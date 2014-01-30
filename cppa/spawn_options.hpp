@@ -65,10 +65,6 @@ constexpr spawn_options operator+(const spawn_options& lhs,
                                      | static_cast<int>(rhs));
 }
 
-#ifndef CPPA_DOCUMENTATION
-namespace {
-#endif
-
 /**
  * @brief Denotes default settings.
  */
@@ -110,10 +106,6 @@ constexpr spawn_options blocking_api     = spawn_options::blocking_api_flag;
  */
 constexpr spawn_options priority_aware   = spawn_options::priority_aware_flag
                                          + spawn_options::detach_flag;
-
-#ifndef CPPA_DOCUMENTATION
-} // namespace <anonymous>
-#endif
 
 /**
  * @brief Checks wheter @p haystack contains @p needle.
@@ -182,8 +174,7 @@ constexpr bool is_unbound(spawn_options opts) {
 constexpr spawn_options make_unbound(spawn_options opts) {
     return static_cast<spawn_options>(
                 (static_cast<int>(opts)
-                 & ~static_cast<int>(spawn_options::link_flag))
-                & ~static_cast<int>(spawn_options::monitor_flag));
+                 & ~(static_cast<int>(linked) | static_cast<int>(monitored))));
 }
 
 /** @endcond */

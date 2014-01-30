@@ -36,6 +36,7 @@
 #include "cppa/logging.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/mailbox_based.hpp"
+#include "cppa/response_handle.hpp"
 #include "cppa/behavior_stack_based.hpp"
 
 #include "cppa/detail/response_handle_util.hpp"
@@ -43,52 +44,6 @@
 namespace cppa {
 
 class event_based_actor;
-
-/**
- * @brief Helper class to enable users to add continuations when dealing
- *        with synchronous sends.
- */
-class continue_helper {
-
- public:
-
-    typedef int message_id_wrapper_tag;
-
-    inline continue_helper(message_id mid, event_based_actor* self)
-            : m_mid(mid), m_self(self) { }
-
-    /**
-     * @brief Adds a continuation to the synchronous message handler
-     *        that is invoked if the response handler successfully returned.
-     * @param fun The continuation as functor object.
-     */
-    template<typename F>
-    continue_helper& continue_with(F fun) {
-        return continue_with(behavior::continuation_fun{partial_function{
-                   on(any_vals, arg_match) >> fun
-               }});
-    }
-
-    /**
-     * @brief Adds a continuation to the synchronous message handler
-     *        that is invoked if the response handler successfully returned.
-     * @param fun The continuation as functor object.
-     */
-    continue_helper& continue_with(behavior::continuation_fun fun);
-
-    /**
-     * @brief Returns the ID of the expected response message.
-     */
-    message_id get_message_id() const {
-        return m_mid;
-    }
-
- private:
-
-    message_id m_mid;
-    event_based_actor* m_self;
-
-};
 
 /**
  * @brief A cooperatively scheduled, event-based actor implementation.
@@ -116,60 +71,9 @@ class event_based_actor : public extend<local_actor>::
 
  public:
 
-    /**
-     * @brief This helper class identifies an expected response message
-     *        enables <tt>sync_send(...).then(...)</tt>.
-     */
-    class response_handle {
+    typedef nonblocking_response_handle_tag response_handle_tag;
 
-        friend class event_based_actor;
-
-     public:
-
-        response_handle() = delete;
-
-        response_handle(const response_handle&) = default;
-
-        response_handle& operator=(const response_handle&) = default;
-
-        /**
-         * @brief Sets @p bhvr as event-handler for the response message.
-         */
-        inline continue_helper then(behavior bhvr) {
-            m_self->bhvr_stack().push_back(std::move(bhvr), m_mid);
-            return {m_mid, m_self};
-        }
-
-        /**
-         * @brief Sets @p mexpr as event-handler for the response message.
-         */
-        template<typename... Cs, typename... Ts>
-        continue_helper then(const match_expr<Cs...>& arg, const Ts&... args) {
-            return then(match_expr_convert(arg, args...));
-        }
-
-        /**
-         * @brief Sets @p fun as event-handler for the response message, calls
-         *        <tt>self->handle_sync_failure()</tt> if the response message
-         *        is an 'EXITED' or 'VOID' message.
-         */
-        template<typename... Fs>
-        typename std::enable_if<
-            util::all_callable<Fs...>::value,
-            continue_helper
-        >::type
-        then(Fs... fs) {
-            return then(detail::fs2bhvr(m_self, fs...));
-        }
-
-     private:
-
-        response_handle(const message_id& from, event_based_actor* self);
-
-        message_id m_mid;
-        event_based_actor* m_self;
-
-    };
+    typedef response_handle<event_based_actor> untyped_response_handle;
 
     /**
      * @brief Sends @p what as a synchronous message to @p whom.
@@ -180,8 +84,12 @@ class event_based_actor : public extend<local_actor>::
      *          sent message cannot be received by another actor.
      * @throws std::invalid_argument if <tt>whom == nullptr</tt>
      */
-    response_handle sync_send_tuple(const actor& whom, any_tuple what);
-
+    inline untyped_response_handle sync_send_tuple(const actor& whom,
+                                                any_tuple what) {
+        return {sync_send_tuple_impl(message_priority::normal,
+                                     whom, std::move(what)),
+                this};
+    }
 
     /**
      * @brief Sends <tt>{what...}</tt> as a synchronous message to @p whom.
@@ -194,7 +102,7 @@ class event_based_actor : public extend<local_actor>::
      * @throws std::invalid_argument if <tt>whom == nullptr</tt>
      */
     template<typename... Ts>
-    inline response_handle sync_send(const actor& whom, Ts&&... what) {
+    inline untyped_response_handle sync_send(const actor& whom, Ts&&... what) {
         static_assert(sizeof...(Ts) > 0, "no message to send");
         return sync_send_tuple(whom, make_any_tuple(std::forward<Ts>(what)...));
     }
@@ -205,9 +113,13 @@ class event_based_actor : public extend<local_actor>::
      * @param rtime Relative time until this messages times out.
      * @param what  Message content as tuple.
      */
-    response_handle timed_sync_send_tuple(const util::duration& rtime,
+    untyped_response_handle timed_sync_send_tuple(const util::duration& rtime,
                                           const actor& whom,
-                                          any_tuple what);
+                                          any_tuple what) {
+        return {timed_sync_send_tuple_impl(message_priority::normal, whom,
+                                           rtime, std::move(what)),
+                this};
+    }
 
     /**
      * @brief Sends a synchronous message with timeout @p rtime to @p whom.
@@ -217,7 +129,7 @@ class event_based_actor : public extend<local_actor>::
      * @pre <tt>sizeof...(Ts) > 0</tt>
      */
     template<typename... Ts>
-    response_handle timed_sync_send(const actor& whom,
+    untyped_response_handle timed_sync_send(const actor& whom,
                                     const util::duration& rtime,
                                     Ts&&... what) {
         static_assert(sizeof...(Ts) > 0, "no message to send");

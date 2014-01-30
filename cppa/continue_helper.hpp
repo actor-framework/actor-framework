@@ -28,33 +28,64 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_DETAIL_RESPONSE_FUTURE_UTIL_HPP
-#define CPPA_DETAIL_RESPONSE_FUTURE_UTIL_HPP
+#ifndef CONTINUE_HELPER_HPP
+#define CONTINUE_HELPER_HPP
+
+#include <functional>
 
 #include "cppa/on.hpp"
-#include "cppa/match_hint.hpp"
-#include "cppa/system_messages.hpp"
-
-#include "cppa/util/type_traits.hpp"
+#include "cppa/behavior.hpp"
+#include "cppa/message_id.hpp"
 
 namespace cppa {
-namespace detail {
 
-template<typename Actor, typename... Fs>
-behavior fs2bhvr(Actor* self, Fs... fs) {
-    auto handle_sync_timeout = [self]() -> match_hint {
-        self->handle_sync_timeout();
-        return match_hint::skip;
-    };
-    return behavior{
-        on<sync_timeout_msg>() >> handle_sync_timeout,
-        on<unit_t>() >> skip_message,
-        on<sync_exited_msg>() >> skip_message,
-        (on(any_vals, arg_match) >> std::move(fs))...
-    };
-}
+class local_actor;
 
-} // namespace detail
+/**
+ * @brief Helper class to enable users to add continuations
+ *        when dealing with synchronous sends.
+ */
+class continue_helper {
+
+ public:
+
+    typedef int message_id_wrapper_tag;
+
+    continue_helper(message_id mid, local_actor* self);
+
+    /**
+     * @brief Adds a continuation to the synchronous message handler
+     *        that is invoked if the response handler successfully returned.
+     * @param fun The continuation as functor object.
+     */
+    template<typename F>
+    continue_helper& continue_with(F fun) {
+        return continue_with(behavior::continuation_fun{partial_function{
+                   on(any_vals, arg_match) >> fun
+               }});
+    }
+
+    /**
+     * @brief Adds a continuation to the synchronous message handler
+     *        that is invoked if the response handler successfully returned.
+     * @param fun The continuation as functor object.
+     */
+    continue_helper& continue_with(behavior::continuation_fun fun);
+
+    /**
+     * @brief Returns the ID of the expected response message.
+     */
+    message_id get_message_id() const {
+        return m_mid;
+    }
+
+ private:
+
+    message_id m_mid;
+    local_actor* m_self;
+
+};
+
 } // namespace cppa
 
-#endif // CPPA_DETAIL_RESPONSE_FUTURE_UTIL_HPP
+#endif // CONTINUE_HELPER_HPP

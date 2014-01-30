@@ -92,7 +92,7 @@ class behavior_stack_based : public single_timeout<Base, Subtype> {
         return m_bhvr_stack;
     }
 
-    inline optional<behavior&> sync_handler(message_id msg_id) {
+    optional<behavior&> sync_handler(message_id msg_id) override {
         return m_bhvr_stack.sync_handler(msg_id);
     }
 

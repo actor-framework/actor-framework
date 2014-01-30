@@ -675,7 +675,7 @@ void test_spawn() {
         }
     );
     // must skip remaining async message
-    self->receive_response (handle) (
+    handle.await(
         on_arg_match >> [&](int a, int b) {
             CPPA_CHECK_EQUAL(a, 42);
             CPPA_CHECK_EQUAL(b, 2);
@@ -738,7 +738,7 @@ void test_spawn() {
     CPPA_CHECKPOINT();
 
     self->sync_send(sync_testee, "!?").await(
-        on(atom("EXITED"), any_vals) >> CPPA_CHECKPOINT_CB(),
+        on<sync_exited_msg>() >> CPPA_CHECKPOINT_CB(),
         others() >> CPPA_UNEXPECTED_MSG_CB(),
         after(chrono::milliseconds(5)) >> CPPA_UNEXPECTED_TOUT_CB()
     );

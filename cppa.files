@@ -20,6 +20,7 @@ cppa/binary_serializer.hpp
 cppa/blocking_actor.hpp
 cppa/channel.hpp
 cppa/config.hpp
+cppa/continue_helper.hpp
 cppa/cow_ptr.hpp
 cppa/cow_tuple.hpp
 cppa/cppa.hpp
@@ -155,6 +156,7 @@ cppa/primitive_variant.hpp
 cppa/qtsupport/actor_widget_mixin.hpp
 cppa/ref_counted.hpp
 cppa/replies_to.hpp
+cppa/response_handle.hpp
 cppa/response_promise.hpp
 cppa/resumable.hpp
 cppa/sb_actor.hpp
@@ -256,6 +258,7 @@ src/buffer.cpp
 src/channel.cpp
 src/context_switching_resume.cpp
 src/continuable.cpp
+src/continue_helper.cpp
 src/decorated_tuple.cpp
 src/demangle.cpp
 src/deserializer.cpp

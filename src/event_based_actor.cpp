@@ -35,39 +35,8 @@
 
 namespace cppa {
 
-continue_helper&
-continue_helper::continue_with(behavior::continuation_fun fun) {
-    auto ref_opt = m_self->bhvr_stack().sync_handler(m_mid);
-    if (ref_opt) {
-        behavior cpy = *ref_opt;
-        *ref_opt = cpy.add_continuation(std::move(fun));
-    }
-    else { CPPA_LOG_ERROR("failed to add continuation"); }
-    return *this;
-}
-
-event_based_actor::response_handle::response_handle(const message_id& from,
-                                                    event_based_actor* self)
-        : m_mid(from), m_self(self) { }
-
 void event_based_actor::forward_to(const actor& whom) {
     forward_message(whom, message_priority::normal);
-}
-
-event_based_actor::response_handle
-event_based_actor::sync_send_tuple(const actor& dest, any_tuple what) {
-    auto nri = new_request_id();
-    dest->enqueue({address(), dest, nri}, std::move(what));
-    return {nri.response_id(), this};
-}
-
-event_based_actor::response_handle
-event_based_actor::timed_sync_send_tuple(const util::duration& rtime,
-                                         const actor& dest,
-                                         any_tuple what) {
-    return {timed_sync_send_tuple_impl(message_priority::normal, dest, rtime,
-                                       std::move(what)),
-            this};
 }
 
 } // namespace cppa

@@ -31,19 +31,26 @@
 #ifndef CPPA_TYPED_ACTOR_HPP
 #define CPPA_TYPED_ACTOR_HPP
 
+#include "cppa/actor_addr.hpp"
 #include "cppa/replies_to.hpp"
 #include "cppa/intrusive_ptr.hpp"
 #include "cppa/abstract_actor.hpp"
-#include "cppa/typed_event_based_actor.hpp"
 
 namespace cppa {
 
+class actor_addr;
+class local_actor;
+
+struct invalid_actor_addr_t;
+
 template<typename... Signatures>
-class typed_actor {
+class typed_actor : util::comparable<typed_actor<Signatures...>>
+                  , util::comparable<typed_actor<Signatures...>, actor_addr>
+                  , util::comparable<typed_actor<Signatures...>, invalid_actor_addr_t> {
+
+    friend class local_actor;
 
  public:
-
-    typedef typed_event_based_actor<Signatures...> actor_type;
 
     typedef util::type_list<Signatures...> signatures;
 
@@ -67,6 +74,21 @@ class typed_actor {
     template<template<typename...> class Impl, typename... OtherSignatures>
     typed_actor(intrusive_ptr<Impl<OtherSignatures...>> other) {
         set(other);
+    }
+
+    /**
+     * @brief Queries the address of the stored actor.
+     */
+    actor_addr address() const {
+        return m_ptr ? m_ptr->address() : actor_addr{};
+    }
+
+    inline intptr_t compare(const actor_addr& rhs) const {
+        return address().compare(rhs);
+    }
+
+    inline intptr_t compare(const invalid_actor_addr_t&) const {
+        return m_ptr ? 1 : 0;
     }
 
  private:

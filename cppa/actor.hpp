@@ -69,10 +69,10 @@ constexpr invalid_actor_t invalid_actor = invalid_actor_t{};
 
 template<typename T>
 struct is_convertible_to_actor {
-    static constexpr bool value =    std::is_base_of<io::broker, T>::value
-                                  || std::is_base_of<actor_proxy, T>::value
-                                  || std::is_base_of<blocking_actor, T>::value
-                                  || std::is_base_of<event_based_actor, T>::value;
+    static constexpr bool value =  std::is_base_of<io::broker, T>::value
+                                || std::is_base_of<actor_proxy, T>::value
+                                || std::is_base_of<blocking_actor, T>::value
+                                || std::is_base_of<event_based_actor, T>::value;
 };
 
 /**

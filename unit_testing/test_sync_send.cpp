@@ -281,8 +281,8 @@ void test_sync_send() {
 
     // test use case 3
     self->spawn<monitored + blocking_api>([](blocking_actor* self) { // client
-        auto s = self->spawn<server, linked>();                        // server
-        auto w = self->spawn<linked>([](event_based_actor* self) {         // worker
+        auto s = self->spawn<server, linked>();                      // server
+        auto w = self->spawn<linked>([](event_based_actor* self) {   // worker
             self->become(on(atom("request")) >> []{ return atom("response"); });
         });
         // first 'idle', then 'request'
@@ -300,7 +300,7 @@ void test_sync_send() {
         // first 'request', then 'idle'
         auto handle = self->sync_send(s, atom("request"));
         send_as(w, s, atom("idle"));
-        self->receive_response(handle) (
+        handle.await(
             on(atom("response")) >> [=] {
                 CPPA_CHECKPOINT();
                 CPPA_CHECK_EQUAL(self->last_sender(), w);

@@ -41,6 +41,14 @@ bool operator==(const my_request& lhs, const my_request& rhs) {
     return lhs.a == rhs.a && lhs.b == rhs.b;
 }
 
+typed_behavior<replies_to<my_request>::with<bool>> typed_server() {
+    return {
+        on_arg_match >> [](const my_request& req) {
+            return req.a == req.b;
+        }
+    };
+}
+
 /*
 typed_actor_ptr<replies_to<my_request>::with<bool>>
 spawn_typed_server() {
@@ -66,10 +74,31 @@ class typed_testee : public typed_actor<replies_to<my_request>::with<bool>> {
 };
 */
 
+void test_typed_spawn() {
+    auto ts = spawn_typed(typed_server);
+    scoped_actor self;
+    self->send(ts, my_request{1, 2});
+    self->receive(
+        on_arg_match >> [](bool value) {
+            CPPA_CHECK_EQUAL(value, false);
+        }
+    );
+    self->send(ts, my_request{42, 42});
+    self->receive(
+        on_arg_match >> [](bool value) {
+            CPPA_CHECK_EQUAL(value, true);
+        }
+    );
+    self->send_exit(ts, exit_reason::user_shutdown);
+}
+
 int main() {
     CPPA_TEST(test_typed_spawn);
-/*
     announce<my_request>(&my_request::a, &my_request::b);
+    test_typed_spawn();
+    await_all_actors_done();
+    shutdown();
+/*
     auto sptr = spawn_typed_server();
     sync_send(sptr, my_request{2, 2}).await(
         [](bool value) {

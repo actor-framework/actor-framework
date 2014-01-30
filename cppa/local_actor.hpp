@@ -36,12 +36,12 @@
 #include <functional>
 
 #include "cppa/actor.hpp"
-#include "cppa/abstract_group.hpp"
 #include "cppa/extend.hpp"
 #include "cppa/channel.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/cppa_fwd.hpp"
 #include "cppa/any_tuple.hpp"
+#include "cppa/cow_tuple.hpp"
 #include "cppa/message_id.hpp"
 #include "cppa/match_expr.hpp"
 #include "cppa/actor_state.hpp"
@@ -51,6 +51,7 @@
 #include "cppa/memory_cached.hpp"
 #include "cppa/message_header.hpp"
 #include "cppa/abstract_actor.hpp"
+#include "cppa/abstract_group.hpp"
 #include "cppa/mailbox_element.hpp"
 #include "cppa/response_promise.hpp"
 #include "cppa/message_priority.hpp"
@@ -59,6 +60,7 @@
 #include "cppa/util/duration.hpp"
 
 #include "cppa/detail/behavior_stack.hpp"
+#include "cppa/detail/typed_actor_util.hpp"
 
 #include "cppa/intrusive/single_reader_queue.hpp"
 
@@ -66,28 +68,12 @@ namespace cppa {
 
 // forward declarations
 class scheduler;
-class response_handle;
 class local_scheduler;
 class sync_handle_helper;
 
 namespace util {
 struct fiber;
 } // namespace util
-
-// prototype definitions of the spawn function famility;
-// implemented in spawn.hpp (this header is included there)
-
-template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
-actor spawn(Ts&&... args);
-
-template<spawn_options Options = no_spawn_options, typename... Ts>
-actor spawn(Ts&&... args);
-
-template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
-actor spawn_in_group(const group&, Ts&&... args);
-
-template<spawn_options Options = no_spawn_options, typename... Ts>
-actor spawn_in_group(const group&, Ts&&... args);
 
 /**
  * @brief Base class for local running Actors.
@@ -104,16 +90,6 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     typedef intrusive::single_reader_queue<mailbox_element, del> mailbox_type;
 
     ~local_actor();
-
-    inline actor eval_opts(spawn_options opts, actor res) {
-        if (has_monitor_flag(opts)) {
-            monitor(res);
-        }
-        if (has_link_flag(opts)) {
-            link_to(res);
-        }
-        return res;
-    }
 
 
     template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
@@ -143,52 +119,168 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     /**
      * @brief Sends @p what to the receiver specified in @p dest.
      */
-    void send_tuple(message_priority prio, const channel& dest, any_tuple what);
-
-    /**
-     * @brief Sends <tt>{what...}</tt> to the receiver specified in @p hdr.
-     * @pre <tt>sizeof...(Ts) > 0</tt>
-     */
-    template<typename... Ts>
-    void send(message_priority prio, const channel& whom, Ts&&... what) {
-        send_tuple(prio, whom, make_any_tuple(std::forward<Ts>(what)...));
-    }
+    void send_tuple(message_priority prio, const channel& whom, any_tuple what);
 
     /**
      * @brief Sends @p what to the receiver specified in @p dest.
      */
-    void send_tuple(const channel& dest, any_tuple what);
-
-    /**
-     * @brief Sends <tt>{what...}</tt> to the receiver specified in @p hdr.
-     * @pre <tt>sizeof...(Ts) > 0</tt>
-     */
-    template<typename... Ts>
-    void send(const channel& whom, Ts&&... what) {
-        send_tuple(whom, make_any_tuple(std::forward<Ts>(what)...));
+    inline void send_tuple(const channel& whom, any_tuple what) {
+        send_tuple(message_priority::normal, whom, std::move(what));
     }
 
+    /**
+     * @brief Sends <tt>{what...}</tt> to @p whom.
+     * @param prio Priority of the message.
+     * @param whom Receiver of the message.
+     * @param what Message elements.
+     * @pre <tt>sizeof...(Ts) > 0</tt>.
+     */
+    template<typename... Ts>
+    inline void send(message_priority prio, const channel& whom, Ts&&... what) {
+        static_assert(sizeof...(Ts) > 0, "sizeof...(Ts) == 0");
+        send_tuple(prio, whom, make_any_tuple(std::forward<Ts>(what)...));
+    }
+
+    /**
+     * @brief Sends <tt>{what...}</tt> to @p whom.
+     * @param whom Receiver of the message.
+     * @param what Message elements.
+     * @pre <tt>sizeof...(Ts) > 0</tt>.
+     */
+    template<typename... Ts>
+    inline void send(const channel& whom, Ts&&... what) {
+        static_assert(sizeof...(Ts) > 0, "sizeof...(Ts) == 0");
+        send_tuple(message_priority::normal, whom,
+                   make_any_tuple(std::forward<Ts>(what)...));
+    }
+
+    /**
+     * @brief Sends @p what to @p whom.
+     * @param prio Priority of the message.
+     * @param whom Receiver of the message.
+     * @param what Message content as a tuple.
+     */
+    template<typename... Signatures, typename... Ts>
+    void send_tuple(message_priority prio,
+                    const typed_actor<Signatures...>& whom,
+                    cow_tuple<Ts...> what) {
+        check_typed_input(whom, what);
+        send_tuple(prio, whom.m_ptr, any_tuple{std::move(what)});
+    }
+
+    /**
+     * @brief Sends @p what to @p whom.
+     * @param whom Receiver of the message.
+     * @param what Message content as a tuple.
+     */
+    template<typename... Signatures, typename... Ts>
+    void send_tuple(const typed_actor<Signatures...>& whom,
+                    cow_tuple<Ts...> what) {
+        check_typed_input(whom, what);
+        send_tuple_impl(message_priority::normal, whom, std::move(what));
+    }
+
+    /**
+     * @brief Sends <tt>{what...}</tt> to @p whom.
+     * @param prio Priority of the message.
+     * @param whom Receiver of the message.
+     * @param what Message elements.
+     * @pre <tt>sizeof...(Ts) > 0</tt>.
+     */
+    template<typename... Signatures, typename... Ts>
+    void send(message_priority prio,
+              const typed_actor<Signatures...>& whom,
+              cow_tuple<Ts...> what) {
+        send_tuple(prio, whom, make_cow_tuple(std::forward<Ts>(what)...));
+    }
+
+    /**
+     * @brief Sends <tt>{what...}</tt> to @p whom.
+     * @param whom Receiver of the message.
+     * @param what Message elements.
+     * @pre <tt>sizeof...(Ts) > 0</tt>.
+     */
+    template<typename... Signatures, typename... Ts>
+    void send(const typed_actor<Signatures...>& whom, Ts... what) {
+        send_tuple(message_priority::normal, whom,
+                   make_cow_tuple(std::forward<Ts>(what)...));
+    }
+
+    /**
+     * @brief Sends an exit message to @p whom.
+     */
     void send_exit(const actor_addr& whom, std::uint32_t reason);
 
+    /**
+     * @copydoc send_exit(const actor_addr&, std::uint32_t)
+     */
     inline void send_exit(const actor& whom, std::uint32_t reason) {
         send_exit(whom.address(), reason);
     }
 
     /**
+     * @copydoc send_exit(const actor_addr&, std::uint32_t)
+     */
+    template<typename... Signatures>
+    void send_exit(const typed_actor<Signatures...>& whom,
+                   std::uint32_t reason) {
+        send_exit(whom.address(), reason);
+    }
+
+    /**
      * @brief Sends a message to @p whom that is delayed by @p rel_time.
+     * @param prio Priority of the message.
      * @param whom Receiver of the message.
-     * @param rtime Relative time duration to delay the message in
+     * @param rtime Relative time to delay the message in
      *              microseconds, milliseconds, seconds or minutes.
      * @param data Message content as a tuple.
      */
-    void delayed_send_tuple(const channel& dest,
+    void delayed_send_tuple(message_priority prio,
+                            const channel& whom,
                             const util::duration& rtime,
                             any_tuple data);
 
+    /**
+     * @brief Sends a message to @p whom that is delayed by @p rel_time.
+     * @param whom Receiver of the message.
+     * @param rtime Relative time to delay the message in
+     *              microseconds, milliseconds, seconds or minutes.
+     * @param data Message content as a tuple.
+     */
+    inline void delayed_send_tuple(const channel& whom,
+                                   const util::duration& rtime,
+                                   any_tuple data) {
+        delayed_send_tuple(message_priority::normal, whom,
+                           rtime, std::move(data));
+    }
+
+    /**
+     * @brief Sends a message to @p whom that is delayed by @p rel_time.
+     * @param prio Priority of the message.
+     * @param whom Receiver of the message.
+     * @param rtime Relative time to delay the message in
+     *              microseconds, milliseconds, seconds or minutes.
+     * @param data Message content as a tuple.
+     */
     template<typename... Ts>
-    void delayed_send(const channel& dest, const util::duration& rtime,
+    void delayed_send(message_priority prio, const channel& whom,
+                      const util::duration& rtime, Ts&&... args) {
+        delayed_send_tuple(prio, whom, rtime,
+                           make_any_tuple(std::forward<Ts>(args)...));
+    }
+
+    /**
+     * @brief Sends a message to @p whom that is delayed by @p rel_time.
+     * @param whom Receiver of the message.
+     * @param rtime Relative time to delay the message in
+     *              microseconds, milliseconds, seconds or minutes.
+     * @param data Message content as a tuple.
+     */
+    template<typename... Ts>
+    void delayed_send(const channel& whom, const util::duration& rtime,
                       Ts&&... args) {
-        delayed_send_tuple(dest, rtime, make_any_tuple(std::forward<Ts>(args)...));
+        delayed_send_tuple(message_priority::normal, whom, rtime,
+                           make_any_tuple(std::forward<Ts>(args)...));
     }
 
     /**
@@ -265,6 +357,9 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
      */
     void monitor(const actor_addr& whom);
 
+    /**
+     * @copydoc monitor(const actor_addr&)
+     */
     inline void monitor(const actor& whom) {
         monitor(whom.address());
     }
@@ -329,6 +424,18 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
 
     /** @cond PRIVATE */
 
+    local_actor();
+
+    inline actor eval_opts(spawn_options opts, actor res) {
+        if (has_monitor_flag(opts)) {
+            monitor(res);
+        }
+        if (has_link_flag(opts)) {
+            link_to(res);
+        }
+        return res;
+    }
+
     inline void current_node(mailbox_element* ptr) {
         this->m_current_node = ptr;
     }
@@ -353,14 +460,25 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
         else quit(exit_reason::unhandled_sync_failure);
     }
 
-    local_actor();
-
-    inline bool chaining_enabled();
-
+    // returns the response ID
     message_id timed_sync_send_tuple_impl(message_priority mp,
                                           const actor& whom,
                                           const util::duration& rel_time,
                                           any_tuple&& what);
+
+    // returns the response ID
+    message_id sync_send_tuple_impl(message_priority mp,
+                                    const actor& whom,
+                                    any_tuple&& what);
+
+    // returns the response ID
+    template<typename... Signatures, typename... Ts>
+    message_id sync_send_tuple_impl(message_priority mp,
+                                    const typed_actor<Signatures...>& whom,
+                                    cow_tuple<Ts...>&& what) {
+        check_typed_input(whom, what);
+        return sync_send_tuple_impl(mp, whom.m_ptr, any_tuple{std::move(what)});
+    }
 
     // returns 0 if last_dequeued() is an asynchronous or sync request message,
     // a response id generated from the request id otherwise
@@ -399,6 +517,8 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
         return &m_dummy_node;
     }
 
+    virtual optional<behavior&> sync_handler(message_id msg_id) = 0;
+
  protected:
 
     template<typename... Ts>
@@ -434,6 +554,19 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     /** @endcond */
 
  private:
+
+    template<typename... Signatures, typename... Ts>
+    static void check_typed_input(const typed_actor<Signatures...>&,
+                                  const cow_tuple<Ts...>&) {
+        static constexpr int input_pos = util::tl_find_if<
+                                             util::type_list<Signatures...>,
+                                             detail::input_is<
+                                                 util::type_list<Ts...>
+                                             >::template eval
+                                         >::value;
+        static_assert(input_pos >= 0,
+                      "typed actor does not support given input");
+    }
 
     std::function<void()> m_sync_failure_handler;
     std::function<void()> m_sync_timeout_handler;

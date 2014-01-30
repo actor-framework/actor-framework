@@ -96,6 +96,7 @@ int main() {
         "@down",                     // down_msg
         "@exit",                     // exit_msg
         "@timeout",                  // timeout_msg
+        "@sync_exited",              // sync_exited_msg
         "@sync_timeout",             // sync_timeout_msg
         // default announced cppa tuples
         "@<>+@atom",                 // {atom_value}

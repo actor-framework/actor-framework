@@ -221,7 +221,7 @@ class invoke_policy {
                                      << " did not reply to a "
                                         "synchronous request message");
                     auto fhdl = fetch_response_promise(self, hdl);
-                    if (fhdl) fhdl.deliver(make_any_tuple(atom("VOID")));
+                    if (fhdl) fhdl.deliver(make_any_tuple(unit));
                 }
             } else {
                 if (   detail::matches<atom_value, std::uint64_t>(*res)

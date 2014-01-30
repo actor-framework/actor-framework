@@ -77,6 +77,20 @@ struct down_msg {
 struct sync_timeout_msg { };
 
 /**
+ * @brief Sent whenever a terminated actor receives a synchronous request.
+ */
+struct sync_exited_msg {
+    /**
+     * @brief The source of this message, i.e., the terminated actor.
+     */
+    actor_addr source;
+    /**
+     * @brief The exit reason of the terminated actor.
+     */
+    std::uint32_t reason;
+};
+
+/**
  * @brief Signalizes a timeout event.
  * @note This message is handled implicitly by the runtime system.
  */

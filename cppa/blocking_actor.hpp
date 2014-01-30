@@ -34,87 +34,32 @@
 #include "cppa/on.hpp"
 #include "cppa/extend.hpp"
 #include "cppa/behavior.hpp"
+#include "cppa/typed_actor.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/mailbox_based.hpp"
 #include "cppa/mailbox_element.hpp"
+#include "cppa/response_handle.hpp"
 
 #include "cppa/detail/response_handle_util.hpp"
 
 namespace cppa {
 
 /**
+ * @brief A thread-mapped or context-switching actor using a blocking
+ *        receive rather than a behavior-stack based message processing.
  * @extends local_actor
  */
 class blocking_actor : public extend<local_actor>::with<mailbox_based> {
 
  public:
 
-    class response_handle {
+    typedef blocking_response_handle_tag response_handle_tag;
 
-     public:
+    typedef response_handle<blocking_actor> response_handle_type;
 
-        response_handle() = delete;
-
-        void await(behavior&);
-
-        inline void await(behavior&& bhvr) {
-            behavior arg{std::move(bhvr)};
-            await(arg);
-        }
-
-        /**
-         * @brief Blocks until the response arrives and then executes @p mexpr.
-         */
-        template<typename... Cs, typename... Ts>
-        void await(const match_expr<Cs...>& arg, const Ts&... args) {
-            await(match_expr_convert(arg, args...));
-        }
-
-        /**
-         * @brief Blocks until the response arrives and then executes @p @p fun,
-         *        calls <tt>self->handle_sync_failure()</tt> if the response
-         *        message is an 'EXITED' or 'VOID' message.
-         */
-        template<typename... Fs>
-        typename std::enable_if<util::all_callable<Fs...>::value>::type
-        await(Fs... fs) {
-            await(detail::fs2bhvr(m_self, fs...));
-        }
-
-        /**
-         * @brief Returns the awaited response ID.
-         */
-        inline const message_id& id() const { return m_mid; }
-
-        response_handle(const response_handle&) = default;
-        response_handle& operator=(const response_handle&) = default;
-
-        inline response_handle(const message_id& from, blocking_actor* self)
-                : m_mid(from), m_self(self) { }
-
-     private:
-
-        message_id m_mid;
-        blocking_actor* m_self;
-
-    };
-
-    class sync_receive_helper {
-
-     public:
-
-        inline sync_receive_helper(const response_handle& mf) : m_mf(mf) { }
-
-        template<typename... Ts>
-        inline void operator()(Ts&&... args) {
-            m_mf.await(std::forward<Ts>(args)...);
-        }
-
-     private:
-
-        response_handle m_mf;
-
-    };
+    /**************************************************************************
+     *                     sync_send[_tuple](actor, ...)                      *
+     **************************************************************************/
 
     /**
      * @brief Sends @p what as a synchronous message to @p whom.
@@ -125,11 +70,15 @@ class blocking_actor : public extend<local_actor>::with<mailbox_based> {
      *          sent message cannot be received by another actor.
      * @throws std::invalid_argument if <tt>whom == nullptr</tt>
      */
-    response_handle sync_send_tuple(const actor& dest, any_tuple what);
+    inline response_handle_type sync_send_tuple(message_priority prio,
+                                           const actor& dest,
+                                           any_tuple what) {
+        return {sync_send_tuple_impl(prio, dest, std::move(what)), this};
+    }
 
-    response_handle timed_sync_send_tuple(const util::duration& rtime,
-                                          const actor& dest,
-                                          any_tuple what);
+    inline response_handle_type sync_send_tuple(const actor& dest, any_tuple what) {
+        return sync_send_tuple(message_priority::normal, dest, std::move(what));
+    }
 
     /**
      * @brief Sends <tt>{what...}</tt> as a synchronous message to @p whom.
@@ -142,19 +91,62 @@ class blocking_actor : public extend<local_actor>::with<mailbox_based> {
      * @throws std::invalid_argument if <tt>whom == nullptr</tt>
      */
     template<typename... Ts>
-    inline response_handle sync_send(const actor& dest, Ts&&... what) {
+    inline response_handle_type sync_send(message_priority prio,
+                                     const actor& dest, Ts&&... what) {
         static_assert(sizeof...(Ts) > 0, "no message to send");
-        return sync_send_tuple(dest, make_any_tuple(std::forward<Ts>(what)...));
+        return sync_send_tuple(prio, dest,
+                               make_any_tuple(std::forward<Ts>(what)...));
     }
 
     template<typename... Ts>
-    response_handle timed_sync_send(const actor& dest,
+    inline response_handle_type sync_send(const actor& dest, Ts&&... what) {
+        static_assert(sizeof...(Ts) > 0, "no message to send");
+        return sync_send_tuple(message_priority::normal,
+                               dest, make_any_tuple(std::forward<Ts>(what)...));
+    }
+
+    /**************************************************************************
+     *                  timed_sync_send[_tuple](actor, ...)                   *
+     **************************************************************************/
+
+
+    inline response_handle_type timed_sync_send_tuple(const util::duration& rtime,
+                                                 const actor& dest,
+                                                 any_tuple what) {
+        return {timed_sync_send_tuple_impl(message_priority::normal,
+                                           dest, rtime, std::move(what)),
+                this};
+    }
+
+    template<typename... Ts>
+    response_handle_type timed_sync_send(const actor& dest,
                                    const util::duration& rtime,
                                    Ts&&... what) {
         static_assert(sizeof...(Ts) > 0, "no message to send");
         return timed_sync_send_tuple(rtime, dest,
                                      make_any_tuple(std::forward<Ts>(what)...));
     }
+
+    /**************************************************************************
+     *                sync_send[_tuple](typed_actor<...>, ...)                *
+     **************************************************************************/
+
+    template<typename... Rs, typename... Ts>
+    inline response_handle_type sync_send_tuple(message_priority prio,
+                                           const typed_actor<Rs...>& dest,
+                                           cow_tuple<Ts...> what) {
+        return {sync_send_tuple_impl(prio, dest, std::move(what)), this};
+    }
+
+    template<typename... Rs, typename... Ts>
+    inline response_handle_type sync_send_tuple(const typed_actor<Rs...>& dest,
+                                           cow_tuple<Ts...> what) {
+        return sync_send_tuple(message_priority::normal, dest, std::move(what));
+    }
+
+    /**************************************************************************
+     *           utility stuff and receive() member function family           *
+     **************************************************************************/
 
     typedef std::chrono::high_resolution_clock::time_point timeout_type;
 
@@ -267,18 +259,6 @@ class blocking_actor : public extend<local_actor>::with<mailbox_based> {
         return {make_dequeue_callback(), stmt};
     }
 
-
-    /**
-     * @brief Handles a synchronous response message in an event-based way.
-     * @param handle A future for a synchronous response.
-     * @throws std::logic_error if @p handle is not valid or if the actor
-     *                          already received the response for @p handle
-     * @relates response_handle
-     */
-    inline sync_receive_helper receive_response(const response_handle& f) {
-        return {f};
-    }
-
     /**
      * @brief Receives messages until @p stmt returns true.
      *
@@ -304,28 +284,20 @@ class blocking_actor : public extend<local_actor>::with<mailbox_based> {
                , match_expr_convert(std::forward<Ts>(args)...)};
     }
 
-    inline optional<behavior&> sync_handler(message_id msg_id) {
+    optional<behavior&> sync_handler(message_id msg_id) override {
         auto i = m_sync_handler.find(msg_id);
         if (i != m_sync_handler.end()) return i->second;
         return none;
     }
 
-    // unused in blocking actors
-    inline void remove_handler(message_id) { }
-
-    inline void dequeue(behavior&& bhvr) {
-        behavior tmp{std::move(bhvr)};
-        dequeue(tmp);
-    }
-
-    inline void dequeue(behavior& bhvr) {
-        dequeue_response(bhvr, message_id::invalid);
-    }
-
-    virtual void dequeue_response(behavior& bhvr, message_id mid) = 0;
-
+    /**
+     * @brief Blocks this actor until all other actors are done.
+     */
     void await_all_other_actors_done();
 
+    /**
+     * @brief Implements the actor's behavior.
+     */
     virtual void act() = 0;
 
     /**
@@ -334,13 +306,35 @@ class blocking_actor : public extend<local_actor>::with<mailbox_based> {
      */
     virtual void quit(std::uint32_t reason = exit_reason::normal);
 
+    /** @cond PRIVATE */
+
+    // required from invoke_policy; unused in blocking actors
+    inline void remove_handler(message_id) { }
+
+    // required by receive() member function family
+    inline void dequeue(behavior&& bhvr) {
+        behavior tmp{std::move(bhvr)};
+        dequeue(tmp);
+    }
+
+    // required by receive() member function family
+    inline void dequeue(behavior& bhvr) {
+        dequeue_response(bhvr, message_id::invalid);
+    }
+
+    // implemented by detail::proper_actor
+    virtual void dequeue_response(behavior& bhvr, message_id mid) = 0;
+
+    /** @endcond */
+
  private:
 
-    std::map<message_id, behavior> m_sync_handler;
-
+    // helper function to implement receive_(for|while) and do_receive
     std::function<void(behavior&)> make_dequeue_callback() {
         return [=](behavior& bhvr) { dequeue(bhvr); };
     }
+
+    std::map<message_id, behavior> m_sync_handler;
 
 };
 

@@ -147,18 +147,18 @@ void local_actor::send_tuple(message_priority prio, const channel& dest, any_tup
     dest.enqueue({address(), dest, id}, std::move(what));
 }
 
-void local_actor::send_tuple(const channel& dest, any_tuple what) {
-    send_tuple(message_priority::normal, dest, std::move(what));
-}
-
 void local_actor::send_exit(const actor_addr& whom, std::uint32_t reason) {
     send(detail::raw_access::get(whom), exit_msg{address(), reason});
 }
 
-void local_actor::delayed_send_tuple(const channel& dest,
+void local_actor::delayed_send_tuple(message_priority prio,
+                                     const channel& dest,
                                      const util::duration& rel_time,
                                      cppa::any_tuple msg) {
-    get_scheduler()->delayed_send({address(), dest}, rel_time, std::move(msg));
+    message_id mid;
+    if (prio == message_priority::high) mid = mid.with_high_priority();
+    get_scheduler()->delayed_send({address(), dest, mid},
+                                  rel_time, std::move(msg));
 }
 
 response_promise local_actor::make_response_promise() {
@@ -203,6 +203,15 @@ message_id local_actor::timed_sync_send_tuple_impl(message_priority mp,
     get_scheduler()->delayed_send({address(), this, rri}, rtime,
                                   make_any_tuple(sync_timeout_msg{}));
     return rri;
+}
+
+message_id local_actor::sync_send_tuple_impl(message_priority mp,
+                                             const actor& dest,
+                                             any_tuple&& what) {
+    auto nri = new_request_id();
+    if (mp == message_priority::high) nri = nri.with_high_priority();
+    dest->enqueue({address(), dest, nri}, std::move(what));
+    return nri.response_id();
 }
 
 void anon_send_exit(const actor_addr& whom, std::uint32_t reason) {

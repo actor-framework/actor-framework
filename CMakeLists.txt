@@ -152,6 +152,7 @@ set(LIBCPPA_SRC
     src/channel.cpp
     src/context_switching_resume.cpp
     src/continuable.cpp
+    src/continue_helper.cpp
     src/decorated_tuple.cpp
     src/actor_proxy.cpp
     src/peer.cpp

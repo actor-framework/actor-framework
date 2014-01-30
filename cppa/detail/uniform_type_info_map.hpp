@@ -73,6 +73,7 @@ using mapped_type_list = util::type_list<
     io::accept_handle,
     io::connection_handle,
     message_header,
+    sync_exited_msg,
     sync_timeout_msg,
     timeout_msg,
     unit_t,

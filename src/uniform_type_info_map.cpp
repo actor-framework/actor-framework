@@ -73,6 +73,7 @@ namespace cppa { namespace detail {
     { "cppa::io::accept_handle",                        "@ac_hdl"             },
     { "cppa::io::connection_handle",                    "@cn_hdl"             },
     { "cppa::message_header",                           "@header"             },
+    { "cppa::sync_exited_msg",                          "@sync_exited"        },
     { "cppa::sync_timeout_msg",                         "@sync_timeout"       },
     { "cppa::timeout_msg",                              "@timeout"            },
     { "cppa::unit_t",                                   "@0"                  },
@@ -391,7 +392,9 @@ inline void deserialize_impl(bool& val, deserializer* source) {
 // exit_msg & down_msg have the same fields
 template<typename T>
 typename std::enable_if<
-    std::is_same<T, down_msg>::value || std::is_same<T, exit_msg>::value
+       std::is_same<T, down_msg>::value
+    || std::is_same<T, exit_msg>::value
+    || std::is_same<T, sync_exited_msg>::value
 >::type
 serialize_impl(const T& dm, serializer* sink) {
     serialize_impl(dm.source, sink);
@@ -401,7 +404,9 @@ serialize_impl(const T& dm, serializer* sink) {
 // exit_msg & down_msg have the same fields
 template<typename T>
 typename std::enable_if<
-    std::is_same<T, down_msg>::value || std::is_same<T, exit_msg>::value
+       std::is_same<T, down_msg>::value
+    || std::is_same<T, exit_msg>::value
+    || std::is_same<T, sync_exited_msg>::value
 >::type
 deserialize_impl(T& dm, deserializer* source) {
     deserialize_impl(dm.source, source);
@@ -782,6 +787,7 @@ class utim_impl : public uniform_type_info_map {
         *i++ = &m_type_proc;            // @proc
         *i++ = &m_type_str;             // @str
         *i++ = &m_type_strmap;          // @strmap
+        *i++ = &m_type_sync_exited;     // @sync_exited
         *i++ = &m_type_sync_timeout;    // @sync_timeout
         *i++ = &m_type_timeout;         // @timeout
         *i++ = &m_type_tuple;           // @tuple
@@ -903,6 +909,7 @@ class utim_impl : public uniform_type_info_map {
     // 10-19
     uti_impl<any_tuple>                     m_type_tuple;
     uti_impl<util::duration>                m_type_duration;
+    uti_impl<sync_exited_msg>               m_type_sync_exited;
     uti_impl<sync_timeout_msg>              m_type_sync_timeout;
     uti_impl<timeout_msg>                   m_type_timeout;
     uti_impl<message_header>                m_type_header;
@@ -910,9 +917,9 @@ class utim_impl : public uniform_type_info_map {
     uti_impl<atom_value>                    m_type_atom;
     uti_impl<std::string>                   m_type_str;
     uti_impl<std::u16string>                m_type_u16str;
-    uti_impl<std::u32string>                m_type_u32str;
 
     // 20-29
+    uti_impl<std::u32string>                m_type_u32str;
     default_uniform_type_info_impl<strmap>  m_type_strmap;
     uti_impl<bool>                          m_type_bool;
     uti_impl<float>                         m_type_float;
@@ -922,15 +929,15 @@ class utim_impl : public uniform_type_info_map {
     int_tinfo<std::uint8_t>                 m_type_u8;
     int_tinfo<std::int16_t>                 m_type_i16;
     int_tinfo<std::uint16_t>                m_type_u16;
-    int_tinfo<std::int32_t>                 m_type_i32;
 
-    // 30-32
+    // 30-33
+    int_tinfo<std::int32_t>                 m_type_i32;
     int_tinfo<std::uint32_t>                m_type_u32;
     int_tinfo<std::int64_t>                 m_type_i64;
     int_tinfo<std::uint64_t>                m_type_u64;
 
     // both containers are sorted by uniform name
-    std::array<pointer, 33> m_builtin_types;
+    std::array<pointer, 34> m_builtin_types;
     std::vector<uniform_type_info*> m_user_types;
     mutable util::shared_spinlock m_lock;
 

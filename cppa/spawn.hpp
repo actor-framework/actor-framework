@@ -35,8 +35,8 @@
 
 #include "cppa/policy.hpp"
 #include "cppa/logging.hpp"
+#include "cppa/cppa_fwd.hpp"
 #include "cppa/scheduler.hpp"
-#include "cppa/local_actor.hpp"
 #include "cppa/typed_actor.hpp"
 #include "cppa/spawn_options.hpp"
 #include "cppa/typed_event_based_actor.hpp"
@@ -157,7 +157,7 @@ intrusive_ptr<Impl> spawn_fwd_args(BeforeLaunch before_launch_fun, Ts&&... args)
 template<class Impl, spawn_options Opts, typename... Ts>
 actor spawn(Ts&&... args) {
     return detail::spawn_fwd_args<Impl, Opts>(
-            [](local_actor*) { /* no-op as BeforeLaunch callback */ },
+            [](Impl*) { /* no-op as BeforeLaunch callback */ },
             std::forward<Ts>(args)...);
 }
 
@@ -196,7 +196,7 @@ actor spawn_in_group(const group& grp, Ts&&... args) {
                            detail::functor_based_actor
                        >::type;
     return detail::spawn_fwd_args<base_class, Opts>(
-            [&](local_actor* ptr) { ptr->join(grp); },
+            [&](base_class* ptr) { ptr->join(grp); },
             std::forward<Ts>(args)...);
 }
 
@@ -211,7 +211,7 @@ actor spawn_in_group(const group& grp, Ts&&... args) {
 template<class Impl, spawn_options Opts, typename... Ts>
 actor spawn_in_group(const group& grp, Ts&&... args) {
     return detail::spawn_fwd_args<Impl, Opts>(
-            [&](local_actor* ptr) { ptr->join(grp); },
+            [&](Impl* ptr) { ptr->join(grp); },
             std::forward<Ts>(args)...);
 }
 

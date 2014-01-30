@@ -28,33 +28,22 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_DETAIL_RESPONSE_FUTURE_UTIL_HPP
-#define CPPA_DETAIL_RESPONSE_FUTURE_UTIL_HPP
-
-#include "cppa/on.hpp"
-#include "cppa/match_hint.hpp"
-#include "cppa/system_messages.hpp"
-
-#include "cppa/util/type_traits.hpp"
+#include "cppa/continue_helper.hpp"
+#include "cppa/event_based_actor.hpp"
 
 namespace cppa {
-namespace detail {
 
-template<typename Actor, typename... Fs>
-behavior fs2bhvr(Actor* self, Fs... fs) {
-    auto handle_sync_timeout = [self]() -> match_hint {
-        self->handle_sync_timeout();
-        return match_hint::skip;
-    };
-    return behavior{
-        on<sync_timeout_msg>() >> handle_sync_timeout,
-        on<unit_t>() >> skip_message,
-        on<sync_exited_msg>() >> skip_message,
-        (on(any_vals, arg_match) >> std::move(fs))...
-    };
+continue_helper::continue_helper(message_id mid, local_actor* self)
+        : m_mid(mid), m_self(self) { }
+
+continue_helper& continue_helper::continue_with(behavior::continuation_fun f) {
+    auto ref_opt = m_self->sync_handler(m_mid);
+    if (ref_opt) {
+        behavior cpy = *ref_opt;
+        *ref_opt = cpy.add_continuation(std::move(f));
+    }
+    else { CPPA_LOG_ERROR("failed to add continuation"); }
+    return *this;
 }
 
-} // namespace detail
 } // namespace cppa
-
-#endif // CPPA_DETAIL_RESPONSE_FUTURE_UTIL_HPP

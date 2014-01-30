@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_RESPONSE_HANDLE_HPP
-#define CPPA_RESPONSE_HANDLE_HPP
+#ifndef CPPA_RESPONSE_PROMISE_HPP
+#define CPPA_RESPONSE_PROMISE_HPP
 
 #include "cppa/actor.hpp"
 #include "cppa/any_tuple.hpp"
@@ -78,4 +78,4 @@ class response_promise {
 } // namespace cppa
 
 
-#endif // CPPA_RESPONSE_HANDLE_HPP
+#endif // CPPA_RESPONSE_PROMISE_HPP

@@ -37,29 +37,8 @@
 
 namespace cppa {
 
-void blocking_actor::response_handle::await(behavior& bhvr) {
-    m_self->dequeue_response(bhvr, m_mid);
-}
-
-
 void blocking_actor::await_all_other_actors_done() {
     get_actor_registry()->await_running_count_equal(1);
-}
-
-blocking_actor::response_handle
-blocking_actor::sync_send_tuple(const actor& dest, any_tuple what) {
-    auto nri = new_request_id();
-    dest->enqueue({address(), dest, nri}, std::move(what));
-    return {nri.response_id(), this};
-}
-
-blocking_actor::response_handle
-blocking_actor::timed_sync_send_tuple(const util::duration& rtime,
-                                              const actor& dest,
-                                              any_tuple what) {
-    return {timed_sync_send_tuple_impl(message_priority::normal, dest, rtime,
-                                       std::move(what)),
-            this};
 }
 
 void blocking_actor::quit(std::uint32_t reason) {
