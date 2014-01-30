@@ -88,7 +88,7 @@ class command : public ref_counted {
         else {
             auto event_r = m_read_event.get();
             err = clEnqueueReadBuffer(m_queue.get(),
-                                      m_arguments[0].get(),
+                                      m_arguments.back().get(),
                                       CL_FALSE,
                                       0,
                                       sizeof(typename R::value_type) * m_result_size,
