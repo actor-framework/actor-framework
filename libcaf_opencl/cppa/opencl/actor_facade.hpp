@@ -33,9 +33,9 @@
 #define CPPA_OPENCL_ACTOR_FACADE_HPP
 
 #include <ostream>
+#include <iostream>
 #include <algorithm>
 #include <stdexcept>
-#include <iostream>
 
 #include "cppa/cppa.hpp"
 
@@ -190,20 +190,16 @@ class actor_facade<Ret(Args...)> : public actor {
 
     void add_arguments_to_kernel_rec(args_vec& arguments) {
         cl_int err{0};
-        for(size_t i = 1; i < arguments.size(); ++i) {
+        // rotate left (output buffer to the end)
+        rotate(begin(arguments), begin(arguments) + 1, end(arguments));
+        for(size_t i = 0; i < arguments.size(); ++i) {
             err = clSetKernelArg(m_kernel.get(),
-                                 (i-1),
+                                 i,
                                  sizeof(cl_mem),
                                  static_cast<void*>(&arguments[i]));
             CPPA_LOG_ERROR_IF(err != CL_SUCCESS,
                               "clSetKernelArg: " << get_opencl_error(err));
         }
-        err = clSetKernelArg(m_kernel.get(),
-                             arguments.size()-1,
-                             sizeof(cl_mem),
-                             static_cast<void*>(&arguments[0]));
-        CPPA_LOG_ERROR_IF(err != CL_SUCCESS,
-                          "clSetKernelArg: " << get_opencl_error(err));
     }
 
     template<typename T0, typename... Ts>
