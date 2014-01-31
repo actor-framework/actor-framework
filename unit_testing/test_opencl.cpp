@@ -21,6 +21,8 @@ using fvec = vector<float>;
 constexpr size_t matrix_size = 4;
 constexpr size_t array_size = 32;
 
+constexpr int magic_number = 23;
+
 // since we do currently not support local memory arguments
 // this size is fixed in the reduce kernel code
 constexpr size_t reduce_buffer_size = 512 * 8;
@@ -33,6 +35,7 @@ constexpr const char* kernel_name = "matrix_square";
 constexpr const char* kernel_name_result_size = "result_size";
 constexpr const char* kernel_name_compiler_flag = "compiler_flag";
 constexpr const char* kernel_name_reduce = "reduce";
+constexpr const char* kernel_name_const = "const_mod";
 
 constexpr const char* compiler_flag = "-D OPENCL_CPPA_TEST_FLAG";
 
@@ -68,7 +71,8 @@ constexpr const char* kernel_source_compiler_flag = R"__(
     }
 )__";
 
-// http://developer.amd.com/resources/documentation-articles/articles-whitepapers/opencl-optimization-case-study-simple-reductions/
+// http://developer.amd.com/resources/documentation-articles/articles-whitepapers/
+// opencl-optimization-case-study-simple-reductions
 constexpr const char* kernel_source_reduce = R"__(
     __kernel void reduce(__global int* buffer,
                          __global int* result) {
@@ -98,6 +102,14 @@ constexpr const char* kernel_source_reduce = R"__(
         if (local_index == 0) {
             result[get_group_id(0)] = scratch[0];
         }
+    }
+)__";
+
+constexpr const char* kernel_source_const = R"__(
+    __kernel void const_mod(__constant int* input,
+                            __global int* output) {
+        size_t idx = get_global_id(0);
+        output[idx] = input[0];
     }
 )__";
 
@@ -276,6 +288,21 @@ int main() {
     receive (
         on_arg_match >> [&] (const ivec& result) {
             CPPA_CHECK(equal(begin(expected4), end(expected4), begin(result)));
+        }
+    );
+
+
+    // constant memory arguments
+    ivec arr7{magic_number};
+    auto worker7 = spawn_cl<ivec(ivec&)>(kernel_source_const,
+                                         kernel_name_const,
+                                         {magic_number});
+    send(worker7, move(arr7));
+    ivec expected5(magic_number);
+    fill(begin(expected5), end(expected5), magic_number);
+    receive(
+        on_arg_match >> [&] (const ivec& result) {
+            CPPA_CHECK(equal(begin(expected5), end(expected5), begin(result)));
         }
     );
 
