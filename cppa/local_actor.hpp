@@ -477,7 +477,9 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
                                     const typed_actor<Signatures...>& whom,
                                     cow_tuple<Ts...>&& what) {
         check_typed_input(whom, what);
-        return sync_send_tuple_impl(mp, whom.m_ptr, any_tuple{std::move(what)});
+        return sync_send_tuple_impl(mp,
+                                    actor{whom.m_ptr.get()},
+                                    any_tuple{std::move(what)});
     }
 
     // returns 0 if last_dequeued() is an asynchronous or sync request message,

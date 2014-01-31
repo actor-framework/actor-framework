@@ -70,7 +70,7 @@ intrusive_ptr<Impl> spawn_impl(BeforeLaunch before_launch_fun, Ts&&... args) {
             && !has_detach_flag(Opts)
             && util::fiber::is_disabled_feature()) {
         return spawn_impl<Impl, Opts + detached>(before_launch_fun,
-                                                    std::forward<Ts>(args)...);
+                                                 std::forward<Ts>(args)...);
     }
     /*
     using scheduling_policy = typename std::conditional<
@@ -224,7 +224,7 @@ class functor_based_typed_actor : public typed_event_based_actor<Sigs...> {
 
  public:
 
-    typedef functor_based_typed_actor* pointer;
+    typedef typed_event_based_actor<Sigs...>* pointer;
     typedef typename super::behavior_type behavior_type;
 
     typedef std::function<typed_behavior<Sigs...> ()> no_arg_fun;
@@ -264,6 +264,14 @@ struct actor_handle_from_typed_behavior<typed_behavior<Signatures...>> {
     typedef typed_actor<Signatures...> type;
 };
 
+template<typename SignatureList>
+struct actor_handle_from_signature_list;
+
+template<typename... Signatures>
+struct actor_handle_from_signature_list<util::type_list<Signatures...>> {
+    typedef typed_actor<Signatures...> type;
+};
+
 } // namespace detail
 
 template<spawn_options Options = no_spawn_options, typename F>
@@ -278,6 +286,17 @@ spawn_typed(F fun) {
     return detail::spawn_fwd_args<impl, Options>(
             [&](impl*) { },
             std::move(fun));
+}
+
+
+template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
+typename detail::actor_handle_from_signature_list<
+    typename Impl::signatures
+>::type
+spawn_typed(Ts&&... args) {
+    return detail::spawn_fwd_args<Impl, Options>(
+            [&](Impl*) { },
+            std::forward<Ts>(args)...);
 }
 
 /*

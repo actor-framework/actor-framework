@@ -34,13 +34,12 @@
 #include "cppa/on.hpp"
 #include "cppa/extend.hpp"
 #include "cppa/behavior.hpp"
-#include "cppa/typed_actor.hpp"
 #include "cppa/local_actor.hpp"
+#include "cppa/sync_sender.hpp"
+#include "cppa/typed_actor.hpp"
 #include "cppa/mailbox_based.hpp"
 #include "cppa/mailbox_element.hpp"
 #include "cppa/response_handle.hpp"
-
-#include "cppa/detail/response_handle_util.hpp"
 
 namespace cppa {
 
@@ -49,100 +48,12 @@ namespace cppa {
  *        receive rather than a behavior-stack based message processing.
  * @extends local_actor
  */
-class blocking_actor : public extend<local_actor>::with<mailbox_based> {
+class blocking_actor
+        : public extend<local_actor, blocking_actor>::
+                        with<mailbox_based,
+                             sync_sender<blocking_response_handle_tag>::impl> {
 
  public:
-
-    typedef blocking_response_handle_tag response_handle_tag;
-
-    typedef response_handle<blocking_actor> response_handle_type;
-
-    /**************************************************************************
-     *                     sync_send[_tuple](actor, ...)                      *
-     **************************************************************************/
-
-    /**
-     * @brief Sends @p what as a synchronous message to @p whom.
-     * @param whom Receiver of the message.
-     * @param what Message content as tuple.
-     * @returns A handle identifying a future to the response of @p whom.
-     * @warning The returned handle is actor specific and the response to the
-     *          sent message cannot be received by another actor.
-     * @throws std::invalid_argument if <tt>whom == nullptr</tt>
-     */
-    inline response_handle_type sync_send_tuple(message_priority prio,
-                                           const actor& dest,
-                                           any_tuple what) {
-        return {sync_send_tuple_impl(prio, dest, std::move(what)), this};
-    }
-
-    inline response_handle_type sync_send_tuple(const actor& dest, any_tuple what) {
-        return sync_send_tuple(message_priority::normal, dest, std::move(what));
-    }
-
-    /**
-     * @brief Sends <tt>{what...}</tt> as a synchronous message to @p whom.
-     * @param whom Receiver of the message.
-     * @param what Message elements.
-     * @returns A handle identifying a future to the response of @p whom.
-     * @warning The returned handle is actor specific and the response to the
-     *          sent message cannot be received by another actor.
-     * @pre <tt>sizeof...(Ts) > 0</tt>
-     * @throws std::invalid_argument if <tt>whom == nullptr</tt>
-     */
-    template<typename... Ts>
-    inline response_handle_type sync_send(message_priority prio,
-                                     const actor& dest, Ts&&... what) {
-        static_assert(sizeof...(Ts) > 0, "no message to send");
-        return sync_send_tuple(prio, dest,
-                               make_any_tuple(std::forward<Ts>(what)...));
-    }
-
-    template<typename... Ts>
-    inline response_handle_type sync_send(const actor& dest, Ts&&... what) {
-        static_assert(sizeof...(Ts) > 0, "no message to send");
-        return sync_send_tuple(message_priority::normal,
-                               dest, make_any_tuple(std::forward<Ts>(what)...));
-    }
-
-    /**************************************************************************
-     *                  timed_sync_send[_tuple](actor, ...)                   *
-     **************************************************************************/
-
-
-    inline response_handle_type timed_sync_send_tuple(const util::duration& rtime,
-                                                 const actor& dest,
-                                                 any_tuple what) {
-        return {timed_sync_send_tuple_impl(message_priority::normal,
-                                           dest, rtime, std::move(what)),
-                this};
-    }
-
-    template<typename... Ts>
-    response_handle_type timed_sync_send(const actor& dest,
-                                   const util::duration& rtime,
-                                   Ts&&... what) {
-        static_assert(sizeof...(Ts) > 0, "no message to send");
-        return timed_sync_send_tuple(rtime, dest,
-                                     make_any_tuple(std::forward<Ts>(what)...));
-    }
-
-    /**************************************************************************
-     *                sync_send[_tuple](typed_actor<...>, ...)                *
-     **************************************************************************/
-
-    template<typename... Rs, typename... Ts>
-    inline response_handle_type sync_send_tuple(message_priority prio,
-                                           const typed_actor<Rs...>& dest,
-                                           cow_tuple<Ts...> what) {
-        return {sync_send_tuple_impl(prio, dest, std::move(what)), this};
-    }
-
-    template<typename... Rs, typename... Ts>
-    inline response_handle_type sync_send_tuple(const typed_actor<Rs...>& dest,
-                                           cow_tuple<Ts...> what) {
-        return sync_send_tuple(message_priority::normal, dest, std::move(what));
-    }
 
     /**************************************************************************
      *           utility stuff and receive() member function family           *

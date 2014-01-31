@@ -35,6 +35,7 @@
 #include "cppa/extend.hpp"
 #include "cppa/logging.hpp"
 #include "cppa/local_actor.hpp"
+#include "cppa/sync_sender.hpp"
 #include "cppa/mailbox_based.hpp"
 #include "cppa/response_handle.hpp"
 #include "cppa/behavior_stack_based.hpp"
@@ -54,8 +55,10 @@ class event_based_actor;
  *
  * @extends local_actor
  */
-class event_based_actor : public extend<local_actor>::
-                                 with<mailbox_based, behavior_stack_based> {
+class event_based_actor : public extend<local_actor, event_based_actor>::
+                                 with<mailbox_based,
+                                      behavior_stack_based<behavior>::impl,
+                                      sync_sender<nonblocking_response_handle_tag>::impl> {
 
  protected:
 
@@ -68,74 +71,6 @@ class event_based_actor : public extend<local_actor>::
      * @brief Forwards the last received message to @p whom.
      */
     void forward_to(const actor& whom);
-
- public:
-
-    typedef nonblocking_response_handle_tag response_handle_tag;
-
-    typedef response_handle<event_based_actor> untyped_response_handle;
-
-    /**
-     * @brief Sends @p what as a synchronous message to @p whom.
-     * @param whom Receiver of the message.
-     * @param what Message content as tuple.
-     * @returns A handle identifying a future to the response of @p whom.
-     * @warning The returned handle is actor specific and the response to the
-     *          sent message cannot be received by another actor.
-     * @throws std::invalid_argument if <tt>whom == nullptr</tt>
-     */
-    inline untyped_response_handle sync_send_tuple(const actor& whom,
-                                                any_tuple what) {
-        return {sync_send_tuple_impl(message_priority::normal,
-                                     whom, std::move(what)),
-                this};
-    }
-
-    /**
-     * @brief Sends <tt>{what...}</tt> as a synchronous message to @p whom.
-     * @param whom Receiver of the message.
-     * @param what Message elements.
-     * @returns A handle identifying a future to the response of @p whom.
-     * @warning The returned handle is actor specific and the response to the
-     *          sent message cannot be received by another actor.
-     * @pre <tt>sizeof...(Ts) > 0</tt>
-     * @throws std::invalid_argument if <tt>whom == nullptr</tt>
-     */
-    template<typename... Ts>
-    inline untyped_response_handle sync_send(const actor& whom, Ts&&... what) {
-        static_assert(sizeof...(Ts) > 0, "no message to send");
-        return sync_send_tuple(whom, make_any_tuple(std::forward<Ts>(what)...));
-    }
-
-    /**
-     * @brief Sends a synchronous message with timeout @p rtime to @p whom.
-     * @param whom  Receiver of the message.
-     * @param rtime Relative time until this messages times out.
-     * @param what  Message content as tuple.
-     */
-    untyped_response_handle timed_sync_send_tuple(const util::duration& rtime,
-                                          const actor& whom,
-                                          any_tuple what) {
-        return {timed_sync_send_tuple_impl(message_priority::normal, whom,
-                                           rtime, std::move(what)),
-                this};
-    }
-
-    /**
-     * @brief Sends a synchronous message with timeout @p rtime to @p whom.
-     * @param whom  Receiver of the message.
-     * @param rtime Relative time until this messages times out.
-     * @param what  Message elements.
-     * @pre <tt>sizeof...(Ts) > 0</tt>
-     */
-    template<typename... Ts>
-    untyped_response_handle timed_sync_send(const actor& whom,
-                                    const util::duration& rtime,
-                                    Ts&&... what) {
-        static_assert(sizeof...(Ts) > 0, "no message to send");
-        return timed_sync_send_tuple(rtime, whom,
-                                     make_any_tuple(std::forward<Ts>(what)...));
-    }
 
 };
 

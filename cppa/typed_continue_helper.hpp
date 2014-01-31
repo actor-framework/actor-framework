@@ -28,71 +28,44 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_TYPED_ACTOR_HPP
-#define CPPA_TYPED_ACTOR_HPP
+#ifndef CPPA_TYPED_CONTINUE_HELPER_HPP
+#define CPPA_TYPED_CONTINUE_HELPER_HPP
 
-#include "cppa/replies_to.hpp"
-#include "cppa/typed_behavior.hpp"
-#include "cppa/event_based_actor.hpp"
+#include "cppa/continue_helper.hpp"
 
-#include "cppa/detail/typed_actor_util.hpp"
+#include "cppa/util/type_traits.hpp"
 
 namespace cppa {
 
-template<typename... Signatures>
-class typed_actor_ptr;
-
-template<typename... Signatures>
-class typed_actor : public event_based_actor {
+template<typename OutputList>
+class typed_continue_helper {
 
  public:
 
-    using signatures = util::type_list<Signatures...>;
+    typedef int message_id_wrapper_tag;
 
-    using behavior_type = typed_behavior<Signatures...>;
+    typed_continue_helper(message_id mid, local_actor* self) : m_ch(mid, self) { }
 
-    using typed_pointer_type = typed_actor_ptr<Signatures...>;
-
- protected:
-
-    virtual behavior_type make_behavior() = 0;
-
-    void init() final {
-        auto bhvr = make_behavior();
-        m_bhvr_stack.push_back(std::move(bhvr.unbox()));
+    template<typename F>
+    typed_continue_helper<typename util::get_callable_trait<F>::result_type>
+    continue_with(F fun) {
+        detail::assert_types<OutputList, F>();
+        m_ch.continue_with(std::move(fun));
+        return {m_ch};
     }
 
-    void do_become(behavior&&, bool) final {
-        CPPA_LOG_ERROR("typed actors are not allowed to call become()");
-        quit(exit_reason::unallowed_function_call);
+    inline message_id get_message_id() const {
+        return m_ch.get_message_id();
     }
+
+    typed_continue_helper(continue_helper ch) : m_ch(std::move(ch)) { }
+
+ private:
+
+    continue_helper m_ch;
 
 };
 
 } // namespace cppa
 
-namespace cppa { namespace detail {
-
-template<typename... Signatures>
-class default_typed_actor : public typed_actor<Signatures...> {
-
- public:
-
-    template<typename... Cases>
-    default_typed_actor(match_expr<Cases...> expr) : m_bhvr(std::move(expr)) { }
-
- protected:
-
-    typed_behavior<Signatures...> make_behavior() override {
-        return m_bhvr;
-    }
-
- private:
-
-    typed_behavior<Signatures...> m_bhvr;
-
-};
-
-} } // namespace cppa::detail
-
-#endif // CPPA_TYPED_ACTOR_HPP
+#endif // CPPA_TYPED_CONTINUE_HELPER_HPP

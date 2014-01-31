@@ -38,11 +38,11 @@
 
 namespace cppa {
 
-template<class, typename...>
-class typed_behavior_stack_based;
-
 template<typename... Signatures>
 class typed_actor;
+
+template<class Base, class Subtype, class BehaviorType>
+class behavior_stack_based_impl;
 
 template<typename... Signatures>
 class typed_behavior {
@@ -50,8 +50,8 @@ class typed_behavior {
     template<typename... OtherSignatures>
     friend class typed_actor;
 
-    template<class, typename...>
-    friend class typed_behavior_stack_based;
+    template<class Base, class Subtype, class BehaviorType>
+    friend class behavior_stack_based_impl;
 
     typed_behavior() = delete;
 

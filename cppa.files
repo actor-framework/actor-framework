@@ -174,10 +174,8 @@ cppa/tpartial_function.hpp
 cppa/tuple_cast.hpp
 cppa/type_lookup_table.hpp
 cppa/typed_actor.hpp
-cppa/typed_actor_base.hpp
 cppa/typed_actor_ptr.hpp
 cppa/typed_behavior.hpp
-cppa/typed_behavior_stack_based.hpp
 cppa/typed_event_based_actor.hpp
 cppa/uniform_type_info.hpp
 cppa/unit.hpp
@@ -347,3 +345,5 @@ unit_testing/test_tuple.cpp
 unit_testing/test_typed_spawn.cpp
 unit_testing/test_uniform_type.cpp
 unit_testing/test_yield_interface.cpp
+cppa/typed_continue_helper.hpp
+cppa/sync_sender.hpp

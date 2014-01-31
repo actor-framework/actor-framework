@@ -37,11 +37,13 @@ using namespace cppa;
 
 struct my_request { int a; int b; };
 
+typedef typed_actor<replies_to<my_request>::with<bool>> server_type;
+
 bool operator==(const my_request& lhs, const my_request& rhs) {
     return lhs.a == rhs.a && lhs.b == rhs.b;
 }
 
-typed_behavior<replies_to<my_request>::with<bool>> typed_server() {
+server_type::behavior_type typed_server1() {
     return {
         on_arg_match >> [](const my_request& req) {
             return req.a == req.b;
@@ -49,33 +51,41 @@ typed_behavior<replies_to<my_request>::with<bool>> typed_server() {
     };
 }
 
-/*
-typed_actor_ptr<replies_to<my_request>::with<bool>>
-spawn_typed_server() {
-    return spawn_typed(
-        on_arg_match >> [](const my_request& req) {
-            return req.a == req.b;
-        }
-    );
+server_type::behavior_type typed_server2(server_type::pointer) {
+    return typed_server1();
 }
 
-class typed_testee : public typed_actor<replies_to<my_request>::with<bool>> {
+class typed_server3 : public server_type::impl {
 
- protected:
+ public:
+
+    typed_server3(const string& line, actor buddy) {
+        send(buddy, line);
+    }
 
     behavior_type make_behavior() override {
-        return (
-            on_arg_match >> [](const my_request& req) {
-                return req.a == req.b;
-            }
-        );
+        return typed_server2(this);
     }
 
 };
-*/
 
-void test_typed_spawn() {
-    auto ts = spawn_typed(typed_server);
+void client(event_based_actor* self, actor parent, server_type serv) {
+    self->sync_send(serv, my_request{0, 0}).then(
+        [](bool value) {
+            CPPA_CHECK_EQUAL(value, true);
+        }
+    )
+    .continue_with([=] {
+        self->sync_send(serv, my_request{10, 20}).then(
+            [=](bool value) {
+                CPPA_CHECK_EQUAL(value, false);
+                self->send(parent, atom("passed"));
+            }
+        );
+    });
+}
+
+void test_typed_spawn(server_type ts) {
     scoped_actor self;
     self->send(ts, my_request{1, 2});
     self->receive(
@@ -89,13 +99,47 @@ void test_typed_spawn() {
             CPPA_CHECK_EQUAL(value, true);
         }
     );
+    self->sync_send(ts, my_request{10, 20}).await(
+        [](bool value) {
+            CPPA_CHECK_EQUAL(value, false);
+        }
+    );
+    self->sync_send(ts, my_request{0, 0}).await(
+        [](bool value) {
+            CPPA_CHECK_EQUAL(value, true);
+        }
+    );
+    self->spawn<monitored>(client, self, ts);
+    self->receive(
+        on(atom("passed")) >> CPPA_CHECKPOINT_CB()
+    );
+    self->receive(
+        on_arg_match >> [](const down_msg& dmsg) {
+            CPPA_CHECK_EQUAL(dmsg.reason, exit_reason::normal);
+        }
+    );
     self->send_exit(ts, exit_reason::user_shutdown);
 }
 
 int main() {
     CPPA_TEST(test_typed_spawn);
     announce<my_request>(&my_request::a, &my_request::b);
-    test_typed_spawn();
+    test_typed_spawn(spawn_typed(typed_server1));
+    CPPA_CHECKPOINT();
+    await_all_actors_done();
+    CPPA_CHECKPOINT();
+    test_typed_spawn(spawn_typed(typed_server2));
+    CPPA_CHECKPOINT();
+    await_all_actors_done();
+    CPPA_CHECKPOINT();
+    {
+        scoped_actor self;
+        test_typed_spawn(spawn_typed<typed_server3>("hi there", self));
+        self->receive(
+            on("hi there") >> CPPA_CHECKPOINT_CB()
+        );
+    }
+    CPPA_CHECKPOINT();
     await_all_actors_done();
     shutdown();
 /*

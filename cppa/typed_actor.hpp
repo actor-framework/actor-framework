@@ -35,6 +35,7 @@
 #include "cppa/replies_to.hpp"
 #include "cppa/intrusive_ptr.hpp"
 #include "cppa/abstract_actor.hpp"
+#include "cppa/typed_behavior.hpp"
 
 namespace cppa {
 
@@ -44,6 +45,12 @@ class local_actor;
 struct invalid_actor_addr_t;
 
 template<typename... Signatures>
+class typed_event_based_actor;
+
+/**
+ * @brief Identifies a strongly typed actor.
+ */
+template<typename... Signatures>
 class typed_actor : util::comparable<typed_actor<Signatures...>>
                   , util::comparable<typed_actor<Signatures...>, actor_addr>
                   , util::comparable<typed_actor<Signatures...>, invalid_actor_addr_t> {
@@ -51,6 +58,22 @@ class typed_actor : util::comparable<typed_actor<Signatures...>>
     friend class local_actor;
 
  public:
+
+    /**
+     * @brief Identifies the behavior type actors of this kind use
+     *        for their behavior stack.
+     */
+    typedef typed_behavior<Signatures...> behavior_type;
+
+    /**
+     * @brief Identifies pointers to instances of this kind of actor.
+     */
+    typedef typed_event_based_actor<Signatures...>* pointer;
+
+    /**
+     * @brief Identifies the base class for this kind of actor.
+     */
+    typedef typed_event_based_actor<Signatures...> impl;
 
     typedef util::type_list<Signatures...> signatures;
 
@@ -71,8 +94,8 @@ class typed_actor : util::comparable<typed_actor<Signatures...>>
         return *this;
     }
 
-    template<template<typename...> class Impl, typename... OtherSignatures>
-    typed_actor(intrusive_ptr<Impl<OtherSignatures...>> other) {
+    template<class Impl>
+    typed_actor(intrusive_ptr<Impl> other) {
         set(other);
     }
 
@@ -105,9 +128,9 @@ class typed_actor : util::comparable<typed_actor<Signatures...>>
         m_ptr = other.m_ptr;
     }
 
-    template<template<typename...> class Impl, typename... OtherSignatures>
-    inline void set(intrusive_ptr<Impl<OtherSignatures...>>& other) {
-        check_signatures<signatures, util::type_list<OtherSignatures...>>();
+    template<class Impl>
+    inline void set(intrusive_ptr<Impl>& other) {
+        check_signatures<signatures, typename Impl::signatures>();
         m_ptr = std::move(other);
     }
 

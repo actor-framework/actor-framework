@@ -36,9 +36,11 @@
 #include "cppa/message_id.hpp"
 #include "cppa/typed_behavior.hpp"
 #include "cppa/continue_helper.hpp"
+#include "cppa/typed_continue_helper.hpp"
 
 #include "cppa/util/type_list.hpp"
 
+#include "cppa/detail/typed_actor_util.hpp"
 #include "cppa/detail/response_handle_util.hpp"
 
 namespace cppa {
@@ -46,12 +48,14 @@ namespace cppa {
 /**
  * @brief This tag identifies response handles featuring a
  *        nonblocking API by providing a @p then member function.
+ * @relates response_handle
  */
 struct nonblocking_response_handle_tag { };
 
 /**
  * @brief This tag identifies response handles featuring a
  *        blocking API by providing an @p await member function.
+ * @relates response_handle
  */
 struct blocking_response_handle_tag { };
 
@@ -64,12 +68,14 @@ struct blocking_response_handle_tag { };
  * @tparam Tag Either {@link nonblocking_response_handle_tag} or
  *             {@link blocking_response_handle_tag}.
  */
-template<class Self,
-         class Result = any_tuple,
-         class Tag = typename Self::response_handle_tag>
-class response_handle { // default impl for nonblocking_response_handle_tag
+template<class Self, class Result, class Tag>
+class response_handle;
 
-    friend Self;
+/******************************************************************************
+ *                           nonblocking + untyped                            *
+ ******************************************************************************/
+template<class Self>
+class response_handle<Self, any_tuple, nonblocking_response_handle_tag> {
 
  public:
 
@@ -79,59 +85,29 @@ class response_handle { // default impl for nonblocking_response_handle_tag
 
     response_handle& operator=(const response_handle&) = default;
 
-    /**
-     * @brief Sets @p bhvr as event-handler for the response message.
-     */
     inline continue_helper then(behavior bhvr) {
-        return then_impl<Result>(std::move(bhvr));
+        m_self->bhvr_stack().push_back(std::move(bhvr), m_mid);
+        return {m_mid, m_self};
     }
 
-    /**
-     * @brief Sets @p mexpr as event-handler for the response message.
-     */
     template<typename... Cs, typename... Ts>
     continue_helper then(const match_expr<Cs...>& arg, const Ts&... args) {
-        return then_impl<Result>({arg, args...});
+        return then(behavior{arg, args...});
     }
 
-    /**
-     * @brief Sets @p fun as event-handler for the response message, calls
-     *        <tt>self->handle_sync_failure()</tt> if the response message
-     *        is an 'EXITED' or 'VOID' message.
-     */
     template<typename... Fs>
     typename std::enable_if<
         util::all_callable<Fs...>::value,
         continue_helper
     >::type
     then(Fs... fs) {
-        return then_impl<Result>(detail::fs2bhvr(m_self, fs...));
-    }
-
- private:
-
-    template<typename R>
-    typename std::enable_if<
-        std::is_same<R, any_tuple>::value,
-        continue_helper
-    >::type
-    then_impl(behavior&& bhvr) {
-        m_self->bhvr_stack().push_back(std::move(bhvr), m_mid);
-        return {m_mid, m_self};
-    }
-
-    template<typename R>
-    typename std::enable_if<
-        util::is_type_list<R>::value,
-        continue_helper
-    >::type
-    then_impl(behavior&& bhvr) {
-        m_self->bhvr_stack().push_back(std::move(bhvr), m_mid);
-        return {m_mid, m_self};
+        return then(detail::fs2bhvr(m_self, fs...));
     }
 
     response_handle(const message_id& mid, Self* self)
             : m_mid(mid), m_self(self) { }
+
+ private:
 
     message_id m_mid;
 
@@ -139,10 +115,11 @@ class response_handle { // default impl for nonblocking_response_handle_tag
 
 };
 
-template<class Self, typename Result>
-class response_handle<Self, Result, blocking_response_handle_tag> {
-
-    friend Self;
+/******************************************************************************
+ *                            nonblocking + typed                             *
+ ******************************************************************************/
+template<class Self, typename... Ts>
+class response_handle<Self, util::type_list<Ts...>, nonblocking_response_handle_tag> {
 
  public:
 
@@ -152,46 +129,111 @@ class response_handle<Self, Result, blocking_response_handle_tag> {
 
     response_handle& operator=(const response_handle&) = default;
 
-    /**
-     * @brief Blocks until the response arrives and then executes @p pfun.
-     */
+    template<typename F>
+    typed_continue_helper<
+        typename detail::lifted_result_type<
+            typename util::get_callable_trait<F>::result_type
+        >::type
+    >
+    then(F fun) {
+        detail::assert_types<util::type_list<Ts...>, F>();
+        m_self->bhvr_stack().push_back(behavior{on_arg_match >> fun}, m_mid);
+        return {m_mid, m_self};
+    }
+
+    response_handle(const message_id& mid, Self* self)
+            : m_mid(mid), m_self(self) { }
+
+ private:
+
+    message_id m_mid;
+
+    Self* m_self;
+
+};
+
+/******************************************************************************
+ *                             blocking + untyped                             *
+ ******************************************************************************/
+template<class Self>
+class response_handle<Self, any_tuple, blocking_response_handle_tag> {
+
+ public:
+
+    response_handle() = delete;
+
+    response_handle(const response_handle&) = default;
+
+    response_handle& operator=(const response_handle&) = default;
+
     void await(behavior& pfun) {
         m_self->dequeue_response(pfun, m_mid);
     }
 
-    /**
-     * @copydoc await(behavior&)
-     */
     inline void await(behavior&& pfun) {
-        behavior arg{std::move(pfun)};
-        await(arg);
+        behavior tmp{std::move(pfun)};
+        await(tmp);
     }
 
-    /**
-     * @brief Blocks until the response arrives and then executes
-     *        the corresponding handler.
-     */
     template<typename... Cs, typename... Ts>
     void await(const match_expr<Cs...>& arg, const Ts&... args) {
         await(match_expr_convert(arg, args...));
     }
 
-    /**
-     * @brief Blocks until the response arrives and then executes
-     *        the corresponding handler.
-     * @note Calls <tt>self->handle_sync_failure()</tt> if the response
-     *       message is an 'EXITED' or 'VOID' message.
-     */
     template<typename... Fs>
     typename std::enable_if<util::all_callable<Fs...>::value>::type
     await(Fs... fs) {
         await(detail::fs2bhvr(m_self, fs...));
     }
 
+    response_handle(const message_id& mid, Self* self)
+            : m_mid(mid), m_self(self) { }
+
  private:
+
+   message_id m_mid;
+
+   Self* m_self;
+
+};
+
+/******************************************************************************
+ *                              blocking + typed                              *
+ ******************************************************************************/
+template<class Self, typename... Ts>
+class response_handle<Self, util::type_list<Ts...>, blocking_response_handle_tag> {
+
+ public:
+
+    typedef util::type_list<Ts...> result_types;
+
+    response_handle() = delete;
+
+    response_handle(const response_handle&) = default;
+
+    response_handle& operator=(const response_handle&) = default;
+
+    template<typename F>
+    void await(F fun) {
+        typedef typename util::tl_map<
+                    typename util::get_callable_trait<F>::arg_types,
+                    util::rm_const_and_ref
+                >::type
+                arg_types;
+        static constexpr size_t fun_args = util::tl_size<arg_types>::value;
+        static_assert(fun_args <= util::tl_size<result_types>::value,
+                      "functor takes too much arguments");
+        typedef typename util::tl_right<result_types, fun_args>::type recv_types;
+        static_assert(std::is_same<arg_types, recv_types>::value,
+                      "wrong functor signature");
+        behavior tmp = detail::fs2bhvr(m_self, fun);
+        m_self->dequeue_response(tmp, m_mid);
+    }
 
     response_handle(const message_id& mid, Self* self)
             : m_mid(mid), m_self(self) { }
+
+ private:
 
     message_id m_mid;
 

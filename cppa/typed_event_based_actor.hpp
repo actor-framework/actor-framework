@@ -33,17 +33,23 @@
 
 #include "cppa/replies_to.hpp"
 #include "cppa/local_actor.hpp"
+#include "cppa/sync_sender.hpp"
 #include "cppa/mailbox_based.hpp"
 #include "cppa/typed_behavior.hpp"
-#include "cppa/typed_behavior_stack_based.hpp"
+#include "cppa/behavior_stack_based.hpp"
 
 namespace cppa {
 
 template<typename... Signatures>
-class typed_event_based_actor : public typed_behavior_stack_based<
-                                           extend<local_actor>::template
-                                           with<mailbox_based>,
-                                           Signatures...> {
+class typed_event_based_actor
+        : public extend<local_actor, typed_event_based_actor<Signatures...>>::template
+                 with<mailbox_based,
+                      behavior_stack_based<
+                          typed_behavior<Signatures...>
+                      >::template impl,
+                      sync_sender<
+                          nonblocking_response_handle_tag
+                      >::template impl> {
 
  public:
 

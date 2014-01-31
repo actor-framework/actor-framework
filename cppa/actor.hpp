@@ -46,6 +46,7 @@ namespace cppa {
 
 class actor_addr;
 class actor_proxy;
+class local_actor;
 class blocking_actor;
 class event_based_actor;
 
@@ -87,6 +88,7 @@ class actor : util::comparable<actor>
             , util::comparable<actor, invalid_actor_t>
             , util::comparable<actor, invalid_actor_addr_t> {
 
+    friend class local_actor;
     friend class detail::raw_access;
 
  public:

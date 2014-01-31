@@ -62,7 +62,8 @@ broker_ptr init_and_launch(broker_ptr);
  *        and other components in the network.
  * @extends local_actor
  */
-class broker : public extend<local_actor>::with<behavior_stack_based> {
+class broker : public extend<local_actor>::
+                      with<behavior_stack_based<behavior>::impl> {
 
     friend class policy::sequential_invoke;
 
