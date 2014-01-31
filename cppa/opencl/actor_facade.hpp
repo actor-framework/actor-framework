@@ -163,12 +163,14 @@ class actor_facade<Ret(Args...)> : public actor {
         if (opt) {
             response_handle handle{this, sender, id.response_id()};
             std::vector<mem_ptr> arguments;
+            std::vector<cl_event> events;
             add_arguments_to_kernel<Ret>(arguments,
                                          m_result_size,
                                          get_ref<Is>(*opt)...);
             auto cmd = make_counted<command<actor_facade, Ret>>(handle,
                                                                 this,
                                                                 std::move(arguments),
+                                                                std::move(events),
                                                                 m_result_size);
             cmd->enqueue();
         }

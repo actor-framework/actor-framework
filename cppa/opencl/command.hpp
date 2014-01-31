@@ -54,19 +54,32 @@ class command : public ref_counted {
     command(response_handle handle,
             intrusive_ptr<T> actor_facade,
             std::vector<mem_ptr> arguments,
+            std::vector<cl_event> events,
             size_t result_size)
         : m_result_size(result_size)
         , m_handle(handle)
         , m_actor_facade(actor_facade)
         , m_queue(actor_facade->m_queue)
-        , m_arguments(move(arguments))
+        , m_arguments(std::move(arguments))
+        , m_events(std::move(events))
         , m_result(m_result_size) { }
+
+    ~command() {
+        cl_int err{0};
+        for(auto& e : m_events) {
+            err = clReleaseEvent(e);
+            if (err != CL_SUCCESS) {
+                CPPA_LOGMF(CPPA_ERROR, self, "clReleaseEvent: "
+                                             << get_opencl_error(err));
+            }
+        }
+    }
 
     void enqueue () {
         CPPA_LOG_TRACE("command::enqueue()");
         this->ref(); // reference held by the OpenCL comand queue
         cl_int err{0};
-        auto event_k = m_kernel_event.get();
+        cl_event event_k;
         auto data_or_nullptr = [](const dim_vec& vec) {
             return vec.empty() ? nullptr : vec.data();
         };
@@ -80,13 +93,14 @@ class command : public ref_counted {
                                      0,
                                      nullptr,
                                      &event_k);
+        m_events.push_back(event_k);
         if (err != CL_SUCCESS) {
             CPPA_LOGMF(CPPA_ERROR, self, "clEnqueueNDRangeKernel: "
                                          << get_opencl_error(err));
             this->deref(); // or can anything actually happen?
         }
         else {
-            auto event_r = m_read_event.get();
+            cl_event event_r;
             err = clEnqueueReadBuffer(m_queue.get(),
                                       m_arguments.back().get(),
                                       CL_FALSE,
@@ -96,6 +110,7 @@ class command : public ref_counted {
                                       1,
                                       &event_k,
                                       &event_r);
+            m_events.push_back(event_r);
             if (err != CL_SUCCESS) {
                 throw std::runtime_error("clEnqueueReadBuffer: "
                                          + get_opencl_error(err));
@@ -127,10 +142,9 @@ class command : public ref_counted {
     int m_result_size;
     response_handle m_handle;
     intrusive_ptr<T> m_actor_facade;
-    event_ptr m_kernel_event;
-    event_ptr m_read_event;
     command_queue_ptr m_queue;
     std::vector<mem_ptr> m_arguments;
+    std::vector<cl_event> m_events;
     R m_result;
 
     void handle_results () {
