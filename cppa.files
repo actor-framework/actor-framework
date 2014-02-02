@@ -166,7 +166,9 @@ cppa/serializer.hpp
 cppa/single_timeout.hpp
 cppa/singletons.hpp
 cppa/spawn.hpp
+cppa/spawn_fwd.hpp
 cppa/spawn_options.hpp
+cppa/sync_sender.hpp
 cppa/system_messages.hpp
 cppa/timeout_definition.hpp
 cppa/to_string.hpp
@@ -176,6 +178,7 @@ cppa/type_lookup_table.hpp
 cppa/typed_actor.hpp
 cppa/typed_actor_ptr.hpp
 cppa/typed_behavior.hpp
+cppa/typed_continue_helper.hpp
 cppa/typed_event_based_actor.hpp
 cppa/uniform_type_info.hpp
 cppa/unit.hpp
@@ -345,5 +348,3 @@ unit_testing/test_tuple.cpp
 unit_testing/test_typed_spawn.cpp
 unit_testing/test_uniform_type.cpp
 unit_testing/test_yield_interface.cpp
-cppa/typed_continue_helper.hpp
-cppa/sync_sender.hpp

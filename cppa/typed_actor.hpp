@@ -73,7 +73,7 @@ class typed_actor : util::comparable<typed_actor<Signatures...>>
     /**
      * @brief Identifies the base class for this kind of actor.
      */
-    typedef typed_event_based_actor<Signatures...> impl;
+    typedef typed_event_based_actor<Signatures...> base;
 
     typedef util::type_list<Signatures...> signatures;
 

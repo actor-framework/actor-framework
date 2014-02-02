@@ -457,13 +457,65 @@ class default_uniform_type_info_impl : public util::abstract_uniform_type_info<T
         m_members.push_back(unique_uti(new result_type));
     }
 
-    void serialize(const void* obj, serializer* s) const {
+    void serialize(const void* obj, serializer* s) const override {
         for (auto& m : m_members) m->serialize(obj, s);
     }
 
-    void deserialize(void* obj, deserializer* d) const {
+    void deserialize(void* obj, deserializer* d) const override {
         for (auto& m : m_members) m->deserialize(obj, d);
     }
+
+};
+
+template<typename T>
+class empty_uniform_type_info_impl : public uniform_type_info {
+
+ public:
+
+    bool equals(const std::type_info& tinfo) const override {
+        return typeid(T) == tinfo;
+    }
+
+    const char* name() const override {
+        return m_name.c_str();
+    }
+
+    any_tuple as_any_tuple(void*) const override {
+        return make_any_tuple(T{});
+    }
+
+    void serialize(const void*, serializer*) const override {
+        // no members means: nothing to do
+    }
+
+    void deserialize(void*, deserializer*) const override {
+        // no members means: nothing to do
+    }
+
+    empty_uniform_type_info_impl() {
+        auto uname = detail::to_uniform_name<T>();
+        auto cname = detail::mapped_name_by_decorated_name(uname.c_str());
+        if (cname == uname.c_str()) m_name = std::move(uname);
+        else m_name = cname;
+    }
+
+ protected:
+
+    bool equals(const void*, const void*) const override {
+        return true;
+    }
+
+    void* new_instance(const void*) const override {
+        return new T();
+    }
+
+    void delete_instance(void* instance) const override {
+        delete reinterpret_cast<T*>(instance);
+    }
+
+ private:
+
+    std::string m_name;
 
 };
 

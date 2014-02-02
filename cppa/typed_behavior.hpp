@@ -38,6 +38,49 @@
 
 namespace cppa {
 
+namespace detail {
+
+template<typename T>
+struct match_hint_to_void {
+    typedef T type;
+};
+
+template<>
+struct match_hint_to_void<match_hint> {
+    typedef void type;
+};
+
+template<typename T>
+struct all_match_hints_to_void {
+    typedef typename T::input_types input_types;
+    typedef typename util::tl_map<
+                typename T::output_types,
+                match_hint_to_void
+            >::type
+            output_types;
+    typedef typename replies_to_from_type_list<
+                input_types,
+                output_types
+            >::type
+            type;
+};
+
+// this function is called from typed_behavior<...>::set and its whole
+// purpose is to give users a nicer error message on a type mismatch
+// (this function only has the type informations needed to understand the error)
+template<class SignatureList, class InputList>
+void static_check_typed_behavior_input() {
+    constexpr bool is_equal = util::tl_equal<SignatureList, InputList>::value;
+    // note: it might be worth considering to allow a wildcard in the
+    //       InputList if its return type is identical to all "missing"
+    //       input types ... however, it might lead to unexpected results
+    //       and would cause a lot of not-so-straightforward code here
+    static_assert(is_equal, "given pattern cannot be used to initialize "
+                            "typed behavior (exact match needed)");
+}
+
+} // namespace detail
+
 template<typename... Signatures>
 class typed_actor;
 
@@ -64,15 +107,13 @@ class typed_behavior {
 
     typedef util::type_list<Signatures...> signatures;
 
-    template<typename... Cs>
-    typed_behavior(match_expr<Cs...> expr) {
-        static_asserts(expr);
-        set(std::move(expr));
+    template<typename... Cs, typename... Ts>
+    typed_behavior(match_expr<Cs...> expr, Ts&&... args) {
+        set(match_expr_collect(std::move(expr), std::forward<Ts>(args)...));
     }
 
     template<typename... Cs>
     typed_behavior& operator=(match_expr<Cs...> expr) {
-        static_asserts(expr);
         set(std::move(expr));
         return *this;
     }
@@ -101,29 +142,24 @@ class typed_behavior {
     behavior& unbox() { return m_bhvr; }
 
     template<typename... Cs>
-    void static_asserts(const match_expr<Cs...>&) {
+    void set(match_expr<Cs...>&& expr) {
+        // check for (the lack of) guards
         static_assert(util::conjunction<
                           detail::match_expr_has_no_guard<Cs>::value...
                       >::value,
                       "typed actors are not allowed to use guard expressions");
-        static_assert(util::tl_is_distinct<
-                          util::type_list<
-                              typename detail::deduce_signature<Cs>::arg_types...
-                          >
-                      >::value,
-                      "typed actors are not allowed to define "
-                      "multiple patterns with identical signature");
-    }
-
-    template<typename... Cs>
-    void set(match_expr<Cs...>&& expr) {
+        // returning a match_hint from a message handler does
+        // not send anything back, so we can consider match_hint to be void
+        typedef typename util::tl_map<
+                    util::type_list<
+                        typename detail::deduce_signature<Cs>::type...
+                    >,
+                    detail::all_match_hints_to_void
+                >::type
+                input;
+        detail::static_check_typed_behavior_input<signatures, input>();
+        // final (type-erasure) step
         m_bhvr = std::move(expr);
-        using input = util::type_list<
-                          typename detail::deduce_signature<Cs>::type...
-                      >;
-        // check whether the signature is an exact match
-        static_assert(util::tl_equal<signatures, input>::value,
-                      "'expr' does not match given signature");
     }
 
     behavior m_bhvr;

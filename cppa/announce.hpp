@@ -156,16 +156,29 @@ compound_member(const std::pair<GRes (Parent::*)() const,
     return {gspair, new detail::default_uniform_type_info_impl<mtype>(args...)};
 }
 
-
 /**
- * @brief Adds a new type mapping for @p T to the libcppa type system.
- * @param args Members of @p T.
+ * @brief Adds a new type mapping for @p C to the libcppa type system.
+ * @tparam C A class that is default constructible, copy constructible,
+ *           and comparable.
+ * @param arg  First members of @p C.
+ * @param args Additional members of @p C.
  * @warning @p announce is <b>not</b> thead safe!
  */
-template<typename T, typename... Ts>
+template<class C, typename... Ts>
 inline const uniform_type_info* announce(const Ts&... args) {
-    auto ptr = new detail::default_uniform_type_info_impl<T>(args...);
-    return announce(typeid(T), std::unique_ptr<uniform_type_info>{ptr});
+    auto ptr = new detail::default_uniform_type_info_impl<C>(args...);
+    return announce(typeid(C), std::unique_ptr<uniform_type_info>{ptr});
+}
+
+/**
+ * @brief Adds a new type mapping for an empty or "tag" class.
+ * @tparam C A class without any member.
+ * @warning @p announce_tag is <b>not</b> thead safe!
+ */
+template<class C>
+inline const uniform_type_info* announce_tag() {
+    auto ptr = new detail::empty_uniform_type_info_impl<C>();
+    return announce(typeid(C), std::unique_ptr<uniform_type_info>{ptr});
 }
 
 /**

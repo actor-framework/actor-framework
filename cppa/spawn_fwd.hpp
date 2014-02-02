@@ -28,68 +28,71 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_TYPED_ACTOR_PTR_HPP
-#define CPPA_TYPED_ACTOR_PTR_HPP
+// this header contains prototype definitions of the spawn function famility;
+// implementations can be found in spawn.hpp (this header is included there)
 
-#include "cppa/replies_to.hpp"
-#include "cppa/match_expr.hpp"
+#ifndef CPPA_SPAWN_FWD_HPP
+#define CPPA_SPAWN_FWD_HPP
+
+#include "cppa/typed_actor.hpp"
 #include "cppa/spawn_options.hpp"
-#include "cppa/detail/typed_actor_util.hpp"
+
+#include "cppa/util/type_list.hpp"
 
 namespace cppa {
 
+/******************************************************************************
+ *                               untyped actors                               *
+ ******************************************************************************/
+
+template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
+actor spawn(Ts&&... args);
+
+template<spawn_options Options = no_spawn_options, typename... Ts>
+actor spawn(Ts&&... args);
+
+template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
+actor spawn_in_group(const group&, Ts&&... args);
+
+template<spawn_options Options = no_spawn_options, typename... Ts>
+actor spawn_in_group(const group&, Ts&&... args);
+
+/******************************************************************************
+ *                                typed actors                                *
+ ******************************************************************************/
+
+namespace detail { // some utility
+
+template<typename TypedBehavior>
+struct actor_handle_from_typed_behavior;
+
 template<typename... Signatures>
-class typed_actor_ptr {
-
- public:
-
-    typedef util::type_list<Signatures...> signatures;
-
-    typed_actor_ptr() = default;
-    typed_actor_ptr(typed_actor_ptr&&) = default;
-    typed_actor_ptr(const typed_actor_ptr&) = default;
-    typed_actor_ptr& operator=(typed_actor_ptr&&) = default;
-    typed_actor_ptr& operator=(const typed_actor_ptr&) = default;
-
-    template<typename... Others>
-    typed_actor_ptr(typed_actor_ptr<Others...> other) {
-        set(std::move(other));
-    }
-
-    template<typename... Others>
-    typed_actor_ptr& operator=(typed_actor_ptr<Others...> other) {
-        set(std::move(other));
-        return *this;
-    }
-
-    /** @cond PRIVATE */
-    static typed_actor_ptr cast_from(actor_ptr from) {
-        return {std::move(from)};
-    }
-    const actor_ptr& type_erased() const { return m_ptr; }
-    actor_ptr& type_erased() { return m_ptr; }
-    /** @endcond */
-
- private:
-
-    typed_actor_ptr(actor_ptr ptr) : m_ptr(std::move(ptr)) { }
-
-    template<class ListA, class ListB>
-    inline void check_signatures() {
-        static_assert(util::tl_is_strict_subset<ListA, ListB>::value,
-                      "'this' must be a strict subset of 'other'");
-    }
-
-    template<typename... Others>
-    inline void set(typed_actor_ptr<Others...> other) {
-        check_signatures<signatures, util::type_list<Others...>>();
-        m_ptr = std::move(other.type_erased());
-    }
-
-    actor_ptr m_ptr;
-
+struct actor_handle_from_typed_behavior<typed_behavior<Signatures...>> {
+    typedef typed_actor<Signatures...> type;
 };
+
+template<typename SignatureList>
+struct actor_handle_from_signature_list;
+
+template<typename... Signatures>
+struct actor_handle_from_signature_list<util::type_list<Signatures...>> {
+    typedef typed_actor<Signatures...> type;
+};
+
+} // namespace detail
+
+template<spawn_options Options = no_spawn_options, typename F>
+typename detail::actor_handle_from_typed_behavior<
+    typename util::get_callable_trait<F>::result_type
+>::type
+spawn_typed(F fun);
+
+template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
+typename detail::actor_handle_from_signature_list<
+    typename Impl::signatures
+>::type
+spawn_typed(Ts&&... args);
 
 } // namespace cppa
 
-#endif // CPPA_TYPED_ACTOR_PTR_HPP
+#endif // CPPA_SPAWN_FWD_HPP

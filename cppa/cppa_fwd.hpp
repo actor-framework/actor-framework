@@ -33,8 +33,6 @@
 
 #include <cstdint>
 
-#include "cppa/spawn_options.hpp"
-
 namespace cppa {
 
 // classes
@@ -75,21 +73,6 @@ typedef intrusive_ptr<node_id>             node_id_ptr;
 
 // weak intrusive pointer typedefs
 typedef weak_intrusive_ptr<actor_proxy>    weak_actor_proxy_ptr;
-
-// prototype definitions of the spawn function famility;
-// implemented in spawn.hpp (this header is included there)
-
-template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
-actor spawn(Ts&&... args);
-
-template<spawn_options Options = no_spawn_options, typename... Ts>
-actor spawn(Ts&&... args);
-
-template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
-actor spawn_in_group(const group&, Ts&&... args);
-
-template<spawn_options Options = no_spawn_options, typename... Ts>
-actor spawn_in_group(const group&, Ts&&... args);
 
 } // namespace cppa
 

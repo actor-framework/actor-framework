@@ -39,9 +39,9 @@
 #include "cppa/extend.hpp"
 #include "cppa/channel.hpp"
 #include "cppa/behavior.hpp"
-#include "cppa/cppa_fwd.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/cow_tuple.hpp"
+#include "cppa/spawn_fwd.hpp"
 #include "cppa/message_id.hpp"
 #include "cppa/match_expr.hpp"
 #include "cppa/actor_state.hpp"
@@ -91,30 +91,65 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
 
     ~local_actor();
 
+    /**************************************************************************
+     *                          spawn untyped actors                          *
+     **************************************************************************/
 
-    template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
+    template<class C, spawn_options Os = no_spawn_options, typename... Ts>
     actor spawn(Ts&&... args) {
-        auto res = cppa::spawn<Impl, make_unbound(Options)>(std::forward<Ts>(args)...);
-        return eval_opts(Options, std::move(res));
+        constexpr auto os = make_unbound(Os);
+        auto res = cppa::spawn<C, os>(std::forward<Ts>(args)...);
+        return eval_opts(Os, std::move(res));
     }
 
-    template<spawn_options Options = no_spawn_options, typename... Ts>
+    template<spawn_options Os = no_spawn_options, typename... Ts>
     actor spawn(Ts&&... args) {
-        auto res = cppa::spawn<make_unbound(Options)>(std::forward<Ts>(args)...);
-        return eval_opts(Options, std::move(res));
+        constexpr auto os = make_unbound(Os);
+        auto res = cppa::spawn<os>(std::forward<Ts>(args)...);
+        return eval_opts(Os, std::move(res));
     }
 
-    template<spawn_options Options = no_spawn_options, typename... Ts>
+    template<spawn_options Os = no_spawn_options, typename... Ts>
     actor spawn_in_group(const group& grp, Ts&&... args) {
-        auto res = cppa::spawn_in_group<make_unbound(Options)>(grp, std::forward<Ts>(args)...);
-        return eval_opts(Options, std::move(res));
+        constexpr auto os = make_unbound(Os);
+        auto res = cppa::spawn_in_group<os>(grp, std::forward<Ts>(args)...);
+        return eval_opts(Os, std::move(res));
     }
 
-    template<class Impl, spawn_options Options, typename... Ts>
+    template<class C, spawn_options Os, typename... Ts>
     actor spawn_in_group(const group& grp, Ts&&... args) {
-        auto res = cppa::spawn_in_group<Impl, make_unbound(Options)>(grp, std::forward<Ts>(args)...);
-        return eval_opts(Options, std::move(res));
+        constexpr auto os = make_unbound(Os);
+        auto res = cppa::spawn_in_group<C, os>(grp, std::forward<Ts>(args)...);
+        return eval_opts(Os, std::move(res));
     }
+
+    /**************************************************************************
+     *                           spawn typed actors                           *
+     **************************************************************************/
+
+    template<spawn_options Os = no_spawn_options, typename F>
+    typename detail::actor_handle_from_typed_behavior<
+        typename util::get_callable_trait<F>::result_type
+    >::type
+    spawn_typed(F fun) {
+        constexpr auto os = make_unbound(Os);
+        auto res = cppa::spawn_typed<os>(std::move(fun));
+        return eval_opts(Os, std::move(res));
+    }
+
+    template<class C, spawn_options Os = no_spawn_options, typename... Ts>
+    typename detail::actor_handle_from_signature_list<
+        typename C::signatures
+    >::type
+    spawn_typed(Ts&&... args) {
+        constexpr auto os = make_unbound(Os);
+        auto res = cppa::spawn_typed<C, os>(std::forward<Ts>(args)...);
+        return eval_opts(Os, std::move(res));
+    }
+
+    /**************************************************************************
+     *                       send asynchronous messages                       *
+     **************************************************************************/
 
     /**
      * @brief Sends @p what to the receiver specified in @p dest.
@@ -283,6 +318,10 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
                            make_any_tuple(std::forward<Ts>(args)...));
     }
 
+    /**************************************************************************
+     *                     miscellaneous actor operations                     *
+     **************************************************************************/
+
     /**
      * @brief Causes this actor to subscribe to the group @p what.
      *
@@ -422,16 +461,21 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
         on_sync_failure(fun);
     }
 
+    /**************************************************************************
+     *                here be dragons: end of public interface                *
+     **************************************************************************/
+
     /** @cond PRIVATE */
 
     local_actor();
 
-    inline actor eval_opts(spawn_options opts, actor res) {
+    template<class ActorHandle>
+    inline ActorHandle eval_opts(spawn_options opts, ActorHandle res) {
         if (has_monitor_flag(opts)) {
-            monitor(res);
+            monitor(res.address());
         }
         if (has_link_flag(opts)) {
-            link_to(res);
+            link_to(res.address());
         }
         return res;
     }
