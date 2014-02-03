@@ -45,16 +45,16 @@ namespace cppa {
  *                               untyped actors                               *
  ******************************************************************************/
 
-template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
+template<class Impl, spawn_options Os = no_spawn_options, typename... Ts>
 actor spawn(Ts&&... args);
 
-template<spawn_options Options = no_spawn_options, typename... Ts>
+template<spawn_options Os = no_spawn_options, typename... Ts>
 actor spawn(Ts&&... args);
 
-template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
+template<class Impl, spawn_options Os = no_spawn_options, typename... Ts>
 actor spawn_in_group(const group&, Ts&&... args);
 
-template<spawn_options Options = no_spawn_options, typename... Ts>
+template<spawn_options Os = no_spawn_options, typename... Ts>
 actor spawn_in_group(const group&, Ts&&... args);
 
 /******************************************************************************
@@ -63,35 +63,45 @@ actor spawn_in_group(const group&, Ts&&... args);
 
 namespace detail { // some utility
 
-template<typename TypedBehavior>
-struct actor_handle_from_typed_behavior;
+template<class TypedBehavior, class FirstArg>
+struct infer_typed_actor_handle;
 
-template<typename... Signatures>
-struct actor_handle_from_typed_behavior<typed_behavior<Signatures...>> {
-    typedef typed_actor<Signatures...> type;
+// infer actor type from result type if possible
+template<typename... Rs, class FirstArg>
+struct infer_typed_actor_handle<typed_behavior<Rs...>, FirstArg> {
+    typedef typed_actor<Rs...> type;
+};
+
+// infer actor type from first argument if result type is void
+template<typename... Rs>
+struct infer_typed_actor_handle<void, typed_event_based_actor<Rs...>*> {
+    typedef typed_actor<Rs...> type;
 };
 
 template<typename SignatureList>
 struct actor_handle_from_signature_list;
 
-template<typename... Signatures>
-struct actor_handle_from_signature_list<util::type_list<Signatures...>> {
-    typedef typed_actor<Signatures...> type;
+template<typename... Rs>
+struct actor_handle_from_signature_list<util::type_list<Rs...>> {
+    typedef typed_actor<Rs...> type;
 };
 
 } // namespace detail
 
-template<spawn_options Options = no_spawn_options, typename F>
-typename detail::actor_handle_from_typed_behavior<
-    typename util::get_callable_trait<F>::result_type
->::type
-spawn_typed(F fun);
-
-template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
+template<class Impl, spawn_options Os = no_spawn_options, typename... Ts>
 typename detail::actor_handle_from_signature_list<
     typename Impl::signatures
 >::type
 spawn_typed(Ts&&... args);
+
+template<spawn_options Os = no_spawn_options, typename F, typename... Ts>
+typename detail::infer_typed_actor_handle<
+    typename util::get_callable_trait<F>::result_type,
+    typename util::tl_head<
+        typename util::get_callable_trait<F>::arg_types
+    >::type
+>::type
+spawn_typed(F fun, Ts&&... args);
 
 } // namespace cppa
 

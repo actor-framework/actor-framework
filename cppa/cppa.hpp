@@ -484,7 +484,8 @@ void anon_send_exit(const actor_addr& whom, std::uint32_t reason);
 /**
  * @brief Anonymously sends @p whom an exit message.
  */
-inline void anon_send_exit(const actor& whom, std::uint32_t reason) {
+template<typename ActorHandle>
+inline void anon_send_exit(const ActorHandle& whom, std::uint32_t reason) {
     anon_send_exit(whom.address(), reason);
 }
 
@@ -548,10 +549,10 @@ actor remote_actor(io::stream_ptr_pair connection);
  * @brief Spawns an IO actor of type @p Impl.
  * @param args Constructor arguments.
  * @tparam Impl Subtype of {@link io::broker}.
- * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
+ * @tparam Os Optional flags to modify <tt>spawn</tt>'s behavior.
  * @returns An {@link actor_ptr} to the spawned {@link actor}.
  */
-template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
+template<class Impl, spawn_options Os = no_spawn_options, typename... Ts>
 actor spawn_io(Ts&&... args) {
     auto ptr = make_counted<Impl>(std::forward<Ts>(args)...);
     return {io::init_and_launch(std::move(ptr))};
@@ -563,10 +564,10 @@ actor spawn_io(Ts&&... args) {
  * @param in   The actor's input stream.
  * @param out  The actor's output stream.
  * @param args Optional arguments for @p fun.
- * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
+ * @tparam Os Optional flags to modify <tt>spawn</tt>'s behavior.
  * @returns A {@link actor handle} to the spawned actor.
  */
-template<spawn_options Options = no_spawn_options,
+template<spawn_options Os = no_spawn_options,
          typename F = std::function<void (io::broker*)>,
          typename... Ts>
 actor spawn_io(F fun,
@@ -578,7 +579,7 @@ actor spawn_io(F fun,
     return {io::init_and_launch(std::move(ptr))};
 }
 
-template<spawn_options Options = no_spawn_options,
+template<spawn_options Os = no_spawn_options,
          typename F = std::function<void (io::broker*)>,
          typename... Ts>
 actor spawn_io(F fun, const std::string& host, uint16_t port, Ts&&... args) {
@@ -586,13 +587,13 @@ actor spawn_io(F fun, const std::string& host, uint16_t port, Ts&&... args) {
     return spawn_io(std::move(fun), ptr, ptr, std::forward<Ts>(args)...);
 }
 
-template<spawn_options Options = no_spawn_options,
+template<spawn_options Os = no_spawn_options,
          typename F = std::function<void (io::broker*)>,
          typename... Ts>
 actor spawn_io_server(F fun, uint16_t port, Ts&&... args) {
-    static_assert(!has_detach_flag(Options),
+    static_assert(!has_detach_flag(Os),
                   "brokers cannot be detached");
-    static_assert(is_unbound(Options),
+    static_assert(is_unbound(Os),
                   "top-level spawns cannot have monitor or link flag");
     using namespace std;
     auto ptr = io::broker::from(move(fun),

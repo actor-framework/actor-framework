@@ -31,9 +31,11 @@
 #ifndef CPPA_ABSTRACT_ACTOR_HPP
 #define CPPA_ABSTRACT_ACTOR_HPP
 
+#include <set>
 #include <mutex>
 #include <atomic>
 #include <memory>
+#include <string>
 #include <vector>
 #include <cstdint>
 #include <type_traits>
@@ -119,7 +121,10 @@ class abstract_actor : public abstract_channel {
     /**
      * @copydoc abstract_actor::link_to(const actor_addr&)
      */
-    void link_to(const actor& whom);
+    template<typename ActorHandle>
+    void link_to(const ActorHandle& whom) {
+        link_to(whom.address());
+    }
 
     /**
      * @brief Unlinks this actor from @p whom.
@@ -131,7 +136,10 @@ class abstract_actor : public abstract_channel {
     /**
      * @copydoc abstract_actor::unlink_from(const actor_addr&)
      */
-    void unlink_from(const actor& whom);
+    template<class ActorHandle>
+    void unlink_from(const ActorHandle& whom) {
+        unlink_from(whom.address());
+    }
 
     /**
      * @brief Establishes a link relation between this actor and @p other.
@@ -173,6 +181,12 @@ class abstract_actor : public abstract_channel {
      *        <tt>exit_reason::not_exited</tt> if it's still alive.
      */
     inline std::uint32_t exit_reason() const;
+
+    /**
+     * @brief Returns the type interface as set of strings.
+     * @note The returned set is empty for all untyped actors.
+     */
+    virtual std::set<std::string> interface() const;
 
  protected:
 

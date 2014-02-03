@@ -40,12 +40,22 @@
 
 namespace cppa {
 
-template<typename... Signatures>
+/**
+ * @brief A cooperatively scheduled, event-based actor implementation
+ *        with strong type checking.
+ *
+ * This is the recommended base class for user-defined actors and is used
+ * implicitly when spawning typed, functor-based actors without the
+ * {@link blocking_api} flag.
+ *
+ * @extends local_actor
+ */
+template<typename... Rs>
 class typed_event_based_actor
-        : public extend<local_actor, typed_event_based_actor<Signatures...>>::template
+        : public extend<local_actor, typed_event_based_actor<Rs...>>::template
                  with<mailbox_based,
                       behavior_stack_based<
-                          typed_behavior<Signatures...>
+                          typed_behavior<Rs...>
                       >::template impl,
                       sync_sender<
                           nonblocking_response_handle_tag
@@ -53,9 +63,13 @@ class typed_event_based_actor
 
  public:
 
-    typedef util::type_list<Signatures...> signatures;
+    typedef util::type_list<Rs...> signatures;
 
-    typedef typed_behavior<Signatures...> behavior_type;
+    typedef typed_behavior<Rs...> behavior_type;
+
+    std::set<std::string> interface() const override {
+        return {detail::to_uniform_name<Rs>()...};
+    }
 
  protected:
 

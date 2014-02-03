@@ -44,18 +44,23 @@ class local_actor;
 
 struct invalid_actor_addr_t;
 
-template<typename... Signatures>
+template<typename... Rs>
 class typed_event_based_actor;
 
 /**
  * @brief Identifies a strongly typed actor.
+ * @tparam Rs Interface as @p replies_to<...>::with<...> parameter pack.
  */
-template<typename... Signatures>
-class typed_actor : util::comparable<typed_actor<Signatures...>>
-                  , util::comparable<typed_actor<Signatures...>, actor_addr>
-                  , util::comparable<typed_actor<Signatures...>, invalid_actor_addr_t> {
+template<typename... Rs>
+class typed_actor : util::comparable<typed_actor<Rs...>>
+                  , util::comparable<typed_actor<Rs...>, actor_addr>
+                  , util::comparable<typed_actor<Rs...>, invalid_actor_addr_t> {
 
     friend class local_actor;
+
+    // friend with all possible instantiations
+    template<typename...>
+    friend class typed_actor;
 
  public:
 
@@ -63,19 +68,19 @@ class typed_actor : util::comparable<typed_actor<Signatures...>>
      * @brief Identifies the behavior type actors of this kind use
      *        for their behavior stack.
      */
-    typedef typed_behavior<Signatures...> behavior_type;
+    typedef typed_behavior<Rs...> behavior_type;
 
     /**
      * @brief Identifies pointers to instances of this kind of actor.
      */
-    typedef typed_event_based_actor<Signatures...>* pointer;
+    typedef typed_event_based_actor<Rs...>* pointer;
 
     /**
      * @brief Identifies the base class for this kind of actor.
      */
-    typedef typed_event_based_actor<Signatures...> base;
+    typedef typed_event_based_actor<Rs...> base;
 
-    typedef util::type_list<Signatures...> signatures;
+    typedef util::type_list<Rs...> signatures;
 
     typed_actor() = default;
     typed_actor(typed_actor&&) = default;
@@ -83,13 +88,13 @@ class typed_actor : util::comparable<typed_actor<Signatures...>>
     typed_actor& operator=(typed_actor&&) = default;
     typed_actor& operator=(const typed_actor&) = default;
 
-    template<typename... OtherSignatures>
-    typed_actor(const typed_actor<OtherSignatures...>& other) {
+    template<typename... OtherRs>
+    typed_actor(const typed_actor<OtherRs...>& other) {
         set(std::move(other));
     }
 
-    template<typename... OtherSignatures>
-    typed_actor& operator=(const typed_actor<OtherSignatures...>& other) {
+    template<typename... OtherRs>
+    typed_actor& operator=(const typed_actor<OtherRs...>& other) {
         set(std::move(other));
         return *this;
     }
@@ -97,6 +102,14 @@ class typed_actor : util::comparable<typed_actor<Signatures...>>
     template<class Impl>
     typed_actor(intrusive_ptr<Impl> other) {
         set(other);
+    }
+
+    pointer operator->() const {
+        return static_cast<pointer>(m_ptr.get());
+    }
+
+    base& operator*() const {
+        return static_cast<base&>(*m_ptr.get());
     }
 
     /**
@@ -108,6 +121,10 @@ class typed_actor : util::comparable<typed_actor<Signatures...>>
 
     inline intptr_t compare(const actor_addr& rhs) const {
         return address().compare(rhs);
+    }
+
+    inline intptr_t compare(const typed_actor& other) const {
+        return compare(other.address());
     }
 
     inline intptr_t compare(const invalid_actor_addr_t&) const {
@@ -122,9 +139,9 @@ class typed_actor : util::comparable<typed_actor<Signatures...>>
                       "'this' must be a strict subset of 'other'");
     }
 
-    template<typename... OtherSignatures>
-    inline void set(const typed_actor<OtherSignatures...>& other) {
-        check_signatures<signatures, util::type_list<OtherSignatures...>>();
+    template<typename... OtherRs>
+    inline void set(const typed_actor<OtherRs...>& other) {
+        check_signatures<signatures, util::type_list<OtherRs...>>();
         m_ptr = other.m_ptr;
     }
 

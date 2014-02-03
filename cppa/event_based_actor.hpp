@@ -44,8 +44,6 @@
 
 namespace cppa {
 
-class event_based_actor;
-
 /**
  * @brief A cooperatively scheduled, event-based actor implementation.
  *

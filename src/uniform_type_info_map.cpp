@@ -174,7 +174,7 @@ inline void deserialize_impl(unit_t&, deserializer*) { }
 void serialize_impl(const actor_addr& addr, serializer* sink) {
     auto ns = sink->get_namespace();
     if (ns) ns->write(sink, addr);
-    else throw std::runtime_error("unable to serialize actor_ptr: "
+    else throw std::runtime_error("unable to serialize actor_addr: "
                                   "no actor addressing defined");
 }
 

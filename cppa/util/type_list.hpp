@@ -85,7 +85,7 @@ struct tl_head;
 
 template<template<typename...> class List>
 struct tl_head<List<>> {
-    typedef empty_type_list type;
+    typedef void type;
 };
 
 template<template<typename...> class List, typename T0, typename... Ts>

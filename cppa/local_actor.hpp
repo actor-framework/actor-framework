@@ -127,13 +127,17 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
      *                           spawn typed actors                           *
      **************************************************************************/
 
-    template<spawn_options Os = no_spawn_options, typename F>
-    typename detail::actor_handle_from_typed_behavior<
-        typename util::get_callable_trait<F>::result_type
+    template<spawn_options Os = no_spawn_options, typename F, typename... Ts>
+    typename detail::infer_typed_actor_handle<
+        typename util::get_callable_trait<F>::result_type,
+        typename util::tl_head<
+            typename util::get_callable_trait<F>::arg_types
+        >::type
     >::type
-    spawn_typed(F fun) {
+    spawn_typed(F fun, Ts&&... args) {
         constexpr auto os = make_unbound(Os);
-        auto res = cppa::spawn_typed<os>(std::move(fun));
+        auto res = cppa::spawn_typed<os>(std::move(fun),
+                                         std::forward<Ts>(args)...);
         return eval_opts(Os, std::move(res));
     }
 
@@ -195,9 +199,9 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
      * @param whom Receiver of the message.
      * @param what Message content as a tuple.
      */
-    template<typename... Signatures, typename... Ts>
+    template<typename... Rs, typename... Ts>
     void send_tuple(message_priority prio,
-                    const typed_actor<Signatures...>& whom,
+                    const typed_actor<Rs...>& whom,
                     cow_tuple<Ts...> what) {
         check_typed_input(whom, what);
         send_tuple(prio, whom.m_ptr, any_tuple{std::move(what)});
@@ -208,8 +212,8 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
      * @param whom Receiver of the message.
      * @param what Message content as a tuple.
      */
-    template<typename... Signatures, typename... Ts>
-    void send_tuple(const typed_actor<Signatures...>& whom,
+    template<typename... Rs, typename... Ts>
+    void send_tuple(const typed_actor<Rs...>& whom,
                     cow_tuple<Ts...> what) {
         check_typed_input(whom, what);
         send_tuple_impl(message_priority::normal, whom, std::move(what));
@@ -222,9 +226,9 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
      * @param what Message elements.
      * @pre <tt>sizeof...(Ts) > 0</tt>.
      */
-    template<typename... Signatures, typename... Ts>
+    template<typename... Rs, typename... Ts>
     void send(message_priority prio,
-              const typed_actor<Signatures...>& whom,
+              const typed_actor<Rs...>& whom,
               cow_tuple<Ts...> what) {
         send_tuple(prio, whom, make_cow_tuple(std::forward<Ts>(what)...));
     }
@@ -235,8 +239,8 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
      * @param what Message elements.
      * @pre <tt>sizeof...(Ts) > 0</tt>.
      */
-    template<typename... Signatures, typename... Ts>
-    void send(const typed_actor<Signatures...>& whom, Ts... what) {
+    template<typename... Rs, typename... Ts>
+    void send(const typed_actor<Rs...>& whom, Ts... what) {
         send_tuple(message_priority::normal, whom,
                    make_cow_tuple(std::forward<Ts>(what)...));
     }
@@ -256,8 +260,8 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     /**
      * @copydoc send_exit(const actor_addr&, std::uint32_t)
      */
-    template<typename... Signatures>
-    void send_exit(const typed_actor<Signatures...>& whom,
+    template<typename... Rs>
+    void send_exit(const typed_actor<Rs...>& whom,
                    std::uint32_t reason) {
         send_exit(whom.address(), reason);
     }
@@ -516,9 +520,9 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
                                     any_tuple&& what);
 
     // returns the response ID
-    template<typename... Signatures, typename... Ts>
+    template<typename... Rs, typename... Ts>
     message_id sync_send_tuple_impl(message_priority mp,
-                                    const typed_actor<Signatures...>& whom,
+                                    const typed_actor<Rs...>& whom,
                                     cow_tuple<Ts...>&& what) {
         check_typed_input(whom, what);
         return sync_send_tuple_impl(mp,
@@ -601,11 +605,11 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
 
  private:
 
-    template<typename... Signatures, typename... Ts>
-    static void check_typed_input(const typed_actor<Signatures...>&,
+    template<typename... Rs, typename... Ts>
+    static void check_typed_input(const typed_actor<Rs...>&,
                                   const cow_tuple<Ts...>&) {
         static constexpr int input_pos = util::tl_find_if<
-                                             util::type_list<Signatures...>,
+                                             util::type_list<Rs...>,
                                              detail::input_is<
                                                  util::type_list<Ts...>
                                              >::template eval

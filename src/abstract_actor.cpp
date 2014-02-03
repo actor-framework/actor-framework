@@ -66,14 +66,6 @@ abstract_actor::abstract_actor()
 : m_id(get_actor_registry()->next_id()), m_is_proxy(false)
 , m_exit_reason(exit_reason::not_exited) { }
 
-void abstract_actor::link_to(const actor& whom) {
-    link_to(whom.address());
-}
-
-void abstract_actor::unlink_from(const actor& whom) {
-    unlink_from(whom.address());
-}
-
 bool abstract_actor::link_to_impl(const actor_addr& other) {
     if (other && other != this) {
         guard_type guard{m_mtx};
@@ -224,6 +216,11 @@ void abstract_actor::cleanup(std::uint32_t reason) {
     for (attachable_ptr& ptr : mattachables) {
         ptr->actor_exited(reason);
     }
+}
+
+std::set<std::string> abstract_actor::interface() const {
+    // defaults to untyped
+    return std::set<std::string>{};
 }
 
 } // namespace cppa

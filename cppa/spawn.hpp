@@ -217,23 +217,44 @@ actor spawn_in_group(const group& grp, Ts&&... args) {
 
 namespace detail {
 
-template<typename... Sigs>
-class functor_based_typed_actor : public typed_event_based_actor<Sigs...> {
+template<typename... Rs>
+class functor_based_typed_actor : public typed_event_based_actor<Rs...> {
 
-    typedef typed_event_based_actor<Sigs...> super;
+    typedef typed_event_based_actor<Rs...> super;
 
  public:
 
-    typedef typed_event_based_actor<Sigs...>* pointer;
-    typedef typename super::behavior_type behavior_type;
+    typedef typed_event_based_actor<Rs...>* pointer;
+    typedef typename super::behavior_type   behavior_type;
 
-    typedef std::function<typed_behavior<Sigs...> ()> no_arg_fun;
-    typedef std::function<typed_behavior<Sigs...> (pointer)> one_arg_fun;
+    typedef std::function<behavior_type ()>        no_arg_fun;
+    typedef std::function<behavior_type (pointer)> one_arg_fun1;
+    typedef std::function<void (pointer)>          one_arg_fun2;
 
-    functor_based_typed_actor(one_arg_fun fun) : m_fun(std::move(fun)) { }
+    functor_based_typed_actor(one_arg_fun1 fun) {
+        set(std::move(fun));
+    }
+
+    functor_based_typed_actor(one_arg_fun2 fun) {
+        set(std::move(fun));
+    }
 
     functor_based_typed_actor(no_arg_fun fun) {
-        m_fun = [fun](pointer) { return fun(); };
+        set(std::move(fun));
+    }
+
+    template<typename F, typename T, typename... Ts>
+    functor_based_typed_actor(F fun, T&& arg, Ts&&... args) {
+        typedef typename util::get_callable_trait<F>::arg_types arg_types;
+        constexpr bool uses_first_arg = std::is_same<
+                                            typename util::tl_head<
+                                                arg_types
+                                            >::type,
+                                            pointer
+                                        >::value;
+        std::integral_constant<bool, uses_first_arg> token;
+        bind_and_set(token, std::move(fun),
+                     std::forward<T>(arg), std::forward<Ts>(args)...);
     }
 
  protected:
@@ -244,43 +265,91 @@ class functor_based_typed_actor : public typed_event_based_actor<Sigs...> {
 
  private:
 
-    one_arg_fun m_fun;
+    void set(one_arg_fun1 fun) {
+        m_fun = std::move(fun);
+    }
+
+    void set(one_arg_fun2 fun) {
+        m_fun = [fun](pointer ptr) {
+            fun(ptr);
+            return behavior_type{};
+        };
+    }
+
+    void set(no_arg_fun fun) {
+        m_fun = [fun](pointer) { return fun(); };
+    }
+
+    template<typename F, typename... Ts>
+    void bind_and_set(std::true_type, F fun, Ts&&... args) {
+        set(std::bind(fun, std::placeholders::_1, std::forward<Ts>(args)...));
+    }
+
+    template<typename F, typename... Ts>
+    void bind_and_set(std::false_type, F fun, Ts&&... args) {
+        set(std::bind(fun, std::forward<Ts>(args)...));
+    }
+
+    one_arg_fun1 m_fun;
 
 };
 
-template<typename TypedBehavior>
-struct actor_type_from_typed_behavior;
+template<class TypedBehavior, class FirstArg>
+struct infer_typed_actor_base;
 
-template<typename... Signatures>
-struct actor_type_from_typed_behavior<typed_behavior<Signatures...>> {
-    typedef functor_based_typed_actor<Signatures...> type;
+template<typename... Rs, class FirstArg>
+struct infer_typed_actor_base<typed_behavior<Rs...>, FirstArg> {
+    typedef functor_based_typed_actor<Rs...> type;
+};
+
+template<typename... Rs>
+struct infer_typed_actor_base<void, typed_event_based_actor<Rs...>*> {
+    typedef functor_based_typed_actor<Rs...> type;
 };
 
 } // namespace detail
 
-template<spawn_options Options, typename F>
-typename detail::actor_handle_from_typed_behavior<
-    typename util::get_callable_trait<F>::result_type
->::type
-spawn_typed(F fun) {
-    typedef typename detail::actor_type_from_typed_behavior<
-                typename util::get_callable_trait<F>::result_type
-            >::type
-            impl;
-    return detail::spawn_fwd_args<impl, Options>(
-            [&](impl*) { },
-            std::move(fun));
-}
-
-
-template<class C, spawn_options Options, typename... Ts>
+/**
+ * @brief Spawns a typed actor of type @p C.
+ * @param args Constructor arguments.
+ * @tparam C Subtype of {@link typed_event_based_actor}.
+ * @tparam Os Optional flags to modify <tt>spawn</tt>'s behavior.
+ * @returns A {@link typed_actor} handle to the spawned actor.
+ */
+template<class C, spawn_options Os, typename... Ts>
 typename detail::actor_handle_from_signature_list<
     typename C::signatures
 >::type
 spawn_typed(Ts&&... args) {
-    return detail::spawn_fwd_args<C, Options>(
+    return detail::spawn_fwd_args<C, Os>(
             [&](C*) { },
             std::forward<Ts>(args)...);
+}
+
+/**
+ * @brief Spawns a typed actor from a functor.
+ * @param args A functor followed by its arguments.
+ * @tparam Os Optional flags to modify <tt>spawn</tt>'s behavior.
+ * @returns An {@link actor} to the spawned {@link actor}.
+ */
+template<spawn_options Os, typename F, typename... Ts>
+typename detail::infer_typed_actor_handle<
+    typename util::get_callable_trait<F>::result_type,
+    typename util::tl_head<
+        typename util::get_callable_trait<F>::arg_types
+    >::type
+>::type
+spawn_typed(F fun, Ts&&... args) {
+    typedef typename detail::infer_typed_actor_base<
+                typename util::get_callable_trait<F>::result_type,
+                typename util::tl_head<
+                    typename util::get_callable_trait<F>::arg_types
+                >::type
+            >::type
+            impl;
+    return detail::spawn_fwd_args<impl, Os>(
+            [&](impl*) { },
+            std::move(fun), std::forward<Ts>(args)...);
 }
 
 /** @} */
