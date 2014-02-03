@@ -53,16 +53,18 @@ class command : public ref_counted {
 
     command(response_handle handle,
             intrusive_ptr<T> actor_facade,
-            std::vector<mem_ptr> arguments,
             std::vector<cl_event> events,
-            size_t result_size)
+            std::vector<mem_ptr> arguments,
+            size_t result_size,
+            any_tuple msg)
         : m_result_size(result_size)
         , m_handle(handle)
         , m_actor_facade(actor_facade)
         , m_queue(actor_facade->m_queue)
-        , m_arguments(std::move(arguments))
         , m_events(std::move(events))
-        , m_result(m_result_size) { }
+        , m_arguments(std::move(arguments))
+        , m_result(m_result_size)
+        , m_msg(msg) { }
 
     ~command() {
         cl_int err{0};
@@ -83,21 +85,20 @@ class command : public ref_counted {
         auto data_or_nullptr = [](const dim_vec& vec) {
             return vec.empty() ? nullptr : vec.data();
         };
-
         err = clEnqueueNDRangeKernel(m_queue.get(),
                                      m_actor_facade->m_kernel.get(),
                                      m_actor_facade->m_global_dimensions.size(),
                                      data_or_nullptr(m_actor_facade->m_global_offsets),
                                      data_or_nullptr(m_actor_facade->m_global_dimensions),
                                      data_or_nullptr(m_actor_facade->m_local_dimensions),
-                                     0,
-                                     nullptr,
+                                     m_events.size(),
+                                     (m_events.empty() ? nullptr : m_events.data()),
                                      &event_k);
-        m_events.push_back(event_k);
         if (err != CL_SUCCESS) {
             CPPA_LOGMF(CPPA_ERROR, self, "clEnqueueNDRangeKernel: "
                                          << get_opencl_error(err));
             this->deref(); // or can anything actually happen?
+            return;
         }
         else {
             cl_event event_r;
@@ -110,11 +111,11 @@ class command : public ref_counted {
                                       1,
                                       &event_k,
                                       &event_r);
-            m_events.push_back(event_r);
             if (err != CL_SUCCESS) {
                 throw std::runtime_error("clEnqueueReadBuffer: "
                                          + get_opencl_error(err));
                 this->deref(); // failed to enqueue command
+                return;
             }
             err = clSetEventCallback(event_r,
                                      CL_COMPLETE,
@@ -128,12 +129,15 @@ class command : public ref_counted {
                 CPPA_LOGMF(CPPA_ERROR, self, "clSetEventCallback: "
                                              << get_opencl_error(err));
                 this->deref(); // callback is not set
+                return;
             }
 
             err = clFlush(m_queue.get());
             if (err != CL_SUCCESS) {
                 CPPA_LOGMF(CPPA_ERROR, self, "clFlush: " << get_opencl_error(err));
             }
+            m_events.push_back(std::move(event_k));
+            m_events.push_back(std::move(event_r));
         }
     }
 
@@ -143,9 +147,10 @@ class command : public ref_counted {
     response_handle m_handle;
     intrusive_ptr<T> m_actor_facade;
     command_queue_ptr m_queue;
-    std::vector<mem_ptr> m_arguments;
     std::vector<cl_event> m_events;
+    std::vector<mem_ptr> m_arguments;
     R m_result;
+    any_tuple m_msg; // required to keep the argument buffers alive (for async copy)
 
     void handle_results () {
         reply_tuple_to(m_handle, m_actor_facade->m_map_result(m_result));
