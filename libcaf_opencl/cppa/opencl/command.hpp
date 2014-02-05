@@ -37,10 +37,10 @@
 #include <algorithm>
 #include <functional>
 
-#include "cppa/actor.hpp"
 #include "cppa/logging.hpp"
 #include "cppa/opencl/global.hpp"
-#include "cppa/response_handle.hpp"
+#include "cppa/abstract_actor.hpp"
+#include "cppa/response_promise.hpp"
 #include "cppa/opencl/smart_ptr.hpp"
 #include "cppa/util/scope_guard.hpp"
 
@@ -51,7 +51,7 @@ class command : public ref_counted {
 
  public:
 
-    command(response_handle handle,
+    command(response_promise handle,
             intrusive_ptr<T> actor_facade,
             std::vector<cl_event> events,
             std::vector<mem_ptr> arguments,
@@ -71,8 +71,8 @@ class command : public ref_counted {
         for(auto& e : m_events) {
             err = clReleaseEvent(e);
             if (err != CL_SUCCESS) {
-                CPPA_LOGMF(CPPA_ERROR, self, "clReleaseEvent: "
-                                             << get_opencl_error(err));
+                CPPA_LOGMF(CPPA_ERROR, "clReleaseEvent: "
+                                       << get_opencl_error(err));
             }
         }
     }
@@ -95,8 +95,8 @@ class command : public ref_counted {
                                      (m_events.empty() ? nullptr : m_events.data()),
                                      &event_k);
         if (err != CL_SUCCESS) {
-            CPPA_LOGMF(CPPA_ERROR, self, "clEnqueueNDRangeKernel: "
-                                         << get_opencl_error(err));
+            CPPA_LOGMF(CPPA_ERROR, "clEnqueueNDRangeKernel: " 
+                                   << get_opencl_error(err));
             this->deref(); // or can anything actually happen?
             return;
         }
@@ -126,15 +126,15 @@ class command : public ref_counted {
                                      },
                                      this);
             if (err != CL_SUCCESS) {
-                CPPA_LOGMF(CPPA_ERROR, self, "clSetEventCallback: "
-                                             << get_opencl_error(err));
+                CPPA_LOGMF(CPPA_ERROR, "clSetEventCallback: "
+                                       << get_opencl_error(err));
                 this->deref(); // callback is not set
                 return;
             }
 
             err = clFlush(m_queue.get());
             if (err != CL_SUCCESS) {
-                CPPA_LOGMF(CPPA_ERROR, self, "clFlush: " << get_opencl_error(err));
+                CPPA_LOGMF(CPPA_ERROR, "clFlush: " << get_opencl_error(err));
             }
             m_events.push_back(std::move(event_k));
             m_events.push_back(std::move(event_r));
@@ -144,7 +144,7 @@ class command : public ref_counted {
  private:
 
     int m_result_size;
-    response_handle m_handle;
+    response_promise m_handle;
     intrusive_ptr<T> m_actor_facade;
     command_queue_ptr m_queue;
     std::vector<cl_event> m_events;
@@ -153,7 +153,7 @@ class command : public ref_counted {
     any_tuple m_msg; // required to keep the argument buffers alive (for async copy)
 
     void handle_results () {
-        reply_tuple_to(m_handle, m_actor_facade->m_map_result(m_result));
+        m_handle.deliver(m_actor_facade->m_map_result(m_result));
     }
 };
 
