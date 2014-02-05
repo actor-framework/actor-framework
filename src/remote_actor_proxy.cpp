@@ -44,33 +44,33 @@ using namespace std;
 
 namespace cppa { namespace io {
 
-inline sync_request_info* new_req_info(actor_ptr sptr, message_id id) {
+inline sync_request_info* new_req_info(actor_addr sptr, message_id id) {
     return detail::memory::create<sync_request_info>(std::move(sptr), id);
 }
 
-sync_request_info::sync_request_info(actor_ptr sptr, message_id id)
-: next(nullptr), sender(std::move(sptr)), mid(id) { }
+sync_request_info::sync_request_info(actor_addr sptr, message_id id)
+        : next(nullptr), sender(std::move(sptr)), mid(id) {
+}
 
 remote_actor_proxy::remote_actor_proxy(actor_id mid,
-                                       const node_id_ptr& pinfo,
+                                       node_id_ptr pinfo,
                                        middleman* parent)
-: super(mid), m_parent(parent), m_pinf(pinfo) {
+        : super(mid), m_parent(parent) {
     CPPA_REQUIRE(parent != nullptr);
-    CPPA_LOG_INFO(CPPA_ARG(mid) << ", " << CPPA_TARG(pinfo, to_string)
-                  << "protocol = " << detail::demangle(typeid(*parent)));
+    CPPA_LOG_INFO(CPPA_ARG(mid) << ", " << CPPA_TARG(*pinfo, to_string));
+    m_node = std::move(pinfo);
 }
 
 remote_actor_proxy::~remote_actor_proxy() {
     auto aid = m_id;
-    auto node = m_pinf;
+    auto node = m_node;
     auto mm = m_parent;
-    CPPA_LOG_INFO(CPPA_ARG(m_id) << ", " << CPPA_TSARG(m_pinf)
+    CPPA_LOG_INFO(CPPA_ARG(m_id) << ", " << CPPA_TSARG(*m_node)
                    << ", protocol = " << detail::demangle(typeid(*m_parent)));
     mm->run_later([aid, node, mm] {
         CPPA_LOGC_TRACE("cppa::io::remote_actor_proxy",
                         "~remote_actor_proxy$run_later",
-                        "node = " << to_string(*node) << ", aid " << aid
-                        << ", proto = " << to_string(proto->identifier()));
+                        "node = " << to_string(*node) << ", aid " << aid);
         mm->get_namespace().erase(*node, aid);
         auto p = mm->get_peer(*node);
         if (p && p->erase_on_last_proxy_exited()) {
@@ -113,14 +113,14 @@ void remote_actor_proxy::forward_msg(const message_header& hdr, any_tuple msg) {
                                     "forward_msg$bouncer",
                                     "bounce message for reason " << rsn);
                     detail::sync_request_bouncer f{rsn};
-                    f(hdr.sender.get(), hdr.id);
+                    f(hdr.sender, hdr.id);
                 });
                 return; // no need to forward message
             }
             default: break;
         }
     }
-    auto node = m_pinf;
+    auto node = m_node;
     auto mm = m_parent;
     m_parent->run_later([hdr, msg, node, mm] {
         CPPA_LOGC_TRACE("cppa::io::remote_actor_proxy",
@@ -131,6 +131,7 @@ void remote_actor_proxy::forward_msg(const message_header& hdr, any_tuple msg) {
 }
 
 void remote_actor_proxy::enqueue(const message_header& hdr, any_tuple msg) {
+    CPPA_REQUIRE(m_parent != nullptr);
     CPPA_LOG_TRACE(CPPA_TARG(hdr, to_string) << ", " << CPPA_TARG(msg, to_string));
     auto& arr = detail::static_types_array<atom_value, uint32_t>::arr;
     if (   msg.size() == 2
@@ -143,61 +144,56 @@ void remote_actor_proxy::enqueue(const message_header& hdr, any_tuple msg) {
         m_parent->run_later([_this, reason] {
             CPPA_LOGC_TRACE("cppa::io::remote_actor_proxy",
                             "enqueue$kill_proxy_helper",
-                            "KILL_PROXY with exit reason " << reason);
+                            "KILL_PROXY " << to_string(_this->address())
+                            << " with exit reason " << reason);
             _this->cleanup(reason);
             detail::sync_request_bouncer f{reason};
             _this->m_pending_requests.close([&](const sync_request_info& e) {
-                f(e.sender.get(), e.mid);
+                f(e.sender, e.mid);
             });
         });
     }
     else forward_msg(hdr, move(msg));
 }
 
-void remote_actor_proxy::link_to(const intrusive_ptr<actor>& other) {
-    CPPA_LOG_TRACE(CPPA_MARG(other, get));
+void remote_actor_proxy::link_to(const actor_addr& other) {
     if (link_to_impl(other)) {
         // causes remote actor to link to (proxy of) other
         // receiving peer will call: this->local_link_to(other)
-        forward_msg({this, this}, make_any_tuple(atom("LINK"), other));
+        forward_msg({address(), this}, make_any_tuple(atom("LINK"), other));
     }
 }
 
-void remote_actor_proxy::unlink_from(const intrusive_ptr<actor>& other) {
-    CPPA_LOG_TRACE(CPPA_MARG(other, get));
+void remote_actor_proxy::unlink_from(const actor_addr& other) {
     if (unlink_from_impl(other)) {
         // causes remote actor to unlink from (proxy of) other
-        forward_msg({this, this}, make_any_tuple(atom("UNLINK"), other));
+        forward_msg({address(), this}, make_any_tuple(atom("UNLINK"), other));
     }
 }
 
-bool remote_actor_proxy::establish_backlink(const intrusive_ptr<actor>& other) {
-    CPPA_LOG_TRACE(CPPA_MARG(other, get));
+bool remote_actor_proxy::establish_backlink(const actor_addr& other) {
     if (super::establish_backlink(other)) {
         // causes remote actor to unlink from (proxy of) other
-        forward_msg({this, this}, make_any_tuple(atom("LINK"), other));
+        forward_msg({address(), this}, make_any_tuple(atom("LINK"), other));
         return true;
     }
     return false;
 }
 
-bool remote_actor_proxy::remove_backlink(const intrusive_ptr<actor>& other) {
-    CPPA_LOG_TRACE(CPPA_MARG(other, get));
+bool remote_actor_proxy::remove_backlink(const actor_addr& other) {
     if (super::remove_backlink(other)) {
         // causes remote actor to unlink from (proxy of) other
-        forward_msg({this, this}, make_any_tuple(atom("UNLINK"), other));
+        forward_msg({address(), this}, make_any_tuple(atom("UNLINK"), other));
         return true;
     }
     return false;
 }
 
-void remote_actor_proxy::local_link_to(const intrusive_ptr<actor>& other) {
-    CPPA_LOG_TRACE(CPPA_MARG(other, get));
+void remote_actor_proxy::local_link_to(const actor_addr& other) {
     link_to_impl(other);
 }
 
-void remote_actor_proxy::local_unlink_from(const intrusive_ptr<actor>& other) {
-    CPPA_LOG_TRACE(CPPA_MARG(other, get));
+void remote_actor_proxy::local_unlink_from(const actor_addr& other) {
     unlink_from_impl(other);
 }
 

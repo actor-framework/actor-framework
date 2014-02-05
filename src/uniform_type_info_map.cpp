@@ -35,10 +35,12 @@
 #include <algorithm>
 #include <type_traits>
 
+#include "cppa/group.hpp"
 #include "cppa/logging.hpp"
 #include "cppa/announce.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/message_header.hpp"
+#include "cppa/abstract_group.hpp"
 #include "cppa/actor_namespace.hpp"
 
 #include "cppa/util/duration.hpp"
@@ -48,6 +50,7 @@
 #include "cppa/util/shared_spinlock.hpp"
 #include "cppa/util/shared_lock_guard.hpp"
 
+#include "cppa/detail/raw_access.hpp"
 #include "cppa/detail/object_array.hpp"
 #include "cppa/detail/uniform_type_info_map.hpp"
 #include "cppa/detail/default_uniform_type_info_impl.hpp"
@@ -57,41 +60,47 @@ namespace cppa { namespace detail {
 // maps demangled names to libcppa names
 // WARNING: this map is sorted, insert new elements *in sorted order* as well!
 /* extern */ const char* mapped_type_names[][2] = {
-    { "bool",                                           "bool" },
-    { "cppa::any_tuple",                                "@tuple" },
-    { "cppa::atom_value",                               "@atom" },
-    { "cppa::intrusive_ptr<cppa::actor>",               "@actor" },
-    { "cppa::intrusive_ptr<cppa::channel>",             "@channel" },
-    { "cppa::intrusive_ptr<cppa::group>",               "@group" },
-    { "cppa::intrusive_ptr<cppa::node_id>", "@proc"},
-    { "cppa::io::accept_handle",                        "@ac_hdl" },
-    { "cppa::io::connection_handle",                    "@cn_hdl" },
-    { "cppa::message_header",                           "@header" },
-    { "cppa::nullptr_t",                                "@null" },
-    { "cppa::unit_t",                                   "@0" },
-    { "cppa::util::buffer",                             "@buffer" },
-    { "cppa::util::duration",                           "@duration" },
-    { "double",                                         "double" },
-    { "float",                                          "float" },
-    { "long double",                                    "@ldouble" },
+    { "bool",                                           "bool"                },
+    { "cppa::actor",                                    "@actor"              },
+    { "cppa::actor_addr",                               "@addr"               },
+    { "cppa::any_tuple",                                "@tuple"              },
+    { "cppa::atom_value",                               "@atom"               },
+    { "cppa::channel",                                  "@channel"            },
+    { "cppa::down_msg",                                 "@down"               },
+    { "cppa::exit_msg",                                 "@exit"               },
+    { "cppa::group",                                    "@group"              },
+    { "cppa::intrusive_ptr<cppa::node_id>",             "@proc"               },
+    { "cppa::io::accept_handle",                        "@ac_hdl"             },
+    { "cppa::io::connection_handle",                    "@cn_hdl"             },
+    { "cppa::message_header",                           "@header"             },
+    { "cppa::sync_exited_msg",                          "@sync_exited"        },
+    { "cppa::sync_timeout_msg",                         "@sync_timeout"       },
+    { "cppa::timeout_msg",                              "@timeout"            },
+    { "cppa::unit_t",                                   "@0"                  },
+    { "cppa::util::buffer",                             "@buffer"             },
+    { "cppa::util::duration",                           "@duration"           },
+    { "double",                                         "double"              },
+    { "float",                                          "float"               },
+    { "long double",                                    "@ldouble"            },
     // std::u16string
     { "std::basic_string<@i16,std::char_traits<@i16>,std::allocator<@i16>>",
-      "@u16str" },
+      "@u16str"                                                               },
     // std::u32string
     { "std::basic_string<@i32,std::char_traits<@i32>,std::allocator<@i32>>",
-      "@u32str" },
+      "@u32str"                                                               },
     // std::string
     { "std::basic_string<@i8,std::char_traits<@i8>,std::allocator<@i8>>",
-      "@str" },
+      "@str"                                                                  },
     // std::u16string (again, using unsigned char type)
     { "std::basic_string<@u16,std::char_traits<@u16>,std::allocator<@u16>>",
-      "@u16str" },
+      "@u16str"                                                               },
     // std::u32string (again, using unsigned char type)
     { "std::basic_string<@u32,std::char_traits<@u32>,std::allocator<@u32>>",
-      "@u32str" },
+      "@u32str"                                                               },
     // std::map<std::string,std::string>
-    { "std::map<@str,@str,std::less<@str>,std::allocator<std::pair<const @str,@str>>>",
-      "@strmap" }
+    { "std::map<@str,@str,std::less<@str>,"
+               "std::allocator<std::pair<const @str,@str>>>",
+      "@strmap"                                                               }
 };
 
 // maps sizeof(T) => {unsigned name, signed name}
@@ -115,11 +124,10 @@ const char* mapped_name_by_decorated_name(const char* cstr) {
     auto e = end(mapped_type_names);
     auto i = lower_bound(begin(mapped_type_names), e, cstr, cmp);
     if (i != e && strcmp(cstr, (*i)[0]) == 0) return (*i)[1];
-#   if defined(__GNUC__) && !defined(__clang__)
     // for some reason, GCC returns "std::string" as RTTI type name
-    // instead of std::basic_string<...>
+    // instead of std::basic_string<...>, this also affects clang-compiled
+    // code when used with GCC's libstdc++
     if (strcmp("std::string", cstr) == 0) return mapped_name<std::string>();
-#   endif
     return cstr;
 }
 
@@ -163,39 +171,50 @@ inline void serialize_impl(const unit_t&, serializer*) { }
 
 inline void deserialize_impl(unit_t&, deserializer*) { }
 
-void serialize_impl(const actor_ptr& ptr, serializer* sink) {
+void serialize_impl(const actor_addr& addr, serializer* sink) {
     auto ns = sink->get_namespace();
-    if (ns) ns->write(sink, ptr);
-    else throw std::runtime_error("unable to serialize actor_ptr: "
+    if (ns) ns->write(sink, addr);
+    else throw std::runtime_error("unable to serialize actor_addr: "
                                   "no actor addressing defined");
 }
 
-void deserialize_impl(actor_ptr& ptrref, deserializer* source) {
+void deserialize_impl(actor_addr& addr, deserializer* source) {
     auto ns = source->get_namespace();
-    if (ns) ptrref = ns->read(source);
+    if (ns) addr = ns->read(source);
     else throw std::runtime_error("unable to deserialize actor_ptr: "
                                   "no actor addressing defined");
 }
 
-void serialize_impl(const group_ptr& ptr, serializer* sink) {
-    if (ptr == nullptr) {
+void serialize_impl(const actor& ptr, serializer* sink) {
+    serialize_impl(ptr.address(), sink);
+}
+
+void deserialize_impl(actor& ptr, deserializer* source) {
+    actor_addr addr;
+    deserialize_impl(addr, source);
+    ptr = detail::raw_access::unsafe_cast(addr);
+}
+
+void serialize_impl(const group& gref, serializer* sink) {
+    if (!gref) {
+        CPPA_LOGF_DEBUG("serialized an invalid group");
         // write an empty string as module name
         std::string empty_string;
         sink->write_value(empty_string);
     }
     else {
-        sink->write_value(ptr->module_name());
-        ptr->serialize(sink);
+        sink->write_value(gref->module_name());
+        gref->serialize(sink);
     }
 }
 
-void deserialize_impl(group_ptr& ptrref, deserializer* source) {
+void deserialize_impl(group& gref, deserializer* source) {
     auto modname = source->read<std::string>();
-    if (modname.empty()) ptrref.reset();
-    else ptrref = group::get_module(modname)->deserialize(source);
+    if (modname.empty()) gref = invalid_group;
+    else gref = group::get_module(modname)->deserialize(source);
 }
 
-void serialize_impl(const channel_ptr& ptr, serializer* sink) {
+void serialize_impl(const channel& chref, serializer* sink) {
     // channel is an abstract base class that's either an actor or a group
     // to indicate that, we write a flag first, that is
     //     0 if ptr == nullptr
@@ -205,20 +224,27 @@ void serialize_impl(const channel_ptr& ptr, serializer* sink) {
     auto wr_nullptr = [&] {
         sink->write_value(flag);
     };
-    if (ptr == nullptr) wr_nullptr();
+    if (!chref) {
+        // invalid channel
+        wr_nullptr();
+    }
     else {
-        auto aptr = ptr.downcast<actor>();
+        // raw pointer
+        auto rptr = detail::raw_access::get(chref);
+        // raw actor pointer
+        auto aptr = dynamic_cast<abstract_actor*>(rptr);
         if (aptr != nullptr) {
             flag = 1;
             sink->write_value(flag);
-            serialize_impl(aptr, sink);
+            serialize_impl(detail::raw_access::unsafe_cast(aptr), sink);
         }
         else {
-            auto gptr = ptr.downcast<group>();
-            if (gptr != nullptr) {
+            // get raw group pointer and store it inside a group handle
+            group tmp{dynamic_cast<abstract_group*>(rptr)};
+            if (tmp) {
                 flag = 2;
                 sink->write_value(flag);
-                serialize_impl(gptr, sink);
+                serialize_impl(tmp, sink);
             }
             else {
                 CPPA_LOGF_ERROR("ptr is neither an actor nor a group");
@@ -228,27 +254,27 @@ void serialize_impl(const channel_ptr& ptr, serializer* sink) {
     }
 }
 
-void deserialize_impl(channel_ptr& ptrref, deserializer* source) {
+void deserialize_impl(channel& ptrref, deserializer* source) {
     auto flag = source->read<uint8_t>();
     switch (flag) {
         case 0: {
-            ptrref.reset();
+            ptrref = channel{}; //ptrref.reset();
             break;
         }
         case 1: {
-            actor_ptr tmp;
+            actor tmp;
             deserialize_impl(tmp, source);
-            ptrref = tmp;
+            ptrref = detail::raw_access::get(tmp);
             break;
         }
         case 2: {
-            group_ptr tmp;
+            group tmp;
             deserialize_impl(tmp, source);
             ptrref = tmp;
             break;
         }
         default: {
-            CPPA_LOGF_ERROR("invalid flag while deserializing 'channel_ptr'");
+            CPPA_LOGF_ERROR("invalid flag while deserializing 'channel'");
             throw std::runtime_error("invalid flag");
         }
     }
@@ -256,10 +282,15 @@ void deserialize_impl(channel_ptr& ptrref, deserializer* source) {
 
 void serialize_impl(const any_tuple& tup, serializer* sink) {
     auto tname = tup.tuple_type_names();
-    auto uti = get_uniform_type_info_map()->by_uniform_name(tname ? *tname : detail::get_tuple_type_names(*tup.vals()));
+    auto uti = get_uniform_type_info_map()
+               ->by_uniform_name(tname
+                                ? *tname
+                                : detail::get_tuple_type_names(*tup.vals()));
     if (uti == nullptr) {
-        std::string err = "could not get uniform type info for ";
+        std::string err = "could not get uniform type info for \"";
         err += tname ? *tname : detail::get_tuple_type_names(*tup.vals());
+        err += "\"";
+        CPPA_LOGF_ERROR(err);
         throw std::runtime_error(err);
     }
     sink->begin_object(uti);
@@ -358,6 +389,42 @@ inline void deserialize_impl(bool& val, deserializer* source) {
     val = source->read<uint8_t>() != 0;
 }
 
+// exit_msg & down_msg have the same fields
+template<typename T>
+typename std::enable_if<
+       std::is_same<T, down_msg>::value
+    || std::is_same<T, exit_msg>::value
+    || std::is_same<T, sync_exited_msg>::value
+>::type
+serialize_impl(const T& dm, serializer* sink) {
+    serialize_impl(dm.source, sink);
+    sink->write_value(dm.reason);
+}
+
+// exit_msg & down_msg have the same fields
+template<typename T>
+typename std::enable_if<
+       std::is_same<T, down_msg>::value
+    || std::is_same<T, exit_msg>::value
+    || std::is_same<T, sync_exited_msg>::value
+>::type
+deserialize_impl(T& dm, deserializer* source) {
+    deserialize_impl(dm.source, source);
+    dm.reason = source->read<std::uint32_t>();
+}
+
+inline void serialize_impl(const timeout_msg& tm, serializer* sink) {
+    sink->write_value(tm.timeout_id);
+}
+
+inline void deserialize_impl(timeout_msg& tm, deserializer* source) {
+    tm.timeout_id = source->read<std::uint32_t>();
+}
+
+inline void serialize_impl(const sync_timeout_msg&, serializer*) { }
+
+inline void deserialize_impl(const sync_timeout_msg&, deserializer*) { }
+
 bool types_equal(const std::type_info* lhs, const std::type_info* rhs) {
     // in some cases (when dealing with dynamic libraries),
     // address can be different although types are equal
@@ -416,7 +483,7 @@ class uti_impl : public uti_base<T> {
 
  protected:
 
-    void serialize(const void *instance, serializer *sink) const {
+    void serialize(const void* instance, serializer* sink) const {
         serialize_impl(super::deref(instance), sink);
     }
 
@@ -469,7 +536,8 @@ class int_tinfo : public abstract_int_tinfo {
 
     bool equals(const std::type_info& ti) const {
         auto tptr = &ti;
-        return std::any_of(m_natives.begin(), m_natives.end(), [tptr](const std::type_info* ptr) {
+        return std::any_of(m_natives.begin(), m_natives.end(),
+                           [tptr](const std::type_info* ptr) {
             return types_equal(ptr, tptr);
         });
     }
@@ -697,55 +765,61 @@ class utim_impl : public uniform_type_info_map {
                          size_t,                ptrdiff_t,
                          intptr_t                                >(mapping);
         // fill builtin types *in sorted order* (by uniform name)
-        size_t i = 0;
-        m_builtin_types[i++] = &m_type_unit;            // @0
-        m_builtin_types[i++] = &m_ac_hdl;               // @ac_hdl
-        m_builtin_types[i++] = &m_type_actor;           // @actor
-        m_builtin_types[i++] = &m_type_atom;            // @atom
-        m_builtin_types[i++] = &m_type_buffer;          // @buffer
-        m_builtin_types[i++] = &m_type_channel;         // @channel
-        m_builtin_types[i++] = &m_cn_hdl;               // @cn_hdl
-        m_builtin_types[i++] = &m_type_duration;        // @duration
-        m_builtin_types[i++] = &m_type_group;           // @group
-        m_builtin_types[i++] = &m_type_header;          // @header
-        m_builtin_types[i++] = &m_type_i16;             // @i16
-        m_builtin_types[i++] = &m_type_i32;             // @i32
-        m_builtin_types[i++] = &m_type_i64;             // @i64
-        m_builtin_types[i++] = &m_type_i8;              // @i8
-        m_builtin_types[i++] = &m_type_long_double;     // @ldouble
-        m_builtin_types[i++] = &m_type_proc;            // @proc
-        m_builtin_types[i++] = &m_type_str;             // @str
-        m_builtin_types[i++] = &m_type_strmap;          // @strmap
-        m_builtin_types[i++] = &m_type_tuple;           // @tuple
-        m_builtin_types[i++] = &m_type_u16;             // @u16
-        m_builtin_types[i++] = &m_type_u16str;          // @u16str
-        m_builtin_types[i++] = &m_type_u32;             // @u32
-        m_builtin_types[i++] = &m_type_u32str;          // @u32str
-        m_builtin_types[i++] = &m_type_u64;             // @u64
-        m_builtin_types[i++] = &m_type_u8;              // @u8
-        m_builtin_types[i++] = &m_type_bool;            // bool
-        m_builtin_types[i++] = &m_type_double;          // double
-        m_builtin_types[i++] = &m_type_float;           // float
-        CPPA_REQUIRE(i == m_builtin_types.size());
+        auto i = m_builtin_types.begin();
+        *i++ = &m_type_unit;            // @0
+        *i++ = &m_ac_hdl;               // @ac_hdl
+        *i++ = &m_type_actor;           // @actor
+        *i++ = &m_type_actor_addr;      // @actor_addr
+        *i++ = &m_type_atom;            // @atom
+        *i++ = &m_type_buffer;          // @buffer
+        *i++ = &m_type_channel;         // @channel
+        *i++ = &m_cn_hdl;               // @cn_hdl
+        *i++ = &m_type_down_msg;        // @down
+        *i++ = &m_type_duration;        // @duration
+        *i++ = &m_type_exit_msg;        // @exit
+        *i++ = &m_type_group;           // @group
+        *i++ = &m_type_header;          // @header
+        *i++ = &m_type_i16;             // @i16
+        *i++ = &m_type_i32;             // @i32
+        *i++ = &m_type_i64;             // @i64
+        *i++ = &m_type_i8;              // @i8
+        *i++ = &m_type_long_double;     // @ldouble
+        *i++ = &m_type_proc;            // @proc
+        *i++ = &m_type_str;             // @str
+        *i++ = &m_type_strmap;          // @strmap
+        *i++ = &m_type_sync_exited;     // @sync_exited
+        *i++ = &m_type_sync_timeout;    // @sync_timeout
+        *i++ = &m_type_timeout;         // @timeout
+        *i++ = &m_type_tuple;           // @tuple
+        *i++ = &m_type_u16;             // @u16
+        *i++ = &m_type_u16str;          // @u16str
+        *i++ = &m_type_u32;             // @u32
+        *i++ = &m_type_u32str;          // @u32str
+        *i++ = &m_type_u64;             // @u64
+        *i++ = &m_type_u8;              // @u8
+        *i++ = &m_type_bool;            // bool
+        *i++ = &m_type_double;          // double
+        *i++ = &m_type_float;           // float
+        CPPA_REQUIRE(i == m_builtin_types.end());
 #       if CPPA_DEBUG_MODE
         auto cmp = [](pointer lhs, pointer rhs) {
             return strcmp(lhs->name(), rhs->name()) < 0;
         };
-        if (!std::is_sorted(m_builtin_types.begin(), m_builtin_types.end(), cmp)) {
-            std::cerr << "FATAL: uniform type map not sorted" << std::endl;
-
-            std::cerr << "order is:" << std::endl;
-            for (auto ptr : m_builtin_types) std::cerr << ptr->name() << std::endl;
-
-            std::sort(m_builtin_types.begin(), m_builtin_types.end(), cmp);
-            std::cerr << "\norder should be:" << std::endl;
-            for (auto ptr : m_builtin_types) std::cerr << ptr->name() << std::endl;
+        auto& arr = m_builtin_types;
+        if (!std::is_sorted(arr.begin(), arr.end(), cmp)) {
+            std::cerr << "FATAL: uniform type map not sorted" << std::endl
+                      << "order is:" << std::endl;
+            for (auto ptr : arr) std::cerr << ptr->name() << std::endl;
+            std::sort(arr.begin(), arr.end(), cmp);
+            std::cerr << std::endl << "order should be:" << std::endl;
+            for (auto ptr : arr) std::cerr << ptr->name() << std::endl;
             abort();
         }
         auto cmp2 = [](const char** lhs, const char** rhs) {
             return strcmp(lhs[0], rhs[0]) < 0;
         };
-        if (!std::is_sorted(std::begin(mapped_type_names), std::end(mapped_type_names), cmp2)) {
+        if (!std::is_sorted(std::begin(mapped_type_names),
+                            std::end(mapped_type_names), cmp2)) {
             std::cerr << "FATAL: mapped_type_names not sorted" << std::endl;
             abort();
         }
@@ -754,7 +828,7 @@ class utim_impl : public uniform_type_info_map {
         push_hint<atom_value>(this);
         push_hint<atom_value, std::uint32_t>(this);
         push_hint<atom_value, node_id_ptr>(this);
-        push_hint<atom_value, actor_ptr>(this);
+        push_hint<atom_value, actor>(this);
         push_hint<atom_value, node_id_ptr, std::uint32_t, std::uint32_t>(this);
         push_hint<atom_value, std::uint32_t, std::string>(this);
     }
@@ -772,7 +846,7 @@ class utim_impl : public uniform_type_info_map {
             result = find_name(m_builtin_types, name);
             result = (result) ? result : find_name(m_user_types, name);
         }
-        if (!result && name.compare(0, 4, "@<>+") == 0) {
+        if (!result && name.compare(0, 3, "@<>") == 0) {
             // create tuple UTI on-the-fly
             result = insert(create_unique<default_meta_tuple>(name));
         }
@@ -791,7 +865,8 @@ class utim_impl : public uniform_type_info_map {
     pointer insert(std::unique_ptr<uniform_type_info> uti) {
         std::unique_lock<util::shared_spinlock> guard(m_lock);
         auto e = m_user_types.end();
-        auto i = std::lower_bound(m_user_types.begin(), e, uti.get(), [](uniform_type_info* lhs, pointer rhs) {
+        auto i = std::lower_bound(m_user_types.begin(), e, uti.get(),
+                                  [](uniform_type_info* lhs, pointer rhs) {
             return strcmp(lhs->name(), rhs->name()) < 0;
         });
         if (i == e) {
@@ -819,20 +894,31 @@ class utim_impl : public uniform_type_info_map {
 
     typedef std::map<std::string, std::string> strmap;
 
-    uti_impl<node_id_ptr>       m_type_proc;
+    // 0-9
+    uti_impl<node_id_ptr>                   m_type_proc;
     uti_impl<io::accept_handle>             m_ac_hdl;
     uti_impl<io::connection_handle>         m_cn_hdl;
-    uti_impl<channel_ptr>                   m_type_channel;
+    uti_impl<channel>                       m_type_channel;
+    uti_impl<down_msg>                      m_type_down_msg;
+    uti_impl<exit_msg>                      m_type_exit_msg;
     buffer_type_info_impl                   m_type_buffer;
-    uti_impl<actor_ptr>                     m_type_actor;
-    uti_impl<group_ptr>                     m_type_group;
+    uti_impl<actor>                         m_type_actor;
+    uti_impl<actor_addr>                    m_type_actor_addr;
+    uti_impl<group>                         m_type_group;
+
+    // 10-19
     uti_impl<any_tuple>                     m_type_tuple;
     uti_impl<util::duration>                m_type_duration;
+    uti_impl<sync_exited_msg>               m_type_sync_exited;
+    uti_impl<sync_timeout_msg>              m_type_sync_timeout;
+    uti_impl<timeout_msg>                   m_type_timeout;
     uti_impl<message_header>                m_type_header;
     uti_impl<unit_t>                        m_type_unit;
     uti_impl<atom_value>                    m_type_atom;
     uti_impl<std::string>                   m_type_str;
     uti_impl<std::u16string>                m_type_u16str;
+
+    // 20-29
     uti_impl<std::u32string>                m_type_u32str;
     default_uniform_type_info_impl<strmap>  m_type_strmap;
     uti_impl<bool>                          m_type_bool;
@@ -843,13 +929,15 @@ class utim_impl : public uniform_type_info_map {
     int_tinfo<std::uint8_t>                 m_type_u8;
     int_tinfo<std::int16_t>                 m_type_i16;
     int_tinfo<std::uint16_t>                m_type_u16;
+
+    // 30-33
     int_tinfo<std::int32_t>                 m_type_i32;
     int_tinfo<std::uint32_t>                m_type_u32;
     int_tinfo<std::int64_t>                 m_type_i64;
     int_tinfo<std::uint64_t>                m_type_u64;
 
     // both containers are sorted by uniform name
-    std::array<pointer, 28> m_builtin_types;
+    std::array<pointer, 34> m_builtin_types;
     std::vector<uniform_type_info*> m_user_types;
     mutable util::shared_spinlock m_lock;
 
@@ -866,7 +954,8 @@ class utim_impl : public uniform_type_info_map {
     pointer find_name(const Container& c, const std::string& name) const {
         auto e = c.end();
         // both containers are sorted
-        auto i = std::lower_bound(c.begin(), e, name, [](pointer p, const std::string& n) {
+        auto i = std::lower_bound(c.begin(), e, name,
+                                  [](pointer p, const std::string& n) {
             return p->name() < n;
         });
         return (i != e && (*i)->name() == name) ? *i : nullptr;

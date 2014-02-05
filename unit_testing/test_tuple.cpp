@@ -88,8 +88,8 @@ optional<int> str2int(const std::string& str) {
     } else { CPPA_CHECKPOINT(); } static_cast<void>(42)
 
 struct dummy_receiver : event_based_actor {
-    void init() {
-        become(
+    behavior make_behavior() override {
+        return (
             on_arg_match >> [=](expensive_copy_struct& ecs) -> expensive_copy_struct {
                 ecs.value = 42;
                 quit();
@@ -425,8 +425,9 @@ void check_move_ops() {
     check_move_optional();
     CPPA_PRINT(__func__);
     CPPA_CHECK_EQUAL(s_expensive_copies.load(), 0);
-    send(spawn<dummy_receiver>(), expensive_copy_struct());
-    receive (
+    scoped_actor self;
+    self->send(spawn<dummy_receiver>(), expensive_copy_struct());
+    self->receive (
         on_arg_match >> [&](expensive_copy_struct& ecs) {
             CPPA_CHECK_EQUAL(42, ecs.value);
         }
@@ -463,7 +464,7 @@ int main() {
     check_wildcards();
     check_move_ops();
     check_drop();
-    await_all_others_done();
+    await_all_actors_done();
     shutdown();
     return CPPA_TEST_RESULT();
 }

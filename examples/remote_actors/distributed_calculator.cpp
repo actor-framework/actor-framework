@@ -26,15 +26,15 @@ using namespace cppa;
 using namespace cppa::placeholders;
 
 // our "service"
-void calculator() {
-    become (
+void calculator(event_based_actor* self) {
+    self->become (
         on(atom("plus"), arg_match) >> [](int a, int b) -> any_tuple {
-            return {atom("result"), a + b};
+            return make_any_tuple(atom("result"), a + b);
         },
         on(atom("minus"), arg_match) >> [](int a, int b) -> any_tuple {
-            return {atom("result"), a - b};
+            return make_any_tuple(atom("result"), a - b);
         },
-        on(atom("quit")) >> [=]() {
+        on(atom("quit")) >> [=] {
             self->quit();
         }
     );
@@ -49,70 +49,72 @@ inline string trim(std::string s) {
     return s;
 }
 
-void client_bhvr(const string& host, uint16_t port, const actor_ptr& server) {
+void client_bhvr(event_based_actor* self, const string& host, uint16_t port, const actor& server) {
     // recover from sync failures by trying to reconnect to server
     if (!self->has_sync_failure_handler()) {
         self->on_sync_failure([=] {
-            aout << "*** lost connection to " << host << ":" << port << endl;
-            client_bhvr(host, port, nullptr);
+            aout(self) << "*** lost connection to " << host
+                       << ":" << port << endl;
+            client_bhvr(self, host, port, invalid_actor);
         });
     }
     // connect to server if needed
     if (!server) {
-        aout << "*** try to connect to " << host << ":" << port << endl;
+        aout(self) << "*** try to connect to " << host << ":" << port << endl;
         try {
             auto new_serv = remote_actor(host, port);
             self->monitor(new_serv);
-            aout << "reconnection succeeded" << endl;
-            client_bhvr(host, port, new_serv);
+            aout(self) << "reconnection succeeded" << endl;
+            client_bhvr(self, host, port, new_serv);
             return;
         }
         catch (exception&) {
-            aout << "connection failed, try again in 3s" << endl;
-            delayed_send(self, chrono::seconds(3), atom("reconnect"));
+            aout(self) << "connection failed, try again in 3s" << endl;
+            self->delayed_send(self, chrono::seconds(3), atom("reconnect"));
         }
     }
-    become (
-        on_arg_match.when(_x1.in({atom("plus"), atom("minus")}) && gval(server) != nullptr) >> [=](atom_value op, int lhs, int rhs) {
-            sync_send_tuple(server, self->last_dequeued()).then(
+    self->become (
+        on_arg_match.when(_x1.in({atom("plus"), atom("minus")}) && gval(server) != invalid_actor) >> [=](atom_value op, int lhs, int rhs) {
+            self->sync_send_tuple(server, self->last_dequeued()).then(
                 on(atom("result"), arg_match) >> [=](int result) {
-                    aout << lhs << " "
-                         << to_string(op) << " "
-                         << rhs << " = "
-                         << result << endl;
+                    aout(self) << lhs << " "
+                               << to_string(op) << " "
+                               << rhs << " = "
+                               << result << endl;
                 }
             );
         },
-        on(atom("DOWN"), arg_match) >> [=](uint32_t) {
-            aout << "*** server down, try to reconnect ..." << endl;
-            client_bhvr(host, port, nullptr);
+        on_arg_match >> [=](const down_msg&) {
+            aout(self) << "*** server down, try to reconnect ..." << endl;
+            client_bhvr(self, host, port, invalid_actor);
         },
         on(atom("rebind"), arg_match) >> [=](const string& host, uint16_t port) {
-            aout << "*** rebind to new server: " << host << ":" << port << endl;
-            client_bhvr(host, port, nullptr);
+            aout(self) << "*** rebind to new server: "
+                       << host << ":" << port << endl;
+            client_bhvr(self, host, port, invalid_actor);
         },
         on(atom("reconnect")) >> [=] {
-            client_bhvr(host, port, nullptr);
+            client_bhvr(self, host, port, invalid_actor);
         }
     );
 }
 
 void client_repl(const string& host, uint16_t port) {
     // keeps track of requests and tries to reconnect on server failures
-    aout << "Usage:\n"
+    cout << "Usage:\n"
             "quit                   Quit the program\n"
             "<x> + <y>              Calculate <x>+<y> and print result\n"
             "<x> - <y>              Calculate <x>-<y> and print result\n"
             "connect <host> <port>  Reconfigure server"
          << endl << endl;
     string line;
-    auto client = spawn(client_bhvr, host, port, nullptr);
+    auto client = spawn(client_bhvr, host, port, invalid_actor);
     const char connect[] = "connect ";
     while (getline(cin, line)) {
         line = trim(std::move(line)); // ignore leading and trailing whitespaces
         if (line == "quit") {
             // force client to quit
-            send_exit(client, exit_reason::user_shutdown);
+            anon_send_exit(client, exit_reason::user_shutdown);
             return;
         }
         // the STL way of line.starts_with("connect")
@@ -123,19 +125,19 @@ void client_repl(const string& host, uint16_t port) {
                         auto lport = std::stoul(sport);
                         if (lport < std::numeric_limits<uint16_t>::max()) {
                             auto port = static_cast<uint16_t>(lport);
-                            send(client, atom("rebind"), move(host), port);
+                            anon_send(client, atom("rebind"), move(host), port);
                         }
                         else {
-                            aout << lport << " is not a valid port" << endl;
+                            cout << lport << " is not a valid port" << endl;
                         }
                     }
                     catch (std::exception& e) {
-                        aout << "\"" << sport << "\" is not an unsigned integer"
+                        cout << "\"" << sport << "\" is not an unsigned integer"
                              << endl;
                     }
                 },
                 others() >> [] {
-                    aout << "*** usage: connect <host> <port>" << endl;
+                    cout << "*** usage: connect <host> <port>" << endl;
                 }
             );
         }
@@ -143,7 +145,7 @@ void client_repl(const string& host, uint16_t port) {
             auto toint = [](const string& str) -> optional<int> {
                 try { return {std::stoi(str)}; }
                 catch (std::exception&) {
-                    aout << "\"" << str << "\" is not an integer" << endl;
+                    cout << "\"" << str << "\" is not an integer" << endl;
                     return none;
                 }
             };
@@ -159,11 +161,11 @@ void client_repl(const string& host, uint16_t port) {
                 auto rhs = toint(rsub);
                 if (lhs && rhs) {
                     auto op = (*pos == '+') ? atom("plus") : atom("minus");
-                    send(client, op, *lhs, *rhs);
+                    anon_send(client, op, *lhs, *rhs);
                 }
             }
             else if (!success) {
-                aout << "*** invalid format; usage: <x> [+|-] <y>" << endl;
+                cout << "*** invalid format; usage: <x> [+|-] <y>" << endl;
             }
         }
     }
@@ -216,7 +218,7 @@ int main(int argc, char** argv) {
         if (host.empty()) host = "localhost";
         client_repl(host, port);
     }
-    await_all_others_done();
+    await_all_actors_done();
     shutdown();
     return 0;
 }

@@ -109,10 +109,6 @@ constexpr size_t num_curl_workers = 10;
 constexpr int min_req_interval =  10;
 constexpr int max_req_interval = 300;
 
-const actor_ostream& print(const char* color_code, const char* actor_name) {
-    return aout << color_code << actor_name << " (id = " << self->id() << "): ";
-}
-
 } // namespace <anonymous>
 
 // provides print utility and each base_actor has a parent
@@ -120,25 +116,27 @@ class base_actor : public event_based_actor {
 
  protected:
 
-    base_actor(actor_ptr parent, std::string name, std::string color_code)
+    base_actor(actor parent, std::string name, std::string color_code)
     : m_parent(std::move(parent))
     , m_name(std::move(name))
-    , m_color(std::move(color_code)) { }
+    , m_color(std::move(color_code))
+    , m_out(this) { }
 
-    inline const actor_ostream& print() const {
-        return ::print(m_color.c_str(), m_name.c_str());
+    inline actor_ostream& print() {
+        return m_out << m_color << m_name << " (id = " << id() << "): ";
     }
 
     void on_exit() override {
         print() << "on_exit" << color::reset_endl;
     }
 
-    actor_ptr m_parent;
+    actor m_parent;
 
  private:
 
-    std::string m_name;
-    std::string m_color;
+    std::string   m_name;
+    std::string   m_color;
+    actor_ostream m_out;
 
 };
 
@@ -147,19 +145,19 @@ class client_job : public base_actor {
 
  public:
 
-    client_job(actor_ptr parent)
+    client_job(actor parent)
     : base_actor(std::move(parent), "client_job", color::blue) { }
 
  protected:
 
-    void init() override {
+    behavior make_behavior() override {
         print() << "init" << color::reset_endl;
         send(m_parent,
              atom("read"),
              "http://www.example.com/index.html",
              static_cast<uint64_t>(0),
              static_cast<uint64_t>(4095));
-        become (
+        return (
             on(atom("reply"), arg_match) >> [=](const util::buffer& buf) {
                 print() << "successfully received "
                         << buf.size()
@@ -181,18 +179,18 @@ class client : public base_actor {
 
  public:
 
-    client(const actor_ptr& parent)
+    client(const actor& parent)
     : base_actor(parent, "client", color::green), m_count(0) { }
 
  protected:
 
-    void init() override {
+    behavior make_behavior() override {
         using std::chrono::milliseconds;
         link_to(m_parent);
         print() << "init" << color::reset_endl;
         // start 'loop'
         send(this, atom("next"));
-        become (
+        return (
             on(atom("next")) >> [=] {
                 print() << "spawn new client_job (nr. "
                         << ++m_count
@@ -203,7 +201,7 @@ class client : public base_actor {
                 spawn<client_job, detached+linked>(m_parent);
                 // compute random delay until next job is launched
                 auto delay = (rand() + min_req_interval) % max_req_interval;
-                delayed_send(self, milliseconds(delay), atom("next"));
+                delayed_send(this, milliseconds(delay), atom("next"));
             }
         );
     }
@@ -219,17 +217,17 @@ class curl_worker : public base_actor {
 
  public:
 
-    curl_worker(const actor_ptr& parent)
+    curl_worker(const actor& parent)
     : base_actor(parent, "curl_worker", color::yellow) { }
 
  protected:
 
-    void init() override {
+    behavior make_behavior() override {
         print() << "init" << color::reset_endl;
         m_curl = curl_easy_init();
         curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, &curl_worker::cb);
         curl_easy_setopt(m_curl, CURLOPT_NOSIGNAL, 1);
-        become (
+        return (
             on(atom("read"), arg_match)
             >> [=](const std::string& fname, uint64_t offset, uint64_t range)
             -> cow_tuple<atom_value, util::buffer> {
@@ -310,35 +308,36 @@ class curl_master : public base_actor {
 
  public:
 
-    curl_master() : base_actor(nullptr, "curl_master", color::magenta) { }
+    curl_master() : base_actor(invalid_actor, "curl_master", color::magenta) { }
 
  protected:
 
-    void init() override {
+    behavior make_behavior() override {
         print() << "init" << color::reset_endl;
         // spawn workers
         for(size_t i = 0; i < num_curl_workers; ++i) {
             m_idle_worker.push_back(spawn<curl_worker, detached+linked>(this));
         }
         auto worker_finished = [=] {
-            actor_ptr sender = self->last_sender();
-            m_busy_worker.erase(std::find(m_busy_worker.begin(),
-                                          m_busy_worker.end(),
-                                          sender));
-            m_idle_worker.push_back(sender);
+            auto sender = last_sender();
+            auto i = std::find(m_busy_worker.begin(),
+                               m_busy_worker.end(),
+                               sender);
+            m_idle_worker.push_back(*i);
+            m_busy_worker.erase(i);
             print() << "worker is done" << color::reset_endl;
         };
         print() << "spawned "
                 << m_idle_worker.size()
                 << " worker"
                 << color::reset_endl;
-        become (
+        return (
             on(atom("read"), arg_match) >> [=](const std::string&,
                                                uint64_t,
                                                uint64_t) {
                 print() << "received {'read'}" << color::reset_endl;
                 // forward job to first idle worker
-                actor_ptr worker = m_idle_worker.front();
+                actor worker = m_idle_worker.front();
                 m_idle_worker.erase(m_idle_worker.begin());
                 m_busy_worker.push_back(worker);
                 forward_to(worker);
@@ -364,8 +363,8 @@ class curl_master : public base_actor {
 
  private:
 
-    std::vector<actor_ptr> m_idle_worker;
-    std::vector<actor_ptr> m_busy_worker;
+    std::vector<actor> m_idle_worker;
+    std::vector<actor> m_busy_worker;
 
 };
 
@@ -387,21 +386,25 @@ int main() {
     set_sighandler();
     // initialize CURL
     curl_global_init(CURL_GLOBAL_DEFAULT);
-    // spawn client and curl_master
-    auto master = spawn<curl_master, detached>();
-    spawn<client, detached>(master);
-    // poll CTRL+C flag every second
-    while (!shutdown_flag) { sleep(1); }
-    aout << color::cyan << "received CTRL+C" << color::reset_endl;
-    // shutdown actors
-    send_exit(master, exit_reason::user_shutdown);
-    // await actors
-    act.sa_handler = [](int) { abort(); };
-    set_sighandler();
-    aout << color::cyan
-         << "await CURL; this may take a while (press CTRL+C again to abort)"
-         << color::reset_endl;
-    await_all_others_done();
+    { // lifetime scope of self
+        scoped_actor self;
+        // spawn client and curl_master
+        auto master = self->spawn<curl_master, detached>();
+        self->spawn<client, detached>(master);
+        // poll CTRL+C flag every second
+        while (!shutdown_flag) { sleep(1); }
+        aout(self) << color::cyan << "received CTRL+C" << color::reset_endl;
+        // shutdown actors
+        anon_send_exit(master, exit_reason::user_shutdown);
+        // await actors
+        act.sa_handler = [](int) { abort(); };
+        set_sighandler();
+        aout(self) << color::cyan
+                   << "await CURL; this may take a while "
+                      "(press CTRL+C again to abort)"
+                   << color::reset_endl;
+        self->await_all_other_actors_done();
+    }
     // shutdown libcppa
     shutdown();
     // shutdown CURL

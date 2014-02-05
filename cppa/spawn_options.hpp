@@ -65,10 +65,6 @@ constexpr spawn_options operator+(const spawn_options& lhs,
                                      | static_cast<int>(rhs));
 }
 
-#ifndef CPPA_DOCUMENTATION
-namespace {
-#endif
-
 /**
  * @brief Denotes default settings.
  */
@@ -93,7 +89,7 @@ constexpr spawn_options detached         = spawn_options::detach_flag;
 
 /**
  * @brief Causes the runtime to ignore the new actor in
- *        {@link await_all_others_done()}.
+ *        {@link await_all_actors_done()}.
  */
 constexpr spawn_options hidden           = spawn_options::hide_flag;
 
@@ -110,10 +106,6 @@ constexpr spawn_options blocking_api     = spawn_options::blocking_api_flag;
  */
 constexpr spawn_options priority_aware   = spawn_options::priority_aware_flag
                                          + spawn_options::detach_flag;
-
-#ifndef CPPA_DOCUMENTATION
-} // namespace <anonymous>
-#endif
 
 /**
  * @brief Checks wheter @p haystack contains @p needle.
@@ -172,6 +164,20 @@ constexpr bool has_blocking_api_flag(spawn_options opts) {
 }
 
 /** @} */
+
+/** @cond PRIVATE */
+
+constexpr bool is_unbound(spawn_options opts) {
+    return !has_monitor_flag(opts) && !has_link_flag(opts);
+}
+
+constexpr spawn_options make_unbound(spawn_options opts) {
+    return static_cast<spawn_options>(
+                (static_cast<int>(opts)
+                 & ~(static_cast<int>(linked) | static_cast<int>(monitored))));
+}
+
+/** @endcond */
 
 } // namespace cppa
 

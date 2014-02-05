@@ -31,130 +31,86 @@
 #ifndef CPPA_GROUP_HPP
 #define CPPA_GROUP_HPP
 
-#include <string>
-#include <memory>
+#include "cppa/intrusive_ptr.hpp"
+#include "cppa/abstract_group.hpp"
 
-#include "cppa/channel.hpp"
-#include "cppa/attachable.hpp"
-#include "cppa/ref_counted.hpp"
-
-namespace cppa { namespace detail {
-
-class group_manager;
-class peer_connection;
-
-} } // namespace cppa::detail
+#include "cppa/util/comparable.hpp"
+#include "cppa/util/type_traits.hpp"
 
 namespace cppa {
 
-class serializer;
-class deserializer;
+class channel;
+class any_tuple;
+class message_header;
+
+struct invalid_group_t { constexpr invalid_group_t() { } };
+
+namespace detail {
+class raw_access;
+} // namespace detail
 
 /**
- * @brief A multicast group.
+ * @brief Identifies an invalid {@link group}.
+ * @relates group
  */
-class group : public channel {
+constexpr invalid_group_t invalid_group = invalid_group_t{};
 
-    friend class detail::group_manager;
-    friend class detail::peer_connection; // needs access to remote_enqueue
+class group : util::comparable<group>
+            , util::comparable<group, invalid_group_t> {
+
+    friend class detail::raw_access;
 
  public:
 
-    class subscription;
+    group() = default;
 
-    // needs access to unsubscribe()
-    friend class subscription;
+    group(group&&) = default;
 
-    // unsubscribes its channel from the group on destruction
-    class subscription {
+    group(const group&) = default;
 
-        friend class group;
+    group(const invalid_group_t&);
 
-        subscription(const subscription&) = delete;
-        subscription& operator=(const subscription&) = delete;
+    group& operator=(group&&) = default;
 
-     public:
+    group& operator=(const group&) = default;
 
-        subscription() = default;
-        subscription(subscription&&) = default;
-        subscription(const channel_ptr& s, const intrusive_ptr<group>& g);
+    group& operator=(const invalid_group_t&);
 
-        ~subscription();
+    group(intrusive_ptr<abstract_group> ptr);
 
-        inline bool valid() const { return (m_subscriber) && (m_group); }
+    inline explicit operator bool() const {
+        return static_cast<bool>(m_ptr);
+    }
 
-     private:
-
-        channel_ptr m_subscriber;
-        intrusive_ptr<group> m_group;
-
-    };
+    inline bool operator!() const {
+        return !static_cast<bool>(m_ptr);
+    }
 
     /**
-     * @brief Module interface.
+     * @brief Returns a handle that grants access to
+     *        actor operations such as enqueue.
      */
-    class module {
+    inline abstract_group* operator->() const {
+        return m_ptr.get();
+    }
 
-        std::string m_name;
+    inline abstract_group& operator*() const {
+        return *m_ptr;
+    }
 
-     protected:
+    intptr_t compare(const group& other) const;
 
-        module(std::string module_name);
-
-     public:
-
-        /**
-         * @brief Get the name of this module implementation.
-         * @returns The name of this module implementation.
-         * @threadsafe
-         */
-        const std::string& name();
-
-        /**
-         * @brief Get a pointer to the group associated with
-         *        the name @p group_name.
-         * @threadsafe
-         */
-        virtual intrusive_ptr<group> get(const std::string& group_name) = 0;
-
-        virtual intrusive_ptr<group> deserialize(deserializer* source) = 0;
-
-    };
-
-    typedef module* module_ptr;
-    typedef std::unique_ptr<module> unique_module_ptr;
-
-    virtual void serialize(serializer* sink) = 0;
-
-    /**
-     * @brief A string representation of the group identifier.
-     * @returns The group identifier as string (e.g. "224.0.0.1" for IPv4
-     *         multicast or a user-defined string for local groups).
-     */
-    const std::string& identifier() const;
-
-    module_ptr get_module() const;
-
-    /**
-     * @brief The name of the module.
-     * @returns The module name of this group (e.g. "local").
-     */
-    const std::string& module_name() const;
-
-    /**
-     * @brief Subscribe @p who to this group.
-     * @returns A {@link subscription} object that unsubscribes @p who
-     *         if the lifetime of @p who ends.
-     */
-    virtual subscription subscribe(const channel_ptr& who) = 0;
+    inline intptr_t compare(const invalid_actor_t&) const {
+        return m_ptr ? 1 : 0;
+    }
 
     /**
      * @brief Get a pointer to the group associated with
      *        @p group_identifier from the module @p module_name.
      * @threadsafe
      */
-    static intrusive_ptr<group> get(const std::string& module_name,
-                                    const std::string& group_identifier);
+    static group get(const std::string& module_name,
+                     const std::string& group_identifier);
 
     /**
      * @brief Returns an anonymous group.
@@ -163,44 +119,26 @@ class group : public channel {
      * of an anonymous group. Anonymous groups can be used whenever
      * a set of actors wants to communicate using an exclusive channel.
      */
-    static intrusive_ptr<group> anonymous();
+    static group anonymous();
 
     /**
      * @brief Add a new group module to the libcppa group management.
      * @threadsafe
      */
-    static void add_module(unique_module_ptr);
+    static void add_module(abstract_group::unique_module_ptr);
 
     /**
      * @brief Returns the module associated with @p module_name.
      * @threadsafe
      */
-    static module_ptr get_module(const std::string& module_name);
+    static abstract_group::module_ptr get_module(const std::string& module_name);
 
- protected:
 
-    group(module_ptr module, std::string group_id);
+ private:
 
-    virtual void unsubscribe(const channel_ptr& who) = 0;
-
-    module_ptr m_module;
-    std::string m_identifier;
+    abstract_group_ptr m_ptr;
 
 };
-
-/**
- * @brief A smart pointer type that manages instances of {@link group}.
- * @relates group
- */
-typedef intrusive_ptr<group> group_ptr;
-
-/**
- * @brief Makes *all* local groups accessible via network on address @p addr
- *        and @p port.
- * @throws bind_failure
- * @throws network_error
- */
-void publish_local_groups_at(std::uint16_t port, const char* addr = nullptr);
 
 } // namespace cppa
 

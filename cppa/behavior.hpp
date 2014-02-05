@@ -112,6 +112,10 @@ class behavior {
      */
     behavior add_continuation(continuation_fun fun);
 
+    inline operator bool() const {
+        return static_cast<bool>(m_impl);
+    }
+
  private:
 
     impl_ptr m_impl;

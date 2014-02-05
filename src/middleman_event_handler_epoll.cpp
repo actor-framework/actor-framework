@@ -27,6 +27,11 @@
  * along with libcppa. If not, see <http://www.gnu.org/licenses/>.            *
 \******************************************************************************/
 
+
+#include "cppa/config.hpp"
+
+#if defined(CPPA_LINUX) && !defined(CPPA_POLL_IMPL)
+
 #include <ios>
 #include <string>
 #include <vector>
@@ -34,6 +39,7 @@
 #include <string.h>
 #include <sys/epoll.h>
 
+#include "cppa/logging.hpp"
 #include "cppa/io/middleman_event_handler.hpp"
 
 namespace cppa { namespace io {
@@ -139,18 +145,18 @@ class middleman_event_handler_impl : public middleman_event_handler {
             switch (errno) {
                 // supplied file descriptor is already registered
                 case EEXIST: {
-                    CPPA_LOGMF(CPPA_ERROR, self, "file descriptor registered twice");
+                    CPPA_LOG_ERROR("file descriptor registered twice");
                     break;
                 }
                 // op was EPOLL_CTL_MOD or EPOLL_CTL_DEL,
                 // and fd is not registered with this epoll instance.
                 case ENOENT: {
-                    CPPA_LOGMF(CPPA_ERROR, self, "cannot delete file descriptor "
+                    CPPA_LOG_ERROR("cannot delete file descriptor "
                                    "because it isn't registered");
                     break;
                 }
                 default: {
-                    CPPA_LOGMF(CPPA_ERROR, self, strerror(errno));
+                    CPPA_LOG_ERROR(strerror(errno));
                     perror("epoll_ctl() failed");
                     CPPA_CRITICAL("epoll_ctl() failed");
                 }
@@ -171,4 +177,10 @@ std::unique_ptr<middleman_event_handler> middleman_event_handler::create() {
     return std::unique_ptr<middleman_event_handler>{new middleman_event_handler_impl};
 }
 
-} } // namespace cppa::network
+} } // namespace cppa::io
+
+#else // defined(CPPA_LINUX) && !defined(CPPA_POLL_IMPL)
+
+int keep_compiler_happy_for_epoll_impl() { return 42; }
+
+#endif // defined(CPPA_LINUX) && !defined(CPPA_POLL_IMPL)

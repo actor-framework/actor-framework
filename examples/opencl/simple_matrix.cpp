@@ -74,7 +74,7 @@ void print_as_matrix(const vector<float>& matrix) {
     }
 }
 
-void multiplier() {
+void multiplier(event_based_actor* self) {
     // the opencl actor only understands vectors
     // so these vectors represent the matrices
     vector<float> m1(matrix_size * matrix_size);
@@ -107,7 +107,7 @@ void multiplier() {
                                                   {},
                                                   matrix_size * matrix_size);
     // send both matrices to the actor and wait for a result
-    sync_send(worker, move(m1), move(m2)).then(
+    self->sync_send(worker, move(m1), move(m2)).then(
         [](const vector<float>& result) {
             cout << "result: " << endl;
             print_as_matrix(result);
@@ -118,7 +118,7 @@ void multiplier() {
 int main() {
     announce<vector<float>>();
     spawn(multiplier);
-    await_all_others_done();
+    await_all_actors_done();
     shutdown();
     return 0;
 }

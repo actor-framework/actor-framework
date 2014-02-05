@@ -48,6 +48,8 @@
 #include "cppa/binary_serializer.hpp"
 #include "cppa/binary_deserializer.hpp"
 
+#include "cppa/detail/raw_access.hpp"
+
 #include "cppa/intrusive/single_reader_queue.hpp"
 #include "cppa/intrusive/blocking_single_reader_queue.hpp"
 
@@ -63,23 +65,22 @@ namespace cppa {
 using namespace detail;
 using namespace io;
 
-void publish(actor_ptr whom, std::unique_ptr<acceptor> aptr) {
-    CPPA_LOG_TRACE(CPPA_TARG(whom, to_string) << ", " << CPPA_MARG(ptr, get)
-                   << ", args.size() = " << args.size());
+void publish(actor whom, std::unique_ptr<acceptor> aptr) {
+    CPPA_LOGF_TRACE(CPPA_TARG(whom, to_string) << ", " << CPPA_MARG(aptr, get));
     if (!whom) return;
-    CPPA_REQUIRE(args.size() == 0);
-    get_actor_registry()->put(whom->id(), whom);
+    get_actor_registry()->put(whom->id(), detail::raw_access::get(whom));
     auto mm = get_middleman();
-    mm->register_acceptor(whom, new peer_acceptor(mm, move(aptr), whom));
+    auto addr = whom.address();
+    mm->register_acceptor(addr, new peer_acceptor(mm, move(aptr), addr));
 }
 
-void publish(actor_ptr whom, std::uint16_t port, const char* addr) {
+void publish(actor whom, std::uint16_t port, const char* addr) {
     if (!whom) return;
     publish(whom, ipv4_acceptor::create(port, addr));
 }
 
-actor_ptr remote_actor(stream_ptr_pair io) {
-    CPPA_LOG_TRACE("io{" << io.first.get() << ", " << io.second.get() << "}");
+actor remote_actor(stream_ptr_pair io) {
+    CPPA_LOGF_TRACE("io{" << io.first.get() << ", " << io.second.get() << "}");
     auto pinf = node_id::get();
     std::uint32_t process_id = pinf->process_id();
     // throws on error
@@ -95,10 +96,11 @@ actor_ptr remote_actor(stream_ptr_pair io) {
     if (*pinf == *pinfptr) {
         // this is a local actor, not a remote actor
         CPPA_LOGF_WARNING("remote_actor() called to access a local actor");
-        return get_actor_registry()->get(remote_aid);
+        auto ptr = get_actor_registry()->get(remote_aid);
+        return detail::raw_access::unsafe_cast(ptr.get());
     }
     auto mm = get_middleman();
-    struct remote_actor_result { remote_actor_result* next; actor_ptr value; };
+    struct remote_actor_result { remote_actor_result* next; actor value; };
     intrusive::blocking_single_reader_queue<remote_actor_result> q;
     mm->run_later([mm, io, pinfptr, remote_aid, &q] {
         CPPA_LOGC_TRACE("cppa",
@@ -110,11 +112,11 @@ actor_ptr remote_actor(stream_ptr_pair io) {
         q.push_back(new remote_actor_result{0, res});
     });
     std::unique_ptr<remote_actor_result> result(q.pop());
-    CPPA_LOGF_DEBUG("result = " << result->value.get());
+    CPPA_LOGF_DEBUG(CPPA_MARG(result, get));
     return result->value;
 }
-    
-actor_ptr remote_actor(const char* host, std::uint16_t port) {
+
+actor remote_actor(const char* host, std::uint16_t port) {
     auto io = ipv4_io_stream::connect_to(host, port);
     return remote_actor(stream_ptr_pair(io, io));
 }

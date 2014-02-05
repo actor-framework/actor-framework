@@ -47,6 +47,10 @@ void fiber::swap(fiber&, fiber&) {
                            "CPPA_DISABLE_CONTEXT_SWITCHING");
 }
 
+bool fiber::is_disabled_feature() {
+    return true;
+}
+
 } } // namespace cppa::util
 
 #else // ifdef CPPA_DISABLE_CONTEXT_SWITCHING
@@ -99,7 +103,7 @@ inline void fc_make(fc_member& storage, fc_allocator& alloc, vg_member& vgm) {
                 reinterpret_cast<void*>(
                     reinterpret_cast<intptr_t>(storage.fc_stack.base) - mss));
 }
-#else
+#elif BOOST_VERSION < 105400
 namespace ctx = boost::context;
 typedef ctx::fcontext_t* fc_member;
 #   if BOOST_VERSION < 105300
@@ -117,6 +121,28 @@ inline void fc_make(fc_member& storage, fc_allocator& alloc, vg_member& vgm) {
                 storage->fc_stack.sp,
                 reinterpret_cast<void*>(
                     reinterpret_cast<intptr_t>(storage->fc_stack.sp) - mss));
+}
+#else // BOOST_VERSION >= 105400
+namespace ctx = boost::context;
+typedef ctx::fcontext_t* fc_member;
+typedef boost::coroutines::stack_context fc_make_result;
+typedef boost::coroutines::stack_allocator fc_allocator;
+inline void fc_jump(fc_member& from, fc_member& to, fiber_impl* ptr) {
+    ctx::jump_fcontext(from, to, (intptr_t) ptr);
+}
+inline fc_make_result fc_make(fc_member& storage, fc_allocator& alloc, vg_member& vgm) {
+    size_t mss = fc_allocator::minimum_stacksize();
+    fc_make_result sctx;
+    alloc.allocate(sctx, mss);
+    storage = ctx::make_fcontext(sctx.sp, sctx.size, fiber_trampoline);
+    vg_register(vgm,
+                storage->fc_stack.sp,
+                reinterpret_cast<void*>(
+                    reinterpret_cast<intptr_t>(storage->fc_stack.sp) - mss));
+    return sctx;
+}
+inline void fc_destroy(fc_allocator& alloc, fc_make_result sctx) {
+    alloc.deallocate(sctx);
 }
 #endif
 
@@ -157,11 +183,12 @@ struct converted_fiber : fiber_impl {
 struct fun_fiber : fiber_impl {
 
     fun_fiber(void (*fun)(void*), void* arg) : m_arg(arg), m_fun(fun) {
-        fc_make(m_ctx, m_alloc, m_vgm);
+        m_make_res = fc_make(m_ctx, m_alloc, m_vgm);
     }
 
     ~fun_fiber() {
         vg_deregister(m_vgm);
+        fc_destroy(m_alloc, m_make_res);
     }
 
     virtual void run() {
@@ -170,6 +197,7 @@ struct fun_fiber : fiber_impl {
 
     void* m_arg;
     void (*m_fun)(void*);
+    fc_make_result m_make_res;
     fc_allocator m_alloc;
     vg_member m_vgm;
 
@@ -190,6 +218,10 @@ void fiber::swap(fiber& from, fiber& to) {
 
 fiber::~fiber() {
     delete m_impl;
+}
+
+bool fiber::is_disabled_feature() {
+    return false;
 }
 
 } } // namespace cppa::util

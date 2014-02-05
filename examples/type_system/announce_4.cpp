@@ -79,23 +79,23 @@ bool operator==(const baz& lhs, const baz& rhs) {
 }
 
 // receives `remaining` messages
-void testee(size_t remaining) {
+void testee(event_based_actor* self, size_t remaining) {
     auto set_next_behavior = [=] {
-        if (remaining > 1) testee(remaining - 1);
+        if (remaining > 1) testee(self, remaining - 1);
         else self->quit();
     };
-    become (
+    self->become (
        on<bar>() >> [=](const bar& val) {
-            aout << "bar(foo("
-                 << val.f.a() << ", "
-                 << val.f.b() << "), "
-                 << val.i << ")"
-                 << endl;
+            aout(self) << "bar(foo("
+                       << val.f.a() << ", "
+                       << val.f.b() << "), "
+                       << val.i << ")"
+                       << endl;
             set_next_behavior();
         },
         on<baz>() >> [=](const baz& val) {
             // prints: baz ( foo ( 1, 2 ), bar ( foo ( 3, 4 ), 5 ) )
-            aout << to_string(object::from(val)) << endl;
+            aout(self) << to_string(object::from(val)) << endl;
             set_next_behavior();
         }
     );
@@ -127,9 +127,12 @@ int main(int, char**) {
 
     // spawn a testee that receives two messages
     auto t = spawn(testee, 2);
-    send(t, bar{foo{1, 2}, 3});
-    send(t, baz{foo{1, 2}, bar{foo{3, 4}, 5}});
-    await_all_others_done();
+    {
+        scoped_actor self;
+        self->send(t, bar{foo{1, 2}, 3});
+        self->send(t, baz{foo{1, 2}, bar{foo{3, 4}, 5}});
+    }
+    await_all_actors_done();
     shutdown();
     return 0;
 }

@@ -43,6 +43,7 @@
 #include "cppa/unit.hpp"
 #include "cppa/none.hpp"
 #include "cppa/node_id.hpp"
+#include "cppa/system_messages.hpp"
 
 #include "cppa/util/buffer.hpp"
 #include "cppa/util/duration.hpp"
@@ -60,16 +61,21 @@ namespace cppa { namespace detail {
 // ordered according to demangled type name (see uniform_type_info_map.cpp)
 using mapped_type_list = util::type_list<
     bool,
+    actor,
+    actor_addr,
     any_tuple,
     atom_value,
-    actor_ptr,
-    channel_ptr,
-    group_ptr,
+    channel,
+    down_msg,
+    exit_msg,
+    group,
     node_id_ptr,
     io::accept_handle,
     io::connection_handle,
     message_header,
-    std::nullptr_t,
+    sync_exited_msg,
+    sync_timeout_msg,
+    timeout_msg,
     unit_t,
     util::buffer,
     util::duration,

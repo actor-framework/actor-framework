@@ -175,11 +175,9 @@ inline bool operator!=(const square_matrix<Size>& lhs,
 
 using matrix_type = square_matrix<matrix_size>;
 
-int main() {
-    CPPA_TEST(test_opencl);
+void test_opencl() {
 
-    announce<ivec>();
-    announce<matrix_type>();
+    scoped_actor self;
 
     const ivec expected1{  56,  62,  68,  74
                         , 152, 174, 196, 218
@@ -191,8 +189,8 @@ int main() {
                                          {matrix_size, matrix_size});
     ivec m1(matrix_size * matrix_size);
     iota(begin(m1), end(m1), 0);
-    send(worker1, move(m1));
-    receive (
+    self->send(worker1, move(m1));
+    self->receive (
         on_arg_match >> [&] (const ivec& result) {
             CPPA_CHECK(equal(begin(expected1), end(expected1), begin(result)));
         }
@@ -203,8 +201,8 @@ int main() {
                                          {matrix_size, matrix_size});
     ivec m2(matrix_size * matrix_size);
     iota(begin(m2), end(m2), 0);
-    send(worker2, move(m2));
-    receive (
+    self->send(worker2, move(m2));
+    self->receive (
         on_arg_match >> [&] (const ivec& result) {
             CPPA_CHECK(equal(begin(expected1), end(expected1), begin(result)));
         }
@@ -230,8 +228,8 @@ int main() {
     auto worker3 = spawn_cl(program::create(kernel_source), kernel_name,
                             map_args, map_results,
                             {matrix_size, matrix_size});
-    send(worker3, move(m3));
-    receive (
+    self->send(worker3, move(m3));
+    self->receive (
         on_arg_match >> [&] (const matrix_type& result) {
             CPPA_CHECK(expected2 == result);
         }
@@ -243,8 +241,8 @@ int main() {
                             map_args, map_results,
                             {matrix_size, matrix_size}
     );
-    send(worker4, move(m4));
-    receive (
+    self->send(worker4, move(m4));
+    self->receive (
         on_arg_match >> [&] (const matrix_type& result) {
             CPPA_CHECK(expected2 == result);
         }
@@ -263,11 +261,11 @@ int main() {
     iota(begin(arr5), end(arr5), 0);
     auto prog5 = program::create(kernel_source_compiler_flag, compiler_flag);
     auto worker5 = spawn_cl<ivec(ivec&)>(prog5, kernel_name_compiler_flag, {array_size});
-    send(worker5, move(arr5));
+    self->send(worker5, move(arr5));
 
     ivec expected3(array_size);
     iota(begin(expected3), end(expected3), 0);
-    receive (
+    self->receive (
         on_arg_match >> [&] (const ivec& result) {
             CPPA_CHECK(equal(begin(expected3), end(expected3), begin(result)));
         }
@@ -283,9 +281,9 @@ int main() {
                                          {},
                                          {reduce_local_size},
                                          reduce_result_size);
-    send(worker6, move(arr6));
+    self->send(worker6, move(arr6));
     fvec expected4{3584, 3072, 2560, 2048, 1536, 1024, 512, 0};
-    receive (
+    self->receive (
         on_arg_match >> [&] (const ivec& result) {
             CPPA_CHECK(equal(begin(expected4), end(expected4), begin(result)));
         }
@@ -297,17 +295,26 @@ int main() {
     auto worker7 = spawn_cl<ivec(ivec&)>(kernel_source_const,
                                          kernel_name_const,
                                          {magic_number});
-    send(worker7, move(arr7));
+    self->send(worker7, move(arr7));
     ivec expected5(magic_number);
     fill(begin(expected5), end(expected5), magic_number);
-    receive(
+    self->receive(
         on_arg_match >> [&] (const ivec& result) {
             CPPA_CHECK(equal(begin(expected5), end(expected5), begin(result)));
         }
     );
 
-    cppa::await_all_others_done();
-    cppa::shutdown();
+}
+
+int main() {
+    CPPA_TEST(test_opencl);
+
+    announce<ivec>();
+    announce<matrix_type>();
+
+    test_opencl();
+    await_all_actors_done();
+    shutdown();
 
     return CPPA_TEST_RESULT();
 }

@@ -49,7 +49,7 @@ template<class Derived, class Base = event_based_actor>
 class sb_actor : public Base {
 
     static_assert(std::is_base_of<event_based_actor, Base>::value,
-                  "Base must be either event_based_actor or a derived type");
+                  "Base must be event_based_actor or a derived type");
 
  protected:
 
@@ -58,11 +58,11 @@ class sb_actor : public Base {
  public:
 
     /**
-     * @brief Overrides {@link event_based_actor::init()} and sets
+     * @brief Overrides {@link event_based_actor::make_behavior()} and sets
      *        the initial actor behavior to <tt>Derived::init_state</tt>.
      */
-    void init() override {
-        become(util::dptr<Derived>(this)->init_state);
+    behavior make_behavior() override {
+        return util::dptr<Derived>(this)->init_state;
     }
 
  protected:

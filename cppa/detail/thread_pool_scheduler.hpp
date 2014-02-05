@@ -33,10 +33,10 @@
 
 #include <thread>
 
+#include "cppa/resumable.hpp"
 #include "cppa/scheduler.hpp"
-#include "cppa/context_switching_actor.hpp"
+
 #include "cppa/util/producer_consumer_list.hpp"
-#include "cppa/detail/scheduled_actor_dummy.hpp"
 
 namespace cppa { namespace detail {
 
@@ -46,8 +46,9 @@ class thread_pool_scheduler : public scheduler {
 
  public:
 
-    using scheduler::init_callback;
-    using scheduler::void_function;
+    struct dummy : resumable {
+        resume_result resume(util::fiber*) override;
+    };
 
     struct worker;
 
@@ -59,24 +60,20 @@ class thread_pool_scheduler : public scheduler {
 
     void destroy();
 
-    void enqueue(scheduled_actor* what);
-
-    local_actor_ptr exec(spawn_options opts, scheduled_actor_ptr ptr) override;
-
-    local_actor_ptr exec(spawn_options opts, init_callback init_cb, void_function f) override;
+    void enqueue(resumable* what) override;
 
  private:
 
     //typedef util::single_reader_queue<abstract_scheduled_actor> job_queue;
-    typedef util::producer_consumer_list<scheduled_actor> job_queue;
+    typedef util::producer_consumer_list<resumable> job_queue;
 
     size_t m_num_threads;
     job_queue m_queue;
-    scheduled_actor_dummy m_dummy;
+    dummy m_dummy;
     std::thread m_supervisor;
 
     static void worker_loop(worker*);
-    static void supervisor_loop(job_queue*, scheduled_actor*, size_t);
+    static void supervisor_loop(job_queue*, resumable*, size_t);
 
 };
 

@@ -45,6 +45,7 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --enable-debug              compile in debugging mode
                                 (always sets --build-type=Debug)
     --enable-perftools          use Google perftools
+    --enable-address-sanitizer  use Clang's address sanitizer
     --with-cppa-log-level=LVL   sets the debugging output, possible values:
                                   - ERROR
                                   - WARNING
@@ -123,7 +124,7 @@ configure ()
     cd $workdir
 
     if [ -n "$5" ]; then
-        cmake -G $5 $CMakeCacheEntries $sourcedir
+        cmake -G "$5" $CMakeCacheEntries $sourcedir
     else
         cmake $CMakeCacheEntries $sourcedir
     fi
@@ -136,7 +137,6 @@ configure ()
 # Set defaults.
 builddir="$sourcedir/build"
 CMakeCacheEntries=""
-append_cache_entry CMAKE_BUILD_TYPE            STRING RelWithDebInfo
 append_cache_entry CMAKE_INSTALL_PREFIX        PATH   /usr/local
 append_cache_entry ENABLE_DEBUG                BOOL   false
 append_cache_entry DISABLE_CONTEXT_SWITCHING   BOOL   false
@@ -161,6 +161,9 @@ while [ $# -ne 0 ]; do
             ;;
         --enable-debug)
             append_cache_entry ENABLE_DEBUG BOOL true
+            ;;
+        --enable-address-sanitizer)
+            append_cache_entry ENABLE_ADDRESS_SANITIZER BOOL true
             ;;
         --with-opencl)
             append_cache_entry ENABLE_OPENCL BOOL true

@@ -31,9 +31,11 @@
 #ifndef PRIORITY_HPP
 #define PRIORITY_HPP
 
+#include <cstdint>
+
 namespace cppa {
 
-enum class message_priority {
+enum class message_priority : std::uint32_t {
     normal,
     high
 };

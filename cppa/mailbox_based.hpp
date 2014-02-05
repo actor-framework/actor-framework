@@ -53,6 +53,17 @@ class mailbox_based : public Base {
         }
     }
 
+    template<typename... Ts>
+    inline mailbox_element* new_mailbox_element(Ts&&... args) {
+        return mailbox_element::create(std::forward<Ts>(args)...);
+    }
+
+    void cleanup(std::uint32_t reason) override {
+        detail::sync_request_bouncer f{reason};
+        m_mailbox.close(f);
+        Base::cleanup(reason);
+    }
+
  protected:
 
     typedef mailbox_based combined_type;
@@ -61,17 +72,6 @@ class mailbox_based : public Base {
 
     template<typename... Ts>
     mailbox_based(Ts&&... args) : Base(std::forward<Ts>(args)...) { }
-
-    void cleanup(std::uint32_t reason) override {
-        detail::sync_request_bouncer f{reason};
-        m_mailbox.close(f);
-        Base::cleanup(reason);
-    }
-
-    template<typename... Ts>
-    inline mailbox_element* new_mailbox_element(Ts&&... args) {
-        return mailbox_element::create(std::forward<Ts>(args)...);
-    }
 
     mailbox_type m_mailbox;
 

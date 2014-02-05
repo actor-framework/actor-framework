@@ -5,6 +5,7 @@
 #include "test.hpp"
 
 #include "cppa/cppa.hpp"
+#include "cppa/scoped_actor.hpp"
 
 namespace cppa {
 inline std::ostream& operator<<(std::ostream& out, const atom_value& a) {
@@ -27,6 +28,15 @@ void foo() {
                       << " = " << to_string(AtomValue) << ")");
 }
 
+struct mirror {
+    mirror(blocking_actor* self) : m_self(self) { }
+    template<typename... Ts>
+    void operator()(Ts&&... args) {
+        m_self->send(m_self, std::forward<Ts>(args)...);
+    }
+    blocking_actor* m_self;
+};
+
 int main() {
     bool matched_pattern[3] = { false, false, false };
         CPPA_TEST(test_atom);
@@ -38,12 +48,14 @@ int main() {
     CPPA_CHECK_EQUAL(atom("   "), atom("@!?"));
     // check to_string impl.
     CPPA_CHECK_EQUAL(to_string(s_foo), "FooBar");
-    self << make_cow_tuple(atom("foo"), static_cast<std::uint32_t>(42))
-         << make_cow_tuple(atom(":Attach"), atom(":Baz"), "cstring")
-         << make_cow_tuple(atom("b"), atom("a"), atom("c"), 23.f)
-         << make_cow_tuple(atom("a"), atom("b"), atom("c"), 23.f);
+    scoped_actor self;
+    mirror m(self.get());
+    m(atom("foo"), static_cast<std::uint32_t>(42));
+    m(atom(":Attach"), atom(":Baz"), "cstring");
+    m(atom("b"), atom("a"), atom("c"), 23.f);
+    m(atom("a"), atom("b"), atom("c"), 23.f);
     int i = 0;
-    receive_for(i, 3) (
+    self->receive_for(i, 3) (
         on<atom("foo"), std::uint32_t>() >> [&](std::uint32_t value) {
             matched_pattern[0] = true;
             CPPA_CHECK_EQUAL(value, 42);
@@ -58,7 +70,7 @@ int main() {
         }
     );
     CPPA_CHECK(matched_pattern[0] && matched_pattern[1] && matched_pattern[2]);
-    receive (
+    self->receive (
         // "erase" message { atom("b"), atom("a"), atom("c"), 23.f }
         others() >> CPPA_CHECKPOINT_CB(),
         after(std::chrono::seconds(0)) >> CPPA_UNEXPECTED_TOUT_CB()

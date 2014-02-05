@@ -42,22 +42,22 @@ any_tuple split_line(const line& l) {
     return any_tuple::view(std::move(result));
 }
 
-void client(const string& name) {
-    become (
+void client(event_based_actor* self, const string& name) {
+    self->become (
         on(atom("broadcast"), arg_match) >> [=](const string& message) {
             for(auto& dest : self->joined_groups()) {
-                send(dest, name + ": " + message);
+                self->send(dest, name + ": " + message);
             }
         },
-        on(atom("join"), arg_match) >> [=](const group_ptr& what) {
+        on(atom("join"), arg_match) >> [=](const group& what) {
             for (auto g : self->joined_groups()) {
                 cout << "*** leave " << to_string(g) << endl;
-                send(g, name + " has left the chatroom");
+                self->send(self, g, name + " has left the chatroom");
                 self->leave(g);
             }
             cout << "*** join " << to_string(what) << endl;
             self->join(what);
-            send(what, name + " has entered the chatroom");
+            self->send(self, what, name + " has entered the chatroom");
         },
         on<string>() >> [=](const string& txt) {
             // don't print own messages
@@ -104,7 +104,7 @@ int main(int argc, char** argv) {
             try {
                 auto g = group::get(group_id.substr(0, p),
                                     group_id.substr(p + 1));
-                send(client_actor, atom("join"), g);
+                anon_send(client_actor, atom("join"), g);
             }
             catch (exception& e) {
                 ostringstream err;
@@ -120,7 +120,7 @@ int main(int argc, char** argv) {
     match_each (lines, eof, split_line) (
         on("/join", arg_match) >> [&](const string& mod, const string& id) {
             try {
-                send(client_actor, atom("join"), group::get(mod, id));
+                anon_send(client_actor, atom("join"), group::get(mod, id));
             }
             catch (exception& e) {
                 cerr << "*** exception: " << to_verbose_string(e) << endl;
@@ -137,13 +137,13 @@ int main(int argc, char** argv) {
         },
         others() >> [&] {
             if (!s_last_line.empty()) {
-                send(client_actor, atom("broadcast"), s_last_line);
+                anon_send(client_actor, atom("broadcast"), s_last_line);
             }
         }
     );
     // force actor to quit
-    send_exit(client_actor, exit_reason::user_shutdown);
-    await_all_others_done();
+    anon_send_exit(client_actor, exit_reason::user_shutdown);
+    await_all_actors_done();
     shutdown();
     return 0;
 }

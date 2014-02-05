@@ -46,9 +46,10 @@ struct invalid_message_id { constexpr invalid_message_id() { } };
  */
 class message_id : util::comparable<message_id> {
 
-    static constexpr std::uint64_t response_flag_mask = 0x8000000000000000;
-    static constexpr std::uint64_t answered_flag_mask = 0x4000000000000000;
-    static constexpr std::uint64_t request_id_mask    = 0x3FFFFFFFFFFFFFFF;
+    static constexpr std::uint64_t response_flag_mask     = 0x8000000000000000;
+    static constexpr std::uint64_t answered_flag_mask     = 0x4000000000000000;
+    static constexpr std::uint64_t high_prioity_flag_mask = 0x2000000000000000;
+    static constexpr std::uint64_t request_id_mask        = 0x1FFFFFFFFFFFFFFF;
 
  public:
 
@@ -72,8 +73,12 @@ class message_id : util::comparable<message_id> {
         return (m_value & answered_flag_mask) != 0;
     }
 
+    inline bool is_high_priority() const {
+        return (m_value & high_prioity_flag_mask) != 0;
+    }
+
     inline bool valid() const {
-        return m_value != 0;
+        return (m_value & request_id_mask) != 0;
     }
 
     inline bool is_request() const {
@@ -81,11 +86,21 @@ class message_id : util::comparable<message_id> {
     }
 
     inline message_id response_id() const {
-        return message_id(valid() ? m_value | response_flag_mask : 0);
+        // the response to a response is an asynchronous message
+        if (is_response()) return message_id{0};
+        return message_id{valid() ? m_value | response_flag_mask : 0};
     }
 
     inline message_id request_id() const {
         return message_id(m_value & request_id_mask);
+    }
+
+    inline message_id with_high_priority() const {
+        return message_id(m_value | high_prioity_flag_mask);
+    }
+
+    inline message_id with_normal_priority() const {
+        return message_id(m_value & ~high_prioity_flag_mask);
     }
 
     inline void mark_as_answered() {

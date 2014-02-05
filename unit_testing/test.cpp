@@ -34,8 +34,7 @@ const char* cppa_strip_path(const char* fname) {
 }
 
 void cppa_unexpected_message(const char* fname, size_t line_num) {
-    CPPA_PRINTERRC(fname, line_num,
-                   "unexpected message: " << to_string(self->last_dequeued()));
+    CPPA_PRINTERRC(fname, line_num, "unexpected message");
 }
 
 void cppa_unexpected_timeout(const char* fname, size_t line_num) {
@@ -54,7 +53,7 @@ vector<string> split(const string& str, char delim, bool keep_empties) {
 }
 
 void verbose_terminate() {
-    try { if (uncaught_exception()) throw; }
+    try { throw; }
     catch (exception& e) {
         CPPA_PRINTERR("terminate called after throwing "
                       << to_verbose_string(e));
@@ -66,7 +65,6 @@ void verbose_terminate() {
 }
 
 void set_default_test_settings() {
-    CPPA_SET_DEBUG_NAME("main");
     set_terminate(verbose_terminate);
     cout.unsetf(ios_base::unitbuf);
 }

@@ -84,15 +84,21 @@ int main() {
         "@ac_hdl",                   // io::accept_handle
         "@cn_hdl",                   // io::connection_handle
         "@atom",                     // atom_value
+        "@addr",                     // actor address
         "@tuple",                    // any_tuple
         "@header",                   // message_header
         "@actor",                    // actor_ptr
-        "@group",                    // group_ptr
-        "@channel",                  // channel_ptr
+        "@group",                    // group
+        "@channel",                  // channel
         "@proc",                     // intrusive_ptr<node_id>
         "@duration",                 // util::duration
         "@buffer",                   // util::buffer
-        // default announced cpap tuples
+        "@down",                     // down_msg
+        "@exit",                     // exit_msg
+        "@timeout",                  // timeout_msg
+        "@sync_exited",              // sync_exited_msg
+        "@sync_timeout",             // sync_timeout_msg
+        // default announced cppa tuples
         "@<>+@atom",                 // {atom_value}
         "@<>+@atom+@actor",          // {atom_value, actor_ptr}
         "@<>+@atom+@proc",           // {atom_value, node_id}
@@ -117,13 +123,25 @@ int main() {
         CPPA_CHECK(expected_equals_found);
     }
     if (!expected_equals_found) {
-        CPPA_PRINT("found:");
-        for (const std::string& tname : found) {
-            CPPA_PRINT("    - " << tname);
-        }
-        CPPA_PRINT("expected: ");
-        for (const std::string& tname : expected) {
-            CPPA_PRINT("    - " << tname);
+        std::string(41, ' ');
+        std::ostringstream oss(std::string(41, ' '));
+        oss.seekp(0);
+        oss << "found (" << found.size() << ")";
+        oss.seekp(22);
+        oss << "expected (" << found.size() << ")";
+        std::string lhs;
+        std::string rhs;
+        CPPA_PRINT(oss.str());
+        CPPA_PRINT(std::string(41, '-'));
+        auto fi = found.begin();
+        auto fe = found.end();
+        auto ei = expected.begin();
+        auto ee = expected.end();
+        while (fi != fe || ei != ee) {
+            if (fi != fe) lhs = *fi++; else lhs.clear();
+            if (ei != ee) rhs = *ei++; else rhs.clear();
+            lhs.resize(20, ' ');
+            CPPA_PRINT(lhs << "| " << rhs);
         }
     }
 
@@ -134,8 +152,8 @@ int main() {
                     std::string, std::u16string, std::u32string,
                     float, double,
                     atom_value, any_tuple, message_header,
-                    actor_ptr, group_ptr,
-                    channel_ptr, node_id_ptr
+                    actor, group,
+                    channel, node_id_ptr
                  >::arr;
 
     CPPA_CHECK(sarr.is_pure());
@@ -157,9 +175,9 @@ int main() {
         uniform_typeid<atom_value>(),
         uniform_typeid<any_tuple>(),
         uniform_typeid<message_header>(),
-        uniform_typeid<actor_ptr>(),
-        uniform_typeid<group_ptr>(),
-        uniform_typeid<channel_ptr>(),
+        uniform_typeid<actor>(),
+        uniform_typeid<group>(),
+        uniform_typeid<channel>(),
         uniform_typeid<node_id_ptr>()
     };
 

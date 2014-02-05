@@ -31,226 +31,164 @@
 #ifndef CPPA_ACTOR_HPP
 #define CPPA_ACTOR_HPP
 
-#include <mutex>
-#include <atomic>
-#include <memory>
-#include <vector>
+#include <cstddef>
 #include <cstdint>
+#include <utility>
 #include <type_traits>
 
-#include "cppa/group.hpp"
-#include "cppa/channel.hpp"
-#include "cppa/cppa_fwd.hpp"
-#include "cppa/attachable.hpp"
-#include "cppa/message_id.hpp"
-#include "cppa/exit_reason.hpp"
 #include "cppa/intrusive_ptr.hpp"
+#include "cppa/abstract_actor.hpp"
 
+#include "cppa/util/comparable.hpp"
 #include "cppa/util/type_traits.hpp"
 
 namespace cppa {
 
-class actor;
-class self_type;
-class serializer;
-class deserializer;
+class actor_addr;
+class actor_proxy;
+class local_actor;
+class blocking_actor;
+class event_based_actor;
+
+struct invalid_actor_addr_t;
+
+namespace io {
+class broker;
+} // namespace io
+
+namespace opencl {
+template <typename Signature>
+class actor_facade;
+} // namespace opencl
+
+namespace detail {
+class raw_access;
+} // namespace detail
+
+struct invalid_actor_t { constexpr invalid_actor_t() { } };
 
 /**
- * @brief A unique actor ID.
+ * @brief Identifies an invalid {@link actor}.
  * @relates actor
  */
-typedef std::uint32_t actor_id;
+constexpr invalid_actor_t invalid_actor = invalid_actor_t{};
+
+template<typename T>
+struct is_convertible_to_actor {
+    static constexpr bool value =  std::is_base_of<io::broker, T>::value
+                                || std::is_base_of<actor_proxy, T>::value
+                                || std::is_base_of<blocking_actor, T>::value
+                                || std::is_base_of<event_based_actor, T>::value;
+};
+
+template<typename T>
+struct is_convertible_to_actor<opencl::actor_facade<T>> {
+    static constexpr bool value = true;
+};
 
 /**
- * @brief A smart pointer type that manages instances of {@link actor}.
- * @relates actor
+ * @brief Identifies an untyped actor.
+ *
+ * Can be used with derived types of {@link event_based_actor},
+ * {@link blocking_actor}, {@link actor_proxy}, or
+ * {@link io::broker}.
  */
-typedef intrusive_ptr<actor> actor_ptr;
+class actor : util::comparable<actor>
+            , util::comparable<actor, actor_addr>
+            , util::comparable<actor, invalid_actor_t>
+            , util::comparable<actor, invalid_actor_addr_t> {
 
-/**
- * @brief Base class for all actor implementations.
- */
-class actor : public channel {
+    friend class local_actor;
+    friend class detail::raw_access;
 
  public:
 
-    /**
-     * @brief Attaches @p ptr to this actor.
-     *
-     * The actor will call <tt>ptr->detach(...)</tt> on exit, or immediately
-     * if it already finished execution.
-     * @param ptr A callback object that's executed if the actor finishes
-     *            execution.
-     * @returns @c true if @p ptr was successfully attached to the actor;
-     *          otherwise (actor already exited) @p false.
-     * @warning The actor takes ownership of @p ptr.
-     */
-    bool attach(attachable_ptr ptr);
+    actor() = default;
+
+    actor(actor&&) = default;
+
+    actor(const actor&) = default;
+
+    template<typename T>
+    actor(intrusive_ptr<T> ptr,
+          typename std::enable_if<is_convertible_to_actor<T>::value>::type* = 0)
+            : m_ptr(std::move(ptr)) { }
+
+    template<typename T>
+    actor(T* ptr,
+          typename std::enable_if<is_convertible_to_actor<T>::value>::type* = 0)
+                : m_ptr(ptr) { }
+
+    actor(const invalid_actor_t&);
+
+    actor& operator=(actor&&) = default;
+
+    actor& operator=(const actor&) = default;
+
+    template<typename T>
+    typename std::enable_if<is_convertible_to_actor<T>::value, actor&>::type
+    operator=(intrusive_ptr<T> ptr) {
+        actor tmp{std::move(ptr)};
+        swap(tmp);
+        return *this;
+    }
+
+    template<typename T>
+    typename std::enable_if<is_convertible_to_actor<T>::value, actor&>::type
+    operator=(T* ptr) {
+        actor tmp{ptr};
+        swap(tmp);
+        return *this;
+    }
+
+    actor& operator=(const invalid_actor_t&);
+
+    inline operator bool() const {
+        return static_cast<bool>(m_ptr);
+    }
+
+    inline bool operator!() const {
+        return !m_ptr;
+    }
 
     /**
-     * @brief Convenience function that attaches the functor
-     *        or function @p f to this actor.
-     *
-     * The actor executes <tt>f()</tt> on exit, or immediatley
-     * if it already finished execution.
-     * @param f A functor, function or lambda expression that's executed
-     *             if the actor finishes execution.
-     * @returns @c true if @p f was successfully attached to the actor;
-     *          otherwise (actor already exited) @p false.
+     * @brief Returns a handle that grants access to
+     *        actor operations such as enqueue.
      */
-    template<typename F>
-    bool attach_functor(F&& f);
+    inline abstract_actor* operator->() const {
+        return m_ptr.get();
+    }
+
+    inline abstract_actor& operator*() const {
+        return *m_ptr;
+    }
+
+    intptr_t compare(const actor& other) const;
+
+    intptr_t compare(const actor_addr&) const;
+
+    inline intptr_t compare(const invalid_actor_t&) const {
+        return m_ptr ? 1 : 0;
+    }
+
+    inline intptr_t compare(const invalid_actor_addr_t&) const {
+        return compare(invalid_actor);
+    }
 
     /**
-     * @brief Detaches the first attached object that matches @p what.
+     * @brief Queries the address of the stored actor.
      */
-    void detach(const attachable::token& what);
-
-    /**
-     * @brief Links this actor to @p other.
-     * @param other Actor instance that whose execution is coupled to the
-     *              execution of this Actor.
-     */
-    virtual void link_to(const actor_ptr& other);
-
-    /**
-     * @brief Unlinks this actor from @p other.
-     * @param other Linked Actor.
-     * @note Links are automatically removed if the actor finishes execution.
-     */
-    virtual void unlink_from(const actor_ptr& other);
-
-    /**
-     * @brief Establishes a link relation between this actor and @p other.
-     * @param other Actor instance that wants to link against this Actor.
-     * @returns @c true if this actor is running and added @p other to its
-     *          list of linked actors; otherwise @c false.
-     */
-    virtual bool establish_backlink(const actor_ptr& other);
-
-    /**
-     * @brief Removes a link relation between this actor and @p other.
-     * @param other Actor instance that wants to unlink from this Actor.
-     * @returns @c true if this actor is running and removed @p other
-     *          from its list of linked actors; otherwise @c false.
-     */
-    virtual bool remove_backlink(const actor_ptr& other);
-
-    /**
-     * @brief Gets an integer value that uniquely identifies this Actor in
-     *        the process it's executed in.
-     * @returns The unique identifier of this actor.
-     */
-    inline actor_id id() const;
-
-    /**
-     * @brief Checks if this actor is running on a remote node.
-     * @returns @c true if this actor represents a remote actor;
-     *          otherwise @c false.
-     */
-    inline bool is_proxy() const;
-
-
- protected:
-
-    actor();
-
-    actor(actor_id aid);
-
-    /**
-     * @brief Should be overridden by subtypes and called upon termination.
-     * @note Default implementation sets 'exit_reason' accordingly.
-     * @note Overridden functions should always call super::cleanup().
-     */
-    virtual void cleanup(std::uint32_t reason);
-
-    /**
-     * @brief The default implementation for {@link link_to()}.
-     */
-    bool link_to_impl(const actor_ptr& other);
-
-    /**
-     * @brief The default implementation for {@link unlink_from()}.
-     */
-    bool unlink_from_impl(const actor_ptr& other);
-
-    /**
-     * @brief Returns the actor's exit reason of
-     *        <tt>exit_reason::not_exited</tt> if it's still alive.
-     */
-    inline std::uint32_t exit_reason() const;
-
-    /**
-     * @brief Returns <tt>exit_reason() != exit_reason::not_exited</tt>.
-     */
-    inline bool exited() const;
-
-    // cannot be changed after construction
-    const actor_id m_id;
-
-    // you're either a proxy or you're not
-    const bool m_is_proxy;
+    actor_addr address() const;
 
  private:
 
-    // initially exit_reason::not_exited
-    std::atomic<std::uint32_t> m_exit_reason;
+    void swap(actor& other);
 
-    // guards access to m_exit_reason, m_attachables, and m_links
-    std::mutex m_mtx;
+    actor(abstract_actor*);
 
-    // links to other actors
-    std::vector<actor_ptr> m_links;
-
-    // attached functors that are executed on cleanup
-    std::vector<attachable_ptr> m_attachables;
+    abstract_actor_ptr m_ptr;
 
 };
-
-// undocumented, because self_type is hidden in documentation
-bool operator==(const actor_ptr&, const self_type&);
-bool operator!=(const self_type&, const actor_ptr&);
-
-/******************************************************************************
- *             inline and template member function implementations            *
- ******************************************************************************/
-
-inline std::uint32_t actor::id() const {
-    return m_id;
-}
-
-inline bool actor::is_proxy() const {
-    return m_is_proxy;
-}
-
-inline std::uint32_t actor::exit_reason() const {
-    return m_exit_reason;
-}
-
-inline bool actor::exited() const {
-    return exit_reason() != exit_reason::not_exited;
-}
-
-template<class F>
-struct functor_attachable : attachable {
-
-    F m_functor;
-
-    template<typename T>
-    inline functor_attachable(T&& arg) : m_functor(std::forward<T>(arg)) { }
-
-    void actor_exited(std::uint32_t reason) { m_functor(reason); }
-
-    bool matches(const attachable::token&) { return false; }
-
-};
-
-template<typename F>
-bool actor::attach_functor(F&& f) {
-    typedef typename util::rm_const_and_ref<F>::type f_type;
-    typedef functor_attachable<f_type> impl;
-    return attach(attachable_ptr{new impl(std::forward<F>(f))});
-}
 
 } // namespace cppa
 

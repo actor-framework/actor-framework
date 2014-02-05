@@ -34,7 +34,7 @@ void cppa_unexpected_timeout(const char* fname, size_t line_num);
 #define CPPA_PRINT(message) CPPA_PRINTC(__FILE__, __LINE__, message)
 
 #define CPPA_PRINTERRC(fname, linenum, msg)                                    \
-    CPPA_LOGF(CPPA_ERROR, ::cppa::self, CPPA_STREAMIFY(fname, linenum, msg));  \
+    CPPA_LOGF(CPPA_ERROR, CPPA_STREAMIFY(fname, linenum, msg));                \
     std::cerr << "ERROR: " << CPPA_STREAMIFY(fname, linenum, msg)              \
               << std::endl
 
@@ -56,7 +56,11 @@ const T& cppa_stream_arg(const T& value) {
     return value;
 }
 
-inline std::string cppa_stream_arg(const cppa::actor_ptr& ptr) {
+inline std::string cppa_stream_arg(const cppa::actor& ptr) {
+    return cppa::to_string(ptr);
+}
+
+inline std::string cppa_stream_arg(const cppa::actor_addr& ptr) {
     return cppa::to_string(ptr);
 }
 
@@ -178,7 +182,7 @@ void run_client_part(const std::map<std::string, std::string>& args, F fun) {
     }
     auto port = static_cast<std::uint16_t>(stoi(i->second));
     fun(port);
-    cppa::await_all_others_done();
+    cppa::await_all_actors_done();
     cppa::shutdown();
 }
 

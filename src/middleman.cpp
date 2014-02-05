@@ -46,7 +46,6 @@
 #include "cppa/actor_proxy.hpp"
 #include "cppa/binary_serializer.hpp"
 #include "cppa/uniform_type_info.hpp"
-#include "cppa/thread_mapped_actor.hpp"
 #include "cppa/binary_deserializer.hpp"
 
 #include "cppa/util/buffer.hpp"
@@ -92,30 +91,30 @@ void middleman::continue_writer(continuable* ptr) {
     CPPA_LOG_TRACE(CPPA_ARG(ptr));
     m_handler->add_later(ptr, event::write);
 }
-    
+
 void middleman::stop_writer(continuable* ptr) {
     CPPA_LOG_TRACE(CPPA_ARG(ptr));
     m_handler->erase_later(ptr, event::write);
 }
-    
+
 bool middleman::has_writer(continuable* ptr) {
     return m_handler->has_writer(ptr);
 }
-    
+
 void middleman::continue_reader(continuable* ptr) {
     CPPA_LOG_TRACE(CPPA_ARG(ptr));
     m_handler->add_later(ptr, event::read);
 }
-    
+
 void middleman::stop_reader(continuable* ptr) {
     CPPA_LOG_TRACE(CPPA_ARG(ptr));
     m_handler->erase_later(ptr, event::read);
 }
-    
+
 bool middleman::has_reader(continuable* ptr) {
     return m_handler->has_reader(ptr);
 }
-    
+
 typedef intrusive::single_reader_queue<middleman_event> middleman_queue;
 
 /*
@@ -135,7 +134,7 @@ class middleman_impl : public middleman {
         });
         m_namespace.set_new_element_callback([=](actor_id aid, const node_id& node) {
             deliver(node,
-                    {nullptr, nullptr},
+                    {invalid_actor_addr, nullptr},
                     make_any_tuple(atom("MONITOR"),
                                    node_id::get(),
                                    aid));
@@ -146,8 +145,9 @@ class middleman_impl : public middleman {
         m_queue.enqueue(new middleman_event(move(fun)));
         atomic_thread_fence(memory_order_seq_cst);
         uint8_t dummy = 0;
+        auto res = ::write(m_pipe_write, &dummy, sizeof(dummy));
         // ignore result; write error only means middleman already exited
-        static_cast<void>(::write(m_pipe_write, &dummy, sizeof(dummy)));
+        static_cast<void>(res);
     }
 
     void register_peer(const node_id& node, peer* ptr) override {
@@ -168,18 +168,19 @@ class middleman_impl : public middleman {
                              "multiple calls to remote_actor()?");
         }
     }
-    
+
     peer* get_peer(const node_id& node) override {
-        CPPA_LOG_TRACE("n = " << to_string(n));
+        CPPA_LOG_TRACE(CPPA_TARG(node, to_string));
         auto i = m_peers.find(node);
         if (i != m_peers.end()) {
+            CPPA_REQUIRE(i->second.impl != nullptr);
             CPPA_LOG_DEBUG("result = " << i->second.impl);
             return i->second.impl;
         }
-        CPPA_LOGMF(CPPA_DEBUG, self, "result = nullptr");
+        CPPA_LOG_DEBUG("result = nullptr");
         return nullptr;
     }
-    
+
     void del_acceptor(peer_acceptor* ptr) override {
         auto i = m_acceptors.begin();
         auto e = m_acceptors.end();
@@ -192,7 +193,7 @@ class middleman_impl : public middleman {
             else i = m_acceptors.erase(i);
         }
     }
-    
+
     void deliver(const node_id& node,
                  const message_header& hdr,
                  any_tuple msg                  ) override {
@@ -211,22 +212,14 @@ class middleman_impl : public middleman {
 
     void last_proxy_exited(peer* pptr) override {
         CPPA_REQUIRE(pptr != nullptr);
+        CPPA_REQUIRE(pptr->m_queue != nullptr);
         CPPA_LOG_TRACE(CPPA_ARG(pptr)
                        << ", pptr->node() = " << to_string(pptr->node()));
         if (pptr->erase_on_last_proxy_exited() && pptr->queue().empty()) {
             stop_reader(pptr);
-            auto i = m_peers.find(pptr->node());
-            if (i != m_peers.end()) {
-                CPPA_LOG_DEBUG_IF(i->second.impl != pptr,
-                                  "node " << to_string(pptr->node())
-                                  << " does not exist in m_peers");
-                if (i->second.impl == pptr) {
-                    m_peers.erase(i);
-                }
-            }
+            del_peer(pptr);
         }
     }
-    
 
     void new_peer(const input_stream_ptr& in,
                   const output_stream_ptr& out,
@@ -236,8 +229,21 @@ class middleman_impl : public middleman {
         continue_reader(ptr);
         if (node) register_peer(*node, ptr);
     }
-    
-    void register_acceptor(const actor_ptr& whom, peer_acceptor* ptr) override {
+
+    void del_peer(peer* pptr) override {
+        CPPA_LOG_TRACE(CPPA_ARG(pptr));
+        auto i = m_peers.find(pptr->node());
+        if (i != m_peers.end()) {
+            CPPA_LOG_DEBUG_IF(i->second.impl != pptr,
+                              "node " << to_string(pptr->node())
+                              << " does not exist in m_peers");
+            if (i->second.impl == pptr) {
+                m_peers.erase(i);
+            }
+        }
+    }
+
+    void register_acceptor(const actor_addr& whom, peer_acceptor* ptr) override {
         run_later([=] {
             CPPA_LOGC_TRACE("cppa::io::middleman",
                             "register_acceptor$lambda", "");
@@ -245,7 +251,7 @@ class middleman_impl : public middleman {
             continue_reader(ptr);
         });
     }
-    
+
  protected:
 
     void initialize() override {
@@ -287,10 +293,10 @@ class middleman_impl : public middleman {
         peer* impl;
         default_message_queue_ptr queue;
     };
-    
-    std::map<actor_ptr, std::vector<peer_acceptor*>> m_acceptors;
+
+    std::map<actor_addr, std::vector<peer_acceptor*>> m_acceptors;
     std::map<node_id, peer_entry> m_peers;
-    
+
 };
 
 class middleman_overseer : public continuable {
@@ -311,21 +317,21 @@ class middleman_overseer : public continuable {
         static constexpr size_t num_dummies = 64;
         uint8_t dummies[num_dummies];
         auto read_result = ::read(read_handle(), dummies, num_dummies);
-        CPPA_LOGMF(CPPA_DEBUG, self, "read " << read_result << " messages from queue");
+        CPPA_LOG_DEBUG("read " << read_result << " messages from queue");
         if (read_result < 0) {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
                 // try again later
                 return read_continue_later;
             }
             else {
-                CPPA_LOGMF(CPPA_ERROR, self, "cannot read from pipe");
+                CPPA_LOG_ERROR("cannot read from pipe");
                 CPPA_CRITICAL("cannot read from pipe");
             }
         }
         for (int i = 0; i < read_result; ++i) {
             unique_ptr<middleman_event> msg(m_queue.try_pop());
             if (!msg) {
-                CPPA_LOGMF(CPPA_ERROR, self, "nullptr dequeued");
+                CPPA_LOG_ERROR("nullptr dequeued");
                 CPPA_CRITICAL("nullptr dequeued");
             }
             CPPA_LOGF_DEBUG("execute run_later functor");
@@ -347,11 +353,6 @@ class middleman_overseer : public continuable {
 middleman::~middleman() { }
 
 void middleman_loop(middleman_impl* impl) {
-#   ifdef CPPA_LOG_LEVEL
-    auto mself = make_counted<thread_mapped_actor>();
-    scoped_self_setter sss(mself.get());
-    CPPA_SET_DEBUG_NAME("middleman");
-#   endif
     middleman_event_handler* handler = impl->m_handler.get();
     CPPA_LOGF_TRACE("run middleman loop");
     CPPA_LOGF_INFO("middleman runs at "
@@ -452,4 +453,22 @@ middleman* middleman::create_singleton() {
     return new middleman_impl;
 }
 
-} } // namespace cppa::detail
+} // namespace io
+
+namespace {
+
+std::atomic<size_t> default_max_msg_size{16 * 1024 * 1024};
+
+} // namespace <anonymous>
+
+void max_msg_size(size_t size)
+{
+  default_max_msg_size = size;
+}
+
+size_t max_msg_size()
+{
+  return default_max_msg_size;
+}
+
+} // namespace cppa

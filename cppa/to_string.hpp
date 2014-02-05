@@ -42,8 +42,9 @@
 #include "cppa/anything.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/intrusive_ptr.hpp"
-#include "cppa/uniform_type_info.hpp"
+#include "cppa/abstract_group.hpp"
 #include "cppa/message_header.hpp"
+#include "cppa/uniform_type_info.hpp"
 
 namespace std { class exception; }
 
@@ -68,15 +69,19 @@ inline std::string to_string(const message_header& what) {
     return detail::to_string_impl(what);
 }
 
-inline std::string to_string(const actor_ptr& what) {
+inline std::string to_string(const actor& what) {
     return detail::to_string_impl(what);
 }
 
-inline std::string to_string(const group_ptr& what) {
+inline std::string to_string(const actor_addr& what) {
     return detail::to_string_impl(what);
 }
 
-inline std::string to_string(const channel_ptr& what) {
+inline std::string to_string(const group& what) {
+    return detail::to_string_impl(what);
+}
+
+inline std::string to_string(const channel& what) {
     return detail::to_string_impl(what);
 }
 

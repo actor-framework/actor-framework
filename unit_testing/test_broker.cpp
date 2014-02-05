@@ -39,12 +39,14 @@ using namespace cppa;
 
 namespace { constexpr size_t message_size = sizeof(atom_value) + sizeof(int); }
 
-void ping(size_t num_pings) {
+void ping(cppa::event_based_actor* self, size_t num_pings) {
+    CPPA_CHECKPOINT();
     auto count = std::make_shared<size_t>(0);
-    become (
-        on(atom("kickoff"), arg_match) >> [=](const actor_ptr& pong) {
-            send(pong, atom("ping"), 1);
-            become (
+    self->become (
+        on(atom("kickoff"), arg_match) >> [=](const actor& pong) {
+            CPPA_CHECKPOINT();
+            self->send(pong, atom("ping"), 1);
+            self->become (
                 on(atom("pong"), arg_match)
                 >> [=](int value) -> cow_tuple<atom_value, int> {
                     if (++*count >= num_pings) self->quit();
@@ -57,18 +59,20 @@ void ping(size_t num_pings) {
     );
 }
 
-void pong() {
-    become  (
+void pong(cppa::event_based_actor* self) {
+    CPPA_CHECKPOINT();
+    self->become  (
         on(atom("ping"), arg_match)
-        >> [](int value) -> cow_tuple<atom_value, int> {
+        >> [=](int value) -> cow_tuple<atom_value, int> {
+            CPPA_CHECKPOINT();
             self->monitor(self->last_sender());
             // set next behavior
-            become (
+            self->become (
                 on(atom("ping"), arg_match) >> [](int value) {
                     return make_cow_tuple(atom("pong"), value);
                 },
-                on(atom("DOWN"), arg_match) >> [=](uint32_t reason) {
-                    self->quit(reason);
+                on_arg_match >> [=](const down_msg& dm) {
+                    self->quit(dm.reason);
                 },
                 others() >> CPPA_UNEXPECTED_MSG_CB()
             );
@@ -79,18 +83,23 @@ void pong() {
     );
 }
 
-void peer(io::broker* thisptr, io::connection_handle hdl, const actor_ptr& buddy) {
+void peer(io::broker* self, io::connection_handle hdl, const actor& buddy) {
+    CPPA_CHECKPOINT();
+    CPPA_CHECK(self != nullptr);
+    CPPA_CHECK(buddy != invalid_actor);
     self->monitor(buddy);
-    if (thisptr->num_connections() == 0) {
-        cout << "num_connections() != 1" << endl;
+    if (self->num_connections() == 0) {
+        cerr << "num_connections() != 1" << endl;
         throw std::logic_error("num_connections() != 1");
     }
     auto write = [=](atom_value type, int value) {
-        thisptr->write(hdl, sizeof(type), &type);
-        thisptr->write(hdl, sizeof(value), &value);
+        CPPA_LOGF_DEBUG("write: " << value);
+        self->write(hdl, sizeof(type), &type);
+        self->write(hdl, sizeof(value), &value);
     };
-    become (
+    self->become (
         on(atom("IO_closed"), arg_match) >> [=](io::connection_handle) {
+            CPPA_LOGF_INFO("received IO_closed");
             self->quit();
         },
         on(atom("IO_read"), arg_match) >> [=](io::connection_handle, const util::buffer& buf) {
@@ -98,7 +107,7 @@ void peer(io::broker* thisptr, io::connection_handle hdl, const actor_ptr& buddy
             int value;
             memcpy(&type, buf.data(), sizeof(atom_value));
             memcpy(&value, buf.offset_data(sizeof(atom_value)), sizeof(int));
-            send(buddy, type, value);
+            self->send(buddy, type, value);
         },
         on(atom("ping"), arg_match) >> [=](int value) {
             write(atom("ping"), value);
@@ -106,19 +115,20 @@ void peer(io::broker* thisptr, io::connection_handle hdl, const actor_ptr& buddy
         on(atom("pong"), arg_match) >> [=](int value) {
             write(atom("pong"), value);
         },
-        on(atom("DOWN"), arg_match) >> [=](uint32_t reason) {
-            if (thisptr->last_sender() == buddy) self->quit(reason);
+        on_arg_match >> [=](const down_msg& dm) {
+            if (dm.source == buddy) self->quit(dm.reason);
         },
         others() >> CPPA_UNEXPECTED_MSG_CB()
     );
 }
 
-void peer_acceptor(io::broker* thisptr, const actor_ptr& buddy) {
-    become (
+void peer_acceptor(io::broker* self, const actor& buddy) {
+    CPPA_CHECKPOINT();
+    self->become (
         on(atom("IO_accept"), arg_match) >> [=](io::accept_handle, io::connection_handle hdl) {
             CPPA_CHECKPOINT();
             CPPA_LOGF_INFO("received IO_accept");
-            thisptr->fork(peer, hdl, buddy);
+            self->fork(peer, hdl, buddy);
             self->quit();
         },
         others() >> CPPA_UNEXPECTED_MSG_CB()
@@ -137,7 +147,7 @@ int main(int argc, char** argv) {
                 CPPA_CHECKPOINT();
                 auto cl = spawn_io(peer, "localhost", port, p);
                 CPPA_CHECKPOINT();
-                send_as(nullptr, p, atom("kickoff"), cl);
+                anon_send(p, atom("kickoff"), cl);
                 CPPA_CHECKPOINT();
             });
             CPPA_CHECKPOINT();
@@ -169,7 +179,7 @@ int main(int argc, char** argv) {
             CPPA_CHECKPOINT();
             child.join();
             CPPA_CHECKPOINT();
-            await_all_others_done();
+            await_all_actors_done();
             CPPA_CHECKPOINT();
             shutdown();
             return CPPA_TEST_RESULT();

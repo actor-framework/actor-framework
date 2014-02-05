@@ -34,9 +34,6 @@
 #include <string>
 #include <type_traits>
 
-#include "cppa/self.hpp"
-#include "cppa/actor.hpp"
-
 #include "cppa/util/type_traits.hpp"
 
 namespace cppa { class local_actor; }
@@ -76,10 +73,9 @@ struct implicit_conversions {
 
     typedef typename util::replace_type<
                 subtype3,
-                actor_ptr,
-                std::is_convertible<T, actor*>,
-                std::is_convertible<T, local_actor*>,
-                std::is_same<self_type, T>
+                actor,
+                std::is_convertible<T, abstract_actor*>,
+                std::is_same<scoped_actor, T>
             >::type
             type;
 

@@ -4,7 +4,7 @@
 #include <QLineEdit>
 #include <QTextEdit>
 
-#include "cppa/group.hpp"
+#include "cppa/abstract_group.hpp"
 #include "cppa/qtsupport/actor_widget_mixin.hpp"
 
 class ChatWidget : public cppa::actor_widget_mixin<QWidget> {
@@ -51,6 +51,6 @@ class ChatWidget : public cppa::actor_widget_mixin<QWidget> {
     QLineEdit* m_input;
     QTextEdit* m_output;
     std::string m_name;
-    cppa::group_ptr m_chatroom;
+    cppa::group m_chatroom;
 
 };

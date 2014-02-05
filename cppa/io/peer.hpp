@@ -51,7 +51,7 @@
 namespace cppa { namespace io {
 
 class middleman_impl;
-    
+
 class peer : public extend<continuable>::with<buffered_writing> {
 
     typedef combined_type super;
@@ -107,6 +107,7 @@ class peer : public extend<continuable>::with<buffered_writing> {
     default_message_queue_ptr m_queue;
 
     inline default_message_queue& queue() {
+        CPPA_REQUIRE(m_queue != nullptr);
         return *m_queue;
     }
 
@@ -123,18 +124,18 @@ class peer : public extend<continuable>::with<buffered_writing> {
     type_lookup_table m_incoming_types;
     type_lookup_table m_outgoing_types;
 
-    void monitor(const actor_ptr& sender, const node_id_ptr& node, actor_id aid);
+    void monitor(const actor_addr& sender, const node_id_ptr& node, actor_id aid);
 
-    void kill_proxy(const actor_ptr& sender, const node_id_ptr& node, actor_id aid, std::uint32_t reason);
+    void kill_proxy(const actor_addr& sender, const node_id_ptr& node, actor_id aid, std::uint32_t reason);
 
-    void link(const actor_ptr& sender, const actor_ptr& ptr);
+    void link(const actor_addr& sender, const actor_addr& ptr);
 
-    void unlink(const actor_ptr& sender, const actor_ptr& ptr);
+    void unlink(const actor_addr& sender, const actor_addr& ptr);
 
     void deliver(const message_header& hdr, any_tuple msg);
 
     inline void enqueue(const any_tuple& msg) {
-        enqueue({nullptr, nullptr}, msg);
+        enqueue({invalid_actor_addr, nullptr}, msg);
     }
 
     void enqueue_impl(const message_header& hdr, const any_tuple& msg);

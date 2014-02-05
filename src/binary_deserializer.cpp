@@ -38,7 +38,6 @@
 #include <stdexcept>
 #include <type_traits>
 
-#include "cppa/self.hpp"
 #include "cppa/logging.hpp"
 #include "cppa/type_lookup_table.hpp"
 #include "cppa/binary_deserializer.hpp"
@@ -64,7 +63,7 @@ pointer advanced(pointer ptr, size_t num_bytes) {
 
 inline void range_check(pointer begin, pointer end, size_t read_size) {
     if (advanced(begin, read_size) > end) {
-        CPPA_LOGF(CPPA_ERROR, self, "range_check failed");
+        CPPA_LOGF(CPPA_ERROR, "range_check failed");
         throw out_of_range("binary_deserializer::read_range()");
     }
 }
@@ -201,7 +200,7 @@ const uniform_type_info* binary_deserializer::begin_object() {
 void binary_deserializer::end_object() { }
 
 size_t binary_deserializer::begin_sequence() {
-    CPPA_LOGMF(CPPA_TRACE, self, "");
+    CPPA_LOG_TRACE("");
     static_assert(sizeof(size_t) >= sizeof(uint32_t),
                   "sizeof(size_t) < sizeof(uint32_t)");
     uint32_t result;

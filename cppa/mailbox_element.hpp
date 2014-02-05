@@ -33,9 +33,9 @@
 
 #include <cstdint>
 
-#include "cppa/actor.hpp"
 #include "cppa/extend.hpp"
 #include "cppa/any_tuple.hpp"
+#include "cppa/actor_addr.hpp"
 #include "cppa/message_id.hpp"
 #include "cppa/ref_counted.hpp"
 #include "cppa/memory_cached.hpp"
@@ -53,13 +53,11 @@ class mailbox_element : public extend<memory_managed>::with<memory_cached> {
 
  public:
 
-    typedef mailbox_element* pointer;
-
-    pointer    next;   // intrusive next pointer
-    bool       marked; // denotes if this node is currently processed
-    actor_ptr  sender; // points to the sender of msg
-    any_tuple  msg;    // 'content field'
-    message_id mid;
+    mailbox_element* next;   // intrusive next pointer
+    bool             marked; // denotes if this node is currently processed
+    actor_addr       sender;
+    any_tuple        msg;    // 'content field'
+    message_id       mid;
 
     mailbox_element(mailbox_element&&) = delete;
     mailbox_element(const mailbox_element&) = delete;
@@ -78,6 +76,9 @@ class mailbox_element : public extend<memory_managed>::with<memory_cached> {
     mailbox_element(const message_header& hdr, any_tuple data);
 
 };
+
+typedef std::unique_ptr<mailbox_element, detail::disposer>
+        unique_mailbox_element_pointer;
 
 } // namespace cppa
 

@@ -61,7 +61,7 @@ class middleman_event_handler;
 
 typedef intrusive_ptr<input_stream> input_stream_ptr;
 typedef intrusive_ptr<output_stream> output_stream_ptr;
-    
+
 /**
  * @brief Multiplexes asynchronous IO.
  * @note No member function except for @p run_later is safe to call from
@@ -74,7 +74,7 @@ class middleman {
  public:
 
     virtual ~middleman();
-    
+
     /**
      * @brief Runs @p fun in the event loop of the middleman.
      * @note This member function is thread-safe.
@@ -119,31 +119,37 @@ class middleman {
      * @brief Registers a new peer, i.e., a new node in the network.
      */
     virtual void register_peer(const node_id& node, peer* ptr) = 0;
-    
+
     /**
      * @brief Returns the peer associated with given node id.
      */
     virtual peer* get_peer(const node_id& node) = 0;
-    
+
     /**
      * @brief This callback is used by peer_acceptor implementations to
      *        invoke cleanup code when disposed.
      */
     virtual void del_acceptor(peer_acceptor* ptr) = 0;
-    
+
+    /**
+     * @brief This callback is used by peer implementations to
+     *        invoke cleanup code when disposed.
+     */
+    virtual void del_peer(peer* ptr) = 0;
+
     /**
      * @brief Delivers a message to given node.
      */
     virtual void deliver(const node_id& node,
                          const message_header& hdr,
                          any_tuple msg                  ) = 0;
-    
+
     /**
      * @brief This callback is invoked by {@link peer} implementations
      *        and causes the middleman to disconnect from the node.
      */
     virtual void last_proxy_exited(peer* ptr) = 0;
-    
+
     /**
      *
      */
@@ -156,22 +162,23 @@ class middleman {
      *        to the event loop of the middleman.
      * @note This member function is thread-safe.
      */
-    virtual void register_acceptor(const actor_ptr& pa, peer_acceptor* ptr) = 0;
-    
+    virtual void register_acceptor(const actor_addr& pa,
+                                   peer_acceptor* ptr) = 0;
+
     /**
      * @brief Returns the namespace that contains all remote actors
      *        connected to this middleman.
      */
     inline actor_namespace& get_namespace();
-    
+
  protected:
-    
+
     // creates a middleman instance
     static middleman* create_singleton();
-    
+
     // destroys uninitialized instances
     inline void dispose() { delete this; }
-    
+
     // destroys an initialized singleton
     virtual void destroy() = 0;
 
@@ -180,19 +187,18 @@ class middleman {
 
     // each middleman defines its own namespace
     actor_namespace m_namespace;
-    
+
     // the node id of this middleman
     node_id_ptr m_node;
-    
-    // 
+
     std::unique_ptr<middleman_event_handler> m_handler;
-    
+
 };
 
 inline actor_namespace& middleman::get_namespace() {
     return m_namespace;
 }
-    
+
 } } // namespace cppa::io
 
 #endif // MIDDLEMAN_HPP

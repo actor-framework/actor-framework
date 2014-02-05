@@ -38,8 +38,8 @@
 #include <cstdint>
 #include <condition_variable>
 
-#include "cppa/actor.hpp"
 #include "cppa/attachable.hpp"
+#include "cppa/abstract_actor.hpp"
 #include "cppa/util/shared_spinlock.hpp"
 
 #include "cppa/detail/singleton_mixin.hpp"
@@ -59,7 +59,7 @@ class actor_registry : public singleton_mixin<actor_registry> {
      *        exit reason. An entry with a nullptr means the actor has finished
      *        execution for given reason.
      */
-    typedef std::pair<actor_ptr, std::uint32_t> value_type;
+    typedef std::pair<abstract_actor_ptr, std::uint32_t> value_type;
 
     /**
      * @brief Returns the {nullptr, invalid_exit_reason}.
@@ -67,11 +67,11 @@ class actor_registry : public singleton_mixin<actor_registry> {
     value_type get_entry(actor_id key) const;
 
     // return nullptr if the actor wasn't put *or* finished execution
-    inline actor_ptr get(actor_id key) const {
+    inline abstract_actor_ptr get(actor_id key) const {
         return get_entry(key).first;
     }
 
-    void put(actor_id key, const actor_ptr& value);
+    void put(actor_id key, const abstract_actor_ptr& value);
 
     void erase(actor_id key, std::uint32_t reason);
 

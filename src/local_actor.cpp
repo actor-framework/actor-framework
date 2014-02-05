@@ -34,7 +34,8 @@
 #include "cppa/logging.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/local_actor.hpp"
-#include "cppa/message_future.hpp"
+
+#include "cppa/detail/raw_access.hpp"
 
 namespace cppa {
 
@@ -42,96 +43,74 @@ namespace {
 
 class down_observer : public attachable {
 
-    actor_ptr m_observer;
-    actor_ptr m_observed;
+    actor_addr m_observer;
+    actor_addr m_observed;
 
  public:
 
-    down_observer(actor_ptr observer, actor_ptr observed)
+    down_observer(actor_addr observer, actor_addr observed)
     : m_observer(std::move(observer)), m_observed(std::move(observed)) {
         CPPA_REQUIRE(m_observer != nullptr);
         CPPA_REQUIRE(m_observed != nullptr);
     }
 
     void actor_exited(std::uint32_t reason) {
-        if (m_observer) {
-            message_header hdr{m_observed, m_observer, message_priority::high};
-            hdr.deliver(make_any_tuple(atom("DOWN"), reason));
-        }
+        auto ptr = detail::raw_access::get(m_observer);
+        message_header hdr{m_observed, ptr, message_id{}.with_high_priority()};
+        hdr.deliver(make_any_tuple(down_msg{m_observed, reason}));
     }
 
     bool matches(const attachable::token& match_token) {
         if (match_token.subtype == typeid(down_observer)) {
             auto ptr = reinterpret_cast<const local_actor*>(match_token.ptr);
-            return m_observer == ptr;
+            return m_observer == ptr->address();
         }
         return false;
     }
 
 };
 
-constexpr const char* s_default_debug_name = "actor";
-
 } // namespace <anonymous>
 
-local_actor::local_actor(bool sflag)
-: m_chaining(sflag), m_trap_exit(false)
-, m_is_scheduled(sflag), m_dummy_node(), m_current_node(&m_dummy_node)
-, m_planned_exit_reason(exit_reason::not_exited) {
-#   ifdef CPPA_DEBUG_MODE
-    new (&m_debug_name) std::string (std::to_string(m_id) + "@local");
-#   endif // CPPA_DEBUG_MODE
+local_actor::local_actor()
+        : m_trap_exit(false)
+        , m_dummy_node(), m_current_node(&m_dummy_node)
+        , m_planned_exit_reason(exit_reason::not_exited)
+        , m_state(actor_state::ready) {
+    m_node = node_id::get();
 }
 
-local_actor::~local_actor() {
-    using std::string;
-#   ifdef CPPA_DEBUG_MODE
-    m_debug_name.~string();
-#   endif // CPPA_DEBUG_MODE
+local_actor::~local_actor() { }
+
+void local_actor::monitor(const actor_addr& whom) {
+    if (!whom) return;
+    auto ptr = detail::raw_access::get(whom);
+    ptr->attach(attachable_ptr{new down_observer(address(), whom)});
 }
 
-const char* local_actor::debug_name() const {
-#   ifdef CPPA_DEBUG_MODE
-    return m_debug_name.c_str();
-#   else // CPPA_DEBUG_MODE
-    return s_default_debug_name;
-#   endif // CPPA_DEBUG_MODE
-}
-
-void local_actor::debug_name(std::string str) {
-#   ifdef CPPA_DEBUG_MODE
-    m_debug_name = std::move(str);
-#   else // CPPA_DEBUG_MODE
-    CPPA_LOG_WARNING("unable to set debug name to " << str
-                     << " (compiled without debug mode enabled)");
-#   endif // CPPA_DEBUG_MODE
-}
-
-void local_actor::monitor(const actor_ptr& whom) {
-    if (whom) whom->attach(attachable_ptr{new down_observer(this, whom)});
-}
-
-void local_actor::demonitor(const actor_ptr& whom) {
+void local_actor::demonitor(const actor_addr& whom) {
+    if (!whom) return;
+    auto ptr = detail::raw_access::get(whom);
     attachable::token mtoken{typeid(down_observer), this};
-    if (whom) whom->detach(mtoken);
+    ptr->detach(mtoken);
 }
 
 void local_actor::on_exit() { }
 
-void local_actor::init() { }
-
-void local_actor::join(const group_ptr& what) {
+void local_actor::join(const group& what) {
+    CPPA_LOG_TRACE(CPPA_TSARG(what));
     if (what && m_subscriptions.count(what) == 0) {
+        CPPA_LOG_DEBUG("join group: " << to_string(what));
         m_subscriptions.insert(std::make_pair(what, what->subscribe(this)));
     }
 }
 
-void local_actor::leave(const group_ptr& what) {
+void local_actor::leave(const group& what) {
     if (what) m_subscriptions.erase(what);
 }
 
-std::vector<group_ptr> local_actor::joined_groups() const {
-    std::vector<group_ptr> result;
+std::vector<group> local_actor::joined_groups() const {
+    std::vector<group> result;
     for (auto& kvp : m_subscriptions) {
         result.emplace_back(kvp.first);
     }
@@ -139,55 +118,60 @@ std::vector<group_ptr> local_actor::joined_groups() const {
 }
 
 void local_actor::reply_message(any_tuple&& what) {
-    auto& whom = last_sender();
-    if (whom == nullptr) {
-        return;
-    }
+    auto& whom = m_current_node->sender;
+    if (!whom) return;
     auto& id = m_current_node->mid;
     if (id.valid() == false || id.is_response()) {
-        send_tuple(whom, std::move(what));
+        send_tuple(detail::raw_access::get(whom), std::move(what));
     }
     else if (!id.is_answered()) {
-        if (chaining_enabled()) {
-            if (whom->chained_enqueue({this, whom, id.response_id()}, std::move(what))) {
-                chained_actor(whom);
-            }
-        }
-        else whom->enqueue({this, whom, id.response_id()}, std::move(what));
+        auto ptr = detail::raw_access::get(whom);
+        ptr->enqueue({address(), ptr, id.response_id()}, std::move(what));
         id.mark_as_answered();
     }
 }
 
-void local_actor::forward_message(const actor_ptr& dest, message_priority p) {
-    if (dest == nullptr) return;
-    auto& id = m_current_node->mid;
-    dest->enqueue({last_sender(), dest, id, p}, m_current_node->msg);
+void local_actor::forward_message(const actor& dest, message_priority p) {
+    if (!dest) return;
+    auto id = (p == message_priority::high)
+            ? m_current_node->mid.with_high_priority()
+            : m_current_node->mid.with_normal_priority();
+    detail::raw_access::get(dest)->enqueue({m_current_node->sender, detail::raw_access::get(dest), id}, m_current_node->msg);
     // treat this message as asynchronous message from now on
-    id = message_id{};
+    m_current_node->mid = message_id::invalid;
 }
 
-response_handle local_actor::make_response_handle() {
+void local_actor::send_tuple(message_priority prio, const channel& dest, any_tuple what) {
+    message_id id;
+    if (prio == message_priority::high) id = id.with_high_priority();
+    dest.enqueue({address(), dest, id}, std::move(what));
+}
+
+void local_actor::send_exit(const actor_addr& whom, std::uint32_t reason) {
+    send(detail::raw_access::get(whom), exit_msg{address(), reason});
+}
+
+void local_actor::delayed_send_tuple(message_priority prio,
+                                     const channel& dest,
+                                     const util::duration& rel_time,
+                                     cppa::any_tuple msg) {
+    message_id mid;
+    if (prio == message_priority::high) mid = mid.with_high_priority();
+    get_scheduler()->delayed_send({address(), dest, mid},
+                                  rel_time, std::move(msg));
+}
+
+response_promise local_actor::make_response_promise() {
     auto n = m_current_node;
-    response_handle result{this, n->sender, n->mid.response_id()};
+    response_promise result{address(), n->sender, n->mid.response_id()};
     n->mid.mark_as_answered();
     return result;
 }
 
-void local_actor::exec_behavior_stack() {
-    // default implementation does nothing
-}
-
 void local_actor::cleanup(std::uint32_t reason) {
+    CPPA_LOG_TRACE(CPPA_ARG(reason));
     m_subscriptions.clear();
     super::cleanup(reason);
-}
-
-void local_actor::dequeue(behavior&) {
-    quit(exit_reason::unallowed_function_call);
-}
-
-void local_actor::dequeue_response(behavior&, message_id) {
-    quit(exit_reason::unallowed_function_call);
 }
 
 void local_actor::quit(std::uint32_t reason) {
@@ -196,18 +180,44 @@ void local_actor::quit(std::uint32_t reason) {
     if (reason == exit_reason::unallowed_function_call) {
         // this is the only reason that causes an exception
         cleanup(reason);
-        m_bhvr_stack.clear();
         CPPA_LOG_WARNING("actor tried to use a blocking function");
         // when using receive(), the non-blocking nature of event-based
         // actors breaks any assumption the user has about his code,
         // in particular, receive_loop() is a deadlock when not throwing
         // an exception here
-        aout << "*** warning: event-based actor killed because it tried to "
-                "use receive()\n";
+        aout(this) << "*** warning: event-based actor killed because it tried "
+                      "to use receive()\n";
         throw actor_exited(reason);
     }
-    m_bhvr_stack.clear();
     planned_exit_reason(reason);
+}
+
+message_id local_actor::timed_sync_send_tuple_impl(message_priority mp,
+                                                   const actor& dest,
+                                                   const util::duration& rtime,
+                                                   any_tuple&& what) {
+    auto nri = new_request_id();
+    if (mp == message_priority::high) nri = nri.with_high_priority();
+    dest->enqueue({address(), dest, nri}, std::move(what));
+    auto rri = nri.response_id();
+    get_scheduler()->delayed_send({address(), this, rri}, rtime,
+                                  make_any_tuple(sync_timeout_msg{}));
+    return rri;
+}
+
+message_id local_actor::sync_send_tuple_impl(message_priority mp,
+                                             const actor& dest,
+                                             any_tuple&& what) {
+    auto nri = new_request_id();
+    if (mp == message_priority::high) nri = nri.with_high_priority();
+    dest->enqueue({address(), dest, nri}, std::move(what));
+    return nri.response_id();
+}
+
+void anon_send_exit(const actor_addr& whom, std::uint32_t reason) {
+    auto ptr = detail::raw_access::get(whom);
+    ptr->enqueue({invalid_actor_addr, ptr, message_id{}.with_high_priority()},
+                 make_any_tuple(exit_msg{invalid_actor_addr, reason}));
 }
 
 } // namespace cppa

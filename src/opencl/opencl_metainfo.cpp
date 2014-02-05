@@ -50,7 +50,7 @@ void opencl_metainfo::initialize()
         ostringstream oss;
         oss << "clGetPlatformIDs (getting number of platforms): "
             << get_opencl_error(err);
-        CPPA_LOGMF(CPPA_ERROR, self, oss.str());
+        CPPA_LOGMF(CPPA_ERROR, oss.str());
         throw logic_error(oss.str());
     }
 
@@ -62,7 +62,7 @@ void opencl_metainfo::initialize()
         ostringstream oss;
         oss << "clGetPlatformIDs (getting platform ids): "
             << get_opencl_error(err);
-        CPPA_LOGMF(CPPA_ERROR, self, oss.str());
+        CPPA_LOGMF(CPPA_ERROR, oss.str());
         throw logic_error(oss.str());
     }
 
@@ -81,7 +81,7 @@ void opencl_metainfo::initialize()
     if (err != CL_SUCCESS) {
         ostringstream oss;
         oss << "clGetDeviceIDs: " << get_opencl_error(err);
-        CPPA_LOGMF(CPPA_ERROR, self, oss.str());
+        CPPA_LOGMF(CPPA_ERROR, oss.str());
         throw runtime_error(oss.str());
     }
     vector<cl_device_id> devices(num_devices);
@@ -89,7 +89,7 @@ void opencl_metainfo::initialize()
     if (err != CL_SUCCESS) {
         ostringstream oss;
         oss << "clGetDeviceIDs: " << get_opencl_error(err);
-        CPPA_LOGMF(CPPA_ERROR, self, oss.str());
+        CPPA_LOGMF(CPPA_ERROR, oss.str());
         throw runtime_error(oss.str());
     }
 
@@ -112,7 +112,7 @@ void opencl_metainfo::initialize()
     if (err != CL_SUCCESS) {
         ostringstream oss;
         oss << "clCreateContext: " << get_opencl_error(err);
-        CPPA_LOGMF(CPPA_ERROR, self, oss.str());
+        CPPA_LOGMF(CPPA_ERROR, oss.str());
         throw runtime_error(oss.str());
     }
 
@@ -126,8 +126,8 @@ void opencl_metainfo::initialize()
         char buf[buf_size];
         err = clGetDeviceInfo(device.get(), CL_DEVICE_NAME, buf_size, buf, &return_size);
         if (err != CL_SUCCESS) {
-            CPPA_LOGMF(CPPA_ERROR, self, "clGetDeviceInfo (CL_DEVICE_NAME): "
-                                         << get_opencl_error(err));
+            CPPA_LOGMF(CPPA_ERROR, "clGetDeviceInfo (CL_DEVICE_NAME): "
+                                   << get_opencl_error(err));
             fill(buf, buf+buf_size, 0);
         }
         command_queue_ptr cmd_queue;
@@ -136,8 +136,8 @@ void opencl_metainfo::initialize()
                                              CL_QUEUE_PROFILING_ENABLE,
                                              &err));
         if (err != CL_SUCCESS) {
-            CPPA_LOGMF(CPPA_DEBUG, self, "Could not create command queue for device "
-                           << buf << ": " << get_opencl_error(err));
+            CPPA_LOGMF(CPPA_DEBUG, "Could not create command queue for device "
+                                   << buf << ": " << get_opencl_error(err));
         }
         else {
             size_t max_work_group_size{0};
@@ -151,7 +151,7 @@ void opencl_metainfo::initialize()
                 oss << "clGetDeviceInfo ("
                     << "CL_DEVICE_MAX_WORK_GROUP_SIZE): "
                     << get_opencl_error(err);
-                CPPA_LOGMF(CPPA_ERROR, self, oss.str());
+                CPPA_LOGMF(CPPA_ERROR, oss.str());
                 throw runtime_error(oss.str());
             }
             cl_uint max_work_item_dimensions = 0;
@@ -165,7 +165,7 @@ void opencl_metainfo::initialize()
                 oss << "clGetDeviceInfo ("
                     << "CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS): "
                     << get_opencl_error(err);
-                CPPA_LOGMF(CPPA_ERROR, self, oss.str());
+                CPPA_LOGMF(CPPA_ERROR, oss.str());
                 throw runtime_error(oss.str());
             }
             dim_vec max_work_items_per_dim(max_work_item_dimensions);
@@ -179,7 +179,7 @@ void opencl_metainfo::initialize()
                 oss << "clGetDeviceInfo ("
                     << "CL_DEVICE_MAX_WORK_ITEM_SIZES): "
                     << get_opencl_error(err);
-                CPPA_LOGMF(CPPA_ERROR, self, oss.str());
+                CPPA_LOGMF(CPPA_ERROR, oss.str());
                 throw runtime_error(oss.str());
             }
             device_info dev_info{device,
@@ -195,7 +195,7 @@ void opencl_metainfo::initialize()
         ostringstream oss;
         oss << "Could not create a command queue for "
             << "any present device.";
-        CPPA_LOGMF(CPPA_ERROR, self, oss.str());
+        CPPA_LOGMF(CPPA_ERROR, oss.str());
         throw runtime_error(oss.str());
     }
 }

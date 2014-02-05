@@ -1,3 +1,16 @@
+Version 0.9.0
+-------------
+
+__2014_XX_XX__
+
+- Redesigned large parts of the library related to type-safe actors:
+  * No more thread-local `self`, because it can only return a type-erased handle
+  * New type `actor` replaces `actor_ptr`, can be used to send any message
+  * New type `actor_addr` can only be used for monitoring and identifying actors
+  * New type `exit_msg` is now used instead of messages using the atom `EXIT`
+  * New type `down_msg` is now used instead of messages using the atom `DOWN`
+  * New header `system_messages.hpp` for message types used by the runtime
+
 Version 0.8.1
 -------------
 

@@ -34,16 +34,16 @@
 #include <iostream>
 
 #include "cppa/on.hpp"
-#include "cppa/self.hpp"
-#include "cppa/receive.hpp"
+#include "cppa/policy.hpp"
 #include "cppa/logging.hpp"
 #include "cppa/anything.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/local_actor.hpp"
-#include "cppa/thread_mapped_actor.hpp"
-#include "cppa/context_switching_actor.hpp"
+#include "cppa/scoped_actor.hpp"
+#include "cppa/system_messages.hpp"
 
+#include "cppa/detail/proper_actor.hpp"
 #include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 #include "cppa/detail/thread_pool_scheduler.hpp"
@@ -56,11 +56,11 @@ typedef std::uint32_t ui32;
 
 typedef std::chrono::high_resolution_clock hrc;
 
-struct exit_observer : cppa::attachable {
-    ~exit_observer() { get_actor_registry()->dec_running(); }
-    void actor_exited(std::uint32_t) { }
-    bool matches(const token&) { return false; }
-};
+typedef hrc::time_point time_point;
+
+typedef policy::policies<policy::no_scheduling, policy::not_prioritizing,
+                         policy::no_resume, policy::nestable_invoke>
+        timer_actor_policies;
 
 class delayed_msg {
 
@@ -86,111 +86,125 @@ class delayed_msg {
 
 };
 
-} // namespace <anonymous>
-
-class scheduler_helper {
-
- public:
-
-    typedef intrusive_ptr<thread_mapped_actor> ptr_type;
-
-    void start() {
-        auto mt = make_counted<thread_mapped_actor>();
-        auto mp = make_counted<thread_mapped_actor>();
-        // launch threads
-        m_timer_thread = std::thread{&scheduler_helper::timer_loop, mt};
-        m_printer_thread = std::thread{&scheduler_helper::printer_loop, mp};
-        // set member variables
-        m_timer = std::move(mt);
-        m_printer = std::move(mp);
-    }
-
-    void stop() {
-        auto msg = make_any_tuple(atom("DIE"));
-        m_timer->enqueue(nullptr, msg);
-        m_printer->enqueue(nullptr, msg);
-        m_timer_thread.join();
-        m_printer_thread.join();
-    }
-
-    actor_ptr m_timer;
-    std::thread m_timer_thread;
-
-    actor_ptr m_printer;
-    std::thread m_printer_thread;
-
- private:
-
-    static void timer_loop(ptr_type m_self);
-
-    static void printer_loop(ptr_type m_self);
-
-};
-
 template<class Map>
-inline void insert_dmsg(Map& storage,
-                        const util::duration& d,
-                        message_header&& hdr,
-                        any_tuple&& tup        ) {
+inline void insert_dmsg(Map& storage, const util::duration& d,
+                        message_header&& hdr, any_tuple&& tup) {
     auto tout = hrc::now();
     tout += d;
     delayed_msg dmsg{move(hdr), move(tup)};
     storage.insert(std::make_pair(std::move(tout), std::move(dmsg)));
 }
 
-void scheduler_helper::timer_loop(scheduler_helper::ptr_type m_self) {
-    // setup & local variables
-    self.set(m_self.get());
-    bool done = false;
-    std::unique_ptr<mailbox_element, detail::disposer> msg_ptr;
-    auto tout = hrc::now();
-    std::multimap<decltype(tout), delayed_msg> messages;
-    // message handling rules
-    auto mfun = (
-        on(atom("SEND"), arg_match) >> [&](const util::duration& d,
-                                           message_header& hdr,
-                                           any_tuple& tup) {
-            insert_dmsg(messages, d, move(hdr), move(tup));
-        },
-        on(atom("DIE")) >> [&] {
-            done = true;
-        },
-        others() >> [&]() {
-#           ifdef CPPA_DEBUG_MODE
-                std::cerr << "scheduler_helper::timer_loop: UNKNOWN MESSAGE: "
-                          << to_string(msg_ptr->msg)
-                          << std::endl;
-#           endif
+class timer_actor final : public detail::proper_actor<blocking_actor,
+                                                      timer_actor_policies> {
+
+ public:
+
+    inline unique_mailbox_element_pointer dequeue() {
+        await_data();
+        return next_message();
+    }
+
+    inline unique_mailbox_element_pointer try_dequeue(const time_point& tp) {
+        if (scheduling_policy().await_data(this, tp)) {
+            return next_message();
         }
-    );
-    // loop
-    while (!done) {
-        while (!msg_ptr) {
-            if (messages.empty()) msg_ptr.reset(m_self->pop());
-            else {
-                tout = hrc::now();
-                // handle timeouts (send messages)
-                auto it = messages.begin();
-                while (it != messages.end() && (it->first) <= tout) {
-                    it->second.eval();
-                    messages.erase(it);
-                    it = messages.begin();
-                }
-                // wait for next message or next timeout
-                if (it != messages.end()) {
-                    msg_ptr.reset(m_self->try_pop(it->first));
+        return unique_mailbox_element_pointer{};
+    }
+
+    void act() override {
+        // setup & local variables
+        bool done = false;
+        unique_mailbox_element_pointer msg_ptr;
+        auto tout = hrc::now();
+        std::multimap<decltype(tout), delayed_msg> messages;
+        // message handling rules
+        auto mfun = (
+            on(atom("SEND"), arg_match) >> [&](const util::duration& d,
+                                               message_header& hdr,
+                                               any_tuple& tup) {
+                insert_dmsg(messages, d, move(hdr), move(tup));
+            },
+            on(atom("DIE")) >> [&] {
+                done = true;
+            },
+            others() >> [&]() {
+#               ifdef CPPA_DEBUG_MODE
+                    std::cerr << "scheduler_helper::timer_loop: UNKNOWN MESSAGE: "
+                              << to_string(msg_ptr->msg)
+                              << std::endl;
+#               endif
+            }
+        );
+        // loop
+        while (!done) {
+            while (!msg_ptr) {
+                if (messages.empty()) msg_ptr = dequeue();
+                else {
+                    tout = hrc::now();
+                    // handle timeouts (send messages)
+                    auto it = messages.begin();
+                    while (it != messages.end() && (it->first) <= tout) {
+                        it->second.eval();
+                        messages.erase(it);
+                        it = messages.begin();
+                    }
+                    // wait for next message or next timeout
+                    if (it != messages.end()) {
+                        msg_ptr = try_dequeue(it->first);
+                    }
                 }
             }
+            mfun(msg_ptr->msg);
+            msg_ptr.reset();
         }
-        mfun(msg_ptr->msg);
-        msg_ptr.reset();
     }
+
+};
+
+} // namespace <anonymous>
+
+class scheduler_helper {
+
+ public:
+
+    scheduler_helper() : m_timer(new timer_actor), m_printer(true) { }
+
+    void start() {
+        // launch threads
+        m_timer_thread = std::thread{&scheduler_helper::timer_loop, m_timer.get()};
+        m_printer_thread = std::thread{&scheduler_helper::printer_loop, m_printer.get()};
+    }
+
+    void stop() {
+        auto msg = make_any_tuple(atom("DIE"));
+        m_timer->enqueue({invalid_actor_addr, nullptr}, msg);
+        m_printer->enqueue({invalid_actor_addr, nullptr}, msg);
+        m_timer_thread.join();
+        m_printer_thread.join();
+    }
+
+    intrusive_ptr<timer_actor> m_timer;
+    std::thread m_timer_thread;
+
+    scoped_actor m_printer;
+    std::thread m_printer_thread;
+
+ private:
+
+    static void timer_loop(timer_actor* self);
+
+    static void printer_loop(blocking_actor* self);
+
+};
+
+void scheduler_helper::timer_loop(timer_actor* self) {
+    self->act();
 }
 
-void scheduler_helper::printer_loop(ptr_type m_self) {
-    self.set(m_self.get());
-    std::map<actor_ptr, std::string> out;
-    auto flush_output = [&out](const actor_ptr& s) {
+void scheduler_helper::printer_loop(blocking_actor* self) {
+    std::map<actor_addr, std::string> out;
+    auto flush_output = [&out](const actor_addr& s) {
         auto i = out.find(s);
         if (i != out.end()) {
             auto& line = i->second;
@@ -207,10 +221,10 @@ void scheduler_helper::printer_loop(ptr_type m_self) {
         }
     };
     bool running = true;
-    receive_while (gref(running)) (
+    self->receive_while (gref(running)) (
         on(atom("add"), arg_match) >> [&](std::string& str) {
             auto s = self->last_sender();
-            if (!str.empty() && s != nullptr) {
+            if (!str.empty() && s) {
                 auto i = out.find(s);
                 if (i == out.end()) {
                     i = out.insert(make_pair(s, move(str))).first;
@@ -228,18 +242,17 @@ void scheduler_helper::printer_loop(ptr_type m_self) {
         on(atom("flush")) >> [&] {
             flush_output(self->last_sender());
         },
-        on(atom("DOWN"), any_vals) >> [&] {
-            auto s = self->last_sender();
-            flush_output(s);
-            out.erase(s);
+        on_arg_match >> [&](const down_msg& dm) {
+            flush_output(dm.source);
+            out.erase(dm.source);
         },
         on(atom("DIE")) >> [&] {
             running = false;
         },
-        others() >> [] {
-            //cout << "*** unexpected: "
-            //     << to_string(self->last_dequeued())
-            //     << endl;
+        others() >> [self] {
+            std::cerr << "*** unexpected: "
+                      << to_string(self->last_dequeued())
+                      << std::endl;
         }
     );
 }
@@ -261,20 +274,8 @@ scheduler::~scheduler() {
     delete m_helper;
 }
 
-const actor_ptr& scheduler::delayed_send_helper() {
-    return m_helper->m_timer;
-}
-
-void scheduler::register_converted_context(actor* what) {
-    if (what) {
-        get_actor_registry()->inc_running();
-        what->attach(attachable_ptr{new exit_observer});
-    }
-}
-
-attachable* scheduler::register_hidden_context() {
-    get_actor_registry()->inc_running();
-    return new exit_observer;
+actor scheduler::delayed_send_helper() {
+    return m_helper->m_timer.get();
 }
 
 void set_scheduler(scheduler* sched) {
@@ -291,8 +292,8 @@ scheduler* scheduler::create_singleton() {
     return new detail::thread_pool_scheduler;
 }
 
-const actor_ptr& scheduler::printer() const {
-    return m_helper->m_printer;
+actor scheduler::printer() const {
+    return m_helper->m_printer.get();
 }
 
 } // namespace cppa

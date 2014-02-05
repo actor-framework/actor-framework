@@ -28,18 +28,42 @@
 \******************************************************************************/
 
 
+#include "cppa/actor.hpp"
 #include "cppa/channel.hpp"
 #include "cppa/any_tuple.hpp"
 
+#include "cppa/detail/raw_access.hpp"
+
 namespace cppa {
 
-channel::~channel() { }
+channel::channel(const actor& other) : m_ptr(detail::raw_access::get(other)) { }
 
-bool channel::chained_enqueue(const message_header& hdr, any_tuple msg) {
-    enqueue(hdr, std::move(msg));
-    return false;
+channel::channel(const group& other) : m_ptr(detail::raw_access::get(other)) { }
+
+channel::channel(const invalid_actor_t&) : m_ptr(nullptr) { }
+
+channel::channel(const invalid_group_t&) : m_ptr(nullptr) { }
+
+intptr_t channel::compare(const abstract_channel* lhs, const abstract_channel* rhs) {
+    return reinterpret_cast<intptr_t>(lhs) - reinterpret_cast<intptr_t>(rhs);
 }
 
-void channel::unchain() { }
+channel::channel(abstract_channel* ptr) : m_ptr(ptr) { }
+
+void channel::enqueue(const message_header& hdr, any_tuple msg) const {
+    if (m_ptr) m_ptr->enqueue(hdr, std::move(msg));
+}
+
+intptr_t channel::compare(const channel& other) const {
+    return compare(m_ptr.get(), other.m_ptr.get());
+}
+
+intptr_t channel::compare(const actor& other) const {
+    return compare(m_ptr.get(), detail::raw_access::get(other));
+}
+
+intptr_t channel::compare(const abstract_channel* other) const {
+    return compare(m_ptr.get(), other);
+}
 
 } // namespace cppa

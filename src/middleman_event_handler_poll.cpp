@@ -28,6 +28,10 @@
 \******************************************************************************/
 
 
+#include "cppa/config.hpp"
+
+#if !defined(CPPA_LINUX) || defined(CPPA_POLL_IMPL)
+
 #include <poll.h>
 #include "cppa/io/middleman_event_handler.hpp"
 
@@ -116,7 +120,7 @@ class middleman_event_handler_impl : public middleman_event_handler {
                 tmp.events = to_poll_bitmask(new_bitmask);
                 tmp.revents = 0;
                 m_pollset.insert(iter, tmp);
-                CPPA_LOGMF(CPPA_DEBUG, self, "inserted new element");
+                CPPA_LOG_DEBUG("inserted new element");
                 break;
             }
             case fd_meta_event::erase: {
@@ -124,7 +128,7 @@ class middleman_event_handler_impl : public middleman_event_handler {
                                   "m_meta and m_pollset out of sync; "
                                   "no element found for fd (cannot erase)");
                 if (iter != last && iter->fd == fd) {
-                    CPPA_LOGMF(CPPA_DEBUG, self, "erased element");
+                    CPPA_LOG_DEBUG("erased element");
                     m_pollset.erase(iter);
                 }
                 break;
@@ -134,7 +138,7 @@ class middleman_event_handler_impl : public middleman_event_handler {
                                   "m_meta and m_pollset out of sync; "
                                   "no element found for fd (cannot erase)");
                 if (iter != last && iter->fd == fd) {
-                    CPPA_LOGMF(CPPA_DEBUG, self, "updated bitmask");
+                    CPPA_LOG_DEBUG("updated bitmask");
                     iter->events = to_poll_bitmask(new_bitmask);
                 }
                 break;
@@ -154,4 +158,10 @@ std::unique_ptr<middleman_event_handler> middleman_event_handler::create() {
     return std::unique_ptr<middleman_event_handler>{new middleman_event_handler_impl};
 }
 
-} } // namespace cppa::network
+} } // namespace cppa::io
+
+#else // !defined(CPPA_LINUX) || defined(CPPA_POLL_IMPL)
+
+int keep_compiler_happy_for_poll_impl() { return 42; }
+
+#endif // !defined(CPPA_LINUX) || defined(CPPA_POLL_IMPL)

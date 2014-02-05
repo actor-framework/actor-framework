@@ -45,6 +45,8 @@ using namespace std;
 
 namespace cppa {
 
-actor_proxy::actor_proxy(actor_id mid) : super(mid) { }
+actor_proxy::actor_proxy(actor_id mid) : super(mid) {
+    m_node = node_id::get();
+}
 
 } // namespace cppa

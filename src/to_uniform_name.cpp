@@ -39,7 +39,7 @@
 
 #include "cppa/atom.hpp"
 #include "cppa/actor.hpp"
-#include "cppa/group.hpp"
+#include "cppa/abstract_group.hpp"
 #include "cppa/channel.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/any_tuple.hpp"

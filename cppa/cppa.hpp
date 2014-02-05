@@ -40,18 +40,12 @@
 
 #include "cppa/on.hpp"
 #include "cppa/atom.hpp"
-#include "cppa/send.hpp"
-#include "cppa/self.hpp"
-#include "cppa/actor.hpp"
 #include "cppa/match.hpp"
 #include "cppa/spawn.hpp"
 #include "cppa/channel.hpp"
-#include "cppa/receive.hpp"
-#include "cppa/factory.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/announce.hpp"
 #include "cppa/sb_actor.hpp"
-#include "cppa/threaded.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/any_tuple.hpp"
@@ -61,12 +55,13 @@
 #include "cppa/typed_actor.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/local_actor.hpp"
-#include "cppa/prioritizing.hpp"
+#include "cppa/scoped_actor.hpp"
 #include "cppa/spawn_options.hpp"
-#include "cppa/message_future.hpp"
-#include "cppa/response_handle.hpp"
-#include "cppa/typed_actor_ptr.hpp"
-#include "cppa/scheduled_actor.hpp"
+#include "cppa/actor_ostream.hpp"
+#include "cppa/abstract_actor.hpp"
+#include "cppa/blocking_actor.hpp"
+#include "cppa/system_messages.hpp"
+#include "cppa/response_promise.hpp"
 #include "cppa/event_based_actor.hpp"
 
 #include "cppa/util/type_traits.hpp"
@@ -82,9 +77,7 @@
 #include "cppa/io/connection_handle.hpp"
 
 #include "cppa/detail/memory.hpp"
-#include "cppa/detail/get_behavior.hpp"
 #include "cppa/detail/actor_registry.hpp"
-#include "cppa/detail/receive_loop_helper.hpp"
 
 /**
  * @author Dominik Charousset <dominik.charousset (at) haw-hamburg.de>
@@ -441,36 +434,60 @@
 namespace cppa {
 
 /**
- * @ingroup MessageHandling
- * @{
+ * @brief Sends @p to a message under the identity of @p from.
  */
-
-/**
- * @brief Sends a message to @p whom.
- *
- * <b>Usage example:</b>
- * @code
- * self << make_any_tuple(1, 2, 3);
- * @endcode
- * @param whom Receiver of the message.
- * @param what Message as instance of {@link any_tuple}.
- * @returns @p whom.
- */
-template<class C>
-inline typename enable_if_channel<C, const intrusive_ptr<C>&>::type
-operator<<(const intrusive_ptr<C>& whom, any_tuple what) {
-    send_tuple(whom, std::move(what));
-    return whom;
-}
-
-inline const self_type& operator<<(const self_type& s, any_tuple what) {
-    send_tuple(s.get(), std::move(what));
-    return s;
+inline void send_tuple_as(const actor& from, const channel& to, any_tuple msg) {
+    to.enqueue({from.address(), to}, std::move(msg));
 }
 
 /**
- * @}
+ * @brief Sends @p to a message under the identity of @p from.
  */
+template<typename... Ts>
+void send_as(const actor& from, const channel& to, Ts&&... args) {
+    send_tuple_as(from, to, make_any_tuple(std::forward<Ts>(args)...));
+}
+
+/**
+ * @brief Anonymously sends @p to a message.
+ */
+inline void anon_send_tuple(const channel& to, any_tuple msg) {
+    send_tuple_as(invalid_actor, to, std::move(msg));
+}
+
+/**
+ * @brief Anonymously sends @p to a message.
+ */
+template<typename... Ts>
+inline void anon_send(const channel& to, Ts&&... args) {
+    send_as(invalid_actor, to, std::forward<Ts>(args)...);
+}
+
+/**
+ * @brief Sets the maximum size of a message over network.
+ * @param size The maximum number of bytes a message may occupy.
+ */
+void max_msg_size(size_t size);
+
+/**
+ * @brief Queries the maximum size of messages over network.
+ * @returns The number maximum number of bytes a message may occupy.
+ */
+size_t max_msg_size();
+
+// implemented in local_actor.cpp
+/**
+ * @brief Anonymously sends @p whom an exit message.
+ */
+void anon_send_exit(const actor_addr& whom, std::uint32_t reason);
+
+/**
+ * @brief Anonymously sends @p whom an exit message.
+ */
+template<typename ActorHandle>
+inline void anon_send_exit(const ActorHandle& whom, std::uint32_t reason) {
+    anon_send_exit(whom.address(), reason);
+}
 
 /**
  * @brief Blocks execution of this actor until all
@@ -478,9 +495,8 @@ inline const self_type& operator<<(const self_type& s, any_tuple what) {
  * @warning This function will cause a deadlock if called from multiple actors.
  * @warning Do not call this function in cooperatively scheduled actors.
  */
-inline void await_all_others_done() {
-    auto value = (self.unchecked() == nullptr) ? 0 : 1;
-    get_actor_registry()->await_running_count_equal(value);
+inline void await_all_actors_done() {
+    get_actor_registry()->await_running_count_equal(0);
 }
 
 /**
@@ -493,7 +509,7 @@ inline void await_all_others_done() {
  *             @p nullptr.
  * @throws bind_failure
  */
-void publish(actor_ptr whom, std::uint16_t port, const char* addr = nullptr);
+void publish(actor whom, std::uint16_t port, const char* addr = nullptr);
 
 /**
  * @brief Publishes @p whom using @p acceptor to handle incoming connections.
@@ -502,7 +518,7 @@ void publish(actor_ptr whom, std::uint16_t port, const char* addr = nullptr);
  * @param whom Actor that should be published at @p port.
  * @param acceptor Network technology-specific acceptor implementation.
  */
-void publish(actor_ptr whom, std::unique_ptr<io::acceptor> acceptor);
+void publish(actor whom, std::unique_ptr<io::acceptor> acceptor);
 
 /**
  * @brief Establish a new connection to the actor at @p host on given @p port.
@@ -511,84 +527,79 @@ void publish(actor_ptr whom, std::unique_ptr<io::acceptor> acceptor);
  * @returns An {@link actor_ptr} to the proxy instance
  *          representing a remote actor.
  */
-actor_ptr remote_actor(const char* host, std::uint16_t port);
+actor remote_actor(const char* host, std::uint16_t port);
 
 /**
  * @copydoc remote_actor(const char*, std::uint16_t)
  */
-inline actor_ptr remote_actor(const std::string& host, std::uint16_t port) {
+inline actor remote_actor(const std::string& host, std::uint16_t port) {
     return remote_actor(host.c_str(), port);
 }
 
 /**
- * @brief Establish a new connection to the actor via given @p connection.
+ * @brief Establish a new connection to a remote actor via @p connection.
  * @param connection A connection to another libcppa process described by a pair
  *                   of input and output stream.
  * @returns An {@link actor_ptr} to the proxy instance
  *          representing a remote actor.
  */
-actor_ptr remote_actor(io::stream_ptr_pair connection);
+actor remote_actor(io::stream_ptr_pair connection);
 
 /**
  * @brief Spawns an IO actor of type @p Impl.
  * @param args Constructor arguments.
  * @tparam Impl Subtype of {@link io::broker}.
- * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
+ * @tparam Os Optional flags to modify <tt>spawn</tt>'s behavior.
  * @returns An {@link actor_ptr} to the spawned {@link actor}.
  */
-template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
-actor_ptr spawn_io(io::input_stream_ptr in,
-                   io::output_stream_ptr out,
-                   Ts&&... args) {
-    using namespace io;
-    using namespace std;
-    auto ptr = make_counted<Impl>(move(in), move(out), forward<Ts>(args)...);
-    return eval_sopts(Options, io::init_and_launch(move(ptr)));
+template<class Impl, spawn_options Os = no_spawn_options, typename... Ts>
+actor spawn_io(Ts&&... args) {
+    auto ptr = make_counted<Impl>(std::forward<Ts>(args)...);
+    return {io::init_and_launch(std::move(ptr))};
 }
 
 /**
- * @brief Spawns a new {@link actor} that evaluates given arguments.
- * @param args A functor followed by its arguments.
- * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
- * @returns An {@link actor_ptr} to the spawned {@link actor}.
+ * @brief Spawns a new, function-based IO actor.
+ * @param fun  A functor implementing the actor's behavior.
+ * @param in   The actor's input stream.
+ * @param out  The actor's output stream.
+ * @param args Optional arguments for @p fun.
+ * @tparam Os Optional flags to modify <tt>spawn</tt>'s behavior.
+ * @returns A {@link actor handle} to the spawned actor.
  */
-template<spawn_options Options = no_spawn_options,
+template<spawn_options Os = no_spawn_options,
          typename F = std::function<void (io::broker*)>,
          typename... Ts>
-actor_ptr spawn_io(F fun,
-                   io::input_stream_ptr in,
-                   io::output_stream_ptr out,
-                   Ts&&... args) {
-    using namespace std;
-    auto ptr = io::broker::from(move(fun), move(in), move(out),
-                                forward<Ts>(args)...);
-    return eval_sopts(Options, io::init_and_launch(move(ptr)));
+actor spawn_io(F fun,
+               io::input_stream_ptr in,
+               io::output_stream_ptr out,
+               Ts&&... args) {
+    auto ptr = io::broker::from(std::move(fun), std::move(in), std::move(out),
+                                std::forward<Ts>(args)...);
+    return {io::init_and_launch(std::move(ptr))};
 }
 
-/*
-template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
-actor_ptr spawn_io(const char* host, uint16_t port, Ts&&... args) {
-    auto ptr = io::ipv4_io_stream::connect_to(host, port);
-    return spawn_io<Impl>(ptr, ptr, std::forward<Ts>(args)...);
-}
-*/
-
-template<spawn_options Options = no_spawn_options,
+template<spawn_options Os = no_spawn_options,
          typename F = std::function<void (io::broker*)>,
          typename... Ts>
-actor_ptr spawn_io(F fun, const std::string& host, uint16_t port, Ts&&... args) {
+actor spawn_io(F fun, const std::string& host, uint16_t port, Ts&&... args) {
     auto ptr = io::ipv4_io_stream::connect_to(host.c_str(), port);
     return spawn_io(std::move(fun), ptr, ptr, std::forward<Ts>(args)...);
 }
 
-template<spawn_options Options = no_spawn_options,
+template<spawn_options Os = no_spawn_options,
          typename F = std::function<void (io::broker*)>,
          typename... Ts>
-actor_ptr spawn_io_server(F fun, uint16_t port, Ts&&... args) {
+actor spawn_io_server(F fun, uint16_t port, Ts&&... args) {
+    static_assert(!has_detach_flag(Os),
+                  "brokers cannot be detached");
+    static_assert(is_unbound(Os),
+                  "top-level spawns cannot have monitor or link flag");
     using namespace std;
-    auto ptr = io::broker::from(move(fun), io::ipv4_acceptor::create(port),
+    auto ptr = io::broker::from(move(fun),
+                                io::ipv4_acceptor::create(port),
                                 forward<Ts>(args)...);
-    return eval_sopts(Options, io::init_and_launch(move(ptr)));
+    return {io::init_and_launch(move(ptr))};
 }
 
 /**
@@ -599,93 +610,22 @@ actor_ptr spawn_io_server(F fun, uint16_t port, Ts&&... args) {
  */
 void shutdown(); // note: implemented in singleton_manager.cpp
 
-/**
- * @brief Sets the actor's behavior and discards the previous behavior
- *        unless {@link keep_behavior} is given as first argument.
- */
-template<typename T, typename... Ts>
-inline typename std::enable_if<
-    !is_behavior_policy<typename util::rm_const_and_ref<T>::type>::value,
-    void
->::type
-become(T&& arg, Ts&&... args) {
-    self->do_become(match_expr_convert(std::forward<T>(arg),
-                                       std::forward<Ts>(args)...),
-                    true);
-}
-
-template<bool Discard, typename... Ts>
-inline void become(behavior_policy<Discard>, Ts&&... args) {
-    self->do_become(match_expr_convert(std::forward<Ts>(args)...), Discard);
-}
-
-/**
- * @brief Returns to a previous behavior if available.
- */
-inline void unbecome() {
-    self->do_unbecome();
-}
-
-struct actor_ostream {
-
-    typedef const actor_ostream& (*fun_type)(const actor_ostream&);
-
-    constexpr actor_ostream() { }
-
-    inline const actor_ostream& write(std::string arg) const {
-        send(get_scheduler()->printer(), atom("add"), move(arg));
-        return *this;
-    }
-
-    inline const actor_ostream& flush() const {
-        send(get_scheduler()->printer(), atom("flush"));
-        return *this;
-    }
-
-};
-
-namespace { constexpr actor_ostream aout; }
-
-inline const actor_ostream& operator<<(const actor_ostream& o, std::string arg) {
-    return o.write(move(arg));
-}
-
-inline const actor_ostream& operator<<(const actor_ostream& o, const any_tuple& arg) {
-    return o.write(cppa::to_string(arg));
-}
-
-// disambiguate between conversion to string and to any_tuple
-inline const actor_ostream& operator<<(const actor_ostream& o, const char* arg) {
-    return o << std::string{arg};
-}
-
-template<typename T>
-inline typename std::enable_if<
-       !std::is_convertible<T, std::string>::value
-    && !std::is_convertible<T, any_tuple>::value,
-    const actor_ostream&
->::type
-operator<<(const actor_ostream& o, T&& arg) {
-    return o.write(std::to_string(std::forward<T>(arg)));
-}
-
-inline const actor_ostream& operator<<(const actor_ostream& o, actor_ostream::fun_type f) {
-    return f(o);
-}
-
 } // namespace cppa
 
 namespace std {
-// allow actor_ptr to be used in hash maps
+// allow actor and actor_addr to be used in hash maps
 template<>
-struct hash<cppa::actor_ptr> {
-    inline size_t operator()(const cppa::actor_ptr& ptr) const {
-        return (ptr) ? static_cast<size_t>(ptr->id()) : 0;
+struct hash<cppa::actor> {
+    inline size_t operator()(const cppa::actor& ref) const {
+        return static_cast<size_t>(ref->id());
     }
 };
-// provide convenience overlaods for aout; implemented in logging.cpp
-const cppa::actor_ostream& endl(const cppa::actor_ostream& o);
-const cppa::actor_ostream& flush(const cppa::actor_ostream& o);
+template<>
+struct hash<cppa::actor_addr> {
+    inline size_t operator()(const cppa::actor_addr& ref) const {
+        return static_cast<size_t>(ref.id());
+    }
+};
 } // namespace std
 
 #endif // CPPA_HPP

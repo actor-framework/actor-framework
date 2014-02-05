@@ -7,7 +7,7 @@ using namespace cppa::placeholders;
 
 struct sync_mirror : sb_actor<sync_mirror> {
     behavior init_state = (
-        others() >> [] { return self->last_dequeued(); }
+        others() >> [=] { return last_dequeued(); }
     );
 };
 
@@ -20,12 +20,12 @@ struct float_or_int : sb_actor<float_or_int> {
 };
 
 struct popular_actor : event_based_actor { // popular actors have a buddy
-    actor_ptr m_buddy;
-    popular_actor(const actor_ptr& buddy) : m_buddy(buddy) { }
-    inline const actor_ptr& buddy() const { return m_buddy; }
+    actor m_buddy;
+    popular_actor(const actor& buddy) : m_buddy(buddy) { }
+    inline const actor& buddy() const { return m_buddy; }
     void report_failure() {
         send(buddy(), atom("failure"));
-        self->quit();
+        quit();
     }
 };
 
@@ -45,10 +45,10 @@ struct popular_actor : event_based_actor { // popular actors have a buddy
 \******************************************************************************/
 
 struct A : popular_actor {
-    A(const actor_ptr& buddy) : popular_actor(buddy) { }
-    void init() {
-        become (
-            on(atom("go"), arg_match) >> [=](const actor_ptr& next) {
+    A(const actor& buddy) : popular_actor(buddy) { }
+    behavior make_behavior() override {
+        return (
+            on(atom("go"), arg_match) >> [=](const actor& next) {
                 CPPA_CHECKPOINT();
                 sync_send(next, atom("gogo")).then([=] {
                     CPPA_CHECKPOINT();
@@ -62,9 +62,9 @@ struct A : popular_actor {
 };
 
 struct B : popular_actor {
-    B(const actor_ptr& buddy) : popular_actor(buddy) { }
-    void init() {
-        become (
+    B(const actor& buddy) : popular_actor(buddy) { }
+    behavior make_behavior() override {
+        return (
             others() >> [=] {
                 CPPA_CHECKPOINT();
                 forward_to(buddy());
@@ -77,7 +77,8 @@ struct B : popular_actor {
 struct C : sb_actor<C> {
     behavior init_state = (
         on(atom("gogo")) >> [=]() -> atom_value {
-            self->quit();
+            CPPA_CHECKPOINT();
+            quit();
             return atom("gogogo");
         }
     );
@@ -100,12 +101,12 @@ struct C : sb_actor<C> {
 \******************************************************************************/
 
 struct D : popular_actor {
-    D(const actor_ptr& buddy) : popular_actor(buddy) { }
-    void init() {
-        become (
+    D(const actor& buddy) : popular_actor(buddy) { }
+    behavior make_behavior() override {
+        return (
             others() >> [=] {
                 /*
-                response_handle handle = make_response_handle();
+                response_promise handle = make_response_promise();
                 sync_send_tuple(buddy(), last_dequeued()).then([=] {
                     reply_to(handle, last_dequeued());
                     quit();
@@ -138,11 +139,10 @@ struct D : popular_actor {
 
 struct server : event_based_actor {
 
-    void init() {
+    behavior make_behavior() override {
         auto die = [=] { quit(exit_reason::user_shutdown); };
-        become (
-            on(atom("idle")) >> [=] {
-                auto worker = last_sender();
+        return (
+            on(atom("idle"), arg_match) >> [=](actor worker) {
                 become (
                     keep_behavior,
                     on(atom("request")) >> [=] {
@@ -160,33 +160,29 @@ struct server : event_based_actor {
 
 };
 
-
-
-int main() {
-    CPPA_TEST(test_sync_send);
-    self->on_sync_failure([] {
+void test_sync_send() {
+    scoped_actor self;
+    self->on_sync_failure([&] {
         CPPA_FAILURE("received: " << to_string(self->last_dequeued()));
     });
-    spawn<monitored + blocking_api>([] {
+    self->spawn<monitored + blocking_api>([](blocking_actor* self) {
         CPPA_LOGC_TRACE("NONE", "main$sync_failure_test", "id = " << self->id());
         int invocations = 0;
-        auto foi = spawn<float_or_int, linked>();
-        send(foi, atom("i"));
-        receive(on_arg_match >> [](int i) { CPPA_CHECK_EQUAL(i, 0); });
-        self->on_sync_failure([] {
+        auto foi = self->spawn<float_or_int, linked>();
+        self->send(foi, atom("i"));
+        self->receive(on_arg_match >> [](int i) { CPPA_CHECK_EQUAL(i, 0); });
+        self->on_sync_failure([=] {
             CPPA_FAILURE("received: " << to_string(self->last_dequeued()));
         });
-        sync_send(foi, atom("i")).then(
+        self->sync_send(foi, atom("i")).await(
             [&](int i) { CPPA_CHECK_EQUAL(i, 0); ++invocations; },
             [&](float) { CPPA_UNEXPECTED_MSG(); }
-        )
-        .continue_with([&] {
-            sync_send(foi, atom("f")).then(
-                [&](int) { CPPA_UNEXPECTED_MSG(); },
-                [&](float f) { CPPA_CHECK_EQUAL(f, 0); ++invocations; }
-            );
-        });
-        self->exec_behavior_stack();
+        );
+        self->sync_send(foi, atom("f")).await(
+            [&](int) { CPPA_UNEXPECTED_MSG(); },
+            [&](float f) { CPPA_CHECK_EQUAL(f, 0); ++invocations; }
+        );
+        //self->exec_behavior_stack();
         CPPA_CHECK_EQUAL(invocations, 2);
         CPPA_PRINT("trigger sync failure");
         // provoke invocation of self->handle_sync_failure()
@@ -195,7 +191,7 @@ int main() {
         self->on_sync_failure([&] {
             sync_failure_called = true;
         });
-        sync_send(foi, atom("f")).await(
+        self->sync_send(foi, atom("f")).await(
             on<int>() >> [&] {
                 int_handler_called = true;
             }
@@ -204,48 +200,56 @@ int main() {
         CPPA_CHECK_EQUAL(int_handler_called, false);
         self->quit(exit_reason::user_shutdown);
     });
-    receive (
-        on(atom("DOWN"), exit_reason::user_shutdown) >> CPPA_CHECKPOINT_CB(),
+    self->receive (
+        on_arg_match >> [&](const down_msg& dm) {
+            CPPA_CHECK_EQUAL(dm.reason, exit_reason::user_shutdown);
+        },
         others() >> CPPA_UNEXPECTED_MSG_CB()
     );
     auto mirror = spawn<sync_mirror>();
     bool continuation_called = false;
-    sync_send(mirror, 42)
-    .then([](int value) { CPPA_CHECK_EQUAL(value, 42); })
-    .continue_with([&] { continuation_called = true; });
-    self->exec_behavior_stack();
+    self->sync_send(mirror, 42)
+    .await([&](int value) {
+        continuation_called = true;
+        CPPA_CHECK_EQUAL(value, 42);
+    });
     CPPA_CHECK_EQUAL(continuation_called, true);
-    send_exit(mirror, exit_reason::user_shutdown);
-    await_all_others_done();
+    self->send_exit(mirror, exit_reason::user_shutdown);
+    self->await_all_other_actors_done();
     CPPA_CHECKPOINT();
     auto await_success_message = [&] {
-        receive (
+        self->receive (
             on(atom("success")) >> CPPA_CHECKPOINT_CB(),
             on(atom("failure")) >> CPPA_FAILURE_CB("A didn't receive sync response"),
-            on(atom("DOWN"), arg_match).when(_x2 != exit_reason::normal)
-            >> [&](uint32_t err) {
-                CPPA_FAILURE("A exited for reason " << err);
+            on_arg_match >> [&](const down_msg& dm) -> match_hint {
+                if (dm.reason != exit_reason::normal) {
+                    CPPA_FAILURE("A exited for reason " << dm.reason);
+                    return match_hint::handle;
+                }
+                return match_hint::skip;
             }
         );
     };
-    send(spawn<A, monitored>(self), atom("go"), spawn<B>(spawn<C>()));
+    self->send(self->spawn<A, monitored>(self), atom("go"), spawn<B>(spawn<C>()));
     await_success_message();
     CPPA_CHECKPOINT();
-    await_all_others_done();
-    send(spawn<A, monitored>(self), atom("go"), spawn<D>(spawn<C>()));
+    self->await_all_other_actors_done();
+    self->send(self->spawn<A, monitored>(self), atom("go"), spawn<D>(spawn<C>()));
     await_success_message();
     CPPA_CHECKPOINT();
-    await_all_others_done();
+    self->await_all_other_actors_done();
     CPPA_CHECKPOINT();
-    timed_sync_send(self, std::chrono::milliseconds(50), atom("NoWay")).await(
-        on(atom("TIMEOUT")) >> CPPA_CHECKPOINT_CB(),
+    self->timed_sync_send(self, std::chrono::milliseconds(50), atom("NoWay")).await(
+        on<sync_timeout_msg>() >> CPPA_CHECKPOINT_CB(),
         others() >> CPPA_UNEXPECTED_MSG_CB()
     );
     // we should have received two DOWN messages with normal exit reason
     // plus 'NoWay'
     int i = 0;
-    receive_for(i, 3) (
-        on(atom("DOWN"), exit_reason::normal) >> CPPA_CHECKPOINT_CB(),
+    self->receive_for(i, 3) (
+        on_arg_match >> [&](const down_msg& dm) {
+            CPPA_CHECK_EQUAL(dm.reason, exit_reason::normal);
+        },
         on(atom("NoWay")) >> [] {
             CPPA_CHECKPOINT();
             CPPA_PRINT("trigger \"actor did not reply to a "
@@ -256,7 +260,7 @@ int main() {
     );
     CPPA_CHECKPOINT();
     // mailbox should be empty now
-    receive (
+    self->receive (
         others() >> CPPA_UNEXPECTED_MSG_CB(),
         after(std::chrono::seconds(0)) >> CPPA_CHECKPOINT_CB()
     );
@@ -266,53 +270,59 @@ int main() {
     bool timeout_occured = false;
     self->on_sync_timeout([&] { timeout_occured = true; });
     self->on_sync_failure(CPPA_UNEXPECTED_MSG_CB());
-    timed_sync_send(c, std::chrono::milliseconds(500), atom("HiThere"))
-    .then(CPPA_FAILURE_CB("C replied to 'HiThere'!"))
-    .continue_with(CPPA_FAILURE_CB("continuation erroneously invoked"));
-    self->exec_behavior_stack();
+    self->timed_sync_send(c, std::chrono::milliseconds(500), atom("HiThere"))
+    .await(CPPA_FAILURE_CB("C replied to 'HiThere'!"));
     CPPA_CHECK_EQUAL(timeout_occured, true);
     self->on_sync_failure(CPPA_UNEXPECTED_MSG_CB());
-    sync_send(c, atom("gogo")).then(CPPA_CHECKPOINT_CB())
-                              .continue_with(CPPA_CHECKPOINT_CB());
-    self->exec_behavior_stack();
-    send_exit(c, exit_reason::user_shutdown);
-    await_all_others_done();
+    self->sync_send(c, atom("gogo")).await(CPPA_CHECKPOINT_CB());
+    self->send_exit(c, exit_reason::user_shutdown);
+    self->await_all_other_actors_done();
     CPPA_CHECKPOINT();
 
     // test use case 3
-    spawn<monitored + blocking_api>([] {  // client
-        auto s = spawn<server, linked>(); // server
-        auto w = spawn<linked>([] {       // worker
-            become(on(atom("request")) >> []{ return atom("response"); });
+    self->spawn<monitored + blocking_api>([](blocking_actor* self) { // client
+        auto s = self->spawn<server, linked>();                      // server
+        auto w = self->spawn<linked>([](event_based_actor* self) {   // worker
+            self->become(on(atom("request")) >> []{ return atom("response"); });
         });
         // first 'idle', then 'request'
-        send_as(w, s, atom("idle"));
-        sync_send(s, atom("request")).await(
+        anon_send(s, atom("idle"), w);
+        self->sync_send(s, atom("request")).await(
             on(atom("response")) >> [=] {
                 CPPA_CHECKPOINT();
                 CPPA_CHECK_EQUAL(self->last_sender(), w);
             },
-            others() >> CPPA_UNEXPECTED_MSG_CB()
+            others() >> [&] {
+                CPPA_PRINTERR("unexpected message: "
+                              << to_string(self->last_dequeued()));
+            }
         );
         // first 'request', then 'idle'
-        auto handle = sync_send(s, atom("request"));
+        auto handle = self->sync_send(s, atom("request"));
         send_as(w, s, atom("idle"));
-        receive_response(handle) (
+        handle.await(
             on(atom("response")) >> [=] {
                 CPPA_CHECKPOINT();
                 CPPA_CHECK_EQUAL(self->last_sender(), w);
             },
             others() >> CPPA_UNEXPECTED_MSG_CB()
         );
-        send(s, "Ever danced with the devil in the pale moonlight?");
+        self->send(s, "Ever danced with the devil in the pale moonlight?");
         // response: {'EXIT', exit_reason::user_shutdown}
-        receive_loop(others() >> CPPA_UNEXPECTED_MSG_CB());
+        self->receive_loop(others() >> CPPA_UNEXPECTED_MSG_CB());
     });
-    receive (
-        on(atom("DOWN"), exit_reason::user_shutdown) >> CPPA_CHECKPOINT_CB(),
+    self->receive (
+        on_arg_match >> [&](const down_msg& dm) {
+            CPPA_CHECK_EQUAL(dm.reason, exit_reason::user_shutdown);
+        },
         others() >> CPPA_UNEXPECTED_MSG_CB()
     );
-    await_all_others_done();
+}
+
+int main() {
+    CPPA_TEST(test_sync_send);
+    test_sync_send();
+    await_all_actors_done();
     CPPA_CHECKPOINT();
     shutdown();
     return CPPA_TEST_RESULT();

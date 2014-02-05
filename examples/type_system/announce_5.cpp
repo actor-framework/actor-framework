@@ -39,18 +39,18 @@ struct tree_node {
     void print() const {
         // format is: value { children0, children1, ..., childrenN }
         // e.g., 10 { 20 { 21, 22 }, 30 }
-        aout << value;
+        cout << value;
         if (children.empty() == false) {
-            aout << " { ";
+            cout << " { ";
             auto begin = children.begin();
             auto end = children.end();
             for (auto i = begin; i != end; ++i) {
                 if (i != begin) {
-                    aout << ", ";
+                    cout << ", ";
                 }
                 i->print();
             }
-            aout << " } ";
+            cout << " } ";
         }
     }
 
@@ -62,9 +62,9 @@ struct tree {
 
     // print tree to stdout
     void print() const {
-        aout << "tree::print: ";
+        cout << "tree::print: ";
         root.print();
-        aout << endl;
+        cout << endl;
     }
 
 };
@@ -131,16 +131,16 @@ class tree_type_info : public util::abstract_uniform_type_info<tree> {
 typedef std::vector<tree> tree_vector;
 
 // receives `remaining` messages
-void testee(size_t remaining) {
+void testee(event_based_actor* self, size_t remaining) {
     auto set_next_behavior = [=] {
-        if (remaining > 1) testee(remaining - 1);
+        if (remaining > 1) testee(self, remaining - 1);
         else self->quit();
     };
-    become (
+    self->become (
         on_arg_match >> [=](const tree& tmsg) {
             // prints the tree in its serialized format:
             // @<> ( { tree ( 0, { 10, { 11, { }, 12, { }, 13, { } }, 20, { 21, { }, 22, { } } } ) } )
-            aout << "to_string(self->last_dequeued()): "
+            cout << "to_string(self->last_dequeued()): "
                  << to_string(self->last_dequeued())
                  << endl;
             // prints the tree using the print member function:
@@ -150,7 +150,7 @@ void testee(size_t remaining) {
         },
         on_arg_match >> [=](const tree_vector& trees) {
             // prints "received 2 trees"
-            aout << "received " << trees.size() << " trees" << endl;
+            cout << "received " << trees.size() << " trees" << endl;
             // prints:
             // @<> ( {
             //   std::vector<tree, std::allocator<tree>> ( {
@@ -158,7 +158,7 @@ void testee(size_t remaining) {
             //     tree ( 0, { 10, { 11, { }, 12, { }, 13, { } }, 20, { 21, { }, 22, { } } } )
             //   )
             // } )
-            aout << "to_string: " << to_string(self->last_dequeued()) << endl;
+            cout << "to_string: " << to_string(self->last_dequeued()) << endl;
             set_next_behavior();
         }
     );
@@ -188,20 +188,24 @@ int main() {
        11 12 13 21    22
     */
 
-    // spawn a testee that receives two messages
-    auto t = spawn(testee, 2);
+    { // lifetime scope of self
+        scoped_actor self;
 
-    // send a tree
-    send(t, t0);
+        // spawn a testee that receives two messages
+        auto t = spawn(testee, 2);
 
-    // send a vector of trees
-    announce<tree_vector>();
-    tree_vector tvec;
-    tvec.push_back(t0);
-    tvec.push_back(t0);
-    send(t, tvec);
+        // send a tree
+        self->send(t, t0);
 
-    await_all_others_done();
+        // send a vector of trees
+        announce<tree_vector>();
+        tree_vector tvec;
+        tvec.push_back(t0);
+        tvec.push_back(t0);
+        self->send(t, tvec);
+    }
+
+    await_all_actors_done();
     shutdown();
     return 0;
 }

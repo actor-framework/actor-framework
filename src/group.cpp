@@ -28,87 +28,42 @@
 \******************************************************************************/
 
 
-#include "cppa/cppa.hpp"
 #include "cppa/group.hpp"
+#include "cppa/channel.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/singletons.hpp"
-#include "cppa/util/shared_spinlock.hpp"
-#include "cppa/util/shared_lock_guard.hpp"
-#include "cppa/util/upgrade_lock_guard.hpp"
 
 #include "cppa/detail/group_manager.hpp"
-#include "cppa/detail/singleton_manager.hpp"
 
 namespace cppa {
 
-intrusive_ptr<group> group::get(const std::string& arg0,
-                                const std::string& arg1) {
+group::group(const invalid_group_t&) : m_ptr(nullptr) { }
+
+group::group(abstract_group_ptr ptr) : m_ptr(std::move(ptr)) { }
+
+group& group::operator=(const invalid_group_t&) {
+    m_ptr.reset();
+    return *this;
+}
+
+intptr_t group::compare(const group& other) const {
+    return channel::compare(m_ptr.get(), other.m_ptr.get());
+}
+
+group group::get(const std::string& arg0, const std::string& arg1) {
     return get_group_manager()->get(arg0, arg1);
 }
 
-intrusive_ptr<group> group::anonymous() {
+group group::anonymous() {
     return get_group_manager()->anonymous();
 }
 
-void group::add_module(group::unique_module_ptr ptr) {
+void group::add_module(abstract_group::unique_module_ptr ptr) {
     get_group_manager()->add_module(std::move(ptr));
 }
 
-group::module_ptr group::get_module(const std::string& module_name) {
+abstract_group::module_ptr group::get_module(const std::string& module_name) {
     return get_group_manager()->get_module(module_name);
-}
-
-group::subscription::subscription(const channel_ptr& s,
-                                  const intrusive_ptr<group>& g)
-: m_subscriber(s), m_group(g) { }
-
-group::subscription::~subscription() {
-    if (valid()) m_group->unsubscribe(m_subscriber);
-}
-
-group::module::module(std::string name) : m_name(std::move(name)) { }
-
-const std::string& group::module::name() {
-    return m_name;
-}
-
-group::group(group::module_ptr mod, std::string id)
-: m_module(mod), m_identifier(std::move(id)) { }
-
-const std::string& group::identifier() const {
-    return m_identifier;
-}
-
-group::module_ptr group::get_module() const {
-    return m_module;
-}
-
-const std::string& group::module_name() const {
-    return get_module()->name();
-}
-
-struct group_nameserver : event_based_actor {
-    void init() {
-        become (
-            on(atom("GET_GROUP"), arg_match) >> [](const std::string& name) {
-                return make_cow_tuple(atom("GROUP"), group::get("local", name));
-            },
-            on(atom("SHUTDOWN")) >> [=] {
-                quit();
-            }
-        );
-    }
-};
-
-void publish_local_groups_at(std::uint16_t port, const char* addr) {
-    auto gn = spawn<group_nameserver, hidden>();
-    try {
-        publish(gn, port, addr);
-    }
-    catch (std::exception&) {
-        gn->enqueue(nullptr, make_any_tuple(atom("SHUTDOWN")));
-        throw;
-    }
 }
 
 } // namespace cppa

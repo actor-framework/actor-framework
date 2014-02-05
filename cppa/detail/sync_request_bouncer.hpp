@@ -33,29 +33,22 @@
 
 #include <cstdint>
 
-#include "cppa/atom.hpp"
-#include "cppa/actor.hpp"
-#include "cppa/any_tuple.hpp"
-#include "cppa/message_id.hpp"
-#include "cppa/exit_reason.hpp"
-#include "cppa/mailbox_element.hpp"
+namespace cppa {
+
+class actor_addr;
+class message_id;
+class local_actor;
+class mailbox_element;
+
+} // namespace cppa
 
 namespace cppa { namespace detail {
 
 struct sync_request_bouncer {
     std::uint32_t rsn;
-    constexpr sync_request_bouncer(std::uint32_t r)
-    : rsn(r == exit_reason::not_exited ? exit_reason::normal : r) { }
-    inline void operator()(const actor_ptr& sender, const message_id& mid) const {
-        CPPA_REQUIRE(rsn != exit_reason::not_exited);
-        if (mid.is_request() && sender != nullptr) {
-            sender->enqueue({nullptr, sender, mid.response_id()},
-                            make_any_tuple(atom("EXITED"), rsn));
-        }
-    }
-    inline void operator()(const mailbox_element& e) const {
-        (*this)(e.sender, e.mid);
-    }
+    explicit sync_request_bouncer(std::uint32_t r);
+    void operator()(const actor_addr& sender, const message_id& mid) const;
+    void operator()(const mailbox_element& e) const;
 };
 
 } } // namespace cppa::detail

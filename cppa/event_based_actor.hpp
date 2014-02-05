@@ -28,52 +28,50 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_ABSTRACT_EVENT_BASED_ACTOR_HPP
-#define CPPA_ABSTRACT_EVENT_BASED_ACTOR_HPP
+#ifndef CPPA_UNTYPED_ACTOR_HPP
+#define CPPA_UNTYPED_ACTOR_HPP
 
-#include <tuple>
-#include <stack>
-#include <memory>
-#include <vector>
-
-#include "cppa/config.hpp"
+#include "cppa/on.hpp"
 #include "cppa/extend.hpp"
-#include "cppa/behavior.hpp"
-#include "cppa/stackless.hpp"
-#include "cppa/scheduled_actor.hpp"
-#include "cppa/detail/receive_policy.hpp"
+#include "cppa/logging.hpp"
+#include "cppa/local_actor.hpp"
+#include "cppa/sync_sender.hpp"
+#include "cppa/mailbox_based.hpp"
+#include "cppa/response_handle.hpp"
+#include "cppa/behavior_stack_based.hpp"
+
+#include "cppa/detail/response_handle_util.hpp"
 
 namespace cppa {
 
 /**
- * @brief Base class for all event-based actor implementations.
- * @extends scheduled_actor
+ * @brief A cooperatively scheduled, event-based actor implementation.
+ *
+ * This is the recommended base class for user-defined actors and is used
+ * implicitly when spawning functor-based actors without the
+ * {@link blocking_api} flag.
+ *
+ * @extends local_actor
  */
-class event_based_actor : public extend<scheduled_actor>::with<stackless> {
-
-    friend class detail::receive_policy;
-
-    typedef combined_type super;
-
- public:
-
-    resume_result resume(util::fiber*, actor_ptr&);
-
-    /**
-     * @brief Initializes the actor.
-     */
-    virtual void init() = 0;
-
-    scheduled_actor_type impl_type();
-
-    static intrusive_ptr<event_based_actor> from(std::function<void()> fun);
+class event_based_actor : public extend<local_actor, event_based_actor>::
+                                 with<mailbox_based,
+                                      behavior_stack_based<behavior>::impl,
+                                      sync_sender<nonblocking_response_handle_tag>::impl> {
 
  protected:
 
-    event_based_actor(actor_state st = actor_state::blocked);
+    /**
+     * @brief Returns the initial actor behavior.
+     */
+    virtual behavior make_behavior() = 0;
+
+    /**
+     * @brief Forwards the last received message to @p whom.
+     */
+    void forward_to(const actor& whom);
 
 };
 
 } // namespace cppa
 
-#endif // CPPA_ABSTRACT_EVENT_BASED_ACTOR_HPP
+#endif // CPPA_UNTYPED_ACTOR_HPP
