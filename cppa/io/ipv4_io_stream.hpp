@@ -40,6 +40,8 @@ class ipv4_io_stream : public stream {
 
  public:
 
+    ~ipv4_io_stream();
+
     static stream_ptr connect_to(const char* host, std::uint16_t port);
 
     static stream_ptr from_native_socket(native_socket_type fd);

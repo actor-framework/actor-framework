@@ -133,9 +133,10 @@ class typed_behavior {
 
     typedef util::type_list<Rs...> signatures;
 
-    template<typename... Cs, typename... Ts>
-    typed_behavior(match_expr<Cs...> expr, Ts&&... args) {
-        set(match_expr_collect(std::move(expr), std::forward<Ts>(args)...));
+    template<typename T, typename... Ts>
+    typed_behavior(T arg, Ts&&... args) {
+        set(match_expr_collect(lift_to_match_expr(std::move(arg)),
+                               lift_to_match_expr(std::forward<Ts>(args))...));
     }
 
     template<typename... Cs>

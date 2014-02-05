@@ -46,13 +46,16 @@ class peer_acceptor : public continuable {
 
  public:
 
+    typedef std::set<std::string> string_set;
+
     continue_reading_result continue_reading() override;
 
     peer_acceptor(middleman* parent,
                   acceptor_uptr ptr,
-                  const actor_addr& published_actor);
+                  const actor_addr& published_actor,
+                  string_set signatures);
 
-    inline const actor_addr& published_actor() const { return m_pa; }
+    inline const actor_addr& published_actor() const { return m_aa; }
 
     void dispose() override;
 
@@ -62,7 +65,8 @@ class peer_acceptor : public continuable {
 
     middleman*    m_parent;
     acceptor_uptr m_ptr;
-    actor_addr    m_pa;
+    actor_addr    m_aa;
+    string_set    m_sigs;
 
 };
 

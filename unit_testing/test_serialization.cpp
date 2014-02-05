@@ -53,7 +53,6 @@
 #include "cppa/detail/object_array.hpp"
 #include "cppa/detail/type_to_ptype.hpp"
 #include "cppa/detail/ptype_to_type.hpp"
-#include "cppa/detail/default_uniform_type_info_impl.hpp"
 
 using namespace std;
 using namespace cppa;
@@ -123,17 +122,20 @@ bool operator!=(const raw_struct& lhs, const raw_struct& rhs) {
 }
 
 struct raw_struct_type_info : util::abstract_uniform_type_info<raw_struct> {
-    void serialize(const void* ptr, serializer* sink) const {
+    void serialize(const void* ptr, serializer* sink) const override {
         auto rs = reinterpret_cast<const raw_struct*>(ptr);
         sink->write_value(static_cast<uint32_t>(rs->str.size()));
         sink->write_raw(rs->str.size(), rs->str.data());
     }
-    void deserialize(void* ptr, deserializer* source) const {
+    void deserialize(void* ptr, deserializer* source) const override {
         auto rs = reinterpret_cast<raw_struct*>(ptr);
         rs->str.clear();
         auto size = source->read<std::uint32_t>();
         rs->str.resize(size);
         source->read_raw(size, &(rs->str[0]));
+    }
+    bool equals(const void* lhs, const void* rhs) const override {
+        return deref(lhs) == deref(rhs);
     }
 };
 

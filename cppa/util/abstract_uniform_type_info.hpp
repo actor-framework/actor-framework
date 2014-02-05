@@ -49,7 +49,7 @@ class abstract_uniform_type_info : public uniform_type_info {
 
  public:
 
-    bool equals(const std::type_info& tinfo) const {
+    bool equal_to(const std::type_info& tinfo) const override {
         return typeid(T) == tinfo;
     }
 
@@ -70,19 +70,17 @@ class abstract_uniform_type_info : public uniform_type_info {
         else m_name = cname;
     }
 
-    bool equals(const void* lhs, const void* rhs) const {
-        return deref(lhs) == deref(rhs);
+    bool equals(const void* lhs, const void* rhs) const override {
+        return eq(deref(lhs), deref(rhs));
     }
 
-    void* new_instance(const void* ptr) const {
+    void* new_instance(const void* ptr) const override {
         return (ptr) ? new T(deref(ptr)) : new T();
     }
 
-    void delete_instance(void* instance) const {
+    void delete_instance(void* instance) const override {
         delete reinterpret_cast<T*>(instance);
     }
-
- private:
 
     static inline const T& deref(const void* ptr) {
         return *reinterpret_cast<const T*>(ptr);
@@ -93,6 +91,20 @@ class abstract_uniform_type_info : public uniform_type_info {
     }
 
     std::string m_name;
+
+ private:
+
+    template<class C>
+    typename std::enable_if<std::is_empty<C>::value == true , bool>::type
+    eq(const C&, const C&) const {
+        return true;
+    }
+
+    template<class C>
+    typename std::enable_if<std::is_empty<C>::value == false, bool>::type
+    eq(const C& lhs, const C& rhs) const {
+        return lhs == rhs;
+    }
 
 };
 

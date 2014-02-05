@@ -71,7 +71,7 @@ peer::peer(middleman* parent,
                        : sizeof(uint32_t));
     // state == wait_for_msg_size iff peer was created using remote_peer()
     // in this case, this peer must be erased if no proxy of it remains
-    m_erase_on_last_proxy_exited = m_state == wait_for_msg_size;
+    m_stop_on_last_proxy_exited = m_state == wait_for_msg_size;
     m_meta_hdr = uniform_typeid<message_header>();
     m_meta_msg = uniform_typeid<any_tuple>();
 }
@@ -119,7 +119,11 @@ continue_reading_result peer::continue_reading() {
                     return read_failure;
                 }
                 CPPA_LOG_DEBUG("read process info: " << to_string(*m_node));
-                parent()->register_peer(*m_node, this);
+                if (!parent()->register_peer(*m_node, this)) {
+                    CPPA_LOG_ERROR("multiple incoming connections "
+                                   "from the same node");
+                    return read_failure;
+                }
                 // initialization done
                 m_state = wait_for_msg_size;
                 m_rd_buf.clear();
@@ -339,7 +343,7 @@ continue_writing_result peer::continue_writing() {
         enqueue(tmp.first, tmp.second);
         result = super::continue_writing();
     }
-    if (result == write_done && erase_on_last_proxy_exited() && !has_unwritten_data()) {
+    if (result == write_done && stop_on_last_proxy_exited() && !has_unwritten_data()) {
         if (parent()->get_namespace().count_proxies(*m_node) == 0) {
             parent()->last_proxy_exited(this);
         }

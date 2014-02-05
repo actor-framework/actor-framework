@@ -57,7 +57,6 @@
 #include "cppa/detail/to_uniform_name.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 #include "cppa/detail/uniform_type_info_map.hpp"
-#include "cppa/detail/default_uniform_type_info_impl.hpp"
 
 namespace cppa {
 

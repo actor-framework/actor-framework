@@ -75,8 +75,8 @@ class peer : public extend<continuable>::with<buffered_writing> {
 
     void enqueue(const message_header& hdr, const any_tuple& msg);
 
-    inline bool erase_on_last_proxy_exited() const {
-        return m_erase_on_last_proxy_exited;
+    inline bool stop_on_last_proxy_exited() const {
+        return m_stop_on_last_proxy_exited;
     }
 
     inline const node_id& node() const {
@@ -117,7 +117,7 @@ class peer : public extend<continuable>::with<buffered_writing> {
 
     // if this peer was created using remote_actor(), then m_doorman will
     // point to the published actor of the remote node
-    bool m_erase_on_last_proxy_exited;
+    bool m_stop_on_last_proxy_exited;
 
     partial_function m_content_handler;
 

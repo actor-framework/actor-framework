@@ -383,28 +383,28 @@ int main(int argc, char** argv) {
         do {
             CPPA_TEST(test_remote_actor);
             thread child;
-                ostringstream oss;
-                if (run_remote_actor) {
-                    oss << app_path << " run=remote_actor port=" << port << " &>/dev/null";
-                    // execute client_part() in a separate process,
-                    // connected via localhost socket
-                    child = thread([&oss]() {
-                        CPPA_LOGC_TRACE("NONE", "main$thread_launcher", "");
-                        string cmdstr = oss.str();
-                        if (system(cmdstr.c_str()) != 0) {
-                            CPPA_PRINTERR("FATAL: command \"" << cmdstr << "\" failed!");
-                            abort();
-                        }
-                    });
-                }
-                else { CPPA_PRINT("actor published at port " << port); }
-                CPPA_CHECKPOINT();
-                self->receive (
-                    on_arg_match >> [&](const down_msg& dm) {
-                        CPPA_CHECK_EQUAL(dm.source, serv);
-                        CPPA_CHECK_EQUAL(dm.reason, exit_reason::normal);
+            ostringstream oss;
+            if (run_remote_actor) {
+                oss << app_path << " run=remote_actor port=" << port << " &>/dev/null";
+                // execute client_part() in a separate process,
+                // connected via localhost socket
+                child = thread([&oss]() {
+                    CPPA_LOGC_TRACE("NONE", "main$thread_launcher", "");
+                    string cmdstr = oss.str();
+                    if (system(cmdstr.c_str()) != 0) {
+                        CPPA_PRINTERR("FATAL: command \"" << cmdstr << "\" failed!");
+                        abort();
                     }
-                );
+                });
+            }
+            else { CPPA_PRINT("actor published at port " << port); }
+            CPPA_CHECKPOINT();
+            self->receive (
+                on_arg_match >> [&](const down_msg& dm) {
+                    CPPA_CHECK_EQUAL(dm.source, serv);
+                    CPPA_CHECK_EQUAL(dm.reason, exit_reason::normal);
+                }
+            );
             // wait until separate process (in sep. thread) finished execution
             CPPA_CHECKPOINT();
             if (run_remote_actor) child.join();

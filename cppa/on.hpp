@@ -283,6 +283,14 @@ __unspecified__ on();
 template<atom_value... Atoms, typename... Ts>
 __unspecified__ on();
 
+/**
+ * @brief Converts @p arg to a match expression by returning
+ *        <tt>on_arg_match >> arg</tt> if @p arg is a callable type,
+ *        otherwise returns @p arg.
+ */
+template<typename T>
+__unspecified__ lift_to_match_expr(T arg);
+
 #else
 
 template<typename T>
@@ -407,6 +415,18 @@ class on_the_fly_rvalue_builder {
 } // namespace detail
 
 constexpr detail::on_the_fly_rvalue_builder on_arg_match;
+
+// and even more convenience
+
+template<typename F, class E = typename std::enable_if<util::is_callable<F>::value>::type>
+inline auto lift_to_match_expr(F fun) -> decltype(on_arg_match >> fun) {
+    return (on_arg_match >> fun);
+}
+
+template<typename... Cs>
+inline match_expr<Cs...> lift_to_match_expr(match_expr<Cs...> expr) {
+    return std::move(expr);
+}
 
 #endif // CPPA_DOCUMENTATION
 

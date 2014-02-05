@@ -316,7 +316,7 @@ int main() {
     CPPA_TEST(test_typed_spawn);
 
     // announce stuff
-    announce_tag<get_state_msg>();
+    announce<get_state_msg>();
     announce<int_actor>();
     announce<my_request>(&my_request::a, &my_request::b);
 

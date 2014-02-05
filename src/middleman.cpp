@@ -150,7 +150,7 @@ class middleman_impl : public middleman {
         static_cast<void>(res);
     }
 
-    void register_peer(const node_id& node, peer* ptr) override {
+    bool register_peer(const node_id& node, peer* ptr) override {
         CPPA_LOG_TRACE("node = " << to_string(node) << ", ptr = " << ptr);
         auto& entry = m_peers[node];
         if (entry.impl == nullptr) {
@@ -162,10 +162,12 @@ class middleman_impl : public middleman {
                 ptr->enqueue(tmp.first, tmp.second);
             }
             CPPA_LOG_INFO("peer " << to_string(node) << " added");
+            return true;
         }
         else {
             CPPA_LOG_WARNING("peer " << to_string(node) << " already defined, "
                              "multiple calls to remote_actor()?");
+            return false;
         }
     }
 
@@ -215,9 +217,8 @@ class middleman_impl : public middleman {
         CPPA_REQUIRE(pptr->m_queue != nullptr);
         CPPA_LOG_TRACE(CPPA_ARG(pptr)
                        << ", pptr->node() = " << to_string(pptr->node()));
-        if (pptr->erase_on_last_proxy_exited() && pptr->queue().empty()) {
+        if (pptr->stop_on_last_proxy_exited() && pptr->queue().empty()) {
             stop_reader(pptr);
-            del_peer(pptr);
         }
     }
 

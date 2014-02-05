@@ -207,7 +207,7 @@ class uniform_type_info {
      *        type than @p tinfo.
      * @returns @p true if @p tinfo describes the same type as @p this.
      */
-    virtual bool equals(const std::type_info& tinfo) const = 0;
+    virtual bool equal_to(const std::type_info& tinfo) const = 0;
 
     /**
      * @brief Compares two instances of this type.
@@ -293,28 +293,28 @@ inline bool operator!=(const uniform_type_info& lhs,
  * @relates uniform_type_info
  */
 inline bool operator==(const uniform_type_info& lhs, const std::type_info& rhs) {
-    return lhs.equals(rhs);
+    return lhs.equal_to(rhs);
 }
 
 /**
  * @relates uniform_type_info
  */
 inline bool operator!=(const uniform_type_info& lhs, const std::type_info& rhs) {
-    return !(lhs.equals(rhs));
+    return !(lhs.equal_to(rhs));
 }
 
 /**
  * @relates uniform_type_info
  */
 inline bool operator==(const std::type_info& lhs, const uniform_type_info& rhs) {
-    return rhs.equals(lhs);
+    return rhs.equal_to(lhs);
 }
 
 /**
  * @relates uniform_type_info
  */
 inline bool operator!=(const std::type_info& lhs, const uniform_type_info& rhs) {
-    return !(rhs.equals(lhs));
+    return !(rhs.equal_to(lhs));
 }
 
 } // namespace cppa

@@ -53,7 +53,7 @@
 #include "cppa/detail/raw_access.hpp"
 #include "cppa/detail/object_array.hpp"
 #include "cppa/detail/uniform_type_info_map.hpp"
-#include "cppa/detail/default_uniform_type_info_impl.hpp"
+#include "cppa/detail/default_uniform_type_info.hpp"
 
 namespace cppa { namespace detail {
 
@@ -438,19 +438,19 @@ class uti_base : public uniform_type_info {
 
     uti_base() : m_native(&typeid(T)) { }
 
-    bool equals(const std::type_info& ti) const {
+    bool equal_to(const std::type_info& ti) const override {
         return types_equal(m_native, &ti);
     }
 
-    bool equals(const void* lhs, const void* rhs) const {
+    bool equals(const void* lhs, const void* rhs) const override {
         return deref(lhs) == deref(rhs);
     }
 
-    void* new_instance(const void* ptr) const {
+    void* new_instance(const void* ptr) const override {
         return (ptr) ? new T(deref(ptr)) : new T;
     }
 
-    void delete_instance(void* instance) const {
+    void delete_instance(void* instance) const override {
         delete reinterpret_cast<T*>(instance);
     }
 
@@ -516,15 +516,15 @@ class int_tinfo : public abstract_int_tinfo {
 
  public:
 
-    void serialize(const void* instance, serializer* sink) const {
+    void serialize(const void* instance, serializer* sink) const override {
         sink->write_value(deref(instance));
     }
 
-    void deserialize(void* instance, deserializer* source) const {
+    void deserialize(void* instance, deserializer* source) const override {
         deref(instance) = source->read<T>();
     }
 
-    const char* name() const {
+    const char* name() const override {
         return static_name();
     }
 
@@ -534,7 +534,7 @@ class int_tinfo : public abstract_int_tinfo {
 
  protected:
 
-    bool equals(const std::type_info& ti) const {
+    bool equal_to(const std::type_info& ti) const override {
         auto tptr = &ti;
         return std::any_of(m_natives.begin(), m_natives.end(),
                            [tptr](const std::type_info* ptr) {
@@ -542,15 +542,15 @@ class int_tinfo : public abstract_int_tinfo {
         });
     }
 
-    bool equals(const void* lhs, const void* rhs) const {
+    bool equals(const void* lhs, const void* rhs) const override {
         return deref(lhs) == deref(rhs);
     }
 
-    void* new_instance(const void* ptr) const {
+    void* new_instance(const void* ptr) const override {
         return (ptr) ? new T(deref(ptr)) : new T;
     }
 
-    void delete_instance(void* instance) const {
+    void delete_instance(void* instance) const override {
         delete reinterpret_cast<T*>(instance);
     }
 
@@ -595,11 +595,11 @@ class buffer_type_info_impl : public uniform_type_info {
 
  protected:
 
-    bool equals(const std::type_info& ti) const {
+    bool equal_to(const std::type_info& ti) const override {
         return ti == typeid(util::buffer);
     }
 
-    bool equals(const void* vlhs, const void* vrhs) const {
+    bool equals(const void* vlhs, const void* vrhs) const override {
         auto& lhs = deref(vlhs);
         auto& rhs = deref(vrhs);
         return    (lhs.empty() && rhs.empty())
@@ -607,11 +607,11 @@ class buffer_type_info_impl : public uniform_type_info {
                    && memcmp(lhs.data(), rhs.data(), lhs.size()) == 0);
     }
 
-    void* new_instance(const void* ptr) const {
+    void* new_instance(const void* ptr) const override {
         return (ptr) ? new util::buffer(deref(ptr)) : new util::buffer;
     }
 
-    void delete_instance(void* instance) const {
+    void delete_instance(void* instance) const override {
         delete reinterpret_cast<util::buffer*>(instance);
     }
 
@@ -686,7 +686,7 @@ class default_meta_tuple : public uniform_type_info {
         }
     }
 
-    bool equals(const std::type_info&) const override {
+    bool equal_to(const std::type_info&) const override {
         return false;
     }
 
@@ -696,7 +696,6 @@ class default_meta_tuple : public uniform_type_info {
         full_eq_type cmp;
         return std::equal(lhs.begin(), lhs.end(), rhs.begin(), cmp);
     }
-
 
  private:
 
@@ -920,7 +919,7 @@ class utim_impl : public uniform_type_info_map {
 
     // 20-29
     uti_impl<std::u32string>                m_type_u32str;
-    default_uniform_type_info_impl<strmap>  m_type_strmap;
+    default_uniform_type_info<strmap>  m_type_strmap;
     uti_impl<bool>                          m_type_bool;
     uti_impl<float>                         m_type_float;
     uti_impl<double>                        m_type_double;
@@ -945,7 +944,7 @@ class utim_impl : public uniform_type_info_map {
     pointer find_rtti(const Container& c, const std::type_info& ti) const {
         auto e = c.end();
         auto i = std::find_if(c.begin(), e, [&](pointer p) {
-            return p->equals(ti);
+            return p->equal_to(ti);
         });
         return (i == e) ? nullptr : *i;
     }

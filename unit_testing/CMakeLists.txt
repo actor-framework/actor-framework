@@ -28,6 +28,7 @@ add_unit_test(typed_spawn)
 add_unit_test(local_group)
 add_unit_test(sync_send)
 add_unit_test(remote_actor ping_pong.cpp)
+add_unit_test(typed_remote_actor)
 add_unit_test(broker)
 
 if (ENABLE_OPENCL)

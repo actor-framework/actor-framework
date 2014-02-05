@@ -40,7 +40,7 @@
 #include "cppa/util/algorithm.hpp"
 #include "cppa/util/abstract_uniform_type_info.hpp"
 
-#include "cppa/detail/default_uniform_type_info_impl.hpp"
+#include "cppa/detail/default_uniform_type_info.hpp"
 
 namespace cppa {
 
@@ -117,7 +117,7 @@ const uniform_type_info* announce(const std::type_info& tinfo,
 template<class C, class Parent, typename... Ts>
 std::pair<C Parent::*, util::abstract_uniform_type_info<C>*>
 compound_member(C Parent::*c_ptr, const Ts&... args) {
-    return {c_ptr, new detail::default_uniform_type_info_impl<C>(args...)};
+    return {c_ptr, new detail::default_uniform_type_info<C>(args...)};
 }
 
 // deals with getter returning a mutable reference
@@ -132,7 +132,7 @@ compound_member(C Parent::*c_ptr, const Ts&... args) {
 template<class C, class Parent, typename... Ts>
 std::pair<C& (Parent::*)(), util::abstract_uniform_type_info<C>*>
 compound_member(C& (Parent::*getter)(), const Ts&... args) {
-    return {getter, new detail::default_uniform_type_info_impl<C>(args...)};
+    return {getter, new detail::default_uniform_type_info<C>(args...)};
 }
 
 // deals with getter/setter pair
@@ -153,31 +153,20 @@ compound_member(const std::pair<GRes (Parent::*)() const,
                                 SRes (Parent::*)(SArg)  >& gspair,
                 const Ts&... args) {
     typedef typename util::rm_const_and_ref<GRes>::type mtype;
-    return {gspair, new detail::default_uniform_type_info_impl<mtype>(args...)};
+    return {gspair, new detail::default_uniform_type_info<mtype>(args...)};
 }
 
 /**
  * @brief Adds a new type mapping for @p C to the libcppa type system.
- * @tparam C A class that is default constructible, copy constructible,
- *           and comparable.
+ * @tparam C A class that is either empty or is default constructible,
+ *           copy constructible, and comparable.
  * @param arg  First members of @p C.
  * @param args Additional members of @p C.
  * @warning @p announce is <b>not</b> thead safe!
  */
 template<class C, typename... Ts>
 inline const uniform_type_info* announce(const Ts&... args) {
-    auto ptr = new detail::default_uniform_type_info_impl<C>(args...);
-    return announce(typeid(C), std::unique_ptr<uniform_type_info>{ptr});
-}
-
-/**
- * @brief Adds a new type mapping for an empty or "tag" class.
- * @tparam C A class without any member.
- * @warning @p announce_tag is <b>not</b> thead safe!
- */
-template<class C>
-inline const uniform_type_info* announce_tag() {
-    auto ptr = new detail::empty_uniform_type_info_impl<C>();
+    auto ptr = new detail::default_uniform_type_info<C>(args...);
     return announce(typeid(C), std::unique_ptr<uniform_type_info>{ptr});
 }
 
@@ -272,11 +261,11 @@ class meta_cow_tuple : public uniform_type_info {
         return (instance) ? any_tuple{*cast(instance)} : any_tuple{};
     }
 
-    bool equals(const std::type_info& tinfo) const {
+    bool equal_to(const std::type_info& tinfo) const override {
         return typeid(tuple_type) == tinfo;
     }
 
-    bool equals(const void* instance1, const void* instance2) const {
+    bool equals(const void* instance1, const void* instance2) const override {
         return *cast(instance1) == *cast(instance2);
     }
 
@@ -303,9 +292,9 @@ class meta_cow_tuple : public uniform_type_info {
 
 /**
  * @brief Adds a hint to the type system of libcppa. This type hint can
- *        significantly increase the network performance, because libcppa
- *        can use the hint to create tuples with full static type information
- *        rather than using fully dynamically typed tuples.
+ *        increase the network performance, because libcppa
+ *        can use the hint to create tuples with full static type
+ *        information rather than using fully dynamically typed tuples.
  */
 template<typename T, typename... Ts>
 inline void announce_tuple() {

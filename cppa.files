@@ -34,7 +34,7 @@ cppa/detail/behavior_stack.hpp
 cppa/detail/boxed.hpp
 cppa/detail/container_tuple_view.hpp
 cppa/detail/decorated_tuple.hpp
-cppa/detail/default_uniform_type_info_impl.hpp
+cppa/detail/default_uniform_type_info.hpp
 cppa/detail/demangle.hpp
 cppa/detail/disablable_delete.hpp
 cppa/detail/empty_tuple.hpp
@@ -345,6 +345,7 @@ unit_testing/test_serialization.cpp
 unit_testing/test_spawn.cpp
 unit_testing/test_sync_send.cpp
 unit_testing/test_tuple.cpp
+unit_testing/test_typed_remote_actor.cpp
 unit_testing/test_typed_spawn.cpp
 unit_testing/test_uniform_type.cpp
 unit_testing/test_yield_interface.cpp

@@ -661,8 +661,9 @@ class match_expr {
 
     static constexpr idx_token_type idx_token = idx_token_type{};
 
-    template<typename... Ts>
-    match_expr(Ts&&... args) : m_cases(std::forward<Ts>(args)...) {
+    template<typename T, typename... Ts>
+    match_expr(T arg, Ts&&... args)
+            : m_cases(std::move(arg), std::forward<Ts>(args)...) {
         init();
     }
 

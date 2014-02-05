@@ -116,9 +116,11 @@ class middleman {
     bool has_reader(continuable* ptr);
 
     /**
-     * @brief Registers a new peer, i.e., a new node in the network.
+     * @brief Tries to register a new peer, i.e., a new node in the network.
+     *        Returns false if there is already a connection to @p node,
+     *        otherwise true.
      */
-    virtual void register_peer(const node_id& node, peer* ptr) = 0;
+    virtual bool register_peer(const node_id& node, peer* ptr) = 0;
 
     /**
      * @brief Returns the peer associated with given node id.

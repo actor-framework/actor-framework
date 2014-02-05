@@ -73,7 +73,7 @@ remote_actor_proxy::~remote_actor_proxy() {
                         "node = " << to_string(*node) << ", aid " << aid);
         mm->get_namespace().erase(*node, aid);
         auto p = mm->get_peer(*node);
-        if (p && p->erase_on_last_proxy_exited()) {
+        if (p && p->stop_on_last_proxy_exited()) {
             if (mm->get_namespace().count_proxies(*node) == 0) {
                 mm->last_proxy_exited(p);
             }

@@ -47,6 +47,12 @@ struct invalid_actor_addr_t;
 template<typename... Rs>
 class typed_event_based_actor;
 
+namespace detail {
+
+class raw_access;
+
+} // namespace detail
+
 /**
  * @brief Identifies a strongly typed actor.
  * @tparam Rs Interface as @p replies_to<...>::with<...> parameter pack.
@@ -57,6 +63,8 @@ class typed_actor : util::comparable<typed_actor<Rs...>>
                   , util::comparable<typed_actor<Rs...>, invalid_actor_addr_t> {
 
     friend class local_actor;
+
+    friend class detail::raw_access;
 
     // friend with all possible instantiations
     template<typename...>
@@ -80,7 +88,10 @@ class typed_actor : util::comparable<typed_actor<Rs...>>
      */
     typedef typed_event_based_actor<Rs...> base;
 
-    typedef util::type_list<Rs...> signatures;
+    /**
+     * @brief Stores the interface of the actor as type list.
+     */
+    typedef util::type_list<Rs...> interface;
 
     typed_actor() = default;
     typed_actor(typed_actor&&) = default;
@@ -131,7 +142,21 @@ class typed_actor : util::comparable<typed_actor<Rs...>>
         return m_ptr ? 1 : 0;
     }
 
+    static std::set<std::string> get_interface() {
+        return {detail::to_uniform_name<Rs>()...};
+    }
+
+    explicit operator bool() const {
+        return static_cast<bool>(m_ptr);
+    }
+
+    inline bool operator!() const {
+        return !m_ptr;
+    }
+
  private:
+
+    typed_actor(abstract_actor* ptr) : m_ptr(ptr) { }
 
     template<class ListA, class ListB>
     inline void check_signatures() {
@@ -141,13 +166,13 @@ class typed_actor : util::comparable<typed_actor<Rs...>>
 
     template<typename... OtherRs>
     inline void set(const typed_actor<OtherRs...>& other) {
-        check_signatures<signatures, util::type_list<OtherRs...>>();
+        check_signatures<interface, util::type_list<OtherRs...>>();
         m_ptr = other.m_ptr;
     }
 
     template<class Impl>
     inline void set(intrusive_ptr<Impl>& other) {
-        check_signatures<signatures, typename Impl::signatures>();
+        check_signatures<interface, typename Impl::signatures>();
         m_ptr = std::move(other);
     }
 

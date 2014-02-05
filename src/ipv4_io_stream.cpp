@@ -54,6 +54,10 @@ using namespace ::cppa::detail::fd_util;
 
 ipv4_io_stream::ipv4_io_stream(native_socket_type fd) : m_fd(fd) { }
 
+ipv4_io_stream::~ipv4_io_stream() {
+    closesocket(m_fd);
+}
+
 native_socket_type ipv4_io_stream::read_handle() const {
     return m_fd;
 }

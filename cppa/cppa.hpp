@@ -77,6 +77,7 @@
 #include "cppa/io/connection_handle.hpp"
 
 #include "cppa/detail/memory.hpp"
+#include "cppa/detail/raw_access.hpp"
 #include "cppa/detail/actor_registry.hpp"
 
 /**
@@ -499,6 +500,35 @@ inline void await_all_actors_done() {
     get_actor_registry()->await_running_count_equal(0);
 }
 
+namespace detail {
+
+void publish_impl(abstract_actor_ptr whom, std::unique_ptr<io::acceptor> aptr);
+
+abstract_actor_ptr remote_actor_impl(io::stream_ptr_pair io,
+                                     std::set<std::string> expected_interface);
+
+template<class List>
+struct typed_remote_actor_helper;
+
+template<typename... Ts>
+struct typed_remote_actor_helper<util::type_list<Ts...>> {
+    typedef typed_actor<Ts...> return_type;
+    return_type operator()(io::stream_ptr_pair conn) {
+        auto iface = return_type::get_interface();
+        auto tmp = remote_actor_impl(std::move(conn), std::move(iface));
+        return_type res;
+        // actually safe, because remote_actor_impl throws on type mismatch
+        raw_access::unsafe_assign(res, tmp);
+        return res;
+    }
+    return_type operator()(const char* host, std::uint16_t port) {
+        auto ptr = io::ipv4_io_stream::connect_to(host, port);
+        return (*this)(io::stream_ptr_pair(ptr, ptr));
+    }
+};
+
+} // namespace detail
+
 /**
  * @brief Publishes @p whom at @p port.
  *
@@ -511,6 +541,7 @@ inline void await_all_actors_done() {
  */
 void publish(actor whom, std::uint16_t port, const char* addr = nullptr);
 
+// implemented in unicast_network.cpp
 /**
  * @brief Publishes @p whom using @p acceptor to handle incoming connections.
  *
@@ -520,12 +551,24 @@ void publish(actor whom, std::uint16_t port, const char* addr = nullptr);
  */
 void publish(actor whom, std::unique_ptr<io::acceptor> acceptor);
 
+// implemented in unicast_network.cpp
+/**
+ * @brief Establish a new connection to a remote actor via @p connection.
+ * @param connection A connection to another libcppa process described by a pair
+ *                   of input and output stream.
+ * @returns An {@link actor_ptr} to the proxy instance
+ *          representing a remote actor.
+ * @throws std::invalid_argument Thrown when connecting to a typed actor.
+ */
+actor remote_actor(io::stream_ptr_pair connection);
+
 /**
  * @brief Establish a new connection to the actor at @p host on given @p port.
  * @param host Valid hostname or IP address.
  * @param port TCP port.
  * @returns An {@link actor_ptr} to the proxy instance
  *          representing a remote actor.
+ * @throws std::invalid_argument Thrown when connecting to a typed actor.
  */
 actor remote_actor(const char* host, std::uint16_t port);
 
@@ -537,13 +580,54 @@ inline actor remote_actor(const std::string& host, std::uint16_t port) {
 }
 
 /**
- * @brief Establish a new connection to a remote actor via @p connection.
- * @param connection A connection to another libcppa process described by a pair
- *                   of input and output stream.
- * @returns An {@link actor_ptr} to the proxy instance
- *          representing a remote actor.
+ * @copydoc publish(actor,std::unique_ptr<io::acceptor>)
  */
-actor remote_actor(io::stream_ptr_pair connection);
+template<typename... Rs>
+void typed_publish(typed_actor<Rs...> whom, std::unique_ptr<io::acceptor> uptr) {
+    if (!whom) return;
+    detail::publish_impl(detail::raw_access::get(whom), std::move(uptr));
+}
+
+/**
+ * @copydoc publish(actor,std::uint16_t,const char*)
+ */
+template<typename... Rs>
+void typed_publish(typed_actor<Rs...> whom,
+                   std::uint16_t port, const char* addr = nullptr) {
+    if (!whom) return;
+    detail::publish_impl(detail::raw_access::get(whom),
+                         io::ipv4_acceptor::create(port, addr));
+}
+
+/**
+ * @copydoc remote_actor(io::stream_ptr_pair)
+ */
+template<class List>
+typename detail::typed_remote_actor_helper<List>::return_type
+typed_remote_actor(io::stream_ptr_pair connection) {
+    detail::typed_remote_actor_helper<List> f;
+    return f(std::move(connection));
+}
+
+/**
+ * @copydoc remote_actor(const char*,std::uint16_t)
+ */
+template<class List>
+typename detail::typed_remote_actor_helper<List>::return_type
+typed_remote_actor(const char* host, std::uint16_t port) {
+    detail::typed_remote_actor_helper<List> f;
+    return f(host, port);
+}
+
+/**
+ * @copydoc remote_actor(const std::string&,std::uint16_t)
+ */
+template<class List>
+typename detail::typed_remote_actor_helper<List>::return_type
+typed_remote_actor(const std::string& host, std::uint16_t port) {
+    detail::typed_remote_actor_helper<List> f;
+    return f(host.c_str(), port);
+}
 
 /**
  * @brief Spawns an IO actor of type @p Impl.

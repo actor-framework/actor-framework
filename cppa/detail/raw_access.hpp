@@ -45,11 +45,8 @@ class raw_access {
 
  public:
 
-    static abstract_actor* get(const actor& hdl) {
-        return hdl.m_ptr.get();
-    }
-
-    static abstract_actor* get(const actor_addr& hdl) {
+    template<typename ActorHandle>
+    static abstract_actor* get(const ActorHandle& hdl) {
         return hdl.m_ptr.get();
     }
 
@@ -67,6 +64,20 @@ class raw_access {
 
     static actor unsafe_cast(const actor_addr& hdl) {
         return {get(hdl)};
+    }
+
+    static actor unsafe_cast(const abstract_actor_ptr& ptr) {
+        return {ptr.get()};
+    }
+
+    template<typename T>
+    static void unsafe_assign(T& lhs, const actor& rhs) {
+        lhs = T{get(rhs)};
+    }
+
+    template<typename T>
+    static void unsafe_assign(T& lhs, const abstract_actor_ptr& ptr) {
+        lhs = T{ptr.get()};
     }
 
 };
