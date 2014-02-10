@@ -70,7 +70,7 @@ class blocking_actor
         void operator()(Ts&&... args) {
             static_assert(sizeof...(Ts) > 0,
                           "operator() requires at least one argument");
-            behavior bhvr = match_expr_convert(std::forward<Ts>(args)...);
+            behavior bhvr = lift_and_convert(std::forward<Ts>(args)...);
             while (m_stmt()) m_dq(bhvr);
         }
 
@@ -85,7 +85,7 @@ class blocking_actor
 
         template<typename... Ts>
         void operator()(Ts&&... args) {
-            behavior bhvr = match_expr_convert(std::forward<Ts>(args)...);
+            behavior bhvr = lift_and_convert(std::forward<Ts>(args)...);
             for ( ; begin != end; ++begin) m_dq(bhvr);
         }
 
@@ -111,7 +111,7 @@ class blocking_actor
     template<typename... Ts>
     void receive(Ts&&... args) {
         static_assert(sizeof...(Ts), "at least one argument required");
-        dequeue(match_expr_convert(std::forward<Ts>(args)...));
+        dequeue(lift_and_convert(std::forward<Ts>(args)...));
     }
 
     /**
@@ -120,7 +120,7 @@ class blocking_actor
      */
     template<typename... Ts>
     void receive_loop(Ts&&... args) {
-        behavior bhvr = match_expr_convert(std::forward<Ts>(args)...);
+        behavior bhvr = lift_and_convert(std::forward<Ts>(args)...);
         for (;;) dequeue(bhvr);
     }
 
@@ -192,7 +192,7 @@ class blocking_actor
     template<typename... Ts>
     do_receive_helper do_receive(Ts&&... args) {
         return { make_dequeue_callback()
-               , match_expr_convert(std::forward<Ts>(args)...)};
+               , lift_and_convert(std::forward<Ts>(args)...)};
     }
 
     optional<behavior&> sync_handler(message_id msg_id) override {

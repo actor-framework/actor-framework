@@ -28,26 +28,31 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_MATCH_HINT_HPP
-#define CPPA_MATCH_HINT_HPP
-
-#include <iosfwd>
+#ifndef MAY_HAVE_TIMEOUT_HPP
+#define MAY_HAVE_TIMEOUT_HPP
 
 namespace cppa {
 
-/**
- * @brief Optional return type for functors used in pattern matching
- *        expressions. This type is evaluated by the runtime system of libcppa
- *        and can be used to intentionally skip messages.
- */
-enum class match_hint {
-    skip,
-    handle
+template<typename F>
+struct timeout_definition;
+
+class behavior;
+
+template<typename T>
+struct may_have_timeout {
+    static constexpr bool value = false;
 };
 
-// implemented in string_serialization.cpp
-std::ostream& operator<<(std::ostream&, match_hint);
+template<>
+struct may_have_timeout<behavior> {
+    static constexpr bool value = true;
+};
+
+template<typename F>
+struct may_have_timeout<timeout_definition<F>> {
+    static constexpr bool value = true;
+};
 
 } // namespace cppa
 
-#endif // CPPA_MATCH_HINT_HPP
+#endif // MAY_HAVE_TIMEOUT_HPP

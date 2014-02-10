@@ -37,10 +37,12 @@
 #include <utility>
 #include <type_traits>
 
+#include "cppa/on.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/ref_counted.hpp"
 #include "cppa/intrusive_ptr.hpp"
+#include "cppa/may_have_timeout.hpp"
 #include "cppa/timeout_definition.hpp"
 
 #include "cppa/util/duration.hpp"
@@ -68,8 +70,6 @@ class partial_function {
     inline auto as_behavior_impl() const -> impl_ptr;
 
     partial_function(impl_ptr ptr);
-
-    static constexpr bool may_have_timeout = false;
 
     /** @endcond */
 
@@ -107,7 +107,9 @@ class partial_function {
      */
     template<typename... Ts>
     typename std::conditional<
-        util::disjunction<util::rm_const_and_ref<Ts>::type::may_have_timeout...>::value,
+        util::disjunction<
+            may_have_timeout<typename util::rm_const_and_ref<Ts>::type>::value...
+        >::value,
         behavior,
         partial_function
     >::type
@@ -120,7 +122,11 @@ class partial_function {
 };
 
 template<typename T>
-typename std::conditional<T::may_have_timeout, behavior, partial_function>::type
+typename std::conditional<
+    may_have_timeout<T>::value,
+    behavior,
+    partial_function
+>::type
 match_expr_convert(const T& arg) {
     return {arg};
 }
@@ -128,15 +134,29 @@ match_expr_convert(const T& arg) {
 template<typename T0, typename T1, typename... Ts>
 typename std::conditional<
     util::disjunction<
-        T0::may_have_timeout,
-        T1::may_have_timeout,
-        Ts::may_have_timeout...
+        may_have_timeout<T0>::value,
+        may_have_timeout<T1>::value,
+        may_have_timeout<Ts>::value...
     >::value,
     behavior,
     partial_function
 >::type
 match_expr_convert(const T0& arg0, const T1& arg1, const Ts&... args) {
     return detail::match_expr_concat(arg0, arg1, args...);
+}
+
+// calls match_expr_convert(lift_to_match_expr(args)...)
+template<typename... Ts>
+typename std::conditional<
+    util::disjunction<
+        may_have_timeout<Ts>::value...
+    >::value,
+    behavior,
+    partial_function
+>::type
+lift_and_convert(Ts&&... args) {
+    static_assert(sizeof...(Ts) > 0, "at least one argument required");
+    return match_expr_convert(lift_to_match_expr(std::forward<Ts>(args))...);
 }
 
 template<typename... Cases>
@@ -174,7 +194,9 @@ inline optional<any_tuple> partial_function::operator()(T&& arg) {
 
 template<typename... Ts>
 typename std::conditional<
-    util::disjunction<util::rm_const_and_ref<Ts>::type::may_have_timeout...>::value,
+    util::disjunction<
+        may_have_timeout<typename util::rm_const_and_ref<Ts>::type>::value...
+    >::value,
     behavior,
     partial_function
 >::type

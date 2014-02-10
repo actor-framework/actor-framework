@@ -40,7 +40,8 @@
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/type_traits.hpp"
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 /**
  * @addtogroup MetaProgramming
@@ -59,7 +60,7 @@ template<typename T> struct rm_const_and_ref<const T> { typedef T type; };
 
 template<typename T> struct rm_const_and_ref<T&> { typedef T type; };
 
-template<> struct rm_const_and_ref<void> { };
+//template<> struct rm_const_and_ref<void> { };
 
 /**
  * @brief Joins all bool constants using operator &&.
@@ -93,7 +94,6 @@ struct disjunction<V0, Vs...> {
 
 template<>
 struct disjunction<> { static constexpr bool value = false; };
-
 
 /**
  * @brief Equal to std::is_same<T, anything>.
@@ -496,6 +496,8 @@ struct type_at<0, T0, Ts...> {
 /**
  * @}
  */
-} } // namespace cppa::util
+
+} // namespace util
+} // namespace cppa
 
 #endif // CPPA_UTIL_TYPE_TRAITS_HPP

@@ -113,7 +113,7 @@ cppa/mailbox_based.hpp
 cppa/mailbox_element.hpp
 cppa/match.hpp
 cppa/match_expr.hpp
-cppa/match_hint.hpp
+cppa/skip_message.hpp
 cppa/memory_cached.hpp
 cppa/memory_managed.hpp
 cppa/message_header.hpp
@@ -293,7 +293,6 @@ src/middleman_event_handler_poll.cpp
 src/node_id.cpp
 src/object.cpp
 src/object_array.cpp
-src/on.cpp
 src/opencl/actor_facade.cpp
 src/opencl/global.cpp
 src/opencl/opencl_metainfo.cpp
@@ -349,3 +348,4 @@ unit_testing/test_typed_remote_actor.cpp
 unit_testing/test_typed_spawn.cpp
 unit_testing/test_uniform_type.cpp
 unit_testing/test_yield_interface.cpp
+cppa/may_have_timeout.hpp

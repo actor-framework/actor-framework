@@ -78,9 +78,9 @@ struct optional_any_tuple_visitor {
 };
 
 template<typename... Ts>
-struct has_match_hint {
+struct has_skip_message {
     static constexpr bool value = util::disjunction<
-                                      std::is_same<Ts, match_hint>::value...
+                                      std::is_same<Ts, skip_message_t>::value...
                                   >::value;
 };
 
@@ -188,13 +188,10 @@ class default_behavior_impl : public behavior_impl {
  private:
 
     template<typename... Ts>
-    typename std::enable_if<has_match_hint<Ts...>::value, bhvr_invoke_result>::type
+    typename std::enable_if<has_skip_message<Ts...>::value, bhvr_invoke_result>::type
     eval_res(optional_variant<Ts...>&& res) {
         if (res) {
-            if (res.template is<match_hint>()) {
-                if (get<match_hint>(res) == match_hint::handle) {
-                    return any_tuple{};
-                }
+            if (res.template is<skip_message_t>()) {
                 return none;
             }
             return apply_visitor(optional_any_tuple_visitor{}, res);
@@ -203,7 +200,7 @@ class default_behavior_impl : public behavior_impl {
     }
 
     template<typename... Ts>
-    typename std::enable_if<!has_match_hint<Ts...>::value, bhvr_invoke_result>::type
+    typename std::enable_if<!has_skip_message<Ts...>::value, bhvr_invoke_result>::type
     eval_res(optional_variant<Ts...>&& res) {
         return apply_visitor(optional_any_tuple_visitor{}, res);
     }

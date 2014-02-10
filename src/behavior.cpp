@@ -86,5 +86,4 @@ behavior behavior::add_continuation(continuation_fun fun) {
     return {new continuation_decorator(std::move(fun), m_impl)};
 }
 
-
 } // namespace cppa

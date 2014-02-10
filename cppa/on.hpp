@@ -38,12 +38,12 @@
 #include "cppa/unit.hpp"
 #include "cppa/atom.hpp"
 #include "cppa/anything.hpp"
-#include "cppa/behavior.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/guard_expr.hpp"
-#include "cppa/match_hint.hpp"
 #include "cppa/match_expr.hpp"
-#include "cppa/partial_function.hpp"
+#include "cppa/skip_message.hpp"
+#include "cppa/may_have_timeout.hpp"
+#include "cppa/timeout_definition.hpp"
 
 #include "cppa/util/duration.hpp"
 #include "cppa/util/type_list.hpp"
@@ -226,11 +226,6 @@ namespace cppa {
  * @brief A wildcard that matches any number of any values.
  */
 constexpr anything any_vals = anything{};
-
-/**
- * @brief Returns {@link match_hint skipped}.
- */
-match_hint skip_message();
 
 #ifdef CPPA_DOCUMENTATION
 
@@ -418,14 +413,16 @@ constexpr detail::on_the_fly_rvalue_builder on_arg_match;
 
 // and even more convenience
 
-template<typename F, class E = typename std::enable_if<util::is_callable<F>::value>::type>
+template<typename F,
+         class E = typename std::enable_if<util::is_callable<F>::value>::type>
 inline auto lift_to_match_expr(F fun) -> decltype(on_arg_match >> fun) {
     return (on_arg_match >> fun);
 }
 
-template<typename... Cs>
-inline match_expr<Cs...> lift_to_match_expr(match_expr<Cs...> expr) {
-    return std::move(expr);
+template<typename T,
+         class E = typename std::enable_if<!util::is_callable<T>::value>::type>
+inline T lift_to_match_expr(T arg) {
+    return arg;
 }
 
 #endif // CPPA_DOCUMENTATION

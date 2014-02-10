@@ -137,7 +137,7 @@ typedef typed_actor<
             replies_to<get_state_msg>::with<string>,
             replies_to<string>::with<void>,
             replies_to<float>::with<void>,
-            replies_to<int>::with<void>
+            replies_to<int>::with<int>
         >
         event_testee_type;
 
@@ -162,12 +162,11 @@ class event_testee : public event_testee_type::base {
             on<get_state_msg>() >> [] {
                 return "wait4int";
             },
-            on<int>() >> [=] {
+            on<int>() >> [=]() -> int {
                 become(wait4float());
+                return 42;
             },
-            (on<float>() || on<string>()) >> [] {
-                return match_hint::skip;
-            }
+            (on<float>() || on<string>()) >> skip_message
         };
     }
 
@@ -179,9 +178,7 @@ class event_testee : public event_testee_type::base {
             on<float>() >> [=] {
                 become(wait4string());
             },
-            (on<string>() || on<int>()) >> [] {
-                return match_hint::skip;
-            }
+            (on<string>() || on<int>()) >> skip_message
         };
     }
 
@@ -208,11 +205,18 @@ void test_event_testee() {
     set<string> iface{"cppa::replies_to<get_state_msg>::with<@str>",
                       "cppa::replies_to<@str>::with<void>",
                       "cppa::replies_to<float>::with<void>",
-                      "cppa::replies_to<@i32>::with<void>"};
+                      "cppa::replies_to<@i32>::with<@i32>"};
     CPPA_CHECK(sub_et->interface() == iface);
     self->send(sub_et, get_state_msg{});
+    // we expect three 42s
+    int i = 0;
+    self->receive_for(i, 3) (
+        [](int value) {
+            CPPA_CHECK_EQUAL(value, 42);
+        }
+    );
     self->receive (
-        on_arg_match >> [&](const string& str) {
+        [&](const string& str) {
             result = str;
         },
         after(chrono::minutes(1)) >> [&]() {

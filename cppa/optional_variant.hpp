@@ -38,7 +38,7 @@
 #include "cppa/none.hpp"
 #include "cppa/unit.hpp"
 #include "cppa/optional.hpp"
-#include "cppa/match_hint.hpp"
+#include "cppa/skip_message.hpp"
 
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/type_traits.hpp"
@@ -115,8 +115,6 @@ class optional_variant {
     typedef util::type_list<Ts...> types;
 
     static constexpr int void_pos = util::tl_find<types, void>::value;
-
-    static constexpr bool has_match_hint = util::tl_find<types, match_hint>::value != -1;
 
     /**
      * @brief Checks whether this objects holds a value of type @p T.

@@ -94,25 +94,6 @@ class projection {
     projection(const projection&) = default;
 
     /**
-     * @brief Invokes @p fun with a projection of <tt>args...</tt> and stores
-     *        the result of @p fun in @p result.
-     */
-    /*
-    template<class PartFun>
-    bool invoke(PartFun& fun, typename PartFun::result_type& result, Ts... args) const {
-        typename collected_args_tuple<ProjectionFuns, Ts...>::type pargs;
-        if (collect(pargs, m_funs, std::forward<Ts>(args)...)) {
-            auto indices = util::get_indices(pargs);
-            if (is_defined_at(fun, pargs, indices)) {
-                result = util::apply_args(fun, pargs, indices);
-                return true;
-            }
-        }
-        return false;
-    }
-    */
-
-    /**
      * @brief Invokes @p fun with a projection of <tt>args...</tt>.
      */
     template<class PartFun>

@@ -64,8 +64,6 @@ class behavior {
 
     inline behavior(impl_ptr ptr);
 
-    static constexpr bool may_have_timeout = true;
-
     /** @endcond */
 
     behavior() = default;
@@ -87,6 +85,14 @@ class behavior {
 
     template<typename... Cs, typename T, typename... Ts>
     behavior(const match_expr<Cs...>& arg0, const T& arg1, const Ts&... args);
+
+    template<typename F,
+             typename Enable = typename std::enable_if<
+                                      util::is_callable<F>::value
+                                   && !std::is_same<F, behavior>::value
+                                   && !std::is_same<F, partial_function>::value
+                               >::type>
+    behavior(F fun);
 
     /**
      * @brief Invokes the timeout callback.
@@ -137,6 +143,10 @@ inline behavior operator,(const match_expr<Cs...>& lhs,
  *             inline and template member function implementations            *
  ******************************************************************************/
 
+template<typename F, typename Enable>
+behavior::behavior(F fun)
+: m_impl(detail::match_expr_from_functor(std::move(fun)).as_behavior_impl()) { }
+
 template<typename F>
 behavior::behavior(const timeout_definition<F>& arg)
 : m_impl(detail::new_default_behavior(arg.timeout, arg.handler)) { }
@@ -172,11 +182,6 @@ inline optional<any_tuple> behavior::operator()(T&& arg) {
 inline auto behavior::as_behavior_impl() const -> const impl_ptr& {
     return m_impl;
 }
-
-//template<typename F>
-//inline behavior behavior::add_continuation(F fun) {
-//    return {new detail::continuation_decorator<F>(std::move(fun), m_impl)};
-//}
 
 } // namespace cppa
 

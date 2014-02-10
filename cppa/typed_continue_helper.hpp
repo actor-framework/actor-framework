@@ -35,6 +35,8 @@
 
 #include "cppa/util/type_traits.hpp"
 
+#include "cppa/detail/typed_actor_util.hpp"
+
 namespace cppa {
 
 template<typename OutputList>

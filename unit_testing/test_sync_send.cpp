@@ -217,16 +217,16 @@ void test_sync_send() {
     self->send_exit(mirror, exit_reason::user_shutdown);
     self->await_all_other_actors_done();
     CPPA_CHECKPOINT();
+    auto non_normal_down_msg = [](down_msg dm) -> optional<down_msg> {
+        if (dm.reason != exit_reason::normal) return dm;
+        return none;
+    };
     auto await_success_message = [&] {
         self->receive (
             on(atom("success")) >> CPPA_CHECKPOINT_CB(),
             on(atom("failure")) >> CPPA_FAILURE_CB("A didn't receive sync response"),
-            on_arg_match >> [&](const down_msg& dm) -> match_hint {
-                if (dm.reason != exit_reason::normal) {
-                    CPPA_FAILURE("A exited for reason " << dm.reason);
-                    return match_hint::handle;
-                }
-                return match_hint::skip;
+            on(non_normal_down_msg) >> [&](const down_msg& dm) {
+                CPPA_FAILURE("A exited for reason " << dm.reason);
             }
         );
     };

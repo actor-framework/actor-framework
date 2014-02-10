@@ -186,7 +186,6 @@ set(LIBCPPA_SRC
     src/node_id.cpp
     src/object.cpp
     src/object_array.cpp
-    src/on.cpp
     src/opt.cpp
     src/partial_function.cpp
     src/primitive_variant.cpp

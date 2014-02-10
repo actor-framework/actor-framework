@@ -359,7 +359,6 @@ struct invoke_util
             typename util::tl_filter_not_type<Pattern, anything>::type> {
 };
 
-
 template<class Pattern, class Projection, class PartialFun>
 struct projection_partial_function_pair : std::pair<Projection, PartialFun> {
     template<typename... Ts>
@@ -629,7 +628,8 @@ struct get_case_result {
 namespace cppa {
 
 /**
- * @brief A match expression encapsulating cases <tt>Cs...</tt>.
+ * @brief A match expression encapsulating cases <tt>Cs...</tt>, whereas
+ *        each case is a @p detail::projection_partial_function_pair.
  */
 template<class... Cs>
 class match_expr {
@@ -637,8 +637,6 @@ class match_expr {
     static_assert(sizeof...(Cs) < 64, "too many functions");
 
  public:
-
-    static constexpr bool may_have_timeout = false;
 
     typedef util::type_list<Cs...> cases_list;
 
@@ -993,6 +991,30 @@ template<typename T, typename... Ts>
 behavior_impl_ptr match_expr_concat(const T& arg, const Ts&... args) {
     detail::tdata<> dummy;
     return concat_rec(dummy, util::empty_type_list{}, arg, args...);
+}
+
+template<typename F>
+match_expr<
+    typename get_case<
+        false,
+        F,
+        empty_value_guard,
+        util::empty_type_list,
+        util::empty_type_list
+    >::type>
+match_expr_from_functor(F fun) {
+    typedef typename get_case<
+                false,
+                F,
+                empty_value_guard,
+                util::empty_type_list,
+                util::empty_type_list
+            >::type
+            result_type;
+    return result_type{typename result_type::first_type{},
+                       typename result_type::second_type{
+                           std::move(fun),
+                           empty_value_guard{}}};
 }
 
 } // namespace detail

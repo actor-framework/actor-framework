@@ -33,6 +33,7 @@
 
 #include "cppa/behavior.hpp"
 #include "cppa/match_expr.hpp"
+#include "cppa/typed_continue_helper.hpp"
 
 #include "cppa/detail/typed_actor_util.hpp"
 
@@ -43,51 +44,69 @@ namespace detail {
 template<typename... Rs>
 class functor_based_typed_actor;
 
-template<typename T>
-struct match_hint_to_void {
-    typedef T type;
+// converts a list of replies_to<...>::with<...> elements to a list of
+// lists containing the replies_to<...> half only
+template<typename List>
+struct input_only;
+
+template<typename... Ts>
+struct input_only<util::type_list<Ts...>> {
+    typedef util::type_list<typename Ts::input_types...> type;
 };
 
-template<>
-struct match_hint_to_void<match_hint> {
-    typedef void type;
-};
-template<typename T>
-struct infer_result_from_continue_helper {
-    typedef T type;
-};
-
-template<typename R>
-struct infer_result_from_continue_helper<typed_continue_helper<R>> {
-    typedef R type;
-};
+typedef util::type_list<skip_message_t> skip_list;
 
 template<class List>
-struct collapse_infered_list {
+struct unbox_typed_continue_helper {
+    // do nothing if List is actually a list, i.e., not a typed_continue_helper
     typedef List type;
 };
 
-template<typename... Ts>
-struct collapse_infered_list<util::type_list<util::type_list<Ts...>>> {
-    typedef util::type_list<Ts...> type;
+template<class List>
+struct unbox_typed_continue_helper<util::type_list<typed_continue_helper<List>>> {
+    typedef List type;
 };
 
-template<typename T>
-struct infer_response_types {
-    typedef typename T::input_types input_types;
-    typedef typename util::tl_map<
-                typename T::output_types,
-                match_hint_to_void,
-                infer_result_from_continue_helper
-            >::type
-            output_types;
-    typedef typename replies_to_from_type_list<
-                input_types,
-                // continue_helper stores a type list,
-                // so we need to collapse the list here
-                typename collapse_infered_list<output_types>::type
-            >::type
-            type;
+template<typename SList>
+struct valid_input_predicate {
+    typedef typename input_only<SList>::type s_inputs;
+    template<typename Expr>
+    struct inner {
+        typedef typename Expr::input_types input_types;
+        typedef typename unbox_typed_continue_helper<
+                    typename Expr::output_types
+                >::type
+                output_types;
+        static constexpr int pos = util::tl_find<s_inputs, input_types>::value;
+        static_assert(pos != -1, "cannot assign given match expression to "
+                                 "typed behavior, because the expression "
+                                 "contains at least one pattern that is "
+                                 "not defined in the actor's type");
+        typedef typename util::tl_at<SList, pos>::type s_element;
+        typedef typename s_element::output_types s_out;
+        static constexpr bool value =
+               std::is_same<output_types, s_out>::value
+            || std::is_same<output_types, skip_list>::value;
+        static_assert(value, "wtf");
+    };
+};
+
+// Tests whether the input list (IList) matches the
+// signature list (SList) for a typed actor behavior
+template<class SList, class IList>
+struct valid_input {
+    // check for each element in IList that there's an element in SList that
+    // (1) has an identical input type list
+    // (2)    has an identical output type list
+    //     OR the output of the element in IList is skip_message_t
+    static_assert(util::tl_is_distinct<IList>::value,
+                  "given pattern is not distinct");
+    static constexpr bool value =
+           util::tl_size<SList>::value == util::tl_size<IList>::value
+        && util::tl_forall<
+               IList,
+               valid_input_predicate<SList>::template inner
+           >::value;
 };
 
 // this function is called from typed_behavior<...>::set and its whole
@@ -95,12 +114,12 @@ struct infer_response_types {
 // (this function only has the type informations needed to understand the error)
 template<class SignatureList, class InputList>
 void static_check_typed_behavior_input() {
-    constexpr bool is_equal = util::tl_equal<SignatureList, InputList>::value;
+    constexpr bool is_valid = valid_input<SignatureList, InputList>::value;
     // note: it might be worth considering to allow a wildcard in the
     //       InputList if its return type is identical to all "missing"
     //       input types ... however, it might lead to unexpected results
     //       and would cause a lot of not-so-straightforward code here
-    static_assert(is_equal, "given pattern cannot be used to initialize "
+    static_assert(is_valid, "given pattern cannot be used to initialize "
                             "typed behavior (exact match needed)");
 }
 
@@ -181,11 +200,7 @@ class typed_behavior {
         typedef typename util::tl_map<
                     util::type_list<
                         typename detail::deduce_signature<Cs>::type...
-                    >,
-                    // returning a match_hint from a message handler does
-                    // not send anything back, so we can consider
-                    // match_hint to be void
-                    detail::infer_response_types
+                    >
                 >::type
                 input;
         // check types

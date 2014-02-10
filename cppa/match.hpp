@@ -37,8 +37,8 @@
 #include <type_traits>
 
 #include "cppa/any_tuple.hpp"
-#include "cppa/match_hint.hpp"
 #include "cppa/match_expr.hpp"
+#include "cppa/skip_message.hpp"
 #include "cppa/partial_function.hpp"
 
 #include "cppa/util/tbind.hpp"
@@ -170,14 +170,8 @@ static inline bool eval_res(const optional<T>& res, bool&) {
     return static_cast<bool>(res);
 }
 
-static inline bool eval_res(const optional<match_hint>& res, bool& skipped) {
-    if (res) {
-        if (*res == match_hint::skip) {
-            skipped = true;
-            return false;
-        }
-        return true;
-    }
+static inline bool eval_res(const optional<skip_message_t>& res, bool& skipped) {
+    if (res) skipped = true;
     return false;
 }
 
@@ -240,13 +234,22 @@ size_t run_case(std::vector<T>& vec,
                 InputIterator& pos,
                 const InputIterator& end,
                 Case& target) {
+    // check that there's no empty match expression
+    // (would cause indefinite recursion)
     static constexpr size_t num_args = util::tl_size<typename Case::pattern_type>::value;
-    typedef typename Case::second_type partial_fun_type;
-    typedef typename partial_fun_type::arg_types arg_types;
-    typedef typename util::tl_map<arg_types, util::rm_const_and_ref>::type plain_args;
     static_assert(num_args > 0,
                   "empty match expressions are not allowed in stream matching");
-    static_assert(util::tl_forall<plain_args, util::tbind<std::is_same, T>::template type>::value,
+    typedef typename Case::first_type projection_type;
+    typedef typename projection_type::arg_types arg_types;
+    typedef typename util::tl_map<
+                arg_types,
+                util::rm_const_and_ref
+            >::type
+            plain_args;
+    static_assert(util::tl_forall<
+                      plain_args,
+                      util::tbind<std::is_same, T>::template type
+                  >::value,
                   "match_stream<T>: at least one callback argument "
                   "is not of type T");
     while (vec.size() < num_args) {

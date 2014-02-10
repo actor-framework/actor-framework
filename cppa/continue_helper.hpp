@@ -36,6 +36,7 @@
 #include "cppa/on.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/message_id.hpp"
+#include "cppa/partial_function.hpp"
 
 namespace cppa {
 

@@ -27,12 +27,31 @@
  * along with libcppa. If not, see <http://www.gnu.org/licenses/>.            *
 \******************************************************************************/
 
-#include "cppa/on.hpp"
+
+#ifndef CPPA_MATCH_HINT_HPP
+#define CPPA_MATCH_HINT_HPP
 
 namespace cppa {
 
-match_hint skip_message() {
-    return match_hint::skip;
+/**
+ * @brief Optional return type for functors used in pattern matching
+ *        expressions. This type is evaluated by the runtime system of libcppa
+ *        and can be used to intentionally skip messages.
+ */
+struct skip_message_t { constexpr skip_message_t() { } };
+
+/**
+ * @brief Tells the runtime system to skip a message when used as message
+ *        handler, i.e., causes the runtime to leave the message in
+ *        the mailbox of an actor.
+ */
+constexpr skip_message_t skip_message() {
+    return {};
 }
 
+// implemented in string_serialization.cpp
+std::ostream& operator<<(std::ostream&, skip_message_t);
+
 } // namespace cppa
+
+#endif // CPPA_MATCH_HINT_HPP

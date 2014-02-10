@@ -32,7 +32,7 @@
 #define CPPA_DETAIL_RESPONSE_FUTURE_UTIL_HPP
 
 #include "cppa/on.hpp"
-#include "cppa/match_hint.hpp"
+#include "cppa/skip_message.hpp"
 #include "cppa/system_messages.hpp"
 
 #include "cppa/util/type_traits.hpp"
@@ -42,9 +42,9 @@ namespace detail {
 
 template<typename Actor, typename... Fs>
 behavior fs2bhvr(Actor* self, Fs... fs) {
-    auto handle_sync_timeout = [self]() -> match_hint {
+    auto handle_sync_timeout = [self]() -> skip_message_t {
         self->handle_sync_timeout();
-        return match_hint::skip;
+        return {};
     };
     return behavior{
         on<sync_timeout_msg>() >> handle_sync_timeout,

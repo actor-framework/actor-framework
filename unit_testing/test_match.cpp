@@ -268,17 +268,12 @@ void test_match_stream() {
             CPPA_CHECK(name == "foo" || name == "bar");
             return name == "foo" || name == "bar";
         },
-        on("-p", arg_match) >> [&](const string& port) -> match_hint {
-            auto i = toint(port);
-            if (i) {
-                CPPA_CHECK_EQUAL(*i, 2);
-                return match_hint::handle;
-            }
-            else return match_hint::skip;
+        on("-p", toint) >> [&](int port) {
+            CPPA_CHECK_EQUAL(port, 2);
         },
-        on_arg_match >> [](const string& arg) -> match_hint {
+        on_arg_match >> [](const string& arg) -> skip_message_t {
             CPPA_FAILURE("unexpected string: " << arg);
-            return match_hint::skip;
+            return {};
         }
     );
     CPPA_CHECK_EQUAL(success, true);
@@ -291,10 +286,13 @@ void test_behavior() {
         CPPA_CHECK_EQUAL(static_cast<bool>(pf(tup)), expected_result);         \
         CPPA_CHECK_EQUAL(last_invoked_fun, str);                               \
     }
+    auto not_42 = [](int i) -> optional<int> {
+        if (i != 42) return i;
+        return none;
+    };
     behavior bhvr1 {
-        on<int>() >> [&](int i) -> match_hint {
+        on(not_42) >> [&](int) {
             last_invoked_fun = "<int>@1";
-            return (i == 42) ? match_hint::skip : match_hint::handle;
         },
         on<float>() >> [&] {
             last_invoked_fun = "<float>@2";
@@ -306,7 +304,7 @@ void test_behavior() {
             last_invoked_fun = "<*>@4";
         }
     };
-    bhvr_check(bhvr1, make_any_tuple(42), false, "<int>@1");
+    bhvr_check(bhvr1, make_any_tuple(42), true, "<int>@3");
     bhvr_check(bhvr1, make_any_tuple(24), true, "<int>@1");
     bhvr_check(bhvr1, make_any_tuple(2.f), true, "<float>@2");
     bhvr_check(bhvr1, make_any_tuple(""), true, "<*>@4");

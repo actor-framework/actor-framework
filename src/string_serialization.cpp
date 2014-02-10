@@ -38,11 +38,11 @@
 #include "cppa/atom.hpp"
 #include "cppa/object.hpp"
 #include "cppa/to_string.hpp"
-#include "cppa/match_hint.hpp"
 #include "cppa/serializer.hpp"
 #include "cppa/singletons.hpp"
 #include "cppa/from_string.hpp"
 #include "cppa/deserializer.hpp"
+#include "cppa/skip_message.hpp"
 #include "cppa/actor_namespace.hpp"
 #include "cppa/primitive_variant.hpp"
 #include "cppa/uniform_type_info.hpp"
@@ -526,9 +526,8 @@ string to_verbose_string(const exception& e) {
     return oss.str();
 }
 
-std::ostream& operator<<(std::ostream& out, match_hint mh) {
-     return out << (mh == match_hint::handle ? "match_hint::handle"
-                                             : "match_hint::skip");
+std::ostream& operator<<(std::ostream& out, skip_message_t) {
+     return out << "skip_message";
 }
 
 } // namespace cppa
