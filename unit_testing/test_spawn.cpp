@@ -274,11 +274,15 @@ behavior echo_actor(event_based_actor* self) {
 
 struct simple_mirror : sb_actor<simple_mirror> {
 
-    behavior init_state = (
-        others() >> [=] {
-            return last_dequeued();
-        }
-    );
+    behavior init_state;
+    
+    simple_mirror() {
+        init_state = (
+            others() >> [=]() -> any_tuple {
+                return last_dequeued();
+            }
+        );
+    }
 
 };
 

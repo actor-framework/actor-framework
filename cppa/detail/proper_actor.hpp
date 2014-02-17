@@ -272,11 +272,13 @@ class proper_actor<Base, Policies,true> : public proper_actor_base<Base,
             has_timeout = true;
             timeout_id = this->request_timeout(bhvr.timeout());
         }
+        // workaround for GCC 4.7 bug (const this when capturing refs)
+        auto& pending_timeouts = m_pending_timeouts;
         auto guard = util::make_scope_guard([&] {
             if (has_timeout) {
-                auto e = m_pending_timeouts.end();
-                auto i = std::find(m_pending_timeouts.begin(), e, timeout_id);
-                if (i != e) m_pending_timeouts.erase(i);
+                auto e = pending_timeouts.end();
+                auto i = std::find(pending_timeouts.begin(), e, timeout_id);
+                if (i != e) pending_timeouts.erase(i);
             }
         });
         // read incoming messages
