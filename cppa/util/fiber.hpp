@@ -44,7 +44,7 @@ struct fiber {
      * @brief Queries whether libcppa was compiled without
      *        fiber support on this platform.
      */
-    static bool is_disabled_feature();
+    static const bool is_disabled_feature;
 
     /**
      * @brief Creates a new fiber that describes stores the context
