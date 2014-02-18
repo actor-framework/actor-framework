@@ -30,6 +30,7 @@
 
 #include <memory>
 
+#include "cppa/detail/cs_thread.hpp"
 #include "cppa/detail/yield_interface.hpp"
 
 namespace {
@@ -37,8 +38,8 @@ namespace {
 using namespace cppa;
 
 __thread detail::yield_state* t_ystate = nullptr;
-__thread util::fiber* t_caller = nullptr;
-__thread util::fiber* t_callee = nullptr;
+__thread detail::cs_thread* t_caller = nullptr;
+__thread detail::cs_thread* t_callee = nullptr;
 
 constexpr const char* names_table[] = {
     "yield_state::invalid",
@@ -53,15 +54,15 @@ namespace cppa { namespace detail {
 
 void yield(yield_state ystate) {
     *t_ystate = ystate;
-    util::fiber::swap(*t_callee, *t_caller);
+    detail::cs_thread::swap(*t_callee, *t_caller);
 }
 
-yield_state call(util::fiber* what, util::fiber* from) {
+yield_state call(detail::cs_thread* what, detail::cs_thread* from) {
     yield_state result;
     t_ystate = &result;
     t_caller = from;
     t_callee = what;
-    util::fiber::swap(*from, *what);
+    detail::cs_thread::swap(*from, *what);
     return result;
 }
 

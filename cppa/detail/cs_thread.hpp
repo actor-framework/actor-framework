@@ -31,42 +31,29 @@
 #ifndef CPPA_FIBER_HPP
 #define CPPA_FIBER_HPP
 
-namespace cppa { namespace util {
+namespace cppa { namespace detail {
 
-struct fiber_impl;
+struct cst_impl;
 
-/**
- * @brief A 'lightweight thread' supporting manual context switching.
- */
-struct fiber {
+// A cooperatively scheduled thread implementation
+struct cs_thread {
 
-    /**
-     * @brief Queries whether libcppa was compiled without
-     *        fiber support on this platform.
-     */
+    // Queries whether libcppa was compiled without cs threads on this platform.
     static const bool is_disabled_feature;
 
-    /**
-     * @brief Creates a new fiber that describes stores the context
-     *        of the calling (kernel) thread.
-     */
-    fiber();
+    // Creates a new cs_thread storing the context of the calling thread.
+    cs_thread();
 
-    /**
-     * @brief Creates a fiber that executes the given function @p func
-     *        using the argument @p arg1.
-     */
-    fiber(void (*func)(void*), void* arg1);
+    // Creates a cs_thread that executes @p func(arg1)
+    cs_thread(void (*func)(void*), void* arg1);
 
-    ~fiber();
+    ~cs_thread();
 
-    /**
-     * @brief Swaps the context from @p source to @p target.
-     */
-    static void swap(fiber& source, fiber& target);
+    // Swaps the context from @p source to @p target.
+    static void swap(cs_thread& source, cs_thread& target);
 
     // pimpl
-    fiber_impl* m_impl;
+    cst_impl* m_impl;
 
 };
 

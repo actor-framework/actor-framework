@@ -31,11 +31,11 @@
 #define CPPA_CONTEXT_SWITCHING_ACTOR_HPP
 
 #include "cppa/config.hpp"
-#include "cppa/resumable.hpp"
 #include "cppa/actor_state.hpp"
 #include "cppa/mailbox_element.hpp"
 
-#include "cppa/util/fiber.hpp"
+#include "cppa/detail/cs_thread.hpp"
+#include "cppa/detail/resumable.hpp"
 
 #include "cppa/policy/resume_policy.hpp"
 
@@ -56,25 +56,25 @@ class context_switching_resume {
 
  public:
 
-    // required by util::fiber
+    // required by detail::cs_thread
     static void trampoline(void* _this);
 
     // Base must be a mailbox-based actor
     template<class Base, class Derived>
-    struct mixin : Base, resumable {
+    struct mixin : Base, detail::resumable {
 
         template<typename... Ts>
         mixin(Ts&&... args)
             : Base(std::forward<Ts>(args)...)
-            , m_fiber(context_switching_resume::trampoline,
+            , m_cs_thread(context_switching_resume::trampoline,
                       static_cast<blocking_actor*>(this)) { }
 
-        resumable::resume_result resume(util::fiber* from) override {
+        detail::resumable::resume_result resume(detail::cs_thread* from) override {
             CPPA_REQUIRE(from != nullptr);
             CPPA_PUSH_AID(this->id());
             using namespace detail;
             for (;;) {
-                switch (call(&m_fiber, from)) {
+                switch (call(&m_cs_thread, from)) {
                     case yield_state::done: {
                         return resumable::done;
                     }
@@ -99,7 +99,7 @@ class context_switching_resume {
             }
         }
 
-        util::fiber m_fiber;
+        detail::cs_thread m_cs_thread;
 
     };
 
@@ -120,7 +120,7 @@ class context_switching_resume {
  private:
 
     // members
-    util::fiber m_fiber;
+    detail::cs_thread m_cs_thread;
 
 };
 

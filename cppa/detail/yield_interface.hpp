@@ -33,9 +33,9 @@
 
 #include <string>
 
-#include "cppa/util/fiber.hpp"
-
 namespace cppa { namespace detail {
+
+struct cs_thread;
 
 enum class yield_state : int {
     // yield() wasn't called yet
@@ -52,7 +52,7 @@ enum class yield_state : int {
 void yield(yield_state);
 
 // switches to @p what and returns to @p from after yield(...)
-yield_state call(util::fiber* what, util::fiber* from);
+yield_state call(detail::cs_thread* what, detail::cs_thread* from);
 
 } } // namespace cppa::detail
 

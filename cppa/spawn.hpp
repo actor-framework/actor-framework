@@ -41,7 +41,7 @@
 #include "cppa/spawn_options.hpp"
 #include "cppa/typed_event_based_actor.hpp"
 
-#include "cppa/util/fiber.hpp"
+#include "cppa/detail/cs_thread.hpp"
 #include "cppa/util/type_traits.hpp"
 
 #include "cppa/detail/proper_actor.hpp"
@@ -65,10 +65,10 @@ intrusive_ptr<C> spawn_impl(BeforeLaunch before_launch_fun, Ts&&... args) {
     CPPA_LOGF_TRACE("spawn " << detail::demangle<C>());
     // runtime check wheter context_switching_resume can be used,
     // i.e., add the detached flag if libcppa was compiled
-    // without fiber support when using the blocking API
+    // without cs_thread support when using the blocking API
     if (has_blocking_api_flag(Os)
             && !has_detach_flag(Os)
-            && util::fiber::is_disabled_feature) {
+            && detail::cs_thread::is_disabled_feature) {
         return spawn_impl<C, Os + detached>(before_launch_fun,
                                             std::forward<Ts>(args)...);
     }

@@ -5,7 +5,7 @@
 #include <type_traits>
 
 #include "test.hpp"
-#include "cppa/util/fiber.hpp"
+#include "cppa/detail/cs_thread.hpp"
 #include "cppa/detail/yield_interface.hpp"
 
 using namespace cppa;
@@ -19,7 +19,7 @@ struct pseudo_worker {
 
     pseudo_worker() : m_count(0), m_blocked(true) { }
 
-    void operator()() {
+    void run() {
         for (;;) {
             if (m_blocked) {
                 yield(yield_state::blocked);
@@ -33,17 +33,19 @@ struct pseudo_worker {
 
 };
 
-void coroutine(void* worker) { (*reinterpret_cast<pseudo_worker*>(worker))(); }
+void coroutine(void* worker) {
+    reinterpret_cast<pseudo_worker*>(worker)->run();
+}
 
 int main() {
     CPPA_TEST(test_yield_interface);
 #   ifdef CPPA_DISABLE_CONTEXT_SWITCHING
-    CPPA_PRINT("WARNING: context switching was explicitly disabled "
-                      "using CPPA_DISABLE_CONTEXT_SWITCHING");
+    CPPA_PRINT("WARNING: context switching was explicitly "
+               "disabled by defining CPPA_DISABLE_CONTEXT_SWITCHING");
 #   else
-    fiber fself;
+    cs_thread fself;
     pseudo_worker worker;
-    fiber fcoroutine(coroutine, &worker);
+    cs_thread fcoroutine(coroutine, &worker);
     yield_state ys;
     int i = 0;
     do {

@@ -33,12 +33,15 @@
 
 #include <thread>
 
-#include "cppa/resumable.hpp"
 #include "cppa/scheduler.hpp"
 
 #include "cppa/util/producer_consumer_list.hpp"
 
+#include "cppa/detail/resumable.hpp"
+
 namespace cppa { namespace detail {
+
+struct cs_thread;
 
 class thread_pool_scheduler : public scheduler {
 
@@ -47,7 +50,7 @@ class thread_pool_scheduler : public scheduler {
  public:
 
     struct dummy : resumable {
-        resume_result resume(util::fiber*) override;
+        resume_result resume(detail::cs_thread*) override;
     };
 
     struct worker;

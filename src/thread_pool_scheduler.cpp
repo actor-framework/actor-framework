@@ -37,7 +37,7 @@
 #include "cppa/on.hpp"
 #include "cppa/logging.hpp"
 
-#include "cppa/util/fiber.hpp"
+#include "cppa/detail/cs_thread.hpp"
 
 #include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/thread_pool_scheduler.hpp"
@@ -47,7 +47,7 @@ using std::endl;
 
 namespace cppa { namespace detail {
 
-resumable::resume_result thread_pool_scheduler::dummy::resume(util::fiber*) {
+resumable::resume_result thread_pool_scheduler::dummy::resume(detail::cs_thread*) {
     throw std::logic_error("thread_pool_scheduler::dummy::resume");
 }
 
@@ -97,7 +97,7 @@ struct thread_pool_scheduler::worker {
 
     void operator()() {
         CPPA_LOG_TRACE("");
-        util::fiber fself;
+        detail::cs_thread fself;
         job_ptr job = nullptr;
         for (;;) {
             aggressive(job) || moderate(job) || relaxed(job);

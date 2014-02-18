@@ -9,9 +9,9 @@
 #include "cppa/policy/resume_policy.hpp"
 
 namespace cppa {
-namespace util {
-struct fiber;
-} // namespace util
+namespace detail {
+struct cs_thread;
+} // namespace detail
 } // namespace cppa
 
 namespace cppa { namespace policy {
@@ -29,7 +29,7 @@ class no_resume {
         template<typename... Ts>
         mixin(Ts&&... args) : Base(std::forward<Ts>(args)...) { }
 
-        inline resumable::resume_result resume(util::fiber*) {
+        inline detail::resumable::resume_result resume(detail::cs_thread*) {
             auto done_cb = [=](std::uint32_t reason) {
                 this->planned_exit_reason(reason);
                 this->on_exit();
@@ -45,7 +45,7 @@ class no_resume {
             catch (...) {
                 done_cb(exit_reason::unhandled_exception);
             }
-            return resumable::done;
+            return detail::resumable::done;
         }
     };
 

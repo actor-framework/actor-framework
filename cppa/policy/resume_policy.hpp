@@ -31,12 +31,19 @@
 #ifndef CPPA_RESUME_POLICY_HPP
 #define CPPA_RESUME_POLICY_HPP
 
-#include "cppa/resumable.hpp"
+#include "cppa/detail/resumable.hpp"
 
 // this header consists all type definitions needed to
 // implement the resume_policy trait
 
-namespace cppa { namespace util { class duration; struct fiber; } }
+namespace cppa {
+namespace util {
+class duration;
+} // namespace util
+namespace detail {
+struct cs_thread;
+} // namespace detail
+} // namespace cppa
 
 namespace cppa {
 namespace policy {
@@ -57,7 +64,8 @@ class resume_policy {
      *        actor finishes execution.
      */
     template<class Actor>
-    resumable::resume_result resume(Actor* self, util::fiber* from);
+    detail::resumable::resume_result resume(Actor* self,
+                                            detail::cs_thread* from);
 
     /**
      * @brief Waits unconditionally until the actor is ready to resume.

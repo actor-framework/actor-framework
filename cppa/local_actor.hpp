@@ -71,10 +71,6 @@ class scheduler;
 class local_scheduler;
 class sync_handle_helper;
 
-namespace util {
-struct fiber;
-} // namespace util
-
 /**
  * @brief Base class for local running Actors.
  * @extends abstract_actor

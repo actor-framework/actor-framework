@@ -42,7 +42,6 @@
 #include "cppa/channel.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/cow_tuple.hpp"
-#include "cppa/resumable.hpp"
 #include "cppa/attachable.hpp"
 #include "cppa/spawn_options.hpp"
 #include "cppa/message_header.hpp"
@@ -55,7 +54,11 @@ class event_based_actor;
 class scheduled_actor;
 class scheduler_helper;
 typedef intrusive_ptr<scheduled_actor> scheduled_actor_ptr;
-namespace detail { class singleton_manager; } // namespace detail
+
+namespace detail {
+class resumable;
+class singleton_manager;
+} // namespace detail
 
 /**
  * @brief This abstract class allows to create (spawn) new actors
@@ -86,7 +89,7 @@ class scheduler {
 
     actor printer() const;
 
-    virtual void enqueue(resumable*) = 0;
+    virtual void enqueue(detail::resumable*) = 0;
 
     template<typename Duration, typename... Data>
     void delayed_send(message_header hdr,

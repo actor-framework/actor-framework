@@ -41,7 +41,7 @@
 #include "cppa/actor_state.hpp"
 #include "cppa/exit_reason.hpp"
 
-#include "cppa/util/fiber.hpp"
+#include "cppa/detail/cs_thread.hpp"
 #include "cppa/util/duration.hpp"
 #include "cppa/util/scope_guard.hpp"
 
@@ -116,10 +116,10 @@ class no_scheduling {
             auto guard = util::make_scope_guard([is_hidden] {
                 if (!is_hidden) get_actor_registry()->dec_running();
             });
-            util::fiber fself;
+            detail::cs_thread fself;
             for (;;) {
                 mself->set_state(actor_state::ready);
-                if (mself->resume(&fself) == resumable::done) {
+                if (mself->resume(&fself) == detail::resumable::done) {
                     return;
                 }
                 // await new data before resuming actor

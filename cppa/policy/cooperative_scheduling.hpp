@@ -34,7 +34,6 @@
 #include <atomic>
 
 #include "cppa/any_tuple.hpp"
-#include "cppa/resumable.hpp"
 #include "cppa/actor_state.hpp"
 #include "cppa/message_header.hpp"
 

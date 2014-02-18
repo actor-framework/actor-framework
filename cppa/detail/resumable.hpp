@@ -32,12 +32,13 @@
 #define CPPA_RESUMABLE_HPP
 
 namespace cppa {
+namespace detail {
 
-namespace util {
-struct fiber;
-} // namespace util
+struct cs_thread;
 
-struct resumable {
+class resumable {
+
+ public:
 
     enum resume_result {
         resume_later,
@@ -50,10 +51,11 @@ struct resumable {
 
     virtual ~resumable();
 
-    virtual resume_result resume(util::fiber*) = 0;
+    virtual resume_result resume(detail::cs_thread*) = 0;
 
 };
 
+} // namespace detail
 } // namespace cppa
 
 #endif // CPPA_RESUMABLE_HPP

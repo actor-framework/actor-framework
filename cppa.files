@@ -191,7 +191,7 @@ cppa/util/comparable.hpp
 cppa/util/compare_tuples.hpp
 cppa/util/dptr.hpp
 cppa/util/duration.hpp
-cppa/util/fiber.hpp
+cppa/detail/cs_thread.hpp
 cppa/util/get_mac_addresses.hpp
 cppa/util/get_root_uuid.hpp
 cppa/util/guard.hpp
@@ -270,7 +270,7 @@ src/exception.cpp
 src/exit_reason.cpp
 src/factory.cpp
 src/fd_util.cpp
-src/fiber.cpp
+src/cs_thread.cpp
 src/functor_based_actor.cpp
 src/functor_based_blocking_actor.cpp
 src/get_mac_addresses.cpp

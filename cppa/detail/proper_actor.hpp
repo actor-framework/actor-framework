@@ -4,7 +4,6 @@
 #include <type_traits>
 
 #include "cppa/logging.hpp"
-#include "cppa/resumable.hpp"
 #include "cppa/blocking_actor.hpp"
 #include "cppa/mailbox_element.hpp"
 
@@ -12,11 +11,7 @@
 
 #include "cppa/util/duration.hpp"
 
-namespace cppa {
-namespace util {
-struct fiber;
-} // namespace util
-} // namespace cppa
+#include "cppa/detail/resumable.hpp"
 
 namespace cppa {
 namespace detail {
