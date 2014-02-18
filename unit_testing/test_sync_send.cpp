@@ -6,9 +6,13 @@ using namespace cppa;
 using namespace cppa::placeholders;
 
 struct sync_mirror : sb_actor<sync_mirror> {
-    behavior init_state = (
-        others() >> [=] { return last_dequeued(); }
-    );
+    behavior init_state;
+    
+    sync_mirror() {
+        init_state = (
+            others() >> [=] { return last_dequeued(); }
+        );
+    }
 };
 
 // replies to 'f' with 0.0f and to 'i' with 0
@@ -75,13 +79,16 @@ struct B : popular_actor {
 };
 
 struct C : sb_actor<C> {
-    behavior init_state = (
-        on(atom("gogo")) >> [=]() -> atom_value {
-            CPPA_CHECKPOINT();
-            quit();
-            return atom("gogogo");
-        }
-    );
+    behavior init_state;
+    C() {
+        init_state = (
+            on(atom("gogo")) >> [=]() -> atom_value {
+                CPPA_CHECKPOINT();
+                quit();
+                return atom("gogogo");
+            }
+        );
+    }
 };
 
 
