@@ -5,14 +5,14 @@ Messages can be sent by using \lstinline^send^, \lstinline^send_tuple^, or \lsti
 
 \begin{lstlisting}
 template<typename... Args>
-void send(actor_ptr whom, Args&&... what);
+void send(actor whom, Args&&... what);
 \end{lstlisting}
 
 The variadic template pack \lstinline^what...^ is converted to a dynamically typed tuple (see Section \ref{Sec::Tuples::DynamicallyTypedTuples}) and then enqueued to the mailbox of \lstinline^whom^.
 The following example shows two equal sends, one using \lstinline^send^ and the other using \lstinline^operator<<^.
 
 \begin{lstlisting}
-actor_ptr other = spawn(...);
+actor other = spawn(...);
 send(other, 1, 2, 3);
 other << make_any_tuple(1, 2, 3);
 \end{lstlisting}
@@ -21,7 +21,7 @@ Using the function \lstinline^send^ is more compact, but does not have any other
 However, note that you should not use \lstinline^send^ if you already have an instance of \lstinline^any_tuple^, because it creates a new tuple containing the old one.
 
 \begin{lstlisting}
-actor_ptr other = spawn(...);
+actor other = spawn(...);
 auto msg = make_any_tuple(1, 2, 3);
 send(other, msg); // oops, creates a new tuple that contains msg
 send_tuple(other, msg); // ok
@@ -36,12 +36,11 @@ Choosing one or the other is merely a matter of personal preferences.
 \label{Sec::Send::Reply}
 
 The return value of a message handler is used as response message.
-During callback invokation, \lstinline^self->last_sender()^ is set.
-This identifies the sender of the received message and is used implicitly to reply to the correct sender.
-However, using \lstinline^send(self->last_sender(), ...)^ does \emph{not} reply to the message, i.e., synchronous messages will not recognize the message as response.
+During callback invocation, \lstinline^self->last_sender()^ is set to the address of the sender.
+Actors can also use the result of a \lstinline^send^ to answer to a request, as shown below.
 
 \begin{lstlisting}
-void client(const actor_ptr& master) {
+void client(const actor& master) {
   become (
     on("foo", arg_match) >> [=](const string& request) -> string {
       return sync_send(master, atom("bar"), request).then(
@@ -52,46 +51,6 @@ void client(const actor_ptr& master) {
     }
   );
 };
-\end{lstlisting}
-
-\clearpage
-\subsection{Chaining}
-\label{Sec::Send::ChainedSend}
-
-Sending a message to a cooperatively scheduled actor usually causes the receiving actor to be put into the scheduler's job queue if it is currently blocked, i.e., is waiting for a new message.
-This job queue is accessed by worker threads.
-The \textit{chaining} optimization does not cause the receiver to be put into the scheduler's job queue if it is currently blocked.
-The receiver is stored as successor of the currently running actor instead.
-Hence, the active worker thread does not need to access the job queue, which significantly speeds up execution.
-However, this optimization can be inefficient if an actor first sends a message and then starts computation.
-
-\begin{lstlisting}
-void foo(actor_ptr other) {
-  send(other, ...);
-  very_long_computation();
-  // ...
-}
-
-int main() {
-  // ...
-  auto a = spawn(...);
-  auto b = spawn(foo, a);
-  // ...
-}
-\end{lstlisting}
-
-The example above illustrates an inefficient work flow.
-The actor \lstinline^other^ is marked as successor of the \lstinline^foo^ actor but its execution is delayed until \lstinline^very_long_computation()^ is done.
-In general, actors should follow the work flow \lstinline^receive^ $\Rightarrow$\lstinline^compute^ $\Rightarrow$ \lstinline^send results^.
-However, this optimization can be disabled by calling \lstinline^self->chaining(false)^ if an actor does not match this work flow.
-
-\begin{lstlisting}
-void foo(actor_ptr other) {
-  self->chaining(false);   // disable chaining optimization
-  send(other, ...);        // not delayed by very_long_compuation
-  very_long_computation();
-  // ...
-}
 \end{lstlisting}
 
 \subsection{Delaying Messages}

@@ -13,19 +13,18 @@ An implementation of \lstinline^init^ shall set an initial behavior by using \ls
 
 \begin{lstlisting}
 class printer : public event_based_actor {
-  void init() {
-    become (
+  behavior make_behavior() override {
+    return {
       others() >> [] {
         cout << to_string(self->last_received()) << endl;
       }
-    );
+    };
   }
 };
 \end{lstlisting}
 
 Another way to implement class-based actors is provided by the class \lstinline^sb_actor^ (``State-Based Actor'').
-This base class calls \lstinline^become(init_state)^ in its \lstinline^init^ member function.
-Hence, a subclass must only provide a member of type \lstinline^behavior^ named \lstinline^init_state^.
+This base class simply returns \lstinline^init_state^ (defined in the subclass) from its implementation for \lstinline^make_behavior^.
 
 \begin{lstlisting}
 struct printer : sb_actor<printer> {

@@ -9,23 +9,10 @@ Context-switching actors are used for actors that make use of the blocking API (
 Context-switching and event-based actors are scheduled cooperatively in a thread pool.
 Thread-mapped actors can be used to opt-out of this cooperative scheduling.
 
-%\subsection{Local Actors}
+\subsection{Implicit \texttt{self} Pointer}
 
-%The class \lstinline^local_actor^ describes a local running actor.
-%It provides a common interface for actor operations like trapping exit messages or finishing execution.
-
-\subsection{The ``Keyword'' \texttt{self}}
-
-The \lstinline^self^ pointer is an essential ingredient of our design.
-It identifies the running actor similar to the implicit \lstinline^this^ pointer identifying an object within a member function.
-Unlike \lstinline^this^, though, \lstinline^self^ is not limited to a particular scope.
-The \lstinline^self^ pointer is used implicitly, whenever an actor calls functions like \lstinline^send^ or \lstinline^become^, but can be accessed to use more advanced actor operations such as linking to another actor, e.g., by calling \lstinline^self->link_to(other)^.
-The \lstinline^self^ pointer is convertible to \lstinline^actor_ptr^ and \lstinline^local_actor*^, but it is neither copyable nor assignable.
-Thus, \lstinline^auto s = self^ will cause a compiler error, while \lstinline^actor_ptr s = self^ works as expected.
-
-A thread that accesses \lstinline^self^ is converted on-the-fly to an actor if needed.
-Hence, ``everything is an actor'' in \libcppa.
-However, automatically converted actors use an implementation based on the blocking API, which behaves slightly different than the default, i.e., event-based, implementation.
+When using a function or functor to implement an actor, the first argument \emph{can} be used to capture a pointer to the actor itself.
+The type of this pointer is \lstinline^event_based_actor^ or \lstinline^blocking_actor^ when using the \lstinline^blocking_api^ flag or their typed counterparts when dealing with typed actors.
 
 \clearpage
 \subsection{Interface}

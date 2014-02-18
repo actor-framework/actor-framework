@@ -29,7 +29,7 @@ Please submit a bug report that includes (a) your compiler version, (b) your OS,
   \item Network transparent messaging
   \item Error handling based on Erlang's failure model
   \item Pattern matching for messages as internal DSL to ease development
-  \item Thread-mapped actors and on-the-fly conversions for soft migration of existing applications
+  \item Thread-mapped actors for soft migration of existing applications
   \item Publish/subscribe group communication
 \end{itemize*}
 
@@ -62,41 +62,42 @@ We will support this platform as soon as Microsoft's compiler implements all req
 using namespace std;
 using namespace cppa;
 
-void mirror() {
-  // wait for messages
-  become (
-    // invoke this lambda expression if we receive a string
-    on_arg_match >> [](const string& what) -> string {
-      // prints "Hello World!" via aout (thread-safe cout wrapper)
-      aout << what << endl;
-      // terminates this actor afterwards;
-      // 'become' otherwise loops forever
-      self->quit();
-      // replies "!dlroW olleH"
-      return string(what.rbegin(), what.rend());
-    }
-  );
+behavior mirror(event_based_actor* self) {
+    // wait for messages
+    return (
+        // invoke this lambda expression if we receive a string
+        on_arg_match >> [=](const string& what) -> string {
+            // prints "Hello World!" via aout
+            // (a thread-safe cout wrapper)
+            aout(self) << what << endl;
+            // terminates this actor
+            // ('become' otherwise loops forever)
+            self->quit();
+            // reply "!dlroW olleH"
+            return string(what.rbegin(), what.rend());
+        }
+    );
 }
 
-void hello_world(const actor_ptr& buddy) {
-  // send "Hello World!" to our buddy ...
-  sync_send(buddy, "Hello World!").then(
-    // ... and wait for a response
-    on_arg_match >> [](const string& what) {
-      // prints "!dlroW olleH"
-      aout << what << endl;
-    }
-  );
+void hello_world(event_based_actor* self, const actor& buddy) {
+    // send "Hello World!" to our buddy ...
+    self->sync_send(buddy, "Hello World!").then(
+        // ... and wait for a response
+        on_arg_match >> [=](const string& what) {
+            // prints "!dlroW olleH"
+            aout(self) << what << endl;
+        }
+    );
 }
 
 int main() {
-  // create a new actor that calls 'mirror()'
-  auto mirror_actor = spawn(mirror);
-  // create another actor that calls 'hello_world(mirror_actor)'
-  spawn(hello_world, mirror_actor);
-  // wait until all other actors we have spawned are done
-  await_all_others_done();
-  // run cleanup code before exiting main
-  shutdown();
+    // create a new actor that calls 'mirror()'
+    auto mirror_actor = spawn(mirror);
+    // create another actor that calls 'hello_world(mirror_actor)'
+    spawn(hello_world, mirror_actor);
+    // wait until all other actors we have spawned are done
+    await_all_actors_done();
+    // run cleanup code before exiting main
+    shutdown();
 }
 \end{lstlisting}
