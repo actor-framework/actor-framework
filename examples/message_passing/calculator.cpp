@@ -3,7 +3,6 @@
  * for both the blocking and the event-based API.                             *
 \******************************************************************************/
 
-#include <string>
 #include <cassert>
 #include <iostream>
 #include "cppa/cppa.hpp"

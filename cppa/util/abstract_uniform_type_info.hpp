@@ -35,6 +35,8 @@
 #include "cppa/deserializer.hpp"
 #include "cppa/uniform_type_info.hpp"
 
+#include "cppa/util/type_traits.hpp"
+
 #include "cppa/detail/to_uniform_name.hpp"
 #include "cppa/detail/uniform_type_info_map.hpp"
 
@@ -61,15 +63,6 @@ class abstract_uniform_type_info : public uniform_type_info {
         return make_any_tuple(deref(instance));
     }
 
- protected:
-
-    abstract_uniform_type_info() {
-        auto uname = detail::to_uniform_name<T>();
-        auto cname = detail::mapped_name_by_decorated_name(uname.c_str());
-        if (cname == uname.c_str()) m_name = std::move(uname);
-        else m_name = cname;
-    }
-
     bool equals(const void* lhs, const void* rhs) const override {
         return eq(deref(lhs), deref(rhs));
     }
@@ -82,6 +75,15 @@ class abstract_uniform_type_info : public uniform_type_info {
         delete reinterpret_cast<T*>(instance);
     }
 
+ protected:
+
+    abstract_uniform_type_info() {
+        auto uname = detail::to_uniform_name<T>();
+        auto cname = detail::mapped_name_by_decorated_name(uname.c_str());
+        if (cname == uname.c_str()) m_name = std::move(uname);
+        else m_name = cname;
+    }
+
     static inline const T& deref(const void* ptr) {
         return *reinterpret_cast<const T*>(ptr);
     }
@@ -90,20 +92,40 @@ class abstract_uniform_type_info : public uniform_type_info {
         return *reinterpret_cast<T*>(ptr);
     }
 
+    // can be overridden in subclasses to compare POD types
+    // by comparing each individual member
+    virtual bool pod_mems_equals(const T&, const T&) const {
+        return false;
+    }
+
     std::string m_name;
 
  private:
 
     template<class C>
-    typename std::enable_if<std::is_empty<C>::value == true , bool>::type
+    typename std::enable_if<std::is_empty<C>::value, bool>::type
     eq(const C&, const C&) const {
         return true;
     }
 
     template<class C>
-    typename std::enable_if<std::is_empty<C>::value == false, bool>::type
+    typename std::enable_if<
+        !std::is_empty<C>::value && util::is_comparable<C, C>::value,
+        bool
+    >::type
     eq(const C& lhs, const C& rhs) const {
         return lhs == rhs;
+    }
+
+    template<class C>
+    typename std::enable_if<
+        !std::is_empty<C>::value
+            && std::is_pod<C>::value
+            && !util::is_comparable<C, C>::value,
+        bool
+    >::type
+    eq(const C& lhs, const C& rhs) const {
+        return pod_mems_equals(lhs, rhs);
     }
 
 };

@@ -9,7 +9,7 @@ std::string group_module = ...;
 std::string group_id = ...;
 auto grp = group::get(group_module, group_id);
 self->join(grp);
-send(grp, atom("test"));
+self->send(grp, atom("test"));
 self->leave(grp);
 \end{lstlisting}
 

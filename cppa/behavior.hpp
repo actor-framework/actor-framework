@@ -78,21 +78,10 @@ class behavior {
     behavior(const timeout_definition<F>& arg);
 
     template<typename F>
-    behavior(util::duration d, F f);
+    behavior(const util::duration& d, F f);
 
-    template<typename... Cs>
-    behavior(const match_expr<Cs...>& arg);
-
-    template<typename... Cs, typename T, typename... Ts>
-    behavior(const match_expr<Cs...>& arg0, const T& arg1, const Ts&... args);
-
-    template<typename F,
-             typename Enable = typename std::enable_if<
-                                      util::is_callable<F>::value
-                                   && !std::is_same<F, behavior>::value
-                                   && !std::is_same<F, partial_function>::value
-                               >::type>
-    behavior(F fun);
+    template<typename T, typename... Ts>
+    behavior(const T& arg, Ts&&... args);
 
     /**
      * @brief Invokes the timeout callback.
@@ -132,10 +121,11 @@ class behavior {
  * @brief Creates a behavior from a match expression and a timeout definition.
  * @relates behavior
  */
+
 template<typename... Cs, typename F>
 inline behavior operator,(const match_expr<Cs...>& lhs,
                           const timeout_definition<F>& rhs) {
-    return match_expr_convert(lhs, rhs);
+    return {lhs, rhs};
 }
 
 
@@ -143,25 +133,19 @@ inline behavior operator,(const match_expr<Cs...>& lhs,
  *             inline and template member function implementations            *
  ******************************************************************************/
 
-template<typename F, typename Enable>
-behavior::behavior(F fun)
-: m_impl(detail::match_expr_from_functor(std::move(fun)).as_behavior_impl()) { }
+template<typename T, typename... Ts>
+behavior::behavior(const T& arg, Ts&&... args)
+: m_impl(detail::match_expr_concat(
+             detail::lift_to_match_expr(arg),
+             detail::lift_to_match_expr(std::forward<Ts>(args))...)) { }
 
 template<typename F>
 behavior::behavior(const timeout_definition<F>& arg)
 : m_impl(detail::new_default_behavior(arg.timeout, arg.handler)) { }
 
 template<typename F>
-behavior::behavior(util::duration d, F f)
+behavior::behavior(const util::duration& d, F f)
 : m_impl(detail::new_default_behavior(d, f)) { }
-
-template<typename... Cs>
-behavior::behavior(const match_expr<Cs...>& arg)
-: m_impl(arg.as_behavior_impl()) { }
-
-template<typename... Cs, typename T, typename... Ts>
-behavior::behavior(const match_expr<Cs...>& v0, const T& v1, const Ts&... vs)
-: m_impl(detail::match_expr_concat(v0, v1, vs...)) { }
 
 inline behavior::behavior(impl_ptr ptr) : m_impl(std::move(ptr)) { }
 
@@ -177,7 +161,6 @@ template<typename T>
 inline optional<any_tuple> behavior::operator()(T&& arg) {
     return (m_impl) ? m_impl->invoke(std::forward<T>(arg)) : none;
 }
-
 
 inline auto behavior::as_behavior_impl() const -> const impl_ptr& {
     return m_impl;

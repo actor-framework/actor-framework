@@ -11,18 +11,19 @@ The default behavior for actors receiving such an exit message is to die for the
 Actors can \textit{trap} exit messages to handle them manually.
 
 \begin{lstlisting}
-actor_ptr worker = ...;
+actor worker = ...;
 // receive exit messages as regular messages
 self->trap_exit(true);
 // monitor spawned actor
 self->link_to(worker);
 // wait until worker exited
-become (
-  on(atom("EXIT"), exit_reason::normal) >> [] {
-    // worker finished computation
-  },
-  on(atom("EXIT"), arg_match) >> [](std::uint32_t reason) {
-    // worker died unexpectedly
+self->become (
+  [](const exit_msg& e) >> [=] {
+    if (e.reason == exit_reason::normal) {
+      // worker finished computation
+    else {
+      // worker died unexpectedly
+    }
   }
 );
 \end{lstlisting}
@@ -36,16 +37,17 @@ Unlike exit messages, down messages are always treated like any other ordinary m
 An actor will receive one down message for each time it called \lstinline^self->monitor(...)^, even if it adds a monitor to the same actor multiple times.
 
 \begin{lstlisting}
-actor_ptr worker = ...;
+actor worker = ...;
 // monitor spawned actor
 self->monitor(worker);
 // wait until worker exited
-receive (
-  on(atom("DOWN"), exit_reason::normal) >> [] {
-    // worker finished computation
-  },
-  on(atom("DOWN"), arg_match) >> [](std::uint32_t reason) {
-    // worker died unexpectedly
+self->become (
+  on(const down_msg& d) >> [] {
+    if (d.reason == exit_reason::normal) {
+      // worker finished computation
+    } else {
+      // worker died unexpectedly
+    }
   }
 );
 \end{lstlisting}
@@ -84,14 +86,14 @@ Thus, \lstinline^self^ refers to the terminating actor and not to the actor that
 
 \begin{lstlisting}
 auto worker = spawn(...);
-actor_ptr observer = self;
+actor observer = self;
 // "monitor" spawned actor
 worker->attach_functor([observer](std::uint32_t reason) {
   // this callback is invoked from worker
-  send(observer, atom("DONE"));
+  anon_send(observer, atom("DONE"));
 });
 // wait until worker exited
-become (
+self->become (
   on(atom("DONE")) >> [] {
     // worker terminated
   }

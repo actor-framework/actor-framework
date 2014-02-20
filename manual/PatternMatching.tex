@@ -73,6 +73,7 @@ Note that the second version does call \lstinline^on^ without template parameter
 Furthermore, \lstinline^arg_match^ must be passed as last parameter.
 If all types should be deduced from the callback signature, \lstinline^on_arg_match^ can be used.
 It is equal to \lstinline^on(arg_match)^.
+However, when using a pattern to initialize the behavior of an actor, \lstinline^on_arg_match^ is used implicitly whenever a functor is passed without preceding it with an \lstinline^on^ clause.
 
 \begin{lstlisting}
 on_arg_match >> [](const std::string& str) { /*...*/ }

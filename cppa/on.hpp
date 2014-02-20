@@ -411,20 +411,6 @@ class on_the_fly_rvalue_builder {
 
 constexpr detail::on_the_fly_rvalue_builder on_arg_match;
 
-// and even more convenience
-
-template<typename F,
-         class E = typename std::enable_if<util::is_callable<F>::value>::type>
-inline auto lift_to_match_expr(F fun) -> decltype(on_arg_match >> fun) {
-    return (on_arg_match >> fun);
-}
-
-template<typename T,
-         class E = typename std::enable_if<!util::is_callable<T>::value>::type>
-inline T lift_to_match_expr(T arg) {
-    return arg;
-}
-
 #endif // CPPA_DOCUMENTATION
 
 } // namespace cppa

@@ -154,8 +154,8 @@ class typed_behavior {
 
     template<typename T, typename... Ts>
     typed_behavior(T arg, Ts&&... args) {
-        set(match_expr_collect(lift_to_match_expr(std::move(arg)),
-                               lift_to_match_expr(std::forward<Ts>(args))...));
+        set(match_expr_collect(detail::lift_to_match_expr(std::move(arg)),
+                               detail::lift_to_match_expr(std::forward<Ts>(args))...));
     }
 
     template<typename... Cs>

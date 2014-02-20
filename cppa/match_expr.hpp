@@ -486,9 +486,6 @@ Result unroll_expr(PPFPs&, std::uint64_t, minus1l, const std::type_info&,
     return none;
 }
 
-template<typename A, typename B>
-struct wtf { };
-
 template<typename Result, class PPFPs, long N, typename PtrType, class Tuple>
 Result unroll_expr(PPFPs& fs,
                    std::uint64_t bitmask,
@@ -851,6 +848,16 @@ class match_expr {
 
 };
 
+template<typename T>
+struct is_match_expr {
+    static constexpr bool value = false;
+};
+
+template<typename... Cs>
+struct is_match_expr<match_expr<Cs...>> {
+    static constexpr bool value = true;
+};
+
 template<class List>
 struct match_expr_from_type_list;
 
@@ -864,7 +871,6 @@ inline match_expr<Lhs..., Rhs...> operator,(const match_expr<Lhs...>& lhs,
                                             const match_expr<Rhs...>& rhs) {
     return lhs.or_else(rhs);
 }
-
 
 template<typename... Cs>
 match_expr<Cs...>& match_expr_collect(match_expr<Cs...>& arg) {
@@ -987,13 +993,23 @@ behavior_impl_ptr concat_rec(const tdata<>& data,
     return combine(pfun, concat_rec(data, token, arg, args...));
 }
 
-template<typename T, typename... Ts>
-behavior_impl_ptr match_expr_concat(const T& arg, const Ts&... args) {
+template<typename T0, typename T1, typename... Ts>
+behavior_impl_ptr match_expr_concat(const T0& arg0,
+                                    const T1& arg1,
+                                    const Ts&... args) {
     detail::tdata<> dummy;
-    return concat_rec(dummy, util::empty_type_list{}, arg, args...);
+    return concat_rec(dummy, util::empty_type_list{}, arg0, arg1, args...);
 }
 
-template<typename F>
+template<typename T>
+behavior_impl_ptr match_expr_concat(const T& arg) {
+    return arg.as_behavior_impl();
+}
+
+// some more convenience functions
+
+template<typename F,
+         class E = typename std::enable_if<util::is_callable<F>::value>::type>
 match_expr<
     typename get_case<
         false,
@@ -1002,7 +1018,7 @@ match_expr<
         util::empty_type_list,
         util::empty_type_list
     >::type>
-match_expr_from_functor(F fun) {
+lift_to_match_expr(F fun) {
     typedef typename get_case<
                 false,
                 F,
@@ -1015,6 +1031,12 @@ match_expr_from_functor(F fun) {
                        typename result_type::second_type{
                            std::move(fun),
                            empty_value_guard{}}};
+}
+
+template<typename T,
+         class E = typename std::enable_if<!util::is_callable<T>::value>::type>
+inline T lift_to_match_expr(T arg) {
+    return arg;
 }
 
 } // namespace detail

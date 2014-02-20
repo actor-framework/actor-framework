@@ -6,10 +6,11 @@ using namespace std;
 using namespace cppa;
 
 behavior mirror(event_based_actor* self) {
-    // wait for messages
-    return (
-        // invoke this lambda expression if we receive a string
-        on_arg_match >> [=](const string& what) -> string {
+    // return the (initial) actor behavior
+    return {
+        // a handler for messages containing a single string
+        // that replies with a string
+        [=](const string& what) -> string {
             // prints "Hello World!" via aout (thread-safe cout wrapper)
             aout(self) << what << endl;
             // terminates this actor ('become' otherwise loops forever)
@@ -17,15 +18,15 @@ behavior mirror(event_based_actor* self) {
             // reply "!dlroW olleH"
             return string(what.rbegin(), what.rend());
         }
-    );
+    };
 }
 
 void hello_world(event_based_actor* self, const actor& buddy) {
     // send "Hello World!" to our buddy ...
     self->sync_send(buddy, "Hello World!").then(
-        // ... and wait for a response
-        on_arg_match >> [=](const string& what) {
-            // prints "!dlroW olleH"
+        // ... wait for a response ...
+        [=](const string& what) {
+            // ... and print it
             aout(self) << what << endl;
         }
     );
@@ -34,7 +35,7 @@ void hello_world(event_based_actor* self, const actor& buddy) {
 int main() {
     // create a new actor that calls 'mirror()'
     auto mirror_actor = spawn(mirror);
-    // create another actor that calls 'hello_world(mirror_actor)'
+    // create another actor that calls 'hello_world(mirror_actor)';
     spawn(hello_world, mirror_actor);
     // wait until all other actors we have spawned are done
     await_all_actors_done();

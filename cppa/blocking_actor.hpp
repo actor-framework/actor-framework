@@ -58,8 +58,7 @@ class blocking_actor
     /**************************************************************************
      *           utility stuff and receive() member function family           *
      **************************************************************************/
-
-    typedef std::chrono::high_resolution_clock::time_point timeout_type;
+ typedef std::chrono::high_resolution_clock::time_point timeout_type;
 
     struct receive_while_helper {
 
@@ -70,7 +69,7 @@ class blocking_actor
         void operator()(Ts&&... args) {
             static_assert(sizeof...(Ts) > 0,
                           "operator() requires at least one argument");
-            behavior bhvr = lift_and_convert(std::forward<Ts>(args)...);
+            behavior bhvr{std::forward<Ts>(args)...};
             while (m_stmt()) m_dq(bhvr);
         }
 
@@ -85,7 +84,7 @@ class blocking_actor
 
         template<typename... Ts>
         void operator()(Ts&&... args) {
-            behavior bhvr = lift_and_convert(std::forward<Ts>(args)...);
+            behavior bhvr{std::forward<Ts>(args)...};
             for ( ; begin != end; ++begin) m_dq(bhvr);
         }
 
@@ -111,7 +110,8 @@ class blocking_actor
     template<typename... Ts>
     void receive(Ts&&... args) {
         static_assert(sizeof...(Ts), "at least one argument required");
-        dequeue(lift_and_convert(std::forward<Ts>(args)...));
+        behavior bhvr{std::forward<Ts>(args)...};
+        dequeue(bhvr);
     }
 
     /**
@@ -120,7 +120,7 @@ class blocking_actor
      */
     template<typename... Ts>
     void receive_loop(Ts&&... args) {
-        behavior bhvr = lift_and_convert(std::forward<Ts>(args)...);
+        behavior bhvr{std::forward<Ts>(args)...};
         for (;;) dequeue(bhvr);
     }
 
@@ -191,8 +191,7 @@ class blocking_actor
      */
     template<typename... Ts>
     do_receive_helper do_receive(Ts&&... args) {
-        return { make_dequeue_callback()
-               , lift_and_convert(std::forward<Ts>(args)...)};
+        return {make_dequeue_callback(), behavior{std::forward<Ts>(args)...}};
     }
 
     optional<behavior&> sync_handler(message_id msg_id) override {

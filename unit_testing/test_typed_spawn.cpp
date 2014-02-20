@@ -49,7 +49,7 @@ bool operator==(const my_request& lhs, const my_request& rhs) {
 
 server_type::behavior_type typed_server1() {
     return {
-        on_arg_match >> [](const my_request& req) {
+        [](const my_request& req) {
             return req.a == req.b;
         }
     };

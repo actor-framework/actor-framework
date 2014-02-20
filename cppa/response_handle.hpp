@@ -129,7 +129,11 @@ class response_handle<Self, util::type_list<Ts...>, nonblocking_response_handle_
 
     response_handle& operator=(const response_handle&) = default;
 
-    template<typename F>
+    template<typename F,
+             typename Enable = typename std::enable_if<
+                                      util::is_callable<F>::value
+                                   && !is_match_expr<F>::value
+                               >::type>
     typed_continue_helper<
         typename detail::lifted_result_type<
             typename util::get_callable_trait<F>::result_type
@@ -177,7 +181,8 @@ class response_handle<Self, any_tuple, blocking_response_handle_tag> {
 
     template<typename... Cs, typename... Ts>
     void await(const match_expr<Cs...>& arg, const Ts&... args) {
-        await(match_expr_convert(arg, args...));
+        behavior bhvr{arg, args...};
+        await(bhvr);
     }
 
     template<typename... Fs>

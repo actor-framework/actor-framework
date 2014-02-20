@@ -83,7 +83,8 @@ class continuation_decorator : public detail::behavior_impl {
 behavior::behavior(const partial_function& fun) : m_impl(fun.m_impl) { }
 
 behavior behavior::add_continuation(continuation_fun fun) {
-    return {new continuation_decorator(std::move(fun), m_impl)};
+    return behavior::impl_ptr{new continuation_decorator(std::move(fun),
+                                                         m_impl)};
 }
 
 } // namespace cppa

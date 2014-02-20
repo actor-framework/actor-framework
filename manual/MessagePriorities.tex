@@ -6,30 +6,30 @@ This flag causes the actor to use a priority-aware mailbox implementation.
 It is not possible to change this implementation dynamically at runtime.
 
 \begin{lstlisting}
-void testee() {
+behavior testee(event_based_actor* self) {
   // send 'b' with normal priority
-  send(self, atom("b"));
+  self->send(self, atom("b"));
   // send 'a' with high priority
-  send({self, message_priority::high}, atom("a"));
+  self->send(message_priority::high, self, atom("a"));
   // terminate after receiving a 'b'
-  become (
-    on(atom("b")) >> [] {
-      aout << "received 'b' => quit" << endl;
+  return {
+    on(atom("b")) >> [=] {
+      aout(self) << "received 'b' => quit" << endl;
       self->quit();
     },
-    on(atom("a")) >> [] {
-      aout << "received 'a'" << endl;
+    on(atom("a")) >> [=] {
+      aout(self) << "received 'a'" << endl;
     },
-  );
+  };
 }
 
 int main() {
   // will print "received 'b' => quit"
   spawn(testee);
-  await_all_others_done();
+  await_all_actors_done();
   // will print "received 'a'" and then "received 'b' => quit"
   spawn<priority_aware>(testee);
-  await_all_others_done();
+  await_all_actors_done();
   shutdown();
 }
 \end{lstlisting}

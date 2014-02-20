@@ -79,11 +79,8 @@ class partial_function {
     partial_function& operator=(partial_function&&) = default;
     partial_function& operator=(const partial_function&) = default;
 
-    template<typename... Cs>
-    partial_function(const match_expr<Cs...>& arg);
-
-    template<typename... Cs, typename T, typename... Ts>
-    partial_function(const match_expr<Cs...>& arg0, const T& arg1, const Ts&... args);
+    template<typename T, typename... Ts>
+    partial_function(const T& arg, Ts&&... args);
 
     /**
      * @brief Returns @p true if this partial function is defined for the
@@ -121,44 +118,6 @@ class partial_function {
 
 };
 
-template<typename T>
-typename std::conditional<
-    may_have_timeout<T>::value,
-    behavior,
-    partial_function
->::type
-match_expr_convert(const T& arg) {
-    return {arg};
-}
-
-template<typename T0, typename T1, typename... Ts>
-typename std::conditional<
-    util::disjunction<
-        may_have_timeout<T0>::value,
-        may_have_timeout<T1>::value,
-        may_have_timeout<Ts>::value...
-    >::value,
-    behavior,
-    partial_function
->::type
-match_expr_convert(const T0& arg0, const T1& arg1, const Ts&... args) {
-    return detail::match_expr_concat(arg0, arg1, args...);
-}
-
-// calls match_expr_convert(lift_to_match_expr(args)...)
-template<typename... Ts>
-typename std::conditional<
-    util::disjunction<
-        may_have_timeout<Ts>::value...
-    >::value,
-    behavior,
-    partial_function
->::type
-lift_and_convert(Ts&&... args) {
-    static_assert(sizeof...(Ts) > 0, "at least one argument required");
-    return match_expr_convert(lift_to_match_expr(std::forward<Ts>(args))...);
-}
-
 template<typename... Cases>
 partial_function operator,(const match_expr<Cases...>& mexpr,
                            const partial_function& pfun) {
@@ -175,13 +134,11 @@ partial_function operator,(const partial_function& pfun,
  *             inline and template member function implementations            *
  ******************************************************************************/
 
-template<typename... Cs>
-partial_function::partial_function(const match_expr<Cs...>& arg)
-: m_impl(arg.as_behavior_impl()) { }
-
-template<typename... Cs, typename T, typename... Ts>
-partial_function::partial_function(const match_expr<Cs...>& arg0, const T& arg1, const Ts&... args)
-: m_impl(detail::match_expr_concat(arg0, arg1, args...)) { }
+template<typename T, typename... Ts>
+partial_function::partial_function(const T& arg, Ts&&... args)
+: m_impl(detail::match_expr_concat(
+             detail::lift_to_match_expr(arg),
+             detail::lift_to_match_expr(std::forward<Ts>(args))...)) { }
 
 inline bool partial_function::defined_at(const any_tuple& value) {
     return (m_impl) && m_impl->defined_at(value);
@@ -201,7 +158,9 @@ typename std::conditional<
     partial_function
 >::type
 partial_function::or_else(Ts&&... args) const {
-    auto tmp = match_expr_convert(std::forward<Ts>(args)...);
+    // using a behavior is safe here, because we "cast"
+    // it back to a partial_function when appropriate
+    behavior tmp{std::forward<Ts>(args)...};
     return m_impl->or_else(tmp.as_behavior_impl());
 }
 

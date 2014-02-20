@@ -28,8 +28,7 @@ struct foo { int a; int b; };
 
 int main() {
   announce<foo>(&foo::a, &foo::b);
-  send(self, foo{1,2});
-  return 0;
+  // ... foo can now safely be used in messages ...
 }
 \end{lstlisting}
 

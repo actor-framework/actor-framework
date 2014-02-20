@@ -1,19 +1,17 @@
 \section{Strongly Typed Actors}
 
 Strongly typed actors provide a convenient way of defining type-safe messaging interfaces.
-Unlike ``dynamic actors'', typed actors are not allowed to change their behavior at runtime, neither are typed actors allowed to use guard expressions.
-When calling \lstinline^become^ in a strongly typed actor, the actor will be killed with exit reason \lstinline^unallowed_function_call^.
+Unlike untyped actorsd, typed actors are not allowed to use guard expressions.
+When calling \lstinline^become^ in a strongly typed actor, \emph{all} message handlers from the typed interface must be set.
 
-Typed actors use \lstinline^typed_actor_ptr<...>^ instead of \lstinline^actor_ptr^, whereas the template parameters hold the messaging interface.
-For example, an actor responding to two integers with a dobule would use the type \lstinline^typed_actor_ptr<replies_to<int, int>::with<double>>^.
-
+Typed actors use handles of type \lstinline^typed_actor<...>^ rather than \lstinline^actor^, whereas the template parameters hold the messaging interface.
+For example, an actor responding to two integers with a dobule would use the type \lstinline^typed_actor<replies_to<int, int>::with<double>>^.
 All functions for message passing, linking and monitoring are overloaded to accept both types of actors.
-As of version 0.8, strongly typed actors cannot be published and do not support message priorities (those are planned feature for future releases).
 
 \subsection{Spawning Typed Actors}
 \label{sec:strong:spawn}
 
-Actors are spawned using the function \lstinline^spawn_typed^.
+Typed actors are spawned using the function \lstinline^spawn_typed^.
 The argument to this function call \emph{must} be a match expression as shown in the example below, because the runtime of libcppa needs to evaluate the signature of each message handler.
 
 \begin{lstlisting}
@@ -46,32 +44,94 @@ subtype2 p3 = p0;
 \clearpage
 \subsection{Class-based Typed Actors}
 
-Typed actors can be implemented using a class by inheriting from \lstinline^typed_actor<...>^, whereas the template parameter pack denotes the messaging interface.
-Derived classes have to implemented the pure virtual member function \lstinline^make_behavior^, as shown in the example below.
+Typed actors are spawned using the function \lstinline^spawn_typed^ and define their message passing interface as list of \lstinline^replies_to<...>::with<...>^ statements.
+This interface is used in (1) \lstinline^typed_event_based_actor<...>^, which is the base class for typed actors, (2) the handle type \lstinline^typed_actor<...>^, and (3) \lstinline^typed_behavior<...>^, i.e., the behavior definition for typed actors.
+Since this is rather redundant, the actor handle provides definitions for the behavior as well as the base class, as shown in the example below.
+It is worth mentioning that all typed actors always use the event-based implementation, i.e., there is no typed actor implementation providing a blocking API.
 
 \begin{lstlisting}
-// implementation
-class typed_testee : public typed_actor<replies_to<int>::with<bool>> {
+struct shutdown_request { };
+struct plus_request { int a; int b; };
+struct minus_request { int a; int b; };
 
- protected:
+typedef typed_actor<replies_to<plus_request>::with<int>,
+                    replies_to<minus_request>::with<int>,
+                    replies_to<shutdown_request>::with<void>>
+        calculator_type;
 
-  behavior_type make_behavior() final {
-    // returning a non-matching expression 
-    // results in a compile-time error
-    return (
-      on_arg_match >> [](int value) {
-        return value == 42;
-      }
-    );
-  }
+calculator_type::behavior_type
+typed_calculator(calculator_type::pointer self) {
+    return {
+        [](const plus_request& pr) {
+            return pr.a + pr.b;
+        },
+        [](const minus_request& pr) {
+            return pr.a - pr.b;
+        },
+        [=](const shutdown_request&) {
+            self->quit();
+        }
+    };
+}
 
+class typed_calculator_class : public calculator_type::base {
+ protected: behavior_type make_behavior() override {
+        return {
+            [](const plus_request& pr) {
+                return pr.a + pr.b;
+            },
+            [](const minus_request& pr) {
+                return pr.a - pr.b;
+            },
+            [=](const shutdown_request&) {
+                quit();
+            }
+        };
+    }
 };
-
-// instantiation
-auto testee = spawn_typed<typed_testee>();
 \end{lstlisting}
 
-It is worth mentioning that \lstinline^typed_actor^ implements the member function \lstinline^init()^ using the \lstinline^final^ qualifier.
-Hence, derived classes are not allowed to override \lstinline^init()^.
-However, typed actors are allowed to override other member functions such as \lstinline^on_exit()^.
-The return type of \lstinline^make_behavior^ is \lstinline^typed_behavior<...>^, which is aliased as \lstinline^behavior_type^ for convenience.
+\clearpage
+\begin{lstlisting}
+void tester(event_based_actor* self, const calculator_type& testee) {
+    self->link_to(testee);
+    // will be invoked if we receive an unexpected response message
+    self->on_sync_failure([=] {
+        aout(self) << "AUT (actor under test) failed" << endl;
+        self->quit(exit_reason::user_shutdown);
+    });
+    // first test: 2 + 1 = 3
+    self->sync_send(testee, plus_request{2, 1}).then(
+        [=](int r1) {
+            assert(r1 == 3);
+            // second test: 2 - 1 = 1
+            self->sync_send(testee, minus_request{2, 1}).then(
+                [=](int r2) {
+                    assert(r2 == 1);
+                    // both tests succeeded
+                    aout(self) << "AUT (actor under test) "
+                               << "seems to be ok"
+                               << endl;
+                    self->send(testee, shutdown_request{});
+                }
+            );
+        }
+    );
+}
+
+int main() {
+    // announce custom message types
+    announce<shutdown_request>();
+    announce<plus_request>(&plus_request::a, &plus_request::b);
+    announce<minus_request>(&minus_request::a, &minus_request::b);
+    // test function-based impl
+    spawn(tester, spawn_typed(typed_calculator));
+    await_all_actors_done();
+    // test class-based impl
+    spawn(tester, spawn_typed<typed_calculator_class>());
+    await_all_actors_done();
+    // done
+    shutdown();
+    return 0;
+}
+\end{lstlisting}

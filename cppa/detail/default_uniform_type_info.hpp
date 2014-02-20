@@ -405,7 +405,50 @@ unique_uti new_member_tinfo(GRes (C::*getter)() const,
 template<typename T>
 class default_uniform_type_info : public util::abstract_uniform_type_info<T> {
 
-    std::vector<unique_uti> m_members;
+ public:
+
+    template<typename... Ts>
+    default_uniform_type_info(Ts&&... args) {
+        push_back(std::forward<Ts>(args)...);
+    }
+
+    default_uniform_type_info() {
+        typedef member_tinfo<T, fake_access_policy<T> > result_type;
+        m_members.push_back(unique_uti(new result_type));
+    }
+
+    void serialize(const void* obj, serializer* s) const override {
+        // serialize each member
+        for (auto& m : m_members) m->serialize(obj, s);
+    }
+
+    void deserialize(void* obj, deserializer* d) const override {
+        // deserialize each member
+        for (auto& m : m_members) m->deserialize(obj, d);
+    }
+
+ protected:
+
+    bool pod_mems_equals(const T& lhs, const T& rhs) const override {
+        return pod_eq(lhs, rhs);
+    }
+
+ private:
+
+    template<class C>
+    typename std::enable_if<std::is_pod<C>::value, bool>::type
+    pod_eq(const C& lhs, const C& rhs) const {
+        for (auto& member : m_members) {
+            if (!member->equals(&lhs, &rhs)) return false;
+        }
+        return true;
+    }
+
+    template<class C>
+    typename std::enable_if<!std::is_pod<C>::value, bool>::type
+    pod_eq(const C&, const C&) const {
+        return false;
+    }
 
     // terminates recursion
     inline void push_back() { }
@@ -459,27 +502,7 @@ class default_uniform_type_info : public util::abstract_uniform_type_info<T> {
         push_back(std::forward<Ts>(args)...);
     }
 
- public:
-
-    template<typename... Ts>
-    default_uniform_type_info(Ts&&... args) {
-        push_back(std::forward<Ts>(args)...);
-    }
-
-    default_uniform_type_info() {
-        typedef member_tinfo<T, fake_access_policy<T> > result_type;
-        m_members.push_back(unique_uti(new result_type));
-    }
-
-    void serialize(const void* obj, serializer* s) const override {
-        // serialize each member
-        for (auto& m : m_members) m->serialize(obj, s);
-    }
-
-    void deserialize(void* obj, deserializer* d) const override {
-        // deserialize each member
-        for (auto& m : m_members) m->deserialize(obj, d);
-    }
+    std::vector<unique_uti> m_members;
 
 };
 

@@ -12,7 +12,8 @@ Thread-mapped actors can be used to opt-out of this cooperative scheduling.
 \subsection{Implicit \texttt{self} Pointer}
 
 When using a function or functor to implement an actor, the first argument \emph{can} be used to capture a pointer to the actor itself.
-The type of this pointer is \lstinline^event_based_actor^ or \lstinline^blocking_actor^ when using the \lstinline^blocking_api^ flag or their typed counterparts when dealing with typed actors.
+The type of this pointer is \lstinline^event_based_actor*^ per default and \lstinline^blocking_actor*^ when using the \lstinline^blocking_api^ flag.
+When dealing with typed actors, the types are \lstinline^typed_event_based_actor<...>*^ and \lstinline^typed_blocking_actor<...>*^.
 
 \clearpage
 \subsection{Interface}
@@ -33,26 +34,20 @@ class local_actor;
   \hline
   \lstinline^bool trap_exit()^ & Checks whether this actor traps exit messages \\
   \hline
-  \lstinline^bool chaining()^ & Checks whether this actor uses the ``chained send'' optimization (see Section \ref{Sec::Send::ChainedSend}) \\
-  \hline
   \lstinline^any_tuple last_dequeued()^ & Returns the last message that was dequeued from the actor's mailbox\newline\textbf{Note}: Only set during callback invocation \\
   \hline
-  \lstinline^actor_ptr last_sender()^ & Returns the sender of the last dequeued message\newline\textbf{Note$_{1}$}: Only set during callback invocation\newline\textbf{Note$_{2}$}: Used implicitly to send response messages (see Section \ref{Sec::Send::Reply}) \\
+  \lstinline^actor_addr last_sender()^ & Returns the sender of the last dequeued message\newline\textbf{Note}: Only set during callback invocation \\
   \hline
-  \lstinline^vector<group_ptr> joined_groups()^ & Returns all subscribed groups \\
+  \lstinline^vector<group> joined_groups()^ & Returns all subscribed groups \\
   \hline
   \\
   \multicolumn{2}{l}{\textbf{Modifiers}\vspace{3pt}} \\
   \hline
   \lstinline^void trap_exit(bool enabled)^ & Enables or disables trapping of exit messages \\
   \hline
-  \lstinline^void chaining(bool enabled)^ & Enables or disables chained send \\
+  \lstinline^void join(const group& g)^ & Subscribes to group \lstinline^g^ \\
   \hline
-  \lstinline^void join(const group_ptr& g)^ & Subscribes to group \lstinline^g^ \\
-  \hline
-  \lstinline^void leave(const group_ptr& g)^ & Unsubscribes group \lstinline^g^ \\
-  \hline
-  \lstinline^auto make_response_handle()^ & Creates a handle that can be used to respond to the last received message later on, e.g., after receiving another message \\
+  \lstinline^void leave(const group& g)^ & Unsubscribes group \lstinline^g^ \\
   \hline
   \lstinline^void on_sync_failure(auto fun)^ & Sets a handler, i.e., a functor taking no arguments, for unexpected synchronous response messages (default action is to kill the actor for reason \lstinline^unhandled_sync_failure^) \\
   \hline
@@ -61,8 +56,6 @@ class local_actor;
   \lstinline^void monitor(actor_ptr whom)^ & Adds a unidirectional monitor to \lstinline^whom^ (see Section \ref{Sec::Management::Monitors}) \\
   \hline
   \lstinline^void demonitor(actor_ptr whom)^ & Removes a monitor from \lstinline^whom^ \\
-  \hline
-  \lstinline^void exec_behavior_stack()^ & Executes an actor's behavior stack until it is empty \\
   \hline
   \lstinline^bool has_sync_failure_handler()^ & Checks wheter this actor has a user-defined sync failure handler \\
   \hline

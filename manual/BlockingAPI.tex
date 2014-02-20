@@ -13,7 +13,7 @@ It takes a partial function that is applied to the elements in the mailbox until
 An actor calling \lstinline^receive^ is blocked until it successfully dequeued a message from its mailbox or an optional timeout occurs.
 
 \begin{lstlisting}
-receive (
+self->receive (
   on<int>().when(_x1 > 0) >> // ...
 );
 \end{lstlisting}
@@ -80,9 +80,9 @@ The examples above illustrate the correct usage of the three loops \lstinline^re
 It is possible to nest receives and receive loops.
 
 \begin{lstlisting}
-receive_loop (
-  on<int>() >> [](int value1) {
-    receive (
+self->receive_loop (
+  on<int>() >> [&](int value1) {
+    self->receive (
       on<float>() >> [&](float value2) {
         cout << value1 << " => " << value2 << endl;
       }
@@ -94,27 +94,18 @@ receive_loop (
 \clearpage
 \subsection{Receiving Synchronous Responses}
 
+Analogous to \lstinline^sync_send(...).then(...)^ for event-based actors, blocking actors can use \lstinline^sync_send(...).await(...)^.
+
 \begin{lstlisting}
-actor_ptr testee = ...; // replies with a string to 'get'
-
-auto future = sync_send(testee, atom("get"));
-receive_response (future) (
-  on_arg_match >> [&](const std::string& str) {
-    // handle str
-  },
-  after(std::chrono::seconds(30)) >> [&]() {
-    // handle error
-  }
-);
-
-// or:
-
-sync_send(testee, atom("get")).await (
-  on_arg_match >> [&](const std::string& str) {
-    // handle str
-  },
-  after(std::chrono::seconds(30)) >> [&]() {
-    // handle error
-  }
-);
+void foo(blocking_actor* self, actor testee) {
+  // testee replies with a string to 'get'
+  self->sync_send(testee, atom("get")).await(
+    [&](const std::string& str) {
+      // handle str
+    },
+    after(std::chrono::seconds(30)) >> [&]() {
+      // handle error
+    }
+  );
+}
 \end{lstlisting}

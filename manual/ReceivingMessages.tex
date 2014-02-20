@@ -8,15 +8,14 @@ The given behavior is then executed until it is replaced by another call to \lst
 
 \subsection{Class-based actors}
 
-A class-based actor is a subtype of \lstinline^event_based_actor^ and must implement the pure virtual member function \lstinline^init^.
-An implementation of \lstinline^init^ shall set an initial behavior by using \lstinline^become^.
+A class-based actor is a subtype of \lstinline^event_based_actor^ and must implement the pure virtual member function \lstinline^make_behavior^ returning the initial behavior.
 
 \begin{lstlisting}
 class printer : public event_based_actor {
   behavior make_behavior() override {
     return {
       others() >> [] {
-        cout << to_string(self->last_received()) << endl;
+        cout << to_string(last_received()) << endl;
       }
     };
   }
@@ -28,11 +27,11 @@ This base class simply returns \lstinline^init_state^ (defined in the subclass) 
 
 \begin{lstlisting}
 struct printer : sb_actor<printer> {
-  behavior init_state = (
+  behavior init_state {
     others() >> [] {
       cout << to_string(self->last_received()) << endl;
     }
-  );
+  };
 };
 \end{lstlisting}
 
@@ -46,7 +45,7 @@ class fixed_stack : public sb_actor<fixed_stack> {
 
     friend class sb_actor<fixed_stack>;
 
-    size_t max_size = 10;
+    size_t max_size;
 
     vector<int> data;
 
@@ -103,22 +102,22 @@ An actor can set a new behavior by calling \lstinline^become^ with the \lstinlin
 
 \begin{lstlisting}
 // receives {int, float} sequences
-void testee() {
-  become (
-    on_arg_match >> [=](int value1) {
-      become (
+behavior testee(event_based_actor* self) {
+  return {
+    [=](int value1) {
+      self->become (
         // the keep_behavior policy stores the current behavior
         // on the behavior stack to be able to return to this
         // behavior later on by calling unbecome()
         keep_behavior,
-        on_arg_match >> [=](float value2) {
+        [=](float value2) {
           cout << value1 << " => " << value2 << endl;
           // restore previous behavior
-          unbecome();
+          self->unbecome();
         }
       );
     }
-  );
+  };
 }
 \end{lstlisting}
 
@@ -146,16 +145,16 @@ But often, we need to be able to recover if an expected messages does not arrive
 
 using std::endl;
 
-void eager_actor() {
-  become (
-    on_arg_match >> [](int i) { /* ... */ },
-    on_arg_match >> [](float i) { /* ... */ },
+behavior eager_actor(event_based_actor* self) {
+  return {
+    [](int i) { /* ... */ },
+    [](float i) { /* ... */ },
     others() >> [] { /* ... */ },
-    after(std::chrono::seconds(10)) >> []() {
-      aout << "received nothing within 10 seconds..." << endl;
+    after(std::chrono::seconds(10)) >> [] {
+      aout(self) << "received nothing within 10 seconds..." << endl;
       // ...
     }
-  );
+  };
 }
 \end{lstlisting}
 
@@ -181,18 +180,18 @@ Afterwards, the server returns to its initial behavior, i.e., awaits the next \l
 The server actor will exit for reason \lstinline^user_defined^ whenever it receives a message that is neither a request, nor an idle message.
 
 \begin{lstlisting}
-void server() {
+behavior server(event_based_actor* self) {
   auto die = [=] { self->quit(exit_reason::user_defined); };
-  become (
+  return {
     on(atom("idle")) >> [=] {
       auto worker = last_sender();
-      become (
+      self->become (
         keep_behavior,
         on(atom("request")) >> [=] {
           // forward request to idle worker
-          forward_to(worker);
+          self->forward_to(worker);
           // await next idle message
-          unbecome();
+          self->unbecome();
         },
         on(atom("idle")) >> skip_message,
         others() >> die
@@ -200,6 +199,6 @@ void server() {
     },
     on(atom("request")) >> skip_message,
     others() >> die
-  );
+  };
 }
 \end{lstlisting}

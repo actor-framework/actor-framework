@@ -349,3 +349,5 @@ unit_testing/test_typed_spawn.cpp
 unit_testing/test_uniform_type.cpp
 unit_testing/test_yield_interface.cpp
 cppa/may_have_timeout.hpp
+examples/message_passing/typed_calculator.cpp
+examples/aout.cpp
