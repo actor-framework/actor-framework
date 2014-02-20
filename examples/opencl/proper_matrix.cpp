@@ -142,7 +142,7 @@ inline bool operator!=(const square_matrix<Size>& lhs,
 
 using matrix_type = square_matrix<matrix_size>;
 
-void multiplier() {
+void multiplier(event_based_actor* self) {
 
     // create two matrices with ascending values
     matrix_type m1;
@@ -182,7 +182,7 @@ void multiplier() {
 
     // send both matrices to the actor and
     // wait for results in form of a matrix_type
-    sync_send(worker, move(m1), move(m2)).then(
+    self->sync_send(worker, move(m1), move(m2)).then(
         [](const matrix_type& result) {
             cout << "result:" << endl << to_string(result);
         }
@@ -194,7 +194,7 @@ int main() {
     // it must be annouced to libcppa
     announce<matrix_type>();
     spawn(multiplier);
-    await_all_others_done();
+    await_all_actors_done();
     shutdown();
     return 0;
 }

@@ -74,7 +74,7 @@ void print_as_matrix(const vector<float>& matrix) {
     }
 }
 
-void multiplier() {
+void multiplier(event_based_actor* self) {
     // the opencl actor only understands vectors
     // so these vectors represent the matrices
     vector<float> m1(matrix_size * matrix_size);
@@ -99,11 +99,15 @@ void multiplier() {
     //          creates matrix_size * matrix_size global work items
     // 4th arg: offsets for global dimensions (optional)
     // 5th arg: local dimensions (optional)
+    // 6th arg: number of elements in the result buffer
     auto worker = spawn_cl<float*(float*,float*)>(kernel_source,
                                                   kernel_name,
-                                                  {matrix_size, matrix_size});
+                                                  {matrix_size, matrix_size},
+                                                  {},
+                                                  {},
+                                                  matrix_size * matrix_size);
     // send both matrices to the actor and wait for a result
-    sync_send(worker, move(m1), move(m2)).then(
+    self->sync_send(worker, move(m1), move(m2)).then(
         [](const vector<float>& result) {
             cout << "result: " << endl;
             print_as_matrix(result);
@@ -114,7 +118,7 @@ void multiplier() {
 int main() {
     announce<vector<float>>();
     spawn(multiplier);
-    await_all_others_done();
+    await_all_actors_done();
     shutdown();
     return 0;
 }

@@ -56,6 +56,11 @@ namespace io {
 class broker;
 } // namespace io
 
+namespace opencl {
+template <typename Signature>
+class actor_facade;
+} // namespace opencl
+
 namespace detail {
 class raw_access;
 } // namespace detail
@@ -74,6 +79,11 @@ struct is_convertible_to_actor {
                                 || std::is_base_of<actor_proxy, T>::value
                                 || std::is_base_of<blocking_actor, T>::value
                                 || std::is_base_of<event_based_actor, T>::value;
+};
+
+template<typename T>
+struct is_convertible_to_actor<opencl::actor_facade<T>> {
+    static constexpr bool value = true;
 };
 
 /**

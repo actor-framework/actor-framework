@@ -233,7 +233,6 @@ if (ENABLE_OPENCL)
       ${LIBCPPA_SRC} 
       src/opencl/global.cpp
       src/opencl/program.cpp
-      src/opencl/actor_facade.cpp
       src/opencl/opencl_metainfo.cpp)
   add_definitions(-DCPPA_OPENCL)
 endif (ENABLE_OPENCL)

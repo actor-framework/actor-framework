@@ -16,9 +16,28 @@ using namespace cppa::opencl;
 namespace {
 
 using ivec = vector<int>;
+using fvec = vector<float>;
 
 constexpr size_t matrix_size = 4;
+constexpr size_t array_size = 32;
+
+constexpr int magic_number = 23;
+
+// since we do currently not support local memory arguments
+// this size is fixed in the reduce kernel code
+constexpr size_t reduce_buffer_size = 512 * 8;
+constexpr size_t reduce_local_size  = 512;
+constexpr size_t reduce_work_groups = reduce_buffer_size / reduce_local_size;
+constexpr size_t reduce_global_size = reduce_buffer_size;
+constexpr size_t reduce_result_size = reduce_work_groups;
+
 constexpr const char* kernel_name = "matrix_square";
+constexpr const char* kernel_name_result_size = "result_size";
+constexpr const char* kernel_name_compiler_flag = "compiler_flag";
+constexpr const char* kernel_name_reduce = "reduce";
+constexpr const char* kernel_name_const = "const_mod";
+
+constexpr const char* compiler_flag = "-D OPENCL_CPPA_TEST_FLAG";
 
 constexpr const char* kernel_source = R"__(
     __kernel void matrix_square(__global int* matrix,
@@ -35,8 +54,62 @@ constexpr const char* kernel_source = R"__(
 )__";
 
 constexpr const char* kernel_source_error = R"__(
-    __kernel void matrix_square(__global int*) {
+    __kernel void missing(__global int*) {
         size_t semicolon
+    }
+)__";
+
+constexpr const char* kernel_source_compiler_flag = R"__(
+    __kernel void compiler_flag(__global int* input,
+                                __global int* output) {
+        size_t x = get_global_id(0);
+#ifdef OPENCL_CPPA_TEST_FLAG
+        output[x] = input[x];
+#else
+        output[x] = 0;
+#endif
+    }
+)__";
+
+// http://developer.amd.com/resources/documentation-articles/articles-whitepapers/
+// opencl-optimization-case-study-simple-reductions
+constexpr const char* kernel_source_reduce = R"__(
+    __kernel void reduce(__global int* buffer,
+                         __global int* result) {
+        __local int scratch[512];
+        size_t length = get_global_size(0);
+        size_t global_index = get_global_id(0);
+        int accumulator = INFINITY;
+        // Loop sequentially over chunks of input vector
+        while (global_index < length) {
+            int element = buffer[global_index];
+            accumulator = (accumulator < element) ? accumulator : element;
+            global_index += length;
+        }
+
+        // Perform parallel reduction
+        int local_index = get_local_id(0);
+        scratch[local_index] = accumulator;
+        barrier(CLK_LOCAL_MEM_FENCE);
+        for(int offset = get_local_size(0) / 2; offset > 0; offset = offset / 2) {
+            if (local_index < offset) {
+                int other = scratch[local_index + offset];
+                int mine = scratch[local_index];
+                scratch[local_index] = (mine < other) ? mine : other;
+            }
+            barrier(CLK_LOCAL_MEM_FENCE);
+        }
+        if (local_index == 0) {
+            result[get_group_id(0)] = scratch[0];
+        }
+    }
+)__";
+
+constexpr const char* kernel_source_const = R"__(
+    __kernel void const_mod(__constant int* input,
+                            __global int* output) {
+        size_t idx = get_global_id(0);
+        output[idx] = input[0];
     }
 )__";
 
@@ -102,13 +175,11 @@ inline bool operator!=(const square_matrix<Size>& lhs,
 
 using matrix_type = square_matrix<matrix_size>;
 
-int main() {
-    CPPA_TEST(test_opencl);
+void test_opencl() {
 
-    announce<ivec>();
-    announce<matrix_type>();
+    scoped_actor self;
 
-    const ivec expected1{ 56, 62, 68, 74
+    const ivec expected1{  56,  62,  68,  74
                         , 152, 174, 196, 218
                         , 248, 286, 324, 362
                         , 344, 398, 452, 506};
@@ -117,9 +188,9 @@ int main() {
                                          kernel_name,
                                          {matrix_size, matrix_size});
     ivec m1(matrix_size * matrix_size);
-    iota(m1.begin(), m1.end(), 0);
-    send(worker1, move(m1));
-    receive (
+    iota(begin(m1), end(m1), 0);
+    self->send(worker1, move(m1));
+    self->receive (
         on_arg_match >> [&] (const ivec& result) {
             CPPA_CHECK(equal(begin(expected1), end(expected1), begin(result)));
         }
@@ -129,9 +200,9 @@ int main() {
                                          kernel_name,
                                          {matrix_size, matrix_size});
     ivec m2(matrix_size * matrix_size);
-    iota(m2.begin(), m2.end(), 0);
-    send(worker2, move(m2));
-    receive (
+    iota(begin(m2), end(m2), 0);
+    self->send(worker2, move(m2));
+    self->receive (
         on_arg_match >> [&] (const ivec& result) {
             CPPA_CHECK(equal(begin(expected1), end(expected1), begin(result)));
         }
@@ -157,8 +228,8 @@ int main() {
     auto worker3 = spawn_cl(program::create(kernel_source), kernel_name,
                             map_args, map_results,
                             {matrix_size, matrix_size});
-    send(worker3, move(m3));
-    receive (
+    self->send(worker3, move(m3));
+    self->receive (
         on_arg_match >> [&] (const matrix_type& result) {
             CPPA_CHECK(expected2 == result);
         }
@@ -170,8 +241,8 @@ int main() {
                             map_args, map_results,
                             {matrix_size, matrix_size}
     );
-    send(worker4, move(m4));
-    receive (
+    self->send(worker4, move(m4));
+    self->receive (
         on_arg_match >> [&] (const matrix_type& result) {
             CPPA_CHECK(expected2 == result);
         }
@@ -185,8 +256,65 @@ int main() {
         CPPA_CHECK_EQUAL("clBuildProgram: CL_BUILD_PROGRAM_FAILURE", exc.what());
     }
 
-    cppa::await_all_others_done();
-    cppa::shutdown();
+    // test for opencl compiler flags
+    ivec arr5(array_size);
+    iota(begin(arr5), end(arr5), 0);
+    auto prog5 = program::create(kernel_source_compiler_flag, compiler_flag);
+    auto worker5 = spawn_cl<ivec(ivec&)>(prog5, kernel_name_compiler_flag, {array_size});
+    self->send(worker5, move(arr5));
+
+    ivec expected3(array_size);
+    iota(begin(expected3), end(expected3), 0);
+    self->receive (
+        on_arg_match >> [&] (const ivec& result) {
+            CPPA_CHECK(equal(begin(expected3), end(expected3), begin(result)));
+        }
+    );
+
+    // test for manuel return size selection
+    ivec arr6(reduce_buffer_size);
+    int n{static_cast<int>(arr6.capacity())};
+    generate(begin(arr6), end(arr6), [&]{ return --n; });
+    auto worker6 = spawn_cl<ivec(ivec&)>(kernel_source_reduce,
+                                         kernel_name_reduce,
+                                         {reduce_global_size},
+                                         {},
+                                         {reduce_local_size},
+                                         reduce_result_size);
+    self->send(worker6, move(arr6));
+    fvec expected4{3584, 3072, 2560, 2048, 1536, 1024, 512, 0};
+    self->receive (
+        on_arg_match >> [&] (const ivec& result) {
+            CPPA_CHECK(equal(begin(expected4), end(expected4), begin(result)));
+        }
+    );
+
+
+    // constant memory arguments
+    ivec arr7{magic_number};
+    auto worker7 = spawn_cl<ivec(ivec&)>(kernel_source_const,
+                                         kernel_name_const,
+                                         {magic_number});
+    self->send(worker7, move(arr7));
+    ivec expected5(magic_number);
+    fill(begin(expected5), end(expected5), magic_number);
+    self->receive(
+        on_arg_match >> [&] (const ivec& result) {
+            CPPA_CHECK(equal(begin(expected5), end(expected5), begin(result)));
+        }
+    );
+
+}
+
+int main() {
+    CPPA_TEST(test_opencl);
+
+    announce<ivec>();
+    announce<matrix_type>();
+
+    test_opencl();
+    await_all_actors_done();
+    shutdown();
 
     return CPPA_TEST_RESULT();
 }

@@ -72,18 +72,18 @@ struct cl_spawn_helper<R (Ts...), void> {
     using map_res_fun = typename impl::result_mapping;
 
     template<typename... Us>
-    actor_ptr operator()(map_arg_fun f0,
-                         map_res_fun f1,
-                         const opencl::program& p,
-                         const char* fname,
-                         Us&&... args) const {
+    actor operator()(map_arg_fun f0,
+                     map_res_fun f1,
+                     const opencl::program& p,
+                     const char* fname,
+                     Us&&... args) const {
         using std::move;
         using std::forward;
         return impl::create(p, fname, move(f0), move(f1), forward<Us>(args)...);
     }
 
     template<typename... Us>
-    actor_ptr operator()(const opencl::program& p,
+    actor operator()(const opencl::program& p,
                          const char* fname,
                          Us&&... args) const {
         using std::move;
@@ -118,14 +118,15 @@ struct cl_spawn_helper<std::function<optional<cow_tuple<Ts...>> (any_tuple)>,
  *                            failed.
  */
 template<typename Signature, typename... Ts>
-inline actor_ptr spawn_cl(const opencl::program& prog,
-                          const char* fname,
-                          const opencl::dim_vec& dims,
-                          const opencl::dim_vec& offset = {},
-                          const opencl::dim_vec& local_dims = {}) {
+inline actor spawn_cl(const opencl::program& prog,
+                      const char* fname,
+                      const opencl::dim_vec& dims,
+                      const opencl::dim_vec& offset = {},
+                      const opencl::dim_vec& local_dims = {},
+                      size_t result_size = 0) {
     using std::move;
     detail::cl_spawn_helper<Signature> f;
-    return f(prog, fname, dims, offset, local_dims);
+    return f(prog, fname, dims, offset, local_dims, result_size);
 }
 
 /**
@@ -136,17 +137,19 @@ inline actor_ptr spawn_cl(const opencl::program& prog,
  *                            occured, or @p clCreateKernel failed.
  */
 template<typename Signature, typename... Ts>
-inline actor_ptr spawn_cl(const char* source,
-                          const char* fname,
-                          const opencl::dim_vec& dims,
-                          const opencl::dim_vec& offset = {},
-                          const opencl::dim_vec& local_dims = {}) {
+inline actor spawn_cl(const char* source,
+                      const char* fname,
+                      const opencl::dim_vec& dims,
+                      const opencl::dim_vec& offset = {},
+                      const opencl::dim_vec& local_dims = {},
+                      size_t result_size = 0) {
     using std::move;
     return spawn_cl<Signature, Ts...>(opencl::program::create(source),
                                       fname,
                                       dims,
                                       offset,
-                                      local_dims);
+                                      local_dims,
+                                      result_size);
 }
 
 /**
@@ -159,13 +162,14 @@ inline actor_ptr spawn_cl(const char* source,
  *                            failed.
  */
 template<typename MapArgs, typename MapResult>
-inline actor_ptr spawn_cl(const opencl::program& prog,
-                          const char* fname,
-                          MapArgs map_args,
-                          MapResult map_result,
-                          const opencl::dim_vec& dims,
-                          const opencl::dim_vec& offset = {},
-                          const opencl::dim_vec& local_dims = {}) {
+inline actor spawn_cl(const opencl::program& prog,
+                      const char* fname,
+                      MapArgs map_args,
+                      MapResult map_result,
+                      const opencl::dim_vec& dims,
+                      const opencl::dim_vec& offset = {},
+                      const opencl::dim_vec& local_dims = {},
+                      size_t result_size = 0) {
     using std::move;
     typedef typename util::get_callable_trait<MapArgs>::fun_type f0;
     typedef typename util::get_callable_trait<MapResult>::fun_type f1;
@@ -176,7 +180,8 @@ inline actor_ptr spawn_cl(const opencl::program& prog,
              fname,
              dims,
              offset,
-             local_dims);
+             local_dims,
+             result_size);
 }
 
 /**
@@ -189,13 +194,14 @@ inline actor_ptr spawn_cl(const opencl::program& prog,
  *                            occured, or @p clCreateKernel failed.
  */
 template<typename MapArgs, typename MapResult>
-inline actor_ptr spawn_cl(const char* source,
-                          const char* fun_name,
-                          MapArgs map_args,
-                          MapResult map_result,
-                          const opencl::dim_vec& dims,
-                          const opencl::dim_vec& offset = {},
-                          const opencl::dim_vec& local_dims = {}) {
+inline actor spawn_cl(const char* source,
+                      const char* fun_name,
+                      MapArgs map_args,
+                      MapResult map_result,
+                      const opencl::dim_vec& dims,
+                      const opencl::dim_vec& offset = {},
+                      const opencl::dim_vec& local_dims = {},
+                      size_t result_size = 0) {
     using std::move;
     return spawn_cl(opencl::program::create(source),
                     fun_name,
@@ -203,7 +209,8 @@ inline actor_ptr spawn_cl(const char* source,
                     move(map_result),
                     dims,
                     offset,
-                    local_dims);
+                    local_dims,
+                    result_size);
 }
 
 } // namespace cppa
