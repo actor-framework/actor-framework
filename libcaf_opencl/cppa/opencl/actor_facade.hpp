@@ -32,9 +32,9 @@
 #define CPPA_OPENCL_ACTOR_FACADE_HPP
 
 #include <ostream>
+#include <iostream>
 #include <algorithm>
 #include <stdexcept>
-#include <iostream>
 
 #include "cppa/cppa.hpp"
 
@@ -51,8 +51,6 @@
 #include "cppa/opencl/command.hpp"
 #include "cppa/opencl/program.hpp"
 #include "cppa/opencl/smart_ptr.hpp"
-
-#include "cppa/detail/scheduled_actor_dummy.hpp"
 
 namespace cppa {
 namespace opencl {
@@ -76,9 +74,10 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
     typedef std::function<any_tuple(Ret&)> result_mapping;
 
     static intrusive_ptr<actor_facade>
-    create(const program& prog, const char* kernel_name, arg_mapping map_args,
-           result_mapping map_result, const dim_vec& global_dims,
-           const dim_vec& offsets, const dim_vec& local_dims) {
+    create(const program& prog, const char* kernel_name,
+           arg_mapping map_args, result_mapping map_result,
+           const dim_vec& global_dims, const dim_vec& offsets,
+           const dim_vec& local_dims, size_t result_size) {
         if (global_dims.empty()) {
             auto str = "OpenCL kernel needs at least 1 global dimension.";
             CPPA_LOGM_ERROR(detail::demangle(typeid(actor_facade)).c_str(),
@@ -107,9 +106,15 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
                             oss.str());
             throw std::runtime_error(oss.str());
         }
-        return new actor_facade<Ret(Args...)>{
-            prog,       kernel,              global_dims,          offsets,
-            local_dims, std::move(map_args), std::move(map_result)
+        if (result_size == 0) {
+            result_size = std::accumulate(global_dims.begin(),
+                                          global_dims.end(),
+                                          1,
+                                          std::multiplies<size_t>{});
+        }
+        return new actor_facade<Ret (Args...)>{
+            prog      , kernel             , global_dims          , offsets,
+            local_dims, std::move(map_args), std::move(map_result), result_size
         };
     }
 
@@ -121,41 +126,48 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
 
  private:
 
+    using evnt_vec = std::vector<cl_event>;
+    using args_vec = std::vector<mem_ptr>;
+
     actor_facade(const program& prog, kernel_ptr kernel,
-                 const dim_vec& global_dimensions,
-                 const dim_vec& global_offsets, const dim_vec& local_dimensions,
-                 arg_mapping map_args, result_mapping map_result)
-        : m_kernel(kernel), m_program(prog.m_program),
-          m_context(prog.m_context), m_queue(prog.m_queue),
-          m_global_dimensions(global_dimensions),
-          m_global_offsets(global_offsets),
-          m_local_dimensions(local_dimensions), m_map_args(std::move(map_args)),
-          m_map_result(std::move(map_result)) {
+                 const dim_vec& global_dimensions, 
+                 const dim_vec& global_offsets,
+                 const dim_vec& local_dimensions,
+                 arg_mapping map_args, result_mapping map_result, 
+                 size_t result_size)
+      : m_kernel(kernel) , m_program(prog.m_program)
+      , m_context(prog.m_context) , m_queue(prog.m_queue)
+      , m_global_dimensions(global_dimensions)
+      , m_global_offsets(global_offsets)
+      , m_local_dimensions(local_dimensions)
+      , m_map_args(std::move(map_args))
+      , m_map_result(std::move(map_result))
+      , m_result_size(result_size)
+    {
         CPPA_LOG_TRACE("id: " << this->id());
     }
 
     template <long... Is>
-    void enqueue_impl(const actor_ptr& sender, any_tuple msg, message_id id,
+    void enqueue_impl(const actor_addr& sender, any_tuple msg, message_id id,
                       util::int_list<Is...>) {
         auto opt = m_map_args(std::move(msg));
         if (opt) {
-            response_promise handle{ this, sender, id.response_id() };
-            size_t ret_size = std::accumulate(m_global_dimensions.begin(),
-                                              m_global_dimensions.end(), 1,
-                                              std::multiplies<size_t>{});
-            std::vector<mem_ptr> arguments;
-            add_arguments_to_kernel<Ret>(arguments, ret_size,
+            response_promise handle{this->address(), sender, id.response_id()};
+            evnt_vec events;
+            args_vec arguments;
+            add_arguments_to_kernel<Ret>(events, arguments, m_result_size, 
                                          get_ref<Is>(*opt)...);
             auto cmd = make_counted<command<actor_facade, Ret>>(
-                handle, this, std::move(arguments));
+                handle, this, 
+                std::move(events), std::move(arguments),
+                m_result_size, *opt
+            );
             cmd->enqueue();
         } else {
-            CPPA_LOGMF(CPPA_ERROR, this,
-                       "actor_facade::enqueue() tuple_cast failed.");
+            CPPA_LOGMF(CPPA_ERROR, "actor_facade::enqueue() tuple_cast failed.");
         }
     }
 
-    typedef std::vector<mem_ptr> args_vec;
 
     kernel_ptr m_kernel;
     program_ptr m_program;
@@ -166,56 +178,67 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
     dim_vec m_local_dimensions;
     arg_mapping m_map_args;
     result_mapping m_map_result;
+    size_t m_result_size;
 
-    void add_arguments_to_kernel_rec(args_vec& arguments) {
-        cl_int err{ 0 };
-        for (size_t i = 1; i < arguments.size(); ++i) {
-            err = clSetKernelArg(m_kernel.get(), (i - 1), sizeof(cl_mem),
+    void add_arguments_to_kernel_rec(evnt_vec&, args_vec& arguments) {
+        cl_int err{0};
+        // rotate left (output buffer to the end)
+        rotate(begin(arguments), begin(arguments) + 1, end(arguments));
+        for(size_t i = 0; i < arguments.size(); ++i) {
+            err = clSetKernelArg(m_kernel.get(), i, sizeof(cl_mem),
                                  static_cast<void*>(&arguments[i]));
             CPPA_LOG_ERROR_IF(err != CL_SUCCESS,
                               "clSetKernelArg: " << get_opencl_error(err));
         }
-        err = clSetKernelArg(m_kernel.get(), arguments.size() - 1,
-                             sizeof(cl_mem), static_cast<void*>(&arguments[0]));
-        CPPA_LOG_ERROR_IF(err != CL_SUCCESS,
-                          "clSetKernelArg: " << get_opencl_error(err));
+        clFlush(m_queue.get());
     }
 
-    template <typename T0, typename... Ts>
-    void add_arguments_to_kernel_rec(args_vec& arguments, T0& arg0,
-                                     Ts&... args) {
-        cl_int err{ 0 };
-        auto buf = clCreateBuffer(
-            m_context.get(), CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-            sizeof(typename T0::value_type) * arg0.size(), arg0.data(), &err);
+    template<typename T0, typename... Ts>
+    void add_arguments_to_kernel_rec(evnt_vec& events, args_vec& arguments, 
+                                     T0& arg0, Ts&... args) {
+        cl_int err{0};
+        size_t buffer_size = sizeof(typename T0::value_type) * arg0.size();
+        auto buffer = clCreateBuffer(m_context.get(),
+                                     CL_MEM_READ_ONLY,
+                                     buffer_size,
+                                     nullptr,
+                                     &err);
         if (err != CL_SUCCESS) {
-            CPPA_LOGMF(CPPA_ERROR, this,
-                       "clCreateBuffer: " << get_opencl_error(err));
-        } else {
-            mem_ptr tmp;
-            tmp.adopt(std::move(buf));
-            arguments.push_back(tmp);
-            add_arguments_to_kernel_rec(arguments, args...);
+            CPPA_LOGMF(CPPA_ERROR, "clCreateBuffer: " << get_opencl_error(err));
+            return;
         }
+        cl_event event;
+        err = clEnqueueWriteBuffer(m_queue.get(), buffer, CL_FALSE, 0,
+                                   buffer_size, arg0.data(),
+                                   0, nullptr, &event);
+        if (err != CL_SUCCESS) {
+            CPPA_LOGMF(CPPA_ERROR, "clEnqueueWriteBuffer: "
+                                   << get_opencl_error(err));
+            return;
+        }
+        events.push_back(std::move(event));
+        mem_ptr tmp;
+        tmp.adopt(std::move(buffer));
+        arguments.push_back(tmp);
+        add_arguments_to_kernel_rec(events, arguments, args...);
     }
 
-    template <typename R, typename... Ts>
-    void add_arguments_to_kernel(args_vec& arguments, size_t ret_size,
-                                 Ts&&... args) {
+    template<typename R, typename... Ts>
+    void add_arguments_to_kernel(evnt_vec& events, args_vec& arguments,
+                                 size_t ret_size, Ts&&... args) {
         arguments.clear();
         cl_int err{ 0 };
         auto buf = clCreateBuffer(m_context.get(), CL_MEM_WRITE_ONLY,
                                   sizeof(typename R::value_type) * ret_size,
                                   nullptr, &err);
         if (err != CL_SUCCESS) {
-            CPPA_LOGMF(CPPA_ERROR, this,
-                       "clCreateBuffer: " << get_opencl_error(err));
-        } else {
-            mem_ptr tmp;
-            tmp.adopt(std::move(buf));
-            arguments.push_back(tmp);
-            add_arguments_to_kernel_rec(arguments, std::forward<Ts>(args)...);
+            CPPA_LOGMF(CPPA_ERROR, "clCreateBuffer: " << get_opencl_error(err));
+            return;
         }
+        mem_ptr tmp;
+        tmp.adopt(std::move(buf));
+        arguments.push_back(tmp);
+        add_arguments_to_kernel_rec(events, arguments, std::forward<Ts>(args)...);
     }
 
 };

@@ -45,7 +45,7 @@ namespace cppa { namespace opencl {
 program::program(context_ptr context, command_queue_ptr queue, program_ptr program)
 : m_context(move(context)), m_program(move(program)), m_queue(move(queue)) { }
 
-program program::create(const char* kernel_source, uint32_t device_id) {
+program program::create(const char* kernel_source, const char* options, uint32_t device_id) {
     auto metainfo = get_opencl_metainfo();
     auto devices  = metainfo->get_devices();
     auto context  = metainfo->m_context;
@@ -70,77 +70,21 @@ program program::create(const char* kernel_source, uint32_t device_id) {
                                          &kernel_source,
                                          &kernel_source_length,
                                          &err));
-
     if (err != CL_SUCCESS) {
         throw runtime_error("clCreateProgramWithSource: "
                                  + get_opencl_error(err));
     }
 
-    auto program_build_info = [&](size_t vs, void* v, size_t* vsr) {
-        return clGetProgramBuildInfo(pptr.get(),
-                                     devices[device_id].m_device.get(),
-                                     CL_PROGRAM_BUILD_LOG,
-                                     vs,
-                                     v,
-                                     vsr);
-    };
-
     // build programm from program object
     auto dev_tmp = devices[device_id].m_device.get();
-    err = clBuildProgram(pptr.get(), 1, &dev_tmp, nullptr, nullptr, nullptr);
+    err = clBuildProgram(pptr.get(), 1, &dev_tmp, options, nullptr, nullptr);
     if (err != CL_SUCCESS) {
         ostringstream oss;
         oss << "clBuildProgram: " << get_opencl_error(err);
-        size_t ret_size;
-        auto bi_err = program_build_info(0, nullptr, &ret_size);
-        if (bi_err == CL_SUCCESS) {
-            vector<char> build_log(ret_size);
-            bi_err = program_build_info(ret_size, build_log.data(), nullptr);
-            if (bi_err == CL_SUCCESS) {
-                if (ret_size <= 1) {
-                    oss << " (no build log available)";
-                }
-                else {
-                    build_log[ret_size - 1] = '\0';
-                    cerr << build_log.data() << endl;
-                }
-            }
-            else { // program_build_info failed to get log
-                oss << " (with CL_PROGRAM_BUILD_LOG to get log)";
-            }
-        }
-        else { // program_build_info failed to get size of the log
-            oss << " (with CL_PROGRAM_BUILD_LOG to get size)";
-        }
-        CPPA_LOGM_ERROR(detail::demangle<program>().c_str(), oss.str());
+        // the build log will be printed by the
+        // pfn_notify (see opencl_metainfo.cpp)
         throw runtime_error(oss.str());
     }
-#   ifdef CPPA_DEBUG_MODE
-    else {
-        const char* where = "CL_PROGRAM_BUILD_LOG:get size";
-        size_t ret_size;
-        err = program_build_info(0, nullptr, &ret_size);
-        if (err == CL_SUCCESS) {
-            where = "CL_PROGRAM_BUILD_LOG:get log";
-            vector<char> build_log(ret_size+1);
-            err = program_build_info(ret_size, build_log.data(), nullptr);
-            if (err == CL_SUCCESS) {
-                if (ret_size > 1) {
-                    CPPA_LOGM_ERROR(detail::demangle<program>().c_str(),
-                                    "clBuildProgram: error");
-                    build_log[ret_size - 1] = '\0';
-                    cerr << "clBuildProgram build log:\n"
-                         << build_log.data() << endl;
-                }
-            }
-        }
-        if (err != CL_SUCCESS) {
-            CPPA_LOGM_ERROR(detail::demangle<program>().c_str(),
-                            "clGetProgramBuildInfo (" << where << "): "
-                            << get_opencl_error(err));
-        }
-    }
-#   endif
     return {context, devices[device_id].m_cmd_queue, pptr};
 }
 
