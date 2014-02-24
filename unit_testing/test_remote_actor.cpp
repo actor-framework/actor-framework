@@ -25,7 +25,7 @@ typedef vector<actor> actor_vector;
 void reflector(event_based_actor* self) {
     self->become (
         others() >> [=] {
-            CPPA_LOGF_INFO("reflect and quit");
+            CPPA_PRINT("reflect and quit");
             self->quit();
             return self->last_dequeued();
         }
@@ -38,10 +38,10 @@ void spawn5_server_impl(event_based_actor* self, actor client, group grp) {
     CPPA_CHECK(grp != invalid_group);
     self->spawn_in_group(grp, reflector);
     self->spawn_in_group(grp, reflector);
-    CPPA_LOGF_INFO("send {'Spawn5'} and await {'ok', actor_vector}");
+    CPPA_PRINT("send {'Spawn5'} and await {'ok', actor_vector}");
     self->sync_send(client, atom("Spawn5"), grp).then(
         on(atom("ok"), arg_match) >> [=](const actor_vector& vec) {
-            CPPA_LOGF_INFO("received vector with " << vec.size() << " elements");
+            CPPA_PRINT("received vector with " << vec.size() << " elements");
             self->send(grp, "Hello reflectors!", 5.0);
             if (vec.size() != 5) {
                 CPPA_PRINTERR("remote client did not spawn five reflectors!");
@@ -107,7 +107,7 @@ void spawn5_server_impl(event_based_actor* self, actor client, group grp) {
 void spawn5_server(event_based_actor* self, actor client, bool inverted) {
     if (!inverted) spawn5_server_impl(self, client, group::get("local", "foobar"));
     else {
-        CPPA_LOGF_INFO("request group");
+        CPPA_PRINT("request group");
         self->sync_send(client, atom("GetGroup")).then (
             [=](const group& remote_group) {
                 spawn5_server_impl(self, client, remote_group);
@@ -119,11 +119,11 @@ void spawn5_server(event_based_actor* self, actor client, bool inverted) {
 void spawn5_client(event_based_actor* self) {
     self->become (
         on(atom("GetGroup")) >> []() -> group {
-            CPPA_LOGF_INFO("received {'GetGroup'}");
+            CPPA_PRINT("received {'GetGroup'}");
             return group::get("local", "foobar");
         },
         on(atom("Spawn5"), arg_match) >> [=](const group& grp) -> any_tuple {
-            CPPA_LOGF_INFO("received {'Spawn5'}");
+            CPPA_PRINT("received {'Spawn5'}");
             actor_vector vec;
             for (int i = 0; i < 5; ++i) {
                 vec.push_back(spawn_in_group(grp, reflector));
@@ -131,7 +131,7 @@ void spawn5_client(event_based_actor* self) {
             return make_any_tuple(atom("ok"), std::move(vec));
         },
         on(atom("Spawn5Done")) >> [=] {
-            CPPA_LOGF_INFO("received {'Spawn5Done'}");
+            CPPA_PRINT("received {'Spawn5Done'}");
             self->quit();
         }
     );
@@ -252,10 +252,12 @@ class server : public event_based_actor {
             on(atom("SpawnPing")) >> [=]() -> any_tuple {
                 CPPA_PRINT("received {'SpawnPing'}");
                 auto client = last_sender();
-                CPPA_LOGF_ERROR_IF(!client, "last_sender() == nullptr");
-                CPPA_LOGF_INFO("spawn event-based ping actor");
+                if (!client) {
+                    CPPA_PRINT("last_sender() invalid!");
+                }
+                CPPA_PRINT("spawn event-based ping actor");
                 auto pptr = spawn<monitored>(event_based_ping, num_pings);
-                CPPA_LOGF_INFO("wait until spawned ping actor is done");
+                CPPA_PRINT("wait until spawned ping actor is done");
                 await_down(this, pptr, [=] {
                     CPPA_CHECK_EQUAL(pongs(), num_pings);
                     await_sync_msg();
@@ -331,11 +333,11 @@ int main(int argc, char** argv) {
     bool run_as_server = false;
     if (argc > 1) {
         if (strcmp(argv[1], "run_remote_actor=false") == 0) {
-            CPPA_LOGF_INFO("don't run remote actor");
+            CPPA_PRINT("don't run remote actor");
             run_remote_actor = false;
         }
         else if (strcmp(argv[1], "run_as_server") == 0) {
-            CPPA_LOGF_INFO("don't run remote actor");
+            CPPA_PRINT("don't run remote actor");
             run_remote_actor = false;
             run_as_server = true;
         }

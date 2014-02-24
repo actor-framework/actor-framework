@@ -171,10 +171,11 @@ oss_wr operator<<(oss_wr&& lhs, T rhs) {
     } CPPA_VOID_STMT
 
 #ifndef CPPA_LOG_LEVEL
+    inline cppa::actor_id cppa_set_aid_dummy() { return 0; }
 #   define CPPA_LOG_IMPL(lvlname, classname, funname, message)                 \
         CPPA_PRINT_ERROR_IMPL(lvlname, classname, funname, message)
-#   define CPPA_PUSH_AID(unused)
-#   define CPPA_SET_AID(unused) 0
+#   define CPPA_PUSH_AID(unused) static_cast<void>(0)
+#   define CPPA_SET_AID(unused) cppa_set_aid_dummy()
 #   define CPPA_LOG_LEVEL 1
 #else
 #   define CPPA_LOG_IMPL(lvlname, classname, funname, message)                 \

@@ -275,7 +275,7 @@ behavior echo_actor(event_based_actor* self) {
 struct simple_mirror : sb_actor<simple_mirror> {
 
     behavior init_state;
-    
+
     simple_mirror() {
         init_state = (
             others() >> [=]() -> any_tuple {
@@ -343,7 +343,7 @@ struct slave : event_based_actor {
 void test_serial_reply() {
     auto mirror_behavior = [=](event_based_actor* self) {
         self->become(others() >> [=]() -> any_tuple {
-            CPPA_LOGF_INFO("return self->last_dequeued()");
+            CPPA_PRINT("return self->last_dequeued()");
             return self->last_dequeued();
         });
     };
@@ -357,22 +357,22 @@ void test_serial_reply() {
         auto c4 = self->spawn<linked>(mirror_behavior);
         self->become (
           on(atom("hi there")) >> [=]() -> continue_helper {
-            CPPA_LOGF_INFO("received 'hi there'");
+            CPPA_PRINT("received 'hi there'");
             return self->sync_send(c0, atom("sub0")).then(
               on(atom("sub0")) >> [=]() -> continue_helper {
-                CPPA_LOGF_INFO("received 'sub0'");
+                CPPA_PRINT("received 'sub0'");
                 return self->sync_send(c1, atom("sub1")).then(
                   on(atom("sub1")) >> [=]() -> continue_helper {
-                    CPPA_LOGF_INFO("received 'sub1'");
+                    CPPA_PRINT("received 'sub1'");
                     return self->sync_send(c2, atom("sub2")).then(
                       on(atom("sub2")) >> [=]() -> continue_helper {
-                        CPPA_LOGF_INFO("received 'sub2'");
+                        CPPA_PRINT("received 'sub2'");
                         return self->sync_send(c3, atom("sub3")).then(
                           on(atom("sub3")) >> [=]() -> continue_helper {
-                            CPPA_LOGF_INFO("received 'sub3'");
+                            CPPA_PRINT("received 'sub3'");
                             return self->sync_send(c4, atom("sub4")).then(
                               on(atom("sub4")) >> [=]() -> atom_value {
-                                CPPA_LOGF_INFO("received 'sub4'");
+                                CPPA_PRINT("received 'sub4'");
                                 return atom("hiho");
                             }
                           );
@@ -426,13 +426,13 @@ void test_or_else() {
         self->await_all_other_actors_done();
 
     });
-    CPPA_LOGF_INFO("run_testee: handle_a.or_else(handle_b).or_else(handle_c)");
+    CPPA_PRINT("run_testee: handle_a.or_else(handle_b).or_else(handle_c)");
     run_testee(
         spawn([=] {
             return handle_a.or_else(handle_b).or_else(handle_c);
         })
     );
-    CPPA_LOGF_INFO("run_testee: handle_a.or_else(handle_b), on(\"c\") ...");
+    CPPA_PRINT("run_testee: handle_a.or_else(handle_b), on(\"c\") ...");
     run_testee(
         spawn([=] {
             return (
@@ -441,7 +441,7 @@ void test_or_else() {
             );
         })
     );
-    CPPA_LOGF_INFO("run_testee: on(\"a\") ..., handle_b.or_else(handle_c)");
+    CPPA_PRINT("run_testee: on(\"a\") ..., handle_b.or_else(handle_c)");
     run_testee(
         spawn([=] {
             return (
@@ -832,7 +832,7 @@ void test_spawn() {
     // create some actors linked to one single actor
     // and kill them all through killing the link
     auto legion = spawn([](event_based_actor* self) {
-        CPPA_LOGF_INFO("spawn 1, 000 actors");
+        CPPA_PRINT("spawn 1, 000 actors");
         for (int i = 0; i < 1000; ++i) {
             self->spawn<event_testee, linked>();
         }

@@ -99,7 +99,7 @@ void peer(io::broker* self, io::connection_handle hdl, const actor& buddy) {
     };
     self->become (
         on(atom("IO_closed"), arg_match) >> [=](io::connection_handle) {
-            CPPA_LOGF_INFO("received IO_closed");
+            CPPA_PRINT("received IO_closed");
             self->quit();
         },
         on(atom("IO_read"), arg_match) >> [=](io::connection_handle, const util::buffer& buf) {
@@ -127,7 +127,7 @@ void peer_acceptor(io::broker* self, const actor& buddy) {
     self->become (
         on(atom("IO_accept"), arg_match) >> [=](io::accept_handle, io::connection_handle hdl) {
             CPPA_CHECKPOINT();
-            CPPA_LOGF_INFO("received IO_accept");
+            CPPA_PRINT("received IO_accept");
             self->fork(peer, hdl, buddy);
             self->quit();
         },

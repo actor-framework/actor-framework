@@ -1,5 +1,6 @@
 #include <iostream>
 
+#include "test.hpp"
 #include "ping_pong.hpp"
 
 #include "cppa/cppa.hpp"
@@ -18,11 +19,13 @@ size_t s_pongs = 0;
 behavior ping_behavior(local_actor* self, size_t num_pings) {
     return  (
         on(atom("pong"), arg_match) >> [=](int value) -> any_tuple {
-            CPPA_LOGF_ERROR_IF(!self->last_sender(), "last_sender() == nullptr");
-            CPPA_LOGF_INFO("received {'pong', " << value << "}");
+            if (!self->last_sender()) {
+                CPPA_PRINT("last_sender() invalid!");
+            }
+            CPPA_PRINT("received {'pong', " << value << "}");
             //cout << to_string(self->last_dequeued()) << endl;
             if (++s_pongs >= num_pings) {
-                CPPA_LOGF_INFO("reached maximum, send {'EXIT', user_defined} "
+                CPPA_PRINT("reached maximum, send {'EXIT', user_defined} "
                                << "to last sender and quit with normal reason");
                 self->send_exit(self->last_sender(), exit_reason::user_shutdown);
                 self->quit();
@@ -40,7 +43,7 @@ behavior ping_behavior(local_actor* self, size_t num_pings) {
 behavior pong_behavior(local_actor* self) {
     return  (
         on(atom("ping"), arg_match) >> [](int value) -> any_tuple {
-            CPPA_LOGF_INFO("received {'ping', " << value << "}");
+            CPPA_PRINT("received {'ping', " << value << "}");
             return make_any_tuple(atom("pong"), value + 1);
         },
         others() >> [=] {
