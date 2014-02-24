@@ -33,13 +33,6 @@
 namespace cppa {
 namespace detail {
 
-void functor_based_actor::create(event_based_actor*, void_fun fun) {
-    m_make_behavior = [=](event_based_actor* self) -> behavior {
-        fun(self);
-        return behavior{};
-    };
-}
-
 behavior functor_based_actor::make_behavior() {
     return m_make_behavior(this);
 }

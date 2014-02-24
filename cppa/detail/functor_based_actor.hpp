@@ -41,75 +41,79 @@ class functor_based_actor : public event_based_actor {
 
  public:
 
+    typedef event_based_actor* pointer;
+
     typedef std::function<behavior(event_based_actor*)> make_behavior_fun;
 
     typedef std::function<void(event_based_actor*)> void_fun;
 
     template<typename F, typename... Ts>
     functor_based_actor(F f, Ts&&... vs) {
-        event_based_actor* dummy = nullptr;
-        create(dummy, f, std::forward<Ts>(vs)...);
+        typedef typename util::get_callable_trait<F>::type trait;
+        typedef typename trait::arg_types arg_types;
+        typedef typename trait::result_type result_type;
+        constexpr bool returns_behavior = std::is_convertible<
+                                              result_type,
+                                              behavior
+                                          >::value;
+        constexpr bool uses_first_arg = std::is_same<
+                                            typename util::tl_head<
+                                                arg_types
+                                            >::type,
+                                            pointer
+                                        >::value;
+        std::integral_constant<bool, returns_behavior> token1;
+        std::integral_constant<bool, uses_first_arg>   token2;
+        set(token1, token2, std::move(f), std::forward<Ts>(vs)...);
     }
 
     behavior make_behavior() override;
 
  private:
 
-    void create(event_based_actor*, void_fun);
-
-    template<class Actor, typename F, typename... Ts>
-    auto create(Actor*, F f, Ts&&... vs) ->
-    typename std::enable_if<
-        std::is_convertible<
-            decltype(f(std::forward<Ts>(vs)...)),
-            behavior
-        >::value
-    >::type {
-        auto fun = std::bind(f, std::forward<Ts>(vs)...);
-        m_make_behavior = [fun](Actor*) -> behavior { return fun(); };
+    template<typename F>
+    void set(std::true_type, std::true_type, F&& fun) {
+        // behavior (pointer)
+        m_make_behavior = std::forward<F>(fun);
     }
 
-    template<class Actor, typename F, typename... Ts>
-    auto create(Actor* dummy, F f, Ts&&... vs) ->
-    typename std::enable_if<
-        std::is_convertible<
-            decltype(f(dummy, std::forward<Ts>(vs)...)),
-            behavior
-        >::value
-    >::type {
-        auto fun = std::bind(f, std::placeholders::_1, std::forward<Ts>(vs)...);
-        m_make_behavior = [fun](Actor* self) -> behavior { return fun(self); };
+    template<typename F>
+    void set(std::false_type, std::true_type, F fun) {
+        // void (pointer)
+        m_make_behavior = [fun](pointer ptr) {
+            fun(ptr);
+            return behavior{};
+        };
     }
 
-    template<class Actor, typename F, typename... Ts>
-    auto create(Actor*, F f, Ts&&... vs) ->
-    typename std::enable_if<
-        std::is_same<
-            decltype(f(std::forward<Ts>(vs)...)),
-            void
-        >::value
-    >::type {
-        std::function<void()> fun = std::bind(f, std::forward<Ts>(vs)...);
-        m_make_behavior = [fun](Actor*) -> behavior {
+    template<typename F>
+    void set(std::true_type, std::false_type, F fun) {
+        // behavior (void)
+        m_make_behavior = [fun](pointer) { return fun(); };
+    }
+
+    template<typename F>
+    void set(std::false_type, std::false_type, F fun) {
+        // void (void)
+        m_make_behavior = [fun](pointer) {
             fun();
             return behavior{};
         };
     }
 
-    template<class Actor, typename F, typename... Ts>
-    auto create(Actor* dummy, F f, Ts&&... vs) ->
-    typename std::enable_if<
-        std::is_same<
-            decltype(f(dummy, std::forward<Ts>(vs)...)),
-            void
-        >::value
-    >::type {
-        std::function<void(Actor*)> fun = std::bind(f, std::placeholders::_1,
-                                                    std::forward<Ts>(vs)...);
-        m_make_behavior = [fun](Actor* self) -> behavior {
-            fun(self);
-            return behavior{};
-        };
+    template<class Token, typename F, typename T0, typename... Ts>
+    void set(Token t1, std::true_type t2, F fun, T0&& arg0, Ts&&... args) {
+        set(t1, t2, std::bind(fun,
+                              std::placeholders::_1,
+                              std::forward<T0>(arg0),
+                              std::forward<Ts>(args)...));
+    }
+
+    template<class Token, typename F, typename T0, typename... Ts>
+    void set(Token t1, std::false_type t2, F fun, T0&& arg0,  Ts&&... args) {
+        set(t1, t2, std::bind(fun,
+                              std::forward<T0>(arg0),
+                              std::forward<Ts>(args)...));
     }
 
     make_behavior_fun m_make_behavior;
