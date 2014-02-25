@@ -26,7 +26,7 @@ vector<string> kvp_split(const string& str) {
     if (pos != string::npos && pos == str.rfind('=')) {
         return vector<string>{str.substr(0, pos), str.substr(pos+1)};
     }
-    return {};
+    return vector<string>{};
 }
 
 optional<int> toint(const string& str) {
