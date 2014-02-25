@@ -83,7 +83,7 @@ void ipv4_io_stream::read(void* vbuf, size_t len) {
 }
 
 size_t ipv4_io_stream::read_some(void* buf, size_t len) {
-    auto recv_result = ::recv(m_fd, buf, len, 0);
+    auto recv_result = ::recv(m_fd, reinterpret_cast<char*>(buf), len, 0);
     handle_read_result(recv_result, true);
     return (recv_result > 0) ? static_cast<size_t>(recv_result) : 0;
 }
@@ -110,7 +110,7 @@ void ipv4_io_stream::write(const void* vbuf, size_t len) {
 }
 
 size_t ipv4_io_stream::write_some(const void* buf, size_t len) {
-    auto send_result = ::send(m_fd, buf, len, 0);
+    auto send_result = ::send(m_fd, reinterpret_cast<const char*>(buf), len, 0);
     handle_write_result(send_result, true);
     return static_cast<size_t>(send_result);
 }

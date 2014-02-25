@@ -181,5 +181,20 @@ std::string get_root_uuid() {
 
 } } // namespace cppa::util
 
-#endif // CPPA_LINUX
+#elif defined(CPPA_WINDOWS)
+
+#include <string>
+using namespace std;
+
+namespace cppa { namespace util {
+
+std::string get_root_uuid() {
+    // what should be done here ??
+    string uuid;
+    return uuid;    
+}
+
+} } // namespace cppa::util
+
+#endif // CPPA_WINDOWS
 

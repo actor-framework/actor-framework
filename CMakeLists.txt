@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(cppa C CXX)
+project(cppa CXX)
 
 set(LIBCPPA_VERSION_MAJOR 0)
 set(LIBCPPA_VERSION_MINOR 8)
@@ -24,6 +24,11 @@ if (CMAKE_CXX_FLAGS)
 else (CMAKE_CXX_FLAGS)
   set(CXXFLAGS_PROVIDED false)
   set(CMAKE_CXX_FLAGS                "-std=c++11 -Wextra -Wall -pedantic")
+  if (MINGW)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWIN32")
+    include (GenerateExportHeader)
+  endif(MINGW)
+
   set(CMAKE_CXX_FLAGS_DEBUG          "-O0 -g")
   set(CMAKE_CXX_FLAGS_MINSIZEREL     "-Os")
   set(CMAKE_CXX_FLAGS_RELEASE        "-O3 -DNDEBUG")
@@ -42,7 +47,7 @@ endif (HAVE_VALGRIND_H)
 # check for g++ >= 4.7 or clang++ > = 3.2
 try_run(ProgramResult
         CompilationSucceeded
-	${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/get_compiler_version.cpp
+        ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/get_compiler_version.cpp
         RUN_OUTPUT_VARIABLE CompilerVersion)
 if (NOT CompilationSucceeded OR NOT ProgramResult EQUAL 0)
   message(FATAL_ERROR "Cannot determine compiler version")
@@ -83,6 +88,16 @@ endif(CPPA_LOG_LEVEL)
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "")
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif ("${CMAKE_BUILD_TYPE}" STREQUAL "")
+
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+  set(LIBCPPA_PLATFORM_SRC src/middleman_event_handler_epoll.cpp)
+elseif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  set(LIBCPPA_PLATFORM_SRC src/middleman_event_handler_poll.cpp)
+elseif (${CMAKE_SYSTEM_NAME} MATCHES "Window")
+  set(LIBCPPA_PLATFORM_SRC src/middleman_event_handler_poll.cpp src/backtrace.cpp)
+else ()
+  message(FATAL_ERROR "This platform is not supported by libcppa")
+endif()
 
 set(LIBCPPA_SRC
     ${LIBCPPA_PLATFORM_SRC}
@@ -135,8 +150,6 @@ set(LIBCPPA_SRC
     src/message_header.cpp
     src/middleman.cpp
     src/middleman_event_handler.cpp
-    src/middleman_event_handler_epoll.cpp
-    src/middleman_event_handler_poll.cpp
     src/object.cpp
     src/object_array.cpp
     src/on.cpp
@@ -156,6 +169,7 @@ set(LIBCPPA_SRC
     src/serializer.cpp
     src/shared_spinlock.cpp
     src/singleton_manager.cpp
+    src/socketpair.cpp
     src/string_serialization.cpp
     src/thread_mapped_actor.cpp
     src/thread_pool_scheduler.cpp
@@ -180,6 +194,10 @@ if (APPLE)
   # -pthread is ignored on MacOSX
 elseif (UNIX)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+elseif (MINGW)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+#  set(LD_FLAGS "${LD_FLAGS} ws2_32 kernel32")
+  set(LD_FLAGS "ws2_32 -liphlpapi")
 endif ()
 
 if (ENABLE_OPENCL)
@@ -231,7 +249,7 @@ if (DISABLE_CONTEXT_SWITCHING)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_DISABLE_CONTEXT_SWITCHING")
 endif ()
 
-# bulid shared library only if not comiling static only
+# build shared library only if not compiling static only
 if (NOT "${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes")
   add_library(libcppa SHARED ${LIBCPPA_SRC})
   target_link_libraries(libcppa ${LD_FLAGS})
@@ -242,7 +260,14 @@ if (NOT "${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes")
                         SOVERSION ${LIBRARY_SOVERSION}
                         VERSION ${LIBRARY_VERSION}
                         OUTPUT_NAME cppa)
-  install(TARGETS libcppa LIBRARY DESTINATION lib)
+#ajc  install(TARGETS libcppa LIBRARY DESTINATION lib)
+  GENERATE_EXPORT_HEADER( libcppa
+               BASE_NAME libcppa
+               EXPORT_MACRO_NAME libcppa_EXPORT
+               EXPORT_FILE_NAME libcppa_Export.h
+               STATIC_DEFINE libcppa_BUILT_AS_STATIC
+)
+
 endif ()
 
 # build static library if --build-static or --build-static-only was set
@@ -288,6 +313,8 @@ else ()
     set (CPPA_LIBRARY ${LIBRARY_OUTPUT_PATH}/libcppa.dylib)
   elseif (UNIX)
     set (CPPA_LIBRARY ${LIBRARY_OUTPUT_PATH}/libcppa.so)
+  elseif (MINGW)
+    set (CPPA_LIBRARY ${LIBRARY_OUTPUT_PATH}/libcppa.dll)
   else ()
     message (SEND_FATAL "Host platform not supported ...")
   endif ()
@@ -327,7 +354,7 @@ endif ()
 # check for doxygen and add custom "doc" target to Makefile
 find_package(Doxygen)
 if (DOXYGEN_FOUND)
-  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile
+  configure_file(${CMAKE_SOURCE_DIR}/Doxyfile.in ${CMAKE_SOURCE_DIR}/Doxyfile
                  @ONLY)
   add_custom_target(doc ${DOXYGEN_EXECUTABLE} ${CMAKE_HOME_DIRECTORY}/Doxyfile
                     WORKING_DIRECTORY ${CMAKE_HOME_DIRECTORY}

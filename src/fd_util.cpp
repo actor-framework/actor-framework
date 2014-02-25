@@ -112,5 +112,74 @@ void handle_read_result(ssize_t res, bool is_nonblock) {
 } } } // namespace cppa::detail::fd_util
 
 #else
+// windows
+#include <winsock2.h>
 
+namespace cppa { namespace detail { namespace fd_util {
+
+void throw_io_failure(const char* what, bool add_errno_failure) {
+    if (add_errno_failure) {
+        std::ostringstream oss;
+        oss << what << ": " << strerror(errno)
+            << " [errno: " << errno << "]";
+        throw std::ios_base::failure(oss.str());
+    }
+    throw std::ios_base::failure(what);
+}
+
+// int rd_flags(native_socket_type fd) {
+
+//     auto flags = ioctlsocket(fd, F_GETFL, 0);
+//     if (flags == -1) throw_io_failure("unable to read socket flags");
+//     return flags;
+// }
+
+// bool nonblocking(native_socket_type fd) {    
+//     return (rd_flags(fd) & O_NONBLOCK) != 0;
+// }
+
+void nonblocking(native_socket_type fd, bool new_value) {
+    u_long iMode = new_value ? 1 : 0;
+// If iMode = 0, blocking is enabled; 
+// If iMode != 0, non-blocking mode is enabled.
+    if (ioctlsocket(fd, FIONBIO, &iMode) < 0) {
+        throw_io_failure("unable to set FIONBIO");
+    }
+}
+
+bool tcp_nodelay(native_socket_type fd) {
+    int flag;
+    auto len = static_cast<int>(sizeof(flag));
+    if (getsockopt(fd, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char *>  (&flag), &len) < 0) {
+        throw_io_failure("unable to read TCP_NODELAY socket option");
+    }
+    return flag != 0;
+}
+
+void tcp_nodelay(native_socket_type fd, bool new_value) {
+    int flag = new_value ? 1 : 0;
+    auto len = static_cast<int>(sizeof(flag));
+    if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char *> (&flag), len) < 0) {
+        throw_io_failure("unable to set TCP_NODELAY");
+    }
+}
+
+void handle_io_result(ssize_t res, bool is_nonblock, const char* msg) {
+    if (res < 0) {
+        // don't throw for 'failed' non-blocking IO
+        if (is_nonblock && ( WSAGetLastError() == WSAEWOULDBLOCK)) { }
+        else throw_io_failure(msg);
+    }
+}
+
+void handle_write_result(ssize_t res, bool is_nonblock) {
+    handle_io_result(res, is_nonblock, "cannot write to file descriptor");
+}
+
+void handle_read_result(ssize_t res, bool is_nonblock) {
+    handle_io_result(res, is_nonblock, "cannot read from file descriptor");
+    if (res == 0) throw_io_failure("cannot read from closed file descriptor");
+}
+
+} } } // namespace cppa::detail::fd_util
 #endif

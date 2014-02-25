@@ -126,6 +126,10 @@ class middleman {
 
 };
 
-} } // namespace cppa::detail
+
+int dumb_socketpair(native_socket_type socks[2], int make_overlapped);
+
+
+} } // namespace cppa::io
 
 #endif // MIDDLEMAN_HPP

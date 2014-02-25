@@ -91,6 +91,13 @@
 #define CPPA_CRITICAL(error) CPPA_CRITICAL__(error, __FILE__, __LINE__)
 
 #ifdef CPPA_WINDOWS
+#   include <w32api.h>
+#undef _WIN32_WINNT
+#undef WINVER
+#define _WIN32_WINNT WindowsVista
+#define WINVER WindowsVista
+#   include <ws2tcpip.h>
+#   include <winsock2.h>
 #else
 #   include <unistd.h>
 #endif

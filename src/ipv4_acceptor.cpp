@@ -26,7 +26,11 @@
  * You should have received a copy of the GNU Lesser General Public License   *
  * along with libcppa. If not, see <http://www.gnu.org/licenses/>.            *
 \******************************************************************************/
-
+#include "cppa/config.hpp"
+#ifdef CPPA_WINDOWS
+#   include <ws2tcpip.h>
+#   include <winsock2.h>
+#endif
 
 #include <ios>
 #include <cstring>
@@ -43,6 +47,8 @@
 #include "cppa/detail/fd_util.hpp"
 
 #ifdef CPPA_WINDOWS
+#   include <winsock2.h>
+#   include <ws2tcpip.h>
 #else
 #   include <netdb.h>
 #   include <unistd.h>
@@ -82,8 +88,24 @@ bool accept_impl(stream_ptr_pair& result,
                  native_socket_type fd,
                  bool nonblocking) {
     sockaddr addr;
+#ifdef CPPA_WINDOWS
+    int addrlen;
+#else
     socklen_t addrlen;
+#endif
     memset(&addr, 0, sizeof(addr));
+#ifdef CPPA_WINDOWS
+    addrlen=sizeof(addr);   // check this
+
+    auto sfd = ::WSAAccept(fd, &addr, &addrlen, 0, 0); // size too small
+    if (sfd == INVALID_SOCKET) {
+        if (nonblocking && (WSAGetLastError() == WSATRY_AGAIN || WSAGetLastError() == WSAEWOULDBLOCK)) {
+            // ok, try again
+            return false;
+        }
+        throw_io_failure("accept failed");
+    }
+#else
     memset(&addrlen, 0, sizeof(addrlen));
     auto sfd = ::accept(fd, &addr, &addrlen);
     if (sfd < 0) {
@@ -93,6 +115,7 @@ bool accept_impl(stream_ptr_pair& result,
         }
         throw_io_failure("accept failed");
     }
+#endif
     stream_ptr ptr(ipv4_io_stream::from_native_socket(sfd));
     result.first = ptr;
     result.second = ptr;
@@ -109,25 +132,49 @@ std::unique_ptr<acceptor> ipv4_acceptor::create(std::uint16_t port,
     CPPA_LOGM_TRACE("ipv4_acceptor", CPPA_ARG(port) << ", addr = "
                                      << (addr ? addr : "nullptr"));
     native_socket_type sockfd;
+
+#ifdef CPPA_WINDOWS
+    sockfd = INVALID_SOCKET;
+    sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (sockfd == INVALID_SOCKET) {
+        throw network_error("could not create server socket");
+    }
+#else
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == invalid_socket) {
         throw network_error("could not create server socket");
     }
+#endif
     // sguard closes the socket in case of exception
     socket_guard sguard(sockfd);
+#ifdef CPPA_WINDOWS
+    int on = 1;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char*)&on,sizeof(on)) < 0) {
+        throw_io_failure("unable to set SO_REUSEADDR");
+    }
+#else
     int on = 1;
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0) {
         throw_io_failure("unable to set SO_REUSEADDR");
     }
+#endif
+
+
     struct sockaddr_in serv_addr;
     memset((char*) &serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     if (! addr) {
         serv_addr.sin_addr.s_addr = INADDR_ANY;
     }
+#ifdef CPPA_WINDOWS
+    else if (::inet_pton(AF_INET, addr, &serv_addr.sin_addr) <= 0) {
+        throw network_error("invalid IPv4 address");
+    }
+#else
     else if (inet_pton(AF_INET, addr, &serv_addr.sin_addr) <= 0) {
         throw network_error("invalid IPv4 address");
     }
+#endif
 
     serv_addr.sin_port = htons(port);
     if (bind(sockfd, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0) {

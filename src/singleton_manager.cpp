@@ -57,6 +57,13 @@ class opencl_metainfo : public detail::singleton_mixin<opencl_metainfo> { };
 } } // namespace cppa::opencl
 #endif
 
+#ifdef CPPA_WINDOWS
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#endif
+
+
+
 namespace cppa { void shutdown() { detail::singleton_manager::shutdown(); } }
 
 namespace cppa { namespace detail {
@@ -99,6 +106,10 @@ void singleton_manager::shutdown() {
     CPPA_LOGF(CPPA_DEBUG, nullptr, "clear type info map");
     destroy(s_uniform_type_info_map);
     destroy(s_logger);
+#ifdef CPPA_WINDOWS
+    WSACleanup();
+#endif
+
 }
 
 opencl::opencl_metainfo* singleton_manager::get_opencl_metainfo() {
@@ -123,6 +134,15 @@ group_manager* singleton_manager::get_group_manager() {
 }
 
 scheduler* singleton_manager::get_scheduler() {
+
+#ifdef CPPA_WINDOWS
+    WSADATA WinsockData;
+    if (WSAStartup(MAKEWORD(2, 2), &WinsockData) != 0) {
+        CPPA_LOGF_ERROR("libcppa WSAStartup failed");
+        throw std::logic_error("libcppa WSAStartup failed");
+    }
+#endif
+
     return lazy_get(s_scheduler);
 }
 
