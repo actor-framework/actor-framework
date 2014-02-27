@@ -100,6 +100,15 @@ class message_future {
     message_future() = delete;
 
     /**
+     * @brief Sets @c bhvr as event-handler for the response message.
+     */
+    continue_helper then(behavior bhvr) {
+        check_consistency();
+        self->become_waiting_for(std::move(bhvr), m_mid);
+        return {m_mid};
+    }
+
+    /**
      * @brief Sets @p mexpr as event-handler for the response message.
      */
     template<typename... Cs, typename... Ts>
