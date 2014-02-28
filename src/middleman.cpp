@@ -65,6 +65,11 @@
 
 #include "cppa/intrusive/single_reader_queue.hpp"
 
+#ifdef CPPA_WINDOWS
+#include "io.h"
+#include "fcntl.h"
+#endif
+
 using namespace std;
 
 namespace cppa { namespace io {
@@ -145,8 +150,12 @@ class middleman_impl : public middleman {
         m_queue.enqueue(new middleman_event(move(fun)));
         atomic_thread_fence(memory_order_seq_cst);
         uint8_t dummy = 0;
-        auto res = ::write(m_pipe_write, &dummy, sizeof(dummy));
         // ignore result; write error only means middleman already exited
+#ifdef CPPA_WINDOWS 
+        auto res = ::send(m_pipe_write, (char *)&dummy, sizeof(dummy), 0);
+#else
+        auto res = write(m_pipe_write, &dummy, sizeof(dummy));
+#endif
         static_cast<void>(res);
     }
 
@@ -256,8 +265,16 @@ class middleman_impl : public middleman {
  protected:
 
     void initialize() override {
+#ifdef CPPA_WINDOWS
+        // if ( CreatePipe(&m_pipe_read,&m_pipe_write,0,4096) ) { CPPA_CRITICAL("cannot create pipe"); }
+        // DWORD dwMode = PIPE_NOWAIT; 
+        // if ( !SetNamedPipeHandleState(&m_pipe_read,&dwMode,NULL,NULL) ) { CPPA_CRITICAL("cannot set PIPE_NOWAIT"); }
+        native_socket_type pipefds[2];       
+         if ( cppa::io::dumb_socketpair(pipefds, 0) != 0) { CPPA_CRITICAL("cannot create pipe"); }
+#else
         int pipefds[2];
         if (pipe(pipefds) != 0) { CPPA_CRITICAL("cannot create pipe"); }
+#endif
         m_pipe_read = pipefds[0];
         m_pipe_write = pipefds[1];
         detail::fd_util::nonblocking(m_pipe_read, true);
@@ -271,8 +288,10 @@ class middleman_impl : public middleman {
             this->m_done = true;
         });
         m_thread.join();
-        close(m_pipe_read);
-        close(m_pipe_write);
+
+        closesocket(m_pipe_read);
+        closesocket(m_pipe_write);
+#
     }
 
  private:
@@ -286,6 +305,7 @@ class middleman_impl : public middleman {
     middleman_event_handler& handler();
 
     thread m_thread;
+
     native_socket_type m_pipe_read;
     native_socket_type m_pipe_write;
     middleman_queue m_queue;
@@ -306,7 +326,7 @@ class middleman_overseer : public continuable {
 
  public:
 
-    middleman_overseer(int pipe_fd, middleman_queue& q)
+    middleman_overseer(native_socket_type pipe_fd, middleman_queue& q)
     : super(pipe_fd), m_queue(q) { }
 
     void dispose() override {
@@ -317,8 +337,25 @@ class middleman_overseer : public continuable {
         CPPA_LOG_TRACE("");
         static constexpr size_t num_dummies = 64;
         uint8_t dummies[num_dummies];
+#ifdef CPPA_WINDOWS
+        auto read_result = ::recv(read_handle(), (char *)dummies, num_dummies, 0);
+#else
         auto read_result = ::read(read_handle(), dummies, num_dummies);
+#endif
         CPPA_LOG_DEBUG("read " << read_result << " messages from queue");
+
+#ifdef CPPA_WINDOWS
+        if (read_result == SOCKET_ERROR) {
+            if (WSAGetLastError() == WSAEWOULDBLOCK) {
+                // try again later
+                return read_continue_later;
+            }
+            else {
+                CPPA_LOG_ERROR("cannot read from pipe");
+                CPPA_CRITICAL("cannot read from pipe");
+            }
+        }
+#else
         if (read_result < 0) {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
                 // try again later
@@ -329,6 +366,7 @@ class middleman_overseer : public continuable {
                 CPPA_CRITICAL("cannot read from pipe");
             }
         }
+#endif
         for (int i = 0; i < read_result; ++i) {
             unique_ptr<middleman_event> msg(m_queue.try_pop());
             if (!msg) {

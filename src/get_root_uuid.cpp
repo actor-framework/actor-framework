@@ -175,11 +175,78 @@ std::string get_root_uuid() {
         replace_if(cpy.begin(), cpy.end(), ::isxdigit, 'F');
         // discard invalid UUID
         if (cpy != "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF") uuid.clear();
+ //     "\\?\Volume{5ec70abf-058c-11e1-bdda-806e6f6e6963}\"
+
     }
     return uuid;
 }
 
 } } // namespace cppa::util
 
-#endif // CPPA_LINUX
+#elif defined(CPPA_WINDOWS)
+
+#include <string>
+#include <windows.h>
+#include <stdio.h>
+#include <tchar.h>
+#include <algorithm>
+#include <iostream>
+
+using namespace std;
+
+namespace cppa { namespace util {
+
+std::string get_root_uuid() {
+    // what should be done here ??
+    string uuid;
+
+
+#define BUFSIZE MAX_PATH 
+
+
+  BOOL bFlag;
+  TCHAR Buf[BUFSIZE];           // temporary buffer for volume name
+  TCHAR Drive[] = TEXT("c:\\"); // template drive specifier
+  TCHAR I;                      // generic loop counter
+
+  // Walk through legal drive letters, skipping floppies.
+  for (I = TEXT('c'); I < TEXT('z');  I++ ) 
+   {
+    // Stamp the drive for the appropriate letter.
+    Drive[0] = I;
+
+    bFlag = GetVolumeNameForVolumeMountPoint(
+                Drive,     // input volume mount point or directory
+                Buf,       // output volume name buffer
+                BUFSIZE ); // size of volume name buffer
+
+    if (bFlag) 
+     {
+      string str(Buf);
+      std::size_t founds = str.find("Volume{");
+      if( founds != std::string::npos ) {
+        founds = founds+7;
+        std::size_t founde = str.find("}");
+        if( founde != std::string::npos && (founde > founds)) {
+            uuid =  str.substr(founds,founde-founds);
+            // UUIDs are formatted as 8-4-4-4-12 hex digits groups
+            auto cpy = uuid;
+            replace_if(cpy.begin(), cpy.end(), ::isxdigit, 'F');
+            // discard invalid UUID
+            if (cpy != "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF") {
+                uuid.clear();
+            } else {
+                return uuid;
+            }
+        }
+      }
+
+     }
+   }
+    return uuid;    
+}
+
+} } // namespace cppa::util
+
+#endif // CPPA_WINDOWS
 
