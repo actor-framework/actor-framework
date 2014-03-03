@@ -122,14 +122,30 @@ class behavior_stack_based_impl : public single_timeout<Base, Subtype> {
         return m_bhvr_stack;
     }
 
+    /**************************************************************************
+     *           extended timeout handling (handle_timeout mem fun)           *
+     **************************************************************************/
+
+    void handle_timeout(behavior& bhvr, std::uint32_t timeout_id) {
+        if (this->is_active_timeout(timeout_id)) {
+            this->reset_timeout();
+            bhvr.handle_timeout();
+            // request next timeout if behavior stack is not empty
+            // and timeout handler did not set a new timeout, e.g.,
+            // by calling become()
+            if (!this->has_active_timeout() &&  has_behavior()) {
+                this->request_timeout(get_behavior().timeout());
+            }
+        }
+    }
+
  private:
 
     void do_become(behavior_type bhvr, bool discard_old) {
         if (discard_old) this->m_bhvr_stack.pop_async_back();
-        this->reset_timeout();
-        if (bhvr.timeout().valid()) {
-            this->request_timeout(bhvr.timeout());
-        }
+        // since we know we extend single_timeout, we can be sure
+        // request_timeout simply resets the timeout when it's invalid
+        this->request_timeout(bhvr.timeout());
         this->m_bhvr_stack.push_back(std::move(unbox(bhvr)));
     }
 

@@ -62,7 +62,8 @@ actor spawn_event_testee2(actor parent) {
         behavior wait4timeout(int remaining) {
             CPPA_LOG_TRACE(CPPA_ARG(remaining));
             return {
-                after(chrono::milliseconds(50)) >> [=] {
+                after(chrono::milliseconds(1)) >> [=] {
+                    CPPA_PRINT(CPPA_ARG(remaining));
                     if (remaining == 1) {
                         send(parent, atom("t2done"));
                         quit();
@@ -887,13 +888,32 @@ void test_spawn() {
     CPPA_CHECKPOINT();
     spawn<high_priority_testee_class, priority_aware>();
     self->await_all_other_actors_done();
-    // don't try this at home, kids
+    // test sending message to self via scoped_actor
     self->send(self, atom("check"));
     self->receive (
         on(atom("check")) >> [] {
             CPPA_CHECKPOINT();
         }
     );
+    CPPA_CHECKPOINT();
+    CPPA_PRINT("check whether timeouts trigger more than once");
+    auto counter = make_shared<int>(0);
+    auto sleeper = self->spawn<monitored>([=](event_based_actor* s) {
+        return after(std::chrono::milliseconds(1)) >> [=] {
+            CPPA_PRINT("received timeout #" << (*counter + 1));
+            if (++*counter > 3) {
+                CPPA_CHECKPOINT();
+                s->quit();
+            }
+        };
+    });
+    self->receive(
+        [&](const down_msg& msg) {
+            CPPA_CHECK_EQUAL(msg.source, sleeper);
+            CPPA_CHECK_EQUAL(msg.reason, exit_reason::normal);
+        }
+    );
+    CPPA_CHECKPOINT();
 }
 
 int main() {

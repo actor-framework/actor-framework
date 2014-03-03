@@ -79,15 +79,12 @@ class single_timeout : public Base {
         return waits_for_timeout(tid);
     }
 
-    inline void reset_timeout() {
-        m_has_timeout = false;
+    inline bool has_active_timeout() const {
+        return m_has_timeout;
     }
 
-    inline void handle_timeout(behavior& bhvr, std::uint32_t timeout_id) {
-        if (timeout_id == m_timeout_id) {
-            m_has_timeout = false;
-            bhvr.handle_timeout();
-        }
+    inline void reset_timeout() {
+        m_has_timeout = false;
     }
 
  protected:
