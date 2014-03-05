@@ -11,11 +11,12 @@
  *                                                                            *
  * Copyright (C) 2011-2013                                                    *
  * Dominik Charousset <dominik.charousset@haw-hamburg.de>                     *
+ * Raphael Hiesgen <raphael.hiesgen@haw-hamburg.de>                           *
  *                                                                            *
  * This file is part of libcppa.                                              *
  * libcppa is free software: you can redistribute it and/or modify it under   *
  * the terms of the GNU Lesser General Public License as published by the     *
- * Free Software Foundation; either version 2.1 of the License,               *
+ * Free Software Foundation, either version 3 of the License                  *
  * or (at your option) any later version.                                     *
  *                                                                            *
  * libcppa is distributed in the hope that it will be useful,                 *
@@ -28,52 +29,44 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_SINGLETONS_HPP
-#define CPPA_SINGLETONS_HPP
+#ifndef WINDOWS_TCP_HPP
+#define WINDOWS_TCP_HPP
 
+#include <atomic>
+#include <vector>
+#include <algorithm>
+#include <functional>
+
+#include "cppa/cppa.hpp"
+
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include "cppa/windows/windows_tcp.hpp"
+
+
+#include "cppa/detail/singleton_mixin.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 
-namespace cppa {
+namespace cppa { namespace windows {
 
-inline logging* get_logger() {
-    return detail::singleton_manager::get_logger();
-}
+class windows_tcp {
 
-inline scheduler* get_scheduler() {
-    return detail::singleton_manager::get_scheduler();
-}
+    friend class detail::singleton_manager;
 
-inline detail::group_manager* get_group_manager() {
-    return detail::singleton_manager::get_group_manager();
-}
+ private:
 
-inline detail::actor_registry* get_actor_registry() {
-    return detail::singleton_manager::get_actor_registry();
-}
+    static inline windows_tcp* create_singleton() {
+        return new windows_tcp;
+    }
 
-inline io::middleman* get_middleman() {
-    return detail::singleton_manager::get_middleman();
-}
+    void initialize();
+    void dispose();
+    void destroy();
 
-inline detail::uniform_type_info_map* get_uniform_type_info_map() {
-    return detail::singleton_manager::get_uniform_type_info_map();
-}
+};
 
-inline detail::abstract_tuple* get_tuple_dummy() {
-    return detail::singleton_manager::get_tuple_dummy();
-}
+windows_tcp* get_windows_tcp();
 
-inline detail::empty_tuple* get_empty_tuple() {
-    return detail::singleton_manager::get_empty_tuple();
-}
+} } // namespace cppa::windows
 
-#ifdef CPPA_WINDOWS
-inline windows::windows_tcp* get_windows_tcp() {
-    return detail::singleton_manager::get_windows_tcp();
-}
-#endif
-
-
-} // namespace cppa
-
-#endif // CPPA_SINGLETONS_HPP
+#endif // WINDOWS_TCP_HPP

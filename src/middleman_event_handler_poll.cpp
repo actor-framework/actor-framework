@@ -32,7 +32,21 @@
 
 #if !defined(CPPA_LINUX) || defined(CPPA_POLL_IMPL)
 
+#ifndef CPPA_WINDOWS
 #include <poll.h>
+#define SOCKERR errno 
+#else
+#   include <ws2tcpip.h>
+#   include <ws2ipdef.h>
+#   include <winsock2.h>
+#define SOCKERR GetLastError()
+#undef EINTR
+#undef ENOMEM
+#define EINTR WSAEINTR
+#define ENOMEM WSAENOBUFS
+#endif
+
+
 #include "cppa/io/middleman_event_handler.hpp"
 
 #ifndef POLLRDHUP
@@ -73,11 +87,15 @@ class middleman_event_handler_impl : public middleman_event_handler {
         CPPA_REQUIRE(m_pollset.size() == m_meta.size());
         int presult = -1;
         while (presult < 0) {
+#ifdef CPPA_WINDOWS 
+            presult = ::WSAPoll(m_pollset.data(), m_pollset.size(), -1);
+#else
             presult = ::poll(m_pollset.data(), m_pollset.size(), -1);
+#endif
             CPPA_LOG_DEBUG("poll() on " << num_sockets()
                            << " sockets returned " << presult);
             if (presult < 0) {
-                switch (errno) {
+                switch (SOCKERR) {
                     case EINTR: {
                         // a signal was caught
                         // just try again

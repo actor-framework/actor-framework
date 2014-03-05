@@ -34,7 +34,12 @@
 #include <cstring>
 #include <sstream>
 #include <iostream>
+#include <cppa/config.hpp> 
+#ifdef CPPA_WINDOWS
+#include <cppa/execinfo_windows.h>
+#else 
 #include <execinfo.h>
+#endif 
 #include <type_traits>
 
 #include "cppa/singletons.hpp"

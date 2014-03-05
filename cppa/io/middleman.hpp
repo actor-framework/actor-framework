@@ -197,6 +197,8 @@ class middleman {
 
 };
 
+int dumb_socketpair(native_socket_type socks[2], int make_overlapped);
+
 inline actor_namespace& middleman::get_namespace() {
     return m_namespace;
 }

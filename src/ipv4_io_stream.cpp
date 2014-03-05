@@ -33,12 +33,20 @@
 #include <errno.h>
 #include <iostream>
 
+#include "cppa/config.hpp"
+#ifdef CPPA_WINDOWS
+#   include <ws2tcpip.h>
+#   include <winsock2.h>
+#endif
+
 #include "cppa/logging.hpp"
 #include "cppa/exception.hpp"
 #include "cppa/detail/fd_util.hpp"
 #include "cppa/io/ipv4_io_stream.hpp"
 
 #ifdef CPPA_WINDOWS
+#   include "cppa/singletons.hpp"
+#   include "cppa/windows/windows_tcp.hpp" 
 #else
 #   include <netdb.h>
 #   include <unistd.h>
@@ -47,6 +55,9 @@
 #   include <netinet/in.h>
 #   include <netinet/tcp.h>
 #endif
+
+
+
 
 namespace cppa { namespace io {
 
@@ -87,7 +98,7 @@ void ipv4_io_stream::read(void* vbuf, size_t len) {
 }
 
 size_t ipv4_io_stream::read_some(void* buf, size_t len) {
-    auto recv_result = ::recv(m_fd, buf, len, 0);
+    auto recv_result = ::recv(m_fd, reinterpret_cast<char*>(buf), len, 0);
     handle_read_result(recv_result, true);
     return (recv_result > 0) ? static_cast<size_t>(recv_result) : 0;
 }
@@ -114,7 +125,7 @@ void ipv4_io_stream::write(const void* vbuf, size_t len) {
 }
 
 size_t ipv4_io_stream::write_some(const void* buf, size_t len) {
-    auto send_result = ::send(m_fd, buf, len, 0);
+    auto send_result = ::send(m_fd, reinterpret_cast<const char*>(buf), len, 0);
     handle_write_result(send_result, true);
     return static_cast<size_t>(send_result);
 }
@@ -131,6 +142,12 @@ io::stream_ptr ipv4_io_stream::connect_to(const char* host,
     CPPA_LOGF_INFO("try to connect to " << host << " on port " << port);
     struct sockaddr_in serv_addr;
     struct hostent* server;
+
+#ifdef CPPA_WINDOWS
+// ensure tcp has been initialized
+    cppa::get_windows_tcp();
+#endif
+
     native_socket_type fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fd == invalid_socket) {
         throw network_error("socket creation failed");

@@ -65,7 +65,12 @@
 #include <cstdlib>
 
 #ifdef CPPA_DEBUG_MODE
+
+#ifdef CPPA_WINDOWS
+#include <cppa/execinfo_windows.h>
+#else 
 #include <execinfo.h>
+#endif 
 
 #define CPPA_REQUIRE__(stmt, file, line)                                       \
     printf("%s:%u: requirement failed '%s'\n", file, line, stmt);              \
@@ -91,6 +96,16 @@
 #define CPPA_CRITICAL(error) CPPA_CRITICAL__(error, __FILE__, __LINE__)
 
 #ifdef CPPA_WINDOWS
+#   include <w32api.h>
+#undef _WIN32_WINNT
+#undef WINVER
+#define _WIN32_WINNT WindowsVista
+#define WINVER WindowsVista
+#   include <ws2tcpip.h>
+#   include <winsock2.h>
+#undef interface
+// remove interface which is defined in rpc.h in files included by windows.h
+// as it clashes with name used in own code
 #else
 #   include <unistd.h>
 #endif

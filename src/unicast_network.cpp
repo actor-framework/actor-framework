@@ -37,7 +37,9 @@
 #include <iostream>
 #include <stdexcept>
 
+#ifndef CPPA_WINDOWS
 #include <netinet/tcp.h>
+#endif
 
 #include "cppa/cppa.hpp"
 #include "cppa/atom.hpp"

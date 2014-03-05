@@ -39,6 +39,10 @@ if (CMAKE_CXX_FLAGS)
 else (CMAKE_CXX_FLAGS)
   set(CXXFLAGS_PROVIDED false)
   set(CMAKE_CXX_FLAGS                "-std=c++11 -Wextra -Wall -pedantic")
+  if (MINGW)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWIN32")
+    include (GenerateExportHeader)
+  endif(MINGW)
   set(CMAKE_CXX_FLAGS_DEBUG          "-O0 -g")
   set(CMAKE_CXX_FLAGS_MINSIZEREL     "-Os")
   set(CMAKE_CXX_FLAGS_RELEASE        "-O3 -DNDEBUG")
@@ -57,7 +61,7 @@ endif (HAVE_VALGRIND_H)
 # check for g++ >= 4.7 or clang++ > = 3.2
 try_run(ProgramResult
         CompilationSucceeded
-	${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/get_compiler_version.cpp
+  ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/get_compiler_version.cpp
         RUN_OUTPUT_VARIABLE CompilerVersion)
 if (NOT CompilationSucceeded OR NOT ProgramResult EQUAL 0)
   message(FATAL_ERROR "Cannot determine compiler version")
@@ -111,6 +115,8 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   set(LIBCPPA_PLATFORM_SRC src/middleman_event_handler_epoll.cpp)
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   set(LIBCPPA_PLATFORM_SRC src/middleman_event_handler_poll.cpp)
+elseif (${CMAKE_SYSTEM_NAME} MATCHES "Window")
+  set(LIBCPPA_PLATFORM_SRC src/middleman_event_handler_poll.cpp src/backtrace.cpp)
 else ()
   message(FATAL_ERROR "This platform is not supported by libcppa")
 endif()
@@ -123,7 +129,8 @@ file(GLOB LIBCPPA_HDRS "cppa/*.hpp"
                        "cppa/io/*.hpp"
                        "cppa/opencl/*.hpp"
                        "cppa/qtsupport/*.hpp"
-                       "cppa/util/*.hpp")
+                       "cppa/util/*.hpp"
+                       "cppa/windows/*.hpp")
 
 # list cpp files including platform-dependent files
 set(LIBCPPA_SRC
@@ -199,6 +206,7 @@ set(LIBCPPA_SRC
     src/serializer.cpp
     src/shared_spinlock.cpp
     src/singleton_manager.cpp
+    src/socketpair.cpp
     src/string_serialization.cpp
     src/sync_request_bouncer.cpp
     src/thread_pool_scheduler.cpp
@@ -223,6 +231,9 @@ if (APPLE)
   # -pthread is ignored on MacOSX
 elseif (UNIX)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+elseif (MINGW)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+  set(LD_FLAGS "ws2_32 -liphlpapi")
 endif ()
 
 if (ENABLE_OPENCL)
@@ -236,6 +247,13 @@ if (ENABLE_OPENCL)
       src/opencl/opencl_metainfo.cpp)
   add_definitions(-DCPPA_OPENCL)
 endif (ENABLE_OPENCL)
+
+if (MINGW)
+  set(LIBCPPA_SRC
+      ${LIBCPPA_SRC} 
+      src/windows/windows_tcp.cpp)
+endif (MINGW)
+
 
 if (DISABLE_MEM_MANAGEMENT)
   add_definitions(-DCPPA_DISABLE_MEM_MANAGEMENT)
@@ -285,7 +303,7 @@ if (DISABLE_CONTEXT_SWITCHING)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_DISABLE_CONTEXT_SWITCHING")
 endif ()
 
-# bulid shared library if not comiling static only
+# build shared library if not compiling static only
 if (NOT "${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes")
   add_library(libcppa SHARED ${LIBCPPA_SRC} ${LIBCPPA_HDRS})
   target_link_libraries(libcppa ${LD_FLAGS})
@@ -296,7 +314,9 @@ if (NOT "${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes")
                         SOVERSION ${LIBRARY_SOVERSION}
                         VERSION ${LIBRARY_VERSION}
                         OUTPUT_NAME cppa)
-  install(TARGETS libcppa LIBRARY DESTINATION lib)
+  if(NOT MINGW)
+    install(TARGETS libcppa LIBRARY DESTINATION lib)
+  endif()
 endif ()
 
 # build static library only if --build-static or --build-static-only was set
@@ -338,6 +358,8 @@ else ()
     #set (CPPA_LIBRARY -L${LIBRARY_OUTPUT_PATH} -lcppa)
   elseif (UNIX)
     set (CPPA_LIBRARY ${LIBRARY_OUTPUT_PATH}/libcppa.so)
+  elseif (MINGW)
+    set (CPPA_LIBRARY ${LIBRARY_OUTPUT_PATH}/libcppa.dll)
   else ()
     message (SEND_FATAL "Host platform not supported ...")
   endif ()
