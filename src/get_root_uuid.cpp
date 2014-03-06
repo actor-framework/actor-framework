@@ -189,12 +189,12 @@ std::string get_root_uuid() {
 
 #elif defined(CPPA_WINDOWS)
 
-#include <windows.h>
-#include <stdio.h>
-#include <tchar.h>
 #include <string>
 #include <iostream>
 #include <algorithm>
+
+#include <windows.h>
+#include <tchar.h>
 
 using namespace std;
 
@@ -202,21 +202,38 @@ namespace cppa { namespace util {
 
 namespace { constexpr size_t max_drive_name = MAX_PATH; }
 
+// if TCHAR is indeed a char, we can simply move rhs
+void mv(std::string& lhs, std::string&& rhs) {
+    lhs = std::move(rhs);
+}
+
+// if TCHAR is defined as WCHAR, we have to do unicode conversion
+void mv(std::string& lhs, const std::basic_string<WCHAR>& rhs) {
+    auto size_needed = WideCharToMultiByte(CP_UTF8, 0, rhs.c_str(),
+                                           static_cast<int>(rhs.size()),
+                                           nullptr, 0, nullptr, nullptr);
+    lhs.resize(size_needed);
+    WideCharToMultiByte(CP_UTF8, 0, rhs.c_str(), static_cast<int>(rhs.size()),
+                        &lhs[0], size_needed, nullptr, nullptr);
+}
+
 std::string get_root_uuid() {
+    typedef std::basic_string<TCHAR> tchar_str;
     string uuid;
-    char drive_name[max_drive_name]; // temporary buffer for volume name
-    auto drive = TEXT("c:\\");       // string "template" for drive specifier
+    TCHAR buf[max_drive_name]; // temporary buffer for volume name
+    tchar_str drive = TEXT("c:\\");   // string "template" for drive specifier
     // walk through legal drive letters, skipping floppies
-    for (auto i = TEXT('c'); i < TEXT('z');  i++ )  {
+    for (TCHAR i = TEXT('c'); i < TEXT('z');  i++ )  {
         // Stamp the drive for the appropriate letter.
         drive[0] = i;
-        if (GetVolumeNameForVolumeMountPoint(drive, drive_name, max_drive_name)) {
-            auto first = drive_name.find("Volume{");
+        if (GetVolumeNameForVolumeMountPoint(drive.c_str(), buf, max_drive_name)) {
+            tchar_str drive_name = buf;
+            auto first = drive_name.find(TEXT("Volume{"));
             if (first != std::string::npos) {
                 first += 7;
-                auto last = drive_name.find("}", first);
+                auto last = drive_name.find(TEXT("}"), first);
                 if (last != std::string::npos && last > first) {
-                    uuid =  drive_name.substr(first, last - first);
+                    mv(uuid, drive_name.substr(first, last - first));
                     // UUIDs are formatted as 8-4-4-4-12 hex digits groups
                     auto cpy = uuid;
                     replace_if(cpy.begin(), cpy.end(), ::isxdigit, 'F');

@@ -32,9 +32,8 @@
 #include <sstream>
 #include <cstring>
 
-// socket related functions
-#include <sys/types.h>
-#include <sys/socket.h>
+#include "cppa/config.hpp"
+#include "cppa/exception.hpp"
 
 #ifdef CPPA_WINDOWS
 #   include <winsock2.h>
@@ -42,6 +41,8 @@
 #   include <windows.h>
 #   include <io.h>
 #else
+#   include <sys/types.h>
+#   include <sys/socket.h>
 #   include <errno.h>
 #   include <netdb.h>
 #   include <fcntl.h>
@@ -49,7 +50,8 @@
 #   include <netinet/tcp.h>
 #endif
 
-#include "cppa/exception.hpp"
+#include "cppa/util/scope_guard.hpp"
+
 #include "cppa/detail/fd_util.hpp"
 
 /************** implementation of platform-independent functions **************/
@@ -68,7 +70,8 @@ void throw_io_failure(const char* what, bool add_errno_failure) {
 
 void tcp_nodelay(native_socket_type fd, bool new_value) {
     int flag = new_value ? 1 : 0;
-    if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag)) < 0) {
+    if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY,
+                   reinterpret_cast<setsockopt_ptr>(&flag), sizeof(flag)) < 0) {
         throw_io_failure("unable to set TCP_NODELAY");
     }
 }
@@ -128,6 +131,7 @@ namespace cppa { namespace detail { namespace fd_util {
 
 std::string last_socket_error_as_string() {
     LPTSTR errorText = NULL;
+    auto hresult = last_socket_error();
     FormatMessage(// use system message tables to retrieve error text
                   FORMAT_MESSAGE_FROM_SYSTEM
                   // allocate buffer on local heap for error text
@@ -160,7 +164,7 @@ void nonblocking(native_socket_type fd, bool new_value) {
 // wraps a C call and throws an IO failure if f returns an integer != 0
 template<typename F, typename... Ts>
 inline void ccall(const char* errmsg, F f, Ts&&... args) {
-    if (f(std::forward<Ts>(args...)) != 0) {
+    if (f(std::forward<Ts>(args)...) != 0) {
         throw_io_failure(errmsg);
     }
 }

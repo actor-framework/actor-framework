@@ -181,9 +181,6 @@ std::vector<std::string> get_mac_addresses() {
 #include <stdio.h>
 #include <stdlib.h>
 #include "cppa/singletons.hpp"
-#include "cppa/windows/windows_tcp.hpp"
-// Link with Iphlpapi.lib
-// #pragma comment(lib, "IPHLPAPI.lib")    -liphlpapi
 
 namespace {
 

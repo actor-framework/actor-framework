@@ -45,8 +45,6 @@
 #ifdef CPPA_WINDOWS
 #   include <winsock2.h>
 #   include <ws2tcpip.h>
-#   include "cppa/singletons.hpp"
-#   include "cppa/windows/windows_tcp.hpp"
 #else
 #   include <netdb.h>
 #   include <unistd.h>
@@ -82,40 +80,13 @@ struct socket_guard {
 
 };
 
-#ifdef CPPA_WINDOWS
-inline native_socket_type do_accept(native_socket_type fd,
-                                    sockaddr* addr,
-                                    socklen_t* addrlen) {
-    return ::WSAAccept(fd, addr, addrlen, 0, 0)
-}
-#else
-inline native_socket_type do_accept(native_socket_type fd,
-                                    sockaddr* addr,
-                                    socklen_t* addrlen) {
-    return ::accept(fd, addr, addrlen);
-}
-#endif
-
 bool accept_impl(stream_ptr_pair& result,
                  native_socket_type fd,
                  bool nonblocking) {
-    /*
     sockaddr addr;
     memset(&addr, 0, sizeof(addr));
-    */
-    //socklen_t addrlen = sizeof(addr);
-    /*
-    socklen_t addrlen;
-    memset(&addrlen, 0, sizeof(addrlen));
-#   ifdef CPPA_WINDOWS
-    addrlen = sizeof(addr);
-#   endif
-    */
-    sockaddr addr;
-    socklen_t addrlen;
-    memset(&addr, 0, sizeof(addr));
-    memset(&addrlen, 0, sizeof(addrlen));
-    auto sfd = do_accept(fd, &addr, &addrlen);
+    socklen_t addrlen = sizeof(addr);
+    auto sfd = ::accept(fd, &addr, &addrlen);
     if (sfd == invalid_socket) {
         auto err = last_socket_error();
         if (nonblocking && would_block_or_temporarily_unavailable(err)) {

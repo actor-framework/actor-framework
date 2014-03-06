@@ -833,8 +833,8 @@ void test_spawn() {
     // create some actors linked to one single actor
     // and kill them all through killing the link
     auto legion = spawn([](event_based_actor* self) {
-        CPPA_PRINT("spawn 1, 000 actors");
-        for (int i = 0; i < 1000; ++i) {
+        CPPA_PRINT("spawn 100 actors");
+        for (int i = 0; i < 100; ++i) {
             self->spawn<event_testee, linked>();
         }
         self->become(others() >> CPPA_UNEXPECTED_MSG_CB());

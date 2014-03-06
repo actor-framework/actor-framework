@@ -140,7 +140,7 @@ std::unique_ptr<T> create_unique(Args&&... args) {
     constexpr SOCKET invalid_socket = INVALID_SOCKET;
     inline int last_socket_error() { return WSAGetLastError(); }
     inline bool would_block_or_temporarily_unavailable(int errcode) {
-        return errcode == WSAEWOULDBLOCK || errcode = WSATRY_AGAIN;
+        return errcode == WSAEWOULDBLOCK || errcode == WSATRY_AGAIN;
     }
 #else
     typedef int native_socket_type;

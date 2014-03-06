@@ -111,9 +111,9 @@ void middleman_event_handler::update() {
         CPPA_LOG_DEBUG("new bitmask for "
                        << elem.ptr << ": " << eb2str(mask));
         if (iter == last || iter->fd != elem.fd) {
-            CPPA_LOG_ERROR_IF(mask == event::none,
-                              "cannot erase " << ptr << " (no such element)");
             if (mask != event::none) {
+                // element has been removed from m_meta by an
+                // previous alteration but is not put back in
                 m_meta.insert(iter, elem);
                 handle_event(fd_meta_event::add, elem.fd,
                              event::none, mask, ptr);
@@ -138,11 +138,13 @@ void middleman_event_handler::update() {
     // m_meta won't be touched inside loop
     auto first = m_meta.begin();
     auto last = m_meta.end();
+    // checks whether an element can be safely deleted,
+    // i.e., was not put back into m_meta by some alteration
     auto is_alive = [&](native_socket_type fd) -> bool {
         auto iter = std::lower_bound(first, last, fd, mless);
         return iter != last && iter->fd == fd;
     };
-    // check whether elements in dispose list can be safely deleted
+    // dispose everything that wasn't put back into m_meta again
     for (auto elem : m_dispose_list) {
         auto rd = elem->read_handle();
         auto wr = elem->write_handle();

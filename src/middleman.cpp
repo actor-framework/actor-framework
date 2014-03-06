@@ -79,7 +79,7 @@ using namespace std;
 namespace cppa { namespace io {
 
 void notify_queue_event(native_socket_type fd) {
-    uint8_t dummy = 0;
+    char dummy = 0;
     // on unix, we have file handles, on windows, we actually have sockets
 #   ifdef CPPA_WINDOWS
     auto res = ::send(fd, &dummy, sizeof(dummy), 0);
@@ -92,7 +92,7 @@ void notify_queue_event(native_socket_type fd) {
 
 size_t num_queue_events(native_socket_type fd) {
     static constexpr size_t num_dummies = 64;
-    uint8_t dummies[num_dummies];
+    char dummies[num_dummies];
     // on unix, we have file handles, on windows, we actually have sockets
 #   ifdef CPPA_WINDOWS
     auto read_result = ::recv(fd, dummies, num_dummies, 0);
