@@ -72,7 +72,7 @@ actor_addr actor_namespace::read(deserializer* source) {
     auto aid = source->read<uint32_t>();                 // actor id
     auto pid = source->read<uint32_t>();                 // process id
     source->read_raw(node_id::host_id_size, hid.data()); // host id
-    auto this_node = node_id::get();
+    auto this_node = get_middleman()->node();
     if (aid == 0 && pid == 0) {
         // 0:0 identifies an invalid actor
         return invalid_actor_addr;

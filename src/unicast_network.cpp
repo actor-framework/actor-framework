@@ -112,7 +112,8 @@ void publish_impl(abstract_actor_ptr ptr, std::unique_ptr<acceptor> aptr) {
 
 abstract_actor_ptr remote_actor_impl(stream_ptr_pair io, string_set expected) {
     CPPA_LOGF_TRACE("io{" << io.first.get() << ", " << io.second.get() << "}");
-    auto pinf = node_id::get();
+    auto mm = get_middleman();
+    auto pinf = mm->node();
     std::uint32_t process_id = pinf->process_id();
     // throws on error
     io.second->write(&process_id, sizeof(std::uint32_t));
@@ -196,7 +197,6 @@ abstract_actor_ptr remote_actor_impl(stream_ptr_pair io, string_set expected) {
         auto ptr = get_actor_registry()->get(remote_aid);
         return ptr;
     }
-    auto mm = get_middleman();
     struct remote_actor_result { remote_actor_result* next; actor value; };
     intrusive::blocking_single_reader_queue<remote_actor_result> q;
     mm->run_later([mm, io, pinfptr, remote_aid, &q] {

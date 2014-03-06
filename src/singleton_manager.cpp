@@ -56,18 +56,6 @@ class opencl_metainfo : public detail::singleton_mixin<opencl_metainfo> { };
 } } // namespace cppa::opencl
 #endif
 
-#ifdef CPPA_WINDOWS
-#  include "cppa/windows/windows_tcp.hpp"
-#else
-namespace cppa { namespace windows {
-
-class windows_tcp : public detail::singleton_mixin<windows_tcp> { };
-
-} } // namespace cppa::windows
-#endif
-
-
-
 namespace cppa { void shutdown() { detail::singleton_manager::shutdown(); } }
 
 namespace cppa { namespace detail {
@@ -82,7 +70,6 @@ std::atomic<group_manager*> s_group_manager;
 std::atomic<empty_tuple*> s_empty_tuple;
 std::atomic<scheduler*> s_scheduler;
 std::atomic<logging*> s_logger;
-std::atomic<windows::windows_tcp*> s_windows_tcp;
 
 } // namespace <anonymous>
 
@@ -104,11 +91,6 @@ void singleton_manager::shutdown() {
     CPPA_LOGF_DEBUG("clear type info map");
     destroy(s_uniform_type_info_map);
     destroy(s_logger);
-#ifdef CPPA_WINDOWS
-    CPPA_LOGF_DEBUG("WSACleanup");
-    destroy(s_windows_tcp);
-#endif
-
 }
 
 opencl::opencl_metainfo* singleton_manager::get_opencl_metainfo() {
@@ -117,15 +99,6 @@ opencl::opencl_metainfo* singleton_manager::get_opencl_metainfo() {
 #   else
     CPPA_LOGF_ERROR("libcppa was compiled without OpenCL support");
     throw std::logic_error("libcppa was compiled without OpenCL support");
-#   endif
-}
-
-windows::windows_tcp* singleton_manager::get_windows_tcp() {
-#ifdef CPPA_WINDOWS
-    return lazy_get(s_windows_tcp);
-#   else
-    CPPA_LOGF_ERROR("libcppa was compiled without windows support");
-    throw std::logic_error("libcppa was compiled without windows support");
 #   endif
 }
 

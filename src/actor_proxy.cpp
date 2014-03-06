@@ -35,9 +35,12 @@
 #include "cppa/to_string.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/scheduler.hpp"
+#include "cppa/singletons.hpp"
 #include "cppa/actor_proxy.hpp"
 #include "cppa/exit_reason.hpp"
+
 #include "cppa/io/middleman.hpp"
+
 #include "cppa/detail/types_array.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 
@@ -46,7 +49,7 @@ using namespace std;
 namespace cppa {
 
 actor_proxy::actor_proxy(actor_id mid) : super(mid) {
-    m_node = node_id::get();
+    m_node = get_middleman()->node();
 }
 
 } // namespace cppa

@@ -290,7 +290,7 @@ class local_group_module : public abstract_group::module {
  public:
 
     local_group_module()
-    : super("local"), m_process(node_id::get())
+    : super("local"), m_process(get_middleman()->node())
     , m_actor_utype(uniform_typeid<actor>()){ }
 
     group get(const string& identifier) override {

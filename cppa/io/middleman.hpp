@@ -173,6 +173,11 @@ class middleman {
      */
     inline actor_namespace& get_namespace();
 
+    /**
+     * @brief Returns the node of this middleman.
+     */
+    inline const node_id_ptr& node() const;
+
  protected:
 
     // creates a middleman instance
@@ -197,10 +202,12 @@ class middleman {
 
 };
 
-int dumb_socketpair(native_socket_type socks[2], int make_overlapped);
-
 inline actor_namespace& middleman::get_namespace() {
     return m_namespace;
+}
+
+const node_id_ptr& middleman::node() const {
+    return m_node;
 }
 
 } } // namespace cppa::io

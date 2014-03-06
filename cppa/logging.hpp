@@ -34,13 +34,9 @@
 #include <cstring>
 #include <sstream>
 #include <iostream>
-#include <cppa/config.hpp> 
-#ifdef CPPA_WINDOWS
-#include <cppa/execinfo_windows.h>
-#else 
-#include <execinfo.h>
-#endif 
 #include <type_traits>
+
+#include "cppa/config.hpp"
 
 #include "cppa/singletons.hpp"
 #include "cppa/abstract_actor.hpp"
@@ -171,8 +167,8 @@ oss_wr operator<<(oss_wr&& lhs, T rhs) {
         std::cerr << "[" << lvlname << "] " << classname << "::"               \
                   << funname << ": " << message << "\nStack trace:\n";         \
         void* bt_array[20];                                                    \
-        size_t size = backtrace(bt_array, 20);                                 \
-        backtrace_symbols_fd(bt_array, size, 2);                               \
+        size_t size = ::cppa::detail::backtrace(bt_array, 20);                 \
+        ::cppa::detail::backtrace_symbols_fd(bt_array, size, 2);               \
     } CPPA_VOID_STMT
 
 #ifndef CPPA_LOG_LEVEL

@@ -94,12 +94,6 @@ class node_id : public ref_counted, util::comparable<node_id> {
      */
     inline const host_id_type& host_id() const { return m_host_id; }
 
-    /**
-     * @brief Returns the proccess_information for the running process.
-     * @returns A pointer to the singleton of this process.
-     */
-    static const intrusive_ptr<node_id>& get();
-
     /** @cond PRIVATE */
 
     // "inherited" from comparable<node_id>

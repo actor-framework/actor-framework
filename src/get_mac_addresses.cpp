@@ -185,13 +185,19 @@ std::vector<std::string> get_mac_addresses() {
 // Link with Iphlpapi.lib
 // #pragma comment(lib, "IPHLPAPI.lib")    -liphlpapi
 
-#define WORKING_BUFFER_SIZE 15000
-#define MAX_TRIES 3
+namespace {
 
-#define MALLOC(x) HeapAlloc(GetProcessHeap(), 0, (x))
-#define FREE(x) HeapFree(GetProcessHeap(), 0, (x))
+constexpr size_t working_buffer_size = 15 * 1024; // 15kb by default
+constexpr size_t max_iterations = 3;
 
-/* Note: could also use malloc() and free() */
+struct c_free {
+    template<typename T>
+    void operator()(T* ptr) {
+        free(ptr);
+    }
+};
+
+} // namespace <anonymous>
 
 
 using namespace std;
@@ -199,95 +205,55 @@ using namespace std;
 namespace cppa { namespace util {
 
 std::vector<std::string> get_mac_addresses() {
-
-   /* Declare and initialize variables */
-
-    DWORD dwRetVal = 0;
-
-    unsigned int i = 0;
-
-    // Set the flags to pass to GetAdaptersAddresses
+    // result vector
+    vector<string> hw_addresses;
+    // flags to pass to GetAdaptersAddresses
     ULONG flags = GAA_FLAG_INCLUDE_PREFIX;
-
     // default to unspecified address family (both)
     ULONG family = AF_UNSPEC;
-
-
-    PIP_ADAPTER_ADDRESSES pAddresses = NULL;
-    ULONG outBufLen = 0;
-    ULONG Iterations = 0;
-    PIP_ADAPTER_ADDRESSES pCurrAddresses = NULL;
-
-    vector<string> hw_addresses;
-
-// Allocate a 15 KB buffer to start with.
-    outBufLen = WORKING_BUFFER_SIZE;
-
-    cppa::windows::get_windows_tcp();
-
+    // buffer
+    std::unique_ptr<IP_ADAPTER_ADDRESSES, c_free> addresses;
+    // init buf size to default, adjusted by GetAdaptersAddresses if needed
+    ULONG addresses_len = working_buffer_size;
+    // stores result of latest system call
+    DWORD res = 0;
+    // break condition
+    size_t iterations = 0;
     do {
-
-        pAddresses = (IP_ADAPTER_ADDRESSES *) MALLOC(outBufLen);
-        if (pAddresses == NULL) {
+        addresses.reset((IP_ADAPTER_ADDRESSES*) malloc(addresses_len));
+        if (!addresses) {
             perror("Memory allocation failed for IP_ADAPTER_ADDRESSES struct");
             exit(1);
         }
-
-        dwRetVal =
-            GetAdaptersAddresses(family, flags, NULL, pAddresses, &outBufLen);
-
-        if (dwRetVal == ERROR_BUFFER_OVERFLOW) {
-            FREE(pAddresses);
-            pAddresses = NULL;
-        } else {
-            break;
-        }
-
-        Iterations++;
-
-    } while ((dwRetVal == ERROR_BUFFER_OVERFLOW) && (Iterations < MAX_TRIES));
-
-
-    if (dwRetVal == NO_ERROR) {
-        // If successful, output some information from the data we received
-        pCurrAddresses = pAddresses;
-        while (pCurrAddresses) {
-            if (pCurrAddresses->PhysicalAddressLength != 0) {
+        res = GetAdaptersAddresses(family, flags, nullptr,
+                                   addresses.get(), &addresses_len);
+    } while ((res == ERROR_BUFFER_OVERFLOW) && (++iterations < max_iterations));
+    if (res == NO_ERROR) {
+        // read hardware addresses from the output we've received
+        for (auto addr = addresses.get(); addr != nullptr; addr = addr->Next) {
+            if (addr->PhysicalAddressLength > 0) {
                 std::ostringstream oss;
                 oss << hex;
-                for (i = 0; i < (unsigned int) pCurrAddresses->PhysicalAddressLength; i++) {
-                    if (i == (pCurrAddresses->PhysicalAddressLength - 1)) {
-                        oss.width(2);
-                        oss << ((int) pCurrAddresses->PhysicalAddress[i]);
-                    } else {
-                        oss.width(2);
-                        oss << ((int) pCurrAddresses->PhysicalAddress[i]) << ":";
-                       
-                    }
-
+                oss.width(2);
+                oss << static_cast<int>(addr->PhysicalAddress[0]);
+                for (DWORD i = 1; i < addr->PhysicalAddressLength; ++i) {
+                    oss << ":";
+                    oss.width(2);
+                    oss << static_cast<int>(addr->PhysicalAddress[i]);
                 }
-                auto addr = oss.str();
-                if (addr != "00:00:00:00:00:00") {
-                    hw_addresses.push_back(std::move(addr));
+                auto hw_addr = oss.str();
+                if (hw_addr != "00:00:00:00:00:00") {
+                    hw_addresses.push_back(std::move(hw_addr));
                 }
-
             }
-
-            pCurrAddresses = pCurrAddresses->Next;
         }
     } else {
-
-        if (dwRetVal == ERROR_NO_DATA) {
+        if (res == ERROR_NO_DATA) {
             perror("No addresses were found for the requested parameters");
         } else {
             perror("Call to GetAdaptersAddresses failed with error");
         }
     }
-
-    if (pAddresses) {
-        FREE(pAddresses);
-    }
-
     return hw_addresses;
 }
 

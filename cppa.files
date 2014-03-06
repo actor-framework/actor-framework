@@ -351,3 +351,5 @@ unit_testing/test_yield_interface.cpp
 cppa/may_have_timeout.hpp
 examples/message_passing/typed_calculator.cpp
 examples/aout.cpp
+cppa/detail/execinfo_windows.hpp
+src/execinfo_windows.cpp

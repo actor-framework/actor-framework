@@ -171,7 +171,7 @@ int main() {
 
     actor_namespace addressing;
 
-    cout << "process id: " << to_string(node_id::get()) << endl;
+    cout << "process id: " << to_string(get_middleman()->node()) << endl;
 
     auto oarr = new detail::object_array;
     oarr->push_back(object::from(static_cast<uint32_t>(42)));

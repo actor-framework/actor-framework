@@ -44,8 +44,6 @@ namespace cppa { namespace io { class middleman; } }
 
 namespace cppa { namespace opencl { class opencl_metainfo; } }
 
-namespace cppa { namespace windows { class windows_tcp; } }
-
 namespace cppa { namespace detail {
 
 class empty_tuple;
@@ -81,8 +79,6 @@ class singleton_manager {
     static empty_tuple* get_empty_tuple();
 
     static opencl::opencl_metainfo* get_opencl_metainfo();
-
-    static windows::windows_tcp* get_windows_tcp();
 
  private:
 

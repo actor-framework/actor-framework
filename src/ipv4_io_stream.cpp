@@ -34,19 +34,14 @@
 #include <iostream>
 
 #include "cppa/config.hpp"
-#ifdef CPPA_WINDOWS
-#   include <ws2tcpip.h>
-#   include <winsock2.h>
-#endif
-
 #include "cppa/logging.hpp"
 #include "cppa/exception.hpp"
 #include "cppa/detail/fd_util.hpp"
 #include "cppa/io/ipv4_io_stream.hpp"
 
 #ifdef CPPA_WINDOWS
-#   include "cppa/singletons.hpp"
-#   include "cppa/windows/windows_tcp.hpp" 
+#   include <ws2tcpip.h>
+#   include <winsock2.h>
 #else
 #   include <netdb.h>
 #   include <unistd.h>
@@ -55,9 +50,6 @@
 #   include <netinet/in.h>
 #   include <netinet/tcp.h>
 #endif
-
-
-
 
 namespace cppa { namespace io {
 
@@ -140,14 +132,12 @@ io::stream_ptr ipv4_io_stream::connect_to(const char* host,
                                           std::uint16_t port) {
     CPPA_LOGF_TRACE(CPPA_ARG(host) << ", " << CPPA_ARG(port));
     CPPA_LOGF_INFO("try to connect to " << host << " on port " << port);
-    struct sockaddr_in serv_addr;
-    struct hostent* server;
-
-#ifdef CPPA_WINDOWS
-// ensure tcp has been initialized
-    cppa::get_windows_tcp();
-#endif
-
+#   ifdef CPPA_WINDOWS
+    // make sure TCP has been initialized via WSAStartup
+    cppa::get_middleman();
+#   endif
+    sockaddr_in serv_addr;
+    hostent* server;
     native_socket_type fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fd == invalid_socket) {
         throw network_error("socket creation failed");

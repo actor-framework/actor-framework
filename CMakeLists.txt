@@ -116,7 +116,7 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   set(LIBCPPA_PLATFORM_SRC src/middleman_event_handler_poll.cpp)
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "Window")
-  set(LIBCPPA_PLATFORM_SRC src/middleman_event_handler_poll.cpp src/backtrace.cpp)
+  set(LIBCPPA_PLATFORM_SRC src/middleman_event_handler_poll.cpp src/execinfo_windows.cpp)
 else ()
   message(FATAL_ERROR "This platform is not supported by libcppa")
 endif()
@@ -129,8 +129,7 @@ file(GLOB LIBCPPA_HDRS "cppa/*.hpp"
                        "cppa/io/*.hpp"
                        "cppa/opencl/*.hpp"
                        "cppa/qtsupport/*.hpp"
-                       "cppa/util/*.hpp"
-                       "cppa/windows/*.hpp")
+                       "cppa/util/*.hpp")
 
 # list cpp files including platform-dependent files
 set(LIBCPPA_SRC
@@ -206,7 +205,6 @@ set(LIBCPPA_SRC
     src/serializer.cpp
     src/shared_spinlock.cpp
     src/singleton_manager.cpp
-    src/socketpair.cpp
     src/string_serialization.cpp
     src/sync_request_bouncer.cpp
     src/thread_pool_scheduler.cpp
@@ -247,13 +245,6 @@ if (ENABLE_OPENCL)
       src/opencl/opencl_metainfo.cpp)
   add_definitions(-DCPPA_OPENCL)
 endif (ENABLE_OPENCL)
-
-if (MINGW)
-  set(LIBCPPA_SRC
-      ${LIBCPPA_SRC} 
-      src/windows/windows_tcp.cpp)
-endif (MINGW)
-
 
 if (DISABLE_MEM_MANAGEMENT)
   add_definitions(-DCPPA_DISABLE_MEM_MANAGEMENT)

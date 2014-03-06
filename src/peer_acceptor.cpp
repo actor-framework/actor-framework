@@ -63,7 +63,7 @@ continue_reading_result peer_acceptor::continue_reading() {
         }
         if (opt) {
             auto& pair = *opt;
-            auto& pself = node_id::get();
+            auto& pself = m_parent->node();
             uint32_t process_id = pself->process_id();
             try {
                 auto& out = pair.second;

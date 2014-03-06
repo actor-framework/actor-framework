@@ -26,17 +26,13 @@
  * You should have received a copy of the GNU Lesser General Public License   *
  * along with libcppa. If not, see <http://www.gnu.org/licenses/>.            *
 \******************************************************************************/
-#include "cppa/config.hpp"
-#ifdef CPPA_WINDOWS
-#   include <ws2tcpip.h>
-#   include <winsock2.h>
-#endif
 
 #include <ios>
 #include <cstring>
 #include <errno.h>
 #include <iostream>
 
+#include "cppa/config.hpp"
 #include "cppa/logging.hpp"
 #include "cppa/exception.hpp"
 
@@ -86,38 +82,48 @@ struct socket_guard {
 
 };
 
+#ifdef CPPA_WINDOWS
+inline native_socket_type do_accept(native_socket_type fd,
+                                    sockaddr* addr,
+                                    socklen_t* addrlen) {
+    return ::WSAAccept(fd, addr, addrlen, 0, 0)
+}
+#else
+inline native_socket_type do_accept(native_socket_type fd,
+                                    sockaddr* addr,
+                                    socklen_t* addrlen) {
+    return ::accept(fd, addr, addrlen);
+}
+#endif
+
 bool accept_impl(stream_ptr_pair& result,
                  native_socket_type fd,
                  bool nonblocking) {
+    /*
     sockaddr addr;
-#ifdef CPPA_WINDOWS
-    int addrlen;
-#else
-    socklen_t addrlen;
-#endif
     memset(&addr, 0, sizeof(addr));
-#ifdef CPPA_WINDOWS
-    addrlen=sizeof(addr);   // check this
-
-    auto sfd = ::WSAAccept(fd, &addr, &addrlen, 0, 0); // size too small
-    if (sfd == INVALID_SOCKET) {
-        if (nonblocking && (WSAGetLastError() == WSATRY_AGAIN || WSAGetLastError() == WSAEWOULDBLOCK)) {
-            // ok, try again
-            return false;
-        }
-        throw_io_failure("accept failed");
-    }
-#else
+    */
+    //socklen_t addrlen = sizeof(addr);
+    /*
+    socklen_t addrlen;
     memset(&addrlen, 0, sizeof(addrlen));
-    auto sfd = ::accept(fd, &addr, &addrlen);
-    if (sfd < 0) {
-        if (nonblocking && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+#   ifdef CPPA_WINDOWS
+    addrlen = sizeof(addr);
+#   endif
+    */
+    sockaddr addr;
+    socklen_t addrlen;
+    memset(&addr, 0, sizeof(addr));
+    memset(&addrlen, 0, sizeof(addrlen));
+    auto sfd = do_accept(fd, &addr, &addrlen);
+    if (sfd == invalid_socket) {
+        auto err = last_socket_error();
+        if (nonblocking && would_block_or_temporarily_unavailable(err)) {
             // ok, try again
             return false;
         }
         throw_io_failure("accept failed");
     }
-#endif
     stream_ptr ptr(ipv4_io_stream::from_native_socket(sfd));
     result.first = ptr;
     result.second = ptr;
@@ -133,55 +139,32 @@ std::unique_ptr<acceptor> ipv4_acceptor::create(std::uint16_t port,
                                                 const char* addr) {
     CPPA_LOGM_TRACE("ipv4_acceptor", CPPA_ARG(port) << ", addr = "
                                      << (addr ? addr : "nullptr"));
-    native_socket_type sockfd;
-
-#ifdef CPPA_WINDOWS
-// ensure tcp has been initialized
-    cppa::windows::get_windows_tcp();
-    sockfd = INVALID_SOCKET;
-    sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (sockfd == INVALID_SOCKET) {
-        throw network_error("could not create server socket");
-    }
-#else
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+#   ifdef CPPA_WINDOWS
+    // ensure that TCP has been initialized via WSAStartup
+    cppa::get_middleman();
+#   endif
+    native_socket_type sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == invalid_socket) {
         throw network_error("could not create server socket");
     }
-#endif
     // sguard closes the socket in case of exception
     socket_guard sguard(sockfd);
-#ifdef CPPA_WINDOWS
     int on = 1;
-    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char*)&on,sizeof(on)) < 0) {
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
+                   reinterpret_cast<setsockopt_ptr>(&on), sizeof(on)) < 0) {
         throw_io_failure("unable to set SO_REUSEADDR");
     }
-#else
-    int on = 1;
-    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0) {
-        throw_io_failure("unable to set SO_REUSEADDR");
-    }
-#endif
-
-
     struct sockaddr_in serv_addr;
     memset((char*) &serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     if (! addr) {
         serv_addr.sin_addr.s_addr = INADDR_ANY;
     }
-#ifdef CPPA_WINDOWS
     else if (::inet_pton(AF_INET, addr, &serv_addr.sin_addr) <= 0) {
         throw network_error("invalid IPv4 address");
     }
-#else
-    else if (inet_pton(AF_INET, addr, &serv_addr.sin_addr) <= 0) {
-        throw network_error("invalid IPv4 address");
-    }
-#endif
-
     serv_addr.sin_port = htons(port);
-    if (bind(sockfd, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0) {
+    if (bind(sockfd, (sockaddr*) &serv_addr, sizeof(serv_addr)) < 0) {
         throw bind_failure(errno);
     }
     if (listen(sockfd, 10) != 0) {

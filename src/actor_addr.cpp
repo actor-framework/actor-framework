@@ -29,8 +29,11 @@
 
 
 #include "cppa/actor.hpp"
+#include "cppa/singletons.hpp"
 #include "cppa/actor_addr.hpp"
 #include "cppa/local_actor.hpp"
+
+#include "cppa/io/middleman.hpp"
 
 #include "cppa/detail/raw_access.hpp"
 
@@ -64,7 +67,7 @@ actor_id actor_addr::id() const {
 }
 
 const node_id& actor_addr::node() const {
-    return m_ptr ? m_ptr->node() : *node_id::get();
+    return m_ptr ? m_ptr->node() : *get_middleman()->node();
 }
 
 bool actor_addr::is_remote() const {

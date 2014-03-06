@@ -127,11 +127,8 @@ int main(int argc, char** argv) {
             }
         },
         on("/quit") >> [&] {
-#ifndef CPPA_WINDOWS
-            close(STDIN_FILENO); // close STDIN; causes this match loop to quit
-#else
-            cin.setstate(ios_base::eofbit); // close STDIN; causes this match loop to quit
-#endif
+            // close STDIN; causes this match loop to quit
+            cin.setstate(ios_base::eofbit);
         },
         on<string, anything>().when(_x1.starts_with("/")) >> [&] {
             cout <<  "*** available commands:\n"

@@ -29,18 +29,19 @@
 
 
 #include <sstream>
+#include <stdlib.h>
+
+
 #include "cppa/config.hpp"
 #include "cppa/exception.hpp"
 
-#ifndef CPPA_WINDOWS
-#include <sys/socket.h>
-#include <sys/un.h>
+#ifdef CPPA_WINDOWS
+#   include <winerror.h>
 #else
-#include <winerror.h>
+#   include <errno.h>
+#   include <sys/socket.h>
+#   include <sys/un.h>
 #endif
-
-#include <stdlib.h>
-#include <errno.h>
 
 namespace {
 
@@ -52,20 +53,20 @@ std::string ae_what(std::uint32_t reason) {
 
 std::string be_what(int err_code) {
     switch (err_code) {
-#ifndef CPPA_WINDOWS
-    case EACCES: return "EACCES: address is protected; root access needed";
-    case EADDRINUSE: return "EADDRINUSE: address is already in use";
-    case EBADF: return "EBADF: no valid socket descriptor";
-    case EINVAL: return "EINVAL: socket already bound to an address";
-    case ENOTSOCK: return "ENOTSOCK: file descriptor given";
-#else
-    case WSAEACCES: return "EACCES: address is protected; root access needed";
-    case WSAEADDRINUSE: return "EADDRINUSE: address is already in use";
-    case WSAEBADF: return "EBADF: no valid socket descriptor";
-    case WSAEINVAL: return "EINVAL: socket already bound to an address";
-    case WSAENOTSOCK: return "ENOTSOCK: file descriptor given";
-#endif
-    default: break;
+#   ifndef CPPA_WINDOWS
+        case EACCES: return "EACCES: address protected; root access needed";
+        case EADDRINUSE: return "EADDRINUSE: address already in use";
+        case EBADF: return "EBADF: no valid socket descriptor";
+        case EINVAL: return "EINVAL: socket already bound to an address";
+        case ENOTSOCK: return "ENOTSOCK: no file descriptor given";
+#   else
+        case WSAEACCES: return "EACCES: address protected; root access needed";
+        case WSAEADDRINUSE: return "EADDRINUSE: address already in use";
+        case WSAEBADF: return "EBADF: no valid socket descriptor";
+        case WSAEINVAL: return "EINVAL: socket already bound to an address";
+        case WSAENOTSOCK: return "ENOTSOCK: no file descriptor given";
+#   endif
+        default: break;
     }
     std::stringstream oss;
     oss << "an unknown error occurred (code: " << err_code << ")";

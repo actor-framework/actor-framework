@@ -67,13 +67,6 @@ inline detail::empty_tuple* get_empty_tuple() {
     return detail::singleton_manager::get_empty_tuple();
 }
 
-#ifdef CPPA_WINDOWS
-inline windows::windows_tcp* get_windows_tcp() {
-    return detail::singleton_manager::get_windows_tcp();
-}
-#endif
-
-
 } // namespace cppa
 
 #endif // CPPA_SINGLETONS_HPP

@@ -112,7 +112,7 @@ continue_reading_result peer::continue_reading() {
                 memcpy(host_id.data(), m_rd_buf.offset_data(sizeof(uint32_t)),
                        node_id::host_id_size);
                 m_node.reset(new node_id(process_id, host_id));
-                if (*node_id::get() == *m_node) {
+                if (*parent()->node() == *m_node) {
                     std::cerr << "*** middleman warning: "
                                  "incoming connection from self"
                               << std::endl;
@@ -203,7 +203,7 @@ void peer::monitor(const actor_addr&,
         return;
     }
     auto entry = get_actor_registry()->get_entry(aid);
-    auto pself = node_id::get();
+    auto pself = parent()->node();
 
     if (*node == *pself) {
         CPPA_LOG_ERROR("received 'MONITOR' from pself");
