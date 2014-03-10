@@ -89,6 +89,7 @@ int main() {
         "@header",                   // message_header
         "@actor",                    // actor_ptr
         "@group",                    // group
+        "@group_down",               // group_down_msg
         "@channel",                  // channel
         "@proc",                     // intrusive_ptr<node_id>
         "@duration",                 // util::duration

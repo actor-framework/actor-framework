@@ -389,8 +389,7 @@ class remote_group : public abstract_group {
         CPPA_LOG_TRACE("");
         group this_group{this};
         m_decorated->send_all_subscribers({invalid_actor_addr, nullptr},
-                                          make_any_tuple(atom("GROUP_DOWN"),
-                                                         this_group));
+                                          make_any_tuple(group_down_msg{this_group}));
     }
 
  private:
@@ -464,15 +463,16 @@ class remote_group_module : public abstract_group::module {
         auto sm = make_counted<shared_map>();
         abstract_group::module_ptr this_group{this};
         m_map = sm;
+        typedef map<string, pair<actor, vector<pair<string, remote_group_ptr>>>>
+                peer_map;
+        auto peers = std::make_shared<peer_map>();
         m_map->m_worker = spawn<hidden>([=](event_based_actor* self) -> behavior {
             CPPA_LOGC_TRACE(detail::demangle(typeid(*this_group)),
                             "remote_group_module$worker",
                             "");
-            typedef map<string, pair<actor, vector<pair<string, remote_group_ptr>>>>
-                    peer_map;
-            auto peers = std::make_shared<peer_map>();
-            return (
+            return {
                 on(atom("FETCH"), arg_match) >> [=](const string& key) {
+                    CPPA_LOGF_TRACE("");
                     // format is group@host:port
                     auto pos1 = key.find('@');
                     auto pos2 = key.find(':');
@@ -489,22 +489,19 @@ class remote_group_module : public abstract_group::module {
                         else {
                             auto host = key.substr(pos1 + 1, pos2 - pos1 - 1);
                             auto pstr = key.substr(pos2 + 1);
-                            istringstream iss(pstr);
-                            uint16_t port;
-                            if (iss >> port) {
-                                try {
-                                    nameserver = remote_actor(host, port);
-                                    self->monitor(nameserver);
-                                    (*peers)[authority].first = nameserver;
-                                }
-                                catch (exception&) {
-                                    sm->put(key, nullptr);
-                                    return;
-                                }
+                            try {
+                                auto port = static_cast<uint16_t>(std::stoi(pstr));
+                                nameserver = remote_actor(host, port);
+                                self->monitor(nameserver);
+                                (*peers)[authority].first = nameserver;
+                            }
+                            catch (exception&) {
+                                sm->put(key, nullptr);
+                                return;
                             }
                         }
                         self->timed_sync_send(nameserver, chrono::seconds(10), atom("GET_GROUP"), name).then (
-                            on(atom("GROUP"), arg_match) >> [&](const group& g) {
+                            on(atom("GROUP"), arg_match) >> [=](const group& g) {
                                 auto gg = dynamic_cast<local_group*>(detail::raw_access::get(g));
                                 if (gg) {
                                     auto rg = make_counted<remote_group>(this_group, key, gg);
@@ -521,29 +518,34 @@ class remote_group_module : public abstract_group::module {
                                     sm->put(key, nullptr);
                                 }
                             },
-                            on<sync_timeout_msg>() >> [sm, &key] {
+                            on<sync_timeout_msg>() >> [sm, key] {
+                                CPPA_LOGF_WARNING("'GET_GROUP' timed out");
                                 sm->put(key, nullptr);
                             }
                         );
                     }
                 },
-                on_arg_match >> [&](const down_msg&) {
+                on_arg_match >> [=](const down_msg&) {
                     auto who = self->last_sender();
-                    auto find_peer = [&] {
-                        return find_if(begin(*peers), end(*peers), [&](const peer_map::value_type& kvp) {
-                            return kvp.second.first == who;
-                        });
-                    };
-                    for (auto i = find_peer(); i != peers->end(); i = find_peer()) {
-                        for (auto& kvp: i->second.second) {
-                            sm->put(kvp.first, nullptr);
-                            kvp.second->group_down();
+                    auto i = peers->begin();
+                    auto last = peers->end();
+                    while (i != last) {
+                        auto& e = i->second;
+                        if (e.first == who) {
+                            for (auto& kvp: e.second) {
+                                sm->put(kvp.first, nullptr);
+                                kvp.second->group_down();
+                            }
+                            i = peers->erase(i);
                         }
-                        peers->erase(i);
+                        else ++i;
                     }
                 },
-                others() >> [] { }
-            );
+                others() >> [=] {
+                    CPPA_LOGF_ERROR("unexpected message: "
+                                    << to_string(self->last_dequeued()));
+                }
+            };
         });
     }
 

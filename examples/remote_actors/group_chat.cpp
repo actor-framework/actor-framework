@@ -57,11 +57,14 @@ void client(event_based_actor* self, const string& name) {
             }
             cout << "*** join " << to_string(what) << endl;
             self->join(what);
-            self->send(self, what, name + " has entered the chatroom");
+            self->send(what, name + " has entered the chatroom");
         },
-        on<string>() >> [=](const string& txt) {
+        [=](const string& txt) {
             // don't print own messages
             if (self->last_sender() != self) cout << txt << endl;
+        },
+        [=](const group_down_msg& g) {
+            cout << "*** chatroom offline: " << to_string(g.source) << endl;
         },
         others() >> [=]() {
             cout << "unexpected: " << to_string(self->last_dequeued()) << endl;
@@ -90,7 +93,6 @@ int main(int argc, char** argv) {
         }
     }
 
-    cout << "*** starting client, type '/help' for a list of commands" << endl;
     auto client_actor = spawn(client, name);
 
     // evaluate group parameters
@@ -115,6 +117,7 @@ int main(int argc, char** argv) {
         }
     }
 
+    cout << "*** starting client, type '/help' for a list of commands" << endl;
     istream_iterator<line> lines(cin);
     istream_iterator<line> eof;
     match_each (lines, eof, split_line) (

@@ -202,8 +202,10 @@ class middleman_impl : public middleman {
     peer* get_peer(const node_id& node) override {
         CPPA_LOG_TRACE(CPPA_TARG(node, to_string));
         auto i = m_peers.find(node);
-        if (i != m_peers.end()) {
-            CPPA_REQUIRE(i->second.impl != nullptr);
+        // future work (?): we *could* try to be smart here and try to
+        // route all messages to node via other known peers in the network
+        // if i->second.impl == nullptr
+        if (i != m_peers.end() && i->second.impl != nullptr) {
             CPPA_LOG_DEBUG("result = " << i->second.impl);
             return i->second.impl;
         }

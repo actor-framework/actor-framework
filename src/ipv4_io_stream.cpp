@@ -117,6 +117,7 @@ void ipv4_io_stream::write(const void* vbuf, size_t len) {
 }
 
 size_t ipv4_io_stream::write_some(const void* buf, size_t len) {
+    CPPA_LOG_TRACE(CPPA_ARG(buf) << ", " << CPPA_ARG(len));
     auto send_result = ::send(m_fd, reinterpret_cast<const char*>(buf), len, 0);
     handle_write_result(send_result, true);
     return static_cast<size_t>(send_result);

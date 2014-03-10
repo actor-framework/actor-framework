@@ -33,6 +33,7 @@
 
 #include <cstdint>
 
+#include "cppa/group.hpp"
 #include "cppa/actor_addr.hpp"
 
 namespace cppa {
@@ -66,6 +67,16 @@ struct down_msg {
      * @brief The exit reason of the terminated actor.
      */
     std::uint32_t reason;
+};
+
+/**
+ * @brief Sent to all members of a group when it goes offline.
+ */
+struct group_down_msg {
+    /**
+     * @brief The source of this message, i.e., the now unreachable group.
+     */
+    group source;
 };
 
 /**

@@ -69,6 +69,7 @@ namespace cppa { namespace detail {
     { "cppa::down_msg",                                 "@down"               },
     { "cppa::exit_msg",                                 "@exit"               },
     { "cppa::group",                                    "@group"              },
+    { "cppa::group_down_msg",                           "@group_down"         },
     { "cppa::intrusive_ptr<cppa::node_id>",             "@proc"               },
     { "cppa::io::accept_handle",                        "@ac_hdl"             },
     { "cppa::io::connection_handle",                    "@cn_hdl"             },
@@ -411,6 +412,14 @@ typename std::enable_if<
 deserialize_impl(T& dm, deserializer* source) {
     deserialize_impl(dm.source, source);
     dm.reason = source->read<std::uint32_t>();
+}
+
+inline void serialize_impl(const group_down_msg& dm, serializer* sink) {
+    serialize_impl(dm.source, sink);
+}
+
+inline void deserialize_impl(group_down_msg& dm, deserializer* source) {
+    deserialize_impl(dm.source, source);
 }
 
 inline void serialize_impl(const timeout_msg& tm, serializer* sink) {
@@ -777,6 +786,7 @@ class utim_impl : public uniform_type_info_map {
         *i++ = &m_type_duration;        // @duration
         *i++ = &m_type_exit_msg;        // @exit
         *i++ = &m_type_group;           // @group
+        *i++ = &m_type_group_down;      // @group_down
         *i++ = &m_type_header;          // @header
         *i++ = &m_type_i16;             // @i16
         *i++ = &m_type_i32;             // @i32
@@ -906,6 +916,7 @@ class utim_impl : public uniform_type_info_map {
     uti_impl<group>                         m_type_group;
 
     // 10-19
+    uti_impl<group_down_msg>                m_type_group_down;
     uti_impl<any_tuple>                     m_type_tuple;
     uti_impl<util::duration>                m_type_duration;
     uti_impl<sync_exited_msg>               m_type_sync_exited;
@@ -915,9 +926,9 @@ class utim_impl : public uniform_type_info_map {
     uti_impl<unit_t>                        m_type_unit;
     uti_impl<atom_value>                    m_type_atom;
     uti_impl<std::string>                   m_type_str;
-    uti_impl<std::u16string>                m_type_u16str;
 
     // 20-29
+    uti_impl<std::u16string>                m_type_u16str;
     uti_impl<std::u32string>                m_type_u32str;
     default_uniform_type_info<strmap>  m_type_strmap;
     uti_impl<bool>                          m_type_bool;
@@ -927,16 +938,16 @@ class utim_impl : public uniform_type_info_map {
     int_tinfo<std::int8_t>                  m_type_i8;
     int_tinfo<std::uint8_t>                 m_type_u8;
     int_tinfo<std::int16_t>                 m_type_i16;
-    int_tinfo<std::uint16_t>                m_type_u16;
 
-    // 30-33
+    // 30-34
+    int_tinfo<std::uint16_t>                m_type_u16;
     int_tinfo<std::int32_t>                 m_type_i32;
     int_tinfo<std::uint32_t>                m_type_u32;
     int_tinfo<std::int64_t>                 m_type_i64;
     int_tinfo<std::uint64_t>                m_type_u64;
 
     // both containers are sorted by uniform name
-    std::array<pointer, 34> m_builtin_types;
+    std::array<pointer, 35> m_builtin_types;
     std::vector<uniform_type_info*> m_user_types;
     mutable util::shared_spinlock m_lock;
 

@@ -69,6 +69,7 @@ using mapped_type_list = util::type_list<
     down_msg,
     exit_msg,
     group,
+    group_down_msg,
     node_id_ptr,
     io::accept_handle,
     io::connection_handle,
