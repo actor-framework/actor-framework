@@ -11,9 +11,16 @@
 
 #include "cppa/cppa.hpp"
 #include "cppa/actor.hpp"
+#include "cppa/config.hpp"
 #include "cppa/logging.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/util/scope_guard.hpp"
+
+#ifndef CPPA_WINDOWS
+constexpr char to_dev_null[] = " &>/dev/null";
+#else
+constexpr char to_dev_null[] = "";
+#endif // CPPA_WINDOWS
 
 void set_default_test_settings();
 

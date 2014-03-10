@@ -167,7 +167,7 @@ int main(int argc, char** argv) {
             spawn_io_server(peer_acceptor, port, p);
             CPPA_CHECKPOINT();
             ostringstream oss;
-            oss << app_path << " mode=client port=" << port << " &>/dev/null";
+            oss << app_path << " mode=client port=" << port << to_dev_null;
             thread child{[&oss] {
                 CPPA_LOGC_TRACE("NONE", "main$thread_launcher", "");
                 auto cmdstr = oss.str();

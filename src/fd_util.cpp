@@ -201,7 +201,7 @@ inline void ccall(const char* errmsg, F f, Ts&&... args) {
 \******************************************************************************/
 std::pair<native_socket_type, native_socket_type> create_pipe() {
     socklen_t addrlen = sizeof(sockaddr_in);
-    native_socket_type socks[2] = {-1, -1};
+    native_socket_type socks[2] = {invalid_socket, invalid_socket};
     auto listener = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (listener == invalid_socket) throw_io_failure("socket() failed");
     union {

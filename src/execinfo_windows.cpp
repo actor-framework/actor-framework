@@ -61,6 +61,9 @@
 #include <stdlib.h>
 #include <io.h>
 
+#include <sstream>
+#include <iostream>
+
 #include "cppa/detail/execinfo_windows.hpp"
 
 namespace cppa {
@@ -68,29 +71,17 @@ namespace detail {
 
 int backtrace(void** buffer, int size) {
     if (size <= 0) return 0;
-    auto hProcess = GetCurrentProcess();
     auto frames = CaptureStackBackTrace (0, (DWORD) size, buffer, NULL);
     return static_cast<int>(frames);
 }
 
-char** backtrace_symbols(void* const* buffer, int size) {
-    auto t = ((size_t) size) * ((sizeof(void*) * 2) + 6 + sizeof(char*));
-    auto r = (char**) malloc(t);
-    if (!r) return nullptr;
-    auto cur = (char *) &r[size];
-    for (int i = 0; i < size; i++) {
-        r[i] = cur;
-        sprintf (cur, "[+0x%Ix]", (size_t) buffer[i]);
-        cur += strlen (cur) + 1;
-    }
-    return r;
-}
-
 void backtrace_symbols_fd(void* const* buffer, int size, int fd) {
-    char s[128];
+    std::ostringstream out;
     for (int i = 0; i < size; i++) {
-        sprintf(s, "[+0x%Ix]\n", (size_t) buffer[i]);
-        write(fd, s, strlen (s));
+        out << "[" << std::hex << reinterpret_cast<size_t>(buffer[i])
+            << "]" << std::endl;
+        auto s = out.str();
+        write(fd, s.c_str(), s.size());
     }
     _commit(fd);
 }

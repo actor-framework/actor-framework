@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
         CPPA_CHECKPOINT();
         thread child;
         ostringstream oss;
-        oss << argv[0] << " run=remote_actor port=" << port << " &>/dev/null";
+        oss << argv[0] << " run=remote_actor port=" << port << to_dev_null;
         // execute client_part() in a separate process,
         // connected via localhost socket
         child = thread([&oss]() {

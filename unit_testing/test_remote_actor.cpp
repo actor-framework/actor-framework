@@ -387,7 +387,8 @@ int main(int argc, char** argv) {
             thread child;
             ostringstream oss;
             if (run_remote_actor) {
-                oss << app_path << " run=remote_actor port=" << port << " &>/dev/null";
+                oss << app_path << " run=remote_actor port=" << port
+                    << to_dev_null;
                 // execute client_part() in a separate process,
                 // connected via localhost socket
                 child = thread([&oss]() {
