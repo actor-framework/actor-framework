@@ -14,33 +14,39 @@ using namespace cppa;
 
 ChatWidget::ChatWidget(QWidget* parent, Qt::WindowFlags f)
 : super(parent, f), m_input(nullptr), m_output(nullptr) {
-    set_message_handler (
-        on(atom("join"), arg_match) >> [=](const group& what) {
-            if (m_chatroom) {
-                send(m_chatroom, m_name + " has left the chatroom");
-                self->leave(m_chatroom);
+    set_message_handler ([=](local_actor* self) -> partial_function {
+        return {
+            on(atom("join"), arg_match) >> [=](const group& what) {
+                if (m_chatroom) {
+                    self->send(m_chatroom, m_name + " has left the chatroom");
+                    self->leave(m_chatroom);
+                }
+                self->join(what);
+                print(("*** joined " + to_string(what)).c_str());
+                m_chatroom = what;
+                self->send(what, m_name + " has entered the chatroom");
+            },
+            on(atom("setName"), arg_match) >> [=](string& name) {
+                self->send(m_chatroom, m_name + " is now known as " + name);
+                m_name = std::move(name);
+                print("*** changed name to "
+                                  + QString::fromUtf8(m_name.c_str()));
+            },
+            on(atom("quit")) >> [=] {
+                close(); // close widget
+            },
+            [=](const string& txt) {
+                // don't print own messages
+                if (self != self->last_sender()) {
+                    print(QString::fromUtf8(txt.c_str()));
+                }
+            },
+            [=](const group_down_msg& gdm) {
+                print("*** chatroom offline: "
+                      + QString::fromUtf8(to_string(gdm.source).c_str()));
             }
-            self->join(what);
-            print(("*** joined " + to_string(what)).c_str());
-            m_chatroom = what;
-            send(what, m_name + " has entered the chatroom");
-        },
-        on(atom("setName"), arg_match) >> [=](string& name) {
-            send(m_chatroom, m_name + " is now known as " + name);
-            m_name = std::move(name);
-            print("*** changed name to "
-                              + QString::fromUtf8(m_name.c_str()));
-        },
-        on(atom("quit")) >> [=] {
-            close(); // close widget
-        },
-        on<string>() >> [=](const string& txt) {
-            // don't print own messages
-            if (self != self->last_sender()) {
-                print(QString::fromUtf8(txt.c_str()));
-            }
-        }
-    );
+        };
+    });
 }
 
 void ChatWidget::sendChatMessage() {
@@ -52,11 +58,11 @@ void ChatWidget::sendChatMessage() {
         match_split(line.midRef(1).toUtf8().constData(), ' ') (
             on("join", arg_match) >> [=](const string& mod, const string& g) {
                 group gptr;
-                try { gptr = abstract_group::get(mod, g); }
+                try { gptr = group::get(mod, g); }
                 catch (exception& e) {
                     print("*** exception: " + QString::fromUtf8((e.what())));
                 }
-                if (gptr != nullptr) {
+                if (gptr) {
                     send_as(as_actor(), as_actor(), atom("join"), gptr);
                 }
             },
@@ -75,7 +81,7 @@ void ChatWidget::sendChatMessage() {
         print("*** please set a name before sending messages");
         return;
     }
-    if (m_chatroom == nullptr) {
+    if (!m_chatroom) {
         print("*** no one is listening... please join a group");
         return;
     }
@@ -110,7 +116,7 @@ void ChatWidget::joinGroup() {
     string gid = gname.midRef(pos+1).toUtf8().constData();
     group gptr;
     try {
-        auto gptr = abstract_group::get(mod, gid);
+        auto gptr = group::get(mod, gid);
         send_as(as_actor(), as_actor(), atom("join"), gptr);
     }
     catch (exception& e) {

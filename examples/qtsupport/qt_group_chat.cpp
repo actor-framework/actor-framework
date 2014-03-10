@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
         }
         else {
             try {
-                gptr = abstract_group::get(group_id.substr(0, p),
+                gptr = group::get(group_id.substr(0, p),
                                   group_id.substr(p + 1));
             }
             catch (exception& e) {
@@ -93,7 +93,7 @@ int main(int argc, char** argv) {
     if (!name.empty()) {
         send_as(client, client, atom("setName"), move(name));
     }
-    if (gptr != nullptr) {
+    if (gptr) {
         send_as(client, client, atom("join"), gptr);
     }
     mw.show();

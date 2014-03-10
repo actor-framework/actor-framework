@@ -28,73 +28,72 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_ACTOR_WIDGET_MIXIN_HPP
-#define CPPA_ACTOR_WIDGET_MIXIN_HPP
+#ifndef CPPA_ACTOR_COMPANION_HPP
+#define CPPA_ACTOR_COMPANION_HPP
 
-#include <QEvent>
-#include <QApplication>
+#include <memory>
+#include <functional>
 
-#include "cppa/actor_companion.hpp"
-#include "cppa/partial_function.hpp"
+#include "cppa/local_actor.hpp"
+#include "cppa/sync_sender.hpp"
+#include "cppa/mailbox_based.hpp"
+#include "cppa/mailbox_element.hpp"
+#include "cppa/behavior_stack_based.hpp"
 
-#include "cppa/policy/sequential_invoke.hpp"
+#include "cppa/detail/memory.hpp"
+
+#include "cppa/util/shared_spinlock.hpp"
+#include "cppa/util/shared_lock_guard.hpp"
 
 namespace cppa {
 
-template<typename Base, int EventId = static_cast<int>(QEvent::User + 31337)>
-class actor_widget_mixin : public Base {
+/**
+ * @brief An co-existing forwarding all messages through a user-defined
+ *        callback to another object, thus serving as gateway to
+ *        allow any object to interact with other actors.
+ */
+class actor_companion : public extend<local_actor, actor_companion>::
+                               with<behavior_stack_based<behavior>::impl,
+                                    sync_sender<nonblocking_response_handle_tag>::impl> {
+
+    typedef util::shared_spinlock lock_type;
 
  public:
 
-    typedef typename actor_companion::message_pointer message_pointer;
+    typedef std::unique_ptr<mailbox_element, detail::disposer> message_pointer;
 
-    struct event_type : public QEvent {
+    typedef std::function<void (message_pointer)> enqueue_handler;
 
-        message_pointer mptr;
+    /**
+     * @brief Removes the handler for incoming messages and terminates
+     *        the companion for exit reason @ rsn.
+     */
+    void disconnect(std::uint32_t rsn = exit_reason::normal);
 
-        event_type(message_pointer mptr)
-        : QEvent(static_cast<QEvent::Type>(EventId)), mptr(std::move(mptr)) { }
+    /**
+     * @brief Sets the handler for incoming messages.
+     * @warning @p handler needs to be thread-safe
+     */
+    void on_enqueue(enqueue_handler handler);
 
-    };
-
-    template<typename... Ts>
-    actor_widget_mixin(Ts&&... args) : Base(std::forward<Ts>(args)...) {
-        m_companion.reset(detail::memory::create<actor_companion>());
-        m_companion->on_enqueue([=](message_pointer ptr) {
-            qApp->postEvent(this, new event_type(std::move(ptr)));
-        });
-    }
-
-    template<typename T>
-    void set_message_handler(T pfun) {
-        m_companion->become(pfun(m_companion.get()));
-    }
-
-    virtual bool event(QEvent* event) {
-        if (event->type() == static_cast<QEvent::Type>(EventId)) {
-            auto ptr = dynamic_cast<event_type*>(event);
-            if (ptr) {
-                m_invoke.handle_message(m_companion.get(),
-                                        ptr->mptr.release(),
-                                        m_companion->bhvr_stack().back(),
-                                        m_companion->bhvr_stack().back_id());
-                return true;
-            }
-        }
-        return Base::event(event);
-    }
-
-    actor as_actor() const {
-        return m_companion;
-    }
+    void enqueue(const message_header& hdr, any_tuple msg) override;
 
  private:
 
-    policy::sequential_invoke m_invoke;
-    actor_companion_ptr m_companion;
+    // set by parent to define custom enqueue action
+    enqueue_handler m_on_enqueue;
+
+    // guards access to m_handler
+    lock_type m_lock;
 
 };
 
+/**
+ * @brief A pointer to a co-existing (actor) object.
+ * @relates actor_companion
+ */
+typedef intrusive_ptr<actor_companion> actor_companion_ptr;
+
 } // namespace cppa
 
-#endif // CPPA_ACTOR_WIDGET_MIXIN_HPP
+#endif // CPPA_ACTOR_COMPANION_HPP

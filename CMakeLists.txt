@@ -140,6 +140,7 @@ set(LIBCPPA_SRC
     src/abstract_tuple.cpp
     src/actor.cpp
     src/actor_addr.cpp
+    src/actor_companion.cpp
     src/actor_namespace.cpp
     src/actor_proxy.cpp
     src/actor_registry.cpp
