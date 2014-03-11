@@ -142,9 +142,10 @@ void local_actor::forward_message(const actor& dest, message_priority p) {
 }
 
 void local_actor::send_tuple(message_priority prio, const channel& dest, any_tuple what) {
+    if (!dest) return;
     message_id id;
     if (prio == message_priority::high) id = id.with_high_priority();
-    dest.enqueue({address(), dest, id}, std::move(what));
+    dest->enqueue({address(), dest, id}, std::move(what));
 }
 
 void local_actor::send_exit(const actor_addr& whom, std::uint32_t reason) {

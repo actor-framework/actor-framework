@@ -43,6 +43,7 @@ namespace cppa {
 
 class actor;
 class group;
+class execution_unit;
 
 struct invalid_actor_t;
 struct invalid_group_t;
@@ -87,8 +88,13 @@ class channel : util::comparable<channel>
         return !m_ptr;
     }
 
+    inline abstract_channel* operator->() const {
+        return m_ptr.get();
+    }
 
-    void enqueue(const message_header& hdr, any_tuple msg) const;
+    inline abstract_channel& operator*() const {
+        return *m_ptr;
+    }
 
     intptr_t compare(const channel& other) const;
 
