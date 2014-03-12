@@ -75,7 +75,7 @@ class local_group : public abstract_group {
                        << CPPA_TARG(msg, to_string));
         shared_guard guard(m_mtx);
         for (auto& s : m_subscribers) {
-            s.enqueue(hdr, msg);
+            s->enqueue(hdr, msg);
         }
     }
 

@@ -50,10 +50,6 @@ intptr_t channel::compare(const abstract_channel* lhs, const abstract_channel* r
 
 channel::channel(abstract_channel* ptr) : m_ptr(ptr) { }
 
-void channel::enqueue(const message_header& hdr, any_tuple msg) const {
-    if (m_ptr) m_ptr->enqueue(hdr, std::move(msg));
-}
-
 intptr_t channel::compare(const channel& other) const {
     return compare(m_ptr.get(), other.m_ptr.get());
 }

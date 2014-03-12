@@ -38,13 +38,13 @@ message_header::message_header(actor_addr source,
                                message_id mid)
 : sender(source), receiver(dest), id(mid) { }
 
-bool operator==(msg_hdr_cref lhs, msg_hdr_cref rhs) {
+bool operator==(const message_header& lhs, const message_header& rhs) {
     return    lhs.sender == rhs.sender
            && lhs.receiver == rhs.receiver
            && lhs.id == rhs.id;
 }
 
-bool operator!=(msg_hdr_cref lhs, msg_hdr_cref rhs) {
+bool operator!=(const message_header& lhs, const message_header& rhs) {
     return !(lhs == rhs);
 }
 
