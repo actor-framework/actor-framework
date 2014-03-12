@@ -93,7 +93,7 @@ void opencl_metainfo::initialize()
         throw runtime_error(oss.str());
     }
 
-    auto pfn_notify = [](const char *errinfo,
+    auto pfn_notify = [this](const char *errinfo,
                          const void *,
                          size_t,
                          void *) {
