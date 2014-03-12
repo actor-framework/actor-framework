@@ -45,6 +45,8 @@
 #include "cppa/message_header.hpp"
 #include "cppa/system_messages.hpp"
 
+#include "cppa/io/middleman.hpp"
+
 #include "cppa/util/shared_spinlock.hpp"
 #include "cppa/util/shared_lock_guard.hpp"
 
@@ -64,7 +66,9 @@ abstract_actor::abstract_actor(actor_id aid)
 
 abstract_actor::abstract_actor()
 : m_id(get_actor_registry()->next_id()), m_is_proxy(false)
-, m_exit_reason(exit_reason::not_exited) { }
+, m_exit_reason(exit_reason::not_exited) {
+    m_node = get_middleman()->node();
+}
 
 bool abstract_actor::link_to_impl(const actor_addr& other) {
     if (other && other != this) {

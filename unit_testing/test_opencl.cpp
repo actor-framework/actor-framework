@@ -122,6 +122,10 @@ class square_matrix {
 
     static constexpr size_t num_elements = Size * Size;
 
+    static void announce() {
+        cppa::announce<square_matrix>(&square_matrix::m_data);
+    }
+
     square_matrix(square_matrix&&) = default;
     square_matrix(const square_matrix&) = default;
     square_matrix& operator=(square_matrix&&) = default;
@@ -310,7 +314,7 @@ int main() {
     CPPA_TEST(test_opencl);
 
     announce<ivec>();
-    announce<matrix_type>();
+    matrix_type::announce();
 
     test_opencl();
     await_all_actors_done();
