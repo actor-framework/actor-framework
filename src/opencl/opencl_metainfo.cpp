@@ -93,13 +93,18 @@ void opencl_metainfo::initialize()
         throw runtime_error(oss.str());
     }
 
-    auto pfn_notify = [this](const char *errinfo,
+    auto pfn_notify = [](const char *errinfo,
                          const void *,
                          size_t,
                          void *) {
-        CPPA_LOG_ERROR("\n##### Error message via pfn_notify #####\n" +
-                       string(errinfo) +
-                       "\n########################################");
+        std::cerr << "[" << "ERROR" << "] " << "opencl_metainfo::" << __func__ << ": "
+                  << "\n##### Error message via pfn_notify #####\n"
+                     + string(errinfo)
+                     + "\n########################################"
+                  << "\nStack trace:\n";
+        void *array[10];
+        size_t size = backtrace(array, 10);
+        backtrace_symbols_fd(array, size, 2);
     };
 
     // create a context
