@@ -286,6 +286,7 @@ class middleman_impl : public middleman {
  protected:
 
     void initialize() override {
+        CPPA_LOG_TRACE("");
 #       ifdef CPPA_WINDOWS
         WSADATA WinsockData;
         if (WSAStartup(MAKEWORD(2, 2), &WinsockData) != 0) {
@@ -314,6 +315,7 @@ class middleman_impl : public middleman {
     }
 
     void destroy() override {
+        CPPA_LOG_TRACE("");
         run_later([this] {
             CPPA_LOGM_TRACE("destroy$helper", "");
             this->m_done = true;
@@ -475,6 +477,7 @@ void middleman_loop(middleman_impl* impl) {
     while (handler->num_sockets() > 0) {
         handler->poll([&](event_bitmask mask, continuable* io) {
             switch (mask) {
+                case event::both:
                 case event::write:
                     switch (io->continue_writing()) {
                         case write_failure:
@@ -493,12 +496,12 @@ void middleman_loop(middleman_impl* impl) {
                     handler->erase_later(io, event::both);
                     break;
                 default:
-                    CPPA_LOGF_ERROR("expected event::write only "
-                                    "during shutdown phase");
+                    CPPA_LOGF_WARNING("event::read event during shutdown");
                     handler->erase_later(io, event::read);
                     break;
             }
         });
+        handler->update();
     }
     CPPA_LOGF_DEBUG("middleman loop done");
 }
