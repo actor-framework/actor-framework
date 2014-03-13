@@ -44,7 +44,10 @@ namespace cppa { namespace detail {
 std::string demangle(const char* decorated) {
     size_t size;
     int status;
-    char* undecorated = abi::__cxa_demangle(decorated, nullptr, &size, &status);
+    std::unique_ptr<char, void (*)(void*)> undecorated{
+        abi::__cxa_demangle(decorated, nullptr, &size, &status),
+        std::free
+    };
     if (status != 0) {
         std::string error_msg = "Could not demangle type name ";
         error_msg += decorated;
@@ -52,7 +55,7 @@ std::string demangle(const char* decorated) {
     }
     std::string result; // the undecorated typeid name
     result.reserve(size);
-    const char* cstr = undecorated;
+    const char* cstr = undecorated.get();
     // filter unnecessary characters from undecorated
     char c = *cstr;
     while (c != '\0') {
@@ -78,7 +81,6 @@ std::string demangle(const char* decorated) {
             c = *++cstr;
         }
     }
-    free(undecorated);
 #   ifdef CPPA_CLANG
     // replace "std::__1::" with "std::" (fixes strange clang names)
     std::string needle = "std::__1::";
