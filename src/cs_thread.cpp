@@ -38,6 +38,15 @@ namespace {
 typedef void* vptr;
 typedef void (*cst_fun)(vptr);
 
+// Boost's coroutine minimal stack size is pretty small
+// and easily causes stack overflows when using libcppa
+// in debug mode or with logging
+#if defined(CPPA_DEBUG_MODE) || defined(CPPA_LOG_LEVEL)
+constexpr size_t stack_multiplier = 4;
+#else
+constexpr size_t stack_multiplier = 2;
+#endif
+
 } // namespace <anonmyous>
 
 #ifdef CPPA_DISABLE_CONTEXT_SWITCHING
@@ -145,7 +154,7 @@ namespace {
     ctx_stack_info new_stack(context& ctx,
                                      stack_allocator& alloc,
                                      vg_member& vgm) {
-        size_t mss = ctxn::minimum_stacksize();
+        size_t mss = ctxn::minimum_stacksize() * stack_multiplier;
         ctx.fc_stack.base = alloc.allocate(mss);
         ctx.fc_stack.limit = reinterpret_cast<vptr>(
                     reinterpret_cast<intptr_t>(ctx.fc_stack.base) - mss);
@@ -181,7 +190,7 @@ namespace {
     ctx_stack_info new_stack(context& ctx,
                                      stack_allocator& alloc,
                                      vg_member& vgm) {
-        size_t mss = stack_allocator::minimum_stacksize();
+        size_t mss = stack_allocator::minimum_stacksize() * stack_multiplier;
         ctx = ctxn::make_fcontext(alloc.allocate(mss), mss, cst_trampoline);
         vg_register(vgm,
                     ctx->fc_stack.sp,
@@ -210,7 +219,7 @@ namespace {
     ctx_stack_info new_stack(context& ctx,
                                      stack_allocator& alloc,
                                      vg_member& vgm) {
-        size_t mss = stack_allocator::minimum_stacksize();
+        size_t mss = stack_allocator::minimum_stacksize() * stack_multiplier;
         ctx_stack_info sinf;
         alloc.allocate(sinf, mss);
         ctx = ctxn::make_fcontext(sinf.sp, sinf.size, cst_trampoline);
