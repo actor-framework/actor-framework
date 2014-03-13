@@ -31,6 +31,14 @@ class no_resume {
                 : Base(std::forward<Ts>(args)...)
                 , m_hidden(true) { }
 
+        inline void attach_to_scheduler() {
+            this->ref();
+        }
+
+        inline void detach_from_scheduler() {
+            this->deref();
+        }
+
         inline resumable::resume_result resume(detail::cs_thread*,
                                                execution_unit*) {
             auto done_cb = [=](std::uint32_t reason) {

@@ -64,6 +64,14 @@ class event_based_resume {
             return static_cast<Derived*>(this);
         }
 
+        void attach_to_scheduler() override {
+            this->ref();
+        }
+
+        void detach_from_scheduler() override {
+            this->deref();
+        }
+
         resumable::resume_result resume(detail::cs_thread*,
                                         execution_unit* host) override {
             auto d = dptr();

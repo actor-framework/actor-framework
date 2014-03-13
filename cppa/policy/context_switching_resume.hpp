@@ -70,6 +70,14 @@ class context_switching_resume {
             , m_cs_thread(context_switching_resume::trampoline,
                       static_cast<blocking_actor*>(this)) { }
 
+        void attach_to_scheduler() override {
+            this->ref();
+        }
+
+        void detach_from_scheduler() override {
+            this->deref();
+        }
+
         resumable::resume_result resume(detail::cs_thread* from,
                                         execution_unit* host) override {
             CPPA_REQUIRE(from != nullptr);

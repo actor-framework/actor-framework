@@ -235,6 +235,10 @@ class coordinator::shutdown_helper : public resumable {
 
  public:
 
+    void attach_to_scheduler() override { }
+
+    void detach_from_scheduler() override { }
+
     resumable::resume_result resume(detail::cs_thread*, execution_unit* ptr) {
         auto w = dynamic_cast<worker*>(ptr);
         CPPA_REQUIRE(w != nullptr);
@@ -260,12 +264,13 @@ void coordinator::initialize() {
         ptr->act();
     }};
     m_printer_thread = std::thread{printer_loop, m_printer.get()};
-    // launch workers
+    // create workers
     size_t hc = std::thread::hardware_concurrency();
     for (size_t i = 0; i < hc; ++i) {
         m_workers.emplace_back(new worker(i, this));
-        m_workers.back()->start();
     }
+    // start all workers
+    for (auto& w : m_workers) w->start();
 }
 
 void coordinator::destroy() {
@@ -299,7 +304,9 @@ void coordinator::destroy() {
     delete this;
 }
 
-coordinator::coordinator() : m_timer(new timer_actor), m_printer(true) {
+coordinator::coordinator()
+        : m_timer(new timer_actor), m_printer(true)
+        , m_next_worker(0) {
     // NOP
 }
 
@@ -386,7 +393,10 @@ void worker::run() {
     while (m_running) {
         local_poll() || aggressive_poll() || moderate_poll() || relaxed_poll();
         CPPA_LOG_DEBUG("dequeued new job");
-        job->resume(&fself, this);
+        if (job->resume(&fself, this) == resumable::done) {
+            // was attached in policy::cooperative_scheduling::launch
+            job->detach_from_scheduler();
+        }
         job = nullptr;
     }
 }

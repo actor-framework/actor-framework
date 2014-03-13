@@ -83,6 +83,8 @@ class cooperative_scheduling {
 
     template<class Actor>
     inline void launch(Actor* self) {
+        // detached in scheduler::worker::run
+        self->attach_to_scheduler();
         get_scheduling_coordinator()->enqueue(self);
     }
 

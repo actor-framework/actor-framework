@@ -37,6 +37,10 @@ class execution_unit;
 
 namespace detail { struct cs_thread; }
 
+/**
+ * @brief A cooperatively executed task managed by one or more instances of
+ *        {@link execution_unit}.
+ */
 class resumable {
 
  public:
@@ -46,14 +50,26 @@ class resumable {
         done
     };
 
-    // intrusive next pointer needed to use
-    // 'resumable' with 'single_reader_queue'
-    resumable* next;
-
     resumable();
 
     virtual ~resumable();
 
+    /**
+     * @brief Initializes this object, e.g., by increasing the
+     *        the reference count.
+     */
+    virtual void attach_to_scheduler() = 0;
+
+    /**
+     * @brief Uninitializes this object, e.g., by decrementing the
+     *        the reference count.
+     */
+    virtual void detach_from_scheduler() = 0;
+
+    /**
+     * @brief Resume any pending computation until it is either finished
+     *        or needs to be re-scheduled later.
+     */
     virtual resume_result resume(detail::cs_thread*, execution_unit*) = 0;
 
  protected:

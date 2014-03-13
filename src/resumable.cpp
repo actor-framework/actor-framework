@@ -32,7 +32,7 @@
 
 namespace cppa {
 
-resumable::resumable() : next(nullptr), m_hidden(true) { }
+resumable::resumable() : m_hidden(true) { }
 
 resumable::~resumable() { }
 
