@@ -438,7 +438,7 @@ namespace cppa {
  * @brief Sends @p to a message under the identity of @p from.
  */
 inline void send_tuple_as(const actor& from, const channel& to, any_tuple msg) {
-    if (to) to->enqueue({from.address(), to}, std::move(msg));
+    if (to) to->enqueue({from.address(), to}, std::move(msg), nullptr);
 }
 
 /**

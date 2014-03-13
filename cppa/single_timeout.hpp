@@ -62,7 +62,8 @@ class single_timeout : public Base {
             auto msg = make_any_tuple(timeout_msg{tid});
             if (d.is_zero()) {
                 // immediately enqueue timeout message if duration == 0s
-                this->enqueue({this->address(), this}, std::move(msg));
+                this->enqueue({this->address(), this}, std::move(msg),
+                              this->m_host);
                 //auto e = this->new_mailbox_element(this, std::move(msg));
                 //this->m_mailbox.enqueue(e);
             }

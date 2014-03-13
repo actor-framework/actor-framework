@@ -31,13 +31,10 @@
 #ifndef CPPA_ABSTRACT_CHANNEL_HPP
 #define CPPA_ABSTRACT_CHANNEL_HPP
 
+#include "cppa/cppa_fwd.hpp"
 #include "cppa/ref_counted.hpp"
 
 namespace cppa {
-
-// forward declarations
-class any_tuple;
-class message_header;
 
 /**
  * @brief Interface for all message receivers.
@@ -50,9 +47,18 @@ class abstract_channel : public ref_counted {
  public:
 
     /**
-     * @brief Enqueues @p msg to the list of received messages.
+     * @brief Enqueues a new message to the channel.
+     * @param header Contains meta information about this message
+     *               such as the address of the sender and the
+     *               ID of the message if it is a synchronous message.
+     * @param content The content encapsulated in a copy-on-write tuple.
+     * @param host Pointer to the {@link execution_unit execution unit} the
+     *             caller is executed by or @p nullptr if the caller
+     *             is not a scheduled actor.
      */
-    virtual void enqueue(const message_header& hdr, any_tuple msg) = 0;
+    virtual void enqueue(msg_hdr_cref header,
+                         any_tuple content,
+                         execution_unit* host) = 0;
 
  protected:
 

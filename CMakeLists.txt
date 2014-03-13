@@ -171,6 +171,7 @@ set(LIBCPPA_SRC
     src/empty_tuple.cpp
     src/event_based_actor.cpp
     src/exception.cpp
+    src/execution_unit.cpp
     src/exit_reason.cpp
     src/fd_util.cpp
     src/functor_based_actor.cpp
@@ -208,7 +209,6 @@ set(LIBCPPA_SRC
     src/singleton_manager.cpp
     src/string_serialization.cpp
     src/sync_request_bouncer.cpp
-    src/thread_pool_scheduler.cpp
     src/to_uniform_name.cpp
     src/type_lookup_table.cpp
     src/unicast_network.cpp

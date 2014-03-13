@@ -73,7 +73,8 @@ behavior default_broker::make_behavior() {
     CPPA_PUSH_AID(id());
     CPPA_LOG_TRACE("");
     enqueue({invalid_actor_addr, channel{this}},
-            make_any_tuple(atom("INITMSG")));
+            make_any_tuple(atom("INITMSG")),
+            nullptr);
     return (
         on(atom("INITMSG")) >> [=] {
             unbecome();
@@ -86,7 +87,7 @@ class broker::continuation {
 
  public:
 
-    continuation(broker_ptr ptr, const message_header& hdr, any_tuple&& msg)
+    continuation(broker_ptr ptr, msg_hdr_cref hdr, any_tuple&& msg)
     : m_self(move(ptr)), m_hdr(hdr), m_data(move(msg)) { }
 
     inline void operator()() {
@@ -287,7 +288,7 @@ class broker::doorman : public broker::servant {
 
 };
 
-void broker::invoke_message(const message_header& hdr, any_tuple msg) {
+void broker::invoke_message(msg_hdr_cref hdr, any_tuple msg) {
     CPPA_LOG_TRACE(CPPA_TARG(msg, to_string));
     if (planned_exit_reason() != exit_reason::not_exited || bhvr_stack().empty()) {
         CPPA_LOG_DEBUG("actor already finished execution"
@@ -372,7 +373,7 @@ bool broker::invoke_message_from_cache() {
     return false;
 }
 
-void broker::enqueue(const message_header& hdr, any_tuple msg) {
+void broker::enqueue(msg_hdr_cref hdr, any_tuple msg, execution_unit*) {
     get_middleman()->run_later(continuation{this, hdr, move(msg)});
 }
 

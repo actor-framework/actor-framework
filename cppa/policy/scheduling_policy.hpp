@@ -31,11 +31,15 @@
 #ifndef CPPA_SCHEDULING_POLICY_HPP
 #define CPPA_SCHEDULING_POLICY_HPP
 
-namespace cppa { class message_header; class any_tuple; }
+namespace cppa {
 
-namespace cppa { namespace util { class duration; } }
+class any_tuple;
+class execution_unit;
+class message_header;
 
-namespace cppa { namespace policy {
+namespace util { class duration; }
+
+namespace policy {
 
 enum class timed_fetch_result {
     no_message,
@@ -100,7 +104,10 @@ class scheduling_policy {
      *        steps to resume the actor if it's currently blocked.
      */
     template<class Actor>
-    void enqueue(Actor* self, const message_header& hdr, any_tuple& msg);
+    void enqueue(Actor* self,
+                 msg_hdr_cref hdr,
+                 any_tuple& msg,
+                 execution_unit* host);
 
     /**
      * @brief Starts the given actor either by launching a thread or enqueuing

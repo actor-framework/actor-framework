@@ -37,7 +37,7 @@
 namespace cppa {
 
 actor_ostream::actor_ostream(local_actor* self) : m_self(self) {
-    m_printer = get_scheduler()->printer();
+    m_printer = get_scheduling_coordinator()->printer();
 }
 
 actor_ostream& actor_ostream::write(std::string arg) {

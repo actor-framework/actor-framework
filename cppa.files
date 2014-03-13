@@ -67,7 +67,6 @@ cppa/detail/singleton_mixin.hpp
 cppa/detail/swap_bytes.hpp
 cppa/detail/sync_request_bouncer.hpp
 cppa/detail/tdata.hpp
-cppa/detail/thread_pool_scheduler.hpp
 cppa/detail/to_uniform_name.hpp
 cppa/detail/tuple_cast_impl.hpp
 cppa/detail/tuple_iterator.hpp
@@ -83,6 +82,7 @@ cppa/detail/yield_interface.hpp
 cppa/enable_weak_ptr.hpp
 cppa/event_based_actor.hpp
 cppa/exception.hpp
+cppa/execution_unit.hpp
 cppa/exit_reason.hpp
 cppa/extend.hpp
 cppa/from_string.hpp
@@ -275,6 +275,7 @@ src/empty_tuple.cpp
 src/event_based_actor.cpp
 src/exception.cpp
 src/execinfo_windows.cpp
+src/execution_unit.cpp
 src/exit_reason.cpp
 src/factory.cpp
 src/fd_util.cpp
@@ -322,7 +323,6 @@ src/shared_spinlock.cpp
 src/singleton_manager.cpp
 src/string_serialization.cpp
 src/sync_request_bouncer.cpp
-src/thread_pool_scheduler.cpp
 src/to_uniform_name.cpp
 src/type_lookup_table.cpp
 src/unicast_network.cpp

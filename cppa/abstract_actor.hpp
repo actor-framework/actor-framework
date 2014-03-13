@@ -55,6 +55,7 @@ namespace cppa {
 class actor_addr;
 class serializer;
 class deserializer;
+class execution_unit;
 
 /**
  * @brief A unique actor ID.
@@ -240,6 +241,9 @@ class abstract_actor : public abstract_channel {
 
     // identifies the node this actor is running on
     node_id_ptr m_node;
+
+    // identifies the execution unit this actor is currently executed by
+    execution_unit* m_host;
 
 };
 

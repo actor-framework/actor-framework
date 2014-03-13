@@ -46,9 +46,9 @@ void actor_companion::on_enqueue(enqueue_handler handler) {
     m_on_enqueue = std::move(handler);
 }
 
-void actor_companion::enqueue(const message_header& hdr, any_tuple msg) {
+void actor_companion::enqueue(msg_hdr_cref hdr, any_tuple ct, execution_unit*) {
     message_pointer ptr;
-    ptr.reset(detail::memory::create<mailbox_element>(hdr, std::move(msg)));
+    ptr.reset(detail::memory::create<mailbox_element>(hdr, std::move(ct)));
     util::shared_lock_guard<lock_type> guard(m_lock);
     if (!m_on_enqueue) return;
     m_on_enqueue(std::move(ptr));

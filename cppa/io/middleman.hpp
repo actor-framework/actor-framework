@@ -143,7 +143,7 @@ class middleman {
      * @brief Delivers a message to given node.
      */
     virtual void deliver(const node_id& node,
-                         const message_header& hdr,
+                         msg_hdr_cref hdr,
                          any_tuple msg                  ) = 0;
 
     /**
@@ -207,6 +207,7 @@ inline actor_namespace& middleman::get_namespace() {
 }
 
 const node_id_ptr& middleman::node() const {
+    CPPA_REQUIRE(m_node != nullptr);
     return m_node;
 }
 

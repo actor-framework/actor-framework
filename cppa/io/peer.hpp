@@ -73,7 +73,7 @@ class peer : public extend<continuable>::with<buffered_writing> {
 
     void io_failed(event_bitmask mask) override;
 
-    void enqueue(const message_header& hdr, const any_tuple& msg);
+    void enqueue(msg_hdr_cref hdr, const any_tuple& msg);
 
     inline bool stop_on_last_proxy_exited() const {
         return m_stop_on_last_proxy_exited;
@@ -132,13 +132,13 @@ class peer : public extend<continuable>::with<buffered_writing> {
 
     void unlink(const actor_addr& sender, const actor_addr& ptr);
 
-    void deliver(const message_header& hdr, any_tuple msg);
+    void deliver(msg_hdr_cref hdr, any_tuple msg);
 
     inline void enqueue(const any_tuple& msg) {
         enqueue({invalid_actor_addr, nullptr}, msg);
     }
 
-    void enqueue_impl(const message_header& hdr, const any_tuple& msg);
+    void enqueue_impl(msg_hdr_cref hdr, const any_tuple& msg);
 
     void add_type_if_needed(const std::string& tname);
 

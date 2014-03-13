@@ -49,7 +49,7 @@ bool operator!=(const message_header& lhs, const message_header& rhs) {
 }
 
 void message_header::deliver(any_tuple msg) const {
-    if (receiver) receiver->enqueue(*this, std::move(msg));
+    if (receiver) receiver->enqueue(*this, std::move(msg), nullptr);
 }
 
 } // namespace cppa::network

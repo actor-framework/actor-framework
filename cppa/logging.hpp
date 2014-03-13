@@ -194,7 +194,7 @@ oss_wr operator<<(oss_wr&& lhs, T rhs) {
     ::cppa::get_logger()->set_aid(aid_arg)
 #endif
 
-#define CPPA_CLASS_NAME ::cppa::detail::demangle(typeid(*this)).c_str()
+#define CPPA_CLASS_NAME cppa::detail::demangle(typeid(decltype(*this))).c_str()
 
 #define CPPA_PRINT0(lvlname, classname, funname, msg)                          \
     CPPA_LOG_IMPL(lvlname, classname, funname, msg)

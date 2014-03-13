@@ -81,7 +81,7 @@ remote_actor_proxy::~remote_actor_proxy() {
     });
 }
 
-void remote_actor_proxy::deliver(const message_header& hdr, any_tuple msg) {
+void remote_actor_proxy::deliver(msg_hdr_cref hdr, any_tuple msg) {
     // this member function is exclusively called from default_peer from inside
     // the middleman's thread, therefore we can safely access
     // m_pending_requests here
@@ -95,7 +95,7 @@ void remote_actor_proxy::deliver(const message_header& hdr, any_tuple msg) {
     hdr.deliver(std::move(msg));
 }
 
-void remote_actor_proxy::forward_msg(const message_header& hdr, any_tuple msg) {
+void remote_actor_proxy::forward_msg(msg_hdr_cref hdr, any_tuple msg) {
     CPPA_LOG_TRACE(CPPA_ARG(m_id) << ", " << CPPA_TSARG(hdr)
                    << ", " << CPPA_TSARG(msg));
     if (hdr.receiver != this) {
@@ -130,9 +130,11 @@ void remote_actor_proxy::forward_msg(const message_header& hdr, any_tuple msg) {
     });
 }
 
-void remote_actor_proxy::enqueue(const message_header& hdr, any_tuple msg) {
+void remote_actor_proxy::enqueue(msg_hdr_cref hdr, any_tuple msg,
+                                 execution_unit*) {
     CPPA_REQUIRE(m_parent != nullptr);
-    CPPA_LOG_TRACE(CPPA_TARG(hdr, to_string) << ", " << CPPA_TARG(msg, to_string));
+    CPPA_LOG_TRACE(CPPA_TARG(hdr, to_string)
+                   << ", " << CPPA_TARG(msg, to_string));
     auto& arr = detail::static_types_array<atom_value, uint32_t>::arr;
     if (   msg.size() == 2
         && msg.type_at(0) == arr[0]

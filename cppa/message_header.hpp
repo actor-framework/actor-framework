@@ -69,9 +69,14 @@ class message_header {
 
 };
 
-bool operator==(const message_header& lhs, const message_header& rhs);
+/**
+ * @brief Convenience typedef.
+ */
+typedef const message_header& msg_hdr_cref;
 
-bool operator!=(const message_header& lhs, const message_header& rhs);
+bool operator==(msg_hdr_cref lhs, msg_hdr_cref rhs);
+
+bool operator!=(msg_hdr_cref lhs, msg_hdr_cref rhs);
 
 } // namespace cppa
 

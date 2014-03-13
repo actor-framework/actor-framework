@@ -11,12 +11,12 @@
 
 #include "cppa/util/duration.hpp"
 
-#include "cppa/detail/resumable.hpp"
-
 namespace cppa {
 namespace detail {
 
-// 'imports' all member functions from policies to the actor
+// 'imports' all member functions from policies to the actor,
+// the resume mixin also adds the m_hidden member which *must* be
+// initialized to @p true
 template<class Base,
          class Derived,
          class Policies>
@@ -27,7 +27,9 @@ class proper_actor_base : public Policies::resume_policy::template mixin<Base, D
  public:
 
     template <typename... Ts>
-    proper_actor_base(Ts&&... args) : super(std::forward<Ts>(args)...) { }
+    proper_actor_base(Ts&&... args) : super(std::forward<Ts>(args)...) {
+        CPPA_REQUIRE(this->m_hidden == true);
+    }
 
     // grant access to the actor's mailbox
     typename Base::mailbox_type& mailbox() {
@@ -38,11 +40,11 @@ class proper_actor_base : public Policies::resume_policy::template mixin<Base, D
 
     typedef typename Policies::scheduling_policy::timeout_type timeout_type;
 
-    void enqueue(const message_header& hdr, any_tuple msg) override {
+    void enqueue(msg_hdr_cref hdr, any_tuple msg, execution_unit* eu) override {
         CPPA_PUSH_AID(dptr()->id());
         CPPA_LOG_DEBUG(CPPA_TARG(hdr, to_string)
                        << ", " << CPPA_TARG(msg, to_string));
-        scheduling_policy().enqueue(dptr(), hdr, msg);
+        scheduling_policy().enqueue(dptr(), hdr, msg, eu);
     }
 
     // NOTE: scheduling_policy::launch is 'imported' in proper_actor
@@ -117,6 +119,17 @@ class proper_actor_base : public Policies::resume_policy::template mixin<Base, D
                                               awaited_response);
     }
 
+    inline bool hidden() const {
+        return this->m_hidden;
+    }
+
+    void cleanup(std::uint32_t reason) override {
+        CPPA_LOG_TRACE(CPPA_ARG(reason));
+        if (!hidden()) get_actor_registry()->dec_running();
+        super::cleanup(reason);
+    }
+
+
  protected:
 
     inline typename Policies::scheduling_policy& scheduling_policy() {
@@ -137,6 +150,13 @@ class proper_actor_base : public Policies::resume_policy::template mixin<Base, D
 
     inline Derived* dptr() {
         return static_cast<Derived*>(this);
+    }
+
+    inline void hidden(bool value) {
+        if (this->m_hidden == value) return;
+        if (value) get_actor_registry()->dec_running();
+        else get_actor_registry()->inc_running();
+        this->m_hidden = value;
     }
 
  private:
@@ -170,12 +190,13 @@ class proper_actor : public proper_actor_base<Base,
 
     inline void launch(bool is_hidden) {
         CPPA_LOG_TRACE("");
+        this->hidden(is_hidden);
         auto bhvr = this->make_behavior();
         if (bhvr) this->become(std::move(bhvr));
         CPPA_LOG_WARNING_IF(this->bhvr_stack().empty(),
                             "actor did not set a behavior");
         if (!this->bhvr_stack().empty()) {
-            this->scheduling_policy().launch(this, is_hidden);
+            this->scheduling_policy().launch(this);
         }
     }
 
@@ -236,7 +257,8 @@ class proper_actor<Base, Policies,true> : public proper_actor_base<Base,
     }
 
     inline void launch(bool is_hidden) {
-        this->scheduling_policy().launch(this, is_hidden);
+        this->hidden(is_hidden);
+        this->scheduling_policy().launch(this);
     }
 
     // implement blocking_actor::dequeue_response
@@ -298,7 +320,8 @@ class proper_actor<Base, Policies,true> : public proper_actor_base<Base,
         auto msg = make_any_tuple(timeout_msg{tid});
         if (d.is_zero()) {
             // immediately enqueue timeout message if duration == 0s
-            this->enqueue({this->address(), this}, std::move(msg));
+            this->enqueue({this->address(), this},
+                          std::move(msg), this->m_host);
             //auto e = this->new_mailbox_element(this, std::move(msg));
             //this->m_mailbox.enqueue(e);
         }

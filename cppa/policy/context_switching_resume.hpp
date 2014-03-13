@@ -31,11 +31,12 @@
 #define CPPA_CONTEXT_SWITCHING_ACTOR_HPP
 
 #include "cppa/config.hpp"
+#include "cppa/logging.hpp"
+#include "cppa/resumable.hpp"
 #include "cppa/actor_state.hpp"
 #include "cppa/mailbox_element.hpp"
 
 #include "cppa/detail/cs_thread.hpp"
-#include "cppa/detail/resumable.hpp"
 
 #include "cppa/policy/resume_policy.hpp"
 
@@ -61,7 +62,7 @@ class context_switching_resume {
 
     // Base must be a mailbox-based actor
     template<class Base, class Derived>
-    struct mixin : Base, detail::resumable {
+    struct mixin : Base, resumable {
 
         template<typename... Ts>
         mixin(Ts&&... args)
@@ -69,9 +70,11 @@ class context_switching_resume {
             , m_cs_thread(context_switching_resume::trampoline,
                       static_cast<blocking_actor*>(this)) { }
 
-        detail::resumable::resume_result resume(detail::cs_thread* from) override {
+        resumable::resume_result resume(detail::cs_thread* from,
+                                        execution_unit* host) override {
             CPPA_REQUIRE(from != nullptr);
             CPPA_PUSH_AID(this->id());
+            this->m_host = host;
             using namespace detail;
             for (;;) {
                 switch (call(&m_cs_thread, from)) {
@@ -105,6 +108,7 @@ class context_switching_resume {
 
     template<class Actor>
     void await_ready(Actor* self) {
+        CPPA_LOG_TRACE("");
         while (!self->has_next_message()) {
             self->set_state(actor_state::about_to_block);
             // double-check before going to block

@@ -53,7 +53,8 @@ response_promise::operator bool() const {
 void response_promise::deliver(any_tuple msg) {
     if (m_to) {
         auto ptr = detail::raw_access::get(m_to);
-        ptr->enqueue({m_from, ptr, m_id}, move(msg));
+        // TODO: breaks out of the execution unit
+        ptr->enqueue({m_from, ptr, m_id}, move(msg), nullptr);
         m_to = invalid_actor_addr;
     }
 }

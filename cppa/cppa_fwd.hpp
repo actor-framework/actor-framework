@@ -41,10 +41,12 @@ class group;
 class channel;
 class node_id;
 class behavior;
+class resumable;
 class any_tuple;
 class actor_addr;
 class actor_proxy;
 class scoped_actor;
+class execution_unit;
 class abstract_actor;
 class abstract_group;
 class blocking_actor;
@@ -73,6 +75,9 @@ typedef intrusive_ptr<node_id>             node_id_ptr;
 
 // weak intrusive pointer typedefs
 typedef weak_intrusive_ptr<actor_proxy>    weak_actor_proxy_ptr;
+
+// convenience typedefs
+typedef const message_header& msg_hdr_cref;
 
 } // namespace cppa
 

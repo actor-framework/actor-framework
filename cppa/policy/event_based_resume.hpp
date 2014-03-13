@@ -40,6 +40,7 @@
 #include "cppa/config.hpp"
 #include "cppa/extend.hpp"
 #include "cppa/behavior.hpp"
+#include "cppa/scheduler.hpp"
 #include "cppa/actor_state.hpp"
 
 #include "cppa/policy/resume_policy.hpp"
@@ -54,7 +55,7 @@ class event_based_resume {
 
     // Base must be a mailbox-based actor
     template<class Base, class Derived>
-    struct mixin : Base, detail::resumable {
+    struct mixin : Base, resumable {
 
         template<typename... Ts>
         mixin(Ts&&... args) : Base(std::forward<Ts>(args)...) { }
@@ -63,8 +64,10 @@ class event_based_resume {
             return static_cast<Derived*>(this);
         }
 
-        resumable::resume_result resume(detail::cs_thread*) override {
+        resumable::resume_result resume(detail::cs_thread*,
+                                        execution_unit* host) override {
             auto d = dptr();
+            d->m_host = host;
             CPPA_LOG_TRACE("id = " << d->id()
                            << ", state = " << static_cast<int>(d->state()));
             CPPA_REQUIRE(   d->state() == actor_state::ready
@@ -171,7 +174,7 @@ class event_based_resume {
                 }
             }
             done_cb();
-            return detail::resumable::done;
+            return resumable::done;
         }
 
     };

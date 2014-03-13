@@ -32,7 +32,6 @@ constexpr size_t reduce_global_size = reduce_buffer_size;
 constexpr size_t reduce_result_size = reduce_work_groups;
 
 constexpr const char* kernel_name = "matrix_square";
-constexpr const char* kernel_name_result_size = "result_size";
 constexpr const char* kernel_name_compiler_flag = "compiler_flag";
 constexpr const char* kernel_name_reduce = "reduce";
 constexpr const char* kernel_name_const = "const_mod";
@@ -158,6 +157,8 @@ class square_matrix {
     ivec& data() { return m_data; }
 
     const ivec& data() const { return m_data; }
+
+    void data(ivec new_data) { m_data = std::move(new_data); }
 
  private:
 
@@ -311,7 +312,7 @@ void test_opencl() {
 }
 
 int main() {
-    CPPA_TEST(test_opencl);
+    CPPA_TEST(tkest_opencl);
 
     announce<ivec>();
     matrix_type::announce();

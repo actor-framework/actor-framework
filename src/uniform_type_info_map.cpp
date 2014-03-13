@@ -312,7 +312,7 @@ void deserialize_impl(any_tuple& atref, deserializer* source) {
     atref = uti->as_any_tuple(ptr);
 }
 
-void serialize_impl(const message_header& hdr, serializer* sink) {
+void serialize_impl(msg_hdr_cref hdr, serializer* sink) {
     serialize_impl(hdr.sender, sink);
     serialize_impl(hdr.receiver, sink);
     sink->write_value(hdr.id.integer_value());

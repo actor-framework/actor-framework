@@ -89,7 +89,9 @@ void publish_local_groups(std::uint16_t port, const char* addr) {
         publish(gn, port, addr);
     }
     catch (std::exception&) {
-        gn->enqueue({invalid_actor_addr, nullptr}, make_any_tuple(atom("SHUTDOWN")));
+        gn->enqueue({invalid_actor_addr, nullptr},
+                    make_any_tuple(atom("SHUTDOWN")),
+                    nullptr);
         throw;
     }
 }

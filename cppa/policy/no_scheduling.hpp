@@ -83,7 +83,8 @@ class no_scheduling {
     }
 
     template<class Actor>
-    void enqueue(Actor* self, const message_header& hdr, any_tuple& msg) {
+    void enqueue(Actor* self, msg_hdr_cref hdr,
+                 any_tuple& msg, execution_unit*) {
         auto ptr = self->new_mailbox_element(hdr, std::move(msg));
         switch (self->mailbox().enqueue(ptr)) {
             default:
@@ -104,22 +105,18 @@ class no_scheduling {
     }
 
     template<class Actor>
-    void launch(Actor* self, bool is_hidden) {
+    void launch(Actor* self) {
         CPPA_PUSH_AID(self->id());
-        CPPA_LOG_TRACE(CPPA_ARG(self) << ", " << CPPA_ARG(is_hidden));
+        CPPA_LOG_TRACE(CPPA_ARG(self));
         CPPA_REQUIRE(self != nullptr);
-        if (!is_hidden) get_actor_registry()->inc_running();
         intrusive_ptr<Actor> mself{self};
         std::thread([=] {
             CPPA_PUSH_AID(mself->id());
             CPPA_LOG_TRACE("");
-            auto guard = util::make_scope_guard([is_hidden] {
-                if (!is_hidden) get_actor_registry()->dec_running();
-            });
             detail::cs_thread fself;
             for (;;) {
                 mself->set_state(actor_state::ready);
-                if (mself->resume(&fself) == detail::resumable::done) {
+                if (mself->resume(&fself, nullptr) == resumable::done) {
                     return;
                 }
                 // await new data before resuming actor

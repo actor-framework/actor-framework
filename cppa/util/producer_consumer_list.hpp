@@ -175,6 +175,13 @@ class producer_consumer_list {
         }
     }
 
+    bool empty() const {
+        // this seems to be a non-thread-safe implementation,
+        // however, any 'race condition' that might occur
+        // only means we cannot assume an empty list
+        return m_first == m_last;
+    }
+
 };
 
 } } // namespace cppa::util

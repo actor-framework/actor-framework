@@ -32,7 +32,7 @@
 
 namespace cppa {
 
-mailbox_element::mailbox_element(const message_header& hdr, any_tuple data)
+mailbox_element::mailbox_element(msg_hdr_cref hdr, any_tuple data)
 : next(nullptr), marked(false), sender(hdr.sender), msg(std::move(data)), mid(hdr.id) { }
 
 } // namespace cppa

@@ -268,7 +268,7 @@ void peer::kill_proxy(const actor_addr& sender,
     }
 }
 
-void peer::deliver(const message_header& hdr, any_tuple msg) {
+void peer::deliver(msg_hdr_cref hdr, any_tuple msg) {
     CPPA_LOG_TRACE("");
     if (hdr.sender && hdr.sender.is_remote()) {
         // is_remote() is guaranteed to return true if and only if
@@ -361,7 +361,7 @@ void peer::add_type_if_needed(const std::string& tname) {
     }
 }
 
-void peer::enqueue_impl(const message_header& hdr, const any_tuple& msg) {
+void peer::enqueue_impl(msg_hdr_cref hdr, const any_tuple& msg) {
     CPPA_LOG_TRACE("");
     auto tname = msg.tuple_type_names();
     add_type_if_needed((tname) ? *tname : detail::get_tuple_type_names(*msg.vals()));
@@ -384,7 +384,7 @@ void peer::enqueue_impl(const message_header& hdr, const any_tuple& msg) {
     memcpy(wbuf.offset_data(before), &size, sizeof(std::uint32_t));
 }
 
-void peer::enqueue(const message_header& hdr, const any_tuple& msg) {
+void peer::enqueue(msg_hdr_cref hdr, const any_tuple& msg) {
     enqueue_impl(hdr, msg);
     register_for_writing();
 }

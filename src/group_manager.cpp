@@ -70,26 +70,27 @@ class local_group : public abstract_group {
 
  public:
 
-    void send_all_subscribers(const message_header& hdr, const any_tuple& msg) {
+    void send_all_subscribers(msg_hdr_cref hdr, const any_tuple& msg,
+                              execution_unit* eu) {
         CPPA_LOG_TRACE(CPPA_TARG(hdr.sender, to_string) << ", "
                        << CPPA_TARG(msg, to_string));
         shared_guard guard(m_mtx);
         for (auto& s : m_subscribers) {
-            s->enqueue(hdr, msg);
+            s->enqueue(hdr, msg, eu);
         }
     }
 
-    void enqueue(const message_header& hdr, any_tuple msg) override {
+    void enqueue(msg_hdr_cref hdr, any_tuple msg, execution_unit* eu) override {
         CPPA_LOG_TRACE(CPPA_TARG(hdr, to_string) << ", "
                        << CPPA_TARG(msg, to_string));
-        send_all_subscribers(hdr, msg);
-        m_broker->enqueue(hdr, msg);
+        send_all_subscribers(hdr, msg, eu);
+        m_broker->enqueue(hdr, msg, eu);
     }
 
     pair<bool, size_t> add_subscriber(const channel& who) {
         CPPA_LOG_TRACE(CPPA_TARG(who, to_string));
         exclusive_guard guard(m_mtx);
-        if (m_subscribers.insert(who).second) {
+        if (who && m_subscribers.insert(who).second) {
             return {true, m_subscribers.size()};
         }
         return {false, m_subscribers.size()};
@@ -160,7 +161,7 @@ class local_broker : public event_based_actor {
                                 CPPA_TARG(what, to_string));
                 // local forwarding
                 message_header hdr{last_sender(), nullptr};
-                m_group->send_all_subscribers(hdr, what);
+                m_group->send_all_subscribers(hdr, what, m_host);
                 // forward to all acquaintances
                 send_to_acquaintances(what);
             },
@@ -195,7 +196,7 @@ class local_broker : public event_based_actor {
                        << " acquaintances; " << CPPA_TSARG(sender)
                        << ", " << CPPA_TSARG(what));
         for (auto& acquaintance : m_acquaintances) {
-            acquaintance->enqueue({sender, acquaintance}, what);
+            acquaintance->enqueue({sender, acquaintance}, what, m_host);
         }
     }
 
@@ -249,9 +250,9 @@ class local_group_proxy : public local_group {
         }
     }
 
-    void enqueue(const message_header& hdr, any_tuple msg) override {
+    void enqueue(msg_hdr_cref hdr, any_tuple msg, execution_unit* eu) override {
         // forward message to the broker
-        m_broker->enqueue(hdr, make_any_tuple(atom("FORWARD"), move(msg)));
+        m_broker->enqueue(hdr, make_any_tuple(atom("FORWARD"), move(msg)), eu);
     }
 
  private:
@@ -272,7 +273,7 @@ class proxy_broker : public event_based_actor {
         return (
             others() >> [=] {
                 message_header hdr{last_sender(), nullptr};
-                m_group->send_all_subscribers(hdr, last_dequeued());
+                m_group->send_all_subscribers(hdr, last_dequeued(), m_host);
             }
         );
     }
@@ -378,18 +379,18 @@ class remote_group : public abstract_group {
         CPPA_LOG_ERROR("should never be called");
     }
 
-    void enqueue(const message_header& hdr, any_tuple msg) override {
+    void enqueue(msg_hdr_cref hdr, any_tuple msg, execution_unit* eu) override {
         CPPA_LOG_TRACE("");
-        m_decorated->enqueue(hdr, std::move(msg));
+        m_decorated->enqueue(hdr, std::move(msg), eu);
     }
 
     void serialize(serializer* sink);
 
     void group_down() {
         CPPA_LOG_TRACE("");
-        group this_group{this};
+        group_down_msg gdm{group{this}};
         m_decorated->send_all_subscribers({invalid_actor_addr, nullptr},
-                                          make_any_tuple(group_down_msg{this_group}));
+                                          make_any_tuple(gdm), nullptr);
     }
 
  private:

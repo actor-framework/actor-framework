@@ -43,7 +43,6 @@
 #include "cppa/detail/group_manager.hpp"
 #include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/singleton_manager.hpp"
-#include "cppa/detail/thread_pool_scheduler.hpp"
 #include "cppa/detail/uniform_type_info_map.hpp"
 
 #ifdef CPPA_OPENCL
@@ -68,14 +67,14 @@ std::atomic<io::middleman*> s_middleman;
 std::atomic<actor_registry*> s_actor_registry;
 std::atomic<group_manager*> s_group_manager;
 std::atomic<empty_tuple*> s_empty_tuple;
-std::atomic<scheduler*> s_scheduler;
+std::atomic<scheduler::coordinator*> s_scheduling_coordinator;
 std::atomic<logging*> s_logger;
 
 } // namespace <anonymous>
 
 void singleton_manager::shutdown() {
     CPPA_LOGF_DEBUG("shutdown scheduler");
-    destroy(s_scheduler);
+    destroy(s_scheduling_coordinator);
     CPPA_LOGF_DEBUG("shutdown middleman");
     destroy(s_middleman);
     std::atomic_thread_fence(std::memory_order_seq_cst);
@@ -115,24 +114,12 @@ group_manager* singleton_manager::get_group_manager() {
     return lazy_get(s_group_manager);
 }
 
-scheduler* singleton_manager::get_scheduler() {
-    return lazy_get(s_scheduler);
+scheduler::coordinator* singleton_manager::get_scheduling_coordinator() {
+    return lazy_get(s_scheduling_coordinator);
 }
 
 logging* singleton_manager::get_logger() {
     return lazy_get(s_logger);
-}
-
-bool singleton_manager::set_scheduler(scheduler* ptr) {
-    scheduler* expected = nullptr;
-    if (s_scheduler.compare_exchange_weak(expected, ptr)) {
-        ptr->initialize();
-        return true;
-    }
-    else {
-        ptr->dispose();
-        return false;
-    }
 }
 
 io::middleman* singleton_manager::get_middleman() {

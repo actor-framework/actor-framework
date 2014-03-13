@@ -55,7 +55,7 @@ class middleman_scheduling {
 
         typedef intrusive_ptr<Actor> pointer;
 
-        continuation(pointer ptr, const message_header& hdr, any_tuple&& msg)
+        continuation(pointer ptr, msg_hdr_cref hdr, any_tuple&& msg)
         : m_self(std::move(ptr)), m_hdr(hdr), m_data(std::move(msg)) { }
 
         inline void operator()() const {
@@ -91,7 +91,7 @@ class middleman_scheduling {
     }
 
     template<class Actor>
-    void enqueue(Actor* self, const message_header& hdr, any_tuple& msg) {
+    void enqueue(Actor* self, msg_hdr_cref hdr, any_tuple& msg) {
         get_middleman()->run_later(continuation<Actor>{self, hdr, std::move(msg)});
     }
 

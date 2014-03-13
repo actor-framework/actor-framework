@@ -72,14 +72,11 @@ intrusive_ptr<C> spawn_impl(BeforeLaunch before_launch_fun, Ts&&... args) {
         return spawn_impl<C, Os + detached>(before_launch_fun,
                                             std::forward<Ts>(args)...);
     }
-    /*
     using scheduling_policy = typename std::conditional<
                                   has_detach_flag(Os),
                                   policy::no_scheduling,
                                   policy::cooperative_scheduling
                               >::type;
-    */
-    using scheduling_policy = policy::no_scheduling;
     using priority_policy = typename std::conditional<
                                 has_priority_aware_flag(Os),
                                 policy::prioritizing,

@@ -52,6 +52,7 @@
 #include "cppa/message_header.hpp"
 #include "cppa/abstract_actor.hpp"
 #include "cppa/abstract_group.hpp"
+#include "cppa/execution_unit.hpp"
 #include "cppa/mailbox_element.hpp"
 #include "cppa/response_promise.hpp"
 #include "cppa/message_priority.hpp"
@@ -67,8 +68,7 @@
 namespace cppa {
 
 // forward declarations
-class scheduler;
-class local_scheduler;
+class execution_unit;
 class sync_handle_helper;
 
 /**
@@ -557,7 +557,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
         return m_state;
     }
 
-    void cleanup(std::uint32_t reason);
+    void cleanup(std::uint32_t reason) override;
 
     mailbox_element* dummy_node() {
         return &m_dummy_node;

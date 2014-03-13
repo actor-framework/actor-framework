@@ -61,8 +61,6 @@ using namespace cppa::util;
 using cppa::detail::type_to_ptype;
 using cppa::detail::ptype_to_type;
 
-namespace { const size_t ui32size = sizeof(uint32_t); }
-
 struct struct_a {
     int x;
     int y;

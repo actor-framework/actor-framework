@@ -28,58 +28,40 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_THREAD_POOL_SCHEDULER_HPP
-#define CPPA_THREAD_POOL_SCHEDULER_HPP
+#ifndef CPPA_RESUMABLE_HPP
+#define CPPA_RESUMABLE_HPP
 
-#include <thread>
+namespace cppa {
 
-#include "cppa/scheduler.hpp"
+class execution_unit;
 
-#include "cppa/util/producer_consumer_list.hpp"
+namespace detail { struct cs_thread; }
 
-#include "cppa/detail/resumable.hpp"
-
-namespace cppa { namespace detail {
-
-struct cs_thread;
-
-class thread_pool_scheduler : public scheduler {
-
-    typedef scheduler super;
+class resumable {
 
  public:
 
-    struct dummy : resumable {
-        resume_result resume(detail::cs_thread*) override;
+    enum resume_result {
+        resume_later,
+        done
     };
 
-    struct worker;
+    // intrusive next pointer needed to use
+    // 'resumable' with 'single_reader_queue'
+    resumable* next;
 
-    thread_pool_scheduler();
+    resumable();
 
-    thread_pool_scheduler(size_t num_worker_threads);
+    virtual ~resumable();
 
-    void initialize();
+    virtual resume_result resume(detail::cs_thread*, execution_unit*) = 0;
 
-    void destroy();
+ protected:
 
-    void enqueue(resumable* what) override;
-
- private:
-
-    //typedef util::single_reader_queue<abstract_scheduled_actor> job_queue;
-    typedef util::producer_consumer_list<resumable> job_queue;
-
-    size_t m_num_threads;
-    job_queue m_queue;
-    dummy m_dummy;
-    std::thread m_supervisor;
-
-    static void worker_loop(worker*);
-    static void supervisor_loop(job_queue*, resumable*, size_t);
+    bool m_hidden;
 
 };
 
-} } // namespace cppa::detail
+} // namespace cppa
 
-#endif // CPPA_THREAD_POOL_SCHEDULER_HPP
+#endif // CPPA_RESUMABLE_HPP

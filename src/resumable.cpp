@@ -28,12 +28,12 @@
 \******************************************************************************/
 
 
-#include "cppa/detail/resumable.hpp"
+#include "cppa/resumable.hpp"
 
 namespace cppa {
-namespace detail {
+
+resumable::resumable() : next(nullptr), m_hidden(true) { }
 
 resumable::~resumable() { }
 
-} // namespace detail
 } // namespace cppa

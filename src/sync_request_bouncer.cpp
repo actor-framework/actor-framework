@@ -49,7 +49,9 @@ void sync_request_bouncer::operator()(const actor_addr& sender,
     if (sender && mid.is_request()) {
         auto ptr = detail::raw_access::get(sender);
         ptr->enqueue({invalid_actor_addr, ptr, mid.response_id()},
-                     make_any_tuple(sync_exited_msg{sender, rsn}));
+                     make_any_tuple(sync_exited_msg{sender, rsn}),
+                     // TODO: this breaks out of the execution unit
+                     nullptr);
     }
 }
 

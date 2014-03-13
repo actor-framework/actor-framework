@@ -227,7 +227,7 @@ class middleman_impl : public middleman {
     }
 
     void deliver(const node_id& node,
-                 const message_header& hdr,
+                 msg_hdr_cref hdr,
                  any_tuple msg                  ) override {
         auto& entry = m_peers[node];
         if (entry.impl) {

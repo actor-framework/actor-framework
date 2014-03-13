@@ -33,12 +33,9 @@
 
 #include <atomic>
 
-namespace cppa {
+namespace cppa { class logging; }
 
-class logging;
-class scheduler;
-
-} // namespace cppa
+namespace cppa { namespace scheduler { class coordinator; } }
 
 namespace cppa { namespace io { class middleman; } }
 
@@ -62,9 +59,7 @@ class singleton_manager {
 
     static logging* get_logger();
 
-    static scheduler* get_scheduler();
-
-    static bool set_scheduler(scheduler*);
+    static scheduler::coordinator* get_scheduling_coordinator();
 
     static group_manager* get_group_manager();
 

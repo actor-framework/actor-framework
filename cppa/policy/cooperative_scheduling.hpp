@@ -34,6 +34,8 @@
 #include <atomic>
 
 #include "cppa/any_tuple.hpp"
+#include "cppa/scheduler.hpp"
+#include "cppa/singletons.hpp"
 #include "cppa/actor_state.hpp"
 #include "cppa/message_header.hpp"
 
@@ -80,12 +82,15 @@ class cooperative_scheduling {
     }
 
     template<class Actor>
-    inline void launch(Actor*) {
-        static_cast<void>(m_hidden);
+    inline void launch(Actor* self) {
+        get_scheduling_coordinator()->enqueue(self);
     }
 
     template<class Actor>
-    void enqueue(Actor* self, const message_header& hdr, any_tuple& msg) {
+    void enqueue(Actor* self,
+                 msg_hdr_cref hdr,
+                 any_tuple& msg,
+                 execution_unit* host) {
         auto e = self->new_mailbox_element(hdr, std::move(msg));
         switch (self->mailbox().enqueue(e)) {
             case intrusive::first_enqueued: {
@@ -98,7 +103,8 @@ class cooperative_scheduling {
                     switch (state) {
                         case actor_state::blocked: {
                             if (set_ready()) {
-                                //m_scheduler->enqueue(this);
+                                if (host) host->exec_later(self);
+                                else get_scheduling_coordinator()->enqueue(self);
                                 return;
                             }
                             break;
@@ -116,20 +122,14 @@ class cooperative_scheduling {
             }
             case intrusive::queue_closed: {
                 if (hdr.id.is_request()) {
-                    //FIXME
-                    //detail::sync_request_bouncer f{exit_reason()};
-                    //f(hdr.sender, hdr.id);
+                    detail::sync_request_bouncer f{self->exit_reason()};
+                    f(hdr.sender, hdr.id);
                 }
                 break;
             }
             default: break;
         }
     }
-
- private:
-
-    // denotes whether this actor is ignored by await_all_actors_done()
-    bool m_hidden;
 
 };
 

@@ -65,7 +65,7 @@ inline std::string to_string(const any_tuple& what) {
     return detail::to_string_impl(what);
 }
 
-inline std::string to_string(const message_header& what) {
+inline std::string to_string(msg_hdr_cref what) {
     return detail::to_string_impl(what);
 }
 

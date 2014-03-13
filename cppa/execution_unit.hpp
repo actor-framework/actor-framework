@@ -28,34 +28,31 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_RESUMABLE_HPP
-#define CPPA_RESUMABLE_HPP
+#ifndef CPPA_DETAIL_EXECUTION_UNIT_HPP
+#define CPPA_DETAIL_EXECUTION_UNIT_HPP
 
 namespace cppa {
-namespace detail {
 
-struct cs_thread;
+class resumable;
 
-class resumable {
+/*
+ * @brief Identifies an execution unit, e.g., a worker thread of the scheduler.
+ */
+class execution_unit {
 
  public:
 
-    enum resume_result {
-        resume_later,
-        done
-    };
+    virtual ~execution_unit();
 
-    // intrusive next pointer needed to use
-    // 'resumable' with 'single_reader_queue'
-    resumable* next;
-
-    virtual ~resumable();
-
-    virtual resume_result resume(detail::cs_thread*) = 0;
+    /*
+     * @brief Enqueues @p ptr to the job list of the execution unit.
+     * @warning Must only be called from a {@link resumable} currently
+     *          executed by this execution unit.
+     */
+    virtual void exec_later(resumable* ptr) = 0;
 
 };
 
-} // namespace detail
 } // namespace cppa
 
-#endif // CPPA_RESUMABLE_HPP
+#endif // CPPA_DETAIL_EXECUTION_UNIT_HPP

@@ -33,6 +33,7 @@
 
 #include <chrono>
 #include <memory>
+#include <thread>
 #include <cstdint>
 #include <functional>
 #include <type_traits>
@@ -43,53 +44,44 @@
 #include "cppa/any_tuple.hpp"
 #include "cppa/cow_tuple.hpp"
 #include "cppa/attachable.hpp"
+#include "cppa/scoped_actor.hpp"
 #include "cppa/spawn_options.hpp"
+#include "cppa/execution_unit.hpp"
 #include "cppa/message_header.hpp"
 
 #include "cppa/util/duration.hpp"
+#include "cppa/util/producer_consumer_list.hpp"
 
 namespace cppa {
 
-class event_based_actor;
-class scheduled_actor;
-class scheduler_helper;
-typedef intrusive_ptr<scheduled_actor> scheduled_actor_ptr;
-
-namespace detail {
 class resumable;
-class singleton_manager;
-} // namespace detail
+
+namespace detail { class singleton_manager; }
+
+namespace scheduler {
+
+class worker;
 
 /**
- * @brief This abstract class allows to create (spawn) new actors
- *        and offers delayed sends.
+ * @brief Central scheduling interface.
  */
-class scheduler {
+class coordinator {
 
     friend class detail::singleton_manager;
 
- protected:
-
-    scheduler();
-
-    virtual ~scheduler();
-
-
-    /**
-     * @warning Always call scheduler::initialize on overriding.
-     */
-    virtual void initialize();
-
-    /**
-     * @warning Always call scheduler::destroy on overriding.
-     */
-    virtual void destroy();
-
  public:
 
+    class shutdown_helper;
+
+    /**
+     * @brief Returns a handle to the central printing actor.
+     */
     actor printer() const;
 
-    virtual void enqueue(detail::resumable*) = 0;
+    /**
+     * @brief Puts @p what into the queue of a randomly chosen worker.
+     */
+    void enqueue(resumable* what);
 
     template<typename Duration, typename... Data>
     void delayed_send(message_header hdr,
@@ -99,7 +91,7 @@ class scheduler {
                                   util::duration{rel_time},
                                   std::move(hdr),
                                   std::move(data));
-        delayed_send_helper()->enqueue(message_header{}, std::move(tup));
+        m_timer->enqueue(message_header{}, std::move(tup), nullptr);
     }
 
     template<typename Duration, typename... Data>
@@ -111,34 +103,124 @@ class scheduler {
                                   util::duration{rel_time},
                                   std::move(hdr),
                                   std::move(data));
-        delayed_send_helper()->enqueue(message_header{}, std::move(tup));
+        m_timer->enqueue(message_header{}, std::move(tup), nullptr);
+    }
+
+    inline size_t num_workers() const {
+        return static_cast<unsigned>(m_workers.size());
+    }
+
+    inline worker* worker_by_id(size_t id) const {
+        return m_workers[id].get();
     }
 
  private:
 
-    static scheduler* create_singleton();
+    static coordinator* create_singleton();
+
+    coordinator();
 
     inline void dispose() { delete this; }
 
-    actor delayed_send_helper();
+    void initialize();
 
-    scheduler_helper* m_helper;
+    void destroy();
+
+    intrusive_ptr<blocking_actor> m_timer;
+    scoped_actor m_printer;
+
+    std::thread m_timer_thread;
+    std::thread m_printer_thread;
+
+    // ID of the worker receiving the next enqueue
+    std::atomic<size_t> m_next_worker;
+
+    // vector of size std::thread::hardware_concurrency()
+    std::vector<std::unique_ptr<worker>> m_workers;
 
 };
 
 /**
- * @brief Sets the scheduler to @p sched.
- * @param sched A user-defined scheduler implementation.
- * @pre <tt>sched != nullptr</tt>.
- * @throws std::runtime_error if there's already a scheduler defined.
+ * @brief A work-stealing scheduling worker.
+ *
+ * The work-stealing implementation of libcppa minimizes access to the
+ * synchronized queue. The reasoning behind this design decision is that
+ * it has been shown that stealing actually is very rare for workloads [1].
+ * Hence, implementations should focus on the performance in
+ * the non-stealing case. For this reason, each worker has an exposed
+ * job queue that can be accessed by the central scheduler instance as
+ * well as other workers, but it also has a private job list it is
+ * currently working on. To account for the load balancing aspect, each
+ * worker makes sure that at least one job is left in its exposed queue
+ * to allow other workers to steal it.
+ *
+ * [1] http://dl.acm.org/citation.cfm?doid=2398857.2384639
  */
-void set_scheduler(scheduler* sched);
+class worker : public execution_unit {
 
-/**
- * @brief Sets a thread pool scheduler with @p num_threads worker threads.
- * @throws std::runtime_error if there's already a scheduler defined.
- */
-void set_default_scheduler(size_t num_threads);
+    friend class coordinator;
+
+    friend class coordinator::shutdown_helper;
+
+ public:
+
+    typedef resumable* job_ptr;
+
+    typedef util::producer_consumer_list<resumable> job_queue;
+
+    worker(size_t id, coordinator* parent);
+
+    /**
+     * @brief Attempt to steal an element from the exposed job queue.
+     */
+    job_ptr try_steal();
+
+    /**
+     * @brief Enqueues a new job to the worker's queue from an external
+     *        source, i.e., from any other thread.
+     */
+    void external_enqueue(job_ptr);
+
+    /**
+     * @brief Enqueues a new job to the worker's queue from an internal
+     *        source, i.e., a job that is currently executed by
+     *        this worker.
+     * @warning Must not be called from other threads.
+     */
+    void exec_later(job_ptr) override;
+
+ private:
+
+    void start(); // called from the scheduler
+
+    void run(); // work loop
+
+    job_ptr raid(); // go on a raid in quest for a new shiny job
+
+    bool m_running;
+
+    // this queue is exposed to others, i.e., other workers
+    // may attempt to steal jobs from it and the central scheduling
+    // unit can push new jobs to the queue
+    job_queue m_exposed_queue;
+
+    // internal job stack
+    std::vector<job_ptr> m_job_list;
+
+    // the worker's thread
+    std::thread m_this_thread;
+
+    // the worker's ID received from scheduler
+    size_t m_id;
+
+    // the ID of the last victim we stole from
+    size_t m_last_victim;
+
+    coordinator* m_parent;
+
+};
+
+} // namespace scheduler
 
 } // namespace cppa
 

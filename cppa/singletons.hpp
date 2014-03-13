@@ -39,8 +39,8 @@ inline logging* get_logger() {
     return detail::singleton_manager::get_logger();
 }
 
-inline scheduler* get_scheduler() {
-    return detail::singleton_manager::get_scheduler();
+inline scheduler::coordinator* get_scheduling_coordinator() {
+    return detail::singleton_manager::get_scheduling_coordinator();
 }
 
 inline detail::group_manager* get_group_manager() {

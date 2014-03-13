@@ -62,11 +62,12 @@ namespace { typedef std::unique_lock<std::mutex> guard_type; }
 // by std::atomic<> constructor
 
 abstract_actor::abstract_actor(actor_id aid)
-: m_id(aid), m_is_proxy(true), m_exit_reason(exit_reason::not_exited) { }
+        : m_id(aid), m_is_proxy(true)
+        , m_exit_reason(exit_reason::not_exited), m_host(nullptr) { }
 
 abstract_actor::abstract_actor()
-: m_id(get_actor_registry()->next_id()), m_is_proxy(false)
-, m_exit_reason(exit_reason::not_exited) {
+        : m_id(get_actor_registry()->next_id()), m_is_proxy(false)
+        , m_exit_reason(exit_reason::not_exited) {
     m_node = get_middleman()->node();
 }
 
@@ -77,7 +78,8 @@ bool abstract_actor::link_to_impl(const actor_addr& other) {
         // send exit message if already exited
         if (exited()) {
             ptr->enqueue({address(), ptr},
-                         make_any_tuple(exit_msg{address(), exit_reason()}));
+                         make_any_tuple(exit_msg{address(), exit_reason()}),
+                         m_host);
         }
         // add link if not already linked to other
         // (checked by establish_backlink)
@@ -160,7 +162,8 @@ bool abstract_actor::establish_backlink(const actor_addr& other) {
     if (reason != exit_reason::not_exited) {
         auto ptr = detail::raw_access::unsafe_cast(other);
         ptr->enqueue({address(), ptr},
-                     make_any_tuple(exit_msg{address(), exit_reason()}));
+                     make_any_tuple(exit_msg{address(), exit_reason()}),
+                     m_host);
     }
     return false;
 }
@@ -213,7 +216,8 @@ void abstract_actor::cleanup(std::uint32_t reason) {
     auto msg = make_any_tuple(exit_msg{address(), reason});
     CPPA_LOGM_DEBUG("cppa::actor", "send EXIT to " << mlinks.size() << " links");
     for (auto& aptr : mlinks) {
-        aptr->enqueue({address(), aptr, message_id{}.with_high_priority()}, msg);
+        aptr->enqueue({address(), aptr, message_id{}.with_high_priority()},
+                      msg, m_host);
     }
     CPPA_LOGM_DEBUG("cppa::actor", "run " << mattachables.size()
                                    << " attachables");
