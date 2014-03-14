@@ -52,7 +52,6 @@
 #include "cppa/message_header.hpp"
 #include "cppa/abstract_actor.hpp"
 #include "cppa/abstract_group.hpp"
-#include "cppa/execution_unit.hpp"
 #include "cppa/mailbox_element.hpp"
 #include "cppa/response_promise.hpp"
 #include "cppa/message_priority.hpp"
@@ -68,7 +67,6 @@
 namespace cppa {
 
 // forward declarations
-class execution_unit;
 class sync_handle_helper;
 
 /**
@@ -94,34 +92,49 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     template<class C, spawn_options Os = no_spawn_options, typename... Ts>
     actor spawn(Ts&&... args) {
         constexpr auto os = make_unbound(Os);
-        auto res = cppa::spawn<C, os>(std::forward<Ts>(args)...);
+        auto res = spawn_class<C, os>(m_host, empty_before_launch_callback{},
+                                      std::forward<Ts>(args)...);
         return eval_opts(Os, std::move(res));
     }
 
     template<spawn_options Os = no_spawn_options, typename... Ts>
     actor spawn(Ts&&... args) {
         constexpr auto os = make_unbound(Os);
-        auto res = cppa::spawn<os>(std::forward<Ts>(args)...);
-        return eval_opts(Os, std::move(res));
-    }
-
-    template<spawn_options Os = no_spawn_options, typename... Ts>
-    actor spawn_in_group(const group& grp, Ts&&... args) {
-        constexpr auto os = make_unbound(Os);
-        auto res = cppa::spawn_in_group<os>(grp, std::forward<Ts>(args)...);
+        auto res = spawn_functor<os>(m_host, empty_before_launch_callback{},
+                                     std::forward<Ts>(args)...);
         return eval_opts(Os, std::move(res));
     }
 
     template<class C, spawn_options Os, typename... Ts>
     actor spawn_in_group(const group& grp, Ts&&... args) {
         constexpr auto os = make_unbound(Os);
-        auto res = cppa::spawn_in_group<C, os>(grp, std::forward<Ts>(args)...);
+        auto res = spawn_class<C, os>(m_host, group_subscriber{grp},
+                                      std::forward<Ts>(args)...);
+        return eval_opts(Os, std::move(res));
+    }
+
+    template<spawn_options Os = no_spawn_options, typename... Ts>
+    actor spawn_in_group(const group& grp, Ts&&... args) {
+        constexpr auto os = make_unbound(Os);
+        auto res = spawn_functor<os>(m_host, group_subscriber{grp},
+                                     std::forward<Ts>(args)...);
         return eval_opts(Os, std::move(res));
     }
 
     /**************************************************************************
      *                           spawn typed actors                           *
      **************************************************************************/
+
+    template<class C, spawn_options Os = no_spawn_options, typename... Ts>
+    typename detail::actor_handle_from_signature_list<
+        typename C::signatures
+    >::type
+    spawn_typed(Ts&&... args) {
+        constexpr auto os = make_unbound(Os);
+        auto res = spawn_class<C, os>(m_host, empty_before_launch_callback{},
+                                      std::forward<Ts>(args)...);
+        return eval_opts(Os, std::move(res));
+    }
 
     template<spawn_options Os = no_spawn_options, typename F, typename... Ts>
     typename detail::infer_typed_actor_handle<
@@ -132,18 +145,10 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     >::type
     spawn_typed(F fun, Ts&&... args) {
         constexpr auto os = make_unbound(Os);
-        auto res = cppa::spawn_typed<os>(std::move(fun),
-                                         std::forward<Ts>(args)...);
-        return eval_opts(Os, std::move(res));
-    }
-
-    template<class C, spawn_options Os = no_spawn_options, typename... Ts>
-    typename detail::actor_handle_from_signature_list<
-        typename C::signatures
-    >::type
-    spawn_typed(Ts&&... args) {
-        constexpr auto os = make_unbound(Os);
-        auto res = cppa::spawn_typed<C, os>(std::forward<Ts>(args)...);
+        auto res = cppa::spawn_typed_functor<os>(m_host,
+                                                 empty_before_launch_callback{},
+                                                 std::move(fun),
+                                                 std::forward<Ts>(args)...);
         return eval_opts(Os, std::move(res));
     }
 
@@ -472,10 +477,10 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     template<class ActorHandle>
     inline ActorHandle eval_opts(spawn_options opts, ActorHandle res) {
         if (has_monitor_flag(opts)) {
-            monitor(res.address());
+            monitor(res->address());
         }
         if (has_link_flag(opts)) {
-            link_to(res.address());
+            link_to(res->address());
         }
         return res;
     }

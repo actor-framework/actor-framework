@@ -104,12 +104,6 @@ class logging_impl : public logging {
         }
     }
 
-    actor_id set_aid(actor_id aid) override {
-        actor_id prev = t_self_id;
-        t_self_id = aid;
-        return prev;
-    }
-
     void log(const char* level,
              const char* c_class_name,
              const char* function_name,
@@ -169,5 +163,11 @@ logging::trace_helper::~trace_helper() {
 logging::~logging() { }
 
 logging* logging::create_singleton() { return new logging_impl; }
+
+actor_id logging::set_aid(actor_id aid) {
+    actor_id prev = t_self_id;
+    t_self_id = aid;
+    return prev;
+}
 
 } // namespace cppa

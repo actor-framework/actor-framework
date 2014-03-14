@@ -39,6 +39,7 @@
 
 #include "cppa/config.hpp"
 #include "cppa/extend.hpp"
+#include "cppa/logging.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/actor_state.hpp"
@@ -74,13 +75,13 @@ class event_based_resume {
 
         resumable::resume_result resume(detail::cs_thread*,
                                         execution_unit* host) override {
+            CPPA_REQUIRE(host != nullptr);
             auto d = dptr();
             d->m_host = host;
             CPPA_LOG_TRACE("id = " << d->id()
                            << ", state = " << static_cast<int>(d->state()));
             CPPA_REQUIRE(   d->state() == actor_state::ready
                          || d->state() == actor_state::pending);
-            CPPA_PUSH_AID(d->id());
             auto done_cb = [&]() -> bool {
                 CPPA_LOG_TRACE("");
                 d->bhvr_stack().clear();

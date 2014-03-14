@@ -52,10 +52,14 @@
 
 namespace cppa {
 
+class execution_unit;
+
 namespace detail {
 
 template<class C, spawn_options Os, typename BeforeLaunch, typename... Ts>
-intrusive_ptr<C> spawn_impl(BeforeLaunch before_launch_fun, Ts&&... args) {
+intrusive_ptr<C> spawn_impl(execution_unit* host,
+                            BeforeLaunch before_launch_fun,
+                            Ts&&... args) {
     static_assert(!std::is_base_of<blocking_actor, C>::value ||
                   has_blocking_api_flag(Os),
                   "C is derived type of blocking_actor but "
@@ -69,7 +73,7 @@ intrusive_ptr<C> spawn_impl(BeforeLaunch before_launch_fun, Ts&&... args) {
     if (has_blocking_api_flag(Os)
             && !has_detach_flag(Os)
             && detail::cs_thread::is_disabled_feature) {
-        return spawn_impl<C, Os + detached>(before_launch_fun,
+        return spawn_impl<C, Os + detached>(host, before_launch_fun,
                                             std::forward<Ts>(args)...);
     }
     using scheduling_policy = typename std::conditional<
@@ -102,9 +106,10 @@ intrusive_ptr<C> spawn_impl(BeforeLaunch before_launch_fun, Ts&&... args) {
                                       invoke_policy>;
     using proper_impl = detail::proper_actor<C, policies>;
     auto ptr = make_counted<proper_impl>(std::forward<Ts>(args)...);
+    CPPA_LOGF_DEBUG("spawned actor with ID " << ptr->id());
     CPPA_PUSH_AID(ptr->id());
     before_launch_fun(ptr.get());
-    ptr->launch(has_hide_flag(Os));
+    ptr->launch(has_hide_flag(Os), host);
     return ptr;
 }
 
@@ -127,17 +132,51 @@ struct spawn_fwd<scoped_actor> {
     static inline actor fwd(T& arg) { return arg; }
 };
 
+} // namespace detail
+
 // forwards the arguments to spawn_impl, replacing pointers
 // to actors with instances of 'actor'
 template<class C, spawn_options Os, typename BeforeLaunch, typename... Ts>
-intrusive_ptr<C> spawn_fwd_args(BeforeLaunch before_launch_fun, Ts&&... args) {
-    return spawn_impl<C, Os>(
-            before_launch_fun,
-            spawn_fwd<typename util::rm_const_and_ref<Ts>::type>::fwd(
+intrusive_ptr<C> spawn_class(execution_unit* host,
+                             BeforeLaunch before_launch_fun,
+                             Ts&&... args) {
+    return detail::spawn_impl<C, Os>(host,
+                                     before_launch_fun,
+            detail::spawn_fwd<typename util::rm_const_and_ref<Ts>::type>::fwd(
                     std::forward<Ts>(args))...);
 }
 
-} // namespace detail
+template<spawn_options Os, typename BeforeLaunch, typename F, typename... Ts>
+actor spawn_functor(execution_unit* eu,
+                    BeforeLaunch cb,
+                    F fun,
+                    Ts&&... args) {
+    typedef typename util::get_callable_trait<F>::type trait;
+    typedef typename trait::arg_types arg_types;
+    typedef typename util::tl_head<arg_types>::type first_arg;
+    constexpr bool is_blocking = has_blocking_api_flag(Os);
+    constexpr bool has_ptr_arg = std::is_pointer<first_arg>::value;
+    constexpr bool has_blocking_self = std::is_same<
+                                                  first_arg,
+                                                  blocking_actor*
+                                              >::value;
+    constexpr bool has_nonblocking_self = std::is_same<
+                                                     first_arg,
+                                                     event_based_actor*
+                                                 >::value;
+    static_assert(!is_blocking || has_blocking_self || !has_ptr_arg,
+                  "functor-based actors with blocking_actor* as first "
+                  "argument need to be spawned using the blocking_api flag");
+    static_assert(is_blocking || has_nonblocking_self || !has_ptr_arg,
+                  "functor-based actors with event_based_actor* as first "
+                  "argument cannot be spawned using the blocking_api flag");
+    using base_class = typename std::conditional<
+                           is_blocking,
+                           detail::functor_based_blocking_actor,
+                           detail::functor_based_actor
+                       >::type;
+    return spawn_class<base_class, Os>(eu, cb, fun, std::forward<Ts>(args)...);
+}
 
 /**
  * @ingroup ActorCreation
@@ -151,11 +190,10 @@ intrusive_ptr<C> spawn_fwd_args(BeforeLaunch before_launch_fun, Ts&&... args) {
  * @tparam Os Optional flags to modify <tt>spawn</tt>'s behavior.
  * @returns An {@link actor} to the spawned {@link actor}.
  */
-template<class C, spawn_options Os, typename... Ts>
+template<class Impl, spawn_options Os = no_spawn_options, typename... Ts>
 actor spawn(Ts&&... args) {
-    return detail::spawn_fwd_args<C, Os>(
-            [](C*) { /* no-op as BeforeLaunch callback */ },
-            std::forward<Ts>(args)...);
+    return spawn_class<Impl, Os>(nullptr, empty_before_launch_callback{},
+                                 std::forward<Ts>(args)...);
 }
 
 /**
@@ -164,37 +202,11 @@ actor spawn(Ts&&... args) {
  * @tparam Os Optional flags to modify <tt>spawn</tt>'s behavior.
  * @returns An {@link actor} to the spawned {@link actor}.
  */
-//template<spawn_options Os = no_spawn_options, typename... Ts>
-template<spawn_options Os, typename... Ts>
+template<spawn_options Os = no_spawn_options, typename... Ts>
 actor spawn(Ts&&... args) {
     static_assert(sizeof...(Ts) > 0, "too few arguments provided");
-    using base_class = typename std::conditional<
-                           has_blocking_api_flag(Os),
-                           detail::functor_based_blocking_actor,
-                           detail::functor_based_actor
-                       >::type;
-    return spawn<base_class, Os>(std::forward<Ts>(args)...);
-}
-
-/**
- * @brief Spawns a new actor that evaluates given arguments and
- *        immediately joins @p grp.
- * @param args A functor followed by its arguments.
- * @tparam Os Optional flags to modify <tt>spawn</tt>'s behavior.
- * @returns An {@link actor} to the spawned {@link actor}.
- * @note The spawned has joined the group before this function returns.
- */
-template<spawn_options Os, typename... Ts>
-actor spawn_in_group(const group& grp, Ts&&... args) {
-    static_assert(sizeof...(Ts) > 0, "too few arguments provided");
-    using base_class = typename std::conditional<
-                           has_blocking_api_flag(Os),
-                           detail::functor_based_blocking_actor,
-                           detail::functor_based_actor
-                       >::type;
-    return detail::spawn_fwd_args<base_class, Os>(
-            [&](base_class* ptr) { ptr->join(grp); },
-            std::forward<Ts>(args)...);
+    return spawn_functor<Os>(nullptr, empty_before_launch_callback{},
+                             std::forward<Ts>(args)...);
 }
 
 /**
@@ -205,11 +217,25 @@ actor spawn_in_group(const group& grp, Ts&&... args) {
  * @returns An {@link actor} to the spawned {@link actor}.
  * @note The spawned has joined the group before this function returns.
  */
-template<class C, spawn_options Os, typename... Ts>
+template<class Impl, spawn_options Os = no_spawn_options, typename... Ts>
 actor spawn_in_group(const group& grp, Ts&&... args) {
-    return detail::spawn_fwd_args<C, Os>(
-            [&](C* ptr) { ptr->join(grp); },
-            std::forward<Ts>(args)...);
+    return spawn_class<Impl, Os>(nullptr, group_subscriber{grp},
+                                 std::forward<Ts>(args)...);
+}
+
+/**
+ * @brief Spawns a new actor that evaluates given arguments and
+ *        immediately joins @p grp.
+ * @param args A functor followed by its arguments.
+ * @tparam Os Optional flags to modify <tt>spawn</tt>'s behavior.
+ * @returns An {@link actor} to the spawned {@link actor}.
+ * @note The spawned has joined the group before this function returns.
+ */
+template<spawn_options Os = no_spawn_options, typename... Ts>
+actor spawn_in_group(const group& grp, Ts&&... args) {
+    static_assert(sizeof...(Ts) > 0, "too few arguments provided");
+    return spawn_functor<Os>(nullptr, group_subscriber{grp},
+                             std::forward<Ts>(args)...);
 }
 
 namespace detail {
@@ -318,14 +344,31 @@ struct infer_typed_actor_base<void, typed_event_based_actor<Rs...>*> {
  * @tparam Os Optional flags to modify <tt>spawn</tt>'s behavior.
  * @returns A {@link typed_actor} handle to the spawned actor.
  */
-template<class C, spawn_options Os, typename... Ts>
+template<class C, spawn_options Os = no_spawn_options, typename... Ts>
 typename detail::actor_handle_from_signature_list<
     typename C::signatures
 >::type
 spawn_typed(Ts&&... args) {
-    return detail::spawn_fwd_args<C, Os>(
-            [&](C*) { },
-            std::forward<Ts>(args)...);
+    return spawn_class<C, Os>(nullptr, empty_before_launch_callback{},
+                              std::forward<Ts>(args)...);
+}
+
+template<spawn_options Os, typename BeforeLaunch, typename F, typename... Ts>
+typename detail::infer_typed_actor_handle<
+    typename util::get_callable_trait<F>::result_type,
+    typename util::tl_head<
+        typename util::get_callable_trait<F>::arg_types
+    >::type
+>::type
+spawn_typed_functor(execution_unit* eu, BeforeLaunch bl, F fun, Ts&&... args) {
+    typedef typename detail::infer_typed_actor_base<
+                typename util::get_callable_trait<F>::result_type,
+                typename util::tl_head<
+                    typename util::get_callable_trait<F>::arg_types
+                >::type
+            >::type
+            impl;
+    return spawn_class<impl, Os>(eu, bl, fun, std::forward<Ts>(args)...);
 }
 
 /**
@@ -334,7 +377,7 @@ spawn_typed(Ts&&... args) {
  * @tparam Os Optional flags to modify <tt>spawn</tt>'s behavior.
  * @returns An {@link actor} to the spawned {@link actor}.
  */
-template<spawn_options Os, typename F, typename... Ts>
+template<spawn_options Os = no_spawn_options, typename F, typename... Ts>
 typename detail::infer_typed_actor_handle<
     typename util::get_callable_trait<F>::result_type,
     typename util::tl_head<
@@ -342,16 +385,8 @@ typename detail::infer_typed_actor_handle<
     >::type
 >::type
 spawn_typed(F fun, Ts&&... args) {
-    typedef typename detail::infer_typed_actor_base<
-                typename util::get_callable_trait<F>::result_type,
-                typename util::tl_head<
-                    typename util::get_callable_trait<F>::arg_types
-                >::type
-            >::type
-            impl;
-    return detail::spawn_fwd_args<impl, Os>(
-            [&](impl*) { },
-            std::move(fun), std::forward<Ts>(args)...);
+    return spawn_typed_functor<Os>(nullptr, empty_before_launch_callback{},
+                                   std::move(fun), std::forward<Ts>(args)...);
 }
 
 /** @} */

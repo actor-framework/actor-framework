@@ -105,7 +105,7 @@ class no_scheduling {
     }
 
     template<class Actor>
-    void launch(Actor* self) {
+    void launch(Actor* self, execution_unit*) {
         CPPA_PUSH_AID(self->id());
         CPPA_LOG_TRACE(CPPA_ARG(self));
         CPPA_REQUIRE(self != nullptr);

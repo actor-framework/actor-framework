@@ -80,8 +80,8 @@ class context_switching_resume {
 
         resumable::resume_result resume(detail::cs_thread* from,
                                         execution_unit* host) override {
-            CPPA_REQUIRE(from != nullptr);
-            CPPA_PUSH_AID(this->id());
+            CPPA_REQUIRE(from != nullptr && host != nullptr);
+            CPPA_LOG_TRACE("");
             this->m_host = host;
             using namespace detail;
             for (;;) {

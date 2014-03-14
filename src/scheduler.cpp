@@ -242,6 +242,7 @@ class coordinator::shutdown_helper : public resumable {
     resumable::resume_result resume(detail::cs_thread*, execution_unit* ptr) {
         auto w = dynamic_cast<worker*>(ptr);
         CPPA_REQUIRE(w != nullptr);
+        CPPA_LOG_DEBUG("shutdown_helper::resume => shutdown worker");
         w->m_running = false;
         std::unique_lock<std::mutex> guard(mtx);
         last_worker = w;
@@ -328,7 +329,7 @@ void coordinator::enqueue(resumable* what) {
  ******************************************************************************/
 
 worker::worker(size_t id, coordinator* parent)
-        : m_running(false), m_id(id), m_last_victim(id), m_parent(parent) { }
+        : m_running(true), m_id(id), m_last_victim(id), m_parent(parent) { }
 
 
 void worker::start() {
@@ -389,15 +390,20 @@ void worker::run() {
         }
     };
     // scheduling loop
-    m_running = true;
     while (m_running) {
         local_poll() || aggressive_poll() || moderate_poll() || relaxed_poll();
         CPPA_LOG_DEBUG("dequeued new job");
+        CPPA_PUSH_AID_FROM_PTR(dynamic_cast<abstract_actor*>(job));
         if (job->resume(&fself, this) == resumable::done) {
             // was attached in policy::cooperative_scheduling::launch
             job->detach_from_scheduler();
         }
         job = nullptr;
+        // give others the opportunity to steal from us
+        if (m_job_list.size() > 1 && m_exposed_queue.empty()) {
+            m_exposed_queue.push_back(m_job_list.front());
+            m_job_list.erase(m_job_list.begin());
+        }
     }
 }
 
@@ -412,7 +418,12 @@ worker::job_ptr worker::raid() {
         m_last_victim = (m_last_victim + 1) % n;
         if (m_last_victim != m_id) {
             auto job = m_parent->worker_by_id(m_last_victim)->try_steal();
-            if (job) return job;
+            if (job) {
+                CPPA_LOG_DEBUG("worker " << m_id
+                               << " has successfully stolen a job from "
+                               << m_last_victim);
+                return job;
+            }
         }
     }
     return nullptr;

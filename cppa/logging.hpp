@@ -70,7 +70,7 @@ class logging {
 
     // associates given actor id with this thread,
     // returns the previously set actor id
-    virtual actor_id set_aid(actor_id aid) = 0;
+    actor_id set_aid(actor_id aid);
 
     virtual void log(const char* level,
                      const char* class_name,
@@ -176,6 +176,7 @@ oss_wr operator<<(oss_wr&& lhs, T rhs) {
 #   define CPPA_LOG_IMPL(lvlname, classname, funname, message)                 \
         CPPA_PRINT_ERROR_IMPL(lvlname, classname, funname, message)
 #   define CPPA_PUSH_AID(unused) static_cast<void>(0)
+#   define CPPA_PUSH_AID_FROM_PTR(unused) static_cast<void>(0)
 #   define CPPA_SET_AID(unused) cppa_set_aid_dummy()
 #   define CPPA_LOG_LEVEL 1
 #else
@@ -190,6 +191,9 @@ oss_wr operator<<(oss_wr&& lhs, T rhs) {
         auto aid_pop_guard = ::cppa::util::make_scope_guard([=] {              \
             ::cppa::get_logger()->set_aid(prev_aid_in_scope);                  \
         })
+#   define CPPA_PUSH_AID_FROM_PTR(some_ptr)                                    \
+        auto aid_ptr_argument = some_ptr;                                      \
+        CPPA_PUSH_AID(aid_ptr_argument ? aid_ptr_argument->id() : 0)
 #   define CPPA_SET_AID(aid_arg)                                              \
     ::cppa::get_logger()->set_aid(aid_arg)
 #endif

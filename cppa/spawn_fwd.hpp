@@ -34,6 +34,7 @@
 #ifndef CPPA_SPAWN_FWD_HPP
 #define CPPA_SPAWN_FWD_HPP
 
+#include "cppa/group.hpp"
 #include "cppa/typed_actor.hpp"
 #include "cppa/spawn_options.hpp"
 
@@ -41,21 +42,42 @@
 
 namespace cppa {
 
-/******************************************************************************
- *                               untyped actors                               *
- ******************************************************************************/
+template<class C, spawn_options Os, typename BeforeLaunch, typename... Ts>
+intrusive_ptr<C> spawn_class(execution_unit* host,
+                             BeforeLaunch before_launch_fun,
+                             Ts&&... args);
 
-template<class Impl, spawn_options Os = no_spawn_options, typename... Ts>
-actor spawn(Ts&&... args);
+template<spawn_options Os, typename BeforeLaunch, typename F, typename... Ts>
+actor spawn_functor(execution_unit* host,
+                    BeforeLaunch before_launch_fun,
+                    F fun,
+                    Ts&&... args);
 
-template<spawn_options Os = no_spawn_options, typename... Ts>
-actor spawn(Ts&&... args);
+class group_subscriber {
 
-template<class Impl, spawn_options Os = no_spawn_options, typename... Ts>
-actor spawn_in_group(const group&, Ts&&... args);
+ public:
 
-template<spawn_options Os = no_spawn_options, typename... Ts>
-actor spawn_in_group(const group&, Ts&&... args);
+    inline group_subscriber(const group& grp) : m_grp(grp) { }
+
+    template<typename T>
+    inline void operator()(T* ptr) const {
+        ptr->join(m_grp);
+    }
+
+ private:
+
+    group m_grp;
+
+};
+
+class empty_before_launch_callback {
+
+ public:
+
+    template<typename T>
+    inline void operator()(T*) const { }
+
+};
 
 /******************************************************************************
  *                                typed actors                                *
@@ -88,20 +110,14 @@ struct actor_handle_from_signature_list<util::type_list<Rs...>> {
 
 } // namespace detail
 
-template<class Impl, spawn_options Os = no_spawn_options, typename... Ts>
-typename detail::actor_handle_from_signature_list<
-    typename Impl::signatures
->::type
-spawn_typed(Ts&&... args);
-
-template<spawn_options Os = no_spawn_options, typename F, typename... Ts>
+template<spawn_options Os, typename BeforeLaunch, typename F, typename... Ts>
 typename detail::infer_typed_actor_handle<
     typename util::get_callable_trait<F>::result_type,
     typename util::tl_head<
         typename util::get_callable_trait<F>::arg_types
     >::type
 >::type
-spawn_typed(F fun, Ts&&... args);
+spawn_typed_functor(execution_unit*, BeforeLaunch bl, F fun, Ts&&... args);
 
 } // namespace cppa
 

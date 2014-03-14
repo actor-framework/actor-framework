@@ -82,10 +82,11 @@ class cooperative_scheduling {
     }
 
     template<class Actor>
-    inline void launch(Actor* self) {
+    inline void launch(Actor* self, execution_unit* host) {
         // detached in scheduler::worker::run
         self->attach_to_scheduler();
-        get_scheduling_coordinator()->enqueue(self);
+        if (host) host->exec_later(self);
+        else get_scheduling_coordinator()->enqueue(self);
     }
 
     template<class Actor>

@@ -188,7 +188,7 @@ class proper_actor : public proper_actor_base<Base,
     template <typename... Ts>
     proper_actor(Ts&&... args) : super(std::forward<Ts>(args)...) { }
 
-    inline void launch(bool is_hidden) {
+    inline void launch(bool is_hidden, execution_unit* host) {
         CPPA_LOG_TRACE("");
         this->hidden(is_hidden);
         auto bhvr = this->make_behavior();
@@ -196,7 +196,7 @@ class proper_actor : public proper_actor_base<Base,
         CPPA_LOG_WARNING_IF(this->bhvr_stack().empty(),
                             "actor did not set a behavior");
         if (!this->bhvr_stack().empty()) {
-            this->scheduling_policy().launch(this);
+            this->scheduling_policy().launch(this, host);
         }
     }
 
@@ -256,9 +256,9 @@ class proper_actor<Base, Policies,true> : public proper_actor_base<Base,
         this->resume_policy().await_ready(this);
     }
 
-    inline void launch(bool is_hidden) {
+    inline void launch(bool is_hidden, execution_unit* host) {
         this->hidden(is_hidden);
-        this->scheduling_policy().launch(this);
+        this->scheduling_policy().launch(this, host);
     }
 
     // implement blocking_actor::dequeue_response
