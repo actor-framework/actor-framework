@@ -31,6 +31,17 @@
 #ifndef CPPA_CONFIG_HPP
 #define CPPA_CONFIG_HPP
 
+/**
+ * @brief Denotes the libcppa version in the format {MAJOR}{MINOR}{PATCH},
+ *        whereas each number is a two-digit decimal number without
+ *        leading zeros (e.g. 900 is version 0.9.0).
+ */
+#define CPPA_VERSION 900
+
+#define CPPA_MAJOR_VERSION (CPPA_VERSION / 100000)
+#define CPPA_MINOR_VERSION ((CPPA_VERSION / 100) % 1000)
+#define CPPA_PATCH_VERSION (CPPA_VERSION % 100)
+
 // detect compiler and set CPPA_DEPRECATED
 #if defined(__clang__)
 #  define CPPA_CLANG
