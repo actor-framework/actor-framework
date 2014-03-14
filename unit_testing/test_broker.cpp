@@ -37,8 +37,6 @@
 using namespace std;
 using namespace cppa;
 
-namespace { constexpr size_t message_size = sizeof(atom_value) + sizeof(int); }
-
 void ping(cppa::event_based_actor* self, size_t num_pings) {
     CPPA_CHECKPOINT();
     auto count = std::make_shared<size_t>(0);
