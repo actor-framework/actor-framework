@@ -202,7 +202,6 @@ while [ $# -ne 0 ]; do
                     exit 1
                     ;;
             esac
-            append_cache_entry ENABLE_DEBUG BOOL true
             ;;
         --disable-context-switching)
             append_cache_entry DISABLE_CONTEXT_SWITCHING BOOL true
