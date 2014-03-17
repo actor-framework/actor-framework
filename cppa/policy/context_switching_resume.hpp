@@ -70,6 +70,10 @@ class context_switching_resume {
             , m_cs_thread(context_switching_resume::trampoline,
                       static_cast<blocking_actor*>(this)) { }
 
+        inline bool exec_on_spawn() const {
+            return true;
+        }
+
         void attach_to_scheduler() override {
             this->ref();
         }

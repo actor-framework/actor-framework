@@ -47,6 +47,7 @@
 #include "cppa/policy/resume_policy.hpp"
 
 #include "cppa/detail/cs_thread.hpp"
+#include "cppa/detail/functor_based_actor.hpp"
 
 namespace cppa { namespace policy {
 
@@ -73,6 +74,10 @@ class event_based_resume {
             this->deref();
         }
 
+        inline bool exec_on_spawn() const {
+            return false;
+        }
+
         resumable::resume_result resume(detail::cs_thread*,
                                         execution_unit* host) override {
             CPPA_REQUIRE(host != nullptr);
@@ -80,8 +85,7 @@ class event_based_resume {
             d->m_host = host;
             CPPA_LOG_TRACE("id = " << d->id()
                            << ", state = " << static_cast<int>(d->state()));
-            CPPA_REQUIRE(   d->state() == actor_state::ready
-                         || d->state() == actor_state::pending);
+            CPPA_REQUIRE(d->state() == actor_state::ready);
             auto done_cb = [&]() -> bool {
                 CPPA_LOG_TRACE("");
                 d->bhvr_stack().clear();
@@ -91,7 +95,7 @@ class event_based_resume {
                 }
                 d->on_exit();
                 if (!d->bhvr_stack().empty()) {
-                    CPPA_LOG_DEBUG("on_exit did set a new behavior");
+                    CPPA_LOG_DEBUG("on_exit did set a new behavior in done_cb");
                     d->planned_exit_reason(exit_reason::not_exited);
                     return false; // on_exit did set a new behavior
                 }
@@ -131,7 +135,8 @@ class event_based_resume {
                         }
                     }
                     else {
-                        CPPA_LOG_DEBUG("no more element in mailbox; going to block");
+                        CPPA_LOG_DEBUG("no more element in mailbox; "
+                                       "going to block");
                         d->set_state(actor_state::about_to_block);
                         std::atomic_thread_fence(std::memory_order_seq_cst);
                         if (!d->has_next_message()) {
@@ -145,7 +150,8 @@ class event_based_resume {
                                                    "arriving message");
                                     break;
                                 case actor_state::blocked:
-                                    CPPA_LOG_DEBUG("set state successfully to blocked");
+                                    CPPA_LOG_DEBUG("set state successfully "
+                                                   "to blocked");
                                     // done setting actor to blocked
                                     return resumable::resume_later;
                                 default:

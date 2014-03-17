@@ -207,9 +207,12 @@ class invoke_policy {
                                    message_id& mid,
                                    Fun& fun,
                                    MaybeResponseHandle hdl = MaybeResponseHandle{}) {
+#       if CPPA_LOG_LEVEL >= CPPA_DEBUG
+        auto msg_str = to_string(msg);
+#       endif
         auto res = fun(msg); // might change mid
-        CPPA_LOG_DEBUG_IF(res, "actor did consume message");
-        CPPA_LOG_DEBUG_IF(!res, "actor did ignore message");
+        CPPA_LOG_DEBUG_IF(res, "actor did consume message: " << msg_str);
+        CPPA_LOG_DEBUG_IF(!res, "actor did ignore message: " << msg_str);
         if (res) {
             //message_header hdr{self, sender, mid.is_request() ? mid.response_id()
             //                                                    : message_id{}};
@@ -357,8 +360,6 @@ class invoke_policy {
                 return hm_cache_msg;
             }
             case ordinary_message: {
-                CPPA_LOG_DEBUG("handle as ordinary message: "
-                               << CPPA_TARG(node->msg, to_string));
                 if (!awaited_response.valid()) {
                     auto previous_node = dptr()->hm_begin(self, node);
                     auto res = invoke_fun(self,

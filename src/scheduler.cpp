@@ -328,6 +328,9 @@ void coordinator::enqueue(resumable* what) {
  *                          implementation of worker                          *
  ******************************************************************************/
 
+#define CPPA_LOG_DEBUG_WORKER(msg)                                             \
+    CPPA_LOG_DEBUG("worker " << m_id << ": " << msg)
+
 worker::worker(size_t id, coordinator* parent)
         : m_running(true), m_id(id), m_last_victim(id), m_parent(parent) { }
 
@@ -349,6 +352,7 @@ void worker::run() {
         if (!m_job_list.empty()) {
             job = m_job_list.back();
             m_job_list.pop_back();
+            CPPA_LOG_DEBUG_WORKER("got job from m_job_list");
             return true;
         }
         return false;
@@ -356,11 +360,17 @@ void worker::run() {
     auto aggressive_poll = [&]() -> bool {
         for (int i = 1; i < 101; ++i) {
             job = m_exposed_queue.try_pop();
-            if (job) return true;
+            if (job) {
+                CPPA_LOG_DEBUG_WORKER("got job with aggressive polling");
+                return true;
+            }
             // try to steal every 10 poll attempts
             if ((i % 10) == 0) {
                 job = raid();
-                if (job) return true;
+                if (job) {
+                    CPPA_LOG_DEBUG_WORKER("got job with aggressive polling");
+                    return true;
+                }
             }
             std::this_thread::yield();
         }
@@ -369,11 +379,17 @@ void worker::run() {
     auto moderate_poll = [&]() -> bool {
         for (int i = 1; i < 550; ++i) {
             job =  m_exposed_queue.try_pop();
-            if (job) return true;
+            if (job) {
+                CPPA_LOG_DEBUG_WORKER("got job with moderate polling");
+                return true;
+            }
             // try to steal every 5 poll attempts
             if ((i % 5) == 0) {
                 job = raid();
-                if (job) return true;
+                if (job) {
+                    CPPA_LOG_DEBUG_WORKER("got job with moderate polling");
+                    return true;
+                }
             }
             std::this_thread::sleep_for(std::chrono::microseconds(50));
         }
@@ -382,17 +398,22 @@ void worker::run() {
     auto relaxed_poll = [&]() -> bool {
         for (;;) {
             job =  m_exposed_queue.try_pop();
-            if (job) return true;
+            if (job) {
+                CPPA_LOG_DEBUG_WORKER("got job with relaxed polling");
+                return true;
+            }
             // always try to steal at this stage
             job = raid();
-            if (job) return true;
+            if (job) {
+                CPPA_LOG_DEBUG_WORKER("got job with relaxed polling");
+                return true;
+            }
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
     };
     // scheduling loop
     while (m_running) {
         local_poll() || aggressive_poll() || moderate_poll() || relaxed_poll();
-        CPPA_LOG_DEBUG("dequeued new job");
         CPPA_PUSH_AID_FROM_PTR(dynamic_cast<abstract_actor*>(job));
         if (job->resume(&fself, this) == resumable::done) {
             // was attached in policy::cooperative_scheduling::launch
@@ -413,15 +434,20 @@ worker::job_ptr worker::try_steal() {
 
 worker::job_ptr worker::raid() {
     // try once to steal from anyone
+    auto inc = [](size_t arg) -> size_t { return arg + 1; };
+    auto dec = [](size_t arg) -> size_t { return arg - 1; };
+    // reduce probability of 'steal collisions' by letting
+    // half the workers pick victims by increasing IDs and
+    // the other half by decreasing IDs
+    size_t (*next)(size_t) = (m_id % 2) == 0 ? inc : dec;
     auto n = m_parent->num_workers();
     for (size_t i = 0; i < n; ++i) {
-        m_last_victim = (m_last_victim + 1) % n;
+        m_last_victim = next(m_last_victim) % n;
         if (m_last_victim != m_id) {
             auto job = m_parent->worker_by_id(m_last_victim)->try_steal();
             if (job) {
-                CPPA_LOG_DEBUG("worker " << m_id
-                               << " has successfully stolen a job from "
-                               << m_last_victim);
+                CPPA_LOG_DEBUG_WORKER("successfully stolen a job from "
+                                      << m_last_victim);
                 return job;
             }
         }

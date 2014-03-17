@@ -35,6 +35,10 @@
 
 namespace cppa {
 
+event_based_actor::event_based_actor() {
+    m_state = actor_state::blocked;
+}
+
 void event_based_actor::forward_to(const actor& whom) {
     forward_message(whom, message_priority::normal);
 }

@@ -78,7 +78,16 @@ class logging_impl : public logging {
 
     void initialize() {
         m_thread = thread([this] { (*this)(); });
-        log("TRACE", "logging", "run", __FILE__, __LINE__, "ENTRY");
+        std::string msg = "ENTRY log level = ";
+        switch (CPPA_LOG_LEVEL) {
+            default: msg += "????";  break;
+            case  0: msg += "ERROR"; break;
+            case  1: msg += "WARN";  break;
+            case  2: msg += "INFO";  break;
+            case  3: msg += "DEBUG"; break;
+            case  4: msg += "TRACE"; break;
+        }
+        log("TRACE", "logging", "run", __FILE__, __LINE__, msg);
     }
 
     void destroy() {

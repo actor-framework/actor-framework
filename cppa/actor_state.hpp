@@ -33,11 +33,32 @@
 
 namespace cppa {
 
+/**
+ * @brief Denotes the state of a cooperatively scheduled actor.
+ */
 enum class actor_state : int {
+
+    /**
+     * @brief Indicates that the actor is either waiting to be executed
+     *        or currently running.
+     */
     ready,
+
+    /**
+     * @brief Indicates that the actor finished exection.
+     */
     done,
+
+    /**
+     * @brief Indicates that the actor awaits a new message.
+     */
     blocked,
-    pending,
+
+    /**
+     * @brief Indicates that the actor is about to change its state to
+     *        {@link blocked}, but still can be interrupted by an
+     *        incoming message.
+     */
     about_to_block
 };
 

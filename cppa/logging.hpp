@@ -213,7 +213,7 @@ oss_wr operator<<(oss_wr&& lhs, T rhs) {
 #define CPPA_PRINT_IF1(stmt, lvlname, classname, funname, msg)                 \
     CPPA_PRINT_IF0(stmt, lvlname, classname, funname, msg)
 
-#if CPPA_LOG_LEVEL < 4
+#if CPPA_LOG_LEVEL < CPPA_TRACE
 #       define CPPA_PRINT4(arg0, arg1, arg2, arg3)
 #   else
 #       define CPPA_PRINT4(lvlname, classname, funname, msg)                   \
@@ -223,7 +223,7 @@ oss_wr operator<<(oss_wr&& lhs, T rhs) {
                }
 #endif
 
-#if CPPA_LOG_LEVEL < 3
+#if CPPA_LOG_LEVEL < CPPA_DEBUG
 #       define CPPA_PRINT3(arg0, arg1, arg2, arg3)
 #       define CPPA_PRINT_IF3(arg0, arg1, arg2, arg3, arg4)
 #   else
@@ -233,7 +233,7 @@ oss_wr operator<<(oss_wr&& lhs, T rhs) {
                CPPA_PRINT_IF0(stmt, lvlname, classname, funname, msg)
 #endif
 
-#if CPPA_LOG_LEVEL < 2
+#if CPPA_LOG_LEVEL < CPPA_INFO
 #       define CPPA_PRINT2(arg0, arg1, arg2, arg3)
 #       define CPPA_PRINT_IF2(arg0, arg1, arg2, arg3, arg4)
 #   else

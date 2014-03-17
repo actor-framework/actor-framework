@@ -85,8 +85,10 @@ class cooperative_scheduling {
     inline void launch(Actor* self, execution_unit* host) {
         // detached in scheduler::worker::run
         self->attach_to_scheduler();
-        if (host) host->exec_later(self);
-        else get_scheduling_coordinator()->enqueue(self);
+        if (self->exec_on_spawn()) {
+            if (host) host->exec_later(self);
+            else get_scheduling_coordinator()->enqueue(self);
+        }
     }
 
     template<class Actor>
@@ -106,6 +108,7 @@ class cooperative_scheduling {
                     switch (state) {
                         case actor_state::blocked: {
                             if (set_ready()) {
+                                // re-schedule actor
                                 if (host) host->exec_later(self);
                                 else get_scheduling_coordinator()->enqueue(self);
                                 return;
@@ -114,6 +117,7 @@ class cooperative_scheduling {
                         }
                         case actor_state::about_to_block: {
                             if (set_ready()) {
+                                // actor is still running
                                 return;
                             }
                             break;

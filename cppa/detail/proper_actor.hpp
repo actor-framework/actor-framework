@@ -191,6 +191,7 @@ class proper_actor : public proper_actor_base<Base,
     inline void launch(bool is_hidden, execution_unit* host) {
         CPPA_LOG_TRACE("");
         this->hidden(is_hidden);
+        this->m_host = host; // may be accessed during make_behavior call
         auto bhvr = this->make_behavior();
         if (bhvr) this->become(std::move(bhvr));
         CPPA_LOG_WARNING_IF(this->bhvr_stack().empty(),
