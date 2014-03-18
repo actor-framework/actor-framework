@@ -60,7 +60,92 @@ namespace detail { class singleton_manager; }
 
 namespace scheduler {
 
-class worker;
+class coordinator;
+
+
+/**
+ * @brief A work-stealing scheduling worker.
+ *
+ * The work-stealing implementation of libcppa minimizes access to the
+ * synchronized queue. The reasoning behind this design decision is that
+ * it has been shown that stealing actually is very rare for workloads [1].
+ * Hence, implementations should focus on the performance in
+ * the non-stealing case. For this reason, each worker has an exposed
+ * job queue that can be accessed by the central scheduler instance as
+ * well as other workers, but it also has a private job list it is
+ * currently working on. To account for the load balancing aspect, each
+ * worker makes sure that at least one job is left in its exposed queue
+ * to allow other workers to steal it.
+ *
+ * [1] http://dl.acm.org/citation.cfm?doid=2398857.2384639
+ */
+class worker : public execution_unit {
+
+    friend class coordinator;
+
+ public:
+
+    worker() = default;
+
+    worker(worker&&);
+
+    worker& operator=(worker&&);
+
+    worker(const worker&) = delete;
+
+    worker& operator=(const worker&) = delete;
+
+    typedef resumable* job_ptr;
+
+    typedef util::producer_consumer_list<resumable> job_queue;
+
+    /**
+     * @brief Attempt to steal an element from the exposed job queue.
+     */
+    job_ptr try_steal();
+
+    /**
+     * @brief Enqueues a new job to the worker's queue from an external
+     *        source, i.e., from any other thread.
+     */
+    void external_enqueue(job_ptr);
+
+    /**
+     * @brief Enqueues a new job to the worker's queue from an internal
+     *        source, i.e., a job that is currently executed by
+     *        this worker.
+     * @warning Must not be called from other threads.
+     */
+    void exec_later(job_ptr) override;
+
+ private:
+
+    void start(size_t id, coordinator* parent); // called from coordinator
+
+    void run(); // work loop
+
+    job_ptr raid(); // go on a raid in quest for a shiny new job
+
+    // this queue is exposed to others, i.e., other workers
+    // may attempt to steal jobs from it and the central scheduling
+    // unit can push new jobs to the queue
+    job_queue m_exposed_queue;
+
+    // internal job stack
+    std::vector<job_ptr> m_job_list;
+
+    // the worker's thread
+    std::thread m_this_thread;
+
+    // the worker's ID received from scheduler
+    size_t m_id;
+
+    // the ID of the last victim we stole from
+    size_t m_last_victim;
+
+    coordinator* m_parent;
+
+};
 
 /**
  * @brief Central scheduling interface.
@@ -110,8 +195,8 @@ class coordinator {
         return static_cast<unsigned>(m_workers.size());
     }
 
-    inline worker* worker_by_id(size_t id) const {
-        return m_workers[id].get();
+    inline worker& worker_by_id(size_t id) {
+        return m_workers[id];
     }
 
  private:
@@ -136,87 +221,7 @@ class coordinator {
     std::atomic<size_t> m_next_worker;
 
     // vector of size std::thread::hardware_concurrency()
-    std::vector<std::unique_ptr<worker>> m_workers;
-
-};
-
-/**
- * @brief A work-stealing scheduling worker.
- *
- * The work-stealing implementation of libcppa minimizes access to the
- * synchronized queue. The reasoning behind this design decision is that
- * it has been shown that stealing actually is very rare for workloads [1].
- * Hence, implementations should focus on the performance in
- * the non-stealing case. For this reason, each worker has an exposed
- * job queue that can be accessed by the central scheduler instance as
- * well as other workers, but it also has a private job list it is
- * currently working on. To account for the load balancing aspect, each
- * worker makes sure that at least one job is left in its exposed queue
- * to allow other workers to steal it.
- *
- * [1] http://dl.acm.org/citation.cfm?doid=2398857.2384639
- */
-class worker : public execution_unit {
-
-    friend class coordinator;
-
-    friend class coordinator::shutdown_helper;
-
- public:
-
-    typedef resumable* job_ptr;
-
-    typedef util::producer_consumer_list<resumable> job_queue;
-
-    worker(size_t id, coordinator* parent);
-
-    /**
-     * @brief Attempt to steal an element from the exposed job queue.
-     */
-    job_ptr try_steal();
-
-    /**
-     * @brief Enqueues a new job to the worker's queue from an external
-     *        source, i.e., from any other thread.
-     */
-    void external_enqueue(job_ptr);
-
-    /**
-     * @brief Enqueues a new job to the worker's queue from an internal
-     *        source, i.e., a job that is currently executed by
-     *        this worker.
-     * @warning Must not be called from other threads.
-     */
-    void exec_later(job_ptr) override;
-
- private:
-
-    void start(); // called from the scheduler
-
-    void run(); // work loop
-
-    job_ptr raid(); // go on a raid in quest for a new shiny job
-
-    bool m_running;
-
-    // this queue is exposed to others, i.e., other workers
-    // may attempt to steal jobs from it and the central scheduling
-    // unit can push new jobs to the queue
-    job_queue m_exposed_queue;
-
-    // internal job stack
-    std::vector<job_ptr> m_job_list;
-
-    // the worker's thread
-    std::thread m_this_thread;
-
-    // the worker's ID received from scheduler
-    size_t m_id;
-
-    // the ID of the last victim we stole from
-    size_t m_last_victim;
-
-    coordinator* m_parent;
+    std::vector<worker> m_workers;
 
 };
 

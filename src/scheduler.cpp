@@ -240,14 +240,12 @@ class coordinator::shutdown_helper : public resumable {
     void detach_from_scheduler() override { }
 
     resumable::resume_result resume(detail::cs_thread*, execution_unit* ptr) {
-        auto w = dynamic_cast<worker*>(ptr);
-        CPPA_REQUIRE(w != nullptr);
         CPPA_LOG_DEBUG("shutdown_helper::resume => shutdown worker");
-        w->m_running = false;
+        last_worker = dynamic_cast<worker*>(ptr);
+        CPPA_REQUIRE(last_worker != nullptr);
         std::unique_lock<std::mutex> guard(mtx);
-        last_worker = w;
         cv.notify_all();
-        return resumable::resume_later;
+        return resumable::shutdown_execution_unit;
     }
 
     shutdown_helper() : last_worker(nullptr) { }
@@ -265,20 +263,21 @@ void coordinator::initialize() {
         ptr->act();
     }};
     m_printer_thread = std::thread{printer_loop, m_printer.get()};
-    // create workers
-    size_t hc = std::thread::hardware_concurrency();
-    for (size_t i = 0; i < hc; ++i) {
-        m_workers.emplace_back(new worker(i, this));
+    // create & start workers
+    auto hwc = static_cast<size_t>(std::thread::hardware_concurrency());
+    m_workers.resize(hwc);
+    for (size_t i = 0; i < hwc; ++i) {
+        m_workers[i].start(i, this);
     }
-    // start all workers
-    for (auto& w : m_workers) w->start();
 }
 
 void coordinator::destroy() {
+    CPPA_LOG_TRACE("");
     // shutdown workers
     shutdown_helper sh;
     std::vector<worker*> alive_workers;
-    for (auto& w : m_workers) alive_workers.push_back(w.get());
+    for (auto& w : m_workers) alive_workers.push_back(&w);
+    CPPA_LOG_DEBUG("enqueue shutdown_helper into each worker");
     while (!alive_workers.empty()) {
         alive_workers.back()->external_enqueue(&sh);
         // since jobs can be stolen, we cannot assume that we have
@@ -294,13 +293,23 @@ void coordinator::destroy() {
         alive_workers.erase(i);
     }
     // shutdown utility actors
+    CPPA_LOG_DEBUG("send 'DIE' messages to timer & printer");
     auto msg = make_any_tuple(atom("DIE"));
     m_timer->enqueue({invalid_actor_addr, nullptr}, msg, nullptr);
     m_printer->enqueue({invalid_actor_addr, nullptr}, msg, nullptr);
+    CPPA_LOG_DEBUG("join threads of utility actors");
     m_timer_thread.join();
     m_printer_thread.join();
     // join each worker thread for good manners
-    for (auto& w : m_workers) w->m_this_thread.join();
+    CPPA_LOG_DEBUG("join threads of workers");
+    for (auto& w : m_workers) w.m_this_thread.join();
+    CPPA_LOG_DEBUG("detach all resumables from all workers");
+    for (auto& w : m_workers) {
+        auto next = [&] { return w.m_exposed_queue.try_pop(); };
+        for (auto job = next(); job != nullptr; job = next()) {
+            job->detach_from_scheduler();
+        }
+    }
     // cleanup
     delete this;
 }
@@ -321,7 +330,7 @@ actor coordinator::printer() const {
 
 void coordinator::enqueue(resumable* what) {
     size_t nw = m_next_worker++;
-    m_workers[nw % m_workers.size()]->external_enqueue(what);
+    m_workers[nw % m_workers.size()].external_enqueue(what);
 }
 
 /******************************************************************************
@@ -331,11 +340,30 @@ void coordinator::enqueue(resumable* what) {
 #define CPPA_LOG_DEBUG_WORKER(msg)                                             \
     CPPA_LOG_DEBUG("worker " << m_id << ": " << msg)
 
-worker::worker(size_t id, coordinator* parent)
-        : m_running(true), m_id(id), m_last_victim(id), m_parent(parent) { }
+worker::worker(worker&& other) {
+    *this = std::move(other); // delegate to move assignment operator
+}
 
+worker& worker::operator=(worker&& other) {
+    // cannot be moved once m_this_thread is up and running
+    auto running = [](std::thread& t) {
+        return t.get_id() != std::thread::id{};
+    };
+    if (running(m_this_thread) || running(other.m_this_thread)) {
+        throw std::runtime_error("running workers cannot be moved");
+    }
+    m_job_list = std::move(other.m_job_list);
+    auto next = [&] { return other.m_exposed_queue.try_pop(); };
+    for (auto j = next(); j != nullptr; j = next()) {
+        m_exposed_queue.push_back(j);
+    }
+    return *this;
+}
 
-void worker::start() {
+void worker::start(size_t id, coordinator* parent) {
+    m_id = id;
+    m_last_victim = id;
+    m_parent = parent;
     auto this_worker = this;
     m_this_thread = std::thread{[this_worker] {
         this_worker->run();
@@ -412,12 +440,26 @@ void worker::run() {
         }
     };
     // scheduling loop
-    while (m_running) {
+    for (;;) {
         local_poll() || aggressive_poll() || moderate_poll() || relaxed_poll();
         CPPA_PUSH_AID_FROM_PTR(dynamic_cast<abstract_actor*>(job));
-        if (job->resume(&fself, this) == resumable::done) {
-            // was attached in policy::cooperative_scheduling::launch
-            job->detach_from_scheduler();
+        switch (job->resume(&fself, this)) {
+            case resumable::done: {
+                job->detach_from_scheduler();
+                break;
+            }
+            case resumable::resume_later: {
+                break;
+            }
+            case resumable::shutdown_execution_unit: {
+                // give others the opportunity to steal unfinished jobs
+                for (auto ptr : m_job_list) m_exposed_queue.push_back(ptr);
+                m_job_list.clear();
+                return;
+            }
+            default: {
+                CPPA_CRITICAL("job->resume returned illegal result");
+            }
         }
         job = nullptr;
         // give others the opportunity to steal from us
@@ -444,7 +486,7 @@ worker::job_ptr worker::raid() {
     for (size_t i = 0; i < n; ++i) {
         m_last_victim = next(m_last_victim) % n;
         if (m_last_victim != m_id) {
-            auto job = m_parent->worker_by_id(m_last_victim)->try_steal();
+            auto job = m_parent->worker_by_id(m_last_victim).try_steal();
             if (job) {
                 CPPA_LOG_DEBUG_WORKER("successfully stolen a job from "
                                       << m_last_victim);

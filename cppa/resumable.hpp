@@ -47,7 +47,8 @@ class resumable {
 
     enum resume_result {
         resume_later,
-        done
+        done,
+        shutdown_execution_unit
     };
 
     resumable();
