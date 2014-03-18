@@ -3,7 +3,7 @@ project(cppa CXX)
 
 set(LIBCPPA_VERSION_MAJOR 0)
 set(LIBCPPA_VERSION_MINOR 8)
-set(LIBCPPA_VERSION_PATCH 1)
+set(LIBCPPA_VERSION_PATCH 2)
 
 # prohibit in-source builds
 if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
