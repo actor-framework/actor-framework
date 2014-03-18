@@ -7,7 +7,7 @@ using namespace cppa::placeholders;
 
 struct sync_mirror : sb_actor<sync_mirror> {
     behavior init_state;
-    
+
     sync_mirror() {
         init_state = (
             others() >> [=] { return last_dequeued(); }
@@ -166,6 +166,13 @@ struct server : event_based_actor {
     }
 
 };
+
+void compile_time_optional_variant_check(event_based_actor* self) {
+    typedef optional_variant<std::tuple<int, float>,
+                             std::tuple<float, int, int>>
+            msg_type;
+    self->sync_send(self, atom("msg")).then([](msg_type) {});
+}
 
 void test_sync_send() {
     scoped_actor self;

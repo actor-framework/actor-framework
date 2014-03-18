@@ -114,6 +114,22 @@ class rebindable_reference {
 
 };
 
+template<typename T>
+T& unwrap_ref(T& ref) {
+    return ref;
+}
+
+template<typename T>
+T& unwrap_ref(util::rebindable_reference<T>& ref) {
+    return ref.get();
+}
+
+template<typename T>
+typename std::add_const<T>::type&
+unwrap_ref(const util::rebindable_reference<T>& ref) {
+    return ref.get();
+}
+
 } } // namespace cppa::util
 
 #endif // CPPA_REBINDABLE_REFERENCE_HPP

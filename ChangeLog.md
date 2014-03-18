@@ -12,6 +12,13 @@ __2014_XX_XX__
   * New header `system_messages.hpp` for message types used by the runtime
 - Announce properly handles empty & POD types
 
+Version 0.8.2
+-------------
+
+__2014-18-03__
+
+- Fixed a compile-time error with some user-defined message types
+
 Version 0.8.1
 -------------
 
