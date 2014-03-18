@@ -82,7 +82,7 @@ std::uint32_t type_lookup_table::id_of(pointer uti) const {
 
 
 void type_lookup_table::emplace(std::uint32_t id, pointer instance) {
-    CPPA_REQUIRE(instance);
+    CPPA_REQUIRE(instance != nullptr);
     value_type kvp{id, instance};
     auto i = find(id);
     if (i == m_data.end()) m_data.push_back(std::move(kvp));

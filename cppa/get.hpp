@@ -35,6 +35,7 @@
 #include <cstddef>
 
 #include "cppa/util/type_traits.hpp"
+#include "cppa/util/rebindable_reference.hpp"
 
 namespace cppa {
 
@@ -90,8 +91,9 @@ inline auto get_ref(std::tuple<Ts...>& tup) -> decltype(std::get<Pos>(tup)) {
  *        depending on the cv-qualifier of @p tup.
  */
 template<size_t Pos, class Tuple>
-inline auto get_cv_aware(Tuple& tup) -> decltype(get_ref<Pos>(tup)) {
-    return get_ref<Pos>(tup);
+inline auto get_cv_aware(Tuple& tup)
+-> decltype(util::unwrap_ref(get_ref<Pos>(tup))) {
+    return util::unwrap_ref(get_ref<Pos>(tup));
 }
 
 /**
@@ -99,8 +101,9 @@ inline auto get_cv_aware(Tuple& tup) -> decltype(get_ref<Pos>(tup)) {
  *        depending on the cv-qualifier of @p tup.
  */
 template<size_t Pos, class Tuple>
-inline auto get_cv_aware(const Tuple& tup) -> decltype(get<Pos>(tup)) {
-    return get<Pos>(tup);
+inline auto get_cv_aware(const Tuple& tup)
+-> decltype(util::unwrap_ref(get<Pos>(tup))) {
+    return util::unwrap_ref(get<Pos>(tup));
 }
 
 } // namespace cppa

@@ -160,7 +160,12 @@ struct server : event_based_actor {
 
 };
 
-
+void compile_time_optional_variant_check() {
+    typedef optional_variant<std::tuple<int, float>,
+                             std::tuple<float, int, int>>
+            msg_type;
+    sync_send(self, atom("msg")).then([](msg_type) {});
+}
 
 int main() {
     CPPA_TEST(test_sync_send);
