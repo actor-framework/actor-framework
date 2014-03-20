@@ -241,20 +241,26 @@ class coordinator::shutdown_helper : public resumable {
 
     resumable::resume_result resume(detail::cs_thread*, execution_unit* ptr) {
         CPPA_LOG_DEBUG("shutdown_helper::resume => shutdown worker");
-        last_worker = dynamic_cast<worker*>(ptr);
-        CPPA_REQUIRE(last_worker != nullptr);
+        auto wptr = dynamic_cast<worker*>(ptr);
+        CPPA_REQUIRE(wptr != nullptr);
         std::unique_lock<std::mutex> guard(mtx);
+        last_worker = wptr;
         cv.notify_all();
         return resumable::shutdown_execution_unit;
     }
 
     shutdown_helper() : last_worker(nullptr) { }
 
+    ~shutdown_helper();
+
     std::mutex mtx;
     std::condition_variable cv;
     worker* last_worker;
 
 };
+
+// get rid of weak-vtables warning by providing dtor out-of-line
+coordinator::shutdown_helper::~shutdown_helper() { }
 
 void coordinator::initialize() {
     // launch threads of utility actors
@@ -456,9 +462,6 @@ void worker::run() {
                 for (auto ptr : m_job_list) m_exposed_queue.push_back(ptr);
                 m_job_list.clear();
                 return;
-            }
-            default: {
-                CPPA_CRITICAL("job->resume returned illegal result");
             }
         }
         job = nullptr;
