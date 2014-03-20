@@ -42,7 +42,7 @@
 #if !defined(_GLIBCXX_USE_SCHED_YIELD) && !defined(__clang__)
 #include <time.h>
 namespace std { namespace this_thread { namespace {
-inline void yield() noexcept {
+inline void yield() throw {
     timespec req;
     req.tv_sec = 0;
     req.tv_nsec = 1;
@@ -87,13 +87,26 @@ class producer_consumer_list {
     typedef value_type*         pointer;
     typedef const value_type*   const_pointer;
 
-    struct node {
+    class node {
+
+     public:
+
         pointer value;
+
         std::atomic<node*> next;
+
         node(pointer val) : value(val), next(nullptr) { }
+
+     private:
+
         static constexpr size_type payload_size =
                 sizeof(pointer) + sizeof(std::atomic<node*>);
-        static constexpr size_type pad_size = (CPPA_CACHE_LINE_SIZE * ((payload_size / CPPA_CACHE_LINE_SIZE) + 1)) - payload_size;
+
+        static constexpr size_type cline_size = CPPA_CACHE_LINE_SIZE;
+
+        static constexpr size_type pad_size =
+                (cline_size * ((payload_size / cline_size) + 1)) - payload_size;
+
         // avoid false sharing
         char pad[pad_size];
 
@@ -105,11 +118,11 @@ class producer_consumer_list {
                   "sizeof(node*) >= CPPA_CACHE_LINE_SIZE");
 
     // for one consumer at a time
-    node* m_first;
+    std::atomic<node*> m_first;
     char m_pad1[CPPA_CACHE_LINE_SIZE - sizeof(node*)];
 
     // for one producers at a time
-    node* m_last;
+    std::atomic<node*> m_last;
     char m_pad2[CPPA_CACHE_LINE_SIZE - sizeof(node*)];
 
     // shared among producers
@@ -119,7 +132,9 @@ class producer_consumer_list {
  public:
 
     producer_consumer_list() {
-        m_first = m_last = new node(nullptr);
+        auto ptr = new node(nullptr);
+        m_first = ptr;
+        m_last = ptr;
         m_consumer_lock = false;
         m_producer_lock = false;
     }
@@ -127,7 +142,7 @@ class producer_consumer_list {
     ~producer_consumer_list() {
         while (m_first) {
             node* tmp = m_first;
-            m_first = tmp->next;
+            m_first = tmp->next.load();
             delete tmp;
         }
     }
@@ -140,7 +155,7 @@ class producer_consumer_list {
             std::this_thread::yield();
         }
         // publish & swing last forward
-        m_last->next = tmp;
+        m_last.load()->next = tmp;
         m_last = tmp;
         // release exclusivity
         m_producer_lock = false;
@@ -154,7 +169,7 @@ class producer_consumer_list {
         }
         // only one consumer allowed
         node* first = m_first;
-        node* next = m_first->next;
+        node* next = m_first.load()->next;
         if (next) {
             // queue is not empty
             result = next->value; // take it out of the node
@@ -176,9 +191,7 @@ class producer_consumer_list {
     }
 
     bool empty() const {
-        // this seems to be a non-thread-safe implementation,
-        // however, any 'race condition' that might occur
-        // only means we cannot assume an empty list
+        // atomically compares first and last pointer without locks
         return m_first == m_last;
     }
 
