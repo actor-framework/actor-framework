@@ -74,8 +74,12 @@ class blocking_single_reader_queue {
                 m_cv.notify_one();
                 return true;
             }
-            default: return true;
-            case queue_closed: return false;
+            case enqueued:
+                // enqueued message to a running actor's mailbox
+                return true;
+            case queue_closed:
+                // actor no longer alive
+                return false;
         }
     }
 

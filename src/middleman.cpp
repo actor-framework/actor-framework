@@ -172,6 +172,8 @@ class middleman_impl : public middleman {
 
     middleman_impl() : m_done(false) { }
 
+    ~middleman_impl();
+
     void run_later(function<void()> fun) override {
         m_queue.enqueue(new middleman_event(move(fun)));
         atomic_thread_fence(memory_order_seq_cst);
@@ -337,7 +339,7 @@ class middleman_impl : public middleman {
                                     + util::get_root_uuid();
         cppa::node_id::host_id_type node_id;
         ripemd_160(node_id, hd_serial_and_mac_addr);
-        return new cppa::node_id(getpid(), node_id);
+        return new cppa::node_id(static_cast<uint32_t>(getpid()), node_id);
     }
 
     inline void quit() { m_done = true; }
@@ -363,6 +365,9 @@ class middleman_impl : public middleman {
 
 };
 
+// avoid weak-vtables warning by providing dtor out-of-line
+middleman_impl::~middleman_impl() { }
+
 class middleman_overseer : public continuable {
 
     typedef continuable super;
@@ -371,6 +376,8 @@ class middleman_overseer : public continuable {
 
     middleman_overseer(native_socket_type pipe_fd, middleman_queue& q)
     : super(pipe_fd), m_queue(q) { }
+
+    ~middleman_overseer();
 
     void dispose() override {
         delete this;
@@ -392,7 +399,7 @@ class middleman_overseer : public continuable {
             CPPA_LOGF_DEBUG("execute run_later functor");
             (*msg)();
         }
-        return read_continue_later;
+        return continue_reading_result::continue_later;
     }
 
     void io_failed(event_bitmask) override {
@@ -404,6 +411,9 @@ class middleman_overseer : public continuable {
     middleman_queue& m_queue;
 
 };
+
+// avoid weak-vtables warning by providing dtor out-of-line
+middleman_overseer::~middleman_overseer() { }
 
 middleman::~middleman() { }
 
@@ -425,33 +435,39 @@ void middleman_loop(middleman_impl* impl) {
                 case event::write: {
                     CPPA_LOGF_DEBUG("handle event::write for " << io);
                     switch (io->continue_writing()) {
-                        case read_failure:
+                        case continue_writing_result::failure:
                             io->io_failed(event::write);
-                            // fall through
-                        case write_closed:
+                            CPPA_ANNOTATE_FALLTHROUGH;
+                        case continue_writing_result::closed:
                             impl->stop_writer(io);
-                            CPPA_LOGF_DEBUG("writer removed because of error");
+                            CPPA_LOGF_DEBUG("writer removed because "
+                                            "of error write_closed or ");
                             break;
-                        case write_done:
+                        case continue_writing_result::done:
                             impl->stop_writer(io);
                             break;
-                        default: break;
+                        case continue_writing_result::continue_later:
+                            // leave
+                            break;
                     }
                     if (mask == event::write) break;
                     // else: fall through
                     CPPA_LOGF_DEBUG("handle event::both; fall through");
+                    CPPA_ANNOTATE_FALLTHROUGH;
                 }
                 case event::read: {
                     CPPA_LOGF_DEBUG("handle event::read for " << io);
                     switch (io->continue_reading()) {
-                        case read_failure:
+                        case continue_reading_result::failure:
                             io->io_failed(event::read);
-                            // fall through
-                        case read_closed:
+                            CPPA_ANNOTATE_FALLTHROUGH;
+                        case continue_reading_result::closed:
                             impl->stop_reader(io);
                             CPPA_LOGF_DEBUG("remove peer");
                             break;
-                        default: break;
+                        case continue_reading_result::continue_later:
+                            // nothing to do
+                            break;
                     }
                     break;
                 }
@@ -480,14 +496,16 @@ void middleman_loop(middleman_impl* impl) {
                 case event::both:
                 case event::write:
                     switch (io->continue_writing()) {
-                        case write_failure:
+                        case continue_writing_result::failure:
                             io->io_failed(event::write);
-                            // fall through
-                        case write_closed:
-                        case write_done:
+                            CPPA_ANNOTATE_FALLTHROUGH;
+                        case continue_writing_result::closed:
+                        case continue_writing_result::done:
                             handler->erase_later(io, event::write);
                             break;
-                        default: break;
+                        case continue_writing_result::continue_later:
+                            // nothing to do
+                            break;
                     }
                     break;
                 case event::error:

@@ -76,7 +76,7 @@ class string_serializer : public serializer {
         ostream& out;
         bool suppress_quotes;
 
-        pt_writer(ostream& mout, bool suppress_quotes = false) : out(mout), suppress_quotes(suppress_quotes) { }
+        pt_writer(ostream& mout, bool suppress = false) : out(mout), suppress_quotes(suppress) { }
 
         template<typename T>
         void operator()(const T& value) {
@@ -222,7 +222,7 @@ class string_deserializer : public deserializer {
         while (*m_pos == ' ' || *m_pos == ',') ++m_pos;
     }
 
-    void throw_malformed(const string& error_msg) {
+    void throw_malformed [[noreturn]] (const string& error_msg) {
         throw logic_error("malformed string: " + error_msg);
     }
 

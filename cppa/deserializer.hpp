@@ -68,8 +68,7 @@ class deserializer {
     //virtual std::string seek_object() = 0;
 
     /**
-     * @brief Begins deserialization of an object of type @p type_name.
-     * @param type_name The platform-independent @p libcppa type name.
+     * @brief Begins deserialization of a new object.
      */
     virtual const uniform_type_info* begin_object() = 0;
 

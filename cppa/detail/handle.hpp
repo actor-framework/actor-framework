@@ -46,6 +46,8 @@ class handle : util::comparable<Subtype> {
         m_id = other.id();
     }
 
+    handle(const handle& other) : m_id(other.m_id) { }
+
     Subtype& operator=(const handle& other) {
         m_id = other.id();
         return *static_cast<Subtype*>(this);

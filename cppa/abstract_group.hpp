@@ -62,6 +62,8 @@ class abstract_group : public abstract_channel {
 
  public:
 
+    ~abstract_group();
+
     class subscription;
 
     // needs access to unsubscribe()
@@ -104,6 +106,8 @@ class abstract_group : public abstract_channel {
         module(std::string module_name);
 
      public:
+
+        virtual ~module();
 
         /**
          * @brief Get the name of this module implementation.

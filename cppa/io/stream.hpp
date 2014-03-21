@@ -39,7 +39,13 @@ namespace cppa { namespace io {
 /**
  * @brief A stream capable of both reading and writing.
  */
-class stream : public input_stream, public output_stream { };
+class stream : public input_stream, public output_stream {
+
+ public:
+
+    ~stream();
+
+};
 
 /**
  * @brief An IO stream pointer.

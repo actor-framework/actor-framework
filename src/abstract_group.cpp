@@ -81,7 +81,11 @@ struct group_nameserver : event_based_actor {
             }
         );
     }
+    ~group_nameserver();
 };
+
+// avoid weak-vtables warning by providing dtor out-of-line
+group_nameserver::~group_nameserver() { }
 
 void publish_local_groups(std::uint16_t port, const char* addr) {
     auto gn = spawn<group_nameserver, hidden>();
@@ -95,5 +99,9 @@ void publish_local_groups(std::uint16_t port, const char* addr) {
         throw;
     }
 }
+
+abstract_group::module::~module() { }
+
+abstract_group::~abstract_group() { }
 
 } // namespace cppa

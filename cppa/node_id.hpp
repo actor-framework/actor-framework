@@ -52,6 +52,8 @@ class node_id : public ref_counted, util::comparable<node_id> {
 
  public:
 
+    ~node_id();
+
     /**
      * @brief @c libcppa uses 160 bit hashes (20 bytes).
      */
@@ -77,7 +79,7 @@ class node_id : public ref_counted, util::comparable<node_id> {
     /**
      * @brief Creates @c this from @p process_id and @p hash.
      * @param process_id System-wide unique process identifier.
-     * @param hash Unique node id.
+     * @param node_id Unique node id.
      */
     node_id(std::uint32_t process_id, const host_id_type& node_id);
 

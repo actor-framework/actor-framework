@@ -252,18 +252,17 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     void send_exit(const actor_addr& whom, std::uint32_t reason);
 
     /**
-     * @copydoc send_exit(const actor_addr&, std::uint32_t)
+     * @brief Sends an exit message to @p whom.
      */
     inline void send_exit(const actor& whom, std::uint32_t reason) {
         send_exit(whom.address(), reason);
     }
 
     /**
-     * @copydoc send_exit(const actor_addr&, std::uint32_t)
+     * @brief Sends an exit message to @p whom.
      */
     template<typename... Rs>
-    void send_exit(const typed_actor<Rs...>& whom,
-                   std::uint32_t reason) {
+    void send_exit(const typed_actor<Rs...>& whom, std::uint32_t reason) {
         send_exit(whom.address(), reason);
     }
 
@@ -300,7 +299,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
      * @param whom Receiver of the message.
      * @param rtime Relative time to delay the message in
      *              microseconds, milliseconds, seconds or minutes.
-     * @param data Message content as a tuple.
+     * @param args Message content as a tuple.
      */
     template<typename... Ts>
     void delayed_send(message_priority prio, const channel& whom,
@@ -314,7 +313,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
      * @param whom Receiver of the message.
      * @param rtime Relative time to delay the message in
      *              microseconds, milliseconds, seconds or minutes.
-     * @param data Message content as a tuple.
+     * @param args Message content as a tuple.
      */
     template<typename... Ts>
     void delayed_send(const channel& whom, const util::duration& rtime,
@@ -363,7 +362,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
      *               {@link on_exit()}.
      * @note Throws {@link actor_exited} to unwind the stack
      *       when called in context-switching or thread-based actors.
-     * @warning This member function throws imeediately in thread-based actors
+     * @warning This member function throws immediately in thread-based actors
      *          that do not use the behavior stack, i.e., actors that use
      *          blocking API calls such as {@link receive()}.
      */
@@ -394,15 +393,15 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
 
     /**
      * @brief Adds a unidirectional @p monitor to @p whom.
-     *
-     * @whom sends a "DOWN" message to this actor as part of its termination.
      * @param whom The actor that should be monitored by this actor.
      * @note Each call to @p monitor creates a new, independent monitor.
      */
     void monitor(const actor_addr& whom);
 
     /**
-     * @copydoc monitor(const actor_addr&)
+     * @brief Adds a unidirectional @p monitor to @p whom.
+     * @param whom The actor that should be monitored by this actor.
+     * @note Each call to @p monitor creates a new, independent monitor.
      */
     inline void monitor(const actor& whom) {
         monitor(whom.address());
@@ -414,6 +413,10 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
      */
     void demonitor(const actor_addr& whom);
 
+    /**
+     * @brief Removes a monitor from @p whom.
+     * @param whom A monitored actor.
+     */
     inline void demonitor(const actor& whom) {
         demonitor(whom.address());
     }

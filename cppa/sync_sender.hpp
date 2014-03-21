@@ -56,7 +56,7 @@ class sync_sender_impl : public Base {
 
     /**
      * @brief Sends @p what as a synchronous message to @p whom.
-     * @param whom Receiver of the message.
+     * @param dest Receiver of the message.
      * @param what Message content as tuple.
      * @returns A handle identifying a future to the response of @p whom.
      * @warning The returned handle is actor specific and the response to the
@@ -76,7 +76,7 @@ class sync_sender_impl : public Base {
 
     /**
      * @brief Sends <tt>{what...}</tt> as a synchronous message to @p whom.
-     * @param whom Receiver of the message.
+     * @param dest Receiver of the message.
      * @param what Message elements.
      * @returns A handle identifying a future to the response of @p whom.
      * @warning The returned handle is actor specific and the response to the

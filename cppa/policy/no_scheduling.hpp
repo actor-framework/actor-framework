@@ -87,20 +87,23 @@ class no_scheduling {
                  any_tuple& msg, execution_unit*) {
         auto ptr = self->new_mailbox_element(hdr, std::move(msg));
         switch (self->mailbox().enqueue(ptr)) {
-            default:
-                break;
             case intrusive::first_enqueued: {
                 lock_type guard(m_mtx);
                 self->set_state(actor_state::ready);
                 m_cv.notify_one();
                 break;
             }
-            case intrusive::queue_closed:
+            case intrusive::queue_closed: {
                 if (hdr.id.valid()) {
                     detail::sync_request_bouncer f{self->exit_reason()};
                     f(hdr.sender, hdr.id);
                 }
                 break;
+            }
+            case intrusive::enqueued: {
+                // enqueued to a running actor's mailbox; nothing to do
+                break;
+            }
         }
     }
 

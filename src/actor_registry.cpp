@@ -49,6 +49,8 @@ typedef cppa::util::upgrade_lock_guard<cppa::util::shared_spinlock> upgrade_guar
 
 namespace cppa { namespace detail {
 
+actor_registry::~actor_registry() { }
+
 actor_registry::actor_registry() : m_running(0), m_ids(1) { }
 
 actor_registry::value_type actor_registry::get_entry(actor_id key) const {

@@ -394,7 +394,7 @@ void ripemd_160(std::array<std::uint8_t, 20>& storage, const std::string& data) 
 
     // initialize
     MDinit(MDbuf);
-    length = data.size();
+    length = static_cast<dword>(data.size());
 
     // process message in 16-word chunks
     for (dword nbytes = length; nbytes > 63; nbytes -= 64) {
@@ -410,10 +410,11 @@ void ripemd_160(std::array<std::uint8_t, 20>& storage, const std::string& data) 
     MDfinish(MDbuf, message, length, 0);
 
     for (size_t i = 0; i < storage.size(); i += 4) {
-        storage[i]   =  MDbuf[i>>2];         // implicit cast to byte
-        storage[i+1] = (MDbuf[i>>2] >>  8);  //  extracts the 8 least
-        storage[i+2] = (MDbuf[i>>2] >> 16);  //  significant bits.
-        storage[i+3] = (MDbuf[i>>2] >> 24);
+        // extracts the 8 least significant bits by casting to byte
+        storage[i]   = static_cast<uint8_t>(MDbuf[i>>2]      );
+        storage[i+1] = static_cast<uint8_t>(MDbuf[i>>2] >>  8);
+        storage[i+2] = static_cast<uint8_t>(MDbuf[i>>2] >> 16);
+        storage[i+3] = static_cast<uint8_t>(MDbuf[i>>2] >> 24);
     }
 }
 

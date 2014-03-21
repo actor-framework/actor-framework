@@ -376,7 +376,7 @@ inline void deserialize_impl(util::duration& val, deserializer* source) {
             break;
 
         default:
-            val.unit = util::time_unit::none;
+            val.unit = util::time_unit::invalid;
             break;
     }
     val.count = count_val;
@@ -810,7 +810,7 @@ class utim_impl : public uniform_type_info_map {
         *i++ = &m_type_double;          // double
         *i++ = &m_type_float;           // float
         CPPA_REQUIRE(i == m_builtin_types.end());
-#       if CPPA_DEBUG_MODE
+#       ifdef CPPA_DEBUG_MODE
         auto cmp = [](pointer lhs, pointer rhs) {
             return strcmp(lhs->name(), rhs->name()) < 0;
         };

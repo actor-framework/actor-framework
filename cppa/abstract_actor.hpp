@@ -114,13 +114,15 @@ class abstract_actor : public abstract_channel {
 
     /**
      * @brief Links this actor to @p whom.
-     * @param other Actor instance that whose execution is coupled to the
-     *              execution of this Actor.
+     * @param whom Actor instance that whose execution is coupled to the
+     *             execution of this Actor.
      */
     virtual void link_to(const actor_addr& whom);
 
     /**
-     * @copydoc abstract_actor::link_to(const actor_addr&)
+     * @brief Links this actor to @p whom.
+     * @param whom Actor instance that whose execution is coupled to the
+     *             execution of this Actor.
      */
     template<typename ActorHandle>
     void link_to(const ActorHandle& whom) {
@@ -129,13 +131,15 @@ class abstract_actor : public abstract_channel {
 
     /**
      * @brief Unlinks this actor from @p whom.
-     * @param other Linked Actor.
+     * @param whom Linked Actor.
      * @note Links are automatically removed if the actor finishes execution.
      */
     virtual void unlink_from(const actor_addr& whom);
 
     /**
-     * @copydoc abstract_actor::unlink_from(const actor_addr&)
+     * @brief Unlinks this actor from @p whom.
+     * @param whom Linked Actor.
+     * @note Links are automatically removed if the actor finishes execution.
      */
     template<class ActorHandle>
     void unlink_from(const ActorHandle& whom) {

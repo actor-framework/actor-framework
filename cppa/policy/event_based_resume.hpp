@@ -141,7 +141,7 @@ class event_based_resume {
                         std::atomic_thread_fence(std::memory_order_seq_cst);
                         if (!d->has_next_message()) {
                             switch (d->cas_state(actor_state::about_to_block,
-                                                    actor_state::blocked)) {
+                                                 actor_state::blocked)) {
                                 case actor_state::ready:
                                     // interrupted by arriving message
                                     // restore members
@@ -154,9 +154,16 @@ class event_based_resume {
                                                    "to blocked");
                                     // done setting actor to blocked
                                     return resumable::resume_later;
-                                default:
-                                    CPPA_LOG_ERROR("invalid state");
-                                    CPPA_CRITICAL("invalid state");
+                                case actor_state::about_to_block:
+                                    CPPA_CRITICAL("attempt to set state from "
+                                                  "about_to_block to blocked "
+                                                  "failed: state is still set "
+                                                  "to about_to_block");
+                                case actor_state::done:
+                                    CPPA_CRITICAL("attempt to set state from "
+                                                  "about_to_block to blocked "
+                                                  "failed: state is set "
+                                                  "to done");
                             };
                         }
                         else {

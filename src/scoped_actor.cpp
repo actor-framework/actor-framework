@@ -54,8 +54,8 @@ blocking_actor* alloc() {
 
 } // namespace <anonymous>
 
-void scoped_actor::init(bool hidden) {
-    m_hidden = hidden;
+void scoped_actor::init(bool hide_actor) {
+    m_hidden = hide_actor;
     m_self.reset(alloc());
     if (!m_hidden) {
         get_actor_registry()->inc_running();
@@ -63,13 +63,12 @@ void scoped_actor::init(bool hidden) {
     }
 }
 
-
 scoped_actor::scoped_actor() {
     init(false);
 }
 
-scoped_actor::scoped_actor(bool hidden) {
-    init(hidden);
+scoped_actor::scoped_actor(bool hide_actor) {
+    init(hide_actor);
 }
 
 scoped_actor::~scoped_actor() {

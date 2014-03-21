@@ -16,7 +16,7 @@ void cppa_inc_error_count() {
     ++s_error_count;
 }
 
-string cppa_fill4(int value) {
+string cppa_fill4(size_t value) {
     string result = to_string(value);
     while (result.size() < 4) result.insert(result.begin(), '0');
     return result;

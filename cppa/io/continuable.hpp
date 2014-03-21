@@ -43,21 +43,21 @@ namespace cppa { namespace io {
  * @brief Denotes the return value of
  *        {@link continuable::continue_reading()}.
  */
-enum continue_reading_result {
-    read_failure,
-    read_closed,
-    read_continue_later
+enum class continue_reading_result {
+    failure,
+    closed,
+    continue_later
 };
 
 /**
  * @brief Denotes the return value of
  *        {@link continuable::continue_writing()}.
  */
-enum continue_writing_result {
-    write_failure,
-    write_closed,
-    write_continue_later,
-    write_done
+enum class continue_writing_result {
+    failure,
+    closed,
+    continue_later,
+    done
 };
 
 /**

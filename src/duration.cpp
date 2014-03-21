@@ -48,11 +48,11 @@ bool operator==(const duration& lhs, const duration& rhs) {
 }
 
 std::string duration::to_string() const {
-    if (unit == time_unit::none) return "-invalid-";
+    if (unit == time_unit::invalid) return "-invalid-";
     std::ostringstream oss;
     oss << count;
     switch (unit) {
-        default: oss << "???"; break;
+        case time_unit::invalid: oss << "?"; break;
         case time_unit::seconds: oss << "s"; break;
         case time_unit::milliseconds: oss << "ms"; break;
         case time_unit::microseconds: oss << "us"; break;

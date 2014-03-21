@@ -1,5 +1,3 @@
-#define CPPA_VERBOSE_CHECK
-
 #include "cppa/config.hpp"
 
 #include <new>
@@ -138,14 +136,14 @@ struct raw_struct_type_info : util::abstract_uniform_type_info<raw_struct> {
 };
 
 void test_ieee_754() {
-    // check float packing
-    float f1 = 3.1415925;                  // float value
+    // check conversion of float
+    float f1 = 3.1415925f;                 // float value
     auto p1 = cppa::detail::pack754(f1);   // packet value
     CPPA_CHECK_EQUAL(p1, 0x40490FDA);
     auto u1 = cppa::detail::unpack754(p1); // unpacked value
     CPPA_CHECK_EQUAL(f1, u1);
-    // check double packing
-    double f2 = 3.14159265358979311600;    // float value
+    // check conversion of double
+    double f2 = 3.14159265358979311600;    // double value
     auto p2 = cppa::detail::pack754(f2);   // packet value
     CPPA_CHECK_EQUAL(p2, 0x400921FB54442D18);
     auto u2 = cppa::detail::unpack754(p2); // unpacked value

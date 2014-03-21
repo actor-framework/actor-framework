@@ -47,7 +47,8 @@ enum buffer_write_policy {
 };
 
 /**
- * @brief
+ * @brief A buffer implementation with configurable final size
+ *        that also supports dynamic growing if needed.
  */
 class buffer {
 

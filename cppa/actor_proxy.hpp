@@ -52,6 +52,8 @@ class actor_proxy : public extend<abstract_actor>::with<enable_weak_ptr> {
 
  public:
 
+    ~actor_proxy();
+
     /**
      * @brief Establishes a local link state that's not synchronized back
      *        to the remote instance.

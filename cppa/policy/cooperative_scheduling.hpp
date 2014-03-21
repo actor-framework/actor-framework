@@ -122,7 +122,9 @@ class cooperative_scheduling {
                             }
                             break;
                         }
-                        default: return;
+                        case actor_state::ready:
+                        case actor_state::done:
+                            return;
                     }
                 }
                 break;
@@ -134,7 +136,9 @@ class cooperative_scheduling {
                 }
                 break;
             }
-            default: break;
+            case intrusive::enqueued:
+                // enqueued to an running actors' mailbox; nothing to do
+                break;
         }
     }
 

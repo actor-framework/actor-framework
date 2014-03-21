@@ -304,7 +304,6 @@ T& get_ref(primitive_variant& pv) {
  * @ingroup TypeSystem
  * @brief Casts a primitive variant to its C++ type.
  * @relates primitive_variant
- * @tparam T C++ type equivalent of @p PT.
  * @param pv A primitive variant of type @p T.
  * @returns A const reference to the value of @p pv of type @p T.
  */
@@ -319,7 +318,6 @@ get(const primitive_variant& pv) {
  * @ingroup TypeSystem
  * @brief Casts a non-const primitive variant to its C++ type.
  * @relates primitive_variant
- * @tparam T C++ type equivalent of @p PT.
  * @param pv A primitive variant of type @p T.
  * @returns A reference to the value of @p pv of type @p T.
  */

@@ -57,6 +57,8 @@ class sync_request_info : public extend<memory_managed>::with<memory_cached> {
 
     typedef sync_request_info* pointer;
 
+    ~sync_request_info();
+
     pointer    next;   // intrusive next pointer
     actor_addr sender; // points to the sender of the message
     message_id mid;    // sync message ID

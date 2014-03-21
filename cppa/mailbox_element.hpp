@@ -59,6 +59,8 @@ class mailbox_element : public extend<memory_managed>::with<memory_cached> {
     any_tuple        msg;    // 'content field'
     message_id       mid;
 
+    ~mailbox_element();
+
     mailbox_element(mailbox_element&&) = delete;
     mailbox_element(const mailbox_element&) = delete;
     mailbox_element& operator=(mailbox_element&&) = delete;

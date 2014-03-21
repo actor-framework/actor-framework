@@ -229,7 +229,7 @@ class uniform_type_info {
     /**
      * @brief Deserializes @p instance from @p source.
      * @param instance Instance of this type.
-     * @param sink Data source.
+     * @param source Data source.
      * @pre @p instance has the type of @p this.
      */
     virtual void deserialize(void* instance, deserializer* source) const = 0;

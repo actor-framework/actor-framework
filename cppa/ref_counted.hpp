@@ -51,6 +51,8 @@ class ref_counted : public memory_managed {
 
     ref_counted();
 
+    ~ref_counted();
+
     /**
      * @brief Increases reference count by one.
      */

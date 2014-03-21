@@ -63,7 +63,6 @@ enum receive_policy_flag {
 };
 
 enum handle_message_result {
-    hm_timeout_msg,
     hm_skip_msg,
     hm_drop_msg,
     hm_cache_msg,
@@ -111,9 +110,6 @@ class invoke_policy {
                 // "received" a marked node
                 reset_pointer = false;
                 break;
-            }
-            default: {
-                CPPA_CRITICAL("illegal result of handle_message");
             }
         }
         if (reset_pointer) node_ptr.reset();
@@ -296,10 +292,6 @@ class invoke_policy {
             return hm_skip_msg;
         }
         switch (this->filter_msg(self, node)) {
-            default: {
-                CPPA_LOG_ERROR("illegal filter result");
-                CPPA_CRITICAL("illegal filter result");
-            }
             case normal_exit_signal: {
                 CPPA_LOG_DEBUG("dropped normal exit signal");
                 return hm_drop_msg;
@@ -334,7 +326,7 @@ class invoke_policy {
             }
             case timeout_response_message: {
                 handle_sync_failure_on_mismatch = false;
-                // fall through
+                CPPA_ANNOTATE_FALLTHROUGH;
             }
             case sync_response: {
                 CPPA_LOG_DEBUG("handle as synchronous response: "

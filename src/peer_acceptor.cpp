@@ -59,7 +59,7 @@ continue_reading_result peer_acceptor::continue_reading() {
         catch (exception& e) {
             CPPA_LOG_ERROR(to_verbose_string(e));
             static_cast<void>(e); // keep compiler happy
-            return read_failure;
+            return continue_reading_result::failure;
         }
         if (opt) {
             auto& pair = *opt;
@@ -89,7 +89,7 @@ continue_reading_result peer_acceptor::continue_reading() {
                      << endl;
             }
         }
-        else return read_continue_later;
+        else return continue_reading_result::continue_later;
    }
 }
 

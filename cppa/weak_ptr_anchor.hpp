@@ -47,6 +47,8 @@ class weak_ptr_anchor : public ref_counted {
 
  public:
 
+    ~weak_ptr_anchor();
+
     weak_ptr_anchor(ref_counted* ptr);
 
     /**

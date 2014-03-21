@@ -186,7 +186,7 @@ actor spawn_functor(execution_unit* eu,
 /**
  * @brief Spawns an actor of type @p C.
  * @param args Constructor arguments.
- * @tparam C Subtype of {@link event_based_actor} or {@link sb_actor}.
+ * @tparam Impl Subtype of {@link event_based_actor} or {@link sb_actor}.
  * @tparam Os Optional flags to modify <tt>spawn</tt>'s behavior.
  * @returns An {@link actor} to the spawned {@link actor}.
  */
@@ -212,7 +212,7 @@ actor spawn(Ts&&... args) {
 /**
  * @brief Spawns an actor of type @p C that immediately joins @p grp.
  * @param args Constructor arguments.
- * @tparam C Subtype of {@link event_based_actor} or {@link sb_actor}.
+ * @tparam Impl Subtype of {@link event_based_actor} or {@link sb_actor}.
  * @tparam Os Optional flags to modify <tt>spawn</tt>'s behavior.
  * @returns An {@link actor} to the spawned {@link actor}.
  * @note The spawned has joined the group before this function returns.

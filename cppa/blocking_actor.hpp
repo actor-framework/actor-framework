@@ -186,7 +186,7 @@ class blocking_actor
      * )
      * .until([&]() { return (++i >= 10); };
      * @endcode
-     * @param bhvr Denotes the actor's response the next incoming message.
+     * @param args Denotes the actor's response the next incoming message.
      * @returns A functor providing the @c until member function.
      */
     template<typename... Ts>

@@ -34,7 +34,7 @@
 
 #ifndef CPPA_WINDOWS
 #include <poll.h>
-#define SOCKERR errno 
+#define SOCKERR errno
 #else
 #   include <ws2tcpip.h>
 #   include <ws2ipdef.h>
@@ -87,10 +87,12 @@ class middleman_event_handler_impl : public middleman_event_handler {
         CPPA_REQUIRE(m_pollset.size() == m_meta.size());
         int presult = -1;
         while (presult < 0) {
-#ifdef CPPA_WINDOWS 
+#ifdef CPPA_WINDOWS
             presult = ::WSAPoll(m_pollset.data(), m_pollset.size(), -1);
 #else
-            presult = ::poll(m_pollset.data(), m_pollset.size(), -1);
+            presult = ::poll(m_pollset.data(),
+                             static_cast<nfds_t>(m_pollset.size()),
+                             -1);
 #endif
             CPPA_LOG_DEBUG("poll() on " << num_sockets()
                            << " sockets returned " << presult);

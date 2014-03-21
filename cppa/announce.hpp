@@ -160,8 +160,7 @@ compound_member(const std::pair<GRes (Parent::*)() const,
  * @brief Adds a new type mapping for @p C to the libcppa type system.
  * @tparam C A class that is either empty or is default constructible,
  *           copy constructible, and comparable.
- * @param arg  First members of @p C.
- * @param args Additional members of @p C.
+ * @param args Members of @p C.
  * @warning @p announce is <b>not</b> thead safe!
  */
 template<class C, typename... Ts>

@@ -44,6 +44,8 @@ class input_stream : public virtual ref_counted {
 
  public:
 
+    ~input_stream();
+
     /**
      * @brief Returns the internal file descriptor. This descriptor is needed
      *        for socket multiplexing using select().

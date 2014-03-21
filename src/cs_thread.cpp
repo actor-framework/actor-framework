@@ -31,6 +31,8 @@
 #include <cstdint>
 #include <stdexcept>
 
+#include "cppa/config.hpp"
+
 #include "cppa/detail/cs_thread.hpp"
 
 namespace {
@@ -75,12 +77,14 @@ const bool cs_thread::is_disabled_feature = true;
 #   include <valgrind/valgrind.h>
 #endif
 
+CPPA_PUSH_WARNINGS
 // boost includes
 #include <boost/version.hpp>
 #include <boost/context/all.hpp>
 #if BOOST_VERSION >= 105300
 #   include <boost/coroutine/all.hpp>
 #endif
+CPPA_POP_WARNINGS
 
 namespace cppa { namespace detail {
 
@@ -88,7 +92,7 @@ void cst_trampoline(intptr_t iptr);
 
 namespace {
 
-#if CPPA_ANNOTATE_VALGRIND
+#ifdef CPPA_ANNOTATE_VALGRIND
     typedef int vg_member;
     inline void vg_register(vg_member& stack_id, vptr ptr1, vptr ptr2) {
         stack_id = VALGRIND_STACK_REGISTER(ptr1, ptr2);
@@ -154,7 +158,8 @@ namespace {
     ctx_stack_info new_stack(context& ctx,
                                      stack_allocator& alloc,
                                      vg_member& vgm) {
-        size_t mss = ctxn::minimum_stacksize() * stack_multiplier;
+        auto mss = static_cast<intptr_t>(  ctxn::minimum_stacksize()
+                                         * stack_multiplier);
         ctx.fc_stack.base = alloc.allocate(mss);
         ctx.fc_stack.limit = reinterpret_cast<vptr>(
                     reinterpret_cast<intptr_t>(ctx.fc_stack.base) - mss);
@@ -190,7 +195,8 @@ namespace {
     ctx_stack_info new_stack(context& ctx,
                                      stack_allocator& alloc,
                                      vg_member& vgm) {
-        size_t mss = stack_allocator::minimum_stacksize() * stack_multiplier;
+        auto mss = static_cast<intptr_t>(  stack_allocator::minimum_stacksize()
+                                         * stack_multiplier);
         ctx = ctxn::make_fcontext(alloc.allocate(mss), mss, cst_trampoline);
         vg_register(vgm,
                     ctx->fc_stack.sp,
@@ -219,9 +225,10 @@ namespace {
     ctx_stack_info new_stack(context& ctx,
                                      stack_allocator& alloc,
                                      vg_member& vgm) {
-        size_t mss = stack_allocator::minimum_stacksize() * stack_multiplier;
+        auto mss = static_cast<intptr_t>(  stack_allocator::minimum_stacksize()
+                                         * stack_multiplier);
         ctx_stack_info sinf;
-        alloc.allocate(sinf, mss);
+        alloc.allocate(sinf, static_cast<size_t>(mss));
         ctx = ctxn::make_fcontext(sinf.sp, sinf.size, cst_trampoline);
         vg_register(vgm,
                     ctx->fc_stack.sp,
@@ -244,7 +251,7 @@ struct cst_impl {
 
     cst_impl() : m_ctx() { }
 
-    virtual ~cst_impl() { }
+    virtual ~cst_impl();
 
     virtual void run() = 0;
 
@@ -256,8 +263,13 @@ struct cst_impl {
 
 };
 
+// avoid weak-vtables warning by providing dtor out-of-line
+cst_impl::~cst_impl() { }
+
 // a cs_thread representing a thread ('converts' the thread to a cs_thread)
 struct converted_cs_thread : cst_impl {
+
+    ~converted_cs_thread();
 
     converted_cs_thread() {
         init_converted_context(m_converted, m_ctx);
@@ -271,6 +283,9 @@ struct converted_cs_thread : cst_impl {
 
 };
 
+// avoid weak-vtables warning by providing dtor out-of-line
+converted_cs_thread::~converted_cs_thread() { }
+
 // a cs_thread executing a function
 struct fun_cs_thread : cst_impl {
 
@@ -278,9 +293,7 @@ struct fun_cs_thread : cst_impl {
         m_stack_info = new_stack(m_ctx, m_alloc, m_vgm);
     }
 
-    ~fun_cs_thread() {
-        del_stack(m_alloc, m_stack_info, m_vgm);
-    }
+    ~fun_cs_thread();
 
     void run() override {
         m_fun(m_arg);
@@ -293,6 +306,11 @@ struct fun_cs_thread : cst_impl {
     ctx_stack_info  m_stack_info; // needed to delete stack in destructor
 
 };
+
+// avoid weak-vtables warning by providing dtor out-of-line
+fun_cs_thread::~fun_cs_thread() {
+    del_stack(m_alloc, m_stack_info, m_vgm);
+}
 
 void cst_trampoline(intptr_t iptr) {
     auto ptr = (cst_impl*) iptr;

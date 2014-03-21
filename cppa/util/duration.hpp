@@ -41,10 +41,32 @@ namespace cppa { namespace util {
  * @brief SI time units to specify timeouts.
  */
 enum class time_unit : std::uint32_t {
-    none = 0,
+    invalid = 0,
     seconds = 1,
     milliseconds = 1000,
     microseconds = 1000000
+};
+
+// minutes are implicitly converted to seconds
+template<std::intmax_t Num, std::intmax_t Denom>
+struct ratio_to_time_unit_helper {
+    static constexpr time_unit value = time_unit::invalid;
+};
+
+template<> struct ratio_to_time_unit_helper<1, 1> {
+    static constexpr time_unit value = time_unit::seconds;
+};
+
+template<> struct ratio_to_time_unit_helper<1, 1000> {
+    static constexpr time_unit value = time_unit::milliseconds;
+};
+
+template<> struct ratio_to_time_unit_helper<1, 1000000> {
+    static constexpr time_unit value = time_unit::microseconds;
+};
+
+template<> struct ratio_to_time_unit_helper<60, 1> {
+    static constexpr time_unit value = time_unit::seconds;
 };
 
 /**
@@ -53,45 +75,45 @@ enum class time_unit : std::uint32_t {
  */
 template<typename Period>
 constexpr time_unit get_time_unit_from_period() {
-    return (Period::num != 1
-            ? time_unit::none
-            : (Period::den == 1
-               ? time_unit::seconds
-               : (Period::den == 1000
-                  ? time_unit::milliseconds
-                  : (Period::den == 1000000
-                     ? time_unit::microseconds
-                     : time_unit::none))));
+    return ratio_to_time_unit_helper<Period::num, Period::den>::value;
 }
 
 /**
  * @brief Time duration consisting of a {@link cppa::util::time_unit time_unit}
- *        and a 32 bit unsigned integer.
+ *        and a 64 bit unsigned integer.
  */
 class duration {
 
  public:
 
-    constexpr duration() : unit(time_unit::none), count(0) { }
+    constexpr duration() : unit(time_unit::invalid), count(0) { }
 
     constexpr duration(time_unit u, std::uint32_t v) : unit(u), count(v) { }
 
+    /**
+     * @brief Creates a new instance from an STL duration.
+     * @throws std::invalid_argument Thrown if <tt>d.count()</tt> is negative.
+     */
     template<class Rep, class Period>
-    constexpr duration(std::chrono::duration<Rep, Period> d)
-    : unit(get_time_unit_from_period<Period>()), count(d.count()) {
-        static_assert(get_time_unit_from_period<Period>() != time_unit::none,
-                      "only seconds, milliseconds or microseconds allowed");
+    duration(std::chrono::duration<Rep, Period> d)
+    : unit(get_time_unit_from_period<Period>()), count(rd(d)) {
+        static_assert(get_time_unit_from_period<Period>() != time_unit::invalid,
+                      "cppa::duration supports only minutes, seconds, "
+                      "milliseconds or microseconds");
     }
 
-    // convert minutes to seconds
+    /**
+     * @brief Creates a new instance from an STL duration given in minutes.
+     * @throws std::invalid_argument Thrown if <tt>d.count()</tt> is negative.
+     */
     template<class Rep>
-    constexpr duration(std::chrono::duration<Rep, std::ratio<60, 1> > d)
-    : unit(time_unit::seconds), count(d.count() * 60) { }
+    duration(std::chrono::duration<Rep, std::ratio<60, 1> > d)
+    : unit(time_unit::seconds), count(rd(d) * 60) { }
 
     /**
      * @brief Returns true if <tt>unit != time_unit::none</tt>.
      */
-    inline bool valid() const { return unit != time_unit::none; }
+    inline bool valid() const { return unit != time_unit::invalid; }
 
     /**
      * @brief Returns true if <tt>count == 0</tt>.
@@ -102,7 +124,27 @@ class duration {
 
     time_unit unit;
 
-    std::uint32_t count;
+    std::uint64_t count;
+
+ private:
+
+    // reads d.count and throws invalid_argument if d.count < 0
+    template<class Rep, class Period>
+    static inline std::uint64_t
+    rd(const std::chrono::duration<Rep, Period>& d) {
+        if (d.count() < 0) {
+            throw std::invalid_argument("negative durations are not supported");
+        }
+        return static_cast<std::uint64_t>(d.count());
+    }
+
+    template<class Rep>
+    static inline std::uint64_t
+    rd(const std::chrono::duration<Rep, std::ratio<60, 1>>& d) {
+        // convert minutes to seconds on-the-fly
+        return rd(std::chrono::duration<Rep, std::ratio<1, 1>>(d.count()) * 60);
+    }
+
 
 };
 
@@ -140,7 +182,8 @@ operator+=(std::chrono::time_point<Clock, Duration>& lhs,
             lhs += std::chrono::microseconds(rhs.count);
             break;
 
-        default: break;
+        case cppa::util::time_unit::invalid:
+            break;
     }
     return lhs;
 }

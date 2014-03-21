@@ -40,11 +40,11 @@ continuable::continuable(native_socket_type rd, native_socket_type wr)
 : m_rd(rd), m_wr(wr) { }
 
 continue_reading_result continuable::continue_reading() {
-    return read_closed;
+    return continue_reading_result::closed;
 }
 
 continue_writing_result continuable::continue_writing() {
-    return write_closed;
+    return continue_writing_result::closed;
 }
 
 } } // namespace cppa::network

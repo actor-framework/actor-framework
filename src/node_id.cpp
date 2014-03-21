@@ -106,6 +106,8 @@ bool equal(const std::string& hash,
     return true;
 }
 
+node_id::~node_id() { }
+
 node_id::node_id(const node_id& other)
 : super(), m_process_id(other.process_id()), m_host_id(other.host_id()) { }
 

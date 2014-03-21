@@ -47,7 +47,7 @@ class scoped_actor {
 
     scoped_actor(const scoped_actor&) = delete;
 
-    explicit scoped_actor(bool hidden);
+    explicit scoped_actor(bool hide_actor);
 
     ~scoped_actor();
 
@@ -81,7 +81,7 @@ class scoped_actor {
 
  private:
 
-    void init(bool hidden);
+    void init(bool hide_actor);
 
     bool m_hidden;
     actor_id m_prev; // used for logging/debugging purposes only

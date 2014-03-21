@@ -167,8 +167,8 @@ oss_wr operator<<(oss_wr&& lhs, T rhs) {
         std::cerr << "[" << lvlname << "] " << classname << "::"               \
                   << funname << ": " << message << "\nStack trace:\n";         \
         void* bt_array[20];                                                    \
-        size_t size = ::cppa::detail::backtrace(bt_array, 20);                 \
-        ::cppa::detail::backtrace_symbols_fd(bt_array, size, 2);               \
+        auto cppa_bt_size = ::cppa::detail::backtrace(bt_array, 20);           \
+        ::cppa::detail::backtrace_symbols_fd(bt_array, cppa_bt_size, 2);       \
     } CPPA_VOID_STMT
 
 #ifndef CPPA_LOG_LEVEL

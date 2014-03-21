@@ -59,7 +59,7 @@ void pt_dispatch(primitive_type ptype, Fun&& f) {
      case pt_u16string:   f(pt_token<pt_u16string>());   break;
      case pt_u32string:   f(pt_token<pt_u32string>());   break;
      case pt_atom:        f(pt_token<pt_atom>());        break;
-     default: break;
+     case pt_null:        break; // nothing to do
     }
 }
 

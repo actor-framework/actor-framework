@@ -62,13 +62,13 @@ class buffered_writing : public Base {
             catch (std::exception& e) {
                 CPPA_LOG_ERROR(to_verbose_string(e));
                 static_cast<void>(e); // keep compiler happy
-                return write_failure;
+                return continue_writing_result::failure;
             }
             if (written != m_buf.size()) {
                 CPPA_LOG_DEBUG("tried to write " << m_buf.size() << "bytes, "
                                << "only " << written << " bytes written");
                 m_buf.erase_leading(written);
-                return write_continue_later;
+                return continue_writing_result::continue_later;
             }
             else {
                 m_buf.clear();
@@ -76,7 +76,7 @@ class buffered_writing : public Base {
                 CPPA_LOG_DEBUG("write done, " << written << " bytes written");
             }
         }
-        return write_done;
+        return continue_writing_result::done;
     }
 
     inline bool has_unwritten_data() const {
@@ -118,7 +118,7 @@ class buffered_writing : public Base {
     inline middleman* parent() {
         return m_parent;
     }
-    
+
     typedef buffered_writing combined_type;
 
  private:

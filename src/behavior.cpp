@@ -43,6 +43,8 @@ class continuation_decorator : public detail::behavior_impl {
 
     typedef typename behavior_impl::pointer pointer;
 
+    ~continuation_decorator();
+
     continuation_decorator(continuation_fun fun, pointer ptr)
     : super(ptr->timeout()), m_fun(fun), m_decorated(std::move(ptr)) {
         CPPA_REQUIRE(m_decorated != nullptr);
@@ -79,6 +81,9 @@ class continuation_decorator : public detail::behavior_impl {
     pointer m_decorated;
 
 };
+
+// avoid weak-vtables warning by providing dtor out-of-line
+continuation_decorator::~continuation_decorator() { }
 
 behavior::behavior(const partial_function& fun) : m_impl(fun.m_impl) { }
 

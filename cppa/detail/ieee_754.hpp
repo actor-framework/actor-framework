@@ -35,6 +35,8 @@
 #ifndef IEEE_754_HPP
 #define IEEE_754_HPP
 
+#include <cmath>
+
 namespace cppa { namespace detail {
 
 template<typename T>
@@ -42,12 +44,13 @@ struct ieee_754_trait;
 
 template<>
 struct ieee_754_trait<float> {
-    static constexpr std::uint32_t bits = 32;
-    static constexpr std::uint32_t expbits = 8;
-    static constexpr float  zero = 0.0f;
-    using packed_type = std::uint32_t;
-    using signed_packed_type = std::int32_t;
-    using float_type = float;
+    static constexpr std::uint32_t bits = 32;       // number of bits
+    static constexpr std::uint32_t expbits = 8;     // bits used for exponent
+    static constexpr float zero = 0.0f;             // the value 0
+    static constexpr float p5 = 0.5f;               // the value 0.5
+    using packed_type = std::uint32_t;              // unsigned integer type
+    using signed_packed_type = std::int32_t;        // signed integer type
+    using float_type = float;                       // floating point type
 };
 
 template<>
@@ -58,6 +61,7 @@ struct ieee_754_trait<double> {
     static constexpr std::uint64_t bits = 64;
     static constexpr std::uint64_t expbits = 11;
     static constexpr double  zero = 0.0;
+    static constexpr double p5 = 0.5;
     using packed_type = std::uint64_t;
     using signed_packed_type = std::int64_t;
     using float_type = double;
@@ -71,7 +75,7 @@ typename ieee_754_trait<T>::packed_type pack754(T f) {
     typedef ieee_754_trait<T> trait;
     typedef typename trait::packed_type result_type;
     // filter special type
-    if (f == trait::zero) return 0;
+    if (fabs(f) <= trait::zero) return 0; // only true if f equals +0 or -0
     auto significandbits = trait::bits - trait::expbits - 1; // -1 for sign bit
     // check sign and begin normalization
     result_type sign;
@@ -95,8 +99,10 @@ typename ieee_754_trait<T>::packed_type pack754(T f) {
         --shift;
     }
     fnorm = fnorm - static_cast<T>(1);
+    // calculate 2^significandbits
+    auto pownum = static_cast<result_type>(1) << significandbits;
     // calculate the binary form (non-float) of the significand data
-    result_type significand = fnorm * ((static_cast<result_type>(1) << significandbits) + 0.5f);
+    auto significand = static_cast<result_type>(fnorm * (pownum + trait::p5));
     // get the biased exponent
     auto exp = shift + ((1 << (trait::expbits - 1)) - 1); // shift + bias
     // return the final answer
@@ -107,6 +113,7 @@ typename ieee_754_trait<T>::packed_type pack754(T f) {
 template<typename T>
 typename ieee_754_trait<T>::float_type unpack754(T i) {
     typedef ieee_754_trait<T> trait;
+    typedef typename trait::signed_packed_type signed_type;
     typedef typename trait::float_type result_type;
     if (i == 0) return trait::zero;
     auto significandbits = trait::bits - trait::expbits - 1; // -1 for sign bit
@@ -115,8 +122,10 @@ typename ieee_754_trait<T>::float_type unpack754(T i) {
     result /= (static_cast<T>(1) << significandbits); // convert back to float
     result += static_cast<result_type>(1); // add the one back on
     // deal with the exponent
+    auto si = static_cast<signed_type>(i);
     auto bias = (1 << (trait::expbits - 1)) - 1;
-    typename trait::signed_packed_type shift = ((i >> significandbits) & ((static_cast<typename trait::signed_packed_type>(1) << trait::expbits) - 1)) - bias;
+    auto pownum = static_cast<signed_type>(1) << trait::expbits;
+    auto shift = static_cast<signed_type>(((si >> significandbits) & (pownum - 1)) - bias);
     while (shift > 0) {
         result *= static_cast<result_type>(2);
         --shift;

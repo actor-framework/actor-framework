@@ -41,7 +41,7 @@ namespace cppa {
 struct invalid_message_id { constexpr invalid_message_id() { } };
 
 /**
- * @brief
+ * @brief Denotes whether a message is asynchronous or synchronous
  * @note Asynchronous messages always have an invalid message id.
  */
 class message_id : util::comparable<message_id> {

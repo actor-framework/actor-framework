@@ -109,7 +109,10 @@ class context_switching_resume {
                         }
                         break;
                     }
-                    default: { CPPA_CRITICAL("illegal state"); }
+                    case yield_state::invalid: {
+                        // must not happen
+                        CPPA_CRITICAL("illegal state");
+                    }
                 }
             }
         }

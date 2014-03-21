@@ -34,6 +34,8 @@
 
 namespace cppa {
 
+weak_ptr_anchor::~weak_ptr_anchor() { }
+
 weak_ptr_anchor::weak_ptr_anchor(ref_counted* ptr) : m_ptr(ptr) { }
 
 bool weak_ptr_anchor::try_expire() {

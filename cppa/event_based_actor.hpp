@@ -62,6 +62,8 @@ class event_based_actor : public extend<local_actor, event_based_actor>::
 
     event_based_actor();
 
+    ~event_based_actor();
+
  protected:
 
     /**

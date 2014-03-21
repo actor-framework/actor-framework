@@ -110,6 +110,8 @@ class broker::servant : public continuable {
 
  public:
 
+    ~servant();
+
     template<typename... Ts>
     servant(broker_ptr parent, Ts&&... args)
     : super{std::forward<Ts>(args)...}, m_disconnected{false}
@@ -153,11 +155,16 @@ class broker::servant : public continuable {
 
 };
 
+// avoid weak-vtables warning by providing dtor out-of-line
+broker::servant::~servant() { }
+
 class broker::scribe : public extend<broker::servant>::with<buffered_writing> {
 
     typedef combined_type super;
 
  public:
+
+    ~scribe();
 
     scribe(broker_ptr parent, input_stream_ptr in, output_stream_ptr out)
     : super{get_middleman(), out, move(parent), in->read_handle(), out->write_handle()}
@@ -185,7 +192,7 @@ class broker::scribe : public extend<broker::servant>::with<buffered_writing> {
         for (;;) {
             // stop reading if actor finished execution
             if (m_broker->exit_reason() != exit_reason::not_exited) {
-                return read_closed;
+                return continue_reading_result::closed;
             }
             auto& buf = get_ref<2>(m_read_msg);
             if (m_dirty) {
@@ -199,12 +206,12 @@ class broker::scribe : public extend<broker::servant>::with<buffered_writing> {
             try { buf.append_from(m_in.get()); }
             catch (std::ios_base::failure&) {
                 disconnect();
-                return read_failure;
+                return continue_reading_result::failure;
             }
             CPPA_LOG_DEBUG("received " << (buf.size() - before) << " bytes");
             if  ( before == buf.size()
                || (m_policy == broker::exactly && buf.size() != m_policy_buffer_size)) {
-                return read_continue_later;
+                return continue_reading_result::continue_later;
             }
             if  ( (   m_policy == broker::at_least
                    && buf.size() >= m_policy_buffer_size)
@@ -240,11 +247,16 @@ class broker::scribe : public extend<broker::servant>::with<buffered_writing> {
 
 };
 
+// avoid weak-vtables warning by providing dtor out-of-line
+broker::scribe::~scribe() { }
+
 class broker::doorman : public broker::servant {
 
     typedef servant super;
 
  public:
+
+    ~doorman();
 
     doorman(broker_ptr parent, acceptor_uptr ptr)
     : super{move(parent), ptr->file_handle()}
@@ -261,7 +273,7 @@ class broker::doorman : public broker::servant {
             catch (std::exception& e) {
                 CPPA_LOG_ERROR(to_verbose_string(e));
                 static_cast<void>(e); // keep compiler happy
-                return read_failure;
+                return continue_reading_result::failure;
             }
             if (opt) {
                 using namespace std;
@@ -270,7 +282,7 @@ class broker::doorman : public broker::servant {
                                                                 move(p.second));
                 m_broker->invoke_message({invalid_actor_addr, nullptr}, m_accept_msg);
             }
-            else return read_continue_later;
+            else return continue_reading_result::continue_later;
        }
     }
 
@@ -287,6 +299,9 @@ class broker::doorman : public broker::servant {
     cow_tuple<atom_value, accept_handle, connection_handle> m_accept_msg;
 
 };
+
+// avoid weak-vtables warning by providing dtor out-of-line
+broker::doorman::~doorman() { }
 
 void broker::invoke_message(msg_hdr_cref hdr, any_tuple msg) {
     CPPA_LOG_TRACE(CPPA_TARG(msg, to_string));
@@ -327,7 +342,6 @@ void broker::invoke_message(msg_hdr_cref hdr, any_tuple msg) {
                 m_priority_policy.push_to_cache(unique_mailbox_element_pointer{e});
                 break;
             }
-            default: CPPA_CRITICAL("illegal result of handle_message");
         }
     }
     catch (std::exception& e) {

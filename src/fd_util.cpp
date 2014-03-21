@@ -58,8 +58,8 @@
 
 namespace cppa { namespace detail { namespace fd_util {
 
-void throw_io_failure(const char* what, bool add_errno_failure) {
-    if (add_errno_failure) {
+void throw_io_failure [[noreturn]] (const char* what, bool add_errno) {
+    if (add_errno) {
         std::ostringstream oss;
         oss << what << ": " << last_socket_error_as_string()
             << " [errno: " << last_socket_error() << "]";

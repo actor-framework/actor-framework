@@ -307,7 +307,7 @@ namespace cppa {
 
 /**
  * @brief Starts a match expression.
- * @param what Tuple or value that should be matched against a pattern.
+ * @param what Tuple that should be matched against a pattern.
  * @returns A helper object providing <tt>operator(...)</tt>.
  */
 inline detail::match_helper match(any_tuple what) {
@@ -315,7 +315,9 @@ inline detail::match_helper match(any_tuple what) {
 }
 
 /**
- * @copydoc match(any_tuple)
+ * @brief Starts a match expression.
+ * @param what Value that should be matched against a pattern.
+ * @returns A helper object providing <tt>operator(...)</tt>.
  */
 template<typename T>
 detail::match_helper match(T&& what) {

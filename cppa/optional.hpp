@@ -114,7 +114,8 @@ class optional {
     inline bool empty() const { return !m_valid; }
 
     /**
-     * @copydoc valid()
+     * @brief Returns @p true if this @p option has a valid value;
+     *        otherwise @p false.
      */
     inline explicit operator bool() const { return valid(); }
 

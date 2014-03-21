@@ -99,9 +99,12 @@ continue_reading_result peer::continue_reading() {
     for (;;) {
         try { m_rd_buf.append_from(m_in.get()); }
         catch (exception&) {
-            return read_failure;
+            return continue_reading_result::failure;
         }
-        if (!m_rd_buf.full()) return read_continue_later; // try again later
+        if (!m_rd_buf.full()) {
+            // try again later
+            return continue_reading_result::continue_later;
+        }
         switch (m_state) {
             case wait_for_process_info: {
                 //DEBUG("peer_connection::continue_reading: "
@@ -116,13 +119,13 @@ continue_reading_result peer::continue_reading() {
                     std::cerr << "*** middleman warning: "
                                  "incoming connection from self"
                               << std::endl;
-                    return read_failure;
+                    return continue_reading_result::failure;
                 }
                 CPPA_LOG_DEBUG("read process info: " << to_string(*m_node));
                 if (!parent()->register_peer(*m_node, this)) {
                     CPPA_LOG_ERROR("multiple incoming connections "
                                    "from the same node");
-                    return read_failure;
+                    return continue_reading_result::failure;
                 }
                 // initialization done
                 m_state = wait_for_msg_size;
@@ -153,7 +156,7 @@ continue_reading_result peer::continue_reading() {
                     CPPA_LOG_ERROR("exception during read_message: "
                                    << detail::demangle(typeid(e))
                                    << ", what(): " << e.what());
-                    return read_failure;
+                    return continue_reading_result::failure;
                 }
                 CPPA_LOG_DEBUG("deserialized: " << to_string(hdr) << " " << to_string(msg));
                 match(msg) (
@@ -185,9 +188,6 @@ continue_reading_result peer::continue_reading() {
                 m_rd_buf.final_size(sizeof(uint32_t));
                 m_state = wait_for_msg_size;
                 break;
-            }
-            default: {
-                CPPA_CRITICAL("illegal state");
             }
         }
         // try to read more (next iteration)
@@ -338,12 +338,14 @@ void peer::unlink(const actor_addr& lhs, const actor_addr& rhs) {
 continue_writing_result peer::continue_writing() {
     CPPA_LOG_TRACE("");
     auto result = super::continue_writing();
-    while (result == write_done && !queue().empty()) {
+    while (result == continue_writing_result::done && !queue().empty()) {
         auto tmp = queue().pop();
         enqueue(tmp.first, tmp.second);
         result = super::continue_writing();
     }
-    if (result == write_done && stop_on_last_proxy_exited() && !has_unwritten_data()) {
+    if (result == continue_writing_result::done
+            && stop_on_last_proxy_exited()
+            && !has_unwritten_data()) {
         if (parent()->get_namespace().count_proxies(*m_node) == 0) {
             parent()->last_proxy_exited(this);
         }
@@ -367,7 +369,7 @@ void peer::enqueue_impl(msg_hdr_cref hdr, const any_tuple& msg) {
     add_type_if_needed((tname) ? *tname : detail::get_tuple_type_names(*msg.vals()));
     uint32_t size = 0;
     auto& wbuf = write_buffer();
-    auto before = wbuf.size();
+    auto before = static_cast<uint32_t>(wbuf.size());
     binary_serializer bs(&wbuf, &(parent()->get_namespace()), &m_outgoing_types);
     wbuf.write(sizeof(uint32_t), &size);
     try { bs << hdr << msg; }
@@ -379,7 +381,8 @@ void peer::enqueue_impl(msg_hdr_cref hdr, const any_tuple& msg) {
         return;
     }
     CPPA_LOG_DEBUG("serialized: " << to_string(hdr) << " " << to_string(msg));
-    size = (wbuf.size() - before) - sizeof(std::uint32_t);
+    size =   static_cast<std::uint32_t>((wbuf.size() - before))
+           - static_cast<std::uint32_t>(sizeof(std::uint32_t));
     // update size in buffer
     memcpy(wbuf.offset_data(before), &size, sizeof(std::uint32_t));
 }

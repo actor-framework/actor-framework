@@ -42,17 +42,40 @@
 #define CPPA_MINOR_VERSION ((CPPA_VERSION / 100) % 1000)
 #define CPPA_PATCH_VERSION (CPPA_VERSION % 100)
 
-// detect compiler and set CPPA_DEPRECATED
+// sets CPPA_DEPRECATED, CPPA_ANNOTATE_FALLTHROUGH,
+// CPPA_PUSH_WARNINGS and CPPA_POP_WARNINGS
 #if defined(__clang__)
 #  define CPPA_CLANG
 #  define CPPA_DEPRECATED __attribute__((__deprecated__))
+#  define CPPA_PUSH_WARNINGS                                                   \
+        _Pragma("clang diagnostic push")                                       \
+        _Pragma("clang diagnostic ignored \"-Wall\"")                          \
+        _Pragma("clang diagnostic ignored \"-Werror\"")                        \
+        _Pragma("clang diagnostic ignored \"-Wdeprecated\"")                   \
+        _Pragma("clang diagnostic ignored \"-Wdisabled-macro-expansion\"")     \
+        _Pragma("clang diagnostic ignored \"-Wextra-semi\"")                   \
+        _Pragma("clang diagnostic ignored \"-Wdocumentation\"")                \
+        _Pragma("clang diagnostic ignored \"-Wweak-vtables\"")                 \
+        _Pragma("clang diagnostic ignored \"-Wundef\"")
+#  define CPPA_POP_WARNINGS                                                    \
+        _Pragma("clang diagnostic pop")
+#  define CPPA_ANNOTATE_FALLTHROUGH [[clang::fallthrough]]
 #elif defined(__GNUC__)
 #  define CPPA_GCC
 #  define CPPA_DEPRECATED __attribute__((__deprecated__))
+#  define CPPA_PUSH_WARNINGS
+#  define CPPA_POP_WARNINGS
+#  define CPPA_ANNOTATE_FALLTHROUGH static_cast<void>(0)
 #elif defined(_MSC_VER)
 #  define CPPA_DEPRECATED __declspec(deprecated)
+#  define CPPA_PUSH_WARNINGS
+#  define CPPA_POP_WARNINGS
+#  define CPPA_ANNOTATE_FALLTHROUGH static_cast<void>(0)
 #else
 #  define CPPA_DEPRECATED
+#  define CPPA_PUSH_WARNINGS
+#  define CPPA_POP_WARNINGS
+#  define CPPA_ANNOTATE_FALLTHROUGH static_cast<void>(0)
 #endif
 
 // detect OS

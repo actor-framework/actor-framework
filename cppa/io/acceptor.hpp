@@ -53,7 +53,7 @@ class acceptor {
 
  public:
 
-    virtual ~acceptor() { }
+    virtual ~acceptor();
 
     /**
      * @brief Returns the internal file descriptor. This descriptor is needed

@@ -63,11 +63,9 @@ class serializer {
     virtual ~serializer();
 
     /**
-     * @brief Begins serialization of an object of the type
-     *        named @p type_name.
-     * @param type_name The platform-independent @p libcppa type name.
+     * @brief Begins serialization of an object of type @p uti.
      */
-    virtual void begin_object(const uniform_type_info*) = 0;
+    virtual void begin_object(const uniform_type_info* uti) = 0;
 
     /**
      * @brief Ends serialization of an object.

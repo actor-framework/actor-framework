@@ -26,7 +26,7 @@ void set_default_test_settings();
 
 size_t cppa_error_count();
 void cppa_inc_error_count();
-std::string cppa_fill4(int value);
+std::string cppa_fill4(size_t value);
 const char* cppa_strip_path(const char* fname);
 void cppa_unexpected_message(const char* fname, size_t line_num);
 void cppa_unexpected_timeout(const char* fname, size_t line_num);
@@ -75,7 +75,7 @@ inline std::string cppa_stream_arg(const bool& value) {
     return value ? "true" : "false";
 }
 
-inline void cppa_passed(const char* fname, int line_number) {
+inline void cppa_passed(const char* fname, size_t line_number) {
     CPPA_PRINTC(fname, line_number, "passed");
 }
 
@@ -83,7 +83,7 @@ template<typename V1, typename V2>
 inline void cppa_failed(const V1& v1,
                         const V2& v2,
                         const char* fname,
-                        int line_number) {
+                        size_t line_number) {
     CPPA_PRINTERRC(fname, line_number,
                    "expected value: " << cppa_stream_arg(v2)
                    << ", found: " << cppa_stream_arg(v1));
@@ -93,7 +93,7 @@ inline void cppa_failed(const V1& v1,
 inline void cppa_check_value(const std::string& v1,
                              const std::string& v2,
                              const char* fname,
-                             int line,
+                             size_t line,
                              bool expected = true) {
     if ((v1 == v2) == expected) cppa_passed(fname, line);
     else cppa_failed(v1, v2, fname, line);
@@ -103,7 +103,7 @@ template<typename V1, typename V2>
 inline void cppa_check_value(const V1& v1,
                              const V2& v2,
                              const char* fname,
-                             int line,
+                             size_t line,
                              bool expected = true,
                              typename enable_integral<false, V1, V2>::type* = 0) {
     if ((v1 == v2) == expected) cppa_passed(fname, line);
@@ -114,7 +114,7 @@ template<typename V1, typename V2>
 inline void cppa_check_value(V1 v1,
                              V2 v2,
                              const char* fname,
-                             int line,
+                             size_t line,
                              bool expected = true,
                              typename enable_integral<true, V1, V2>::type* = 0) {
     if ((v1 == static_cast<V1>(v2)) == expected) cppa_passed(fname, line);

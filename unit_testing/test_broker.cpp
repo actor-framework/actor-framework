@@ -66,8 +66,8 @@ void pong(cppa::event_based_actor* self) {
             self->monitor(self->last_sender());
             // set next behavior
             self->become (
-                on(atom("ping"), arg_match) >> [](int value) {
-                    return make_cow_tuple(atom("pong"), value);
+                on(atom("ping"), arg_match) >> [](int val) {
+                    return make_cow_tuple(atom("pong"), val);
                 },
                 on_arg_match >> [=](const down_msg& dm) {
                     self->quit(dm.reason);

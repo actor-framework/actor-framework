@@ -138,6 +138,7 @@ set(LIBCPPA_SRC
     src/abstract_channel.cpp
     src/abstract_group.cpp
     src/abstract_tuple.cpp
+    src/acceptor.cpp
     src/actor.cpp
     src/actor_addr.cpp
     src/actor_companion.cpp
@@ -180,6 +181,7 @@ set(LIBCPPA_SRC
     src/get_mac_addresses.cpp
     src/group.cpp
     src/group_manager.cpp
+    src/input_stream.cpp
     src/ipv4_acceptor.cpp
     src/ipv4_io_stream.cpp
     src/local_actor.cpp
@@ -195,6 +197,7 @@ set(LIBCPPA_SRC
     src/object.cpp
     src/object_array.cpp
     src/opt.cpp
+    src/output_stream.cpp
     src/partial_function.cpp
     src/primitive_variant.cpp
     src/ref_counted.cpp
@@ -207,6 +210,7 @@ set(LIBCPPA_SRC
     src/serializer.cpp
     src/shared_spinlock.cpp
     src/singleton_manager.cpp
+    src/stream.cpp
     src/string_serialization.cpp
     src/sync_request_bouncer.cpp
     src/to_uniform_name.cpp

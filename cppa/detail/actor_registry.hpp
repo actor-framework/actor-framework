@@ -54,6 +54,8 @@ class actor_registry : public singleton_mixin<actor_registry> {
 
  public:
 
+    ~actor_registry();
+
     /**
      * @brief A registry entry consists of a pointer to the actor and an
      *        exit reason. An entry with a nullptr means the actor has finished

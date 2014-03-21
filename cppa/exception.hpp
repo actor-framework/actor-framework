@@ -45,13 +45,17 @@ class cppa_exception : public std::exception {
 
  public:
 
-    ~cppa_exception() throw();
+    ~cppa_exception();
+
+    cppa_exception() = delete;
+    cppa_exception(const cppa_exception&) = default;
+    cppa_exception& operator=(const cppa_exception&) = default;
 
     /**
      * @brief Returns the error message.
      * @returns The error message as C-string.
      */
-    const char* what() const throw();
+    const char* what() const noexcept;
 
  protected:
 
@@ -80,14 +84,19 @@ class actor_exited : public cppa_exception {
 
  public:
 
+    ~actor_exited();
+
     actor_exited(std::uint32_t exit_reason);
+
+    actor_exited(const actor_exited&) = default;
+    actor_exited& operator=(const actor_exited&) = default;
 
     /**
      * @brief Gets the exit reason.
      * @returns The exit reason of the terminating actor either set via
      *          {@link quit} or by a special (exit) message.
      */
-    inline std::uint32_t reason() const throw();
+    inline std::uint32_t reason() const noexcept;
 
  private:
 
@@ -103,8 +112,11 @@ class network_error : public cppa_exception {
 
  public:
 
+    ~network_error();
     network_error(std::string&& what_str);
     network_error(const std::string& what_str);
+    network_error(const network_error&) = default;
+    network_error& operator=(const network_error&) = default;
 
 };
 
@@ -116,13 +128,17 @@ class bind_failure : public network_error {
 
  public:
 
+    ~bind_failure();
+
     bind_failure(int bind_errno);
+    bind_failure(const bind_failure&) = default;
+    bind_failure& operator=(const bind_failure&) = default;
 
     /**
      * @brief Gets the socket API error code.
      * @returns The errno set by <tt>bind()</tt>.
      */
-    inline int error_code() const throw();
+    inline int error_code() const noexcept;
 
  private:
 
@@ -130,11 +146,11 @@ class bind_failure : public network_error {
 
 };
 
-inline std::uint32_t actor_exited::reason() const throw() {
+inline std::uint32_t actor_exited::reason() const noexcept {
     return m_reason;
 }
 
-inline int bind_failure::error_code() const throw() {
+inline int bind_failure::error_code() const noexcept {
     return m_errno;
 }
 

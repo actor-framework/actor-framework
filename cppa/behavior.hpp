@@ -95,7 +95,11 @@ class behavior {
     inline const util::duration& timeout() const;
 
     /**
-     * @copydoc partial_function::operator()()
+     * @brief Returns a value if @p arg was matched by one of the
+     *        handler of this behavior, returns @p nothing otherwise.
+     * @note This member function can return @p nothing even if
+     *       {@link defined_at()} returns @p true, because {@link defined_at()}
+     *       does not evaluate guards.
      */
     template<typename T>
     inline optional<any_tuple> operator()(T&& arg);

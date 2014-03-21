@@ -259,7 +259,7 @@ class coordinator::shutdown_helper : public resumable {
 
 };
 
-// get rid of weak-vtables warning by providing dtor out-of-line
+// avoid weak-vtables warning by providing dtor out-of-line
 coordinator::shutdown_helper::~shutdown_helper() { }
 
 void coordinator::initialize() {

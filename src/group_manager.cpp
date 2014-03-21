@@ -591,6 +591,8 @@ atomic<size_t> m_ad_hoc_id;
 
 namespace cppa { namespace detail {
 
+group_manager::~group_manager() { }
+
 group_manager::group_manager() {
     abstract_group::unique_module_ptr ptr(new local_group_module);
     m_mmap.insert(make_pair(string("local"), move(ptr)));

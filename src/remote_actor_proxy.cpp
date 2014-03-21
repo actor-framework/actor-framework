@@ -48,6 +48,8 @@ inline sync_request_info* new_req_info(actor_addr sptr, message_id id) {
     return detail::memory::create<sync_request_info>(std::move(sptr), id);
 }
 
+sync_request_info::~sync_request_info() { }
+
 sync_request_info::sync_request_info(actor_addr sptr, message_id id)
         : next(nullptr), sender(std::move(sptr)), mid(id) {
 }
@@ -117,7 +119,14 @@ void remote_actor_proxy::forward_msg(msg_hdr_cref hdr, any_tuple msg) {
                 });
                 return; // no need to forward message
             }
-            default: break;
+            case intrusive::enqueued: {
+                CPPA_LOG_DEBUG("enqueued pending request to non-empty queue");
+                break;
+            }
+            case intrusive::first_enqueued: {
+                CPPA_LOG_DEBUG("enqueued pending request to empty queue");
+                break;
+            }
         }
     }
     auto node = m_node;

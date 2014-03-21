@@ -48,6 +48,8 @@ class group_manager : public singleton_mixin<group_manager> {
 
  public:
 
+    ~group_manager();
+
     group get(const std::string& module_name,
               const std::string& group_identifier);
 

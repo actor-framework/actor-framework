@@ -38,7 +38,7 @@ std::vector<std::string> get_mac_addresses() {
     size_t buf_size = 0;
 
     for (auto i = indices; !(i->if_index == 0 && i->if_name == nullptr); ++i) {
-        mib[5] = i->if_index;
+        mib[5] = static_cast<int>(i->if_index);
 
         size_t len;
         if (sysctl(mib, 6, nullptr, &len, nullptr, 0) < 0) {
@@ -60,7 +60,7 @@ std::vector<std::string> get_mac_addresses() {
         auto sdl = reinterpret_cast<sockaddr_dl*>(ifm + 1);
         auto ptr = reinterpret_cast<unsigned char*>(LLADDR(sdl));
 
-        auto ctoi = [](char c) -> unsigned {
+        auto uctoi = [](unsigned char c) -> unsigned {
             return static_cast<unsigned char>(c);
         };
 
@@ -68,11 +68,11 @@ std::vector<std::string> get_mac_addresses() {
         oss << std::hex;
         oss.fill('0');
         oss.width(2);
-        oss << ctoi(*ptr++);
+        oss << uctoi(*ptr++);
         for (auto j = 0; j < 5; ++j) {
             oss << ":";
             oss.width(2);
-            oss << ctoi(*ptr++);
+            oss << uctoi(*ptr++);
         }
         auto addr = oss.str();
         if (addr != "00:00:00:00:00:00") result.push_back(std::move(addr));
