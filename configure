@@ -130,6 +130,14 @@ configure ()
     fi
 
     echo "# This is the command used to configure this build" > config.status
+    if [ -n "$CC" ]; then
+      printf "CC=%s" $CC >> config.status
+      printf ' ' >> config.status
+    fi
+    if [ -n "$CXX" ]; then
+      printf "CXX=%s" $CXX >> config.status
+      printf ' ' >> config.status
+    fi
     echo $command >> config.status
     chmod u+x config.status
 }
