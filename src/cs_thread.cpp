@@ -51,7 +51,7 @@ constexpr size_t stack_multiplier = 2;
 
 } // namespace <anonmyous>
 
-#ifdef CPPA_DISABLE_CONTEXT_SWITCHING
+#if defined(CPPA_DISABLE_CONTEXT_SWITCHING) || defined(CPPA_STANDALONE_BUILD)
 
 namespace cppa { namespace detail {
 
@@ -70,7 +70,7 @@ const bool cs_thread::is_disabled_feature = true;
 
 } } // namespace cppa::detail
 
-#else // ifdef CPPA_DISABLE_CONTEXT_SWITCHING
+#else // CPPA_DISABLE_CONTEXT_SWITCHING  || CPPA_STANDALONE_BUILD
 
 // optional valgrind include
 #ifdef CPPA_ANNOTATE_VALGRIND
@@ -81,9 +81,7 @@ CPPA_PUSH_WARNINGS
 // boost includes
 #include <boost/version.hpp>
 #include <boost/context/all.hpp>
-#if BOOST_VERSION >= 105300
-#   include <boost/coroutine/all.hpp>
-#endif
+#include <boost/coroutine/all.hpp>
 CPPA_POP_WARNINGS
 
 namespace cppa { namespace detail {
@@ -142,72 +140,7 @@ namespace {
  * void del_stack(stack_allocator&, ctx_stack_info, vg_member&):
  *     destroys the stack and (optionally) deregisters it from valgrind
  */
-#if BOOST_VERSION == 105100
-    // === namespace aliases ===
-    namespace ctxn = boost::ctx;
-    // === types ===
-    typedef ctxn::fcontext_t      context;
-    struct                        converted_context { };
-    typedef int                   ctx_stack_info;
-    typedef ctxn::stack_allocator stack_allocator;
-    // === functions ===
-    inline void init_converted_context(converted_context&, context&) {/*NOP*/}
-    inline void ctx_switch(context& from, context& to, cst_impl* ptr) {
-        ctxn::jump_fcontext(&from, &to, (intptr_t) ptr);
-    }
-    ctx_stack_info new_stack(context& ctx,
-                                     stack_allocator& alloc,
-                                     vg_member& vgm) {
-        auto mss = static_cast<intptr_t>(  ctxn::minimum_stacksize()
-                                         * stack_multiplier);
-        ctx.fc_stack.base = alloc.allocate(mss);
-        ctx.fc_stack.limit = reinterpret_cast<vptr>(
-                    reinterpret_cast<intptr_t>(ctx.fc_stack.base) - mss);
-        ctxn::make_fcontext(&ctx, cst_trampoline);
-        vg_register(vgm,
-                    ctx.fc_stack.base,
-                    reinterpret_cast<vptr>(
-                        reinterpret_cast<intptr_t>(ctx.fc_stack.base) - mss));
-        return 0; // dummy value
-    }
-    inline void del_stack(stack_allocator&, ctx_stack_info, vg_member& vgm) {
-        vg_deregister(vgm);
-    }
-#elif BOOST_VERSION < 105400
-    // === namespace aliases ===
-    namespace ctxn = boost::context;
-    // === types ===
-    typedef ctxn::fcontext_t*     context;
-    typedef ctxn::fcontext_t      converted_context;
-    typedef int                   ctx_stack_info;
-#   if BOOST_VERSION < 105300
-        typedef ctxn::guarded_stack_allocator      stack_allocator;
-#   else
-        typedef boost::coroutines::stack_allocator stack_allocator;
-#   endif
-    // === functions ===
-    inline void init_converted_context(converted_context& cctx, context& ctx) {
-        ctx = &cctx;
-    }
-    inline void ctx_switch(context& from, context& to, cst_impl* ptr) {
-        ctxn::jump_fcontext(from, to, (intptr_t) ptr);
-    }
-    ctx_stack_info new_stack(context& ctx,
-                                     stack_allocator& alloc,
-                                     vg_member& vgm) {
-        auto mss = static_cast<intptr_t>(  stack_allocator::minimum_stacksize()
-                                         * stack_multiplier);
-        ctx = ctxn::make_fcontext(alloc.allocate(mss), mss, cst_trampoline);
-        vg_register(vgm,
-                    ctx->fc_stack.sp,
-                    reinterpret_cast<vptr>(
-                       reinterpret_cast<intptr_t>(ctx->fc_stack.sp) - mss));
-        return 0; // dummy value
-    }
-    inline void del_stack(stack_allocator&, ctx_stack_info, vg_member& vgm) {
-        vg_deregister(vgm);
-    }
-#else // BOOST_VERSION >= 105400
+#if BOOST_VERSION >= 105400
     // === namespace aliases ===
     namespace ctxn = boost::context;
     // === types ===
@@ -242,6 +175,8 @@ namespace {
         vg_deregister(vgm);
         alloc.deallocate(sctx);
     }
+#else
+#   error libcppa context switching requires Boost in version >= 1.54
 #endif
 
 } // namespace <anonymous>

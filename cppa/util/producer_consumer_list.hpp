@@ -31,6 +31,46 @@
 #ifndef CPPA_PRODUCER_CONSUMER_LIST_HPP
 #define CPPA_PRODUCER_CONSUMER_LIST_HPP
 
+#include "cppa/config.hpp"
+
+#ifndef CPPA_STANDALONE_BUILD
+
+CPPA_PUSH_WARNINGS
+#include <boost/lockfree/queue.hpp>
+CPPA_POP_WARNINGS
+
+namespace cppa {
+namespace util {
+
+template<typename T>
+class producer_consumer_list {
+
+ public:
+
+    inline T* try_pop() {
+        T* res;
+        return m_queue.pop(res) ? res : nullptr;
+    }
+
+    inline void push_back(T* ptr) {
+        m_queue.push(ptr);
+    }
+
+    inline bool empty() {
+        return m_queue.empty();
+    }
+
+ private:
+
+    boost::lockfree::queue<T*> m_queue;
+
+};
+
+} // namespace util
+} // namespace cppa
+
+#else // fallback implementation in case Boost is not available
+
 #define CPPA_CACHE_LINE_SIZE 64
 
 #include <chrono>
@@ -198,5 +238,7 @@ class producer_consumer_list {
 };
 
 } } // namespace cppa::util
+
+#endif // CPPA_STANDALONE_BUILD
 
 #endif // CPPA_PRODUCER_CONSUMER_LIST_HPP

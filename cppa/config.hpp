@@ -31,6 +31,24 @@
 #ifndef CPPA_CONFIG_HPP
 #define CPPA_CONFIG_HPP
 
+// Config pararameters defined by the build system (usually CMake):
+//
+// CPPA_STANDALONE_BUILD:
+//     - builds libcppa without Boost
+//
+// CPPA_DISABLE_CONTEXT_SWITCHING:
+//     - disables context switching even if Boost is available
+//
+// CPPA_DEBUG_MODE:
+//     - check requirements at runtime
+//
+// CPPA_LOG_LEVEL:
+//     - denotes the amount of logging, ranging from error messages only (0)
+//       to complete traces (4)
+//
+// CPPA_OPENCL:
+//     - enables optional OpenCL module
+
 /**
  * @brief Denotes the libcppa version in the format {MAJOR}{MINOR}{PATCH},
  *        whereas each number is a two-digit decimal number without
@@ -56,6 +74,7 @@
         _Pragma("clang diagnostic ignored \"-Wextra-semi\"")                   \
         _Pragma("clang diagnostic ignored \"-Wdocumentation\"")                \
         _Pragma("clang diagnostic ignored \"-Wweak-vtables\"")                 \
+        _Pragma("clang diagnostic ignored \"-Wunused-parameter\"")             \
         _Pragma("clang diagnostic ignored \"-Wundef\"")
 #  define CPPA_POP_WARNINGS                                                    \
         _Pragma("clang diagnostic pop")
@@ -93,7 +112,7 @@
 #elif defined(WIN32)
 #  define CPPA_WINDOWS
 #else
-#  error Plattform and/or compiler not supportet
+#  error Platform and/or compiler not supportet
 #endif
 
 #include <memory>

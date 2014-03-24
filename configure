@@ -37,6 +37,7 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --build-static-only         build libcppa as static library only
     --with-opencl               build libcppa with OpenCL support
     --without-memory-management build libcppa without memory management
+    --standalone-build          build libcppa without Boost or other dependencies
 
   Installation Directories:
     --prefix=PREFIX             installation directory [/usr/local]
@@ -186,6 +187,9 @@ while [ $# -ne 0 ]; do
             ;;
         --without-memory-management)
             append_cache_entry DISABLE_MEM_MANAGEMENT BOOL true
+            ;;
+        --standalone-build)
+            append_cache_entry STANDALONE_BUILD BOOL true
             ;;
         --with-cppa-log-level=*)
             level=$(echo "$optarg" | tr '[:lower:]' '[:upper:]')
