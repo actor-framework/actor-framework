@@ -128,16 +128,16 @@ class invoke_policy {
         CPPA_CRITICAL("handle_timeout(partial_function&)");
     }
 
-    enum filter_result {
-        normal_exit_signal,       // an exit message with normal exit reason
-        non_normal_exit_signal,   // an exit message with abnormal exit reason
-        expired_timeout_message,  // an 'old & obsolete' timeout
-        inactive_timeout_message, // a currently inactive timeout
-        expired_sync_response,    // a sync response that already timed out
-        timeout_message,          // triggers currently active timeout
-        timeout_response_message, // triggers timeout of a sync message
-        ordinary_message,         // an asynchronous message or sync. request
-        sync_response             // a synchronous response
+    enum class msg_type {
+        normal_exit,            // an exit message with normal exit reason
+        non_normal_exit,        // an exit message with abnormal exit reason
+        expired_timeout,        // an 'old & obsolete' timeout
+        inactive_timeout,       // a currently inactive timeout
+        expired_sync_response,  // a sync response that already timed out
+        timeout,                // triggers currently active timeout
+        timeout_response,       // triggers timeout of a sync message
+        ordinary,               // an asynchronous message or sync. request
+        sync_response           // a synchronous response
     };
 
 
@@ -146,7 +146,7 @@ class invoke_policy {
     // - expired synchronous response messages
 
     template<class Actor>
-    filter_result filter_msg(Actor* self, mailbox_element* node) {
+    msg_type filter_msg(Actor* self, mailbox_element* node) {
         const any_tuple& msg = node->msg;
         auto mid = node->mid;
         auto& arr = detail::static_types_array<exit_msg,
@@ -159,28 +159,28 @@ class invoke_policy {
                 if (self->trap_exit() == false) {
                     if (em.reason != exit_reason::normal) {
                         self->quit(em.reason);
-                        return non_normal_exit_signal;
+                        return msg_type::non_normal_exit;
                     }
-                    return normal_exit_signal;
+                    return msg_type::normal_exit;
                 }
             }
             else if (msg.type_at(0) == arr[1]) {
                 auto& tm = msg.get_as<timeout_msg>(0);
                 auto tid = tm.timeout_id;
                 CPPA_REQUIRE(!mid.valid());
-                if (self->is_active_timeout(tid)) return timeout_message;
-                return self->waits_for_timeout(tid) ? inactive_timeout_message
-                                                    : expired_timeout_message;
+                if (self->is_active_timeout(tid)) return msg_type::timeout;
+                return self->waits_for_timeout(tid) ? msg_type::inactive_timeout
+                                                    : msg_type::expired_timeout;
             }
             else if (msg.type_at(0) == arr[2] && mid.is_response()) {
-                return timeout_response_message;
+                return msg_type::timeout_response;
             }
         }
         if (mid.is_response()) {
-            return (self->awaits(mid)) ? sync_response
-                                       : expired_sync_response;
+            return (self->awaits(mid)) ? msg_type::sync_response
+                                       : msg_type::expired_sync_response;
         }
-        return ordinary_message;
+        return msg_type::ordinary;
     }
 
  public:
@@ -292,29 +292,29 @@ class invoke_policy {
             return hm_skip_msg;
         }
         switch (this->filter_msg(self, node)) {
-            case normal_exit_signal: {
+            case msg_type::normal_exit: {
                 CPPA_LOG_DEBUG("dropped normal exit signal");
                 return hm_drop_msg;
             }
-            case expired_sync_response: {
+            case msg_type::expired_sync_response: {
                 CPPA_LOG_DEBUG("dropped expired sync response");
                 return hm_drop_msg;
             }
-            case expired_timeout_message: {
+            case msg_type::expired_timeout: {
                 CPPA_LOG_DEBUG("dropped expired timeout message");
                 return hm_drop_msg;
             }
-            case inactive_timeout_message: {
+            case msg_type::inactive_timeout: {
                 CPPA_LOG_DEBUG("skipped inactive timeout message");
                 return hm_skip_msg;
             }
-            case non_normal_exit_signal: {
+            case msg_type::non_normal_exit: {
                 CPPA_LOG_DEBUG("handled non-normal exit signal");
                 // this message was handled
                 // by calling self->quit(...)
                 return hm_msg_handled;
             }
-            case timeout_message: {
+            case msg_type::timeout: {
                 CPPA_LOG_DEBUG("handle timeout message");
                 auto& tm = node->msg.get_as<timeout_msg>(0);
                 self->handle_timeout(fun, tm.timeout_id);
@@ -324,11 +324,11 @@ class invoke_policy {
                 }
                 return hm_msg_handled;
             }
-            case timeout_response_message: {
+            case msg_type::timeout_response: {
                 handle_sync_failure_on_mismatch = false;
                 CPPA_ANNOTATE_FALLTHROUGH;
             }
-            case sync_response: {
+            case msg_type::sync_response: {
                 CPPA_LOG_DEBUG("handle as synchronous response: "
                                << CPPA_TARG(node->msg, to_string) << ", "
                                << CPPA_MARG(node->mid, integer_value) << ", "
@@ -351,7 +351,7 @@ class invoke_policy {
                 }
                 return hm_cache_msg;
             }
-            case ordinary_message: {
+            case msg_type::ordinary: {
                 if (!awaited_response.valid()) {
                     auto previous_node = dptr()->hm_begin(self, node);
                     auto res = invoke_fun(self,
