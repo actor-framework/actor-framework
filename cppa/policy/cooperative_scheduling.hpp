@@ -101,8 +101,8 @@ class cooperative_scheduling {
             case intrusive::first_enqueued: {
                 auto state = self->state();
                 auto set_ready = [&]() -> bool {
-                    auto s = self->cas_state(state, actor_state::ready);
-                    return s == actor_state::ready;
+                    state = self->cas_state(state, actor_state::ready);
+                    return state == actor_state::ready;
                 };
                 for (;;) {
                     switch (state) {
