@@ -42,7 +42,7 @@ namespace cppa { namespace intrusive {
 enum enqueue_result { enqueued, first_enqueued, queue_closed };
 
 /**
- * @brief An intrusive, thread safe queue implementation.
+ * @brief An intrusive, thread-safe queue implementation.
  * @note For implementation details see
  *       http://libcppa.blogspot.com/2011/04/mailbox-part-1.html
  */

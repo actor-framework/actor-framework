@@ -105,7 +105,16 @@ class context_switching_resume {
                                 // wait until someone re-schedules that actor
                                 return resumable::resume_later;
                             }
-                            default: { CPPA_CRITICAL("illegal yield result"); }
+                            case actor_state::about_to_block:
+                                CPPA_CRITICAL("attempt to set state from "
+                                              "about_to_block to blocked "
+                                              "failed: state is still set "
+                                              "to about_to_block");
+                            case actor_state::done:
+                                CPPA_CRITICAL("attempt to set state from "
+                                              "about_to_block to blocked "
+                                              "failed: state is set "
+                                              "to done");
                         }
                         break;
                     }

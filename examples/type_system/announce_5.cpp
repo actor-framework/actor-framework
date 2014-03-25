@@ -20,6 +20,8 @@ using std::endl;
 
 using namespace cppa;
 
+namespace {
+
 // a node containing an integer and a vector of children
 struct tree_node {
     std::uint32_t value;
@@ -163,6 +165,8 @@ void testee(event_based_actor* self, size_t remaining) {
         }
     );
 }
+
+} // namespace <anonymous>
 
 int main() {
     // the tree_type_info is owned by libcppa after this function call

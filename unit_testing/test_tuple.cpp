@@ -36,7 +36,22 @@ using namespace cppa;
 using namespace cppa::detail;
 using namespace cppa::placeholders;
 
-namespace { std::atomic<size_t> s_expensive_copies; }
+
+#define CPPA_CHECK_INVOKED(FunName, Args)                                      \
+    invoked.clear();                                                           \
+    if ( !( FunName Args ) || invoked != #FunName ) {                          \
+        CPPA_FAILURE("invocation of " #FunName " failed");                     \
+    } else { CPPA_CHECKPOINT(); } static_cast<void>(42)
+
+#define CPPA_CHECK_NOT_INVOKED(FunName, Args)                                  \
+    invoked.clear();                                                           \
+    if ( FunName Args || invoked == #FunName ) {                               \
+        CPPA_FAILURE(#FunName " erroneously invoked");                         \
+    } else { CPPA_CHECKPOINT(); } static_cast<void>(42)
+
+namespace {
+
+std::atomic<size_t> s_expensive_copies;
 
 struct expensive_copy_struct {
 
@@ -57,11 +72,6 @@ inline bool operator==(const expensive_copy_struct& lhs,
     return lhs.value == rhs.value;
 }
 
-inline bool operator!=(const expensive_copy_struct& lhs,
-                       const expensive_copy_struct& rhs) {
-    return !(lhs == rhs);
-}
-
 std::string int2str(int i) {
     return std::to_string(i);
 }
@@ -74,18 +84,6 @@ optional<int> str2int(const std::string& str) {
     }
     return none;
 }
-
-#define CPPA_CHECK_INVOKED(FunName, Args)                                      \
-    invoked.clear();                                                           \
-    if ( !( FunName Args ) || invoked != #FunName ) {                          \
-        CPPA_FAILURE("invocation of " #FunName " failed");                     \
-    } else { CPPA_CHECKPOINT(); } static_cast<void>(42)
-
-#define CPPA_CHECK_NOT_INVOKED(FunName, Args)                                  \
-    invoked.clear();                                                           \
-    if ( FunName Args || invoked == #FunName ) {                               \
-        CPPA_FAILURE(#FunName " erroneously invoked");                         \
-    } else { CPPA_CHECKPOINT(); } static_cast<void>(42)
 
 struct dummy_receiver : event_based_actor {
     behavior make_behavior() override {
@@ -455,12 +453,15 @@ void check_drop() {
     CPPA_CHECK(t0.take(0).empty());
 }
 
+} // namespace <anonymous>
+
 int main() {
     CPPA_TEST(test_tuple);
     announce<expensive_copy_struct>(&expensive_copy_struct::value);
     check_type_list();
     check_default_ctors();
     check_guards();
+    check_many_cases();
     check_wildcards();
     check_move_ops();
     check_drop();

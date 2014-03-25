@@ -184,8 +184,6 @@ namespace {
 // base class for cs_thread pimpls
 struct cst_impl {
 
-    cst_impl() : m_ctx() { }
-
     virtual ~cst_impl();
 
     virtual void run() = 0;
@@ -198,13 +196,12 @@ struct cst_impl {
 
 };
 
-// avoid weak-vtables warning by providing dtor out-of-line
 cst_impl::~cst_impl() { }
+
+namespace {
 
 // a cs_thread representing a thread ('converts' the thread to a cs_thread)
 struct converted_cs_thread : cst_impl {
-
-    ~converted_cs_thread();
 
     converted_cs_thread() {
         init_converted_context(m_converted, m_ctx);
@@ -218,9 +215,6 @@ struct converted_cs_thread : cst_impl {
 
 };
 
-// avoid weak-vtables warning by providing dtor out-of-line
-converted_cs_thread::~converted_cs_thread() { }
-
 // a cs_thread executing a function
 struct fun_cs_thread : cst_impl {
 
@@ -228,7 +222,9 @@ struct fun_cs_thread : cst_impl {
         m_stack_info = new_stack(m_ctx, m_alloc, m_vgm);
     }
 
-    ~fun_cs_thread();
+    ~fun_cs_thread() {
+        del_stack(m_alloc, m_stack_info, m_vgm);
+    }
 
     void run() override {
         m_fun(m_arg);
@@ -242,10 +238,7 @@ struct fun_cs_thread : cst_impl {
 
 };
 
-// avoid weak-vtables warning by providing dtor out-of-line
-fun_cs_thread::~fun_cs_thread() {
-    del_stack(m_alloc, m_stack_info, m_vgm);
-}
+} // namespace <anonymous>
 
 void cst_trampoline(intptr_t iptr) {
     auto ptr = (cst_impl*) iptr;

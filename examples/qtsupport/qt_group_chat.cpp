@@ -29,6 +29,9 @@ using namespace std;
 using namespace cppa;
 using namespace cppa::placeholders;
 
+/*
+namespace {
+
 struct line { string str; };
 
 istream& operator>>(istream& is, line& l) {
@@ -48,6 +51,9 @@ any_tuple split_line(const line& l) {
     s_last_line = any_tuple::view(std::move(result));
     return s_last_line;
 }
+
+} // namespace <anonymous>
+*/
 
 int main(int argc, char** argv) {
 
@@ -97,7 +103,8 @@ int main(int argc, char** argv) {
         send_as(client, client, atom("join"), gptr);
     }
     mw.show();
-    return app.exec();
+    auto res = app.exec();
     shutdown();
-    return 0;
+    await_all_actors_done();
+    return res;
 }

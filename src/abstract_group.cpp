@@ -70,6 +70,7 @@ const std::string& abstract_group::module_name() const {
     return get_module()->name();
 }
 
+namespace {
 struct group_nameserver : event_based_actor {
     behavior make_behavior() override {
         return (
@@ -81,11 +82,8 @@ struct group_nameserver : event_based_actor {
             }
         );
     }
-    ~group_nameserver();
 };
-
-// avoid weak-vtables warning by providing dtor out-of-line
-group_nameserver::~group_nameserver() { }
+} // namespace <anonymous>
 
 void publish_local_groups(std::uint16_t port, const char* addr) {
     auto gn = spawn<group_nameserver, hidden>();

@@ -35,6 +35,8 @@
 using namespace std;
 using namespace cppa;
 
+namespace {
+
 /******************************************************************************
  *                        simple request/response test                        *
  ******************************************************************************/
@@ -311,6 +313,8 @@ void test_sending_typed_actors() {
     );
     self->send_exit(aut, exit_reason::user_shutdown);
 }
+
+} // namespace <anonymous>
 
 /******************************************************************************
  *                            put it all together                             *

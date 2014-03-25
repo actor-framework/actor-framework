@@ -28,73 +28,12 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_ACTOR_WIDGET_MIXIN_HPP
-#define CPPA_ACTOR_WIDGET_MIXIN_HPP
-
-#include <QEvent>
-#include <QApplication>
-
-#include "cppa/actor_companion.hpp"
-#include "cppa/partial_function.hpp"
-
-#include "cppa/policy/sequential_invoke.hpp"
+#include "cppa/io/default_message_queue.hpp"
 
 namespace cppa {
+namespace io {
 
-template<typename Base, int EventId = static_cast<int>(QEvent::User + 31337)>
-class actor_widget_mixin : public Base {
+default_message_queue::~default_message_queue() { }
 
- public:
-
-    typedef typename actor_companion::message_pointer message_pointer;
-
-    struct event_type : public QEvent {
-
-        message_pointer mptr;
-
-        event_type(message_pointer ptr)
-        : QEvent(static_cast<QEvent::Type>(EventId)), mptr(std::move(ptr)) { }
-
-    };
-
-    template<typename... Ts>
-    actor_widget_mixin(Ts&&... args) : Base(std::forward<Ts>(args)...) {
-        m_companion.reset(detail::memory::create<actor_companion>());
-        m_companion->on_enqueue([=](message_pointer ptr) {
-            qApp->postEvent(this, new event_type(std::move(ptr)));
-        });
-    }
-
-    template<typename T>
-    void set_message_handler(T pfun) {
-        m_companion->become(pfun(m_companion.get()));
-    }
-
-    virtual bool event(QEvent* event) {
-        if (event->type() == static_cast<QEvent::Type>(EventId)) {
-            auto ptr = dynamic_cast<event_type*>(event);
-            if (ptr) {
-                m_invoke.handle_message(m_companion.get(),
-                                        ptr->mptr.release(),
-                                        m_companion->bhvr_stack().back(),
-                                        m_companion->bhvr_stack().back_id());
-                return true;
-            }
-        }
-        return Base::event(event);
-    }
-
-    actor as_actor() const {
-        return m_companion;
-    }
-
- private:
-
-    policy::sequential_invoke m_invoke;
-    actor_companion_ptr m_companion;
-
-};
-
+} // namespace io
 } // namespace cppa
-
-#endif // CPPA_ACTOR_WIDGET_MIXIN_HPP

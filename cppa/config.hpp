@@ -68,6 +68,7 @@
 #  define CPPA_PUSH_WARNINGS                                                   \
         _Pragma("clang diagnostic push")                                       \
         _Pragma("clang diagnostic ignored \"-Wall\"")                          \
+        _Pragma("clang diagnostic ignored \"-Wextra\"")                        \
         _Pragma("clang diagnostic ignored \"-Werror\"")                        \
         _Pragma("clang diagnostic ignored \"-Wdeprecated\"")                   \
         _Pragma("clang diagnostic ignored \"-Wdisabled-macro-expansion\"")     \
@@ -75,6 +76,10 @@
         _Pragma("clang diagnostic ignored \"-Wdocumentation\"")                \
         _Pragma("clang diagnostic ignored \"-Wweak-vtables\"")                 \
         _Pragma("clang diagnostic ignored \"-Wunused-parameter\"")             \
+        _Pragma("clang diagnostic ignored \"-Wswitch-enum\"")                  \
+        _Pragma("clang diagnostic ignored \"-Wshadow\"")                       \
+        _Pragma("clang diagnostic ignored \"-Wconversion\"")                   \
+        _Pragma("clang diagnostic ignored \"-Wcast-align\"")                   \
         _Pragma("clang diagnostic ignored \"-Wundef\"")
 #  define CPPA_POP_WARNINGS                                                    \
         _Pragma("clang diagnostic pop")
@@ -138,8 +143,8 @@ using ::backtrace_symbols_fd;
         printf("%s:%u: requirement failed '%s'\n", file, line, stmt);          \
         {                                                                      \
             void* array[10];                                                   \
-            size_t size = ::cppa::detail::backtrace(array, 10);                \
-            ::cppa::detail::backtrace_symbols_fd(array, size, 2);              \
+            auto cppa_bt_size = ::cppa::detail::backtrace(array, 10);          \
+            ::cppa::detail::backtrace_symbols_fd(array, cppa_bt_size, 2);      \
         }                                                                      \
         abort()
 #   define CPPA_REQUIRE(stmt)                                                  \

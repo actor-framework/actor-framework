@@ -52,7 +52,7 @@ vector<string> split(const string& str, char delim, bool keep_empties) {
     return result;
 }
 
-void verbose_terminate() {
+void verbose_terminate [[noreturn]] () {
     try { throw; }
     catch (exception& e) {
         CPPA_PRINTERR("terminate called after throwing "

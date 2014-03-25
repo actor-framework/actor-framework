@@ -168,7 +168,8 @@ void test_gref() {
         on<anything>() >> [] { return 2; }
     );
     any_tuple expr19_tup = make_cow_tuple("hello guard!");
-    CPPA_CHECK_EQUAL(expr19(expr19_tup), 2);
+    auto res19 = expr19(expr19_tup);
+    CPPA_CHECK(res19.is<int>() && get<int>(res19) == 2);
     partial_function expr20 = expr19;
     enable_case1 = false;
     CPPA_CHECK(expr20(expr19_tup) == make_any_tuple(1));
@@ -219,7 +220,7 @@ void test_match_function() {
             return "C";
         }
     );
-    CPPA_CHECK_EQUAL(res5, "C");
+    CPPA_CHECK_EQUAL(get<string>(res5), "C");
 }
 
 void test_match_each() {
@@ -341,7 +342,7 @@ void test_pattern_matching() {
             return f;
         }
     );
-    CPPA_CHECK(res && res.is<float>() && get<float>(res) == 4.2f);
+    CPPA_CHECK(res && res.is<float>() && util::safe_equal(get<float>(res), 4.2f));
     auto res2 = match(make_any_tuple(23, 4.2f)) (
         on(42, arg_match) >> [](double d) {
             return d;

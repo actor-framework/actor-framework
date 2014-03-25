@@ -74,9 +74,17 @@
 // libcppa
 #include "cppa/cppa.hpp"
 
+// disable some clang warnings here caused by CURL and srand(time(nullptr))
+#ifdef __clang__
+#   pragma clang diagnostic ignored "-Wshorten-64-to-32"
+#   pragma clang diagnostic ignored "-Wdisabled-macro-expansion"
+#endif // __clang__
+
 using namespace cppa;
 
-namespace color { namespace {
+namespace {
+
+namespace color {
 
 // UNIX terminal color codes
 constexpr char reset[]        = "\033[0m";
@@ -98,9 +106,7 @@ constexpr char bold_magenta[] = "\033[1m\033[35m";
 constexpr char bold_cyan[]    = "\033[1m\033[36m";
 constexpr char bold_white[]   = "\033[1m\033[37m";
 
-} } // namespace color::<anonymous>
-
-namespace {
+} // namespace color
 
 // number of HTTP workers
 constexpr size_t num_curl_workers = 10;
@@ -108,8 +114,6 @@ constexpr size_t num_curl_workers = 10;
 // delay between HTTP requests
 constexpr int min_req_interval =  10;
 constexpr int max_req_interval = 300;
-
-} // namespace <anonymous>
 
 // provides print utility and each base_actor has a parent
 class base_actor : public event_based_actor {
@@ -369,7 +373,9 @@ class curl_master : public base_actor {
 };
 
 // signal handling for ctrl+c
-namespace { std::atomic<bool> shutdown_flag{false}; }
+std::atomic<bool> shutdown_flag{false};
+
+} // namespace <anonymous>
 
 int main() {
     // random number setup

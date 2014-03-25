@@ -16,6 +16,8 @@ using std::chrono::seconds;
 using namespace std;
 using namespace cppa;
 
+namespace {
+
 // either taken by a philosopher or available
 void chopstick(event_based_actor* self) {
     self->become(
@@ -185,6 +187,8 @@ void dining_philosophers() {
         spawn<philosopher>(names[i], chopsticks[i], chopsticks[(i+1)%5]);
     }
 }
+
+} // namespace <anonymous>
 
 int main(int, char**) {
     dining_philosophers();

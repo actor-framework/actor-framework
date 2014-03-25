@@ -38,6 +38,7 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --with-opencl               build libcppa with OpenCL support
     --without-memory-management build libcppa without memory management
     --standalone-build          build libcppa without Boost or other dependencies
+    --more-clang-warnings       enables most of Clang's warning flags
 
   Installation Directories:
     --prefix=PREFIX             installation directory [/usr/local]
@@ -190,6 +191,9 @@ while [ $# -ne 0 ]; do
             ;;
         --standalone-build)
             append_cache_entry STANDALONE_BUILD BOOL true
+            ;;
+        --more-clang-warnings)
+            append_cache_entry MORE_CLANG_WARNINGS BOOL true
             ;;
         --with-cppa-log-level=*)
             level=$(echo "$optarg" | tr '[:lower:]' '[:upper:]')

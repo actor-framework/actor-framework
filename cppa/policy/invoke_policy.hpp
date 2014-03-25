@@ -371,6 +371,8 @@ class invoke_policy {
                 return hm_cache_msg;
             }
         }
+        // should be unreachable
+        CPPA_CRITICAL("invalid message type");
     }
 
     Derived* dptr() {

@@ -33,6 +33,7 @@
 
 #include "cppa/get.hpp"
 
+#include "cppa/util/algorithm.hpp"
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/type_traits.hpp"
 
@@ -47,7 +48,7 @@ do_get(const Tuple<Ts...>& t) {
 template<size_t N, typename LhsTuple, typename RhsTuple>
 struct cmp_helper {
     inline static bool cmp(const LhsTuple& lhs, const RhsTuple& rhs) {
-        return    do_get<N>(lhs) == do_get<N>(rhs)
+        return    util::safe_equal(do_get<N>(lhs), do_get<N>(rhs))
                && cmp_helper<N-1, LhsTuple, RhsTuple>::cmp(lhs, rhs);
     }
 };

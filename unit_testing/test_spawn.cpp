@@ -11,6 +11,8 @@
 using namespace std;
 using namespace cppa;
 
+namespace {
+
 class event_testee : public sb_actor<event_testee> {
 
     friend class sb_actor<event_testee>;
@@ -58,7 +60,7 @@ class event_testee : public sb_actor<event_testee> {
 actor spawn_event_testee2(actor parent) {
     struct impl : event_based_actor {
         actor parent;
-        impl(actor parent) : parent(parent) { }
+        impl(actor parent_actor) : parent(parent_actor) { }
         behavior wait4timeout(int remaining) {
             CPPA_LOG_TRACE(CPPA_ARG(remaining));
             return {
@@ -328,7 +330,7 @@ struct master : event_based_actor {
 
 struct slave : event_based_actor {
 
-    slave(actor master) : master{master} { }
+    slave(actor master_actor) : master{master_actor} { }
 
     behavior make_behavior() override {
         link_to(master);
@@ -477,7 +479,6 @@ void test_continuation() {
 }
 
 void test_simple_reply_response() {
-    scoped_actor self;
     auto s = spawn([](event_based_actor* self) -> behavior {
         return (
             others() >> [=]() -> any_tuple {
@@ -487,6 +488,7 @@ void test_simple_reply_response() {
             }
         );
     });
+    scoped_actor self;
     self->send(s, atom("hello"));
     self->receive(
         others() >> [&] {
@@ -630,7 +632,7 @@ void test_spawn() {
     self->await_all_other_actors_done();
     CPPA_CHECKPOINT();
 
-    auto st = spawn<fixed_stack>(10);
+    auto st = spawn<fixed_stack>(size_t{10});
     // push 20 values
     for (int i = 0; i < 20; ++i) self->send(st, atom("push"), i);
     // pop 20 times
@@ -660,8 +662,8 @@ void test_spawn() {
     self->await_all_other_actors_done();
     CPPA_CHECKPOINT();
 
-    auto sync_testee1 = spawn<blocking_api>([](blocking_actor* self) {
-        self->receive (
+    auto sync_testee1 = spawn<blocking_api>([](blocking_actor* s) {
+        s->receive (
             on(atom("get")) >> [] {
                 return make_cow_tuple(42, 2);
             }
@@ -701,12 +703,12 @@ void test_spawn() {
     CPPA_PRINT("test sync send");
 
     CPPA_CHECKPOINT();
-    auto sync_testee = spawn<blocking_api>([](blocking_actor* self) {
-        self->receive (
+    auto sync_testee = spawn<blocking_api>([](blocking_actor* s) {
+        s->receive (
             on("hi", arg_match) >> [&](actor from) {
-                self->sync_send(from, "whassup?", self).await(
+                s->sync_send(from, "whassup?", s).await(
                     on_arg_match >> [&](const string& str) -> string {
-                        CPPA_CHECK(self->last_sender() != nullptr);
+                        CPPA_CHECK(s->last_sender() != nullptr);
                         CPPA_CHECK_EQUAL(str, "nothing");
                         return "goodbye!";
                     },
@@ -750,15 +752,15 @@ void test_spawn() {
 
     CPPA_CHECKPOINT();
 
-    auto inflater = [](event_based_actor* self, const string& name, actor buddy) {
-        CPPA_LOGF_TRACE(CPPA_ARG(self) << ", " << CPPA_ARG(name)
+    auto inflater = [](event_based_actor* s, const string& name, actor buddy) {
+        CPPA_LOGF_TRACE(CPPA_ARG(s) << ", " << CPPA_ARG(name)
                         << ", " << CPPA_TARG(buddy, to_string));
-        self->become(
-            on_arg_match >> [=](int n, const string& s) {
-                self->send(buddy, n * 2, s + " from " + name);
+        s->become(
+            on_arg_match >> [=](int n, const string& str) {
+                s->send(buddy, n * 2, str + " from " + name);
             },
             on(atom("done")) >> [=] {
-                self->quit();
+                s->quit();
             }
         );
     };
@@ -781,15 +783,15 @@ void test_spawn() {
     // - the lambda is always executed in the current actor's thread
     // but using spawn_next in a message handler could
     // still cause undefined behavior!
-    auto kr34t0r = [&spawn_next](event_based_actor* self, const string& name, actor pal) {
+    auto kr34t0r = [&spawn_next](event_based_actor* s, const string& name, actor pal) {
         if (name == "Joe" && !pal) {
-            pal = spawn_next("Bob", self);
+            pal = spawn_next("Bob", s);
         }
-        self->become (
+        s->become (
             others() >> [=] {
                 // forward message and die
-                self->send_tuple(pal, self->last_dequeued());
-                self->quit();
+                s->send_tuple(pal, s->last_dequeued());
+                s->quit();
             }
         );
     };
@@ -832,12 +834,12 @@ void test_spawn() {
 
     // create some actors linked to one single actor
     // and kill them all through killing the link
-    auto legion = spawn([](event_based_actor* self) {
+    auto legion = spawn([](event_based_actor* s) {
         CPPA_PRINT("spawn 100 actors");
         for (int i = 0; i < 100; ++i) {
-            self->spawn<event_testee, linked>();
+            s->spawn<event_testee, linked>();
         }
-        self->become(others() >> CPPA_UNEXPECTED_MSG_CB());
+        s->become(others() >> CPPA_UNEXPECTED_MSG_CB());
     });
     self->send_exit(legion, exit_reason::user_shutdown);
     self->await_all_other_actors_done();
@@ -915,6 +917,8 @@ void test_spawn() {
     );
     CPPA_CHECKPOINT();
 }
+
+} // namespace <anonymous>
 
 int main() {
     CPPA_TEST(test_spawn);

@@ -106,7 +106,7 @@ inline void cppa_check_value(const V1& v1,
                              size_t line,
                              bool expected = true,
                              typename enable_integral<false, V1, V2>::type* = 0) {
-    if ((v1 == v2) == expected) cppa_passed(fname, line);
+    if (cppa::util::safe_equal(v1, v2) == expected) cppa_passed(fname, line);
     else cppa_failed(v1, v2, fname, line);
 }
 

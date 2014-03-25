@@ -10,6 +10,8 @@
 using std::endl;
 using namespace cppa;
 
+namespace {
+
 struct shutdown_request { };
 struct plus_request { int a; int b; };
 struct minus_request { int a; int b; };
@@ -76,6 +78,8 @@ void tester(event_based_actor* self, const calculator_type& testee) {
         }
     );
 }
+
+} // namespace <anonymous>
 
 int main() {
     // announce custom message types

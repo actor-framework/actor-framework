@@ -430,18 +430,24 @@ void middleman_loop(middleman_impl* impl) {
         handler->poll([&](event_bitmask mask, continuable* io) {
             switch (mask) {
                 default: CPPA_CRITICAL("invalid event");
-                case event::none: break;
+                case event::none:
+                    // should not happen
+                    CPPA_LOGF_WARNING("polled an event::none event");
+                    break;
                 case event::both:
-                case event::write: {
+                case event::write:
                     CPPA_LOGF_DEBUG("handle event::write for " << io);
                     switch (io->continue_writing()) {
                         case continue_writing_result::failure:
                             io->io_failed(event::write);
-                            CPPA_ANNOTATE_FALLTHROUGH;
+                            impl->stop_writer(io);
+                            CPPA_LOGF_DEBUG("writer removed because "
+                                            "of an error");
+                            break;
                         case continue_writing_result::closed:
                             impl->stop_writer(io);
                             CPPA_LOGF_DEBUG("writer removed because "
-                                            "of error write_closed or ");
+                                            "connection has been closed");
                             break;
                         case continue_writing_result::done:
                             impl->stop_writer(io);
@@ -454,16 +460,19 @@ void middleman_loop(middleman_impl* impl) {
                     // else: fall through
                     CPPA_LOGF_DEBUG("handle event::both; fall through");
                     CPPA_ANNOTATE_FALLTHROUGH;
-                }
                 case event::read: {
                     CPPA_LOGF_DEBUG("handle event::read for " << io);
                     switch (io->continue_reading()) {
                         case continue_reading_result::failure:
                             io->io_failed(event::read);
-                            CPPA_ANNOTATE_FALLTHROUGH;
+                            impl->stop_reader(io);
+                            CPPA_LOGF_DEBUG("peer removed because a "
+                                            "read error has occured");
+                            break;
                         case continue_reading_result::closed:
                             impl->stop_reader(io);
-                            CPPA_LOGF_DEBUG("remove peer");
+                            CPPA_LOGF_DEBUG("peer removed because "
+                                            "connection has been closed");
                             break;
                         case continue_reading_result::continue_later:
                             // nothing to do

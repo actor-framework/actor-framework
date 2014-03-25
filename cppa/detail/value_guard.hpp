@@ -34,6 +34,8 @@
 #include <type_traits>
 
 #include "cppa/unit.hpp"
+
+#include "cppa/util/algorithm.hpp"
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/type_traits.hpp"
 
@@ -60,7 +62,7 @@ template<typename T>
 struct vg_cmp {
     template<typename U>
     inline static bool _(const T& lhs, const U& rhs) {
-        return lhs == rhs;
+        return util::safe_equal(lhs, rhs);
     }
 };
 

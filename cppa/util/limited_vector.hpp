@@ -108,7 +108,9 @@ class limited_vector {
     void assign(InputIterator first, InputIterator last,
                 // dummy SFINAE argument
                 typename std::iterator_traits<InputIterator>::pointer = 0) {
-        resize(std::distance(first, last));
+        auto dist = std::distance(first, last);
+        CPPA_REQUIRE(dist >= 0);
+        resize(static_cast<size_t>(dist));
         std::copy(first, last, begin());
     }
 
@@ -247,7 +249,8 @@ class limited_vector {
      */
     template<class InputIterator>
     inline void insert(iterator pos, InputIterator first, InputIterator last) {
-        auto num_elements = std::distance(first, last);
+        CPPA_REQUIRE(first <= last);
+        auto num_elements = static_cast<size_t>(std::distance(first, last));
         if ((size() + num_elements) > MaxSize) {
             throw std::length_error("limited_vector::insert: too much elements");
         }

@@ -137,8 +137,6 @@ void spawn5_client(event_based_actor* self) {
     );
 }
 
-} // namespace <anonymous>
-
 template<typename F>
 void await_down(event_based_actor* self, actor ptr, F continuation) {
     self->become (
@@ -323,6 +321,8 @@ class server : public event_based_actor {
     }
 
 };
+
+} // namespace <anonymous>
 
 int main(int argc, char** argv) {
     announce<actor_vector>();

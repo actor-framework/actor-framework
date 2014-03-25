@@ -269,6 +269,7 @@ src/continuable.cpp
 src/continue_helper.cpp
 src/cs_thread.cpp
 src/decorated_tuple.cpp
+src/default_message_queue.cpp
 src/demangle.cpp
 src/deserializer.cpp
 src/duration.cpp

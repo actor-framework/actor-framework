@@ -42,6 +42,7 @@
 #include "cppa/optional.hpp"
 
 #include "cppa/util/call.hpp"
+#include "cppa/util/algorithm.hpp"
 #include "cppa/util/type_traits.hpp"
 #include "cppa/util/rebindable_reference.hpp"
 
@@ -101,13 +102,15 @@ struct guard_expr {
 
 };
 
-#define CPPA_FORALL_OPS(SubMacro)                                              \
+/*
+ * @brief Invokes SubMacro for "+", "-", "*", "/", "%", "<", "<=", ">" and ">=".
+ **/
+#define CPPA_FORALL_DEFAULT_OPS(SubMacro)                                      \
     SubMacro (addition_op, +)         SubMacro (subtraction_op, -)             \
     SubMacro (multiplication_op, *)   SubMacro (division_op, /)                \
     SubMacro (modulo_op, %)           SubMacro (less_op, <)                    \
     SubMacro (less_eq_op, <=)         SubMacro (greater_op, >)                 \
-    SubMacro (greater_eq_op, >=)      SubMacro (equal_op, ==)                  \
-    SubMacro (not_equal_op, !=)
+    SubMacro (greater_eq_op, >=)
 
 /**
  * @brief Creates a reference wrapper similar to std::reference_wrapper<const T>
@@ -418,7 +421,9 @@ ge_concatenate(T1 first, T2 second,
         return ge_concatenate< EnumValue >(v1, v2);                            \
     }
 
-CPPA_FORALL_OPS(CPPA_GE_OPERATOR)
+CPPA_FORALL_DEFAULT_OPS(CPPA_GE_OPERATOR)
+CPPA_GE_OPERATOR(equal_op, ==)
+CPPA_GE_OPERATOR(not_equal_op, !=)
 
 template<operator_id OP>
 struct ge_eval_op;
@@ -430,9 +435,24 @@ struct ge_eval_op;
         -> decltype(lhs Operator rhs) { return lhs Operator rhs; }             \
     };
 
-CPPA_FORALL_OPS(CPPA_EVAL_OP_IMPL)
+CPPA_FORALL_DEFAULT_OPS(CPPA_EVAL_OP_IMPL)
+
 CPPA_EVAL_OP_IMPL(logical_and_op, &&)
 CPPA_EVAL_OP_IMPL(logical_or_op, ||)
+
+template<> struct ge_eval_op<equal_op> {
+    template<typename T1, typename T2>
+    static inline bool _(const T1& lhs, const T2& rhs) {
+        return util::safe_equal(lhs, rhs);
+    }
+};
+
+template<> struct ge_eval_op<not_equal_op> {
+    template<typename T1, typename T2>
+    static inline bool _(const T1& lhs, const T2& rhs) {
+        return !util::safe_equal(lhs, rhs);
+    }
+};
 
 template<typename T, class Tuple>
 struct ge_result_ {

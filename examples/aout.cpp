@@ -11,7 +11,7 @@ using namespace cppa;
 using std::endl;
 
 int main() {
-    std::srand(std::time(0));
+    std::srand(static_cast<unsigned>(std::time(0)));
     for (int i = 1; i <= 50; ++i) {
         spawn<blocking_api>([i](blocking_actor* self) {
           aout(self) << "Hi there! This is actor nr. "

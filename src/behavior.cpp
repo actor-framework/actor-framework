@@ -33,6 +33,7 @@
 
 namespace cppa {
 
+namespace {
 class continuation_decorator : public detail::behavior_impl {
 
     typedef behavior_impl super;
@@ -42,8 +43,6 @@ class continuation_decorator : public detail::behavior_impl {
     typedef behavior::continuation_fun continuation_fun;
 
     typedef typename behavior_impl::pointer pointer;
-
-    ~continuation_decorator();
 
     continuation_decorator(continuation_fun fun, pointer ptr)
     : super(ptr->timeout()), m_fun(fun), m_decorated(std::move(ptr)) {
@@ -81,9 +80,7 @@ class continuation_decorator : public detail::behavior_impl {
     pointer m_decorated;
 
 };
-
-// avoid weak-vtables warning by providing dtor out-of-line
-continuation_decorator::~continuation_decorator() { }
+} // namespace <anonymous>
 
 behavior::behavior(const partial_function& fun) : m_impl(fun.m_impl) { }
 

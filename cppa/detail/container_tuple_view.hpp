@@ -44,6 +44,8 @@ class container_tuple_view : public abstract_tuple {
 
     typedef abstract_tuple super;
 
+    typedef typename Container::difference_type difference_type;
+
  public:
 
     typedef typename Container::value_type value_type;
@@ -54,33 +56,35 @@ class container_tuple_view : public abstract_tuple {
         if (!take_ownership) m_ptr.get_deleter().disable();
     }
 
-    size_t size() const {
+    size_t size() const override {
         return m_ptr->size();
     }
 
-    abstract_tuple* copy() const {
+    abstract_tuple* copy() const override {
         return new container_tuple_view{new Container(*m_ptr), true};
     }
 
-    const void* at(size_t pos) const {
+    const void* at(size_t pos) const override {
         CPPA_REQUIRE(pos < size());
+        CPPA_REQUIRE(static_cast<difference_type>(pos) >= 0);
         auto i = m_ptr->cbegin();
-        std::advance(i, pos);
+        std::advance(i, static_cast<difference_type>(pos));
         return &(*i);
     }
 
-    void* mutable_at(size_t pos) {
+    void* mutable_at(size_t pos) override {
         CPPA_REQUIRE(pos < size());
+        CPPA_REQUIRE(static_cast<difference_type>(pos) >= 0);
         auto i = m_ptr->begin();
-        std::advance(i, pos);
+        std::advance(i, static_cast<difference_type>(pos));
         return &(*i);
     }
 
-    const uniform_type_info* type_at(size_t) const {
+    const uniform_type_info* type_at(size_t) const override {
         return static_types_array<value_type>::arr[0];
     }
 
-    const std::string* tuple_type_names() const {
+    const std::string* tuple_type_names() const override {
         static std::string result = demangle<value_type>();
         return &result;
     }

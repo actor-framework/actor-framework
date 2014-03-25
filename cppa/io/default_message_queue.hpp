@@ -31,6 +31,8 @@
 #ifndef CPPA_MESSAGE_QUEUE_HPP
 #define CPPA_MESSAGE_QUEUE_HPP
 
+#include <vector>
+
 #include "cppa/any_tuple.hpp"
 #include "cppa/ref_counted.hpp"
 #include "cppa/message_header.hpp"
@@ -44,6 +46,8 @@ class default_message_queue : public ref_counted {
     typedef std::pair<message_header, any_tuple> value_type;
 
     typedef value_type& reference;
+
+    ~default_message_queue();
 
     template<typename... Ts>
     void emplace(Ts&&... args) {

@@ -81,6 +81,8 @@ class blocking_single_reader_queue {
                 // actor no longer alive
                 return false;
         }
+        // should be unreachable
+        CPPA_CRITICAL("invalid result of enqueue()");
     }
 
     inline void clear() {

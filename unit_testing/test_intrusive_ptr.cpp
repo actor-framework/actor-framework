@@ -12,8 +12,6 @@ namespace {
 int class0_instances = 0;
 int class1_instances = 0;
 
-}
-
 struct class0 : ref_counted {
     class0() { ++class0_instances; }
 
@@ -40,6 +38,8 @@ class0* get_test_rc() {
 class0_ptr get_test_ptr() {
     return get_test_rc();
 }
+
+} // namespace <anonymous>
 
 int main() {
     // this test dosn't test thread-safety of intrusive_ptr

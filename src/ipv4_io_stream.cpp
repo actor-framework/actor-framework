@@ -151,7 +151,9 @@ io::stream_ptr ipv4_io_stream::connect_to(const char* host,
     }
     memset(&serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
-    memmove(&serv_addr.sin_addr.s_addr, server->h_addr, server->h_length);
+    memmove(&serv_addr.sin_addr.s_addr,
+            server->h_addr,
+            static_cast<size_t>(server->h_length));
     serv_addr.sin_port = htons(port);
     CPPA_LOGF_DEBUG("call connect()");
     if (connect(fd, (const sockaddr*) &serv_addr, sizeof(serv_addr)) != 0) {

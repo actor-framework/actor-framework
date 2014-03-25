@@ -29,6 +29,7 @@
 
 
 #include <array>
+#include <limits>
 #include <string>
 #include <vector>
 #include <cstring>
@@ -452,7 +453,9 @@ class uti_base : public uniform_type_info {
     }
 
     bool equals(const void* lhs, const void* rhs) const override {
-        return deref(lhs) == deref(rhs);
+        //return util::safe_equal(deref(lhs), deref(rhs));
+        //return deref(lhs) == deref(rhs);
+        return eq(deref(lhs), deref(rhs));
     }
 
     void* new_instance(const void* ptr) const override {
@@ -476,6 +479,20 @@ class uti_base : public uniform_type_info {
     }
 
     const std::type_info* m_native;
+
+ private:
+
+    template<typename U>
+    typename std::enable_if<std::is_floating_point<U>::value, bool>::type
+    eq(const U& lhs, const U& rhs) const {
+        return util::safe_equal(lhs, rhs);
+    }
+
+    template<typename U>
+    typename std::enable_if<!std::is_floating_point<U>::value, bool>::type
+    eq(const U& lhs, const U& rhs) const {
+        return lhs ==  rhs;
+    }
 
 };
 
@@ -890,7 +907,7 @@ class utim_impl : public uniform_type_info_map {
             // insert after lower bound (vector is always sorted)
             auto new_pos = std::distance(m_user_types.begin(), i);
             m_user_types.insert(i, uti.release());
-            return m_user_types[new_pos];
+            return m_user_types[static_cast<size_t>(new_pos)];
         }
     }
 

@@ -34,6 +34,7 @@
 #include <string>
 #include <chrono>
 #include <cstdint>
+#include <stdexcept>
 
 namespace cppa { namespace util {
 

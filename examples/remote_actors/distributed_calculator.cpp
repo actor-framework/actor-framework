@@ -88,10 +88,10 @@ void client_bhvr(event_based_actor* self, const string& host, uint16_t port, con
             aout(self) << "*** server down, try to reconnect ..." << endl;
             client_bhvr(self, host, port, invalid_actor);
         },
-        on(atom("rebind"), arg_match) >> [=](const string& host, uint16_t port) {
+        on(atom("rebind"), arg_match) >> [=](const string& nhost, uint16_t nport) {
             aout(self) << "*** rebind to new server: "
-                       << host << ":" << port << endl;
-            client_bhvr(self, host, port, invalid_actor);
+                       << nhost << ":" << nport << endl;
+            client_bhvr(self, nhost, nport, invalid_actor);
         },
         on(atom("reconnect")) >> [=] {
             client_bhvr(self, host, port, invalid_actor);
@@ -120,18 +120,18 @@ void client_repl(const string& host, uint16_t port) {
         // the STL way of line.starts_with("connect")
         else if (equal(begin(connect), end(connect) - 1, begin(line))) {
             match_split(line, ' ') (
-                on("connect", arg_match) >> [&](string& host, string& sport) {
+                on("connect", arg_match) >> [&](string& nhost, string& sport) {
                     try {
                         auto lport = std::stoul(sport);
                         if (lport < std::numeric_limits<uint16_t>::max()) {
-                            auto port = static_cast<uint16_t>(lport);
-                            anon_send(client, atom("rebind"), move(host), port);
+                            anon_send(client, atom("rebind"), move(nhost),
+                                      static_cast<uint16_t>(lport));
                         }
                         else {
                             cout << lport << " is not a valid port" << endl;
                         }
                     }
-                    catch (std::exception& e) {
+                    catch (std::exception&) {
                         cout << "\"" << sport << "\" is not an unsigned integer"
                              << endl;
                     }

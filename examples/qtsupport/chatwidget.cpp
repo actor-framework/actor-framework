@@ -114,7 +114,6 @@ void ChatWidget::joinGroup() {
     }
     string mod = gname.left(pos).toUtf8().constData();
     string gid = gname.midRef(pos+1).toUtf8().constData();
-    group gptr;
     try {
         auto gptr = group::get(mod, gid);
         send_as(as_actor(), as_actor(), atom("join"), gptr);

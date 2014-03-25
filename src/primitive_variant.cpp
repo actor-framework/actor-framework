@@ -31,6 +31,9 @@
 #include <typeinfo>
 
 #include "cppa/primitive_variant.hpp"
+
+#include "cppa/util/algorithm.hpp"
+
 #include "cppa/detail/type_to_ptype.hpp"
 
 namespace cppa {
@@ -77,7 +80,8 @@ struct comparator {
     template<primitive_type PT>
     void operator()(util::pt_token<PT>) {
         if (rhs.ptype() == PT) {
-            result = (get<PT>(lhs) == get<PT>(rhs));
+            result = util::safe_equal(get<PT>(lhs), get<PT>(rhs));
+            //result = (get<PT>(lhs) == get<PT>(rhs));
         }
     }
 };

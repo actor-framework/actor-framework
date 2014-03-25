@@ -29,35 +29,6 @@ if ("${CMAKE_GENERATOR}" STREQUAL "Xcode")
   set(LIBRARY_OUTPUT_PATH "${EXECUTABLE_OUTPUT_PATH}")
 endif ()
 
-# check if the user provided CXXFLAGS on the command line
-if (CMAKE_CXX_FLAGS)
-  set(CXXFLAGS_PROVIDED true)
-  set(CMAKE_CXX_FLAGS_DEBUG          "")
-  set(CMAKE_CXX_FLAGS_MINSIZEREL     "")
-  set(CMAKE_CXX_FLAGS_RELEASE        "")
-  set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "")
-else (CMAKE_CXX_FLAGS)
-  set(CXXFLAGS_PROVIDED false)
-  set(CMAKE_CXX_FLAGS                "-std=c++11 -Wextra -Wall -pedantic")
-  if (MINGW)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWIN32")
-    include (GenerateExportHeader)
-  endif(MINGW)
-  set(CMAKE_CXX_FLAGS_DEBUG          "-O0 -g")
-  set(CMAKE_CXX_FLAGS_MINSIZEREL     "-Os")
-  set(CMAKE_CXX_FLAGS_RELEASE        "-O3 -DNDEBUG")
-  set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
-endif (CMAKE_CXX_FLAGS)
-
-include(CheckIncludeFileCXX)
-check_include_file_cxx("valgrind/valgrind.h" HAVE_VALGRIND_H)
-if (HAVE_VALGRIND_H)
-  set(VALGRIND "yes")
-  add_definitions(-DCPPA_ANNOTATE_VALGRIND)
-else (HAVE_VALGRIND_H)
-  set(VALGRIND "no")
-endif (HAVE_VALGRIND_H)
-
 # check for g++ >= 4.7 or clang++ > = 3.2
 try_run(ProgramResult
         CompilationSucceeded
@@ -87,6 +58,39 @@ else ()
   message(FATAL_ERROR "Your C++ compiler does not support C++11 "
                       "or is not supported")
 endif ()
+
+# check if the user provided CXXFLAGS on the command line
+if (CMAKE_CXX_FLAGS)
+  set(CXXFLAGS_PROVIDED true)
+  set(CMAKE_CXX_FLAGS_DEBUG          "")
+  set(CMAKE_CXX_FLAGS_MINSIZEREL     "")
+  set(CMAKE_CXX_FLAGS_RELEASE        "")
+  set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "")
+else (CMAKE_CXX_FLAGS)
+  set(CXXFLAGS_PROVIDED false)
+  if (MORE_CLANG_WARNINGS AND "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    set(CMAKE_CXX_FLAGS "-std=c++11 -pedantic -Weverything -Wno-c++98-compat -Wno-padded -Wno-documentation-unknown-command -Wno-exit-time-destructors -Wno-global-constructors -Wno-missing-prototypes -Wno-c++98-compat-pedantic -Wno-unused-member-function -Wno-unused-const-variable")
+  else ()
+    set(CMAKE_CXX_FLAGS "-std=c++11 -Wextra -Wall -pedantic")
+  endif ()
+  if (MINGW)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWIN32")
+    include (GenerateExportHeader)
+  endif(MINGW)
+  set(CMAKE_CXX_FLAGS_DEBUG          "-O0 -g")
+  set(CMAKE_CXX_FLAGS_MINSIZEREL     "-Os")
+  set(CMAKE_CXX_FLAGS_RELEASE        "-O3 -DNDEBUG")
+  set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
+endif (CMAKE_CXX_FLAGS)
+
+include(CheckIncludeFileCXX)
+check_include_file_cxx("valgrind/valgrind.h" HAVE_VALGRIND_H)
+if (HAVE_VALGRIND_H)
+  set(VALGRIND "yes")
+  add_definitions(-DCPPA_ANNOTATE_VALGRIND)
+else (HAVE_VALGRIND_H)
+  set(VALGRIND "no")
+endif (HAVE_VALGRIND_H)
 
 # set build type (evaluate ENABLE_DEBUG flag)
 if (ENABLE_DEBUG)
@@ -163,6 +167,7 @@ set(LIBCPPA_SRC
     src/continue_helper.cpp
     src/cs_thread.cpp
     src/decorated_tuple.cpp
+    src/default_message_queue.cpp
     src/actor_proxy.cpp
     src/peer.cpp
     src/peer_acceptor.cpp

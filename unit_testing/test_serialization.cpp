@@ -59,36 +59,18 @@ using namespace cppa::util;
 using cppa::detail::type_to_ptype;
 using cppa::detail::ptype_to_type;
 
+namespace {
+
 struct struct_a {
     int x;
     int y;
 };
-
-bool operator==(const struct_a& lhs, const struct_a& rhs) {
-    return lhs.x == rhs.x && lhs.y == rhs.y;
-}
-
-bool operator!=(const struct_a& lhs, const struct_a& rhs) {
-    return !(lhs == rhs);
-}
 
 struct struct_b {
     struct_a a;
     int z;
     list<int> ints;
 };
-
-string to_string(const struct_b& what) {
-    return to_string(object::from(what));
-}
-
-bool operator==(const struct_b& lhs, const struct_b& rhs) {
-    return lhs.a == rhs.a && lhs.z == rhs.z && lhs.ints == rhs.ints;
-}
-
-bool operator!=(const struct_b& lhs, const struct_b& rhs) {
-    return !(lhs == rhs);
-}
 
 typedef map<string, u16string> strmap;
 
@@ -97,24 +79,12 @@ struct struct_c {
     set<int> ints;
 };
 
-bool operator==(const struct_c& lhs, const struct_c& rhs) {
-    return lhs.strings == rhs.strings && lhs.ints == rhs.ints;
-}
-
-bool operator!=(const struct_c& lhs, const struct_c& rhs) {
-    return !(lhs == rhs);
-}
-
 struct raw_struct {
     string str;
 };
 
 bool operator==(const raw_struct& lhs, const raw_struct& rhs) {
     return lhs.str == rhs.str;
-}
-
-bool operator!=(const raw_struct& lhs, const raw_struct& rhs) {
-    return lhs.str != rhs.str;
 }
 
 struct raw_struct_type_info : util::abstract_uniform_type_info<raw_struct> {
@@ -149,6 +119,8 @@ void test_ieee_754() {
     auto u2 = cppa::detail::unpack754(p2); // unpacked value
     CPPA_CHECK_EQUAL(f2, u2);
 }
+
+} // namespace <anonymous>
 
 int main() {
     CPPA_TEST(test_serialization);
