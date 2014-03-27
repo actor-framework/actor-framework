@@ -52,7 +52,7 @@ void spawn5_server_impl(event_based_actor* self, actor client, group grp) {
             }
         },
         others() >> [=] {
-            CPPA_UNEXPECTED_MSG();
+            CPPA_UNEXPECTED_MSG(self);
             self->quit(exit_reason::unhandled_exception);
         },
         after(chrono::seconds(10)) >> [=] {
@@ -81,7 +81,7 @@ void spawn5_server_impl(event_based_actor* self, actor client, group grp) {
                             }
                         },
                         others() >> [=] {
-                            CPPA_UNEXPECTED_MSG();
+                            CPPA_UNEXPECTED_MSG(self);
                             //self->quit(exit_reason::unhandled_exception);
                         },
                         after(chrono::seconds(2)) >> [=] {

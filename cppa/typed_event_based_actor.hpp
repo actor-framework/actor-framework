@@ -63,6 +63,8 @@ class typed_event_based_actor
 
  public:
 
+    typed_event_based_actor() : m_initialized(false) { }
+
     typedef util::type_list<Rs...> signatures;
 
     typedef typed_behavior<Rs...> behavior_type;
@@ -74,6 +76,8 @@ class typed_event_based_actor
  protected:
 
     virtual behavior_type make_behavior() = 0;
+
+    bool m_initialized;
 
 };
 

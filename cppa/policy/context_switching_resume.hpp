@@ -33,7 +33,6 @@
 #include "cppa/config.hpp"
 #include "cppa/logging.hpp"
 #include "cppa/resumable.hpp"
-#include "cppa/actor_state.hpp"
 #include "cppa/mailbox_element.hpp"
 
 #include "cppa/detail/cs_thread.hpp"
@@ -70,10 +69,6 @@ class context_switching_resume {
             , m_cs_thread(context_switching_resume::trampoline,
                       static_cast<blocking_actor*>(this)) { }
 
-        inline bool exec_on_spawn() const {
-            return true;
-        }
-
         void attach_to_scheduler() override {
             this->ref();
         }
@@ -84,7 +79,7 @@ class context_switching_resume {
 
         resumable::resume_result resume(detail::cs_thread* from,
                                         execution_unit* host) override {
-            CPPA_REQUIRE(from != nullptr && host != nullptr);
+            CPPA_REQUIRE(from != nullptr);
             CPPA_LOG_TRACE("");
             this->m_host = host;
             using namespace detail;
@@ -93,28 +88,16 @@ class context_switching_resume {
                     case yield_state::done: {
                         return resumable::done;
                     }
-                    case yield_state::ready: { break; }
+                    case yield_state::ready: {
+                        // should not happen, since it is simply a waste
+                        // of time (switching back-and-forth for no reason)
+                        CPPA_LOG_WARNING("context-switching actor returned "
+                                         "with yield_state::ready");
+                        break;
+                    }
                     case yield_state::blocked: {
-                        switch (this->cas_state(actor_state::about_to_block,
-                                                actor_state::blocked)) {
-                            case actor_state::ready: {
-                                // restore variables
-                                break;
-                            }
-                            case actor_state::blocked: {
-                                // wait until someone re-schedules that actor
-                                return resumable::resume_later;
-                            }
-                            case actor_state::about_to_block:
-                                CPPA_CRITICAL("attempt to set state from "
-                                              "about_to_block to blocked "
-                                              "failed: state is still set "
-                                              "to about_to_block");
-                            case actor_state::done:
-                                CPPA_CRITICAL("attempt to set state from "
-                                              "about_to_block to blocked "
-                                              "failed: state is set "
-                                              "to done");
+                        if (static_cast<Derived*>(this)->mailbox().try_block()) {
+                            return resumable::resume_later;
                         }
                         break;
                     }
@@ -134,14 +117,8 @@ class context_switching_resume {
     void await_ready(Actor* self) {
         CPPA_LOG_TRACE("");
         while (!self->has_next_message()) {
-            self->set_state(actor_state::about_to_block);
-            // double-check before going to block
-            if (self->has_next_message()) {
-                // someone preempt us => continue
-                self->set_state(actor_state::ready);
-            }
-            // wait until actor becomes rescheduled
-            else detail::yield(detail::yield_state::blocked);
+            // will call mailbox().try_block() in resume()
+            detail::yield(detail::yield_state::blocked);
         }
     }
 

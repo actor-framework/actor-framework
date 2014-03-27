@@ -22,9 +22,9 @@ string cppa_fill4(size_t value) {
     return result;
 }
 
-const char* cppa_strip_path(const char* fname) {
-    auto res = fname;
-    auto i = fname;
+const char* cppa_strip_path(const char* file) {
+    auto res = file;
+    auto i = file;
     for (char c = *i; c != '\0'; c = *++i) {
         if (c == '/') {
             res = i + 1;
@@ -33,12 +33,12 @@ const char* cppa_strip_path(const char* fname) {
     return res;
 }
 
-void cppa_unexpected_message(const char* fname, size_t line_num) {
-    CPPA_PRINTERRC(fname, line_num, "unexpected message");
+void cppa_unexpected_message(const char* file, size_t line, cppa::any_tuple t) {
+    CPPA_PRINTERRC(file, line, "unexpected message: " << to_string(t));
 }
 
-void cppa_unexpected_timeout(const char* fname, size_t line_num) {
-    CPPA_PRINTERRC(fname, line_num, "unexpected timeout");
+void cppa_unexpected_timeout(const char* file, size_t line) {
+    CPPA_PRINTERRC(file, line, "unexpected timeout");
 }
 
 vector<string> split(const string& str, char delim, bool keep_empties) {

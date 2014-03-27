@@ -74,8 +74,7 @@ class down_observer : public attachable {
 
 local_actor::local_actor()
         : m_trap_exit(false), m_dummy_node(), m_current_node(&m_dummy_node)
-        , m_planned_exit_reason(exit_reason::not_exited)
-        , m_state(actor_state::ready) {
+        , m_planned_exit_reason(exit_reason::not_exited) {
     m_node = get_middleman()->node();
 }
 

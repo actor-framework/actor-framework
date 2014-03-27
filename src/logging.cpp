@@ -34,6 +34,7 @@
 #include <fstream>
 #include <algorithm>
 #include <pthread.h>
+#include <condition_variable>
 
 #ifndef CPPA_WINDOWS
 #include <unistd.h>
@@ -43,8 +44,10 @@
 #include "cppa/cppa.hpp"
 #include "cppa/logging.hpp"
 #include "cppa/actor_proxy.hpp"
+
 #include "cppa/detail/singleton_manager.hpp"
-#include "cppa/intrusive/blocking_single_reader_queue.hpp"
+
+#include "cppa/intrusive/single_reader_queue.hpp"
 
 using namespace std;
 
@@ -89,7 +92,8 @@ class logging_impl : public logging {
     void destroy() {
         log("TRACE", "logging", "run", __FILE__, __LINE__, "EXIT");
         // an empty string means: shut down
-        m_queue.push_back(new log_event{0, ""});
+        m_queue.synchronized_enqueue(m_queue_mtx, m_queue_cv,
+                                     new log_event{0, ""});
         m_thread.join();
         delete this;
     }
@@ -100,7 +104,7 @@ class logging_impl : public logging {
         fstream out(fname.str().c_str(), ios::out | ios::app);
         unique_ptr<log_event> event;
         for (;;) {
-            event.reset(m_queue.pop());
+            event.reset(m_queue.synchronized_pop(m_queue_mtx, m_queue_cv));
             if (event->msg.empty()) {
                 out.close();
                 return;
@@ -137,13 +141,16 @@ class logging_impl : public logging {
              << file_name << ":" << line_num << " "
              << msg
              << endl;
-        m_queue.push_back(new log_event{nullptr, line.str()});
+        m_queue.synchronized_enqueue(m_queue_mtx, m_queue_cv,
+                                     new log_event{nullptr, line.str()});
     }
 
  private:
 
     thread m_thread;
-    intrusive::blocking_single_reader_queue<log_event> m_queue;
+    mutex m_queue_mtx;
+    condition_variable m_queue_cv;
+    intrusive::single_reader_queue<log_event> m_queue;
 
 };
 

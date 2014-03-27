@@ -35,9 +35,7 @@
 
 namespace cppa {
 
-event_based_actor::event_based_actor() {
-    m_state = actor_state::blocked;
-}
+event_based_actor::event_based_actor() : m_initialized(false) { }
 
 event_based_actor::~event_based_actor() { }
 

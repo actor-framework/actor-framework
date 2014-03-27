@@ -34,14 +34,6 @@ namespace cppa {
 namespace detail {
 
 behavior functor_based_actor::make_behavior() {
-    if (m_void_impl) {
-        enqueue({address(), this}, make_any_tuple(atom("RUN")), m_host);
-        return {
-            on(atom("RUN")) >> [=] {
-                become(m_make_behavior(this));
-            }
-        };
-    }
     return m_make_behavior(this);
 }
 

@@ -192,10 +192,10 @@ void test_sync_send() {
         });
         s->sync_send(foi, atom("i")).await(
             [&](int i) { CPPA_CHECK_EQUAL(i, 0); ++invocations; },
-            [&](float) { CPPA_UNEXPECTED_MSG(); }
+            [&](float) { CPPA_UNEXPECTED_MSG(s); }
         );
         s->sync_send(foi, atom("f")).await(
-            [&](int) { CPPA_UNEXPECTED_MSG(); },
+            [&](int) { CPPA_UNEXPECTED_MSG(s); },
             [&](float f) { CPPA_CHECK_EQUAL(f, 0.f); ++invocations; }
         );
         CPPA_CHECK_EQUAL(invocations, 2);
@@ -219,7 +219,7 @@ void test_sync_send() {
         on_arg_match >> [&](const down_msg& dm) {
             CPPA_CHECK_EQUAL(dm.reason, exit_reason::user_shutdown);
         },
-        others() >> CPPA_UNEXPECTED_MSG_CB()
+        others() >> CPPA_UNEXPECTED_MSG_CB_REF(self)
     );
     auto mirror = spawn<sync_mirror>();
     bool continuation_called = false;
@@ -256,7 +256,7 @@ void test_sync_send() {
     CPPA_CHECKPOINT();
     self->timed_sync_send(self, std::chrono::milliseconds(50), atom("NoWay")).await(
         on<sync_timeout_msg>() >> CPPA_CHECKPOINT_CB(),
-        others() >> CPPA_UNEXPECTED_MSG_CB()
+        others() >> CPPA_UNEXPECTED_MSG_CB_REF(self)
     );
     // we should have received two DOWN messages with normal exit reason
     // plus 'NoWay'
@@ -270,13 +270,13 @@ void test_sync_send() {
             CPPA_PRINT("trigger \"actor did not reply to a "
                        "synchronous request message\"");
         },
-        others() >> CPPA_UNEXPECTED_MSG_CB(),
+        others() >> CPPA_UNEXPECTED_MSG_CB_REF(self),
         after(std::chrono::seconds(0)) >> CPPA_UNEXPECTED_TOUT_CB()
     );
     CPPA_CHECKPOINT();
     // mailbox should be empty now
     self->receive (
-        others() >> CPPA_UNEXPECTED_MSG_CB(),
+        others() >> CPPA_UNEXPECTED_MSG_CB_REF(self),
         after(std::chrono::seconds(0)) >> CPPA_CHECKPOINT_CB()
     );
     // check wheter continuations are invoked correctly
@@ -284,11 +284,11 @@ void test_sync_send() {
     // first test: sync error must occur, continuation must not be called
     bool timeout_occured = false;
     self->on_sync_timeout([&] { timeout_occured = true; });
-    self->on_sync_failure(CPPA_UNEXPECTED_MSG_CB());
+    self->on_sync_failure(CPPA_UNEXPECTED_MSG_CB_REF(self));
     self->timed_sync_send(c, std::chrono::milliseconds(500), atom("HiThere"))
     .await(CPPA_FAILURE_CB("C replied to 'HiThere'!"));
     CPPA_CHECK_EQUAL(timeout_occured, true);
-    self->on_sync_failure(CPPA_UNEXPECTED_MSG_CB());
+    self->on_sync_failure(CPPA_UNEXPECTED_MSG_CB_REF(self));
     self->sync_send(c, atom("gogo")).await(CPPA_CHECKPOINT_CB());
     self->send_exit(c, exit_reason::user_shutdown);
     self->await_all_other_actors_done();
@@ -320,17 +320,17 @@ void test_sync_send() {
                 CPPA_CHECKPOINT();
                 CPPA_CHECK_EQUAL(s->last_sender(), work);
             },
-            others() >> CPPA_UNEXPECTED_MSG_CB()
+            others() >> CPPA_UNEXPECTED_MSG_CB(s)
         );
         s->send(s, "Ever danced with the devil in the pale moonlight?");
         // response: {'EXIT', exit_reason::user_shutdown}
-        s->receive_loop(others() >> CPPA_UNEXPECTED_MSG_CB());
+        s->receive_loop(others() >> CPPA_UNEXPECTED_MSG_CB(s));
     });
     self->receive (
         on_arg_match >> [&](const down_msg& dm) {
             CPPA_CHECK_EQUAL(dm.reason, exit_reason::user_shutdown);
         },
-        others() >> CPPA_UNEXPECTED_MSG_CB()
+        others() >> CPPA_UNEXPECTED_MSG_CB_REF(self)
     );
 }
 

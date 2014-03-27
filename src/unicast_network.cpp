@@ -36,6 +36,7 @@
 #include <cstring>    // memset
 #include <iostream>
 #include <stdexcept>
+#include <condition_variable>
 
 #ifndef CPPA_WINDOWS
 #include <netinet/tcp.h>
@@ -53,7 +54,6 @@
 #include "cppa/detail/raw_access.hpp"
 
 #include "cppa/intrusive/single_reader_queue.hpp"
-#include "cppa/intrusive/blocking_single_reader_queue.hpp"
 
 #include "cppa/io/acceptor.hpp"
 #include "cppa/io/middleman.hpp"
@@ -198,17 +198,19 @@ abstract_actor_ptr remote_actor_impl(stream_ptr_pair io, string_set expected) {
         return ptr;
     }
     struct remote_actor_result { remote_actor_result* next; actor value; };
-    intrusive::blocking_single_reader_queue<remote_actor_result> q;
-    mm->run_later([mm, io, pinfptr, remote_aid, &q] {
+    std::mutex qmtx;
+    std::condition_variable qcv;
+    intrusive::single_reader_queue<remote_actor_result> q;
+    mm->run_later([mm, io, pinfptr, remote_aid, &q, &qmtx, &qcv] {
         CPPA_LOGC_TRACE("cppa",
                         "remote_actor$create_connection", "");
         auto pp = mm->get_peer(*pinfptr);
         CPPA_LOGF_INFO_IF(pp, "connection already exists (re-use old one)");
         if (!pp) mm->new_peer(io.first, io.second, pinfptr);
         auto res = mm->get_namespace().get_or_put(pinfptr, remote_aid);
-        q.push_back(new remote_actor_result{0, res});
+        q.synchronized_enqueue(qmtx, qcv, new remote_actor_result{0, res});
     });
-    std::unique_ptr<remote_actor_result> result(q.pop());
+    std::unique_ptr<remote_actor_result> result(q.synchronized_pop(qmtx, qcv));
     CPPA_LOGF_DEBUG(CPPA_MARG(result, get));
     return raw_access::get(result->value);
 }

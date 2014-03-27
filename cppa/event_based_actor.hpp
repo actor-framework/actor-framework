@@ -76,6 +76,8 @@ class event_based_actor : public extend<local_actor, event_based_actor>::
      */
     void forward_to(const actor& whom);
 
+    bool m_initialized;
+
 };
 
 } // namespace cppa

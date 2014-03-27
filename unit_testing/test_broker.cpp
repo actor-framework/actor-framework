@@ -50,10 +50,10 @@ void ping(cppa::event_based_actor* self, size_t num_pings) {
                     if (++*count >= num_pings) self->quit();
                     return make_cow_tuple(atom("ping"), value + 1);
                 },
-                others() >> CPPA_UNEXPECTED_MSG_CB()
+                others() >> CPPA_UNEXPECTED_MSG_CB(self)
             );
         },
-        others() >> CPPA_UNEXPECTED_MSG_CB()
+        others() >> CPPA_UNEXPECTED_MSG_CB(self)
     );
 }
 
@@ -72,12 +72,12 @@ void pong(cppa::event_based_actor* self) {
                 on_arg_match >> [=](const down_msg& dm) {
                     self->quit(dm.reason);
                 },
-                others() >> CPPA_UNEXPECTED_MSG_CB()
+                others() >> CPPA_UNEXPECTED_MSG_CB(self)
             );
             // reply to 'ping'
             return {atom("pong"), value};
         },
-        others() >> CPPA_UNEXPECTED_MSG_CB()
+        others() >> CPPA_UNEXPECTED_MSG_CB(self)
     );
 }
 
@@ -116,7 +116,7 @@ void peer(io::broker* self, io::connection_handle hdl, const actor& buddy) {
         on_arg_match >> [=](const down_msg& dm) {
             if (dm.source == buddy) self->quit(dm.reason);
         },
-        others() >> CPPA_UNEXPECTED_MSG_CB()
+        others() >> CPPA_UNEXPECTED_MSG_CB(self)
     );
 }
 
@@ -129,7 +129,7 @@ void peer_acceptor(io::broker* self, const actor& buddy) {
             self->fork(peer, hdl, buddy);
             self->quit();
         },
-        others() >> CPPA_UNEXPECTED_MSG_CB()
+        others() >> CPPA_UNEXPECTED_MSG_CB(self)
     );
 }
 

@@ -47,7 +47,11 @@ class proper_actor_base : public Policies::resume_policy::template mixin<Base, D
         scheduling_policy().enqueue(dptr(), hdr, msg, eu);
     }
 
-    // NOTE: scheduling_policy::launch is 'imported' in proper_actor
+    inline void launch(bool is_hidden, execution_unit* host) {
+        CPPA_LOG_TRACE("");
+        this->hidden(is_hidden);
+        this->scheduling_policy().launch(this, host);
+    }
 
     template<typename F>
     bool fetch_messages(F cb) {
@@ -188,19 +192,6 @@ class proper_actor : public proper_actor_base<Base,
     template <typename... Ts>
     proper_actor(Ts&&... args) : super(std::forward<Ts>(args)...) { }
 
-    inline void launch(bool is_hidden, execution_unit* host) {
-        CPPA_LOG_TRACE("");
-        this->hidden(is_hidden);
-        this->m_host = host; // may be accessed during make_behavior call
-        auto bhvr = this->make_behavior();
-        if (bhvr) this->become(std::move(bhvr));
-        CPPA_LOG_WARNING_IF(this->bhvr_stack().empty(),
-                            "actor did not set a behavior");
-        if (!this->bhvr_stack().empty()) {
-            this->scheduling_policy().launch(this, host);
-        }
-    }
-
     // required by event_based_resume::mixin::resume
 
     bool invoke_message(unique_mailbox_element_pointer& ptr) {
@@ -233,7 +224,7 @@ class proper_actor : public proper_actor_base<Base,
 
 // for blocking actors, there's one more member function to implement
 template <class Base, class Policies>
-class proper_actor<Base, Policies,true> : public proper_actor_base<Base,
+class proper_actor<Base, Policies, true> : public proper_actor_base<Base,
                                               proper_actor<Base,
                                                            Policies,
                                                            true>,
@@ -255,11 +246,6 @@ class proper_actor<Base, Policies,true> : public proper_actor_base<Base,
 
     inline void await_ready() {
         this->resume_policy().await_ready(this);
-    }
-
-    inline void launch(bool is_hidden, execution_unit* host) {
-        this->hidden(is_hidden);
-        this->scheduling_policy().launch(this, host);
     }
 
     // implement blocking_actor::dequeue_response

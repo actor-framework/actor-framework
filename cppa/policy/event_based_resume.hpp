@@ -42,7 +42,6 @@
 #include "cppa/logging.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/scheduler.hpp"
-#include "cppa/actor_state.hpp"
 
 #include "cppa/policy/resume_policy.hpp"
 
@@ -62,10 +61,6 @@ class event_based_resume {
         template<typename... Ts>
         mixin(Ts&&... args) : Base(std::forward<Ts>(args)...) { }
 
-        inline Derived* dptr() {
-            return static_cast<Derived*>(this);
-        }
-
         void attach_to_scheduler() override {
             this->ref();
         }
@@ -74,44 +69,49 @@ class event_based_resume {
             this->deref();
         }
 
-        inline bool exec_on_spawn() const {
-            return false;
-        }
-
         resumable::resume_result resume(detail::cs_thread*,
                                         execution_unit* host) override {
-            CPPA_REQUIRE(host != nullptr);
-            auto d = dptr();
+            auto d = static_cast<Derived*>(this);
             d->m_host = host;
             CPPA_LOG_TRACE("id = " << d->id()
                            << ", state = " << static_cast<int>(d->state()));
-            CPPA_REQUIRE(d->state() == actor_state::ready);
             auto done_cb = [&]() -> bool {
                 CPPA_LOG_TRACE("");
                 d->bhvr_stack().clear();
                 d->bhvr_stack().cleanup();
-                if (d->planned_exit_reason() == exit_reason::not_exited) {
-                    d->planned_exit_reason(exit_reason::normal);
-                }
                 d->on_exit();
                 if (!d->bhvr_stack().empty()) {
-                    CPPA_LOG_DEBUG("on_exit did set a new behavior in done_cb");
+                    CPPA_LOG_DEBUG("on_exit did set a new behavior in on_exit");
                     d->planned_exit_reason(exit_reason::not_exited);
                     return false; // on_exit did set a new behavior
                 }
-                d->set_state(actor_state::done);
-                d->cleanup(d->planned_exit_reason());
+                auto rsn = d->planned_exit_reason();
+                if (rsn == exit_reason::not_exited) {
+                    rsn = exit_reason::normal;
+                    d->planned_exit_reason(rsn);
+                }
+                d->cleanup(rsn);
                 return true;
             };
             auto actor_done = [&] {
                 return    d->bhvr_stack().empty()
                        || d->planned_exit_reason() != exit_reason::not_exited;
             };
+            // actors without behavior or that have already defined
+            // an exit reason must not be resumed
+            CPPA_REQUIRE(!d->m_initialized || !actor_done());
+            if (!d->m_initialized) {
+                d->m_initialized = true;
+                auto bhvr = d->make_behavior();
+                if (bhvr) d->become(std::move(bhvr));
+                // else: make_behavior() might have just called become()
+                if (actor_done() && done_cb()) return resume_result::done;
+                // else: enter resume loop
+            }
             try {
                 for (;;) {
                     auto ptr = d->next_message();
                     if (ptr) {
-                        CPPA_REQUIRE(!d->bhvr_stack().empty());
                         if (d->invoke_message(ptr)) {
                             if (actor_done() && done_cb()) {
                                 CPPA_LOG_DEBUG("actor exited");
@@ -137,40 +137,10 @@ class event_based_resume {
                     else {
                         CPPA_LOG_DEBUG("no more element in mailbox; "
                                        "going to block");
-                        d->set_state(actor_state::about_to_block);
-                        std::atomic_thread_fence(std::memory_order_seq_cst);
-                        if (!d->has_next_message()) {
-                            switch (d->cas_state(actor_state::about_to_block,
-                                                 actor_state::blocked)) {
-                                case actor_state::ready:
-                                    // interrupted by arriving message
-                                    // restore members
-                                    CPPA_LOG_DEBUG("switched back to ready: "
-                                                   "interrupted by "
-                                                   "arriving message");
-                                    break;
-                                case actor_state::blocked:
-                                    CPPA_LOG_DEBUG("set state successfully "
-                                                   "to blocked");
-                                    // done setting actor to blocked
-                                    return resumable::resume_later;
-                                case actor_state::about_to_block:
-                                    CPPA_CRITICAL("attempt to set state from "
-                                                  "about_to_block to blocked "
-                                                  "failed: state is still set "
-                                                  "to about_to_block");
-                                case actor_state::done:
-                                    CPPA_CRITICAL("attempt to set state from "
-                                                  "about_to_block to blocked "
-                                                  "failed: state is set "
-                                                  "to done");
-                            };
+                        if (d->mailbox().try_block()) {
+                            return resumable::resume_later;
                         }
-                        else {
-                            CPPA_LOG_DEBUG("switched back to ready: "
-                                           "mailbox can fetch more");
-                            d->set_state(actor_state::ready);
-                        }
+                        // else: try again
                     }
                 }
             }

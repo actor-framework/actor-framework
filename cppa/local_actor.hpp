@@ -44,7 +44,6 @@
 #include "cppa/spawn_fwd.hpp"
 #include "cppa/message_id.hpp"
 #include "cppa/match_expr.hpp"
-#include "cppa/actor_state.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/typed_actor.hpp"
 #include "cppa/spawn_options.hpp"
@@ -424,8 +423,6 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     /**
      * @brief Can be overridden to perform cleanup code after an actor
      *        finished execution.
-     * @warning Must not call any function manipulating the actor's state such
-     *          as join, leave, link, or monitor.
      */
     virtual void on_exit();
 
@@ -550,21 +547,6 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
 
     inline void planned_exit_reason(std::uint32_t value);
 
-    actor_state cas_state(actor_state expected, actor_state desired) {
-        auto e = expected;
-        do { if (m_state.compare_exchange_weak(e, desired)) return desired; }
-        while (e == expected);
-        return e;
-    }
-
-    inline void set_state(actor_state new_value) {
-        m_state.store(new_value);
-    }
-
-    inline actor_state state() const {
-        return m_state;
-    }
-
     void cleanup(std::uint32_t reason) override;
 
     mailbox_element* dummy_node() {
@@ -601,9 +583,6 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
 
     // set by quit
     std::uint32_t m_planned_exit_reason;
-
-    // the state of the (possibly cooperatively scheduled) actor
-    std::atomic<actor_state> m_state;
 
     /** @endcond */
 

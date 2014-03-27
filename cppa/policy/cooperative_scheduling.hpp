@@ -36,7 +36,6 @@
 #include "cppa/any_tuple.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/singletons.hpp"
-#include "cppa/actor_state.hpp"
 #include "cppa/message_header.hpp"
 
 #include "cppa/detail/yield_interface.hpp"
@@ -51,93 +50,34 @@ class cooperative_scheduling {
 
     using timeout_type = int;
 
-    // this does return nullptr
-    template<class Actor, typename F>
-    void fetch_messages(Actor* self, F cb) {
-        auto e = self->mailbox().try_pop();
-        while (e == nullptr) {
-            if (self->mailbox().can_fetch_more() == false) {
-                self->set_state(actor_state::about_to_block);
-                // make sure mailbox is empty
-                if (self->mailbox().can_fetch_more()) {
-                    // someone preempt us => continue
-                    self->set_state(actor_state::ready);
-                }
-                // wait until actor becomes rescheduled
-                else detail::yield(detail::yield_state::blocked);
-            }
-        }
-        // ok, we have at least one message
-        while (e) {
-            cb(e);
-            e = self->mailbox().try_pop();
-        }
-    }
-
-    template<class Actor, typename F>
-    inline void fetch_messages(Actor* self, F cb, timeout_type) {
-        // a call to this call is always preceded by init_timeout,
-        // which will trigger a timeout message
-        fetch_messages(self, cb);
-    }
-
     template<class Actor>
     inline void launch(Actor* self, execution_unit* host) {
         // detached in scheduler::worker::run
         self->attach_to_scheduler();
-        if (self->exec_on_spawn()) {
-            if (host) host->exec_later(self);
-            else get_scheduling_coordinator()->enqueue(self);
-        }
+        if (host) host->exec_later(self);
+        else get_scheduling_coordinator()->enqueue(self);
     }
 
     template<class Actor>
-    void enqueue(Actor* self,
-                 msg_hdr_cref hdr,
-                 any_tuple& msg,
-                 execution_unit* host) {
+    void enqueue(Actor* self, msg_hdr_cref hdr,
+                 any_tuple& msg, execution_unit* host) {
         auto e = self->new_mailbox_element(hdr, std::move(msg));
         switch (self->mailbox().enqueue(e)) {
-            case intrusive::first_enqueued: {
-                auto state = self->state();
-                auto set_ready = [&]() -> bool {
-                    state = self->cas_state(state, actor_state::ready);
-                    return state == actor_state::ready;
-                };
-                for (;;) {
-                    switch (state) {
-                        case actor_state::blocked: {
-                            if (set_ready()) {
-                                // re-schedule actor
-                                if (host) host->exec_later(self);
-                                else get_scheduling_coordinator()->enqueue(self);
-                                return;
-                            }
-                            break;
-                        }
-                        case actor_state::about_to_block: {
-                            if (set_ready()) {
-                                // actor is still running
-                                return;
-                            }
-                            break;
-                        }
-                        case actor_state::ready:
-                        case actor_state::done:
-                            return;
-                    }
-                }
+            case intrusive::enqueue_result::unblocked_reader: {
+                // re-schedule actor
+                if (host) host->exec_later(self);
+                else get_scheduling_coordinator()->enqueue(self);
                 break;
             }
-            case intrusive::queue_closed: {
+            case intrusive::enqueue_result::queue_closed: {
                 if (hdr.id.is_request()) {
                     detail::sync_request_bouncer f{self->exit_reason()};
                     f(hdr.sender, hdr.id);
                 }
                 break;
             }
-            case intrusive::enqueued:
-                // enqueued to an running actors' mailbox; nothing to do
+            case intrusive::enqueue_result::success:
+                // enqueued to a running actors' mailbox; nothing to do
                 break;
         }
     }

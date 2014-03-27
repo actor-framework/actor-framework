@@ -321,10 +321,7 @@ void coordinator::destroy() {
 }
 
 coordinator::coordinator()
-        : m_timer(new timer_actor), m_printer(true)
-        , m_next_worker(0) {
-    // NOP
-}
+: m_timer(new timer_actor), m_printer(true) , m_next_worker(0) { }
 
 coordinator* coordinator::create_singleton() {
     return new coordinator;
@@ -505,6 +502,7 @@ void worker::external_enqueue(job_ptr ptr) {
 }
 
 void worker::exec_later(job_ptr ptr) {
+    CPPA_REQUIRE(std::this_thread::get_id() == m_this_thread.get_id());
     m_job_list.push_back(ptr);
 }
 

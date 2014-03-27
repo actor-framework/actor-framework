@@ -7,7 +7,6 @@ cppa/actor_companion.hpp
 cppa/actor_namespace.hpp
 cppa/actor_ostream.hpp
 cppa/actor_proxy.hpp
-cppa/actor_state.hpp
 cppa/announce.hpp
 cppa/any_tuple.hpp
 cppa/anything.hpp
@@ -89,7 +88,6 @@ cppa/from_string.hpp
 cppa/get.hpp
 cppa/group.hpp
 cppa/guard_expr.hpp
-cppa/intrusive/blocking_single_reader_queue.hpp
 cppa/intrusive/single_reader_queue.hpp
 cppa/intrusive_ptr.hpp
 cppa/io/accept_handle.hpp

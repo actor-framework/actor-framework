@@ -38,7 +38,6 @@
 
 #include "cppa/logging.hpp"
 #include "cppa/singletons.hpp"
-#include "cppa/actor_state.hpp"
 #include "cppa/exit_reason.hpp"
 
 #include "cppa/detail/cs_thread.hpp"
@@ -62,47 +61,15 @@ class no_scheduling {
 
     typedef std::chrono::high_resolution_clock::time_point timeout_type;
 
-    template<class Actor, typename F>
-    bool fetch_messages(Actor* self, F cb) {
-        await_data(self);
-        return fetch_messages_impl(self, cb);
-    }
-
-    template<class Actor, typename F>
-    bool try_fetch_messages(Actor* self, F cb) {
-        return fetch_messages_impl(self, cb);
-    }
-
-    template<class Actor, typename F>
-    timed_fetch_result fetch_messages(Actor* self, F cb, timeout_type abs_time) {
-        if (!await_data(self, abs_time)) {
-            return timed_fetch_result::no_message;
-        }
-        if (fetch_messages_impl(self, cb)) return timed_fetch_result::success;
-        return timed_fetch_result::no_message;
-    }
-
     template<class Actor>
     void enqueue(Actor* self, msg_hdr_cref hdr,
                  any_tuple& msg, execution_unit*) {
         auto ptr = self->new_mailbox_element(hdr, std::move(msg));
-        switch (self->mailbox().enqueue(ptr)) {
-            case intrusive::first_enqueued: {
-                lock_type guard(m_mtx);
-                self->set_state(actor_state::ready);
-                m_cv.notify_one();
-                break;
-            }
-            case intrusive::queue_closed: {
-                if (hdr.id.valid()) {
-                    detail::sync_request_bouncer f{self->exit_reason()};
-                    f(hdr.sender, hdr.id);
-                }
-                break;
-            }
-            case intrusive::enqueued: {
-                // enqueued to a running actor's mailbox; nothing to do
-                break;
+        // returns false if mailbox has been closed
+        if (!self->mailbox().synchronized_enqueue(m_mtx, m_cv, ptr)) {
+            if (hdr.id.is_request()) {
+                detail::sync_request_bouncer srb{self->exit_reason()};
+                srb(hdr.sender, hdr.id);
             }
         }
     }
@@ -113,58 +80,39 @@ class no_scheduling {
         CPPA_LOG_TRACE(CPPA_ARG(self));
         CPPA_REQUIRE(self != nullptr);
         intrusive_ptr<Actor> mself{self};
+        self->attach_to_scheduler();
         std::thread([=] {
             CPPA_PUSH_AID(mself->id());
             CPPA_LOG_TRACE("");
             detail::cs_thread fself;
             for (;;) {
-                mself->set_state(actor_state::ready);
                 if (mself->resume(&fself, nullptr) == resumable::done) {
                     return;
                 }
                 // await new data before resuming actor
                 await_data(mself.get());
             }
+            self->detach_from_scheduler();
         }).detach();
     }
 
+    // await_data is being called from no_scheduling (only)
+
     template<class Actor>
     void await_data(Actor* self) {
-        if (!self->has_next_message()) {
-            lock_type guard(m_mtx);
-            while (!self->has_next_message()) m_cv.wait(guard);
-        }
+        if (self->has_next_message()) return;
+        self->mailbox().synchronized_await(m_mtx, m_cv);
     }
 
     // this additional member function is needed to implement
     // timer_actor (see scheduler.cpp)
     template<class Actor, class TimePoint>
     bool await_data(Actor* self, const TimePoint& tp) {
-        if (!self->has_next_message()) {
-            lock_type guard(m_mtx);
-            while (!self->has_next_message()) {
-                if (m_cv.wait_until(guard, tp) == std::cv_status::timeout) {
-                    return false;
-                }
-            }
-        }
-        return true;
+        if (self->has_next_message()) return true;
+        return self->mailbox().synchronized_await(m_mtx, m_cv, tp);
     }
 
  private:
-
-    template<class Actor, typename F>
-    bool fetch_messages_impl(Actor* self, F cb) {
-        auto next = [&] { return self->mailbox().try_pop(); };
-        auto e = next();
-        if (e) {
-            for (; e != nullptr; e = next()) {
-                cb(e);
-            }
-            return true;
-        }
-        return false;
-    }
 
     std::mutex m_mtx;
     std::condition_variable m_cv;

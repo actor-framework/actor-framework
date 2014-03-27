@@ -45,13 +45,15 @@ class priority_policy {
  public:
 
     /**
-     * @brief Returns the next message from the list of cached elements or
-     *        @p nullptr. The latter indicates only that there is no element
-     *        left in the cache.
+     * @brief Returns the next message from the mailbox or @p nullptr
+     *        if it's empty.
      */
     template<class Actor>
     unique_mailbox_element_pointer next_message(Actor* self);
 
+    /**
+     * @brief Queries whether the mailbox is not empty.
+     */
     template<class Actor>
     bool has_next_message(Actor* self);
 

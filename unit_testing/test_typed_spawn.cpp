@@ -204,11 +204,12 @@ void test_event_testee() {
     self->send(et, "hello again event testee!");
     self->send(et, "goodbye event testee!");
     typed_actor<replies_to<get_state_msg>::with<string>> sub_et = et;
-    set<string> iface{"cppa::replies_to<get_state_msg>::with<@str>",
+    // $:: is the anonymous namespace
+    set<string> iface{"cppa::replies_to<$::get_state_msg>::with<@str>",
                       "cppa::replies_to<@str>::with<void>",
                       "cppa::replies_to<float>::with<void>",
                       "cppa::replies_to<@i32>::with<@i32>"};
-    CPPA_CHECK(sub_et->interface() == iface);
+    CPPA_CHECK_EQUAL(util::join(sub_et->interface()), util::join(iface));
     self->send(sub_et, get_state_msg{});
     // we expect three 42s
     int i = 0;

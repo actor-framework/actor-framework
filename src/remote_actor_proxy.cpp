@@ -108,7 +108,7 @@ void remote_actor_proxy::forward_msg(msg_hdr_cref hdr, any_tuple msg) {
     }
     if (hdr.sender && hdr.id.is_request()) {
         switch (m_pending_requests.enqueue(new_req_info(hdr.sender, hdr.id))) {
-            case intrusive::queue_closed: {
+            case intrusive::enqueue_result::queue_closed: {
                 auto rsn = exit_reason();
                 m_parent->run_later([rsn, hdr] {
                     CPPA_LOGC_TRACE("cppa::io::remote_actor_proxy",
@@ -119,11 +119,11 @@ void remote_actor_proxy::forward_msg(msg_hdr_cref hdr, any_tuple msg) {
                 });
                 return; // no need to forward message
             }
-            case intrusive::enqueued: {
+            case intrusive::enqueue_result::success: {
                 CPPA_LOG_DEBUG("enqueued pending request to non-empty queue");
                 break;
             }
-            case intrusive::first_enqueued: {
+            case intrusive::enqueue_result::unblocked_reader: {
                 CPPA_LOG_DEBUG("enqueued pending request to empty queue");
                 break;
             }

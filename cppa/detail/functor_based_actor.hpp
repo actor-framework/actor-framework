@@ -48,7 +48,7 @@ class functor_based_actor : public event_based_actor {
     typedef std::function<void(event_based_actor*)> void_fun;
 
     template<typename F, typename... Ts>
-    functor_based_actor(F f, Ts&&... vs) : m_void_impl(false) {
+    functor_based_actor(F f, Ts&&... vs) {
         typedef typename util::get_callable_trait<F>::type trait;
         typedef typename trait::arg_types arg_types;
         typedef typename trait::result_type result_type;
@@ -80,7 +80,6 @@ class functor_based_actor : public event_based_actor {
     template<typename F>
     void set(std::false_type, std::true_type, F fun) {
         // void (pointer)
-        m_void_impl = true;
         m_make_behavior = [fun](pointer ptr) {
             fun(ptr);
             return behavior{};
@@ -96,7 +95,6 @@ class functor_based_actor : public event_based_actor {
     template<typename F>
     void set(std::false_type, std::false_type, F fun) {
         // void (void)
-        m_void_impl = true;
         m_make_behavior = [fun](pointer) {
             fun();
             return behavior{};
@@ -118,7 +116,6 @@ class functor_based_actor : public event_based_actor {
                               std::forward<Ts>(args)...));
     }
 
-    bool m_void_impl;
     make_behavior_fun m_make_behavior;
 
 };

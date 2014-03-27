@@ -27,9 +27,9 @@ void set_default_test_settings();
 size_t cppa_error_count();
 void cppa_inc_error_count();
 std::string cppa_fill4(size_t value);
-const char* cppa_strip_path(const char* fname);
-void cppa_unexpected_message(const char* fname, size_t line_num);
-void cppa_unexpected_timeout(const char* fname, size_t line_num);
+const char* cppa_strip_path(const char* file);
+void cppa_unexpected_message(const char* file, size_t line, cppa::any_tuple t);
+void cppa_unexpected_timeout(const char* file, size_t line);
 
 #define CPPA_STREAMIFY(fname, line, message)                                   \
     cppa_strip_path(fname) << ":" << cppa_fill4(line) << " " << message
@@ -166,13 +166,14 @@ inline void cppa_check_value(V1 v1,
 #define CPPA_UNEXPECTED_TOUT()                                                 \
     cppa_unexpected_timeout(__FILE__, __LINE__)
 
-#define CPPA_UNEXPECTED_MSG()                                                  \
-    cppa_unexpected_message(__FILE__, __LINE__)
+#define CPPA_UNEXPECTED_MSG(selfptr)                                           \
+    cppa_unexpected_message(__FILE__, __LINE__, selfptr ->last_dequeued())
 
 // some convenience macros for defining callbacks
 #define CPPA_CHECKPOINT_CB() [] { CPPA_CHECKPOINT(); }
 #define CPPA_FAILURE_CB(err_msg) [] { CPPA_FAILURE(err_msg); }
-#define CPPA_UNEXPECTED_MSG_CB() [] { CPPA_UNEXPECTED_MSG(); }
+#define CPPA_UNEXPECTED_MSG_CB(selfptr) [=] { CPPA_UNEXPECTED_MSG(selfptr); }
+#define CPPA_UNEXPECTED_MSG_CB_REF(selfref) [&] { CPPA_UNEXPECTED_MSG(selfref); }
 #define CPPA_UNEXPECTED_TOUT_CB() [] { CPPA_UNEXPECTED_TOUT(); }
 
 std::vector<std::string> split(const std::string& str, char delim = ' ', bool keep_empties = true);

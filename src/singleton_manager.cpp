@@ -102,7 +102,6 @@ opencl::opencl_metainfo* singleton_manager::get_opencl_metainfo() {
 }
 
 actor_registry* singleton_manager::get_actor_registry() {
-
     return lazy_get(s_actor_registry);
 }
 
