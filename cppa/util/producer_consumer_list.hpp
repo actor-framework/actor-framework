@@ -44,7 +44,7 @@
 #if !defined(_GLIBCXX_USE_SCHED_YIELD) && !defined(__clang__)
 #include <time.h>
 namespace std { namespace this_thread { namespace {
-inline void yield() throw {
+inline void yield() noexcept {
     timespec req;
     req.tv_sec = 0;
     req.tv_nsec = 1;

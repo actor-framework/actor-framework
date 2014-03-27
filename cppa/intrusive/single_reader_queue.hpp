@@ -35,6 +35,7 @@
 #include <mutex>
 #include <atomic>
 #include <memory>
+#include <condition_variable> // std::cv_status
 
 #include "cppa/config.hpp"
 
