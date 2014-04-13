@@ -85,13 +85,13 @@ class response_handle<Self, any_tuple, nonblocking_response_handle_tag> {
 
     response_handle& operator=(const response_handle&) = default;
 
-    inline continue_helper then(behavior bhvr) {
+    inline continue_helper then(behavior bhvr) const {
         m_self->bhvr_stack().push_back(std::move(bhvr), m_mid);
         return {m_mid, m_self};
     }
 
     template<typename... Cs, typename... Ts>
-    continue_helper then(const match_expr<Cs...>& arg, const Ts&... args) {
+    continue_helper then(const match_expr<Cs...>& arg, const Ts&... args) const {
         return then(behavior{arg, args...});
     }
 
@@ -100,7 +100,7 @@ class response_handle<Self, any_tuple, nonblocking_response_handle_tag> {
         util::all_callable<Fs...>::value,
         continue_helper
     >::type
-    then(Fs... fs) {
+    then(Fs... fs) const {
         return then(detail::fs2bhvr(m_self, fs...));
     }
 
