@@ -120,10 +120,14 @@ void test_ieee_754() {
     CPPA_CHECK_EQUAL(f2, u2);
 }
 
+enum class test_enum { a, b, c };
+
 } // namespace <anonymous>
 
 int main() {
     CPPA_TEST(test_serialization);
+
+    announce<test_enum>();
 
     test_ieee_754();
 
@@ -260,6 +264,28 @@ int main() {
             auto str = to_string(object::from(get<uint32_t>(o)));
             CPPA_CHECK_EQUAL( "@u32 ( 42 )", str);
         }
+    }
+    catch (exception& e) { CPPA_FAILURE(to_verbose_string(e)); }
+
+    // test serialization of enums
+    try {
+        auto enum_tuple = make_any_tuple(test_enum::b);
+        // serialize b1 to buf
+        util::buffer wr_buf;
+        binary_serializer bs(&wr_buf, &addressing);
+        bs << enum_tuple;
+        // deserialize b2 from buf
+        binary_deserializer bd(wr_buf.data(), wr_buf.size(), &addressing);
+        any_tuple enum_tuple2;
+        uniform_typeid<any_tuple>()->deserialize(&enum_tuple2, &bd);
+        auto opt = tuple_cast<test_enum>(enum_tuple2);
+        CPPA_CHECK(opt.valid());
+        if (opt.valid()) {
+            auto& tup = *opt;
+            CPPA_CHECK_EQUAL(tup.size(), 1);
+            CPPA_CHECK(get<0>(tup) == test_enum::b);
+        }
+
     }
     catch (exception& e) { CPPA_FAILURE(to_verbose_string(e)); }
 

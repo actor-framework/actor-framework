@@ -238,7 +238,8 @@ class forwarding_serialize_policy {
 template<typename T,
          class AccessPolicy,
          class SerializePolicy = default_serialize_policy,
-         bool IsEmptyType = std::is_empty<T>::value>
+         bool IsEnum = std::is_enum<T>::value,
+         bool IsEmptyType = std::is_class<T>::value && std::is_empty<T>::value>
 class member_tinfo : public util::abstract_uniform_type_info<T> {
 
  public:
@@ -250,11 +251,11 @@ class member_tinfo : public util::abstract_uniform_type_info<T> {
 
     member_tinfo() { }
 
-    void serialize(const void* vptr, serializer* s) const {
+    void serialize(const void* vptr, serializer* s) const override {
         m_spol(m_apol(vptr), s);
     }
 
-    void deserialize(void* vptr, deserializer* d) const {
+    void deserialize(void* vptr, deserializer* d) const override {
         std::integral_constant<bool, AccessPolicy::grants_mutable_access> token;
         ds(vptr, d, token);
     }
@@ -277,7 +278,8 @@ class member_tinfo : public util::abstract_uniform_type_info<T> {
 };
 
 template<typename T, class A, class S>
-class member_tinfo<T, A, S, true> : public util::abstract_uniform_type_info<T> {
+class member_tinfo<T, A, S, false, true>
+        : public util::abstract_uniform_type_info<T> {
 
  public:
 
@@ -287,11 +289,46 @@ class member_tinfo<T, A, S, true> : public util::abstract_uniform_type_info<T> {
 
     member_tinfo() { }
 
-    void serialize(const void*, serializer*) const { }
+    void serialize(const void*, serializer*) const override { }
 
-    void deserialize(void*, deserializer*) const { }
+    void deserialize(void*, deserializer*) const override { }
 
 };
+
+
+template<typename T, class AccessPolicy, class SerializePolicy>
+class member_tinfo<T, AccessPolicy, SerializePolicy, true, false>
+        : public util::abstract_uniform_type_info<T> {
+
+    typedef typename std::underlying_type<T>::type value_type;
+
+ public:
+
+    member_tinfo(AccessPolicy apol, SerializePolicy spol)
+    : m_apol(std::move(apol)), m_spol(std::move(spol)) { }
+
+    member_tinfo(AccessPolicy apol) : m_apol(std::move(apol)) { }
+
+    member_tinfo() { }
+
+    void serialize(const void* p, serializer* s) const override {
+        auto val = m_apol(p);
+        m_spol(static_cast<value_type>(val), s);
+    }
+
+    void deserialize(void* p, deserializer* d) const override {
+        value_type tmp;
+        m_spol(tmp, d);
+        m_apol(p, static_cast<T>(tmp));
+    }
+
+ private:
+
+    AccessPolicy m_apol;
+    SerializePolicy m_spol;
+
+};
+
 
 template<typename T, class C>
 class memptr_access_policy {
@@ -360,6 +397,11 @@ struct fake_access_policy {
 
     inline const T& operator()(const void* vptr) const {
         return *reinterpret_cast<const T*>(vptr);
+    }
+
+    template<typename U>
+    inline void operator()(void* vptr, U&& value) const {
+        *reinterpret_cast<T*>(vptr) = std::forward<U>(value);
     }
 
     static constexpr bool grants_mutable_access = true;
