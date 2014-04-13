@@ -33,6 +33,7 @@
 
 #include "cppa/actor.hpp"
 #include "cppa/any_tuple.hpp"
+#include "cppa/actor_addr.hpp"
 #include "cppa/message_id.hpp"
 
 namespace cppa {
@@ -60,7 +61,10 @@ class response_promise {
      * @brief Queries whether this promise is still valid, i.e., no response
      *        was yet delivered to the client.
      */
-    explicit operator bool() const;
+    inline explicit operator bool() const {
+        // handle is valid if it has a receiver
+        return static_cast<bool>(m_to);
+    }
 
     /**
      * @brief Sends @p response_message and invalidates this handle afterwards.

@@ -65,6 +65,7 @@ typedef std::uint32_t actor_id;
 
 class actor;
 class abstract_actor;
+class response_promise;
 
 typedef intrusive_ptr<abstract_actor> abstract_actor_ptr;
 
@@ -72,6 +73,8 @@ typedef intrusive_ptr<abstract_actor> abstract_actor_ptr;
  * @brief Base class for all actor implementations.
  */
 class abstract_actor : public abstract_channel {
+
+    friend class response_promise;
 
  public:
 

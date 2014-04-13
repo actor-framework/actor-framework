@@ -46,15 +46,11 @@ response_promise::response_promise(const actor_addr& from,
     CPPA_REQUIRE(id.is_response() || !id.valid());
 }
 
-response_promise::operator bool() const {
-    return m_to != nullptr;
-}
-
 void response_promise::deliver(any_tuple msg) {
     if (m_to) {
-        auto ptr = detail::raw_access::get(m_to);
-        // TODO: breaks out of the execution unit
-        ptr->enqueue({m_from, ptr, m_id}, move(msg), nullptr);
+        auto to = detail::raw_access::get(m_to);
+        auto from = detail::raw_access::get(m_from);
+        to->enqueue({m_from, to, m_id}, move(msg), from->m_host);
         m_to = invalid_actor_addr;
     }
 }
