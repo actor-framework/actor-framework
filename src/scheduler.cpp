@@ -35,6 +35,7 @@
 
 #include "cppa/on.hpp"
 #include "cppa/self.hpp"
+#include "cppa/cppa.hpp"
 #include "cppa/receive.hpp"
 #include "cppa/logging.hpp"
 #include "cppa/anything.hpp"
@@ -259,6 +260,14 @@ void scheduler::destroy() {
 
 scheduler::~scheduler() {
     delete m_helper;
+}
+
+local_actor_ptr scheduler::exec(spawn_options opts,
+                                init_callback init_cb,
+                                std::function<behavior()> actor_behavior) {
+    return exec(opts, std::move(init_cb), [=] {
+        become(actor_behavior());
+    });
 }
 
 const actor_ptr& scheduler::delayed_send_helper() {

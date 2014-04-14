@@ -102,7 +102,7 @@ class message_future {
     /**
      * @brief Sets @c bhvr as event-handler for the response message.
      */
-    continue_helper then(behavior bhvr) {
+    continue_helper then(behavior bhvr) const {
         check_consistency();
         self->become_waiting_for(std::move(bhvr), m_mid);
         return {m_mid};
@@ -112,7 +112,7 @@ class message_future {
      * @brief Sets @p mexpr as event-handler for the response message.
      */
     template<typename... Cs, typename... Ts>
-    continue_helper then(const match_expr<Cs...>& arg, const Ts&... args) {
+    continue_helper then(const match_expr<Cs...>& arg, const Ts&... args) const {
         check_consistency();
         self->become_waiting_for(match_expr_convert(arg, args...), m_mid);
         return {m_mid};
@@ -122,7 +122,7 @@ class message_future {
      * @brief Blocks until the response arrives and then executes @p mexpr.
      */
     template<typename... Cs, typename... Ts>
-    void await(const match_expr<Cs...>& arg, const Ts&... args) {
+    void await(const match_expr<Cs...>& arg, const Ts&... args) const {
         check_consistency();
         self->dequeue_response(match_expr_convert(arg, args...), m_mid);
     }
@@ -137,7 +137,7 @@ class message_future {
         util::all_callable<Fs...>::value,
         continue_helper
     >::type
-    then(Fs... fs) {
+    then(Fs... fs) const {
         check_consistency();
         self->become_waiting_for(fs2bhvr(std::move(fs)...), m_mid);
         return {m_mid};
@@ -150,7 +150,7 @@ class message_future {
      */
     template<typename... Fs>
     typename std::enable_if<util::all_callable<Fs...>::value>::type
-    await(Fs... fs) {
+    await(Fs... fs) const {
         check_consistency();
         self->dequeue_response(fs2bhvr(std::move(fs)...), m_mid);
     }
@@ -170,7 +170,7 @@ class message_future {
     message_id m_mid;
 
     template<typename... Fs>
-    behavior fs2bhvr(Fs... fs) {
+    behavior fs2bhvr(Fs... fs) const {
         auto handle_sync_timeout = []() -> match_hint {
             self->handle_sync_timeout();
             return match_hint::skip;
@@ -183,7 +183,7 @@ class message_future {
         };
     }
 
-    void check_consistency() {
+    void check_consistency() const {
         if (!m_mid.valid() || !m_mid.is_response()) {
             throw std::logic_error("handle does not point to a response");
         }

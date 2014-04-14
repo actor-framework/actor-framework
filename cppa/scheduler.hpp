@@ -144,6 +144,10 @@ class scheduler {
                            init_callback init_cb,
                            void_function actor_behavior) = 0;
 
+    local_actor_ptr exec(spawn_options opts,
+                         init_callback init_cb,
+                         std::function<behavior()> actor_behavior);
+
     template<typename F, typename T, typename... Ts>
     local_actor_ptr exec(spawn_options opts, init_callback cb,
                          F f, T&& a0, Ts&&... as) {
