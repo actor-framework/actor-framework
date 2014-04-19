@@ -240,7 +240,7 @@ class invoke_policy {
                             [=](any_tuple& intermediate) -> optional<any_tuple> {
                                 if (!intermediate.empty()) {
                                     // do no use lamba expresion type to
-                                    // avoid recursive template intantiaton
+                                    // avoid recursive template instantiaton
                                     behavior::continuation_fun f2 = [=](any_tuple& m) -> optional<any_tuple> {
                                         return std::move(m);
                                     };
@@ -265,7 +265,11 @@ class invoke_policy {
                     // respond by using the result of 'fun'
                     CPPA_LOG_DEBUG("respond via response_promise");
                     auto fhdl = fetch_response_promise(self, hdl);
-                    if (fhdl) fhdl.deliver(std::move(*res));
+                    if (fhdl) {
+                        fhdl.deliver(std::move(*res));
+                        // inform caller about success
+                        return any_tuple{};
+                    }
                 }
             }
             return res;
