@@ -73,8 +73,7 @@ class event_based_resume {
                                         execution_unit* host) override {
             auto d = static_cast<Derived*>(this);
             d->m_host = host;
-            CPPA_LOG_TRACE("id = " << d->id()
-                           << ", state = " << static_cast<int>(d->state()));
+            CPPA_LOG_TRACE("id = " << d->id());
             auto done_cb = [&]() -> bool {
                 CPPA_LOG_TRACE("");
                 d->bhvr_stack().clear();
