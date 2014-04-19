@@ -38,9 +38,7 @@ any_tuple::any_tuple() : m_vals(get_empty_tuple()) { }
 
 any_tuple::any_tuple(detail::abstract_tuple* ptr) : m_vals(ptr) { }
 
-any_tuple::any_tuple(any_tuple&& other) : m_vals(get_empty_tuple()) {
-    m_vals.swap(other.m_vals);
-}
+any_tuple::any_tuple(any_tuple&& other) : m_vals(std::move(other.m_vals)) { }
 
 any_tuple::any_tuple(const data_ptr& vals) : m_vals(vals) { }
 
@@ -54,28 +52,34 @@ void any_tuple::reset() {
 }
 
 void* any_tuple::mutable_at(size_t p) {
+    CPPA_REQUIRE(m_vals != nullptr);
     return m_vals->mutable_at(p);
 }
 
 const void* any_tuple::at(size_t p) const {
+    CPPA_REQUIRE(m_vals != nullptr);
     return m_vals->at(p);
 }
 
 const uniform_type_info* any_tuple::type_at(size_t p) const {
+    CPPA_REQUIRE(m_vals != nullptr);
     return m_vals->type_at(p);
 }
 
 bool any_tuple::equals(const any_tuple& other) const {
+    CPPA_REQUIRE(m_vals != nullptr);
     return m_vals->equals(*other.vals());
 }
 
 any_tuple any_tuple::drop(size_t n) const {
+    CPPA_REQUIRE(m_vals != nullptr);
     if (n == 0) return *this;
     if (n >= size()) return any_tuple{};
     return any_tuple{detail::decorated_tuple::create(m_vals, n)};
 }
 
 any_tuple any_tuple::drop_right(size_t n) const {
+    CPPA_REQUIRE(m_vals != nullptr);
     using namespace std;
     if (n == 0) return *this;
     if (n >= size()) return any_tuple{};
