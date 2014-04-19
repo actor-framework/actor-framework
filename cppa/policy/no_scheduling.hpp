@@ -76,9 +76,9 @@ class no_scheduling {
 
     template<class Actor>
     void launch(Actor* self, execution_unit*) {
+        CPPA_REQUIRE(self != nullptr);
         CPPA_PUSH_AID(self->id());
         CPPA_LOG_TRACE(CPPA_ARG(self));
-        CPPA_REQUIRE(self != nullptr);
         intrusive_ptr<Actor> mself{self};
         self->attach_to_scheduler();
         std::thread([=] {
@@ -91,6 +91,7 @@ class no_scheduling {
                 }
                 // await new data before resuming actor
                 await_data(mself.get());
+                CPPA_REQUIRE(self->mailbox().blocked() == false);
             }
             self->detach_from_scheduler();
         }).detach();
