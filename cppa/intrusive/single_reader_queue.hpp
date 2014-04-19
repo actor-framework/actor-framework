@@ -148,7 +148,6 @@ class single_reader_queue {
      */
     inline bool can_fetch_more() {
         auto ptr = m_stack.load();
-        //CPPA_REQUIRE(ptr != reader_blocked_dummy());
         CPPA_REQUIRE(ptr != nullptr);
         return !is_dummy(ptr);
     }
@@ -171,12 +170,15 @@ class single_reader_queue {
 
     /**
      * @brief Tries to set this queue from state @p empty to state @p blocked.
-     * @returns @p true if the state change was successful, otherwise @p false.
+     * @returns @p true if the state change was successful or if the mailbox
+     *          was already blocked, otherwise @p false.
      * @note This function does never fail spuriously.
      */
     inline bool try_block() {
         auto e = stack_empty_dummy();
-        return m_stack.compare_exchange_strong(e, reader_blocked_dummy());
+        bool res = m_stack.compare_exchange_strong(e, reader_blocked_dummy());
+        // return true in case queue was already blocked
+        return res || e == reader_blocked_dummy();
     }
 
     /**
@@ -245,13 +247,21 @@ class single_reader_queue {
 
     template<class Mutex, class CondVar, class TimePoint>
     pointer synchronized_try_pop(Mutex& mtx, CondVar& cv, const TimePoint& abs_time) {
-        return (synchronized_await(mtx, cv, abs_time)) ? try_pop() : nullptr;
+        auto res = try_pop();
+        if (!res && synchronized_await(mtx, cv, abs_time)) {
+            res = try_pop();
+        }
+        return res;
     }
 
     template<class Mutex, class CondVar>
     pointer synchronized_pop(Mutex& mtx, CondVar& cv) {
-        synchronized_await(mtx, cv);
-        return try_pop();
+        auto res = try_pop();
+        if (!res) {
+            synchronized_await(mtx, cv);
+            res = try_pop();
+        }
+        return res;
     }
 
     template<class Mutex, class CondVar>
