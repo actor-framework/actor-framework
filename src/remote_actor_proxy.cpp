@@ -157,11 +157,16 @@ void remote_actor_proxy::enqueue(msg_hdr_cref hdr, any_tuple msg,
                             "enqueue$kill_proxy_helper",
                             "KILL_PROXY " << to_string(_this->address())
                             << " with exit reason " << reason);
-            _this->cleanup(reason);
-            detail::sync_request_bouncer f{reason};
-            _this->m_pending_requests.close([&](const sync_request_info& e) {
-                f(e.sender, e.mid);
-            });
+            if (_this->m_pending_requests.closed()) {
+                CPPA_LOG_WARNING("received KILL_PROXY twice");
+            }
+            else {
+                _this->cleanup(reason);
+                detail::sync_request_bouncer f{reason};
+                _this->m_pending_requests.close([&](const sync_request_info& e) {
+                    f(e.sender, e.mid);
+                });
+            }
         });
     }
     else forward_msg(hdr, move(msg));
