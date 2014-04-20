@@ -72,6 +72,7 @@ int main() {
     // these types (and only those) are present if
     // the uniform_type_info implementation is correct
     std::set<std::string> expected = {
+        // basic types
         "bool",
         "$::foo",                         // <anonymous namespace>::foo
         "@i8", "@i16", "@i32", "@i64",    // signed integer names
@@ -99,6 +100,10 @@ int main() {
         "@timeout",                  // timeout_msg
         "@sync_exited",              // sync_exited_msg
         "@sync_timeout",             // sync_timeout_msg
+        "@acceptor_closed",          // acceptor_closed_msg
+        "@conn_closed",              // connection_closed_msg
+        "@new_conn",                 // new_connection_msg
+        "@new_data",                 // new_data_msg
         // default announced cppa tuples
         "@<>+@atom",                 // {atom_value}
         "@<>+@atom+@actor",          // {atom_value, actor_ptr}

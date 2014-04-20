@@ -96,15 +96,15 @@ void peer(io::broker* self, io::connection_handle hdl, const actor& buddy) {
         self->write(hdl, sizeof(value), &value);
     };
     self->become (
-        on(atom("IO_closed"), arg_match) >> [=](io::connection_handle) {
-            CPPA_PRINT("received IO_closed");
+        [=](const connection_closed_msg&) {
+            CPPA_PRINT("received connection_closed_msg");
             self->quit();
         },
-        on(atom("IO_read"), arg_match) >> [=](io::connection_handle, const util::buffer& buf) {
+        [=](const new_data_msg& msg) {
             atom_value type;
             int value;
-            memcpy(&type, buf.data(), sizeof(atom_value));
-            memcpy(&value, buf.offset_data(sizeof(atom_value)), sizeof(int));
+            memcpy(&type, msg.buf.data(), sizeof(atom_value));
+            memcpy(&value, msg.buf.offset_data(sizeof(atom_value)), sizeof(int));
             self->send(buddy, type, value);
         },
         on(atom("ping"), arg_match) >> [=](int value) {
@@ -113,7 +113,7 @@ void peer(io::broker* self, io::connection_handle hdl, const actor& buddy) {
         on(atom("pong"), arg_match) >> [=](int value) {
             write(atom("pong"), value);
         },
-        on_arg_match >> [=](const down_msg& dm) {
+        [=](const down_msg& dm) {
             if (dm.source == buddy) self->quit(dm.reason);
         },
         others() >> CPPA_UNEXPECTED_MSG_CB(self)
@@ -123,10 +123,10 @@ void peer(io::broker* self, io::connection_handle hdl, const actor& buddy) {
 void peer_acceptor(io::broker* self, const actor& buddy) {
     CPPA_CHECKPOINT();
     self->become (
-        on(atom("IO_accept"), arg_match) >> [=](io::accept_handle, io::connection_handle hdl) {
+        [=](const new_connection_msg& msg) {
             CPPA_CHECKPOINT();
-            CPPA_PRINT("received IO_accept");
-            self->fork(peer, hdl, buddy);
+            CPPA_PRINT("received new_connection_msg");
+            self->fork(peer, msg.handle, buddy);
             self->quit();
         },
         others() >> CPPA_UNEXPECTED_MSG_CB(self)

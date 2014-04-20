@@ -36,6 +36,11 @@
 #include "cppa/group.hpp"
 #include "cppa/actor_addr.hpp"
 
+#include "cppa/util/buffer.hpp"
+
+#include "cppa/io/accept_handle.hpp"
+#include "cppa/io/connection_handle.hpp"
+
 namespace cppa {
 
 /**
@@ -110,6 +115,54 @@ struct timeout_msg {
      * @brief Actor-specific timeout ID.
      */
     std::uint32_t timeout_id;
+};
+
+/**
+ * @brief Signalizes a newly accepted connection from a {@link broker}.
+ */
+struct new_connection_msg {
+    /**
+     * @brief The handle that accepted the new connection.
+     */
+    io::accept_handle source;
+    /**
+     * @brief The handle for the new connection.
+     */
+    io::connection_handle handle;
+};
+
+/**
+ * @brief Signalizes newly arrived data for a {@link broker}.
+ */
+struct new_data_msg {
+    /**
+     * @brief Handle to the related connection
+     */
+    io::connection_handle handle;
+    /**
+     * @brief Buffer containing the received data.
+     */
+    util::buffer buf;
+};
+
+/**
+ * @brief Signalizes that a {@link broker} connection has been closed.
+ */
+struct connection_closed_msg {
+    /**
+     * @brief Handle to the closed connection.
+     */
+    io::connection_handle handle;
+};
+
+/**
+ * @brief Signalizes that a {@link broker} acceptor has been closed.
+ */
+struct acceptor_closed_msg {
+    /**
+     * @brief Handle to the closed connection.
+     */
+    io::accept_handle handle;
 };
 
 } // namespace cppa

@@ -61,11 +61,13 @@ namespace cppa { namespace detail {
 // ordered according to demangled type name (see uniform_type_info_map.cpp)
 using mapped_type_list = util::type_list<
     bool,
+    acceptor_closed_msg,
     actor,
     actor_addr,
     any_tuple,
     atom_value,
     channel,
+    connection_closed_msg,
     down_msg,
     exit_msg,
     group,
@@ -74,6 +76,8 @@ using mapped_type_list = util::type_list<
     io::accept_handle,
     io::connection_handle,
     message_header,
+    new_connection_msg,
+    new_data_msg,
     sync_exited_msg,
     sync_timeout_msg,
     timeout_msg,

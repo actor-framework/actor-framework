@@ -169,9 +169,10 @@ class broker::scribe : public extend<broker::servant>::with<buffered_writing> {
     scribe(broker_ptr parent, input_stream_ptr in, output_stream_ptr out)
     : super{get_middleman(), out, move(parent), in->read_handle(), out->write_handle()}
     , m_is_continue_reading{false}, m_dirty{false}
-    , m_policy{broker::at_least}, m_policy_buffer_size{0}, m_in{in}
-    , m_read_msg{atom("IO_read"), connection_handle::from_int(in->read_handle())} {
-        get_ref<2>(m_read_msg).final_size(default_max_buffer_size);
+    , m_policy{broker::at_least}, m_policy_buffer_size{0}, m_in{in} {
+        auto& ndm = get_ref<0>(m_read_msg);
+        ndm.handle = connection_handle::from_int(in->read_handle());
+        ndm.buf.final_size(default_max_buffer_size);
     }
 
     void receive_policy(broker::policy_flag policy, size_t buffer_size) {
@@ -192,9 +193,11 @@ class broker::scribe : public extend<broker::servant>::with<buffered_writing> {
         for (;;) {
             // stop reading if actor finished execution
             if (m_broker->exit_reason() != exit_reason::not_exited) {
+                CPPA_LOG_DEBUG("broker already done; exit reason: "
+                               << m_broker->exit_reason());
                 return continue_reading_result::closed;
             }
-            auto& buf = get_ref<2>(m_read_msg);
+            auto& buf = get_ref<0>(m_read_msg).buf;
             if (m_dirty) {
                 m_dirty = false;
                 if (m_policy == broker::at_most || m_policy == broker::exactly) {
@@ -220,7 +223,7 @@ class broker::scribe : public extend<broker::servant>::with<buffered_writing> {
                 CPPA_LOG_DEBUG("invoke io actor");
                 m_broker->invoke_message({invalid_actor_addr, nullptr}, m_read_msg);
                 CPPA_LOG_INFO_IF(!m_read_msg.vals()->unique(), "detached buffer");
-                get_ref<2>(m_read_msg).clear();
+                get_ref<0>(m_read_msg).buf.clear();
             }
         }
     }
@@ -232,8 +235,8 @@ class broker::scribe : public extend<broker::servant>::with<buffered_writing> {
  protected:
 
     any_tuple disconnect_message() override {
-        return make_any_tuple(atom("IO_closed"),
-                              connection_handle::from_int(m_in->read_handle()));
+        auto hdl = connection_handle::from_int(m_in->read_handle());
+        return make_any_tuple(connection_closed_msg{hdl});
     }
 
  private:
@@ -243,7 +246,7 @@ class broker::scribe : public extend<broker::servant>::with<buffered_writing> {
     broker::policy_flag m_policy;
     size_t m_policy_buffer_size;
     input_stream_ptr m_in;
-    cow_tuple<atom_value, connection_handle, util::buffer> m_read_msg;
+    cow_tuple<new_data_msg> m_read_msg;
 
 };
 
@@ -259,10 +262,9 @@ class broker::doorman : public broker::servant {
     ~doorman();
 
     doorman(broker_ptr parent, acceptor_uptr ptr)
-    : super{move(parent), ptr->file_handle()}
-    , m_accept_msg{atom("IO_accept"),
-                   accept_handle::from_int(ptr->file_handle())} {
-        m_ptr.reset(ptr.release());
+            : super{move(parent), ptr->file_handle()} {
+        get_ref<0>(m_accept_msg).source = accept_handle::from_int(ptr->file_handle());
+        m_ptr.swap(ptr);
     }
 
     continue_reading_result continue_reading() override {
@@ -278,8 +280,8 @@ class broker::doorman : public broker::servant {
             if (opt) {
                 using namespace std;
                 auto& p = *opt;
-                get_ref<2>(m_accept_msg) = m_broker->add_scribe(move(p.first),
-                                                                move(p.second));
+                get_ref<0>(m_accept_msg).handle = m_broker->add_scribe(move(p.first),
+                                                                       move(p.second));
                 m_broker->invoke_message({invalid_actor_addr, nullptr}, m_accept_msg);
             }
             else return continue_reading_result::continue_later;
@@ -289,14 +291,14 @@ class broker::doorman : public broker::servant {
  protected:
 
     any_tuple disconnect_message() override {
-        return make_any_tuple(atom("IO_closed"),
-                              accept_handle::from_int(m_ptr->file_handle()));
+        auto hdl = accept_handle::from_int(m_ptr->file_handle());
+        return make_any_tuple(acceptor_closed_msg{hdl});
     }
 
  private:
 
     acceptor_uptr m_ptr;
-    cow_tuple<atom_value, accept_handle, connection_handle> m_accept_msg;
+    cow_tuple<new_connection_msg> m_accept_msg;
 
 };
 
