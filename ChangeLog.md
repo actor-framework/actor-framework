@@ -10,7 +10,8 @@ __2014_XX_XX__
   * New type `exit_msg` is now used instead of messages using the atom `EXIT`
   * New type `down_msg` is now used instead of messages using the atom `DOWN`
   * New header `system_messages.hpp` for message types used by the runtime
-- Announce properly handles empty & POD types
+- Announce properly handles empty & POD types as well as enums
+- Brokers now use proper message types rather than 'IO_*' atom prefixed tuples
 
 Version 0.8.2
 -------------
