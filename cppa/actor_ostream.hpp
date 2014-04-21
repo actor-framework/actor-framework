@@ -52,7 +52,7 @@ class actor_ostream {
     actor_ostream& operator=(actor_ostream&&) = default;
     actor_ostream& operator=(const actor_ostream&) = default;
 
-    explicit actor_ostream(local_actor* self);
+    explicit actor_ostream(actor self);
 
     actor_ostream& write(std::string arg);
 
@@ -87,16 +87,14 @@ class actor_ostream {
 
  private:
 
-    local_actor* m_self;
+    actor m_self;
     actor m_printer;
 
 };
 
-inline actor_ostream aout(local_actor* self) {
+inline actor_ostream aout(actor self) {
     return actor_ostream{self};
 }
-
-actor_ostream aout(scoped_actor& self);
 
 } // namespace cppa
 

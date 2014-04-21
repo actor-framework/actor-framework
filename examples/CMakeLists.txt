@@ -29,6 +29,8 @@ if (NOT "${CPPA_NO_PROTOBUF_EXAMPLES}" STREQUAL "yes")
   if (PROTOBUF_FOUND)
     PROTOBUF_GENERATE_CPP(ProtoSources ProtoHeaders "${CMAKE_CURRENT_SOURCE_DIR}/remote_actors/pingpong.proto")
     include_directories(${PROTOBUF_INCLUDE_DIR})
+    # add binary dir as include path as generated headers will be located there
+    include_directories(${CMAKE_CURRENT_BINARY_DIR})
     add_executable(protobuf_broker remote_actors/protobuf_broker.cpp ${ProtoSources})
     target_link_libraries(protobuf_broker ${CMAKE_DL_LIBS} ${CPPA_LIBRARY} ${PTHREAD_LIBRARIES} ${PROTOBUF_LIBRARIES})
     add_dependencies(protobuf_broker all_examples)

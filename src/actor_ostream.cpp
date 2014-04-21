@@ -28,6 +28,7 @@
 \******************************************************************************/
 
 
+#include "cppa/cppa.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/singletons.hpp"
 #include "cppa/local_actor.hpp"
@@ -36,22 +37,18 @@
 
 namespace cppa {
 
-actor_ostream::actor_ostream(local_actor* self) : m_self(self) {
+actor_ostream::actor_ostream(actor self) : m_self(std::move(self)) {
     m_printer = get_scheduling_coordinator()->printer();
 }
 
 actor_ostream& actor_ostream::write(std::string arg) {
-    m_self->send(m_printer, atom("add"), move(arg));
+    send_as(m_self, m_printer, atom("add"), move(arg));
     return *this;
 }
 
 actor_ostream& actor_ostream::flush() {
-    m_self->send(m_printer, atom("flush"));
+    send_as(m_self, m_printer, atom("flush"));
     return *this;
-}
-
-actor_ostream aout(scoped_actor& self) {
-    return actor_ostream{self.get()};
 }
 
 } // namespace cppa

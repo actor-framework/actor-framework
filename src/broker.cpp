@@ -78,7 +78,8 @@ behavior default_broker::make_behavior() {
     return (
         on(atom("INITMSG")) >> [=] {
             unbecome();
-            m_fun(this);
+            auto bhvr = m_fun(this);
+            if (bhvr) become(std::move(bhvr));
         }
     );
 }
@@ -468,14 +469,28 @@ broker_ptr init_and_launch(broker_ptr ptr) {
     return ptr;
 }
 
-broker_ptr broker::from_impl(std::function<void (broker*)> fun,
+broker_ptr broker::from_impl(std::function<behavior (broker*)> fun,
                              input_stream_ptr in,
                              output_stream_ptr out) {
     return make_counted<default_broker>(move(fun), move(in), move(out));
 }
 
-broker_ptr broker::from(std::function<void (broker*)> fun, acceptor_uptr in) {
+
+broker_ptr broker::from_impl(std::function<void (broker*)> fun,
+                             input_stream_ptr in,
+                             output_stream_ptr out) {
+    auto f = [=](broker* ptr) -> behavior { fun(ptr); return behavior{}; };
+    return make_counted<default_broker>(f, move(in), move(out));
+}
+
+broker_ptr broker::from(std::function<behavior (broker*)> fun, acceptor_uptr in) {
     return make_counted<default_broker>(move(fun), move(in));
+}
+
+
+broker_ptr broker::from(std::function<void (broker*)> fun, acceptor_uptr in) {
+    auto f = [=](broker* ptr) -> behavior { fun(ptr); return behavior{}; };
+    return make_counted<default_broker>(f, move(in));
 }
 
 void broker::erase_io(int id) {
@@ -509,7 +524,8 @@ actor broker::fork_impl(std::function<void (broker*)> fun,
         throw std::invalid_argument("invalid handle");
     }
     scribe* sptr = i->second.get(); // non-owning pointer
-    auto result = make_counted<default_broker>(move(fun), move(i->second));
+    auto f = [=](broker* ptr) -> behavior { fun(ptr); return behavior{}; };
+    auto result = make_counted<default_broker>(f, move(i->second));
     init_and_launch(result);
     sptr->set_broker(result); // set new broker
     m_io.erase(i);
