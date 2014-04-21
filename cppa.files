@@ -150,6 +150,7 @@ cppa/serializer.hpp
 cppa/singletons.hpp
 cppa/spawn.hpp
 cppa/spawn_options.hpp
+cppa/spawn_prototypes.hpp
 cppa/stacked.hpp
 cppa/stackless.hpp
 cppa/thread_mapped_actor.hpp
@@ -237,6 +238,7 @@ src/buffer.cpp
 src/channel.cpp
 src/context_switching_actor.cpp
 src/continuable.cpp
+src/continue_helper.cpp
 src/decorated_tuple.cpp
 src/default_actor_addressing.cpp
 src/default_actor_proxy.cpp
@@ -282,6 +284,7 @@ src/partial_function.cpp
 src/primitive_variant.cpp
 src/process_information.cpp
 src/protocol.cpp
+src/receive.cpp
 src/ref_counted.cpp
 src/response_handle.cpp
 src/ripemd_160.cpp

@@ -84,7 +84,6 @@
 #include "cppa/detail/memory.hpp"
 #include "cppa/detail/get_behavior.hpp"
 #include "cppa/detail/actor_registry.hpp"
-#include "cppa/detail/receive_loop_helper.hpp"
 
 /**
  * @author Dominik Charousset <dominik.charousset (at) haw-hamburg.de>

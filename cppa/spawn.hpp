@@ -38,6 +38,7 @@
 #include "cppa/typed_actor.hpp"
 #include "cppa/prioritizing.hpp"
 #include "cppa/spawn_options.hpp"
+#include "cppa/spawn_prototypes.hpp"
 #include "cppa/event_based_actor.hpp"
 
 namespace cppa {
@@ -65,7 +66,7 @@ inline actor_ptr eval_sopts(spawn_options opts, local_actor_ptr ptr) {
  * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
  * @returns An {@link actor_ptr} to the spawned {@link actor}.
  */
-template<spawn_options Options = no_spawn_options, typename... Ts>
+template<spawn_options Options, typename... Ts>
 actor_ptr spawn(Ts&&... args) {
     static_assert(sizeof...(Ts) > 0, "too few arguments provided");
     return eval_sopts(Options,
@@ -81,7 +82,7 @@ actor_ptr spawn(Ts&&... args) {
  * @tparam Options Optional flags to modify <tt>spawn</tt>'s behavior.
  * @returns An {@link actor_ptr} to the spawned {@link actor}.
  */
-template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
+template<class Impl, spawn_options Options, typename... Ts>
 actor_ptr spawn(Ts&&... args) {
     static_assert(std::is_base_of<event_based_actor, Impl>::value,
                   "Impl is not a derived type of event_based_actor");
@@ -106,7 +107,7 @@ actor_ptr spawn(Ts&&... args) {
  * @returns An {@link actor_ptr} to the spawned {@link actor}.
  * @note The spawned has joined the group before this function returns.
  */
-template<spawn_options Options = no_spawn_options, typename... Ts>
+template<spawn_options Options, typename... Ts>
 actor_ptr spawn_in_group(const group_ptr& grp, Ts&&... args) {
     static_assert(sizeof...(Ts) > 0, "too few arguments provided");
     auto init_cb = [=](local_actor* ptr) {

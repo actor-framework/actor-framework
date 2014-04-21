@@ -31,13 +31,13 @@
 #ifndef CPPA_SEND_HPP
 #define CPPA_SEND_HPP
 
-#include "cppa/self.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/message_header.hpp"
 #include "cppa/message_future.hpp"
 #include "cppa/typed_actor_ptr.hpp"
+#include "cppa/response_handle.hpp"
 
 #include "cppa/util/duration.hpp"
 
@@ -71,18 +71,7 @@ using actor_destination = destination_header<actor_ptr>;
 /**
  * @brief Sends @p what to the receiver specified in @p hdr.
  */
-inline void send_tuple(channel_destination dest, any_tuple what) {
-    if (dest.receiver == nullptr) return;
-    auto s = self.get();
-    message_header fhdr{s, std::move(dest.receiver), dest.priority};
-    if (fhdr.receiver != s && s->chaining_enabled()) {
-        if (fhdr.receiver->chained_enqueue(fhdr, std::move(what))) {
-            // only actors implement chained_enqueue to return true
-            s->chained_actor(fhdr.receiver.downcast<actor>());
-        }
-    }
-    else fhdr.deliver(std::move(what));
-}
+void send_tuple(channel_destination dest, any_tuple what);
 
 /**
  * @brief Sends @p what to the receiver specified in @p hdr.
@@ -133,6 +122,23 @@ template<typename... Ts>
 inline void send_as(actor_ptr from, channel_destination dest, Ts&&... what) {
     send_tuple_as(std::move(from), std::move(dest),
                   make_any_tuple(std::forward<Ts>(what)...));
+}
+
+/**
+ * @brief Sends <tt>{what...}</tt> as a message to @p dest without
+ *        sender information.
+ */
+template<typename... Ts>
+inline void anon_send(channel_destination dest, Ts&&... args) {
+    send_as(nullptr, std::move(dest), std::forward<Ts>(args)...);
+}
+
+/**
+ * @brief Sends @p tup as a message to @p dest without
+ *        sender information.
+ */
+inline void anon_send_tuple(channel_destination dest, cppa::any_tuple tup) {
+    send_tuple_as(nullptr, std::move(dest), std::move(tup));
 }
 
 /**
@@ -266,9 +272,7 @@ message_future timed_sync_send(actor_destination whom,
  * @brief Sends a message to the sender of the last received message.
  * @param what Message content as a tuple.
  */
-CPPA_DEPRECATED inline void reply_tuple(any_tuple what) {
-    self->reply_message(std::move(what));
-}
+CPPA_DEPRECATED void reply_tuple(any_tuple what);
 
 /**
  * @brief Sends a message to the sender of the last received message.
@@ -276,7 +280,7 @@ CPPA_DEPRECATED inline void reply_tuple(any_tuple what) {
  */
 template<typename... Ts>
 CPPA_DEPRECATED inline void reply(Ts&&... what) {
-    self->reply_message(make_any_tuple(std::forward<Ts>(what)...));
+    reply_tuple(make_any_tuple(std::forward<Ts>(what)...));
 }
 
 /**
@@ -301,9 +305,7 @@ inline void reply_tuple_to(const response_handle& handle, any_tuple what) {
 /**
  * @brief Forwards the last received message to @p whom.
  */
-inline void forward_to(actor_destination dest) {
-    self->forward_message(dest.receiver, dest.priority);
-}
+void forward_to(actor_destination dest);
 
 /**
  * @brief Sends a message to @p whom that is delayed by @p rel_time.

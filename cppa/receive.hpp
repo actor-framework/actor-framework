@@ -31,12 +31,75 @@
 #ifndef CPPA_RECEIVE_HPP
 #define CPPA_RECEIVE_HPP
 
-#include "cppa/self.hpp"
 #include "cppa/behavior.hpp"
-#include "cppa/local_actor.hpp"
-#include "cppa/detail/receive_loop_helper.hpp"
 
 namespace cppa {
+
+namespace detail {
+
+void dq_bhvr(behavior& bhvr);
+
+template<class Statement>
+class receive_while_helper {
+
+ public:
+
+    template<typename S>
+    receive_while_helper(S&& stmt) : m_stmt(std::forward<S>(stmt)) { }
+
+    template<typename... Ts>
+    void operator()(Ts&&... args) {
+        static_assert(sizeof...(Ts) > 0,
+                      "operator() requires at least one argument");
+        behavior bhvr = match_expr_convert(std::forward<Ts>(args)...);
+        while (m_stmt()) dq_bhvr(bhvr);
+    }
+
+ private:
+
+    Statement m_stmt;
+
+};
+
+template<typename T>
+class receive_for_helper {
+
+    T& begin;
+    T end;
+
+ public:
+
+    receive_for_helper(T& first, const T& last) : begin(first), end(last) { }
+
+    template<typename... Ts>
+    void operator()(Ts&&... args) {
+        behavior tmp = match_expr_convert(std::forward<Ts>(args)...);
+        for ( ; begin != end; ++begin) dq_bhvr(tmp);
+    }
+
+};
+
+class do_receive_helper {
+
+    behavior m_bhvr;
+
+ public:
+
+    inline do_receive_helper(behavior&& bhvr) : m_bhvr(std::move(bhvr)) { }
+
+    do_receive_helper(do_receive_helper&&) = default;
+
+    template<typename Statement>
+    void until(Statement&& stmt) {
+        static_assert(std::is_same<bool, decltype(stmt())>::value,
+                      "functor or function does not return a boolean");
+        do { dq_bhvr(m_bhvr); }
+        while (stmt() == false);
+    }
+
+};
+
+} // namespace detail
 
 /**
  * @ingroup BlockingAPI
@@ -127,22 +190,18 @@ detail::do_receive_helper do_receive(Ts&&... args);
  *                inline and template function implementations                *
  ******************************************************************************/
 
+void receive_impl(behavior bhvr);
+void receive_loop_impl(behavior rules);
+
 template<typename... Ts>
 void receive(Ts&&... args) {
     static_assert(sizeof...(Ts), "receive() requires at least one argument");
-    self->dequeue(match_expr_convert(std::forward<Ts>(args)...));
-}
-
-inline void receive_loop(behavior rules) {
-    local_actor* sptr = self;
-    for (;;) sptr->dequeue(rules);
+    receive_impl(match_expr_convert(std::forward<Ts>(args)...));
 }
 
 template<typename... Ts>
 void receive_loop(Ts&&... args) {
-    behavior bhvr = match_expr_convert(std::forward<Ts>(args)...);
-    local_actor* sptr = self;
-    for (;;) sptr->dequeue(bhvr);
+    receive_loop_impl(match_expr_convert(std::forward<Ts>(args)...));
 }
 
 template<typename T>

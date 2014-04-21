@@ -34,9 +34,11 @@
 #include <cstdint>
 #include <functional>
 
+#include "cppa/send.hpp"
 #include "cppa/group.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/extend.hpp"
+#include "cppa/receive.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/message_id.hpp"
@@ -48,6 +50,7 @@
 #include "cppa/response_handle.hpp"
 #include "cppa/message_priority.hpp"
 #include "cppa/partial_function.hpp"
+#include "cppa/spawn_prototypes.hpp"
 
 #include "cppa/util/duration.hpp"
 
@@ -339,6 +342,64 @@ class local_actor : public extend<actor>::with<memory_cached> {
     inline std::uint32_t planned_exit_reason() const;
 
     inline void planned_exit_reason(std::uint32_t value);
+
+    // some v09 upward compatibility
+
+    template<typename... Args>
+    inline void send(Args&&... args) {
+        cppa::send(std::forward<Args>(args)...);
+    }
+
+    template<typename... Args>
+    inline void send_tuple(Args&&... args) {
+        cppa::send_tuple(std::forward<Args>(args)...);
+    }
+
+    template<typename... Ts>
+    void receive(Ts&&... args) {
+        cppa::receive(std::forward<Ts>(args)...);
+    }
+
+    template<typename... Ts>
+    void receive_loop(Ts&&... args) {
+        cppa::receive_loop(std::forward<Ts>(args)...);
+    }
+
+    template<typename T>
+    detail::receive_for_helper<T> receive_for(T& begin, const T& end) {
+        return cppa::receive_for(begin, end);
+    }
+
+    template<typename Statement>
+    detail::receive_while_helper<Statement> receive_while(Statement&& stmt) {
+        return cppa::receive_while(std::forward<Statement>(stmt));
+    }
+
+    template<typename... Ts>
+    detail::do_receive_helper do_receive(Ts&&... args) {
+        return cppa::do_receive(std::forward<Ts>(args)...);
+    }
+
+    template<spawn_options Options = no_spawn_options, typename... Ts>
+    actor_ptr spawn(Ts&&... args) {
+        return cppa::spawn<Options>(std::forward<Ts>(args)...);
+    }
+
+    template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
+    actor_ptr spawn(Ts&&... args) {
+        return cppa::spawn<Impl, Options>(std::forward<Ts>(args)...);
+
+    }
+
+    template<spawn_options Options, typename... Ts>
+    actor_ptr spawn_in_group(const group_ptr& grp, Ts&&... args) {
+        return cppa::spawn_in_group<Options>(grp, std::forward<Ts>(args)...);
+    }
+
+    template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
+    actor_ptr spawn_in_group(const group_ptr& grp, Ts&&... args) {
+        return cppa::spawn_in_group<Impl, Options>(grp, std::forward<Ts>(args)...);
+    }
 
  protected:
 

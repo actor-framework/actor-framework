@@ -28,19 +28,27 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_RECEIVE_LOOP_HELPER_HPP
-#define CPPA_RECEIVE_LOOP_HELPER_HPP
-
-#include <new>
-
 #include "cppa/self.hpp"
-#include "cppa/behavior.hpp"
-#include "cppa/match_expr.hpp"
+#include "cppa/receive.hpp"
 #include "cppa/local_actor.hpp"
-#include "cppa/partial_function.hpp"
 
-#include "cppa/util/type_list.hpp"
+namespace cppa {
 
-namespace cppa {  } // namespace cppa::detail
+namespace detail {
 
-#endif // CPPA_RECEIVE_LOOP_HELPER_HPP
+void dq_bhvr(behavior& bhvr) {
+    self->dequeue(bhvr);
+}
+
+} // namespace detail
+
+void receive_impl(behavior bhvr) {
+    self->dequeue(bhvr);
+}
+
+void receive_loop_impl(behavior bhvr) {
+    local_actor* sptr = self;
+    for (;;) sptr->dequeue(bhvr);
+}
+
+} // namespace cppa

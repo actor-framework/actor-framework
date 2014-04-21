@@ -3,7 +3,7 @@ project(cppa CXX)
 
 set(LIBCPPA_VERSION_MAJOR 0)
 set(LIBCPPA_VERSION_MINOR 8)
-set(LIBCPPA_VERSION_PATCH 2)
+set(LIBCPPA_VERSION_PATCH 3)
 
 # prohibit in-source builds
 if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
@@ -141,6 +141,7 @@ set(LIBCPPA_SRC
     src/memory.cpp
     src/memory_managed.cpp
     src/message_header.cpp
+    src/message_future.cpp
     src/middleman.cpp
     src/middleman_event_handler.cpp
     src/object.cpp
@@ -151,6 +152,7 @@ set(LIBCPPA_SRC
     src/primitive_variant.cpp
     src/process_information.cpp
     src/protocol.cpp
+    src/receive.cpp
     src/ref_counted.cpp
     src/response_handle.cpp
     src/ripemd_160.cpp

@@ -34,6 +34,27 @@
 
 namespace cppa {
 
+void send_tuple(channel_destination dest, any_tuple what) {
+    if (dest.receiver == nullptr) return;
+    auto s = self.get();
+    message_header fhdr{s, std::move(dest.receiver), dest.priority};
+    if (fhdr.receiver != s && s->chaining_enabled()) {
+        if (fhdr.receiver->chained_enqueue(fhdr, std::move(what))) {
+            // only actors implement chained_enqueue to return true
+            s->chained_actor(fhdr.receiver.downcast<actor>());
+        }
+    }
+    else fhdr.deliver(std::move(what));
+}
+
+void reply_tuple(any_tuple what) {
+    self->reply_message(std::move(what));
+}
+
+void forward_to(actor_destination dest) {
+    self->forward_message(dest.receiver, dest.priority);
+}
+
 message_future sync_send_tuple(actor_destination dest, any_tuple what) {
     if (!dest.receiver) throw std::invalid_argument("whom == nullptr");
     auto req = self->new_request_id();

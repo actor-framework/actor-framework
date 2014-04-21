@@ -36,7 +36,6 @@
 
 #include "cppa/on.hpp"
 #include "cppa/atom.hpp"
-#include "cppa/logging.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/match_expr.hpp"
 #include "cppa/message_id.hpp"
@@ -68,17 +67,7 @@ class continue_helper {
         }});
     }
 
-    inline continue_helper& continue_with(behavior::continuation_fun fun) {
-        auto ref_opt = self->bhvr_stack().sync_handler(m_mid);
-        if (ref_opt) {
-            auto& ref = *ref_opt;
-            // copy original behavior
-            behavior cpy = ref;
-            ref = cpy.add_continuation(std::move(fun));
-        }
-        else CPPA_LOG_ERROR(".continue_with: failed to add continuation");
-        return *this;
-    }
+    continue_helper& continue_with(behavior::continuation_fun fun);
 
     inline message_id get_message_id() const {
         return m_mid;
@@ -102,29 +91,14 @@ class message_future {
     /**
      * @brief Sets @c bhvr as event-handler for the response message.
      */
-    continue_helper then(behavior bhvr) const {
-        check_consistency();
-        self->become_waiting_for(std::move(bhvr), m_mid);
-        return {m_mid};
-    }
+    continue_helper then(behavior bhvr) const;
 
     /**
      * @brief Sets @p mexpr as event-handler for the response message.
      */
     template<typename... Cs, typename... Ts>
     continue_helper then(const match_expr<Cs...>& arg, const Ts&... args) const {
-        check_consistency();
-        self->become_waiting_for(match_expr_convert(arg, args...), m_mid);
-        return {m_mid};
-    }
-
-    /**
-     * @brief Blocks until the response arrives and then executes @p mexpr.
-     */
-    template<typename... Cs, typename... Ts>
-    void await(const match_expr<Cs...>& arg, const Ts&... args) const {
-        check_consistency();
-        self->dequeue_response(match_expr_convert(arg, args...), m_mid);
+        return then(match_expr_convert(arg, args...));
     }
 
     /**
@@ -138,9 +112,20 @@ class message_future {
         continue_helper
     >::type
     then(Fs... fs) const {
-        check_consistency();
-        self->become_waiting_for(fs2bhvr(std::move(fs)...), m_mid);
-        return {m_mid};
+        return then(fs2bhvr(std::move(fs)...));
+    }
+
+    /**
+     * @brief Blocks until the response arrives and then executes @p bhvr.
+     */
+    void await(behavior bhvr) const;
+
+    /**
+     * @brief Blocks until the response arrives and then executes @p mexpr.
+     */
+    template<typename... Cs, typename... Ts>
+    void await(const match_expr<Cs...>& arg, const Ts&... args) const {
+        await(match_expr_convert(arg, args...));
     }
 
     /**
@@ -151,8 +136,7 @@ class message_future {
     template<typename... Fs>
     typename std::enable_if<util::all_callable<Fs...>::value>::type
     await(Fs... fs) const {
-        check_consistency();
-        self->dequeue_response(fs2bhvr(std::move(fs)...), m_mid);
+        await(fs2bhvr(std::move(fs)...));
     }
 
     /**
@@ -169,28 +153,19 @@ class message_future {
 
     message_id m_mid;
 
+    static match_hint handle_sync_timeout();
+
     template<typename... Fs>
     behavior fs2bhvr(Fs... fs) const {
-        auto handle_sync_timeout = []() -> match_hint {
-            self->handle_sync_timeout();
-            return match_hint::skip;
-        };
         return {
             on(atom("EXITED"), val<std::uint32_t>) >> skip_message,
             on(atom("VOID")) >> skip_message,
-            on(atom("TIMEOUT")) >> handle_sync_timeout,
+            on(atom("TIMEOUT")) >> &message_future::handle_sync_timeout,
             (on(any_vals, arg_match) >> fs)...
         };
     }
 
-    void check_consistency() const {
-        if (!m_mid.valid() || !m_mid.is_response()) {
-            throw std::logic_error("handle does not point to a response");
-        }
-        else if (!self->awaits(m_mid)) {
-            throw std::logic_error("response already received");
-        }
-    }
+    void check_consistency() const;
 
 };
 
@@ -222,37 +197,6 @@ class typed_continue_helper {
     continue_helper m_ch;
 
 };
-
-/*
-template<>
-class typed_continue_helper<void> {
-
- public:
-
-    typedef int message_id_wrapper_tag;
-
-    typedef util::type_list<void> result_types;
-
-    typed_continue_helper(continue_helper ch) : m_ch(std::move(ch)) { }
-
-    template<typename F>
-    void continue_with(F fun) {
-        using arg_types = typename util::get_callable_trait<F>::arg_types;
-        static_assert(std::is_same<util::empty_type_list, arg_types>::value,
-                      "functor takes too much arguments");
-        m_ch.continue_with(std::move(fun));
-    }
-
-    inline message_id get_message_id() const {
-        return m_ch.get_message_id();
-    }
-
- private:
-
-    continue_helper m_ch;
-
-};
-*/
 
 template<typename OutputList>
 class typed_message_future {

@@ -1,3 +1,11 @@
+Version 0.8.3
+-------------
+
+__2014-21-04__
+
+- Added message_future::then(behavior) member function
+- Made API 0.9 compatible to ease benchmarking 0.8 vs 0.9
+
 Version 0.8.2
 -------------
 

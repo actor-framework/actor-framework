@@ -28,19 +28,26 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_RECEIVE_LOOP_HELPER_HPP
-#define CPPA_RECEIVE_LOOP_HELPER_HPP
+#ifndef CPPA_SPAWN_PROTOTYPES_HPP
+#define CPPA_SPAWN_PROTOTYPES_HPP
 
-#include <new>
+#include "cppa/cppa_fwd.hpp"
+#include "cppa/spawn_options.hpp"
 
-#include "cppa/self.hpp"
-#include "cppa/behavior.hpp"
-#include "cppa/match_expr.hpp"
-#include "cppa/local_actor.hpp"
-#include "cppa/partial_function.hpp"
+namespace cppa {
 
-#include "cppa/util/type_list.hpp"
+template<spawn_options Options = no_spawn_options, typename... Ts>
+actor_ptr spawn(Ts&&... args);
 
-namespace cppa {  } // namespace cppa::detail
+template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
+actor_ptr spawn(Ts&&... args);
 
-#endif // CPPA_RECEIVE_LOOP_HELPER_HPP
+template<spawn_options Options = no_spawn_options, typename... Ts>
+actor_ptr spawn_in_group(const group_ptr& grp, Ts&&... args);
+
+template<class Impl, spawn_options Options = no_spawn_options, typename... Ts>
+actor_ptr spawn_in_group(const group_ptr& grp, Ts&&... args);
+
+} // namespace cppa
+
+#endif // CPPA_SPAWN_PROTOTYPES_HPP

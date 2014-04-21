@@ -28,19 +28,48 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_RECEIVE_LOOP_HELPER_HPP
-#define CPPA_RECEIVE_LOOP_HELPER_HPP
-
-#include <new>
-
 #include "cppa/self.hpp"
-#include "cppa/behavior.hpp"
-#include "cppa/match_expr.hpp"
+#include "cppa/logging.hpp"
 #include "cppa/local_actor.hpp"
-#include "cppa/partial_function.hpp"
+#include "cppa/message_future.hpp"
 
-#include "cppa/util/type_list.hpp"
+namespace cppa {
 
-namespace cppa {  } // namespace cppa::detail
+continue_helper& continue_helper::continue_with(behavior::continuation_fun fun) {
+    auto ref_opt = self->bhvr_stack().sync_handler(m_mid);
+    if (ref_opt) {
+        auto& ref = *ref_opt;
+        // copy original behavior
+        behavior cpy = ref;
+        ref = cpy.add_continuation(std::move(fun));
+    }
+    else CPPA_LOG_ERROR(".continue_with: failed to add continuation");
+    return *this;
+}
 
-#endif // CPPA_RECEIVE_LOOP_HELPER_HPP
+continue_helper message_future::then(behavior bhvr) const {
+    check_consistency();
+    self->become_waiting_for(std::move(bhvr), m_mid);
+    return {m_mid};
+}
+
+void message_future::await(behavior bhvr) const {
+    check_consistency();
+    self->dequeue_response(bhvr, m_mid);
+}
+
+match_hint message_future::handle_sync_timeout() {
+    self->handle_sync_timeout();
+    return match_hint::skip;
+}
+
+void message_future::check_consistency() const {
+    if (!m_mid.valid() || !m_mid.is_response()) {
+        throw std::logic_error("handle does not point to a response");
+    }
+    else if (!self->awaits(m_mid)) {
+        throw std::logic_error("response already received");
+    }
+}
+
+} // namespace cppa
