@@ -174,7 +174,6 @@ set(LIBCPPA_SRC
     src/demangle.cpp
     src/deserializer.cpp
     src/duration.cpp
-    src/empty_tuple.cpp
     src/event_based_actor.cpp
     src/exception.cpp
     src/execution_unit.cpp

@@ -63,10 +63,6 @@ inline detail::abstract_tuple* get_tuple_dummy() {
     return detail::singleton_manager::get_tuple_dummy();
 }
 
-inline detail::empty_tuple* get_empty_tuple() {
-    return detail::singleton_manager::get_empty_tuple();
-}
-
 } // namespace cppa
 
 #endif // CPPA_SINGLETONS_HPP

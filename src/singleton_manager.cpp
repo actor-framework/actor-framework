@@ -39,7 +39,6 @@
 
 #include "cppa/io/middleman.hpp"
 
-#include "cppa/detail/empty_tuple.hpp"
 #include "cppa/detail/group_manager.hpp"
 #include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/singleton_manager.hpp"
@@ -66,7 +65,6 @@ std::atomic<uniform_type_info_map*> s_uniform_type_info_map;
 std::atomic<io::middleman*> s_middleman;
 std::atomic<actor_registry*> s_actor_registry;
 std::atomic<group_manager*> s_group_manager;
-std::atomic<empty_tuple*> s_empty_tuple;
 std::atomic<scheduler::coordinator*> s_scheduling_coordinator;
 std::atomic<logging*> s_logger;
 
@@ -85,8 +83,6 @@ void singleton_manager::shutdown() {
     destroy(s_actor_registry);
     CPPA_LOGF_DEBUG("shutdown group manager");
     destroy(s_group_manager);
-    CPPA_LOGF_DEBUG("destroy empty tuple singleton");
-    destroy(s_empty_tuple);
     CPPA_LOGF_DEBUG("clear type info map");
     destroy(s_uniform_type_info_map);
     destroy(s_logger);
@@ -123,10 +119,6 @@ logging* singleton_manager::get_logger() {
 
 io::middleman* singleton_manager::get_middleman() {
     return lazy_get(s_middleman);
-}
-
-empty_tuple* singleton_manager::get_empty_tuple() {
-    return lazy_get(s_empty_tuple);
 }
 
 } } // namespace cppa::detail

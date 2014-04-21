@@ -30,11 +30,8 @@
 
 #include "cppa/any_tuple.hpp"
 #include "cppa/singletons.hpp"
-#include "cppa/detail/empty_tuple.hpp"
 
 namespace cppa {
-
-any_tuple::any_tuple() : m_vals(get_empty_tuple()) { }
 
 any_tuple::any_tuple(detail::abstract_tuple* ptr) : m_vals(ptr) { }
 
@@ -48,7 +45,7 @@ any_tuple& any_tuple::operator=(any_tuple&& other) {
 }
 
 void any_tuple::reset() {
-    m_vals.reset(get_empty_tuple());
+    m_vals.reset();
 }
 
 void* any_tuple::mutable_at(size_t p) {

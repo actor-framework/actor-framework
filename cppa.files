@@ -38,7 +38,6 @@ cppa/detail/decorated_tuple.hpp
 cppa/detail/default_uniform_type_info.hpp
 cppa/detail/demangle.hpp
 cppa/detail/disablable_delete.hpp
-cppa/detail/empty_tuple.hpp
 cppa/detail/execinfo_windows.hpp
 cppa/detail/fd_util.hpp
 cppa/detail/functor_based_actor.hpp

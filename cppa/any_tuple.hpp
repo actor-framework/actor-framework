@@ -73,7 +73,7 @@ class any_tuple {
     /**
      * @brief Creates an empty tuple.
      */
-    any_tuple();
+    any_tuple() = default;
 
     /**
      * @brief Creates a tuple from @p t.
@@ -345,7 +345,7 @@ inline const std::string* any_tuple::tuple_type_names() const {
 
 
 inline size_t any_tuple::size() const {
-    return m_vals->size();
+    return m_vals ? m_vals->size() : 0;
 }
 
 inline any_tuple any_tuple::take(size_t n) const {
