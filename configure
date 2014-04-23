@@ -93,13 +93,16 @@ configure ()
         append_cache_entry CMAKE_CXX_COMPILER FILEPATH $1
     fi
 
-    if [[ "$builddir" = /* ]]; then
-        # absolute path given
-        absolute_builddir="$builddir"
-    else
-        # relative path given; convert to absolute path
-        absolute_builddir="$(pwd)/$builddir"
-    fi
+    case "$builddir" in
+        /*)
+            #absolute path given
+            absolute_builddir="$builddir"
+            ;;
+        *)
+            # relative path given; convert to absolute path
+            absolute_builddir="$(pwd)/$builddir"
+            ;;
+    esac
 
     if [ -n "$2" ]; then
         workdir="$absolute_builddir-$2"
