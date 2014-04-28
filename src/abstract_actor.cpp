@@ -67,7 +67,7 @@ abstract_actor::abstract_actor(actor_id aid)
 
 abstract_actor::abstract_actor()
         : m_id(get_actor_registry()->next_id()), m_is_proxy(false)
-        , m_exit_reason(exit_reason::not_exited) {
+        , m_exit_reason(exit_reason::not_exited), m_host(nullptr)  {
     m_node = get_middleman()->node();
 }
 
