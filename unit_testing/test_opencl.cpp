@@ -23,14 +23,6 @@ constexpr size_t array_size = 32;
 
 constexpr int magic_number = 23;
 
-// since we do currently not support local memory arguments
-// this size is fixed in the reduce kernel code
-constexpr size_t reduce_buffer_size = 512 * 8;
-constexpr size_t reduce_local_size  = 512;
-constexpr size_t reduce_work_groups = reduce_buffer_size / reduce_local_size;
-constexpr size_t reduce_global_size = reduce_buffer_size;
-constexpr size_t reduce_result_size = reduce_work_groups;
-
 constexpr const char* kernel_name = "matrix_square";
 constexpr const char* kernel_name_compiler_flag = "compiler_flag";
 constexpr const char* kernel_name_reduce = "reduce";
@@ -76,20 +68,10 @@ constexpr const char* kernel_source_reduce = R"__(
     __kernel void reduce(__global int* buffer,
                          __global int* result) {
         __local int scratch[512];
-        size_t length = get_global_size(0);
-        size_t global_index = get_global_id(0);
-        int accumulator = INFINITY;
-        // Loop sequentially over chunks of input vector
-        while (global_index < length) {
-            int element = buffer[global_index];
-            accumulator = (accumulator < element) ? accumulator : element;
-            global_index += length;
-        }
-
-        // Perform parallel reduction
         int local_index = get_local_id(0);
-        scratch[local_index] = accumulator;
+        scratch[local_index] = buffer[get_global_id(0)];
         barrier(CLK_LOCAL_MEM_FENCE);
+
         for(int offset = get_local_size(0) / 2; offset > 0; offset = offset / 2) {
             if (local_index < offset) {
                 int other = scratch[local_index + offset];
@@ -179,6 +161,13 @@ inline bool operator!=(const square_matrix<Size>& lhs,
 }
 
 using matrix_type = square_matrix<matrix_size>;
+
+size_t get_max_workgroup_size(size_t device_id, size_t dimension) {
+    size_t max_size = 512;
+    auto devices = get_opencl_metainfo()->get_devices()[device_id];
+    size_t dimsize = devices.get_max_work_items_per_dim()[dimension];
+    return max_size < dimsize ? max_size : dimsize;
+}
 
 void test_opencl() {
 
@@ -277,6 +266,13 @@ void test_opencl() {
     );
 
     // test for manuel return size selection
+    const int max_workgroup_size = static_cast<int>(get_max_workgroup_size(0,1)); // max workgroup size (1d)
+    const size_t reduce_buffer_size = max_workgroup_size * 8;
+    const size_t reduce_local_size  = max_workgroup_size;
+    const size_t reduce_work_groups = reduce_buffer_size / reduce_local_size;
+    const size_t reduce_global_size = reduce_buffer_size;
+    const size_t reduce_result_size = reduce_work_groups;
+
     ivec arr6(reduce_buffer_size);
     int n{static_cast<int>(arr6.capacity())};
     generate(begin(arr6), end(arr6), [&]{ return --n; });
@@ -287,16 +283,18 @@ void test_opencl() {
                                          {reduce_local_size},
                                          reduce_result_size);
     self->send(worker6, move(arr6));
-    fvec expected4{3584, 3072, 2560, 2048, 1536, 1024, 512, 0};
+    const ivec expected4{ max_workgroup_size * 7, max_workgroup_size * 6,
+                          max_workgroup_size * 5, max_workgroup_size * 4,
+                          max_workgroup_size * 3, max_workgroup_size * 2,
+                          max_workgroup_size, 0 };
     self->receive (
         on_arg_match >> [&] (const ivec& result) {
             CPPA_CHECK(equal(begin(expected4), end(expected4), begin(result)));
         }
     );
 
-
     // constant memory arguments
-    ivec arr7{magic_number};
+    const ivec arr7{magic_number};
     auto worker7 = spawn_cl<ivec(ivec&)>(kernel_source_const,
                                          kernel_name_const,
                                          {magic_number});
