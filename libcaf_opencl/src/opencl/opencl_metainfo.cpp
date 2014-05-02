@@ -97,9 +97,11 @@ void opencl_metainfo::initialize()
                          const void *,
                          size_t,
                          void *) {
-        CPPA_LOG_ERROR("\n##### Error message via pfn_notify #####\n" +
-                       string(errinfo) +
-                       "\n########################################");
+        CPPA_LOGC_ERROR("cppa::opencl::opencl_metainfo",
+                        "initialize",
+                        "\n##### Error message via pfn_notify #####\n" +
+                        string(errinfo) +
+                        "\n########################################");
     };
 
     // create a context

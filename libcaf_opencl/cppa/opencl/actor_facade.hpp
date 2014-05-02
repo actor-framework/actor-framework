@@ -118,7 +118,7 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
         };
     }
 
-    void enqueue(const message_header& hdr, any_tuple msg) override {
+    void enqueue(msg_hdr_cref hdr, any_tuple msg, execution_unit*) override {
         CPPA_LOG_TRACE("");
         typename util::il_indices<util::type_list<Args...>>::type indices;
         enqueue_impl(hdr.sender, std::move(msg), hdr.id, indices);
@@ -130,10 +130,10 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
     using args_vec = std::vector<mem_ptr>;
 
     actor_facade(const program& prog, kernel_ptr kernel,
-                 const dim_vec& global_dimensions, 
+                 const dim_vec& global_dimensions,
                  const dim_vec& global_offsets,
                  const dim_vec& local_dimensions,
-                 arg_mapping map_args, result_mapping map_result, 
+                 arg_mapping map_args, result_mapping map_result,
                  size_t result_size)
       : m_kernel(kernel) , m_program(prog.m_program)
       , m_context(prog.m_context) , m_queue(prog.m_queue)
@@ -155,10 +155,10 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
             response_promise handle{this->address(), sender, id.response_id()};
             evnt_vec events;
             args_vec arguments;
-            add_arguments_to_kernel<Ret>(events, arguments, m_result_size, 
+            add_arguments_to_kernel<Ret>(events, arguments, m_result_size,
                                          get_ref<Is>(*opt)...);
             auto cmd = make_counted<command<actor_facade, Ret>>(
-                handle, this, 
+                handle, this,
                 std::move(events), std::move(arguments),
                 m_result_size, *opt
             );
@@ -194,7 +194,7 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
     }
 
     template<typename T0, typename... Ts>
-    void add_arguments_to_kernel_rec(evnt_vec& events, args_vec& arguments, 
+    void add_arguments_to_kernel_rec(evnt_vec& events, args_vec& arguments,
                                      T0& arg0, Ts&... args) {
         cl_int err{0};
         size_t buffer_size = sizeof(typename T0::value_type) * arg0.size();
