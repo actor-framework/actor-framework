@@ -143,7 +143,7 @@ int main(int argc, char** argv) {
                 CPPA_CHECKPOINT();
                 auto p = spawn(ping, 10);
                 CPPA_CHECKPOINT();
-                auto cl = spawn_io(peer, "localhost", port, p);
+                auto cl = spawn_io_client(peer, "localhost", port, p);
                 CPPA_CHECKPOINT();
                 anon_send(p, atom("kickoff"), cl);
                 CPPA_CHECKPOINT();

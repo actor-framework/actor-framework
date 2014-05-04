@@ -33,7 +33,7 @@ Actors can also use the result of a \lstinline^sync_send^ to answer to a request
 \begin{lstlisting}
 void client(event_based_actor* self, const actor& master) {
   become (
-    on("foo", arg_match) >> [=](const string& request) -> string {
+    on("foo", arg_match) >> [=](const string& request) {
       return self->sync_send(master, atom("bar"), request).then(
         on_arg_match >> [=](const std::string& response) {
           return response;

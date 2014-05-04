@@ -171,22 +171,6 @@ void testee1(event_based_actor* self) {
     });
 }
 
-void testee2(event_based_actor* self, actor other) {
-    self->link_to(other);
-    self->send(other, uint32_t(1));
-    self->become (
-        on<uint32_t>() >> [=](uint32_t sleep_time) {
-            // "sleep" for sleep_time milliseconds
-            self->become (
-                keep_behavior,
-                after(chrono::milliseconds(sleep_time)) >> [=] {
-                    self->unbecome();
-                }
-            );
-        }
-    );
-}
-
 template<class Testee>
 string behavior_test(scoped_actor& self, actor et) {
     string testee_name = detail::to_uniform_name(typeid(Testee));

@@ -630,15 +630,19 @@ typed_remote_actor(const std::string& host, std::uint16_t port) {
 }
 
 /**
- * @brief Spawns an IO actor of type @p Impl.
- * @param args Constructor arguments.
- * @tparam Impl Subtype of {@link io::broker}.
+ * @brief Spawns a new, function-based IO actor.
+ * @param fun  A functor implementing the actor's behavior.
+ * @param in   The actor's input stream.
+ * @param out  The actor's output stream.
+ * @param args Optional arguments for @p fun.
  * @tparam Os Optional flags to modify <tt>spawn</tt>'s behavior.
- * @returns An {@link actor_ptr} to the spawned {@link actor}.
+ * @returns A {@link actor handle} to the spawned actor.
  */
-template<class Impl, spawn_options Os = no_spawn_options, typename... Ts>
-actor spawn_io(Ts&&... args) {
-    auto ptr = make_counted<Impl>(std::forward<Ts>(args)...);
+template<spawn_options Os = no_spawn_options,
+         typename F = std::function<void (io::broker*)>,
+         typename... Ts>
+actor spawn_io(F fun, Ts&&... args) {
+    auto ptr = io::broker::from(std::move(fun), std::forward<Ts>(args)...);
     return {io::init_and_launch(std::move(ptr))};
 }
 
@@ -654,10 +658,10 @@ actor spawn_io(Ts&&... args) {
 template<spawn_options Os = no_spawn_options,
          typename F = std::function<void (io::broker*)>,
          typename... Ts>
-actor spawn_io(F fun,
-               io::input_stream_ptr in,
-               io::output_stream_ptr out,
-               Ts&&... args) {
+actor spawn_io_client(F fun,
+                      io::input_stream_ptr in,
+                      io::output_stream_ptr out,
+                      Ts&&... args) {
     auto ptr = io::broker::from(std::move(fun), std::move(in), std::move(out),
                                 std::forward<Ts>(args)...);
     return {io::init_and_launch(std::move(ptr))};
@@ -666,9 +670,9 @@ actor spawn_io(F fun,
 template<spawn_options Os = no_spawn_options,
          typename F = std::function<void (io::broker*)>,
          typename... Ts>
-actor spawn_io(F fun, const std::string& host, uint16_t port, Ts&&... args) {
+actor spawn_io_client(F fun, const std::string& host, uint16_t port, Ts&&... args) {
     auto ptr = io::tcp_io_stream::connect_to(host.c_str(), port);
-    return spawn_io(std::move(fun), ptr, ptr, std::forward<Ts>(args)...);
+    return spawn_io_client(std::move(fun), ptr, ptr, std::forward<Ts>(args)...);
 }
 
 template<spawn_options Os = no_spawn_options,

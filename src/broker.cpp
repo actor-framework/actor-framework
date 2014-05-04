@@ -58,31 +58,45 @@ constexpr size_t default_max_buffer_size = 65535;
 
 } // namespace <anonymous>
 
-default_broker::default_broker(function_type f,
-                               input_stream_ptr in,
-                               output_stream_ptr out)
-    : broker(std::move(in), std::move(out)), m_fun(std::move(f)) { }
 
-default_broker::default_broker(function_type f, scribe_pointer ptr)
-    : broker(std::move(ptr)), m_fun(std::move(f)) { }
+class default_broker : public broker {
 
-default_broker::default_broker(function_type f, acceptor_uptr ptr)
-    : broker(std::move(ptr)), m_fun(std::move(f)) { }
+ public:
 
-behavior default_broker::make_behavior() {
-    CPPA_PUSH_AID(id());
-    CPPA_LOG_TRACE("");
-    enqueue({invalid_actor_addr, channel{this}},
-            make_any_tuple(atom("INITMSG")),
-            nullptr);
-    return (
-        on(atom("INITMSG")) >> [=] {
-            unbecome();
-            auto bhvr = m_fun(this);
-            if (bhvr) become(std::move(bhvr));
-        }
-    );
-}
+    typedef std::function<behavior (broker*)> function_type;
+
+
+    default_broker(function_type f) : m_fun(std::move(f)) { }
+
+    default_broker(function_type f, input_stream_ptr in, output_stream_ptr out)
+        : broker(std::move(in), std::move(out)), m_fun(std::move(f)) { }
+
+    default_broker(function_type f, scribe_pointer ptr)
+        : broker(std::move(ptr)), m_fun(std::move(f)) { }
+
+    default_broker(function_type f, acceptor_uptr ptr)
+        : broker(std::move(ptr)), m_fun(std::move(f)) { }
+
+    behavior make_behavior() override {
+        CPPA_PUSH_AID(id());
+        CPPA_LOG_TRACE("");
+        enqueue({invalid_actor_addr, channel{this}},
+                make_any_tuple(atom("INITMSG")),
+                nullptr);
+        return (
+            on(atom("INITMSG")) >> [=] {
+                unbecome();
+                auto bhvr = m_fun(this);
+                if (bhvr) become(std::move(bhvr));
+            }
+        );
+    }
+
+ private:
+
+    function_type m_fun;
+
+};
 
 class broker::continuation {
 
@@ -125,11 +139,6 @@ class broker::servant : public continuable {
     void dispose() override {
         auto ptr = m_broker;
         ptr->erase_io(read_handle());
-        if (ptr->m_io.empty() && ptr->m_accept.empty()) {
-            // release implicit reference count held by middleman
-            // in caes no reader/writer is left for this broker
-            ptr->deref();
-        }
     }
 
     void set_broker(broker_ptr new_broker) {
@@ -364,11 +373,15 @@ void broker::invoke_message(msg_hdr_cref hdr, any_tuple msg) {
     // cleanup if needed
     if (planned_exit_reason() != exit_reason::not_exited) {
         cleanup(planned_exit_reason());
+        // release implicit reference count held by MM
+        deref();
     }
     else if (bhvr_stack().empty()) {
         CPPA_LOG_DEBUG("bhvr_stack().empty(), quit for normal exit reason");
         quit(exit_reason::normal);
         cleanup(planned_exit_reason());
+        // release implicit reference count held by MM
+        deref();
     }
 }
 
@@ -403,6 +416,10 @@ void broker::init_broker() {
     ref();
     // actor is running now
     get_actor_registry()->inc_running();
+}
+
+broker::broker() {
+    init_broker();
 }
 
 broker::broker(input_stream_ptr in, output_stream_ptr out) {
@@ -481,6 +498,17 @@ broker_ptr broker::from_impl(std::function<void (broker*)> fun,
                              output_stream_ptr out) {
     auto f = [=](broker* ptr) -> behavior { fun(ptr); return behavior{}; };
     return make_counted<default_broker>(f, move(in), move(out));
+}
+
+broker_ptr broker::from(std::function<behavior (broker*)> fun) {
+    return make_counted<default_broker>(fun);
+}
+
+broker_ptr broker::from(std::function<void (broker*)> fun) {
+    return from([=](broker* self) -> behavior {
+        fun(self);
+        return {};
+    });
 }
 
 broker_ptr broker::from(std::function<behavior (broker*)> fun, acceptor_uptr in) {

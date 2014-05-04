@@ -1,7 +1,7 @@
 Version 0.9.0
 -------------
 
-__2014_XX_XX__
+__2014_04_05__
 
 - Redesigned large parts of the library related to type-safe actors:
   * No more thread-local `self`, because it can only return a type-erased handle
@@ -12,6 +12,8 @@ __2014_XX_XX__
   * New header `system_messages.hpp` for message types used by the runtime
 - Announce properly handles empty & POD types as well as enums
 - Brokers now use proper message types rather than 'IO_*' atom prefixed tuples
+- Brokers can be spawned 'empty' and add connections/acceptors later on
+- New work-stealing scheduler
 
 Version 0.8.2
 -------------

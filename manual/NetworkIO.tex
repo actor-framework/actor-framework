@@ -1,0 +1,127 @@
+\section{Network IO}
+\label{Sec::NetworkIO}
+
+When communicating to other services in the network, sometimes low-level socket IO is inevitable.
+For this reason, \libcppa provides \emph{brokers}.
+A broker is an event-based actor running in the middleman that multiplexes socket IO.
+It can maintain any number of acceptors and connections.
+Since the broker runs in the middleman, implementations should be careful to consume as little time as possible in message handlers.
+Any considerable amount work should outsourced by spawning new actors (or maintaining worker actors).
+
+\subsection{Spawning Brokers}
+
+Brokers are spawned using the function \lstinline^spawn_io^ and always use functor-based implementations capturing the self pointer of type \lstinline^broker*^.
+For convenience, \lstinline^spawn_io_server^ can be used to spawn a new broker listening to a local port and \lstinline^spawn_io_client^ can be used to spawn a new broker that connects to given host and port or uses existing IO streams.
+
+\begin{lstlisting}
+template<spawn_options Os = no_spawn_options,
+         typename F = std::function<behavior (io::broker*)>,
+         typename... Ts>
+actor spawn_io(F fun, Ts&&... args);
+
+template<spawn_options Os = no_spawn_options,
+         typename F = std::function<behavior (io::broker*)>,
+         typename... Ts>
+actor spawn_io_client(F fun,
+                      io::input_stream_ptr in,
+                      io::output_stream_ptr out,
+                      Ts&&... args);
+
+template<spawn_options Os = no_spawn_options,
+         typename F = std::function<behavior (io::broker*)>,
+         typename... Ts>
+actor spawn_io_client(F fun, string host, uint16_t port, Ts&&... args);
+
+template<spawn_options Os = no_spawn_options,
+         typename F = std::function<behavior (io::broker*)>,
+         typename... Ts>
+actor spawn_io_server(F fun, uint16_t port, Ts&&... args);
+\end{lstlisting}
+
+\clearpage
+\subsection{Broker Interface}
+
+\begin{lstlisting}
+class io::broker;
+\end{lstlisting}
+
+{\small
+\begin{tabular*}{\textwidth}{m{0.51\textwidth}m{0.44\textwidth}}
+  \multicolumn{2}{m{\linewidth}}{\large{\textbf{Data Types}}\vspace{3pt}} \\
+  \\
+  \hline
+  \multicolumn{2}{m{\linewidth}}{\texttt{enum policy\_flag  \{ at\_least, at\_most, exactly \}}} \\
+  \hline
+  \\
+  \multicolumn{2}{m{\linewidth}}{\large{\textbf{Member Functions}}\vspace{3pt}} \\
+  \\
+  \hline
+  \lstinline^void receive_policy(^ \lstinline^connection_handle hdl,^ \lstinline^policy_flag policy,^ \lstinline^size_t buffer_size)^ & Modifies the receive policy for the connection identified by \lstinline^hdl^. This will cause the middleman to enqueue the next \lstinline^new_data_msg^ after \emph{at least}, \emph{at most}, or \emph{exactly} \lstinline^buffer_size^ bytes have been read \\
+  \hline
+  \lstinline^void write(connection_handle hdl,^ \lstinline^size_t num_bytes,^ \lstinline^const void* buf)^ & Sends data \\
+  \hline
+  \lstinline^void write(connection_handle hdl,^ \lstinline^const util::buffer& buf)^ & Sends data \\
+  \hline
+  \lstinline^void write(connection_handle hdl,^ \lstinline^util::buffer&& buf)^ & Sends data \\
+  \hline
+  \lstinline^template<typename F, typename... Ts>^ \lstinline^actor fork(F fun,^ \lstinline^connection_handle hdl, Ts&&... args)^ & Spawns a new broker that takes ownership of given connection \\
+  \hline
+  \lstinline^size_t num_connections()^ & Returns the number of open connections \\
+  \hline
+  \lstinline^connection_handle add_connection(^ \lstinline^input_stream_ptr in,^ \lstinline^output_stream_ptr out)^ & Adds a new connection from input and output stream \\
+  \hline
+  \lstinline^connection_handle add_connection(^ \lstinline^stream_ptr sptr)^ & Adds a new connection from an IO stream \\
+  \hline
+  \lstinline^connection_handle add_tcp_connection(^ \lstinline^native_socket_type tcp_sockfd)^ & Adds a new connection from a native TCP socket descriptor \\
+  \hline
+  \lstinline^accept_handle add_acceptor(^ \lstinline^acceptor_uptr ptr)^ & Adds a new acceptor \\
+  \hline
+  \lstinline^accept_handle add_tcp_acceptor(^ \lstinline^native_socket_type tcp_sockfd)^ & Adds a new acceptor from a native TCP socket descriptor \\
+  \hline
+\end{tabular*}
+}
+
+\clearpage
+\subsection{Broker-related Message Types}
+
+Brokers, just like any other dynamically typed actor, can receive messages of any type.
+However, it also receives system messages from the middleman:
+
+\begin{lstlisting}
+struct new_connection_msg {
+    io::accept_handle source;
+    io::connection_handle handle;
+};
+\end{lstlisting}
+
+A \lstinline^new_connection_msg^ is received whenever a new incoming connection (identified by the \lstinline^handle^ field) has been accepted for one of the broker's accept handles (identified by the \lstinline^source^ field).
+
+\begin{lstlisting}
+struct new_data_msg {
+    io::connection_handle handle;
+    util::buffer buf;
+};
+\end{lstlisting}
+
+A \lstinline^new_data_msg^ is received whenever data on a connection is ready.
+The data can be accessed as buffer object (see \ref{Appendix::Buffer}).
+The amount of data, i.e., how often this message is received, can be configured using the brokers receive policy (see \ref{Sec::NetworkIO::ReceivePolicy}).
+
+It is worth mentioning that the buffer is re-used whenever possible.
+This means, as long as the broker does not create any new references to the message by copying it, the middleman will always use only a single buffer per connection.
+
+\begin{lstlisting}
+struct connection_closed_msg {
+    io::connection_handle handle;
+};
+\end{lstlisting}
+
+A \lstinline^connection_closed_msg^ informs the broker that one of its connections has been closed.
+
+\begin{lstlisting}
+struct acceptor_closed_msg {
+    io::accept_handle handle;
+};
+\end{lstlisting}
+
+A \lstinline^ acceptor_closed_msg^ informs the broker that of its acceptors has been closed.

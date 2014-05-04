@@ -159,7 +159,7 @@ int main(int argc, char** argv) {
         },
         on("-c", val<string>, as_u16) >> [&](const string& host, uint16_t port) {
             auto ping_actor = spawn(ping, 20);
-            auto io_actor = spawn_io(broker_impl, host, port, ping_actor);
+            auto io_actor = spawn_io_client(broker_impl, host, port, ping_actor);
             print_on_exit(io_actor, "protobuf_io");
             print_on_exit(ping_actor, "ping");
             send_as(io_actor, ping_actor, atom("kickoff"), io_actor);
