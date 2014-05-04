@@ -47,6 +47,7 @@
 #include "cppa/detail/matches.hpp"
 #include "cppa/detail/projection.hpp"
 #include "cppa/detail/value_guard.hpp"
+#include "cppa/detail/tuple_dummy.hpp"
 #include "cppa/detail/pseudo_tuple.hpp"
 #include "cppa/detail/behavior_impl.hpp"
 
@@ -829,35 +830,7 @@ class match_expr {
     template<class Tuple>
     result_type apply(Tuple& tup) {
         if (tup.empty()) {
-            struct tuple_dummy {
-                typedef util::empty_type_list types;
-                typedef detail::tuple_iterator<tuple_dummy> const_iterator;
-                inline size_t size() const {
-                    return 0;
-                }
-                inline void* mutable_at(size_t) {
-                    return nullptr;
-                }
-                inline const void* at(size_t) const {
-                    return nullptr;
-                }
-                inline const uniform_type_info* type_at(size_t) const {
-                    return nullptr;
-                }
-                inline const std::type_info* type_token() const {
-                    return &typeid(util::empty_type_list);
-                }
-                inline bool dynamically_typed() const {
-                    return false;
-                }
-                inline const_iterator begin() const {
-                    return {this};
-                }
-                inline const_iterator end() const {
-                    return {this, 0};
-                }
-            };
-            tuple_dummy td;
+            detail::tuple_dummy td;
             auto td_token_ptr = td.type_token();
             auto td_bitmask = get_cache_entry(td_token_ptr, td);
             return detail::unroll_expr<result_type>(m_cases,

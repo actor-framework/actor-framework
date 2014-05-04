@@ -67,6 +67,7 @@ cppa/detail/sync_request_bouncer.hpp
 cppa/detail/tdata.hpp
 cppa/detail/to_uniform_name.hpp
 cppa/detail/tuple_cast_impl.hpp
+cppa/detail/tuple_dummy.hpp
 cppa/detail/tuple_iterator.hpp
 cppa/detail/tuple_vals.hpp
 cppa/detail/tuple_view.hpp
