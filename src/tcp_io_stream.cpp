@@ -37,7 +37,7 @@
 #include "cppa/logging.hpp"
 #include "cppa/exception.hpp"
 #include "cppa/detail/fd_util.hpp"
-#include "cppa/io/ipv4_io_stream.hpp"
+#include "cppa/io/tcp_io_stream.hpp"
 
 #ifdef CPPA_WINDOWS
 #   include <ws2tcpip.h>
@@ -55,21 +55,21 @@ namespace cppa { namespace io {
 
 using namespace ::cppa::detail::fd_util;
 
-ipv4_io_stream::ipv4_io_stream(native_socket_type fd) : m_fd(fd) { }
+tcp_io_stream::tcp_io_stream(native_socket_type fd) : m_fd(fd) { }
 
-ipv4_io_stream::~ipv4_io_stream() {
+tcp_io_stream::~tcp_io_stream() {
     closesocket(m_fd);
 }
 
-native_socket_type ipv4_io_stream::read_handle() const {
+native_socket_type tcp_io_stream::read_handle() const {
     return m_fd;
 }
 
-native_socket_type ipv4_io_stream::write_handle() const {
+native_socket_type tcp_io_stream::write_handle() const {
     return m_fd;
 }
 
-void ipv4_io_stream::read(void* vbuf, size_t len) {
+void tcp_io_stream::read(void* vbuf, size_t len) {
     auto buf = reinterpret_cast<char*>(vbuf);
     size_t rd = 0;
     while (rd < len) {
@@ -89,13 +89,13 @@ void ipv4_io_stream::read(void* vbuf, size_t len) {
     }
 }
 
-size_t ipv4_io_stream::read_some(void* buf, size_t len) {
+size_t tcp_io_stream::read_some(void* buf, size_t len) {
     auto recv_result = ::recv(m_fd, reinterpret_cast<char*>(buf), len, 0);
     handle_read_result(recv_result, true);
     return (recv_result > 0) ? static_cast<size_t>(recv_result) : 0;
 }
 
-void ipv4_io_stream::write(const void* vbuf, size_t len) {
+void tcp_io_stream::write(const void* vbuf, size_t len) {
     auto buf = reinterpret_cast<const char*>(vbuf);
     size_t written = 0;
     while (written < len) {
@@ -116,20 +116,20 @@ void ipv4_io_stream::write(const void* vbuf, size_t len) {
     }
 }
 
-size_t ipv4_io_stream::write_some(const void* buf, size_t len) {
+size_t tcp_io_stream::write_some(const void* buf, size_t len) {
     CPPA_LOG_TRACE(CPPA_ARG(buf) << ", " << CPPA_ARG(len));
     auto send_result = ::send(m_fd, reinterpret_cast<const char*>(buf), len, 0);
     handle_write_result(send_result, true);
     return static_cast<size_t>(send_result);
 }
 
-io::stream_ptr ipv4_io_stream::from_native_socket(native_socket_type fd) {
+io::stream_ptr tcp_io_stream::from_sockfd(native_socket_type fd) {
     tcp_nodelay(fd, true);
     nonblocking(fd, true);
-    return new ipv4_io_stream(fd);
+    return new tcp_io_stream(fd);
 }
 
-io::stream_ptr ipv4_io_stream::connect_to(const char* host,
+io::stream_ptr tcp_io_stream::connect_to(const char* host,
                                           std::uint16_t port) {
     CPPA_LOGF_TRACE(CPPA_ARG(host) << ", " << CPPA_ARG(port));
     CPPA_LOGF_INFO("try to connect to " << host << " on port " << port);
@@ -162,9 +162,7 @@ io::stream_ptr ipv4_io_stream::connect_to(const char* host,
         throw network_error("could not connect to host");
     }
     CPPA_LOGF_DEBUG("enable nodelay + nonblocking for socket");
-    tcp_nodelay(fd, true);
-    nonblocking(fd, true);
-    return new ipv4_io_stream(fd);
+    return from_sockfd(fd);
 }
 
 } } // namespace cppa::detail

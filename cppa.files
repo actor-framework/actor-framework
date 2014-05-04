@@ -98,8 +98,6 @@ cppa/io/continuable.hpp
 cppa/io/default_message_queue.hpp
 cppa/io/event.hpp
 cppa/io/input_stream.hpp
-cppa/io/ipv4_acceptor.hpp
-cppa/io/ipv4_io_stream.hpp
 cppa/io/middleman.hpp
 cppa/io/middleman_event_handler.hpp
 cppa/io/output_stream.hpp
@@ -107,6 +105,8 @@ cppa/io/peer.hpp
 cppa/io/peer_acceptor.hpp
 cppa/io/remote_actor_proxy.hpp
 cppa/io/stream.hpp
+cppa/io/tcp_acceptor.hpp
+cppa/io/tcp_io_stream.hpp
 cppa/local_actor.hpp
 cppa/logging.hpp
 cppa/mailbox_based.hpp
@@ -232,6 +232,7 @@ examples/remote_actors/distributed_calculator.cpp
 examples/remote_actors/group_chat.cpp
 examples/remote_actors/group_server.cpp
 examples/remote_actors/protobuf_broker.cpp
+examples/remote_actors/simple_broker.cpp
 examples/type_system/announce_1.cpp
 examples/type_system/announce_2.cpp
 examples/type_system/announce_3.cpp
@@ -285,8 +286,6 @@ src/get_root_uuid.cpp
 src/group.cpp
 src/group_manager.cpp
 src/input_stream.cpp
-src/ipv4_acceptor.cpp
-src/ipv4_io_stream.cpp
 src/local_actor.cpp
 src/logging.cpp
 src/mailbox_element.cpp
@@ -325,6 +324,8 @@ src/singleton_manager.cpp
 src/stream.cpp
 src/string_serialization.cpp
 src/sync_request_bouncer.cpp
+src/tcp_acceptor.cpp
+src/tcp_io_stream.cpp
 src/to_uniform_name.cpp
 src/type_lookup_table.cpp
 src/unicast_network.cpp

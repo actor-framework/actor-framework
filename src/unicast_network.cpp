@@ -58,8 +58,8 @@
 #include "cppa/io/acceptor.hpp"
 #include "cppa/io/middleman.hpp"
 #include "cppa/io/peer_acceptor.hpp"
-#include "cppa/io/ipv4_acceptor.hpp"
-#include "cppa/io/ipv4_io_stream.hpp"
+#include "cppa/io/tcp_acceptor.hpp"
+#include "cppa/io/tcp_io_stream.hpp"
 #include "cppa/io/remote_actor_proxy.hpp"
 
 namespace {
@@ -78,7 +78,7 @@ using namespace io;
 
 void publish(actor whom, std::uint16_t port, const char* addr) {
     if (!whom) return;
-    publish(std::move(whom), io::ipv4_acceptor::create(port, addr));
+    publish(std::move(whom), io::tcp_acceptor::create(port, addr));
 }
 
 void publish(actor whom, std::unique_ptr<io::acceptor> acceptor) {
@@ -91,7 +91,7 @@ actor remote_actor(io::stream_ptr_pair conn) {
 }
 
 actor remote_actor(const char* host, std::uint16_t port) {
-    auto ptr = ipv4_io_stream::connect_to(host, port);
+    auto ptr = tcp_io_stream::connect_to(host, port);
     return remote_actor(stream_ptr_pair(ptr, ptr));
 }
 

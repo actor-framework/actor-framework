@@ -42,8 +42,8 @@
 
 #include "cppa/io/broker.hpp"
 #include "cppa/io/middleman.hpp"
-#include "cppa/io/ipv4_acceptor.hpp"
-#include "cppa/io/ipv4_io_stream.hpp"
+#include "cppa/io/tcp_acceptor.hpp"
+#include "cppa/io/tcp_io_stream.hpp"
 
 CPPA_PUSH_WARNINGS
 #include "pingpong.pb.h"

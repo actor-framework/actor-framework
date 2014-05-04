@@ -39,24 +39,40 @@
 
 namespace cppa { namespace io {
 
-class ipv4_acceptor : public acceptor {
+/**
+ * @brief An implementation of the {@link acceptor} interface for TCP sockets.
+ */
+class tcp_acceptor : public acceptor {
 
  public:
 
+    /**
+     * @brief Creates an TCP acceptor and binds it to given @p port. Incoming
+     *        connections are only accepted from the address @p addr.
+     *        Per default, i.e., <tt>addr == nullptr</tt>, all incoming
+     *        connections are accepted.
+     * @throws network_error if a socket operation fails
+     * @throws bind_failure if given port is already in use
+     */
     static std::unique_ptr<acceptor> create(std::uint16_t port,
                                             const char* addr = nullptr);
 
-    ~ipv4_acceptor();
+    /**
+     * @brief Creates an TCP acceptor from the native socket handle @p fd.
+     */
+    static std::unique_ptr<acceptor> from_sockfd(native_socket_type fd);
 
-    native_socket_type file_handle() const;
+    ~tcp_acceptor();
 
-    stream_ptr_pair accept_connection();
+    native_socket_type file_handle() const override;
 
-    optional<stream_ptr_pair> try_accept_connection();
+    stream_ptr_pair accept_connection() override;
+
+    optional<stream_ptr_pair> try_accept_connection() override;
 
  private:
 
-    ipv4_acceptor(native_socket_type fd, bool nonblocking);
+    tcp_acceptor(native_socket_type fd, bool nonblocking);
 
     native_socket_type m_fd;
     bool m_is_nonblocking;

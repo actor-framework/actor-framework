@@ -33,7 +33,7 @@
 
 #include "cppa/actor.hpp"
 
-#include "cppa/io/ipv4_acceptor.hpp"
+#include "cppa/io/tcp_acceptor.hpp"
 #include "cppa/io/continuable.hpp"
 
 namespace cppa { namespace io {

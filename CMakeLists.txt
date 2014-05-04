@@ -147,9 +147,10 @@ set(LIBCPPA_SRC
     src/actor_addr.cpp
     src/actor_companion.cpp
     src/actor_namespace.cpp
+    src/actor_ostream.cpp
+    src/actor_proxy.cpp
     src/actor_proxy.cpp
     src/actor_registry.cpp
-    src/actor_ostream.cpp
     src/algorithm.cpp
     src/any_tuple.cpp
     src/atom.cpp
@@ -158,9 +159,9 @@ set(LIBCPPA_SRC
     src/behavior_stack.cpp
     src/binary_deserializer.cpp
     src/binary_serializer.cpp
+    src/blocking_actor.cpp
     src/broker.cpp
     src/buffer.cpp
-    src/blocking_actor.cpp
     src/channel.cpp
     src/context_switching_resume.cpp
     src/continuable.cpp
@@ -168,9 +169,6 @@ set(LIBCPPA_SRC
     src/cs_thread.cpp
     src/decorated_tuple.cpp
     src/default_message_queue.cpp
-    src/actor_proxy.cpp
-    src/peer.cpp
-    src/peer_acceptor.cpp
     src/demangle.cpp
     src/deserializer.cpp
     src/duration.cpp
@@ -181,13 +179,11 @@ set(LIBCPPA_SRC
     src/fd_util.cpp
     src/functor_based_actor.cpp
     src/functor_based_blocking_actor.cpp
-    src/get_root_uuid.cpp
     src/get_mac_addresses.cpp
+    src/get_root_uuid.cpp
     src/group.cpp
     src/group_manager.cpp
     src/input_stream.cpp
-    src/ipv4_acceptor.cpp
-    src/ipv4_io_stream.cpp
     src/local_actor.cpp
     src/logging.cpp
     src/mailbox_element.cpp
@@ -203,11 +199,13 @@ set(LIBCPPA_SRC
     src/opt.cpp
     src/output_stream.cpp
     src/partial_function.cpp
+    src/peer.cpp
+    src/peer_acceptor.cpp
     src/primitive_variant.cpp
     src/ref_counted.cpp
-    src/resumable.cpp
     src/remote_actor_proxy.cpp
     src/response_promise.cpp
+    src/resumable.cpp
     src/ripemd_160.cpp
     src/scheduler.cpp
     src/scoped_actor.cpp
@@ -217,6 +215,8 @@ set(LIBCPPA_SRC
     src/stream.cpp
     src/string_serialization.cpp
     src/sync_request_bouncer.cpp
+    src/tcp_acceptor.cpp
+    src/tcp_io_stream.cpp
     src/to_uniform_name.cpp
     src/type_lookup_table.cpp
     src/unicast_network.cpp

@@ -23,6 +23,7 @@ add(typed_calculator message_passing)
 add(distributed_calculator remote_actors)
 add(group_server remote_actors)
 add(group_chat remote_actors)
+add(simple_broker remote_actors)
 
 if (NOT "${CPPA_NO_PROTOBUF_EXAMPLES}" STREQUAL "yes")
   find_package(Protobuf)

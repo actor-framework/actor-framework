@@ -57,7 +57,7 @@ class acceptor {
 
     /**
      * @brief Returns the internal file descriptor. This descriptor is needed
-     *        for socket multiplexing using select().
+     *        for socket multiplexing using select()/poll()/epoll().
      */
     virtual native_socket_type file_handle() const = 0;
 

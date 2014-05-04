@@ -36,15 +36,25 @@
 
 namespace cppa { namespace io {
 
-class ipv4_io_stream : public stream {
+/**
+ * @brief An implementation of the {@link stream} interface for TCP sockets.
+ */
+class tcp_io_stream : public stream {
 
  public:
 
-    ~ipv4_io_stream();
+    ~tcp_io_stream();
 
+    /**
+     * @brief Establishes a TCP connection to given @p host at given @p port.
+     * @throws network_error if connection fails or read error occurs
+     */
     static stream_ptr connect_to(const char* host, std::uint16_t port);
 
-    static stream_ptr from_native_socket(native_socket_type fd);
+    /**
+     * @brief Creates an TCP stream from the native socket handle @p fd.
+     */
+    static stream_ptr from_sockfd(native_socket_type fd);
 
     native_socket_type read_handle() const;
 
@@ -60,7 +70,7 @@ class ipv4_io_stream : public stream {
 
  private:
 
-    ipv4_io_stream(native_socket_type fd);
+    tcp_io_stream(native_socket_type fd);
 
     native_socket_type m_fd;
 

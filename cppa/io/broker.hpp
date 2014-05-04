@@ -39,8 +39,11 @@
 
 #include "cppa/util/buffer.hpp"
 
+#include "cppa/io/stream.hpp"
 #include "cppa/io/acceptor.hpp"
 #include "cppa/io/input_stream.hpp"
+#include "cppa/io/tcp_acceptor.hpp"
+#include "cppa/io/tcp_io_stream.hpp"
 #include "cppa/io/output_stream.hpp"
 #include "cppa/io/accept_handle.hpp"
 #include "cppa/io/connection_handle.hpp"
@@ -149,6 +152,22 @@ class broker : public extend<local_actor>::
         return m_io.size();
     }
 
+    connection_handle add_connection(input_stream_ptr in, output_stream_ptr out);
+
+    inline connection_handle add_connection(stream_ptr sptr) {
+        return add_connection(sptr, sptr);
+    }
+
+    inline connection_handle add_tcp_connection(native_socket_type tcp_sockfd) {
+        return add_connection(tcp_io_stream::from_sockfd(tcp_sockfd));
+    }
+
+    accept_handle add_acceptor(acceptor_uptr ptr);
+
+    inline accept_handle add_tcp_acceptor(native_socket_type tcp_sockfd) {
+        return add_acceptor(tcp_acceptor::from_sockfd(tcp_sockfd));
+    }
+
  protected:
 
     broker(input_stream_ptr in, output_stream_ptr out);
@@ -170,6 +189,9 @@ class broker : public extend<local_actor>::
     actor fork_impl(std::function<void (broker*)> fun,
                     connection_handle hdl);
 
+    actor fork_impl(std::function<behavior (broker*)> fun,
+                    connection_handle hdl);
+
     static broker_ptr from_impl(std::function<void (broker*)> fun,
                                 input_stream_ptr in,
                                 output_stream_ptr out);
@@ -187,10 +209,6 @@ class broker : public extend<local_actor>::
     void erase_acceptor(int id);
 
     void init_broker();
-
-    connection_handle add_scribe(input_stream_ptr in, output_stream_ptr out);
-
-    accept_handle add_doorman(acceptor_uptr ptr);
 
     std::map<accept_handle, doorman_pointer> m_accept;
     std::map<connection_handle, scribe_pointer> m_io;
