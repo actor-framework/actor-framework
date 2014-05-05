@@ -662,8 +662,9 @@ actor spawn_io_client(F fun,
                       io::input_stream_ptr in,
                       io::output_stream_ptr out,
                       Ts&&... args) {
-    auto ptr = io::broker::from(std::move(fun), std::move(in), std::move(out),
-                                std::forward<Ts>(args)...);
+    auto hdl = io::connection_handle::from_int(in->read_handle());
+    auto ptr = io::broker::from(std::move(fun), hdl, std::forward<Ts>(args)...);
+    ptr->add_connection(std::move(in), std::move(out));
     return {io::init_and_launch(std::move(ptr))};
 }
 
@@ -684,9 +685,9 @@ actor spawn_io_server(F fun, uint16_t port, Ts&&... args) {
     static_assert(is_unbound(Os),
                   "top-level spawns cannot have monitor or link flag");
     using namespace std;
-    auto ptr = io::broker::from(move(fun),
-                                io::tcp_acceptor::create(port),
-                                forward<Ts>(args)...);
+    auto aptr = io::tcp_acceptor::create(port);
+    auto ptr = io::broker::from(move(fun), forward<Ts>(args)...);
+    ptr->add_acceptor(std::move(aptr));
     return {io::init_and_launch(move(ptr))};
 }
 

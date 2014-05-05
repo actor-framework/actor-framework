@@ -68,15 +68,6 @@ class default_broker : public broker {
 
     default_broker(function_type f) : m_fun(std::move(f)) { }
 
-    default_broker(function_type f, input_stream_ptr in, output_stream_ptr out)
-        : broker(std::move(in), std::move(out)), m_fun(std::move(f)) { }
-
-    default_broker(function_type f, scribe_pointer ptr)
-        : broker(std::move(ptr)), m_fun(std::move(f)) { }
-
-    default_broker(function_type f, acceptor_uptr ptr)
-        : broker(std::move(ptr)), m_fun(std::move(f)) { }
-
     behavior make_behavior() override {
         CPPA_PUSH_AID(id());
         CPPA_LOG_TRACE("");
@@ -422,25 +413,6 @@ broker::broker() {
     init_broker();
 }
 
-broker::broker(input_stream_ptr in, output_stream_ptr out) {
-    using namespace std;
-    init_broker();
-    add_connection(move(in), move(out));
-}
-
-broker::broker(scribe_pointer ptr) {
-    using namespace std;
-    init_broker();
-    auto id = ptr->id();
-    m_io.insert(make_pair(id, move(ptr)));
-}
-
-broker::broker(acceptor_uptr ptr) {
-    using namespace std;
-    init_broker();
-    add_acceptor(move(ptr));
-}
-
 void broker::cleanup(std::uint32_t reason) {
     super::cleanup(reason);
     get_actor_registry()->dec_running();
@@ -462,23 +434,7 @@ void broker::write(const connection_handle& hdl, util::buffer&& buf) {
 
 broker_ptr init_and_launch(broker_ptr ptr) {
     CPPA_PUSH_AID(ptr->id());
-    CPPA_LOGF_TRACE("init and launch actor with id " << ptr->id());
-    // continue reader only if not inherited from default_broker_impl
-    auto mm = get_middleman();
-    mm->run_later([=] {
-        CPPA_LOGC_TRACE("NONE", "init_and_launch::run_later_functor", "");
-        CPPA_LOGF_WARNING_IF(ptr->m_io.empty() && ptr->m_accept.empty(),
-                             "both m_io and m_accept are empty");
-        // 'launch' all backends
-        CPPA_LOGC_DEBUG("NONE", "init_and_launch::run_later_functor",
-                        "add " << ptr->m_io.size() << " IO servants");
-        for (auto& kvp : ptr->m_io)
-            mm->continue_reader(kvp.second.get());
-        CPPA_LOGC_DEBUG("NONE", "init_and_launch::run_later_functor",
-                        "add " << ptr->m_accept.size() << " acceptors");
-        for (auto& kvp : ptr->m_accept)
-            mm->continue_reader(kvp.second.get());
-    });
+    CPPA_LOGF_TRACE("init and launch broker with id " << ptr->id());
     // exec initialization code
     auto bhvr = ptr->make_behavior();
     if (bhvr) ptr->become(std::move(bhvr));
@@ -486,39 +442,15 @@ broker_ptr init_and_launch(broker_ptr ptr) {
     return ptr;
 }
 
-broker_ptr broker::from_impl(std::function<behavior (broker*)> fun,
-                             input_stream_ptr in,
-                             output_stream_ptr out) {
-    return make_counted<default_broker>(move(fun), move(in), move(out));
-}
-
-
-broker_ptr broker::from_impl(std::function<void (broker*)> fun,
-                             input_stream_ptr in,
-                             output_stream_ptr out) {
-    auto f = [=](broker* ptr) -> behavior { fun(ptr); return behavior{}; };
-    return make_counted<default_broker>(f, move(in), move(out));
-}
-
-broker_ptr broker::from(std::function<behavior (broker*)> fun) {
+broker_ptr broker::from_impl(std::function<behavior (broker*)> fun) {
     return make_counted<default_broker>(fun);
 }
 
-broker_ptr broker::from(std::function<void (broker*)> fun) {
+broker_ptr broker::from_impl(std::function<void (broker*)> fun) {
     return from([=](broker* self) -> behavior {
         fun(self);
         return {};
     });
-}
-
-broker_ptr broker::from(std::function<behavior (broker*)> fun, acceptor_uptr in) {
-    return make_counted<default_broker>(move(fun), move(in));
-}
-
-
-broker_ptr broker::from(std::function<void (broker*)> fun, acceptor_uptr in) {
-    auto f = [=](broker* ptr) -> behavior { fun(ptr); return behavior{}; };
-    return make_counted<default_broker>(f, move(in));
 }
 
 void broker::erase_io(int id) {
@@ -532,14 +464,28 @@ void broker::erase_acceptor(int id) {
 connection_handle broker::add_connection(input_stream_ptr in, output_stream_ptr out) {
     using namespace std;
     auto id = connection_handle::from_int(in->read_handle());
-    m_io.insert(make_pair(id, create_unique<scribe>(this, move(in), move(out))));
+    auto ires = m_io.insert(make_pair(id, create_unique<scribe>(this, move(in), move(out))));
+    CPPA_REQUIRE(ires.second == true);
+    auto sptr = ires.first->second.get();
+    auto mm = get_middleman();
+    mm->run_later([=] {
+        // 'launch' backends
+        mm->continue_reader(sptr);
+    });
     return id;
 }
 
 accept_handle broker::add_acceptor(acceptor_uptr ptr) {
     using namespace std;
     auto id = accept_handle::from_int(ptr->file_handle());
-    m_accept.insert(make_pair(id, create_unique<doorman>(this, move(ptr))));
+    auto ires = m_accept.insert(make_pair(id, create_unique<doorman>(this, move(ptr))));
+    CPPA_REQUIRE(ires.second == true);
+    auto aptr = ires.first->second.get();
+    auto mm = get_middleman();
+    mm->run_later([=] {
+        // 'launch' backends
+        mm->continue_reader(aptr);
+    });
     return id;
 }
 
@@ -551,8 +497,9 @@ actor broker::fork_impl(std::function<behavior (broker*)> fun,
         CPPA_LOG_ERROR("invalid handle");
         throw std::invalid_argument("invalid handle");
     }
-    scribe* sptr = i->second.get(); // non-owning pointer
-    auto result = make_counted<default_broker>(fun, move(i->second));
+    scribe* sptr = i->second.get(); // keep non-owning pointer
+    auto result = make_counted<default_broker>(fun);
+    result->m_io.insert(make_pair(sptr->id(), move(i->second)));
     init_and_launch(result);
     sptr->set_broker(result); // set new broker
     m_io.erase(i);
@@ -561,10 +508,10 @@ actor broker::fork_impl(std::function<behavior (broker*)> fun,
 
 actor broker::fork_impl(std::function<void (broker*)> fun,
                         connection_handle hdl) {
-    return fork_impl([=](broker* self) -> behavior {
+    return fork_impl(std::function<behavior (broker*)>{[=](broker* self) -> behavior {
         fun(self);
         return behavior{};
-    }, hdl);
+    }}, hdl);
 }
 
 void broker::receive_policy(const connection_handle& hdl,
