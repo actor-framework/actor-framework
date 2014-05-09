@@ -287,14 +287,19 @@ void deserialize_impl(channel& ptrref, deserializer* source) {
 }
 
 void serialize_impl(const any_tuple& tup, serializer* sink) {
-    auto tname = tup.tuple_type_names();
-    auto uti = get_uniform_type_info_map()
-               ->by_uniform_name(tname
-                                ? *tname
-                                : detail::get_tuple_type_names(*tup.vals()));
+    std::string dynamic_name; // used if tup holds an object_array
+    // ttn can be nullptr even if tuple is not empty (in case of object_array)
+    const std::string* ttn = tup.empty() ? nullptr : tup.tuple_type_names();
+    const char* tname = ttn ? ttn->data() : (tup.empty() ? "@<>" : nullptr);
+    if (!tname) {
+        // tuple is not empty, i.e., we are dealing with an object array
+        dynamic_name = detail::get_tuple_type_names(*tup.vals());
+        tname = dynamic_name.c_str();
+    }
+    auto uti = get_uniform_type_info_map()->by_uniform_name(tname);
     if (uti == nullptr) {
         std::string err = "could not get uniform type info for \"";
-        err += tname ? *tname : detail::get_tuple_type_names(*tup.vals());
+        err += tname;
         err += "\"";
         CPPA_LOGF_ERROR(err);
         throw std::runtime_error(err);
