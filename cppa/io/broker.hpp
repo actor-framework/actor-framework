@@ -158,8 +158,6 @@ class broker : public extend<local_actor>::
 
     void enqueue(msg_hdr_cref, any_tuple, execution_unit*) override;
 
-    bool initialized() const;
-
     template<typename F>
     static broker_ptr from(F fun) {
         // transform to STD function here, because GCC is unable
@@ -186,9 +184,11 @@ class broker : public extend<local_actor>::
 
     typedef std::unique_ptr<broker::doorman> doorman_pointer;
 
-    virtual behavior make_behavior() = 0;
+    bool initialized() const;
 
     /** @endcond */
+
+    virtual behavior make_behavior() = 0;
 
  private:
 
@@ -210,13 +210,13 @@ class broker : public extend<local_actor>::
 
     void erase_acceptor(int id);
 
-    void init_broker();
-
     std::map<accept_handle, doorman_pointer> m_accept;
     std::map<connection_handle, scribe_pointer> m_io;
 
     policy::not_prioritizing  m_priority_policy;
     policy::sequential_invoke m_invoke_policy;
+
+    bool m_initialized;
 
 };
 

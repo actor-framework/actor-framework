@@ -58,29 +58,16 @@ constexpr size_t default_max_buffer_size = 65535;
 
 } // namespace <anonymous>
 
-
 class default_broker : public broker {
 
  public:
 
     typedef std::function<behavior (broker*)> function_type;
 
-
     default_broker(function_type f) : m_fun(std::move(f)) { }
 
     behavior make_behavior() override {
-        CPPA_PUSH_AID(id());
-        CPPA_LOG_TRACE("");
-        enqueue({invalid_actor_addr, channel{this}},
-                make_any_tuple(atom("INITMSG")),
-                nullptr);
-        return (
-            on(atom("INITMSG")) >> [=] {
-                unbecome();
-                auto bhvr = m_fun(this);
-                if (bhvr) become(std::move(bhvr));
-            }
-        );
+        return m_fun(this);
     }
 
  private:
@@ -399,18 +386,14 @@ void broker::enqueue(msg_hdr_cref hdr, any_tuple msg, execution_unit*) {
 }
 
 bool broker::initialized() const {
-    return true;
+    return m_initialized;
 }
 
-void broker::init_broker() {
+broker::broker() : m_initialized(false) {
     // acquire implicit reference count held by the middleman
     ref();
     // actor is running now
     get_actor_registry()->inc_running();
-}
-
-broker::broker() {
-    init_broker();
 }
 
 void broker::cleanup(std::uint32_t reason) {
@@ -435,10 +418,32 @@ void broker::write(const connection_handle& hdl, util::buffer&& buf) {
 broker_ptr init_and_launch(broker_ptr ptr) {
     CPPA_PUSH_AID(ptr->id());
     CPPA_LOGF_TRACE("init and launch broker with id " << ptr->id());
-    // exec initialization code
-    auto bhvr = ptr->make_behavior();
-    if (bhvr) ptr->become(std::move(bhvr));
-    CPPA_LOGF_WARNING_IF(!ptr->has_behavior(), "broker w/o behavior spawned");
+    // we want to make sure initialization is executed in MM context
+    auto self = ptr.get();
+    ptr->become(
+        on(atom("INITMSG")) >> [self] {
+            CPPA_LOGF_TRACE(CPPA_ARG(self));
+            self->unbecome();
+            auto mm = get_middleman();
+            // launch backend now, because user-defined initialization
+            // might call functions like add_connection
+            for (auto& kvp : self->m_io) {
+                CPPA_LOGF_DEBUG("launch scribe " << kvp.second.get());
+                mm->continue_reader(kvp.second.get());
+            }
+            for (auto& kvp : self->m_accept) {
+                CPPA_LOGF_DEBUG("launch doorman " << kvp.second.get());
+                mm->continue_reader(kvp.second.get());
+            }
+            self->m_initialized = true;
+            // run user-defined initialization code
+            auto bhvr = self->make_behavior();
+            if (bhvr) self->become(std::move(bhvr));
+        }
+    );
+    ptr->enqueue({invalid_actor_addr, ptr},
+                  make_any_tuple(atom("INITMSG")),
+                  nullptr);
     return ptr;
 }
 
@@ -466,26 +471,29 @@ connection_handle broker::add_connection(input_stream_ptr in, output_stream_ptr 
     auto id = connection_handle::from_int(in->read_handle());
     auto ires = m_io.insert(make_pair(id, create_unique<scribe>(this, move(in), move(out))));
     CPPA_REQUIRE(ires.second == true);
-    auto sptr = ires.first->second.get();
-    auto mm = get_middleman();
-    mm->run_later([=] {
-        // 'launch' backends
+    // 'launch' backend only if broker is already initialized
+    if (initialized()) {
+        CPPA_LOG_DEBUG("launch scribe " << ires.first->second.get());
+        auto sptr = ires.first->second.get();
+        auto mm = get_middleman();
         mm->continue_reader(sptr);
-    });
+    }
     return id;
 }
 
 accept_handle broker::add_acceptor(acceptor_uptr ptr) {
+    CPPA_LOG_TRACE(CPPA_MARG(ptr, get));
     using namespace std;
     auto id = accept_handle::from_int(ptr->file_handle());
     auto ires = m_accept.insert(make_pair(id, create_unique<doorman>(this, move(ptr))));
     CPPA_REQUIRE(ires.second == true);
-    auto aptr = ires.first->second.get();
-    auto mm = get_middleman();
-    mm->run_later([=] {
-        // 'launch' backends
+    // 'launch' backend only if broker is already initialized
+    if (initialized()) {
+        CPPA_LOG_DEBUG("launch doorman " << ires.first->second.get());
+        auto aptr = ires.first->second.get();
+        auto mm = get_middleman();
         mm->continue_reader(aptr);
-    });
+    }
     return id;
 }
 
