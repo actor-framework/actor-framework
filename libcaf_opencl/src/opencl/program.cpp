@@ -83,6 +83,36 @@ program program::create(const char* kernel_source, const char* options, uint32_t
         oss << "clBuildProgram: " << get_opencl_error(err);
         // the build log will be printed by the
         // pfn_notify (see opencl_metainfo.cpp)
+#ifndef __APPLE__
+        // seems that just apple implemented the
+        // pfn_notify callback, but we can get
+        // the build log
+        if(err == CL_BUILD_PROGRAM_FAILURE) {
+            size_t buildlog_buffer_size = 0;
+            // get the log length
+            clGetProgramBuildInfo(pptr.get(),
+                                  dev_tmp,
+                                  CL_PROGRAM_BUILD_LOG,
+                                  sizeof(buildlog_buffer_size),
+                                  nullptr,
+                                  &buildlog_buffer_size);
+
+            vector<char> buffer(buildlog_buffer_size);
+
+            // fill the buffer with buildlog informations
+            clGetProgramBuildInfo(pptr.get(),
+                                  dev_tmp,
+                                  CL_PROGRAM_BUILD_LOG,
+                                  sizeof(buffer[0]) * buildlog_buffer_size,
+                                  buffer.data(),
+                                  nullptr);
+
+            CPPA_LOGC_ERROR("cppa::opencl::program",
+                            "create",
+                            "Build log:\n" + string(buffer.data()) +
+                            "\n########################################");
+        }
+#endif
         throw runtime_error(oss.str());
     }
     return {context, devices[device_id].m_cmd_queue, pptr};
