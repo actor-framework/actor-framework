@@ -67,9 +67,20 @@ struct unbox_typed_continue_helper<util::type_list<typed_continue_helper<List>>>
     typedef List type;
 };
 
+template<class Input, class RepliesToWith>
+struct same_input : std::is_same<Input, typename RepliesToWith::input_types> { };
+
+template<class Output, class RepliesToWith>
+struct same_output_or_skip_message_t {
+    typedef typename RepliesToWith::output_types other;
+    static constexpr bool value =
+               std::is_same<Output, typename RepliesToWith::output_types>::value
+            || std::is_same<Output, util::type_list<skip_message_t>>::value;
+};
+
 template<typename SList>
 struct valid_input_predicate {
-    typedef typename input_only<SList>::type s_inputs;
+    //typedef typename input_only<SList>::type s_inputs;
     template<typename Expr>
     struct inner {
         typedef typename Expr::input_types input_types;
@@ -77,17 +88,29 @@ struct valid_input_predicate {
                     typename Expr::output_types
                 >::type
                 output_types;
-        static constexpr int pos = util::tl_find<s_inputs, input_types>::value;
-        static_assert(pos != -1, "cannot assign given match expression to "
-                                 "typed behavior, because the expression "
-                                 "contains at least one pattern that is "
-                                 "not defined in the actor's type");
-        typedef typename util::tl_at<SList, pos>::type s_element;
-        typedef typename s_element::output_types s_out;
-        static constexpr bool value =
-               std::is_same<output_types, s_out>::value
-            || std::is_same<output_types, skip_list>::value;
-        static_assert(value, "wtf");
+        // get matching elements for input type
+        typedef typename util::tl_filter<
+                    SList,
+                    util::tbind<same_input, input_types>::template type
+                >::type
+                filtered_slist;
+        static_assert(util::tl_size<filtered_slist>::value > 0,
+                      "cannot assign given match expression to "
+                      "typed behavior, because the expression "
+                      "contains at least one pattern that is "
+                      "not defined in the actor's type");
+        static constexpr bool value = util::tl_exists<
+                                          filtered_slist,
+                                          util::tbind<
+                                              same_output_or_skip_message_t,
+                                              output_types
+                                          >::template type
+                                      >::value;
+        // check whether given output matches in the filtered list
+        static_assert(value,
+                      "cannot assign given match expression to "
+                      "typed behavior, because at least one return "
+                      "type does not match");
     };
 };
 

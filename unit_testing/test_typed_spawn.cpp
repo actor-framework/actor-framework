@@ -315,6 +315,52 @@ void test_sending_typed_actors() {
     self->send_exit(aut, exit_reason::user_shutdown);
 }
 
+/******************************************************************************
+ *                         returning different types                          *
+ ******************************************************************************/
+
+// might be implemented one fine day
+
+/*
+typedef typed_actor<
+            replies_to<int>::with<int>,
+            replies_to<int>::with<float>
+        >
+        different_results_t;
+
+different_results_t::behavior_type different_results_testee() {
+    return {
+        on_arg_match.when(cppa::placeholders::_x1 >= 5) >> [](int) {
+            return 1;
+        },
+        [](int) {
+            return 0.1f;
+        }
+    };
+}
+
+void test_returning_different_types() {
+    scoped_actor self;
+    auto testee = self->spawn_typed(different_results_testee);
+    self->sync_send(testee, 5).await(
+        [](int i) {
+            CPPA_CHECK_EQUAL(i, 1);
+        },
+        [&](float) {
+            CPPA_UNEXPECTED_MSG(self);
+        }
+    );
+    self->sync_send(testee, 4).await(
+        [](float f) {
+            CPPA_CHECK_EQUAL(f, 0.1f);
+        },
+        [&](int) {
+            CPPA_UNEXPECTED_MSG(self);
+        }
+    );
+}
+*/
+
 } // namespace <anonymous>
 
 /******************************************************************************
