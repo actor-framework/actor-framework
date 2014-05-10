@@ -503,7 +503,18 @@ void worker::external_enqueue(job_ptr ptr) {
 
 void worker::exec_later(job_ptr ptr) {
     CPPA_REQUIRE(std::this_thread::get_id() == m_this_thread.get_id());
-    m_job_list.push_back(ptr);
+    // give others the opportunity to steal from us
+    if (m_exposed_queue.empty()) {
+        if (m_job_list.empty()) {
+            m_exposed_queue.push_back(ptr);
+        }
+        else {
+            m_exposed_queue.push_back(m_job_list.front());
+            m_job_list.erase(m_job_list.begin());
+            m_job_list.push_back(ptr);
+        }
+    }
+    else m_job_list.push_back(ptr);
 }
 
 } // namespace scheduler
