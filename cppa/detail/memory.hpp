@@ -122,6 +122,9 @@ class memory {
 template<typename T>
 class basic_memory_cache : public memory_cache {
 
+    static constexpr size_t ne = s_alloc_size / sizeof(T);
+    static constexpr size_t dsize = ne > s_min_elements ? ne : s_min_elements;
+
     struct wrapper : instance_wrapper {
         ref_counted* parent;
         union { T instance; };
@@ -133,8 +136,6 @@ class basic_memory_cache : public memory_cache {
 
     class storage : public ref_counted {
 
-        static constexpr size_t ne = s_alloc_size / sizeof(T);
-        static constexpr size_t dsize = ne > s_min_elements ? ne : s_min_elements;
 
      public:
 
@@ -163,7 +164,7 @@ class basic_memory_cache : public memory_cache {
     std::vector<wrapper*> cached_elements;
 
     basic_memory_cache() {
-        cached_elements.reserve(s_cache_size / sizeof(T));
+        cached_elements.reserve(dsize);
     }
 
     ~basic_memory_cache() {
@@ -174,18 +175,16 @@ class basic_memory_cache : public memory_cache {
         return static_cast<T*>(ptr);
     }
 
-
-    virtual void release_instance(void* vptr) {
+    void release_instance(void* vptr) override {
         CPPA_REQUIRE(vptr != nullptr);
         auto ptr = reinterpret_cast<T*>(vptr);
         CPPA_REQUIRE(ptr->outer_memory != nullptr);
         auto wptr = static_cast<wrapper*>(ptr->outer_memory);
         wptr->destroy();
-        if (cached_elements.capacity() > 0) cached_elements.push_back(wptr);
-        else wptr->deallocate();
+        wptr->deallocate();
     }
 
-    virtual std::pair<instance_wrapper*, void*> new_instance() {
+    std::pair<instance_wrapper*, void*> new_instance() override {
         if (cached_elements.empty()) {
             auto elements = new storage;
             for (auto i = elements->begin(); i != elements->end(); ++i) {
