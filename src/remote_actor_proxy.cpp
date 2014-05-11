@@ -158,7 +158,7 @@ void remote_actor_proxy::enqueue(msg_hdr_cref hdr, any_tuple msg,
                             "KILL_PROXY " << to_string(_this->address())
                             << " with exit reason " << reason);
             if (_this->m_pending_requests.closed()) {
-                CPPA_LOG_WARNING("received KILL_PROXY twice");
+                CPPA_LOG_INFO("received KILL_PROXY twice");
             }
             else {
                 _this->cleanup(reason);
