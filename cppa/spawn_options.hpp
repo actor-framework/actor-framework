@@ -102,10 +102,8 @@ constexpr spawn_options blocking_api     = spawn_options::blocking_api_flag;
 
 /**
  * @brief Causes the new actor to evaluate message priorities.
- * @note This implicitly causes the actor to run in its own thread.
  */
-constexpr spawn_options priority_aware   = spawn_options::priority_aware_flag
-                                         + spawn_options::detach_flag;
+constexpr spawn_options priority_aware   = spawn_options::priority_aware_flag;
 
 /**
  * @brief Checks wheter @p haystack contains @p needle.
