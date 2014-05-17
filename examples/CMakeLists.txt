@@ -5,7 +5,11 @@ add_custom_target(all_examples)
 
 macro(add name folder)
   add_executable(${name} ${folder}/${name}.cpp ${ARGN})
-  target_link_libraries(${name} ${CMAKE_DL_LIBS} ${CPPA_LIBRARY} ${PTHREAD_LIBRARIES})
+  if (${CMAKE_SYSTEM_NAME} MATCHES "Window")
+    target_link_libraries(${name} ${CMAKE_DL_LIBS} ${CPPA_LIBRARY} ${PTHREAD_LIBRARIES} -lws2_32)
+  else ()
+    target_link_libraries(${name} ${CMAKE_DL_LIBS} ${CPPA_LIBRARY} ${PTHREAD_LIBRARIES})
+  endif ()
   add_dependencies(${name} all_examples)
 endmacro()
 
