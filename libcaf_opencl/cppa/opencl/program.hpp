@@ -37,7 +37,8 @@
 #include "cppa/opencl/global.hpp"
 #include "cppa/opencl/smart_ptr.hpp"
 
-namespace cppa { namespace opencl {
+namespace cppa {
+namespace opencl {
 
 template<typename Signature>
 class actor_facade;
@@ -69,6 +70,8 @@ class program {
 
 };
 
-} } // namespace cppa::opencl
+} // namespace opencl
+} // namespace cppa
+
 
 #endif // CPPA_OPENCL_PROGRAM_HPP

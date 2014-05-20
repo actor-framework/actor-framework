@@ -39,7 +39,8 @@
 
 using namespace std;
 
-namespace cppa { namespace opencl {
+namespace cppa {
+namespace opencl {
 
 
 program::program(context_ptr context, command_queue_ptr queue, program_ptr program)
@@ -88,4 +89,6 @@ program program::create(const char* kernel_source, const char* options, uint32_t
     return {context, devices[device_id].m_cmd_queue, pptr};
 }
 
-} } // namespace cppa::opencl
+} // namespace opencl
+} // namespace cppa
+

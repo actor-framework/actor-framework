@@ -36,7 +36,8 @@
 #include "cppa/opencl/program.hpp"
 #include "cppa/opencl/smart_ptr.hpp"
 
-namespace cppa { namespace opencl {
+namespace cppa {
+namespace opencl {
 
 class device_info {
 
@@ -84,7 +85,8 @@ inline dim_vec device_info::get_max_work_items_per_dim() {
     return m_max_work_items_per_dim;
 }
 
-} } // namespace cppa::opencl
+} // namespace opencl
+} // namespace cppa
 
 
 #endif // DEVICE_INFO_HPP
