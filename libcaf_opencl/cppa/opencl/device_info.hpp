@@ -29,8 +29,8 @@
 \******************************************************************************/
 
 
-#ifndef DEVICE_INFO_HPP
-#define DEVICE_INFO_HPP
+#ifndef CPPA_OPENCL_DEVICE_INFO_HPP
+#define CPPA_OPENCL_DEVICE_INFO_HPP
 
 #include "cppa/opencl/global.hpp"
 #include "cppa/opencl/program.hpp"
@@ -89,4 +89,4 @@ inline dim_vec device_info::get_max_work_items_per_dim() {
 } // namespace cppa
 
 
-#endif // DEVICE_INFO_HPP
+#endif // CPPA_OPENCL_DEVICE_INFO_HPP
