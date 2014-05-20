@@ -1,7 +1,20 @@
+Version 0.9.2
+-------------
+
+__2014_05_20__
+
+- Fixed memory leak in memory cache
+- Fixed MinGW build on Windows 64
+- Fixed performance issue with prioritizing policy
+- Handle invalid_actor in sync send + anon_send_exit
+- Give more opportunities for work stealing
+- Fixed issue with serialization of empty any tuples
+- Fixed initialization order in broker
+
 Version 0.9.1
 -------------
 
-__2014_06_05__
+__2014_05_06__
 
 - Fixed build on GCC
 

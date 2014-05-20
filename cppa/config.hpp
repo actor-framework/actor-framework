@@ -54,7 +54,7 @@
  *        whereas each number is a two-digit decimal number without
  *        leading zeros (e.g. 900 is version 0.9.0).
  */
-#define CPPA_VERSION 901
+#define CPPA_VERSION 902
 
 #define CPPA_MAJOR_VERSION (CPPA_VERSION / 100000)
 #define CPPA_MINOR_VERSION ((CPPA_VERSION / 100) % 1000)

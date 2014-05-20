@@ -1,9 +1,13 @@
 cmake_minimum_required(VERSION 2.8)
 project(cppa C CXX)
 
-set(LIBCPPA_VERSION_MAJOR 0)
-set(LIBCPPA_VERSION_MINOR 9)
-set(LIBCPPA_VERSION_PATCH 1)
+# extract version from VERSION file
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" VERSION LIMIT_COUNT 1)
+string(REPLACE "." " " version_numbers ${VERSION})
+separate_arguments(version_numbers)
+list(GET version_numbers 0 LIBCPPA_VERSION_MAJOR)
+list(GET version_numbers 1 LIBCPPA_VERSION_MINOR)
+list(GET version_numbers 2 LIBCPPA_VERSION_PATCH)
 
 # prohibit in-source builds
 if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
