@@ -76,7 +76,8 @@
 
 using namespace std;
 
-namespace cppa { namespace io {
+namespace cppa {
+namespace io {
 
 void notify_queue_event(native_socket_type fd) {
     char dummy = 0;

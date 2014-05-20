@@ -39,7 +39,8 @@
 #include "cppa/io/continuable.hpp"
 #include "cppa/io/output_stream.hpp"
 
-namespace cppa { namespace io {
+namespace cppa {
+namespace io {
 
 template<class Base, class Subtype>
 class buffered_writing : public Base {
@@ -130,6 +131,7 @@ class buffered_writing : public Base {
 
 };
 
-} } // namespace cppa::io
+} // namespace io
+} // namespace cppa
 
 #endif // CPPA_IO_BUFFERED_WRITING_HPP

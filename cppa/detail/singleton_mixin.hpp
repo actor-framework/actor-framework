@@ -33,7 +33,8 @@
 
 #include <utility>
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 class singleton_manager;
 
@@ -73,6 +74,7 @@ class singleton_mixin<Derived, void> {
 
 };
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_SINGLETON_MIXIN_HPP

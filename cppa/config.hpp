@@ -135,6 +135,7 @@ using ::backtrace;
 using ::backtrace_symbols_fd;
 } // namespace detail
 } // namespace cppa
+
 #endif
 
 //

@@ -33,7 +33,8 @@
 
 #include "cppa/util/type_list.hpp"
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 /**
  * @addtogroup MetaProgramming
@@ -506,6 +507,8 @@ constexpr auto get_right_indices(const T&)
  * @}
  */
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+
 
 #endif // CPPA_UTIL_INT_LIST_HPP

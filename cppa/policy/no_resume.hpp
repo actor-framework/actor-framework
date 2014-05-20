@@ -8,13 +8,11 @@
 #include "cppa/exit_reason.hpp"
 #include "cppa/policy/resume_policy.hpp"
 
-namespace cppa {
-namespace detail {
-struct cs_thread;
-} // namespace detail
-} // namespace cppa
+namespace cppa { namespace detail { struct cs_thread; } }
 
-namespace cppa { namespace policy {
+
+namespace cppa {
+namespace policy {
 
 // this policy simply forwards calls to @p await_data to the scheduling
 // policy and throws an exception whenever @p resume is called;
@@ -70,6 +68,8 @@ class no_resume {
 
 };
 
-} } // namespace cppa::policy
+} // namespace policy
+} // namespace cppa
+
 
 #endif // NO_RESUME_HPP

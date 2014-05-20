@@ -50,7 +50,8 @@ constexpr const char* s_get_uuid = "/usr/sbin/diskutil info / | "
 
 } // namespace <anonymous>
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 std::string get_root_uuid() {
     char cbuf[100];
@@ -65,7 +66,9 @@ std::string get_root_uuid() {
     return uuid;
 }
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+
 
 #elif defined(CPPA_LINUX)
 
@@ -116,7 +119,8 @@ bool operator!=(const columns_iterator& lhs, const columns_iterator& rhs) {
     return !(lhs == rhs);
 }
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 std::string get_root_uuid() {
     int sck = socket(AF_INET, SOCK_DGRAM, 0);
@@ -185,7 +189,9 @@ std::string get_root_uuid() {
     return uuid;
 }
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+
 
 #elif defined(CPPA_WINDOWS)
 
@@ -198,7 +204,8 @@ std::string get_root_uuid() {
 
 using namespace std;
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 namespace { constexpr size_t max_drive_name = MAX_PATH; }
 
@@ -247,7 +254,9 @@ std::string get_root_uuid() {
     return uuid;
 }
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+
 
 #endif // CPPA_WINDOWS
 

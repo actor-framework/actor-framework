@@ -215,5 +215,6 @@ abstract_actor_ptr remote_actor_impl(stream_ptr_pair io, string_set expected) {
     return raw_access::get(result->value);
 }
 
-} // namespace detail
+} // namespace util
 } // namespace cppa
+

@@ -38,7 +38,8 @@
 #include "cppa/message_priority.hpp"
 #include "cppa/detail/sync_request_bouncer.hpp"
 
-namespace cppa { namespace policy {
+namespace cppa {
+namespace policy {
 
 class prioritizing {
 
@@ -138,6 +139,8 @@ class prioritizing {
 
 };
 
-} } // namespace cppa::policy
+} // namespace policy
+} // namespace cppa
+
 
 #endif // PRIORITIZING_HPP

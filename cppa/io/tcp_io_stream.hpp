@@ -34,7 +34,8 @@
 #include "cppa/config.hpp"
 #include "cppa/io/stream.hpp"
 
-namespace cppa { namespace io {
+namespace cppa {
+namespace io {
 
 /**
  * @brief An implementation of the {@link stream} interface for TCP sockets.
@@ -76,6 +77,8 @@ class tcp_io_stream : public stream {
 
 };
 
-} } // namespace cppa::detail
+} // namespace io
+} // namespace cppa
+
 
 #endif // CPPA_IPV4_IO_STREAM_HPP

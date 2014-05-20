@@ -35,7 +35,8 @@
 
 #include "cppa/util/type_traits.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 // tuple-like access to an array of void pointers
 template<typename... T>
@@ -66,7 +67,8 @@ struct pseudo_tuple_from_type_list<util::type_list<Ts...> > {
     typedef pseudo_tuple<Ts...> type;
 };
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 namespace cppa {
 

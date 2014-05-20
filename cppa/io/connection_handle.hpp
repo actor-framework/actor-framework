@@ -33,7 +33,8 @@
 
 #include "cppa/detail/handle.hpp"
 
-namespace cppa { namespace io {
+namespace cppa {
+namespace io {
 
 class broker;
 
@@ -53,6 +54,8 @@ class connection_handle : public detail::handle<connection_handle> {
 
 };
 
-} } // namespace cppa::network
+} // namespace io
+} // namespace cppa
+
 
 #endif // IO_SERVICE_HPP

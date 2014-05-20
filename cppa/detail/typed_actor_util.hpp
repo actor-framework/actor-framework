@@ -43,7 +43,8 @@ class typed_continue_helper;
 
 } // namespace cppa
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 template<typename R, typename T>
 struct deduce_signature_helper;
@@ -140,6 +141,7 @@ struct deduce_output_type {
             type;
 };
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_TYPED_ACTOR_UTIL_HPP

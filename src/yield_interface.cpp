@@ -50,7 +50,8 @@ constexpr const char* names_table[] = {
 
 } // namespace <anonymous>
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 void yield(yield_state ystate) {
     *t_ystate = ystate;
@@ -66,7 +67,9 @@ yield_state call(detail::cs_thread* what, detail::cs_thread* from) {
     return result;
 }
 
-} } // namespace cppa::detail
+} // namespace util
+} // namespace cppa
+
 
 namespace cppa {
 

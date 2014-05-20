@@ -38,7 +38,8 @@
 #include "cppa/detail/raw_access.hpp"
 #include "cppa/detail/sync_request_bouncer.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 sync_request_bouncer::sync_request_bouncer(std::uint32_t r)
 : rsn(r == exit_reason::not_exited ? exit_reason::normal : r) { }
@@ -59,4 +60,6 @@ void sync_request_bouncer::operator()(const mailbox_element& e) const {
     (*this)(e.sender, e.mid);
 }
 
-} } // namespace cppa::detail
+} // namespace util
+} // namespace cppa
+

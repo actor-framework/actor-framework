@@ -33,7 +33,8 @@
 
 #include "cppa/util/comparable.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 template<typename Subtype>
 class handle : util::comparable<Subtype> {
@@ -80,6 +81,7 @@ class handle : util::comparable<Subtype> {
 
 };
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_DETAIL_HANDLE_HPP

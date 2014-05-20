@@ -30,7 +30,8 @@
 
 #include "cppa/io/middleman_event_handler.hpp"
 
-namespace cppa { namespace io {
+namespace cppa {
+namespace io {
 
 inline std::string eb2str(event_bitmask e) {
     switch (e) {
@@ -168,4 +169,6 @@ bool middleman_event_handler::has_writer(continuable* ptr) {
     });
 }
 
-} } // namespace cppa::network
+} // namespace io
+} // namespace cppa
+

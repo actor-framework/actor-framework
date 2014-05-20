@@ -33,7 +33,8 @@
 
 namespace cppa { class mailbox_element; }
 
-namespace cppa { namespace policy {
+namespace cppa {
+namespace policy {
 
 /**
  * @brief The priority_policy <b>concept</b> class. Please note that this
@@ -71,6 +72,8 @@ class priority_policy {
 
 };
 
-} } // namespace cppa::policy
+} // namespace policy
+} // namespace cppa
+
 
 #endif // CPPA_PRIORITY_POLICY_HPP

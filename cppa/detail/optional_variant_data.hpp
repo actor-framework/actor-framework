@@ -49,7 +49,8 @@
         return CPPA_OPTIONAL_VARIANT_DATA_CONCAT(v, pos) ;                     \
     }
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 template<typename T>
 struct lift_void { typedef  T type; };
@@ -106,6 +107,7 @@ struct optional_variant_data_destructor {
     inline void operator()(T& storage) const { storage.~T(); }
 };
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // TRIVARIANT_DATA_HPP

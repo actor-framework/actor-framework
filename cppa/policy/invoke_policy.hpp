@@ -53,7 +53,8 @@
 
 #include "cppa/util/scope_guard.hpp"
 
-namespace cppa { namespace policy {
+namespace cppa {
+namespace policy {
 
 enum receive_policy_flag {
     // receives can be nested
@@ -385,6 +386,8 @@ class invoke_policy {
 
 };
 
-} } // namespace cppa::policy
+} // namespace policy
+} // namespace cppa
+
 
 #endif // CPPA_INVOKE_POLICY_HPP

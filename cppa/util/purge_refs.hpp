@@ -37,7 +37,8 @@
 #include "cppa/util/type_traits.hpp"
 #include "cppa/util/rebindable_reference.hpp"
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 template<typename T>
 struct purge_refs_impl {
@@ -72,6 +73,8 @@ struct purge_refs {
     typedef typename purge_refs_impl<typename util::rm_const_and_ref<T>::type>::type type;
 };
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+
 
 #endif // CPPA_PURGE_REFS_HPP

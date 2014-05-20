@@ -38,7 +38,8 @@
 
 #include "cppa/policy/invoke_policy.hpp"
 
-namespace cppa { namespace policy {
+namespace cppa {
+namespace policy {
 
 /**
  * @brief An actor that is scheduled or otherwise managed.
@@ -70,6 +71,8 @@ class sequential_invoke : public invoke_policy<sequential_invoke> {
 
 };
 
-} } // namespace cppa::policy
+} // namespace policy
+} // namespace cppa
+
 
 #endif // CPPA_THREADLESS_HPP

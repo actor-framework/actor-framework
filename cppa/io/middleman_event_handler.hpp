@@ -40,7 +40,8 @@
 #include "cppa/io/event.hpp"
 #include "cppa/io/continuable.hpp"
 
-namespace cppa { namespace io {
+namespace cppa {
+namespace io {
 
 struct fd_meta_info {
     native_socket_type fd;
@@ -134,6 +135,8 @@ class middleman_event_handler {
 
 };
 
-} } // namespace cppa::detail
+} // namespace io
+} // namespace cppa
+
 
 #endif // MIDDLEMAN_EVENT_HANDLER_HPP

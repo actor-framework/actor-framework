@@ -33,7 +33,8 @@
 
 #include "cppa/unit.hpp"
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 /**
  * @brief Evaluates to @p Right if @p Left == unit_t, @p Left otherwise.
@@ -71,6 +72,8 @@ struct if_not_left<unit_t, Right> {
     typedef Right type;
 };
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+
 
 #endif // CPPA_LEFT_OR_RIGHT_HPP

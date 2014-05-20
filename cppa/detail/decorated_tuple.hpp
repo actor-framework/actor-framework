@@ -45,7 +45,8 @@
 #include "cppa/detail/abstract_tuple.hpp"
 #include "cppa/detail/serialize_tuple.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 class decorated_tuple : public abstract_tuple {
 
@@ -117,6 +118,7 @@ class decorated_tuple : public abstract_tuple {
 
 };
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_DECORATED_TUPLE_HPP

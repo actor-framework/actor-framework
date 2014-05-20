@@ -33,10 +33,13 @@
 
 #include <string>
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 std::string get_root_uuid();
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+
 
 #endif // CPPA_UTIL_GET_ROOT_UUID_HPP

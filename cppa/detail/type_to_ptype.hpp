@@ -40,7 +40,8 @@
 
 #include "cppa/util/type_traits.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 template<primitive_type PT>
 struct wrapped_ptype { static const primitive_type ptype = PT; };
@@ -93,6 +94,7 @@ template<> struct type_to_ptype_impl<atom_value>  : wrapped_ptype<pt_atom       
 template<typename T>
 struct type_to_ptype : type_to_ptype_impl<typename util::rm_const_and_ref<T>::type> { };
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_TYPE_TO_PTYPE_HPP

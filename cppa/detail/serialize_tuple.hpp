@@ -38,7 +38,8 @@
 
 namespace cppa { class serializer; }
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 template<typename List, size_t Pos = 0>
 struct serialize_tuple {
@@ -56,6 +57,7 @@ struct serialize_tuple<util::empty_type_list, Pos> {
     inline static void _(serializer&, const T*) { }
 };
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_SERIALIZE_TUPLE_HPP

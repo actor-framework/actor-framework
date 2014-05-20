@@ -56,7 +56,8 @@
 
 namespace cppa { class uniform_type_info; }
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 // ordered according to demangled type name (see uniform_type_info_map.cpp)
 using mapped_type_list = util::type_list<
@@ -153,6 +154,7 @@ class uniform_type_info_map {
 
 };
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_UNIFORM_TYPE_INFO_MAP_HPP

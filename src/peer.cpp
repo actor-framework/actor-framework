@@ -57,7 +57,8 @@
 
 using namespace std;
 
-namespace cppa { namespace io {
+namespace cppa {
+namespace io {
 
 peer::peer(middleman* parent,
            const input_stream_ptr& in,
@@ -399,4 +400,6 @@ void peer::dispose() {
     delete this;
 }
 
-} } // namespace cppa::network
+} // namespace io
+} // namespace cppa
+

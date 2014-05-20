@@ -36,7 +36,8 @@
 #include <cstdint>
 #include <stdexcept>
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 /**
  * @brief SI time units to specify timeouts.
@@ -161,7 +162,9 @@ inline bool operator!=(const duration& lhs, const duration& rhs) {
     return !(lhs == rhs);
 }
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+
 
 /**
  * @relates cppa::util::duration

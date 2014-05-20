@@ -38,7 +38,8 @@
 #include "cppa/detail/types_array.hpp"
 #include "cppa/detail/abstract_tuple.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 enum class tuple_cast_impl_id {
     no_wildcard,
@@ -86,6 +87,7 @@ struct tuple_cast_impl<wildcard_position::leading, Result, T...> {
     }
 };
 
-} }
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_TUPLE_CAST_IMPL_HPP

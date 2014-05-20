@@ -34,7 +34,8 @@
 #include "cppa/get.hpp"
 #include "cppa/util/int_list.hpp"
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 template<typename F, class Tuple, long... Is>
 inline auto apply_args(F& f, Tuple& tup, util::int_list<Is...>)
@@ -59,6 +60,8 @@ inline auto call_mv(F& f, Ts&&... args) -> decltype(f(std::move(args)...)) {
     return f(std::move(args)...);
 }
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+
 
 #endif // CALL_HPP

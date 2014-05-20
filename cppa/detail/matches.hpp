@@ -38,7 +38,8 @@
 
 #include "cppa/util/type_list.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 template<wildcard_position, class Tuple, typename...>
 struct matcher;
@@ -346,6 +347,7 @@ inline bool matches_types(const any_tuple& tup, const util::type_list<Ts...>&) {
     return matches<Ts...>(tup);
 }
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_MATCHES_HPP

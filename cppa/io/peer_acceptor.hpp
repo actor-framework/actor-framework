@@ -36,7 +36,8 @@
 #include "cppa/io/tcp_acceptor.hpp"
 #include "cppa/io/continuable.hpp"
 
-namespace cppa { namespace io {
+namespace cppa {
+namespace io {
 
 class default_protocol;
 
@@ -70,6 +71,8 @@ class peer_acceptor : public continuable {
 
 };
 
-} } // namespace cppa::detail
+} // namespace io
+} // namespace cppa
+
 
 #endif // IPV4_PEER_ACCEPTOR_HPP

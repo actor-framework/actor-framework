@@ -34,7 +34,8 @@
 #include <atomic>
 #include <cstddef>
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 /**
  * @brief A spinlock implementation providing shared and exclusive locking.
@@ -63,6 +64,8 @@ class shared_spinlock {
 
 };
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+
 
 #endif // CPPA_SHARED_SPINLOCK_HPP

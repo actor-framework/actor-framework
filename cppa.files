@@ -278,7 +278,6 @@ src/exception.cpp
 src/execinfo_windows.cpp
 src/execution_unit.cpp
 src/exit_reason.cpp
-src/factory.cpp
 src/fd_util.cpp
 src/functor_based_actor.cpp
 src/functor_based_blocking_actor.cpp

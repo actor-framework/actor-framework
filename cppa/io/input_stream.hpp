@@ -35,7 +35,8 @@
 #include "cppa/ref_counted.hpp"
 #include "cppa/intrusive_ptr.hpp"
 
-namespace cppa { namespace io {
+namespace cppa {
+namespace io {
 
 /**
  * @brief An abstract input stream interface.
@@ -73,6 +74,7 @@ class input_stream : public virtual ref_counted {
  */
 typedef intrusive_ptr<input_stream> input_stream_ptr;
 
-} } // namespace cppa::util
+} // namespace io
+} // namespace cppa
 
 #endif // CPPA_INPUT_STREAM_HPP

@@ -50,7 +50,8 @@ typedef weak_intrusive_ptr<actor_proxy> weak_actor_proxy_ptr;
 
 } // namespace cppa
 
-namespace cppa { namespace io {
+namespace cppa {
+namespace io {
 
 class peer;
 class continuable;
@@ -211,6 +212,7 @@ const node_id_ptr& middleman::node() const {
     return m_node;
 }
 
-} } // namespace cppa::io
+} // namespace io
+} // namespace cppa
 
 #endif // MIDDLEMAN_HPP

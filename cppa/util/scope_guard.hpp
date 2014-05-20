@@ -33,7 +33,8 @@
 
 #include <utility>
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 /**
  * @brief A lightweight scope guard implementation.
@@ -83,6 +84,8 @@ scope_guard<Fun> make_scope_guard(Fun f) {
     return {std::move(f)};
 }
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+
 
 #endif // CPPA_SCOPE_GUARD_HPP

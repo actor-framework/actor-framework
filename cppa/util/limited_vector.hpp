@@ -40,7 +40,8 @@
 
 #include "cppa/config.hpp"
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 /**
  * @brief A vector with a fixed maximum size (uses an array internally).
@@ -270,6 +271,8 @@ class limited_vector {
 
 };
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+
 
 #endif // CPPA_FIXED_VECTOR_HPP

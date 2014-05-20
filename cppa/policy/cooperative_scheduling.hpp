@@ -42,7 +42,8 @@
 
 #include "cppa/intrusive/single_reader_queue.hpp"
 
-namespace cppa { namespace policy {
+namespace cppa {
+namespace policy {
 
 class cooperative_scheduling {
 
@@ -84,6 +85,8 @@ class cooperative_scheduling {
 
 };
 
-} } // namespace cppa::policy
+} // namespace policy
+} // namespace cppa
+
 
 #endif // CPPA_COOPERATIVE_SCHEDULING_HPP

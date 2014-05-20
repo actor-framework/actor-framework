@@ -30,7 +30,8 @@
 
 #include "cppa/detail/decorated_tuple.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 void* decorated_tuple::mutable_at(size_t pos) {
     CPPA_REQUIRE(pos < size());
@@ -101,4 +102,6 @@ const std::string* decorated_tuple::tuple_type_names() const {
     return &result;
 }
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
+

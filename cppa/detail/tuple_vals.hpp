@@ -40,7 +40,8 @@
 #include "cppa/detail/abstract_tuple.hpp"
 #include "cppa/detail/serialize_tuple.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 template<typename... Ts>
 class tuple_vals : public abstract_tuple {
@@ -138,6 +139,7 @@ struct tuple_vals_from_type_list< util::type_list<Ts...> > {
     typedef tuple_vals<Ts...> type;
 };
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_TUPLE_VALS_HPP

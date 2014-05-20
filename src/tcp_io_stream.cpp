@@ -51,7 +51,8 @@
 #   include <netinet/tcp.h>
 #endif
 
-namespace cppa { namespace io {
+namespace cppa {
+namespace io {
 
 using namespace ::cppa::detail::fd_util;
 
@@ -165,4 +166,6 @@ io::stream_ptr tcp_io_stream::connect_to(const char* host,
     return from_sockfd(fd);
 }
 
-} } // namespace cppa::detail
+} // namespace util
+} // namespace cppa
+

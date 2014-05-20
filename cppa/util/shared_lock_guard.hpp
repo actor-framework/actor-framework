@@ -31,7 +31,8 @@
 #ifndef CPPA_SHARED_LOCK_GUARD_HPP
 #define CPPA_SHARED_LOCK_GUARD_HPP
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 /**
  * @brief Similar to <tt>std::lock_guard</tt> but performs shared locking.
@@ -62,6 +63,8 @@ class shared_lock_guard {
     }
 };
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+
 
 #endif // CPPA_SHARED_LOCK_GUARD_HPP

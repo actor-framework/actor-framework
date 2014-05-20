@@ -51,7 +51,8 @@
 
 #include "cppa/intrusive/single_reader_queue.hpp"
 
-namespace cppa { namespace policy {
+namespace cppa {
+namespace policy {
 
 class no_scheduling {
 
@@ -120,6 +121,8 @@ class no_scheduling {
 
 };
 
-} } // namespace cppa::policy
+} // namespace policy
+} // namespace cppa
+
 
 #endif // CPPA_NO_SCHEDULING_HPP

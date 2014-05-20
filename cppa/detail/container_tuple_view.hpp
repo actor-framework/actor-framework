@@ -37,7 +37,8 @@
 #include "cppa/detail/abstract_tuple.hpp"
 #include "cppa/detail/disablable_delete.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 template<class Container>
 class container_tuple_view : public abstract_tuple {
@@ -95,6 +96,7 @@ class container_tuple_view : public abstract_tuple {
 
 };
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_CONTAINER_TUPLE_VIEW_HPP

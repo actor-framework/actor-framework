@@ -69,7 +69,8 @@ inline void sleep_for(const chrono::duration<Rep, Period>& rt) {
 } } } // namespace std::this_thread::<anonymous>
 #endif
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 /**
  * @brief A producer-consumer list.
@@ -199,6 +200,8 @@ class producer_consumer_list {
 
 };
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+
 
 #endif // CPPA_PRODUCER_CONSUMER_LIST_HPP

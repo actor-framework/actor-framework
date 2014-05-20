@@ -37,7 +37,9 @@
 
 #include "cppa/config.hpp"
 
-namespace cppa { namespace detail { namespace fd_util {
+namespace cppa {
+namespace detail {
+namespace fd_util {
 
 std::string last_socket_error_as_string();
 
@@ -61,6 +63,8 @@ void handle_read_result(ssize_t result, bool is_nonblocking_io);
 
 std::pair<native_socket_type, native_socket_type> create_pipe();
 
-} } } // namespace cppa::detail::fd_util
+} // namespace fd_util
+} // namespace detail
+} // namespace cppa
 
 #endif // FD_UTIL_HPP

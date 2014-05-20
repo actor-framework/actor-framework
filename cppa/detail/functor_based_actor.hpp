@@ -35,7 +35,8 @@
 
 #include "cppa/event_based_actor.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 class functor_based_actor : public event_based_actor {
 
@@ -120,6 +121,7 @@ class functor_based_actor : public event_based_actor {
 
 };
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_FUNCTOR_BASED_ACTOR_HPP

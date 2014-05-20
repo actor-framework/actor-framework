@@ -37,5 +37,6 @@ behavior functor_based_actor::make_behavior() {
     return m_make_behavior(this);
 }
 
-} // namespace detail
+} // namespace util
 } // namespace cppa
+

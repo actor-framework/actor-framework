@@ -48,7 +48,8 @@
 #include "cppa/detail/cs_thread.hpp"
 #include "cppa/detail/functor_based_actor.hpp"
 
-namespace cppa { namespace policy {
+namespace cppa {
+namespace policy {
 
 class event_based_resume {
 
@@ -187,6 +188,8 @@ class event_based_resume {
 
 };
 
-} } // namespace cppa::policy
+} // namespace policy
+} // namespace cppa
+
 
 #endif // CPPA_ABSTRACT_EVENT_BASED_ACTOR_HPP

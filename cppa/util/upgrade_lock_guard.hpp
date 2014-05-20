@@ -31,7 +31,8 @@
 #ifndef CPPA_UPGRADE_LOCK_GUARD_HPP
 #define CPPA_UPGRADE_LOCK_GUARD_HPP
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 /**
  * @brief Upgrades shared ownership to exclusive ownership.
@@ -59,6 +60,8 @@ class upgrade_lock_guard {
 
 };
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+
 
 #endif // CPPA_UPGRADE_LOCK_GUARD_HPP

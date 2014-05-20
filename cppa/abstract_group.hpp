@@ -39,12 +39,15 @@
 #include "cppa/ref_counted.hpp"
 #include "cppa/abstract_channel.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 class group_manager;
 class peer_connection;
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
+
 
 namespace cppa {
 

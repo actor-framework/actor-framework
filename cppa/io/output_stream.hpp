@@ -35,7 +35,8 @@
 #include "cppa/ref_counted.hpp"
 #include "cppa/intrusive_ptr.hpp"
 
-namespace cppa { namespace io {
+namespace cppa {
+namespace io {
 
 /**
  * @brief An abstract output stream interface.
@@ -74,6 +75,7 @@ class output_stream : public virtual ref_counted {
  */
 typedef intrusive_ptr<output_stream> output_stream_ptr;
 
-} } // namespace cppa::util
+} // namespace io
+} // namespace cppa
 
 #endif // CPPA_OUTPUT_STREAM_HPP

@@ -39,7 +39,8 @@
 
 #include "cppa/config.hpp"
 
-namespace cppa { namespace intrusive {
+namespace cppa {
+namespace intrusive {
 
 /**
  * @brief Denotes in which state queue and reader are after an enqueue.
@@ -377,6 +378,7 @@ class single_reader_queue {
 
 };
 
-} } // namespace cppa::util
+} // namespace intrusive
+} // namespace cppa
 
 #endif // CPPA_SINGLE_READER_QUEUE_HPP

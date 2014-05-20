@@ -47,7 +47,8 @@ const uniform_type_info* uniform_typeid(const std::type_info&);
 
 } // namespace cppa
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 /**
  * @addtogroup MetaProgramming
@@ -1067,7 +1068,9 @@ struct tl_equal {
  * @}
  */
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+
 
 namespace cppa {
 template<size_t N, typename... Ts>

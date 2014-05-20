@@ -47,7 +47,8 @@ typedef cppa::util::upgrade_lock_guard<cppa::util::shared_spinlock> upgrade_guar
 
 } // namespace <anonymous>
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 actor_registry::~actor_registry() { }
 
@@ -142,4 +143,6 @@ void actor_registry::await_running_count_equal(size_t expected) {
     }
 }
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
+

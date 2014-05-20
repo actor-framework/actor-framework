@@ -36,7 +36,8 @@
 #include <algorithm>
 #include <type_traits>
 
-namespace cppa { namespace opencl {
+namespace cppa {
+namespace opencl {
 
 template<typename T, cl_int (*ref)(T), cl_int (*deref)(T)>
 class smart_ptr {
@@ -119,6 +120,8 @@ typedef smart_ptr<cl_device_id, clRetainDeviceDummy, clReleaseDeviceDummy>
 typedef smart_ptr<cl_command_queue, clRetainCommandQueue, clReleaseCommandQueue>
         command_queue_ptr;
 
-} } // namespace cppa::opencl
+} // namespace opencl
+} // namespace cppa
+
 
 #endif // SMART_PTR_HPP

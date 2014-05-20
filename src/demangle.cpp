@@ -39,7 +39,8 @@
 
 #include <stdlib.h>
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 std::string demangle(const char* decorated) {
     size_t size;
@@ -96,4 +97,6 @@ std::string demangle(const std::type_info& tinf) {
     return demangle(tinf.name());
 }
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
+

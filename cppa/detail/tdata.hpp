@@ -56,7 +56,8 @@ class uniform_type_info;
 const uniform_type_info* uniform_typeid(const std::type_info&);
 } // namespace cppa
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 template<typename T>
 inline void* ptr_to(T& what) { return &what; }
@@ -440,7 +441,8 @@ void rebind_tdata(tdata<Ts...>& td, const tdata<Us...>& arg, const Vs&... args) 
     rebind_tdata(td.tail(), arg.tail(), args...);
 }
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 namespace cppa {
 

@@ -37,7 +37,8 @@
 
 #include <cmath>
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 template<typename T>
 struct ieee_754_trait;
@@ -139,6 +140,7 @@ typename ieee_754_trait<T>::float_type unpack754(T i) {
     return result;
 }
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // IEEE_754_HPP

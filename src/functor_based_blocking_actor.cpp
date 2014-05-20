@@ -43,5 +43,6 @@ void functor_based_blocking_actor::act() {
     m_act(this);
 }
 
-} // namespace detail
+} // namespace util
 } // namespace cppa
+

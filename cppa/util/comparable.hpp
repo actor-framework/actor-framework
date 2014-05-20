@@ -31,7 +31,8 @@
 #ifndef CPPA_COMPARABLE_HPP
 #define CPPA_COMPARABLE_HPP
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 /**
  * @brief Barton–Nackman trick implementation.
@@ -124,6 +125,8 @@ class comparable<Subclass, Subclass> {
 
 };
 
-} } // cppa::util
+} // namespace util
+} // namespace cppa
+
 
 #endif // CPPA_COMPARABLE_HPP

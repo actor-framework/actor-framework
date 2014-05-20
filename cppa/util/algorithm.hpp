@@ -41,7 +41,8 @@
 
 #include "cppa/util/type_traits.hpp"
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 std::vector<std::string> split(const std::string& str,
                                char delim = ' ',
@@ -101,6 +102,8 @@ safe_equal(const T& lhs, const U& rhs) {
     return std::fabs(lhs - rhs) <= std::numeric_limits<res_type>::epsilon();
 }
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+
 
 #endif // CPPA_UTIL_SPLIT_HPP

@@ -37,7 +37,8 @@
 
 #include "cppa/io/event.hpp"
 
-namespace cppa { namespace io {
+namespace cppa {
+namespace io {
 
 /**
  * @brief Denotes the return value of
@@ -137,6 +138,8 @@ inline native_socket_type continuable::write_handle() const {
     return m_wr;
 }
 
-} } // namespace cppa::network
+} // namespace io
+} // namespace cppa
+
 
 #endif // CONTINUABLE_WRITER_HPP

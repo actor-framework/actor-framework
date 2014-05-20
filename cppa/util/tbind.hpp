@@ -31,7 +31,8 @@
 #ifndef CPPA_TBIND_HPP
 #define CPPA_TBIND_HPP
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 /**
  * @ingroup MetaProgramming
@@ -45,6 +46,8 @@ struct tbind {
     };
 };
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+
 
 #endif // CPPA_TBIND_HPP

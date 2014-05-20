@@ -31,7 +31,8 @@
 #ifndef CPPA_WRAPPED_HPP
 #define CPPA_WRAPPED_HPP
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 /**
  * @ingroup MetaProgramming
@@ -47,6 +48,8 @@ struct wrapped< wrapped<T> > {
     typedef typename wrapped<T>::type type;
 };
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+
 
 #endif // CPPA_WRAPPED_HPP

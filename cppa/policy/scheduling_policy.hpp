@@ -118,6 +118,8 @@ class scheduling_policy {
 
 };
 
-} } // namespace cppa::policy
+} // namespace policy
+} // namespace cppa
+
 
 #endif // CPPA_SCHEDULING_POLICY_HPP

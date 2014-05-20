@@ -31,7 +31,8 @@
 #ifndef CPPA_TYPE_PAIR_HPP
 #define CPPA_TYPE_PAIR_HPP
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 /**
  * @ingroup MetaProgramming
@@ -58,6 +59,8 @@ struct is_type_pair<type_pair<First, Second> > {
     static constexpr bool value = true;
 };
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+
 
 #endif // CPPA_TYPE_PAIR_HPP

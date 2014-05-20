@@ -31,7 +31,8 @@
 #ifndef GUARD_HPP
 #define GUARD_HPP
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 template<typename T>
 struct guard {
@@ -42,6 +43,8 @@ struct guard {
 
 };
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+
 
 #endif // GUARD_HPP

@@ -43,7 +43,8 @@
 
 namespace cppa { class mailbox_element; }
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 namespace {
 
@@ -240,6 +241,7 @@ class memory {
 
 #endif // CPPA_DISABLE_MEM_MANAGEMENT
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_MEMORY_HPP

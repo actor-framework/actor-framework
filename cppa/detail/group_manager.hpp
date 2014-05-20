@@ -40,7 +40,8 @@
 
 #include "cppa/detail/singleton_mixin.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 class group_manager : public singleton_mixin<group_manager> {
 
@@ -70,6 +71,7 @@ class group_manager : public singleton_mixin<group_manager> {
 
 };
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_GROUP_MANAGER_HPP

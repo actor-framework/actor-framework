@@ -41,7 +41,8 @@ void detail::behavior_impl::handle_timeout() { }
 
 } // namespace cppa
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 behavior_impl_ptr combine(behavior_impl_ptr lhs, const partial_function& rhs) {
     return lhs->or_else(rhs.as_behavior_impl());
@@ -55,4 +56,6 @@ behavior_impl_ptr extract(const partial_function& arg) {
     return arg.as_behavior_impl();
 }
 
-} } // namespace cppa::detail
+} // namespace util
+} // namespace cppa
+

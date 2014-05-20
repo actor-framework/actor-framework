@@ -44,7 +44,8 @@
 #include "cppa/util/tbind.hpp"
 #include "cppa/util/type_list.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 class match_helper {
 
@@ -301,7 +302,9 @@ class stream_matcher {
 
 };
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
+
 
 namespace cppa {
 

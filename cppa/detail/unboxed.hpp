@@ -36,7 +36,8 @@
 #include "cppa/util/guard.hpp"
 #include "cppa/util/wrapped.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 template<typename T>
 struct unboxed {
@@ -68,6 +69,7 @@ struct unboxed<std::unique_ptr<util::guard<T>>> {
     typedef T type;
 };
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_UNBOXED_HPP

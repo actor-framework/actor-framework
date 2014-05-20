@@ -42,7 +42,8 @@
 
 using namespace std;
 
-namespace cppa { namespace io {
+namespace cppa {
+namespace io {
 
 inline sync_request_info* new_req_info(actor_addr sptr, message_id id) {
     return detail::memory::create<sync_request_info>(std::move(sptr), id);
@@ -213,4 +214,6 @@ void remote_actor_proxy::local_unlink_from(const actor_addr& other) {
     unlink_from_impl(other);
 }
 
-} } // namespace cppa::network
+} // namespace io
+} // namespace cppa
+

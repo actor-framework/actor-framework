@@ -41,7 +41,8 @@
 
 #include "cppa/detail/tdata.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 // 'absorbs' callables and instances of `anything`
 template<typename T>
@@ -125,6 +126,7 @@ class value_guard {
 
 typedef value_guard<util::empty_type_list> empty_value_guard;
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_VALUE_GUARD_HPP

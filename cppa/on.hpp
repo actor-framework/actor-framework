@@ -55,7 +55,8 @@
 #include "cppa/detail/value_guard.hpp"
 #include "cppa/detail/implicit_conversions.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 template<bool IsFun, typename T>
 struct add_ptr_to_fun_ { typedef T* type; };
@@ -218,7 +219,8 @@ struct pattern_type : pattern_type_<util::is_callable<T>::value && !detail::is_b
 };
 
 
-} } // cppa::detail
+} // namespace detail
+} // namespace cppa
 
 namespace cppa {
 

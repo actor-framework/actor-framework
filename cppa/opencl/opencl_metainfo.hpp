@@ -48,7 +48,8 @@
 #include "cppa/detail/singleton_mixin.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 
-namespace cppa { namespace opencl {
+namespace cppa {
+namespace opencl {
 
 class opencl_metainfo {
 
@@ -77,6 +78,8 @@ class opencl_metainfo {
 
 opencl_metainfo* get_opencl_metainfo();
 
-} } // namespace cppa::opencl
+} // namespace opencl
+} // namespace cppa
+
 
 #endif // OPENCL_METAINFO_HPP

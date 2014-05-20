@@ -44,7 +44,8 @@
 #include "cppa/detail/types_array.hpp"
 #include "cppa/detail/type_to_ptype.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 template<typename T1, typename T2, bool PrimitiveTypes> // default: true
 struct pair_member_impl {
@@ -116,6 +117,7 @@ class pair_member : public util::abstract_uniform_type_info<std::pair<T1, T2>> {
 
 };
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_PAIR_MEMBER_HPP

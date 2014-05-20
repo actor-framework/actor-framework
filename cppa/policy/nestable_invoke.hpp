@@ -46,9 +46,11 @@
 
 #include "cppa/policy/invoke_policy.hpp"
 
-namespace cppa { namespace detail { class receive_policy; } }
+namespace cppa {
+namespace detail { class receive_policy; } }
 
-namespace cppa { namespace policy {
+namespace cppa {
+namespace policy {
 
 class nestable_invoke : public invoke_policy<nestable_invoke> {
 
@@ -82,6 +84,8 @@ class nestable_invoke : public invoke_policy<nestable_invoke> {
 
 };
 
-} } // namespace cppa::policy
+} // namespace policy
+} // namespace cppa
+
 
 #endif // CPPA_THREADED_HPP

@@ -2,7 +2,8 @@
 
 #include <sstream>
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 std::vector<std::string> split(const std::string& str, char delim, bool keep_empties) {
     using namespace std;
@@ -15,4 +16,6 @@ std::vector<std::string> split(const std::string& str, char delim, bool keep_emp
     return result;
 }
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+

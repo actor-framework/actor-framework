@@ -46,7 +46,8 @@
 #include "cppa/detail/types_array.hpp"
 #include "cppa/detail/type_to_ptype.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 typedef std::unique_ptr<uniform_type_info> unique_uti;
 
@@ -585,6 +586,7 @@ class default_uniform_type_info<typed_actor<Rs...>>
 
 };
 
-} } // namespace detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_DEFAULT_UNIFORM_TYPE_INFO_IMPL_HPP

@@ -33,7 +33,8 @@
 
 #include "cppa/primitive_type.hpp"
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 /**
  * @brief Achieves static call dispatch (int-to-type idiom).
@@ -41,6 +42,8 @@ namespace cppa { namespace util {
 template<primitive_type PT>
 struct pt_token { static const primitive_type value = PT; };
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+
 
 #endif // CPPA_PT_TOKEN_HPP

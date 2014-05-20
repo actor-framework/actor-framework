@@ -49,7 +49,8 @@ typedef optional<any_tuple> bhvr_invoke_result;
 
 } // namespace cppa
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 template<class T> struct is_message_id_wrapper {
     template<class U> static char (&test(typename U::message_id_wrapper_tag))[1];
@@ -227,6 +228,7 @@ behavior_impl_ptr combine(behavior_impl_ptr, const partial_function&);
 behavior_impl_ptr combine(const partial_function&, behavior_impl_ptr);
 behavior_impl_ptr extract(const partial_function&);
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // BEHAVIOR_IMPL_HPP

@@ -39,9 +39,11 @@ namespace cppa { namespace scheduler { class coordinator; } }
 
 namespace cppa { namespace io { class middleman; } }
 
-namespace cppa { namespace opencl { class opencl_metainfo; } }
+namespace cppa {
+namespace opencl { class opencl_metainfo; } }
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 class group_manager;
 class abstract_tuple;
@@ -122,6 +124,7 @@ class singleton_manager {
 
 };
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_SINGLETON_MANAGER_HPP

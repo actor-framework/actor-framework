@@ -37,7 +37,8 @@
 #include "cppa/ref_counted.hpp"
 #include "cppa/message_header.hpp"
 
-namespace cppa { namespace io {
+namespace cppa {
+namespace io {
 
 class default_message_queue : public ref_counted {
 
@@ -70,7 +71,9 @@ class default_message_queue : public ref_counted {
 
 typedef intrusive_ptr<default_message_queue> default_message_queue_ptr;
 
-} } // namespace cppa::network
+} // namespace io
+} // namespace cppa
+
 
 
 

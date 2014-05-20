@@ -37,7 +37,8 @@
 #include "cppa/config.hpp"
 #include "cppa/io/acceptor.hpp"
 
-namespace cppa { namespace io {
+namespace cppa {
+namespace io {
 
 /**
  * @brief An implementation of the {@link acceptor} interface for TCP sockets.
@@ -79,6 +80,8 @@ class tcp_acceptor : public acceptor {
 
 };
 
-} } // namespace cppa::detail
+} // namespace io
+} // namespace cppa
+
 
 #endif // CPPA_IPV4_ACCEPTOR_HPP

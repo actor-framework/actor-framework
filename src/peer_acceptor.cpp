@@ -42,7 +42,8 @@
 
 using namespace std;
 
-namespace cppa { namespace io {
+namespace cppa {
+namespace io {
 
 peer_acceptor::peer_acceptor(middleman* parent,
                              acceptor_uptr aur,
@@ -103,4 +104,6 @@ void peer_acceptor::dispose() {
     delete this;
 }
 
-} } // namespace cppa::network
+} // namespace io
+} // namespace cppa
+

@@ -40,7 +40,8 @@ const utype& uniform_type_info();
 
 }
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 template<typename T>
 struct obj_impl : object {
@@ -59,6 +60,7 @@ struct obj_impl : object {
     }
 };
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_OBJECT_IMPL_HPP

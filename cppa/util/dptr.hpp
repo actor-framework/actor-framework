@@ -33,7 +33,8 @@
 
 #include <type_traits>
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 /**
  * @brief Returns <tt>static_cast<Subtype*>(ptr)</tt> if @p Subtype is a
@@ -55,6 +56,8 @@ dptr(MixinType* ptr) {
     return static_cast<result_type*>(ptr);
 }
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+
 
 #endif // CPPA_DTHIS_HPP

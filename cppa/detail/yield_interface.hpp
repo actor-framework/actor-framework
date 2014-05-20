@@ -33,7 +33,8 @@
 
 #include <string>
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 struct cs_thread;
 
@@ -54,7 +55,8 @@ void yield(yield_state);
 // switches to @p what and returns to @p from after yield(...)
 yield_state call(detail::cs_thread* what, detail::cs_thread* from);
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 namespace cppa {
 

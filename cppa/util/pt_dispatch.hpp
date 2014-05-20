@@ -34,7 +34,8 @@
 #include "cppa/primitive_type.hpp"
 #include "cppa/util/pt_token.hpp"
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 /**
  * @brief Creates a {@link pt_token} from the runtime value @p ptype
@@ -63,6 +64,8 @@ void pt_dispatch(primitive_type ptype, Fun&& f) {
     }
 }
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+
 
 #endif // CPPA_PT_DISPATCH_HPP

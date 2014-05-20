@@ -33,7 +33,8 @@
 
 #include "cppa/detail/handle.hpp"
 
-namespace cppa { namespace io {
+namespace cppa {
+namespace io {
 
 class broker;
 
@@ -53,6 +54,7 @@ class accept_handle : public detail::handle<accept_handle> {
 
 };
 
-} } // namespace cppa::io
+} // namespace io
+} // namespace cppa
 
 #endif // CPPA_IO_ACCEPT_HANDLE_HPP

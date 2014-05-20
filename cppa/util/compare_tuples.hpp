@@ -37,7 +37,8 @@
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/type_traits.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 template<size_t N, template<typename...> class Tuple, typename... Ts>
 const typename util::type_at<N, Ts...>::type&
@@ -60,9 +61,12 @@ struct cmp_helper<0, LhsTuple, RhsTuple> {
     }
 };
 
-} } // namespace cppa::detail
+} // namespace util
+} // namespace cppa
 
-namespace cppa { namespace util {
+
+namespace cppa {
+namespace util {
 
 template<template<typename...> class LhsTuple, typename... LhsTs,
          template<typename...> class RhsTuple, typename... RhsTs>
@@ -101,6 +105,8 @@ bool compare_first_elements(const LhsTuple<LhsTs...>& lhs,
                               RhsTuple<RhsTs...>>::cmp(lhs, rhs);
 }
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+
 
 #endif // CPPA_COMPARE_TUPLES_HPP

@@ -42,7 +42,8 @@ int cppa_memory_keep_compiler_happy() { return 0; }
 
 #else // CPPA_DISABLE_MEM_MANAGEMENT
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 namespace {
 
@@ -90,6 +91,8 @@ void memory::add_cache_map_entry(const type_info* tinf, memory_cache* instance) 
 
 instance_wrapper::~instance_wrapper() { }
 
-} } // namespace cppa::detail
+} // namespace util
+} // namespace cppa
+
 
 #endif // CPPA_DISABLE_MEM_MANAGEMENT

@@ -34,7 +34,8 @@
 #include "cppa/anything.hpp"
 #include "cppa/util/wrapped.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 template<typename T>
 struct boxed {
@@ -76,6 +77,7 @@ struct is_boxed<util::wrapped<T>(*)()> {
     static constexpr bool value = true;
 };
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_BOXED_HPP

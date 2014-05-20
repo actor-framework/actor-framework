@@ -37,7 +37,8 @@
 
 #include "cppa/util/wrapped.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 // maps the primitive_type PT to the corresponding type
 template<primitive_type PT>
@@ -66,6 +67,7 @@ template<> struct ptype_to_type<pt_u8string > : util::wrapped<std::string   > { 
 template<> struct ptype_to_type<pt_u16string> : util::wrapped<std::u16string> { };
 template<> struct ptype_to_type<pt_u32string> : util::wrapped<std::u32string> { };
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_PTYPE_TO_TYPE_HPP

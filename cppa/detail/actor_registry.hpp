@@ -44,7 +44,8 @@
 
 #include "cppa/detail/singleton_mixin.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 class singleton_manager;
 
@@ -108,6 +109,7 @@ class actor_registry : public singleton_mixin<actor_registry> {
 
 };
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_ACTOR_REGISTRY_HPP

@@ -31,7 +31,8 @@
 #ifndef CPPA_ATOM_VAL_HPP
 #define CPPA_ATOM_VAL_HPP
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 namespace {
 
@@ -66,6 +67,7 @@ constexpr std::uint64_t atom_val(const char* cstr, std::uint64_t interim = 0) {
                                                    static_cast<size_t>(*cstr)));
 }
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_ATOM_VAL_HPP

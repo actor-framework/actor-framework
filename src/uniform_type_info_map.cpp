@@ -56,7 +56,8 @@
 #include "cppa/detail/uniform_type_info_map.hpp"
 #include "cppa/detail/default_uniform_type_info.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 // maps demangled names to libcppa names
 // WARNING: this map is sorted, insert new elements *in sorted order* as well!
@@ -1061,4 +1062,6 @@ uniform_type_info_map* uniform_type_info_map::create_singleton() {
 
 uniform_type_info_map::~uniform_type_info_map() { }
 
-} } // namespace cppa::detail
+} // namespace util
+} // namespace cppa
+

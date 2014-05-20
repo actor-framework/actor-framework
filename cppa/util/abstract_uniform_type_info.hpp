@@ -40,7 +40,8 @@
 #include "cppa/detail/to_uniform_name.hpp"
 #include "cppa/detail/uniform_type_info_map.hpp"
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 /**
  * @brief Implements all pure virtual functions of {@link uniform_type_info}
@@ -130,6 +131,8 @@ class abstract_uniform_type_info : public uniform_type_info {
 
 };
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+
 
 #endif // CPPA_ABSTRACT_UNIFORM_TYPE_INFO_HPP

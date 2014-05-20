@@ -56,7 +56,9 @@
 
 /************** implementation of platform-independent functions **************/
 
-namespace cppa { namespace detail { namespace fd_util {
+namespace cppa {
+namespace detail {
+namespace fd_util {
 
 void throw_io_failure [[noreturn]] (const char* what, bool add_errno) {
     if (add_errno) {
@@ -96,11 +98,15 @@ void handle_read_result(ssize_t res, bool is_nonblock) {
     if (res == 0) throw_io_failure("cannot read from closed file descriptor");
 }
 
-} } } // namespace cppa::detail::fd_util
+} // namespace fd_util
+} // namespace detail
+} // namespace cppa
 
 #ifndef CPPA_WINDOWS // Linux or Mac OS
 
-namespace cppa { namespace detail { namespace fd_util {
+namespace cppa {
+namespace detail {
+namespace fd_util {
 
 std::string last_socket_error_as_string() {
     return strerror(errno);
@@ -123,11 +129,15 @@ std::pair<native_socket_type, native_socket_type> create_pipe() {
     return {pipefds[0], pipefds[1]};
 }
 
-} } } // namespace cppa::detail::fd_util
+} // namespace fd_util
+} // namespace detail
+} // namespace cppa
 
 #else // CPPA_WINDOWS
 
-namespace cppa { namespace detail { namespace fd_util {
+namespace cppa {
+namespace detail {
+namespace fd_util {
 
 std::string last_socket_error_as_string() {
     LPTSTR errorText = NULL;
@@ -253,5 +263,8 @@ std::pair<native_socket_type, native_socket_type> create_pipe() {
     return {read_fd, write_fd};
 }
 
-} } } // namespace cppa::detail::fd_util
+} // namespace fd_util
+} // namespace util
+} // namespace cppa
+
 #endif

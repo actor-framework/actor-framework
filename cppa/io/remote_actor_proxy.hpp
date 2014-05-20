@@ -36,16 +36,20 @@
 #include "cppa/memory_cached.hpp"
 #include "cppa/intrusive/single_reader_queue.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 class memory;
 class instance_wrapper;
 template<typename>
 class basic_memory_cache;
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
-namespace cppa { namespace io {
+
+namespace cppa {
+namespace io {
 
 class middleman;
 
@@ -108,6 +112,8 @@ class remote_actor_proxy : public actor_proxy {
 
 };
 
-} } // namespace cppa::network
+} // namespace io
+} // namespace cppa
+
 
 #endif // remote_actor_proxy_HPP

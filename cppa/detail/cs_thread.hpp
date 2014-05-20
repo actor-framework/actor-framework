@@ -31,7 +31,8 @@
 #ifndef CPPA_FIBER_HPP
 #define CPPA_FIBER_HPP
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 struct cst_impl;
 
@@ -57,6 +58,7 @@ struct cs_thread {
 
 };
 
-} } // namespace cppa::util
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_FIBER_HPP

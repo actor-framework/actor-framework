@@ -55,7 +55,8 @@
 #   include <netinet/tcp.h>
 #endif
 
-namespace cppa { namespace io {
+namespace cppa {
+namespace io {
 
 using namespace ::cppa::detail::fd_util;
 
@@ -188,4 +189,6 @@ optional<stream_ptr_pair> tcp_acceptor::try_accept_connection() {
     return none;
 }
 
-} } // namespace cppa::detail
+} // namespace util
+} // namespace cppa
+

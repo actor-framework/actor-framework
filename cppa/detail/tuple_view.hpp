@@ -38,7 +38,8 @@
 #include "cppa/detail/tuple_vals.hpp"
 #include "cppa/detail/abstract_tuple.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 struct tuple_view_copy_helper {
     size_t pos;
@@ -120,6 +121,7 @@ class tuple_view : public abstract_tuple {
 template<typename... Ts>
 types_array<Ts...> tuple_view<Ts...>::m_types;
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_TUPLE_VIEW_HPP

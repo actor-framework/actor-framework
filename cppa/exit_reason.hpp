@@ -33,7 +33,8 @@
 
 #include <cstdint>
 
-namespace cppa { namespace exit_reason {
+namespace cppa {
+namespace exit_reason {
 
 /**
  * @brief Indicates that the actor is still alive.
@@ -91,6 +92,7 @@ static constexpr std::uint32_t user_defined = 0x10000;
 
 const char* as_string(std::uint32_t value);
 
-} } // namespace cppa::exit_reason
+} // namespace exit_reason
+} // namespace cppa
 
 #endif // CPPA_EXIT_REASON_HPP

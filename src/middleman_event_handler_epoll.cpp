@@ -42,7 +42,8 @@
 #include "cppa/logging.hpp"
 #include "cppa/io/middleman_event_handler.hpp"
 
-namespace cppa { namespace io {
+namespace cppa {
+namespace io {
 
 namespace {
 
@@ -177,7 +178,8 @@ std::unique_ptr<middleman_event_handler> middleman_event_handler::create() {
     return std::unique_ptr<middleman_event_handler>{new middleman_event_handler_impl};
 }
 
-} } // namespace cppa::io
+} // namespace io
+} // namespace cppa
 
 #else // defined(CPPA_LINUX) && !defined(CPPA_POLL_IMPL)
 

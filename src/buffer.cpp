@@ -37,7 +37,8 @@
 #include "cppa/util/buffer.hpp"
 #include "cppa/io/input_stream.hpp"
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 namespace {
 
@@ -171,4 +172,6 @@ void buffer::append_from(io::input_stream* istream) {
     }
 }
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+

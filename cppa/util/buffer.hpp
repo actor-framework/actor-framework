@@ -37,7 +37,8 @@ namespace cppa { class deserializer; }
 
 namespace cppa { namespace io { class input_stream; } }
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 class input_stream;
 
@@ -313,6 +314,7 @@ inline size_t buffer::adjust(size_t alloc_size) const {
                             : (alloc_size - remainder) + m_chunk_size;
 }
 
-} } // namespace cppa::detail
+} // namespace util
+} // namespace cppa
 
 #endif // CPPA_BUFFER_HPP

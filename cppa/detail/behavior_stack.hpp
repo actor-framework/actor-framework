@@ -42,7 +42,8 @@
 #include "cppa/message_id.hpp"
 #include "cppa/mailbox_element.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 struct behavior_stack_mover;
 
@@ -124,6 +125,7 @@ class behavior_stack
 
 };
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // BEHAVIOR_STACK_HPP

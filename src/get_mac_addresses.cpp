@@ -19,7 +19,8 @@
 
 #include <iostream>
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 std::vector<std::string> get_mac_addresses() {
     int mib[6];
@@ -81,7 +82,9 @@ std::vector<std::string> get_mac_addresses() {
     return result;
 }
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+
 
 #elif defined(CPPA_LINUX)
 
@@ -105,7 +108,8 @@ std::vector<std::string> get_mac_addresses() {
 
 using namespace std;
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 std::vector<std::string> get_mac_addresses() {
     // get a socket handle
@@ -156,7 +160,9 @@ std::vector<std::string> get_mac_addresses() {
     return hw_addresses;
 }
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+
 
 #else
 
@@ -199,7 +205,8 @@ struct c_free {
 
 using namespace std;
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 std::vector<std::string> get_mac_addresses() {
     // result vector
@@ -254,7 +261,9 @@ std::vector<std::string> get_mac_addresses() {
     return hw_addresses;
 }
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+
 
 
 #endif

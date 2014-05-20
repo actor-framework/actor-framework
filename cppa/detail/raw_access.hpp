@@ -39,7 +39,8 @@
 #include "cppa/abstract_group.hpp"
 #include "cppa/abstract_channel.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 class raw_access {
 
@@ -82,6 +83,7 @@ class raw_access {
 
 };
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_RAW_ACCESS_HPP

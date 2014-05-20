@@ -35,7 +35,8 @@
 
 #include "cppa/config.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 template<class Tuple>
 class tuple_iterator {
@@ -107,6 +108,7 @@ class tuple_iterator {
 
 };
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_TUPLE_ITERATOR_HPP

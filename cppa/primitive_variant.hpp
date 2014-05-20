@@ -46,7 +46,8 @@
 #include "cppa/detail/type_to_ptype.hpp"
 #include "cppa/detail/ptype_to_type.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 template<primitive_type FT, class T, class V>
 void ptv_set(primitive_type& lhs_type, T& lhs, V&& rhs,
@@ -56,7 +57,9 @@ template<primitive_type FT, class T, class V>
 void ptv_set(primitive_type& lhs_type, T& lhs, V&& rhs,
              typename std::enable_if<std::is_arithmetic<T>::value, int>::type* = 0);
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
+
 
 namespace cppa {
 
@@ -353,7 +356,8 @@ inline bool equal(const primitive_variant& lhs, const T& rhs) {
 
 } // namespace cppa
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 template<primitive_type FT, class T, class V>
 void ptv_set(primitive_type& lhs_type, T& lhs, V&& rhs,
@@ -375,7 +379,9 @@ void ptv_set(primitive_type& lhs_type, T& lhs, V&& rhs,
     lhs_type = FT;
 }
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
+
 
 
 #endif // CPPA_PRIMITIVE_VARIANT_HPP

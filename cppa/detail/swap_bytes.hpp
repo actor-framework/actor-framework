@@ -33,7 +33,8 @@
 
 #include <cstddef>
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 template<typename T>
 struct byte_access {
@@ -66,6 +67,7 @@ inline T swap_bytes(T what) {
     return byte_swapper<sizeof(T), T>::_(what);
 }
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_SWAP_BYTES_HPP

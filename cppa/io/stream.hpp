@@ -34,7 +34,8 @@
 #include "cppa/io/input_stream.hpp"
 #include "cppa/io/output_stream.hpp"
 
-namespace cppa { namespace io {
+namespace cppa {
+namespace io {
 
 /**
  * @brief A stream capable of both reading and writing.
@@ -52,6 +53,7 @@ class stream : public input_stream, public output_stream {
  */
 typedef intrusive_ptr<stream> stream_ptr;
 
-} } // namespace cppa::util
+} // namespace io
+} // namespace cppa
 
 #endif // CPPA_IO_STREAM_HPP

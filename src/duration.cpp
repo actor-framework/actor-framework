@@ -40,7 +40,8 @@ inline std::uint64_t ui64_val(const cppa::util::duration& d) {
 
 } // namespace <anonmyous>
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 bool operator==(const duration& lhs, const duration& rhs) {
     return (lhs.unit == rhs.unit ? lhs.count == rhs.count
@@ -60,4 +61,6 @@ std::string duration::to_string() const {
     return oss.str();
 }
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+

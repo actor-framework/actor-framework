@@ -406,7 +406,8 @@ const char s_an[] = "$";
 
 } // namespace <anonymous>
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 std::string to_uniform_name(const std::string& dname) {
     auto r = parse_tree::parse(begin(dname), end(dname)).compile();
@@ -419,4 +420,6 @@ std::string to_uniform_name(const std::type_info& tinfo) {
     return to_uniform_name(demangle(tinfo.name()));
 }
 
-} } // namespace detail
+} // namespace util
+} // namespace cppa
+

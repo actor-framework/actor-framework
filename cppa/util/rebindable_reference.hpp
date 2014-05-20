@@ -35,7 +35,8 @@
 
 #include "cppa/util/type_traits.hpp"
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 template<typename T>
 struct call_helper {
@@ -130,6 +131,8 @@ unwrap_ref(const util::rebindable_reference<T>& ref) {
     return ref.get();
 }
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+
 
 #endif // CPPA_REBINDABLE_REFERENCE_HPP

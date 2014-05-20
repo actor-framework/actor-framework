@@ -47,16 +47,20 @@
 #ifdef CPPA_OPENCL
 #  include "cppa/opencl/opencl_metainfo.hpp"
 #else
-namespace cppa { namespace opencl {
+namespace cppa {
+namespace opencl {
 
 class opencl_metainfo : public detail::singleton_mixin<opencl_metainfo> { };
 
-} } // namespace cppa::opencl
+} // namespace opencl
+} // namespace cppa
+
 #endif
 
 namespace cppa { void shutdown() { detail::singleton_manager::shutdown(); } }
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 namespace {
 
@@ -121,4 +125,6 @@ io::middleman* singleton_manager::get_middleman() {
     return lazy_get(s_middleman);
 }
 
-} } // namespace cppa::detail
+} // namespace util
+} // namespace cppa
+

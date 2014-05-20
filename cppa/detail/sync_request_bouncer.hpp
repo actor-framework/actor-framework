@@ -42,7 +42,8 @@ class mailbox_element;
 
 } // namespace cppa
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 struct sync_request_bouncer {
     std::uint32_t rsn;
@@ -51,6 +52,7 @@ struct sync_request_bouncer {
     void operator()(const mailbox_element& e) const;
 };
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_SYNC_REQUEST_BOUNCER_HPP

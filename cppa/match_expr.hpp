@@ -51,7 +51,8 @@
 #include "cppa/detail/pseudo_tuple.hpp"
 #include "cppa/detail/behavior_impl.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 template<long N>
 struct long_constant { static constexpr long value = N; };
@@ -621,7 +622,9 @@ struct get_case_result {
     typedef typename T::second_type::result_type type;
 };
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
+
 
 namespace cppa {
 

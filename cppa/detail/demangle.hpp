@@ -34,7 +34,8 @@
 #include <string>
 #include <typeinfo>
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 std::string demangle(const char* typeid_name);
 std::string demangle(const std::type_info& tinf);
@@ -44,6 +45,7 @@ inline std::string demangle() {
     return demangle(typeid(T));
 }
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_DEMANGLE_HPP

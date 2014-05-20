@@ -589,7 +589,8 @@ atomic<size_t> m_ad_hoc_id;
 
 } // namespace <anonymous>
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 group_manager::~group_manager() { }
 
@@ -639,4 +640,6 @@ abstract_group::module* group_manager::get_module(const string& module_name) {
     return  (i != m_mmap.end()) ? i->second.get() : nullptr;
 }
 
-} } // namespace cppa::detail
+} // namespace util
+} // namespace cppa
+

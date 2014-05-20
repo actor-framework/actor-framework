@@ -42,7 +42,8 @@
     #include <CL/opencl.h>
 #endif
 
-namespace cppa { namespace opencl {
+namespace cppa {
+namespace opencl {
 
 /**
  * @brief A vector of up to three elements used for OpenCL dimensions.
@@ -54,6 +55,8 @@ std::string get_opencl_error(cl_int err);
 cl_int clReleaseDeviceDummy (cl_device_id);
 cl_int clRetainDeviceDummy  (cl_device_id);
 
-} } // namespace cppa::opencl
+} // namespace opencl
+} // namespace cppa
+
 
 #endif // CPPA_OPENCL_GLOBAL_HPP

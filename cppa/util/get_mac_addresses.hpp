@@ -34,10 +34,13 @@
 #include <string>
 #include <vector>
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 std::vector<std::string> get_mac_addresses();
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+
 
 #endif // CPPA_UTIL_GET_MAC_ADDRESSES_HPP

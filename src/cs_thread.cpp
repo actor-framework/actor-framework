@@ -53,7 +53,8 @@ constexpr size_t stack_multiplier = 2;
 
 #if defined(CPPA_DISABLE_CONTEXT_SWITCHING) || defined(CPPA_STANDALONE_BUILD)
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 cs_thread::cs_thread() : m_impl(nullptr) { }
 
@@ -68,7 +69,9 @@ void cs_thread::swap(cs_thread&, cs_thread&) {
 
 const bool cs_thread::is_disabled_feature = true;
 
-} } // namespace cppa::detail
+} // namespace util
+} // namespace cppa
+
 
 #else // CPPA_DISABLE_CONTEXT_SWITCHING  || CPPA_STANDALONE_BUILD
 
@@ -84,7 +87,8 @@ CPPA_PUSH_WARNINGS
 #include <boost/coroutine/all.hpp>
 CPPA_POP_WARNINGS
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 void cst_trampoline(intptr_t iptr);
 
@@ -259,6 +263,8 @@ cs_thread::~cs_thread() {
 
 const bool cs_thread::is_disabled_feature = false;
 
-} } // namespace cppa::detail
+} // namespace util
+} // namespace cppa
+
 
 #endif // CPPA_DISABLE_CONTEXT_SWITCHING

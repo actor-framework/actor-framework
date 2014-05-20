@@ -88,3 +88,4 @@ void backtrace_symbols_fd(void* const* buffer, int size, int fd) {
 
 } // namespace detail
 } // namespace cppa
+

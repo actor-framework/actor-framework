@@ -39,7 +39,8 @@
 #include "cppa/io/input_stream.hpp"
 #include "cppa/io/output_stream.hpp"
 
-namespace cppa { namespace io {
+namespace cppa {
+namespace io {
 
 /**
  * @brief A pair of input and output stream pointers.
@@ -77,7 +78,7 @@ class acceptor {
 
 typedef std::unique_ptr<acceptor> acceptor_uptr;
 
-
-} } // namespace cppa::util
+} // namespace io
+} // namespace cppa
 
 #endif // CPPA_ACCEPTOR_HPP

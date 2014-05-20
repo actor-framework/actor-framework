@@ -43,7 +43,8 @@ class uniform_type_info;
 const uniform_type_info* uniform_typeid(const std::type_info&);
 } // namespace cppa
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 enum type_info_impl { std_tinf, cppa_tinf };
 
@@ -210,6 +211,7 @@ struct static_type_list<T0, T1, Ts...> {
 template<typename T0, typename T1, typename... Ts>
 const std::type_info* static_type_list<T0, T1, Ts...>::list = &typeid(util::type_list<T0, T1, Ts...>);
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_TYPES_ARRAY_HPP

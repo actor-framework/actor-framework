@@ -38,7 +38,8 @@
 
 // this header contains implementation details for opt.hpp
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 template<typename T>
 struct conv_arg_impl {
@@ -232,6 +233,7 @@ class opt1_rvalue_builder<false> {
 
 };
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_OPT_IMPLS_HPP

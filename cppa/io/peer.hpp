@@ -48,7 +48,8 @@
 #include "cppa/io/buffered_writing.hpp"
 #include "cppa/io/default_message_queue.hpp"
 
-namespace cppa { namespace io {
+namespace cppa {
+namespace io {
 
 class middleman_impl;
 
@@ -144,6 +145,8 @@ class peer : public extend<continuable>::with<buffered_writing> {
 
 };
 
-} } // namespace cppa::network
+} // namespace io
+} // namespace cppa
+
 
 #endif // CPPA_peer_IMPL_HPP

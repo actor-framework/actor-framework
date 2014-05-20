@@ -43,7 +43,8 @@
 
 #include "cppa/detail/tuple_iterator.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 class abstract_tuple : public ref_counted {
 
@@ -125,6 +126,7 @@ constexpr types_only_eq_type types_only_eq;
 
 std::string get_tuple_type_names(const detail::abstract_tuple&);
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_ABSTRACT_TUPLE_HPP

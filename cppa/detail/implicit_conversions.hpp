@@ -38,7 +38,8 @@
 
 namespace cppa { class local_actor; }
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 template<typename T>
 struct implicit_conversions {
@@ -87,6 +88,7 @@ struct strip_and_convert {
             type;
 };
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_IMPLICIT_CONVERSIONS_HPP

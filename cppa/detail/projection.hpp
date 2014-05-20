@@ -42,7 +42,8 @@
 
 #include "cppa/detail/tdata.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 template<typename Fun, typename Tuple, long... Is>
 inline bool is_defined_at(Fun& f, Tuple& tup, util::int_list<Is...>) {
@@ -179,6 +180,7 @@ struct projection_from_type_list<ProjectionFuns, util::type_list<Ts...> > {
     typedef projection<ProjectionFuns, Ts...> type;
 };
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_PROJECTION_HPP

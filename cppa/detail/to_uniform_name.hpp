@@ -34,7 +34,8 @@
 #include <string>
 #include <typeinfo>
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 std::string to_uniform_name(const std::string& demangled_name);
 std::string to_uniform_name(const std::type_info& tinfo);
@@ -42,6 +43,7 @@ std::string to_uniform_name(const std::type_info& tinfo);
 template<class T>
 inline std::string to_uniform_name() { return to_uniform_name(typeid(T)); }
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_TO_UNIFORM_NAME_HPP

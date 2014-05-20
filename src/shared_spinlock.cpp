@@ -40,7 +40,8 @@ inline long min_long() { return std::numeric_limits<long>::min(); }
 
 } // namespace <anonymous>
 
-namespace cppa { namespace util {
+namespace cppa {
+namespace util {
 
 shared_spinlock::shared_spinlock() : m_flag(0) {
 
@@ -97,4 +98,6 @@ bool shared_spinlock::try_lock_shared() {
     return (v >= 0) ? m_flag.compare_exchange_weak(v, v + 1) : false;
 }
 
-} } // namespace cppa::util
+} // namespace util
+} // namespace cppa
+

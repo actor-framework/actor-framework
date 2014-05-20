@@ -44,7 +44,8 @@
 #include "cppa/opencl/smart_ptr.hpp"
 #include "cppa/util/scope_guard.hpp"
 
-namespace cppa { namespace opencl {
+namespace cppa {
+namespace opencl {
 
 template<typename T, typename R>
 class command : public ref_counted {
@@ -95,7 +96,7 @@ class command : public ref_counted {
                                      (m_events.empty() ? nullptr : m_events.data()),
                                      &event_k);
         if (err != CL_SUCCESS) {
-            CPPA_LOGMF(CPPA_ERROR, "clEnqueueNDRangeKernel: " 
+            CPPA_LOGMF(CPPA_ERROR, "clEnqueueNDRangeKernel: "
                                    << get_opencl_error(err));
             this->deref(); // or can anything actually happen?
             return;
@@ -157,6 +158,7 @@ class command : public ref_counted {
     }
 };
 
-} } // namespace cppa::opencl
+} // namespace opencl
+} // namespace cppa
 
 #endif // CPPA_OPENCL_COMMAND_HPP

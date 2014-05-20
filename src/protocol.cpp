@@ -32,10 +32,13 @@
 #include "cppa/io/protocol.hpp"
 #include "cppa/io/middleman.hpp"
 
-namespace cppa { namespace io {
+namespace cppa {
+namespace io {
 
 protocol::protocol(middleman* parent) : m_parent(parent) {
     CPPA_REQUIRE(parent != nullptr);
 }
 
-} } // namespace cppa::network
+} // namespace io
+} // namespace cppa
+

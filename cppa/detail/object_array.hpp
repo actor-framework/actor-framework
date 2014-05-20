@@ -36,7 +36,8 @@
 #include "cppa/object.hpp"
 #include "cppa/detail/abstract_tuple.hpp"
 
-namespace cppa { namespace detail {
+namespace cppa {
+namespace detail {
 
 class object_array : public abstract_tuple {
 
@@ -72,6 +73,7 @@ class object_array : public abstract_tuple {
 
 };
 
-} } // namespace cppa::detail
+} // namespace detail
+} // namespace cppa
 
 #endif // CPPA_OBJECT_ARRAY_HPP
