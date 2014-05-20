@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_DISABLABLE_DELETE_HPP
-#define CPPA_DISABLABLE_DELETE_HPP
+#ifndef CPPA_DETAIL_DISABLABLE_DELETE_HPP
+#define CPPA_DETAIL_DISABLABLE_DELETE_HPP
 
 namespace cppa {
 namespace detail {
@@ -62,4 +62,4 @@ class disablable_delete {
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_DISABLABLE_DELETE_HPP
+#endif // CPPA_DETAIL_DISABLABLE_DELETE_HPP

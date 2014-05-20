@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef TRIVARIANT_DATA_HPP
-#define TRIVARIANT_DATA_HPP
+#ifndef CPPA_DETAIL_OPTIONAL_VARIANT_DATA
+#define CPPA_DETAIL_OPTIONAL_VARIANT_DATA
 
 #include <stdexcept>
 #include <type_traits>
@@ -110,4 +110,4 @@ struct optional_variant_data_destructor {
 } // namespace detail
 } // namespace cppa
 
-#endif // TRIVARIANT_DATA_HPP
+#endif // CPPA_DETAIL_OPTIONAL_VARIANT_DATA

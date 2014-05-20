@@ -73,5 +73,4 @@ class program {
 } // namespace opencl
 } // namespace cppa
 
-
 #endif // CPPA_OPENCL_PROGRAM_HPP

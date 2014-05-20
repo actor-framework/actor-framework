@@ -60,7 +60,6 @@ void ptv_set(primitive_type& lhs_type, T& lhs, V&& rhs,
 } // namespace detail
 } // namespace cppa
 
-
 namespace cppa {
 
 class primitive_variant;
@@ -381,7 +380,5 @@ void ptv_set(primitive_type& lhs_type, T& lhs, V&& rhs,
 
 } // namespace detail
 } // namespace cppa
-
-
 
 #endif // CPPA_PRIMITIVE_VARIANT_HPP

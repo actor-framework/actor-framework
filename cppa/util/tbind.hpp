@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_TBIND_HPP
-#define CPPA_TBIND_HPP
+#ifndef CPPA_UTIL_TBIND_HPP
+#define CPPA_UTIL_TBIND_HPP
 
 namespace cppa {
 namespace util {
@@ -50,4 +50,4 @@ struct tbind {
 } // namespace cppa
 
 
-#endif // CPPA_TBIND_HPP
+#endif // CPPA_UTIL_TBIND_HPP

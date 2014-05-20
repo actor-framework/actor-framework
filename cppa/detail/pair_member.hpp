@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_PAIR_MEMBER_HPP
-#define CPPA_PAIR_MEMBER_HPP
+#ifndef CPPA_DETAIL_PAIR_MEMBER_HPP
+#define CPPA_DETAIL_PAIR_MEMBER_HPP
 
 #include <utility>
 
@@ -120,4 +120,4 @@ class pair_member : public util::abstract_uniform_type_info<std::pair<T1, T2>> {
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_PAIR_MEMBER_HPP
+#endif // CPPA_DETAIL_PAIR_MEMBER_HPP

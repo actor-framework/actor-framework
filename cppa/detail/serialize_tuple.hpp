@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_SERIALIZE_TUPLE_HPP
-#define CPPA_SERIALIZE_TUPLE_HPP
+#ifndef CPPA_DETAIL_SERIALIZE_TUPLE_HPP
+#define CPPA_DETAIL_SERIALIZE_TUPLE_HPP
 
 #include <cstddef>
 
@@ -60,4 +60,4 @@ struct serialize_tuple<util::empty_type_list, Pos> {
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_SERIALIZE_TUPLE_HPP
+#endif // CPPA_DETAIL_SERIALIZE_TUPLE_HPP

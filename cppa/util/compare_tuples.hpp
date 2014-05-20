@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_COMPARE_TUPLES_HPP
-#define CPPA_COMPARE_TUPLES_HPP
+#ifndef CPPA_UTIL_COMPARE_TUPLES_HPP
+#define CPPA_UTIL_COMPARE_TUPLES_HPP
 
 #include "cppa/get.hpp"
 
@@ -61,9 +61,8 @@ struct cmp_helper<0, LhsTuple, RhsTuple> {
     }
 };
 
-} // namespace util
+} // namespace detail
 } // namespace cppa
-
 
 namespace cppa {
 namespace util {
@@ -108,5 +107,4 @@ bool compare_first_elements(const LhsTuple<LhsTs...>& lhs,
 } // namespace util
 } // namespace cppa
 
-
-#endif // CPPA_COMPARE_TUPLES_HPP
+#endif // CPPA_UTIL_COMPARE_TUPLES_HPP

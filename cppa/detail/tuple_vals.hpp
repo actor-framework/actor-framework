@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_TUPLE_VALS_HPP
-#define CPPA_TUPLE_VALS_HPP
+#ifndef CPPA_DETAIL_TUPLE_VALS_HPP
+#define CPPA_DETAIL_TUPLE_VALS_HPP
 
 #include <stdexcept>
 
@@ -142,4 +142,4 @@ struct tuple_vals_from_type_list< util::type_list<Ts...> > {
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_TUPLE_VALS_HPP
+#endif // CPPA_DETAIL_TUPLE_VALS_HPP

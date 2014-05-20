@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_TUPLE_CAST_IMPL_HPP
-#define CPPA_TUPLE_CAST_IMPL_HPP
+#ifndef CPPA_DETAIL_TUPLE_CAST_IMPL_HPP
+#define CPPA_DETAIL_TUPLE_CAST_IMPL_HPP
 
 #include "cppa/any_tuple.hpp"
 
@@ -90,4 +90,4 @@ struct tuple_cast_impl<wildcard_position::leading, Result, T...> {
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_TUPLE_CAST_IMPL_HPP
+#endif // CPPA_DETAIL_TUPLE_CAST_IMPL_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_UNTYPED_ACTOR_HPP
-#define CPPA_UNTYPED_ACTOR_HPP
+#ifndef CPPA_EVENT_BASED_ACTOR_HPP
+#define CPPA_EVENT_BASED_ACTOR_HPP
 
 #include "cppa/on.hpp"
 #include "cppa/extend.hpp"
@@ -82,4 +82,4 @@ class event_based_actor : public extend<local_actor, event_based_actor>::
 
 } // namespace cppa
 
-#endif // CPPA_UNTYPED_ACTOR_HPP
+#endif // CPPA_EVENT_BASED_ACTOR_HPP

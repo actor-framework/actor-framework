@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_REBINDABLE_REFERENCE_HPP
-#define CPPA_REBINDABLE_REFERENCE_HPP
+#ifndef CPPA_UTIL_REBINDABLE_REFERENCE_HPP
+#define CPPA_UTIL_REBINDABLE_REFERENCE_HPP
 
 #include "cppa/config.hpp"
 
@@ -135,4 +135,4 @@ unwrap_ref(const util::rebindable_reference<T>& ref) {
 } // namespace cppa
 
 
-#endif // CPPA_REBINDABLE_REFERENCE_HPP
+#endif // CPPA_UTIL_REBINDABLE_REFERENCE_HPP

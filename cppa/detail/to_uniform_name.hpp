@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_TO_UNIFORM_NAME_HPP
-#define CPPA_TO_UNIFORM_NAME_HPP
+#ifndef CPPA_DETAIL_TO_UNIFORM_NAME_HPP
+#define CPPA_DETAIL_TO_UNIFORM_NAME_HPP
 
 #include <string>
 #include <typeinfo>
@@ -46,4 +46,4 @@ inline std::string to_uniform_name() { return to_uniform_name(typeid(T)); }
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_TO_UNIFORM_NAME_HPP
+#endif // CPPA_DETAIL_TO_UNIFORM_NAME_HPP

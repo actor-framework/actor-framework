@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef TYPED_BEHAVIOR_HPP
-#define TYPED_BEHAVIOR_HPP
+#ifndef CPPA_TYPED_BEHAVIOR_HPP
+#define CPPA_TYPED_BEHAVIOR_HPP
 
 #include "cppa/behavior.hpp"
 #include "cppa/match_expr.hpp"
@@ -238,4 +238,4 @@ class typed_behavior {
 
 } // namespace cppa
 
-#endif // TYPED_BEHAVIOR_HPP
+#endif // CPPA_TYPED_BEHAVIOR_HPP

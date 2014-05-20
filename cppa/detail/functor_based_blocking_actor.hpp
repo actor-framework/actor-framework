@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef FUNCTOR_BASED_BLOCKING_ACTOR_HPP
-#define FUNCTOR_BASED_BLOCKING_ACTOR_HPP
+#ifndef CPPA_DETAIL_FUNCTOR_BASED_BLOCKING_ACTOR_HPP
+#define CPPA_DETAIL_FUNCTOR_BASED_BLOCKING_ACTOR_HPP
 
 #include "cppa/blocking_actor.hpp"
 
@@ -88,4 +88,4 @@ class functor_based_blocking_actor : public blocking_actor {
 } // namespace detail
 } // namespace cppa
 
-#endif // FUNCTOR_BASED_BLOCKING_ACTOR_HPP
+#endif // CPPA_DETAIL_FUNCTOR_BASED_BLOCKING_ACTOR_HPP

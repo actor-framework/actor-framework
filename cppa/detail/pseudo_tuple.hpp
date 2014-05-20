@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_PSEUDO_TUPLE_HPP
-#define CPPA_PSEUDO_TUPLE_HPP
+#ifndef CPPA_DETAIL_PSEUDO_TUPLE_HPP
+#define CPPA_DETAIL_PSEUDO_TUPLE_HPP
 
 #include <cstddef>
 
@@ -86,4 +86,4 @@ typename util::type_at<N, Ts...>::type& get_ref(detail::pseudo_tuple<Ts...>& tv)
 
 } // namespace cppa
 
-#endif // CPPA_PSEUDO_TUPLE_HPP
+#endif // CPPA_DETAIL_PSEUDO_TUPLE_HPP

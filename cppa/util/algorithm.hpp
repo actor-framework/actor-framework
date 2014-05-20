@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_UTIL_SPLIT_HPP
-#define CPPA_UTIL_SPLIT_HPP
+#ifndef CPPA_UTIL_ALGORITHM_HPP
+#define CPPA_UTIL_ALGORITHM_HPP
 
 #include <cmath>       // fabs
 #include <string>
@@ -105,5 +105,4 @@ safe_equal(const T& lhs, const U& rhs) {
 } // namespace util
 } // namespace cppa
 
-
-#endif // CPPA_UTIL_SPLIT_HPP
+#endif // CPPA_UTIL_ALGORITHM_HPP

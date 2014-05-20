@@ -32,8 +32,8 @@
 \******************************************************************************/
 
 
-#ifndef IEEE_754_HPP
-#define IEEE_754_HPP
+#ifndef CPPA_DETAIL_IEEE_754_HPP
+#define CPPA_DETAIL_IEEE_754_HPP
 
 #include <cmath>
 
@@ -143,4 +143,4 @@ typename ieee_754_trait<T>::float_type unpack754(T i) {
 } // namespace detail
 } // namespace cppa
 
-#endif // IEEE_754_HPP
+#endif // CPPA_DETAIL_IEEE_754_HPP

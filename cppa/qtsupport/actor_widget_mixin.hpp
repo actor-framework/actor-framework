@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_ACTOR_WIDGET_MIXIN_HPP
-#define CPPA_ACTOR_WIDGET_MIXIN_HPP
+#ifndef CPPA_QTSUPPORT_ACTOR_WIDGET_MIXIN_HPP
+#define CPPA_QTSUPPORT_ACTOR_WIDGET_MIXIN_HPP
 
 #include <QEvent>
 #include <QApplication>
@@ -97,4 +97,4 @@ class actor_widget_mixin : public Base {
 
 } // namespace cppa
 
-#endif // CPPA_ACTOR_WIDGET_MIXIN_HPP
+#endif // CPPA_QTSUPPORT_ACTOR_WIDGET_MIXIN_HPP

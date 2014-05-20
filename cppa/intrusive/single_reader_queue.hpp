@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_SINGLE_READER_QUEUE_HPP
-#define CPPA_SINGLE_READER_QUEUE_HPP
+#ifndef CPPA_INTRUSIVE_SINGLE_READER_QUEUE_HPP
+#define CPPA_INTRUSIVE_SINGLE_READER_QUEUE_HPP
 
 #include <list>
 #include <mutex>
@@ -381,4 +381,4 @@ class single_reader_queue {
 } // namespace intrusive
 } // namespace cppa
 
-#endif // CPPA_SINGLE_READER_QUEUE_HPP
+#endif // CPPA_INTRUSIVE_SINGLE_READER_QUEUE_HPP

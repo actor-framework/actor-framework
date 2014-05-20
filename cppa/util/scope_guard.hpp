@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_SCOPE_GUARD_HPP
-#define CPPA_SCOPE_GUARD_HPP
+#ifndef CPPA_UTIL_SCOPE_GUARD_HPP
+#define CPPA_UTIL_SCOPE_GUARD_HPP
 
 #include <utility>
 
@@ -88,4 +88,4 @@ scope_guard<Fun> make_scope_guard(Fun f) {
 } // namespace cppa
 
 
-#endif // CPPA_SCOPE_GUARD_HPP
+#endif // CPPA_UTIL_SCOPE_GUARD_HPP

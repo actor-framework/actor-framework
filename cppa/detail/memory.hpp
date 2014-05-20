@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_MEMORY_HPP
-#define CPPA_MEMORY_HPP
+#ifndef CPPA_DETAIL_MEMORY_HPP
+#define CPPA_DETAIL_MEMORY_HPP
 
 #include <new>
 #include <vector>
@@ -95,7 +95,7 @@ class instance_wrapper;
 template<typename T>
 class basic_memory_cache;
 
-#ifdef CPPA_DISABLE_MEM_MANAGEMENT
+#ifdef CPPA_DETAIL_DISABLE_MEM_MANAGEMENT
 
 class memory {
 
@@ -118,7 +118,7 @@ class memory {
 
 };
 
-#else // CPPA_DISABLE_MEM_MANAGEMENT
+#else // CPPA_DETAIL_DISABLE_MEM_MANAGEMENT
 
 template<typename T>
 class basic_memory_cache : public memory_cache {
@@ -239,9 +239,9 @@ class memory {
 
 };
 
-#endif // CPPA_DISABLE_MEM_MANAGEMENT
+#endif // CPPA_DETAIL_DISABLE_MEM_MANAGEMENT
 
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_MEMORY_HPP
+#endif // CPPA_DETAIL_MEMORY_HPP

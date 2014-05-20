@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_MIXED_HPP
-#define CPPA_MIXED_HPP
+#ifndef CPPA_EXTEND_HPP
+#define CPPA_EXTEND_HPP
 
 // saves some typing
 #define CPPA_MIXIN template<class, class> class
@@ -70,4 +70,4 @@ struct extend {
 
 } // namespace cppa
 
-#endif // CPPA_MIXED_HPP
+#endif // CPPA_EXTEND_HPP

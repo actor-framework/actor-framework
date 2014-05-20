@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_VALUE_GUARD_HPP
-#define CPPA_VALUE_GUARD_HPP
+#ifndef CPPA_DETAIL_VALUE_GUARD_HPP
+#define CPPA_DETAIL_VALUE_GUARD_HPP
 
 #include <type_traits>
 
@@ -129,4 +129,4 @@ typedef value_guard<util::empty_type_list> empty_value_guard;
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_VALUE_GUARD_HPP
+#endif // CPPA_DETAIL_VALUE_GUARD_HPP

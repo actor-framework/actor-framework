@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_PT_TOKEN_HPP
-#define CPPA_PT_TOKEN_HPP
+#ifndef CPPA_UTIL_PT_TOKEN_HPP
+#define CPPA_UTIL_PT_TOKEN_HPP
 
 #include "cppa/primitive_type.hpp"
 
@@ -46,4 +46,4 @@ struct pt_token { static const primitive_type value = PT; };
 } // namespace cppa
 
 
-#endif // CPPA_PT_TOKEN_HPP
+#endif // CPPA_UTIL_PT_TOKEN_HPP

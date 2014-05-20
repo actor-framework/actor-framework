@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_OBJECT_IMPL_HPP
-#define CPPA_OBJECT_IMPL_HPP
+#ifndef CPPA_DETAIL_OBJECT_IMPL_HPP
+#define CPPA_DETAIL_OBJECT_IMPL_HPP
 
 #include "cppa/object.hpp"
 
@@ -63,4 +63,4 @@ struct obj_impl : object {
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_OBJECT_IMPL_HPP
+#endif // CPPA_DETAIL_OBJECT_IMPL_HPP

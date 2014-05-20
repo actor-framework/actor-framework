@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_FUNCTOR_BASED_ACTOR_HPP
-#define CPPA_FUNCTOR_BASED_ACTOR_HPP
+#ifndef CPPA_DETAIL_FUNCTOR_BASED_ACTOR_HPP
+#define CPPA_DETAIL_FUNCTOR_BASED_ACTOR_HPP
 
 #include <type_traits>
 
@@ -124,4 +124,4 @@ class functor_based_actor : public event_based_actor {
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_FUNCTOR_BASED_ACTOR_HPP
+#endif // CPPA_DETAIL_FUNCTOR_BASED_ACTOR_HPP

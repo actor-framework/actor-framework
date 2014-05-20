@@ -28,17 +28,12 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_SCHEDULING_POLICY_HPP
-#define CPPA_SCHEDULING_POLICY_HPP
+#ifndef CPPA_POLICY_SCHEDULING_POLICY_HPP
+#define CPPA_POLICY_SCHEDULING_POLICY_HPP
+
+#include "cppa/cppa_fwd.hpp"
 
 namespace cppa {
-
-class any_tuple;
-class execution_unit;
-class message_header;
-
-namespace util { class duration; }
-
 namespace policy {
 
 enum class timed_fetch_result {
@@ -121,5 +116,4 @@ class scheduling_policy {
 } // namespace policy
 } // namespace cppa
 
-
-#endif // CPPA_SCHEDULING_POLICY_HPP
+#endif // CPPA_POLICY_SCHEDULING_POLICY_HPP

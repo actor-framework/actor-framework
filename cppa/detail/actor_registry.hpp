@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_ACTOR_REGISTRY_HPP
-#define CPPA_ACTOR_REGISTRY_HPP
+#ifndef CPPA_DETAIL_ACTOR_REGISTRY_HPP
+#define CPPA_DETAIL_ACTOR_REGISTRY_HPP
 
 #include <map>
 #include <mutex>
@@ -112,4 +112,4 @@ class actor_registry : public singleton_mixin<actor_registry> {
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_ACTOR_REGISTRY_HPP
+#endif // CPPA_DETAIL_ACTOR_REGISTRY_HPP

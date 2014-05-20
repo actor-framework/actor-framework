@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_TYPED_ACTOR_UTIL_HPP
-#define CPPA_TYPED_ACTOR_UTIL_HPP
+#ifndef CPPA_DETAIL_TYPED_ACTOR_UTIL_HPP
+#define CPPA_DETAIL_TYPED_ACTOR_UTIL_HPP
 
 #include "cppa/cow_tuple.hpp"
 #include "cppa/replies_to.hpp"
@@ -144,4 +144,4 @@ struct deduce_output_type {
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_TYPED_ACTOR_UTIL_HPP
+#endif // CPPA_DETAIL_TYPED_ACTOR_UTIL_HPP

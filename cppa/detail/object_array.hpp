@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_OBJECT_ARRAY_HPP
-#define CPPA_OBJECT_ARRAY_HPP
+#ifndef CPPA_DETAIL_OBJECT_ARRAY_HPP
+#define CPPA_DETAIL_OBJECT_ARRAY_HPP
 
 #include <vector>
 
@@ -76,4 +76,4 @@ class object_array : public abstract_tuple {
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_OBJECT_ARRAY_HPP
+#endif // CPPA_DETAIL_OBJECT_ARRAY_HPP

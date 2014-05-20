@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CALL_HPP
-#define CALL_HPP
+#ifndef CPPA_UTIL_CALL_HPP
+#define CPPA_UTIL_CALL_HPP
 
 #include "cppa/get.hpp"
 #include "cppa/util/int_list.hpp"
@@ -63,5 +63,4 @@ inline auto call_mv(F& f, Ts&&... args) -> decltype(f(std::move(args)...)) {
 } // namespace util
 } // namespace cppa
 
-
-#endif // CALL_HPP
+#endif // CPPA_UTIL_CALL_HPP

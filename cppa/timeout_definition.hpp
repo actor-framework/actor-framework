@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef TIMEOUT_DEFINITION_HPP
-#define TIMEOUT_DEFINITION_HPP
+#ifndef CPPA_TIMEOUT_DEFINITION_HPP
+#define CPPA_TIMEOUT_DEFINITION_HPP
 
 #include <functional>
 
@@ -51,4 +51,4 @@ typedef timeout_definition<std::function<void()> > generic_timeout_definition;
 
 } // namespace cppa
 
-#endif // TIMEOUT_DEFINITION_HPP
+#endif // CPPA_TIMEOUT_DEFINITION_HPP

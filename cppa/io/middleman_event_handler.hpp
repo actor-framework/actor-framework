@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef MIDDLEMAN_EVENT_HANDLER_HPP
-#define MIDDLEMAN_EVENT_HANDLER_HPP
+#ifndef CPPA_IO_MIDDLEMAN_EVENT_HANDLER_HPP
+#define CPPA_IO_MIDDLEMAN_EVENT_HANDLER_HPP
 
 #include <vector>
 #include <utility>
@@ -138,5 +138,4 @@ class middleman_event_handler {
 } // namespace io
 } // namespace cppa
 
-
-#endif // MIDDLEMAN_EVENT_HANDLER_HPP
+#endif // CPPA_IO_MIDDLEMAN_EVENT_HANDLER_HPP

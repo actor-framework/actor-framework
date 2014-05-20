@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_GROUP_MANAGER_HPP
-#define CPPA_GROUP_MANAGER_HPP
+#ifndef CPPA_DETAIL_GROUP_MANAGER_HPP
+#define CPPA_DETAIL_GROUP_MANAGER_HPP
 
 #include <map>
 #include <mutex>
@@ -74,4 +74,4 @@ class group_manager : public singleton_mixin<group_manager> {
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_GROUP_MANAGER_HPP
+#endif // CPPA_DETAIL_GROUP_MANAGER_HPP

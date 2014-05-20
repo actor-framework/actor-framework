@@ -38,6 +38,7 @@
 #include "cppa/unit.hpp"
 #include "cppa/atom.hpp"
 #include "cppa/anything.hpp"
+#include "cppa/arg_match.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/guard_expr.hpp"
 #include "cppa/match_expr.hpp"
@@ -47,7 +48,6 @@
 
 #include "cppa/util/duration.hpp"
 #include "cppa/util/type_list.hpp"
-#include "cppa/util/arg_match_t.hpp"
 #include "cppa/util/type_traits.hpp"
 
 #include "cppa/detail/boxed.hpp"
@@ -128,7 +128,7 @@ struct rvalue_builder {
     typedef typename util::tl_back<Pattern>::type back_type;
 
     static constexpr bool is_complete =
-            !std::is_same<util::arg_match_t, back_type>::value;
+            !std::is_same<arg_match_t, back_type>::value;
 
     typedef typename util::tl_apply<Transformers, tdata>::type fun_container;
 
@@ -295,9 +295,9 @@ constexpr typename detail::boxed<T>::type val() {
     return typename detail::boxed<T>::type();
 }
 
-typedef typename detail::boxed<util::arg_match_t>::type boxed_arg_match_t;
+typedef typename detail::boxed<arg_match_t>::type boxed_arg_match_t;
 
-constexpr boxed_arg_match_t arg_match = boxed_arg_match_t();
+//constexpr boxed_arg_match_t arg_match = boxed_arg_match_t();
 
 template<typename T, typename... Ts>
 detail::rvalue_builder<

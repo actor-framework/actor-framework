@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef PRIORITIZING_HPP
-#define PRIORITIZING_HPP
+#ifndef CPPA_POLICY_PRIORITIZING_HPP
+#define CPPA_POLICY_PRIORITIZING_HPP
 
 #include <list>
 #include <iostream>
@@ -142,5 +142,4 @@ class prioritizing {
 } // namespace policy
 } // namespace cppa
 
-
-#endif // PRIORITIZING_HPP
+#endif // CPPA_POLICY_PRIORITIZING_HPP

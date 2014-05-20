@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_TYPES_ARRAY_HPP
-#define CPPA_TYPES_ARRAY_HPP
+#ifndef CPPA_DETAIL_TYPES_ARRAY_HPP
+#define CPPA_DETAIL_TYPES_ARRAY_HPP
 
 #include <atomic>
 #include <typeinfo>
@@ -214,4 +214,4 @@ const std::type_info* static_type_list<T0, T1, Ts...>::list = &typeid(util::type
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_TYPES_ARRAY_HPP
+#endif // CPPA_DETAIL_TYPES_ARRAY_HPP

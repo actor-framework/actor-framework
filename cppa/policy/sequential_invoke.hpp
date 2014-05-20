@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_THREADLESS_HPP
-#define CPPA_THREADLESS_HPP
+#ifndef CPPA_POLICY_SEQUENTIAL_INVOKE_HPP
+#define CPPA_POLICY_SEQUENTIAL_INVOKE_HPP
 
 #include "cppa/atom.hpp"
 #include "cppa/behavior.hpp"
@@ -74,5 +74,4 @@ class sequential_invoke : public invoke_policy<sequential_invoke> {
 } // namespace policy
 } // namespace cppa
 
-
-#endif // CPPA_THREADLESS_HPP
+#endif // CPPA_POLICY_SEQUENTIAL_INVOKE_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef MIDDLEMAN_HPP
-#define MIDDLEMAN_HPP
+#ifndef CPPA_IO_MIDDLEMAN_HPP
+#define CPPA_IO_MIDDLEMAN_HPP
 
 #include <map>
 #include <vector>
@@ -215,4 +215,4 @@ const node_id_ptr& middleman::node() const {
 } // namespace io
 } // namespace cppa
 
-#endif // MIDDLEMAN_HPP
+#endif // CPPA_IO_MIDDLEMAN_HPP

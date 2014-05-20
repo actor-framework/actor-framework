@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef EVENT_HPP
-#define EVENT_HPP
+#ifndef CPPA_IO_EVENT_HPP
+#define CPPA_IO_EVENT_HPP
 
 namespace cppa {
 namespace io {
@@ -61,4 +61,4 @@ inline event_bitmask from_int_bitmask(unsigned mask) {
 } // namespace io
 } // namespace cppa
 
-#endif // EVENT_HPP
+#endif // CPPA_IO_EVENT_HPP

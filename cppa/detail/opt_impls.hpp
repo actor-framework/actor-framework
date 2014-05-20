@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_OPT_IMPLS_HPP
-#define CPPA_OPT_IMPLS_HPP
+#ifndef CPPA_DETAIL_OPT_IMPLS_HPP
+#define CPPA_DETAIL_OPT_IMPLS_HPP
 
 #include <sstream>
 
@@ -236,4 +236,4 @@ class opt1_rvalue_builder<false> {
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_OPT_IMPLS_HPP
+#endif // CPPA_DETAIL_OPT_IMPLS_HPP

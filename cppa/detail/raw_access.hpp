@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_RAW_ACCESS_HPP
-#define CPPA_RAW_ACCESS_HPP
+#ifndef CPPA_DETAIL_RAW_ACCESS_HPP
+#define CPPA_DETAIL_RAW_ACCESS_HPP
 
 #include "cppa/actor.hpp"
 #include "cppa/group.hpp"
@@ -86,4 +86,4 @@ class raw_access {
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_RAW_ACCESS_HPP
+#endif // CPPA_DETAIL_RAW_ACCESS_HPP

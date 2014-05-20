@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CONTINUE_HELPER_HPP
-#define CONTINUE_HELPER_HPP
+#ifndef CPPA_CONTINUE_HELPER_HPP
+#define CPPA_CONTINUE_HELPER_HPP
 
 #include <functional>
 
@@ -89,4 +89,4 @@ class continue_helper {
 
 } // namespace cppa
 
-#endif // CONTINUE_HELPER_HPP
+#endif // CPPA_CONTINUE_HELPER_HPP

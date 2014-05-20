@@ -1,5 +1,5 @@
-#ifndef PROPER_ACTOR_HPP
-#define PROPER_ACTOR_HPP
+#ifndef CPPA_DETAIL_PROPER_ACTOR_HPP
+#define CPPA_DETAIL_PROPER_ACTOR_HPP
 
 #include <type_traits>
 
@@ -359,4 +359,4 @@ class proper_actor<Base, Policies, true> : public proper_actor_base<Base,
 } // namespace detail
 } // namespace cppa
 
-#endif // PROPER_ACTOR_HPP
+#endif // CPPA_DETAIL_PROPER_ACTOR_HPP

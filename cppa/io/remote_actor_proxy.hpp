@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef REMOTE_ACTOR_PROXY_HPP
-#define REMOTE_ACTOR_PROXY_HPP
+#ifndef CPPA_IO_REMOTE_ACTOR_PROXY_HPP
+#define CPPA_IO_REMOTE_ACTOR_PROXY_HPP
 
 #include "cppa/extend.hpp"
 #include "cppa/actor_proxy.hpp"
@@ -114,6 +114,5 @@ class remote_actor_proxy : public actor_proxy {
 
 } // namespace io
 } // namespace cppa
-
 
 #endif // remote_actor_proxy_HPP

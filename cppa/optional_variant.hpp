@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef OPTIONAL_VARIANT_HPP
-#define OPTIONAL_VARIANT_HPP
+#ifndef CPPA_OPTIONAL_VARIANT_HPP
+#define CPPA_OPTIONAL_VARIANT_HPP
 
 #include <ostream>
 #include <stdexcept>
@@ -454,4 +454,4 @@ inline optional_variant<Ts...> make_optional_variant(optional_variant<Ts...> val
 
 } // namespace cppa
 
-#endif // OPTIONAL_VARIANT_HPP
+#endif // CPPA_OPTIONAL_VARIANT_HPP

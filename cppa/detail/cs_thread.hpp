@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_FIBER_HPP
-#define CPPA_FIBER_HPP
+#ifndef CPPA_DETAIL_CS_THREAD_HPP
+#define CPPA_DETAIL_CS_THREAD_HPP
 
 namespace cppa {
 namespace detail {
@@ -61,4 +61,4 @@ struct cs_thread {
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_FIBER_HPP
+#endif // CPPA_DETAIL_CS_THREAD_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef FD_UTIL_HPP
-#define FD_UTIL_HPP
+#ifndef CPPA_DETAIL_FD_UTIL_HPP
+#define CPPA_DETAIL_FD_UTIL_HPP
 
 #include <string>
 #include <utility>  // std::pair
@@ -67,4 +67,4 @@ std::pair<native_socket_type, native_socket_type> create_pipe();
 } // namespace detail
 } // namespace cppa
 
-#endif // FD_UTIL_HPP
+#endif // CPPA_DETAIL_FD_UTIL_HPP

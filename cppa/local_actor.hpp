@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_CONTEXT_HPP
-#define CPPA_CONTEXT_HPP
+#ifndef CPPA_LOCAL_ACTOR_HPP
+#define CPPA_LOCAL_ACTOR_HPP
 
 #include <atomic>
 #include <cstdint>
@@ -667,4 +667,4 @@ inline void local_actor::planned_exit_reason(std::uint32_t value) {
 
 } // namespace cppa
 
-#endif // CPPA_CONTEXT_HPP
+#endif // CPPA_LOCAL_ACTOR_HPP

@@ -28,13 +28,12 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_FSM_ACTOR_HPP
-#define CPPA_FSM_ACTOR_HPP
+#ifndef CPPA_SB_ACTOR_HPP
+#define CPPA_SB_ACTOR_HPP
 
 #include <utility>
 #include <type_traits>
 
-#include "cppa/util/dptr.hpp"
 #include "cppa/event_based_actor.hpp"
 
 namespace cppa {
@@ -62,7 +61,7 @@ class sb_actor : public Base {
      *        the initial actor behavior to <tt>Derived::init_state</tt>.
      */
     behavior make_behavior() override {
-        return util::dptr<Derived>(this)->init_state;
+        return static_cast<Derived*>(this)->init_state;
     }
 
  protected:
@@ -74,4 +73,4 @@ class sb_actor : public Base {
 
 } // namespace cppa
 
-#endif // CPPA_FSM_ACTOR_HPP
+#endif // CPPA_SB_ACTOR_HPP

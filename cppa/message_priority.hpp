@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef PRIORITY_HPP
-#define PRIORITY_HPP
+#ifndef CPPA_PRIORITY_HPP
+#define CPPA_PRIORITY_HPP
 
 #include <cstdint>
 
@@ -42,4 +42,4 @@ enum class message_priority : std::uint32_t {
 
 } // namespace cppa
 
-#endif // PRIORITY_HPP
+#endif // CPPA_PRIORITY_HPP

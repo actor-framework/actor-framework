@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_INVOKE_POLICY_HPP
-#define CPPA_INVOKE_POLICY_HPP
+#ifndef CPPA_POLICY_INVOKE_POLICY_HPP
+#define CPPA_POLICY_INVOKE_POLICY_HPP
 
 #include <list>
 #include <memory>
@@ -47,7 +47,6 @@
 #include "cppa/partial_function.hpp"
 #include "cppa/response_promise.hpp"
 
-#include "cppa/util/dptr.hpp"
 #include "cppa/detail/memory.hpp"
 #include "cppa/detail/matches.hpp"
 
@@ -204,7 +203,7 @@ class invoke_policy {
                                    message_id& mid,
                                    Fun& fun,
                                    MaybeResponseHandle hdl = MaybeResponseHandle{}) {
-#       if CPPA_LOG_LEVEL >= CPPA_DEBUG
+#       if CPPA_LOG_LEVEL >= CPPA_POLICY_DEBUG
         auto msg_str = to_string(msg);
 #       endif
         auto res = fun(msg); // might change mid
@@ -335,9 +334,9 @@ class invoke_policy {
             }
             case msg_type::sync_response: {
                 CPPA_LOG_DEBUG("handle as synchronous response: "
-                               << CPPA_TARG(node->msg, to_string) << ", "
-                               << CPPA_MARG(node->mid, integer_value) << ", "
-                               << CPPA_MARG(awaited_response, integer_value));
+                               << CPPA_POLICY_TARG(node->msg, to_string) << ", "
+                               << CPPA_POLICY_MARG(node->mid, integer_value) << ", "
+                               << CPPA_POLICY_MARG(awaited_response, integer_value));
                 if (awaited_response.valid() && node->mid == awaited_response) {
                     auto previous_node = dptr()->hm_begin(self, node);
                     auto res = invoke_fun(self,
@@ -389,5 +388,4 @@ class invoke_policy {
 } // namespace policy
 } // namespace cppa
 
-
-#endif // CPPA_INVOKE_POLICY_HPP
+#endif // CPPA_POLICY_INVOKE_POLICY_HPP

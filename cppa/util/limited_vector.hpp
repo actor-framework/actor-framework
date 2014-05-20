@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_FIXED_VECTOR_HPP
-#define CPPA_FIXED_VECTOR_HPP
+#ifndef CPPA_UTIL_LIMITED_VECTOR_HPP
+#define CPPA_UTIL_LIMITED_VECTOR_HPP
 
 #include <cstddef>
 #include <iterator>
@@ -274,5 +274,4 @@ class limited_vector {
 } // namespace util
 } // namespace cppa
 
-
-#endif // CPPA_FIXED_VECTOR_HPP
+#endif // CPPA_UTIL_LIMITED_VECTOR_HPP

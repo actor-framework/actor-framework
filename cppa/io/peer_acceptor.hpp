@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef IPV4_PEER_ACCEPTOR_HPP
-#define IPV4_PEER_ACCEPTOR_HPP
+#ifndef CPPA_IO_TCP_PEER_ACCEPTOR_HPP
+#define CPPA_IO_TCP_PEER_ACCEPTOR_HPP
 
 #include "cppa/actor.hpp"
 
@@ -74,5 +74,4 @@ class peer_acceptor : public continuable {
 } // namespace io
 } // namespace cppa
 
-
-#endif // IPV4_PEER_ACCEPTOR_HPP
+#endif // CPPA_IO_TCP_PEER_ACCEPTOR_HPP

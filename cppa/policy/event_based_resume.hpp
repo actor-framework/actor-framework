@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_ABSTRACT_EVENT_BASED_ACTOR_HPP
-#define CPPA_ABSTRACT_EVENT_BASED_ACTOR_HPP
+#ifndef CPPA_POLICY_EVENT_BASED_RESUME_HPP
+#define CPPA_POLICY_EVENT_BASED_RESUME_HPP
 
 #include <tuple>
 #include <stack>
@@ -191,5 +191,4 @@ class event_based_resume {
 } // namespace policy
 } // namespace cppa
 
-
-#endif // CPPA_ABSTRACT_EVENT_BASED_ACTOR_HPP
+#endif // CPPA_POLICY_EVENT_BASED_RESUME_HPP

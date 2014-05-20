@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_RECURSIVE_QUEUE_NODE_HPP
-#define CPPA_RECURSIVE_QUEUE_NODE_HPP
+#ifndef CPPA_MAILBOX_ELEMENT_HPP
+#define CPPA_MAILBOX_ELEMENT_HPP
 
 #include <cstdint>
 
@@ -84,4 +84,4 @@ typedef std::unique_ptr<mailbox_element, detail::disposer>
 
 } // namespace cppa
 
-#endif // CPPA_RECURSIVE_QUEUE_NODE_HPP
+#endif // CPPA_MAILBOX_ELEMENT_HPP

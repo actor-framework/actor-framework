@@ -625,7 +625,6 @@ struct get_case_result {
 } // namespace detail
 } // namespace cppa
 
-
 namespace cppa {
 
 /**
@@ -1056,7 +1055,6 @@ inline T lift_to_match_expr(T arg) {
 }
 
 } // namespace detail
-
 } // namespace cppa
 
 #endif // CPPA_MATCH_EXPR_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_SHARED_SPINLOCK_HPP
-#define CPPA_SHARED_SPINLOCK_HPP
+#ifndef CPPA_UTIL_SHARED_SPINLOCK_HPP
+#define CPPA_UTIL_SHARED_SPINLOCK_HPP
 
 #include <atomic>
 #include <cstddef>
@@ -68,4 +68,4 @@ class shared_spinlock {
 } // namespace cppa
 
 
-#endif // CPPA_SHARED_SPINLOCK_HPP
+#endif // CPPA_UTIL_SHARED_SPINLOCK_HPP

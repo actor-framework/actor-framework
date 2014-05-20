@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef BEHAVIOR_IMPL_HPP
-#define BEHAVIOR_IMPL_HPP
+#ifndef CPPA_DETAIL_BEHAVIOR_IMPL_HPP
+#define CPPA_DETAIL_BEHAVIOR_IMPL_HPP
 
 #include "cppa/atom.hpp"
 #include "cppa/optional.hpp"
@@ -231,4 +231,4 @@ behavior_impl_ptr extract(const partial_function&);
 } // namespace detail
 } // namespace cppa
 
-#endif // BEHAVIOR_IMPL_HPP
+#endif // CPPA_DETAIL_BEHAVIOR_IMPL_HPP

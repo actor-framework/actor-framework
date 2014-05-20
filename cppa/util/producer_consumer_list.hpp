@@ -28,12 +28,12 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_PRODUCER_CONSUMER_LIST_HPP
-#define CPPA_PRODUCER_CONSUMER_LIST_HPP
+#ifndef CPPA_UTIL_PRODUCER_CONSUMER_LIST_HPP
+#define CPPA_UTIL_PRODUCER_CONSUMER_LIST_HPP
 
 #include "cppa/config.hpp"
 
-#define CPPA_CACHE_LINE_SIZE 64
+#define CPPA_UTIL_CACHE_LINE_SIZE 64
 
 #include <chrono>
 #include <thread>
@@ -105,7 +105,7 @@ class producer_consumer_list {
         static constexpr size_type payload_size =
                 sizeof(pointer) + sizeof(std::atomic<node*>);
 
-        static constexpr size_type cline_size = CPPA_CACHE_LINE_SIZE;
+        static constexpr size_type cline_size = CPPA_UTIL_CACHE_LINE_SIZE;
 
         static constexpr size_type pad_size =
                 (cline_size * ((payload_size / cline_size) + 1)) - payload_size;
@@ -117,16 +117,16 @@ class producer_consumer_list {
 
  private:
 
-    static_assert(sizeof(node*) < CPPA_CACHE_LINE_SIZE,
-                  "sizeof(node*) >= CPPA_CACHE_LINE_SIZE");
+    static_assert(sizeof(node*) < CPPA_UTIL_CACHE_LINE_SIZE,
+                  "sizeof(node*) >= CPPA_UTIL_CACHE_LINE_SIZE");
 
     // for one consumer at a time
     std::atomic<node*> m_first;
-    char m_pad1[CPPA_CACHE_LINE_SIZE - sizeof(node*)];
+    char m_pad1[CPPA_UTIL_CACHE_LINE_SIZE - sizeof(node*)];
 
     // for one producers at a time
     std::atomic<node*> m_last;
-    char m_pad2[CPPA_CACHE_LINE_SIZE - sizeof(node*)];
+    char m_pad2[CPPA_UTIL_CACHE_LINE_SIZE - sizeof(node*)];
 
     // shared among producers
     std::atomic<bool> m_consumer_lock;
@@ -203,5 +203,4 @@ class producer_consumer_list {
 } // namespace util
 } // namespace cppa
 
-
-#endif // CPPA_PRODUCER_CONSUMER_LIST_HPP
+#endif // CPPA_UTIL_PRODUCER_CONSUMER_LIST_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_OUTPUT_STREAM_HPP
-#define CPPA_OUTPUT_STREAM_HPP
+#ifndef CPPA_IO_OUTPUT_STREAM_HPP
+#define CPPA_IO_OUTPUT_STREAM_HPP
 
 #include "cppa/config.hpp"
 #include "cppa/ref_counted.hpp"
@@ -78,4 +78,4 @@ typedef intrusive_ptr<output_stream> output_stream_ptr;
 } // namespace io
 } // namespace cppa
 
-#endif // CPPA_OUTPUT_STREAM_HPP
+#endif // CPPA_IO_OUTPUT_STREAM_HPP

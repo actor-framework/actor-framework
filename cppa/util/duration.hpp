@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_DURATION_HPP
-#define CPPA_DURATION_HPP
+#ifndef CPPA_UTIL_DURATION_HPP
+#define CPPA_UTIL_DURATION_HPP
 
 #include <string>
 #include <chrono>
@@ -73,7 +73,7 @@ template<> struct ratio_to_time_unit_helper<60, 1> {
 
 /**
  * @brief Converts an STL time period to a
- *        {@link cppa::util::time_unit time_unit}.
+ *        {@link time_unit time_unit}.
  */
 template<typename Period>
 constexpr time_unit get_time_unit_from_period() {
@@ -81,7 +81,7 @@ constexpr time_unit get_time_unit_from_period() {
 }
 
 /**
- * @brief Time duration consisting of a {@link cppa::util::time_unit time_unit}
+ * @brief Time duration consisting of a {@link time_unit time_unit}
  *        and a 64 bit unsigned integer.
  */
 class duration {
@@ -162,34 +162,32 @@ inline bool operator!=(const duration& lhs, const duration& rhs) {
     return !(lhs == rhs);
 }
 
-} // namespace util
-} // namespace cppa
-
-
 /**
- * @relates cppa::util::duration
+ * @relates duration
  */
 template<class Clock, class Duration>
 std::chrono::time_point<Clock, Duration>&
-operator+=(std::chrono::time_point<Clock, Duration>& lhs,
-           const cppa::util::duration& rhs) {
+operator+=(std::chrono::time_point<Clock, Duration>& lhs, const duration& rhs) {
     switch (rhs.unit) {
-        case cppa::util::time_unit::seconds:
+        case time_unit::seconds:
             lhs += std::chrono::seconds(rhs.count);
             break;
 
-        case cppa::util::time_unit::milliseconds:
+        case time_unit::milliseconds:
             lhs += std::chrono::milliseconds(rhs.count);
             break;
 
-        case cppa::util::time_unit::microseconds:
+        case time_unit::microseconds:
             lhs += std::chrono::microseconds(rhs.count);
             break;
 
-        case cppa::util::time_unit::invalid:
+        case time_unit::invalid:
             break;
     }
     return lhs;
 }
 
-#endif // CPPA_DURATION_HPP
+} // namespace util
+} // namespace cppa
+
+#endif // CPPA_UTIL_DURATION_HPP

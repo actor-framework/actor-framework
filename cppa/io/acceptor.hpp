@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_ACCEPTOR_HPP
-#define CPPA_ACCEPTOR_HPP
+#ifndef CPPA_IO_ACCEPTOR_HPP
+#define CPPA_IO_ACCEPTOR_HPP
 
 #include <memory>
 
@@ -81,4 +81,4 @@ typedef std::unique_ptr<acceptor> acceptor_uptr;
 } // namespace io
 } // namespace cppa
 
-#endif // CPPA_ACCEPTOR_HPP
+#endif // CPPA_IO_ACCEPTOR_HPP

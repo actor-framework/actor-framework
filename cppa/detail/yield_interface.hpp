@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_YIELD_INTERFACE_HPP
-#define CPPA_YIELD_INTERFACE_HPP
+#ifndef CPPA_DETAIL_YIELD_INTERFACE_HPP
+#define CPPA_DETAIL_YIELD_INTERFACE_HPP
 
 #include <string>
 
@@ -64,4 +64,4 @@ std::string to_string(detail::yield_state ys);
 
 } // namespace cppa
 
-#endif // CPPA_YIELD_INTERFACE_HPP
+#endif // CPPA_DETAIL_YIELD_INTERFACE_HPP

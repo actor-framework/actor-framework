@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_LEFT_OR_RIGHT_HPP
-#define CPPA_LEFT_OR_RIGHT_HPP
+#ifndef CPPA_UTIL_LEFT_OR_RIGHT_HPP
+#define CPPA_UTIL_LEFT_OR_RIGHT_HPP
 
 #include "cppa/unit.hpp"
 
@@ -75,5 +75,4 @@ struct if_not_left<unit_t, Right> {
 } // namespace util
 } // namespace cppa
 
-
-#endif // CPPA_LEFT_OR_RIGHT_HPP
+#endif // CPPA_UTIL_LEFT_OR_RIGHT_HPP

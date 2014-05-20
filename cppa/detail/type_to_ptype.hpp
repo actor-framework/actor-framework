@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_TYPE_TO_PTYPE_HPP
-#define CPPA_TYPE_TO_PTYPE_HPP
+#ifndef CPPA_DETAIL_TYPE_TO_PTYPE_HPP
+#define CPPA_DETAIL_TYPE_TO_PTYPE_HPP
 
 #include <string>
 #include <limits>
@@ -97,4 +97,4 @@ struct type_to_ptype : type_to_ptype_impl<typename util::rm_const_and_ref<T>::ty
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_TYPE_TO_PTYPE_HPP
+#endif // CPPA_DETAIL_TYPE_TO_PTYPE_HPP

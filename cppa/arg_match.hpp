@@ -28,10 +28,17 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_ARG_MATCH_T_HPP
-#define CPPA_ARG_MATCH_T_HPP
+#ifndef CPPA_ARG_MATCH_HPP
+#define CPPA_ARG_MATCH_HPP
+
+#include "cppa/util/wrapped.hpp"
 
 namespace cppa {
-namespace util { struct arg_match_t { }; } }
 
-#endif // CPPA_ARG_MATCH_T_HPP
+struct arg_match_t { };
+
+constexpr util::wrapped<arg_match_t> arg_match = util::wrapped<arg_match_t>{};
+
+} // namespace cppa
+
+#endif // CPPA_ARG_MATCH_HPP

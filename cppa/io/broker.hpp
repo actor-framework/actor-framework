@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_BROKER_HPP
-#define CPPA_BROKER_HPP
+#ifndef CPPA_IO_BROKER_HPP
+#define CPPA_IO_BROKER_HPP
 
 #include <map>
 
@@ -223,4 +223,4 @@ class broker : public extend<local_actor>::
 } // namespace io
 } // namespace cppa
 
-#endif // CPPA_BROKER_HPP
+#endif // CPPA_IO_BROKER_HPP

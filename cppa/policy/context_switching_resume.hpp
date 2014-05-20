@@ -27,8 +27,8 @@
  * along with libcppa. If not, see <http://www.gnu.org/licenses/>.            *
 \******************************************************************************/
 
-#ifndef CPPA_CONTEXT_SWITCHING_ACTOR_HPP
-#define CPPA_CONTEXT_SWITCHING_ACTOR_HPP
+#ifndef CPPA_POLICY_CONTEXT_SWITCHING_RESUME_HPP
+#define CPPA_POLICY_CONTEXT_SWITCHING_RESUME_HPP
 
 #include "cppa/config.hpp"
 #include "cppa/logging.hpp"
@@ -132,4 +132,4 @@ class context_switching_resume {
 } // namespace policy
 } // namespace cppa
 
-#endif // CPPA_CONTEXT_SWITCHING_ACTOR_HPP
+#endif // CPPA_POLICY_CONTEXT_SWITCHING_RESUME_HPP

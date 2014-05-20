@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_NO_SCHEDULING_HPP
-#define CPPA_NO_SCHEDULING_HPP
+#ifndef CPPA_POLICY_NO_SCHEDULING_HPP
+#define CPPA_POLICY_NO_SCHEDULING_HPP
 
 #include <mutex>
 #include <thread>
@@ -79,7 +79,7 @@ class no_scheduling {
     void launch(Actor* self, execution_unit*) {
         CPPA_REQUIRE(self != nullptr);
         CPPA_PUSH_AID(self->id());
-        CPPA_LOG_TRACE(CPPA_ARG(self));
+        CPPA_LOG_TRACE(CPPA_POLICY_ARG(self));
         intrusive_ptr<Actor> mself{self};
         self->attach_to_scheduler();
         std::thread([=] {
@@ -124,5 +124,4 @@ class no_scheduling {
 } // namespace policy
 } // namespace cppa
 
-
-#endif // CPPA_NO_SCHEDULING_HPP
+#endif // CPPA_POLICY_NO_SCHEDULING_HPP

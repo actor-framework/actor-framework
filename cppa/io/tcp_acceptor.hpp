@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_IPV4_ACCEPTOR_HPP
-#define CPPA_IPV4_ACCEPTOR_HPP
+#ifndef CPPA_IO_TCP_ACCEPTOR_HPP
+#define CPPA_IO_TCP_ACCEPTOR_HPP
 
 #include <memory>
 #include <cstdint>
@@ -83,5 +83,4 @@ class tcp_acceptor : public acceptor {
 } // namespace io
 } // namespace cppa
 
-
-#endif // CPPA_IPV4_ACCEPTOR_HPP
+#endif // CPPA_IO_TCP_ACCEPTOR_HPP

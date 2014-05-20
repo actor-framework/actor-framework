@@ -58,5 +58,4 @@ cl_int clRetainDeviceDummy  (cl_device_id);
 } // namespace opencl
 } // namespace cppa
 
-
 #endif // CPPA_OPENCL_GLOBAL_HPP

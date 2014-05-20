@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_PTYPE_TO_TYPE_HPP
-#define CPPA_PTYPE_TO_TYPE_HPP
+#ifndef CPPA_DETAIL_PTYPE_TO_TYPE_HPP
+#define CPPA_DETAIL_PTYPE_TO_TYPE_HPP
 
 #include <cstdint>
 
@@ -70,4 +70,4 @@ template<> struct ptype_to_type<pt_u32string> : util::wrapped<std::u32string> { 
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_PTYPE_TO_TYPE_HPP
+#endif // CPPA_DETAIL_PTYPE_TO_TYPE_HPP

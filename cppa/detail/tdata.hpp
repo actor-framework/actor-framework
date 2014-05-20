@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_TDATA_HPP
-#define CPPA_TDATA_HPP
+#ifndef CPPA_DETAIL_TDATA_HPP
+#define CPPA_DETAIL_TDATA_HPP
 
 #include <typeinfo>
 #include <functional>
@@ -41,7 +41,6 @@
 
 #include "cppa/util/wrapped.hpp"
 #include "cppa/util/type_list.hpp"
-#include "cppa/util/arg_match_t.hpp"
 #include "cppa/util/type_traits.hpp"
 #include "cppa/util/rebindable_reference.hpp"
 
@@ -331,7 +330,7 @@ struct tdata<Head, Tail...> : tdata<Tail...> {
     }
 
     inline void* mutable_at(size_t p) {
-#       ifdef CPPA_DEBUG_MODE
+#       ifdef CPPA_DETAIL_DEBUG_MODE
         if (p == 0) {
             if (std::is_same<decltype(ptr_to(head)), const void*>::value) {
                 throw std::logic_error{"mutable_at with const head"};
@@ -460,4 +459,4 @@ typename util::type_at<N, Ts...>::type& get_ref(detail::tdata<Ts...>& tv) {
 
 } // namespace cppa
 
-#endif // CPPA_TDATA_HPP
+#endif // CPPA_DETAIL_TDATA_HPP

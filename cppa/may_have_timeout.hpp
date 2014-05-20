@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef MAY_HAVE_TIMEOUT_HPP
-#define MAY_HAVE_TIMEOUT_HPP
+#ifndef CPPA_MAY_HAVE_TIMEOUT_HPP
+#define CPPA_MAY_HAVE_TIMEOUT_HPP
 
 namespace cppa {
 
@@ -55,4 +55,4 @@ struct may_have_timeout<timeout_definition<F>> {
 
 } // namespace cppa
 
-#endif // MAY_HAVE_TIMEOUT_HPP
+#endif // CPPA_MAY_HAVE_TIMEOUT_HPP

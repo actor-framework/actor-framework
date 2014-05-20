@@ -29,8 +29,8 @@
 \******************************************************************************/
 
 
-#ifndef OPENCL_METAINFO_HPP
-#define OPENCL_METAINFO_HPP
+#ifndef CPPA_OPENCL_METAINFO_HPP
+#define CPPA_OPENCL_METAINFO_HPP
 
 #include <atomic>
 #include <vector>
@@ -81,5 +81,4 @@ opencl_metainfo* get_opencl_metainfo();
 } // namespace opencl
 } // namespace cppa
 
-
-#endif // OPENCL_METAINFO_HPP
+#endif // CPPA_OPENCL_METAINFO_HPP

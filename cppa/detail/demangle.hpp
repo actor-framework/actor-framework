@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_DEMANGLE_HPP
-#define CPPA_DEMANGLE_HPP
+#ifndef CPPA_DETAIL_DEMANGLE_HPP
+#define CPPA_DETAIL_DEMANGLE_HPP
 
 #include <string>
 #include <typeinfo>
@@ -48,4 +48,4 @@ inline std::string demangle() {
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_DEMANGLE_HPP
+#endif // CPPA_DETAIL_DEMANGLE_HPP

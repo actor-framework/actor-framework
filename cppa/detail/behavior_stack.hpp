@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef BEHAVIOR_STACK_HPP
-#define BEHAVIOR_STACK_HPP
+#ifndef CPPA_DETAIL_BEHAVIOR_STACK_HPP
+#define CPPA_DETAIL_BEHAVIOR_STACK_HPP
 
 #include <vector>
 #include <memory>
@@ -128,4 +128,4 @@ class behavior_stack
 } // namespace detail
 } // namespace cppa
 
-#endif // BEHAVIOR_STACK_HPP
+#endif // CPPA_DETAIL_BEHAVIOR_STACK_HPP

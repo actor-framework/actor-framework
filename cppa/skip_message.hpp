@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_MATCH_HINT_HPP
-#define CPPA_MATCH_HINT_HPP
+#ifndef CPPA_SKIP_MESSAGE_HPP
+#define CPPA_SKIP_MESSAGE_HPP
 
 namespace cppa {
 
@@ -54,4 +54,4 @@ std::ostream& operator<<(std::ostream&, skip_message_t);
 
 } // namespace cppa
 
-#endif // CPPA_MATCH_HINT_HPP
+#endif // CPPA_SKIP_MESSAGE_HPP

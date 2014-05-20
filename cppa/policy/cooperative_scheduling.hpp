@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_COOPERATIVE_SCHEDULING_HPP
-#define CPPA_COOPERATIVE_SCHEDULING_HPP
+#ifndef CPPA_POLICY_COOPERATIVE_SCHEDULING_HPP
+#define CPPA_POLICY_COOPERATIVE_SCHEDULING_HPP
 
 #include <atomic>
 
@@ -88,5 +88,4 @@ class cooperative_scheduling {
 } // namespace policy
 } // namespace cppa
 
-
-#endif // CPPA_COOPERATIVE_SCHEDULING_HPP
+#endif // CPPA_POLICY_COOPERATIVE_SCHEDULING_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_ATOM_VAL_HPP
-#define CPPA_ATOM_VAL_HPP
+#ifndef CPPA_DETAIL_ATOM_VAL_HPP
+#define CPPA_DETAIL_ATOM_VAL_HPP
 
 namespace cppa {
 namespace detail {
@@ -70,4 +70,4 @@ constexpr std::uint64_t atom_val(const char* cstr, std::uint64_t interim = 0) {
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_ATOM_VAL_HPP
+#endif // CPPA_DETAIL_ATOM_VAL_HPP

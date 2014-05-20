@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_MESSAGE_QUEUE_HPP
-#define CPPA_MESSAGE_QUEUE_HPP
+#ifndef CPPA_IO_DEFAULT_MESSAGE_QUEUE_HPP
+#define CPPA_IO_DEFAULT_MESSAGE_QUEUE_HPP
 
 #include <vector>
 
@@ -74,7 +74,4 @@ typedef intrusive_ptr<default_message_queue> default_message_queue_ptr;
 } // namespace io
 } // namespace cppa
 
-
-
-
-#endif // CPPA_MESSAGE_QUEUE_HPP
+#endif // CPPA_IO_DEFAULT_MESSAGE_QUEUE_HPP

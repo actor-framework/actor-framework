@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_ABSTRACT_TUPLE_HPP
-#define CPPA_ABSTRACT_TUPLE_HPP
+#ifndef CPPA_DETAIL_ABSTRACT_TUPLE_HPP
+#define CPPA_DETAIL_ABSTRACT_TUPLE_HPP
 
 #include <string>
 #include <iterator>
@@ -129,4 +129,4 @@ std::string get_tuple_type_names(const detail::abstract_tuple&);
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_ABSTRACT_TUPLE_HPP
+#endif // CPPA_DETAIL_ABSTRACT_TUPLE_HPP

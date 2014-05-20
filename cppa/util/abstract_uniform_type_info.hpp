@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_ABSTRACT_UNIFORM_TYPE_INFO_HPP
-#define CPPA_ABSTRACT_UNIFORM_TYPE_INFO_HPP
+#ifndef CPPA_UTIL_ABSTRACT_UNIFORM_TYPE_INFO_HPP
+#define CPPA_UTIL_ABSTRACT_UNIFORM_TYPE_INFO_HPP
 
 #include "cppa/any_tuple.hpp"
 #include "cppa/deserializer.hpp"
@@ -134,5 +134,4 @@ class abstract_uniform_type_info : public uniform_type_info {
 } // namespace util
 } // namespace cppa
 
-
-#endif // CPPA_ABSTRACT_UNIFORM_TYPE_INFO_HPP
+#endif // CPPA_UTIL_ABSTRACT_UNIFORM_TYPE_INFO_HPP

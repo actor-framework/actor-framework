@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_SINGLETON_MIXIN_HPP
-#define CPPA_SINGLETON_MIXIN_HPP
+#ifndef CPPA_DETAIL_SINGLETON_MIXIN_HPP
+#define CPPA_DETAIL_SINGLETON_MIXIN_HPP
 
 #include <utility>
 
@@ -77,4 +77,4 @@ class singleton_mixin<Derived, void> {
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_SINGLETON_MIXIN_HPP
+#endif // CPPA_DETAIL_SINGLETON_MIXIN_HPP

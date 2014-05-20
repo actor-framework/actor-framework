@@ -41,5 +41,4 @@ std::string get_root_uuid();
 } // namespace util
 } // namespace cppa
 
-
 #endif // CPPA_UTIL_GET_ROOT_UUID_HPP

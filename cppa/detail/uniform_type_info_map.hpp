@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_UNIFORM_TYPE_INFO_MAP_HPP
-#define CPPA_UNIFORM_TYPE_INFO_MAP_HPP
+#ifndef CPPA_DETAIL_UNIFORM_TYPE_INFO_MAP_HPP
+#define CPPA_DETAIL_UNIFORM_TYPE_INFO_MAP_HPP
 
 #include <set>
 #include <map>
@@ -157,4 +157,4 @@ class uniform_type_info_map {
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_UNIFORM_TYPE_INFO_MAP_HPP
+#endif // CPPA_DETAIL_UNIFORM_TYPE_INFO_MAP_HPP

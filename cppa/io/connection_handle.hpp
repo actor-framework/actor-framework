@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef IO_SERVICE_HPP
-#define IO_SERVICE_HPP
+#ifndef CPPA_IO_CONNECTION_HANDLE_HPP
+#define CPPA_IO_CONNECTION_HANDLE_HPP
 
 #include "cppa/detail/handle.hpp"
 
@@ -57,5 +57,4 @@ class connection_handle : public detail::handle<connection_handle> {
 } // namespace io
 } // namespace cppa
 
-
-#endif // IO_SERVICE_HPP
+#endif // CPPA_IO_CONNECTION_HANDLE_HPP

@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_IPV4_IO_STREAM_HPP
-#define CPPA_IPV4_IO_STREAM_HPP
+#ifndef CPPA_IO_TCP_IO_STREAM_HPP
+#define CPPA_IO_TCP_IO_STREAM_HPP
 
 #include "cppa/config.hpp"
 #include "cppa/io/stream.hpp"
@@ -80,5 +80,4 @@ class tcp_io_stream : public stream {
 } // namespace io
 } // namespace cppa
 
-
-#endif // CPPA_IPV4_IO_STREAM_HPP
+#endif // CPPA_IO_TCP_IO_STREAM_HPP

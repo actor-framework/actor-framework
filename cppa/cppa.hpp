@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_HPP
-#define CPPA_HPP
+#ifndef CPPA_CPPA_HPP
+#define CPPA_CPPA_HPP
 
 #include <tuple>
 #include <chrono>
@@ -717,4 +717,4 @@ struct hash<cppa::actor_addr> {
 };
 } // namespace std
 
-#endif // CPPA_HPP
+#endif // CPPA_CPPA_HPP

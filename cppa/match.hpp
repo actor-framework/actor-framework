@@ -305,7 +305,6 @@ class stream_matcher {
 } // namespace detail
 } // namespace cppa
 
-
 namespace cppa {
 
 /**

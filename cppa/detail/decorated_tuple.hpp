@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_DECORATED_TUPLE_HPP
-#define CPPA_DECORATED_TUPLE_HPP
+#ifndef CPPA_DETAIL_DECORATED_TUPLE_HPP
+#define CPPA_DETAIL_DECORATED_TUPLE_HPP
 
 #include <vector>
 #include <algorithm>
@@ -121,4 +121,4 @@ class decorated_tuple : public abstract_tuple {
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_DECORATED_TUPLE_HPP
+#endif // CPPA_DETAIL_DECORATED_TUPLE_HPP

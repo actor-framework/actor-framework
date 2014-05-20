@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_PRIORITY_POLICY_HPP
-#define CPPA_PRIORITY_POLICY_HPP
+#ifndef CPPA_POLICY_PRIORITY_POLICY_HPP
+#define CPPA_POLICY_PRIORITY_POLICY_HPP
 
 namespace cppa { class mailbox_element; }
 
@@ -75,5 +75,4 @@ class priority_policy {
 } // namespace policy
 } // namespace cppa
 
-
-#endif // CPPA_PRIORITY_POLICY_HPP
+#endif // CPPA_POLICY_PRIORITY_POLICY_HPP

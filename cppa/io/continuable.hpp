@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CONTINUABLE_WRITER_HPP
-#define CONTINUABLE_WRITER_HPP
+#ifndef CPPA_IO_CONTINUABLE_WRITER_HPP
+#define CPPA_IO_CONTINUABLE_WRITER_HPP
 
 #include "cppa/config.hpp"
 #include "cppa/ref_counted.hpp"
@@ -141,5 +141,4 @@ inline native_socket_type continuable::write_handle() const {
 } // namespace io
 } // namespace cppa
 
-
-#endif // CONTINUABLE_WRITER_HPP
+#endif // CPPA_IO_CONTINUABLE_WRITER_HPP

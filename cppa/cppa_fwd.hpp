@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_FWD_HPP
-#define CPPA_FWD_HPP
+#ifndef CPPA_CPPA_FWD_HPP
+#define CPPA_CPPA_FWD_HPP
 
 #include <cstdint>
 
@@ -81,4 +81,4 @@ typedef const message_header& msg_hdr_cref;
 
 } // namespace cppa
 
-#endif // CPPA_FWD_HPP
+#endif // CPPA_CPPA_FWD_HPP

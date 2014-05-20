@@ -178,7 +178,6 @@ cppa/tpartial_function.hpp
 cppa/tuple_cast.hpp
 cppa/type_lookup_table.hpp
 cppa/typed_actor.hpp
-cppa/typed_actor_ptr.hpp
 cppa/typed_behavior.hpp
 cppa/typed_continue_helper.hpp
 cppa/typed_event_based_actor.hpp
@@ -186,12 +185,10 @@ cppa/uniform_type_info.hpp
 cppa/unit.hpp
 cppa/util/abstract_uniform_type_info.hpp
 cppa/util/algorithm.hpp
-cppa/util/arg_match_t.hpp
 cppa/util/buffer.hpp
 cppa/util/call.hpp
 cppa/util/comparable.hpp
 cppa/util/compare_tuples.hpp
-cppa/util/dptr.hpp
 cppa/util/duration.hpp
 cppa/util/get_mac_addresses.hpp
 cppa/util/get_root_uuid.hpp
@@ -272,7 +269,6 @@ src/default_message_queue.cpp
 src/demangle.cpp
 src/deserializer.cpp
 src/duration.cpp
-src/empty_tuple.cpp
 src/event_based_actor.cpp
 src/exception.cpp
 src/execinfo_windows.cpp
@@ -358,3 +354,4 @@ unit_testing/test_typed_remote_actor.cpp
 unit_testing/test_typed_spawn.cpp
 unit_testing/test_uniform_type.cpp
 unit_testing/test_yield_interface.cpp
+cppa/arg_match.hpp

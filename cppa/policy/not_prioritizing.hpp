@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef NOT_PRIORITIZING_HPP
-#define NOT_PRIORITIZING_HPP
+#ifndef CPPA_POLICY_NOT_PRIORITIZING_HPP
+#define CPPA_POLICY_NOT_PRIORITIZING_HPP
 
 #include <list>
 #include <iterator>
@@ -101,4 +101,4 @@ class not_prioritizing {
 } // namespace policy
 } // namespace cppa
 
-#endif // NOT_PRIORITIZING_HPP
+#endif // CPPA_POLICY_NOT_PRIORITIZING_HPP

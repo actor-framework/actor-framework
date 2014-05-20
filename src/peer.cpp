@@ -402,4 +402,3 @@ void peer::dispose() {
 
 } // namespace io
 } // namespace cppa
-

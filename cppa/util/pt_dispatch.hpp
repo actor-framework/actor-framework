@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_PT_DISPATCH_HPP
-#define CPPA_PT_DISPATCH_HPP
+#ifndef CPPA_UTIL_PT_DISPATCH_HPP
+#define CPPA_UTIL_PT_DISPATCH_HPP
 
 #include "cppa/primitive_type.hpp"
 #include "cppa/util/pt_token.hpp"
@@ -68,4 +68,4 @@ void pt_dispatch(primitive_type ptype, Fun&& f) {
 } // namespace cppa
 
 
-#endif // CPPA_PT_DISPATCH_HPP
+#endif // CPPA_UTIL_PT_DISPATCH_HPP

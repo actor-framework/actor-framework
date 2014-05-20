@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_peer_IMPL_HPP
-#define CPPA_peer_IMPL_HPP
+#ifndef CPPA_IO_PEER_HPP
+#define CPPA_IO_PEER_HPP
 
 #include <map>
 #include <cstdint>
@@ -149,4 +149,4 @@ class peer : public extend<continuable>::with<buffered_writing> {
 } // namespace cppa
 
 
-#endif // CPPA_peer_IMPL_HPP
+#endif // CPPA_IO_PEER_HPP

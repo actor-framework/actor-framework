@@ -29,8 +29,8 @@
 \******************************************************************************/
 
 
-#ifndef SMART_PTR_HPP
-#define SMART_PTR_HPP
+#ifndef CPPA_OPENCL_SMART_PTR_HPP
+#define CPPA_OPENCL_SMART_PTR_HPP
 
 #include <memory>
 #include <algorithm>
@@ -123,5 +123,4 @@ typedef smart_ptr<cl_command_queue, clRetainCommandQueue, clReleaseCommandQueue>
 } // namespace opencl
 } // namespace cppa
 
-
-#endif // SMART_PTR_HPP
+#endif // CPPA_OPENCL_SMART_PTR_HPP

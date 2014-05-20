@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_THREADED_HPP
-#define CPPA_THREADED_HPP
+#ifndef CPPA_POLICY_NESTABLE_INVOKE_HPP
+#define CPPA_POLICY_NESTABLE_INVOKE_HPP
 
 #include <mutex>
 #include <chrono>
@@ -38,16 +38,11 @@
 #include "cppa/exit_reason.hpp"
 #include "cppa/mailbox_element.hpp"
 
-#include "cppa/util/dptr.hpp"
-
 #include "cppa/detail/sync_request_bouncer.hpp"
 
 #include "cppa/intrusive/single_reader_queue.hpp"
 
 #include "cppa/policy/invoke_policy.hpp"
-
-namespace cppa {
-namespace detail { class receive_policy; } }
 
 namespace cppa {
 namespace policy {
@@ -87,5 +82,4 @@ class nestable_invoke : public invoke_policy<nestable_invoke> {
 } // namespace policy
 } // namespace cppa
 
-
-#endif // CPPA_THREADED_HPP
+#endif // CPPA_POLICY_NESTABLE_INVOKE_HPP

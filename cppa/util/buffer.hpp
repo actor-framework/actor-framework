@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_BUFFER_HPP
-#define CPPA_BUFFER_HPP
+#ifndef CPPA_UTIL_BUFFER_HPP
+#define CPPA_UTIL_BUFFER_HPP
 
 #include <cstddef> // size_t
 
@@ -317,4 +317,4 @@ inline size_t buffer::adjust(size_t alloc_size) const {
 } // namespace util
 } // namespace cppa
 
-#endif // CPPA_BUFFER_HPP
+#endif // CPPA_UTIL_BUFFER_HPP

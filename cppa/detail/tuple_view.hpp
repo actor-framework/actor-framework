@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_TUPLE_VIEW_HPP
-#define CPPA_TUPLE_VIEW_HPP
+#ifndef CPPA_DETAIL_TUPLE_VIEW_HPP
+#define CPPA_DETAIL_TUPLE_VIEW_HPP
 
 #include "cppa/guard_expr.hpp"
 
@@ -124,4 +124,4 @@ types_array<Ts...> tuple_view<Ts...>::m_types;
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_TUPLE_VIEW_HPP
+#endif // CPPA_DETAIL_TUPLE_VIEW_HPP

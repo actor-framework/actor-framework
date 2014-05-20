@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_PROCESS_INFORMATION_HPP
-#define CPPA_PROCESS_INFORMATION_HPP
+#ifndef CPPA_NODE_ID_HPP
+#define CPPA_NODE_ID_HPP
 
 #include <array>
 #include <string>
@@ -151,4 +151,4 @@ std::string to_string(const node_id::host_id_type& node_id);
 
 } // namespace cppa
 
-#endif // CPPA_PROCESS_INFORMATION_HPP
+#endif // CPPA_NODE_ID_HPP

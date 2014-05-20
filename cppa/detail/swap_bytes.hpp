@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_SWAP_BYTES_HPP
-#define CPPA_SWAP_BYTES_HPP
+#ifndef CPPA_DETAIL_SWAP_BYTES_HPP
+#define CPPA_DETAIL_SWAP_BYTES_HPP
 
 #include <cstddef>
 
@@ -70,4 +70,4 @@ inline T swap_bytes(T what) {
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_SWAP_BYTES_HPP
+#endif // CPPA_DETAIL_SWAP_BYTES_HPP

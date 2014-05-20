@@ -28,8 +28,8 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_SYNC_REQUEST_BOUNCER_HPP
-#define CPPA_SYNC_REQUEST_BOUNCER_HPP
+#ifndef CPPA_DETAIL_SYNC_REQUEST_BOUNCER_HPP
+#define CPPA_DETAIL_SYNC_REQUEST_BOUNCER_HPP
 
 #include <cstdint>
 
@@ -55,4 +55,4 @@ struct sync_request_bouncer {
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_SYNC_REQUEST_BOUNCER_HPP
+#endif // CPPA_DETAIL_SYNC_REQUEST_BOUNCER_HPP
