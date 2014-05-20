@@ -12,7 +12,8 @@ use this configure script to access CMake equivalent functionality.\
 }
 
 command="$0 $*"
-sourcedir="$( cd "$( dirname "$0" )" && pwd )"
+dirname_0=`dirname $0`
+sourcedir=`cd $dirname_0 && pwd`
 usage="\
 Usage: $0 [OPTION]... [VAR=VALUE]...
 
@@ -100,7 +101,7 @@ configure ()
             ;;
         *)
             # relative path given; convert to absolute path
-            absolute_builddir="$(pwd)/$builddir"
+            absolute_builddir="$PWD/$builddir"
             ;;
     esac
 
@@ -199,7 +200,7 @@ while [ $# -ne 0 ]; do
             append_cache_entry MORE_CLANG_WARNINGS BOOL true
             ;;
         --with-cppa-log-level=*)
-            level=$(echo "$optarg" | tr '[:lower:]' '[:upper:]')
+            level=`echo "$optarg" | tr '[:lower:]' '[:upper:]'`
             case $level in
                 ERROR)
                     append_cache_entry CPPA_LOG_LEVEL STRING 0
@@ -289,7 +290,7 @@ if [ -n "$dualbuild" ]; then
     fi
 
     for i in gcc clang; do
-        compiler="$(eval echo \$$i)"
+        compiler=`eval echo \$$i`
         configure $compiler $i "" "" $CMakeGenerator
     done
 else
@@ -304,7 +305,7 @@ else
 fi
 
 printf "DIRS := %s\n\n" "$workdirs" > $sourcedir/Makefile
-makefile=$(cat <<'EOT'
+makefile=`cat <<'EOT'
 all:
 	@for i in $(DIRS); do $(MAKE) -C $$i $@ || exit; done
 
@@ -328,6 +329,6 @@ doc:
 
 .PHONY: all test install uninstall clean distclean
 EOT
-)
+`
 
 echo "$makefile" >> $sourcedir/Makefile
