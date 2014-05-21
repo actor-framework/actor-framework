@@ -39,9 +39,9 @@ void coroutine [[noreturn]] (void* worker) {
 
 int main() {
     CPPA_TEST(test_yield_interface);
-#   ifdef CPPA_DISABLE_CONTEXT_SWITCHING
-    CPPA_PRINT("WARNING: context switching was explicitly "
-               "disabled by defining CPPA_DISABLE_CONTEXT_SWITCHING");
+#   ifndef CPPA_ENABLE_CONTEXT_SWITCHING
+    CPPA_PRINT("WARNING: context switching disabled by default, "
+               "enable by defining CPPA_ENABLE_CONTEXT_SWITCHING");
 #   else
     cs_thread fself;
     pseudo_worker worker;

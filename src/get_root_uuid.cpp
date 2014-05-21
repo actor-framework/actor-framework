@@ -28,6 +28,8 @@
 \******************************************************************************/
 
 
+#include <iostream>
+
 #include "cppa/config.hpp"
 #include "cppa/util/get_root_uuid.hpp"
 
@@ -38,12 +40,6 @@ constexpr char uuid_format[] = "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF";
 #ifdef CPPA_MACOS
 
 namespace {
-
-inline void erase_trailing_newline(std::string& str) {
-    while (!str.empty() && (*str.rbegin()) == '\n') {
-        str.resize(str.size() - 1);
-    }
-}
 
 constexpr const char* s_get_uuid = "/usr/sbin/diskutil info / | "
                                    "/usr/bin/awk '$0 ~ /UUID/ { print $3 }'";
@@ -62,7 +58,19 @@ std::string get_root_uuid() {
         uuid += cbuf;
     }
     pclose(get_uuid_cmd);
-    erase_trailing_newline(uuid);
+    // erase trailing newlines
+    while (!uuid.empty() && uuid.back() == '\n') uuid.pop_back();
+    // check whether uuid is valid
+    auto valid =  uuid.size() == sizeof(uuid_format)
+               && std::equal(uuid.begin(), uuid.end(), uuid_format,
+                             [](char lhs, char rhs) {
+                                 return    (rhs == 'F' && ::isxdigit(lhs))
+                                        || (rhs == '-' && lhs == '-');
+                             });
+    if (!valid) {
+        std::cerr << "*** WARNING: found invalid root UUID: "
+                  << uuid << std::endl;
+    }
     return uuid;
 }
 

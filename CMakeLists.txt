@@ -263,38 +263,20 @@ if (DISABLE_MEM_MANAGEMENT)
   add_definitions(-DCPPA_DISABLE_MEM_MANAGEMENT)
 endif (DISABLE_MEM_MANAGEMENT)
 
-if (STANDALONE_BUILD)
-  add_definitions(-DCPPA_STANDALONE_BUILD)
-endif (STANDALONE_BUILD)
-
-if (STANDALONE_BUILD)
-  # explicitly disabled, don't include Boost
-else (STANDALONE_BUILD)
-  find_package(Boost 1.54.0 COMPONENTS system context coroutine)
-  # without REQUIRED, find_package(Boost...) returns with Boost_FOUND=FALSE
-  if (NOT Boost_FOUND)
-    # disable implicitly
-    add_definitions(-DCPPA_STANDALONE_BUILD)
-    set(DISABLE_CONTEXT_SWITCHING true)
-  else (NOT Boost_FOUND)
-    set(LD_FLAGS ${LD_FLAGS} ${Boost_COROUTINE_LIBRARY} ${Boost_CONTEXT_LIBRARY} ${Boost_SYSTEM_LIBRARY})
-    # This hack fixes a problem when the linker search path is the same as
-    # the one provided by the compiler. In this case, CMake replaces the absolute
-    # path (e.g., /path/to/lib.so) with -l<lib>, which may cause it to pick up the wrong
-    # library. So when this replacement happens, we ensure that the right
-    # library gets picked by adding a -L directive for the affected libraries
-    # (which is just Boost Context here).
-    set(CMAKE_EXE_LINKER_FLAGS -L${Boost_LIBRARY_DIRS})
-    set(INCLUDE_DIRS ${INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
-    set(LD_DIRS ${LD_DIRS} ${Boost_LIBRARY_DIRS})
-    set(DISABLE_CONTEXT_SWITCHING false)
-  endif (NOT Boost_FOUND)
-endif (STANDALONE_BUILD)
-
-# set compiler flag when compiling w/o context-switching actors
-if (DISABLE_CONTEXT_SWITCHING)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_DISABLE_CONTEXT_SWITCHING")
-endif ()
+if (ENABLE_CONTEXT_SWITCHING)
+  find_package(Boost 1.54.0 COMPONENTS system context coroutine REQUIRED)
+  set(LD_FLAGS ${LD_FLAGS} ${Boost_COROUTINE_LIBRARY} ${Boost_CONTEXT_LIBRARY} ${Boost_SYSTEM_LIBRARY})
+  # This hack fixes a problem when the linker search path is the same as
+  # the one provided by the compiler. In this case, CMake replaces the absolute
+  # path (e.g., /path/to/lib.so) with -l<lib>, which may cause it to pick up the wrong
+  # library. So when this replacement happens, we ensure that the right
+  # library gets picked by adding a -L directive for the affected libraries
+  # (which is just Boost Context here).
+  set(CMAKE_EXE_LINKER_FLAGS -L${Boost_LIBRARY_DIRS})
+  set(INCLUDE_DIRS ${INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
+  set(LD_DIRS ${LD_DIRS} ${Boost_LIBRARY_DIRS})
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_ENABLE_CONTEXT_SWITCHING")
+endif (ENABLE_CONTEXT_SWITCHING)
 
 # build shared library if not compiling static only
 if (NOT "${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes")
@@ -379,9 +361,9 @@ endif ()
 
 # set optional flags
 string(TOUPPER ${CMAKE_BUILD_TYPE} build_type)
-set(CONTEXT_SWITCHING "yes")
-if (DISABLE_CONTEXT_SWITCHING)
-    set(CONTEXT_SWITCHING "no")
+set(CONTEXT_SWITCHING "no")
+if (ENABLE_CONTEXT_SWITCHING)
+    set(CONTEXT_SWITCHING "yes")
 endif ()
 
 # check for doxygen and add custom "doc" target to Makefile

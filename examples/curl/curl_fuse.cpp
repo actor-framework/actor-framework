@@ -78,6 +78,7 @@
 #ifdef __clang__
 #   pragma clang diagnostic ignored "-Wshorten-64-to-32"
 #   pragma clang diagnostic ignored "-Wdisabled-macro-expansion"
+#   pragma clang diagnostic ignored "-Wunused-const-variable"
 #endif // __clang__
 
 using namespace cppa;

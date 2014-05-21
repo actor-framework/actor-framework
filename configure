@@ -18,8 +18,8 @@ usage="\
 Usage: $0 [OPTION]... [VAR=VALUE]...
 
   Build Options:
-    --generator=GENERATOR       CMake generator to use (see cmake --help)
-    --build-type=DIR            CMake build type: [RelWithDebInfo]
+    --generator=GENERATOR       set CMake generator (see cmake --help)
+    --build-type=TYPE           set CMake build type [RelWithDebInfo]:
                                   - Debug: debugging flags enabled
                                   - MinSizeRel: minimal output size
                                   - Release: optimizations on, debugging off
@@ -29,40 +29,46 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --lib-dir=DIR               library directory [build/lib]
     --with-clang=FILE           path to clang++ executable
     --with-gcc=FILE             path to g++ executable
-    --dual-build                build both with gcc and clang
-    --no-examples               build libcppa without examples
-    --no-qt-examples            build libcppa without Qt examples
-    --no-protobuf-examples      build libcppa without protobuf examples
-    --no-unit-tests             build libcppa without unit tests
-    --build-static              build libcppa as static and shared library
-    --build-static-only         build libcppa as static library only
-    --with-opencl               build libcppa with OpenCL support
-    --without-memory-management build libcppa without memory management
-    --standalone-build          build libcppa without Boost or other dependencies
+    --dual-build                build using both gcc and clang
+    --build-static              build as static and shared library
+    --build-static-only         build as static library only
     --more-clang-warnings       enables most of Clang's warning flags
 
   Installation Directories:
     --prefix=PREFIX             installation directory [/usr/local]
 
-  Optional Features:
-    --enable-debug              compile in debugging mode
-                                (always sets --build-type=Debug)
-    --enable-perftools          use Google perftools
-    --enable-address-sanitizer  use Clang's address sanitizer
-    --with-cppa-log-level=LVL   sets the debugging output, possible values:
+  Add Optional Features:
+    --enable-opencl             build with OpenCL support
+    --enable-context-switching  build with context-switching (requires Boost)
+    --enable-perftools          build with Google perftools
+
+  Remove Standard Features (even if all dependencies are available):
+    --no-memory-management      build without memory management
+    --no-examples               build without examples
+    --no-qt-examples            build without Qt examples
+    --no-protobuf-examples      build without Google Protobuf examples
+    --no-unit-tests             build without unit tests
+
+  Debugging:
+    --enable-debug              build with requirement checks at runtime
+                                (always sets --build-type=Debug implicitly)
+    --with-cppa-log-level=LVL   build with debugging output, possible values:
                                   - ERROR
                                   - WARNING
                                   - INFO
                                   - DEBUG
                                   - TRACE
                                 (implicitly sets --enable-debug)
-
-  Platform-Dependent Adjustments:
-    --disable-context-switching compile libcppa without context-switching actors
-                                even if Boost.Context is available
+    --enable-address-sanitizer  build with Clang's address sanitizer
 
   Required Packages in Non-Standard Locations:
     --with-boost=PATH           path to Boost install root
+
+  Deprecated Options:
+    --without-memory-management replaced by --no-memory-management
+    --with-opencl               replaced by --enable-opencl
+    --standalone-build          build without Boost even if available (default)
+    --disable-context-switching build without context-switching (default)
 
   Influential Environment Variables (only on first invocation
   per build directory):
@@ -161,7 +167,7 @@ builddir="$sourcedir/build"
 CMakeCacheEntries=""
 append_cache_entry CMAKE_INSTALL_PREFIX        PATH   /usr/local
 append_cache_entry ENABLE_DEBUG                BOOL   false
-append_cache_entry DISABLE_CONTEXT_SWITCHING   BOOL   false
+append_cache_entry ENABLE_CONTEXT_SWITCHING    BOOL   false
 
 # Parse arguments.
 while [ $# -ne 0 ]; do
@@ -187,14 +193,22 @@ while [ $# -ne 0 ]; do
         --enable-address-sanitizer)
             append_cache_entry ENABLE_ADDRESS_SANITIZER BOOL true
             ;;
-        --with-opencl)
+        --enable-opencl)
             append_cache_entry ENABLE_OPENCL BOOL true
             ;;
+        --with-opencl)
+            echo "*** WARNING: --with-opencl is deprecated"
+            append_cache_entry ENABLE_OPENCL BOOL true
+            ;;
+        --no-memory-management)
+            append_cache_entry DISABLE_MEM_MANAGEMENT BOOL true
+            ;;
         --without-memory-management)
+            echo "*** WARNING: --without-memory-management is deprecated"
             append_cache_entry DISABLE_MEM_MANAGEMENT BOOL true
             ;;
         --standalone-build)
-            append_cache_entry STANDALONE_BUILD BOOL true
+            echo "*** WARNING: --standalone-build is deprecated"
             ;;
         --more-clang-warnings)
             append_cache_entry MORE_CLANG_WARNINGS BOOL true
@@ -223,8 +237,11 @@ while [ $# -ne 0 ]; do
                     ;;
             esac
             ;;
+        --enable-context-switching)
+            append_cache_entry ENABLE_CONTEXT_SWITCHING BOOL true
+            ;;
         --disable-context-switching)
-            append_cache_entry DISABLE_CONTEXT_SWITCHING BOOL true
+            echo "*** WARNING: --disable-context-switching is deprecated"
             ;;
         --with-boost=*)
             append_cache_entry BOOST_ROOT PATH $optarg

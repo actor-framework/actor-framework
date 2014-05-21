@@ -33,11 +33,8 @@
 
 // Config pararameters defined by the build system (usually CMake):
 //
-// CPPA_STANDALONE_BUILD:
-//     - builds libcppa without Boost
-//
-// CPPA_DISABLE_CONTEXT_SWITCHING:
-//     - disables context switching even if Boost is available
+// CPPA_ENABLE_CONTEXT_SWITCHING:
+//     - enables context switching (requires Boost)
 //
 // CPPA_DEBUG_MODE:
 //     - check requirements at runtime

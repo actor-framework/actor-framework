@@ -40,18 +40,9 @@ namespace {
 typedef void* vptr;
 typedef void (*cst_fun)(vptr);
 
-// Boost's coroutine minimal stack size is pretty small
-// and easily causes stack overflows when using libcppa
-// in debug mode or with logging
-#if defined(CPPA_DEBUG_MODE) || defined(CPPA_LOG_LEVEL)
-constexpr size_t stack_multiplier = 4;
-#else
-constexpr size_t stack_multiplier = 2;
-#endif
-
 } // namespace <anonmyous>
 
-#if defined(CPPA_DISABLE_CONTEXT_SWITCHING) || defined(CPPA_STANDALONE_BUILD)
+#ifndef CPPA_ENABLE_CONTEXT_SWITCHING
 
 namespace cppa {
 namespace detail {
@@ -63,8 +54,8 @@ cs_thread::cs_thread(cst_fun, vptr) : m_impl(nullptr) { }
 cs_thread::~cs_thread() { }
 
 void cs_thread::swap(cs_thread&, cs_thread&) {
-    throw std::logic_error("libcppa was compiled using "
-                           "CPPA_DISABLE_CONTEXT_SWITCHING");
+    throw std::logic_error("to enable context-switching, recompile libcppa "
+                           "using CPPA_ENABLE_CONTEXT_SWITCHING");
 }
 
 const bool cs_thread::is_disabled_feature = true;
@@ -72,8 +63,7 @@ const bool cs_thread::is_disabled_feature = true;
 } // namespace util
 } // namespace cppa
 
-
-#else // CPPA_DISABLE_CONTEXT_SWITCHING  || CPPA_STANDALONE_BUILD
+#else // ifndef CPPA_ENABLE_CONTEXT_SWITCHING
 
 // optional valgrind include
 #ifdef CPPA_ANNOTATE_VALGRIND
@@ -89,6 +79,15 @@ CPPA_POP_WARNINGS
 
 namespace cppa {
 namespace detail {
+
+// Boost's coroutine minimal stack size is pretty small
+// and easily causes stack overflows, especially when using
+// libcppa's debug mode or logging
+#if defined(CPPA_DEBUG_MODE) || defined(CPPA_LOG_LEVEL)
+constexpr size_t stack_multiplier = 4;
+#else
+constexpr size_t stack_multiplier = 2;
+#endif
 
 void cst_trampoline(intptr_t iptr);
 
@@ -266,5 +265,4 @@ const bool cs_thread::is_disabled_feature = false;
 } // namespace util
 } // namespace cppa
 
-
-#endif // CPPA_DISABLE_CONTEXT_SWITCHING
+#endif // ifndef CPPA_ENABLE_CONTEXT_SWITCHING

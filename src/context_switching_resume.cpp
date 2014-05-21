@@ -29,7 +29,7 @@
 
 
 #include "cppa/policy/context_switching_resume.hpp"
-#ifndef CPPA_DISABLE_CONTEXT_SWITCHING
+#ifdef CPPA_ENABLE_CONTEXT_SWITCHING
 
 #include <iostream>
 
@@ -67,7 +67,7 @@ void context_switching_resume::trampoline(void* this_ptr) {
 } // namespace policy
 } // namespace cppa
 
-#else // ifdef CPPA_DISABLE_CONTEXT_SWITCHING
+#else // ifdef CPPA_ENABLE_CONTEXT_SWITCHING
 
 namespace cppa {
 namespace policy {
@@ -79,4 +79,4 @@ void context_switching_resume::trampoline(void*) {
 } // namespace policy
 } // namespace cppa
 
-#endif // ifdef CPPA_DISABLE_CONTEXT_SWITCHING
+#endif // ifdef CPPA_ENABLE_CONTEXT_SWITCHING
