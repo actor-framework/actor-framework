@@ -929,6 +929,14 @@ int main() {
     CPPA_TEST(test_spawn);
     test_spawn();
     CPPA_CHECKPOINT();
+    // test setting exit reasons for scoped actors
+    { // lifetime scope of self
+        scoped_actor self;
+        self->spawn<linked>([]() -> behavior { return others() >> [] {}; });
+        self->planned_exit_reason(exit_reason::user_defined);
+    }
+    await_all_actors_done();
+    CPPA_CHECKPOINT();
     shutdown();
     CPPA_CHECKPOINT();
     return CPPA_TEST_RESULT();

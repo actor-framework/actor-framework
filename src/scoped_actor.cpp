@@ -72,6 +72,8 @@ scoped_actor::scoped_actor(bool hide_actor) {
 }
 
 scoped_actor::~scoped_actor() {
+    auto r = m_self->planned_exit_reason();
+    m_self->cleanup(r == exit_reason::not_exited ? exit_reason::normal : r);
     if (!m_hidden) {
         get_actor_registry()->dec_running();
         CPPA_SET_AID(m_prev);
