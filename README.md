@@ -1,8 +1,8 @@
 libcppa
 =======
 
-libcppa is an LGPL C++11 actor model implementation featuring lightweight & fast
-actor implementations, pattern matching for messages,
+libcppa is an open source C++11 actor model implementation featuring
+lightweight & fast actor implementations, pattern matching for messages,
 network transparent messaging, and more.
 
 
