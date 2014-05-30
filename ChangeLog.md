@@ -1,3 +1,12 @@
+Version 0.9.3
+-------------
+
+__2014_05_30__
+
+- Switched to the Boost Software License
+- Disabled context-switching per default
+- Allowed scoped actors to use `planned_exit_reason`
+
 Version 0.9.2
 -------------
 
