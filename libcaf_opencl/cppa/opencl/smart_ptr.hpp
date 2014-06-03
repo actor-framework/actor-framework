@@ -9,7 +9,7 @@
  *                                          \ \_\   \ \_\                     *
  *                                           \/_/    \/_/                     *
  *                                                                            *
- * Copyright (C) 2011-2013                                                    *
+ * Copyright (C) 2011-2014                                                    *
  * Dominik Charousset <dominik.charousset@haw-hamburg.de>                     *
  * Raphael Hiesgen <raphael.hiesgen@haw-hamburg.de>                           *
  *                                                                            *
@@ -29,14 +29,15 @@
 \******************************************************************************/
 
 
-#ifndef SMART_PTR_HPP
-#define SMART_PTR_HPP
+#ifndef CPPA_OPENCL_SMART_PTR_HPP
+#define CPPA_OPENCL_SMART_PTR_HPP
 
 #include <memory>
 #include <algorithm>
 #include <type_traits>
 
-namespace cppa { namespace opencl {
+namespace cppa {
+namespace opencl {
 
 template<typename T, cl_int (*ref)(T), cl_int (*deref)(T)>
 class smart_ptr {
@@ -119,6 +120,7 @@ typedef smart_ptr<cl_device_id, clRetainDeviceDummy, clReleaseDeviceDummy>
 typedef smart_ptr<cl_command_queue, clRetainCommandQueue, clReleaseCommandQueue>
         command_queue_ptr;
 
-} } // namespace cppa::opencl
+} // namespace opencl
+} // namespace cppa
 
-#endif // SMART_PTR_HPP
+#endif // CPPA_OPENCL_SMART_PTR_HPP

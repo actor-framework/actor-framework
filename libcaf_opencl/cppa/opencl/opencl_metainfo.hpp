@@ -9,7 +9,7 @@
  *                                          \ \_\   \ \_\                     *
  *                                           \/_/    \/_/                     *
  *                                                                            *
- * Copyright (C) 2011-2013                                                    *
+ * Copyright (C) 2011-2014                                                    *
  * Dominik Charousset <dominik.charousset@haw-hamburg.de>                     *
  * Raphael Hiesgen <raphael.hiesgen@haw-hamburg.de>                           *
  *                                                                            *
@@ -29,8 +29,8 @@
 \******************************************************************************/
 
 
-#ifndef OPENCL_METAINFO_HPP
-#define OPENCL_METAINFO_HPP
+#ifndef CPPA_OPENCL_METAINFO_HPP
+#define CPPA_OPENCL_METAINFO_HPP
 
 #include <atomic>
 #include <vector>
@@ -48,7 +48,8 @@
 #include "cppa/detail/singleton_mixin.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 
-namespace cppa { namespace opencl {
+namespace cppa {
+namespace opencl {
 
 class opencl_metainfo {
 
@@ -77,6 +78,7 @@ class opencl_metainfo {
 
 opencl_metainfo* get_opencl_metainfo();
 
-} } // namespace cppa::opencl
+} // namespace opencl
+} // namespace cppa
 
-#endif // OPENCL_METAINFO_HPP
+#endif // CPPA_OPENCL_METAINFO_HPP

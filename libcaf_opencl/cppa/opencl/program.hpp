@@ -9,7 +9,7 @@
  *                                          \ \_\   \ \_\                     *
  *                                           \/_/    \/_/                     *
  *                                                                            *
- * Copyright (C) 2011-2013                                                    *
+ * Copyright (C) 2011-2014                                                    *
  * Dominik Charousset <dominik.charousset@haw-hamburg.de>                     *
  * Raphael Hiesgen <raphael.hiesgen@haw-hamburg.de>                           *
  *                                                                            *
@@ -37,7 +37,8 @@
 #include "cppa/opencl/global.hpp"
 #include "cppa/opencl/smart_ptr.hpp"
 
-namespace cppa { namespace opencl {
+namespace cppa {
+namespace opencl {
 
 template<typename Signature>
 class actor_facade;
@@ -69,6 +70,7 @@ class program {
 
 };
 
-} } // namespace cppa::opencl
+} // namespace opencl
+} // namespace cppa
 
 #endif // CPPA_OPENCL_PROGRAM_HPP

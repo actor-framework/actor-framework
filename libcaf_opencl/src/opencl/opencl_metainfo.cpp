@@ -9,7 +9,7 @@
  *                                          \ \_\   \ \_\                     *
  *                                           \/_/    \/_/                     *
  *                                                                            *
- * Copyright (C) 2011-2013                                                    *
+ * Copyright (C) 2011-2014                                                    *
  * Dominik Charousset <dominik.charousset@haw-hamburg.de>                     *
  * Raphael Hiesgen <raphael.hiesgen@haw-hamburg.de>                           *
  *                                                                            *
@@ -32,7 +32,8 @@
 
 using namespace std;
 
-namespace cppa { namespace opencl {
+namespace cppa {
+namespace opencl {
 
 const std::vector<device_info> opencl_metainfo::get_devices() const {
     return m_devices;
@@ -214,5 +215,7 @@ opencl_metainfo* get_opencl_metainfo() {
     return detail::singleton_manager::get_opencl_metainfo();
 }
 
-} } // namespace cppa::opencl
+} // namespace opencl
+} // namespace cppa
+
 

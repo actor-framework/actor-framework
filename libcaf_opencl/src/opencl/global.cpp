@@ -9,7 +9,7 @@
  *                                          \ \_\   \ \_\                     *
  *                                           \/_/    \/_/                     *
  *                                                                            *
- * Copyright (C) 2011-2013                                                    *
+ * Copyright (C) 2011-2014                                                    *
  * Dominik Charousset <dominik.charousset@haw-hamburg.de>                     *
  * Raphael Hiesgen <raphael.hiesgen@haw-hamburg.de>                           *
  *                                                                            *
@@ -30,7 +30,8 @@
 
 #include "cppa/opencl/global.hpp"
 
-namespace cppa { namespace opencl {
+namespace cppa {
+namespace opencl {
 
 std::string get_opencl_error(cl_int err) {
     switch (err) {
@@ -135,4 +136,6 @@ std::string get_opencl_error(cl_int err) {
 cl_int clReleaseDeviceDummy (cl_device_id) { return 0; }
 cl_int clRetainDeviceDummy  (cl_device_id) { return 0; }
 
-} } // namespace cppa::opencl
+} // namespace opencl
+} // namespace cppa
+
