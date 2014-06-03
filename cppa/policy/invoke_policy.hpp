@@ -192,7 +192,7 @@ class invoke_policy {
                                    message_id& mid,
                                    Fun& fun,
                                    MaybeResponseHandle hdl = MaybeResponseHandle{}) {
-#       if CPPA_LOG_LEVEL >= CPPA_POLICY_DEBUG
+#       if CPPA_LOG_LEVEL >= CPPA_DEBUG
         auto msg_str = to_string(msg);
 #       endif
         auto res = fun(msg); // might change mid
@@ -323,9 +323,9 @@ class invoke_policy {
             }
             case msg_type::sync_response: {
                 CPPA_LOG_DEBUG("handle as synchronous response: "
-                               << CPPA_POLICY_TARG(node->msg, to_string) << ", "
-                               << CPPA_POLICY_MARG(node->mid, integer_value) << ", "
-                               << CPPA_POLICY_MARG(awaited_response, integer_value));
+                               << CPPA_TARG(node->msg, to_string) << ", "
+                               << CPPA_MARG(node->mid, integer_value) << ", "
+                               << CPPA_MARG(awaited_response, integer_value));
                 if (awaited_response.valid() && node->mid == awaited_response) {
                     auto previous_node = dptr()->hm_begin(self, node);
                     auto res = invoke_fun(self,

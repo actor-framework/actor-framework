@@ -68,7 +68,7 @@ class no_scheduling {
     void launch(Actor* self, execution_unit*) {
         CPPA_REQUIRE(self != nullptr);
         CPPA_PUSH_AID(self->id());
-        CPPA_LOG_TRACE(CPPA_POLICY_ARG(self));
+        CPPA_LOG_TRACE(CPPA_ARG(self));
         intrusive_ptr<Actor> mself{self};
         self->attach_to_scheduler();
         std::thread([=] {
