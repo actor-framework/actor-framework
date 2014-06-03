@@ -42,13 +42,6 @@ static constexpr std::uint32_t normal = 0x00001;
 static constexpr std::uint32_t unhandled_exception = 0x00002;
 
 /**
- * @brief Indicates that an event-based actor
- *        tried to use {@link receive()} or a strongly typed actor tried
- *        to call {@link become()}.
- */
-static constexpr std::uint32_t unallowed_function_call = 0x00003;
-
-/**
  * @brief Indicates that the actor received an unexpected
  *        synchronous reply message.
  */

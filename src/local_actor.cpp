@@ -167,18 +167,6 @@ void local_actor::cleanup(std::uint32_t reason) {
 void local_actor::quit(std::uint32_t reason) {
     CPPA_LOG_TRACE("reason = " << reason
                    << ", class " << detail::demangle(typeid(*this)));
-    if (reason == exit_reason::unallowed_function_call) {
-        // this is the only reason that causes an exception
-        cleanup(reason);
-        CPPA_LOG_WARNING("actor tried to use a blocking function");
-        // when using receive(), the non-blocking nature of event-based
-        // actors breaks any assumption the user has about his code,
-        // in particular, receive_loop() is a deadlock when not throwing
-        // an exception here
-        aout(this) << "*** warning: event-based actor killed because it tried "
-                      "to use receive()\n";
-        throw actor_exited(reason);
-    }
     planned_exit_reason(reason);
 }
 
