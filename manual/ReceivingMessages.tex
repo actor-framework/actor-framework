@@ -29,7 +29,7 @@ This base class simply returns \lstinline^init_state^ (defined in the subclass) 
 struct printer : sb_actor<printer> {
   behavior init_state {
     others() >> [] {
-      cout << to_string(self->last_received()) << endl;
+      cout << to_string(last_received()) << endl;
     }
   };
 };

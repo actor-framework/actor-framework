@@ -45,7 +45,7 @@ It is worth mentioning that user-implemented groups can be build on top of IP mu
 \label{Sec::Group::Spawn}
 
 The function \lstinline^spawn_in_group^ can be used to create actors as members of a group.
-The function causes the newly created actors to call \lstinline^self->join(...)^ immediately and before \lstinline^spawn_in_group^ returns. 
+The function causes the newly created actors to call \lstinline^join(...)^ immediately and before \lstinline^spawn_in_group^ returns. 
 The usage of \lstinline^spawn_in_group^ is equal to \lstinline^spawn^, except for an additional group argument.
 The group handle is always the first argument, as shown in the examples below.
 
