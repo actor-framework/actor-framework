@@ -185,8 +185,8 @@ class middleman_impl : public middleman {
             return true;
         }
         else {
-            CPPA_LOG_WARNING("peer " << to_string(node) << " already defined, "
-                             "multiple calls to remote_actor()?");
+            CPPA_LOG_INFO("peer " << to_string(node) << " already defined, "
+                          "multiple calls to remote_actor()?");
             return false;
         }
     }

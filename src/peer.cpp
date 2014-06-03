@@ -106,15 +106,13 @@ continue_reading_result peer::continue_reading() {
                        node_id::host_id_size);
                 m_node.reset(new node_id(process_id, host_id));
                 if (*parent()->node() == *m_node) {
-                    std::cerr << "*** middleman warning: "
-                                 "incoming connection from self"
-                              << std::endl;
+                    CPPA_LOG_INFO("incoming connection from self");
                     return continue_reading_result::failure;
                 }
                 CPPA_LOG_DEBUG("read process info: " << to_string(*m_node));
                 if (!parent()->register_peer(*m_node, this)) {
-                    CPPA_LOG_ERROR("multiple incoming connections "
-                                   "from the same node");
+                    CPPA_LOG_INFO("multiple incoming connections "
+                                  "from the same node");
                     return continue_reading_result::failure;
                 }
                 // initialization done
@@ -365,9 +363,6 @@ void peer::enqueue_impl(msg_hdr_cref hdr, const any_tuple& msg) {
     try { bs << hdr << msg; }
     catch (exception& e) {
         CPPA_LOG_ERROR(to_verbose_string(e));
-        cerr << "*** exception in peer::enqueue; "
-             << to_verbose_string(e)
-             << endl;
         return;
     }
     CPPA_LOG_DEBUG("serialized: " << to_string(hdr) << " " << to_string(msg));

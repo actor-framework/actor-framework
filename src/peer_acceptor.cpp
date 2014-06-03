@@ -47,7 +47,7 @@ continue_reading_result peer_acceptor::continue_reading() {
         optional<stream_ptr_pair> opt{none};
         try { opt = m_ptr->try_accept_connection(); }
         catch (exception& e) {
-            CPPA_LOG_ERROR(to_verbose_string(e));
+            CPPA_LOG_WARNING("accept failed: " << to_verbose_string(e));
             static_cast<void>(e); // keep compiler happy
             return continue_reading_result::failure;
         }
@@ -73,10 +73,10 @@ continue_reading_result peer_acceptor::continue_reading() {
                 m_parent->new_peer(pair.first, pair.second);
             }
             catch (exception& e) {
-                CPPA_LOG_ERROR(to_verbose_string(e));
-                cerr << "*** exception while sending actor and process id; "
-                     << to_verbose_string(e)
-                     << endl;
+                CPPA_LOG_WARNING("exception while sending actor "
+                                 "and process id: " << to_verbose_string(e));
+                static_cast<void>(e);
+                return continue_reading_result::failure;
             }
         }
         else return continue_reading_result::continue_later;

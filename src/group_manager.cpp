@@ -225,7 +225,7 @@ class local_group_proxy : public local_group {
             }
             return {who, this};
         }
-        CPPA_LOG_WARNING("channel " << to_string(who) << " already joined");
+        CPPA_LOG_INFO("channel " << to_string(who) << " already joined");
         return {};
     }
 
@@ -499,12 +499,9 @@ class remote_group_module : public abstract_group::module {
                                     (*peers)[authority].second.push_back(make_pair(key, rg));
                                 }
                                 else {
-                                    cerr << "*** WARNING: received a non-local "
-                                            "group form nameserver for key "
-                                         << key << " in file "
-                                         << __FILE__
-                                         << ", line " << __LINE__
-                                         << endl;
+                                    CPPA_LOG_WARNING("received a non-local "
+                                                     "group form nameserver for "
+                                                     "key " << key);
                                     sm->put(key, nullptr);
                                 }
                             },

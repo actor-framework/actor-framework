@@ -126,11 +126,8 @@ class timer_actor final : public detail::proper_actor<blocking_actor,
                 done = true;
             },
             others() >> [&]() {
-#               ifdef CPPA_DEBUG_MODE
-                    std::cerr << "coordinator::timer_loop: UNKNOWN MESSAGE: "
-                              << to_string(msg_ptr->msg)
-                              << std::endl;
-#               endif
+                CPPA_LOG_WARNING("coordinator::timer_loop: UNKNOWN MESSAGE: "
+                                 << to_string(msg_ptr->msg));
             }
         );
         // loop
@@ -206,10 +203,9 @@ void printer_loop(blocking_actor* self) {
         on(atom("DIE")) >> [&] {
             running = false;
         },
-        others() >> [self] {
-            std::cerr << "*** unexpected: "
-                      << to_string(self->last_dequeued())
-                      << std::endl;
+        others() >> [&] {
+            CPPA_LOGF_WARNING("unexpected message: "
+                              << to_string(self->last_dequeued()));
         }
     );
 }
