@@ -39,11 +39,8 @@ const std::vector<device_info> opencl_metainfo::get_devices() const {
     return m_devices;
 }
 
-void opencl_metainfo::initialize()
-{
+void opencl_metainfo::initialize() {
     cl_int err{0};
-
-
     // get number of available platforms
     cl_uint number_of_platforms;
     err = clGetPlatformIDs(0, nullptr, &number_of_platforms);
@@ -54,8 +51,6 @@ void opencl_metainfo::initialize()
         CPPA_LOGMF(CPPA_ERROR, oss.str());
         throw logic_error(oss.str());
     }
-
-
     // get platform ids
     vector<cl_platform_id> ids(number_of_platforms);
     err = clGetPlatformIDs(ids.size(), ids.data(), nullptr);
@@ -66,8 +61,6 @@ void opencl_metainfo::initialize()
         CPPA_LOGMF(CPPA_ERROR, oss.str());
         throw logic_error(oss.str());
     }
-
-
     // find gpu devices on our platform
     int pid{0};
     cl_uint num_devices{0};
@@ -93,23 +86,11 @@ void opencl_metainfo::initialize()
         CPPA_LOGMF(CPPA_ERROR, oss.str());
         throw runtime_error(oss.str());
     }
-
-    auto pfn_notify = [](const char *errinfo,
-                         const void *,
-                         size_t,
-                         void *) {
-        CPPA_LOGC_ERROR("cppa::opencl::opencl_metainfo",
-                        "initialize",
-                        "\n##### Error message via pfn_notify #####\n" +
-                        string(errinfo) +
-                        "\n########################################");
-    };
-
     // create a context
     m_context.adopt(clCreateContext(0,
                                     devices.size(),
                                     devices.data(),
-                                    pfn_notify,
+                                    nullptr,
                                     nullptr,
                                     &err));
     if (err != CL_SUCCESS) {
@@ -118,8 +99,7 @@ void opencl_metainfo::initialize()
         CPPA_LOGMF(CPPA_ERROR, oss.str());
         throw runtime_error(oss.str());
     }
-
-
+    // create command queues
     for (auto& d : devices) {
         CPPA_LOG_TRACE("Creating command queue for device(s).");
         device_ptr device;
@@ -193,7 +173,6 @@ void opencl_metainfo::initialize()
             m_devices.push_back(move(dev_info));
         }
     }
-
     if (m_devices.empty()) {
         ostringstream oss;
         oss << "Could not create a command queue for "
@@ -217,5 +196,4 @@ opencl_metainfo* get_opencl_metainfo() {
 
 } // namespace opencl
 } // namespace cppa
-
 

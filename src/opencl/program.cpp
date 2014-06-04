@@ -33,6 +33,7 @@
 #include <cstring>
 #include <iostream>
 
+#include "cppa/config.hpp"
 #include "cppa/singletons.hpp"
 #include "cppa/opencl/program.hpp"
 #include "cppa/opencl/opencl_metainfo.hpp"
@@ -42,7 +43,6 @@ using namespace std;
 namespace cppa {
 namespace opencl {
 
-
 program::program(context_ptr context, command_queue_ptr queue, program_ptr program)
 : m_context(move(context)), m_program(move(program)), m_queue(move(queue)) { }
 
@@ -50,8 +50,6 @@ program program::create(const char* kernel_source, const char* options, uint32_t
     auto metainfo = get_opencl_metainfo();
     auto devices  = metainfo->get_devices();
     auto context  = metainfo->m_context;
-
-
     if (devices.size() <= device_id) {
         ostringstream oss;
         oss << "Device id " << device_id
@@ -60,9 +58,7 @@ program program::create(const char* kernel_source, const char* options, uint32_t
         CPPA_LOGM_ERROR(detail::demangle<program>().c_str(), oss.str());
         throw runtime_error(oss.str());
     }
-
     cl_int err{0};
-
     // create program object from kernel source
     size_t kernel_source_length = strlen(kernel_source);
     program_ptr pptr;
@@ -75,15 +71,37 @@ program program::create(const char* kernel_source, const char* options, uint32_t
         throw runtime_error("clCreateProgramWithSource: "
                                  + get_opencl_error(err));
     }
-
     // build programm from program object
     auto dev_tmp = devices[device_id].m_device.get();
     err = clBuildProgram(pptr.get(), 1, &dev_tmp, options, nullptr, nullptr);
     if (err != CL_SUCCESS) {
         ostringstream oss;
         oss << "clBuildProgram: " << get_opencl_error(err);
-        // the build log will be printed by the
-        // pfn_notify (see opencl_metainfo.cpp)
+        // get the build log
+        if (err == CL_BUILD_PROGRAM_FAILURE) {
+            size_t buildlog_buffer_size = 0;
+            // get the log length
+            clGetProgramBuildInfo(pptr.get(),
+                                  dev_tmp,
+                                  CL_PROGRAM_BUILD_LOG,
+                                  sizeof(buildlog_buffer_size),
+                                  nullptr,
+                                  &buildlog_buffer_size);
+            vector<char> buffer(buildlog_buffer_size);
+            // fill the buffer with buildlog informations
+            clGetProgramBuildInfo(pptr.get(),
+                                  dev_tmp,
+                                  CL_PROGRAM_BUILD_LOG,
+                                  sizeof(buffer[0]) * buildlog_buffer_size,
+                                  buffer.data(),
+                                  nullptr);
+            // make sure string is null terminated 
+            buffer.push_back('\0');
+            cerr << "OpenCL build error log: "
+                 << endl
+                 << buffer.data()
+                 << endl;
+        }
         throw runtime_error(oss.str());
     }
     return {context, devices[device_id].m_cmd_queue, pptr};
