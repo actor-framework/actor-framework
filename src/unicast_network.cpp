@@ -182,7 +182,7 @@ abstract_actor_ptr remote_actor_impl(stream_ptr_pair io, string_set expected) {
     auto pinfptr = make_counted<node_id>(peer_pid, peer_node_id);
     if (*pinf == *pinfptr) {
         // this is a local actor, not a remote actor
-        CPPA_LOGF_WARNING("remote_actor() called to access a local actor");
+        CPPA_LOGF_INFO("remote_actor() called to access a local actor");
         auto ptr = get_actor_registry()->get(remote_aid);
         return ptr;
     }
