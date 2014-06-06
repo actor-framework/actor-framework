@@ -28,6 +28,7 @@
 #include <sys/epoll.h>
 
 #include "cppa/logging.hpp"
+#include "cppa/exception.hpp"
 #include "cppa/io/middleman_event_handler.hpp"
 
 namespace cppa {
