@@ -99,4 +99,6 @@ bind_failure::bind_failure(int err_code) : network_error(be_what(err_code)) {
 
 bind_failure::~bind_failure() { }
 
+stream_at_eof::~stream_at_eof() { }
+
 } // namespace cppa

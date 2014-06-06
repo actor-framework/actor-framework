@@ -184,7 +184,11 @@ class broker::scribe : public extend<broker::servant>::with<buffered_writing> {
             }
             auto before = buf.size();
             try { buf.append_from(m_in.get()); }
-            catch (std::ios_base::failure&) {
+            catch (stream_at_eof&) {
+                disconnect();
+                return continue_reading_result::closed;
+            }
+            catch (network_error&) {
                 disconnect();
                 return continue_reading_result::failure;
             }
@@ -246,23 +250,21 @@ class broker::doorman : public broker::servant {
 
     continue_reading_result continue_reading() override {
         CPPA_LOG_TRACE("");
-        for (;;) {
-            optional<stream_ptr_pair> opt{none};
-            try { opt = m_ptr->try_accept_connection(); }
-            catch (std::exception& e) {
-                CPPA_LOG_ERROR(to_verbose_string(e));
-                static_cast<void>(e); // keep compiler happy
-                return continue_reading_result::failure;
-            }
-            if (opt) {
-                using namespace std;
-                auto& p = *opt;
-                get_ref<0>(m_accept_msg).handle = m_broker->add_connection(move(p.first),
-                                                                           move(p.second));
-                m_broker->invoke_message({invalid_actor_addr, nullptr}, m_accept_msg);
-            }
-            else return continue_reading_result::continue_later;
-       }
+        optional<stream_ptr_pair> opt{none};
+        try { opt = m_ptr->try_accept_connection(); }
+        catch (std::exception& e) {
+            CPPA_LOG_ERROR(to_verbose_string(e));
+            static_cast<void>(e); // keep compiler happy
+            return continue_reading_result::failure;
+        }
+        if (opt) {
+            using namespace std;
+            auto& p = *opt;
+            get_ref<0>(m_accept_msg).handle = m_broker->add_connection(move(p.first),
+                                                                       move(p.second));
+            m_broker->invoke_message({invalid_actor_addr, nullptr}, m_accept_msg);
+        }
+        return continue_reading_result::continue_later;
     }
 
  protected:
@@ -338,15 +340,14 @@ void broker::invoke_message(msg_hdr_cref hdr, any_tuple msg) {
     m_dummy_node.sender = actor_addr{};
     m_dummy_node.msg.reset();
     // cleanup if needed
-    if (planned_exit_reason() != exit_reason::not_exited) {
-        cleanup(planned_exit_reason());
-        // release implicit reference count held by MM
-        deref();
-    }
-    else if (bhvr_stack().empty()) {
+    auto per = planned_exit_reason();
+    if (bhvr_stack().empty() && per != exit_reason::not_exited) {
         CPPA_LOG_DEBUG("bhvr_stack().empty(), quit for normal exit reason");
-        quit(exit_reason::normal);
-        cleanup(planned_exit_reason());
+        per = exit_reason::normal;
+        quit(per);
+    }
+    if (per != exit_reason::not_exited) {
+        cleanup(per);
         // release implicit reference count held by MM
         deref();
     }
@@ -386,6 +387,14 @@ broker::broker() : m_initialized(false) {
 }
 
 void broker::cleanup(std::uint32_t reason) {
+    CPPA_LOG_TRACE(CPPA_ARG(reason));
+    auto mm = get_middleman();
+    for (auto& dm : m_accept) {
+        mm->stop_reader(dm.second.get());
+    }
+    for (auto& ds : m_io) {
+        mm->stop_reader(ds.second.get());
+    }
     super::cleanup(reason);
     get_actor_registry()->dec_running();
 }

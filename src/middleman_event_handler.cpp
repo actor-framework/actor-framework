@@ -130,17 +130,19 @@ void middleman_event_handler::update() {
     auto last = m_meta.end();
     // checks whether an element can be safely deleted,
     // i.e., was not put back into m_meta by some alteration
-    auto is_alive = [&](native_socket_type fd) -> bool {
+    auto not_in_meta = [&](native_socket_type fd) -> bool {
         auto iter = std::lower_bound(first, last, fd, mless);
-        return iter != last && iter->fd == fd;
+        return iter == last || iter->fd != fd;
     };
     // dispose everything that wasn't put back into m_meta again
     for (auto elem : m_dispose_list) {
+        CPPA_LOG_DEBUG("dispose " << elem);
         auto rd = elem->read_handle();
         auto wr = elem->write_handle();
-        if  ( (rd == wr && !is_alive(rd))
-           || (rd != wr && !is_alive(rd) && !is_alive(wr))) {
-           elem->dispose();
+        if  (      (rd == wr && not_in_meta(rd))
+                || (rd != wr && not_in_meta(rd) && not_in_meta(wr))) {
+            // dispose continuable
+            elem->dispose();
         }
     }
     m_dispose_list.clear();

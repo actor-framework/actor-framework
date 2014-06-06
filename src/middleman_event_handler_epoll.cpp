@@ -21,7 +21,6 @@
 
 #if defined(CPPA_LINUX) && !defined(CPPA_POLL_IMPL)
 
-#include <ios>
 #include <string>
 #include <vector>
 
@@ -51,7 +50,7 @@ class middleman_event_handler_impl : public middleman_event_handler {
     void init() {
         m_epollfd = epoll_create1(EPOLL_CLOEXEC);
         if (m_epollfd == -1) {
-            throw std::ios_base::failure(  std::string("epoll_create1: ")
+            throw network_error(  std::string("epoll_create1: ")
                                          + strerror(errno));
         }
         // handle at most 64 events at a time

@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#include <ios>
 #include <cstring>
 #include <errno.h>
 #include <iostream>
@@ -79,6 +78,7 @@ bool accept_impl(stream_ptr_pair& result,
     auto sfd = ::accept(fd, &addr, &addrlen);
     if (sfd == invalid_socket) {
         auto err = last_socket_error();
+        CPPA_LOGF_DEBUG("accept failed for reason " << err);
         if (nonblocking && would_block_or_temporarily_unavailable(err)) {
             // ok, try again
             return false;
@@ -128,7 +128,7 @@ std::unique_ptr<acceptor> tcp_acceptor::create(std::uint16_t port,
     if (bind(sockfd, (sockaddr*) &serv_addr, sizeof(serv_addr)) < 0) {
         throw bind_failure(errno);
     }
-    if (listen(sockfd, 10) != 0) {
+    if (listen(sockfd, SOMAXCONN) != 0) {
         throw network_error("listen() failed");
     }
     // ok, no exceptions so far

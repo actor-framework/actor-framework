@@ -431,12 +431,12 @@ void middleman_loop(middleman_impl* impl) {
                         case continue_writing_result::failure:
                             io->io_failed(event::write);
                             impl->stop_writer(io);
-                            CPPA_LOGF_DEBUG("writer removed because "
+                            CPPA_LOGF_DEBUG("stopped writer because "
                                             "of an error");
                             break;
                         case continue_writing_result::closed:
                             impl->stop_writer(io);
-                            CPPA_LOGF_DEBUG("writer removed because "
+                            CPPA_LOGF_DEBUG("stopped writer because "
                                             "connection has been closed");
                             break;
                         case continue_writing_result::done:
@@ -456,12 +456,12 @@ void middleman_loop(middleman_impl* impl) {
                         case continue_reading_result::failure:
                             io->io_failed(event::read);
                             impl->stop_reader(io);
-                            CPPA_LOGF_DEBUG("peer removed because a "
-                                            "read error has occured");
+                            CPPA_LOGF_DEBUG("stopped reader because "
+                                            "of an error");
                             break;
                         case continue_reading_result::closed:
                             impl->stop_reader(io);
-                            CPPA_LOGF_DEBUG("peer removed because "
+                            CPPA_LOGF_DEBUG("stopped reader because "
                                             "connection has been closed");
                             break;
                         case continue_reading_result::continue_later:

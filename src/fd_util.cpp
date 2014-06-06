@@ -17,7 +17,6 @@
 \******************************************************************************/
 
 
-#include <ios>
 #include <sstream>
 #include <cstring>
 
@@ -54,9 +53,9 @@ void throw_io_failure [[noreturn]] (const char* what, bool add_errno) {
         std::ostringstream oss;
         oss << what << ": " << last_socket_error_as_string()
             << " [errno: " << last_socket_error() << "]";
-        throw std::ios_base::failure(oss.str());
+        throw network_error(oss.str());
     }
-    throw std::ios_base::failure(what);
+    throw network_error(what);
 }
 
 void tcp_nodelay(native_socket_type fd, bool new_value) {
@@ -83,8 +82,8 @@ void handle_write_result(ssize_t res, bool is_nonblock) {
 }
 
 void handle_read_result(ssize_t res, bool is_nonblock) {
-    handle_io_result(res, is_nonblock, "cannot read from file descriptor");
-    if (res == 0) throw_io_failure("cannot read from closed file descriptor");
+    handle_io_result(res, is_nonblock, "cannot read from socket");
+    if (res == 0) throw stream_at_eof("cannot read from closed socket");
 }
 
 } // namespace fd_util

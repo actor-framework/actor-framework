@@ -18,9 +18,9 @@
 
 
 #include <atomic>
-#include <ios>      // std::ios_base::failure
 #include <cstring>
 #include <utility>
+#include <stdexcept> // invalid_argument
 
 #include "cppa/cppa.hpp"
 #include "cppa/util/buffer.hpp"
@@ -135,7 +135,7 @@ void buffer::write(size_t num_bytes, const void* data, buffer_write_policy wp) {
         acquire(num_bytes);
     }
     else if (num_bytes > remaining()) {
-        throw std::ios_base::failure("final buffer size exceeded");
+        throw network_error("final buffer size exceeded");
     }
     memcpy(wr_ptr(), data, num_bytes);
     inc_size(num_bytes);

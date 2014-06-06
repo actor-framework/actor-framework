@@ -46,14 +46,14 @@ class output_stream : public virtual ref_counted {
      * @brief Writes @p num_bytes bytes from @p buf to the data sink.
      * @note This member function blocks until @p num_bytes were successfully
      *       written.
-     * @throws std::ios_base::failure
+     * @throws network_error
      */
     virtual void write(const void* buf, size_t num_bytes) = 0;
 
     /**
      * @brief Tries to write up to @p num_bytes bytes from @p buf.
      * @returns The number of written bytes.
-     * @throws std::ios_base::failure
+     * @throws network_error
      */
     virtual size_t write_some(const void* buf, size_t num_bytes) = 0;
 

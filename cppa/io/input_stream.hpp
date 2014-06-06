@@ -45,14 +45,14 @@ class input_stream : public virtual ref_counted {
     /**
      * @brief Reads exactly @p num_bytes from the data source and blocks the
      *        caller if needed.
-     * @throws std::ios_base::failure
+     * @throws network_error
      */
     virtual void read(void* buf, size_t num_bytes) = 0;
 
     /**
      * @brief Tries to read up to @p num_bytes from the data source.
      * @returns The number of read bytes.
-     * @throws std::ios_base::failure
+     * @throws network_error
      */
     virtual size_t read_some(void* buf, size_t num_bytes) = 0;
 

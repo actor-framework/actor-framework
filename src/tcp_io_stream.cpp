@@ -17,7 +17,6 @@
 \******************************************************************************/
 
 
-#include <ios>
 #include <cstring>
 #include <errno.h>
 #include <iostream>
@@ -45,9 +44,12 @@ namespace io {
 
 using namespace ::cppa::detail::fd_util;
 
-tcp_io_stream::tcp_io_stream(native_socket_type fd) : m_fd(fd) { }
+tcp_io_stream::tcp_io_stream(native_socket_type fd) : m_fd(fd) {
+    CPPA_LOG_TRACE("new IO stream using socket " << fd);
+}
 
 tcp_io_stream::~tcp_io_stream() {
+    CPPA_LOG_TRACE("close socket " << m_fd);
     closesocket(m_fd);
 }
 

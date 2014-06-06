@@ -19,7 +19,6 @@
 
 #include "cppa/config.hpp"
 
-#include <ios> // ios_base::failure
 #include <list>
 #include <memory>
 #include <cstring>    // memset

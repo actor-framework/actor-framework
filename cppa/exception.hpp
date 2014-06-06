@@ -104,8 +104,6 @@ class network_error : public cppa_exception {
     ~network_error();
     network_error(std::string&& what_str);
     network_error(const std::string& what_str);
-    network_error(const network_error&) = default;
-    network_error& operator=(const network_error&) = default;
 
 };
 
@@ -132,6 +130,23 @@ class bind_failure : public network_error {
  private:
 
     int m_errno;
+
+};
+
+/**
+ * @brief Thrown to indicate that a client tried to read from
+ *        a stream after is has been shutdown by the remote side.
+ */
+class stream_at_eof : public network_error {
+
+    using super = network_error;
+
+ public:
+
+    ~stream_at_eof();
+
+    template<typename... Ts>
+    stream_at_eof(Ts&&... args) : super(std::forward<Ts>(args)...) { }
 
 };
 
