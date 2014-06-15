@@ -19,7 +19,7 @@ struct pseudo_worker {
 
     pseudo_worker() : m_count(0), m_blocked(true) { }
 
-    void run [[noreturn]] () {
+    void run () {
         for (;;) {
             if (m_blocked) {
                 yield(yield_state::blocked);
@@ -33,7 +33,7 @@ struct pseudo_worker {
 
 };
 
-void coroutine [[noreturn]] (void* worker) {
+void coroutine (void* worker) {
     reinterpret_cast<pseudo_worker*>(worker)->run();
 }
 

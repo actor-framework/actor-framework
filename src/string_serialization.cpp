@@ -213,7 +213,7 @@ class string_deserializer : public deserializer {
         while (*m_pos == ' ' || *m_pos == ',') ++m_pos;
     }
 
-    void throw_malformed [[noreturn]] (const string& error_msg) {
+    void throw_malformed (const string& error_msg) {
         throw logic_error("malformed string: " + error_msg);
     }
 
