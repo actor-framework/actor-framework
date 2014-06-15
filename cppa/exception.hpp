@@ -34,7 +34,7 @@ class cppa_exception : public std::exception {
 
  public:
 
-    ~cppa_exception();
+    ~cppa_exception() noexcept;
 
     cppa_exception() = delete;
     cppa_exception(const cppa_exception&) = default;
@@ -73,7 +73,7 @@ class actor_exited : public cppa_exception {
 
  public:
 
-    ~actor_exited();
+    ~actor_exited() noexcept;
 
     actor_exited(std::uint32_t exit_reason);
 
@@ -101,7 +101,7 @@ class network_error : public cppa_exception {
 
  public:
 
-    ~network_error();
+    ~network_error() noexcept;
     network_error(std::string&& what_str);
     network_error(const std::string& what_str);
 
@@ -115,7 +115,7 @@ class bind_failure : public network_error {
 
  public:
 
-    ~bind_failure();
+    ~bind_failure() noexcept;
 
     bind_failure(int bind_errno);
     bind_failure(const bind_failure&) = default;
@@ -143,7 +143,7 @@ class stream_at_eof : public network_error {
 
  public:
 
-    ~stream_at_eof();
+    ~stream_at_eof() noexcept;
 
     template<typename... Ts>
     stream_at_eof(Ts&&... args) : super(std::forward<Ts>(args)...) { }

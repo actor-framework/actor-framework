@@ -33,7 +33,7 @@ namespace fd_util {
 std::string last_socket_error_as_string();
 
 // throws network_error and adds errno failure if @p add_errno_failure
-void throw_io_failure [[noreturn]] (const char* what, bool add_errno = true);
+void throw_io_failure (const char* what, bool add_errno = true);
 
 // sets fd to nonblocking if <tt>set_nonblocking == true</tt>
 // or to blocking if <tt>set_nonblocking == false</tt>
