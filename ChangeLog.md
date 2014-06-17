@@ -1,3 +1,13 @@
+Version 0.9.4
+-------------
+
+__2014_06_17__
+
+- Fixed build on GCC 4.7 (patched by GitHub user edwardcapriolo, #134)
+- Made sure brokers stop their backends on exit
+- Reduced verbosity / adjusted warnings (#132)
+- Fixed OpenCL logging of compilation errors
+
 Version 0.9.3
 -------------
 
