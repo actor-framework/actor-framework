@@ -429,7 +429,8 @@ else ()
 endif ()
 
 # done (print summary)
-message("\n====================|  Build Summary  |===================="
+message(STATUS
+        "\n====================|  Build Summary  |===================="
         "\n"
         "\nLibcppa version:   ${LIBRARY_VERSION}"
         "\n"
