@@ -67,7 +67,7 @@ std::string be_what(int err_code) {
 
 namespace cppa {
 
-cppa_exception::~cppa_exception() { }
+cppa_exception::~cppa_exception() noexcept { }
 
 cppa_exception::cppa_exception(const std::string& what_str)
 : m_what(what_str) { }
@@ -79,14 +79,14 @@ const char* cppa_exception::what() const noexcept {
     return m_what.c_str();
 }
 
-actor_exited::~actor_exited() { }
+actor_exited::~actor_exited() noexcept { }
 
 actor_exited::actor_exited(std::uint32_t reason)
 : cppa_exception(ae_what(reason)) {
     m_reason = reason;
 }
 
-network_error::~network_error() { }
+network_error::~network_error() noexcept { }
 
 network_error::network_error(const std::string& str) : cppa_exception(str) { }
 
@@ -97,8 +97,8 @@ bind_failure::bind_failure(int err_code) : network_error(be_what(err_code)) {
     m_errno = err_code;
 }
 
-bind_failure::~bind_failure() { }
+bind_failure::~bind_failure() noexcept { }
 
-stream_at_eof::~stream_at_eof() { }
+stream_at_eof::~stream_at_eof() noexcept  { }
 
 } // namespace cppa

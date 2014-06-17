@@ -250,9 +250,9 @@ coordinator::shutdown_helper::~shutdown_helper() { }
 void coordinator::initialize() {
     // launch threads of utility actors
     auto ptr = m_timer.get();
-    m_timer_thread = std::thread{[ptr] {
+    m_timer_thread = std::thread([ptr](){
         ptr->act();
-    }};
+    });
     m_printer_thread = std::thread{printer_loop, m_printer.get()};
     // create & start workers
     auto hwc = static_cast<size_t>(std::thread::hardware_concurrency());
@@ -353,9 +353,9 @@ void worker::start(size_t id, coordinator* parent) {
     m_last_victim = id;
     m_parent = parent;
     auto this_worker = this;
-    m_this_thread = std::thread{[this_worker] {
+    m_this_thread = std::thread([this_worker](){
         this_worker->run();
-    }};
+    });
 }
 
 void worker::run() {
