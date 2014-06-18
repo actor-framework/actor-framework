@@ -379,8 +379,12 @@ void peer::enqueue(msg_hdr_cref hdr, const any_tuple& msg) {
 
 void peer::dispose() {
     CPPA_LOG_TRACE(CPPA_ARG(this));
-    if (m_node) parent()->get_namespace().erase(*m_node);
-    parent()->del_peer(this);
+    // if m_node is nullptr, this peer has never been registered to the MM
+    // and does not have any proxies attached to it
+    if (m_node) {
+        parent()->get_namespace().erase(*m_node);
+        parent()->del_peer(this);
+    }
     delete this;
 }
 
