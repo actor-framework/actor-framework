@@ -47,6 +47,8 @@
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/limited_vector.hpp"
 
+#include "cppa/detail/make_counted.hpp"
+
 #include "cppa/opencl/global.hpp"
 #include "cppa/opencl/command.hpp"
 #include "cppa/opencl/program.hpp"
@@ -157,7 +159,7 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
             args_vec arguments;
             add_arguments_to_kernel<Ret>(events, arguments, m_result_size,
                                          get_ref<Is>(*opt)...);
-            auto cmd = make_counted<command<actor_facade, Ret>>(
+            auto cmd = detail::make_counted<command<actor_facade, Ret>>(
                 handle, this,
                 std::move(events), std::move(arguments),
                 m_result_size, *opt

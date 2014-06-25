@@ -17,65 +17,32 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_REF_COUNTED_HPP
-#define CPPA_REF_COUNTED_HPP
+#ifndef CPPA_DETAIL_MAKE_COUNTED_HPP
+#define CPPA_DETAIL_MAKE_COUNTED_HPP
 
-#include <atomic>
-#include <cstddef>
+#include <type_traits>
 
-#include "cppa/memory_managed.hpp"
+#include "cppa/intrusive_ptr.hpp"
+
+#include "cppa/ref_counted.hpp"
+#include "cppa/detail/memory.hpp"
 
 namespace cppa {
+namespace detail {
 
-/**
- * @brief A (thread safe) base class for reference counted objects
- *        with an atomic reference count.
- *
- * Serves the requirements of {@link intrusive_ptr}.
- * @relates intrusive_ptr
- */
-class ref_counted : public memory_managed {
-
- public:
-
-    ref_counted();
-
-    ~ref_counted();
-
-    /**
-     * @brief Increases reference count by one.
-     */
-    inline void ref() { ++m_rc; }
-
-    /**
-     * @brief Decreases reference count by one and calls
-     *        @p request_deletion when it drops to zero.
-     */
-    inline void deref() { if (--m_rc == 0) request_deletion(); }
-
-    /**
-     * @brief Queries whether there is exactly one reference.
-     */
-    inline bool unique() const { return m_rc == 1; }
-
-    inline size_t get_reference_count() const { return m_rc; }
-
- private:
-
-    std::atomic<size_t> m_rc;
-
-};
-
-// compatibility with the intrusive_ptr implementation of boost
-inline void intrusive_ptr_add_ref(ref_counted* p) {
-    p->ref();
+template<typename T, typename... Ts>
+typename std::enable_if<is_memory_cached<T>::value, intrusive_ptr<T>>::type
+make_counted(Ts&&... args) {
+    return {memory::create<T>(std::forward<Ts>(args)...)};
 }
 
-// compatibility with the intrusive_ptr implementation of boost
-inline void intrusive_ptr_release(ref_counted* p) {
-    p->deref();
+template<typename T, typename... Ts>
+typename std::enable_if<!is_memory_cached<T>::value, intrusive_ptr<T>>::type
+make_counted(Ts&&... args) {
+    return {new T(std::forward<Ts>(args)...)};
 }
 
+} // namespace detail
 } // namespace cppa
 
-#endif // CPPA_REF_COUNTED_HPP
+#endif // CPPA_DETAIL_MAKE_COUNTED_HPP

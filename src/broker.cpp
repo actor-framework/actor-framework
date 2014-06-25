@@ -31,6 +31,7 @@
 #include "cppa/io/middleman.hpp"
 #include "cppa/io/buffered_writing.hpp"
 
+#include "cppa/detail/make_counted.hpp"
 #include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/sync_request_bouncer.hpp"
 
@@ -446,7 +447,7 @@ broker_ptr init_and_launch(broker_ptr ptr) {
 }
 
 broker_ptr broker::from_impl(std::function<behavior (broker*)> fun) {
-    return make_counted<default_broker>(fun);
+    return detail::make_counted<default_broker>(fun);
 }
 
 broker_ptr broker::from_impl(std::function<void (broker*)> fun) {
@@ -504,7 +505,7 @@ actor broker::fork_impl(std::function<behavior (broker*)> fun,
         throw std::invalid_argument("invalid handle");
     }
     scribe* sptr = i->second.get(); // keep non-owning pointer
-    auto result = make_counted<default_broker>(fun);
+    auto result = detail::make_counted<default_broker>(fun);
     result->m_io.insert(make_pair(sptr->id(), move(i->second)));
     init_and_launch(result);
     sptr->set_broker(result); // set new broker

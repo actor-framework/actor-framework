@@ -54,6 +54,7 @@
 #include "cppa/io/middleman_event_handler.hpp"
 
 #include "cppa/detail/fd_util.hpp"
+#include "cppa/detail/make_counted.hpp"
 #include "cppa/detail/actor_registry.hpp"
 
 #include "cppa/intrusive/single_reader_queue.hpp"
@@ -288,7 +289,7 @@ class middleman_impl : public middleman {
         m_node = compute_node_id();
         m_handler = middleman_event_handler::create();
         m_namespace.set_proxy_factory([=](actor_id aid, node_id_ptr ptr) {
-            return make_counted<remote_actor_proxy>(aid, std::move(ptr), this);
+            return detail::make_counted<remote_actor_proxy>(aid, std::move(ptr), this);
         });
         m_namespace.set_new_element_callback([=](actor_id aid,
                                                  const node_id& node) {

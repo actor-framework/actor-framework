@@ -25,17 +25,9 @@
 #include <stdexcept>
 #include <type_traits>
 
-#include "cppa/memory_cached.hpp"
 #include "cppa/util/comparable.hpp"
 
 namespace cppa {
-
-template<class From, class To>
-struct convertible {
-    inline To convert() const {
-        return static_cast<const From*>(this)->do_convert();
-    }
-};
 
 /**
  * @brief An intrusive, reference counting smart pointer impelementation.
@@ -66,12 +58,6 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T> >,
     intrusive_ptr(intrusive_ptr<Y> other) : m_ptr(other.release()) {
         static_assert(std::is_convertible<Y*, T*>::value,
                       "Y* is not assignable to T*");
-    }
-
-    // enables "actor_ptr s = self"
-    template<typename From>
-    intrusive_ptr(const convertible<From, pointer>& from) {
-        set_ptr(from.convert());
     }
 
     ~intrusive_ptr() { if (m_ptr) m_ptr->deref(); }
@@ -131,12 +117,6 @@ class intrusive_ptr : util::comparable<intrusive_ptr<T> >,
         return *this;
     }
 
-    template<typename From>
-    intrusive_ptr& operator=(const convertible<From, T*>& from) {
-        reset(from.convert());
-        return *this;
-    }
-
     inline pointer get() const { return m_ptr; }
     inline pointer operator->() const { return m_ptr; }
     inline reference operator*() const { return *m_ptr; }
@@ -191,22 +171,6 @@ inline bool operator==(const intrusive_ptr<X>& lhs, const intrusive_ptr<Y>& rhs)
 template<typename X, typename Y>
 inline bool operator!=(const intrusive_ptr<X>& lhs, const intrusive_ptr<Y>& rhs) {
     return !(lhs == rhs);
-}
-
-/**
- * @brief Constructs an object of type T which must be a derived type
- *        of {@link ref_counted} and wraps it in an {@link intrusive_ptr}.
- */
-template<typename T, typename... Ts>
-typename std::enable_if<is_memory_cached<T>::value, intrusive_ptr<T>>::type
-make_counted(Ts&&... args) {
-    return {detail::memory::create<T>(std::forward<Ts>(args)...)};
-}
-
-template<typename T, typename... Ts>
-typename std::enable_if<not is_memory_cached<T>::value, intrusive_ptr<T>>::type
-make_counted(Ts&&... args) {
-    return {new T(std::forward<Ts>(args)...)};
 }
 
 } // namespace cppa

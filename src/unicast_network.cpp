@@ -40,6 +40,7 @@
 #include "cppa/binary_deserializer.hpp"
 
 #include "cppa/detail/raw_access.hpp"
+#include "cppa/detail/make_counted.hpp"
 
 #include "cppa/intrusive/single_reader_queue.hpp"
 
@@ -178,7 +179,7 @@ abstract_actor_ptr remote_actor_impl(stream_ptr_pair io, string_set expected) {
                                     " but found a strongly typed actor of type "
                                     + iface_str);
     }
-    auto pinfptr = make_counted<node_id>(peer_pid, peer_node_id);
+    auto pinfptr = detail::make_counted<node_id>(peer_pid, peer_node_id);
     if (*pinf == *pinfptr) {
         // this is a local actor, not a remote actor
         CPPA_LOGF_INFO("remote_actor() called to access a local actor");

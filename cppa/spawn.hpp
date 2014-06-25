@@ -32,6 +32,7 @@
 
 #include "cppa/detail/cs_thread.hpp"
 #include "cppa/util/type_traits.hpp"
+#include "cppa/detail/make_counted.hpp"
 
 #include "cppa/detail/proper_actor.hpp"
 #include "cppa/detail/typed_actor_util.hpp"

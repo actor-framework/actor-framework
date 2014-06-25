@@ -37,6 +37,7 @@
 
 #include "cppa/detail/raw_access.hpp"
 #include "cppa/detail/types_array.hpp"
+#include "cppa/detail/make_counted.hpp"
 #include "cppa/detail/group_manager.hpp"
 
 #include "cppa/util/shared_spinlock.hpp"
@@ -290,7 +291,7 @@ class local_group_module : public abstract_group::module {
             return {i->second};
         }
         else {
-            auto tmp = make_counted<local_group>(true, this, identifier);
+            auto tmp = detail::make_counted<local_group>(true, this, identifier);
             { // lifetime scope of uguard
                 upgrade_guard uguard(guard);
                 auto p = m_instances.insert(make_pair(identifier, tmp));
@@ -450,7 +451,7 @@ class remote_group_module : public abstract_group::module {
  public:
 
     remote_group_module() : super("remote") {
-        auto sm = make_counted<shared_map>();
+        auto sm = detail::make_counted<shared_map>();
         abstract_group::module_ptr this_group{this};
         m_map = sm;
         typedef map<string, pair<actor, vector<pair<string, remote_group_ptr>>>>
@@ -494,7 +495,7 @@ class remote_group_module : public abstract_group::module {
                             on(atom("GROUP"), arg_match) >> [=](const group& g) {
                                 auto gg = dynamic_cast<local_group*>(detail::raw_access::get(g));
                                 if (gg) {
-                                    auto rg = make_counted<remote_group>(this_group, key, gg);
+                                    auto rg = detail::make_counted<remote_group>(this_group, key, gg);
                                     sm->put(key, rg);
                                     (*peers)[authority].second.push_back(make_pair(key, rg));
                                 }

@@ -4,8 +4,11 @@
 #include "test.hpp"
 #include "cppa/ref_counted.hpp"
 #include "cppa/intrusive_ptr.hpp"
+#include "cppa/detail/make_counted.hpp"
 
 using namespace cppa;
+
+using detail::make_counted;
 
 namespace {
 
