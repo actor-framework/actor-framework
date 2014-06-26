@@ -142,8 +142,33 @@ inline void cppa_check_value(V1 v1,
         CPPA_PRINT("passed");                                                  \
     } ((void) 0)
 
+namespace cppa {
+
+inline bool is_false_or_none(bool value) {
+    return !value;
+}
+
+template<typename... Ts>
+inline bool is_false_or_none(const variant<none_t, Ts...>& res) {
+    return get<none_t>(&res) != nullptr;
+}
+
+template<typename T>
+inline bool is_false_or_none(const optional<T>& res) {
+    return !static_cast<bool>(res);
+}
+
+} // namespace cppa
+
 #define CPPA_CHECK(line_of_code)                                               \
-    if (!(line_of_code)) {                                                     \
+    if (cppa::is_false_or_none(line_of_code)) {                                \
+        CPPA_PRINTERR(#line_of_code);                                          \
+        cppa_inc_error_count();                                                \
+    }                                                                          \
+    else { CPPA_PRINT("passed"); } CPPA_VOID_STMT
+
+#define CPPA_CHECK_NOT(line_of_code)                                           \
+    if (!cppa::is_false_or_none(line_of_code)) {                               \
         CPPA_PRINTERR(#line_of_code);                                          \
         cppa_inc_error_count();                                                \
     }                                                                          \

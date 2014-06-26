@@ -87,7 +87,7 @@ class match_each_helper {
         auto expr = match_expr_collect(std::forward<Ts>(args)...);
         for (; i != e; ++i) {
             auto res = expr(p(*i));
-            if (!res) return i;
+            if (get<none_t>(&res)) return i;
         }
         return e;
     }

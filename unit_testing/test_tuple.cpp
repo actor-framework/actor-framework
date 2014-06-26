@@ -39,15 +39,21 @@ using namespace cppa::placeholders;
 
 #define CPPA_CHECK_INVOKED(FunName, Args)                                      \
     invoked.clear();                                                           \
-    if ( !( FunName Args ) || invoked != #FunName ) {                          \
-        CPPA_FAILURE("invocation of " #FunName " failed");                     \
-    } else { CPPA_CHECKPOINT(); } static_cast<void>(42)
+    {                                                                          \
+        auto res = FunName Args ;                                              \
+        if (get<none_t>(&res) || invoked != #FunName ) {                       \
+            CPPA_FAILURE("invocation of " #FunName " failed");                 \
+        } else { CPPA_CHECKPOINT(); }                                          \
+    } static_cast<void>(42)
 
 #define CPPA_CHECK_NOT_INVOKED(FunName, Args)                                  \
     invoked.clear();                                                           \
-    if ( FunName Args || invoked == #FunName ) {                               \
-        CPPA_FAILURE(#FunName " erroneously invoked");                         \
-    } else { CPPA_CHECKPOINT(); } static_cast<void>(42)
+    {                                                                          \
+        auto res = FunName Args ;                                              \
+        if (!get<none_t>(&res) || invoked == #FunName ) {                      \
+            CPPA_FAILURE(#FunName " erroneously invoked");                     \
+        } else { CPPA_CHECKPOINT(); }                                          \
+    } static_cast<void>(42)
 
 namespace {
 

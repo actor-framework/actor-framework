@@ -658,28 +658,6 @@ struct ge_invoke_helper {
     }
 };
 
-template<typename TupleTypes, operator_id OP, typename First, typename Second>
-typename ge_result<
-    OP, First, Second,
-    typename detail::tdata_from_type_list<
-        typename util::tl_filter_not<TupleTypes, is_anything>::type
-    >::type
->::type
-ge_invoke_any(const guard_expr<OP, First, Second>& ge,
-              const any_tuple& tup) {
-    using namespace util;
-    typename std::conditional<
-                std::is_same<typename TupleTypes::back, anything>::value,
-                TupleTypes,
-                wrapped<typename tl_push_back<TupleTypes, anything>::type>
-            >::type
-            cast_token;
-    auto x = tuple_cast(tup, cast_token);
-    CPPA_REQUIRE(static_cast<bool>(x) == true);
-    ge_invoke_helper<guard_expr<OP, First, Second> > f{ge};
-    return util::apply_args(f, *x, util::get_indices(*x));
-}
-
 template<operator_id OP, typename First, typename Second>
 template<typename... Ts>
 bool guard_expr<OP, First, Second>::operator()(const Ts&... args) const {

@@ -26,6 +26,7 @@
 #include "cppa/none.hpp"
 #include "cppa/unit.hpp"
 #include "cppa/optional.hpp"
+#include "cppa/lift_void.hpp"
 
 #include "cppa/util/call.hpp"
 #include "cppa/util/type_list.hpp"
@@ -41,20 +42,28 @@ struct tpartial_function_helper {
         if (fun.defined_at(args...)) return fun.invoke(args...);
         return none;
     }
+    template<class Expr, class Tuple, class Indices>
+    inline Result lifted_result(Expr& expr, Tuple& tup, Indices& indices) {
+        return util::apply_args(expr, tup, indices);
+    }
 };
 
 template<typename... Ts>
-struct tpartial_function_helper<void, Ts...> {
+struct tpartial_function_helper<unit_t, Ts...> {
     template<typename Fun>
-    inline optional<void> operator()(const Fun& fun, Ts... args) {
+    inline optional<unit_t> operator()(const Fun& fun, Ts... args) {
         if (fun.defined_at(args...)) {
             fun.invoke(args...);
             return unit;
         }
         return none;
     }
+    template<class Expr, class Tuple, class Indices>
+    inline unit_t lifted_result(Expr& expr, Tuple& tup, Indices& indices) {
+        util::apply_args(expr, tup, indices);
+        return unit;
+    }
 };
-
 
 template<class Expr, class Guard, typename Result, typename... Ts>
 class tpartial_function {
@@ -80,7 +89,7 @@ class tpartial_function {
     static constexpr bool manipulates_args =
             util::tl_exists<arg_types, util::is_mutable_ref>::value;
 
-    typedef Result result_type;
+    typedef typename lift_void<Result>::type result_type;
 
     template<typename Fun, typename... G>
     tpartial_function(Fun&& fun, G&&... guard_args)
@@ -105,7 +114,8 @@ class tpartial_function {
     result_type invoke(Ts... args) const {
         auto targs = std::forward_as_tuple(args...);
         auto indices = util::get_right_indices<num_expr_args>(targs);
-        return util::apply_args(m_expr, targs, indices);
+        tpartial_function_helper<result_type, Ts...> helper;
+        return helper.lifted_result(m_expr, targs, indices);
     }
 
     inline optional<result_type> operator()(Ts... args) const {

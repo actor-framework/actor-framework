@@ -169,9 +169,9 @@ struct server : event_based_actor {
 
 };
 
-void compile_time_optional_variant_check(event_based_actor* self) {
-    typedef optional_variant<std::tuple<int, float>,
-                             std::tuple<float, int, int>>
+void compile_time_variant_check(event_based_actor* self) {
+    typedef variant<std::tuple<int, float>,
+                    std::tuple<float, int, int>>
             msg_type;
     self->sync_send(self, atom("msg")).then([](msg_type) {});
 }
@@ -343,6 +343,6 @@ int main() {
     CPPA_CHECKPOINT();
     shutdown();
     // shutdown warning about unused function (only performs compile-time check)
-    static_cast<void>(compile_time_optional_variant_check);
+    static_cast<void>(compile_time_variant_check);
     return CPPA_TEST_RESULT();
 }

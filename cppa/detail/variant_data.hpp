@@ -17,68 +17,57 @@
 \******************************************************************************/
 
 
-#ifndef CPPA_DETAIL_OPTIONAL_VARIANT_DATA
-#define CPPA_DETAIL_OPTIONAL_VARIANT_DATA
+#ifndef CPPA_DETAIL_VARIANT_DATA_HPP
+#define CPPA_DETAIL_VARIANT_DATA_HPP
 
 #include <stdexcept>
 #include <type_traits>
 
 #include "cppa/unit.hpp"
 #include "cppa/none.hpp"
+#include "cppa/lift_void.hpp"
 
-#define CPPA_OPTIONAL_VARIANT_DATA_CONCAT(x, y) x ## y
+#define CPPA_VARIANT_DATA_CONCAT(x, y) x ## y
 
-#define CPPA_OPTIONAL_VARIANT_DATA_GETTER(pos)                                 \
-    inline CPPA_OPTIONAL_VARIANT_DATA_CONCAT(T, pos) &                         \
+#define CPPA_VARIANT_DATA_GETTER(pos)                                 \
+    inline CPPA_VARIANT_DATA_CONCAT(T, pos) &                         \
     get(std::integral_constant<int, pos >) {                                   \
-        return CPPA_OPTIONAL_VARIANT_DATA_CONCAT(v, pos) ;                     \
+        return CPPA_VARIANT_DATA_CONCAT(v, pos) ;                     \
     }                                                                          \
-    inline const CPPA_OPTIONAL_VARIANT_DATA_CONCAT(T, pos) &                   \
+    inline const CPPA_VARIANT_DATA_CONCAT(T, pos) &                   \
     get(std::integral_constant<int, pos >) const {                             \
-        return CPPA_OPTIONAL_VARIANT_DATA_CONCAT(v, pos) ;                     \
+        return CPPA_VARIANT_DATA_CONCAT(v, pos) ;                     \
     }
 
 namespace cppa {
 namespace detail {
-
-template<typename T>
-struct lift_void { typedef  T type; };
-
-template<>
-struct lift_void<void> { typedef unit_t type; };
-
-template<typename T>
-struct unlift_void { typedef  T type; };
-
-template<>
-struct unlift_void<unit_t> { typedef void type; };
 
 template<typename T0,          typename T1 = unit_t,
          typename T2 = unit_t, typename T3 = unit_t,
          typename T4 = unit_t, typename T5 = unit_t,
          typename T6 = unit_t, typename T7 = unit_t,
          typename T8 = unit_t, typename T9 = unit_t>
-struct optional_variant_data {
+struct variant_data {
 
     union {
         T0 v0; T1 v1; T2 v2; T3 v3; T4 v4;
         T5 v5; T6 v6; T7 v7; T8 v8; T9 v9;
     };
 
-    optional_variant_data() { }
+    variant_data() { }
 
-    ~optional_variant_data() { }
+    ~variant_data() { }
 
-    CPPA_OPTIONAL_VARIANT_DATA_GETTER(0)
-    CPPA_OPTIONAL_VARIANT_DATA_GETTER(1)
-    CPPA_OPTIONAL_VARIANT_DATA_GETTER(2)
-    CPPA_OPTIONAL_VARIANT_DATA_GETTER(3)
-    CPPA_OPTIONAL_VARIANT_DATA_GETTER(4)
-    CPPA_OPTIONAL_VARIANT_DATA_GETTER(5)
-    CPPA_OPTIONAL_VARIANT_DATA_GETTER(6)
-    CPPA_OPTIONAL_VARIANT_DATA_GETTER(7)
-    CPPA_OPTIONAL_VARIANT_DATA_GETTER(8)
-    CPPA_OPTIONAL_VARIANT_DATA_GETTER(9)
+    CPPA_VARIANT_DATA_GETTER(0)
+    CPPA_VARIANT_DATA_GETTER(1)
+    CPPA_VARIANT_DATA_GETTER(2)
+    CPPA_VARIANT_DATA_GETTER(3)
+    CPPA_VARIANT_DATA_GETTER(4)
+    CPPA_VARIANT_DATA_GETTER(5)
+    CPPA_VARIANT_DATA_GETTER(6)
+    CPPA_VARIANT_DATA_GETTER(7)
+    CPPA_VARIANT_DATA_GETTER(8)
+    CPPA_VARIANT_DATA_GETTER(9)
 
  private:
 
@@ -89,7 +78,7 @@ struct optional_variant_data {
 
 };
 
-struct optional_variant_data_destructor {
+struct variant_data_destructor {
     inline void operator()() const { }
     inline void operator()(const none_t&) const { }
     template<typename T>
@@ -99,4 +88,4 @@ struct optional_variant_data_destructor {
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_DETAIL_OPTIONAL_VARIANT_DATA
+#endif // CPPA_DETAIL_VARIANT_DATA_HPP

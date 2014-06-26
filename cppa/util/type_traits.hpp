@@ -25,6 +25,7 @@
 #include <type_traits>
 
 #include "cppa/cppa_fwd.hpp"
+#include "cppa/optional.hpp"
 
 #include "cppa/util/type_list.hpp"
 #include "cppa/util/type_traits.hpp"

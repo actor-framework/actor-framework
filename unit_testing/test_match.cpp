@@ -169,7 +169,7 @@ void test_gref() {
     );
     any_tuple expr19_tup = make_cow_tuple("hello guard!");
     auto res19 = expr19(expr19_tup);
-    CPPA_CHECK(res19.is<int>() && get<int>(res19) == 2);
+    CPPA_CHECK(get<int>(&res19) && get<int>(res19) == 2);
     partial_function expr20 = expr19;
     enable_case1 = false;
     CPPA_CHECK(expr20(expr19_tup) == make_any_tuple(1));
@@ -188,32 +188,32 @@ void test_match_function() {
             CPPA_CHECK_EQUAL(i, 5);
         }
     );
-    CPPA_CHECK(res0);
+    CPPA_CHECK(!get<none_t>(&res0));
     auto res1 = match("value=42") (
         on(kvp_split).when(_x1.not_empty()) >> [&](const vector<string>& vec) {
             CPPA_CHECK_EQUAL("value", vec[0]);
             CPPA_CHECK_EQUAL("42", vec[1]);
         }
     );
-    CPPA_CHECK(res1);
+    CPPA_CHECK(!get<none_t>(&res1));
     auto res2 = match("42") (
         on(toint) >> [&](int i) {
             CPPA_CHECK_EQUAL(42, i);
         }
     );
-    CPPA_CHECK(res2);
+    CPPA_CHECK(!get<none_t>(&res2));
     auto res3 = match("abc") (
         on<string>().when(_x1 == "abc") >> [&] { }
     );
-    CPPA_CHECK(res3);
-    CPPA_CHECK(res3.is<void>());
+    CPPA_CHECK(!get<none_t>(&res3));
+    CPPA_CHECK(get<unit_t>(&res3));
     // match vectors
     auto res4 = match(std::vector<int>{1, 2, 3}) (
         on<int, int, int>().when(   _x1 + _x2 + _x3 == 6
                                  && _x2(is_even)
                                  && _x3 % 2 == 1        ) >> [&] { }
     );
-    CPPA_CHECK(res4);
+    CPPA_CHECK(!get<none_t>(&res4));
     vector<string> vec{"a", "b", "c"};
     auto res5 = match(vec) (
         on("a", "b", val<string>) >> [](string&) -> string {
@@ -342,7 +342,7 @@ void test_pattern_matching() {
             return f;
         }
     );
-    CPPA_CHECK(res && res.is<float>() && util::safe_equal(get<float>(res), 4.2f));
+    CPPA_CHECK(get<float>(&res) && util::safe_equal(get<float>(res), 4.2f));
     auto res2 = match(make_any_tuple(23, 4.2f)) (
         on(42, arg_match) >> [](double d) {
             return d;
@@ -351,7 +351,7 @@ void test_pattern_matching() {
             return f;
         }
     );
-    CPPA_CHECK(!res2);
+    CPPA_CHECK(get<none_t>(&res2));
 }
 
 inline void make_dynamically_typed_impl(detail::object_array&) { }
@@ -377,7 +377,7 @@ void test_wildcards() {
             CPPA_CHECK_EQUAL(b, 2);
         }
     );
-    CPPA_CHECK(not expr0(1));
+    CPPA_CHECK_NOT(expr0(1));
     CPPA_CHECK(expr0(1, 2));
     CPPA_CHECK(expr0(0, 1, 2));
     partial_function pf0 = expr0;

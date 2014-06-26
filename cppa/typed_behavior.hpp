@@ -73,8 +73,11 @@ struct valid_input_predicate {
     template<typename Expr>
     struct inner {
         typedef typename Expr::input_types input_types;
-        typedef typename unbox_typed_continue_helper<
-                    typename Expr::output_types
+        typedef typename util::tl_map<
+                    typename unbox_typed_continue_helper<
+                        typename Expr::output_types
+                    >::type,
+                    unlift_void
                 >::type
                 output_types;
         // get matching elements for input type
