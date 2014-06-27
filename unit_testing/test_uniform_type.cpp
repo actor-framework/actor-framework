@@ -55,16 +55,6 @@ int main() {
     CPPA_CHECK(announce1 == announce4);
     CPPA_CHECK_EQUAL(announce1->name(), "$::foo");
     {
-        //bar.create_object();
-        object obj1 = uniform_typeid<foo>()->create();
-        object obj2(obj1);
-        CPPA_CHECK(obj1 == obj2);
-        get_ref<foo>(obj1).value = 42;
-        CPPA_CHECK(obj1 != obj2);
-        CPPA_CHECK_EQUAL(get<foo>(obj1).value, 42);
-        CPPA_CHECK_EQUAL(get<foo>(obj2).value, 0);
-    }
-    {
         auto uti = uniform_typeid<atom_value>();
         CPPA_CHECK(uti != nullptr);
         CPPA_CHECK_EQUAL(uti->name(), "@atom");

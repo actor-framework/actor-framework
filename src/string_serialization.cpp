@@ -25,7 +25,6 @@
 #include <algorithm>
 
 #include "cppa/atom.hpp"
-#include "cppa/object.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/serializer.hpp"
 #include "cppa/singletons.hpp"
@@ -491,7 +490,7 @@ class string_deserializer : public deserializer {
 
 } // namespace <anonymous>
 
-object from_string(const string& what) {
+uniform_value from_string(const string& what) {
     string_deserializer strd(what);
     auto utype = strd.begin_object();
     auto result = utype->deserialize(&strd);

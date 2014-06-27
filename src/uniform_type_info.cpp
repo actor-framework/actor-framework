@@ -31,7 +31,6 @@
 
 #include "cppa/atom.hpp"
 #include "cppa/actor.hpp"
-#include "cppa/object.hpp"
 #include "cppa/logging.hpp"
 #include "cppa/any_tuple.hpp"
 #include "cppa/announce.hpp"
@@ -58,10 +57,12 @@ const uniform_type_info* announce(const std::type_info&,
     return uti_map().insert(std::move(utype));
 }
 
-uniform_type_info::~uniform_type_info() { }
+uniform_type_info::~uniform_type_info() {
+    // nop
+}
 
-object uniform_type_info::create() const {
-    return {new_instance(), this};
+uniform_value_t::~uniform_value_t() {
+    // nop
 }
 
 const uniform_type_info* uniform_type_info::from(const std::type_info& tinf) {
@@ -84,10 +85,10 @@ const uniform_type_info* uniform_type_info::from(const std::string& name) {
     return result;
 }
 
-object uniform_type_info::deserialize(deserializer* from) const {
-    auto ptr = new_instance();
-    deserialize(ptr, from);
-    return {ptr, this};
+uniform_value uniform_type_info::deserialize(deserializer* from) const {
+    auto uval = create();
+    deserialize(uval->val, from);
+    return uval;
 }
 
 std::vector<const uniform_type_info*> uniform_type_info::instances() {

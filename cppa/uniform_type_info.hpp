@@ -27,8 +27,6 @@
 #include <typeinfo>
 #include <type_traits>
 
-#include "cppa/object.hpp"
-
 #include "cppa/util/comparable.hpp"
 #include "cppa/util/type_traits.hpp"
 
@@ -42,6 +40,32 @@ class deserializer;
 class uniform_type_info;
 
 const uniform_type_info* uniform_typeid(const std::type_info&);
+
+struct uniform_value_t;
+
+typedef std::unique_ptr<uniform_value_t> uniform_value;
+
+struct uniform_value_t {
+    const uniform_type_info* ti;
+    void* val;
+    virtual uniform_value copy() = 0;
+    virtual ~uniform_value_t();
+};
+
+template<typename T, typename... Ts>
+uniform_value make_uniform_value(const uniform_type_info* ti, Ts&&... args) {
+    struct container : uniform_value_t {
+        T value;
+        container(const uniform_type_info* ptr, T arg) : value(std::move(arg)) {
+            ti = ptr;
+            val = &value;
+        }
+        uniform_value copy() override {
+            return uniform_value{new container(ti, value)};
+        }
+    };
+    return uniform_value{new container(ti, T(std::forward<Ts>(args)...))};
+}
 
 /**
  * @defgroup TypeSystem libcppa's platform-independent type system.
@@ -136,8 +160,6 @@ const uniform_type_info* uniform_typeid(const std::type_info&);
  */
 class uniform_type_info {
 
-    friend class object;
-
     friend bool operator==(const uniform_type_info& lhs,
                            const uniform_type_info& rhs);
 
@@ -176,14 +198,14 @@ class uniform_type_info {
     static std::vector<const uniform_type_info*> instances();
 
     /**
-     * @brief Creates an object of this type.
+     * @brief Creates a copy of @p other.
      */
-    object create() const;
+    virtual uniform_value create(const uniform_value& other = uniform_value{}) const = 0;
 
     /**
      * @brief Deserializes an object of this type from @p source.
      */
-    object deserialize(deserializer* source) const;
+    uniform_value deserialize(deserializer* source) const;
 
     /**
      * @brief Get the internal @p libcppa name for this type.
@@ -224,24 +246,6 @@ class uniform_type_info {
     virtual void deserialize(void* instance, deserializer* source) const = 0;
 
     /**
-     * @brief Casts @p instance to the native type and deletes it.
-     * @param instance Instance of this type.
-     * @pre @p instance has the type of @p this.
-     */
-    virtual void delete_instance(void* instance) const = 0;
-
-    /**
-     * @brief Creates an instance of this type, either as a copy of
-     *        @p instance or initialized with the default constructor
-     *        if <tt>instance == nullptr</tt>.
-     * @param instance Optional instance of this type.
-     * @returns Either a copy of @p instance or a new instance, initialized
-     *          with the default constructor.
-     * @pre @p instance has the type of @p this or is set to @p nullptr.
-     */
-    virtual void* new_instance(const void* instance = nullptr) const = 0;
-
-    /**
      * @brief Returns @p instance encapsulated as an @p any_tuple.
      */
     virtual any_tuple as_any_tuple(void* instance) const = 0;
@@ -249,6 +253,16 @@ class uniform_type_info {
  protected:
 
     uniform_type_info() = default;
+
+    template<typename T>
+    uniform_value create_impl(const uniform_value& other) const {
+        if (other) {
+            CPPA_REQUIRE(other->ti == this);
+            auto ptr = reinterpret_cast<const T*>(other->val);
+            return make_uniform_value<T>(this, *ptr);
+        }
+        return make_uniform_value<T>(this);
+    }
 
 };
 

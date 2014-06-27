@@ -145,6 +145,8 @@ int main() {
 
     cout << "process id: " << to_string(get_middleman()->node()) << endl;
 
+    auto atuple1 = make_tuple(uint32_t{42}, "foo");
+    /*
     auto oarr = new detail::object_array;
     oarr->push_back(object::from(static_cast<uint32_t>(42)));
     oarr->push_back(object::from("foo"  ));
@@ -198,8 +200,9 @@ int main() {
         CPPA_CHECK_EQUAL(rs2.str, rs.str);
     }
     catch (exception& e) { CPPA_FAILURE(to_verbose_string(e)); }
+    */
 
-    try {
+    //try {
         scoped_actor self;
         auto ttup = make_any_tuple(1, 2, actor{self.get()});
         util::buffer wr_buf;
@@ -209,8 +212,8 @@ int main() {
         any_tuple ttup2;
         uniform_typeid<any_tuple>()->deserialize(&ttup2, &bd);
         CPPA_CHECK(ttup  == ttup2);
-    }
-    catch (exception& e) { CPPA_FAILURE(to_verbose_string(e)); }
+    //}
+    //catch (exception& e) { CPPA_FAILURE(to_verbose_string(e)); }
 
     try {
         scoped_actor self;
@@ -255,6 +258,7 @@ int main() {
     CPPA_CHECK((is_iterable<string>::value) == false);
     CPPA_CHECK((is_iterable<list<int>>::value) == true);
     CPPA_CHECK((is_iterable<map<int, int>>::value) == true);
+    /*
     try {  // test meta_object implementation for primitive types
         auto meta_int = uniform_typeid<uint32_t>();
         CPPA_CHECK(meta_int != nullptr);
@@ -266,6 +270,7 @@ int main() {
         }
     }
     catch (exception& e) { CPPA_FAILURE(to_verbose_string(e)); }
+    */
 
     // test serialization of enums
     try {

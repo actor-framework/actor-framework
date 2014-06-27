@@ -23,6 +23,7 @@
 #include "cppa/on.hpp"
 #include "cppa/extend.hpp"
 #include "cppa/behavior.hpp"
+#include "cppa/exception.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/sync_sender.hpp"
 #include "cppa/typed_actor.hpp"

@@ -237,12 +237,8 @@ class meta_cow_tuple : public uniform_type_info {
         do_deserialize(source, ref, util::get_indices(ref));
     }
 
-    void* new_instance(const void* other = nullptr) const override {
-        return (other) ? new tuple_type{*cast(other)} : new tuple_type;
-    }
-
-    void delete_instance(void* instance) const override {
-        delete cast(instance);
+    uniform_value create(const uniform_value& other) const override {
+        return create_impl<tuple_type>(other);
     }
 
     any_tuple as_any_tuple(void* instance) const override {

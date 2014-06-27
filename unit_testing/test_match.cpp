@@ -358,7 +358,9 @@ inline void make_dynamically_typed_impl(detail::object_array&) { }
 
 template<typename T0, typename... Ts>
 void make_dynamically_typed_impl(detail::object_array& arr, T0&& arg0, Ts&&... args) {
-    arr.push_back(object::from(std::forward<T0>(arg0)));
+    using type = typename detail::strip_and_convert<T0>::type;
+    arr.push_back(make_uniform_value<type>(uniform_typeid<type>(),
+                                           std::forward<T0>(arg0)));
     make_dynamically_typed_impl(arr, std::forward<Ts>(args)...);
 }
 

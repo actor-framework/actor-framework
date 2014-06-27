@@ -198,7 +198,6 @@ set(LIBCPPA_SRC
     src/middleman.cpp
     src/middleman_event_handler.cpp
     src/node_id.cpp
-    src/object.cpp
     src/object_array.cpp
     src/opt.cpp
     src/output_stream.cpp

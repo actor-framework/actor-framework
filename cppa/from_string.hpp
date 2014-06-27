@@ -24,7 +24,6 @@
 #include <typeinfo>
 #include <exception>
 
-#include "cppa/object.hpp"
 #include "cppa/uniform_type_info.hpp"
 
 namespace cppa {
@@ -36,29 +35,7 @@ namespace cppa {
  * @returns An {@link cppa::object object} instance that contains
  *          the deserialized value.
  */
-object from_string(const std::string& what);
-
-/**
- * @brief Convenience function that deserializes a value from @p what and
- *        converts the result to @p T.
- * @throws std::logic_error if the result is not of type @p T.
- * @returns The deserialized value as instance of @p T.
- */
-template<typename T>
-T from_string(const std::string& what) {
-    object o = from_string(what);
-    const std::type_info& tinfo = typeid(T);
-    if (tinfo == *(o.type())) {
-        return std::move(get_ref<T>(o));
-    }
-    else {
-        std::string error_msg = "expected type name ";
-        error_msg += uniform_typeid(tinfo)->name();
-        error_msg += " found ";
-        error_msg += o.type()->name();
-        throw std::logic_error(error_msg);
-    }
-}
+uniform_value from_string(const std::string& what);
 
 } // namespace cppa
 

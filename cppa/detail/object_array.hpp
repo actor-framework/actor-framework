@@ -22,7 +22,7 @@
 
 #include <vector>
 
-#include "cppa/object.hpp"
+#include "cppa/uniform_type_info.hpp"
 #include "cppa/detail/abstract_tuple.hpp"
 
 namespace cppa {
@@ -38,11 +38,11 @@ class object_array : public abstract_tuple {
 
     object_array();
     object_array(object_array&&) = default;
-    object_array(const object_array&) = default;
+    object_array(const object_array&);
 
-    void push_back(object&& what);
+    ~object_array();
 
-    void push_back(const object& what);
+    void push_back(uniform_value what);
 
     void* mutable_at(size_t pos) override;
 
@@ -58,7 +58,7 @@ class object_array : public abstract_tuple {
 
  private:
 
-    std::vector<object> m_elements;
+    std::vector<uniform_value> m_elements;
 
 };
 

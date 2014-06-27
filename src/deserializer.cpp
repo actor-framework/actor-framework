@@ -19,7 +19,6 @@
 
 #include <string>
 
-#include "cppa/object.hpp"
 #include "cppa/deserializer.hpp"
 #include "cppa/uniform_type_info.hpp"
 

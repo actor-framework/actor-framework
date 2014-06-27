@@ -25,7 +25,6 @@
 #include "cppa/atom.hpp" // included for to_string(atom_value)
 #include "cppa/actor.hpp"
 #include "cppa/group.hpp"
-#include "cppa/object.hpp"
 #include "cppa/channel.hpp"
 #include "cppa/node_id.hpp"
 #include "cppa/anything.hpp"
@@ -79,10 +78,6 @@ std::string to_string(const node_id& what);
 
 // implemented in node_id.cpp
 std::string to_string(const node_id_ptr& what);
-
-inline std::string to_string(const object& what) {
-    return detail::to_string_impl(what.value(), what.type());
-}
 
 /**
  * @brief Converts @p e to a string including the demangled type of e

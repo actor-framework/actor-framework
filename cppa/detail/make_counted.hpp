@@ -25,6 +25,7 @@
 #include "cppa/intrusive_ptr.hpp"
 
 #include "cppa/ref_counted.hpp"
+#include "cppa/memory_cached.hpp"
 #include "cppa/detail/memory.hpp"
 
 namespace cppa {

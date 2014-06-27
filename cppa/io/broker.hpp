@@ -23,6 +23,7 @@
 #include <map>
 
 #include "cppa/extend.hpp"
+#include "cppa/exception.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/behavior_stack_based.hpp"
 
