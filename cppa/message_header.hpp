@@ -27,11 +27,11 @@
 
 namespace cppa {
 
-class any_tuple;
+class message;
 
 /**
  * @brief Encapsulates information about sender, receiver and (synchronous)
- *        message ID of a message. The message itself is usually an any_tuple.
+ *        message ID of a message. The message itself is usually an message.
  */
 class message_header {
 
@@ -54,7 +54,7 @@ class message_header {
                    channel dest,
                    message_id mid = message_id::invalid);
 
-    void deliver(any_tuple msg) const;
+    void deliver(message msg) const;
 
 };
 

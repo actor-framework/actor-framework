@@ -28,9 +28,10 @@
 #include "cppa/group.hpp"
 #include "cppa/logging.hpp"
 #include "cppa/announce.hpp"
-#include "cppa/any_tuple.hpp"
+#include "cppa/message.hpp"
 #include "cppa/message_header.hpp"
 #include "cppa/abstract_group.hpp"
+#include "cppa/message_builder.hpp"
 #include "cppa/actor_namespace.hpp"
 
 #include "cppa/util/duration.hpp"
@@ -41,7 +42,6 @@
 #include "cppa/util/shared_lock_guard.hpp"
 
 #include "cppa/detail/raw_access.hpp"
-#include "cppa/detail/object_array.hpp"
 #include "cppa/detail/uniform_type_info_map.hpp"
 #include "cppa/detail/default_uniform_type_info.hpp"
 
@@ -55,7 +55,6 @@ namespace detail {
     { "cppa::acceptor_closed_msg",                      "@acceptor_closed"    },
     { "cppa::actor",                                    "@actor"              },
     { "cppa::actor_addr",                               "@addr"               },
-    { "cppa::any_tuple",                                "@tuple"              },
     { "cppa::atom_value",                               "@atom"               },
     { "cppa::channel",                                  "@channel"            },
     { "cppa::connection_closed_msg",                    "@conn_closed"        },
@@ -66,6 +65,7 @@ namespace detail {
     { "cppa::intrusive_ptr<cppa::node_id>",             "@proc"               },
     { "cppa::io::accept_handle",                        "@ac_hdl"             },
     { "cppa::io::connection_handle",                    "@cn_hdl"             },
+    { "cppa::message",                                  "@msg"                },
     { "cppa::message_header",                           "@header"             },
     { "cppa::new_connection_msg",                       "@new_conn"           },
     { "cppa::new_data_msg",                             "@new_data"           },
@@ -276,7 +276,7 @@ void deserialize_impl(channel& ptrref, deserializer* source) {
     }
 }
 
-void serialize_impl(const any_tuple& tup, serializer* sink) {
+void serialize_impl(const message& tup, serializer* sink) {
     std::string dynamic_name; // used if tup holds an object_array
     // ttn can be nullptr even if tuple is not empty (in case of object_array)
     const std::string* ttn = tup.empty() ? nullptr : tup.tuple_type_names();
@@ -301,12 +301,12 @@ void serialize_impl(const any_tuple& tup, serializer* sink) {
     sink->end_object();
 }
 
-void deserialize_impl(any_tuple& atref, deserializer* source) {
+void deserialize_impl(message& atref, deserializer* source) {
     auto uti = source->begin_object();
     auto uval = uti->create();
     uti->deserialize(uval->val, source);
     source->end_object();
-    atref = uti->as_any_tuple(uval->val);
+    atref = uti->as_message(uval->val);
 }
 
 void serialize_impl(msg_hdr_cref hdr, serializer* sink) {
@@ -492,8 +492,8 @@ class uti_base : public uniform_type_info {
         return create_impl<T>(other);
     }
 
-    any_tuple as_any_tuple(void* instance) const override {
-        return make_any_tuple(deref(instance));
+    message as_message(void* instance) const override {
+        return make_message(deref(instance));
     }
 
     static inline const T& deref(const void* ptr) {
@@ -580,8 +580,8 @@ class int_tinfo : public abstract_int_tinfo {
         return static_name();
     }
 
-    any_tuple as_any_tuple(void* instance) const override {
-        return make_any_tuple(deref(instance));
+    message as_message(void* instance) const override {
+        return make_message(deref(instance));
     }
 
  protected:
@@ -637,8 +637,8 @@ class buffer_type_info_impl : public uniform_type_info {
         return static_name();
     }
 
-    any_tuple as_any_tuple(void* instance) const override {
-        return make_any_tuple(deref(instance));
+    message as_message(void* instance) const override {
+        return make_message(deref(instance));
     }
 
  protected:
@@ -675,13 +675,13 @@ class buffer_type_info_impl : public uniform_type_info {
 
 };
 
-class default_meta_tuple : public uniform_type_info {
+class default_meta_message : public uniform_type_info {
 
  public:
 
-    default_meta_tuple(const std::string& name) {
+    default_meta_message(const std::string& name) {
         m_name = name;
-        auto elements = util::split(name, '+', false);
+        std::vector<std::string> elements = util::split(name, '+');
         auto uti_map = get_uniform_type_info_map();
         CPPA_REQUIRE(elements.size() > 0 && elements.front() == "@<>");
         // ignore first element, because it's always "@<>"
@@ -694,17 +694,18 @@ class default_meta_tuple : public uniform_type_info {
     }
 
     uniform_value create(const uniform_value& other) const override {
-        auto res = create_impl<object_array>(other);
+        auto res = create_impl<message>(other);
         if (!other) {
-            // res is not a copy => fill it with values
-            auto& oarr = *cast(res->val);
-            for (auto uti : m_elements) oarr.push_back(uti->create());
+            // res is not a copy => fill with values
+            message_builder mb;
+            for (auto& e : m_elements) mb.append(e->create());
+            *cast(res->val) = mb.to_message();
         }
         return res;
     }
 
-    any_tuple as_any_tuple(void* ptr) const override {
-        return any_tuple{static_cast<any_tuple::raw_ptr>(cast(ptr))};
+    message as_message(void* ptr) const override {
+        return *cast(ptr);
     }
 
     const char* name() const override {
@@ -712,17 +713,19 @@ class default_meta_tuple : public uniform_type_info {
     }
 
     void serialize(const void* ptr, serializer* sink) const override {
-        auto& oarr = *cast(ptr);
+        auto& msg = *cast(ptr);
+        CPPA_REQUIRE(msg.size() == m_elements.size());
         for (size_t i = 0; i < m_elements.size(); ++i) {
-            m_elements[i]->serialize(oarr.at(i), sink);
+            m_elements[i]->serialize(msg.at(i), sink);
         }
     }
 
     void deserialize(void* ptr, deserializer* source) const override {
-        auto& oarr = *cast(ptr);
+        message_builder mb;
         for (size_t i = 0; i < m_elements.size(); ++i) {
-            m_elements[i]->deserialize(oarr.mutable_at(i), source);
+            mb.append(m_elements[i]->deserialize(source));
         }
+        *cast(ptr) = mb.to_message();
     }
 
     bool equal_to(const std::type_info&) const override {
@@ -741,12 +744,12 @@ class default_meta_tuple : public uniform_type_info {
     std::string m_name;
     std::vector<const uniform_type_info*> m_elements;
 
-    inline object_array* cast(void* ptr) const {
-        return reinterpret_cast<object_array*>(ptr);
+    inline message* cast(void* ptr) const {
+        return reinterpret_cast<message*>(ptr);
     }
 
-    inline const object_array* cast(const void* ptr) const {
-        return reinterpret_cast<const object_array*>(ptr);
+    inline const message* cast(const void* ptr) const {
+        return reinterpret_cast<const message*>(ptr);
     }
 
 };
@@ -845,7 +848,7 @@ class utim_impl : public uniform_type_info_map {
         *i++ = &m_type_sync_exited;         // @sync_exited
         *i++ = &m_type_sync_timeout;        // @sync_timeout
         *i++ = &m_type_timeout;             // @timeout
-        *i++ = &m_type_tuple;               // @tuple
+        *i++ = &m_type_tuple;               // @msg
         *i++ = &m_type_u16;                 // @u16
         *i++ = &m_type_u16str;              // @u16str
         *i++ = &m_type_u32;                 // @u32
@@ -903,7 +906,7 @@ class utim_impl : public uniform_type_info_map {
         }
         if (!result && name.compare(0, 3, "@<>") == 0) {
             // create tuple UTI on-the-fly
-            result = insert(create_unique<default_meta_tuple>(name));
+            result = insert(create_unique<default_meta_message>(name));
         }
         return result; //(res) ? res : find_name(m_user_types, name);
     }
@@ -963,7 +966,7 @@ class utim_impl : public uniform_type_info_map {
 
     // 10-19
     uti_impl<group_down_msg>                m_type_group_down;
-    uti_impl<any_tuple>                     m_type_tuple;
+    uti_impl<message>                     m_type_tuple;
     uti_impl<util::duration>                m_type_duration;
     uti_impl<sync_exited_msg>               m_type_sync_exited;
     uti_impl<sync_timeout_msg>              m_type_sync_timeout;

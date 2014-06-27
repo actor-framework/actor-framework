@@ -22,7 +22,7 @@
 
 #include <atomic>
 
-#include "cppa/any_tuple.hpp"
+#include "cppa/message.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/singletons.hpp"
 #include "cppa/message_header.hpp"
@@ -50,7 +50,7 @@ class cooperative_scheduling {
 
     template<class Actor>
     void enqueue(Actor* self, msg_hdr_cref hdr,
-                 any_tuple& msg, execution_unit* host) {
+                 message& msg, execution_unit* host) {
         auto e = self->new_mailbox_element(hdr, std::move(msg));
         switch (self->mailbox().enqueue(e)) {
             case intrusive::enqueue_result::unblocked_reader: {

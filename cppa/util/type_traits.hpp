@@ -152,7 +152,7 @@ struct is_builtin {
                                        std::u16string,
                                        std::u32string,
                                        atom_value,
-                                       any_tuple,
+                                       message,
                                        message_header,
                                        actor,
                                        group,

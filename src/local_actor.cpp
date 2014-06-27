@@ -46,7 +46,7 @@ class down_observer : public attachable {
     void actor_exited(std::uint32_t reason) {
         auto ptr = detail::raw_access::get(m_observer);
         message_header hdr{m_observed, ptr, message_id{}.with_high_priority()};
-        hdr.deliver(make_any_tuple(down_msg{m_observed, reason}));
+        hdr.deliver(make_message(down_msg{m_observed, reason}));
     }
 
     bool matches(const attachable::token& match_token) {
@@ -104,7 +104,7 @@ std::vector<group> local_actor::joined_groups() const {
     return result;
 }
 
-void local_actor::reply_message(any_tuple&& what) {
+void local_actor::reply_message(message&& what) {
     auto& whom = m_current_node->sender;
     if (!whom) return;
     auto& id = m_current_node->mid;
@@ -130,7 +130,7 @@ void local_actor::forward_message(const actor& dest, message_priority prio) {
     m_current_node->mid = message_id::invalid;
 }
 
-void local_actor::send_tuple(message_priority prio, const channel& dest, any_tuple what) {
+void local_actor::send_tuple(message_priority prio, const channel& dest, message what) {
     if (!dest) return;
     message_id id;
     if (prio == message_priority::high) id = id.with_high_priority();
@@ -144,7 +144,7 @@ void local_actor::send_exit(const actor_addr& whom, std::uint32_t reason) {
 void local_actor::delayed_send_tuple(message_priority prio,
                                      const channel& dest,
                                      const util::duration& rel_time,
-                                     cppa::any_tuple msg) {
+                                     cppa::message msg) {
     message_id mid;
     if (prio == message_priority::high) mid = mid.with_high_priority();
     get_scheduling_coordinator()->delayed_send({address(), dest, mid},
@@ -173,7 +173,7 @@ void local_actor::quit(std::uint32_t reason) {
 message_id local_actor::timed_sync_send_tuple_impl(message_priority mp,
                                                    const actor& dest,
                                                    const util::duration& rtime,
-                                                   any_tuple&& what) {
+                                                   message&& what) {
     if (!dest) {
         throw std::invalid_argument("cannot send synchronous message "
                                     "to invalid_actor");
@@ -183,13 +183,13 @@ message_id local_actor::timed_sync_send_tuple_impl(message_priority mp,
     dest->enqueue({address(), dest, nri}, std::move(what), m_host);
     auto rri = nri.response_id();
     get_scheduling_coordinator()->delayed_send({address(), this, rri}, rtime,
-                                  make_any_tuple(sync_timeout_msg{}));
+                                  make_message(sync_timeout_msg{}));
     return rri;
 }
 
 message_id local_actor::sync_send_tuple_impl(message_priority mp,
                                              const actor& dest,
-                                             any_tuple&& what) {
+                                             message&& what) {
     if (!dest) {
         throw std::invalid_argument("cannot send synchronous message "
                                     "to invalid_actor");
@@ -204,7 +204,7 @@ void anon_send_exit(const actor_addr& whom, std::uint32_t reason) {
     if (!whom) return;
     auto ptr = detail::raw_access::get(whom);
     ptr->enqueue({invalid_actor_addr, ptr, message_id{}.with_high_priority()},
-                 make_any_tuple(exit_msg{invalid_actor_addr, reason}), nullptr);
+                 make_message(exit_msg{invalid_actor_addr, reason}), nullptr);
 }
 
 } // namespace cppa

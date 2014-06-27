@@ -72,7 +72,7 @@ class remote_actor_proxy : public actor_proxy {
                        node_id_ptr pinfo,
                        middleman* parent);
 
-    void enqueue(msg_hdr_cref hdr, any_tuple msg, execution_unit*) override;
+    void enqueue(msg_hdr_cref hdr, message msg, execution_unit*) override;
 
     void link_to(const actor_addr& other) override;
 
@@ -86,7 +86,7 @@ class remote_actor_proxy : public actor_proxy {
 
     void local_unlink_from(const actor_addr& other) override;
 
-    void deliver(msg_hdr_cref hdr, any_tuple msg) override;
+    void deliver(msg_hdr_cref hdr, message msg) override;
 
  protected:
 
@@ -94,7 +94,7 @@ class remote_actor_proxy : public actor_proxy {
 
  private:
 
-    void forward_msg(msg_hdr_cref hdr, any_tuple msg);
+    void forward_msg(msg_hdr_cref hdr, message msg);
 
     middleman* m_parent;
     intrusive::single_reader_queue<sync_request_info, detail::disposer> m_pending_requests;

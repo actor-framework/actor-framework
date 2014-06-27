@@ -121,7 +121,7 @@ struct D : popular_actor {
                     quit();
                 });
                 //*/
-                return sync_send_tuple(buddy(), last_dequeued()).then([=]() -> any_tuple {
+                return sync_send_tuple(buddy(), last_dequeued()).then([=]() -> message {
                     quit();
                     return last_dequeued();
                 });//*/

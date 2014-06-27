@@ -33,11 +33,6 @@
 
 namespace cppa {
 
-//template<typename T>
-//optional<T> conv_arg(const std::string& arg) {
-//    return detail::conv_arg_impl<T>::_(arg);
-//}
-
 /**
  * @brief Right-hand side of a match expression for a program option
  *        reading an argument of type @p T.
@@ -74,25 +69,29 @@ struct option_info {
 typedef std::map<std::string, std::map<std::pair<char, std::string>, option_info> >
         options_description;
 
+using opt_rvalue_builder = decltype(on(std::function<optional<std::string> (const std::string&)>{}) || on(std::string{}, val<std::string>));
+
+using opt0_rvalue_builder = decltype(on(std::string{}) || on(std::string{}));
+
 /**
  * @brief Left-hand side of a match expression for a program option with
  *        one argument.
  */
-detail::opt1_rvalue_builder<true> on_opt1(char short_opt,
-                                          std::string long_opt,
-                                          options_description* desc = nullptr,
-                                          std::string help_text = "",
-                                          std::string help_group = "general options");
+opt_rvalue_builder on_opt1(char short_opt,
+                           std::string long_opt,
+                           options_description* desc = nullptr,
+                           std::string help_text = "",
+                           std::string help_group = "general options");
 
 /**
  * @brief Left-hand side of a match expression for a program option with
  *        no argument.
  */
-detail::opt0_rvalue_builder on_opt0(char short_opt,
-                                    std::string long_opt,
-                                    options_description* desc = nullptr,
-                                    std::string help_text = "",
-                                    std::string help_group = "general options");
+opt0_rvalue_builder on_opt0(char short_opt,
+                            std::string long_opt,
+                            options_description* desc = nullptr,
+                            std::string help_text = "",
+                            std::string help_group = "general options");
 
 /**
  * @brief Returns a function that prints the help text of @p desc to @p out.

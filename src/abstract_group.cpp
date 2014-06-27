@@ -19,7 +19,7 @@
 
 #include "cppa/cppa.hpp"
 #include "cppa/abstract_group.hpp"
-#include "cppa/any_tuple.hpp"
+#include "cppa/message.hpp"
 #include "cppa/singletons.hpp"
 #include "cppa/util/shared_spinlock.hpp"
 #include "cppa/util/shared_lock_guard.hpp"
@@ -81,7 +81,7 @@ void publish_local_groups(std::uint16_t port, const char* addr) {
     }
     catch (std::exception&) {
         gn->enqueue({invalid_actor_addr, nullptr},
-                    make_any_tuple(atom("SHUTDOWN")),
+                    make_message(atom("SHUTDOWN")),
                     nullptr);
         throw;
     }

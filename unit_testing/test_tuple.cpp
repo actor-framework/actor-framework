@@ -14,20 +14,17 @@
 #include "cppa/on.hpp"
 #include "cppa/cppa.hpp"
 #include "cppa/cow_tuple.hpp"
-#include "cppa/any_tuple.hpp"
+#include "cppa/message.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/tuple_cast.hpp"
 #include "cppa/intrusive_ptr.hpp"
-#include "cppa/tpartial_function.hpp"
 #include "cppa/uniform_type_info.hpp"
 
 #include "cppa/util/type_traits.hpp"
 
 #include "cppa/detail/matches.hpp"
-#include "cppa/detail/projection.hpp"
 #include "cppa/detail/types_array.hpp"
 #include "cppa/detail/value_guard.hpp"
-#include "cppa/detail/object_array.hpp"
 
 using std::cout;
 using std::endl;
@@ -212,7 +209,7 @@ void check_guards() {
     auto f08 = on<int>() >> [&](int& mref) { mref = 8; invoked = "f08"; };
     CPPA_CHECK_INVOKED(f08, (f08_val));
     CPPA_CHECK_EQUAL(f08_val, 8);
-    any_tuple f08_any_val = make_cow_tuple(666);
+    message f08_any_val = make_cow_tuple(666);
     CPPA_CHECK(f08(f08_any_val));
     CPPA_CHECK_EQUAL(f08_any_val.get_as<int>(0), 8);
 
@@ -221,11 +218,11 @@ void check_guards() {
     CPPA_CHECK_NOT_INVOKED(f09, ("hello lambda", f09_val));
     CPPA_CHECK_INVOKED(f09, ("0", f09_val));
     CPPA_CHECK_EQUAL(f09_val, 9);
-    any_tuple f09_any_val = make_cow_tuple("0", 666);
+    message f09_any_val = make_cow_tuple("0", 666);
     CPPA_CHECK(f09(f09_any_val));
     CPPA_CHECK_EQUAL(f09_any_val.get_as<int>(1), 9);
     f09_any_val.get_as_mutable<int>(1) = 666;
-    any_tuple f09_any_val_copy{f09_any_val};
+    message f09_any_val_copy{f09_any_val};
     CPPA_CHECK(f09_any_val.at(0) == f09_any_val_copy.at(0));
     // detaches f09_any_val from f09_any_val_copy
     CPPA_CHECK(f09(f09_any_val));
@@ -340,7 +337,7 @@ void check_wildcards() {
     CPPA_CHECK_EQUAL("1", t0_0);
     CPPA_CHECK_EQUAL(2, t0_1);
     // use tuple cast to get a subtuple
-    any_tuple at0(t0);
+    message at0(t0);
     auto v0opt = tuple_cast<std::string, anything>(at0);
     CPPA_CHECK((std::is_same<decltype(v0opt), optional<cow_tuple<std::string>>>::value));
     CPPA_CHECK((v0opt));
@@ -366,7 +363,7 @@ void check_wildcards() {
         CPPA_CHECK(lhs == rhs);
         CPPA_CHECK(rhs == lhs);
     }
-    any_tuple at1 = make_cow_tuple("one", 2, 3.f, 4.0); {
+    message at1 = make_cow_tuple("one", 2, 3.f, 4.0); {
         // perfect match
         auto opt0 = tuple_cast<std::string, int, float, double>(at1);
         CPPA_CHECK(opt0);
@@ -404,7 +401,7 @@ void check_wildcards() {
         auto opt4 = tuple_cast<anything, double>(at1);
         CPPA_CHECK(opt4);
         if (opt4) {
-            CPPA_CHECK((*opt4 == make_any_tuple(4.0)));
+            CPPA_CHECK((*opt4 == make_message(4.0)));
             CPPA_CHECK_EQUAL(get<0>(*opt4), 4.0);
             CPPA_CHECK(&get<0>(*opt4) == at1.at(3));
         }
@@ -441,17 +438,17 @@ void check_move_ops() {
 
 void check_drop() {
     CPPA_PRINT(__func__);
-    auto t0 = make_any_tuple(0, 1, 2, 3);
+    auto t0 = make_message(0, 1, 2, 3);
     auto t1 = t0.drop(2);
     CPPA_CHECK_EQUAL(t1.size(), 2);
     CPPA_CHECK_EQUAL(t1.get_as<int>(0), 2);
     CPPA_CHECK_EQUAL(t1.get_as<int>(1), 3);
-    CPPA_CHECK(t1 == make_any_tuple(2, 3));
+    CPPA_CHECK(t1 == make_message(2, 3));
     auto t2 = t0.drop_right(2);
     CPPA_CHECK_EQUAL(t2.size(), 2);
     CPPA_CHECK_EQUAL(t2.get_as<int>(0), 0);
     CPPA_CHECK_EQUAL(t2.get_as<int>(1), 1);
-    CPPA_CHECK(t2 == make_any_tuple(0, 1));
+    CPPA_CHECK(t2 == make_message(0, 1));
     CPPA_CHECK(t0.take(3) == t0.drop_right(1));
     CPPA_CHECK(t0.take_right(3) == t0.drop(1));
     CPPA_CHECK(t0 == t0.take(4));

@@ -37,7 +37,7 @@
 #include "cppa/sb_actor.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/to_string.hpp"
-#include "cppa/any_tuple.hpp"
+#include "cppa/message.hpp"
 #include "cppa/cow_tuple.hpp"
 #include "cppa/singletons.hpp"
 #include "cppa/typed_actor.hpp"
@@ -322,7 +322,7 @@
  * std::vector<int> vec {1, 2, 3, 4};
  * auto i = vec.begin();
  * receive_for(i, vec.end()) (
- *     on(atom("get")) >> [&]() -> any_tuple { return {atom("result"), *i}; }
+ *     on(atom("get")) >> [&]() -> message { return {atom("result"), *i}; }
  * );
  * @endcode
  *
@@ -425,7 +425,7 @@ namespace cppa {
 /**
  * @brief Sends @p to a message under the identity of @p from.
  */
-inline void send_tuple_as(const actor& from, const channel& to, any_tuple msg) {
+inline void send_tuple_as(const actor& from, const channel& to, message msg) {
     if (to) to->enqueue({from.address(), to}, std::move(msg), nullptr);
 }
 
@@ -434,13 +434,13 @@ inline void send_tuple_as(const actor& from, const channel& to, any_tuple msg) {
  */
 template<typename... Ts>
 void send_as(const actor& from, const channel& to, Ts&&... args) {
-    send_tuple_as(from, to, make_any_tuple(std::forward<Ts>(args)...));
+    send_tuple_as(from, to, make_message(std::forward<Ts>(args)...));
 }
 
 /**
  * @brief Anonymously sends @p to a message.
  */
-inline void anon_send_tuple(const channel& to, any_tuple msg) {
+inline void anon_send_tuple(const channel& to, message msg) {
     send_tuple_as(invalid_actor, to, std::move(msg));
 }
 

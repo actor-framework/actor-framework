@@ -20,12 +20,11 @@
 #ifndef CPPA_DETAIL_TUPLE_CAST_IMPL_HPP
 #define CPPA_DETAIL_TUPLE_CAST_IMPL_HPP
 
-#include "cppa/any_tuple.hpp"
+#include "cppa/message.hpp"
 
 #include "cppa/detail/matches.hpp"
 #include "cppa/detail/tuple_vals.hpp"
 #include "cppa/detail/types_array.hpp"
-#include "cppa/detail/abstract_tuple.hpp"
 
 namespace cppa {
 namespace detail {
@@ -46,7 +45,7 @@ struct tuple_cast_impl {
             static_cast<size_t>(
                 util::tl_find<util::type_list<T...>, anything>::value);
     typedef util::limited_vector<size_t, size> mapping_vector;
-    static inline optional<Result> safe(any_tuple& tup) {
+    static inline optional<Result> safe(message& tup) {
         mapping_vector mv;
         if (matches<T...>(tup, mv)) return {Result::from(std::move(tup.vals()),
                                                          mv)};
@@ -56,7 +55,7 @@ struct tuple_cast_impl {
 
 template<class Result, typename... T>
 struct tuple_cast_impl<wildcard_position::nil, Result, T...> {
-    static inline optional<Result> safe(any_tuple& tup) {
+    static inline optional<Result> safe(message& tup) {
         if (matches<T...>(tup)) return {Result::from(std::move(tup.vals()))};
         return none;
     }
@@ -69,7 +68,7 @@ struct tuple_cast_impl<wildcard_position::trailing, Result, T...>
 
 template<class Result, typename... T>
 struct tuple_cast_impl<wildcard_position::leading, Result, T...> {
-    static inline optional<Result> safe(any_tuple& tup) {
+    static inline optional<Result> safe(message& tup) {
         size_t o = tup.size() - (sizeof...(T) - 1);
         if (matches<T...>(tup)) return {Result::offset_subtuple(tup.vals(), o)};
         return none;

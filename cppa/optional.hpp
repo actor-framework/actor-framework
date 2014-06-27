@@ -288,13 +288,6 @@ class optional<void> {
 };
 
 /** @relates option */
-template<typename T>
-struct is_optional { static constexpr bool value = false; };
-
-template<typename T>
-struct is_optional<optional<T>> { static constexpr bool value = true; };
-
-/** @relates option */
 template<typename T, typename U>
 bool operator==(const optional<T>& lhs, const optional<U>& rhs) {
     if ((lhs) && (rhs)) return *lhs == *rhs;

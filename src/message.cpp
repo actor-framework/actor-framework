@@ -16,63 +16,78 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
+#include "cppa/message.hpp"
+#include "cppa/message_handler.hpp"
 
-#include "cppa/any_tuple.hpp"
-#include "cppa/singletons.hpp"
+#include "cppa/detail/decorated_tuple.hpp"
 
 namespace cppa {
 
-any_tuple::any_tuple(detail::abstract_tuple* ptr) : m_vals(ptr) { }
+message::message(detail::message_data* ptr) : m_vals(ptr) {}
 
-any_tuple::any_tuple(any_tuple&& other) : m_vals(std::move(other.m_vals)) { }
+message::message(message&& other) : m_vals(std::move(other.m_vals)) {}
 
-any_tuple::any_tuple(const data_ptr& vals) : m_vals(vals) { }
+message::message(const data_ptr& vals) : m_vals(vals) {}
 
-any_tuple& any_tuple::operator=(any_tuple&& other) {
+message& message::operator=(message&& other) {
     m_vals.swap(other.m_vals);
     return *this;
 }
 
-void any_tuple::reset() {
-    m_vals.reset();
-}
+void message::reset() { m_vals.reset(); }
 
-void* any_tuple::mutable_at(size_t p) {
-    CPPA_REQUIRE(m_vals != nullptr);
+void* message::mutable_at(size_t p) {
+    CPPA_REQUIRE(m_vals);
     return m_vals->mutable_at(p);
 }
 
-const void* any_tuple::at(size_t p) const {
-    CPPA_REQUIRE(m_vals != nullptr);
+const void* message::at(size_t p) const {
+    CPPA_REQUIRE(m_vals);
     return m_vals->at(p);
 }
 
-const uniform_type_info* any_tuple::type_at(size_t p) const {
-    CPPA_REQUIRE(m_vals != nullptr);
+const uniform_type_info* message::type_at(size_t p) const {
+    CPPA_REQUIRE(m_vals);
     return m_vals->type_at(p);
 }
 
-bool any_tuple::equals(const any_tuple& other) const {
-    CPPA_REQUIRE(m_vals != nullptr);
+bool message::equals(const message& other) const {
+    CPPA_REQUIRE(m_vals);
     return m_vals->equals(*other.vals());
 }
 
-any_tuple any_tuple::drop(size_t n) const {
-    CPPA_REQUIRE(m_vals != nullptr);
+message message::drop(size_t n) const {
+    CPPA_REQUIRE(m_vals);
     if (n == 0) return *this;
-    if (n >= size()) return any_tuple{};
-    return any_tuple{detail::decorated_tuple::create(m_vals, n)};
+    if (n >= size()) return message{};
+    return message{detail::decorated_tuple::create(m_vals, n)};
 }
 
-any_tuple any_tuple::drop_right(size_t n) const {
-    CPPA_REQUIRE(m_vals != nullptr);
-    using namespace std;
+message message::drop_right(size_t n) const {
+    CPPA_REQUIRE(m_vals);
     if (n == 0) return *this;
-    if (n >= size()) return any_tuple{};
-    vector<size_t> mapping(size() - n);
+    if (n >= size()) return message{};
+    std::vector<size_t> mapping(size() - n);
     size_t i = 0;
-    generate(mapping.begin(), mapping.end(), [&] { return i++; });
-    return any_tuple{detail::decorated_tuple::create(m_vals, move(mapping))};
+    std::generate(mapping.begin(), mapping.end(), [&] { return i++; });
+    return message{detail::decorated_tuple::create(m_vals, std::move(mapping))};
+}
+
+optional<message> message::apply(message_handler handler) {
+    return handler(*this);
+}
+
+bool message::apply_iterative(message_handler handler) {
+    if (empty()) return true;
+    for (size_t chunk_size = 1; chunk_size <= size(); ++chunk_size) {
+        auto chunk = take(chunk_size);
+        auto remainder = drop(chunk_size);
+        if (handler(chunk)) {
+            return remainder.empty() ? true
+                                     : remainder.apply_iterative(std::move(handler));
+        }
+    }
+    return false;
 }
 
 } // namespace cppa

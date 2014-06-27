@@ -24,7 +24,7 @@
 #include <QApplication>
 
 #include "cppa/actor_companion.hpp"
-#include "cppa/partial_function.hpp"
+#include "cppa/message_handler.hpp"
 
 #include "cppa/policy/sequential_invoke.hpp"
 

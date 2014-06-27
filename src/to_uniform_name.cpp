@@ -30,8 +30,8 @@
 #include "cppa/actor.hpp"
 #include "cppa/abstract_group.hpp"
 #include "cppa/channel.hpp"
-#include "cppa/any_tuple.hpp"
-#include "cppa/any_tuple.hpp"
+#include "cppa/message.hpp"
+#include "cppa/message.hpp"
 #include "cppa/message_header.hpp"
 
 #include "cppa/util/algorithm.hpp"

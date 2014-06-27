@@ -59,10 +59,10 @@ namespace opencl {
 
 class opencl_metainfo;
 
-template <typename Signature>
+template<typename Signature>
 class actor_facade;
 
-template <typename Ret, typename... Args>
+template<typename Ret, typename... Args>
 class actor_facade<Ret(Args...)> : public abstract_actor {
 
     friend class command<actor_facade, Ret>;
@@ -72,8 +72,8 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
     typedef cow_tuple<typename util::rm_const_and_ref<Args>::type...>
             args_tuple;
 
-    typedef std::function<optional<args_tuple>(any_tuple)> arg_mapping;
-    typedef std::function<any_tuple(Ret&)> result_mapping;
+    typedef std::function<optional<args_tuple>(message)> arg_mapping;
+    typedef std::function<message(Ret&)> result_mapping;
 
     static intrusive_ptr<actor_facade>
     create(const program& prog, const char* kernel_name,
@@ -120,7 +120,7 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
         };
     }
 
-    void enqueue(msg_hdr_cref hdr, any_tuple msg, execution_unit*) override {
+    void enqueue(msg_hdr_cref hdr, message msg, execution_unit*) override {
         CPPA_LOG_TRACE("");
         typename util::il_indices<util::type_list<Args...>>::type indices;
         enqueue_impl(hdr.sender, std::move(msg), hdr.id, indices);
@@ -149,8 +149,8 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
         CPPA_LOG_TRACE("id: " << this->id());
     }
 
-    template <long... Is>
-    void enqueue_impl(const actor_addr& sender, any_tuple msg, message_id id,
+    template<long... Is>
+    void enqueue_impl(const actor_addr& sender, message msg, message_id id,
                       util::int_list<Is...>) {
         auto opt = m_map_args(std::move(msg));
         if (opt) {

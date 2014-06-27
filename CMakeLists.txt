@@ -119,16 +119,6 @@ if ("${CMAKE_BUILD_TYPE}" STREQUAL "")
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif ("${CMAKE_BUILD_TYPE}" STREQUAL "")
 
-if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-  set(LIBCPPA_PLATFORM_SRC src/middleman_event_handler_epoll.cpp)
-elseif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  set(LIBCPPA_PLATFORM_SRC src/middleman_event_handler_poll.cpp)
-elseif (${CMAKE_SYSTEM_NAME} MATCHES "Window")
-  set(LIBCPPA_PLATFORM_SRC src/middleman_event_handler_poll.cpp src/execinfo_windows.cpp)
-else ()
-  message(FATAL_ERROR "This platform is not supported by libcppa")
-endif()
-
 # get header files; only needed by CMake generators,
 # e.g., for creating proper Xcode projects
 file(GLOB LIBCPPA_HDRS "cppa/*.hpp"
@@ -139,94 +129,106 @@ file(GLOB LIBCPPA_HDRS "cppa/*.hpp"
                        "cppa/qtsupport/*.hpp"
                        "cppa/util/*.hpp")
 
-# list cpp files including platform-dependent files
-set(LIBCPPA_SRC
-    ${LIBCPPA_PLATFORM_SRC}
-    src/abstract_actor.cpp
-    src/abstract_channel.cpp
-    src/abstract_group.cpp
-    src/abstract_tuple.cpp
-    src/acceptor.cpp
-    src/actor.cpp
-    src/actor_addr.cpp
-    src/actor_companion.cpp
-    src/actor_namespace.cpp
-    src/actor_ostream.cpp
-    src/actor_proxy.cpp
-    src/actor_proxy.cpp
-    src/actor_registry.cpp
-    src/algorithm.cpp
-    src/any_tuple.cpp
-    src/atom.cpp
-    src/attachable.cpp
-    src/behavior.cpp
-    src/behavior_stack.cpp
-    src/binary_deserializer.cpp
-    src/binary_serializer.cpp
-    src/blocking_actor.cpp
-    src/broker.cpp
-    src/buffer.cpp
-    src/channel.cpp
-    src/context_switching_resume.cpp
-    src/continuable.cpp
-    src/continue_helper.cpp
-    src/cs_thread.cpp
-    src/decorated_tuple.cpp
-    src/default_message_queue.cpp
-    src/demangle.cpp
-    src/deserializer.cpp
-    src/duration.cpp
-    src/event_based_actor.cpp
-    src/exception.cpp
-    src/execution_unit.cpp
-    src/exit_reason.cpp
-    src/fd_util.cpp
-    src/functor_based_actor.cpp
-    src/functor_based_blocking_actor.cpp
-    src/get_mac_addresses.cpp
-    src/get_root_uuid.cpp
-    src/group.cpp
-    src/group_manager.cpp
-    src/input_stream.cpp
-    src/local_actor.cpp
-    src/logging.cpp
-    src/mailbox_element.cpp
-    src/match.cpp
-    src/memory.cpp
-    src/memory_managed.cpp
-    src/message_header.cpp
-    src/middleman.cpp
-    src/middleman_event_handler.cpp
-    src/node_id.cpp
-    src/object_array.cpp
-    src/opt.cpp
-    src/output_stream.cpp
-    src/partial_function.cpp
-    src/peer.cpp
-    src/peer_acceptor.cpp
-    src/primitive_variant.cpp
-    src/ref_counted.cpp
-    src/remote_actor_proxy.cpp
-    src/response_promise.cpp
-    src/resumable.cpp
-    src/ripemd_160.cpp
-    src/scheduler.cpp
-    src/scoped_actor.cpp
-    src/serializer.cpp
-    src/shared_spinlock.cpp
-    src/singleton_manager.cpp
-    src/stream.cpp
-    src/string_serialization.cpp
-    src/sync_request_bouncer.cpp
-    src/tcp_acceptor.cpp
-    src/tcp_io_stream.cpp
-    src/to_uniform_name.cpp
-    src/type_lookup_table.cpp
-    src/unicast_network.cpp
-    src/uniform_type_info.cpp
-    src/uniform_type_info_map.cpp
-    src/weak_ptr_anchor.cpp
-    src/yield_interface.cpp)
+# platform-dependent files
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+  set(LIBCPPA_PLATFORM_SRCS src/middleman_event_handler_epoll.cpp)
+elseif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  set(LIBCPPA_PLATFORM_SRCS src/middleman_event_handler_poll.cpp)
+elseif (${CMAKE_SYSTEM_NAME} MATCHES "Window")
+  set(LIBCPPA_PLATFORM_SRCS src/middleman_event_handler_poll.cpp src/execinfo_windows.cpp)
+else ()
+  message(FATAL_ERROR "This platform is not supported by libcppa")
+endif()
+
+# list cpp files excluding platform-dependent files
+set (LIBCPPA_SRCS 
+     ${LIBCPPA_PLATFORM_SRCS}
+     src/abstract_actor.cpp
+     src/abstract_channel.cpp
+     src/abstract_group.cpp
+     src/acceptor.cpp
+     src/actor.cpp
+     src/actor_addr.cpp
+     src/actor_companion.cpp
+     src/actor_namespace.cpp
+     src/actor_ostream.cpp
+     src/actor_proxy.cpp
+     src/actor_registry.cpp
+     src/algorithm.cpp
+     src/atom.cpp
+     src/attachable.cpp
+     src/behavior.cpp
+     src/behavior_stack.cpp
+     src/binary_deserializer.cpp
+     src/binary_serializer.cpp
+     src/blocking_actor.cpp
+     src/broker.cpp
+     src/buffer.cpp
+     src/channel.cpp
+     src/context_switching_resume.cpp
+     src/continuable.cpp
+     src/continue_helper.cpp
+     src/cs_thread.cpp
+     src/decorated_tuple.cpp
+     src/default_message_queue.cpp
+     src/demangle.cpp
+     src/deserializer.cpp
+     src/duration.cpp
+     src/event_based_actor.cpp
+     src/exception.cpp
+     src/execution_unit.cpp
+     src/exit_reason.cpp
+     src/fd_util.cpp
+     src/functor_based_actor.cpp
+     src/functor_based_blocking_actor.cpp
+     src/get_mac_addresses.cpp
+     src/get_root_uuid.cpp
+     src/group.cpp
+     src/group_manager.cpp
+     src/input_stream.cpp
+     src/local_actor.cpp
+     src/logging.cpp
+     src/mailbox_element.cpp
+     src/match.cpp
+     src/memory.cpp
+     src/memory_managed.cpp
+     src/message.cpp
+     src/message_builder.cpp
+     src/message_handler.cpp
+     src/message_header.cpp
+     src/middleman.cpp
+     src/middleman_event_handler.cpp
+     src/node_id.cpp
+     src/opencl/global.cpp
+     src/opencl/opencl_metainfo.cpp
+     src/opencl/program.cpp
+     src/opt.cpp
+     src/output_stream.cpp
+     src/peer.cpp
+     src/peer_acceptor.cpp
+     src/primitive_variant.cpp
+     src/ref_counted.cpp
+     src/remote_actor_proxy.cpp
+     src/response_promise.cpp
+     src/resumable.cpp
+     src/ripemd_160.cpp
+     src/scheduler.cpp
+     src/scoped_actor.cpp
+     src/serializer.cpp
+     src/shared_spinlock.cpp
+     src/singleton_manager.cpp
+     src/stream.cpp
+     src/string_serialization.cpp
+     src/sync_request_bouncer.cpp
+     src/tcp_acceptor.cpp
+     src/tcp_io_stream.cpp
+     src/to_uniform_name.cpp
+     src/type_lookup_table.cpp
+     src/unicast_network.cpp
+     src/uniform_type_info.cpp
+     src/uniform_type_info_map.cpp
+     src/weak_ptr_anchor.cpp
+     src/yield_interface.cpp)
 
 if (BOOST_ROOT)
   # Prevent falling back to system paths when using a custom Boost prefix.
@@ -279,7 +281,7 @@ endif (ENABLE_CONTEXT_SWITCHING)
 
 # build shared library if not compiling static only
 if (NOT "${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes")
-  add_library(libcppa SHARED ${LIBCPPA_SRC} ${LIBCPPA_HDRS})
+  add_library(libcppa SHARED ${LIBCPPA_SRCS} ${LIBCPPA_HDRS})
   target_link_libraries(libcppa ${LD_FLAGS})
   set(LIBRARY_VERSION ${LIBCPPA_VERSION_MAJOR}.${LIBCPPA_VERSION_MINOR}.${LIBCPPA_VERSION_PATCH})
   set(LIBRARY_SOVERSION ${LIBCPPA_VERSION_MAJOR})
@@ -295,7 +297,7 @@ endif ()
 
 # build static library only if --build-static or --build-static-only was set
 if ("${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes" OR "${CPPA_BUILD_STATIC}" STREQUAL "yes")
-  add_library(libcppaStatic STATIC ${LIBCPPA_HDRS} ${LIBCPPA_SRC})
+  add_library(libcppaStatic STATIC ${LIBCPPA_HDRS} ${LIBCPPA_SRCS})
   set_target_properties(libcppaStatic PROPERTIES OUTPUT_NAME cppa_static)
   install(TARGETS libcppaStatic ARCHIVE DESTINATION lib)
 endif ()

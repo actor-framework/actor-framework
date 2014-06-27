@@ -124,7 +124,7 @@ class blocking_actor
      * @code
      * int i = 0;
      * receive_for(i, 10) (
-     *     on(atom("get")) >> [&]() -> any_tuple { return {"result", i}; }
+     *     on(atom("get")) >> [&]() -> message { return {"result", i}; }
      * );
      * @endcode
      * @param begin First value in range.

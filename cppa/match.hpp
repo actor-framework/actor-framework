@@ -25,10 +25,11 @@
 #include <iterator>
 #include <type_traits>
 
-#include "cppa/any_tuple.hpp"
+#include "cppa/message.hpp"
 #include "cppa/match_expr.hpp"
 #include "cppa/skip_message.hpp"
-#include "cppa/partial_function.hpp"
+#include "cppa/message_handler.hpp"
+#include "cppa/message_builder.hpp"
 
 #include "cppa/util/tbind.hpp"
 #include "cppa/util/type_list.hpp"
@@ -45,11 +46,11 @@ class match_helper {
 
     match_helper(match_helper&&) = default;
 
-    inline match_helper(any_tuple t) : tup(std::move(t)) { }
+    inline match_helper(message t) : tup(std::move(t)) { }
 
     template<typename... Ts>
     auto operator()(Ts&&... args)
-    -> decltype(match_expr_collect(std::forward<Ts>(args)...)(any_tuple{})) {
+    -> decltype(match_expr_collect(std::forward<Ts>(args)...)(message{})) {
         static_assert(sizeof...(Ts) > 0, "at least one argument required");
         auto tmp = match_expr_collect(std::forward<Ts>(args)...);
         return tmp(tup);
@@ -57,7 +58,7 @@ class match_helper {
 
  private:
 
-    any_tuple tup;
+    message tup;
 
 };
 
@@ -301,7 +302,7 @@ namespace cppa {
  * @param what Tuple that should be matched against a pattern.
  * @returns A helper object providing <tt>operator(...)</tt>.
  */
-inline detail::match_helper match(any_tuple what) {
+inline detail::match_helper match(message what) {
     return what;
 }
 
@@ -312,7 +313,7 @@ inline detail::match_helper match(any_tuple what) {
  */
 template<typename T>
 detail::match_helper match(T&& what) {
-    return any_tuple::view(std::forward<T>(what));
+    return message_builder{std::forward<T>(what)}.to_message();
 }
 
 /**

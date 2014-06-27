@@ -19,7 +19,7 @@
 
 #include "cppa/group.hpp"
 #include "cppa/channel.hpp"
-#include "cppa/any_tuple.hpp"
+#include "cppa/message.hpp"
 #include "cppa/singletons.hpp"
 
 #include "cppa/detail/group_manager.hpp"

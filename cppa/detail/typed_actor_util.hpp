@@ -62,14 +62,6 @@ struct deduce_signature {
     typedef typename deduce_signature_helper<result_type, arg_types>::type type;
 };
 
-template<typename T>
-struct match_expr_has_no_guard {
-    static constexpr bool value = std::is_same<
-                                      typename T::second_type::guard_type,
-                                      detail::empty_value_guard
-                                  >::value;
-};
-
 template<typename Arguments>
 struct input_is {
     template<typename Signature>

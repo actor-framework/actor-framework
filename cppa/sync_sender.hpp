@@ -21,7 +21,7 @@
 #define CPPA_SYNC_SENDER_HPP
 
 #include "cppa/actor.hpp"
-#include "cppa/any_tuple.hpp"
+#include "cppa/message.hpp"
 #include "cppa/response_handle.hpp"
 #include "cppa/message_priority.hpp"
 
@@ -35,7 +35,7 @@ class sync_sender_impl : public Base {
  public:
 
     typedef response_handle<Subtype,
-                            any_tuple,
+                            message,
                             ResponseHandleTag>
             response_handle_type;
 
@@ -54,12 +54,12 @@ class sync_sender_impl : public Base {
      */
     response_handle_type sync_send_tuple(message_priority prio,
                                          const actor& dest,
-                                         any_tuple what) {
+                                         message what) {
         return {dptr()->sync_send_tuple_impl(prio, dest, std::move(what)),
                 dptr()};
     }
 
-    response_handle_type sync_send_tuple(const actor& dest, any_tuple what) {
+    response_handle_type sync_send_tuple(const actor& dest, message what) {
         return sync_send_tuple(message_priority::normal, dest, std::move(what));
     }
 
@@ -79,14 +79,14 @@ class sync_sender_impl : public Base {
                                    Ts&&... what) {
         static_assert(sizeof...(Ts) > 0, "no message to send");
         return sync_send_tuple(prio, dest,
-                               make_any_tuple(std::forward<Ts>(what)...));
+                               make_message(std::forward<Ts>(what)...));
     }
 
     template<typename... Ts>
     response_handle_type sync_send(const actor& dest, Ts&&... what) {
         static_assert(sizeof...(Ts) > 0, "no message to send");
         return sync_send_tuple(message_priority::normal,
-                               dest, make_any_tuple(std::forward<Ts>(what)...));
+                               dest, make_message(std::forward<Ts>(what)...));
     }
 
     /**************************************************************************
@@ -96,7 +96,7 @@ class sync_sender_impl : public Base {
     response_handle_type timed_sync_send_tuple(message_priority prio,
                                                const actor& dest,
                                                const util::duration& rtime,
-                                               any_tuple what) {
+                                               message what) {
         return {dptr()->timed_sync_send_tuple_impl(prio, dest, rtime,
                                                    std::move(what)),
                 dptr()};
@@ -104,7 +104,7 @@ class sync_sender_impl : public Base {
 
     response_handle_type timed_sync_send_tuple(const actor& dest,
                                                const util::duration& rtime,
-                                               any_tuple what) {
+                                               message what) {
         return {dptr()->timed_sync_send_tuple_impl(message_priority::normal,
                                                    dest, rtime,
                                                    std::move(what)),
@@ -118,7 +118,7 @@ class sync_sender_impl : public Base {
                                          Ts&&... what) {
         static_assert(sizeof...(Ts) > 0, "no message to send");
         return timed_sync_send_tuple(prio, dest, rtime,
-                                     make_any_tuple(std::forward<Ts>(what)...));
+                                     make_message(std::forward<Ts>(what)...));
     }
 
     template<typename... Ts>
@@ -127,7 +127,7 @@ class sync_sender_impl : public Base {
                                          Ts&&... what) {
         static_assert(sizeof...(Ts) > 0, "no message to send");
         return timed_sync_send_tuple(message_priority::normal, dest, rtime,
-                                     make_any_tuple(std::forward<Ts>(what)...));
+                                     make_message(std::forward<Ts>(what)...));
     }
 
     /**************************************************************************
@@ -263,7 +263,7 @@ class sync_sender_impl : public Base {
                     Ts&&... what) {
         static_assert(sizeof...(Ts) > 0, "no message to send");
         return timed_sync_send_tuple(prio, dest, rtime,
-                                     make_any_tuple(std::forward<Ts>(what)...));
+                                     make_message(std::forward<Ts>(what)...));
     }
 
     template<typename... Rs, typename... Ts>
@@ -284,7 +284,7 @@ class sync_sender_impl : public Base {
                     Ts&&... what) {
         static_assert(sizeof...(Ts) > 0, "no message to send");
         return timed_sync_send_tuple(message_priority::normal, dest, rtime,
-                                     make_any_tuple(std::forward<Ts>(what)...));
+                                     make_message(std::forward<Ts>(what)...));
     }
 
  private:

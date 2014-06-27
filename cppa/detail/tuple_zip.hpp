@@ -16,35 +16,23 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
+#ifndef CPPA_DETAIL_TUPLE_ZIP_HPP
+#define CPPA_DETAIL_TUPLE_ZIP_HPP
 
-#include "cppa/to_string.hpp"
+#include <tuple>
 
-#include "cppa/config.hpp"
-#include "cppa/partial_function.hpp"
-
-namespace cppa {
-
-partial_function::partial_function(impl_ptr ptr) : m_impl(std::move(ptr)) { }
-
-void detail::behavior_impl::handle_timeout() { }
-
-} // namespace cppa
+#include "cppa/util/int_list.hpp"
 
 namespace cppa {
 namespace detail {
 
-behavior_impl_ptr combine(behavior_impl_ptr lhs, const partial_function& rhs) {
-    return lhs->or_else(rhs.as_behavior_impl());
+template <typename F, long... Is, class Tup0, class Tup1>
+auto tuple_zip(F& f, util::int_list<Is...>, Tup0&& tup0, Tup1&& tup1)
+    -> decltype(std::make_tuple(f(std::get<Is>(tup0), std::get<Is>(tup1))...)) {
+    return std::make_tuple(f(std::get<Is>(tup0), std::get<Is>(tup1))...);
 }
 
-behavior_impl_ptr combine(const partial_function& lhs, behavior_impl_ptr rhs) {
-    return lhs.as_behavior_impl()->or_else(rhs);
-}
-
-behavior_impl_ptr extract(const partial_function& arg) {
-    return arg.as_behavior_impl();
-}
-
-} // namespace util
+} // namespace detail
 } // namespace cppa
 
+#endif // CPPA_DETAIL_TUPLE_ZIP_HPP

@@ -65,7 +65,7 @@ class actor_companion : public extend<local_actor, actor_companion>::
      */
     void on_enqueue(enqueue_handler handler);
 
-    void enqueue(msg_hdr_cref hdr, any_tuple msg, execution_unit* eu) override;
+    void enqueue(msg_hdr_cref hdr, message msg, execution_unit* eu) override;
 
  private:
 

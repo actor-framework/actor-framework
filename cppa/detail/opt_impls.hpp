@@ -143,17 +143,14 @@ struct is_rd_arg<rd_arg_functor<T> > : std::true_type { };
 template<typename T>
 struct is_rd_arg<add_arg_functor<T> > : std::true_type { };
 
-typedef decltype(on<std::string>().when(cppa::placeholders::_x1.in(std::vector<std::string>())))
-        opt0_rvalue_builder;
+typedef decltype(on<std::string>()) opt0_rvalue_builder;
 
 template<bool HasShortOpt = true>
 class opt1_rvalue_builder {
 
  public:
 
-    typedef decltype(on<std::string, std::string>()
-                    .when(cppa::placeholders::_x1.in(std::vector<std::string>())))
-            left_type;
+    typedef decltype(on<std::string, std::string>()) left_type;
 
     typedef decltype(on(std::function<optional<std::string>(const std::string&)>()))
             right_type;

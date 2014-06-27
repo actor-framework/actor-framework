@@ -134,7 +134,7 @@ class middleman {
      */
     virtual void deliver(const node_id& node,
                          msg_hdr_cref hdr,
-                         any_tuple msg                  ) = 0;
+                         message msg                  ) = 0;
 
     /**
      * @brief This callback is invoked by {@link peer} implementations

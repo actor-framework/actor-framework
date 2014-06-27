@@ -63,7 +63,7 @@ peer::peer(middleman* parent,
     // in this case, this peer must be erased if no proxy of it remains
     m_stop_on_last_proxy_exited = m_state == wait_for_msg_size;
     m_meta_hdr = uniform_typeid<message_header>();
-    m_meta_msg = uniform_typeid<any_tuple>();
+    m_meta_msg = uniform_typeid<message>();
 }
 
 void peer::io_failed(event_bitmask mask) {
@@ -133,7 +133,7 @@ continue_reading_result peer::continue_reading() {
             case read_message: {
                 //DEBUG("peer_connection::continue_reading: read_message");
                 message_header hdr;
-                any_tuple msg;
+                message msg;
                 binary_deserializer bd(m_rd_buf.data(), m_rd_buf.size(),
                                        &(parent()->get_namespace()), &m_incoming_types);
                 try {
@@ -208,7 +208,7 @@ void peer::monitor(const actor_addr&,
             // this actor already finished execution;
             // reply with KILL_PROXY message
             // get corresponding peer
-            enqueue(make_any_tuple(atom("KILL_PROXY"), pself, aid, entry.second));
+            enqueue(make_message(atom("KILL_PROXY"), pself, aid, entry.second));
         }
     }
     else {
@@ -220,7 +220,7 @@ void peer::monitor(const actor_addr&,
                                 "monitor$kill_proxy_helper",
                                 "reason = " << reason);
                 auto p = mm->get_peer(*node);
-                if (p) p->enqueue(make_any_tuple(atom("KILL_PROXY"), pself, aid, reason));
+                if (p) p->enqueue(make_message(atom("KILL_PROXY"), pself, aid, reason));
             });
         });
     }
@@ -256,7 +256,7 @@ void peer::kill_proxy(const actor_addr& sender,
     }
 }
 
-void peer::deliver(msg_hdr_cref hdr, any_tuple msg) {
+void peer::deliver(msg_hdr_cref hdr, message msg) {
     CPPA_LOG_TRACE("");
     if (hdr.sender && hdr.sender.is_remote()) {
         // is_remote() is guaranteed to return true if and only if
@@ -347,11 +347,11 @@ void peer::add_type_if_needed(const std::string& tname) {
         auto imap = get_uniform_type_info_map();
         auto uti = imap->by_uniform_name(tname);
         m_outgoing_types.emplace(id, uti);
-        enqueue_impl({invalid_actor_addr, nullptr}, make_any_tuple(atom("ADD_TYPE"), id, tname));
+        enqueue_impl({invalid_actor_addr, nullptr}, make_message(atom("ADD_TYPE"), id, tname));
     }
 }
 
-void peer::enqueue_impl(msg_hdr_cref hdr, const any_tuple& msg) {
+void peer::enqueue_impl(msg_hdr_cref hdr, const message& msg) {
     CPPA_LOG_TRACE("");
     auto tname = msg.tuple_type_names();
     add_type_if_needed((tname) ? *tname : detail::get_tuple_type_names(*msg.vals()));
@@ -372,7 +372,7 @@ void peer::enqueue_impl(msg_hdr_cref hdr, const any_tuple& msg) {
     memcpy(wbuf.offset_data(before), &size, sizeof(std::uint32_t));
 }
 
-void peer::enqueue(msg_hdr_cref hdr, const any_tuple& msg) {
+void peer::enqueue(msg_hdr_cref hdr, const message& msg) {
     enqueue_impl(hdr, msg);
     register_for_writing();
 }

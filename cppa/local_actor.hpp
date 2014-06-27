@@ -28,7 +28,7 @@
 #include "cppa/extend.hpp"
 #include "cppa/channel.hpp"
 #include "cppa/behavior.hpp"
-#include "cppa/any_tuple.hpp"
+#include "cppa/message.hpp"
 #include "cppa/cow_tuple.hpp"
 #include "cppa/spawn_fwd.hpp"
 #include "cppa/message_id.hpp"
@@ -43,7 +43,7 @@
 #include "cppa/mailbox_element.hpp"
 #include "cppa/response_promise.hpp"
 #include "cppa/message_priority.hpp"
-#include "cppa/partial_function.hpp"
+#include "cppa/message_handler.hpp"
 
 #include "cppa/util/duration.hpp"
 
@@ -147,12 +147,12 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     /**
      * @brief Sends @p what to the receiver specified in @p dest.
      */
-    void send_tuple(message_priority prio, const channel& whom, any_tuple what);
+    void send_tuple(message_priority prio, const channel& whom, message what);
 
     /**
      * @brief Sends @p what to the receiver specified in @p dest.
      */
-    inline void send_tuple(const channel& whom, any_tuple what) {
+    inline void send_tuple(const channel& whom, message what) {
         send_tuple(message_priority::normal, whom, std::move(what));
     }
 
@@ -166,7 +166,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     template<typename... Ts>
     inline void send(message_priority prio, const channel& whom, Ts&&... what) {
         static_assert(sizeof...(Ts) > 0, "sizeof...(Ts) == 0");
-        send_tuple(prio, whom, make_any_tuple(std::forward<Ts>(what)...));
+        send_tuple(prio, whom, make_message(std::forward<Ts>(what)...));
     }
 
     /**
@@ -179,7 +179,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     inline void send(const channel& whom, Ts&&... what) {
         static_assert(sizeof...(Ts) > 0, "sizeof...(Ts) == 0");
         send_tuple(message_priority::normal, whom,
-                   make_any_tuple(std::forward<Ts>(what)...));
+                   make_message(std::forward<Ts>(what)...));
     }
 
     /**
@@ -193,7 +193,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
                     const typed_actor<Rs...>& whom,
                     cow_tuple<Ts...> what) {
         check_typed_input(whom, what);
-        send_tuple(prio, whom.m_ptr, any_tuple{std::move(what)});
+        send_tuple(prio, whom.m_ptr, message{std::move(what)});
     }
 
     /**
@@ -265,7 +265,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     void delayed_send_tuple(message_priority prio,
                             const channel& whom,
                             const util::duration& rtime,
-                            any_tuple data);
+                            message data);
 
     /**
      * @brief Sends a message to @p whom that is delayed by @p rel_time.
@@ -276,7 +276,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
      */
     inline void delayed_send_tuple(const channel& whom,
                                    const util::duration& rtime,
-                                   any_tuple data) {
+                                   message data) {
         delayed_send_tuple(message_priority::normal, whom,
                            rtime, std::move(data));
     }
@@ -293,7 +293,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     void delayed_send(message_priority prio, const channel& whom,
                       const util::duration& rtime, Ts&&... args) {
         delayed_send_tuple(prio, whom, rtime,
-                           make_any_tuple(std::forward<Ts>(args)...));
+                           make_message(std::forward<Ts>(args)...));
     }
 
     /**
@@ -307,7 +307,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     void delayed_send(const channel& whom, const util::duration& rtime,
                       Ts&&... args) {
         delayed_send_tuple(message_priority::normal, whom, rtime,
-                           make_any_tuple(std::forward<Ts>(args)...));
+                           make_message(std::forward<Ts>(args)...));
     }
 
     /**************************************************************************
@@ -371,7 +371,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
      *        from the actor's mailbox.
      * @warning Only set during callback invocation.
      */
-    inline any_tuple& last_dequeued();
+    inline message& last_dequeued();
 
     /**
      * @brief Returns the address of the last sender of the
@@ -502,12 +502,12 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     message_id timed_sync_send_tuple_impl(message_priority mp,
                                           const actor& whom,
                                           const util::duration& rel_time,
-                                          any_tuple&& what);
+                                          message&& what);
 
     // returns the response ID
     message_id sync_send_tuple_impl(message_priority mp,
                                     const actor& whom,
-                                    any_tuple&& what);
+                                    message&& what);
 
     // returns the response ID
     template<typename... Rs, typename... Ts>
@@ -517,14 +517,14 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
         check_typed_input(whom, what);
         return sync_send_tuple_impl(mp,
                                     actor{whom.m_ptr.get()},
-                                    any_tuple{std::move(what)});
+                                    message{std::move(what)});
     }
 
     // returns 0 if last_dequeued() is an asynchronous or sync request message,
     // a response id generated from the request id otherwise
     inline message_id get_response_id();
 
-    void reply_message(any_tuple&& what);
+    void reply_message(message&& what);
 
     void forward_message(const actor& new_receiver, message_priority prio);
 
@@ -616,7 +616,7 @@ inline void local_actor::trap_exit(bool new_value) {
     m_trap_exit = new_value;
 }
 
-inline any_tuple& local_actor::last_dequeued() {
+inline message& local_actor::last_dequeued() {
     return m_current_node->msg;
 }
 

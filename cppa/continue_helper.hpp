@@ -25,7 +25,7 @@
 #include "cppa/on.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/message_id.hpp"
-#include "cppa/partial_function.hpp"
+#include "cppa/message_handler.hpp"
 
 namespace cppa {
 
@@ -50,7 +50,7 @@ class continue_helper {
      */
     template<typename F>
     continue_helper& continue_with(F fun) {
-        return continue_with(behavior::continuation_fun{partial_function{
+        return continue_with(behavior::continuation_fun{message_handler{
                    on(any_vals, arg_match) >> fun
                }});
     }

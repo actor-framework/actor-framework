@@ -23,14 +23,14 @@
 #include <typeinfo>
 
 #include "cppa/util/type_list.hpp"
-#include "cppa/detail/tuple_iterator.hpp"
+#include "cppa/detail/message_iterator.hpp"
 
 namespace cppa {
 namespace detail {
 
 struct tuple_dummy {
     typedef util::empty_type_list types;
-    typedef detail::tuple_iterator<tuple_dummy> const_iterator;
+    typedef detail::message_iterator<tuple_dummy> const_iterator;
     inline size_t size() const {
         return 0;
     }

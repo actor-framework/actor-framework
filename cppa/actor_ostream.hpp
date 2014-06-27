@@ -21,7 +21,7 @@
 #define CPPA_ACTOR_OSTREAM_HPP
 
 #include "cppa/actor.hpp"
-#include "cppa/any_tuple.hpp"
+#include "cppa/message.hpp"
 #include "cppa/to_string.hpp"
 
 namespace cppa {
@@ -51,11 +51,11 @@ class actor_ostream {
         return write(move(arg));
     }
 
-    inline actor_ostream& operator<<(const any_tuple& arg) {
+    inline actor_ostream& operator<<(const message& arg) {
         return write(cppa::to_string(arg));
     }
 
-    // disambiguate between conversion to string and to any_tuple
+    // disambiguate between conversion to string and to message
     inline actor_ostream& operator<<(const char* arg) {
         return *this << std::string{arg};
     }
@@ -63,7 +63,7 @@ class actor_ostream {
     template<typename T>
     inline typename std::enable_if<
            !std::is_convertible<T, std::string>::value
-        && !std::is_convertible<T, any_tuple>::value,
+        && !std::is_convertible<T, message>::value,
         actor_ostream&
     >::type
     operator<<(T&& arg) {

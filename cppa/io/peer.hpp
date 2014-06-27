@@ -26,7 +26,7 @@
 #include "cppa/extend.hpp"
 #include "cppa/node_id.hpp"
 #include "cppa/actor_proxy.hpp"
-#include "cppa/partial_function.hpp"
+#include "cppa/message_handler.hpp"
 #include "cppa/type_lookup_table.hpp"
 #include "cppa/weak_intrusive_ptr.hpp"
 
@@ -63,7 +63,7 @@ class peer : public extend<continuable>::with<buffered_writing> {
 
     void io_failed(event_bitmask mask) override;
 
-    void enqueue(msg_hdr_cref hdr, const any_tuple& msg);
+    void enqueue(msg_hdr_cref hdr, const message& msg);
 
     inline bool stop_on_last_proxy_exited() const {
         return m_stop_on_last_proxy_exited;
@@ -109,7 +109,7 @@ class peer : public extend<continuable>::with<buffered_writing> {
     // point to the published actor of the remote node
     bool m_stop_on_last_proxy_exited;
 
-    partial_function m_content_handler;
+    message_handler m_content_handler;
 
     type_lookup_table m_incoming_types;
     type_lookup_table m_outgoing_types;
@@ -122,13 +122,13 @@ class peer : public extend<continuable>::with<buffered_writing> {
 
     void unlink(const actor_addr& sender, const actor_addr& ptr);
 
-    void deliver(msg_hdr_cref hdr, any_tuple msg);
+    void deliver(msg_hdr_cref hdr, message msg);
 
-    inline void enqueue(const any_tuple& msg) {
+    inline void enqueue(const message& msg) {
         enqueue({invalid_actor_addr, nullptr}, msg);
     }
 
-    void enqueue_impl(msg_hdr_cref hdr, const any_tuple& msg);
+    void enqueue_impl(msg_hdr_cref hdr, const message& msg);
 
     void add_type_if_needed(const std::string& tname);
 

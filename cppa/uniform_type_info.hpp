@@ -246,9 +246,9 @@ class uniform_type_info {
     virtual void deserialize(void* instance, deserializer* source) const = 0;
 
     /**
-     * @brief Returns @p instance encapsulated as an @p any_tuple.
+     * @brief Returns @p instance encapsulated as an @p message.
      */
-    virtual any_tuple as_any_tuple(void* instance) const = 0;
+    virtual message as_message(void* instance) const = 0;
 
  protected:
 

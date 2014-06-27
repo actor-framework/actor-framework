@@ -40,9 +40,9 @@ behavior ping(event_based_actor* self, size_t num_pings) {
         on(atom("kickoff"), arg_match) >> [=](const actor& pong) {
             self->send(pong, atom("ping"), int32_t(1));
             self->become (
-                on(atom("pong"), arg_match) >> [=](int32_t value) -> any_tuple {
+                on(atom("pong"), arg_match) >> [=](int32_t value) -> message {
                     if (++*count >= num_pings) self->quit();
-                    return make_any_tuple(atom("ping"), value + 1);
+                    return make_message(atom("ping"), value + 1);
                 }
             );
         }
@@ -52,7 +52,7 @@ behavior ping(event_based_actor* self, size_t num_pings) {
 behavior pong() {
     return {
         on(atom("ping"), arg_match) >> [](int32_t value) {
-            return make_any_tuple(atom("pong"), value);
+            return make_message(atom("pong"), value);
         }
     };
 }

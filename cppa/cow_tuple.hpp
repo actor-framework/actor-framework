@@ -26,7 +26,7 @@
 #include <type_traits>
 
 #include "cppa/get.hpp"
-#include "cppa/cow_ptr.hpp"
+#include "cppa/message.hpp"
 #include "cppa/ref_counted.hpp"
 
 #include "cppa/util/type_traits.hpp"
@@ -38,13 +38,6 @@
 #include "cppa/detail/implicit_conversions.hpp"
 
 namespace cppa {
-
-// forward declaration
-class any_tuple;
-class local_actor;
-
-template<typename... ElementTypes>
-class cow_tuple;
 
 /**
  * @ingroup CopyOnWrite
@@ -58,21 +51,15 @@ class cow_tuple<Head, Tail...> {
                   "illegal types in cow_tuple definition: "
                   "pointers and references are prohibited");
 
-    friend class any_tuple;
+    using data_type = detail::tuple_vals<
+                          typename detail::strip_and_convert<Head>::type,
+                          typename detail::strip_and_convert<Tail>::type...>;
 
-    typedef detail::tuple_vals<Head, Tail...> data_type;
-
-    cow_ptr<detail::abstract_tuple> m_vals;
-
-    struct priv_ctor { };
-
-    cow_tuple(priv_ctor, cow_ptr<detail::abstract_tuple>&& ptr) : m_vals(std::move(ptr)) { }
+    using data_ptr = detail::message_data::ptr;
 
  public:
 
     typedef util::type_list<Head, Tail...> types;
-
-    typedef cow_ptr<detail::abstract_tuple> cow_ptr_type;
 
     static constexpr size_t num_elements = sizeof...(Tail) + 1;
 
@@ -98,12 +85,6 @@ class cow_tuple<Head, Tail...> {
     cow_tuple(const cow_tuple&) = default;
     cow_tuple& operator=(cow_tuple&&) = default;
     cow_tuple& operator=(const cow_tuple&) = default;
-
-    static cow_tuple offset_subtuple(cow_ptr_type ptr, size_t offset) {
-        CPPA_REQUIRE(offset > 0);
-        auto ti = detail::static_type_list<Head, Tail...>::by_offset(offset);
-        return {priv_ctor{}, detail::decorated_tuple::create(std::move(ptr), ti, offset)};
-    }
 
     /**
      * @brief Gets the size of this cow_tuple.
@@ -138,28 +119,21 @@ class cow_tuple<Head, Tail...> {
         return cow_tuple<Tail...>::offset_subtuple(m_vals, 1);
     }
 
-    /** @cond PRIVATE */
-
-    static cow_tuple from(cow_ptr_type ptr) {
-        return {priv_ctor{}, std::move(ptr)};
+    inline operator message() {
+        return message{m_vals};
     }
 
-    static cow_tuple from(cow_ptr_type ptr, std::vector<size_t> mv) {
-        auto ti = detail::static_type_list<Head, Tail...>::list;
-        return {priv_ctor{}, detail::decorated_tuple::create(std::move(ptr), ti, std::move(mv))};
+ private:
+
+    data_type* ptr() {
+        return static_cast<data_type*>(m_vals.get());
     }
 
-    static cow_tuple from(cow_ptr_type ptr, const util::limited_vector<size_t, num_elements>& mv) {
-        std::vector<size_t> v(mv.size());
-        std::copy(mv.begin(), mv.end(), v.begin());
-        return from(ptr, std::move(v));
+    const data_type* ptr() const {
+        return static_cast<data_type*>(m_vals.get());
     }
 
-    inline const cow_ptr<detail::abstract_tuple>& vals() const {
-        return m_vals;
-    }
-
-    /** @endcond */
+    data_ptr m_vals;
 
 };
 

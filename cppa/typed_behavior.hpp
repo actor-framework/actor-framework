@@ -206,11 +206,6 @@ class typed_behavior {
 
     template<typename... Cs>
     void set(match_expr<Cs...>&& expr) {
-        // check for (the lack of) guards
-        static_assert(util::conjunction<
-                          detail::match_expr_has_no_guard<Cs>::value...
-                      >::value,
-                      "typed actors are not allowed to use guard expressions");
         // do some transformation before type-checking the input signatures
         typedef typename util::tl_map<
                     util::type_list<

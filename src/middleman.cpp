@@ -221,7 +221,7 @@ class middleman_impl : public middleman {
 
     void deliver(const node_id& node,
                  msg_hdr_cref hdr,
-                 any_tuple msg                  ) override {
+                 message msg                  ) override {
         auto& entry = m_peers[node];
         if (entry.impl) {
             CPPA_REQUIRE(entry.queue != nullptr);
@@ -295,7 +295,7 @@ class middleman_impl : public middleman {
                                                  const node_id& node) {
             deliver(node,
                     {invalid_actor_addr, nullptr},
-                    make_any_tuple(atom("MONITOR"),
+                    make_message(atom("MONITOR"),
                                    m_node,
                                    aid));
         });

@@ -29,7 +29,7 @@
 namespace cppa {
 
 class channel;
-class any_tuple;
+class message;
 class message_header;
 
 struct invalid_group_t { constexpr invalid_group_t() { } };

@@ -27,7 +27,7 @@
 #include "cppa/atom.hpp"
 #include "cppa/config.hpp"
 #include "cppa/logging.hpp"
-#include "cppa/any_tuple.hpp"
+#include "cppa/message.hpp"
 #include "cppa/singletons.hpp"
 #include "cppa/actor_addr.hpp"
 #include "cppa/abstract_actor.hpp"
@@ -67,7 +67,7 @@ bool abstract_actor::link_to_impl(const actor_addr& other) {
         // send exit message if already exited
         if (exited()) {
             ptr->enqueue({address(), ptr},
-                         make_any_tuple(exit_msg{address(), exit_reason()}),
+                         make_message(exit_msg{address(), exit_reason()}),
                          m_host);
         }
         // add link if not already linked to other
@@ -151,7 +151,7 @@ bool abstract_actor::establish_backlink(const actor_addr& other) {
     if (reason != exit_reason::not_exited) {
         auto ptr = detail::raw_access::unsafe_cast(other);
         ptr->enqueue({address(), ptr},
-                     make_any_tuple(exit_msg{address(), exit_reason()}),
+                     make_message(exit_msg{address(), exit_reason()}),
                      m_host);
     }
     return false;
@@ -202,7 +202,7 @@ void abstract_actor::cleanup(std::uint32_t reason) {
                       << " attached functors; exit reason = " << reason
                       << ", class = " << detail::demangle(typeid(*this)));
     // send exit messages
-    auto msg = make_any_tuple(exit_msg{address(), reason});
+    auto msg = make_message(exit_msg{address(), reason});
     CPPA_LOGM_DEBUG("cppa::actor", "send EXIT to " << mlinks.size() << " links");
     for (auto& aptr : mlinks) {
         aptr->enqueue({address(), aptr, message_id{}.with_high_priority()},

@@ -241,8 +241,8 @@ class meta_cow_tuple : public uniform_type_info {
         return create_impl<tuple_type>(other);
     }
 
-    any_tuple as_any_tuple(void* instance) const override {
-        return (instance) ? any_tuple{*cast(instance)} : any_tuple{};
+    message as_message(void* instance) const override {
+        return (instance) ? make_message(*cast(instance)) : message{};
     }
 
     bool equal_to(const std::type_info& tinfo) const override {

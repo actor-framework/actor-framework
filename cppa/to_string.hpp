@@ -28,7 +28,7 @@
 #include "cppa/channel.hpp"
 #include "cppa/node_id.hpp"
 #include "cppa/anything.hpp"
-#include "cppa/any_tuple.hpp"
+#include "cppa/message.hpp"
 #include "cppa/intrusive_ptr.hpp"
 #include "cppa/abstract_group.hpp"
 #include "cppa/message_header.hpp"
@@ -49,7 +49,7 @@ inline std::string to_string_impl(const T& what) {
 
 } // namespace detail
 
-inline std::string to_string(const any_tuple& what) {
+inline std::string to_string(const message& what) {
     return detail::to_string_impl(what);
 }
 

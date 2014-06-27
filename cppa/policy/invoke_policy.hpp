@@ -33,7 +33,7 @@
 #include "cppa/exit_reason.hpp"
 #include "cppa/mailbox_element.hpp"
 #include "cppa/system_messages.hpp"
-#include "cppa/partial_function.hpp"
+#include "cppa/message_handler.hpp"
 #include "cppa/response_promise.hpp"
 
 #include "cppa/detail/memory.hpp"
@@ -113,7 +113,7 @@ class invoke_policy {
 
     std::list<std::unique_ptr<mailbox_element, detail::disposer> > m_cache;
 
-    inline void handle_timeout(partial_function&) {
+    inline void handle_timeout(message_handler&) {
         CPPA_CRITICAL("handle_timeout(partial_function&)");
     }
 
@@ -136,7 +136,7 @@ class invoke_policy {
 
     template<class Actor>
     msg_type filter_msg(Actor* self, mailbox_element* node) {
-        const any_tuple& msg = node->msg;
+        const message& msg = node->msg;
         auto mid = node->mid;
         auto& arr = detail::static_types_array<exit_msg,
                                                timeout_msg,
@@ -187,11 +187,11 @@ class invoke_policy {
     // - extracts response message from handler
     // - returns true if fun was successfully invoked
     template<class Actor, class Fun, class MaybeResponseHandle = int>
-    optional<any_tuple> invoke_fun(Actor* self,
-                                   any_tuple& msg,
-                                   message_id& mid,
-                                   Fun& fun,
-                                   MaybeResponseHandle hdl = MaybeResponseHandle{}) {
+    optional<message> invoke_fun(Actor* self,
+                                 message& msg,
+                                 message_id& mid,
+                                 Fun& fun,
+                                 MaybeResponseHandle hdl = MaybeResponseHandle{}) {
 #       if CPPA_LOG_LEVEL >= CPPA_DEBUG
         auto msg_str = to_string(msg);
 #       endif
@@ -209,7 +209,7 @@ class invoke_policy {
                                      << " did not reply to a "
                                         "synchronous request message");
                     auto fhdl = fetch_response_promise(self, hdl);
-                    if (fhdl) fhdl.deliver(make_any_tuple(unit));
+                    if (fhdl) fhdl.deliver(make_message(unit));
                 }
             } else {
                 if (   detail::matches<atom_value, std::uint64_t>(*res)
@@ -226,11 +226,11 @@ class invoke_policy {
                     if (ref_opt) {
                         behavior cpy = *ref_opt;
                         *ref_opt = cpy.add_continuation(
-                            [=](any_tuple& intermediate) -> optional<any_tuple> {
+                            [=](message& intermediate) -> optional<message> {
                                 if (!intermediate.empty()) {
                                     // do no use lamba expresion type to
                                     // avoid recursive template instantiaton
-                                    behavior::continuation_fun f2 = [=](any_tuple& m) -> optional<any_tuple> {
+                                    behavior::continuation_fun f2 = [=](message& m) -> optional<message> {
                                         return std::move(m);
                                     };
                                     auto mutable_mid = mid;
@@ -257,7 +257,7 @@ class invoke_policy {
                     if (fhdl) {
                         fhdl.deliver(std::move(*res));
                         // inform caller about success
-                        return any_tuple{};
+                        return message{};
                     }
                 }
             }

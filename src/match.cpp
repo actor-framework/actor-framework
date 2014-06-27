@@ -20,6 +20,7 @@
 #include <vector>
 #include <string>
 #include <sstream>
+
 #include "cppa/match.hpp"
 
 using namespace std;
@@ -27,13 +28,13 @@ using namespace std;
 namespace cppa {
 
 detail::match_helper match_split(const std::string& str, char delim, bool keep_empties) {
-    vector<string> result;
+    message_builder result;
     stringstream strs(str);
     string tmp;
     while (getline(strs, tmp, delim)) {
-        if (!tmp.empty() && !keep_empties) result.push_back(std::move(tmp));
+        if (!tmp.empty() && !keep_empties) result.append(std::move(tmp));
     }
-    return match(any_tuple::view(std::move(result)));
+    return result.to_message();
 }
 
 } // namespace cppa

@@ -90,7 +90,7 @@ class scheduling_policy {
     template<class Actor>
     void enqueue(Actor* self,
                  msg_hdr_cref hdr,
-                 any_tuple& msg,
+                 message& msg,
                  execution_unit* host);
 
     /**

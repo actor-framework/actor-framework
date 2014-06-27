@@ -21,7 +21,7 @@
 #define CPPA_RESPONSE_PROMISE_HPP
 
 #include "cppa/actor.hpp"
-#include "cppa/any_tuple.hpp"
+#include "cppa/message.hpp"
 #include "cppa/actor_addr.hpp"
 #include "cppa/message_id.hpp"
 
@@ -58,7 +58,7 @@ class response_promise {
     /**
      * @brief Sends @p response_message and invalidates this handle afterwards.
      */
-    void deliver(any_tuple response_message);
+    void deliver(message response_message);
 
  private:
 

@@ -31,7 +31,7 @@ istream& operator>>(istream& is, line& l) {
 
 namespace { string s_last_line; }
 
-any_tuple split_line(const line& l) {
+message split_line(const line& l) {
     istringstream strs(l.str);
     s_last_line = move(l.str);
     string tmp;
@@ -39,7 +39,7 @@ any_tuple split_line(const line& l) {
     while (getline(strs, tmp, ' ')) {
         if (!tmp.empty()) result.push_back(std::move(tmp));
     }
-    return any_tuple::view(std::move(result));
+    return message::view(std::move(result));
 }
 
 void client(event_based_actor* self, const string& name) {

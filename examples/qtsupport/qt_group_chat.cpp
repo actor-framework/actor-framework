@@ -39,16 +39,16 @@ istream& operator>>(istream& is, line& l) {
     return is;
 }
 
-any_tuple s_last_line;
+message s_last_line;
 
-any_tuple split_line(const line& l) {
+message split_line(const line& l) {
     vector<string> result;
     stringstream strs(l.str);
     string tmp;
     while (getline(strs, tmp, ' ')) {
         if (!tmp.empty()) result.push_back(std::move(tmp));
     }
-    s_last_line = any_tuple::view(std::move(result));
+    s_last_line = message::view(std::move(result));
     return s_last_line;
 }
 

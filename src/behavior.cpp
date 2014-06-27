@@ -18,7 +18,7 @@
 
 
 #include "cppa/behavior.hpp"
-#include "cppa/partial_function.hpp"
+#include "cppa/message_handler.hpp"
 
 namespace cppa {
 
@@ -45,16 +45,12 @@ class continuation_decorator : public detail::behavior_impl {
         return none;
     }
 
-    bhvr_invoke_result invoke(any_tuple& tup) {
+    bhvr_invoke_result invoke(message& tup) {
         return invoke_impl(tup);
     }
 
-    bhvr_invoke_result invoke(const any_tuple& tup) {
+    bhvr_invoke_result invoke(const message& tup) {
         return invoke_impl(tup);
-    }
-
-    bool defined_at(const any_tuple& tup) {
-        return m_decorated->defined_at(tup);
     }
 
     pointer copy(const generic_timeout_definition& tdef) const {
@@ -71,7 +67,7 @@ class continuation_decorator : public detail::behavior_impl {
 };
 } // namespace <anonymous>
 
-behavior::behavior(const partial_function& fun) : m_impl(fun.m_impl) { }
+behavior::behavior(const message_handler& fun) : m_impl(fun.m_impl) { }
 
 behavior behavior::add_continuation(continuation_fun fun) {
     return behavior::impl_ptr{new continuation_decorator(std::move(fun),

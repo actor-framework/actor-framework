@@ -16,53 +16,41 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
+#ifndef CALL_HPP
+#define CALL_HPP
 
-#ifndef CPPA_DETAIL_OBJECT_ARRAY_HPP
-#define CPPA_DETAIL_OBJECT_ARRAY_HPP
-
-#include <vector>
-
-#include "cppa/uniform_type_info.hpp"
-#include "cppa/detail/abstract_tuple.hpp"
+#include "cppa/util/int_list.hpp"
 
 namespace cppa {
 namespace detail {
 
-class object_array : public abstract_tuple {
+template <typename F, long... Is, class Tuple>
+inline auto apply_args(F& f, util::int_list<Is...>, Tuple&& tup)
+    -> decltype(f(get<Is>(tup)...)) {
+    return f(get<Is>(tup)...);
+}
 
-    typedef abstract_tuple super;
+template <typename F, class Tuple, typename... Ts>
+inline auto apply_args_prefixed(F& f, util::int_list<>, Tuple&, Ts&&... args)
+    -> decltype(f(std::forward<Ts>(args)...)) {
+    return f(std::forward<Ts>(args)...);
+}
 
- public:
+template <typename F, long... Is, class Tuple, typename... Ts>
+inline auto apply_args_prefixed(F& f, util::int_list<Is...>, Tuple& tup,
+                                Ts&&... args)
+    -> decltype(f(std::forward<Ts>(args)..., get<Is>(tup)...)) {
+    return f(std::forward<Ts>(args)..., get<Is>(tup)...);
+}
 
-    using abstract_tuple::const_iterator;
-
-    object_array();
-    object_array(object_array&&) = default;
-    object_array(const object_array&);
-
-    ~object_array();
-
-    void push_back(uniform_value what);
-
-    void* mutable_at(size_t pos) override;
-
-    size_t size() const override;
-
-    object_array* copy() const override;
-
-    const void* at(size_t pos) const override;
-
-    const uniform_type_info* type_at(size_t pos) const override;
-
-    const std::string* tuple_type_names() const override;
-
- private:
-
-    std::vector<uniform_value> m_elements;
-
-};
+template <typename F, long... Is, class Tuple, typename... Ts>
+inline auto apply_args_suffxied(F& f, util::int_list<Is...>, Tuple& tup,
+                                Ts&&... args)
+    -> decltype(f(get<Is>(tup)..., std::forward<Ts>(args)...)) {
+    return f(get<Is>(tup)..., std::forward<Ts>(args)...);
+}
 
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_DETAIL_OBJECT_ARRAY_HPP
+#endif // CALL_HPP

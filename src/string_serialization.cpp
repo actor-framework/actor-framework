@@ -46,7 +46,7 @@ namespace cppa {
 namespace {
 
 bool isbuiltin(const string& type_name) {
-    return type_name == "@str" || type_name == "@atom" || type_name == "@tuple";
+    return type_name == "@str" || type_name == "@atom" || type_name == "@msg";
 }
 
 // serializes types as type_name(...) except:
@@ -289,7 +289,7 @@ class string_deserializer : public deserializer {
             type_name = "@atom";
         }
         else if (*m_pos == '{') {
-            type_name = "@tuple";
+            type_name = "@msg";
         }
         else {
             auto substr_end = next_delimiter();

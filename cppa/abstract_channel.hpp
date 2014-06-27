@@ -46,7 +46,7 @@ class abstract_channel : public ref_counted {
      *             is not a scheduled actor.
      */
     virtual void enqueue(msg_hdr_cref header,
-                         any_tuple content,
+                         message content,
                          execution_unit* host) = 0;
 
  protected:

@@ -26,7 +26,7 @@ class proper_actor_base : public Policies::resume_policy::template mixin<Base, D
 
  public:
 
-    template <typename... Ts>
+    template<typename... Ts>
     proper_actor_base(Ts&&... args) : super(std::forward<Ts>(args)...) {
         CPPA_REQUIRE(this->m_hidden == true);
     }
@@ -40,7 +40,7 @@ class proper_actor_base : public Policies::resume_policy::template mixin<Base, D
 
     typedef typename Policies::scheduling_policy::timeout_type timeout_type;
 
-    void enqueue(msg_hdr_cref hdr, any_tuple msg, execution_unit* eu) override {
+    void enqueue(msg_hdr_cref hdr, message msg, execution_unit* eu) override {
         CPPA_PUSH_AID(dptr()->id());
         CPPA_LOG_DEBUG(CPPA_TARG(hdr, to_string)
                        << ", " << CPPA_TARG(msg, to_string));
@@ -189,7 +189,7 @@ class proper_actor : public proper_actor_base<Base,
     // that Base is derived from local_actor and uses the
     // behavior_stack_based mixin
 
-    template <typename... Ts>
+    template<typename... Ts>
     proper_actor(Ts&&... args) : super(std::forward<Ts>(args)...) { }
 
     // required by event_based_resume::mixin::resume
@@ -223,7 +223,7 @@ class proper_actor : public proper_actor_base<Base,
 };
 
 // for blocking actors, there's one more member function to implement
-template <class Base, class Policies>
+template<class Base, class Policies>
 class proper_actor<Base, Policies, true> : public proper_actor_base<Base,
                                               proper_actor<Base,
                                                            Policies,
@@ -234,7 +234,7 @@ class proper_actor<Base, Policies, true> : public proper_actor_base<Base,
 
  public:
 
-    template <typename... Ts>
+    template<typename... Ts>
     proper_actor(Ts&&... args)
         : super(std::forward<Ts>(args)...), m_next_timeout_id(0) { }
 
@@ -304,7 +304,7 @@ class proper_actor<Base, Policies, true> : public proper_actor_base<Base,
     std::uint32_t request_timeout(const util::duration& d) {
         CPPA_REQUIRE(d.valid());
         auto tid = ++m_next_timeout_id;
-        auto msg = make_any_tuple(timeout_msg{tid});
+        auto msg = make_message(timeout_msg{tid});
         if (d.is_zero()) {
             // immediately enqueue timeout message if duration == 0s
             this->enqueue({this->address(), this},

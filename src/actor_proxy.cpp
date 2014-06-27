@@ -22,7 +22,7 @@
 
 #include "cppa/atom.hpp"
 #include "cppa/to_string.hpp"
-#include "cppa/any_tuple.hpp"
+#include "cppa/message.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/singletons.hpp"
 #include "cppa/actor_proxy.hpp"

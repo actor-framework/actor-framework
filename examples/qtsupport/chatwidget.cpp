@@ -14,7 +14,7 @@ using namespace cppa;
 
 ChatWidget::ChatWidget(QWidget* parent, Qt::WindowFlags f)
 : super(parent, f), m_input(nullptr), m_output(nullptr) {
-    set_message_handler ([=](local_actor* self) -> partial_function {
+    set_message_handler ([=](local_actor* self) -> message_handler {
         return {
             on(atom("join"), arg_match) >> [=](const group& what) {
                 if (m_chatroom) {

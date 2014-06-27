@@ -16,30 +16,28 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
-#ifndef CPPA_DETAIL_DECORATED_TUPLE_HPP
-#define CPPA_DETAIL_DECORATED_TUPLE_HPP
+#ifndef CPPA_DECORATED_TUPLE_HPP
+#define CPPA_DECORATED_TUPLE_HPP
 
 #include <vector>
 #include <algorithm>
 
 #include "cppa/config.hpp"
-#include "cppa/cow_ptr.hpp"
 #include "cppa/ref_counted.hpp"
 #include "cppa/uniform_type_info.hpp"
 
 #include "cppa/util/type_list.hpp"
 
 #include "cppa/detail/tuple_vals.hpp"
-#include "cppa/detail/abstract_tuple.hpp"
+#include "cppa/detail/message_data.hpp"
 #include "cppa/detail/serialize_tuple.hpp"
 
 namespace cppa {
 namespace detail {
 
-class decorated_tuple : public abstract_tuple {
+class decorated_tuple : public message_data {
 
-    typedef abstract_tuple super;
+    typedef message_data super;
 
     decorated_tuple& operator=(const decorated_tuple&) = delete;
 
@@ -47,7 +45,7 @@ class decorated_tuple : public abstract_tuple {
 
     typedef std::vector<size_t> vector_type;
 
-    typedef cow_ptr<abstract_tuple> pointer;
+    typedef message_data::ptr pointer;
 
     typedef const std::type_info* rtti;
 
@@ -87,8 +85,8 @@ class decorated_tuple : public abstract_tuple {
 
  private:
 
-    pointer     m_decorated;
-    rtti        m_token;
+    pointer m_decorated;
+    rtti m_token;
     vector_type m_mapping;
 
     void init();
@@ -110,4 +108,4 @@ class decorated_tuple : public abstract_tuple {
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_DETAIL_DECORATED_TUPLE_HPP
+#endif // CPPA_DECORATED_TUPLE_HPP

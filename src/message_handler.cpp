@@ -17,17 +17,34 @@
 \******************************************************************************/
 
 
-#include "cppa/logging.hpp"
-#include "cppa/io/protocol.hpp"
-#include "cppa/io/middleman.hpp"
+#include "cppa/to_string.hpp"
+
+#include "cppa/config.hpp"
+#include "cppa/message_handler.hpp"
 
 namespace cppa {
-namespace io {
 
-protocol::protocol(middleman* parent) : m_parent(parent) {
-    CPPA_REQUIRE(parent != nullptr);
+message_handler::message_handler(impl_ptr ptr) : m_impl(std::move(ptr)) { }
+
+void detail::behavior_impl::handle_timeout() { }
+
+} // namespace cppa
+
+namespace cppa {
+namespace detail {
+
+behavior_impl_ptr combine(behavior_impl_ptr lhs, const message_handler& rhs) {
+    return lhs->or_else(rhs.as_behavior_impl());
 }
 
-} // namespace io
+behavior_impl_ptr combine(const message_handler& lhs, behavior_impl_ptr rhs) {
+    return lhs.as_behavior_impl()->or_else(rhs);
+}
+
+behavior_impl_ptr extract(const message_handler& arg) {
+    return arg.as_behavior_impl();
+}
+
+} // namespace util
 } // namespace cppa
 

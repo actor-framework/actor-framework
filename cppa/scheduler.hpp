@@ -30,7 +30,7 @@
 #include "cppa/atom.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/channel.hpp"
-#include "cppa/any_tuple.hpp"
+#include "cppa/message.hpp"
 #include "cppa/cow_tuple.hpp"
 #include "cppa/attachable.hpp"
 #include "cppa/scoped_actor.hpp"
@@ -160,8 +160,8 @@ class coordinator {
     template<typename Duration, typename... Data>
     void delayed_send(message_header hdr,
                       const Duration& rel_time,
-                      any_tuple data           ) {
-        auto tup = make_any_tuple(atom("SEND"),
+                      message data           ) {
+        auto tup = make_message(atom("SEND"),
                                   util::duration{rel_time},
                                   std::move(hdr),
                                   std::move(data));
@@ -171,9 +171,9 @@ class coordinator {
     template<typename Duration, typename... Data>
     void delayed_reply(message_header hdr,
                        const Duration& rel_time,
-                       any_tuple data           ) {
+                       message data           ) {
         CPPA_REQUIRE(hdr.id.valid() && hdr.id.is_response());
-        auto tup = make_any_tuple(atom("SEND"),
+        auto tup = make_message(atom("SEND"),
                                   util::duration{rel_time},
                                   std::move(hdr),
                                   std::move(data));

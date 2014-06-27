@@ -146,7 +146,7 @@ class broker : public extend<local_actor>::
         return add_acceptor(tcp_acceptor::from_sockfd(tcp_sockfd));
     }
 
-    void enqueue(msg_hdr_cref, any_tuple, execution_unit*) override;
+    void enqueue(msg_hdr_cref, message, execution_unit*) override;
 
     template<typename F>
     static broker_ptr from(F fun) {
@@ -192,7 +192,7 @@ class broker : public extend<local_actor>::
 
     static broker_ptr from_impl(std::function<behavior (broker*)> fun);
 
-    void invoke_message(msg_hdr_cref hdr, any_tuple msg);
+    void invoke_message(msg_hdr_cref hdr, message msg);
 
     bool invoke_message_from_cache();
 

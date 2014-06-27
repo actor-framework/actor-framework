@@ -18,7 +18,7 @@ size_t s_pongs = 0;
 
 behavior ping_behavior(local_actor* self, size_t num_pings) {
     return  (
-        on(atom("pong"), arg_match) >> [=](int value) -> any_tuple {
+        on(atom("pong"), arg_match) >> [=](int value) -> message {
             if (!self->last_sender()) {
                 CPPA_PRINT("last_sender() invalid!");
             }
@@ -30,7 +30,7 @@ behavior ping_behavior(local_actor* self, size_t num_pings) {
                 self->send_exit(self->last_sender(), exit_reason::user_shutdown);
                 self->quit();
             }
-            return make_any_tuple(atom("ping"), value);
+            return make_message(atom("ping"), value);
         },
         others() >> [=] {
             CPPA_LOGF_ERROR("unexpected message; "
@@ -42,9 +42,9 @@ behavior ping_behavior(local_actor* self, size_t num_pings) {
 
 behavior pong_behavior(local_actor* self) {
     return  (
-        on(atom("ping"), arg_match) >> [](int value) -> any_tuple {
+        on(atom("ping"), arg_match) >> [](int value) -> message {
             CPPA_PRINT("received {'ping', " << value << "}");
-            return make_any_tuple(atom("pong"), value + 1);
+            return make_message(atom("pong"), value + 1);
         },
         others() >> [=] {
             CPPA_LOGF_ERROR("unexpected message; "

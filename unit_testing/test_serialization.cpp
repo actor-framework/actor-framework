@@ -25,10 +25,10 @@
 #include "test.hpp"
 
 #include "cppa/cow_tuple.hpp"
-#include "cppa/any_tuple.hpp"
+#include "cppa/message.hpp"
 #include "cppa/announce.hpp"
 #include "cppa/tuple_cast.hpp"
-#include "cppa/any_tuple.hpp"
+#include "cppa/message.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/serializer.hpp"
 #include "cppa/from_string.hpp"
@@ -151,7 +151,7 @@ int main() {
     oarr->push_back(object::from(static_cast<uint32_t>(42)));
     oarr->push_back(object::from("foo"  ));
 
-    any_tuple atuple1{static_cast<any_tuple::raw_ptr>(oarr)};
+    message atuple1{static_cast<message::raw_ptr>(oarr)};
     try {
         auto opt = tuple_cast<uint32_t, string>(atuple1);
         CPPA_CHECK(opt.valid());
@@ -204,29 +204,29 @@ int main() {
 
     //try {
         scoped_actor self;
-        auto ttup = make_any_tuple(1, 2, actor{self.get()});
+        auto ttup = make_message(1, 2, actor{self.get()});
         util::buffer wr_buf;
         binary_serializer bs(&wr_buf, &addressing);
         bs << ttup;
         binary_deserializer bd(wr_buf.data(), wr_buf.size(), &addressing);
-        any_tuple ttup2;
-        uniform_typeid<any_tuple>()->deserialize(&ttup2, &bd);
+        message ttup2;
+        uniform_typeid<message>()->deserialize(&ttup2, &bd);
         CPPA_CHECK(ttup  == ttup2);
     //}
     //catch (exception& e) { CPPA_FAILURE(to_verbose_string(e)); }
 
     try {
         scoped_actor self;
-        auto ttup = make_any_tuple(1, 2, actor{self.get()});
+        auto ttup = make_message(1, 2, actor{self.get()});
         util::buffer wr_buf;
         binary_serializer bs(&wr_buf, &addressing);
         bs << ttup;
         bs << ttup;
         binary_deserializer bd(wr_buf.data(), wr_buf.size(), &addressing);
-        any_tuple ttup2;
-        any_tuple ttup3;
-        uniform_typeid<any_tuple>()->deserialize(&ttup2, &bd);
-        uniform_typeid<any_tuple>()->deserialize(&ttup3, &bd);
+        message ttup2;
+        message ttup3;
+        uniform_typeid<message>()->deserialize(&ttup2, &bd);
+        uniform_typeid<message>()->deserialize(&ttup3, &bd);
         CPPA_CHECK(ttup  == ttup2);
         CPPA_CHECK(ttup  == ttup3);
         CPPA_CHECK(ttup2 == ttup3);
@@ -240,8 +240,8 @@ int main() {
         bs << atuple1;
         // deserialize b2 from buf
         binary_deserializer bd(wr_buf.data(), wr_buf.size(), &addressing);
-        any_tuple atuple2;
-        uniform_typeid<any_tuple>()->deserialize(&atuple2, &bd);
+        message atuple2;
+        uniform_typeid<message>()->deserialize(&atuple2, &bd);
         auto opt = tuple_cast<uint32_t, string>(atuple2);
         CPPA_CHECK(opt.valid());
         if (opt.valid()) {
@@ -274,15 +274,15 @@ int main() {
 
     // test serialization of enums
     try {
-        auto enum_tuple = make_any_tuple(test_enum::b);
+        auto enum_tuple = make_message(test_enum::b);
         // serialize b1 to buf
         util::buffer wr_buf;
         binary_serializer bs(&wr_buf, &addressing);
         bs << enum_tuple;
         // deserialize b2 from buf
         binary_deserializer bd(wr_buf.data(), wr_buf.size(), &addressing);
-        any_tuple enum_tuple2;
-        uniform_typeid<any_tuple>()->deserialize(&enum_tuple2, &bd);
+        message enum_tuple2;
+        uniform_typeid<message>()->deserialize(&enum_tuple2, &bd);
         auto opt = tuple_cast<test_enum>(enum_tuple2);
         CPPA_CHECK(opt.valid());
         if (opt.valid()) {

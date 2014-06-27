@@ -16,76 +16,77 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
+#include <vector>
 
-#ifndef CPPA_DETAIL_CONTAINER_TUPLE_VIEW_HPP
-#define CPPA_DETAIL_CONTAINER_TUPLE_VIEW_HPP
-
-#include <iostream>
-
-#include "cppa/detail/tuple_vals.hpp"
-#include "cppa/detail/abstract_tuple.hpp"
-#include "cppa/detail/disablable_delete.hpp"
+#include "cppa/message_builder.hpp"
+#include "cppa/message_handler.hpp"
+#include "cppa/uniform_type_info.hpp"
 
 namespace cppa {
-namespace detail {
 
-template<class Container>
-class container_tuple_view : public abstract_tuple {
+namespace {
 
-    typedef abstract_tuple super;
+class dynamic_msg_data : public detail::message_data {
 
-    typedef typename Container::difference_type difference_type;
+    typedef message_data super;
 
  public:
 
-    typedef typename Container::value_type value_type;
+    using message_data::const_iterator;
 
-    container_tuple_view(Container* c, bool take_ownership = false)
-    : super(true), m_ptr(c) {
-        CPPA_REQUIRE(c != nullptr);
-        if (!take_ownership) m_ptr.get_deleter().disable();
+    dynamic_msg_data(const dynamic_msg_data& other) : super(true) {
+        for (auto& d : other.m_data) {
+            m_data.push_back(d->copy());
+        }
     }
 
-    size_t size() const override {
-        return m_ptr->size();
-    }
-
-    abstract_tuple* copy() const override {
-        return new container_tuple_view{new Container(*m_ptr), true};
-    }
+    dynamic_msg_data(std::vector<uniform_value>&& data)
+            : super(true), m_data(std::move(data)) {}
 
     const void* at(size_t pos) const override {
         CPPA_REQUIRE(pos < size());
-        CPPA_REQUIRE(static_cast<difference_type>(pos) >= 0);
-        auto i = m_ptr->cbegin();
-        std::advance(i, static_cast<difference_type>(pos));
-        return &(*i);
+        return m_data[pos]->val;
     }
 
     void* mutable_at(size_t pos) override {
         CPPA_REQUIRE(pos < size());
-        CPPA_REQUIRE(static_cast<difference_type>(pos) >= 0);
-        auto i = m_ptr->begin();
-        std::advance(i, static_cast<difference_type>(pos));
-        return &(*i);
+        return m_data[pos]->val;
     }
 
-    const uniform_type_info* type_at(size_t) const override {
-        return static_types_array<value_type>::arr[0];
+    size_t size() const override { return m_data.size(); }
+
+    dynamic_msg_data* copy() const override {
+        return new dynamic_msg_data(*this);
+    }
+
+    const uniform_type_info* type_at(size_t pos) const override {
+        CPPA_REQUIRE(pos < size());
+        return m_data[pos]->ti;
     }
 
     const std::string* tuple_type_names() const override {
-        static std::string result = demangle<value_type>();
-        return &result;
+        return nullptr; // get_tuple_type_names(*this);
     }
 
  private:
 
-    std::unique_ptr<Container, disablable_delete> m_ptr;
+    std::vector<uniform_value> m_data;
 
 };
 
-} // namespace detail
-} // namespace cppa
+} // namespace <anonymous>
 
-#endif // CPPA_DETAIL_CONTAINER_TUPLE_VIEW_HPP
+message_builder& message_builder::append(uniform_value what) {
+    m_elements.push_back(std::move(what));
+    return *this;
+}
+
+message message_builder::to_message() {
+    return message{new dynamic_msg_data(std::move(m_elements))};
+}
+
+optional<message> message_builder::apply(message_handler handler) {
+    return to_message().apply(std::move(handler));
+}
+
+} // namespace cppa

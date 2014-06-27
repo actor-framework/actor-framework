@@ -39,10 +39,10 @@ namespace cppa {
  * @param tup Dynamically typed tuple.
  * @returns An {@link option} for a {@link cow_tuple} with the types
  *          deduced from {T...}.
- * @relates any_tuple
+ * @relates message
  */
 template<typename... T>
-auto moving_tuple_cast(any_tuple& tup);
+auto moving_tuple_cast(message& tup);
 
 /**
  * @brief Tries to cast @p tup to {@link cow_tuple cow_tuple<T...>} and moves
@@ -50,35 +50,35 @@ auto moving_tuple_cast(any_tuple& tup);
  * @param tup Dynamically typed tuple.
  * @returns An {@link option} for a {@link cow_tuple} with the types
  *          deduced from {T...}.
- * @relates any_tuple
+ * @relates message
  */
 template<typename... T>
-auto moving_tuple_cast(any_tuple& tup, const util::type_list<T...>&);
+auto moving_tuple_cast(message& tup, const util::type_list<T...>&);
 
 /**
  * @brief Tries to cast @p tup to {@link cow_tuple cow_tuple<T...>}.
  * @param tup Dynamically typed tuple.
  * @returns An {@link option} for a {@link cow_tuple} with the types
  *          deduced from {T...}.
- * @relates any_tuple
+ * @relates message
  */
 template<typename... T>
-auto tuple_cast(any_tuple tup);
+auto tuple_cast(message tup);
 
 /**
  * @brief Tries to cast @p tup to {@link cow_tuple cow_tuple<T...>}.
  * @param tup Dynamically typed tuple.
  * @returns An {@link option} for a {@link cow_tuple} with the types
  *          deduced from {T...}.
- * @relates any_tuple
+ * @relates message
  */
 template<typename... T>
-auto tuple_cast(any_tuple tup, const util::type_list<T...>&);
+auto tuple_cast(message tup, const util::type_list<T...>&);
 
 #else
 
 template<typename... T>
-auto moving_tuple_cast(any_tuple& tup)
+auto moving_tuple_cast(message& tup)
     -> optional<
         typename cow_tuple_from_type_list<
             typename util::tl_filter_not<util::type_list<T...>,
@@ -92,13 +92,13 @@ auto moving_tuple_cast(any_tuple& tup)
 }
 
 template<typename... T>
-auto moving_tuple_cast(any_tuple& tup, const util::type_list<T...>&)
+auto moving_tuple_cast(message& tup, const util::type_list<T...>&)
     -> decltype(moving_tuple_cast<T...>(tup)) {
     return moving_tuple_cast<T...>(tup);
 }
 
 template<typename... T>
-auto tuple_cast(any_tuple tup)
+auto tuple_cast(message tup)
      -> optional<
           typename cow_tuple_from_type_list<
             typename util::tl_filter_not<util::type_list<T...>,
@@ -108,7 +108,7 @@ auto tuple_cast(any_tuple tup)
 }
 
 template<typename... T>
-auto tuple_cast(any_tuple tup, const util::type_list<T...>&)
+auto tuple_cast(message tup, const util::type_list<T...>&)
     -> decltype(tuple_cast<T...>(tup)) {
     return moving_tuple_cast<T...>(tup);
 }
@@ -116,7 +116,7 @@ auto tuple_cast(any_tuple tup, const util::type_list<T...>&)
 // ************************ for in-library use only! ************************ //
 
 template<typename... T>
-auto unsafe_tuple_cast(any_tuple& tup, const util::type_list<T...>&)
+auto unsafe_tuple_cast(message& tup, const util::type_list<T...>&)
     -> decltype(tuple_cast<T...>(tup)) {
     return tuple_cast<T...>(tup);
 }

@@ -22,15 +22,25 @@
 #include "cppa/opt.hpp"
 
 using namespace std;
-using cppa::placeholders::_x1;
 
 namespace cppa {
 
-detail::opt1_rvalue_builder<true> on_opt1(char short_opt,
-                                         string long_opt,
-                                         options_description* desc,
-                                         string help_text,
-                                         string help_group) {
+using string_proj = function<optional<string> (const string&)>;
+
+string_proj extract_longopt_arg(const string& prefix) {
+    return [prefix](const string& arg) -> optional<string> {
+        if (arg.compare(0, prefix.size(), prefix)) {
+            return string(arg.begin() + prefix.size(), arg.end());
+        }
+        return none;
+    };
+}
+
+opt_rvalue_builder on_opt1(char short_opt,
+                           string long_opt,
+                           options_description* desc,
+                           string help_text,
+                           string help_group) {
     if (desc) {
         option_info oinf{move(help_text), 1};
         (*desc)[help_group].insert(make_pair(make_pair(short_opt, long_opt), move(oinf)));
@@ -53,24 +63,22 @@ detail::opt1_rvalue_builder<true> on_opt1(char short_opt,
     opts.push_back(lhs_str);
     opts.push_back("--" + long_opt);
     opts.push_back("-" + long_opt);
-    return {short_opt, long_opt, on<string, string>().when(_x1.in(opts)), on(kvp)};
+    return on(extract_longopt_arg(prefix)) || on(lhs_str, val<string>);
+    //return {short_opt, long_opt, on<string, string>().when(_x1.in(opts)), on(kvp)};
 }
 
-decltype(on<string>().when(_x1.in(vector<string>())))
-on_opt0(char short_opt,
-        string long_opt,
-        options_description* desc,
-        string help_text,
-        string help_group) {
+opt0_rvalue_builder on_opt0(char short_opt,
+                            string long_opt,
+                            options_description* desc,
+                            string help_text,
+                            string help_group) {
     if (desc) {
         option_info oinf{help_text, 0};
         (*desc)[help_group].insert(make_pair(make_pair(short_opt, long_opt), move(oinf)));
     }
     const char short_flag_arr[] = {'-', short_opt, '\0' };
-    vector<string> opt_strs = { short_flag_arr };
-    opt_strs.push_back("-" + long_opt);
-    opt_strs.push_back("--" + move(long_opt));
-    return on<string>().when(_x1.in(move(opt_strs)));
+    string short_opt_string = short_flag_arr;
+    return on(long_opt) || on(short_opt_string);
 }
 
 function<void()> print_desc(options_description* desc, ostream& out) {
@@ -109,8 +117,8 @@ function<void()> print_desc(options_description* desc, ostream& out) {
 }
 
 function<void()> print_desc_and_exit(options_description* desc,
-                                          ostream& out,
-                                          int exit_reason) {
+                                     ostream& out,
+                                     int exit_reason) {
     auto fun = print_desc(desc, out);
     return [=] {
         fun();

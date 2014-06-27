@@ -32,9 +32,9 @@
 #include "cppa/atom.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/logging.hpp"
-#include "cppa/any_tuple.hpp"
+#include "cppa/message.hpp"
 #include "cppa/announce.hpp"
-#include "cppa/any_tuple.hpp"
+#include "cppa/message.hpp"
 #include "cppa/intrusive_ptr.hpp"
 #include "cppa/uniform_type_info.hpp"
 

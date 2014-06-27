@@ -57,7 +57,7 @@ class command : public ref_counted {
             std::vector<cl_event> events,
             std::vector<mem_ptr> arguments,
             size_t result_size,
-            any_tuple msg)
+            message msg)
         : m_result_size(result_size)
         , m_handle(handle)
         , m_actor_facade(actor_facade)
@@ -151,7 +151,7 @@ class command : public ref_counted {
     std::vector<cl_event> m_events;
     std::vector<mem_ptr> m_arguments;
     R m_result;
-    any_tuple m_msg; // required to keep the argument buffers alive (for async copy)
+    message m_msg; // required to keep the argument buffers alive (for async copy)
 
     void handle_results () {
         m_handle.deliver(m_actor_facade->m_map_result(m_result));

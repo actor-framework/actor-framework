@@ -122,13 +122,13 @@ void spawn5_client(event_based_actor* self) {
             CPPA_PRINT("received {'GetGroup'}");
             return group::get("local", "foobar");
         },
-        on(atom("Spawn5"), arg_match) >> [=](const group& grp) -> any_tuple {
+        on(atom("Spawn5"), arg_match) >> [=](const group& grp) -> message {
             CPPA_PRINT("received {'Spawn5'}");
             actor_vector vec;
             for (int i = 0; i < 5; ++i) {
                 vec.push_back(spawn_in_group(grp, reflector));
             }
-            return make_any_tuple(atom("ok"), std::move(vec));
+            return make_message(atom("ok"), std::move(vec));
         },
         on(atom("Spawn5Done")) >> [=] {
             CPPA_PRINT("received {'Spawn5Done'}");
@@ -216,7 +216,7 @@ class client : public event_based_actor {
     void test_group_comm_inverted() {
         CPPA_PRINT("test group communication via network (inverted setup)");
         become (
-            on(atom("GClient")) >> [=]() -> any_tuple {
+            on(atom("GClient")) >> [=]() -> message {
                 CPPA_CHECKPOINT();
                 auto cptr = last_sender();
                 auto s5c = spawn<monitored>(spawn5_client);
@@ -225,7 +225,7 @@ class client : public event_based_actor {
                     CPPA_CHECKPOINT();
                     quit();
                 });
-                return make_any_tuple(atom("GClient"), s5c);
+                return make_message(atom("GClient"), s5c);
             }
         );
     }
@@ -247,7 +247,7 @@ class server : public event_based_actor {
     behavior await_spawn_ping() {
         CPPA_PRINT("await {'SpawnPing'}");
         return (
-            on(atom("SpawnPing")) >> [=]() -> any_tuple {
+            on(atom("SpawnPing")) >> [=]() -> message {
                 CPPA_PRINT("received {'SpawnPing'}");
                 auto client = last_sender();
                 if (!client) {
@@ -260,7 +260,7 @@ class server : public event_based_actor {
                     CPPA_CHECK_EQUAL(pongs(), num_pings);
                     await_sync_msg();
                 });
-                return make_any_tuple(atom("PingPtr"), pptr);
+                return make_message(atom("PingPtr"), pptr);
             }
         );
     }
@@ -281,7 +281,7 @@ class server : public event_based_actor {
         CPPA_PRINT("await foobars");
         auto foobars = make_shared<int>(0);
         become (
-            on(atom("foo"), atom("bar"), arg_match) >> [=](int i) -> any_tuple {
+            on(atom("foo"), atom("bar"), arg_match) >> [=](int i) -> message {
                 ++*foobars;
                 if (i == 99) {
                     CPPA_CHECK_EQUAL(*foobars, 100);
@@ -295,7 +295,7 @@ class server : public event_based_actor {
     void test_group_comm() {
         CPPA_PRINT("test group communication via network");
         become (
-            on(atom("GClient")) >> [=]() -> any_tuple {
+            on(atom("GClient")) >> [=]() -> message {
                 CPPA_CHECKPOINT();
                 auto cptr = last_sender();
                 auto s5c = spawn<monitored>(spawn5_client);
@@ -303,7 +303,7 @@ class server : public event_based_actor {
                     CPPA_CHECKPOINT();
                     test_group_comm_inverted(detail::raw_access::unsafe_cast(cptr));
                 });
-                return make_any_tuple(atom("GClient"), s5c);
+                return make_message(atom("GClient"), s5c);
             }
         );
     }

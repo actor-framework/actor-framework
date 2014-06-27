@@ -22,7 +22,6 @@
 
 #include <functional>
 
-#include "cppa/guard_expr.hpp"
 #include "cppa/util/type_traits.hpp"
 #include "cppa/util/rebindable_reference.hpp"
 

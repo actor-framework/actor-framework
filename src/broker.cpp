@@ -70,7 +70,7 @@ class broker::continuation {
 
  public:
 
-    continuation(broker_ptr ptr, msg_hdr_cref hdr, any_tuple&& msg)
+    continuation(broker_ptr ptr, msg_hdr_cref hdr, message&& msg)
     : m_self(move(ptr)), m_hdr(hdr), m_data(move(msg)) { }
 
     inline void operator()() {
@@ -83,7 +83,7 @@ class broker::continuation {
 
     broker_ptr     m_self;
     message_header m_hdr;
-    any_tuple      m_data;
+    message      m_data;
 
 };
 
@@ -125,7 +125,7 @@ class broker::servant : public continuable {
         }
     }
 
-    virtual any_tuple disconnect_message() = 0;
+    virtual message disconnect_message() = 0;
 
     bool m_disconnected;
 
@@ -216,9 +216,9 @@ class broker::scribe : public extend<broker::servant>::with<buffered_writing> {
 
  protected:
 
-    any_tuple disconnect_message() override {
+    message disconnect_message() override {
         auto hdl = connection_handle::from_int(m_in->read_handle());
-        return make_any_tuple(connection_closed_msg{hdl});
+        return make_message(connection_closed_msg{hdl});
     }
 
  private:
@@ -270,9 +270,9 @@ class broker::doorman : public broker::servant {
 
  protected:
 
-    any_tuple disconnect_message() override {
+    message disconnect_message() override {
         auto hdl = accept_handle::from_int(m_ptr->file_handle());
-        return make_any_tuple(acceptor_closed_msg{hdl});
+        return make_message(acceptor_closed_msg{hdl});
     }
 
  private:
@@ -285,7 +285,7 @@ class broker::doorman : public broker::servant {
 // avoid weak-vtables warning by providing dtor out-of-line
 broker::doorman::~doorman() { }
 
-void broker::invoke_message(msg_hdr_cref hdr, any_tuple msg) {
+void broker::invoke_message(msg_hdr_cref hdr, message msg) {
     CPPA_LOG_TRACE(CPPA_TARG(msg, to_string));
     if (planned_exit_reason() != exit_reason::not_exited || bhvr_stack().empty()) {
         CPPA_LOG_DEBUG("actor already finished execution"
@@ -372,7 +372,7 @@ bool broker::invoke_message_from_cache() {
     return false;
 }
 
-void broker::enqueue(msg_hdr_cref hdr, any_tuple msg, execution_unit*) {
+void broker::enqueue(msg_hdr_cref hdr, message msg, execution_unit*) {
     get_middleman()->run_later(continuation{this, hdr, move(msg)});
 }
 
@@ -441,7 +441,7 @@ broker_ptr init_and_launch(broker_ptr ptr) {
         }
     );
     ptr->enqueue({invalid_actor_addr, ptr},
-                  make_any_tuple(atom("INITMSG")),
+                  make_message(atom("INITMSG")),
                   nullptr);
     return ptr;
 }

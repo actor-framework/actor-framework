@@ -28,7 +28,7 @@
 
 #include "cppa/on.hpp"
 #include "cppa/behavior.hpp"
-#include "cppa/any_tuple.hpp"
+#include "cppa/message.hpp"
 #include "cppa/ref_counted.hpp"
 #include "cppa/intrusive_ptr.hpp"
 #include "cppa/may_have_timeout.hpp"
@@ -44,9 +44,9 @@ class behavior;
 
 /**
  * @brief A partial function implementation
- *        for {@link cppa::any_tuple any_tuples}.
+ *        for {@link cppa::message messages}.
  */
-class partial_function {
+class message_handler {
 
     friend class behavior;
 
@@ -58,24 +58,18 @@ class partial_function {
 
     inline auto as_behavior_impl() const -> impl_ptr;
 
-    partial_function(impl_ptr ptr);
+    message_handler(impl_ptr ptr);
 
     /** @endcond */
 
-    partial_function() = default;
-    partial_function(partial_function&&) = default;
-    partial_function(const partial_function&) = default;
-    partial_function& operator=(partial_function&&) = default;
-    partial_function& operator=(const partial_function&) = default;
+    message_handler() = default;
+    message_handler(message_handler&&) = default;
+    message_handler(const message_handler&) = default;
+    message_handler& operator=(message_handler&&) = default;
+    message_handler& operator=(const message_handler&) = default;
 
     template<typename T, typename... Ts>
-    partial_function(const T& arg, Ts&&... args);
-
-    /**
-     * @brief Returns @p true if this partial function is defined for the
-     *        types of @p value, false otherwise.
-     */
-    inline bool defined_at(const any_tuple& value);
+    message_handler(const T& arg, Ts&&... args);
 
     /**
      * @brief Returns a value if @p arg was matched by one of the
@@ -85,7 +79,7 @@ class partial_function {
      *       does not evaluate guards.
      */
     template<typename T>
-    inline optional<any_tuple> operator()(T&& arg);
+    inline optional<message> operator()(T&& arg);
 
     /**
      * @brief Adds a fallback which is used where
@@ -97,7 +91,7 @@ class partial_function {
             may_have_timeout<typename util::rm_const_and_ref<Ts>::type>::value...
         >::value,
         behavior,
-        partial_function
+        message_handler
     >::type
     or_else(Ts&&... args) const;
 
@@ -108,13 +102,13 @@ class partial_function {
 };
 
 template<typename... Cases>
-partial_function operator,(const match_expr<Cases...>& mexpr,
-                           const partial_function& pfun) {
+message_handler operator,(const match_expr<Cases...>& mexpr,
+                           const message_handler& pfun) {
     return mexpr.as_behavior_impl()->or_else(pfun.as_behavior_impl());
 }
 
 template<typename... Cases>
-partial_function operator,(const partial_function& pfun,
+message_handler operator,(const message_handler& pfun,
                            const match_expr<Cases...>& mexpr) {
     return pfun.as_behavior_impl()->or_else(mexpr.as_behavior_impl());
 }
@@ -124,17 +118,13 @@ partial_function operator,(const partial_function& pfun,
  ******************************************************************************/
 
 template<typename T, typename... Ts>
-partial_function::partial_function(const T& arg, Ts&&... args)
+message_handler::message_handler(const T& arg, Ts&&... args)
 : m_impl(detail::match_expr_concat(
              detail::lift_to_match_expr(arg),
              detail::lift_to_match_expr(std::forward<Ts>(args))...)) { }
 
-inline bool partial_function::defined_at(const any_tuple& value) {
-    return (m_impl) && m_impl->defined_at(value);
-}
-
 template<typename T>
-inline optional<any_tuple> partial_function::operator()(T&& arg) {
+inline optional<message> message_handler::operator()(T&& arg) {
     return (m_impl) ? m_impl->invoke(std::forward<T>(arg)) : none;
 }
 
@@ -144,16 +134,16 @@ typename std::conditional<
         may_have_timeout<typename util::rm_const_and_ref<Ts>::type>::value...
     >::value,
     behavior,
-    partial_function
+    message_handler
 >::type
-partial_function::or_else(Ts&&... args) const {
+message_handler::or_else(Ts&&... args) const {
     // using a behavior is safe here, because we "cast"
     // it back to a partial_function when appropriate
     behavior tmp{std::forward<Ts>(args)...};
     return m_impl->or_else(tmp.as_behavior_impl());
 }
 
-inline auto partial_function::as_behavior_impl() const -> impl_ptr {
+inline auto message_handler::as_behavior_impl() const -> impl_ptr {
     return m_impl;
 }
 

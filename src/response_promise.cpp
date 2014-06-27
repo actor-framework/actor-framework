@@ -35,7 +35,7 @@ response_promise::response_promise(const actor_addr& from,
     CPPA_REQUIRE(id.is_response() || !id.valid());
 }
 
-void response_promise::deliver(any_tuple msg) {
+void response_promise::deliver(message msg) {
     if (m_to) {
         auto to = detail::raw_access::get(m_to);
         auto from = detail::raw_access::get(m_from);

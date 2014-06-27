@@ -135,7 +135,7 @@ using ::backtrace_symbols_fd;
         }                                                                      \
         abort()
 #   define CPPA_REQUIRE(stmt)                                                  \
-        if ((stmt) == false) {                                                 \
+        if (static_cast<bool>(stmt) == false) {                                \
             CPPA_REQUIRE__(#stmt, __FILE__, __LINE__);                         \
         }((void) 0)
 #else

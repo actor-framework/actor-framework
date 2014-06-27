@@ -20,7 +20,7 @@
 #ifndef CPPA_UTIL_ABSTRACT_UNIFORM_TYPE_INFO_HPP
 #define CPPA_UTIL_ABSTRACT_UNIFORM_TYPE_INFO_HPP
 
-#include "cppa/any_tuple.hpp"
+#include "cppa/message.hpp"
 #include "cppa/deserializer.hpp"
 #include "cppa/uniform_type_info.hpp"
 
@@ -49,8 +49,8 @@ class abstract_uniform_type_info : public uniform_type_info {
         return m_name.c_str();
     }
 
-    any_tuple as_any_tuple(void* instance) const override {
-        return make_any_tuple(deref(instance));
+    message as_message(void* instance) const override {
+        return make_message(deref(instance));
     }
 
     bool equals(const void* lhs, const void* rhs) const override {

@@ -23,7 +23,7 @@
 #include "cppa/logging.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/exception.hpp"
-#include "cppa/any_tuple.hpp"
+#include "cppa/message.hpp"
 #include "cppa/local_actor.hpp"
 
 #include "cppa/io/middleman.hpp"

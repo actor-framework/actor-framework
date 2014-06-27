@@ -64,7 +64,7 @@ class delayed_msg {
  public:
 
     delayed_msg(message_header&& arg1,
-                any_tuple&&      arg2)
+                message&&      arg2)
     : hdr(move(arg1)), msg(move(arg2)) { }
 
     delayed_msg(delayed_msg&&) = default;
@@ -79,13 +79,13 @@ class delayed_msg {
  private:
 
     message_header hdr;
-    any_tuple      msg;
+    message      msg;
 
 };
 
 template<class Map>
 inline void insert_dmsg(Map& storage, const util::duration& d,
-                        message_header&& hdr, any_tuple&& tup) {
+                        message_header&& hdr, message&& tup) {
     auto tout = hrc::now();
     tout += d;
     delayed_msg dmsg{move(hdr), move(tup)};
@@ -119,13 +119,13 @@ class timer_actor final : public detail::proper_actor<blocking_actor,
         auto mfun = (
             on(atom("SEND"), arg_match) >> [&](const util::duration& d,
                                                message_header& hdr,
-                                               any_tuple& tup) {
+                                               message& tup) {
                 insert_dmsg(messages, d, move(hdr), move(tup));
             },
             on(atom("DIE")) >> [&] {
                 done = true;
             },
-            others() >> [&]() {
+            others() >> [&] {
                 CPPA_LOG_WARNING("coordinator::timer_loop: UNKNOWN MESSAGE: "
                                  << to_string(msg_ptr->msg));
             }
@@ -175,7 +175,7 @@ void printer_loop(blocking_actor* self) {
         }
     };
     bool running = true;
-    self->receive_while (gref(running)) (
+    self->receive_while ([&] { return running; }) (
         on(atom("add"), arg_match) >> [&](std::string& str) {
             auto s = self->last_sender();
             if (!str.empty() && s) {
@@ -285,7 +285,7 @@ void coordinator::destroy() {
     }
     // shutdown utility actors
     CPPA_LOG_DEBUG("send 'DIE' messages to timer & printer");
-    auto msg = make_any_tuple(atom("DIE"));
+    auto msg = make_message(atom("DIE"));
     m_timer->enqueue({invalid_actor_addr, nullptr}, msg, nullptr);
     m_printer->enqueue({invalid_actor_addr, nullptr}, msg, nullptr);
     CPPA_LOG_DEBUG("join threads of utility actors");

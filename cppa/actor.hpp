@@ -47,7 +47,7 @@ class broker;
 } // namespace io
 
 namespace opencl {
-template <typename Signature>
+template<typename Signature>
 class actor_facade;
 } // namespace opencl
 

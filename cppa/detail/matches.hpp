@@ -22,10 +22,11 @@
 
 #include <numeric>
 
-#include "cppa/any_tuple.hpp"
+#include "cppa/message.hpp"
 #include "cppa/wildcard_position.hpp"
 
 #include "cppa/util/type_list.hpp"
+#include "cppa/util/limited_vector.hpp"
 
 namespace cppa {
 namespace detail {
@@ -294,9 +295,9 @@ struct match_impl_from_type_list<Tuple, util::type_list<Ts...> > {
  * @brief Returns true if this tuple matches the pattern <tt>{Ts...}</tt>.
  */
 template<typename... Ts>
-bool matches(const any_tuple& tup) {
+bool matches(const message& tup) {
     typedef util::type_list<Ts...> tl;
-    return match_impl<get_wildcard_position<tl>(), any_tuple, Ts...>
+    return match_impl<get_wildcard_position<tl>(), message, Ts...>
            ::_(tup);
 }
 
@@ -304,25 +305,25 @@ bool matches(const any_tuple& tup) {
  * @brief Returns true if this tuple matches the pattern <tt>{Ts...}</tt>.
  */
 template<typename... Ts>
-bool matches(const any_tuple& tup,
+bool matches(const message& tup,
              util::limited_vector<
                                  size_t,
                                  util::tl_count_not<
                                      util::type_list<Ts...>,
                                      is_anything>::value>& mv) {
     typedef util::type_list<Ts...> tl;
-    return match_impl<get_wildcard_position<tl>(), any_tuple, Ts...>
+    return match_impl<get_wildcard_position<tl>(), message, Ts...>
            ::_(tup, mv);
 }
 
 // support for type_list based matching
 template<typename... Ts>
-inline bool matches(const any_tuple& tup, const util::type_list<Ts...>&) {
+inline bool matches(const message& tup, const util::type_list<Ts...>&) {
     return matches<Ts...>(tup);
 }
 
 template<typename... Ts>
-inline bool matches(const any_tuple& tup, const util::type_list<Ts...>&,
+inline bool matches(const message& tup, const util::type_list<Ts...>&,
                     util::limited_vector<
                                         size_t,
                                         util::tl_count_not<
@@ -332,9 +333,20 @@ inline bool matches(const any_tuple& tup, const util::type_list<Ts...>&,
 }
 
 template<typename... Ts>
-inline bool matches_types(const any_tuple& tup, const util::type_list<Ts...>&) {
+inline bool matches_types(const message& tup, const util::type_list<Ts...>&) {
     return matches<Ts...>(tup);
 }
+
+template<class Tuple, class List>
+struct select_matcher;
+
+template<class Tuple, typename... Ts>
+struct select_matcher<Tuple, util::type_list<Ts...> > {
+    typedef matcher<get_wildcard_position<util::type_list<Ts...>>(),
+                    Tuple,
+                    Ts...>
+            type;
+};
 
 } // namespace detail
 } // namespace cppa
