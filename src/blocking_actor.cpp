@@ -16,23 +16,32 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
-#include "cppa/logging.hpp"
+#include "cppa/exception.hpp"
 #include "cppa/scheduler.hpp"
-#include "cppa/singletons.hpp"
 #include "cppa/blocking_actor.hpp"
 
+#include "cppa/detail/logging.hpp"
+#include "cppa/detail/singletons.hpp"
 #include "cppa/detail/actor_registry.hpp"
 
 namespace cppa {
 
 void blocking_actor::await_all_other_actors_done() {
-    get_actor_registry()->await_running_count_equal(1);
+    detail::singletons::get_actor_registry()->await_running_count_equal(1);
 }
 
-void blocking_actor::quit(std::uint32_t reason) {
+void blocking_actor::quit(uint32_t reason) {
     planned_exit_reason(reason);
     throw actor_exited(reason);
+}
+
+void blocking_actor::functor_based::create(blocking_actor*, act_fun fun) {
+    m_act = fun;
+}
+
+void blocking_actor::functor_based::act() {
+    CPPA_LOG_TRACE("");
+    m_act(this);
 }
 
 } // namespace cppa

@@ -19,6 +19,7 @@
 #include "cppa/message.hpp"
 #include "cppa/message_handler.hpp"
 
+#include "cppa/detail/singletons.hpp"
 #include "cppa/detail/decorated_tuple.hpp"
 
 namespace cppa {
@@ -75,19 +76,6 @@ message message::drop_right(size_t n) const {
 
 optional<message> message::apply(message_handler handler) {
     return handler(*this);
-}
-
-bool message::apply_iterative(message_handler handler) {
-    if (empty()) return true;
-    for (size_t chunk_size = 1; chunk_size <= size(); ++chunk_size) {
-        auto chunk = take(chunk_size);
-        auto remainder = drop(chunk_size);
-        if (handler(chunk)) {
-            return remainder.empty() ? true
-                                     : remainder.apply_iterative(std::move(handler));
-        }
-    }
-    return false;
 }
 
 } // namespace cppa

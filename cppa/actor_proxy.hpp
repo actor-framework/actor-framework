@@ -16,30 +16,76 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_ACTOR_PROXY_HPP
 #define CPPA_ACTOR_PROXY_HPP
 
-#include "cppa/extend.hpp"
+#include <atomic>
+#include <cstdint>
+
 #include "cppa/abstract_actor.hpp"
-#include "cppa/abstract_actor.hpp"
-#include "cppa/message_header.hpp"
-#include "cppa/enable_weak_ptr.hpp"
-#include "cppa/weak_intrusive_ptr.hpp"
+
+#include "cppa/detail/shared_spinlock.hpp"
 
 namespace cppa {
 
-class actor_proxy_cache;
+class actor_proxy;
+
+/**
+ * @brief A smart pointer to an {@link actor_proxy} instance.
+ * @relates actor_proxy
+ */
+using actor_proxy_ptr = intrusive_ptr<actor_proxy>;
 
 /**
  * @brief Represents a remote actor.
  * @extends abstract_actor
  */
-class actor_proxy : public extend<abstract_actor>::with<enable_weak_ptr> {
+class actor_proxy : public abstract_actor {
 
-    typedef combined_type super;
+    typedef abstract_actor super;
 
  public:
+
+    /**
+     * @brief An anchor points to a proxy instance without sharing
+     *        ownership to it, i.e., models a weak ptr.
+     */
+    class anchor : public ref_counted {
+
+        friend class actor_proxy;
+
+     public:
+
+        anchor(actor_proxy* instance = nullptr);
+
+        ~anchor();
+
+        /**
+         * @brief Queries whether the proxy was already deleted.
+         */
+        bool expired() const;
+
+        /**
+         * @brief Gets a pointer to the proxy or @p nullptr
+         *        if the instance is {@link expired()}.
+         */
+        actor_proxy_ptr get();
+
+     private:
+
+        /*
+         * @brief Tries to expire this anchor. Fails if reference
+         *        count of the proxy is nonzero.
+         */
+        bool try_expire();
+
+        std::atomic<actor_proxy*> m_ptr;
+
+        detail::shared_spinlock m_lock;
+
+    };
+
+    using anchor_ptr = intrusive_ptr<anchor>;
 
     ~actor_proxy();
 
@@ -55,33 +101,21 @@ class actor_proxy : public extend<abstract_actor>::with<enable_weak_ptr> {
     virtual void local_unlink_from(const actor_addr& other) = 0;
 
     /**
-     * @brief Delivers given message via this proxy instance.
-     *
-     * This function is meant to give the proxy the opportunity to keep track
-     * of synchronous communication or perform other bookkeeping if needed.
-     * The member function is called by the protocol from inside the
-     * middleman's thread.
-     * @note This function is guaranteed to be called non-concurrently.
+     * @brief
      */
-    virtual void deliver(msg_hdr_cref hdr, message msg) = 0;
+    virtual void kill_proxy(uint32_t reason) = 0;
+
+    void request_deletion() override;
+
+    inline anchor_ptr get_anchor() { return m_anchor; }
 
  protected:
 
-    actor_proxy(actor_id mid);
+    actor_proxy(actor_id aid, node_id nid);
+
+    anchor_ptr m_anchor;
 
 };
-
-/**
- * @brief A smart pointer to an {@link actor_proxy} instance.
- * @relates actor_proxy
- */
-typedef intrusive_ptr<actor_proxy> actor_proxy_ptr;
-
-/**
- * @brief A weak smart pointer to an {@link actor_proxy} instance.
- * @relates actor_proxy
- */
-typedef weak_intrusive_ptr<actor_proxy> weak_actor_proxy_ptr;
 
 } // namespace cppa
 

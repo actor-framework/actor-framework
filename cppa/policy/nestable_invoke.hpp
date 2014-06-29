@@ -16,9 +16,8 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
-#ifndef CPPA_POLICY_NESTABLE_INVOKE_HPP
-#define CPPA_POLICY_NESTABLE_INVOKE_HPP
+#ifndef CPPA_THREADED_HPP
+#define CPPA_THREADED_HPP
 
 #include <mutex>
 #include <chrono>
@@ -28,10 +27,17 @@
 #include "cppa/mailbox_element.hpp"
 
 #include "cppa/detail/sync_request_bouncer.hpp"
-
-#include "cppa/intrusive/single_reader_queue.hpp"
+#include "cppa/detail/single_reader_queue.hpp"
 
 #include "cppa/policy/invoke_policy.hpp"
+
+namespace boost {
+namespace actor {
+namespace detail {
+class receive_policy;
+}
+}
+}
 
 namespace cppa {
 namespace policy {
@@ -40,9 +46,7 @@ class nestable_invoke : public invoke_policy<nestable_invoke> {
 
  public:
 
-    inline bool hm_should_skip(mailbox_element* node) {
-        return node->marked;
-    }
+    inline bool hm_should_skip(mailbox_element* node) { return node->marked; }
 
     template<class Actor>
     inline mailbox_element* hm_begin(Actor* self, mailbox_element* node) {
@@ -71,4 +75,4 @@ class nestable_invoke : public invoke_policy<nestable_invoke> {
 } // namespace policy
 } // namespace cppa
 
-#endif // CPPA_POLICY_NESTABLE_INVOKE_HPP
+#endif // CPPA_THREADED_HPP

@@ -9,7 +9,7 @@
 #include "test.hpp"
 
 #include "cppa/on.hpp"
-#include "cppa/cppa.hpp"
+#include "cppa/all.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/abstract_group.hpp"
 #include "cppa/ref_counted.hpp"
@@ -26,10 +26,10 @@ void testee(event_based_actor* self, int current_value, int final_result) {
         [=](int result) {
             auto next = result + current_value;
             if (next >= final_result) {
-                CPPA_CHECKPOINT();
                 self->quit();
+            } else {
+                testee(self, next, final_result);
             }
-            else testee(self, next, final_result);
         },
         after(std::chrono::seconds(2)) >> [=] {
             CPPA_UNEXPECTED_TOUT();
@@ -38,26 +38,25 @@ void testee(event_based_actor* self, int current_value, int final_result) {
     );
 }
 
-void test_local_group() {
-    scoped_actor self;
+int main() {
+    CPPA_TEST(test_local_group);
+    /*
     auto foo_group = group::get("local", "foo");
     auto master = spawn_in_group(foo_group, testee, 0, 10);
     for (int i = 0; i < 5; ++i) {
         // spawn five workers and let them join local/foo
-        self->spawn_in_group(foo_group, [master](event_based_actor* m) {
-            m->become([master, m](int v) {
-                m->send(master, v);
-                m->quit();
-            });
+        spawn_in_group(foo_group, [master] {
+            become(
+                [master](int v) {
+                    send(master, v);
+                    self->quit();
+                }
+            );
         });
     }
-    self->send(foo_group, 2);
-}
-
-int main() {
-    CPPA_TEST(test_local_group);
-    test_local_group();
+    send(foo_group, 2);
     await_all_actors_done();
     shutdown();
+    */
     return CPPA_TEST_RESULT();
 }

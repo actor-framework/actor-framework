@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 // this header contains prototype definitions of the spawn function famility;
 // implementations can be found in spawn.hpp (this header is included there)
 
@@ -27,26 +26,28 @@
 #include "cppa/typed_actor.hpp"
 #include "cppa/spawn_options.hpp"
 
-#include "cppa/util/type_list.hpp"
+#include "cppa/detail/type_list.hpp"
 
 namespace cppa {
 
-template<class C, spawn_options Os, typename BeforeLaunch, typename... Ts>
+template<class C,
+         spawn_options Os = no_spawn_options,
+         typename BeforeLaunch = std::function<void (C*)>,
+         typename... Ts>
 intrusive_ptr<C> spawn_class(execution_unit* host,
-                             BeforeLaunch before_launch_fun,
-                             Ts&&... args);
+                             BeforeLaunch before_launch_fun, Ts&&... args);
 
-template<spawn_options Os, typename BeforeLaunch, typename F, typename... Ts>
-actor spawn_functor(execution_unit* host,
-                    BeforeLaunch before_launch_fun,
-                    F fun,
+template<spawn_options Os = no_spawn_options,
+          typename BeforeLaunch = void (*)(abstract_actor*),
+          typename F = behavior (*)(), typename... Ts>
+actor spawn_functor(execution_unit* host, BeforeLaunch before_launch_fun, F fun,
                     Ts&&... args);
 
 class group_subscriber {
 
  public:
 
-    inline group_subscriber(const group& grp) : m_grp(grp) { }
+    inline group_subscriber(const group& grp) : m_grp(grp) {}
 
     template<typename T>
     inline void operator()(T* ptr) const {
@@ -64,7 +65,7 @@ class empty_before_launch_callback {
  public:
 
     template<typename T>
-    inline void operator()(T*) const { }
+    inline void operator()(T*) const {}
 
 };
 
@@ -81,31 +82,32 @@ struct infer_typed_actor_handle;
 template<typename... Rs, class FirstArg>
 struct infer_typed_actor_handle<typed_behavior<Rs...>, FirstArg> {
     typedef typed_actor<Rs...> type;
+
 };
 
 // infer actor type from first argument if result type is void
 template<typename... Rs>
 struct infer_typed_actor_handle<void, typed_event_based_actor<Rs...>*> {
     typedef typed_actor<Rs...> type;
+
 };
 
 template<typename SignatureList>
 struct actor_handle_from_signature_list;
 
 template<typename... Rs>
-struct actor_handle_from_signature_list<util::type_list<Rs...>> {
+struct actor_handle_from_signature_list<detail::type_list<Rs...>> {
     typedef typed_actor<Rs...> type;
+
 };
 
 } // namespace detail
 
 template<spawn_options Os, typename BeforeLaunch, typename F, typename... Ts>
 typename detail::infer_typed_actor_handle<
-    typename util::get_callable_trait<F>::result_type,
-    typename util::tl_head<
-        typename util::get_callable_trait<F>::arg_types
-    >::type
->::type
+    typename detail::get_callable_trait<F>::result_type,
+    typename detail::tl_head<
+        typename detail::get_callable_trait<F>::arg_types>::type>::type
 spawn_typed_functor(execution_unit*, BeforeLaunch bl, F fun, Ts&&... args);
 
 } // namespace cppa

@@ -16,11 +16,21 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #include "cppa/abstract_channel.hpp"
+#include "cppa/detail/singletons.hpp"
 
 namespace cppa {
 
-abstract_channel::~abstract_channel() { }
+using detail::singletons;
+
+abstract_channel::abstract_channel() : m_node(singletons::get_node_id()) {}
+
+abstract_channel::abstract_channel(node_id nid) : m_node(std::move(nid)) {}
+
+abstract_channel::~abstract_channel() {}
+
+bool abstract_channel::is_remote() const {
+    return m_node != singletons::get_node_id();
+}
 
 } // namespace cppa

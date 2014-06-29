@@ -6,46 +6,50 @@
 #include <functional>
 
 #include "test.hpp"
-#include "cppa/cppa.hpp"
+#include "cppa/all.hpp"
+#include "cppa/io/all.hpp"
 
 using namespace std;
 using namespace cppa;
+using namespace boost::actor_io;
 
-struct ping { std::int32_t value; };
+struct ping {
+    int32_t value;
+};
 
 bool operator==(const ping& lhs, const ping& rhs) {
     return lhs.value == rhs.value;
 }
 
-struct pong { std::int32_t value; };
+struct pong {
+    int32_t value;
+
+};
 
 bool operator==(const pong& lhs, const pong& rhs) {
     return lhs.value == rhs.value;
 }
 
-using server_type = typed_actor<
-                        replies_to<ping>::with<pong>
-                    >;
+using server_type = typed_actor<replies_to<ping>::with<pong>>;
 
 typedef typed_actor<> client_type;
 
 server_type::behavior_type server() {
     return {
-        [](const ping& p) -> pong {
-            CPPA_CHECKPOINT();
+        [](const ping & p)->pong{CPPA_CHECKPOINT();
             return pong{p.value};
         }
     };
 }
 
-void run_client(const char* host, std::uint16_t port) {
+void run_client(const char* host, uint16_t port) {
     // check whether invalid_argument is thrown
     // when trying to connect to get an untyped
     // handle to the server
     try {
         remote_actor(host, port);
     }
-    catch (std::invalid_argument& e) {
+    catch (std::runtime_error& e) {
         cout << e.what() << endl;
         CPPA_CHECKPOINT();
     }
@@ -56,15 +60,17 @@ void run_client(const char* host, std::uint16_t port) {
     auto serv = typed_remote_actor<server_type::interface>(host, port);
     CPPA_CHECKPOINT();
     scoped_actor self;
-    self->sync_send(serv, ping{42}).await(
-        [](const pong& p) {
-            CPPA_CHECK_EQUAL(p.value, 42);
-        }
-    );
+    self->sync_send(serv, ping{42})
+        .await([](const pong& p) { CPPA_CHECK_EQUAL(p.value, 42); });
     anon_send_exit(serv, exit_reason::user_shutdown);
+    self->monitor(serv);
+    self->receive([&](const down_msg& dm) {
+        CPPA_CHECK_EQUAL(dm.reason, exit_reason::user_shutdown);
+        CPPA_CHECK(dm.source == serv);
+    });
 }
 
-std::uint16_t run_server() {
+uint16_t run_server() {
     auto ref = spawn_typed(server);
     uint16_t port = 4242;
     for (;;) {
@@ -83,36 +89,18 @@ std::uint16_t run_server() {
 int main(int argc, char** argv) {
     announce<ping>(&ping::value);
     announce<pong>(&pong::value);
-    auto run_remote_actor = true;
-    if (argc > 1) {
-        if (strcmp(argv[1], "run_remote_actor=false") == 0) {
-            CPPA_PRINT("don't run remote actor");
-            run_remote_actor = false;
-        }
-        else {
-            auto kvp = get_kv_pairs(argc, argv);
-            if (kvp.count("port") == 0) {
-                throw std::invalid_argument("no port given");
-            }
-            run_client("localhost",
-                       static_cast<std::uint16_t>(std::stoi(kvp["port"])));
-            CPPA_CHECKPOINT();
-            await_all_actors_done();
-            shutdown();
-            return CPPA_TEST_RESULT();
-        }
-    }
-    CPPA_CHECKPOINT();
-    auto port = run_server();
-    CPPA_CHECKPOINT();
-    if (run_remote_actor) {
+    message_builder { argv + 1, argv + argc }
+    .apply({on("-c", spro<uint16_t>)>> [](uint16_t port) {
+                run_client("localhost", port);
+            },
+            on("-s") >> [] { run_server(); }, on() >> [&] {
+        auto port = run_server();
         CPPA_CHECKPOINT();
-        thread child;
         ostringstream oss;
-        oss << argv[0] << " run=remote_actor port=" << port << to_dev_null;
+        oss << argv[0] << " -c " << port << to_dev_null;
         // execute client_part() in a separate process,
         // connected via localhost socket
-        child = thread([&oss]() {
+        auto child = thread([&oss]() {
             CPPA_LOGC_TRACE("NONE", "main$thread_launcher", "");
             string cmdstr = oss.str();
             if (system(cmdstr.c_str()) != 0) {
@@ -122,10 +110,7 @@ int main(int argc, char** argv) {
         });
         CPPA_CHECKPOINT();
         child.join();
-    }
-    else {
-        CPPA_PRINT("actor published at port " << port);
-    }
+    }});
     CPPA_CHECKPOINT();
     await_all_actors_done();
     shutdown();

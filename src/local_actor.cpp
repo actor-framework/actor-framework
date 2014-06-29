@@ -16,15 +16,14 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #include <string>
-#include "cppa/cppa.hpp"
+#include "cppa/all.hpp"
 #include "cppa/atom.hpp"
-#include "cppa/logging.hpp"
 #include "cppa/scheduler.hpp"
+#include "cppa/actor_cast.hpp"
 #include "cppa/local_actor.hpp"
 
-#include "cppa/detail/raw_access.hpp"
+#include "cppa/detail/logging.hpp"
 
 namespace cppa {
 
@@ -32,21 +31,18 @@ namespace {
 
 class down_observer : public attachable {
 
-    actor_addr m_observer;
-    actor_addr m_observed;
-
  public:
 
     down_observer(actor_addr observer, actor_addr observed)
-    : m_observer(std::move(observer)), m_observed(std::move(observed)) {
-        CPPA_REQUIRE(m_observer != nullptr);
-        CPPA_REQUIRE(m_observed != nullptr);
+            : m_observer(std::move(observer)), m_observed(std::move(observed)) {
+        CPPA_REQUIRE(m_observer != invalid_actor_addr);
+        CPPA_REQUIRE(m_observed != invalid_actor_addr);
     }
 
-    void actor_exited(std::uint32_t reason) {
-        auto ptr = detail::raw_access::get(m_observer);
-        message_header hdr{m_observed, ptr, message_id{}.with_high_priority()};
-        hdr.deliver(make_message(down_msg{m_observed, reason}));
+    void actor_exited(uint32_t reason) {
+        auto ptr = actor_cast<abstract_actor_ptr>(m_observer);
+        ptr->enqueue(m_observed, message_id {}.with_high_priority(),
+                     make_message(down_msg{m_observed, reason}), nullptr);
     }
 
     bool matches(const attachable::token& match_token) {
@@ -57,32 +53,37 @@ class down_observer : public attachable {
         return false;
     }
 
+ private:
+
+    actor_addr m_observer;
+    actor_addr m_observed;
+
 };
 
 } // namespace <anonymous>
 
 local_actor::local_actor()
-        : m_trap_exit(false), m_dummy_node(), m_current_node(&m_dummy_node)
-        , m_planned_exit_reason(exit_reason::not_exited) {
-    m_node = get_middleman()->node();
-}
+        : m_trap_exit(false)
+        , m_dummy_node()
+        , m_current_node(&m_dummy_node)
+        , m_planned_exit_reason(exit_reason::not_exited) {}
 
-local_actor::~local_actor() { }
+local_actor::~local_actor() {}
 
 void local_actor::monitor(const actor_addr& whom) {
     if (!whom) return;
-    auto ptr = detail::raw_access::get(whom);
+    auto ptr = actor_cast<abstract_actor_ptr>(whom);
     ptr->attach(attachable_ptr{new down_observer(address(), whom)});
 }
 
 void local_actor::demonitor(const actor_addr& whom) {
     if (!whom) return;
-    auto ptr = detail::raw_access::get(whom);
+    auto ptr = actor_cast<abstract_actor_ptr>(whom);
     attachable::token mtoken{typeid(down_observer), this};
     ptr->detach(mtoken);
 }
 
-void local_actor::on_exit() { }
+void local_actor::on_exit() {}
 
 void local_actor::join(const group& what) {
     CPPA_LOG_TRACE(CPPA_TSARG(what));
@@ -109,46 +110,42 @@ void local_actor::reply_message(message&& what) {
     if (!whom) return;
     auto& id = m_current_node->mid;
     if (id.valid() == false || id.is_response()) {
-        send_tuple(detail::raw_access::get(whom), std::move(what));
-    }
-    else if (!id.is_answered()) {
-        auto ptr = detail::raw_access::get(whom);
-        ptr->enqueue({address(), ptr, id.response_id()},
-                     std::move(what), m_host);
+        send_tuple(actor_cast<channel>(whom), std::move(what));
+    } else if (!id.is_answered()) {
+        auto ptr = actor_cast<actor>(whom);
+        ptr->enqueue(address(), id.response_id(), std::move(what), m_host);
         id.mark_as_answered();
     }
 }
 
 void local_actor::forward_message(const actor& dest, message_priority prio) {
     if (!dest) return;
-    auto id = (prio == message_priority::high)
-            ? m_current_node->mid.with_high_priority()
-            : m_current_node->mid.with_normal_priority();
-    auto p = detail::raw_access::get(dest);
-    p->enqueue({m_current_node->sender, p, id}, m_current_node->msg, m_host);
+    auto id = (prio == message_priority::high) ?
+                  m_current_node->mid.with_high_priority() :
+                  m_current_node->mid.with_normal_priority();
+    dest->enqueue(m_current_node->sender, id, m_current_node->msg, m_host);
     // treat this message as asynchronous message from now on
     m_current_node->mid = message_id::invalid;
 }
 
-void local_actor::send_tuple(message_priority prio, const channel& dest, message what) {
+void local_actor::send_tuple(message_priority prio, const channel& dest,
+                             message what) {
     if (!dest) return;
     message_id id;
     if (prio == message_priority::high) id = id.with_high_priority();
-    dest->enqueue({address(), dest, id}, std::move(what), m_host);
+    dest->enqueue(address(), id, std::move(what), m_host);
 }
 
-void local_actor::send_exit(const actor_addr& whom, std::uint32_t reason) {
-    send(detail::raw_access::get(whom), exit_msg{address(), reason});
+void local_actor::send_exit(const actor_addr& whom, uint32_t reason) {
+    send(actor_cast<actor>(whom), exit_msg{address(), reason});
 }
 
-void local_actor::delayed_send_tuple(message_priority prio,
-                                     const channel& dest,
-                                     const util::duration& rel_time,
-                                     cppa::message msg) {
+void local_actor::delayed_send_tuple(message_priority prio, const channel& dest,
+                                     const duration& rel_time, message msg) {
     message_id mid;
     if (prio == message_priority::high) mid = mid.with_high_priority();
-    get_scheduling_coordinator()->delayed_send({address(), dest, mid},
-                                  rel_time, std::move(msg));
+    detail::singletons::get_scheduling_coordinator()->delayed_send(
+        rel_time, address(), dest, mid, std::move(msg));
 }
 
 response_promise local_actor::make_response_promise() {
@@ -158,32 +155,45 @@ response_promise local_actor::make_response_promise() {
     return result;
 }
 
-void local_actor::cleanup(std::uint32_t reason) {
+void local_actor::cleanup(uint32_t reason) {
     CPPA_LOG_TRACE(CPPA_ARG(reason));
     m_subscriptions.clear();
     super::cleanup(reason);
 }
 
-void local_actor::quit(std::uint32_t reason) {
-    CPPA_LOG_TRACE("reason = " << reason
-                   << ", class " << detail::demangle(typeid(*this)));
+void local_actor::quit(uint32_t reason) {
+    CPPA_LOG_TRACE("reason = " << reason << ", class "
+                               << detail::demangle(typeid(*this)));
+    if (reason == exit_reason::unallowed_function_call) {
+        // this is the only reason that causes an exception
+        cleanup(reason);
+        CPPA_LOG_WARNING("actor tried to use a blocking function");
+        // when using receive(), the non-blocking nature of event-based
+        // actors breaks any assumption the user has about his code,
+        // in particular, receive_loop() is a deadlock when not throwing
+        // an exception here
+        aout(this) << "*** warning: event-based actor killed because it tried "
+                      "to use receive()\n";
+        throw actor_exited(reason);
+    }
     planned_exit_reason(reason);
 }
 
 message_id local_actor::timed_sync_send_tuple_impl(message_priority mp,
                                                    const actor& dest,
-                                                   const util::duration& rtime,
+                                                   const duration& rtime,
                                                    message&& what) {
     if (!dest) {
-        throw std::invalid_argument("cannot send synchronous message "
-                                    "to invalid_actor");
+        throw std::invalid_argument(
+            "cannot send synchronous message "
+            "to invalid_actor");
     }
     auto nri = new_request_id();
     if (mp == message_priority::high) nri = nri.with_high_priority();
-    dest->enqueue({address(), dest, nri}, std::move(what), m_host);
+    dest->enqueue(address(), nri, std::move(what), m_host);
     auto rri = nri.response_id();
-    get_scheduling_coordinator()->delayed_send({address(), this, rri}, rtime,
-                                  make_message(sync_timeout_msg{}));
+    detail::singletons::get_scheduling_coordinator()->delayed_send(
+        rtime, address(), this, rri, make_message(sync_timeout_msg{}));
     return rri;
 }
 
@@ -191,19 +201,20 @@ message_id local_actor::sync_send_tuple_impl(message_priority mp,
                                              const actor& dest,
                                              message&& what) {
     if (!dest) {
-        throw std::invalid_argument("cannot send synchronous message "
-                                    "to invalid_actor");
+        throw std::invalid_argument(
+            "cannot send synchronous message "
+            "to invalid_actor");
     }
     auto nri = new_request_id();
     if (mp == message_priority::high) nri = nri.with_high_priority();
-    dest->enqueue({address(), dest, nri}, std::move(what), m_host);
+    dest->enqueue(address(), nri, std::move(what), m_host);
     return nri.response_id();
 }
 
-void anon_send_exit(const actor_addr& whom, std::uint32_t reason) {
+void anon_send_exit(const actor_addr& whom, uint32_t reason) {
     if (!whom) return;
-    auto ptr = detail::raw_access::get(whom);
-    ptr->enqueue({invalid_actor_addr, ptr, message_id{}.with_high_priority()},
+    auto ptr = actor_cast<actor>(whom);
+    ptr->enqueue(invalid_actor_addr, message_id {}.with_high_priority(),
                  make_message(exit_msg{invalid_actor_addr, reason}), nullptr);
 }
 

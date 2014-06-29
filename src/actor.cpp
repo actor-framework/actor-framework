@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #include <utility>
 
 #include "cppa/actor.hpp"
@@ -29,9 +28,9 @@
 
 namespace cppa {
 
-actor::actor(const invalid_actor_t&) : m_ptr(nullptr) { }
+actor::actor(const invalid_actor_t&) : m_ptr(nullptr) {}
 
-actor::actor(abstract_actor* ptr) : m_ptr(ptr) { }
+actor::actor(abstract_actor* ptr) : m_ptr(ptr) {}
 
 actor& actor::operator=(const invalid_actor_t&) {
     m_ptr.reset();
@@ -43,12 +42,10 @@ intptr_t actor::compare(const actor& other) const {
 }
 
 intptr_t actor::compare(const actor_addr& other) const {
-    return m_ptr.compare(other.m_ptr);
+    return static_cast<ptrdiff_t>(m_ptr.get() - other.m_ptr.get());
 }
 
-void actor::swap(actor& other) {
-    m_ptr.swap(other.m_ptr);
-}
+void actor::swap(actor& other) { m_ptr.swap(other.m_ptr); }
 
 actor_addr actor::address() const {
     return m_ptr ? m_ptr->address() : actor_addr{};

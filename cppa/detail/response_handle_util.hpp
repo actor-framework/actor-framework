@@ -16,15 +16,14 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
-#ifndef CPPA_DETAIL_RESPONSE_HANDLE_UTIL_HPP
-#define CPPA_DETAIL_RESPONSE_HANDLE_UTIL_HPP
+#ifndef CPPA_DETAIL_RESPONSE_FUTURE_DETAIL_HPP
+#define CPPA_DETAIL_RESPONSE_FUTURE_DETAIL_HPP
 
 #include "cppa/on.hpp"
 #include "cppa/skip_message.hpp"
 #include "cppa/system_messages.hpp"
 
-#include "cppa/util/type_traits.hpp"
+#include "cppa/detail/type_traits.hpp"
 
 namespace cppa {
 namespace detail {
@@ -46,4 +45,4 @@ behavior fs2bhvr(Actor* self, Fs... fs) {
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_DETAIL_RESPONSE_HANDLE_UTIL_HPP
+#endif // CPPA_DETAIL_RESPONSE_FUTURE_DETAIL_HPP

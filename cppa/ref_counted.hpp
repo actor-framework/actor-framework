@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_REF_COUNTED_HPP
 #define CPPA_REF_COUNTED_HPP
 
@@ -40,6 +39,10 @@ class ref_counted : public memory_managed {
 
     ref_counted();
 
+    ref_counted(const ref_counted&);
+
+    ref_counted& operator=(const ref_counted&);
+
     ~ref_counted();
 
     /**
@@ -51,7 +54,9 @@ class ref_counted : public memory_managed {
      * @brief Decreases reference count by one and calls
      *        @p request_deletion when it drops to zero.
      */
-    inline void deref() { if (--m_rc == 0) request_deletion(); }
+    inline void deref() {
+        if (--m_rc == 0) request_deletion();
+    }
 
     /**
      * @brief Queries whether there is exactly one reference.
@@ -66,15 +71,9 @@ class ref_counted : public memory_managed {
 
 };
 
-// compatibility with the intrusive_ptr implementation of boost
-inline void intrusive_ptr_add_ref(ref_counted* p) {
-    p->ref();
-}
+inline void intrusive_ptr_add_ref(ref_counted* p) { p->ref(); }
 
-// compatibility with the intrusive_ptr implementation of boost
-inline void intrusive_ptr_release(ref_counted* p) {
-    p->deref();
-}
+inline void intrusive_ptr_release(ref_counted* p) { p->deref(); }
 
 } // namespace cppa
 

@@ -16,41 +16,41 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#ifndef CALL_HPP
-#define CALL_HPP
+#ifndef CPPA_DETAIL_APPLY_ARGS_HPP
+#define CPPA_DETAIL_APPLY_ARGS_HPP
 
-#include "cppa/util/int_list.hpp"
+#include "cppa/detail/int_list.hpp"
 
 namespace cppa {
 namespace detail {
 
-template <typename F, long... Is, class Tuple>
-inline auto apply_args(F& f, util::int_list<Is...>, Tuple&& tup)
-    -> decltype(f(get<Is>(tup)...)) {
+template<typename F, long... Is, class Tuple>
+inline auto apply_args(F& f, detail::int_list<Is...>, Tuple&& tup)
+-> decltype(f(get<Is>(tup)...)) {
     return f(get<Is>(tup)...);
 }
 
-template <typename F, class Tuple, typename... Ts>
-inline auto apply_args_prefixed(F& f, util::int_list<>, Tuple&, Ts&&... args)
-    -> decltype(f(std::forward<Ts>(args)...)) {
+template<typename F, class Tuple, typename... Ts>
+inline auto apply_args_prefixed(F& f, detail::int_list<>, Tuple&, Ts&&... args)
+-> decltype(f(std::forward<Ts>(args)...)) {
     return f(std::forward<Ts>(args)...);
 }
 
-template <typename F, long... Is, class Tuple, typename... Ts>
-inline auto apply_args_prefixed(F& f, util::int_list<Is...>, Tuple& tup,
+template<typename F, long... Is, class Tuple, typename... Ts>
+inline auto apply_args_prefixed(F& f, detail::int_list<Is...>, Tuple& tup,
                                 Ts&&... args)
-    -> decltype(f(std::forward<Ts>(args)..., get<Is>(tup)...)) {
+-> decltype(f(std::forward<Ts>(args)..., get<Is>(tup)...)) {
     return f(std::forward<Ts>(args)..., get<Is>(tup)...);
 }
 
-template <typename F, long... Is, class Tuple, typename... Ts>
-inline auto apply_args_suffxied(F& f, util::int_list<Is...>, Tuple& tup,
+template<typename F, long... Is, class Tuple, typename... Ts>
+inline auto apply_args_suffxied(F& f, detail::int_list<Is...>, Tuple& tup,
                                 Ts&&... args)
-    -> decltype(f(get<Is>(tup)..., std::forward<Ts>(args)...)) {
+-> decltype(f(get<Is>(tup)..., std::forward<Ts>(args)...)) {
     return f(get<Is>(tup)..., std::forward<Ts>(args)...);
 }
 
 } // namespace detail
 } // namespace cppa
 
-#endif // CALL_HPP
+#endif // CPPA_DETAIL_APPLY_ARGS_HPP

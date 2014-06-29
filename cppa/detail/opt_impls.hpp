@@ -138,10 +138,10 @@ template<typename T>
 struct is_rd_arg : std::false_type { };
 
 template<typename T>
-struct is_rd_arg<rd_arg_functor<T> > : std::true_type { };
+struct is_rd_arg<rd_arg_functor<T>> : std::true_type { };
 
 template<typename T>
-struct is_rd_arg<add_arg_functor<T> > : std::true_type { };
+struct is_rd_arg<add_arg_functor<T>> : std::true_type { };
 
 typedef decltype(on<std::string>()) opt0_rvalue_builder;
 

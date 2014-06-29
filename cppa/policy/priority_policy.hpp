@@ -16,11 +16,12 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
+#ifndef CPPA_PRIORITY_POLICY_HPP
+#define CPPA_PRIORITY_POLICY_HPP
 
-#ifndef CPPA_POLICY_PRIORITY_POLICY_HPP
-#define CPPA_POLICY_PRIORITY_POLICY_HPP
-
-namespace cppa { class mailbox_element; }
+namespace cppa {
+class mailbox_element;
+} // namespace cppa
 
 namespace cppa {
 namespace policy {
@@ -64,4 +65,4 @@ class priority_policy {
 } // namespace policy
 } // namespace cppa
 
-#endif // CPPA_POLICY_PRIORITY_POLICY_HPP
+#endif // CPPA_PRIORITY_POLICY_HPP

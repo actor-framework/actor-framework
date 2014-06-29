@@ -16,9 +16,8 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
-#ifndef CPPA_TYPED_BEHAVIOR_HPP
-#define CPPA_TYPED_BEHAVIOR_HPP
+#ifndef TYPED_BEHAVIOR_HPP
+#define TYPED_BEHAVIOR_HPP
 
 #include "cppa/behavior.hpp"
 #include "cppa/match_expr.hpp"
@@ -39,70 +38,64 @@ template<typename List>
 struct input_only;
 
 template<typename... Ts>
-struct input_only<util::type_list<Ts...>> {
-    typedef util::type_list<typename Ts::input_types...> type;
+struct input_only<detail::type_list<Ts...>> {
+    typedef detail::type_list<typename Ts::input_types...> type;
+
 };
 
-typedef util::type_list<skip_message_t> skip_list;
+typedef detail::type_list<skip_message_t> skip_list;
 
 template<class List>
 struct unbox_typed_continue_helper {
     // do nothing if List is actually a list, i.e., not a typed_continue_helper
     typedef List type;
+
 };
 
 template<class List>
-struct unbox_typed_continue_helper<util::type_list<typed_continue_helper<List>>> {
+struct unbox_typed_continue_helper<
+    detail::type_list<typed_continue_helper<List>>> {
     typedef List type;
+
 };
 
 template<class Input, class RepliesToWith>
-struct same_input : std::is_same<Input, typename RepliesToWith::input_types> { };
+struct same_input : std::is_same<Input, typename RepliesToWith::input_types> {};
 
 template<class Output, class RepliesToWith>
 struct same_output_or_skip_message_t {
     typedef typename RepliesToWith::output_types other;
     static constexpr bool value =
-               std::is_same<Output, typename RepliesToWith::output_types>::value
-            || std::is_same<Output, util::type_list<skip_message_t>>::value;
+        std::is_same<Output, typename RepliesToWith::output_types>::value ||
+        std::is_same<Output, type_list<skip_message_t>>::value;
+
 };
 
 template<typename SList>
 struct valid_input_predicate {
-    //typedef typename input_only<SList>::type s_inputs;
     template<typename Expr>
     struct inner {
         typedef typename Expr::input_types input_types;
-        typedef typename util::tl_map<
-                    typename unbox_typed_continue_helper<
-                        typename Expr::output_types
-                    >::type,
-                    unlift_void
-                >::type
-                output_types;
+        typedef typename unbox_typed_continue_helper<
+            typename Expr::output_types>::type output_types;
         // get matching elements for input type
-        typedef typename util::tl_filter<
-                    SList,
-                    util::tbind<same_input, input_types>::template type
-                >::type
-                filtered_slist;
-        static_assert(util::tl_size<filtered_slist>::value > 0,
+        typedef typename tl_filter<
+            SList, tbind<same_input, input_types>::template type>::type
+        filtered_slist;
+        static_assert(tl_size<filtered_slist>::value > 0,
                       "cannot assign given match expression to "
                       "typed behavior, because the expression "
                       "contains at least one pattern that is "
                       "not defined in the actor's type");
-        static constexpr bool value = util::tl_exists<
-                                          filtered_slist,
-                                          util::tbind<
-                                              same_output_or_skip_message_t,
-                                              output_types
-                                          >::template type
-                                      >::value;
+        static constexpr bool value = tl_exists<
+            filtered_slist, tbind<same_output_or_skip_message_t,
+                                  output_types>::template type>::value;
         // check whether given output matches in the filtered list
         static_assert(value,
                       "cannot assign given match expression to "
                       "typed behavior, because at least one return "
                       "type does not match");
+
     };
 };
 
@@ -114,14 +107,13 @@ struct valid_input {
     // (1) has an identical input type list
     // (2)    has an identical output type list
     //     OR the output of the element in IList is skip_message_t
-    static_assert(util::tl_is_distinct<IList>::value,
+    static_assert(detail::tl_is_distinct<IList>::value,
                   "given pattern is not distinct");
     static constexpr bool value =
-           util::tl_size<SList>::value == util::tl_size<IList>::value
-        && util::tl_forall<
-               IList,
-               valid_input_predicate<SList>::template inner
-           >::value;
+        detail::tl_size<SList>::value == detail::tl_size<IList>::value &&
+        detail::tl_forall<IList,
+                          valid_input_predicate<SList>::template inner>::value;
+
 };
 
 // this function is called from typed_behavior<...>::set and its whole
@@ -134,8 +126,9 @@ void static_check_typed_behavior_input() {
     //       InputList if its return type is identical to all "missing"
     //       input types ... however, it might lead to unexpected results
     //       and would cause a lot of not-so-straightforward code here
-    static_assert(is_valid, "given pattern cannot be used to initialize "
-                            "typed behavior (exact match needed)");
+    static_assert(is_valid,
+                  "given pattern cannot be used to initialize "
+                  "typed behavior (exact match needed)");
 }
 
 } // namespace detail
@@ -143,8 +136,10 @@ void static_check_typed_behavior_input() {
 template<typename... Rs>
 class typed_actor;
 
-template<class Base, class Subtype, class BehaviorType>
+namespace mixin {
+template<class, class, class>
 class behavior_stack_based_impl;
+}
 
 template<typename... Rs>
 class typed_behavior {
@@ -152,8 +147,8 @@ class typed_behavior {
     template<typename... OtherRs>
     friend class typed_actor;
 
-    template<class Base, class Subtype, class BehaviorType>
-    friend class behavior_stack_based_impl;
+    template<class, class, class>
+    friend class mixin::behavior_stack_based_impl;
 
     template<typename...>
     friend class detail::functor_based_typed_actor;
@@ -165,12 +160,13 @@ class typed_behavior {
     typed_behavior& operator=(typed_behavior&&) = default;
     typed_behavior& operator=(const typed_behavior&) = default;
 
-    typedef util::type_list<Rs...> signatures;
+    typedef detail::type_list<Rs...> signatures;
 
     template<typename T, typename... Ts>
     typed_behavior(T arg, Ts&&... args) {
-        set(match_expr_collect(detail::lift_to_match_expr(std::move(arg)),
-                               detail::lift_to_match_expr(std::forward<Ts>(args))...));
+        set(match_expr_collect(
+            detail::lift_to_match_expr(std::move(arg)),
+            detail::lift_to_match_expr(std::forward<Ts>(args))...));
     }
 
     template<typename... Cs>
@@ -179,24 +175,18 @@ class typed_behavior {
         return *this;
     }
 
-    explicit operator bool() const {
-        return static_cast<bool>(m_bhvr);
-    }
+    explicit operator bool() const { return static_cast<bool>(m_bhvr); }
 
-   /**
-     * @brief Invokes the timeout callback.
-     */
-    inline void handle_timeout() {
-        m_bhvr.handle_timeout();
-    }
+    /**
+      * @brief Invokes the timeout callback.
+      */
+    inline void handle_timeout() { m_bhvr.handle_timeout(); }
 
     /**
      * @brief Returns the duration after which receives using
      *        this behavior should time out.
      */
-    inline const util::duration& timeout() const {
-        return m_bhvr.timeout();
-    }
+    inline const duration& timeout() const { return m_bhvr.timeout(); }
 
  private:
 
@@ -207,12 +197,8 @@ class typed_behavior {
     template<typename... Cs>
     void set(match_expr<Cs...>&& expr) {
         // do some transformation before type-checking the input signatures
-        typedef typename util::tl_map<
-                    util::type_list<
-                        typename detail::deduce_signature<Cs>::type...
-                    >
-                >::type
-                input;
+        typedef typename detail::tl_map<detail::type_list<
+            typename detail::deduce_signature<Cs>::type...>>::type input;
         // check types
         detail::static_check_typed_behavior_input<signatures, input>();
         // final (type-erasure) step
@@ -225,4 +211,4 @@ class typed_behavior {
 
 } // namespace cppa
 
-#endif // CPPA_TYPED_BEHAVIOR_HPP
+#endif // TYPED_BEHAVIOR_HPP

@@ -68,7 +68,7 @@ class behavior_stack_based_impl : public single_timeout<Base, Subtype> {
 
     template<typename T, typename... Ts>
     inline typename std::enable_if<
-        !is_behavior_policy<typename util::rm_const_and_ref<T>::type>::value,
+        !is_behavior_policy<typename detail::rm_const_and_ref<T>::type>::value,
         void
     >::type
     become(T&& arg, Ts&&... args) {

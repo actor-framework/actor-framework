@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_SCHEDULER_HPP
 #define CPPA_SCHEDULER_HPP
 
@@ -31,33 +30,32 @@
 #include "cppa/actor.hpp"
 #include "cppa/channel.hpp"
 #include "cppa/message.hpp"
-#include "cppa/cow_tuple.hpp"
+#include "cppa/duration.hpp"
 #include "cppa/attachable.hpp"
 #include "cppa/scoped_actor.hpp"
 #include "cppa/spawn_options.hpp"
 #include "cppa/execution_unit.hpp"
-#include "cppa/message_header.hpp"
 
-#include "cppa/util/duration.hpp"
-#include "cppa/util/producer_consumer_list.hpp"
+#include "cppa/detail/producer_consumer_list.hpp"
 
 namespace cppa {
 
 class resumable;
 
-namespace detail { class singleton_manager; }
+namespace detail {
+class singletons;
+}
 
 namespace scheduler {
 
 class coordinator;
 
-
 /**
  * @brief A work-stealing scheduling worker.
  *
  * The work-stealing implementation of libcppa minimizes access to the
- * synchronized queue. The reasoning behind this design decision is that
- * it has been shown that stealing actually is very rare for workloads [1].
+ * synchronized queue. The reasoning behind this design decision is that it
+ * has been shown that stealing actually is very rare for most workloads [1].
  * Hence, implementations should focus on the performance in
  * the non-stealing case. For this reason, each worker has an exposed
  * job queue that can be accessed by the central scheduler instance as
@@ -86,7 +84,7 @@ class worker : public execution_unit {
 
     typedef resumable* job_ptr;
 
-    typedef util::producer_consumer_list<resumable> job_queue;
+    typedef detail::producer_consumer_list<resumable> job_queue;
 
     /**
      * @brief Attempt to steal an element from the exposed job queue.
@@ -141,7 +139,7 @@ class worker : public execution_unit {
  */
 class coordinator {
 
-    friend class detail::singleton_manager;
+    friend class detail::singletons;
 
  public:
 
@@ -158,35 +156,20 @@ class coordinator {
     void enqueue(resumable* what);
 
     template<typename Duration, typename... Data>
-    void delayed_send(message_header hdr,
-                      const Duration& rel_time,
-                      message data           ) {
-        auto tup = make_message(atom("SEND"),
-                                  util::duration{rel_time},
-                                  std::move(hdr),
-                                  std::move(data));
-        m_timer->enqueue(message_header{}, std::move(tup), nullptr);
-    }
-
-    template<typename Duration, typename... Data>
-    void delayed_reply(message_header hdr,
-                       const Duration& rel_time,
-                       message data           ) {
-        CPPA_REQUIRE(hdr.id.valid() && hdr.id.is_response());
-        auto tup = make_message(atom("SEND"),
-                                  util::duration{rel_time},
-                                  std::move(hdr),
-                                  std::move(data));
-        m_timer->enqueue(message_header{}, std::move(tup), nullptr);
+    void delayed_send(Duration rel_time, actor_addr from, channel to,
+                      message_id mid, message data) {
+        m_timer->enqueue(invalid_actor_addr, message_id::invalid,
+                         make_message(atom("_Send"), duration{rel_time},
+                                      std::move(from), std::move(to), mid,
+                                      std::move(data)),
+                         nullptr);
     }
 
     inline size_t num_workers() const {
         return static_cast<unsigned>(m_workers.size());
     }
 
-    inline worker& worker_by_id(size_t id) {
-        return m_workers[id];
-    }
+    inline worker& worker_by_id(size_t id) { return m_workers[id]; }
 
  private:
 
@@ -198,7 +181,7 @@ class coordinator {
 
     void initialize();
 
-    void destroy();
+    void stop();
 
     intrusive_ptr<blocking_actor> m_timer;
     scoped_actor m_printer;

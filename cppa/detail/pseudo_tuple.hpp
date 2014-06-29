@@ -16,13 +16,12 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
-#ifndef CPPA_DETAIL_PSEUDO_TUPLE_HPP
-#define CPPA_DETAIL_PSEUDO_TUPLE_HPP
+#ifndef CPPA_PSEUDO_TUPLE_HPP
+#define CPPA_PSEUDO_TUPLE_HPP
 
 #include <cstddef>
 
-#include "cppa/util/type_traits.hpp"
+#include "cppa/detail/type_traits.hpp"
 
 namespace cppa {
 namespace detail {
@@ -35,44 +34,30 @@ struct pseudo_tuple {
 
     pointer data[sizeof...(T) > 0 ? sizeof...(T) : 1];
 
-    inline const_pointer at(size_t p) const {
-        return data[p];
-    }
+    inline const_pointer at(size_t p) const { return data[p]; }
 
-    inline pointer mutable_at(size_t p) {
-        return data[p];
-    }
+    inline pointer mutable_at(size_t p) { return data[p]; }
 
-    inline pointer& operator[](size_t p) {
-        return data[p];
-    }
+    inline pointer& operator[](size_t p) { return data[p]; }
+
 };
 
-template<class List>
-struct pseudo_tuple_from_type_list;
+template<size_t N, typename... Ts>
+const typename detail::type_at<N, Ts...>::type&
+get(const detail::pseudo_tuple<Ts...>& tv) {
+    static_assert(N < sizeof...(Ts), "N >= tv.size()");
+    return *reinterpret_cast<const typename detail::type_at<N, Ts...>::type*>(
+                tv.at(N));
+}
 
-template<typename... Ts>
-struct pseudo_tuple_from_type_list<util::type_list<Ts...> > {
-    typedef pseudo_tuple<Ts...> type;
-};
+template<size_t N, typename... Ts>
+typename detail::type_at<N, Ts...>::type& get(detail::pseudo_tuple<Ts...>& tv) {
+    static_assert(N < sizeof...(Ts), "N >= tv.size()");
+    return *reinterpret_cast<typename detail::type_at<N, Ts...>::type*>(
+                tv.mutable_at(N));
+}
 
 } // namespace detail
 } // namespace cppa
 
-namespace cppa {
-
-template<size_t N, typename... Ts>
-const typename util::type_at<N, Ts...>::type& get(const detail::pseudo_tuple<Ts...>& tv) {
-    static_assert(N < sizeof...(Ts), "N >= tv.size()");
-    return *reinterpret_cast<const typename util::type_at<N, Ts...>::type*>(tv.at(N));
-}
-
-template<size_t N, typename... Ts>
-typename util::type_at<N, Ts...>::type& get_ref(detail::pseudo_tuple<Ts...>& tv) {
-    static_assert(N < sizeof...(Ts), "N >= tv.size()");
-    return *reinterpret_cast<typename util::type_at<N, Ts...>::type*>(tv.mutable_at(N));
-}
-
-} // namespace cppa
-
-#endif // CPPA_DETAIL_PSEUDO_TUPLE_HPP
+#endif // CPPA_PSEUDO_TUPLE_HPP

@@ -29,7 +29,7 @@
 #include "cppa/ref_counted.hpp"
 #include "cppa/uniform_type_info.hpp"
 
-#include "cppa/util/type_list.hpp"
+#include "cppa/detail/type_list.hpp"
 
 #include "cppa/detail/message_iterator.hpp"
 
@@ -37,6 +37,8 @@ namespace cppa {
 namespace detail {
 
 class message_data : public ref_counted {
+
+    using super = ref_counted;
 
  public:
 
@@ -107,11 +109,13 @@ class message_data : public ref_counted {
         inline const message_data& operator*() const { return *m_ptr.get(); }
         inline void swap(ptr& other) { m_ptr.swap(other.m_ptr); }
         inline void reset(message_data* p = nullptr) { m_ptr.reset(p); }
-        inline const message_data* get() const { return m_ptr.get(); }
-        inline message_data* get() { return m_ptr.get(); }
 
         inline explicit operator bool() const {
             return static_cast<bool>(m_ptr);
+        }
+
+        inline message_data* get() const {
+            return m_ptr.get();
         }
 
      private:
@@ -125,6 +129,7 @@ class message_data : public ref_counted {
  private:
 
     bool m_is_dynamic;
+
 };
 
 struct full_eq_type {
@@ -135,6 +140,7 @@ struct full_eq_type {
         return lhs.type() == rhs.type() &&
                lhs.type()->equals(lhs.value(), rhs.value());
     }
+
 };
 
 struct types_only_eq_type {
@@ -149,6 +155,7 @@ struct types_only_eq_type {
                            const message_iterator<Tuple>& rhs) const {
         return lhs == rhs.type();
     }
+
 };
 
 namespace {

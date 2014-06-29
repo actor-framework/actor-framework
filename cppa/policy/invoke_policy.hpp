@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_POLICY_INVOKE_POLICY_HPP
 #define CPPA_POLICY_INVOKE_POLICY_HPP
 
@@ -25,8 +24,9 @@
 #include <iostream>
 #include <type_traits>
 
+#include "cppa/none.hpp"
+
 #include "cppa/on.hpp"
-#include "cppa/logging.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/message_id.hpp"
@@ -38,8 +38,8 @@
 
 #include "cppa/detail/memory.hpp"
 #include "cppa/detail/matches.hpp"
-
-#include "cppa/util/scope_guard.hpp"
+#include "cppa/detail/logging.hpp"
+#include "cppa/detail/scope_guard.hpp"
 
 namespace cppa {
 namespace policy {
@@ -59,7 +59,9 @@ enum handle_message_result {
 };
 
 template<receive_policy_flag X>
-struct rp_flag { typedef std::integral_constant<receive_policy_flag, X> type; };
+struct rp_flag {
+    typedef std::integral_constant<receive_policy_flag, X> type;
+};
 
 /**
  * @brief The invoke_policy <b>concept</b> class. Please note that this
@@ -76,10 +78,8 @@ class invoke_policy {
      *       handled or dropped.
      */
     template<class Actor, class Fun>
-    bool invoke_message(Actor* self,
-                        unique_mailbox_element_pointer& node_ptr,
-                        Fun& fun,
-                        message_id awaited_response) {
+    bool invoke_message(Actor* self, unique_mailbox_element_pointer& node_ptr,
+                        Fun& fun, message_id awaited_response) {
         if (!node_ptr) return false;
         bool result = false;
         bool reset_pointer = true;
@@ -88,9 +88,7 @@ class invoke_policy {
                 result = true;
                 break;
             }
-            case hm_drop_msg: {
-                break;
-            }
+            case hm_drop_msg: { break; }
             case hm_cache_msg: {
                 reset_pointer = false;
                 break;
@@ -111,24 +109,24 @@ class invoke_policy {
 
  private:
 
-    std::list<std::unique_ptr<mailbox_element, detail::disposer> > m_cache;
+    std::list<std::unique_ptr<mailbox_element, detail::disposer>> m_cache;
 
     inline void handle_timeout(message_handler&) {
-        CPPA_CRITICAL("handle_timeout(partial_function&)");
+        CPPA_CRITICAL("handle_timeout(message_handler&)");
     }
 
     enum class msg_type {
-        normal_exit,            // an exit message with normal exit reason
-        non_normal_exit,        // an exit message with abnormal exit reason
-        expired_timeout,        // an 'old & obsolete' timeout
-        inactive_timeout,       // a currently inactive timeout
-        expired_sync_response,  // a sync response that already timed out
-        timeout,                // triggers currently active timeout
-        timeout_response,       // triggers timeout of a sync message
-        ordinary,               // an asynchronous message or sync. request
-        sync_response           // a synchronous response
-    };
+        normal_exit,           // an exit message with normal exit reason
+        non_normal_exit,       // an exit message with abnormal exit reason
+        expired_timeout,       // an 'old & obsolete' timeout
+        inactive_timeout,      // a currently inactive timeout
+        expired_sync_response, // a sync response that already timed out
+        timeout,               // triggers currently active timeout
+        timeout_response,      // triggers timeout of a sync message
+        ordinary,              // an asynchronous message or sync. request
+        sync_response          // a synchronous response
 
+    };
 
     // identifies 'special' messages that should not be processed normally:
     // - system messages such as EXIT (if self doesn't trap exits) and TIMEOUT
@@ -138,11 +136,8 @@ class invoke_policy {
     msg_type filter_msg(Actor* self, mailbox_element* node) {
         const message& msg = node->msg;
         auto mid = node->mid;
-        auto& arr = detail::static_types_array<exit_msg,
-                                               timeout_msg,
-                                               sync_timeout_msg>::arr;
         if (msg.size() == 1) {
-            if (msg.type_at(0) == arr[0]) {
+            if (msg.type_at(0)->equal_to(typeid(exit_msg))) {
                 auto& em = msg.get_as<exit_msg>(0);
                 CPPA_REQUIRE(!mid.valid());
                 if (self->trap_exit() == false) {
@@ -152,22 +147,22 @@ class invoke_policy {
                     }
                     return msg_type::normal_exit;
                 }
-            }
-            else if (msg.type_at(0) == arr[1]) {
+            } else if (msg.type_at(0)->equal_to(typeid(timeout_msg))) {
                 auto& tm = msg.get_as<timeout_msg>(0);
                 auto tid = tm.timeout_id;
                 CPPA_REQUIRE(!mid.valid());
                 if (self->is_active_timeout(tid)) return msg_type::timeout;
-                return self->waits_for_timeout(tid) ? msg_type::inactive_timeout
-                                                    : msg_type::expired_timeout;
-            }
-            else if (msg.type_at(0) == arr[2] && mid.is_response()) {
+                return self->waits_for_timeout(tid) ?
+                           msg_type::inactive_timeout :
+                           msg_type::expired_timeout;
+            } else if (msg.type_at(0)->equal_to(typeid(sync_timeout_msg)) &&
+                       mid.is_response()) {
                 return msg_type::timeout_response;
             }
         }
         if (mid.is_response()) {
-            return (self->awaits(mid)) ? msg_type::sync_response
-                                       : msg_type::expired_sync_response;
+            return (self->awaits(mid)) ? msg_type::sync_response :
+                                         msg_type::expired_sync_response;
         }
         return msg_type::ordinary;
     }
@@ -180,43 +175,44 @@ class invoke_policy {
     }
 
     template<class Actor>
-    inline response_promise fetch_response_promise(Actor*, response_promise& hdl) {
+    inline response_promise fetch_response_promise(Actor*,
+                                                   response_promise& hdl) {
         return std::move(hdl);
     }
 
     // - extracts response message from handler
     // - returns true if fun was successfully invoked
     template<class Actor, class Fun, class MaybeResponseHandle = int>
-    optional<message> invoke_fun(Actor* self,
-                                 message& msg,
-                                 message_id& mid,
-                                 Fun& fun,
-                                 MaybeResponseHandle hdl = MaybeResponseHandle{}) {
-#       if CPPA_LOG_LEVEL >= CPPA_DEBUG
+    optional<message> invoke_fun(Actor* self, message& msg, message_id& mid,
+                                 Fun& fun, MaybeResponseHandle hdl =
+                                               MaybeResponseHandle{}) {
+#       ifdef CPPA_LOG_LEVEL
         auto msg_str = to_string(msg);
 #       endif
+        CPPA_LOG_TRACE(CPPA_MARG(mid, integer_value) << ", msg = " << msg_str);
         auto res = fun(msg); // might change mid
         CPPA_LOG_DEBUG_IF(res, "actor did consume message: " << msg_str);
         CPPA_LOG_DEBUG_IF(!res, "actor did ignore message: " << msg_str);
         if (res) {
-            //message_header hdr{self, sender, mid.is_request() ? mid.response_id()
-            //                                                    : message_id{}};
             if (res->empty()) {
                 // make sure synchronous requests
                 // always receive a response
                 if (mid.is_request() && !mid.is_answered()) {
-                    CPPA_LOG_WARNING("actor with ID " << self->id()
+                    CPPA_LOG_WARNING("actor with ID "
+                                     << self->id()
                                      << " did not reply to a "
                                         "synchronous request message");
                     auto fhdl = fetch_response_promise(self, hdl);
                     if (fhdl) fhdl.deliver(make_message(unit));
                 }
             } else {
-                if (   detail::matches<atom_value, std::uint64_t>(*res)
-                    && res->template get_as<atom_value>(0) == atom("MESSAGE_ID")) {
-                    CPPA_LOG_DEBUG("message handler returned a "
-                                   "message id wrapper");
-                    auto id = res->template get_as<std::uint64_t>(1);
+                CPPA_LOGF_DEBUG("res = " << to_string(*res));
+                if (res->template has_types<atom_value, uint64_t>() &&
+                    res->template get_as<atom_value>(0) == atom("MESSAGE_ID")) {
+                    CPPA_LOG_DEBUG(
+                        "message handler returned a "
+                        "message id wrapper");
+                    auto id = res->template get_as<uint64_t>(1);
                     auto msg_id = message_id::from_integer_value(id);
                     auto ref_opt = self->sync_handler(msg_id);
                     // calls self->response_promise() if hdl is a dummy
@@ -225,27 +221,26 @@ class invoke_policy {
                     auto fhdl = fetch_response_promise(self, hdl);
                     if (ref_opt) {
                         behavior cpy = *ref_opt;
-                        *ref_opt = cpy.add_continuation(
-                            [=](message& intermediate) -> optional<message> {
+                        *ref_opt =
+                            cpy.add_continuation([=](message & intermediate)
+                                                     ->optional<message> {
                                 if (!intermediate.empty()) {
                                     // do no use lamba expresion type to
                                     // avoid recursive template instantiaton
-                                    behavior::continuation_fun f2 = [=](message& m) -> optional<message> {
+                                    behavior::continuation_fun f2 = [=](
+                                        message & m)->optional<message> {
                                         return std::move(m);
+
                                     };
                                     auto mutable_mid = mid;
                                     // recursively call invoke_fun on the
                                     // result to correctly handle stuff like
                                     // sync_send(...).then(...).then(...)...
-                                    return invoke_fun(self,
-                                                      intermediate,
-                                                      mutable_mid,
-                                                      f2,
-                                                      fhdl);
+                                    return invoke_fun(self, intermediate,
+                                                      mutable_mid, f2, fhdl);
                                 }
                                 return none;
-                            }
-                        );
+                            });
                     }
                     // reset res to prevent "outer" invoke_fun
                     // from handling the result again
@@ -276,8 +271,7 @@ class invoke_policy {
     //     - no: revert(...) -> set self back to state it had before begin()
 
     template<class Actor, class Fun>
-    handle_message_result handle_message(Actor* self,
-                                         mailbox_element* node,
+    handle_message_result handle_message(Actor* self, mailbox_element* node,
                                          Fun& fun,
                                          message_id awaited_response) {
         bool handle_sync_failure_on_mismatch = true;
@@ -328,10 +322,7 @@ class invoke_policy {
                                << CPPA_MARG(awaited_response, integer_value));
                 if (awaited_response.valid() && node->mid == awaited_response) {
                     auto previous_node = dptr()->hm_begin(self, node);
-                    auto res = invoke_fun(self,
-                                          node->msg,
-                                          node->mid,
-                                          fun);
+                    auto res = invoke_fun(self, node->msg, node->mid, fun);
                     if (!res && handle_sync_failure_on_mismatch) {
                         CPPA_LOG_WARNING("sync failure occured in actor "
                                          << "with ID " << self->id());
@@ -347,10 +338,7 @@ class invoke_policy {
             case msg_type::ordinary: {
                 if (!awaited_response.valid()) {
                     auto previous_node = dptr()->hm_begin(self, node);
-                    auto res = invoke_fun(self,
-                                          node->msg,
-                                          node->mid,
-                                          fun);
+                    auto res = invoke_fun(self, node->msg, node->mid, fun);
                     if (res) {
                         dptr()->hm_cleanup(self, previous_node);
                         return hm_msg_handled;
@@ -360,7 +348,7 @@ class invoke_policy {
                 }
                 CPPA_LOG_DEBUG_IF(awaited_response.valid(),
                                   "ignored message; await response: "
-                                  << awaited_response.integer_value());
+                                      << awaited_response.integer_value());
                 return hm_cache_msg;
             }
         }
@@ -368,9 +356,7 @@ class invoke_policy {
         CPPA_CRITICAL("invalid message type");
     }
 
-    Derived* dptr() {
-        return static_cast<Derived*>(this);
-    }
+    Derived* dptr() { return static_cast<Derived*>(this); }
 
 };
 

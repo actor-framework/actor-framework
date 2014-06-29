@@ -16,11 +16,10 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #include "cppa/policy.hpp"
-#include "cppa/singletons.hpp"
 #include "cppa/scoped_actor.hpp"
 
+#include "cppa/detail/singletons.hpp"
 #include "cppa/detail/proper_actor.hpp"
 #include "cppa/detail/actor_registry.hpp"
 
@@ -47,7 +46,7 @@ void scoped_actor::init(bool hide_actor) {
     m_hidden = hide_actor;
     m_self.reset(alloc());
     if (!m_hidden) {
-        get_actor_registry()->inc_running();
+        detail::singletons::get_actor_registry()->inc_running();
         m_prev = CPPA_SET_AID(m_self->id());
     }
 }
@@ -64,7 +63,7 @@ scoped_actor::~scoped_actor() {
     auto r = m_self->planned_exit_reason();
     m_self->cleanup(r == exit_reason::not_exited ? exit_reason::normal : r);
     if (!m_hidden) {
-        get_actor_registry()->dec_running();
+        detail::singletons::get_actor_registry()->dec_running();
         CPPA_SET_AID(m_prev);
     }
 }

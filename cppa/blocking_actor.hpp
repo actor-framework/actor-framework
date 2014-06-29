@@ -16,20 +16,21 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_BLOCKING_UNTYPED_ACTOR_HPP
 #define CPPA_BLOCKING_UNTYPED_ACTOR_HPP
+
+#include "cppa/none.hpp"
 
 #include "cppa/on.hpp"
 #include "cppa/extend.hpp"
 #include "cppa/behavior.hpp"
-#include "cppa/exception.hpp"
 #include "cppa/local_actor.hpp"
-#include "cppa/sync_sender.hpp"
 #include "cppa/typed_actor.hpp"
-#include "cppa/mailbox_based.hpp"
 #include "cppa/mailbox_element.hpp"
 #include "cppa/response_handle.hpp"
+
+#include "cppa/mixin/sync_sender.hpp"
+#include "cppa/mixin/mailbox_based.hpp"
 
 namespace cppa {
 
@@ -39,16 +40,18 @@ namespace cppa {
  * @extends local_actor
  */
 class blocking_actor
-        : public extend<local_actor, blocking_actor>::
-                        with<mailbox_based,
-                             sync_sender<blocking_response_handle_tag>::impl> {
+    : public extend<local_actor, blocking_actor>::with<
+          mixin::mailbox_based,
+          mixin::sync_sender<blocking_response_handle_tag>::impl> {
 
  public:
+
+    class functor_based;
 
     /**************************************************************************
      *           utility stuff and receive() member function family           *
      **************************************************************************/
- typedef std::chrono::high_resolution_clock::time_point timeout_type;
+    typedef std::chrono::high_resolution_clock::time_point timeout_type;
 
     struct receive_while_helper {
 
@@ -75,7 +78,7 @@ class blocking_actor
         template<typename... Ts>
         void operator()(Ts&&... args) {
             behavior bhvr{std::forward<Ts>(args)...};
-            for ( ; begin != end; ++begin) m_dq(bhvr);
+            for (; begin != end; ++begin) m_dq(bhvr);
         }
 
     };
@@ -87,8 +90,13 @@ class blocking_actor
 
         template<typename Statement>
         void until(Statement stmt) {
-            do { m_dq(m_bhvr); }
-            while (stmt() == false);
+            do {
+                m_dq(m_bhvr);
+            } while (stmt() == false);
+        }
+
+        void until(const bool& bvalue) {
+            until([&] { return bvalue; });
         }
 
     };
@@ -204,12 +212,12 @@ class blocking_actor
      * @brief Unwinds the stack by throwing an actor_exited exception.
      * @throws actor_exited
      */
-    virtual void quit(std::uint32_t reason = exit_reason::normal);
+    virtual void quit(uint32_t reason = exit_reason::normal);
 
     /** @cond PRIVATE */
 
     // required from invoke_policy; unused in blocking actors
-    inline void remove_handler(message_id) { }
+    inline void remove_handler(message_id) {}
 
     // required by receive() member function family
     inline void dequeue(behavior&& bhvr) {
@@ -235,6 +243,49 @@ class blocking_actor
     }
 
     std::map<message_id, behavior> m_sync_handler;
+
+};
+
+class blocking_actor::functor_based : public blocking_actor {
+
+ public:
+
+    typedef std::function<void(blocking_actor*)> act_fun;
+
+    template<typename F, typename... Ts>
+    functor_based(F f, Ts&&... vs) {
+        blocking_actor* dummy = nullptr;
+        create(dummy, f, std::forward<Ts>(vs)...);
+    }
+
+ protected:
+
+    void act() override;
+
+ private:
+
+    void create(blocking_actor*, act_fun);
+
+    template<class Actor, typename F, typename T0, typename... Ts>
+    auto create(Actor* dummy, F f, T0&& v0, Ts&&... vs)
+        -> typename std::enable_if<std::is_same<
+              decltype(f(dummy, std::forward<T0>(v0), std::forward<Ts>(vs)...)),
+              void>::value>::type {
+        create(dummy, std::bind(f, std::placeholders::_1, std::forward<T0>(v0),
+                                std::forward<Ts>(vs)...));
+    }
+
+    template<class Actor, typename F, typename T0, typename... Ts>
+    auto create(Actor* dummy, F f, T0&& v0, Ts&&... vs)
+        -> typename std::enable_if<std::is_same<
+              decltype(f(std::forward<T0>(v0), std::forward<Ts>(vs)...)),
+              void>::value>::type {
+        std::function<void()> fun =
+            std::bind(f, std::forward<T0>(v0), std::forward<Ts>(vs)...);
+        create(dummy, [fun](Actor*) { fun(); });
+    }
+
+    act_fun m_act;
 
 };
 

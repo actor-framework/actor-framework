@@ -16,9 +16,8 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
-#ifndef CPPA_POLICY_EVENT_BASED_RESUME_HPP
-#define CPPA_POLICY_EVENT_BASED_RESUME_HPP
+#ifndef CPPA_POLICY_ABSTRACT_EVENT_BASED_ACTOR_HPP
+#define CPPA_POLICY_ABSTRACT_EVENT_BASED_ACTOR_HPP
 
 #include <tuple>
 #include <stack>
@@ -28,14 +27,12 @@
 
 #include "cppa/config.hpp"
 #include "cppa/extend.hpp"
-#include "cppa/logging.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/scheduler.hpp"
 
 #include "cppa/policy/resume_policy.hpp"
 
-#include "cppa/detail/cs_thread.hpp"
-#include "cppa/detail/functor_based_actor.hpp"
+#include "cppa/detail/logging.hpp"
 
 namespace cppa {
 namespace policy {
@@ -49,22 +46,18 @@ class event_based_resume {
     struct mixin : Base, resumable {
 
         template<typename... Ts>
-        mixin(Ts&&... args) : Base(std::forward<Ts>(args)...) { }
+        mixin(Ts&&... args)
+                : Base(std::forward<Ts>(args)...) {}
 
-        void attach_to_scheduler() override {
-            this->ref();
-        }
+        void attach_to_scheduler() override { this->ref(); }
 
-        void detach_from_scheduler() override {
-            this->deref();
-        }
+        void detach_from_scheduler() override { this->deref(); }
 
-        resumable::resume_result resume(detail::cs_thread*,
-                                        execution_unit* host) override {
+        resumable::resume_result resume(execution_unit* host) override {
             auto d = static_cast<Derived*>(this);
             d->m_host = host;
             CPPA_LOG_TRACE("id = " << d->id());
-            auto done_cb = [&]() -> bool {
+            auto done_cb = [&]()->bool {
                 CPPA_LOG_TRACE("");
                 d->bhvr_stack().clear();
                 d->bhvr_stack().cleanup();
@@ -81,10 +74,12 @@ class event_based_resume {
                 }
                 d->cleanup(rsn);
                 return true;
+
             };
             auto actor_done = [&] {
-                return    d->bhvr_stack().empty()
-                       || d->planned_exit_reason() != exit_reason::not_exited;
+                return d->bhvr_stack().empty() ||
+                       d->planned_exit_reason() != exit_reason::not_exited;
+
             };
             // actors without behavior or that have already defined
             // an exit reason must not be resumed
@@ -122,10 +117,10 @@ class event_based_resume {
                             CPPA_LOG_DEBUG("add message to cache");
                             d->push_to_cache(std::move(ptr));
                         }
-                    }
-                    else {
-                        CPPA_LOG_DEBUG("no more element in mailbox; "
-                                       "going to block");
+                    } else {
+                        CPPA_LOG_DEBUG(
+                            "no more element in mailbox; "
+                            "going to block");
                         if (d->mailbox().try_block()) {
                             return resumable::resume_later;
                         }
@@ -134,8 +129,10 @@ class event_based_resume {
                 }
             }
             catch (actor_exited& what) {
-                CPPA_LOG_INFO("actor died because of exception: actor_exited, "
-                              "reason = " << what.reason());
+                CPPA_LOG_INFO(
+                    "actor died because of exception: actor_exited, "
+                    "reason = "
+                    << what.reason());
                 if (d->exit_reason() == exit_reason::not_exited) {
                     d->quit(what.reason());
                 }
@@ -168,7 +165,7 @@ class event_based_resume {
     }
 
     template<class Actor>
-    bool await_data(Actor*, const util::duration&) {
+    bool await_data(Actor*, const duration&) {
         static_assert(std::is_same<Actor, Actor>::value == false,
                       "The event-based resume policy cannot be used "
                       "to implement blocking actors");
@@ -180,4 +177,4 @@ class event_based_resume {
 } // namespace policy
 } // namespace cppa
 
-#endif // CPPA_POLICY_EVENT_BASED_RESUME_HPP
+#endif // CPPA_POLICY_ABSTRACT_EVENT_BASED_ACTOR_HPP

@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #include <thread>
 #include <atomic>
 #include <chrono>
@@ -25,7 +24,6 @@
 
 #include "cppa/on.hpp"
 #include "cppa/policy.hpp"
-#include "cppa/logging.hpp"
 #include "cppa/anything.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/scheduler.hpp"
@@ -33,14 +31,11 @@
 #include "cppa/scoped_actor.hpp"
 #include "cppa/system_messages.hpp"
 
+#include "cppa/detail/logging.hpp"
 #include "cppa/detail/proper_actor.hpp"
 #include "cppa/detail/actor_registry.hpp"
-#include "cppa/detail/singleton_manager.hpp"
-
-using std::move;
 
 namespace cppa {
-
 namespace scheduler {
 
 /******************************************************************************
@@ -49,51 +44,36 @@ namespace scheduler {
 
 namespace {
 
-typedef std::uint32_t ui32;
+using hrc = std::chrono::high_resolution_clock;
 
-typedef std::chrono::high_resolution_clock hrc;
+using time_point = hrc::time_point;
 
-typedef hrc::time_point time_point;
+using timer_actor_policies =
+    policy::policies<policy::no_scheduling, policy::not_prioritizing,
+                     policy::no_resume, policy::nestable_invoke>;
 
-typedef policy::policies<policy::no_scheduling, policy::not_prioritizing,
-                         policy::no_resume, policy::nestable_invoke>
-        timer_actor_policies;
-
-class delayed_msg {
-
- public:
-
-    delayed_msg(message_header&& arg1,
-                message&&      arg2)
-    : hdr(move(arg1)), msg(move(arg2)) { }
-
-    delayed_msg(delayed_msg&&) = default;
-    delayed_msg(const delayed_msg&) = default;
-    delayed_msg& operator=(delayed_msg&&) = default;
-    delayed_msg& operator=(const delayed_msg&) = default;
-
-    inline void eval() {
-        hdr.deliver(std::move(msg));
-    }
-
- private:
-
-    message_header hdr;
-    message      msg;
+struct delayed_msg {
+    actor_addr from;
+    channel to;
+    message_id mid;
+    message msg;
 
 };
 
-template<class Map>
-inline void insert_dmsg(Map& storage, const util::duration& d,
-                        message_header&& hdr, message&& tup) {
+inline void deliver(delayed_msg& dm) {
+    dm.to->enqueue(dm.from, dm.mid, std::move(dm.msg), nullptr);
+}
+
+template<class Map, typename... Ts>
+inline void insert_dmsg(Map& storage, const duration& d, Ts&&... vs) {
     auto tout = hrc::now();
     tout += d;
-    delayed_msg dmsg{move(hdr), move(tup)};
+    delayed_msg dmsg{std::forward<Ts>(vs)...};
     storage.insert(std::make_pair(std::move(tout), std::move(dmsg)));
 }
 
-class timer_actor final : public detail::proper_actor<blocking_actor,
-                                                      timer_actor_policies> {
+class timer_actor final
+    : public detail::proper_actor<blocking_actor, timer_actor_policies> {
 
  public:
 
@@ -116,30 +96,30 @@ class timer_actor final : public detail::proper_actor<blocking_actor,
         auto tout = hrc::now();
         std::multimap<decltype(tout), delayed_msg> messages;
         // message handling rules
-        auto mfun = (
-            on(atom("SEND"), arg_match) >> [&](const util::duration& d,
-                                               message_header& hdr,
-                                               message& tup) {
-                insert_dmsg(messages, d, move(hdr), move(tup));
-            },
-            on(atom("DIE")) >> [&] {
-                done = true;
-            },
-            others() >> [&] {
-                CPPA_LOG_WARNING("coordinator::timer_loop: UNKNOWN MESSAGE: "
-                                 << to_string(msg_ptr->msg));
-            }
-        );
+        auto mfun =
+            (on(atom("_Send"), arg_match) >> [&](const duration& d,
+                                                 actor_addr& from, channel& to,
+                                                 message_id mid, message& tup) {
+                 insert_dmsg(messages, d, std::move(from), std::move(to), mid,
+                             std::move(tup));
+             },
+             on(atom("DIE")) >> [&] { done = true; }, others() >> [&]() {
+#ifdef CPPA_DEBUG_MODE
+                std::cerr << "coordinator::timer_loop: UNKNOWN MESSAGE: "
+                          << to_string(msg_ptr->msg) << std::endl;
+#               endif
+            });
         // loop
         while (!done) {
             while (!msg_ptr) {
-                if (messages.empty()) msg_ptr = dequeue();
+                if (messages.empty())
+                    msg_ptr = dequeue();
                 else {
                     tout = hrc::now();
                     // handle timeouts (send messages)
                     auto it = messages.begin();
                     while (it != messages.end() && (it->first) <= tout) {
-                        it->second.eval();
+                        deliver(it->second);
                         messages.erase(it);
                         it = messages.begin();
                     }
@@ -167,28 +147,29 @@ void printer_loop(blocking_actor* self) {
                 line.clear();
             }
         }
+
     };
     auto flush_if_needed = [](std::string& str) {
         if (str.back() == '\n') {
             std::cout << str << std::flush;
             str.clear();
         }
+
     };
     bool running = true;
-    self->receive_while ([&] { return running; }) (
+    self->receive_while([&] { return running; })(
         on(atom("add"), arg_match) >> [&](std::string& str) {
             auto s = self->last_sender();
             if (!str.empty() && s) {
                 auto i = out.find(s);
                 if (i == out.end()) {
-                    i = out.insert(make_pair(s, move(str))).first;
+                    i = out.insert(make_pair(s, std::move(str))).first;
                     // monitor actor to flush its output on exit
                     self->monitor(s);
                     flush_if_needed(i->second);
-                }
-                else {
+                } else {
                     auto& ref = i->second;
-                    ref += move(str);
+                    ref += std::move(str);
                     flush_if_needed(ref);
                 }
             }
@@ -196,18 +177,14 @@ void printer_loop(blocking_actor* self) {
         on(atom("flush")) >> [&] {
             flush_output(self->last_sender());
         },
-        on_arg_match >> [&](const down_msg& dm) {
+        [&](const down_msg& dm) {
             flush_output(dm.source);
             out.erase(dm.source);
         },
-        on(atom("DIE")) >> [&] {
-            running = false;
-        },
-        others() >> [&] {
-            CPPA_LOGF_WARNING("unexpected message: "
-                              << to_string(self->last_dequeued()));
-        }
-    );
+        on(atom("DIE")) >> [&] { running = false; }, others() >> [self] {
+            std::cerr << "*** unexpected: " << to_string(self->last_dequeued())
+                      << std::endl;
+        });
 }
 
 } // namespace <anonymous>
@@ -220,11 +197,11 @@ class coordinator::shutdown_helper : public resumable {
 
  public:
 
-    void attach_to_scheduler() override { }
+    void attach_to_scheduler() override {}
 
-    void detach_from_scheduler() override { }
+    void detach_from_scheduler() override {}
 
-    resumable::resume_result resume(detail::cs_thread*, execution_unit* ptr) {
+    resumable::resume_result resume(execution_unit* ptr) {
         CPPA_LOG_DEBUG("shutdown_helper::resume => shutdown worker");
         auto wptr = dynamic_cast<worker*>(ptr);
         CPPA_REQUIRE(wptr != nullptr);
@@ -234,7 +211,7 @@ class coordinator::shutdown_helper : public resumable {
         return resumable::shutdown_execution_unit;
     }
 
-    shutdown_helper() : last_worker(nullptr) { }
+    shutdown_helper() : last_worker(nullptr) {}
 
     ~shutdown_helper();
 
@@ -245,14 +222,12 @@ class coordinator::shutdown_helper : public resumable {
 };
 
 // avoid weak-vtables warning by providing dtor out-of-line
-coordinator::shutdown_helper::~shutdown_helper() { }
+coordinator::shutdown_helper::~shutdown_helper() {}
 
 void coordinator::initialize() {
     // launch threads of utility actors
     auto ptr = m_timer.get();
-    m_timer_thread = std::thread([ptr](){
-        ptr->act();
-    });
+    m_timer_thread = std::thread{[ptr] { ptr->act(); }};
     m_printer_thread = std::thread{printer_loop, m_printer.get()};
     // create & start workers
     auto hwc = static_cast<size_t>(std::thread::hardware_concurrency());
@@ -262,7 +237,7 @@ void coordinator::initialize() {
     }
 }
 
-void coordinator::destroy() {
+void coordinator::stop() {
     CPPA_LOG_TRACE("");
     // shutdown workers
     shutdown_helper sh;
@@ -275,7 +250,7 @@ void coordinator::destroy() {
         // actually shut down the worker we've enqueued sh to
         { // lifetime scope of guard
             std::unique_lock<std::mutex> guard(sh.mtx);
-            sh.cv.wait(guard, [&]{ return sh.last_worker != nullptr; });
+            sh.cv.wait(guard, [&] { return sh.last_worker != nullptr; });
         }
         auto first = alive_workers.begin();
         auto last = alive_workers.end();
@@ -286,8 +261,8 @@ void coordinator::destroy() {
     // shutdown utility actors
     CPPA_LOG_DEBUG("send 'DIE' messages to timer & printer");
     auto msg = make_message(atom("DIE"));
-    m_timer->enqueue({invalid_actor_addr, nullptr}, msg, nullptr);
-    m_printer->enqueue({invalid_actor_addr, nullptr}, msg, nullptr);
+    m_timer->enqueue(invalid_actor_addr, message_id::invalid, msg, nullptr);
+    m_printer->enqueue(invalid_actor_addr, message_id::invalid, msg, nullptr);
     CPPA_LOG_DEBUG("join threads of utility actors");
     m_timer_thread.join();
     m_printer_thread.join();
@@ -301,20 +276,14 @@ void coordinator::destroy() {
             job->detach_from_scheduler();
         }
     }
-    // cleanup
-    delete this;
 }
 
 coordinator::coordinator()
-: m_timer(new timer_actor), m_printer(true) , m_next_worker(0) { }
+        : m_timer(new timer_actor), m_printer(true), m_next_worker(0) {}
 
-coordinator* coordinator::create_singleton() {
-    return new coordinator;
-}
+coordinator* coordinator::create_singleton() { return new coordinator; }
 
-actor coordinator::printer() const {
-    return m_printer.get();
-}
+actor coordinator::printer() const { return m_printer.get(); }
 
 void coordinator::enqueue(resumable* what) {
     size_t nw = m_next_worker++;
@@ -336,6 +305,7 @@ worker& worker::operator=(worker&& other) {
     // cannot be moved once m_this_thread is up and running
     auto running = [](std::thread& t) {
         return t.get_id() != std::thread::id{};
+
     };
     if (running(m_this_thread) || running(other.m_this_thread)) {
         throw std::runtime_error("running workers cannot be moved");
@@ -353,18 +323,15 @@ void worker::start(size_t id, coordinator* parent) {
     m_last_victim = id;
     m_parent = parent;
     auto this_worker = this;
-    m_this_thread = std::thread([this_worker](){
-        this_worker->run();
-    });
+    m_this_thread = std::thread{[this_worker] { this_worker->run(); }};
 }
 
 void worker::run() {
     CPPA_LOG_TRACE(CPPA_ARG(m_id));
     // local variables
-    detail::cs_thread fself;
     job_ptr job = nullptr;
     // some utility functions
-    auto local_poll = [&]() -> bool {
+    auto local_poll = [&]()->bool {
         if (!m_job_list.empty()) {
             job = m_job_list.back();
             m_job_list.pop_back();
@@ -372,8 +339,9 @@ void worker::run() {
             return true;
         }
         return false;
+
     };
-    auto aggressive_poll = [&]() -> bool {
+    auto aggressive_poll = [&]()->bool {
         for (int i = 1; i < 101; ++i) {
             job = m_exposed_queue.try_pop();
             if (job) {
@@ -391,10 +359,11 @@ void worker::run() {
             std::this_thread::yield();
         }
         return false;
+
     };
-    auto moderate_poll = [&]() -> bool {
+    auto moderate_poll = [&]()->bool {
         for (int i = 1; i < 550; ++i) {
-            job =  m_exposed_queue.try_pop();
+            job = m_exposed_queue.try_pop();
             if (job) {
                 CPPA_LOG_DEBUG_WORKER("got job with moderate polling");
                 return true;
@@ -410,10 +379,11 @@ void worker::run() {
             std::this_thread::sleep_for(std::chrono::microseconds(50));
         }
         return false;
+
     };
-    auto relaxed_poll = [&]() -> bool {
+    auto relaxed_poll = [&]()->bool {
         for (;;) {
-            job =  m_exposed_queue.try_pop();
+            job = m_exposed_queue.try_pop();
             if (job) {
                 CPPA_LOG_DEBUG_WORKER("got job with relaxed polling");
                 return true;
@@ -426,19 +396,18 @@ void worker::run() {
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
+
     };
     // scheduling loop
     for (;;) {
         local_poll() || aggressive_poll() || moderate_poll() || relaxed_poll();
         CPPA_PUSH_AID_FROM_PTR(dynamic_cast<abstract_actor*>(job));
-        switch (job->resume(&fself, this)) {
+        switch (job->resume(this)) {
             case resumable::done: {
                 job->detach_from_scheduler();
                 break;
             }
-            case resumable::resume_later: {
-                break;
-            }
+            case resumable::resume_later: { break; }
             case resumable::shutdown_execution_unit: {
                 // give others the opportunity to steal unfinished jobs
                 for (auto ptr : m_job_list) m_exposed_queue.push_back(ptr);
@@ -455,14 +424,18 @@ void worker::run() {
     }
 }
 
-worker::job_ptr worker::try_steal() {
-    return m_exposed_queue.try_pop();
-}
+worker::job_ptr worker::try_steal() { return m_exposed_queue.try_pop(); }
 
 worker::job_ptr worker::raid() {
     // try once to steal from anyone
-    auto inc = [](size_t arg) -> size_t { return arg + 1; };
-    auto dec = [](size_t arg) -> size_t { return arg - 1; };
+    auto inc = [](size_t arg)->size_t {
+        return arg + 1;
+
+    };
+    auto dec = [](size_t arg)->size_t {
+        return arg - 1;
+
+    };
     // reduce probability of 'steal collisions' by letting
     // half the workers pick victims by increasing IDs and
     // the other half by decreasing IDs
@@ -482,9 +455,7 @@ worker::job_ptr worker::raid() {
     return nullptr;
 }
 
-void worker::external_enqueue(job_ptr ptr) {
-    m_exposed_queue.push_back(ptr);
-}
+void worker::external_enqueue(job_ptr ptr) { m_exposed_queue.push_back(ptr); }
 
 void worker::exec_later(job_ptr ptr) {
     CPPA_REQUIRE(std::this_thread::get_id() == m_this_thread.get_id());
@@ -492,16 +463,14 @@ void worker::exec_later(job_ptr ptr) {
     if (m_exposed_queue.empty()) {
         if (m_job_list.empty()) {
             m_exposed_queue.push_back(ptr);
-        }
-        else {
+        } else {
             m_exposed_queue.push_back(m_job_list.front());
             m_job_list.erase(m_job_list.begin());
             m_job_list.push_back(ptr);
         }
-    }
-    else m_job_list.push_back(ptr);
+    } else
+        m_job_list.push_back(ptr);
 }
 
 } // namespace scheduler
-
 } // namespace cppa

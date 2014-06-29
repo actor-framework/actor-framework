@@ -16,14 +16,12 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
-#ifndef CPPA_POLICY_SEQUENTIAL_INVOKE_HPP
-#define CPPA_POLICY_SEQUENTIAL_INVOKE_HPP
+#ifndef CPPA_THREADLESS_HPP
+#define CPPA_THREADLESS_HPP
 
 #include "cppa/atom.hpp"
 #include "cppa/behavior.hpp"
-
-#include "cppa/util/duration.hpp"
+#include "cppa/duration.hpp"
 
 #include "cppa/policy/invoke_policy.hpp"
 
@@ -37,9 +35,7 @@ class sequential_invoke : public invoke_policy<sequential_invoke> {
 
  public:
 
-    inline bool hm_should_skip(mailbox_element*) {
-        return false;
-    }
+    inline bool hm_should_skip(mailbox_element*) { return false; }
 
     template<class Actor>
     inline mailbox_element* hm_begin(Actor* self, mailbox_element* node) {
@@ -63,4 +59,4 @@ class sequential_invoke : public invoke_policy<sequential_invoke> {
 } // namespace policy
 } // namespace cppa
 
-#endif // CPPA_POLICY_SEQUENTIAL_INVOKE_HPP
+#endif // CPPA_THREADLESS_HPP

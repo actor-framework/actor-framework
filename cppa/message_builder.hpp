@@ -16,42 +16,56 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#ifndef CPPA_MESSAGE_BUILDER_HPP
-#define CPPA_MESSAGE_BUILDER_HPP
+#ifndef CPPA_OBJECT_ARRAY_HPP
+#define CPPA_OBJECT_ARRAY_HPP
 
 #include <vector>
 
 #include "cppa/message.hpp"
+#include "cppa/message_handler.hpp"
 #include "cppa/uniform_type_info.hpp"
 
 #include "cppa/detail/message_data.hpp"
-#include "cppa/detail/implicit_conversions.hpp"
 
 namespace cppa {
 
+/**
+ * @brief Provides a convenient interface to create a {@link message}
+ *        from a series of values using the member function @p append.
+ */
 class message_builder {
-
- public:
-
-    message_builder() = default;
 
     message_builder(const message_builder&) = delete;
 
     message_builder& operator=(const message_builder&) = delete;
 
+ public:
+
+    message_builder();
+
+    /**
+     * @brief Creates a new instance and immediately calls
+     *        <tt>append(first, last)</tt>.
+     */
     template<typename Iter>
     message_builder(Iter first, Iter last) {
+        init();
         append(first, last);
     }
 
-    template<typename T>
-    message_builder& append(T what) {
-        return append_impl<T>(std::move(what));
-    }
+    ~message_builder();
 
+    /**
+     * @brief Adds @p what to the elements of the internal buffer.
+     */
+    message_builder& append(uniform_value what);
+
+    /**
+     * @brief Appends all values in range [first, last).
+     */
     template<typename Iter>
     message_builder& append(Iter first, Iter last) {
-        using vtype = typename util::rm_const_and_ref<decltype(*first)>::type;
+        using vtype = typename detail::rm_const_and_ref<decltype(*first)>::type;
         using converted = typename detail::implicit_conversions<vtype>::type;
         auto uti = uniform_typeid<converted>();
         for (; first != last; ++first) {
@@ -62,13 +76,50 @@ class message_builder {
         return *this;
     }
 
-    message_builder& append(uniform_value what);
+    /**
+     * @brief Adds @p what to the elements of the internal buffer.
+     */
+    template<typename T>
+    message_builder& append(T what) {
+        return append_impl<T>(std::move(what));
+    }
 
+    /**
+     * @brief Converts the internal buffer to an actual message object.
+     *
+     * It is worth mentioning that a call to @p to_message does neither
+     * invalidate the @p message_builder instance nor clears the internal
+     * buffer. However, calling any non-const member function afterwards
+     * can cause the @p message_builder to detach its data, i.e.,
+     * copy it if there is more than one reference to it.
+     */
     message to_message();
 
-    optional<message> apply(message_handler handler);
+    /**
+     * @brief Convenience function for <tt>to_message().apply(handler)</tt>.
+     */
+    inline optional<message> apply(message_handler handler) {
+        return to_message().apply(std::move(handler));
+    }
+
+    /**
+     * @brief Removes all elements from the internal buffer.
+     */
+    void clear();
+
+    /**
+     * @brief Returns whether the internal buffer is empty.
+     */
+    bool empty() const;
+
+    /**
+     * @brief Returns the number of elements in the internal buffer.
+     */
+    size_t size() const;
 
  private:
+
+    void init();
 
     template<typename T>
     message_builder&
@@ -80,10 +131,16 @@ class message_builder {
         return append(std::move(uval));
     }
 
-    std::vector<uniform_value> m_elements;
+    class dynamic_msg_data;
+
+    dynamic_msg_data* data();
+
+    const dynamic_msg_data* data() const;
+
+    intrusive_ptr<ref_counted> m_data; // hide dynamic_msg_data implementation
 
 };
 
 } // namespace cppa
 
-#endif // CPPA_MESSAGE_BUILDER_HPP
+#endif // CPPA_OBJECT_ARRAY_HPP

@@ -16,11 +16,12 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_ABSTRACT_CHANNEL_HPP
 #define CPPA_ABSTRACT_CHANNEL_HPP
 
-#include "cppa/cppa_fwd.hpp"
+#include "cppa/fwd.hpp"
+#include "cppa/node_id.hpp"
+#include "cppa/message_id.hpp"
 #include "cppa/ref_counted.hpp"
 
 namespace cppa {
@@ -35,6 +36,8 @@ class abstract_channel : public ref_counted {
 
  public:
 
+    virtual ~abstract_channel();
+
     /**
      * @brief Enqueues a new message to the channel.
      * @param header Contains meta information about this message
@@ -45,15 +48,37 @@ class abstract_channel : public ref_counted {
      *             caller is executed by or @p nullptr if the caller
      *             is not a scheduled actor.
      */
-    virtual void enqueue(msg_hdr_cref header,
-                         message content,
-                         execution_unit* host) = 0;
+    virtual void enqueue(const actor_addr& sender, message_id mid,
+                         message content, execution_unit* host) = 0;
+
+    /**
+     * @brief Returns the ID of the node this actor is running on.
+     */
+    inline node_id node() const;
+
+    /**
+     * @brief Returns true if {@link node_ptr} returns
+     */
+    bool is_remote() const;
 
  protected:
 
-    virtual ~abstract_channel();
+    abstract_channel();
+
+    abstract_channel(node_id nid);
+
+ private:
+
+    // identifies the node of this channel
+    node_id m_node;
 
 };
+
+using abstract_channel_ptr = intrusive_ptr<abstract_channel>;
+
+inline node_id abstract_channel::node() const {
+    return m_node;
+}
 
 } // namespace cppa
 

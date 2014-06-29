@@ -127,18 +127,8 @@ file(GLOB LIBCPPA_HDRS "cppa/*.hpp"
                        "cppa/io/*.hpp"
                        "cppa/opencl/*.hpp"
                        "cppa/qtsupport/*.hpp"
-                       "cppa/util/*.hpp")
-
-# platform-dependent files
-if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-  set(LIBCPPA_PLATFORM_SRCS src/middleman_event_handler_epoll.cpp)
-elseif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  set(LIBCPPA_PLATFORM_SRCS src/middleman_event_handler_poll.cpp)
-elseif (${CMAKE_SYSTEM_NAME} MATCHES "Window")
-  set(LIBCPPA_PLATFORM_SRCS src/middleman_event_handler_poll.cpp src/execinfo_windows.cpp)
-else ()
-  message(FATAL_ERROR "This platform is not supported by libcppa")
-endif()
+                       "cppa/policy/*.hpp"
+                       "cppa/mixin/*.hpp")
 
 # list cpp files excluding platform-dependent files
 set (LIBCPPA_SRCS 
@@ -146,7 +136,6 @@ set (LIBCPPA_SRCS
      src/abstract_actor.cpp
      src/abstract_channel.cpp
      src/abstract_group.cpp
-     src/acceptor.cpp
      src/actor.cpp
      src/actor_addr.cpp
      src/actor_companion.cpp
@@ -154,23 +143,18 @@ set (LIBCPPA_SRCS
      src/actor_ostream.cpp
      src/actor_proxy.cpp
      src/actor_registry.cpp
-     src/algorithm.cpp
      src/atom.cpp
      src/attachable.cpp
+     src/basp_broker.cpp
      src/behavior.cpp
      src/behavior_stack.cpp
      src/binary_deserializer.cpp
      src/binary_serializer.cpp
      src/blocking_actor.cpp
      src/broker.cpp
-     src/buffer.cpp
      src/channel.cpp
-     src/context_switching_resume.cpp
-     src/continuable.cpp
      src/continue_helper.cpp
-     src/cs_thread.cpp
      src/decorated_tuple.cpp
-     src/default_message_queue.cpp
      src/demangle.cpp
      src/deserializer.cpp
      src/duration.cpp
@@ -178,14 +162,10 @@ set (LIBCPPA_SRCS
      src/exception.cpp
      src/execution_unit.cpp
      src/exit_reason.cpp
-     src/fd_util.cpp
-     src/functor_based_actor.cpp
-     src/functor_based_blocking_actor.cpp
      src/get_mac_addresses.cpp
      src/get_root_uuid.cpp
      src/group.cpp
      src/group_manager.cpp
-     src/input_stream.cpp
      src/local_actor.cpp
      src/logging.cpp
      src/mailbox_element.cpp
@@ -194,41 +174,30 @@ set (LIBCPPA_SRCS
      src/memory_managed.cpp
      src/message.cpp
      src/message_builder.cpp
+     src/message_data.cpp
      src/message_handler.cpp
-     src/message_header.cpp
      src/middleman.cpp
-     src/middleman_event_handler.cpp
+     src/network.cpp
      src/node_id.cpp
-     src/opencl/global.cpp
-     src/opencl/opencl_metainfo.cpp
-     src/opencl/program.cpp
-     src/opt.cpp
-     src/output_stream.cpp
-     src/peer.cpp
-     src/peer_acceptor.cpp
-     src/primitive_variant.cpp
+     src/options_description.cpp
      src/ref_counted.cpp
      src/remote_actor_proxy.cpp
      src/response_promise.cpp
      src/resumable.cpp
      src/ripemd_160.cpp
      src/scheduler.cpp
+     src/shutdown.cpp
      src/scoped_actor.cpp
      src/serializer.cpp
      src/shared_spinlock.cpp
-     src/singleton_manager.cpp
-     src/stream.cpp
+     src/singletons.cpp
+     src/string_algorithms.cpp
      src/string_serialization.cpp
      src/sync_request_bouncer.cpp
-     src/tcp_acceptor.cpp
-     src/tcp_io_stream.cpp
+     src/publish_local_groups.cpp
      src/to_uniform_name.cpp
-     src/type_lookup_table.cpp
-     src/unicast_network.cpp
      src/uniform_type_info.cpp
-     src/uniform_type_info_map.cpp
-     src/weak_ptr_anchor.cpp
-     src/yield_interface.cpp)
+     src/uniform_type_info_map.cpp)
 
 if (BOOST_ROOT)
   # Prevent falling back to system paths when using a custom Boost prefix.

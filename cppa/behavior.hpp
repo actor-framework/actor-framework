@@ -16,19 +16,20 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_BEHAVIOR_HPP
 #define CPPA_BEHAVIOR_HPP
 
 #include <functional>
 #include <type_traits>
 
+#include "cppa/none.hpp"
+
+#include "cppa/duration.hpp"
 #include "cppa/match_expr.hpp"
 #include "cppa/timeout_definition.hpp"
 
-#include "cppa/util/duration.hpp"
-#include "cppa/util/type_list.hpp"
-#include "cppa/util/type_traits.hpp"
+#include "cppa/detail/type_list.hpp"
+#include "cppa/detail/type_traits.hpp"
 
 namespace cppa {
 
@@ -43,7 +44,7 @@ class behavior {
 
  public:
 
-    typedef std::function<optional<message> (message&)> continuation_fun;
+    typedef std::function<optional<message>(message&)> continuation_fun;
 
     /** @cond PRIVATE */
 
@@ -67,7 +68,7 @@ class behavior {
     behavior(const timeout_definition<F>& arg);
 
     template<typename F>
-    behavior(const util::duration& d, F f);
+    behavior(const duration& d, F f);
 
     template<typename T, typename... Ts>
     behavior(const T& arg, Ts&&... args);
@@ -81,14 +82,11 @@ class behavior {
      * @brief Returns the duration after which receives using
      *        this behavior should time out.
      */
-    inline const util::duration& timeout() const;
+    inline const duration& timeout() const;
 
     /**
      * @brief Returns a value if @p arg was matched by one of the
      *        handler of this behavior, returns @p nothing otherwise.
-     * @note This member function can return @p nothing even if
-     *       {@link defined_at()} returns @p true, because {@link defined_at()}
-     *       does not evaluate guards.
      */
     template<typename T>
     inline optional<message> operator()(T&& arg);
@@ -100,9 +98,7 @@ class behavior {
      */
     behavior add_continuation(continuation_fun fun);
 
-    inline operator bool() const {
-        return static_cast<bool>(m_impl);
-    }
+    inline operator bool() const { return static_cast<bool>(m_impl); }
 
  private:
 
@@ -116,11 +112,10 @@ class behavior {
  */
 
 template<typename... Cs, typename F>
-inline behavior operator,(const match_expr<Cs...>& lhs,
-                          const timeout_definition<F>& rhs) {
+inline behavior operator, (const match_expr<Cs...>& lhs,
+                           const timeout_definition<F>& rhs) {
     return {lhs, rhs};
 }
-
 
 /******************************************************************************
  *             inline and template member function implementations            *
@@ -128,27 +123,23 @@ inline behavior operator,(const match_expr<Cs...>& lhs,
 
 template<typename T, typename... Ts>
 behavior::behavior(const T& arg, Ts&&... args)
-: m_impl(detail::match_expr_concat(
-             detail::lift_to_match_expr(arg),
-             detail::lift_to_match_expr(std::forward<Ts>(args))...)) { }
+        : m_impl(detail::match_expr_concat(
+              detail::lift_to_match_expr(arg),
+              detail::lift_to_match_expr(std::forward<Ts>(args))...)) {}
 
 template<typename F>
 behavior::behavior(const timeout_definition<F>& arg)
-: m_impl(detail::new_default_behavior(arg.timeout, arg.handler)) { }
+        : m_impl(detail::new_default_behavior(arg.timeout, arg.handler)) {}
 
 template<typename F>
-behavior::behavior(const util::duration& d, F f)
-: m_impl(detail::new_default_behavior(d, f)) { }
+behavior::behavior(const duration& d, F f)
+        : m_impl(detail::new_default_behavior(d, f)) {}
 
-inline behavior::behavior(impl_ptr ptr) : m_impl(std::move(ptr)) { }
+inline behavior::behavior(impl_ptr ptr) : m_impl(std::move(ptr)) {}
 
-inline void behavior::handle_timeout() {
-    m_impl->handle_timeout();
-}
+inline void behavior::handle_timeout() { m_impl->handle_timeout(); }
 
-inline const util::duration& behavior::timeout() const {
-    return m_impl->timeout();
-}
+inline const duration& behavior::timeout() const { return m_impl->timeout(); }
 
 template<typename T>
 inline optional<message> behavior::operator()(T&& arg) {

@@ -81,8 +81,8 @@ behavior broker_impl(broker* self, connection_handle hdl, const actor& buddy) {
     self->monitor(buddy);
     // setup: we are exchanging only messages consisting of an atom
     // (as uint64_t) and an integer value (int32_t)
-    self->receive_policy(hdl, broker::exactly,
-                         sizeof(uint64_t) + sizeof(int32_t));
+    self->configure_read(hdl, receive_policy::exactly(sizeof(uint64_t) +
+                                                      sizeof(int32_t)));
     // our message handlers
     return {
         [=](const connection_closed_msg& msg) {
@@ -117,7 +117,7 @@ behavior broker_impl(broker* self, connection_handle hdl, const actor& buddy) {
             auto atm = static_cast<atom_value>(atm_val);
             // read integer value from buffer, jumping to the correct
             // position via offset_data(...)
-            auto ival = read_int<int32_t>(msg.buf.offset_data(sizeof(uint64_t)));
+            auto ival = read_int<int32_t>(msg.buf.data() + sizeof(uint64_t));
             // show some output
             aout(self) << "received {" << to_string(atm) << ", " << ival << "}"
                        << endl;

@@ -16,15 +16,21 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
-
 #include "cppa/ref_counted.hpp"
 
 namespace cppa {
 
-ref_counted::ref_counted() : m_rc(0) { }
+ref_counted::ref_counted() : m_rc(0) {}
 
-ref_counted::~ref_counted() { }
+ref_counted::~ref_counted() {}
 
+ref_counted::ref_counted(const ref_counted&) {
+    // nop; don't copy reference count
+}
+
+ref_counted& ref_counted::operator=(const ref_counted&) {
+    // nop; don't copy reference count
+    return *this;
+}
 
 } // namespace cppa

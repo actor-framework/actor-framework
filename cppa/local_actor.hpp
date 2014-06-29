@@ -16,9 +16,8 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
-#ifndef CPPA_LOCAL_ACTOR_HPP
-#define CPPA_LOCAL_ACTOR_HPP
+#ifndef CPPA_CONTEXT_HPP
+#define CPPA_CONTEXT_HPP
 
 #include <atomic>
 #include <cstdint>
@@ -26,31 +25,28 @@
 
 #include "cppa/actor.hpp"
 #include "cppa/extend.hpp"
-#include "cppa/channel.hpp"
-#include "cppa/behavior.hpp"
 #include "cppa/message.hpp"
-#include "cppa/cow_tuple.hpp"
+#include "cppa/channel.hpp"
+#include "cppa/duration.hpp"
+#include "cppa/behavior.hpp"
 #include "cppa/spawn_fwd.hpp"
 #include "cppa/message_id.hpp"
 #include "cppa/match_expr.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/typed_actor.hpp"
 #include "cppa/spawn_options.hpp"
-#include "cppa/memory_cached.hpp"
-#include "cppa/message_header.hpp"
 #include "cppa/abstract_actor.hpp"
 #include "cppa/abstract_group.hpp"
 #include "cppa/mailbox_element.hpp"
+#include "cppa/message_handler.hpp"
 #include "cppa/response_promise.hpp"
 #include "cppa/message_priority.hpp"
-#include "cppa/message_handler.hpp"
 
-#include "cppa/util/duration.hpp"
+#include "cppa/mixin/memory_cached.hpp"
 
 #include "cppa/detail/behavior_stack.hpp"
 #include "cppa/detail/typed_actor_util.hpp"
-
-#include "cppa/intrusive/single_reader_queue.hpp"
+#include "cppa/detail/single_reader_queue.hpp"
 
 namespace cppa {
 
@@ -61,7 +57,7 @@ class sync_handle_helper;
  * @brief Base class for local running Actors.
  * @extends abstract_actor
  */
-class local_actor : public extend<abstract_actor>::with<memory_cached> {
+class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
 
     typedef combined_type super;
 
@@ -69,7 +65,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
 
     typedef detail::disposer del;
 
-    typedef intrusive::single_reader_queue<mailbox_element, del> mailbox_type;
+    typedef detail::single_reader_queue<mailbox_element, del> mailbox_type;
 
     ~local_actor();
 
@@ -115,8 +111,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
 
     template<class C, spawn_options Os = no_spawn_options, typename... Ts>
     typename detail::actor_handle_from_signature_list<
-        typename C::signatures
-    >::type
+        typename C::signatures>::type
     spawn_typed(Ts&&... args) {
         constexpr auto os = make_unbound(Os);
         auto res = spawn_class<C, os>(m_host, empty_before_launch_callback{},
@@ -126,17 +121,14 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
 
     template<spawn_options Os = no_spawn_options, typename F, typename... Ts>
     typename detail::infer_typed_actor_handle<
-        typename util::get_callable_trait<F>::result_type,
-        typename util::tl_head<
-            typename util::get_callable_trait<F>::arg_types
-        >::type
-    >::type
+        typename detail::get_callable_trait<F>::result_type,
+        typename detail::tl_head<
+            typename detail::get_callable_trait<F>::arg_types>::type>::type
     spawn_typed(F fun, Ts&&... args) {
         constexpr auto os = make_unbound(Os);
-        auto res = cppa::spawn_typed_functor<os>(m_host,
-                                                 empty_before_launch_callback{},
-                                                 std::move(fun),
-                                                 std::forward<Ts>(args)...);
+        auto res = cppa::spawn_typed_functor<os>(
+            m_host, empty_before_launch_callback{}, std::move(fun),
+            std::forward<Ts>(args)...);
         return eval_opts(Os, std::move(res));
     }
 
@@ -183,46 +175,6 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     }
 
     /**
-     * @brief Sends @p what to @p whom.
-     * @param prio Priority of the message.
-     * @param whom Receiver of the message.
-     * @param what Message content as a tuple.
-     */
-    template<typename... Rs, typename... Ts>
-    void send_tuple(message_priority prio,
-                    const typed_actor<Rs...>& whom,
-                    cow_tuple<Ts...> what) {
-        check_typed_input(whom, what);
-        send_tuple(prio, whom.m_ptr, message{std::move(what)});
-    }
-
-    /**
-     * @brief Sends @p what to @p whom.
-     * @param whom Receiver of the message.
-     * @param what Message content as a tuple.
-     */
-    template<typename... Rs, typename... Ts>
-    void send_tuple(const typed_actor<Rs...>& whom,
-                    cow_tuple<Ts...> what) {
-        check_typed_input(whom, what);
-        send_tuple_impl(message_priority::normal, whom, std::move(what));
-    }
-
-    /**
-     * @brief Sends <tt>{what...}</tt> to @p whom.
-     * @param prio Priority of the message.
-     * @param whom Receiver of the message.
-     * @param what Message elements.
-     * @pre <tt>sizeof...(Ts) > 0</tt>.
-     */
-    template<typename... Rs, typename... Ts>
-    void send(message_priority prio,
-              const typed_actor<Rs...>& whom,
-              cow_tuple<Ts...> what) {
-        send_tuple(prio, whom, make_cow_tuple(std::forward<Ts>(what)...));
-    }
-
-    /**
      * @brief Sends <tt>{what...}</tt> to @p whom.
      * @param whom Receiver of the message.
      * @param what Message elements.
@@ -230,19 +182,22 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
      */
     template<typename... Rs, typename... Ts>
     void send(const typed_actor<Rs...>& whom, Ts... what) {
-        send_tuple(message_priority::normal, whom,
-                   make_cow_tuple(std::forward<Ts>(what)...));
+        check_typed_input(
+            whom, detail::type_list<typename detail::implicit_conversions<
+                      typename detail::rm_const_and_ref<Ts>::type>::type...>{});
+        send_tuple(message_priority::normal, actor{whom.m_ptr.get()},
+                   make_message(std::forward<Ts>(what)...));
     }
 
     /**
      * @brief Sends an exit message to @p whom.
      */
-    void send_exit(const actor_addr& whom, std::uint32_t reason);
+    void send_exit(const actor_addr& whom, uint32_t reason);
 
     /**
      * @brief Sends an exit message to @p whom.
      */
-    inline void send_exit(const actor& whom, std::uint32_t reason) {
+    inline void send_exit(const actor& whom, uint32_t reason) {
         send_exit(whom.address(), reason);
     }
 
@@ -250,7 +205,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
      * @brief Sends an exit message to @p whom.
      */
     template<typename... Rs>
-    void send_exit(const typed_actor<Rs...>& whom, std::uint32_t reason) {
+    void send_exit(const typed_actor<Rs...>& whom, uint32_t reason) {
         send_exit(whom.address(), reason);
     }
 
@@ -262,10 +217,8 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
      *              microseconds, milliseconds, seconds or minutes.
      * @param data Message content as a tuple.
      */
-    void delayed_send_tuple(message_priority prio,
-                            const channel& whom,
-                            const util::duration& rtime,
-                            message data);
+    void delayed_send_tuple(message_priority prio, const channel& whom,
+                            const duration& rtime, message data);
 
     /**
      * @brief Sends a message to @p whom that is delayed by @p rel_time.
@@ -274,11 +227,10 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
      *              microseconds, milliseconds, seconds or minutes.
      * @param data Message content as a tuple.
      */
-    inline void delayed_send_tuple(const channel& whom,
-                                   const util::duration& rtime,
+    inline void delayed_send_tuple(const channel& whom, const duration& rtime,
                                    message data) {
-        delayed_send_tuple(message_priority::normal, whom,
-                           rtime, std::move(data));
+        delayed_send_tuple(message_priority::normal, whom, rtime,
+                           std::move(data));
     }
 
     /**
@@ -291,7 +243,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
      */
     template<typename... Ts>
     void delayed_send(message_priority prio, const channel& whom,
-                      const util::duration& rtime, Ts&&... args) {
+                      const duration& rtime, Ts&&... args) {
         delayed_send_tuple(prio, whom, rtime,
                            make_message(std::forward<Ts>(args)...));
     }
@@ -304,7 +256,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
      * @param args Message content as a tuple.
      */
     template<typename... Ts>
-    void delayed_send(const channel& whom, const util::duration& rtime,
+    void delayed_send(const channel& whom, const duration& rtime,
                       Ts&&... args) {
         delayed_send_tuple(message_priority::normal, whom, rtime,
                            make_message(std::forward<Ts>(args)...));
@@ -354,7 +306,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
      *          that do not use the behavior stack, i.e., actors that use
      *          blocking API calls such as {@link receive()}.
      */
-    virtual void quit(std::uint32_t reason = exit_reason::normal);
+    virtual void quit(uint32_t reason = exit_reason::normal);
 
     /**
      * @brief Checks whether this actor traps exit messages.
@@ -387,11 +339,15 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     void monitor(const actor_addr& whom);
 
     /**
-     * @brief Adds a unidirectional @p monitor to @p whom.
-     * @param whom The actor that should be monitored by this actor.
-     * @note Each call to @p monitor creates a new, independent monitor.
+     * @copydoc monitor(const actor_addr&)
      */
-    inline void monitor(const actor& whom) {
+    inline void monitor(const actor& whom) { monitor(whom.address()); }
+
+    /**
+     * @copydoc monitor(const actor_addr&)
+     */
+    template<typename... Rs>
+    inline void monitor(const typed_actor<Rs...>& whom) {
         monitor(whom.address());
     }
 
@@ -405,9 +361,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
      * @brief Removes a monitor from @p whom.
      * @param whom A monitored actor.
      */
-    inline void demonitor(const actor& whom) {
-        demonitor(whom.address());
-    }
+    inline void demonitor(const actor& whom) { demonitor(whom.address()); }
 
     /**
      * @brief Can be overridden to perform cleanup code after an actor
@@ -478,9 +432,7 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
         this->m_current_node = ptr;
     }
 
-    inline mailbox_element* current_node() {
-        return this->m_current_node;
-    }
+    inline mailbox_element* current_node() { return this->m_current_node; }
 
     inline message_id new_request_id() {
         auto result = ++m_last_request_id;
@@ -489,35 +441,36 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     }
 
     inline void handle_sync_timeout() {
-        if (m_sync_timeout_handler) m_sync_timeout_handler();
-        else quit(exit_reason::unhandled_sync_timeout);
+        if (m_sync_timeout_handler)
+            m_sync_timeout_handler();
+        else
+            quit(exit_reason::unhandled_sync_timeout);
     }
 
     inline void handle_sync_failure() {
-        if (m_sync_failure_handler) m_sync_failure_handler();
-        else quit(exit_reason::unhandled_sync_failure);
+        if (m_sync_failure_handler)
+            m_sync_failure_handler();
+        else
+            quit(exit_reason::unhandled_sync_failure);
     }
 
     // returns the response ID
     message_id timed_sync_send_tuple_impl(message_priority mp,
                                           const actor& whom,
-                                          const util::duration& rel_time,
+                                          const duration& rel_time,
                                           message&& what);
 
     // returns the response ID
-    message_id sync_send_tuple_impl(message_priority mp,
-                                    const actor& whom,
+    message_id sync_send_tuple_impl(message_priority mp, const actor& whom,
                                     message&& what);
 
     // returns the response ID
     template<typename... Rs, typename... Ts>
     message_id sync_send_tuple_impl(message_priority mp,
                                     const typed_actor<Rs...>& whom,
-                                    cow_tuple<Ts...>&& what) {
-        check_typed_input(whom, what);
-        return sync_send_tuple_impl(mp,
-                                    actor{whom.m_ptr.get()},
-                                    message{std::move(what)});
+                                    message&& msg) {
+        return sync_send_tuple_impl(mp, actor{whom.m_ptr.get()},
+                                    std::move(msg));
     }
 
     // returns 0 if last_dequeued() is an asynchronous or sync request message,
@@ -532,19 +485,26 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
 
     inline void mark_arrived(message_id response_id);
 
-    inline std::uint32_t planned_exit_reason() const;
+    inline uint32_t planned_exit_reason() const;
 
-    inline void planned_exit_reason(std::uint32_t value);
+    inline void planned_exit_reason(uint32_t value);
 
-    void cleanup(std::uint32_t reason) override;
+    void cleanup(uint32_t reason) override;
 
-    mailbox_element* dummy_node() {
-        return &m_dummy_node;
-    }
+    mailbox_element* dummy_node() { return &m_dummy_node; }
 
     virtual optional<behavior&> sync_handler(message_id msg_id) = 0;
 
  protected:
+
+    template<typename... Rs, template<typename...> class T, typename... Ts>
+    static void check_typed_input(const typed_actor<Rs...>&, const T<Ts...>&) {
+        static constexpr int input_pos = detail::tl_find_if<
+            detail::type_list<Rs...>,
+            detail::input_is<detail::type_list<Ts...>>::template eval>::value;
+        static_assert(input_pos >= 0,
+                      "typed actor does not support given input");
+    }
 
     template<typename... Ts>
     inline mailbox_element* new_mailbox_element(Ts&&... args) {
@@ -571,24 +531,11 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
     std::map<group, abstract_group::subscription> m_subscriptions;
 
     // set by quit
-    std::uint32_t m_planned_exit_reason;
+    uint32_t m_planned_exit_reason;
 
     /** @endcond */
 
  private:
-
-    template<typename... Rs, typename... Ts>
-    static void check_typed_input(const typed_actor<Rs...>&,
-                                  const cow_tuple<Ts...>&) {
-        static constexpr int input_pos = util::tl_find_if<
-                                             util::type_list<Rs...>,
-                                             detail::input_is<
-                                                 util::type_list<Ts...>
-                                             >::template eval
-                                         >::value;
-        static_assert(input_pos >= 0,
-                      "typed actor does not support given input");
-    }
 
     std::function<void()> m_sync_failure_handler;
     std::function<void()> m_sync_timeout_handler;
@@ -601,28 +548,19 @@ class local_actor : public extend<abstract_actor>::with<memory_cached> {
  */
 typedef intrusive_ptr<local_actor> local_actor_ptr;
 
-
 /******************************************************************************
  *             inline and template member function implementations            *
  ******************************************************************************/
 
 /** @cond PRIVATE */
 
-inline bool local_actor::trap_exit() const {
-    return m_trap_exit;
-}
+inline bool local_actor::trap_exit() const { return m_trap_exit; }
 
-inline void local_actor::trap_exit(bool new_value) {
-    m_trap_exit = new_value;
-}
+inline void local_actor::trap_exit(bool new_value) { m_trap_exit = new_value; }
 
-inline message& local_actor::last_dequeued() {
-    return m_current_node->msg;
-}
+inline message& local_actor::last_dequeued() { return m_current_node->msg; }
 
-inline actor_addr& local_actor::last_sender() {
-    return m_current_node->sender;
-}
+inline actor_addr& local_actor::last_sender() { return m_current_node->sender; }
 
 inline message_id local_actor::get_response_id() {
     auto id = m_current_node->mid;
@@ -631,11 +569,8 @@ inline message_id local_actor::get_response_id() {
 
 inline bool local_actor::awaits(message_id response_id) {
     CPPA_REQUIRE(response_id.is_response());
-    return std::any_of(m_pending_responses.begin(),
-                       m_pending_responses.end(),
-                       [=](message_id other) {
-                           return response_id == other;
-                       });
+    return std::any_of(m_pending_responses.begin(), m_pending_responses.end(),
+                       [=](message_id other) { return response_id == other; });
 }
 
 inline void local_actor::mark_arrived(message_id response_id) {
@@ -644,11 +579,11 @@ inline void local_actor::mark_arrived(message_id response_id) {
     if (i != last) m_pending_responses.erase(i);
 }
 
-inline std::uint32_t local_actor::planned_exit_reason() const {
+inline uint32_t local_actor::planned_exit_reason() const {
     return m_planned_exit_reason;
 }
 
-inline void local_actor::planned_exit_reason(std::uint32_t value) {
+inline void local_actor::planned_exit_reason(uint32_t value) {
     m_planned_exit_reason = value;
 }
 
@@ -656,4 +591,4 @@ inline void local_actor::planned_exit_reason(std::uint32_t value) {
 
 } // namespace cppa
 
-#endif // CPPA_LOCAL_ACTOR_HPP
+#endif // CPPA_CONTEXT_HPP

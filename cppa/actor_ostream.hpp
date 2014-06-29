@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_ACTOR_OSTREAM_HPP
 #define CPPA_ACTOR_OSTREAM_HPP
 
@@ -48,7 +47,7 @@ class actor_ostream {
     actor_ostream& flush();
 
     inline actor_ostream& operator<<(std::string arg) {
-        return write(move(arg));
+        return write(std::move(arg));
     }
 
     inline actor_ostream& operator<<(const message& arg) {
@@ -61,12 +60,8 @@ class actor_ostream {
     }
 
     template<typename T>
-    inline typename std::enable_if<
-           !std::is_convertible<T, std::string>::value
-        && !std::is_convertible<T, message>::value,
-        actor_ostream&
-    >::type
-    operator<<(T&& arg) {
+    inline typename std::enable_if<!std::is_convertible<T, std::string>::value && !std::is_convertible<T, message>::value, actor_ostream&>::type operator<<(
+        T&& arg) {
         return write(std::to_string(std::forward<T>(arg)));
     }
 

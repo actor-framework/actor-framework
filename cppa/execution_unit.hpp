@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_DETAIL_EXECUTION_UNIT_HPP
 #define CPPA_DETAIL_EXECUTION_UNIT_HPP
 

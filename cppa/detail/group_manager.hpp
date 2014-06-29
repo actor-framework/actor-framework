@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_DETAIL_GROUP_MANAGER_HPP
 #define CPPA_DETAIL_GROUP_MANAGER_HPP
 
@@ -25,7 +24,7 @@
 #include <thread>
 
 #include "cppa/abstract_group.hpp"
-#include "cppa/util/shared_spinlock.hpp"
+#include "cppa/detail/shared_spinlock.hpp"
 
 #include "cppa/detail/singleton_mixin.hpp"
 
@@ -51,7 +50,8 @@ class group_manager : public singleton_mixin<group_manager> {
 
  private:
 
-    typedef std::map<std::string, abstract_group::unique_module_ptr> modules_map;
+    typedef std::map<std::string, abstract_group::unique_module_ptr>
+    modules_map;
 
     modules_map m_mmap;
     std::mutex m_mmap_mtx;

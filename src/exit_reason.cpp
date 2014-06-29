@@ -16,22 +16,21 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #include "cppa/exit_reason.hpp"
 
 namespace cppa {
 namespace exit_reason {
 
-namespace { constexpr const char* s_names_table[] = {
+static constexpr const char* s_names_table[] = {
     "not_exited",
     "normal",
     "unhandled_exception",
     "unallowed_function_call",
     "unhandled_sync_failure",
     "unhandled_sync_timeout"
-}; }
+};
 
-const char* as_string(std::uint32_t value) {
+const char* as_string(uint32_t value) {
     if (value <= unhandled_sync_timeout) return s_names_table[value];
     if (value == remote_link_unreachable) return "remote_link_unreachable";
     if (value >= user_defined) return "user_defined";

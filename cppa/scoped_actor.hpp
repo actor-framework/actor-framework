@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_SCOPED_ACTOR_HPP
 #define CPPA_SCOPED_ACTOR_HPP
 
@@ -40,33 +39,19 @@ class scoped_actor {
 
     ~scoped_actor();
 
-    inline blocking_actor* operator->() const {
-        return m_self.get();
-    }
+    inline blocking_actor* operator->() const { return m_self.get(); }
 
-    inline blocking_actor& operator*() const {
-        return *m_self;
-    }
+    inline blocking_actor& operator*() const { return *m_self; }
 
-    inline blocking_actor* get() const {
-        return m_self.get();
-    }
+    inline blocking_actor* get() const { return m_self.get(); }
 
-    operator channel() const {
-        return get();
-    }
+    operator channel() const { return get(); }
 
-    operator actor() const {
-        return get();
-    }
+    operator actor() const { return get(); }
 
-    operator actor_addr() const {
-        return get()->address();
-    }
+    operator actor_addr() const { return get()->address(); }
 
-    inline actor_addr address() const {
-        return get()->address();
-    }
+    inline actor_addr address() const { return get()->address(); }
 
  private:
 

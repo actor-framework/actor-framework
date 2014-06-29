@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #include <stack>
 #include <cctype>
 #include <sstream>
@@ -24,10 +23,11 @@
 #include <iostream>
 #include <algorithm>
 
+#include "cppa/string_algorithms.hpp"
+
 #include "cppa/atom.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/serializer.hpp"
-#include "cppa/singletons.hpp"
 #include "cppa/from_string.hpp"
 #include "cppa/deserializer.hpp"
 #include "cppa/skip_message.hpp"
@@ -35,36 +35,50 @@
 #include "cppa/primitive_variant.hpp"
 #include "cppa/uniform_type_info.hpp"
 
-#include "cppa/util/algorithm.hpp"
-
+#include "cppa/detail/singletons.hpp"
 #include "cppa/detail/uniform_type_info_map.hpp"
 
-using namespace std;
+using std::string;
+using std::ostream;
+using std::u16string;
+using std::u32string;
+using std::istringstream;
 
 namespace cppa {
 
 namespace {
 
 bool isbuiltin(const string& type_name) {
-    return type_name == "@str" || type_name == "@atom" || type_name == "@msg";
+    return type_name == "@str" || type_name == "@atom" || type_name == "@tuple";
 }
+
+class dummy_backend : public actor_namespace::backend {
+
+ public:
+
+    actor_proxy_ptr make_proxy(const node_id&, actor_id) override {
+        return nullptr;
+    }
+
+};
 
 // serializes types as type_name(...) except:
 // - strings are serialized "..."
 // - atoms are serialized '...'
-class string_serializer : public serializer {
+class string_serializer : public serializer, public dummy_backend {
 
     typedef serializer super;
 
     ostream& out;
     actor_namespace m_namespace;
 
-    struct pt_writer {
+    struct pt_writer : static_visitor<> {
 
         ostream& out;
         bool suppress_quotes;
 
-        pt_writer(ostream& mout, bool suppress = false) : out(mout), suppress_quotes(suppress) { }
+        pt_writer(ostream& mout, bool suppress = false)
+                : out(mout), suppress_quotes(suppress) {}
 
         template<typename T>
         void operator()(const T& value) {
@@ -84,15 +98,17 @@ class string_serializer : public serializer {
         void operator()(const string& str) {
             if (!suppress_quotes) out << "\"";
             for (char c : str) {
-                if (c == '"') out << "\\\"";
-                else out << c;
+                if (c == '"')
+                    out << "\\\"";
+                else
+                    out << c;
             }
             if (!suppress_quotes) out << "\"";
         }
 
-        void operator()(const u16string&) { }
+        void operator()(const u16string&) {}
 
-        void operator()(const u32string&) { }
+        void operator()(const u32string&) {}
 
         void operator()(const atom_value& value) {
             out << "'" << to_string(value) << "'";
@@ -102,15 +118,14 @@ class string_serializer : public serializer {
 
     bool m_after_value;
     bool m_obj_just_opened;
-    stack<size_t> m_object_pos;
-    stack<string> m_open_objects;
+    std::stack<size_t> m_object_pos;
+    std::stack<string> m_open_objects;
 
     inline void clear() {
         if (m_after_value) {
             out << ", ";
             m_after_value = false;
-        }
-        else if (m_obj_just_opened) {
+        } else if (m_obj_just_opened) {
             if (!m_open_objects.empty() && !isbuiltin(m_open_objects.top())) {
                 out << " ( ";
             }
@@ -121,18 +136,22 @@ class string_serializer : public serializer {
  public:
 
     string_serializer(ostream& mout)
-    : super(&m_namespace), out(mout), m_after_value(false)
-    , m_obj_just_opened(false) { }
+            : super(&m_namespace)
+            , out(mout)
+            , m_namespace(*this)
+            , m_after_value(false)
+            , m_obj_just_opened(false) {}
 
     void begin_object(const uniform_type_info* uti) {
         clear();
-        std::string tname = uti->name();
+        string tname = uti->name();
         m_open_objects.push(tname);
         // do not print type names for strings and atoms
-        if (!isbuiltin(tname)) out << tname;
+        if (!isbuiltin(tname))
+            out << tname;
         else if (tname.compare(0, 3, "@<>") == 0) {
-            auto subtypes = util::split(tname, '+', false);
-
+            std::vector<std::string> subtypes;
+            split(subtypes, tname, is_any_of("+"), token_compress_on);
         }
         m_obj_just_opened = true;
     }
@@ -164,9 +183,10 @@ class string_serializer : public serializer {
     void write_value(const primitive_variant& value) {
         clear();
         if (m_open_objects.empty()) {
-            throw runtime_error("write_value(): m_open_objects.empty()");
+            throw std::runtime_error("write_value(): m_open_objects.empty()");
         }
-        value.apply(pt_writer(out));
+        pt_writer ptw(out);
+        apply_visitor(ptw, value);
         m_after_value = true;
     }
 
@@ -174,7 +194,7 @@ class string_serializer : public serializer {
         clear();
         out << "{";
         const primitive_variant* end = values + size;
-        for ( ; values != end; ++values) {
+        for (; values != end; ++values) {
             write_value(*values);
         }
         out << (m_after_value ? " }" : "}");
@@ -184,18 +204,18 @@ class string_serializer : public serializer {
         clear();
         auto first = reinterpret_cast<const unsigned char*>(buf);
         auto last = first + num_bytes;
-        out << hex;
-        out << setfill('0');
+        out << std::hex;
+        out << std::setfill('0');
         for (; first != last; ++first) {
-            out << setw(2) << static_cast<size_t>(*first);
+            out << std::setw(2) << static_cast<size_t>(*first);
         }
-        out << dec;
+        out << std::dec;
         m_after_value = true;
     }
 
 };
 
-class string_deserializer : public deserializer {
+class string_deserializer : public deserializer, public dummy_backend {
 
     typedef deserializer super;
 
@@ -203,17 +223,17 @@ class string_deserializer : public deserializer {
 
     string m_str;
     string::iterator m_pos;
-    //size_t m_obj_count;
-    stack<bool> m_obj_had_left_parenthesis;
-    stack<string> m_open_objects;
+    // size_t m_obj_count;
+    std::stack<bool> m_obj_had_left_parenthesis;
+    std::stack<string> m_open_objects;
     actor_namespace m_namespace;
 
     void skip_space_and_comma() {
         while (*m_pos == ' ' || *m_pos == ',') ++m_pos;
     }
 
-    void throw_malformed (const string& error_msg) {
-        throw logic_error("malformed string: " + error_msg);
+    void throw_malformed[[noreturn]](const string& error_msg) {
+        throw std::logic_error("malformed string: " + error_msg);
     }
 
     void consume(char c) {
@@ -244,19 +264,15 @@ class string_deserializer : public deserializer {
     }
 
     inline string::iterator next_delimiter() {
-        return find_if(m_pos, m_str.end(), [] (char c) -> bool {
+        return find_if(m_pos, m_str.end(), [](char c)->bool {
             switch (c) {
                 case '(':
                 case ')':
                 case '{':
                 case '}':
                 case ' ':
-                case ',': {
-                    return true;
-                }
-                default: {
-                    return false;
-                }
+                case ',': { return true; }
+                default: { return false; }
             }
         });
     }
@@ -265,16 +281,18 @@ class string_deserializer : public deserializer {
         if (m_open_objects.empty() || m_obj_had_left_parenthesis.empty()) {
             throw_malformed("missing begin_object()");
         }
-        if (   m_obj_had_left_parenthesis.top() == false
-            && !isbuiltin(m_open_objects.top())) {
-            throw_malformed("expected left parenthesis after "
-                            "begin_object call or void value");
+        if (m_obj_had_left_parenthesis.top() == false &&
+            !isbuiltin(m_open_objects.top())) {
+            throw_malformed(
+                "expected left parenthesis after "
+                "begin_object call or void value");
         }
     }
 
  public:
 
-    string_deserializer(string str) : super(&m_namespace), m_str(move(str)) {
+    string_deserializer(string str)
+            : super(&m_namespace), m_str(std::move(str)), m_namespace(*this) {
         m_pos = m_str.begin();
     }
 
@@ -284,14 +302,11 @@ class string_deserializer : public deserializer {
         // shortcuts for builtin types
         if (*m_pos == '"') {
             type_name = "@str";
-        }
-        else if (*m_pos == '\'') {
+        } else if (*m_pos == '\'') {
             type_name = "@atom";
-        }
-        else if (*m_pos == '{') {
-            type_name = "@msg";
-        }
-        else {
+        } else if (*m_pos == '{') {
+            type_name = "@tuple";
+        } else {
             auto substr_end = next_delimiter();
             if (m_pos == substr_end) {
                 throw_malformed("could not seek object type name");
@@ -304,13 +319,14 @@ class string_deserializer : public deserializer {
         skip_space_and_comma();
         // suppress leading parenthesis for builtin types
         m_obj_had_left_parenthesis.push(try_consume('('));
-        //consume('(');
-        return get_uniform_type_info_map()->by_uniform_name(type_name);
+        // consume('(');
+        return detail::singletons::get_uniform_type_info_map()->by_uniform_name(
+            type_name);
     }
 
-    void end_object() {
+    void end_object() override {
         if (m_open_objects.empty()) {
-            throw runtime_error("no object to end");
+            throw std::runtime_error("no object to end");
         }
         if (m_obj_had_left_parenthesis.top() == true) {
             consume(')');
@@ -320,26 +336,27 @@ class string_deserializer : public deserializer {
         if (m_open_objects.empty()) {
             skip_space_and_comma();
             if (m_pos != m_str.end()) {
-                throw_malformed(string("expected end of of string, found: ") + *m_pos);
+                throw_malformed(string("expected end of of string, found: ") +
+                                *m_pos);
             }
         }
     }
 
-    size_t begin_sequence() {
+    size_t begin_sequence() override {
         integrity_check();
         consume('{');
         auto num_vals = count(m_pos, find(m_pos, m_str.end(), '}'), ',') + 1;
         return static_cast<size_t>(num_vals);
     }
 
-    void end_sequence() {
+    void end_sequence() override {
         integrity_check();
         consume('}');
     }
 
-    struct from_string {
+    struct from_string_reader : static_visitor<> {
         const string& str;
-        from_string(const string& s) : str(s) { }
+        from_string_reader(const string& s) : str(s) {}
         template<typename T>
         void operator()(T& what) {
             istringstream s(str);
@@ -357,83 +374,92 @@ class string_deserializer : public deserializer {
             s >> tmp;
             what = static_cast<unsigned char>(tmp);
         }
-        void operator()(string& what) {
-            what = str;
-        }
+        void operator()(string& what) { what = str; }
         void operator()(atom_value& what) {
             what = static_cast<atom_value>(detail::atom_val(str.c_str(), 0xF));
         }
-        void operator()(u16string&) { }
-        void operator()(u32string&) { }
+        void operator()(u16string&) {
+            throw std::logic_error(
+                "u16string currently not supported "
+                "by string_deserializer");
+        }
+        void operator()(u32string&) {
+            throw std::logic_error(
+                "u32string currently not supported "
+                "by string_deserializer");
+        }
+
     };
 
-    primitive_variant read_value(primitive_type ptype) {
+    void read_value(primitive_variant& storage) override {
         integrity_check();
         skip_space_and_comma();
         string::iterator substr_end;
-        auto find_if_cond = [] (char c) -> bool {
+        auto find_if_cond = [](char c)->bool {
             switch (c) {
-             case ')':
-             case '}':
-             case ' ':
-             case ',': return true;
-             default : return false;
+                case ')':
+                case '}':
+                case ' ':
+                case ',':
+                    return true;
+                default:
+                    return false;
             }
+
         };
-        if (ptype == pt_u8string || ptype == pt_atom) {
-            char needle = (ptype == pt_u8string) ? '"' : '\'';
+        if (get<string>(&storage) || get<atom_value>(&storage)) {
+            char needle = (get<string>(&storage)) ? '"' : '\'';
             if (*m_pos == needle) {
                 // skip leading "
                 ++m_pos;
                 char last_char = needle;
-                auto find_if_str_cond = [&last_char, needle] (char c) -> bool {
+                auto find_if_str_cond = [&last_char, needle ](char c)->bool {
                     if (c == needle && last_char != '\\') {
                         return true;
                     }
                     last_char = c;
                     return false;
+
                 };
                 substr_end = find_if(m_pos, m_str.end(), find_if_str_cond);
-            }
-            else {
+            } else {
                 substr_end = find_if(m_pos, m_str.end(), find_if_cond);
             }
-        }
-        else {
+        } else {
             substr_end = find_if(m_pos, m_str.end(), find_if_cond);
         }
         if (substr_end == m_str.end()) {
-            throw logic_error("malformed string (unterminated value)");
+            throw std::logic_error("malformed string (unterminated value)");
         }
         string substr(m_pos, substr_end);
         m_pos += static_cast<difference_type>(substr.size());
-        if (ptype == pt_u8string || ptype == pt_atom) {
-            char needle = (ptype == pt_u8string) ? '"' : '\'';
+        if (get<string>(&storage) || get<atom_value>(&storage)) {
+            char needle = (get<string>(&storage)) ? '"' : '\'';
             // skip trailing "
             if (*m_pos != needle) {
                 string error_msg;
-                error_msg  = "malformed string, expected '";
+                error_msg = "malformed string, expected '";
                 error_msg += needle;
                 error_msg += "' found '";
                 error_msg += *m_pos;
                 error_msg += "'";
-                throw logic_error(error_msg);
+                throw std::logic_error(error_msg);
             }
             ++m_pos;
             // replace '\"' by '"'
             char last_char = ' ';
-            auto cond = [&last_char, needle] (char c) -> bool {
+            auto cond = [&last_char, needle ](char c)->bool {
                 if (c == needle && last_char == '\\') {
                     return true;
                 }
                 last_char = c;
                 return false;
+
             };
             string tmp;
             auto sbegin = substr.begin();
             auto send = substr.end();
-            for (auto i = find_if(sbegin, send, cond);
-                 i != send;
+            for (auto i = find_if(sbegin, send, cond); i != send;
                  i = find_if(i, send, cond)) {
                 --i;
                 tmp.append(sbegin, i);
@@ -445,32 +471,18 @@ class string_deserializer : public deserializer {
                 tmp.append(sbegin, send);
             }
             if (!tmp.empty()) {
-                substr = move(tmp);
+                substr = std::move(tmp);
             }
         }
-        primitive_variant result(ptype);
-        result.apply(from_string(substr));
-        return result;
+        from_string_reader fsr(substr);
+        apply_visitor(fsr, storage);
     }
 
-    void read_tuple(size_t size,
-                    const primitive_type* begin,
-                    primitive_variant* storage) {
-        integrity_check();
-        consume('{');
-        const primitive_type* end = begin + size;
-        for ( ; begin != end; ++begin) {
-            *storage = move(read_value(*begin));
-            ++storage;
-        }
-        consume('}');
-    }
-
-    void read_raw(size_t buf_size, void* vbuf) {
+    void read_raw(size_t buf_size, void* vbuf) override {
         auto buf = reinterpret_cast<unsigned char*>(vbuf);
         integrity_check();
         skip_space_and_comma();
-        auto next_nibble = [&]() -> size_t {
+        auto next_nibble = [&]()->size_t {
             if (*m_pos == '\0') {
                 throw_malformed("unexpected end-of-string");
             }
@@ -479,6 +491,7 @@ class string_deserializer : public deserializer {
                 throw_malformed("unexpected character, expected [0-9a-f]");
             }
             return static_cast<size_t>(isdigit(c) ? c - '0' : (c - 'a' + 10));
+
         };
         for (size_t i = 0; i < buf_size; ++i) {
             auto nibble = next_nibble();
@@ -496,12 +509,13 @@ uniform_value from_string(const string& what) {
     auto result = utype->deserialize(&strd);
     strd.end_object();
     return result;
+    return {};
 }
 
 namespace detail {
 
-string to_string_impl(const void *what, const uniform_type_info *utype) {
-    ostringstream osstr;
+string to_string_impl(const void* what, const uniform_type_info* utype) {
+    std::ostringstream osstr;
     string_serializer strs(osstr);
     strs.begin_object(utype);
     utype->serialize(what, &strs);
@@ -511,14 +525,14 @@ string to_string_impl(const void *what, const uniform_type_info *utype) {
 
 } // namespace detail
 
-string to_verbose_string(const exception& e) {
+string to_verbose_string(const std::exception& e) {
     std::ostringstream oss;
     oss << detail::demangle(typeid(e)) << ": " << e.what();
     return oss.str();
 }
 
-std::ostream& operator<<(std::ostream& out, skip_message_t) {
-     return out << "skip_message";
+ostream& operator<<(ostream& out, skip_message_t) {
+    return out << "skip_message";
 }
 
 } // namespace cppa

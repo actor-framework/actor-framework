@@ -16,17 +16,16 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#ifndef CPPA_TUPLE_VALS_HPP
-#define CPPA_TUPLE_VALS_HPP
+#ifndef CPPA_DETAIL_TUPLE_VALS_HPP
+#define CPPA_DETAIL_TUPLE_VALS_HPP
 
 #include <tuple>
 #include <stdexcept>
 
-#include "cppa/util/type_list.hpp"
+#include "cppa/detail/type_list.hpp"
 
 #include "cppa/detail/types_array.hpp"
 #include "cppa/detail/message_data.hpp"
-#include "cppa/detail/serialize_tuple.hpp"
 
 namespace cppa {
 namespace detail {
@@ -132,4 +131,4 @@ types_array<Ts...> tuple_vals<Ts...>::m_types;
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_TUPLE_VALS_HPP
+#endif // CPPA_DETAIL_TUPLE_VALS_HPP

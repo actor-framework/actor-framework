@@ -4,12 +4,12 @@
 #include <algorithm>
 
 #include "test.hpp"
-#include "cppa/util/limited_vector.hpp"
+#include "cppa/detail/limited_vector.hpp"
 
 using std::cout;
 using std::endl;
 using std::equal;
-using cppa::util::limited_vector;
+using cppa::detail::limited_vector;
 
 int main() {
     CPPA_TEST(test_limited_vector);

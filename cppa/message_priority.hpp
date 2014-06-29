@@ -16,19 +16,19 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
-#ifndef CPPA_PRIORITY_HPP
-#define CPPA_PRIORITY_HPP
+#ifndef PRIORITY_HPP
+#define PRIORITY_HPP
 
 #include <cstdint>
 
 namespace cppa {
 
-enum class message_priority : std::uint32_t {
+enum class message_priority : uint32_t {
     normal,
     high
+
 };
 
 } // namespace cppa
 
-#endif // CPPA_PRIORITY_HPP
+#endif // PRIORITY_HPP

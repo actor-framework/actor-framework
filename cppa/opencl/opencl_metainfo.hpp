@@ -69,7 +69,7 @@ class opencl_metainfo {
 
     void initialize();
     void dispose();
-    void destroy();
+    void stop();
 
     context_ptr m_context;
     std::vector<device_info> m_devices;

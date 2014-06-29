@@ -16,14 +16,13 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #include "cppa/attachable.hpp"
 
 namespace cppa {
 
-attachable::~attachable() { }
+attachable::~attachable() {}
 
 attachable::token::token(const std::type_info& tinfo, const void* vptr)
-: subtype(tinfo), ptr(vptr) { }
+        : subtype(tinfo), ptr(vptr) {}
 
 } // namespace cppa

@@ -1,5 +1,5 @@
 #include "cppa/config.hpp"
-#include "cppa/util/get_mac_addresses.hpp"
+#include "cppa/detail/get_mac_addresses.hpp"
 
 #ifdef CPPA_MACOS
 
@@ -20,7 +20,7 @@
 #include <iostream>
 
 namespace cppa {
-namespace util {
+namespace detail {
 
 std::vector<std::string> get_mac_addresses() {
     int mib[6];
@@ -61,8 +61,9 @@ std::vector<std::string> get_mac_addresses() {
         auto sdl = reinterpret_cast<sockaddr_dl*>(ifm + 1);
         auto ptr = reinterpret_cast<unsigned char*>(LLADDR(sdl));
 
-        auto uctoi = [](unsigned char c) -> unsigned {
+        auto uctoi = [](unsigned char c)->unsigned {
             return static_cast<unsigned char>(c);
+
         };
 
         std::ostringstream oss;
@@ -82,12 +83,10 @@ std::vector<std::string> get_mac_addresses() {
     return result;
 }
 
-} // namespace util
+} // namespace detail
 } // namespace cppa
 
-
 #elif defined(CPPA_LINUX)
-
 
 #include <vector>
 #include <string>
@@ -109,7 +108,7 @@ std::vector<std::string> get_mac_addresses() {
 using namespace std;
 
 namespace cppa {
-namespace util {
+namespace detail {
 
 std::vector<std::string> get_mac_addresses() {
     // get a socket handle
@@ -130,8 +129,9 @@ std::vector<std::string> get_mac_addresses() {
     }
 
     vector<string> hw_addresses;
-    auto ctoi = [](char c) -> unsigned {
+    auto ctoi = [](char c)->unsigned {
         return static_cast<unsigned char>(c);
+
     };
     // iterate through interfaces
     auto ifr = ifc.ifc_req;
@@ -160,9 +160,8 @@ std::vector<std::string> get_mac_addresses() {
     return hw_addresses;
 }
 
-} // namespace util
+} // namespace detail
 } // namespace cppa
-
 
 #else
 
@@ -198,15 +197,15 @@ struct c_free {
     void operator()(T* ptr) {
         free(ptr);
     }
+
 };
 
 } // namespace <anonymous>
 
-
 using namespace std;
 
 namespace cppa {
-namespace util {
+namespace detail {
 
 std::vector<std::string> get_mac_addresses() {
     // result vector
@@ -224,13 +223,13 @@ std::vector<std::string> get_mac_addresses() {
     // break condition
     size_t iterations = 0;
     do {
-        addresses.reset((IP_ADAPTER_ADDRESSES*) malloc(addresses_len));
+        addresses.reset((IP_ADAPTER_ADDRESSES*)malloc(addresses_len));
         if (!addresses) {
             perror("Memory allocation failed for IP_ADAPTER_ADDRESSES struct");
             exit(1);
         }
-        res = GetAdaptersAddresses(family, flags, nullptr,
-                                   addresses.get(), &addresses_len);
+        res = GetAdaptersAddresses(family, flags, nullptr, addresses.get(),
+                                   &addresses_len);
     } while ((res == ERROR_BUFFER_OVERFLOW) && (++iterations < max_iterations));
     if (res == NO_ERROR) {
         // read hardware addresses from the output we've received
@@ -261,9 +260,7 @@ std::vector<std::string> get_mac_addresses() {
     return hw_addresses;
 }
 
-} // namespace util
+} // namespace detail
 } // namespace cppa
-
-
 
 #endif

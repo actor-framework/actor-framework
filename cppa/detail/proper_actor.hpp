@@ -1,15 +1,15 @@
-#ifndef CPPA_DETAIL_PROPER_ACTOR_HPP
-#define CPPA_DETAIL_PROPER_ACTOR_HPP
+#ifndef PROPER_ACTOR_HPP
+#define PROPER_ACTOR_HPP
 
 #include <type_traits>
 
-#include "cppa/logging.hpp"
+#include "cppa/duration.hpp"
 #include "cppa/blocking_actor.hpp"
 #include "cppa/mailbox_element.hpp"
 
-#include "cppa/policy/scheduling_policy.hpp"
+#include "cppa/detail/logging.hpp"
 
-#include "cppa/util/duration.hpp"
+#include "cppa/policy/scheduling_policy.hpp"
 
 namespace cppa {
 namespace detail {
@@ -17,12 +17,12 @@ namespace detail {
 // 'imports' all member functions from policies to the actor,
 // the resume mixin also adds the m_hidden member which *must* be
 // initialized to @p true
-template<class Base,
-         class Derived,
-         class Policies>
-class proper_actor_base : public Policies::resume_policy::template mixin<Base, Derived> {
+template<class Base, class Derived, class Policies>
+class proper_actor_base
+    : public Policies::resume_policy::template mixin<Base, Derived> {
 
-    typedef typename Policies::resume_policy::template mixin<Base, Derived> super;
+    typedef typename Policies::resume_policy::template mixin<Base, Derived>
+            super;
 
  public:
 
@@ -32,19 +32,21 @@ class proper_actor_base : public Policies::resume_policy::template mixin<Base, D
     }
 
     // grant access to the actor's mailbox
-    typename Base::mailbox_type& mailbox() {
-        return this->m_mailbox;
-    }
+    typename Base::mailbox_type& mailbox() { return this->m_mailbox; }
 
     // member functions from scheduling policy
 
     typedef typename Policies::scheduling_policy::timeout_type timeout_type;
 
-    void enqueue(msg_hdr_cref hdr, message msg, execution_unit* eu) override {
+    void enqueue(const actor_addr& sender,
+                 message_id mid,
+                 message msg,
+                 execution_unit* eu) override {
         CPPA_PUSH_AID(dptr()->id());
-        CPPA_LOG_DEBUG(CPPA_TARG(hdr, to_string)
-                       << ", " << CPPA_TARG(msg, to_string));
-        scheduling_policy().enqueue(dptr(), hdr, msg, eu);
+        CPPA_LOG_DEBUG(CPPA_TARG(sender, to_string)
+                       << ", " << CPPA_MARG(mid, integer_value) << ", "
+                       << CPPA_TARG(msg, to_string));
+        scheduling_policy().enqueue(dptr(), sender, mid, msg, eu);
     }
 
     inline void launch(bool is_hidden, execution_unit* host) {
@@ -123,16 +125,13 @@ class proper_actor_base : public Policies::resume_policy::template mixin<Base, D
                                               awaited_response);
     }
 
-    inline bool hidden() const {
-        return this->m_hidden;
-    }
+    inline bool hidden() const { return this->m_hidden; }
 
-    void cleanup(std::uint32_t reason) override {
+    void cleanup(uint32_t reason) override {
         CPPA_LOG_TRACE(CPPA_ARG(reason));
-        if (!hidden()) get_actor_registry()->dec_running();
+        if (!hidden()) detail::singletons::get_actor_registry()->dec_running();
         super::cleanup(reason);
     }
-
 
  protected:
 
@@ -158,8 +157,11 @@ class proper_actor_base : public Policies::resume_policy::template mixin<Base, D
 
     inline void hidden(bool value) {
         if (this->m_hidden == value) return;
-        if (value) get_actor_registry()->dec_running();
-        else get_actor_registry()->inc_running();
+        if (value) {
+            detail::singletons::get_actor_registry()->dec_running();
+        } else {
+            detail::singletons::get_actor_registry()->inc_running();
+        }
         this->m_hidden = value;
     }
 
@@ -172,11 +174,9 @@ class proper_actor_base : public Policies::resume_policy::template mixin<Base, D
 template<class Base,
          class Policies,
          bool OverrideDequeue = std::is_base_of<blocking_actor, Base>::value>
-class proper_actor : public proper_actor_base<Base,
-                                              proper_actor<Base,
-                                                           Policies,
-                                                           false>,
-                                              Policies> {
+class proper_actor
+        : public proper_actor_base<Base,  proper_actor<Base, Policies, false>,
+                                   Policies> {
 
     typedef proper_actor_base<Base, proper_actor, Policies> super;
 
@@ -190,7 +190,8 @@ class proper_actor : public proper_actor_base<Base,
     // behavior_stack_based mixin
 
     template<typename... Ts>
-    proper_actor(Ts&&... args) : super(std::forward<Ts>(args)...) { }
+    proper_actor(Ts&&... args)
+            : super(std::forward<Ts>(args)...) {}
 
     // required by event_based_resume::mixin::resume
 
@@ -224,11 +225,10 @@ class proper_actor : public proper_actor_base<Base,
 
 // for blocking actors, there's one more member function to implement
 template<class Base, class Policies>
-class proper_actor<Base, Policies, true> : public proper_actor_base<Base,
-                                              proper_actor<Base,
-                                                           Policies,
-                                                           true>,
-                                              Policies> {
+class proper_actor<
+    Base, Policies,
+    true> : public proper_actor_base<Base, proper_actor<Base, Policies, true>,
+                                     Policies> {
 
     typedef proper_actor_base<Base, proper_actor, Policies> super;
 
@@ -236,7 +236,7 @@ class proper_actor<Base, Policies, true> : public proper_actor_base<Base,
 
     template<typename... Ts>
     proper_actor(Ts&&... args)
-        : super(std::forward<Ts>(args)...), m_next_timeout_id(0) { }
+            : super(std::forward<Ts>(args)...), m_next_timeout_id(0) {}
 
     // 'import' optional blocking member functions from policies
 
@@ -258,19 +258,20 @@ class proper_actor<Base, Policies, true> : public proper_actor_base<Base,
                 if (!tmp_vec.empty()) {
                     this->cache_prepend(tmp_vec.begin(), tmp_vec.end());
                 }
+
             };
             while (!this->cache_empty()) {
                 auto tmp = this->cache_take_first();
                 if (this->invoke_message(tmp, bhvr, mid)) {
                     restore_cache();
                     return;
-                }
-                else tmp_vec.push_back(std::move(tmp));
+                } else
+                    tmp_vec.push_back(std::move(tmp));
             }
             restore_cache();
         }
         bool has_timeout = false;
-        std::uint32_t timeout_id;
+        uint32_t timeout_id;
         // request timeout if needed
         if (bhvr.timeout().valid()) {
             has_timeout = true;
@@ -278,7 +279,7 @@ class proper_actor<Base, Policies, true> : public proper_actor_base<Base,
         }
         // workaround for GCC 4.7 bug (const this when capturing refs)
         auto& pending_timeouts = m_pending_timeouts;
-        auto guard = util::make_scope_guard([&] {
+        auto guard = detail::make_scope_guard([&] {
             if (has_timeout) {
                 auto e = pending_timeouts.end();
                 auto i = std::find(pending_timeouts.begin(), e, timeout_id);
@@ -288,7 +289,8 @@ class proper_actor<Base, Policies, true> : public proper_actor_base<Base,
         // read incoming messages
         for (;;) {
             auto msg = this->next_message();
-            if (!msg) this->await_ready();
+            if (!msg)
+                this->await_ready();
             else {
                 if (this->invoke_message(msg, bhvr, mid)) {
                     // we're done
@@ -301,23 +303,23 @@ class proper_actor<Base, Policies, true> : public proper_actor_base<Base,
 
     // timeout handling
 
-    std::uint32_t request_timeout(const util::duration& d) {
+    uint32_t request_timeout(const duration& d) {
         CPPA_REQUIRE(d.valid());
         auto tid = ++m_next_timeout_id;
         auto msg = make_message(timeout_msg{tid});
         if (d.is_zero()) {
             // immediately enqueue timeout message if duration == 0s
-            this->enqueue({this->address(), this},
-                          std::move(msg), this->m_host);
-            //auto e = this->new_mailbox_element(this, std::move(msg));
-            //this->m_mailbox.enqueue(e);
-        }
-        else this->delayed_send_tuple(this, d, std::move(msg));
+            this->enqueue(this->address(), message_id::invalid, std::move(msg),
+                          this->m_host);
+            // auto e = this->new_mailbox_element(this, std::move(msg));
+            // this->m_mailbox.enqueue(e);
+        } else
+            this->delayed_send_tuple(this, d, std::move(msg));
         m_pending_timeouts.push_back(tid);
         return tid;
     }
 
-    inline void handle_timeout(behavior& bhvr, std::uint32_t timeout_id) {
+    inline void handle_timeout(behavior& bhvr, uint32_t timeout_id) {
         auto e = m_pending_timeouts.end();
         auto i = std::find(m_pending_timeouts.begin(), e, timeout_id);
         CPPA_LOG_WARNING_IF(i == e, "ignored unexpected timeout");
@@ -339,24 +341,24 @@ class proper_actor<Base, Policies, true> : public proper_actor_base<Base,
         m_pending_timeouts.push_back(++m_next_timeout_id);
     }
 
-    inline bool waits_for_timeout(std::uint32_t timeout_id) const {
+    inline bool waits_for_timeout(uint32_t timeout_id) const {
         auto e = m_pending_timeouts.end();
         auto i = std::find(m_pending_timeouts.begin(), e, timeout_id);
         return i != e;
     }
 
-    inline bool is_active_timeout(std::uint32_t tid) const {
+    inline bool is_active_timeout(uint32_t tid) const {
         return !m_pending_timeouts.empty() && m_pending_timeouts.back() == tid;
     }
 
  private:
 
-    std::vector<std::uint32_t> m_pending_timeouts;
-    std::uint32_t m_next_timeout_id;
+    std::vector<uint32_t> m_pending_timeouts;
+    uint32_t m_next_timeout_id;
 
 };
 
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_DETAIL_PROPER_ACTOR_HPP
+#endif // PROPER_ACTOR_HPP

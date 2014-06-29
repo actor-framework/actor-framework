@@ -43,11 +43,10 @@
 #include "cppa/tuple_cast.hpp"
 #include "cppa/intrusive_ptr.hpp"
 
-#include "cppa/util/int_list.hpp"
-#include "cppa/util/type_list.hpp"
-#include "cppa/util/limited_vector.hpp"
-
+#include "cppa/detail/int_list.hpp"
+#include "cppa/detail/type_list.hpp"
 #include "cppa/detail/make_counted.hpp"
+#include "cppa/detail/limited_vector.hpp"
 
 #include "cppa/opencl/global.hpp"
 #include "cppa/opencl/command.hpp"
@@ -69,7 +68,7 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
 
  public:
 
-    typedef cow_tuple<typename util::rm_const_and_ref<Args>::type...>
+    typedef cow_tuple<typename detail::rm_const_and_ref<Args>::type...>
             args_tuple;
 
     typedef std::function<optional<args_tuple>(message)> arg_mapping;
@@ -120,10 +119,11 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
         };
     }
 
-    void enqueue(msg_hdr_cref hdr, message msg, execution_unit*) override {
+    void enqueue(const actor_addr& sender, message_id mid,
+                 message msg, execution_unit*) override {
         CPPA_LOG_TRACE("");
-        typename util::il_indices<util::type_list<Args...>>::type indices;
-        enqueue_impl(hdr.sender, std::move(msg), hdr.id, indices);
+        typename detail::il_indices<detail::type_list<Args...>>::type indices;
+        enqueue_impl(sender, std::move(msg), mid, indices);
     }
 
  private:
@@ -151,7 +151,7 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
 
     template<long... Is>
     void enqueue_impl(const actor_addr& sender, message msg, message_id id,
-                      util::int_list<Is...>) {
+                      detail::int_list<Is...>) {
         auto opt = m_map_args(std::move(msg));
         if (opt) {
             response_promise handle{this->address(), sender, id.response_id()};

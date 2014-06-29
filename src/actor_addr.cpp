@@ -16,15 +16,13 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #include "cppa/actor.hpp"
-#include "cppa/singletons.hpp"
 #include "cppa/actor_addr.hpp"
 #include "cppa/local_actor.hpp"
 
-#include "cppa/io/middleman.hpp"
+#include "cppa/detail/singletons.hpp"
 
-#include "cppa/detail/raw_access.hpp"
+#include "cppa/io/middleman.hpp"
 
 namespace cppa {
 
@@ -34,9 +32,9 @@ intptr_t compare_impl(const abstract_actor* lhs, const abstract_actor* rhs) {
 }
 } // namespace <anonymous>
 
-actor_addr::actor_addr(const invalid_actor_addr_t&) : m_ptr(nullptr) { }
+actor_addr::actor_addr(const invalid_actor_addr_t&) : m_ptr(nullptr) {}
 
-actor_addr::actor_addr(abstract_actor* ptr) : m_ptr(ptr) { }
+actor_addr::actor_addr(abstract_actor* ptr) : m_ptr(ptr) {}
 
 intptr_t actor_addr::compare(const actor_addr& other) const {
     return compare_impl(m_ptr.get(), other.m_ptr.get());
@@ -51,16 +49,19 @@ actor_addr actor_addr::operator=(const invalid_actor_addr_t&) {
     return *this;
 }
 
-actor_id actor_addr::id() const {
-    return (m_ptr) ? m_ptr->id() : 0;
-}
+actor_id actor_addr::id() const { return (m_ptr) ? m_ptr->id() : 0; }
 
-const node_id& actor_addr::node() const {
-    return m_ptr ? m_ptr->node() : *get_middleman()->node();
+node_id actor_addr::node() const {
+    return m_ptr ? m_ptr->node() : detail::singletons::get_node_id();
 }
 
 bool actor_addr::is_remote() const {
-    return m_ptr ? m_ptr->is_proxy() : false;
+    return m_ptr ? m_ptr->is_remote() : false;
+}
+
+std::set<std::string> actor_addr::interface() const {
+    if (!m_ptr) return std::set<std::string>{};
+    return m_ptr->interface();
 }
 
 } // namespace cppa

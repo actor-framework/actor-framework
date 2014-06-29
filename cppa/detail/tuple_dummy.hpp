@@ -16,45 +16,36 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_DETAIL_TUPLE_DUMMY_HPP
 #define CPPA_DETAIL_TUPLE_DUMMY_HPP
 
-#include <typeinfo>
+#include "cppa/fwd.hpp"
 
-#include "cppa/util/type_list.hpp"
+#include "cppa/detail/type_list.hpp"
+
 #include "cppa/detail/message_iterator.hpp"
 
 namespace cppa {
 namespace detail {
 
 struct tuple_dummy {
-    typedef util::empty_type_list types;
-    typedef detail::message_iterator<tuple_dummy> const_iterator;
-    inline size_t size() const {
-        return 0;
-    }
-    inline void* mutable_at(size_t) {
-        return nullptr;
-    }
-    inline const void* at(size_t) const {
-        return nullptr;
-    }
-    inline const uniform_type_info* type_at(size_t) const {
-        return nullptr;
-    }
+    typedef detail::empty_type_list types;
+    typedef message_iterator<tuple_dummy> const_iterator;
+    inline size_t size() const { return 0; }
+    inline void* mutable_at(size_t) { return nullptr; }
+    inline const void* at(size_t) const { return nullptr; }
+    inline const uniform_type_info* type_at(size_t) const { return nullptr; }
     inline const std::type_info* type_token() const {
-        return &typeid(util::empty_type_list);
+        return &typeid(detail::empty_type_list);
     }
-    inline bool dynamically_typed() const {
-        return false;
-    }
+    inline bool dynamically_typed() const { return false; }
     inline const_iterator begin() const {
         return {this};
     }
     inline const_iterator end() const {
         return {this, 0};
     }
+
 };
 
 } // namespace detail

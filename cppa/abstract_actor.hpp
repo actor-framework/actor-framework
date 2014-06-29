@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_ABSTRACT_ACTOR_HPP
 #define CPPA_ABSTRACT_ACTOR_HPP
 
@@ -30,14 +29,14 @@
 #include <type_traits>
 
 #include "cppa/node_id.hpp"
-#include "cppa/cppa_fwd.hpp"
+#include "cppa/fwd.hpp"
 #include "cppa/attachable.hpp"
 #include "cppa/message_id.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/intrusive_ptr.hpp"
 #include "cppa/abstract_channel.hpp"
 
-#include "cppa/util/type_traits.hpp"
+#include "cppa/detail/type_traits.hpp"
 
 namespace cppa {
 
@@ -50,7 +49,12 @@ class execution_unit;
  * @brief A unique actor ID.
  * @relates abstract_actor
  */
-typedef std::uint32_t actor_id;
+typedef uint32_t actor_id;
+
+/**
+ * @brief Denotes an ID that is never used by an actor.
+ */
+constexpr actor_id invalid_actor_id = 0;
 
 class actor;
 class abstract_actor;
@@ -64,6 +68,8 @@ typedef intrusive_ptr<abstract_actor> abstract_actor_ptr;
 class abstract_actor : public abstract_channel {
 
     friend class response_promise;
+
+    using super = abstract_channel;
 
  public:
 
@@ -162,22 +168,10 @@ class abstract_actor : public abstract_channel {
     inline actor_id id() const;
 
     /**
-     * @brief Checks if this actor is running on a remote node.
-     * @returns @c true if this actor represents a remote actor;
-     *          otherwise @c false.
-     */
-    inline bool is_proxy() const;
-
-    /**
-     * @brief Returns the ID of the node this actor is running on.
-     */
-    inline const node_id& node() const;
-
-    /**
      * @brief Returns the actor's exit reason of
      *        <tt>exit_reason::not_exited</tt> if it's still alive.
      */
-    inline std::uint32_t exit_reason() const;
+    inline uint32_t exit_reason() const;
 
     /**
      * @brief Returns the type interface as set of strings.
@@ -189,14 +183,14 @@ class abstract_actor : public abstract_channel {
 
     abstract_actor();
 
-    abstract_actor(actor_id aid);
+    abstract_actor(actor_id aid, node_id nid);
 
     /**
      * @brief Should be overridden by subtypes and called upon termination.
      * @note Default implementation sets 'exit_reason' accordingly.
      * @note Overridden functions should always call super::cleanup().
      */
-    virtual void cleanup(std::uint32_t reason);
+    virtual void cleanup(uint32_t reason);
 
     /**
      * @brief The default implementation for {@link link_to()}.
@@ -222,7 +216,7 @@ class abstract_actor : public abstract_channel {
  private:
 
     // initially exit_reason::not_exited
-    std::atomic<std::uint32_t> m_exit_reason;
+    std::atomic<uint32_t> m_exit_reason;
 
     // guards access to m_exit_reason, m_attachables, and m_links
     std::mutex m_mtx;
@@ -235,9 +229,6 @@ class abstract_actor : public abstract_channel {
 
  protected:
 
-    // identifies the node this actor is running on
-    node_id_ptr m_node;
-
     // identifies the execution unit this actor is currently executed by
     execution_unit* m_host;
 
@@ -247,24 +238,12 @@ class abstract_actor : public abstract_channel {
  *             inline and template member function implementations            *
  ******************************************************************************/
 
-inline std::uint32_t abstract_actor::id() const {
-    return m_id;
-}
+inline uint32_t abstract_actor::id() const { return m_id; }
 
-inline bool abstract_actor::is_proxy() const {
-    return m_is_proxy;
-}
-
-inline std::uint32_t abstract_actor::exit_reason() const {
-    return m_exit_reason;
-}
+inline uint32_t abstract_actor::exit_reason() const { return m_exit_reason; }
 
 inline bool abstract_actor::exited() const {
     return exit_reason() != exit_reason::not_exited;
-}
-
-inline const node_id& abstract_actor::node() const {
-    return *m_node;
 }
 
 template<class F>
@@ -275,7 +254,7 @@ struct functor_attachable : attachable {
     template<typename T>
     inline functor_attachable(T&& arg) : m_functor(std::forward<T>(arg)) { }
 
-    void actor_exited(std::uint32_t reason) { m_functor(reason); }
+    void actor_exited(uint32_t reason) { m_functor(reason); }
 
     bool matches(const attachable::token&) { return false; }
 
@@ -283,7 +262,7 @@ struct functor_attachable : attachable {
 
 template<typename F>
 bool abstract_actor::attach_functor(F&& f) {
-    typedef typename util::rm_const_and_ref<F>::type f_type;
+    typedef typename detail::rm_const_and_ref<F>::type f_type;
     typedef functor_attachable<f_type> impl;
     return attach(attachable_ptr{new impl(std::forward<F>(f))});
 }

@@ -20,7 +20,6 @@
 
 using namespace std;
 using namespace cppa;
-using namespace cppa::placeholders;
 
 struct line { string str; };
 
@@ -35,11 +34,11 @@ message split_line(const line& l) {
     istringstream strs(l.str);
     s_last_line = move(l.str);
     string tmp;
-    vector<string> result;
+    message_builder mb;
     while (getline(strs, tmp, ' ')) {
-        if (!tmp.empty()) result.push_back(std::move(tmp));
+        if (!tmp.empty()) mb.append(std::move(tmp));
     }
-    return message::view(std::move(result));
+    return mb.to_message();
 }
 
 void client(event_based_actor* self, const string& name) {
@@ -116,8 +115,15 @@ int main(int argc, char** argv) {
             }
         }
     }
-
     cout << "*** starting client, type '/help' for a list of commands" << endl;
+    auto starts_with = [](const string& str) -> function<optional<string> (const string&)> {
+        return [=](const string& arg) -> optional<string> {
+            if (arg.compare(0, str.size(), str) == 0) {
+                return arg;
+            }
+            return none;
+        };
+    };
     istream_iterator<line> lines(cin);
     istream_iterator<line> eof;
     match_each (lines, eof, split_line) (
@@ -133,7 +139,7 @@ int main(int argc, char** argv) {
             // close STDIN; causes this match loop to quit
             cin.setstate(ios_base::eofbit);
         },
-        on<string, anything>().when(_x1.starts_with("/")) >> [&] {
+        on(starts_with("/"), any_vals) >> [&] {
             cout <<  "*** available commands:\n"
                      "    /join <module> <group> join a new chat channel\n"
                      "    /quit                  quit the program\n"

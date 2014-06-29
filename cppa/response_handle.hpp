@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_RESPONSE_HANDLE_HPP
 #define CPPA_RESPONSE_HANDLE_HPP
 
@@ -27,7 +26,7 @@
 #include "cppa/continue_helper.hpp"
 #include "cppa/typed_continue_helper.hpp"
 
-#include "cppa/util/type_list.hpp"
+#include "cppa/detail/type_list.hpp"
 
 #include "cppa/detail/typed_actor_util.hpp"
 #include "cppa/detail/response_handle_util.hpp"
@@ -39,14 +38,14 @@ namespace cppa {
  *        nonblocking API by providing a @p then member function.
  * @relates response_handle
  */
-struct nonblocking_response_handle_tag { };
+struct nonblocking_response_handle_tag {};
 
 /**
  * @brief This tag identifies response handles featuring a
  *        blocking API by providing an @p await member function.
  * @relates response_handle
  */
-struct blocking_response_handle_tag { };
+struct blocking_response_handle_tag {};
 
 /**
  * @brief This helper class identifies an expected response message
@@ -80,21 +79,20 @@ class response_handle<Self, message, nonblocking_response_handle_tag> {
     }
 
     template<typename... Cs, typename... Ts>
-    continue_helper then(const match_expr<Cs...>& arg, const Ts&... args) const {
+    continue_helper then(const match_expr<Cs...>& arg,
+                         const Ts&... args) const {
         return then(behavior{arg, args...});
     }
 
     template<typename... Fs>
-    typename std::enable_if<
-        util::all_callable<Fs...>::value,
-        continue_helper
-    >::type
+    typename std::enable_if<detail::all_callable<Fs...>::value,
+                            continue_helper>::type
     then(Fs... fs) const {
         return then(detail::fs2bhvr(m_self, fs...));
     }
 
     response_handle(const message_id& mid, Self* self)
-            : m_mid(mid), m_self(self) { }
+            : m_mid(mid), m_self(self) {}
 
  private:
 
@@ -108,7 +106,8 @@ class response_handle<Self, message, nonblocking_response_handle_tag> {
  *                            nonblocking + typed                             *
  ******************************************************************************/
 template<class Self, typename... Ts>
-class response_handle<Self, util::type_list<Ts...>, nonblocking_response_handle_tag> {
+class response_handle<Self, detail::type_list<Ts...>,
+                      nonblocking_response_handle_tag> {
 
  public:
 
@@ -118,24 +117,19 @@ class response_handle<Self, util::type_list<Ts...>, nonblocking_response_handle_
 
     response_handle& operator=(const response_handle&) = default;
 
-    template<typename F,
-             typename Enable = typename std::enable_if<
-                                      util::is_callable<F>::value
-                                   && !is_match_expr<F>::value
-                               >::type>
-    typed_continue_helper<
-        typename detail::lifted_result_type<
-            typename util::get_callable_trait<F>::result_type
-        >::type
-    >
+    template<typename F, typename Enable = typename std::enable_if<
+                              detail::is_callable<F>::value &&
+                              !is_match_expr<F>::value>::type>
+    typed_continue_helper<typename detail::lifted_result_type<
+        typename detail::get_callable_trait<F>::result_type>::type>
     then(F fun) {
-        detail::assert_types<util::type_list<Ts...>, F>();
+        detail::assert_types<detail::type_list<Ts...>, F>();
         m_self->bhvr_stack().push_back(behavior{on_arg_match >> fun}, m_mid);
         return {m_mid, m_self};
     }
 
     response_handle(const message_id& mid, Self* self)
-            : m_mid(mid), m_self(self) { }
+            : m_mid(mid), m_self(self) {}
 
  private:
 
@@ -159,9 +153,7 @@ class response_handle<Self, message, blocking_response_handle_tag> {
 
     response_handle& operator=(const response_handle&) = default;
 
-    void await(behavior& pfun) {
-        m_self->dequeue_response(pfun, m_mid);
-    }
+    void await(behavior& pfun) { m_self->dequeue_response(pfun, m_mid); }
 
     inline void await(behavior&& pfun) {
         behavior tmp{std::move(pfun)};
@@ -175,19 +167,19 @@ class response_handle<Self, message, blocking_response_handle_tag> {
     }
 
     template<typename... Fs>
-    typename std::enable_if<util::all_callable<Fs...>::value>::type
+    typename std::enable_if<detail::all_callable<Fs...>::value>::type
     await(Fs... fs) {
         await(detail::fs2bhvr(m_self, fs...));
     }
 
     response_handle(const message_id& mid, Self* self)
-            : m_mid(mid), m_self(self) { }
+            : m_mid(mid), m_self(self) {}
 
  private:
 
-   message_id m_mid;
+    message_id m_mid;
 
-   Self* m_self;
+    Self* m_self;
 
 };
 
@@ -195,11 +187,12 @@ class response_handle<Self, message, blocking_response_handle_tag> {
  *                              blocking + typed                              *
  ******************************************************************************/
 template<class Self, typename... Ts>
-class response_handle<Self, util::type_list<Ts...>, blocking_response_handle_tag> {
+class response_handle<Self, detail::type_list<Ts...>,
+                      blocking_response_handle_tag> {
 
  public:
 
-    typedef util::type_list<Ts...> result_types;
+    typedef detail::type_list<Ts...> result_types;
 
     response_handle() = delete;
 
@@ -209,15 +202,14 @@ class response_handle<Self, util::type_list<Ts...>, blocking_response_handle_tag
 
     template<typename F>
     void await(F fun) {
-        typedef typename util::tl_map<
-                    typename util::get_callable_trait<F>::arg_types,
-                    util::rm_const_and_ref
-                >::type
-                arg_types;
-        static constexpr size_t fun_args = util::tl_size<arg_types>::value;
-        static_assert(fun_args <= util::tl_size<result_types>::value,
+        typedef typename detail::tl_map<
+            typename detail::get_callable_trait<F>::arg_types,
+            detail::rm_const_and_ref>::type arg_types;
+        static constexpr size_t fun_args = detail::tl_size<arg_types>::value;
+        static_assert(fun_args <= detail::tl_size<result_types>::value,
                       "functor takes too much arguments");
-        typedef typename util::tl_right<result_types, fun_args>::type recv_types;
+        typedef typename detail::tl_right<result_types, fun_args>::type
+        recv_types;
         static_assert(std::is_same<arg_types, recv_types>::value,
                       "wrong functor signature");
         behavior tmp = detail::fs2bhvr(m_self, fun);
@@ -225,7 +217,7 @@ class response_handle<Self, util::type_list<Ts...>, blocking_response_handle_tag
     }
 
     response_handle(const message_id& mid, Self* self)
-            : m_mid(mid), m_self(self) { }
+            : m_mid(mid), m_self(self) {}
 
  private:
 

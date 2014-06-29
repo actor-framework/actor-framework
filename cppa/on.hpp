@@ -28,18 +28,18 @@
 #include "cppa/atom.hpp"
 #include "cppa/anything.hpp"
 #include "cppa/message.hpp"
+#include "cppa/duration.hpp"
 #include "cppa/match_expr.hpp"
 #include "cppa/skip_message.hpp"
 #include "cppa/may_have_timeout.hpp"
 #include "cppa/timeout_definition.hpp"
 
-#include "cppa/util/duration.hpp"
-#include "cppa/util/type_list.hpp"
-#include "cppa/util/type_traits.hpp"
+#include "cppa/detail/type_list.hpp"
+#include "cppa/detail/arg_match_t.hpp"
+#include "cppa/detail/type_traits.hpp"
 
 #include "cppa/detail/boxed.hpp"
 #include "cppa/detail/unboxed.hpp"
-#include "cppa/detail/arg_match_t.hpp"
 #include "cppa/detail/implicit_conversions.hpp"
 
 namespace cppa {
@@ -48,11 +48,13 @@ namespace detail {
 template<bool IsFun, typename T>
 struct add_ptr_to_fun_ {
     typedef T* type;
+
 };
 
 template<typename T>
 struct add_ptr_to_fun_<false, T> {
     typedef T type;
+
 };
 
 template<typename T>
@@ -61,11 +63,13 @@ struct add_ptr_to_fun : add_ptr_to_fun_<std::is_function<T>::value, T> {};
 template<bool ToVoid, typename T>
 struct to_void_impl {
     typedef unit_t type;
+
 };
 
 template<typename T>
 struct to_void_impl<false, T> {
     typedef typename add_ptr_to_fun<T>::type type;
+
 };
 
 template<typename T>
@@ -77,12 +81,13 @@ struct boxed_to_void<std::function<
 
 template<typename T>
 struct boxed_and_callable_to_void
-    : to_void_impl<is_boxed<T>::value || util::is_callable<T>::value, T> {};
+    : to_void_impl<is_boxed<T>::value || detail::is_callable<T>::value, T> {};
 
 class behavior_rvalue_builder {
 
  public:
-    constexpr behavior_rvalue_builder(const util::duration& d) : m_tout(d) {}
+
+    constexpr behavior_rvalue_builder(const duration& d) : m_tout(d) {}
 
     template<typename F>
     timeout_definition<F> operator>>(F&& f) const {
@@ -90,7 +95,9 @@ class behavior_rvalue_builder {
     }
 
  private:
-    util::duration m_tout;
+
+    duration m_tout;
+
 };
 
 struct rvalue_builder_args_ctor {};
@@ -99,6 +106,7 @@ template<class Left, class Right>
 struct disjunct_rvalue_builders {
 
  public:
+
     disjunct_rvalue_builders(Left l, Right r)
             : m_left(std::move(l)), m_right(std::move(r)) {}
 
@@ -111,8 +119,10 @@ struct disjunct_rvalue_builders {
     }
 
  private:
+
     Left m_left;
     Right m_right;
+
 };
 
 struct tuple_maker {
@@ -121,22 +131,24 @@ struct tuple_maker {
         -> decltype(std::make_tuple(std::forward<Ts>(args)...)) {
         return std::make_tuple(std::forward<Ts>(args)...);
     }
+
 };
 
 template<class Transformers, class Pattern>
 struct rvalue_builder {
 
-    typedef typename util::tl_back<Pattern>::type back_type;
+    typedef typename detail::tl_back<Pattern>::type back_type;
 
     static constexpr bool is_complete =
         !std::is_same<detail::arg_match_t, back_type>::value;
 
-    typedef typename util::tl_apply<Transformers, std::tuple>::type
+    typedef typename detail::tl_apply<Transformers, std::tuple>::type
     fun_container;
 
     fun_container m_funs;
 
  public:
+
     rvalue_builder() = default;
 
     template<typename... Ts>
@@ -153,15 +165,13 @@ struct rvalue_builder {
                                   Pattern>::type lifted_expr;
         // adjust m_funs to exactly match expected projections in match case
         typedef typename lifted_expr::projections_list target;
-        typedef typename util::tl_trim<Transformers>::type trimmed_projections;
+        typedef typename tl_trim<Transformers>::type trimmed_projections;
         tuple_maker f;
         auto lhs = apply_args(f, get_indices(trimmed_projections{}), m_funs);
-        typename util::tl_apply<
-            typename util::tl_slice<target,
-                                    util::tl_size<trimmed_projections>::value,
-                                    util::tl_size<target>::value>::type,
-                                    std::tuple>::type
-                rhs;
+        typename tl_apply<
+            typename tl_slice<target, tl_size<trimmed_projections>::value,
+                              tl_size<target>::value>::type,
+            std::tuple>::type rhs;
         // done
         return lifted_expr{std::move(expr), std::tuple_cat(lhs, rhs)};
     }
@@ -171,32 +181,31 @@ struct rvalue_builder {
     operator||(rvalue_builder<T, P> other) const {
         return {*this, std::move(other)};
     }
+
 };
 
 template<bool IsCallable, typename T>
 struct pattern_type_ {
-    typedef util::get_callable_trait<T> ctrait;
+    typedef detail::get_callable_trait<T> ctrait;
     typedef typename ctrait::arg_types args;
-    static_assert(util::tl_size<args>::value == 1,
+    static_assert(detail::tl_size<args>::value == 1,
                   "only unary functions allowed");
-    typedef typename util::rm_const_and_ref<
-        typename util::tl_head<args>::type>::type type;
+    typedef typename detail::rm_const_and_ref<
+        typename detail::tl_head<args>::type>::type type;
+
 };
 
 template<typename T>
 struct pattern_type_<false, T> {
-    typedef typename implicit_conversions<
-                typename util::rm_const_and_ref<
-                    typename detail::unboxed<T>::type
-                >::type
-            >::type
-            type;
+    typedef typename implicit_conversions<typename detail::rm_const_and_ref<
+        typename detail::unboxed<T>::type>::type>::type type;
+
 };
 
 template<typename T>
 struct pattern_type
     : pattern_type_<
-          util::is_callable<T>::value && !is_boxed<T>::value, T> {};
+          detail::is_callable<T>::value && !detail::is_boxed<T>::value, T> {};
 
 } // namespace detail
 } // namespace cppa
@@ -283,20 +292,22 @@ std::function<optional<T>(const T&)> guarded(Predicate p, T value) {
     return[=](const T & other)->optional<T> {
         if (p(other, value)) return value;
     return none;
+
 };
 }
 
 // special case covering arg_match as argument to guarded()
 template<typename T, typename Predicate>
-unit_t guarded(Predicate, const util::wrapped<T>&) {
+unit_t guarded(Predicate, const detail::wrapped<T>&) {
     return {};
 }
 
-template<typename T, bool Callable = util::is_callable<T>::value>
+template<typename T, bool Callable = detail::is_callable<T>::value>
 struct to_guard {
     static std::function<optional<T>(const T&)> _(const T& value) {
         return guarded<T>(std::equal_to<T>{}, value);
     }
+
 };
 
 template<>
@@ -305,10 +316,11 @@ struct to_guard<anything, false> {
     static unit_t _(const U&) {
         return {};
     }
+
 };
 
 template<typename T>
-struct to_guard<util::wrapped<T>, false> : to_guard<anything> {};
+struct to_guard<detail::wrapped<T>, false> : to_guard<anything> {};
 
 template<typename T>
 struct is_optional : std::false_type {};
@@ -318,42 +330,43 @@ struct is_optional<optional<T>> : std::true_type {};
 
 template<typename T>
 struct to_guard<T, true> {
-    typedef typename util::get_callable_trait<T>::type ct;
+    typedef typename detail::get_callable_trait<T>::type ct;
     typedef typename ct::arg_types arg_types;
-    static_assert(util::tl_size<arg_types>::value == 1,
+    static_assert(detail::tl_size<arg_types>::value == 1,
                   "projection/guard must take exactly one argument");
     static_assert(is_optional<typename ct::result_type>::value,
                   "projection/guard must return an optional value");
     typedef typename std::conditional<std::is_function<T>::value, T*, T>::type
     value_type;
     static value_type _(value_type val) { return val; }
+
 };
 
 template<typename T>
-struct to_guard<util::wrapped<T>(), true> : to_guard<anything> {};
+struct to_guard<detail::wrapped<T>(), true> : to_guard<anything> {};
 
 template<typename T, typename... Ts>
 auto on(const T& arg, const Ts&... args)
     -> detail::rvalue_builder<
-          util::type_list<
+          detail::type_list<
               decltype(to_guard<typename detail::strip_and_convert<T>::type>::_(
                   arg)),
               decltype(to_guard<
                   typename detail::strip_and_convert<Ts>::type>::_(args))...>,
-          util::type_list<typename detail::pattern_type<T>::type,
+          detail::type_list<typename detail::pattern_type<T>::type,
                             typename detail::pattern_type<Ts>::type...>> {
     return {detail::rvalue_builder_args_ctor{},
             to_guard<typename detail::strip_and_convert<T>::type>::_(arg),
             to_guard<typename detail::strip_and_convert<Ts>::type>::_(args)...};
 }
 
-inline detail::rvalue_builder<util::empty_type_list, util::empty_type_list>
+inline detail::rvalue_builder<detail::empty_type_list, detail::empty_type_list>
 on() {
     return {};
 }
 
 template<typename T0, typename... Ts>
-detail::rvalue_builder<util::empty_type_list, util::type_list<T0, Ts...>>
+detail::rvalue_builder<detail::empty_type_list, detail::type_list<T0, Ts...>>
 on() {
     return {};
 }
@@ -394,16 +407,18 @@ namespace detail {
 class on_the_fly_rvalue_builder {
 
  public:
+
     constexpr on_the_fly_rvalue_builder() {}
 
     template<typename Expr>
-    match_expr<typename get_case<false, Expr, util::empty_type_list,
-                                 util::empty_type_list>::type>
+    match_expr<typename get_case<false, Expr, detail::empty_type_list,
+                                 detail::empty_type_list>::type>
     operator>>(Expr expr) const {
-        typedef typename get_case<false, Expr, util::empty_type_list,
-                                  util::empty_type_list>::type result_type;
+        typedef typename get_case<false, Expr, detail::empty_type_list,
+                                  detail::empty_type_list>::type result_type;
         return result_type{std::move(expr)};
     }
+
 };
 
 } // namespace detail

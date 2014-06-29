@@ -27,33 +27,6 @@
 
 using namespace std;
 using namespace cppa;
-using namespace cppa::placeholders;
-
-/*
-namespace {
-
-struct line { string str; };
-
-istream& operator>>(istream& is, line& l) {
-    getline(is, l.str);
-    return is;
-}
-
-message s_last_line;
-
-message split_line(const line& l) {
-    vector<string> result;
-    stringstream strs(l.str);
-    string tmp;
-    while (getline(strs, tmp, ' ')) {
-        if (!tmp.empty()) result.push_back(std::move(tmp));
-    }
-    s_last_line = message::view(std::move(result));
-    return s_last_line;
-}
-
-} // namespace <anonymous>
-*/
 
 int main(int argc, char** argv) {
 

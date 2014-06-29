@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_DETAIL_TO_UNIFORM_NAME_HPP
 #define CPPA_DETAIL_TO_UNIFORM_NAME_HPP
 
@@ -30,7 +29,9 @@ std::string to_uniform_name(const std::string& demangled_name);
 std::string to_uniform_name(const std::type_info& tinfo);
 
 template<class T>
-inline std::string to_uniform_name() { return to_uniform_name(typeid(T)); }
+inline std::string to_uniform_name() {
+    return to_uniform_name(typeid(T));
+}
 
 } // namespace detail
 } // namespace cppa

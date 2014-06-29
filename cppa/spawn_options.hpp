@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_SPAWN_OPTIONS_HPP
 #define CPPA_SPAWN_OPTIONS_HPP
 
@@ -31,16 +30,17 @@ namespace cppa {
  * @brief Stores options passed to the @p spawn function family.
  */
 #ifdef CPPA_DOCUMENTATION
-class spawn_options { };
+class spawn_options {};
 #else
 enum class spawn_options : int {
-    no_flags            = 0x00,
-    link_flag           = 0x01,
-    monitor_flag        = 0x02,
-    detach_flag         = 0x04,
-    hide_flag           = 0x08,
-    blocking_api_flag   = 0x10,
+    no_flags = 0x00,
+    link_flag = 0x01,
+    monitor_flag = 0x02,
+    detach_flag = 0x04,
+    hide_flag = 0x08,
+    blocking_api_flag = 0x10,
     priority_aware_flag = 0x20
+
 };
 #endif
 
@@ -50,8 +50,8 @@ enum class spawn_options : int {
  */
 constexpr spawn_options operator+(const spawn_options& lhs,
                                   const spawn_options& rhs) {
-    return static_cast<spawn_options>( static_cast<int>(lhs)
-                                     | static_cast<int>(rhs));
+    return static_cast<spawn_options>(static_cast<int>(lhs) |
+                                      static_cast<int>(rhs));
 }
 
 /**
@@ -63,36 +63,37 @@ constexpr spawn_options no_spawn_options = spawn_options::no_flags;
  * @brief Causes @p spawn to call <tt>self->monitor(...)</tt> immediately
  *        after the new actor was spawned.
  */
-constexpr spawn_options monitored        = spawn_options::monitor_flag;
+constexpr spawn_options monitored = spawn_options::monitor_flag;
 
 /**
  * @brief Causes @p spawn to call <tt>self->link_to(...)</tt> immediately
  *        after the new actor was spawned.
  */
-constexpr spawn_options linked           = spawn_options::link_flag;
+constexpr spawn_options linked = spawn_options::link_flag;
 
 /**
  * @brief Causes the new actor to opt out of the cooperative scheduling.
  */
-constexpr spawn_options detached         = spawn_options::detach_flag;
+constexpr spawn_options detached = spawn_options::detach_flag;
 
 /**
  * @brief Causes the runtime to ignore the new actor in
  *        {@link await_all_actors_done()}.
  */
-constexpr spawn_options hidden           = spawn_options::hide_flag;
+constexpr spawn_options hidden = spawn_options::hide_flag;
 
 /**
- * @brief Causes the new actor to opt in to the blocking API of libcppa,
+ * @brief Causes the new actor to opt in to the blocking API,
  *        i.e., the actor uses a context-switching or thread-based backend
  *        instead of the default event-based implementation.
  */
-constexpr spawn_options blocking_api     = spawn_options::blocking_api_flag;
+constexpr spawn_options blocking_api = spawn_options::blocking_api_flag;
 
 /**
  * @brief Causes the new actor to evaluate message priorities.
+ * @note This implicitly causes the actor to run in its own thread.
  */
-constexpr spawn_options priority_aware   = spawn_options::priority_aware_flag;
+constexpr spawn_options priority_aware = spawn_options::priority_aware_flag;
 
 /**
  * @brief Checks wheter @p haystack contains @p needle.
@@ -160,8 +161,8 @@ constexpr bool is_unbound(spawn_options opts) {
 
 constexpr spawn_options make_unbound(spawn_options opts) {
     return static_cast<spawn_options>(
-                (static_cast<int>(opts)
-                 & ~(static_cast<int>(linked) | static_cast<int>(monitored))));
+        (static_cast<int>(opts) &
+         ~(static_cast<int>(linked) | static_cast<int>(monitored))));
 }
 
 /** @endcond */

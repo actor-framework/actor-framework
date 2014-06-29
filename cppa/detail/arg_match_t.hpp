@@ -16,8 +16,8 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#ifndef CPPA_ARG_MATCH_T_HPP
-#define CPPA_ARG_MATCH_T_HPP
+#ifndef CPPA_DETAIL_ARG_MATCH_T_HPP
+#define CPPA_DETAIL_ARG_MATCH_T_HPP
 
 namespace cppa {
 namespace detail {
@@ -27,4 +27,4 @@ struct arg_match_t {};
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_ARG_MATCH_T_HPP
+#endif // CPPA_DETAIL_ARG_MATCH_T_HPP

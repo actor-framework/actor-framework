@@ -16,189 +16,102 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_IO_MIDDLEMAN_HPP
 #define CPPA_IO_MIDDLEMAN_HPP
 
 #include <map>
 #include <vector>
 #include <memory>
-#include <functional>
+#include <thread>
 
+#include "cppa/fwd.hpp"
 #include "cppa/node_id.hpp"
-#include "cppa/cppa_fwd.hpp"
 #include "cppa/actor_namespace.hpp"
+#include "cppa/detail/singletons.hpp"
 
-namespace cppa { namespace detail { class singleton_manager; } }
-
-namespace cppa {
-
-class actor_proxy;
-typedef intrusive_ptr<actor_proxy> actor_proxy_ptr;
-typedef weak_intrusive_ptr<actor_proxy> weak_actor_proxy_ptr;
-
-} // namespace cppa
+#include "cppa/io/broker.hpp"
+#include "cppa/io/network.hpp"
 
 namespace cppa {
 namespace io {
 
-class peer;
-class continuable;
-class input_stream;
-class peer_acceptor;
-class output_stream;
-class middleman_event_handler;
-
-typedef intrusive_ptr<input_stream> input_stream_ptr;
-typedef intrusive_ptr<output_stream> output_stream_ptr;
-
 /**
- * @brief Multiplexes asynchronous IO.
- * @note No member function except for @p run_later is safe to call from
- *       outside the event loop.
+ * @brief Manages brokers.
  */
-class middleman {
+class middleman : public detail::abstract_singleton {
 
-    friend class detail::singleton_manager;
+    friend class detail::singletons;
 
  public:
 
-    virtual ~middleman();
+    /**
+     * @brief Get middleman instance.
+     */
+    static middleman* instance();
+
+    ~middleman();
+
+    /**
+     * @brief Returns the broker associated with @p name.
+     */
+    template<class Impl>
+    intrusive_ptr<Impl> get_named_broker(atom_value name);
+
+    /**
+     * @brief Adds @p bptr to the list of known brokers.
+     */
+    void add_broker(broker_ptr bptr);
 
     /**
      * @brief Runs @p fun in the event loop of the middleman.
      * @note This member function is thread-safe.
      */
-    virtual void run_later(std::function<void()> fun) = 0;
+    template<typename F>
+    void run_later(F fun) {
+        m_backend.dispatch(fun);
+    }
 
     /**
-     * @brief Removes @p ptr from the list of active writers.
+     * @brief Returns the IO backend used by this middleman.
      */
-    void stop_writer(continuable* ptr);
+    inline network::multiplexer& backend() { return m_backend; }
 
-    /**
-     * @brief Adds @p ptr to the list of active writers.
-     */
-    void continue_writer(continuable* ptr);
+    /** @cond PRIVATE */
 
-    /**
-     * @brief Checks wheter @p ptr is an active writer.
-     * @warning This member function is not thread-safe.
-     */
-    bool has_writer(continuable* ptr);
+    // stops uninitialized instances
+    void dispose() override;
 
-    /**
-     * @brief Removes @p ptr from the list of active readers.
-     * @warning This member function is not thread-safe.
-     */
-    void stop_reader(continuable* ptr);
-
-    /**
-     * @brief Adds @p ptr to the list of active readers.
-     * @warning This member function is not thread-safe.
-     */
-    void continue_reader(continuable* ptr);
-
-    /**
-     * @brief Checks wheter @p ptr is an active reader.
-     * @warning This member function is not thread-safe.
-     */
-    bool has_reader(continuable* ptr);
-
-    /**
-     * @brief Tries to register a new peer, i.e., a new node in the network.
-     *        Returns false if there is already a connection to @p node,
-     *        otherwise true.
-     */
-    virtual bool register_peer(const node_id& node, peer* ptr) = 0;
-
-    /**
-     * @brief Returns the peer associated with given node id.
-     */
-    virtual peer* get_peer(const node_id& node) = 0;
-
-    /**
-     * @brief This callback is used by peer_acceptor implementations to
-     *        invoke cleanup code when disposed.
-     */
-    virtual void del_acceptor(peer_acceptor* ptr) = 0;
-
-    /**
-     * @brief This callback is used by peer implementations to
-     *        invoke cleanup code when disposed.
-     */
-    virtual void del_peer(peer* ptr) = 0;
-
-    /**
-     * @brief Delivers a message to given node.
-     */
-    virtual void deliver(const node_id& node,
-                         msg_hdr_cref hdr,
-                         message msg                  ) = 0;
-
-    /**
-     * @brief This callback is invoked by {@link peer} implementations
-     *        and causes the middleman to disconnect from the node.
-     */
-    virtual void last_proxy_exited(peer* ptr) = 0;
-
-    /**
-     *
-     */
-    virtual void new_peer(const input_stream_ptr& in,
-                          const output_stream_ptr& out,
-                          const node_id_ptr& node = nullptr) = 0;
-
-    /**
-     * @brief Adds a new acceptor for incoming connections to @p pa
-     *        to the event loop of the middleman.
-     * @note This member function is thread-safe.
-     */
-    virtual void register_acceptor(const actor_addr& pa,
-                                   peer_acceptor* ptr) = 0;
-
-    /**
-     * @brief Returns the namespace that contains all remote actors
-     *        connected to this middleman.
-     */
-    inline actor_namespace& get_namespace();
-
-    /**
-     * @brief Returns the node of this middleman.
-     */
-    inline const node_id_ptr& node() const;
-
- protected:
-
-    // creates a middleman instance
-    static middleman* create_singleton();
-
-    // destroys uninitialized instances
-    inline void dispose() { delete this; }
-
-    // destroys an initialized singleton
-    virtual void destroy() = 0;
+    // stops an initialized singleton
+    void stop() override;
 
     // initializes a singleton
-    virtual void initialize() = 0;
+    void initialize() override;
 
-    // each middleman defines its own namespace
-    actor_namespace m_namespace;
+    /** @endcond */
 
-    // the node id of this middleman
-    node_id_ptr m_node;
+ private:
 
-    std::unique_ptr<middleman_event_handler> m_handler;
+    middleman();
+
+    network::multiplexer m_backend;    // networking backend
+    network::supervisor* m_supervisor; // keeps backend busy
+
+    std::thread m_thread; // runs the backend
+
+    std::map<atom_value, broker_ptr> m_named_brokers;
+
+    std::set<broker_ptr> m_brokers;
 
 };
 
-inline actor_namespace& middleman::get_namespace() {
-    return m_namespace;
-}
-
-const node_id_ptr& middleman::node() const {
-    CPPA_REQUIRE(m_node != nullptr);
-    return m_node;
+template<class Impl>
+intrusive_ptr<Impl> middleman::get_named_broker(atom_value name) {
+    auto i = m_named_brokers.find(name);
+    if (i != m_named_brokers.end()) return static_cast<Impl*>(i->second.get());
+    intrusive_ptr<Impl> result{new Impl};
+    result->launch(true, nullptr);
+    m_named_brokers.emplace(name, result);
+    return result;
 }
 
 } // namespace io

@@ -16,13 +16,14 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_MEMORY_MANAGED_HPP
 #define CPPA_MEMORY_MANAGED_HPP
 
 namespace cppa {
 
-namespace detail { struct disposer; }
+namespace detail {
+struct disposer;
+}
 
 /**
  * @brief This base enables derived classes to enforce a different
@@ -33,9 +34,7 @@ class memory_managed {
 
     friend struct detail::disposer;
 
- protected:
-
-    virtual ~memory_managed();
+ public:
 
     /**
      * @brief Default implementations calls <tt>delete this</tt>, but can
@@ -43,6 +42,10 @@ class memory_managed {
      *        the class doesn't use default new/delete.
      */
     virtual void request_deletion();
+
+ protected:
+
+    virtual ~memory_managed();
 
 };
 

@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_ANYTHING_HPP
 #define CPPA_ANYTHING_HPP
 
@@ -27,7 +26,7 @@ namespace cppa {
 /**
  * @brief Acts as wildcard expression in patterns.
  */
-struct anything { };
+struct anything {};
 
 /**
  * @brief Compares two instances of {@link anything}.
@@ -49,8 +48,8 @@ inline bool operator!=(const anything&, const anything&) { return false; }
 template<typename T>
 struct is_anything {
     static constexpr bool value = std::is_same<T, anything>::value;
-};
 
+};
 
 } // namespace cppa
 

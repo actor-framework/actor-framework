@@ -16,9 +16,8 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
-#ifndef CPPA_POLICY_NOT_PRIORITIZING_HPP
-#define CPPA_POLICY_NOT_PRIORITIZING_HPP
+#ifndef NOT_PRIORITIZING_HPP
+#define NOT_PRIORITIZING_HPP
 
 #include <list>
 #include <iterator>
@@ -52,21 +51,13 @@ class not_prioritizing {
         m_cache.push_back(std::move(ptr));
     }
 
-    inline cache_iterator cache_begin() {
-        return m_cache.begin();
-    }
+    inline cache_iterator cache_begin() { return m_cache.begin(); }
 
-    inline cache_iterator cache_end() {
-        return m_cache.end();
-    }
+    inline cache_iterator cache_end() { return m_cache.end(); }
 
-    inline void cache_erase(cache_iterator iter) {
-        m_cache.erase(iter);
-    }
+    inline void cache_erase(cache_iterator iter) { m_cache.erase(iter); }
 
-    inline bool cache_empty() const {
-        return m_cache.empty();
-    }
+    inline bool cache_empty() const { return m_cache.empty(); }
 
     inline unique_mailbox_element_pointer cache_take_first() {
         auto tmp = std::move(m_cache.front());
@@ -90,4 +81,4 @@ class not_prioritizing {
 } // namespace policy
 } // namespace cppa
 
-#endif // CPPA_POLICY_NOT_PRIORITIZING_HPP
+#endif // NOT_PRIORITIZING_HPP

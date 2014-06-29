@@ -20,11 +20,11 @@
  *            Based on http://beej.us/guide/bgnet/examples/pack2.c            *
 \******************************************************************************/
 
-
 #ifndef CPPA_DETAIL_IEEE_754_HPP
 #define CPPA_DETAIL_IEEE_754_HPP
 
 #include <cmath>
+#include <cstdint>
 
 namespace cppa {
 namespace detail {
@@ -34,31 +34,33 @@ struct ieee_754_trait;
 
 template<>
 struct ieee_754_trait<float> {
-    static constexpr std::uint32_t bits = 32;       // number of bits
-    static constexpr std::uint32_t expbits = 8;     // bits used for exponent
-    static constexpr float zero = 0.0f;             // the value 0
-    static constexpr float p5 = 0.5f;               // the value 0.5
-    using packed_type = std::uint32_t;              // unsigned integer type
-    using signed_packed_type = std::int32_t;        // signed integer type
-    using float_type = float;                       // floating point type
+    static constexpr uint32_t bits = 32;   // number of bits
+    static constexpr uint32_t expbits = 8; // bits used for exponent
+    static constexpr float zero = 0.0f;    // the value 0
+    static constexpr float p5 = 0.5f;      // the value 0.5
+    using packed_type = uint32_t;          // unsigned integer type
+    using signed_packed_type = int32_t;    // signed integer type
+    using float_type = float;              // floating point type
+
 };
 
 template<>
-struct ieee_754_trait<std::uint32_t> : ieee_754_trait<float> { };
+struct ieee_754_trait<uint32_t> : ieee_754_trait<float> {};
 
 template<>
 struct ieee_754_trait<double> {
-    static constexpr std::uint64_t bits = 64;
-    static constexpr std::uint64_t expbits = 11;
-    static constexpr double  zero = 0.0;
+    static constexpr uint64_t bits = 64;
+    static constexpr uint64_t expbits = 11;
+    static constexpr double zero = 0.0;
     static constexpr double p5 = 0.5;
-    using packed_type = std::uint64_t;
-    using signed_packed_type = std::int64_t;
+    using packed_type = uint64_t;
+    using signed_packed_type = int64_t;
     using float_type = double;
+
 };
 
 template<>
-struct ieee_754_trait<std::uint64_t> : ieee_754_trait<double> { };
+struct ieee_754_trait<uint64_t> : ieee_754_trait<double> {};
 
 template<typename T>
 typename ieee_754_trait<T>::packed_type pack754(T f) {
@@ -73,8 +75,7 @@ typename ieee_754_trait<T>::packed_type pack754(T f) {
     if (f < 0) {
         sign = 1;
         fnorm = -f;
-    }
-    else {
+    } else {
         sign = 0;
         fnorm = f;
     }
@@ -96,9 +97,9 @@ typename ieee_754_trait<T>::packed_type pack754(T f) {
     // get the biased exponent
     auto exp = shift + ((1 << (trait::expbits - 1)) - 1); // shift + bias
     // return the final answer
-    return (sign << (trait::bits - 1)) | (exp << (trait::bits - trait::expbits - 1)) | significand;
+    return (sign << (trait::bits - 1)) |
+           (exp << (trait::bits - trait::expbits - 1)) | significand;
 }
-
 
 template<typename T>
 typename ieee_754_trait<T>::float_type unpack754(T i) {
@@ -108,14 +109,16 @@ typename ieee_754_trait<T>::float_type unpack754(T i) {
     if (i == 0) return trait::zero;
     auto significandbits = trait::bits - trait::expbits - 1; // -1 for sign bit
     // pull the significand
-    result_type result = (i & ((static_cast<T>(1) << significandbits) - 1)); // mask
+    result_type result =
+        (i & ((static_cast<T>(1) << significandbits) - 1)); // mask
     result /= (static_cast<T>(1) << significandbits); // convert back to float
-    result += static_cast<result_type>(1); // add the one back on
+    result += static_cast<result_type>(1);            // add the one back on
     // deal with the exponent
     auto si = static_cast<signed_type>(i);
     auto bias = (1 << (trait::expbits - 1)) - 1;
     auto pownum = static_cast<signed_type>(1) << trait::expbits;
-    auto shift = static_cast<signed_type>(((si >> significandbits) & (pownum - 1)) - bias);
+    auto shift = static_cast<signed_type>(
+        ((si >> significandbits) & (pownum - 1)) - bias);
     while (shift > 0) {
         result *= static_cast<result_type>(2);
         --shift;

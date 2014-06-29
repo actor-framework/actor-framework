@@ -16,14 +16,13 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_WILDCARD_POSITION_HPP
 #define CPPA_WILDCARD_POSITION_HPP
 
 #include <type_traits>
 
 #include "cppa/anything.hpp"
-#include "cppa/util/type_list.hpp"
+#include "cppa/detail/type_list.hpp"
 
 namespace cppa {
 
@@ -37,24 +36,28 @@ enum class wildcard_position {
     leading,
     in_between,
     multiple
+
 };
 
 /**
  * @brief Gets the position of {@link cppa::anything anything} from the
  *        type list @p Types.
- * @tparam A template parameter pack as {@link cppa::util::type_list type_list}.
+ * @tparam A template parameter pack as {@link cppa::detail::type_list
+ * type_list}.
  */
 template<typename Types>
 constexpr wildcard_position get_wildcard_position() {
-    return util::tl_count<Types, is_anything>::value > 1
-           ? wildcard_position::multiple
-           : (util::tl_count<Types, is_anything>::value == 1
-              ? (std::is_same<typename util::tl_head<Types>::type, anything>::value
-                 ? wildcard_position::leading
-                 : (std::is_same<typename util::tl_back<Types>::type, anything>::value
-                    ? wildcard_position::trailing
-                    : wildcard_position::in_between))
-              : wildcard_position::nil);
+    return detail::tl_count<Types, is_anything>::value > 1 ?
+               wildcard_position::multiple :
+               (detail::tl_count<Types, is_anything>::value == 1 ?
+                    (std::is_same<typename detail::tl_head<Types>::type,
+                                  anything>::value ?
+                         wildcard_position::leading :
+                         (std::is_same<typename detail::tl_back<Types>::type,
+                                       anything>::value ?
+                              wildcard_position::trailing :
+                              wildcard_position::in_between)) :
+                    wildcard_position::nil);
 }
 
 } // namespace cppa

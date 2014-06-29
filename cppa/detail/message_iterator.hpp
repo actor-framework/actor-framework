@@ -16,8 +16,8 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#ifndef CPPA_TUPLE_ITERATOR_HPP
-#define CPPA_TUPLE_ITERATOR_HPP
+#ifndef CPPA_DETAIL_TUPLE_ITERATOR_HPP
+#define CPPA_DETAIL_TUPLE_ITERATOR_HPP
 
 #include <cstddef>
 
@@ -96,4 +96,4 @@ class message_iterator {
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_TUPLE_ITERATOR_HPP
+#endif // CPPA_DETAIL_TUPLE_ITERATOR_HPP

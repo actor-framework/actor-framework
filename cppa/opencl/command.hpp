@@ -37,12 +37,13 @@
 #include <algorithm>
 #include <functional>
 
-#include "cppa/logging.hpp"
 #include "cppa/opencl/global.hpp"
 #include "cppa/abstract_actor.hpp"
 #include "cppa/response_promise.hpp"
 #include "cppa/opencl/smart_ptr.hpp"
-#include "cppa/util/scope_guard.hpp"
+
+#include "cppa/detail/logging.hpp"
+#include "cppa/detail/scope_guard.hpp"
 
 namespace cppa {
 namespace opencl {

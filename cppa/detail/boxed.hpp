@@ -16,54 +16,61 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_DETAIL_BOXED_HPP
 #define CPPA_DETAIL_BOXED_HPP
 
 #include "cppa/anything.hpp"
-#include "cppa/util/wrapped.hpp"
+#include "cppa/detail/wrapped.hpp"
 
 namespace cppa {
 namespace detail {
 
 template<typename T>
 struct boxed {
-    typedef util::wrapped<T> type;
+    typedef detail::wrapped<T> type;
+
 };
 
 template<typename T>
-struct boxed< util::wrapped<T> > {
-    typedef util::wrapped<T> type;
+struct boxed<detail::wrapped<T>> {
+    typedef detail::wrapped<T> type;
+
 };
 
 template<>
 struct boxed<anything> {
     typedef anything type;
+
 };
 
 template<typename T>
 struct is_boxed {
     static constexpr bool value = false;
+
 };
 
 template<typename T>
-struct is_boxed< util::wrapped<T> > {
+struct is_boxed<detail::wrapped<T>> {
     static constexpr bool value = true;
+
 };
 
 template<typename T>
-struct is_boxed<util::wrapped<T>()> {
+struct is_boxed<detail::wrapped<T>()> {
     static constexpr bool value = true;
+
 };
 
 template<typename T>
-struct is_boxed<util::wrapped<T>(&)()> {
+struct is_boxed<detail::wrapped<T>(&)()> {
     static constexpr bool value = true;
+
 };
 
 template<typename T>
-struct is_boxed<util::wrapped<T>(*)()> {
+struct is_boxed<detail::wrapped<T>(*)()> {
     static constexpr bool value = true;
+
 };
 
 } // namespace detail

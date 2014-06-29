@@ -23,7 +23,6 @@
 
 using namespace std;
 using namespace cppa;
-using namespace cppa::placeholders;
 
 // our "service"
 void calculator(event_based_actor* self) {
@@ -73,8 +72,16 @@ void client_bhvr(event_based_actor* self, const string& host, uint16_t port, con
             self->delayed_send(self, chrono::seconds(3), atom("reconnect"));
         }
     }
+    // our predicate guarding the first callback
+    auto pred = [=](atom_value val) -> optional<atom_value> {
+        if (server != invalid_actor
+                && (val == atom("plus") || val == atom("minus"))) {
+            return val;
+        }
+        return none;
+    };
     self->become (
-        on_arg_match.when(_x1.in({atom("plus"), atom("minus")}) && gval(server) != invalid_actor) >> [=](atom_value op, int lhs, int rhs) {
+        on(pred, arg_match) >> [=](atom_value op, int lhs, int rhs) {
             self->sync_send_tuple(server, self->last_dequeued()).then(
                 on(atom("result"), arg_match) >> [=](int result) {
                     aout(self) << lhs << " "
@@ -84,7 +91,7 @@ void client_bhvr(event_based_actor* self, const string& host, uint16_t port, con
                 }
             );
         },
-        on_arg_match >> [=](const down_msg&) {
+        [=](const down_msg&) {
             aout(self) << "*** server down, try to reconnect ..." << endl;
             client_bhvr(self, host, port, invalid_actor);
         },

@@ -16,8 +16,9 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #include <iterator>
+
+#include "cppa/none.hpp"
 
 #include "cppa/local_actor.hpp"
 #include "cppa/detail/behavior_stack.hpp"
@@ -27,11 +28,12 @@ using namespace std;
 namespace cppa {
 namespace detail {
 
-struct behavior_stack_mover : iterator<output_iterator_tag, void, void, void, void>{
+struct behavior_stack_mover
+    : iterator<output_iterator_tag, void, void, void, void> {
 
  public:
 
-    behavior_stack_mover(behavior_stack* st) : m_stack(st) { }
+    behavior_stack_mover(behavior_stack* st) : m_stack(st) {}
 
     behavior_stack_mover& operator=(behavior_stack::element_type&& rval) {
         m_stack->m_erased_elements.emplace_back(move(rval.first));
@@ -50,7 +52,9 @@ struct behavior_stack_mover : iterator<output_iterator_tag, void, void, void, vo
 
 };
 
-inline behavior_stack_mover move_iter(behavior_stack* bs) { return {bs}; }
+inline behavior_stack_mover move_iter(behavior_stack* bs) {
+    return {bs};
+}
 
 optional<behavior&> behavior_stack::sync_handler(message_id expected_response) {
     if (expected_response.valid()) {
@@ -64,20 +68,22 @@ optional<behavior&> behavior_stack::sync_handler(message_id expected_response) {
 }
 
 void behavior_stack::pop_async_back() {
-    if (m_elements.empty()) { } // nothing to do
-    else if (!m_elements.back().second.valid()) erase_at(m_elements.end() - 1);
-    else rerase_if([](const element_type& e) {
-        return e.second.valid() == false;
-    });
+    if (m_elements.empty()) {
+    } // nothing to do
+    else if (!m_elements.back().second.valid())
+        erase_at(m_elements.end() - 1);
+    else
+        rerase_if([](const element_type& e) {
+            return e.second.valid() == false;
+        });
 }
 
 void behavior_stack::clear() {
     if (m_elements.empty() == false) {
-        move(m_elements.begin(), m_elements.end(), move_iter(this));
+        std::move(m_elements.begin(), m_elements.end(), move_iter(this));
         m_elements.clear();
     }
 }
 
 } // namespace detail
 } // namespace cppa
-

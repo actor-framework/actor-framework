@@ -16,9 +16,8 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
-#ifndef CPPA_DETAIL_UNIFORM_TYPE_INFO_MAP_HPP
-#define CPPA_DETAIL_UNIFORM_TYPE_INFO_MAP_HPP
+#ifndef CPPA_UNIFORM_TYPE_INFO_MAP_HPP
+#define CPPA_UNIFORM_TYPE_INFO_MAP_HPP
 
 #include <set>
 #include <map>
@@ -26,80 +25,33 @@
 #include <utility>
 #include <type_traits>
 
-#include "cppa/cppa_fwd.hpp"
+#include "cppa/fwd.hpp"
 
 #include "cppa/atom.hpp"
 #include "cppa/unit.hpp"
-#include "cppa/none.hpp"
 #include "cppa/node_id.hpp"
+#include "cppa/duration.hpp"
+#include "cppa/accept_handle.hpp"
 #include "cppa/system_messages.hpp"
+#include "cppa/connection_handle.hpp"
 
-#include "cppa/util/buffer.hpp"
-#include "cppa/util/duration.hpp"
-#include "cppa/util/type_list.hpp"
+#include "cppa/detail/type_list.hpp"
 
 #include "cppa/detail/singleton_mixin.hpp"
 
-#include "cppa/io/accept_handle.hpp"
-#include "cppa/io/connection_handle.hpp"
-
-namespace cppa { class uniform_type_info; }
+namespace cppa {
+class uniform_type_info;
+} // namespace cppa
 
 namespace cppa {
 namespace detail {
-
-// ordered according to demangled type name (see uniform_type_info_map.cpp)
-using mapped_type_list = util::type_list<
-    bool,
-    acceptor_closed_msg,
-    actor,
-    actor_addr,
-    atom_value,
-    channel,
-    connection_closed_msg,
-    down_msg,
-    exit_msg,
-    group,
-    group_down_msg,
-    node_id_ptr,
-    io::accept_handle,
-    io::connection_handle,
-    message,
-    message_header,
-    new_connection_msg,
-    new_data_msg,
-    sync_exited_msg,
-    sync_timeout_msg,
-    timeout_msg,
-    unit_t,
-    util::buffer,
-    util::duration,
-    double,
-    float,
-    long double,
-    std::u16string,
-    std::u32string,
-    std::string,
-    std::u16string,
-    std::u32string,
-    std::map<std::string, std::string>
->;
-
-using zipped_type_list = util::tl_zip_with_index<mapped_type_list>::type;
-
-// lookup table for built-in types
-extern const char* mapped_type_names[][2];
-
-template<typename T>
-constexpr const char* mapped_name() {
-    return mapped_type_names[util::tl_index_of<zipped_type_list, T>::value][1];
-}
 
 const char* mapped_name_by_decorated_name(const char* decorated_name);
 
 std::string mapped_name_by_decorated_name(std::string&& decorated_name);
 
-inline const char* mapped_name_by_decorated_name(const std::string& decorated_name) {
+inline const char*
+mapped_name_by_decorated_name(const std::string& decorated_name) {
     return mapped_name_by_decorated_name(decorated_name.c_str());
 }
 
@@ -131,13 +83,13 @@ class uniform_type_info_map {
 
     virtual std::vector<pointer> get_all() const = 0;
 
-    virtual pointer insert(std::unique_ptr<uniform_type_info> uti) = 0;
+    virtual pointer insert(uniform_type_info_ptr uti) = 0;
 
     static uniform_type_info_map* create_singleton();
 
     inline void dispose() { delete this; }
 
-    inline void destroy() { delete this; }
+    inline void stop() { }
 
     virtual void initialize() = 0;
 
@@ -146,4 +98,4 @@ class uniform_type_info_map {
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_DETAIL_UNIFORM_TYPE_INFO_MAP_HPP
+#endif // CPPA_UNIFORM_TYPE_INFO_MAP_HPP

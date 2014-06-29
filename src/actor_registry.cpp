@@ -16,32 +16,33 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #include <mutex>
 #include <limits>
 #include <stdexcept>
 
-#include "cppa/logging.hpp"
 #include "cppa/attachable.hpp"
 #include "cppa/exit_reason.hpp"
 #include "cppa/detail/actor_registry.hpp"
-#include "cppa/util/shared_lock_guard.hpp"
-#include "cppa/util/upgrade_lock_guard.hpp"
 
-namespace {
-
-typedef std::lock_guard<cppa::util::shared_spinlock> exclusive_guard;
-typedef cppa::util::shared_lock_guard<cppa::util::shared_spinlock> shared_guard;
-typedef cppa::util::upgrade_lock_guard<cppa::util::shared_spinlock> upgrade_guard;
-
-} // namespace <anonymous>
+#include "cppa/locks.hpp"
+#include "cppa/detail/logging.hpp"
+#include "cppa/detail/shared_spinlock.hpp"
 
 namespace cppa {
 namespace detail {
 
-actor_registry::~actor_registry() { }
+namespace {
 
-actor_registry::actor_registry() : m_running(0), m_ids(1) { }
+typedef unique_lock<shared_spinlock> exclusive_guard;
+typedef shared_lock<shared_spinlock> shared_guard;
+typedef upgrade_lock<shared_spinlock> upgrade_guard;
+typedef upgrade_to_unique_lock<shared_spinlock> upgrade_to_unique_guard;
+
+} // namespace <anonymous>
+
+actor_registry::~actor_registry() {}
+
+actor_registry::actor_registry() : m_running(0), m_ids(1) {}
 
 actor_registry::value_type actor_registry::get_entry(actor_id key) const {
     shared_guard guard(m_instances_mtx);
@@ -49,20 +50,19 @@ actor_registry::value_type actor_registry::get_entry(actor_id key) const {
     if (i != m_entries.end()) {
         return i->second;
     }
-    CPPA_LOG_DEBUG("key not found: " << key);
-    return {nullptr, exit_reason::not_exited};
+    CPPA_LOG_DEBUG("key not found, assume the actor no longer exists: " << key);
+    return {nullptr, exit_reason::unknown};
 }
 
 void actor_registry::put(actor_id key, const abstract_actor_ptr& value) {
     bool add_attachable = false;
     if (value != nullptr) {
-        shared_guard guard(m_instances_mtx);
+        upgrade_guard guard(m_instances_mtx);
         auto i = m_entries.find(key);
         if (i == m_entries.end()) {
-            auto entry = std::make_pair(key,
-                                        value_type(value,
-                                                   exit_reason::not_exited));
-            upgrade_guard uguard(guard);
+            auto entry =
+                std::make_pair(key, value_type(value, exit_reason::not_exited));
+            upgrade_to_unique_guard uguard(guard);
             add_attachable = m_entries.insert(entry).second;
         }
     }
@@ -71,19 +71,18 @@ void actor_registry::put(actor_id key, const abstract_actor_ptr& value) {
         struct eraser : attachable {
             actor_id m_id;
             actor_registry* m_registry;
-            eraser(actor_id id, actor_registry* s) : m_id(id), m_registry(s) { }
-            void actor_exited(std::uint32_t reason) {
+            eraser(actor_id id, actor_registry* s) : m_id(id), m_registry(s) {}
+            void actor_exited(uint32_t reason) {
                 m_registry->erase(m_id, reason);
             }
-            bool matches(const token&) {
-                return false;
-            }
+            bool matches(const token&) { return false; }
+
         };
         value->attach(attachable_ptr{new eraser(key, this)});
     }
 }
 
-void actor_registry::erase(actor_id key, std::uint32_t reason) {
+void actor_registry::erase(actor_id key, uint32_t reason) {
     exclusive_guard guard(m_instances_mtx);
     auto i = m_entries.find(key);
     if (i != m_entries.end()) {
@@ -94,21 +93,17 @@ void actor_registry::erase(actor_id key, std::uint32_t reason) {
     }
 }
 
-std::uint32_t actor_registry::next_id() {
-    return m_ids.fetch_add(1);
-}
+uint32_t actor_registry::next_id() { return m_ids.fetch_add(1); }
 
 void actor_registry::inc_running() {
-#   if CPPA_LOG_LEVEL >= CPPA_DEBUG
+#if CPPA_LOG_LEVEL >= CPPA_DEBUG
     CPPA_LOG_DEBUG("new value = " << ++m_running);
-#   else
+#else
     ++m_running;
-#   endif
+#endif
 }
 
-size_t actor_registry::running() const {
-    return m_running.load();
-}
+size_t actor_registry::running() const { return m_running.load(); }
 
 void actor_registry::dec_running() {
     size_t new_val = --m_running;
@@ -134,4 +129,3 @@ void actor_registry::await_running_count_equal(size_t expected) {
 
 } // namespace detail
 } // namespace cppa
-

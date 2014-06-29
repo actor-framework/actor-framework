@@ -16,13 +16,12 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #include "cppa/resumable.hpp"
 
 namespace cppa {
 
-resumable::resumable() : m_hidden(true) { }
+resumable::resumable() : m_hidden(true) {}
 
-resumable::~resumable() { }
+resumable::~resumable() {}
 
 } // namespace cppa

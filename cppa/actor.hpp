@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_ACTOR_HPP
 #define CPPA_ACTOR_HPP
 
@@ -26,36 +25,19 @@
 #include <type_traits>
 
 #include "cppa/intrusive_ptr.hpp"
+
+#include "cppa/fwd.hpp"
 #include "cppa/abstract_actor.hpp"
 
-#include "cppa/util/comparable.hpp"
-#include "cppa/util/type_traits.hpp"
+#include "cppa/detail/comparable.hpp"
+#include "cppa/detail/type_traits.hpp"
 
 namespace cppa {
 
-class actor_addr;
-class actor_proxy;
-class local_actor;
-class blocking_actor;
-class actor_companion;
-class event_based_actor;
+struct invalid_actor_t {
+    constexpr invalid_actor_t() {}
 
-struct invalid_actor_addr_t;
-
-namespace io {
-class broker;
-} // namespace io
-
-namespace opencl {
-template<typename Signature>
-class actor_facade;
-} // namespace opencl
-
-namespace detail {
-class raw_access;
-} // namespace detail
-
-struct invalid_actor_t { constexpr invalid_actor_t() { } };
+};
 
 /**
  * @brief Identifies an invalid {@link actor}.
@@ -65,16 +47,9 @@ constexpr invalid_actor_t invalid_actor = invalid_actor_t{};
 
 template<typename T>
 struct is_convertible_to_actor {
-    static constexpr bool value =  std::is_base_of<io::broker, T>::value
-                                || std::is_base_of<actor_proxy, T>::value
-                                || std::is_base_of<blocking_actor, T>::value
-                                || std::is_base_of<actor_companion, T>::value
-                                || std::is_base_of<event_based_actor, T>::value;
-};
+    static constexpr bool value = std::is_base_of<actor_proxy, T>::value ||
+                                  std::is_base_of<local_actor, T>::value;
 
-template<typename T>
-struct is_convertible_to_actor<opencl::actor_facade<T>> {
-    static constexpr bool value = true;
 };
 
 /**
@@ -84,13 +59,15 @@ struct is_convertible_to_actor<opencl::actor_facade<T>> {
  * {@link blocking_actor}, {@link actor_proxy}, or
  * {@link io::broker}.
  */
-class actor : util::comparable<actor>
-            , util::comparable<actor, actor_addr>
-            , util::comparable<actor, invalid_actor_t>
-            , util::comparable<actor, invalid_actor_addr_t> {
+class actor : detail::comparable<actor>,
+              detail::comparable<actor, actor_addr>,
+              detail::comparable<actor, invalid_actor_t>,
+              detail::comparable<actor, invalid_actor_addr_t> {
 
     friend class local_actor;
-    friend class detail::raw_access;
+
+    template<typename T, typename U>
+    friend T actor_cast(const U&);
 
  public:
 
@@ -103,12 +80,12 @@ class actor : util::comparable<actor>
     template<typename T>
     actor(intrusive_ptr<T> ptr,
           typename std::enable_if<is_convertible_to_actor<T>::value>::type* = 0)
-            : m_ptr(std::move(ptr)) { }
+            : m_ptr(std::move(ptr)) {}
 
     template<typename T>
     actor(T* ptr,
           typename std::enable_if<is_convertible_to_actor<T>::value>::type* = 0)
-                : m_ptr(ptr) { }
+            : m_ptr(ptr) {}
 
     actor(const invalid_actor_t&);
 
@@ -175,6 +152,10 @@ class actor : util::comparable<actor>
 
     void swap(actor& other);
 
+    inline abstract_actor* get() const {
+        return m_ptr.get();
+    }
+
     actor(abstract_actor*);
 
     abstract_actor_ptr m_ptr;
@@ -182,5 +163,16 @@ class actor : util::comparable<actor>
 };
 
 } // namespace cppa
+
+// allow actor to be used in hash maps
+namespace std {
+template<>
+struct hash<cppa::actor> {
+    inline size_t operator()(const cppa::actor& ref) const {
+        return ref ? static_cast<size_t>(ref->id()) : 0;
+    }
+
+};
+} // namespace std
 
 #endif // CPPA_ACTOR_HPP

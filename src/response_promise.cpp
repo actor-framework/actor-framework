@@ -16,30 +16,26 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #include <utility>
 
 #include "cppa/local_actor.hpp"
 #include "cppa/response_promise.hpp"
 
-#include "cppa/detail/raw_access.hpp"
-
 using std::move;
 
 namespace cppa {
 
-response_promise::response_promise(const actor_addr& from,
-                                   const actor_addr& to,
+response_promise::response_promise(const actor_addr& from, const actor_addr& to,
                                    const message_id& id)
-: m_from(from), m_to(to), m_id(id) {
+        : m_from(from), m_to(to), m_id(id) {
     CPPA_REQUIRE(id.is_response() || !id.valid());
 }
 
 void response_promise::deliver(message msg) {
     if (m_to) {
-        auto to = detail::raw_access::get(m_to);
-        auto from = detail::raw_access::get(m_from);
-        to->enqueue({m_from, to, m_id}, move(msg), from->m_host);
+        auto to = actor_cast<abstract_actor_ptr>(m_to);
+        auto from = actor_cast<abstract_actor_ptr>(m_from);
+        to->enqueue(m_from, m_id, move(msg), from->m_host);
         m_to = invalid_actor_addr;
     }
 }

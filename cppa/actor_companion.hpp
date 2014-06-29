@@ -24,15 +24,14 @@
 #include <functional>
 
 #include "cppa/local_actor.hpp"
-#include "cppa/sync_sender.hpp"
 #include "cppa/mailbox_based.hpp"
 #include "cppa/mailbox_element.hpp"
 #include "cppa/behavior_stack_based.hpp"
 
-#include "cppa/detail/memory.hpp"
+#include "cppa/mixin/sync_sender.hpp"
 
-#include "cppa/util/shared_spinlock.hpp"
-#include "cppa/util/shared_lock_guard.hpp"
+#include "cppa/detail/memory.hpp"
+#include "cppa/detail/shared_spinlock.hpp"
 
 namespace cppa {
 
@@ -43,9 +42,9 @@ namespace cppa {
  */
 class actor_companion : public extend<local_actor, actor_companion>::
                                with<behavior_stack_based<behavior>::impl,
-                                    sync_sender<nonblocking_response_handle_tag>::impl> {
+                                    mixin::sync_sender<nonblocking_response_handle_tag>::impl> {
 
-    typedef util::shared_spinlock lock_type;
+    typedef detail::shared_spinlock lock_type;
 
  public:
 
@@ -65,7 +64,8 @@ class actor_companion : public extend<local_actor, actor_companion>::
      */
     void on_enqueue(enqueue_handler handler);
 
-    void enqueue(msg_hdr_cref hdr, message msg, execution_unit* eu) override;
+    void enqueue(const actor_addr& sender, message_id mid,
+                 message content, execution_unit* host) override;
 
  private:
 

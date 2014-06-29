@@ -7,7 +7,7 @@
 #include "chatwidget.hpp"
 
 #include "cppa/cppa.hpp"
-#include "cppa/util/scope_guard.hpp"
+#include "cppa/detail/scope_guard.hpp"
 
 using namespace std;
 using namespace cppa;
@@ -50,7 +50,7 @@ ChatWidget::ChatWidget(QWidget* parent, Qt::WindowFlags f)
 }
 
 void ChatWidget::sendChatMessage() {
-    auto cleanup = util::make_scope_guard([=] {
+    auto cleanup = detail::make_scope_guard([=] {
         input()->setText(QString());
     });
     QString line = input()->text();

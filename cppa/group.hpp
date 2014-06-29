@@ -16,27 +16,26 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_GROUP_HPP
 #define CPPA_GROUP_HPP
 
 #include "cppa/intrusive_ptr.hpp"
+
+#include "cppa/fwd.hpp"
 #include "cppa/abstract_group.hpp"
 
-#include "cppa/util/comparable.hpp"
-#include "cppa/util/type_traits.hpp"
+#include "cppa/detail/comparable.hpp"
+#include "cppa/detail/type_traits.hpp"
 
 namespace cppa {
 
 class channel;
 class message;
-class message_header;
 
-struct invalid_group_t { constexpr invalid_group_t() { } };
+struct invalid_group_t {
+    constexpr invalid_group_t() {}
 
-namespace detail {
-class raw_access;
-} // namespace detail
+};
 
 /**
  * @brief Identifies an invalid {@link group}.
@@ -44,10 +43,11 @@ class raw_access;
  */
 constexpr invalid_group_t invalid_group = invalid_group_t{};
 
-class group : util::comparable<group>
-            , util::comparable<group, invalid_group_t> {
+class group : detail::comparable<group>,
+              detail::comparable<group, invalid_group_t> {
 
-    friend class detail::raw_access;
+    template<typename T, typename U>
+    friend T actor_cast(const U&);
 
  public:
 
@@ -67,25 +67,17 @@ class group : util::comparable<group>
 
     group(intrusive_ptr<abstract_group> ptr);
 
-    inline explicit operator bool() const {
-        return static_cast<bool>(m_ptr);
-    }
+    inline explicit operator bool() const { return static_cast<bool>(m_ptr); }
 
-    inline bool operator!() const {
-        return !static_cast<bool>(m_ptr);
-    }
+    inline bool operator!() const { return !static_cast<bool>(m_ptr); }
 
     /**
      * @brief Returns a handle that grants access to
      *        actor operations such as enqueue.
      */
-    inline abstract_group* operator->() const {
-        return m_ptr.get();
-    }
+    inline abstract_group* operator->() const { return m_ptr.get(); }
 
-    inline abstract_group& operator*() const {
-        return *m_ptr;
-    }
+    inline abstract_group& operator*() const { return *m_ptr; }
 
     intptr_t compare(const group& other) const;
 
@@ -111,7 +103,7 @@ class group : util::comparable<group>
     static group anonymous();
 
     /**
-     * @brief Add a new group module to the libcppa group management.
+     * @brief Add a new group module to the group management.
      * @threadsafe
      */
     static void add_module(abstract_group::unique_module_ptr);
@@ -120,10 +112,12 @@ class group : util::comparable<group>
      * @brief Returns the module associated with @p module_name.
      * @threadsafe
      */
-    static abstract_group::module_ptr get_module(const std::string& module_name);
-
+    static abstract_group::module_ptr
+    get_module(const std::string& module_name);
 
  private:
+
+    inline abstract_group* get() const { return m_ptr.get(); }
 
     abstract_group_ptr m_ptr;
 

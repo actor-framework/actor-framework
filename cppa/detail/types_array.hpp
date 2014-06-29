@@ -16,15 +16,14 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_DETAIL_TYPES_ARRAY_HPP
 #define CPPA_DETAIL_TYPES_ARRAY_HPP
 
 #include <atomic>
 #include <typeinfo>
 
-#include "cppa/util/type_list.hpp"
-#include "cppa/util/type_traits.hpp"
+#include "cppa/detail/type_list.hpp"
+#include "cppa/detail/type_traits.hpp"
 
 // forward declarations
 namespace cppa {
@@ -35,7 +34,10 @@ const uniform_type_info* uniform_typeid(const std::type_info&);
 namespace cppa {
 namespace detail {
 
-enum type_info_impl { std_tinf, cppa_tinf };
+enum type_info_impl {
+    std_tinf,
+    cppa_tinf
+};
 
 // some metaprogramming utility
 template<type_info_impl What, bool IsBuiltin, typename T>
@@ -43,12 +45,16 @@ struct ta_util;
 
 template<bool IsBuiltin, typename T>
 struct ta_util<std_tinf, IsBuiltin, T> {
-    static inline const std::type_info* get() { return &(typeid(T)); }
+    static inline const std::type_info* get() {
+        return &(typeid(T));
+    }
 };
 
 template<>
 struct ta_util<std_tinf, true, anything> {
-    static inline const std::type_info* get() { return nullptr; }
+    static inline const std::type_info* get() {
+        return nullptr;
+    }
 };
 
 template<typename T>
@@ -60,12 +66,16 @@ struct ta_util<cppa_tinf, true, T> {
 
 template<>
 struct ta_util<cppa_tinf, true, anything> {
-    static inline const uniform_type_info* get() { return nullptr; }
+    static inline const uniform_type_info* get() {
+        return nullptr;
+    }
 };
 
 template<typename T>
 struct ta_util<cppa_tinf, false, T> {
-    static inline const uniform_type_info* get() { return nullptr; }
+    static inline const uniform_type_info* get() {
+        return nullptr;
+    }
 };
 
 // only built-in types are guaranteed to be available at static initialization
@@ -78,7 +88,7 @@ struct types_array_impl {
     inline bool is_pure() const { return true; }
     // all types are builtin, perform lookup on constuction
     const uniform_type_info* data[sizeof...(T)];
-    types_array_impl() : data{ta_util<cppa_tinf, true, T>::get()...} { }
+    types_array_impl() : data{ta_util<cppa_tinf, true, T>::get()...} {}
     inline const uniform_type_info* operator[](size_t p) const {
         return data[p];
     }
@@ -96,12 +106,13 @@ struct types_array_impl<false, T...> {
     // contains uniform_type_infos for builtin types and lazy initializes
     // non-builtin types at runtime
     mutable std::atomic<const uniform_type_info*> data[sizeof...(T)];
-    mutable std::atomic<const uniform_type_info* *> pairs;
+    mutable std::atomic<const uniform_type_info**> pairs;
     // pairs[sizeof...(T)];
     types_array_impl()
-        : tinfo_data{ta_util<std_tinf, util::is_builtin<T>::value, T>::get()...} {
-        bool static_init[sizeof...(T)] = {    !std::is_same<T, anything>::value
-                                           && util::is_builtin<T>::value ...  };
+            : tinfo_data{ta_util<std_tinf, detail::is_builtin<T>::value,
+                                 T>::get()...} {
+        bool static_init[sizeof...(T)] = {!std::is_same<T, anything>::value &&
+                                          detail::is_builtin<T>::value...};
         for (size_t i = 0; i < sizeof...(T); ++i) {
             if (static_init[i]) {
                 data[i].store(uniform_typeid(*(tinfo_data[i])),
@@ -124,36 +135,38 @@ struct types_array_impl<false, T...> {
     inline const_iterator begin() const {
         auto result = pairs.load();
         if (result == nullptr) {
-            auto parr = new const uniform_type_info*[sizeof...(T)];
+            auto parr = new const uniform_type_info* [sizeof...(T)];
             for (size_t i = 0; i < sizeof...(T); ++i) {
                 parr[i] = (*this)[i];
             }
-            if (!pairs.compare_exchange_weak(result, parr, std::memory_order_relaxed)) {
+            if (!pairs.compare_exchange_weak(result, parr,
+                                             std::memory_order_relaxed)) {
                 delete[] parr;
-            }
-            else {
+            } else {
                 result = parr;
             }
         }
         return result;
     }
-    inline const_iterator end() const {
-        return begin() + sizeof...(T);
-    }
+    inline const_iterator end() const { return begin() + sizeof...(T); }
+
 };
 
 // a container for uniform_type_information singletons with optimization
 // for builtin types; can act as pattern
 template<typename... T>
-struct types_array : types_array_impl<util::tl_forall<util::type_list<T...>,
-                                                      util::is_builtin>::value,
-                                      T...> {
+struct types_array
+    : types_array_impl<
+          detail::tl_forall<detail::type_list<T...>, detail::is_builtin>::value,
+          T...> {
     static constexpr size_t size = sizeof...(T);
-    typedef util::type_list<T...> types;
-    typedef typename util::tl_filter_not<types, util::is_anything>::type
-            filtered_types;
-    static constexpr size_t filtered_size = util::tl_size<filtered_types>::value;
+    typedef detail::type_list<T...> types;
+    typedef typename detail::tl_filter_not<types, detail::is_anything>::type
+    filtered_types;
+    static constexpr size_t filtered_size =
+        detail::tl_size<filtered_types>::value;
     inline bool has_values() const { return false; }
+
 };
 
 // utility for singleton-like access to a types_array
@@ -169,8 +182,9 @@ template<typename TypeList>
 struct static_types_array_from_type_list;
 
 template<typename... T>
-struct static_types_array_from_type_list<util::type_list<T...>> {
+struct static_types_array_from_type_list<detail::type_list<T...>> {
     typedef static_types_array<T...> type;
+
 };
 
 template<typename... T>
@@ -180,13 +194,12 @@ template<typename T>
 struct static_type_list<T> {
     static const std::type_info* list;
     static inline const std::type_info* by_offset(size_t offset) {
-        return offset == 0 ? list : &typeid(util::type_list<>);
+        return offset == 0 ? list : &typeid(detail::type_list<>);
     }
 };
 
 template<typename T>
-const std::type_info* static_type_list<T>::list = &typeid(util::type_list<T>);
-
+const std::type_info* static_type_list<T>::list = &typeid(detail::type_list<T>);
 
 // utility for singleton-like access to a type_info instance of a type_list
 template<typename T0, typename T1, typename... Ts>
@@ -198,7 +211,8 @@ struct static_type_list<T0, T1, Ts...> {
 };
 
 template<typename T0, typename T1, typename... Ts>
-const std::type_info* static_type_list<T0, T1, Ts...>::list = &typeid(util::type_list<T0, T1, Ts...>);
+const std::type_info* static_type_list<T0, T1, Ts...>::list =
+    &typeid(detail::type_list<T0, T1, Ts...>);
 
 } // namespace detail
 } // namespace cppa

@@ -16,45 +16,46 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_ACTOR_ADDR_HPP
 #define CPPA_ACTOR_ADDR_HPP
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <type_traits>
 
 #include "cppa/intrusive_ptr.hpp"
+
+#include "cppa/fwd.hpp"
 #include "cppa/abstract_actor.hpp"
 
-#include "cppa/util/comparable.hpp"
+#include "cppa/detail/comparable.hpp"
 
 namespace cppa {
 
-class actor;
-class local_actor;
-class actor_namespace;
+struct invalid_actor_addr_t {
+    constexpr invalid_actor_addr_t() {}
 
-namespace detail { class raw_access; }
+};
 
 /**
  * @brief Identifies an invalid {@link actor_addr}.
  * @relates actor_addr
  */
-struct invalid_actor_addr_t { constexpr invalid_actor_addr_t() { } };
-
 constexpr invalid_actor_addr_t invalid_actor_addr = invalid_actor_addr_t{};
 
 /**
  * @brief Stores the address of typed as well as untyped actors.
  */
-class actor_addr : util::comparable<actor_addr>
-                 , util::comparable<actor_addr, abstract_actor*>
-                 , util::comparable<actor_addr, abstract_actor_ptr> {
+class actor_addr : detail::comparable<actor_addr>,
+                   detail::comparable<actor_addr, abstract_actor*>,
+                   detail::comparable<actor_addr, abstract_actor_ptr> {
 
     friend class actor;
     friend class abstract_actor;
-    friend class detail::raw_access;
+
+    template<typename T, typename U>
+    friend T actor_cast(const U&);
 
  public:
 
@@ -72,13 +73,9 @@ class actor_addr : util::comparable<actor_addr>
 
     actor_addr operator=(const invalid_actor_addr_t&);
 
-    inline explicit operator bool() const {
-        return static_cast<bool>(m_ptr);
-    }
+    inline explicit operator bool() const { return static_cast<bool>(m_ptr); }
 
-    inline bool operator!() const {
-        return !m_ptr;
-    }
+    inline bool operator!() const { return !m_ptr; }
 
     intptr_t compare(const actor_addr& other) const;
 
@@ -90,7 +87,7 @@ class actor_addr : util::comparable<actor_addr>
 
     actor_id id() const;
 
-    const node_id& node() const;
+    node_id node() const;
 
     /**
      * @brief Returns whether this is an address of a
@@ -98,7 +95,11 @@ class actor_addr : util::comparable<actor_addr>
      */
     bool is_remote() const;
 
+    std::set<std::string> interface() const;
+
  private:
+
+    inline abstract_actor* get() const { return m_ptr.get(); }
 
     explicit actor_addr(abstract_actor*);
 
@@ -107,5 +108,16 @@ class actor_addr : util::comparable<actor_addr>
 };
 
 } // namespace cppa
+
+// allow actor_addr to be used in hash maps
+namespace std {
+template<>
+struct hash<cppa::actor_addr> {
+    inline size_t operator()(const cppa::actor_addr& ref) const {
+        return static_cast<size_t>(ref.id());
+    }
+
+};
+} // namespace std
 
 #endif // CPPA_ACTOR_ADDR_HPP

@@ -16,14 +16,12 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_DETAIL_UNBOXED_HPP
 #define CPPA_DETAIL_UNBOXED_HPP
 
 #include <memory>
 
-#include "cppa/util/guard.hpp"
-#include "cppa/util/wrapped.hpp"
+#include "cppa/detail/wrapped.hpp"
 
 namespace cppa {
 namespace detail {
@@ -31,31 +29,31 @@ namespace detail {
 template<typename T>
 struct unboxed {
     typedef T type;
+
 };
 
 template<typename T>
-struct unboxed< util::wrapped<T> > {
-    typedef typename util::wrapped<T>::type type;
+struct unboxed<detail::wrapped<T>> {
+    typedef typename detail::wrapped<T>::type type;
+
 };
 
 template<typename T>
-struct unboxed<util::wrapped<T> (&)()> {
-    typedef typename util::wrapped<T>::type type;
+struct unboxed<detail::wrapped<T>(&)()> {
+    typedef typename detail::wrapped<T>::type type;
+
 };
 
 template<typename T>
-struct unboxed<util::wrapped<T> ()> {
-    typedef typename util::wrapped<T>::type type;
+struct unboxed<detail::wrapped<T>()> {
+    typedef typename detail::wrapped<T>::type type;
+
 };
 
 template<typename T>
-struct unboxed<util::wrapped<T> (*)()> {
-    typedef typename util::wrapped<T>::type type;
-};
+struct unboxed<detail::wrapped<T>(*)()> {
+    typedef typename detail::wrapped<T>::type type;
 
-template<typename T>
-struct unboxed<std::unique_ptr<util::guard<T>>> {
-    typedef T type;
 };
 
 } // namespace detail

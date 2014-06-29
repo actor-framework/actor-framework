@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_CHANNEL_HPP
 #define CPPA_CHANNEL_HPP
 
@@ -24,9 +23,11 @@
 #include <type_traits>
 
 #include "cppa/intrusive_ptr.hpp"
+
+#include "cppa/fwd.hpp"
 #include "cppa/abstract_channel.hpp"
 
-#include "cppa/util/comparable.hpp"
+#include "cppa/detail/comparable.hpp"
 
 namespace cppa {
 
@@ -37,16 +38,15 @@ class execution_unit;
 struct invalid_actor_t;
 struct invalid_group_t;
 
-namespace detail { class raw_access; }
-
 /**
  * @brief A handle to instances of {@link abstract_channel}.
  */
-class channel : util::comparable<channel>
-              , util::comparable<channel, actor>
-              , util::comparable<channel, abstract_channel*> {
+class channel : detail::comparable<channel>,
+                detail::comparable<channel, actor>,
+                detail::comparable<channel, abstract_channel*> {
 
-    friend class detail::raw_access;
+    template<typename T, typename U>
+    friend T actor_cast(const U&);
 
  public:
 
@@ -63,27 +63,18 @@ class channel : util::comparable<channel>
     template<typename T>
     channel(intrusive_ptr<T> ptr,
             typename std::enable_if<
-                std::is_base_of<abstract_channel, T>::value
-            >::type* = 0)
-        : m_ptr(ptr) { }
+                std::is_base_of<abstract_channel, T>::value>::type* = 0)
+            : m_ptr(ptr) {}
 
     channel(abstract_channel* ptr);
 
-    inline explicit operator bool() const {
-        return static_cast<bool>(m_ptr);
-    }
+    inline explicit operator bool() const { return static_cast<bool>(m_ptr); }
 
-    inline bool operator!() const {
-        return !m_ptr;
-    }
+    inline bool operator!() const { return !m_ptr; }
 
-    inline abstract_channel* operator->() const {
-        return m_ptr.get();
-    }
+    inline abstract_channel* operator->() const { return m_ptr.get(); }
 
-    inline abstract_channel& operator*() const {
-        return *m_ptr;
-    }
+    inline abstract_channel& operator*() const { return *m_ptr; }
 
     intptr_t compare(const channel& other) const;
 
@@ -95,6 +86,8 @@ class channel : util::comparable<channel>
                             const abstract_channel* rhs);
 
  private:
+
+    inline abstract_channel* get() const { return m_ptr.get(); }
 
     intrusive_ptr<abstract_channel> m_ptr;
 

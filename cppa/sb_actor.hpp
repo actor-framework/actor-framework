@@ -16,9 +16,8 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
-#ifndef CPPA_SB_ACTOR_HPP
-#define CPPA_SB_ACTOR_HPP
+#ifndef CPPA_FSM_ACTOR_HPP
+#define CPPA_FSM_ACTOR_HPP
 
 #include <utility>
 #include <type_traits>
@@ -56,10 +55,11 @@ class sb_actor : public Base {
  protected:
 
     template<typename... Ts>
-    sb_actor(Ts&&... args) : Base(std::forward<Ts>(args)...) { }
+    sb_actor(Ts&&... args)
+            : Base(std::forward<Ts>(args)...) {}
 
 };
 
 } // namespace cppa
 
-#endif // CPPA_SB_ACTOR_HPP
+#endif // CPPA_FSM_ACTOR_HPP

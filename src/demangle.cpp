@@ -16,71 +16,95 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
+#include <memory>
+#include <string>
+#include <cstdlib>
 #include <stdexcept>
 
 #include "cppa/config.hpp"
 #include "cppa/detail/demangle.hpp"
 
-#if defined(CPPA_GCC) || defined(CPPA_CLANG)
-#include <cxxabi.h>
+#if defined(CPPA_CLANG) || defined(CPPA_GCC)
+#   include <cxxabi.h>
+#   include <stdlib.h>
 #endif
-
-#include <stdlib.h>
 
 namespace cppa {
 namespace detail {
 
-std::string demangle(const char* decorated) {
-    size_t size;
-    int status;
-    std::unique_ptr<char, void (*)(void*)> undecorated{
-        abi::__cxa_demangle(decorated, nullptr, &size, &status),
-        std::free
-    };
-    if (status != 0) {
-        std::string error_msg = "Could not demangle type name ";
-        error_msg += decorated;
-        throw std::logic_error(error_msg);
-    }
-    std::string result; // the undecorated typeid name
-    result.reserve(size);
-    const char* cstr = undecorated.get();
-    // filter unnecessary characters from undecorated
+namespace {
+
+// filter unnecessary characters from undecorated cstr
+std::string filter_whitespaces(const char* cstr, size_t size = 0) {
+    std::string result;
+    if (size > 0) result.reserve(size);
     char c = *cstr;
     while (c != '\0') {
         if (c == ' ') {
             char previous_c = result.empty() ? ' ' : *(result.rbegin());
             // get next non-space character
-            for (c = *++cstr; c == ' '; c = *++cstr) { }
+            for (c = *++cstr; c == ' '; c = *++cstr) {
+            }
             if (c != '\0') {
                 // skip whitespace unless it separates two alphanumeric
                 // characters (such as in "unsigned int")
                 if (isalnum(c) && isalnum(previous_c)) {
                     result += ' ';
                     result += c;
-                }
-                else {
+                } else {
                     result += c;
                 }
                 c = *++cstr;
             }
-        }
-        else {
+        } else {
             result += c;
             c = *++cstr;
         }
     }
-#   ifdef CPPA_CLANG
-    // replace "std::__1::" with "std::" (fixes strange clang names)
-    std::string needle = "std::__1::";
-    std::string fixed_string = "std::";
-    for (auto pos = result.find(needle); pos != std::string::npos; pos = result.find(needle)) {
-        result.replace(pos, needle.size(), fixed_string);
-    }
-#   endif
     return result;
 }
+
+} // namespace <anonymous>
+
+#if defined(CPPA_CLANG) || defined(CPPA_GCC)
+
+    std::string demangle(const char* decorated) {
+        using std::string;
+        size_t size;
+        int status;
+        std::unique_ptr<char, void (*)(void*)> undecorated{
+            abi::__cxa_demangle(decorated, nullptr, &size, &status), std::free};
+        if (status != 0) {
+            string error_msg = "Could not demangle type name ";
+            error_msg += decorated;
+            throw std::logic_error(error_msg);
+        }
+        // the undecorated typeid name
+        string result = filter_whitespaces(undecorated.get(), size);
+#       ifdef CPPA_CLANG
+        // replace "std::__1::" with "std::" (fixes strange clang names)
+        string needle = "std::__1::";
+        string fixed_string = "std::";
+        for (auto pos = result.find(needle); pos != string::npos;
+             pos = result.find(needle)) {
+            result.replace(pos, needle.size(), fixed_string);
+        }
+#       endif
+        return result;
+    }
+
+#elif defined(CPPA_MSVC)
+
+    string demangle(const char* decorated) {
+        // on MSVC, name() returns a human-readable version, all we need
+        // to do is to remove "struct" and "class" qualifiers
+        // (handled in to_uniform_name)
+        return filter_whitespaces(decorated);
+    }
+
+#else
+#   error "compiler or platform not supported"
+#endif
 
 std::string demangle(const std::type_info& tinf) {
     return demangle(tinf.name());
@@ -88,4 +112,3 @@ std::string demangle(const std::type_info& tinf) {
 
 } // namespace detail
 } // namespace cppa
-

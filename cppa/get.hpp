@@ -53,9 +53,9 @@ const typename util::type_at<N, Ts...>::type& get(const cow_tuple<Ts...>&);
 template<size_t N, typename... Ts>
 const typename util::type_at<N, Ts...>::type& get(const detail::pseudo_tuple<Ts...>& tv);
 
-// forward declarations of get(util::type_list<...>&)
+// forward declarations of get(detail::type_list<...>&)
 template<size_t N, typename... Ts>
-typename util::type_at<N, Ts...>::type get(const util::type_list<Ts...>&);
+typename util::type_at<N, Ts...>::type get(const detail::type_list<Ts...>&);
 
 // forward declarations of get_ref(detail::tdata<...>&)
 template<size_t N, typename... Ts>

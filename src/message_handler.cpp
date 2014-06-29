@@ -41,6 +41,11 @@ behavior_impl_ptr combine(const message_handler& lhs, behavior_impl_ptr rhs) {
     return lhs.as_behavior_impl()->or_else(rhs);
 }
 
+message_handler combine(behavior_impl_ptr lhs, behavior_impl_ptr rhs) {
+    return lhs->or_else(rhs);
+}
+
+
 behavior_impl_ptr extract(const message_handler& arg) {
     return arg.as_behavior_impl();
 }

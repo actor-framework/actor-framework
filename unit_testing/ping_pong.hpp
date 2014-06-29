@@ -4,7 +4,7 @@
 //#include "cppa/actor.hpp"
 
 #include <cstddef>
-#include "cppa/cppa_fwd.hpp"
+#include "cppa/fwd.hpp"
 
 void ping(cppa::blocking_actor*, size_t num_pings);
 

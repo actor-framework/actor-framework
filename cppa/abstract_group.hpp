@@ -37,7 +37,6 @@ class peer_connection;
 } // namespace detail
 } // namespace cppa
 
-
 namespace cppa {
 
 class group;
@@ -162,14 +161,6 @@ class abstract_group : public abstract_channel {
  * @relates group
  */
 typedef intrusive_ptr<abstract_group> abstract_group_ptr;
-
-/**
- * @brief Makes *all* local groups accessible via network on address @p addr
- *        and @p port.
- * @throws bind_failure
- * @throws network_error
- */
-void publish_local_groups(std::uint16_t port, const char* addr = nullptr);
 
 } // namespace cppa
 

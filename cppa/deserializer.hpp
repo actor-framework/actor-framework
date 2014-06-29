@@ -16,23 +16,20 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_DESERIALIZER_HPP
 #define CPPA_DESERIALIZER_HPP
 
 #include <string>
 #include <cstddef>
 
-#include "cppa/primitive_type.hpp"
 #include "cppa/primitive_variant.hpp"
+#include "cppa/uniform_type_info.hpp"
 
 namespace cppa {
 
 class object;
 class actor_namespace;
-class type_lookup_table;
-
-namespace util { class buffer; }
+class uniform_type_info;
 
 /**
  * @ingroup TypeSystem
@@ -45,16 +42,9 @@ class deserializer {
 
  public:
 
-    deserializer(actor_namespace* ns = nullptr,
-                 type_lookup_table* incoming_types = nullptr);
+    deserializer(actor_namespace* ns = nullptr);
 
     virtual ~deserializer();
-
-    /**
-     * @brief Seeks the beginning of the next object and return
-     *        its uniform type name.
-     */
-    //virtual std::string seek_object() = 0;
 
     /**
      * @brief Begins deserialization of a new object.
@@ -78,53 +68,58 @@ class deserializer {
     virtual void end_sequence() = 0;
 
     /**
-     * @brief Reads a primitive value from the data source of type @p ptype.
-     * @param ptype Expected primitive data type.
-     * @returns A primitive value of type @p ptype.
+     * @brief Reads a primitive value from the data source.
      */
-    virtual primitive_variant read_value(primitive_type ptype) = 0;
+    virtual void read_value(primitive_variant& storage) = 0;
 
     /**
-     * @brief Reads a value of type @p T from the data source of type @p ptype.
-     * @note @p T must be of a primitive type.
-     * @returns The read value of type @p T.
+     * @brief Reads a value of type @p T from the data source.
+     * @note @p T must be a primitive type.
      */
     template<typename T>
     inline T read() {
-        auto val = read_value(detail::type_to_ptype<T>::ptype);
-        return std::move(get_ref<T>(val));
+        primitive_variant val{T()};
+        read_value(val);
+        return std::move(get<T>(val));
     }
 
-    /**
-     * @brief Reads a tuple of primitive values from the data
-     *        source of the types @p ptypes.
-     * @param num The size of the tuple.
-     * @param ptypes Array of expected primitive data types.
-     * @param storage Array of size @p num, storing the result of this function.
-     */
-    virtual void read_tuple(size_t num,
-                            const primitive_type* ptypes,
-                            primitive_variant* storage   ) = 0;
+    template<typename T>
+    inline T read(const uniform_type_info* uti) {
+        T result;
+        uti->deserialize(&result, uti);
+        return result;
+    }
+
+    template<typename T>
+    inline deserializer& read(T& storage) {
+        primitive_variant val{T()};
+        read_value(val);
+        storage = std::move(get<T>(val));
+        return *this;
+    }
+
+    template<typename T>
+    inline deserializer& read(T& storage, const uniform_type_info* uti) {
+        uti->deserialize(&storage, this);
+        return *this;
+    }
 
     /**
      * @brief Reads a raw memory block.
      */
     virtual void read_raw(size_t num_bytes, void* storage) = 0;
 
-    inline actor_namespace* get_namespace() {
-        return m_namespace;
-    }
+    inline actor_namespace* get_namespace() { return m_namespace; }
 
-    inline type_lookup_table* incoming_types() {
-        return m_incoming_types;
+    template<class Buffer>
+    void read_raw(size_t num_bytes, Buffer& storage) {
+        storage.resize(num_bytes);
+        read_raw(num_bytes, storage.data());
     }
-
-    void read_raw(size_t num_bytes, util::buffer& storage);
 
  private:
 
     actor_namespace* m_namespace;
-    type_lookup_table* m_incoming_types;
 
 };
 

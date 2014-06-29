@@ -34,9 +34,9 @@
 #include <iostream>
 
 #include "cppa/config.hpp"
-#include "cppa/singletons.hpp"
 #include "cppa/opencl/program.hpp"
 #include "cppa/opencl/opencl_metainfo.hpp"
+#include "cppa/detail/singletons.hpp"
 
 using namespace std;
 
@@ -95,7 +95,7 @@ program program::create(const char* kernel_source, const char* options, uint32_t
                                   sizeof(buffer[0]) * buildlog_buffer_size,
                                   buffer.data(),
                                   nullptr);
-            // make sure string is null terminated 
+            // make sure string is null terminated
             buffer.push_back('\0');
             cerr << "OpenCL build error log: "
                  << endl

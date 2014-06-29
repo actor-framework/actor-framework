@@ -16,8 +16,8 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#ifndef CPPA_DECORATED_TUPLE_HPP
-#define CPPA_DECORATED_TUPLE_HPP
+#ifndef CPPA_DETAIL_DECORATED_TUPLE_HPP
+#define CPPA_DETAIL_DECORATED_TUPLE_HPP
 
 #include <vector>
 #include <algorithm>
@@ -26,11 +26,10 @@
 #include "cppa/ref_counted.hpp"
 #include "cppa/uniform_type_info.hpp"
 
-#include "cppa/util/type_list.hpp"
+#include "cppa/detail/type_list.hpp"
 
 #include "cppa/detail/tuple_vals.hpp"
 #include "cppa/detail/message_data.hpp"
-#include "cppa/detail/serialize_tuple.hpp"
 
 namespace cppa {
 namespace detail {
@@ -108,4 +107,4 @@ class decorated_tuple : public message_data {
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_DECORATED_TUPLE_HPP
+#endif // CPPA_DETAIL_DECORATED_TUPLE_HPP

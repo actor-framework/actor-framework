@@ -7,8 +7,6 @@
 #include "cppa/match.hpp"
 #include "cppa/announce.hpp"
 #include "cppa/to_string.hpp"
-#include "cppa/guard_expr.hpp"
-#include "cppa/detail/object_array.hpp"
 
 using namespace std;
 using namespace cppa;

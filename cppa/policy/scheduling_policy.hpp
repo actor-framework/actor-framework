@@ -16,19 +16,20 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
+#ifndef CPPA_SCHEDULING_POLICY_HPP
+#define CPPA_SCHEDULING_POLICY_HPP
 
-#ifndef CPPA_POLICY_SCHEDULING_POLICY_HPP
-#define CPPA_POLICY_SCHEDULING_POLICY_HPP
-
-#include "cppa/cppa_fwd.hpp"
+#include "cppa/fwd.hpp"
 
 namespace cppa {
+
 namespace policy {
 
 enum class timed_fetch_result {
     no_message,
     indeterminate,
     success
+
 };
 
 /**
@@ -88,10 +89,8 @@ class scheduling_policy {
      *        steps to resume the actor if it's currently blocked.
      */
     template<class Actor>
-    void enqueue(Actor* self,
-                 msg_hdr_cref hdr,
-                 message& msg,
-                 execution_unit* host);
+    void enqueue(Actor* self, const actor_addr& sender, message_id mid,
+                 message& msg, execution_unit* host);
 
     /**
      * @brief Starts the given actor either by launching a thread or enqueuing
@@ -105,4 +104,4 @@ class scheduling_policy {
 } // namespace policy
 } // namespace cppa
 
-#endif // CPPA_POLICY_SCHEDULING_POLICY_HPP
+#endif // CPPA_SCHEDULING_POLICY_HPP

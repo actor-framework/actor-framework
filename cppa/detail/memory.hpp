@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_DETAIL_MEMORY_HPP
 #define CPPA_DETAIL_MEMORY_HPP
 
@@ -30,16 +29,18 @@
 #include "cppa/config.hpp"
 #include "cppa/ref_counted.hpp"
 
-namespace cppa { class mailbox_element; }
+namespace cppa {
+class mailbox_element;
+} // namespace cppa
 
 namespace cppa {
 namespace detail {
 
 namespace {
 
-constexpr size_t s_alloc_size   = 1024*1024;    // allocate ~1mb chunks
-constexpr size_t s_cache_size   = 10*1024*1024; // cache about 10mb per thread
-constexpr size_t s_min_elements = 5;            // don't create < 5 elements
+constexpr size_t s_alloc_size = 1024 * 1024;      // allocate ~1mb chunks
+constexpr size_t s_cache_size = 10 * 1024 * 1024; // cache about 10mb per thread
+constexpr size_t s_min_elements = 5;              // don't create < 5 elements
 
 } // namespace <anonymous>
 
@@ -47,6 +48,7 @@ struct disposer {
     inline void operator()(memory_managed* ptr) const {
         ptr->request_deletion();
     }
+
 };
 
 class instance_wrapper {
@@ -84,7 +86,7 @@ class instance_wrapper;
 template<typename T>
 class basic_memory_cache;
 
-#ifdef CPPA_DETAIL_DISABLE_MEM_MANAGEMENT
+#ifdef CPPA_DISABLE_MEM_MANAGEMENT
 
 class memory {
 
@@ -98,7 +100,7 @@ class memory {
      */
     template<typename T, typename... Ts>
     static T* create(Ts&&... args) {
-        return new T (std::forward<Ts>(args)...);
+        return new T(std::forward<Ts>(args)...);
     }
 
     static inline memory_cache* get_cache_map_entry(const std::type_info*) {
@@ -107,7 +109,7 @@ class memory {
 
 };
 
-#else // CPPA_DETAIL_DISABLE_MEM_MANAGEMENT
+#else // CPPA_DISABLE_MEM_MANAGEMENT
 
 template<typename T>
 class basic_memory_cache : public memory_cache {
@@ -117,15 +119,18 @@ class basic_memory_cache : public memory_cache {
 
     struct wrapper : instance_wrapper {
         ref_counted* parent;
-        union { T instance; };
-        wrapper() : parent(nullptr) { }
-        ~wrapper() { }
+        union {
+            T instance;
+
+        };
+        wrapper() : parent(nullptr) {}
+        ~wrapper() {}
         void destroy() { instance.~T(); }
         void deallocate() { parent->deref(); }
+
     };
 
     class storage : public ref_counted {
-
 
      public:
 
@@ -153,17 +158,13 @@ class basic_memory_cache : public memory_cache {
 
     std::vector<wrapper*> cached_elements;
 
-    basic_memory_cache() {
-        cached_elements.reserve(dsize);
-    }
+    basic_memory_cache() { cached_elements.reserve(dsize); }
 
     ~basic_memory_cache() {
         for (auto e : cached_elements) e->deallocate();
     }
 
-    void* downcast(memory_managed* ptr) {
-        return static_cast<T*>(ptr);
-    }
+    void* downcast(memory_managed* ptr) { return static_cast<T*>(ptr); }
 
     void release_instance(void* vptr) override {
         CPPA_REQUIRE(vptr != nullptr);
@@ -205,7 +206,7 @@ class memory {
     static T* create(Ts&&... args) {
         auto mc = get_or_set_cache_map_entry<T>();
         auto p = mc->new_instance();
-        auto result = new (p.second) T (std::forward<Ts>(args)...);
+        auto result = new (p.second) T(std::forward<Ts>(args)...);
         result->outer_memory = p.first;
         return result;
     }
@@ -214,7 +215,8 @@ class memory {
 
  private:
 
-    static void add_cache_map_entry(const std::type_info* tinf, memory_cache* instance);
+    static void add_cache_map_entry(const std::type_info* tinf,
+                                    memory_cache* instance);
 
     template<typename T>
     static inline memory_cache* get_or_set_cache_map_entry() {
@@ -228,7 +230,7 @@ class memory {
 
 };
 
-#endif // CPPA_DETAIL_DISABLE_MEM_MANAGEMENT
+#endif // CPPA_DISABLE_MEM_MANAGEMENT
 
 } // namespace detail
 } // namespace cppa

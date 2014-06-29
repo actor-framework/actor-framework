@@ -20,18 +20,14 @@
 #ifndef CPPA_COW_TUPLE_HPP
 #define CPPA_COW_TUPLE_HPP
 
+// <backward_compatibility version="0.9">
 #include <cstddef>
 #include <string>
 #include <typeinfo>
 #include <type_traits>
 
-#include "cppa/get.hpp"
 #include "cppa/message.hpp"
 #include "cppa/ref_counted.hpp"
-
-#include "cppa/util/type_traits.hpp"
-#include "cppa/util/limited_vector.hpp"
-#include "cppa/util/compare_tuples.hpp"
 
 #include "cppa/detail/tuple_vals.hpp"
 #include "cppa/detail/decorated_tuple.hpp"
@@ -39,15 +35,18 @@
 
 namespace cppa {
 
+template<typename... Ts>
+class cow_tuple;
+
 /**
  * @ingroup CopyOnWrite
- * @brief A fixed-length copy-on-write cow_tuple.
+ * @brief A fixed-length copy-on-write tuple.
  */
 template<typename Head, typename... Tail>
 class cow_tuple<Head, Tail...> {
 
-    static_assert(util::tl_forall<util::type_list<Head, Tail...>,
-                                  util::is_legal_tuple_type>::value,
+    static_assert(detail::tl_forall<detail::type_list<Head, Tail...>,
+                                    detail::is_legal_tuple_type>::value,
                   "illegal types in cow_tuple definition: "
                   "pointers and references are prohibited");
 
@@ -59,11 +58,13 @@ class cow_tuple<Head, Tail...> {
 
  public:
 
-    typedef util::type_list<Head, Tail...> types;
+    typedef detail::type_list<Head, Tail...> types;
 
     static constexpr size_t num_elements = sizeof...(Tail) + 1;
 
-    cow_tuple() : m_vals(new data_type) { }
+    cow_tuple() : m_vals(new data_type) {
+        // nop
+    }
 
     /**
      * @brief Initializes the cow_tuple with @p args.
@@ -71,7 +72,9 @@ class cow_tuple<Head, Tail...> {
      */
     template<typename... Ts>
     cow_tuple(const Head& arg, Ts&&... args)
-    : m_vals(new data_type(arg, std::forward<Ts>(args)...)) { }
+            : m_vals(new data_type(arg, std::forward<Ts>(args)...)) {
+        // nop
+    }
 
     /**
      * @brief Initializes the cow_tuple with @p args.
@@ -79,7 +82,9 @@ class cow_tuple<Head, Tail...> {
      */
     template<typename... Ts>
     cow_tuple(Head&& arg, Ts&&... args)
-    : m_vals(new data_type(std::move(arg), std::forward<Ts>(args)...)) { }
+            : m_vals(new data_type(std::move(arg), std::forward<Ts>(args)...)) {
+        // nop
+    }
 
     cow_tuple(cow_tuple&&) = default;
     cow_tuple(const cow_tuple&) = default;
@@ -141,7 +146,7 @@ template<typename TypeList>
 struct cow_tuple_from_type_list;
 
 template<typename... Ts>
-struct cow_tuple_from_type_list< util::type_list<Ts...> > {
+struct cow_tuple_from_type_list< detail::type_list<Ts...>> {
     typedef cow_tuple<Ts...> type;
 };
 
@@ -160,8 +165,8 @@ struct is_cow_tuple<cow_tuple<Ts...>> { static constexpr bool value = true; };
  * @relates cow_tuple
  */
 template<size_t N, typename... Ts>
-const typename util::type_at<N, Ts...>::type& get(const cow_tuple<Ts...>& tup) {
-    typedef typename util::type_at<N, Ts...>::type result_type;
+const typename detail::type_at<N, Ts...>::type& get(const cow_tuple<Ts...>& tup) {
+    typedef typename detail::type_at<N, Ts...>::type result_type;
     return *reinterpret_cast<const result_type*>(tup.at(N));
 }
 
@@ -175,8 +180,8 @@ const typename util::type_at<N, Ts...>::type& get(const cow_tuple<Ts...>& tup) {
  * @relates cow_tuple
  */
 template<size_t N, typename... Ts>
-typename util::type_at<N, Ts...>::type& get_ref(cow_tuple<Ts...>& tup) {
-    typedef typename util::type_at<N, Ts...>::type result_type;
+typename detail::type_at<N, Ts...>::type& get_ref(cow_tuple<Ts...>& tup) {
+    typedef typename detail::type_at<N, Ts...>::type result_type;
     return *reinterpret_cast<result_type*>(tup.mutable_at(N));
 }
 
@@ -193,32 +198,7 @@ make_cow_tuple(Ts&&... args) {
     return {std::forward<Ts>(args)...};
 }
 
-/**
- * @brief Compares two cow_tuples.
- * @param lhs First cow_tuple object.
- * @param rhs Second cow_tuple object.
- * @returns @p true if @p lhs and @p rhs are equal; otherwise @p false.
- * @relates cow_tuple
- */
-template<typename... LhsTs, typename... RhsTs>
-inline bool operator==(const cow_tuple<LhsTs...>& lhs,
-                       const cow_tuple<RhsTs...>& rhs) {
-    return util::compare_tuples(lhs, rhs);
-}
-
-/**
- * @brief Compares two cow_tuples.
- * @param lhs First cow_tuple object.
- * @param rhs Second cow_tuple object.
- * @returns @p true if @p lhs and @p rhs are not equal; otherwise @p false.
- * @relates cow_tuple
- */
-template<typename... LhsTs, typename... RhsTs>
-inline bool operator!=(const cow_tuple<LhsTs...>& lhs,
-                       const cow_tuple<RhsTs...>& rhs) {
-    return !(lhs == rhs);
-}
-
 } // namespace cppa
+// </backward_compatibility>
 
 #endif // CPPA_COW_TUPLE_HPP

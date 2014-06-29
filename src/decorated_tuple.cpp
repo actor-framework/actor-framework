@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #include "cppa/detail/decorated_tuple.hpp"
 
 namespace cppa {
@@ -27,9 +26,7 @@ void* decorated_tuple::mutable_at(size_t pos) {
     return m_decorated->mutable_at(m_mapping[pos]);
 }
 
-size_t decorated_tuple::size() const {
-    return m_mapping.size();
-}
+size_t decorated_tuple::size() const { return m_mapping.size(); }
 
 decorated_tuple* decorated_tuple::copy() const {
     return new decorated_tuple(*this);
@@ -45,14 +42,12 @@ const uniform_type_info* decorated_tuple::type_at(size_t pos) const {
     return m_decorated->type_at(m_mapping[pos]);
 }
 
-auto decorated_tuple::type_token() const -> rtti {
-    return m_token;
-}
+auto decorated_tuple::type_token() const -> rtti { return m_token; }
 
 void decorated_tuple::init() {
-    CPPA_REQUIRE(   m_mapping.empty()
-                 ||   *(std::max_element(m_mapping.begin(), m_mapping.end()))
-                    < static_cast<const pointer&>(m_decorated)->size());
+    CPPA_REQUIRE(m_mapping.empty() ||
+                 *(std::max_element(m_mapping.begin(), m_mapping.end())) <
+                     static_cast<const pointer&>(m_decorated)->size());
 }
 
 void decorated_tuple::init(size_t offset) {
@@ -60,28 +55,34 @@ void decorated_tuple::init(size_t offset) {
     if (offset < dec->size()) {
         size_t i = offset;
         m_mapping.resize(dec->size() - offset);
-        std::generate(m_mapping.begin(), m_mapping.end(), [&] {return i++;});
+        std::generate(m_mapping.begin(), m_mapping.end(), [&] { return i++; });
     }
     init();
 }
 
 decorated_tuple::decorated_tuple(pointer d, vector_type&& v)
-: super(true), m_decorated(std::move(d)), m_token(&typeid(void)), m_mapping(std::move(v)) {
+        : super(true)
+        , m_decorated(std::move(d))
+        , m_token(&typeid(void))
+        , m_mapping(std::move(v)) {
     init();
 }
 
 decorated_tuple::decorated_tuple(pointer d, rtti ti, vector_type&& v)
-: super(false), m_decorated(std::move(d)), m_token(ti), m_mapping(std::move(v)) {
+        : super(false)
+        , m_decorated(std::move(d))
+        , m_token(ti)
+        , m_mapping(std::move(v)) {
     init();
 }
 
 decorated_tuple::decorated_tuple(pointer d, size_t offset)
-: super(true), m_decorated(std::move(d)), m_token(&typeid(void)) {
+        : super(true), m_decorated(std::move(d)), m_token(&typeid(void)) {
     init(offset);
 }
 
 decorated_tuple::decorated_tuple(pointer d, rtti ti, size_t offset)
-: super(false), m_decorated(std::move(d)), m_token(ti) {
+        : super(false), m_decorated(std::move(d)), m_token(ti) {
     init(offset);
 }
 
@@ -93,4 +94,3 @@ const std::string* decorated_tuple::tuple_type_names() const {
 
 } // namespace detail
 } // namespace cppa
-

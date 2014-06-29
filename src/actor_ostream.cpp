@@ -16,22 +16,22 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
-#include "cppa/cppa.hpp"
+#include "cppa/all.hpp"
 #include "cppa/scheduler.hpp"
-#include "cppa/singletons.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/scoped_actor.hpp"
 #include "cppa/actor_ostream.hpp"
 
+#include "cppa/detail/singletons.hpp"
+
 namespace cppa {
 
 actor_ostream::actor_ostream(actor self) : m_self(std::move(self)) {
-    m_printer = get_scheduling_coordinator()->printer();
+    m_printer = detail::singletons::get_scheduling_coordinator()->printer();
 }
 
 actor_ostream& actor_ostream::write(std::string arg) {
-    send_as(m_self, m_printer, atom("add"), move(arg));
+    send_as(m_self, m_printer, atom("add"), std::move(arg));
     return *this;
 }
 
@@ -44,12 +44,8 @@ actor_ostream& actor_ostream::flush() {
 
 namespace std {
 
-cppa::actor_ostream& endl(cppa::actor_ostream& o) {
-    return o.write("\n");
-}
+cppa::actor_ostream& endl(cppa::actor_ostream& o) { return o.write("\n"); }
 
-cppa::actor_ostream& flush(cppa::actor_ostream& o) {
-    return o.flush();
-}
+cppa::actor_ostream& flush(cppa::actor_ostream& o) { return o.flush(); }
 
 } // namespace std

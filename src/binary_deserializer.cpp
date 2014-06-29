@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #include <string>
 #include <cstdint>
 #include <cstring>
@@ -27,14 +26,12 @@
 #include <stdexcept>
 #include <type_traits>
 
-#include "cppa/logging.hpp"
-#include "cppa/type_lookup_table.hpp"
 #include "cppa/binary_deserializer.hpp"
 
+#include "cppa/detail/logging.hpp"
 #include "cppa/detail/ieee_754.hpp"
+#include "cppa/detail/singletons.hpp"
 #include "cppa/detail/uniform_type_info_map.hpp"
-
-using namespace std;
 
 namespace cppa {
 
@@ -53,23 +50,26 @@ pointer advanced(pointer ptr, size_t num_bytes) {
 inline void range_check(pointer begin, pointer end, size_t read_size) {
     if (advanced(begin, read_size) > end) {
         CPPA_LOGF(CPPA_ERROR, "range_check failed");
-        throw out_of_range("binary_deserializer::read_range()");
+        throw std::out_of_range("binary_deserializer::read_range()");
     }
 }
 
-pointer read_range(pointer begin, pointer end, string& storage);
+pointer read_range(pointer begin, pointer end, std::string& storage);
 
 template<typename T>
 pointer read_range(pointer begin, pointer end, T& storage,
-                   typename enable_if<is_integral<T>::value>::type* = 0) {
+                   typename std::enable_if<std::is_integral<T>::value>::type* =
+                       0) {
     range_check(begin, end, sizeof(T));
     memcpy(&storage, begin, sizeof(T));
     return advanced(begin, sizeof(T));
 }
 
 template<typename T>
-pointer read_range(pointer begin, pointer end, T& storage,
-                   typename enable_if<is_floating_point<T>::value>::type* = 0) {
+pointer
+read_range(pointer begin, pointer end, T& storage,
+           typename std::enable_if<std::is_floating_point<T>::value>::type* =
+               0) {
     typename detail::ieee_754_trait<T>::packed_type tmp;
     auto result = read_range(begin, end, tmp);
     storage = detail::unpack754(tmp);
@@ -86,14 +86,15 @@ pointer read_range(pointer begin, pointer end, long double& storage) {
     return result;
 }
 
-pointer read_range(pointer begin, pointer end, string& storage) {
+pointer read_range(pointer begin, pointer end, std::string& storage) {
     uint32_t str_size;
     begin = read_range(begin, end, str_size);
     range_check(begin, end, str_size);
     storage.clear();
     storage.reserve(str_size);
     pointer cpy_end = advanced(begin, str_size);
-    copy(as_char_pointer(begin), as_char_pointer(cpy_end), back_inserter(storage));
+    copy(as_char_pointer(begin), as_char_pointer(cpy_end),
+         back_inserter(storage));
     return advanced(begin, str_size);
 }
 
@@ -111,30 +112,32 @@ pointer read_unicode_string(pointer begin, pointer end, StringType& str) {
 }
 
 pointer read_range(pointer begin, pointer end, atom_value& storage) {
-    std::uint64_t tmp;
+    uint64_t tmp;
     auto result = read_range(begin, end, tmp);
     storage = static_cast<atom_value>(tmp);
     return result;
 }
 
-pointer read_range(pointer begin, pointer end, u16string& storage) {
+pointer read_range(pointer begin, pointer end, std::u16string& storage) {
     // char16_t is guaranteed to has *at least* 16 bytes,
     // but not to have *exactly* 16 bytes; thus use uint16_t
     return read_unicode_string<uint16_t>(begin, end, storage);
 }
 
-pointer read_range(pointer begin, pointer end, u32string& storage) {
+pointer read_range(pointer begin, pointer end, std::u32string& storage) {
     // char32_t is guaranteed to has *at least* 32 bytes,
     // but not to have *exactly* 32 bytes; thus use uint32_t
     return read_unicode_string<uint32_t>(begin, end, storage);
 }
 
-struct pt_reader {
+struct pt_reader : static_visitor<> {
 
     pointer begin;
     pointer end;
 
-    pt_reader(pointer bbegin, pointer bend) : begin(bbegin), end(bend) { }
+    pt_reader(pointer bbegin, pointer bend) : begin(bbegin), end(bend) {}
+
+    inline void operator()(none_t&) {}
 
     template<typename T>
     inline void operator()(T& value) {
@@ -146,47 +149,28 @@ struct pt_reader {
 } // namespace <anonmyous>
 
 binary_deserializer::binary_deserializer(const void* buf, size_t buf_size,
-                                         actor_namespace* ns,
-                                         type_lookup_table* tbl)
-: super(ns, tbl), m_pos(buf), m_end(advanced(buf, buf_size)) { }
+                                         actor_namespace* ns)
+        : super(ns), m_pos(buf), m_end(advanced(buf, buf_size)) {}
 
 binary_deserializer::binary_deserializer(const void* bbegin, const void* bend,
-                                         actor_namespace* ns,
-                                         type_lookup_table* tbl)
-: super(ns, tbl), m_pos(bbegin), m_end(bend) { }
+                                         actor_namespace* ns)
+        : super(ns), m_pos(bbegin), m_end(bend) {}
 
 const uniform_type_info* binary_deserializer::begin_object() {
-    std::uint8_t flag;
-    m_pos = read_range(m_pos, m_end, flag);
-    if (flag == 1) {
-        string tname;
-        m_pos = read_range(m_pos, m_end, tname);
-        auto uti = get_uniform_type_info_map()->by_uniform_name(tname);
-        if (!uti) {
-            std::string err = "received type name \"";
-            err += tname;
-            err += "\" but no such type is known";
-            throw std::runtime_error(err);
-        }
-        return uti;
+    std::string tname;
+    m_pos = read_range(m_pos, m_end, tname);
+    auto uti =
+        detail::singletons::get_uniform_type_info_map()->by_uniform_name(tname);
+    if (!uti) {
+        std::string err = "received type name \"";
+        err += tname;
+        err += "\" but no such type is known";
+        throw std::runtime_error(err);
     }
-    else {
-        std::uint32_t type_id;
-        m_pos = read_range(m_pos, m_end, type_id);
-        auto it = incoming_types();
-        if (!it) {
-            std::string err = "received type ID ";
-            err += std::to_string(type_id);
-            err += " but incoming_types() == nullptr";
-            throw std::runtime_error(err);
-        }
-        auto uti = it->by_id(type_id);
-        if (!uti) throw std::runtime_error("received unknown type id");
-        return uti;
-    }
+    return uti;
 }
 
-void binary_deserializer::end_object() { }
+void binary_deserializer::end_object() {}
 
 size_t binary_deserializer::begin_sequence() {
     CPPA_LOG_TRACE("");
@@ -197,23 +181,12 @@ size_t binary_deserializer::begin_sequence() {
     return static_cast<size_t>(result);
 }
 
-void binary_deserializer::end_sequence() { }
+void binary_deserializer::end_sequence() {}
 
-primitive_variant binary_deserializer::read_value(primitive_type ptype) {
-    primitive_variant val(ptype);
+void binary_deserializer::read_value(primitive_variant& storage) {
     pt_reader ptr(m_pos, m_end);
-    val.apply(ptr);
+    apply_visitor(ptr, storage);
     m_pos = ptr.begin;
-    return val;
-}
-
-void binary_deserializer::read_tuple(size_t size,
-                                     const primitive_type* ptypes,
-                                     primitive_variant* storage) {
-    for (auto end = ptypes + size; ptypes != end; ++ptypes) {
-        *storage = move(read_value(*ptypes));
-        ++storage;
-    }
 }
 
 void binary_deserializer::read_raw(size_t num_bytes, void* storage) {

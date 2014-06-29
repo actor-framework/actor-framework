@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_POLICY_COOPERATIVE_SCHEDULING_HPP
 #define CPPA_POLICY_COOPERATIVE_SCHEDULING_HPP
 
@@ -24,12 +23,9 @@
 
 #include "cppa/message.hpp"
 #include "cppa/scheduler.hpp"
-#include "cppa/singletons.hpp"
-#include "cppa/message_header.hpp"
 
-#include "cppa/detail/yield_interface.hpp"
-
-#include "cppa/intrusive/single_reader_queue.hpp"
+#include "cppa/detail/singletons.hpp"
+#include "cppa/detail/single_reader_queue.hpp"
 
 namespace cppa {
 namespace policy {
@@ -44,29 +40,34 @@ class cooperative_scheduling {
     inline void launch(Actor* self, execution_unit* host) {
         // detached in scheduler::worker::run
         self->attach_to_scheduler();
-        if (host) host->exec_later(self);
-        else get_scheduling_coordinator()->enqueue(self);
+        if (host)
+            host->exec_later(self);
+        else
+            detail::singletons::get_scheduling_coordinator()->enqueue(self);
     }
 
     template<class Actor>
-    void enqueue(Actor* self, msg_hdr_cref hdr,
-                 message& msg, execution_unit* host) {
-        auto e = self->new_mailbox_element(hdr, std::move(msg));
+    void enqueue(Actor* self, const actor_addr& sender, message_id mid,
+                 message& msg, execution_unit* eu) {
+        auto e = self->new_mailbox_element(sender, mid, std::move(msg));
         switch (self->mailbox().enqueue(e)) {
-            case intrusive::enqueue_result::unblocked_reader: {
+            case detail::enqueue_result::unblocked_reader: {
                 // re-schedule actor
-                if (host) host->exec_later(self);
-                else get_scheduling_coordinator()->enqueue(self);
+                if (eu)
+                    eu->exec_later(self);
+                else
+                    detail::singletons::get_scheduling_coordinator()->enqueue(
+                        self);
                 break;
             }
-            case intrusive::enqueue_result::queue_closed: {
-                if (hdr.id.is_request()) {
+            case detail::enqueue_result::queue_closed: {
+                if (mid.is_request()) {
                     detail::sync_request_bouncer f{self->exit_reason()};
-                    f(hdr.sender, hdr.id);
+                    f(sender, mid);
                 }
                 break;
             }
-            case intrusive::enqueue_result::success:
+            case detail::enqueue_result::success:
                 // enqueued to a running actors' mailbox; nothing to do
                 break;
         }

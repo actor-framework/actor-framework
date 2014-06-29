@@ -23,7 +23,7 @@
 #include "cppa/message.hpp"
 #include "cppa/system_messages.hpp"
 
-#include "cppa/util/duration.hpp"
+#include "cppa/duration.hpp"
 
 namespace cppa {
 
@@ -44,14 +44,16 @@ class single_timeout : public Base {
             : super(std::forward<Ts>(args)...), m_has_timeout(false)
             , m_timeout_id(0) { }
 
-    void request_timeout(const util::duration& d) {
+    void request_timeout(const duration& d) {
         if (d.valid()) {
             m_has_timeout = true;
             auto tid = ++m_timeout_id;
             auto msg = make_message(timeout_msg{tid});
             if (d.is_zero()) {
                 // immediately enqueue timeout message if duration == 0s
-                this->enqueue({this->address(), this}, std::move(msg),
+                this->enqueue(this->address(),
+                              message_id::invalid,
+                              std::move(msg),
                               this->m_host);
                 //auto e = this->new_mailbox_element(this, std::move(msg));
                 //this->m_mailbox.enqueue(e);

@@ -16,6 +16,7 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
+#include "cppa/none.hpp"
 
 #include "cppa/behavior.hpp"
 #include "cppa/message_handler.hpp"
@@ -34,7 +35,7 @@ class continuation_decorator : public detail::behavior_impl {
     typedef typename behavior_impl::pointer pointer;
 
     continuation_decorator(continuation_fun fun, pointer ptr)
-    : super(ptr->timeout()), m_fun(fun), m_decorated(std::move(ptr)) {
+            : super(ptr->timeout()), m_fun(fun), m_decorated(std::move(ptr)) {
         CPPA_REQUIRE(m_decorated != nullptr);
     }
 
@@ -45,13 +46,9 @@ class continuation_decorator : public detail::behavior_impl {
         return none;
     }
 
-    bhvr_invoke_result invoke(message& tup) {
-        return invoke_impl(tup);
-    }
+    bhvr_invoke_result invoke(message& tup) { return invoke_impl(tup); }
 
-    bhvr_invoke_result invoke(const message& tup) {
-        return invoke_impl(tup);
-    }
+    bhvr_invoke_result invoke(const message& tup) { return invoke_impl(tup); }
 
     pointer copy(const generic_timeout_definition& tdef) const {
         return new continuation_decorator(m_fun, m_decorated->copy(tdef));
@@ -67,11 +64,11 @@ class continuation_decorator : public detail::behavior_impl {
 };
 } // namespace <anonymous>
 
-behavior::behavior(const message_handler& fun) : m_impl(fun.m_impl) { }
+behavior::behavior(const message_handler& fun) : m_impl(fun.m_impl) {}
 
 behavior behavior::add_continuation(continuation_fun fun) {
-    return behavior::impl_ptr{new continuation_decorator(std::move(fun),
-                                                         m_impl)};
+    return behavior::impl_ptr{
+        new continuation_decorator(std::move(fun), m_impl)};
 }
 
 } // namespace cppa

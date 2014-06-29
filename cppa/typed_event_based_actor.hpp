@@ -16,16 +16,16 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_TYPED_EVENT_BASED_ACTOR_HPP
 #define CPPA_TYPED_EVENT_BASED_ACTOR_HPP
 
 #include "cppa/replies_to.hpp"
 #include "cppa/local_actor.hpp"
-#include "cppa/sync_sender.hpp"
-#include "cppa/mailbox_based.hpp"
 #include "cppa/typed_behavior.hpp"
-#include "cppa/behavior_stack_based.hpp"
+
+#include "cppa/mixin/sync_sender.hpp"
+#include "cppa/mixin/mailbox_based.hpp"
+#include "cppa/mixin/behavior_stack_based.hpp"
 
 namespace cppa {
 
@@ -41,20 +41,16 @@ namespace cppa {
  */
 template<typename... Rs>
 class typed_event_based_actor
-        : public extend<local_actor, typed_event_based_actor<Rs...>>::template
-                 with<mailbox_based,
-                      behavior_stack_based<
-                          typed_behavior<Rs...>
-                      >::template impl,
-                      sync_sender<
-                          nonblocking_response_handle_tag
-                      >::template impl> {
+    : public extend<local_actor, typed_event_based_actor<Rs...>>::template with<
+          mixin::mailbox_based,
+          mixin::behavior_stack_based<typed_behavior<Rs...>>::template impl,
+          mixin::sync_sender<nonblocking_response_handle_tag>::template impl> {
 
  public:
 
-    typed_event_based_actor() : m_initialized(false) { }
+    typed_event_based_actor() : m_initialized(false) {}
 
-    typedef util::type_list<Rs...> signatures;
+    typedef detail::type_list<Rs...> signatures;
 
     typedef typed_behavior<Rs...> behavior_type;
 

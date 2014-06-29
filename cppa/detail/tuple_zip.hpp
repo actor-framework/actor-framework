@@ -21,14 +21,14 @@
 
 #include <tuple>
 
-#include "cppa/util/int_list.hpp"
+#include "cppa/detail/int_list.hpp"
 
 namespace cppa {
 namespace detail {
 
-template <typename F, long... Is, class Tup0, class Tup1>
-auto tuple_zip(F& f, util::int_list<Is...>, Tup0&& tup0, Tup1&& tup1)
-    -> decltype(std::make_tuple(f(std::get<Is>(tup0), std::get<Is>(tup1))...)) {
+template<typename F, long... Is, class Tup0, class Tup1>
+auto tuple_zip(F& f, detail::int_list<Is...>, Tup0&& tup0, Tup1&& tup1)
+-> decltype(std::make_tuple(f(std::get<Is>(tup0), std::get<Is>(tup1))...)) {
     return std::make_tuple(f(std::get<Is>(tup0), std::get<Is>(tup1))...);
 }
 

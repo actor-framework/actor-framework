@@ -8,9 +8,6 @@
 
 #include "cppa/cppa.hpp"
 
-#include "cppa/detail/cs_thread.hpp"
-#include "cppa/detail/yield_interface.hpp"
-
 using namespace std;
 using namespace cppa;
 
@@ -37,7 +34,6 @@ class event_testee : public sb_actor<event_testee> {
                 return "wait4string";
             }
         );
-
         wait4float = (
             on<float>() >> [=] {
                 become(wait4string);
@@ -46,7 +42,6 @@ class event_testee : public sb_actor<event_testee> {
                 return "wait4float";
             }
         );
-
         wait4int = (
             on<int>() >> [=] {
                 become(wait4float);
@@ -130,7 +125,7 @@ class testee_actor {
                 return "wait4string";
             }
         )
-        .until(gref(string_received));
+        .until([&] { return string_received; });
     }
 
     void wait4float(blocking_actor* self) {
@@ -143,7 +138,7 @@ class testee_actor {
                 return "wait4float";
             }
         )
-        .until(gref(float_received));
+        .until([&] { return float_received; });
         wait4string(self);
     }
 
@@ -187,7 +182,7 @@ string behavior_test(scoped_actor& self, actor et) {
     self->send(et, "goodbye " + testee_name);
     self->send(et, atom("get_state"));
     self->receive (
-        on_arg_match >> [&](const string& str) {
+        [&](const string& str) {
             result = str;
         },
         after(chrono::minutes(1)) >> [&]() {
@@ -529,7 +524,7 @@ void test_spawn() {
         );
         self->send_exit(mirror, exit_reason::user_shutdown);
         self->receive (
-            on_arg_match >> [&](const down_msg& dm) {
+            [&](const down_msg& dm) {
                 if (dm.reason == exit_reason::user_shutdown) {
                     CPPA_CHECKPOINT();
                 }
@@ -550,7 +545,7 @@ void test_spawn() {
         );
         self->send_exit(mirror, exit_reason::user_shutdown);
         self->receive (
-            on_arg_match >> [&](const down_msg& dm) {
+            [&](const down_msg& dm) {
                 if (dm.reason == exit_reason::user_shutdown) {
                     CPPA_CHECKPOINT();
                 }
@@ -572,7 +567,7 @@ void test_spawn() {
         );
         self->send_exit(mirror, exit_reason::user_shutdown);
         self->receive (
-            on_arg_match >> [&](const down_msg& dm) {
+            [&](const down_msg& dm) {
                 if (dm.reason == exit_reason::user_shutdown) {
                     CPPA_CHECKPOINT();
                 }
@@ -648,58 +643,10 @@ void test_spawn() {
             }
         );
         vector<int> expected{9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
-        CPPA_CHECK_EQUAL(util::join(values, ","), util::join(expected, ","));
+        CPPA_CHECK_EQUAL(join(values, ","), join(expected, ","));
     }
     // terminate st
     self->send_exit(st, exit_reason::user_shutdown);
-    self->await_all_other_actors_done();
-    CPPA_CHECKPOINT();
-
-    auto sync_testee1 = spawn<blocking_api>([](blocking_actor* s) {
-        if (detail::cs_thread::is_disabled_feature) {
-            CPPA_LOGF_WARNING("compiled w/o context switching "
-                              "(skip some tests)");
-        }
-        else {
-            CPPA_CHECKPOINT();
-            // scheduler should switch back immediately
-            detail::yield(detail::yield_state::ready);
-            CPPA_CHECKPOINT();
-        }
-        s->receive (
-            on(atom("get")) >> [] {
-                return make_cow_tuple(42, 2);
-            }
-        );
-    });
-    self->send(self, 0, 0);
-    auto handle = self->sync_send(sync_testee1, atom("get"));
-    // wait for some time (until sync response arrived in mailbox)
-    self->receive (after(chrono::milliseconds(50)) >> [] { });
-    // enqueue async messages (must be skipped by self->receive_response)
-    self->send(self, 42, 1);
-    // must skip sync message
-    self->receive (
-        on(42, arg_match) >> [&](int i) {
-            CPPA_CHECK_EQUAL(i, 1);
-        }
-    );
-    // must skip remaining async message
-    handle.await(
-        on_arg_match >> [&](int a, int b) {
-            CPPA_CHECK_EQUAL(a, 42);
-            CPPA_CHECK_EQUAL(b, 2);
-        },
-        others() >> CPPA_UNEXPECTED_MSG_CB_REF(self),
-        after(chrono::seconds(10)) >> CPPA_UNEXPECTED_TOUT_CB()
-    );
-    // dequeue remaining async. message
-    self->receive (on(0, 0) >> CPPA_CHECKPOINT_CB());
-    // make sure there's no other message in our mailbox
-    self->receive (
-        others() >> CPPA_UNEXPECTED_MSG_CB_REF(self),
-        after(chrono::seconds(0)) >> [] { }
-    );
     self->await_all_other_actors_done();
     CPPA_CHECKPOINT();
 
@@ -739,7 +686,7 @@ void test_spawn() {
         after(std::chrono::seconds(5)) >> CPPA_UNEXPECTED_TOUT_CB()
     );
     self->receive (
-        on_arg_match >> [&](const down_msg& dm) {
+        [&](const down_msg& dm) {
             CPPA_CHECK_EQUAL(dm.reason, exit_reason::normal);
             CPPA_CHECK_EQUAL(dm.source, sync_testee);
         }
@@ -759,7 +706,7 @@ void test_spawn() {
         CPPA_LOGF_TRACE(CPPA_ARG(s) << ", " << CPPA_ARG(name)
                         << ", " << CPPA_TARG(buddy, to_string));
         s->become(
-            on_arg_match >> [=](int n, const string& str) {
+            [=](int n, const string& str) {
                 s->send(buddy, n * 2, str + " from " + name);
             },
             on(atom("done")) >> [=] {
@@ -858,12 +805,12 @@ void test_spawn() {
     self->delayed_send(self, chrono::seconds(1), atom("FooBar"));
     // wait for DOWN and EXIT messages of pong
     self->receive_for(i, 4) (
-        on_arg_match >> [&](const exit_msg& em) {
+        [&](const exit_msg& em) {
             CPPA_CHECK_EQUAL(em.source, pong_actor);
             CPPA_CHECK_EQUAL(em.reason, exit_reason::user_shutdown);
             flags |= 0x01;
         },
-        on_arg_match >> [&](const down_msg& dm) {
+        [&](const down_msg& dm) {
             if (dm.source == pong_actor) {
                 flags |= 0x02;
                 CPPA_CHECK_EQUAL(dm.reason, exit_reason::user_shutdown);
@@ -873,7 +820,7 @@ void test_spawn() {
                 CPPA_CHECK_EQUAL(dm.reason, exit_reason::normal);
             }
         },
-        on_arg_match >> [&](const atom_value& val) {
+        [&](const atom_value& val) {
             CPPA_CHECK(val == atom("FooBar"));
             flags |= 0x08;
         },
@@ -928,6 +875,8 @@ void test_spawn() {
 int main() {
     CPPA_TEST(test_spawn);
     test_spawn();
+    CPPA_CHECKPOINT();
+    await_all_actors_done();
     CPPA_CHECKPOINT();
     // test setting exit reasons for scoped actors
     { // lifetime scope of self

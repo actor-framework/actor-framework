@@ -16,19 +16,22 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
+#ifndef CPPA_UNTYPED_ACTOR_HPP
+#define CPPA_UNTYPED_ACTOR_HPP
 
-#ifndef CPPA_EVENT_BASED_ACTOR_HPP
-#define CPPA_EVENT_BASED_ACTOR_HPP
+#include <type_traits>
 
 #include "cppa/on.hpp"
 #include "cppa/extend.hpp"
-#include "cppa/logging.hpp"
 #include "cppa/local_actor.hpp"
-#include "cppa/sync_sender.hpp"
-#include "cppa/mailbox_based.hpp"
 #include "cppa/response_handle.hpp"
-#include "cppa/behavior_stack_based.hpp"
 
+#include "cppa/mixin/sync_sender.hpp"
+#include "cppa/mixin/mailbox_based.hpp"
+#include "cppa/mixin/functor_based.hpp"
+#include "cppa/mixin/behavior_stack_based.hpp"
+
+#include "cppa/detail/logging.hpp"
 #include "cppa/detail/response_handle_util.hpp"
 
 namespace cppa {
@@ -42,16 +45,18 @@ namespace cppa {
  *
  * @extends local_actor
  */
-class event_based_actor : public extend<local_actor, event_based_actor>::
-                                 with<mailbox_based,
-                                      behavior_stack_based<behavior>::impl,
-                                      sync_sender<nonblocking_response_handle_tag>::impl> {
+class event_based_actor
+    : public extend<local_actor, event_based_actor>::with<
+          mixin::mailbox_based, mixin::behavior_stack_based<behavior>::impl,
+          mixin::sync_sender<nonblocking_response_handle_tag>::impl> {
 
  public:
 
     event_based_actor();
 
     ~event_based_actor();
+
+    class functor_based;
 
  protected:
 
@@ -69,6 +74,21 @@ class event_based_actor : public extend<local_actor, event_based_actor>::
 
 };
 
+class event_based_actor::functor_based
+    : public extend<event_based_actor>::with<mixin::functor_based> {
+
+    using super = combined_type;
+
+ public:
+
+    template<typename... Ts>
+    functor_based(Ts&&... vs)
+            : super(std::forward<Ts>(vs)...) {}
+
+    behavior make_behavior() override;
+
+};
+
 } // namespace cppa
 
-#endif // CPPA_EVENT_BASED_ACTOR_HPP
+#endif // CPPA_UNTYPED_ACTOR_HPP

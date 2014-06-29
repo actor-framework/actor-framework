@@ -37,7 +37,7 @@ namespace cppa {
  *           {@link ref_counted}.
  */
 template<typename T>
-class cow_ptr : util::comparable<cow_ptr<T> >,
+class cow_ptr : util::comparable<cow_ptr<T>>,
                 util::comparable<cow_ptr<T>, const T*>,
                 util::comparable<cow_ptr<T>, std::nullptr_t> {
 

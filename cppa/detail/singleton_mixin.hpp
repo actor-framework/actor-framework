@@ -16,45 +16,45 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
-#ifndef CPPA_DETAIL_SINGLETON_MIXIN_HPP
-#define CPPA_DETAIL_SINGLETON_MIXIN_HPP
+#ifndef CPPA_SINGLETON_MIXIN_HPP
+#define CPPA_SINGLETON_MIXIN_HPP
 
 #include <utility>
 
 namespace cppa {
 namespace detail {
 
-class singleton_manager;
+class singletons;
 
 // a mixin for simple singleton classes
 template<class Derived, class Base = void>
 class singleton_mixin : public Base {
 
-    friend class singleton_manager;
+    friend class singletons;
 
     inline static Derived* create_singleton() { return new Derived; }
     inline void dispose() { delete this; }
-    inline void destroy() { delete this; }
-    inline void initialize() { }
+    inline void stop() { }
+    inline void initialize() {}
 
  protected:
 
     template<typename... Ts>
-    singleton_mixin(Ts&&... args) : Base(std::forward<Ts>(args)...) { }
+    singleton_mixin(Ts&&... args)
+            : Base(std::forward<Ts>(args)...) {}
 
-    virtual ~singleton_mixin() { }
+    virtual ~singleton_mixin() {}
 
 };
 
 template<class Derived>
 class singleton_mixin<Derived, void> {
 
-    friend class singleton_manager;
+    friend class singletons;
 
     inline static Derived* create_singleton() { return new Derived; }
     inline void dispose() { delete this; }
-    inline void destroy() { delete this; }
+    inline void stop() { }
     inline void initialize() { }
 
  protected:
@@ -66,4 +66,4 @@ class singleton_mixin<Derived, void> {
 } // namespace detail
 } // namespace cppa
 
-#endif // CPPA_DETAIL_SINGLETON_MIXIN_HPP
+#endif // CPPA_SINGLETON_MIXIN_HPP

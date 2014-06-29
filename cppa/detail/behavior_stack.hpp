@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_DETAIL_BEHAVIOR_STACK_HPP
 #define CPPA_DETAIL_BEHAVIOR_STACK_HPP
 
@@ -26,6 +25,7 @@
 #include <algorithm>
 
 #include "cppa/optional.hpp"
+
 #include "cppa/config.hpp"
 #include "cppa/behavior.hpp"
 #include "cppa/message_id.hpp"
@@ -36,8 +36,7 @@ namespace detail {
 
 struct behavior_stack_mover;
 
-class behavior_stack
-{
+class behavior_stack {
 
     friend struct behavior_stack_mover;
 
@@ -80,9 +79,7 @@ class behavior_stack
         m_elements.emplace_back(std::move(what), response_id);
     }
 
-    inline void cleanup() {
-        m_erased_elements.clear();
-    }
+    inline void cleanup() { m_erased_elements.clear(); }
 
  private:
 

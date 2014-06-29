@@ -16,15 +16,12 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_RESUMABLE_HPP
 #define CPPA_RESUMABLE_HPP
 
 namespace cppa {
 
 class execution_unit;
-
-namespace detail { struct cs_thread; }
 
 /**
  * @brief A cooperatively executed task managed by one or more instances of
@@ -38,6 +35,7 @@ class resumable {
         resume_later,
         done,
         shutdown_execution_unit
+
     };
 
     resumable();
@@ -60,7 +58,7 @@ class resumable {
      * @brief Resume any pending computation until it is either finished
      *        or needs to be re-scheduled later.
      */
-    virtual resume_result resume(detail::cs_thread*, execution_unit*) = 0;
+    virtual resume_result resume(execution_unit*) = 0;
 
  protected:
 

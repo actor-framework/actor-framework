@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_DETAIL_DISABLABLE_DELETE_HPP
 #define CPPA_DETAIL_DISABLABLE_DELETE_HPP
 
@@ -27,15 +26,11 @@ class disablable_delete {
 
  public:
 
-    constexpr disablable_delete() : m_enabled(true) { }
+    constexpr disablable_delete() : m_enabled(true) {}
 
-    inline void disable() {
-        m_enabled = false;
-    }
+    inline void disable() { m_enabled = false; }
 
-    inline void enable() {
-        m_enabled = true;
-    }
+    inline void enable() { m_enabled = true; }
 
     template<typename T>
     inline void operator()(T* ptr) {

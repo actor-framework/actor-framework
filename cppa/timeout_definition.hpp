@@ -16,28 +16,30 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
-#ifndef CPPA_TIMEOUT_DEFINITION_HPP
-#define CPPA_TIMEOUT_DEFINITION_HPP
+#ifndef TIMEOUT_DEFINITION_HPP
+#define TIMEOUT_DEFINITION_HPP
 
 #include <functional>
 
-#include "cppa/util/duration.hpp"
+#include "cppa/duration.hpp"
 
 namespace cppa {
 
-namespace detail { class behavior_impl; }
+namespace detail {
+class behavior_impl;
+}
 
 template<typename F>
 struct timeout_definition {
     static constexpr bool may_have_timeout = true;
-    util::duration timeout;
+    duration timeout;
     F handler;
     detail::behavior_impl* as_behavior_impl() const;
+
 };
 
-typedef timeout_definition<std::function<void()> > generic_timeout_definition;
+typedef timeout_definition<std::function<void()>> generic_timeout_definition;
 
 } // namespace cppa
 
-#endif // CPPA_TIMEOUT_DEFINITION_HPP
+#endif // TIMEOUT_DEFINITION_HPP

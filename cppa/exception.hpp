@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_EXCEPTION_HPP
 #define CPPA_EXCEPTION_HPP
 
@@ -28,13 +27,13 @@
 namespace cppa {
 
 /**
- * @brief Base class for libcppa exceptions.
+ * @brief Base class for exceptions.
  */
 class cppa_exception : public std::exception {
 
  public:
 
-    ~cppa_exception() noexcept;
+    ~cppa_exception();
 
     cppa_exception() = delete;
     cppa_exception(const cppa_exception&) = default;
@@ -73,9 +72,9 @@ class actor_exited : public cppa_exception {
 
  public:
 
-    ~actor_exited() noexcept;
+    ~actor_exited();
 
-    actor_exited(std::uint32_t exit_reason);
+    actor_exited(uint32_t exit_reason);
 
     actor_exited(const actor_exited&) = default;
     actor_exited& operator=(const actor_exited&) = default;
@@ -85,25 +84,29 @@ class actor_exited : public cppa_exception {
      * @returns The exit reason of the terminating actor either set via
      *          {@link quit} or by a special (exit) message.
      */
-    inline std::uint32_t reason() const noexcept;
+    inline uint32_t reason() const noexcept;
 
  private:
 
-    std::uint32_t m_reason;
+    uint32_t m_reason;
 
 };
 
 /**
  * @brief Thrown to indicate that either an actor publishing failed or
- *        @p libcppa was unable to connect to a remote host.
+ *        the middleman was unable to connect to a remote host.
  */
 class network_error : public cppa_exception {
 
+    using super = cppa_exception;
+
  public:
 
-    ~network_error() noexcept;
+    ~network_error();
     network_error(std::string&& what_str);
     network_error(const std::string& what_str);
+    network_error(const network_error&) = default;
+    network_error& operator=(const network_error&) = default;
 
 };
 
@@ -113,49 +116,21 @@ class network_error : public cppa_exception {
  */
 class bind_failure : public network_error {
 
- public:
-
-    ~bind_failure() noexcept;
-
-    bind_failure(int bind_errno);
-    bind_failure(const bind_failure&) = default;
-    bind_failure& operator=(const bind_failure&) = default;
-
-    /**
-     * @brief Gets the socket API error code.
-     * @returns The errno set by <tt>bind()</tt>.
-     */
-    inline int error_code() const noexcept;
-
- private:
-
-    int m_errno;
-
-};
-
-/**
- * @brief Thrown to indicate that a client tried to read from
- *        a stream after is has been shutdown by the remote side.
- */
-class stream_at_eof : public network_error {
-
     using super = network_error;
 
  public:
 
-    ~stream_at_eof() noexcept;
+    ~bind_failure();
 
-    template<typename... Ts>
-    stream_at_eof(Ts&&... args) : super(std::forward<Ts>(args)...) { }
+    bind_failure(std::string&& what_str);
+    bind_failure(const std::string& what_str);
+    bind_failure(const bind_failure&) = default;
+    bind_failure& operator=(const bind_failure&) = default;
 
 };
 
-inline std::uint32_t actor_exited::reason() const noexcept {
+inline uint32_t actor_exited::reason() const noexcept {
     return m_reason;
-}
-
-inline int bind_failure::error_code() const noexcept {
-    return m_errno;
 }
 
 } // namespace cppa

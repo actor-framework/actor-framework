@@ -16,17 +16,18 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
+#ifndef CPPA_RESUME_POLICY_HPP
+#define CPPA_RESUME_POLICY_HPP
 
-#ifndef CPPA_POLICY_RESUME_POLICY_HPP
-#define CPPA_POLICY_RESUME_POLICY_HPP
-
-#include "cppa/cppa_fwd.hpp"
 #include "cppa/resumable.hpp"
 
 // this header consists all type definitions needed to
 // implement the resume_policy trait
 
 namespace cppa {
+
+class execution_unit;
+class duration;
 
 namespace policy {
 
@@ -46,9 +47,7 @@ class resume_policy {
      *        actor finishes execution.
      */
     template<class Actor>
-    resumable::resume_result resume(Actor* self,
-                                    detail::cs_thread* from,
-                                    execution_unit*);
+    resumable::resume_result resume(Actor* self, execution_unit*);
 
     /**
      * @brief Waits unconditionally until the actor is ready to resume.
@@ -65,4 +64,4 @@ class resume_policy {
 } // namespace policy
 } // namespace cppa
 
-#endif // CPPA_POLICY_RESUME_POLICY_HPP
+#endif // CPPA_RESUME_POLICY_HPP

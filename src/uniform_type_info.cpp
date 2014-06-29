@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #include "cppa/config.hpp"
 
 #include <map>
@@ -29,41 +28,39 @@
 #include <cstdint>
 #include <type_traits>
 
+#include "cppa/intrusive_ptr.hpp"
+
 #include "cppa/atom.hpp"
 #include "cppa/actor.hpp"
-#include "cppa/logging.hpp"
+#include "cppa/message.hpp"
 #include "cppa/message.hpp"
 #include "cppa/announce.hpp"
-#include "cppa/message.hpp"
-#include "cppa/intrusive_ptr.hpp"
+#include "cppa/duration.hpp"
 #include "cppa/uniform_type_info.hpp"
 
-#include "cppa/util/duration.hpp"
-
+#include "cppa/detail/logging.hpp"
 #include "cppa/detail/demangle.hpp"
+#include "cppa/detail/singletons.hpp"
 #include "cppa/detail/actor_registry.hpp"
 #include "cppa/detail/to_uniform_name.hpp"
-#include "cppa/detail/singleton_manager.hpp"
 #include "cppa/detail/uniform_type_info_map.hpp"
 
 namespace cppa {
 
-namespace { inline detail::uniform_type_info_map& uti_map() {
-    return *detail::singleton_manager::get_uniform_type_info_map();
-} } // namespace <anonymous>
+namespace {
+inline detail::uniform_type_info_map& uti_map() {
+    return *detail::singletons::get_uniform_type_info_map();
+}
+} // namespace <anonymous>
+
+uniform_value_t::~uniform_value_t() {}
 
 const uniform_type_info* announce(const std::type_info&,
-                                  std::unique_ptr<uniform_type_info> utype) {
+                                  uniform_type_info_ptr utype) {
     return uti_map().insert(std::move(utype));
 }
 
-uniform_type_info::~uniform_type_info() {
-    // nop
-}
-
-uniform_value_t::~uniform_value_t() {
-    // nop
-}
+uniform_type_info::~uniform_type_info() {}
 
 const uniform_type_info* uniform_type_info::from(const std::type_info& tinf) {
     auto result = uti_map().by_rtti(tinf);
@@ -88,7 +85,7 @@ const uniform_type_info* uniform_type_info::from(const std::string& name) {
 uniform_value uniform_type_info::deserialize(deserializer* from) const {
     auto uval = create();
     deserialize(uval->val, from);
-    return uval;
+    return std::move(uval);
 }
 
 std::vector<const uniform_type_info*> uniform_type_info::instances() {

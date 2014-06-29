@@ -26,13 +26,11 @@
 #include <arpa/inet.h>
 
 #include "cppa/cppa.hpp"
-#include "cppa/logging.hpp"
-#include "cppa/singletons.hpp"
 
 #include "cppa/io/broker.hpp"
 #include "cppa/io/middleman.hpp"
-#include "cppa/io/tcp_acceptor.hpp"
-#include "cppa/io/tcp_io_stream.hpp"
+
+#include "cppa/detail/logging.hpp"
 
 CPPA_PUSH_WARNINGS
 #include "pingpong.pb.h"
@@ -54,9 +52,9 @@ behavior ping(event_based_actor* self, size_t num_pings) {
         on(atom("kickoff"), arg_match) >> [=](const actor& pong) {
             self->send(pong, atom("ping"), 1);
             self->become (
-                on(atom("pong"), arg_match) >> [=](int value) -> any_tuple {
+                on(atom("pong"), arg_match) >> [=](int value) -> message {
                     if (++*count >= num_pings) self->quit();
-                    return make_any_tuple(atom("ping"), value + 1);
+                    return make_message(atom("ping"), value + 1);
                 }
             );
         }
@@ -66,7 +64,7 @@ behavior ping(event_based_actor* self, size_t num_pings) {
 behavior pong() {
     return {
         on(atom("ping"), arg_match) >> [](int value) {
-            return make_any_tuple(atom("pong"), value);
+            return make_message(atom("pong"), value);
         }
     };
 }
@@ -79,7 +77,7 @@ void protobuf_io(broker* self, connection_handle hdl, const actor& buddy) {
         self->write(hdl, sizeof(int32_t), &s);
         self->write(hdl, buf.size(), buf.data());
     };
-    partial_function default_bhvr = {
+    message_handler default_bhvr = {
         [=](const connection_closed_msg&) {
             aout(self) << "connection closed" << endl;
             self->send_exit(buddy, exit_reason::remote_link_unreachable);
@@ -107,7 +105,7 @@ void protobuf_io(broker* self, connection_handle hdl, const actor& buddy) {
             cout << "unexpected: " << to_string(self->last_dequeued()) << endl;
         }
     };
-    partial_function await_protobuf_data {
+    message_handler await_protobuf_data {
         [=](const new_data_msg& msg) {
             org::libcppa::PingOrPong p;
             p.ParseFromArray(msg.buf.data(), static_cast<int>(msg.buf.size()));
@@ -122,12 +120,12 @@ void protobuf_io(broker* self, connection_handle hdl, const actor& buddy) {
                 cerr << "neither Ping nor Pong!" << endl;
             }
             // receive next length prefix
-            self->receive_policy(hdl, broker::exactly, sizeof(int32_t));
+            self->configure_read(hdl, receive_policy::exactly(sizeof(int32_t)));
             self->unbecome();
         },
         default_bhvr
     };
-    partial_function await_length_prefix {
+    message_handler await_length_prefix {
         [=](const new_data_msg& msg) {
             int32_t num_bytes;
             memcpy(&num_bytes, msg.buf.data(), sizeof(int32_t));
@@ -138,13 +136,14 @@ void protobuf_io(broker* self, connection_handle hdl, const actor& buddy) {
                 return;
             }
             // receive protobuf data
-            self->receive_policy(hdl, broker::exactly, static_cast<size_t>(num_bytes));
+            auto nb = static_cast<size_t>(num_bytes);
+            self->configure_read(hdl, receive_policy::exactly(nb));
             self->become(keep_behavior, await_protobuf_data);
         },
         default_bhvr
     };
     // initial setup
-    self->receive_policy(hdl, broker::exactly, sizeof(int32_t));
+    self->configure_read(hdl, receive_policy::exactly(sizeof(int32_t)));
     self->become(await_length_prefix);
 }
 
@@ -185,7 +184,8 @@ int main(int argc, char** argv) {
             send_as(io_actor, ping_actor, atom("kickoff"), io_actor);
         },
         others() >> [] {
-            cerr << "use with eihter '-s PORT' as server or '-c HOST PORT' as client"
+            cerr << "use with eihter '-s PORT' as server or "
+                    "'-c HOST PORT' as client"
                  << endl;
         }
     );

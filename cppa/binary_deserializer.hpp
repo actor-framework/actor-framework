@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_BINARY_DESERIALIZER_HPP
 #define CPPA_BINARY_DESERIALIZER_HPP
 
@@ -35,20 +34,27 @@ class binary_deserializer : public deserializer {
  public:
 
     binary_deserializer(const void* buf, size_t buf_size,
-                        actor_namespace* ns = nullptr,
-                        type_lookup_table* table = nullptr);
+                        actor_namespace* ns = nullptr);
 
     binary_deserializer(const void* begin, const void* m_end,
-                        actor_namespace* ns = nullptr,
-                        type_lookup_table* table = nullptr);
+                        actor_namespace* ns = nullptr);
 
     const uniform_type_info* begin_object() override;
     void end_object() override;
     size_t begin_sequence() override;
     void end_sequence() override;
-    primitive_variant read_value(primitive_type ptype) override;
-    void read_tuple(size_t, const primitive_type*, primitive_variant*) override;
+    void read_value(primitive_variant& storage) override;
     void read_raw(size_t num_bytes, void* storage) override;
+
+    /**
+     * @brief Replaces the current read buffer.
+     */
+    void set_rdbuf(const void* buf, size_t buf_size);
+
+    /**
+     * @brief Replaces the current read buffer.
+     */
+    void set_rdbuf(const void* begin, const void* m_end);
 
  private:
 
@@ -56,6 +62,12 @@ class binary_deserializer : public deserializer {
     const void* m_end;
 
 };
+
+template<typename T>
+inline binary_deserializer& operator>>(binary_deserializer& lhs, T& rhs) {
+    rhs = lhs.read<T>();
+    return lhs;
+}
 
 } // namespace cppa
 

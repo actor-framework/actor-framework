@@ -24,36 +24,38 @@
 
 namespace cppa {
 
-namespace {
+class message_builder::dynamic_msg_data : public detail::message_data {
 
-class dynamic_msg_data : public detail::message_data {
-
-    typedef message_data super;
+    using super = message_data;
 
  public:
 
     using message_data::const_iterator;
 
+    dynamic_msg_data() : super(true) { }
+
     dynamic_msg_data(const dynamic_msg_data& other) : super(true) {
-        for (auto& d : other.m_data) {
-            m_data.push_back(d->copy());
+        for (auto& d : other.m_elements) {
+            m_elements.push_back(d->copy());
         }
     }
 
     dynamic_msg_data(std::vector<uniform_value>&& data)
-            : super(true), m_data(std::move(data)) {}
+            : super(true), m_elements(std::move(data)) { }
 
     const void* at(size_t pos) const override {
         CPPA_REQUIRE(pos < size());
-        return m_data[pos]->val;
+        return m_elements[pos]->val;
     }
 
     void* mutable_at(size_t pos) override {
         CPPA_REQUIRE(pos < size());
-        return m_data[pos]->val;
+        return m_elements[pos]->val;
     }
 
-    size_t size() const override { return m_data.size(); }
+    size_t size() const override {
+        return m_elements.size();
+    }
 
     dynamic_msg_data* copy() const override {
         return new dynamic_msg_data(*this);
@@ -61,32 +63,66 @@ class dynamic_msg_data : public detail::message_data {
 
     const uniform_type_info* type_at(size_t pos) const override {
         CPPA_REQUIRE(pos < size());
-        return m_data[pos]->ti;
+        return m_elements[pos]->ti;
     }
 
     const std::string* tuple_type_names() const override {
         return nullptr; // get_tuple_type_names(*this);
     }
 
- private:
-
-    std::vector<uniform_value> m_data;
+    std::vector<uniform_value> m_elements;
 
 };
 
-} // namespace <anonymous>
+message_builder::message_builder() {
+    init();
+}
+
+message_builder::~message_builder() {
+    // nop
+}
+
+void message_builder::init() {
+    // this should really be done by delegating
+    // constructors, but we want to support
+    // some compilers without that feature...
+    m_data.reset(new dynamic_msg_data);
+}
+
+void message_builder::clear() {
+    data()->m_elements.clear();
+}
+
+size_t message_builder::size() const {
+    return data()->m_elements.size();
+}
+
+bool message_builder::empty() const {
+    return size() == 0;
+}
 
 message_builder& message_builder::append(uniform_value what) {
-    m_elements.push_back(std::move(what));
+    data()->m_elements.push_back(std::move(what));
     return *this;
 }
 
 message message_builder::to_message() {
-    return message{new dynamic_msg_data(std::move(m_elements))};
+    return message{data()};
 }
 
-optional<message> message_builder::apply(message_handler handler) {
-    return to_message().apply(std::move(handler));
+message_builder::dynamic_msg_data* message_builder::data() {
+    // detach if needed, i.e., assume further non-const
+    // operations on m_data can cause race conditions if
+    // someone else holds a reference to m_data
+    if (!m_data->unique()) {
+        intrusive_ptr<ref_counted> tmp{std::move(m_data)};
+        m_data.reset(static_cast<dynamic_msg_data*>(tmp.get())->copy());
+    }
+    return static_cast<dynamic_msg_data*>(m_data.get());
+}
+
+const message_builder::dynamic_msg_data* message_builder::data() const {
+    return static_cast<const dynamic_msg_data*>(m_data.get());
 }
 
 } // namespace cppa

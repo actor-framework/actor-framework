@@ -31,8 +31,8 @@
 #include "cppa/message_handler.hpp"
 #include "cppa/message_builder.hpp"
 
-#include "cppa/util/tbind.hpp"
-#include "cppa/util/type_list.hpp"
+#include "cppa/detail/tbind.hpp"
+#include "cppa/detail/type_list.hpp"
 
 namespace cppa {
 namespace detail {
@@ -62,233 +62,74 @@ class match_helper {
 
 };
 
-struct identity_fun {
-    template<typename T>
-    inline auto operator()(T&& arg) -> decltype(std::forward<T>(arg)) {
-        return std::forward<T>(arg);
-    }
-};
-
-template<typename Iterator, typename Projection = identity_fun>
-class match_each_helper {
-
-    match_each_helper(const match_each_helper&) = delete;
-    match_each_helper& operator=(const match_each_helper&) = delete;
-
- public:
-
-    match_each_helper(match_each_helper&&) = default;
-
-    match_each_helper(Iterator first, Iterator last, Projection proj = Projection{})
-    : i(std::move(first)), e(std::move(last)), p(std::move(proj)) { }
-
-    template<typename... Ts>
-    Iterator operator()(Ts&&... args) {
-        static_assert(sizeof...(Ts) > 0, "at least one argument required");
-        auto expr = match_expr_collect(std::forward<Ts>(args)...);
-        for (; i != e; ++i) {
-            auto res = expr(p(*i));
-            if (get<none_t>(&res)) return i;
-        }
-        return e;
-    }
-
- private:
-
-    Iterator i;
-    Iterator e;
-    Projection p;
-
-};
-
-struct advance_once {
-    template<typename T>
-    inline void operator()(T& what) { ++what; }
-};
-
-template<class Iterator,
-         class Predicate,
-         class Advance = advance_once,
-         class Projection = identity_fun>
-class match_for_helper {
-
-    match_for_helper(const match_for_helper&) = delete;
-    match_for_helper& operator=(const match_for_helper&) = delete;
-
- public:
-
-    match_for_helper(match_for_helper&&) = default;
-
-    match_for_helper(Iterator first, Predicate p, Advance a = Advance{}, Projection pj = Projection{})
-    : i(first), adv(a), pred(p), proj(pj) { }
-
-    template<typename... Ts>
-    void operator()(Ts&&... args) {
-        static_assert(sizeof...(Ts) > 0, "at least one argument required");
-        auto expr = match_expr_collect(std::forward<Ts>(args)...);
-        for (; pred(i); adv(i)) {
-            expr(proj(*i));
-        }
-    }
-
- private:
-
-    Iterator i;
-    Advance adv;
-    Predicate pred;
-    Projection proj;
-
-};
-
-// Case is a projection_partial_function_pair
-template<typename T, typename InputIterator, class Case>
-size_t run_case(std::vector<T>& vec,
-                bool& match_returned_false,
-                InputIterator& pos,
-                const InputIterator& end,
-                Case& target);
-
-template<size_t Pos, size_t Max>
-struct unwind_pos_token { };
-
-template<size_t Pos, size_t Max>
-constexpr unwind_pos_token<Pos+1, Max> next(unwind_pos_token<Pos, Max>) {
-    return {};
-}
-
-template<typename T>
-static inline bool eval_res(const optional<T>& res, bool&) {
-    return static_cast<bool>(res);
-}
-
-static inline bool eval_res(const optional<skip_message_t>& res, bool& skipped) {
-    if (res) skipped = true;
-    return false;
-}
-
-template<size_t Max, class Target, typename T, typename... Ts>
-bool unwind_and_call(unwind_pos_token<Max, Max>,
-                     Target& target,
-                     bool& skipped,
-                     std::vector<T>&,
-                     Ts&&... args) {
-    return eval_res(target.first(target.second, std::forward<Ts>(args)...),
-                    skipped);
-}
-
-template<size_t Max, typename T, typename InputIterator, class MatchExpr>
-bool unwind_and_call(unwind_pos_token<Max, Max>,
-                     std::vector<T>&,
-                     InputIterator&,
-                     InputIterator,
-                     MatchExpr&) {
-    return false;
-}
-
-template<size_t Pos, size_t Max, class Target, typename T, typename... Ts>
-bool unwind_and_call(unwind_pos_token<Pos, Max> pt,
-                     Target& target,
-                     bool& skipped,
-                     std::vector<T>& vec,
-                     Ts&&... args) {
-    return unwind_and_call(next(pt),
-                           target,
-                           skipped,
-                           vec,
-                           std::forward<Ts>(args)...,
-                           vec[Pos]);
-}
-
-template<size_t Pos, size_t Max, typename T, typename InputIterator, class MatchExpr>
-bool unwind_and_call(unwind_pos_token<Pos, Max> pt,
-                     std::vector<T>& vec,
-                     InputIterator& pos,
-                     InputIterator end,
-                     MatchExpr& ex) {
-    bool skipped = false;
-    if (run_case(vec, skipped, pos, end, get<Pos>(ex.cases())) == 0) {
-        return (skipped) ? false : unwind_and_call(next(pt), vec, pos, end, ex);
-    }
-    return true;
-}
-
-template<class Case, typename T>
-inline bool run_case_impl(Case& target, std::vector<T>& vec, bool& skipped) {
-    unwind_pos_token<0, util::tl_size<typename Case::pattern_type>::value> pt;
-    return unwind_and_call(pt, target, skipped, vec);
-}
-
-// Case is a projection_partial_function_pair
-template<typename T, typename InputIterator, class Case>
-size_t run_case(std::vector<T>& vec,
-                bool& skipped,
-                InputIterator& pos,
-                const InputIterator& end,
-                Case& target) {
-    // check that there's no empty match expression
-    // (would cause indefinite recursion)
-    static constexpr size_t num_args = util::tl_size<typename Case::pattern_type>::value;
-    static_assert(num_args > 0,
-                  "empty match expressions are not allowed in stream matching");
-    typedef typename Case::first_type projection_type;
-    typedef typename projection_type::arg_types arg_types;
-    typedef typename util::tl_map<
-                arg_types,
-                util::rm_const_and_ref
-            >::type
-            plain_args;
-    static_assert(util::tl_forall<
-                      plain_args,
-                      util::tbind<std::is_same, T>::template type
-                  >::value,
-                  "match_stream<T>: at least one callback argument "
-                  "is not of type T");
-    while (vec.size() < num_args) {
-        if (pos == end) {
-            return 0;
-        }
-        vec.emplace_back(*pos++);
-    }
-    if (run_case_impl(target, vec, skipped)) {
-        if (vec.size() == num_args) {
-            vec.clear();
-        }
-        else {
-            auto i = vec.begin();
-            vec.erase(i, i + num_args);
-        }
-        return skipped ? 0 : num_args;
-    }
-    return 0;
-}
-
 template<typename T, typename InputIterator>
 class stream_matcher {
 
  public:
 
-    typedef InputIterator iter;
+    using iterator = InputIterator;
 
-    stream_matcher(iter first, iter last) : m_pos(first), m_end(last) { }
+    stream_matcher(iterator first, iterator last) : m_pos(first), m_end(last) {
+        // nop
+    }
 
     template<typename... Ts>
     bool operator()(Ts&&... args) {
-        auto expr = match_expr_collect(std::forward<Ts>(args)...);
-        typedef decltype(expr) et;
-        unwind_pos_token<0, util::tl_size<typename et::cases_list>::value> pt;
+        auto mexpr = match_expr_collect(std::forward<Ts>(args)...);
+        //TODO: static_assert -> mexpr must not have a wildcard
+        constexpr size_t max_handler_args = 0; // TODO: get from mexpr
+        message_handler handler = mexpr;
         while (m_pos != m_end) {
-            if (!unwind_and_call(pt, m_cache, m_pos, m_end, expr)) {
+            m_mb.append(*m_pos++);
+            if (m_mb.apply(handler)) {
+                m_mb.clear();
+            } else if (m_mb.size() == max_handler_args) {
                 return false;
             }
+        }
+        // we have a match if all elements were consumed
+        return m_mb.empty();
+    }
+
+ private:
+
+    iterator m_pos;
+    iterator m_end;
+    message_builder m_mb;
+
+};
+
+struct identity_fun {
+    template<typename T>
+    inline T& operator()(T& arg) { return arg; }
+};
+
+template<typename InputIterator, typename Transformation = identity_fun>
+class match_each_helper {
+
+ public:
+
+    using iterator = InputIterator;
+
+    match_each_helper(iterator first, iterator last, Transformation fun)
+            : m_pos(first), m_end(last), m_fun(std::move(fun)) {
+        // nop
+    }
+
+    template<typename... Ts>
+    bool operator()(Ts&&... args) {
+        message_handler handler = match_expr_collect(std::forward<Ts>(args)...);
+        for ( ; m_pos != m_end; ++m_pos) {
+            if (!handler(m_fun(*m_pos))) return false;
         }
         return true;
     }
 
  private:
 
-    iter m_pos;
-    iter m_end;
-    std::vector<T> m_cache;
+    iterator m_pos;
+    iterator m_end;
+    Transformation m_fun;
 
 };
 
@@ -313,7 +154,7 @@ inline detail::match_helper match(message what) {
  */
 template<typename T>
 detail::match_helper match(T&& what) {
-    return message_builder{std::forward<T>(what)}.to_message();
+    return message_builder{}.append(std::forward<T>(what)).to_message();
 }
 
 /**
@@ -332,7 +173,7 @@ match_split(const std::string& str, char delim, bool keep_empties = false);
 template<typename InputIterator>
 detail::match_each_helper<InputIterator>
 match_each(InputIterator first, InputIterator last) {
-    return {first, last};
+    return {first, last, detail::identity_fun{}};
 }
 
 /**
@@ -347,24 +188,6 @@ template<typename InputIterator, typename Projection>
 detail::match_each_helper<InputIterator, Projection>
 match_each(InputIterator first, InputIterator last, Projection proj) {
     return {first, last, std::move(proj)};
-}
-
-template<typename InputIterator, typename Predicate>
-detail::match_for_helper<InputIterator, Predicate>
-match_for(InputIterator first, Predicate pred) {
-    return {first, std::move(pred)};
-}
-
-template<typename InputIterator, typename Predicate, typename Advance>
-detail::match_for_helper<InputIterator, Predicate, Advance>
-match_for(InputIterator first, Predicate pred, Advance adv) {
-    return {first, std::move(pred), std::move(adv)};
-}
-
-template<class InputIterator, class Predicate, class Advance, class Projection>
-detail::match_for_helper<InputIterator, Predicate, Advance, Projection>
-match_for(InputIterator first, Predicate pred, Advance adv, Projection pj) {
-    return {first, std::move(pred), std::move(adv), std::move(pj)};
 }
 
 template<typename T>

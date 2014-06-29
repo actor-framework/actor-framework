@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #include <vector>
 #include <typeinfo>
 
@@ -41,9 +40,9 @@ pthread_once_t s_key_once = PTHREAD_ONCE_INIT;
 
 } // namespace <anonymous>
 
-memory_cache::~memory_cache() { }
+memory_cache::~memory_cache() {}
 
-typedef map<const type_info*, unique_ptr<memory_cache> > cache_map;
+typedef map<const type_info*, unique_ptr<memory_cache>> cache_map;
 
 void cache_map_destructor(void* ptr) {
     if (ptr) delete reinterpret_cast<cache_map*>(ptr);
@@ -73,15 +72,17 @@ memory_cache* memory::get_cache_map_entry(const type_info* tinf) {
     return nullptr;
 }
 
-void memory::add_cache_map_entry(const type_info* tinf, memory_cache* instance) {
+void memory::add_cache_map_entry(const type_info* tinf,
+                                 memory_cache* instance) {
     auto& cache = get_cache_map();
     cache[tinf].reset(instance);
 }
 
-instance_wrapper::~instance_wrapper() { }
+instance_wrapper::~instance_wrapper() {
+    // nop
+}
 
-} // namespace util
+} // namespace detail
 } // namespace cppa
-
 
 #endif // CPPA_DISABLE_MEM_MANAGEMENT

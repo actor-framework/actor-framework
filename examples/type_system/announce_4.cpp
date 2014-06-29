@@ -95,7 +95,7 @@ void testee(event_based_actor* self, size_t remaining) {
         },
         on<baz>() >> [=](const baz& val) {
             // prints: baz ( foo ( 1, 2 ), bar ( foo ( 3, 4 ), 5 ) )
-            //aout(self) << to_string(object::from(val)) << endl;
+            aout(self) << to_string(make_message(val)) << endl;
             set_next_behavior();
         }
     );

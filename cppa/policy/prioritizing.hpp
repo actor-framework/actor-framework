@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_POLICY_PRIORITIZING_HPP
 #define CPPA_POLICY_PRIORITIZING_HPP
 
@@ -44,8 +43,10 @@ class prioritizing {
         // read whole mailbox
         unique_mailbox_element_pointer tmp{self->mailbox().try_pop()};
         while (tmp) {
-            if (tmp->mid.is_high_priority()) m_high.push_back(std::move(tmp));
-            else m_low.push_back(std::move(tmp));
+            if (tmp->mid.is_high_priority())
+                m_high.push_back(std::move(tmp));
+            else
+                m_low.push_back(std::move(tmp));
             tmp.reset(self->mailbox().try_pop());
         }
         if (!m_high.empty()) return take_first(m_high);
@@ -55,32 +56,25 @@ class prioritizing {
 
     template<class Actor>
     inline bool has_next_message(Actor* self) {
-        return !m_high.empty() || !m_low.empty() || self->mailbox().can_fetch_more();
+        return !m_high.empty() || !m_low.empty() ||
+               self->mailbox().can_fetch_more();
     }
 
     inline void push_to_cache(unique_mailbox_element_pointer ptr) {
         if (ptr->mid.is_high_priority()) {
             // insert before first element with low priority
             m_cache.insert(cache_low_begin(), std::move(ptr));
-        }
-        else m_cache.push_back(std::move(ptr));
+        } else
+            m_cache.push_back(std::move(ptr));
     }
 
-    inline cache_iterator cache_begin() {
-        return m_cache.begin();
-    }
+    inline cache_iterator cache_begin() { return m_cache.begin(); }
 
-    inline cache_iterator cache_end() {
-        return m_cache.begin();
-    }
+    inline cache_iterator cache_end() { return m_cache.begin(); }
 
-    inline void cache_erase(cache_iterator iter) {
-        m_cache.erase(iter);
-    }
+    inline void cache_erase(cache_iterator iter) { m_cache.erase(iter); }
 
-    inline bool cache_empty() const {
-        return m_cache.empty();
-    }
+    inline bool cache_empty() const { return m_cache.empty(); }
 
     inline unique_mailbox_element_pointer cache_take_first() {
         return take_first(m_cache);
@@ -93,16 +87,16 @@ class prioritizing {
         cache_type high;
         cache_type low;
         for (; first != last; ++first) {
-            if ((*first)->mid.is_high_priority()) high.push_back(std::move(*first));
-            else low.push_back(std::move(*first));
+            if ((*first)->mid.is_high_priority())
+                high.push_back(std::move(*first));
+            else
+                low.push_back(std::move(*first));
         }
         // prepend high priority messages
-        m_cache.insert(m_cache.begin(),
-                       make_move_iterator(high.begin()),
+        m_cache.insert(m_cache.begin(), make_move_iterator(high.begin()),
                        make_move_iterator(high.end()));
         // insert low priority messages after high priority messages
-        m_cache.insert(cache_low_begin(),
-                       make_move_iterator(low.begin()),
+        m_cache.insert(cache_low_begin(), make_move_iterator(low.begin()),
                        make_move_iterator(low.end()));
     }
 

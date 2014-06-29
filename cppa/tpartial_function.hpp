@@ -74,13 +74,13 @@ class tpartial_function {
 
     static constexpr size_t num_expr_args = util::tl_size<ctrait_args>::value;
 
-    static_assert(util::tl_exists<util::type_list<Ts...>,
+    static_assert(util::tl_exists<detail::type_list<Ts...>,
                                   std::is_rvalue_reference >::value == false,
                   "partial functions using rvalue arguments are not supported");
 
  public:
 
-    typedef util::type_list<Ts...> arg_types;
+    typedef detail::type_list<Ts...> arg_types;
 
     typedef Guard guard_type;
 
@@ -135,13 +135,13 @@ template<class Expr, class Guard, typename Ts,
 struct get_tpartial_function;
 
 template<class Expr, class Guard, typename... Ts, typename Result>
-struct get_tpartial_function<Expr, Guard, util::type_list<Ts...>, Result, 1> {
+struct get_tpartial_function<Expr, Guard, detail::type_list<Ts...>, Result, 1> {
     typedef tpartial_function<Expr, Guard, Result, Ts...> type;
 };
 
 template<class Expr, class Guard, typename... Ts>
 struct get_tpartial_function<Expr, Guard,
-                             util::type_list<Ts...>, unit_t, 0> {
+                             detail::type_list<Ts...>, unit_t, 0> {
     typedef typename util::get_callable_trait<Expr>::type ctrait;
     typedef typename ctrait::arg_types arg_types;
 
@@ -157,7 +157,7 @@ struct get_tpartial_function<Expr, Guard,
                         typename ctrait::arg_types,
                         sizeof...(Ts)
                     >::type,
-                    util::type_list<const Ts&...>,
+                    detail::type_list<const Ts&...>,
                     util::left_or_right
                 >::type,
                 typename ctrait::result_type,

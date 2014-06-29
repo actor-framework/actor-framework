@@ -23,11 +23,11 @@
 
 #include "cppa/config.hpp"
 
-#include "cppa/util/int_list.hpp"
-#include "cppa/util/comparable.hpp"
-#include "cppa/util/type_traits.hpp"
-
+#include "cppa/detail/int_list.hpp"
+#include "cppa/detail/comparable.hpp"
 #include "cppa/detail/apply_args.hpp"
+#include "cppa/detail/type_traits.hpp"
+
 #include "cppa/detail/tuple_vals.hpp"
 #include "cppa/detail/message_data.hpp"
 #include "cppa/detail/implicit_conversions.hpp"
@@ -47,17 +47,17 @@ class message {
     /**
      * @brief A raw pointer to the data.
      */
-    using raw_ptr = detail::message_data*;
+    typedef detail::message_data* raw_ptr;
 
     /**
      * @brief A (COW) smart pointer to the data.
      */
-    using data_ptr = detail::message_data::ptr;
+    typedef detail::message_data::ptr data_ptr;
 
     /**
      * @brief An iterator to access each element as <tt>const void*</tt>.
      */
-    using const_iterator = detail::message_data::const_iterator;
+    typedef detail::message_data::const_iterator const_iterator;
 
     /**
      * @brief Creates an empty tuple.
@@ -193,6 +193,12 @@ class message {
      */
     inline bool dynamically_typed() const;
 
+    /**
+     * @brief Applies @p handler to this message and returns the result
+     *        of <tt>handler(*this)</tt>.
+     */
+    optional<message> apply(message_handler handler);
+
     /** @cond PRIVATE */
 
     inline void force_detach();
@@ -207,14 +213,6 @@ class message {
 
     template<typename... Ts>
     static inline message move_from_tuple(std::tuple<Ts...>&&);
-
-    /**
-     * @brief Applies @p handler to this message and returns the result
-     *        of <tt>handler(*this)</tt>.
-     */
-    optional<message> apply(message_handler handler);
-
-    bool apply_iterative(message_handler handler);
 
     /** @endcond */
 
@@ -244,7 +242,7 @@ inline bool operator!=(const message& lhs, const message& rhs) {
  */
 template<typename T, typename... Ts>
 typename std::enable_if<
-    !std::is_same<message, typename util::rm_const_and_ref<T>::type>::value ||
+    !std::is_same<message, typename detail::rm_const_and_ref<T>::type>::value ||
         (sizeof...(Ts) > 0),
     message>::type
 make_message(T&& arg, Ts&&... args) {
@@ -316,12 +314,13 @@ struct move_from_tuple_helper {
     inline message operator()(Ts&... vs) {
         return make_message(std::move(vs)...);
     }
+
 };
 
 template<typename... Ts>
 inline message message::move_from_tuple(std::tuple<Ts...>&& tup) {
     move_from_tuple_helper f;
-    return detail::apply_args(f, util::get_indices(tup), tup);
+    return detail::apply_args(f, detail::get_indices(tup), tup);
 }
 
 template<typename... Ts>

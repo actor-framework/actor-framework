@@ -16,27 +16,33 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
-#include <iostream>
-
 #include "cppa/config.hpp"
-#include "cppa/util/get_root_uuid.hpp"
+#include "cppa/detail/get_root_uuid.hpp"
 
+#ifndef CPPA_MACOS // not needed on Mac OS X
 namespace {
 constexpr char uuid_format[] = "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF";
 } // namespace <anonmyous>
+#endif // CPPA_MACOS
 
 #ifdef CPPA_MACOS
 
 namespace {
 
-constexpr const char* s_get_uuid = "/usr/sbin/diskutil info / | "
-                                   "/usr/bin/awk '$0 ~ /UUID/ { print $3 }'";
+inline void erase_trailing_newline(std::string& str) {
+    while (!str.empty() && (*str.rbegin()) == '\n') {
+        str.resize(str.size() - 1);
+    }
+}
+
+constexpr const char* s_get_uuid =
+    "/usr/sbin/diskutil info / | "
+    "/usr/bin/awk '$0 ~ /UUID/ { print $3 }'";
 
 } // namespace <anonymous>
 
 namespace cppa {
-namespace util {
+namespace detail {
 
 std::string get_root_uuid() {
     char cbuf[100];
@@ -47,25 +53,12 @@ std::string get_root_uuid() {
         uuid += cbuf;
     }
     pclose(get_uuid_cmd);
-    // erase trailing newlines
-    while (!uuid.empty() && uuid.back() == '\n') uuid.pop_back();
-    // check whether uuid is valid, note: sizeof() counts null terminator
-    auto valid =  uuid.size() == (sizeof(uuid_format) - 1)
-               && std::equal(uuid.begin(), uuid.end(), uuid_format,
-                             [](char lhs, char rhs) {
-                                 return    (rhs == 'F' && ::isxdigit(lhs))
-                                        || (rhs == '-' && lhs == '-');
-                             });
-    if (!valid) {
-        std::cerr << "*** WARNING: found invalid root UUID: "
-                  << uuid << std::endl;
-    }
+    erase_trailing_newline(uuid);
     return uuid;
 }
 
-} // namespace util
+} // namespace detail
 } // namespace cppa
-
 
 #elif defined(CPPA_LINUX)
 
@@ -86,20 +79,27 @@ std::string get_root_uuid() {
 #include <unistd.h>
 #include <iostream>
 
-#include "cppa/util/algorithm.hpp"
+#include <boost/algorithm/string.hpp>
 
-using namespace std;
+using std::vector;
+using std::string;
+using std::ifstream;
 
-struct columns_iterator : iterator<forward_iterator_tag, vector<string>> {
+struct columns_iterator
+    : std::iterator<std::forward_iterator_tag, vector<string>> {
 
-    columns_iterator(ifstream* s = nullptr) : fs(s) { }
+    columns_iterator(ifstream* s = nullptr) : fs(s) {}
 
     vector<string>& operator*() { return cols; }
 
     columns_iterator& operator++() {
         string line;
-        if (!getline(*fs, line)) fs = nullptr;
-        else cols = cppa::util::split(line);
+        if (!std::getline(*fs, line))
+            fs = nullptr;
+        else {
+            using namespace boost::algorithm;
+            split(cols, line, is_any_of(" "), token_compress_on);
+        }
         return *this;
     }
 
@@ -117,7 +117,7 @@ bool operator!=(const columns_iterator& lhs, const columns_iterator& rhs) {
 }
 
 namespace cppa {
-namespace util {
+namespace detail {
 
 std::string get_root_uuid() {
     int sck = socket(AF_INET, SOCK_DGRAM, 0);
@@ -135,8 +135,9 @@ std::string get_root_uuid() {
         return "";
     }
     vector<string> hw_addresses;
-    auto ctoi = [](char c) -> unsigned {
+    auto ctoi = [](char c)->unsigned {
         return static_cast<unsigned char>(c);
+
     };
     // iterate through interfaces.
     auto ifr = ifc.ifc_req;
@@ -150,7 +151,7 @@ std::string get_root_uuid() {
         }
         // convert MAC address to standard string representation
         std::ostringstream oss;
-        oss << hex;
+        oss << std::hex;
         oss.width(2);
         oss << ctoi(item.ifr_hwaddr.sa_data[0]);
         for (size_t i = 1; i < 6; ++i) {
@@ -165,14 +166,15 @@ std::string get_root_uuid() {
     }
     string uuid;
     ifstream fs;
-    fs.open("/etc/fstab", ios_base::in);
+    fs.open("/etc/fstab", std::ios_base::in);
     columns_iterator end;
-    auto i = find_if(columns_iterator{&fs}, end, [](const vector<string>& cols) {
-        return cols.size() == 6 && cols[1] == "/";
-    });
+    auto i =
+        find_if(columns_iterator{&fs}, end, [](const vector<string>& cols) {
+            return cols.size() == 6 && cols[1] == "/";
+        });
     if (i != end) {
         uuid = move((*i)[0]);
-        const char cstr[] = { "UUID=" };
+        const char cstr[] = {"UUID="};
         auto slen = sizeof(cstr) - 1;
         if (uuid.compare(0, slen, cstr) == 0) uuid.erase(0, slen);
         // UUIDs are formatted as 8-4-4-4-12 hex digits groups
@@ -180,15 +182,13 @@ std::string get_root_uuid() {
         replace_if(cpy.begin(), cpy.end(), ::isxdigit, 'F');
         // discard invalid UUID
         if (cpy != uuid_format) uuid.clear();
- //     "\\?\Volume{5ec70abf-058c-11e1-bdda-806e6f6e6963}\"
-
+        //     "\\?\Volume{5ec70abf-058c-11e1-bdda-806e6f6e6963}\"
     }
     return uuid;
 }
 
-} // namespace util
+} // namespace detail
 } // namespace cppa
-
 
 #elif defined(CPPA_WINDOWS)
 
@@ -202,14 +202,14 @@ std::string get_root_uuid() {
 using namespace std;
 
 namespace cppa {
-namespace util {
+namespace detail {
 
-namespace { constexpr size_t max_drive_name = MAX_PATH; }
+namespace {
+constexpr size_t max_drive_name = MAX_PATH;
+}
 
 // if TCHAR is indeed a char, we can simply move rhs
-void mv(std::string& lhs, std::string&& rhs) {
-    lhs = std::move(rhs);
-}
+void mv(std::string& lhs, std::string&& rhs) { lhs = std::move(rhs); }
 
 // if TCHAR is defined as WCHAR, we have to do unicode conversion
 void mv(std::string& lhs, const std::basic_string<WCHAR>& rhs) {
@@ -224,13 +224,14 @@ void mv(std::string& lhs, const std::basic_string<WCHAR>& rhs) {
 std::string get_root_uuid() {
     typedef std::basic_string<TCHAR> tchar_str;
     string uuid;
-    TCHAR buf[max_drive_name]; // temporary buffer for volume name
-    tchar_str drive = TEXT("c:\\");   // string "template" for drive specifier
+    TCHAR buf[max_drive_name];      // temporary buffer for volume name
+    tchar_str drive = TEXT("c:\\"); // string "template" for drive specifier
     // walk through legal drive letters, skipping floppies
-    for (TCHAR i = TEXT('c'); i < TEXT('z');  i++ )  {
+    for (TCHAR i = TEXT('c'); i < TEXT('z'); i++) {
         // Stamp the drive for the appropriate letter.
         drive[0] = i;
-        if (GetVolumeNameForVolumeMountPoint(drive.c_str(), buf, max_drive_name)) {
+        if (GetVolumeNameForVolumeMountPoint(drive.c_str(), buf,
+                                             max_drive_name)) {
             tchar_str drive_name = buf;
             auto first = drive_name.find(TEXT("Volume{"));
             if (first != std::string::npos) {
@@ -242,8 +243,10 @@ std::string get_root_uuid() {
                     auto cpy = uuid;
                     replace_if(cpy.begin(), cpy.end(), ::isxdigit, 'F');
                     // discard invalid UUID
-                    if (cpy != uuid_format) uuid.clear();
-                    else return uuid; // return first valid UUID we get
+                    if (cpy != uuid_format)
+                        uuid.clear();
+                    else
+                        return uuid; // return first valid UUID we get
                 }
             }
         }
@@ -251,9 +254,7 @@ std::string get_root_uuid() {
     return uuid;
 }
 
-} // namespace util
+} // namespace detail
 } // namespace cppa
 
-
 #endif // CPPA_WINDOWS
-

@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #include <map>
 #include <cwchar>
 #include <limits>
@@ -28,66 +27,73 @@
 
 #include "cppa/atom.hpp"
 #include "cppa/actor.hpp"
-#include "cppa/abstract_group.hpp"
 #include "cppa/channel.hpp"
 #include "cppa/message.hpp"
 #include "cppa/message.hpp"
-#include "cppa/message_header.hpp"
-
-#include "cppa/util/algorithm.hpp"
-#include "cppa/util/scope_guard.hpp"
+#include "cppa/abstract_group.hpp"
 
 #include "cppa/detail/demangle.hpp"
+#include "cppa/detail/safe_equal.hpp"
+#include "cppa/detail/singletons.hpp"
+#include "cppa/detail/scope_guard.hpp"
 #include "cppa/detail/to_uniform_name.hpp"
-#include "cppa/detail/singleton_manager.hpp"
 #include "cppa/detail/uniform_type_info_map.hpp"
 
 //#define DEBUG_PARSER
 
 #ifdef DEBUG_PARSER
-    namespace { size_t s_indentation = 0; }
+    namespace {
+    size_t s_indentation = 0;
+    } // namespace <anonymous>
 #   define PARSER_INIT(message)                                                \
         std::cout << std::string(s_indentation, ' ') << ">>> " << message      \
                   << std::endl;                                                \
         s_indentation += 2;                                                    \
-        auto ____sg = cppa::util::make_scope_guard([] { s_indentation -= 2; })
+        auto ____sg = cppa::detail::make_scope_guard([] { s_indentation -= 2; })
 #   define PARSER_OUT(condition, message)                                      \
         if (condition) {                                                       \
             std::cout << std::string(s_indentation, ' ') << "### " << message  \
                       << std::endl;                                            \
-        } static_cast<void>(0)
+        }                                                                      \
+        static_cast<void>(0)
 #else
 #   define PARSER_INIT(unused) static_cast<void>(0)
 #   define PARSER_OUT(unused1, unused2) static_cast<void>(0)
 #endif
 
+namespace cppa {
+namespace detail {
+
 namespace {
 
 using namespace std;
-using namespace cppa;
-using namespace detail;
 
-struct platform_int_mapping { const char* name; size_t size; bool is_signed; };
+struct platform_int_mapping {
+    const char* name;
+    size_t size;
+    bool is_signed;
+
+};
 
 // WARNING: this list is sorted and searched with std::lower_bound;
 //          keep ordered when adding elements!
 platform_int_mapping platform_dependent_sizes[] = {
-    {"char",                sizeof(char),               true},
-    {"char16_t",            sizeof(char16_t),           true},
-    {"char32_t",            sizeof(char32_t),           true},
-    {"int",                 sizeof(int),                true},
-    {"long",                sizeof(long),               true},
-    {"long int",            sizeof(long int),           true},
-    {"long long",           sizeof(long long),          true},
-    {"short",               sizeof(short),              true},
-    {"short int",           sizeof(short int),          true},
-    {"signed char",         sizeof(signed char),        true},
-    {"signed int",          sizeof(signed int),         true},
-    {"signed long",         sizeof(signed long),        true},
-    {"signed long int",     sizeof(signed long int),    true},
-    {"signed long long",    sizeof(signed long long),   true},
-    {"signed short",        sizeof(signed short),       true},
-    {"signed short int",    sizeof(signed short int),   true},
+    {"char",                sizeof(char),               true },
+    {"char16_t",            sizeof(char16_t),           true },
+    {"char32_t",            sizeof(char32_t),           true },
+    {"int",                 sizeof(int),                true },
+    {"long",                sizeof(long),               true },
+    {"long int",            sizeof(long int),           true },
+    {"long long",           sizeof(long long),          true },
+    {"short",               sizeof(short),              true },
+    {"short int",           sizeof(short int),          true },
+    {"signed char",         sizeof(signed char),        true },
+    {"signed int",          sizeof(signed int),         true },
+    {"signed long",         sizeof(signed long),        true },
+    {"signed long int",     sizeof(signed long int),    true },
+    {"signed long long",    sizeof(signed long long),   true },
+    {"signed short",        sizeof(signed short),       true },
+    {"signed short int",    sizeof(signed short int),   true },
     {"unsigned char",       sizeof(unsigned char),      false},
     {"unsigned int",        sizeof(unsigned int),       false},
     {"unsigned long",       sizeof(unsigned long),      false},
@@ -97,37 +103,26 @@ platform_int_mapping platform_dependent_sizes[] = {
     {"unsigned short int",  sizeof(unsigned short int), false}
 };
 
-/*
-string map2decorated(const char* name) {
-    auto cmp = [](const platform_int_mapping& pim, const char* name) {
-        return strcmp(pim.name, name) < 0;
-    };
-    auto e = end(platform_dependent_sizes);
-    auto i = lower_bound(begin(platform_dependent_sizes), e, name, cmp);
-    if (i != e && strcmp(i->name, name) == 0) {
-        return mapped_int_names[i->size][i->is_signed ? 1 : 0];
-    }
-    return mapped_name_by_decorated_name(name);
-}
-*/
-
 string map2decorated(string&& name) {
     auto cmp = [](const platform_int_mapping& pim, const string& str) {
         return strcmp(pim.name, str.c_str()) < 0;
+
     };
     auto e = end(platform_dependent_sizes);
     auto i = lower_bound(begin(platform_dependent_sizes), e, name, cmp);
     if (i != e && i->name == name) {
-        PARSER_OUT(true, name << " => " << mapped_int_names[i->size][i->is_signed ? 1 : 0]);
+        PARSER_OUT(true,
+                   name << " => "
+                        << mapped_int_names[i->size][i->is_signed ? 1 : 0]);
         return mapped_int_names[i->size][i->is_signed ? 1 : 0];
     }
-#   ifdef DEBUG_PARSER
+#ifdef DEBUG_PARSER
     auto mapped = mapped_name_by_decorated_name(name.c_str());
     PARSER_OUT(mapped != name, name << " => " << string{mapped});
     return mapped;
-#   else
+#else
     return mapped_name_by_decorated_name(std::move(name));
-#   endif
+#endif
 }
 
 class parse_tree {
@@ -148,8 +143,7 @@ class parse_tree {
                 sub_result += i->compile(true);
             }
             result += map2decorated(std::move(sub_result));
-        }
-        else {
+        } else {
             string full_name = map2decorated(std::move(m_name));
             if (is_template()) {
                 full_name += "<";
@@ -181,16 +175,22 @@ class parse_tree {
         typedef std::pair<Iterator, Iterator> range;
         std::vector<range> subranges;
         /* lifetime scope of temporary variables needed to fill 'subranges' */ {
-            auto find_end = [&](Iterator from) -> Iterator {
+            auto find_end = [&](Iterator from)->Iterator {
                 auto open = 1;
                 for (auto i = from + 1; i != last && open > 0; ++i) {
                     switch (*i) {
-                        default: break;
-                        case '<': ++open; break;
-                        case '>': if (--open == 0) return i; break;
+                        default:
+                            break;
+                        case '<':
+                            ++open;
+                            break;
+                        case '>':
+                            if (--open == 0) return i;
+                            break;
                     }
                 }
                 return last;
+
             };
             auto sub_first = find(first, last, '<');
             while (sub_first != last) {
@@ -199,19 +199,24 @@ class parse_tree {
                 sub_first = find(sub_last + 1, last, '<');
             }
         }
-        auto islegal = [](char c) { return isalnum(c) || c == ':' || c == '_'; };
+        auto islegal = [](char c) {
+            return isalnum(c) || c == ':' || c == '_';
+
+        };
         vector<string> tokens;
         tokens.push_back("");
         vector<Iterator> scope_resolution_ops;
-        auto is_in_subrange = [&](Iterator i) -> bool {
+        auto is_in_subrange = [&](Iterator i)->bool {
             for (auto& r : subranges) {
                 if (i >= r.first && i < r.second) return true;
             }
             return false;
+
         };
         auto add_child = [&](Iterator ch_first, Iterator ch_last) {
             PARSER_OUT(true, "new child: [" << distance(first, ch_first) << ", "
-                             << ", " << distance(first, ch_last) << ")");
+                                            << ", " << distance(first, ch_last)
+                                            << ")");
             result.m_children.push_back(parse(ch_first, ch_last));
         };
         // scan string for "::" separators
@@ -242,36 +247,34 @@ class parse_tree {
             vector<range> non_template_ranges;
             if (subranges.empty()) {
                 non_template_ranges.emplace_back(first, last);
-            }
-            else {
+            } else {
                 non_template_ranges.emplace_back(first, subranges[0].first);
                 for (size_t i = 1; i < subranges.size(); ++i) {
-                    non_template_ranges.emplace_back(subranges[i-1].second + 1,
-                                                     subranges[i].first);
+                    non_template_ranges.emplace_back(
+                        subranges[i - 1].second + 1, subranges[i].first);
                 }
-                non_template_ranges.emplace_back(subranges.back().second + 1, last);
+                non_template_ranges.emplace_back(subranges.back().second + 1,
+                                                 last);
             }
             for (auto& ntr : non_template_ranges) {
                 for (auto i = ntr.first; i != ntr.second; ++i) {
                     char c = *i;
                     if (islegal(c)) {
-                        if (!tokens.back().empty() && !islegal(tokens.back().back())) {
+                        if (!tokens.back().empty() &&
+                            !islegal(tokens.back().back())) {
                             tokens.push_back("");
                         }
                         tokens.back() += c;
-                    }
-                    else if (c == ' ') {
+                    } else if (c == ' ') {
                         tokens.push_back("");
-                    }
-                    else if (c == '&') {
-                        if (tokens.back().empty() || tokens.back().back() == '&') {
+                    } else if (c == '&') {
+                        if (tokens.back().empty() ||
+                            tokens.back().back() == '&') {
                             tokens.back() += c;
-                        }
-                        else {
+                        } else {
                             tokens.push_back("&");
                         }
-                    }
-                    else if (c == '*') {
+                    } else if (c == '*') {
                         tokens.push_back("*");
                     }
                 }
@@ -279,38 +282,34 @@ class parse_tree {
             }
             if (!subranges.empty()) {
                 auto& range0 = subranges.front();
-                PARSER_OUT(true, "subrange: [" << distance(first, range0.first + 1)
-                                 << "," << distance(first, range0.second) << ")");
-                result.m_template_parameters = parse_tpl_args(range0.first + 1,
-                                                              range0.second);
+                PARSER_OUT(true, "subrange: ["
+                                     << distance(first, range0.first + 1) << ","
+                                     << distance(first, range0.second) << ")");
+                result.m_template_parameters =
+                    parse_tpl_args(range0.first + 1, range0.second);
             }
-            for (auto& token: tokens) {
+            for (auto& token : tokens) {
                 if (token == "const") {
                     result.m_const = true;
-                }
-                else if (token == "volatile") {
+                } else if (token == "volatile") {
                     result.m_volatile = true;
-                }
-                else if (token == "&") {
+                } else if (token == "&") {
                     result.m_lvalue_ref = true;
-                }
-                else if (token == "&&") {
+                } else if (token == "&&") {
                     result.m_rvalue_ref = true;
-                }
-                else if (token == "*") {
+                } else if (token == "*") {
                     result.m_pointer = true;
-                }
-                else if (token == "class" || token == "struct") {
+                } else if (token == "class" || token == "struct") {
                     // ignored (created by visual c++ compilers)
-                }
-                else if (!token.empty()) {
+                } else if (!token.empty()) {
                     if (!result.m_name.empty()) result.m_name += " ";
                     result.m_name += token;
                 }
             }
         }
         PARSER_OUT(!subranges.empty(), subranges.size() << " subranges");
-        PARSER_OUT(!result.m_children.empty(), result.m_children.size() << " children");
+        PARSER_OUT(!result.m_children.empty(), result.m_children.size()
+                                                   << " children");
         return result;
     }
 
@@ -335,9 +334,10 @@ class parse_tree {
         }
     }
 
-    parse_tree()
-    : m_const(false), m_pointer(false), m_volatile(false)
-    , m_lvalue_ref(false), m_rvalue_ref(false) { }
+    parse_tree() : m_const(false), m_pointer(false), m_volatile(false)
+                 , m_lvalue_ref(false), m_rvalue_ref(false) {
+        // nop
+    }
 
     bool m_const;
     bool m_pointer;
@@ -345,12 +345,9 @@ class parse_tree {
     bool m_lvalue_ref;
     bool m_rvalue_ref;
     bool m_nested_type;
-
     string m_name;
-
-    vector<parse_tree> m_template_parameters;
-
     vector<parse_tree> m_children;
+    vector<parse_tree> m_template_parameters;
 
 };
 
@@ -373,7 +370,8 @@ vector<parse_tree> parse_tree::parse_tpl_args(Iterator first, Iterator last) {
                     i0 = first + 1;
                 }
                 break;
-            default: break;
+            default:
+                break;
         }
     }
     result.push_back(parse(i0, first));
@@ -381,7 +379,8 @@ vector<parse_tree> parse_tree::parse_tpl_args(Iterator first, Iterator last) {
 }
 
 template<size_t RawSize>
-void replace_all(string& str, const char (&before)[RawSize], const char* after) {
+void replace_all(string& str, const char (&before)[RawSize],
+                 const char* after) {
     // end(before) - 1 points to the null-terminator
     auto i = search(begin(str), end(str), begin(before), end(before) - 1);
     while (i != end(str)) {
@@ -395,9 +394,6 @@ const char s_an[] = "$";
 
 } // namespace <anonymous>
 
-namespace cppa {
-namespace detail {
-
 std::string to_uniform_name(const std::string& dname) {
     auto r = parse_tree::parse(begin(dname), end(dname)).compile();
     // replace compiler-dependent "anonmyous namespace" with "@_"
@@ -409,6 +405,5 @@ std::string to_uniform_name(const std::type_info& tinfo) {
     return to_uniform_name(demangle(tinfo.name()));
 }
 
-} // namespace util
+} // namespace detail
 } // namespace cppa
-

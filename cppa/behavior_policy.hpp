@@ -16,23 +16,25 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_BEHAVIOR_POLICY_HPP
 #define CPPA_BEHAVIOR_POLICY_HPP
 
 namespace cppa {
 
 template<bool DiscardBehavior>
-struct behavior_policy { static constexpr bool discard_old = DiscardBehavior; };
+struct behavior_policy {
+    static constexpr bool discard_old = DiscardBehavior;
+
+};
 
 template<typename T>
-struct is_behavior_policy : std::false_type { };
+struct is_behavior_policy : std::false_type {};
 
 template<bool DiscardBehavior>
-struct is_behavior_policy<behavior_policy<DiscardBehavior>> : std::true_type { };
+struct is_behavior_policy<behavior_policy<DiscardBehavior>> : std::true_type {};
 
 typedef behavior_policy<false> keep_behavior_t;
-typedef behavior_policy<true > discard_behavior_t;
+typedef behavior_policy<true> discard_behavior_t;
 
 /**
  * @brief Policy tag that causes {@link event_based_actor::become} to

@@ -26,14 +26,15 @@
 
 #include "cppa/unit.hpp"
 
-#include "cppa/util/int_list.hpp"
-#include "cppa/util/type_list.hpp"
-#include "cppa/util/purge_refs.hpp"
-#include "cppa/util/type_traits.hpp"
-#include "cppa/util/left_or_right.hpp"
+#include "cppa/detail/int_list.hpp"
+#include "cppa/detail/type_list.hpp"
+#include "cppa/detail/purge_refs.hpp"
+#include "cppa/detail/apply_args.hpp"
+#include "cppa/detail/type_traits.hpp"
+#include "cppa/detail/left_or_right.hpp"
 
 #include "cppa/detail/matches.hpp"
-#include "cppa/detail/apply_args.hpp"
+#include "cppa/detail/type_list.hpp"
 #include "cppa/detail/lifted_fun.hpp"
 #include "cppa/detail/tuple_dummy.hpp"
 #include "cppa/detail/pseudo_tuple.hpp"
@@ -45,6 +46,7 @@ namespace detail {
 template<long N>
 struct long_constant {
     static constexpr long value = N;
+
 };
 
 typedef long_constant<-1l> minus1l;
@@ -61,8 +63,9 @@ inline const T2& deduce_const(const T1&, T2& rhs) {
 
 template<class FilteredPattern>
 struct invoke_util_base {
-    typedef typename util::tl_apply<FilteredPattern, pseudo_tuple>::type
+    typedef typename detail::tl_apply<FilteredPattern, pseudo_tuple>::type
     tuple_type;
+
 };
 
 // covers wildcard_position::multiple and wildcard_position::in_between
@@ -85,13 +88,13 @@ struct invoke_util_impl : invoke_util_base<FilteredPattern> {
                                 Pattern>::type mimpl;
         std::vector<size_t> mv;
         if (type_token == typeid(FilteredPattern)) {
-            for (size_t i = 0; i < util::tl_size<FilteredPattern>::value;
+            for (size_t i = 0; i < detail::tl_size<FilteredPattern>::value;
                  ++i) {
                 result[i] = const_cast<void*>(tup.at(i));
             }
             return true;
         } else if (mimpl(tup, mv)) {
-            for (size_t i = 0; i < util::tl_size<FilteredPattern>::value;
+            for (size_t i = 0; i < detail::tl_size<FilteredPattern>::value;
                  ++i) {
                 result[i] = const_cast<void*>(tup.at(mv[i]));
             }
@@ -99,14 +102,15 @@ struct invoke_util_impl : invoke_util_base<FilteredPattern> {
         }
         return false;
     }
+
 };
 
 template<>
 struct invoke_util_impl<
-    wildcard_position::nil, util::empty_type_list,
-    util::empty_type_list> : invoke_util_base<util::empty_type_list> {
+    wildcard_position::nil, detail::empty_type_list,
+    detail::empty_type_list> : invoke_util_base<detail::empty_type_list> {
 
-    typedef invoke_util_base<util::empty_type_list> super;
+    typedef invoke_util_base<detail::empty_type_list> super;
 
     template<typename PtrType, class Tuple>
     static bool prepare_invoke(typename super::tuple_type&,
@@ -117,16 +121,17 @@ struct invoke_util_impl<
 
     template<class Tuple>
     static bool can_invoke(const std::type_info& arg_types, const Tuple&) {
-        return arg_types == typeid(util::empty_type_list);
+        return arg_types == typeid(detail::empty_type_list);
     }
+
 };
 
 template<class Pattern, typename... Ts>
 struct invoke_util_impl<
     wildcard_position::nil, Pattern,
-    util::type_list<Ts...>> : invoke_util_base<util::type_list<Ts...>> {
+    detail::type_list<Ts...>> : invoke_util_base<detail::type_list<Ts...>> {
 
-    typedef invoke_util_base<util::type_list<Ts...>> super;
+    typedef invoke_util_base<detail::type_list<Ts...>> super;
 
     typedef typename super::tuple_type tuple_type;
 
@@ -154,10 +159,10 @@ struct invoke_util_impl<
             std::is_same<typename std::remove_const<Tuple>::type,
                          detail::message_data>::value == false>::type* = 0) {
         std::integral_constant<
-            bool, util::tl_binary_forall<
-                      typename util::tl_map<typename Tuple::types,
-                                              util::purge_refs>::type,
-                      util::type_list<Ts...>, std::is_same>::value> token;
+            bool, detail::tl_binary_forall<
+                      typename detail::tl_map<typename Tuple::types,
+                                              detail::purge_refs>::type,
+                      detail::type_list<Ts...>, std::is_same>::value> token;
         return prepare_invoke(token, result, tup);
     }
 
@@ -168,7 +173,7 @@ struct invoke_util_impl<
         typename std::enable_if<
             std::is_same<typename std::remove_const<Tuple>::type,
                          detail::message_data>::value == true>::type* = 0) {
-        if (arg_types == typeid(util::type_list<Ts...>)) {
+        if (arg_types == typeid(detail::type_list<Ts...>)) {
             if (native_arg) {
                 typedef typename std::conditional<
                     std::is_const<PtrType>::value, const native_data_type*,
@@ -202,16 +207,17 @@ struct invoke_util_impl<
 
     template<class Tuple>
     static bool can_invoke(const std::type_info& arg_types, const Tuple&) {
-        return arg_types == typeid(util::type_list<Ts...>);
+        return arg_types == typeid(detail::type_list<Ts...>);
     }
+
 };
 
 template<>
 struct invoke_util_impl<
-    wildcard_position::leading, util::type_list<anything>,
-    util::empty_type_list> : invoke_util_base<util::empty_type_list> {
+    wildcard_position::leading, detail::type_list<anything>,
+    detail::empty_type_list> : invoke_util_base<detail::empty_type_list> {
 
-    typedef invoke_util_base<util::empty_type_list> super;
+    typedef invoke_util_base<detail::empty_type_list> super;
 
     template<class Tuple>
     static inline bool can_invoke(const std::type_info&, const Tuple&) {
@@ -224,18 +230,19 @@ struct invoke_util_impl<
                                       Tuple&) {
         return true;
     }
+
 };
 
 template<class Pattern, typename... Ts>
 struct invoke_util_impl<
     wildcard_position::trailing, Pattern,
-    util::type_list<Ts...>> : invoke_util_base<util::type_list<Ts...>> {
+    detail::type_list<Ts...>> : invoke_util_base<detail::type_list<Ts...>> {
 
-    typedef invoke_util_base<util::type_list<Ts...>> super;
+    typedef invoke_util_base<detail::type_list<Ts...>> super;
 
     template<class Tuple>
     static bool can_invoke(const std::type_info& arg_types, const Tuple& tup) {
-        if (arg_types == typeid(util::type_list<Ts...>)) {
+        if (arg_types == typeid(detail::type_list<Ts...>)) {
             return true;
         }
         typedef detail::static_types_array<Ts...> arr_type;
@@ -261,18 +268,19 @@ struct invoke_util_impl<
         }
         return true;
     }
+
 };
 
 template<class Pattern, typename... Ts>
 struct invoke_util_impl<
     wildcard_position::leading, Pattern,
-    util::type_list<Ts...>> : invoke_util_base<util::type_list<Ts...>> {
+    detail::type_list<Ts...>> : invoke_util_base<detail::type_list<Ts...>> {
 
-    typedef invoke_util_base<util::type_list<Ts...>> super;
+    typedef invoke_util_base<detail::type_list<Ts...>> super;
 
     template<class Tuple>
     static bool can_invoke(const std::type_info& arg_types, const Tuple& tup) {
-        if (arg_types == typeid(util::type_list<Ts...>)) {
+        if (arg_types == typeid(detail::type_list<Ts...>)) {
             return true;
         }
         typedef detail::static_types_array<Ts...> arr_type;
@@ -300,13 +308,14 @@ struct invoke_util_impl<
         }
         return true;
     }
+
 };
 
 template<class Pattern>
 struct invoke_util
     : invoke_util_impl<
           get_wildcard_position<Pattern>(), Pattern,
-          typename util::tl_filter_not_type<Pattern, anything>::type> {};
+          typename detail::tl_filter_not_type<Pattern, anything>::type> {};
 
 template<class Expr, class Projections, class Signature, class Pattern>
 class match_expr_case
@@ -315,70 +324,75 @@ class match_expr_case
     typedef typename get_lifted_fun<Expr, Projections, Signature>::type super;
 
  public:
+
     template<typename... Ts>
     match_expr_case(Ts&&... args)
             : super(std::forward<Ts>(args)...) {}
 
     typedef Pattern pattern_type;
+
 };
 
 template<class Expr, class Transformers, class Pattern>
 struct get_case_ {
-    typedef typename util::get_callable_trait<Expr>::type ctrait;
+    typedef typename detail::get_callable_trait<Expr>::type ctrait;
 
-    typedef typename util::tl_filter_not_type<Pattern, anything>::type
+    typedef typename detail::tl_filter_not_type<Pattern, anything>::type
     filtered_pattern;
 
-    typedef typename util::tl_pad_right<
-        Transformers, util::tl_size<filtered_pattern>::value>::type
+    typedef typename detail::tl_pad_right<
+        Transformers, detail::tl_size<filtered_pattern>::value>::type
     padded_transformers;
 
-    typedef typename util::tl_map<filtered_pattern, std::add_const,
+    typedef typename detail::tl_map<filtered_pattern, std::add_const,
                                     std::add_lvalue_reference>::type
     base_signature;
 
-    typedef typename util::tl_map_conditional<
-        typename util::tl_pad_left<
+    typedef typename detail::tl_map_conditional<
+        typename detail::tl_pad_left<
             typename ctrait::arg_types,
-            util::tl_size<filtered_pattern>::value>::type,
+            detail::tl_size<filtered_pattern>::value>::type,
         std::is_lvalue_reference, false, std::add_const,
         std::add_lvalue_reference>::type padded_expr_args;
 
     // override base signature with required argument types of Expr
     // and result types of transformation
-    typedef typename util::tl_zip<
-        typename util::tl_map<padded_transformers, util::map_to_result_type,
-                                util::rm_optional,
+    typedef typename detail::tl_zip<
+        typename detail::tl_map<padded_transformers, detail::map_to_result_type,
+                                detail::rm_optional,
                                 std::add_lvalue_reference>::type,
-        typename util::tl_zip<padded_expr_args, base_signature,
-                                util::left_or_right>::type,
-        util::left_or_right>::type partial_fun_signature;
+        typename detail::tl_zip<padded_expr_args, base_signature,
+                                detail::left_or_right>::type,
+        detail::left_or_right>::type partial_fun_signature;
 
     // 'inherit' mutable references from partial_fun_signature
     // for arguments without transformation
-    typedef typename util::tl_zip<
-        typename util::tl_zip<padded_transformers, partial_fun_signature,
-                                util::if_not_left>::type,
-        base_signature, util::deduce_ref_type>::type projection_signature;
+    typedef typename detail::tl_zip<
+        typename detail::tl_zip<padded_transformers, partial_fun_signature,
+                                detail::if_not_left>::type,
+        base_signature, detail::deduce_ref_type>::type projection_signature;
 
     typedef match_expr_case<Expr, padded_transformers, projection_signature,
                             Pattern> type;
+
 };
 
 template<bool Complete, class Expr, class Trans, class Pattern>
 struct get_case {
     typedef typename get_case_<Expr, Trans, Pattern>::type type;
+
 };
 
 template<class Expr, class Trans, class Pattern>
 struct get_case<false, Expr, Trans, Pattern> {
-    typedef typename util::tl_pop_back<Pattern>::type lhs_pattern;
-    typedef typename util::tl_map<
-        typename util::get_callable_trait<Expr>::arg_types,
-        util::rm_const_and_ref>::type rhs_pattern;
+    typedef typename detail::tl_pop_back<Pattern>::type lhs_pattern;
+    typedef typename detail::tl_map<
+        typename detail::get_callable_trait<Expr>::arg_types,
+        detail::rm_const_and_ref>::type rhs_pattern;
     typedef typename get_case_<
         Expr, Trans,
-        typename util::tl_concat<lhs_pattern, rhs_pattern>::type>::type type;
+        typename detail::tl_concat<lhs_pattern, rhs_pattern>::type>::type type;
+
 };
 
 template<typename Fun>
@@ -386,6 +400,7 @@ struct has_bool_result {
     typedef typename Fun::result_type result_type;
     static constexpr bool value = std::is_same<bool, result_type>::value;
     typedef std::integral_constant<bool, value> token_type;
+
 };
 
 template<typename T>
@@ -425,12 +440,12 @@ Result unroll_expr(PPFPs& fs, uint64_t bitmask, long_constant<N>,
     }
     if ((bitmask & (0x01 << N)) == 0) return none;
     auto& f = get<N>(fs);
-    typedef typename util::rm_const_and_ref<decltype(f)>::type Fun;
+    typedef typename detail::rm_const_and_ref<decltype(f)>::type Fun;
     typedef typename Fun::pattern_type pattern_type;
     typedef detail::invoke_util<pattern_type> policy;
     typename policy::tuple_type targs;
     if (policy::prepare_invoke(targs, type_token, is_dynamic, ptr, tup)) {
-        auto is = util::get_indices(targs);
+        auto is = detail::get_indices(targs);
         auto res = detail::apply_args(f, is, deduce_const(tup, targs));
         if (unroll_expr_result_valid(res)) {
             return std::move(unroll_expr_result_unbox(res));
@@ -449,7 +464,7 @@ template<class Case, long N, class Tuple>
 inline uint64_t calc_bitmask(Case& fs, long_constant<N>,
                              const std::type_info& tinf, const Tuple& tup) {
     auto& f = get<N>(fs);
-    typedef typename util::rm_const_and_ref<decltype(f)>::type Fun;
+    typedef typename detail::rm_const_and_ref<decltype(f)>::type Fun;
     typedef typename Fun::pattern_type pattern_type;
     typedef detail::invoke_util<pattern_type> policy;
     uint64_t result = policy::can_invoke(tinf, tup) ? (0x01 << N) : 0x00;
@@ -459,16 +474,19 @@ inline uint64_t calc_bitmask(Case& fs, long_constant<N>,
 template<bool IsManipulator, typename T0, typename T1>
 struct mexpr_fwd_ {
     typedef T1 type;
+
 };
 
 template<typename T>
 struct mexpr_fwd_<false, const T&, T> {
     typedef std::reference_wrapper<const T> type;
+
 };
 
 template<typename T>
 struct mexpr_fwd_<true, T&, T> {
     typedef std::reference_wrapper<T> type;
+
 };
 
 template<bool IsManipulator, typename T>
@@ -476,7 +494,8 @@ struct mexpr_fwd {
     typedef typename mexpr_fwd_<
         IsManipulator, T,
         typename detail::implicit_conversions<
-            typename util::rm_const_and_ref<T>::type>::type>::type type;
+            typename detail::rm_const_and_ref<T>::type>::type>::type type;
+
 };
 
 // detach_if_needed(message tup, bool do_detach)
@@ -509,14 +528,15 @@ template<typename T>
 struct is_manipulator_case {
     // static constexpr bool value = T::second_type::manipulates_args;
     typedef typename T::arg_types arg_types;
-    static constexpr bool value = util::tl_exists<arg_types,
-                                                  util::is_mutable_ref>::value;
+    static constexpr bool value = tl_exists<arg_types, is_mutable_ref>::value;
+
 };
 
 template<typename T>
 struct get_case_result {
     // typedef typename T::second_type::result_type type;
     typedef typename T::result_type type;
+
 };
 
 } // namespace detail
@@ -528,13 +548,14 @@ template<class List>
 struct match_result_from_type_list;
 
 template<typename... Ts>
-struct match_result_from_type_list<util::type_list<Ts...>> {
+struct match_result_from_type_list<detail::type_list<Ts...>> {
     typedef variant<none_t, typename lift_void<Ts>::type...> type;
+
 };
 
 /**
  * @brief A match expression encapsulating cases <tt>Cs...</tt>, whereas
- *        each case is a @p util::match_expr_case<...>.
+ *        each case is a @p detail::match_expr_case<...>.
  */
 template<class... Cs>
 class match_expr {
@@ -542,15 +563,16 @@ class match_expr {
     static_assert(sizeof...(Cs) < 64, "too many functions");
 
  public:
-    typedef util::type_list<Cs...> cases_list;
+
+    typedef detail::type_list<Cs...> cases_list;
 
     typedef typename match_result_from_type_list<
-        typename util::tl_distinct<typename util::tl_map<
+        typename detail::tl_distinct<typename detail::tl_map<
             cases_list, detail::get_case_result>::type>::type>::type
     result_type;
 
     static constexpr bool has_manipulator =
-        util::tl_exists<cases_list, detail::is_manipulator_case>::value;
+        detail::tl_exists<cases_list, detail::is_manipulator_case>::value;
 
     typedef detail::long_constant<sizeof...(Cs) - 1l> idx_token_type;
 
@@ -590,7 +612,7 @@ class match_expr {
         // return new pfun_impl(*this);
         auto lvoid = [] {};
         using impl = detail::default_behavior_impl<match_expr, decltype(lvoid)>;
-        return new impl(*this, util::duration{}, lvoid);
+        return new impl(*this, duration{}, lvoid);
     }
 
     /** @endcond */
@@ -681,11 +703,13 @@ class match_expr {
 template<typename T>
 struct is_match_expr {
     static constexpr bool value = false;
+
 };
 
 template<typename... Cs>
 struct is_match_expr<match_expr<Cs...>> {
     static constexpr bool value = true;
+
 };
 
 template<typename... Lhs, typename... Rhs>
@@ -710,8 +734,8 @@ const match_expr<Cs...>& match_expr_collect(const match_expr<Cs...>& arg) {
 }
 
 template<typename T, typename... Ts>
-typename util::tl_apply<
-    typename util::tl_concat<typename T::cases_list,
+typename detail::tl_apply<
+    typename detail::tl_concat<typename T::cases_list,
                                typename Ts::cases_list...>::type,
     match_expr>::type
 match_expr_collect(const T& arg, const Ts&... args) {
@@ -775,17 +799,17 @@ behavior_impl_ptr match_expr_concat(const T0& arg0, const T1& arg1,
 // some more convenience functions
 
 template<typename F, class E = typename std::enable_if<
-                          util::is_callable<F>::value>::type>
-match_expr<typename get_case<false, F, util::empty_type_list,
-                             util::empty_type_list>::type>
+                          detail::is_callable<F>::value>::type>
+match_expr<typename get_case<false, F, detail::empty_type_list,
+                             detail::empty_type_list>::type>
 lift_to_match_expr(F fun) {
-    typedef typename get_case<false, F, util::empty_type_list,
-                              util::empty_type_list>::type result_type;
+    typedef typename get_case<false, F, detail::empty_type_list,
+                              detail::empty_type_list>::type result_type;
     return result_type{std::move(fun)};
 }
 
 template<typename T, class E = typename std::enable_if<
-                          !util::is_callable<T>::value>::type>
+                          !detail::is_callable<T>::value>::type>
 inline T lift_to_match_expr(T arg) {
     return arg;
 }

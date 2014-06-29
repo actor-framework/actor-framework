@@ -16,13 +16,12 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_TYPED_CONTINUE_HELPER_HPP
 #define CPPA_TYPED_CONTINUE_HELPER_HPP
 
 #include "cppa/continue_helper.hpp"
 
-#include "cppa/util/type_traits.hpp"
+#include "cppa/detail/type_traits.hpp"
 
 #include "cppa/detail/typed_actor_util.hpp"
 
@@ -35,21 +34,20 @@ class typed_continue_helper {
 
     typedef int message_id_wrapper_tag;
 
-    typed_continue_helper(message_id mid, local_actor* self) : m_ch(mid, self) { }
+    typed_continue_helper(message_id mid, local_actor* self)
+            : m_ch(mid, self) {}
 
     template<typename F>
-    typed_continue_helper<typename util::get_callable_trait<F>::result_type>
+    typed_continue_helper<typename detail::get_callable_trait<F>::result_type>
     continue_with(F fun) {
         detail::assert_types<OutputList, F>();
         m_ch.continue_with(std::move(fun));
         return {m_ch};
     }
 
-    inline message_id get_message_id() const {
-        return m_ch.get_message_id();
-    }
+    inline message_id get_message_id() const { return m_ch.get_message_id(); }
 
-    typed_continue_helper(continue_helper ch) : m_ch(std::move(ch)) { }
+    typed_continue_helper(continue_helper ch) : m_ch(std::move(ch)) {}
 
  private:
 

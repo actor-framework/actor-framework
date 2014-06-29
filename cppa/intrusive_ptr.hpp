@@ -25,7 +25,7 @@
 #include <stdexcept>
 #include <type_traits>
 
-#include "cppa/util/comparable.hpp"
+#include "cppa/detail/comparable.hpp"
 
 namespace cppa {
 
@@ -34,9 +34,9 @@ namespace cppa {
  * @relates ref_counted
  */
 template<typename T>
-class intrusive_ptr : util::comparable<intrusive_ptr<T> >,
-                      util::comparable<intrusive_ptr<T>, const T*>,
-                      util::comparable<intrusive_ptr<T>, std::nullptr_t> {
+class intrusive_ptr : detail::comparable<intrusive_ptr<T>>,
+                      detail::comparable<intrusive_ptr<T>, const T*>,
+                      detail::comparable<intrusive_ptr<T>, std::nullptr_t> {
 
  public:
 

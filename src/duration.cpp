@@ -16,25 +16,23 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #include <sstream>
 
-#include "cppa/util/duration.hpp"
+#include "cppa/duration.hpp"
+
+namespace cppa {
 
 namespace {
 
-inline std::uint64_t ui64_val(const cppa::util::duration& d) {
-    return static_cast<std::uint64_t>(d.unit) * d.count;
+inline uint64_t ui64_val(const duration& d) {
+    return static_cast<uint64_t>(d.unit) * d.count;
 }
 
 } // namespace <anonmyous>
 
-namespace cppa {
-namespace util {
-
 bool operator==(const duration& lhs, const duration& rhs) {
-    return (lhs.unit == rhs.unit ? lhs.count == rhs.count
-                                 : ui64_val(lhs) == ui64_val(rhs));
+    return (lhs.unit == rhs.unit ? lhs.count == rhs.count :
+                                   ui64_val(lhs) == ui64_val(rhs));
 }
 
 std::string duration::to_string() const {
@@ -42,14 +40,20 @@ std::string duration::to_string() const {
     std::ostringstream oss;
     oss << count;
     switch (unit) {
-        case time_unit::invalid: oss << "?"; break;
-        case time_unit::seconds: oss << "s"; break;
-        case time_unit::milliseconds: oss << "ms"; break;
-        case time_unit::microseconds: oss << "us"; break;
+        case time_unit::invalid:
+            oss << "?";
+            break;
+        case time_unit::seconds:
+            oss << "s";
+            break;
+        case time_unit::milliseconds:
+            oss << "ms";
+            break;
+        case time_unit::microseconds:
+            oss << "us";
+            break;
     }
     return oss.str();
 }
 
-} // namespace util
 } // namespace cppa
-

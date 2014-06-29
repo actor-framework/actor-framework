@@ -83,7 +83,7 @@
 
 using namespace cppa;
 
-namespace {
+using buffer_type = std::vector<char>;
 
 namespace color {
 
@@ -163,7 +163,7 @@ class client_job : public base_actor {
              static_cast<uint64_t>(0),
              static_cast<uint64_t>(4095));
         return (
-            on(atom("reply"), arg_match) >> [=](const util::buffer& buf) {
+            on(atom("reply"), arg_match) >> [=](const buffer_type& buf) {
                 print() << "successfully received "
                         << buf.size()
                         << " bytes"
@@ -235,7 +235,7 @@ class curl_worker : public base_actor {
         return (
             on(atom("read"), arg_match)
             >> [=](const std::string& fname, uint64_t offset, uint64_t range)
-            -> cow_tuple<atom_value, util::buffer> {
+            -> cow_tuple<atom_value, buffer_type> {
                 print() << "read" << color::reset_endl;
                 for (;;) {
                     m_buf.clear();
@@ -298,13 +298,15 @@ class curl_worker : public base_actor {
 
     static size_t cb(void* data, size_t bsize, size_t nmemb, void* userp) {
         size_t size = bsize * nmemb;
-        auto thisptr = reinterpret_cast<curl_worker*>(userp);
-        thisptr->m_buf.write(size, data);
+        auto& buf = reinterpret_cast<curl_worker*>(userp)->m_buf;
+        auto first = reinterpret_cast<char*>(data);
+        auto last = first + bsize;
+        buf.insert(buf.end(), first, last);
         return size;
     }
 
-    CURL*        m_curl;
-    util::buffer m_buf;
+    CURL*       m_curl;
+    buffer_type m_buf;
 
 };
 
@@ -375,8 +377,6 @@ class curl_master : public base_actor {
 
 // signal handling for ctrl+c
 std::atomic<bool> shutdown_flag{false};
-
-} // namespace <anonymous>
 
 int main() {
     // random number setup

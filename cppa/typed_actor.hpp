@@ -16,13 +16,14 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_TYPED_ACTOR_HPP
 #define CPPA_TYPED_ACTOR_HPP
 
-#include "cppa/actor_addr.hpp"
-#include "cppa/replies_to.hpp"
 #include "cppa/intrusive_ptr.hpp"
+
+#include "cppa/actor_addr.hpp"
+#include "cppa/actor_cast.hpp"
+#include "cppa/replies_to.hpp"
 #include "cppa/abstract_actor.hpp"
 #include "cppa/typed_behavior.hpp"
 
@@ -36,28 +37,25 @@ struct invalid_actor_addr_t;
 template<typename... Rs>
 class typed_event_based_actor;
 
-namespace detail {
-
-class raw_access;
-
-} // namespace detail
-
 /**
  * @brief Identifies a strongly typed actor.
  * @tparam Rs Interface as @p replies_to<...>::with<...> parameter pack.
  */
 template<typename... Rs>
-class typed_actor : util::comparable<typed_actor<Rs...>>
-                  , util::comparable<typed_actor<Rs...>, actor_addr>
-                  , util::comparable<typed_actor<Rs...>, invalid_actor_addr_t> {
+class typed_actor
+    : detail::comparable<typed_actor<Rs...>>,
+      detail::comparable<typed_actor<Rs...>, actor_addr>,
+      detail::comparable<typed_actor<Rs...>, invalid_actor_addr_t> {
 
     friend class local_actor;
-
-    friend class detail::raw_access;
 
     // friend with all possible instantiations
     template<typename...>
     friend class typed_actor;
+
+    // allow conversion via actor_cast
+    template<typename T, typename U>
+    friend T actor_cast(const U&);
 
  public:
 
@@ -80,7 +78,7 @@ class typed_actor : util::comparable<typed_actor<Rs...>>
     /**
      * @brief Stores the interface of the actor as type list.
      */
-    typedef util::type_list<Rs...> interface;
+    typedef detail::type_list<Rs...> interface;
 
     typed_actor() = default;
     typed_actor(typed_actor&&) = default;
@@ -104,13 +102,9 @@ class typed_actor : util::comparable<typed_actor<Rs...>>
         set(other);
     }
 
-    pointer operator->() const {
-        return static_cast<pointer>(m_ptr.get());
-    }
+    pointer operator->() const { return static_cast<pointer>(m_ptr.get()); }
 
-    base& operator*() const {
-        return static_cast<base&>(*m_ptr.get());
-    }
+    base& operator*() const { return static_cast<base&>(*m_ptr.get()); }
 
     /**
      * @brief Queries the address of the stored actor.
@@ -135,27 +129,25 @@ class typed_actor : util::comparable<typed_actor<Rs...>>
         return {detail::to_uniform_name<Rs>()...};
     }
 
-    explicit operator bool() const {
-        return static_cast<bool>(m_ptr);
-    }
+    explicit operator bool() const { return static_cast<bool>(m_ptr); }
 
-    inline bool operator!() const {
-        return !m_ptr;
-    }
+    inline bool operator!() const { return !m_ptr; }
 
  private:
 
-    typed_actor(abstract_actor* ptr) : m_ptr(ptr) { }
+    inline abstract_actor* get() const { return m_ptr.get(); }
+
+    typed_actor(abstract_actor* ptr) : m_ptr(ptr) {}
 
     template<class ListA, class ListB>
     inline void check_signatures() {
-        static_assert(util::tl_is_strict_subset<ListA, ListB>::value,
+        static_assert(detail::tl_is_strict_subset<ListA, ListB>::value,
                       "'this' must be a strict subset of 'other'");
     }
 
     template<typename... OtherRs>
     inline void set(const typed_actor<OtherRs...>& other) {
-        check_signatures<interface, util::type_list<OtherRs...>>();
+        check_signatures<interface, detail::type_list<OtherRs...>>();
         m_ptr = other.m_ptr;
     }
 

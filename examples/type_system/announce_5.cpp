@@ -85,7 +85,7 @@ bool operator==(const tree& lhs, const tree& rhs) {
 // - does have a default constructor
 // - does have a copy constructor
 // - does provide operator==
-class tree_type_info : public util::abstract_uniform_type_info<tree> {
+class tree_type_info : public detail::abstract_uniform_type_info<tree> {
 
  protected:
 
@@ -139,7 +139,7 @@ void testee(event_based_actor* self, size_t remaining) {
         else self->quit();
     };
     self->become (
-        on_arg_match >> [=](const tree& tmsg) {
+        [=](const tree& tmsg) {
             // prints the tree in its serialized format:
             // @<> ( { tree ( 0, { 10, { 11, { }, 12, { }, 13, { } }, 20, { 21, { }, 22, { } } } ) } )
             cout << "to_string(self->last_dequeued()): "
@@ -150,7 +150,7 @@ void testee(event_based_actor* self, size_t remaining) {
             tmsg.print();
             set_next_behavior();
         },
-        on_arg_match >> [=](const tree_vector& trees) {
+        [=](const tree_vector& trees) {
             // prints "received 2 trees"
             cout << "received " << trees.size() << " trees" << endl;
             // prints:

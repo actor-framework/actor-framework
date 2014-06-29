@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_RESPONSE_PROMISE_HPP
 #define CPPA_RESPONSE_PROMISE_HPP
 
@@ -42,8 +41,7 @@ class response_promise {
     response_promise& operator=(response_promise&&) = default;
     response_promise& operator=(const response_promise&) = default;
 
-    response_promise(const actor_addr& from,
-                     const actor_addr& to,
+    response_promise(const actor_addr& from, const actor_addr& to,
                      const message_id& response_id);
 
     /**
@@ -69,6 +67,5 @@ class response_promise {
 };
 
 } // namespace cppa
-
 
 #endif // CPPA_RESPONSE_PROMISE_HPP

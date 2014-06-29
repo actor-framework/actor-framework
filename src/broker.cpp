@@ -1,13 +1,12 @@
 /******************************************************************************\
- *           ___        __                                                    *
- *          /\_ \    __/\ \                                                   *
- *          \//\ \  /\_\ \ \____    ___   _____   _____      __               *
- *            \ \ \ \/\ \ \ '__`\  /'___\/\ '__`\/\ '__`\  /'__`\             *
- *             \_\ \_\ \ \ \ \L\ \/\ \__/\ \ \L\ \ \ \L\ \/\ \L\.\_           *
- *             /\____\\ \_\ \_,__/\ \____\\ \ ,__/\ \ ,__/\ \__/.\_\          *
- *             \/____/ \/_/\/___/  \/____/ \ \ \/  \ \ \/  \/__/\/_/          *
- *                                          \ \_\   \ \_\                     *
- *                                           \/_/    \/_/                     *
+ *                                                                            *
+ *           ____                  _        _        _                        *
+ *          | __ )  ___   ___  ___| |_     / \   ___| |_ ___  _ __            *
+ *          |  _ \ / _ \ / _ \/ __| __|   / _ \ / __| __/ _ \| '__|           *
+ *          | |_) | (_) | (_) \__ \ |_ _ / ___ \ (__| || (_) | |              *
+ *          |____/ \___/ \___/|___/\__(_)_/   \_\___|\__\___/|_|              *
+ *                                                                            *
+ *                                                                            *
  *                                                                            *
  * Copyright (C) 2011 - 2014                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
@@ -19,17 +18,16 @@
 
 #include <iostream>
 
+#include "cppa/none.hpp"
+
 #include "cppa/config.hpp"
 
-#include "cppa/logging.hpp"
-#include "cppa/singletons.hpp"
+#include "cppa/detail/logging.hpp"
+#include "cppa/detail/singletons.hpp"
+#include "cppa/detail/scope_guard.hpp"
 
-#include "cppa/util/scope_guard.hpp"
-
-#include "cppa/io/broker.hpp"
 #include "cppa/io/broker.hpp"
 #include "cppa/io/middleman.hpp"
-#include "cppa/io/buffered_writing.hpp"
 
 #include "cppa/detail/make_counted.hpp"
 #include "cppa/detail/actor_registry.hpp"
@@ -37,270 +35,160 @@
 
 using std::cout;
 using std::endl;
-using std::move;
 
 namespace cppa {
 namespace io {
 
-namespace {
+broker::servant::~servant() {
+    // nop
+}
 
-constexpr size_t default_max_buffer_size = 65535;
+broker::servant::servant(broker* ptr) : m_disconnected(false), m_broker(ptr) { }
 
-} // namespace <anonymous>
+void broker::servant::set_broker(broker* new_broker) {
+    if (!m_disconnected) m_broker = new_broker;
+}
 
-class default_broker : public broker {
-
- public:
-
-    typedef std::function<behavior (broker*)> function_type;
-
-    default_broker(function_type f) : m_fun(std::move(f)) { }
-
-    behavior make_behavior() override {
-        return m_fun(this);
+void broker::servant::disconnect() {
+    CPPA_LOG_TRACE("");
+    if (!m_disconnected) {
+        CPPA_LOG_DEBUG("disconnect servant from broker");
+        m_disconnected = true;
+        remove_from_broker();
+        if (m_broker->exit_reason() == exit_reason::not_exited) {
+            if (m_broker->m_running) {
+                CPPA_LOG_DEBUG("broker is running, push message to cache");
+                // push this message to the cache to make sure we
+                // don't have interleaved message handlers
+                auto e = mailbox_element::create(m_broker->address(),
+                                                 message_id::invalid,
+                                                 disconnect_message());
+                m_broker->m_priority_policy
+                .push_to_cache(unique_mailbox_element_pointer{e});
+            }
+            else {
+                CPPA_LOG_DEBUG("broker is not running, invoke handler");
+                m_broker->enqueue(m_broker->address(),
+                                  message_id::invalid,
+                                  disconnect_message(),
+                                  nullptr);
+            }
+        }
     }
+}
 
- private:
+broker::scribe::scribe(broker* parent, connection_handle hdl)
+        : super(parent), m_hdl(hdl) {
+    std::vector<char> tmp;
+    m_read_msg = make_message(new_data_msg{m_hdl, std::move(tmp)});
+}
 
-    function_type m_fun;
+void broker::scribe::remove_from_broker() {
+    CPPA_LOG_TRACE("hdl = " << hdl().id());
+    m_broker->m_scribes.erase(hdl());
+}
 
-};
+broker::scribe::~scribe() {
+    CPPA_LOG_TRACE("");
+}
+
+message broker::scribe::disconnect_message() {
+    return make_message(connection_closed_msg{hdl()});
+}
+
+void broker::scribe::consume(const void*, size_t num_bytes) {
+    CPPA_LOG_TRACE(CPPA_ARG(num_bytes));
+    auto& buf = rd_buf();
+    buf.resize(num_bytes);                       // make sure size is correct
+    read_msg().buf.swap(buf);                    // swap into message to client
+    m_broker->invoke_message(invalid_actor_addr, // call client
+                             message_id::invalid,
+                             m_read_msg);
+    read_msg().buf.swap(buf);                    // swap buffer back to stream
+    flush();                                     // implicit flush of wr_buf()
+}
+
+void broker::scribe::io_failure(network::operation op) {
+    CPPA_LOG_TRACE("id = " << hdl().id()
+                   << ", " << CPPA_TARG(op, static_cast<int>));
+    // keep compiler happy when compiling w/o logging
+    static_cast<void>(op);
+    disconnect();
+}
+
+broker::doorman::doorman(broker* parent, accept_handle hdl)
+        : super(parent), m_hdl(hdl) {
+    auto hdl2 = connection_handle::from_int(-1);
+    m_accept_msg = make_message(new_connection_msg{m_hdl, hdl2});
+}
+
+broker::doorman::~doorman() {
+    CPPA_LOG_TRACE("");
+}
+
+void broker::doorman::remove_from_broker() {
+    CPPA_LOG_TRACE("hdl = " << hdl().id());
+    m_broker->m_doormen.erase(hdl());
+}
+
+message broker::doorman::disconnect_message() {
+    return make_message(acceptor_closed_msg{hdl()});
+}
+
+void broker::doorman::io_failure(network::operation op) {
+    CPPA_LOG_TRACE("id = " << hdl().id()
+                   << ", " << CPPA_TARG(op, static_cast<int>));
+    // keep compiler happy when compiling w/o logging
+    static_cast<void>(op);
+    disconnect();
+}
 
 class broker::continuation {
 
  public:
 
-    continuation(broker_ptr ptr, msg_hdr_cref hdr, message&& msg)
-    : m_self(move(ptr)), m_hdr(hdr), m_data(move(msg)) { }
+    continuation(broker_ptr ptr, actor_addr from, message_id mid, message&& msg)
+            : m_self(std::move(ptr)), m_from(from)
+            , m_mid(mid), m_data(std::move(msg)) { }
 
     inline void operator()() {
         CPPA_PUSH_AID(m_self->id());
         CPPA_LOG_TRACE("");
-        m_self->invoke_message(m_hdr, move(m_data));
+        m_self->invoke_message(m_from, m_mid, m_data);
     }
 
  private:
 
-    broker_ptr     m_self;
-    message_header m_hdr;
-    message      m_data;
+    broker_ptr m_self;
+    actor_addr m_from;
+    message_id m_mid;
+    message    m_data;
 
 };
 
-class broker::servant : public continuable {
-
-    typedef continuable super;
-
- public:
-
-    ~servant();
-
-    template<typename... Ts>
-    servant(broker_ptr parent, Ts&&... args)
-    : super{std::forward<Ts>(args)...}, m_disconnected{false}
-    , m_broker{move(parent)} { }
-
-    void io_failed(event_bitmask mask) override {
-        if (mask == event::read) disconnect();
-    }
-
-    void dispose() override {
-        auto ptr = m_broker;
-        ptr->erase_io(read_handle());
-    }
-
-    void set_broker(broker_ptr new_broker) {
-        if (!m_disconnected) m_broker = std::move(new_broker);
-    }
-
- protected:
-
-    void disconnect() {
-        if (!m_disconnected) {
-            m_disconnected = true;
-            if (m_broker->exit_reason() == exit_reason::not_exited) {
-                m_broker->invoke_message({invalid_actor_addr, invalid_actor},
-                                         disconnect_message());
-            }
-        }
-    }
-
-    virtual message disconnect_message() = 0;
-
-    bool m_disconnected;
-
-    broker_ptr m_broker;
-
-};
-
-// avoid weak-vtables warning by providing dtor out-of-line
-broker::servant::~servant() { }
-
-class broker::scribe : public extend<broker::servant>::with<buffered_writing> {
-
-    typedef combined_type super;
-
- public:
-
-    ~scribe();
-
-    scribe(broker_ptr parent, input_stream_ptr in, output_stream_ptr out)
-    : super{get_middleman(), out, move(parent), in->read_handle(), out->write_handle()}
-    , m_is_continue_reading{false}, m_dirty{false}
-    , m_policy{broker::at_least}, m_policy_buffer_size{0}, m_in{in} {
-        auto& ndm = get_ref<0>(m_read_msg);
-        ndm.handle = connection_handle::from_int(in->read_handle());
-        ndm.buf.final_size(default_max_buffer_size);
-    }
-
-    void receive_policy(broker::policy_flag policy, size_t buffer_size) {
-        CPPA_LOG_TRACE(CPPA_ARG(policy) << ", " << CPPA_ARG(buffer_size));
-        if (not m_disconnected) {
-            m_dirty = true;
-            m_policy = policy;
-            m_policy_buffer_size = buffer_size;
-        }
-    }
-
-    continue_reading_result continue_reading() override {
-        CPPA_LOG_TRACE("");
-        m_is_continue_reading = true;
-        auto sg = util::make_scope_guard([=] {
-            m_is_continue_reading = false;
-        });
-        for (;;) {
-            // stop reading if actor finished execution
-            if (m_broker->exit_reason() != exit_reason::not_exited) {
-                CPPA_LOG_DEBUG("broker already done; exit reason: "
-                               << m_broker->exit_reason());
-                return continue_reading_result::closed;
-            }
-            auto& buf = get_ref<0>(m_read_msg).buf;
-            if (m_dirty) {
-                m_dirty = false;
-                if (m_policy == broker::at_most || m_policy == broker::exactly) {
-                    buf.final_size(m_policy_buffer_size);
-                }
-                else buf.final_size(default_max_buffer_size);
-            }
-            auto before = buf.size();
-            try { buf.append_from(m_in.get()); }
-            catch (stream_at_eof&) {
-                disconnect();
-                return continue_reading_result::closed;
-            }
-            catch (network_error&) {
-                disconnect();
-                return continue_reading_result::failure;
-            }
-            CPPA_LOG_DEBUG("received " << (buf.size() - before) << " bytes");
-            if  ( before == buf.size()
-               || (m_policy == broker::exactly && buf.size() != m_policy_buffer_size)) {
-                return continue_reading_result::continue_later;
-            }
-            if  ( (   m_policy == broker::at_least
-                   && buf.size() >= m_policy_buffer_size)
-               || m_policy == broker::exactly
-               || m_policy == broker::at_most) {
-                CPPA_LOG_DEBUG("invoke io actor");
-                m_broker->invoke_message({invalid_actor_addr, nullptr}, m_read_msg);
-                CPPA_LOG_INFO_IF(!m_read_msg.vals()->unique(), "detached buffer");
-                get_ref<0>(m_read_msg).buf.clear();
-            }
-        }
-    }
-
-    connection_handle id() const {
-        return connection_handle::from_int(m_in->read_handle());
-    }
-
- protected:
-
-    message disconnect_message() override {
-        auto hdl = connection_handle::from_int(m_in->read_handle());
-        return make_message(connection_closed_msg{hdl});
-    }
-
- private:
-
-    bool m_is_continue_reading;
-    bool m_dirty;
-    broker::policy_flag m_policy;
-    size_t m_policy_buffer_size;
-    input_stream_ptr m_in;
-    cow_tuple<new_data_msg> m_read_msg;
-
-};
-
-// avoid weak-vtables warning by providing dtor out-of-line
-broker::scribe::~scribe() { }
-
-class broker::doorman : public broker::servant {
-
-    typedef servant super;
-
- public:
-
-    ~doorman();
-
-    doorman(broker_ptr parent, acceptor_uptr ptr)
-            : super{move(parent), ptr->file_handle()} {
-        get_ref<0>(m_accept_msg).source = accept_handle::from_int(ptr->file_handle());
-        m_ptr.swap(ptr);
-    }
-
-    continue_reading_result continue_reading() override {
-        CPPA_LOG_TRACE("");
-        optional<stream_ptr_pair> opt{none};
-        try { opt = m_ptr->try_accept_connection(); }
-        catch (std::exception& e) {
-            CPPA_LOG_ERROR(to_verbose_string(e));
-            static_cast<void>(e); // keep compiler happy
-            return continue_reading_result::failure;
-        }
-        if (opt) {
-            using namespace std;
-            auto& p = *opt;
-            get_ref<0>(m_accept_msg).handle = m_broker->add_connection(move(p.first),
-                                                                       move(p.second));
-            m_broker->invoke_message({invalid_actor_addr, nullptr}, m_accept_msg);
-        }
-        return continue_reading_result::continue_later;
-    }
-
- protected:
-
-    message disconnect_message() override {
-        auto hdl = accept_handle::from_int(m_ptr->file_handle());
-        return make_message(acceptor_closed_msg{hdl});
-    }
-
- private:
-
-    acceptor_uptr m_ptr;
-    cow_tuple<new_connection_msg> m_accept_msg;
-
-};
-
-// avoid weak-vtables warning by providing dtor out-of-line
-broker::doorman::~doorman() { }
-
-void broker::invoke_message(msg_hdr_cref hdr, message msg) {
+void broker::invoke_message(const actor_addr& sender,
+                            message_id mid,
+                            message& msg) {
     CPPA_LOG_TRACE(CPPA_TARG(msg, to_string));
-    if (planned_exit_reason() != exit_reason::not_exited || bhvr_stack().empty()) {
+    m_running = true;
+    auto sg = detail::make_scope_guard([=] {
+        m_running = false;
+    });
+    if (   planned_exit_reason() != exit_reason::not_exited
+        || bhvr_stack().empty()) {
         CPPA_LOG_DEBUG("actor already finished execution"
                        << ", planned_exit_reason = " << planned_exit_reason()
                        << ", bhvr_stack().empty() = " << bhvr_stack().empty());
-        if (hdr.id.valid()) {
+        if (mid.valid()) {
             detail::sync_request_bouncer srb{exit_reason()};
-            srb(hdr.sender, hdr.id);
+            srb(sender, mid);
         }
         return;
     }
     // prepare actor for invocation of message handler
-    m_dummy_node.sender = hdr.sender;
-    m_dummy_node.msg = move(msg);
-    m_dummy_node.mid = hdr.id;
+    m_dummy_node.sender = sender;
+    m_dummy_node.mid = mid;
+    std::swap(msg, m_dummy_node.msg);
     try {
         auto bhvr = bhvr_stack().back();
         auto mid = bhvr_stack().back_id();
@@ -320,7 +208,8 @@ void broker::invoke_message(msg_hdr_cref hdr, message msg) {
             case policy::hm_skip_msg:
             case policy::hm_cache_msg: {
                 CPPA_LOG_DEBUG("handle_message returned hm_skip_msg or hm_cache_msg");
-                auto e = mailbox_element::create(hdr, move(m_dummy_node.msg));
+                auto e = mailbox_element::create(sender, mid,
+                                                 std::move(m_dummy_node.msg));
                 m_priority_policy.push_to_cache(unique_mailbox_element_pointer{e});
                 break;
             }
@@ -334,23 +223,24 @@ void broker::invoke_message(msg_hdr_cref hdr, message msg) {
         quit(exit_reason::unhandled_exception);
     }
     catch (...) {
-        CPPA_LOG_ERROR("broker killed due to an unhandled exception");
+        CPPA_LOG_ERROR("broker killed due to an unknown exception");
         quit(exit_reason::unhandled_exception);
     }
     // restore dummy node
-    m_dummy_node.sender = actor_addr{};
-    m_dummy_node.msg.reset();
+    m_dummy_node.sender = invalid_actor_addr;
+    std::swap(m_dummy_node.msg, msg);
     // cleanup if needed
-    auto per = planned_exit_reason();
-    if (bhvr_stack().empty() && per != exit_reason::not_exited) {
-        CPPA_LOG_DEBUG("bhvr_stack().empty(), quit for normal exit reason");
-        per = exit_reason::normal;
-        quit(per);
-    }
-    if (per != exit_reason::not_exited) {
-        cleanup(per);
+    if (planned_exit_reason() != exit_reason::not_exited) {
+        cleanup(planned_exit_reason());
         // release implicit reference count held by MM
-        deref();
+        //deref();
+    }
+    else if (bhvr_stack().empty()) {
+        CPPA_LOG_DEBUG("bhvr_stack().empty(), quit for normal exit reason");
+        quit(exit_reason::normal);
+        cleanup(planned_exit_reason());
+        // release implicit reference count held by MM
+        //deref();
     }
 }
 
@@ -372,67 +262,56 @@ bool broker::invoke_message_from_cache() {
     return false;
 }
 
-void broker::enqueue(msg_hdr_cref hdr, message msg, execution_unit*) {
-    get_middleman()->run_later(continuation{this, hdr, move(msg)});
+void broker::write(connection_handle hdl, size_t bs, const void* buf) {
+    auto& out = wr_buf(hdl);
+    auto first = reinterpret_cast<const char*>(buf);
+    auto last = first + bs;
+    out.insert(out.end(), first, last);
+}
+
+
+void broker::enqueue(const actor_addr& sender,
+                     message_id mid,
+                     message msg,
+                     execution_unit*) {
+    middleman::instance()->run_later(continuation{this, sender, mid,
+                                                  std::move(msg)});
 }
 
 bool broker::initialized() const {
     return m_initialized;
 }
 
-broker::broker() : m_initialized(false) {
-    // acquire implicit reference count held by the middleman
-    ref();
-    // actor is running now
-    get_actor_registry()->inc_running();
+broker::broker()
+        : m_initialized(false), m_hidden(true)
+        , m_running(false), m_mm(*middleman::instance()) {
+    // nop
 }
 
-void broker::cleanup(std::uint32_t reason) {
+void broker::cleanup(uint32_t reason) {
     CPPA_LOG_TRACE(CPPA_ARG(reason));
-    auto mm = get_middleman();
-    for (auto& dm : m_accept) {
-        mm->stop_reader(dm.second.get());
-    }
-    for (auto& ds : m_io) {
-        mm->stop_reader(ds.second.get());
-    }
+    close_all();
     super::cleanup(reason);
-    get_actor_registry()->dec_running();
+    if (!m_hidden) detail::singletons::get_actor_registry()->dec_running();
 }
 
-void broker::write(const connection_handle& hdl, size_t num_bytes, const void* buf) {
-    auto i = m_io.find(hdl);
-    if (i != m_io.end()) i->second->write(num_bytes, buf);
-}
-
-void broker::write(const connection_handle& hdl, const util::buffer& buf) {
-    write(hdl, buf.size(), buf.data());
-}
-
-void broker::write(const connection_handle& hdl, util::buffer&& buf) {
-    write(hdl, buf.size(), buf.data());
-    buf.clear();
-}
-
-broker_ptr init_and_launch(broker_ptr ptr) {
-    CPPA_PUSH_AID(ptr->id());
-    CPPA_LOGF_TRACE("init and launch broker with id " << ptr->id());
+void broker::launch(bool is_hidden, execution_unit*) {
+    if (!is_hidden) {
+        m_hidden = false;
+        detail::singletons::get_actor_registry()->inc_running();
+    }
+    CPPA_PUSH_AID(id());
+    CPPA_LOGF_TRACE("init and launch broker with id " << id());
     // we want to make sure initialization is executed in MM context
-    auto self = ptr.get();
-    ptr->become(
+    broker_ptr self = this;
+    self->become(
         on(atom("INITMSG")) >> [self] {
-            CPPA_LOGF_TRACE(CPPA_ARG(self));
+            CPPA_LOGF_TRACE(CPPA_MARG(self, get));
             self->unbecome();
-            auto mm = get_middleman();
-            // launch backend now, because user-defined initialization
+            // launch backends now, because user-defined initialization
             // might call functions like add_connection
-            for (auto& kvp : self->m_io) {
-                CPPA_LOGF_DEBUG("launch scribe " << kvp.second.get());
-                mm->continue_reader(kvp.second.get());
-            }
-            for (auto& kvp : self->m_accept) {
-                CPPA_LOGF_DEBUG("launch doorman " << kvp.second.get());
-                mm->continue_reader(kvp.second.get());
+            for (auto& kvp : self->m_doormen) {
+                kvp.second->launch();
             }
             self->m_initialized = true;
             // run user-defined initialization code
@@ -440,96 +319,65 @@ broker_ptr init_and_launch(broker_ptr ptr) {
             if (bhvr) self->become(std::move(bhvr));
         }
     );
-    ptr->enqueue({invalid_actor_addr, ptr},
-                  make_message(atom("INITMSG")),
-                  nullptr);
-    return ptr;
+    self->enqueue(invalid_actor_addr, message_id::invalid,
+                  make_message(atom("INITMSG")), nullptr);
 }
 
-broker_ptr broker::from_impl(std::function<behavior (broker*)> fun) {
-    return detail::make_counted<default_broker>(fun);
+void broker::configure_read(connection_handle hdl, receive_policy::config cfg) {
+    CPPA_LOG_TRACE(CPPA_MARG(hdl, id) << ", cfg = {"
+                          << static_cast<int>(cfg.first)
+                          << ", " << cfg.second << "}");
+    by_id(hdl).configure_read(cfg);
 }
 
-broker_ptr broker::from_impl(std::function<void (broker*)> fun) {
-    return from([=](broker* self) -> behavior {
-        fun(self);
-        return {};
-    });
+void broker::flush(connection_handle hdl) {
+    by_id(hdl).flush();
 }
 
-void broker::erase_io(int id) {
-    m_io.erase(connection_handle::from_int(id));
-}
-
-void broker::erase_acceptor(int id) {
-    m_accept.erase(accept_handle::from_int(id));
-}
-
-connection_handle broker::add_connection(input_stream_ptr in, output_stream_ptr out) {
-    using namespace std;
-    auto id = connection_handle::from_int(in->read_handle());
-    auto ires = m_io.insert(make_pair(id, create_unique<scribe>(this, move(in), move(out))));
-    CPPA_REQUIRE(ires.second == true);
-    // 'launch' backend only if broker is already initialized
-    if (initialized()) {
-        CPPA_LOG_DEBUG("launch scribe " << ires.first->second.get());
-        auto sptr = ires.first->second.get();
-        auto mm = get_middleman();
-        mm->continue_reader(sptr);
-    }
-    return id;
-}
-
-accept_handle broker::add_acceptor(acceptor_uptr ptr) {
-    CPPA_LOG_TRACE(CPPA_MARG(ptr, get));
-    using namespace std;
-    auto id = accept_handle::from_int(ptr->file_handle());
-    auto ires = m_accept.insert(make_pair(id, create_unique<doorman>(this, move(ptr))));
-    CPPA_REQUIRE(ires.second == true);
-    // 'launch' backend only if broker is already initialized
-    if (initialized()) {
-        CPPA_LOG_DEBUG("launch doorman " << ires.first->second.get());
-        auto aptr = ires.first->second.get();
-        auto mm = get_middleman();
-        mm->continue_reader(aptr);
-    }
-    return id;
-}
-
-actor broker::fork_impl(std::function<behavior (broker*)> fun,
-                        connection_handle hdl) {
-    CPPA_LOG_TRACE(CPPA_MARG(hdl, id));
-    auto i = m_io.find(hdl);
-    if (i == m_io.end()) {
-        CPPA_LOG_ERROR("invalid handle");
-        throw std::invalid_argument("invalid handle");
-    }
-    scribe* sptr = i->second.get(); // keep non-owning pointer
-    auto result = detail::make_counted<default_broker>(fun);
-    result->m_io.insert(make_pair(sptr->id(), move(i->second)));
-    init_and_launch(result);
-    sptr->set_broker(result); // set new broker
-    m_io.erase(i);
-    return {result};
-}
-
-actor broker::fork_impl(std::function<void (broker*)> fun,
-                        connection_handle hdl) {
-    return fork_impl(std::function<behavior (broker*)>{[=](broker* self) -> behavior {
-        fun(self);
-        return behavior{};
-    }}, hdl);
-}
-
-void broker::receive_policy(const connection_handle& hdl,
-                            broker::policy_flag policy,
-                            size_t buffer_size) {
-    auto i = m_io.find(hdl);
-    if (i != m_io.end()) i->second->receive_policy(policy, buffer_size);
+broker::buffer_type& broker::wr_buf(connection_handle hdl) {
+    return by_id(hdl).wr_buf();
 }
 
 broker::~broker() {
     CPPA_LOG_TRACE("");
+}
+
+void broker::close(connection_handle hdl) {
+    by_id(hdl).stop_reading();
+}
+
+void broker::close(accept_handle hdl) {
+    by_id(hdl).stop_reading();
+}
+
+void broker::close_all() {
+    CPPA_LOG_TRACE("");
+    while (!m_doormen.empty()) {
+        // stop_reading will remove the doorman from m_doormen
+        m_doormen.begin()->second->stop_reading();
+    }
+    while (!m_scribes.empty()) {
+        // stop_reading will remove the scribe from m_scribes
+        m_scribes.begin()->second->stop_reading();
+    }
+}
+
+std::vector<connection_handle> broker::connections() const {
+    std::vector<connection_handle> result;
+    for (auto& scribe : m_scribes) result.push_back(scribe.first);
+    return result;
+}
+
+broker::functor_based::~functor_based() {
+    // nop
+}
+
+behavior broker::functor_based::make_behavior() {
+    return m_make_behavior(this);
+}
+
+network::multiplexer& broker::backend() {
+    return m_mm.backend();
 }
 
 } // namespace io

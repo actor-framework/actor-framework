@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_DETAIL_SYNC_REQUEST_BOUNCER_HPP
 #define CPPA_DETAIL_SYNC_REQUEST_BOUNCER_HPP
 
@@ -35,10 +34,11 @@ namespace cppa {
 namespace detail {
 
 struct sync_request_bouncer {
-    std::uint32_t rsn;
-    explicit sync_request_bouncer(std::uint32_t r);
+    uint32_t rsn;
+    explicit sync_request_bouncer(uint32_t r);
     void operator()(const actor_addr& sender, const message_id& mid) const;
     void operator()(const mailbox_element& e) const;
+
 };
 
 } // namespace detail

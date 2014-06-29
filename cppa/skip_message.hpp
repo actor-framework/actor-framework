@@ -16,18 +16,20 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
-#ifndef CPPA_SKIP_MESSAGE_HPP
-#define CPPA_SKIP_MESSAGE_HPP
+#ifndef CPPA_MATCH_HINT_HPP
+#define CPPA_MATCH_HINT_HPP
 
 namespace cppa {
 
 /**
  * @brief Optional return type for functors used in pattern matching
- *        expressions. This type is evaluated by the runtime system of libcppa
+ *        expressions. This type is evaluated by the runtime system
  *        and can be used to intentionally skip messages.
  */
-struct skip_message_t { constexpr skip_message_t() { } };
+struct skip_message_t {
+    constexpr skip_message_t() {}
+
+};
 
 /**
  * @brief Tells the runtime system to skip a message when used as message
@@ -43,4 +45,4 @@ std::ostream& operator<<(std::ostream&, skip_message_t);
 
 } // namespace cppa
 
-#endif // CPPA_SKIP_MESSAGE_HPP
+#endif // CPPA_MATCH_HINT_HPP

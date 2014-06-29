@@ -9,8 +9,8 @@
 
 using std::cout;
 using std::endl;
+using std::vector;
 
-using namespace std;
 using namespace cppa;
 
 // POD struct
@@ -34,7 +34,7 @@ typedef std::pair<int, int> foo_pair2;
 // a struct with member vector<vector<...>>
 struct foo2 {
     int a;
-    vector<vector<double> > b;
+    vector<vector<double>> b;
 };
 
 bool operator==( const foo2& lhs, const foo2& rhs ) {
@@ -88,8 +88,8 @@ int main(int, char**) {
     vd.b.resize(1);
     vd.b.back().push_back(42);
 
-    util::buffer buf;
-    binary_serializer bs(&buf);
+    vector<char> buf;
+    binary_serializer bs(std::back_inserter(buf));
     bs << vd;
 
     binary_deserializer bd(buf.data(), buf.size());

@@ -16,20 +16,24 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #include "cppa/scheduler.hpp"
-#include "cppa/singletons.hpp"
 #include "cppa/message_id.hpp"
 #include "cppa/event_based_actor.hpp"
 
+#include "cppa/detail/singletons.hpp"
+
 namespace cppa {
 
-event_based_actor::event_based_actor() : m_initialized(false) { }
+event_based_actor::event_based_actor() : m_initialized(false) {}
 
-event_based_actor::~event_based_actor() { }
+event_based_actor::~event_based_actor() {}
 
 void event_based_actor::forward_to(const actor& whom) {
     forward_message(whom, message_priority::normal);
+}
+
+behavior event_based_actor::functor_based::make_behavior() {
+    return m_make_behavior(this);
 }
 
 } // namespace cppa

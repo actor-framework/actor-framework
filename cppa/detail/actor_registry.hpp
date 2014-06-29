@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_DETAIL_ACTOR_REGISTRY_HPP
 #define CPPA_DETAIL_ACTOR_REGISTRY_HPP
 
@@ -29,14 +28,14 @@
 
 #include "cppa/attachable.hpp"
 #include "cppa/abstract_actor.hpp"
-#include "cppa/util/shared_spinlock.hpp"
+#include "cppa/detail/shared_spinlock.hpp"
 
 #include "cppa/detail/singleton_mixin.hpp"
 
 namespace cppa {
 namespace detail {
 
-class singleton_manager;
+class singletons;
 
 class actor_registry : public singleton_mixin<actor_registry> {
 
@@ -51,7 +50,7 @@ class actor_registry : public singleton_mixin<actor_registry> {
      *        exit reason. An entry with a nullptr means the actor has finished
      *        execution for given reason.
      */
-    typedef std::pair<abstract_actor_ptr, std::uint32_t> value_type;
+    typedef std::pair<abstract_actor_ptr, uint32_t> value_type;
 
     /**
      * @brief Returns the {nullptr, invalid_exit_reason}.
@@ -65,7 +64,7 @@ class actor_registry : public singleton_mixin<actor_registry> {
 
     void put(actor_id key, const abstract_actor_ptr& value);
 
-    void erase(actor_id key, std::uint32_t reason);
+    void erase(actor_id key, uint32_t reason);
 
     // gets the next free actor id
     actor_id next_id();
@@ -91,7 +90,7 @@ class actor_registry : public singleton_mixin<actor_registry> {
     std::mutex m_running_mtx;
     std::condition_variable m_running_cv;
 
-    mutable util::shared_spinlock m_instances_mtx;
+    mutable detail::shared_spinlock m_instances_mtx;
     entries m_entries;
 
     actor_registry();

@@ -16,9 +16,8 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
-#ifndef CPPA_CONTINUE_HELPER_HPP
-#define CPPA_CONTINUE_HELPER_HPP
+#ifndef CONTINUE_HELPER_HPP
+#define CONTINUE_HELPER_HPP
 
 #include <functional>
 
@@ -50,9 +49,8 @@ class continue_helper {
      */
     template<typename F>
     continue_helper& continue_with(F fun) {
-        return continue_with(behavior::continuation_fun{message_handler{
-                   on(any_vals, arg_match) >> fun
-               }});
+        return continue_with(behavior::continuation_fun{
+            message_handler{on(any_vals, arg_match) >> fun}});
     }
 
     /**
@@ -65,9 +63,7 @@ class continue_helper {
     /**
      * @brief Returns the ID of the expected response message.
      */
-    message_id get_message_id() const {
-        return m_mid;
-    }
+    message_id get_message_id() const { return m_mid; }
 
  private:
 
@@ -78,4 +74,4 @@ class continue_helper {
 
 } // namespace cppa
 
-#endif // CPPA_CONTINUE_HELPER_HPP
+#endif // CONTINUE_HELPER_HPP

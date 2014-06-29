@@ -16,25 +16,27 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_TO_STRING_HPP
 #define CPPA_TO_STRING_HPP
 
 #include <type_traits>
+
+#include "cppa/intrusive_ptr.hpp"
 
 #include "cppa/atom.hpp" // included for to_string(atom_value)
 #include "cppa/actor.hpp"
 #include "cppa/group.hpp"
 #include "cppa/channel.hpp"
 #include "cppa/node_id.hpp"
-#include "cppa/anything.hpp"
 #include "cppa/message.hpp"
-#include "cppa/intrusive_ptr.hpp"
+#include "cppa/anything.hpp"
+#include "cppa/actor_addr.hpp"
 #include "cppa/abstract_group.hpp"
-#include "cppa/message_header.hpp"
 #include "cppa/uniform_type_info.hpp"
 
-namespace std { class exception; }
+namespace std {
+class exception;
+}
 
 namespace cppa {
 
@@ -50,10 +52,6 @@ inline std::string to_string_impl(const T& what) {
 } // namespace detail
 
 inline std::string to_string(const message& what) {
-    return detail::to_string_impl(what);
-}
-
-inline std::string to_string(msg_hdr_cref what) {
     return detail::to_string_impl(what);
 }
 
@@ -77,7 +75,13 @@ inline std::string to_string(const channel& what) {
 std::string to_string(const node_id& what);
 
 // implemented in node_id.cpp
-std::string to_string(const node_id_ptr& what);
+std::string to_string(const node_id& what);
+
+/*
+inline std::string to_string(const any& what) {
+    return detail::to_string_impl(what.value(), what.type());
+}
+*/
 
 /**
  * @brief Converts @p e to a string including the demangled type of e

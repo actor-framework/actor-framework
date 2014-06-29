@@ -16,12 +16,11 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #include "cppa/memory_managed.hpp"
 
 namespace cppa {
 
-memory_managed::~memory_managed() { }
+memory_managed::~memory_managed() {}
 
 void memory_managed::request_deletion() { delete this; }
 
