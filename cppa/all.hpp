@@ -29,7 +29,6 @@
 #include "cppa/spawn.hpp"
 #include "cppa/config.hpp"
 #include "cppa/extend.hpp"
-#include "cppa/policy.hpp"
 #include "cppa/channel.hpp"
 #include "cppa/message.hpp"
 #include "cppa/node_id.hpp"

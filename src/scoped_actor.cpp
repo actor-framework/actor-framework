@@ -16,8 +16,13 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#include "cppa/policy.hpp"
 #include "cppa/scoped_actor.hpp"
+
+#include "cppa/policy/no_resume.hpp"
+#include "cppa/policy/no_scheduling.hpp"
+#include "cppa/policy/actor_policies.hpp"
+#include "cppa/policy/nestable_invoke.hpp"
+#include "cppa/policy/not_prioritizing.hpp"
 
 #include "cppa/detail/singletons.hpp"
 #include "cppa/detail/proper_actor.hpp"
@@ -33,11 +38,10 @@ struct impl : blocking_actor {
 
 blocking_actor* alloc() {
     using namespace policy;
-    return new detail::proper_actor<impl,
-                                    policies<no_scheduling,
-                                             not_prioritizing,
-                                             no_resume,
-                                             nestable_invoke>>;
+    return new detail::proper_actor<impl, actor_policies<no_scheduling,
+                                                         not_prioritizing,
+                                                         no_resume,
+                                                         nestable_invoke>>;
 }
 
 } // namespace <anonymous>

@@ -22,24 +22,40 @@
 namespace cppa {
 namespace policy {
 
-template<class SchedulingPolicy, class PriorityPolicy, class ResumePolicy,
-          class InvokePolicy>
-class policies {
+/**
+ * @brief A container for actor-related policies.
+ */
+template<class SchedulingPolicy,
+         class PriorityPolicy,
+         class ResumePolicy,
+         class InvokePolicy>
+class actor_policies {
 
  public:
 
     using scheduling_policy = SchedulingPolicy;
+
     using priority_policy = PriorityPolicy;
+
     using resume_policy = ResumePolicy;
+
     using invoke_policy = InvokePolicy;
 
-    scheduling_policy& get_scheduling_policy() { return m_scheduling_policy; }
+    inline scheduling_policy& get_scheduling_policy() {
+        return m_scheduling_policy;
+    }
 
-    priority_policy& get_priority_policy() { return m_priority_policy; }
+    inline priority_policy& get_priority_policy() {
+        return m_priority_policy;
+    }
 
-    resume_policy& get_resume_policy() { return m_resume_policy; }
+    inline resume_policy& get_resume_policy() {
+        return m_resume_policy;
+    }
 
-    invoke_policy& get_invoke_policy() { return m_invoke_policy; }
+    inline invoke_policy& get_invoke_policy() {
+        return m_invoke_policy;
+    }
 
  private:
 

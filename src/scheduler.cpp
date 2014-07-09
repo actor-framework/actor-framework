@@ -23,13 +23,18 @@
 #include <condition_variable>
 
 #include "cppa/on.hpp"
-#include "cppa/policy.hpp"
 #include "cppa/anything.hpp"
 #include "cppa/to_string.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/local_actor.hpp"
 #include "cppa/scoped_actor.hpp"
 #include "cppa/system_messages.hpp"
+
+#include "cppa/policy/no_resume.hpp"
+#include "cppa/policy/no_scheduling.hpp"
+#include "cppa/policy/actor_policies.hpp"
+#include "cppa/policy/nestable_invoke.hpp"
+#include "cppa/policy/not_prioritizing.hpp"
 
 #include "cppa/detail/logging.hpp"
 #include "cppa/detail/proper_actor.hpp"
@@ -48,16 +53,18 @@ using hrc = std::chrono::high_resolution_clock;
 
 using time_point = hrc::time_point;
 
-using timer_actor_policies =
-    policy::policies<policy::no_scheduling, policy::not_prioritizing,
-                     policy::no_resume, policy::nestable_invoke>;
+using timer_actor_policies = policy::actor_policies<
+                                 policy::no_scheduling,
+                                 policy::not_prioritizing,
+                                 policy::no_resume,
+                                 policy::nestable_invoke
+                             >;
 
 struct delayed_msg {
     actor_addr from;
     channel to;
     message_id mid;
     message msg;
-
 };
 
 inline void deliver(delayed_msg& dm) {
@@ -72,8 +79,8 @@ inline void insert_dmsg(Map& storage, const duration& d, Ts&&... vs) {
     storage.insert(std::make_pair(std::move(tout), std::move(dmsg)));
 }
 
-class timer_actor final
-    : public detail::proper_actor<blocking_actor, timer_actor_policies> {
+class timer_actor final : public detail::proper_actor<blocking_actor,
+                                                      timer_actor_policies> {
 
  public:
 
@@ -103,10 +110,10 @@ class timer_actor final
                  insert_dmsg(messages, d, std::move(from), std::move(to), mid,
                              std::move(tup));
              },
-             on(atom("DIE")) >> [&] { done = true; }, others() >> [&]() {
-#ifdef CPPA_DEBUG_MODE
-                std::cerr << "coordinator::timer_loop: UNKNOWN MESSAGE: "
-                          << to_string(msg_ptr->msg) << std::endl;
+             on(atom("DIE")) >> [&] { done = true; }, others() >> [&] {
+#               ifdef CPPA_DEBUG_MODE
+                    std::cerr << "coordinator::timer_loop: UNKNOWN MESSAGE: "
+                              << to_string(msg_ptr->msg) << std::endl;
 #               endif
             });
         // loop
@@ -147,14 +154,12 @@ void printer_loop(blocking_actor* self) {
                 line.clear();
             }
         }
-
     };
     auto flush_if_needed = [](std::string& str) {
         if (str.back() == '\n') {
             std::cout << str << std::flush;
             str.clear();
         }
-
     };
     bool running = true;
     self->receive_while([&] { return running; })(

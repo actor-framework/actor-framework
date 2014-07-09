@@ -21,12 +21,21 @@
 
 #include <type_traits>
 
-#include "cppa/policy.hpp"
 #include "cppa/scheduler.hpp"
 #include "cppa/spawn_fwd.hpp"
 #include "cppa/typed_actor.hpp"
 #include "cppa/spawn_options.hpp"
 #include "cppa/typed_event_based_actor.hpp"
+
+#include "cppa/policy/no_resume.hpp"
+#include "cppa/policy/prioritizing.hpp"
+#include "cppa/policy/no_scheduling.hpp"
+#include "cppa/policy/actor_policies.hpp"
+#include "cppa/policy/nestable_invoke.hpp"
+#include "cppa/policy/not_prioritizing.hpp"
+#include "cppa/policy/sequential_invoke.hpp"
+#include "cppa/policy/event_based_resume.hpp"
+#include "cppa/policy/cooperative_scheduling.hpp"
 
 #include "cppa/detail/logging.hpp"
 #include "cppa/detail/type_traits.hpp"
@@ -46,30 +55,44 @@ class spawn_as_is {};
 template<class C, spawn_options Os, typename BeforeLaunch, typename... Ts>
 intrusive_ptr<C> spawn_impl(execution_unit* eu, BeforeLaunch before_launch_fun,
                             Ts&&... args) {
-    static_assert(!std::is_base_of<blocking_actor, C>::value ||
-                      has_blocking_api_flag(Os),
+    static_assert(   !std::is_base_of<blocking_actor, C>::value
+                  || has_blocking_api_flag(Os),
                   "C is derived type of blocking_actor but "
                   "blocking_api_flag is missing");
     static_assert(is_unbound(Os),
                   "top-level spawns cannot have monitor or link flag");
     CPPA_LOGF_TRACE("spawn " << detail::demangle<C>());
-    using scheduling_policy = typename std::conditional < has_detach_flag(Os) ||
-                              has_blocking_api_flag(Os),
-          policy::no_scheduling, policy::cooperative_scheduling > ::type;
+    using scheduling_policy = typename std::conditional<
+                                  has_detach_flag(Os) || has_blocking_api_flag(Os),
+                                  policy::no_scheduling,
+                                  policy::cooperative_scheduling
+                              >::type;
     using priority_policy = typename std::conditional<
-        has_priority_aware_flag(Os), policy::prioritizing,
-        policy::not_prioritizing>::type;
-    using resume_policy =
-        typename std::conditional<has_blocking_api_flag(Os), policy::no_resume,
-                                  policy::event_based_resume>::type;
+                                has_priority_aware_flag(Os),
+                                policy::prioritizing,
+                                policy::not_prioritizing
+                            >::type;
+    using resume_policy = typename std::conditional<
+                              has_blocking_api_flag(Os),
+                              policy::no_resume,
+                              policy::event_based_resume
+                          >::type;
     using invoke_policy = typename std::conditional<
-        has_blocking_api_flag(Os), policy::nestable_invoke,
-        policy::sequential_invoke>::type;
-    using policies = policy::policies<scheduling_policy, priority_policy,
-                                      resume_policy, invoke_policy>;
-    using actor_impl =
-        typename std::conditional<std::is_base_of<spawn_as_is, C>::value, C,
-                                  detail::proper_actor<C, policies>>::type;
+                              has_blocking_api_flag(Os),
+                              policy::nestable_invoke,
+                              policy::sequential_invoke
+                          >::type;
+    using policy_token = policy::actor_policies<
+                             scheduling_policy,
+                             priority_policy,
+                             resume_policy,
+                             invoke_policy
+                         >;
+    using actor_impl = typename std::conditional<
+                           std::is_base_of<spawn_as_is, C>::value,
+                           C,
+                           detail::proper_actor<C, policy_token>
+                       >::type;
     auto ptr = detail::make_counted<actor_impl>(std::forward<Ts>(args)...);
     CPPA_LOGF_DEBUG("spawned actor with ID " << ptr->id());
     CPPA_PUSH_AID(ptr->id());
