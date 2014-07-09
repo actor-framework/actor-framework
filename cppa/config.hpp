@@ -99,7 +99,7 @@
 #   if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,16)
 #     define CPPA_POLL_IMPL
 #   endif
-#elif defined(WIN32)
+#elif defined(WIN32) || defined(_WIN32)
 #  define CPPA_WINDOWS
 #else
 #  error Platform and/or compiler not supportet
