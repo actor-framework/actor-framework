@@ -68,11 +68,10 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
 
  public:
 
-    typedef cow_tuple<typename detail::rm_const_and_ref<Args>::type...>
-            args_tuple;
+    using args_tuple = cow_tuple<typename detail::rm_const_and_ref<Args>::type...>;
 
-    typedef std::function<optional<args_tuple>(message)> arg_mapping;
-    typedef std::function<message(Ret&)> result_mapping;
+    using arg_mapping = std::function<optional<args_tuple>(message)>;
+    using result_mapping = std::function<message(Ret&)>;
 
     static intrusive_ptr<actor_facade>
     create(const program& prog, const char* kernel_name,

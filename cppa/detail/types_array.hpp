@@ -92,7 +92,7 @@ struct types_array_impl {
     inline const uniform_type_info* operator[](size_t p) const {
         return data[p];
     }
-    typedef const uniform_type_info* const* const_iterator;
+    using const_iterator = const uniform_type_info* const*;
     inline const_iterator begin() const { return std::begin(data); }
     inline const_iterator end() const { return std::end(data); }
 };
@@ -109,10 +109,9 @@ struct types_array_impl<false, T...> {
     mutable std::atomic<const uniform_type_info**> pairs;
     // pairs[sizeof...(T)];
     types_array_impl()
-            : tinfo_data{ta_util<std_tinf, detail::is_builtin<T>::value,
-                                 T>::get()...} {
+            : tinfo_data{ta_util<std_tinf, is_builtin<T>::value, T>::get()...} {
         bool static_init[sizeof...(T)] = {!std::is_same<T, anything>::value &&
-                                          detail::is_builtin<T>::value...};
+                                          is_builtin<T>::value...};
         for (size_t i = 0; i < sizeof...(T); ++i) {
             if (static_init[i]) {
                 data[i].store(uniform_typeid(*(tinfo_data[i])),
@@ -131,7 +130,7 @@ struct types_array_impl<false, T...> {
         }
         return result;
     }
-    typedef const uniform_type_info* const* const_iterator;
+    using const_iterator = const uniform_type_info* const*;
     inline const_iterator begin() const {
         auto result = pairs.load();
         if (result == nullptr) {
@@ -157,14 +156,16 @@ struct types_array_impl<false, T...> {
 template<typename... T>
 struct types_array
     : types_array_impl<
-          detail::tl_forall<detail::type_list<T...>, detail::is_builtin>::value,
+          tl_forall<type_list<T...>, is_builtin>::value,
           T...> {
     static constexpr size_t size = sizeof...(T);
-    typedef detail::type_list<T...> types;
-    typedef typename detail::tl_filter_not<types, detail::is_anything>::type
-    filtered_types;
+    using types = type_list<T...>;
+    using filtered_types = typename tl_filter_not<
+                               types,
+                               is_anything
+                           >::type;
     static constexpr size_t filtered_size =
-        detail::tl_size<filtered_types>::value;
+        tl_size<filtered_types>::value;
     inline bool has_values() const { return false; }
 
 };
@@ -182,8 +183,8 @@ template<typename TypeList>
 struct static_types_array_from_type_list;
 
 template<typename... T>
-struct static_types_array_from_type_list<detail::type_list<T...>> {
-    typedef static_types_array<T...> type;
+struct static_types_array_from_type_list<type_list<T...>> {
+    using type = static_types_array<T...>;
 
 };
 
@@ -194,12 +195,12 @@ template<typename T>
 struct static_type_list<T> {
     static const std::type_info* list;
     static inline const std::type_info* by_offset(size_t offset) {
-        return offset == 0 ? list : &typeid(detail::type_list<>);
+        return offset == 0 ? list : &typeid(type_list<>);
     }
 };
 
 template<typename T>
-const std::type_info* static_type_list<T>::list = &typeid(detail::type_list<T>);
+const std::type_info* static_type_list<T>::list = &typeid(type_list<T>);
 
 // utility for singleton-like access to a type_info instance of a type_list
 template<typename T0, typename T1, typename... Ts>
@@ -212,7 +213,7 @@ struct static_type_list<T0, T1, Ts...> {
 
 template<typename T0, typename T1, typename... Ts>
 const std::type_info* static_type_list<T0, T1, Ts...>::list =
-    &typeid(detail::type_list<T0, T1, Ts...>);
+    &typeid(type_list<T0, T1, Ts...>);
 
 } // namespace detail
 } // namespace cppa

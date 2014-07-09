@@ -34,8 +34,8 @@ namespace cppa {
 
 class local_actor;
 
-class mailbox_element
-    : public extend<memory_managed>::with<mixin::memory_cached> {
+class mailbox_element : public extend<memory_managed>::
+                               with<mixin::memory_cached> {
 
     friend class local_actor;
     friend class detail::memory;
@@ -69,8 +69,10 @@ class mailbox_element
 
 };
 
-typedef std::unique_ptr<mailbox_element, detail::disposer>
-unique_mailbox_element_pointer;
+using unique_mailbox_element_pointer = std::unique_ptr<
+                                           mailbox_element,
+                                           detail::disposer
+                                       >;
 
 } // namespace cppa
 

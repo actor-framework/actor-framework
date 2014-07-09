@@ -118,8 +118,8 @@ class abstract_group : public abstract_channel {
 
     };
 
-    typedef module* module_ptr;
-    typedef std::unique_ptr<module> unique_module_ptr;
+    using module_ptr = module*;
+    using unique_module_ptr = std::unique_ptr<module>;
 
     virtual void serialize(serializer* sink) = 0;
 
@@ -160,7 +160,7 @@ class abstract_group : public abstract_channel {
  * @brief A smart pointer type that manages instances of {@link group}.
  * @relates group
  */
-typedef intrusive_ptr<abstract_group> abstract_group_ptr;
+using abstract_group_ptr = intrusive_ptr<abstract_group>;
 
 } // namespace cppa
 

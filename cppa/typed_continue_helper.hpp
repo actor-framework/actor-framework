@@ -32,7 +32,7 @@ class typed_continue_helper {
 
  public:
 
-    typedef int message_id_wrapper_tag;
+    using message_id_wrapper_tag = int;
 
     typed_continue_helper(message_id mid, local_actor* self)
             : m_ch(mid, self) {}

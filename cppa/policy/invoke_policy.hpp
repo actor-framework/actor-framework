@@ -60,7 +60,7 @@ enum handle_message_result {
 
 template<receive_policy_flag X>
 struct rp_flag {
-    typedef std::integral_constant<receive_policy_flag, X> type;
+    using type = std::integral_constant<receive_policy_flag, X>;
 };
 
 /**
@@ -103,9 +103,9 @@ class invoke_policy {
         return result;
     }
 
-    typedef typename rp_flag<rp_nestable>::type nestable;
+    using nestable = typename rp_flag<rp_nestable>::type;
 
-    typedef typename rp_flag<rp_sequential>::type sequential;
+    using sequential = typename rp_flag<rp_sequential>::type;
 
  private:
 

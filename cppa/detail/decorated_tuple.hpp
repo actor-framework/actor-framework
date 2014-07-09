@@ -36,17 +36,17 @@ namespace detail {
 
 class decorated_tuple : public message_data {
 
-    typedef message_data super;
+    using super = message_data;
 
     decorated_tuple& operator=(const decorated_tuple&) = delete;
 
  public:
 
-    typedef std::vector<size_t> vector_type;
+    using vector_type = std::vector<size_t>;
 
-    typedef message_data::ptr pointer;
+    using pointer = message_data::ptr;
 
-    typedef const std::type_info* rtti;
+    using rtti = const std::type_info*;
 
     // creates a dynamically typed subtuple from @p d with an offset
     static inline pointer create(pointer d, vector_type v) {

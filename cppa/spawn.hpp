@@ -88,7 +88,7 @@ struct spawn_fwd {
 
 template<typename T, typename... Ts>
 struct spawn_fwd<T(Ts...)> {
-    typedef T (*fun_pointer)(Ts...);
+    using fun_pointer = T (*)(Ts...);
     static inline fun_pointer fwd(fun_pointer arg) { return arg; }
 
 };
@@ -114,9 +114,9 @@ intrusive_ptr<C> spawn_class(execution_unit* eu, BeforeLaunch before_launch_fun,
 
 template<spawn_options Os, typename BeforeLaunch, typename F, typename... Ts>
 actor spawn_functor(execution_unit* eu, BeforeLaunch cb, F fun, Ts&&... args) {
-    typedef typename detail::get_callable_trait<F>::type trait;
-    typedef typename trait::arg_types arg_types;
-    typedef typename detail::tl_head<arg_types>::type first_arg;
+    using trait = typename detail::get_callable_trait<F>::type;
+    using arg_types = typename trait::arg_types;
+    using first_arg = typename detail::tl_head<arg_types>::type;
     using base_class = typename std::conditional<
         std::is_pointer<first_arg>::value,
         typename std::remove_pointer<first_arg>::type,
@@ -199,22 +199,22 @@ namespace detail {
 template<typename... Rs>
 class functor_based_typed_actor : public typed_event_based_actor<Rs...> {
 
-    typedef typed_event_based_actor<Rs...> super;
+    using super = typed_event_based_actor<Rs...>;
 
  public:
 
-    typedef typed_event_based_actor<Rs...>* pointer;
-    typedef typename super::behavior_type behavior_type;
+    using pointer = typed_event_based_actor<Rs...>*;
+    using behavior_type = typename super::behavior_type;
 
-    typedef std::function<behavior_type()> no_arg_fun;
-    typedef std::function<behavior_type(pointer)> one_arg_fun1;
-    typedef std::function<void(pointer)> one_arg_fun2;
+    using no_arg_fun = std::function<behavior_type()>;
+    using one_arg_fun1 = std::function<behavior_type(pointer)>;
+    using one_arg_fun2 = std::function<void(pointer)>;
 
     template<typename F, typename... Ts>
     functor_based_typed_actor(F fun, Ts&&... args) {
-        typedef typename detail::get_callable_trait<F>::type trait;
-        typedef typename trait::arg_types arg_types;
-        typedef typename trait::result_type result_type;
+        using trait = typename detail::get_callable_trait<F>::type;
+        using arg_types = typename trait::arg_types;
+        using result_type = typename trait::result_type;
         constexpr bool returns_behavior =
             std::is_same<result_type, behavior_type>::value;
         constexpr bool uses_first_arg = std::is_same<
@@ -276,13 +276,13 @@ struct infer_typed_actor_base;
 
 template<typename... Rs, class FirstArg>
 struct infer_typed_actor_base<typed_behavior<Rs...>, FirstArg> {
-    typedef functor_based_typed_actor<Rs...> type;
+    using type = functor_based_typed_actor<Rs...>;
 
 };
 
 template<typename... Rs>
 struct infer_typed_actor_base<void, typed_event_based_actor<Rs...>*> {
-    typedef functor_based_typed_actor<Rs...> type;
+    using type = functor_based_typed_actor<Rs...>;
 
 };
 
@@ -308,10 +308,12 @@ typename detail::infer_typed_actor_handle<
     typename detail::tl_head<
         typename detail::get_callable_trait<F>::arg_types>::type>::type
 spawn_typed_functor(execution_unit* eu, BeforeLaunch bl, F fun, Ts&&... args) {
-    typedef typename detail::infer_typed_actor_base<
-        typename detail::get_callable_trait<F>::result_type,
-        typename detail::tl_head<typename detail::get_callable_trait<
-            F>::arg_types>::type>::type impl;
+    using impl = typename detail::infer_typed_actor_base<
+                     typename detail::get_callable_trait<F>::result_type,
+                     typename detail::tl_head<
+                         typename detail::get_callable_trait<F>::arg_types
+                     >::type
+                 >::type;
     return spawn_class<impl, Os>(eu, bl, fun, std::forward<Ts>(args)...);
 }
 

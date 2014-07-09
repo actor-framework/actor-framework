@@ -29,8 +29,8 @@ namespace detail {
 // tuple-like access to an array of void pointers
 template<typename... T>
 struct pseudo_tuple {
-    typedef void* pointer;
-    typedef const void* const_pointer;
+    using pointer = void*;
+    using const_pointer = const void*;
 
     pointer data[sizeof...(T) > 0 ? sizeof...(T) : 1];
 

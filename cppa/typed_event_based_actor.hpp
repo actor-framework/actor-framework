@@ -50,9 +50,9 @@ class typed_event_based_actor
 
     typed_event_based_actor() : m_initialized(false) {}
 
-    typedef detail::type_list<Rs...> signatures;
+    using signatures = detail::type_list<Rs...>;
 
-    typedef typed_behavior<Rs...> behavior_type;
+    using behavior_type = typed_behavior<Rs...>;
 
     std::set<std::string> interface() const override {
         return {detail::to_uniform_name<Rs>()...};

@@ -50,8 +50,8 @@ class group_manager : public singleton_mixin<group_manager> {
 
  private:
 
-    typedef std::map<std::string, abstract_group::unique_module_ptr>
-    modules_map;
+    using modules_map = std::map<std::string,
+                                 abstract_group::unique_module_ptr>;
 
     modules_map m_mmap;
     std::mutex m_mmap_mtx;

@@ -32,7 +32,7 @@ class actor_ostream {
 
  public:
 
-    typedef actor_ostream& (*fun_type)(actor_ostream&);
+    using fun_type = actor_ostream& (*)(actor_ostream&);
 
     actor_ostream(actor_ostream&&) = default;
     actor_ostream(const actor_ostream&) = default;

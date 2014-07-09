@@ -40,7 +40,7 @@ class optional {
     /**
      * @brief Typdef for @p T.
      */
-    typedef T type;
+    using type = T;
 
     /* *
      * @brief Default constructor.
@@ -199,7 +199,7 @@ class optional<T&> {
 
  public:
 
-    typedef T type;
+    using type = T;
 
     optional(const none_t& = none) : m_value(nullptr) { }
 

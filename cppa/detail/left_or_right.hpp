@@ -29,25 +29,25 @@ namespace detail {
  */
 template<typename Left, typename Right>
 struct left_or_right {
-    typedef Left type;
+    using type = Left;
 
 };
 
 template<typename Right>
 struct left_or_right<unit_t, Right> {
-    typedef Right type;
+    using type = Right;
 
 };
 
 template<typename Right>
 struct left_or_right<unit_t&, Right> {
-    typedef Right type;
+    using type = Right;
 
 };
 
 template<typename Right>
 struct left_or_right<const unit_t&, Right> {
-    typedef Right type;
+    using type = Right;
 
 };
 
@@ -56,13 +56,13 @@ struct left_or_right<const unit_t&, Right> {
  */
 template<typename Left, typename Right>
 struct if_not_left {
-    typedef unit_t type;
+    using type = unit_t;
 
 };
 
 template<typename Right>
 struct if_not_left<unit_t, Right> {
-    typedef Right type;
+    using type = Right;
 
 };
 

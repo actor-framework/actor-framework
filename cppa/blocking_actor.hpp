@@ -51,7 +51,7 @@ class blocking_actor
     /**************************************************************************
      *           utility stuff and receive() member function family           *
      **************************************************************************/
-    typedef std::chrono::high_resolution_clock::time_point timeout_type;
+    using timeout_type = std::chrono::high_resolution_clock::time_point;
 
     struct receive_while_helper {
 
@@ -250,7 +250,7 @@ class blocking_actor::functor_based : public blocking_actor {
 
  public:
 
-    typedef std::function<void(blocking_actor*)> act_fun;
+    using act_fun = std::function<void(blocking_actor*)>;
 
     template<typename F, typename... Ts>
     functor_based(F f, Ts&&... vs) {

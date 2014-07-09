@@ -81,7 +81,7 @@ class attachable {
  * @brief A managed {@link attachable} pointer.
  * @relates attachable
  */
-typedef std::unique_ptr<attachable> attachable_ptr;
+using attachable_ptr = std::unique_ptr<attachable>;
 
 } // namespace cppa
 

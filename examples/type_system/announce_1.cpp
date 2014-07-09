@@ -26,10 +26,10 @@ bool operator==(const foo& lhs, const foo& rhs) {
 }
 
 // a pair of two ints
-typedef std::pair<int, int> foo_pair;
+using foo_pair = std::pair<int, int>;
 
 // another pair of two ints
-typedef std::pair<int, int> foo_pair2;
+using foo_pair2 = std::pair<int, int>;
 
 // a struct with member vector<vector<...>>
 struct foo2 {

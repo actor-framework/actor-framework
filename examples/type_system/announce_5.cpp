@@ -130,7 +130,7 @@ class tree_type_info : public detail::abstract_uniform_type_info<tree> {
 
 };
 
-typedef std::vector<tree> tree_vector;
+using tree_vector = std::vector<tree>;
 
 // receives `remaining` messages
 void testee(event_based_actor* self, size_t remaining) {

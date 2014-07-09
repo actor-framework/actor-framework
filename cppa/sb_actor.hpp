@@ -40,7 +40,7 @@ class sb_actor : public Base {
 
  protected:
 
-    typedef sb_actor combined_type;
+    using combined_type = sb_actor;
 
  public:
 

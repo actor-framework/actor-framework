@@ -28,13 +28,13 @@ namespace detail {
  */
 template<typename T>
 struct wrapped {
-    typedef T type;
+    using type = T;
 
 };
 
 template<typename T>
 struct wrapped<wrapped<T>> {
-    typedef typename wrapped<T>::type type;
+    using type = typename wrapped<T>::type;
 
 };
 

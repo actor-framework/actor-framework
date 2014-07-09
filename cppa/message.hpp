@@ -47,17 +47,17 @@ class message {
     /**
      * @brief A raw pointer to the data.
      */
-    typedef detail::message_data* raw_ptr;
+    using raw_ptr = detail::message_data*;
 
     /**
      * @brief A (COW) smart pointer to the data.
      */
-    typedef detail::message_data::ptr data_ptr;
+    using data_ptr = detail::message_data::ptr;
 
     /**
      * @brief An iterator to access each element as <tt>const void*</tt>.
      */
-    typedef detail::message_data::const_iterator const_iterator;
+    using const_iterator = detail::message_data::const_iterator;
 
     /**
      * @brief Creates an empty tuple.
@@ -247,8 +247,8 @@ typename std::enable_if<
     message>::type
 make_message(T&& arg, Ts&&... args) {
     using namespace detail;
-    typedef tuple_vals<typename strip_and_convert<T>::type,
-                       typename strip_and_convert<Ts>::type...> data;
+    using data = tuple_vals<typename strip_and_convert<T>::type,
+                            typename strip_and_convert<Ts>::type...>;
     auto ptr = new data(std::forward<T>(arg), std::forward<Ts>(args)...);
     return message{detail::message_data::ptr{ptr}};
 }

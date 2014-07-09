@@ -241,9 +241,9 @@ struct select_matcher;
 
 template<class Tuple, typename... Ts>
 struct select_matcher<Tuple, detail::type_list<Ts...>> {
-    typedef matcher<get_wildcard_position<detail::type_list<Ts...>>(), Tuple,
-                    Ts...> type;
-
+    using type = matcher<get_wildcard_position<detail::type_list<Ts...>>(),
+                         Tuple,
+                         Ts...>;
 };
 
 } // namespace detail

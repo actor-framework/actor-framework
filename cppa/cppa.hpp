@@ -20,7 +20,8 @@
 #ifndef CPPA_CPPA_HPP
 #define CPPA_CPPA_HPP
 
-// this header has been deprecated, forward to new header
+// <backward_compatibility version="0.9" whole_file="yes">
 #include "cppa/all.hpp"
+// </backward_compatibility>
 
 #endif // CPPA_CPPA_HPP

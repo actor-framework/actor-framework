@@ -43,11 +43,11 @@ class cow_ptr : util::comparable<cow_ptr<T>>,
 
  public:
 
-    typedef T*       pointer;
-    typedef const T* const_pointer;
-    typedef T        element_type;
-    typedef T&       reference;
-    typedef const T& const_reference;
+    using pointer         = T*;
+    using const_pointer   = const T*;
+    using element_type    = T;
+    using reference       = T&;
+    using const_reference = const T&;
 
     constexpr cow_ptr() : m_ptr() { }
 

@@ -73,7 +73,7 @@ class message_data : public ref_counted {
 
     bool equals(const message_data& other) const;
 
-    typedef message_iterator<message_data> const_iterator;
+    using const_iterator = message_iterator<message_data>;
 
     inline const_iterator begin() const {
         return {this};

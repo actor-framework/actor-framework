@@ -49,7 +49,7 @@ class execution_unit;
  * @brief A unique actor ID.
  * @relates abstract_actor
  */
-typedef uint32_t actor_id;
+using actor_id = uint32_t;
 
 /**
  * @brief Denotes an ID that is never used by an actor.
@@ -60,7 +60,7 @@ class actor;
 class abstract_actor;
 class response_promise;
 
-typedef intrusive_ptr<abstract_actor> abstract_actor_ptr;
+using abstract_actor_ptr = intrusive_ptr<abstract_actor>;
 
 /**
  * @brief Base class for all actor implementations.
@@ -262,8 +262,8 @@ struct functor_attachable : attachable {
 
 template<typename F>
 bool abstract_actor::attach_functor(F&& f) {
-    typedef typename detail::rm_const_and_ref<F>::type f_type;
-    typedef functor_attachable<f_type> impl;
+    using f_type = typename detail::rm_const_and_ref<F>::type;
+    using impl = functor_attachable<f_type>;
     return attach(attachable_ptr{new impl(std::forward<F>(f))});
 }
 

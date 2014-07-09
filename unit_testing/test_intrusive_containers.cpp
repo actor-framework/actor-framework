@@ -45,7 +45,7 @@ inline bool operator==(const iint& lhs, int rhs) { return lhs.value == rhs; }
 
 inline bool operator==(int lhs, const iint& rhs) { return lhs == rhs.value; }
 
-typedef cppa::detail::single_reader_queue<iint> iint_queue;
+using iint_queue = cppa::detail::single_reader_queue<iint>;
 
 int main() {
     CPPA_TEST(test_intrusive_containers);

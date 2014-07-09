@@ -34,52 +34,46 @@ namespace detail {
 template<typename T>
 struct implicit_conversions {
 
-    typedef typename replace_type<
-                T,
-                std::string,
-                std::is_same<T, const char*>,
-                std::is_same<T, char*>,
-                std::is_same<T, char[]>,
-                is_array_of<T, char>,
-                is_array_of<T, const char>
-            >::type
-            subtype1;
+    using subtype1 = typename replace_type<
+                         T,
+                         std::string,
+                         std::is_same<T, const char*>,
+                         std::is_same<T, char*>,
+                         std::is_same<T, char[]>,
+                         is_array_of<T, char>,
+                         is_array_of<T, const char>
+                     >::type;
 
-    typedef typename replace_type<
-                subtype1,
-                std::u16string,
-                std::is_same<subtype1, const char16_t*>,
-                std::is_same<subtype1, char16_t*>,
-                is_array_of<subtype1, char16_t>
-            >::type
-            subtype2;
+    using subtype2 = typename replace_type<
+                         subtype1,
+                         std::u16string,
+                         std::is_same<subtype1, const char16_t*>,
+                         std::is_same<subtype1, char16_t*>,
+                         is_array_of<subtype1, char16_t>
+                     >::type;
 
-    typedef typename replace_type<
-                subtype2,
-                std::u32string,
-                std::is_same<subtype2, const char32_t*>,
-                std::is_same<subtype2, char32_t*>,
-                is_array_of<subtype2, char32_t>
-            >::type
-            subtype3;
+    using subtype3 = typename replace_type<
+                         subtype2,
+                         std::u32string,
+                         std::is_same<subtype2, const char32_t*>,
+                         std::is_same<subtype2, char32_t*>,
+                         is_array_of<subtype2, char32_t>
+                     >::type;
 
-    typedef typename replace_type<
-                subtype3,
-                actor,
-                std::is_convertible<T, abstract_actor*>,
-                std::is_same<scoped_actor, T>
-            >::type
-            type;
+    using type = typename replace_type<
+                     subtype3,
+                     actor,
+                     std::is_convertible<T, abstract_actor*>,
+                     std::is_same<scoped_actor, T>
+                 >::type;
 
 };
 
 template<typename T>
 struct strip_and_convert {
-    typedef typename implicit_conversions<
-                typename rm_const_and_ref<T>::type
-            >::type
-            type;
-
+    using type = typename implicit_conversions<
+                     typename rm_const_and_ref<T>::type
+                 >::type;
 };
 
 } // namespace detail

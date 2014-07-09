@@ -48,7 +48,7 @@ namespace opencl {
 /**
  * @brief A vector of up to three elements used for OpenCL dimensions.
  */
-typedef detail::limited_vector<size_t, 3> dim_vec;
+using dim_vec = detail::limited_vector<size_t, 3>;
 
 std::string get_opencl_error(cl_int err);
 

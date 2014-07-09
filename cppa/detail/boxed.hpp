@@ -27,19 +27,19 @@ namespace detail {
 
 template<typename T>
 struct boxed {
-    typedef detail::wrapped<T> type;
+    using type = detail::wrapped<T>;
 
 };
 
 template<typename T>
 struct boxed<detail::wrapped<T>> {
-    typedef detail::wrapped<T> type;
+    using type = detail::wrapped<T>;
 
 };
 
 template<>
 struct boxed<anything> {
-    typedef anything type;
+    using type = anything;
 
 };
 

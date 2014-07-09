@@ -81,14 +81,14 @@ struct infer_typed_actor_handle;
 // infer actor type from result type if possible
 template<typename... Rs, class FirstArg>
 struct infer_typed_actor_handle<typed_behavior<Rs...>, FirstArg> {
-    typedef typed_actor<Rs...> type;
+    using type = typed_actor<Rs...>;
 
 };
 
 // infer actor type from first argument if result type is void
 template<typename... Rs>
 struct infer_typed_actor_handle<void, typed_event_based_actor<Rs...>*> {
-    typedef typed_actor<Rs...> type;
+    using type = typed_actor<Rs...>;
 
 };
 
@@ -97,7 +97,7 @@ struct actor_handle_from_signature_list;
 
 template<typename... Rs>
 struct actor_handle_from_signature_list<detail::type_list<Rs...>> {
-    typedef typed_actor<Rs...> type;
+    using type = typed_actor<Rs...>;
 
 };
 

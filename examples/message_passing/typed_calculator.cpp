@@ -16,12 +16,11 @@ struct shutdown_request { };
 struct plus_request { int a; int b; };
 struct minus_request { int a; int b; };
 
-typedef typed_actor<
-            replies_to<plus_request>::with<int>,
-            replies_to<minus_request>::with<int>,
-            replies_to<shutdown_request>::with<void>
-        >
-        calculator_type;
+using calculator_type = typed_actor<
+                            replies_to<plus_request>::with<int>,
+                            replies_to<minus_request>::with<int>,
+                            replies_to<shutdown_request>::with<void>
+                        >;
 
 calculator_type::behavior_type typed_calculator(calculator_type::pointer self) {
     return {

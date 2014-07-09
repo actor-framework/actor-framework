@@ -55,7 +55,7 @@ class broker : public extend<local_actor>::
 
     friend class policy::sequential_invoke;
 
-    typedef combined_type super;
+    using super = combined_type;
 
  public:
 
@@ -219,8 +219,7 @@ class broker : public extend<local_actor>::
     actor fork(F fun, connection_handle hdl, Ts&&... vs) {
         // provoke compile-time errors early
         using fun_res = decltype(fun(this, hdl, std::forward<Ts>(vs)...));
-        // this static assert only prevents a warning about
-        // unused local typedef
+        // prevent warning about unused local type
         static_assert(std::is_same<fun_res, fun_res>::value,
                       "your compiler is lying to you");
         auto i = m_scribes.find(hdl);
@@ -346,7 +345,7 @@ class broker : public extend<local_actor>::
     static broker_ptr from(F fun) {
         // transform to STD function here, because GCC is unable
         // to select proper overload otherwise ...
-        typedef decltype(fun((broker*)nullptr)) fres;
+        using fres = decltype(fun((broker*)nullptr));
         std::function<fres(broker*)> stdfun{std::move(fun)};
         return from_impl(std::move(stdfun));
     }
@@ -399,9 +398,9 @@ class broker : public extend<local_actor>::
 
     void cleanup(uint32_t reason) override;
 
-    typedef intrusive_ptr<scribe> scribe_pointer;
+    using scribe_pointer = intrusive_ptr<scribe>;
 
-    typedef intrusive_ptr<doorman> doorman_pointer;
+    using doorman_pointer = intrusive_ptr<doorman>;
 
     bool initialized() const;
 

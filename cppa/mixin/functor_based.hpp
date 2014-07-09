@@ -37,9 +37,9 @@ class functor_based : public Base {
 
     template<typename F, typename... Ts>
     functor_based(F f, Ts&&... vs) {
-        typedef typename detail::get_callable_trait<F>::type trait;
-        typedef typename trait::arg_types arg_types;
-        typedef typename trait::result_type result_type;
+        using trait = typename detail::get_callable_trait<F>::type;
+        using arg_types = typename trait::arg_types;
+        using result_type = typename trait::result_type;
         constexpr bool returns_behavior =
             std::is_convertible<result_type, behavior>::value;
         constexpr bool uses_first_arg = std::is_same<

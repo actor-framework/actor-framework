@@ -37,7 +37,7 @@ namespace cppa {
 
 namespace {
 
-typedef const void* pointer;
+using pointer = const void*;
 
 const char* as_char_pointer(pointer ptr) {
     return reinterpret_cast<const char*>(ptr);

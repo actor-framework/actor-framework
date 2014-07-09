@@ -33,25 +33,25 @@ static constexpr unit_t unit = unit_t{};
 
 template<typename T>
 struct lift_void {
-    typedef T type;
+    using type = T;
 
 };
 
 template<>
 struct lift_void<void> {
-    typedef unit_t type;
+    using type = unit_t;
 
 };
 
 template<typename T>
 struct unlift_void {
-    typedef T type;
+    using type = T;
 
 };
 
 template<>
 struct unlift_void<unit_t> {
-    typedef void type;
+    using type = void;
 
 };
 

@@ -35,7 +35,7 @@ class actor_widget_mixin : public Base {
 
  public:
 
-    typedef typename actor_companion::message_pointer message_pointer;
+    using message_pointer = typename actor_companion::message_pointer;
 
     struct event_type : public QEvent {
 

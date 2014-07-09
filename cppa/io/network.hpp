@@ -95,11 +95,11 @@ namespace network {
 
 // some more annoying platform-dependent bootstrapping
 #ifdef CPPA_WINDOWS
-    typedef SOCKET native_socket_t;
-    typedef const char* setsockopt_ptr;
-    typedef const char* socket_send_ptr;
-    typedef char* socket_recv_ptr;
-    typedef int socklen_t;
+    using native_socket_t = SOCKET;
+    using setsockopt_ptr = const char*;
+    using socket_send_ptr = const char*;
+    using socket_recv_ptr = char*;
+    using socklen_t = int;
     constexpr native_socket_t invalid_socket = INVALID_SOCKET;
     inline int last_socket_error() { return WSAGetLastError(); }
     inline bool would_block_or_temporarily_unavailable(int errcode) {
@@ -108,10 +108,10 @@ namespace network {
     constexpr int ec_out_of_memory = WSAENOBUFS;
     constexpr int ec_interrupted_syscall = WSAEINTR;
 #else
-    typedef int native_socket_t;
-    typedef const void* setsockopt_ptr;
-    typedef const void* socket_send_ptr;
-    typedef void* socket_recv_ptr;
+    using native_socket_t = int;
+    using setsockopt_ptr = const void*;
+    using socket_send_ptr = const void*;
+    using socket_recv_ptr = void*;
     constexpr native_socket_t invalid_socket = -1;
     inline void closesocket(native_socket_t fd) { close(fd); }
     inline int last_socket_error() { return errno; }

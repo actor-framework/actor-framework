@@ -49,18 +49,18 @@ class limited_vector {
 
  public:
 
-    typedef T                   value_type;
-    typedef size_t              size_type;
-    typedef ptrdiff_t           difference_type;
-    typedef value_type&         reference;
-    typedef const value_type&   const_reference;
-    typedef value_type*         pointer;
-    typedef const value_type*   const_pointer;
+    using value_type = T;
+    using size_type = size_t;
+    using difference_type = ptrdiff_t;
+    using reference = value_type&;
+    using const_reference = const value_type&;
+    using pointer = value_type*;
+    using const_pointer = const value_type*;
 
-    typedef T*                                      iterator;
-    typedef const T*                                const_iterator;
-    typedef std::reverse_iterator<iterator>         reverse_iterator;
-    typedef std::reverse_iterator<const_iterator>   const_reverse_iterator;
+    using iterator = T*;
+    using const_iterator = const T*;
+    using reverse_iterator = std::reverse_iterator<iterator>;
+    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
     inline limited_vector() : m_size(0) { }
 

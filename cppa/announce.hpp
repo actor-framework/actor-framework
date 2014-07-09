@@ -143,7 +143,7 @@ std::pair<std::pair<GRes (Parent::*)() const, SRes (Parent::*)(SArg)>,
 compound_member(
     const std::pair<GRes (Parent::*)() const, SRes (Parent::*)(SArg)>& gspair,
     const Ts&... args) {
-    typedef typename detail::rm_const_and_ref<GRes>::type mtype;
+    using mtype = typename detail::rm_const_and_ref<GRes>::type;
     return {gspair, new detail::default_uniform_type_info<mtype>(args...)};
 }
 

@@ -142,7 +142,7 @@ class basic_memory_cache : public memory_cache {
             }
         }
 
-        typedef wrapper* iterator;
+        using iterator = wrapper*;
 
         iterator begin() { return data; }
 

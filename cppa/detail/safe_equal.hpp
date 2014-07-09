@@ -52,7 +52,7 @@ typename std::enable_if<   std::is_floating_point<T>::value
                         bool
 >::type
 safe_equal(const T& lhs, const U& rhs) {
-    typedef decltype(lhs - rhs) res_type;
+    using res_type = decltype(lhs - rhs);
     return std::fabs(lhs - rhs) <= std::numeric_limits<res_type>::epsilon();
 }
 

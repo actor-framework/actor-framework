@@ -41,11 +41,11 @@ namespace policy {
 
 class no_scheduling {
 
-    typedef std::unique_lock<std::mutex> lock_type;
+    using lock_type = std::unique_lock<std::mutex>;
 
  public:
 
-    typedef std::chrono::high_resolution_clock::time_point timeout_type;
+    using timeout_type = std::chrono::high_resolution_clock::time_point;
 
     template<class Actor>
     void enqueue(Actor* self, const actor_addr& sender, message_id mid,

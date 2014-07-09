@@ -44,7 +44,7 @@ const uniform_type_info* uniform_typeid(const std::type_info&);
 
 struct uniform_value_t;
 
-typedef std::unique_ptr<uniform_value_t> uniform_value;
+using uniform_value = std::unique_ptr<uniform_value_t>;
 
 struct uniform_value_t {
     const uniform_type_info* ti;
@@ -274,7 +274,7 @@ class uniform_type_info {
 
 };
 
-typedef std::unique_ptr<uniform_type_info> uniform_type_info_ptr;
+using uniform_type_info_ptr = std::unique_ptr<uniform_type_info>;
 
 /**
  * @relates uniform_type_info

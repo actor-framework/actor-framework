@@ -57,13 +57,13 @@ class tuple_vals : public message_data {
 
     static_assert(sizeof...(Ts) > 0, "tuple_vals is not allowed to be empty");
 
-    typedef message_data super;
+    using super = message_data;
 
  public:
 
-    typedef std::tuple<Ts...> data_type;
+    using data_type = std::tuple<Ts...>;
 
-    typedef types_array<Ts...> element_types;
+    using element_types = types_array<Ts...>;
 
     tuple_vals(const tuple_vals&) = default;
 

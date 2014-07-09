@@ -192,7 +192,7 @@ class response_handle<Self, detail::type_list<Ts...>,
 
  public:
 
-    typedef detail::type_list<Ts...> result_types;
+    using result_types = detail::type_list<Ts...>;
 
     response_handle() = delete;
 
@@ -202,14 +202,17 @@ class response_handle<Self, detail::type_list<Ts...>,
 
     template<typename F>
     void await(F fun) {
-        typedef typename detail::tl_map<
-            typename detail::get_callable_trait<F>::arg_types,
-            detail::rm_const_and_ref>::type arg_types;
+        using arg_types = typename detail::tl_map<
+                              typename detail::get_callable_trait<F>::arg_types,
+                              detail::rm_const_and_ref
+                          >::type;
         static constexpr size_t fun_args = detail::tl_size<arg_types>::value;
         static_assert(fun_args <= detail::tl_size<result_types>::value,
                       "functor takes too much arguments");
-        typedef typename detail::tl_right<result_types, fun_args>::type
-        recv_types;
+        using recv_types = typename detail::tl_right<
+                               result_types,
+                               fun_args
+                           >::type;
         static_assert(std::is_same<arg_types, recv_types>::value,
                       "wrong functor signature");
         behavior tmp = detail::fs2bhvr(m_self, fun);

@@ -44,13 +44,13 @@ class actor_companion : public extend<local_actor, actor_companion>::
                                with<behavior_stack_based<behavior>::impl,
                                     mixin::sync_sender<nonblocking_response_handle_tag>::impl> {
 
-    typedef detail::shared_spinlock lock_type;
+    using lock_type = detail::shared_spinlock;
 
  public:
 
-    typedef std::unique_ptr<mailbox_element, detail::disposer> message_pointer;
+    using message_pointer = std::unique_ptr<mailbox_element, detail::disposer>;
 
-    typedef std::function<void (message_pointer)> enqueue_handler;
+    using enqueue_handler = std::function<void (message_pointer)>;
 
     /**
      * @brief Removes the handler for incoming messages and terminates
@@ -81,7 +81,7 @@ class actor_companion : public extend<local_actor, actor_companion>::
  * @brief A pointer to a co-existing (actor) object.
  * @relates actor_companion
  */
-typedef intrusive_ptr<actor_companion> actor_companion_ptr;
+using actor_companion_ptr = intrusive_ptr<actor_companion>;
 
 } // namespace cppa
 

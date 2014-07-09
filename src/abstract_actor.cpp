@@ -39,7 +39,7 @@
 namespace cppa {
 
 namespace {
-typedef std::unique_lock<std::mutex> guard_type;
+using guard_type = std::unique_lock<std::mutex>;
 }
 
 // m_exit_reason is guaranteed to be set to 0, i.e., exit_reason::not_exited,

@@ -73,7 +73,7 @@ class uniform_type_info_map {
 
  public:
 
-    typedef const uniform_type_info* pointer;
+    using pointer = const uniform_type_info*;
 
     virtual ~uniform_type_info_map();
 

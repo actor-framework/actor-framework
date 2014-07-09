@@ -33,8 +33,8 @@ struct is_behavior_policy : std::false_type {};
 template<bool DiscardBehavior>
 struct is_behavior_policy<behavior_policy<DiscardBehavior>> : std::true_type {};
 
-typedef behavior_policy<false> keep_behavior_t;
-typedef behavior_policy<true> discard_behavior_t;
+using keep_behavior_t = behavior_policy<false>;
+using discard_behavior_t = behavior_policy<true>;
 
 /**
  * @brief Policy tag that causes {@link event_based_actor::become} to

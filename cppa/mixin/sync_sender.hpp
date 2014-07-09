@@ -35,8 +35,11 @@ class sync_sender_impl : public Base {
 
  public:
 
-    typedef response_handle<Subtype, message, ResponseHandleTag>
-    response_handle_type;
+    using response_handle_type = response_handle<
+                                     Subtype,
+                                     message,
+                                     ResponseHandleTag
+                                 >;
 
     /**************************************************************************
      *                     sync_send[_tuple](actor, ...)                      *

@@ -36,7 +36,7 @@ struct typed_remote_actor_helper;
 
 template<typename... Ts>
 struct typed_remote_actor_helper<detail::type_list<Ts...>> {
-    typedef typed_actor<Ts...> return_type;
+    using return_type = typed_actor<Ts...>;
     template<typename... Vs>
     return_type operator()(Vs&&... vs) {
         auto iface = return_type::get_interface();

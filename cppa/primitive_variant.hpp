@@ -32,9 +32,23 @@
 
 namespace cppa {
 
-typedef variant<int8_t, int16_t, int32_t, int64_t, uint8_t, uint16_t, uint32_t,
-                uint64_t, float, double, long double, std::string,
-                std::u16string, std::u32string, atom_value> primitive_variant;
+using primitive_variant = variant<
+                              int8_t,
+                              int16_t,
+                              int32_t,
+                              int64_t,
+                              uint8_t,
+                              uint16_t,
+                              uint32_t,
+                              uint64_t,
+                              float,
+                              double,
+                              long double,
+                              std::string,
+                              std::u16string,
+                              std::u32string,
+                              atom_value
+                          >;
 
 } // namespace cppa
 

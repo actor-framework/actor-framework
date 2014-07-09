@@ -63,22 +63,22 @@ class typed_actor
      * @brief Identifies the behavior type actors of this kind use
      *        for their behavior stack.
      */
-    typedef typed_behavior<Rs...> behavior_type;
+    using behavior_type = typed_behavior<Rs...>;
 
     /**
      * @brief Identifies pointers to instances of this kind of actor.
      */
-    typedef typed_event_based_actor<Rs...>* pointer;
+    using pointer = typed_event_based_actor<Rs...>*;
 
     /**
      * @brief Identifies the base class for this kind of actor.
      */
-    typedef typed_event_based_actor<Rs...> base;
+    using base = typed_event_based_actor<Rs...>;
 
     /**
      * @brief Stores the interface of the actor as type list.
      */
-    typedef detail::type_list<Rs...> interface;
+    using interface = detail::type_list<Rs...>;
 
     typed_actor() = default;
     typed_actor(typed_actor&&) = default;

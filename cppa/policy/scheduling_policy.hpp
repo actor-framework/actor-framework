@@ -42,7 +42,7 @@ class scheduling_policy {
  public:
 
     /**
-     * @brief This typedef can be set freely by any implementation and is
+     * @brief This type can be set freely by any implementation and is
      *        used by callers to pass the result of @p init_timeout back to
      *        @p fetch_messages.
      */

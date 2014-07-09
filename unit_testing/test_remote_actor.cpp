@@ -20,9 +20,9 @@ using namespace boost::actor_io;
 
 namespace {
 
-typedef std::pair<std::string, std::string> string_pair;
+using string_pair = std::pair<std::string, std::string>;
 
-typedef vector<actor> actor_vector;
+using actor_vector = vector<actor>;
 
 void reflector(event_based_actor* self) {
     self->become(others() >> [=] {

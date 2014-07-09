@@ -33,10 +33,10 @@ namespace detail {
 
 namespace {
 
-typedef unique_lock<shared_spinlock> exclusive_guard;
-typedef shared_lock<shared_spinlock> shared_guard;
-typedef upgrade_lock<shared_spinlock> upgrade_guard;
-typedef upgrade_to_unique_lock<shared_spinlock> upgrade_to_unique_guard;
+using exclusive_guard = unique_lock<shared_spinlock>;
+using shared_guard = shared_lock<shared_spinlock>;
+using upgrade_guard = upgrade_lock<shared_spinlock>;
+using upgrade_to_unique_guard = upgrade_to_unique_lock<shared_spinlock>;
 
 } // namespace <anonymous>
 

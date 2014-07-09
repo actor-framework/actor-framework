@@ -42,7 +42,7 @@ class middleman_scheduling {
 
      public:
 
-        typedef intrusive_ptr<Actor> pointer;
+        using pointer = intrusive_ptr<Actor>;
 
         continuation(pointer ptr, msg_hdr_cref hdr, message&& msg)
         : m_self(std::move(ptr)), m_hdr(hdr), m_data(std::move(msg)) { }

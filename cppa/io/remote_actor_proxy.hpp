@@ -46,7 +46,7 @@ class sync_request_info : public extend<memory_managed>::
 
  public:
 
-    typedef sync_request_info* pointer;
+    using pointer = sync_request_info*;
 
     ~sync_request_info();
 
@@ -62,7 +62,7 @@ class sync_request_info : public extend<memory_managed>::
 
 class remote_actor_proxy : public actor_proxy {
 
-    typedef actor_proxy super;
+    using super = actor_proxy;
 
  public:
 

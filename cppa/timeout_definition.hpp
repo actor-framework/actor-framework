@@ -38,7 +38,7 @@ struct timeout_definition {
 
 };
 
-typedef timeout_definition<std::function<void()>> generic_timeout_definition;
+using generic_timeout_definition = timeout_definition<std::function<void()>>;
 
 } // namespace cppa
 

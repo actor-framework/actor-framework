@@ -58,7 +58,7 @@ class cow_tuple<Head, Tail...> {
 
  public:
 
-    typedef detail::type_list<Head, Tail...> types;
+    using types = detail::type_list<Head, Tail...>;
 
     static constexpr size_t num_elements = sizeof...(Tail) + 1;
 
@@ -147,7 +147,7 @@ struct cow_tuple_from_type_list;
 
 template<typename... Ts>
 struct cow_tuple_from_type_list< detail::type_list<Ts...>> {
-    typedef cow_tuple<Ts...> type;
+    using type = cow_tuple<Ts...>;
 };
 
 template<typename T>
@@ -166,7 +166,7 @@ struct is_cow_tuple<cow_tuple<Ts...>> { static constexpr bool value = true; };
  */
 template<size_t N, typename... Ts>
 const typename detail::type_at<N, Ts...>::type& get(const cow_tuple<Ts...>& tup) {
-    typedef typename detail::type_at<N, Ts...>::type result_type;
+    using result_type = typename detail::type_at<N, Ts...>::type;
     return *reinterpret_cast<const result_type*>(tup.at(N));
 }
 
@@ -181,7 +181,7 @@ const typename detail::type_at<N, Ts...>::type& get(const cow_tuple<Ts...>& tup)
  */
 template<size_t N, typename... Ts>
 typename detail::type_at<N, Ts...>::type& get_ref(cow_tuple<Ts...>& tup) {
-    typedef typename detail::type_at<N, Ts...>::type result_type;
+    using result_type = typename detail::type_at<N, Ts...>::type;
     return *reinterpret_cast<result_type*>(tup.mutable_at(N));
 }
 

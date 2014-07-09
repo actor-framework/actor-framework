@@ -28,7 +28,7 @@ struct extend_helper;
 
 template<class D, class B>
 struct extend_helper<D, B> {
-    typedef B type;
+    using type = B;
 
 };
 

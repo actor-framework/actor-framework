@@ -32,11 +32,11 @@ namespace mixin {
 template<class Base, class Subtype>
 class single_timeout : public Base {
 
-    typedef Base super;
+    using super = Base;
 
  public:
 
-    typedef single_timeout combined_type;
+    using combined_type = single_timeout;
 
     template<typename... Ts>
     single_timeout(Ts&&... args)

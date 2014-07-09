@@ -30,7 +30,7 @@ class connection_handle : public io_handle<connection_handle> {
 
     friend class io_handle<connection_handle>;
 
-    typedef io_handle<connection_handle> super;
+    using super = io_handle<connection_handle>;
 
  public:
 

@@ -38,7 +38,7 @@ class continue_helper {
 
  public:
 
-    typedef int message_id_wrapper_tag;
+    using message_id_wrapper_tag = int;
 
     continue_helper(message_id mid, local_actor* self);
 

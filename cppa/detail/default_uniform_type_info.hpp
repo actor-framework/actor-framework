@@ -36,7 +36,7 @@
 namespace cppa {
 namespace detail {
 
-typedef uniform_type_info_ptr uniform_type_info_ptr;
+using uniform_type_info_ptr = uniform_type_info_ptr;
 
 // check if there's a 'push_back' that takes a C::value_type
 template<typename T>
@@ -76,11 +76,11 @@ struct is_stl_pair : std::false_type {};
 template<typename F, typename S>
 struct is_stl_pair<std::pair<F, S>> : std::true_type {};
 
-typedef std::integral_constant<int, 0> primitive_impl;
-typedef std::integral_constant<int, 1> list_impl;
-typedef std::integral_constant<int, 2> map_impl;
-typedef std::integral_constant<int, 3> pair_impl;
-typedef std::integral_constant<int, 9> recursive_impl;
+using primitive_impl = std::integral_constant<int, 0>;
+using list_impl = std::integral_constant<int, 1>;
+using map_impl = std::integral_constant<int, 2>;
+using pair_impl = std::integral_constant<int, 3>;
+using recursive_impl = std::integral_constant<int, 9>;
 
 template<typename T>
 constexpr int impl_id() {
@@ -95,15 +95,15 @@ constexpr int impl_id() {
 
 template<typename T>
 struct deconst_pair {
-    typedef T type;
+    using type = T;
 
 };
 
 template<typename K, typename V>
 struct deconst_pair<std::pair<K, V>> {
-    typedef typename std::remove_const<K>::type first_type;
-    typedef typename std::remove_const<V>::type second_type;
-    typedef std::pair<first_type, second_type> type;
+    using first_type = typename std::remove_const<K>::type;
+    using second_type = typename std::remove_const<V>::type;
+    using type = std::pair<first_type, second_type>;
 
 };
 
@@ -165,7 +165,7 @@ class default_serialize_policy {
 
     template<typename T>
     void dimpl(T& storage, deserializer* d, list_impl) const {
-        typedef typename T::value_type value_type;
+        using value_type = typename T::value_type;
         storage.clear();
         size_t size = d->begin_sequence();
         for (size_t i = 0; i < size; ++i) {
@@ -287,7 +287,7 @@ template<typename T, class AccessPolicy, class SerializePolicy>
 class member_tinfo<T, AccessPolicy, SerializePolicy, true,
                    false> : public detail::abstract_uniform_type_info<T> {
 
-    typedef typename std::underlying_type<T>::type value_type;
+    using value_type = typename std::underlying_type<T>::type;
 
  public:
 
@@ -349,8 +349,8 @@ class getter_setter_access_policy {
 
  public:
 
-    typedef GRes (C::*getter)() const;
-    typedef SRes (C::*setter)(SArg);
+    using getter = GRes (C::*)() const;
+    using setter = SRes (C::*)(SArg);
 
     getter_setter_access_policy(getter g, setter s) : m_get(g), m_set(s) {}
 
@@ -396,25 +396,25 @@ struct fake_access_policy {
 
 template<typename T, class C>
 uniform_type_info_ptr new_member_tinfo(T C::*memptr) {
-    typedef memptr_access_policy<T, C> access_policy;
-    typedef member_tinfo<T, access_policy> result_type;
+    using access_policy = memptr_access_policy<T, C>;
+    using result_type = member_tinfo<T, access_policy>;
     return uniform_type_info_ptr(new result_type(memptr));
 }
 
 template<typename T, class C>
 uniform_type_info_ptr new_member_tinfo(T C::*memptr,
                                        uniform_type_info_ptr meminf) {
-    typedef memptr_access_policy<T, C> access_policy;
-    typedef member_tinfo<T, access_policy, forwarding_serialize_policy> tinfo;
+    using access_policy = memptr_access_policy<T, C>;
+    using tinfo = member_tinfo<T, access_policy, forwarding_serialize_policy>;
     return uniform_type_info_ptr(new tinfo(memptr, std::move(meminf)));
 }
 
 template<class C, typename GRes, typename SRes, typename SArg>
 uniform_type_info_ptr new_member_tinfo(GRes (C::*getter)() const,
                                        SRes (C::*setter)(SArg)) {
-    typedef getter_setter_access_policy<C, GRes, SRes, SArg> access_policy;
-    typedef typename detail::rm_const_and_ref<GRes>::type value_type;
-    typedef member_tinfo<value_type, access_policy> result_type;
+    using access_policy = getter_setter_access_policy<C, GRes, SRes, SArg>;
+    using value_type = typename detail::rm_const_and_ref<GRes>::type;
+    using result_type = member_tinfo<value_type, access_policy>;
     return uniform_type_info_ptr(
         new result_type(access_policy(getter, setter)));
 }
@@ -423,10 +423,10 @@ template<class C, typename GRes, typename SRes, typename SArg>
 uniform_type_info_ptr new_member_tinfo(GRes (C::*getter)() const,
                                        SRes (C::*setter)(SArg),
                                        uniform_type_info_ptr meminf) {
-    typedef getter_setter_access_policy<C, GRes, SRes, SArg> access_policy;
-    typedef typename detail::rm_const_and_ref<GRes>::type value_type;
-    typedef member_tinfo<value_type, access_policy, forwarding_serialize_policy>
-    tinfo;
+    using access_policy = getter_setter_access_policy<C, GRes, SRes, SArg>;
+    using value_type = typename detail::rm_const_and_ref<GRes>::type;
+    using tinfo = member_tinfo<value_type, access_policy,
+                               forwarding_serialize_policy>;
     return uniform_type_info_ptr(
         new tinfo(access_policy(getter, setter), std::move(meminf)));
 }
@@ -442,7 +442,7 @@ class default_uniform_type_info : public detail::abstract_uniform_type_info<T> {
     }
 
     default_uniform_type_info() {
-        typedef member_tinfo<T, fake_access_policy<T>> result_type;
+        using result_type = member_tinfo<T, fake_access_policy<T>>;
         m_members.push_back(uniform_type_info_ptr(new result_type));
     }
 
@@ -535,7 +535,7 @@ class default_uniform_type_info<typed_actor<
 
  public:
 
-    typedef typed_actor<Rs...> handle_type;
+    using handle_type = typed_actor<Rs...>;
 
     default_uniform_type_info() { sub_uti = uniform_typeid<actor>(); }
 

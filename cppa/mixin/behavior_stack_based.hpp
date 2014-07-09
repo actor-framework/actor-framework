@@ -34,21 +34,23 @@ namespace mixin {
 template<class Base, class Subtype, class BehaviorType>
 class behavior_stack_based_impl : public single_timeout<Base, Subtype> {
 
-    typedef single_timeout<Base, Subtype> super;
+    using super = single_timeout<Base, Subtype>;
 
  public:
 
     /**************************************************************************
-     *                        typedefs and constructor                        *
+     *                         types and constructor                          *
      **************************************************************************/
 
-    typedef BehaviorType behavior_type;
+    using behavior_type = BehaviorType;
 
-    typedef behavior_stack_based_impl combined_type;
+    using combined_type = behavior_stack_based_impl;
 
-    typedef response_handle<behavior_stack_based_impl, message,
-                            nonblocking_response_handle_tag>
-    response_handle_type;
+    using response_handle_type = response_handle<
+                                     behavior_stack_based_impl,
+                                     message,
+                                     nonblocking_response_handle_tag
+                                 >;
 
     template<typename... Ts>
     behavior_stack_based_impl(Ts&&... vs)
@@ -158,11 +160,11 @@ class behavior_stack_based {
     template<class Base, class Subtype>
     class impl : public behavior_stack_based_impl<Base, Subtype, BehaviorType> {
 
-        typedef behavior_stack_based_impl<Base, Subtype, BehaviorType> super;
+        using super = behavior_stack_based_impl<Base, Subtype, BehaviorType>;
 
      public:
 
-        typedef impl combined_type;
+        using combined_type = impl;
 
         template<typename... Ts>
         impl(Ts&&... args)

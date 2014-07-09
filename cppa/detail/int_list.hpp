@@ -40,7 +40,7 @@ struct il_right_impl;
 
 template<size_t N, size_t Size>
 struct il_right_impl<N, Size> {
-    typedef int_list<> type;
+    using type = int_list<>;
 };
 
 template<size_t N, size_t Size, long I, long... Is>
@@ -48,7 +48,7 @@ struct il_right_impl<N, Size, I, Is...> : il_right_impl<N, Size - 1, Is...> { };
 
 template<size_t N, long I, long... Is>
 struct il_right_impl<N, N, I, Is...> {
-    typedef int_list<I, Is...> type;
+    using type = int_list<I, Is...>;
 };
 
 template<class List, size_t N>
@@ -69,7 +69,7 @@ struct il_indices;
 
 template<template<class...> class List, long... Is, long Pos>
 struct il_indices<List<>, Pos, int_list<Is...>> {
-    typedef int_list<Is...> type;
+    using type = int_list<Is...>;
 };
 
 template<template<class...> class List,
@@ -79,12 +79,11 @@ template<template<class...> class List,
          long... Is>
 struct il_indices<List<T0, Ts...>, Pos, int_list<Is...>> {
     // always use type_list to forward remaining Ts... arguments
-    typedef typename il_indices<
-                type_list<Ts...>,
-                Pos + 1,
-                int_list<Is..., Pos>
-            >::type
-            type;
+    using type = typename il_indices<
+                     type_list<Ts...>,
+                     Pos + 1,
+                     int_list<Is..., Pos>
+                 >::type;
 
 };
 

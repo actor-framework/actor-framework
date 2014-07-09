@@ -28,19 +28,19 @@ namespace detail {
 
 template<typename T>
 struct purge_refs_impl {
-    typedef T type;
+    using type = T;
 
 };
 
 template<typename T>
 struct purge_refs_impl<std::reference_wrapper<T>> {
-    typedef T type;
+    using type = T;
 
 };
 
 template<typename T>
 struct purge_refs_impl<std::reference_wrapper<const T>> {
-    typedef T type;
+    using type = T;
 
 };
 
@@ -49,8 +49,8 @@ struct purge_refs_impl<std::reference_wrapper<const T>> {
  */
 template<typename T>
 struct purge_refs {
-    typedef typename purge_refs_impl<
-        typename detail::rm_const_and_ref<T>::type>::type type;
+    using type = typename purge_refs_impl<
+                     typename detail::rm_const_and_ref<T>::type>::type;
 
 };
 

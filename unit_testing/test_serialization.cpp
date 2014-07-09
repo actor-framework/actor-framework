@@ -63,7 +63,7 @@ struct struct_b {
 
 };
 
-typedef map<string, u16string> strmap;
+using strmap = map<string, u16string>;
 
 struct struct_c {
     strmap strings;
@@ -130,7 +130,7 @@ int main() {
 
     test_ieee_754();
 
-    typedef std::integral_constant<int, detail::impl_id<strmap>()> token;
+    using token = std::integral_constant<int, detail::impl_id<strmap>()>;
     CPPA_CHECK_EQUAL(detail::is_iterable<strmap>::value, true);
     CPPA_CHECK_EQUAL(detail::is_stl_compliant_list<vector<int>>::value, true);
     CPPA_CHECK_EQUAL(detail::is_stl_compliant_list<strmap>::value, false);

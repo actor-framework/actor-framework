@@ -31,7 +31,7 @@ namespace cppa {
 template<class Base, class Subtype>
 class mailbox_based : public Base {
 
-    typedef detail::disposer del;
+    using del = detail::disposer;
 
  public:
 
@@ -55,9 +55,9 @@ class mailbox_based : public Base {
 
  protected:
 
-    typedef mailbox_based combined_type;
+    using combined_type = mailbox_based;
 
-    typedef detail::single_reader_queue<mailbox_element, del> mailbox_type;
+    using mailbox_type = detail::single_reader_queue<mailbox_element, del>;
 
     template<typename... Ts>
     mailbox_based(Ts&&... args) : Base(std::forward<Ts>(args)...) { }

@@ -124,7 +124,7 @@ class message_builder {
     template<typename T>
     message_builder&
     append_impl(typename detail::implicit_conversions<T>::type what) {
-        typedef decltype(what) type;
+        using type = decltype(what);
         auto uti = uniform_typeid<type>();
         auto uval = uti->create();
         *reinterpret_cast<type*>(uval->val) = std::move(what);

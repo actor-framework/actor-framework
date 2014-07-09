@@ -82,9 +82,9 @@ class worker : public execution_unit {
 
     worker& operator=(const worker&) = delete;
 
-    typedef resumable* job_ptr;
+    using job_ptr = resumable*;
 
-    typedef detail::producer_consumer_list<resumable> job_queue;
+    using job_queue = detail::producer_consumer_list<resumable>;
 
     /**
      * @brief Attempt to steal an element from the exposed job queue.

@@ -33,9 +33,9 @@ class not_prioritizing {
 
  public:
 
-    typedef std::list<unique_mailbox_element_pointer> cache_type;
+    using cache_type = std::list<unique_mailbox_element_pointer>;
 
-    typedef cache_type::iterator cache_iterator;
+    using cache_iterator = cache_type::iterator;
 
     template<class Actor>
     unique_mailbox_element_pointer next_message(Actor* self) {

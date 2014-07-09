@@ -31,8 +31,8 @@ struct class1 : class0 {
 
 };
 
-typedef intrusive_ptr<class0> class0_ptr;
-typedef intrusive_ptr<class1> class1_ptr;
+using class0_ptr = intrusive_ptr<class0>;
+using class1_ptr = intrusive_ptr<class1>;
 
 class0* get_test_rc() { return new class0; }
 

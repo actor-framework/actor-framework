@@ -67,7 +67,7 @@ class dummy_backend : public actor_namespace::backend {
 // - atoms are serialized '...'
 class string_serializer : public serializer, public dummy_backend {
 
-    typedef serializer super;
+    using super = serializer;
 
     ostream& out;
     actor_namespace m_namespace;
@@ -217,9 +217,9 @@ class string_serializer : public serializer, public dummy_backend {
 
 class string_deserializer : public deserializer, public dummy_backend {
 
-    typedef deserializer super;
+    using super = deserializer;
 
-    typedef string::iterator::difference_type difference_type;
+    using difference_type = string::iterator::difference_type;
 
     string m_str;
     string::iterator m_pos;

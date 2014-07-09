@@ -42,9 +42,9 @@ bool operator==(const foo& lhs, const foo& rhs) {
 }
 
 // a member function pointer to get an attribute of foo
-typedef int (foo::*foo_getter)() const;
+using foo_getter = int (foo::*)() const;
 // a member function pointer to set an attribute of foo
-typedef void (foo::*foo_setter)(int);
+using foo_setter = void (foo::*)(int);
 
 void testee(event_based_actor* self) {
     self->become (

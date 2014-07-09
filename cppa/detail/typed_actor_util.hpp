@@ -39,24 +39,30 @@ template<typename R, typename T>
 struct deduce_signature_helper;
 
 template<typename R, typename... Ts>
-struct deduce_signature_helper<R, detail::type_list<Ts...>> {
-    typedef typename replies_to<Ts...>::template with<R> type;
+struct deduce_signature_helper<R, type_list<Ts...>> {
+    using type = typename replies_to<Ts...>::template with<R>;
 
 };
 
 template<typename... Rs, typename... Ts>
-struct deduce_signature_helper<std::tuple<Rs...>, detail::type_list<Ts...>> {
-    typedef typename replies_to<Ts...>::template with<Rs...> type;
+struct deduce_signature_helper<std::tuple<Rs...>, type_list<Ts...>> {
+    using type = typename replies_to<Ts...>::template with<Rs...>;
 
 };
 
 template<typename T>
 struct deduce_signature {
-    typedef typename detail::implicit_conversions<typename T::result_type>::type
-    result_type;
-    typedef typename detail::tl_map<typename T::arg_types,
-                                    detail::rm_const_and_ref>::type arg_types;
-    typedef typename deduce_signature_helper<result_type, arg_types>::type type;
+
+    using result_type = typename implicit_conversions<
+                            typename T::result_type
+                        >::type;
+
+    using arg_types = typename tl_map<
+                          typename T::arg_types,
+                          rm_const_and_ref
+                      >::type;
+
+    using type = typename deduce_signature_helper<result_type, arg_types>::type;
 
 };
 
@@ -72,50 +78,58 @@ struct input_is {
 
 template<typename OutputList, typename F>
 inline void assert_types() {
-    typedef typename detail::tl_map<
-        typename detail::get_callable_trait<F>::arg_types,
-        detail::rm_const_and_ref>::type arg_types;
-    static constexpr size_t fun_args = detail::tl_size<arg_types>::value;
-    static_assert(fun_args <= detail::tl_size<OutputList>::value,
+
+    using arg_types = typename tl_map<
+                          typename get_callable_trait<F>::arg_types,
+                          rm_const_and_ref
+                      >::type;
+
+    static constexpr size_t fun_args = tl_size<arg_types>::value;
+
+    static_assert(fun_args <= tl_size<OutputList>::value,
                   "functor takes too much arguments");
-    typedef typename detail::tl_right<OutputList, fun_args>::type recv_types;
+
+    using recv_types = typename tl_right<OutputList, fun_args>::type;
+
     static_assert(std::is_same<arg_types, recv_types>::value,
                   "wrong functor signature");
+
 }
 
 template<typename T>
 struct lifted_result_type {
-    typedef detail::type_list<typename detail::implicit_conversions<T>::type>
-    type;
-
+    using type = type_list<typename implicit_conversions<T>::type>;
 };
 
 template<typename... Ts>
 struct lifted_result_type<std::tuple<Ts...>> {
-    typedef detail::type_list<Ts...> type;
-
+    using type = type_list<Ts...>;
 };
 
 template<typename T>
 struct deduce_output_type_step2 {
-    typedef T type;
-
+    using type = T;
 };
 
 template<typename R>
-struct deduce_output_type_step2<detail::type_list<typed_continue_helper<R>>> {
-    typedef typename lifted_result_type<R>::type type;
-
+struct deduce_output_type_step2<type_list<typed_continue_helper<R>>> {
+    using type = typename lifted_result_type<R>::type;
 };
 
 template<typename Signatures, typename InputTypes>
 struct deduce_output_type {
-    static constexpr int input_pos = detail::tl_find_if<
-        Signatures, input_is<InputTypes>::template eval>::value;
+    static constexpr int input_pos = tl_find_if<
+                                         Signatures,
+                                         input_is<InputTypes>::template eval
+                                     >::value;
+
     static_assert(input_pos >= 0, "typed actor does not support given input");
-    typedef typename detail::tl_at<Signatures, input_pos>::type signature;
-    typedef typename deduce_output_type_step2<
-        typename signature::output_types>::type type;
+
+    using signature = typename tl_at<Signatures, input_pos>::type;
+
+    using type = typename deduce_output_type_step2<
+                     typename signature::output_types
+                 >::type;
 
 };
 

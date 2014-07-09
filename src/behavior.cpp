@@ -26,13 +26,13 @@ namespace cppa {
 namespace {
 class continuation_decorator : public detail::behavior_impl {
 
-    typedef behavior_impl super;
+    using super = behavior_impl;
 
  public:
 
-    typedef behavior::continuation_fun continuation_fun;
+    using continuation_fun = behavior::continuation_fun;
 
-    typedef typename behavior_impl::pointer pointer;
+    using pointer = typename behavior_impl::pointer;
 
     continuation_decorator(continuation_fun fun, pointer ptr)
             : super(ptr->timeout()), m_fun(fun), m_decorated(std::move(ptr)) {

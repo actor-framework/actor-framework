@@ -79,7 +79,7 @@ inline bool has_none(const optional<T>& v, const Ts&... vs) {
 template<typename R, typename F>
 class lifted_fun_invoker {
 
-    typedef typename get_callable_trait<F>::arg_types arg_types;
+    using arg_types = typename get_callable_trait<F>::arg_types;
 
     static constexpr size_t args = tl_size<arg_types>::value;
 
@@ -110,7 +110,7 @@ class lifted_fun_invoker {
 template<typename F>
 class lifted_fun_invoker<bool, F> {
 
-    typedef typename get_callable_trait<F>::arg_types arg_types;
+    using arg_types = typename get_callable_trait<F>::arg_types;
 
     static constexpr size_t args = tl_size<arg_types>::value;
 
@@ -150,19 +150,20 @@ class lifted_fun {
 
  public:
 
-    typedef typename get_callable_trait<F>::result_type result_type;
+    using result_type = typename get_callable_trait<F>::result_type;
 
     // Let F be "R (Ts...)" then lifted_fun<F...> returns optional<R>
     // unless R is void in which case bool is returned
-    typedef typename std::conditional<std::is_same<result_type, void>::value,
-                                      bool, optional<result_type>>::type
-    optional_result_type;
+    using optional_result_type = typename std::conditional<
+                                     std::is_same<result_type, void>::value,
+                                     bool, optional<result_type>
+                                 >::type;
 
-    typedef ListOfProjections projections_list;
+    using projections_list = ListOfProjections;
 
-    typedef typename tl_apply<projections_list, std::tuple>::type projections;
+    using projections = typename tl_apply<projections_list, std::tuple>::type;
 
-    typedef type_list<Args...> arg_types;
+    using arg_types = type_list<Args...>;
 
     lifted_fun() = default;
 
@@ -204,7 +205,7 @@ struct get_lifted_fun;
 
 template<typename F, class ListOfProjections, typename... Ts>
 struct get_lifted_fun<F, ListOfProjections, type_list<Ts...>> {
-    typedef lifted_fun<F, ListOfProjections, Ts...> type;
+    using type = lifted_fun<F, ListOfProjections, Ts...>;
 
 };
 

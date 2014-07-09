@@ -27,8 +27,8 @@ template<typename... Is>
 struct replies_to {
     template<typename... Os>
     struct with {
-        typedef detail::type_list<Is...> input_types;
-        typedef detail::type_list<Os...> output_types;
+        using input_types = detail::type_list<Is...>;
+        using output_types = detail::type_list<Os...>;
 
     };
 };

@@ -28,31 +28,31 @@ namespace detail {
 
 template<typename T>
 struct unboxed {
-    typedef T type;
+    using type = T;
 
 };
 
 template<typename T>
 struct unboxed<detail::wrapped<T>> {
-    typedef typename detail::wrapped<T>::type type;
+    using type = typename detail::wrapped<T>::type;
 
 };
 
 template<typename T>
 struct unboxed<detail::wrapped<T>(&)()> {
-    typedef typename detail::wrapped<T>::type type;
+    using type = typename detail::wrapped<T>::type;
 
 };
 
 template<typename T>
 struct unboxed<detail::wrapped<T>()> {
-    typedef typename detail::wrapped<T>::type type;
+    using type = typename detail::wrapped<T>::type;
 
 };
 
 template<typename T>
 struct unboxed<detail::wrapped<T>(*)()> {
-    typedef typename detail::wrapped<T>::type type;
+    using type = typename detail::wrapped<T>::type;
 
 };
 

@@ -32,7 +32,7 @@ bool operator==(const pong& lhs, const pong& rhs) {
 
 using server_type = typed_actor<replies_to<ping>::with<pong>>;
 
-typedef typed_actor<> client_type;
+using client_type = typed_actor<>;
 
 server_type::behavior_type server() {
     return {

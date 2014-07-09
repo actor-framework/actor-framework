@@ -39,23 +39,23 @@ struct input_only;
 
 template<typename... Ts>
 struct input_only<detail::type_list<Ts...>> {
-    typedef detail::type_list<typename Ts::input_types...> type;
+    using type = detail::type_list<typename Ts::input_types...>;
 
 };
 
-typedef detail::type_list<skip_message_t> skip_list;
+using skip_list = detail::type_list<skip_message_t>;
 
 template<class List>
 struct unbox_typed_continue_helper {
     // do nothing if List is actually a list, i.e., not a typed_continue_helper
-    typedef List type;
+    using type = List;
 
 };
 
 template<class List>
 struct unbox_typed_continue_helper<
     detail::type_list<typed_continue_helper<List>>> {
-    typedef List type;
+    using type = List;
 
 };
 
@@ -64,7 +64,7 @@ struct same_input : std::is_same<Input, typename RepliesToWith::input_types> {};
 
 template<class Output, class RepliesToWith>
 struct same_output_or_skip_message_t {
-    typedef typename RepliesToWith::output_types other;
+    using other = typename RepliesToWith::output_types;
     static constexpr bool value =
         std::is_same<Output, typename RepliesToWith::output_types>::value ||
         std::is_same<Output, type_list<skip_message_t>>::value;
@@ -75,13 +75,15 @@ template<typename SList>
 struct valid_input_predicate {
     template<typename Expr>
     struct inner {
-        typedef typename Expr::input_types input_types;
-        typedef typename unbox_typed_continue_helper<
-            typename Expr::output_types>::type output_types;
+        using input_types = typename Expr::input_types;
+        using output_types = typename unbox_typed_continue_helper<
+                                 typename Expr::output_types
+                             >::type;
         // get matching elements for input type
-        typedef typename tl_filter<
-            SList, tbind<same_input, input_types>::template type>::type
-        filtered_slist;
+        using filtered_slist = typename tl_filter<
+                                   SList,
+                                   tbind<same_input, input_types>::template type
+                               >::type;
         static_assert(tl_size<filtered_slist>::value > 0,
                       "cannot assign given match expression to "
                       "typed behavior, because the expression "
@@ -160,7 +162,7 @@ class typed_behavior {
     typed_behavior& operator=(typed_behavior&&) = default;
     typed_behavior& operator=(const typed_behavior&) = default;
 
-    typedef detail::type_list<Rs...> signatures;
+    using signatures = detail::type_list<Rs...>;
 
     template<typename T, typename... Ts>
     typed_behavior(T arg, Ts&&... args) {
@@ -197,8 +199,11 @@ class typed_behavior {
     template<typename... Cs>
     void set(match_expr<Cs...>&& expr) {
         // do some transformation before type-checking the input signatures
-        typedef typename detail::tl_map<detail::type_list<
-            typename detail::deduce_signature<Cs>::type...>>::type input;
+        using input = typename detail::tl_map<
+                          detail::type_list<
+                              typename detail::deduce_signature<Cs>::type...
+                          >
+                      >::type;
         // check types
         detail::static_check_typed_behavior_input<signatures, input>();
         // final (type-erasure) step

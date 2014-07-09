@@ -28,14 +28,14 @@ namespace detail {
  */
 template<typename First, typename Second>
 struct type_pair {
-    typedef First first;
-    typedef Second second;
+    using first = First;
+    using second = Second;
 
 };
 
 template<typename First, typename Second>
 struct to_type_pair {
-    typedef type_pair<First, Second> type;
+    using type = type_pair<First, Second>;
 
 };
 

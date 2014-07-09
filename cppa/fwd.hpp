@@ -55,9 +55,9 @@ struct invalid_actor_addr_t;
 enum primitive_type : unsigned char;
 enum class atom_value : uint64_t;
 
-// intrusive pointer typedefs
-typedef intrusive_ptr<abstract_group> abstract_group_ptr;
-typedef intrusive_ptr<actor_proxy> actor_proxy_ptr;
+// intrusive pointer types
+using abstract_group_ptr = intrusive_ptr<abstract_group>;
+using actor_proxy_ptr = intrusive_ptr<actor_proxy>;
 
 // functions
 template<typename T, typename U>

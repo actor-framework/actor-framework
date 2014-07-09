@@ -30,7 +30,7 @@ class accept_handle : public io_handle<accept_handle> {
 
     friend class io_handle<accept_handle>;
 
-    typedef io_handle<accept_handle> super;
+    using super = io_handle<accept_handle>;
 
  public:
 

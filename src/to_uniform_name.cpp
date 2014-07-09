@@ -172,7 +172,7 @@ class parse_tree {
     static parse_tree parse(Iterator first, Iterator last) {
         PARSER_INIT((std::string{first, last}));
         parse_tree result;
-        typedef std::pair<Iterator, Iterator> range;
+        using range = std::pair<Iterator, Iterator>;
         std::vector<range> subranges;
         /* lifetime scope of temporary variables needed to fill 'subranges' */ {
             auto find_end = [&](Iterator from)->Iterator {

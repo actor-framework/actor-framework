@@ -41,7 +41,7 @@ class memory_cached : public Base {
 
  protected:
 
-    typedef memory_cached combined_type;
+    using combined_type = memory_cached;
 
  public:
 

@@ -50,9 +50,9 @@ class priority_policy {
 
     void push_to_cache(unique_mailbox_element_pointer ptr);
 
-    typedef std::vector<unique_mailbox_element_pointer> cache_type;
+    using cache_type = std::vector<unique_mailbox_element_pointer>;
 
-    typedef cache_type::iterator cache_iterator;
+    using cache_iterator = cache_type::iterator;
 
     cache_iterator cache_begin();
 

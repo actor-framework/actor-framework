@@ -42,7 +42,7 @@ using actor_proxy_ptr = intrusive_ptr<actor_proxy>;
  */
 class actor_proxy : public abstract_actor {
 
-    typedef abstract_actor super;
+    using super = abstract_actor;
 
  public:
 

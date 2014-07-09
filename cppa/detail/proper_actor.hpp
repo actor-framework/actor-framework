@@ -21,8 +21,8 @@ template<class Base, class Derived, class Policies>
 class proper_actor_base
     : public Policies::resume_policy::template mixin<Base, Derived> {
 
-    typedef typename Policies::resume_policy::template mixin<Base, Derived>
-            super;
+    using super = typename Policies::resume_policy::template mixin<Base,
+                                                                   Derived>;
 
  public:
 
@@ -36,7 +36,7 @@ class proper_actor_base
 
     // member functions from scheduling policy
 
-    typedef typename Policies::scheduling_policy::timeout_type timeout_type;
+    using timeout_type = typename Policies::scheduling_policy::timeout_type;
 
     void enqueue(const actor_addr& sender,
                  message_id mid,
@@ -84,7 +84,7 @@ class proper_actor_base
         priority_policy().push_to_cache(std::move(ptr));
     }
 
-    typedef typename Policies::priority_policy::cache_iterator cache_iterator;
+    using cache_iterator = typename Policies::priority_policy::cache_iterator;
 
     inline bool cache_empty() {
         return priority_policy().cache_empty();
@@ -178,7 +178,7 @@ class proper_actor
         : public proper_actor_base<Base,  proper_actor<Base, Policies, false>,
                                    Policies> {
 
-    typedef proper_actor_base<Base, proper_actor, Policies> super;
+    using super = proper_actor_base<Base, proper_actor, Policies>;
 
  public:
 
@@ -230,7 +230,7 @@ class proper_actor<
     true> : public proper_actor_base<Base, proper_actor<Base, Policies, true>,
                                      Policies> {
 
-    typedef proper_actor_base<Base, proper_actor, Policies> super;
+    using super = proper_actor_base<Base, proper_actor, Policies>;
 
  public:
 

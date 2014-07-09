@@ -49,7 +49,7 @@ actor spawn_io_client(F fun, const std::string& host,
     auto hdl = network::conn_hdl_from_socket(sock);
     // provoke compiler error early
     using fun_res = decltype(fun((broker*) 0, hdl, std::forward<Ts>(args)...));
-    // prevent warning about unused local typedef
+    // prevent warning about unused local type
     static_assert(std::is_same<fun_res, fun_res>::value,
                   "your compiler is lying to you");
     return spawn_class<broker::functor_based>(

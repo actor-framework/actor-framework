@@ -20,54 +20,8 @@
 #ifndef CPPA_CPPA_FWD_HPP
 #define CPPA_CPPA_FWD_HPP
 
-#include <cstdint>
-
-namespace cppa {
-
-// classes
-class actor;
-class group;
-class channel;
-class node_id;
-class behavior;
-class resumable;
-class message;
-class actor_addr;
-class actor_proxy;
-class scoped_actor;
-class execution_unit;
-class abstract_actor;
-class abstract_group;
-class blocking_actor;
-class message_header;
-class message_handler;
-class uniform_type_info;
-class event_based_actor;
-class primitive_variant;
-
-// structs
-struct anything;
-
-// enums
-enum primitive_type : unsigned char;
-enum class atom_value : std::uint64_t;
-
-// class templates
-template<typename> class optional;
-template<typename> class intrusive_ptr;
-template<typename> class weak_intrusive_ptr;
-
-// intrusive pointer typedefs
-typedef intrusive_ptr<abstract_group>      abstract_group_ptr;
-typedef intrusive_ptr<actor_proxy>         actor_proxy_ptr;
-typedef intrusive_ptr<node_id>             node_id_ptr;
-
-// weak intrusive pointer typedefs
-typedef weak_intrusive_ptr<actor_proxy>    weak_actor_proxy_ptr;
-
-// convenience typedefs
-typedef const message_header& msg_hdr_cref;
-
-} // namespace cppa
+// <backward_compatibility version="0.9" whole_file="yes">
+#include "cppa/fwd.hpp"
+// </backward_compatibility>
 
 #endif // CPPA_CPPA_FWD_HPP

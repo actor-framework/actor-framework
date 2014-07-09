@@ -32,7 +32,7 @@ namespace detail {
 
 template<typename T>
 struct conv_arg_impl {
-    typedef optional<T> result_type;
+    using result_type = optional<T>;
     static inline result_type _(const std::string& arg) {
         std::istringstream iss(arg);
         T result;
@@ -45,7 +45,7 @@ struct conv_arg_impl {
 
 template<>
 struct conv_arg_impl<std::string> {
-    typedef optional<std::string> result_type;
+    using result_type = optional<std::string>;
     static inline result_type _(const std::string& arg) { return arg; }
 };
 
@@ -64,7 +64,7 @@ class rd_arg_functor {
 
     template<bool> friend class opt1_rvalue_builder;
 
-    typedef rd_arg_storage<T> storage_type;
+    using storage_type = rd_arg_storage<T>;
 
  public:
 
@@ -108,8 +108,8 @@ class add_arg_functor {
 
  public:
 
-    typedef std::vector<T> value_type;
-    typedef rd_arg_storage<value_type> storage_type;
+    using value_type = std::vector<T>;
+    using storage_type = rd_arg_storage<value_type>;
 
     add_arg_functor(const add_arg_functor&) = default;
 
@@ -143,17 +143,17 @@ struct is_rd_arg<rd_arg_functor<T>> : std::true_type { };
 template<typename T>
 struct is_rd_arg<add_arg_functor<T>> : std::true_type { };
 
-typedef decltype(on<std::string>()) opt0_rvalue_builder;
+using opt0_rvalue_builder = decltype(on<std::string>());
 
 template<bool HasShortOpt = true>
 class opt1_rvalue_builder {
 
  public:
 
-    typedef decltype(on<std::string, std::string>()) left_type;
+    using left_type = decltype(on<std::string, std::string>());
 
-    typedef decltype(on(std::function<optional<std::string>(const std::string&)>()))
-            right_type;
+    using right_type = decltype(on(std::function<optional<std::string>
+                                                 (const std::string&)>()));
 
     template<typename Left, typename Right>
     opt1_rvalue_builder(char sopt, std::string lopt, Left&& lhs, Right&& rhs)
@@ -190,8 +190,8 @@ class opt1_rvalue_builder<false> {
 
  public:
 
-    typedef decltype(on(std::function<optional<std::string>(const std::string&)>()))
-            sub_type;
+    using sub_type = decltype(on(std::function<optional<std::string>
+                                               (const std::string&)>()));
 
     template<typename SubType>
     opt1_rvalue_builder(std::string lopt, SubType&& sub)

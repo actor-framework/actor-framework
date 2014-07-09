@@ -50,7 +50,7 @@ class actor_registry : public singleton_mixin<actor_registry> {
      *        exit reason. An entry with a nullptr means the actor has finished
      *        execution for given reason.
      */
-    typedef std::pair<abstract_actor_ptr, uint32_t> value_type;
+    using value_type = std::pair<abstract_actor_ptr, uint32_t>;
 
     /**
      * @brief Returns the {nullptr, invalid_exit_reason}.
@@ -82,7 +82,7 @@ class actor_registry : public singleton_mixin<actor_registry> {
 
  private:
 
-    typedef std::map<actor_id, value_type> entries;
+    using entries = std::map<actor_id, value_type>;
 
     std::atomic<size_t> m_running;
     std::atomic<actor_id> m_ids;

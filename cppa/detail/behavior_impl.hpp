@@ -46,7 +46,7 @@
 namespace cppa {
 
 class message_handler;
-typedef optional<message> bhvr_invoke_result;
+using bhvr_invoke_result = optional<message>;
 
 } // namespace cppa
 
@@ -152,7 +152,7 @@ class behavior_impl : public ref_counted {
     virtual void handle_timeout();
     inline const duration& timeout() const { return m_timeout; }
 
-    typedef intrusive_ptr<behavior_impl> pointer;
+    using pointer = intrusive_ptr<behavior_impl>;
 
     virtual pointer copy(const generic_timeout_definition& tdef) const = 0;
 
@@ -202,7 +202,7 @@ struct dummy_match_expr {
 template<class MatchExpr, typename F>
 class default_behavior_impl : public behavior_impl {
 
-    typedef behavior_impl super;
+    using super = behavior_impl;
 
  public:
 
@@ -256,7 +256,7 @@ default_behavior_impl<dummy_match_expr, F>* new_default_behavior(duration d,
                                                           f);
 }
 
-typedef intrusive_ptr<behavior_impl> behavior_impl_ptr;
+using behavior_impl_ptr = intrusive_ptr<behavior_impl>;
 
 // implemented in message_handler.cpp
 // message_handler combine(behavior_impl_ptr, behavior_impl_ptr);

@@ -59,13 +59,13 @@ class sync_handle_helper;
  */
 class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
 
-    typedef combined_type super;
+    using super = combined_type;
 
  public:
 
-    typedef detail::disposer del;
+    using del = detail::disposer;
 
-    typedef detail::single_reader_queue<mailbox_element, del> mailbox_type;
+    using mailbox_type = detail::single_reader_queue<mailbox_element, del>;
 
     ~local_actor();
 
@@ -546,7 +546,7 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
  * @brief A smart pointer to a {@link local_actor} instance.
  * @relates local_actor
  */
-typedef intrusive_ptr<local_actor> local_actor_ptr;
+using local_actor_ptr = intrusive_ptr<local_actor>;
 
 /******************************************************************************
  *             inline and template member function implementations            *

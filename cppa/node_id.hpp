@@ -74,7 +74,7 @@ class node_id : detail::comparable<node_id>,
     /**
      * @brief Represents a 160 bit hash.
      */
-    typedef std::array<uint8_t, host_id_size> host_id_type;
+    using host_id_type = std::array<uint8_t, host_id_size>;
 
     /**
      * @brief A reference counted container for host ID and process ID.

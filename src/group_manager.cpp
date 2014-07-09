@@ -42,10 +42,10 @@ namespace detail {
 
 namespace {
 
-typedef unique_lock<detail::shared_spinlock> exclusive_guard;
-typedef shared_lock<detail::shared_spinlock> shared_guard;
-typedef upgrade_lock<detail::shared_spinlock> upgrade_guard;
-typedef upgrade_to_unique_lock<detail::shared_spinlock> upgrade_to_unique_guard;
+using exclusive_guard = unique_lock<detail::shared_spinlock>;
+using shared_guard = shared_lock<detail::shared_spinlock>;
+using upgrade_guard = upgrade_lock<detail::shared_spinlock>;
+using upgrade_to_unique_guard = upgrade_to_unique_lock<detail::shared_spinlock>;
 
 class local_broker;
 class local_group_module;
@@ -116,7 +116,7 @@ class local_group : public abstract_group {
 
 };
 
-typedef intrusive_ptr<local_group> local_group_ptr;
+using local_group_ptr = intrusive_ptr<local_group>;
 
 class local_broker : public event_based_actor {
 
@@ -194,7 +194,7 @@ class proxy_broker;
 
 class local_group_proxy : public local_group {
 
-    typedef local_group super;
+    using super = local_group;
 
  public:
 
@@ -244,7 +244,7 @@ class local_group_proxy : public local_group {
 
 };
 
-typedef intrusive_ptr<local_group_proxy> local_group_proxy_ptr;
+using local_group_proxy_ptr = intrusive_ptr<local_group_proxy>;
 
 class proxy_broker : public event_based_actor {
 
@@ -267,7 +267,7 @@ class proxy_broker : public event_based_actor {
 
 class local_group_module : public abstract_group::module {
 
-    typedef abstract_group::module super;
+    using super = abstract_group::module;
 
  public:
 

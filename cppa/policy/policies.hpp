@@ -28,10 +28,10 @@ class policies {
 
  public:
 
-    typedef SchedulingPolicy scheduling_policy;
-    typedef PriorityPolicy priority_policy;
-    typedef ResumePolicy resume_policy;
-    typedef InvokePolicy invoke_policy;
+    using scheduling_policy = SchedulingPolicy;
+    using priority_policy = PriorityPolicy;
+    using resume_policy = ResumePolicy;
+    using invoke_policy = InvokePolicy;
 
     scheduling_policy& get_scheduling_policy() { return m_scheduling_policy; }
 

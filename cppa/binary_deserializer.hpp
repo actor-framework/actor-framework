@@ -29,7 +29,7 @@ namespace cppa {
  */
 class binary_deserializer : public deserializer {
 
-    typedef deserializer super;
+    using super = deserializer;
 
  public:
 

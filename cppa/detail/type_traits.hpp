@@ -42,25 +42,25 @@ namespace detail {
  */
 template<typename T>
 struct rm_const_and_ref {
-    typedef T type;
+    using type = T;
 
 };
 
 template<typename T>
 struct rm_const_and_ref<const T&> {
-    typedef T type;
+    using type = T;
 
 };
 
 template<typename T>
 struct rm_const_and_ref<const T> {
-    typedef T type;
+    using type = T;
 
 };
 
 template<typename T>
 struct rm_const_and_ref<T&> {
-    typedef T type;
+    using type = T;
 
 };
 
@@ -119,8 +119,8 @@ struct is_anything : std::is_same<T, anything> {};
  */
 template<typename T, typename U>
 struct is_array_of {
-    typedef typename std::remove_all_extents<T>::type step1_type;
-    typedef typename std::remove_cv<step1_type>::type step2_type;
+    using step1_type = typename std::remove_all_extents<T>::type;
+    using step2_type = typename std::remove_cv<step1_type>::type;
     static constexpr bool value =
         std::is_array<T>::value && std::is_same<step2_type, U>::value;
 
@@ -131,19 +131,19 @@ struct is_array_of {
  */
 template<typename T0, typename T1>
 struct deduce_ref_type {
-    typedef typename detail::rm_const_and_ref<T1>::type type;
+    using type = typename detail::rm_const_and_ref<T1>::type;
 
 };
 
 template<typename T0, typename T1>
 struct deduce_ref_type<T0&, T1> {
-    typedef typename detail::rm_const_and_ref<T1>::type& type;
+    using type = typename detail::rm_const_and_ref<T1>::type&;
 
 };
 
 template<typename T0, typename T1>
 struct deduce_ref_type<const T0&, T1> {
-    typedef const typename detail::rm_const_and_ref<T1>::type& type;
+    using type = const typename detail::rm_const_and_ref<T1>::type&;
 
 };
 
@@ -209,16 +209,16 @@ class is_comparable {
 
     template<typename A, typename B>
     static bool cmp_help_fun(const A* arg0, const B* arg1,
-                             decltype(*arg0 == *arg1) * = nullptr) {
+                             decltype(*arg0 == *arg1)* = nullptr) {
         return true;
     }
 
     template<typename A, typename B>
     static void cmp_help_fun(const A*, const B*, void* = nullptr) {}
 
-    typedef decltype(cmp_help_fun(static_cast<T1*>(nullptr),
-                                  static_cast<T2*>(nullptr),
-                                  static_cast<bool*>(nullptr))) result_type;
+    using result_type = decltype(cmp_help_fun(static_cast<T1*>(nullptr),
+                                              static_cast<T2*>(nullptr),
+                                              static_cast<bool*>(nullptr)));
 
  public:
 
@@ -251,7 +251,7 @@ class is_forward_iterator {
 
     static void sfinae_fun(void*) {}
 
-    typedef decltype(sfinae_fun(static_cast<T*>(nullptr))) result_type;
+    using result_type = decltype(sfinae_fun(static_cast<T*>(nullptr)));
 
  public:
 
@@ -283,7 +283,7 @@ class is_iterable {
     // SFNINAE default
     static void sfinae_fun(const void*) {}
 
-    typedef decltype(sfinae_fun(static_cast<const T*>(nullptr))) result_type;
+    using result_type = decltype(sfinae_fun(static_cast<const T*>(nullptr)));
 
  public:
 
@@ -318,13 +318,13 @@ struct is_mutable_ref {
  */
 template<typename T>
 struct rm_optional {
-    typedef T type;
+    using type = T;
 
 };
 
 template<typename T>
 struct rm_optional<optional<T>> {
-    typedef T type;
+    using type = T;
 
 };
 
@@ -343,50 +343,50 @@ struct callable_trait;
 // member const function pointer
 template<class C, typename Result, typename... Ts>
 struct callable_trait<Result (C::*)(Ts...) const> {
-    typedef Result result_type;
-    typedef type_list<Ts...> arg_types;
-    typedef std::function<Result(Ts...)> fun_type;
+    using result_type = Result;
+    using arg_types = type_list<Ts...>;
+    using fun_type = std::function<Result(Ts...)>;
 
 };
 
 // member function pointer
 template<class C, typename Result, typename... Ts>
 struct callable_trait<Result (C::*)(Ts...)> {
-    typedef Result result_type;
-    typedef type_list<Ts...> arg_types;
-    typedef std::function<Result(Ts...)> fun_type;
+    using result_type = Result;
+    using arg_types = type_list<Ts...>;
+    using fun_type = std::function<Result(Ts...)>;
 
 };
 
 // good ol' function
 template<typename Result, typename... Ts>
 struct callable_trait<Result(Ts...)> {
-    typedef Result result_type;
-    typedef type_list<Ts...> arg_types;
-    typedef std::function<Result(Ts...)> fun_type;
+    using result_type = Result;
+    using arg_types = type_list<Ts...>;
+    using fun_type = std::function<Result(Ts...)>;
 
 };
 
 // good ol' function pointer
 template<typename Result, typename... Ts>
 struct callable_trait<Result (*)(Ts...)> {
-    typedef Result result_type;
-    typedef type_list<Ts...> arg_types;
-    typedef std::function<Result(Ts...)> fun_type;
+    using result_type = Result;
+    using arg_types = type_list<Ts...>;
+    using fun_type = std::function<Result(Ts...)>;
 
 };
 
 // matches (IsFun || IsMemberFun)
 template<bool IsFun, bool IsMemberFun, typename T>
 struct get_callable_trait_helper {
-    typedef callable_trait<T> type;
+    using type = callable_trait<T>;
 
 };
 
 // assume functor providing operator()
 template<typename C>
 struct get_callable_trait_helper<false, false, C> {
-    typedef callable_trait<decltype(&C::operator())> type;
+    using type = callable_trait<decltype(&C::operator())>;
 
 };
 
@@ -398,18 +398,18 @@ struct get_callable_trait_helper<false, false, C> {
 template<typename T>
 struct get_callable_trait {
     // type without cv qualifiers
-    typedef typename rm_const_and_ref<T>::type bare_type;
-    // if type is a function pointer, this typedef identifies the function
-    typedef typename std::remove_pointer<bare_type>::type signature_type;
-    typedef typename get_callable_trait_helper <
-            std::is_function<bare_type>::value ||
-        std::is_function<signature_type>::value,
-        std::is_member_function_pointer<bare_type>::value,
-        bare_type > ::type type;
-    typedef typename type::result_type result_type;
-    typedef typename type::arg_types arg_types;
-    typedef typename type::fun_type fun_type;
-
+    using bare_type = typename rm_const_and_ref<T>::type;
+    // if T is a function pointer, this type identifies the function
+    using signature_type = typename std::remove_pointer<bare_type>::type;
+    using type = typename get_callable_trait_helper<
+                        std::is_function<bare_type>::value
+                     || std::is_function<signature_type>::value,
+                     std::is_member_function_pointer<bare_type>::value,
+                     bare_type
+                 >::type;
+    using result_type = typename type::result_type;
+    using arg_types = typename type::arg_types;
+    using fun_type = typename type::fun_type;
 };
 
 /**
@@ -425,15 +425,16 @@ struct is_callable {
 
     template<typename C>
     static bool
-    _fun(C*, typename callable_trait<decltype(&C::operator())>::result_type* =
-                 nullptr) {
+    _fun(C*,
+         typename callable_trait<decltype(&C::operator())>::result_type* = 0) {
         return true;
     }
 
-    static void _fun(void*) {}
+    static void _fun(void*) { }
 
-    typedef decltype(_fun(
-        static_cast<typename rm_const_and_ref<T>::type*>(nullptr))) result_type;
+    using pointer = typename rm_const_and_ref<T>::type*;
+
+    using result_type = decltype(_fun(static_cast<pointer>(nullptr)));
 
  public:
 
@@ -465,14 +466,14 @@ struct is_manipulator {
 
 template<bool IsCallable, typename C>
 struct map_to_result_type_impl {
-    typedef typename get_callable_trait<C>::type trait_type;
-    typedef typename trait_type::result_type type;
+    using trait_type = typename get_callable_trait<C>::type;
+    using type = typename trait_type::result_type;
 
 };
 
 template<typename C>
 struct map_to_result_type_impl<false, C> {
-    typedef unit_t type;
+    using type = unit_t;
 
 };
 
@@ -482,21 +483,20 @@ struct map_to_result_type_impl<false, C> {
  */
 template<typename T>
 struct map_to_result_type {
-    typedef typename map_to_result_type_impl<is_callable<T>::value, T>::type
-    type;
-
+    using type = typename map_to_result_type_impl<
+                     is_callable<T>::value,
+                     T
+                 >::type;
 };
 
 template<bool DoReplace, typename T1, typename T2>
 struct replace_type_impl {
-    typedef T1 type;
-
+    using type = T1;
 };
 
 template<typename T1, typename T2>
 struct replace_type_impl<true, T1, T2> {
-    typedef T2 type;
-
+    using type = T2;
 };
 
 /**
@@ -505,8 +505,7 @@ struct replace_type_impl<true, T1, T2> {
 template<typename What, typename With, typename... IfStmt>
 struct replace_type {
     static constexpr bool do_replace = disjunction<IfStmt::value...>::value;
-    typedef typename replace_type_impl<do_replace, What, With>::type type;
-
+    using type = typename replace_type_impl<do_replace, What, With>::type;
 };
 
 /**
@@ -517,14 +516,12 @@ struct type_at;
 
 template<size_t N, typename T0, typename... Ts>
 struct type_at<N, T0, Ts...> {
-    typedef typename type_at<N - 1, Ts...>::type type;
-
+    using type = typename type_at<N - 1, Ts...>::type;
 };
 
 template<typename T0, typename... Ts>
 struct type_at<0, T0, Ts...> {
-    typedef T0 type;
-
+    using type = T0;
 };
 
 /**

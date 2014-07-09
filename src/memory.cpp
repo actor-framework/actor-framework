@@ -42,7 +42,7 @@ pthread_once_t s_key_once = PTHREAD_ONCE_INIT;
 
 memory_cache::~memory_cache() {}
 
-typedef map<const type_info*, unique_ptr<memory_cache>> cache_map;
+using cache_map = map<const type_info*, unique_ptr<memory_cache>>;
 
 void cache_map_destructor(void* ptr) {
     if (ptr) delete reinterpret_cast<cache_map*>(ptr);

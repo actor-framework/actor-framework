@@ -11,7 +11,7 @@ class ChatWidget : public cppa::actor_widget_mixin<QWidget> {
 
     Q_OBJECT
 
-    typedef cppa::actor_widget_mixin<QWidget> super;
+    using super = cppa::actor_widget_mixin<QWidget>;
 
  public:
 

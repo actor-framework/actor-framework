@@ -65,8 +65,8 @@ class single_reader_queue {
 
  public:
 
-    typedef T value_type;
-    typedef value_type* pointer;
+    using value_type = T;
+    using pointer = value_type*;
 
     /**
      * @warning call only from the reader (owner)

@@ -563,7 +563,7 @@ class uti_base : public uniform_type_info {
 template<typename T>
 class uti_impl : public uti_base<T> {
 
-    typedef uti_base<T> super;
+    using super = uti_base<T>;
 
  public:
 

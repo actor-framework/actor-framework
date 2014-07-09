@@ -37,7 +37,7 @@ struct my_request {
 
 };
 
-typedef typed_actor<replies_to<my_request>::with<bool>> server_type;
+using server_type = typed_actor<replies_to<my_request>::with<bool>>;
 
 bool operator==(const my_request& lhs, const my_request& rhs) {
     return lhs.a == rhs.a && lhs.b == rhs.b;
@@ -118,10 +118,12 @@ void test_typed_spawn(server_type ts) {
 
 struct get_state_msg {};
 
-typedef typed_actor<replies_to<get_state_msg>::with<string>,
-                    replies_to<string>::with<void>,
-                    replies_to<float>::with<void>,
-                    replies_to<int>::with<int>> event_testee_type;
+using event_testee_type = typed_actor<
+                              replies_to<get_state_msg>::with<string>,
+                              replies_to<string>::with<void>,
+                              replies_to<float>::with<void>,
+                              replies_to<int>::with<int>
+                          >;
 
 class event_testee : public event_testee_type::base {
 
@@ -134,24 +136,29 @@ class event_testee : public event_testee_type::base {
     }
 
     behavior_type wait4int() {
-        return {on<get_state_msg>() >> [] { return "wait4int"; },
-                on<int>() >> [=]()->int {become(wait4float());
-        return 42;
+        return {
+            on<get_state_msg>() >> [] { return "wait4int"; },
+            on<int>() >> [=]()->int {become(wait4float());
+                return 42;
+            },
+            (on<float>() || on<string>()) >> skip_message
+        };
     }
-    , (on<float>() || on<string>()) >> skip_message
 
-};
-}
-
-behavior_type wait4float() {
-    return {on<get_state_msg>() >> [] { return "wait4float"; },
+    behavior_type wait4float() {
+        return {
+            on<get_state_msg>() >> [] {
+                return "wait4float";
+            },
             on<float>() >> [=] { become(wait4string()); },
             (on<string>() || on<int>()) >> skip_message};
-}
+    }
 
-behavior_type make_behavior() override { return wait4int(); }
-}
-;
+    behavior_type make_behavior() override {
+        return wait4int();
+    }
+
+};
 
 void test_event_testee() {
     scoped_actor self;
@@ -191,7 +198,7 @@ void test_event_testee() {
  *                         simple 'forwarding' chain                          *
  ******************************************************************************/
 
-typedef typed_actor<replies_to<string>::with<string>> string_actor;
+using string_actor = typed_actor<replies_to<string>::with<string>>;
 
 void simple_relay(string_actor::pointer self, string_actor master, bool leaf) {
     string_actor next =
@@ -232,7 +239,7 @@ void test_simple_string_reverter() {
  *                        sending typed actor handles                         *
  ******************************************************************************/
 
-typedef typed_actor<replies_to<int>::with<int>> int_actor;
+using int_actor = typed_actor<replies_to<int>::with<int>>;
 
 int_actor::behavior_type int_fun() {
     return {on_arg_match >> [](int i) { return i * i; }};

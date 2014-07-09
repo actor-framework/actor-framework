@@ -47,13 +47,13 @@ namespace detail {
 
 template<bool IsFun, typename T>
 struct add_ptr_to_fun_ {
-    typedef T* type;
+    using type = T*;
 
 };
 
 template<typename T>
 struct add_ptr_to_fun_<false, T> {
-    typedef T type;
+    using type = T;
 
 };
 
@@ -62,13 +62,13 @@ struct add_ptr_to_fun : add_ptr_to_fun_<std::is_function<T>::value, T> {};
 
 template<bool ToVoid, typename T>
 struct to_void_impl {
-    typedef unit_t type;
+    using type = unit_t;
 
 };
 
 template<typename T>
 struct to_void_impl<false, T> {
-    typedef typename add_ptr_to_fun<T>::type type;
+    using type = typename add_ptr_to_fun<T>::type;
 
 };
 
@@ -137,13 +137,15 @@ struct tuple_maker {
 template<class Transformers, class Pattern>
 struct rvalue_builder {
 
-    typedef typename detail::tl_back<Pattern>::type back_type;
+    using back_type = typename detail::tl_back<Pattern>::type;
 
     static constexpr bool is_complete =
         !std::is_same<detail::arg_match_t, back_type>::value;
 
-    typedef typename detail::tl_apply<Transformers, std::tuple>::type
-    fun_container;
+    using fun_container = typename detail::tl_apply<
+                              Transformers,
+                              std::tuple
+                          >::type;
 
     fun_container m_funs;
 
@@ -161,11 +163,15 @@ struct rvalue_builder {
     match_expr<
         typename get_case<is_complete, Expr, Transformers, Pattern>::type>
     operator>>(Expr expr) const {
-        typedef typename get_case<is_complete, Expr, Transformers,
-                                  Pattern>::type lifted_expr;
+        using lifted_expr = typename get_case<
+                                is_complete,
+                                Expr,
+                                Transformers,
+                                Pattern
+                            >::type;
         // adjust m_funs to exactly match expected projections in match case
-        typedef typename lifted_expr::projections_list target;
-        typedef typename tl_trim<Transformers>::type trimmed_projections;
+        using target = typename lifted_expr::projections_list;
+        using trimmed_projections = typename tl_trim<Transformers>::type;
         tuple_maker f;
         auto lhs = apply_args(f, get_indices(trimmed_projections{}), m_funs);
         typename tl_apply<
@@ -186,26 +192,28 @@ struct rvalue_builder {
 
 template<bool IsCallable, typename T>
 struct pattern_type_ {
-    typedef detail::get_callable_trait<T> ctrait;
-    typedef typename ctrait::arg_types args;
+    using ctrait = detail::get_callable_trait<T>;
+    using args = typename ctrait::arg_types;
     static_assert(detail::tl_size<args>::value == 1,
                   "only unary functions allowed");
-    typedef typename detail::rm_const_and_ref<
-        typename detail::tl_head<args>::type>::type type;
-
+    using type = typename detail::rm_const_and_ref<
+                     typename detail::tl_head<args>::type
+                 >::type;
 };
 
 template<typename T>
 struct pattern_type_<false, T> {
-    typedef typename implicit_conversions<typename detail::rm_const_and_ref<
-        typename detail::unboxed<T>::type>::type>::type type;
-
+    using type = typename implicit_conversions<
+                     typename detail::rm_const_and_ref<
+                         typename detail::unboxed<T>::type
+                     >::type
+                 >::type;
 };
 
 template<typename T>
 struct pattern_type
     : pattern_type_<
-          detail::is_callable<T>::value && !detail::is_boxed<T>::value, T> {};
+          detail::is_callable<T>::value && !detail::is_boxed<T>::value, T> { };
 
 } // namespace detail
 } // namespace cppa
@@ -283,7 +291,7 @@ constexpr typename detail::boxed<T>::type val() {
     return typename detail::boxed<T>::type();
 }
 
-typedef typename detail::boxed<detail::arg_match_t>::type boxed_arg_match_t;
+using boxed_arg_match_t = typename detail::boxed<detail::arg_match_t>::type;
 
 constexpr boxed_arg_match_t arg_match = boxed_arg_match_t();
 
@@ -330,14 +338,17 @@ struct is_optional<optional<T>> : std::true_type {};
 
 template<typename T>
 struct to_guard<T, true> {
-    typedef typename detail::get_callable_trait<T>::type ct;
-    typedef typename ct::arg_types arg_types;
+    using ct = typename detail::get_callable_trait<T>::type;
+    using arg_types = typename ct::arg_types;
     static_assert(detail::tl_size<arg_types>::value == 1,
                   "projection/guard must take exactly one argument");
     static_assert(is_optional<typename ct::result_type>::value,
                   "projection/guard must return an optional value");
-    typedef typename std::conditional<std::is_function<T>::value, T*, T>::type
-    value_type;
+    using value_type = typename std::conditional<
+                           std::is_function<T>::value,
+                           T*,
+                           T
+                       >::type;
     static value_type _(value_type val) { return val; }
 
 };
@@ -414,8 +425,12 @@ class on_the_fly_rvalue_builder {
     match_expr<typename get_case<false, Expr, detail::empty_type_list,
                                  detail::empty_type_list>::type>
     operator>>(Expr expr) const {
-        typedef typename get_case<false, Expr, detail::empty_type_list,
-                                  detail::empty_type_list>::type result_type;
+        using result_type = typename get_case<
+                                false,
+                                Expr,
+                                detail::empty_type_list,
+                                detail::empty_type_list
+                            >::type;
         return result_type{std::move(expr)};
     }
 

@@ -43,7 +43,7 @@ class behavior_stack {
     behavior_stack(const behavior_stack&) = delete;
     behavior_stack& operator=(const behavior_stack&) = delete;
 
-    typedef std::pair<behavior, message_id> element_type;
+    using element_type = std::pair<behavior, message_id>;
 
  public:
 

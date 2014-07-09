@@ -44,11 +44,11 @@ class behavior {
 
  public:
 
-    typedef std::function<optional<message>(message&)> continuation_fun;
+    using continuation_fun = std::function<optional<message>(message&)>;
 
     /** @cond PRIVATE */
 
-    typedef intrusive_ptr<detail::behavior_impl> impl_ptr;
+    using impl_ptr = intrusive_ptr<detail::behavior_impl>;
 
     inline auto as_behavior_impl() const -> const impl_ptr&;
 

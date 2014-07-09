@@ -29,8 +29,8 @@ namespace cppa {
 namespace detail {
 
 struct tuple_dummy {
-    typedef detail::empty_type_list types;
-    typedef message_iterator<tuple_dummy> const_iterator;
+    using types = detail::empty_type_list;
+    using const_iterator = message_iterator<tuple_dummy>;
     inline size_t size() const { return 0; }
     inline void* mutable_at(size_t) { return nullptr; }
     inline const void* at(size_t) const { return nullptr; }

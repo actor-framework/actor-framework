@@ -75,7 +75,7 @@ class actor_namespace {
     /**
      * @brief A map that stores all proxies for known remote actors.
      */
-    typedef std::map<actor_id, actor_proxy::anchor_ptr> proxy_map;
+    using proxy_map = std::map<actor_id, actor_proxy::anchor_ptr>;
 
     /**
      * @brief Returns the number of proxies for @p node.
