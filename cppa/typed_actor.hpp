@@ -102,9 +102,13 @@ class typed_actor
         set(other);
     }
 
-    pointer operator->() const { return static_cast<pointer>(m_ptr.get()); }
+    abstract_actor* operator->() const {
+        return m_ptr.get();
+    }
 
-    base& operator*() const { return static_cast<base&>(*m_ptr.get()); }
+    abstract_actor& operator*() const {
+        return *m_ptr.get();
+    }
 
     /**
      * @brief Queries the address of the stored actor.
