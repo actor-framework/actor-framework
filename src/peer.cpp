@@ -379,8 +379,10 @@ void peer::enqueue(msg_hdr_cref hdr, const any_tuple& msg) {
 
 void peer::dispose() {
     CPPA_LOG_TRACE(CPPA_ARG(this));
-    parent()->get_namespace().erase(*m_node);
-    parent()->del_peer(this);
+    if (m_node) {
+        parent()->get_namespace().erase(*m_node);
+        parent()->del_peer(this);
+    }
     delete this;
 }
 
