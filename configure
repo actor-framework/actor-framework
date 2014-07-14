@@ -38,8 +38,6 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --prefix=PREFIX             installation directory [/usr/local]
 
   Add Optional Features:
-    --enable-opencl             build with OpenCL support
-    --enable-context-switching  build with context-switching (requires Boost)
     --enable-perftools          build with Google perftools
 
   Remove Standard Features (even if all dependencies are available):
@@ -60,15 +58,6 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
                                   - TRACE
                                 (implicitly sets --enable-debug)
     --enable-address-sanitizer  build with Clang's address sanitizer
-
-  Required Packages in Non-Standard Locations:
-    --with-boost=PATH           path to Boost install root
-
-  Deprecated Options:
-    --without-memory-management replaced by --no-memory-management
-    --with-opencl               replaced by --enable-opencl
-    --standalone-build          build without Boost even if available (default)
-    --disable-context-switching build without context-switching (default)
 
   Influential Environment Variables (only on first invocation
   per build directory):
@@ -167,7 +156,6 @@ builddir="$sourcedir/build"
 CMakeCacheEntries=""
 append_cache_entry CMAKE_INSTALL_PREFIX        PATH   /usr/local
 append_cache_entry ENABLE_DEBUG                BOOL   false
-append_cache_entry ENABLE_CONTEXT_SWITCHING    BOOL   false
 
 # Parse arguments.
 while [ $# -ne 0 ]; do
@@ -192,13 +180,6 @@ while [ $# -ne 0 ]; do
             ;;
         --enable-address-sanitizer)
             append_cache_entry ENABLE_ADDRESS_SANITIZER BOOL true
-            ;;
-        --enable-opencl)
-            append_cache_entry ENABLE_OPENCL BOOL true
-            ;;
-        --with-opencl)
-            echo "*** WARNING: --with-opencl is deprecated"
-            append_cache_entry ENABLE_OPENCL BOOL true
             ;;
         --no-memory-management)
             append_cache_entry DISABLE_MEM_MANAGEMENT BOOL true
@@ -236,15 +217,6 @@ while [ $# -ne 0 ]; do
                     exit 1
                     ;;
             esac
-            ;;
-        --enable-context-switching)
-            append_cache_entry ENABLE_CONTEXT_SWITCHING BOOL true
-            ;;
-        --disable-context-switching)
-            echo "*** WARNING: --disable-context-switching is deprecated"
-            ;;
-        --with-boost=*)
-            append_cache_entry BOOST_ROOT PATH $optarg
             ;;
         --with-clang=*)
             clang=$optarg

@@ -199,11 +199,6 @@ set (LIBCPPA_SRCS
      src/uniform_type_info.cpp
      src/uniform_type_info_map.cpp)
 
-if (BOOST_ROOT)
-  # Prevent falling back to system paths when using a custom Boost prefix.
-  set(Boost_NO_SYSTEM_PATHS true)
-endif ()
-
 set(INCLUDE_DIRS .)
 set(LD_DIRS)
 set(LD_FLAGS ${CMAKE_LD_LIBS})
@@ -217,36 +212,9 @@ elseif (MINGW)
   set(LD_FLAGS "ws2_32 -liphlpapi")
 endif ()
 
-if (ENABLE_OPENCL)
-  find_package(OPENCL REQUIRED)
-  set(LD_FLAGS ${LD_FLAGS} ${OPENCL_LIBRARIES})
-  set(INCLUDE_DIRS ${INCLUDE_DIRS} ${OPENCL_INCLUDE_DIR})
-  set(LIBCPPA_SRC
-      ${LIBCPPA_SRC} 
-      src/opencl/global.cpp
-      src/opencl/program.cpp
-      src/opencl/opencl_metainfo.cpp)
-  add_definitions(-DCPPA_OPENCL)
-endif (ENABLE_OPENCL)
-
 if (DISABLE_MEM_MANAGEMENT)
   add_definitions(-DCPPA_DISABLE_MEM_MANAGEMENT)
 endif (DISABLE_MEM_MANAGEMENT)
-
-if (ENABLE_CONTEXT_SWITCHING)
-  find_package(Boost 1.54.0 COMPONENTS system context coroutine REQUIRED)
-  set(LD_FLAGS ${LD_FLAGS} ${Boost_COROUTINE_LIBRARY} ${Boost_CONTEXT_LIBRARY} ${Boost_SYSTEM_LIBRARY})
-  # This hack fixes a problem when the linker search path is the same as
-  # the one provided by the compiler. In this case, CMake replaces the absolute
-  # path (e.g., /path/to/lib.so) with -l<lib>, which may cause it to pick up the wrong
-  # library. So when this replacement happens, we ensure that the right
-  # library gets picked by adding a -L directive for the affected libraries
-  # (which is just Boost Context here).
-  set(CMAKE_EXE_LINKER_FLAGS -L${Boost_LIBRARY_DIRS})
-  set(INCLUDE_DIRS ${INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
-  set(LD_DIRS ${LD_DIRS} ${Boost_LIBRARY_DIRS})
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_ENABLE_CONTEXT_SWITCHING")
-endif (ENABLE_CONTEXT_SWITCHING)
 
 # build shared library if not compiling static only
 if (NOT "${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes")
@@ -331,10 +299,6 @@ endif ()
 
 # set optional flags
 string(TOUPPER ${CMAKE_BUILD_TYPE} build_type)
-set(CONTEXT_SWITCHING "no")
-if (ENABLE_CONTEXT_SWITCHING)
-    set(CONTEXT_SWITCHING "yes")
-endif ()
 
 # check for doxygen and add custom "doc" target to Makefile
 find_package(Doxygen)
@@ -407,13 +371,10 @@ message(STATUS
         "\nBuild type:        ${CMAKE_BUILD_TYPE}"
         "\nDebug mode:        ${DEBUG_MODE_STR}"
         "\nLog level:         ${LOG_LEVEL_STR}"
-        "\nContext switching: ${CONTEXT_SWITCHING}"
-        "\nValgrind:          ${VALGRIND}"
         "\nBuild examples:    ${BUILD_EXAMPLES}"
         "\nBuild unit tests:  ${BUILD_UNIT_TESTS}"
         "\nBuild static:      ${CPPA_BUILD_STATIC}"
         "\nBulid static only: ${CPPA_BUILD_STATIC_ONLY}"
-        "\nBuild OpenCL:      ${BUILD_OPENCL_STR}"
         "\nWith mem. mgmt.:   ${WITH_MEM_MANAGEMENT}"
         "\n"
         "\nCXX:               ${CMAKE_CXX_COMPILER}"
