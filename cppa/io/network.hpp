@@ -50,6 +50,7 @@
 #else
 #   include <unistd.h>
 #   include <errno.h>
+#   include <sys/socket.h>
 #endif
 
 // poll vs epoll backend
@@ -121,6 +122,11 @@ namespace network {
     constexpr int ec_out_of_memory = ENOMEM;
     constexpr int ec_interrupted_syscall = EINTR;
 #endif
+
+struct datagram_endpoint_data {
+    sockaddr addr;
+    socklen_t addrlen;
+};
 
 /**
  * @brief Platform-specific native socket type.

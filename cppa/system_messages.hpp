@@ -28,6 +28,9 @@
 #include "cppa/accept_handle.hpp"
 #include "cppa/connection_handle.hpp"
 
+#include "cppa/io/datagram_endpoint.hpp"
+#include "cppa/io/datagram_source_handle.hpp"
+
 #include "cppa/detail/tbind.hpp"
 #include "cppa/detail/type_list.hpp"
 
@@ -48,7 +51,6 @@ struct exit_msg {
      * @brief The exit reason of the terminated actor.
      */
     uint32_t reason;
-
 };
 
 /**
@@ -63,7 +65,6 @@ struct down_msg {
      * @brief The exit reason of the terminated actor.
      */
     uint32_t reason;
-
 };
 
 /**
@@ -78,7 +79,6 @@ struct sync_exited_msg {
      * @brief The exit reason of the terminated actor.
      */
     uint32_t reason;
-
 };
 
 template<typename T>
@@ -107,7 +107,6 @@ struct group_down_msg {
      * @brief The source of this message, i.e., the now unreachable group.
      */
     group source;
-
 };
 
 inline bool operator==(const group_down_msg& lhs, const group_down_msg& rhs) {
@@ -124,7 +123,7 @@ inline bool operator!=(const group_down_msg& lhs, const group_down_msg& rhs) {
  * This system message does not have any fields, because the message ID
  * sent alongside this message identifies the matching request that timed out.
  */
-struct sync_timeout_msg {};
+struct sync_timeout_msg { };
 
 /**
  * @relates exit_msg
@@ -149,7 +148,6 @@ struct timeout_msg {
      * @brief Actor-specific timeout ID.
      */
     uint32_t timeout_id;
-
 };
 
 inline bool operator==(const timeout_msg& lhs, const timeout_msg& rhs) {
@@ -172,7 +170,6 @@ struct new_connection_msg {
      * @brief The handle for the new connection.
      */
     connection_handle handle;
-
 };
 
 inline bool operator==(const new_connection_msg& lhs,
@@ -190,14 +187,13 @@ inline bool operator!=(const new_connection_msg& lhs,
  */
 struct new_data_msg {
     /**
-     * @brief Handle to the related connection
+     * @brief Handle to the related connection.
      */
     connection_handle handle;
     /**
      * @brief Buffer containing the received data.
      */
     std::vector<char> buf;
-
 };
 
 inline bool operator==(const new_data_msg& lhs, const new_data_msg& rhs) {
@@ -209,6 +205,24 @@ inline bool operator!=(const new_data_msg& lhs, const new_data_msg& rhs) {
 }
 
 /**
+ * @brief Signalizes a newly arrived datagram for a {@link broker}.
+ */
+struct new_datagram_msg {
+    /**
+     * @brief Handle to the related datagram source.
+     */
+    io::datagram_source_handle handle;
+    /**
+     * @brief Handle to the sender of this datagram.
+     */
+    io::datagram_endpoint endpoint;
+    /**
+     * @brief Buffer containing the received data.
+     */
+    std::vector<char> buf;
+};
+
+/**
  * @brief Signalizes that a {@link broker} connection has been closed.
  */
 struct connection_closed_msg {
@@ -216,7 +230,6 @@ struct connection_closed_msg {
      * @brief Handle to the closed connection.
      */
     connection_handle handle;
-
 };
 
 inline bool operator==(const connection_closed_msg& lhs,
@@ -237,7 +250,6 @@ struct acceptor_closed_msg {
      * @brief Handle to the closed connection.
      */
     accept_handle handle;
-
 };
 
 inline bool operator==(const acceptor_closed_msg& lhs,
