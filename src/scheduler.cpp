@@ -297,4 +297,12 @@ void abstract_coordinator::enqueue(resumable* what) {
 }
 
 } // namespace scheduler
+
+void set_scheduler(scheduler::abstract_coordinator* impl) {
+    if (!detail::singletons::set_scheduling_coordinator(impl)) {
+        delete impl;
+        throw std::logic_error("scheduler already defined");
+    }
+}
+
 } // namespace cppa

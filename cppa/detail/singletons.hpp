@@ -61,6 +61,9 @@ class singletons {
 
     static scheduler::abstract_coordinator* get_scheduling_coordinator();
 
+    // returns false if singleton is already defined
+    static bool set_scheduling_coordinator(scheduler::abstract_coordinator*);
+
     static group_manager* get_group_manager();
 
     static actor_registry* get_actor_registry();

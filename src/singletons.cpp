@@ -88,6 +88,11 @@ scheduler::abstract_coordinator* singletons::get_scheduling_coordinator() {
     return lazy_get(s_scheduling_coordinator);
 }
 
+bool singletons::set_scheduling_coordinator(scheduler::abstract_coordinator*p) {
+    scheduler::abstract_coordinator* expected = nullptr;
+    return s_scheduling_coordinator.compare_exchange_weak(expected, p);
+}
+
 node_id singletons::get_node_id() {
     return node_id{lazy_get(s_node_id)};
 }

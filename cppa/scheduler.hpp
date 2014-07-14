@@ -46,6 +46,9 @@ namespace scheduler {
 
 class abstract_coordinator;
 
+/**
+ * @brief Base class for work-stealing workers.
+ */
 class abstract_worker : public execution_unit {
 
     friend class abstract_coordinator;
@@ -70,6 +73,12 @@ class abstract_worker : public execution_unit {
 
 };
 
+/**
+ * @brief A coordinator creates the workers, manages delayed sends and
+ *        the central printer instance for {@link aout}. It also forwards
+ *        sends from detached workers or non-actor threads to randomly
+ *        chosen workers.
+ */
 class abstract_coordinator {
 
     friend class detail::singletons;
@@ -137,7 +146,7 @@ class abstract_coordinator {
 };
 
 /**
- * @brief A work-stealing scheduling worker.
+ * @brief Policy-based implementation of the abstract worker base class.
  */
 template<class StealPolicy, class JobQueuePolicy>
 class worker : public abstract_worker {
@@ -267,7 +276,7 @@ class worker : public abstract_worker {
 };
 
 /**
- * @brief Central scheduling interface.
+ * @brief Policy-based implementation of the abstract coordinator base class.
  */
 template<class StealPolicy, class JobQueuePolicy>
 class coordinator : public abstract_coordinator {
@@ -313,6 +322,26 @@ class coordinator : public abstract_coordinator {
 };
 
 } // namespace scheduler
+
+/**
+ * @brief Sets a user-defined scheduler.
+ * @note This function must be used before actor is spawned. Dynamically
+ *       changing the scheduler at runtime is not supported.
+ * @throws std::logic_error if a scheduler is already defined
+ */
+void set_scheduler(scheduler::abstract_coordinator* ptr);
+
+/**
+ * @brief Sets a user-defined scheduler using given policies. The scheduler
+ *        is instantiated with @p nw number of workers.
+ * @note This function must be used before actor is spawned. Dynamically
+ *       changing the scheduler at runtime is not supported.
+ * @throws std::logic_error if a scheduler is already defined
+ */
+template<class StealPolicy, class JobQueuePolicy>
+void set_scheduler(size_t nw = std::thread::hardware_concurrency()) {
+    set_scheduler(new scheduler::coordinator<StealPolicy, JobQueuePolicy>(nw));
+}
 
 } // namespace cppa
 
