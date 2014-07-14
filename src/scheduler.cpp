@@ -106,19 +106,21 @@ class timer_actor final : public detail::proper_actor<blocking_actor,
         auto tout = hrc::now();
         std::multimap<decltype(tout), delayed_msg> messages;
         // message handling rules
-        auto mfun =
-            (on(atom("_Send"), arg_match) >> [&](const duration& d,
-                                                 actor_addr& from, channel& to,
-                                                 message_id mid, message& tup) {
-                 insert_dmsg(messages, d, std::move(from), std::move(to), mid,
-                             std::move(tup));
-             },
-             on(atom("DIE")) >> [&] { done = true; }, others() >> [&] {
-#               ifdef CPPA_DEBUG_MODE
-                    std::cerr << "coordinator::timer_loop: UNKNOWN MESSAGE: "
-                              << to_string(msg_ptr->msg) << std::endl;
-#               endif
-            });
+        message_handler mfun{
+            on(atom("_Send"), arg_match) >> [&](const duration& d,
+                                                actor_addr& from, channel& to,
+                                                message_id mid, message& tup) {
+                 insert_dmsg(messages, d, std::move(from),
+                             std::move(to), mid, std::move(tup));
+            },
+            [&](const exit_msg&) {
+                done = true;
+            },
+            others() >> [&] {
+                std::cerr << "coordinator::timer_loop: UNKNOWN MESSAGE: "
+                          << to_string(msg_ptr->msg) << std::endl;
+            }
+        };
         // loop
         while (!done) {
             while (!msg_ptr) {
@@ -147,6 +149,7 @@ class timer_actor final : public detail::proper_actor<blocking_actor,
 };
 
 void printer_loop(blocking_actor* self) {
+    self->trap_exit(true);
     std::map<actor_addr, std::string> out;
     auto flush_output = [&out](const actor_addr& s) {
         auto i = out.find(s);
@@ -189,10 +192,15 @@ void printer_loop(blocking_actor* self) {
             flush_output(dm.source);
             out.erase(dm.source);
         },
-        on(atom("DIE")) >> [&] { running = false; }, others() >> [self] {
-            std::cerr << "*** unexpected: " << to_string(self->last_dequeued())
+        [&](const exit_msg&) {
+            running = false;
+        },
+        others() >> [self] {
+            std::cerr << "*** unexpected: "
+                      << to_string(self->last_dequeued())
                       << std::endl;
-        });
+        }
+    );
 }
 
 } // namespace <anonymous>
@@ -273,7 +281,7 @@ void abstract_coordinator::stop() {
         alive_workers.erase(i);
     }
     // shutdown utility actors
-    CPPA_LOG_DEBUG("send 'DIE' messages to timer & printer");
+    CPPA_LOG_DEBUG("send exit messages to timer & printer");
     anon_send_exit(m_timer->address(), exit_reason::user_shutdown);
     anon_send_exit(m_printer->address(), exit_reason::user_shutdown);
     CPPA_LOG_DEBUG("join threads of utility actors");
