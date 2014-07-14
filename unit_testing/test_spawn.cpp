@@ -304,6 +304,7 @@ struct master : event_based_actor {
     behavior make_behavior() override {
         return (
             on(atom("done")) >> [=] {
+                CPPA_PRINT("master: received done");
                 quit(exit_reason::user_shutdown);
             }
         );
@@ -316,7 +317,12 @@ struct slave : event_based_actor {
 
     behavior make_behavior() override {
         link_to(master);
+        trap_exit(true);
         return (
+            [=](const exit_msg& msg) {
+                CPPA_PRINT("slave: received exit message");
+                quit(msg.reason);
+            },
             others() >> CPPA_UNEXPECTED_MSG_CB(this)
         );
     }

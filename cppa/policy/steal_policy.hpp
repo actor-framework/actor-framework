@@ -16,31 +16,34 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#ifndef CPPA_DETAIL_EXECUTION_UNIT_HPP
-#define CPPA_DETAIL_EXECUTION_UNIT_HPP
+#ifndef CPPA_POLICY_STEAL_POLICY_HPP
+#define CPPA_POLICY_STEAL_POLICY_HPP
+
+#include <cstddef>
+
+#include "cppa/fwd.hpp"
 
 namespace cppa {
-
-class resumable;
+namespace policy {
 
 /**
- * @brief Identifies an execution unit, e.g., a worker thread of the scheduler.
+ * @brief This concept class describes the interface of a policy class
+ *        for stealing jobs from other workers.
  */
-class execution_unit {
+class steal_policy {
 
  public:
 
-    virtual ~execution_unit();
-
     /**
-     * @brief Enqueues @p ptr to the job list of the execution unit.
-     * @warning Must only be called from a {@link resumable} currently
-     *          executed by this execution unit.
+     * @brief Go on a raid in quest for a shiny new job. Returns @p nullptr
+     *        if no other worker provided any work to steal.
      */
-    virtual void exec_later(resumable* ptr) = 0;
+    template<class Worker>
+    resumable* raid(Worker* self);
 
 };
 
+} // namespace policy
 } // namespace cppa
 
-#endif // CPPA_DETAIL_EXECUTION_UNIT_HPP
+#endif // CPPA_POLICY_STEAL_POLICY_HPP

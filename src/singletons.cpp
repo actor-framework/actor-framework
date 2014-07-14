@@ -36,7 +36,7 @@ namespace detail {
 namespace {
 
 std::atomic<abstract_singleton*> s_plugins[singletons::max_plugin_singletons];
-std::atomic<scheduler::coordinator*> s_scheduling_coordinator;
+std::atomic<scheduler::abstract_coordinator*> s_scheduling_coordinator;
 std::atomic<uniform_type_info_map*> s_uniform_type_info_map;
 std::atomic<actor_registry*> s_actor_registry;
 std::atomic<group_manager*> s_group_manager;
@@ -84,7 +84,7 @@ group_manager* singletons::get_group_manager() {
     return lazy_get(s_group_manager);
 }
 
-scheduler::coordinator* singletons::get_scheduling_coordinator() {
+scheduler::abstract_coordinator* singletons::get_scheduling_coordinator() {
     return lazy_get(s_scheduling_coordinator);
 }
 

@@ -22,23 +22,10 @@
 #include <atomic>
 #include <cstddef> // size_t
 
-namespace cppa {
-
-class node_id;
-namespace scheduler {
-class coordinator;
-}
-
-} // namespace cppa
+#include "cppa/fwd.hpp"
 
 namespace cppa {
 namespace detail {
-
-class logging;
-class message_data;
-class group_manager;
-class actor_registry;
-class uniform_type_info_map;
 
 class abstract_singleton {
 
@@ -72,7 +59,7 @@ class singletons {
 
     static node_id get_node_id();
 
-    static scheduler::coordinator* get_scheduling_coordinator();
+    static scheduler::abstract_coordinator* get_scheduling_coordinator();
 
     static group_manager* get_group_manager();
 

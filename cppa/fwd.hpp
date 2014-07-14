@@ -29,11 +29,11 @@ class intrusive_ptr;
 // classes
 class actor;
 class group;
+class message;
 class channel;
 class node_id;
 class behavior;
 class resumable;
-class message;
 class actor_addr;
 class local_actor;
 class actor_proxy;
@@ -64,10 +64,23 @@ template<typename T, typename U>
 T actor_cast(const U&);
 
 namespace io {
-
-class broker;
-
+    class broker;
+    class middleman;
 } // namespace io
+
+namespace scheduler {
+    class abstract_worker;
+    class abstract_coordinator;
+} // namespace scheduler
+
+namespace detail {
+    class logging;
+    class singletons;
+    class message_data;
+    class group_manager;
+    class actor_registry;
+    class uniform_type_info_map;
+} // namespace detail
 
 } // namespace cppa
 

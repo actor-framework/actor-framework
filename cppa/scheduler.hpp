@@ -26,124 +26,59 @@
 #include <functional>
 #include <type_traits>
 
+#include "cppa/fwd.hpp"
 #include "cppa/atom.hpp"
 #include "cppa/actor.hpp"
 #include "cppa/channel.hpp"
 #include "cppa/message.hpp"
 #include "cppa/duration.hpp"
+#include "cppa/resumable.hpp"
 #include "cppa/attachable.hpp"
 #include "cppa/scoped_actor.hpp"
 #include "cppa/spawn_options.hpp"
 #include "cppa/execution_unit.hpp"
 
+#include "cppa/detail/logging.hpp"
 #include "cppa/detail/producer_consumer_list.hpp"
 
 namespace cppa {
-
-class resumable;
-
-namespace detail {
-class singletons;
-}
-
 namespace scheduler {
 
-class coordinator;
+class abstract_coordinator;
 
-/**
- * @brief A work-stealing scheduling worker.
- *
- * The work-stealing implementation of libcppa minimizes access to the
- * synchronized queue. The reasoning behind this design decision is that it
- * has been shown that stealing actually is very rare for most workloads [1].
- * Hence, implementations should focus on the performance in
- * the non-stealing case. For this reason, each worker has an exposed
- * job queue that can be accessed by the central scheduler instance as
- * well as other workers, but it also has a private job list it is
- * currently working on. To account for the load balancing aspect, each
- * worker makes sure that at least one job is left in its exposed queue
- * to allow other workers to steal it.
- *
- * [1] http://dl.acm.org/citation.cfm?doid=2398857.2384639
- */
-class worker : public execution_unit {
+class abstract_worker : public execution_unit {
 
-    friend class coordinator;
+    friend class abstract_coordinator;
 
  public:
 
-    worker() = default;
-
-    worker(worker&&);
-
-    worker& operator=(worker&&);
-
-    worker(const worker&) = delete;
-
-    worker& operator=(const worker&) = delete;
-
-    using job_ptr = resumable*;
-
-    using job_queue = detail::producer_consumer_list<resumable>;
-
     /**
-     * @brief Attempt to steal an element from the exposed job queue.
+     * @brief Attempt to steal an element from this worker.
      */
-    job_ptr try_steal();
+    virtual resumable* try_steal() = 0;
 
     /**
      * @brief Enqueues a new job to the worker's queue from an external
      *        source, i.e., from any other thread.
      */
-    void external_enqueue(job_ptr);
+    virtual void external_enqueue(resumable*) = 0;
 
     /**
-     * @brief Enqueues a new job to the worker's queue from an internal
-     *        source, i.e., a job that is currently executed by
-     *        this worker.
-     * @warning Must not be called from other threads.
+     * @brief Starts the thread of this worker.
      */
-    void exec_later(job_ptr) override;
-
- private:
-
-    void start(size_t id, coordinator* parent); // called from coordinator
-
-    void run(); // work loop
-
-    job_ptr raid(); // go on a raid in quest for a shiny new job
-
-    // this queue is exposed to others, i.e., other workers
-    // may attempt to steal jobs from it and the central scheduling
-    // unit can push new jobs to the queue
-    job_queue m_exposed_queue;
-
-    // internal job stack
-    std::vector<job_ptr> m_job_list;
-
-    // the worker's thread
-    std::thread m_this_thread;
-
-    // the worker's ID received from scheduler
-    size_t m_id;
-
-    // the ID of the last victim we stole from
-    size_t m_last_victim;
-
-    coordinator* m_parent;
+    virtual void start(size_t id, abstract_coordinator* parent) = 0;
 
 };
 
-/**
- * @brief Central scheduling interface.
- */
-class coordinator {
+class abstract_coordinator {
 
     friend class detail::singletons;
 
  public:
 
-    class shutdown_helper;
+    explicit abstract_coordinator(size_t num_worker_threads);
+
+    virtual ~abstract_coordinator();
 
     /**
      * @brief Returns a handle to the central printing actor.
@@ -166,34 +101,214 @@ class coordinator {
     }
 
     inline size_t num_workers() const {
-        return static_cast<unsigned>(m_workers.size());
+        return m_num_workers;
     }
 
-    inline worker& worker_by_id(size_t id) { return m_workers[id]; }
+    virtual abstract_worker* worker_by_id(size_t id) = 0;
+
+ protected:
+
+    abstract_coordinator();
+
+    virtual void initialize();
+
+    virtual void stop();
 
  private:
 
-    static coordinator* create_singleton();
+    // Creates a default instance.
+    static abstract_coordinator* create_singleton();
 
-    coordinator();
-
-    inline void dispose() { delete this; }
-
-    void initialize();
-
-    void stop();
+    inline void dispose() {
+        delete this;
+    }
 
     intrusive_ptr<blocking_actor> m_timer;
     scoped_actor m_printer;
 
-    std::thread m_timer_thread;
-    std::thread m_printer_thread;
-
     // ID of the worker receiving the next enqueue
     std::atomic<size_t> m_next_worker;
 
+    size_t m_num_workers;
+
+    std::thread m_timer_thread;
+    std::thread m_printer_thread;
+
+};
+
+/**
+ * @brief A work-stealing scheduling worker.
+ */
+template<class StealPolicy, class JobQueuePolicy>
+class worker : public abstract_worker {
+
+ public:
+
+    worker() = default;
+
+    worker(worker&& other) {
+        *this = std::move(other); // delegate to move assignment operator
+    }
+
+    worker& operator=(worker&& other) {
+        // cannot be moved once m_this_thread is up and running
+        auto running = [](std::thread& t) {
+            return t.get_id() != std::thread::id{};
+
+        };
+        if (running(m_this_thread) || running(other.m_this_thread)) {
+            throw std::runtime_error("running workers cannot be moved");
+        }
+        m_queue_policy = std::move(other.m_queue_policy);
+        m_steal_policy = std::move(other.m_steal_policy);
+        return *this;
+    }
+
+    worker(const worker&) = delete;
+
+    worker& operator=(const worker&) = delete;
+
+    using job_ptr = resumable*;
+
+    using job_queue = detail::producer_consumer_list<resumable>;
+
+    /**
+     * @brief Attempt to steal an element from the exposed job queue.
+     */
+    job_ptr try_steal() override {
+        return m_queue_policy.try_external_dequeue(this);
+    }
+
+    /**
+     * @brief Enqueues a new job to the worker's queue from an external
+     *        source, i.e., from any other thread.
+     */
+    void external_enqueue(job_ptr job) override {
+        m_queue_policy.external_enqueue(this, job);
+    }
+
+    /**
+     * @brief Enqueues a new job to the worker's queue from an internal
+     *        source, i.e., a job that is currently executed by
+     *        this worker.
+     * @warning Must not be called from other threads.
+     */
+    void exec_later(job_ptr job) override {
+        m_queue_policy.internal_enqueue(this, job);
+    }
+
+    // go on a raid in quest for a shiny new job
+    job_ptr raid() {
+        return m_steal_policy.raid(this);
+    }
+
+    inline abstract_coordinator* parent() {
+        return m_parent;
+    }
+
+    inline size_t id() const {
+        return m_id;
+    }
+
+    inline std::thread& get_thread() {
+        return m_this_thread;
+    }
+
+    void detach_all() {
+        m_queue_policy.consume_all(this, [](resumable* job) {
+            job->detach_from_scheduler();
+        });
+    }
+
+    void start(size_t id, abstract_coordinator* parent) override {
+        m_id = id;
+        m_parent = parent;
+        auto this_worker = this;
+        m_this_thread = std::thread{[this_worker] { this_worker->run(); }};
+    }
+
+ private:
+
+    void run() {
+        CPPA_LOG_TRACE("worker with ID " << m_id);
+        // scheduling loop
+        for (;;) {
+            auto job = m_queue_policy.internal_dequeue(this);
+            CPPA_PUSH_AID_FROM_PTR(dynamic_cast<abstract_actor*>(job));
+            switch (job->resume(this)) {
+                case resumable::done: {
+                    job->detach_from_scheduler();
+                    break;
+                }
+                case resumable::resume_later: {
+                    break;
+                }
+                case resumable::shutdown_execution_unit: {
+                    m_queue_policy.clear_internal_queue(this);
+                    return;
+                }
+            }
+            m_queue_policy.assert_stealable(this);
+        }
+    }
+
+    // the worker's thread
+    std::thread m_this_thread;
+
+    // the worker's ID received from scheduler
+    size_t m_id;
+
+    abstract_coordinator* m_parent;
+
+    JobQueuePolicy m_queue_policy;
+
+    StealPolicy m_steal_policy;
+
+};
+
+/**
+ * @brief Central scheduling interface.
+ */
+template<class StealPolicy, class JobQueuePolicy>
+class coordinator : public abstract_coordinator {
+
+    using super = abstract_coordinator;
+
+ public:
+
+    coordinator(size_t nw = std::thread::hardware_concurrency()) : super(nw) {
+        // nop
+    }
+
+    using worker_type = worker<StealPolicy, JobQueuePolicy>;
+
+    abstract_worker* worker_by_id(size_t id) override {
+        return &m_workers[id];
+    }
+
+ protected:
+
+    void initialize() override {
+        super::initialize();
+        // create & start workers
+        m_workers.resize(num_workers());
+        for (size_t i = 0; i < num_workers(); ++i) {
+            m_workers[i].start(i, this);
+        }
+    }
+
+    void stop() override {
+        super::stop();
+        // wait until all actors are done
+        for (auto& w : m_workers) w.get_thread().join();
+        // clear all queues
+        for (auto& w : m_workers) w.detach_all();
+    }
+
+ private:
+
     // vector of size std::thread::hardware_concurrency()
-    std::vector<worker> m_workers;
+    std::vector<worker_type> m_workers;
 
 };
 
