@@ -85,6 +85,11 @@ using std::vector;
 using std::string;
 using std::ifstream;
 
+namespace cppa {
+namespace detail {
+
+namespace {
+
 struct columns_iterator
     : std::iterator<std::forward_iterator_tag, vector<string>> {
 
@@ -115,8 +120,7 @@ bool operator!=(const columns_iterator& lhs, const columns_iterator& rhs) {
     return !(lhs == rhs);
 }
 
-namespace cppa {
-namespace detail {
+} // namespace <anonymous>
 
 std::string get_root_uuid() {
     int sck = socket(AF_INET, SOCK_DGRAM, 0);
