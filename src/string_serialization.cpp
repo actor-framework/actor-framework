@@ -232,8 +232,8 @@ class string_deserializer : public deserializer, public dummy_backend {
         while (*m_pos == ' ' || *m_pos == ',') ++m_pos;
     }
 
-    void throw_malformed[[noreturn]](const string& error_msg) {
-        throw std::logic_error("malformed string: " + error_msg);
+    void throw_malformed(const string& error_msg) {
+        throw std::runtime_error("malformed string: " + error_msg);
     }
 
     void consume(char c) {
@@ -377,12 +377,12 @@ class string_deserializer : public deserializer, public dummy_backend {
             what = static_cast<atom_value>(detail::atom_val(str.c_str(), 0xF));
         }
         void operator()(u16string&) {
-            throw std::logic_error(
+            throw std::runtime_error(
                 "u16string currently not supported "
                 "by string_deserializer");
         }
         void operator()(u32string&) {
-            throw std::logic_error(
+            throw std::runtime_error(
                 "u32string currently not supported "
                 "by string_deserializer");
         }
@@ -428,7 +428,7 @@ class string_deserializer : public deserializer, public dummy_backend {
             substr_end = find_if(m_pos, m_str.end(), find_if_cond);
         }
         if (substr_end == m_str.end()) {
-            throw std::logic_error("malformed string (unterminated value)");
+            throw std::runtime_error("malformed string (unterminated value)");
         }
         string substr(m_pos, substr_end);
         m_pos += static_cast<difference_type>(substr.size());
@@ -442,7 +442,7 @@ class string_deserializer : public deserializer, public dummy_backend {
                 error_msg += "' found '";
                 error_msg += *m_pos;
                 error_msg += "'";
-                throw std::logic_error(error_msg);
+                throw std::runtime_error(error_msg);
             }
             ++m_pos;
             // replace '\"' by '"'
@@ -539,11 +539,15 @@ ostream& operator<<(ostream& out, skip_message_t) {
 
 uniform_value from_string_impl(const string& what) {
     string_deserializer strd(what);
-    auto utype = strd.begin_object();
-    if (utype) {
-        return utype->deserialize(&strd);
+    try {
+        auto utype = strd.begin_object();
+        if (utype) {
+            return utype->deserialize(&strd);
+        }
+        strd.end_object();
+    } catch (std::runtime_error&) {
+        // ignored, i.e., return an invalid value
     }
-    strd.end_object();
     return {};
 }
 
