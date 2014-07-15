@@ -79,7 +79,7 @@ std::string get_root_uuid() {
 #include <unistd.h>
 #include <iostream>
 
-#include <boost/algorithm/string.hpp>
+#include "cppa/string_algorithms.hpp"
 
 using std::vector;
 using std::string;
@@ -97,7 +97,6 @@ struct columns_iterator
         if (!std::getline(*fs, line))
             fs = nullptr;
         else {
-            using namespace boost::algorithm;
             split(cols, line, is_any_of(" "), token_compress_on);
         }
         return *this;
