@@ -141,6 +141,12 @@ int main() {
     announce(typeid(raw_struct),
              uniform_type_info_ptr{new raw_struct_type_info});
 
+    auto nid = detail::singletons::get_node_id();
+    auto nid_str = to_string(nid);
+    CPPA_PRINT("nid_str = " << nid_str);
+    auto nid2 = from_string<node_id>(nid_str);
+    CPPA_CHECK(nid2 && nid == *nid2);
+
     /*
       auto oarr = new detail::object_array;
       oarr->push_back(object::from(static_cast<uint32_t>(42)));

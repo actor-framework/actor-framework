@@ -34,7 +34,7 @@ namespace cppa {
  * @returns An {@link cppa::object object} instance that contains
  *          the deserialized value.
  */
-uniform_value from_string(const std::string& what);
+uniform_value from_string_impl(const std::string& what);
 
 /**
  * @brief Convenience function that deserializes a value from @p what and
@@ -42,23 +42,23 @@ uniform_value from_string(const std::string& what);
  * @throws std::logic_error if the result is not of type @p T.
  * @returns The deserialized value as instance of @p T.
  */
-/*
 template<typename T>
-T from_string(const std::string& what) {
-    any o = from_string(what);
-    const std::type_info& tinfo = typeid(T);
-    if (tinfo == *(o.type())) {
-        return std::move(get_ref<T>(o));
+optional<T> from_string(const std::string& what) {
+    auto uti = uniform_typeid<T>();
+    auto uv = from_string_impl(what);
+    if (!uv || (*uv->ti) != typeid(T)) {
+        // try again using the type name
+        std::string tmp = uti->name();
+        tmp += " ( ";
+        tmp += what;
+        tmp += " )";
+        uv = from_string_impl(tmp);
     }
-    else {
-        std::string error_msg = "expected type name ";
-        error_msg += uniform_typeid(tinfo)->name();
-        error_msg += " found ";
-        error_msg += o.type()->name();
-        throw std::logic_error(error_msg);
+    if (uv && (*uv->ti) == typeid(T)) {
+        return T{std::move(*reinterpret_cast<T*>(uv->val))};
     }
+    return none;
 }
-*/
 
 } // namespace cppa
 

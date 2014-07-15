@@ -299,7 +299,7 @@ class string_deserializer : public deserializer, public dummy_backend {
     const uniform_type_info* begin_object() override {
         skip_space_and_comma();
         string type_name;
-        // shortcuts for builtin types
+        // shortcuts for built-in types
         if (*m_pos == '"') {
             type_name = "@str";
         } else if (*m_pos == '\'') {
@@ -315,11 +315,9 @@ class string_deserializer : public deserializer, public dummy_backend {
             m_pos = substr_end;
         }
         m_open_objects.push(type_name);
-        //++m_obj_count;
         skip_space_and_comma();
-        // suppress leading parenthesis for builtin types
+        // suppress leading parenthesis for built-in types
         m_obj_had_left_parenthesis.push(try_consume('('));
-        // consume('(');
         return detail::singletons::get_uniform_type_info_map()->by_uniform_name(
             type_name);
     }
@@ -401,6 +399,7 @@ class string_deserializer : public deserializer, public dummy_backend {
                 case '}':
                 case ' ':
                 case ',':
+                case '@':
                     return true;
                 default:
                     return false;
@@ -479,21 +478,33 @@ class string_deserializer : public deserializer, public dummy_backend {
     }
 
     void read_raw(size_t buf_size, void* vbuf) override {
+        if (buf_size == node_id::host_id_size
+            && !m_open_objects.empty()
+            && m_open_objects.top() == "@node") {
+            // node ids are formatted as process_id@host_id
+            // this read_raw reads the host_id, i.e., we need
+            // to skip the '@' character
+            consume('@');
+        }
         auto buf = reinterpret_cast<unsigned char*>(vbuf);
         integrity_check();
         skip_space_and_comma();
-        auto next_nibble = [&]()->size_t {
+        auto next_nibble = [&]() -> size_t {
             if (*m_pos == '\0') {
                 throw_malformed("unexpected end-of-string");
             }
             char c = *m_pos++;
             if (!isxdigit(c)) {
-                throw_malformed("unexpected character, expected [0-9a-f]");
+                std::string errmsg = "unexpected character: '";
+                errmsg += c;
+                errmsg += "', expected [0-9a-f]";
+                throw_malformed(errmsg);
             }
             return static_cast<size_t>(isdigit(c) ? c - '0' : (c - 'a' + 10));
 
         };
         for (size_t i = 0; i < buf_size; ++i) {
+            // one byte consists of two nibbles
             auto nibble = next_nibble();
             *buf++ = static_cast<unsigned char>((nibble << 4) | next_nibble());
         }
@@ -502,15 +513,6 @@ class string_deserializer : public deserializer, public dummy_backend {
 };
 
 } // namespace <anonymous>
-
-uniform_value from_string(const string& what) {
-    string_deserializer strd(what);
-    auto utype = strd.begin_object();
-    auto result = utype->deserialize(&strd);
-    strd.end_object();
-    return result;
-    return {};
-}
 
 namespace detail {
 
@@ -533,6 +535,16 @@ string to_verbose_string(const std::exception& e) {
 
 ostream& operator<<(ostream& out, skip_message_t) {
     return out << "skip_message";
+}
+
+uniform_value from_string_impl(const string& what) {
+    string_deserializer strd(what);
+    auto utype = strd.begin_object();
+    if (utype) {
+        return utype->deserialize(&strd);
+    }
+    strd.end_object();
+    return {};
 }
 
 } // namespace cppa
