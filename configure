@@ -201,19 +201,19 @@ while [ $# -ne 0 ]; do
             level=`echo "$optarg" | tr '[:lower:]' '[:upper:]'`
             case $level in
                 ERROR)
-                    append_cache_entry CPPA_LOG_LEVEL STRING 0
+                    append_cache_entry CAF_LOG_LEVEL STRING 0
                     ;;
                 WARNING)
-                    append_cache_entry CPPA_LOG_LEVEL STRING 1
+                    append_cache_entry CAF_LOG_LEVEL STRING 1
                     ;;
                 INFO)
-                    append_cache_entry CPPA_LOG_LEVEL STRING 2
+                    append_cache_entry CAF_LOG_LEVEL STRING 2
                     ;;
                 DEBUG)
-                    append_cache_entry CPPA_LOG_LEVEL STRING 3
+                    append_cache_entry CAF_LOG_LEVEL STRING 3
                     ;;
                 TRACE)
-                    append_cache_entry CPPA_LOG_LEVEL STRING 4
+                    append_cache_entry CAF_LOG_LEVEL STRING 4
                     ;;
                 *)
                     echo "Invalid log level '$level'. Try '$0 --help' to see valid values."
@@ -243,22 +243,22 @@ while [ $# -ne 0 ]; do
             dualbuild=1
             ;;
         --no-examples)
-            append_cache_entry CPPA_NO_EXAMPLES STRING yes
+            append_cache_entry CAF_NO_EXAMPLES STRING yes
             ;;
         --no-qt-examples)
-            append_cache_entry CPPA_NO_QT_EXAMPLES STRING yes
+            append_cache_entry CAF_NO_QT_EXAMPLES STRING yes
             ;;
         --no-protobuf-examples)
-            append_cache_entry CPPA_NO_PROTOBUF_EXAMPLES STRING yes
+            append_cache_entry CAF_NO_PROTOBUF_EXAMPLES STRING yes
             ;;
         --no-unit-tests)
-            append_cache_entry CPPA_NO_UNIT_TESTS STRING yes
+            append_cache_entry CAF_NO_UNIT_TESTS STRING yes
             ;;
         --build-static)
-            append_cache_entry CPPA_BUILD_STATIC STRING yes
+            append_cache_entry CAF_BUILD_STATIC STRING yes
             ;;
         --build-static-only)
-            append_cache_entry CPPA_BUILD_STATIC_ONLY STRING yes
+            append_cache_entry CAF_BUILD_STATIC_ONLY STRING yes
             ;;
         *)
             echo "Invalid option '$1'.  Try $0 --help to see available options."

@@ -99,7 +99,7 @@ endif (HAVE_VALGRIND_H)
 # set build type (evaluate CAF_ENABLE_RUNTIME_CHECKS flag)
 if (CAF_ENABLE_RUNTIME_CHECKS)
   add_definitions(-DCAF_ENABLE_RUNTIME_CHECKS)
-  message(STATUS "Enable libcaf's debug mode")
+  message(STATUS "Enable runtime checks")
 endif (CAF_ENABLE_RUNTIME_CHECKS)
 
 if (ENABLE_ADDRESS_SANITIZER)
@@ -368,7 +368,7 @@ message(STATUS
         "\nLibcaf version:   ${LIBRARY_VERSION}"
         "\n"
         "\nBuild type:        ${CMAKE_BUILD_TYPE}"
-        "\nDebug mode:        ${DEBUG_MODE_STR}"
+        "\nRuntime checks:    ${DEBUG_MODE_STR}"
         "\nLog level:         ${LOG_LEVEL_STR}"
         "\nBuild examples:    ${BUILD_EXAMPLES}"
         "\nBuild unit tests:  ${BUILD_UNIT_TESTS}"
@@ -386,7 +386,5 @@ message(STATUS
         "\nExecutable path:   ${EXECUTABLE_OUTPUT_PATH}"
         "\nLibrary path:      ${LIBRARY_OUTPUT_PATH}"
         "\nInstall prefix:    ${CMAKE_INSTALL_PREFIX}"
-        "\n"
-        "\nBoost:             ${Boost_INCLUDE_DIR}"
         "\n"
         "\n===========================================================\n")
