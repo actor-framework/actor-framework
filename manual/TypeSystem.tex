@@ -1,10 +1,10 @@
 \section{Platform-Independent Type System}
 \label{Sec::TypeSystem}
 
-\libcppa provides a fully network transparent communication between actors.
-Thus, \libcppa needs to serialize and deserialize messages.
+\lib provides a fully network transparent communication between actors.
+Thus, \lib needs to serialize and deserialize messages.
 Unfortunately, this is not possible using the RTTI system of C++.
-\libcppa uses its own RTTI based on the class \lstinline^uniform_type_info^, since it is not possible to extend \lstinline^std::type_info^.
+\lib uses its own RTTI based on the class \lstinline^uniform_type_info^, since it is not possible to extend \lstinline^std::type_info^.
 
 Unlike \lstinline^std::type_info::name()^, \lstinline^uniform_type_info::name()^ is guaranteed to return the same name on all supported platforms. Furthermore, it allows to create an instance of a type by name.
 
@@ -18,7 +18,7 @@ However, you should rarely if ever need to use \lstinline^object^ or \lstinline^
 \subsection{User-Defined Data Types in Messages}
 \label{Sec::TypeSystem::UserDefined}
 
-All user-defined types must be explicitly ``announced'' so that \libcppa can (de)serialize them correctly, as shown in the example below.
+All user-defined types must be explicitly ``announced'' so that \lib can (de)serialize them correctly, as shown in the example below.
 
 \begin{lstlisting}
 #include "cppa/cppa.hpp"
@@ -32,7 +32,7 @@ int main() {
 }
 \end{lstlisting}
 
-Without the \lstinline^announce^ function call, the example program would terminate with an exception, because \libcppa rejects all types without available runtime type information.
+Without the \lstinline^announce^ function call, the example program would terminate with an exception, because \lib rejects all types without available runtime type information.
 
 \lstinline^announce()^ takes the class as template parameter and pointers to all members (or getter/setter pairs) as arguments.
 This works for all primitive data types and STL compliant containers.

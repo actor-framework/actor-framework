@@ -12,7 +12,7 @@ All functions for message passing, linking and monitoring are overloaded to acce
 \label{sec:strong:spawn}
 
 Typed actors are spawned using the function \lstinline^spawn_typed^.
-The argument to this function call \emph{must} be a match expression as shown in the example below, because the runtime of libcppa needs to evaluate the signature of each message handler.
+The argument to this function call \emph{must} be a match expression as shown in the example below, because the runtime of \lib needs to evaluate the signature of each message handler.
 
 \begin{lstlisting}
 auto p0 = spawn_typed(
@@ -24,18 +24,18 @@ auto p0 = spawn_typed(
   }
 );
 // assign to identical type
-using full_type = typed_actor_ptr<
+using full_type = typed_actor<
                     replies_to<int, int>::with<double>,
                     replies_to<double, double>::with<double, double>
                   >;
 full_type p1 = p0;
 // assign to subtype
-using subtype1 = typed_actor_ptr<
+using subtype1 = typed_actor<
                    replies_to<int, int>::with<double>
                  >;
 subtype1 p2 = p0;
 // assign to another subtype
-using subtype2 = typed_actor_ptr<
+using subtype2 = typed_actor<
                    replies_to<double, double>::with<double, double>
                  >;
 subtype2 p3 = p0;

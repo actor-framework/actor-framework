@@ -3,7 +3,7 @@
 
 The current \textit{behavior} of an actor is its response to the \textit{next} incoming message and includes (a) sending messages to other actors, (b) creation of more actors, and (c) setting a new behavior.
 
-An event-based actor, i.e., the default implementation in \libcppa, uses \lstinline^become^ to set its behavior.
+An event-based actor, i.e., the default implementation in \lib, uses \lstinline^become^ to set its behavior.
 The given behavior is then executed until it is replaced by another call to \lstinline^become^ or the actor finishes execution.
 
 \subsection{Class-based actors}
@@ -15,7 +15,7 @@ class printer : public event_based_actor {
   behavior make_behavior() override {
     return {
       others() >> [] {
-        cout << to_string(last_received()) << endl;
+        cout << to_string(last_dequeued()) << endl;
       }
     };
   }
@@ -29,7 +29,7 @@ This base class simply returns \lstinline^init_state^ (defined in the subclass) 
 struct printer : sb_actor<printer> {
   behavior init_state {
     others() >> [] {
-      cout << to_string(last_received()) << endl;
+      cout << to_string(last_dequeued()) << endl;
     }
   };
 };
@@ -58,12 +58,14 @@ class fixed_stack : public sb_actor<fixed_stack> {
  public:
 
     fixed_stack(size_t max) : max_size(max)  {
+        assert(max_size > 0);
         full = (
             on(atom("push"), arg_match) >> [=](int) { /* discard */ },
-            on(atom("pop")) >> [=]() -> cow_tuple<atom_value, int> {
+            on(atom("pop")) >> [=]() -> tuple<atom_value, int> {
                 auto result = data.back();
                 data.pop_back();
-                become(filled);
+                if (data.empty()) become(empty);
+                else become(filled);
                 return {atom("ok"), result};
             }
         );
@@ -72,7 +74,7 @@ class fixed_stack : public sb_actor<fixed_stack> {
                 data.push_back(what);
                 if (data.size() == max_size) become(full);
             },
-            on(atom("pop")) >> [=]() -> cow_tuple<atom_value, int> {
+            on(atom("pop")) >> [=]() -> tuple<atom_value, int> {
                 auto result = data.back();
                 data.pop_back();
                 if (data.empty()) become(empty);
@@ -82,7 +84,8 @@ class fixed_stack : public sb_actor<fixed_stack> {
         empty = (
             on(atom("push"), arg_match) >> [=](int what) {
                 data.push_back(what);
-                become(filled);
+                if (data.size() == max_size) become(full);
+                else become(filled);
             },
             on(atom("pop")) >> [=] {
                 return atom("failure");
@@ -125,7 +128,7 @@ An event-based actor finishes execution with normal exit reason if the behavior 
 The default policy of \lstinline^become^ is \lstinline^discard_behavior^ that causes an actor to override its current behavior.
 The policy flag must be the first argument of \lstinline^become^.
 
-\textbf{Note}: the message handling in \libcppa is consistent among all actor implementations: unmatched messages are \textit{never} implicitly discarded if no suitable handler was found.
+\textbf{Note}: the message handling in \lib is consistent among all actor implementations: unmatched messages are \textit{never} implicitly discarded if no suitable handler was found.
 Hence, the order of arrival is not important in the example above.
 This is unlike other event-based implementations of the actor model such as Akka for instance.
 
@@ -143,14 +146,14 @@ But often, we need to be able to recover if an expected messages does not arrive
 #include <iostream>
 #include "cppa/cppa.hpp"
 
-using std::endl;
+using endl;
 
 behavior eager_actor(event_based_actor* self) {
   return {
     [](int i) { /* ... */ },
     [](float i) { /* ... */ },
     others() >> [] { /* ... */ },
-    after(std::chrono::seconds(10)) >> [] {
+    after(chrono::seconds(10)) >> [] {
       aout(self) << "received nothing within 10 seconds..." << endl;
       // ...
     }
@@ -162,14 +165,14 @@ Callbacks given as timeout handler must have zero arguments.
 Any number of patterns can precede the timeout definition, but  ``\lstinline^after^'' must always be the final statement.
 Using a zero-duration timeout causes the actor to scan its mailbox once and then invoke the timeout immediately if no matching message was found.
 
-\libcppa supports timeouts using \lstinline^minutes^, \lstinline^seconds^, \lstinline^milliseconds^ and \lstinline^microseconds^.
+\lib supports timeouts using \lstinline^minutes^, \lstinline^seconds^, \lstinline^milliseconds^ and \lstinline^microseconds^.
 However, note that the precision depends on the operating system and your local work load.
 Thus, you should not depend on a certain clock resolution.
 
 \clearpage
 \subsection{Skipping Messages}
 
-Unmatched messages are skipped automatically by \libcppa's runtime system.
+Unmatched messages are skipped automatically by \lib's runtime system.
 This is true for \textit{all} actor implementations.
 To allow actors to skip messages manually, \lstinline^skip_message^ can be used.
 This is in particular useful whenever an actor switches between behaviors, but wants to use a default rule created by \lstinline^others()^ to filter messages that are not handled by any of its behaviors.

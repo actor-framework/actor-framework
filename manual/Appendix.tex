@@ -92,3 +92,34 @@ int main() {
     return 0;
 }
 \end{lstlisting}
+
+\clearpage
+\subsection{Migration Guides}
+
+The guides in this section document all possibly breaking changes in the library for that last versions of \lib.
+
+\subsubsection{0.8 $\Rightarrow$ 0.9}
+
+\paragraph{\lstinline^self^ has been removed}
+
+~
+
+This is the biggest library change since the initial release.
+The major problem with this keyword-like identifier is that it must have a single type as it's implemented as a thread-local variable.
+Since there are so many different kinds of actors (event-based or blocking, untyped or typed), \lstinline^self^ needs to perform type erasure at some point, rendering it ultimately useless.
+Instead of a thread-local pointer, you can now use the first argument in functor-based actors to "catch" the self pointer with proper type information.
+
+\paragraph{\lstinline^actor_ptr^ has been replaced}
+
+~
+
+\lib now distinguishes between handles to actors, i.e., \lstinline^typed_actor<...>^ or simply \lstinline^actor^, and \emph{addresses} of actors, i.e., \lstinline^actor_addr^. The reason for this change is that each actor has a logical, (network-wide) unique address, which is used by the networking layer of \lib. Furthermore, for monitoring or linking, the address is all you need. However, the address is not sufficient for sending messages, because it doesn't have any type information. The function \lstinline^last_sender()^ now returns the \emph{address} of the sender.
+This means that previously valid code such as \lstinline^send(last_sender(), ...)^ will cause a compiler error.
+However, the recommended way of replying to messages is to return the result from the message handler.
+
+\paragraph{The API for typed actors is now similar to the API for untyped actors}
+
+~
+
+The APIs of typed and untyped actors have been harmonized.
+Typed actors can now be published in the network and also use all operations untyped actors can.

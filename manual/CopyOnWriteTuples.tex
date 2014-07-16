@@ -1,10 +1,10 @@
 \section{Copy-On-Write Tuples}
 \label{Sec::Tuples}
 
-The message passing implementation of \libcppa uses tuples with call-by-value semantic.
-Hence, it is not necessary to declare message types, though, \libcppa allows users to use user-defined types in messages (see Section \ref{Sec::TypeSystem::UserDefined}).
+The message passing implementation of \lib uses tuples with call-by-value semantic.
+Hence, it is not necessary to declare message types, though, \lib allows users to use user-defined types in messages (see Section \ref{Sec::TypeSystem::UserDefined}).
 A call-by-value semantic would cause multiple copies of a tuple if it is send to multiple actors.
-To avoid unnecessary copying overhead, \libcppa uses a copy-on-write tuple implementation.
+To avoid unnecessary copying overhead, \lib uses a copy-on-write tuple implementation.
 A tuple is implicitly shared between any number of actors, as long as all actors demand only read access.
 Whenever an actor demands write access, it has to copy the data first if more than one reference to it exists.
 Thus, race conditions cannot occur and each tuple is copied only if necessary.
@@ -30,7 +30,7 @@ assert(&get<0>(x1) != &get<0>(x2));    // no longer the same
 The class \lstinline^any_tuple^ represents a tuple without static type information.
 All messages send between actors use this tuple type.
 The type information can be either explicitly accessed for each element or the original tuple, or a subtuple of it, can be restored using \lstinline^tuple_cast^.
-Users of \libcppa usually do not need to know about
+Users of \lib usually do not need to know about
 \lstinline^any_tuple^, since it is used ``behind the scenes''.
 However, \lstinline^any_tuple^ can be created from a \lstinline^cow_tuple^
 or by using \lstinline^make_any_tuple^, as shown below.

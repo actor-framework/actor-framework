@@ -1,9 +1,12 @@
 \section{Pattern Matching}
 \label{Sec::PatternMatching}
 
-C++ does not provide pattern matching facilities.
-A general pattern matching solution for arbitrary data structures would require a language extension.
-Hence, we decided to restrict our implementation to tuples, to be able to use an internal domain-specific language approach.
+Actor programming implies a message passing paradigm.
+This means that defining message handlers is a recurring task.
+The easiest and most natural way to specify such message handlers is pattern matching.
+Unfortunately, C++ does not provide any pattern matching facilities.
+%A general pattern matching solution for arbitrary data structures would require a language extension.
+Hence, we provide an internal domain-specific language to match incoming messages.
 
 \subsection{Basics}
 \label{Sec::PatternMatching::Basics}
@@ -88,7 +91,7 @@ It cannot determine an operation, such as multiply or add, by receiving two oper
 Thus, the operation must be encoded into the message.
 The Erlang programming language introduced an approach to use non-numerical
 constants, so-called \textit{atoms}, which have an unambiguous, special-purpose type and do not have the runtime overhead of string constants.
-Atoms are mapped to integer values at compile time in \libcppa.
+Atoms are mapped to integer values at compile time in \lib.
 This mapping is guaranteed to be collision-free and invertible, but limits atom literals to ten characters and prohibits special characters.
 Legal characters are ``\lstinline[language=C++]^_0-9A-Za-z^'' and the whitespace character.
 Atoms are created using the \lstinline^constexpr^ function \lstinline^atom^, as the following example illustrates.

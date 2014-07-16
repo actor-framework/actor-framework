@@ -37,15 +37,15 @@
 \definecolor{darkblue}{rgb}{0,0,0.5}
 \definecolor{darkgreen}{rgb}{0,0.5,0}
 
-\newcommand{\libcppa}{\textit{libcppa}\xspace}
-
 \pagenumbering{arabic}
+
+\input{variables}
 
 \title{%
 %BEGIN LATEX
-\texttt{\huge{\textbf{libcppa}}}\\~\\A C++ library for actor programming\\~\\~\\~\\%
+\libtitle
 %END LATEX
-User Manual\\\normalsize{\texttt{libcppa} version 0.9.4}\vfill}
+\libsubtitle}
 
 \author{Dominik Charousset}
 
@@ -114,7 +114,6 @@ User Manual\\\normalsize{\texttt{libcppa} version 0.9.4}\vfill}
 % content
 \include{Introduction}
 \include{FirstSteps}
-\include{CopyOnWriteTuples}
 \include{PatternMatching}
 \include{Actors}
 \include{SendingMessages}

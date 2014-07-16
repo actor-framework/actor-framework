@@ -1,7 +1,7 @@
 \section{Blocking API}
 \label{Sec::BlockingAPI}
 
-Besides event-based actors (the default implementation), \libcppa also provides context-switching and thread-mapped actors that can make use of the blocking API.
+Besides event-based actors (the default implementation), \lib also provides context-switching and thread-mapped actors that can make use of the blocking API.
 Those actor implementations are intended to ease migration of existing applications or to implement actors that need to have access to blocking receive primitives for other reasons.
 
 Event-based actors differ in receiving messages from context-switching and thread-mapped actors: the former define their behavior as a message handler that is invoked whenever a new messages arrives in the actor's mailbox (by using \lstinline^become^), whereas the latter use an explicit, blocking receive function.
@@ -21,7 +21,7 @@ self->receive (
 The code snippet above illustrates the use of \lstinline^receive^.
 Note that the partial function passed to \lstinline^receive^ is a temporary object at runtime.
 Hence, using receive inside a loop would cause creation of a new partial function on each iteration.
-\libcppa provides three predefined receive loops to provide a more efficient but yet convenient way of defining receive loops.
+\lib provides three predefined receive loops to provide a more efficient but yet convenient way of defining receive loops.
 
 \begin{tabular*}{\textwidth}{p{0.47\textwidth}|p{0.47\textwidth}}
 \lstinline^// DON'T^ & \lstinline^// DO^ \\

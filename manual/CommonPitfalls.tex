@@ -44,7 +44,7 @@ However, sharing \textit{data} between actors is fine, as long as the data is \t
 The simplest way to meet the lifetime guarantee is by storing the data in smart pointers such as \lstinline^std::shared_ptr^.
 Nevertheless, the recommended way of sharing informations is message passing.
 Sending data to multiple actors does not necessarily result in copying the data several times.
-Read Section \ref{Sec::Tuples} to learn more about \libcppa's copy-on-write optimization for tuples.
+Read Section \ref{Sec::Tuples} to learn more about \lib's copy-on-write optimization for tuples.
 \end{itemize}
 
 \subsection{Constructors of Class-based Actors}
