@@ -35,14 +35,16 @@ namespace {
 
 using exclusive_guard = unique_lock<shared_spinlock>;
 using shared_guard = shared_lock<shared_spinlock>;
-using upgrade_guard = upgrade_lock<shared_spinlock>;
-using upgrade_to_unique_guard = upgrade_to_unique_lock<shared_spinlock>;
 
 } // namespace <anonymous>
 
-actor_registry::~actor_registry() {}
+actor_registry::~actor_registry() {
+    // nop
+}
 
-actor_registry::actor_registry() : m_running(0), m_ids(1) {}
+actor_registry::actor_registry() : m_running(0), m_ids(1) {
+    // nop
+}
 
 actor_registry::value_type actor_registry::get_entry(actor_id key) const {
     shared_guard guard(m_instances_mtx);
@@ -54,32 +56,24 @@ actor_registry::value_type actor_registry::get_entry(actor_id key) const {
     return {nullptr, exit_reason::unknown};
 }
 
-void actor_registry::put(actor_id key, const abstract_actor_ptr& value) {
-    bool add_attachable = false;
-    if (value != nullptr) {
-        upgrade_guard guard(m_instances_mtx);
-        auto i = m_entries.find(key);
-        if (i == m_entries.end()) {
-            auto entry =
-                std::make_pair(key, value_type(value, exit_reason::not_exited));
-            upgrade_to_unique_guard uguard(guard);
-            add_attachable = m_entries.insert(entry).second;
+void actor_registry::put(actor_id key, const abstract_actor_ptr& val) {
+    if (val == nullptr) {
+        return;
+    }
+    auto entry = std::make_pair(key, value_type(val, exit_reason::not_exited));
+    { // lifetime scope of guard
+        exclusive_guard guard(m_instances_mtx);
+        if (!m_entries.insert(entry).second) {
+            // already defined
+            return;
         }
     }
-    if (add_attachable) {
-        CPPA_LOG_INFO("added actor with ID " << key);
-        struct eraser : attachable {
-            actor_id m_id;
-            actor_registry* m_registry;
-            eraser(actor_id id, actor_registry* s) : m_id(id), m_registry(s) {}
-            void actor_exited(uint32_t reason) {
-                m_registry->erase(m_id, reason);
-            }
-            bool matches(const token&) { return false; }
-
-        };
-        value->attach(attachable_ptr{new eraser(key, this)});
-    }
+    // attach functor without lock
+    CPPA_LOG_INFO("added actor with ID " << key);
+    actor_registry* reg = this;
+    val->attach_functor([key, reg](uint32_t reason) {
+        reg->erase(key, reason);
+    });
 }
 
 void actor_registry::erase(actor_id key, uint32_t reason) {
@@ -93,25 +87,25 @@ void actor_registry::erase(actor_id key, uint32_t reason) {
     }
 }
 
-uint32_t actor_registry::next_id() { return m_ids.fetch_add(1); }
-
-void actor_registry::inc_running() {
-#if CPPA_LOG_LEVEL >= CPPA_DEBUG
-    CPPA_LOG_DEBUG("new value = " << ++m_running);
-#else
-    ++m_running;
-#endif
+uint32_t actor_registry::next_id() {
+    return ++m_ids;
 }
 
-size_t actor_registry::running() const { return m_running.load(); }
+void actor_registry::inc_running() {
+#   if CPPA_LOG_LEVEL >= CPPA_DEBUG
+        CPPA_LOG_DEBUG("new value = " << ++m_running);
+#   else
+        ++m_running;
+#   endif
+}
+
+size_t actor_registry::running() const {
+    return m_running.load();
+}
 
 void actor_registry::dec_running() {
     size_t new_val = --m_running;
-    /*
-    if (new_val == std::numeric_limits<size_t>::max()) {
-        throw std::underflow_error("actor_count::dec()");
-    }
-    else*/ if (new_val <= 1) {
+    if (new_val <= 1) {
         std::unique_lock<std::mutex> guard(m_running_mtx);
         m_running_cv.notify_all();
     }
@@ -119,6 +113,7 @@ void actor_registry::dec_running() {
 }
 
 void actor_registry::await_running_count_equal(size_t expected) {
+    CPPA_REQUIRE(expected == 0 || expected == 1);
     CPPA_LOG_TRACE(CPPA_ARG(expected));
     std::unique_lock<std::mutex> guard{m_running_mtx};
     while (m_running != expected) {
