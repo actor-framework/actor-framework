@@ -209,32 +209,6 @@ class broker : public extend<local_actor>::
      */
     void flush(connection_handle hdl);
 
-    struct datagram_handle {
-        buffer_type* buf;
-        datagram_endpoint dest;
-    };
-
-    /**
-     * @brief Returns a new buffer for the given endpoint. Note that each call
-     *        to this member function will return a new buffer.
-     */
-    datagram_handle new_datagram(datagram_endpoint ep);
-
-    /**
-     * @brief Sends the datagram.
-     */
-    void send_datagram(datagram_handle ep);
-
-    inline void send_datagram(datagram_endpoint ep,
-                              size_t data_size,
-                              const void* data) {
-        auto hdl = new_datagram(ep);
-        auto first = reinterpret_cast<const char*>(data);
-        auto last = first + data_size;
-        hdl.buf->insert(hdl.buf->end(), first, last);
-        send_datagram(hdl);
-    }
-
     /**
      * @brief Returns the number of open connections.
      */
@@ -365,12 +339,6 @@ class broker : public extend<local_actor>::
         m_doormen.emplace(ptr->hdl(), ptr);
         if (initialized()) ptr->launch();
         return ptr->hdl();
-    }
-
-    template<class DatagramSocket>
-    datagram_source_handle add_datagram_source(DatagramSocket sock) {
-        // ToDo: implement me
-        return invalid_datagram_source_handle;
     }
 
     void enqueue(const actor_addr&, message_id, message,

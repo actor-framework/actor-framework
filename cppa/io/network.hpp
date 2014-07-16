@@ -123,11 +123,6 @@ namespace network {
     constexpr int ec_interrupted_syscall = EINTR;
 #endif
 
-struct datagram_endpoint_data {
-    sockaddr addr;
-    socklen_t addrlen;
-};
-
 /**
  * @brief Platform-specific native socket type.
  */

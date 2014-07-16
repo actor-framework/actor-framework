@@ -28,9 +28,6 @@
 #include "cppa/accept_handle.hpp"
 #include "cppa/connection_handle.hpp"
 
-#include "cppa/io/datagram_endpoint.hpp"
-#include "cppa/io/datagram_source_handle.hpp"
-
 #include "cppa/detail/tbind.hpp"
 #include "cppa/detail/type_list.hpp"
 
@@ -203,24 +200,6 @@ inline bool operator==(const new_data_msg& lhs, const new_data_msg& rhs) {
 inline bool operator!=(const new_data_msg& lhs, const new_data_msg& rhs) {
     return !(lhs == rhs);
 }
-
-/**
- * @brief Signalizes a newly arrived datagram for a {@link broker}.
- */
-struct new_datagram_msg {
-    /**
-     * @brief Handle to the related datagram source.
-     */
-    io::datagram_source_handle handle;
-    /**
-     * @brief Handle to the sender of this datagram.
-     */
-    io::datagram_endpoint endpoint;
-    /**
-     * @brief Buffer containing the received data.
-     */
-    std::vector<char> buf;
-};
 
 /**
  * @brief Signalizes that a {@link broker} connection has been closed.
