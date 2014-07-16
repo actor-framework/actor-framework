@@ -20,14 +20,14 @@
 #define CPPA_PUBLISH_LOCAL_GROUPS_HPP
 
 // <backward_compatibility version="0.9" whole_file="yes">
-#include "cppa/io/publish_local_groups.hpp"
+#include "caf/io/publish_local_groups.hpp"
 
-namespace cppa {
+namespace caf {
 
-// import into cppa for the sake of backwart compatibility
+// import into caf for the sake of backwart compatibility
 using io::publish_local_groups;
 
-} // namespace cppa
+} // namespace caf
 // </backward_compatibility>
 
 #endif // CPPA_PUBLISH_LOCAL_GROUPS_HPP

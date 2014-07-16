@@ -16,12 +16,11 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #include <limits>
 
-#include "cppa/binary_serializer.hpp"
+#include "caf/binary_serializer.hpp"
 
-namespace cppa {
+namespace caf {
 
 class binary_writer : public static_visitor<> {
 
@@ -126,4 +125,4 @@ void binary_serializer::write_raw(size_t num_bytes, const void* data) {
     m_out(first, last);
 }
 
-} // namespace cppa
+} // namespace caf

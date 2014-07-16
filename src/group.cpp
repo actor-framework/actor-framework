@@ -16,14 +16,14 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#include "cppa/group.hpp"
-#include "cppa/channel.hpp"
-#include "cppa/message.hpp"
+#include "caf/group.hpp"
+#include "caf/channel.hpp"
+#include "caf/message.hpp"
 
-#include "cppa/detail/singletons.hpp"
-#include "cppa/detail/group_manager.hpp"
+#include "caf/detail/singletons.hpp"
+#include "caf/detail/group_manager.hpp"
 
-namespace cppa {
+namespace caf {
 
 group::group(const invalid_group_t&) : m_ptr(nullptr) {}
 
@@ -54,4 +54,4 @@ abstract_group::module_ptr group::get_module(const std::string& module_name) {
     return detail::singletons::get_group_manager()->get_module(module_name);
 }
 
-} // namespace cppa
+} // namespace caf

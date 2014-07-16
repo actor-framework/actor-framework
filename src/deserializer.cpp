@@ -16,12 +16,12 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#include "cppa/deserializer.hpp"
+#include "caf/deserializer.hpp"
 
-namespace cppa {
+namespace caf {
 
 deserializer::deserializer(actor_namespace* ns) : m_namespace{ns} {}
 
 deserializer::~deserializer() {}
 
-} // namespace cppa
+} // namespace caf

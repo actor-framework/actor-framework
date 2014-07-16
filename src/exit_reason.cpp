@@ -16,9 +16,9 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#include "cppa/exit_reason.hpp"
+#include "caf/exit_reason.hpp"
 
-namespace cppa {
+namespace caf {
 namespace exit_reason {
 
 static constexpr const char* s_names_table[] = {
@@ -38,4 +38,4 @@ const char* as_string(uint32_t value) {
 }
 
 } // namespace exit_reason
-} // namespace cppa
+} // namespace caf

@@ -16,10 +16,10 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#include "cppa/continue_helper.hpp"
-#include "cppa/event_based_actor.hpp"
+#include "caf/continue_helper.hpp"
+#include "caf/event_based_actor.hpp"
 
-namespace cppa {
+namespace caf {
 
 continue_helper::continue_helper(message_id mid, local_actor* self)
         : m_mid(mid), m_self(self) {}
@@ -30,9 +30,9 @@ continue_helper& continue_helper::continue_with(behavior::continuation_fun f) {
         behavior cpy = *ref_opt;
         *ref_opt = cpy.add_continuation(std::move(f));
     } else {
-        CPPA_LOG_ERROR("failed to add continuation");
+        CAF_LOG_ERROR("failed to add continuation");
     }
     return *this;
 }
 
-} // namespace cppa
+} // namespace caf

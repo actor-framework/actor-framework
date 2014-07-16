@@ -16,14 +16,13 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
+#include "caf/config.hpp"
+#include "caf/exception.hpp"
 
-#include "cppa/config.hpp"
-#include "cppa/exception.hpp"
+#include "caf/io/network.hpp"
+#include "caf/io/middleman.hpp"
 
-#include "cppa/io/network.hpp"
-#include "cppa/io/middleman.hpp"
-
-#ifdef CPPA_WINDOWS
+#ifdef CAF_WINDOWS
 #   include <winsock2.h>
 #   include <ws2tcpip.h> /* socklen_t, et al (MSVC20xx) */
 #   include <windows.h>
@@ -41,7 +40,7 @@
 
 using std::string;
 
-namespace cppa {
+namespace caf {
 namespace io {
 namespace network {
 
@@ -49,7 +48,7 @@ namespace network {
  *                     platform-dependent implementations                     *
  ******************************************************************************/
 
-#ifndef CPPA_WINDOWS
+#ifndef CAF_WINDOWS
 
     string last_socket_error_as_string() {
         return strerror(errno);
@@ -75,7 +74,7 @@ namespace network {
         return {pipefds[0], pipefds[1]};
     }
 
-#else // CPPA_WINDOWS
+#else // CAF_WINDOWS
 
     string last_socket_error_as_string() {
         LPTSTR errorText = NULL;
@@ -208,7 +207,7 @@ namespace network {
  *                             epoll() vs. poll()                             *
  ******************************************************************************/
 
-#ifdef CPPA_EPOLL_MULTIPLEXER
+#ifdef CAF_EPOLL_MULTIPLEXER
 
     // In this implementation, m_shadow is the number of sockets we have
     // registered to epoll.
@@ -216,7 +215,7 @@ namespace network {
     multiplexer::multiplexer() : m_epollfd(invalid_socket), m_shadow(1) {
         m_epollfd = epoll_create1(EPOLL_CLOEXEC);
         if (m_epollfd == -1) {
-            CPPA_LOG_ERROR("epoll_create1: " << strerror(errno));
+            CAF_LOG_ERROR("epoll_create1: " << strerror(errno));
             exit(errno);
         }
         // handle at most 64 events at a time
@@ -226,13 +225,13 @@ namespace network {
         ee.events = input_mask;
         ee.data.ptr = nullptr;
         if (epoll_ctl(m_epollfd, EPOLL_CTL_ADD, m_pipe.first, &ee) < 0) {
-            CPPA_LOG_ERROR("epoll_ctl: " << strerror(errno));
+            CAF_LOG_ERROR("epoll_ctl: " << strerror(errno));
             exit(errno);
         }
     }
 
     void multiplexer::run() {
-        CPPA_LOG_TRACE("epoll()-based multiplexer");
+        CAF_LOG_TRACE("epoll()-based multiplexer");
         while (m_shadow > 0) {
             int presult = epoll_wait(m_epollfd,
                                      m_pollset.data(),
@@ -247,7 +246,7 @@ namespace network {
                     }
                     default: {
                         perror("epoll_wait() failed");
-                        CPPA_CRITICAL("epoll_wait() failed");
+                        CAF_CRITICAL("epoll_wait() failed");
                     }
                 }
             }
@@ -266,7 +265,7 @@ namespace network {
     }
 
     void multiplexer::handle(const multiplexer::event& e) {
-        CPPA_REQUIRE(e.ptr != nullptr || e.fd == m_pipe.first);
+        CAF_REQUIRE(e.ptr != nullptr || e.fd == m_pipe.first);
         if (e.ptr && e.ptr->eventbf() == e.mask) {
             // nop
             return;
@@ -292,14 +291,14 @@ namespace network {
             switch (last_socket_error()) {
                 // supplied file descriptor is already registered
                 case EEXIST: {
-                    CPPA_LOG_ERROR("file descriptor registered twice");
+                    CAF_LOG_ERROR("file descriptor registered twice");
                     --m_shadow;
                     break;
                 }
                 // op was EPOLL_CTL_MOD or EPOLL_CTL_DEL,
                 // and fd is not registered with this epoll instance.
                 case ENOENT: {
-                    CPPA_LOG_ERROR("cannot delete file descriptor "
+                    CAF_LOG_ERROR("cannot delete file descriptor "
                                    "because it isn't registered");
                     if (e.mask == 0) {
                         ++m_shadow;
@@ -307,15 +306,15 @@ namespace network {
                     break;
                 }
                 default: {
-                    CPPA_LOG_ERROR(strerror(errno));
+                    CAF_LOG_ERROR(strerror(errno));
                     perror("epoll_ctl() failed");
-                    CPPA_CRITICAL("epoll_ctl() failed");
+                    CAF_CRITICAL("epoll_ctl() failed");
                 }
             }
         }
     }
 
-#else // CPPA_EPOLL_MULTIPLEXER
+#else // CAF_EPOLL_MULTIPLEXER
 
     // Let's be honest: the API of poll() sucks. When dealing with 1000 sockets
     // and the very last socket in your pollset triggers, you have to traverse
@@ -341,9 +340,9 @@ namespace network {
     }
 
     void multiplexer::run() {
-        CPPA_LOG_TRACE("poll()-based multiplexer; " << CPPA_ARG(input_mask)
-                       << ", " << CPPA_ARG(output_mask)
-                       << ", " << CPPA_ARG(error_mask));
+        CAF_LOG_TRACE("poll()-based multiplexer; " << CAF_ARG(input_mask)
+                       << ", " << CAF_ARG(output_mask)
+                       << ", " << CAF_ARG(error_mask));
         // we store the results of poll() in a separate vector , because
         // altering the pollset while traversing it is not exactly a
         // bright idea ...
@@ -356,13 +355,13 @@ namespace network {
         std::vector<fd_event> poll_res;
         while (!m_pollset.empty()) {
             int presult;
-#           ifdef CPPA_WINDOWS
+#           ifdef CAF_WINDOWS
                 presult = ::WSAPoll(m_pollset.data(), m_pollset.size(), -1);
 #           else
                 presult = ::poll(m_pollset.data(),
                                  static_cast<nfds_t>(m_pollset.size()), -1);
 #           endif
-            CPPA_LOG_DEBUG("poll() on " << m_pollset.size()
+            CAF_LOG_DEBUG("poll() on " << m_pollset.size()
                            << " reported " << presult << " event(s)");
             if (presult < 0) {
                 switch (last_socket_error()) {
@@ -372,14 +371,14 @@ namespace network {
                         break;
                     }
                     case ENOMEM: {
-                        CPPA_LOG_ERROR("poll() failed for reason ENOMEM");
+                        CAF_LOG_ERROR("poll() failed for reason ENOMEM");
                         // there's not much we can do other than try again
                         // in hope someone else releases memory
                         break;
                     }
                     default: {
                         perror("poll() failed");
-                        CPPA_CRITICAL("poll() failed");
+                        CAF_CRITICAL("poll() failed");
                     }
                 }
                 continue; // rince and repeat
@@ -389,7 +388,7 @@ namespace network {
             for (size_t i = 0; i < m_pollset.size() && presult > 0; ++i) {
                 auto& pfd = m_pollset[i];
                 if (pfd.revents != 0) {
-                    CPPA_LOG_DEBUG("event on socket " << pfd.fd
+                    CAF_LOG_DEBUG("event on socket " << pfd.fd
                                    << ", revents = " << pfd.revents);
                     poll_res.push_back({pfd.fd, pfd.revents,
                                         pfd.events, m_shadow[i]});
@@ -412,9 +411,9 @@ namespace network {
     }
 
     void multiplexer::handle(const multiplexer::event& e) {
-        CPPA_REQUIRE(e.fd != invalid_socket);
-        CPPA_REQUIRE(m_pollset.size() == m_shadow.size());
-        CPPA_LOGF_TRACE("fd = " << e.fd
+        CAF_REQUIRE(e.fd != invalid_socket);
+        CAF_REQUIRE(m_pollset.size() == m_shadow.size());
+        CAF_LOGF_TRACE("fd = " << e.fd
                         << ", old mask = " << (e.ptr ? e.ptr->eventbf() : -1)
                         << ", new mask = " << e.mask);
         using namespace std;
@@ -461,7 +460,7 @@ namespace network {
                 m_shadow.erase(j);
             } else {
                 // update event mask of existing entry
-                CPPA_REQUIRE(*j == e.ptr);
+                CAF_REQUIRE(*j == e.ptr);
                 if (e.ptr) {
                     if (old_mask & input_mask && !(e.mask & input_mask)) {
                         e.ptr->removed_from_loop(operation::read);
@@ -478,7 +477,7 @@ namespace network {
         }
     }
 
-#endif // CPPA_EPOLL_MULTIPLEXER
+#endif // CAF_EPOLL_MULTIPLEXER
 
 int add_flag(operation op, int bf) {
     switch (op) {
@@ -487,7 +486,7 @@ int add_flag(operation op, int bf) {
         case operation::write:
             return bf | output_mask;
         default:
-            CPPA_LOGF_ERROR("unexpected operation");
+            CAF_LOGF_ERROR("unexpected operation");
             break;
     }
     // weird stuff going on
@@ -501,7 +500,7 @@ int del_flag(operation op, int bf) {
         case operation::write:
             return bf & ~output_mask;
         default:
-            CPPA_LOGF_ERROR("unexpected operation");
+            CAF_LOGF_ERROR("unexpected operation");
             break;
     }
     // weird stuff going on
@@ -509,28 +508,28 @@ int del_flag(operation op, int bf) {
 }
 
 void multiplexer::add(operation op, native_socket fd, event_handler* ptr) {
-    CPPA_REQUIRE(fd != invalid_socket);
+    CAF_REQUIRE(fd != invalid_socket);
     // ptr == nullptr is only allowed to store our pipe read handle
     // and the pipe read handle is added in the ctor (not allowed here)
-    CPPA_REQUIRE(ptr != nullptr);
-    CPPA_LOG_TRACE(CPPA_TARG(op, static_cast<int>) << ", "
-                   << CPPA_ARG(fd) << ", " CPPA_ARG(ptr));
+    CAF_REQUIRE(ptr != nullptr);
+    CAF_LOG_TRACE(CAF_TARG(op, static_cast<int>) << ", "
+                   << CAF_ARG(fd) << ", " CAF_ARG(ptr));
     new_event(add_flag, op, fd, ptr);
 }
 
 void multiplexer::del(operation op, native_socket fd, event_handler* ptr) {
-    CPPA_REQUIRE(fd != invalid_socket);
+    CAF_REQUIRE(fd != invalid_socket);
     // ptr == nullptr is only allowed when removing our pipe read handle
-    CPPA_REQUIRE(ptr != nullptr || fd == m_pipe.first);
-    CPPA_LOG_TRACE(CPPA_TARG(op, static_cast<int>) << ", "
-                   << CPPA_ARG(fd) << ", " CPPA_ARG(ptr));
+    CAF_REQUIRE(ptr != nullptr || fd == m_pipe.first);
+    CAF_LOG_TRACE(CAF_TARG(op, static_cast<int>) << ", "
+                   << CAF_ARG(fd) << ", " CAF_ARG(ptr));
     new_event(del_flag, op, fd, ptr);
 }
 
 void multiplexer::wr_dispatch_request(runnable* ptr) {
     intptr_t ptrval = reinterpret_cast<intptr_t>(ptr);
     // on windows, we actually have sockets, otherwise we have file handles
-#   ifdef CPPA_WINDOWS
+#   ifdef CAF_WINDOWS
     ::send(m_pipe.second, &ptrval, sizeof(ptrval), 0);
 #   else
     ::write(m_pipe.second, &ptrval, sizeof(ptrval));
@@ -540,7 +539,7 @@ void multiplexer::wr_dispatch_request(runnable* ptr) {
 multiplexer::runnable* multiplexer::rd_dispatch_request() {
     intptr_t ptrval;
     // on windows, we actually have sockets, otherwise we have file handles
-#   ifdef CPPA_WINDOWS
+#   ifdef CAF_WINDOWS
     ::recv(m_pipe.first, &ptrval, sizeof(ptrval), 0);
 #   else
     ::read(m_pipe.first, &ptrval, sizeof(ptrval));
@@ -557,7 +556,7 @@ multiplexer& get_multiplexer_singleton() {
 }
 
 void multiplexer::close_pipe() {
-    CPPA_LOG_TRACE("");
+    CAF_LOG_TRACE("");
     del(operation::read, m_pipe.first, nullptr);
 }
 
@@ -569,8 +568,8 @@ void multiplexer::handle_socket_event(native_socket fd, int mask,
         if (ptr) {
             ptr->handle_event(operation::read);
         } else {
-            CPPA_REQUIRE(fd == m_pipe.first);
-            CPPA_LOG_DEBUG("read message from pipe");
+            CAF_REQUIRE(fd == m_pipe.first);
+            CAF_LOG_DEBUG("read message from pipe");
             auto cb = rd_dispatch_request();
             cb->run();
             cb->request_deletion();
@@ -578,13 +577,13 @@ void multiplexer::handle_socket_event(native_socket fd, int mask,
     }
     if (mask & output_mask) {
         // we do *never* register our pipe handle for writing
-        CPPA_REQUIRE(ptr != nullptr);
+        CAF_REQUIRE(ptr != nullptr);
         checkerror = false;
         ptr->handle_event(operation::write);
     }
     if (checkerror && (mask & error_mask)) {
         if (ptr) {
-            CPPA_LOG_DEBUG("error occured on socket "
+            CAF_LOG_DEBUG("error occured on socket "
                            << fd << ", error code: "
                            << last_socket_error()
                            << ", error string: "
@@ -593,7 +592,7 @@ void multiplexer::handle_socket_event(native_socket fd, int mask,
             del(operation::read, fd, ptr);
             del(operation::write, fd, ptr);
         } else {
-            CPPA_LOG_DEBUG("pipe has been closed, assume shutdown");
+            CAF_LOG_DEBUG("pipe has been closed, assume shutdown");
             // a pipe failure means we are in the process
             // of shutting down the middleman
             del(operation::read, fd, nullptr);
@@ -644,9 +643,9 @@ bool is_error(ssize_t res, bool is_nonblock) {
 }
 
 bool read_some(size_t& result, native_socket fd, void* buf, size_t len) {
-    CPPA_LOGF_TRACE(CPPA_ARG(fd) << ", " << CPPA_ARG(len));
+    CAF_LOGF_TRACE(CAF_ARG(fd) << ", " << CAF_ARG(len));
     auto sres = ::recv(fd, reinterpret_cast<socket_recv_ptr>(buf), len, 0);
-    CPPA_LOGF_DEBUG("tried to read " << len << " bytes from socket " << fd
+    CAF_LOGF_DEBUG("tried to read " << len << " bytes from socket " << fd
                     << ", recv returned " << sres);
     if (is_error(sres, true) || sres == 0) {
         // recv returns 0  when the peer has performed an orderly shutdown
@@ -657,9 +656,9 @@ bool read_some(size_t& result, native_socket fd, void* buf, size_t len) {
 }
 
 bool write_some(size_t& result, native_socket fd, const void* buf, size_t len) {
-    CPPA_LOGF_TRACE(CPPA_ARG(fd) << ", " << CPPA_ARG(len));
+    CAF_LOGF_TRACE(CAF_ARG(fd) << ", " << CAF_ARG(len));
     auto sres = ::send(fd, reinterpret_cast<socket_send_ptr>(buf), len, 0);
-    CPPA_LOGF_DEBUG("tried to write " << len << " bytes to socket " << fd
+    CAF_LOGF_DEBUG("tried to write " << len << " bytes to socket " << fd
                     << ", send returned " << sres);
     if (is_error(sres, true)) return false;
     result = (sres > 0) ? static_cast<size_t>(sres) : 0;
@@ -667,12 +666,12 @@ bool write_some(size_t& result, native_socket fd, const void* buf, size_t len) {
 }
 
 bool try_accept(native_socket& result, native_socket fd) {
-    CPPA_LOGF_TRACE(CPPA_ARG(fd));
+    CAF_LOGF_TRACE(CAF_ARG(fd));
     sockaddr addr;
     memset(&addr, 0, sizeof(addr));
     socklen_t addrlen = sizeof(addr);
     result = ::accept(fd, &addr, &addrlen);
-    CPPA_LOGF_DEBUG("tried to accept a new connection from from socket " << fd
+    CAF_LOGF_DEBUG("tried to accept a new connection from from socket " << fd
                     << ", accept returned " << result);
     if (result == invalid_socket) {
         auto err = last_socket_error();
@@ -702,7 +701,7 @@ supervisor::~supervisor() {
 
 default_socket::default_socket(multiplexer& parent, native_socket fd)
         : m_parent(parent), m_fd(fd) {
-    CPPA_LOG_TRACE(CPPA_ARG(fd));
+    CAF_LOG_TRACE(CAF_ARG(fd));
     if (fd != invalid_socket) {
         // enable nonblocking IO & disable Nagle's algorithm
         nonblocking(m_fd, true);
@@ -722,7 +721,7 @@ default_socket& default_socket::operator=(default_socket&& other) {
 
 default_socket::~default_socket() {
     if (m_fd != invalid_socket) {
-        CPPA_LOG_DEBUG("close socket " << m_fd);
+        CAF_LOG_DEBUG("close socket " << m_fd);
         closesocket(m_fd);
     }
 }
@@ -768,9 +767,9 @@ struct socket_guard {
 };
 
 native_socket new_ipv4_connection_impl(const std::string& host, uint16_t port) {
-    CPPA_LOGF_TRACE(CPPA_ARG(host) << ", " << CPPA_ARG(port));
-    CPPA_LOGF_INFO("try to connect to " << host << " on port " << port);
-#   ifdef CPPA_WINDOWS
+    CAF_LOGF_TRACE(CAF_ARG(host) << ", " << CAF_ARG(port));
+    CAF_LOGF_INFO("try to connect to " << host << " on port " << port);
+#   ifdef CAF_WINDOWS
         // make sure TCP has been initialized via WSAStartup
         get_multiplexer_singleton();
 #   endif
@@ -793,9 +792,9 @@ native_socket new_ipv4_connection_impl(const std::string& host, uint16_t port) {
             server->h_addr,
             static_cast<size_t>(server->h_length));
     serv_addr.sin_port = htons(port);
-    CPPA_LOGF_DEBUG("call connect()");
+    CAF_LOGF_DEBUG("call connect()");
     if (connect(fd, (const sockaddr*) &serv_addr, sizeof(serv_addr)) != 0) {
-        CPPA_LOGF_ERROR("could not connect to to " << host
+        CAF_LOGF_ERROR("could not connect to to " << host
                         << " on port " << port);
         throw network_error("could not connect to host");
     }
@@ -809,9 +808,9 @@ default_socket new_ipv4_connection(const std::string& host, uint16_t port) {
 }
 
 native_socket new_ipv4_acceptor_impl(uint16_t port, const char* addr) {
-    CPPA_LOGF_TRACE(CPPA_ARG(port)
+    CAF_LOGF_TRACE(CAF_ARG(port)
                     << ", addr = " << (addr ? addr : "nullptr"));
-#   ifdef CPPA_WINDOWS
+#   ifdef CAF_WINDOWS
         // make sure TCP has been initialized via WSAStartup
         get_multiplexer_singleton();
 #   endif
@@ -844,12 +843,12 @@ native_socket new_ipv4_acceptor_impl(uint16_t port, const char* addr) {
     }
     // ok, no exceptions so far
     sguard.release();
-    CPPA_LOGF_DEBUG("sockfd = " << fd);
+    CAF_LOGF_DEBUG("sockfd = " << fd);
     return fd;
 }
 
 default_socket_acceptor new_ipv4_acceptor(uint16_t port, const char* addr) {
-    CPPA_LOGF_TRACE(CPPA_ARG(port)
+    CAF_LOGF_TRACE(CAF_ARG(port)
                     << ", addr = " << (addr ? addr : "nullptr"));
     auto& backend = get_multiplexer_singleton();
     return default_socket_acceptor{backend, new_ipv4_acceptor_impl(port, addr)};
@@ -857,4 +856,4 @@ default_socket_acceptor new_ipv4_acceptor(uint16_t port, const char* addr) {
 
 } // namespace network
 } // namespace io
-} // namespace cppa
+} // namespace caf

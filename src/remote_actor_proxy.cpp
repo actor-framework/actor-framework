@@ -15,21 +15,20 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
+#include "caf/send.hpp"
+#include "caf/to_string.hpp"
 
-#include "cppa/send.hpp"
-#include "cppa/to_string.hpp"
+#include "caf/io/middleman.hpp"
+#include "caf/io/remote_actor_proxy.hpp"
 
-#include "cppa/io/middleman.hpp"
-#include "cppa/io/remote_actor_proxy.hpp"
-
-#include "cppa/detail/memory.hpp"
-#include "cppa/detail/logging.hpp"
-#include "cppa/detail/singletons.hpp"
-#include "cppa/detail/sync_request_bouncer.hpp"
+#include "caf/detail/memory.hpp"
+#include "caf/detail/logging.hpp"
+#include "caf/detail/singletons.hpp"
+#include "caf/detail/sync_request_bouncer.hpp"
 
 using namespace std;
 
-namespace cppa {
+namespace caf {
 namespace io {
 
 inline sync_request_info* new_req_info(actor_addr sptr, message_id id) {
@@ -46,8 +45,8 @@ remote_actor_proxy::remote_actor_proxy(actor_id aid,
                                        node_id nid,
                                        actor parent)
         : super(aid, nid), m_parent(parent) {
-    CPPA_REQUIRE(parent != invalid_actor);
-    CPPA_LOG_INFO(CPPA_ARG(aid) << ", " << CPPA_TARG(nid, to_string));
+    CAF_REQUIRE(parent != invalid_actor);
+    CAF_LOG_INFO(CAF_ARG(aid) << ", " << CAF_TARG(nid, to_string));
 }
 
 remote_actor_proxy::~remote_actor_proxy() {
@@ -59,10 +58,10 @@ remote_actor_proxy::~remote_actor_proxy() {
 void remote_actor_proxy::forward_msg(const actor_addr& sender,
                                      message_id mid,
                                      message msg) {
-    CPPA_LOG_TRACE(CPPA_ARG(m_id)
-                   << ", " << CPPA_TSARG(sender)
-                   << ", " << CPPA_MARG(mid, integer_value)
-                   << ", " << CPPA_TSARG(msg));
+    CAF_LOG_TRACE(CAF_ARG(m_id)
+                   << ", " << CAF_TSARG(sender)
+                   << ", " << CAF_MARG(mid, integer_value)
+                   << ", " << CAF_TSARG(msg));
     m_parent->enqueue(invalid_actor_addr,
                       message_id::invalid,
                       make_message(atom("_Dispatch"),
@@ -130,4 +129,4 @@ void remote_actor_proxy::kill_proxy(uint32_t reason) {
 }
 
 } // namespace io
-} // namespace cppa
+} // namespace caf

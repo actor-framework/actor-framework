@@ -16,9 +16,9 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#include "cppa/detail/message_data.hpp"
+#include "caf/detail/message_data.hpp"
 
-namespace cppa {
+namespace caf {
 namespace detail {
 
 message_data::message_data(bool is_dynamic) : m_is_dynamic(is_dynamic) {}
@@ -65,4 +65,4 @@ message_data* message_data::ptr::get_detached() {
 }
 
 } // namespace detail
-} // namespace cppa
+} // namespace caf

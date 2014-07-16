@@ -5,9 +5,9 @@
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
-#include "cppa/cppa.hpp"
+#include "caf/all.hpp"
 
-using namespace cppa;
+using namespace caf;
 using std::endl;
 
 int main() {

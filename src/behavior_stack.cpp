@@ -18,14 +18,14 @@
 
 #include <iterator>
 
-#include "cppa/none.hpp"
+#include "caf/none.hpp"
 
-#include "cppa/local_actor.hpp"
-#include "cppa/detail/behavior_stack.hpp"
+#include "caf/local_actor.hpp"
+#include "caf/detail/behavior_stack.hpp"
 
 using namespace std;
 
-namespace cppa {
+namespace caf {
 namespace detail {
 
 struct behavior_stack_mover
@@ -86,4 +86,4 @@ void behavior_stack::clear() {
 }
 
 } // namespace detail
-} // namespace cppa
+} // namespace caf

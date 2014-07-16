@@ -1,26 +1,26 @@
 #include <atomic>
 
 #include "test.hpp"
-#include "cppa/all.hpp"
+#include "caf/all.hpp"
 
 using namespace std;
-using namespace cppa;
+using namespace caf;
 
 namespace {
 atomic<size_t> s_error_count{0};
 }
 
-size_t cppa_error_count() { return s_error_count; }
+size_t caf_error_count() { return s_error_count; }
 
-void cppa_inc_error_count() { ++s_error_count; }
+void caf_inc_error_count() { ++s_error_count; }
 
-string cppa_fill4(size_t value) {
+string caf_fill4(size_t value) {
     string result = to_string(value);
     while (result.size() < 4) result.insert(result.begin(), '0');
     return result;
 }
 
-const char* cppa_strip_path(const char* file) {
+const char* caf_strip_path(const char* file) {
     auto res = file;
     auto i = file;
     for (char c = *i; c != '\0'; c = *++i) {
@@ -31,12 +31,12 @@ const char* cppa_strip_path(const char* file) {
     return res;
 }
 
-void cppa_unexpected_message(const char* file, size_t line, message t) {
-    CPPA_PRINTERRC(file, line, "unexpected message: " << to_string(t));
+void caf_unexpected_message(const char* file, size_t line, message t) {
+    CAF_PRINTERRC(file, line, "unexpected message: " << to_string(t));
 }
 
-void cppa_unexpected_timeout(const char* file, size_t line) {
-    CPPA_PRINTERRC(file, line, "unexpected timeout");
+void caf_unexpected_timeout(const char* file, size_t line) {
+    CAF_PRINTERRC(file, line, "unexpected timeout");
 }
 
 vector<string> split(const string& str, char delim, bool keep_empties) {
@@ -55,11 +55,11 @@ void verbose_terminate[[noreturn]]() {
         throw;
     }
     catch (std::exception& e) {
-        CPPA_PRINTERR("terminate called after throwing "
+        CAF_PRINTERR("terminate called after throwing "
                       << to_verbose_string(e));
     }
     catch (...) {
-        CPPA_PRINTERR("terminate called after throwing an unknown exception");
+        CAF_PRINTERR("terminate called after throwing an unknown exception");
     }
     abort();
 }

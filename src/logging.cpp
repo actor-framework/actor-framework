@@ -24,18 +24,18 @@
 #include <pthread.h>
 #include <condition_variable>
 
-#ifndef CPPA_WINDOWS
+#ifndef CAF_WINDOWS
 #include <unistd.h>
 #include <sys/types.h>
 #endif
 
-#include "cppa/all.hpp"
-#include "cppa/actor_proxy.hpp"
+#include "caf/all.hpp"
+#include "caf/actor_proxy.hpp"
 
-#include "cppa/detail/logging.hpp"
-#include "cppa/detail/single_reader_queue.hpp"
+#include "caf/detail/logging.hpp"
+#include "caf/detail/single_reader_queue.hpp"
 
-namespace cppa {
+namespace caf {
 namespace detail {
 
 namespace {
@@ -74,7 +74,7 @@ class logging_impl : public logging {
                                                 "DEBUG", "TRACE"};
         m_thread = std::thread([this] { (*this)(); });
         std::string msg = "ENTRY log level = ";
-        msg += log_level_lookup_table[CPPA_LOG_LEVEL];
+        msg += log_level_lookup_table[CAF_LOG_LEVEL];
         log("TRACE", "logging", "run", __FILE__, __LINE__, msg);
     }
 
@@ -165,4 +165,4 @@ actor_id logging::set_aid(actor_id aid) {
 }
 
 } // namespace detail
-} // namespace cppa
+} // namespace caf

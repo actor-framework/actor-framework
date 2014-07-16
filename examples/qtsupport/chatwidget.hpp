@@ -4,14 +4,14 @@
 #include <QLineEdit>
 #include <QTextEdit>
 
-#include "cppa/group.hpp"
-#include "cppa/qtsupport/actor_widget_mixin.hpp"
+#include "caf/group.hpp"
+#include "caf/qtsupport/actor_widget_mixin.hpp"
 
-class ChatWidget : public cppa::actor_widget_mixin<QWidget> {
+class ChatWidget : public caf::actor_widget_mixin<QWidget> {
 
     Q_OBJECT
 
-    using super = cppa::actor_widget_mixin<QWidget>;
+    using super = caf::actor_widget_mixin<QWidget>;
 
  public:
 
@@ -51,6 +51,6 @@ class ChatWidget : public cppa::actor_widget_mixin<QWidget> {
     QLineEdit* m_input;
     QTextEdit* m_output;
     std::string m_name;
-    cppa::group m_chatroom;
+    caf::group m_chatroom;
 
 };

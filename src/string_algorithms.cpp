@@ -16,15 +16,14 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #include <sstream>
 
-#include "cppa/string_algorithms.hpp"
+#include "caf/string_algorithms.hpp"
 
 using std::string;
 using std::vector;
 
-namespace cppa {
+namespace caf {
 
 void split(vector<string>& result, const string& str,
            const string& delims, bool keep_all) {
@@ -42,4 +41,4 @@ void split(vector<string>& result, const string& str,
     }
 }
 
-} // namespace cppa
+} // namespace caf

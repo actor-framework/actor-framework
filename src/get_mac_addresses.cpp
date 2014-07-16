@@ -1,7 +1,7 @@
-#include "cppa/config.hpp"
-#include "cppa/detail/get_mac_addresses.hpp"
+#include "caf/config.hpp"
+#include "caf/detail/get_mac_addresses.hpp"
 
-#ifdef CPPA_MACOS
+#ifdef CAF_MACOS
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -19,7 +19,7 @@
 
 #include <iostream>
 
-namespace cppa {
+namespace caf {
 namespace detail {
 
 std::vector<std::string> get_mac_addresses() {
@@ -84,9 +84,9 @@ std::vector<std::string> get_mac_addresses() {
 }
 
 } // namespace detail
-} // namespace cppa
+} // namespace caf
 
-#elif defined(CPPA_LINUX)
+#elif defined(CAF_LINUX)
 
 #include <vector>
 #include <string>
@@ -107,7 +107,7 @@ std::vector<std::string> get_mac_addresses() {
 
 using namespace std;
 
-namespace cppa {
+namespace caf {
 namespace detail {
 
 std::vector<std::string> get_mac_addresses() {
@@ -161,7 +161,7 @@ std::vector<std::string> get_mac_addresses() {
 }
 
 } // namespace detail
-} // namespace cppa
+} // namespace caf
 
 #else
 
@@ -185,7 +185,7 @@ std::vector<std::string> get_mac_addresses() {
 #include <iphlpapi.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "cppa/singletons.hpp"
+#include "caf/singletons.hpp"
 
 namespace {
 
@@ -204,7 +204,7 @@ struct c_free {
 
 using namespace std;
 
-namespace cppa {
+namespace caf {
 namespace detail {
 
 std::vector<std::string> get_mac_addresses() {
@@ -261,6 +261,6 @@ std::vector<std::string> get_mac_addresses() {
 }
 
 } // namespace detail
-} // namespace cppa
+} // namespace caf
 
 #endif

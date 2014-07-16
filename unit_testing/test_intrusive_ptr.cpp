@@ -2,11 +2,11 @@
 #include <cstddef>
 
 #include "test.hpp"
-#include "cppa/intrusive_ptr.hpp"
-#include "cppa/ref_counted.hpp"
-#include "cppa/detail/make_counted.hpp"
+#include "caf/intrusive_ptr.hpp"
+#include "caf/ref_counted.hpp"
+#include "caf/detail/make_counted.hpp"
 
-using namespace cppa;
+using namespace caf;
 
 namespace {
 
@@ -44,50 +44,50 @@ int main() {
     // this test dosn't test thread-safety of intrusive_ptr
     // however, it is thread safe since it uses atomic operations only
 
-    CPPA_TEST(test_intrusive_ptr);
+    CAF_TEST(test_intrusive_ptr);
     {
         auto p = detail::make_counted<class0>();
-        CPPA_CHECK_EQUAL(class0_instances, 1);
-        CPPA_CHECK(p->unique());
+        CAF_CHECK_EQUAL(class0_instances, 1);
+        CAF_CHECK(p->unique());
     }
-    CPPA_CHECK_EQUAL(class0_instances, 0);
+    CAF_CHECK_EQUAL(class0_instances, 0);
     {
         class0_ptr p;
         p = new class0;
-        CPPA_CHECK_EQUAL(class0_instances, 1);
-        CPPA_CHECK(p->unique());
+        CAF_CHECK_EQUAL(class0_instances, 1);
+        CAF_CHECK(p->unique());
     }
-    CPPA_CHECK_EQUAL(class0_instances, 0);
+    CAF_CHECK_EQUAL(class0_instances, 0);
     {
         class0_ptr p1;
         p1 = get_test_rc();
         class0_ptr p2 = p1;
-        CPPA_CHECK_EQUAL(class0_instances, 1);
-        CPPA_CHECK_EQUAL(p1->unique(), false);
+        CAF_CHECK_EQUAL(class0_instances, 1);
+        CAF_CHECK_EQUAL(p1->unique(), false);
     }
-    CPPA_CHECK_EQUAL(class0_instances, 0);
+    CAF_CHECK_EQUAL(class0_instances, 0);
     {
         std::list<class0_ptr> pl;
         pl.push_back(get_test_ptr());
         pl.push_back(get_test_rc());
         pl.push_back(pl.front()->create());
-        CPPA_CHECK(pl.front()->unique());
-        CPPA_CHECK_EQUAL(class0_instances, 3);
+        CAF_CHECK(pl.front()->unique());
+        CAF_CHECK_EQUAL(class0_instances, 3);
     }
-    CPPA_CHECK_EQUAL(class0_instances, 0);
+    CAF_CHECK_EQUAL(class0_instances, 0);
     {
         auto p1 = detail::make_counted<class0>();
         p1 = new class1;
-        CPPA_CHECK_EQUAL(class0_instances, 1);
-        CPPA_CHECK_EQUAL(class1_instances, 1);
+        CAF_CHECK_EQUAL(class0_instances, 1);
+        CAF_CHECK_EQUAL(class1_instances, 1);
         auto p2 = detail::make_counted<class1>();
         p1 = p2;
-        CPPA_CHECK_EQUAL(class0_instances, 1);
-        CPPA_CHECK_EQUAL(class1_instances, 1);
-        CPPA_CHECK(p1 == p2);
+        CAF_CHECK_EQUAL(class0_instances, 1);
+        CAF_CHECK_EQUAL(class1_instances, 1);
+        CAF_CHECK(p1 == p2);
     }
-    CPPA_CHECK_EQUAL(class0_instances, 0);
-    CPPA_CHECK_EQUAL(class1_instances, 0);
+    CAF_CHECK_EQUAL(class0_instances, 0);
+    CAF_CHECK_EQUAL(class1_instances, 0);
 
-    return CPPA_TEST_RESULT();
+    return CAF_TEST_RESULT();
 }

@@ -16,21 +16,20 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
+#include "caf/to_string.hpp"
 
-#include "cppa/to_string.hpp"
+#include "caf/config.hpp"
+#include "caf/message_handler.hpp"
 
-#include "cppa/config.hpp"
-#include "cppa/message_handler.hpp"
-
-namespace cppa {
+namespace caf {
 
 message_handler::message_handler(impl_ptr ptr) : m_impl(std::move(ptr)) { }
 
 void detail::behavior_impl::handle_timeout() { }
 
-} // namespace cppa
+} // namespace caf
 
-namespace cppa {
+namespace caf {
 namespace detail {
 
 behavior_impl_ptr combine(behavior_impl_ptr lhs, const message_handler& rhs) {
@@ -45,11 +44,10 @@ message_handler combine(behavior_impl_ptr lhs, behavior_impl_ptr rhs) {
     return lhs->or_else(rhs);
 }
 
-
 behavior_impl_ptr extract(const message_handler& arg) {
     return arg.as_behavior_impl();
 }
 
 } // namespace util
-} // namespace cppa
+} // namespace caf
 

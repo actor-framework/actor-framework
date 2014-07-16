@@ -23,20 +23,20 @@
 #include <iostream>
 #include <algorithm>
 
-#include "cppa/string_algorithms.hpp"
+#include "caf/string_algorithms.hpp"
 
-#include "cppa/atom.hpp"
-#include "cppa/to_string.hpp"
-#include "cppa/serializer.hpp"
-#include "cppa/from_string.hpp"
-#include "cppa/deserializer.hpp"
-#include "cppa/skip_message.hpp"
-#include "cppa/actor_namespace.hpp"
-#include "cppa/primitive_variant.hpp"
-#include "cppa/uniform_type_info.hpp"
+#include "caf/atom.hpp"
+#include "caf/to_string.hpp"
+#include "caf/serializer.hpp"
+#include "caf/from_string.hpp"
+#include "caf/deserializer.hpp"
+#include "caf/skip_message.hpp"
+#include "caf/actor_namespace.hpp"
+#include "caf/primitive_variant.hpp"
+#include "caf/uniform_type_info.hpp"
 
-#include "cppa/detail/singletons.hpp"
-#include "cppa/detail/uniform_type_info_map.hpp"
+#include "caf/detail/singletons.hpp"
+#include "caf/detail/uniform_type_info_map.hpp"
 
 using std::string;
 using std::ostream;
@@ -44,7 +44,7 @@ using std::u16string;
 using std::u32string;
 using std::istringstream;
 
-namespace cppa {
+namespace caf {
 
 namespace {
 
@@ -551,4 +551,4 @@ uniform_value from_string_impl(const string& what) {
     return {};
 }
 
-} // namespace cppa
+} // namespace caf

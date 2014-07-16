@@ -21,15 +21,15 @@
 #include <cstdlib>
 #include <stdexcept>
 
-#include "cppa/config.hpp"
-#include "cppa/detail/demangle.hpp"
+#include "caf/config.hpp"
+#include "caf/detail/demangle.hpp"
 
-#if defined(CPPA_CLANG) || defined(CPPA_GCC)
+#if defined(CAF_CLANG) || defined(CAF_GCC)
 #   include <cxxabi.h>
 #   include <stdlib.h>
 #endif
 
-namespace cppa {
+namespace caf {
 namespace detail {
 
 namespace {
@@ -66,7 +66,7 @@ std::string filter_whitespaces(const char* cstr, size_t size = 0) {
 
 } // namespace <anonymous>
 
-#if defined(CPPA_CLANG) || defined(CPPA_GCC)
+#if defined(CAF_CLANG) || defined(CAF_GCC)
 
     std::string demangle(const char* decorated) {
         using std::string;
@@ -81,7 +81,7 @@ std::string filter_whitespaces(const char* cstr, size_t size = 0) {
         }
         // the undecorated typeid name
         string result = filter_whitespaces(undecorated.get(), size);
-#       ifdef CPPA_CLANG
+#       ifdef CAF_CLANG
         // replace "std::__1::" with "std::" (fixes strange clang names)
         string needle = "std::__1::";
         string fixed_string = "std::";
@@ -93,7 +93,7 @@ std::string filter_whitespaces(const char* cstr, size_t size = 0) {
         return result;
     }
 
-#elif defined(CPPA_MSVC)
+#elif defined(CAF_MSVC)
 
     string demangle(const char* decorated) {
         // on MSVC, name() returns a human-readable version, all we need
@@ -111,4 +111,4 @@ std::string demangle(const std::type_info& tinf) {
 }
 
 } // namespace detail
-} // namespace cppa
+} // namespace caf

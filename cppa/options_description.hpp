@@ -16,7 +16,6 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_OPTIONS_DESCRIPTION_HPP
 #define CPPA_OPTIONS_DESCRIPTION_HPP
 
@@ -26,12 +25,13 @@
 #include <iostream>
 #include <functional>
 
-#include "cppa/on.hpp"
-#include "cppa/optional.hpp"
-#include "cppa/detail/demangle.hpp"
-#include "cppa/detail/opt_impls.hpp"
+#include "caf/on.hpp"
+#include "caf/optional.hpp"
+#include "caf/detail/demangle.hpp"
 
-namespace cppa {
+#include "cppa/opt_impls.hpp"
+
+namespace caf {
 
 /**
  * @brief Right-hand side of a match expression for a program option
@@ -114,6 +114,6 @@ std::function<void()> print_desc_and_exit(options_description* desc,
                                           std::ostream& out = std::cout,
                                           int exit_reason = 0);
 
-} // namespace cppa
+} // namespace caf
 
 #endif // CPPA_OPTIONS_DESCRIPTION_HPP

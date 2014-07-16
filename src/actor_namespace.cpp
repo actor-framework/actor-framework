@@ -19,19 +19,19 @@
 #include <utility>
 #include <algorithm>
 
-#include "cppa/node_id.hpp"
-#include "cppa/serializer.hpp"
-#include "cppa/deserializer.hpp"
-#include "cppa/actor_namespace.hpp"
+#include "caf/node_id.hpp"
+#include "caf/serializer.hpp"
+#include "caf/deserializer.hpp"
+#include "caf/actor_namespace.hpp"
 
-#include "cppa/io/middleman.hpp"
-#include "cppa/io/remote_actor_proxy.hpp"
+#include "caf/io/middleman.hpp"
+#include "caf/io/remote_actor_proxy.hpp"
 
-#include "cppa/detail/logging.hpp"
-#include "cppa/detail/singletons.hpp"
-#include "cppa/detail/actor_registry.hpp"
+#include "caf/detail/logging.hpp"
+#include "caf/detail/singletons.hpp"
+#include "caf/detail/actor_registry.hpp"
 
-namespace cppa {
+namespace caf {
 
 actor_namespace::backend::~backend() {
     // nop
@@ -42,7 +42,7 @@ actor_namespace::actor_namespace(backend& be) : m_backend(be) {
 }
 
 void actor_namespace::write(serializer* sink, const actor_addr& addr) {
-    CPPA_REQUIRE(sink != nullptr);
+    CAF_REQUIRE(sink != nullptr);
     if (!addr) {
         node_id::host_id_type zero;
         std::fill(zero.begin(), zero.end(), 0);
@@ -64,7 +64,7 @@ void actor_namespace::write(serializer* sink, const actor_addr& addr) {
 }
 
 actor_addr actor_namespace::read(deserializer* source) {
-    CPPA_REQUIRE(source != nullptr);
+    CAF_REQUIRE(source != nullptr);
     node_id::host_id_type hid;
     auto aid = source->read<uint32_t>();                 // actor id
     auto pid = source->read<uint32_t>();                 // process id
@@ -118,12 +118,12 @@ actor_proxy_ptr actor_namespace::get_or_put(const key_type& node,
 bool actor_namespace::empty() const { return m_proxies.empty(); }
 
 void actor_namespace::erase(const key_type& inf) {
-    CPPA_LOG_TRACE(CPPA_TARG(inf, to_string));
+    CAF_LOG_TRACE(CAF_TARG(inf, to_string));
     m_proxies.erase(inf);
 }
 
 void actor_namespace::erase(const key_type& inf, actor_id aid) {
-    CPPA_LOG_TRACE(CPPA_TARG(inf, to_string) << ", " << CPPA_ARG(aid));
+    CAF_LOG_TRACE(CAF_TARG(inf, to_string) << ", " << CAF_ARG(aid));
     auto i = m_proxies.find(inf);
     if (i != m_proxies.end()) {
         i->second.erase(aid);
@@ -131,4 +131,4 @@ void actor_namespace::erase(const key_type& inf, actor_id aid) {
     }
 }
 
-} // namespace cppa
+} // namespace caf

@@ -202,7 +202,6 @@ void test_opencl() {
         }
     );
 
-
     const matrix_type expected2(move(expected1));
 
     auto map_args = [] (any_tuple msg) -> optional<cow_tuple<ivec>> {

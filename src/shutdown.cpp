@@ -16,13 +16,13 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#include "cppa/shutdown.hpp"
-#include "cppa/detail/singletons.hpp"
+#include "caf/shutdown.hpp"
+#include "caf/detail/singletons.hpp"
 
-namespace cppa {
+namespace caf {
 
 void shutdown() {
     detail::singletons::stop_singletons();
 }
 
-} // namespace cppa
+} // namespace caf

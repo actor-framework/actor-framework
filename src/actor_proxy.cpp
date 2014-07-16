@@ -19,22 +19,22 @@
 #include <utility>
 #include <iostream>
 
-#include "cppa/locks.hpp"
+#include "caf/locks.hpp"
 
-#include "cppa/atom.hpp"
-#include "cppa/to_string.hpp"
-#include "cppa/message.hpp"
-#include "cppa/scheduler.hpp"
-#include "cppa/actor_proxy.hpp"
-#include "cppa/exit_reason.hpp"
+#include "caf/atom.hpp"
+#include "caf/to_string.hpp"
+#include "caf/message.hpp"
+#include "caf/scheduler.hpp"
+#include "caf/actor_proxy.hpp"
+#include "caf/exit_reason.hpp"
 
-#include "cppa/io/middleman.hpp"
+#include "caf/io/middleman.hpp"
 
-#include "cppa/detail/singletons.hpp"
+#include "caf/detail/singletons.hpp"
 
 using namespace std;
 
-namespace cppa {
+namespace caf {
 
 actor_proxy::anchor::anchor(actor_proxy* instance) : m_ptr(instance) {}
 
@@ -71,4 +71,4 @@ void actor_proxy::request_deletion() {
     if (m_anchor->try_expire()) delete this;
 }
 
-} // namespace cppa
+} // namespace caf

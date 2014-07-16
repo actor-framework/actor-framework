@@ -16,9 +16,9 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#include "cppa/atom.hpp"
+#include "caf/atom.hpp"
 
-namespace cppa {
+namespace caf {
 
 std::string to_string(const atom_value& what) {
     auto x = static_cast<uint64_t>(what);
@@ -38,4 +38,4 @@ std::string to_string(const atom_value& what) {
     return result;
 }
 
-} // namespace cppa
+} // namespace caf

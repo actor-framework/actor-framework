@@ -1,13 +1,13 @@
 #include <utility>
 #include <iostream>
 
-#include "cppa/cppa.hpp"
+#include "caf/all.hpp"
 
 using std::cout;
 using std::endl;
 using std::make_pair;
 
-using namespace cppa;
+using namespace caf;
 
 // a simple class using getter and setter member functions
 class foo {

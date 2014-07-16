@@ -18,15 +18,15 @@
 
 #include <utility>
 
-#include "cppa/actor.hpp"
-#include "cppa/channel.hpp"
-#include "cppa/actor_addr.hpp"
-#include "cppa/actor_proxy.hpp"
-#include "cppa/local_actor.hpp"
-#include "cppa/blocking_actor.hpp"
-#include "cppa/event_based_actor.hpp"
+#include "caf/actor.hpp"
+#include "caf/channel.hpp"
+#include "caf/actor_addr.hpp"
+#include "caf/actor_proxy.hpp"
+#include "caf/local_actor.hpp"
+#include "caf/blocking_actor.hpp"
+#include "caf/event_based_actor.hpp"
 
-namespace cppa {
+namespace caf {
 
 actor::actor(const invalid_actor_t&) : m_ptr(nullptr) {}
 
@@ -51,4 +51,4 @@ actor_addr actor::address() const {
     return m_ptr ? m_ptr->address() : actor_addr{};
 }
 
-} // namespace cppa
+} // namespace caf

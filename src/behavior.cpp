@@ -16,12 +16,12 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#include "cppa/none.hpp"
+#include "caf/none.hpp"
 
-#include "cppa/behavior.hpp"
-#include "cppa/message_handler.hpp"
+#include "caf/behavior.hpp"
+#include "caf/message_handler.hpp"
 
-namespace cppa {
+namespace caf {
 
 namespace {
 class continuation_decorator : public detail::behavior_impl {
@@ -36,7 +36,7 @@ class continuation_decorator : public detail::behavior_impl {
 
     continuation_decorator(continuation_fun fun, pointer ptr)
             : super(ptr->timeout()), m_fun(fun), m_decorated(std::move(ptr)) {
-        CPPA_REQUIRE(m_decorated != nullptr);
+        CAF_REQUIRE(m_decorated != nullptr);
     }
 
     template<typename T>
@@ -71,4 +71,4 @@ behavior behavior::add_continuation(continuation_fun fun) {
         new continuation_decorator(std::move(fun), m_impl)};
 }
 
-} // namespace cppa
+} // namespace caf

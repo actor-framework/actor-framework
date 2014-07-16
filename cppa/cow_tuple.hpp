@@ -16,24 +16,23 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_COW_TUPLE_HPP
 #define CPPA_COW_TUPLE_HPP
 
-// <backward_compatibility version="0.9">
+// <backward_compatibility version="0.9" whole_file="yes">
 #include <cstddef>
 #include <string>
 #include <typeinfo>
 #include <type_traits>
 
-#include "cppa/message.hpp"
-#include "cppa/ref_counted.hpp"
+#include "caf/message.hpp"
+#include "caf/ref_counted.hpp"
 
-#include "cppa/detail/tuple_vals.hpp"
-#include "cppa/detail/decorated_tuple.hpp"
-#include "cppa/detail/implicit_conversions.hpp"
+#include "caf/detail/tuple_vals.hpp"
+#include "caf/detail/decorated_tuple.hpp"
+#include "caf/detail/implicit_conversions.hpp"
 
-namespace cppa {
+namespace caf {
 
 template<typename... Ts>
 class cow_tuple;
@@ -46,13 +45,14 @@ template<typename Head, typename... Tail>
 class cow_tuple<Head, Tail...> {
 
     static_assert(detail::tl_forall<detail::type_list<Head, Tail...>,
-                                    detail::is_legal_tuple_type>::value,
+                                         detail::is_legal_tuple_type
+                                        >::value,
                   "illegal types in cow_tuple definition: "
                   "pointers and references are prohibited");
 
     using data_type = detail::tuple_vals<
-                          typename detail::strip_and_convert<Head>::type,
-                          typename detail::strip_and_convert<Tail>::type...>;
+                        typename detail::strip_and_convert<Head>::type,
+                        typename detail::strip_and_convert<Tail>::type...>;
 
     using data_ptr = detail::message_data::ptr;
 
@@ -142,20 +142,6 @@ class cow_tuple<Head, Tail...> {
 
 };
 
-template<typename TypeList>
-struct cow_tuple_from_type_list;
-
-template<typename... Ts>
-struct cow_tuple_from_type_list< detail::type_list<Ts...>> {
-    using type = cow_tuple<Ts...>;
-};
-
-template<typename T>
-struct is_cow_tuple { static constexpr bool value = false; };
-
-template<typename... Ts>
-struct is_cow_tuple<cow_tuple<Ts...>> { static constexpr bool value = true; };
-
 /**
  * @ingroup CopyOnWrite
  * @brief Gets a const-reference to the <tt>N</tt>th element of @p tup.
@@ -165,7 +151,8 @@ struct is_cow_tuple<cow_tuple<Ts...>> { static constexpr bool value = true; };
  * @relates cow_tuple
  */
 template<size_t N, typename... Ts>
-const typename detail::type_at<N, Ts...>::type& get(const cow_tuple<Ts...>& tup) {
+const typename detail::type_at<N, Ts...>::type&
+get(const cow_tuple<Ts...>& tup) {
     using result_type = typename detail::type_at<N, Ts...>::type;
     return *reinterpret_cast<const result_type*>(tup.at(N));
 }
@@ -180,7 +167,8 @@ const typename detail::type_at<N, Ts...>::type& get(const cow_tuple<Ts...>& tup)
  * @relates cow_tuple
  */
 template<size_t N, typename... Ts>
-typename detail::type_at<N, Ts...>::type& get_ref(cow_tuple<Ts...>& tup) {
+typename detail::type_at<N, Ts...>::type&
+get_ref(cow_tuple<Ts...>& tup) {
     using result_type = typename detail::type_at<N, Ts...>::type;
     return *reinterpret_cast<result_type*>(tup.mutable_at(N));
 }

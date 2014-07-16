@@ -16,16 +16,16 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#include "cppa/config.hpp"
-#include "cppa/detail/get_root_uuid.hpp"
+#include "caf/config.hpp"
+#include "caf/detail/get_root_uuid.hpp"
 
-#ifndef CPPA_MACOS // not needed on Mac OS X
+#ifndef CAF_MACOS // not needed on Mac OS X
 namespace {
 constexpr char uuid_format[] = "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF";
 } // namespace <anonmyous>
-#endif // CPPA_MACOS
+#endif // CAF_MACOS
 
-#ifdef CPPA_MACOS
+#ifdef CAF_MACOS
 
 namespace {
 
@@ -41,7 +41,7 @@ constexpr const char* s_get_uuid =
 
 } // namespace <anonymous>
 
-namespace cppa {
+namespace caf {
 namespace detail {
 
 std::string get_root_uuid() {
@@ -58,9 +58,9 @@ std::string get_root_uuid() {
 }
 
 } // namespace detail
-} // namespace cppa
+} // namespace caf
 
-#elif defined(CPPA_LINUX)
+#elif defined(CAF_LINUX)
 
 #include <vector>
 #include <string>
@@ -79,13 +79,13 @@ std::string get_root_uuid() {
 #include <unistd.h>
 #include <iostream>
 
-#include "cppa/string_algorithms.hpp"
+#include "caf/string_algorithms.hpp"
 
 using std::vector;
 using std::string;
 using std::ifstream;
 
-namespace cppa {
+namespace caf {
 namespace detail {
 
 namespace {
@@ -191,9 +191,9 @@ std::string get_root_uuid() {
 }
 
 } // namespace detail
-} // namespace cppa
+} // namespace caf
 
-#elif defined(CPPA_WINDOWS)
+#elif defined(CAF_WINDOWS)
 
 #include <string>
 #include <iostream>
@@ -204,7 +204,7 @@ std::string get_root_uuid() {
 
 using namespace std;
 
-namespace cppa {
+namespace caf {
 namespace detail {
 
 namespace {
@@ -258,6 +258,6 @@ std::string get_root_uuid() {
 }
 
 } // namespace detail
-} // namespace cppa
+} // namespace caf
 
-#endif // CPPA_WINDOWS
+#endif // CAF_WINDOWS

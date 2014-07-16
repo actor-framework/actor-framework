@@ -18,17 +18,17 @@
 
 #include <utility>
 
-#include "cppa/local_actor.hpp"
-#include "cppa/response_promise.hpp"
+#include "caf/local_actor.hpp"
+#include "caf/response_promise.hpp"
 
 using std::move;
 
-namespace cppa {
+namespace caf {
 
 response_promise::response_promise(const actor_addr& from, const actor_addr& to,
                                    const message_id& id)
         : m_from(from), m_to(to), m_id(id) {
-    CPPA_REQUIRE(id.is_response() || !id.valid());
+    CAF_REQUIRE(id.is_response() || !id.valid());
 }
 
 void response_promise::deliver(message msg) {
@@ -40,4 +40,4 @@ void response_promise::deliver(message msg) {
     }
 }
 
-} // namespace cppa
+} // namespace caf

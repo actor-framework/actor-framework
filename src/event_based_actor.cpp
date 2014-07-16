@@ -16,13 +16,13 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#include "cppa/scheduler.hpp"
-#include "cppa/message_id.hpp"
-#include "cppa/event_based_actor.hpp"
+#include "caf/scheduler.hpp"
+#include "caf/message_id.hpp"
+#include "caf/event_based_actor.hpp"
 
-#include "cppa/detail/singletons.hpp"
+#include "caf/detail/singletons.hpp"
 
-namespace cppa {
+namespace caf {
 
 event_based_actor::event_based_actor() : m_initialized(false) {}
 
@@ -36,4 +36,4 @@ behavior event_based_actor::functor_based::make_behavior() {
     return m_make_behavior(this);
 }
 
-} // namespace cppa
+} // namespace caf

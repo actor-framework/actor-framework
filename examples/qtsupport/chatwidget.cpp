@@ -6,11 +6,11 @@
 
 #include "chatwidget.hpp"
 
-#include "cppa/cppa.hpp"
-#include "cppa/detail/scope_guard.hpp"
+#include "caf/all.hpp"
+#include "caf/detail/scope_guard.hpp"
 
 using namespace std;
-using namespace cppa;
+using namespace caf;
 
 ChatWidget::ChatWidget(QWidget* parent, Qt::WindowFlags f)
 : super(parent, f), m_input(nullptr), m_output(nullptr) {

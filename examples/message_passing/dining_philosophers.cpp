@@ -1,6 +1,6 @@
 /******************************************************************************\
  * This example is an implementation of the classical Dining Philosophers     *
- * exercise using only libcppa's event-based actor implementation.            *
+ * exercise using only libcaf's event-based actor implementation.            *
 \******************************************************************************/
 
 #include <map>
@@ -9,12 +9,12 @@
 #include <sstream>
 #include <iostream>
 
-#include "cppa/cppa.hpp"
+#include "caf/all.hpp"
 
 using std::chrono::seconds;
 
 using namespace std;
-using namespace cppa;
+using namespace caf;
 
 namespace {
 

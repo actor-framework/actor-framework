@@ -16,19 +16,19 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#include "cppa/scoped_actor.hpp"
+#include "caf/scoped_actor.hpp"
 
-#include "cppa/policy/no_resume.hpp"
-#include "cppa/policy/no_scheduling.hpp"
-#include "cppa/policy/actor_policies.hpp"
-#include "cppa/policy/nestable_invoke.hpp"
-#include "cppa/policy/not_prioritizing.hpp"
+#include "caf/policy/no_resume.hpp"
+#include "caf/policy/no_scheduling.hpp"
+#include "caf/policy/actor_policies.hpp"
+#include "caf/policy/nestable_invoke.hpp"
+#include "caf/policy/not_prioritizing.hpp"
 
-#include "cppa/detail/singletons.hpp"
-#include "cppa/detail/proper_actor.hpp"
-#include "cppa/detail/actor_registry.hpp"
+#include "caf/detail/singletons.hpp"
+#include "caf/detail/proper_actor.hpp"
+#include "caf/detail/actor_registry.hpp"
 
-namespace cppa {
+namespace caf {
 
 namespace {
 
@@ -51,7 +51,7 @@ void scoped_actor::init(bool hide_actor) {
     m_self.reset(alloc());
     if (!m_hidden) {
         detail::singletons::get_actor_registry()->inc_running();
-        m_prev = CPPA_SET_AID(m_self->id());
+        m_prev = CAF_SET_AID(m_self->id());
     }
 }
 
@@ -68,8 +68,8 @@ scoped_actor::~scoped_actor() {
     m_self->cleanup(r == exit_reason::not_exited ? exit_reason::normal : r);
     if (!m_hidden) {
         detail::singletons::get_actor_registry()->dec_running();
-        CPPA_SET_AID(m_prev);
+        CAF_SET_AID(m_prev);
     }
 }
 
-} // namespace cppa
+} // namespace caf

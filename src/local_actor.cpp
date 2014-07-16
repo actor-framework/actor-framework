@@ -17,15 +17,15 @@
 \******************************************************************************/
 
 #include <string>
-#include "cppa/all.hpp"
-#include "cppa/atom.hpp"
-#include "cppa/scheduler.hpp"
-#include "cppa/actor_cast.hpp"
-#include "cppa/local_actor.hpp"
+#include "caf/all.hpp"
+#include "caf/atom.hpp"
+#include "caf/scheduler.hpp"
+#include "caf/actor_cast.hpp"
+#include "caf/local_actor.hpp"
 
-#include "cppa/detail/logging.hpp"
+#include "caf/detail/logging.hpp"
 
-namespace cppa {
+namespace caf {
 
 namespace {
 
@@ -35,8 +35,8 @@ class down_observer : public attachable {
 
     down_observer(actor_addr observer, actor_addr observed)
             : m_observer(std::move(observer)), m_observed(std::move(observed)) {
-        CPPA_REQUIRE(m_observer != invalid_actor_addr);
-        CPPA_REQUIRE(m_observed != invalid_actor_addr);
+        CAF_REQUIRE(m_observer != invalid_actor_addr);
+        CAF_REQUIRE(m_observed != invalid_actor_addr);
     }
 
     void actor_exited(uint32_t reason) {
@@ -86,9 +86,9 @@ void local_actor::demonitor(const actor_addr& whom) {
 void local_actor::on_exit() {}
 
 void local_actor::join(const group& what) {
-    CPPA_LOG_TRACE(CPPA_TSARG(what));
+    CAF_LOG_TRACE(CAF_TSARG(what));
     if (what && m_subscriptions.count(what) == 0) {
-        CPPA_LOG_DEBUG("join group: " << to_string(what));
+        CAF_LOG_DEBUG("join group: " << to_string(what));
         m_subscriptions.insert(std::make_pair(what, what->subscribe(this)));
     }
 }
@@ -156,18 +156,18 @@ response_promise local_actor::make_response_promise() {
 }
 
 void local_actor::cleanup(uint32_t reason) {
-    CPPA_LOG_TRACE(CPPA_ARG(reason));
+    CAF_LOG_TRACE(CAF_ARG(reason));
     m_subscriptions.clear();
     super::cleanup(reason);
 }
 
 void local_actor::quit(uint32_t reason) {
-    CPPA_LOG_TRACE("reason = " << reason << ", class "
+    CAF_LOG_TRACE("reason = " << reason << ", class "
                                << detail::demangle(typeid(*this)));
     if (reason == exit_reason::unallowed_function_call) {
         // this is the only reason that causes an exception
         cleanup(reason);
-        CPPA_LOG_WARNING("actor tried to use a blocking function");
+        CAF_LOG_WARNING("actor tried to use a blocking function");
         // when using receive(), the non-blocking nature of event-based
         // actors breaks any assumption the user has about his code,
         // in particular, receive_loop() is a deadlock when not throwing
@@ -218,4 +218,4 @@ void anon_send_exit(const actor_addr& whom, uint32_t reason) {
                  make_message(exit_msg{invalid_actor_addr, reason}), nullptr);
 }
 
-} // namespace cppa
+} // namespace caf

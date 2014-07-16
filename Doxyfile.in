@@ -25,7 +25,7 @@ DOXYFILE_ENCODING      = UTF-8
 # The PROJECT_NAME tag is a single word (or a sequence of words surrounded 
 # by quotes) that should identify the project.
 
-PROJECT_NAME           = libcppa
+PROJECT_NAME           = libcaf
 
 # The PROJECT_NUMBER tag can be used to enter a project or revision number. 
 # This could be handy for archiving the generated documentation or 
@@ -565,7 +565,7 @@ WARN_LOGFILE           =
 # directories like "/usr/src/myproject". Separate the files or directories 
 # with spaces.
 
-INPUT                  = @CMAKE_HOME_DIRECTORY@/cppa/ @CMAKE_HOME_DIRECTORY@/cppa/util @CMAKE_HOME_DIRECTORY@/cppa/intrusive @CMAKE_HOME_DIRECTORY@/cppa/io @CMAKE_HOME_DIRECTORY@/cppa/opencl
+INPUT                  = @CMAKE_HOME_DIRECTORY@/caf/ @CMAKE_HOME_DIRECTORY@/caf/util @CMAKE_HOME_DIRECTORY@/caf/intrusive @CMAKE_HOME_DIRECTORY@/caf/io @CMAKE_HOME_DIRECTORY@/caf/opencl
 
 # This tag can be used to specify the character encoding of the source files 
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding, which is 
@@ -1245,7 +1245,7 @@ INCLUDE_FILE_PATTERNS  =
 # undefined via #undef or recursively expanded use the := operator 
 # instead of the = operator.
 
-PREDEFINED             = CPPA_DOCUMENTATION
+PREDEFINED             = CAF_DOCUMENTATION
 
 # If the MACRO_EXPANSION and EXPAND_ONLY_PREDEF tags are set to YES then 
 # this tag can be used to specify a list of macro names that should be expanded. 

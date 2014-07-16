@@ -16,10 +16,10 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#include "cppa/abstract_channel.hpp"
-#include "cppa/detail/singletons.hpp"
+#include "caf/abstract_channel.hpp"
+#include "caf/detail/singletons.hpp"
 
-namespace cppa {
+namespace caf {
 
 using detail::singletons;
 
@@ -33,4 +33,4 @@ bool abstract_channel::is_remote() const {
     return m_node != singletons::get_node_id();
 }
 
-} // namespace cppa
+} // namespace caf

@@ -12,10 +12,12 @@
 #include <iostream>
 
 #include "cppa/opt.hpp"
-#include "cppa/cppa.hpp"
+
+#include "caf/all.hpp"
+#include "caf/io/all.hpp"
 
 using namespace std;
-using namespace cppa;
+using namespace caf;
 
 int main(int argc, char** argv) {
     uint16_t port = 0;
@@ -40,7 +42,7 @@ int main(int argc, char** argv) {
         // group::get("remote", "<group>@<host>:<port>");
         // note: it is not needed to explicitly create a <group> on the server,
         //       as groups are created on-the-fly on first usage
-        publish_local_groups(port);
+        io::publish_local_groups(port);
     }
     catch (bind_failure& e) {
         // thrown if <port> is already in use

@@ -19,18 +19,18 @@
 #include <atomic>
 #include <iostream>
 
-#include "cppa/message.hpp"
-#include "cppa/scheduler.hpp"
-#include "cppa/exception.hpp"
-#include "cppa/local_actor.hpp"
+#include "caf/message.hpp"
+#include "caf/scheduler.hpp"
+#include "caf/exception.hpp"
+#include "caf/local_actor.hpp"
 
-#include "cppa/detail/logging.hpp"
-#include "cppa/detail/singletons.hpp"
-#include "cppa/detail/group_manager.hpp"
-#include "cppa/detail/actor_registry.hpp"
-#include "cppa/detail/uniform_type_info_map.hpp"
+#include "caf/detail/logging.hpp"
+#include "caf/detail/singletons.hpp"
+#include "caf/detail/group_manager.hpp"
+#include "caf/detail/actor_registry.hpp"
+#include "caf/detail/uniform_type_info_map.hpp"
 
-namespace cppa {
+namespace caf {
 namespace detail {
 
 namespace {
@@ -50,15 +50,15 @@ abstract_singleton::~abstract_singleton() {
 }
 
 void singletons::stop_singletons() {
-    CPPA_LOGF_DEBUG("stop scheduler");
+    CAF_LOGF_DEBUG("stop scheduler");
     stop(s_scheduling_coordinator);
-    CPPA_LOGF_DEBUG("stop plugins");
+    CAF_LOGF_DEBUG("stop plugins");
     for (auto& plugin : s_plugins) stop(plugin);
-    CPPA_LOGF_DEBUG("stop actor registry");
+    CAF_LOGF_DEBUG("stop actor registry");
     stop(s_actor_registry);
-    CPPA_LOGF_DEBUG("stop group manager");
+    CAF_LOGF_DEBUG("stop group manager");
     stop(s_group_manager);
-    CPPA_LOGF_DEBUG("stop type info map");
+    CAF_LOGF_DEBUG("stop type info map");
     stop(s_uniform_type_info_map);
     stop(s_logger);
     stop(s_node_id);
@@ -100,9 +100,9 @@ node_id singletons::get_node_id() {
 logging* singletons::get_logger() { return lazy_get(s_logger); }
 
 std::atomic<abstract_singleton*>& singletons::get_plugin_singleton(size_t id) {
-    CPPA_REQUIRE(id < max_plugin_singletons);
+    CAF_REQUIRE(id < max_plugin_singletons);
     return s_plugins[id];
 }
 
 } // namespace detail
-} // namespace cppa
+} // namespace caf

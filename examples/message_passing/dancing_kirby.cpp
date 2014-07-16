@@ -1,17 +1,17 @@
 /******************************************************************************\
- * This example illustrates how to do time-triggered loops in libcppa.        *
+ * This example illustrates how to do time-triggered loops in libcaf.        *
 \******************************************************************************/
 
 #include <chrono>
 #include <iostream>
 #include <algorithm>
-#include "cppa/cppa.hpp"
+#include "caf/all.hpp"
 
 using std::cout;
 using std::endl;
 using std::pair;
 
-using namespace cppa;
+using namespace caf;
 
 // ASCII art figures
 constexpr const char* figures[] = {

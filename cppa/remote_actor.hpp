@@ -16,19 +16,18 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_REMOTE_ACTOR_HPP
 #define CPPA_REMOTE_ACTOR_HPP
 
 // <backward_compatibility version="0.9" whole_file="yes">
-#include "cppa/io/remote_actor.hpp"
+#include "caf/io/remote_actor.hpp"
 
-namespace cppa {
+namespace caf {
 
 using io::remote_actor;
 using io::typed_remote_actor;
 
-} // namespace cppa
+} // namespace caf
 // </backward_compatibility>
 
 #endif // CPPA_REMOTE_ACTOR_HPP

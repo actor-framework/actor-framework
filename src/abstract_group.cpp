@@ -16,16 +16,16 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#include "cppa/all.hpp"
-#include "cppa/message.hpp"
-#include "cppa/publish.hpp"
-#include "cppa/abstract_group.hpp"
-#include "cppa/detail/shared_spinlock.hpp"
+#include "caf/all.hpp"
+#include "caf/message.hpp"
+#include "caf/publish.hpp"
+#include "caf/abstract_group.hpp"
+#include "caf/detail/shared_spinlock.hpp"
 
-#include "cppa/detail/group_manager.hpp"
-#include "cppa/detail/singletons.hpp"
+#include "caf/detail/group_manager.hpp"
+#include "caf/detail/singletons.hpp"
 
-namespace cppa {
+namespace caf {
 
 abstract_group::subscription::subscription(
     const channel& s, const intrusive_ptr<abstract_group>& g)
@@ -56,4 +56,4 @@ abstract_group::module::~module() {}
 
 abstract_group::~abstract_group() {}
 
-} // namespace cppa
+} // namespace caf

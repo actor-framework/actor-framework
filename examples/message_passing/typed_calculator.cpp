@@ -5,10 +5,10 @@
 
 #include <cassert>
 #include <iostream>
-#include "cppa/cppa.hpp"
+#include "caf/all.hpp"
 
 using std::endl;
-using namespace cppa;
+using namespace caf;
 
 namespace {
 

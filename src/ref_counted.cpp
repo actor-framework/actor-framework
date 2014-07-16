@@ -16,9 +16,9 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#include "cppa/ref_counted.hpp"
+#include "caf/ref_counted.hpp"
 
-namespace cppa {
+namespace caf {
 
 ref_counted::ref_counted() : m_rc(0) {}
 
@@ -33,4 +33,4 @@ ref_counted& ref_counted::operator=(const ref_counted&) {
     return *this;
 }
 
-} // namespace cppa
+} // namespace caf

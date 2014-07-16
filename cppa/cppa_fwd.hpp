@@ -16,12 +16,17 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_CPPA_FWD_HPP
 #define CPPA_CPPA_FWD_HPP
 
 // <backward_compatibility version="0.9" whole_file="yes">
-#include "cppa/fwd.hpp"
+#include "caf/fwd.hpp"
+
+namespace caf {
+using any_tuple = message;
+template<typename... Ts>
+class cow_tuple;
+} // namespace caf
 // </backward_compatibility>
 
 #endif // CPPA_CPPA_FWD_HPP

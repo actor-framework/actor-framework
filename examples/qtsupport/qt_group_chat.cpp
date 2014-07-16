@@ -20,13 +20,15 @@
 #include <QMainWindow>
 #include <QApplication>
 
+#include "caf/all.hpp"
+
+// the options_description API is deprecated
 #include "cppa/opt.hpp"
-#include "cppa/cppa.hpp"
 
 #include "ui_chatwindow.h" // auto generated from chatwindow.ui
 
 using namespace std;
-using namespace cppa;
+using namespace caf;
 
 int main(int argc, char** argv) {
 

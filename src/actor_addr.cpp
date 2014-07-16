@@ -16,15 +16,15 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#include "cppa/actor.hpp"
-#include "cppa/actor_addr.hpp"
-#include "cppa/local_actor.hpp"
+#include "caf/actor.hpp"
+#include "caf/actor_addr.hpp"
+#include "caf/local_actor.hpp"
 
-#include "cppa/detail/singletons.hpp"
+#include "caf/detail/singletons.hpp"
 
-#include "cppa/io/middleman.hpp"
+#include "caf/io/middleman.hpp"
 
-namespace cppa {
+namespace caf {
 
 namespace {
 intptr_t compare_impl(const abstract_actor* lhs, const abstract_actor* rhs) {
@@ -64,4 +64,4 @@ std::set<std::string> actor_addr::interface() const {
     return m_ptr->interface();
 }
 
-} // namespace cppa
+} // namespace caf

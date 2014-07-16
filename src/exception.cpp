@@ -19,10 +19,10 @@
 #include <sstream>
 #include <stdlib.h>
 
-#include "cppa/config.hpp"
-#include "cppa/exception.hpp"
+#include "caf/config.hpp"
+#include "caf/exception.hpp"
 
-#ifdef CPPA_WINDOWS
+#ifdef CAF_WINDOWS
 #include <winerror.h>
 #else
 #include <errno.h>
@@ -40,21 +40,21 @@ std::string ae_what(uint32_t reason) {
 
 } // namespace <anonymous>
 
-namespace cppa {
+namespace caf {
 
-cppa_exception::~cppa_exception() {}
+caf_exception::~caf_exception() {}
 
-cppa_exception::cppa_exception(const std::string& what_str)
+caf_exception::caf_exception(const std::string& what_str)
         : m_what(what_str) {}
 
-cppa_exception::cppa_exception(std::string&& what_str)
+caf_exception::caf_exception(std::string&& what_str)
         : m_what(std::move(what_str)) {}
 
-const char* cppa_exception::what() const noexcept { return m_what.c_str(); }
+const char* caf_exception::what() const noexcept { return m_what.c_str(); }
 
 actor_exited::~actor_exited() {}
 
-actor_exited::actor_exited(uint32_t reason) : cppa_exception(ae_what(reason)) {
+actor_exited::actor_exited(uint32_t reason) : caf_exception(ae_what(reason)) {
     m_reason = reason;
 }
 
@@ -70,4 +70,4 @@ bind_failure::bind_failure(std::string&& str) : super(std::move(str)) {}
 
 bind_failure::~bind_failure() {}
 
-} // namespace cppa
+} // namespace caf

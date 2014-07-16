@@ -23,22 +23,22 @@
 #include <unistd.h>
 #include <sys/types.h>
 
-#include "cppa/string_algorithms.hpp"
+#include "caf/string_algorithms.hpp"
 
-#include "cppa/config.hpp"
-#include "cppa/node_id.hpp"
-#include "cppa/serializer.hpp"
-#include "cppa/primitive_variant.hpp"
+#include "caf/config.hpp"
+#include "caf/node_id.hpp"
+#include "caf/serializer.hpp"
+#include "caf/primitive_variant.hpp"
 
-#include "cppa/io/middleman.hpp"
+#include "caf/io/middleman.hpp"
 
-#include "cppa/detail/singletons.hpp"
-#include "cppa/detail/ripemd_160.hpp"
-#include "cppa/detail/safe_equal.hpp"
-#include "cppa/detail/get_root_uuid.hpp"
-#include "cppa/detail/get_mac_addresses.hpp"
+#include "caf/detail/singletons.hpp"
+#include "caf/detail/ripemd_160.hpp"
+#include "caf/detail/safe_equal.hpp"
+#include "caf/detail/get_root_uuid.hpp"
+#include "caf/detail/get_mac_addresses.hpp"
 
-namespace cppa {
+namespace caf {
 
 namespace {
 
@@ -182,4 +182,4 @@ node_id& node_id::operator=(const invalid_node_id_t&) {
     return *this;
 }
 
-} // namespace cppa
+} // namespace caf

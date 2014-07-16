@@ -16,13 +16,13 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#include "cppa/actor.hpp"
-#include "cppa/group.hpp"
-#include "cppa/channel.hpp"
-#include "cppa/message.hpp"
-#include "cppa/actor_cast.hpp"
+#include "caf/actor.hpp"
+#include "caf/group.hpp"
+#include "caf/channel.hpp"
+#include "caf/message.hpp"
+#include "caf/actor_cast.hpp"
 
-namespace cppa {
+namespace caf {
 
 channel::channel(const actor& other)
         : m_ptr(actor_cast<abstract_channel_ptr>(other)) {}
@@ -53,4 +53,4 @@ intptr_t channel::compare(const abstract_channel* other) const {
     return compare(m_ptr.get(), other);
 }
 
-} // namespace cppa
+} // namespace caf

@@ -16,17 +16,17 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#include "cppa/atom.hpp"
-#include "cppa/config.hpp"
-#include "cppa/actor_cast.hpp"
-#include "cppa/message_id.hpp"
-#include "cppa/exit_reason.hpp"
-#include "cppa/mailbox_element.hpp"
-#include "cppa/system_messages.hpp"
+#include "caf/atom.hpp"
+#include "caf/config.hpp"
+#include "caf/actor_cast.hpp"
+#include "caf/message_id.hpp"
+#include "caf/exit_reason.hpp"
+#include "caf/mailbox_element.hpp"
+#include "caf/system_messages.hpp"
 
-#include "cppa/detail/sync_request_bouncer.hpp"
+#include "caf/detail/sync_request_bouncer.hpp"
 
-namespace cppa {
+namespace caf {
 namespace detail {
 
 sync_request_bouncer::sync_request_bouncer(uint32_t r)
@@ -34,7 +34,7 @@ sync_request_bouncer::sync_request_bouncer(uint32_t r)
 
 void sync_request_bouncer::operator()(const actor_addr& sender,
                                       const message_id& mid) const {
-    CPPA_REQUIRE(rsn != exit_reason::not_exited);
+    CAF_REQUIRE(rsn != exit_reason::not_exited);
     if (sender && mid.is_request()) {
         auto ptr = actor_cast<abstract_actor_ptr>(sender);
         ptr->enqueue(invalid_actor_addr, mid.response_id(),
@@ -49,4 +49,4 @@ void sync_request_bouncer::operator()(const mailbox_element& e) const {
 }
 
 } // namespace detail
-} // namespace cppa
+} // namespace caf

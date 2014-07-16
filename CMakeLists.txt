@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 2.8)
-project(cppa C CXX)
+project(caf C CXX)
 
 # extract version from VERSION file
 file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" VERSION LIMIT_COUNT 1)
 string(REPLACE "." " " version_numbers ${VERSION})
 separate_arguments(version_numbers)
-list(GET version_numbers 0 LIBCPPA_VERSION_MAJOR)
-list(GET version_numbers 1 LIBCPPA_VERSION_MINOR)
-list(GET version_numbers 2 LIBCPPA_VERSION_PATCH)
+list(GET version_numbers 0 LIBCAF_VERSION_MAJOR)
+list(GET version_numbers 1 LIBCAF_VERSION_MINOR)
+list(GET version_numbers 2 LIBCAF_VERSION_PATCH)
 
 # prohibit in-source builds
 if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
@@ -91,26 +91,25 @@ include(CheckIncludeFileCXX)
 check_include_file_cxx("valgrind/valgrind.h" HAVE_VALGRIND_H)
 if (HAVE_VALGRIND_H)
   set(VALGRIND "yes")
-  add_definitions(-DCPPA_ANNOTATE_VALGRIND)
+  add_definitions(-DCAF_ANNOTATE_VALGRIND)
 else (HAVE_VALGRIND_H)
   set(VALGRIND "no")
 endif (HAVE_VALGRIND_H)
 
-# set build type (evaluate ENABLE_DEBUG flag)
-if (ENABLE_DEBUG)
-  set(CMAKE_BUILD_TYPE Debug)
-  add_definitions(-DCPPA_DEBUG_MODE)
-  message(STATUS "Enable libcppa's debug mode")
-endif (ENABLE_DEBUG)
+# set build type (evaluate CAF_ENABLE_RUNTIME_CHECKS flag)
+if (CAF_ENABLE_RUNTIME_CHECKS)
+  add_definitions(-DCAF_ENABLE_RUNTIME_CHECKS)
+  message(STATUS "Enable libcaf's debug mode")
+endif (CAF_ENABLE_RUNTIME_CHECKS)
 
 if (ENABLE_ADDRESS_SANITIZER)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
   message(STATUS "Enable address sanitizer")
 endif (ENABLE_ADDRESS_SANITIZER)
 
-if (CPPA_LOG_LEVEL)
-  add_definitions(-DCPPA_LOG_LEVEL=${CPPA_LOG_LEVEL})
-endif(CPPA_LOG_LEVEL)
+if (CAF_LOG_LEVEL)
+  add_definitions(-DCAF_LOG_LEVEL=${CAF_LOG_LEVEL})
+endif(CAF_LOG_LEVEL)
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
@@ -121,18 +120,19 @@ endif ("${CMAKE_BUILD_TYPE}" STREQUAL "")
 
 # get header files; only needed by CMake generators,
 # e.g., for creating proper Xcode projects
-file(GLOB LIBCPPA_HDRS "cppa/*.hpp"
-                       "cppa/detail/*.hpp"
-                       "cppa/intrusive/*.hpp"
-                       "cppa/io/*.hpp"
-                       "cppa/opencl/*.hpp"
-                       "cppa/qtsupport/*.hpp"
-                       "cppa/policy/*.hpp"
-                       "cppa/mixin/*.hpp")
+file(GLOB LIBCAF_HDRS "caf/*.hpp"
+                      "caf/detail/*.hpp"
+                      "caf/intrusive/*.hpp"
+                      "caf/io/*.hpp"
+                      "caf/opencl/*.hpp"
+                      "caf/qtsupport/*.hpp"
+                      "caf/policy/*.hpp"
+                      "caf/mixin/*.hpp"
+                      "cppa/*.hpp")
 
 # list cpp files excluding platform-dependent files
-set (LIBCPPA_SRCS 
-     ${LIBCPPA_PLATFORM_SRCS}
+set (LIBCAF_SRCS 
+     ${LIBCAF_PLATFORM_SRCS}
      src/abstract_actor.cpp
      src/abstract_channel.cpp
      src/abstract_group.cpp
@@ -179,7 +179,6 @@ set (LIBCPPA_SRCS
      src/middleman.cpp
      src/network.cpp
      src/node_id.cpp
-     src/options_description.cpp
      src/ref_counted.cpp
      src/remote_actor_proxy.cpp
      src/response_promise.cpp
@@ -213,37 +212,37 @@ elseif (MINGW)
 endif ()
 
 if (DISABLE_MEM_MANAGEMENT)
-  add_definitions(-DCPPA_DISABLE_MEM_MANAGEMENT)
+  add_definitions(-DCAF_DISABLE_MEM_MANAGEMENT)
 endif (DISABLE_MEM_MANAGEMENT)
 
 # build shared library if not compiling static only
-if (NOT "${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes")
-  add_library(libcppa SHARED ${LIBCPPA_SRCS} ${LIBCPPA_HDRS})
-  target_link_libraries(libcppa ${LD_FLAGS})
-  set(LIBRARY_VERSION ${LIBCPPA_VERSION_MAJOR}.${LIBCPPA_VERSION_MINOR}.${LIBCPPA_VERSION_PATCH})
-  set(LIBRARY_SOVERSION ${LIBCPPA_VERSION_MAJOR})
-  set_target_properties(libcppa 
+if (NOT "${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes")
+  add_library(libcaf SHARED ${LIBCAF_SRCS} ${LIBCAF_HDRS})
+  target_link_libraries(libcaf ${LD_FLAGS})
+  set(LIBRARY_VERSION ${LIBCAF_VERSION_MAJOR}.${LIBCAF_VERSION_MINOR}.${LIBCAF_VERSION_PATCH})
+  set(LIBRARY_SOVERSION ${LIBCAF_VERSION_MAJOR})
+  set_target_properties(libcaf 
                         PROPERTIES
                         SOVERSION ${LIBRARY_SOVERSION}
                         VERSION ${LIBRARY_VERSION}
-                        OUTPUT_NAME cppa)
+                        OUTPUT_NAME caf)
   if(NOT MINGW)
-    install(TARGETS libcppa LIBRARY DESTINATION lib)
+    install(TARGETS libcaf LIBRARY DESTINATION lib)
   endif()
 endif ()
 
 # build static library only if --build-static or --build-static-only was set
-if ("${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes" OR "${CPPA_BUILD_STATIC}" STREQUAL "yes")
-  add_library(libcppaStatic STATIC ${LIBCPPA_HDRS} ${LIBCPPA_SRCS})
-  set_target_properties(libcppaStatic PROPERTIES OUTPUT_NAME cppa_static)
-  install(TARGETS libcppaStatic ARCHIVE DESTINATION lib)
+if ("${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes" OR "${CAF_BUILD_STATIC}" STREQUAL "yes")
+  add_library(libcafStatic STATIC ${LIBCAF_HDRS} ${LIBCAF_SRCS})
+  set_target_properties(libcafStatic PROPERTIES OUTPUT_NAME caf_static)
+  install(TARGETS libcafStatic ARCHIVE DESTINATION lib)
 endif ()
 
 link_directories(${LD_DIRS})
 include_directories(${INCLUDE_DIRS})
 
 # install includes
-install(DIRECTORY cppa/ DESTINATION include/cppa FILES_MATCHING PATTERN "*.hpp")
+install(DIRECTORY caf/ DESTINATION include/caf FILES_MATCHING PATTERN "*.hpp")
 
 # process cmake_uninstall.cmake.in
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
@@ -255,45 +254,45 @@ add_custom_target(uninstall
                   COMMAND ${CMAKE_COMMAND} -P
                   ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 
-# setting path to cppa headers and libcppa
-set (CPPA_INCLUDE_PATH ${CMAKE_SOURCE_DIR}/libcppa)
-set (CPPA_INCLUDE ${CPPA_INCLUDE_PATH})
+# setting path to caf headers and libcaf
+set (CAF_INCLUDE_PATH ${CMAKE_SOURCE_DIR}/libcaf)
+set (CAF_INCLUDE ${CAF_INCLUDE_PATH})
 
-if ("${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes")
-  set (CPPA_LIBRARY ${LIBRARY_OUTPUT_PATH}/libcppa_static.a ${LD_FLAGS})
+if ("${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes")
+  set (CAF_LIBRARY ${LIBRARY_OUTPUT_PATH}/libcaf_static.a ${LD_FLAGS})
 else ()
   if (APPLE)
     if ("${CMAKE_GENERATOR}" STREQUAL "Xcode")
-      set (CPPA_LIBRARY "-lcppa")
+      set (CAF_LIBRARY "-lcaf")
     else ()
-      set (CPPA_LIBRARY ${LIBRARY_OUTPUT_PATH}/libcppa.dylib)
+      set (CAF_LIBRARY ${LIBRARY_OUTPUT_PATH}/libcaf.dylib)
     endif ()
-    #set (CPPA_LIBRARY -L${LIBRARY_OUTPUT_PATH} -lcppa)
+    #set (CAF_LIBRARY -L${LIBRARY_OUTPUT_PATH} -lcaf)
   elseif (UNIX)
-    set (CPPA_LIBRARY ${LIBRARY_OUTPUT_PATH}/libcppa.so)
+    set (CAF_LIBRARY ${LIBRARY_OUTPUT_PATH}/libcaf.so)
   elseif (MINGW)
-    set (CPPA_LIBRARY ${LIBRARY_OUTPUT_PATH}/libcppa.dll)
+    set (CAF_LIBRARY ${LIBRARY_OUTPUT_PATH}/libcaf.dll)
   else ()
     message (SEND_FATAL "Host platform not supported ...")
   endif ()
 endif ()
 
 # set up subdirectories
-if (NOT "${CPPA_NO_UNIT_TESTS}" STREQUAL "yes")
+if (NOT "${CAF_NO_UNIT_TESTS}" STREQUAL "yes")
   enable_testing()
   add_subdirectory(unit_testing)
-  if ("${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes")
-    add_dependencies(all_unit_tests libcppaStatic)
+  if ("${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes")
+    add_dependencies(all_unit_tests libcafStatic)
   else ()
-    add_dependencies(all_unit_tests libcppa)
+    add_dependencies(all_unit_tests libcaf)
   endif ()
 endif ()
-if (NOT "${CPPA_NO_EXAMPLES}" STREQUAL "yes")
+if (NOT "${CAF_NO_EXAMPLES}" STREQUAL "yes")
   add_subdirectory(examples)
-  if ("${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes")
-    add_dependencies(all_examples libcppaStatic)
+  if ("${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes")
+    add_dependencies(all_examples libcafStatic)
   else ()
-    add_dependencies(all_examples libcppa)
+    add_dependencies(all_examples libcaf)
   endif ()
 endif ()
 
@@ -313,21 +312,21 @@ endif (DOXYGEN_FOUND)
 
 # set variables for summary
 set(LOG_LEVEL_STR "none")
-if (CPPA_LOG_LEVEL)
-  if (${CPPA_LOG_LEVEL} EQUAL 0)
+if (CAF_LOG_LEVEL)
+  if (${CAF_LOG_LEVEL} EQUAL 0)
     set(LOG_LEVEL_STR "ERROR")
-  elseif (${CPPA_LOG_LEVEL} EQUAL 1)
+  elseif (${CAF_LOG_LEVEL} EQUAL 1)
     set(LOG_LEVEL_STR "WARNING")
-  elseif (${CPPA_LOG_LEVEL} EQUAL 2)
+  elseif (${CAF_LOG_LEVEL} EQUAL 2)
     set(LOG_LEVEL_STR "INFO")
-  elseif (${CPPA_LOG_LEVEL} EQUAL 3)
+  elseif (${CAF_LOG_LEVEL} EQUAL 3)
     set(LOG_LEVEL_STR "DEBUG")
-  elseif (${CPPA_LOG_LEVEL} EQUAL 4)
+  elseif (${CAF_LOG_LEVEL} EQUAL 4)
     set(LOG_LEVEL_STR "TRACE")
   else ()
     set(LOG_LEVEL_STR "invalid")
   endif ()
-endif (CPPA_LOG_LEVEL)
+endif (CAF_LOG_LEVEL)
 
 macro (toYesNo in out)
   if (${in})
@@ -345,36 +344,36 @@ macro (invertYesNo in out)
   endif ()
 endmacro ()
 
-toYesNo(ENABLE_DEBUG DEBUG_MODE_STR)
+toYesNo(CAF_ENABLE_RUNTIME_CHECKS DEBUG_MODE_STR)
 toYesNo(ENABLE_OPENCL BUILD_OPENCL_STR)
 toYesNo(DISABLE_MEM_MANAGEMENT DISABLE_MEM_MANAGEMENT_STR)
-invertYesNo(CPPA_NO_EXAMPLES BUILD_EXAMPLES)
-invertYesNo(CPPA_NO_UNIT_TESTS BUILD_UNIT_TESTS)
+invertYesNo(CAF_NO_EXAMPLES BUILD_EXAMPLES)
+invertYesNo(CAF_NO_UNIT_TESTS BUILD_UNIT_TESTS)
 invertYesNo(DISABLE_MEM_MANAGEMENT_STR WITH_MEM_MANAGEMENT)
 
-if (NOT "${CPPA_BUILD_STATIC}" STREQUAL "yes")
-  set(CPPA_BUILD_STATIC "no")
+if (NOT "${CAF_BUILD_STATIC}" STREQUAL "yes")
+  set(CAF_BUILD_STATIC "no")
 endif ()
 
-if (NOT "${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes")
-  set(CPPA_BUILD_STATIC_ONLY "no")
+if (NOT "${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes")
+  set(CAF_BUILD_STATIC_ONLY "no")
 else ()
-  set(CPPA_BUILD_STATIC "yes")
+  set(CAF_BUILD_STATIC "yes")
 endif ()
 
 # done (print summary)
 message(STATUS
         "\n====================|  Build Summary  |===================="
         "\n"
-        "\nLibcppa version:   ${LIBRARY_VERSION}"
+        "\nLibcaf version:   ${LIBRARY_VERSION}"
         "\n"
         "\nBuild type:        ${CMAKE_BUILD_TYPE}"
         "\nDebug mode:        ${DEBUG_MODE_STR}"
         "\nLog level:         ${LOG_LEVEL_STR}"
         "\nBuild examples:    ${BUILD_EXAMPLES}"
         "\nBuild unit tests:  ${BUILD_UNIT_TESTS}"
-        "\nBuild static:      ${CPPA_BUILD_STATIC}"
-        "\nBulid static only: ${CPPA_BUILD_STATIC_ONLY}"
+        "\nBuild static:      ${CAF_BUILD_STATIC}"
+        "\nBulid static only: ${CAF_BUILD_STATIC_ONLY}"
         "\nWith mem. mgmt.:   ${WITH_MEM_MANAGEMENT}"
         "\n"
         "\nCXX:               ${CMAKE_CXX_COMPILER}"

@@ -15,11 +15,13 @@
 #include <sstream>
 #include <iostream>
 
+#include "caf/all.hpp"
+
+// the options_description API is deprecated
 #include "cppa/opt.hpp"
-#include "cppa/cppa.hpp"
 
 using namespace std;
-using namespace cppa;
+using namespace caf;
 
 struct line { string str; };
 

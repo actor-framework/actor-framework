@@ -16,13 +16,13 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#include "cppa/message.hpp"
-#include "cppa/message_handler.hpp"
+#include "caf/message.hpp"
+#include "caf/message_handler.hpp"
 
-#include "cppa/detail/singletons.hpp"
-#include "cppa/detail/decorated_tuple.hpp"
+#include "caf/detail/singletons.hpp"
+#include "caf/detail/decorated_tuple.hpp"
 
-namespace cppa {
+namespace caf {
 
 message::message(detail::message_data* ptr) : m_vals(ptr) {}
 
@@ -38,34 +38,34 @@ message& message::operator=(message&& other) {
 void message::reset() { m_vals.reset(); }
 
 void* message::mutable_at(size_t p) {
-    CPPA_REQUIRE(m_vals);
+    CAF_REQUIRE(m_vals);
     return m_vals->mutable_at(p);
 }
 
 const void* message::at(size_t p) const {
-    CPPA_REQUIRE(m_vals);
+    CAF_REQUIRE(m_vals);
     return m_vals->at(p);
 }
 
 const uniform_type_info* message::type_at(size_t p) const {
-    CPPA_REQUIRE(m_vals);
+    CAF_REQUIRE(m_vals);
     return m_vals->type_at(p);
 }
 
 bool message::equals(const message& other) const {
-    CPPA_REQUIRE(m_vals);
+    CAF_REQUIRE(m_vals);
     return m_vals->equals(*other.vals());
 }
 
 message message::drop(size_t n) const {
-    CPPA_REQUIRE(m_vals);
+    CAF_REQUIRE(m_vals);
     if (n == 0) return *this;
     if (n >= size()) return message{};
     return message{detail::decorated_tuple::create(m_vals, n)};
 }
 
 message message::drop_right(size_t n) const {
-    CPPA_REQUIRE(m_vals);
+    CAF_REQUIRE(m_vals);
     if (n == 0) return *this;
     if (n >= size()) return message{};
     std::vector<size_t> mapping(size() - n);
@@ -78,4 +78,4 @@ optional<message> message::apply(message_handler handler) {
     return handler(*this);
 }
 
-} // namespace cppa
+} // namespace caf

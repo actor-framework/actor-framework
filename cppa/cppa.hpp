@@ -16,12 +16,24 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #ifndef CPPA_CPPA_HPP
 #define CPPA_CPPA_HPP
 
 // <backward_compatibility version="0.9" whole_file="yes">
-#include "cppa/all.hpp"
+
+// include new header
+#include "caf/all.hpp"
+
+// include compatibility headers
+#include "cppa/opt.hpp"
+#include "cppa/cow_tuple.hpp"
+#include "cppa/remote_actor.hpp"
+#include "cppa/options_description.hpp"
+#include "cppa/publish_local_groups.hpp"
+
+// set old namespace to new namespace
+namespace cppa = caf;
+
 // </backward_compatibility>
 
 #endif // CPPA_CPPA_HPP

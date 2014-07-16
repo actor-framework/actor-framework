@@ -20,15 +20,15 @@
 #include <limits>
 #include <stdexcept>
 
-#include "cppa/attachable.hpp"
-#include "cppa/exit_reason.hpp"
-#include "cppa/detail/actor_registry.hpp"
+#include "caf/attachable.hpp"
+#include "caf/exit_reason.hpp"
+#include "caf/detail/actor_registry.hpp"
 
-#include "cppa/locks.hpp"
-#include "cppa/detail/logging.hpp"
-#include "cppa/detail/shared_spinlock.hpp"
+#include "caf/locks.hpp"
+#include "caf/detail/logging.hpp"
+#include "caf/detail/shared_spinlock.hpp"
 
-namespace cppa {
+namespace caf {
 namespace detail {
 
 namespace {
@@ -52,7 +52,7 @@ actor_registry::value_type actor_registry::get_entry(actor_id key) const {
     if (i != m_entries.end()) {
         return i->second;
     }
-    CPPA_LOG_DEBUG("key not found, assume the actor no longer exists: " << key);
+    CAF_LOG_DEBUG("key not found, assume the actor no longer exists: " << key);
     return {nullptr, exit_reason::unknown};
 }
 
@@ -69,7 +69,7 @@ void actor_registry::put(actor_id key, const abstract_actor_ptr& val) {
         }
     }
     // attach functor without lock
-    CPPA_LOG_INFO("added actor with ID " << key);
+    CAF_LOG_INFO("added actor with ID " << key);
     actor_registry* reg = this;
     val->attach_functor([key, reg](uint32_t reason) {
         reg->erase(key, reason);
@@ -81,7 +81,7 @@ void actor_registry::erase(actor_id key, uint32_t reason) {
     auto i = m_entries.find(key);
     if (i != m_entries.end()) {
         auto& entry = i->second;
-        CPPA_LOG_INFO("erased actor with ID " << key << ", reason " << reason);
+        CAF_LOG_INFO("erased actor with ID " << key << ", reason " << reason);
         entry.first = nullptr;
         entry.second = reason;
     }
@@ -92,8 +92,8 @@ uint32_t actor_registry::next_id() {
 }
 
 void actor_registry::inc_running() {
-#   if CPPA_LOG_LEVEL >= CPPA_DEBUG
-        CPPA_LOG_DEBUG("new value = " << ++m_running);
+#   if CAF_LOG_LEVEL >= CAF_DEBUG
+        CAF_LOG_DEBUG("new value = " << ++m_running);
 #   else
         ++m_running;
 #   endif
@@ -109,18 +109,18 @@ void actor_registry::dec_running() {
         std::unique_lock<std::mutex> guard(m_running_mtx);
         m_running_cv.notify_all();
     }
-    CPPA_LOG_DEBUG(CPPA_ARG(new_val));
+    CAF_LOG_DEBUG(CAF_ARG(new_val));
 }
 
 void actor_registry::await_running_count_equal(size_t expected) {
-    CPPA_REQUIRE(expected == 0 || expected == 1);
-    CPPA_LOG_TRACE(CPPA_ARG(expected));
+    CAF_REQUIRE(expected == 0 || expected == 1);
+    CAF_LOG_TRACE(CAF_ARG(expected));
     std::unique_lock<std::mutex> guard{m_running_mtx};
     while (m_running != expected) {
-        CPPA_LOG_DEBUG("count = " << m_running.load());
+        CAF_LOG_DEBUG("count = " << m_running.load());
         m_running_cv.wait(guard);
     }
 }
 
 } // namespace detail
-} // namespace cppa
+} // namespace caf

@@ -1,12 +1,12 @@
 #include <iostream>
-#include "cppa/cppa.hpp"
-#include "cppa/to_string.hpp"
+#include "caf/all.hpp"
+#include "caf/to_string.hpp"
 
 using std::cout;
 using std::endl;
 using std::make_pair;
 
-using namespace cppa;
+using namespace caf;
 
 // the foo class from example 3
 class foo {

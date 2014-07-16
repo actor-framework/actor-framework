@@ -15,28 +15,27 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #include <iostream>
 
-#include "cppa/none.hpp"
+#include "caf/none.hpp"
 
-#include "cppa/config.hpp"
+#include "caf/config.hpp"
 
-#include "cppa/detail/logging.hpp"
-#include "cppa/detail/singletons.hpp"
-#include "cppa/detail/scope_guard.hpp"
+#include "caf/detail/logging.hpp"
+#include "caf/detail/singletons.hpp"
+#include "caf/detail/scope_guard.hpp"
 
-#include "cppa/io/broker.hpp"
-#include "cppa/io/middleman.hpp"
+#include "caf/io/broker.hpp"
+#include "caf/io/middleman.hpp"
 
-#include "cppa/detail/make_counted.hpp"
-#include "cppa/detail/actor_registry.hpp"
-#include "cppa/detail/sync_request_bouncer.hpp"
+#include "caf/detail/make_counted.hpp"
+#include "caf/detail/actor_registry.hpp"
+#include "caf/detail/sync_request_bouncer.hpp"
 
 using std::cout;
 using std::endl;
 
-namespace cppa {
+namespace caf {
 namespace io {
 
 broker::servant::~servant() {
@@ -50,14 +49,14 @@ void broker::servant::set_broker(broker* new_broker) {
 }
 
 void broker::servant::disconnect() {
-    CPPA_LOG_TRACE("");
+    CAF_LOG_TRACE("");
     if (!m_disconnected) {
-        CPPA_LOG_DEBUG("disconnect servant from broker");
+        CAF_LOG_DEBUG("disconnect servant from broker");
         m_disconnected = true;
         remove_from_broker();
         if (m_broker->exit_reason() == exit_reason::not_exited) {
             if (m_broker->m_running) {
-                CPPA_LOG_DEBUG("broker is running, push message to cache");
+                CAF_LOG_DEBUG("broker is running, push message to cache");
                 // push this message to the cache to make sure we
                 // don't have interleaved message handlers
                 auto e = mailbox_element::create(m_broker->address(),
@@ -67,7 +66,7 @@ void broker::servant::disconnect() {
                 .push_to_cache(unique_mailbox_element_pointer{e});
             }
             else {
-                CPPA_LOG_DEBUG("broker is not running, invoke handler");
+                CAF_LOG_DEBUG("broker is not running, invoke handler");
                 m_broker->enqueue(m_broker->address(),
                                   message_id::invalid,
                                   disconnect_message(),
@@ -84,12 +83,12 @@ broker::scribe::scribe(broker* parent, connection_handle hdl)
 }
 
 void broker::scribe::remove_from_broker() {
-    CPPA_LOG_TRACE("hdl = " << hdl().id());
+    CAF_LOG_TRACE("hdl = " << hdl().id());
     m_broker->m_scribes.erase(hdl());
 }
 
 broker::scribe::~scribe() {
-    CPPA_LOG_TRACE("");
+    CAF_LOG_TRACE("");
 }
 
 message broker::scribe::disconnect_message() {
@@ -97,7 +96,7 @@ message broker::scribe::disconnect_message() {
 }
 
 void broker::scribe::consume(const void*, size_t num_bytes) {
-    CPPA_LOG_TRACE(CPPA_ARG(num_bytes));
+    CAF_LOG_TRACE(CAF_ARG(num_bytes));
     auto& buf = rd_buf();
     buf.resize(num_bytes);                       // make sure size is correct
     read_msg().buf.swap(buf);                    // swap into message to client
@@ -109,8 +108,8 @@ void broker::scribe::consume(const void*, size_t num_bytes) {
 }
 
 void broker::scribe::io_failure(network::operation op) {
-    CPPA_LOG_TRACE("id = " << hdl().id()
-                   << ", " << CPPA_TARG(op, static_cast<int>));
+    CAF_LOG_TRACE("id = " << hdl().id()
+                   << ", " << CAF_TARG(op, static_cast<int>));
     // keep compiler happy when compiling w/o logging
     static_cast<void>(op);
     disconnect();
@@ -123,11 +122,11 @@ broker::doorman::doorman(broker* parent, accept_handle hdl)
 }
 
 broker::doorman::~doorman() {
-    CPPA_LOG_TRACE("");
+    CAF_LOG_TRACE("");
 }
 
 void broker::doorman::remove_from_broker() {
-    CPPA_LOG_TRACE("hdl = " << hdl().id());
+    CAF_LOG_TRACE("hdl = " << hdl().id());
     m_broker->m_doormen.erase(hdl());
 }
 
@@ -136,8 +135,8 @@ message broker::doorman::disconnect_message() {
 }
 
 void broker::doorman::io_failure(network::operation op) {
-    CPPA_LOG_TRACE("id = " << hdl().id()
-                   << ", " << CPPA_TARG(op, static_cast<int>));
+    CAF_LOG_TRACE("id = " << hdl().id()
+                   << ", " << CAF_TARG(op, static_cast<int>));
     // keep compiler happy when compiling w/o logging
     static_cast<void>(op);
     disconnect();
@@ -152,8 +151,8 @@ class broker::continuation {
             , m_mid(mid), m_data(std::move(msg)) { }
 
     inline void operator()() {
-        CPPA_PUSH_AID(m_self->id());
-        CPPA_LOG_TRACE("");
+        CAF_PUSH_AID(m_self->id());
+        CAF_LOG_TRACE("");
         m_self->invoke_message(m_from, m_mid, m_data);
     }
 
@@ -169,14 +168,14 @@ class broker::continuation {
 void broker::invoke_message(const actor_addr& sender,
                             message_id mid,
                             message& msg) {
-    CPPA_LOG_TRACE(CPPA_TARG(msg, to_string));
+    CAF_LOG_TRACE(CAF_TARG(msg, to_string));
     m_running = true;
     auto sg = detail::make_scope_guard([=] {
         m_running = false;
     });
     if (   planned_exit_reason() != exit_reason::not_exited
         || bhvr_stack().empty()) {
-        CPPA_LOG_DEBUG("actor already finished execution"
+        CAF_LOG_DEBUG("actor already finished execution"
                        << ", planned_exit_reason = " << planned_exit_reason()
                        << ", bhvr_stack().empty() = " << bhvr_stack().empty());
         if (mid.valid()) {
@@ -194,7 +193,7 @@ void broker::invoke_message(const actor_addr& sender,
         auto mid = bhvr_stack().back_id();
         switch (m_invoke_policy.handle_message(this, &m_dummy_node, bhvr, mid)) {
             case policy::hm_msg_handled: {
-                CPPA_LOG_DEBUG("handle_message returned hm_msg_handled");
+                CAF_LOG_DEBUG("handle_message returned hm_msg_handled");
                 while (   !bhvr_stack().empty()
                        && planned_exit_reason() == exit_reason::not_exited
                        && invoke_message_from_cache()) {
@@ -203,11 +202,11 @@ void broker::invoke_message(const actor_addr& sender,
                 break;
             }
             case policy::hm_drop_msg:
-                CPPA_LOG_DEBUG("handle_message returned hm_drop_msg");
+                CAF_LOG_DEBUG("handle_message returned hm_drop_msg");
                 break;
             case policy::hm_skip_msg:
             case policy::hm_cache_msg: {
-                CPPA_LOG_DEBUG("handle_message returned hm_skip_msg or hm_cache_msg");
+                CAF_LOG_DEBUG("handle_message returned hm_skip_msg or hm_cache_msg");
                 auto e = mailbox_element::create(sender, mid,
                                                  std::move(m_dummy_node.msg));
                 m_priority_policy.push_to_cache(unique_mailbox_element_pointer{e});
@@ -216,14 +215,14 @@ void broker::invoke_message(const actor_addr& sender,
         }
     }
     catch (std::exception& e) {
-        CPPA_LOG_ERROR("broker killed due to an unhandled exception: "
+        CAF_LOG_ERROR("broker killed due to an unhandled exception: "
                        << to_verbose_string(e));
         // keep compiler happy in non-debug mode
         static_cast<void>(e);
         quit(exit_reason::unhandled_exception);
     }
     catch (...) {
-        CPPA_LOG_ERROR("broker killed due to an unknown exception");
+        CAF_LOG_ERROR("broker killed due to an unknown exception");
         quit(exit_reason::unhandled_exception);
     }
     // restore dummy node
@@ -236,7 +235,7 @@ void broker::invoke_message(const actor_addr& sender,
         //deref();
     }
     else if (bhvr_stack().empty()) {
-        CPPA_LOG_DEBUG("bhvr_stack().empty(), quit for normal exit reason");
+        CAF_LOG_DEBUG("bhvr_stack().empty(), quit for normal exit reason");
         quit(exit_reason::normal);
         cleanup(planned_exit_reason());
         // release implicit reference count held by MM
@@ -245,11 +244,11 @@ void broker::invoke_message(const actor_addr& sender,
 }
 
 bool broker::invoke_message_from_cache() {
-    CPPA_LOG_TRACE("");
+    CAF_LOG_TRACE("");
     auto bhvr = bhvr_stack().back();
     auto mid = bhvr_stack().back_id();
     auto e = m_priority_policy.cache_end();
-    CPPA_LOG_DEBUG(std::distance(m_priority_policy.cache_begin(), e)
+    CAF_LOG_DEBUG(std::distance(m_priority_policy.cache_begin(), e)
                    << " elements in cache");
     for (auto i = m_priority_policy.cache_begin(); i != e; ++i) {
         auto res = m_invoke_policy.invoke_message(this, *i, bhvr, mid);
@@ -268,7 +267,6 @@ void broker::write(connection_handle hdl, size_t bs, const void* buf) {
     auto last = first + bs;
     out.insert(out.end(), first, last);
 }
-
 
 void broker::enqueue(const actor_addr& sender,
                      message_id mid,
@@ -289,7 +287,7 @@ broker::broker()
 }
 
 void broker::cleanup(uint32_t reason) {
-    CPPA_LOG_TRACE(CPPA_ARG(reason));
+    CAF_LOG_TRACE(CAF_ARG(reason));
     close_all();
     super::cleanup(reason);
     if (!m_hidden) detail::singletons::get_actor_registry()->dec_running();
@@ -300,13 +298,13 @@ void broker::launch(bool is_hidden, execution_unit*) {
         m_hidden = false;
         detail::singletons::get_actor_registry()->inc_running();
     }
-    CPPA_PUSH_AID(id());
-    CPPA_LOGF_TRACE("init and launch broker with id " << id());
+    CAF_PUSH_AID(id());
+    CAF_LOGF_TRACE("init and launch broker with id " << id());
     // we want to make sure initialization is executed in MM context
     broker_ptr self = this;
     self->become(
         on(atom("INITMSG")) >> [self] {
-            CPPA_LOGF_TRACE(CPPA_MARG(self, get));
+            CAF_LOGF_TRACE(CAF_MARG(self, get));
             self->unbecome();
             // launch backends now, because user-defined initialization
             // might call functions like add_connection
@@ -324,7 +322,7 @@ void broker::launch(bool is_hidden, execution_unit*) {
 }
 
 void broker::configure_read(connection_handle hdl, receive_policy::config cfg) {
-    CPPA_LOG_TRACE(CPPA_MARG(hdl, id) << ", cfg = {"
+    CAF_LOG_TRACE(CAF_MARG(hdl, id) << ", cfg = {"
                           << static_cast<int>(cfg.first)
                           << ", " << cfg.second << "}");
     by_id(hdl).configure_read(cfg);
@@ -339,7 +337,7 @@ broker::buffer_type& broker::wr_buf(connection_handle hdl) {
 }
 
 broker::~broker() {
-    CPPA_LOG_TRACE("");
+    CAF_LOG_TRACE("");
 }
 
 void broker::close(connection_handle hdl) {
@@ -351,7 +349,7 @@ void broker::close(accept_handle hdl) {
 }
 
 void broker::close_all() {
-    CPPA_LOG_TRACE("");
+    CAF_LOG_TRACE("");
     while (!m_doormen.empty()) {
         // stop_reading will remove the doorman from m_doormen
         m_doormen.begin()->second->stop_reading();
@@ -381,4 +379,4 @@ network::multiplexer& broker::backend() {
 }
 
 } // namespace io
-} // namespace cppa
+} // namespace caf

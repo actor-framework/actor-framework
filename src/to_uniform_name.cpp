@@ -25,19 +25,19 @@
 #include <stdexcept>
 #include <algorithm>
 
-#include "cppa/atom.hpp"
-#include "cppa/actor.hpp"
-#include "cppa/channel.hpp"
-#include "cppa/message.hpp"
-#include "cppa/message.hpp"
-#include "cppa/abstract_group.hpp"
+#include "caf/atom.hpp"
+#include "caf/actor.hpp"
+#include "caf/channel.hpp"
+#include "caf/message.hpp"
+#include "caf/message.hpp"
+#include "caf/abstract_group.hpp"
 
-#include "cppa/detail/demangle.hpp"
-#include "cppa/detail/safe_equal.hpp"
-#include "cppa/detail/singletons.hpp"
-#include "cppa/detail/scope_guard.hpp"
-#include "cppa/detail/to_uniform_name.hpp"
-#include "cppa/detail/uniform_type_info_map.hpp"
+#include "caf/detail/demangle.hpp"
+#include "caf/detail/safe_equal.hpp"
+#include "caf/detail/singletons.hpp"
+#include "caf/detail/scope_guard.hpp"
+#include "caf/detail/to_uniform_name.hpp"
+#include "caf/detail/uniform_type_info_map.hpp"
 
 //#define DEBUG_PARSER
 
@@ -49,7 +49,7 @@
         std::cout << std::string(s_indentation, ' ') << ">>> " << message      \
                   << std::endl;                                                \
         s_indentation += 2;                                                    \
-        auto ____sg = cppa::detail::make_scope_guard([] { s_indentation -= 2; })
+        auto ____sg = caf::detail::make_scope_guard([] { s_indentation -= 2; })
 #   define PARSER_OUT(condition, message)                                      \
         if (condition) {                                                       \
             std::cout << std::string(s_indentation, ' ') << "### " << message  \
@@ -61,7 +61,7 @@
 #   define PARSER_OUT(unused1, unused2) static_cast<void>(0)
 #endif
 
-namespace cppa {
+namespace caf {
 namespace detail {
 
 namespace {
@@ -243,7 +243,7 @@ class parse_tree {
         }
         if (result.m_children.empty()) {
             // no children -> leaf node; parse non-template part now
-            CPPA_REQUIRE(subranges.size() < 2);
+            CAF_REQUIRE(subranges.size() < 2);
             vector<range> non_template_ranges;
             if (subranges.empty()) {
                 non_template_ranges.emplace_back(first, last);
@@ -406,4 +406,4 @@ std::string to_uniform_name(const std::type_info& tinfo) {
 }
 
 } // namespace detail
-} // namespace cppa
+} // namespace caf

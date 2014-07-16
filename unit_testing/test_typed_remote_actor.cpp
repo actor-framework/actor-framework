@@ -6,11 +6,11 @@
 #include <functional>
 
 #include "test.hpp"
-#include "cppa/all.hpp"
-#include "cppa/io/all.hpp"
+#include "caf/all.hpp"
+#include "caf/io/all.hpp"
 
 using namespace std;
-using namespace cppa;
+using namespace caf;
 using namespace boost::actor_io;
 
 struct ping {
@@ -36,7 +36,7 @@ using client_type = typed_actor<>;
 
 server_type::behavior_type server() {
     return {
-        [](const ping & p)->pong{CPPA_CHECKPOINT();
+        [](const ping & p)->pong{CAF_CHECKPOINT();
             return pong{p.value};
         }
     };
@@ -47,26 +47,26 @@ void run_client(const char* host, uint16_t port) {
     // when trying to connect to get an untyped
     // handle to the server
     try {
-        remote_actor(host, port);
+        io::remote_actor(host, port);
     }
     catch (std::runtime_error& e) {
         cout << e.what() << endl;
-        CPPA_CHECKPOINT();
+        CAF_CHECKPOINT();
     }
     catch (std::exception& e) {
         cerr << "unexpected: " << e.what() << endl;
     }
-    CPPA_CHECKPOINT();
-    auto serv = typed_remote_actor<server_type::interface>(host, port);
-    CPPA_CHECKPOINT();
+    CAF_CHECKPOINT();
+    auto serv = io::typed_remote_actor<server_type::interface>(host, port);
+    CAF_CHECKPOINT();
     scoped_actor self;
     self->sync_send(serv, ping{42})
-        .await([](const pong& p) { CPPA_CHECK_EQUAL(p.value, 42); });
+        .await([](const pong& p) { CAF_CHECK_EQUAL(p.value, 42); });
     anon_send_exit(serv, exit_reason::user_shutdown);
     self->monitor(serv);
     self->receive([&](const down_msg& dm) {
-        CPPA_CHECK_EQUAL(dm.reason, exit_reason::user_shutdown);
-        CPPA_CHECK(dm.source == serv);
+        CAF_CHECK_EQUAL(dm.reason, exit_reason::user_shutdown);
+        CAF_CHECK(dm.source == serv);
     });
 }
 
@@ -76,7 +76,7 @@ uint16_t run_server() {
     for (;;) {
         try {
             typed_publish(ref, port, "127.0.0.1");
-            CPPA_LOGF_DEBUG("running on port " << port);
+            CAF_LOGF_DEBUG("running on port " << port);
             return port;
         }
         catch (bind_failure&) {
@@ -95,24 +95,24 @@ int main(int argc, char** argv) {
             },
             on("-s") >> [] { run_server(); }, on() >> [&] {
         auto port = run_server();
-        CPPA_CHECKPOINT();
+        CAF_CHECKPOINT();
         ostringstream oss;
         oss << argv[0] << " -c " << port << to_dev_null;
         // execute client_part() in a separate process,
         // connected via localhost socket
         auto child = thread([&oss]() {
-            CPPA_LOGC_TRACE("NONE", "main$thread_launcher", "");
+            CAF_LOGC_TRACE("NONE", "main$thread_launcher", "");
             string cmdstr = oss.str();
             if (system(cmdstr.c_str()) != 0) {
-                CPPA_PRINTERR("FATAL: command \"" << cmdstr << "\" failed!");
+                CAF_PRINTERR("FATAL: command \"" << cmdstr << "\" failed!");
                 abort();
             }
         });
-        CPPA_CHECKPOINT();
+        CAF_CHECKPOINT();
         child.join();
     }});
-    CPPA_CHECKPOINT();
+    CAF_CHECKPOINT();
     await_all_actors_done();
     shutdown();
-    return CPPA_TEST_RESULT();
+    return CAF_TEST_RESULT();
 }

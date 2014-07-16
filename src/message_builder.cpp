@@ -18,11 +18,11 @@
 
 #include <vector>
 
-#include "cppa/message_builder.hpp"
-#include "cppa/message_handler.hpp"
-#include "cppa/uniform_type_info.hpp"
+#include "caf/message_builder.hpp"
+#include "caf/message_handler.hpp"
+#include "caf/uniform_type_info.hpp"
 
-namespace cppa {
+namespace caf {
 
 class message_builder::dynamic_msg_data : public detail::message_data {
 
@@ -44,12 +44,12 @@ class message_builder::dynamic_msg_data : public detail::message_data {
             : super(true), m_elements(std::move(data)) { }
 
     const void* at(size_t pos) const override {
-        CPPA_REQUIRE(pos < size());
+        CAF_REQUIRE(pos < size());
         return m_elements[pos]->val;
     }
 
     void* mutable_at(size_t pos) override {
-        CPPA_REQUIRE(pos < size());
+        CAF_REQUIRE(pos < size());
         return m_elements[pos]->val;
     }
 
@@ -62,7 +62,7 @@ class message_builder::dynamic_msg_data : public detail::message_data {
     }
 
     const uniform_type_info* type_at(size_t pos) const override {
-        CPPA_REQUIRE(pos < size());
+        CAF_REQUIRE(pos < size());
         return m_elements[pos]->ti;
     }
 
@@ -125,4 +125,4 @@ const message_builder::dynamic_msg_data* message_builder::data() const {
     return static_cast<const dynamic_msg_data*>(m_data.get());
 }
 
-} // namespace cppa
+} // namespace caf

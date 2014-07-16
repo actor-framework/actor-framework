@@ -16,11 +16,10 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
+#include "caf/locks.hpp"
+#include "caf/actor_companion.hpp"
 
-#include "cppa/locks.hpp"
-#include "cppa/actor_companion.hpp"
-
-namespace cppa {
+namespace caf {
 
 void actor_companion::disconnect(std::uint32_t rsn) {
     enqueue_handler tmp;
@@ -46,4 +45,4 @@ void actor_companion::enqueue(const actor_addr& sender, message_id mid,
     m_on_enqueue(std::move(ptr));
 }
 
-} // namespace cppa
+} // namespace caf

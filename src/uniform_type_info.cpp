@@ -16,7 +16,7 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#include "cppa/config.hpp"
+#include "caf/config.hpp"
 
 #include <map>
 #include <set>
@@ -28,24 +28,24 @@
 #include <cstdint>
 #include <type_traits>
 
-#include "cppa/intrusive_ptr.hpp"
+#include "caf/intrusive_ptr.hpp"
 
-#include "cppa/atom.hpp"
-#include "cppa/actor.hpp"
-#include "cppa/message.hpp"
-#include "cppa/message.hpp"
-#include "cppa/announce.hpp"
-#include "cppa/duration.hpp"
-#include "cppa/uniform_type_info.hpp"
+#include "caf/atom.hpp"
+#include "caf/actor.hpp"
+#include "caf/message.hpp"
+#include "caf/message.hpp"
+#include "caf/announce.hpp"
+#include "caf/duration.hpp"
+#include "caf/uniform_type_info.hpp"
 
-#include "cppa/detail/logging.hpp"
-#include "cppa/detail/demangle.hpp"
-#include "cppa/detail/singletons.hpp"
-#include "cppa/detail/actor_registry.hpp"
-#include "cppa/detail/to_uniform_name.hpp"
-#include "cppa/detail/uniform_type_info_map.hpp"
+#include "caf/detail/logging.hpp"
+#include "caf/detail/demangle.hpp"
+#include "caf/detail/singletons.hpp"
+#include "caf/detail/actor_registry.hpp"
+#include "caf/detail/to_uniform_name.hpp"
+#include "caf/detail/uniform_type_info_map.hpp"
 
-namespace cppa {
+namespace caf {
 
 namespace {
 inline detail::uniform_type_info_map& uti_map() {
@@ -68,7 +68,7 @@ const uniform_type_info* uniform_type_info::from(const std::type_info& tinf) {
         std::string error = "uniform_type_info::by_type_info(): ";
         error += detail::to_uniform_name(tinf);
         error += " is an unknown typeid name";
-        CPPA_LOGM_ERROR("cppa::uniform_type_info", error);
+        CAF_LOGM_ERROR("caf::uniform_type_info", error);
         throw std::runtime_error(error);
     }
     return result;
@@ -96,4 +96,4 @@ const uniform_type_info* uniform_typeid(const std::type_info& tinfo) {
     return uniform_type_info::from(tinfo);
 }
 
-} // namespace cppa
+} // namespace caf

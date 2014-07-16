@@ -20,7 +20,7 @@
 
 #include "test.hpp"
 
-#include "cppa/detail/single_reader_queue.hpp"
+#include "caf/detail/single_reader_queue.hpp"
 
 using std::begin;
 using std::end;
@@ -45,29 +45,29 @@ inline bool operator==(const iint& lhs, int rhs) { return lhs.value == rhs; }
 
 inline bool operator==(int lhs, const iint& rhs) { return lhs == rhs.value; }
 
-using iint_queue = cppa::detail::single_reader_queue<iint>;
+using iint_queue = caf::detail::single_reader_queue<iint>;
 
 int main() {
-    CPPA_TEST(test_intrusive_containers);
+    CAF_TEST(test_intrusive_containers);
 
-    cppa::detail::single_reader_queue<iint> q;
+    caf::detail::single_reader_queue<iint> q;
     q.enqueue(new iint(1));
     q.enqueue(new iint(2));
     q.enqueue(new iint(3));
 
-    CPPA_CHECK_EQUAL(3, s_iint_instances);
+    CAF_CHECK_EQUAL(3, s_iint_instances);
 
     auto x = q.try_pop();
-    CPPA_CHECK_EQUAL(x->value, 1);
+    CAF_CHECK_EQUAL(x->value, 1);
     delete x;
     x = q.try_pop();
-    CPPA_CHECK_EQUAL(x->value, 2);
+    CAF_CHECK_EQUAL(x->value, 2);
     delete x;
     x = q.try_pop();
-    CPPA_CHECK_EQUAL(x->value, 3);
+    CAF_CHECK_EQUAL(x->value, 3);
     delete x;
     x = q.try_pop();
-    CPPA_CHECK(x == nullptr);
+    CAF_CHECK(x == nullptr);
 
-    return CPPA_TEST_RESULT();
+    return CAF_TEST_RESULT();
 }

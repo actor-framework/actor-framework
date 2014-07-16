@@ -16,15 +16,15 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#include "cppa/all.hpp"
-#include "cppa/scheduler.hpp"
-#include "cppa/local_actor.hpp"
-#include "cppa/scoped_actor.hpp"
-#include "cppa/actor_ostream.hpp"
+#include "caf/all.hpp"
+#include "caf/scheduler.hpp"
+#include "caf/local_actor.hpp"
+#include "caf/scoped_actor.hpp"
+#include "caf/actor_ostream.hpp"
 
-#include "cppa/detail/singletons.hpp"
+#include "caf/detail/singletons.hpp"
 
-namespace cppa {
+namespace caf {
 
 actor_ostream::actor_ostream(actor self) : m_self(std::move(self)) {
     m_printer = detail::singletons::get_scheduling_coordinator()->printer();
@@ -40,12 +40,12 @@ actor_ostream& actor_ostream::flush() {
     return *this;
 }
 
-} // namespace cppa
+} // namespace caf
 
 namespace std {
 
-cppa::actor_ostream& endl(cppa::actor_ostream& o) { return o.write("\n"); }
+caf::actor_ostream& endl(caf::actor_ostream& o) { return o.write("\n"); }
 
-cppa::actor_ostream& flush(cppa::actor_ostream& o) { return o.flush(); }
+caf::actor_ostream& flush(caf::actor_ostream& o) { return o.flush(); }
 
 } // namespace std

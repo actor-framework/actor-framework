@@ -18,11 +18,14 @@
 #include <iostream>
 #include <functional>
 
+#include "caf/all.hpp"
+#include "caf/io/all.hpp"
+
+// the options_description API is deprecated
 #include "cppa/opt.hpp"
-#include "cppa/cppa.hpp"
 
 using namespace std;
-using namespace cppa;
+using namespace caf;
 
 // our "service"
 void calculator(event_based_actor* self) {
@@ -61,7 +64,7 @@ void client_bhvr(event_based_actor* self, const string& host, uint16_t port, con
     if (!server) {
         aout(self) << "*** try to connect to " << host << ":" << port << endl;
         try {
-            auto new_serv = remote_actor(host, port);
+            auto new_serv = io::remote_actor(host, port);
             self->monitor(new_serv);
             aout(self) << "reconnection succeeded" << endl;
             client_bhvr(self, host, port, new_serv);

@@ -16,11 +16,11 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#include "cppa/config.hpp"
+#include "caf/config.hpp"
 
 #include <limits>
 #include <thread>
-#include "cppa/detail/shared_spinlock.hpp"
+#include "caf/detail/shared_spinlock.hpp"
 
 namespace {
 
@@ -28,7 +28,7 @@ inline long min_long() { return std::numeric_limits<long>::min(); }
 
 } // namespace <anonymous>
 
-namespace cppa {
+namespace caf {
 namespace detail {
 
 shared_spinlock::shared_spinlock() : m_flag(0) {}
@@ -88,4 +88,4 @@ bool shared_spinlock::try_lock_shared() {
 }
 
 } // namespace detail
-} // namespace cppa
+} // namespace caf

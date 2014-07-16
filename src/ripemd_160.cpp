@@ -55,7 +55,7 @@
 \******************************************************************************/
 
 #include <cstring>
-#include "cppa/detail/ripemd_160.hpp"
+#include "caf/detail/ripemd_160.hpp"
 
 namespace {
 
@@ -376,7 +376,7 @@ void MDfinish(dword* MDbuf, const byte* strptr, dword lswlen, dword mswlen) {
 
 } // namespace <anonmyous>
 
-namespace cppa {
+namespace caf {
 namespace detail {
 
 void ripemd_160(std::array<uint8_t, 20>& storage, const std::string& data) {
@@ -413,4 +413,4 @@ void ripemd_160(std::array<uint8_t, 20>& storage, const std::string& data) {
 }
 
 } // namespace detail
-} // namespace cppa
+} // namespace caf

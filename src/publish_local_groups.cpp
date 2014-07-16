@@ -16,12 +16,11 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
+#include "caf/all.hpp"
 
-#include "cppa/all.hpp"
+#include "caf/io/publish_local_groups.hpp"
 
-#include "cppa/io/publish_local_groups.hpp"
-
-namespace cppa {
+namespace caf {
 namespace io {
 
 namespace {
@@ -54,4 +53,4 @@ void publish_local_groups(uint16_t port, const char* addr) {
 }
 
 } // namespace io
-} // namespace cppa
+} // namespace caf

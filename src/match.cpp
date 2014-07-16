@@ -16,16 +16,15 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-
 #include <vector>
 #include <string>
 #include <sstream>
 
-#include "cppa/match.hpp"
+#include "caf/match.hpp"
 
 using namespace std;
 
-namespace cppa {
+namespace caf {
 
 detail::match_helper match_split(const std::string& str, char delim, bool keep_empties) {
     message_builder result;
@@ -37,4 +36,4 @@ detail::match_helper match_split(const std::string& str, char delim, bool keep_e
     return result.to_message();
 }
 
-} // namespace cppa
+} // namespace caf

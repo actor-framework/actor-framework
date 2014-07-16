@@ -48,9 +48,8 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --no-unit-tests             build without unit tests
 
   Debugging:
-    --enable-debug              build with requirement checks at runtime
-                                (always sets --build-type=Debug implicitly)
-    --with-cppa-log-level=LVL   build with debugging output, possible values:
+    --with-runtime-checks       build with requirement checks at runtime
+    --with-log-level=LVL        build with debugging output, possible values:
                                   - ERROR
                                   - WARNING
                                   - INFO
@@ -155,7 +154,7 @@ configure ()
 builddir="$sourcedir/build"
 CMakeCacheEntries=""
 append_cache_entry CMAKE_INSTALL_PREFIX        PATH   /usr/local
-append_cache_entry ENABLE_DEBUG                BOOL   false
+append_cache_entry CAF_ENABLE_RUNTIME_CHECKS          BOOL   false
 
 # Parse arguments.
 while [ $# -ne 0 ]; do
@@ -175,8 +174,12 @@ while [ $# -ne 0 ]; do
         --prefix=*)
             append_cache_entry CMAKE_INSTALL_PREFIX PATH $optarg
             ;;
+        --with-runtime-checks)
+            append_cache_entry CAF_ENABLE_RUNTIME_CHECKS BOOL true
+            ;;
         --enable-debug)
-            append_cache_entry ENABLE_DEBUG BOOL true
+            echo "*** warning: --enable-debug is deprecated, please use --with-runtime-checks instead"
+            append_cache_entry CAF_ENABLE_RUNTIME_CHECKS BOOL true
             ;;
         --enable-address-sanitizer)
             append_cache_entry ENABLE_ADDRESS_SANITIZER BOOL true
@@ -194,7 +197,7 @@ while [ $# -ne 0 ]; do
         --more-clang-warnings)
             append_cache_entry MORE_CLANG_WARNINGS BOOL true
             ;;
-        --with-cppa-log-level=*)
+        --with-log-level=*)
             level=`echo "$optarg" | tr '[:lower:]' '[:upper:]'`
             case $level in
                 ERROR)

@@ -21,11 +21,11 @@
 #include <arpa/inet.h> // htonl
 #endif
 
-#include "cppa/cppa.hpp"
+#include "caf/all.hpp"
 
 using namespace std;
-using namespace cppa;
-using namespace cppa::io;
+using namespace caf;
+using namespace caf::io;
 
 // utility function to print an exit message with custom name
 void print_on_exit(const actor& ptr, const std::string& name) {

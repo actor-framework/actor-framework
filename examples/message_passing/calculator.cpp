@@ -3,13 +3,15 @@
  * for both the blocking and the event-based API.                             *
 \******************************************************************************/
 
+#include <tuple>
 #include <cassert>
 #include <iostream>
-#include "cppa/cppa.hpp"
+
+#include "caf/all.hpp"
 
 using std::cout;
 using std::endl;
-using namespace cppa;
+using namespace caf;
 
 // implementation using the blocking API
 void blocking_math_fun(blocking_actor* self) {
@@ -20,10 +22,10 @@ void blocking_math_fun(blocking_actor* self) {
         // - on<atom("plus"), int, int>()
         // - on(atom("plus"), val<int>, val<int>)
         on(atom("plus"), arg_match) >> [](int a, int b) {
-            return make_cow_tuple(atom("result"), a + b);
+            return std::make_tuple(atom("result"), a + b);
         },
         on(atom("minus"), arg_match) >> [](int a, int b) {
-            return make_cow_tuple(atom("result"), a - b);
+            return std::make_tuple(atom("result"), a - b);
         },
         on(atom("quit")) >> [&]() {
             // note: this actor uses the blocking API, hence self->quit()
@@ -37,10 +39,10 @@ void calculator(event_based_actor* self) {
     // execute this behavior until actor terminates
     self->become (
         on(atom("plus"), arg_match) >> [](int a, int b) {
-            return make_cow_tuple(atom("result"), a + b);
+            return std::make_tuple(atom("result"), a + b);
         },
         on(atom("minus"), arg_match) >> [](int a, int b) {
-            return make_cow_tuple(atom("result"), a - b);
+            return std::make_tuple(atom("result"), a - b);
         },
         on(atom("quit")) >> [=] {
             // terminate actor with normal exit reason

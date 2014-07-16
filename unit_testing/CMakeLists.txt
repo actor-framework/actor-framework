@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 2.8)
-project(cppa_unit_tests CXX)
+project(caf_unit_tests CXX)
 
 add_custom_target(all_unit_tests)
 
 macro(add_unit_test name)
   add_executable(test_${name} test_${name}.cpp test.cpp ${ARGN})
-  target_link_libraries(test_${name} ${CMAKE_DL_LIBS} ${CPPA_LIBRARY} ${PTHREAD_LIBRARIES} ${OPENCL_LIBRARIES})
+  target_link_libraries(test_${name} ${CMAKE_DL_LIBS} ${CAF_LIBRARY} ${PTHREAD_LIBRARIES} ${OPENCL_LIBRARIES})
   add_test(${name} ${EXECUTABLE_OUTPUT_PATH}/test_${name})
   add_dependencies(test_${name} all_unit_tests)
 endmacro()

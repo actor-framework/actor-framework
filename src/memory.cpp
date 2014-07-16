@@ -19,18 +19,18 @@
 #include <vector>
 #include <typeinfo>
 
-#include "cppa/detail/memory.hpp"
-#include "cppa/mailbox_element.hpp"
+#include "caf/detail/memory.hpp"
+#include "caf/mailbox_element.hpp"
 
 using namespace std;
 
-#ifdef CPPA_DISABLE_MEM_MANAGEMENT
+#ifdef CAF_DISABLE_MEM_MANAGEMENT
 
-int cppa_memory_keep_compiler_happy() { return 0; }
+int caf_memory_keep_compiler_happy() { return 0; }
 
-#else // CPPA_DISABLE_MEM_MANAGEMENT
+#else // CAF_DISABLE_MEM_MANAGEMENT
 
-namespace cppa {
+namespace caf {
 namespace detail {
 
 namespace {
@@ -83,6 +83,6 @@ instance_wrapper::~instance_wrapper() {
 }
 
 } // namespace detail
-} // namespace cppa
+} // namespace caf
 
-#endif // CPPA_DISABLE_MEM_MANAGEMENT
+#endif // CAF_DISABLE_MEM_MANAGEMENT

@@ -18,9 +18,9 @@
 
 #include <sstream>
 
-#include "cppa/duration.hpp"
+#include "caf/duration.hpp"
 
-namespace cppa {
+namespace caf {
 
 namespace {
 
@@ -56,4 +56,4 @@ std::string duration::to_string() const {
     return oss.str();
 }
 
-} // namespace cppa
+} // namespace caf

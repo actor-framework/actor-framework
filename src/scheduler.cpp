@@ -22,28 +22,28 @@
 #include <iostream>
 #include <condition_variable>
 
-#include "cppa/on.hpp"
-#include "cppa/send.hpp"
-#include "cppa/anything.hpp"
-#include "cppa/to_string.hpp"
-#include "cppa/scheduler.hpp"
-#include "cppa/local_actor.hpp"
-#include "cppa/scoped_actor.hpp"
-#include "cppa/system_messages.hpp"
+#include "caf/on.hpp"
+#include "caf/send.hpp"
+#include "caf/anything.hpp"
+#include "caf/to_string.hpp"
+#include "caf/scheduler.hpp"
+#include "caf/local_actor.hpp"
+#include "caf/scoped_actor.hpp"
+#include "caf/system_messages.hpp"
 
-#include "cppa/policy/fork_join.hpp"
-#include "cppa/policy/no_resume.hpp"
-#include "cppa/policy/no_scheduling.hpp"
-#include "cppa/policy/actor_policies.hpp"
-#include "cppa/policy/nestable_invoke.hpp"
-#include "cppa/policy/not_prioritizing.hpp"
-#include "cppa/policy/iterative_stealing.hpp"
+#include "caf/policy/fork_join.hpp"
+#include "caf/policy/no_resume.hpp"
+#include "caf/policy/no_scheduling.hpp"
+#include "caf/policy/actor_policies.hpp"
+#include "caf/policy/nestable_invoke.hpp"
+#include "caf/policy/not_prioritizing.hpp"
+#include "caf/policy/iterative_stealing.hpp"
 
-#include "cppa/detail/logging.hpp"
-#include "cppa/detail/proper_actor.hpp"
-#include "cppa/detail/actor_registry.hpp"
+#include "caf/detail/logging.hpp"
+#include "caf/detail/proper_actor.hpp"
+#include "caf/detail/actor_registry.hpp"
 
-namespace cppa {
+namespace caf {
 namespace scheduler {
 
 /******************************************************************************
@@ -218,9 +218,9 @@ class shutdown_helper : public resumable {
     void detach_from_scheduler() override { }
 
     resumable::resume_result resume(execution_unit* ptr) {
-        CPPA_LOG_DEBUG("shutdown_helper::resume => shutdown worker");
+        CAF_LOG_DEBUG("shutdown_helper::resume => shutdown worker");
         auto wptr = dynamic_cast<abstract_worker*>(ptr);
-        CPPA_REQUIRE(wptr != nullptr);
+        CAF_REQUIRE(wptr != nullptr);
         std::unique_lock<std::mutex> guard(mtx);
         last_worker = wptr;
         cv.notify_all();
@@ -258,7 +258,7 @@ void abstract_coordinator::initialize() {
 }
 
 void abstract_coordinator::stop() {
-    CPPA_LOG_TRACE("");
+    CAF_LOG_TRACE("");
     // shutdown workers
     shutdown_helper sh;
     std::vector<abstract_worker*> alive_workers;
@@ -266,7 +266,7 @@ void abstract_coordinator::stop() {
     for (size_t i = 0; i < num; ++i) {
         alive_workers.push_back(worker_by_id(i));
     }
-    CPPA_LOG_DEBUG("enqueue shutdown_helper into each worker");
+    CAF_LOG_DEBUG("enqueue shutdown_helper into each worker");
     while (!alive_workers.empty()) {
         alive_workers.back()->external_enqueue(&sh);
         // since jobs can be stolen, we cannot assume that we have
@@ -281,10 +281,10 @@ void abstract_coordinator::stop() {
         alive_workers.erase(i);
     }
     // shutdown utility actors
-    CPPA_LOG_DEBUG("send exit messages to timer & printer");
+    CAF_LOG_DEBUG("send exit messages to timer & printer");
     anon_send_exit(m_timer->address(), exit_reason::user_shutdown);
     anon_send_exit(m_printer->address(), exit_reason::user_shutdown);
-    CPPA_LOG_DEBUG("join threads of utility actors");
+    CAF_LOG_DEBUG("join threads of utility actors");
     m_timer_thread.join();
     m_printer_thread.join();
     // join each worker thread for good manners
@@ -313,4 +313,4 @@ void set_scheduler(scheduler::abstract_coordinator* impl) {
     }
 }
 
-} // namespace cppa
+} // namespace caf

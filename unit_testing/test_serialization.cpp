@@ -1,4 +1,4 @@
-#include "cppa/config.hpp"
+#include "caf/config.hpp"
 
 #include <new>
 #include <set>
@@ -24,29 +24,29 @@
 
 #include "test.hpp"
 
-#include "cppa/message.hpp"
-#include "cppa/announce.hpp"
-#include "cppa/message.hpp"
-#include "cppa/to_string.hpp"
-#include "cppa/serializer.hpp"
-#include "cppa/from_string.hpp"
-#include "cppa/ref_counted.hpp"
-#include "cppa/deserializer.hpp"
-#include "cppa/actor_namespace.hpp"
-#include "cppa/primitive_variant.hpp"
-#include "cppa/binary_serializer.hpp"
-#include "cppa/binary_deserializer.hpp"
-#include "cppa/detail/get_mac_addresses.hpp"
+#include "caf/message.hpp"
+#include "caf/announce.hpp"
+#include "caf/message.hpp"
+#include "caf/to_string.hpp"
+#include "caf/serializer.hpp"
+#include "caf/from_string.hpp"
+#include "caf/ref_counted.hpp"
+#include "caf/deserializer.hpp"
+#include "caf/actor_namespace.hpp"
+#include "caf/primitive_variant.hpp"
+#include "caf/binary_serializer.hpp"
+#include "caf/binary_deserializer.hpp"
+#include "caf/detail/get_mac_addresses.hpp"
 
-#include "cppa/detail/int_list.hpp"
-#include "cppa/detail/type_traits.hpp"
-#include "cppa/detail/abstract_uniform_type_info.hpp"
+#include "caf/detail/int_list.hpp"
+#include "caf/detail/type_traits.hpp"
+#include "caf/detail/abstract_uniform_type_info.hpp"
 
-#include "cppa/detail/ieee_754.hpp"
-#include "cppa/detail/safe_equal.hpp"
+#include "caf/detail/ieee_754.hpp"
+#include "caf/detail/safe_equal.hpp"
 
 using namespace std;
-using namespace cppa;
+using namespace caf;
 
 namespace {
 
@@ -102,16 +102,16 @@ struct raw_struct_type_info : detail::abstract_uniform_type_info<raw_struct> {
 void test_ieee_754() {
     // check conversion of float
     float f1 = 3.1415925f;               // float value
-    auto p1 = cppa::detail::pack754(f1); // packet value
-    CPPA_CHECK_EQUAL(p1, 0x40490FDA);
-    auto u1 = cppa::detail::unpack754(p1); // unpacked value
-    CPPA_CHECK_EQUAL(f1, u1);
+    auto p1 = caf::detail::pack754(f1); // packet value
+    CAF_CHECK_EQUAL(p1, 0x40490FDA);
+    auto u1 = caf::detail::unpack754(p1); // unpacked value
+    CAF_CHECK_EQUAL(f1, u1);
     // check conversion of double
     double f2 = 3.14159265358979311600;  // double value
-    auto p2 = cppa::detail::pack754(f2); // packet value
-    CPPA_CHECK_EQUAL(p2, 0x400921FB54442D18);
-    auto u2 = cppa::detail::unpack754(p2); // unpacked value
-    CPPA_CHECK_EQUAL(f2, u2);
+    auto p2 = caf::detail::pack754(f2); // packet value
+    CAF_CHECK_EQUAL(p2, 0x400921FB54442D18);
+    auto u2 = caf::detail::unpack754(p2); // unpacked value
+    CAF_CHECK_EQUAL(f2, u2);
 }
 
 enum class test_enum {
@@ -124,28 +124,28 @@ enum class test_enum {
 } // namespace <anonymous>
 
 int main() {
-    CPPA_TEST(test_serialization);
+    CAF_TEST(test_serialization);
 
     announce<test_enum>();
 
     test_ieee_754();
 
     using token = std::integral_constant<int, detail::impl_id<strmap>()>;
-    CPPA_CHECK_EQUAL(detail::is_iterable<strmap>::value, true);
-    CPPA_CHECK_EQUAL(detail::is_stl_compliant_list<vector<int>>::value, true);
-    CPPA_CHECK_EQUAL(detail::is_stl_compliant_list<strmap>::value, false);
-    CPPA_CHECK_EQUAL(detail::is_stl_compliant_map<strmap>::value, true);
-    CPPA_CHECK_EQUAL(detail::impl_id<strmap>(), 2);
-    CPPA_CHECK_EQUAL(token::value, 2);
+    CAF_CHECK_EQUAL(detail::is_iterable<strmap>::value, true);
+    CAF_CHECK_EQUAL(detail::is_stl_compliant_list<vector<int>>::value, true);
+    CAF_CHECK_EQUAL(detail::is_stl_compliant_list<strmap>::value, false);
+    CAF_CHECK_EQUAL(detail::is_stl_compliant_map<strmap>::value, true);
+    CAF_CHECK_EQUAL(detail::impl_id<strmap>(), 2);
+    CAF_CHECK_EQUAL(token::value, 2);
 
     announce(typeid(raw_struct),
              uniform_type_info_ptr{new raw_struct_type_info});
 
     auto nid = detail::singletons::get_node_id();
     auto nid_str = to_string(nid);
-    CPPA_PRINT("nid_str = " << nid_str);
+    CAF_PRINT("nid_str = " << nid_str);
     auto nid2 = from_string<node_id>(nid_str);
-    CPPA_CHECK(nid2 && nid == *nid2);
+    CAF_CHECK(nid2 && nid == *nid2);
 
     /*
       auto oarr = new detail::object_array;
@@ -162,9 +162,9 @@ int main() {
 
           };
           check(atuple1);
-          CPPA_CHECK(ok);
+          CAF_CHECK(ok);
       }
-      catch (std::exception& e) { CPPA_FAILURE(to_verbose_string(e)); }
+      catch (std::exception& e) { CAF_FAILURE(to_verbose_string(e)); }
 
       detail::meta_cow_tuple<int,int> mct;
       try {
@@ -179,10 +179,10 @@ int main() {
           });
           mct.deserialize(ptr, &bd);
           auto& tref = *reinterpret_cast<cow_tuple<int, int>*>(ptr);
-          CPPA_CHECK_EQUAL(get<0>(tup0), get<0>(tref));
-          CPPA_CHECK_EQUAL(get<1>(tup0), get<1>(tref));
+          CAF_CHECK_EQUAL(get<0>(tup0), get<0>(tref));
+          CAF_CHECK_EQUAL(get<1>(tup0), get<1>(tref));
       }
-      catch (std::exception& e) { CPPA_FAILURE(to_verbose_string(e)); }
+      catch (std::exception& e) { CAF_FAILURE(to_verbose_string(e)); }
 
       try {
           // test raw_type in both binary and string serialization
@@ -194,14 +194,14 @@ int main() {
           binary_deserializer bd(wr_buf.data(), wr_buf.size(), &addressing);
           raw_struct rs2;
           uniform_typeid<raw_struct>()->deserialize(&rs2, &bd);
-          CPPA_CHECK_EQUAL(rs2.str, rs.str);
-          auto rsstr = cppa::to_string(object::from(rs));
+          CAF_CHECK_EQUAL(rs2.str, rs.str);
+          auto rsstr = caf::to_string(object::from(rs));
           rs2.str = "foobar";
-          CPPA_PRINT("rs as string: " << rsstr);
+          CAF_PRINT("rs as string: " << rsstr);
           rs2 = from_string<raw_struct>(rsstr);
-          CPPA_CHECK_EQUAL(rs2.str, rs.str);
+          CAF_CHECK_EQUAL(rs2.str, rs.str);
       }
-      catch (std::exception& e) { CPPA_FAILURE(to_verbose_string(e)); }
+      catch (std::exception& e) { CAF_FAILURE(to_verbose_string(e)); }
 
       try {
           scoped_actor self;
@@ -212,9 +212,9 @@ int main() {
           binary_deserializer bd(wr_buf.data(), wr_buf.size(), &addressing);
           message ttup2;
           uniform_typeid<message>()->deserialize(&ttup2, &bd);
-          CPPA_CHECK(ttup  == ttup2);
+          CAF_CHECK(ttup  == ttup2);
       }
-      catch (std::exception& e) { CPPA_FAILURE(to_verbose_string(e)); }
+      catch (std::exception& e) { CAF_FAILURE(to_verbose_string(e)); }
 
       try {
           scoped_actor self;
@@ -228,11 +228,11 @@ int main() {
           message ttup3;
           uniform_typeid<message>()->deserialize(&ttup2, &bd);
           uniform_typeid<message>()->deserialize(&ttup3, &bd);
-          CPPA_CHECK(ttup  == ttup2);
-          CPPA_CHECK(ttup  == ttup3);
-          CPPA_CHECK(ttup2 == ttup3);
+          CAF_CHECK(ttup  == ttup2);
+          CAF_CHECK(ttup  == ttup3);
+          CAF_CHECK(ttup2 == ttup3);
       }
-      catch (std::exception& e) { CPPA_FAILURE(to_verbose_string(e)); }
+      catch (std::exception& e) { CAF_FAILURE(to_verbose_string(e)); }
 
       try {
           // serialize b1 to buf
@@ -251,26 +251,26 @@ int main() {
 
           };
           check(atuple2);
-          CPPA_CHECK(ok);
+          CAF_CHECK(ok);
       }
-      catch (std::exception& e) { CPPA_FAILURE(to_verbose_string(e)); }
+      catch (std::exception& e) { CAF_FAILURE(to_verbose_string(e)); }
 
-      CPPA_CHECK((is_iterable<int>::value) == false);
+      CAF_CHECK((is_iterable<int>::value) == false);
       // string is primitive and thus not identified by is_iterable
-      CPPA_CHECK((is_iterable<string>::value) == false);
-      CPPA_CHECK((is_iterable<list<int>>::value) == true);
-      CPPA_CHECK((is_iterable<map<int, int>>::value) == true);
+      CAF_CHECK((is_iterable<string>::value) == false);
+      CAF_CHECK((is_iterable<list<int>>::value) == true);
+      CAF_CHECK((is_iterable<map<int, int>>::value) == true);
       try {  // test meta_object implementation for primitive types
           auto meta_int = uniform_typeid<uint32_t>();
-          CPPA_CHECK(meta_int != nullptr);
+          CAF_CHECK(meta_int != nullptr);
           if (meta_int) {
               auto o = meta_int->create();
               get_ref<uint32_t>(o) = 42;
               auto str = to_string(object::from(get<uint32_t>(o)));
-              CPPA_CHECK_EQUAL( "@u32 ( 42 )", str);
+              CAF_CHECK_EQUAL( "@u32 ( 42 )", str);
           }
       }
-      catch (std::exception& e) { CPPA_FAILURE(to_verbose_string(e)); }
+      catch (std::exception& e) { CAF_FAILURE(to_verbose_string(e)); }
 
       // test serialization of enums
       try {
@@ -291,9 +291,9 @@ int main() {
 
           };
           check(enum_tuple2);
-          CPPA_CHECK(ok);
+          CAF_CHECK(ok);
       }
-      catch (std::exception& e) { CPPA_FAILURE(to_verbose_string(e)); }
+      catch (std::exception& e) { CAF_FAILURE(to_verbose_string(e)); }
     */
-    return CPPA_TEST_RESULT();
+    return CAF_TEST_RESULT();
 }

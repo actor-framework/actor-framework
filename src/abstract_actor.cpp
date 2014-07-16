@@ -16,27 +16,27 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#include "cppa/config.hpp"
+#include "caf/config.hpp"
 
 #include <map>
 #include <mutex>
 #include <atomic>
 #include <stdexcept>
 
-#include "cppa/atom.hpp"
-#include "cppa/config.hpp"
-#include "cppa/message.hpp"
-#include "cppa/actor_addr.hpp"
-#include "cppa/actor_cast.hpp"
-#include "cppa/abstract_actor.hpp"
-#include "cppa/system_messages.hpp"
+#include "caf/atom.hpp"
+#include "caf/config.hpp"
+#include "caf/message.hpp"
+#include "caf/actor_addr.hpp"
+#include "caf/actor_cast.hpp"
+#include "caf/abstract_actor.hpp"
+#include "caf/system_messages.hpp"
 
-#include "cppa/detail/logging.hpp"
-#include "cppa/detail/singletons.hpp"
-#include "cppa/detail/actor_registry.hpp"
-#include "cppa/detail/shared_spinlock.hpp"
+#include "caf/detail/logging.hpp"
+#include "caf/detail/singletons.hpp"
+#include "caf/detail/actor_registry.hpp"
+#include "caf/detail/shared_spinlock.hpp"
 
-namespace cppa {
+namespace caf {
 
 namespace {
 using guard_type = std::unique_lock<std::mutex>;
@@ -162,7 +162,7 @@ bool abstract_actor::unlink_from_impl(const actor_addr& other) {
     auto ptr = actor_cast<abstract_actor_ptr>(other);
     if (!exited() && ptr->remove_backlink(address())) {
         auto i = std::find(m_links.begin(), m_links.end(), ptr);
-        CPPA_REQUIRE(i != m_links.end());
+        CAF_REQUIRE(i != m_links.end());
         m_links.erase(i);
         return true;
     }
@@ -175,10 +175,10 @@ actor_addr abstract_actor::address() const {
 
 void abstract_actor::cleanup(uint32_t reason) {
     // log as 'actor'
-    CPPA_LOGM_TRACE("cppa::actor", CPPA_ARG(m_id) << ", " << CPPA_ARG(reason)
+    CAF_LOGM_TRACE("caf::actor", CAF_ARG(m_id) << ", " << CAF_ARG(reason)
                                                   << ", "
-                                                  << CPPA_ARG(m_is_proxy));
-    CPPA_REQUIRE(reason != exit_reason::not_exited);
+                                                  << CAF_ARG(m_is_proxy));
+    CAF_REQUIRE(reason != exit_reason::not_exited);
     // move everyhting out of the critical section before processing it
     decltype(m_links) mlinks;
     decltype(m_attachables) mattachables;
@@ -195,21 +195,21 @@ void abstract_actor::cleanup(uint32_t reason) {
         m_links.clear();
         m_attachables.clear();
     }
-    CPPA_LOGC_INFO_IF(
-        not is_remote(), "cppa::actor", __func__,
+    CAF_LOGC_INFO_IF(
+        not is_remote(), "caf::actor", __func__,
         "actor with ID " << m_id << " had " << mlinks.size() << " links and "
                          << mattachables.size()
                          << " attached functors; exit reason = " << reason
                          << ", class = " << detail::demangle(typeid(*this)));
     // send exit messages
     auto msg = make_message(exit_msg{address(), reason});
-    CPPA_LOGM_DEBUG("cppa::actor", "send EXIT to " << mlinks.size()
+    CAF_LOGM_DEBUG("caf::actor", "send EXIT to " << mlinks.size()
                                                    << " links");
     for (auto& aptr : mlinks) {
         aptr->enqueue(address(), message_id {}.with_high_priority(), msg,
                       m_host);
     }
-    CPPA_LOGM_DEBUG("cppa::actor", "run " << mattachables.size()
+    CAF_LOGM_DEBUG("caf::actor", "run " << mattachables.size()
                                           << " attachables");
     for (attachable_ptr& ptr : mattachables) {
         ptr->actor_exited(reason);
@@ -221,4 +221,4 @@ std::set<std::string> abstract_actor::interface() const {
     return std::set<std::string>{};
 }
 
-} // namespace cppa
+} // namespace caf

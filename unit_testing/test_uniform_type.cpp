@@ -15,14 +15,14 @@
 
 #include "test.hpp"
 
-#include "cppa/atom.hpp"
-#include "cppa/announce.hpp"
-#include "cppa/message.hpp"
-#include "cppa/serializer.hpp"
-#include "cppa/deserializer.hpp"
-#include "cppa/uniform_type_info.hpp"
+#include "caf/atom.hpp"
+#include "caf/announce.hpp"
+#include "caf/message.hpp"
+#include "caf/serializer.hpp"
+#include "caf/deserializer.hpp"
+#include "caf/uniform_type_info.hpp"
 
-#include "cppa/detail/type_traits.hpp"
+#include "caf/detail/type_traits.hpp"
 
 using std::cout;
 using std::endl;
@@ -41,34 +41,34 @@ inline bool operator==(const foo& lhs, const foo& rhs) {
 
 } // namespace <anonymous>
 
-using namespace cppa;
+using namespace caf;
 
 int main() {
-    CPPA_TEST(test_uniform_type);
+    CAF_TEST(test_uniform_type);
     auto announce1 = announce<foo>(&foo::value);
     auto announce2 = announce<foo>(&foo::value);
     auto announce3 = announce<foo>(&foo::value);
     auto announce4 = announce<foo>(&foo::value);
-    CPPA_CHECK(announce1 == announce2);
-    CPPA_CHECK(announce1 == announce3);
-    CPPA_CHECK(announce1 == announce4);
-    CPPA_CHECK_EQUAL(announce1->name(), "$::foo");
+    CAF_CHECK(announce1 == announce2);
+    CAF_CHECK(announce1 == announce3);
+    CAF_CHECK(announce1 == announce4);
+    CAF_CHECK_EQUAL(announce1->name(), "$::foo");
     {
         /*
         //bar.create_object();
         auto obj1 = uniform_typeid<foo>()->create();
         auto obj2(obj1);
-        CPPA_CHECK(obj1 == obj2);
+        CAF_CHECK(obj1 == obj2);
         get_ref<foo>(obj1).value = 42;
-        CPPA_CHECK(obj1 != obj2);
-        CPPA_CHECK_EQUAL(get<foo>(obj1).value, 42);
-        CPPA_CHECK_EQUAL(get<foo>(obj2).value, 0);
+        CAF_CHECK(obj1 != obj2);
+        CAF_CHECK_EQUAL(get<foo>(obj1).value, 42);
+        CAF_CHECK_EQUAL(get<foo>(obj2).value, 0);
         */
     }
     {
         auto uti = uniform_typeid<atom_value>();
-        CPPA_CHECK(uti != nullptr);
-        CPPA_CHECK_EQUAL(uti->name(), "@atom");
+        CAF_CHECK(uti != nullptr);
+        CAF_CHECK_EQUAL(uti->name(), "@atom");
     }
     // these types (and only those) are present if
     // the uniform_type_info implementation is correct
@@ -116,12 +116,12 @@ int main() {
         found.insert(tinfo->name());
     }
     // compare the two sets
-    CPPA_CHECK_EQUAL(expected.size(), found.size());
+    CAF_CHECK_EQUAL(expected.size(), found.size());
     bool expected_equals_found = false;
     if (expected.size() == found.size()) {
         expected_equals_found =
             std::equal(found.begin(), found.end(), expected.begin());
-        CPPA_CHECK(expected_equals_found);
+        CAF_CHECK(expected_equals_found);
     }
     if (!expected_equals_found) {
         std::string(41, ' ');
@@ -132,8 +132,8 @@ int main() {
         oss << "expected (" << found.size() << ")";
         std::string lhs;
         std::string rhs;
-        CPPA_PRINT(oss.str());
-        CPPA_PRINT(std::string(41, '-'));
+        CAF_PRINT(oss.str());
+        CAF_PRINT(std::string(41, '-'));
         auto fi = found.begin();
         auto fe = found.end();
         auto ei = expected.begin();
@@ -148,8 +148,8 @@ int main() {
             else
                 rhs.clear();
             lhs.resize(20, ' ');
-            CPPA_PRINT(lhs << "| " << rhs);
+            CAF_PRINT(lhs << "| " << rhs);
         }
     }
-    return CPPA_TEST_RESULT();
+    return CAF_TEST_RESULT();
 }

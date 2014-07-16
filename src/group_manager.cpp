@@ -23,21 +23,21 @@
 #include <stdexcept>
 #include <condition_variable>
 
-#include "cppa/locks.hpp"
+#include "caf/locks.hpp"
 
-#include "cppa/all.hpp"
-#include "cppa/group.hpp"
-#include "cppa/to_string.hpp"
-#include "cppa/message.hpp"
-#include "cppa/serializer.hpp"
-#include "cppa/deserializer.hpp"
-#include "cppa/event_based_actor.hpp"
+#include "caf/all.hpp"
+#include "caf/group.hpp"
+#include "caf/to_string.hpp"
+#include "caf/message.hpp"
+#include "caf/serializer.hpp"
+#include "caf/deserializer.hpp"
+#include "caf/event_based_actor.hpp"
 
-#include "cppa/io/middleman.hpp"
+#include "caf/io/middleman.hpp"
 
-#include "cppa/detail/group_manager.hpp"
+#include "caf/detail/group_manager.hpp"
 
-namespace cppa {
+namespace caf {
 namespace detail {
 
 namespace {
@@ -56,8 +56,8 @@ class local_group : public abstract_group {
 
     void send_all_subscribers(const actor_addr& sender, const message& msg,
                               execution_unit* host) {
-        CPPA_LOG_TRACE(CPPA_TARG(sender, to_string)
-                       << ", " << CPPA_TARG(msg, to_string));
+        CAF_LOG_TRACE(CAF_TARG(sender, to_string)
+                       << ", " << CAF_TARG(msg, to_string));
         shared_guard guard(m_mtx);
         for (auto& s : m_subscribers) {
             s->enqueue(sender, message_id::invalid, msg, host);
@@ -66,14 +66,14 @@ class local_group : public abstract_group {
 
     void enqueue(const actor_addr& sender, message_id, message msg,
                  execution_unit* host) override {
-        CPPA_LOG_TRACE(CPPA_TARG(sender, to_string)
-                       << ", " << CPPA_TARG(msg, to_string));
+        CAF_LOG_TRACE(CAF_TARG(sender, to_string)
+                       << ", " << CAF_TARG(msg, to_string));
         send_all_subscribers(sender, msg, host);
         m_broker->enqueue(sender, message_id::invalid, msg, host);
     }
 
     std::pair<bool, size_t> add_subscriber(const channel& who) {
-        CPPA_LOG_TRACE(CPPA_TARG(who, to_string));
+        CAF_LOG_TRACE(CAF_TARG(who, to_string));
         exclusive_guard guard(m_mtx);
         if (who && m_subscribers.insert(who).second) {
             return {true, m_subscribers.size()};
@@ -82,14 +82,14 @@ class local_group : public abstract_group {
     }
 
     std::pair<bool, size_t> erase_subscriber(const channel& who) {
-        CPPA_LOG_TRACE(CPPA_TARG(who, to_string));
+        CAF_LOG_TRACE(CAF_TARG(who, to_string));
         exclusive_guard guard(m_mtx);
         auto success = m_subscribers.erase(who) > 0;
         return {success, m_subscribers.size()};
     }
 
     abstract_group::subscription subscribe(const channel& who) {
-        CPPA_LOG_TRACE(CPPA_TARG(who, to_string));
+        CAF_LOG_TRACE(CAF_TARG(who, to_string));
         if (add_subscriber(who).first) {
             return {who, this};
         }
@@ -97,7 +97,7 @@ class local_group : public abstract_group {
     }
 
     void unsubscribe(const channel& who) {
-        CPPA_LOG_TRACE(CPPA_TARG(who, to_string));
+        CAF_LOG_TRACE(CAF_TARG(who, to_string));
         erase_subscriber(who);
     }
 
@@ -126,22 +126,22 @@ class local_broker : public event_based_actor {
 
     behavior make_behavior() override {
         return (on(atom("JOIN"), arg_match) >> [=](const actor& other) {
-                    CPPA_LOGC_TRACE("cppa::local_broker", "init$JOIN",
-                                    CPPA_TARG(other, to_string));
+                    CAF_LOGC_TRACE("caf::local_broker", "init$JOIN",
+                                    CAF_TARG(other, to_string));
                     if (other && m_acquaintances.insert(other).second) {
                         monitor(other);
                     }
                 },
                 on(atom("LEAVE"), arg_match) >> [=](const actor& other) {
-                    CPPA_LOGC_TRACE("cppa::local_broker", "init$LEAVE",
-                                    CPPA_TARG(other, to_string));
+                    CAF_LOGC_TRACE("caf::local_broker", "init$LEAVE",
+                                    CAF_TARG(other, to_string));
                     if (other && m_acquaintances.erase(other) > 0) {
                         demonitor(other);
                     }
                 },
                 on(atom("_Forward"), arg_match) >> [=](const message& what) {
-                    CPPA_LOGC_TRACE("cppa::local_broker", "init$FORWARD",
-                                    CPPA_TARG(what, to_string));
+                    CAF_LOGC_TRACE("caf::local_broker", "init$FORWARD",
+                                    CAF_TARG(what, to_string));
                     // local forwarding
                     m_group->send_all_subscribers(last_sender(), what, m_host);
                     // forward to all acquaintances
@@ -149,8 +149,8 @@ class local_broker : public event_based_actor {
                 },
                 [=](const down_msg&) {
                     auto sender = last_sender();
-                    CPPA_LOGC_TRACE("cppa::local_broker", "init$DOWN",
-                                    CPPA_TARG(sender, to_string));
+                    CAF_LOGC_TRACE("caf::local_broker", "init$DOWN",
+                                    CAF_TARG(sender, to_string));
                     if (sender) {
                         auto first = m_acquaintances.begin();
                         auto last = m_acquaintances.end();
@@ -162,8 +162,8 @@ class local_broker : public event_based_actor {
                 },
                 others() >> [=] {
             auto msg = last_dequeued();
-            CPPA_LOGC_TRACE("cppa::local_broker", "init$others",
-                            CPPA_TARG(msg, to_string));
+            CAF_LOGC_TRACE("caf::local_broker", "init$others",
+                            CAF_TARG(msg, to_string));
             send_to_acquaintances(msg);
         });
     }
@@ -173,9 +173,9 @@ class local_broker : public event_based_actor {
     void send_to_acquaintances(const message& what) {
         // send to all remote subscribers
         auto sender = last_sender();
-        CPPA_LOG_DEBUG("forward message to "
+        CAF_LOG_DEBUG("forward message to "
                        << m_acquaintances.size() << " acquaintances; "
-                       << CPPA_TSARG(sender) << ", " << CPPA_TSARG(what));
+                       << CAF_TSARG(sender) << ", " << CAF_TSARG(what));
         for (auto& acquaintance : m_acquaintances) {
             acquaintance->enqueue(sender, message_id::invalid, what, m_host);
         }
@@ -201,14 +201,14 @@ class local_group_proxy : public local_group {
     template<typename... Ts>
     local_group_proxy(actor remote_broker, Ts&&... args)
             : super(false, std::forward<Ts>(args)...) {
-        CPPA_REQUIRE(m_broker == invalid_actor);
-        CPPA_REQUIRE(remote_broker != invalid_actor);
+        CAF_REQUIRE(m_broker == invalid_actor);
+        CAF_REQUIRE(remote_broker != invalid_actor);
         m_broker = std::move(remote_broker);
         m_proxy_broker = spawn<proxy_broker, hidden>(this);
     }
 
     abstract_group::subscription subscribe(const channel& who) {
-        CPPA_LOG_TRACE(CPPA_TSARG(who));
+        CAF_LOG_TRACE(CAF_TSARG(who));
         auto res = add_subscriber(who);
         if (res.first) {
             if (res.second == 1) {
@@ -217,12 +217,12 @@ class local_group_proxy : public local_group {
             }
             return {who, this};
         }
-        CPPA_LOG_WARNING("channel " << to_string(who) << " already joined");
+        CAF_LOG_WARNING("channel " << to_string(who) << " already joined");
         return {};
     }
 
     void unsubscribe(const channel& who) {
-        CPPA_LOG_TRACE(CPPA_TSARG(who));
+        CAF_LOG_TRACE(CAF_TSARG(who));
         auto res = erase_subscriber(who);
         if (res.first && res.second == 0) {
             // leave the remote source,
@@ -318,7 +318,7 @@ class local_group_module : public abstract_group::module {
     void serialize(local_group* ptr, serializer* sink) {
         // serialize identifier & broker
         sink->write_value(ptr->identifier());
-        CPPA_REQUIRE(ptr->broker() != invalid_actor);
+        CAF_REQUIRE(ptr->broker() != invalid_actor);
         m_actor_utype->serialize(&ptr->broker(), sink);
     }
 
@@ -396,4 +396,4 @@ group_manager::get_module(const std::string& module_name) {
 }
 
 } // namespace detail
-} // namespace cppa
+} // namespace caf

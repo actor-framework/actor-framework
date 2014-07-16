@@ -16,9 +16,9 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#include "cppa/mailbox_element.hpp"
+#include "caf/mailbox_element.hpp"
 
-namespace cppa {
+namespace caf {
 
 mailbox_element::mailbox_element(actor_addr arg0, message_id arg1, message arg2)
         : next(nullptr)
@@ -29,4 +29,4 @@ mailbox_element::mailbox_element(actor_addr arg0, message_id arg1, message arg2)
 
 mailbox_element::~mailbox_element() {}
 
-} // namespace cppa
+} // namespace caf

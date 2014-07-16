@@ -13,19 +13,19 @@
  * Joachim Schiele <js@lastlog.de>                                            *
  * Dominik Charousset <dominik.charousset@haw-hamburg.de>                     *
  *                                                                            *
- * This file is part of libcppa.                                              *
- * libcppa is free software: you can redistribute it and/or modify it under   *
+ * This file is part of libcaf.                                              *
+ * libcaf is free software: you can redistribute it and/or modify it under   *
  * the terms of the GNU Lesser General Public License as published by the     *
  * Free Software Foundation; either version 2.1 of the License,               *
  * or (at your option) any later version.                                     *
  *                                                                            *
- * libcppa is distributed in the hope that it will be useful,                 *
+ * libcaf is distributed in the hope that it will be useful,                 *
  * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.                       *
  * See the GNU Lesser General Public License for more details.                *
  *                                                                            *
  * You should have received a copy of the GNU Lesser General Public License   *
- * along with libcppa. If not, see <http://www.gnu.org/licenses/>.            *
+ * along with libcaf. If not, see <http://www.gnu.org/licenses/>.            *
 \******************************************************************************/
 
 /******************************************************************************\
@@ -71,8 +71,8 @@
 #include <stdlib.h>
 #include <curl/curl.h>
 
-// libcppa
-#include "cppa/cppa.hpp"
+// libcaf
+#include "caf/all.hpp"
 
 // disable some clang warnings here caused by CURL and srand(time(nullptr))
 #ifdef __clang__
@@ -81,7 +81,7 @@
 #   pragma clang diagnostic ignored "-Wunused-const-variable"
 #endif // __clang__
 
-using namespace cppa;
+using namespace caf;
 
 using buffer_type = std::vector<char>;
 
@@ -412,7 +412,7 @@ int main() {
                    << color::reset_endl;
         self->await_all_other_actors_done();
     }
-    // shutdown libcppa
+    // shutdown libcaf
     shutdown();
     // shutdown CURL
     curl_global_cleanup();

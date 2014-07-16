@@ -16,15 +16,15 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#include "cppa/exception.hpp"
-#include "cppa/scheduler.hpp"
-#include "cppa/blocking_actor.hpp"
+#include "caf/exception.hpp"
+#include "caf/scheduler.hpp"
+#include "caf/blocking_actor.hpp"
 
-#include "cppa/detail/logging.hpp"
-#include "cppa/detail/singletons.hpp"
-#include "cppa/detail/actor_registry.hpp"
+#include "caf/detail/logging.hpp"
+#include "caf/detail/singletons.hpp"
+#include "caf/detail/actor_registry.hpp"
 
-namespace cppa {
+namespace caf {
 
 void blocking_actor::await_all_other_actors_done() {
     detail::singletons::get_actor_registry()->await_running_count_equal(1);
@@ -40,8 +40,8 @@ void blocking_actor::functor_based::create(blocking_actor*, act_fun fun) {
 }
 
 void blocking_actor::functor_based::act() {
-    CPPA_LOG_TRACE("");
+    CAF_LOG_TRACE("");
     m_act(this);
 }
 
-} // namespace cppa
+} // namespace caf

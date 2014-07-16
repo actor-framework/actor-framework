@@ -26,55 +26,55 @@
 #include <algorithm>
 #include <type_traits>
 
-#include "cppa/locks.hpp"
+#include "caf/locks.hpp"
 
-#include "cppa/string_algorithms.hpp"
+#include "caf/string_algorithms.hpp"
 
-#include "cppa/group.hpp"
-#include "cppa/message.hpp"
-#include "cppa/announce.hpp"
-#include "cppa/duration.hpp"
-#include "cppa/actor_cast.hpp"
-#include "cppa/abstract_group.hpp"
-#include "cppa/actor_namespace.hpp"
-#include "cppa/message_builder.hpp"
+#include "caf/group.hpp"
+#include "caf/message.hpp"
+#include "caf/announce.hpp"
+#include "caf/duration.hpp"
+#include "caf/actor_cast.hpp"
+#include "caf/abstract_group.hpp"
+#include "caf/actor_namespace.hpp"
+#include "caf/message_builder.hpp"
 
-#include "cppa/detail/logging.hpp"
-#include "cppa/detail/safe_equal.hpp"
-#include "cppa/detail/singletons.hpp"
-#include "cppa/detail/scope_guard.hpp"
-#include "cppa/detail/shared_spinlock.hpp"
-#include "cppa/detail/uniform_type_info_map.hpp"
-#include "cppa/detail/default_uniform_type_info.hpp"
+#include "caf/detail/logging.hpp"
+#include "caf/detail/safe_equal.hpp"
+#include "caf/detail/singletons.hpp"
+#include "caf/detail/scope_guard.hpp"
+#include "caf/detail/shared_spinlock.hpp"
+#include "caf/detail/uniform_type_info_map.hpp"
+#include "caf/detail/default_uniform_type_info.hpp"
 
-namespace cppa {
+namespace caf {
 namespace detail {
 
 namespace {
 const char* mapped_type_names[][2] = {
     {"bool",                            "bool"                                },
-    {"cppa::accept_handle",             "@accept"                             },
-    {"cppa::acceptor_closed_msg",       "@acceptor_closed"                    },
-    {"cppa::actor",                     "@actor"                              },
-    {"cppa::actor_addr",                "@addr"                               },
-    {"cppa::atom_value",                "@atom"                               },
-    {"cppa::channel",                   "@channel"                            },
-    {"cppa::connection_closed_msg",     "@connection_closed"                  },
-    {"cppa::connection_handle",         "@connection"                         },
-    {"cppa::down_msg",                  "@down"                               },
-    {"cppa::duration",                  "@duration"                           },
-    {"cppa::exit_msg",                  "@exit"                               },
-    {"cppa::group",                     "@group"                              },
-    {"cppa::group_down_msg",            "@group_down"                         },
-    {"cppa::message",                   "@message"                            },
-    {"cppa::message_id",                "@message_id"                         },
-    {"cppa::new_connection_msg",        "@new_connection"                     },
-    {"cppa::new_data_msg",              "@new_data"                           },
-    {"cppa::node_id",                   "@node"                               },
-    {"cppa::sync_exited_msg",           "@sync_exited"                        },
-    {"cppa::sync_timeout_msg",          "@sync_timeout"                       },
-    {"cppa::timeout_msg",               "@timeout"                            },
-    {"cppa::unit_t",                    "@unit"                               },
+    {"caf::accept_handle",             "@accept"                             },
+    {"caf::acceptor_closed_msg",       "@acceptor_closed"                    },
+    {"caf::actor",                     "@actor"                              },
+    {"caf::actor_addr",                "@addr"                               },
+    {"caf::atom_value",                "@atom"                               },
+    {"caf::channel",                   "@channel"                            },
+    {"caf::connection_closed_msg",     "@connection_closed"                  },
+    {"caf::connection_handle",         "@connection"                         },
+    {"caf::down_msg",                  "@down"                               },
+    {"caf::duration",                  "@duration"                           },
+    {"caf::exit_msg",                  "@exit"                               },
+    {"caf::group",                     "@group"                              },
+    {"caf::group_down_msg",            "@group_down"                         },
+    {"caf::message",                   "@message"                            },
+    {"caf::message_id",                "@message_id"                         },
+    {"caf::new_connection_msg",        "@new_connection"                     },
+    {"caf::new_data_msg",              "@new_data"                           },
+    {"caf::node_id",                   "@node"                               },
+    {"caf::sync_exited_msg",           "@sync_exited"                        },
+    {"caf::sync_timeout_msg",          "@sync_timeout"                       },
+    {"caf::timeout_msg",               "@timeout"                            },
+    {"caf::unit_t",                    "@unit"                               },
     {"double",                          "double"                              },
     {"float",                           "float"                               },
     {"long double",                     "@ldouble"                            },
@@ -224,7 +224,7 @@ void deserialize_impl(actor& ptr, deserializer* source) {
 
 void serialize_impl(const group& gref, serializer* sink) {
     if (!gref) {
-        CPPA_LOGF_DEBUG("serialized an invalid group");
+        CAF_LOGF_DEBUG("serialized an invalid group");
         // write an empty string as module name
         std::string empty_string;
         sink->write_value(empty_string);
@@ -270,7 +270,7 @@ void serialize_impl(const channel& chref, serializer* sink) {
                 sink->write_value(flag);
                 serialize_impl(tmp, sink);
             } else {
-                CPPA_LOGF_ERROR("ptr is neither an actor nor a group");
+                CAF_LOGF_ERROR("ptr is neither an actor nor a group");
                 wr_nullptr();
             }
         }
@@ -297,7 +297,7 @@ void deserialize_impl(channel& ptrref, deserializer* source) {
             break;
         }
         default: {
-            CPPA_LOGF_ERROR("invalid flag while deserializing 'channel'");
+            CAF_LOGF_ERROR("invalid flag while deserializing 'channel'");
             throw std::runtime_error("invalid flag");
         }
     }
@@ -319,7 +319,7 @@ void serialize_impl(const message& tup, serializer* sink) {
         std::string err = "could not get uniform type info for \"";
         err += tname;
         err += "\"";
-        CPPA_LOGF_ERROR(err);
+        CAF_LOGF_ERROR(err);
         throw std::runtime_error(err);
     }
     sink->begin_object(uti);
@@ -475,7 +475,7 @@ inline void serialize_impl(const new_data_msg& msg, serializer* sink) {
         oss << "attempted to send more than "
             << std::numeric_limits<uint32_t>::max() << " bytes";
         auto errstr = oss.str();
-        CPPA_LOGF_ERROR(errstr);
+        CAF_LOGF_ERROR(errstr);
         throw std::ios_base::failure(std::move(errstr));
     }
     sink->write_value(buf_size);
@@ -659,14 +659,14 @@ class default_meta_message : public uniform_type_info {
         std::vector<std::string> elements;
         split(elements, name, is_any_of("+"));
         auto uti_map = detail::singletons::get_uniform_type_info_map();
-        CPPA_REQUIRE(elements.size() > 0 && elements.front() == "@<>");
+        CAF_REQUIRE(elements.size() > 0 && elements.front() == "@<>");
         // ignore first element, because it's always "@<>"
         for (size_t i = 1; i != elements.size(); ++i) {
             try {
                 m_elements.push_back(uti_map->by_uniform_name(elements[i]));
             }
             catch (std::exception&) {
-                CPPA_LOG_ERROR("type name " << elements[i] << " not found");
+                CAF_LOG_ERROR("type name " << elements[i] << " not found");
             }
         }
     }
@@ -688,7 +688,7 @@ class default_meta_message : public uniform_type_info {
 
     void serialize(const void* ptr, serializer* sink) const override {
         auto& msg = *cast(ptr);
-        CPPA_REQUIRE(msg.size() == m_elements.size());
+        CAF_REQUIRE(msg.size() == m_elements.size());
         for (size_t i = 0; i < m_elements.size(); ++i) {
             m_elements[i]->serialize(msg.at(i), sink);
         }
@@ -943,4 +943,4 @@ uniform_type_info_map* uniform_type_info_map::create_singleton() {
 uniform_type_info_map::~uniform_type_info_map() {}
 
 } // namespace detail
-} // namespace cppa
+} // namespace caf
