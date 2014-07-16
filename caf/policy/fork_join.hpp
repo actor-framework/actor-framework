@@ -19,7 +19,7 @@
 #ifndef CAF_POLICY_FORK_JOIN_HPP
 #define CAF_POLICY_FORK_JOIN_HPP
 
-#include <list>
+#include <deque>
 #include <chrono>
 #include <thread>
 #include <cstddef>
@@ -79,7 +79,7 @@ class fork_join {
      * @brief A queue implementation supporting fast push and pop
      *        operations on both ends of the queue.
      */
-    using priv_queue = std::list<resumable*>;
+    using priv_queue = std::deque<resumable*>;
 
     template<class Worker>
     void external_enqueue(Worker*, resumable* job) {
