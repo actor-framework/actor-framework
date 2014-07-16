@@ -62,7 +62,7 @@ middleman* middleman::instance() {
 }
 
 void middleman::add_broker(broker_ptr bptr) {
-    m_brokers.emplace(bptr);
+    m_brokers.insert(bptr);
     bptr->attach_functor([=](uint32_t) {
         m_brokers.erase(bptr);
     });

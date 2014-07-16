@@ -33,7 +33,7 @@ class caf_exception : public std::exception {
 
  public:
 
-    ~caf_exception();
+    ~caf_exception() noexcept;
 
     caf_exception() = delete;
     caf_exception(const caf_exception&) = default;
@@ -72,7 +72,7 @@ class actor_exited : public caf_exception {
 
  public:
 
-    ~actor_exited();
+    ~actor_exited() noexcept;
 
     actor_exited(uint32_t exit_reason);
 
@@ -102,7 +102,7 @@ class network_error : public caf_exception {
 
  public:
 
-    ~network_error();
+    ~network_error() noexcept;
     network_error(std::string&& what_str);
     network_error(const std::string& what_str);
     network_error(const network_error&) = default;
@@ -120,7 +120,7 @@ class bind_failure : public network_error {
 
  public:
 
-    ~bind_failure();
+    ~bind_failure() noexcept;
 
     bind_failure(std::string&& what_str);
     bind_failure(const std::string& what_str);

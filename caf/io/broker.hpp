@@ -236,7 +236,8 @@ class broker : public extend<local_actor>::
         return spawn_functor(nullptr,
                              [sptr](broker* forked) {
                                  sptr->set_broker(forked);
-                                 forked->m_scribes.emplace(sptr->hdl(), sptr);
+                                 forked->m_scribes.insert(
+                                     std::make_pair(sptr->hdl(), sptr));
                              },
                              fun, hdl, std::forward<Ts>(vs)...);
     }
@@ -295,7 +296,7 @@ class broker : public extend<local_actor>::
 
         };
         intrusive_ptr<impl> ptr{new impl{this, std::move(sock)}};
-        m_scribes.emplace(ptr->hdl(), ptr);
+        m_scribes.insert(std::make_pair(ptr->hdl(), ptr));
         return ptr->hdl();
     }
 
@@ -336,7 +337,7 @@ class broker : public extend<local_actor>::
 
         };
         intrusive_ptr<impl> ptr{new impl{this, std::move(sock)}};
-        m_doormen.emplace(ptr->hdl(), ptr);
+        m_doormen.insert(std::make_pair(ptr->hdl(), ptr));
         if (initialized()) ptr->launch();
         return ptr->hdl();
     }

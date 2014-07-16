@@ -475,7 +475,8 @@ Result unroll_expr(PPFPs& fs, uint64_t bitmask, long_constant<N>,
     auto& f = get<N>(fs);
     using Fun = typename detail::rm_const_and_ref<decltype(f)>::type;
     using pattern_type = typename Fun::pattern_type;
-    using policy = detail::invoke_util<pattern_type>;
+    //using policy = detail::invoke_util<pattern_type>;
+    typedef detail::invoke_util<pattern_type> policy; // using fails on GCC 4.7
     typename policy::tuple_type targs;
     if (policy::prepare_invoke(targs, type_token, is_dynamic, ptr, tup)) {
         auto is = detail::get_indices(targs);

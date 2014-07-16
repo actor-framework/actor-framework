@@ -64,7 +64,7 @@ struct ieee_754_trait<uint64_t> : ieee_754_trait<double> {};
 
 template<typename T>
 typename ieee_754_trait<T>::packed_type pack754(T f) {
-    using trait = ieee_754_trait<T>;
+    typedef ieee_754_trait<T> trait; // using trait = ... fails on GCC 4.7
     using result_type = typename trait::packed_type;
     // filter special type
     if (fabs(f) <= trait::zero) return 0; // only true if f equals +0 or -0
@@ -103,7 +103,7 @@ typename ieee_754_trait<T>::packed_type pack754(T f) {
 
 template<typename T>
 typename ieee_754_trait<T>::float_type unpack754(T i) {
-    using trait = ieee_754_trait<T>;
+    typedef ieee_754_trait<T> trait; // using trait = ... fails on GCC 4.7
     using signed_type = typename trait::signed_packed_type;
     using result_type = typename trait::float_type;
     if (i == 0) return trait::zero;

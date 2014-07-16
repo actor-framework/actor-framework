@@ -110,7 +110,7 @@ intrusive_ptr<Impl> middleman::get_named_broker(atom_value name) {
     if (i != m_named_brokers.end()) return static_cast<Impl*>(i->second.get());
     intrusive_ptr<Impl> result{new Impl};
     result->launch(true, nullptr);
-    m_named_brokers.emplace(name, result);
+    m_named_brokers.insert(std::make_pair(name, result));
     return result;
 }
 

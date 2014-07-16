@@ -304,7 +304,7 @@ basp_broker::handle_basp_header(connection_context& ctx,
             std::set<string> remote_ifs;
             for (uint32_t i = 0; i < remote_ifs_size; ++i) {
                 auto str = bd.read<string>();
-                remote_ifs.emplace(std::move(str));
+                remote_ifs.insert(std::move(str));
             }
             auto& ifs = *(ctx.handshake_data->expected_ifs);
             if (!std::includes(ifs.begin(), ifs.end(),
@@ -565,7 +565,7 @@ void basp_broker::init_handshake_as_sever(connection_context& ctx,
 
 void basp_broker::announce_published_actor(accept_handle hdl,
                                              const abstract_actor_ptr& ptr) {
-    m_published_actors.emplace(hdl, ptr);
+    m_published_actors.insert(std::make_pair(hdl, ptr));
     singletons::get_actor_registry()->put(ptr->id(), ptr);
 }
 
