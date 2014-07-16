@@ -19,7 +19,6 @@
 #ifndef CAF_POLICY_INVOKE_POLICY_HPP
 #define CAF_POLICY_INVOKE_POLICY_HPP
 
-#include <list>
 #include <memory>
 #include <iostream>
 #include <type_traits>
@@ -108,8 +107,6 @@ class invoke_policy {
     using sequential = typename rp_flag<rp_sequential>::type;
 
  private:
-
-    std::list<std::unique_ptr<mailbox_element, detail::disposer>> m_cache;
 
     inline void handle_timeout(message_handler&) {
         CAF_CRITICAL("handle_timeout(message_handler&)");
