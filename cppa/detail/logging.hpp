@@ -357,7 +357,7 @@ inline cppa::actor_id cppa_set_aid_dummy() { return 0; }
     CPPA_LOGC_IF(stmt, CPPA_DEBUG, cname, __func__, msg)
 
 #define CPPA_LOGM_INFO_IF(stmt, cname, msg)                                    \
-    CPPA_LOGC_IF(stmt, CPPA_INFO, cname, msg)
+    CPPA_LOGC_IF(stmt, CPPA_INFO, cname, __func__, msg)
 
 #define CPPA_LOGM_TRACE_IF(stmt, cname, msg)                                   \
     CPPA_LOGC_IF(stmt, CPPA_TRACE, cname, __func__, msg)
