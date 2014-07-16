@@ -185,7 +185,9 @@ class worker : public abstract_worker {
      * @brief Attempt to steal an element from the exposed job queue.
      */
     job_ptr try_steal() override {
-        return m_queue_policy.try_external_dequeue(this);
+        auto result = m_queue_policy.try_external_dequeue(this);
+        CPPA_LOG_DEBUG_IF(result, "stole actor with id " << id_of(result));
+        return result;
     }
 
     /**
@@ -193,6 +195,8 @@ class worker : public abstract_worker {
      *        source, i.e., from any other thread.
      */
     void external_enqueue(job_ptr job) override {
+        CPPA_REQUIRE(job != nullptr);
+        CPPA_LOG_TRACE("id = " << id() << " actor id " << id_of(job));
         m_queue_policy.external_enqueue(this, job);
     }
 
@@ -203,12 +207,16 @@ class worker : public abstract_worker {
      * @warning Must not be called from other threads.
      */
     void exec_later(job_ptr job) override {
+        CPPA_REQUIRE(job != nullptr);
+        CPPA_LOG_TRACE("id = " << id() << " actor id " << id_of(job));
         m_queue_policy.internal_enqueue(this, job);
     }
 
     // go on a raid in quest for a shiny new job
     job_ptr raid() {
-        return m_steal_policy.raid(this);
+        auto result = m_steal_policy.raid(this);
+        CPPA_LOG_DEBUG_IF(result, "got actor with id " << id_of(result));
+        return result;
     }
 
     inline abstract_coordinator* parent() {
@@ -224,6 +232,7 @@ class worker : public abstract_worker {
     }
 
     void detach_all() {
+        CPPA_LOG_TRACE("");
         m_queue_policy.consume_all(this, [](resumable* job) {
             job->detach_from_scheduler();
         });
@@ -233,7 +242,18 @@ class worker : public abstract_worker {
         m_id = id;
         m_parent = parent;
         auto this_worker = this;
-        m_this_thread = std::thread{[this_worker] { this_worker->run(); }};
+        m_this_thread = std::thread{[this_worker] {
+            CPPA_LOGC_TRACE("cppa::scheduler::worker",
+                            "start$lambda",
+                            "id = " << this_worker->id());
+            this_worker->run();
+        }};
+    }
+
+    actor_id id_of(resumable* ptr) {
+        abstract_actor* aptr = ptr ? dynamic_cast<abstract_actor*>(ptr)
+                                   : nullptr;
+        return aptr ? aptr->id() : 0;
     }
 
  private:
@@ -243,6 +263,8 @@ class worker : public abstract_worker {
         // scheduling loop
         for (;;) {
             auto job = m_queue_policy.internal_dequeue(this);
+            CPPA_REQUIRE(job != nullptr);
+            CPPA_LOG_DEBUG("resume actor " << id_of(job));
             CPPA_PUSH_AID_FROM_PTR(dynamic_cast<abstract_actor*>(job));
             switch (job->resume(this)) {
                 case resumable::done: {
