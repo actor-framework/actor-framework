@@ -19,7 +19,7 @@
 #ifndef NOT_PRIORITIZING_HPP
 #define NOT_PRIORITIZING_HPP
 
-#include <list>
+#include <deque>
 #include <iterator>
 
 #include "caf/mailbox_element.hpp"
@@ -33,7 +33,7 @@ class not_prioritizing {
 
  public:
 
-    using cache_type = std::list<unique_mailbox_element_pointer>;
+    using cache_type = std::deque<unique_mailbox_element_pointer>;
 
     using cache_iterator = cache_type::iterator;
 
@@ -82,3 +82,4 @@ class not_prioritizing {
 } // namespace caf
 
 #endif // NOT_PRIORITIZING_HPP
+
