@@ -19,9 +19,10 @@
 #ifndef CPPA_POLICY_FORK_JOIN_HPP
 #define CPPA_POLICY_FORK_JOIN_HPP
 
+#include <list>
 #include <chrono>
-#include <vector>
 #include <thread>
+#include <cstddef>
 
 #include "cppa/resumable.hpp"
 
@@ -76,98 +77,76 @@ class fork_join {
 
     /**
      * @brief A queue implementation supporting fast push and pop
-     *        operations. Note that we do dequeue from the back of the
-     *        queue.
+     *        operations on both ends of the queue.
      */
-    using priv_queue = std::vector<resumable*>;
+    using priv_queue = std::list<resumable*>;
 
     template<class Worker>
-    inline void external_enqueue(Worker*, resumable* job) {
+    void external_enqueue(Worker*, resumable* job) {
         m_exposed_queue.push_back(job);
     }
 
     template<class Worker>
-    inline void internal_enqueue(Worker*, resumable* job) {
+    void internal_enqueue(Worker* ptr, resumable* job) {
+        m_exposed_queue.push_back(job);
         // give others the opportunity to steal from us
-        if (m_exposed_queue.empty()) {
-            if (m_private_queue.empty()) {
-                m_exposed_queue.push_back(job);
-            } else {
-                m_exposed_queue.push_back(m_private_queue.front());
-                m_private_queue.erase(m_private_queue.begin());
-                m_private_queue.push_back(job);
-            }
-        } else {
-            m_private_queue.push_back(job);
-        }
+        assert_stealable(ptr);
     }
 
     template<class Worker>
-    inline resumable* try_external_dequeue(Worker*) {
+    resumable* try_external_dequeue(Worker*) {
         return m_exposed_queue.try_pop();
     }
 
     template<class Worker>
-    inline resumable* internal_dequeue(Worker* self) {
-        resumable* job;
-        auto local_poll = [&]() -> bool {
-            if (!m_private_queue.empty()) {
-                job = m_private_queue.back();
-                m_private_queue.pop_back();
-                return true;
-            }
-            return false;
+    resumable* internal_dequeue(Worker* self) {
+        // we wait for new jobs by polling our external queue: first, we
+        // assume an active work load on the machine and perform aggresive
+        // polling, then we relax our polling a bit and wait 50 us between
+        // dequeue attempts, finally we assume pretty much nothing is going
+        // on and poll every 10 ms; this strategy strives to minimize the
+        // downside of "busy waiting", which still performs much better than a
+        // "signalizing" implementation based on mutexes and conition variables
+        struct poll_strategy {
+            size_t attempts;
+            size_t step_size;
+            size_t raid_interval;
+            std::chrono::microseconds sleep_duration;
         };
-        auto aggressive_poll = [&]() -> bool {
-            for (int i = 1; i < 101; ++i) {
+        constexpr poll_strategy strategies[3] = {
+            // aggressive polling  (100x) without sleep interval
+            {100, 1, 10, std::chrono::microseconds{0}},
+            // moderate polling (500x) with 50 us sleep interval
+            {500, 1, 5,  std::chrono::microseconds{50}},
+            // relaxed polling (infinite attempts) with 10 ms sleep interval
+            {101, 0, 1,  std::chrono::microseconds{10000}}
+        };
+        resumable* job = nullptr;
+        // local poll
+        if (!m_private_queue.empty()) {
+            job = m_private_queue.back();
+            m_private_queue.pop_back();
+            return job;
+        }
+        for (auto& strat : strategies) {
+            for (size_t i = 0; i < strat.attempts; i += strat.step_size) {
                 job = m_exposed_queue.try_pop();
                 if (job) {
-                    return true;
+                    return job;
                 }
-                // try to steal every 10 poll attempts
-                if ((i % 10) == 0) {
+                // try to steal every X poll attempts
+                if ((i % strat.raid_interval) == 0) {
                     job = self->raid();
                     if (job) {
-                        return true;
+                        return job;
                     }
                 }
-                std::this_thread::yield();
+                std::this_thread::sleep_for(strat.sleep_duration);
             }
-            return false;
-        };
-        auto moderate_poll = [&]() -> bool {
-            for (int i = 1; i < 550; ++i) {
-                job = m_exposed_queue.try_pop();
-                if (job) {
-                    return true;
-                }
-                // try to steal every 5 poll attempts
-                if ((i % 5) == 0) {
-                    job = self->raid();
-                    if (job) {
-                        return true;
-                    }
-                }
-                std::this_thread::sleep_for(std::chrono::microseconds(50));
-            }
-            return false;
-        };
-        auto relaxed_poll = [&]() -> bool {
-            for (;;) {
-                job = m_exposed_queue.try_pop();
-                if (job) {
-                    return true;
-                }
-                // always try to steal at this stage
-                job = self->raid();
-                if (job) {
-                    return true;
-                }
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
-            }
-        };
-        local_poll() || aggressive_poll() || moderate_poll() || relaxed_poll();
-        return job;
+        }
+        // unreachable, because the last strategy loops
+        // until a job has been dequeued
+        return nullptr;
     }
 
     template<class Worker>
@@ -184,7 +163,7 @@ class fork_join {
         // give others the opportunity to steal from us
         if (m_private_queue.size() > 1 && m_exposed_queue.empty()) {
             m_exposed_queue.push_back(m_private_queue.front());
-            m_private_queue.erase(m_private_queue.begin());
+            m_private_queue.pop_front();
         }
     }
 
@@ -202,9 +181,8 @@ class fork_join {
 
  private:
 
-    // this queue is exposed to others, i.e., other workers
-    // may attempt to steal jobs from it and the central scheduling
-    // unit can push new jobs to the queue
+    // this queue is exposed to other workers that may attempt to steal jobs
+    // from it and the central scheduling unit can push new jobs to the queue
     sync_queue m_exposed_queue;
 
     // internal job queue
