@@ -24,20 +24,16 @@
 
 #include <arpa/inet.h>
 
-#include "cppa/cppa.hpp"
+#include "caf/all.hpp"
+#include "caf/io/all.hpp"
 
-#include "cppa/io/broker.hpp"
-#include "cppa/io/middleman.hpp"
-
-#include "cppa/detail/logging.hpp"
-
-CPPA_PUSH_WARNINGS
+CAF_PUSH_WARNINGS
 #include "pingpong.pb.h"
-CPPA_POP_WARNINGS
+CAF_POP_WARNINGS
 
 using namespace std;
-using namespace cppa;
-using namespace cppa::io;
+using namespace caf;
+using namespace caf::io;
 
 void print_on_exit(const actor& ptr, const std::string& name) {
     ptr->attach_functor([=](std::uint32_t reason) {
