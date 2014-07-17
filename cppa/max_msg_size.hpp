@@ -16,25 +16,18 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#ifndef CPPA_CPPA_HPP
-#define CPPA_CPPA_HPP
+
+#ifndef CPPA_MAX_MSG_SIZE_HPP
+#define CPPA_MAX_MSG_SIZE_HPP
 
 // <backward_compatibility version="0.9" whole_file="yes">
+#include "caf/io/max_msg_size.hpp"
 
-// include new header
-#include "caf/all.hpp"
+namespace caf {
 
-// include compatibility headers
-#include "cppa/opt.hpp"
-#include "cppa/cow_tuple.hpp"
-#include "cppa/tuple_cast.hpp"
-#include "cppa/max_msg_size.hpp"
-#include "cppa/remote_actor.hpp"
-#include "cppa/publish_local_groups.hpp"
+using io::max_msg_size;
 
-// set old namespace to new namespace
-namespace cppa = caf;
-
+} // namespace caf
 // </backward_compatibility>
 
-#endif // CPPA_CPPA_HPP
+#endif // CPPA_MAX_MSG_SIZE_HPP
