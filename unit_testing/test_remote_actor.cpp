@@ -319,6 +319,8 @@ void test_remote_actor(std::string app_path, bool run_remote_actor) {
     do {
         try {
             io::publish(serv, port, "127.0.0.1");
+            auto serv2 = io::remote_actor("127.0.0.1", port);
+            CAF_CHECK(serv == serv2);
             success = true;
             CAF_PRINT("running on port " << port);
             CAF_LOGF_INFO("running on port " << port);
@@ -391,7 +393,10 @@ int main(int argc, char** argv) {
             CAF_PRINT("don't run remote actor (server mode)");
             test_remote_actor(argv[0], false);
         },
-        on() >> [&] { test_remote_actor(argv[0], true); }, others() >> [&] {
+        on() >> [&] {
+            test_remote_actor(argv[0], true);
+        },
+        others() >> [&] {
             CAF_PRINTERR("usage: " << argv[0] << " [-s|-c PORT]");
         }
     });

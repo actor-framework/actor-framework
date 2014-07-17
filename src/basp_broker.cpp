@@ -347,6 +347,13 @@ basp_broker::handle_basp_header(connection_context& ctx,
                 return close_connection;
             }
             auto nid = ctx.handshake_data->remote_id;
+            if (nid == node()) {
+                CAF_LOG_INFO("incoming connection from self: drop connection");
+                auto res = detail::singletons::get_actor_registry()->get(remote_aid);
+                ctx.handshake_data->result->set_value(std::move(res));
+                ctx.handshake_data = nullptr;
+                return close_connection;
+            }
             if (!try_set_default_route(nid, ctx.hdl)) {
                 CAF_LOG_INFO("multiple connections to "
                                      << to_string(nid)
