@@ -71,17 +71,7 @@ class cow_tuple<Head, Tail...> {
      * @param args Initialization values.
      */
     template<typename... Ts>
-    cow_tuple(const Head& arg, Ts&&... args)
-            : m_vals(new data_type(arg, std::forward<Ts>(args)...)) {
-        // nop
-    }
-
-    /**
-     * @brief Initializes the cow_tuple with @p args.
-     * @param args Initialization values.
-     */
-    template<typename... Ts>
-    cow_tuple(Head&& arg, Ts&&... args)
+    cow_tuple(Head arg, Ts&&... args)
             : m_vals(new data_type(std::move(arg), std::forward<Ts>(args)...)) {
         // nop
     }
@@ -128,7 +118,13 @@ class cow_tuple<Head, Tail...> {
         return message{m_vals};
     }
 
+    static cow_tuple from(message& msg) {
+        return cow_tuple(msg.vals());
+    }
+
  private:
+
+    cow_tuple(data_ptr ptr) : m_vals(ptr) { }
 
     data_type* ptr() {
         return static_cast<data_type*>(m_vals.get());
@@ -186,7 +182,15 @@ make_cow_tuple(Ts&&... args) {
     return {std::forward<Ts>(args)...};
 }
 
-} // namespace cppa
+template<typename TypeList>
+struct cow_tuple_from_type_list;
+
+template<typename... Ts>
+struct cow_tuple_from_type_list<detail::type_list<Ts...>> {
+    typedef cow_tuple<Ts...> type;
+};
+
+} // namespace caf
 // </backward_compatibility>
 
 #endif // CPPA_COW_TUPLE_HPP
