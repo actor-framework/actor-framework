@@ -26,6 +26,7 @@
 
 // include compatibility headers
 #include "cppa/opt.hpp"
+#include "cppa/any_tuple.hpp"
 #include "cppa/cow_tuple.hpp"
 #include "cppa/tuple_cast.hpp"
 #include "cppa/publish_local_groups.hpp"
