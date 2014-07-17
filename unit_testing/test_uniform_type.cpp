@@ -159,7 +159,8 @@ int main() {
         "@strmap",            // map<string,string>
         "@timeout",           // timeout_msg
         "@sync_exited",       // sync_exited_msg
-        "@sync_timeout"       // sync_timeout_msg
+        "@sync_timeout",      // sync_timeout_msg
+        "@strvec"             // vector<string>
     };
     if (check_types(expected)) {
         // causes the middleman to create its singleton

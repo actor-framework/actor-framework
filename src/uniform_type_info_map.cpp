@@ -86,7 +86,9 @@ const char* mapped_type_names[][2] = {
      "std::allocator<std::pair<const @str,@str>>>",
      "@strmap"},
     // std::vector<char>
-    {"std::vector<@i8,std::allocator<@i8>>", "@charbuf"}
+    {"std::vector<@i8,std::allocator<@i8>>", "@charbuf"},
+    // std::vector<std::string>
+    {"std::vector<@str,std::allocator<@str>>", "@strvec"}
 };
 // the order of this table must be *identical* to mapped_type_names
 using static_type_table = type_list<bool,
@@ -797,6 +799,8 @@ class utim_impl : public uniform_type_info_map {
 
     using charbuf = std::vector<char>;
 
+    using strvec = std::vector<std::string>;
+
     using builtin_types = std::tuple<uti_impl<node_id>,
                                      uti_impl<channel>,
                                      uti_impl<down_msg>,
@@ -829,7 +833,8 @@ class utim_impl : public uniform_type_info_map {
                                      int_tinfo<uint32_t>,
                                      int_tinfo<int64_t>,
                                      int_tinfo<uint64_t>,
-                                     default_uniform_type_info<charbuf>>;
+                                     default_uniform_type_info<charbuf>,
+                                     default_uniform_type_info<strvec>>;
 
     builtin_types m_storage;
 
