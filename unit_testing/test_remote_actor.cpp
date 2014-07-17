@@ -16,7 +16,6 @@
 
 using namespace std;
 using namespace caf;
-using namespace boost::actor_io;
 
 namespace {
 

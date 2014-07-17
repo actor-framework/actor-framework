@@ -31,14 +31,6 @@
 
 #include "caf/policy/invoke_policy.hpp"
 
-namespace boost {
-namespace actor {
-namespace detail {
-class receive_policy;
-}
-}
-}
-
 namespace caf {
 namespace policy {
 

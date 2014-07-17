@@ -33,6 +33,6 @@ namespace io {
 void publish_local_groups(uint16_t port, const char* addr = nullptr);
 
 } // namespace io
-} // namespace boost
+} // namespace caf
 
 #endif // CAF_IO_PUBLISH_LOCAL_GROUPS_HPP

@@ -18,10 +18,10 @@
 
 #include <atomic>
 
-#include "boost/actor_io/max_msg_size.hpp"
+#include "caf/io/max_msg_size.hpp"
 
-namespace boost {
-namespace actor_io {
+namespace caf {
+namespace io {
 
 namespace {
 std::atomic<size_t> default_max_msg_size{16 * 1024 * 1024};
@@ -31,5 +31,5 @@ void max_msg_size(size_t size) { default_max_msg_size = size; }
 
 size_t max_msg_size() { return default_max_msg_size; }
 
-} // namespace actor_io
-} // namespace boost
+} // namespace io
+} // namespace caf

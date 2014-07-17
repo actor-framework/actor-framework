@@ -21,8 +21,8 @@
 
 #include <cstddef> // size_t
 
-namespace boost {
-namespace actor_io {
+namespace caf {
+namespace io {
 
 /**
  * @brief Sets the maximum size of a message over network.
@@ -36,7 +36,7 @@ void max_msg_size(size_t size);
  */
 size_t max_msg_size();
 
-} // namespace actor_io
-} // namespace boost
+} // namespace io
+} // namespace caf
 
 #endif // CAF_IO_MAX_MSG_SIZE_HPP

@@ -243,6 +243,7 @@ include_directories(${INCLUDE_DIRS})
 
 # install includes
 install(DIRECTORY caf/ DESTINATION include/caf FILES_MATCHING PATTERN "*.hpp")
+install(DIRECTORY cppa/ DESTINATION include/cppa FILES_MATCHING PATTERN "*.hpp")
 
 # process cmake_uninstall.cmake.in
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
