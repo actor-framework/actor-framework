@@ -100,6 +100,8 @@ The guides in this section document all possibly breaking changes in the library
 
 \subsubsection{0.8 $\Rightarrow$ 0.9}
 
+Version 0.9 included a lot of changes and improvements in its implementation, but it also made breaking changes to the API.
+
 \paragraph{\lstinline^self^ has been removed}
 
 ~
@@ -123,3 +125,38 @@ However, the recommended way of replying to messages is to return the result fro
 
 The APIs of typed and untyped actors have been harmonized.
 Typed actors can now be published in the network and also use all operations untyped actors can.
+
+\clearpage
+\subsubsection{0.9 $\Rightarrow$ 0.10 (\texttt{libcppa} $\Rightarrow$ \texttt{libcaf})}
+
+With the first release under the name \texttt{libcaf}, we have redesigned several parts of the library.
+Some classes have been renamed or relocated, others have been removed.
+The purpose of this refactoring was to make the library easier to grasp and to make its API more consistent.
+All classes now live in the namespace \lstinline^caf^ and all headers have the top level folder ``caf'' instead of ``cppa''.
+For example, \lstinline^#include "cppa/actor.hpp"^ becomes \lstinline^#include "caf/actor.hpp"^.
+
+To give developers more time to migrate their code and to not break existing code right away, the header \lstinline^cppa/cppa.hpp^ still exists and defines the namespace \lstinline^cppa^ as an alias for \lstinline^caf^.
+Furthermore, it provides implementations or type aliases for deprecated or renamed classes.
+You won't get any warning about deprecated code with 0.10.
+However, we will add these warnings in the next library version and remove deprecated code eventually.
+
+Even when using the backwards compatibility header, there is one breaking change regardless: guard expressions have been removed.
+The reasoning behind this decision is that we already have projections to modify the outcome of a match.
+Guard expressions add little expressive power to the library but a whole lot of code that is hard to maintain due to its complexity.
+Using projections to not only perform type conversions but also to restrict values is the natural thing to do.
+
+The following table summarizes the changes made to the API.
+
+\begin{tabular*}{\textwidth}{m{0.44\textwidth}m{0.48\textwidth}}
+  Change & Explanation \\
+  \hline
+  \lstinline^any_tuple => message^ & This type is only being used to pass a message from one actor to another. Hence, \lstinline^message^ is the logical name. \\
+  \hline
+  \lstinline^cow_tuple => X^ & We want to provide a streamlined, simple API. Shipping a full tuple abstraction with the library does not fit into this philosophy. The removal of \lstinline^cow_tuple^ implies the removal of related functions such as \lstinline^tuple_cast^. \\
+  \hline
+  \lstinline^cow_ptr => X^ & Again, shipping smart pointer types like these does not fit into our design philosophy. However, messages still have the copy-on-write semantics. \\
+  \hline
+  \lstinline^X => message_builder^ & This new class can be used to create messages dynamically. For example, the content of a vector can be used to create a message using a series of \lstinline^append^ calls. \\
+  \hline
+  \lstinline^accept_handle^, \lstinline^connection_handle^, \lstinline^publish^, \lstinline^remote_actor^, \lstinline^max_msg_size^, \lstinline^typed_publish^, \lstinline^typed_remote_actor^, \lstinline^publish_local_groups^, \lstinline^new_connection_msg^, \lstinline^new_data_msg^, \lstinline^connection_closed_msg^, \lstinline^acceptor_closed_msg^ & These classes and functions have no logical reason to live in the global \lstinline^caf^ namespace and have been moved to \lstinline^caf::io^. \\
+\end{tabular*}
