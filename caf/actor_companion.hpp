@@ -23,11 +23,10 @@
 #include <functional>
 
 #include "caf/local_actor.hpp"
-#include "caf/mailbox_based.hpp"
 #include "caf/mailbox_element.hpp"
-#include "caf/behavior_stack_based.hpp"
 
 #include "caf/mixin/sync_sender.hpp"
+#include "caf/mixin/behavior_stack_based.hpp"
 
 #include "caf/detail/memory.hpp"
 #include "caf/detail/shared_spinlock.hpp"
@@ -40,7 +39,7 @@ namespace caf {
  *        allow any object to interact with other actors.
  */
 class actor_companion : public extend<local_actor, actor_companion>::
-                               with<behavior_stack_based<behavior>::impl,
+                               with<mixin::behavior_stack_based<behavior>::impl,
                                     mixin::sync_sender<nonblocking_response_handle_tag>::impl> {
 
     using lock_type = detail::shared_spinlock;
