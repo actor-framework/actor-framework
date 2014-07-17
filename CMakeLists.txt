@@ -56,7 +56,7 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     message(STATUS "NOTE: Automatically added -stdlib=libc++ flag, "
                    "you can override this by defining CMAKE_CXX_FLAGS "
                    "(see 'configure --help')")
-    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
   endif ()
 else ()
   message(FATAL_ERROR "Your C++ compiler does not support C++11 "
@@ -169,6 +169,7 @@ set (LIBCAF_SRCS
      src/local_actor.cpp
      src/logging.cpp
      src/mailbox_element.cpp
+     src/max_msg_size.cpp
      src/match.cpp
      src/memory.cpp
      src/memory_managed.cpp
