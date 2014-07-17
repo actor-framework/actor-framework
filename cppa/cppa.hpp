@@ -33,6 +33,9 @@
 // headers for classes and functions that have been moved
 #include "caf/io/all.hpp"
 
+// be nice to code using legacy macros
+#define CPPA_VERSION CAF_VERSION
+
 // set old namespace to new namespace
 namespace cppa = caf;
 
