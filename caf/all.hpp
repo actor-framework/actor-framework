@@ -138,8 +138,8 @@
  *
  * Please read the <b>Manual</b> for an introduction to @p libcaf.
  * It is available online as HTML at
- * http://neverlord.github.com/boost.actor/manual/index.html or as PDF at
- * http://neverlord.github.com/boost.actor/manual/manual.pdf
+ * http://neverlord.github.com/libcaf/manual/index.html or as PDF at
+ * http://neverlord.github.com/libcaf/manual/manual.pdf
  *
  * @section IntroHelloWorld Hello World Example
  *

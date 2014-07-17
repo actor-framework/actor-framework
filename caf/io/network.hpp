@@ -622,7 +622,7 @@ class stream : public event_handler {
     }
 
     void stop_reading() {
-        CAF_LOGM_TRACE("boost::actor_io::network::stream", "");
+        CAF_LOGM_TRACE("caf::io::network::stream", "");
         m_sock.close_read();
         backend().del(operation::read, m_sock.fd(), this);
     }

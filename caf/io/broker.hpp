@@ -258,7 +258,7 @@ class broker : public extend<local_actor>::
             }
 
             void configure_read(receive_policy::config config) override {
-                CAF_LOGM_TRACE("boost::actor_io::broker::scribe", "");
+                CAF_LOGM_TRACE("caf::io::broker::scribe", "");
                 m_stream.configure_read(config);
                 if (!m_launched) launch();
             }
@@ -272,18 +272,18 @@ class broker : public extend<local_actor>::
             }
 
             void stop_reading() override {
-                CAF_LOGM_TRACE("boost::actor_io::broker::scribe", "");
+                CAF_LOGM_TRACE("caf::io::broker::scribe", "");
                 m_stream.stop_reading();
                 disconnect();
             }
 
             void flush() override {
-                CAF_LOGM_TRACE("boost::actor_io::broker::scribe", "");
+                CAF_LOGM_TRACE("caf::io::broker::scribe", "");
                 m_stream.flush(this);
             }
 
             void launch() {
-                CAF_LOGM_TRACE("boost::actor_io::broker::scribe", "");
+                CAF_LOGM_TRACE("caf::io::broker::scribe", "");
                 CAF_REQUIRE(!m_launched);
                 m_launched = true;
                 m_stream.start(this);
