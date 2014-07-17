@@ -11,7 +11,6 @@
 
 using namespace std;
 using namespace caf;
-using namespace boost::actor_io;
 
 struct ping {
     int32_t value;
