@@ -52,12 +52,6 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
   else ()
     message(FATAL_ERROR "clang++ >= 3.2 required (found: ${CompilerVersion}.")
   endif ()
-  if (NOT CXXFLAGS_PROVIDED)
-    message(STATUS "NOTE: Automatically added -stdlib=libc++ flag, "
-                   "you can override this by defining CMAKE_CXX_FLAGS "
-                   "(see 'configure --help')")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
-  endif ()
 else ()
   message(FATAL_ERROR "Your C++ compiler does not support C++11 "
                       "or is not supported")
@@ -70,10 +64,16 @@ if (CMAKE_CXX_FLAGS)
   set(CMAKE_CXX_FLAGS_MINSIZEREL     "")
   set(CMAKE_CXX_FLAGS_RELEASE        "")
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "")
-else (CMAKE_CXX_FLAGS)
+else ()
   set(CXXFLAGS_PROVIDED false)
-  if (MORE_CLANG_WARNINGS AND "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-    set(CMAKE_CXX_FLAGS "-std=c++11 -pedantic -Weverything -Wno-c++98-compat -Wno-padded -Wno-documentation-unknown-command -Wno-exit-time-destructors -Wno-global-constructors -Wno-missing-prototypes -Wno-c++98-compat-pedantic -Wno-unused-member-function -Wno-unused-const-variable")
+  if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    message(STATUS "NOTE: Automatically added -stdlib=libc++ flag, "
+                   "you can override this by defining CMAKE_CXX_FLAGS "
+                   "(see 'configure --help')")
+    set(CMAKE_CXX_FLAGS "-std=c++11 -stdlib=libc++")
+    if (MORE_CLANG_WARNINGS)
+      set(CMAKE_CXX_FLAGS "-pedantic -Weverything -Wno-c++98-compat -Wno-padded -Wno-documentation-unknown-command -Wno-exit-time-destructors -Wno-global-constructors -Wno-missing-prototypes -Wno-c++98-compat-pedantic -Wno-unused-member-function -Wno-unused-const-variable")
+    endif ()
   else ()
     set(CMAKE_CXX_FLAGS "-std=c++11 -Wextra -Wall -pedantic")
   endif ()
@@ -85,7 +85,7 @@ else (CMAKE_CXX_FLAGS)
   set(CMAKE_CXX_FLAGS_MINSIZEREL     "-Os")
   set(CMAKE_CXX_FLAGS_RELEASE        "-O3 -DNDEBUG")
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
-endif (CMAKE_CXX_FLAGS)
+endif ()
 
 include(CheckIncludeFileCXX)
 check_include_file_cxx("valgrind/valgrind.h" HAVE_VALGRIND_H)
@@ -169,8 +169,8 @@ set (LIBCAF_SRCS
      src/local_actor.cpp
      src/logging.cpp
      src/mailbox_element.cpp
-     src/max_msg_size.cpp
      src/match.cpp
+     src/max_msg_size.cpp
      src/memory.cpp
      src/memory_managed.cpp
      src/message.cpp
@@ -180,21 +180,21 @@ set (LIBCAF_SRCS
      src/middleman.cpp
      src/network.cpp
      src/node_id.cpp
+     src/publish_local_groups.cpp
      src/ref_counted.cpp
      src/remote_actor_proxy.cpp
      src/response_promise.cpp
      src/resumable.cpp
      src/ripemd_160.cpp
      src/scheduler.cpp
-     src/shutdown.cpp
      src/scoped_actor.cpp
      src/serializer.cpp
      src/shared_spinlock.cpp
+     src/shutdown.cpp
      src/singletons.cpp
      src/string_algorithms.cpp
      src/string_serialization.cpp
      src/sync_request_bouncer.cpp
-     src/publish_local_groups.cpp
      src/to_uniform_name.cpp
      src/uniform_type_info.cpp
      src/uniform_type_info_map.cpp)
