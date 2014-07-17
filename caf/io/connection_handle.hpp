@@ -16,44 +16,36 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#ifndef CAF_PUBLISH_HPP
-#define CAF_PUBLISH_HPP
+#ifndef CAF_CONNECTION_HANDLE_HPP
+#define CAF_CONNECTION_HANDLE_HPP
 
-#include <cstdint>
-
-#include "caf/actor.hpp"
-#include "caf/actor_cast.hpp"
-
-#include "caf/io/publish_impl.hpp"
+#include "caf/io/handle.hpp"
 
 namespace caf {
+namespace io {
 
 /**
- * @brief Publishes @p whom at @p port.
- *
- * The connection is automatically closed if the lifetime of @p whom ends.
- * @param whom Actor that should be published at @p port.
- * @param port Unused TCP port.
- * @param addr The IP address to listen to, or @p INADDR_ANY if @p addr is
- *             @p nullptr.
- * @throws bind_failure
+ * @brief Generic handle type for identifying connections.
  */
-inline void publish(caf::actor whom, uint16_t port,
-                    const char* addr = nullptr) {
-    if (!whom) return;
-    io::publish_impl(actor_cast<abstract_actor_ptr>(whom), port, addr);
-}
+class connection_handle : public handle<connection_handle> {
 
-/**
- * @copydoc publish(actor,uint16_t,const char*)
- */
-template<typename... Rs>
-void typed_publish(typed_actor<Rs...> whom, uint16_t port,
-                   const char* addr = nullptr) {
-    if (!whom) return;
-    io::publish_impl(actor_cast<abstract_actor_ptr>(whom), port, addr);
-}
+    friend class handle<connection_handle>;
 
+    using super = handle<connection_handle>;
+
+ public:
+
+    constexpr connection_handle() {}
+
+ private:
+
+    inline connection_handle(int64_t handle_id) : super{handle_id} {}
+
+};
+
+constexpr connection_handle invalid_connection_handle = connection_handle{};
+
+} // namespace io
 } // namespace caf
 
-#endif // CAF_PUBLISH_HPP
+#endif // CAF_CONNECTION_HANDLE_HPP

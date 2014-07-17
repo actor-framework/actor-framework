@@ -53,14 +53,10 @@ namespace detail {
 namespace {
 const char* mapped_type_names[][2] = {
     {"bool",                            "bool"                                },
-    {"caf::accept_handle",             "@accept"                             },
-    {"caf::acceptor_closed_msg",       "@acceptor_closed"                    },
     {"caf::actor",                     "@actor"                              },
     {"caf::actor_addr",                "@addr"                               },
     {"caf::atom_value",                "@atom"                               },
     {"caf::channel",                   "@channel"                            },
-    {"caf::connection_closed_msg",     "@connection_closed"                  },
-    {"caf::connection_handle",         "@connection"                         },
     {"caf::down_msg",                  "@down"                               },
     {"caf::duration",                  "@duration"                           },
     {"caf::exit_msg",                  "@exit"                               },
@@ -68,16 +64,14 @@ const char* mapped_type_names[][2] = {
     {"caf::group_down_msg",            "@group_down"                         },
     {"caf::message",                   "@message"                            },
     {"caf::message_id",                "@message_id"                         },
-    {"caf::new_connection_msg",        "@new_connection"                     },
-    {"caf::new_data_msg",              "@new_data"                           },
     {"caf::node_id",                   "@node"                               },
     {"caf::sync_exited_msg",           "@sync_exited"                        },
     {"caf::sync_timeout_msg",          "@sync_timeout"                       },
     {"caf::timeout_msg",               "@timeout"                            },
     {"caf::unit_t",                    "@unit"                               },
-    {"double",                          "double"                              },
-    {"float",                           "float"                               },
-    {"long double",                     "@ldouble"                            },
+    {"double",                         "double"                              },
+    {"float",                          "float"                               },
+    {"long double",                    "@ldouble"                            },
     // std::string
     {"std::basic_string<@i8,std::char_traits<@i8>,std::allocator<@i8>>",
      "@str"},
@@ -96,14 +90,10 @@ const char* mapped_type_names[][2] = {
 };
 // the order of this table must be *identical* to mapped_type_names
 using static_type_table = type_list<bool,
-                                    accept_handle,
-                                    acceptor_closed_msg,
                                     actor,
                                     actor_addr,
                                     atom_value,
                                     channel,
-                                    connection_closed_msg,
-                                    connection_handle,
                                     down_msg,
                                     duration,
                                     exit_msg,
@@ -111,8 +101,6 @@ using static_type_table = type_list<bool,
                                     group_down_msg,
                                     message,
                                     message_id,
-                                    new_connection_msg,
-                                    new_data_msg,
                                     node_id,
                                     sync_exited_msg,
                                     sync_timeout_msg,
@@ -446,64 +434,6 @@ inline void deserialize_impl(timeout_msg& tm, deserializer* source) {
 inline void serialize_impl(const sync_timeout_msg&, serializer*) {}
 
 inline void deserialize_impl(const sync_timeout_msg&, deserializer*) {}
-
-template<typename Subtype>
-inline void serialize_impl(const io_handle<Subtype>& hdl, serializer* sink) {
-    sink->write_value(hdl.id());
-}
-
-template<typename Subtype>
-inline void deserialize_impl(io_handle<Subtype>& hdl, deserializer* source) {
-    hdl.set_id(source->read<int64_t>());
-}
-
-inline void serialize_impl(const new_connection_msg& msg, serializer* sink) {
-    serialize_impl(msg.source, sink);
-    serialize_impl(msg.handle, sink);
-}
-
-inline void deserialize_impl(new_connection_msg& msg, deserializer* source) {
-    deserialize_impl(msg.source, source);
-    deserialize_impl(msg.handle, source);
-}
-
-inline void serialize_impl(const new_data_msg& msg, serializer* sink) {
-    serialize_impl(msg.handle, sink);
-    auto buf_size = static_cast<uint32_t>(msg.buf.size());
-    if (buf_size != msg.buf.size()) { // narrowing error
-        std::ostringstream oss;
-        oss << "attempted to send more than "
-            << std::numeric_limits<uint32_t>::max() << " bytes";
-        auto errstr = oss.str();
-        CAF_LOGF_ERROR(errstr);
-        throw std::ios_base::failure(std::move(errstr));
-    }
-    sink->write_value(buf_size);
-    sink->write_raw(msg.buf.size(), msg.buf.data());
-}
-
-inline void deserialize_impl(new_data_msg& msg, deserializer* source) {
-    deserialize_impl(msg.handle, source);
-    auto buf_size = source->read<uint32_t>();
-    msg.buf.resize(buf_size);
-    source->read_raw(msg.buf.size(), msg.buf.data());
-}
-
-// exit_msg & down_msg have the same fields
-template<typename T>
-typename std::enable_if<std::is_same<T, connection_closed_msg>::value ||
-                        std::is_same<T, acceptor_closed_msg>::value>::type
-serialize_impl(const T& dm, serializer* sink) {
-    serialize_impl(dm.handle, sink);
-}
-
-// exit_msg & down_msg have the same fields
-template<typename T>
-typename std::enable_if<std::is_same<T, connection_closed_msg>::value ||
-                        std::is_same<T, acceptor_closed_msg>::value>::type
-deserialize_impl(T& dm, deserializer* source) {
-    deserialize_impl(dm.handle, source);
-}
 
 bool types_equal(const std::type_info* lhs, const std::type_info* rhs) {
     // in some cases (when dealing with dynamic libraries),
@@ -899,13 +829,7 @@ class utim_impl : public uniform_type_info_map {
                                      int_tinfo<uint32_t>,
                                      int_tinfo<int64_t>,
                                      int_tinfo<uint64_t>,
-                                     default_uniform_type_info<charbuf>,
-                                     uti_impl<accept_handle>,
-                                     uti_impl<connection_handle>,
-                                     uti_impl<acceptor_closed_msg>,
-                                     uti_impl<connection_closed_msg>,
-                                     uti_impl<new_connection_msg>,
-                                     uti_impl<new_data_msg>>;
+                                     default_uniform_type_info<charbuf>>;
 
     builtin_types m_storage;
 

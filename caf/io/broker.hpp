@@ -25,10 +25,11 @@
 #include "caf/spawn.hpp"
 #include "caf/extend.hpp"
 #include "caf/local_actor.hpp"
-#include "caf/accept_handle.hpp"
-#include "caf/connection_handle.hpp"
 
 #include "caf/io/network.hpp"
+#include "caf/io/accept_handle.hpp"
+#include "caf/io/system_messages.hpp"
+#include "caf/io/connection_handle.hpp"
 
 #include "caf/mixin/functor_based.hpp"
 #include "caf/mixin/behavior_stack_based.hpp"

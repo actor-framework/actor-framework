@@ -19,18 +19,19 @@
 #ifndef CAF_ACCEPT_HANDLE_HPP
 #define CAF_ACCEPT_HANDLE_HPP
 
-#include "caf/io_handle.hpp"
+#include "caf/io/handle.hpp"
 
 namespace caf {
+namespace io {
 
 /**
  * @brief Generic handle type for managing incoming connections.
  */
-class accept_handle : public io_handle<accept_handle> {
+class accept_handle : public handle<accept_handle> {
 
-    friend class io_handle<accept_handle>;
+    friend class handle<accept_handle>;
 
-    using super = io_handle<accept_handle>;
+    using super = handle<accept_handle>;
 
  public:
 
@@ -42,6 +43,7 @@ class accept_handle : public io_handle<accept_handle> {
 
 };
 
+} // namespace ios
 } // namespace caf
 
 #endif // CAF_ACCEPT_HANDLE_HPP

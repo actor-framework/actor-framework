@@ -16,18 +16,65 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
+#ifndef CAF_DETAIL_HANDLE_HPP
+#define CAF_DETAIL_HANDLE_HPP
 
-#ifndef CPPA_MAX_MSG_SIZE_HPP
-#define CPPA_MAX_MSG_SIZE_HPP
+#include <cstdint>
 
-// <backward_compatibility version="0.9" whole_file="yes">
-#include "caf/io/max_msg_size.hpp"
+#include "caf/detail/comparable.hpp"
 
 namespace caf {
 
-using io::max_msg_size;
+/**
+ * @brief Base class for IO handles such as {@link accept_handle} or
+ *        {@link connection_handle}.
+ */
+template<typename Subtype, int64_t InvalidId = -1>
+class handle : detail::comparable<Subtype> {
+
+ public:
+
+    constexpr handle() : m_id{InvalidId} {}
+
+    handle(const Subtype& other) { m_id = other.id(); }
+
+    handle(const handle& other) = default;
+
+    Subtype& operator=(const handle& other) {
+        m_id = other.id();
+        return *static_cast<Subtype*>(this);
+    }
+
+    /**
+     * @brief Returns the unique identifier of this handle.
+     */
+    inline int64_t id() const { return m_id; }
+
+    /**
+     * @brief Sets the unique identifier of this handle.
+     */
+    inline void set_id(int64_t value) { m_id = value; }
+
+    inline int64_t compare(const Subtype& other) const {
+        return m_id - other.id();
+    }
+
+    inline bool invalid() const { return m_id == -1; }
+
+    static inline Subtype from_int(int64_t id) {
+        return {id};
+    }
+
+ protected:
+
+    inline handle(int64_t handle_id) : m_id{handle_id} {}
+
+ private:
+
+    int64_t m_id;
+
+};
 
 } // namespace caf
-// </backward_compatibility>
 
-#endif // CPPA_MAX_MSG_SIZE_HPP
+#endif // CAF_DETAIL_HANDLE_HPP

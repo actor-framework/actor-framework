@@ -20,9 +20,10 @@
 #define CAF_IO_SPAWN_IO_HPP
 
 #include "caf/spawn.hpp"
-#include "caf/connection_handle.hpp"
 
 #include "caf/io/broker.hpp"
+#include "caf/io/middleman.hpp"
+#include "caf/io/connection_handle.hpp"
 
 namespace caf {
 namespace io {

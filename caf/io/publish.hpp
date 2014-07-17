@@ -16,65 +16,46 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#ifndef CAF_DETAIL_HANDLE_HPP
-#define CAF_DETAIL_HANDLE_HPP
+#ifndef CAF_IO_PUBLISH_HPP
+#define CAF_IO_PUBLISH_HPP
 
 #include <cstdint>
 
-#include "caf/detail/comparable.hpp"
+#include "caf/actor.hpp"
+#include "caf/actor_cast.hpp"
+
+#include "caf/io/publish_impl.hpp"
 
 namespace caf {
+namespace io {
 
 /**
- * @brief Base class for IO handles such as {@link accept_handle} or
- *        {@link connection_handle}.
+ * @brief Publishes @p whom at @p port.
+ *
+ * The connection is automatically closed if the lifetime of @p whom ends.
+ * @param whom Actor that should be published at @p port.
+ * @param port Unused TCP port.
+ * @param addr The IP address to listen to, or @p INADDR_ANY if @p addr is
+ *             @p nullptr.
+ * @throws bind_failure
  */
-template<typename Subtype, int64_t InvalidId = -1>
-class io_handle : detail::comparable<Subtype> {
+inline void publish(caf::actor whom, uint16_t port,
+                    const char* addr = nullptr) {
+    if (!whom) return;
+    io::publish_impl(actor_cast<abstract_actor_ptr>(whom), port, addr);
+}
 
- public:
+/**
+ * @copydoc publish(actor,uint16_t,const char*)
+ */
+template<typename... Rs>
+void typed_publish(typed_actor<Rs...> whom, uint16_t port,
+                   const char* addr = nullptr) {
+    if (!whom) return;
+    io::publish_impl(actor_cast<abstract_actor_ptr>(whom), port, addr);
+}
 
-    constexpr io_handle() : m_id{InvalidId} {}
-
-    io_handle(const Subtype& other) { m_id = other.id(); }
-
-    io_handle(const io_handle& other) = default;
-
-    Subtype& operator=(const io_handle& other) {
-        m_id = other.id();
-        return *static_cast<Subtype*>(this);
-    }
-
-    /**
-     * @brief Returns the unique identifier of this handle.
-     */
-    inline int64_t id() const { return m_id; }
-
-    /**
-     * @brief Sets the unique identifier of this handle.
-     */
-    inline void set_id(int64_t value) { m_id = value; }
-
-    inline int64_t compare(const Subtype& other) const {
-        return m_id - other.id();
-    }
-
-    inline bool invalid() const { return m_id == -1; }
-
-    static inline Subtype from_int(int64_t id) {
-        return {id};
-    }
-
- protected:
-
-    inline io_handle(int64_t handle_id) : m_id{handle_id} {}
-
- private:
-
-    int64_t m_id;
-
-};
-
+} // namespace io
 } // namespace caf
 
-#endif // CAF_DETAIL_HANDLE_HPP
+#endif // CAF_IO_PUBLISH_HPP

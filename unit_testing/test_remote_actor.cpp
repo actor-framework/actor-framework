@@ -318,7 +318,7 @@ void test_remote_actor(std::string app_path, bool run_remote_actor) {
     bool success = false;
     do {
         try {
-            publish(serv, port, "127.0.0.1");
+            io::publish(serv, port, "127.0.0.1");
             success = true;
             CAF_PRINT("running on port " << port);
             CAF_LOGF_INFO("running on port " << port);

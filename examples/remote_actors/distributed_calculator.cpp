@@ -216,7 +216,7 @@ int main(int argc, char** argv) {
     if (mode == "server") {
         try {
             // try to publish math actor at given port
-            publish(spawn(calculator), port);
+            io::publish(spawn(calculator), port);
         }
         catch (exception& e) {
             cerr << "*** unable to publish math actor at port " << port << "\n"

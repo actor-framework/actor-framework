@@ -18,6 +18,7 @@
 
 #include "caf/all.hpp"
 
+#include "caf/io/publish.hpp"
 #include "caf/io/publish_local_groups.hpp"
 
 namespace caf {

@@ -74,7 +74,7 @@ uint16_t run_server() {
     uint16_t port = 4242;
     for (;;) {
         try {
-            typed_publish(ref, port, "127.0.0.1");
+            io::typed_publish(ref, port, "127.0.0.1");
             CAF_LOGF_DEBUG("running on port " << port);
             return port;
         }

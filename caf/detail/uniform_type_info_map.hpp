@@ -31,9 +31,7 @@
 #include "caf/unit.hpp"
 #include "caf/node_id.hpp"
 #include "caf/duration.hpp"
-#include "caf/accept_handle.hpp"
 #include "caf/system_messages.hpp"
-#include "caf/connection_handle.hpp"
 
 #include "caf/detail/type_list.hpp"
 

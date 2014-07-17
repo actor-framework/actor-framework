@@ -18,7 +18,6 @@
 
 #include "caf/all.hpp"
 #include "caf/message.hpp"
-#include "caf/publish.hpp"
 #include "caf/abstract_group.hpp"
 #include "caf/detail/shared_spinlock.hpp"
 

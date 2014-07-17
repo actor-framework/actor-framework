@@ -43,6 +43,65 @@ inline bool operator==(const foo& lhs, const foo& rhs) {
 
 using namespace caf;
 
+bool check_types(const std::set<std::string>& expected) {
+    // holds the type names we see at runtime
+    std::set<std::string> found;
+    // fetch all available type names
+    auto types = uniform_type_info::instances();
+    for (auto tinfo : types) {
+        found.insert(tinfo->name());
+    }
+    // compare the two sets
+    CAF_CHECK_EQUAL(expected.size(), found.size());
+    bool expected_equals_found = false;
+    if (expected.size() == found.size()
+        && std::equal(found.begin(), found.end(), expected.begin())) {
+        CAF_CHECKPOINT();
+        return true;
+    }
+    CAF_CHECK(false);
+    if (!expected_equals_found) {
+        std::string(41, ' ');
+        std::ostringstream oss(std::string(41, ' '));
+        oss.seekp(0);
+        oss << "found (" << found.size() << ")";
+        oss.seekp(22);
+        oss << "expected (" << expected.size() << ")";
+        std::string lhs;
+        std::string rhs;
+        CAF_PRINT(oss.str());
+        CAF_PRINT(std::string(41, '-'));
+        auto fi = found.begin();
+        auto fe = found.end();
+        auto ei = expected.begin();
+        auto ee = expected.end();
+        while (fi != fe || ei != ee) {
+            if (fi != fe)
+                lhs = *fi++;
+            else
+                lhs.clear();
+            if (ei != ee)
+                rhs = *ei++;
+            else
+                rhs.clear();
+            lhs.resize(20, ' ');
+            CAF_PRINT(lhs << "| " << rhs);
+        }
+    }
+    return false;
+}
+
+template<typename T>
+T& append(T& storage) {
+    return storage;
+}
+
+template<typename T, typename U, typename... Us>
+T& append(T& storage, U&& u, Us&&... us) {
+    storage.insert(std::forward<U>(u));
+    return append(storage, std::forward<Us>(us)...);
+}
+
 int main() {
     CAF_TEST(test_uniform_type);
     auto announce1 = announce<foo>(&foo::value);
@@ -84,15 +143,11 @@ int main() {
         "float",              "double",  "@ldouble", // floating points
         // default announced types
         "@unit",              // unit_t
-        "@accept",            // accept_handle
-        "@acceptor_closed",   // acceptor_closed_msg
         "@actor",             // actor
         "@addr",              // actor_addr
         "@atom",              // atom_value
         "@channel",           // channel
         "@charbuf",           // vector<char>
-        "@connection",        // connection_handle
-        "@connection_closed", // connection_closed_msg
         "@down",              // down_msg
         "@duration",          // duration
         "@exit",              // exit_msg
@@ -100,56 +155,23 @@ int main() {
         "@group_down",        // group_down_msg
         "@message",           // message
         "@message_id",        // message_id
-        "@new_connection",    // new_connection_msg
-        "@new_data",          // new_data_msg
         "@node",              // node_id
         "@strmap",            // map<string,string>
+        "@timeout",           // timeout_msg
         "@sync_exited",       // sync_exited_msg
-        "@sync_timeout",      // sync_timeout_msg
-        "@timeout"            // timeout_msg
+        "@sync_timeout"       // sync_timeout_msg
     };
-    // holds the type names we see at runtime
-    std::set<std::string> found;
-    // fetch all available type names
-    auto types = uniform_type_info::instances();
-    for (auto tinfo : types) {
-        found.insert(tinfo->name());
-    }
-    // compare the two sets
-    CAF_CHECK_EQUAL(expected.size(), found.size());
-    bool expected_equals_found = false;
-    if (expected.size() == found.size()) {
-        expected_equals_found =
-            std::equal(found.begin(), found.end(), expected.begin());
-        CAF_CHECK(expected_equals_found);
-    }
-    if (!expected_equals_found) {
-        std::string(41, ' ');
-        std::ostringstream oss(std::string(41, ' '));
-        oss.seekp(0);
-        oss << "found (" << found.size() << ")";
-        oss.seekp(22);
-        oss << "expected (" << found.size() << ")";
-        std::string lhs;
-        std::string rhs;
-        CAF_PRINT(oss.str());
-        CAF_PRINT(std::string(41, '-'));
-        auto fi = found.begin();
-        auto fe = found.end();
-        auto ei = expected.begin();
-        auto ee = expected.end();
-        while (fi != fe || ei != ee) {
-            if (fi != fe)
-                lhs = *fi++;
-            else
-                lhs.clear();
-            if (ei != ee)
-                rhs = *ei++;
-            else
-                rhs.clear();
-            lhs.resize(20, ' ');
-            CAF_PRINT(lhs << "| " << rhs);
-        }
+    if (check_types(expected)) {
+        // causes the middleman to create its singleton
+        io::middleman::instance();
+        // ok, check whether middleman announces its types correctly
+        check_types(append(expected,
+                           "caf::io::accept_handle",
+                           "caf::io::acceptor_closed_msg",
+                           "caf::io::connection_handle",
+                           "caf::io::connection_closed_msg",
+                           "caf::io::new_connection_msg",
+                           "caf::io::new_data_msg"));
     }
     return CAF_TEST_RESULT();
 }

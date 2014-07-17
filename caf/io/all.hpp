@@ -20,12 +20,14 @@
 #define CAF_IO_ALL_HPP
 
 #include "broker.hpp"
+#include "publish.hpp"
 #include "spawn_io.hpp"
 #include "middleman.hpp"
 #include "max_msg_size.hpp"
 #include "publish_impl.hpp"
 #include "remote_actor.hpp"
 #include "receive_policy.hpp"
+#include "system_messages.hpp"
 #include "publish_local_groups.hpp"
 
 #endif // CAF_IO_ALL_HPP

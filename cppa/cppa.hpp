@@ -28,12 +28,31 @@
 #include "cppa/opt.hpp"
 #include "cppa/cow_tuple.hpp"
 #include "cppa/tuple_cast.hpp"
-#include "cppa/max_msg_size.hpp"
-#include "cppa/remote_actor.hpp"
 #include "cppa/publish_local_groups.hpp"
+
+// headers for classes and functions that have been moved
+#include "caf/io/all.hpp"
 
 // set old namespace to new namespace
 namespace cppa = caf;
+
+// re-import a couple of moved things backinto the global CAF namespace
+namespace caf {
+
+using io::accept_handle;
+using io::connection_handle;
+using io::publish;
+using io::remote_actor;
+using io::max_msg_size;
+using io::typed_publish;
+using io::typed_remote_actor;
+using io::publish_local_groups;
+using io::new_connection_msg;
+using io::new_data_msg;
+using io::connection_closed_msg;
+using io::acceptor_closed_msg;
+
+} // namespace caf
 
 // </backward_compatibility>
 
