@@ -28,7 +28,6 @@
 #include "cppa/opt.hpp"
 #include "cppa/cow_tuple.hpp"
 #include "cppa/remote_actor.hpp"
-#include "cppa/options_description.hpp"
 #include "cppa/publish_local_groups.hpp"
 
 // set old namespace to new namespace
