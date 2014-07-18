@@ -158,19 +158,26 @@ class client : public event_based_actor {
 
  public:
 
-    client(actor server) : m_server(std::move(server)) {}
+    client(actor server) : m_server(std::move(server)) {
+        // nop
+    }
 
-    behavior make_behavior() override { return spawn_ping(); }
+    behavior make_behavior() override {
+        return spawn_ping();
+    }
 
  private:
 
     behavior spawn_ping() {
         CAF_PRINT("send {'SpawnPing'}");
         send(m_server, atom("SpawnPing"));
-        return (on(atom("PingPtr"), arg_match) >> [=](const actor& ping) {
-            auto pptr = spawn<monitored + detached + blocking_api>(pong, ping);
-            await_down(this, pptr, [=] { send_sync_msg(); });
-        });
+        return {
+            on(atom("PingPtr"), arg_match) >> [=](const actor& ping) {
+                CAF_PRINT("received ping pointer, spawn pong");
+                auto pptr = spawn<monitored + detached + blocking_api>(pong, ping);
+                await_down(this, pptr, [=] { send_sync_msg(); });
+            }
+        };
     }
 
     void send_sync_msg() {
