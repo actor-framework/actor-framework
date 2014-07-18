@@ -47,7 +47,7 @@ behavior basp_broker::make_behavior() {
         // received from underlying broker implementation
         [=](new_data_msg& msg) {
             CAF_LOGM_TRACE("make_behavior$new_data_msg",
-                                   "handle = " << msg.handle.id());
+                           "handle = " << msg.handle.id());
             new_data(m_ctx[msg.handle], msg.buf);
         },
         // received from underlying broker implementation
@@ -170,6 +170,48 @@ void basp_broker::dispatch(const basp::header& hdr, message&& payload) {
     dest->enqueue(src, mid, std::move(payload), nullptr);
 }
 
+void basp_broker::dispatch(const actor_addr& from,
+                           const actor_addr& to,
+                           message_id mid,
+                           const message& msg) {
+    CAF_LOG_TRACE(CAF_TARG(from, to_string) << ", "
+                          << CAF_MARG(mid, integer_value) << ", "
+                          << CAF_TARG(to, to_string) << ", "
+                          << CAF_TARG(msg, to_string));
+    CAF_REQUIRE(to != nullptr);
+    auto dest = to.node();
+    auto hdl = get_route(dest);
+    if (hdl.invalid()) {
+        CAF_LOG_WARNING("unable to dispatch message: no route to "
+                                << to_string(dest) << ", message: "
+                                << to_string(msg));
+        return;
+    }
+    auto& buf = wr_buf(hdl);
+    // reserve space in the buffer to write the broker message later on
+    auto wr_pos = buf.size();
+    char placeholder[basp::header_size];
+    buf.insert(buf.end(), std::begin(placeholder), std::end(placeholder));
+    auto before = buf.size();
+    { // write payload, lifetime scope of first serializer
+        binary_serializer bs1{std::back_inserter(buf), &m_namespace};
+        bs1.write(msg, m_meta_msg);
+    }
+    // write broker message to the reserved space
+    binary_serializer bs2{buf.begin() + wr_pos, &m_namespace};
+    if (from != invalid_actor_addr) {
+        // register locally running actors to be able to deserialize them later
+        detail::singletons::get_actor_registry()->put(
+            from.id(), actor_cast<abstract_actor_ptr>(from));
+    }
+    write(bs2, {from.node(), dest,
+                from.id(), to.id(),
+                static_cast<uint32_t>(buf.size() - before),
+                basp::dispatch_message,
+                mid.integer_value()});
+    flush(hdl);
+}
+
 void basp_broker::read(binary_deserializer& bd, basp::header& msg) {
     bd.read(msg.source_node, m_meta_id_type)
       .read(msg.dest_node, m_meta_id_type)
@@ -201,7 +243,10 @@ basp_broker::connection_state
 basp_broker::handle_basp_header(connection_context& ctx,
                                 const buffer_type* payload) {
     auto& hdr = ctx.hdr;
-    if (!payload && hdr.payload_len > 0) return await_payload;
+    if (!payload && hdr.payload_len > 0) {
+        // receive payload first
+        return await_payload;
+    }
     // forward message if not addressed to us; invalid dest_node implies
     // that msg is a server_handshake
     if (hdr.dest_node != invalid_node_id && hdr.dest_node != node()) {
@@ -402,43 +447,6 @@ void basp_broker::send_kill_proxy_instance(const id_type& nid,
     binary_serializer bs(std::back_inserter(buf), &m_namespace);
     write(bs, {node(), nid, aid, invalid_actor_id, 0,
                basp::kill_proxy_instance, uint64_t{reason}});
-    flush(hdl);
-}
-
-void basp_broker::dispatch(const actor_addr& from,
-                             const actor_addr& to,
-                             message_id mid,
-                             const message& msg) {
-    CAF_LOG_TRACE(CAF_TARG(from, to_string) << ", "
-                          << CAF_MARG(mid, integer_value) << ", "
-                          << CAF_TARG(to, to_string) << ", "
-                          << CAF_TARG(msg, to_string));
-    CAF_REQUIRE(to != nullptr);
-    auto dest = to.node();
-    auto hdl = get_route(dest);
-    if (hdl.invalid()) {
-        CAF_LOG_WARNING("unable to dispatch message: no route to "
-                                << to_string(dest) << ", message: "
-                                << to_string(msg));
-        return;
-    }
-    auto& buf = wr_buf(hdl);
-    // reserve space in the buffer to write the broker message later on
-    auto wr_pos = buf.size();
-    char placeholder[basp::header_size];
-    buf.insert(buf.end(), std::begin(placeholder), std::end(placeholder));
-    auto before = buf.size();
-    { // write payload, lifetime scope of first serializer
-        binary_serializer bs1{std::back_inserter(buf), &m_namespace};
-        bs1.write(msg, m_meta_msg);
-    }
-    // write broker message to the reserved space
-    binary_serializer bs2{buf.begin() + wr_pos, &m_namespace};
-    write(bs2, {from.node(), dest,
-                from.id(), to.id(),
-                static_cast<uint32_t>(buf.size() - before),
-                basp::dispatch_message,
-                mid.integer_value()});
     flush(hdl);
 }
 
