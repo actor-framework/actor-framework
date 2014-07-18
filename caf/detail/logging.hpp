@@ -159,7 +159,6 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 #define CAF_PUSH_AID(unused) static_cast<void>(0)
 #define CAF_PUSH_AID_FROM_PTR(unused) static_cast<void>(0)
 #define CAF_SET_AID(unused) caf_set_aid_dummy()
-#define CAF_LOG_LEVEL 1
 #else
 #define CAF_LOG_IMPL(lvlname, classname, funname, message)                    \
     if (strcmp(lvlname, "ERROR") == 0) {                                       \

@@ -65,6 +65,12 @@ struct log_event {
 
 };
 
+#ifndef CAF_LOG_LEVEL
+    constexpr int global_log_level = 0;
+#else
+    constexpr int global_log_level = CAF_LOG_LEVEL;
+#endif
+
 class logging_impl : public logging {
 
  public:
@@ -74,7 +80,7 @@ class logging_impl : public logging {
                                                 "DEBUG", "TRACE"};
         m_thread = std::thread([this] { (*this)(); });
         std::string msg = "ENTRY log level = ";
-        msg += log_level_lookup_table[CAF_LOG_LEVEL];
+        msg += log_level_lookup_table[global_log_level];
         log("TRACE", "logging", "run", __FILE__, __LINE__, msg);
     }
 
