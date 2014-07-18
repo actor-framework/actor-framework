@@ -22,6 +22,7 @@
 #endif
 
 #include "caf/all.hpp"
+#include "caf/io/all.hpp"
 
 using namespace std;
 using namespace caf;

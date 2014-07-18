@@ -33,8 +33,6 @@
 #include "caf/deserializer.hpp"
 #include "caf/event_based_actor.hpp"
 
-#include "caf/io/middleman.hpp"
-
 #include "caf/detail/group_manager.hpp"
 
 namespace caf {

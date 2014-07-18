@@ -24,6 +24,7 @@
 #include <functional>
 
 #include "caf/node_id.hpp"
+#include "caf/actor_cast.hpp"
 #include "caf/actor_proxy.hpp"
 
 namespace caf {

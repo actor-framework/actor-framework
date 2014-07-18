@@ -30,8 +30,6 @@
 #include "caf/serializer.hpp"
 #include "caf/primitive_variant.hpp"
 
-#include "caf/io/middleman.hpp"
-
 #include "caf/detail/singletons.hpp"
 #include "caf/detail/ripemd_160.hpp"
 #include "caf/detail/safe_equal.hpp"

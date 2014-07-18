@@ -20,12 +20,10 @@
 #include <algorithm>
 
 #include "caf/node_id.hpp"
+#include "caf/actor_addr.hpp"
 #include "caf/serializer.hpp"
 #include "caf/deserializer.hpp"
 #include "caf/actor_namespace.hpp"
-
-#include "caf/io/middleman.hpp"
-#include "caf/io/remote_actor_proxy.hpp"
 
 #include "caf/detail/logging.hpp"
 #include "caf/detail/singletons.hpp"

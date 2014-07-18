@@ -36,7 +36,7 @@ endif ()
 # check for g++ >= 4.7 or clang++ > = 3.2
 try_run(ProgramResult
         CompilationSucceeded
-  ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/get_compiler_version.cpp
+  ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/get_compiler_version.cpp
         RUN_OUTPUT_VARIABLE CompilerVersion)
 if (NOT CompilationSucceeded OR NOT ProgramResult EQUAL 0)
   message(FATAL_ERROR "Cannot determine compiler version")
@@ -87,15 +87,6 @@ else ()
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
 endif ()
 
-include(CheckIncludeFileCXX)
-check_include_file_cxx("valgrind/valgrind.h" HAVE_VALGRIND_H)
-if (HAVE_VALGRIND_H)
-  set(VALGRIND "yes")
-  add_definitions(-DCAF_ANNOTATE_VALGRIND)
-else (HAVE_VALGRIND_H)
-  set(VALGRIND "no")
-endif (HAVE_VALGRIND_H)
-
 # set build type (evaluate CAF_ENABLE_RUNTIME_CHECKS flag)
 if (CAF_ENABLE_RUNTIME_CHECKS)
   add_definitions(-DCAF_ENABLE_RUNTIME_CHECKS)
@@ -118,88 +109,8 @@ if ("${CMAKE_BUILD_TYPE}" STREQUAL "")
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif ("${CMAKE_BUILD_TYPE}" STREQUAL "")
 
-# get header files; only needed by CMake generators,
-# e.g., for creating proper Xcode projects
-file(GLOB LIBCAF_HDRS "caf/*.hpp"
-                      "caf/detail/*.hpp"
-                      "caf/intrusive/*.hpp"
-                      "caf/io/*.hpp"
-                      "caf/opencl/*.hpp"
-                      "caf/qtsupport/*.hpp"
-                      "caf/policy/*.hpp"
-                      "caf/mixin/*.hpp"
-                      "cppa/*.hpp")
-
-# list cpp files excluding platform-dependent files
-set (LIBCAF_SRCS 
-     ${LIBCAF_PLATFORM_SRCS}
-     src/abstract_actor.cpp
-     src/abstract_channel.cpp
-     src/abstract_group.cpp
-     src/actor.cpp
-     src/actor_addr.cpp
-     src/actor_companion.cpp
-     src/actor_namespace.cpp
-     src/actor_ostream.cpp
-     src/actor_proxy.cpp
-     src/actor_registry.cpp
-     src/atom.cpp
-     src/attachable.cpp
-     src/basp_broker.cpp
-     src/behavior.cpp
-     src/behavior_stack.cpp
-     src/binary_deserializer.cpp
-     src/binary_serializer.cpp
-     src/blocking_actor.cpp
-     src/broker.cpp
-     src/channel.cpp
-     src/continue_helper.cpp
-     src/decorated_tuple.cpp
-     src/demangle.cpp
-     src/deserializer.cpp
-     src/duration.cpp
-     src/event_based_actor.cpp
-     src/exception.cpp
-     src/execution_unit.cpp
-     src/exit_reason.cpp
-     src/get_mac_addresses.cpp
-     src/get_root_uuid.cpp
-     src/group.cpp
-     src/group_manager.cpp
-     src/local_actor.cpp
-     src/logging.cpp
-     src/mailbox_element.cpp
-     src/match.cpp
-     src/max_msg_size.cpp
-     src/memory.cpp
-     src/memory_managed.cpp
-     src/message.cpp
-     src/message_builder.cpp
-     src/message_data.cpp
-     src/message_handler.cpp
-     src/middleman.cpp
-     src/network.cpp
-     src/node_id.cpp
-     src/publish_local_groups.cpp
-     src/ref_counted.cpp
-     src/remote_actor_proxy.cpp
-     src/response_promise.cpp
-     src/resumable.cpp
-     src/ripemd_160.cpp
-     src/scheduler.cpp
-     src/scoped_actor.cpp
-     src/serializer.cpp
-     src/shared_spinlock.cpp
-     src/shutdown.cpp
-     src/singletons.cpp
-     src/string_algorithms.cpp
-     src/string_serialization.cpp
-     src/sync_request_bouncer.cpp
-     src/to_uniform_name.cpp
-     src/uniform_type_info.cpp
-     src/uniform_type_info_map.cpp)
-
-set(INCLUDE_DIRS .)
+# all libs need access to core headers
+set(INCLUDE_DIRS libcaf_core)
 set(LD_DIRS)
 set(LD_FLAGS ${CMAKE_LD_LIBS})
 
@@ -216,38 +127,18 @@ if (DISABLE_MEM_MANAGEMENT)
   add_definitions(-DCAF_DISABLE_MEM_MANAGEMENT)
 endif (DISABLE_MEM_MANAGEMENT)
 
-# build shared library if not compiling static only
-if (NOT "${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes")
-  add_library(libcaf SHARED ${LIBCAF_SRCS} ${LIBCAF_HDRS})
-  target_link_libraries(libcaf ${LD_FLAGS})
-  set(LIBRARY_VERSION ${LIBCAF_VERSION_MAJOR}.${LIBCAF_VERSION_MINOR}.${LIBCAF_VERSION_PATCH})
-  set(LIBRARY_SOVERSION ${LIBCAF_VERSION_MAJOR})
-  set_target_properties(libcaf 
-                        PROPERTIES
-                        SOVERSION ${LIBRARY_SOVERSION}
-                        VERSION ${LIBRARY_VERSION}
-                        OUTPUT_NAME caf)
-  if(NOT MINGW)
-    install(TARGETS libcaf LIBRARY DESTINATION lib)
-  endif()
-endif ()
-
-# build static library only if --build-static or --build-static-only was set
-if ("${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes" OR "${CAF_BUILD_STATIC}" STREQUAL "yes")
-  add_library(libcafStatic STATIC ${LIBCAF_HDRS} ${LIBCAF_SRCS})
-  set_target_properties(libcafStatic PROPERTIES OUTPUT_NAME caf_static)
-  install(TARGETS libcafStatic ARCHIVE DESTINATION lib)
-endif ()
-
 link_directories(${LD_DIRS})
 include_directories(${INCLUDE_DIRS})
 
-# install includes
-install(DIRECTORY caf/ DESTINATION include/caf FILES_MATCHING PATTERN "*.hpp")
-install(DIRECTORY cppa/ DESTINATION include/cppa FILES_MATCHING PATTERN "*.hpp")
+# install includes from core
+install(DIRECTORY libcaf_core/caf/ DESTINATION include/caf FILES_MATCHING PATTERN "*.hpp")
+install(DIRECTORY libcaf_io/cppa/ DESTINATION include/cppa FILES_MATCHING PATTERN "*.hpp")
+
+# install includes from io
+install(DIRECTORY libcaf_io/caf/ DESTINATION include/caf FILES_MATCHING PATTERN "*.hpp")
 
 # process cmake_uninstall.cmake.in
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in"
                "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
                IMMEDIATE @ONLY)
 
@@ -256,46 +147,27 @@ add_custom_target(uninstall
                   COMMAND ${CMAKE_COMMAND} -P
                   ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 
-# setting path to caf headers and libcaf
-set (CAF_INCLUDE_PATH ${CMAKE_SOURCE_DIR}/libcaf)
-set (CAF_INCLUDE ${CAF_INCLUDE_PATH})
+# set path to caf core & io headers for subdirectories
+set (LIBCAF_INCLUDE_DIRS
+     ${CMAKE_SOURCE_DIR}/libcaf_core
+     ${CMAKE_SOURCE_DIR}/libcaf_io)
 
-if ("${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes")
-  set (CAF_LIBRARY ${LIBRARY_OUTPUT_PATH}/libcaf_static.a ${LD_FLAGS})
-else ()
-  if (APPLE)
-    if ("${CMAKE_GENERATOR}" STREQUAL "Xcode")
-      set (CAF_LIBRARY "-lcaf")
-    else ()
-      set (CAF_LIBRARY ${LIBRARY_OUTPUT_PATH}/libcaf.dylib)
-    endif ()
-    #set (CAF_LIBRARY -L${LIBRARY_OUTPUT_PATH} -lcaf)
-  elseif (UNIX)
-    set (CAF_LIBRARY ${LIBRARY_OUTPUT_PATH}/libcaf.so)
-  elseif (MINGW)
-    set (CAF_LIBRARY ${LIBRARY_OUTPUT_PATH}/libcaf.dll)
-  else ()
-    message (SEND_FATAL "Host platform not supported ...")
-  endif ()
-endif ()
-
-# set up subdirectories
+# set up subdirectories, todo: allow configure option to disable io
+add_subdirectory(libcaf_core)
+# set core lib for sub directories
+set (LIBCAF_CORE_LIBRARY libcaf_core)
+add_subdirectory(libcaf_io)
+# set io lib for sub directories
+set (LIBCAF_IO_LIBRARY libcaf_io)
+add_dependencies(libcaf_io libcaf_core)
 if (NOT "${CAF_NO_UNIT_TESTS}" STREQUAL "yes")
   enable_testing()
   add_subdirectory(unit_testing)
-  if ("${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes")
-    add_dependencies(all_unit_tests libcafStatic)
-  else ()
-    add_dependencies(all_unit_tests libcaf)
-  endif ()
+  add_dependencies(all_unit_tests libcaf_io)
 endif ()
 if (NOT "${CAF_NO_EXAMPLES}" STREQUAL "yes")
   add_subdirectory(examples)
-  if ("${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes")
-    add_dependencies(all_examples libcafStatic)
-  else ()
-    add_dependencies(all_examples libcaf)
-  endif ()
+  add_dependencies(all_examples libcaf_io)
 endif ()
 
 # set optional flags

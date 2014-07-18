@@ -37,7 +37,6 @@
 #include "caf/behavior.hpp"
 #include "caf/duration.hpp"
 #include "caf/sb_actor.hpp"
-#include "caf/spawn_io.hpp"
 #include "caf/shutdown.hpp"
 #include "caf/exception.hpp"
 #include "caf/resumable.hpp"

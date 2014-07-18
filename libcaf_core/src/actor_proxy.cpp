@@ -16,52 +16,57 @@
  * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
 \******************************************************************************/
 
-#include "caf/actor.hpp"
-#include "caf/actor_addr.hpp"
-#include "caf/local_actor.hpp"
+#include <utility>
+#include <iostream>
+
+#include "caf/locks.hpp"
+
+#include "caf/atom.hpp"
+#include "caf/to_string.hpp"
+#include "caf/message.hpp"
+#include "caf/scheduler.hpp"
+#include "caf/actor_proxy.hpp"
+#include "caf/exit_reason.hpp"
 
 #include "caf/detail/singletons.hpp"
 
-#include "caf/io/middleman.hpp"
+using namespace std;
 
 namespace caf {
 
-namespace {
-intptr_t compare_impl(const abstract_actor* lhs, const abstract_actor* rhs) {
-    return reinterpret_cast<intptr_t>(lhs) - reinterpret_cast<intptr_t>(rhs);
-}
-} // namespace <anonymous>
+actor_proxy::anchor::anchor(actor_proxy* instance) : m_ptr(instance) {}
 
-actor_addr::actor_addr(const invalid_actor_addr_t&) : m_ptr(nullptr) {}
+actor_proxy::anchor::~anchor() {}
 
-actor_addr::actor_addr(abstract_actor* ptr) : m_ptr(ptr) {}
+bool actor_proxy::anchor::expired() const { return !m_ptr; }
 
-intptr_t actor_addr::compare(const actor_addr& other) const {
-    return compare_impl(m_ptr.get(), other.m_ptr.get());
-}
-
-intptr_t actor_addr::compare(const abstract_actor* other) const {
-    return compare_impl(m_ptr.get(), other);
+actor_proxy_ptr actor_proxy::anchor::get() {
+    actor_proxy_ptr result;
+    { // lifetime scope of guard
+        shared_lock<detail::shared_spinlock> guard{m_lock};
+        auto ptr = m_ptr.load();
+        if (ptr) result.reset(ptr);
+    }
+    return result;
 }
 
-actor_addr actor_addr::operator=(const invalid_actor_addr_t&) {
-    m_ptr.reset();
-    return *this;
+bool actor_proxy::anchor::try_expire() {
+    std::lock_guard<detail::shared_spinlock> guard{m_lock};
+    // double-check reference count
+    if (m_ptr.load()->get_reference_count() == 0) {
+        m_ptr = nullptr;
+        return true;
+    }
+    return false;
 }
 
-actor_id actor_addr::id() const { return (m_ptr) ? m_ptr->id() : 0; }
+actor_proxy::~actor_proxy() {}
 
-node_id actor_addr::node() const {
-    return m_ptr ? m_ptr->node() : detail::singletons::get_node_id();
-}
+actor_proxy::actor_proxy(actor_id aid, node_id nid)
+        : super(aid, nid), m_anchor(new anchor{this}) {}
 
-bool actor_addr::is_remote() const {
-    return m_ptr ? m_ptr->is_remote() : false;
-}
-
-std::set<std::string> actor_addr::interface() const {
-    if (!m_ptr) return std::set<std::string>{};
-    return m_ptr->interface();
+void actor_proxy::request_deletion() {
+    if (m_anchor->try_expire()) delete this;
 }
 
 } // namespace caf

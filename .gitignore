@@ -12,3 +12,4 @@ lib/*
 manual/manual.pdf
 manual/build-pdf/*
 manual/build-html/*
+*.swp

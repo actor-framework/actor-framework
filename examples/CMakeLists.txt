@@ -3,13 +3,22 @@ project(caf_examples CXX)
 
 add_custom_target(all_examples)
 
+include_directories(${LIBCAF_INCLUDE_DIRS})
+
+if (${CMAKE_SYSTEM_NAME} MATCHES "Window")
+  set(WSLIB -lws2_32)
+else ()
+  set(WSLIB)
+endif ()
+
 macro(add name folder)
   add_executable(${name} ${folder}/${name}.cpp ${ARGN})
-  if (${CMAKE_SYSTEM_NAME} MATCHES "Window")
-    target_link_libraries(${name} ${CMAKE_DL_LIBS} ${CAF_LIBRARY} ${PTHREAD_LIBRARIES} -lws2_32)
-  else ()
-    target_link_libraries(${name} ${CMAKE_DL_LIBS} ${CAF_LIBRARY} ${PTHREAD_LIBRARIES})
-  endif ()
+  target_link_libraries(${name}
+                        ${CMAKE_DL_LIBS}
+                        ${LIBCAF_CORE_LIBRARY}
+                        ${LIBCAF_IO_LIBRARY}
+                        ${PTHREAD_LIBRARIES}
+                        ${WSLIB})
   add_dependencies(${name} all_examples)
 endmacro()
 
@@ -42,42 +51,9 @@ if (NOT "${CAF_NO_PROTOBUF_EXAMPLES}" STREQUAL "yes")
   endif (PROTOBUF_FOUND)
 endif ()
 
-find_package(CURL)
-if (CURL_FOUND)
-  add_executable(curl_fuse curl/curl_fuse.cpp)
-  target_link_libraries(curl_fuse ${CMAKE_DL_LIBS} ${CAF_LIBRARY} ${PTHREAD_LIBRARIES} ${CURL_LIBRARY})
-  add_dependencies(curl_fuse all_examples)
-endif (CURL_FOUND)
-
-if (NOT "${CAF_NO_QT_EXAMPLES}" STREQUAL "yes")
-  find_package(Qt4)
-  if (QT4_FOUND)
-    include(${QT_USE_FILE})
-    QT4_ADD_RESOURCES(GROUP_CHAT_RCS )
-    QT4_WRAP_UI(GROUP_CHAT_UI_HDR qtsupport/chatwindow.ui)
-    QT4_WRAP_CPP(GROUP_CHAT_MOC_SRC qtsupport/chatwidget.hpp)
-    # generated headers will be in cmake build directory
-    #include_directories(. qtsupport ${CMAKE_CURRENT_BINARY_DIR} ${CAF_INCLUDE})
-    include_directories(qtsupport ${CMAKE_CURRENT_BINARY_DIR})
-    set(GROUP_CHAT_SRCS qtsupport/qt_group_chat.cpp qtsupport/chatwidget.cpp)
-    add_executable(qt_group_chat
-                   ${GROUP_CHAT_SRCS}
-                   ${GROUP_CHAT_MOC_SRC}
-                   ${GROUP_CHAT_UI_HDR})
-    target_link_libraries(qt_group_chat
-                          ${CMAKE_DL_LIBS}
-                          ${CAF_LIBRARY}
-                          ${QT_LIBRARIES})
-    add_dependencies(qt_group_chat all_examples)
-  endif (QT4_FOUND)
-endif ()
-
-if (ENABLE_OPENCL)
-  macro(add_opencl name folder)
-    add_executable(${name} ${folder}/${name}.cpp ${ARGN})
-    target_link_libraries(${name} ${CMAKE_DL_LIBS} ${CAF_LIBRARY} ${PTHREAD_LIBRARIES} ${OPENCL_LIBRARIES})
-    add_dependencies(${name} all_examples)
-  endmacro()
-  add_opencl(simple_matrix opencl)
-  add_opencl(proper_matrix opencl)
-endif (ENABLE_OPENCL)
+#find_package(CURL)
+#if (CURL_FOUND)
+#  add_executable(curl_fuse curl/curl_fuse.cpp)
+#  target_link_libraries(curl_fuse ${CMAKE_DL_LIBS} ${CAF_LIBRARY} ${PTHREAD_LIBRARIES} ${CURL_LIBRARY})
+#  add_dependencies(curl_fuse all_examples)
+#endif (CURL_FOUND)

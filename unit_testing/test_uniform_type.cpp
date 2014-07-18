@@ -15,14 +15,8 @@
 
 #include "test.hpp"
 
-#include "caf/atom.hpp"
-#include "caf/announce.hpp"
-#include "caf/message.hpp"
-#include "caf/serializer.hpp"
-#include "caf/deserializer.hpp"
-#include "caf/uniform_type_info.hpp"
-
-#include "caf/detail/type_traits.hpp"
+#include "caf/all.hpp"
+#include "caf/io/all.hpp"
 
 using std::cout;
 using std::endl;
