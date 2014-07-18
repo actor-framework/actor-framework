@@ -41,7 +41,6 @@
 
 #include "caf/detail/logging.hpp"
 #include "caf/detail/proper_actor.hpp"
-#include "caf/detail/actor_registry.hpp"
 
 namespace caf {
 namespace scheduler {
