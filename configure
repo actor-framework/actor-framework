@@ -134,6 +134,9 @@ configure ()
 
     if [ -n "$5" ]; then
         cmake -G "$5" $CMakeCacheEntries $sourcedir
+    elif [ -n "$DEFAULT_CMAKE_GENERATOR" ]; then
+        # parse custom environment variable
+        cmake -G "$DEFAULT_CMAKE_GENERATOR" $CMakeCacheEntries $sourcedir
     else
         cmake $CMakeCacheEntries $sourcedir
     fi
