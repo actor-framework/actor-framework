@@ -215,8 +215,8 @@ void broker::invoke_message(const actor_addr& sender,
         }
     }
     catch (std::exception& e) {
-        CAF_LOG_ERROR("broker killed due to an unhandled exception: "
-                       << to_verbose_string(e));
+        CAF_LOG_INFO("broker killed due to an unhandled exception: "
+                     << to_verbose_string(e));
         // keep compiler happy in non-debug mode
         static_cast<void>(e);
         quit(exit_reason::unhandled_exception);

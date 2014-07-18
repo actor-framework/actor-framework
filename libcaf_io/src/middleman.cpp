@@ -84,7 +84,7 @@ inline void serialize_impl(const new_data_msg& msg, serializer* sink) {
         oss << "attempted to send more than "
             << std::numeric_limits<uint32_t>::max() << " bytes";
         auto errstr = oss.str();
-        CAF_LOGF_ERROR(errstr);
+        CAF_LOGF_INFO(errstr);
         throw std::ios_base::failure(std::move(errstr));
     }
     sink->write_value(buf_size);

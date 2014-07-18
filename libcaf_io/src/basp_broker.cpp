@@ -107,8 +107,8 @@ behavior basp_broker::make_behavior() {
             erase_proxy(nid, aid);
         },
         others() >> [=] {
-            CAF_LOG_ERROR("received unexpected message: "
-                                  << to_string(last_dequeued()));
+            CAF_LOG_INFO("received unexpected message: "
+                         << to_string(last_dequeued()));
         }
     };
 }
@@ -122,7 +122,7 @@ void basp_broker::new_data(connection_context& ctx, buffer_type& buf) {
             binary_deserializer bd{buf.data(), buf.size(), &m_namespace};
             read(bd, ctx.hdr);
             if (!basp::valid(ctx.hdr)) {
-                CAF_LOG_ERROR("invalid broker message received");
+                CAF_LOG_INFO("invalid broker message received");
                 close(ctx.hdl);
                 return;
             }
@@ -182,9 +182,8 @@ void basp_broker::dispatch(const actor_addr& from,
     auto dest = to.node();
     auto hdl = get_route(dest);
     if (hdl.invalid()) {
-        CAF_LOG_WARNING("unable to dispatch message: no route to "
-                                << to_string(dest) << ", message: "
-                                << to_string(msg));
+        CAF_LOG_INFO("unable to dispatch message: no route to "
+                     << to_string(dest) << ", message: " << to_string(msg));
         return;
     }
     auto& buf = wr_buf(hdl);
@@ -253,8 +252,8 @@ basp_broker::handle_basp_header(connection_context& ctx,
         auto hdl = get_route(hdr.dest_node);
         if (hdl.invalid()) {
             // TODO: signalize that we don't have route to given node
-            CAF_LOG_ERROR("message dropped: no route to node "
-                                   << to_string(hdr.dest_node));
+            CAF_LOG_INFO("message dropped: no route to node "
+                         << to_string(hdr.dest_node));
             return close_connection;
         }
         auto& buf = wr_buf(hdl);
@@ -315,7 +314,7 @@ basp_broker::handle_basp_header(connection_context& ctx,
         case basp::client_handshake: {
             CAF_REQUIRE(payload == nullptr);
             if (ctx.remote_id != invalid_node_id) {
-                CAF_LOG_WARNING("received unexpected client handshake");
+                CAF_LOG_INFO("received unexpected client handshake");
                 return close_connection;
             }
             ctx.remote_id = hdr.source_node;
@@ -324,7 +323,7 @@ basp_broker::handle_basp_header(connection_context& ctx,
                 return close_connection;
             }
             else if (!try_set_default_route(ctx.remote_id, ctx.hdl)) {
-                CAF_LOG_WARNING("multiple incoming connections "
+                CAF_LOG_INFO("multiple incoming connections "
                                         "from the same node");
                 return close_connection;
             }
@@ -333,12 +332,12 @@ basp_broker::handle_basp_header(connection_context& ctx,
         case basp::server_handshake: {
             CAF_REQUIRE(payload != nullptr);
             if (ctx.handshake_data == nullptr) {
-                CAF_LOG_WARNING("received unexpected server handshake");
+                CAF_LOG_INFO("received unexpected server handshake");
                 return close_connection;
             }
             if (hdr.operation_data != basp::version) {
-                CAF_LOG_ERROR("tried to connect to a node with "
-                                      "different BASP version");
+                CAF_LOG_INFO("tried to connect to a node with "
+                             "different BASP version");
                 return close_connection;
             }
             ctx.remote_id = hdr.source_node;
@@ -404,10 +403,9 @@ basp_broker::handle_basp_header(connection_context& ctx,
                                      << to_string(nid)
                                      << " (re-use old one)");
                 auto proxy = m_namespace.get(nid, remote_aid);
-                CAF_LOG_WARNING_IF(!proxy,
-                                           "no proxy for published actor "
-                                           "found although an open "
-                                           "connection exists");
+                CAF_LOG_INFO_IF(!proxy,
+                                "no proxy for published actor found "
+                                "although an open connection exists");
                 // discard this peer; there's already an open connection
                 ctx.handshake_data->result->set_value(std::move(proxy));
                 ctx.handshake_data = nullptr;
@@ -439,8 +437,7 @@ void basp_broker::send_kill_proxy_instance(const id_type& nid,
     auto hdl = get_route(nid);
     CAF_LOG_DEBUG(CAF_MARG(hdl, id));
     if (hdl.invalid()) {
-        CAF_LOG_WARNING("message dropped, no route to node: "
-                                << to_string(nid));
+        CAF_LOG_INFO("message dropped, no route to node: " << to_string(nid));
         return;
     }
     auto& buf = wr_buf(hdl);
@@ -481,8 +478,8 @@ actor_proxy_ptr basp_broker::make_proxy(const id_type& nid, actor_id aid) {
     if (hdl.invalid()) {
         // this happens if and only if we don't have a path to @p nid
         // and m_current_context->hdl has been blacklisted
-        CAF_LOG_WARNING("cannot create a proxy instance for an actor "
-                                "running on a node we don't have a route to");
+        CAF_LOG_INFO("cannot create a proxy instance for an actor "
+                     "running on a node we don't have a route to");
         return nullptr;
     }
     // create proxy and add functor that will be called if we
