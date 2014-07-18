@@ -94,7 +94,7 @@ class logging_impl : public logging {
 
     void operator()() {
         std::ostringstream fname;
-        fname << "BoostActor_" << getpid() << "_" << time(0) << ".log";
+        fname << "actor_log_" << getpid() << "_" << time(0) << ".log";
         std::fstream out(fname.str().c_str(), std::ios::out | std::ios::app);
         std::unique_ptr<log_event> event;
         for (;;) {

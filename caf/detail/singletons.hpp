@@ -49,11 +49,11 @@ class singletons {
 
     static constexpr size_t max_plugin_singletons = 3;
 
-    static constexpr size_t middleman_plugin_id = 0; // boost::actor_io
+    static constexpr size_t middleman_plugin_id = 0;   // io lib
 
-    static constexpr size_t opencl_plugin_id = 1; // for future use
+    static constexpr size_t opencl_plugin_id = 1;      // OpenCL lib
 
-    static constexpr size_t actorshell_plugin_id = 2; // for future use
+    static constexpr size_t probe_plugin_id = 2;       // probe hooks
 
     static logging* get_logger();
 
