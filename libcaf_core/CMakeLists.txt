@@ -78,12 +78,11 @@ set (LIBCAF_CORE_SRCS
 if (NOT "${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes")
   add_library(libcaf_core SHARED ${LIBCAF_CORE_SRCS} ${LIBCAF_CORE_HDRS})
   target_link_libraries(libcaf_core ${LD_FLAGS})
-  set(LIBRARY_VERSION ${LIBCAF_VERSION_MAJOR}.${LIBCAF_VERSION_MINOR}.${LIBCAF_VERSION_PATCH})
-  set(LIBRARY_SOVERSION ${LIBCAF_VERSION_MAJOR})
+  set(LIBRARY_SOVERSION ${CAF_VERSION_MAJOR})
   set_target_properties(libcaf_core
                         PROPERTIES
                         SOVERSION ${LIBRARY_SOVERSION}
-                        VERSION ${LIBRARY_VERSION}
+                        VERSION ${CAF_VERSION}
                         OUTPUT_NAME caf_core)
   if(NOT MINGW)
     install(TARGETS libcaf_core LIBRARY DESTINATION lib)

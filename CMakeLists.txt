@@ -2,12 +2,12 @@ cmake_minimum_required(VERSION 2.8)
 project(caf C CXX)
 
 # extract version from VERSION file
-file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" VERSION LIMIT_COUNT 1)
-string(REPLACE "." " " version_numbers ${VERSION})
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" CAF_VERSION LIMIT_COUNT 1)
+string(REPLACE "." " " version_numbers ${CAF_VERSION})
 separate_arguments(version_numbers)
-list(GET version_numbers 0 LIBCAF_VERSION_MAJOR)
-list(GET version_numbers 1 LIBCAF_VERSION_MINOR)
-list(GET version_numbers 2 LIBCAF_VERSION_PATCH)
+list(GET version_numbers 0 CAF_VERSION_MAJOR)
+list(GET version_numbers 1 CAF_VERSION_MINOR)
+list(GET version_numbers 2 CAF_VERSION_PATCH)
 
 # prohibit in-source builds
 if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
@@ -239,7 +239,7 @@ endif ()
 message(STATUS
         "\n====================|  Build Summary  |===================="
         "\n"
-        "\nLibcaf version:   ${LIBRARY_VERSION}"
+        "\nLibcaf version:    ${CAF_VERSION}"
         "\n"
         "\nBuild type:        ${CMAKE_BUILD_TYPE}"
         "\nRuntime checks:    ${DEBUG_MODE_STR}"
@@ -260,5 +260,6 @@ message(STATUS
         "\nExecutable path:   ${EXECUTABLE_OUTPUT_PATH}"
         "\nLibrary path:      ${LIBRARY_OUTPUT_PATH}"
         "\nInstall prefix:    ${CMAKE_INSTALL_PREFIX}"
+        "\nGenerator:         ${CMAKE_GENERATOR}"
         "\n"
         "\n===========================================================\n")
