@@ -1,20 +1,21 @@
-/******************************************************************************\
- *           ___        __                                                    *
- *          /\_ \    __/\ \                                                   *
- *          \//\ \  /\_\ \ \____    ___   _____   _____      __               *
- *            \ \ \ \/\ \ \ '__`\  /'___\/\ '__`\/\ '__`\  /'__`\             *
- *             \_\ \_\ \ \ \ \L\ \/\ \__/\ \ \L\ \ \ \L\ \/\ \L\.\_           *
- *             /\____\\ \_\ \_,__/\ \____\\ \ ,__/\ \ ,__/\ \__/.\_\          *
- *             \/____/ \/_/\/___/  \/____/ \ \ \/  \ \ \/  \/__/\/_/          *
- *                                          \ \_\   \ \_\                     *
- *                                           \/_/    \/_/                     *
+/******************************************************************************
+ *                       ____    _    _____                                   *
+ *                      / ___|  / \  |  ___|    C++                           *
+ *                     | |     / _ \ | |_       Actor                         *
+ *                     | |___ / ___ \|  _|      Framework                     *
+ *                      \____/_/   \_|_|                                      *
  *                                                                            *
  * Copyright (C) 2011 - 2014                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
- * Distributed under the Boost Software License, Version 1.0. See             *
- * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
-\******************************************************************************/
+ * Distributed under the terms and conditions of the BSD 3-Clause License or  *
+ * (at your option) under the terms and conditions of the Boost Software      *
+ * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ *                                                                            *
+ * If you did not receive a copy of the license files, see                    *
+ * http://opensource.org/licenses/BSD-3-Clause and                            *
+ * http://www.boost.org/LICENSE_1_0.txt.                                      *
+ ******************************************************************************/
 
 #ifndef CAF_MIXIN_BEHAVIOR_STACK_BASED_HPP
 #define CAF_MIXIN_BEHAVIOR_STACK_BASED_HPP
@@ -31,120 +32,116 @@
 namespace caf {
 namespace mixin {
 
-template<class Base, class Subtype, class BehaviorType>
+template <class Base, class Subtype, class BehaviorType>
 class behavior_stack_based_impl : public single_timeout<Base, Subtype> {
 
-    using super = single_timeout<Base, Subtype>;
+  using super = single_timeout<Base, Subtype>;
 
  public:
 
-    /**************************************************************************
-     *                         types and constructor                          *
-     **************************************************************************/
+  // types and constructors
 
-    using behavior_type = BehaviorType;
+  using behavior_type = BehaviorType;
 
-    using combined_type = behavior_stack_based_impl;
+  using combined_type = behavior_stack_based_impl;
 
-    using response_handle_type = response_handle<
-                                     behavior_stack_based_impl,
-                                     message,
-                                     nonblocking_response_handle_tag
-                                 >;
+  using response_handle_type = response_handle<behavior_stack_based_impl,
+                                               message,
+                                               nonblocking_response_handle_tag>;
 
-    template<typename... Ts>
-    behavior_stack_based_impl(Ts&&... vs)
-            : super(std::forward<Ts>(vs)...) {}
+  template <class... Ts>
+  behavior_stack_based_impl(Ts&&... vs)
+      : super(std::forward<Ts>(vs)...) {}
 
-    /**************************************************************************
-     *                    become() member function family                     *
-     **************************************************************************/
+  /**************************************************************************
+   *          become() member function family           *
+   **************************************************************************/
 
-    void become(behavior_type bhvr) { do_become(std::move(bhvr), true); }
+  void become(behavior_type bhvr) { do_become(std::move(bhvr), true); }
 
-    template<bool Discard>
-    void become(behavior_policy<Discard>, behavior_type bhvr) {
-        do_become(std::move(bhvr), Discard);
+  template <bool Discard>
+  void become(behavior_policy<Discard>, behavior_type bhvr) {
+    do_become(std::move(bhvr), Discard);
+  }
+
+  template <class T, class... Ts>
+  inline typename std::enable_if<
+    !is_behavior_policy<typename detail::rm_const_and_ref<T>::type>::value,
+    void>::type
+  become(T&& arg, Ts&&... args) {
+    do_become(
+      behavior_type{std::forward<T>(arg), std::forward<Ts>(args)...},
+      true);
+  }
+
+  template <bool Discard, class... Ts>
+  void become(behavior_policy<Discard>, Ts&&... args) {
+    do_become(behavior_type{std::forward<Ts>(args)...}, Discard);
+  }
+
+  inline void unbecome() { m_bhvr_stack.pop_async_back(); }
+
+  /**************************************************************************
+   *       convenience member function for stack manipulation       *
+   **************************************************************************/
+
+  inline bool has_behavior() const { return m_bhvr_stack.empty() == false; }
+
+  inline behavior& get_behavior() {
+    CAF_REQUIRE(m_bhvr_stack.empty() == false);
+    return m_bhvr_stack.back();
+  }
+
+  optional<behavior&> sync_handler(message_id msg_id) override {
+    return m_bhvr_stack.sync_handler(msg_id);
+  }
+
+  inline void remove_handler(message_id mid) { m_bhvr_stack.erase(mid); }
+
+  inline detail::behavior_stack& bhvr_stack() { return m_bhvr_stack; }
+
+  /**************************************************************************
+   *       extended timeout handling (handle_timeout mem fun)       *
+   **************************************************************************/
+
+  void handle_timeout(behavior& bhvr, uint32_t timeout_id) {
+    if (this->is_active_timeout(timeout_id)) {
+      this->reset_timeout();
+      bhvr.handle_timeout();
+      // request next timeout if behavior stack is not empty
+      // and timeout handler did not set a new timeout, e.g.,
+      // by calling become()
+      if (!this->has_active_timeout() && has_behavior()) {
+        this->request_timeout(get_behavior().timeout());
+      }
     }
-
-    template<typename T, typename... Ts>
-    inline typename std::enable_if<
-        !is_behavior_policy<typename detail::rm_const_and_ref<T>::type>::value,
-        void>::type
-    become(T&& arg, Ts&&... args) {
-        do_become(
-            behavior_type{std::forward<T>(arg), std::forward<Ts>(args)...},
-            true);
-    }
-
-    template<bool Discard, typename... Ts>
-    void become(behavior_policy<Discard>, Ts&&... args) {
-        do_become(behavior_type{std::forward<Ts>(args)...}, Discard);
-    }
-
-    inline void unbecome() { m_bhvr_stack.pop_async_back(); }
-
-    /**************************************************************************
-     *           convenience member function for stack manipulation           *
-     **************************************************************************/
-
-    inline bool has_behavior() const { return m_bhvr_stack.empty() == false; }
-
-    inline behavior& get_behavior() {
-        CAF_REQUIRE(m_bhvr_stack.empty() == false);
-        return m_bhvr_stack.back();
-    }
-
-    optional<behavior&> sync_handler(message_id msg_id) override {
-        return m_bhvr_stack.sync_handler(msg_id);
-    }
-
-    inline void remove_handler(message_id mid) { m_bhvr_stack.erase(mid); }
-
-    inline detail::behavior_stack& bhvr_stack() { return m_bhvr_stack; }
-
-    /**************************************************************************
-     *           extended timeout handling (handle_timeout mem fun)           *
-     **************************************************************************/
-
-    void handle_timeout(behavior& bhvr, uint32_t timeout_id) {
-        if (this->is_active_timeout(timeout_id)) {
-            this->reset_timeout();
-            bhvr.handle_timeout();
-            // request next timeout if behavior stack is not empty
-            // and timeout handler did not set a new timeout, e.g.,
-            // by calling become()
-            if (!this->has_active_timeout() && has_behavior()) {
-                this->request_timeout(get_behavior().timeout());
-            }
-        }
-    }
+  }
 
  private:
 
-    void do_become(behavior_type bhvr, bool discard_old) {
-        if (discard_old) this->m_bhvr_stack.pop_async_back();
-        // since we know we extend single_timeout, we can be sure
-        // request_timeout simply resets the timeout when it's invalid
-        this->request_timeout(bhvr.timeout());
-        this->m_bhvr_stack.push_back(std::move(unbox(bhvr)));
-    }
+  void do_become(behavior_type bhvr, bool discard_old) {
+    if (discard_old) this->m_bhvr_stack.pop_async_back();
+    // since we know we extend single_timeout, we can be sure
+    // request_timeout simply resets the timeout when it's invalid
+    this->request_timeout(bhvr.timeout());
+    this->m_bhvr_stack.push_back(std::move(unbox(bhvr)));
+  }
 
-    static inline behavior& unbox(behavior& arg) { return arg; }
+  static inline behavior& unbox(behavior& arg) { return arg; }
 
-    template<typename... Ts>
-    static inline behavior& unbox(typed_behavior<Ts...>& arg) {
-        return arg.unbox();
-    }
+  template <class... Ts>
+  static inline behavior& unbox(typed_behavior<Ts...>& arg) {
+    return arg.unbox();
+  }
 
-    // utility for getting a pointer-to-derived-type
-    Subtype* dptr() { return static_cast<Subtype*>(this); }
+  // utility for getting a pointer-to-derived-type
+  Subtype* dptr() { return static_cast<Subtype*>(this); }
 
-    // utility for getting a const pointer-to-derived-type
-    const Subtype* dptr() const { return static_cast<const Subtype*>(this); }
+  // utility for getting a const pointer-to-derived-type
+  const Subtype* dptr() const { return static_cast<const Subtype*>(this); }
 
-    // allows actors to keep previous behaviors and enables unbecome()
-    detail::behavior_stack m_bhvr_stack;
+  // allows actors to keep previous behaviors and enables unbecome()
+  detail::behavior_stack m_bhvr_stack;
 
 };
 
@@ -152,25 +149,25 @@ class behavior_stack_based_impl : public single_timeout<Base, Subtype> {
  * @brief Mixin for actors using a stack-based message processing.
  * @note This mixin implicitly includes {@link single_timeout}.
  */
-template<class BehaviorType>
+template <class BehaviorType>
 class behavior_stack_based {
 
  public:
 
-    template<class Base, class Subtype>
-    class impl : public behavior_stack_based_impl<Base, Subtype, BehaviorType> {
+  template <class Base, class Subtype>
+  class impl : public behavior_stack_based_impl<Base, Subtype, BehaviorType> {
 
-        using super = behavior_stack_based_impl<Base, Subtype, BehaviorType>;
+    using super = behavior_stack_based_impl<Base, Subtype, BehaviorType>;
 
-     public:
+   public:
 
-        using combined_type = impl;
+    using combined_type = impl;
 
-        template<typename... Ts>
-        impl(Ts&&... args)
-                : super(std::forward<Ts>(args)...) {}
+    template <class... Ts>
+    impl(Ts&&... args)
+        : super(std::forward<Ts>(args)...) {}
 
-    };
+  };
 };
 
 } // namespace mixin

@@ -1,20 +1,21 @@
-/******************************************************************************\
- *           ___        __                                                    *
- *          /\_ \    __/\ \                                                   *
- *          \//\ \  /\_\ \ \____    ___   _____   _____      __               *
- *            \ \ \ \/\ \ \ '__`\  /'___\/\ '__`\/\ '__`\  /'__`\             *
- *             \_\ \_\ \ \ \ \L\ \/\ \__/\ \ \L\ \ \ \L\ \/\ \L\.\_           *
- *             /\____\\ \_\ \_,__/\ \____\\ \ ,__/\ \ ,__/\ \__/.\_\          *
- *             \/____/ \/_/\/___/  \/____/ \ \ \/  \ \ \/  \/__/\/_/          *
- *                                          \ \_\   \ \_\                     *
- *                                           \/_/    \/_/                     *
+/******************************************************************************
+ *                       ____    _    _____                                   *
+ *                      / ___|  / \  |  ___|    C++                           *
+ *                     | |     / _ \ | |_       Actor                         *
+ *                     | |___ / ___ \|  _|      Framework                     *
+ *                      \____/_/   \_|_|                                      *
  *                                                                            *
  * Copyright (C) 2011 - 2014                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
- * Distributed under the Boost Software License, Version 1.0. See             *
- * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
-\******************************************************************************/
+ * Distributed under the terms and conditions of the BSD 3-Clause License or  *
+ * (at your option) under the terms and conditions of the Boost Software      *
+ * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ *                                                                            *
+ * If you did not receive a copy of the license files, see                    *
+ * http://opensource.org/licenses/BSD-3-Clause and                            *
+ * http://www.boost.org/LICENSE_1_0.txt.                                      *
+ ******************************************************************************/
 
 #ifndef CAF_ALL_HPP
 #define CAF_ALL_HPP
@@ -156,7 +157,7 @@
  *
  * @namespace caf::util
  * @brief Contains utility classes and metaprogramming
- *        utilities used by the libcaf implementation.
+ *    utilities used by the libcaf implementation.
  *
  * @namespace caf::intrusive
  * @brief Contains intrusive container implementations.
@@ -169,7 +170,7 @@
  *
  * @namespace caf::factory
  * @brief Contains factory functions to create actors from lambdas or
- *        other functors.
+ *    other functors.
  *
  * @namespace caf::exit_reason
  * @brief Contains all predefined exit reasons.
@@ -216,7 +217,7 @@
  * @defgroup MessageHandling Message handling.
  *
  * @brief This is the beating heart of @p libcaf. Actor programming is
- *        all about message handling.
+ *    all about message handling.
  *
  * A message in @p libcaf is a n-tuple of values (with size >= 1)
  * You can use almost every type in a messages - as long as it is announced,
@@ -260,15 +261,15 @@
  * @code
  * receive
  * (
- *     on(atom("hello"), arg_match) >> [](const std::string& msg)
- *     {
- *         cout << "received hello message: " << msg << endl;
- *     },
- *     on(atom("compute"), arg_match) >> [](int i0, int i1, int i2)
- *     {
- *         // send our result back to the sender of this messages
- *         return make_message(atom("result"), i0 + i1 + i2);
- *     }
+ *   on(atom("hello"), arg_match) >> [](const std::string& msg)
+ *   {
+ *     cout << "received hello message: " << msg << endl;
+ *   },
+ *   on(atom("compute"), arg_match) >> [](int i0, int i1, int i2)
+ *   {
+ *     // send our result back to the sender of this messages
+ *     return make_message(atom("result"), i0 + i1 + i2);
+ *   }
  * );
  * @endcode
  *
@@ -285,14 +286,14 @@
  * Example actor:
  * @code
  * void math_actor() {
- *     receive_loop (
- *         on(atom("plus"), arg_match) >> [](int a, int b) {
- *             return make_message(atom("result"), a + b);
- *         },
- *         on(atom("minus"), arg_match) >> [](int a, int b) {
- *             return make_message(atom("result"), a - b);
- *         }
- *     );
+ *   receive_loop (
+ *     on(atom("plus"), arg_match) >> [](int a, int b) {
+ *       return make_message(atom("result"), a + b);
+ *     },
+ *     on(atom("minus"), arg_match) >> [](int a, int b) {
+ *       return make_message(atom("result"), a - b);
+ *     }
+ *   );
  * }
  * @endcode
  *
@@ -318,9 +319,9 @@
  * // receive two integers
  * vector<int> received_values;
  * receive_while([&]() { return received_values.size() < 2; }) (
- *     on<int>() >> [](int value) {
- *         received_values.push_back(value);
- *     }
+ *   on<int>() >> [](int value) {
+ *     received_values.push_back(value);
+ *   }
  * );
  * // ...
  * @endcode
@@ -331,7 +332,7 @@
  * std::vector<int> vec {1, 2, 3, 4};
  * auto i = vec.begin();
  * receive_for(i, vec.end()) (
- *     on(atom("get")) >> [&]() -> message { return {atom("result"), *i}; }
+ *   on(atom("get")) >> [&]() -> message { return {atom("result"), *i}; }
  * );
  * @endcode
  *
@@ -343,9 +344,9 @@
  * // receive ints until zero was received
  * vector<int> received_values;
  * do_receive (
- *     on<int>() >> [](int value) {
- *         received_values.push_back(value);
- *     }
+ *   on<int>() >> [](int value) {
+ *     received_values.push_back(value);
+ *   }
  * )
  * .until([&]() { return received_values.back() == 0 });
  * // ...
@@ -360,12 +361,12 @@
  * @code
  * delayed_send(self, std::chrono::seconds(1), atom("poll"));
  * receive_loop (
- *     // ...
- *     on(atom("poll")) >> [] {
- *         // ... poll something ...
- *         // and do it again after 1sec
- *         delayed_send(self, std::chrono::seconds(1), atom("poll"));
- *     }
+ *   // ...
+ *   on(atom("poll")) >> [] {
+ *     // ... poll something ...
+ *     // and do it again after 1sec
+ *     delayed_send(self, std::chrono::seconds(1), atom("poll"));
+ *   }
  * );
  * @endcode
  *
@@ -396,8 +397,8 @@
  * auto x = make_message("hello", "tuple");
  *
  * receive (
- *     // equal to: on(std::string("hello actor!"))
- *     on("hello actor!") >> [] { }
+ *   // equal to: on(std::string("hello actor!"))
+ *   on("hello actor!") >> [] { }
  * );
  * @endcode
  *
@@ -415,7 +416,7 @@
 
 /**
  * @brief Shows the usage of {@link caf::atom atoms}
- *        and {@link caf::arg_match arg_match}.
+ *    and {@link caf::arg_match arg_match}.
  * @example math_actor.cpp
  */
 

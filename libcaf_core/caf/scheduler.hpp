@@ -1,20 +1,21 @@
-/******************************************************************************\
- *           ___        __                                                    *
- *          /\_ \    __/\ \                                                   *
- *          \//\ \  /\_\ \ \____    ___   _____   _____      __               *
- *            \ \ \ \/\ \ \ '__`\  /'___\/\ '__`\/\ '__`\  /'__`\             *
- *             \_\ \_\ \ \ \ \L\ \/\ \__/\ \ \L\ \ \ \L\ \/\ \L\.\_           *
- *             /\____\\ \_\ \_,__/\ \____\\ \ ,__/\ \ ,__/\ \__/.\_\          *
- *             \/____/ \/_/\/___/  \/____/ \ \ \/  \ \ \/  \/__/\/_/          *
- *                                          \ \_\   \ \_\                     *
- *                                           \/_/    \/_/                     *
+/******************************************************************************
+ *                       ____    _    _____                                   *
+ *                      / ___|  / \  |  ___|    C++                           *
+ *                     | |     / _ \ | |_       Actor                         *
+ *                     | |___ / ___ \|  _|      Framework                     *
+ *                      \____/_/   \_|_|                                      *
  *                                                                            *
  * Copyright (C) 2011 - 2014                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
- * Distributed under the Boost Software License, Version 1.0. See             *
- * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
-\******************************************************************************/
+ * Distributed under the terms and conditions of the BSD 3-Clause License or  *
+ * (at your option) under the terms and conditions of the Boost Software      *
+ * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ *                                                                            *
+ * If you did not receive a copy of the license files, see                    *
+ * http://opensource.org/licenses/BSD-3-Clause and                            *
+ * http://www.boost.org/LICENSE_1_0.txt.                                      *
+ ******************************************************************************/
 
 #ifndef CAF_SCHEDULER_HPP
 #define CAF_SCHEDULER_HPP
@@ -51,295 +52,295 @@ class abstract_coordinator;
  */
 class abstract_worker : public execution_unit {
 
-    friend class abstract_coordinator;
+  friend class abstract_coordinator;
 
  public:
 
-    /**
-     * @brief Attempt to steal an element from this worker.
-     */
-    virtual resumable* try_steal() = 0;
+  /**
+   * @brief Attempt to steal an element from this worker.
+   */
+  virtual resumable* try_steal() = 0;
 
-    /**
-     * @brief Enqueues a new job to the worker's queue from an external
-     *        source, i.e., from any other thread.
-     */
-    virtual void external_enqueue(resumable*) = 0;
+  /**
+   * @brief Enqueues a new job to the worker's queue from an external
+   *    source, i.e., from any other thread.
+   */
+  virtual void external_enqueue(resumable*) = 0;
 
-    /**
-     * @brief Starts the thread of this worker.
-     */
-    virtual void start(size_t id, abstract_coordinator* parent) = 0;
+  /**
+   * @brief Starts the thread of this worker.
+   */
+  virtual void start(size_t id, abstract_coordinator* parent) = 0;
 
 };
 
 /**
  * @brief A coordinator creates the workers, manages delayed sends and
- *        the central printer instance for {@link aout}. It also forwards
- *        sends from detached workers or non-actor threads to randomly
- *        chosen workers.
+ *    the central printer instance for {@link aout}. It also forwards
+ *    sends from detached workers or non-actor threads to randomly
+ *    chosen workers.
  */
 class abstract_coordinator {
 
-    friend class detail::singletons;
+  friend class detail::singletons;
 
  public:
 
-    explicit abstract_coordinator(size_t num_worker_threads);
+  explicit abstract_coordinator(size_t num_worker_threads);
 
-    virtual ~abstract_coordinator();
+  virtual ~abstract_coordinator();
 
-    /**
-     * @brief Returns a handle to the central printing actor.
-     */
-    actor printer() const;
+  /**
+   * @brief Returns a handle to the central printing actor.
+   */
+  actor printer() const;
 
-    /**
-     * @brief Puts @p what into the queue of a randomly chosen worker.
-     */
-    void enqueue(resumable* what);
+  /**
+   * @brief Puts @p what into the queue of a randomly chosen worker.
+   */
+  void enqueue(resumable* what);
 
-    template<typename Duration, typename... Data>
-    void delayed_send(Duration rel_time, actor_addr from, channel to,
-                      message_id mid, message data) {
-        m_timer->enqueue(invalid_actor_addr, message_id::invalid,
-                         make_message(atom("_Send"), duration{rel_time},
-                                      std::move(from), std::move(to), mid,
-                                      std::move(data)),
-                         nullptr);
-    }
+  template <class Duration, class... Data>
+  void delayed_send(Duration rel_time, actor_addr from, channel to,
+            message_id mid, message data) {
+    m_timer->enqueue(invalid_actor_addr, message_id::invalid,
+             make_message(atom("_Send"), duration{rel_time},
+                    std::move(from), std::move(to), mid,
+                    std::move(data)),
+             nullptr);
+  }
 
-    inline size_t num_workers() const {
-        return m_num_workers;
-    }
+  inline size_t num_workers() const {
+    return m_num_workers;
+  }
 
-    virtual abstract_worker* worker_by_id(size_t id) = 0;
+  virtual abstract_worker* worker_by_id(size_t id) = 0;
 
  protected:
 
-    abstract_coordinator();
+  abstract_coordinator();
 
-    virtual void initialize();
+  virtual void initialize();
 
-    virtual void stop();
+  virtual void stop();
 
  private:
 
-    // Creates a default instance.
-    static abstract_coordinator* create_singleton();
+  // Creates a default instance.
+  static abstract_coordinator* create_singleton();
 
-    inline void dispose() {
-        delete this;
-    }
+  inline void dispose() {
+    delete this;
+  }
 
-    intrusive_ptr<blocking_actor> m_timer;
-    scoped_actor m_printer;
+  intrusive_ptr<blocking_actor> m_timer;
+  scoped_actor m_printer;
 
-    // ID of the worker receiving the next enqueue
-    std::atomic<size_t> m_next_worker;
+  // ID of the worker receiving the next enqueue
+  std::atomic<size_t> m_next_worker;
 
-    size_t m_num_workers;
+  size_t m_num_workers;
 
-    std::thread m_timer_thread;
-    std::thread m_printer_thread;
+  std::thread m_timer_thread;
+  std::thread m_printer_thread;
 
 };
 
 /**
  * @brief Policy-based implementation of the abstract worker base class.
  */
-template<class StealPolicy, class JobQueuePolicy>
+template <class StealPolicy, class JobQueuePolicy>
 class worker : public abstract_worker {
 
  public:
 
-    worker() = default;
+  worker() = default;
 
-    worker(worker&& other) {
-        *this = std::move(other); // delegate to move assignment operator
+  worker(worker&& other) {
+    *this = std::move(other); // delegate to move assignment operator
+  }
+
+  worker& operator=(worker&& other) {
+    // cannot be moved once m_this_thread is up and running
+    auto running = [](std::thread& t) {
+      return t.get_id() != std::thread::id{};
+
+    };
+    if (running(m_this_thread) || running(other.m_this_thread)) {
+      throw std::runtime_error("running workers cannot be moved");
     }
+    m_queue_policy = std::move(other.m_queue_policy);
+    m_steal_policy = std::move(other.m_steal_policy);
+    return *this;
+  }
 
-    worker& operator=(worker&& other) {
-        // cannot be moved once m_this_thread is up and running
-        auto running = [](std::thread& t) {
-            return t.get_id() != std::thread::id{};
+  worker(const worker&) = delete;
 
-        };
-        if (running(m_this_thread) || running(other.m_this_thread)) {
-            throw std::runtime_error("running workers cannot be moved");
-        }
-        m_queue_policy = std::move(other.m_queue_policy);
-        m_steal_policy = std::move(other.m_steal_policy);
-        return *this;
-    }
+  worker& operator=(const worker&) = delete;
 
-    worker(const worker&) = delete;
+  using job_ptr = resumable*;
 
-    worker& operator=(const worker&) = delete;
+  using job_queue = detail::producer_consumer_list<resumable>;
 
-    using job_ptr = resumable*;
+  /**
+   * @brief Attempt to steal an element from the exposed job queue.
+   */
+  job_ptr try_steal() override {
+    auto result = m_queue_policy.try_external_dequeue(this);
+    CAF_LOG_DEBUG_IF(result, "stole actor with id " << id_of(result));
+    return result;
+  }
 
-    using job_queue = detail::producer_consumer_list<resumable>;
+  /**
+   * @brief Enqueues a new job to the worker's queue from an external
+   *    source, i.e., from any other thread.
+   */
+  void external_enqueue(job_ptr job) override {
+    CAF_REQUIRE(job != nullptr);
+    CAF_LOG_TRACE("id = " << id() << " actor id " << id_of(job));
+    m_queue_policy.external_enqueue(this, job);
+  }
 
-    /**
-     * @brief Attempt to steal an element from the exposed job queue.
-     */
-    job_ptr try_steal() override {
-        auto result = m_queue_policy.try_external_dequeue(this);
-        CAF_LOG_DEBUG_IF(result, "stole actor with id " << id_of(result));
-        return result;
-    }
+  /**
+   * @brief Enqueues a new job to the worker's queue from an internal
+   *    source, i.e., a job that is currently executed by
+   *    this worker.
+   * @warning Must not be called from other threads.
+   */
+  void exec_later(job_ptr job) override {
+    CAF_REQUIRE(job != nullptr);
+    CAF_LOG_TRACE("id = " << id() << " actor id " << id_of(job));
+    m_queue_policy.internal_enqueue(this, job);
+  }
 
-    /**
-     * @brief Enqueues a new job to the worker's queue from an external
-     *        source, i.e., from any other thread.
-     */
-    void external_enqueue(job_ptr job) override {
-        CAF_REQUIRE(job != nullptr);
-        CAF_LOG_TRACE("id = " << id() << " actor id " << id_of(job));
-        m_queue_policy.external_enqueue(this, job);
-    }
+  // go on a raid in quest for a shiny new job
+  job_ptr raid() {
+    auto result = m_steal_policy.raid(this);
+    CAF_LOG_DEBUG_IF(result, "got actor with id " << id_of(result));
+    return result;
+  }
 
-    /**
-     * @brief Enqueues a new job to the worker's queue from an internal
-     *        source, i.e., a job that is currently executed by
-     *        this worker.
-     * @warning Must not be called from other threads.
-     */
-    void exec_later(job_ptr job) override {
-        CAF_REQUIRE(job != nullptr);
-        CAF_LOG_TRACE("id = " << id() << " actor id " << id_of(job));
-        m_queue_policy.internal_enqueue(this, job);
-    }
+  inline abstract_coordinator* parent() {
+    return m_parent;
+  }
 
-    // go on a raid in quest for a shiny new job
-    job_ptr raid() {
-        auto result = m_steal_policy.raid(this);
-        CAF_LOG_DEBUG_IF(result, "got actor with id " << id_of(result));
-        return result;
-    }
+  inline size_t id() const {
+    return m_id;
+  }
 
-    inline abstract_coordinator* parent() {
-        return m_parent;
-    }
+  inline std::thread& get_thread() {
+    return m_this_thread;
+  }
 
-    inline size_t id() const {
-        return m_id;
-    }
+  void detach_all() {
+    CAF_LOG_TRACE("");
+    m_queue_policy.consume_all(this, [](resumable* job) {
+      job->detach_from_scheduler();
+    });
+  }
 
-    inline std::thread& get_thread() {
-        return m_this_thread;
-    }
+  void start(size_t id, abstract_coordinator* parent) override {
+    m_id = id;
+    m_parent = parent;
+    auto this_worker = this;
+    m_this_thread = std::thread{[this_worker] {
+      CAF_LOGC_TRACE("caf::scheduler::worker",
+              "start$lambda",
+              "id = " << this_worker->id());
+      this_worker->run();
+    }};
+  }
 
-    void detach_all() {
-        CAF_LOG_TRACE("");
-        m_queue_policy.consume_all(this, [](resumable* job) {
-            job->detach_from_scheduler();
-        });
-    }
-
-    void start(size_t id, abstract_coordinator* parent) override {
-        m_id = id;
-        m_parent = parent;
-        auto this_worker = this;
-        m_this_thread = std::thread{[this_worker] {
-            CAF_LOGC_TRACE("caf::scheduler::worker",
-                            "start$lambda",
-                            "id = " << this_worker->id());
-            this_worker->run();
-        }};
-    }
-
-    actor_id id_of(resumable* ptr) {
-        abstract_actor* aptr = ptr ? dynamic_cast<abstract_actor*>(ptr)
-                                   : nullptr;
-        return aptr ? aptr->id() : 0;
-    }
+  actor_id id_of(resumable* ptr) {
+    abstract_actor* aptr = ptr ? dynamic_cast<abstract_actor*>(ptr)
+                   : nullptr;
+    return aptr ? aptr->id() : 0;
+  }
 
  private:
 
-    void run() {
-        CAF_LOG_TRACE("worker with ID " << m_id);
-        // scheduling loop
-        for (;;) {
-            auto job = m_queue_policy.internal_dequeue(this);
-            CAF_REQUIRE(job != nullptr);
-            CAF_LOG_DEBUG("resume actor " << id_of(job));
-            CAF_PUSH_AID_FROM_PTR(dynamic_cast<abstract_actor*>(job));
-            switch (job->resume(this)) {
-                case resumable::done: {
-                    job->detach_from_scheduler();
-                    break;
-                }
-                case resumable::resume_later: {
-                    break;
-                }
-                case resumable::shutdown_execution_unit: {
-                    m_queue_policy.clear_internal_queue(this);
-                    return;
-                }
-            }
-            m_queue_policy.assert_stealable(this);
+  void run() {
+    CAF_LOG_TRACE("worker with ID " << m_id);
+    // scheduling loop
+    for (;;) {
+      auto job = m_queue_policy.internal_dequeue(this);
+      CAF_REQUIRE(job != nullptr);
+      CAF_LOG_DEBUG("resume actor " << id_of(job));
+      CAF_PUSH_AID_FROM_PTR(dynamic_cast<abstract_actor*>(job));
+      switch (job->resume(this)) {
+        case resumable::done: {
+          job->detach_from_scheduler();
+          break;
         }
+        case resumable::resume_later: {
+          break;
+        }
+        case resumable::shutdown_execution_unit: {
+          m_queue_policy.clear_internal_queue(this);
+          return;
+        }
+      }
+      m_queue_policy.assert_stealable(this);
     }
+  }
 
-    // the worker's thread
-    std::thread m_this_thread;
+  // the worker's thread
+  std::thread m_this_thread;
 
-    // the worker's ID received from scheduler
-    size_t m_id;
+  // the worker's ID received from scheduler
+  size_t m_id;
 
-    abstract_coordinator* m_parent;
+  abstract_coordinator* m_parent;
 
-    JobQueuePolicy m_queue_policy;
+  JobQueuePolicy m_queue_policy;
 
-    StealPolicy m_steal_policy;
+  StealPolicy m_steal_policy;
 
 };
 
 /**
  * @brief Policy-based implementation of the abstract coordinator base class.
  */
-template<class StealPolicy, class JobQueuePolicy>
+template <class StealPolicy, class JobQueuePolicy>
 class coordinator : public abstract_coordinator {
 
-    using super = abstract_coordinator;
+  using super = abstract_coordinator;
 
  public:
 
-    coordinator(size_t nw = std::thread::hardware_concurrency()) : super(nw) {
-        // nop
-    }
+  coordinator(size_t nw = std::thread::hardware_concurrency()) : super(nw) {
+    // nop
+  }
 
-    using worker_type = worker<StealPolicy, JobQueuePolicy>;
+  using worker_type = worker<StealPolicy, JobQueuePolicy>;
 
-    abstract_worker* worker_by_id(size_t id) override {
-        return &m_workers[id];
-    }
+  abstract_worker* worker_by_id(size_t id) override {
+    return &m_workers[id];
+  }
 
  protected:
 
-    void initialize() override {
-        super::initialize();
-        // create & start workers
-        m_workers.resize(num_workers());
-        for (size_t i = 0; i < num_workers(); ++i) {
-            m_workers[i].start(i, this);
-        }
+  void initialize() override {
+    super::initialize();
+    // create & start workers
+    m_workers.resize(num_workers());
+    for (size_t i = 0; i < num_workers(); ++i) {
+      m_workers[i].start(i, this);
     }
+  }
 
-    void stop() override {
-        super::stop();
-        // wait until all actors are done
-        for (auto& w : m_workers) w.get_thread().join();
-        // clear all queues
-        for (auto& w : m_workers) w.detach_all();
-    }
+  void stop() override {
+    super::stop();
+    // wait until all actors are done
+    for (auto& w : m_workers) w.get_thread().join();
+    // clear all queues
+    for (auto& w : m_workers) w.detach_all();
+  }
 
  private:
 
-    // vector of size std::thread::hardware_concurrency()
-    std::vector<worker_type> m_workers;
+  // vector of size std::thread::hardware_concurrency()
+  std::vector<worker_type> m_workers;
 
 };
 
@@ -348,21 +349,21 @@ class coordinator : public abstract_coordinator {
 /**
  * @brief Sets a user-defined scheduler.
  * @note This function must be used before actor is spawned. Dynamically
- *       changing the scheduler at runtime is not supported.
+ *     changing the scheduler at runtime is not supported.
  * @throws std::logic_error if a scheduler is already defined
  */
 void set_scheduler(scheduler::abstract_coordinator* ptr);
 
 /**
  * @brief Sets a user-defined scheduler using given policies. The scheduler
- *        is instantiated with @p nw number of workers.
+ *    is instantiated with @p nw number of workers.
  * @note This function must be used before actor is spawned. Dynamically
- *       changing the scheduler at runtime is not supported.
+ *     changing the scheduler at runtime is not supported.
  * @throws std::logic_error if a scheduler is already defined
  */
-template<class StealPolicy, class JobQueuePolicy>
+template <class StealPolicy, class JobQueuePolicy>
 void set_scheduler(size_t nw = std::thread::hardware_concurrency()) {
-    set_scheduler(new scheduler::coordinator<StealPolicy, JobQueuePolicy>(nw));
+  set_scheduler(new scheduler::coordinator<StealPolicy, JobQueuePolicy>(nw));
 }
 
 } // namespace caf

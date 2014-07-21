@@ -1,20 +1,21 @@
-/******************************************************************************\
- *           ___        __                                                    *
- *          /\_ \    __/\ \                                                   *
- *          \//\ \  /\_\ \ \____    ___   _____   _____      __               *
- *            \ \ \ \/\ \ \ '__`\  /'___\/\ '__`\/\ '__`\  /'__`\             *
- *             \_\ \_\ \ \ \ \L\ \/\ \__/\ \ \L\ \ \ \L\ \/\ \L\.\_           *
- *             /\____\\ \_\ \_,__/\ \____\\ \ ,__/\ \ ,__/\ \__/.\_\          *
- *             \/____/ \/_/\/___/  \/____/ \ \ \/  \ \ \/  \/__/\/_/          *
- *                                          \ \_\   \ \_\                     *
- *                                           \/_/    \/_/                     *
+/******************************************************************************
+ *                       ____    _    _____                                   *
+ *                      / ___|  / \  |  ___|    C++                           *
+ *                     | |     / _ \ | |_       Actor                         *
+ *                     | |___ / ___ \|  _|      Framework                     *
+ *                      \____/_/   \_|_|                                      *
  *                                                                            *
  * Copyright (C) 2011 - 2014                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
- * Distributed under the Boost Software License, Version 1.0. See             *
- * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
-\******************************************************************************/
+ * Distributed under the terms and conditions of the BSD 3-Clause License or  *
+ * (at your option) under the terms and conditions of the Boost Software      *
+ * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ *                                                                            *
+ * If you did not receive a copy of the license files, see                    *
+ * http://opensource.org/licenses/BSD-3-Clause and                            *
+ * http://www.boost.org/LICENSE_1_0.txt.                                      *
+ ******************************************************************************/
 
 #ifndef CAF_SPAWN_OPTIONS_HPP
 #define CAF_SPAWN_OPTIONS_HPP
@@ -33,13 +34,13 @@ namespace caf {
 class spawn_options {};
 #else
 enum class spawn_options : int {
-    no_flags = 0x00,
-    link_flag = 0x01,
-    monitor_flag = 0x02,
-    detach_flag = 0x04,
-    hide_flag = 0x08,
-    blocking_api_flag = 0x10,
-    priority_aware_flag = 0x20
+  no_flags = 0x00,
+  link_flag = 0x01,
+  monitor_flag = 0x02,
+  detach_flag = 0x04,
+  hide_flag = 0x08,
+  blocking_api_flag = 0x10,
+  priority_aware_flag = 0x20
 
 };
 #endif
@@ -49,9 +50,9 @@ enum class spawn_options : int {
  * @relates spawn_options
  */
 constexpr spawn_options operator+(const spawn_options& lhs,
-                                  const spawn_options& rhs) {
-    return static_cast<spawn_options>(static_cast<int>(lhs) |
-                                      static_cast<int>(rhs));
+                  const spawn_options& rhs) {
+  return static_cast<spawn_options>(static_cast<int>(lhs) |
+                    static_cast<int>(rhs));
 }
 
 /**
@@ -61,13 +62,13 @@ constexpr spawn_options no_spawn_options = spawn_options::no_flags;
 
 /**
  * @brief Causes @p spawn to call <tt>self->monitor(...)</tt> immediately
- *        after the new actor was spawned.
+ *    after the new actor was spawned.
  */
 constexpr spawn_options monitored = spawn_options::monitor_flag;
 
 /**
  * @brief Causes @p spawn to call <tt>self->link_to(...)</tt> immediately
- *        after the new actor was spawned.
+ *    after the new actor was spawned.
  */
 constexpr spawn_options linked = spawn_options::link_flag;
 
@@ -78,14 +79,14 @@ constexpr spawn_options detached = spawn_options::detach_flag;
 
 /**
  * @brief Causes the runtime to ignore the new actor in
- *        {@link await_all_actors_done()}.
+ *    {@link await_all_actors_done()}.
  */
 constexpr spawn_options hidden = spawn_options::hide_flag;
 
 /**
  * @brief Causes the new actor to opt in to the blocking API,
- *        i.e., the actor uses a context-switching or thread-based backend
- *        instead of the default event-based implementation.
+ *    i.e., the actor uses a context-switching or thread-based backend
+ *    instead of the default event-based implementation.
  */
 constexpr spawn_options blocking_api = spawn_options::blocking_api_flag;
 
@@ -100,7 +101,7 @@ constexpr spawn_options priority_aware = spawn_options::priority_aware_flag;
  * @relates spawn_options
  */
 constexpr bool has_spawn_option(spawn_options haystack, spawn_options needle) {
-    return (static_cast<int>(haystack) & static_cast<int>(needle)) != 0;
+  return (static_cast<int>(haystack) & static_cast<int>(needle)) != 0;
 }
 
 /**
@@ -108,7 +109,7 @@ constexpr bool has_spawn_option(spawn_options haystack, spawn_options needle) {
  * @relates spawn_options
  */
 constexpr bool has_detach_flag(spawn_options opts) {
-    return has_spawn_option(opts, detached);
+  return has_spawn_option(opts, detached);
 }
 
 /**
@@ -116,7 +117,7 @@ constexpr bool has_detach_flag(spawn_options opts) {
  * @relates spawn_options
  */
 constexpr bool has_priority_aware_flag(spawn_options opts) {
-    return has_spawn_option(opts, priority_aware);
+  return has_spawn_option(opts, priority_aware);
 }
 
 /**
@@ -124,7 +125,7 @@ constexpr bool has_priority_aware_flag(spawn_options opts) {
  * @relates spawn_options
  */
 constexpr bool has_hide_flag(spawn_options opts) {
-    return has_spawn_option(opts, hidden);
+  return has_spawn_option(opts, hidden);
 }
 
 /**
@@ -132,7 +133,7 @@ constexpr bool has_hide_flag(spawn_options opts) {
  * @relates spawn_options
  */
 constexpr bool has_link_flag(spawn_options opts) {
-    return has_spawn_option(opts, linked);
+  return has_spawn_option(opts, linked);
 }
 
 /**
@@ -140,7 +141,7 @@ constexpr bool has_link_flag(spawn_options opts) {
  * @relates spawn_options
  */
 constexpr bool has_monitor_flag(spawn_options opts) {
-    return has_spawn_option(opts, monitored);
+  return has_spawn_option(opts, monitored);
 }
 
 /**
@@ -148,7 +149,7 @@ constexpr bool has_monitor_flag(spawn_options opts) {
  * @relates spawn_options
  */
 constexpr bool has_blocking_api_flag(spawn_options opts) {
-    return has_spawn_option(opts, blocking_api);
+  return has_spawn_option(opts, blocking_api);
 }
 
 /** @} */
@@ -156,13 +157,13 @@ constexpr bool has_blocking_api_flag(spawn_options opts) {
 /** @cond PRIVATE */
 
 constexpr bool is_unbound(spawn_options opts) {
-    return !has_monitor_flag(opts) && !has_link_flag(opts);
+  return !has_monitor_flag(opts) && !has_link_flag(opts);
 }
 
 constexpr spawn_options make_unbound(spawn_options opts) {
-    return static_cast<spawn_options>(
-        (static_cast<int>(opts) &
-         ~(static_cast<int>(linked) | static_cast<int>(monitored))));
+  return static_cast<spawn_options>(
+    (static_cast<int>(opts) &
+     ~(static_cast<int>(linked) | static_cast<int>(monitored))));
 }
 
 /** @endcond */

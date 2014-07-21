@@ -1,20 +1,21 @@
-/******************************************************************************\
- *           ___        __                                                    *
- *          /\_ \    __/\ \                                                   *
- *          \//\ \  /\_\ \ \____    ___   _____   _____      __               *
- *            \ \ \ \/\ \ \ '__`\  /'___\/\ '__`\/\ '__`\  /'__`\             *
- *             \_\ \_\ \ \ \ \L\ \/\ \__/\ \ \L\ \ \ \L\ \/\ \L\.\_           *
- *             /\____\\ \_\ \_,__/\ \____\\ \ ,__/\ \ ,__/\ \__/.\_\          *
- *             \/____/ \/_/\/___/  \/____/ \ \ \/  \ \ \/  \/__/\/_/          *
- *                                          \ \_\   \ \_\                     *
- *                                           \/_/    \/_/                     *
+/******************************************************************************
+ *                       ____    _    _____                                   *
+ *                      / ___|  / \  |  ___|    C++                           *
+ *                     | |     / _ \ | |_       Actor                         *
+ *                     | |___ / ___ \|  _|      Framework                     *
+ *                      \____/_/   \_|_|                                      *
  *                                                                            *
  * Copyright (C) 2011 - 2014                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
- * Distributed under the Boost Software License, Version 1.0. See             *
- * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
-\******************************************************************************/
+ * Distributed under the terms and conditions of the BSD 3-Clause License or  *
+ * (at your option) under the terms and conditions of the Boost Software      *
+ * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ *                                                                            *
+ * If you did not receive a copy of the license files, see                    *
+ * http://opensource.org/licenses/BSD-3-Clause and                            *
+ * http://www.boost.org/LICENSE_1_0.txt.                                      *
+ ******************************************************************************/
 
 // this header contains prototype definitions of the spawn function famility;
 // implementations can be found in spawn.hpp (this header is included there)
@@ -30,33 +31,33 @@
 
 namespace caf {
 
-template<class C,
-         spawn_options Os = no_spawn_options,
-         typename BeforeLaunch = std::function<void (C*)>,
-         typename... Ts>
+template <class C,
+     spawn_options Os = no_spawn_options,
+     typename BeforeLaunch = std::function<void (C*)>,
+     class... Ts>
 intrusive_ptr<C> spawn_class(execution_unit* host,
-                             BeforeLaunch before_launch_fun, Ts&&... args);
+               BeforeLaunch before_launch_fun, Ts&&... args);
 
-template<spawn_options Os = no_spawn_options,
-          typename BeforeLaunch = void (*)(abstract_actor*),
-          typename F = behavior (*)(), typename... Ts>
+template <spawn_options Os = no_spawn_options,
+      typename BeforeLaunch = void (*)(abstract_actor*),
+      typename F = behavior (*)(), class... Ts>
 actor spawn_functor(execution_unit* host, BeforeLaunch before_launch_fun, F fun,
-                    Ts&&... args);
+          Ts&&... args);
 
 class group_subscriber {
 
  public:
 
-    inline group_subscriber(const group& grp) : m_grp(grp) {}
+  inline group_subscriber(const group& grp) : m_grp(grp) {}
 
-    template<typename T>
-    inline void operator()(T* ptr) const {
-        ptr->join(m_grp);
-    }
+  template <class T>
+  inline void operator()(T* ptr) const {
+    ptr->join(m_grp);
+  }
 
  private:
 
-    group m_grp;
+  group m_grp;
 
 };
 
@@ -64,50 +65,50 @@ class empty_before_launch_callback {
 
  public:
 
-    template<typename T>
-    inline void operator()(T*) const {}
+  template <class T>
+  inline void operator()(T*) const {}
 
 };
 
 /******************************************************************************
- *                                typed actors                                *
+ *                typed actors                *
  ******************************************************************************/
 
 namespace detail { // some utility
 
-template<class TypedBehavior, class FirstArg>
+template <class TypedBehavior, class FirstArg>
 struct infer_typed_actor_handle;
 
 // infer actor type from result type if possible
-template<typename... Rs, class FirstArg>
+template <class... Rs, class FirstArg>
 struct infer_typed_actor_handle<typed_behavior<Rs...>, FirstArg> {
-    using type = typed_actor<Rs...>;
+  using type = typed_actor<Rs...>;
 
 };
 
 // infer actor type from first argument if result type is void
-template<typename... Rs>
+template <class... Rs>
 struct infer_typed_actor_handle<void, typed_event_based_actor<Rs...>*> {
-    using type = typed_actor<Rs...>;
+  using type = typed_actor<Rs...>;
 
 };
 
-template<typename SignatureList>
+template <class SignatureList>
 struct actor_handle_from_signature_list;
 
-template<typename... Rs>
+template <class... Rs>
 struct actor_handle_from_signature_list<detail::type_list<Rs...>> {
-    using type = typed_actor<Rs...>;
+  using type = typed_actor<Rs...>;
 
 };
 
 } // namespace detail
 
-template<spawn_options Os, typename BeforeLaunch, typename F, typename... Ts>
+template <spawn_options Os, typename BeforeLaunch, typename F, class... Ts>
 typename detail::infer_typed_actor_handle<
-    typename detail::get_callable_trait<F>::result_type,
-    typename detail::tl_head<
-        typename detail::get_callable_trait<F>::arg_types>::type>::type
+  typename detail::get_callable_trait<F>::result_type,
+  typename detail::tl_head<
+    typename detail::get_callable_trait<F>::arg_types>::type>::type
 spawn_typed_functor(execution_unit*, BeforeLaunch bl, F fun, Ts&&... args);
 
 } // namespace caf

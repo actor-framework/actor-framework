@@ -1,20 +1,21 @@
-/******************************************************************************\
- *           ___        __                                                    *
- *          /\_ \    __/\ \                                                   *
- *          \//\ \  /\_\ \ \____    ___   _____   _____      __               *
- *            \ \ \ \/\ \ \ '__`\  /'___\/\ '__`\/\ '__`\  /'__`\             *
- *             \_\ \_\ \ \ \ \L\ \/\ \__/\ \ \L\ \ \ \L\ \/\ \L\.\_           *
- *             /\____\\ \_\ \_,__/\ \____\\ \ ,__/\ \ ,__/\ \__/.\_\          *
- *             \/____/ \/_/\/___/  \/____/ \ \ \/  \ \ \/  \/__/\/_/          *
- *                                          \ \_\   \ \_\                     *
- *                                           \/_/    \/_/                     *
+/******************************************************************************
+ *                       ____    _    _____                                   *
+ *                      / ___|  / \  |  ___|    C++                           *
+ *                     | |     / _ \ | |_       Actor                         *
+ *                     | |___ / ___ \|  _|      Framework                     *
+ *                      \____/_/   \_|_|                                      *
  *                                                                            *
  * Copyright (C) 2011 - 2014                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
- * Distributed under the Boost Software License, Version 1.0. See             *
- * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
-\******************************************************************************/
+ * Distributed under the terms and conditions of the BSD 3-Clause License or  *
+ * (at your option) under the terms and conditions of the Boost Software      *
+ * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ *                                                                            *
+ * If you did not receive a copy of the license files, see                    *
+ * http://opensource.org/licenses/BSD-3-Clause and                            *
+ * http://www.boost.org/LICENSE_1_0.txt.                                      *
+ ******************************************************************************/
 
 #ifndef CAF_TYPED_EVENT_BASED_ACTOR_HPP
 #define CAF_TYPED_EVENT_BASED_ACTOR_HPP
@@ -31,7 +32,7 @@ namespace caf {
 
 /**
  * @brief A cooperatively scheduled, event-based actor implementation
- *        with strong type checking.
+ *    with strong type checking.
  *
  * This is the recommended base class for user-defined actors and is used
  * implicitly when spawning typed, functor-based actors without the
@@ -39,30 +40,30 @@ namespace caf {
  *
  * @extends local_actor
  */
-template<typename... Rs>
+template <class... Rs>
 class typed_event_based_actor
-    : public extend<local_actor, typed_event_based_actor<Rs...>>::template with<
-          mixin::mailbox_based,
-          mixin::behavior_stack_based<typed_behavior<Rs...>>::template impl,
-          mixin::sync_sender<nonblocking_response_handle_tag>::template impl> {
+  : public extend<local_actor, typed_event_based_actor<Rs...>>::template with<
+      mixin::mailbox_based,
+      mixin::behavior_stack_based<typed_behavior<Rs...>>::template impl,
+      mixin::sync_sender<nonblocking_response_handle_tag>::template impl> {
 
  public:
 
-    typed_event_based_actor() : m_initialized(false) {}
+  typed_event_based_actor() : m_initialized(false) {}
 
-    using signatures = detail::type_list<Rs...>;
+  using signatures = detail::type_list<Rs...>;
 
-    using behavior_type = typed_behavior<Rs...>;
+  using behavior_type = typed_behavior<Rs...>;
 
-    std::set<std::string> interface() const override {
-        return {detail::to_uniform_name<Rs>()...};
-    }
+  std::set<std::string> interface() const override {
+    return {detail::to_uniform_name<Rs>()...};
+  }
 
  protected:
 
-    virtual behavior_type make_behavior() = 0;
+  virtual behavior_type make_behavior() = 0;
 
-    bool m_initialized;
+  bool m_initialized;
 
 };
 

@@ -1,20 +1,21 @@
-/******************************************************************************\
- *           ___        __                                                    *
- *          /\_ \    __/\ \                                                   *
- *          \//\ \  /\_\ \ \____    ___   _____   _____      __               *
- *            \ \ \ \/\ \ \ '__`\  /'___\/\ '__`\/\ '__`\  /'__`\             *
- *             \_\ \_\ \ \ \ \L\ \/\ \__/\ \ \L\ \ \ \L\ \/\ \L\.\_           *
- *             /\____\\ \_\ \_,__/\ \____\\ \ ,__/\ \ ,__/\ \__/.\_\          *
- *             \/____/ \/_/\/___/  \/____/ \ \ \/  \ \ \/  \/__/\/_/          *
- *                                          \ \_\   \ \_\                     *
- *                                           \/_/    \/_/                     *
+/******************************************************************************
+ *                       ____    _    _____                                   *
+ *                      / ___|  / \  |  ___|    C++                           *
+ *                     | |     / _ \ | |_       Actor                         *
+ *                     | |___ / ___ \|  _|      Framework                     *
+ *                      \____/_/   \_|_|                                      *
  *                                                                            *
  * Copyright (C) 2011 - 2014                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
- * Distributed under the Boost Software License, Version 1.0. See             *
- * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
-\******************************************************************************/
+ * Distributed under the terms and conditions of the BSD 3-Clause License or  *
+ * (at your option) under the terms and conditions of the Boost Software      *
+ * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ *                                                                            *
+ * If you did not receive a copy of the license files, see                    *
+ * http://opensource.org/licenses/BSD-3-Clause and                            *
+ * http://www.boost.org/LICENSE_1_0.txt.                                      *
+ ******************************************************************************/
 
 #include <tuple>
 #include <cerrno>
@@ -56,136 +57,136 @@ namespace io {
 
 namespace {
 
-template<typename Subtype>
+template <class Subtype>
 inline void serialize_impl(const handle<Subtype>& hdl, serializer* sink) {
-    sink->write_value(hdl.id());
+  sink->write_value(hdl.id());
 }
 
-template<typename Subtype>
+template <class Subtype>
 inline void deserialize_impl(handle<Subtype>& hdl, deserializer* source) {
-    hdl.set_id(source->read<int64_t>());
+  hdl.set_id(source->read<int64_t>());
 }
 
 inline void serialize_impl(const new_connection_msg& msg, serializer* sink) {
-    serialize_impl(msg.source, sink);
-    serialize_impl(msg.handle, sink);
+  serialize_impl(msg.source, sink);
+  serialize_impl(msg.handle, sink);
 }
 
 inline void deserialize_impl(new_connection_msg& msg, deserializer* source) {
-    deserialize_impl(msg.source, source);
-    deserialize_impl(msg.handle, source);
+  deserialize_impl(msg.source, source);
+  deserialize_impl(msg.handle, source);
 }
 
 inline void serialize_impl(const new_data_msg& msg, serializer* sink) {
-    serialize_impl(msg.handle, sink);
-    auto buf_size = static_cast<uint32_t>(msg.buf.size());
-    if (buf_size != msg.buf.size()) { // narrowing error
-        std::ostringstream oss;
-        oss << "attempted to send more than "
-            << std::numeric_limits<uint32_t>::max() << " bytes";
-        auto errstr = oss.str();
-        CAF_LOGF_INFO(errstr);
-        throw std::ios_base::failure(std::move(errstr));
-    }
-    sink->write_value(buf_size);
-    sink->write_raw(msg.buf.size(), msg.buf.data());
+  serialize_impl(msg.handle, sink);
+  auto buf_size = static_cast<uint32_t>(msg.buf.size());
+  if (buf_size != msg.buf.size()) { // narrowing error
+    std::ostringstream oss;
+    oss << "attempted to send more than "
+      << std::numeric_limits<uint32_t>::max() << " bytes";
+    auto errstr = oss.str();
+    CAF_LOGF_INFO(errstr);
+    throw std::ios_base::failure(std::move(errstr));
+  }
+  sink->write_value(buf_size);
+  sink->write_raw(msg.buf.size(), msg.buf.data());
 }
 
 inline void deserialize_impl(new_data_msg& msg, deserializer* source) {
-    deserialize_impl(msg.handle, source);
-    auto buf_size = source->read<uint32_t>();
-    msg.buf.resize(buf_size);
-    source->read_raw(msg.buf.size(), msg.buf.data());
+  deserialize_impl(msg.handle, source);
+  auto buf_size = source->read<uint32_t>();
+  msg.buf.resize(buf_size);
+  source->read_raw(msg.buf.size(), msg.buf.data());
 }
 
 // connection_closed_msg & acceptor_closed_msg have the same fields
-template<typename T>
+template <class T>
 typename std::enable_if<std::is_same<T, connection_closed_msg>::value ||
-                        std::is_same<T, acceptor_closed_msg>::value>::type
+            std::is_same<T, acceptor_closed_msg>::value>::type
 serialize_impl(const T& dm, serializer* sink) {
-    serialize_impl(dm.handle, sink);
+  serialize_impl(dm.handle, sink);
 }
 
 // connection_closed_msg & acceptor_closed_msg have the same fields
-template<typename T>
+template <class T>
 typename std::enable_if<std::is_same<T, connection_closed_msg>::value ||
-                        std::is_same<T, acceptor_closed_msg>::value>::type
+            std::is_same<T, acceptor_closed_msg>::value>::type
 deserialize_impl(T& dm, deserializer* source) {
-    deserialize_impl(dm.handle, source);
+  deserialize_impl(dm.handle, source);
 }
 
-template<typename T>
+template <class T>
 class uti_impl : public uniform_type_info {
 
  public:
 
-    uti_impl() : m_native(&typeid(T)), m_name(detail::demangle<T>()) {
-        // nop
-    }
+  uti_impl() : m_native(&typeid(T)), m_name(detail::demangle<T>()) {
+    // nop
+  }
 
-    bool equal_to(const std::type_info& ti) const override {
-        // in some cases (when dealing with dynamic libraries),
-        // address can be different although types are equal
-        return m_native == &ti || *m_native == ti;
-    }
+  bool equal_to(const std::type_info& ti) const override {
+    // in some cases (when dealing with dynamic libraries),
+    // address can be different although types are equal
+    return m_native == &ti || *m_native == ti;
+  }
 
-    bool equals(const void* lhs, const void* rhs) const override {
-        return deref(lhs) == deref(rhs);
-    }
+  bool equals(const void* lhs, const void* rhs) const override {
+    return deref(lhs) == deref(rhs);
+  }
 
-    uniform_value create(const uniform_value& other) const override {
-        return this->create_impl<T>(other);
-    }
+  uniform_value create(const uniform_value& other) const override {
+    return this->create_impl<T>(other);
+  }
 
-    message as_message(void* instance) const override {
-        return make_message(deref(instance));
-    }
+  message as_message(void* instance) const override {
+    return make_message(deref(instance));
+  }
 
-    const char* name() const {
-        return m_name.c_str();
-    }
+  const char* name() const {
+    return m_name.c_str();
+  }
 
  protected:
 
-    void serialize(const void* instance, serializer* sink) const {
-        serialize_impl(deref(instance), sink);
-    }
+  void serialize(const void* instance, serializer* sink) const {
+    serialize_impl(deref(instance), sink);
+  }
 
-    void deserialize(void* instance, deserializer* source) const {
-        deserialize_impl(deref(instance), source);
-    }
+  void deserialize(void* instance, deserializer* source) const {
+    deserialize_impl(deref(instance), source);
+  }
 
  private:
 
-    static inline T& deref(void* ptr) {
-        return *reinterpret_cast<T*>(ptr);
-    }
+  static inline T& deref(void* ptr) {
+    return *reinterpret_cast<T*>(ptr);
+  }
 
-    static inline const T& deref(const void* ptr) {
-        return *reinterpret_cast<const T*>(ptr);
-    }
+  static inline const T& deref(const void* ptr) {
+    return *reinterpret_cast<const T*>(ptr);
+  }
 
-    const std::type_info* m_native;
-    std::string m_name;
+  const std::type_info* m_native;
+  std::string m_name;
 
 };
 
-template<typename... Ts>
+template <class... Ts>
 struct announce_helper;
 
-template<typename T, typename... Ts>
+template <class T, class... Ts>
 struct announce_helper<T, Ts...> {
-    static inline void exec() {
-        announce(typeid(T), uniform_type_info_ptr{new uti_impl<T>});
-        announce_helper<Ts...>::exec();
-    }
+  static inline void exec() {
+    announce(typeid(T), uniform_type_info_ptr{new uti_impl<T>});
+    announce_helper<Ts...>::exec();
+  }
 };
 
-template<>
+template <>
 struct announce_helper<> {
-    static inline void exec() {
-        // end of recursion
-    }
+  static inline void exec() {
+    // end of recursion
+  }
 };
 
 } // namespace <anonymous>
@@ -193,53 +194,53 @@ struct announce_helper<> {
 using detail::make_counted;
 
 middleman* middleman::instance() {
-    auto mpi = detail::singletons::middleman_plugin_id;
-    return static_cast<middleman*>(detail::singletons::get_plugin_singleton(mpi, [] {
-        return new middleman;
-    }));
+  auto mpi = detail::singletons::middleman_plugin_id;
+  return static_cast<middleman*>(detail::singletons::get_plugin_singleton(mpi, [] {
+    return new middleman;
+  }));
 }
 
 void middleman::add_broker(broker_ptr bptr) {
-    m_brokers.insert(bptr);
-    bptr->attach_functor([=](uint32_t) {
-        m_brokers.erase(bptr);
-    });
+  m_brokers.insert(bptr);
+  bptr->attach_functor([=](uint32_t) {
+    m_brokers.erase(bptr);
+  });
 }
 
 void middleman::initialize() {
-    CAF_LOG_TRACE("");
-    m_supervisor = new network::supervisor{m_backend};
-    m_thread = std::thread([this] {
-        CAF_LOGC_TRACE("caf::io::middleman", "initialize$run", "");
-        m_backend.run();
-    });
-    m_backend.m_tid = m_thread.get_id();
-    // announce io-related types
-    announce_helper<new_data_msg, new_connection_msg,
-                    acceptor_closed_msg, connection_closed_msg,
-                    accept_handle, acceptor_closed_msg,
-                    connection_closed_msg, connection_handle,
-                    new_connection_msg, new_data_msg>::exec();
+  CAF_LOG_TRACE("");
+  m_supervisor = new network::supervisor{m_backend};
+  m_thread = std::thread([this] {
+    CAF_LOGC_TRACE("caf::io::middleman", "initialize$run", "");
+    m_backend.run();
+  });
+  m_backend.m_tid = m_thread.get_id();
+  // announce io-related types
+  announce_helper<new_data_msg, new_connection_msg,
+          acceptor_closed_msg, connection_closed_msg,
+          accept_handle, acceptor_closed_msg,
+          connection_closed_msg, connection_handle,
+          new_connection_msg, new_data_msg>::exec();
 }
 
 void middleman::stop() {
-    CAF_LOG_TRACE("");
-    m_backend.dispatch([=] {
-        CAF_LOGC_TRACE("caf::io::middleman", "stop$lambda", "");
-        delete m_supervisor;
-        m_supervisor = nullptr;
-        // m_managers will be modified while we are stopping each manager,
-        // because each manager will call remove(...)
-        std::vector<broker_ptr> brokers;
-        for (auto& kvp : m_named_brokers) brokers.push_back(kvp.second);
-        for (auto& bro : brokers) bro->close_all();
-    });
-    m_thread.join();
-    m_named_brokers.clear();
+  CAF_LOG_TRACE("");
+  m_backend.dispatch([=] {
+    CAF_LOGC_TRACE("caf::io::middleman", "stop$lambda", "");
+    delete m_supervisor;
+    m_supervisor = nullptr;
+    // m_managers will be modified while we are stopping each manager,
+    // because each manager will call remove(...)
+    std::vector<broker_ptr> brokers;
+    for (auto& kvp : m_named_brokers) brokers.push_back(kvp.second);
+    for (auto& bro : brokers) bro->close_all();
+  });
+  m_thread.join();
+  m_named_brokers.clear();
 }
 
 void middleman::dispose() {
-    delete this;
+  delete this;
 }
 
 middleman::middleman() : m_supervisor(nullptr) { }

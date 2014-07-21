@@ -1,20 +1,21 @@
-/******************************************************************************\
- *           ___        __                                                    *
- *          /\_ \    __/\ \                                                   *
- *          \//\ \  /\_\ \ \____    ___   _____   _____      __               *
- *            \ \ \ \/\ \ \ '__`\  /'___\/\ '__`\/\ '__`\  /'__`\             *
- *             \_\ \_\ \ \ \ \L\ \/\ \__/\ \ \L\ \ \ \L\ \/\ \L\.\_           *
- *             /\____\\ \_\ \_,__/\ \____\\ \ ,__/\ \ ,__/\ \__/.\_\          *
- *             \/____/ \/_/\/___/  \/____/ \ \ \/  \ \ \/  \/__/\/_/          *
- *                                          \ \_\   \ \_\                     *
- *                                           \/_/    \/_/                     *
+/******************************************************************************
+ *                       ____    _    _____                                   *
+ *                      / ___|  / \  |  ___|    C++                           *
+ *                     | |     / _ \ | |_       Actor                         *
+ *                     | |___ / ___ \|  _|      Framework                     *
+ *                      \____/_/   \_|_|                                      *
  *                                                                            *
  * Copyright (C) 2011 - 2014                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
- * Distributed under the Boost Software License, Version 1.0. See             *
- * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
-\******************************************************************************/
+ * Distributed under the terms and conditions of the BSD 3-Clause License or  *
+ * (at your option) under the terms and conditions of the Boost Software      *
+ * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ *                                                                            *
+ * If you did not receive a copy of the license files, see                    *
+ * http://opensource.org/licenses/BSD-3-Clause and                            *
+ * http://www.boost.org/LICENSE_1_0.txt.                                      *
+ ******************************************************************************/
 
 #ifndef CAF_IO_MIDDLEMAN_HPP
 #define CAF_IO_MIDDLEMAN_HPP
@@ -40,78 +41,78 @@ namespace io {
  */
 class middleman : public detail::abstract_singleton {
 
-    friend class detail::singletons;
+  friend class detail::singletons;
 
  public:
 
-    /**
-     * @brief Get middleman instance.
-     */
-    static middleman* instance();
+  /**
+   * @brief Get middleman instance.
+   */
+  static middleman* instance();
 
-    ~middleman();
+  ~middleman();
 
-    /**
-     * @brief Returns the broker associated with @p name.
-     */
-    template<class Impl>
-    intrusive_ptr<Impl> get_named_broker(atom_value name);
+  /**
+   * @brief Returns the broker associated with @p name.
+   */
+  template <class Impl>
+  intrusive_ptr<Impl> get_named_broker(atom_value name);
 
-    /**
-     * @brief Adds @p bptr to the list of known brokers.
-     */
-    void add_broker(broker_ptr bptr);
+  /**
+   * @brief Adds @p bptr to the list of known brokers.
+   */
+  void add_broker(broker_ptr bptr);
 
-    /**
-     * @brief Runs @p fun in the event loop of the middleman.
-     * @note This member function is thread-safe.
-     */
-    template<typename F>
-    void run_later(F fun) {
-        m_backend.dispatch(fun);
-    }
+  /**
+   * @brief Runs @p fun in the event loop of the middleman.
+   * @note This member function is thread-safe.
+   */
+  template <class F>
+  void run_later(F fun) {
+    m_backend.dispatch(fun);
+  }
 
-    /**
-     * @brief Returns the IO backend used by this middleman.
-     */
-    inline network::multiplexer& backend() { return m_backend; }
+  /**
+   * @brief Returns the IO backend used by this middleman.
+   */
+  inline network::multiplexer& backend() { return m_backend; }
 
-    /** @cond PRIVATE */
+  /** @cond PRIVATE */
 
-    // stops uninitialized instances
-    void dispose() override;
+  // stops uninitialized instances
+  void dispose() override;
 
-    // stops an initialized singleton
-    void stop() override;
+  // stops an initialized singleton
+  void stop() override;
 
-    // initializes a singleton
-    void initialize() override;
+  // initializes a singleton
+  void initialize() override;
 
-    /** @endcond */
+  /** @endcond */
 
  private:
 
-    middleman();
+  middleman();
 
-    network::multiplexer m_backend;    // networking backend
-    network::supervisor* m_supervisor; // keeps backend busy
+  network::multiplexer m_backend;  // networking backend
+  network::supervisor* m_supervisor; // keeps backend busy
 
-    std::thread m_thread; // runs the backend
+  std::thread m_thread; // runs the backend
 
-    std::map<atom_value, broker_ptr> m_named_brokers;
+  std::map<atom_value, broker_ptr> m_named_brokers;
 
-    std::set<broker_ptr> m_brokers;
+  std::set<broker_ptr> m_brokers;
 
 };
 
-template<class Impl>
+template <class Impl>
 intrusive_ptr<Impl> middleman::get_named_broker(atom_value name) {
-    auto i = m_named_brokers.find(name);
-    if (i != m_named_brokers.end()) return static_cast<Impl*>(i->second.get());
-    intrusive_ptr<Impl> result{new Impl};
-    result->launch(true, nullptr);
-    m_named_brokers.insert(std::make_pair(name, result));
-    return result;
+  auto i = m_named_brokers.find(name);
+  if (i != m_named_brokers.end()) return static_cast<Impl*>(i->second.get());
+  intrusive_ptr<Impl> result{new Impl};
+  result->launch(true, nullptr);
+  m_named_brokers.insert(std::make_pair(name, result));
+  return result;
 }
 
 } // namespace io

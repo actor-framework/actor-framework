@@ -1,31 +1,32 @@
-/******************************************************************************\
- *           ___        __                                                    *
- *          /\_ \    __/\ \                                                   *
- *          \//\ \  /\_\ \ \____    ___   _____   _____      __               *
- *            \ \ \ \/\ \ \ '__`\  /'___\/\ '__`\/\ '__`\  /'__`\             *
- *             \_\ \_\ \ \ \ \L\ \/\ \__/\ \ \L\ \ \ \L\ \/\ \L\.\_           *
- *             /\____\\ \_\ \_,__/\ \____\\ \ ,__/\ \ ,__/\ \__/.\_\          *
- *             \/____/ \/_/\/___/  \/____/ \ \ \/  \ \ \/  \/__/\/_/          *
- *                                          \ \_\   \ \_\                     *
- *                                           \/_/    \/_/                     *
+/******************************************************************************
+ *                       ____    _    _____                                   *
+ *                      / ___|  / \  |  ___|    C++                           *
+ *                     | |     / _ \ | |_       Actor                         *
+ *                     | |___ / ___ \|  _|      Framework                     *
+ *                      \____/_/   \_|_|                                      *
  *                                                                            *
  * Copyright (C) 2011 - 2014                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
- * Distributed under the Boost Software License, Version 1.0. See             *
- * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
-\******************************************************************************/
+ * Distributed under the terms and conditions of the BSD 3-Clause License or  *
+ * (at your option) under the terms and conditions of the Boost Software      *
+ * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ *                                                                            *
+ * If you did not receive a copy of the license files, see                    *
+ * http://opensource.org/licenses/BSD-3-Clause and                            *
+ * http://www.boost.org/LICENSE_1_0.txt.                                      *
+ ******************************************************************************/
 
 /******************************************************************************\
  * Based on http://homes.esat.kuleuven.be/~cosicart/ps/AB-9601/rmd160.h;
  * original header:
  *
- *      AUTHOR:   Antoon Bosselaers, ESAT-COSIC
- *      DATE:     1 March 1996
- *      VERSION:  1.0
+ *    AUTHOR:   Antoon Bosselaers, ESAT-COSIC
+ *    DATE:     1 March 1996
+ *    VERSION:  1.0
  *
- *      Copyright (c) Katholieke Universiteit Leuven
- *      1996, All Rights Reserved
+ *    Copyright (c) Katholieke Universiteit Leuven
+ *    1996, All Rights Reserved
  *
  *  Conditions for use of the RIPEMD-160 Software
  *
@@ -50,7 +51,6 @@
  *     or communications in relation with the use of the RIPEMD-160 software
  *     as follows: RIPEMD-160 software written by Antoon Bosselaers,
  *     available at http://www.esat.kuleuven.be/~cosicart/ps/AB-9601/.
- *
 \******************************************************************************/
 
 #ifndef CAF_DETAIL_RIPEMD_160_HPP

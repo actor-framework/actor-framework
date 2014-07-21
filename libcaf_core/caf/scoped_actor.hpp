@@ -1,20 +1,21 @@
-/******************************************************************************\
- *           ___        __                                                    *
- *          /\_ \    __/\ \                                                   *
- *          \//\ \  /\_\ \ \____    ___   _____   _____      __               *
- *            \ \ \ \/\ \ \ '__`\  /'___\/\ '__`\/\ '__`\  /'__`\             *
- *             \_\ \_\ \ \ \ \L\ \/\ \__/\ \ \L\ \ \ \L\ \/\ \L\.\_           *
- *             /\____\\ \_\ \_,__/\ \____\\ \ ,__/\ \ ,__/\ \__/.\_\          *
- *             \/____/ \/_/\/___/  \/____/ \ \ \/  \ \ \/  \/__/\/_/          *
- *                                          \ \_\   \ \_\                     *
- *                                           \/_/    \/_/                     *
+/******************************************************************************
+ *                       ____    _    _____                                   *
+ *                      / ___|  / \  |  ___|    C++                           *
+ *                     | |     / _ \ | |_       Actor                         *
+ *                     | |___ / ___ \|  _|      Framework                     *
+ *                      \____/_/   \_|_|                                      *
  *                                                                            *
  * Copyright (C) 2011 - 2014                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
- * Distributed under the Boost Software License, Version 1.0. See             *
- * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
-\******************************************************************************/
+ * Distributed under the terms and conditions of the BSD 3-Clause License or  *
+ * (at your option) under the terms and conditions of the Boost Software      *
+ * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ *                                                                            *
+ * If you did not receive a copy of the license files, see                    *
+ * http://opensource.org/licenses/BSD-3-Clause and                            *
+ * http://www.boost.org/LICENSE_1_0.txt.                                      *
+ ******************************************************************************/
 
 #ifndef CAF_SCOPED_ACTOR_HPP
 #define CAF_SCOPED_ACTOR_HPP
@@ -31,35 +32,35 @@ class scoped_actor {
 
  public:
 
-    scoped_actor();
+  scoped_actor();
 
-    scoped_actor(const scoped_actor&) = delete;
+  scoped_actor(const scoped_actor&) = delete;
 
-    explicit scoped_actor(bool hide_actor);
+  explicit scoped_actor(bool hide_actor);
 
-    ~scoped_actor();
+  ~scoped_actor();
 
-    inline blocking_actor* operator->() const { return m_self.get(); }
+  inline blocking_actor* operator->() const { return m_self.get(); }
 
-    inline blocking_actor& operator*() const { return *m_self; }
+  inline blocking_actor& operator*() const { return *m_self; }
 
-    inline blocking_actor* get() const { return m_self.get(); }
+  inline blocking_actor* get() const { return m_self.get(); }
 
-    operator channel() const { return get(); }
+  operator channel() const { return get(); }
 
-    operator actor() const { return get(); }
+  operator actor() const { return get(); }
 
-    operator actor_addr() const { return get()->address(); }
+  operator actor_addr() const { return get()->address(); }
 
-    inline actor_addr address() const { return get()->address(); }
+  inline actor_addr address() const { return get()->address(); }
 
  private:
 
-    void init(bool hide_actor);
+  void init(bool hide_actor);
 
-    bool m_hidden;
-    actor_id m_prev; // used for logging/debugging purposes only
-    intrusive_ptr<blocking_actor> m_self;
+  bool m_hidden;
+  actor_id m_prev; // used for logging/debugging purposes only
+  intrusive_ptr<blocking_actor> m_self;
 
 };
 

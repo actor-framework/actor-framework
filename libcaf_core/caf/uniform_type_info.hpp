@@ -1,20 +1,21 @@
-/******************************************************************************\
- *           ___        __                                                    *
- *          /\_ \    __/\ \                                                   *
- *          \//\ \  /\_\ \ \____    ___   _____   _____      __               *
- *            \ \ \ \/\ \ \ '__`\  /'___\/\ '__`\/\ '__`\  /'__`\             *
- *             \_\ \_\ \ \ \ \L\ \/\ \__/\ \ \L\ \ \ \L\ \/\ \L\.\_           *
- *             /\____\\ \_\ \_,__/\ \____\\ \ ,__/\ \ ,__/\ \__/.\_\          *
- *             \/____/ \/_/\/___/  \/____/ \ \ \/  \ \ \/  \/__/\/_/          *
- *                                          \ \_\   \ \_\                     *
- *                                           \/_/    \/_/                     *
+/******************************************************************************
+ *                       ____    _    _____                                   *
+ *                      / ___|  / \  |  ___|    C++                           *
+ *                     | |     / _ \ | |_       Actor                         *
+ *                     | |___ / ___ \|  _|      Framework                     *
+ *                      \____/_/   \_|_|                                      *
  *                                                                            *
  * Copyright (C) 2011 - 2014                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
- * Distributed under the Boost Software License, Version 1.0. See             *
- * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
-\******************************************************************************/
+ * Distributed under the terms and conditions of the BSD 3-Clause License or  *
+ * (at your option) under the terms and conditions of the Boost Software      *
+ * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ *                                                                            *
+ * If you did not receive a copy of the license files, see                    *
+ * http://opensource.org/licenses/BSD-3-Clause and                            *
+ * http://www.boost.org/LICENSE_1_0.txt.                                      *
+ ******************************************************************************/
 
 #ifndef CAF_UNIFORM_TYPE_INFO_HPP
 #define CAF_UNIFORM_TYPE_INFO_HPP
@@ -47,27 +48,27 @@ struct uniform_value_t;
 using uniform_value = std::unique_ptr<uniform_value_t>;
 
 struct uniform_value_t {
-    const uniform_type_info* ti;
-    void* val;
-    virtual uniform_value copy() = 0;
-    virtual ~uniform_value_t();
+  const uniform_type_info* ti;
+  void* val;
+  virtual uniform_value copy() = 0;
+  virtual ~uniform_value_t();
 
 };
 
-template<typename T, typename... Ts>
+template <class T, class... Ts>
 uniform_value make_uniform_value(const uniform_type_info* ti, Ts&&... args) {
-    struct container : uniform_value_t {
-        T value;
-        container(const uniform_type_info* ptr, T arg) : value(std::move(arg)) {
-            ti = ptr;
-            val = &value;
-        }
-        uniform_value copy() override {
-            return uniform_value{new container(ti, value)};
-        }
+  struct container : uniform_value_t {
+    T value;
+    container(const uniform_type_info* ptr, T arg) : value(std::move(arg)) {
+      ti = ptr;
+      val = &value;
+    }
+    uniform_value copy() override {
+      return uniform_value{new container(ti, value)};
+    }
 
-    };
-    return uniform_value{new container(ti, T(std::forward<Ts>(args)...))};
+  };
+  return uniform_value{new container(ti, T(std::forward<Ts>(args)...))};
 }
 
 /**
@@ -107,8 +108,8 @@ uniform_value make_uniform_value(const uniform_type_info* ti, Ts&&... args) {
  *
  * int main()
  * {
- *     send(self, foo{1, 2});
- *     return 0;
+ *   send(self, foo{1, 2});
+ *   return 0;
  * }
  * @endcode
  *
@@ -147,7 +148,7 @@ uniform_value make_uniform_value(const uniform_type_info* ti, Ts&&... args) {
 /**
  * @ingroup TypeSystem
  * @brief Provides a platform independent type name and a (very primitive)
- *        kind of reflection in combination with {@link caf::object object}.
+ *    kind of reflection in combination with {@link caf::object object}.
  *
  * The platform independent name is equal to the "in-sourcecode-name"
  * with a few exceptions:
@@ -163,114 +164,114 @@ uniform_value make_uniform_value(const uniform_type_info* ti, Ts&&... args) {
  */
 class uniform_type_info {
 
-    friend bool operator==(const uniform_type_info& lhs,
-                           const uniform_type_info& rhs);
+  friend bool operator==(const uniform_type_info& lhs,
+               const uniform_type_info& rhs);
 
-    // disable copy and move constructors
-    uniform_type_info(uniform_type_info&&) = delete;
-    uniform_type_info(const uniform_type_info&) = delete;
+  // disable copy and move constructors
+  uniform_type_info(uniform_type_info&&) = delete;
+  uniform_type_info(const uniform_type_info&) = delete;
 
-    // disable assignment operators
-    uniform_type_info& operator=(uniform_type_info&&) = delete;
-    uniform_type_info& operator=(const uniform_type_info&) = delete;
+  // disable assignment operators
+  uniform_type_info& operator=(uniform_type_info&&) = delete;
+  uniform_type_info& operator=(const uniform_type_info&) = delete;
 
  public:
 
-    virtual ~uniform_type_info();
+  virtual ~uniform_type_info();
 
-    /**
-     * @brief Get instance by uniform name.
-     * @param uniform_name The internal name for a type.
-     * @returns The instance associated to @p uniform_name.
-     * @throws std::runtime_error if no type named @p uniform_name was found.
-     */
-    static const uniform_type_info* from(const std::string& uniform_name);
+  /**
+   * @brief Get instance by uniform name.
+   * @param uniform_name The internal name for a type.
+   * @returns The instance associated to @p uniform_name.
+   * @throws std::runtime_error if no type named @p uniform_name was found.
+   */
+  static const uniform_type_info* from(const std::string& uniform_name);
 
-    /**
-     * @brief Get instance by std::type_info.
-     * @param tinfo A STL RTTI object.
-     * @returns An instance describing the same type as @p tinfo.
-     * @throws std::runtime_error if @p tinfo is not an announced type.
-     */
-    static const uniform_type_info* from(const std::type_info& tinfo);
+  /**
+   * @brief Get instance by std::type_info.
+   * @param tinfo A STL RTTI object.
+   * @returns An instance describing the same type as @p tinfo.
+   * @throws std::runtime_error if @p tinfo is not an announced type.
+   */
+  static const uniform_type_info* from(const std::type_info& tinfo);
 
-    /**
-     * @brief Get all instances.
-     * @returns A vector with all known (announced) instances.
-     */
-    static std::vector<const uniform_type_info*> instances();
+  /**
+   * @brief Get all instances.
+   * @returns A vector with all known (announced) instances.
+   */
+  static std::vector<const uniform_type_info*> instances();
 
-    /**
-     * @brief Creates a copy of @p other.
-     */
-    virtual uniform_value
-    create(const uniform_value& other = uniform_value{}) const = 0;
+  /**
+   * @brief Creates a copy of @p other.
+   */
+  virtual uniform_value
+  create(const uniform_value& other = uniform_value{}) const = 0;
 
-    /**
-     * @brief Deserializes an object of this type from @p source.
-     */
-    uniform_value deserialize(deserializer* source) const;
+  /**
+   * @brief Deserializes an object of this type from @p source.
+   */
+  uniform_value deserialize(deserializer* source) const;
 
-    /**
-     * @brief Get the internal name for this type.
-     * @returns A string describing the internal type name.
-     */
-    virtual const char* name() const = 0;
+  /**
+   * @brief Get the internal name for this type.
+   * @returns A string describing the internal type name.
+   */
+  virtual const char* name() const = 0;
 
-    /**
-     * @brief Determines if this uniform_type_info describes the same
-     *        type than @p tinfo.
-     * @returns @p true if @p tinfo describes the same type as @p this.
-     */
-    virtual bool equal_to(const std::type_info& tinfo) const = 0;
+  /**
+   * @brief Determines if this uniform_type_info describes the same
+   *    type than @p tinfo.
+   * @returns @p true if @p tinfo describes the same type as @p this.
+   */
+  virtual bool equal_to(const std::type_info& tinfo) const = 0;
 
-    /**
-     * @brief Compares two instances of this type.
-     * @param instance1 Left hand operand.
-     * @param instance2 Right hand operand.
-     * @returns @p true if <tt>*instance1 == *instance2</tt>.
-     * @pre @p instance1 and @p instance2 have the type of @p this.
-     */
-    virtual bool equals(const void* instance1, const void* instance2) const = 0;
+  /**
+   * @brief Compares two instances of this type.
+   * @param instance1 Left hand operand.
+   * @param instance2 Right hand operand.
+   * @returns @p true if <tt>*instance1 == *instance2</tt>.
+   * @pre @p instance1 and @p instance2 have the type of @p this.
+   */
+  virtual bool equals(const void* instance1, const void* instance2) const = 0;
 
-    /**
-     * @brief Serializes @p instance to @p sink.
-     * @param instance Instance of this type.
-     * @param sink Target data sink.
-     * @pre @p instance has the type of @p this.
-     * @throws std::ios_base::failure Thrown when the underlying serialization
-     *                                layer is unable to serialize the data,
-     *                                e.g., when exceeding maximum buffer
-     *                                sizes.
-     */
-    virtual void serialize(const void* instance, serializer* sink) const = 0;
+  /**
+   * @brief Serializes @p instance to @p sink.
+   * @param instance Instance of this type.
+   * @param sink Target data sink.
+   * @pre @p instance has the type of @p this.
+   * @throws std::ios_base::failure Thrown when the underlying serialization
+   *                layer is unable to serialize the data,
+   *                e.g., when exceeding maximum buffer
+   *                sizes.
+   */
+  virtual void serialize(const void* instance, serializer* sink) const = 0;
 
-    /**
-     * @brief Deserializes @p instance from @p source.
-     * @param instance Instance of this type.
-     * @param source Data source.
-     * @pre @p instance has the type of @p this.
-     */
-    virtual void deserialize(void* instance, deserializer* source) const = 0;
+  /**
+   * @brief Deserializes @p instance from @p source.
+   * @param instance Instance of this type.
+   * @param source Data source.
+   * @pre @p instance has the type of @p this.
+   */
+  virtual void deserialize(void* instance, deserializer* source) const = 0;
 
-    /**
-     * @brief Returns @p instance encapsulated as an @p message.
-     */
-    virtual message as_message(void* instance) const = 0;
+  /**
+   * @brief Returns @p instance encapsulated as an @p message.
+   */
+  virtual message as_message(void* instance) const = 0;
 
  protected:
 
-    uniform_type_info() = default;
+  uniform_type_info() = default;
 
-    template<typename T>
-    uniform_value create_impl(const uniform_value& other) const {
-        if (other) {
-            CAF_REQUIRE(other->ti == this);
-            auto ptr = reinterpret_cast<const T*>(other->val);
-            return make_uniform_value<T>(this, *ptr);
-        }
-        return make_uniform_value<T>(this);
+  template <class T>
+  uniform_value create_impl(const uniform_value& other) const {
+    if (other) {
+      CAF_REQUIRE(other->ti == this);
+      auto ptr = reinterpret_cast<const T*>(other->val);
+      return make_uniform_value<T>(this, *ptr);
     }
+    return make_uniform_value<T>(this);
+  }
 
 };
 
@@ -279,59 +280,59 @@ using uniform_type_info_ptr = std::unique_ptr<uniform_type_info>;
 /**
  * @relates uniform_type_info
  */
-template<typename T>
+template <class T>
 inline const uniform_type_info* uniform_typeid() {
-    return uniform_typeid(typeid(T));
+  return uniform_typeid(typeid(T));
 }
 
 /**
  * @relates uniform_type_info
  */
 inline bool operator==(const uniform_type_info& lhs,
-                       const uniform_type_info& rhs) {
-    // uniform_type_info instances are singletons,
-    // thus, equal == identical
-    return &lhs == &rhs;
+             const uniform_type_info& rhs) {
+  // uniform_type_info instances are singletons,
+  // thus, equal == identical
+  return &lhs == &rhs;
 }
 
 /**
  * @relates uniform_type_info
  */
 inline bool operator!=(const uniform_type_info& lhs,
-                       const uniform_type_info& rhs) {
-    return !(lhs == rhs);
+             const uniform_type_info& rhs) {
+  return !(lhs == rhs);
 }
 
 /**
  * @relates uniform_type_info
  */
 inline bool operator==(const uniform_type_info& lhs,
-                       const std::type_info& rhs) {
-    return lhs.equal_to(rhs);
+             const std::type_info& rhs) {
+  return lhs.equal_to(rhs);
 }
 
 /**
  * @relates uniform_type_info
  */
 inline bool operator!=(const uniform_type_info& lhs,
-                       const std::type_info& rhs) {
-    return !(lhs.equal_to(rhs));
+             const std::type_info& rhs) {
+  return !(lhs.equal_to(rhs));
 }
 
 /**
  * @relates uniform_type_info
  */
 inline bool operator==(const std::type_info& lhs,
-                       const uniform_type_info& rhs) {
-    return rhs.equal_to(lhs);
+             const uniform_type_info& rhs) {
+  return rhs.equal_to(lhs);
 }
 
 /**
  * @relates uniform_type_info
  */
 inline bool operator!=(const std::type_info& lhs,
-                       const uniform_type_info& rhs) {
-    return !(rhs.equal_to(lhs));
+             const uniform_type_info& rhs) {
+  return !(rhs.equal_to(lhs));
 }
 
 } // namespace caf

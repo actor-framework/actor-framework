@@ -1,20 +1,21 @@
-/******************************************************************************\
- *           ___        __                                                    *
- *          /\_ \    __/\ \                                                   *
- *          \//\ \  /\_\ \ \____    ___   _____   _____      __               *
- *            \ \ \ \/\ \ \ '__`\  /'___\/\ '__`\/\ '__`\  /'__`\             *
- *             \_\ \_\ \ \ \ \L\ \/\ \__/\ \ \L\ \ \ \L\ \/\ \L\.\_           *
- *             /\____\\ \_\ \_,__/\ \____\\ \ ,__/\ \ ,__/\ \__/.\_\          *
- *             \/____/ \/_/\/___/  \/____/ \ \ \/  \ \ \/  \/__/\/_/          *
- *                                          \ \_\   \ \_\                     *
- *                                           \/_/    \/_/                     *
+/******************************************************************************
+ *                       ____    _    _____                                   *
+ *                      / ___|  / \  |  ___|    C++                           *
+ *                     | |     / _ \ | |_       Actor                         *
+ *                     | |___ / ___ \|  _|      Framework                     *
+ *                      \____/_/   \_|_|                                      *
  *                                                                            *
  * Copyright (C) 2011 - 2014                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
- * Distributed under the Boost Software License, Version 1.0. See             *
- * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
-\******************************************************************************/
+ * Distributed under the terms and conditions of the BSD 3-Clause License or  *
+ * (at your option) under the terms and conditions of the Boost Software      *
+ * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ *                                                                            *
+ * If you did not receive a copy of the license files, see                    *
+ * http://opensource.org/licenses/BSD-3-Clause and                            *
+ * http://www.boost.org/LICENSE_1_0.txt.                                      *
+ ******************************************************************************/
 
 #ifndef CAF_DETAIL_INT_LIST_HPP
 #define CAF_DETAIL_INT_LIST_HPP
@@ -32,70 +33,70 @@ namespace detail {
 /**
  * @brief A list of integers (wraps a long... template parameter pack).
  */
-template<long... Is>
+template <long... Is>
 struct int_list {};
 
-template<size_t N, size_t Size, long... Is>
+template <size_t N, size_t Size, long... Is>
 struct il_right_impl;
 
-template<size_t N, size_t Size>
+template <size_t N, size_t Size>
 struct il_right_impl<N, Size> {
-    using type = int_list<>;
+  using type = int_list<>;
 };
 
-template<size_t N, size_t Size, long I, long... Is>
+template <size_t N, size_t Size, long I, long... Is>
 struct il_right_impl<N, Size, I, Is...> : il_right_impl<N, Size - 1, Is...> { };
 
-template<size_t N, long I, long... Is>
+template <size_t N, long I, long... Is>
 struct il_right_impl<N, N, I, Is...> {
-    using type = int_list<I, Is...>;
+  using type = int_list<I, Is...>;
 };
 
-template<class List, size_t N>
+template <class List, size_t N>
 struct il_right;
 
-template<long... Is, size_t N>
+template <long... Is, size_t N>
 struct il_right<int_list<Is...>, N> : il_right_impl<(N > sizeof...(Is)
-                                                       ? sizeof...(Is)
-                                                       : N),
-                                                    sizeof...(Is),
-                                                    Is...> { };
+                             ? sizeof...(Is)
+                             : N),
+                          sizeof...(Is),
+                          Is...> { };
 
 /**
  * @brief Creates indices for @p List beginning at @p Pos.
  */
-template<typename List, long Pos = 0, typename Indices = int_list<>>
+template <class List, long Pos = 0, typename Indices = int_list<>>
 struct il_indices;
 
-template<template<class...> class List, long... Is, long Pos>
+template <template <class...> class List, long... Is, long Pos>
 struct il_indices<List<>, Pos, int_list<Is...>> {
-    using type = int_list<Is...>;
+  using type = int_list<Is...>;
 };
 
-template<template<class...> class List,
-         typename T0,
-         typename... Ts,
-         long Pos,
-         long... Is>
+template <template <class...> class List,
+     typename T0,
+     class... Ts,
+     long Pos,
+     long... Is>
 struct il_indices<List<T0, Ts...>, Pos, int_list<Is...>> {
-    // always use type_list to forward remaining Ts... arguments
-    using type = typename il_indices<
-                     type_list<Ts...>,
-                     Pos + 1,
-                     int_list<Is..., Pos>
-                 >::type;
-
+  // always use type_list to forward remaining Ts... arguments
+  using type =
+    typename il_indices<
+      type_list<Ts...>,
+      Pos + 1,
+      int_list<Is..., Pos>
+    >::type;
 };
 
-template<typename T>
+template <class T>
 constexpr auto get_indices(const T&) -> typename il_indices<T>::type {
-    return {};
+  return {};
 }
 
-template<size_t Num, typename T>
+template <size_t Num, typename T>
 constexpr auto get_right_indices(const T&)
 -> typename il_right<typename il_indices<T>::type, Num>::type {
-    return {};
+  return {};
 }
 
 /**

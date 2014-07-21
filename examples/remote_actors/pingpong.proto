@@ -8,6 +8,6 @@ message Pong {
 }
 
 message PingOrPong {
-    optional Ping ping = 1;
-    optional Pong pong = 2;
+  optional Ping ping = 1;
+  optional Pong pong = 2;
 }

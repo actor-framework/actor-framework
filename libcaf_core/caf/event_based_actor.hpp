@@ -1,20 +1,21 @@
-/******************************************************************************\
- *           ___        __                                                    *
- *          /\_ \    __/\ \                                                   *
- *          \//\ \  /\_\ \ \____    ___   _____   _____      __               *
- *            \ \ \ \/\ \ \ '__`\  /'___\/\ '__`\/\ '__`\  /'__`\             *
- *             \_\ \_\ \ \ \ \L\ \/\ \__/\ \ \L\ \ \ \L\ \/\ \L\.\_           *
- *             /\____\\ \_\ \_,__/\ \____\\ \ ,__/\ \ ,__/\ \__/.\_\          *
- *             \/____/ \/_/\/___/  \/____/ \ \ \/  \ \ \/  \/__/\/_/          *
- *                                          \ \_\   \ \_\                     *
- *                                           \/_/    \/_/                     *
+/******************************************************************************
+ *                       ____    _    _____                                   *
+ *                      / ___|  / \  |  ___|    C++                           *
+ *                     | |     / _ \ | |_       Actor                         *
+ *                     | |___ / ___ \|  _|      Framework                     *
+ *                      \____/_/   \_|_|                                      *
  *                                                                            *
  * Copyright (C) 2011 - 2014                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
- * Distributed under the Boost Software License, Version 1.0. See             *
- * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
-\******************************************************************************/
+ * Distributed under the terms and conditions of the BSD 3-Clause License or  *
+ * (at your option) under the terms and conditions of the Boost Software      *
+ * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ *                                                                            *
+ * If you did not receive a copy of the license files, see                    *
+ * http://opensource.org/licenses/BSD-3-Clause and                            *
+ * http://www.boost.org/LICENSE_1_0.txt.                                      *
+ ******************************************************************************/
 
 #ifndef CAF_UNTYPED_ACTOR_HPP
 #define CAF_UNTYPED_ACTOR_HPP
@@ -46,46 +47,46 @@ namespace caf {
  * @extends local_actor
  */
 class event_based_actor
-    : public extend<local_actor, event_based_actor>::with<
-          mixin::mailbox_based, mixin::behavior_stack_based<behavior>::impl,
-          mixin::sync_sender<nonblocking_response_handle_tag>::impl> {
+  : public extend<local_actor, event_based_actor>::with<
+      mixin::mailbox_based, mixin::behavior_stack_based<behavior>::impl,
+      mixin::sync_sender<nonblocking_response_handle_tag>::impl> {
 
  public:
 
-    event_based_actor();
+  event_based_actor();
 
-    ~event_based_actor();
+  ~event_based_actor();
 
-    class functor_based;
+  class functor_based;
 
  protected:
 
-    /**
-     * @brief Returns the initial actor behavior.
-     */
-    virtual behavior make_behavior() = 0;
+  /**
+   * @brief Returns the initial actor behavior.
+   */
+  virtual behavior make_behavior() = 0;
 
-    /**
-     * @brief Forwards the last received message to @p whom.
-     */
-    void forward_to(const actor& whom);
+  /**
+   * @brief Forwards the last received message to @p whom.
+   */
+  void forward_to(const actor& whom);
 
-    bool m_initialized;
+  bool m_initialized;
 
 };
 
 class event_based_actor::functor_based
-    : public extend<event_based_actor>::with<mixin::functor_based> {
+  : public extend<event_based_actor>::with<mixin::functor_based> {
 
-    using super = combined_type;
+  using super = combined_type;
 
  public:
 
-    template<typename... Ts>
-    functor_based(Ts&&... vs)
-            : super(std::forward<Ts>(vs)...) {}
+  template <class... Ts>
+  functor_based(Ts&&... vs)
+      : super(std::forward<Ts>(vs)...) {}
 
-    behavior make_behavior() override;
+  behavior make_behavior() override;
 
 };
 

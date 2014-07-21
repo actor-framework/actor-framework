@@ -1,20 +1,21 @@
-/******************************************************************************\
- *           ___        __                                                    *
- *          /\_ \    __/\ \                                                   *
- *          \//\ \  /\_\ \ \____    ___   _____   _____      __               *
- *            \ \ \ \/\ \ \ '__`\  /'___\/\ '__`\/\ '__`\  /'__`\             *
- *             \_\ \_\ \ \ \ \L\ \/\ \__/\ \ \L\ \ \ \L\ \/\ \L\.\_           *
- *             /\____\\ \_\ \_,__/\ \____\\ \ ,__/\ \ ,__/\ \__/.\_\          *
- *             \/____/ \/_/\/___/  \/____/ \ \ \/  \ \ \/  \/__/\/_/          *
- *                                          \ \_\   \ \_\                     *
- *                                           \/_/    \/_/                     *
+/******************************************************************************
+ *                       ____    _    _____                                   *
+ *                      / ___|  / \  |  ___|    C++                           *
+ *                     | |     / _ \ | |_       Actor                         *
+ *                     | |___ / ___ \|  _|      Framework                     *
+ *                      \____/_/   \_|_|                                      *
  *                                                                            *
  * Copyright (C) 2011 - 2014                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
- * Distributed under the Boost Software License, Version 1.0. See             *
- * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
-\******************************************************************************/
+ * Distributed under the terms and conditions of the BSD 3-Clause License or  *
+ * (at your option) under the terms and conditions of the Boost Software      *
+ * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ *                                                                            *
+ * If you did not receive a copy of the license files, see                    *
+ * http://opensource.org/licenses/BSD-3-Clause and                            *
+ * http://www.boost.org/LICENSE_1_0.txt.                                      *
+ ******************************************************************************/
 
 #ifndef CAF_DETAIL_MEMORY_HPP
 #define CAF_DETAIL_MEMORY_HPP
@@ -38,16 +39,16 @@ namespace detail {
 
 namespace {
 
-constexpr size_t s_alloc_size = 1024 * 1024;      // allocate ~1mb chunks
+constexpr size_t s_alloc_size = 1024 * 1024;    // allocate ~1mb chunks
 constexpr size_t s_cache_size = 10 * 1024 * 1024; // cache about 10mb per thread
-constexpr size_t s_min_elements = 5;              // don't create < 5 elements
+constexpr size_t s_min_elements = 5;        // don't create < 5 elements
 
 } // namespace <anonymous>
 
 struct disposer {
-    inline void operator()(memory_managed* ptr) const {
-        ptr->request_deletion();
-    }
+  inline void operator()(memory_managed* ptr) const {
+    ptr->request_deletion();
+  }
 
 };
 
@@ -55,13 +56,13 @@ class instance_wrapper {
 
  public:
 
-    virtual ~instance_wrapper();
+  virtual ~instance_wrapper();
 
-    // calls the destructor
-    virtual void destroy() = 0;
+  // calls the destructor
+  virtual void destroy() = 0;
 
-    // releases memory
-    virtual void deallocate() = 0;
+  // releases memory
+  virtual void deallocate() = 0;
 
 };
 
@@ -69,164 +70,164 @@ class memory_cache {
 
  public:
 
-    virtual ~memory_cache();
+  virtual ~memory_cache();
 
-    // calls dtor and either releases memory or re-uses it later
-    virtual void release_instance(void*) = 0;
+  // calls dtor and either releases memory or re-uses it later
+  virtual void release_instance(void*) = 0;
 
-    virtual std::pair<instance_wrapper*, void*> new_instance() = 0;
+  virtual std::pair<instance_wrapper*, void*> new_instance() = 0;
 
-    // casts @p ptr to the derived type and returns it
-    virtual void* downcast(memory_managed* ptr) = 0;
+  // casts @p ptr to the derived type and returns it
+  virtual void* downcast(memory_managed* ptr) = 0;
 
 };
 
 class instance_wrapper;
 
-template<typename T>
+template <class T>
 class basic_memory_cache;
 
 #ifdef CAF_DISABLE_MEM_MANAGEMENT
 
 class memory {
 
-    memory() = delete;
+  memory() = delete;
 
  public:
 
-    /*
-     * @brief Allocates storage, initializes a new object, and returns
-     *        the new instance.
-     */
-    template<typename T, typename... Ts>
-    static T* create(Ts&&... args) {
-        return new T(std::forward<Ts>(args)...);
-    }
+  /*
+   * @brief Allocates storage, initializes a new object, and returns
+   *    the new instance.
+   */
+  template <class T, class... Ts>
+  static T* create(Ts&&... args) {
+    return new T(std::forward<Ts>(args)...);
+  }
 
-    static inline memory_cache* get_cache_map_entry(const std::type_info*) {
-        return nullptr;
-    }
+  static inline memory_cache* get_cache_map_entry(const std::type_info*) {
+    return nullptr;
+  }
 
 };
 
 #else // CAF_DISABLE_MEM_MANAGEMENT
 
-template<typename T>
+template <class T>
 class basic_memory_cache : public memory_cache {
 
-    static constexpr size_t ne = s_alloc_size / sizeof(T);
-    static constexpr size_t dsize = ne > s_min_elements ? ne : s_min_elements;
+  static constexpr size_t ne = s_alloc_size / sizeof(T);
+  static constexpr size_t dsize = ne > s_min_elements ? ne : s_min_elements;
 
-    struct wrapper : instance_wrapper {
-        ref_counted* parent;
-        union {
-            T instance;
-
-        };
-        wrapper() : parent(nullptr) {}
-        ~wrapper() {}
-        void destroy() { instance.~T(); }
-        void deallocate() { parent->deref(); }
+  struct wrapper : instance_wrapper {
+    ref_counted* parent;
+    union {
+      T instance;
 
     };
+    wrapper() : parent(nullptr) {}
+    ~wrapper() {}
+    void destroy() { instance.~T(); }
+    void deallocate() { parent->deref(); }
 
-    class storage : public ref_counted {
+  };
 
-     public:
+  class storage : public ref_counted {
 
-        storage() {
-            for (auto& elem : data) {
-                // each instance has a reference to its parent
-                elem.parent = this;
-                ref(); // deref() is called in wrapper::deallocate
-            }
-        }
+   public:
 
-        using iterator = wrapper*;
+    storage() {
+      for (auto& elem : data) {
+        // each instance has a reference to its parent
+        elem.parent = this;
+        ref(); // deref() is called in wrapper::deallocate
+      }
+    }
 
-        iterator begin() { return data; }
+    using iterator = wrapper*;
 
-        iterator end() { return begin() + dsize; }
+    iterator begin() { return data; }
 
-     private:
+    iterator end() { return begin() + dsize; }
 
-        wrapper data[dsize];
+   private:
 
-    };
+    wrapper data[dsize];
+
+  };
 
  public:
 
-    std::vector<wrapper*> cached_elements;
+  std::vector<wrapper*> cached_elements;
 
-    basic_memory_cache() { cached_elements.reserve(dsize); }
+  basic_memory_cache() { cached_elements.reserve(dsize); }
 
-    ~basic_memory_cache() {
-        for (auto e : cached_elements) e->deallocate();
+  ~basic_memory_cache() {
+    for (auto e : cached_elements) e->deallocate();
+  }
+
+  void* downcast(memory_managed* ptr) { return static_cast<T*>(ptr); }
+
+  void release_instance(void* vptr) override {
+    CAF_REQUIRE(vptr != nullptr);
+    auto ptr = reinterpret_cast<T*>(vptr);
+    CAF_REQUIRE(ptr->outer_memory != nullptr);
+    auto wptr = static_cast<wrapper*>(ptr->outer_memory);
+    wptr->destroy();
+    wptr->deallocate();
+  }
+
+  std::pair<instance_wrapper*, void*> new_instance() override {
+    if (cached_elements.empty()) {
+      auto elements = new storage;
+      for (auto i = elements->begin(); i != elements->end(); ++i) {
+        cached_elements.push_back(i);
+      }
     }
-
-    void* downcast(memory_managed* ptr) { return static_cast<T*>(ptr); }
-
-    void release_instance(void* vptr) override {
-        CAF_REQUIRE(vptr != nullptr);
-        auto ptr = reinterpret_cast<T*>(vptr);
-        CAF_REQUIRE(ptr->outer_memory != nullptr);
-        auto wptr = static_cast<wrapper*>(ptr->outer_memory);
-        wptr->destroy();
-        wptr->deallocate();
-    }
-
-    std::pair<instance_wrapper*, void*> new_instance() override {
-        if (cached_elements.empty()) {
-            auto elements = new storage;
-            for (auto i = elements->begin(); i != elements->end(); ++i) {
-                cached_elements.push_back(i);
-            }
-        }
-        wrapper* wptr = cached_elements.back();
-        cached_elements.pop_back();
-        return std::make_pair(wptr, &(wptr->instance));
-    }
+    wrapper* wptr = cached_elements.back();
+    cached_elements.pop_back();
+    return std::make_pair(wptr, &(wptr->instance));
+  }
 
 };
 
 class memory {
 
-    memory() = delete;
+  memory() = delete;
 
-    template<typename>
-    friend class basic_memory_cache;
+  template <class>
+  friend class basic_memory_cache;
 
  public:
 
-    /*
-     * @brief Allocates storage, initializes a new object, and returns
-     *        the new instance.
-     */
-    template<typename T, typename... Ts>
-    static T* create(Ts&&... args) {
-        auto mc = get_or_set_cache_map_entry<T>();
-        auto p = mc->new_instance();
-        auto result = new (p.second) T(std::forward<Ts>(args)...);
-        result->outer_memory = p.first;
-        return result;
-    }
+  /*
+   * @brief Allocates storage, initializes a new object, and returns
+   *    the new instance.
+   */
+  template <class T, class... Ts>
+  static T* create(Ts&&... args) {
+    auto mc = get_or_set_cache_map_entry<T>();
+    auto p = mc->new_instance();
+    auto result = new (p.second) T(std::forward<Ts>(args)...);
+    result->outer_memory = p.first;
+    return result;
+  }
 
-    static memory_cache* get_cache_map_entry(const std::type_info* tinf);
+  static memory_cache* get_cache_map_entry(const std::type_info* tinf);
 
  private:
 
-    static void add_cache_map_entry(const std::type_info* tinf,
-                                    memory_cache* instance);
+  static void add_cache_map_entry(const std::type_info* tinf,
+                  memory_cache* instance);
 
-    template<typename T>
-    static inline memory_cache* get_or_set_cache_map_entry() {
-        auto mc = get_cache_map_entry(&typeid(T));
-        if (!mc) {
-            mc = new basic_memory_cache<T>;
-            add_cache_map_entry(&typeid(T), mc);
-        }
-        return mc;
+  template <class T>
+  static inline memory_cache* get_or_set_cache_map_entry() {
+    auto mc = get_cache_map_entry(&typeid(T));
+    if (!mc) {
+      mc = new basic_memory_cache<T>;
+      add_cache_map_entry(&typeid(T), mc);
     }
+    return mc;
+  }
 
 };
 

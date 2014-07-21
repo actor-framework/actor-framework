@@ -18,45 +18,45 @@ class no_resume {
 
  public:
 
-    template<class Base, class Derived>
-    struct mixin : Base {
+  template <class Base, class Derived>
+  struct mixin : Base {
 
-        template<typename... Ts>
-        mixin(Ts&&... args)
-                : Base(std::forward<Ts>(args)...), m_hidden(true) {}
+    template <class... Ts>
+    mixin(Ts&&... args)
+        : Base(std::forward<Ts>(args)...), m_hidden(true) {}
 
-        inline void attach_to_scheduler() { this->ref(); }
+    inline void attach_to_scheduler() { this->ref(); }
 
-        inline void detach_from_scheduler() { this->deref(); }
+    inline void detach_from_scheduler() { this->deref(); }
 
-        inline resumable::resume_result resume(execution_unit*) {
-            auto done_cb = [=](uint32_t reason) {
-                this->planned_exit_reason(reason);
-                this->on_exit();
-                this->cleanup(reason);
+    inline resumable::resume_result resume(execution_unit*) {
+      auto done_cb = [=](uint32_t reason) {
+        this->planned_exit_reason(reason);
+        this->on_exit();
+        this->cleanup(reason);
 
-            };
-            try {
-                this->act();
-                done_cb(exit_reason::normal);
-            }
-            catch (actor_exited& e) {
-                done_cb(e.reason());
-            }
-            catch (...) {
-                done_cb(exit_reason::unhandled_exception);
-            }
-            return resumable::done;
-        }
-
-        bool m_hidden;
-
-    };
-
-    template<class Actor>
-    void await_ready(Actor* self) {
-        self->await_data();
+      };
+      try {
+        this->act();
+        done_cb(exit_reason::normal);
+      }
+      catch (actor_exited& e) {
+        done_cb(e.reason());
+      }
+      catch (...) {
+        done_cb(exit_reason::unhandled_exception);
+      }
+      return resumable::done;
     }
+
+    bool m_hidden;
+
+  };
+
+  template <class Actor>
+  void await_ready(Actor* self) {
+    self->await_data();
+  }
 
 };
 
