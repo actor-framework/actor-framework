@@ -1,4 +1,4 @@
-This files specifies the coding style for CAF source files.
+This document specifies the coding style for the C++ Actor Framework.
 The style is based on the
 [Google C++ Style Guide](http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml).
 
