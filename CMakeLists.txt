@@ -132,7 +132,7 @@ include_directories(${INCLUDE_DIRS})
 
 # install includes from core
 install(DIRECTORY libcaf_core/caf/ DESTINATION include/caf FILES_MATCHING PATTERN "*.hpp")
-install(DIRECTORY libcaf_io/cppa/ DESTINATION include/cppa FILES_MATCHING PATTERN "*.hpp")
+install(DIRECTORY libcaf_core/cppa/ DESTINATION include/cppa FILES_MATCHING PATTERN "*.hpp")
 
 # install includes from io
 install(DIRECTORY libcaf_io/caf/ DESTINATION include/caf FILES_MATCHING PATTERN "*.hpp")
@@ -160,6 +160,9 @@ add_subdirectory(libcaf_io)
 # set io lib for sub directories
 set (LIBCAF_IO_LIBRARY libcaf_io)
 add_dependencies(libcaf_io libcaf_core)
+# set list variable for sub directories
+set (LIBCAF_LIBRARIES ${LIBCAF_CORE_LIBRARY} ${LIBCAF_IO_LIBRARY})
+
 if (NOT "${CAF_NO_UNIT_TESTS}" STREQUAL "yes")
   enable_testing()
   add_subdirectory(unit_testing)

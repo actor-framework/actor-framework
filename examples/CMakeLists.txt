@@ -15,8 +15,7 @@ macro(add name folder)
   add_executable(${name} ${folder}/${name}.cpp ${ARGN})
   target_link_libraries(${name}
                         ${CMAKE_DL_LIBS}
-                        ${LIBCAF_CORE_LIBRARY}
-                        ${LIBCAF_IO_LIBRARY}
+			${LIBCAF_LIBRARIES}
                         ${PTHREAD_LIBRARIES}
                         ${WSLIB})
   add_dependencies(${name} all_examples)
@@ -55,7 +54,7 @@ if (NOT "${CAF_NO_CURL_EXAMPLES}" STREQUAL "yes")
   find_package(CURL)
   if (CURL_FOUND)
     add_executable(curl_fuse curl/curl_fuse.cpp)
-    target_link_libraries(curl_fuse ${CMAKE_DL_LIBS} ${CAF_LIBRARY} ${PTHREAD_LIBRARIES} ${CURL_LIBRARY})
+    target_link_libraries(curl_fuse ${CMAKE_DL_LIBS} ${LIBCAF_LIBRARIES} ${PTHREAD_LIBRARIES} ${CURL_LIBRARY})
     add_dependencies(curl_fuse all_examples)
   endif (CURL_FOUND)
 endif ()
