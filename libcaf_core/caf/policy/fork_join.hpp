@@ -49,6 +49,8 @@ namespace policy {
  * worker makes sure that at least one job is left in its exposed queue
  * to allow other workers to steal it.
  *
+ * [1] http://dl.acm.org/citation.cfm?doid=2398857.2384639
+ *
  * @relates job_queue_policy
  */
 class fork_join {
