@@ -76,9 +76,9 @@ class abstract_worker : public execution_unit {
 
 /**
  * @brief A coordinator creates the workers, manages delayed sends and
- *    the central printer instance for {@link aout}. It also forwards
- *    sends from detached workers or non-actor threads to randomly
- *    chosen workers.
+ *        the central printer instance for {@link aout}. It also forwards
+ *        sends from detached workers or non-actor threads to randomly
+ *        chosen workers.
  */
 class abstract_coordinator {
 
@@ -203,8 +203,8 @@ class worker : public abstract_worker {
 
   /**
    * @brief Enqueues a new job to the worker's queue from an internal
-   *    source, i.e., a job that is currently executed by
-   *    this worker.
+   *        source, i.e., a job that is currently executed by
+   *        this worker.
    * @warning Must not be called from other threads.
    */
   void exec_later(job_ptr job) override {
@@ -349,16 +349,16 @@ class coordinator : public abstract_coordinator {
 /**
  * @brief Sets a user-defined scheduler.
  * @note This function must be used before actor is spawned. Dynamically
- *     changing the scheduler at runtime is not supported.
+ *       changing the scheduler at runtime is not supported.
  * @throws std::logic_error if a scheduler is already defined
  */
 void set_scheduler(scheduler::abstract_coordinator* ptr);
 
 /**
  * @brief Sets a user-defined scheduler using given policies. The scheduler
- *    is instantiated with @p nw number of workers.
+ *        is instantiated with @p nw number of workers.
  * @note This function must be used before actor is spawned. Dynamically
- *     changing the scheduler at runtime is not supported.
+ *       changing the scheduler at runtime is not supported.
  * @throws std::logic_error if a scheduler is already defined
  */
 template <class StealPolicy, class JobQueuePolicy>

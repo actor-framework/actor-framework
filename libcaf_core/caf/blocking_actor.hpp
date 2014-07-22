@@ -41,12 +41,10 @@ namespace caf {
  * @extends local_actor
  */
 class blocking_actor
-  : public extend<local_actor, blocking_actor>::with<
-      mixin::mailbox_based,
-      mixin::sync_sender<blocking_response_handle_tag>::impl> {
-
+    : public extend<local_actor, blocking_actor>::
+             with<mixin::mailbox_based,
+                  mixin::sync_sender<blocking_response_handle_tag>::impl> {
  public:
-
   class functor_based;
 
   /**************************************************************************
@@ -260,11 +258,9 @@ class blocking_actor::functor_based : public blocking_actor {
   }
 
  protected:
-
   void act() override;
 
  private:
-
   void create(blocking_actor*, act_fun);
 
   template <class Actor, typename F, typename T0, class... Ts>
@@ -287,7 +283,6 @@ class blocking_actor::functor_based : public blocking_actor {
   }
 
   act_fun m_act;
-
 };
 
 } // namespace caf
