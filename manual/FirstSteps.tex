@@ -8,7 +8,7 @@ To compile \lib, you will need CMake and a C++11 compiler. To get and compile th
 
 \begin{verbatim}
 git clone https://github.com/actor-framework/actor-framework
-cd lib
+cd actor-framework
 ./configure
 make
 make install [as root, optional]
@@ -59,10 +59,10 @@ In the meantime, \lib can be used with MinGW.
 #include <string>
 #include <iostream>
 
-#include "cppa/cppa.hpp"
+#include "caf/all.hpp"
 
 using namespace std;
-using namespace cppa;
+using namespace caf;
 
 behavior mirror(event_based_actor* self) {
     // return the (initial) actor behavior
