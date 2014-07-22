@@ -26,6 +26,8 @@
 #include <stdexcept>
 #include <algorithm>
 
+#include "caf/string_algorithms.hpp"
+
 #include "caf/atom.hpp"
 #include "caf/actor.hpp"
 #include "caf/channel.hpp"
@@ -44,18 +46,18 @@
 
 #ifdef DEBUG_PARSER
   namespace {
-  size_t s_indentation = 0;
+    size_t s_indentation = 0;
   } // namespace <anonymous>
-#   define PARSER_INIT(message)                        \
-    std::cout << std::string(s_indentation, ' ') << ">>> " << message    \
-          << std::endl;                        \
-    s_indentation += 2;                          \
+# define PARSER_INIT(message)                                                  \
+    std::cout << std::string(s_indentation, ' ') << ">>> " << message          \
+              << std::endl;                                                    \
+    s_indentation += 2;                                                        \
     auto ____sg = caf::detail::make_scope_guard([] { s_indentation -= 2; })
-#   define PARSER_OUT(condition, message)                    \
-    if (condition) {                             \
-      std::cout << std::string(s_indentation, ' ') << "### " << message  \
-            << std::endl;                      \
-    }                                    \
+# define PARSER_OUT(condition, message)                                        \
+    if (condition) {                                                           \
+      std::cout << std::string(s_indentation, ' ') << "### " << message        \
+                << std::endl;                                                  \
+    }                                                                          \
     static_cast<void>(0)
 #else
 #   define PARSER_INIT(unused) static_cast<void>(0)
@@ -73,48 +75,45 @@ struct platform_int_mapping {
   const char* name;
   size_t size;
   bool is_signed;
-
 };
 
 // WARNING: this list is sorted and searched with std::lower_bound;
-//      keep ordered when adding elements!
-platform_int_mapping platform_dependent_sizes[] = {
-  {"char",        sizeof(char),         true },
-  {"char16_t",      sizeof(char16_t),       true },
-  {"char32_t",      sizeof(char32_t),       true },
-  {"int",         sizeof(int),        true },
-  {"long",        sizeof(long),         true },
-  {"long int",      sizeof(long int),       true },
-  {"long long",       sizeof(long long),      true },
-  {"short",         sizeof(short),        true },
-  {"short int",       sizeof(short int),      true },
-  {"signed char",     sizeof(signed char),    true },
-  {"signed int",      sizeof(signed int),     true },
-  {"signed long",     sizeof(signed long),    true },
-  {"signed long int",   sizeof(signed long int),  true },
-  {"signed long long",  sizeof(signed long long),   true },
-  {"signed short",    sizeof(signed short),     true },
-  {"signed short int",  sizeof(signed short int),   true },
-  {"unsigned char",     sizeof(unsigned char),    false},
-  {"unsigned int",    sizeof(unsigned int),     false},
-  {"unsigned long",     sizeof(unsigned long),    false},
+//          keep ordered when adding elements!
+constexpr platform_int_mapping platform_dependent_sizes[] = {
+  {"char",                sizeof(char),               true },
+  {"char16_t",            sizeof(char16_t),           true },
+  {"char32_t",            sizeof(char32_t),           true },
+  {"int",                 sizeof(int),                true },
+  {"long",                sizeof(long),               true },
+  {"long int",            sizeof(long int),           true },
+  {"long long",           sizeof(long long),          true },
+  {"short",               sizeof(short),              true },
+  {"short int",           sizeof(short int),          true },
+  {"signed char",         sizeof(signed char),        true },
+  {"signed int",          sizeof(signed int),         true },
+  {"signed long",         sizeof(signed long),        true },
+  {"signed long int",     sizeof(signed long int),    true },
+  {"signed long long",    sizeof(signed long long),   true },
+  {"signed short",        sizeof(signed short),       true },
+  {"signed short int",    sizeof(signed short int),   true },
+  {"unsigned char",       sizeof(unsigned char),      false},
+  {"unsigned int",        sizeof(unsigned int),       false},
+  {"unsigned long",       sizeof(unsigned long),      false},
   {"unsigned long int",   sizeof(unsigned long int),  false},
   {"unsigned long long",  sizeof(unsigned long long), false},
-  {"unsigned short",    sizeof(unsigned short),   false},
+  {"unsigned short",      sizeof(unsigned short),     false},
   {"unsigned short int",  sizeof(unsigned short int), false}
 };
 
 string map2decorated(string&& name) {
   auto cmp = [](const platform_int_mapping& pim, const string& str) {
     return strcmp(pim.name, str.c_str()) < 0;
-
   };
   auto e = end(platform_dependent_sizes);
   auto i = lower_bound(begin(platform_dependent_sizes), e, name, cmp);
   if (i != e && i->name == name) {
-    PARSER_OUT(true,
-           name << " => "
-            << mapped_int_names[i->size][i->is_signed ? 1 : 0]);
+    PARSER_OUT(true, name << " => "
+                     << mapped_int_names[i->size][i->is_signed ? 1 : 0]);
     return mapped_int_names[i->size][i->is_signed ? 1 : 0];
   }
 #ifdef DEBUG_PARSER
@@ -127,21 +126,23 @@ string map2decorated(string&& name) {
 }
 
 class parse_tree {
-
  public:
-
   string compile(bool parent_invoked = false) {
     string result;
     propagate_flags();
     if (!parent_invoked) {
-      if (m_volatile) result += "volatile ";
-      if (m_const) result += "const ";
+      if (m_volatile) {
+        result += "volatile ";
+      }
+      if (m_const) {
+        result += "const ";
+      }
     }
     if (has_children()) {
-      string sub_result = m_children.front().compile(true);
-      for (auto i = m_children.begin() + 1; i != m_children.end(); ++i) {
-        sub_result += "::";
-        sub_result += i->compile(true);
+      string sub_result;
+      for (auto& child : m_children) {
+        if (!sub_result.empty()) sub_result += "::";
+        sub_result += child.compile(true);
       }
       result += map2decorated(std::move(sub_result));
     } else {
@@ -303,7 +304,9 @@ class parse_tree {
         } else if (token == "class" || token == "struct") {
           // ignored (created by visual c++ compilers)
         } else if (!token.empty()) {
-          if (!result.m_name.empty()) result.m_name += " ";
+          if (!result.m_name.empty()) {
+            result.m_name += " ";
+          }
           result.m_name += token;
         }
       }
@@ -323,7 +326,6 @@ class parse_tree {
   }
 
  private:
-
   void propagate_flags() {
     for (auto& c : m_children) {
       c.propagate_flags();
@@ -335,8 +337,9 @@ class parse_tree {
     }
   }
 
-  parse_tree() : m_const(false), m_pointer(false), m_volatile(false)
-         , m_lvalue_ref(false), m_rvalue_ref(false) {
+  parse_tree()
+      : m_const(false), m_pointer(false), m_volatile(false),
+        m_lvalue_ref(false), m_rvalue_ref(false) {
     // nop
   }
 
@@ -349,7 +352,6 @@ class parse_tree {
   string m_name;
   vector<parse_tree> m_children;
   vector<parse_tree> m_template_parameters;
-
 };
 
 template <class Iterator>
@@ -379,26 +381,15 @@ vector<parse_tree> parse_tree::parse_tpl_args(Iterator first, Iterator last) {
   return result;
 }
 
-template <size_t RawSize>
-void replace_all(string& str, const char (&before)[RawSize],
-         const char* after) {
-  // end(before) - 1 points to the null-terminator
-  auto i = search(begin(str), end(str), begin(before), end(before) - 1);
-  while (i != end(str)) {
-    str.replace(i, i + RawSize - 1, after);
-    i = search(begin(str), end(str), begin(before), end(before) - 1);
-  }
-}
-
-const char s_rawan[] = "anonymous namespace";
-const char s_an[] = "$";
+const char raw_anonymous_namespace[] = "anonymous namespace";
+const char unified_anonymous_namespace[] = "$";
 
 } // namespace <anonymous>
 
 std::string to_uniform_name(const std::string& dname) {
   auto r = parse_tree::parse(begin(dname), end(dname)).compile();
   // replace compiler-dependent "anonmyous namespace" with "@_"
-  replace_all(r, s_rawan, s_an);
+  replace_all(r, raw_anonymous_namespace, unified_anonymous_namespace);
   return r.c_str();
 }
 

@@ -59,33 +59,34 @@ enum class enqueue_result {
 /**
  * @brief An intrusive, thread-safe queue implementation.
  * @note For implementation details see
- *     http://libcaf.blogspot.com/2011/04/mailbox-part-1.html
+ *       http://libcppa.blogspot.com/2011/04/mailbox-part-1.html
  */
 template <class T, class Delete = std::default_delete<T>>
 class single_reader_queue {
-
  public:
-
   using value_type = T;
   using pointer = value_type*;
 
   /**
    * @warning call only from the reader (owner)
    */
-  pointer try_pop() { return take_head(); }
+  pointer try_pop() {
+    return take_head();
+  }
 
   template <class UnaryPredicate>
   void remove_if(UnaryPredicate f) {
     pointer head = m_head;
     pointer last = nullptr;
     pointer p = m_head;
-    auto loop = [&]()->bool {
+    auto loop = [&]() -> bool {
       while (p) {
         if (f(*p)) {
-          if (last == nullptr)
+          if (last == nullptr) {
             m_head = p->next;
-          else
+          } else {
             last = p->next;
+          }
           m_delete(p);
           return true;
         } else {
@@ -94,7 +95,6 @@ class single_reader_queue {
         }
       }
       return false;
-
     };
     if (!loop()) {
       // last points to the tail now
@@ -114,7 +114,6 @@ class single_reader_queue {
     }
   }
 
-  // returns true if the queue was empty
   enqueue_result enqueue(pointer new_element) {
     pointer e = m_stack.load();
     for (;;) {
@@ -125,42 +124,45 @@ class single_reader_queue {
       }
       new_element->next = is_dummy(e) ? nullptr : e;
       if (m_stack.compare_exchange_weak(e, new_element)) {
-        return (e == reader_blocked_dummy()) ?
-               enqueue_result::unblocked_reader :
-               enqueue_result::success;
+        return (e == reader_blocked_dummy()) ? enqueue_result::unblocked_reader
+                                             : enqueue_result::success;
       }
     }
   }
 
   /**
    * @brief Queries whether there is new data to read.
-   * @pre m_stack.load() != reader_blocked_dummy()
+   * @pre !closed()
    */
-  inline bool can_fetch_more() {
+  bool can_fetch_more() {
     auto ptr = m_stack.load();
-    CAF_REQUIRE(ptr != nullptr);
+    CAF_REQUIRE(!closed());
     return !is_dummy(ptr);
   }
 
   /**
-   * @warning call only from the reader (owner)
+   * @warning Call only from the reader (owner).
    */
-  inline bool empty() {
-    CAF_REQUIRE(m_stack.load() != nullptr);
+  bool empty() {
+    CAF_REQUIRE(!closed());
     return (!m_head && is_dummy(m_stack.load()));
   }
 
-  inline bool closed() { return m_stack.load() == nullptr; }
+  bool closed() {
+    return m_stack.load() == nullptr;
+  }
 
-  inline bool blocked() { return m_stack == reader_blocked_dummy(); }
+  bool blocked() {
+    return m_stack.load() == reader_blocked_dummy();
+  }
 
   /**
    * @brief Tries to set this queue from state @p empty to state @p blocked.
    * @returns @p true if the state change was successful or if the mailbox
-   *      was already blocked, otherwise @p false.
-   * @note This function does never fail spuriously.
+   *          was already blocked, otherwise @p false.
+   * @note This function never fails spuriously.
    */
-  inline bool try_block() {
+  bool try_block() {
     auto e = stack_empty_dummy();
     bool res = m_stack.compare_exchange_strong(e, reader_blocked_dummy());
     // return true in case queue was already blocked
@@ -170,41 +172,52 @@ class single_reader_queue {
   /**
    * @brief Tries to set this queue from state @p blocked to state @p empty.
    * @returns @p true if the state change was successful, otherwise @p false.
-   * @note This function does never fail spuriously.
+   * @note This function never fails spuriously.
    */
-  inline bool try_unblock() {
+  bool try_unblock() {
     auto e = reader_blocked_dummy();
     return m_stack.compare_exchange_strong(e, stack_empty_dummy());
   }
 
   /**
-   * @warning call only from the reader (owner)
+   * @brief Closes this queue and deletes all remaining elements.
+   * @warning Call only from the reader (owner).
    */
-  // closes this queue deletes all remaining elements
-  inline void close() {
+  void close() {
     clear_cached_elements();
-    if (fetch_new_data(nullptr)) clear_cached_elements();
-  }
-
-  // closes this queue and applies f to all remaining elements before deleting
-  template <class F>
-  inline void close(const F& f) {
-    clear_cached_elements(f);
-    if (fetch_new_data(nullptr)) clear_cached_elements(f);
-  }
-
-  inline single_reader_queue() : m_head(nullptr) {
-    m_stack = stack_empty_dummy();
-  }
-
-  inline void clear() {
-    if (!closed()) {
+    if (fetch_new_data(nullptr)) {
       clear_cached_elements();
-      if (fetch_new_data()) clear_cached_elements();
     }
   }
 
-  ~single_reader_queue() { clear(); }
+  /**
+   * @brief Closes this queue and applies f to all remaining elements before deleting.
+   * @warning Call only from the reader (owner).
+   */
+  template <class F>
+  void close(const F& f) {
+    clear_cached_elements(f);
+    if (fetch_new_data(nullptr)) {
+      clear_cached_elements(f);
+    }
+  }
+
+  single_reader_queue() : m_head(nullptr) {
+    m_stack = stack_empty_dummy();
+  }
+
+  void clear() {
+    if (!closed()) {
+      clear_cached_elements();
+      if (fetch_new_data()) {
+        clear_cached_elements();
+      }
+    }
+  }
+
+  ~single_reader_queue() {
+    clear();
+  }
 
   /**************************************************************************
    *          support for synchronized access           *
@@ -227,26 +240,6 @@ class single_reader_queue {
     }
     // should be unreachable
     CAF_CRITICAL("invalid result of enqueue()");
-  }
-
-  template <class Mutex, class CondVar, class TimePoint>
-  pointer synchronized_try_pop(Mutex& mtx, CondVar& cv,
-                 const TimePoint& abs_time) {
-    auto res = try_pop();
-    if (!res && synchronized_await(mtx, cv, abs_time)) {
-      res = try_pop();
-    }
-    return res;
-  }
-
-  template <class Mutex, class CondVar>
-  pointer synchronized_pop(Mutex& mtx, CondVar& cv) {
-    auto res = try_pop();
-    if (!res) {
-      synchronized_await(mtx, cv);
-      res = try_pop();
-    }
-    return res;
   }
 
   template <class Mutex, class CondVar>
@@ -275,7 +268,6 @@ class single_reader_queue {
   }
 
  private:
-
   // exposed to "outside" access
   std::atomic<pointer> m_stack;
 
@@ -314,7 +306,7 @@ class single_reader_queue {
     return false;
   }
 
-  inline bool fetch_new_data() { return fetch_new_data(stack_empty_dummy()); }
+  bool fetch_new_data() { return fetch_new_data(stack_empty_dummy()); }
 
   pointer take_head() {
     if (m_head != nullptr || fetch_new_data()) {
@@ -343,22 +335,21 @@ class single_reader_queue {
     }
   }
 
-  inline pointer stack_empty_dummy() {
+  pointer stack_empty_dummy() {
     // we are *never* going to dereference the returned pointer;
     // it is only used as indicator wheter this queue is closed or not
     return reinterpret_cast<pointer>(this);
   }
 
-  inline pointer reader_blocked_dummy() {
+  pointer reader_blocked_dummy() {
     // we are not going to dereference this pointer either
-    return reinterpret_cast<pointer>(reinterpret_cast<intptr_t>(this) +
-                     sizeof(void*));
+    return reinterpret_cast<pointer>(reinterpret_cast<intptr_t>(this)
+                                     + sizeof(void*));
   }
 
-  inline bool is_dummy(pointer ptr) {
+  bool is_dummy(pointer ptr) {
     return ptr == stack_empty_dummy() || ptr == reader_blocked_dummy();
   }
-
 };
 
 } // namespace detail

@@ -50,7 +50,7 @@ class no_scheduling {
 
   template <class Actor>
   void enqueue(Actor* self, const actor_addr& sender, message_id mid,
-         message& msg, execution_unit*) {
+               message& msg, execution_unit*) {
     auto ptr = self->new_mailbox_element(sender, mid, std::move(msg));
     // returns false if mailbox has been closed
     if (!self->mailbox().synchronized_enqueue(m_mtx, m_cv, ptr)) {

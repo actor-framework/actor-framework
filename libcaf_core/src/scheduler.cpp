@@ -43,6 +43,11 @@
 #include "caf/detail/logging.hpp"
 #include "caf/detail/proper_actor.hpp"
 
+
+#include "caf/actor_ostream.hpp"
+
+
+
 namespace caf {
 namespace scheduler {
 
@@ -108,10 +113,12 @@ class timer_actor final : public detail::proper_actor<blocking_actor,
       on(atom("_Send"), arg_match) >> [&](const duration& d,
                         actor_addr& from, channel& to,
                         message_id mid, message& tup) {
+aout(this) << "new timeout requested!\n";
          insert_dmsg(messages, d, std::move(from),
                std::move(to), mid, std::move(tup));
       },
       [&](const exit_msg&) {
+aout(this) << "DONE!\n";
         done = true;
       },
       others() >> [&] {
@@ -129,6 +136,7 @@ class timer_actor final : public detail::proper_actor<blocking_actor,
           // handle timeouts (send messages)
           auto it = messages.begin();
           while (it != messages.end() && (it->first) <= tout) {
+aout(this) << "deliver timeout!\n";
             deliver(it->second);
             messages.erase(it);
             it = messages.begin();

@@ -130,7 +130,7 @@ void local_actor::forward_message(const actor& dest, message_priority prio) {
 }
 
 void local_actor::send_tuple(message_priority prio, const channel& dest,
-               message what) {
+                             message what) {
   if (!dest) return;
   message_id id;
   if (prio == message_priority::high) id = id.with_high_priority();
