@@ -2,9 +2,11 @@
  * This example illustrates how to use aout.                                  *
 \ ******************************************************************************/
 
+#include <random>
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
+
 #include "caf/all.hpp"
 
 using namespace caf;
@@ -16,7 +18,9 @@ int main() {
     spawn<blocking_api>([i](blocking_actor* self) {
       aout(self) << "Hi there! This is actor nr. "
                  << i << "!" << endl;
-      std::chrono::milliseconds tout{std::rand() % 1000};
+      std::random_device rd;
+      std::default_random_engine re(rd());
+      std::chrono::milliseconds tout{re() % 10};
       self->delayed_send(self, tout, atom("done"));
       self->receive(others() >> [i, self] {
         aout(self) << "Actor nr. "
