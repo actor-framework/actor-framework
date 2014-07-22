@@ -122,7 +122,9 @@ class proper_actor_base : public Policies::resume_policy::template
                         awaited_response);
   }
 
-  inline bool hidden() const { return this->m_hidden; }
+  inline bool hidden() const {
+    return this->m_hidden;
+  }
 
   void cleanup(uint32_t reason) override {
     CAF_LOG_TRACE(CAF_ARG(reason));
@@ -167,9 +169,8 @@ class proper_actor_base : public Policies::resume_policy::template
 
 // this is the nonblocking version of proper_actor; it assumes  that Base is
 // derived from local_actor and uses the behavior_stack_based mixin
-template <class Base,
-     class Policies,
-     bool OverrideDequeue = std::is_base_of<blocking_actor, Base>::value>
+template <class Base, class Policies,
+          bool OverrideDequeue = std::is_base_of<blocking_actor, Base>::value>
 class proper_actor
     : public proper_actor_base<Base, proper_actor<Base, Policies, false>,
                                Policies> {
@@ -179,10 +180,10 @@ class proper_actor
   static_assert(std::is_base_of<local_actor, Base>::value,
           "Base is not derived from local_actor");
 
-
   template <class... Ts>
-  proper_actor(Ts&&... args)
-      : super(std::forward<Ts>(args)...) {}
+  proper_actor(Ts&&... args) : super(std::forward<Ts>(args)...) {
+    // nop
+  }
 
   // required by event_based_resume::mixin::resume
 
@@ -245,7 +246,6 @@ class proper_actor<Base, Policies, true>
         if (!tmp_vec.empty()) {
           this->cache_prepend(tmp_vec.begin(), tmp_vec.end());
         }
-
       };
       while (!this->cache_empty()) {
         auto tmp = this->cache_take_first();
@@ -270,15 +270,17 @@ class proper_actor<Base, Policies, true>
       if (has_timeout) {
         auto e = pending_timeouts.end();
         auto i = std::find(pending_timeouts.begin(), e, timeout_id);
-        if (i != e) pending_timeouts.erase(i);
+        if (i != e) {
+          pending_timeouts.erase(i);
+        }
       }
     });
     // read incoming messages
     for (;;) {
       auto msg = this->next_message();
-      if (!msg)
+      if (!msg) {
         this->await_ready();
-      else {
+      } else {
         if (this->invoke_message(msg, bhvr, mid)) {
           // we're done
           return;
@@ -300,8 +302,9 @@ class proper_actor<Base, Policies, true>
               this->m_host);
       // auto e = this->new_mailbox_element(this, std::move(msg));
       // this->m_mailbox.enqueue(e);
-    } else
+    } else {
       this->delayed_send_tuple(this, d, std::move(msg));
+    }
     m_pending_timeouts.push_back(tid);
     return tid;
   }

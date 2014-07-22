@@ -220,14 +220,14 @@ class single_reader_queue {
   }
 
   /**************************************************************************
-   *          support for synchronized access           *
+   *                    support for synchronized access                     *
    **************************************************************************/
 
   template <class Mutex, class CondVar>
   bool synchronized_enqueue(Mutex& mtx, CondVar& cv, pointer new_element) {
+    std::unique_lock<Mutex> guard(mtx);
     switch (enqueue(new_element)) {
       case enqueue_result::unblocked_reader: {
-        std::unique_lock<Mutex> guard(mtx);
         cv.notify_one();
         return true;
       }
@@ -244,18 +244,18 @@ class single_reader_queue {
 
   template <class Mutex, class CondVar>
   void synchronized_await(Mutex& mtx, CondVar& cv) {
+    std::unique_lock<Mutex> guard(mtx);
     CAF_REQUIRE(!closed());
     if (try_block()) {
-      std::unique_lock<Mutex> guard(mtx);
       while (blocked()) cv.wait(guard);
     }
   }
 
   template <class Mutex, class CondVar, class TimePoint>
   bool synchronized_await(Mutex& mtx, CondVar& cv, const TimePoint& timeout) {
+    std::unique_lock<Mutex> guard(mtx);
     CAF_REQUIRE(!closed());
     if (try_block()) {
-      std::unique_lock<Mutex> guard(mtx);
       while (blocked()) {
         if (cv.wait_until(guard, timeout) == std::cv_status::timeout) {
           // if we're unable to set the queue from blocked to empty,

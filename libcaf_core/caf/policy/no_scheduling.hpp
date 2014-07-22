@@ -37,15 +37,17 @@
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/detail/single_reader_queue.hpp"
 
+
+#include "caf/actor_ostream.hpp"
+
+
+
 namespace caf {
 namespace policy {
 
 class no_scheduling {
-
   using lock_type = std::unique_lock<std::mutex>;
-
  public:
-
   using timeout_type = std::chrono::high_resolution_clock::time_point;
 
   template <class Actor>
@@ -69,22 +71,21 @@ class no_scheduling {
     intrusive_ptr<Actor> mself{self};
     self->attach_to_scheduler();
     std::thread([=] {
-            CAF_PUSH_AID(mself->id());
-            CAF_LOG_TRACE("");
-            for (;;) {
-              if (mself->resume(nullptr) == resumable::done) {
-                return;
-              }
-              // await new data before resuming actor
-              await_data(mself.get());
-              CAF_REQUIRE(self->mailbox().blocked() == false);
-            }
-            self->detach_from_scheduler();
-          }).detach();
+      CAF_PUSH_AID(mself->id());
+      CAF_LOG_TRACE("");
+      for (;;) {
+        if (mself->resume(nullptr) == resumable::done) {
+          return;
+        }
+        // await new data before resuming actor
+        await_data(mself.get());
+        CAF_REQUIRE(self->mailbox().blocked() == false);
+      }
+      self->detach_from_scheduler();
+    }).detach();
   }
 
-  // await_data is being called from no_scheduling (only)
-
+  // await_data is being called from no_resume (only)
   template <class Actor>
   void await_data(Actor* self) {
     if (self->has_next_message()) return;
@@ -100,10 +101,8 @@ class no_scheduling {
   }
 
  private:
-
   std::mutex m_mtx;
   std::condition_variable m_cv;
-
 };
 
 } // namespace policy
