@@ -33,11 +33,23 @@ inline bool operator==(const foo& lhs, const foo& rhs) {
   return lhs.value == rhs.value;
 }
 
+enum class test_enum {
+  test_value1,
+  test_value2
+};
+
+struct test_struct {
+  test_enum test_value;
+};
+
 } // namespace <anonymous>
 
 using namespace caf;
 
 bool check_types(const std::set<std::string>& expected) {
+  // check whether enums can be announced as members
+  announce<test_enum>();
+  announce<test_struct>(&test_struct::test_value);
   // holds the type names we see at runtime
   std::set<std::string> found;
   // fetch all available type names

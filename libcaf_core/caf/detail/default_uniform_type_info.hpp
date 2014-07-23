@@ -267,31 +267,37 @@ class member_tinfo : public detail::abstract_uniform_type_info<T> {
 };
 
 template <class T, class A, class S>
-class member_tinfo<T, A, S, false,
-           true> : public detail::abstract_uniform_type_info<T> {
-
+class member_tinfo<T, A, S, false, true>
+    : public detail::abstract_uniform_type_info<T> {
  public:
+  member_tinfo(const A&, const S&) {
+    // nop
+  }
 
-  member_tinfo(const A&, const S&) {}
+  member_tinfo(const A&) {
+    // nop
+  }
 
-  member_tinfo(const A&) {}
+  member_tinfo() {
+    // nop
+  }
 
-  member_tinfo() {}
+  void serialize(const void*, serializer*) const override {
+    // nop
+  }
 
-  void serialize(const void*, serializer*) const override {}
-
-  void deserialize(void*, deserializer*) const override {}
-
+  void deserialize(void*, deserializer*) const override {
+    // nop
+  }
 };
 
 template <class T, class AccessPolicy, class SerializePolicy>
-class member_tinfo<T, AccessPolicy, SerializePolicy, true,
-           false> : public detail::abstract_uniform_type_info<T> {
+class member_tinfo<T, AccessPolicy, SerializePolicy, true, false>
+    : public detail::abstract_uniform_type_info<T> {
 
   using value_type = typename std::underlying_type<T>::type;
 
  public:
-
   member_tinfo(AccessPolicy apol, SerializePolicy spol)
       : m_apol(std::move(apol)), m_spol(std::move(spol)) {}
 
@@ -311,7 +317,6 @@ class member_tinfo<T, AccessPolicy, SerializePolicy, true,
   }
 
  private:
-
   AccessPolicy m_apol;
   SerializePolicy m_spol;
 
@@ -319,7 +324,6 @@ class member_tinfo<T, AccessPolicy, SerializePolicy, true,
 
 template <class T, class C>
 class memptr_access_policy {
-
  public:
 
   memptr_access_policy(const memptr_access_policy&) = default;
@@ -337,12 +341,16 @@ class memptr_access_policy {
     return *ptr.*m_memptr;
   }
 
+  template <class Arg>
+  inline void operator()(void* vptr, Arg&& value) const {
+    auto ptr = reinterpret_cast<C*>(vptr);
+    (*ptr.*m_memptr) = std::forward<Arg>(value);
+  }
+
   static constexpr bool grants_mutable_access = true;
 
  private:
-
   T C::*m_memptr;
-
 };
 
 template <class C, typename GRes, typename SRes, typename SArg>
@@ -363,7 +371,7 @@ class getter_setter_access_policy {
   template <class Arg>
   inline void operator()(void* vptr, Arg&& value) const {
     auto ptr = reinterpret_cast<C*>(vptr);
-    return (*ptr.*m_set)(std::forward<Arg>(value));
+    (*ptr.*m_set)(std::forward<Arg>(value));
   }
 
   static constexpr bool grants_mutable_access = false;
@@ -404,7 +412,7 @@ uniform_type_info_ptr new_member_tinfo(T C::*memptr) {
 
 template <class T, class C>
 uniform_type_info_ptr new_member_tinfo(T C::*memptr,
-                     uniform_type_info_ptr meminf) {
+                                       uniform_type_info_ptr meminf) {
   using access_policy = memptr_access_policy<T, C>;
   using tinfo = member_tinfo<T, access_policy, forwarding_serialize_policy>;
   return uniform_type_info_ptr(new tinfo(memptr, std::move(meminf)));
@@ -412,7 +420,7 @@ uniform_type_info_ptr new_member_tinfo(T C::*memptr,
 
 template <class C, typename GRes, typename SRes, typename SArg>
 uniform_type_info_ptr new_member_tinfo(GRes (C::*getter)() const,
-                     SRes (C::*setter)(SArg)) {
+                                       SRes (C::*setter)(SArg)) {
   using access_policy = getter_setter_access_policy<C, GRes, SRes, SArg>;
   using value_type = typename detail::rm_const_and_ref<GRes>::type;
   using result_type = member_tinfo<value_type, access_policy>;
@@ -422,7 +430,7 @@ uniform_type_info_ptr new_member_tinfo(GRes (C::*getter)() const,
 
 template <class C, typename GRes, typename SRes, typename SArg>
 uniform_type_info_ptr new_member_tinfo(GRes (C::*getter)() const,
-                     SRes (C::*setter)(SArg),
+                                       SRes (C::*setter)(SArg),
                      uniform_type_info_ptr meminf) {
   using access_policy = getter_setter_access_policy<C, GRes, SRes, SArg>;
   using value_type = typename detail::rm_const_and_ref<GRes>::type;
