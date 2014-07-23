@@ -1,3 +1,17 @@
+Version 0.10.0
+--------------
+
+__2014_07_23__
+
+- Reorganized repository
+- Use new namespace `caf`
+- Renamed:
+  + `any_tuple` => `message`
+  + `partial_function` => `message_handler`
+- Moved all functions and related to IO into namespace `io`
+- Modularized the library into components core and io
+- New networking backend using a new binary protocol
+
 Version 0.9.4
 -------------
 
