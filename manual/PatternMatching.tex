@@ -11,7 +11,7 @@ Hence, we provide an internal domain-specific language to match incoming message
 \subsection{Basics}
 \label{Sec::PatternMatching::Basics}
 
-A match expression begins with a call to the function \lstinline^on^, which returns an intermediate object providing the member function \lstinline^when^ and \lstinline^operator>>^.
+A match expression begins with a call to the function \lstinline^on^, which returns an intermediate object providing \lstinline^operator>>^.
 The right-hand side of the operator denotes a callback, usually a lambda expression, that should be invoked if a tuple matches the types given to \lstinline^on^,
 as shown in the example below.
 
@@ -22,11 +22,11 @@ on<int, int, int>() >> [](int a, int b, int c) { /*...*/ }
 \end{lstlisting}
 
 The result of \lstinline^operator>>^ is a \textit{match statement}.
-A partial function can consist of any number of match statements.
+A message handler can consist of any number of match statements.
 At most one callback is invoked, since the evaluation stops at the first match.
 
 \begin{lstlisting}
-partial_function fun {
+message_handler fun {
   on<int>() >> [](int i) {
     // case1
   },
@@ -129,106 +129,7 @@ others() >> [] {
 }
 \end{lstlisting}
 
-\subsection{Guards}
-
-Guards can be used to constrain a given match statement by using placeholders, as the following example illustrates.
-
-\begin{lstlisting}
-using namespace cppa::placeholders; // contains _x1 - _x9
-
-on<int>().when(_x1 % 2 == 0) >> [] {
-  // int is even
-},
-on<int>() >> [] {
-  // int is odd
-}
-\end{lstlisting}
-
-Guard expressions are a lazy evaluation technique.
-The placeholder \lstinline^_x1^ is substituted with the first value of a given tuple.
-All binary comparison and arithmetic operators are supported, as well as \lstinline^&&^ and \lstinline^||^.
-In addition, there are three functions designed to be used in guard expressions: \lstinline^gref^ (``guard reference''), \lstinline^gval^ (``guard value''), and \lstinline^gcall^ (``guard function call'').
-The function \lstinline^gref^ creates a reference wrapper, while \lstinline^gval^ encloses a value.
-It is similar to \lstinline^std::ref^ but it is always \lstinline^const^ and ``lazy''.
-A few examples to illustrate some pitfalls:
-
-\begin{lstlisting}
-int val = 42;
-
-on<int>().when(_x1 == val)           // (1) matches if _x1 == 42
-on<int>().when(_x1 == gref(val))     // (2) matches if _x1 == val
-on<int>().when(_x1 == std::ref(val)) // (3) ok, because of placeholder
-others().when(gref(val) == 42)       // (4) matches everything
-                                     //     as long as val == 42
-others().when(std::ref(val) == 42)   // (5) compiler error
-\end{lstlisting}
-
-Statement \texttt{(5)} is evaluated immediately and returns a boolean, whereas statement \texttt{(4)} creates a valid guard expression.
-Thus, you should always use \lstinline^gref^ instead of \lstinline^std::ref^ to avoid errors.
-
-The second function, \lstinline^gcall^, encapsulates a function call.
-Its usage is similar to \lstinline^std::bind^, but there is also a short version for unary functions: \lstinline^gcall(fun, _x1)^ is equal to \lstinline^_x1(fun)^.
-
-\begin{lstlisting}
-auto vec_sorted = [](const std::vector<int>& vec) {
-  return std::is_sorted(vec.begin(), vec.end());
-};
-
-on<std::vector<int>>().when(gcall(vec_sorted, _x1)) // is equal to:
-on<std::vector<int>>().when(_x1(vec_sorted)))
-\end{lstlisting}
-
-\subsubsection{Placeholder Interface}
-
-\begin{lstlisting}
-template<int X>
-struct guard_placeholder;
-\end{lstlisting}
-
-\begin{tabular*}{\textwidth}{m{0.3\linewidth}m{0.7\linewidth}}
-  \multicolumn{2}{m{\linewidth}}{\large{\textbf{Member functions} \small{(\lstinline^x^ represents the value at runtime, \lstinline^y^ represents an iterable container)}}\vspace{3pt}} \\
-  \hline
-  \lstinline^size()^ & Returns \lstinline^x.size()^ \\
-  \hline
-  \lstinline^empty()^ & Returns \lstinline^x.empty()^ \\
-  \hline
-  \lstinline^not_empty()^ & Returns \lstinline^!x.empty()^ \\
-  \hline
-  \lstinline^front()^ & Returns an \lstinline^option^ (see Section \ref{Appendix::Option}) to \lstinline^x.front()^  \\
-  \hline
-  \lstinline^in(y)^ & Returns \lstinline^true^ if \lstinline^y^ contains \lstinline^x^, \lstinline^false^ otherwise\\
-  \hline
-  \lstinline^not_in(y)^ & Returns \lstinline^!in(y)^  \\
-  \hline
-  \\
-\end{tabular*}
-
-\subsubsection{Examples for Guard Expressions}
-
-\begin{lstlisting}
-using namespace std;
-typedef vector<int> ivec;
-
-vector<string> strings{"abc", "def"};
-
-on_arg_match.when(_x1.front() == 0) >> [](const ivec& v) {
-  // note: we don't have to check whether _x1 is empty in our guard,
-  //       because '_x1.front()' returns an option for a 
-  //       reference to the first element
-  assert(v.size() >= 1);
-  assert(v.front() == 0);
-},
-on<int>().when(_x1.in({10, 20, 30})) >> [](int i) {
-  assert(i == 10 || i == 20 || i == 30);
-},
-on<string>().when(_x1.not_in(strings)) >> [](const string& str) {
-  assert(str != "abc" && str != "def");
-},
-on<string>().when(_x1.size() == 10) >> [](const string& str) {
-  // ...
-}
-\end{lstlisting}
-
+\clearpage
 \subsection{Projections and Extractors}
 
 Projections perform type conversions or extract data from a given input.
@@ -244,7 +145,7 @@ auto intproj = [](const string& str) -> option<int> {
   if (endptr != nullptr && *endptr == '\0') return result;
   return {};
 };
-partial_function fun {
+message_handler fun {
   on(intproj) >> [](int i) {
     // case 1: successfully converted a string
   },

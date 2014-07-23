@@ -20,7 +20,7 @@ auto p0 = spawn_typed(
    return static_cast<double>(a) * b;
   },
   on_arg_match >> [](double a, double b) {
-    return make_cow_tuple(a * b, a / b);
+    return std::make_tuple(a * b, a / b);
   }
 );
 // assign to identical type

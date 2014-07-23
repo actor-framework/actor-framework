@@ -4,14 +4,14 @@ Before diving into the API of \lib, we would like to take the opportunity to dis
 
 \subsection{Actor Model}
 
-The actor model describes concurrent entities -- actors -- that do not share state and communicate only via message passing.
+The actor model describes concurrent entities---actors---that do not share state and communicate only via message passing.
 By decoupling concurrently running software components via message passing, the actor model avoids race conditions by design.
-Actors can create -- ``spawn'' -- new actors and monitor each other to build fault-tolerant, hierarchical systems.
+Actors can create---``spawn''---new actors and monitor each other to build fault-tolerant, hierarchical systems.
 Since message passing is network transparent, the actor model applies to both concurrency and distribution.
 
 When dealing with dozens of cores, mutexes, semaphores and other threading primitives are the wrong level of abstraction.
 Implementing applications on top of those primitives has proven challenging and error-prone.
-Additionally, mutex-based implementations can cause queueing and unmindful access to (even distinct) data from separate threads in parallel can lead to false sharing -- both decreasing performance significantly, up to the point that an application actually runs slower when adding more cores.
+Additionally, mutex-based implementations can cause queueing and unmindful access to (even distinct) data from separate threads in parallel can lead to false sharing: both decreasing performance significantly, up to the point that an application actually runs slower when adding more cores.
 
 The actor model has gained momentum over the last decade due to its high level of abstraction and its ability to make efficient use of multicore and multiprocessor machines.
 However, the actor model has not yet been widely adopted in the native programming domain.

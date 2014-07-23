@@ -2,6 +2,7 @@
 
 All actor operations as well as sending messages are network transparent.
 Remote actors are represented by actor proxies that forward all messages.
+All functions shown in this section can be accessed by including the header \lstinline^"caf/io/all.hpp"^ and live in the namespace \lstinline^caf::io^.
 
 \subsection{Publishing of Actors}
 
@@ -15,10 +16,10 @@ The optional \lstinline^addr^ parameter can be used to listen only to the given 
 Otherwise, the actor accepts all incoming connections (\lstinline^INADDR_ANY^).
 
 \begin{lstlisting}
-publish(self, 4242);
+io::publish(self, 4242);
 self->become (
   on(atom("ping"), arg_match) >> [](int i) {
-    return make_cow_tuple(atom("pong"), i);
+    return make_message(atom("pong"), i);
   }
 );
 \end{lstlisting}
@@ -40,7 +41,7 @@ self->become (
     self->quit();
   },
   on(atom("pong"), arg_match) >> [=](int i) {
-    return make_cow_tuple(atom("ping"), i+1);
+    return make_message(atom("ping"), i+1);
   }
 );
 \end{lstlisting}

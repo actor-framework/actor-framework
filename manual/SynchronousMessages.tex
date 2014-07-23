@@ -8,7 +8,7 @@ The member functions \lstinline^sync_send^ and \lstinline^sync_send_tuple^ send 
 template<typename... Args>
 __unspecified__ sync_send(actor whom, Args&&... what);
 
-__unspecified__ sync_send_tuple(actor whom, any_tuple what);
+__unspecified__ sync_send_tuple(actor whom, message what);
 
 template<typename Duration, typename... Args>
 __unspecified__ timed_sync_send(actor whom,
@@ -18,7 +18,7 @@ __unspecified__ timed_sync_send(actor whom,
 template<typename Duration, typename... Args>
 __unspecified__ timed_sync_send_tuple(actor whom,
                                       Duration timeout,
-                                      any_tuple what);
+                                      message what);
 \end{lstlisting}
 
 A synchronous message is sent to the receiving actor's mailbox like any other asynchronous message.

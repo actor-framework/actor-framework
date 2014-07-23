@@ -7,6 +7,8 @@ A broker is an event-based actor running in the middleman that multiplexes socke
 It can maintain any number of acceptors and connections.
 Since the broker runs in the middleman, implementations should be careful to consume as little time as possible in message handlers.
 Any considerable amount work should outsourced by spawning new actors (or maintaining worker actors).
+All functions shown in this section can be accessed by including the header \lstinline^"caf/io/all.hpp"^ and live in the namespace \lstinline^caf::io^.
+
 
 \subsection{Spawning Brokers}
 
@@ -15,25 +17,25 @@ For convenience, \lstinline^spawn_io_server^ can be used to spawn a new broker l
 
 \begin{lstlisting}
 template<spawn_options Os = no_spawn_options,
-         typename F = std::function<behavior (io::broker*)>,
+         typename F = std::function<behavior (broker*)>,
          typename... Ts>
 actor spawn_io(F fun, Ts&&... args);
 
 template<spawn_options Os = no_spawn_options,
-         typename F = std::function<behavior (io::broker*)>,
+         typename F = std::function<behavior (broker*)>,
          typename... Ts>
 actor spawn_io_client(F fun,
-                      io::input_stream_ptr in,
-                      io::output_stream_ptr out,
+                      input_stream_ptr in,
+                      output_stream_ptr out,
                       Ts&&... args);
 
 template<spawn_options Os = no_spawn_options,
-         typename F = std::function<behavior (io::broker*)>,
+         typename F = std::function<behavior (broker*)>,
          typename... Ts>
 actor spawn_io_client(F fun, string host, uint16_t port, Ts&&... args);
 
 template<spawn_options Os = no_spawn_options,
-         typename F = std::function<behavior (io::broker*)>,
+         typename F = std::function<behavior (broker*)>,
          typename... Ts>
 actor spawn_io_server(F fun, uint16_t port, Ts&&... args);
 \end{lstlisting}
@@ -42,7 +44,7 @@ actor spawn_io_server(F fun, uint16_t port, Ts&&... args);
 \subsection{Broker Interface}
 
 \begin{lstlisting}
-class io::broker;
+class broker;
 \end{lstlisting}
 
 {\small
@@ -89,8 +91,8 @@ However, it also receives system messages from the middleman:
 
 \begin{lstlisting}
 struct new_connection_msg {
-    io::accept_handle source;
-    io::connection_handle handle;
+    accept_handle source;
+    connection_handle handle;
 };
 \end{lstlisting}
 
@@ -98,7 +100,7 @@ A \lstinline^new_connection_msg^ is received whenever a new incoming connection 
 
 \begin{lstlisting}
 struct new_data_msg {
-    io::connection_handle handle;
+    connection_handle handle;
     util::buffer buf;
 };
 \end{lstlisting}
@@ -112,7 +114,7 @@ This means, as long as the broker does not create any new references to the mess
 
 \begin{lstlisting}
 struct connection_closed_msg {
-    io::connection_handle handle;
+    connection_handle handle;
 };
 \end{lstlisting}
 
@@ -120,7 +122,7 @@ A \lstinline^connection_closed_msg^ informs the broker that one of its connectio
 
 \begin{lstlisting}
 struct acceptor_closed_msg {
-    io::accept_handle handle;
+    accept_handle handle;
 };
 \end{lstlisting}
 

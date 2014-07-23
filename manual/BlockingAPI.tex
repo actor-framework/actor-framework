@@ -9,18 +9,18 @@ Event-based actors differ in receiving messages from context-switching and threa
 \subsection{Receiving Messages}
 
 The function \lstinline^receive^ sequentially iterates over all elements in the mailbox beginning with the first.
-It takes a partial function that is applied to the elements in the mailbox until an element was matched by the partial function.
+It takes a message handler that is applied to the elements in the mailbox until an element was matched by the handler.
 An actor calling \lstinline^receive^ is blocked until it successfully dequeued a message from its mailbox or an optional timeout occurs.
 
 \begin{lstlisting}
 self->receive (
-  on<int>().when(_x1 > 0) >> // ...
+  on<int>() >> // ...
 );
 \end{lstlisting}
 
 The code snippet above illustrates the use of \lstinline^receive^.
-Note that the partial function passed to \lstinline^receive^ is a temporary object at runtime.
-Hence, using receive inside a loop would cause creation of a new partial function on each iteration.
+Note that the message handler passed to \lstinline^receive^ is a temporary object at runtime.
+Hence, using receive inside a loop would cause creation of a new handler on each iteration.
 \lib provides three predefined receive loops to provide a more efficient but yet convenient way of defining receive loops.
 
 \begin{tabular*}{\textwidth}{p{0.47\textwidth}|p{0.47\textwidth}}
@@ -72,7 +72,7 @@ do_receive (
   others() >> [&]() {
     ++received;
   }
-).until(gref(received) >= 10);
+).until([&] { return received >= 10; });
 \end{lstlisting} \\
 \end{tabular*}
 

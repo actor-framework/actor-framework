@@ -34,7 +34,7 @@ class local_actor;
   \hline
   \lstinline^bool trap_exit()^ & Checks whether this actor traps exit messages \\
   \hline
-  \lstinline^any_tuple last_dequeued()^ & Returns the last message that was dequeued from the actor's mailbox\newline\textbf{Note}: Only set during callback invocation \\
+  \lstinline^message last_dequeued()^ & Returns the last message that was dequeued from the actor's mailbox\newline\textbf{Note}: Only set during callback invocation \\
   \hline
   \lstinline^actor_addr last_sender()^ & Returns the sender of the last dequeued message\newline\textbf{Note}: Only set during callback invocation \\
   \hline
