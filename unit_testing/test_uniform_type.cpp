@@ -107,18 +107,6 @@ int main() {
   CAF_CHECK(announce1 == announce4);
   CAF_CHECK_EQUAL(announce1->name(), "$::foo");
   {
-    /*
-    //bar.create_object();
-    auto obj1 = uniform_typeid<foo>()->create();
-    auto obj2(obj1);
-    CAF_CHECK(obj1 == obj2);
-    get_ref<foo>(obj1).value = 42;
-    CAF_CHECK(obj1 != obj2);
-    CAF_CHECK_EQUAL(get<foo>(obj1).value, 42);
-    CAF_CHECK_EQUAL(get<foo>(obj2).value, 0);
-    */
-  }
-  {
     auto uti = uniform_typeid<atom_value>();
     CAF_CHECK(uti != nullptr);
     CAF_CHECK_EQUAL(uti->name(), "@atom");
@@ -161,12 +149,12 @@ int main() {
     io::middleman::instance();
     // ok, check whether middleman announces its types correctly
     check_types(append(expected,
-               "caf::io::accept_handle",
-               "caf::io::acceptor_closed_msg",
-               "caf::io::connection_handle",
-               "caf::io::connection_closed_msg",
-               "caf::io::new_connection_msg",
-               "caf::io::new_data_msg"));
+                       "caf::io::accept_handle",
+                       "caf::io::acceptor_closed_msg",
+                       "caf::io::connection_handle",
+                       "caf::io::connection_closed_msg",
+                       "caf::io::new_connection_msg",
+                       "caf::io::new_data_msg"));
   }
   return CAF_TEST_RESULT();
 }

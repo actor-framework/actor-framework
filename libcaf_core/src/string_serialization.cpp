@@ -21,7 +21,6 @@
 #include <cctype>
 #include <sstream>
 #include <iomanip>
-#include <iostream>
 #include <algorithm>
 
 #include "caf/string_algorithms.hpp"

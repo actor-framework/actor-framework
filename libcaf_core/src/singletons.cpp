@@ -18,7 +18,6 @@
  ******************************************************************************/
 
 #include <atomic>
-#include <iostream>
 
 #include "caf/message.hpp"
 #include "caf/scheduler.hpp"

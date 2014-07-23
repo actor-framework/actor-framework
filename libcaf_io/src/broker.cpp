@@ -1,21 +1,21 @@
-/******************************************************************************\
- *                                      *
- *       ____          _    _    _            *
- *      | __ )  ___   ___  ___| |_   / \   ___| |_ ___  _ __      *
- *      |  _ \ / _ \ / _ \/ __| __|   / _ \ / __| __/ _ \| '__|       *
- *      | |_) | (_) | (_) \__ \ |_ _ / ___ \ (__| || (_) | |        *
- *      |____/ \___/ \___/|___/\__(_)_/   \_\___|\__\___/|_|        *
- *                                      *
- *                                      *
- *                                      *
- * Copyright (C) 2011 - 2014                          *
- * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>        *
- *                                      *
- * Distributed under the Boost Software License, Version 1.0. See       *
- * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
-\ ******************************************************************************/
-
-#include <iostream>
+/******************************************************************************
+ *                       ____    _    _____                                   *
+ *                      / ___|  / \  |  ___|    C++                           *
+ *                     | |     / _ \ | |_       Actor                         *
+ *                     | |___ / ___ \|  _|      Framework                     *
+ *                      \____/_/   \_|_|                                      *
+ *                                                                            *
+ * Copyright (C) 2011 - 2014                                                  *
+ * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
+ *                                                                            *
+ * Distributed under the terms and conditions of the BSD 3-Clause License or  *
+ * (at your option) under the terms and conditions of the Boost Software      *
+ * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ *                                                                            *
+ * If you did not receive a copy of the license files, see                    *
+ * http://opensource.org/licenses/BSD-3-Clause and                            *
+ * http://www.boost.org/LICENSE_1_0.txt.                                      *
+ ******************************************************************************/
 
 #include "caf/none.hpp"
 
@@ -32,9 +32,6 @@
 #include "caf/detail/actor_registry.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 
-using std::cout;
-using std::endl;
-
 namespace caf {
 namespace io {
 
@@ -42,7 +39,9 @@ broker::servant::~servant() {
   // nop
 }
 
-broker::servant::servant(broker* ptr) : m_disconnected(false), m_broker(ptr) { }
+broker::servant::servant(broker* ptr) : m_disconnected(false), m_broker(ptr) {
+  // nop
+}
 
 void broker::servant::set_broker(broker* new_broker) {
   if (!m_disconnected) m_broker = new_broker;
@@ -143,9 +142,7 @@ void broker::doorman::io_failure(network::operation op) {
 }
 
 class broker::continuation {
-
  public:
-
   continuation(broker_ptr ptr, actor_addr from, message_id mid, message&& msg)
       : m_self(std::move(ptr)), m_from(from)
       , m_mid(mid), m_data(std::move(msg)) { }
@@ -157,17 +154,14 @@ class broker::continuation {
   }
 
  private:
-
   broker_ptr m_self;
   actor_addr m_from;
   message_id m_mid;
   message  m_data;
-
 };
 
 void broker::invoke_message(const actor_addr& sender,
-              message_id mid,
-              message& msg) {
+                            message_id mid, message& msg) {
   CAF_LOG_TRACE(CAF_TARG(msg, to_string));
   m_running = true;
   auto sg = detail::make_scope_guard([=] {
@@ -268,12 +262,10 @@ void broker::write(connection_handle hdl, size_t bs, const void* buf) {
   out.insert(out.end(), first, last);
 }
 
-void broker::enqueue(const actor_addr& sender,
-           message_id mid,
-           message msg,
-           execution_unit*) {
-  middleman::instance()->run_later(continuation{this, sender, mid,
-                          std::move(msg)});
+void broker::enqueue(const actor_addr& sender, message_id mid,
+                     message msg, execution_unit*) {
+  middleman::instance()->run_later(continuation{this, sender,
+                                                mid, std::move(msg)});
 }
 
 bool broker::initialized() const {
@@ -281,8 +273,8 @@ bool broker::initialized() const {
 }
 
 broker::broker()
-    : m_initialized(false), m_hidden(true)
-    , m_running(false), m_mm(*middleman::instance()) {
+    : m_initialized(false), m_hidden(true),
+      m_running(false), m_mm(*middleman::instance()) {
   // nop
 }
 
@@ -318,7 +310,7 @@ void broker::launch(bool is_hidden, execution_unit*) {
     }
   );
   self->enqueue(invalid_actor_addr, message_id::invalid,
-          make_message(atom("INITMSG")), nullptr);
+                make_message(atom("INITMSG")), nullptr);
 }
 
 void broker::configure_read(connection_handle hdl, receive_policy::config cfg) {

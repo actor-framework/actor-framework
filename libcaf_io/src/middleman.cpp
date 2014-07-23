@@ -22,7 +22,6 @@
 #include <memory>
 #include <cstring>
 #include <sstream>
-#include <iostream>
 #include <stdexcept>
 
 #include "caf/on.hpp"

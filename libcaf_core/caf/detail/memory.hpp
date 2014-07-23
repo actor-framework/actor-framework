@@ -25,7 +25,6 @@
 #include <memory>
 #include <utility>
 #include <typeinfo>
-#include <iostream>
 
 #include "caf/config.hpp"
 #include "caf/ref_counted.hpp"

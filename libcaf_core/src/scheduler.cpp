@@ -32,6 +32,8 @@
 #include "caf/scoped_actor.hpp"
 #include "caf/system_messages.hpp"
 
+#include "caf/actor_ostream.hpp"
+
 #include "caf/policy/fork_join.hpp"
 #include "caf/policy/no_resume.hpp"
 #include "caf/policy/no_scheduling.hpp"
@@ -86,10 +88,8 @@ inline void insert_dmsg(Map& storage, const duration& d, Ts&&... vs) {
 }
 
 class timer_actor final : public detail::proper_actor<blocking_actor,
-                            timer_actor_policies> {
-
+                                                      timer_actor_policies> {
  public:
-
   inline unique_mailbox_element_pointer dequeue() {
     await_data();
     return next_message();
@@ -103,6 +103,24 @@ class timer_actor final : public detail::proper_actor<blocking_actor,
   }
 
   void act() override {
+    trap_exit(true);
+    bool i_am_done = false;
+    receive_while([&]{ return !i_am_done; })(
+      on(atom("_Send"), arg_match) >> [&](const duration& d,
+                                          actor_addr& from, channel& to,
+                                          message_id mid, message& tup) {
+        to->enqueue(from, mid, std::move(tup), nullptr);
+      },
+      [&](const exit_msg&) {
+        i_am_done = true;
+      },
+      others() >> [&] {
+        std::cerr << "coordinator::timer_loop: UNKNOWN MESSAGE: " << std::endl;
+      }
+    );
+    return;
+
+
     // setup & local variables
     bool done = false;
     unique_mailbox_element_pointer msg_ptr;
@@ -111,8 +129,8 @@ class timer_actor final : public detail::proper_actor<blocking_actor,
     // message handling rules
     message_handler mfun{
       on(atom("_Send"), arg_match) >> [&](const duration& d,
-                        actor_addr& from, channel& to,
-                        message_id mid, message& tup) {
+                                          actor_addr& from, channel& to,
+                                          message_id mid, message& tup) {
          insert_dmsg(messages, d, std::move(from),
                std::move(to), mid, std::move(tup));
       },
@@ -213,12 +231,14 @@ void printer_loop(blocking_actor* self) {
  ******************************************************************************/
 
 class shutdown_helper : public resumable {
-
  public:
+  void attach_to_scheduler() override {
+    // nop
+  }
 
-  void attach_to_scheduler() override { }
-
-  void detach_from_scheduler() override { }
+  void detach_from_scheduler() override {
+    // nop
+  }
 
   resumable::resume_result resume(execution_unit* ptr) {
     CAF_LOG_DEBUG("shutdown_helper::resume => shutdown worker");
@@ -230,14 +250,15 @@ class shutdown_helper : public resumable {
     return resumable::shutdown_execution_unit;
   }
 
-  shutdown_helper() : last_worker(nullptr) { }
+  shutdown_helper() : last_worker(nullptr) {
+    // nop
+  }
 
   ~shutdown_helper();
 
   std::mutex mtx;
   std::condition_variable cv;
   abstract_worker* last_worker;
-
 };
 
 shutdown_helper::~shutdown_helper() {

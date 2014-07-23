@@ -119,21 +119,17 @@ class event_based_resume {
               d->push_to_cache(std::move(ptr));
             }
           } else {
-            CAF_LOG_DEBUG(
-              "no more element in mailbox; "
-              "going to block");
+            CAF_LOG_DEBUG("no more element in mailbox; going to block");
             if (d->mailbox().try_block()) {
               return resumable::resume_later;
             }
-            // else: try again
+            CAF_LOG_DEBUG("try_block() interrupted by new message");
           }
         }
       }
       catch (actor_exited& what) {
-        CAF_LOG_INFO(
-          "actor died because of exception: actor_exited, "
-          "reason = "
-          << what.reason());
+        CAF_LOG_INFO("actor died because of exception: actor_exited, "
+                     "reason = " << what.reason());
         if (d->exit_reason() == exit_reason::not_exited) {
           d->quit(what.reason());
         }

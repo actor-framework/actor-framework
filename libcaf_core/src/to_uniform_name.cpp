@@ -45,6 +45,7 @@
 //#define DEBUG_PARSER
 
 #ifdef DEBUG_PARSER
+# include <iostream>
   namespace {
     size_t s_indentation = 0;
   } // namespace <anonymous>

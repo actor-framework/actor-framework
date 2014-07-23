@@ -157,6 +157,8 @@ The following table summarizes the changes made to the API.
   \hline
   \lstinline^any_tuple => message^ & This type is only being used to pass a message from one actor to another. Hence, \lstinline^message^ is the logical name. \\
   \hline
+  \lstinline^partial_function => ^ \lstinline^message_handler^ & Technically, it still is a partial function, but wanted to emphasize its use case in the library. \\
+  \hline
   \lstinline^cow_tuple => X^ & We want to provide a streamlined, simple API. Shipping a full tuple abstraction with the library does not fit into this philosophy. The removal of \lstinline^cow_tuple^ implies the removal of related functions such as \lstinline^tuple_cast^. \\
   \hline
   \lstinline^cow_ptr => X^ & This pointer class is an implementation detail of \lstinline^message^ and should not live in the global namespace in the first place. It also had the wrong name, because it is intrusive. \\

@@ -35,7 +35,6 @@ namespace detail {
  * @brief Denotes in which state queue and reader are after an enqueue.
  */
 enum class enqueue_result {
-
   /**
    * @brief Indicates that the enqueue operation succeeded and
    *    the reader is ready to receive the data.
@@ -53,7 +52,6 @@ enum class enqueue_result {
    *    queue has been closed by the reader.
    */
   queue_closed
-
 };
 
 /**
@@ -68,53 +66,19 @@ class single_reader_queue {
   using pointer = value_type*;
 
   /**
-   * @warning call only from the reader (owner)
+   * @brief Tries to dequeue a new element from the mailbox.
+   * @warning Call only from the reader (owner).
    */
   pointer try_pop() {
     return take_head();
   }
 
-  template <class UnaryPredicate>
-  void remove_if(UnaryPredicate f) {
-    pointer head = m_head;
-    pointer last = nullptr;
-    pointer p = m_head;
-    auto loop = [&]() -> bool {
-      while (p) {
-        if (f(*p)) {
-          if (last == nullptr) {
-            m_head = p->next;
-          } else {
-            last = p->next;
-          }
-          m_delete(p);
-          return true;
-        } else {
-          last = p;
-          p = p->next;
-        }
-      }
-      return false;
-    };
-    if (!loop()) {
-      // last points to the tail now
-      auto old_tail = last;
-      m_head = nullptr; // fetch_new_data assumes cached list to be empty
-      if (fetch_new_data()) {
-        last = nullptr;
-        p = m_head; // let p point to the first newly fetched element
-        loop();
-        // restore cached list
-        if (head) {
-          old_tail->next = m_head;
-          m_head = head;
-        }
-      } else
-        m_head = head;
-    }
-  }
-
+  /**
+   * @brief Tries to enqueue a new element to the mailbox.
+   * @warning Call only from the reader (owner).
+   */
   enqueue_result enqueue(pointer new_element) {
+    CAF_REQUIRE(new_element != nullptr);
     pointer e = m_stack.load();
     for (;;) {
       if (!e) {
@@ -122,36 +86,50 @@ class single_reader_queue {
         m_delete(new_element);
         return enqueue_result::queue_closed;
       }
+      // a dummy is never part of a non-empty list
       new_element->next = is_dummy(e) ? nullptr : e;
-      if (m_stack.compare_exchange_weak(e, new_element)) {
-        return (e == reader_blocked_dummy()) ? enqueue_result::unblocked_reader
-                                             : enqueue_result::success;
+      if (m_stack.compare_exchange_strong(e, new_element)) {
+        return  (e == reader_blocked_dummy()) ? enqueue_result::unblocked_reader
+                                              : enqueue_result::success;
       }
+      // continue with new value of e
     }
   }
 
   /**
-   * @brief Queries whether there is new data to read.
+   * @brief Queries whether there is new data to read, i.e., whether the next
+   *        call to {@link try_pop} would succeeed.
    * @pre !closed()
    */
   bool can_fetch_more() {
+    if (m_head != nullptr) {
+      return true;
+    }
     auto ptr = m_stack.load();
-    CAF_REQUIRE(!closed());
+    CAF_REQUIRE(ptr != nullptr);
     return !is_dummy(ptr);
   }
 
   /**
+   * @brief Queries whether this queue is empty.
    * @warning Call only from the reader (owner).
    */
   bool empty() {
     CAF_REQUIRE(!closed());
-    return (!m_head && is_dummy(m_stack.load()));
+    return m_head == nullptr && is_dummy(m_stack.load());
   }
 
+  /**
+   * @brief Queries whether this has been closed.
+   */
   bool closed() {
     return m_stack.load() == nullptr;
   }
 
+  /**
+   * @brief Queries whether this has been marked as blocked, i.e., the
+   *        owner of the list is waiting for new data.
+   */
   bool blocked() {
     return m_stack.load() == reader_blocked_dummy();
   }
@@ -165,6 +143,7 @@ class single_reader_queue {
   bool try_block() {
     auto e = stack_empty_dummy();
     bool res = m_stack.compare_exchange_strong(e, reader_blocked_dummy());
+    CAF_REQUIRE(e != nullptr);
     // return true in case queue was already blocked
     return res || e == reader_blocked_dummy();
   }
@@ -191,7 +170,8 @@ class single_reader_queue {
   }
 
   /**
-   * @brief Closes this queue and applies f to all remaining elements before deleting.
+   * @brief Closes this queue and applies f to all remaining
+   *        elements before deleting them.
    * @warning Call only from the reader (owner).
    */
   template <class F>
@@ -225,9 +205,9 @@ class single_reader_queue {
 
   template <class Mutex, class CondVar>
   bool synchronized_enqueue(Mutex& mtx, CondVar& cv, pointer new_element) {
-    std::unique_lock<Mutex> guard(mtx);
     switch (enqueue(new_element)) {
       case enqueue_result::unblocked_reader: {
+        std::unique_lock<Mutex> guard(mtx);
         cv.notify_one();
         return true;
       }
@@ -244,18 +224,20 @@ class single_reader_queue {
 
   template <class Mutex, class CondVar>
   void synchronized_await(Mutex& mtx, CondVar& cv) {
-    std::unique_lock<Mutex> guard(mtx);
     CAF_REQUIRE(!closed());
-    if (try_block()) {
-      while (blocked()) cv.wait(guard);
+    if (!can_fetch_more() && try_block()) {
+      std::unique_lock<Mutex> guard(mtx);
+      while (blocked()) {
+        cv.wait(guard);
+      }
     }
   }
 
   template <class Mutex, class CondVar, class TimePoint>
   bool synchronized_await(Mutex& mtx, CondVar& cv, const TimePoint& timeout) {
-    std::unique_lock<Mutex> guard(mtx);
     CAF_REQUIRE(!closed());
-    if (try_block()) {
+    if (!can_fetch_more() && try_block()) {
+      std::unique_lock<Mutex> guard(mtx);
       while (blocked()) {
         if (cv.wait_until(guard, timeout) == std::cv_status::timeout) {
           // if we're unable to set the queue from blocked to empty,
@@ -278,7 +260,7 @@ class single_reader_queue {
   // atomically sets m_stack back and enqueues all elements to the cache
   bool fetch_new_data(pointer end_ptr) {
     CAF_REQUIRE(m_head == nullptr);
-    CAF_REQUIRE(!end_ptr || end_ptr == stack_empty_dummy());
+    CAF_REQUIRE(end_ptr == nullptr || end_ptr == stack_empty_dummy());
     pointer e = m_stack.load();
     // must not be called on a closed queue
     CAF_REQUIRE(e != nullptr);
@@ -306,7 +288,9 @@ class single_reader_queue {
     return false;
   }
 
-  bool fetch_new_data() { return fetch_new_data(stack_empty_dummy()); }
+  bool fetch_new_data() {
+    return fetch_new_data(stack_empty_dummy());
+  }
 
   pointer take_head() {
     if (m_head != nullptr || fetch_new_data()) {

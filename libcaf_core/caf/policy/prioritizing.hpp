@@ -21,7 +21,6 @@
 #define CAF_POLICY_PRIORITIZING_HPP
 
 #include <list>
-#include <iostream>
 
 #include "caf/mailbox_element.hpp"
 #include "caf/message_priority.hpp"

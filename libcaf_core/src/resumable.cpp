@@ -21,8 +21,12 @@
 
 namespace caf {
 
-resumable::resumable() : m_hidden(true) {}
+resumable::resumable() : m_hidden(true) {
+  // nop
+}
 
-resumable::~resumable() {}
+resumable::~resumable() {
+  // nop
+}
 
 } // namespace caf

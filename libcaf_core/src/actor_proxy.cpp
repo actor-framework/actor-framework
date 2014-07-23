@@ -18,7 +18,6 @@
  ******************************************************************************/
 
 #include <utility>
-#include <iostream>
 
 #include "caf/locks.hpp"
 

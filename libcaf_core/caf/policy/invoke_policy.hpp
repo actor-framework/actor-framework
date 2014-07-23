@@ -21,7 +21,6 @@
 #define CAF_POLICY_INVOKE_POLICY_HPP
 
 #include <memory>
-#include <iostream>
 #include <type_traits>
 
 #include "caf/none.hpp"
