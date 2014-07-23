@@ -1,7 +1,7 @@
-libcppa
-=======
+CAF: C++ Actor Framework
+========================
 
-libcppa is an open source C++11 actor model implementation featuring
+CAF is an open source C++11 actor model implementation featuring
 lightweight & fast actor implementations, pattern matching for messages,
 network transparent messaging, and more.
 
@@ -9,19 +9,16 @@ network transparent messaging, and more.
 On the Web
 ----------
 
-* __Blog__: http://libcppa.org
-* __Manual (PDF)__: http://neverlord.github.com/libcppa/manual/manual.pdf
-* __Manual (HTML)__: http://neverlord.github.com/libcppa/manual/index.html
-* __Documentation__: http://neverlord.github.com/libcppa/
-* __Project Homepage__: http://www.realmv6.org/libcppa.html
-* __Mailing List__: https://groups.google.com/d/forum/libcppa
+* __Project Homepage__: http://www.actor-framework.org
+* __Mailing List__: https://groups.google.com/d/forum/actor-framework
+* __Deveoper Blog__: http://libcppa.org
 
 
 Get the Sources
 ---------------
 
-* git clone git://github.com/Neverlord/libcppa.git
-* cd libcppa
+* git clone https://github.com/actor-framework/actor-framework.git
+* cd actor-framework
 
 
 First Steps
@@ -59,7 +56,7 @@ Supported Operating Systems
 
 * Linux
 * Mac OS X
-* *Note for MS Windows*: libcppa relies on C++11 features such as variadic templates. We will support this platform as soon as Microsoft's compiler implements all required C++11 features.
+* *Note for MS Windows*: libcppa relies on C++11 features such as variadic templates and unrestricted unions. We will support this platform as soon as Microsoft's compiler implements all required C++11 features.
 
 
 Scientific Use
