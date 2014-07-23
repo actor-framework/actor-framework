@@ -1,9 +1,9 @@
 \section{Actors}
 
-\libcppa provides several actor implementations, each covering a particular use case.
+\lib provides several actor implementations, each covering a particular use case.
 The class \lstinline^local_actor^ is the base class for all implementations, except for (remote) proxy actors.
 Hence, \lstinline^local_actor^ provides a common interface for actor operations like trapping exit messages or finishing execution.
-The default actor implementation in \libcppa is event-based.
+The default actor implementation in \lib is event-based.
 Event-based actors have a very small memory footprint and are thus very lightweight and scalable.
 Context-switching actors are used for actors that make use of the blocking API (see Section \ref{Sec::BlockingAPI}), but do not need to run in a separate thread.
 Context-switching and event-based actors are scheduled cooperatively in a thread pool.
@@ -53,9 +53,9 @@ class local_actor;
   \hline
   \lstinline^void on_sync_timeout(auto fun)^ & Sets a handler, i.e., a functor taking no arguments, for \lstinline^timed_sync_send^ timeout messages (default action is to kill the actor for reason \lstinline^unhandled_sync_timeout^) \\
   \hline
-  \lstinline^void monitor(actor_ptr whom)^ & Adds a unidirectional monitor to \lstinline^whom^ (see Section \ref{Sec::Management::Monitors}) \\
+  \lstinline^void monitor(actor whom)^ & Adds a unidirectional monitor to \lstinline^whom^ (see Section \ref{Sec::Management::Monitors}) \\
   \hline
-  \lstinline^void demonitor(actor_ptr whom)^ & Removes a monitor from \lstinline^whom^ \\
+  \lstinline^void demonitor(actor whom)^ & Removes a monitor from \lstinline^whom^ \\
   \hline
   \lstinline^bool has_sync_failure_handler()^ & Checks wheter this actor has a user-defined sync failure handler \\
   \hline

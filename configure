@@ -38,8 +38,6 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --prefix=PREFIX             installation directory [/usr/local]
 
   Add Optional Features:
-    --enable-opencl             build with OpenCL support
-    --enable-context-switching  build with context-switching (requires Boost)
     --enable-perftools          build with Google perftools
 
   Remove Standard Features (even if all dependencies are available):
@@ -47,12 +45,12 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --no-examples               build without examples
     --no-qt-examples            build without Qt examples
     --no-protobuf-examples      build without Google Protobuf examples
+    --no-curl-examples          build without libcurl examples
     --no-unit-tests             build without unit tests
 
   Debugging:
-    --enable-debug              build with requirement checks at runtime
-                                (always sets --build-type=Debug implicitly)
-    --with-cppa-log-level=LVL   build with debugging output, possible values:
+    --with-runtime-checks       build with requirement checks at runtime
+    --with-log-level=LVL        build with debugging output, possible values:
                                   - ERROR
                                   - WARNING
                                   - INFO
@@ -60,15 +58,6 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
                                   - TRACE
                                 (implicitly sets --enable-debug)
     --enable-address-sanitizer  build with Clang's address sanitizer
-
-  Required Packages in Non-Standard Locations:
-    --with-boost=PATH           path to Boost install root
-
-  Deprecated Options:
-    --without-memory-management replaced by --no-memory-management
-    --with-opencl               replaced by --enable-opencl
-    --standalone-build          build without Boost even if available (default)
-    --disable-context-switching build without context-switching (default)
 
   Influential Environment Variables (only on first invocation
   per build directory):
@@ -166,8 +155,12 @@ configure ()
 builddir="$sourcedir/build"
 CMakeCacheEntries=""
 append_cache_entry CMAKE_INSTALL_PREFIX        PATH   /usr/local
-append_cache_entry ENABLE_DEBUG                BOOL   false
-append_cache_entry ENABLE_CONTEXT_SWITCHING    BOOL   false
+append_cache_entry CAF_ENABLE_RUNTIME_CHECKS   BOOL   false
+
+# parse custom environment variable to initialize CMakeGenerator
+if [ -n "$DEFAULT_CMAKE_GENERATOR" ]; then
+  CMakeGenerator="$DEFAULT_CMAKE_GENERATOR"
+fi
 
 # Parse arguments.
 while [ $# -ne 0 ]; do
@@ -187,18 +180,15 @@ while [ $# -ne 0 ]; do
         --prefix=*)
             append_cache_entry CMAKE_INSTALL_PREFIX PATH $optarg
             ;;
+        --with-runtime-checks)
+            append_cache_entry CAF_ENABLE_RUNTIME_CHECKS BOOL true
+            ;;
         --enable-debug)
-            append_cache_entry ENABLE_DEBUG BOOL true
+            echo "*** warning: --enable-debug is deprecated, please use --with-runtime-checks instead"
+            append_cache_entry CAF_ENABLE_RUNTIME_CHECKS BOOL true
             ;;
         --enable-address-sanitizer)
             append_cache_entry ENABLE_ADDRESS_SANITIZER BOOL true
-            ;;
-        --enable-opencl)
-            append_cache_entry ENABLE_OPENCL BOOL true
-            ;;
-        --with-opencl)
-            echo "*** WARNING: --with-opencl is deprecated"
-            append_cache_entry ENABLE_OPENCL BOOL true
             ;;
         --no-memory-management)
             append_cache_entry DISABLE_MEM_MANAGEMENT BOOL true
@@ -213,38 +203,29 @@ while [ $# -ne 0 ]; do
         --more-clang-warnings)
             append_cache_entry MORE_CLANG_WARNINGS BOOL true
             ;;
-        --with-cppa-log-level=*)
+        --with-log-level=*)
             level=`echo "$optarg" | tr '[:lower:]' '[:upper:]'`
             case $level in
                 ERROR)
-                    append_cache_entry CPPA_LOG_LEVEL STRING 0
+                    append_cache_entry CAF_LOG_LEVEL STRING 0
                     ;;
                 WARNING)
-                    append_cache_entry CPPA_LOG_LEVEL STRING 1
+                    append_cache_entry CAF_LOG_LEVEL STRING 1
                     ;;
                 INFO)
-                    append_cache_entry CPPA_LOG_LEVEL STRING 2
+                    append_cache_entry CAF_LOG_LEVEL STRING 2
                     ;;
                 DEBUG)
-                    append_cache_entry CPPA_LOG_LEVEL STRING 3
+                    append_cache_entry CAF_LOG_LEVEL STRING 3
                     ;;
                 TRACE)
-                    append_cache_entry CPPA_LOG_LEVEL STRING 4
+                    append_cache_entry CAF_LOG_LEVEL STRING 4
                     ;;
                 *)
                     echo "Invalid log level '$level'. Try '$0 --help' to see valid values."
                     exit 1
                     ;;
             esac
-            ;;
-        --enable-context-switching)
-            append_cache_entry ENABLE_CONTEXT_SWITCHING BOOL true
-            ;;
-        --disable-context-switching)
-            echo "*** WARNING: --disable-context-switching is deprecated"
-            ;;
-        --with-boost=*)
-            append_cache_entry BOOST_ROOT PATH $optarg
             ;;
         --with-clang=*)
             clang=$optarg
@@ -268,22 +249,25 @@ while [ $# -ne 0 ]; do
             dualbuild=1
             ;;
         --no-examples)
-            append_cache_entry CPPA_NO_EXAMPLES STRING yes
+            append_cache_entry CAF_NO_EXAMPLES STRING yes
             ;;
         --no-qt-examples)
-            append_cache_entry CPPA_NO_QT_EXAMPLES STRING yes
+            append_cache_entry CAF_NO_QT_EXAMPLES STRING yes
             ;;
         --no-protobuf-examples)
-            append_cache_entry CPPA_NO_PROTOBUF_EXAMPLES STRING yes
+            append_cache_entry CAF_NO_PROTOBUF_EXAMPLES STRING yes
+            ;;
+        --no-curl-examples)
+            append_cache_entry CAF_NO_CURL_EXAMPLES STRING yes
             ;;
         --no-unit-tests)
-            append_cache_entry CPPA_NO_UNIT_TESTS STRING yes
+            append_cache_entry CAF_NO_UNIT_TESTS STRING yes
             ;;
         --build-static)
-            append_cache_entry CPPA_BUILD_STATIC STRING yes
+            append_cache_entry CAF_BUILD_STATIC STRING yes
             ;;
         --build-static-only)
-            append_cache_entry CPPA_BUILD_STATIC_ONLY STRING yes
+            append_cache_entry CAF_BUILD_STATIC_ONLY STRING yes
             ;;
         *)
             echo "Invalid option '$1'.  Try $0 --help to see available options."
@@ -319,6 +303,11 @@ else
     fi
 
     configure "$compiler" "" "$bindir" "$libdir" "$CMakeGenerator"
+fi
+
+if [ -n "$CMakeGenerator" ] && [ "$CMakeGenerator" != "Unix" ]; then
+  # skip Makefile-specific code below when not using make
+  exit 0
 fi
 
 printf "DIRS := %s\n\n" "$workdirs" > $sourcedir/Makefile

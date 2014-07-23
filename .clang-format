@@ -1,0 +1,36 @@
+---
+AccessModifierOffset: -1
+AlignEscapedNewlinesLeft: false
+AlignTrailingComments: true
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakBeforeMultilineStrings: true
+AlwaysBreakTemplateDeclarations: true
+BinPackParameters: true
+BreakBeforeBinaryOperators: false
+BreakBeforeBraces: Attach
+BreakBeforeTernaryOperators: false
+ColumnLimit: 80
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+ConstructorInitializerIndentWidth: 4
+ContinuationIndentWidth: 2
+Cpp11BracedListStyle: true
+IndentCaseLabels: true
+IndentFunctionDeclarationAfterType: false
+IndentWidth: 2
+MaxEmptyLinesToKeep: 1
+NamespaceIndentation: None
+PointerBindsToType: true
+SpaceBeforeAssignmentOperators: true
+SpaceAfterControlStatementKeyword: true
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 1
+SpacesInAngles: false
+SpacesInCStyleCastParentheses: false
+SpacesInParentheses: false
+Standard: Cpp11
+UseTab: Never
+BreakConstructorInitializersBeforeComma: false
+...
+

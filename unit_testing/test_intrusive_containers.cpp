@@ -1,74 +1,74 @@
-/******************************************************************************\
- *           ___        __                                                    *
- *          /\_ \    __/\ \                                                   *
- *          \//\ \  /\_\ \ \____    ___   _____   _____      __               *
- *            \ \ \ \/\ \ \ '__`\  /'___\/\ '__`\/\ '__`\  /'__`\             *
- *             \_\ \_\ \ \ \ \L\ \/\ \__/\ \ \L\ \ \ \L\ \/\ \L\.\_           *
- *             /\____\\ \_\ \_,__/\ \____\\ \ ,__/\ \ ,__/\ \__/.\_\          *
- *             \/____/ \/_/\/___/  \/____/ \ \ \/  \ \ \/  \/__/\/_/          *
- *                                          \ \_\   \ \_\                     *
- *                                           \/_/    \/_/                     *
+/******************************************************************************
+ *                       ____    _    _____                                   *
+ *                      / ___|  / \  |  ___|    C++                           *
+ *                     | |     / _ \ | |_       Actor                         *
+ *                     | |___ / ___ \|  _|      Framework                     *
+ *                      \____/_/   \_|_|                                      *
  *                                                                            *
  * Copyright (C) 2011 - 2014                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
- * Distributed under the Boost Software License, Version 1.0. See             *
- * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
-\******************************************************************************/
-
+ * Distributed under the terms and conditions of the BSD 3-Clause License or  *
+ * (at your option) under the terms and conditions of the Boost Software      *
+ * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ *                                                                            *
+ * If you did not receive a copy of the license files, see                    *
+ * http://opensource.org/licenses/BSD-3-Clause and                            *
+ * http://www.boost.org/LICENSE_1_0.txt.                                      *
+ ******************************************************************************/
 
 #include <iterator>
 
 #include "test.hpp"
-#include "cppa/intrusive/single_reader_queue.hpp"
+
+#include "caf/detail/single_reader_queue.hpp"
 
 using std::begin;
 using std::end;
 
-namespace { size_t s_iint_instances = 0; }
+namespace {
+size_t s_iint_instances = 0;
+}
 
 struct iint {
-    iint* next;
-    int value;
-    inline iint(int val = 0) : next(nullptr), value(val) { ++s_iint_instances; }
-    ~iint() { --s_iint_instances; }
+  iint* next;
+  int value;
+  inline iint(int val = 0) : next(nullptr), value(val) { ++s_iint_instances; }
+  ~iint() { --s_iint_instances; }
+
 };
 
 inline bool operator==(const iint& lhs, const iint& rhs) {
-    return lhs.value == rhs.value;
+  return lhs.value == rhs.value;
 }
 
-inline bool operator==(const iint& lhs, int rhs) {
-    return lhs.value == rhs;
-}
+inline bool operator==(const iint& lhs, int rhs) { return lhs.value == rhs; }
 
-inline bool operator==(int lhs, const iint& rhs) {
-    return lhs == rhs.value;
-}
+inline bool operator==(int lhs, const iint& rhs) { return lhs == rhs.value; }
 
-typedef cppa::intrusive::single_reader_queue<iint> iint_queue;
+using iint_queue = caf::detail::single_reader_queue<iint>;
 
 int main() {
-    CPPA_TEST(test_intrusive_containers);
+  CAF_TEST(test_intrusive_containers);
 
-    cppa::intrusive::single_reader_queue<iint> q;
-    q.enqueue(new iint(1));
-    q.enqueue(new iint(2));
-    q.enqueue(new iint(3));
+  caf::detail::single_reader_queue<iint> q;
+  q.enqueue(new iint(1));
+  q.enqueue(new iint(2));
+  q.enqueue(new iint(3));
 
-    CPPA_CHECK_EQUAL(3, s_iint_instances);
+  CAF_CHECK_EQUAL(3, s_iint_instances);
 
-    auto x = q.try_pop();
-    CPPA_CHECK_EQUAL(x->value, 1);
-    delete x;
-    x = q.try_pop();
-    CPPA_CHECK_EQUAL(x->value, 2);
-    delete x;
-    x = q.try_pop();
-    CPPA_CHECK_EQUAL(x->value, 3);
-    delete x;
-    x = q.try_pop();
-    CPPA_CHECK(x == nullptr);
+  auto x = q.try_pop();
+  CAF_CHECK_EQUAL(x->value, 1);
+  delete x;
+  x = q.try_pop();
+  CAF_CHECK_EQUAL(x->value, 2);
+  delete x;
+  x = q.try_pop();
+  CAF_CHECK_EQUAL(x->value, 3);
+  delete x;
+  x = q.try_pop();
+  CAF_CHECK(x == nullptr);
 
-    return CPPA_TEST_RESULT();
+  return CAF_TEST_RESULT();
 }

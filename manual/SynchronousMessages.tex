@@ -1,22 +1,22 @@
 \section{Synchronous Communication}
 \label{Sec::Sync}
 
-\libcppa supports both asynchronous and synchronous communication.
+\lib supports both asynchronous and synchronous communication.
 The member functions \lstinline^sync_send^ and \lstinline^sync_send_tuple^ send synchronous request messages.
 
 \begin{lstlisting}
 template<typename... Args>
-__unspecified__ sync_send(actor_ptr whom, Args&&... what);
+__unspecified__ sync_send(actor whom, Args&&... what);
 
-__unspecified__ sync_send_tuple(actor_ptr whom, any_tuple what);
+__unspecified__ sync_send_tuple(actor whom, any_tuple what);
 
 template<typename Duration, typename... Args>
-__unspecified__ timed_sync_send(actor_ptr whom,
+__unspecified__ timed_sync_send(actor whom,
                                 Duration timeout,
                                 Args&&... what);
 
 template<typename Duration, typename... Args>
-__unspecified__ timed_sync_send_tuple(actor_ptr whom,
+__unspecified__ timed_sync_send_tuple(actor whom,
                                       Duration timeout,
                                       any_tuple what);
 \end{lstlisting}
@@ -30,7 +30,7 @@ When using \lstinline^timed_sync_send^ function, \lstinline^after(...)^ statemen
 
 \subsection{Error Messages}
 
-When using synchronous messaging, \libcppa's runtime environment will send ...
+When using synchronous messaging, \lib's runtime environment will send ...
 
 \begin{itemize}
 \item if the receiver is not alive:\newline\lstinline^sync_exited_msg { actor_addr source; std::uint32_t reason; };^
@@ -90,7 +90,7 @@ void foo(event_based_actor* self, actor testee) {
 \clearpage
 \subsubsection{Continuations for Event-based Actors}
 
-\libcppa supports continuations to enable chaining of send/receive statements.
+\lib supports continuations to enable chaining of send/receive statements.
 The functions \lstinline^then^ returns a helper object offering the member function \lstinline^continue_with^, which takes a functor $f$ without arguments.
 After receiving a message, $f$ is invoked if and only if the received messages was handled successfully, i.e., neither \lstinline^sync_failure^ nor \lstinline^sync_timeout^ occurred.
 

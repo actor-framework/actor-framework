@@ -1,6 +1,6 @@
 \section{Introduction}
 
-Before diving into the API of \libcppa, we would like to take the opportunity to discuss the concepts behind \libcppa and to explain the terminology used in this manual.
+Before diving into the API of \lib, we would like to take the opportunity to discuss the concepts behind \lib and to explain the terminology used in this manual.
 
 \subsection{Actor Model}
 
@@ -15,19 +15,19 @@ Additionally, mutex-based implementations can cause queueing and unmindful acces
 
 The actor model has gained momentum over the last decade due to its high level of abstraction and its ability to make efficient use of multicore and multiprocessor machines.
 However, the actor model has not yet been widely adopted in the native programming domain.
-With \libcppa, we contribute a library for actor programming in C++ as open source software to ease native development of concurrent as well as distributed systems.
-In this regard, \libcppa follows the C++ philosophy ``building the highest abstraction possible without sacrificing performance''.
+With \lib, we contribute a library for actor programming in C++ as open source software to ease native development of concurrent as well as distributed systems.
+In this regard, \lib follows the C++ philosophy ``building the highest abstraction possible without sacrificing performance''.
 
 \subsection{Terminology}
 
-You will find that \libcppa has not simply adopted exiting implementations based on the actor model such as Erlang or the Akka library.
-Instead, \libcppa aims to provide a modern C++ API allowing for type-safe as well as dynamically typed messaging.
+You will find that \lib has not simply adopted exiting implementations based on the actor model such as Erlang or the Akka library.
+Instead, \lib aims to provide a modern C++ API allowing for type-safe as well as dynamically typed messaging.
 Hence, most aspects of our system are familiar to developers having experience with other actor systems, but there are also slight differences in terminology.
-However, neither \libcppa nor this manual require any foreknowledge.
+However, neither \lib nor this manual require any foreknowledge.
 
 \subsubsection{Actor Address}
 
-In \libcppa, each actor has a (network-wide) unique logical address that can be used to identify and monitor it.
+In \lib, each actor has a (network-wide) unique logical address that can be used to identify and monitor it.
 However, the address can \emph{not} be used to send a message to an actor.
 This limitation is due to the fact that the address does not contain any type information about the actor.
 Hence, it would not be safe to send it any message, because the actor might use a strictly typed messaging interface not accepting the given message.
@@ -36,7 +36,7 @@ Hence, it would not be safe to send it any message, because the actor might use 
 
 An actor handle contains the address of an actor along with its type information.
 In order to send an actor a message, one needs to have a handle to it -- the address alone is not sufficient.
-The distinction between handles and addresses -- which is unique to \libcppa when comparing it to other actor systems -- is a consequence of the design decision to support both untyped and typed actors.
+The distinction between handles and addresses -- which is unique to \lib when comparing it to other actor systems -- is a consequence of the design decision to support both untyped and typed actors.
 
 \subsubsection{Untyped Actors}
 

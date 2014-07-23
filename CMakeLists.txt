@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 2.8)
-project(cppa C CXX)
+project(caf C CXX)
 
 # extract version from VERSION file
-file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" VERSION LIMIT_COUNT 1)
-string(REPLACE "." " " version_numbers ${VERSION})
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" CAF_VERSION LIMIT_COUNT 1)
+string(REPLACE "." " " version_numbers ${CAF_VERSION})
 separate_arguments(version_numbers)
-list(GET version_numbers 0 LIBCPPA_VERSION_MAJOR)
-list(GET version_numbers 1 LIBCPPA_VERSION_MINOR)
-list(GET version_numbers 2 LIBCPPA_VERSION_PATCH)
+list(GET version_numbers 0 CAF_VERSION_MAJOR)
+list(GET version_numbers 1 CAF_VERSION_MINOR)
+list(GET version_numbers 2 CAF_VERSION_PATCH)
 
 # prohibit in-source builds
 if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
@@ -36,7 +36,7 @@ endif ()
 # check for g++ >= 4.7 or clang++ > = 3.2
 try_run(ProgramResult
         CompilationSucceeded
-  ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/get_compiler_version.cpp
+  ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/get_compiler_version.cpp
         RUN_OUTPUT_VARIABLE CompilerVersion)
 if (NOT CompilationSucceeded OR NOT ProgramResult EQUAL 0)
   message(FATAL_ERROR "Cannot determine compiler version")
@@ -52,12 +52,6 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
   else ()
     message(FATAL_ERROR "clang++ >= 3.2 required (found: ${CompilerVersion}.")
   endif ()
-  if (NOT CXXFLAGS_PROVIDED)
-    message(STATUS "NOTE: Automatically added -stdlib=libc++ flag, "
-                   "you can override this by defining CMAKE_CXX_FLAGS "
-                   "(see 'configure --help')")
-    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
-  endif ()
 else ()
   message(FATAL_ERROR "Your C++ compiler does not support C++11 "
                       "or is not supported")
@@ -70,10 +64,16 @@ if (CMAKE_CXX_FLAGS)
   set(CMAKE_CXX_FLAGS_MINSIZEREL     "")
   set(CMAKE_CXX_FLAGS_RELEASE        "")
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "")
-else (CMAKE_CXX_FLAGS)
+else ()
   set(CXXFLAGS_PROVIDED false)
-  if (MORE_CLANG_WARNINGS AND "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-    set(CMAKE_CXX_FLAGS "-std=c++11 -pedantic -Weverything -Wno-c++98-compat -Wno-padded -Wno-documentation-unknown-command -Wno-exit-time-destructors -Wno-global-constructors -Wno-missing-prototypes -Wno-c++98-compat-pedantic -Wno-unused-member-function -Wno-unused-const-variable")
+  if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    message(STATUS "NOTE: Automatically added -stdlib=libc++ flag, "
+                   "you can override this by defining CMAKE_CXX_FLAGS "
+                   "(see 'configure --help')")
+    set(CMAKE_CXX_FLAGS "-std=c++11 -stdlib=libc++")
+    if (MORE_CLANG_WARNINGS)
+      set(CMAKE_CXX_FLAGS "-pedantic -Weverything -Wno-c++98-compat -Wno-padded -Wno-documentation-unknown-command -Wno-exit-time-destructors -Wno-global-constructors -Wno-missing-prototypes -Wno-c++98-compat-pedantic -Wno-unused-member-function -Wno-unused-const-variable")
+    endif ()
   else ()
     set(CMAKE_CXX_FLAGS "-std=c++11 -Wextra -Wall -pedantic")
   endif ()
@@ -85,32 +85,22 @@ else (CMAKE_CXX_FLAGS)
   set(CMAKE_CXX_FLAGS_MINSIZEREL     "-Os")
   set(CMAKE_CXX_FLAGS_RELEASE        "-O3 -DNDEBUG")
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
-endif (CMAKE_CXX_FLAGS)
+endif ()
 
-include(CheckIncludeFileCXX)
-check_include_file_cxx("valgrind/valgrind.h" HAVE_VALGRIND_H)
-if (HAVE_VALGRIND_H)
-  set(VALGRIND "yes")
-  add_definitions(-DCPPA_ANNOTATE_VALGRIND)
-else (HAVE_VALGRIND_H)
-  set(VALGRIND "no")
-endif (HAVE_VALGRIND_H)
-
-# set build type (evaluate ENABLE_DEBUG flag)
-if (ENABLE_DEBUG)
-  set(CMAKE_BUILD_TYPE Debug)
-  add_definitions(-DCPPA_DEBUG_MODE)
-  message(STATUS "Enable libcppa's debug mode")
-endif (ENABLE_DEBUG)
+# set build type (evaluate CAF_ENABLE_RUNTIME_CHECKS flag)
+if (CAF_ENABLE_RUNTIME_CHECKS)
+  add_definitions(-DCAF_ENABLE_RUNTIME_CHECKS)
+  message(STATUS "Enable runtime checks")
+endif (CAF_ENABLE_RUNTIME_CHECKS)
 
 if (ENABLE_ADDRESS_SANITIZER)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
   message(STATUS "Enable address sanitizer")
 endif (ENABLE_ADDRESS_SANITIZER)
 
-if (CPPA_LOG_LEVEL)
-  add_definitions(-DCPPA_LOG_LEVEL=${CPPA_LOG_LEVEL})
-endif(CPPA_LOG_LEVEL)
+if (CAF_LOG_LEVEL)
+  add_definitions(-DCAF_LOG_LEVEL=${CAF_LOG_LEVEL})
+endif(CAF_LOG_LEVEL)
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
@@ -119,122 +109,8 @@ if ("${CMAKE_BUILD_TYPE}" STREQUAL "")
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif ("${CMAKE_BUILD_TYPE}" STREQUAL "")
 
-if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-  set(LIBCPPA_PLATFORM_SRC src/middleman_event_handler_epoll.cpp)
-elseif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  set(LIBCPPA_PLATFORM_SRC src/middleman_event_handler_poll.cpp)
-elseif (${CMAKE_SYSTEM_NAME} MATCHES "Window")
-  set(LIBCPPA_PLATFORM_SRC src/middleman_event_handler_poll.cpp src/execinfo_windows.cpp)
-else ()
-  message(FATAL_ERROR "This platform is not supported by libcppa")
-endif()
-
-# get header files; only needed by CMake generators,
-# e.g., for creating proper Xcode projects
-file(GLOB LIBCPPA_HDRS "cppa/*.hpp"
-                       "cppa/detail/*.hpp"
-                       "cppa/intrusive/*.hpp"
-                       "cppa/io/*.hpp"
-                       "cppa/opencl/*.hpp"
-                       "cppa/qtsupport/*.hpp"
-                       "cppa/util/*.hpp")
-
-# list cpp files including platform-dependent files
-set(LIBCPPA_SRC
-    ${LIBCPPA_PLATFORM_SRC}
-    src/abstract_actor.cpp
-    src/abstract_channel.cpp
-    src/abstract_group.cpp
-    src/abstract_tuple.cpp
-    src/acceptor.cpp
-    src/actor.cpp
-    src/actor_addr.cpp
-    src/actor_companion.cpp
-    src/actor_namespace.cpp
-    src/actor_ostream.cpp
-    src/actor_proxy.cpp
-    src/actor_proxy.cpp
-    src/actor_registry.cpp
-    src/algorithm.cpp
-    src/any_tuple.cpp
-    src/atom.cpp
-    src/attachable.cpp
-    src/behavior.cpp
-    src/behavior_stack.cpp
-    src/binary_deserializer.cpp
-    src/binary_serializer.cpp
-    src/blocking_actor.cpp
-    src/broker.cpp
-    src/buffer.cpp
-    src/channel.cpp
-    src/context_switching_resume.cpp
-    src/continuable.cpp
-    src/continue_helper.cpp
-    src/cs_thread.cpp
-    src/decorated_tuple.cpp
-    src/default_message_queue.cpp
-    src/demangle.cpp
-    src/deserializer.cpp
-    src/duration.cpp
-    src/event_based_actor.cpp
-    src/exception.cpp
-    src/execution_unit.cpp
-    src/exit_reason.cpp
-    src/fd_util.cpp
-    src/functor_based_actor.cpp
-    src/functor_based_blocking_actor.cpp
-    src/get_mac_addresses.cpp
-    src/get_root_uuid.cpp
-    src/group.cpp
-    src/group_manager.cpp
-    src/input_stream.cpp
-    src/local_actor.cpp
-    src/logging.cpp
-    src/mailbox_element.cpp
-    src/match.cpp
-    src/memory.cpp
-    src/memory_managed.cpp
-    src/message_header.cpp
-    src/middleman.cpp
-    src/middleman_event_handler.cpp
-    src/node_id.cpp
-    src/object.cpp
-    src/object_array.cpp
-    src/opt.cpp
-    src/output_stream.cpp
-    src/partial_function.cpp
-    src/peer.cpp
-    src/peer_acceptor.cpp
-    src/primitive_variant.cpp
-    src/ref_counted.cpp
-    src/remote_actor_proxy.cpp
-    src/response_promise.cpp
-    src/resumable.cpp
-    src/ripemd_160.cpp
-    src/scheduler.cpp
-    src/scoped_actor.cpp
-    src/serializer.cpp
-    src/shared_spinlock.cpp
-    src/singleton_manager.cpp
-    src/stream.cpp
-    src/string_serialization.cpp
-    src/sync_request_bouncer.cpp
-    src/tcp_acceptor.cpp
-    src/tcp_io_stream.cpp
-    src/to_uniform_name.cpp
-    src/type_lookup_table.cpp
-    src/unicast_network.cpp
-    src/uniform_type_info.cpp
-    src/uniform_type_info_map.cpp
-    src/weak_ptr_anchor.cpp
-    src/yield_interface.cpp)
-
-if (BOOST_ROOT)
-  # Prevent falling back to system paths when using a custom Boost prefix.
-  set(Boost_NO_SYSTEM_PATHS true)
-endif ()
-
-set(INCLUDE_DIRS .)
+# all libs need access to core headers
+set(INCLUDE_DIRS libcaf_core)
 set(LD_DIRS)
 set(LD_FLAGS ${CMAKE_LD_LIBS})
 
@@ -247,68 +123,22 @@ elseif (MINGW)
   set(LD_FLAGS "ws2_32 -liphlpapi")
 endif ()
 
-if (ENABLE_OPENCL)
-  find_package(OPENCL REQUIRED)
-  set(LD_FLAGS ${LD_FLAGS} ${OPENCL_LIBRARIES})
-  set(INCLUDE_DIRS ${INCLUDE_DIRS} ${OPENCL_INCLUDE_DIR})
-  set(LIBCPPA_SRC
-      ${LIBCPPA_SRC} 
-      src/opencl/global.cpp
-      src/opencl/program.cpp
-      src/opencl/opencl_metainfo.cpp)
-  add_definitions(-DCPPA_OPENCL)
-endif (ENABLE_OPENCL)
-
 if (DISABLE_MEM_MANAGEMENT)
-  add_definitions(-DCPPA_DISABLE_MEM_MANAGEMENT)
+  add_definitions(-DCAF_DISABLE_MEM_MANAGEMENT)
 endif (DISABLE_MEM_MANAGEMENT)
-
-if (ENABLE_CONTEXT_SWITCHING)
-  find_package(Boost 1.54.0 COMPONENTS system context coroutine REQUIRED)
-  set(LD_FLAGS ${LD_FLAGS} ${Boost_COROUTINE_LIBRARY} ${Boost_CONTEXT_LIBRARY} ${Boost_SYSTEM_LIBRARY})
-  # This hack fixes a problem when the linker search path is the same as
-  # the one provided by the compiler. In this case, CMake replaces the absolute
-  # path (e.g., /path/to/lib.so) with -l<lib>, which may cause it to pick up the wrong
-  # library. So when this replacement happens, we ensure that the right
-  # library gets picked by adding a -L directive for the affected libraries
-  # (which is just Boost Context here).
-  set(CMAKE_EXE_LINKER_FLAGS -L${Boost_LIBRARY_DIRS})
-  set(INCLUDE_DIRS ${INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
-  set(LD_DIRS ${LD_DIRS} ${Boost_LIBRARY_DIRS})
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCPPA_ENABLE_CONTEXT_SWITCHING")
-endif (ENABLE_CONTEXT_SWITCHING)
-
-# build shared library if not compiling static only
-if (NOT "${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes")
-  add_library(libcppa SHARED ${LIBCPPA_SRC} ${LIBCPPA_HDRS})
-  target_link_libraries(libcppa ${LD_FLAGS})
-  set(LIBRARY_VERSION ${LIBCPPA_VERSION_MAJOR}.${LIBCPPA_VERSION_MINOR}.${LIBCPPA_VERSION_PATCH})
-  set(LIBRARY_SOVERSION ${LIBCPPA_VERSION_MAJOR})
-  set_target_properties(libcppa 
-                        PROPERTIES
-                        SOVERSION ${LIBRARY_SOVERSION}
-                        VERSION ${LIBRARY_VERSION}
-                        OUTPUT_NAME cppa)
-  if(NOT MINGW)
-    install(TARGETS libcppa LIBRARY DESTINATION lib)
-  endif()
-endif ()
-
-# build static library only if --build-static or --build-static-only was set
-if ("${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes" OR "${CPPA_BUILD_STATIC}" STREQUAL "yes")
-  add_library(libcppaStatic STATIC ${LIBCPPA_HDRS} ${LIBCPPA_SRC})
-  set_target_properties(libcppaStatic PROPERTIES OUTPUT_NAME cppa_static)
-  install(TARGETS libcppaStatic ARCHIVE DESTINATION lib)
-endif ()
 
 link_directories(${LD_DIRS})
 include_directories(${INCLUDE_DIRS})
 
-# install includes
-install(DIRECTORY cppa/ DESTINATION include/cppa FILES_MATCHING PATTERN "*.hpp")
+# install includes from core
+install(DIRECTORY libcaf_core/caf/ DESTINATION include/caf FILES_MATCHING PATTERN "*.hpp")
+install(DIRECTORY libcaf_core/cppa/ DESTINATION include/cppa FILES_MATCHING PATTERN "*.hpp")
+
+# install includes from io
+install(DIRECTORY libcaf_io/caf/ DESTINATION include/caf FILES_MATCHING PATTERN "*.hpp")
 
 # process cmake_uninstall.cmake.in
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in"
                "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
                IMMEDIATE @ONLY)
 
@@ -317,54 +147,34 @@ add_custom_target(uninstall
                   COMMAND ${CMAKE_COMMAND} -P
                   ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 
-# setting path to cppa headers and libcppa
-set (CPPA_INCLUDE_PATH ${CMAKE_SOURCE_DIR}/libcppa)
-set (CPPA_INCLUDE ${CPPA_INCLUDE_PATH})
+# set path to caf core & io headers for subdirectories
+set (LIBCAF_INCLUDE_DIRS
+     ${CMAKE_SOURCE_DIR}/libcaf_core
+     ${CMAKE_SOURCE_DIR}/libcaf_io)
 
-if ("${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes")
-  set (CPPA_LIBRARY ${LIBRARY_OUTPUT_PATH}/libcppa_static.a ${LD_FLAGS})
-else ()
-  if (APPLE)
-    if ("${CMAKE_GENERATOR}" STREQUAL "Xcode")
-      set (CPPA_LIBRARY "-lcppa")
-    else ()
-      set (CPPA_LIBRARY ${LIBRARY_OUTPUT_PATH}/libcppa.dylib)
-    endif ()
-    #set (CPPA_LIBRARY -L${LIBRARY_OUTPUT_PATH} -lcppa)
-  elseif (UNIX)
-    set (CPPA_LIBRARY ${LIBRARY_OUTPUT_PATH}/libcppa.so)
-  elseif (MINGW)
-    set (CPPA_LIBRARY ${LIBRARY_OUTPUT_PATH}/libcppa.dll)
-  else ()
-    message (SEND_FATAL "Host platform not supported ...")
-  endif ()
-endif ()
+# set up subdirectories, todo: allow configure option to disable io
+add_subdirectory(libcaf_core)
+# set core lib for sub directories
+set (LIBCAF_CORE_LIBRARY libcaf_core)
+add_subdirectory(libcaf_io)
+# set io lib for sub directories
+set (LIBCAF_IO_LIBRARY libcaf_io)
+add_dependencies(libcaf_io libcaf_core)
+# set list variable for sub directories
+set (LIBCAF_LIBRARIES ${LIBCAF_CORE_LIBRARY} ${LIBCAF_IO_LIBRARY})
 
-# set up subdirectories
-if (NOT "${CPPA_NO_UNIT_TESTS}" STREQUAL "yes")
+if (NOT "${CAF_NO_UNIT_TESTS}" STREQUAL "yes")
   enable_testing()
   add_subdirectory(unit_testing)
-  if ("${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes")
-    add_dependencies(all_unit_tests libcppaStatic)
-  else ()
-    add_dependencies(all_unit_tests libcppa)
-  endif ()
+  add_dependencies(all_unit_tests libcaf_io)
 endif ()
-if (NOT "${CPPA_NO_EXAMPLES}" STREQUAL "yes")
+if (NOT "${CAF_NO_EXAMPLES}" STREQUAL "yes")
   add_subdirectory(examples)
-  if ("${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes")
-    add_dependencies(all_examples libcppaStatic)
-  else ()
-    add_dependencies(all_examples libcppa)
-  endif ()
+  add_dependencies(all_examples libcaf_io)
 endif ()
 
 # set optional flags
 string(TOUPPER ${CMAKE_BUILD_TYPE} build_type)
-set(CONTEXT_SWITCHING "no")
-if (ENABLE_CONTEXT_SWITCHING)
-    set(CONTEXT_SWITCHING "yes")
-endif ()
 
 # check for doxygen and add custom "doc" target to Makefile
 find_package(Doxygen)
@@ -379,21 +189,21 @@ endif (DOXYGEN_FOUND)
 
 # set variables for summary
 set(LOG_LEVEL_STR "none")
-if (CPPA_LOG_LEVEL)
-  if (${CPPA_LOG_LEVEL} EQUAL 0)
+if (CAF_LOG_LEVEL)
+  if (${CAF_LOG_LEVEL} EQUAL 0)
     set(LOG_LEVEL_STR "ERROR")
-  elseif (${CPPA_LOG_LEVEL} EQUAL 1)
+  elseif (${CAF_LOG_LEVEL} EQUAL 1)
     set(LOG_LEVEL_STR "WARNING")
-  elseif (${CPPA_LOG_LEVEL} EQUAL 2)
+  elseif (${CAF_LOG_LEVEL} EQUAL 2)
     set(LOG_LEVEL_STR "INFO")
-  elseif (${CPPA_LOG_LEVEL} EQUAL 3)
+  elseif (${CAF_LOG_LEVEL} EQUAL 3)
     set(LOG_LEVEL_STR "DEBUG")
-  elseif (${CPPA_LOG_LEVEL} EQUAL 4)
+  elseif (${CAF_LOG_LEVEL} EQUAL 4)
     set(LOG_LEVEL_STR "TRACE")
   else ()
     set(LOG_LEVEL_STR "invalid")
   endif ()
-endif (CPPA_LOG_LEVEL)
+endif (CAF_LOG_LEVEL)
 
 macro (toYesNo in out)
   if (${in})
@@ -411,38 +221,36 @@ macro (invertYesNo in out)
   endif ()
 endmacro ()
 
-toYesNo(ENABLE_DEBUG DEBUG_MODE_STR)
+toYesNo(CAF_ENABLE_RUNTIME_CHECKS DEBUG_MODE_STR)
 toYesNo(ENABLE_OPENCL BUILD_OPENCL_STR)
 toYesNo(DISABLE_MEM_MANAGEMENT DISABLE_MEM_MANAGEMENT_STR)
-invertYesNo(CPPA_NO_EXAMPLES BUILD_EXAMPLES)
-invertYesNo(CPPA_NO_UNIT_TESTS BUILD_UNIT_TESTS)
+invertYesNo(CAF_NO_EXAMPLES BUILD_EXAMPLES)
+invertYesNo(CAF_NO_UNIT_TESTS BUILD_UNIT_TESTS)
 invertYesNo(DISABLE_MEM_MANAGEMENT_STR WITH_MEM_MANAGEMENT)
 
-if (NOT "${CPPA_BUILD_STATIC}" STREQUAL "yes")
-  set(CPPA_BUILD_STATIC "no")
+if (NOT "${CAF_BUILD_STATIC}" STREQUAL "yes")
+  set(CAF_BUILD_STATIC "no")
 endif ()
 
-if (NOT "${CPPA_BUILD_STATIC_ONLY}" STREQUAL "yes")
-  set(CPPA_BUILD_STATIC_ONLY "no")
+if (NOT "${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes")
+  set(CAF_BUILD_STATIC_ONLY "no")
 else ()
-  set(CPPA_BUILD_STATIC "yes")
+  set(CAF_BUILD_STATIC "yes")
 endif ()
 
 # done (print summary)
-message("\n====================|  Build Summary  |===================="
+message(STATUS
+        "\n====================|  Build Summary  |===================="
         "\n"
-        "\nLibcppa version:   ${LIBRARY_VERSION}"
+        "\nLibcaf version:    ${CAF_VERSION}"
         "\n"
         "\nBuild type:        ${CMAKE_BUILD_TYPE}"
-        "\nDebug mode:        ${DEBUG_MODE_STR}"
+        "\nRuntime checks:    ${DEBUG_MODE_STR}"
         "\nLog level:         ${LOG_LEVEL_STR}"
-        "\nContext switching: ${CONTEXT_SWITCHING}"
-        "\nValgrind:          ${VALGRIND}"
         "\nBuild examples:    ${BUILD_EXAMPLES}"
         "\nBuild unit tests:  ${BUILD_UNIT_TESTS}"
-        "\nBuild static:      ${CPPA_BUILD_STATIC}"
-        "\nBulid static only: ${CPPA_BUILD_STATIC_ONLY}"
-        "\nBuild OpenCL:      ${BUILD_OPENCL_STR}"
+        "\nBuild static:      ${CAF_BUILD_STATIC}"
+        "\nBulid static only: ${CAF_BUILD_STATIC_ONLY}"
         "\nWith mem. mgmt.:   ${WITH_MEM_MANAGEMENT}"
         "\n"
         "\nCXX:               ${CMAKE_CXX_COMPILER}"
@@ -455,7 +263,6 @@ message("\n====================|  Build Summary  |===================="
         "\nExecutable path:   ${EXECUTABLE_OUTPUT_PATH}"
         "\nLibrary path:      ${LIBRARY_OUTPUT_PATH}"
         "\nInstall prefix:    ${CMAKE_INSTALL_PREFIX}"
-        "\n"
-        "\nBoost:             ${Boost_INCLUDE_DIR}"
+        "\nGenerator:         ${CMAKE_GENERATOR}"
         "\n"
         "\n===========================================================\n")
