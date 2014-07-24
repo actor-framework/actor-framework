@@ -45,7 +45,7 @@ if (NOT "${CAF_NO_PROTOBUF_EXAMPLES}" STREQUAL "yes")
     # add binary dir as include path as generated headers will be located there
     include_directories(${CMAKE_CURRENT_BINARY_DIR})
     add_executable(protobuf_broker remote_actors/protobuf_broker.cpp ${ProtoSources})
-    target_link_libraries(protobuf_broker ${CMAKE_DL_LIBS} ${CAF_LIBRARY} ${PTHREAD_LIBRARIES} ${PROTOBUF_LIBRARIES})
+    target_link_libraries(protobuf_broker ${CMAKE_DL_LIBS} ${LIBCAF_LIBRARIES} ${PTHREAD_LIBRARIES} ${PROTOBUF_LIBRARIES})
     add_dependencies(protobuf_broker all_examples)
   endif (PROTOBUF_FOUND)
 endif ()
