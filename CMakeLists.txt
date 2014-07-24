@@ -159,7 +159,12 @@ set (LIBCAF_CORE_LIBRARY libcaf_core)
 add_subdirectory(libcaf_io)
 # set io lib for sub directories
 set (LIBCAF_IO_LIBRARY libcaf_io)
-add_dependencies(libcaf_io libcaf_core)
+if ("${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes" OR "${CAF_BUILD_STATIC}" STREQUAL "yes")
+  add_dependencies(libcaf_ioStatic libcaf_coreStatic)
+endif ()
+if (NOT "${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes")
+  add_dependencies(libcaf_io libcaf_core)
+endif ()
 # set list variable for sub directories
 set (LIBCAF_LIBRARIES ${LIBCAF_CORE_LIBRARY} ${LIBCAF_IO_LIBRARY})
 
