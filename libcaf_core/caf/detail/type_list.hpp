@@ -539,7 +539,6 @@ struct tl_map;
 
 template <class... Ts, template <class> class... Funs>
 struct tl_map<type_list<Ts...>, Funs...> {
-  static_assert(sizeof...(Funs), "No mapping defined");
   using type = type_list<typename tl_apply_all<Ts, Funs...>::type...>;
 };
 
