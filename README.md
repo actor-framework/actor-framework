@@ -10,6 +10,8 @@ On the Web
 ----------
 
 * __Project Homepage__: http://www.actor-framework.org
+* __Manual (HTML)__: http://actor-framework.github.io/actor-framework/manual/index.html
+* __Manual (PDF)__: http://actor-framework.github.io/actor-framework/manual/manual.pdf
 * __Mailing List__: https://groups.google.com/d/forum/actor-framework
 * __Deveoper Blog__: http://libcppa.org
 
