@@ -25,16 +25,16 @@
 #include <algorithm>
 #include <functional>
 
-#include "cppa/cppa.hpp"
+#include "caf/all.hpp"
 
-#include "cppa/opencl/global.hpp"
-#include "cppa/opencl/program.hpp"
-#include "cppa/opencl/smart_ptr.hpp"
-#include "cppa/opencl/device_info.hpp"
-#include "cppa/opencl/actor_facade.hpp"
+#include "caf/opencl/global.hpp"
+#include "caf/opencl/program.hpp"
+#include "caf/opencl/smart_ptr.hpp"
+#include "caf/opencl/device_info.hpp"
+#include "caf/opencl/actor_facade.hpp"
 
-#include "cppa/detail/singleton_mixin.hpp"
-#include "cppa/detail/singleton_manager.hpp"
+#include "caf/detail/singleton_mixin.hpp"
+#include "caf/detail/singleton_manager.hpp"
 
 namespace caf {
 namespace opencl {

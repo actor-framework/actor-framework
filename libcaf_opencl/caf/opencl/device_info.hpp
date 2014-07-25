@@ -20,9 +20,9 @@
 #ifndef CAF_OPENCL_DEVICE_INFO_HPP
 #define CAF_OPENCL_DEVICE_INFO_HPP
 
-#include "cppa/opencl/global.hpp"
-#include "cppa/opencl/program.hpp"
-#include "cppa/opencl/smart_ptr.hpp"
+#include "caf/opencl/global.hpp"
+#include "caf/opencl/program.hpp"
+#include "caf/opencl/smart_ptr.hpp"
 
 namespace caf {
 namespace opencl {

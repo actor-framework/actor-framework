@@ -22,8 +22,8 @@
 
 #include <memory>
 
-#include "cppa/opencl/global.hpp"
-#include "cppa/opencl/smart_ptr.hpp"
+#include "caf/opencl/global.hpp"
+#include "caf/opencl/smart_ptr.hpp"
 
 namespace caf {
 namespace opencl {

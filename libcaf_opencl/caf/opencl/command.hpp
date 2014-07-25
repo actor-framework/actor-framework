@@ -25,12 +25,12 @@
 #include <algorithm>
 #include <functional>
 
-#include "cppa/logging.hpp"
-#include "cppa/opencl/global.hpp"
-#include "cppa/abstract_actor.hpp"
-#include "cppa/response_promise.hpp"
-#include "cppa/opencl/smart_ptr.hpp"
-#include "cppa/util/scope_guard.hpp"
+#include "caf/logging.hpp"
+#include "caf/opencl/global.hpp"
+#include "caf/abstract_actor.hpp"
+#include "caf/response_promise.hpp"
+#include "caf/opencl/smart_ptr.hpp"
+#include "caf/detail/scope_guard.hpp"
 
 namespace caf {
 namespace opencl {

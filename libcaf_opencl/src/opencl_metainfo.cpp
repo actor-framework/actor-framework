@@ -17,7 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "cppa/opencl/opencl_metainfo.hpp"
+#include "caf/opencl/opencl_metainfo.hpp"
 
 using namespace std;
 

@@ -22,9 +22,9 @@
 #include <cstring>
 #include <iostream>
 
-#include "cppa/singletons.hpp"
-#include "cppa/opencl/program.hpp"
-#include "cppa/opencl/opencl_metainfo.hpp"
+#include "caf/singletons.hpp"
+#include "caf/opencl/program.hpp"
+#include "caf/opencl/opencl_metainfo.hpp"
 
 using namespace std;
 

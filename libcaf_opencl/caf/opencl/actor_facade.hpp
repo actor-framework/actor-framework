@@ -25,21 +25,21 @@
 #include <algorithm>
 #include <stdexcept>
 
-#include "cppa/cppa.hpp"
+#include "caf/all.hpp"
 
-#include "cppa/channel.hpp"
-#include "cppa/to_string.hpp"
-#include "cppa/tuple_cast.hpp"
-#include "cppa/intrusive_ptr.hpp"
+#include "caf/channel.hpp"
+#include "caf/to_string.hpp"
+#include "caf/tuple_cast.hpp"
+#include "caf/intrusive_ptr.hpp"
 
-#include "cppa/util/int_list.hpp"
-#include "cppa/util/type_list.hpp"
-#include "cppa/util/limited_vector.hpp"
+#include "caf/detail/int_list.hpp"
+#include "caf/detail/type_list.hpp"
+#include "caf/detail/limited_vector.hpp"
 
-#include "cppa/opencl/global.hpp"
-#include "cppa/opencl/command.hpp"
-#include "cppa/opencl/program.hpp"
-#include "cppa/opencl/smart_ptr.hpp"
+#include "caf/opencl/global.hpp"
+#include "caf/opencl/command.hpp"
+#include "caf/opencl/program.hpp"
+#include "caf/opencl/smart_ptr.hpp"
 
 namespace caf {
 namespace opencl {
@@ -56,7 +56,7 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
 
  public:
 
-    typedef cow_tuple<typename util::rm_const_and_ref<Args>::type...>
+    typedef cow_tuple<typename detail::rm_const_and_ref<Args>::type...>
             args_tuple;
 
     typedef std::function<optional<args_tuple>(any_tuple)> arg_mapping;
@@ -109,7 +109,7 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
 
     void enqueue(msg_hdr_cref hdr, any_tuple msg, execution_unit*) override {
         CPPA_LOG_TRACE("");
-        typename util::il_indices<util::type_list<Args...>>::type indices;
+        typename detail::il_indices<detail::type_list<Args...>>::type indices;
         enqueue_impl(hdr.sender, std::move(msg), hdr.id, indices);
     }
 
@@ -138,7 +138,7 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
 
     template <long... Is>
     void enqueue_impl(const actor_addr& sender, any_tuple msg, message_id id,
-                      util::int_list<Is...>) {
+                      detail::int_list<Is...>) {
         auto opt = m_map_args(std::move(msg));
         if (opt) {
             response_promise handle{this->address(), sender, id.response_id()};

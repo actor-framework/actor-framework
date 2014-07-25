@@ -17,7 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "cppa/opencl/global.hpp"
+#include "caf/opencl/global.hpp"
 
 namespace caf {
 namespace opencl {
