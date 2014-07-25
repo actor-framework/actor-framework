@@ -35,7 +35,9 @@ namespace detail {
 
 namespace {
 
-std::atomic<abstract_singleton*> s_plugins[singletons::max_plugin_singletons];
+std::mutex s_singletons_mtx;
+
+std::atomic<abstract_singleton*> s_plugins[singletons::max_plugins];
 std::atomic<scheduler::abstract_coordinator*> s_scheduling_coordinator;
 std::atomic<uniform_type_info_map*> s_uniform_type_info_map;
 std::atomic<actor_registry*> s_actor_registry;
@@ -49,7 +51,12 @@ abstract_singleton::~abstract_singleton() {
   // nop
 }
 
+std::mutex& singletons::get_mutex() {
+  return s_singletons_mtx;
+}
+
 void singletons::stop_singletons() {
+  // stop singletons, i.e., make sure no background threads/actors are running
   CAF_LOGF_DEBUG("stop scheduler");
   stop(s_scheduling_coordinator);
   CAF_LOGF_DEBUG("stop plugins");
@@ -64,7 +71,7 @@ void singletons::stop_singletons() {
   stop(s_uniform_type_info_map);
   stop(s_logger);
   stop(s_node_id);
-  // dispose singletons
+  // dispose singletons, i.e., release memory
   dispose(s_scheduling_coordinator);
   for (auto& plugin : s_plugins) {
     dispose(plugin);
@@ -92,9 +99,8 @@ scheduler::abstract_coordinator* singletons::get_scheduling_coordinator() {
   return lazy_get(s_scheduling_coordinator);
 }
 
-bool singletons::set_scheduling_coordinator(scheduler::abstract_coordinator* p) {
-  scheduler::abstract_coordinator* expected = nullptr;
-  return s_scheduling_coordinator.compare_exchange_weak(expected, p);
+bool singletons::set_scheduling_coordinator(scheduler::abstract_coordinator*p) {
+  return lazy_get(s_scheduling_coordinator, [p] { return p; }) == p;
 }
 
 node_id singletons::get_node_id() {
@@ -106,7 +112,7 @@ logging* singletons::get_logger() {
 }
 
 std::atomic<abstract_singleton*>& singletons::get_plugin_singleton(size_t id) {
-  CAF_REQUIRE(id < max_plugin_singletons);
+  CAF_REQUIRE(id < max_plugins);
   return s_plugins[id];
 }
 
