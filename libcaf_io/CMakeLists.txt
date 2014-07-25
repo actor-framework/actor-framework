@@ -33,7 +33,7 @@ endif ()
 # build static library only if --build-static or --build-static-only was set
 if ("${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes" OR "${CAF_BUILD_STATIC}" STREQUAL "yes")
   add_library(libcaf_ioStatic STATIC ${LIBCAF_IO_HDRS} ${LIBCAF_IO_SRCS})
-  set_target_properties(libcaf_ioStatic PROPERTIES OUTPUT_NAME caf_static)
+  set_target_properties(libcaf_ioStatic PROPERTIES OUTPUT_NAME caf_io_static)
   install(TARGETS libcaf_ioStatic ARCHIVE DESTINATION lib)
 endif ()
 
