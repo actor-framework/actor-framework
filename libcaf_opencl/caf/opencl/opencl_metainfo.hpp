@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CPPA_OPENCL_METAINFO_HPP
-#define CPPA_OPENCL_METAINFO_HPP
+#ifndef CAF_OPENCL_METAINFO_HPP
+#define CAF_OPENCL_METAINFO_HPP
 
 #include <atomic>
 #include <vector>
@@ -36,7 +36,7 @@
 #include "cppa/detail/singleton_mixin.hpp"
 #include "cppa/detail/singleton_manager.hpp"
 
-namespace cppa {
+namespace caf {
 namespace opencl {
 
 class opencl_metainfo {
@@ -67,6 +67,6 @@ class opencl_metainfo {
 opencl_metainfo* get_opencl_metainfo();
 
 } // namespace opencl
-} // namespace cppa
+} // namespace caf
 
-#endif // CPPA_OPENCL_METAINFO_HPP
+#endif // CAF_OPENCL_METAINFO_HPP

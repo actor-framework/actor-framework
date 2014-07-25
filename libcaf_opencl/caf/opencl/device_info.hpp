@@ -17,14 +17,14 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CPPA_OPENCL_DEVICE_INFO_HPP
-#define CPPA_OPENCL_DEVICE_INFO_HPP
+#ifndef CAF_OPENCL_DEVICE_INFO_HPP
+#define CAF_OPENCL_DEVICE_INFO_HPP
 
 #include "cppa/opencl/global.hpp"
 #include "cppa/opencl/program.hpp"
 #include "cppa/opencl/smart_ptr.hpp"
 
-namespace cppa {
+namespace caf {
 namespace opencl {
 
 class device_info {
@@ -74,7 +74,7 @@ inline dim_vec device_info::get_max_work_items_per_dim() {
 }
 
 } // namespace opencl
-} // namespace cppa
+} // namespace caf
 
 
-#endif // CPPA_OPENCL_DEVICE_INFO_HPP
+#endif // CAF_OPENCL_DEVICE_INFO_HPP

@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CPPA_OPENCL_ACTOR_FACADE_HPP
-#define CPPA_OPENCL_ACTOR_FACADE_HPP
+#ifndef CAF_OPENCL_ACTOR_FACADE_HPP
+#define CAF_OPENCL_ACTOR_FACADE_HPP
 
 #include <ostream>
 #include <iostream>
@@ -41,7 +41,7 @@
 #include "cppa/opencl/program.hpp"
 #include "cppa/opencl/smart_ptr.hpp"
 
-namespace cppa {
+namespace caf {
 namespace opencl {
 
 class opencl_metainfo;
@@ -233,6 +233,6 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
 };
 
 } // namespace opencl
-} // namespace cppa
+} // namespace caf
 
-#endif // CPPA_OPENCL_ACTOR_FACADE_HPP
+#endif // CAF_OPENCL_ACTOR_FACADE_HPP

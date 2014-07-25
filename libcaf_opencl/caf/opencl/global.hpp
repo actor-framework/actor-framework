@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CPPA_OPENCL_GLOBAL_HPP
-#define CPPA_OPENCL_GLOBAL_HPP
+#ifndef CAF_OPENCL_GLOBAL_HPP
+#define CAF_OPENCL_GLOBAL_HPP
 
 #include <string>
 
@@ -30,7 +30,7 @@
     #include <CL/opencl.h>
 #endif
 
-namespace cppa {
+namespace caf {
 namespace opencl {
 
 /**
@@ -44,6 +44,6 @@ cl_int clReleaseDeviceDummy (cl_device_id);
 cl_int clRetainDeviceDummy  (cl_device_id);
 
 } // namespace opencl
-} // namespace cppa
+} // namespace caf
 
-#endif // CPPA_OPENCL_GLOBAL_HPP
+#endif // CAF_OPENCL_GLOBAL_HPP

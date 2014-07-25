@@ -19,7 +19,7 @@
 
 #include "cppa/opencl/global.hpp"
 
-namespace cppa {
+namespace caf {
 namespace opencl {
 
 std::string get_opencl_error(cl_int err) {
@@ -126,5 +126,5 @@ cl_int clReleaseDeviceDummy (cl_device_id) { return 0; }
 cl_int clRetainDeviceDummy  (cl_device_id) { return 0; }
 
 } // namespace opencl
-} // namespace cppa
+} // namespace caf
 

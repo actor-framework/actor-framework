@@ -17,14 +17,14 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CPPA_OPENCL_SMART_PTR_HPP
-#define CPPA_OPENCL_SMART_PTR_HPP
+#ifndef CAF_OPENCL_SMART_PTR_HPP
+#define CAF_OPENCL_SMART_PTR_HPP
 
 #include <memory>
 #include <algorithm>
 #include <type_traits>
 
-namespace cppa {
+namespace caf {
 namespace opencl {
 
 template<typename T, cl_int (*ref)(T), cl_int (*deref)(T)>
@@ -109,6 +109,6 @@ typedef smart_ptr<cl_command_queue, clRetainCommandQueue, clReleaseCommandQueue>
         command_queue_ptr;
 
 } // namespace opencl
-} // namespace cppa
+} // namespace caf
 
-#endif // CPPA_OPENCL_SMART_PTR_HPP
+#endif // CAF_OPENCL_SMART_PTR_HPP

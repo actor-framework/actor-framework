@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CPPA_OPENCL_COMMAND_HPP
-#define CPPA_OPENCL_COMMAND_HPP
+#ifndef CAF_OPENCL_COMMAND_HPP
+#define CAF_OPENCL_COMMAND_HPP
 
 #include <vector>
 #include <numeric>
@@ -32,7 +32,7 @@
 #include "cppa/opencl/smart_ptr.hpp"
 #include "cppa/util/scope_guard.hpp"
 
-namespace cppa {
+namespace caf {
 namespace opencl {
 
 template<typename T, typename R>
@@ -147,6 +147,6 @@ class command : public ref_counted {
 };
 
 } // namespace opencl
-} // namespace cppa
+} // namespace caf
 
-#endif // CPPA_OPENCL_COMMAND_HPP
+#endif // CAF_OPENCL_COMMAND_HPP

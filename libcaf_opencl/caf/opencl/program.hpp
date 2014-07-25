@@ -17,15 +17,15 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CPPA_OPENCL_PROGRAM_HPP
-#define CPPA_OPENCL_PROGRAM_HPP
+#ifndef CAF_OPENCL_PROGRAM_HPP
+#define CAF_OPENCL_PROGRAM_HPP
 
 #include <memory>
 
 #include "cppa/opencl/global.hpp"
 #include "cppa/opencl/smart_ptr.hpp"
 
-namespace cppa {
+namespace caf {
 namespace opencl {
 
 template<typename Signature>
@@ -59,6 +59,6 @@ class program {
 };
 
 } // namespace opencl
-} // namespace cppa
+} // namespace caf
 
-#endif // CPPA_OPENCL_PROGRAM_HPP
+#endif // CAF_OPENCL_PROGRAM_HPP

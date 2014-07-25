@@ -28,7 +28,7 @@
 
 using namespace std;
 
-namespace cppa {
+namespace caf {
 namespace opencl {
 
 
@@ -109,5 +109,5 @@ program program::create(const char* kernel_source, const char* options, uint32_t
 }
 
 } // namespace opencl
-} // namespace cppa
+} // namespace caf
 

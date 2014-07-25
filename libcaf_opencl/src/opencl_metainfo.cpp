@@ -21,7 +21,7 @@
 
 using namespace std;
 
-namespace cppa {
+namespace caf {
 namespace opencl {
 
 const std::vector<device_info> opencl_metainfo::get_devices() const {
@@ -205,6 +205,6 @@ opencl_metainfo* get_opencl_metainfo() {
 }
 
 } // namespace opencl
-} // namespace cppa
+} // namespace caf
 
 
