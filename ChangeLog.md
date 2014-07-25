@@ -1,3 +1,14 @@
+Version 0.10.1
+--------------
+
+__2014_07_26__
+
+- Improved manual and removed references to deprecated/removed API cals
+- Fixed build on older compilers such as GCC 4.7 and 4.8
+- Fixed build script for Protobuf example
+- Fixed issues with static library version (thanks to GitHub user photex)
+- Updated links in README.md
+
 Version 0.10.0
 --------------
 
