@@ -116,9 +116,7 @@ deserialize_impl(T& dm, deserializer* source) {
 
 template <class T>
 class uti_impl : public uniform_type_info {
-
  public:
-
   uti_impl() : m_native(&typeid(T)), m_name(detail::demangle<T>()) {
     // nop
   }
@@ -146,7 +144,6 @@ class uti_impl : public uniform_type_info {
   }
 
  protected:
-
   void serialize(const void* instance, serializer* sink) const {
     serialize_impl(deref(instance), sink);
   }
@@ -167,7 +164,6 @@ class uti_impl : public uniform_type_info {
 
   const std::type_info* m_native;
   std::string m_name;
-
 };
 
 template <class... Ts>
@@ -193,10 +189,10 @@ struct announce_helper<> {
 using detail::make_counted;
 
 middleman* middleman::instance() {
-  auto mpi = detail::singletons::middleman_plugin_id;
-  return static_cast<middleman*>(detail::singletons::get_plugin_singleton(mpi, [] {
-    return new middleman;
-  }));
+  auto sid = detail::singletons::middleman_plugin_id;
+  auto fac = [] { return new middleman; };
+  auto res = detail::singletons::get_plugin_singleton(sid, fac);
+  return static_cast<middleman*>(res);
 }
 
 void middleman::add_broker(broker_ptr bptr) {
@@ -216,10 +212,10 @@ void middleman::initialize() {
   m_backend.m_tid = m_thread.get_id();
   // announce io-related types
   announce_helper<new_data_msg, new_connection_msg,
-          acceptor_closed_msg, connection_closed_msg,
-          accept_handle, acceptor_closed_msg,
-          connection_closed_msg, connection_handle,
-          new_connection_msg, new_data_msg>::exec();
+                  acceptor_closed_msg, connection_closed_msg,
+                  accept_handle, acceptor_closed_msg,
+                  connection_closed_msg, connection_handle,
+                  new_connection_msg, new_data_msg>::exec();
 }
 
 void middleman::stop() {
@@ -231,8 +227,12 @@ void middleman::stop() {
     // m_managers will be modified while we are stopping each manager,
     // because each manager will call remove(...)
     std::vector<broker_ptr> brokers;
-    for (auto& kvp : m_named_brokers) brokers.push_back(kvp.second);
-    for (auto& bro : brokers) bro->close_all();
+    for (auto& kvp : m_named_brokers) {
+      brokers.push_back(kvp.second);
+    }
+    for (auto& bro : brokers) {
+      bro->close_all();
+    }
   });
   m_thread.join();
   m_named_brokers.clear();
@@ -242,9 +242,13 @@ void middleman::dispose() {
   delete this;
 }
 
-middleman::middleman() : m_supervisor(nullptr) { }
+middleman::middleman() : m_supervisor(nullptr) {
+  // nop
+}
 
-middleman::~middleman() { }
+middleman::~middleman() {
+  // nop
+}
 
 } // namespace io
 } // namespace caf
