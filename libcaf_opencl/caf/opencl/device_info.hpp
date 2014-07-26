@@ -29,32 +29,28 @@ namespace opencl {
 
 class device_info {
 
-    friend class program;
+  friend class program;
 
  public:
+  device_info(device_ptr device, command_queue_ptr queue,
+              size_t work_group_size, cl_uint dimensons,
+              const dim_vec& items_per_dimension)
+      : m_max_work_group_size(work_group_size)
+      , m_max_dimensions(dimensons)
+      , m_max_work_items_per_dim(items_per_dimension)
+      , m_device(device)
+      , m_cmd_queue(queue) {}
 
-    device_info(device_ptr device,
-                command_queue_ptr queue,
-                size_t work_group_size,
-                cl_uint dimensons,
-                const dim_vec& items_per_dimension)
-        : m_max_work_group_size(work_group_size)
-        , m_max_dimensions(dimensons)
-        , m_max_work_items_per_dim(items_per_dimension)
-        , m_device(device)
-        , m_cmd_queue(queue) { }
-
-    inline size_t get_max_work_group_size();
-    inline cl_uint get_max_dimensions();
-    inline dim_vec get_max_work_items_per_dim();
+  inline size_t get_max_work_group_size();
+  inline cl_uint get_max_dimensions();
+  inline dim_vec get_max_work_items_per_dim();
 
  private:
-
-    size_t  m_max_work_group_size;
-    cl_uint m_max_dimensions;
-    dim_vec m_max_work_items_per_dim;
-    device_ptr m_device;
-    command_queue_ptr m_cmd_queue;
+  size_t m_max_work_group_size;
+  cl_uint m_max_dimensions;
+  dim_vec m_max_work_items_per_dim;
+  device_ptr m_device;
+  command_queue_ptr m_cmd_queue;
 };
 
 /******************************************************************************\
@@ -62,19 +58,16 @@ class device_info {
 \******************************************************************************/
 
 inline size_t device_info::get_max_work_group_size() {
-    return m_max_work_group_size;
+  return m_max_work_group_size;
 }
 
-inline cl_uint device_info::get_max_dimensions() {
-    return m_max_dimensions;
-}
+inline cl_uint device_info::get_max_dimensions() { return m_max_dimensions; }
 
 inline dim_vec device_info::get_max_work_items_per_dim() {
-    return m_max_work_items_per_dim;
+  return m_max_work_items_per_dim;
 }
 
 } // namespace opencl
 } // namespace caf
-
 
 #endif // CAF_OPENCL_DEVICE_INFO_HPP

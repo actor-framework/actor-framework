@@ -25,9 +25,9 @@
 #include "caf/detail/limited_vector.hpp"
 
 #if defined __APPLE__ || defined(MACOSX)
-    #include <OpenCL/opencl.h>
+#include <OpenCL/opencl.h>
 #else
-    #include <CL/opencl.h>
+#include <CL/opencl.h>
 #endif
 
 namespace caf {
@@ -40,8 +40,8 @@ typedef detail::limited_vector<size_t, 3> dim_vec;
 
 std::string get_opencl_error(cl_int err);
 
-cl_int clReleaseDeviceDummy (cl_device_id);
-cl_int clRetainDeviceDummy  (cl_device_id);
+cl_int clReleaseDeviceDummy(cl_device_id);
+cl_int clRetainDeviceDummy(cl_device_id);
 
 } // namespace opencl
 } // namespace caf

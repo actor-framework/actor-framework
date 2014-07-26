@@ -41,27 +41,24 @@ namespace opencl {
 
 class opencl_metainfo {
 
-    friend class program;
-    friend class detail::singleton_manager;
-    friend command_queue_ptr get_command_queue(uint32_t id);
+  friend class program;
+  friend class detail::singleton_manager;
+  friend command_queue_ptr get_command_queue(uint32_t id);
 
  public:
-
-    const std::vector<device_info> get_devices() const;
+  const std::vector<device_info> get_devices() const;
 
  private:
+  static inline opencl_metainfo* create_singleton() {
+    return new opencl_metainfo;
+  }
 
-    static inline opencl_metainfo* create_singleton() {
-        return new opencl_metainfo;
-    }
+  void initialize();
+  void dispose();
+  void destroy();
 
-    void initialize();
-    void dispose();
-    void destroy();
-
-    context_ptr m_context;
-    std::vector<device_info> m_devices;
-
+  context_ptr m_context;
+  std::vector<device_info> m_devices;
 };
 
 opencl_metainfo* get_opencl_metainfo();
