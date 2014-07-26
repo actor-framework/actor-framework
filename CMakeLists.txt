@@ -1,13 +1,18 @@
 cmake_minimum_required(VERSION 2.8)
 project(caf C CXX)
 
-# extract version from VERSION file
-file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" CAF_VERSION LIMIT_COUNT 1)
-string(REPLACE "." " " version_numbers ${CAF_VERSION})
-separate_arguments(version_numbers)
-list(GET version_numbers 0 CAF_VERSION_MAJOR)
-list(GET version_numbers 1 CAF_VERSION_MINOR)
-list(GET version_numbers 2 CAF_VERSION_PATCH)
+# read content of config.hpp
+file(READ "libcaf_core/caf/config.hpp" CONFIG_HPP)
+# get line containing the version
+string(REGEX MATCH "#define CAF_VERSION [0-9]+" VERSION_LINE "${CONFIG_HPP}")
+# extract version number from line
+string(REGEX MATCH "[0-9]+" VERSION_INT "${VERSION_LINE}")
+# calculate major, minor, and patch version
+math(EXPR CAF_VERSION_MAJOR "${VERSION_INT} / 10000")
+math(EXPR CAF_VERSION_MINOR "( ${VERSION_INT} / 100) % 100")
+math(EXPR CAF_VERSION_PATCH "${VERSION_INT} % 100")
+# create full version string
+set(CAF_VERSION "${CAF_VERSION_MAJOR}.${CAF_VERSION_MINOR}.${CAF_VERSION_PATCH}")
 
 # prohibit in-source builds
 if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")

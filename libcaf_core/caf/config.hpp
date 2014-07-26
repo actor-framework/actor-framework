@@ -39,8 +39,8 @@
  */
 #define CAF_VERSION 1001
 
-#define CAF_MAJOR_VERSION (CAF_VERSION / 100000)
-#define CAF_MINOR_VERSION ((CAF_VERSION / 100) % 1000)
+#define CAF_MAJOR_VERSION (CAF_VERSION / 10000)
+#define CAF_MINOR_VERSION ((CAF_VERSION / 100) % 100)
 #define CAF_PATCH_VERSION (CAF_VERSION % 100)
 
 // sets CAF_DEPRECATED, CAF_ANNOTATE_FALLTHROUGH,
@@ -48,22 +48,22 @@
 #if defined(__clang__)
 #  define CAF_CLANG
 #  define CAF_DEPRECATED __attribute__((__deprecated__))
-#  define CAF_PUSH_WARNINGS                           \
-    _Pragma("clang diagnostic push")                     \
-    _Pragma("clang diagnostic ignored \"-Wall\"")              \
-    _Pragma("clang diagnostic ignored \"-Wextra\"")            \
-    _Pragma("clang diagnostic ignored \"-Werror\"")            \
-    _Pragma("clang diagnostic ignored \"-Wdeprecated\"")           \
-    _Pragma("clang diagnostic ignored \"-Wdisabled-macro-expansion\"")   \
-    _Pragma("clang diagnostic ignored \"-Wextra-semi\"")           \
-    _Pragma("clang diagnostic ignored \"-Wdocumentation\"")        \
-    _Pragma("clang diagnostic ignored \"-Wweak-vtables\"")         \
-    _Pragma("clang diagnostic ignored \"-Wunused-parameter\"")       \
-    _Pragma("clang diagnostic ignored \"-Wswitch-enum\"")          \
-    _Pragma("clang diagnostic ignored \"-Wshadow\"")             \
-    _Pragma("clang diagnostic ignored \"-Wconversion\"")           \
-    _Pragma("clang diagnostic ignored \"-Wcast-align\"")           \
-    _Pragma("clang diagnostic ignored \"-Wundef\"")            \
+#  define CAF_PUSH_WARNINGS                                                    \
+    _Pragma("clang diagnostic push")                                           \
+    _Pragma("clang diagnostic ignored \"-Wall\"")                              \
+    _Pragma("clang diagnostic ignored \"-Wextra\"")                            \
+    _Pragma("clang diagnostic ignored \"-Werror\"")                            \
+    _Pragma("clang diagnostic ignored \"-Wdeprecated\"")                       \
+    _Pragma("clang diagnostic ignored \"-Wdisabled-macro-expansion\"")         \
+    _Pragma("clang diagnostic ignored \"-Wextra-semi\"")                       \
+    _Pragma("clang diagnostic ignored \"-Wdocumentation\"")                    \
+    _Pragma("clang diagnostic ignored \"-Wweak-vtables\"")                     \
+    _Pragma("clang diagnostic ignored \"-Wunused-parameter\"")                 \
+    _Pragma("clang diagnostic ignored \"-Wswitch-enum\"")                      \
+    _Pragma("clang diagnostic ignored \"-Wshadow\"")                           \
+    _Pragma("clang diagnostic ignored \"-Wconversion\"")                       \
+    _Pragma("clang diagnostic ignored \"-Wcast-align\"")                       \
+    _Pragma("clang diagnostic ignored \"-Wundef\"")                            \
     _Pragma("clang diagnostic ignored \"-Wnested-anon-types\"")
 #  define CAF_POP_WARNINGS                          \
     _Pragma("clang diagnostic pop")
@@ -124,26 +124,24 @@ using ::backtrace_symbols_fd;
 #endif
 
 #ifdef CAF_ENABLE_RUNTIME_CHECKS
-#   define CAF_REQUIRE__(stmt, file, line)                  \
-    printf("%s:%u: requirement failed '%s'\n", file, line, stmt);      \
-    {                                    \
-      void* array[10];                           \
-      auto caf_bt_size = ::caf::detail::backtrace(array, 10);      \
-      ::caf::detail::backtrace_symbols_fd(array, caf_bt_size, 2);    \
-    }                                    \
-    abort()
-#   define CAF_REQUIRE(stmt)                          \
-    if (static_cast<bool>(stmt) == false) {                \
-      CAF_REQUIRE__(#stmt, __FILE__, __LINE__);             \
-    }((void) 0)
+#   define CAF_REQUIRE__(stmt, file, line)                                     \
+    printf("%s:%u: requirement failed '%s'\n", file, line, stmt); {            \
+      void* array[10];                                                         \
+      auto caf_bt_size = ::caf::detail::backtrace(array, 10);                  \
+      ::caf::detail::backtrace_symbols_fd(array, caf_bt_size, 2);              \
+    } abort()
+#   define CAF_REQUIRE(stmt)                                                   \
+    if (static_cast<bool>(stmt) == false) {                                    \
+      CAF_REQUIRE__(#stmt, __FILE__, __LINE__);                                \
+    } static_cast<void>(0)
 #else
 #   define CAF_REQUIRE(unused) static_cast<void>(0)
 #endif
 
-#define CAF_CRITICAL__(error, file, line) {                   \
-    printf("%s:%u: critical error: '%s'\n", file, line, error);      \
-    exit(7);                                 \
-  } ((void) 0)
+#define CAF_CRITICAL__(error, file, line) {                                    \
+    printf("%s:%u: critical error: '%s'\n", file, line, error);                \
+    exit(7);                                                                   \
+  } static_cast<void>(0)
 
 #define CAF_CRITICAL(error) CAF_CRITICAL__(error, __FILE__, __LINE__)
 
