@@ -41,7 +41,7 @@ class program {
 
  public:
   /**
-   * @brief Factory method, that creates a cppa::opencl::program
+   * @brief Factory method, that creates a caf::opencl::program
    *        from a given @p kernel_source.
    * @returns A program object.
    */

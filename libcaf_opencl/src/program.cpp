@@ -48,7 +48,7 @@ program program::create(const char* kernel_source, const char* options,
     oss << "Device id " << device_id
         << " is not a vaild device. Maximum id is: " << (devices.size() - 1)
         << ".";
-    CPPA_LOGM_ERROR(detail::demangle<program>().c_str(), oss.str());
+    CAF_LOGM_ERROR(detail::demangle<program>().c_str(), oss.str());
     throw runtime_error(oss.str());
   }
 
@@ -89,7 +89,7 @@ program program::create(const char* kernel_source, const char* options,
                             sizeof(buffer[0]) * buildlog_buffer_size,
                             buffer.data(), nullptr);
 
-      CPPA_LOGC_ERROR("cppa::opencl::program", "create",
+      CAF_LOGC_ERROR("caf::opencl::program", "create",
                       "Build log:\n" + string(buffer.data()) +
                         "\n########################################");
     }

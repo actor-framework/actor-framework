@@ -68,7 +68,7 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
          size_t result_size) {
     if (global_dims.empty()) {
       auto str = "OpenCL kernel needs at least 1 global dimension.";
-      CPPA_LOGM_ERROR(detail::demangle(typeid(actor_facade)).c_str(), str);
+      CAF_LOGM_ERROR(detail::demangle(typeid(actor_facade)).c_str(), str);
       throw std::runtime_error(str);
     }
     auto check_vec = [&](const dim_vec& vec, const char* name) {
@@ -76,7 +76,7 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
         std::ostringstream oss;
         oss << name << " vector is not empty, but "
             << "its size differs from global dimensions vector's size";
-        CPPA_LOGM_ERROR(detail::demangle<actor_facade>().c_str(), oss.str());
+        CAF_LOGM_ERROR(detail::demangle<actor_facade>().c_str(), oss.str());
         throw std::runtime_error(oss.str());
       }
     };
@@ -88,7 +88,7 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
     if (err != CL_SUCCESS) {
       std::ostringstream oss;
       oss << "clCreateKernel: " << get_opencl_error(err);
-      CPPA_LOGM_ERROR(detail::demangle<actor_facade>().c_str(), oss.str());
+      CAF_LOGM_ERROR(detail::demangle<actor_facade>().c_str(), oss.str());
       throw std::runtime_error(oss.str());
     }
     if (result_size == 0) {
@@ -101,7 +101,7 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
   }
 
   void enqueue(msg_hdr_cref hdr, any_tuple msg, execution_unit*) override {
-    CPPA_LOG_TRACE("");
+    CAF_LOG_TRACE("");
     typename detail::il_indices<detail::type_list<Args...>>::type indices;
     enqueue_impl(hdr.sender, std::move(msg), hdr.id, indices);
   }
@@ -124,7 +124,7 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
       , m_map_args(std::move(map_args))
       , m_map_result(std::move(map_result))
       , m_result_size(result_size) {
-    CPPA_LOG_TRACE("id: " << this->id());
+    CAF_LOG_TRACE("id: " << this->id());
   }
 
   template <long... Is>
@@ -142,7 +142,7 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
         *opt);
       cmd->enqueue();
     } else {
-      CPPA_LOGMF(CPPA_ERROR, "actor_facade::enqueue() tuple_cast failed.");
+      CAF_LOGMF(CAF_ERROR, "actor_facade::enqueue() tuple_cast failed.");
     }
   }
 
@@ -164,8 +164,8 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
     for (size_t i = 0; i < arguments.size(); ++i) {
       err = clSetKernelArg(m_kernel.get(), i, sizeof(cl_mem),
                            static_cast<void*>(&arguments[i]));
-      CPPA_LOG_ERROR_IF(err != CL_SUCCESS,
-                        "clSetKernelArg: " << get_opencl_error(err));
+      CAF_LOG_ERROR_IF(err != CL_SUCCESS,
+                      "clSetKernelArg: " << get_opencl_error(err));
     }
     clFlush(m_queue.get());
   }
@@ -178,14 +178,14 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
     auto buffer = clCreateBuffer(m_context.get(), CL_MEM_READ_ONLY, buffer_size,
                                  nullptr, &err);
     if (err != CL_SUCCESS) {
-      CPPA_LOGMF(CPPA_ERROR, "clCreateBuffer: " << get_opencl_error(err));
+      CAF_LOGMF(CAF_ERROR, "clCreateBuffer: " << get_opencl_error(err));
       return;
     }
     cl_event event;
     err = clEnqueueWriteBuffer(m_queue.get(), buffer, CL_FALSE, 0, buffer_size,
                                arg0.data(), 0, nullptr, &event);
     if (err != CL_SUCCESS) {
-      CPPA_LOGMF(CPPA_ERROR, "clEnqueueWriteBuffer: " << get_opencl_error(err));
+      CAF_LOGMF(CAF_ERROR, "clEnqueueWriteBuffer: " << get_opencl_error(err));
       return;
     }
     events.push_back(std::move(event));
@@ -204,7 +204,7 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
       clCreateBuffer(m_context.get(), CL_MEM_WRITE_ONLY,
                      sizeof(typename R::value_type) * ret_size, nullptr, &err);
     if (err != CL_SUCCESS) {
-      CPPA_LOGMF(CPPA_ERROR, "clCreateBuffer: " << get_opencl_error(err));
+      CAF_LOGMF(CAF_ERROR, "clCreateBuffer: " << get_opencl_error(err));
       return;
     }
     mem_ptr tmp;

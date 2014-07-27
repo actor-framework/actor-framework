@@ -56,13 +56,13 @@ class command : public ref_counted {
     for (auto& e : m_events) {
       err = clReleaseEvent(e);
       if (err != CL_SUCCESS) {
-        CPPA_LOGMF(CPPA_ERROR, "clReleaseEvent: " << get_opencl_error(err));
+        CAF_LOGMF(CAF_ERROR, "clReleaseEvent: " << get_opencl_error(err));
       }
     }
   }
 
   void enqueue() {
-    CPPA_LOG_TRACE("command::enqueue()");
+    CAF_LOG_TRACE("command::enqueue()");
     this->ref(); // reference held by the OpenCL comand queue
     cl_int err{0};
     cl_event event_k;
@@ -77,16 +77,21 @@ class command : public ref_counted {
       data_or_nullptr(m_actor_facade->m_local_dimensions), m_events.size(),
       (m_events.empty() ? nullptr : m_events.data()), &event_k);
     if (err != CL_SUCCESS) {
-      CPPA_LOGMF(CPPA_ERROR,
+      CAF_LOGMF(CAF_ERROR,
                  "clEnqueueNDRangeKernel: " << get_opencl_error(err));
       this->deref(); // or can anything actually happen?
       return;
     } else {
       cl_event event_r;
-      err =
-        clEnqueueReadBuffer(m_queue.get(), m_arguments.back().get(), CL_FALSE,
-                            0, sizeof(typename R::value_type) * m_result_size,
-                            m_result.data(), 1, &event_k, &event_r);
+      err = clEnqueueReadBuffer(m_queue.get(),
+                                m_arguments.back().get(),
+                                CL_FALSE,
+                                0,
+                                sizeof(typename R::value_type) * m_result_size,
+                                m_result.data(),
+                                1,
+                                &event_k,
+                                &event_r);
       if (err != CL_SUCCESS) {
         throw std::runtime_error("clEnqueueReadBuffer: " +
                                  get_opencl_error(err));
@@ -101,14 +106,14 @@ class command : public ref_counted {
                                },
                                this);
       if (err != CL_SUCCESS) {
-        CPPA_LOGMF(CPPA_ERROR, "clSetEventCallback: " << get_opencl_error(err));
+        CAF_LOGMF(CAF_ERROR, "clSetEventCallback: " << get_opencl_error(err));
         this->deref(); // callback is not set
         return;
       }
 
       err = clFlush(m_queue.get());
       if (err != CL_SUCCESS) {
-        CPPA_LOGMF(CPPA_ERROR, "clFlush: " << get_opencl_error(err));
+        CAF_LOGMF(CAF_ERROR, "clFlush: " << get_opencl_error(err));
       }
       m_events.push_back(std::move(event_k));
       m_events.push_back(std::move(event_r));
