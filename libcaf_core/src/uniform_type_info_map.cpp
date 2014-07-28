@@ -53,29 +53,28 @@ namespace detail {
 
 namespace {
 const char* mapped_type_names[][2] = {
-  {"bool",              "bool"                },
-  {"caf::actor",           "@actor"                },
-  {"caf::actor_addr",        "@addr"                 },
-  {"caf::atom_value",        "@atom"                 },
-  {"caf::channel",           "@channel"              },
-  {"caf::down_msg",          "@down"                 },
-  {"caf::duration",          "@duration"               },
-  {"caf::exit_msg",          "@exit"                 },
-  {"caf::group",           "@group"                },
-  {"caf::group_down_msg",      "@group_down"             },
-  {"caf::message",           "@message"              },
-  {"caf::message_id",        "@message_id"             },
-  {"caf::node_id",           "@node"                 },
-  {"caf::sync_exited_msg",       "@sync_exited"            },
-  {"caf::sync_timeout_msg",      "@sync_timeout"             },
-  {"caf::timeout_msg",         "@timeout"              },
-  {"caf::unit_t",          "@unit"                 },
-  {"double",             "double"                },
-  {"float",              "float"                 },
-  {"long double",          "@ldouble"              },
+  {"bool",                  "bool"                  },
+  {"caf::actor",            "@actor"                },
+  {"caf::actor_addr",       "@addr"                 },
+  {"caf::atom_value",       "@atom"                 },
+  {"caf::channel",          "@channel"              },
+  {"caf::down_msg",         "@down"                 },
+  {"caf::duration",         "@duration"             },
+  {"caf::exit_msg",         "@exit"                 },
+  {"caf::group",            "@group"                },
+  {"caf::group_down_msg",   "@group_down"           },
+  {"caf::message",          "@message"              },
+  {"caf::message_id",       "@message_id"           },
+  {"caf::node_id",          "@node"                 },
+  {"caf::sync_exited_msg",  "@sync_exited"          },
+  {"caf::sync_timeout_msg", "@sync_timeout"         },
+  {"caf::timeout_msg",      "@timeout"              },
+  {"caf::unit_t",           "@unit"                 },
+  {"double",                "double"                },
+  {"float",                 "float"                 },
+  {"long double",           "@ldouble"              },
   // std::string
-  {"std::basic_string<@i8,std::char_traits<@i8>,std::allocator<@i8>>",
-   "@str"},
+  {"std::basic_string<@i8,std::char_traits<@i8>,std::allocator<@i8>>", "@str"},
   // std::u16string
   {"std::basic_string<@u16,std::char_traits<@u16>,std::allocator<@u16>>",
    "@u16str"},
@@ -139,12 +138,12 @@ constexpr const char* mapped_name() {
 
 const char* mapped_name_by_decorated_name(const char* cstr) {
   using namespace std;
-  auto cmp = [&](const char** lhs) {
-    return strcmp(lhs[0], cstr) == 0;
-  };
+  auto cmp = [&](const char** lhs) { return strcmp(lhs[0], cstr) == 0; };
   auto e = end(mapped_type_names);
   auto i = find_if(begin(mapped_type_names), e, cmp);
-  if (i != e) return (*i)[1];
+  if (i != e){
+    return (*i)[1];
+  }
   // for some reason, GCC returns "std::string" as RTTI type name
   // instead of std::basic_string<...>, this also affects clang-compiled
   // code when used with GCC's libstdc++
@@ -156,16 +155,20 @@ const char* mapped_name_by_decorated_name(const char* cstr) {
 
 std::string mapped_name_by_decorated_name(std::string&& str) {
   auto res = mapped_name_by_decorated_name(str.c_str());
-  if (res == str.c_str()) return std::move(str);
+  if (res == str.c_str()) {
+    return std::move(str);
+  }
   return res;
 }
 
 namespace {
 
-inline bool operator==(const unit_t&, const unit_t&) { return true; }
+inline bool operator==(const unit_t&, const unit_t&) {
+  return true;
+}
 
 template <class T>
-struct type_token {};
+struct type_token { };
 
 template <class T>
 inline typename std::enable_if<detail::is_primitive<T>::value>::type
@@ -179,28 +182,32 @@ deserialize_impl(T& val, deserializer* source) {
   val = source->read<T>();
 }
 
-inline void serialize_impl(const unit_t&, serializer*) {}
+inline void serialize_impl(const unit_t&, serializer*) {
+  // nop
+}
 
-inline void deserialize_impl(unit_t&, deserializer*) {}
+inline void deserialize_impl(unit_t&, deserializer*) {
+  // nop
+}
 
 void serialize_impl(const actor_addr& addr, serializer* sink) {
   auto ns = sink->get_namespace();
-  if (ns)
-    ns->write(sink, addr);
-  else
+  if (!ns) {
     throw std::runtime_error(
       "unable to serialize actor_addr: "
       "no actor addressing defined");
+  }
+  ns->write(sink, addr);
 }
 
 void deserialize_impl(actor_addr& addr, deserializer* source) {
   auto ns = source->get_namespace();
-  if (ns)
-    addr = ns->read(source);
-  else
+  if (!ns) {
     throw std::runtime_error(
       "unable to deserialize actor_ptr: "
       "no actor addressing defined");
+  }
+  addr = ns->read(source);
 }
 
 void serialize_impl(const actor& ptr, serializer* sink) {
@@ -227,10 +234,11 @@ void serialize_impl(const group& gref, serializer* sink) {
 
 void deserialize_impl(group& gref, deserializer* source) {
   auto modname = source->read<std::string>();
-  if (modname.empty())
+  if (modname.empty()) {
     gref = invalid_group;
-  else
+  } else {
     gref = group::get_module(modname)->deserialize(source);
+  }
 }
 
 void serialize_impl(const channel& chref, serializer* sink) {
@@ -304,8 +312,8 @@ void serialize_impl(const message& tup, serializer* sink) {
     dynamic_name = detail::get_tuple_type_names(*tup.vals());
     tname = dynamic_name.c_str();
   }
-  auto uti =
-    detail::singletons::get_uniform_type_info_map()->by_uniform_name(tname);
+  auto uti_map = detail::singletons::get_uniform_type_info_map();
+  auto uti = uti_map->by_uniform_name(tname);
   if (uti == nullptr) {
     std::string err = "could not get uniform type info for \"";
     err += tname;
@@ -342,8 +350,9 @@ void deserialize_impl(node_id& nid, deserializer* source) {
   if (pid == 0 && std::all_of(hid.begin(), hid.end(), is_zero)) {
     // invalid process information
     nid = invalid_node_id;
-  } else
+  } else {
     nid = node_id{pid, hid};
+  }
 }
 
 inline void serialize_impl(const atom_value& val, serializer* sink) {
@@ -366,15 +375,12 @@ inline void deserialize_impl(duration& val, deserializer* source) {
     case 1:
       val.unit = time_unit::seconds;
       break;
-
     case 1000:
       val.unit = time_unit::milliseconds;
       break;
-
     case 1000000:
       val.unit = time_unit::microseconds;
       break;
-
     default:
       val.unit = time_unit::invalid;
       break;
@@ -392,9 +398,11 @@ inline void deserialize_impl(bool& val, deserializer* source) {
 
 // exit_msg & down_msg have the same fields
 template <class T>
-typename std::enable_if<std::is_same<T, down_msg>::value ||
-            std::is_same<T, exit_msg>::value ||
-            std::is_same<T, sync_exited_msg>::value>::type
+typename std::enable_if<
+  std::is_same<T, down_msg>::value
+  || std::is_same<T, exit_msg>::value
+  || std::is_same<T, sync_exited_msg>::value
+>::type
 serialize_impl(const T& dm, serializer* sink) {
   serialize_impl(dm.source, sink);
   sink->write_value(dm.reason);
@@ -402,9 +410,11 @@ serialize_impl(const T& dm, serializer* sink) {
 
 // exit_msg & down_msg have the same fields
 template <class T>
-typename std::enable_if<std::is_same<T, down_msg>::value ||
-            std::is_same<T, exit_msg>::value ||
-            std::is_same<T, sync_exited_msg>::value>::type
+typename std::enable_if<
+  std::is_same<T, down_msg>::value
+  || std::is_same<T, exit_msg>::value
+  || std::is_same<T, sync_exited_msg>::value
+>::type
 deserialize_impl(T& dm, deserializer* source) {
   deserialize_impl(dm.source, source);
   dm.reason = source->read<uint32_t>();
@@ -434,9 +444,13 @@ inline void deserialize_impl(timeout_msg& tm, deserializer* source) {
   tm.timeout_id = source->read<uint32_t>();
 }
 
-inline void serialize_impl(const sync_timeout_msg&, serializer*) {}
+inline void serialize_impl(const sync_timeout_msg&, serializer*) {
+  // nop
+}
 
-inline void deserialize_impl(const sync_timeout_msg&, deserializer*) {}
+inline void deserialize_impl(const sync_timeout_msg&, deserializer*) {
+  // nop
+}
 
 bool types_equal(const std::type_info* lhs, const std::type_info* rhs) {
   // in some cases (when dealing with dynamic libraries),
@@ -446,80 +460,65 @@ bool types_equal(const std::type_info* lhs, const std::type_info* rhs) {
 
 template <class T>
 class uti_base : public uniform_type_info {
-
  protected:
-
-  uti_base() : m_native(&typeid(T)) {}
-
+  uti_base() : m_native(&typeid(T)) {
+    // nop
+  }
   bool equal_to(const std::type_info& ti) const override {
     return types_equal(m_native, &ti);
   }
-
   bool equals(const void* lhs, const void* rhs) const override {
     // return detail::safe_equal(deref(lhs), deref(rhs));
     // return deref(lhs) == deref(rhs);
     return eq(deref(lhs), deref(rhs));
   }
-
   uniform_value create(const uniform_value& other) const override {
     return create_impl<T>(other);
   }
-
   message as_message(void* instance) const override {
     return make_message(deref(instance));
   }
-
   static inline const T& deref(const void* ptr) {
     return *reinterpret_cast<const T*>(ptr);
   }
-
-  static inline T& deref(void* ptr) { return *reinterpret_cast<T*>(ptr); }
-
+  static inline T& deref(void* ptr) {
+    return *reinterpret_cast<T*>(ptr);
+  }
   const std::type_info* m_native;
 
  private:
-
   template <class U>
   typename std::enable_if<std::is_floating_point<U>::value, bool>::type
   eq(const U& lhs, const U& rhs) const {
     return detail::safe_equal(lhs, rhs);
   }
-
   template <class U>
   typename std::enable_if<!std::is_floating_point<U>::value, bool>::type
   eq(const U& lhs, const U& rhs) const {
     return lhs == rhs;
   }
-
 };
 
 template <class T>
 class uti_impl : public uti_base<T> {
-
-  using super = uti_base<T>;
-
  public:
+  using super = uti_base<T>;
 
   const char* name() const {
     return mapped_name<T>();
   }
 
  protected:
-
   void serialize(const void* instance, serializer* sink) const {
     serialize_impl(super::deref(instance), sink);
   }
-
   void deserialize(void* instance, deserializer* source) const {
     deserialize_impl(super::deref(instance), source);
   }
-
 };
 
 class abstract_int_tinfo : public uniform_type_info {
-
  public:
-
   void add_native_type(const std::type_info& ti) {
     // only push back if not already set
     auto predicate = [&](const std::type_info* ptr) { return ptr == &ti; };
@@ -528,65 +527,53 @@ class abstract_int_tinfo : public uniform_type_info {
   }
 
  protected:
-
   std::vector<const std::type_info*> m_natives;
-
 };
 
 // unfortunately, one integer type can be mapped to multiple types
 template <class T>
 class int_tinfo : public abstract_int_tinfo {
-
  public:
-
   void serialize(const void* instance, serializer* sink) const override {
     sink->write_value(deref(instance));
   }
-
   void deserialize(void* instance, deserializer* source) const override {
     deref(instance) = source->read<T>();
   }
-
-  const char* name() const override { return static_name(); }
-
+  const char* name() const override {
+    return static_name();
+  }
   message as_message(void* instance) const override {
     return make_message(deref(instance));
   }
 
- protected:
-
+protected:
   bool equal_to(const std::type_info& ti) const override {
     auto tptr = &ti;
-    return std::any_of(m_natives.begin(), m_natives.end(),
-               [tptr](const std::type_info* ptr) {
-      return types_equal(ptr, tptr);
-    });
+    return std::any_of(
+      m_natives.begin(), m_natives.end(),
+      [tptr](const std::type_info* ptr) { return types_equal(ptr, tptr); });
   }
-
   bool equals(const void* lhs, const void* rhs) const override {
     return deref(lhs) == deref(rhs);
   }
-
   uniform_value create(const uniform_value& other) const override {
     return create_impl<T>(other);
   }
-
  private:
-
   inline static const T& deref(const void* ptr) {
     return *reinterpret_cast<const T*>(ptr);
   }
-
-  inline static T& deref(void* ptr) { return *reinterpret_cast<T*>(ptr); }
-
-  static inline const char* static_name() { return mapped_int_name<T>(); }
-
+  inline static T& deref(void* ptr) {
+    return *reinterpret_cast<T*>(ptr);
+  }
+  static inline const char* static_name() {
+    return mapped_int_name<T>();
+  }
 };
 
 class default_meta_message : public uniform_type_info {
-
  public:
-
   default_meta_message(const std::string& name) {
     m_name = name;
     std::vector<std::string> elements;
@@ -603,7 +590,6 @@ class default_meta_message : public uniform_type_info {
       }
     }
   }
-
   uniform_value create(const uniform_value& other) const override {
     auto res = create_impl<message>(other);
     if (!other) {
@@ -614,11 +600,12 @@ class default_meta_message : public uniform_type_info {
     }
     return res;
   }
-
-  message as_message(void* ptr) const override { return *cast(ptr); }
-
-  const char* name() const override { return m_name.c_str(); }
-
+  message as_message(void* ptr) const override {
+    return *cast(ptr);
+  }
+  const char* name() const override {
+    return m_name.c_str();
+  }
   void serialize(const void* ptr, serializer* sink) const override {
     auto& msg = *cast(ptr);
     CAF_REQUIRE(msg.size() == m_elements.size());
@@ -626,7 +613,6 @@ class default_meta_message : public uniform_type_info {
       m_elements[i]->serialize(msg.at(i), sink);
     }
   }
-
   void deserialize(void* ptr, deserializer* source) const override {
     message_builder mb;
     for (size_t i = 0; i < m_elements.size(); ++i) {
@@ -634,9 +620,9 @@ class default_meta_message : public uniform_type_info {
     }
     *cast(ptr) = mb.to_message();
   }
-
-  bool equal_to(const std::type_info&) const override { return false; }
-
+  bool equal_to(const std::type_info&) const override {
+    return false;
+  }
   bool equals(const void* instance1, const void* instance2) const override {
     auto& lhs = *cast(instance1);
     auto& rhs = *cast(instance2);
@@ -645,18 +631,14 @@ class default_meta_message : public uniform_type_info {
   }
 
  private:
-
-  std::string m_name;
-  std::vector<const uniform_type_info*> m_elements;
-
   inline message* cast(void* ptr) const {
     return reinterpret_cast<message*>(ptr);
   }
-
   inline const message* cast(const void* ptr) const {
     return reinterpret_cast<const message*>(ptr);
   }
-
+  std::string m_name;
+  std::vector<const uniform_type_info*> m_elements;
 };
 
 template <class T>
@@ -673,7 +655,7 @@ void push_native_type(abstract_int_tinfo* m[][2]) {
 template <class Iterator>
 struct builtin_types_helper {
   Iterator pos;
-  builtin_types_helper(Iterator first) : pos(first) { }
+  builtin_types_helper(Iterator first) : pos(first) {}
   inline void operator()() {
     // end of recursion
   }
@@ -687,44 +669,35 @@ struct builtin_types_helper {
 class utim_impl : public uniform_type_info_map {
 
  public:
-
   void initialize() {
     // maps sizeof(integer_type) to {signed_type, unsigned_type}
-    constexpr auto type_u8 = tl_find<builtin_types,
-                     int_tinfo<uint8_t>>::value;
-    constexpr auto type_i8 = tl_find<builtin_types,
-                     int_tinfo<int8_t>>::value;
-    constexpr auto type_u16 = tl_find<builtin_types,
-                      int_tinfo<uint16_t>>::value;
-    constexpr auto type_i16 = tl_find<builtin_types,
-                      int_tinfo<int16_t>>::value;
-    constexpr auto type_u32 = tl_find<builtin_types,
-                      int_tinfo<uint32_t>>::value;
-    constexpr auto type_i32 = tl_find<builtin_types,
-                      int_tinfo<int32_t>>::value;
-    constexpr auto type_u64 = tl_find<builtin_types,
-                      int_tinfo<uint64_t>>::value;
-    constexpr auto type_i64 = tl_find<builtin_types,
-                      int_tinfo<int64_t>>::value;
+    constexpr auto u8t  = tl_find<builtin_types, int_tinfo<uint8_t>>::value;
+    constexpr auto i8t  = tl_find<builtin_types, int_tinfo<int8_t>>::value;
+    constexpr auto u16t = tl_find<builtin_types, int_tinfo<uint16_t>>::value;
+    constexpr auto i16t = tl_find<builtin_types, int_tinfo<int16_t>>::value;
+    constexpr auto u32t = tl_find<builtin_types, int_tinfo<uint32_t>>::value;
+    constexpr auto i32t = tl_find<builtin_types, int_tinfo<int32_t>>::value;
+    constexpr auto u64t = tl_find<builtin_types, int_tinfo<uint64_t>>::value;
+    constexpr auto i64t = tl_find<builtin_types, int_tinfo<int64_t>>::value;
     abstract_int_tinfo* mapping[][2] = {
-      {nullptr,   nullptr},    // no integer type for sizeof(T) == 0
-      {&get<type_u8>(m_storage), &get<type_i8>(m_storage)},
-      {&get<type_u16>(m_storage), &get<type_i16>(m_storage)},
-      {nullptr,   nullptr},    // no integer type for sizeof(T) == 3
-      {&get<type_u32>(m_storage), &get<type_i32>(m_storage)},
-      {nullptr,   nullptr},    // no integer type for sizeof(T) == 5
-      {nullptr,   nullptr},    // no integer type for sizeof(T) == 6
-      {nullptr,   nullptr},    // no integer type for sizeof(T) == 7
-      {&get<type_u64>(m_storage), &get<type_i64>(m_storage)},
+      {nullptr, nullptr}, // no integer type for sizeof(T) == 0
+      {&get<u8t>(m_storage), &get<i8t>(m_storage)},
+      {&get<u16t>(m_storage), &get<i16t>(m_storage)},
+      {nullptr, nullptr}, // no integer type for sizeof(T) == 3
+      {&get<u32t>(m_storage), &get<i32t>(m_storage)},
+      {nullptr, nullptr}, // no integer type for sizeof(T) == 5
+      {nullptr, nullptr}, // no integer type for sizeof(T) == 6
+      {nullptr, nullptr}, // no integer type for sizeof(T) == 7
+      {&get<u64t>(m_storage), &get<i64t>(m_storage)}
     };
-    push_native_type<
-      char, signed char, unsigned char, short, signed short,
-      unsigned short, short int, signed short int, unsigned short int,
-      int, signed int, unsigned int, long int, signed long int,
-      unsigned long int, long, signed long, unsigned long, long long,
-      signed long long, unsigned long long, wchar_t, int8_t, uint8_t,
-      int16_t, uint16_t, int32_t, uint32_t, int64_t, uint64_t, char16_t,
-      char32_t, size_t, ptrdiff_t, intptr_t>(mapping);
+    push_native_type<char, signed char, unsigned char, short, signed short,
+                     unsigned short, short int, signed short int,
+                     unsigned short int, int, signed int, unsigned int,
+                     long int, signed long int, unsigned long int, long,
+                     signed long, unsigned long, long long, signed long long,
+                     unsigned long long, wchar_t, int8_t, uint8_t, int16_t,
+                     uint16_t, int32_t, uint32_t, int64_t, uint64_t, char16_t,
+                     char32_t, size_t, ptrdiff_t, intptr_t>(mapping);
     // fill builtin types *in sorted order* (by uniform name)
     auto i = m_builtin_types.begin();
     builtin_types_helper<decltype(i)> h{i};
@@ -745,15 +718,14 @@ class utim_impl : public uniform_type_info_map {
 
   pointer by_uniform_name(const std::string& name) {
     pointer result = nullptr;
-    /* lifetime scope of guard */ {
+    { // lifetime scope of guard
       shared_lock<detail::shared_spinlock> guard(m_lock);
       result = find_name(m_builtin_types, name);
       result = (result) ? result : find_name(m_user_types, name);
     }
     if (!result && name.compare(0, 3, "@<>") == 0) {
       // create tuple UTI on-the-fly
-      result =
-        insert(uniform_type_info_ptr{new default_meta_message(name)});
+      result = insert(uniform_type_info_ptr{new default_meta_message(name)});
     }
     return result;
   }
@@ -771,7 +743,7 @@ class utim_impl : public uniform_type_info_map {
     unique_lock<detail::shared_spinlock> guard(m_lock);
     auto e = m_user_types.end();
     auto i = std::lower_bound(m_user_types.begin(), e, uti.get(),
-                  [](uniform_type_info* lhs, pointer rhs) {
+                              [](uniform_type_info* lhs, pointer rhs) {
       return strcmp(lhs->name(), rhs->name()) < 0;
     });
     if (i == e) {
@@ -790,12 +762,13 @@ class utim_impl : public uniform_type_info_map {
   }
 
   ~utim_impl() {
-    for (auto ptr : m_user_types) delete ptr;
+    for (auto ptr : m_user_types) {
+      delete ptr;
+    }
     m_user_types.clear();
   }
 
  private:
-
   using strmap = std::map<std::string, std::string>;
 
   using charbuf = std::vector<char>;
@@ -870,7 +843,9 @@ uniform_type_info_map* uniform_type_info_map::create_singleton() {
   return new utim_impl;
 }
 
-uniform_type_info_map::~uniform_type_info_map() {}
+uniform_type_info_map::~uniform_type_info_map() {
+  // nop
+}
 
 } // namespace detail
 } // namespace caf

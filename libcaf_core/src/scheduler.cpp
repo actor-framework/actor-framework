@@ -54,7 +54,7 @@ namespace caf {
 namespace scheduler {
 
 /******************************************************************************
- *           utility and implementation details           *
+ *                     utility and implementation details                     *
  ******************************************************************************/
 
 namespace {
@@ -148,7 +148,6 @@ class timer_actor final : public detail::proper_actor<blocking_actor,
       msg_ptr.reset();
     }
   }
-
 };
 
 void printer_loop(blocking_actor* self) {
@@ -217,11 +216,9 @@ class shutdown_helper : public resumable {
   void attach_to_scheduler() override {
     // nop
   }
-
   void detach_from_scheduler() override {
     // nop
   }
-
   resumable::resume_result resume(execution_unit* ptr) {
     CAF_LOG_DEBUG("shutdown_helper::resume => shutdown worker");
     auto wptr = dynamic_cast<abstract_worker*>(ptr);
@@ -231,13 +228,10 @@ class shutdown_helper : public resumable {
     cv.notify_all();
     return resumable::shutdown_execution_unit;
   }
-
   shutdown_helper() : last_worker(nullptr) {
     // nop
   }
-
   ~shutdown_helper();
-
   std::mutex mtx;
   std::condition_variable cv;
   abstract_worker* last_worker;
@@ -297,8 +291,10 @@ void abstract_coordinator::stop() {
 }
 
 abstract_coordinator::abstract_coordinator(size_t nw)
-    : m_timer(new timer_actor), m_printer(true)
-    , m_next_worker(0), m_num_workers(nw) {
+    : m_timer(new timer_actor),
+      m_printer(true),
+      m_next_worker(0),
+      m_num_workers(nw) {
   // nop
 }
 

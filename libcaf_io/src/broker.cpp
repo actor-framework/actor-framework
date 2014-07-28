@@ -59,17 +59,15 @@ void broker::servant::disconnect() {
         // push this message to the cache to make sure we
         // don't have interleaved message handlers
         auto e = mailbox_element::create(m_broker->address(),
-                         message_id::invalid,
-                         disconnect_message());
+                                         message_id::invalid,
+                                         disconnect_message());
         m_broker->m_priority_policy
         .push_to_cache(unique_mailbox_element_pointer{e});
       }
       else {
         CAF_LOG_DEBUG("broker is not running, invoke handler");
-        m_broker->enqueue(m_broker->address(),
-                  message_id::invalid,
-                  disconnect_message(),
-                  nullptr);
+        m_broker->enqueue(m_broker->address(), message_id::invalid,
+                          disconnect_message(), nullptr);
       }
     }
   }
@@ -97,18 +95,17 @@ message broker::scribe::disconnect_message() {
 void broker::scribe::consume(const void*, size_t num_bytes) {
   CAF_LOG_TRACE(CAF_ARG(num_bytes));
   auto& buf = rd_buf();
-  buf.resize(num_bytes);             // make sure size is correct
-  read_msg().buf.swap(buf);          // swap into message to client
+  buf.resize(num_bytes);                       // make sure size is correct
+  read_msg().buf.swap(buf);                    // swap into message
   m_broker->invoke_message(invalid_actor_addr, // call client
-               message_id::invalid,
-               m_read_msg);
-  read_msg().buf.swap(buf);          // swap buffer back to stream
-  flush();                   // implicit flush of wr_buf()
+                           message_id::invalid, m_read_msg);
+  read_msg().buf.swap(buf); // swap buffer back to stream
+  flush();                  // implicit flush of wr_buf()
 }
 
 void broker::scribe::io_failure(network::operation op) {
   CAF_LOG_TRACE("id = " << hdl().id()
-           << ", " << CAF_TARG(op, static_cast<int>));
+                << ", " << CAF_TARG(op, static_cast<int>));
   // keep compiler happy when compiling w/o logging
   static_cast<void>(op);
   disconnect();
@@ -134,8 +131,8 @@ message broker::doorman::disconnect_message() {
 }
 
 void broker::doorman::io_failure(network::operation op) {
-  CAF_LOG_TRACE("id = " << hdl().id()
-           << ", " << CAF_TARG(op, static_cast<int>));
+  CAF_LOG_TRACE("id = " << hdl().id() << ", "
+                        << CAF_TARG(op, static_cast<int>));
   // keep compiler happy when compiling w/o logging
   static_cast<void>(op);
   disconnect();
@@ -144,8 +141,12 @@ void broker::doorman::io_failure(network::operation op) {
 class broker::continuation {
  public:
   continuation(broker_ptr ptr, actor_addr from, message_id mid, message&& msg)
-      : m_self(std::move(ptr)), m_from(from)
-      , m_mid(mid), m_data(std::move(msg)) { }
+      : m_self(std::move(ptr)),
+        m_from(from),
+        m_mid(mid),
+        m_data(std::move(msg)) {
+    // nop
+  }
 
   inline void operator()() {
     CAF_PUSH_AID(m_self->id());
@@ -157,21 +158,19 @@ class broker::continuation {
   broker_ptr m_self;
   actor_addr m_from;
   message_id m_mid;
-  message  m_data;
+  message m_data;
 };
 
-void broker::invoke_message(const actor_addr& sender,
-                            message_id mid, message& msg) {
+void broker::invoke_message(const actor_addr& sender, message_id mid,
+                            message& msg) {
   CAF_LOG_TRACE(CAF_TARG(msg, to_string));
   m_running = true;
-  auto sg = detail::make_scope_guard([=] {
-    m_running = false;
-  });
-  if (   planned_exit_reason() != exit_reason::not_exited
-    || bhvr_stack().empty()) {
+  auto sg = detail::make_scope_guard([=] { m_running = false; });
+  if (planned_exit_reason() != exit_reason::not_exited
+      || bhvr_stack().empty()) {
     CAF_LOG_DEBUG("actor already finished execution"
-             << ", planned_exit_reason = " << planned_exit_reason()
-             << ", bhvr_stack().empty() = " << bhvr_stack().empty());
+                  << ", planned_exit_reason = " << planned_exit_reason()
+                  << ", bhvr_stack().empty() = " << bhvr_stack().empty());
     if (mid.valid()) {
       detail::sync_request_bouncer srb{exit_reason()};
       srb(sender, mid);
@@ -188,9 +187,9 @@ void broker::invoke_message(const actor_addr& sender,
     switch (m_invoke_policy.handle_message(this, &m_dummy_node, bhvr, mid)) {
       case policy::hm_msg_handled: {
         CAF_LOG_DEBUG("handle_message returned hm_msg_handled");
-        while (   !bhvr_stack().empty()
-             && planned_exit_reason() == exit_reason::not_exited
-             && invoke_message_from_cache()) {
+        while (!bhvr_stack().empty()
+               && planned_exit_reason() == exit_reason::not_exited
+               && invoke_message_from_cache()) {
           // rinse and repeat
         }
         break;
@@ -202,7 +201,7 @@ void broker::invoke_message(const actor_addr& sender,
       case policy::hm_cache_msg: {
         CAF_LOG_DEBUG("handle_message returned hm_skip_msg or hm_cache_msg");
         auto e = mailbox_element::create(sender, mid,
-                         std::move(m_dummy_node.msg));
+                                         std::move(m_dummy_node.msg));
         m_priority_policy.push_to_cache(unique_mailbox_element_pointer{e});
         break;
       }
@@ -210,7 +209,7 @@ void broker::invoke_message(const actor_addr& sender,
   }
   catch (std::exception& e) {
     CAF_LOG_INFO("broker killed due to an unhandled exception: "
-           << to_verbose_string(e));
+                 << to_verbose_string(e));
     // keep compiler happy in non-debug mode
     static_cast<void>(e);
     quit(exit_reason::unhandled_exception);
@@ -226,14 +225,13 @@ void broker::invoke_message(const actor_addr& sender,
   if (planned_exit_reason() != exit_reason::not_exited) {
     cleanup(planned_exit_reason());
     // release implicit reference count held by MM
-    //deref();
-  }
-  else if (bhvr_stack().empty()) {
+    // deref();
+  } else if (bhvr_stack().empty()) {
     CAF_LOG_DEBUG("bhvr_stack().empty(), quit for normal exit reason");
     quit(exit_reason::normal);
     cleanup(planned_exit_reason());
     // release implicit reference count held by MM
-    //deref();
+    // deref();
   }
 }
 
@@ -243,12 +241,14 @@ bool broker::invoke_message_from_cache() {
   auto mid = bhvr_stack().back_id();
   auto e = m_priority_policy.cache_end();
   CAF_LOG_DEBUG(std::distance(m_priority_policy.cache_begin(), e)
-           << " elements in cache");
+                << " elements in cache");
   for (auto i = m_priority_policy.cache_begin(); i != e; ++i) {
     auto res = m_invoke_policy.invoke_message(this, *i, bhvr, mid);
     if (res || !*i) {
       m_priority_policy.cache_erase(i);
-      if (res) return true;
+      if (res){
+        return true;
+      }
       return invoke_message_from_cache();
     }
   }
@@ -262,8 +262,8 @@ void broker::write(connection_handle hdl, size_t bs, const void* buf) {
   out.insert(out.end(), first, last);
 }
 
-void broker::enqueue(const actor_addr& sender, message_id mid,
-                     message msg, execution_unit*) {
+void broker::enqueue(const actor_addr& sender, message_id mid, message msg,
+                     execution_unit*) {
   middleman::instance()->run_later(continuation{this, sender,
                                                 mid, std::move(msg)});
 }
@@ -273,8 +273,10 @@ bool broker::initialized() const {
 }
 
 broker::broker()
-    : m_initialized(false), m_hidden(true),
-      m_running(false), m_mm(*middleman::instance()) {
+    : m_initialized(false),
+      m_hidden(true),
+      m_running(false),
+      m_mm(*middleman::instance()) {
   // nop
 }
 
@@ -282,7 +284,9 @@ void broker::cleanup(uint32_t reason) {
   CAF_LOG_TRACE(CAF_ARG(reason));
   close_all();
   super::cleanup(reason);
-  if (!m_hidden) detail::singletons::get_actor_registry()->dec_running();
+  if (!m_hidden){
+    detail::singletons::get_actor_registry()->dec_running();
+  }
 }
 
 void broker::launch(bool is_hidden, execution_unit*) {
@@ -294,29 +298,27 @@ void broker::launch(bool is_hidden, execution_unit*) {
   CAF_LOGF_TRACE("init and launch broker with id " << id());
   // we want to make sure initialization is executed in MM context
   broker_ptr self = this;
-  self->become(
-    on(atom("INITMSG")) >> [self] {
-      CAF_LOGF_TRACE(CAF_MARG(self, get));
-      self->unbecome();
-      // launch backends now, because user-defined initialization
-      // might call functions like add_connection
-      for (auto& kvp : self->m_doormen) {
-        kvp.second->launch();
-      }
-      self->m_initialized = true;
-      // run user-defined initialization code
-      auto bhvr = self->make_behavior();
-      if (bhvr) self->become(std::move(bhvr));
+  self->become(on(atom("INITMSG")) >> [self] {
+    CAF_LOGF_TRACE(CAF_MARG(self, get));
+    self->unbecome();
+    // launch backends now, because user-defined initialization
+    // might call functions like add_connection
+    for (auto& kvp : self->m_doormen) {
+      kvp.second->launch();
     }
-  );
+    self->m_initialized = true;
+    // run user-defined initialization code
+    auto bhvr = self->make_behavior();
+    if (bhvr)
+      self->become(std::move(bhvr));
+  });
   self->enqueue(invalid_actor_addr, message_id::invalid,
                 make_message(atom("INITMSG")), nullptr);
 }
 
 void broker::configure_read(connection_handle hdl, receive_policy::config cfg) {
-  CAF_LOG_TRACE(CAF_MARG(hdl, id) << ", cfg = {"
-              << static_cast<int>(cfg.first)
-              << ", " << cfg.second << "}");
+  CAF_LOG_TRACE(CAF_MARG(hdl, id) << ", cfg = {" << static_cast<int>(cfg.first)
+                                  << ", " << cfg.second << "}");
   by_id(hdl).configure_read(cfg);
 }
 
@@ -354,7 +356,9 @@ void broker::close_all() {
 
 std::vector<connection_handle> broker::connections() const {
   std::vector<connection_handle> result;
-  for (auto& scribe : m_scribes) result.push_back(scribe.first);
+  for (auto& scribe : m_scribes) {
+    result.push_back(scribe.first);
+  }
   return result;
 }
 

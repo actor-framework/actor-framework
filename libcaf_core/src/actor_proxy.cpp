@@ -34,18 +34,24 @@ using namespace std;
 
 namespace caf {
 
-actor_proxy::anchor::anchor(actor_proxy* instance) : m_ptr(instance) {}
+actor_proxy::anchor::anchor(actor_proxy* instance) : m_ptr(instance) {
+  // nop
+}
 
 actor_proxy::anchor::~anchor() {}
 
-bool actor_proxy::anchor::expired() const { return !m_ptr; }
+bool actor_proxy::anchor::expired() const {
+  return !m_ptr;
+}
 
 actor_proxy_ptr actor_proxy::anchor::get() {
   actor_proxy_ptr result;
   { // lifetime scope of guard
     shared_lock<detail::shared_spinlock> guard{m_lock};
     auto ptr = m_ptr.load();
-    if (ptr) result.reset(ptr);
+    if (ptr) {
+      result.reset(ptr);
+    }
   }
   return result;
 }
@@ -60,7 +66,9 @@ bool actor_proxy::anchor::try_expire() {
   return false;
 }
 
-actor_proxy::~actor_proxy() {}
+actor_proxy::~actor_proxy() {
+  // nop
+}
 
 actor_proxy::actor_proxy(actor_id aid, node_id nid)
     : abstract_actor(aid, nid), m_anchor(new anchor{this}) {
@@ -68,7 +76,9 @@ actor_proxy::actor_proxy(actor_id aid, node_id nid)
 }
 
 void actor_proxy::request_deletion() {
-  if (m_anchor->try_expire()) delete this;
+  if (m_anchor->try_expire()) {
+    delete this;
+  }
 }
 
 } // namespace caf

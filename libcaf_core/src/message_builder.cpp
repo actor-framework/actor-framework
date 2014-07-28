@@ -26,14 +26,14 @@
 namespace caf {
 
 class message_builder::dynamic_msg_data : public detail::message_data {
-
-  using super = message_data;
-
  public:
+  using super = message_data;
 
   using message_data::const_iterator;
 
-  dynamic_msg_data() : super(true) { }
+  dynamic_msg_data() : super(true) {
+    // nop
+  }
 
   dynamic_msg_data(const dynamic_msg_data& other) : super(true) {
     for (auto& d : other.m_elements) {
@@ -42,7 +42,9 @@ class message_builder::dynamic_msg_data : public detail::message_data {
   }
 
   dynamic_msg_data(std::vector<uniform_value>&& data)
-      : super(true), m_elements(std::move(data)) { }
+      : super(true), m_elements(std::move(data)) {
+    // nop
+  }
 
   const void* at(size_t pos) const override {
     CAF_REQUIRE(pos < size());
@@ -72,7 +74,6 @@ class message_builder::dynamic_msg_data : public detail::message_data {
   }
 
   std::vector<uniform_value> m_elements;
-
 };
 
 message_builder::message_builder() {

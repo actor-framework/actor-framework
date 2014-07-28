@@ -20,7 +20,6 @@
 #include <iterator>
 
 #include "caf/none.hpp"
-
 #include "caf/local_actor.hpp"
 #include "caf/detail/behavior_stack.hpp"
 
@@ -29,11 +28,9 @@ using namespace std;
 namespace caf {
 namespace detail {
 
-struct behavior_stack_mover
-  : iterator<output_iterator_tag, void, void, void, void> {
-
+struct behavior_stack_mover : iterator<output_iterator_tag, void,
+                                       void, void, void> {
  public:
-
   behavior_stack_mover(behavior_stack* st) : m_stack(st) {}
 
   behavior_stack_mover& operator=(behavior_stack::element_type&& rval) {
@@ -41,16 +38,20 @@ struct behavior_stack_mover
     return *this;
   }
 
-  behavior_stack_mover& operator*() { return *this; }
+  behavior_stack_mover& operator*() {
+    return *this;
+  }
 
-  behavior_stack_mover& operator++() { return *this; }
+  behavior_stack_mover& operator++() {
+    return *this;
+  }
 
-  behavior_stack_mover operator++(int) { return *this; }
+  behavior_stack_mover operator++(int) {
+    return *this;
+  }
 
  private:
-
   behavior_stack* m_stack;
-
 };
 
 inline behavior_stack_mover move_iter(behavior_stack* bs) {
@@ -63,20 +64,22 @@ optional<behavior&> behavior_stack::sync_handler(message_id expected_response) {
     auto i = find_if(m_elements.rbegin(), e, [=](element_type& val) {
       return val.second == expected_response;
     });
-    if (i != e) return i->first;
+    if (i != e) {
+      return i->first;
+    }
   }
   return none;
 }
 
 void behavior_stack::pop_async_back() {
   if (m_elements.empty()) {
-  } // nothing to do
-  else if (!m_elements.back().second.valid())
+    return;
+  }
+  if (!m_elements.back().second.valid()) {
     erase_at(m_elements.end() - 1);
-  else
-    rerase_if([](const element_type& e) {
-      return e.second.valid() == false;
-    });
+  } else {
+    rerase_if([](const element_type& e) { return e.second.valid() == false; });
+  }
 }
 
 void behavior_stack::clear() {

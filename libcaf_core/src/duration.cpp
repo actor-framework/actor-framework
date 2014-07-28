@@ -32,12 +32,14 @@ inline uint64_t ui64_val(const duration& d) {
 } // namespace <anonmyous>
 
 bool operator==(const duration& lhs, const duration& rhs) {
-  return (lhs.unit == rhs.unit ? lhs.count == rhs.count :
-                   ui64_val(lhs) == ui64_val(rhs));
+  return (lhs.unit == rhs.unit ? lhs.count == rhs.count
+                               : ui64_val(lhs) == ui64_val(rhs));
 }
 
 std::string duration::to_string() const {
-  if (unit == time_unit::invalid) return "-invalid-";
+  if (unit == time_unit::invalid) {
+    return "-invalid-";
+  }
   std::ostringstream oss;
   oss << count;
   switch (unit) {

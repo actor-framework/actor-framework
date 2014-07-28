@@ -53,7 +53,9 @@ void singletons::stop_singletons() {
   CAF_LOGF_DEBUG("stop scheduler");
   stop(s_scheduling_coordinator);
   CAF_LOGF_DEBUG("stop plugins");
-  for (auto& plugin : s_plugins) stop(plugin);
+  for (auto& plugin : s_plugins) {
+    stop(plugin);
+  }
   CAF_LOGF_DEBUG("stop actor registry");
   stop(s_actor_registry);
   CAF_LOGF_DEBUG("stop group manager");
@@ -64,7 +66,9 @@ void singletons::stop_singletons() {
   stop(s_node_id);
   // dispose singletons
   dispose(s_scheduling_coordinator);
-  for (auto& plugin : s_plugins) dispose(plugin);
+  for (auto& plugin : s_plugins) {
+    dispose(plugin);
+  }
   dispose(s_actor_registry);
   dispose(s_group_manager);
   dispose(s_uniform_type_info_map);
@@ -88,7 +92,7 @@ scheduler::abstract_coordinator* singletons::get_scheduling_coordinator() {
   return lazy_get(s_scheduling_coordinator);
 }
 
-bool singletons::set_scheduling_coordinator(scheduler::abstract_coordinator*p) {
+bool singletons::set_scheduling_coordinator(scheduler::abstract_coordinator* p) {
   scheduler::abstract_coordinator* expected = nullptr;
   return s_scheduling_coordinator.compare_exchange_weak(expected, p);
 }
@@ -97,7 +101,9 @@ node_id singletons::get_node_id() {
   return node_id{lazy_get(s_node_id)};
 }
 
-logging* singletons::get_logger() { return lazy_get(s_logger); }
+logging* singletons::get_logger() {
+  return lazy_get(s_logger);
+}
 
 std::atomic<abstract_singleton*>& singletons::get_plugin_singleton(size_t id) {
   CAF_REQUIRE(id < max_plugin_singletons);

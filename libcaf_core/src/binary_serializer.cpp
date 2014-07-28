@@ -24,9 +24,7 @@
 namespace caf {
 
 class binary_writer : public static_visitor<> {
-
  public:
-
   using write_fun = binary_serializer::write_fun;
 
   binary_writer(write_fun& sink) : m_out(sink) {}
@@ -46,17 +44,14 @@ class binary_writer : public static_visitor<> {
   }
 
   template <class T>
-  void operator()(const T& value,
-          typename std::enable_if<std::is_integral<T>::value>::type* =
-            0) const {
+  typename std::enable_if<std::is_integral<T>::value>::type
+  operator()(const T& value) const {
     write_int(m_out, value);
   }
 
   template <class T>
-  void operator()(
-    const T& value,
-    typename std::enable_if<std::is_floating_point<T>::value>::type* =
-      0) const {
+  typename std::enable_if<std::is_floating_point<T>::value>::type
+  operator()(const T& value) const {
     auto tmp = detail::pack754(value);
     write_int(m_out, tmp);
   }
@@ -73,7 +68,9 @@ class binary_writer : public static_visitor<> {
     (*this)(static_cast<uint64_t>(val));
   }
 
-  void operator()(const std::string& str) const { write_string(m_out, str); }
+  void operator()(const std::string& str) const {
+    write_string(m_out, str);
+  }
 
   void operator()(const std::u16string& str) const {
     // write size as 32 bit unsigned
@@ -94,9 +91,7 @@ class binary_writer : public static_visitor<> {
   }
 
  private:
-
   write_fun& m_out;
-
 };
 
 void binary_serializer::begin_object(const uniform_type_info* uti) {
@@ -104,7 +99,7 @@ void binary_serializer::begin_object(const uniform_type_info* uti) {
 }
 
 void binary_serializer::end_object() {
-  // NOP
+  // nop
 }
 
 void binary_serializer::begin_sequence(size_t list_size) {
@@ -112,7 +107,7 @@ void binary_serializer::begin_sequence(size_t list_size) {
 }
 
 void binary_serializer::end_sequence() {
-  // NOP
+  // nop
 }
 
 void binary_serializer::write_value(const primitive_variant& value) {

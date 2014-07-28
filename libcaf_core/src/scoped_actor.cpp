@@ -34,15 +34,14 @@ namespace caf {
 namespace {
 
 struct impl : blocking_actor {
-  void act() override { }
+  void act() override {}
 };
 
 blocking_actor* alloc() {
   using namespace policy;
-  return new detail::proper_actor<impl, actor_policies<no_scheduling,
-                             not_prioritizing,
-                             no_resume,
-                             nestable_invoke>>;
+  using policies = actor_policies<no_scheduling, not_prioritizing,
+                                  no_resume, nestable_invoke>;
+  return new detail::proper_actor<impl, policies>;
 }
 
 } // namespace <anonymous>

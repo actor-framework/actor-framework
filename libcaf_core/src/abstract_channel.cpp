@@ -24,11 +24,17 @@ namespace caf {
 
 using detail::singletons;
 
-abstract_channel::abstract_channel() : m_node(singletons::get_node_id()) {}
+abstract_channel::abstract_channel() : m_node(singletons::get_node_id()) {
+  // nop
+}
 
-abstract_channel::abstract_channel(node_id nid) : m_node(std::move(nid)) {}
+abstract_channel::abstract_channel(node_id nid) : m_node(std::move(nid)) {
+  // nop
+}
 
-abstract_channel::~abstract_channel() {}
+abstract_channel::~abstract_channel() {
+  // nop
+}
 
 bool abstract_channel::is_remote() const {
   return m_node != singletons::get_node_id();

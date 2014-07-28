@@ -22,16 +22,20 @@
 namespace caf {
 namespace detail {
 
-message_data::message_data(bool is_dynamic) : m_is_dynamic(is_dynamic) {}
+message_data::message_data(bool is_dynamic) : m_is_dynamic(is_dynamic) {
+  // nop
+}
 
 bool message_data::equals(const message_data& other) const {
-  return this == &other ||
-       (size() == other.size() &&
-      std::equal(begin(), end(), other.begin(), detail::full_eq));
+  return this == &other
+         || (size() == other.size()
+             && std::equal(begin(), end(), other.begin(), detail::full_eq));
 }
 
 message_data::message_data(const message_data& other)
-    : super(), m_is_dynamic(other.m_is_dynamic) {}
+    : super(), m_is_dynamic(other.m_is_dynamic) {
+  // nop
+}
 
 const std::type_info* message_data::type_token() const {
   return &typeid(void);

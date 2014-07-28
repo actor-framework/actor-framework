@@ -24,19 +24,19 @@
 #include "caf/io/middleman.hpp"
 
 #ifdef CAF_WINDOWS
-#   include <winsock2.h>
-#   include <ws2tcpip.h> /* socklen_t, et al (MSVC20xx) */
-#   include <windows.h>
-#   include <io.h>
+# include <winsock2.h>
+# include <ws2tcpip.h> /* socklen_t, et al (MSVC20xx) */
+# include <windows.h>
+# include <io.h>
 #else
-#   include <errno.h>
-#   include <netdb.h>
-#   include <fcntl.h>
-#   include <sys/types.h>
-#   include <arpa/inet.h>
-#   include <sys/socket.h>
-#   include <netinet/in.h>
-#   include <netinet/tcp.h>
+# include <errno.h>
+# include <netdb.h>
+# include <fcntl.h>
+# include <sys/types.h>
+# include <arpa/inet.h>
+# include <sys/socket.h>
+# include <netinet/in.h>
+# include <netinet/tcp.h>
 #endif
 
 using std::string;
@@ -58,7 +58,9 @@ namespace network {
   void nonblocking(native_socket fd, bool new_value) {
     // read flags for fd
     auto rf = fcntl(fd, F_GETFL, 0);
-    if (rf == -1) throw_io_failure("unable to read socket flags");
+    if (rf == -1) {
+      throw_io_failure("unable to read socket flags");
+    }
     // calculate and set new flags
     auto wf = new_value ? (rf | O_NONBLOCK) : (rf & (~(O_NONBLOCK)));
     if (fcntl(fd, F_SETFL, wf) < 0) {
@@ -80,24 +82,23 @@ namespace network {
   string last_socket_error_as_string() {
     LPTSTR errorText = NULL;
     auto hresult = last_socket_error();
-    FormatMessage(// use system message tables to retrieve error text
-            FORMAT_MESSAGE_FROM_SYSTEM
-            // allocate buffer on local heap for error text
-            | FORMAT_MESSAGE_ALLOCATE_BUFFER
-            // Important! will fail otherwise, since we're not
-            // (and CANNOT) pass insertion parameters
-            | FORMAT_MESSAGE_IGNORE_INSERTS,
-            nullptr, // unused with FORMAT_MESSAGE_FROM_SYSTEM
-            hresult,
-            MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-            (LPTSTR) &errorText,  // output
-            0, // minimum size for output buffer
-            nullptr);   // arguments - see note
+    FormatMessage( // use system message tables to retrieve error text
+      FORMAT_MESSAGE_FROM_SYSTEM
+      // allocate buffer on local heap for error text
+      | FORMAT_MESSAGE_ALLOCATE_BUFFER
+      // Important! will fail otherwise, since we're not
+      // (and CANNOT) pass insertion parameters
+      | FORMAT_MESSAGE_IGNORE_INSERTS,
+      nullptr, // unused with FORMAT_MESSAGE_FROM_SYSTEM
+      hresult, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+      (LPTSTR) & errorText, // output
+      0,                    // minimum size for output buffer
+      nullptr);             // arguments - see note
     std::string result;
     if (errorText != nullptr) {
       result = errorText;
-       // release memory allocated by FormatMessage()
-       LocalFree(errorText);
+      // release memory allocated by FormatMessage()
+      LocalFree(errorText);
     }
     return result;
   }
@@ -118,33 +119,33 @@ namespace network {
   }
 
   /**************************************************************************\
-   * Based on work of others;                         *
-   * original header:                             *
-   *                                    *
-   * Copyright 2007, 2010 by Nathan C. Myers <ncm@cantrip.org>        *
-   * Redistribution and use in source and binary forms, with or without   *
-   * modification, are permitted provided that the following conditions   *
-   * are met:                                 *
-   *                                    *
+   * Based on work of others;                                               *
+   * original header:                                                       *
+   *                                                                        *
+   * Copyright 2007, 2010 by Nathan C. Myers <ncm@cantrip.org>              *
+   * Redistribution and use in source and binary forms, with or without     *
+   * modification, are permitted provided that the following conditions     *
+   * are met:                                                               *
+   *                                                                        *
    * Redistributions of source code must retain the above copyright notice, *
-   * this list of conditions and the following disclaimer.          *
-   *                                    *
-   * Redistributions in binary form must reproduce the above copyright    *
-   * notice, this list of conditions and the following disclaimer in the  *
+   * this list of conditions and the following disclaimer.                  *
+   *                                                                        *
+   * Redistributions in binary form must reproduce the above copyright      *
+   * notice, this list of conditions and the following disclaimer in the    *
    * documentation and/or other materials provided with the distribution.   *
-   *                                    *
+   *                                                                        *
    * The name of the author must not be used to endorse or promote products *
    * derived from this software without specific prior written permission.  *
-   *                                    *
-   * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS  *
-   * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT    *
+   *                                                                        *
+   * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS    *
+   * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT      *
    * LIMITED  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR *
    * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT   *
    * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, *
-   * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT     *
+   * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT       *
    * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,  *
    * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY  *
-   * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT  *
+   * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT    *
    * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  *
    * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.   *
   \**************************************************************************/
@@ -152,7 +153,9 @@ namespace network {
     socklen_t addrlen = sizeof(sockaddr_in);
     native_socket socks[2] = {invalid_socket, invalid_socket};
     auto listener = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (listener == invalid_socket) throw_io_failure("socket() failed");
+    if (listener == invalid_socket) {
+      throw_io_failure("socket() failed");
+    }
     union {
       sockaddr_in inaddr;
       sockaddr addr;
@@ -164,7 +167,9 @@ namespace network {
     bool success = false;
     // makes sure all sockets are closed in case of an error
     auto guard = util::make_scope_guard([&] {
-      if (success) return; // everyhting's fine
+      if (success) {
+        return; // everyhting's fine
+      }
       auto e = WSAGetLastError();
       closesocket(listener);
       closesocket(socks[0]);
@@ -173,9 +178,9 @@ namespace network {
     });
     // bind listener to a local port
     int reuse = 1;
-    ccall("setsockopt() failed", ::setsockopt, listener,
-        SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char*>(&reuse),
-        static_cast<socklen_t>(sizeof(reuse)));
+    ccall("setsockopt() failed", ::setsockopt, listener, SOL_SOCKET,
+          SO_REUSEADDR, reinterpret_cast<char*>(&reuse),
+          static_cast<socklen_t>(sizeof(reuse)));
     ccall("bind() failed", ::bind, listener, &a.addr, sizeof(a.inaddr));
     // read the port in use: win32 getsockname may only set the port number
     // (http://msdn.microsoft.com/library/ms738543.aspx):
@@ -234,10 +239,8 @@ namespace network {
   void multiplexer::run() {
     CAF_LOG_TRACE("epoll()-based multiplexer");
     while (m_shadow > 0) {
-      int presult = epoll_wait(m_epollfd,
-                   m_pollset.data(),
-                   static_cast<int>(m_pollset.size()),
-                   -1);
+      int presult = epoll_wait(m_epollfd, m_pollset.data(),
+                               static_cast<int>(m_pollset.size()), -1);
       if (presult < 0) {
         switch (errno) {
           case EINTR: {
@@ -274,7 +277,9 @@ namespace network {
     // ptr is only allowed to nullptr if fd is our pipe
     // read handle which is only registered for input
     auto old = e.ptr ? e.ptr->eventbf() : input_mask;
-    if (e.ptr) e.ptr->eventbf(e.mask);
+    if (e.ptr){
+      e.ptr->eventbf(e.mask);
+    }
     epoll_event ee;
     ee.events = e.mask;
     ee.data.ptr = e.ptr;
@@ -291,26 +296,24 @@ namespace network {
     if (epoll_ctl(m_epollfd, op, e.fd, &ee) < 0) {
       switch (last_socket_error()) {
         // supplied file descriptor is already registered
-        case EEXIST: {
+        case EEXIST:
           CAF_LOG_ERROR("file descriptor registered twice");
           --m_shadow;
           break;
-        }
         // op was EPOLL_CTL_MOD or EPOLL_CTL_DEL,
         // and fd is not registered with this epoll instance.
-        case ENOENT: {
-          CAF_LOG_ERROR("cannot delete file descriptor "
-                   "because it isn't registered");
+        case ENOENT:
+          CAF_LOG_ERROR(
+            "cannot delete file descriptor "
+            "because it isn't registered");
           if (e.mask == 0) {
             ++m_shadow;
           }
           break;
-        }
-        default: {
+        default:
           CAF_LOG_ERROR(strerror(errno));
           perror("epoll_ctl() failed");
           CAF_CRITICAL("epoll_ctl() failed");
-        }
       }
     }
   }
@@ -348,20 +351,20 @@ namespace network {
     // altering the pollset while traversing it is not exactly a
     // bright idea ...
     struct fd_event {
-      int      fd;    // our file descriptor
-      short      mask;  // the event mask returned by poll()
-      short      fd_mask; // the mask associated with fd
+      int           fd;    // our file descriptor
+      short          mask;  // the event mask returned by poll()
+      short          fd_mask; // the mask associated with fd
       event_handler* ptr;   // nullptr in case of a pipe event
     };
     std::vector<fd_event> poll_res;
     while (!m_pollset.empty()) {
       int presult;
-#       ifdef CAF_WINDOWS
+#     ifdef CAF_WINDOWS
         presult = ::WSAPoll(m_pollset.data(), m_pollset.size(), -1);
-#       else
+#     else
         presult = ::poll(m_pollset.data(),
-                 static_cast<nfds_t>(m_pollset.size()), -1);
-#       endif
+                         static_cast<nfds_t>(m_pollset.size()), -1);
+#     endif
       CAF_LOG_DEBUG("poll() on " << m_pollset.size()
                << " reported " << presult << " event(s)");
       if (presult < 0) {
@@ -420,9 +423,9 @@ namespace network {
     using namespace std;
     auto last = m_pollset.end();
     auto i = std::lower_bound(m_pollset.begin(), last, e.fd,
-                  [](const pollfd& lhs, int rhs) {
-                    return lhs.fd < rhs;
-                  });
+                              [](const pollfd& lhs, int rhs) {
+                                return lhs.fd < rhs;
+                              });
     pollfd new_element;
     new_element.fd = e.fd;
     new_element.events = static_cast<short>(e.mask);
@@ -513,8 +516,8 @@ void multiplexer::add(operation op, native_socket fd, event_handler* ptr) {
   // ptr == nullptr is only allowed to store our pipe read handle
   // and the pipe read handle is added in the ctor (not allowed here)
   CAF_REQUIRE(ptr != nullptr);
-  CAF_LOG_TRACE(CAF_TARG(op, static_cast<int>) << ", "
-           << CAF_ARG(fd) << ", " CAF_ARG(ptr));
+  CAF_LOG_TRACE(CAF_TARG(op, static_cast<int>)<< ", " << CAF_ARG(fd)
+                                              << ", " CAF_ARG(ptr));
   new_event(add_flag, op, fd, ptr);
 }
 
@@ -522,29 +525,29 @@ void multiplexer::del(operation op, native_socket fd, event_handler* ptr) {
   CAF_REQUIRE(fd != invalid_socket);
   // ptr == nullptr is only allowed when removing our pipe read handle
   CAF_REQUIRE(ptr != nullptr || fd == m_pipe.first);
-  CAF_LOG_TRACE(CAF_TARG(op, static_cast<int>) << ", "
-           << CAF_ARG(fd) << ", " CAF_ARG(ptr));
+  CAF_LOG_TRACE(CAF_TARG(op, static_cast<int>)<< ", " << CAF_ARG(fd)
+                                              << ", " CAF_ARG(ptr));
   new_event(del_flag, op, fd, ptr);
 }
 
 void multiplexer::wr_dispatch_request(runnable* ptr) {
   intptr_t ptrval = reinterpret_cast<intptr_t>(ptr);
   // on windows, we actually have sockets, otherwise we have file handles
-#   ifdef CAF_WINDOWS
-  ::send(m_pipe.second, &ptrval, sizeof(ptrval), 0);
-#   else
-  ::write(m_pipe.second, &ptrval, sizeof(ptrval));
-#   endif
+# ifdef CAF_WINDOWS
+    ::send(m_pipe.second, &ptrval, sizeof(ptrval), 0);
+# else
+    ::write(m_pipe.second, &ptrval, sizeof(ptrval));
+# endif
 }
 
 multiplexer::runnable* multiplexer::rd_dispatch_request() {
   intptr_t ptrval;
   // on windows, we actually have sockets, otherwise we have file handles
-#   ifdef CAF_WINDOWS
-  ::recv(m_pipe.first, &ptrval, sizeof(ptrval), 0);
-#   else
-  ::read(m_pipe.first, &ptrval, sizeof(ptrval));
-#   endif
+# ifdef CAF_WINDOWS
+    ::recv(m_pipe.first, &ptrval, sizeof(ptrval), 0);
+# else
+    ::read(m_pipe.first, &ptrval, sizeof(ptrval));
+# endif
   return reinterpret_cast<runnable*>(ptrval);;
 }
 
@@ -585,10 +588,10 @@ void multiplexer::handle_socket_event(native_socket fd, int mask,
   if (checkerror && (mask & error_mask)) {
     if (ptr) {
       CAF_LOG_DEBUG("error occured on socket "
-               << fd << ", error code: "
-               << last_socket_error()
-               << ", error string: "
-               << last_socket_error_as_string());
+                    << fd << ", error code: "
+                    << last_socket_error()
+                    << ", error string: "
+                    << last_socket_error_as_string());
       ptr->handle_event(operation::propagate_error);
       del(operation::read, fd, ptr);
       del(operation::write, fd, ptr);
@@ -617,7 +620,7 @@ void throw_io_failure(const char* what, bool add_errno) {
   if (add_errno) {
     std::ostringstream oss;
     oss << what << ": " << last_socket_error_as_string()
-      << " [errno: " << last_socket_error() << "]";
+        << " [errno: " << last_socket_error() << "]";
     throw network_error(oss.str());
   }
   throw network_error(what);
@@ -626,7 +629,7 @@ void throw_io_failure(const char* what, bool add_errno) {
 void tcp_nodelay(native_socket fd, bool new_value) {
   int flag = new_value ? 1 : 0;
   if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY,
-           reinterpret_cast<setsockopt_ptr>(&flag), sizeof(flag)) < 0) {
+                 reinterpret_cast<setsockopt_ptr>(&flag), sizeof(flag)) < 0) {
     throw_io_failure("unable to set TCP_NODELAY");
   }
 }
@@ -647,7 +650,7 @@ bool read_some(size_t& result, native_socket fd, void* buf, size_t len) {
   CAF_LOGF_TRACE(CAF_ARG(fd) << ", " << CAF_ARG(len));
   auto sres = ::recv(fd, reinterpret_cast<socket_recv_ptr>(buf), len, 0);
   CAF_LOGF_DEBUG("tried to read " << len << " bytes from socket " << fd
-          << ", recv returned " << sres);
+                                  << ", recv returned " << sres);
   if (is_error(sres, true) || sres == 0) {
     // recv returns 0  when the peer has performed an orderly shutdown
     return false;
@@ -660,8 +663,9 @@ bool write_some(size_t& result, native_socket fd, const void* buf, size_t len) {
   CAF_LOGF_TRACE(CAF_ARG(fd) << ", " << CAF_ARG(len));
   auto sres = ::send(fd, reinterpret_cast<socket_send_ptr>(buf), len, 0);
   CAF_LOGF_DEBUG("tried to write " << len << " bytes to socket " << fd
-          << ", send returned " << sres);
-  if (is_error(sres, true)) return false;
+                                   << ", send returned " << sres);
+  if (is_error(sres, true))
+    return false;
   result = (sres > 0) ? static_cast<size_t>(sres) : 0;
   return true;
 }
@@ -672,8 +676,8 @@ bool try_accept(native_socket& result, native_socket fd) {
   memset(&addr, 0, sizeof(addr));
   socklen_t addrlen = sizeof(addr);
   result = ::accept(fd, &addr, &addrlen);
-  CAF_LOGF_DEBUG("tried to accept a new connection from from socket " << fd
-          << ", accept returned " << result);
+  CAF_LOGF_DEBUG("tried to accept a new connection from from socket "
+                 << fd << ", accept returned " << result);
   if (result == invalid_socket) {
     auto err = last_socket_error();
     if (!would_block_or_temporarily_unavailable(err)) {
@@ -746,34 +750,28 @@ acceptor_manager::~acceptor_manager() {
 }
 
 struct socket_guard {
-
  public:
-
   socket_guard(native_socket fd) : m_fd(fd) {
     // nop
   }
-
   ~socket_guard() {
-    if (m_fd != invalid_socket) closesocket(m_fd);
+    if (m_fd != invalid_socket)
+      closesocket(m_fd);
   }
-
   void release() {
     m_fd = invalid_socket;
   }
-
  private:
-
   native_socket m_fd;
-
 };
 
 native_socket new_ipv4_connection_impl(const std::string& host, uint16_t port) {
   CAF_LOGF_TRACE(CAF_ARG(host) << ", " << CAF_ARG(port));
   CAF_LOGF_INFO("try to connect to " << host << " on port " << port);
-#   ifdef CAF_WINDOWS
+# ifdef CAF_WINDOWS
     // make sure TCP has been initialized via WSAStartup
     get_multiplexer_singleton();
-#   endif
+# endif
   sockaddr_in serv_addr;
   hostent* server;
   native_socket fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -789,14 +787,12 @@ native_socket new_ipv4_connection_impl(const std::string& host, uint16_t port) {
   }
   memset(&serv_addr, 0, sizeof(serv_addr));
   serv_addr.sin_family = AF_INET;
-  memmove(&serv_addr.sin_addr.s_addr,
-      server->h_addr,
-      static_cast<size_t>(server->h_length));
+  memmove(&serv_addr.sin_addr.s_addr, server->h_addr,
+          static_cast<size_t>(server->h_length));
   serv_addr.sin_port = htons(port);
   CAF_LOGF_DEBUG("call connect()");
-  if (connect(fd, (const sockaddr*) &serv_addr, sizeof(serv_addr)) != 0) {
-    CAF_LOGF_ERROR("could not connect to to " << host
-            << " on port " << port);
+  if (connect(fd, (const sockaddr*)&serv_addr, sizeof(serv_addr)) != 0) {
+    CAF_LOGF_ERROR("could not connect to to " << host << " on port " << port);
     throw network_error("could not connect to host");
   }
   sguard.release();
@@ -811,10 +807,10 @@ default_socket new_ipv4_connection(const std::string& host, uint16_t port) {
 native_socket new_ipv4_acceptor_impl(uint16_t port, const char* addr) {
   CAF_LOGF_TRACE(CAF_ARG(port)
           << ", addr = " << (addr ? addr : "nullptr"));
-#   ifdef CAF_WINDOWS
+# ifdef CAF_WINDOWS
     // make sure TCP has been initialized via WSAStartup
     get_multiplexer_singleton();
-#   endif
+# endif
   native_socket fd = socket(AF_INET, SOCK_STREAM, 0);
   if (fd == invalid_socket) {
     throw network_error("could not create server socket");
@@ -823,20 +819,19 @@ native_socket new_ipv4_acceptor_impl(uint16_t port, const char* addr) {
   socket_guard sguard(fd);
   int on = 1;
   if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
-           reinterpret_cast<setsockopt_ptr>(&on), sizeof(on)) < 0) {
+                 reinterpret_cast<setsockopt_ptr>(&on), sizeof(on)) < 0) {
     throw_io_failure("unable to set SO_REUSEADDR");
   }
   struct sockaddr_in serv_addr;
-  memset((char*) &serv_addr, 0, sizeof(serv_addr));
+  memset((char*)&serv_addr, 0, sizeof(serv_addr));
   serv_addr.sin_family = AF_INET;
-  if (! addr) {
+  if (!addr) {
     serv_addr.sin_addr.s_addr = INADDR_ANY;
-  }
-  else if (::inet_pton(AF_INET, addr, &serv_addr.sin_addr) <= 0) {
+  } else if (::inet_pton(AF_INET, addr, &serv_addr.sin_addr) <= 0) {
     throw network_error("invalid IPv4 address");
   }
   serv_addr.sin_port = htons(port);
-  if (bind(fd, (sockaddr*) &serv_addr, sizeof(serv_addr)) < 0) {
+  if (bind(fd, (sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
     throw bind_failure(last_socket_error_as_string());
   }
   if (listen(fd, SOMAXCONN) != 0) {
@@ -849,8 +844,7 @@ native_socket new_ipv4_acceptor_impl(uint16_t port, const char* addr) {
 }
 
 default_socket_acceptor new_ipv4_acceptor(uint16_t port, const char* addr) {
-  CAF_LOGF_TRACE(CAF_ARG(port)
-          << ", addr = " << (addr ? addr : "nullptr"));
+  CAF_LOGF_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
   auto& backend = get_multiplexer_singleton();
   return default_socket_acceptor{backend, new_ipv4_acceptor_impl(port, addr)};
 }

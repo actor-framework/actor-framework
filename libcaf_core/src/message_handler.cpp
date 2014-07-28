@@ -24,9 +24,13 @@
 
 namespace caf {
 
-message_handler::message_handler(impl_ptr ptr) : m_impl(std::move(ptr)) { }
+message_handler::message_handler(impl_ptr ptr) : m_impl(std::move(ptr)) {
+  // nop
+}
 
-void detail::behavior_impl::handle_timeout() { }
+void detail::behavior_impl::handle_timeout() {
+  // nop
+}
 
 } // namespace caf
 
@@ -51,4 +55,3 @@ behavior_impl_ptr extract(const message_handler& arg) {
 
 } // namespace util
 } // namespace caf
-

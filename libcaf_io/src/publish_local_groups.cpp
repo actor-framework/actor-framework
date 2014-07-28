@@ -26,19 +26,20 @@ namespace caf {
 namespace io {
 
 namespace {
+
 struct group_nameserver : event_based_actor {
   behavior make_behavior() override {
-    return (
+    return {
       on(atom("GET_GROUP"), arg_match) >> [](const std::string& name) {
         return make_message(atom("GROUP"), group::get("local", name));
       },
       on(atom("SHUTDOWN")) >> [=] {
         quit();
       }
-    );
+    };
   }
-
 };
+
 } // namespace <anonymous>
 
 void publish_local_groups(uint16_t port, const char* addr) {
@@ -48,8 +49,7 @@ void publish_local_groups(uint16_t port, const char* addr) {
   }
   catch (std::exception&) {
     gn->enqueue(invalid_actor_addr, message_id::invalid,
-          make_message(atom("SHUTDOWN")),
-          nullptr);
+                make_message(atom("SHUTDOWN")), nullptr);
     throw;
   }
 }

@@ -25,18 +25,26 @@
 
 namespace caf {
 
-message::message(detail::message_data* ptr) : m_vals(ptr) {}
+message::message(detail::message_data* ptr) : m_vals(ptr) {
+  // nop
+}
 
-message::message(message&& other) : m_vals(std::move(other.m_vals)) {}
+message::message(message&& other) : m_vals(std::move(other.m_vals)) {
+  // nop
+}
 
-message::message(const data_ptr& vals) : m_vals(vals) {}
+message::message(const data_ptr& vals) : m_vals(vals) {
+  // nop
+}
 
 message& message::operator=(message&& other) {
   m_vals.swap(other.m_vals);
   return *this;
 }
 
-void message::reset() { m_vals.reset(); }
+void message::reset() {
+  m_vals.reset();
+}
 
 void* message::mutable_at(size_t p) {
   CAF_REQUIRE(m_vals);
@@ -60,15 +68,23 @@ bool message::equals(const message& other) const {
 
 message message::drop(size_t n) const {
   CAF_REQUIRE(m_vals);
-  if (n == 0) return *this;
-  if (n >= size()) return message{};
+  if (n == 0) {
+    return *this;
+  }
+  if (n >= size()) {
+    return message{};
+  }
   return message{detail::decorated_tuple::create(m_vals, n)};
 }
 
 message message::drop_right(size_t n) const {
   CAF_REQUIRE(m_vals);
-  if (n == 0) return *this;
-  if (n >= size()) return message{};
+  if (n == 0) {
+    return *this;
+  }
+  if (n >= size()) {
+    return message{};
+  }
   std::vector<size_t> mapping(size() - n);
   size_t i = 0;
   std::generate(mapping.begin(), mapping.end(), [&] { return i++; });

@@ -47,8 +47,8 @@
 #include "caf/detail/get_mac_addresses.hpp"
 
 #ifdef CAF_WINDOWS
-#   include <io.h>
-#   include <fcntl.h>
+# include <io.h>
+# include <fcntl.h>
 #endif
 
 namespace caf {
@@ -82,7 +82,7 @@ inline void serialize_impl(const new_data_msg& msg, serializer* sink) {
   if (buf_size != msg.buf.size()) { // narrowing error
     std::ostringstream oss;
     oss << "attempted to send more than "
-      << std::numeric_limits<uint32_t>::max() << " bytes";
+        << std::numeric_limits<uint32_t>::max() << " bytes";
     auto errstr = oss.str();
     CAF_LOGF_INFO(errstr);
     throw std::ios_base::failure(std::move(errstr));
@@ -100,16 +100,16 @@ inline void deserialize_impl(new_data_msg& msg, deserializer* source) {
 
 // connection_closed_msg & acceptor_closed_msg have the same fields
 template <class T>
-typename std::enable_if<std::is_same<T, connection_closed_msg>::value ||
-            std::is_same<T, acceptor_closed_msg>::value>::type
+typename std::enable_if<std::is_same<T, connection_closed_msg>::value
+                        || std::is_same<T, acceptor_closed_msg>::value>::type
 serialize_impl(const T& dm, serializer* sink) {
   serialize_impl(dm.handle, sink);
 }
 
 // connection_closed_msg & acceptor_closed_msg have the same fields
 template <class T>
-typename std::enable_if<std::is_same<T, connection_closed_msg>::value ||
-            std::is_same<T, acceptor_closed_msg>::value>::type
+typename std::enable_if<std::is_same<T, connection_closed_msg>::value
+                        || std::is_same<T, acceptor_closed_msg>::value>::type
 deserialize_impl(T& dm, deserializer* source) {
   deserialize_impl(dm.handle, source);
 }
@@ -153,7 +153,6 @@ class uti_impl : public uniform_type_info {
   }
 
  private:
-
   static inline T& deref(void* ptr) {
     return *reinterpret_cast<T*>(ptr);
   }
@@ -197,9 +196,7 @@ middleman* middleman::instance() {
 
 void middleman::add_broker(broker_ptr bptr) {
   m_brokers.insert(bptr);
-  bptr->attach_functor([=](uint32_t) {
-    m_brokers.erase(bptr);
-  });
+  bptr->attach_functor([=](uint32_t) { m_brokers.erase(bptr); });
 }
 
 void middleman::initialize() {

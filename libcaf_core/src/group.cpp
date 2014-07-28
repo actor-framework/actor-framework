@@ -26,9 +26,13 @@
 
 namespace caf {
 
-group::group(const invalid_group_t&) : m_ptr(nullptr) {}
+group::group(const invalid_group_t&) : m_ptr(nullptr) {
+  // nop
+}
 
-group::group(abstract_group_ptr ptr) : m_ptr(std::move(ptr)) {}
+group::group(abstract_group_ptr ptr) : m_ptr(std::move(ptr)) {
+  // nop
+}
 
 group& group::operator=(const invalid_group_t&) {
   m_ptr.reset();

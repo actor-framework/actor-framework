@@ -21,9 +21,13 @@
 
 namespace caf {
 
-attachable::~attachable() {}
+attachable::~attachable() {
+  // nop
+}
 
 attachable::token::token(const std::type_info& tinfo, const void* vptr)
-    : subtype(tinfo), ptr(vptr) {}
+    : subtype(tinfo), ptr(vptr) {
+  // nop
+}
 
 } // namespace caf

@@ -45,28 +45,27 @@ void actor_namespace::write(serializer* sink, const actor_addr& addr) {
   if (!addr) {
     node_id::host_id_type zero;
     std::fill(zero.begin(), zero.end(), 0);
-    sink->write_value(static_cast<actor_id>(0));     // actor id
-    sink->write_value(static_cast<uint32_t>(0));     // process id
+    sink->write_value(static_cast<actor_id>(0));         // actor id
+    sink->write_value(static_cast<uint32_t>(0));         // process id
     sink->write_raw(node_id::host_id_size, zero.data()); // host id
   } else {
     // register locally running actors to be able to deserialize them later
     if (!addr.is_remote()) {
-      detail::singletons::get_actor_registry()->put(
-        addr.id(), actor_cast<abstract_actor_ptr>(addr));
+      auto reg = detail::singletons::get_actor_registry();
+      reg->put(addr.id(), actor_cast<abstract_actor_ptr>(addr));
     }
     auto pinf = addr.node();
-    sink->write_value(addr.id());     // actor id
-    sink->write_value(pinf.process_id()); // process id
-    sink->write_raw(node_id::host_id_size,
-            pinf.host_id().data()); // host id
+    sink->write_value(addr.id());                                  // actor id
+    sink->write_value(pinf.process_id());                          // process id
+    sink->write_raw(node_id::host_id_size, pinf.host_id().data()); // host id
   }
 }
 
 actor_addr actor_namespace::read(deserializer* source) {
   CAF_REQUIRE(source != nullptr);
   node_id::host_id_type hid;
-  auto aid = source->read<uint32_t>();         // actor id
-  auto pid = source->read<uint32_t>();         // process id
+  auto aid = source->read<uint32_t>();                 // actor id
+  auto pid = source->read<uint32_t>();                 // process id
   source->read_raw(node_id::host_id_size, hid.data()); // host id
   node_id this_node = detail::singletons::get_node_id();
   if (aid == 0 && pid == 0) {
@@ -93,18 +92,22 @@ actor_proxy_ptr actor_namespace::get(const key_type& node, actor_id aid) {
   auto i = submap.find(aid);
   if (i != submap.end()) {
     auto res = i->second->get();
-    if (!res) submap.erase(i); // instance is expired
+    if (!res) {
+      submap.erase(i); // instance is expired
+    }
     return res;
   }
   return nullptr;
 }
 
 actor_proxy_ptr actor_namespace::get_or_put(const key_type& node,
-                      actor_id aid) {
+                                            actor_id aid) {
   auto& submap = m_proxies[node];
   auto& anchor = submap[aid];
   actor_proxy_ptr result;
-  if (anchor) result = anchor->get();
+  if (anchor) {
+    result = anchor->get();
+  }
   // replace anchor if we've created one using the default ctor
   // or if we've found an expired one in the map
   if (!anchor || !result) {
@@ -114,7 +117,9 @@ actor_proxy_ptr actor_namespace::get_or_put(const key_type& node,
   return result;
 }
 
-bool actor_namespace::empty() const { return m_proxies.empty(); }
+bool actor_namespace::empty() const {
+  return m_proxies.empty();
+}
 
 void actor_namespace::erase(const key_type& inf) {
   CAF_LOG_TRACE(CAF_TARG(inf, to_string));
@@ -126,7 +131,9 @@ void actor_namespace::erase(const key_type& inf, actor_id aid) {
   auto i = m_proxies.find(inf);
   if (i != m_proxies.end()) {
     i->second.erase(aid);
-    if (i->second.empty()) m_proxies.erase(i);
+    if (i->second.empty()) {
+      m_proxies.erase(i);
+    }
   }
 }
 

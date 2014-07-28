@@ -47,7 +47,7 @@
 #ifdef DEBUG_PARSER
 # include <iostream>
   namespace {
-    size_t s_indentation = 0;
+  size_t s_indentation = 0;
   } // namespace <anonymous>
 # define PARSER_INIT(message)                                                  \
     std::cout << std::string(s_indentation, ' ') << ">>> " << message          \
@@ -117,13 +117,13 @@ string map2decorated(string&& name) {
                      << mapped_int_names[i->size][i->is_signed ? 1 : 0]);
     return mapped_int_names[i->size][i->is_signed ? 1 : 0];
   }
-#ifdef DEBUG_PARSER
-  auto mapped = mapped_name_by_decorated_name(name.c_str());
-  PARSER_OUT(mapped != name, name << " => " << string{mapped});
-  return mapped;
-#else
-  return mapped_name_by_decorated_name(std::move(name));
-#endif
+# ifdef DEBUG_PARSER
+    auto mapped = mapped_name_by_decorated_name(name.c_str());
+    PARSER_OUT(mapped != name, name << " => " << string{mapped});
+    return mapped;
+# else
+    return mapped_name_by_decorated_name(std::move(name));
+# endif
 }
 
 class parse_tree {
@@ -142,7 +142,9 @@ class parse_tree {
     if (has_children()) {
       string sub_result;
       for (auto& child : m_children) {
-        if (!sub_result.empty()) sub_result += "::";
+        if (!sub_result.empty()) {
+          sub_result += "::";
+        }
         sub_result += child.compile(true);
       }
       result += map2decorated(std::move(sub_result));
@@ -152,7 +154,9 @@ class parse_tree {
         full_name += "<";
         for (auto& tparam : m_template_parameters) {
           // decorate each single template parameter
-          if (full_name.back() != '<') full_name += ",";
+          if (full_name.back() != '<') {
+            full_name += ",";
+          }
           full_name += tparam.compile();
         }
         full_name += ">";
@@ -161,9 +165,15 @@ class parse_tree {
       result += map2decorated(std::move(full_name));
     }
     if (!parent_invoked) {
-      if (m_pointer) result += "*";
-      if (m_lvalue_ref) result += "&";
-      if (m_rvalue_ref) result += "&&";
+      if (m_pointer) {
+        result += "*";
+      }
+      if (m_lvalue_ref) {
+        result += "&";
+      }
+      if (m_rvalue_ref) {
+        result += "&&";
+      }
     }
     return map2decorated(std::move(result));
   }
@@ -177,7 +187,7 @@ class parse_tree {
     parse_tree result;
     using range = std::pair<Iterator, Iterator>;
     std::vector<range> subranges;
-    /* lifetime scope of temporary variables needed to fill 'subranges' */ {
+    { // lifetime scope of temporary variables needed to fill 'subranges'
       auto find_end = [&](Iterator from)->Iterator {
         auto open = 1;
         for (auto i = from + 1; i != last && open > 0; ++i) {
@@ -193,7 +203,6 @@ class parse_tree {
           }
         }
         return last;
-
       };
       auto sub_first = find(first, last, '<');
       while (sub_first != last) {
@@ -204,22 +213,22 @@ class parse_tree {
     }
     auto islegal = [](char c) {
       return isalnum(c) || c == ':' || c == '_';
-
     };
     vector<string> tokens;
     tokens.push_back("");
     vector<Iterator> scope_resolution_ops;
-    auto is_in_subrange = [&](Iterator i)->bool {
+    auto is_in_subrange = [&](Iterator i) -> bool {
       for (auto& r : subranges) {
-        if (i >= r.first && i < r.second) return true;
+        if (i >= r.first && i < r.second) {
+          return true;
+        }
       }
       return false;
-
     };
     auto add_child = [&](Iterator ch_first, Iterator ch_last) {
       PARSER_OUT(true, "new child: [" << distance(first, ch_first) << ", "
-                      << ", " << distance(first, ch_last)
-                      << ")");
+                                      << ", " << distance(first, ch_last)
+                                      << ")");
       result.m_children.push_back(parse(ch_first, ch_last));
     };
     // scan string for "::" separators
@@ -253,26 +262,23 @@ class parse_tree {
       } else {
         non_template_ranges.emplace_back(first, subranges[0].first);
         for (size_t i = 1; i < subranges.size(); ++i) {
-          non_template_ranges.emplace_back(
-            subranges[i - 1].second + 1, subranges[i].first);
+          non_template_ranges.emplace_back(subranges[i - 1].second + 1,
+                                           subranges[i].first);
         }
-        non_template_ranges.emplace_back(subranges.back().second + 1,
-                         last);
+        non_template_ranges.emplace_back(subranges.back().second + 1, last);
       }
       for (auto& ntr : non_template_ranges) {
         for (auto i = ntr.first; i != ntr.second; ++i) {
           char c = *i;
           if (islegal(c)) {
-            if (!tokens.back().empty() &&
-              !islegal(tokens.back().back())) {
+            if (!tokens.back().empty() && !islegal(tokens.back().back())) {
               tokens.push_back("");
             }
             tokens.back() += c;
           } else if (c == ' ') {
             tokens.push_back("");
           } else if (c == '&') {
-            if (tokens.back().empty() ||
-              tokens.back().back() == '&') {
+            if (tokens.back().empty() || tokens.back().back() == '&') {
               tokens.back() += c;
             } else {
               tokens.push_back("&");
@@ -285,11 +291,11 @@ class parse_tree {
       }
       if (!subranges.empty()) {
         auto& range0 = subranges.front();
-        PARSER_OUT(true, "subrange: ["
-                   << distance(first, range0.first + 1) << ","
-                   << distance(first, range0.second) << ")");
-        result.m_template_parameters =
-          parse_tpl_args(range0.first + 1, range0.second);
+        PARSER_OUT(true, "subrange: [" << distance(first, range0.first + 1)
+                                       << "," << distance(first, range0.second)
+                                       << ")");
+        result.m_template_parameters
+          = parse_tpl_args(range0.first + 1, range0.second);
       }
       for (auto& token : tokens) {
         if (token == "const") {
@@ -314,7 +320,7 @@ class parse_tree {
     }
     PARSER_OUT(!subranges.empty(), subranges.size() << " subranges");
     PARSER_OUT(!result.m_children.empty(), result.m_children.size()
-                           << " children");
+                                           << " children");
     return result;
   }
 

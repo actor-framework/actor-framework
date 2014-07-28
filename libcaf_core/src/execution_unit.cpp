@@ -21,6 +21,8 @@
 
 namespace caf {
 
-execution_unit::~execution_unit() {}
+execution_unit::~execution_unit() {
+  // nop
+}
 
 } // namespace caf

@@ -48,7 +48,8 @@ node_id::host_id_type s_invalid_host_id;
 uint8_t hex_char_value(char c) {
   if (isdigit(c)) {
     return static_cast<uint8_t>(c - '0');
-  } else if (isalpha(c)) {
+  }
+  if (isalpha(c)) {
     if (c >= 'a' && c <= 'f') {
       return static_cast<uint8_t>((c - 'a') + 10);
     } else if (c >= 'A' && c <= 'F') {
@@ -59,7 +60,7 @@ uint8_t hex_char_value(char c) {
 }
 
 void host_id_from_string(const std::string& hash,
-             node_id::host_id_type& node_id) {
+                         node_id::host_id_type& node_id) {
   if (hash.size() != (node_id.size() * 2)) {
     throw std::invalid_argument("string argument is not a node id hash");
   }
@@ -96,13 +97,21 @@ bool equal(const std::string& hash, const node_id::host_id_type& node_id) {
   return true;
 }
 
-node_id::~node_id() {}
+node_id::~node_id() {
+  // nop
+}
 
-node_id::node_id(const invalid_node_id_t&) {}
+node_id::node_id(const invalid_node_id_t&) {
+  // nop
+}
 
-node_id::node_id(const node_id& other) : m_data(other.m_data) {}
+node_id::node_id(const node_id& other) : m_data(other.m_data) {
+  // nop
+}
 
-node_id::node_id(intrusive_ptr<data> dataptr) : m_data(std::move(dataptr)) {}
+node_id::node_id(intrusive_ptr<data> dataptr) : m_data(std::move(dataptr)) {
+  // nop
+}
 
 node_id::node_id(uint32_t procid, const std::string& b) {
   m_data.reset(new data);
@@ -110,7 +119,9 @@ node_id::node_id(uint32_t procid, const std::string& b) {
   host_id_from_string(b, m_data->host_id);
 }
 
-node_id::node_id(uint32_t a, const host_id_type& b) : m_data(new data{a, b}) {}
+node_id::node_id(uint32_t a, const host_id_type& b) : m_data(new data{a, b}) {
+  // nop
+}
 
 std::string to_string(const node_id::host_id_type& node_id) {
   std::ostringstream oss;
@@ -128,19 +139,24 @@ int node_id::compare(const invalid_node_id_t&) const {
 }
 
 int node_id::compare(const node_id& other) const {
-  if (this == &other) return 0;     // shortcut for comparing to self
-  if (m_data == other.m_data) return 0; // shortcut for identical instances
+  if (this == &other) {
+    return 0; // shortcut for comparing to self
+  }
+  if (m_data == other.m_data) {
+    return 0; // shortcut for identical instances
+  }
   if ((m_data != nullptr) != (other.m_data != nullptr)) {
     return m_data ? 1 : -1; // invalid instances are always smaller
   }
   int tmp = strncmp(reinterpret_cast<const char*>(host_id().data()),
-            reinterpret_cast<const char*>(other.host_id().data()),
-            host_id_size);
+                    reinterpret_cast<const char*>(other.host_id().data()),
+                    host_id_size);
   if (tmp == 0) {
-    if (process_id() < other.process_id())
+    if (process_id() < other.process_id()) {
       return -1;
-    else if (process_id() == other.process_id())
+    } else if (process_id() == other.process_id()) {
       return 0;
+    }
     return 1;
   }
   return tmp;
@@ -153,9 +169,13 @@ std::string to_string(const node_id& what) {
 }
 
 node_id::data::data(uint32_t procid, host_id_type hid)
-    : process_id(procid), host_id(hid) {}
+    : process_id(procid), host_id(hid) {
+  // nop
+}
 
-node_id::data::~data() {}
+node_id::data::~data() {
+  // nop
+}
 
 // initializes singleton
 node_id::data* node_id::data::create_singleton() {

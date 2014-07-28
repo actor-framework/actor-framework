@@ -45,8 +45,12 @@ actor_ostream& actor_ostream::flush() {
 
 namespace std {
 
-caf::actor_ostream& endl(caf::actor_ostream& o) { return o.write("\n"); }
+caf::actor_ostream& endl(caf::actor_ostream& o) {
+  return o.write("\n");
+}
 
-caf::actor_ostream& flush(caf::actor_ostream& o) { return o.flush(); }
+caf::actor_ostream& flush(caf::actor_ostream& o) {
+  return o.flush();
+}
 
 } // namespace std

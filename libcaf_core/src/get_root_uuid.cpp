@@ -91,26 +91,25 @@ namespace detail {
 
 namespace {
 
-struct columns_iterator
-  : std::iterator<std::forward_iterator_tag, vector<string>> {
-
-  columns_iterator(ifstream* s = nullptr) : fs(s) {}
-
-  vector<string>& operator*() { return cols; }
-
+struct columns_iterator : std::iterator<std::forward_iterator_tag,
+                                        vector<string>> {
+  columns_iterator(ifstream* s = nullptr) : fs(s) {
+    // nop
+  }
+  vector<string>& operator*() {
+    return cols;
+  }
   columns_iterator& operator++() {
     string line;
-    if (!std::getline(*fs, line))
+    if (!std::getline(*fs, line)) {
       fs = nullptr;
-    else {
+    } else {
       split(cols, line, is_any_of(" "), token_compress_on);
     }
     return *this;
   }
-
   ifstream* fs;
   vector<string> cols;
-
 };
 
 bool operator==(const columns_iterator& lhs, const columns_iterator& rhs) {
@@ -141,7 +140,6 @@ std::string get_root_uuid() {
   vector<string> hw_addresses;
   auto ctoi = [](char c)->unsigned {
     return static_cast<unsigned char>(c);
-
   };
   // iterate through interfaces.
   auto ifr = ifc.ifc_req;
@@ -172,21 +170,24 @@ std::string get_root_uuid() {
   ifstream fs;
   fs.open("/etc/fstab", std::ios_base::in);
   columns_iterator end;
-  auto i =
-    find_if(columns_iterator{&fs}, end, [](const vector<string>& cols) {
-      return cols.size() == 6 && cols[1] == "/";
-    });
+  auto i = find_if(columns_iterator{&fs}, end, [](const vector<string>& cols) {
+    return cols.size() == 6 && cols[1] == "/";
+  });
   if (i != end) {
     uuid = move((*i)[0]);
     const char cstr[] = {"UUID="};
     auto slen = sizeof(cstr) - 1;
-    if (uuid.compare(0, slen, cstr) == 0) uuid.erase(0, slen);
+    if (uuid.compare(0, slen, cstr) == 0) {
+      uuid.erase(0, slen);
+    }
     // UUIDs are formatted as 8-4-4-4-12 hex digits groups
     auto cpy = uuid;
     replace_if(cpy.begin(), cpy.end(), ::isxdigit, 'F');
     // discard invalid UUID
-    if (cpy != uuid_format) uuid.clear();
-    //   "\\?\Volume{5ec70abf-058c-11e1-bdda-806e6f6e6963}\"
+    if (cpy != uuid_format) {
+      uuid.clear();
+    }
+    // "\\?\Volume{5ec70abf-058c-11e1-bdda-806e6f6e6963}\"
   }
   return uuid;
 }
@@ -218,24 +219,23 @@ void mv(std::string& lhs, std::string&& rhs) { lhs = std::move(rhs); }
 // if TCHAR is defined as WCHAR, we have to do unicode conversion
 void mv(std::string& lhs, const std::basic_string<WCHAR>& rhs) {
   auto size_needed = WideCharToMultiByte(CP_UTF8, 0, rhs.c_str(),
-                       static_cast<int>(rhs.size()),
-                       nullptr, 0, nullptr, nullptr);
+                                         static_cast<int>(rhs.size()),
+                                         nullptr, 0, nullptr, nullptr);
   lhs.resize(size_needed);
   WideCharToMultiByte(CP_UTF8, 0, rhs.c_str(), static_cast<int>(rhs.size()),
-            &lhs[0], size_needed, nullptr, nullptr);
+                      &lhs[0], size_needed, nullptr, nullptr);
 }
 
 std::string get_root_uuid() {
   using tchar_str = std::basic_string<TCHAR>;
   string uuid;
-  TCHAR buf[max_drive_name];    // temporary buffer for volume name
+  TCHAR buf[max_drive_name];      // temporary buffer for volume name
   tchar_str drive = TEXT("c:\\"); // string "template" for drive specifier
   // walk through legal drive letters, skipping floppies
   for (TCHAR i = TEXT('c'); i < TEXT('z'); i++) {
     // Stamp the drive for the appropriate letter.
     drive[0] = i;
-    if (GetVolumeNameForVolumeMountPoint(drive.c_str(), buf,
-                       max_drive_name)) {
+    if (GetVolumeNameForVolumeMountPoint(drive.c_str(), buf, max_drive_name)) {
       tchar_str drive_name = buf;
       auto first = drive_name.find(TEXT("Volume{"));
       if (first != std::string::npos) {

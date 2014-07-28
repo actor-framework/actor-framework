@@ -26,14 +26,16 @@ using std::vector;
 
 namespace caf {
 
-void split(vector<string>& result, const string& str,
-       const string& delims, bool keep_all) {
+void split(vector<string>& result, const string& str, const string& delims,
+           bool keep_all) {
   size_t pos = 0;
   size_t prev = 0;
   while ((pos = str.find_first_of(delims, prev)) != string::npos) {
     if (pos > prev) {
       auto substr = str.substr(prev, pos - prev);
-      if (!substr.empty() || keep_all) result.push_back(std::move(substr));
+      if (!substr.empty() || keep_all) {
+        result.push_back(std::move(substr));
+      }
     }
     prev = pos + 1;
   }

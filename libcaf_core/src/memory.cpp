@@ -41,12 +41,14 @@ pthread_once_t s_key_once = PTHREAD_ONCE_INIT;
 
 } // namespace <anonymous>
 
-memory_cache::~memory_cache() {}
+memory_cache::~memory_cache() {
+  // nop
+}
 
 using cache_map = map<const type_info*, unique_ptr<memory_cache>>;
 
 void cache_map_destructor(void* ptr) {
-  if (ptr) delete reinterpret_cast<cache_map*>(ptr);
+  delete reinterpret_cast<cache_map*>(ptr);
 }
 
 void make_cache_map() {
@@ -69,12 +71,14 @@ cache_map& get_cache_map() {
 memory_cache* memory::get_cache_map_entry(const type_info* tinf) {
   auto& cache = get_cache_map();
   auto i = cache.find(tinf);
-  if (i != cache.end()) return i->second.get();
+  if (i != cache.end()) {
+    return i->second.get();
+  }
   return nullptr;
 }
 
 void memory::add_cache_map_entry(const type_info* tinf,
-                 memory_cache* instance) {
+                                 memory_cache* instance) {
   auto& cache = get_cache_map();
   cache[tinf].reset(instance);
 }

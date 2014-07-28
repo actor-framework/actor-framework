@@ -57,19 +57,16 @@ inline void range_check(pointer begin, pointer end, size_t read_size) {
 pointer read_range(pointer begin, pointer end, std::string& storage);
 
 template <class T>
-pointer read_range(pointer begin, pointer end, T& storage,
-           typename std::enable_if<std::is_integral<T>::value>::type* =
-             0) {
+typename std::enable_if<std::is_integral<T>::value, pointer>::type
+read_range(pointer begin, pointer end, T& storage) {
   range_check(begin, end, sizeof(T));
   memcpy(&storage, begin, sizeof(T));
   return advanced(begin, sizeof(T));
 }
 
 template <class T>
-pointer
-read_range(pointer begin, pointer end, T& storage,
-       typename std::enable_if<std::is_floating_point<T>::value>::type* =
-         0) {
+typename std::enable_if<std::is_floating_point<T>::value, pointer>::type
+read_range(pointer begin, pointer end, T& storage) {
   typename detail::ieee_754_trait<T>::packed_type tmp;
   auto result = read_range(begin, end, tmp);
   storage = detail::unpack754(tmp);
@@ -92,9 +89,8 @@ pointer read_range(pointer begin, pointer end, std::string& storage) {
   range_check(begin, end, str_size);
   storage.clear();
   storage.reserve(str_size);
-  pointer cpy_end = advanced(begin, str_size);
-  copy(as_char_pointer(begin), as_char_pointer(cpy_end),
-     back_inserter(storage));
+  pointer last = advanced(begin, str_size);
+  copy(as_char_pointer(begin), as_char_pointer(last), back_inserter(storage));
   return advanced(begin, str_size);
 }
 
@@ -131,36 +127,39 @@ pointer read_range(pointer begin, pointer end, std::u32string& storage) {
 }
 
 struct pt_reader : static_visitor<> {
-
   pointer begin;
   pointer end;
-
-  pt_reader(pointer bbegin, pointer bend) : begin(bbegin), end(bend) {}
-
-  inline void operator()(none_t&) {}
-
+  pt_reader(pointer first, pointer last) : begin(first), end(last) {
+    // nop
+  }
+  inline void operator()(none_t&) {
+    // nop
+  }
   template <class T>
   inline void operator()(T& value) {
     begin = read_range(begin, end, value);
   }
-
 };
 
 } // namespace <anonmyous>
 
 binary_deserializer::binary_deserializer(const void* buf, size_t buf_size,
-                     actor_namespace* ns)
-    : super(ns), m_pos(buf), m_end(advanced(buf, buf_size)) {}
+                                         actor_namespace* ns)
+    : super(ns), m_pos(buf), m_end(advanced(buf, buf_size)) {
+  // nop
+}
 
 binary_deserializer::binary_deserializer(const void* bbegin, const void* bend,
-                     actor_namespace* ns)
-    : super(ns), m_pos(bbegin), m_end(bend) {}
+                                         actor_namespace* ns)
+    : super(ns), m_pos(bbegin), m_end(bend) {
+  // nop
+}
 
 const uniform_type_info* binary_deserializer::begin_object() {
   std::string tname;
   m_pos = read_range(m_pos, m_end, tname);
-  auto uti =
-    detail::singletons::get_uniform_type_info_map()->by_uniform_name(tname);
+  auto uti_map = detail::singletons::get_uniform_type_info_map();
+  auto uti = uti_map->by_uniform_name(tname);
   if (!uti) {
     std::string err = "received type name \"";
     err += tname;
@@ -170,18 +169,22 @@ const uniform_type_info* binary_deserializer::begin_object() {
   return uti;
 }
 
-void binary_deserializer::end_object() {}
+void binary_deserializer::end_object() {
+  // nop
+}
 
 size_t binary_deserializer::begin_sequence() {
   CAF_LOG_TRACE("");
   static_assert(sizeof(size_t) >= sizeof(uint32_t),
-          "sizeof(size_t) < sizeof(uint32_t)");
+                "sizeof(size_t) < sizeof(uint32_t)");
   uint32_t result;
   m_pos = read_range(m_pos, m_end, result);
   return static_cast<size_t>(result);
 }
 
-void binary_deserializer::end_sequence() {}
+void binary_deserializer::end_sequence() {
+  // nop
+}
 
 void binary_deserializer::read_value(primitive_variant& storage) {
   pt_reader ptr(m_pos, m_end);

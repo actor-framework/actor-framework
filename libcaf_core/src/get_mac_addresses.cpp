@@ -24,48 +24,36 @@ namespace detail {
 
 std::vector<std::string> get_mac_addresses() {
   int mib[6];
-
   std::vector<std::string> result;
-
   mib[0] = CTL_NET;
   mib[1] = AF_ROUTE;
   mib[2] = 0;
   mib[3] = AF_LINK;
   mib[4] = NET_RT_IFLIST;
-
   auto indices = if_nameindex();
-
   std::unique_ptr<char> buf;
   size_t buf_size = 0;
-
   for (auto i = indices; !(i->if_index == 0 && i->if_name == nullptr); ++i) {
     mib[5] = static_cast<int>(i->if_index);
-
     size_t len;
     if (sysctl(mib, 6, nullptr, &len, nullptr, 0) < 0) {
       perror("sysctl 1 error");
       exit(3);
     }
-
     if (buf_size < len) {
       buf.reset(new char[len]);
       buf_size = len;
     }
-
     if (sysctl(mib, 6, buf.get(), &len, nullptr, 0) < 0) {
       perror("sysctl 2 error");
       exit(5);
     }
-
     auto ifm = reinterpret_cast<if_msghdr*>(buf.get());
     auto sdl = reinterpret_cast<sockaddr_dl*>(ifm + 1);
     auto ptr = reinterpret_cast<unsigned char*>(LLADDR(sdl));
-
     auto uctoi = [](unsigned char c)->unsigned {
       return static_cast<unsigned char>(c);
-
     };
-
     std::ostringstream oss;
     oss << std::hex;
     oss.fill('0');
@@ -77,7 +65,9 @@ std::vector<std::string> get_mac_addresses() {
       oss << uctoi(*ptr++);
     }
     auto addr = oss.str();
-    if (addr != "00:00:00:00:00:00") result.push_back(std::move(addr));
+    if (addr != "00:00:00:00:00:00") {
+      result.push_back(std::move(addr));
+    }
   }
   if_freenameindex(indices);
   return result;
@@ -117,7 +107,6 @@ std::vector<std::string> get_mac_addresses() {
     perror("socket");
     return {};
   }
-
   // query available interfaces
   char buf[1024] = {0};
   ifconf ifc;
@@ -127,11 +116,9 @@ std::vector<std::string> get_mac_addresses() {
     perror("ioctl(SIOCGIFCONF)");
     return {};
   }
-
   vector<string> hw_addresses;
   auto ctoi = [](char c)->unsigned {
     return static_cast<unsigned char>(c);
-
   };
   // iterate through interfaces
   auto ifr = ifc.ifc_req;
@@ -197,7 +184,6 @@ struct c_free {
   void operator()(T* ptr) {
     free(ptr);
   }
-
 };
 
 } // namespace <anonymous>
@@ -229,7 +215,7 @@ std::vector<std::string> get_mac_addresses() {
       exit(1);
     }
     res = GetAdaptersAddresses(family, flags, nullptr, addresses.get(),
-                   &addresses_len);
+                               &addresses_len);
   } while ((res == ERROR_BUFFER_OVERFLOW) && (++iterations < max_iterations));
   if (res == NO_ERROR) {
     // read hardware addresses from the output we've received

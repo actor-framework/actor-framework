@@ -27,22 +27,34 @@
 
 namespace caf {
 
-abstract_group::subscription::subscription(
-  const channel& s, const intrusive_ptr<abstract_group>& g)
-    : m_subscriber(s), m_group(g) {}
-
-abstract_group::subscription::~subscription() {
-  if (valid()) m_group->unsubscribe(m_subscriber);
+abstract_group::subscription::subscription(const channel& s,
+                                           const abstract_group_ptr& g)
+    : m_subscriber(s), m_group(g) {
+  // nop
 }
 
-abstract_group::module::module(std::string name) : m_name(std::move(name)) {}
+abstract_group::subscription::~subscription() {
+  if (valid()) {
+    m_group->unsubscribe(m_subscriber);
+  }
+}
 
-const std::string& abstract_group::module::name() { return m_name; }
+abstract_group::module::module(std::string name) : m_name(std::move(name)) {
+  // nop
+}
+
+const std::string& abstract_group::module::name() {
+  return m_name;
+}
 
 abstract_group::abstract_group(abstract_group::module_ptr mod, std::string id)
-    : m_module(mod), m_identifier(std::move(id)) {}
+    : m_module(mod), m_identifier(std::move(id)) {
+  // nop
+}
 
-const std::string& abstract_group::identifier() const { return m_identifier; }
+const std::string& abstract_group::identifier() const {
+  return m_identifier;
+}
 
 abstract_group::module_ptr abstract_group::get_module() const {
   return m_module;
@@ -52,8 +64,12 @@ const std::string& abstract_group::module_name() const {
   return get_module()->name();
 }
 
-abstract_group::module::~module() {}
+abstract_group::module::~module() {
+  // nop
+}
 
-abstract_group::~abstract_group() {}
+abstract_group::~abstract_group() {
+  // nop
+}
 
 } // namespace caf

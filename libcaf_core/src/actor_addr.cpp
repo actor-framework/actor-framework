@@ -26,14 +26,20 @@
 namespace caf {
 
 namespace {
+
 intptr_t compare_impl(const abstract_actor* lhs, const abstract_actor* rhs) {
   return reinterpret_cast<intptr_t>(lhs) - reinterpret_cast<intptr_t>(rhs);
 }
+
 } // namespace <anonymous>
 
-actor_addr::actor_addr(const invalid_actor_addr_t&) : m_ptr(nullptr) {}
+actor_addr::actor_addr(const invalid_actor_addr_t&) : m_ptr(nullptr) {
+  // nop
+}
 
-actor_addr::actor_addr(abstract_actor* ptr) : m_ptr(ptr) {}
+actor_addr::actor_addr(abstract_actor* ptr) : m_ptr(ptr) {
+  // nop
+}
 
 intptr_t actor_addr::compare(const actor_addr& other) const {
   return compare_impl(m_ptr.get(), other.m_ptr.get());
@@ -48,7 +54,9 @@ actor_addr actor_addr::operator=(const invalid_actor_addr_t&) {
   return *this;
 }
 
-actor_id actor_addr::id() const { return (m_ptr) ? m_ptr->id() : 0; }
+actor_id actor_addr::id() const {
+  return (m_ptr) ? m_ptr->id() : 0;
+}
 
 node_id actor_addr::node() const {
   return m_ptr ? m_ptr->node() : detail::singletons::get_node_id();
@@ -59,8 +67,7 @@ bool actor_addr::is_remote() const {
 }
 
 std::set<std::string> actor_addr::interface() const {
-  if (!m_ptr) return std::set<std::string>{};
-  return m_ptr->interface();
+  return !m_ptr ? std::set<std::string>{} : m_ptr->interface();
 }
 
 } // namespace caf

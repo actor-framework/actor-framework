@@ -21,8 +21,12 @@
 
 namespace caf {
 
-memory_managed::~memory_managed() {}
+memory_managed::~memory_managed() {
+  // nop
+}
 
-void memory_managed::request_deletion() { delete this; }
+void memory_managed::request_deletion() {
+  delete this;
+}
 
 } // namespace caf

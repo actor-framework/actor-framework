@@ -31,17 +31,19 @@ namespace caf {
 namespace detail {
 
 sync_request_bouncer::sync_request_bouncer(uint32_t r)
-    : rsn(r == exit_reason::not_exited ? exit_reason::normal : r) {}
+    : rsn(r == exit_reason::not_exited ? exit_reason::normal : r) {
+  // nop
+}
 
 void sync_request_bouncer::operator()(const actor_addr& sender,
-                    const message_id& mid) const {
+                                      const message_id& mid) const {
   CAF_REQUIRE(rsn != exit_reason::not_exited);
   if (sender && mid.is_request()) {
     auto ptr = actor_cast<abstract_actor_ptr>(sender);
     ptr->enqueue(invalid_actor_addr, mid.response_id(),
-           make_message(sync_exited_msg{sender, rsn}),
-           // TODO: this breaks out of the execution unit
-           nullptr);
+                 make_message(sync_exited_msg{sender, rsn}),
+                 // TODO: this breaks out of the execution unit
+                 nullptr);
   }
 }
 

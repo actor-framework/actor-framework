@@ -26,17 +26,25 @@
 namespace caf {
 
 channel::channel(const actor& other)
-    : m_ptr(actor_cast<abstract_channel_ptr>(other)) {}
+    : m_ptr(actor_cast<abstract_channel_ptr>(other)) {
+  // nop
+}
 
 channel::channel(const group& other)
-    : m_ptr(actor_cast<abstract_channel_ptr>(other)) {}
+    : m_ptr(actor_cast<abstract_channel_ptr>(other)) {
+  // nop
+}
 
-channel::channel(const invalid_actor_t&) : m_ptr(nullptr) {}
+channel::channel(const invalid_actor_t&) : m_ptr(nullptr) {
+  // nop
+}
 
-channel::channel(const invalid_group_t&) : m_ptr(nullptr) {}
+channel::channel(const invalid_group_t&) : m_ptr(nullptr) {
+  // nop
+}
 
 intptr_t channel::compare(const abstract_channel* lhs,
-              const abstract_channel* rhs) {
+                          const abstract_channel* rhs) {
   return reinterpret_cast<intptr_t>(lhs) - reinterpret_cast<intptr_t>(rhs);
 }
 

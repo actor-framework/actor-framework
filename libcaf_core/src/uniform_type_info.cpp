@@ -49,19 +49,25 @@
 namespace caf {
 
 namespace {
+
 inline detail::uniform_type_info_map& uti_map() {
   return *detail::singletons::get_uniform_type_info_map();
 }
+
 } // namespace <anonymous>
 
-uniform_value_t::~uniform_value_t() {}
+uniform_value_t::~uniform_value_t() {
+  // nop
+}
 
 const uniform_type_info* announce(const std::type_info&,
                   uniform_type_info_ptr utype) {
   return uti_map().insert(std::move(utype));
 }
 
-uniform_type_info::~uniform_type_info() {}
+uniform_type_info::~uniform_type_info() {
+  // nop
+}
 
 const uniform_type_info* uniform_type_info::from(const std::type_info& tinf) {
   auto result = uti_map().by_rtti(tinf);

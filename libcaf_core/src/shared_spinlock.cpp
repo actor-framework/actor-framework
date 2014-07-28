@@ -25,14 +25,18 @@
 
 namespace {
 
-inline long min_long() { return std::numeric_limits<long>::min(); }
+inline long min_long() {
+  return std::numeric_limits<long>::min();
+}
 
 } // namespace <anonymous>
 
 namespace caf {
 namespace detail {
 
-shared_spinlock::shared_spinlock() : m_flag(0) {}
+shared_spinlock::shared_spinlock() : m_flag(0) {
+  // nop
+}
 
 void shared_spinlock::lock() {
   long v = m_flag.load();
@@ -47,9 +51,13 @@ void shared_spinlock::lock() {
   }
 }
 
-void shared_spinlock::lock_upgrade() { lock_shared(); }
+void shared_spinlock::lock_upgrade() {
+  lock_shared();
+}
 
-void shared_spinlock::unlock_upgrade() { unlock_shared(); }
+void shared_spinlock::unlock_upgrade() {
+  unlock_shared();
+}
 
 void shared_spinlock::unlock_upgrade_and_lock() {
   unlock_shared();
@@ -61,7 +69,9 @@ void shared_spinlock::unlock_and_lock_upgrade() {
   lock_upgrade();
 }
 
-void shared_spinlock::unlock() { m_flag.store(0); }
+void shared_spinlock::unlock() {
+  m_flag.store(0);
+}
 
 bool shared_spinlock::try_lock() {
   long v = m_flag.load();
@@ -81,7 +91,9 @@ void shared_spinlock::lock_shared() {
   }
 }
 
-void shared_spinlock::unlock_shared() { m_flag.fetch_sub(1); }
+void shared_spinlock::unlock_shared() {
+  m_flag.fetch_sub(1);
+}
 
 bool shared_spinlock::try_lock_shared() {
   long v = m_flag.load();

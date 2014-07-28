@@ -26,8 +26,8 @@
 #include "caf/detail/demangle.hpp"
 
 #if defined(CAF_CLANG) || defined(CAF_GCC)
-#   include <cxxabi.h>
-#   include <stdlib.h>
+# include <cxxabi.h>
+# include <stdlib.h>
 #endif
 
 namespace caf {
@@ -38,13 +38,15 @@ namespace {
 // filter unnecessary characters from undecorated cstr
 std::string filter_whitespaces(const char* cstr, size_t size = 0) {
   std::string result;
-  if (size > 0) result.reserve(size);
+  if (size > 0) {
+    result.reserve(size);
+  }
   char c = *cstr;
   while (c != '\0') {
     if (c == ' ') {
       char previous_c = result.empty() ? ' ' : *(result.rbegin());
-      // get next non-space character
       for (c = *++cstr; c == ' '; c = *++cstr) {
+        // scan for next non-space character
       }
       if (c != '\0') {
         // skip whitespace unless it separates two alphanumeric
@@ -73,8 +75,9 @@ std::string filter_whitespaces(const char* cstr, size_t size = 0) {
     using std::string;
     size_t size;
     int status;
-    std::unique_ptr<char, void (*)(void*)> undecorated{
-      abi::__cxa_demangle(decorated, nullptr, &size, &status), std::free};
+    using uptr = std::unique_ptr<char, void (*)(void*)>;
+    uptr undecorated{abi::__cxa_demangle(decorated, nullptr, &size, &status),
+                     std::free};
     if (status != 0) {
       string error_msg = "Could not demangle type name ";
       error_msg += decorated;
@@ -82,15 +85,15 @@ std::string filter_whitespaces(const char* cstr, size_t size = 0) {
     }
     // the undecorated typeid name
     string result = filter_whitespaces(undecorated.get(), size);
-#     ifdef CAF_CLANG
-    // replace "std::__1::" with "std::" (fixes strange clang names)
-    string needle = "std::__1::";
-    string fixed_string = "std::";
-    for (auto pos = result.find(needle); pos != string::npos;
-       pos = result.find(needle)) {
-      result.replace(pos, needle.size(), fixed_string);
-    }
-#     endif
+#   ifdef CAF_CLANG
+      // replace "std::__1::" with "std::" (fixes strange clang names)
+      string needle = "std::__1::";
+      string fixed_string = "std::";
+      for (auto pos = result.find(needle); pos != string::npos;
+           pos = result.find(needle)) {
+        result.replace(pos, needle.size(), fixed_string);
+      }
+#   endif
     return result;
   }
 
@@ -104,7 +107,9 @@ std::string filter_whitespaces(const char* cstr, size_t size = 0) {
   }
 
 #else
-#   error "compiler or platform not supported"
+
+# error "compiler or platform not supported"
+
 #endif
 
 std::string demangle(const std::type_info& tinf) {

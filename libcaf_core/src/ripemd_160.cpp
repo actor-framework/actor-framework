@@ -18,42 +18,42 @@
  ******************************************************************************/
 
 /******************************************************************************\
- * Based on http://homes.esat.kuleuven.be/~cosicart/ps/AB-9601/rmd160.c;    *
- * original header:                               *
- *                                      *
- *    AUTHOR:   Antoon Bosselaers, ESAT-COSIC                 *
- *    DATE:   1 March 1996                        *
- *    VERSION:  1.0                             *
- *                                      *
- *    Copyright (c) Katholieke Universiteit Leuven              *
- *    1996, All Rights Reserved                       *
- *                                      *
- *  Conditions for use of the RIPEMD-160 Software               *
- *                                      *
+ * Based on http://homes.esat.kuleuven.be/~cosicart/ps/AB-9601/rmd160.c;      *
+ * original header:                                                           *
+ *                                                                            *
+ *    AUTHOR:   Antoon Bosselaers, ESAT-COSIC                                 *
+ *    DATE:   1 March 1996                                                    *
+ *    VERSION:  1.0                                                           *
+ *                                                                            *
+ *    Copyright (c) Katholieke Universiteit Leuven                            *
+ *    1996, All Rights Reserved                                               *
+ *                                                                            *
+ *  Conditions for use of the RIPEMD-160 Software                             *
+ *                                                                            *
  *  The RIPEMD-160 software is freely available for use under the terms and   *
  *  conditions described hereunder, which shall be deemed to be accepted by   *
- *  any user of the software and applicable on any use of the software:     *
- *                                      *
+ *  any user of the software and applicable on any use of the software:       *
+ *                                                                            *
  *  1. K.U.Leuven Department of Electrical Engineering-ESAT/COSIC shall for   *
- *   all purposes be considered the owner of the RIPEMD-160 software and of *
- *   all copyright, trade secret, patent or other intellectual property   *
- *   rights therein.                            *
- *  2. The RIPEMD-160 software is provided on an "as is" basis without    *
- *   warranty of any sort, express or implied. K.U.Leuven makes no      *
- *   representation that the use of the software will not infringe any    *
- *   patent or proprietary right of third parties. User will indemnify    *
- *   K.U.Leuven and hold K.U.Leuven harmless from any claims or liabilities *
- *   which may arise as a result of its use of the software. In no      *
- *   circumstances K.U.Leuven R&D will be held liable for any deficiency,   *
- *   fault or other mishappening with regard to the use or performance of   *
- *   the software.                              *
- *  3. User agrees to give due credit to K.U.Leuven in scientific       *
- *   publications or communications in relation with the use of the     *
- *   RIPEMD-160 software as follows: RIPEMD-160 software written by     *
- *   Antoon Bosselaers,                           *
- *   available at http://www.esat.kuleuven.be/~cosicart/ps/AB-9601/.    *
- *                                      *
-\ ******************************************************************************/
+ *   all purposes be considered the owner of the RIPEMD-160 software and of   *
+ *   all copyright, trade secret, patent or other intellectual property       *
+ *   rights therein.                                                          *
+ *  2. The RIPEMD-160 software is provided on an "as is" basis without        *
+ *   warranty of any sort, express or implied. K.U.Leuven makes no            *
+ *   representation that the use of the software will not infringe any        *
+ *   patent or proprietary right of third parties. User will indemnify        *
+ *   K.U.Leuven and hold K.U.Leuven harmless from any claims or liabilities   *
+ *   which may arise as a result of its use of the software. In no            *
+ *   circumstances K.U.Leuven R&D will be held liable for any deficiency,     *
+ *   fault or other mishappening with regard to the use or performance of     *
+ *   the software.                                                            *
+ *  3. User agrees to give due credit to K.U.Leuven in scientific             *
+ *   publications or communications in relation with the use of the           *
+ *   RIPEMD-160 software as follows: RIPEMD-160 software written by           *
+ *   Antoon Bosselaers,                                                       *
+ *   available at http://www.esat.kuleuven.be/~cosicart/ps/AB-9601/.          *
+ *                                                                            *
+\******************************************************************************/
 
 #include <cstring>
 #include "caf/detail/ripemd_160.hpp"
@@ -68,9 +68,9 @@ using dword = uint32_t;
 // macro definitions
 
 // collect four bytes into one word:
-#define BYTES_TO_DWORD(strptr)                         \
-  (((dword) * ((strptr) + 3) << 24) | ((dword) * ((strptr) + 2) << 16) |   \
-   ((dword) * ((strptr) + 1) << 8) | ((dword) * (strptr)))
+#define BYTES_TO_DWORD(strptr)                                                 \
+  (((dword) * ((strptr) + 3) << 24) | ((dword) * ((strptr) + 2) << 16)         \
+   | ((dword) * ((strptr) + 1) << 8) | ((dword) * (strptr)))
 
 // ROL(x, n) cyclically rotates x over n bits to the left
 // x must be of an unsigned 32 bits type and 0 <= n < 32.
@@ -84,74 +84,74 @@ using dword = uint32_t;
 #define J(x, y, z) ((x) ^ ((y) | ~(z)))
 
 // the ten basic operations FF() through III()
-#define FF(a, b, c, d, e, x, s)                        \
-  {                                      \
-    (a) += F((b), (c), (d)) + (x);                     \
-    (a) = ROL((a), (s)) + (e);                       \
-    (c) = ROL((c), 10);                          \
+#define FF(a, b, c, d, e, x, s)                                                \
+  {                                                                            \
+    (a) += F((b), (c), (d)) + (x);                                             \
+    (a) = ROL((a), (s)) + (e);                                                 \
+    (c) = ROL((c), 10);                                                        \
   }
 
-#define GG(a, b, c, d, e, x, s)                        \
-  {                                      \
-    (a) += G((b), (c), (d)) + (x) + 0x5a827999UL;              \
-    (a) = ROL((a), (s)) + (e);                       \
-    (c) = ROL((c), 10);                          \
+#define GG(a, b, c, d, e, x, s)                                                \
+  {                                                                            \
+    (a) += G((b), (c), (d)) + (x) + 0x5a827999UL;                              \
+    (a) = ROL((a), (s)) + (e);                                                 \
+    (c) = ROL((c), 10);                                                        \
   }
 
-#define HH(a, b, c, d, e, x, s)                        \
-  {                                      \
-    (a) += H((b), (c), (d)) + (x) + 0x6ed9eba1UL;              \
-    (a) = ROL((a), (s)) + (e);                       \
-    (c) = ROL((c), 10);                          \
+#define HH(a, b, c, d, e, x, s)                                                \
+  {                                                                            \
+    (a) += H((b), (c), (d)) + (x) + 0x6ed9eba1UL;                              \
+    (a) = ROL((a), (s)) + (e);                                                 \
+    (c) = ROL((c), 10);                                                        \
   }
 
-#define II(a, b, c, d, e, x, s)                        \
-  {                                      \
-    (a) += I((b), (c), (d)) + (x) + 0x8f1bbcdcUL;              \
-    (a) = ROL((a), (s)) + (e);                       \
-    (c) = ROL((c), 10);                          \
+#define II(a, b, c, d, e, x, s)                                                \
+  {                                                                            \
+    (a) += I((b), (c), (d)) + (x) + 0x8f1bbcdcUL;                              \
+    (a) = ROL((a), (s)) + (e);                                                 \
+    (c) = ROL((c), 10);                                                        \
   }
 
-#define JJ(a, b, c, d, e, x, s)                        \
-  {                                      \
-    (a) += J((b), (c), (d)) + (x) + 0xa953fd4eUL;              \
-    (a) = ROL((a), (s)) + (e);                       \
-    (c) = ROL((c), 10);                          \
+#define JJ(a, b, c, d, e, x, s)                                                \
+  {                                                                            \
+    (a) += J((b), (c), (d)) + (x) + 0xa953fd4eUL;                              \
+    (a) = ROL((a), (s)) + (e);                                                 \
+    (c) = ROL((c), 10);                                                        \
   }
 
-#define FFF(a, b, c, d, e, x, s)                         \
-  {                                      \
-    (a) += F((b), (c), (d)) + (x);                     \
-    (a) = ROL((a), (s)) + (e);                       \
-    (c) = ROL((c), 10);                          \
+#define FFF(a, b, c, d, e, x, s)                                               \
+  {                                                                            \
+    (a) += F((b), (c), (d)) + (x);                                             \
+    (a) = ROL((a), (s)) + (e);                                                 \
+    (c) = ROL((c), 10);                                                        \
   }
 
-#define GGG(a, b, c, d, e, x, s)                         \
-  {                                      \
-    (a) += G((b), (c), (d)) + (x) + 0x7a6d76e9UL;              \
-    (a) = ROL((a), (s)) + (e);                       \
-    (c) = ROL((c), 10);                          \
+#define GGG(a, b, c, d, e, x, s)                                               \
+  {                                                                            \
+    (a) += G((b), (c), (d)) + (x) + 0x7a6d76e9UL;                              \
+    (a) = ROL((a), (s)) + (e);                                                 \
+    (c) = ROL((c), 10);                                                        \
   }
 
-#define HHH(a, b, c, d, e, x, s)                         \
-  {                                      \
-    (a) += H((b), (c), (d)) + (x) + 0x6d703ef3UL;              \
-    (a) = ROL((a), (s)) + (e);                       \
-    (c) = ROL((c), 10);                          \
+#define HHH(a, b, c, d, e, x, s)                                               \
+  {                                                                            \
+    (a) += H((b), (c), (d)) + (x) + 0x6d703ef3UL;                              \
+    (a) = ROL((a), (s)) + (e);                                                 \
+    (c) = ROL((c), 10);                                                        \
   }
 
-#define III(a, b, c, d, e, x, s)                         \
-  {                                      \
-    (a) += I((b), (c), (d)) + (x) + 0x5c4dd124UL;              \
-    (a) = ROL((a), (s)) + (e);                       \
-    (c) = ROL((c), 10);                          \
+#define III(a, b, c, d, e, x, s)                                               \
+  {                                                                            \
+    (a) += I((b), (c), (d)) + (x) + 0x5c4dd124UL;                              \
+    (a) = ROL((a), (s)) + (e);                                                 \
+    (c) = ROL((c), 10);                                                        \
   }
 
-#define JJJ(a, b, c, d, e, x, s)                         \
-  {                                      \
-    (a) += J((b), (c), (d)) + (x) + 0x50a28be6UL;              \
-    (a) = ROL((a), (s)) + (e);                       \
-    (c) = ROL((c), 10);                          \
+#define JJJ(a, b, c, d, e, x, s)                                               \
+  {                                                                            \
+    (a) += J((b), (c), (d)) + (x) + 0x50a28be6UL;                              \
+    (a) = ROL((a), (s)) + (e);                                                 \
+    (c) = ROL((c), 10);                                                        \
   }
 
 void MDinit(dword* MDbuf) {
@@ -382,15 +382,12 @@ namespace detail {
 
 void ripemd_160(std::array<uint8_t, 20>& storage, const std::string& data) {
   dword MDbuf[5]; // contains (A, B, C, D(, E))
-  dword X[16];  // current 16-word chunk
+  dword X[16];    // current 16-word chunk
   dword length;   // length in bytes of message
-
   auto message = reinterpret_cast<const unsigned char*>(data.c_str());
-
   // initialize
   MDinit(MDbuf);
   length = static_cast<dword>(data.size());
-
   // process message in 16-word chunks
   for (dword nbytes = length; nbytes > 63; nbytes -= 64) {
     for (dword i = 0; i < 16; ++i) {
@@ -400,10 +397,8 @@ void ripemd_160(std::array<uint8_t, 20>& storage, const std::string& data) {
     compress(MDbuf, X);
   }
   // length mod 64 bytes left
-
   // finish:
   MDfinish(MDbuf, message, length, 0);
-
   for (size_t i = 0; i < storage.size(); i += 4) {
     // extracts the 8 least significant bits by casting to byte
     storage[i] = static_cast<uint8_t>(MDbuf[i >> 2]);

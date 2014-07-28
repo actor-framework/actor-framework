@@ -27,12 +27,15 @@ using namespace std;
 
 namespace caf {
 
-detail::match_helper match_split(const std::string& str, char delim, bool keep_empties) {
+detail::match_helper match_split(const std::string& str, char delim,
+                                 bool keep_empties) {
   message_builder result;
   stringstream strs(str);
   string tmp;
   while (getline(strs, tmp, delim)) {
-    if (!tmp.empty() && !keep_empties) result.append(std::move(tmp));
+    if (!tmp.empty() && !keep_empties) {
+      result.append(std::move(tmp));
+    }
   }
   return result.to_message();
 }

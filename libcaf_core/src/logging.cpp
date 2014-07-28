@@ -65,19 +65,17 @@ struct log_event {
 class logging_impl : public logging {
  public:
   void initialize() {
-    const char* log_level_lookup_table[] = {"ERROR", "WARN", "INFO",
-                                            "DEBUG", "TRACE"};
+    const char* log_level_table[] = {"ERROR", "WARN", "INFO", "DEBUG", "TRACE"};
     m_thread = std::thread([this] { (*this)(); });
     std::string msg = "ENTRY log level = ";
-    msg += log_level_lookup_table[global_log_level];
+    msg += log_level_table[global_log_level];
     log("TRACE", "logging", "run", __FILE__, __LINE__, msg);
   }
 
   void stop() {
     log("TRACE", "logging", "run", __FILE__, __LINE__, "EXIT");
     // an empty string means: shut down
-    m_queue.synchronized_enqueue(m_queue_mtx, m_queue_cv,
-                   new log_event{0, ""});
+    m_queue.synchronized_enqueue(m_queue_mtx, m_queue_cv, new log_event{0, ""});
     m_thread.join();
   }
 
@@ -95,9 +93,8 @@ class logging_impl : public logging {
       if (event->msg.empty()) {
         out.close();
         return;
-      } else {
-        out << event->msg << std::flush;
       }
+      out << event->msg << std::flush;
     }
   }
 
@@ -141,8 +138,10 @@ class logging_impl : public logging {
 logging::trace_helper::trace_helper(std::string class_name,
                                     const char* fun_name, const char* file_name,
                                     int line_num, const std::string& msg)
-    : m_class(std::move(class_name)), m_fun_name(fun_name),
-      m_file_name(file_name), m_line_num(line_num) {
+    : m_class(std::move(class_name)),
+      m_fun_name(fun_name),
+      m_file_name(file_name),
+      m_line_num(line_num) {
   singletons::get_logger()->log("TRACE", m_class.c_str(), fun_name, file_name,
                                 line_num, "ENTRY " + msg);
 }

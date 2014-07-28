@@ -21,9 +21,13 @@
 
 namespace caf {
 
-ref_counted::ref_counted() : m_rc(0) {}
+ref_counted::ref_counted() : m_rc(0) {
+  // nop
+}
 
-ref_counted::~ref_counted() {}
+ref_counted::~ref_counted() {
+  // nop
+}
 
 ref_counted::ref_counted(const ref_counted&) {
   // nop; don't copy reference count

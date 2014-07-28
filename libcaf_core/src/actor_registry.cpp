@@ -72,9 +72,7 @@ void actor_registry::put(actor_id key, const abstract_actor_ptr& val) {
   // attach functor without lock
   CAF_LOG_INFO("added actor with ID " << key);
   actor_registry* reg = this;
-  val->attach_functor([key, reg](uint32_t reason) {
-    reg->erase(key, reason);
-  });
+  val->attach_functor([key, reg](uint32_t reason) { reg->erase(key, reason); });
 }
 
 void actor_registry::erase(actor_id key, uint32_t reason) {
@@ -93,11 +91,11 @@ uint32_t actor_registry::next_id() {
 }
 
 void actor_registry::inc_running() {
-#   if CAF_LOG_LEVEL >= CAF_DEBUG
+# if CAF_LOG_LEVEL >= CAF_DEBUG
     CAF_LOG_DEBUG("new value = " << ++m_running);
-#   else
+# else
     ++m_running;
-#   endif
+# endif
 }
 
 size_t actor_registry::running() const {
