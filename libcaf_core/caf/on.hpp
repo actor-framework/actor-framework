@@ -226,35 +226,35 @@ struct pattern_type
 namespace caf {
 
 /**
- * @brief A wildcard that matches any number of any values.
+ * A wildcard that matches any number of any values.
  */
 constexpr anything any_vals = anything{};
 
 #ifdef CAF_DOCUMENTATION
 
 /**
- * @brief A wildcard that matches the argument types
- *    of a given callback. Must be the last argument to {@link on()}.
+ * A wildcard that matches the argument types
+ * of a given callback. Must be the last argument to {@link on()}.
  * @see {@link math_actor_example.cpp Math Actor Example}
  */
 constexpr __unspecified__ arg_match;
 
 /**
- * @brief Left-hand side of a partial function expression.
+ * Left-hand side of a partial function expression.
  *
- * Equal to <tt>on(arg_match)</tt>.
+ * Equal to `on(arg_match).
  */
 constexpr __unspecified__ on_arg_match;
 
 /**
- * @brief A wildcard that matches any value of type @p T.
+ * A wildcard that matches any value of type `T`.
  * @see {@link math_actor_example.cpp Math Actor Example}
  */
 template <class T>
 __unspecified__ val();
 
 /**
- * @brief Left-hand side of a partial function expression that matches values.
+ * Left-hand side of a partial function expression that matches values.
  *
  * This overload can be used with the wildcards {@link caf::val val},
  * {@link caf::any_vals any_vals} and {@link caf::arg_match arg_match}.
@@ -263,7 +263,7 @@ template <class T, class... Ts>
 __unspecified__ on(const T& arg, const Ts&... args);
 
 /**
- * @brief Left-hand side of a partial function expression that matches types.
+ * Left-hand side of a partial function expression that matches types.
  *
  * This overload matches types only. The type {@link caf::anything anything}
  * can be used as wildcard to match any number of elements of any types.
@@ -272,7 +272,7 @@ template <class... Ts>
 __unspecified__ on();
 
 /**
- * @brief Left-hand side of a partial function expression that matches types.
+ * Left-hand side of a partial function expression that matches types.
  *
  * This overload matches up to four leading atoms.
  * The type {@link caf::anything anything}
@@ -282,9 +282,9 @@ template <atom_value... Atoms, class... Ts>
 __unspecified__ on();
 
 /**
- * @brief Converts @p arg to a match expression by returning
- *    <tt>on_arg_match >> arg</tt> if @p arg is a callable type,
- *    otherwise returns @p arg.
+ * Converts `arg` to a match expression by returning
+ *    `on_arg_match >> arg if `arg` is a callable type,
+ *    otherwise returns `arg`.
  */
 template <class T>
 __unspecified__ lift_to_match_expr(T arg);

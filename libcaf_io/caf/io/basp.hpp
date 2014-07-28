@@ -32,8 +32,7 @@ namespace io {
 namespace basp {
 
 /**
- * @brief The header of a Binary Actor System Protocol (BASP) message.
- *
+ * The header of a Binary Actor System Protocol (BASP) message.
  * A BASP header consists of a routing part, i.e., source and
  * destination, as well as an operation and operation data. Several
  * message types consist of only a header.
@@ -49,13 +48,13 @@ struct header {
 };
 
 /**
- * @brief The current BASP version. Different BASP versions will not
- *    be able to exchange messages.
+ * The current BASP version. Different BASP versions will not
+ * be able to exchange messages.
  */
 constexpr uint64_t version = 1;
 
 /**
- * @brief Size of a BASP header in serialized form
+ * Size of a BASP header in serialized form
  */
 constexpr size_t header_size =
   node_id::host_id_size * 2 + sizeof(uint32_t) * 2 +
@@ -80,14 +79,13 @@ inline bool nonzero(T aid) {
 }
 
 /**
- * @brief Send from server, i.e., the node with a published actor, to client,
- *    i.e., node that initiates a new connection using remote_actor().
- *
- * @param source_node   ID of server
- * @param dest_node     invalid
- * @param source_actor  Optional: ID of published actor
- * @param dest_actor    0
- * @param payload_len   Optional: size of actor id + interface definition
+ * Send from server, i.e., the node with a published actor, to client,
+ * i.e., node that initiates a new connection using remote_actor().
+ * @param source_node     ID of server
+ * @param dest_node       invalid
+ * @param source_actor    Optional: ID of published actor
+ * @param dest_actor      0
+ * @param payload_len     Optional: size of actor id + interface definition
  * @param operation_data  BASP version of the server
  */
 constexpr uint32_t server_handshake = 0x00;
@@ -102,14 +100,13 @@ inline bool server_handshake_valid(const header& hdr) {
 }
 
 /**
- * @brief Send from client to server after it has successfully received the
- *    server_handshake to establish the connection.
- *
- * @param source_node   ID of client
- * @param dest_node     ID of server
- * @param source_actor  0
- * @param dest_actor    0
- * @param payload_len   0
+ * Send from client to server after it has successfully received the
+ * server_handshake to establish the connection.
+ * @param source_node     ID of client
+ * @param dest_node       ID of server
+ * @param source_actor    0
+ * @param dest_actor      0
+ * @param payload_len     0
  * @param operation_data  0
  */
 constexpr uint32_t client_handshake = 0x01;
@@ -125,14 +122,13 @@ inline bool client_handshake_valid(const header& hdr) {
 }
 
 /**
- * @brief Transmits a message from source_node:source_actor to
- *    dest_node:dest_actor.
- *
- * @param source_node   ID of sending node (invalid in case of anon_send)
- * @param dest_node     ID of receiving node
- * @param source_actor  ID of sending actor (invalid in case of anon_send)
- * @param dest_actor    ID of receiving actor, must not be invalid
- * @param payload_len   size of serialized message object, must not be 0
+ * Transmits a message from source_node:source_actor to
+ * dest_node:dest_actor.
+ * @param source_node     ID of sending node (invalid in case of anon_send)
+ * @param dest_node       ID of receiving node
+ * @param source_actor    ID of sending actor (invalid in case of anon_send)
+ * @param dest_actor      ID of receiving actor, must not be invalid
+ * @param payload_len     size of serialized message object, must not be 0
  * @param operation_data  message ID (0 for asynchronous messages)
  */
 constexpr uint32_t dispatch_message = 0x02;
@@ -144,16 +140,15 @@ inline bool dispatch_message_valid(const header& hdr) {
 }
 
 /**
- * @brief Informs the receiving node that the sending node has created a proxy
- *    instance for one of its actors. Causes the receiving node to attach
- *    a functor to the actor that triggers a kill_proxy_instance
- *    message on termination.
- *
- * @param source_node   ID of sending node
- * @param dest_node     ID of receiving node
- * @param source_actor  0
- * @param dest_actor    ID of monitored actor
- * @param payload_len   0
+ * Informs the receiving node that the sending node has created a proxy
+ * instance for one of its actors. Causes the receiving node to attach
+ * a functor to the actor that triggers a kill_proxy_instance
+ * message on termination.
+ * @param source_node     ID of sending node
+ * @param dest_node       ID of receiving node
+ * @param source_actor    0
+ * @param dest_actor      ID of monitored actor
+ * @param payload_len     0
  * @param operation_data  0
  */
 constexpr uint32_t announce_proxy_instance = 0x03;
@@ -169,14 +164,13 @@ inline bool announce_proxy_instance_valid(const header& hdr) {
 }
 
 /**
- * @brief Informs the receiving node that it has a proxy for an actor
- *    that has been terminated.
- *
- * @param source_node   ID of sending node
- * @param dest_node     ID of receiving node
- * @param source_actor  ID of monitored actor
- * @param dest_actor    0
- * @param payload_len   0
+ * Informs the receiving node that it has a proxy for an actor
+ * that has been terminated.
+ * @param source_node     ID of sending node
+ * @param dest_node       ID of receiving node
+ * @param source_actor    ID of monitored actor
+ * @param dest_actor      0
+ * @param payload_len     0
  * @param operation_data  exit reason (uint32)
  */
 constexpr uint32_t kill_proxy_instance = 0x04;
@@ -192,7 +186,7 @@ inline bool kill_proxy_instance_valid(const header& hdr) {
 }
 
 /**
- * @brief Checks whether given header is valid.
+ * Checks whether given header is valid.
  */
 inline bool valid(header& hdr) {
   switch (hdr.operation) {

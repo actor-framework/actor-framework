@@ -28,13 +28,12 @@
 
 namespace caf {
 
-class object;
 class actor_namespace;
 class uniform_type_info;
 
 /**
  * @ingroup TypeSystem
- * @brief Technology-independent deserialization interface.
+ * Technology-independent deserialization interface.
  */
 class deserializer {
 
@@ -48,34 +47,34 @@ class deserializer {
   virtual ~deserializer();
 
   /**
-   * @brief Begins deserialization of a new object.
+   * Begins deserialization of a new object.
    */
   virtual const uniform_type_info* begin_object() = 0;
 
   /**
-   * @brief Ends deserialization of an object.
+   * Ends deserialization of an object.
    */
   virtual void end_object() = 0;
 
   /**
-   * @brief Begins deserialization of a sequence.
+   * Begins deserialization of a sequence.
    * @returns The size of the sequence.
    */
   virtual size_t begin_sequence() = 0;
 
   /**
-   * @brief Ends deserialization of a sequence.
+   * Ends deserialization of a sequence.
    */
   virtual void end_sequence() = 0;
 
   /**
-   * @brief Reads a primitive value from the data source.
+   * Reads a primitive value from the data source.
    */
   virtual void read_value(primitive_variant& storage) = 0;
 
   /**
-   * @brief Reads a value of type @p T from the data source.
-   * @note @p T must be a primitive type.
+   * Reads a value of type `T` from the data source.
+   * @note `T` must be a primitive type.
    */
   template <class T>
   inline T read() {
@@ -106,11 +105,13 @@ class deserializer {
   }
 
   /**
-   * @brief Reads a raw memory block.
+   * Reads a raw memory block.
    */
   virtual void read_raw(size_t num_bytes, void* storage) = 0;
 
-  inline actor_namespace* get_namespace() { return m_namespace; }
+  inline actor_namespace* get_namespace() {
+    return m_namespace;
+  }
 
   template <class Buffer>
   void read_raw(size_t num_bytes, Buffer& storage) {
@@ -119,9 +120,7 @@ class deserializer {
   }
 
  private:
-
   actor_namespace* m_namespace;
-
 };
 
 } // namespace caf

@@ -36,8 +36,8 @@
 namespace caf {
 
 /**
- * @brief A thread-mapped or context-switching actor using a blocking
- *    receive rather than a behavior-stack based message processing.
+ * A thread-mapped or context-switching actor using a blocking
+ * receive rather than a behavior-stack based message processing.
  * @extends local_actor
  */
 class blocking_actor
@@ -101,8 +101,8 @@ class blocking_actor
   };
 
   /**
-   * @brief Dequeues the next message from the mailbox that
-   *    is matched by given behavior.
+   * Dequeues the next message from the mailbox that is
+   * matched by given behavior.
    */
   template <class... Ts>
   void receive(Ts&&... args) {
@@ -112,8 +112,8 @@ class blocking_actor
   }
 
   /**
-   * @brief Receives messages in an endless loop.
-   *    Semantically equal to: <tt>for (;;) { receive(...); }</tt>
+   * Semantically equal to: `for (;;) { receive(...); }`, but does
+   * not cause a temporary behavior object per iteration.
    */
   template <class... Ts>
   void receive_loop(Ts&&... args) {
@@ -122,21 +122,19 @@ class blocking_actor
   }
 
   /**
-   * @brief Receives messages as in a range-based loop.
-   *
+   * Receives messages for range `[begin, first)`.
    * Semantically equal to:
-   * <tt>for ( ; begin != end; ++begin) { receive(...); }</tt>.
+   * `for ( ; begin != end; ++begin) { receive(...); }`.
    *
-   * <b>Usage example:</b>
-   * @code
+   * **Usage example:**
+   * ~~~
    * int i = 0;
    * receive_for(i, 10) (
-   *   on(atom("get")) >> [&]() -> message { return {"result", i}; }
+   *   on(atom("get")) >> [&]() -> message {
+   *     return {"result", i};
+   *   }
    * );
-   * @endcode
-   * @param begin First value in range.
-   * @param end Last value in range (excluded).
-   * @returns A functor implementing the loop.
+   * ~~~
    */
   template <class T>
   receive_for_helper<T> receive_for(T& begin, const T& end) {
@@ -144,21 +142,18 @@ class blocking_actor
   }
 
   /**
-   * @brief Receives messages as long as @p stmt returns true.
+   * Receives messages as long as `stmt` returns true.
+   * Semantically equal to: `while (stmt()) { receive(...); }`.
    *
-   * Semantically equal to: <tt>while (stmt()) { receive(...); }</tt>.
-   *
-   * <b>Usage example:</b>
-   * @code
+   * **Usage example:**
+   * ~~~
    * int i = 0;
    * receive_while([&]() { return (++i <= 10); })
    * (
    *   on<int>() >> int_fun,
    *   on<float>() >> float_fun
    * );
-   * @endcode
-   * @param stmt Lambda expression, functor or function returning a @c bool.
-   * @returns A functor implementing the loop.
+   * ~~~
    */
   template <class Statement>
   receive_while_helper receive_while(Statement stmt) {
@@ -168,13 +163,13 @@ class blocking_actor
   }
 
   /**
-   * @brief Receives messages until @p stmt returns true.
+   * Receives messages until `stmt` returns true.
    *
    * Semantically equal to:
-   * <tt>do { receive(...); } while (stmt() == false);</tt>
+   * `do { receive(...); } while (stmt() == false);`
    *
-   * <b>Usage example:</b>
-   * @code
+   * **Usage example:**
+   * ~~~
    * int i = 0;
    * do_receive
    * (
@@ -182,9 +177,7 @@ class blocking_actor
    *   on<float>() >> float_fun
    * )
    * .until([&]() { return (++i >= 10); };
-   * @endcode
-   * @param args Denotes the actor's response the next incoming message.
-   * @returns A functor providing the @c until member function.
+   * ~~~
    */
   template <class... Ts>
   do_receive_helper do_receive(Ts&&... args) {
@@ -198,17 +191,17 @@ class blocking_actor
   }
 
   /**
-   * @brief Blocks this actor until all other actors are done.
+   * Blocks this actor until all other actors are done.
    */
   void await_all_other_actors_done();
 
   /**
-   * @brief Implements the actor's behavior.
+   * Implements the actor's behavior.
    */
   virtual void act() = 0;
 
   /**
-   * @brief Unwinds the stack by throwing an actor_exited exception.
+   * Unwinds the stack by throwing an actor_exited exception.
    * @throws actor_exited
    */
   virtual void quit(uint32_t reason = exit_reason::normal);

@@ -31,13 +31,10 @@ namespace caf {
 namespace io {
 
 /**
- * @brief Publishes @p whom at @p port.
- *
- * The connection is automatically closed if the lifetime of @p whom ends.
- * @param whom Actor that should be published at @p port.
+ * Publishes `whom` at `port`. The connection is managed by the middleman.
+ * @param whom Actor that should be published at `port`.
  * @param port Unused TCP port.
- * @param addr The IP address to listen to, or @p INADDR_ANY if @p addr is
- *       @p nullptr.
+ * @param addr The IP address to listen to or `INADDR_ANY` if `addr == nullptr`.
  * @throws bind_failure
  */
 inline void publish(caf::actor whom, uint16_t port,

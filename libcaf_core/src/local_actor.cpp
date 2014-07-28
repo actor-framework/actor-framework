@@ -114,7 +114,7 @@ void local_actor::reply_message(message&& what) {
     send_tuple(actor_cast<channel>(whom), std::move(what));
   } else if (!id.is_answered()) {
     auto ptr = actor_cast<actor>(whom);
-    ptr->enqueue(address(), id.response_id(), std::move(what), m_host);
+    ptr->enqueue(address(), id.response_id(), std::move(what), host());
     id.mark_as_answered();
   }
 }
@@ -124,7 +124,7 @@ void local_actor::forward_message(const actor& dest, message_priority prio) {
   auto id = (prio == message_priority::high) ?
           m_current_node->mid.with_high_priority() :
           m_current_node->mid.with_normal_priority();
-  dest->enqueue(m_current_node->sender, id, m_current_node->msg, m_host);
+  dest->enqueue(m_current_node->sender, id, m_current_node->msg, host());
   // treat this message as asynchronous message from now on
   m_current_node->mid = message_id::invalid;
 }
@@ -134,7 +134,7 @@ void local_actor::send_tuple(message_priority prio, const channel& dest,
   if (!dest) return;
   message_id id;
   if (prio == message_priority::high) id = id.with_high_priority();
-  dest->enqueue(address(), id, std::move(what), m_host);
+  dest->enqueue(address(), id, std::move(what), host());
 }
 
 void local_actor::send_exit(const actor_addr& whom, uint32_t reason) {
@@ -191,7 +191,7 @@ message_id local_actor::timed_sync_send_tuple_impl(message_priority mp,
   }
   auto nri = new_request_id();
   if (mp == message_priority::high) nri = nri.with_high_priority();
-  dest->enqueue(address(), nri, std::move(what), m_host);
+  dest->enqueue(address(), nri, std::move(what), host());
   auto rri = nri.response_id();
   detail::singletons::get_scheduling_coordinator()->delayed_send(
     rtime, address(), this, rri, make_message(sync_timeout_msg{}));
@@ -208,7 +208,7 @@ message_id local_actor::sync_send_tuple_impl(message_priority mp,
   }
   auto nri = new_request_id();
   if (mp == message_priority::high) nri = nri.with_high_priority();
-  dest->enqueue(address(), nri, std::move(what), m_host);
+  dest->enqueue(address(), nri, std::move(what), host());
   return nri.response_id();
 }
 

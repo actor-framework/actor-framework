@@ -65,7 +65,9 @@ class continuation_decorator : public detail::behavior_impl {
 };
 } // namespace <anonymous>
 
-behavior::behavior(const message_handler& fun) : m_impl(fun.m_impl) {}
+behavior::behavior(const message_handler& mh) : m_impl(mh.as_behavior_impl()) {
+  // nop
+}
 
 behavior behavior::add_continuation(continuation_fun fun) {
   return behavior::impl_ptr{

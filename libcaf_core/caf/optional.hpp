@@ -30,44 +30,45 @@
 namespace caf {
 
 /**
- * @brief Represents an optional value of @p T.
+ * Represents an optional value of `T`.
  */
 template <class T>
 class optional {
-
  public:
-
   /**
-   * @brief Typdef for @p T.
+   * Typdef for `T`.
    */
   using type = T;
 
-  /* *
-   * @brief Default constructor.
-   * @post <tt>valid() == false</tt>
+  /**
+   * Creates an empty instance with `valid() == false`.
    */
-  //optional() : m_valid(false) { }
+  optional(const none_t& = none) : m_valid(false) {
+    // nop
+  }
 
   /**
-   * @post <tt>valid() == false</tt>
+   * Creates an valid instance from `value`.
    */
-  optional(const none_t& = none) : m_valid(false) { }
-
-  /**
-   * @brief Creates an @p option from @p value.
-   * @post <tt>valid() == true</tt>
-   */
-  optional(T value) : m_valid(false) { cr(std::move(value)); }
+  optional(T value) : m_valid(false) {
+    cr(std::move(value));
+  }
 
   optional(const optional& other) : m_valid(false) {
-    if (other.m_valid) cr(other.m_value);
+    if (other.m_valid) {
+      cr(other.m_value);
+    }
   }
 
   optional(optional&& other) : m_valid(false) {
-    if (other.m_valid) cr(std::move(other.m_value));
+    if (other.m_valid) {
+      cr(std::move(other.m_value));
+    }
   }
 
-  ~optional() { destroy(); }
+  ~optional() {
+    destroy();
+  }
 
   optional& operator=(const optional& other) {
     if (m_valid) {
@@ -92,237 +93,240 @@ class optional {
   }
 
   /**
-   * @brief Returns @p true if this @p option has a valid value;
-   *    otherwise @p false.
+   * Queries whether this instance holds a value.
    */
-  inline bool valid() const { return m_valid; }
+  bool valid() const {
+    return m_valid;
+  }
 
   /**
-   * @brief Returns <tt>!valid()</tt>.
+   * Returns `!valid()`.
    */
-  inline bool empty() const { return !m_valid; }
+  bool empty() const {
+    return !m_valid;
+  }
 
   /**
-   * @brief Returns @p true if this @p option has a valid value;
-   *    otherwise @p false.
+   * Returns `valid()`.
    */
-  inline explicit operator bool() const { return valid(); }
+  explicit operator bool() const {
+    return valid();
+  }
 
   /**
-   * @brief Returns <tt>!valid()</tt>.
+   * Returns `!valid()`.
    */
-  inline bool operator!() const { return empty(); }
-
-  inline bool operator==(const none_t&) { return empty(); }
+  bool operator!() const {
+    return !valid();
+  }
 
   /**
-   * @brief Returns the value.
+   * Returns the value.
    */
-  inline T& operator*() {
+  T& operator*() {
     CAF_REQUIRE(valid());
     return m_value;
   }
 
   /**
-   * @brief Returns the value.
+   * Returns the value.
    */
-  inline const T& operator*() const {
+  const T& operator*() const {
     CAF_REQUIRE(valid());
     return m_value;
   }
 
   /**
-   * @brief Returns the value.
+   * Returns the value.
    */
-  inline const T* operator->() const {
+  const T* operator->() const {
     CAF_REQUIRE(valid());
     return &m_value;
   }
 
   /**
-   * @brief Returns the value.
+   * Returns the value.
    */
-  inline T* operator->() {
+  T* operator->() {
     CAF_REQUIRE(valid());
     return &m_value;
   }
 
   /**
-   * @brief Returns the value.
+   * Returns the value.
    */
-  inline T& get() {
+  T& get() {
     CAF_REQUIRE(valid());
     return m_value;
   }
 
   /**
-   * @brief Returns the value.
+   * Returns the value.
    */
-  inline const T& get() const {
+  const T& get() const {
     CAF_REQUIRE(valid());
     return m_value;
   }
 
   /**
-   * @brief Returns the value. The value is set to @p default_value
-   *    if <tt>valid() == false</tt>.
-   * @post <tt>valid() == true</tt>
+   * Returns the value if `valid()`, otherwise returns `default_value`.
    */
-  inline const T& get_or_else(const T& default_value) const {
-    if (valid()) return get();
-    return default_value;
+  const T& get_or_else(const T& default_value) const {
+    return valid() ? get() : default_value;
   }
 
  private:
-
-  bool m_valid;
-  union { T m_value; };
-
   void destroy() {
     if (m_valid) {
       m_value.~T();
       m_valid = false;
     }
   }
-
   template <class V>
   void cr(V&& value) {
     CAF_REQUIRE(!valid());
     m_valid = true;
-    new (&m_value) T (std::forward<V>(value));
+    new (&m_value) T(std::forward<V>(value));
   }
-
+  bool m_valid;
+  union { T m_value; };
 };
 
+/**
+ * Template specialization to allow `optional`
+ * to hold a reference rather than an actual value.
+ */
 template <class T>
 class optional<T&> {
-
  public:
-
   using type = T;
 
-  optional(const none_t& = none) : m_value(nullptr) { }
+  optional(const none_t& = none) : m_value(nullptr) {
+    // nop
+  }
 
-  optional(T& value) : m_value(&value) { }
+  optional(T& value) : m_value(&value) {
+    // nop
+  }
 
   optional(const optional& other) = default;
 
   optional& operator=(const optional& other) = default;
 
-  inline bool valid() const { return m_value != nullptr; }
+  bool valid() const {
+    return m_value != nullptr;
+  }
 
-  inline bool empty() const { return !valid(); }
+  bool empty() const {
+    return !valid();
+  }
 
-  inline explicit operator bool() const { return valid(); }
+  explicit operator bool() const {
+    return valid();
+  }
 
-  inline bool operator!() const { return empty(); }
+  bool operator!() const {
+    return !valid();
+  }
 
-  inline bool operator==(const none_t&) { return empty(); }
-
-  inline T& operator*() {
+  T& operator*() {
     CAF_REQUIRE(valid());
     return *m_value;
   }
 
-  inline const T& operator*() const {
+  const T& operator*() const {
     CAF_REQUIRE(valid());
     return *m_value;
   }
 
-  inline T* operator->() {
+  T* operator->() {
     CAF_REQUIRE(valid());
     return m_value;
   }
 
-  inline const T* operator->() const {
+  const T* operator->() const {
     CAF_REQUIRE(valid());
     return m_value;
   }
 
-  inline T& get() {
+  T& get() {
     CAF_REQUIRE(valid());
     return *m_value;
   }
 
-  inline const T& get() const {
+  const T& get() const {
     CAF_REQUIRE(valid());
     return *m_value;
   }
 
-  inline const T& get_or_else(const T& default_value) const {
+  const T& get_or_else(const T& default_value) const {
     if (valid()) return get();
     return default_value;
   }
 
  private:
-
   T* m_value;
-
 };
 
-template <>
-class optional<void> {
-
- public:
-
-  optional(const unit_t&) : m_valid(true) { }
-
-  optional(const none_t& = none) : m_valid(false) { }
-
-  inline bool valid() const { return m_valid; }
-
-  inline bool empty() const { return !m_valid; }
-
-  inline explicit operator bool() const { return valid(); }
-
-  inline bool operator!() const { return empty(); }
-
-  inline bool operator==(const none_t&) { return empty(); }
-
-  inline const unit_t& operator*() const { return unit; }
-
- private:
-
-  bool m_valid;
-
-};
-
-/** @relates option */
+/** @relates optional */
 template <class T, typename U>
 bool operator==(const optional<T>& lhs, const optional<U>& rhs) {
   if ((lhs) && (rhs)) return *lhs == *rhs;
   return false;
 }
 
-/** @relates option */
+/** @relates optional */
 template <class T, typename U>
 bool operator==(const optional<T>& lhs, const U& rhs) {
   if (lhs) return *lhs == rhs;
   return false;
 }
 
-/** @relates option */
+/** @relates optional */
 template <class T, typename U>
 bool operator==(const T& lhs, const optional<U>& rhs) {
   return rhs == lhs;
 }
 
-/** @relates option */
+/** @relates optional */
 template <class T, typename U>
 bool operator!=(const optional<T>& lhs, const optional<U>& rhs) {
   return !(lhs == rhs);
 }
 
-/** @relates option */
+/** @relates optional */
 template <class T, typename U>
 bool operator!=(const optional<T>& lhs, const U& rhs) {
   return !(lhs == rhs);
 }
 
-/** @relates option */
+/** @relates optional */
 template <class T, typename U>
 bool operator!=(const T& lhs, const optional<U>& rhs) {
   return !(lhs == rhs);
+}
+
+/** @relates optional */
+template <class T>
+bool operator==(const optional<T>& val, const none_t&) {
+  return val.valid();
+}
+
+/** @relates optional */
+template <class T>
+bool operator==(const none_t&, const optional<T>& val) {
+  return val.valid();
+}
+/** @relates optional */
+template <class T>
+bool operator!=(const optional<T>& val, const none_t&) {
+  return !val.valid();
+}
+
+/** @relates optional */
+template <class T>
+bool operator!=(const none_t&, const optional<T>& val) {
+  return !val.valid();
 }
 
 } // namespace caf

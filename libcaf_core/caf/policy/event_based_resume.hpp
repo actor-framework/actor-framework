@@ -54,11 +54,11 @@ class event_based_resume {
 
     void detach_from_scheduler() override { this->deref(); }
 
-    resumable::resume_result resume(execution_unit* host) override {
+    resumable::resume_result resume(execution_unit* new_host) override {
       auto d = static_cast<Derived*>(this);
-      d->m_host = host;
+      d->host(new_host);
       CAF_LOG_TRACE("id = " << d->id());
-      auto done_cb = [&]()->bool {
+      auto done_cb = [&]() -> bool {
         CAF_LOG_TRACE("");
         d->bhvr_stack().clear();
         d->bhvr_stack().cleanup();

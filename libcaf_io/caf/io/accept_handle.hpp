@@ -26,7 +26,7 @@ namespace caf {
 namespace io {
 
 /**
- * @brief Generic handle type for managing incoming connections.
+ * Generic handle type for managing incoming connections.
  */
 class accept_handle : public handle<accept_handle> {
 

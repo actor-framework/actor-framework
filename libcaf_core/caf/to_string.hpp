@@ -85,8 +85,7 @@ inline std::string to_string(const any& what) {
 */
 
 /**
- * @brief Converts @p e to a string including the demangled type of e
- *    and @p e.what().
+ * Converts `e` to a string including the demangled type of `e` and `e.what()`.
  */
 std::string to_verbose_string(const std::exception& e);
 

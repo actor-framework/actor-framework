@@ -29,19 +29,13 @@
 namespace caf {
 
 /**
- * @brief Converts a string created by {@link caf::to_string to_string}
- *    to its original value.
- * @param what String representation of a serialized value.
- * @returns An {@link caf::object object} instance that contains
- *      the deserialized value.
+ * Converts a string created by `to_string` to its original value.
  */
 uniform_value from_string_impl(const std::string& what);
 
 /**
- * @brief Convenience function that deserializes a value from @p what and
- *    converts the result to @p T.
- * @throws std::logic_error if the result is not of type @p T.
- * @returns The deserialized value as instance of @p T.
+ * Convenience function that tries to deserializes a value from
+ * `what` and converts the result to `T`.
  */
 template <class T>
 optional<T> from_string(const std::string& what) {

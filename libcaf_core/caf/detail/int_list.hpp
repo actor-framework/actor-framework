@@ -26,12 +26,7 @@ namespace caf {
 namespace detail {
 
 /**
- * @addtogroup MetaProgramming
- * @{
- */
-
-/**
- * @brief A list of integers (wraps a long... template parameter pack).
+ * A list of integers (wraps a long... template parameter pack).
  */
 template <long... Is>
 struct int_list {};
@@ -63,7 +58,7 @@ struct il_right<int_list<Is...>, N> : il_right_impl<(N > sizeof...(Is)
                           Is...> { };
 
 /**
- * @brief Creates indices for @p List beginning at @p Pos.
+ * Creates indices for `List` beginning at `Pos`.
  */
 template <class List, long Pos = 0, typename Indices = int_list<>>
 struct il_indices;
@@ -98,10 +93,6 @@ constexpr auto get_right_indices(const T&)
 -> typename il_right<typename il_indices<T>::type, Num>::type {
   return {};
 }
-
-/**
- * @}
- */
 
 } // namespace detail
 } // namespace caf

@@ -33,33 +33,29 @@ class duration;
 namespace policy {
 
 /**
- * @brief The resume_policy <b>concept</b> class. Please note that this
- *    class is <b>not</b> implemented. It only explains the all
- *    required member function and their behavior for any resume policy.
+ * The resume_policy <b>concept</b> class. Please note that this
+ * class is <b>not</b> implemented. It only explains the all
+ * required member function and their behavior for any resume policy.
  */
 class resume_policy {
-
  public:
-
   /**
-   * @brief Resumes the actor by reading a new message <tt>msg</tt> and then
-   *    calling <tt>self->invoke(msg)</tt>. This process is repeated
-   *    until either no message is left in the actor's mailbox or the
-   *    actor finishes execution.
+   * Resumes the actor by reading a new message and then
+   * calling `self->invoke(msg)`. This process is repeated
+   * until either no message is left in the actor's mailbox or the
+   * actor finishes execution.
    */
   template <class Actor>
   resumable::resume_result resume(Actor* self, execution_unit*);
 
   /**
-   * @brief Waits unconditionally until the actor is ready to resume.
+   * Waits unconditionally until the actor is ready to be resumed.
+   * This member function calls `self->await_data()`.
    * @note This member function must raise a compiler error if the resume
-   *     strategy cannot be used to implement blocking actors.
-   *
-   * This member function calls {@link scheduling_policy::await_data}
+   *       strategy cannot be used to implement blocking actors.
    */
   template <class Actor>
   bool await_ready(Actor* self);
-
 };
 
 } // namespace policy

@@ -33,9 +33,9 @@
 //   - enables optional OpenCL module
 
 /**
- * @brief Denotes the libcaf version in the format {MAJOR}{MINOR}{PATCH},
- *    whereas each number is a two-digit decimal number without
- *    leading zeros (e.g. 900 is version 0.9.0).
+ * Denotes the libcaf version in the format {MAJOR}{MINOR}{PATCH},
+ * whereas each number is a two-digit decimal number without
+ * leading zeros (e.g. 900 is version 0.9.0).
  */
 #define CAF_VERSION 1001
 

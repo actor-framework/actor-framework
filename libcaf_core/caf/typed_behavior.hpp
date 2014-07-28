@@ -28,10 +28,10 @@
 
 namespace caf {
 
-namespace detail {
-
 template <class... Rs>
 class functor_based_typed_actor;
+
+namespace detail {
 
 // converts a list of replies_to<...>::with<...> elements to a list of
 // lists containing the replies_to<...> half only
@@ -145,7 +145,7 @@ class typed_behavior {
   template <class, class, class>
   friend class mixin::behavior_stack_based_impl;
   template <class...>
-  friend class detail::functor_based_typed_actor;
+  friend class functor_based_typed_actor;
  public:
   typed_behavior(typed_behavior&&) = default;
   typed_behavior(const typed_behavior&) = default;
@@ -172,13 +172,13 @@ class typed_behavior {
   }
 
   /**
-    * @brief Invokes the timeout callback.
+    * Invokes the timeout callback.
     */
   inline void handle_timeout() { m_bhvr.handle_timeout(); }
 
   /**
-   * @brief Returns the duration after which receives using
-   *    this behavior should time out.
+   * Returns the duration after which receives using
+   * this behavior should time out.
    */
   inline const duration& timeout() const { return m_bhvr.timeout(); }
 

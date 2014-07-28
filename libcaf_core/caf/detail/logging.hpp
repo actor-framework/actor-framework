@@ -233,7 +233,7 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 
 /**
  * @def CAF_LOGC
- * @brief Logs a message with custom class and function names.
+ * Logs a message with custom class and function names.
  */
 #define CAF_LOGC(level, classname, funname, msg)                \
   CAF_CAT(CAF_PRINT, level)(CAF_CAT(CAF_LVL_NAME, level)(), classname,   \
@@ -241,19 +241,19 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 
 /**
  * @def CAF_LOGF
- * @brief Logs a message inside a free function.
+ * Logs a message inside a free function.
  */
 #define CAF_LOGF(level, msg) CAF_LOGC(level, "NONE", __func__, msg)
 
 /**
  * @def CAF_LOGMF
- * @brief Logs a message inside a member function.
+ * Logs a message inside a member function.
  */
 #define CAF_LOGMF(level, msg) CAF_LOGC(level, CAF_CLASS_NAME, __func__, msg)
 
 /**
  * @def CAF_LOGC
- * @brief Logs a message with custom class and function names.
+ * Logs a message with custom class and function names.
  */
 #define CAF_LOGC_IF(stmt, level, classname, funname, msg)           \
   CAF_CAT(CAF_PRINT_IF, level)(stmt, CAF_CAT(CAF_LVL_NAME, level)(),   \
@@ -261,14 +261,14 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 
 /**
  * @def CAF_LOGF
- * @brief Logs a message inside a free function.
+ * Logs a message inside a free function.
  */
 #define CAF_LOGF_IF(stmt, level, msg)                     \
   CAF_LOGC_IF(stmt, level, "NONE", __func__, msg)
 
 /**
  * @def CAF_LOGMF
- * @brief Logs a message inside a member function.
+ * Logs a message inside a member function.
  */
 #define CAF_LOGMF_IF(stmt, level, msg)                    \
   CAF_LOGC_IF(stmt, level, CAF_CLASS_NAME, __func__, msg)

@@ -141,7 +141,7 @@ class local_broker : public event_based_actor {
           CAF_LOGC_TRACE("caf::local_broker", "init$FORWARD",
                   CAF_TARG(what, to_string));
           // local forwarding
-          m_group->send_all_subscribers(last_sender(), what, m_host);
+          m_group->send_all_subscribers(last_sender(), what, host());
           // forward to all acquaintances
           send_to_acquaintances(what);
         },
@@ -175,7 +175,7 @@ class local_broker : public event_based_actor {
              << m_acquaintances.size() << " acquaintances; "
              << CAF_TSARG(sender) << ", " << CAF_TSARG(what));
     for (auto& acquaintance : m_acquaintances) {
-      acquaintance->enqueue(sender, message_id::invalid, what, m_host);
+      acquaintance->enqueue(sender, message_id::invalid, what, host());
     }
   }
 
@@ -253,7 +253,7 @@ class proxy_broker : public event_based_actor {
   behavior make_behavior() {
     return (others() >> [=] {
       m_group->send_all_subscribers(last_sender(), last_dequeued(),
-                      m_host);
+                      host());
     });
   }
 

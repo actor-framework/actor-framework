@@ -40,16 +40,14 @@ struct invalid_actor_t;
 struct invalid_group_t;
 
 /**
- * @brief A handle to instances of {@link abstract_channel}.
+ * A handle to instances of `abstract_channel`.
  */
 class channel : detail::comparable<channel>,
-        detail::comparable<channel, actor>,
-        detail::comparable<channel, abstract_channel*> {
-
+                detail::comparable<channel, actor>,
+                detail::comparable<channel, abstract_channel*> {
+ public:
   template <class T, typename U>
   friend T actor_cast(const U&);
-
- public:
 
   channel() = default;
 
@@ -63,19 +61,30 @@ class channel : detail::comparable<channel>,
 
   template <class T>
   channel(intrusive_ptr<T> ptr,
-      typename std::enable_if<
-        std::is_base_of<abstract_channel, T>::value>::type* = 0)
-      : m_ptr(ptr) {}
+          typename std::enable_if<
+            std::is_base_of<abstract_channel, T>::value
+          >::type* = 0)
+      : m_ptr(ptr) {
+    // nop
+  }
 
   channel(abstract_channel* ptr);
 
-  inline explicit operator bool() const { return static_cast<bool>(m_ptr); }
+  inline explicit operator bool() const {
+    return static_cast<bool>(m_ptr);
+  }
 
-  inline bool operator!() const { return !m_ptr; }
+  inline bool operator!() const {
+    return !m_ptr;
+  }
 
-  inline abstract_channel* operator->() const { return m_ptr.get(); }
+  inline abstract_channel* operator->() const {
+    return m_ptr.get();
+  }
 
-  inline abstract_channel& operator*() const { return *m_ptr; }
+  inline abstract_channel& operator*() const {
+    return *m_ptr;
+  }
 
   intptr_t compare(const channel& other) const;
 
@@ -84,14 +93,14 @@ class channel : detail::comparable<channel>,
   intptr_t compare(const abstract_channel* other) const;
 
   static intptr_t compare(const abstract_channel* lhs,
-              const abstract_channel* rhs);
+                          const abstract_channel* rhs);
 
  private:
+  inline abstract_channel* get() const {
+    return m_ptr.get();
+  }
 
-  inline abstract_channel* get() const { return m_ptr.get(); }
-
-  intrusive_ptr<abstract_channel> m_ptr;
-
+  abstract_channel_ptr m_ptr;
 };
 
 } // namespace caf

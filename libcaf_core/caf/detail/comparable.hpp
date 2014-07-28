@@ -24,13 +24,12 @@ namespace caf {
 namespace detail {
 
 /**
- * @brief Barton–Nackman trick implementation.
- *
- * @p Subclass must provide a @c compare member function that compares
- * to instances of @p T and returns an integer @c x with:
- * - <tt>x < 0</tt> if <tt>*this < other</tt>
- * - <tt>x > 0</tt> if <tt>*this > other</tt>
- * - <tt>x == 0</tt> if <tt>*this == other</tt>
+ * Barton–Nackman trick implementation.
+ * `Subclass` must provide a compare member function that compares
+ * to instances of `T` and returns an integer x with:
+ * - `x < 0</tt> if <tt>*this < other
+ * - `x > 0</tt> if <tt>*this > other
+ * - `x == 0</tt> if <tt>*this == other
  */
 template <class Subclass, class T = Subclass>
 class comparable {

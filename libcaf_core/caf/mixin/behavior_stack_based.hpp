@@ -146,7 +146,7 @@ class behavior_stack_based_impl : public single_timeout<Base, Subtype> {
 };
 
 /**
- * @brief Mixin for actors using a stack-based message processing.
+ * Mixin for actors using a stack-based message processing.
  * @note This mixin implicitly includes {@link single_timeout}.
  */
 template <class BehaviorType>

@@ -25,31 +25,32 @@
 namespace caf {
 
 /**
- * @brief Acts as wildcard expression in patterns.
+ * Acts as wildcard expression in patterns.
  */
-struct anything {};
+struct anything {
+  // no content
+};
 
 /**
- * @brief Compares two instances of {@link anything}.
- * @returns @p false
  * @relates anything
  */
-inline bool operator==(const anything&, const anything&) { return true; }
+inline bool operator==(const anything&, const anything&) {
+  return true;
+}
 
 /**
- * @brief Compares two instances of {@link anything}.
- * @returns @p false
  * @relates anything
  */
-inline bool operator!=(const anything&, const anything&) { return false; }
+inline bool operator!=(const anything&, const anything&) {
+  return false;
+}
 
 /**
- * @brief Checks wheter @p T is {@link anything}.
+ * @relates anything
  */
 template <class T>
-struct is_anything {
-  static constexpr bool value = std::is_same<T, anything>::value;
-
+struct is_anything : std::is_same<T, anything> {
+  // no content
 };
 
 } // namespace caf

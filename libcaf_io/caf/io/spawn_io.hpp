@@ -30,7 +30,7 @@ namespace caf {
 namespace io {
 
 /**
- * @brief Spawns a new functor-based broker.
+ * Spawns a new functor-based broker.
  */
 template <spawn_options Os = no_spawn_options,
      typename F = std::function<void(broker*)>, class... Ts>
@@ -40,7 +40,7 @@ actor spawn_io(F fun, Ts&&... args) {
 }
 
 /**
- * @brief Spawns a new functor-based broker connecting to <tt>host:port</tt>.
+ * Spawns a new functor-based broker connecting to `host:port.
  */
 template <spawn_options Os = no_spawn_options,
       typename F = std::function<void(broker*)>, class... Ts>
@@ -77,7 +77,7 @@ struct is_socket : decltype(is_socket_test::test<T>(0)) {
 };
 
 /**
- * @brief Spawns a new broker as server running on given @p port.
+ * Spawns a new broker as server running on given `port`.
  */
 template <spawn_options Os = no_spawn_options,
       typename F = std::function<void(broker*)>,
@@ -93,7 +93,7 @@ spawn_io_server(F fun, Socket sock, Ts&&... args) {
 }
 
 /**
- * @brief Spawns a new broker as server running on given @p port.
+ * Spawns a new broker as server running on given `port`.
  */
 template <spawn_options Os = no_spawn_options,
       typename F = std::function<void(broker*)>, class... Ts>

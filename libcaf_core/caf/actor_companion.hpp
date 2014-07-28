@@ -35,9 +35,9 @@
 namespace caf {
 
 /**
- * @brief An co-existing forwarding all messages through a user-defined
- *    callback to another object, thus serving as gateway to
- *    allow any object to interact with other actors.
+ * An co-existing forwarding all messages through a user-defined
+ * callback to another object, thus serving as gateway to
+ * allow any object to interact with other actors.
  */
 class actor_companion : public extend<local_actor, actor_companion>::
                  with<mixin::behavior_stack_based<behavior>::impl,
@@ -52,14 +52,14 @@ class actor_companion : public extend<local_actor, actor_companion>::
   using enqueue_handler = std::function<void (message_pointer)>;
 
   /**
-   * @brief Removes the handler for incoming messages and terminates
-   *    the companion for exit reason @ rsn.
+   * Removes the handler for incoming messages and terminates
+   * the companion for exit reason @ rsn.
    */
   void disconnect(std::uint32_t rsn = exit_reason::normal);
 
   /**
-   * @brief Sets the handler for incoming messages.
-   * @warning @p handler needs to be thread-safe
+   * Sets the handler for incoming messages.
+   * @warning `handler` needs to be thread-safe
    */
   void on_enqueue(enqueue_handler handler);
 
@@ -77,7 +77,7 @@ class actor_companion : public extend<local_actor, actor_companion>::
 };
 
 /**
- * @brief A pointer to a co-existing (actor) object.
+ * A pointer to a co-existing (actor) object.
  * @relates actor_companion
  */
 using actor_companion_ptr = intrusive_ptr<actor_companion>;

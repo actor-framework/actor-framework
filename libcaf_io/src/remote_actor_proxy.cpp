@@ -52,25 +52,20 @@ remote_actor_proxy::remote_actor_proxy(actor_id aid,
 }
 
 remote_actor_proxy::~remote_actor_proxy() {
-  anon_send(m_parent, make_message(atom("_DelProxy"),
-                   node(),
-                   m_id));
+  anon_send(m_parent, make_message(atom("_DelProxy"), node(), id()));
 }
 
 void remote_actor_proxy::forward_msg(const actor_addr& sender,
                    message_id mid,
                    message msg) {
   CAF_LOG_TRACE(CAF_ARG(m_id)
-           << ", " << CAF_TSARG(sender)
-           << ", " << CAF_MARG(mid, integer_value)
-           << ", " << CAF_TSARG(msg));
+                << ", " << CAF_TSARG(sender)
+                << ", " << CAF_MARG(mid, integer_value)
+                << ", " << CAF_TSARG(msg));
   m_parent->enqueue(invalid_actor_addr,
             message_id::invalid,
-            make_message(atom("_Dispatch"),
-                   sender,
-                   address(),
-                   mid,
-                   std::move(msg)),
+            make_message(atom("_Dispatch"), sender, address(),
+                         mid, std::move(msg)),
             nullptr);
 }
 

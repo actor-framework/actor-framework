@@ -35,35 +35,34 @@
 
 namespace caf {
 
+class scoped_actor;
+
 struct invalid_actor_t {
   constexpr invalid_actor_t() {}
-
 };
 
 /**
- * @brief Identifies an invalid {@link actor}.
+ * Identifies an invalid {@link actor}.
  * @relates actor
  */
 constexpr invalid_actor_t invalid_actor = invalid_actor_t{};
 
 template <class T>
 struct is_convertible_to_actor {
-  static constexpr bool value = std::is_base_of<actor_proxy, T>::value ||
-                  std::is_base_of<local_actor, T>::value;
-
+  using type = typename std::remove_pointer<T>::type;
+  static constexpr bool value = std::is_base_of<actor_proxy, type>::value
+                                || std::is_base_of<local_actor, type>::value
+                                || std::is_same<scoped_actor, type>::value;
 };
 
 /**
- * @brief Identifies an untyped actor.
- *
- * Can be used with derived types of {@link event_based_actor},
- * {@link blocking_actor}, {@link actor_proxy}, or
- * {@link io::broker}.
+ * Identifies an untyped actor. Can be used with derived types
+ * of `event_based_actor`, `blocking_actor`, `actor_proxy`.
  */
 class actor : detail::comparable<actor>,
-        detail::comparable<actor, actor_addr>,
-        detail::comparable<actor, invalid_actor_t>,
-        detail::comparable<actor, invalid_actor_addr_t> {
+              detail::comparable<actor, actor_addr>,
+              detail::comparable<actor, invalid_actor_t>,
+              detail::comparable<actor, invalid_actor_addr_t> {
 
   friend class local_actor;
 
@@ -121,8 +120,7 @@ class actor : detail::comparable<actor>,
   }
 
   /**
-   * @brief Returns a handle that grants access to
-   *    actor operations such as enqueue.
+   * Returns a handle that grants access to actor operations such as enqueue.
    */
   inline abstract_actor* operator->() const {
     return m_ptr.get();
@@ -145,7 +143,7 @@ class actor : detail::comparable<actor>,
   }
 
   /**
-   * @brief Queries the address of the stored actor.
+   * Returns the address of the stored actor.
    */
   actor_addr address() const;
 

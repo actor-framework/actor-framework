@@ -26,7 +26,7 @@ namespace caf {
 namespace io {
 
 /**
- * @brief Generic handle type for identifying connections.
+ * Generic handle type for identifying connections.
  */
 class connection_handle : public handle<connection_handle> {
 

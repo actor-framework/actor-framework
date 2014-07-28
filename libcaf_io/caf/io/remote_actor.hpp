@@ -35,7 +35,7 @@ namespace caf {
 namespace io {
 
 /**
- * @brief Establish a new connection to a remote actor via @p connection.
+ * Establish a new connection to a remote actor via `connection`.
  * @param connection A connection to another process described by a pair
  *           of input and output stream.
  * @returns An {@link actor_ptr} to the proxy instance
@@ -48,7 +48,7 @@ inline actor remote_actor(Socket fd) {
   return actor_cast<actor>(res);
 }
 /**
- * @brief Establish a new connection to the actor at @p host on given @p port.
+ * Establish a new connection to the actor at `host` on given `port`.
  * @param host Valid hostname or IP address.
  * @param port TCP port.
  * @returns An {@link actor_ptr} to the proxy instance

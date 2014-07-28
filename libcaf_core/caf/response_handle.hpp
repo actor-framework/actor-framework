@@ -35,27 +35,22 @@
 namespace caf {
 
 /**
- * @brief This tag identifies response handles featuring a
- *    nonblocking API by providing a @p then member function.
+ * This tag identifies response handles featuring a
+ * nonblocking API by providing a `then` member function.
  * @relates response_handle
  */
 struct nonblocking_response_handle_tag {};
 
 /**
- * @brief This tag identifies response handles featuring a
- *    blocking API by providing an @p await member function.
+ * This tag identifies response handles featuring a
+ * blocking API by providing an `await` member function.
  * @relates response_handle
  */
 struct blocking_response_handle_tag {};
 
 /**
- * @brief This helper class identifies an expected response message
- *    and enables <tt>sync_send(...).then(...)</tt>.
- *
- * @tparam Self The type of the actor this handle belongs to.
- * @tparam Result Either message or type_list<R1, R2, ... Rn>.
- * @tparam Tag Either {@link nonblocking_response_handle_tag} or
- *       {@link blocking_response_handle_tag}.
+ * This helper class identifies an expected response message
+ * and enables `sync_send(...).then(...)`.
  */
 template <class Self, class Result, class Tag>
 class response_handle;

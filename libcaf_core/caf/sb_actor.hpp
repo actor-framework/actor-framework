@@ -28,37 +28,30 @@
 namespace caf {
 
 /**
- * @brief A base class for state-based actors using the
- *    Curiously Recurring Template Pattern
- *    to initialize the derived actor with its @p init_state member.
- * @tparam Derived Direct subclass of @p sb_actor.
+ * A base class for state-based actors using the
+ * Curiously Recurring Template Pattern
+ * to initialize the derived actor with its `init_state` member.
  */
 template <class Derived, class Base = event_based_actor>
 class sb_actor : public Base {
-
+public:
   static_assert(std::is_base_of<event_based_actor, Base>::value,
           "Base must be event_based_actor or a derived type");
 
- protected:
-
-  using combined_type = sb_actor;
-
- public:
-
   /**
-   * @brief Overrides {@link event_based_actor::make_behavior()} and sets
-   *    the initial actor behavior to <tt>Derived::init_state</tt>.
+   * Overrides {@link event_based_actor::make_behavior()} and sets
+   * the initial actor behavior to `Derived::init_state.
    */
   behavior make_behavior() override {
     return static_cast<Derived*>(this)->init_state;
   }
 
  protected:
+  using combined_type = sb_actor;
 
   template <class... Ts>
   sb_actor(Ts&&... args)
       : Base(std::forward<Ts>(args)...) {}
-
 };
 
 } // namespace caf

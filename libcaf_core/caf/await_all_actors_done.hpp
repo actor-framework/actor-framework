@@ -26,8 +26,7 @@
 namespace caf {
 
 /**
- * @brief Blocks execution of this actor until all
- *    other actors finished execution.
+ * Blocks execution of this actor until all other actors finished execution.
  * @warning This function will cause a deadlock if called from multiple actors.
  * @warning Do not call this function in cooperatively scheduled actors.
  */

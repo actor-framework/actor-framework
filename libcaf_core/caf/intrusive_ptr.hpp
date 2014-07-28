@@ -30,7 +30,7 @@
 namespace caf {
 
 /**
- * @brief An intrusive, reference counting smart pointer impelementation.
+ * An intrusive, reference counting smart pointer impelementation.
  * @relates ref_counted
  */
 template <class T>
@@ -67,8 +67,8 @@ class intrusive_ptr : detail::comparable<intrusive_ptr<T>>,
   }
 
   /**
-   * @brief Returns the raw pointer without modifying reference count
-   *    and sets this to @p nullptr.
+   * Returns the raw pointer without modifying reference
+   * count and sets this to `nullptr`.
    */
   pointer release() {
     auto result = m_ptr;
@@ -77,7 +77,7 @@ class intrusive_ptr : detail::comparable<intrusive_ptr<T>>,
   }
 
   /**
-   * @brief Sets this pointer to @p ptr without modifying reference count.
+   * Sets this pointer to `ptr` without modifying reference count.
    */
   void adopt(pointer ptr) {
     reset();
@@ -161,7 +161,7 @@ class intrusive_ptr : detail::comparable<intrusive_ptr<T>>,
  * @relates intrusive_ptr
  */
 template <class X, typename Y>
-inline bool operator==(const intrusive_ptr<X>& lhs, const intrusive_ptr<Y>& rhs) {
+bool operator==(const intrusive_ptr<X>& lhs, const intrusive_ptr<Y>& rhs) {
   return lhs.get() == rhs.get();
 }
 
@@ -169,7 +169,7 @@ inline bool operator==(const intrusive_ptr<X>& lhs, const intrusive_ptr<Y>& rhs)
  * @relates intrusive_ptr
  */
 template <class X, typename Y>
-inline bool operator!=(const intrusive_ptr<X>& lhs, const intrusive_ptr<Y>& rhs) {
+bool operator!=(const intrusive_ptr<X>& lhs, const intrusive_ptr<Y>& rhs) {
   return !(lhs == rhs);
 }
 

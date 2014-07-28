@@ -33,7 +33,7 @@ struct invalid_message_id {
 };
 
 /**
- * @brief Denotes whether a message is asynchronous or synchronous
+ * Denotes whether a message is asynchronous or synchronous
  * @note Asynchronous messages always have an invalid message id.
  */
 class message_id : detail::comparable<message_id> {

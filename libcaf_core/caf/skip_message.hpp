@@ -23,9 +23,9 @@
 namespace caf {
 
 /**
- * @brief Optional return type for functors used in pattern matching
- *    expressions. This type is evaluated by the runtime system
- *    and can be used to intentionally skip messages.
+ * Optional return type for functors used in pattern matching
+ * expressions. This type is evaluated by the runtime system
+ * and can be used to intentionally skip messages.
  */
 struct skip_message_t {
   constexpr skip_message_t() {}
@@ -33,9 +33,9 @@ struct skip_message_t {
 };
 
 /**
- * @brief Tells the runtime system to skip a message when used as message
- *    handler, i.e., causes the runtime to leave the message in
- *    the mailbox of an actor.
+ * Tells the runtime system to skip a message when used as message
+ * handler, i.e., causes the runtime to leave the message in
+ * the mailbox of an actor.
  */
 constexpr skip_message_t skip_message() {
   return {};

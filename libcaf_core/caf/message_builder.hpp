@@ -31,22 +31,19 @@
 namespace caf {
 
 /**
- * @brief Provides a convenient interface to create a {@link message}
- *    from a series of values using the member function @p append.
+ * Provides a convenient interface to create a {@link message}
+ * from a series of values using the member function `append`.
  */
 class message_builder {
-
+ public:
+  message_builder();
   message_builder(const message_builder&) = delete;
-
   message_builder& operator=(const message_builder&) = delete;
 
- public:
-
-  message_builder();
+  ~message_builder();
 
   /**
-   * @brief Creates a new instance and immediately calls
-   *    <tt>append(first, last)</tt>.
+   * Creates a new instance and immediately calls `append(first, last)`.
    */
   template <class Iter>
   message_builder(Iter first, Iter last) {
@@ -54,15 +51,13 @@ class message_builder {
     append(first, last);
   }
 
-  ~message_builder();
-
   /**
-   * @brief Adds @p what to the elements of the internal buffer.
+   * Adds `what` to the elements of the internal buffer.
    */
   message_builder& append(uniform_value what);
 
   /**
-   * @brief Appends all values in range [first, last).
+   * Appends all values in range [first, last).
    */
   template <class Iter>
   message_builder& append(Iter first, Iter last) {
@@ -78,7 +73,7 @@ class message_builder {
   }
 
   /**
-   * @brief Adds @p what to the elements of the internal buffer.
+   * Adds `what` to the elements of the internal buffer.
    */
   template <class T>
   message_builder& append(T what) {
@@ -86,40 +81,39 @@ class message_builder {
   }
 
   /**
-   * @brief Converts the internal buffer to an actual message object.
+   * Converts the internal buffer to an actual message object.
    *
-   * It is worth mentioning that a call to @p to_message does neither
-   * invalidate the @p message_builder instance nor clears the internal
+   * It is worth mentioning that a call to `to_message` does neither
+   * invalidate the `message_builder` instance nor clears the internal
    * buffer. However, calling any non-const member function afterwards
-   * can cause the @p message_builder to detach its data, i.e.,
+   * can cause the `message_builder` to detach its data, i.e.,
    * copy it if there is more than one reference to it.
    */
   message to_message();
 
   /**
-   * @brief Convenience function for <tt>to_message().apply(handler)</tt>.
+   * Convenience function for `to_message().apply(handler).
    */
   inline optional<message> apply(message_handler handler) {
     return to_message().apply(std::move(handler));
   }
 
   /**
-   * @brief Removes all elements from the internal buffer.
+   * Removes all elements from the internal buffer.
    */
   void clear();
 
   /**
-   * @brief Returns whether the internal buffer is empty.
+   * Returns whether the internal buffer is empty.
    */
   bool empty() const;
 
   /**
-   * @brief Returns the number of elements in the internal buffer.
+   * Returns the number of elements in the internal buffer.
    */
   size_t size() const;
 
  private:
-
   void init();
 
   template <class T>
@@ -139,7 +133,6 @@ class message_builder {
   const dynamic_msg_data* data() const;
 
   intrusive_ptr<ref_counted> m_data; // hide dynamic_msg_data implementation
-
 };
 
 } // namespace caf

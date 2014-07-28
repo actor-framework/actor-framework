@@ -28,8 +28,8 @@ namespace caf {
 namespace policy {
 
 /**
- * @brief An implementation of the {@link steal_policy} concept
- *    that iterates over all other workers when stealing.
+ * An implementation of the {@link steal_policy} concept
+ * that simply iterates over other workers when stealing.
  *
  * @relates steal_policy
  */

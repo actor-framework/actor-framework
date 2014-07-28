@@ -43,7 +43,7 @@ struct purge_refs_impl<std::reference_wrapper<const T>> {
 };
 
 /**
- * @brief Removes references and reference wrappers.
+ * Removes references and reference wrappers.
  */
 template <class T>
 struct purge_refs {

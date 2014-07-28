@@ -63,7 +63,9 @@ bool actor_proxy::anchor::try_expire() {
 actor_proxy::~actor_proxy() {}
 
 actor_proxy::actor_proxy(actor_id aid, node_id nid)
-    : super(aid, nid), m_anchor(new anchor{this}) {}
+    : abstract_actor(aid, nid), m_anchor(new anchor{this}) {
+  // nop
+}
 
 void actor_proxy::request_deletion() {
   if (m_anchor->try_expire()) delete this;

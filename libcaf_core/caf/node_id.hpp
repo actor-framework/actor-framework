@@ -41,16 +41,15 @@ struct invalid_node_id_t {
 };
 
 /**
- * @brief Identifies an invalid {@link node_id}.
+ * Identifies an invalid {@link node_id}.
  * @relates node_id
  */
 constexpr invalid_node_id_t invalid_node_id = invalid_node_id_t{};
 
 /**
- * @brief A node ID consists of a host ID and process ID. The host ID
- *    identifies the physical machine in the network, whereas the
- *    process ID identifies the running system-level process on that
- *    machine.
+ * A node ID consists of a host ID and process ID. The host ID identifies
+ * the physical machine in the network, whereas the process ID identifies
+ * the running system-level process on that machine.
  */
 class node_id : detail::comparable<node_id>,
         detail::comparable<node_id, invalid_node_id_t> {
@@ -68,17 +67,17 @@ class node_id : detail::comparable<node_id>,
   node_id& operator=(const invalid_node_id_t&);
 
   /**
-   * @brief A 160 bit hash (20 bytes).
+   * A 160 bit hash (20 bytes).
    */
   static constexpr size_t host_id_size = 20;
 
   /**
-   * @brief Represents a 160 bit hash.
+   * Represents a 160 bit hash.
    */
   using host_id_type = std::array<uint8_t, host_id_size>;
 
   /**
-   * @brief A reference counted container for host ID and process ID.
+   * A reference counted container for host ID and process ID.
    */
   class data : public ref_counted {
 
@@ -116,27 +115,27 @@ class node_id : detail::comparable<node_id>,
   node_id(const node_id&);
 
   /**
-   * @brief Creates @c this from @p process_id and @p hash.
+   * Creates this from `process_id` and `hash`.
    * @param process_id System-wide unique process identifier.
    * @param hash Unique node id as hexadecimal string representation.
    */
   node_id(uint32_t process_id, const std::string& hash);
 
   /**
-   * @brief Creates @c this from @p process_id and @p hash.
+   * Creates this from `process_id` and `hash`.
    * @param process_id System-wide unique process identifier.
    * @param node_id Unique node id.
    */
   node_id(uint32_t process_id, const host_id_type& node_id);
 
   /**
-   * @brief Identifies the running process.
+   * Identifies the running process.
    * @returns A system-wide unique process identifier.
    */
   uint32_t process_id() const;
 
   /**
-   * @brief Identifies the host system.
+   * Identifies the host system.
    * @returns A hash build from the MAC address of the first network device
    *      and the UUID of the root partition (mounted in "/" or "C:").
    */

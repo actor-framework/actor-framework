@@ -28,8 +28,7 @@
 namespace caf {
 
 /**
- * @brief Denotes the position of {@link caf::anything anything} in a
- *    template parameter pack.
+ * Denotes the position of `anything` in a template parameter pack.
  */
 enum class wildcard_position {
   nil,
@@ -37,28 +36,26 @@ enum class wildcard_position {
   leading,
   in_between,
   multiple
-
 };
 
 /**
- * @brief Gets the position of {@link caf::anything anything} from the
- *    type list @p Types.
- * @tparam A template parameter pack as {@link caf::detail::type_list
- * type_list}.
+ * Gets the position of `anything` from the type list `Types`.
  */
 template <class Types>
 constexpr wildcard_position get_wildcard_position() {
-  return detail::tl_count<Types, is_anything>::value > 1 ?
-         wildcard_position::multiple :
-         (detail::tl_count<Types, is_anything>::value == 1 ?
-          (std::is_same<typename detail::tl_head<Types>::type,
-                  anything>::value ?
-             wildcard_position::leading :
-             (std::is_same<typename detail::tl_back<Types>::type,
-                     anything>::value ?
-                wildcard_position::trailing :
-                wildcard_position::in_between)) :
-          wildcard_position::nil);
+  return detail::tl_count<Types, is_anything>::value > 1
+         ? wildcard_position::multiple
+         : (detail::tl_count<Types, is_anything>::value == 1
+            ? (std::is_same<
+                 typename detail::tl_head<Types>::type, anything
+               >::value
+               ? wildcard_position::leading
+               : (std::is_same<
+                    typename detail::tl_back<Types>::type, anything
+                  >::value
+                  ? wildcard_position::trailing
+                  : wildcard_position::in_between))
+            : wildcard_position::nil);
 }
 
 } // namespace caf

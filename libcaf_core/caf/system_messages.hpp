@@ -33,46 +33,46 @@
 namespace caf {
 
 /**
- * @brief Sent to all links when an actor is terminated.
+ * Sent to all links when an actor is terminated.
  * @note This message can be handled manually by calling
- *     {@link local_actor::trap_exit(true) local_actor::trap_exit(bool)}
- *     and is otherwise handled implicitly by the runtime system.
+ *       `local_actor::trap_exit(true)` and is otherwise handled
+ *       implicitly by the runtime system.
  */
 struct exit_msg {
   /**
-   * @brief The source of this message, i.e., the terminated actor.
+   * The source of this message, i.e., the terminated actor.
    */
   actor_addr source;
   /**
-   * @brief The exit reason of the terminated actor.
+   * The exit reason of the terminated actor.
    */
   uint32_t reason;
 };
 
 /**
- * @brief Sent to all actors monitoring an actor when it is terminated.
+ * Sent to all actors monitoring an actor when it is terminated.
  */
 struct down_msg {
   /**
-   * @brief The source of this message, i.e., the terminated actor.
+   * The source of this message, i.e., the terminated actor.
    */
   actor_addr source;
   /**
-   * @brief The exit reason of the terminated actor.
+   * The exit reason of the terminated actor.
    */
   uint32_t reason;
 };
 
 /**
- * @brief Sent whenever a terminated actor receives a synchronous request.
+ * Sent whenever a terminated actor receives a synchronous request.
  */
 struct sync_exited_msg {
   /**
-   * @brief The source of this message, i.e., the terminated actor.
+   * The source of this message, i.e., the terminated actor.
    */
   actor_addr source;
   /**
-   * @brief The exit reason of the terminated actor.
+   * The exit reason of the terminated actor.
    */
   uint32_t reason;
 };
@@ -96,11 +96,11 @@ operator!=(const T& lhs, const T& rhs) {
 }
 
 /**
- * @brief Sent to all members of a group when it goes offline.
+ * Sent to all members of a group when it goes offline.
  */
 struct group_down_msg {
   /**
-   * @brief The source of this message, i.e., the now unreachable group.
+   * The source of this message, i.e., the now unreachable group.
    */
   group source;
 };
@@ -114,8 +114,7 @@ inline bool operator!=(const group_down_msg& lhs, const group_down_msg& rhs) {
 }
 
 /**
- * @brief Sent whenever a timeout occurs during a synchronous send.
- *
+ * Sent whenever a timeout occurs during a synchronous send.
  * This system message does not have any fields, because the message ID
  * sent alongside this message identifies the matching request that timed out.
  */
@@ -136,12 +135,12 @@ inline bool operator!=(const sync_timeout_msg&, const sync_timeout_msg&) {
 }
 
 /**
- * @brief Signalizes a timeout event.
+ * Signalizes a timeout event.
  * @note This message is handled implicitly by the runtime system.
  */
 struct timeout_msg {
   /**
-   * @brief Actor-specific timeout ID.
+   * Actor-specific timeout ID.
    */
   uint32_t timeout_id;
 };

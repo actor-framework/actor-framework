@@ -25,8 +25,7 @@
 namespace caf {
 
 /**
- * @brief Implements the deserializer interface with
- *    a binary serialization protocol.
+ * Implements the deserializer interface with a binary serialization protocol.
  */
 class binary_deserializer : public deserializer {
 
@@ -48,12 +47,12 @@ class binary_deserializer : public deserializer {
   void read_raw(size_t num_bytes, void* storage) override;
 
   /**
-   * @brief Replaces the current read buffer.
+   * Replaces the current read buffer.
    */
   void set_rdbuf(const void* buf, size_t buf_size);
 
   /**
-   * @brief Replaces the current read buffer.
+   * Replaces the current read buffer.
    */
   void set_rdbuf(const void* begin, const void* m_end);
 

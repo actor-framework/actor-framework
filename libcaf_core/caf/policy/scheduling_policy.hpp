@@ -34,29 +34,29 @@ enum class timed_fetch_result {
 };
 
 /**
- * @brief The scheduling_policy <b>concept</b> class. Please note that this
- *    class is <b>not</b> implemented. It only explains the all
- *    required member function and their behavior for any scheduling policy.
+ * The scheduling_policy <b>concept</b> class. Please note that this
+ * class is <b>not</b> implemented. It only explains the all
+ * required member function and their behavior for any scheduling policy.
  */
 class scheduling_policy {
 
  public:
 
   /**
-   * @brief This type can be set freely by any implementation and is
-   *    used by callers to pass the result of @p init_timeout back to
-   *    @p fetch_messages.
+   * This type can be set freely by any implementation and is
+   * used by callers to pass the result of `init_timeout` back to
+   * `fetch_messages`.
    */
   using timeout_type = int;
 
   /**
-   * @brief Fetches new messages from the actor's mailbox and feeds them
-   *    to the given callback. The member function returns @p false if
-   *    no message was read, @p true otherwise.
+   * Fetches new messages from the actor's mailbox and feeds them
+   * to the given callback. The member function returns `false` if
+   * no message was read, `true` otherwise.
    *
-   * In case this function returned @p false, the policy also sets the state
+   * In case this function returned `false,` the policy also sets the state
    * of the actor to blocked. Any caller must evaluate the return value and
-   * act properly in case of a returned @p false, i.e., it must <b>not</b>
+   * act properly in case of a returned `false,` i.e., it must <b>not</b>
    * atttempt to call any further function on the actor, since it might be
    * already in the pipe for re-scheduling.
    */
@@ -64,9 +64,9 @@ class scheduling_policy {
   bool fetch_messages(Actor* self, F cb);
 
   /**
-   * @brief Tries to fetch new messages from the actor's mailbox and to feeds
-   *    them to the given callback. The member function returns @p false
-   *    if no message was read, @p true otherwise.
+   * Tries to fetch new messages from the actor's mailbox and to feeds
+   * them to the given callback. The member function returns `false`
+   * if no message was read, `true` otherwise.
    *
    * This member function does not have any side-effect other than removing
    * messages from the actor's mailbox.
@@ -75,27 +75,27 @@ class scheduling_policy {
   bool try_fetch_messages(Actor* self, F cb);
 
   /**
-   * @brief Tries to fetch new messages before a timeout occurs. The message
-   *    can either return @p success, or @p no_message,
-   *    or @p indeterminate. The latter occurs for cooperative scheduled
-   *    operations and means that timeouts are signaled using
-   *    special-purpose messages. In this case, clients have to simply
-   *    wait for the arriving message.
+   * Tries to fetch new messages before a timeout occurs. The message
+   * can either return `success,` or `no_message,`
+   * or `indeterminate`. The latter occurs for cooperative scheduled
+   * operations and means that timeouts are signaled using
+   * special-purpose messages. In this case, clients have to simply
+   * wait for the arriving message.
    */
   template <class Actor, typename F>
   timed_fetch_result fetch_messages(Actor* self, F cb, timeout_type abs_time);
 
   /**
-   * @brief Enqueues given message to the actor's mailbox and take any
-   *    steps to resume the actor if it's currently blocked.
+   * Enqueues given message to the actor's mailbox and take any
+   * steps to resume the actor if it's currently blocked.
    */
   template <class Actor>
   void enqueue(Actor* self, const actor_addr& sender, message_id mid,
          message& msg, execution_unit* host);
 
   /**
-   * @brief Starts the given actor either by launching a thread or enqueuing
-   *    it to the cooperative scheduler's job queue.
+   * Starts the given actor either by launching a thread or enqueuing
+   * it to the cooperative scheduler's job queue.
    */
   template <class Actor>
   void launch(Actor* self);

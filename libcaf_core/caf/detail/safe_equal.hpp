@@ -34,9 +34,9 @@ namespace caf {
 namespace detail {
 
 /**
- * @brief Compares two values by using @p operator== unless two floating
- *        point numbers are compared. In the latter case, the function
- *        performs an epsilon comparison.
+ * Compares two values by using `operator==` unless two floating
+ * point numbers are compared. In the latter case, the function
+ * performs an epsilon comparison.
  */
 template <class T, typename U>
 typename std::enable_if<   !std::is_floating_point<T>::value

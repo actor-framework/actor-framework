@@ -34,89 +34,80 @@ class serializer;
 class deserializer;
 
 /**
- * @brief Groups a (distributed) set of actors and allows actors
- *    in the same namespace to exchange messages.
+ * Groups a (distributed) set of actors and allows actors
+ * in the same namespace to exchange messages.
  */
 class actor_namespace {
-
  public:
-
   using key_type = node_id;
 
   /**
-   * @brief The backend of an actor namespace is responsible for
-   *    creating proxy actors.
+   * The backend of an actor namespace is responsible for creating proxy actors.
    */
   class backend {
-
    public:
-
     virtual ~backend();
 
     /**
-     * @brief Creates a new proxy instance.
+     * Creates a new proxy instance.
      */
     virtual actor_proxy_ptr make_proxy(const key_type&, actor_id) = 0;
-
   };
 
   actor_namespace(backend& mgm);
 
   /**
-   * @brief Writes an actor address to @p sink and adds the actor
-   *    to the list of known actors for a later deserialization.
+   * Writes an actor address to `sink` and adds the actor
+   * to the list of known actors for a later deserialization.
    */
   void write(serializer* sink, const actor_addr& ptr);
 
   /**
-   * @brief Reads an actor address from @p source, creating
-   *    addresses for remote actors on the fly if needed.
+   * Reads an actor address from `source,` creating
+   * addresses for remote actors on the fly if needed.
    */
   actor_addr read(deserializer* source);
 
   /**
-   * @brief A map that stores all proxies for known remote actors.
+   * A map that stores all proxies for known remote actors.
    */
   using proxy_map = std::map<actor_id, actor_proxy::anchor_ptr>;
 
   /**
-   * @brief Returns the number of proxies for @p node.
+   * Returns the number of proxies for `node`.
    */
   size_t count_proxies(const key_type& node);
 
   /**
-   * @brief Returns the proxy instance identified by @p node and @p aid
-   *    or @p nullptr if the actor either unknown or expired.
+   * Returns the proxy instance identified by `node` and `aid`
+   * or `nullptr` if the actor either unknown or expired.
    */
   actor_proxy_ptr get(const key_type& node, actor_id aid);
 
   /**
-   * @brief Returns the proxy instance identified by @p node and @p aid
-   *    or creates a new (default) proxy instance.
+   * Returns the proxy instance identified by `node` and `aid`
+   * or creates a new (default) proxy instance.
    */
   actor_proxy_ptr get_or_put(const key_type& node, actor_id aid);
 
   /**
-   * @brief Deletes all proxies for @p node.
+   * Deletes all proxies for `node`.
    */
   void erase(const key_type& node);
 
   /**
-   * @brief Deletes the proxy with id @p aid for @p node.
+   * Deletes the proxy with id `aid` for `node`.
    */
   void erase(const key_type& node, actor_id aid);
 
   /**
-   * @brief Queries whether there are any proxies left.
+   * Queries whether there are any proxies left.
    */
   bool empty() const;
 
  private:
-
   backend& m_backend;
-
   std::map<key_type, proxy_map> m_proxies;
-
 };
 
 } // namespace caf

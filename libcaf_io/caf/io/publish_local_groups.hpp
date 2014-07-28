@@ -26,8 +26,7 @@ namespace caf {
 namespace io {
 
 /**
- * @brief Makes *all* local groups accessible via
- *    network on address @p addr and @p port.
+ * Makes *all* local groups accessible via network on address `addr` and `port`.
  * @throws bind_failure
  * @throws network_error
  */

@@ -35,9 +35,7 @@
 namespace caf {
 
 /**
- * @brief Implements the serializer interface with
- *    a binary serialization protocol.
- * @tparam Buffer A class providing a compatible interface to std::vector<char>.
+ * Implements the serializer interface with a binary serialization protocol.
  */
 class binary_serializer : public serializer {
 
@@ -48,8 +46,7 @@ class binary_serializer : public serializer {
   using write_fun = std::function<void(const char*, const char*)>;
 
   /**
-   * @brief Creates a binary serializer writing to @p write_buffer.
-   * @warning @p write_buffer must be guaranteed to outlive @p this
+   * Creates a binary serializer writing to given iterator position.
    */
   template <class OutIter>
   binary_serializer(OutIter iter, actor_namespace* ns = nullptr) : super(ns) {
@@ -59,7 +56,6 @@ class binary_serializer : public serializer {
         m_pos = std::copy(first, last, m_pos);
       }
       OutIter m_pos;
-
     };
     m_out = fun{iter};
   }
@@ -83,7 +79,7 @@ class binary_serializer : public serializer {
 };
 
 template <class T,
-      class = typename std::enable_if<detail::is_primitive<T>::value>::type>
+          class = typename std::enable_if<detail::is_primitive<T>::value>::type>
 binary_serializer& operator<<(binary_serializer& bs, const T& value) {
   bs.write_value(value);
   return bs;

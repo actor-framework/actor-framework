@@ -74,15 +74,15 @@ uniform_value make_uniform_value(const uniform_type_info* ti, Ts&&... args) {
 /**
  * @defgroup TypeSystem Platform-independent type system.
  *
- * @p libcaf provides a fully network transparent communication between
+ * `libcaf` provides a fully network transparent communication between
  * actors. Thus, it needs to serialize and deserialize message objects.
  * Unfortunately, this is not possible using the C++ RTTI system.
  *
- * Since it is not possible to extend <tt>std::type_info</tt>, @p libcaf
+ * Since it is not possible to extend `std::type_info, `libcaf`
  * uses its own type abstraction:
  * {@link caf::uniform_type_info uniform_type_info}.
  *
- * Unlike <tt>std::type_info::name()</tt>,
+ * Unlike `std::type_info::name(),
  * {@link caf::uniform_type_info::name() uniform_type_info::name()}
  * is guaranteed to return the same name on all supported platforms.
  * Furthermore, it allows to create an instance of a type by name:
@@ -121,10 +121,10 @@ uniform_value make_uniform_value(const uniform_type_info* ti, Ts&&... args) {
  * what():  uniform_type_info::by_type_info(): foo is an unknown typeid name
  * </tt>
  *
- * The user-defined struct @p foo is not known by the type system.
- * Thus, @p foo cannot be serialized and is rejected.
+ * The user-defined struct `foo` is not known by the type system.
+ * Thus, `foo` cannot be serialized and is rejected.
  *
- * Fortunately, there is an easy way to add @p foo the type system,
+ * Fortunately, there is an easy way to add `foo` the type system,
  * without needing to implement serialize/deserialize by yourself:
  *
  * @code
@@ -147,20 +147,19 @@ uniform_value make_uniform_value(const uniform_type_info* ti, Ts&&... args) {
 
 /**
  * @ingroup TypeSystem
- * @brief Provides a platform independent type name and a (very primitive)
- *    kind of reflection in combination with {@link caf::object object}.
- *
+ * Provides a platform independent type name and a (very primitive)
+ * kind of reflection in combination with {@link caf::object object}.
  * The platform independent name is equal to the "in-sourcecode-name"
  * with a few exceptions:
- * - @c std::string is named @c \@str
- * - @c std::u16string is named @c \@u16str
- * - @c std::u32string is named @c \@u32str
- * - @c integers are named <tt>\@(i|u)$size</tt>\n
- *   e.g.: @c \@i32 is a 32 bit signed integer; @c \@u16
+ * - std::string is named \@str
+ * - std::u16string is named \@u16str
+ * - std::u32string is named \@u32str
+ * - integers are named `\@(i|u)$size\n
+ *   e.g.: \@i32 is a 32 bit signed integer; \@u16
  *   is a 16 bit unsigned integer
- * - the <em>anonymous namespace</em> is named @c \@_ \n
- *   e.g.: <tt>namespace { class foo { }; }</tt> is mapped to
- *   @c \@_::foo
+ * - the <em>anonymous namespace</em> is named \@_ \n
+ *   e.g.: `namespace { class foo { }; } is mapped to
+ *   \@_::foo
  */
 class uniform_type_info {
 
@@ -180,65 +179,65 @@ class uniform_type_info {
   virtual ~uniform_type_info();
 
   /**
-   * @brief Get instance by uniform name.
+   * Get instance by uniform name.
    * @param uniform_name The internal name for a type.
-   * @returns The instance associated to @p uniform_name.
-   * @throws std::runtime_error if no type named @p uniform_name was found.
+   * @returns The instance associated to `uniform_name`.
+   * @throws std::runtime_error if no type named `uniform_name` was found.
    */
   static const uniform_type_info* from(const std::string& uniform_name);
 
   /**
-   * @brief Get instance by std::type_info.
+   * Get instance by std::type_info.
    * @param tinfo A STL RTTI object.
-   * @returns An instance describing the same type as @p tinfo.
-   * @throws std::runtime_error if @p tinfo is not an announced type.
+   * @returns An instance describing the same type as `tinfo`.
+   * @throws std::runtime_error if `tinfo` is not an announced type.
    */
   static const uniform_type_info* from(const std::type_info& tinfo);
 
   /**
-   * @brief Get all instances.
+   * Get all instances.
    * @returns A vector with all known (announced) instances.
    */
   static std::vector<const uniform_type_info*> instances();
 
   /**
-   * @brief Creates a copy of @p other.
+   * Creates a copy of `other`.
    */
   virtual uniform_value
   create(const uniform_value& other = uniform_value{}) const = 0;
 
   /**
-   * @brief Deserializes an object of this type from @p source.
+   * Deserializes an object of this type from `source`.
    */
   uniform_value deserialize(deserializer* source) const;
 
   /**
-   * @brief Get the internal name for this type.
+   * Get the internal name for this type.
    * @returns A string describing the internal type name.
    */
   virtual const char* name() const = 0;
 
   /**
-   * @brief Determines if this uniform_type_info describes the same
-   *    type than @p tinfo.
-   * @returns @p true if @p tinfo describes the same type as @p this.
+   * Determines if this uniform_type_info describes the same
+   *    type than `tinfo`.
+   * @returns `true` if `tinfo` describes the same type as `this`.
    */
   virtual bool equal_to(const std::type_info& tinfo) const = 0;
 
   /**
-   * @brief Compares two instances of this type.
+   * Compares two instances of this type.
    * @param instance1 Left hand operand.
    * @param instance2 Right hand operand.
-   * @returns @p true if <tt>*instance1 == *instance2</tt>.
-   * @pre @p instance1 and @p instance2 have the type of @p this.
+   * @returns `true` if `*instance1 == *instance2.
+   * @pre `instance1` and `instance2` have the type of `this`.
    */
   virtual bool equals(const void* instance1, const void* instance2) const = 0;
 
   /**
-   * @brief Serializes @p instance to @p sink.
+   * Serializes `instance` to `sink`.
    * @param instance Instance of this type.
    * @param sink Target data sink.
-   * @pre @p instance has the type of @p this.
+   * @pre `instance` has the type of `this`.
    * @throws std::ios_base::failure Thrown when the underlying serialization
    *                layer is unable to serialize the data,
    *                e.g., when exceeding maximum buffer
@@ -247,15 +246,15 @@ class uniform_type_info {
   virtual void serialize(const void* instance, serializer* sink) const = 0;
 
   /**
-   * @brief Deserializes @p instance from @p source.
+   * Deserializes `instance` from `source`.
    * @param instance Instance of this type.
    * @param source Data source.
-   * @pre @p instance has the type of @p this.
+   * @pre `instance` has the type of `this`.
    */
   virtual void deserialize(void* instance, deserializer* source) const = 0;
 
   /**
-   * @brief Returns @p instance encapsulated as an @p message.
+   * Returns `instance` encapsulated as an `message`.
    */
   virtual message as_message(void* instance) const = 0;
 

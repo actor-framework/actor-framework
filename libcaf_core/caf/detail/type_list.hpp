@@ -32,18 +32,13 @@ namespace caf {
 namespace detail {
 
 /**
- * @addtogroup MetaProgramming
- * @{
- */
-
-/**
- * @brief A list of types.
+ * A list of types.
  */
 template <class... Ts>
 struct type_list { };
 
 /**
- * @brief Denotes the empty list.
+ * Denotes the empty list.
  */
 using empty_type_list = type_list<>;
 
@@ -60,7 +55,7 @@ struct is_type_list<type_list<Ts...>> {
 // T head(type_list)
 
 /**
- * @brief Gets the first element of @p List.
+ * Gets the first element of `List`.
  */
 template <class List>
 struct tl_head;
@@ -78,7 +73,7 @@ struct tl_head<List<T0, Ts...>> {
 // type_list tail(type_list)
 
 /**
- * @brief Gets the tail of @p List.
+ * Gets the tail of `List`.
  */
 template <class List>
 struct tl_tail;
@@ -96,7 +91,7 @@ struct tl_tail<List<T0, Ts...>> {
 // size_t size(type_list)
 
 /**
- * @brief Gets the number of template parameters of @p List.
+ * Gets the number of template parameters of `List`.
  */
 template <class List>
 struct tl_size;
@@ -109,7 +104,7 @@ struct tl_size<List<Ts...>> {
 // T back(type_list)
 
 /**
- * @brief Gets the last element in @p List.
+ * Gets the last element in `List`.
  */
 template <class List>
 struct tl_back;
@@ -134,7 +129,7 @@ struct tl_back<List<T0, T1, Ts...>> {
 // bool empty(type_list)
 
 /**
- * @brief Tests whether a list is empty.
+ * Tests whether a list is empty.
  */
 template <class List>
 struct tl_empty {
@@ -213,7 +208,7 @@ struct tl_slice_<List, ListSize, 0, ListSize, PadType> {
 };
 
 /**
- * @brief Creates a new list from range (First, Last].
+ * Creates a new list from range (First, Last].
  */
 template <class List, size_t First, size_t Last>
 struct tl_slice {
@@ -227,9 +222,9 @@ struct tl_slice {
 };
 
 /**
- * @brief Zips two lists of equal size.
+ * Zips two lists of equal size.
  *
- * Creates a list formed from the two lists @p ListA and @p ListB,
+ * Creates a list formed from the two lists `ListA` and `ListB,`
  * e.g., tl_zip<type_list<int, double>, type_list<float, string>>::type
  * is type_list<type_pair<int, float>, type_pair<double, string>>.
  */
@@ -312,7 +307,7 @@ struct tl_reverse_impl<empty_type_list, E...> {
 };
 
 /**
- * @brief Creates a new list wih elements in reversed order.
+ * Creates a new list wih elements in reversed order.
  */
 template <class List>
 struct tl_reverse {
@@ -322,7 +317,7 @@ struct tl_reverse {
 // bool find(list, type)
 
 /**
- * @brief Finds the first element of type @p What beginning at index @p Pos.
+ * Finds the first element of type `What` beginning at index `Pos`.
  */
 template <class List, template <class> class Pred, int Pos = 0>
 struct tl_find_impl;
@@ -342,8 +337,8 @@ struct tl_find_impl<List<T0, Ts...>, Pred, Pos> {
 };
 
 /**
- * @brief Finds the first element satisfying @p Pred beginning at
- *    index @p Pos.
+ * Finds the first element satisfying `Pred` beginning at
+ *    index `Pos`.
  */
 template <class List, template <class> class Pred, int Pos = 0>
 struct tl_find_if {
@@ -351,8 +346,8 @@ struct tl_find_if {
 };
 
 /**
- * @brief Finds the first element of type @p What beginning at
- *    index @p Pos.
+ * Finds the first element of type `What` beginning at
+ *    index `Pos`.
  */
 template <class List, class What, int Pos = 0>
 struct tl_find {
@@ -366,7 +361,7 @@ struct tl_find {
 // bool forall(predicate)
 
 /**
- * @brief Tests whether a predicate holds for all elements of a list.
+ * Tests whether a predicate holds for all elements of a list.
  */
 template <class List, template <class> class Pred>
 struct tl_forall {
@@ -395,8 +390,8 @@ struct tl_forall2_impl<empty_type_list, empty_type_list, Pred> {
 };
 
 /**
- * @brief Tests whether a binary predicate holds for all
- *    corresponding elements of @p ListA and @p ListB.
+ * Tests whether a binary predicate holds for all
+ *    corresponding elements of `ListA` and `ListB`.
  */
 template <class ListA, class ListB, template <class, class> class Pred>
 struct tl_binary_forall {
@@ -406,7 +401,7 @@ struct tl_binary_forall {
 };
 
 /**
- * @brief Tests whether a predicate holds for some of the elements of a list.
+ * Tests whether a predicate holds for some of the elements of a list.
  */
 template <class List, template <class> class Pred>
 struct tl_exists {
@@ -424,7 +419,7 @@ struct tl_exists<empty_type_list, Pred> {
 // size_t count(predicate)
 
 /**
- * @brief Counts the number of elements in the list which satisfy a predicate.
+ * Counts the number of elements in the list which satisfy a predicate.
  */
 template <class List, template <class> class Pred>
 struct tl_count {
@@ -441,7 +436,7 @@ struct tl_count<empty_type_list, Pred> {
 // size_t count_not(predicate)
 
 /**
- * @brief Counts the number of elements in the list which satisfy a predicate.
+ * Counts the number of elements in the list which satisfy a predicate.
  */
 template <class List, template <class> class Pred>
 struct tl_count_not {
@@ -461,7 +456,7 @@ template <class ListA, class ListB>
 struct tl_concat_impl;
 
 /**
- * @brief Concatenates two lists.
+ * Concatenates two lists.
  */
 template <class... LhsTs, class... RhsTs>
 struct tl_concat_impl<type_list<LhsTs...>, type_list<RhsTs...>> {
@@ -471,7 +466,7 @@ struct tl_concat_impl<type_list<LhsTs...>, type_list<RhsTs...>> {
 // static list concat(list, list)
 
 /**
- * @brief Concatenates lists.
+ * Concatenates lists.
  */
 template <class... Lists>
 struct tl_concat;
@@ -496,7 +491,7 @@ template <class List, class What>
 struct tl_push_back;
 
 /**
- * @brief Appends @p What to given list.
+ * Appends `What` to given list.
  */
 template <class... ListTs, class What>
 struct tl_push_back<type_list<ListTs...>, What> {
@@ -508,7 +503,7 @@ template <class List, class What>
 struct tl_push_front;
 
 /**
- * @brief Appends @p What to given list.
+ * Appends `What` to given list.
  */
 template <class... ListTs, class What>
 struct tl_push_front<type_list<ListTs...>, What> {
@@ -532,7 +527,7 @@ struct tl_apply_all<T, Fun0, Funs...> {
 };
 
 /**
- * @brief Creates a new list by applying a "template function" to each element.
+ * Creates a new list by applying a "template function" to each element.
  */
 template <class List, template <class> class... Funs>
 struct tl_map;
@@ -543,8 +538,8 @@ struct tl_map<type_list<Ts...>, Funs...> {
 };
 
 /**
- * @brief Creates a new list by applying a @p Fun to each element which
- *    returns @p TraitResult for @p Trait.
+ * Creates a new list by applying a `Fun` to each element which
+ *    returns `TraitResult` for `Trait`.
  */
 template <class List, template <class> class Trait, bool TRes,
           template <class> class... Funs>
@@ -574,7 +569,7 @@ struct tl_map_conditional<empty_type_list, Trait, TraitResult, Funs...> {
 // list pop_back()
 
 /**
- * @brief Creates a new list wih all but the last element of @p List.
+ * Creates a new list wih all but the last element of `List`.
  */
 template <class List>
 struct tl_pop_back {
@@ -610,7 +605,7 @@ template <class List, size_t N>
 struct tl_at;
 
 /**
- * @brief Gets element at index @p N of @p List.
+ * Gets element at index `N` of `List`.
  */
 template <size_t N, class... E>
 struct tl_at<type_list<E...>, N> {
@@ -623,7 +618,7 @@ template <class List, class What>
 struct tl_prepend;
 
 /**
- * @brief Creates a new list with @p What prepended to @p List.
+ * Creates a new list with `What` prepended to `List`.
  */
 template <class What, class... T>
 struct tl_prepend<type_list<T...>, What> {
@@ -662,7 +657,7 @@ template <class List, template <class> class Pred>
 struct tl_filter;
 
 /**
- * @brief Create a new list containing all elements which satisfy @p Pred.
+ * Create a new list containing all elements which satisfy `Pred`.
  */
 template <template <class> class Pred, class... T>
 struct tl_filter<type_list<T...>, Pred> {
@@ -674,8 +669,8 @@ struct tl_filter<type_list<T...>, Pred> {
 };
 
 /**
- * @brief Creates a new list containing all elements which
- *    do not satisfy @p Pred.
+ * Creates a new list containing all elements which
+ *    do not satisfy `Pred`.
  */
 template <class List, template <class> class Pred>
 struct tl_filter_not;
@@ -695,8 +690,8 @@ struct tl_filter_not<type_list<T...>, Pred> {
 };
 
 /**
- * @brief Creates a new list containing all elements which
- *    are equal to @p Type.
+ * Creates a new list containing all elements which
+ *    are equal to `Type`.
  */
 template <class List, class Type>
 struct tl_filter_type;
@@ -711,8 +706,8 @@ struct tl_filter_type<type_list<T...>, Type> {
 };
 
 /**
- * @brief Creates a new list containing all elements which
- *    are not equal to @p Type.
+ * Creates a new list containing all elements which
+ *    are not equal to `Type`.
  */
 template <class List, class Type>
 struct tl_filter_not_type;
@@ -729,7 +724,7 @@ struct tl_filter_not_type<type_list<T...>, Type> {
 // list distinct(list)
 
 /**
- * @brief Creates a new list from @p List without any duplicate elements.
+ * Creates a new list from `List` without any duplicate elements.
  */
 template <class List>
 struct tl_distinct;
@@ -756,7 +751,7 @@ struct tl_distinct<type_list<T0, Ts...>> {
 // bool is_distinct
 
 /**
- * @brief Tests whether a list is distinct.
+ * Tests whether a list is distinct.
  */
 template <class L>
 struct tl_is_distinct {
@@ -765,7 +760,7 @@ struct tl_is_distinct {
 };
 
 /**
- * @brief Creates a new list containing the last @p N elements.
+ * Creates a new list containing the last `N` elements.
  */
 template <class List, size_t N>
 struct tl_right {
@@ -808,8 +803,8 @@ struct tl_pad_right_impl<List, true, OldSize, NewSize, FillType> {
 };
 
 /**
- * @brief Resizes the list to contain @p NewSize elements and uses
- *    @p FillType to initialize the new elements with.
+ * Resizes the list to contain `NewSize` elements and uses
+ *    `FillType` to initialize the new elements with.
  */
 template <class List, size_t NewSize, class FillType = unit_t>
 struct tl_pad_right {
@@ -845,8 +840,8 @@ struct tl_pad_left_impl<List, Size, Size, FillType> {
 };
 
 /**
- * @brief Resizes the list to contain @p NewSize elements and uses
- *    @p FillType to initialize prepended elements with.
+ * Resizes the list to contain `NewSize` elements and uses
+ *    `FillType` to initialize prepended elements with.
  */
 template <class List, size_t NewSize, class FillType = unit_t>
 struct tl_pad_left {
@@ -868,7 +863,7 @@ struct tl_is_zipped {
 };
 
 /**
- * @brief Removes trailing @p What elements from the end.
+ * Removes trailing `What` elements from the end.
  */
 template <class List, class What = unit_t>
 struct tl_trim {
@@ -948,7 +943,7 @@ struct tl_group_by {
 };
 
 /**
- * @brief Applies the types of the list to @p VarArgTemplate.
+ * Applies the types of the list to `VarArgTemplate`.
  */
 template <class List, template <class...> class VarArgTemplate>
 struct tl_apply;
@@ -969,7 +964,7 @@ struct tl_is_strict_subset_step {
 };
 
 /**
- * @brief Tests whether ListA ist a strict subset of ListB (or equal).
+ * Tests whether ListA ist a strict subset of ListB (or equal).
  */
 template <class ListA, class ListB>
 struct tl_is_strict_subset {
@@ -987,7 +982,7 @@ struct tl_is_strict_subset {
 };
 
 /**
- * @brief Tests whether ListA contains the same elements as ListB
+ * Tests whether ListA contains the same elements as ListB
  *    and vice versa. This comparison ignores element positions.
  */
 template <class ListA, class ListB>
@@ -996,10 +991,6 @@ struct tl_equal {
     tl_is_strict_subset<ListA, ListB>::value
     && tl_is_strict_subset<ListB, ListA>::value;
 };
-
-/**
- * @}
- */
 
 } // namespace detail
 } // namespace caf

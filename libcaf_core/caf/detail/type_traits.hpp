@@ -34,12 +34,7 @@ namespace caf {
 namespace detail {
 
 /**
- * @addtogroup MetaProgramming
- * @{
- */
-
-/**
- * @brief Equal to std::remove_const<std::remove_reference<T>::type>.
+ * Equal to std::remove_const<std::remove_reference<T>::type>.
  */
 template <class T>
 struct rm_const_and_ref {
@@ -64,7 +59,7 @@ struct rm_const_and_ref<T&> {
 // template <> struct rm_const_and_ref<void> { };
 
 /**
- * @brief Joins all bool constants using operator &&.
+ * Joins all bool constants using operator &&.
  */
 template <bool... BoolConstants>
 struct conjunction;
@@ -85,7 +80,7 @@ struct conjunction<V0, V1, Vs...> {
 };
 
 /**
- * @brief Joins all bool constants using operator ||.
+ * Joins all bool constants using operator ||.
  */
 template <bool... BoolConstants>
 struct disjunction;
@@ -101,13 +96,13 @@ struct disjunction<> {
 };
 
 /**
- * @brief Equal to std::is_same<T, anything>.
+ * Equal to std::is_same<T, anything>.
  */
 template <class T>
 struct is_anything : std::is_same<T, anything> {};
 
 /**
- * @brief Checks whether @p T is an array of type @p U.
+ * Checks whether `T` is an array of type `U`.
  */
 template <class T, typename U>
 struct is_array_of {
@@ -118,7 +113,7 @@ struct is_array_of {
 };
 
 /**
- * @brief Deduces the reference type of T0 and applies it to T1.
+ * Deduces the reference type of T0 and applies it to T1.
  */
 template <class T0, typename T1>
 struct deduce_ref_type {
@@ -136,7 +131,7 @@ struct deduce_ref_type<const T0&, T1> {
 };
 
 /**
- * @brief Checks wheter @p X is in the template parameter pack Ts.
+ * Checks wheter `X` is in the template parameter pack Ts.
  */
 template <class X, class... Ts>
 struct is_one_of;
@@ -151,10 +146,10 @@ template <class X, typename T0, class... Ts>
 struct is_one_of<X, T0, Ts...> : is_one_of<X, Ts...> {};
 
 /**
- * @brief Checks wheter @p T is considered a builtin type.
+ * Checks wheter `T` is considered a builtin type.
  *
  * Builtin types are: (1) all arithmetic types, (2) string types from the STL,
- * and (3) built-in types such as @p actor_ptr.
+ * and (3) built-in types such as `actor_ptr`.
  */
 template <class T>
 struct is_builtin {
@@ -167,7 +162,7 @@ struct is_builtin {
 };
 
 /**
- * @brief Chekcs wheter @p T is primitive, i.e., either an arithmetic
+ * Chekcs wheter `T` is primitive, i.e., either an arithmetic
  *    type or convertible to one of STL's string types.
  */
 template <class T>
@@ -180,7 +175,7 @@ struct is_primitive {
 };
 
 /**
- * @brief Chekcs wheter @p T1 is comparable with @p T2.
+ * Chekcs wheter `T1` is comparable with `T2`.
  */
 template <class T1, typename T2>
 class is_comparable {
@@ -207,7 +202,7 @@ class is_comparable {
 };
 
 /**
- * @brief Checks wheter @p T behaves like a forward iterator.
+ * Checks wheter `T` behaves like a forward iterator.
  */
 template <class T>
 class is_forward_iterator {
@@ -237,7 +232,7 @@ class is_forward_iterator {
 };
 
 /**
- * @brief Checks wheter @p T has <tt>begin()</tt> and <tt>end()</tt> member
+ * Checks wheter `T` has `begin()</tt> and <tt>end() member
  *    functions returning forward iterators.
  */
 template <class T>
@@ -267,7 +262,7 @@ class is_iterable {
 };
 
 /**
- * @brief Checks wheter @p T is neither a reference nor a pointer nor an array.
+ * Checks wheter `T` is neither a reference nor a pointer nor an array.
  */
 template <class T>
 struct is_legal_tuple_type {
@@ -278,7 +273,7 @@ struct is_legal_tuple_type {
 };
 
 /**
- * @brief Checks wheter @p T is a non-const reference.
+ * Checks wheter `T` is a non-const reference.
  */
 template <class T>
 struct is_mutable_ref {
@@ -287,7 +282,7 @@ struct is_mutable_ref {
 };
 
 /**
- * @brief Returns either @p T or @p T::type if @p T is an option.
+ * Returns either `T` or `T::type` if `T` is an option.
  */
 template <class T>
 struct rm_optional {
@@ -300,13 +295,13 @@ struct rm_optional<optional<T>> {
 };
 
 /**
- * @brief Defines @p result_type, @p arg_types, and @p fun_type. Functor is
+ * Defines `result_type,` `arg_types,` and `fun_type`. Functor is
  *    (a) a member function pointer, (b) a function,
  *    (c) a function pointer, (d) an std::function.
  *
- * @p result_type is the result type found in the signature.
- * @p arg_types are the argument types as {@link type_list}.
- * @p fun_type is an std::function with an equivalent signature.
+ * `result_type` is the result type found in the signature.
+ * `arg_types` are the argument types as {@link type_list}.
+ * `fun_type` is an std::function with an equivalent signature.
  */
 template <class Functor>
 struct callable_trait;
@@ -356,7 +351,7 @@ struct get_callable_trait_helper<false, false, C> {
 };
 
 /**
- * @brief Gets a callable trait for @p T, where @p T is a functor type,
+ * Gets a callable trait for `T,` where `T` is a functor type,
  *    i.e., a function, member function, or a class providing
  *    the call operator.
  */
@@ -379,7 +374,7 @@ struct get_callable_trait {
 };
 
 /**
- * @brief Checks wheter @p T is a function or member function.
+ * Checks wheter `T` is a function or member function.
  */
 template <class T>
 struct is_callable {
@@ -406,7 +401,7 @@ struct is_callable {
 };
 
 /**
- * @brief Checks wheter each @p T in @p Ts is a function or member function.
+ * Checks wheter each `T` in `Ts` is a function or member function.
  */
 template <class... Ts>
 struct all_callable {
@@ -414,7 +409,7 @@ struct all_callable {
 };
 
 /**
- * @brief Checks wheter @p F takes mutable references.
+ * Checks wheter `F` takes mutable references.
  *
  * A manipulator is a functor that manipulates its arguments via
  * mutable references.
@@ -437,7 +432,7 @@ struct map_to_result_type_impl<false, C> {
 };
 
 /**
- * @brief Maps @p T to its result type if it's callable,
+ * Maps `T` to its result type if it's callable,
  *    {@link unit_t} otherwise.
  */
 template <class T>
@@ -460,7 +455,7 @@ struct replace_type_impl<true, T1, T2> {
 };
 
 /**
- * @brief Replaces @p What with @p With if any IfStmt::value evaluates to true.
+ * Replaces `What` with `With` if any IfStmt::value evaluates to true.
  */
 template <class What, typename With, class... IfStmt>
 struct replace_type {
@@ -469,7 +464,7 @@ struct replace_type {
 };
 
 /**
- * @brief Gets the Nth element of the template parameter pack @p Ts.
+ * Gets the Nth element of the template parameter pack `Ts`.
  */
 template <size_t N, class... Ts>
 struct type_at;
@@ -483,10 +478,6 @@ template <class T0, class... Ts>
 struct type_at<0, T0, Ts...> {
   using type = T0;
 };
-
-/**
- * @}
- */
 
 } // namespace detail
 } // namespace caf

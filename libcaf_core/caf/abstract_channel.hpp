@@ -28,37 +28,29 @@
 namespace caf {
 
 /**
- * @brief Interface for all message receivers.
- *
- * This interface describes an entity that can receive messages
- * and is implemented by {@link actor} and {@link group}.
+ * Interface for all message receivers. * This interface describes an
+ * entity that can receive messages and is implemented by {@link actor}
+ * and {@link group}.
  */
 class abstract_channel : public ref_counted {
-
  public:
-
   virtual ~abstract_channel();
 
   /**
-   * @brief Enqueues a new message to the channel.
-   * @param header Contains meta information about this message
-   *         such as the address of the sender and the
-   *         ID of the message if it is a synchronous message.
-   * @param content The content encapsulated in a copy-on-write tuple.
-   * @param host Pointer to the {@link execution_unit execution unit} the
-   *       caller is executed by or @p nullptr if the caller
-   *       is not a scheduled actor.
+   * Enqueues a new message to the channel.
    */
   virtual void enqueue(const actor_addr& sender, message_id mid,
-             message content, execution_unit* host) = 0;
+                       message content, execution_unit* host) = 0;
 
   /**
-   * @brief Returns the ID of the node this actor is running on.
+   * Returns the ID of the node this actor is running on.
    */
-  inline node_id node() const;
+  inline node_id node() const {
+    return m_node;
+  }
 
   /**
-   * @brief Returns true if {@link node_ptr} returns
+   * Returns true if {@link node_ptr} returns
    */
   bool is_remote() const;
 
@@ -75,11 +67,11 @@ class abstract_channel : public ref_counted {
 
 };
 
+/**
+ * A smart pointer to an abstract channel.
+ * @relates abstract_channel_ptr
+ */
 using abstract_channel_ptr = intrusive_ptr<abstract_channel>;
-
-inline node_id abstract_channel::node() const {
-  return m_node;
-}
 
 } // namespace caf
 

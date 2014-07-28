@@ -53,7 +53,6 @@ struct invalid_actor_t;
 struct invalid_actor_addr_t;
 
 // enums
-enum primitive_type : unsigned char;
 enum class atom_value : uint64_t;
 
 // intrusive pointer types

@@ -23,10 +23,6 @@
 namespace caf {
 namespace detail {
 
-/**
- * @ingroup MetaProgramming
- * @brief Predefines the first template parameter of @p Tp1.
- */
 template <template <class, typename> class Tpl, typename Arg1>
 struct tbind {
   template <class Arg2>

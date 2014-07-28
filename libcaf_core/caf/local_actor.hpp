@@ -55,7 +55,7 @@ namespace caf {
 class sync_handle_helper;
 
 /**
- * @brief Base class for local running Actors.
+ * Base class for local running Actors.
  * @extends abstract_actor
  */
 class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
@@ -77,7 +77,7 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   template <class C, spawn_options Os = no_spawn_options, class... Ts>
   actor spawn(Ts&&... args) {
     constexpr auto os = make_unbound(Os);
-    auto res = spawn_class<C, os>(m_host, empty_before_launch_callback{},
+    auto res = spawn_class<C, os>(host(), empty_before_launch_callback{},
                     std::forward<Ts>(args)...);
     return eval_opts(Os, std::move(res));
   }
@@ -85,7 +85,7 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   template <spawn_options Os = no_spawn_options, class... Ts>
   actor spawn(Ts&&... args) {
     constexpr auto os = make_unbound(Os);
-    auto res = spawn_functor<os>(m_host, empty_before_launch_callback{},
+    auto res = spawn_functor<os>(host(), empty_before_launch_callback{},
                    std::forward<Ts>(args)...);
     return eval_opts(Os, std::move(res));
   }
@@ -93,7 +93,7 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   template <class C, spawn_options Os, class... Ts>
   actor spawn_in_group(const group& grp, Ts&&... args) {
     constexpr auto os = make_unbound(Os);
-    auto res = spawn_class<C, os>(m_host, group_subscriber{grp},
+    auto res = spawn_class<C, os>(host(), group_subscriber{grp},
                     std::forward<Ts>(args)...);
     return eval_opts(Os, std::move(res));
   }
@@ -101,7 +101,7 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   template <spawn_options Os = no_spawn_options, class... Ts>
   actor spawn_in_group(const group& grp, Ts&&... args) {
     constexpr auto os = make_unbound(Os);
-    auto res = spawn_functor<os>(m_host, group_subscriber{grp},
+    auto res = spawn_functor<os>(host(), group_subscriber{grp},
                    std::forward<Ts>(args)...);
     return eval_opts(Os, std::move(res));
   }
@@ -111,25 +111,29 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
    **************************************************************************/
 
   template <class C, spawn_options Os = no_spawn_options, class... Ts>
-  typename detail::actor_handle_from_signature_list<
-    typename C::signatures>::type
+  typename actor_handle_from_signature_list<
+    typename C::signatures
+  >::type
   spawn_typed(Ts&&... args) {
     constexpr auto os = make_unbound(Os);
-    auto res = spawn_class<C, os>(m_host, empty_before_launch_callback{},
+    auto res = spawn_class<C, os>(host(), empty_before_launch_callback{},
                     std::forward<Ts>(args)...);
     return eval_opts(Os, std::move(res));
   }
 
   template <spawn_options Os = no_spawn_options, typename F, class... Ts>
-  typename detail::infer_typed_actor_handle<
+  typename infer_typed_actor_handle<
     typename detail::get_callable_trait<F>::result_type,
     typename detail::tl_head<
-      typename detail::get_callable_trait<F>::arg_types>::type>::type
+      typename detail::get_callable_trait<F>::arg_types
+    >::type
+  >::type
   spawn_typed(F fun, Ts&&... args) {
     constexpr auto os = make_unbound(Os);
-    auto res = caf::spawn_typed_functor<os>(
-      m_host, empty_before_launch_callback{}, std::move(fun),
-      std::forward<Ts>(args)...);
+    auto res = caf::spawn_typed_functor<os>(host(),
+                                            empty_before_launch_callback{},
+                                            std::move(fun),
+                                            std::forward<Ts>(args)...);
     return eval_opts(Os, std::move(res));
   }
 
@@ -138,23 +142,19 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
    **************************************************************************/
 
   /**
-   * @brief Sends @p what to the receiver specified in @p dest.
+   * Sends `what` to the receiver specified in `dest`.
    */
   void send_tuple(message_priority prio, const channel& whom, message what);
 
   /**
-   * @brief Sends @p what to the receiver specified in @p dest.
+   * Sends `what` to the receiver specified in `dest`.
    */
   inline void send_tuple(const channel& whom, message what) {
     send_tuple(message_priority::normal, whom, std::move(what));
   }
 
   /**
-   * @brief Sends <tt>{what...}</tt> to @p whom.
-   * @param prio Priority of the message.
-   * @param whom Receiver of the message.
-   * @param what Message elements.
-   * @pre <tt>sizeof...(Ts) > 0</tt>.
+   * Sends `{what...} to `whom` using the priority `prio`.
    */
   template <class... Ts>
   inline void send(message_priority prio, const channel& whom, Ts&&... what) {
@@ -163,10 +163,7 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   }
 
   /**
-   * @brief Sends <tt>{what...}</tt> to @p whom.
-   * @param whom Receiver of the message.
-   * @param what Message elements.
-   * @pre <tt>sizeof...(Ts) > 0</tt>.
+   * Sends `{what...} to `whom`.
    */
   template <class... Ts>
   inline void send(const channel& whom, Ts&&... what) {
@@ -176,34 +173,32 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   }
 
   /**
-   * @brief Sends <tt>{what...}</tt> to @p whom.
-   * @param whom Receiver of the message.
-   * @param what Message elements.
-   * @pre <tt>sizeof...(Ts) > 0</tt>.
+   * Sends `{what...} to `whom`.
    */
   template <class... Rs, class... Ts>
   void send(const typed_actor<Rs...>& whom, Ts... what) {
-    check_typed_input(
-      whom, detail::type_list<typename detail::implicit_conversions<
-            typename detail::rm_const_and_ref<Ts>::type>::type...>{});
+    check_typed_input(whom,
+                      detail::type_list<typename detail::implicit_conversions<
+                        typename detail::rm_const_and_ref<Ts>::type
+                      >::type...>{});
     send_tuple(message_priority::normal, actor{whom.m_ptr.get()},
-           make_message(std::forward<Ts>(what)...));
+               make_message(std::forward<Ts>(what)...));
   }
 
   /**
-   * @brief Sends an exit message to @p whom.
+   * Sends an exit message to `whom`.
    */
   void send_exit(const actor_addr& whom, uint32_t reason);
 
   /**
-   * @brief Sends an exit message to @p whom.
+   * Sends an exit message to `whom`.
    */
   inline void send_exit(const actor& whom, uint32_t reason) {
     send_exit(whom.address(), reason);
   }
 
   /**
-   * @brief Sends an exit message to @p whom.
+   * Sends an exit message to `whom`.
    */
   template <class... Rs>
   void send_exit(const typed_actor<Rs...>& whom, uint32_t reason) {
@@ -211,50 +206,33 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   }
 
   /**
-   * @brief Sends a message to @p whom that is delayed by @p rel_time.
-   * @param prio Priority of the message.
-   * @param whom Receiver of the message.
-   * @param rtime Relative time to delay the message in
-   *        microseconds, milliseconds, seconds or minutes.
-   * @param data Message content as a tuple.
+   * Sends a message to `whom` with priority `prio`
+   * that is delayed by `rel_time`.
    */
   void delayed_send_tuple(message_priority prio, const channel& whom,
-              const duration& rtime, message data);
+                          const duration& rtime, message data);
 
   /**
-   * @brief Sends a message to @p whom that is delayed by @p rel_time.
-   * @param whom Receiver of the message.
-   * @param rtime Relative time to delay the message in
-   *        microseconds, milliseconds, seconds or minutes.
-   * @param data Message content as a tuple.
+   * Sends a message to `whom` that is delayed by `rel_time`.
    */
   inline void delayed_send_tuple(const channel& whom, const duration& rtime,
-                   message data) {
-    delayed_send_tuple(message_priority::normal, whom, rtime,
-               std::move(data));
+                                 message data) {
+    delayed_send_tuple(message_priority::normal, whom, rtime, std::move(data));
   }
 
   /**
-   * @brief Sends a message to @p whom that is delayed by @p rel_time.
-   * @param prio Priority of the message.
-   * @param whom Receiver of the message.
-   * @param rtime Relative time to delay the message in
-   *        microseconds, milliseconds, seconds or minutes.
-   * @param args Message content as a tuple.
+   * Sends a message to `whom` using priority `prio`
+   * that is delayed by `rel_time`.
    */
   template <class... Ts>
   void delayed_send(message_priority prio, const channel& whom,
-            const duration& rtime, Ts&&... args) {
+                    const duration& rtime, Ts&&... args) {
     delayed_send_tuple(prio, whom, rtime,
-               make_message(std::forward<Ts>(args)...));
+                       make_message(std::forward<Ts>(args)...));
   }
 
   /**
-   * @brief Sends a message to @p whom that is delayed by @p rel_time.
-   * @param whom Receiver of the message.
-   * @param rtime Relative time to delay the message in
-   *        microseconds, milliseconds, seconds or minutes.
-   * @param args Message content as a tuple.
+   * Sends a message to `whom` that is delayed by `rel_time`.
    */
   template <class... Ts>
   void delayed_send(const channel& whom, const duration& rtime,
@@ -268,74 +246,60 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
    **************************************************************************/
 
   /**
-   * @brief Causes this actor to subscribe to the group @p what.
-   *
+   * Causes this actor to subscribe to the group `what`.
    * The group will be unsubscribed if the actor finishes execution.
-   * @param what Group instance that should be joined.
    */
   void join(const group& what);
 
   /**
-   * @brief Causes this actor to leave the group @p what.
-   * @param what Joined group that should be leaved.
-   * @note Groups are leaved automatically if the Actor finishes
-   *     execution.
+   * Causes this actor to leave the group `what`.
    */
   void leave(const group& what);
 
   /**
-   * @brief Finishes execution of this actor after any currently running
-   *    message handler is done.
-   *
-   * This member function clear the behavior stack of the running actor
-   * and invokes {@link on_exit()}. The actors does not finish execution
-   * if the implementation of {@link on_exit()} sets a new behavior.
-   * When setting a new behavior in {@link on_exit()}, one has to make sure
+   * Finishes execution of this actor after any currently running
+   * message handler is done.
+   * This member function clears the behavior stack of the running actor
+   * and invokes `on_exit()`. The actors does not finish execution
+   * if the implementation of `on_exit()` sets a new behavior.
+   * When setting a new behavior in `on_exit()`, one has to make sure
    * to not produce an infinite recursion.
    *
-   * If {@link on_exit()} did not set a new behavior, the actor sends an
-   * exit message to all of its linked actors, sets its state to @c exited
+   * If `on_exit()` did not set a new behavior, the actor sends an
+   * exit message to all of its linked actors, sets its state to exited
    * and finishes execution.
-   *
-   * @param reason Exit reason that will be send to
-   *         linked actors and monitors. Can be queried using
-   *         {@link planned_exit_reason()}, e.g., from inside
-   *         {@link on_exit()}.
    * @note Throws {@link actor_exited} to unwind the stack
-   *     when called in context-switching or thread-based actors.
+   *       (only) when called in detached actors.
    * @warning This member function throws immediately in thread-based actors
-   *      that do not use the behavior stack, i.e., actors that use
-   *      blocking API calls such as {@link receive()}.
+   *          that do not use the behavior stack, i.e., actors that use
+   *          blocking API calls such as {@link receive()}.
    */
   virtual void quit(uint32_t reason = exit_reason::normal);
 
   /**
-   * @brief Checks whether this actor traps exit messages.
+   * Checks whether this actor traps exit messages.
    */
   inline bool trap_exit() const;
 
   /**
-   * @brief Enables or disables trapping of exit messages.
+   * Enables or disables trapping of exit messages.
    */
   inline void trap_exit(bool new_value);
 
   /**
-   * @brief Returns the last message that was dequeued
-   *    from the actor's mailbox.
+   * Returns the last message that was dequeued from the actor's mailbox.
    * @warning Only set during callback invocation.
    */
   inline message& last_dequeued();
 
   /**
-   * @brief Returns the address of the last sender of the
-   *    last dequeued message.
+   * Returns the address of the last sender of the last dequeued message.
    */
   inline actor_addr& last_sender();
 
   /**
-   * @brief Adds a unidirectional @p monitor to @p whom.
-   * @param whom The actor that should be monitored by this actor.
-   * @note Each call to @p monitor creates a new, independent monitor.
+   * Adds a unidirectional `monitor` to `whom`.
+   * @note Each call to `monitor` creates a new, independent monitor.
    */
   void monitor(const actor_addr& whom);
 
@@ -353,57 +317,54 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   }
 
   /**
-   * @brief Removes a monitor from @p whom.
-   * @param whom A monitored actor.
+   * Removes a monitor from `whom`.
    */
   void demonitor(const actor_addr& whom);
 
   /**
-   * @brief Removes a monitor from @p whom.
-   * @param whom A monitored actor.
+   * Removes a monitor from `whom`.
    */
   inline void demonitor(const actor& whom) { demonitor(whom.address()); }
 
   /**
-   * @brief Can be overridden to perform cleanup code after an actor
-   *    finished execution.
+   * Can be overridden to perform cleanup code after an actor
+   * finished execution.
    */
   virtual void on_exit();
 
   /**
-   * @brief Returns all joined groups of this actor.
+   * Returns all joined groups.
    */
   std::vector<group> joined_groups() const;
 
   /**
-   * @brief Creates a {@link response_promise} to allow actors to response
-   *    to a request later on.
+   * Creates a `response_promise` to response to a request later on.
    */
   response_promise make_response_promise();
 
   /**
-   * @brief Sets the handler for unexpected synchronous response messages.
+   * Sets the handler for unexpected synchronous response messages.
    */
   inline void on_sync_timeout(std::function<void()> fun) {
     m_sync_timeout_handler = std::move(fun);
   }
 
   /**
-   * @brief Sets the handler for @p timed_sync_send timeout messages.
+   * Sets the handler for `timed_sync_send` timeout messages.
    */
   inline void on_sync_failure(std::function<void()> fun) {
     m_sync_failure_handler = std::move(fun);
   }
 
   /**
-   * @brief Checks wheter this actor has a user-defined sync failure handler.
+   * Checks wheter this actor has a user-defined sync failure handler.
    */
   inline bool has_sync_failure_handler() {
     return static_cast<bool>(m_sync_failure_handler);
   }
 
   /**
-   * @brief Calls <tt>on_sync_timeout(fun); on_sync_failure(fun);</tt>.
+   * Calls `on_sync_timeout(fun); on_sync_failure(fun);.
    */
   inline void on_sync_timeout_or_failure(std::function<void()> fun) {
     on_sync_timeout(fun);
@@ -544,7 +505,7 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
 };
 
 /**
- * @brief A smart pointer to a {@link local_actor} instance.
+ * A smart pointer to a {@link local_actor} instance.
  * @relates local_actor
  */
 using local_actor_ptr = intrusive_ptr<local_actor>;

@@ -26,7 +26,7 @@
 namespace caf {
 
 /**
- * @brief A scoped handle to a blocking actor.
+ * A scoped handle to a blocking actor.
  */
 class scoped_actor {
 

@@ -39,8 +39,8 @@ template <class... Rs>
 class typed_event_based_actor;
 
 /**
- * @brief Identifies a strongly typed actor.
- * @tparam Rs Interface as @p replies_to<...>::with<...> parameter pack.
+ * Identifies a strongly typed actor.
+ * @tparam Rs Interface as `replies_to<`...>::with<...> parameter pack.
  */
 template <class... Rs>
 class typed_actor
@@ -61,23 +61,23 @@ class typed_actor
  public:
 
   /**
-   * @brief Identifies the behavior type actors of this kind use
-   *    for their behavior stack.
+   * Identifies the behavior type actors of this kind use
+   * for their behavior stack.
    */
   using behavior_type = typed_behavior<Rs...>;
 
   /**
-   * @brief Identifies pointers to instances of this kind of actor.
+   * Identifies pointers to instances of this kind of actor.
    */
   using pointer = typed_event_based_actor<Rs...>*;
 
   /**
-   * @brief Identifies the base class for this kind of actor.
+   * Identifies the base class for this kind of actor.
    */
   using base = typed_event_based_actor<Rs...>;
 
   /**
-   * @brief Stores the interface of the actor as type list.
+   * Stores the interface of the actor as type list.
    */
   using interface = detail::type_list<Rs...>;
 
@@ -112,7 +112,7 @@ class typed_actor
   }
 
   /**
-   * @brief Queries the address of the stored actor.
+   * Queries the address of the stored actor.
    */
   actor_addr address() const {
     return m_ptr ? m_ptr->address() : actor_addr{};

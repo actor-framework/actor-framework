@@ -33,8 +33,8 @@ namespace caf {
 namespace policy {
 
 /**
- * @brief An implementation of the {@link job_queue_policy} concept for
- *    fork-join like processing of actors.
+ * An implementation of the `job_queue_policy` concept for fork-join
+ * like processing of actors.
  *
  * This work-stealing fork-join implementation uses two queues: a
  * synchronized queue accessible by other threads and an internal queue.
@@ -74,12 +74,12 @@ class fork_join {
   }
 
   /**
-   * @brief A thead-safe queue implementation.
+   * A thead-safe queue implementation.
    */
   using sync_queue = detail::producer_consumer_list<resumable>;
 
   /**
-   * @brief A queue implementation supporting fast push and pop
+   * A queue implementation supporting fast push and pop
    *    operations on both ends of the queue.
    */
   using priv_queue = std::deque<resumable*>;

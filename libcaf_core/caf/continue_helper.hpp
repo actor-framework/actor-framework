@@ -32,21 +32,18 @@ namespace caf {
 class local_actor;
 
 /**
- * @brief Helper class to enable users to add continuations
- *    when dealing with synchronous sends.
+ * Helper class to enable users to add continuations
+ *  when dealing with synchronous sends.
  */
 class continue_helper {
-
  public:
-
   using message_id_wrapper_tag = int;
 
   continue_helper(message_id mid, local_actor* self);
 
   /**
-   * @brief Adds a continuation to the synchronous message handler
-   *    that is invoked if the response handler successfully returned.
-   * @param fun The continuation as functor object.
+   * Adds the continuation `fun` to the synchronous message handler
+   * that is invoked if the response handler successfully returned.
    */
   template <class F>
   continue_helper& continue_with(F fun) {
@@ -55,22 +52,19 @@ class continue_helper {
   }
 
   /**
-   * @brief Adds a continuation to the synchronous message handler
-   *    that is invoked if the response handler successfully returned.
-   * @param fun The continuation as functor object.
+   * Adds the continuation `fun` to the synchronous message handler
+   * that is invoked if the response handler successfully returned.
    */
   continue_helper& continue_with(behavior::continuation_fun fun);
 
   /**
-   * @brief Returns the ID of the expected response message.
+   * Returns the ID of the expected response message.
    */
   message_id get_message_id() const { return m_mid; }
 
  private:
-
   message_id m_mid;
   local_actor* m_self;
-
 };
 
 } // namespace caf

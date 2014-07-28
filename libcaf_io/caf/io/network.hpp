@@ -125,12 +125,12 @@ namespace network {
 #endif
 
 /**
- * @brief Platform-specific native socket type.
+ * Platform-specific native socket type.
  */
 using native_socket = native_socket_t;
 
 /**
- * @brief Platform-specific native acceptor socket type.
+ * Platform-specific native acceptor socket type.
  */
 using native_socket_acceptor = native_socket;
 
@@ -142,70 +142,70 @@ inline int64_t int64_from_native_socket(native_socket sock) {
 }
 
 /**
- * @brief Returns the last socket error as human-readable string.
+ * Returns the last socket error as human-readable string.
  */
 std::string last_socket_error_as_string();
 
 /**
- * @brief Sets fd to nonblocking if <tt>set_nonblocking == true</tt>
- *    or to blocking if <tt>set_nonblocking == false</tt>
- *    throws @p network_error on error
+ * Sets fd to nonblocking if `set_nonblocking == true`
+ * or to blocking if `set_nonblocking == false`
+ * throws `network_error` on error
  */
 void nonblocking(native_socket fd, bool new_value);
 
 /**
- * @brief Creates two connected sockets. The former is the read handle
- *    and the latter is the write handle.
+ * Creates two connected sockets. The former is the read handle
+ * and the latter is the write handle.
  */
 std::pair<native_socket, native_socket> create_pipe();
 
 /**
- * @brief Throws network_error with given error message and
- *    the platform-specific error code if @p add_errno is @p true.
+ * Throws network_error with given error message and
+ * the platform-specific error code if `add_errno` is `true`.
  */
 void throw_io_failure(const char* what, bool add_errno = true);
 
 /**
- * @brief Returns true if @p fd is configured as nodelay socket.
+ * Returns true if `fd` is configured as nodelay socket.
  * @throws network_error
  */
 void tcp_nodelay(native_socket fd, bool new_value);
 
 /**
- * @brief Throws @p network_error if @p result is invalid.
+ * Throws `network_error` if `result` is invalid.
  */
 void handle_write_result(ssize_t result);
 
 /**
- * @brief Throws @p network_error if @p result is invalid.
+ * Throws `network_error` if `result` is invalid.
  */
 void handle_read_result(ssize_t result);
 
 /**
- * @brief Reads up to @p len bytes from @p fd, writing the received data
- *    to @p buf. Returns @p true as long as @p fd is readable and @p false
- *    if the socket has been closed or an IO error occured. The number
- *    of read bytes is stored in @p result (can be 0).
+ * Reads up to `len` bytes from `fd,` writing the received data
+ * to `buf`. Returns `true` as long as `fd` is readable and `false`
+ * if the socket has been closed or an IO error occured. The number
+ * of read bytes is stored in `result` (can be 0).
  */
 bool read_some(size_t& result, native_socket fd, void* buf, size_t len);
 
 /**
- * @brief Writes up to @p len bytes from @p buf to @p fd.
- *    Returns @p true as long as @p fd is readable and @p false
- *    if the socket has been closed or an IO error occured. The number
- *    of written bytes is stored in @p result (can be 0).
+ * Writes up to `len` bytes from `buf` to `fd`.
+ * Returns `true` as long as `fd` is readable and `false`
+ * if the socket has been closed or an IO error occured. The number
+ * of written bytes is stored in `result` (can be 0).
  */
 bool write_some(size_t& result, native_socket fd, const void* buf, size_t len);
 
 /**
- * @brief Tries to accept a new connection from @p fd. On success,
- *    the new connection is stored in @p result. Returns true
- *    as long as
+ * Tries to accept a new connection from `fd`. On success,
+ * the new connection is stored in `result`. Returns true
+ * as long as
  */
 bool try_accept(native_socket& result, native_socket fd);
 
 /**
- * @brief Identifies network IO operations, i.e., read or write.
+ * Identifies network IO operations, i.e., read or write.
  */
 enum class operation {
   read,
@@ -216,7 +216,7 @@ enum class operation {
 class multiplexer;
 
 /**
- * @brief A socket IO event handler.
+ * A socket IO event handler.
  */
 class event_handler {
 
@@ -229,27 +229,27 @@ class event_handler {
   virtual ~event_handler();
 
   /**
-   * @brief Returns true once the requested operation is done, i.e.,
-   *    to signalize the multiplexer to remove this handler.
-   *    The handler remains in the event loop as long as it returns false.
+   * Returns true once the requested operation is done, i.e.,
+   * to signalize the multiplexer to remove this handler.
+   * The handler remains in the event loop as long as it returns false.
    */
   virtual void handle_event(operation op) = 0;
 
   /**
-   * @brief Callback to signalize that this handler has been removed
-   *    from the event loop for operations of type @p op.
+   * Callback to signalize that this handler has been removed
+   * from the event loop for operations of type `op`.
    */
   virtual void removed_from_loop(operation op) = 0;
 
   /**
-   * @brief Returns the bit field storing the subscribed events.
+   * Returns the bit field storing the subscribed events.
    */
   inline int eventbf() const {
     return m_eventbf;
   }
 
   /**
-   * @brief Sets the bit field storing the subscribed events.
+   * Sets the bit field storing the subscribed events.
    */
   inline void eventbf(int eventbf) {
     m_eventbf = eventbf;
@@ -266,7 +266,7 @@ class event_handler {
 class supervisor;
 
 /**
- * @brief Low-level backend for IO multiplexing.
+ * Low-level backend for IO multiplexing.
  */
 class multiplexer {
 
@@ -381,12 +381,10 @@ class multiplexer {
 multiplexer& get_multiplexer_singleton();
 
 /**
- * @brief Makes sure a {@link multiplexer} does not stop its event loop
- *    before the application requests a shutdown.
- *
- * The supervisor informs the multiplexer in its constructor that it
- * must not exit the event loop until the destructor of the supervisor
- * has been called.
+ * Makes sure a {@link multiplexer} does not stop its event loop before the
+ * application requests a shutdown. The supervisor informs the multiplexer in
+ * its constructor that it must not exit the event loop until the destructor
+ * of the supervisor has been called.
  */
 class supervisor {
 
@@ -403,7 +401,7 @@ class supervisor {
 };
 
 /**
- * @brief Low-level socket type used as default.
+ * Low-level socket type used as default.
  */
 class default_socket {
 
@@ -441,7 +439,7 @@ class default_socket {
 };
 
 /**
- * @brief Low-level socket type used as default.
+ * Low-level socket type used as default.
  */
 using default_socket_acceptor = default_socket;
 
@@ -459,8 +457,8 @@ inline accept_handle accept_hdl_from_socket(const T& sock) {
 
 
 /**
- * @brief A manager configures an IO device and provides callbacks
- *    for various IO operations.
+ * A manager configures an IO device and provides callbacks
+ * for various IO operations.
  */
 class manager : public ref_counted {
 
@@ -469,14 +467,13 @@ class manager : public ref_counted {
   virtual ~manager();
 
   /**
-   * @brief Causes the manager to stop read operations on its IO device.
-   *    Unwritten bytes are still send before the socket will
-   *    be closed.
+   * Causes the manager to stop read operations on its IO device.
+   * Unwritten bytes are still send before the socket will be closed.
    */
   virtual void stop_reading() = 0;
 
   /**
-   * @brief Called by the underlying IO device to report failures.
+   * Called by the underlying IO device to report failures.
    */
   virtual void io_failure(operation op) = 0;
 };
@@ -487,8 +484,8 @@ class manager : public ref_counted {
 using manager_ptr = intrusive_ptr<manager>;
 
 /**
- * @brief A stream manager configures an IO stream and provides callbacks
- *    for incoming data as well as for error handling.
+ * A stream manager configures an IO stream and provides callbacks
+ * for incoming data as well as for error handling.
  */
 class stream_manager : public manager {
 
@@ -497,15 +494,15 @@ class stream_manager : public manager {
   virtual ~stream_manager();
 
   /**
-   * @brief Called by the underlying IO device whenever it received data.
+   * Called by the underlying IO device whenever it received data.
    */
   virtual void consume(const void* data, size_t num_bytes) = 0;
 
 };
 
 /**
- * @brief A stream capable of both reading and writing. The stream's input
- *    data is forwarded to its {@link stream_manager manager}.
+ * A stream capable of both reading and writing. The stream's input
+ * data is forwarded to its {@link stream_manager manager}.
  */
 template <class Socket>
 class stream : public event_handler {
@@ -513,13 +510,13 @@ class stream : public event_handler {
  public:
 
   /**
-   * @brief A smart pointer to a stream manager.
+   * A smart pointer to a stream manager.
    */
   using manager_ptr = intrusive_ptr<stream_manager>;
 
   /**
-   * @brief A buffer class providing a compatible
-   *    interface to @p std::vector.
+   * A buffer class providing a compatible
+   * interface to `std::vector`.
    */
   using buffer_type = std::vector<char>;
 
@@ -528,29 +525,28 @@ class stream : public event_handler {
   }
 
   /**
-   * @brief Returns the @p multiplexer this stream belongs to.
+   * Returns the `multiplexer` this stream belongs to.
    */
   inline multiplexer& backend() {
     return m_sock.backend();
   }
 
   /**
-   * @brief Returns the IO socket.
+   * Returns the IO socket.
    */
   inline Socket& socket_handle() {
     return m_sock;
   }
 
   /**
-   * @brief Initializes this stream, setting the socket handle to @p fd.
+   * Initializes this stream, setting the socket handle to `fd`.
    */
   void init(Socket fd) {
     m_sock = std::move(fd);
   }
 
   /**
-   * @brief Starts reading data from the socket, forwarding incoming
-   *    data to @p mgr.
+   * Starts reading data from the socket, forwarding incoming data to `mgr`.
    */
   void start(const manager_ptr& mgr) {
     CAF_REQUIRE(mgr != nullptr);
@@ -568,10 +564,10 @@ class stream : public event_handler {
   }
 
   /**
-   * @brief Configures how much data will be provided
-   *    for the next @p consume callback.
+   * Configures how much data will be provided
+   * for the next `consume` callback.
    * @warning Must not be called outside the IO multiplexers event loop
-   *      once the stream has been started.
+   *          once the stream has been started.
    */
   void configure_read(receive_policy::config config) {
     m_rd_flag = config.first;
@@ -579,7 +575,7 @@ class stream : public event_handler {
   }
 
   /**
-   * @brief Copies data to the write buffer.
+   * Copies data to the write buffer.
    * @note Not thread safe.
    */
   void write(const void* buf, size_t num_bytes) {
@@ -590,9 +586,9 @@ class stream : public event_handler {
   }
 
   /**
-   * @brief Returns the write buffer of this stream.
+   * Returns the write buffer of this stream.
    * @warning Must not be modified outside the IO multiplexers event loop
-   *      once the stream has been started.
+   *          once the stream has been started.
    */
   buffer_type& wr_buf() {
     return m_wr_offline_buf;
@@ -603,11 +599,10 @@ class stream : public event_handler {
   }
 
   /**
-   * @brief Sends the content of the write buffer, calling
-   *    the @p io_failure member function of @p mgr in
-   *    case of an error.
+   * Sends the content of the write buffer, calling the `io_failure`
+   * member function of `mgr` in case of an error.
    * @warning Must not be called outside the IO multiplexers event loop
-   *      once the stream has been started.
+   *          once the stream has been started.
    */
   void flush(const manager_ptr& mgr) {
     CAF_REQUIRE(mgr != nullptr);
@@ -747,8 +742,8 @@ class stream : public event_handler {
 };
 
 /**
- * @brief An acceptor manager configures an acceptor and provides
- *    callbacks for incoming connections as well as for error handling.
+ * An acceptor manager configures an acceptor and provides
+ * callbacks for incoming connections as well as for error handling.
  */
 class acceptor_manager : public manager {
 
@@ -757,15 +752,15 @@ class acceptor_manager : public manager {
   ~acceptor_manager();
 
   /**
-   * @brief Called by the underlying IO device to indicate that
-   *    a new connection is awaiting acceptance.
+   * Called by the underlying IO device to indicate that
+   * a new connection is awaiting acceptance.
    */
   virtual void new_connection() = 0;
 
 };
 
 /**
- * @brief An acceptor is responsible for accepting incoming connections.
+ * An acceptor is responsible for accepting incoming connections.
  */
 template <class SocketAcceptor>
 class acceptor : public event_handler {
@@ -775,12 +770,12 @@ class acceptor : public event_handler {
   using socket_type = typename SocketAcceptor::socket_type;
 
   /**
-   * @brief A manager providing the @p accept member function.
+   * A manager providing the `accept` member function.
    */
   using manager_type = acceptor_manager;
 
   /**
-   * @brief A smart pointer to an acceptor manager.
+   * A smart pointer to an acceptor manager.
    */
   using manager_ptr = intrusive_ptr<manager_type>;
 
@@ -790,29 +785,29 @@ class acceptor : public event_handler {
   }
 
   /**
-   * @brief Returns the @p multiplexer this acceptor belongs to.
+   * Returns the `multiplexer` this acceptor belongs to.
    */
   inline multiplexer& backend() {
     return m_backend;
   }
 
   /**
-   * @brief Returns the IO socket.
+   * Returns the IO socket.
    */
   inline SocketAcceptor& socket_handle() {
     return m_accept_sock;
   }
 
   /**
-   * @brief Returns the accepted socket. This member function should
-   *    be called only from the @p new_connection callback.
+   * Returns the accepted socket. This member function should
+   * be called only from the `new_connection` callback.
    */
   inline socket_type& accepted_socket() {
     return m_sock;
   }
 
   /**
-   * @brief Initializes this acceptor, setting the socket handle to @p fd.
+   * Initializes this acceptor, setting the socket handle to `fd`.
    */
   void init(SocketAcceptor sock) {
     CAF_LOG_TRACE("sock.fd = " << sock.fd());
@@ -820,9 +815,9 @@ class acceptor : public event_handler {
   }
 
   /**
-   * @brief Starts this acceptor, forwarding all incoming connections to
-   *    @p manager. The intrusive pointer will be released after the
-   *    acceptor has been closed or an IO error occured.
+   * Starts this acceptor, forwarding all incoming connections to
+   * `manager`. The intrusive pointer will be released after the
+   * acceptor has been closed or an IO error occured.
    */
   void start(const manager_ptr& mgr) {
     CAF_LOG_TRACE("m_accept_sock.fd = " << m_accept_sock.fd());
@@ -832,7 +827,7 @@ class acceptor : public event_handler {
   }
 
   /**
-   * @brief Closes the network connection, thus stopping this acceptor.
+   * Closes the network connection, thus stopping this acceptor.
    */
   void stop_reading() {
     CAF_LOG_TRACE("m_accept_sock.fd = " << m_accept_sock.fd()

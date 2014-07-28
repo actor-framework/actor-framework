@@ -86,17 +86,8 @@ class singletons {
   static std::atomic<abstract_singleton*>& get_plugin_singleton(size_t id);
 
   /*
-   * @brief Type @p T has to provide: <tt>static T* create_singleton()</tt>,
-   *    <tt>void initialize()</tt>, <tt>void destroy()</tt>,
-   *    and <tt>dispose()</tt>.
-   * The constructor of T shall be lightweigt, since more than one object
-   * might get constructed initially.
-   * <tt>dispose()</tt> is called on objects with failed CAS operation.
-   * <tt>initialize()</tt> is called on objects with succeeded CAS operation.
-   * <tt>destroy()</tt> is called during shutdown on initialized objects.
-   *
-   * Both <tt>dispose</tt> and <tt>destroy</tt> must delete the object
-   * eventually.
+   * Type `T` has to provide: `static T* create_singleton()`,
+   * `void initialize()`, `void stop()`, and `dispose()`.
    */
   template <class T, typename Factory>
   static T* lazy_get(std::atomic<T*>& ptr, Factory f) {

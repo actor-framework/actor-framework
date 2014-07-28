@@ -58,7 +58,7 @@ class behavior_stack {
 
   void clear();
 
-  // erases the synchronous response handler associated with @p rid
+  // erases the synchronous response handler associated with `rid`
   void erase(message_id rid) {
     erase_if([=](const element_type& e) { return e.second == rid; });
   }

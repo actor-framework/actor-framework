@@ -26,7 +26,7 @@ namespace caf {
 namespace detail {
 
 /**
- * @brief Evaluates to @p Right if @p Left == unit_t, @p Left otherwise.
+ * Evaluates to `Right` if `Left` == unit_t, `Left` otherwise.
  */
 template <class Left, typename Right>
 struct left_or_right {
@@ -53,7 +53,7 @@ struct left_or_right<const unit_t&, Right> {
 };
 
 /**
- * @brief Evaluates to @p Right if @p Left != unit_t, @p unit_t otherwise.
+ * Evaluates to `Right` if `Left` != unit_t, `unit_t` otherwise.
  */
 template <class Left, typename Right>
 struct if_not_left {

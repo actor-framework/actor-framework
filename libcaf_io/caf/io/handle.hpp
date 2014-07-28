@@ -27,15 +27,14 @@
 namespace caf {
 
 /**
- * @brief Base class for IO handles such as {@link accept_handle} or
- *    {@link connection_handle}.
+ * Base class for IO handles such as `accept_handle` or `connection_handle`.
  */
 template <class Subtype, int64_t InvalidId = -1>
 class handle : detail::comparable<Subtype> {
-
  public:
-
-  constexpr handle() : m_id{InvalidId} {}
+  constexpr handle() : m_id{InvalidId} {
+    // nop
+  }
 
   handle(const Subtype& other) { m_id = other.id(); }
 
@@ -47,12 +46,12 @@ class handle : detail::comparable<Subtype> {
   }
 
   /**
-   * @brief Returns the unique identifier of this handle.
+   * Returns the unique identifier of this handle.
    */
   inline int64_t id() const { return m_id; }
 
   /**
-   * @brief Sets the unique identifier of this handle.
+   * Sets the unique identifier of this handle.
    */
   inline void set_id(int64_t value) { m_id = value; }
 
@@ -67,13 +66,10 @@ class handle : detail::comparable<Subtype> {
   }
 
  protected:
-
   inline handle(int64_t handle_id) : m_id{handle_id} {}
 
  private:
-
   int64_t m_id;
-
 };
 
 } // namespace caf

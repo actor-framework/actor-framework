@@ -38,15 +38,15 @@ using keep_behavior_t = behavior_policy<false>;
 using discard_behavior_t = behavior_policy<true>;
 
 /**
- * @brief Policy tag that causes {@link event_based_actor::become} to
- *    discard the current behavior.
+ * Policy tag that causes {@link event_based_actor::become} to
+ * discard the current behavior.
  * @relates local_actor
  */
 constexpr discard_behavior_t discard_behavior = discard_behavior_t{};
 
 /**
- * @brief Policy tag that causes {@link event_based_actor::become} to
- *    keep the current behavior available.
+ * Policy tag that causes {@link event_based_actor::become} to
+ * keep the current behavior available.
  * @relates local_actor
  */
 constexpr keep_behavior_t keep_behavior = keep_behavior_t{};

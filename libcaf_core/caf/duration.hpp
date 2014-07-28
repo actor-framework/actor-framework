@@ -28,7 +28,7 @@
 namespace caf {
 
 /**
- * @brief SI time units to specify timeouts.
+ * SI time units to specify timeouts.
  */
 enum class time_unit : uint32_t {
   invalid = 0,
@@ -70,8 +70,7 @@ struct ratio_to_time_unit_helper<60, 1> {
 };
 
 /**
- * @brief Converts an STL time period to a
- *    {@link caf::detail::time_unit time_unit}.
+ * Converts an STL time period to a `time_unit`.
  */
 template <class Period>
 constexpr time_unit get_time_unit_from_period() {
@@ -79,9 +78,7 @@ constexpr time_unit get_time_unit_from_period() {
 }
 
 /**
- * @brief Time duration consisting of a {@link caf::detail::time_unit
- * time_unit}
- *    and a 64 bit unsigned integer.
+ * Time duration consisting of a `time_unit` and a 64 bit unsigned integer.
  */
 class duration {
 
@@ -92,8 +89,8 @@ class duration {
   constexpr duration(time_unit u, uint32_t v) : unit(u), count(v) {}
 
   /**
-   * @brief Creates a new instance from an STL duration.
-   * @throws std::invalid_argument Thrown if <tt>d.count()</tt> is negative.
+   * Creates a new instance from an STL duration.
+   * @throws std::invalid_argument Thrown if `d.count() is negative.
    */
   template <class Rep, class Period>
   duration(std::chrono::duration<Rep, Period> d)
@@ -104,20 +101,20 @@ class duration {
   }
 
   /**
-   * @brief Creates a new instance from an STL duration given in minutes.
-   * @throws std::invalid_argument Thrown if <tt>d.count()</tt> is negative.
+   * Creates a new instance from an STL duration given in minutes.
+   * @throws std::invalid_argument Thrown if `d.count() is negative.
    */
   template <class Rep>
   duration(std::chrono::duration<Rep, std::ratio<60, 1>> d)
       : unit(time_unit::seconds), count(rd(d) * 60) {}
 
   /**
-   * @brief Returns true if <tt>unit != time_unit::none</tt>.
+   * Returns `unit != time_unit::invalid`.
    */
   inline bool valid() const { return unit != time_unit::invalid; }
 
   /**
-   * @brief Returns true if <tt>count == 0</tt>.
+   * Returns `count == 0`.
    */
   inline bool is_zero() const { return count == 0; }
 

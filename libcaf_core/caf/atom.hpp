@@ -27,7 +27,7 @@
 namespace caf {
 
 /**
- * @brief The value type of atoms.
+ * The value type of atoms.
  */
 enum class atom_value : uint64_t {
   /** @cond PRIVATE */
@@ -37,16 +37,12 @@ enum class atom_value : uint64_t {
 };
 
 /**
- * @brief Returns @p what as a string representation.
- * @param what Compact representation of an atom.
- * @returns @p what as string.
+ * Returns `what` as a string representation.
  */
 std::string to_string(const atom_value& what);
 
 /**
- * @brief Creates an atom from given string literal.
- * @param str String constant representing an atom.
- * @returns A compact representation of @p str.
+ * Creates an atom from given string literal.
  */
 template <size_t Size>
 constexpr atom_value atom(char const (&str)[Size]) {

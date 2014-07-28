@@ -38,8 +38,7 @@
 namespace caf {
 
 /**
- * @brief A cooperatively scheduled, event-based actor implementation.
- *
+ * A cooperatively scheduled, event-based actor implementation.
  * This is the recommended base class for user-defined actors and is used
  * implicitly when spawning functor-based actors without the
  * {@link blocking_api} flag.
@@ -62,12 +61,12 @@ class event_based_actor
  protected:
 
   /**
-   * @brief Returns the initial actor behavior.
+   * Returns the initial actor behavior.
    */
   virtual behavior make_behavior() = 0;
 
   /**
-   * @brief Forwards the last received message to @p whom.
+   * Forwards the last received message to `whom`.
    */
   void forward_to(const actor& whom);
 

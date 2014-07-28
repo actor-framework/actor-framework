@@ -44,13 +44,13 @@ class sync_sender_impl : public Base {
    **************************************************************************/
 
   /**
-   * @brief Sends @p what as a synchronous message to @p whom.
+   * Sends `what` as a synchronous message to `whom`.
    * @param dest Receiver of the message.
    * @param what Message content as tuple.
-   * @returns A handle identifying a future to the response of @p whom.
+   * @returns A handle identifying a future to the response of `whom`.
    * @warning The returned handle is actor specific and the response to the
    *      sent message cannot be received by another actor.
-   * @throws std::invalid_argument if <tt>whom == nullptr</tt>
+   * @throws std::invalid_argument if `whom == nullptr
    */
   response_handle_type sync_send_tuple(message_priority prio,
                      const actor& dest, message what) {
@@ -63,14 +63,13 @@ class sync_sender_impl : public Base {
   }
 
   /**
-   * @brief Sends <tt>{what...}</tt> as a synchronous message to @p whom.
+   * Sends `{what...}` as a synchronous message to `whom`.
    * @param dest Receiver of the message.
    * @param what Message elements.
-   * @returns A handle identifying a future to the response of @p whom.
+   * @returns A handle identifying a future to the response of `whom`.
    * @warning The returned handle is actor specific and the response to the
-   *      sent message cannot be received by another actor.
-   * @pre <tt>sizeof...(Ts) > 0</tt>
-   * @throws std::invalid_argument if <tt>whom == nullptr</tt>
+   *          sent message cannot be received by another actor.
+   * @throws std::invalid_argument if `whom == nullptr`
    */
   template <class... Ts>
   response_handle_type sync_send(message_priority prio, const actor& dest,

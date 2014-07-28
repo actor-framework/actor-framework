@@ -32,32 +32,30 @@ namespace caf {
 namespace detail {
 
 /**
- * @brief Denotes in which state queue and reader are after an enqueue.
+ * Denotes in which state queue and reader are after an enqueue.
  */
 enum class enqueue_result {
   /**
-   * @brief Indicates that the enqueue operation succeeded and
-   *    the reader is ready to receive the data.
+   * Indicates that the enqueue operation succeeded and
+   * the reader is ready to receive the data.
    */
   success,
 
   /**
-   * @brief Indicates that the enqueue operation succeeded and
-   *    the reader is currently blocked, i.e., needs to be re-scheduled.
+   * Indicates that the enqueue operation succeeded and
+   * the reader is currently blocked, i.e., needs to be re-scheduled.
    */
   unblocked_reader,
 
   /**
-   * @brief Indicates that the enqueue operation failed because the
-   *    queue has been closed by the reader.
+   * Indicates that the enqueue operation failed because the
+   * queue has been closed by the reader.
    */
   queue_closed
 };
 
 /**
- * @brief An intrusive, thread-safe queue implementation.
- * @note For implementation details see
- *       http://libcppa.blogspot.com/2011/04/mailbox-part-1.html
+ * An intrusive, thread-safe queue implementation.
  */
 template <class T, class Delete = std::default_delete<T>>
 class single_reader_queue {
@@ -66,7 +64,7 @@ class single_reader_queue {
   using pointer = value_type*;
 
   /**
-   * @brief Tries to dequeue a new element from the mailbox.
+   * Tries to dequeue a new element from the mailbox.
    * @warning Call only from the reader (owner).
    */
   pointer try_pop() {
@@ -74,7 +72,7 @@ class single_reader_queue {
   }
 
   /**
-   * @brief Tries to enqueue a new element to the mailbox.
+   * Tries to enqueue a new element to the mailbox.
    * @warning Call only from the reader (owner).
    */
   enqueue_result enqueue(pointer new_element) {
@@ -97,8 +95,8 @@ class single_reader_queue {
   }
 
   /**
-   * @brief Queries whether there is new data to read, i.e., whether the next
-   *        call to {@link try_pop} would succeeed.
+   * Queries whether there is new data to read, i.e., whether the next
+   * call to {@link try_pop} would succeeed.
    * @pre !closed()
    */
   bool can_fetch_more() {
@@ -111,7 +109,7 @@ class single_reader_queue {
   }
 
   /**
-   * @brief Queries whether this queue is empty.
+   * Queries whether this queue is empty.
    * @warning Call only from the reader (owner).
    */
   bool empty() {
@@ -120,25 +118,22 @@ class single_reader_queue {
   }
 
   /**
-   * @brief Queries whether this has been closed.
+   * Queries whether this has been closed.
    */
   bool closed() {
     return m_stack.load() == nullptr;
   }
 
   /**
-   * @brief Queries whether this has been marked as blocked, i.e., the
-   *        owner of the list is waiting for new data.
+   * Queries whether this has been marked as blocked, i.e.,
+   * the owner of the list is waiting for new data.
    */
   bool blocked() {
     return m_stack.load() == reader_blocked_dummy();
   }
 
   /**
-   * @brief Tries to set this queue from state @p empty to state @p blocked.
-   * @returns @p true if the state change was successful or if the mailbox
-   *          was already blocked, otherwise @p false.
-   * @note This function never fails spuriously.
+   * Tries to set this queue from state `empty` to state `blocked`.
    */
   bool try_block() {
     auto e = stack_empty_dummy();
@@ -149,9 +144,7 @@ class single_reader_queue {
   }
 
   /**
-   * @brief Tries to set this queue from state @p blocked to state @p empty.
-   * @returns @p true if the state change was successful, otherwise @p false.
-   * @note This function never fails spuriously.
+   * Tries to set this queue from state `blocked` to state `empty`.
    */
   bool try_unblock() {
     auto e = reader_blocked_dummy();
@@ -159,7 +152,7 @@ class single_reader_queue {
   }
 
   /**
-   * @brief Closes this queue and deletes all remaining elements.
+   * Closes this queue and deletes all remaining elements.
    * @warning Call only from the reader (owner).
    */
   void close() {
@@ -170,7 +163,7 @@ class single_reader_queue {
   }
 
   /**
-   * @brief Closes this queue and applies f to all remaining
+   * Closes this queue and applies f to all remaining
    *        elements before deleting them.
    * @warning Call only from the reader (owner).
    */

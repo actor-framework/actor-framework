@@ -41,69 +41,56 @@ namespace caf {
  */
 
 /**
- * @brief A simple example for @c announce with public accessible members.
- *
+ * A simple example for announce with public accessible members.
  * The output of this example program is:
- *
- * <tt>
- * foo(1, 2)<br>
- * foo_pair(3, 4)
- * </tt>
+ * > foo(1, 2)<br>
+ * > foo_pair(3, 4)
  * @example announce_1.cpp
  */
 
 /**
- * @brief An example for @c announce with getter and setter member functions.
- *
+ * An example for announce with getter and setter member functions.
  * The output of this example program is:
  *
- * <tt>foo(1, 2)</tt>
+ * > foo(1, 2)
  * @example announce_2.cpp
  */
 
 /**
- * @brief An example for @c announce with overloaded
- *    getter and setter member functions.
- *
+ * An example for announce with overloaded getter and setter member functions.
  * The output of this example program is:
  *
- * <tt>foo(1, 2)</tt>
+ * > foo(1, 2)
  * @example announce_3.cpp
  */
 
 /**
- * @brief An example for @c announce with non-primitive members.
- *
+ * An example for announce with non-primitive members.
  * The output of this example program is:
  *
- * <tt>bar(foo(1, 2), 3)</tt>
+ * > bar(foo(1, 2), 3)
  * @example announce_4.cpp
  */
 
 /**
- * @brief An advanced example for @c announce implementing serialization
- *    for a user-defined tree data type.
+ * An advanced example for announce implementing serialization
+ * for a user-defined tree data type.
  * @example announce_5.cpp
  */
 
 /**
- * @brief Adds a new type mapping to the type system.
- * @param tinfo C++ RTTI for the new type
- * @param utype Corresponding {@link uniform_type_info} instance.
- * @returns @c true if @p uniform_type was added as known
- *     instance (mapped to @p plain_type); otherwise @c false
- *     is returned and @p uniform_type was deleted.
+ * Adds a new mapping to the type system. Returns `false` if a mapping
+ * for `tinfo` already exists, otherwise `true`.
+ * @warning `announce` is **not** thead-safe!
  */
 const uniform_type_info* announce(const std::type_info& tinfo,
-                  uniform_type_info_ptr utype);
+                                  uniform_type_info_ptr utype);
 
 // deals with member pointer
 /**
- * @brief Creates meta informations for a non-trivial member @p C.
- * @param c_ptr Pointer to the non-trivial member.
- * @param args "Sub-members" of @p c_ptr
+ * Creates meta information for a non-trivial member `C`, whereas
+ * `args` are the "sub-members" of `c_ptr`.
  * @see {@link announce_4.cpp announce example 4}
- * @returns A pair of @p c_ptr and the created meta informations.
  */
 template <class C, class Parent, class... Ts>
 std::pair<C Parent::*, detail::abstract_uniform_type_info<C>*>
@@ -113,12 +100,10 @@ compound_member(C Parent::*c_ptr, const Ts&... args) {
 
 // deals with getter returning a mutable reference
 /**
- * @brief Creates meta informations for a non-trivial member accessed
- *    via a getter returning a mutable reference.
- * @param getter Member function pointer to the getter.
- * @param args "Sub-members" of @p c_ptr
+ * Creates meta information for a non-trivial member accessed
+ * via a getter returning a mutable reference, whereas
+ * `args` are the "sub-members" of `c_ptr`.
  * @see {@link announce_4.cpp announce example 4}
- * @returns A pair of @p c_ptr and the created meta informations.
  */
 template <class C, class Parent, class... Ts>
 std::pair<C& (Parent::*)(), detail::abstract_uniform_type_info<C>*>
@@ -128,32 +113,25 @@ compound_member(C& (Parent::*getter)(), const Ts&... args) {
 
 // deals with getter/setter pair
 /**
- * @brief Creates meta informations for a non-trivial member accessed
- *    via a getter/setter pair.
- * @param gspair A pair of two member function pointers representing
- *         getter and setter.
- * @param args "Sub-members" of @p c_ptr
+ * Creates meta information for a non-trivial member accessed
+ * via a pair of getter and setter member function pointers, whereas
+ * `args` are the "sub-members" of `c_ptr`.
  * @see {@link announce_4.cpp announce example 4}
- * @returns A pair of @p c_ptr and the created meta informations.
  */
-template <class Parent, typename GRes, typename SRes, typename SArg,
-      class... Ts>
+template <class Parent, class GRes, class SRes, class SArg, class... Ts>
 std::pair<std::pair<GRes (Parent::*)() const, SRes (Parent::*)(SArg)>,
-      detail::abstract_uniform_type_info<
-        typename detail::rm_const_and_ref<GRes>::type>*>
-compound_member(
-  const std::pair<GRes (Parent::*)() const, SRes (Parent::*)(SArg)>& gspair,
-  const Ts&... args) {
+          detail::abstract_uniform_type_info<
+            typename detail::rm_const_and_ref<GRes>::type>*>
+compound_member(const std::pair<GRes (Parent::*)() const,
+                SRes (Parent::*)(SArg)>& gspair,
+                const Ts&... args) {
   using mtype = typename detail::rm_const_and_ref<GRes>::type;
   return {gspair, new detail::default_uniform_type_info<mtype>(args...)};
 }
 
 /**
- * @brief Adds a new type mapping for @p C to the type system.
- * @tparam C A class that is either empty or is default constructible,
- *       copy constructible, and comparable.
- * @param args Members of @p C.
- * @warning @p announce is <b>not</b> thead safe!
+ * Adds a new type mapping for `C` to the type system.
+ * @warning `announce` is **not** thead-safe!
  */
 template <class C, class... Ts>
 inline const uniform_type_info* announce(const Ts&... args) {

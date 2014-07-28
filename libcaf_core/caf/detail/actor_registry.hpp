@@ -27,7 +27,6 @@
 #include <cstdint>
 #include <condition_variable>
 
-#include "caf/attachable.hpp"
 #include "caf/abstract_actor.hpp"
 #include "caf/detail/shared_spinlock.hpp"
 
@@ -39,23 +38,18 @@ namespace detail {
 class singletons;
 
 class actor_registry : public singleton_mixin<actor_registry> {
-
-  friend class singleton_mixin<actor_registry>;
-
  public:
+  friend class singleton_mixin<actor_registry>;
 
   ~actor_registry();
 
   /**
-   * @brief A registry entry consists of a pointer to the actor and an
-   *    exit reason. An entry with a nullptr means the actor has finished
-   *    execution for given reason.
+   * A registry entry consists of a pointer to the actor and an
+   * exit reason. An entry with a nullptr means the actor has finished
+   * execution for given reason.
    */
   using value_type = std::pair<abstract_actor_ptr, uint32_t>;
 
-  /**
-   * @brief Returns the {nullptr, invalid_exit_reason}.
-   */
   value_type get_entry(actor_id key) const;
 
   // return nullptr if the actor wasn't put *or* finished execution
@@ -78,12 +72,13 @@ class actor_registry : public singleton_mixin<actor_registry> {
 
   size_t running() const;
 
-  // blocks the caller until running-actors-count becomes @p expected
+  // blocks the caller until running-actors-count becomes `expected`
   void await_running_count_equal(size_t expected);
 
  private:
-
   using entries = std::map<actor_id, value_type>;
+
+  actor_registry();
 
   std::atomic<size_t> m_running;
   std::atomic<actor_id> m_ids;
@@ -93,9 +88,6 @@ class actor_registry : public singleton_mixin<actor_registry> {
 
   mutable detail::shared_spinlock m_instances_mtx;
   entries m_entries;
-
-  actor_registry();
-
 };
 
 } // namespace detail

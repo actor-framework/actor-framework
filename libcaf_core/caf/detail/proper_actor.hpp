@@ -22,8 +22,8 @@
 
 #include <type_traits>
 
+#include "caf/fwd.hpp"
 #include "caf/duration.hpp"
-#include "caf/blocking_actor.hpp"
 #include "caf/mailbox_element.hpp"
 
 #include "caf/detail/logging.hpp"
@@ -35,7 +35,7 @@ namespace detail {
 
 // 'imports' all member functions from policies to the actor,
 // the resume mixin also adds the m_hidden member which *must* be
-// initialized to @p true
+// initialized to `true`
 template <class Base, class Derived, class Policies>
 class proper_actor_base : public Policies::resume_policy::template
                                  mixin<Base, Derived> {
@@ -317,8 +317,8 @@ class proper_actor<Base, Policies, true>
     auto msg = make_message(timeout_msg{tid});
     if (d.is_zero()) {
       // immediately enqueue timeout message if duration == 0s
-      this->enqueue(this->address(), message_id::invalid, std::move(msg),
-              this->m_host);
+      this->enqueue(this->address(), message_id::invalid,
+                    std::move(msg), this->host());
       // auto e = this->new_mailbox_element(this, std::move(msg));
       // this->m_mailbox.enqueue(e);
     } else {

@@ -477,7 +477,7 @@ actor_proxy_ptr basp_broker::make_proxy(const id_type& nid, actor_id aid) {
   // use a direct route if possible, i.e., when talking to a third node
   auto hdl = get_route(nid);
   if (hdl.invalid()) {
-    // this happens if and only if we don't have a path to @p nid
+    // this happens if and only if we don't have a path to `nid`
     // and m_current_context->hdl has been blacklisted
     CAF_LOG_INFO("cannot create a proxy instance for an actor "
            "running on a node we don't have a route to");

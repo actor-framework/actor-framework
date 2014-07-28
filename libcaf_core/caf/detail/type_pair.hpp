@@ -23,10 +23,6 @@
 namespace caf {
 namespace detail {
 
-/**
- * @ingroup MetaProgramming
- * @brief A pair of two types.
- */
 template <class First, typename Second>
 struct type_pair {
   using first = First;

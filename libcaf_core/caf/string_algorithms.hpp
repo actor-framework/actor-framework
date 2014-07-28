@@ -91,9 +91,9 @@ void replace_all(std::string& str,
 }
 
 /**
- * @brief Compares two values by using @p operator== unless two floating
- *    point numbers are compared. In the latter case, the function
- *    performs an epsilon comparison.
+ * Compares two values by using `operator==` unless two floating
+ * point numbers are compared. In the latter case, the function
+ * performs an epsilon comparison.
  */
 template <class T, typename U>
 typename std::enable_if<

@@ -48,7 +48,7 @@ namespace scheduler {
 class abstract_coordinator;
 
 /**
- * @brief Base class for work-stealing workers.
+ * Base class for work-stealing workers.
  */
 class abstract_worker : public execution_unit {
 
@@ -57,46 +57,44 @@ class abstract_worker : public execution_unit {
  public:
 
   /**
-   * @brief Attempt to steal an element from this worker.
+   * Attempt to steal an element from this worker.
    */
   virtual resumable* try_steal() = 0;
 
   /**
-   * @brief Enqueues a new job to the worker's queue from an external
-   *    source, i.e., from any other thread.
+   * Enqueues a new job to the worker's queue from an external
+   * source, i.e., from any other thread.
    */
   virtual void external_enqueue(resumable*) = 0;
 
   /**
-   * @brief Starts the thread of this worker.
+   * Starts the thread of this worker.
    */
   virtual void start(size_t id, abstract_coordinator* parent) = 0;
 
 };
 
 /**
- * @brief A coordinator creates the workers, manages delayed sends and
- *        the central printer instance for {@link aout}. It also forwards
- *        sends from detached workers or non-actor threads to randomly
- *        chosen workers.
+ * A coordinator creates the workers, manages delayed sends and
+ * the central printer instance for {@link aout}. It also forwards
+ * sends from detached workers or non-actor threads to randomly
+ * chosen workers.
  */
 class abstract_coordinator {
-
-  friend class detail::singletons;
-
  public:
+  friend class detail::singletons;
 
   explicit abstract_coordinator(size_t num_worker_threads);
 
   virtual ~abstract_coordinator();
 
   /**
-   * @brief Returns a handle to the central printing actor.
+   * Returns a handle to the central printing actor.
    */
   actor printer() const;
 
   /**
-   * @brief Puts @p what into the queue of a randomly chosen worker.
+   * Puts `what` into the queue of a randomly chosen worker.
    */
   void enqueue(resumable* what);
 
@@ -125,7 +123,6 @@ class abstract_coordinator {
   virtual void stop();
 
  private:
-
   // Creates a default instance.
   static abstract_coordinator* create_singleton();
 
@@ -143,16 +140,16 @@ class abstract_coordinator {
 
   std::thread m_timer_thread;
   std::thread m_printer_thread;
-
 };
 
 /**
- * @brief Policy-based implementation of the abstract worker base class.
+ * Policy-based implementation of the abstract worker base class.
  */
 template <class StealPolicy, class JobQueuePolicy>
 class worker : public abstract_worker {
-
  public:
+  worker(const worker&) = delete;
+  worker& operator=(const worker&) = delete;
 
   worker() = default;
 
@@ -164,7 +161,6 @@ class worker : public abstract_worker {
     // cannot be moved once m_this_thread is up and running
     auto running = [](std::thread& t) {
       return t.get_id() != std::thread::id{};
-
     };
     if (running(m_this_thread) || running(other.m_this_thread)) {
       throw std::runtime_error("running workers cannot be moved");
@@ -174,16 +170,12 @@ class worker : public abstract_worker {
     return *this;
   }
 
-  worker(const worker&) = delete;
-
-  worker& operator=(const worker&) = delete;
-
   using job_ptr = resumable*;
 
   using job_queue = detail::producer_consumer_list<resumable>;
 
   /**
-   * @brief Attempt to steal an element from the exposed job queue.
+   * Attempt to steal an element from the exposed job queue.
    */
   job_ptr try_steal() override {
     auto result = m_queue_policy.try_external_dequeue(this);
@@ -192,8 +184,8 @@ class worker : public abstract_worker {
   }
 
   /**
-   * @brief Enqueues a new job to the worker's queue from an external
-   *    source, i.e., from any other thread.
+   * Enqueues a new job to the worker's queue from an external
+   * source, i.e., from any other thread.
    */
   void external_enqueue(job_ptr job) override {
     CAF_REQUIRE(job != nullptr);
@@ -202,9 +194,8 @@ class worker : public abstract_worker {
   }
 
   /**
-   * @brief Enqueues a new job to the worker's queue from an internal
-   *        source, i.e., a job that is currently executed by
-   *        this worker.
+   * Enqueues a new job to the worker's queue from an internal
+   * source, i.e., a job that is currently executed by this worker.
    * @warning Must not be called from other threads.
    */
   void exec_later(job_ptr job) override {
@@ -253,12 +244,11 @@ class worker : public abstract_worker {
 
   actor_id id_of(resumable* ptr) {
     abstract_actor* aptr = ptr ? dynamic_cast<abstract_actor*>(ptr)
-                   : nullptr;
+                               : nullptr;
     return aptr ? aptr->id() : 0;
   }
 
  private:
-
   void run() {
     CAF_LOG_TRACE("worker with ID " << m_id);
     // scheduling loop
@@ -286,27 +276,23 @@ class worker : public abstract_worker {
 
   // the worker's thread
   std::thread m_this_thread;
-
   // the worker's ID received from scheduler
   size_t m_id;
-
+  // pointer to central coordinator
   abstract_coordinator* m_parent;
-
+  // policy managing queues
   JobQueuePolicy m_queue_policy;
-
+  // policy managing steal operations
   StealPolicy m_steal_policy;
-
 };
 
 /**
- * @brief Policy-based implementation of the abstract coordinator base class.
+ * Policy-based implementation of the abstract coordinator base class.
  */
 template <class StealPolicy, class JobQueuePolicy>
 class coordinator : public abstract_coordinator {
-
-  using super = abstract_coordinator;
-
  public:
+  using super = abstract_coordinator;
 
   coordinator(size_t nw = std::thread::hardware_concurrency()) : super(nw) {
     // nop
@@ -319,7 +305,6 @@ class coordinator : public abstract_coordinator {
   }
 
  protected:
-
   void initialize() override {
     super::initialize();
     // create & start workers
@@ -338,16 +323,14 @@ class coordinator : public abstract_coordinator {
   }
 
  private:
-
-  // vector of size std::thread::hardware_concurrency()
+  // usually of size std::thread::hardware_concurrency()
   std::vector<worker_type> m_workers;
-
 };
 
 } // namespace scheduler
 
 /**
- * @brief Sets a user-defined scheduler.
+ * Sets a user-defined scheduler.
  * @note This function must be used before actor is spawned. Dynamically
  *       changing the scheduler at runtime is not supported.
  * @throws std::logic_error if a scheduler is already defined
@@ -355,8 +338,8 @@ class coordinator : public abstract_coordinator {
 void set_scheduler(scheduler::abstract_coordinator* ptr);
 
 /**
- * @brief Sets a user-defined scheduler using given policies. The scheduler
- *        is instantiated with @p nw number of workers.
+ * Sets a user-defined scheduler using given policies. The scheduler
+ * is instantiated with `nw` number of workers.
  * @note This function must be used before actor is spawned. Dynamically
  *       changing the scheduler at runtime is not supported.
  * @throws std::logic_error if a scheduler is already defined

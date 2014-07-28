@@ -41,9 +41,9 @@ inline void yield() noexcept {
   req.tv_nsec = 1;
   nanosleep(&req, nullptr);
 }
-}
-}
-} // namespace std::this_thread::<anonymous>
+} // namespace anonymous>
+} // namespace this_thread
+} // namespace std
 #endif
 
 // another GCC hack
@@ -61,17 +61,16 @@ inline void sleep_for(const chrono::duration<Rep, Period>& rt) {
   req.tv_nsec = nsec.count();
   nanosleep(&req, nullptr);
 }
-}
-}
-} // namespace std::this_thread::<anonymous>
+} // namespace anonymous>
+} // namespace this_thread
+} // namespace std
 #endif
 
 namespace caf {
 namespace detail {
 
 /**
- * @brief A producer-consumer list.
- *
+ * A producer-consumer list.
  * For implementation details see http://drdobbs.com/cpp/211601363.
  */
 template <class T>

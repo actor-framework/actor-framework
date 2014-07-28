@@ -28,7 +28,7 @@
 namespace caf {
 
 /**
- * @brief Sends @p to a message under the identity of @p from.
+ * Sends `to` a message under the identity of `from`.
  */
 inline void send_tuple_as(const actor& from, const channel& to, message msg) {
   if (to)
@@ -37,7 +37,7 @@ inline void send_tuple_as(const actor& from, const channel& to, message msg) {
 }
 
 /**
- * @brief Sends @p to a message under the identity of @p from.
+ * Sends `to` a message under the identity of `from`.
  */
 template <class... Ts>
 void send_as(const actor& from, const channel& to, Ts&&... args) {
@@ -45,14 +45,14 @@ void send_as(const actor& from, const channel& to, Ts&&... args) {
 }
 
 /**
- * @brief Anonymously sends @p to a message.
+ * Anonymously sends `to` a message.
  */
 inline void anon_send_tuple(const channel& to, message msg) {
   send_tuple_as(invalid_actor, to, std::move(msg));
 }
 
 /**
- * @brief Anonymously sends @p to a message.
+ * Anonymously sends `to` a message.
  */
 template <class... Ts>
 inline void anon_send(const channel& to, Ts&&... args) {
@@ -61,12 +61,12 @@ inline void anon_send(const channel& to, Ts&&... args) {
 
 // implemented in local_actor.cpp
 /**
- * @brief Anonymously sends @p whom an exit message.
+ * Anonymously sends `whom` an exit message.
  */
 void anon_send_exit(const actor_addr& whom, uint32_t reason);
 
 /**
- * @brief Anonymously sends @p whom an exit message.
+ * Anonymously sends `whom` an exit message.
  */
 template <class ActorHandle>
 inline void anon_send_exit(const ActorHandle& whom, uint32_t reason) {

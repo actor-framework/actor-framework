@@ -28,7 +28,7 @@
 namespace caf {
 
 /**
- * @brief Mixin for actors using a non-nestable message processing.
+ * Mixin for actors using a non-nestable message processing.
  */
 template <class Base, class Subtype>
 class single_timeout : public Base {

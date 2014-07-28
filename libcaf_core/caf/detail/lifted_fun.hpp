@@ -141,10 +141,10 @@ class lifted_fun_invoker<bool, F> {
 };
 
 /**
- * @brief A lifted functor consists of a set of projections, a plain-old
- *    functor and its signature. Note that the signature of the lifted
- *    functor might differ from the underlying functor, because
- *    of the projections.
+ * A lifted functor consists of a set of projections, a plain-old
+ * functor and its signature. Note that the signature of the lifted
+ * functor might differ from the underlying functor, because
+ * of the projections.
  */
 template <class F, class ListOfProjections, class... Args>
 class lifted_fun {
@@ -185,7 +185,7 @@ class lifted_fun {
   }
 
   /**
-   * @brief Invokes @p fun with a lifted_fun of <tt>args...</tt>.
+   * Invokes `fun` with a lifted_fun of `args....
    */
   optional_result_type operator()(Args... args) {
     auto indices = get_indices(m_ps);

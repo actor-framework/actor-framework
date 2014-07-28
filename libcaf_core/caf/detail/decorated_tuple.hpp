@@ -49,22 +49,22 @@ class decorated_tuple : public message_data {
 
   using rtti = const std::type_info*;
 
-  // creates a dynamically typed subtuple from @p d with an offset
+  // creates a dynamically typed subtuple from `d` with an offset
   static inline pointer create(pointer d, vector_type v) {
     return pointer{new decorated_tuple(std::move(d), std::move(v))};
   }
 
-  // creates a statically typed subtuple from @p d with an offset
+  // creates a statically typed subtuple from `d` with an offset
   static inline pointer create(pointer d, rtti ti, vector_type v) {
     return pointer{new decorated_tuple(std::move(d), ti, std::move(v))};
   }
 
-  // creates a dynamically typed subtuple from @p d with an offset
+  // creates a dynamically typed subtuple from `d` with an offset
   static inline pointer create(pointer d, size_t offset) {
     return pointer{new decorated_tuple(std::move(d), offset)};
   }
 
-  // creates a statically typed subtuple from @p d with an offset
+  // creates a statically typed subtuple from `d` with an offset
   static inline pointer create(pointer d, rtti ti, size_t offset) {
     return pointer{new decorated_tuple(std::move(d), ti, offset)};
   }

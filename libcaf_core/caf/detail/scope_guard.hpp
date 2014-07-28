@@ -26,7 +26,7 @@ namespace caf {
 namespace detail {
 
 /**
- * @brief A lightweight scope guard implementation.
+ * A lightweight scope guard implementation.
  */
 template <class Fun>
 class scope_guard {
@@ -49,8 +49,8 @@ class scope_guard {
   }
 
   /**
-   * @brief Disables this guard, i.e., the guard does not
-   *    run its cleanup code as it goes out of scope.
+   * Disables this guard, i.e., the guard does not
+   * run its cleanup code as it goes out of scope.
    */
   inline void disable() { m_enabled = false; }
 
@@ -62,8 +62,7 @@ class scope_guard {
 };
 
 /**
- * @brief Creates a guard that executes @p f as soon as it
- *    goes out of scope.
+ * Creates a guard that executes `f` as soon as it goes out of scope.
  * @relates scope_guard
  */
 template <class Fun>

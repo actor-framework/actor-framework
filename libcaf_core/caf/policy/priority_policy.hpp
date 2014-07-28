@@ -28,23 +28,23 @@ namespace caf {
 namespace policy {
 
 /**
- * @brief The priority_policy <b>concept</b> class. Please note that this
- *    class is <b>not</b> implemented. It only explains the all
- *    required member function and their behavior for any priority policy.
+ * The priority_policy *concept* class. Please note that this
+ * class is **not** implemented. It merely explains all
+ * required member functions.
  */
 class priority_policy {
 
  public:
 
   /**
-   * @brief Returns the next message from the mailbox or @p nullptr
-   *    if it's empty.
+   * Returns the next message from the mailbox or `nullptr`
+   * if it's empty.
    */
   template <class Actor>
   unique_mailbox_element_pointer next_message(Actor* self);
 
   /**
-   * @brief Queries whether the mailbox is not empty.
+   * Queries whether the mailbox is not empty.
    */
   template <class Actor>
   bool has_next_message(Actor* self);

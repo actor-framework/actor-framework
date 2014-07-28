@@ -38,7 +38,7 @@ namespace caf {
 namespace io {
 
 /**
- * @brief A broker implementation for the Binary Actor System Protocol (BASP).
+ * A broker implementation for the Binary Actor System Protocol (BASP).
  */
 class basp_broker : public broker, public actor_namespace::backend {
 

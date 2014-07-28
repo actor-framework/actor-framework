@@ -22,6 +22,9 @@
 
 namespace caf {
 
+/**
+ * Converts actor handle `what` to a different actor handle of type `T`.
+ */
 template <class T, typename U>
 T actor_cast(const U& what) {
   return what.get();

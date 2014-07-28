@@ -29,8 +29,8 @@ namespace caf {
 namespace mixin {
 
 /**
- * @brief This mixin adds all member functions and member variables needed
- *    by the memory management subsystem.
+ * This mixin adds all member functions and member variables needed
+ * by the memory management subsystem.
  */
 template <class Base, class Subtype>
 class memory_cached : public Base {

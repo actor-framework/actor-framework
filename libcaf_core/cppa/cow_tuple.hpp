@@ -38,10 +38,6 @@ namespace caf {
 template <class... Ts>
 class cow_tuple;
 
-/**
- * @ingroup CopyOnWrite
- * @brief A fixed-length copy-on-write tuple.
- */
 template <class Head, class... Tail>
 class cow_tuple<Head, Tail...> {
 
@@ -67,10 +63,6 @@ class cow_tuple<Head, Tail...> {
     // nop
   }
 
-  /**
-   * @brief Initializes the cow_tuple with @p args.
-   * @param args Initialization values.
-   */
   template <class... Ts>
   cow_tuple(Head arg, Ts&&... args)
       : m_vals(new data_type(std::move(arg), std::forward<Ts>(args)...)) {
@@ -82,31 +74,18 @@ class cow_tuple<Head, Tail...> {
   cow_tuple& operator=(cow_tuple&&) = default;
   cow_tuple& operator=(const cow_tuple&) = default;
 
-  /**
-   * @brief Gets the size of this cow_tuple.
-   */
   inline size_t size() const {
     return sizeof...(Tail) + 1;
   }
 
-  /**
-   * @brief Gets a const pointer to the element at position @p p.
-   */
   inline const void* at(size_t p) const {
     return m_vals->at(p);
   }
 
-  /**
-   * @brief Gets a mutable pointer to the element at position @p p.
-   */
   inline void* mutable_at(size_t p) {
     return m_vals->mutable_at(p);
   }
 
-  /**
-   * @brief Gets {@link uniform_type_info uniform type information}
-   *    of the element at position @p p.
-   */
   inline const uniform_type_info* type_at(size_t p) const {
     return m_vals->type_at(p);
   }
@@ -139,14 +118,6 @@ class cow_tuple<Head, Tail...> {
 
 };
 
-/**
- * @ingroup CopyOnWrite
- * @brief Gets a const-reference to the <tt>N</tt>th element of @p tup.
- * @param tup The cow_tuple object.
- * @returns A const-reference of type T, whereas T is the type of the
- *      <tt>N</tt>th element of @p tup.
- * @relates cow_tuple
- */
 template <size_t N, class... Ts>
 const typename detail::type_at<N, Ts...>::type&
 get(const cow_tuple<Ts...>& tup) {
@@ -154,15 +125,6 @@ get(const cow_tuple<Ts...>& tup) {
   return *reinterpret_cast<const result_type*>(tup.at(N));
 }
 
-/**
- * @ingroup CopyOnWrite
- * @brief Gets a reference to the <tt>N</tt>th element of @p tup.
- * @param tup The cow_tuple object.
- * @returns A reference of type T, whereas T is the type of the
- *      <tt>N</tt>th element of @p tup.
- * @note Detaches @p tup if there are two or more references to the cow_tuple.
- * @relates cow_tuple
- */
 template <size_t N, class... Ts>
 typename detail::type_at<N, Ts...>::type&
 get_ref(cow_tuple<Ts...>& tup) {
@@ -170,13 +132,6 @@ get_ref(cow_tuple<Ts...>& tup) {
   return *reinterpret_cast<result_type*>(tup.mutable_at(N));
 }
 
-/**
- * @ingroup ImplicitConversion
- * @brief Creates a new cow_tuple from @p args.
- * @param args Values for the cow_tuple elements.
- * @returns A cow_tuple object containing the values @p args.
- * @relates cow_tuple
- */
 template <class... Ts>
 cow_tuple<typename detail::strip_and_convert<Ts>::type...>
 make_cow_tuple(Ts&&... args) {

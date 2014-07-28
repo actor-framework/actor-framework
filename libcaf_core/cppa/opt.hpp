@@ -50,8 +50,8 @@ string_proj extract_longopt_arg(const std::string& prefix) {
 }
 
 /**
- * @brief Right-hand side of a match expression for a program option
- *    reading an argument of type @p T.
+ * Right-hand side of a match expression for a program option
+ * reading an argument of type `T`.
  */
 template <class T>
 detail::rd_arg_functor<T> rd_arg(T& storage) {
@@ -59,8 +59,8 @@ detail::rd_arg_functor<T> rd_arg(T& storage) {
 }
 
 /**
- * @brief Right-hand side of a match expression for a program option
- *    adding an argument of type @p T to @p storage.
+ * Right-hand side of a match expression for a program option
+ * adding an argument of type `T` to `storage`.
  */
 template <class T>
 detail::add_arg_functor<T> add_arg(std::vector<T>& storage) {
@@ -72,7 +72,7 @@ inline std::function<void()> set_flag(bool& storage) {
 }
 
 /**
- * @brief Stores a help text along with the number of expected arguments.
+ * Stores a help text along with the number of expected arguments.
  */
 struct option_info {
   std::string help_text;
@@ -80,7 +80,7 @@ struct option_info {
 };
 
 /**
- * @brief Stores a help text for program options with option groups.
+ * Stores a help text for program options with option groups.
  */
 using options_description =
   std::map<
@@ -98,7 +98,7 @@ using opt_rvalue_builder =
 using opt0_rvalue_builder = decltype(on(std::string{}) || on(std::string{}));
 
 /**
- * @brief Left-hand side of a match expression for a program option with
+ * Left-hand side of a match expression for a program option with
  *    one argument.
  */
 inline opt_rvalue_builder on_opt1(char short_opt,
@@ -135,8 +135,7 @@ inline opt_rvalue_builder on_opt1(char short_opt,
 }
 
 /**
- * @brief Left-hand side of a match expression for a program option with
- *    no argument.
+ * Left-hand side of a match expression for a program option with no argument.
  */
 inline opt0_rvalue_builder on_opt0(char short_opt,
                    std::string long_opt,
@@ -155,7 +154,7 @@ inline opt0_rvalue_builder on_opt0(char short_opt,
 }
 
 /**
- * @brief Returns a function that prints the help text of @p desc to @p out.
+ * Returns a function that prints the help text of `desc` to `out`.
  */
 std::function<void()> print_desc(options_description* desc,
                  std::ostream& out = std::cout) {
@@ -194,8 +193,8 @@ std::function<void()> print_desc(options_description* desc,
 }
 
 /**
- * @brief Returns a function that prints the help text of @p desc to @p out
- *    and then calls <tt>exit(exit_reason)</tt>.
+ * Returns a function that prints the help text of `desc` to `out`
+ *    and then calls `exit(exit_reason).
  */
 inline std::function<void()> print_desc_and_exit(options_description* desc,
                          std::ostream& out = std::cout,

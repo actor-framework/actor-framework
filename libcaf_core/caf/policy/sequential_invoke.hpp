@@ -30,7 +30,7 @@ namespace caf {
 namespace policy {
 
 /**
- * @brief An actor that is scheduled or otherwise managed.
+ * An actor that is scheduled or otherwise managed.
  */
 class sequential_invoke : public invoke_policy<sequential_invoke> {
 

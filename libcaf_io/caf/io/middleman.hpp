@@ -37,34 +37,32 @@ namespace caf {
 namespace io {
 
 /**
- * @brief Manages brokers.
+ * Manages brokers.
  */
 class middleman : public detail::abstract_singleton {
-
+ public:
   friend class detail::singletons;
 
- public:
-
   /**
-   * @brief Get middleman instance.
+   * Get middleman instance.
    */
   static middleman* instance();
 
   ~middleman();
 
   /**
-   * @brief Returns the broker associated with @p name.
+   * Returns the broker associated with `name`.
    */
   template <class Impl>
   intrusive_ptr<Impl> get_named_broker(atom_value name);
 
   /**
-   * @brief Adds @p bptr to the list of known brokers.
+   * Adds `bptr` to the list of known brokers.
    */
   void add_broker(broker_ptr bptr);
 
   /**
-   * @brief Runs @p fun in the event loop of the middleman.
+   * Runs `fun` in the event loop of the middleman.
    * @note This member function is thread-safe.
    */
   template <class F>
@@ -73,7 +71,7 @@ class middleman : public detail::abstract_singleton {
   }
 
   /**
-   * @brief Returns the IO backend used by this middleman.
+   * Returns the IO backend used by this middleman.
    */
   inline network::multiplexer& backend() { return m_backend; }
 
@@ -91,7 +89,6 @@ class middleman : public detail::abstract_singleton {
   /** @endcond */
 
  private:
-
   middleman();
 
   network::multiplexer m_backend;  // networking backend
@@ -102,7 +99,6 @@ class middleman : public detail::abstract_singleton {
   std::map<atom_value, broker_ptr> m_named_brokers;
 
   std::set<broker_ptr> m_brokers;
-
 };
 
 template <class Impl>

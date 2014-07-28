@@ -24,7 +24,7 @@ namespace caf {
 namespace policy {
 
 /**
- * @brief A container for actor-related policies.
+ * A container for actor-related policies.
  */
 template <class SchedulingPolicy,
      class PriorityPolicy,

@@ -28,7 +28,7 @@
 namespace caf {
 
 /**
- * @brief Base class for exceptions.
+ * Base class for exceptions.
  */
 class caf_exception : public std::exception {
 
@@ -41,22 +41,19 @@ class caf_exception : public std::exception {
   caf_exception& operator=(const caf_exception&) = default;
 
   /**
-   * @brief Returns the error message.
-   * @returns The error message as C-string.
+   * Returns the error message.
    */
   const char* what() const noexcept;
 
  protected:
 
   /**
-   * @brief Creates an exception with the error string @p what_str.
-   * @param what_str Error message as rvalue string.
+   * Creates an exception with the error string `what_str`.
    */
   caf_exception(std::string&& what_str);
 
   /**
-   * @brief Creates an exception with the error string @p what_str.
-   * @param what_str Error message as string.
+   * Creates an exception with the error string `what_str`.
    */
   caf_exception(const std::string& what_str);
 
@@ -67,7 +64,7 @@ class caf_exception : public std::exception {
 };
 
 /**
- * @brief Thrown if an actor finished execution.
+ * Thrown if an actor finished execution.
  */
 class actor_exited : public caf_exception {
 
@@ -81,9 +78,7 @@ class actor_exited : public caf_exception {
   actor_exited& operator=(const actor_exited&) = default;
 
   /**
-   * @brief Gets the exit reason.
-   * @returns The exit reason of the terminating actor either set via
-   *      {@link quit} or by a special (exit) message.
+   * Returns the exit reason.
    */
   inline uint32_t reason() const noexcept;
 
@@ -94,8 +89,8 @@ class actor_exited : public caf_exception {
 };
 
 /**
- * @brief Thrown to indicate that either an actor publishing failed or
- *    the middleman was unable to connect to a remote host.
+ * Thrown to indicate that either an actor publishing failed or
+ * the middleman was unable to connect to a remote host.
  */
 class network_error : public caf_exception {
 
@@ -112,8 +107,8 @@ class network_error : public caf_exception {
 };
 
 /**
- * @brief Thrown to indicate that an actor publishing failed because
- *    the requested port could not be used.
+ * Thrown to indicate that an actor publishing failed because
+ * the requested port could not be used.
  */
 class bind_failure : public network_error {
 

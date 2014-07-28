@@ -25,7 +25,7 @@ namespace caf {
 class resumable;
 
 /**
- * @brief Identifies an execution unit, e.g., a worker thread of the scheduler.
+ * Identifies an execution unit, e.g., a worker thread of the scheduler.
  */
 class execution_unit {
 
@@ -34,9 +34,9 @@ class execution_unit {
   virtual ~execution_unit();
 
   /**
-   * @brief Enqueues @p ptr to the job list of the execution unit.
+   * Enqueues `ptr` to the job list of the execution unit.
    * @warning Must only be called from a {@link resumable} currently
-   *      executed by this execution unit.
+   *          executed by this execution unit.
    */
   virtual void exec_later(resumable* ptr) = 0;
 

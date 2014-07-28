@@ -31,13 +31,10 @@
 namespace caf {
 
 /**
- * @brief A cooperatively scheduled, event-based actor implementation
- *    with strong type checking.
- *
- * This is the recommended base class for user-defined actors and is used
- * implicitly when spawning typed, functor-based actors without the
- * {@link blocking_api} flag.
- *
+ * A cooperatively scheduled, event-based actor implementation with strong type
+ * checking. This is the recommended base class for user-defined actors and is
+ * used implicitly when spawning typed, functor-based actors without the
+ * `blocking_api` flag.
  * @extends local_actor
  */
 template <class... Rs>
@@ -46,10 +43,10 @@ class typed_event_based_actor
       mixin::mailbox_based,
       mixin::behavior_stack_based<typed_behavior<Rs...>>::template impl,
       mixin::sync_sender<nonblocking_response_handle_tag>::template impl> {
-
  public:
-
-  typed_event_based_actor() : m_initialized(false) {}
+  typed_event_based_actor() : m_initialized(false) {
+    // nop
+  }
 
   using signatures = detail::type_list<Rs...>;
 
@@ -60,11 +57,8 @@ class typed_event_based_actor
   }
 
  protected:
-
   virtual behavior_type make_behavior() = 0;
-
   bool m_initialized;
-
 };
 
 } // namespace caf

@@ -101,41 +101,41 @@
  * It uses a network transparent messaging system to ease development
  * of both concurrent and distributed software.
  *
- * @p libcaf uses a thread pool to schedule actors by default.
+ * `libcaf` uses a thread pool to schedule actors by default.
  * A scheduled actor should not call blocking functions.
  * Individual actors can be spawned (created) with a special flag to run in
  * an own thread if one needs to make use of blocking APIs.
  *
- * Writing applications in @p libcaf requires a minimum of gluecode and
+ * Writing applications in `libcaf` requires a minimum of gluecode and
  * each context <i>is</i> an actor. Even main is implicitly
  * converted to an actor if needed.
  *
  * @section GettingStarted Getting Started
  *
- * To build @p libcaf, you need <tt>GCC >= 4.7</tt> or <tt>Clang >=
+ * To build `libcaf,` you need `GCC >= 4.7 or <tt>Clang >=
  *3.2</tt>,
- * and @p CMake.
+ * and `CMake`.
  *
  * The usual build steps on Linux and Mac OS X are:
  *
- *- <tt>mkdir build</tt>
- *- <tt>cd build</tt>
- *- <tt>cmake ..</tt>
- *- <tt>make</tt>
- *- <tt>make install</tt> (as root, optionally)
+ *- `mkdir build
+ *- `cd build
+ *- `cmake ..
+ *- `make
+ *- `make install (as root, optionally)
  *
- * Please run the unit tests as well to verify that @p libcaf
+ * Please run the unit tests as well to verify that `libcaf`
  * works properly.
  *
- *- <tt>./bin/unit_tests</tt>
+ *- `./bin/unit_tests
  *
  * Please submit a bug report that includes (a) your compiler version,
  * (b) your OS, and (c) the output of the unit tests if an error occurs.
  *
  * Windows is not supported yet, because MVSC++ doesn't implement the
- * C++11 features needed to compile @p libcaf.
+ * C++11 features needed to compile `libcaf`.
  *
- * Please read the <b>Manual</b> for an introduction to @p libcaf.
+ * Please read the <b>Manual</b> for an introduction to `libcaf`.
  * It is available online as HTML at
  * http://neverlord.github.com/libcaf/manual/index.html or as PDF at
  * http://neverlord.github.com/libcaf/manual/manual.pdf
@@ -149,83 +149,36 @@
  * The {@link math_actor.cpp Math Actor Example} shows the usage
  * of {@link receive_loop} and {@link caf::arg_match arg_match}.
  * The {@link dining_philosophers.cpp Dining Philosophers Example}
- * introduces event-based actors and includes a lot of <tt>libcaf</tt>
+ * introduces event-based actors and includes a lot of `libcaf
  * features.
  *
  * @namespace caf
- * @brief Root namespace of libcaf.
+ * Root namespace of libcaf.
  *
- * @namespace caf::util
- * @brief Contains utility classes and metaprogramming
- *    utilities used by the libcaf implementation.
- *
- * @namespace caf::intrusive
- * @brief Contains intrusive container implementations.
- *
- * @namespace caf::opencl
- * @brief Contains all classes of libcaf's OpenCL binding (optional).
- *
- * @namespace caf::network
- * @brief Contains all network related classes.
- *
- * @namespace caf::factory
- * @brief Contains factory functions to create actors from lambdas or
- *    other functors.
+ * @namespace caf::mixin
+ * Contains mixin classes implementing several actor traits.
  *
  * @namespace caf::exit_reason
- * @brief Contains all predefined exit reasons.
+ * Contains all predefined exit reasons.
  *
- * @namespace caf::placeholders
- * @brief Contains the guard placeholders @p _x1 to @p _x9.
+ * @namespace caf::policy
+ * Contains policies encapsulating characteristics or algorithms.
  *
- * @defgroup CopyOnWrite Copy-on-write optimization.
- * @p libcaf uses a copy-on-write optimization for its message
- * passing implementation.
- *
- * {@link caf::cow_tuple Tuples} should @b always be used with by-value
- * semantic, since tuples use a copy-on-write smart pointer internally.
- * Let's assume two
- * tuple @p x and @p y, whereas @p y is a copy of @p x:
- *
- * @code
- * auto x = make_message(1, 2, 3);
- * auto y = x;
- * @endcode
- *
- * Those two tuples initially point to the same data (the addresses of the
- * first element of @p x is equal to the address of the first element
- * of @p y):
- *
- * @code
- * assert(&(get<0>(x)) == &(get<0>(y)));
- * @endcode
- *
- * <tt>get<0>(x)</tt> returns a const-reference to the first element of @p x.
- * The function @p get does not have a const-overload to avoid
- * unintended copies. The function @p get_ref could be used to
- * modify tuple elements. A call to this function detaches
- * the tuple by copying the data before modifying it if there are two or more
- * references to the data:
- *
- * @code
- * // detaches x from y
- * get_ref<0>(x) = 42;
- * // x and y no longer point to the same data
- * assert(&(get<0>(x)) != &(get<0>(y)));
- * @endcode
+ * @namespace caf::io
+ * Contains all network-related classes and functions.
  *
  * @defgroup MessageHandling Message handling.
  *
- * @brief This is the beating heart of @p libcaf. Actor programming is
- *    all about message handling.
+ * This is the beating heart of `libcaf`. Actor programming is
+ * all about message handling.
  *
- * A message in @p libcaf is a n-tuple of values (with size >= 1)
+ * A message in `libcaf` is a n-tuple of values (with size >= 1)
  * You can use almost every type in a messages - as long as it is announced,
- * i.e., known by the type system of @p libcaf.
+ * i.e., known by the type system of `libcaf`.
  *
  * @defgroup BlockingAPI Blocking API.
  *
- * @brief Blocking functions to receive messages.
+ * Blocking functions to receive messages.
  *
  * The blocking API of libcaf is intended to be used for migrating
  * previously threaded applications. When writing new code, you should use
@@ -233,7 +186,7 @@
  *
  * @section Send Send messages
  *
- * The function @p send can be used to send a message to an actor.
+ * The function `send` can be used to send a message to an actor.
  * The first argument is the receiver of the message followed by any number
  * of values:
  *
@@ -255,7 +208,7 @@
  *
  * @section Receive Receive messages
  *
- * The function @p receive takes a @p behavior as argument. The behavior
+ * The function `receive` takes a `behavior` as argument. The behavior
  * is a list of { pattern >> callback } rules.
  *
  * @code
@@ -299,7 +252,7 @@
  *
  * @section ReceiveLoops Receive loops
  *
- * Previous examples using @p receive create behaviors on-the-fly.
+ * Previous examples using `receive` create behaviors on-the-fly.
  * This is inefficient in a loop since the argument passed to receive
  * is created in each iteration again. It's possible to store the behavior
  * in a variable and pass that variable to receive. This fixes the issue
@@ -307,13 +260,13 @@
  *
  * There are four convenience functions implementing receive loops to
  * declare behavior where it belongs without unnecessary
- * copies: @p receive_loop, @p receive_while, @p receive_for and @p do_receive.
+ * copies: `receive_loop,` `receive_while,` `receive_for` and `do_receive`.
  *
- * @p receive_loop is analogous to @p receive and loops "forever" (until the
+ * `receive_loop` is analogous to `receive` and loops "forever" (until the
  * actor finishes execution).
  *
- * @p receive_while creates a functor evaluating a lambda expression.
- * The loop continues until the given lambda returns @p false. A simple example:
+ * `receive_while` creates a functor evaluating a lambda expression.
+ * The loop continues until the given lambda returns `false`. A simple example:
  *
  * @code
  * // receive two integers
@@ -326,7 +279,7 @@
  * // ...
  * @endcode
  *
- * @p receive_for is a simple ranged-based loop:
+ * `receive_for` is a simple ranged-based loop:
  *
  * @code
  * std::vector<int> vec {1, 2, 3, 4};
@@ -336,7 +289,7 @@
  * );
  * @endcode
  *
- * @p do_receive returns a functor providing the function @p until that
+ * `do_receive` returns a functor providing the function `until` that
  * takes a lambda expression. The loop continues until the given lambda
  * returns true. Example:
  *
@@ -354,7 +307,7 @@
  *
  * @section FutureSend Send delayed messages
  *
- * The function @p delayed_send provides a simple way to delay a message.
+ * The function `delayed_send` provides a simple way to delay a message.
  * This is particularly useful for recurring events, e.g., periodical polling.
  * Usage example:
  *
@@ -374,11 +327,11 @@
  *
  * @defgroup ImplicitConversion Implicit type conversions.
  *
- * The message passing of @p libcaf prohibits pointers in messages because
+ * The message passing of `libcaf` prohibits pointers in messages because
  * it enforces network transparent messaging.
- * Unfortunately, string literals in @p C++ have the type <tt>const char*</tt>,
- * resp. <tt>const char[]</tt>. Since @p libcaf is a user-friendly library,
- * it silently converts string literals and C-strings to @p std::string objects.
+ * Unfortunately, string literals in `C++` have the type `const char*,
+ * resp. `const char[]. Since `libcaf` is a user-friendly library,
+ * it silently converts string literals and C-strings to `std::string` objects.
  * It also converts unicode literals to the corresponding STL container.
  *
  * A few examples:
@@ -403,30 +356,22 @@
  * @endcode
  *
  * @defgroup ActorCreation Actor creation.
- *
- * @defgroup MetaProgramming Metaprogramming utility.
  */
 
 // examples
 
 /**
- * @brief A trivial example program.
+ * A trivial example program.
  * @example hello_world.cpp
  */
 
 /**
- * @brief Shows the usage of {@link caf::atom atoms}
- *    and {@link caf::arg_match arg_match}.
- * @example math_actor.cpp
- */
-
-/**
- * @brief A simple example for a delayed_send based application.
+ * A simple example for a delayed_send based application.
  * @example dancing_kirby.cpp
  */
 
 /**
- * @brief An event-based "Dining Philosophers" implementation.
+ * An event-based "Dining Philosophers" implementation.
  * @example dining_philosophers.cpp
  */
 

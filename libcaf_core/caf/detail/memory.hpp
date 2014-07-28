@@ -76,7 +76,7 @@ class memory_cache {
 
   virtual std::pair<instance_wrapper*, void*> new_instance() = 0;
 
-  // casts @p ptr to the derived type and returns it
+  // casts `ptr` to the derived type and returns it
   virtual void* downcast(memory_managed* ptr) = 0;
 
 };
@@ -94,10 +94,7 @@ class memory {
 
  public:
 
-  /*
-   * @brief Allocates storage, initializes a new object, and returns
-   *    the new instance.
-   */
+  // Allocates storage, initializes a new object, and returns the new instance.
   template <class T, class... Ts>
   static T* create(Ts&&... args) {
     return new T(std::forward<Ts>(args)...);
@@ -198,10 +195,7 @@ class memory {
 
  public:
 
-  /*
-   * @brief Allocates storage, initializes a new object, and returns
-   *    the new instance.
-   */
+  // Allocates storage, initializes a new object, and returns the new instance.
   template <class T, class... Ts>
   static T* create(Ts&&... args) {
     auto mc = get_or_set_cache_map_entry<T>();

@@ -27,7 +27,7 @@ namespace caf {
 namespace detail {
 
 /**
- * @brief A spinlock implementation providing shared and exclusive locking.
+ * A spinlock implementation providing shared and exclusive locking.
  */
 class shared_spinlock {
 

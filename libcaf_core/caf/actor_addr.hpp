@@ -40,13 +40,13 @@ struct invalid_actor_addr_t {
 };
 
 /**
- * @brief Identifies an invalid {@link actor_addr}.
+ * Identifies an invalid {@link actor_addr}.
  * @relates actor_addr
  */
 constexpr invalid_actor_addr_t invalid_actor_addr = invalid_actor_addr_t{};
 
 /**
- * @brief Stores the address of typed as well as untyped actors.
+ * Stores the address of typed as well as untyped actors.
  */
 class actor_addr : detail::comparable<actor_addr>,
            detail::comparable<actor_addr, abstract_actor*>,
@@ -91,8 +91,7 @@ class actor_addr : detail::comparable<actor_addr>,
   node_id node() const;
 
   /**
-   * @brief Returns whether this is an address of a
-   *    remote actor.
+   * Returns whether this is an address of a remote actor.
    */
   bool is_remote() const;
 

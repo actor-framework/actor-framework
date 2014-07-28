@@ -28,7 +28,7 @@ namespace caf {
 namespace mixin {
 
 /**
- * @brief Mixin for actors using a non-nestable message processing.
+ * Mixin for actors using a non-nestable message processing.
  */
 template <class Base, class Subtype>
 class single_timeout : public Base {
@@ -53,7 +53,7 @@ class single_timeout : public Base {
       if (d.is_zero()) {
         // immediately enqueue timeout message if duration == 0s
         this->enqueue(this->address(), message_id::invalid,
-                std::move(msg), this->m_host);
+                      std::move(msg), this->host());
       } else
         this->delayed_send_tuple(this, d, std::move(msg));
     } else

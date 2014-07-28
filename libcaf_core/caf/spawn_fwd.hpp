@@ -36,13 +36,13 @@ template <class C,
      typename BeforeLaunch = std::function<void (C*)>,
      class... Ts>
 intrusive_ptr<C> spawn_class(execution_unit* host,
-               BeforeLaunch before_launch_fun, Ts&&... args);
+                             BeforeLaunch before_launch_fun, Ts&&... args);
 
 template <spawn_options Os = no_spawn_options,
       typename BeforeLaunch = void (*)(abstract_actor*),
       typename F = behavior (*)(), class... Ts>
 actor spawn_functor(execution_unit* host, BeforeLaunch before_launch_fun, F fun,
-          Ts&&... args);
+                    Ts&&... args);
 
 class group_subscriber {
 
@@ -61,20 +61,16 @@ class group_subscriber {
 
 };
 
-class empty_before_launch_callback {
-
- public:
-
+struct empty_before_launch_callback {
   template <class T>
-  inline void operator()(T*) const {}
-
+  inline void operator()(T*) const {
+    // nop
+  }
 };
 
 /******************************************************************************
  *                typed actors                *
  ******************************************************************************/
-
-namespace detail { // some utility
 
 template <class TypedBehavior, class FirstArg>
 struct infer_typed_actor_handle;
@@ -83,14 +79,12 @@ struct infer_typed_actor_handle;
 template <class... Rs, class FirstArg>
 struct infer_typed_actor_handle<typed_behavior<Rs...>, FirstArg> {
   using type = typed_actor<Rs...>;
-
 };
 
 // infer actor type from first argument if result type is void
 template <class... Rs>
 struct infer_typed_actor_handle<void, typed_event_based_actor<Rs...>*> {
   using type = typed_actor<Rs...>;
-
 };
 
 template <class SignatureList>
@@ -99,16 +93,15 @@ struct actor_handle_from_signature_list;
 template <class... Rs>
 struct actor_handle_from_signature_list<detail::type_list<Rs...>> {
   using type = typed_actor<Rs...>;
-
 };
 
-} // namespace detail
-
 template <spawn_options Os, typename BeforeLaunch, typename F, class... Ts>
-typename detail::infer_typed_actor_handle<
+typename infer_typed_actor_handle<
   typename detail::get_callable_trait<F>::result_type,
   typename detail::tl_head<
-    typename detail::get_callable_trait<F>::arg_types>::type>::type
+    typename detail::get_callable_trait<F>::arg_types
+  >::type
+>::type
 spawn_typed_functor(execution_unit*, BeforeLaunch bl, F fun, Ts&&... args);
 
 } // namespace caf

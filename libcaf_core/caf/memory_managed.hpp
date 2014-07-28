@@ -27,27 +27,23 @@ struct disposer;
 }
 
 /**
- * @brief This base enables derived classes to enforce a different
- *    allocation strategy than new/delete by providing a virtual
- *    protected @p request_deletion() function and non-public destructor.
+ * This base enables derived classes to enforce a different
+ * allocation strategy than new/delete by providing a virtual
+ * protected `request_deletion()` function and non-public destructor.
  */
 class memory_managed {
-
+ public:
   friend struct detail::disposer;
 
- public:
-
   /**
-   * @brief Default implementations calls <tt>delete this</tt>, but can
-   *    be overriden in case deletion depends on some condition or
-   *    the class doesn't use default new/delete.
+   * Default implementations calls `delete this, but can
+   * be overriden in case deletion depends on some condition or
+   * the class doesn't use default new/delete.
    */
   virtual void request_deletion();
 
  protected:
-
   virtual ~memory_managed();
-
 };
 
 } // namespace caf

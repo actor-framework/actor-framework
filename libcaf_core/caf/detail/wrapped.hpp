@@ -23,10 +23,6 @@
 namespace caf {
 namespace detail {
 
-/**
- * @ingroup MetaProgramming
- * @brief A simple type wrapper.
- */
 template <class T>
 struct wrapped {
   using type = T;

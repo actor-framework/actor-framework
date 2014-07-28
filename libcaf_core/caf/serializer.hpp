@@ -35,51 +35,49 @@ class uniform_type_info;
 
 /**
  * @ingroup TypeSystem
- * @brief Technology-independent serialization interface.
+ * Technology-independent serialization interface.
  */
 class serializer {
-
+ public:
   serializer(const serializer&) = delete;
   serializer& operator=(const serializer&) = delete;
 
- public:
-
   /**
-   * @note @p addressing must be guaranteed to outlive the serializer
+   * @note `addressing` must be guaranteed to outlive the serializer
    */
   serializer(actor_namespace* addressing = nullptr);
 
   virtual ~serializer();
 
   /**
-   * @brief Begins serialization of an object of type @p uti.
+   * Begins serialization of an object of type `uti`.
    */
   virtual void begin_object(const uniform_type_info* uti) = 0;
 
   /**
-   * @brief Ends serialization of an object.
+   * Ends serialization of an object.
    */
   virtual void end_object() = 0;
 
   /**
-   * @brief Begins serialization of a sequence of size @p num.
+   * Begins serialization of a sequence of size `num`.
    */
   virtual void begin_sequence(size_t num) = 0;
 
   /**
-   * @brief Ends serialization of a sequence.
+   * Ends serialization of a sequence.
    */
   virtual void end_sequence() = 0;
 
   /**
-   * @brief Writes a single value to the data sink.
+   * Writes a single value to the data sink.
    * @param value A primitive data value.
    */
   virtual void write_value(const primitive_variant& value) = 0;
 
   /**
-   * @brief Writes a raw block of data.
-   * @param num_bytes The size of @p data in bytes.
+   * Writes a raw block of data.
+   * @param num_bytes The size of `data` in bytes.
    * @param data Raw data.
    */
   virtual void write_raw(size_t num_bytes, const void* data) = 0;
@@ -99,24 +97,22 @@ class serializer {
   }
 
  private:
-
   actor_namespace* m_namespace;
-
 };
 
 /**
- * @brief Serializes a value to @p s.
+ * Serializes a value to `s`.
  * @param s A valid serializer.
  * @param what A value of an announced or primitive type.
- * @returns @p s
+ * @returns `s`
  * @relates serializer
  */
 template <class T>
 serializer& operator<<(serializer& s, const T& what) {
   auto mtype = uniform_typeid<T>();
   if (mtype == nullptr) {
-    throw std::logic_error("no uniform type info found for " +
-                 detail::to_uniform_name(typeid(T)));
+    throw std::logic_error("no uniform type info found for "
+                           + detail::to_uniform_name(typeid(T)));
   }
   mtype->serialize(&what, &s);
   return s;

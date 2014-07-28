@@ -139,18 +139,18 @@ class match_each_helper {
 namespace caf {
 
 /**
- * @brief Starts a match expression.
+ * Starts a match expression.
  * @param what Tuple that should be matched against a pattern.
- * @returns A helper object providing <tt>operator(...)</tt>.
+ * @returns A helper object providing `operator(...).
  */
 inline detail::match_helper match(message what) {
   return what;
 }
 
 /**
- * @brief Starts a match expression.
+ * Starts a match expression.
  * @param what Value that should be matched against a pattern.
- * @returns A helper object providing <tt>operator(...)</tt>.
+ * @returns A helper object providing `operator(...).
  */
 template <class T>
 detail::match_helper match(T&& what) {
@@ -158,17 +158,17 @@ detail::match_helper match(T&& what) {
 }
 
 /**
- * @brief Splits @p str using @p delim and match the resulting strings.
+ * Splits `str` using `delim` and match the resulting strings.
  */
 detail::match_helper
 match_split(const std::string& str, char delim, bool keep_empties = false);
 
 /**
- * @brief Starts a match expression that matches each element in
+ * Starts a match expression that matches each element in
  *    range [first, last).
  * @param first Iterator to the first element.
  * @param last Iterator to the last element (excluded).
- * @returns A helper object providing <tt>operator(...)</tt>.
+ * @returns A helper object providing `operator(...).
  */
 template <class InputIterator>
 detail::match_each_helper<InputIterator>
@@ -177,12 +177,12 @@ match_each(InputIterator first, InputIterator last) {
 }
 
 /**
- * @brief Starts a match expression that matches <tt>proj(i)</tt> for
- *    each element @p i in range [first, last).
+ * Starts a match expression that matches `proj(i) for
+ *    each element `i` in range [first, last).
  * @param first Iterator to the first element.
  * @param last Iterator to the last element (excluded).
  * @param proj Projection or extractor functor.
- * @returns A helper object providing <tt>operator(...)</tt>.
+ * @returns A helper object providing `operator(...).
  */
 template <class InputIterator, typename Projection>
 detail::match_each_helper<InputIterator, Projection>

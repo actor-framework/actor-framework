@@ -64,10 +64,10 @@ template <class T, typename U>
 struct is_equal_int_type<T, U, false> : std::false_type { };
 
 /**
- * @brief Compares @p T to @p U und evaluates to @p true_type if either
- *    <tt>T == U</tt> or if T and U are both integral types of the
- *    same size and signedness. This works around the issue that
- *    <tt>uint8_t != unsigned char</tt> on some compilers.
+ * Compares `T` to `U` und evaluates to `true_type` if either
+ * `T == U or if T and U are both integral types of the
+ * same size and signedness. This works around the issue that
+ * `uint8_t != unsigned char on some compilers.
  */
 template <class T, typename U>
 struct is_same_ish : std::conditional<
@@ -77,8 +77,7 @@ struct is_same_ish : std::conditional<
            >::type { };
 
 /**
- * @brief A variant represents always a valid value of one of
- *    the types @p Ts.
+ * A variant represents always a valid value of one of the types `Ts...`.
  */
 template <class... Ts>
 class variant {

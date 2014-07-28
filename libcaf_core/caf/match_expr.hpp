@@ -586,8 +586,8 @@ struct match_result_from_type_list<detail::type_list<Ts...>> {
 };
 
 /**
- * @brief A match expression encapsulating cases <tt>Cs...</tt>, whereas
- *    each case is a @p detail::match_expr_case<...>.
+ * A match expression encapsulating cases `Cs..., whereas
+ * each case is a `detail::match_expr_case<`...>.
  */
 template <class... Cs>
 class match_expr {

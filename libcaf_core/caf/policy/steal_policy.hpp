@@ -28,16 +28,16 @@ namespace caf {
 namespace policy {
 
 /**
- * @brief This concept class describes the interface of a policy class
- *    for stealing jobs from other workers.
+ * This concept class describes the interface of a policy class
+ * for stealing jobs from other workers.
  */
 class steal_policy {
 
  public:
 
   /**
-   * @brief Go on a raid in quest for a shiny new job. Returns @p nullptr
-   *    if no other worker provided any work to steal.
+   * Go on a raid in quest for a shiny new job. Returns `nullptr`
+   * if no other worker provided any work to steal.
    */
   template <class Worker>
   resumable* raid(Worker* self);

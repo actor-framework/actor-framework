@@ -33,8 +33,8 @@ namespace caf {
 namespace detail {
 
 /**
- * @brief Implements all pure virtual functions of {@link uniform_type_info}
- *    except serialize() and deserialize().
+ * Implements all pure virtual functions of `uniform_type_info`
+ * except serialize() and deserialize().
  */
 template <class T>
 class abstract_uniform_type_info : public uniform_type_info {

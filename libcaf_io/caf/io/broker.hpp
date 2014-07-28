@@ -47,13 +47,12 @@ class middleman;
 using broker_ptr = intrusive_ptr<broker>;
 
 /**
- * @brief A broker mediates between an actor system
- *    and other components in the network.
+ * A broker mediates between actor systems and other components in the network.
  * @extends local_actor
  */
 class broker : public extend<local_actor>::
-            with<mixin::behavior_stack_based<behavior>::impl>,
-         public spawn_as_is {
+                      with<mixin::behavior_stack_based<behavior>::impl>,
+               public spawn_as_is {
 
   friend class policy::sequential_invoke;
 
@@ -100,17 +99,17 @@ class broker : public extend<local_actor>::
     scribe(broker* parent, connection_handle hdl);
 
     /**
-     * @brief Implicitly starts the read loop on first call.
+     * Implicitly starts the read loop on first call.
      */
     virtual void configure_read(receive_policy::config config) = 0;
 
     /**
-     * @brief Grants access to the output buffer.
+     * Grants access to the output buffer.
      */
     virtual buffer_type& wr_buf() = 0;
 
     /**
-     * @brief Flushes the output buffer, i.e., sends the content of
+     * Flushes the output buffer, i.e., sends the content of
      *    the buffer via the network.
      */
     virtual void flush() = 0;
@@ -190,29 +189,29 @@ class broker : public extend<local_actor>::
   ~broker();
 
   /**
-   * @brief Modifies the receive policy for given connection.
+   * Modifies the receive policy for given connection.
    * @param hdl Identifies the affected connection.
    * @param config Contains the new receive policy.
    */
   void configure_read(connection_handle hdl, receive_policy::config config);
 
   /**
-   * @brief Returns the write buffer for given connection.
+   * Returns the write buffer for given connection.
    */
   buffer_type& wr_buf(connection_handle hdl);
 
   /**
-   * @brief Writes @p data into the buffer for given connection.
+   * Writes `data` into the buffer for given connection.
    */
   void write(connection_handle hdl, size_t data_size, const void* data);
 
   /**
-   * @brief Sends the content of the buffer for given connection.
+   * Sends the content of the buffer for given connection.
    */
   void flush(connection_handle hdl);
 
   /**
-   * @brief Returns the number of open connections.
+   * Returns the number of open connections.
    */
   inline size_t num_connections() const { return m_scribes.size(); }
 
@@ -363,18 +362,18 @@ class broker : public extend<local_actor>::
   }
 
   /**
-   * @brief Closes all connections and acceptors.
+   * Closes all connections and acceptors.
    */
   void close_all();
 
   /**
-   * @brief Closes the connection identified by @p handle.
-   *    Unwritten data will still be send.
+   * Closes the connection identified by `handle`.
+   * Unwritten data will still be send.
    */
   void close(connection_handle handle);
 
   /**
-   * @brief Closes the acceptor identified by @p handle.
+   * Closes the acceptor identified by `handle`.
    */
   void close(accept_handle handle);
 
@@ -461,15 +460,12 @@ class broker : public extend<local_actor>::
   bool m_running;
 
   middleman& m_mm;
-
 };
 
 class broker::functor_based : public extend<broker>::
-                   with<mixin::functor_based> {
-
-  using super = combined_type;
-
+                                     with<mixin::functor_based> {
  public:
+  using super = combined_type;
 
   template <class... Ts>
   functor_based(Ts&&... vs)
@@ -478,7 +474,6 @@ class broker::functor_based : public extend<broker>::
   ~functor_based();
 
   behavior make_behavior() override;
-
 };
 
 } // namespace io
