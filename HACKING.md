@@ -1,6 +1,7 @@
 This document specifies the coding style for the C++ Actor Framework.
-The style is based on the
-[Google C++ Style Guide](http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml).
+The style is loosely based on the
+[Google C++ Style Guide](http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml)
+and the coding conventions used by the STL.
 
 Example for the Impatient
 =========================
@@ -244,6 +245,44 @@ Headers
   main page for the documentation and includes all headers for the user API.
 
 - Use `inline` for small functions (rule of thumb: 10 lines or less).
+
+
+Breaking Statements
+===================
+
+- Break constructor initializers after the comma, use four spaces for
+  indentation, and place each initializer on its own line (unless you don't
+  need to break at all):
+  ```cpp
+
+  my_class::my_class()
+      : my_base_class(some_function()),
+        m_greeting("Hello there! This is my_class!"),
+        m_some_bool_flag(false) {
+    // ok
+  }
+  other_class::other_class() : m_name("tommy"), m_buddy("michael") {
+    // ok
+  }
+  ```
+
+- Break function arguments after the comma for both declaration and invocation:
+  ```cpp
+
+  intptr_t channel::compare(const abstract_channel* lhs,
+                            const abstract_channel* rhs) {
+    // ...
+  }
+  ```
+
+- Break before tenary operators and before binary operators:
+  ```cpp
+
+  if (today_is_a_sunny_day()
+      && it_is_not_too_hot_to_go_swimming()) {
+    // ...
+  }
+  ```
 
 
 Template Metaprogramming
