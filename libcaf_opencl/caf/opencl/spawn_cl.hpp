@@ -40,12 +40,12 @@ namespace detail {
 // converts C arrays, i.e., pointers, to vectors
 template <typename T>
 struct carr_to_vec {
-  typedef T type;
+  using type = T;
 };
 
 template <typename T>
 struct carr_to_vec<T*> {
-  typedef std::vector<T> type;
+  using type = std::vector<T>;
 };
 
 template <typename Signature, typename SecondSignature = void>
@@ -142,8 +142,8 @@ spawn_cl(const opencl::program& prog, const char* fname, MapArgs map_args,
          const opencl::dim_vec& offset = {},
          const opencl::dim_vec& local_dims = {}, size_t result_size = 0) {
   using std::move;
-  typedef typename util::get_callable_trait<MapArgs>::fun_type f0;
-  typedef typename util::get_callable_trait<MapResult>::fun_type f1;
+  using f0 = typename util::get_callable_trait<MapArgs>::fun_type;
+  using f1 = typename util::get_callable_trait<MapResult>::fun_type;
   detail::cl_spawn_helper<f0, f1> f;
   return f(f0{move(map_args)}, f1{move(map_result)}, prog, fname, dims, offset,
            local_dims, result_size);

@@ -30,12 +30,12 @@ namespace opencl {
 template <typename T, cl_int (*ref)(T), cl_int (*deref)(T)>
 class smart_ptr {
 
-  typedef typename std::remove_pointer<T>::type element_type;
+  using element_type = typename std::remove_pointer<T>::type;
 
-  typedef element_type* pointer;
-  typedef element_type& reference;
-  typedef const element_type* const_pointer;
-  typedef const element_type& const_reference;
+  using pointer = element_type*;
+  using reference = element_type&;
+  using const_pointer = const element_type*;
+  using const_reference = const element_type&;
 
  public:
   smart_ptr(pointer ptr = nullptr) : m_ptr(ptr) {
@@ -96,15 +96,15 @@ class smart_ptr {
   pointer m_ptr;
 };
 
-typedef smart_ptr<cl_mem, clRetainMemObject, clReleaseMemObject> mem_ptr;
-typedef smart_ptr<cl_event, clRetainEvent, clReleaseEvent> event_ptr;
-typedef smart_ptr<cl_kernel, clRetainKernel, clReleaseKernel> kernel_ptr;
-typedef smart_ptr<cl_context, clRetainContext, clReleaseContext> context_ptr;
-typedef smart_ptr<cl_program, clRetainProgram, clReleaseProgram> program_ptr;
-typedef smart_ptr<cl_device_id, clRetainDeviceDummy, clReleaseDeviceDummy>
-device_ptr;
-typedef smart_ptr<cl_command_queue, clRetainCommandQueue, clReleaseCommandQueue>
-command_queue_ptr;
+using mem_ptr = smart_ptr<cl_mem, clRetainMemObject, clReleaseMemObject>;
+using event_ptr = smart_ptr<cl_event, clRetainEvent, clReleaseEvent>;
+using kernel_ptr = smart_ptr<cl_kernel, clRetainKernel, clReleaseKernel>;
+using context_ptr = smart_ptr<cl_context, clRetainContext, clReleaseContext>;
+using program_ptr = smart_ptr<cl_program, clRetainProgram, clReleaseProgram>;
+using device_ptr = smart_ptr<cl_device_id, clRetainDeviceDummy,
+                               clReleaseDeviceDummy>;
+using command_queue_ptr = smart_ptr<cl_command_queue, clRetainCommandQueue,
+                               clReleaseCommandQueue>;
 
 } // namespace opencl
 } // namespace caf
