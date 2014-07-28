@@ -101,10 +101,10 @@ using event_ptr = smart_ptr<cl_event, clRetainEvent, clReleaseEvent>;
 using kernel_ptr = smart_ptr<cl_kernel, clRetainKernel, clReleaseKernel>;
 using context_ptr = smart_ptr<cl_context, clRetainContext, clReleaseContext>;
 using program_ptr = smart_ptr<cl_program, clRetainProgram, clReleaseProgram>;
-using device_ptr = smart_ptr<cl_device_id, clRetainDeviceDummy,
-                               clReleaseDeviceDummy>;
-using command_queue_ptr = smart_ptr<cl_command_queue, clRetainCommandQueue,
-                               clReleaseCommandQueue>;
+using device_ptr =
+  smart_ptr<cl_device_id, clRetainDeviceDummy, clReleaseDeviceDummy>;
+using command_queue_ptr =
+  smart_ptr<cl_command_queue, clRetainCommandQueue, clReleaseCommandQueue>;
 
 } // namespace opencl
 } // namespace caf

@@ -82,8 +82,8 @@ void opencl_metainfo::initialize() {
   auto pfn_notify = [](const char* errinfo, const void*, size_t, void*) {
     CAF_LOGC_ERROR("caf::opencl::opencl_metainfo", "initialize",
                    "\n##### Error message via pfn_notify #####\n" +
-                   string(errinfo) +
-                   "\n########################################");
+                     string(errinfo) +
+                     "\n########################################");
   };
 
   // create a context
@@ -107,7 +107,7 @@ void opencl_metainfo::initialize() {
                           &return_size);
     if (err != CL_SUCCESS) {
       CAF_LOGMF(CAF_ERROR,
-                 "clGetDeviceInfo (CL_DEVICE_NAME): " << get_opencl_error(err));
+                "clGetDeviceInfo (CL_DEVICE_NAME): " << get_opencl_error(err));
       fill(buf, buf + buf_size, 0);
     }
     command_queue_ptr cmd_queue;
@@ -115,7 +115,7 @@ void opencl_metainfo::initialize() {
                                          CL_QUEUE_PROFILING_ENABLE, &err));
     if (err != CL_SUCCESS) {
       CAF_LOGMF(CAF_DEBUG, "Could not create command queue for device "
-                               << buf << ": " << get_opencl_error(err));
+                             << buf << ": " << get_opencl_error(err));
     } else {
       size_t max_work_group_size{0};
       err = clGetDeviceInfo(device.get(), CL_DEVICE_MAX_WORK_GROUP_SIZE,

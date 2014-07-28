@@ -42,14 +42,14 @@ class command : public ref_counted {
   command(response_promise handle, intrusive_ptr<T> actor_facade,
           std::vector<cl_event> events, std::vector<mem_ptr> arguments,
           size_t result_size, any_tuple msg)
-      : m_result_size(result_size)
-      , m_handle(handle)
-      , m_actor_facade(actor_facade)
-      , m_queue(actor_facade->m_queue)
-      , m_events(std::move(events))
-      , m_arguments(std::move(arguments))
-      , m_result(m_result_size)
-      , m_msg(msg) {}
+      : m_result_size(result_size),
+        m_handle(handle),
+        m_actor_facade(actor_facade),
+        m_queue(actor_facade->m_queue),
+        m_events(std::move(events)),
+        m_arguments(std::move(arguments)),
+        m_result(m_result_size),
+        m_msg(msg) {}
 
   ~command() {
     cl_int err{0};
@@ -77,21 +77,15 @@ class command : public ref_counted {
       data_or_nullptr(m_actor_facade->m_local_dimensions), m_events.size(),
       (m_events.empty() ? nullptr : m_events.data()), &event_k);
     if (err != CL_SUCCESS) {
-      CAF_LOGMF(CAF_ERROR,
-                 "clEnqueueNDRangeKernel: " << get_opencl_error(err));
+      CAF_LOGMF(CAF_ERROR, "clEnqueueNDRangeKernel: " << get_opencl_error(err));
       this->deref(); // or can anything actually happen?
       return;
     } else {
       cl_event event_r;
-      err = clEnqueueReadBuffer(m_queue.get(),
-                                m_arguments.back().get(),
-                                CL_FALSE,
-                                0,
-                                sizeof(typename R::value_type) * m_result_size,
-                                m_result.data(),
-                                1,
-                                &event_k,
-                                &event_r);
+      err =
+        clEnqueueReadBuffer(m_queue.get(), m_arguments.back().get(), CL_FALSE,
+                            0, sizeof(typename R::value_type) * m_result_size,
+                            m_result.data(), 1, &event_k, &event_r);
       if (err != CL_SUCCESS) {
         throw std::runtime_error("clEnqueueReadBuffer: " +
                                  get_opencl_error(err));

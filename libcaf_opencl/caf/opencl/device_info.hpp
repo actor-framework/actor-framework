@@ -35,11 +35,11 @@ class device_info {
   device_info(device_ptr device, command_queue_ptr queue,
               size_t work_group_size, cl_uint dimensons,
               const dim_vec& items_per_dimension)
-      : m_max_work_group_size(work_group_size)
-      , m_max_dimensions(dimensons)
-      , m_max_work_items_per_dim(items_per_dimension)
-      , m_device(device)
-      , m_cmd_queue(queue) {}
+      : m_max_work_group_size(work_group_size),
+        m_max_dimensions(dimensons),
+        m_max_work_items_per_dim(items_per_dimension),
+        m_device(device),
+        m_cmd_queue(queue) {}
 
   inline size_t get_max_work_group_size();
   inline cl_uint get_max_dimensions();

@@ -33,9 +33,9 @@ namespace opencl {
 
 program::program(context_ptr context, command_queue_ptr queue,
                  program_ptr program)
-    : m_context(move(context))
-    , m_program(move(program))
-    , m_queue(move(queue)) {}
+    : m_context(move(context)),
+      m_program(move(program)),
+      m_queue(move(queue)) {}
 
 program program::create(const char* kernel_source, const char* options,
                         uint32_t device_id) {
@@ -90,8 +90,8 @@ program program::create(const char* kernel_source, const char* options,
                             buffer.data(), nullptr);
 
       CAF_LOGC_ERROR("caf::opencl::program", "create",
-                      "Build log:\n" + string(buffer.data()) +
-                        "\n########################################");
+                     "Build log:\n" + string(buffer.data()) +
+                       "\n########################################");
     }
 #endif
     throw runtime_error(oss.str());

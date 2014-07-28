@@ -55,8 +55,8 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
   friend class command<actor_facade, Ret>;
 
  public:
-  using args_tuple = cow_tuple<
-                       typename detail::rm_const_and_ref<Args>::type...>;
+  using args_tuple =
+    cow_tuple<typename detail::rm_const_and_ref<Args>::type...>;
 
   using arg_mapping = std::function<optional<args_tuple>(any_tuple)>;
   using result_mapping = std::function<any_tuple(Ret&)>;
@@ -114,16 +114,16 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
                const dim_vec& global_dimensions, const dim_vec& global_offsets,
                const dim_vec& local_dimensions, arg_mapping map_args,
                result_mapping map_result, size_t result_size)
-      : m_kernel(kernel)
-      , m_program(prog.m_program)
-      , m_context(prog.m_context)
-      , m_queue(prog.m_queue)
-      , m_global_dimensions(global_dimensions)
-      , m_global_offsets(global_offsets)
-      , m_local_dimensions(local_dimensions)
-      , m_map_args(std::move(map_args))
-      , m_map_result(std::move(map_result))
-      , m_result_size(result_size) {
+      : m_kernel(kernel),
+        m_program(prog.m_program),
+        m_context(prog.m_context),
+        m_queue(prog.m_queue),
+        m_global_dimensions(global_dimensions),
+        m_global_offsets(global_offsets),
+        m_local_dimensions(local_dimensions),
+        m_map_args(std::move(map_args)),
+        m_map_result(std::move(map_result)),
+        m_result_size(result_size) {
     CAF_LOG_TRACE("id: " << this->id());
   }
 
@@ -165,7 +165,7 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
       err = clSetKernelArg(m_kernel.get(), i, sizeof(cl_mem),
                            static_cast<void*>(&arguments[i]));
       CAF_LOG_ERROR_IF(err != CL_SUCCESS,
-                      "clSetKernelArg: " << get_opencl_error(err));
+                       "clSetKernelArg: " << get_opencl_error(err));
     }
     clFlush(m_queue.get());
   }
