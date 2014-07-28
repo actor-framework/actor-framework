@@ -16,44 +16,45 @@ Example for the Impatient
 namespace caf {
 namespace example {
 
+/**
+ * This class is only being used as style guide example.
+ */
 class my_class {
  public:
   /**
-   * @brief Constructs `my_class`.
-   *
-   * The class is only being used as style guide example.
+   * Brief description. More description. Note that CAF uses the
+   * "JavaDoc-style" autobrief option, i.e., everything up until the
+   * first dot is the brief description.
    */
   my_class();
   
   /**
-   * @brief Destructs `my_class`.
+   * Destructs `my_class`. Please use Markdown in comments.
    */
   ~my_class();
 
+  // do not use the @return if you start the brief description with "Returns"
   /**
-   * @brief Gets the name of this instance.
-   *        Some more brief description.
-   *
-   * Long description goes here.
+   * Returns the name of this instance.
    */
   inline const std::string& name() const {
     return m_name;
   }
   
   /**
-   * @brief Sets the name of this instance.
+   * Sets the name of this instance.
    */
   inline void name(std::string new_name) {
     m_name = std::move(new_name);
   }
   
   /**
-   * @brief Prints the name to `STDIN`.
+   * Prints the name to `STDIN`.
    */
   void print_name() const;
 
   /**
-   * @brief Does something. Maybe.
+   * Does something (maybe).
    */
   void do_something();
 
@@ -177,7 +178,8 @@ General rules
   #include "caf/example/myclass.hpp"
   ```
 
-- When declaring a function, the order of parameters is: inputs, then outputs.
+- When declaring a function, the order of parameters is: outputs, then inputs.
+  This follows the parameter order from the STL.
 
 - Never use C-style casts.
 
@@ -225,11 +227,10 @@ Headers
   Exceptions to this rule are unit tests and `main.cpp` files.
 
 - Each class has its own pair of header and implementation
-  files and the relative path is derived from its full name.
+  files and the relative path for the header file is derived from its full name.
   For example, the header file for `caf::example::my_class` of `libcaf_example`
-  is located at `libcaf_example/caf/example/my_class.hpp`.
-  Source files simply belong to the `src` folder of the component, e.g.,
-  `libcaf_example/src/my_class.cpp`.
+  is located at `libcaf_example/caf/example/my_class.hpp` and the
+  source file at `libcaf_example/src/my_class.cpp`.
 
 - All header files should use `#define` guards to prevent multiple inclusion. 
   The symbol name is `<RELATIVE>_<PATH>_<TO>_<FILE>_HPP`.
@@ -239,7 +240,7 @@ Headers
 - Each library component must provide a `fwd.hpp` header providing forward
   declartations for all types used in the user API.
 
-- Each library component must provide an `all.hpp` header that contains 
+- Each library component must provide an `all.hpp` header that contains the
   main page for the documentation and includes all headers for the user API.
 
 - Use `inline` for small functions (rule of thumb: 10 lines or less).
@@ -275,9 +276,9 @@ extra rules for formatting metaprogramming code.
   // think of it as the following (not valid C++):
   auto optional_result_type = 
     conditional {
-      if   (result_type == void)
-      then (bool)
-      else (optional<result_type>)
+      if   result_type == void
+      then bool
+      else optional<result_type>
     };
   ```
 
