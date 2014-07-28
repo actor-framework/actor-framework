@@ -12,11 +12,9 @@ if [ ! -d ../gh-pages ]; then
 fi
 
 echo "build documentation ..."
-make doc &>/dev/null
+make doc &>/dev/null || ninja -C build doc &>/dev/null || exit
 
-if [ -f manual.pdf ]; then
-    echo "PDF manual found ..."
-else
+if [ ! -f manual/manual.pdf ]; then
     echo "no PDF manual found ... stop"
     exit
 fi
@@ -29,10 +27,10 @@ make html &>/dev/null
 echo "copy documentation into gh-pages ..."
 cd ../../gh-pages
 rm -f *.tex *.html *.css *.png *.js manual/manual.pdf manual/index.html
-cp -R ../libcppa/html/* .
+cp -R ../actor-framework/html/* .
 mkdir manual
-cp ../libcppa/manual.pdf manual/
-cp ../libcppa/manual/manual.html manual/index.html
+cp ../actor-framework/manual/manual.pdf manual/
+cp ../actor-framework/manual/manual.html manual/index.html
 
 echo "commit ..."
 git add .
@@ -41,4 +39,4 @@ git commit -a -m "documentation update"
 echo "push ..."
 git push
 
-cd ../libcppa
+cd ../actor-framework
