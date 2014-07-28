@@ -1,4 +1,4 @@
-# Doxyfile 1.5.8
+# Doxyfile 1.8.0
 
 # This file describes the settings to be used by the documentation system
 # doxygen (www.doxygen.org) for a project
@@ -9,6 +9,12 @@
 # For lists items can also be appended using:
 #       TAG += value [value, ...]
 # Values that contain spaces should be placed between quotes (" ")
+
+#---------------------------------------------------------------------------
+# Enable markdown support
+#---------------------------------------------------------------------------
+
+MARKDOWN_SUPPORT       = YES
 
 #---------------------------------------------------------------------------
 # Project related configuration options
@@ -137,7 +143,7 @@ SHORT_NAMES            = NO
 # comments will behave just like regular Qt-style comments 
 # (thus requiring an explicit @brief command for a brief description.)
 
-JAVADOC_AUTOBRIEF      = NO
+JAVADOC_AUTOBRIEF      = YES
 
 # If the QT_AUTOBRIEF tag is set to YES then Doxygen will 
 # interpret the first line (until the first dot) of a Qt-style 
@@ -170,7 +176,7 @@ SEPARATE_MEMBER_PAGES  = NO
 # The TAB_SIZE tag can be used to set the number of spaces in a tab. 
 # Doxygen uses this value to replace tabs by spaces in code fragments.
 
-TAB_SIZE               = 4
+TAB_SIZE               = 2
 
 # This tag can be used to specify a number of aliases that acts 
 # as commands in the documentation. An alias has the form "name=value". 
@@ -272,22 +278,6 @@ SUBGROUPING            = YES
 # types are typedef'ed and only the typedef is referenced, never the tag name.
 
 TYPEDEF_HIDES_STRUCT   = NO
-
-# The SYMBOL_CACHE_SIZE determines the size of the internal cache use to 
-# determine which symbols to keep in memory and which to flush to disk. 
-# When the cache is full, less often used symbols will be written to disk. 
-# For small to medium size projects (<1000 input files) the default value is 
-# probably good enough. For larger projects a too small cache size can cause 
-# doxygen to be busy swapping symbols to and from disk most of the time 
-# causing a significant performance penality. 
-# If the system has enough physical memory increasing the cache will improve the 
-# performance by keeping more symbols in memory. Note that the value works on 
-# a logarithmic scale so increasing the size by one will rougly double the 
-# memory usage. The cache size is given by this formula: 
-# 2^(16+SYMBOL_CACHE_SIZE). The valid range is 0..9, the default is 0, 
-# corresponding to a cache size of 2^16 = 65536 symbols
-
-SYMBOL_CACHE_SIZE      = 0
 
 #---------------------------------------------------------------------------
 # Build related configuration options
@@ -467,12 +457,6 @@ MAX_INITIALIZER_LINES  = 30
 
 SHOW_USED_FILES        = YES
 
-# If the sources in your project are distributed over multiple directories 
-# then setting the SHOW_DIRECTORIES tag to YES will show the directory hierarchy 
-# in the documentation. The default is NO.
-
-SHOW_DIRECTORIES       = NO
-
 # Set the SHOW_FILES tag to NO to disable the generation of the Files page. 
 # This will remove the Files entry from the Quick Index and from the 
 # Folder Tree View (if specified). The default is YES.
@@ -565,7 +549,7 @@ WARN_LOGFILE           =
 # directories like "/usr/src/myproject". Separate the files or directories 
 # with spaces.
 
-INPUT                  = @CMAKE_HOME_DIRECTORY@/caf/ @CMAKE_HOME_DIRECTORY@/caf/util @CMAKE_HOME_DIRECTORY@/caf/intrusive @CMAKE_HOME_DIRECTORY@/caf/io @CMAKE_HOME_DIRECTORY@/caf/opencl
+INPUT                  = @CMAKE_HOME_DIRECTORY@/libcaf_core/caf @CMAKE_HOME_DIRECTORY@/libcaf_core/caf/mixin @CMAKE_HOME_DIRECTORY@/libcaf_core/caf/policy @CMAKE_HOME_DIRECTORY@/libcaf_io/caf/io
 
 # This tag can be used to specify the character encoding of the source files 
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding, which is 
@@ -792,12 +776,6 @@ HTML_FOOTER            =
 # stylesheet in the HTML output directory as well, or it will be erased!
 
 HTML_STYLESHEET        = 
-
-# If the HTML_ALIGN_MEMBERS tag is set to YES, the members of classes, 
-# files or namespaces will be aligned in HTML using tables. If set to 
-# NO a bullet list will be used.
-
-HTML_ALIGN_MEMBERS     = YES
 
 # If the HTML_DYNAMIC_SECTIONS tag is set to YES then the generated HTML 
 # documentation will contain sections that can be hidden and shown after the 
@@ -1130,18 +1108,6 @@ GENERATE_XML           = NO
 
 XML_OUTPUT             = xml
 
-# The XML_SCHEMA tag can be used to specify an XML schema, 
-# which can be used by a validating XML parser to check the 
-# syntax of the XML files.
-
-XML_SCHEMA             = 
-
-# The XML_DTD tag can be used to specify an XML DTD, 
-# which can be used by a validating XML parser to check the 
-# syntax of the XML files.
-
-XML_DTD                = 
-
 # If the XML_PROGRAMLISTING tag is set to YES Doxygen will 
 # dump the program listings (including syntax highlighting 
 # and cross-referencing information) to the XML output. Note that 
@@ -1341,17 +1307,6 @@ HIDE_UNDOC_RELATIONS   = YES
 # have no effect if this option is set to NO (the default)
 
 HAVE_DOT               = NO
-
-# By default doxygen will write a font called FreeSans.ttf to the output 
-# directory and reference it in all dot files that doxygen generates. This 
-# font does not include all possible unicode characters however, so when you need 
-# these (or just want a differently looking font) you can specify the font name 
-# using DOT_FONTNAME. You need need to make sure dot is able to find the font, 
-# which can be done by putting it in a standard location or by setting the 
-# DOTFONTPATH environment variable or by setting DOT_FONTPATH to the directory 
-# containing the font.
-
-DOT_FONTNAME           = FreeSans
 
 # The DOT_FONTSIZE tag can be used to set the size of the font of dot graphs. 
 # The default size is 10pt.
