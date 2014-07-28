@@ -39,7 +39,7 @@ add(simple_broker remote_actors)
 
 if (NOT "${CAF_NO_PROTOBUF_EXAMPLES}" STREQUAL "yes")
   find_package(Protobuf)
-  if (PROTOBUF_FOUND)
+  if (PROTOBUF_FOUND AND PROTOBUF_PROTOC_EXECUTABLE)
     PROTOBUF_GENERATE_CPP(ProtoSources ProtoHeaders "${CMAKE_CURRENT_SOURCE_DIR}/remote_actors/pingpong.proto")
     include_directories(${PROTOBUF_INCLUDE_DIR})
     # add binary dir as include path as generated headers will be located there
@@ -47,7 +47,7 @@ if (NOT "${CAF_NO_PROTOBUF_EXAMPLES}" STREQUAL "yes")
     add_executable(protobuf_broker remote_actors/protobuf_broker.cpp ${ProtoSources})
     target_link_libraries(protobuf_broker ${CMAKE_DL_LIBS} ${LIBCAF_LIBRARIES} ${PTHREAD_LIBRARIES} ${PROTOBUF_LIBRARIES})
     add_dependencies(protobuf_broker all_examples)
-  endif (PROTOBUF_FOUND)
+  endif (PROTOBUF_FOUND AND PROTOBUF_PROTOC_EXECUTABLE)
 endif ()
 
 if (NOT "${CAF_NO_CURL_EXAMPLES}" STREQUAL "yes")
