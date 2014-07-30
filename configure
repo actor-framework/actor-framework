@@ -59,10 +59,13 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
                                 (implicitly sets --enable-debug)
     --enable-address-sanitizer  build with Clang's address sanitizer
 
-  Influential Environment Variables (only on first invocation
-  per build directory):
+  Influential Environment Variables (only on first invocation):
     CXX                         C++ compiler command
     CXXFLAGS                    C++ compiler flags
+
+  Benchmark Suite Options:
+    --with-scalac               path to scalac executable
+    --with-erlc                 path to erlc executable
 "
 
 
@@ -268,6 +271,12 @@ while [ $# -ne 0 ]; do
             ;;
         --build-static-only)
             append_cache_entry CAF_BUILD_STATIC_ONLY STRING yes
+            ;;
+        --with-scalac=*)
+            append_cache_entry CAF_SCALA_COMPILER FILEPATH "$optarg"
+            ;;
+        --with-erlc=*)
+            append_cache_entry CAF_ERLANG_COMPILER FILEPATH "$optarg"
             ;;
         *)
             echo "Invalid option '$1'.  Try $0 --help to see available options."
