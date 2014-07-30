@@ -32,6 +32,7 @@ class no_resume {
     resumable::resume_result resume(execution_unit*, size_t) {
       CAF_LOG_TRACE("");
       uint32_t rsn = exit_reason::normal;
+      std::exception_ptr eptr = nullptr;
       try {
         this->act();
       }
@@ -40,6 +41,11 @@ class no_resume {
       }
       catch (...) {
         rsn = exit_reason::unhandled_exception;
+        eptr = std::current_exception();
+      }
+      if (eptr) {
+        auto opt_reason = this->handle(eptr);
+        rsn = *opt_reason;
       }
       this->planned_exit_reason(rsn);
       try {

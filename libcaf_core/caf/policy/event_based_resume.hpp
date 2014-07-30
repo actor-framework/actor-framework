@@ -92,6 +92,7 @@ class event_based_resume {
       CAF_REQUIRE(!d->is_initialized()
                   || (!d->bhvr_stack().empty()
                       && d->planned_exit_reason() == exit_reason::not_exited));
+      std::exception_ptr eptr = nullptr;
       try {
         if (!d->is_initialized()) {
           CAF_LOG_DEBUG("initialize actor");
@@ -158,20 +159,29 @@ class event_based_resume {
         }
       }
       catch (std::exception& e) {
-        CAF_LOG_WARNING("actor died because of exception: "
-                 << detail::demangle(typeid(e))
-                 << ", what() = " << e.what());
+        CAF_LOG_INFO("actor died because of an exception: "
+                     << detail::demangle(typeid(e))
+                     << ", what() = " << e.what());
         if (d->exit_reason() == exit_reason::not_exited) {
           d->quit(exit_reason::unhandled_exception);
         }
+        eptr = std::current_exception();
       }
       catch (...) {
-        CAF_LOG_WARNING("actor died because of an unknown exception");
+        CAF_LOG_INFO("actor died because of an unknown exception");
         if (d->exit_reason() == exit_reason::not_exited) {
           d->quit(exit_reason::unhandled_exception);
         }
+        eptr = std::current_exception();
       }
-      if (!done_cb()) {
+      if (eptr) {
+        auto opt_reason = d->handle(eptr);
+        if (opt_reason) {
+          // use exit reason defined by custom handler
+          d->planned_exit_reason(*opt_reason);
+        }
+      }
+      if (!actor_done()) {
         // actor has been "revived", try running it again later
         return resumable::resume_later;
       }

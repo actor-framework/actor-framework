@@ -27,6 +27,7 @@
 #include <string>
 #include <vector>
 #include <cstdint>
+#include <exception>
 #include <type_traits>
 
 #include "caf/node_id.hpp"
@@ -96,9 +97,6 @@ class abstract_actor : public abstract_channel {
       }
       void actor_exited(abstract_actor*, uint32_t reason) {
         m_functor(reason);
-      }
-      bool matches(const attachable::token&) {
-        return false;
       }
     };
     attach(attachable_ptr{new functor_attachable(std::move(f))});
@@ -273,6 +271,13 @@ class abstract_actor : public abstract_channel {
                             attachable_ptr& ptr,
                             bool stop_on_first_hit = false,
                             bool dry_run = false);
+
+  /** @cond PRIVATE */
+  /*
+   * Tries to run a custom exception handler for `eptr`.
+   */
+  optional<uint32_t> handle(const std::exception_ptr& eptr);
+  /** @endcond */
 
   // cannot be changed after construction
   const actor_id m_id;

@@ -30,4 +30,16 @@ attachable::token::token(const std::type_info& tinfo, const void* vptr)
   // nop
 }
 
+optional<uint32_t> attachable::handle_exception(const std::exception_ptr&) {
+  return none;
+}
+
+void attachable::actor_exited(abstract_actor*, uint32_t) {
+  // nop
+}
+
+bool attachable::matches(const token&) {
+  return false;
+}
+
 } // namespace caf

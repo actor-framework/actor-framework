@@ -22,6 +22,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <exception>
 #include <functional>
 #include <forward_list>
 
@@ -420,6 +421,24 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   inline void on_sync_timeout_or_failure(std::function<void()> fun) {
     on_sync_timeout(fun);
     on_sync_failure(fun);
+  }
+
+  /**
+   * Sets a custom exception handler for this actor. If multiple handlers are
+   * defined, only the functor that was added *last* is being executed.
+   */
+  template <class F>
+  void set_exception_handler(F f) {
+    struct functor_attachable : attachable {
+      F m_functor;
+      functor_attachable(F arg) : m_functor(std::move(arg)) {
+        // nop
+      }
+      optional<uint32_t> handle_exception(const std::exception_ptr& eptr) {
+        return m_functor(eptr);
+      }
+    };
+    attach(attachable_ptr{new functor_attachable(std::move(f))});
   }
 
   /**************************************************************************

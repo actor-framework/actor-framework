@@ -225,4 +225,22 @@ std::set<std::string> abstract_actor::message_types() const {
   return std::set<std::string>{};
 }
 
+optional<uint32_t> abstract_actor::handle(const std::exception_ptr& eptr) {
+  { // lifetime scope of guard
+    guard_type guard{m_mtx};
+    for (auto i = m_attachables_head.get(); i != nullptr; i = i->next.get()) {
+      try {
+        auto result = i->handle_exception(eptr);
+        if (result) {
+          return *result;
+        }
+      }
+      catch (...) {
+        // ignore exceptions
+      }
+    }
+  }
+  return none;
+}
+
 } // namespace caf

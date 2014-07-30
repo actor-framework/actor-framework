@@ -23,6 +23,9 @@
 #include <memory>
 #include <cstdint>
 #include <typeinfo>
+#include <exception>
+
+#include "caf/optional.hpp"
 
 namespace caf {
 
@@ -62,15 +65,24 @@ class attachable {
   virtual ~attachable();
 
   /**
+   * Executed if the actor did not handle an exception and must
+   * not return `none` if this attachable did handle `eptr`.
+   * Note that the first handler to handle `eptr` "wins" and no other
+   * handler will be invoked.
+   * @returns The exit reason the actor should use.
+   */
+  virtual optional<uint32_t> handle_exception(const std::exception_ptr& eptr);
+
+  /**
    * Executed if the actor finished execution with given `reason`.
    * The default implementation does nothing.
    */
-  virtual void actor_exited(abstract_actor* self, uint32_t reason) = 0;
+  virtual void actor_exited(abstract_actor* self, uint32_t reason);
 
   /**
    * Returns `true` if `what` selects this instance, otherwise `false`.
    */
-  virtual bool matches(const token& what) = 0;
+  virtual bool matches(const token& what);
 
   /**
    * Returns `true` if `what` selects this instance, otherwise `false`.
