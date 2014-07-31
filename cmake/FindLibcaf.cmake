@@ -87,7 +87,7 @@ endforeach ()
 
 # final steps to tell CMake we're done
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(libcaf
+find_package_handle_standard_args(Libcaf
                                   DEFAULT_MSG
                                   LIBCAF_LIBRARIES
                                   LIBCAF_INCLUDE_DIRS)
