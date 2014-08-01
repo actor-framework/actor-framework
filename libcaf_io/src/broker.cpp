@@ -74,7 +74,7 @@ void broker::servant::disconnect() {
 }
 
 broker::scribe::scribe(broker* parent, connection_handle hdl)
-    : super(parent), m_hdl(hdl) {
+    : servant(parent), m_hdl(hdl) {
   std::vector<char> tmp;
   m_read_msg = make_message(new_data_msg{m_hdl, std::move(tmp)});
 }
@@ -112,7 +112,7 @@ void broker::scribe::io_failure(network::operation op) {
 }
 
 broker::doorman::doorman(broker* parent, accept_handle hdl)
-    : super(parent), m_hdl(hdl) {
+    : servant(parent), m_hdl(hdl) {
   auto hdl2 = connection_handle::from_int(-1);
   m_accept_msg = make_message(new_connection_msg{m_hdl, hdl2});
 }

@@ -228,7 +228,7 @@ set(LIBCAF_IO_LIBRARY libcaf_io)
 if(CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
   add_dependencies(libcaf_ioStatic libcaf_coreStatic)
 endif()
-if(NOT "${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes")
+if(NOT CAF_BUILD_STATIC_ONLY)
   add_dependencies(libcaf_io libcaf_core)
 endif()
 # set LIBCAF_LIBRARIES for other subprojects
@@ -260,6 +260,23 @@ if(NOT CAF_NO_NEXUS AND EXISTS "${CMAKE_SOURCE_DIR}/nexus/caf/")
 else()
   # make sure variable is set for build log
   set(CAF_NO_NEXUS yes)
+endif()
+# build probe if not being told otherwise
+if(NOT CAF_NO_PROBE AND EXISTS "${CMAKE_SOURCE_DIR}/probe/caf/")
+  if(NOT CAF_HAS_PROBE_EVENTS)
+    message(WARNING "cannot build probe: probe-event submodule missing")
+    set(CAF_NO_PROBE yes)
+  else()
+    message(STATUS "Enter subdirectory probe")
+    add_subdirectory(probe)
+    if(CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
+      add_dependencies(libcaf_probeStatic libcaf_ioStatic)
+    endif()
+    if(NOT CAF_BUILD_STATIC_ONLY)
+      add_dependencies(libcaf_probe libcaf_io)
+    endif()
+    set(CAF_NO_PROBE no)
+  endif()
 endif()
 # build benchmarks if not being told otherwise
 if(NOT CAF_NO_BENCHMARKS AND EXISTS "${CMAKE_SOURCE_DIR}/benchmarks/caf/")
@@ -341,6 +358,7 @@ message(STATUS
         "\nBuild examples:    ${CAF_BUILD_EXAMPLES}"
         "\nBuild unit tests:  ${CAF_BUILD_UNIT_TESTS}"
         "\nBuild nexus:       ${CAF_BUILD_NEXUS}"
+        "\nBuild probe:       ${CAF_BUILD_PROBE}"
         "\nBuild benchmarks:  ${CAF_BUILD_BENCHMARKS}"
         "\n"
         "\nCXX:               ${CMAKE_CXX_COMPILER}"

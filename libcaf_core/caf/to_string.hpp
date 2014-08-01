@@ -72,17 +72,20 @@ inline std::string to_string(const channel& what) {
   return detail::to_string_impl(what);
 }
 
-// implemented in node_id.cpp
-std::string to_string(const node_id& what);
-
-// implemented in node_id.cpp
-std::string to_string(const node_id& what);
-
-/*
-inline std::string to_string(const any& what) {
-  return detail::to_string_impl(what.value(), what.type());
+inline std::string to_string(const message_id& what) {
+  return detail::to_string_impl(what);
 }
-*/
+
+// implemented in node_id.cpp
+std::string to_string(const node_id& what);
+
+// implemented in node_id.cpp
+std::string to_string(const node_id& what);
+
+template <class T, class U, class... Us>
+std::string to_string(const T& a1, const U& a2, const Us&... as) {
+  return to_string(a1) + ", " + to_string(a2, as...);
+}
 
 /**
  * Converts `e` to a string including the demangled type of `e` and `e.what()`.
