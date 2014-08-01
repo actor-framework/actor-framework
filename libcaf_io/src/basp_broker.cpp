@@ -70,12 +70,16 @@ behavior basp_broker::make_behavior() {
       std::vector<id_type> lost_connections;
       for (auto& kvp : m_routes) {
         auto& entry = kvp.second;
-        if (entry.first == msg.handle) {
-          CAF_LOG_DEBUG("lost direct connection to "
-                      << to_string(kvp.first));
-          entry.first = invalid_connection_handle;
+        if (entry.first.hdl == msg.handle) {
+          CAF_LOG_DEBUG("lost direct connection to " << to_string(kvp.first));
+          entry.first.hdl = invalid_connection_handle;
         }
-        entry.second.erase(msg.handle);
+        auto last = entry.second.end();
+        auto i = std::lower_bound(entry.second.begin(), last, msg.handle,
+                                  connection_info_less{});
+        if (i != last && i->hdl == msg.handle) {
+          entry.second.erase(i);
+        }
         if (entry.first.invalid() && entry.second.empty()) {
           lost_connections.push_back(kvp.first);
         }
@@ -141,12 +145,12 @@ void basp_broker::new_data(connection_context& ctx, buffer_type& buf) {
     return;
   }
   ctx.state = next_state;
-  configure_read(ctx.hdl, receive_policy::exactly( next_state == await_payload
-                           ? ctx.hdr.payload_len
-                           : basp::header_size));
+  configure_read(ctx.hdl, receive_policy::exactly(next_state == await_payload
+                                                    ? ctx.hdr.payload_len
+                                                    : basp::header_size));
 }
 
-void basp_broker::dispatch(const basp::header& hdr, message&& payload) {
+void basp_broker::dispatch(const basp::header& hdr, message&& msg) {
   // TODO: provide hook API to allow ActorShell to
   //       intercept/trace/log each message
   actor_addr src;
@@ -165,13 +169,16 @@ void basp_broker::dispatch(const basp::header& hdr, message&& payload) {
   auto dest = singletons::get_actor_registry()->get(hdr.dest_actor);
   auto mid = message_id::from_integer_value(hdr.operation_data);
   if (!dest) {
-    CAF_LOG_DEBUG(
-      "received a message for an invalid actor; "
-      "could not find an actor with ID "
-      << hdr.dest_actor);
+    CAF_LOG_DEBUG("received a message for an invalid actor; "
+                  "could not find an actor with ID "
+                  << hdr.dest_actor);
+    parent().notify<hook::invalid_message_received>(hdr.source_node, src,
+                                                    hdr.dest_actor, mid, msg);
     return;
   }
-  dest->enqueue(src, mid, std::move(payload), nullptr);
+  parent().notify<hook::message_received>(hdr.source_node, src,
+                                          dest->address(), mid, msg);
+  dest->enqueue(src, mid, std::move(msg), nullptr);
 }
 
 void basp_broker::dispatch(const actor_addr& from, const actor_addr& to,
@@ -181,13 +188,14 @@ void basp_broker::dispatch(const actor_addr& from, const actor_addr& to,
                 << CAF_TARG(to, to_string) << ", " << CAF_TARG(msg, to_string));
   CAF_REQUIRE(to != nullptr);
   auto dest = to.node();
-  auto hdl = get_route(dest);
-  if (hdl.invalid()) {
+  auto route = get_route(dest);
+  if (route.invalid()) {
+    parent().notify<hook::message_sending_failed>(from, to, mid, msg);
     CAF_LOG_INFO("unable to dispatch message: no route to "
                  << to_string(dest) << ", message: " << to_string(msg));
     return;
   }
-  auto& buf = wr_buf(hdl);
+  auto& buf = wr_buf(route.hdl);
   // reserve space in the buffer to write the broker message later on
   auto wr_pos = buf.size();
   char placeholder[basp::header_size];
@@ -209,7 +217,8 @@ void basp_broker::dispatch(const actor_addr& from, const actor_addr& to,
          from.id(),                                  to.id(),
          static_cast<uint32_t>(buf.size() - before), basp::dispatch_message,
          mid.integer_value()});
-  flush(hdl);
+  flush(route.hdl);
+  parent().notify<hook::message_sent>(from, route.node, to, mid, msg);
 }
 
 void basp_broker::read(binary_deserializer& bd, basp::header& msg) {
@@ -250,18 +259,18 @@ basp_broker::handle_basp_header(connection_context& ctx,
   // forward message if not addressed to us; invalid dest_node implies
   // that msg is a server_handshake
   if (hdr.dest_node != invalid_node_id && hdr.dest_node != node()) {
-    auto hdl = get_route(hdr.dest_node);
-    if (hdl.invalid()) {
+    auto route = get_route(hdr.dest_node);
+    if (route.invalid()) {
       // TODO: signalize that we don't have route to given node
       CAF_LOG_INFO("message dropped: no route to node "
              << to_string(hdr.dest_node));
       return close_connection;
     }
-    auto& buf = wr_buf(hdl);
+    auto& buf = wr_buf(route.hdl);
     binary_serializer bs{std::back_inserter(buf), &m_namespace};
     write(bs, hdr);
     if (payload) buf.insert(buf.end(), payload->begin(), payload->end());
-    flush(hdl);
+    flush(route.hdl);
     return await_header;
   }
   // handle a message that is addressed to us
@@ -322,8 +331,7 @@ basp_broker::handle_basp_header(connection_context& ctx,
         return close_connection;
       }
       else if (!try_set_default_route(ctx.remote_id, ctx.hdl)) {
-        CAF_LOG_INFO("multiple incoming connections "
-                    "from the same node");
+        CAF_LOG_INFO("multiple incoming connections from the same node");
         return close_connection;
       }
       break;
@@ -335,8 +343,7 @@ basp_broker::handle_basp_header(connection_context& ctx,
         return close_connection;
       }
       if (hdr.operation_data != basp::version) {
-        CAF_LOG_INFO("tried to connect to a node with "
-               "different BASP version");
+        CAF_LOG_INFO("tried to connect to a node with different BASP version");
         return close_connection;
       }
       ctx.remote_id = hdr.source_node;
@@ -429,31 +436,31 @@ basp_broker::handle_basp_header(connection_context& ctx,
 void basp_broker::send_kill_proxy_instance(const id_type& nid, actor_id aid,
                                            uint32_t reason) {
   CAF_LOG_TRACE(CAF_TSARG(nid) << ", " << CAF_ARG(aid) << CAF_ARG(reason));
-  auto hdl = get_route(nid);
-  CAF_LOG_DEBUG(CAF_MARG(hdl, id));
-  if (hdl.invalid()) {
+  auto route = get_route(nid);
+  CAF_LOG_DEBUG(CAF_MARG(route.hdl, id));
+  if (route.invalid()) {
     CAF_LOG_INFO("message dropped, no route to node: " << to_string(nid));
     return;
   }
-  auto& buf = wr_buf(hdl);
+  auto& buf = wr_buf(route.hdl);
   binary_serializer bs(std::back_inserter(buf), &m_namespace);
   write(bs,
         {node(), nid,                       aid,             invalid_actor_id,
          0,      basp::kill_proxy_instance, uint64_t{reason}});
-  flush(hdl);
+  flush(route.hdl);
 }
 
-connection_handle basp_broker::get_route(const id_type& dest) {
-  connection_handle hdl;
+basp_broker::connection_info basp_broker::get_route(const id_type& dest) {
+  connection_info res;
   auto i = m_routes.find(dest);
   if (i != m_routes.end()) {
     auto& entry = i->second;
-    hdl = entry.first;
-    if (hdl.invalid() && !entry.second.empty()) {
-      hdl = *entry.second.begin();
+    res = entry.first;
+    if (res.invalid() && !entry.second.empty()) {
+      res = *entry.second.begin();
     }
   }
-  return hdl;
+  return res;
 }
 
 actor_proxy_ptr basp_broker::make_proxy(const id_type& nid, actor_id aid) {
@@ -470,8 +477,8 @@ actor_proxy_ptr basp_broker::make_proxy(const id_type& nid, actor_id aid) {
   }
   // we need to tell remote side we are watching this actor now;
   // use a direct route if possible, i.e., when talking to a third node
-  auto hdl = get_route(nid);
-  if (hdl.invalid()) {
+  auto route = get_route(nid);
+  if (route.invalid()) {
     // this happens if and only if we don't have a path to `nid`
     // and m_current_context->hdl has been blacklisted
     CAF_LOG_INFO("cannot create a proxy instance for an actor "
@@ -489,9 +496,11 @@ actor_proxy_ptr basp_broker::make_proxy(const id_type& nid, actor_id aid) {
     });
   });
   // tell remote side we are monitoring this actor now
-  binary_serializer bs(std::back_inserter(wr_buf(hdl)), &m_namespace);
+  binary_serializer bs(std::back_inserter(wr_buf(route.hdl)), &m_namespace);
   write(bs, {node(), nid, invalid_actor_id, aid,
          0, basp::announce_proxy_instance, 0});
+  // run hooks
+  parent().notify<hook::new_remote_actor>(res->address());
   return res;
 }
 
@@ -507,7 +516,7 @@ void basp_broker::erase_proxy(const id_type& nid, actor_id aid) {
 
 void basp_broker::add_route(const id_type& nid, connection_handle hdl) {
   if (m_blacklist.count(std::make_pair(nid, hdl)) == 0) {
-    m_routes[nid].second.insert(hdl);
+    m_routes[nid].second.insert({hdl, nid});
   }
 }
 
@@ -518,7 +527,7 @@ bool basp_broker::try_set_default_route(const id_type& nid,
   if (entry.first.invalid()) {
     CAF_LOG_DEBUG("new default route: " << to_string(nid) << " -> "
                                         << hdl.id());
-    entry.first = hdl;
+    entry.first = {hdl, nid};
     return true;
   }
   return false;
@@ -554,8 +563,9 @@ void basp_broker::init_handshake_as_sever(connection_context& ctx,
     bs1 << addr.id();
     auto sigs = addr.interface();
     bs1 << static_cast<uint32_t>(sigs.size());
-    for (auto& sig : sigs)
+    for (auto& sig : sigs) {
       bs1 << sig;
+    }
   }
   // fill padded region with the actual broker message
   binary_serializer bs2(buf.begin() + wrpos, &m_namespace);

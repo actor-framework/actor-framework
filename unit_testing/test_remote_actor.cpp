@@ -373,8 +373,8 @@ void test_remote_actor(std::string app_path, bool run_remote_actor) {
 
 int main(int argc, char** argv) {
   announce<actor_vector>();
-  cout << "this node is: "
-     << to_string(caf::detail::singletons::get_node_id()) << endl;
+  cout << "this node is: " << to_string(caf::detail::singletons::get_node_id())
+       << endl;
   message_builder{argv + 1, argv + argc}.apply({
     on("-c", spro<uint16_t>)>> [](uint16_t port) {
       CAF_LOGF_INFO("run in client mode");
@@ -395,15 +395,12 @@ int main(int argc, char** argv) {
           CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
         }
       );
-    },
-    on("-s") >> [&] {
+          },
+          on("-s") >> [&] {
       CAF_PRINT("don't run remote actor (server mode)");
       test_remote_actor(argv[0], false);
-    },
-    on() >> [&] {
-      test_remote_actor(argv[0], true);
-    },
-    others() >> [&] {
+          },
+          on() >> [&] { test_remote_actor(argv[0], true); }, others() >> [&] {
       CAF_PRINTERR("usage: " << argv[0] << " [-s|-c PORT]");
     }
   });

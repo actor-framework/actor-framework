@@ -7,3 +7,6 @@
 [submodule "nexus"]
 	path = nexus
 	url = https://github.com/actor-framework/nexus.git
+[submodule "probe"]
+	path = probe
+	url = https://github.com/actor-framework/probe.git

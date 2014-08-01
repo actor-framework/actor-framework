@@ -11,6 +11,7 @@ set (LIBCAF_IO_SRCS
      src/broker.cpp
      src/max_msg_size.cpp
      src/middleman.cpp
+     src/hook.cpp
      src/network.cpp
      src/publish_local_groups.cpp
      src/remote_actor_proxy.cpp)
