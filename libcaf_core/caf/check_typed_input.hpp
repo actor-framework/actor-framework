@@ -17,36 +17,28 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_TYPED_REMOTE_ACTOR_HELPER_HPP
-#define CAF_IO_TYPED_REMOTE_ACTOR_HELPER_HPP
-
-#include "caf/actor_cast.hpp"
-#include "caf/typed_actor.hpp"
-
-#include "caf/typed_actor.hpp"
+#ifndef CAF_CHECK_TYPED_INPUT_HPP
+#define CAF_CHECK_TYPED_INPUT_HPP
 
 #include "caf/detail/type_list.hpp"
-
-#include "caf/io/remote_actor_impl.hpp"
+#include "caf/detail/typed_actor_util.hpp"
 
 namespace caf {
-namespace io {
 
-template <class List>
-struct typed_remote_actor_helper;
+/**
+ * Checks whether `R` does support an input of type `{Ls...}` via a
+ * static assertion (always returns 0).
+ */
+template <template <class...> class R, class... Rs,
+          template <class...> class L, class... Ls>
+constexpr int check_typed_input(const R<Rs...>&, const L<Ls...>&) {
+  static_assert(detail::tl_find_if<
+                  detail::type_list<Rs...>,
+                  detail::input_is<detail::type_list<Ls...>>::template eval
+                >::value >= 0, "typed actor does not support given input");
+  return 0;
+}
 
-template <template<class...> class List, class... Ts>
-struct typed_remote_actor_helper<List<Ts...>> {
-  using return_type = typed_actor<Ts...>;
-  template <class... Vs>
-  return_type operator()(Vs&&... vs) {
-    auto iface = return_type::get_interface();
-    auto tmp = remote_actor_impl(std::forward<Vs>(vs)..., std::move(iface));
-    return actor_cast<return_type>(tmp);
-  }
-};
-
-} // namespace io
 } // namespace caf
 
-#endif // CAF_IO_TYPED_REMOTE_ACTOR_HELPER_HPP
+#endif // CAF_CHECK_TYPED_INPUT_HPP

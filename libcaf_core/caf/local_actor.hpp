@@ -42,6 +42,7 @@
 #include "caf/message_handler.hpp"
 #include "caf/response_promise.hpp"
 #include "caf/message_priority.hpp"
+#include "caf/check_typed_input.hpp"
 
 #include "caf/mixin/memory_cached.hpp"
 
@@ -279,23 +280,31 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   /**
    * Checks whether this actor traps exit messages.
    */
-  inline bool trap_exit() const;
+  inline bool trap_exit() const {
+    return m_trap_exit;
+  }
 
   /**
    * Enables or disables trapping of exit messages.
    */
-  inline void trap_exit(bool new_value);
+  inline void trap_exit(bool new_value) {
+    m_trap_exit = new_value;
+  }
 
   /**
    * Returns the last message that was dequeued from the actor's mailbox.
    * @warning Only set during callback invocation.
    */
-  inline message& last_dequeued();
+  inline message& last_dequeued() {
+    return m_current_node->msg;
+  }
 
   /**
    * Returns the address of the last sender of the last dequeued message.
    */
-  inline actor_addr& last_sender();
+  inline actor_addr& last_sender() {
+    return m_current_node->sender;
+  }
 
   /**
    * Adds a unidirectional `monitor` to `whom`.
@@ -437,19 +446,36 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
 
   // returns 0 if last_dequeued() is an asynchronous or sync request message,
   // a response id generated from the request id otherwise
-  inline message_id get_response_id();
+  inline message_id get_response_id() {
+    auto id = m_current_node->mid;
+    return (id.is_request()) ? id.response_id() : message_id();
+  }
 
   void reply_message(message&& what);
 
   void forward_message(const actor& new_receiver, message_priority prio);
 
-  inline bool awaits(message_id response_id);
+  inline bool awaits(message_id response_id) {
+    CAF_REQUIRE(response_id.is_response());
+    return std::any_of(m_pending_responses.begin(), m_pending_responses.end(),
+                       [=](message_id other) { return response_id == other; });
+  }
 
-  inline void mark_arrived(message_id response_id);
+  inline void mark_arrived(message_id response_id) {
+    auto last = m_pending_responses.end();
+    auto i = std::find(m_pending_responses.begin(), last, response_id);
+    if (i != last) {
+      m_pending_responses.erase(i);
+    }
+  }
 
-  inline uint32_t planned_exit_reason() const;
+  inline uint32_t planned_exit_reason() const {
+    return m_planned_exit_reason;
+  }
 
-  inline void planned_exit_reason(uint32_t value);
+  inline void planned_exit_reason(uint32_t value) {
+    m_planned_exit_reason = value;
+  }
 
   void cleanup(uint32_t reason) override;
 
@@ -458,15 +484,6 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   virtual optional<behavior&> sync_handler(message_id msg_id) = 0;
 
  protected:
-
-  template <class... Rs, template <class...> class T, class... Ts>
-  static void check_typed_input(const typed_actor<Rs...>&, const T<Ts...>&) {
-    static constexpr int input_pos = detail::tl_find_if<
-      detail::type_list<Rs...>,
-      detail::input_is<detail::type_list<Ts...>>::template eval>::value;
-    static_assert(input_pos >= 0,
-            "typed actor does not support given input");
-  }
 
   template <class... Ts>
   inline mailbox_element* new_mailbox_element(Ts&&... args) {
@@ -509,47 +526,6 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
  * @relates local_actor
  */
 using local_actor_ptr = intrusive_ptr<local_actor>;
-
-/******************************************************************************
- *       inline and template member function implementations      *
- ******************************************************************************/
-
-/** @cond PRIVATE */
-
-inline bool local_actor::trap_exit() const { return m_trap_exit; }
-
-inline void local_actor::trap_exit(bool new_value) { m_trap_exit = new_value; }
-
-inline message& local_actor::last_dequeued() { return m_current_node->msg; }
-
-inline actor_addr& local_actor::last_sender() { return m_current_node->sender; }
-
-inline message_id local_actor::get_response_id() {
-  auto id = m_current_node->mid;
-  return (id.is_request()) ? id.response_id() : message_id();
-}
-
-inline bool local_actor::awaits(message_id response_id) {
-  CAF_REQUIRE(response_id.is_response());
-  return std::any_of(m_pending_responses.begin(), m_pending_responses.end(),
-             [=](message_id other) { return response_id == other; });
-}
-
-inline void local_actor::mark_arrived(message_id response_id) {
-  auto last = m_pending_responses.end();
-  auto i = std::find(m_pending_responses.begin(), last, response_id);
-  if (i != last) m_pending_responses.erase(i);
-}
-
-inline uint32_t local_actor::planned_exit_reason() const {
-  return m_planned_exit_reason;
-}
-
-inline void local_actor::planned_exit_reason(uint32_t value) {
-  m_planned_exit_reason = value;
-}
-
-/** @endcond */
 
 } // namespace caf
 

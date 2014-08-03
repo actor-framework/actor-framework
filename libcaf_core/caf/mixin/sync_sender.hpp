@@ -27,6 +27,7 @@
 #include "caf/duration.hpp"
 #include "caf/response_handle.hpp"
 #include "caf/message_priority.hpp"
+#include "caf/check_typed_input.hpp"
 
 namespace caf {
 namespace mixin {
@@ -264,7 +265,7 @@ class sync_sender_impl : public Base {
     ResponseHandleTag>
   sync_send_impl(message_priority prio, const typed_actor<Rs...>& dest,
            detail::type_list<Ts...> token, message&& what) {
-    dptr()->check_typed_input(dest, token);
+    check_typed_input(dest, token);
     return {dptr()->sync_send_tuple_impl(prio, dest, std::move(what)),
         dptr()};
   }

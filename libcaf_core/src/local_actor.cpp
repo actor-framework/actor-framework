@@ -235,13 +235,4 @@ message_id local_actor::sync_send_tuple_impl(message_priority mp,
   return nri.response_id();
 }
 
-void anon_send_exit(const actor_addr& whom, uint32_t reason) {
-  if (!whom){
-    return;
-  }
-  auto ptr = actor_cast<actor>(whom);
-  ptr->enqueue(invalid_actor_addr, message_id {}.with_high_priority(),
-               make_message(exit_msg{invalid_actor_addr, reason}), nullptr);
-}
-
 } // namespace caf
