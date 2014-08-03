@@ -34,6 +34,9 @@ struct replies_to {
   };
 };
 
+template <class... Is>
+using reacts_to = typename replies_to<Is...>::template with<void>;
+
 } // namespace caf
 
 #endif // CAF_REPLIES_TO_HPP
