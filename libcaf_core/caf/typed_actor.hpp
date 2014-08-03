@@ -60,6 +60,11 @@ class typed_actor
 
  public:
 
+  template <class... Es>
+  struct extend {
+    using type = typed_actor<Rs..., Es...>;
+  };
+
   /**
    * Identifies the behavior type actors of this kind use
    * for their behavior stack.
