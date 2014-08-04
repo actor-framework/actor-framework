@@ -261,6 +261,21 @@ else()
   # make sure variable is set for build log
   set(CAF_NO_NEXUS yes)
 endif()
+# build shell if not being told otherwise
+if(NOT CAF_NO_SHELL AND EXISTS "${CMAKE_SOURCE_DIR}/shell/caf/")
+  if(NOT CAF_HAS_PROBE_EVENTS)
+    message(WARNING "cannot build shell: probe-event submodule missing")
+    set(CAF_NO_SHELL yes)
+  else()
+    message(STATUS "Enter subdirectory shell")
+    add_subdirectory(shell)
+    add_dependencies(shell libcaf_io)
+    set(CAF_NO_SHELL no)
+  endif()
+else()
+  # make sure variable is set for build log
+  set(CAF_NO_SHELL yes)
+endif()
 # build probe if not being told otherwise
 if(NOT CAF_NO_PROBE AND EXISTS "${CMAKE_SOURCE_DIR}/probe/caf/")
   if(NOT CAF_HAS_PROBE_EVENTS)
@@ -337,6 +352,8 @@ endmacro()
 invertYesNo(CAF_NO_EXAMPLES CAF_BUILD_EXAMPLES)
 invertYesNo(CAF_NO_UNIT_TESTS CAF_BUILD_UNIT_TESTS)
 invertYesNo(CAF_NO_NEXUS CAF_BUILD_NEXUS)
+invertYesNo(CAF_NO_PROBE CAF_BUILD_PROBE)
+invertYesNo(CAF_NO_SHELL CAF_BUILD_SHELL)
 invertYesNo(CAF_NO_MEM_MANAGEMENT CAF_BUILD_MEM_MANAGEMENT)
 invertYesNo(CAF_NO_BENCHMARKS CAF_BUILD_BENCHMARKS)
 # collect all compiler flags
@@ -358,6 +375,7 @@ message(STATUS
         "\nBuild examples:    ${CAF_BUILD_EXAMPLES}"
         "\nBuild unit tests:  ${CAF_BUILD_UNIT_TESTS}"
         "\nBuild nexus:       ${CAF_BUILD_NEXUS}"
+        "\nBuild shell:       ${CAF_BUILD_SHELL}"
         "\nBuild probe:       ${CAF_BUILD_PROBE}"
         "\nBuild benchmarks:  ${CAF_BUILD_BENCHMARKS}"
         "\n"
