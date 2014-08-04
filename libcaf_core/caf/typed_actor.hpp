@@ -76,11 +76,6 @@ class typed_actor
    */
   using base = typed_event_based_actor<Rs...>;
 
-  /**
-   * Stores the interface of the actor as type list.
-   */
-  using interface = detail::type_list<Rs...>;
-
   typed_actor() = default;
   typed_actor(typed_actor&&) = default;
   typed_actor(const typed_actor&) = default;
@@ -130,7 +125,7 @@ class typed_actor
     return m_ptr ? 1 : 0;
   }
 
-  static std::set<std::string> get_message_types() {
+  static std::set<std::string> message_types() {
     return {detail::to_uniform_name<Rs>()...};
   }
 
@@ -152,13 +147,13 @@ class typed_actor
 
   template <class... OtherRs>
   inline void set(const typed_actor<OtherRs...>& other) {
-    check_signatures<interface, detail::type_list<OtherRs...>>();
+    check_signatures<detail::type_list<Rs...>, detail::type_list<OtherRs...>>();
     m_ptr = other.m_ptr;
   }
 
   template <class Impl>
   inline void set(intrusive_ptr<Impl>& other) {
-    check_signatures<interface, typename Impl::signatures>();
+    check_signatures<detail::type_list<Rs...>, typename Impl::signatures>();
     m_ptr = std::move(other);
   }
 

@@ -56,7 +56,7 @@ void run_client(const char* host, uint16_t port) {
     cerr << "unexpected: " << e.what() << endl;
   }
   CAF_CHECKPOINT();
-  auto serv = io::typed_remote_actor<server_type::interface>(host, port);
+  auto serv = io::typed_remote_actor<server_type>(host, port);
   CAF_CHECKPOINT();
   scoped_actor self;
   self->sync_send(serv, ping{42})
