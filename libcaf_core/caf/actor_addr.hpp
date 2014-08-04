@@ -95,7 +95,11 @@ class actor_addr : detail::comparable<actor_addr>,
    */
   bool is_remote() const;
 
-  std::set<std::string> interface() const;
+  /**
+   * Returns the set of accepted messages types as strings or
+   * an empty set if this actor is untyped.
+   */
+  std::set<std::string> message_types() const;
 
  private:
 

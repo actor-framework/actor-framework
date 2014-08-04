@@ -38,11 +38,11 @@ namespace caf {
  * @extends local_actor
  */
 template <class... Rs>
-class typed_event_based_actor
-  : public extend<local_actor, typed_event_based_actor<Rs...>>::template with<
-      mixin::mailbox_based,
-      mixin::behavior_stack_based<typed_behavior<Rs...>>::template impl,
-      mixin::sync_sender<nonblocking_response_handle_tag>::template impl> {
+class typed_event_based_actor : public
+    extend<local_actor, typed_event_based_actor<Rs...>>::template
+    with<mixin::mailbox_based,
+         mixin::behavior_stack_based<typed_behavior<Rs...>>::template impl,
+         mixin::sync_sender<nonblocking_response_handle_tag>::template impl> {
  public:
   typed_event_based_actor() : m_initialized(false) {
     // nop
@@ -52,7 +52,7 @@ class typed_event_based_actor
 
   using behavior_type = typed_behavior<Rs...>;
 
-  std::set<std::string> interface() const override {
+  std::set<std::string> message_types() const override {
     return {detail::to_uniform_name<Rs>()...};
   }
 

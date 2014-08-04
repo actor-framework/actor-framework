@@ -217,7 +217,7 @@ void abstract_actor::cleanup(uint32_t reason) {
   }
 }
 
-std::set<std::string> abstract_actor::interface() const {
+std::set<std::string> abstract_actor::message_types() const {
   // defaults to untyped
   return std::set<std::string>{};
 }

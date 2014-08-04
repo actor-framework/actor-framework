@@ -175,10 +175,10 @@ void test_event_testee() {
   typed_actor<replies_to<get_state_msg>::with<string>> sub_et = et;
   // $:: is the anonymous namespace
   set<string> iface{"caf::replies_to<$::get_state_msg>::with<@str>",
-            "caf::replies_to<@str>::with<void>",
-            "caf::replies_to<float>::with<void>",
-            "caf::replies_to<@i32>::with<@i32>"};
-  CAF_CHECK_EQUAL(join(sub_et->interface(), ","), join(iface, ","));
+                    "caf::replies_to<@str>::with<void>",
+                    "caf::replies_to<float>::with<void>",
+                    "caf::replies_to<@i32>::with<@i32>"};
+  CAF_CHECK_EQUAL(join(sub_et->message_types(), ","), join(iface, ","));
   self->send(sub_et, get_state_msg{});
   // we expect three 42s
   int i = 0;
@@ -224,10 +224,11 @@ string_actor::behavior_type simple_string_reverter() {
 void test_simple_string_reverter() {
   scoped_actor self;
   // actor-under-test
-  auto aut = self->spawn_typed<monitored>(
-    simple_relay, spawn_typed(simple_string_reverter), true);
+  auto aut = self->spawn_typed<monitored>(simple_relay,
+                                          spawn_typed(simple_string_reverter),
+                                          true);
   set<string> iface{"caf::replies_to<@str>::with<@str>"};
-  CAF_CHECK(aut->interface() == iface);
+  CAF_CHECK(aut->message_types() == iface);
   self->sync_send(aut, "Hello World!").await([](const string& answer) {
     CAF_CHECK_EQUAL(answer, "!dlroW olleH");
   });

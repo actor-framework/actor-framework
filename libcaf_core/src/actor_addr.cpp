@@ -66,8 +66,8 @@ bool actor_addr::is_remote() const {
   return m_ptr ? m_ptr->is_remote() : false;
 }
 
-std::set<std::string> actor_addr::interface() const {
-  return !m_ptr ? std::set<std::string>{} : m_ptr->interface();
+std::set<std::string> actor_addr::message_types() const {
+  return !m_ptr ? std::set<std::string>{} : m_ptr->message_types();
 }
 
 } // namespace caf

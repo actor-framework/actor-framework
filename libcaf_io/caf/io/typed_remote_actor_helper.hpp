@@ -40,7 +40,7 @@ struct typed_remote_actor_helper<detail::type_list<Ts...>> {
   using return_type = typed_actor<Ts...>;
   template <class... Vs>
   return_type operator()(Vs&&... vs) {
-    auto iface = return_type::get_interface();
+    auto iface = return_type::get_message_types();
     auto tmp = remote_actor_impl(std::forward<Vs>(vs)..., std::move(iface));
     return actor_cast<return_type>(tmp);
   }

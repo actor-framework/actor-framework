@@ -552,7 +552,7 @@ void basp_broker::init_handshake_as_sever(connection_context& ctx,
   { // lifetime scope of first serializer
     binary_serializer bs1(std::back_inserter(buf), &m_namespace);
     bs1 << addr.id();
-    auto sigs = addr.interface();
+    auto sigs = addr.message_types();
     bs1 << static_cast<uint32_t>(sigs.size());
     for (auto& sig : sigs)
       bs1 << sig;

@@ -7,6 +7,13 @@
  * - ./build/bin/broker -c localhost 4242                                     *
 \ ******************************************************************************/
 
+#ifdef WIN32
+# define _WIN32_WINNT 0x0600
+# include <Winsock2.h>
+#else
+# include <arpa/inet.h> // htonl
+#endif
+
 #include <vector>
 #include <string>
 #include <limits>
@@ -14,12 +21,6 @@
 #include <cstdint>
 #include <cassert>
 #include <iostream>
-
-#ifdef WIN32
-#include <Winsock2.h>
-#else
-#include <arpa/inet.h> // htonl
-#endif
 
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"

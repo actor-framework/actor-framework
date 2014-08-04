@@ -56,46 +56,23 @@
 
 // poll vs epoll backend
 #if !defined(CAF_LINUX) || defined(CAF_POLL_IMPL) // poll() multiplexer
-#   define CAF_POLL_MULTIPLEXER
-#   ifndef CAF_WINDOWS
-#     include <poll.h>
-#   endif // CAF_WINDOWS
-#   ifndef POLLRDHUP
-#     define POLLRDHUP POLLHUP
-#   endif
-  namespace caf {
-  namespace io {
-  namespace network {
-    constexpr short input_mask  = POLLIN | POLLPRI;
-    constexpr short error_mask  = POLLRDHUP | POLLERR | POLLHUP | POLLNVAL;
-    constexpr short output_mask = POLLOUT;
-    class event_handler;
-    using multiplexer_data = pollfd;
-    using multiplexer_poll_shadow_data = std::vector<event_handler*>;
-  } // namespace network
-  } // namespace io
-  } // namespace caf
+# define CAF_POLL_MULTIPLEXER
+# ifndef CAF_WINDOWS
+#   include <poll.h>
+# endif // CAF_WINDOWS
+# ifndef POLLRDHUP
+#   define POLLRDHUP POLLHUP
+# endif
 #else
-#   define CAF_EPOLL_MULTIPLEXER
-#   include <sys/epoll.h>
-  namespace caf {
-  namespace io {
-  namespace network {
-    constexpr int input_mask  = EPOLLIN;
-    constexpr int error_mask  = EPOLLRDHUP | EPOLLERR | EPOLLHUP;
-    constexpr int output_mask = EPOLLOUT;
-    using multiplexer_data = epoll_event;
-    using multiplexer_poll_shadow_data = int;
-  } // namespace network
-  } // namespace io
-  } // namespace caf
+# define CAF_EPOLL_MULTIPLEXER
+# include <sys/epoll.h>
 #endif
 
 namespace caf {
 namespace io {
 namespace network {
 
-// some more annoying platform-dependent bootstrapping
+// annoying platform-dependent bootstrapping
 #ifdef CAF_WINDOWS
   using native_socket_t = SOCKET;
   using setsockopt_ptr = const char*;
@@ -122,6 +99,23 @@ namespace network {
   }
   constexpr int ec_out_of_memory = ENOMEM;
   constexpr int ec_interrupted_syscall = EINTR;
+#endif
+
+// poll vs epoll backend
+#if !defined(CAF_LINUX) || defined(CAF_POLL_IMPL) // poll() multiplexer
+  constexpr short input_mask  = POLLIN | POLLPRI;
+  constexpr short error_mask  = POLLRDHUP | POLLERR | POLLHUP | POLLNVAL;
+  constexpr short output_mask = POLLOUT;
+  class event_handler;
+  using multiplexer_data = pollfd;
+  using multiplexer_poll_shadow_data = std::vector<event_handler*>;
+#else
+# define CAF_EPOLL_MULTIPLEXER
+  constexpr int input_mask  = EPOLLIN;
+  constexpr int error_mask  = EPOLLRDHUP | EPOLLERR | EPOLLHUP;
+  constexpr int output_mask = EPOLLOUT;
+  using multiplexer_data = epoll_event;
+  using multiplexer_poll_shadow_data = native_socket_t;
 #endif
 
 /**
@@ -314,6 +308,9 @@ class multiplexer {
   void run();
 
  private:
+
+  // platform-dependent additional initialization code
+  void init();
 
   template <class F>
   void new_event(F fun, operation op, native_socket fd, event_handler* ptr) {

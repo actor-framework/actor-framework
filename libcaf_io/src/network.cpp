@@ -166,7 +166,7 @@ namespace network {
     a.inaddr.sin_port = 0;
     bool success = false;
     // makes sure all sockets are closed in case of an error
-    auto guard = util::make_scope_guard([&] {
+    auto guard = detail::make_scope_guard([&] {
       if (success) {
         return; // everyhting's fine
       }
@@ -219,6 +219,7 @@ namespace network {
   // registered to epoll.
 
   multiplexer::multiplexer() : m_epollfd(invalid_socket), m_shadow(1) {
+    init();
     m_epollfd = epoll_create1(EPOLL_CLOEXEC);
     if (m_epollfd == -1) {
       CAF_LOG_ERROR("epoll_create1: " << strerror(errno));
@@ -333,6 +334,7 @@ namespace network {
   // i.e., O(1), access the actual object when handling socket events.
 
   multiplexer::multiplexer() : m_epollfd(-1) {
+    init();
     // initial setup
     m_pipe = create_pipe();
     pollfd pipefd;
@@ -345,16 +347,16 @@ namespace network {
 
   void multiplexer::run() {
     CAF_LOG_TRACE("poll()-based multiplexer; " << CAF_ARG(input_mask)
-             << ", " << CAF_ARG(output_mask)
-             << ", " << CAF_ARG(error_mask));
+                  << ", " << CAF_ARG(output_mask)
+                  << ", " << CAF_ARG(error_mask));
     // we store the results of poll() in a separate vector , because
     // altering the pollset while traversing it is not exactly a
     // bright idea ...
     struct fd_event {
-      int           fd;    // our file descriptor
-      short          mask;  // the event mask returned by poll()
-      short          fd_mask; // the mask associated with fd
-      event_handler* ptr;   // nullptr in case of a pipe event
+      native_socket_t fd;      // our file descriptor
+      short           mask;    // the event mask returned by poll()
+      short           fd_mask; // the mask associated with fd
+      event_handler*  ptr;     // nullptr in case of a pipe event
     };
     std::vector<fd_event> poll_res;
     while (!m_pollset.empty()) {
@@ -366,7 +368,7 @@ namespace network {
                          static_cast<nfds_t>(m_pollset.size()), -1);
 #     endif
       CAF_LOG_DEBUG("poll() on " << m_pollset.size()
-               << " reported " << presult << " event(s)");
+                    << " reported " << presult << " event(s)");
       if (presult < 0) {
         switch (last_socket_error()) {
           case EINTR: {
@@ -393,9 +395,8 @@ namespace network {
         auto& pfd = m_pollset[i];
         if (pfd.revents != 0) {
           CAF_LOG_DEBUG("event on socket " << pfd.fd
-                   << ", revents = " << pfd.revents);
-          poll_res.push_back({pfd.fd, pfd.revents,
-                    pfd.events, m_shadow[i]});
+                        << ", revents = " << pfd.revents);
+          poll_res.push_back({pfd.fd, pfd.revents, pfd.events, m_shadow[i]});
           pfd.revents = 0;
           --presult; // stop as early as possible
         }
@@ -534,7 +535,8 @@ void multiplexer::wr_dispatch_request(runnable* ptr) {
   intptr_t ptrval = reinterpret_cast<intptr_t>(ptr);
   // on windows, we actually have sockets, otherwise we have file handles
 # ifdef CAF_WINDOWS
-    ::send(m_pipe.second, &ptrval, sizeof(ptrval), 0);
+    ::send(m_pipe.second, reinterpret_cast<socket_send_ptr>(&ptrval),
+           sizeof(ptrval), 0);
 # else
     ::write(m_pipe.second, &ptrval, sizeof(ptrval));
 # endif
@@ -544,7 +546,8 @@ multiplexer::runnable* multiplexer::rd_dispatch_request() {
   intptr_t ptrval;
   // on windows, we actually have sockets, otherwise we have file handles
 # ifdef CAF_WINDOWS
-    ::recv(m_pipe.first, &ptrval, sizeof(ptrval), 0);
+    ::recv(m_pipe.first, reinterpret_cast<socket_recv_ptr>(&ptrval),
+           sizeof(ptrval), 0);
 # else
     ::read(m_pipe.first, &ptrval, sizeof(ptrval));
 # endif
@@ -604,8 +607,20 @@ void multiplexer::handle_socket_event(native_socket fd, int mask,
   }
 }
 
+void multiplexer::init() {
+# ifdef CAF_WINDOWS
+    WSADATA WinsockData;
+    if (WSAStartup(MAKEWORD(2, 2), &WinsockData) != 0) {
+        CAF_CRITICAL("WSAStartup failed");
+    }
+# endif
+}
+
 multiplexer::~multiplexer() {
-  if (m_epollfd != -1) {
+# ifdef CAF_WINDOWS
+    WSACleanup();
+# endif
+  if (m_epollfd != invalid_socket) {
     closesocket(m_epollfd);
   }
   closesocket(m_pipe.first);

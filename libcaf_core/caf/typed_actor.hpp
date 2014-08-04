@@ -130,7 +130,7 @@ class typed_actor
     return m_ptr ? 1 : 0;
   }
 
-  static std::set<std::string> get_interface() {
+  static std::set<std::string> get_message_types() {
     return {detail::to_uniform_name<Rs>()...};
   }
 

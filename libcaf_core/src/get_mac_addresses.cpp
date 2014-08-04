@@ -172,7 +172,7 @@ std::vector<std::string> get_mac_addresses() {
 #include <iphlpapi.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "caf/singletons.hpp"
+#include "caf/detail/singletons.hpp"
 
 namespace {
 

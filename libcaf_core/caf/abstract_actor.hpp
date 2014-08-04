@@ -168,10 +168,10 @@ class abstract_actor : public abstract_channel {
   }
 
   /**
-   * Returns the type interface as set of strings or an empty set
-   * if this actor is untyped.
+   * Returns the set of accepted messages types as strings or
+   * an empty set if this actor is untyped.
    */
-  virtual std::set<std::string> interface() const;
+  virtual std::set<std::string> message_types() const;
 
  protected:
   /**
