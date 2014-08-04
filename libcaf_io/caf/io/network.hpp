@@ -59,9 +59,12 @@
 # define CAF_POLL_MULTIPLEXER
 # ifndef CAF_WINDOWS
 #   include <poll.h>
-# endif // CAF_WINDOWS
+# endif
 # ifndef POLLRDHUP
 #   define POLLRDHUP POLLHUP
+# endif
+# ifndef POLLPRI
+#   define POLLPRI POLLIN
 # endif
 #else
 # define CAF_EPOLL_MULTIPLEXER
