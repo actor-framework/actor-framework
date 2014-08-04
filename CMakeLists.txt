@@ -108,7 +108,7 @@ else()
     message(STATUS "NOTE: Automatically added -stdlib=libc++ flag, "
                    "you can override this by defining CMAKE_CXX_FLAGS "
                    "(see 'configure --help')")
-    set(CMAKE_CXX_FLAGS "-std=c++11 -stdlib=libc++")
+    set(CMAKE_CXX_FLAGS "-std=c++11 -stdlib=libc++ -fPIC")
     if(MORE_CLANG_WARNINGS)
       set(CMAKE_CXX_FLAGS "-pedantic -Weverything -Wno-c++98-compat "
                           "-Wno-padded -Wno-documentation-unknown-command "
@@ -118,7 +118,7 @@ else()
                           "-Wno-unused-const-variable")
     endif()
   else()
-    set(CMAKE_CXX_FLAGS "-std=c++11 -Wextra -Wall -pedantic")
+    set(CMAKE_CXX_FLAGS "-std=c++11 -Wextra -Wall -pedantic  -fPIC")
   endif()
   set(CMAKE_CXX_FLAGS_DEBUG          "-O0 -g")
   set(CMAKE_CXX_FLAGS_MINSIZEREL     "-Os")
