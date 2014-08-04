@@ -35,12 +35,12 @@ namespace io {
 template <class List>
 struct typed_remote_actor_helper;
 
-template <class... Ts>
-struct typed_remote_actor_helper<detail::type_list<Ts...>> {
+template <template <class...> class List, class... Ts>
+struct typed_remote_actor_helper<List<Ts...>> {
   using return_type = typed_actor<Ts...>;
   template <class... Vs>
   return_type operator()(Vs&&... vs) {
-    auto iface = return_type::get_message_types();
+    auto iface = return_type::message_types();
     auto tmp = remote_actor_impl(std::forward<Vs>(vs)..., std::move(iface));
     return actor_cast<return_type>(tmp);
   }

@@ -143,8 +143,8 @@ std::string get_root_uuid() {
   };
   // iterate through interfaces.
   auto ifr = ifc.ifc_req;
-  size_t num_interfaces = ifc.ifc_len / sizeof(ifreq);
-  for (size_t i = 0; i < num_interfaces; i++) {
+  size_t num_ifs = ifc.ifc_len / sizeof(ifreq);
+  for (size_t i = 0; i < num_ifs; i++) {
     auto& item = ifr[i];
     // get MAC address
     if (ioctl(sck, SIOCGIFHWADDR, &item) < 0) {
