@@ -25,7 +25,7 @@
 #include <algorithm>
 #include <functional>
 
-#include "caf/logging.hpp"
+#include "caf/detail/logging.hpp"
 #include "caf/opencl/global.hpp"
 #include "caf/abstract_actor.hpp"
 #include "caf/response_promise.hpp"
@@ -41,7 +41,7 @@ class command : public ref_counted {
  public:
   command(response_promise handle, intrusive_ptr<T> actor_facade,
           std::vector<cl_event> events, std::vector<mem_ptr> arguments,
-          size_t result_size, any_tuple msg)
+          size_t result_size, message msg)
       : m_result_size(result_size),
         m_handle(handle),
         m_actor_facade(actor_facade),
@@ -122,7 +122,7 @@ class command : public ref_counted {
   std::vector<cl_event> m_events;
   std::vector<mem_ptr> m_arguments;
   R m_result;
-  any_tuple m_msg; // required to keep the argument buffers alive (async copy)
+  message m_msg; // required to keep the argument buffers alive (async copy)
 
   void handle_results() {
     m_handle.deliver(m_actor_facade->m_map_result(m_result));

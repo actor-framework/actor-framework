@@ -24,6 +24,13 @@ using namespace std;
 namespace caf {
 namespace opencl {
 
+opencl_metainfo* opencl_metainfo::instance() {
+  auto sid = detail::singletons::opencl_plugin_id;
+  auto fac = [] { return new opencl_metainfo; };
+  auto res = detail::singletons::get_plugin_singleton(sid, fac);
+  return static_cast<opencl_metainfo*>(res);
+}
+
 const std::vector<device_info> opencl_metainfo::get_devices() const {
   return m_devices;
 }
@@ -164,13 +171,8 @@ void opencl_metainfo::initialize() {
   }
 }
 
-void opencl_metainfo::destroy() { delete this; }
-
 void opencl_metainfo::dispose() { delete this; }
 
-opencl_metainfo* get_opencl_metainfo() {
-  return detail::singleton_manager::get_opencl_metainfo();
-}
 
 } // namespace opencl
 } // namespace caf

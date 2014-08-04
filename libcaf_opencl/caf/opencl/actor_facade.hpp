@@ -29,7 +29,7 @@
 
 #include "caf/channel.hpp"
 #include "caf/to_string.hpp"
-#include "caf/tuple_cast.hpp"
+#include "cppa/tuple_cast.hpp"
 #include "caf/intrusive_ptr.hpp"
 
 #include "caf/detail/int_list.hpp"
@@ -58,8 +58,8 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
   using args_tuple =
     cow_tuple<typename detail::rm_const_and_ref<Args>::type...>;
 
-  using arg_mapping = std::function<optional<args_tuple>(any_tuple)>;
-  using result_mapping = std::function<any_tuple(Ret&)>;
+  using arg_mapping = std::function<optional<args_tuple>(message)>;
+  using result_mapping = std::function<message(Ret&)>;
 
   static intrusive_ptr<actor_facade>
   create(const program& prog, const char* kernel_name, arg_mapping map_args,
@@ -100,10 +100,11 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
       local_dims, std::move(map_args), std::move(map_result), result_size};
   }
 
-  void enqueue(msg_hdr_cref hdr, any_tuple msg, execution_unit*) override {
+  void enqueue(const actor_addr &sender, message_id mid, message content,
+               execution_unit *host) override {
     CAF_LOG_TRACE("");
     typename detail::il_indices<detail::type_list<Args...>>::type indices;
-    enqueue_impl(hdr.sender, std::move(msg), hdr.id, indices);
+    enqueue_impl(sender, mid, std::move(content), indices);
   }
 
  private:
@@ -128,16 +129,16 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
   }
 
   template <long... Is>
-  void enqueue_impl(const actor_addr& sender, any_tuple msg, message_id id,
+  void enqueue_impl(const actor_addr& sender, message_id mid, message msg,
                     detail::int_list<Is...>) {
     auto opt = m_map_args(std::move(msg));
     if (opt) {
-      response_promise handle{this->address(), sender, id.response_id()};
+      response_promise handle{this->address(), sender, mid.response_id()};
       evnt_vec events;
       args_vec arguments;
       add_arguments_to_kernel<Ret>(events, arguments, m_result_size,
                                    get_ref<Is>(*opt)...);
-      auto cmd = make_counted<command<actor_facade, Ret>>(
+      auto cmd = detail::make_counted<command<actor_facade, Ret>>(
         handle, this, std::move(events), std::move(arguments), m_result_size,
         *opt);
       cmd->enqueue();

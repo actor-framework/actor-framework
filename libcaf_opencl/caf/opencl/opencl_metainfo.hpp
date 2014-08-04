@@ -33,35 +33,37 @@
 #include "caf/opencl/device_info.hpp"
 #include "caf/opencl/actor_facade.hpp"
 
-#include "caf/detail/singleton_mixin.hpp"
-#include "caf/detail/singleton_manager.hpp"
+//#include "caf/detail/singleton_mixin.hpp"
+//#include "caf/detail/singleton_manager.hpp"
+#include "caf/detail/singletons.hpp"
 
 namespace caf {
 namespace opencl {
 
-class opencl_metainfo {
+class opencl_metainfo : public detail::abstract_singleton {
 
   friend class program;
-  friend class detail::singleton_manager;
+  friend class detail::singletons;
   friend command_queue_ptr get_command_queue(uint32_t id);
 
  public:
   const std::vector<device_info> get_devices() const;
 
- private:
-  static inline opencl_metainfo* create_singleton() {
-    return new opencl_metainfo;
-  }
+  /**
+   * Get opencl_metainfo instance.
+   */
+  static opencl_metainfo* instance();
 
-  void initialize();
-  void dispose();
-  void destroy();
+ private:
+  opencl_metainfo();
+
+  void stop();
+  void initialize() override;
+  void dispose() override;
 
   context_ptr m_context;
   std::vector<device_info> m_devices;
 };
-
-opencl_metainfo* get_opencl_metainfo();
 
 } // namespace opencl
 } // namespace caf

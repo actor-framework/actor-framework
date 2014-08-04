@@ -74,20 +74,20 @@ struct cl_spawn_helper<R(Ts...), void> {
                    Us&&... args) const {
     using std::move;
     using std::forward;
-    map_arg_fun f0 = [](any_tuple msg) {
+    map_arg_fun f0 = [](message msg) {
       return tuple_cast<typename util::rm_const_and_ref<
         typename carr_to_vec<Ts>::type>::type...>(msg);
     };
     map_res_fun f1 = [](result_type& result) {
-      return make_any_tuple(move(result));
+      return make_message(move(result));
     };
     return impl::create(p, fname, move(f0), move(f1), forward<Us>(args)...);
   }
 };
 
 template <typename R, typename... Ts>
-struct cl_spawn_helper<std::function<optional<cow_tuple<Ts...>>(any_tuple)>,
-                       std::function<any_tuple(R&)>>
+struct cl_spawn_helper<std::function<optional<cow_tuple<Ts...>>(message)>,
+                       std::function<message(R&)>>
   : cl_spawn_helper<R(Ts...)> {};
 
 } // namespace detail

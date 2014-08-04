@@ -22,7 +22,7 @@
 #include <cstring>
 #include <iostream>
 
-#include "caf/singletons.hpp"
+#include "caf/detail/singletons.hpp"
 #include "caf/opencl/program.hpp"
 #include "caf/opencl/opencl_metainfo.hpp"
 
@@ -39,9 +39,9 @@ program::program(context_ptr context, command_queue_ptr queue,
 
 program program::create(const char* kernel_source, const char* options,
                         uint32_t device_id) {
-  auto metainfo = get_opencl_metainfo();
-  auto devices = metainfo->get_devices();
-  auto context = metainfo->m_context;
+  auto metainfo = opencl_metainfo::instance();
+  auto devices  = metainfo->get_devices();
+  auto context  = metainfo->m_context;
 
   if (devices.size() <= device_id) {
     ostringstream oss;
