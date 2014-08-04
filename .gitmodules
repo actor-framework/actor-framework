@@ -13,3 +13,6 @@
 [submodule "shell"]
 	path = shell
 	url = https://github.com/actor-framework/shell
+[submodule "opencl"]
+	path = libcaf_opencl
+	url = https://github.com/actor-framework/opencl.git

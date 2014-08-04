@@ -47,6 +47,7 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --no-protobuf-examples      build without Google Protobuf examples
     --no-curl-examples          build without libcurl examples
     --no-unit-tests             build without unit tests
+    --no-opencl                 build without opencl
 
   Debugging:
     --with-runtime-checks       build with requirement checks at runtime
@@ -265,6 +266,9 @@ while [ $# -ne 0 ]; do
             ;;
         --no-unit-tests)
             append_cache_entry CAF_NO_UNIT_TESTS STRING yes
+            ;;
+        --no-opencl)
+            append_cache_entry CAF_NO_OPENCL STRING yes
             ;;
         --build-static)
             append_cache_entry CAF_BUILD_STATIC STRING yes

@@ -179,6 +179,12 @@ install(DIRECTORY libcaf_core/cppa/
 # install includes from io
 install(DIRECTORY libcaf_io/caf/ DESTINATION include/caf
         FILES_MATCHING PATTERN "*.hpp")
+# install includes from opencl
+if(EXISTS ${CMAKE_SOURCE_DOR}/libcaf_opencl/caf)
+  install(DIRECTORY libcaf_opencl/caf/ DESTINATION include/caf
+        FILES_MATCHING PATTERN "*.hpp")
+endif()
+
 # process cmake_uninstall.cmake.in
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in"
                "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
@@ -197,6 +203,12 @@ add_custom_target(uninstall
 set(LIBCAF_INCLUDE_DIRS
     ${CMAKE_SOURCE_DIR}/libcaf_core
     ${CMAKE_SOURCE_DIR}/libcaf_io)
+# path to caf opencl headers
+if(EXISTS ${CMAKE_SOURCE_DOR}/libcaf_opencl/caf)
+  set(LIBCAF_INCLUDE_DIRS ${LIBCAF_INCLUDE_DIRS}
+                          ${CMAKE_SOURCE_DIR}/libcaf_opencl)
+endif()
+
 # path to probe-event headers (if submodule is loaded)
 if(EXISTS "${CMAKE_SOURCE_DIR}/probe-event/caf")
   set(LIBCAF_INCLUDE_DIRS
@@ -224,6 +236,11 @@ message(STATUS "Enter subdirectory libcaf_io")
 add_subdirectory(libcaf_io)
 # set io lib for sub directories
 set(LIBCAF_IO_LIBRARY libcaf_io)
+# set opencl lib for sub directories if not told otherwise
+if(NOT CAF_NO_OPENCL AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/caf")
+  message(STATUS "Enter subdirectory libcaf_opencl")
+  add_subdirectory(libcaf_opencl)
+endif()
 # tell CMake caf_io depends on caf_core
 if(CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
   add_dependencies(libcaf_ioStatic libcaf_coreStatic)
@@ -356,6 +373,7 @@ invertYesNo(CAF_NO_PROBE CAF_BUILD_PROBE)
 invertYesNo(CAF_NO_SHELL CAF_BUILD_SHELL)
 invertYesNo(CAF_NO_MEM_MANAGEMENT CAF_BUILD_MEM_MANAGEMENT)
 invertYesNo(CAF_NO_BENCHMARKS CAF_BUILD_BENCHMARKS)
+invertYesNo(CAF_NO_OPENCL CAF_BUILD_OPENCL)
 # collect all compiler flags
 string(TOUPPER ${CMAKE_BUILD_TYPE} UPPER_BUILD_TYPE)
 set(ALL_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${UPPER_BUILD_TYPE}}")
@@ -378,6 +396,7 @@ message(STATUS
         "\nBuild shell:       ${CAF_BUILD_SHELL}"
         "\nBuild probe:       ${CAF_BUILD_PROBE}"
         "\nBuild benchmarks:  ${CAF_BUILD_BENCHMARKS}"
+        "\nBuild opencl:      ${CAF_BUILD_OPENCL}"
         "\n"
         "\nCXX:               ${CMAKE_CXX_COMPILER}"
         "\nCXXFLAGS:          ${ALL_CXX_FLAGS}"
