@@ -106,7 +106,13 @@ namespace network {
 
 // poll vs epoll backend
 #if !defined(CAF_LINUX) || defined(CAF_POLL_IMPL) // poll() multiplexer
-  constexpr short input_mask  = POLLIN | POLLPRI;
+# ifdef CAF_WINDOWS
+    // From the MSDN: If the POLLPRI flag is set on a socket for the Microsoft
+    //                Winsock provider, the WSAPoll function will fail.
+    constexpr short input_mask  = POLLIN;
+# else
+    constexpr short input_mask  = POLLIN | POLLPRI;
+# endif
   constexpr short error_mask  = POLLRDHUP | POLLERR | POLLHUP | POLLNVAL;
   constexpr short output_mask = POLLOUT;
   class event_handler;
