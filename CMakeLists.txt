@@ -310,6 +310,13 @@ if(NOT CAF_NO_PROBE AND EXISTS "${CMAKE_SOURCE_DIR}/probe/caf/")
     set(CAF_NO_PROBE no)
   endif()
 endif()
+# add probe-event if not told otherwise
+if(NOT CAF_NO_PROBE_EVENT AND EXISTS "${CMAKE_SOURCE_DIR}/probe-event/caf/")
+  message(STATUS "Enter subdirectory probe-event")
+  add_subdirectory(probe-event)
+  set(CAF_NO_PROBE_EVENT no) 
+endif()
+
 # build benchmarks if not being told otherwise
 if(NOT CAF_NO_BENCHMARKS AND EXISTS "${CMAKE_SOURCE_DIR}/benchmarks/caf/")
   message(STATUS "Enter subdirectory benchmarks")
