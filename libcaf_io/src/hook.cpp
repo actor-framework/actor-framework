@@ -41,7 +41,7 @@ void hook::message_sent_cb(const actor_addr& from, const node_id& dest_node,
 }
 
 void hook::message_forwarded_cb(const node_id& from, const node_id& dest,
-                                std::vector<char>* payload) {
+                                const std::vector<char>* payload) {
   call_next<message_forwarded>(from, dest, payload);
 }
 
@@ -53,7 +53,7 @@ void hook::message_sending_failed_cb(const actor_addr& from,
 }
 
 void hook::message_forwarding_failed_cb(const node_id& from, const node_id& to,
-                                        std::vector<char>* payload) {
+                                        const std::vector<char>* payload) {
   call_next<message_forwarding_failed>(from, to, payload);
 }
 

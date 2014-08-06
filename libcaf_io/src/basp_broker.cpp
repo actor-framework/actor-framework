@@ -261,9 +261,10 @@ basp_broker::handle_basp_header(connection_context& ctx,
   if (hdr.dest_node != invalid_node_id && hdr.dest_node != node()) {
     auto route = get_route(hdr.dest_node);
     if (route.invalid()) {
-      // TODO: signalize that we don't have route to given node
       CAF_LOG_INFO("message dropped: no route to node "
-             << to_string(hdr.dest_node));
+                   << to_string(hdr.dest_node));
+      parent().notify<hook::message_forwarding_failed>(hdr.source_node,
+                                                       hdr.dest_node, payload);
       return close_connection;
     }
     auto& buf = wr_buf(route.hdl);
@@ -271,6 +272,8 @@ basp_broker::handle_basp_header(connection_context& ctx,
     write(bs, hdr);
     if (payload) buf.insert(buf.end(), payload->begin(), payload->end());
     flush(route.hdl);
+    parent().notify<hook::message_forwarded>(hdr.source_node,
+                                             hdr.dest_node, payload);
     return await_header;
   }
   // handle a message that is addressed to us
@@ -334,6 +337,7 @@ basp_broker::handle_basp_header(connection_context& ctx,
         CAF_LOG_INFO("multiple incoming connections from the same node");
         return close_connection;
       }
+      parent().notify<hook::new_connection_established>(ctx.remote_id );
       break;
     }
     case basp::server_handshake: {
@@ -427,6 +431,7 @@ basp_broker::handle_basp_header(connection_context& ctx,
       ctx.published_actor = proxy;
       ctx.handshake_data->result->set_value(std::move(proxy));
       ctx.handshake_data = nullptr;
+      parent().notify<hook::new_connection_established>(nid);
       break;
     }
   }
@@ -516,6 +521,7 @@ void basp_broker::erase_proxy(const id_type& nid, actor_id aid) {
 
 void basp_broker::add_route(const id_type& nid, connection_handle hdl) {
   if (m_blacklist.count(std::make_pair(nid, hdl)) == 0) {
+    parent().notify<hook::new_route_added>(m_current_context->remote_id, nid);
     m_routes[nid].second.insert({hdl, nid});
   }
 }
