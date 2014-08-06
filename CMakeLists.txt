@@ -108,7 +108,7 @@ else()
     message(STATUS "NOTE: Automatically added -stdlib=libc++ flag, "
                    "you can override this by defining CMAKE_CXX_FLAGS "
                    "(see 'configure --help')")
-    set(CMAKE_CXX_FLAGS "-std=c++11 -stdlib=libc++")
+    set(CMAKE_CXX_FLAGS "-std=c++11 -stdlib=libc++ -fPIC")
     if(MORE_CLANG_WARNINGS)
       set(CMAKE_CXX_FLAGS "-pedantic -Weverything -Wno-c++98-compat "
                           "-Wno-padded -Wno-documentation-unknown-command "
@@ -118,7 +118,7 @@ else()
                           "-Wno-unused-const-variable")
     endif()
   else()
-    set(CMAKE_CXX_FLAGS "-std=c++11 -Wextra -Wall -pedantic")
+    set(CMAKE_CXX_FLAGS "-std=c++11 -Wextra -Wall -pedantic -fPIC")
   endif()
   set(CMAKE_CXX_FLAGS_DEBUG          "-O0 -g")
   set(CMAKE_CXX_FLAGS_MINSIZEREL     "-Os")
@@ -204,9 +204,9 @@ set(LIBCAF_INCLUDE_DIRS
     ${CMAKE_SOURCE_DIR}/libcaf_core
     ${CMAKE_SOURCE_DIR}/libcaf_io)
 # path to caf opencl headers
-if(EXISTS ${CMAKE_SOURCE_DOR}/libcaf_opencl/caf)
-  set(LIBCAF_INCLUDE_DIRS ${LIBCAF_INCLUDE_DIRS}
-                          ${CMAKE_SOURCE_DIR}/libcaf_opencl)
+if(EXISTS ${CMAKE_SOURCE_DIR}/libcaf_opencl/caf)
+  set(LIBCAF_INCLUDE_DIRS 
+      ${CMAKE_SOURCE_DIR}/libcaf_opencl/ ${LIBCAF_INCLUDE_DIRS})
 endif()
 
 # path to probe-event headers (if submodule is loaded)
@@ -239,7 +239,9 @@ set(LIBCAF_IO_LIBRARY libcaf_io)
 # set opencl lib for sub directories if not told otherwise
 if(NOT CAF_NO_OPENCL AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/caf")
   message(STATUS "Enter subdirectory libcaf_opencl")
+  find_package(OPENCL REQUIRED)
   add_subdirectory(libcaf_opencl)
+  set(LIBCAF_OPENCL_LIBRARY libcaf_opencl)
 endif()
 # tell CMake caf_io depends on caf_core
 if(CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
@@ -249,13 +251,16 @@ if(NOT CAF_BUILD_STATIC_ONLY)
   add_dependencies(libcaf_io libcaf_core)
 endif()
 # set LIBCAF_LIBRARIES for other subprojects
-set(LIBCAF_LIBRARIES ${LIBCAF_CORE_LIBRARY} ${LIBCAF_IO_LIBRARY})
+set(LIBCAF_LIBRARIES ${LIBCAF_CORE_LIBRARY} ${LIBCAF_IO_LIBRARY} ${LIBCAF_OPENCL_LIBRARY})
 # add unit tests if not being told otherwise
 if(NOT CAF_NO_UNIT_TESTS)
   enable_testing()
   message(STATUS "Enter subdirectory unit_testing")
   add_subdirectory(unit_testing)
   add_dependencies(all_unit_tests libcaf_io)
+  if(NOT CAF_NO_OPENCL AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/caf")
+    add_subdirectory(libcaf_opencl/unit_testing)
+  endif()
 endif()
 # build examples if not being told otherwise
 if(NOT CAF_NO_EXAMPLES)
@@ -310,6 +315,13 @@ if(NOT CAF_NO_PROBE AND EXISTS "${CMAKE_SOURCE_DIR}/probe/caf/")
     set(CAF_NO_PROBE no)
   endif()
 endif()
+# add probe-event if not told otherwise
+if(NOT CAF_NO_PROBE_EVENT AND EXISTS "${CMAKE_SOURCE_DIR}/probe-event/caf/")
+  message(STATUS "Enter subdirectory probe-event")
+  add_subdirectory(probe-event)
+  set(CAF_NO_PROBE_EVENT no) 
+endif()
+
 # build benchmarks if not being told otherwise
 if(NOT CAF_NO_BENCHMARKS AND EXISTS "${CMAKE_SOURCE_DIR}/benchmarks/caf/")
   message(STATUS "Enter subdirectory benchmarks")

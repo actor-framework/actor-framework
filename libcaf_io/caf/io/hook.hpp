@@ -84,14 +84,14 @@ class hook {
    * Called whenever a message is forwarded to a different node.
    */
   virtual void message_forwarded_cb(const node_id& from, const node_id& dest,
-                                    std::vector<char>* payload);
+                                    const std::vector<char>* payload);
 
   /**
    * Called whenever no route for a forwarding request exists.
    */
   virtual void message_forwarding_failed_cb(const node_id& from,
                                             const node_id& to,
-                                            std::vector<char>* payload);
+                                            const std::vector<char>* payload);
 
   /**
    * Called whenever an actor has been published.

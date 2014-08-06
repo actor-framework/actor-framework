@@ -32,26 +32,26 @@ namespace caf {
 namespace io {
 
 template <class ActorHandle, class SocketAcceptor>
-void publish_impl(ActorHandle whom, SocketAcceptor fd) {
+void publish_impl(ActorHandle whom, SocketAcceptor fd, uint16_t port) {
   using namespace detail;
   auto mm = middleman::instance();
   // we can't move fd into our lambda in C++11 ...
   using pair_type = std::pair<ActorHandle, SocketAcceptor>;
-  auto data = std::make_shared<pair_type>(std::move(whom), std::move(fd));
-  mm->run_later([mm, data] {
+  auto data = std::make_shared<pair_type>(whom, std::move(fd));
+  mm->run_later([mm, data, whom, port] {
     auto bro = mm->get_named_broker<basp_broker>(atom("_BASP"));
     bro->publish(std::move(data->first), std::move(data->second));
+    mm->notify<hook::actor_published>(whom->address(), port);
   });
 }
 
 inline void publish_impl(abstract_actor_ptr whom, uint16_t port,
-             const char* ipaddr) {
+                         const char* ipaddr) {
   using namespace detail;
   auto mm = middleman::instance();
-  auto addr = whom->address();
   network::default_socket_acceptor fd{mm->backend()};
   network::ipv4_bind(fd, port, ipaddr);
-  publish_impl(std::move(whom), std::move(fd));
+  publish_impl(std::move(whom), std::move(fd), port);
 }
 
 } // namespace io
