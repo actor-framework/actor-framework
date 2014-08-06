@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_UNTYPED_ACTOR_HPP
-#define CAF_UNTYPED_ACTOR_HPP
+#ifndef CAF_EVENT_BASED_ACTOR_HPP
+#define CAF_EVENT_BASED_ACTOR_HPP
 
 #include <type_traits>
 
@@ -41,16 +41,19 @@ namespace caf {
  * A cooperatively scheduled, event-based actor implementation.
  * This is the recommended base class for user-defined actors and is used
  * implicitly when spawning functor-based actors without the
- * {@link blocking_api} flag.
- *
+ * `blocking_api` flag.
  * @extends local_actor
  */
 class event_based_actor
-  : public extend<local_actor, event_based_actor>::with<
-      mixin::mailbox_based, mixin::behavior_stack_based<behavior>::impl,
-      mixin::sync_sender<nonblocking_response_handle_tag>::impl> {
-
+    : public extend<local_actor, event_based_actor>::
+             with<mixin::mailbox_based,
+                  mixin::behavior_stack_based<behavior>::impl,
+                  mixin::sync_sender<nonblocking_response_handle_tag>::impl> {
  public:
+  /**
+   * Forwards the last received message to `whom`.
+   */
+  void forward_to(const actor& whom);
 
   event_based_actor();
 
@@ -59,36 +62,24 @@ class event_based_actor
   class functor_based;
 
  protected:
-
   /**
    * Returns the initial actor behavior.
    */
   virtual behavior make_behavior() = 0;
 
-  /**
-   * Forwards the last received message to `whom`.
-   */
-  void forward_to(const actor& whom);
-
   bool m_initialized;
-
 };
 
-class event_based_actor::functor_based
-  : public extend<event_based_actor>::with<mixin::functor_based> {
-
-  using super = combined_type;
-
+class event_based_actor::functor_based : public extend<event_based_actor>::
+                                                with<mixin::functor_based> {
  public:
-
   template <class... Ts>
-  functor_based(Ts&&... vs)
-      : super(std::forward<Ts>(vs)...) {}
-
+  functor_based(Ts&&... vs) : combined_type(std::forward<Ts>(vs)...) {
+    // nop
+  }
   behavior make_behavior() override;
-
 };
 
 } // namespace caf
 
-#endif // CAF_UNTYPED_ACTOR_HPP
+#endif // CAF_EVENT_BASED_ACTOR_HPP
