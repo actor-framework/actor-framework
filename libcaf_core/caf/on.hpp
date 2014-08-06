@@ -336,27 +336,22 @@ template <class T>
 struct to_guard<detail::wrapped<T>, false> : to_guard<anything> {};
 
 template <class T>
-struct is_optional : std::false_type {};
-
-template <class T>
-struct is_optional<optional<T>> : std::true_type {};
-
-template <class T>
 struct to_guard<T, true> {
   using ct = typename detail::get_callable_trait<T>::type;
   using arg_types = typename ct::arg_types;
   static_assert(detail::tl_size<arg_types>::value == 1,
-          "projection/guard must take exactly one argument");
-  static_assert(is_optional<typename ct::result_type>::value,
-          "projection/guard must return an optional value");
+                "projection/guard must take exactly one argument");
+  static_assert(detail::is_optional<typename ct::result_type>::value,
+                "projection/guard must return an optional value");
   using value_type =
     typename std::conditional<
       std::is_function<T>::value,
       T*,
       T
     >::type;
-  static value_type _(value_type val) { return val; }
-
+  static value_type _(value_type val) {
+    return val;
+  }
 };
 
 template <class T>
