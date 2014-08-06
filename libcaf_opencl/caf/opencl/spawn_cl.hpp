@@ -24,9 +24,9 @@
 #include <functional>
 
 #include "caf/optional.hpp"
-#include "caf/cow_tuple.hpp"
+#include "cppa/cow_tuple.hpp"
 
-#include "caf/detail/call.hpp"
+#include "caf/actor_cast.hpp"
 #include "caf/detail/limited_vector.hpp"
 
 #include "caf/opencl/global.hpp"
@@ -66,7 +66,8 @@ struct cl_spawn_helper<R(Ts...), void> {
                    const char* fname, Us&&... args) const {
     using std::move;
     using std::forward;
-    return impl::create(p, fname, move(f0), move(f1), forward<Us>(args)...);
+    return actor_cast<actor>(
+             impl::create(p, fname, move(f0), move(f1), forward<Us>(args)...));
   }
 
   template <typename... Us>
@@ -81,7 +82,8 @@ struct cl_spawn_helper<R(Ts...), void> {
     map_res_fun f1 = [](result_type& result) {
       return make_message(move(result));
     };
-    return impl::create(p, fname, move(f0), move(f1), forward<Us>(args)...);
+    return actor_cast<actor>(
+             impl::create(p, fname, move(f0), move(f1), forward<Us>(args)...));
   }
 };
 
