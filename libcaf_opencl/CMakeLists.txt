@@ -13,8 +13,8 @@ if (OPENCL_LIBRARIES)
        src/program.cpp)
   # build shared library if not compiling static only
   if(NOT "${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes")
-    add_library(libcaf_opencl SHARED ${LIBCAF_OPENCL_SRCS} ${LIBCAF_OPENCL_HDRS})
-    target_link_libraries(libcaf_opencl ${LD_FLAGS} ${LIBCAF_CORE_LIBRARY})
+    add_library(libcaf_opencl SHARED ${LIBCAF_OPENCL_SRCS} ${LIBCAF_OPENCL_HDRS} ${OPENCL_INCLUDE_DIR})
+    target_link_libraries(libcaf_opencl ${LD_FLAGS} ${LIBCAF_CORE_LIBRARY} ${OPENCL_LIBRARIES})
     set(LIBRARY_SOVERSION ${CAF_VERSION_MAJOR})
     set_target_properties(libcaf_opencl
                           PROPERTIES
