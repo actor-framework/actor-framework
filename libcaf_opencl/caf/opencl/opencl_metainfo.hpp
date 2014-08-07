@@ -55,9 +55,9 @@ class opencl_metainfo : public detail::abstract_singleton {
   static opencl_metainfo* instance();
 
  private:
-  opencl_metainfo();
+  opencl_metainfo() = default;
 
-  void stop();
+  void stop() override;
   void initialize() override;
   void dispose() override;
 

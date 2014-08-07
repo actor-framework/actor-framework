@@ -101,7 +101,7 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
   }
 
   void enqueue(const actor_addr &sender, message_id mid, message content,
-               execution_unit *host) override {
+               execution_unit*) override {
     CAF_LOG_TRACE("");
     typename detail::il_indices<detail::type_list<Args...>>::type indices;
     enqueue_impl(sender, mid, std::move(content), indices);

@@ -4,7 +4,7 @@
 #include <iostream>
 #include <algorithm>
 
-#include "../../test.hpp"
+#include "../../unit_testing/test.hpp"
 
 #include "caf/all.hpp"
 #include "caf/opencl/spawn_cl.hpp"
@@ -164,7 +164,7 @@ using matrix_type = square_matrix<matrix_size>;
 
 size_t get_max_workgroup_size(size_t device_id, size_t dimension) {
   size_t max_size = 512;
-  auto devices = get_opencl_metainfo()->get_devices()[device_id];
+  auto devices = opencl_metainfo::instance()->get_devices()[device_id];
   size_t dimsize = devices.get_max_work_items_per_dim()[dimension];
   return max_size < dimsize ? max_size : dimsize;
 }

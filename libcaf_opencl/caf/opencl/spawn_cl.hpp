@@ -23,10 +23,11 @@
 #include <algorithm>
 #include <functional>
 
+#include "caf/actor_cast.hpp"
 #include "caf/optional.hpp"
 #include "cppa/cow_tuple.hpp"
 
-#include "caf/actor_cast.hpp"
+#include "caf/detail/type_traits.hpp"
 #include "caf/detail/limited_vector.hpp"
 
 #include "caf/opencl/global.hpp"
@@ -76,7 +77,7 @@ struct cl_spawn_helper<R(Ts...), void> {
     using std::move;
     using std::forward;
     map_arg_fun f0 = [](message msg) {
-      return tuple_cast<typename util::rm_const_and_ref<
+      return tuple_cast<typename detail::rm_const_and_ref<
         typename carr_to_vec<Ts>::type>::type...>(msg);
     };
     map_res_fun f1 = [](result_type& result) {
@@ -144,8 +145,8 @@ spawn_cl(const opencl::program& prog, const char* fname, MapArgs map_args,
          const opencl::dim_vec& offset = {},
          const opencl::dim_vec& local_dims = {}, size_t result_size = 0) {
   using std::move;
-  using f0 = typename util::get_callable_trait<MapArgs>::fun_type;
-  using f1 = typename util::get_callable_trait<MapResult>::fun_type;
+  using f0 = typename detail::get_callable_trait<MapArgs>::fun_type;
+  using f1 = typename detail::get_callable_trait<MapResult>::fun_type;
   detail::cl_spawn_helper<f0, f1> f;
   return f(f0{move(map_args)}, f1{move(map_result)}, prog, fname, dims, offset,
            local_dims, result_size);
