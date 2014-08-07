@@ -77,11 +77,14 @@ foreach (comp ${Libcaf_FIND_COMPONENTS})
                  ../../actor-framework/build/lib
                  ../../../actor-framework/build/lib)
   mark_as_advanced(LIBCAF_LIBRARY_${UPPERCOMP})
-  if ("${LIBCAF_LIBRARY_${UPPERCOMP}}" STREQUAL "LIBCAF_LIBRARY-NOTFOUND")
-    # exit on first error
-    break ()
-  else ()
-    set(LIBCAF_LIBRARIES ${LIBCAF_LIBRARIES} ${LIBCAF_LIBRARY_${UPPERCOMP}})
+  # skip probe_event as it is header only
+  if (NOT ${comp} STREQUAL "probe_event")
+    if ("${LIBCAF_LIBRARY_${UPPERCOMP}}" STREQUAL "LIBCAF_LIBRARY-NOTFOUND")
+      # exit on first error
+      break ()
+    else ()
+      set(LIBCAF_LIBRARIES ${LIBCAF_LIBRARIES} ${LIBCAF_LIBRARY_${UPPERCOMP}})
+    endif ()
   endif ()
 endforeach ()
 
