@@ -1,3 +1,14 @@
+Version 0.10.2
+--------------
+
+__2014_08_07__
+
+- Improved CMake build script
+- Added workaround for Protobuf example with incomplete installations
+- Resolved several issues when building for MinGW 64
+- Fixed casing issue in FindLibcaf.cmake
+- Fixed access modifier of `event_based_actor::forward_to`
+
 Version 0.10.1
 --------------
 
