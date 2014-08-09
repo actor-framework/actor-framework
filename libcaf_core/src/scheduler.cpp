@@ -253,7 +253,7 @@ abstract_coordinator* abstract_coordinator::create_singleton() {
 void abstract_coordinator::initialize() {
   // launch threads of utility actors
   auto ptr = m_timer.get();
-  m_timer_thread = std::thread{[ptr] { ptr->act(); }};
+  m_timer_thread = std::thread([ptr] { ptr->act(); });
   m_printer_thread = std::thread{printer_loop, m_printer.get()};
 }
 
