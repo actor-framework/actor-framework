@@ -176,7 +176,7 @@ class fork_join {
       f(job);
     }
     m_private_queue.clear();
-    auto next = [&] { return m_exposed_queue.try_pop(); };
+    auto next = [&] { return this->m_exposed_queue.try_pop(); };
     for (auto job = next(); job != nullptr; job = next()) {
       f(job);
     }
