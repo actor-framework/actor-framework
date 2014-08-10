@@ -39,22 +39,26 @@ namespace caf {
 namespace policy {
 
 class event_based_resume {
-
  public:
 
   // Base must be a mailbox-based actor
   template <class Base, class Derived>
   struct mixin : Base, resumable {
-
     template <class... Ts>
-    mixin(Ts&&... args)
-        : Base(std::forward<Ts>(args)...) {}
+    mixin(Ts&&... args) : Base(std::forward<Ts>(args)...) {
+      // nop
+    }
 
-    void attach_to_scheduler() override { this->ref(); }
+    void attach_to_scheduler() override {
+      this->ref();
+    }
 
-    void detach_from_scheduler() override { this->deref(); }
+    void detach_from_scheduler() override {
+      this->deref();
+    }
 
-    resumable::resume_result resume(execution_unit* new_host) override {
+    resumable::resume_result resume(execution_unit* new_host,
+                                    size_t max_throughput) override {
       auto d = static_cast<Derived*>(this);
       d->host(new_host);
       CAF_LOG_TRACE("id = " << d->id());
@@ -78,23 +82,27 @@ class event_based_resume {
 
       };
       auto actor_done = [&] {
-        return d->bhvr_stack().empty() ||
-             d->planned_exit_reason() != exit_reason::not_exited;
-
+        return d->bhvr_stack().empty()
+               || d->planned_exit_reason() != exit_reason::not_exited;
       };
       // actors without behavior or that have already defined
       // an exit reason must not be resumed
       CAF_REQUIRE(!d->m_initialized || !actor_done());
-      if (!d->m_initialized) {
-        d->m_initialized = true;
-        auto bhvr = d->make_behavior();
-        if (bhvr) d->become(std::move(bhvr));
-        // else: make_behavior() might have just called become()
-        if (actor_done() && done_cb()) return resume_result::done;
-        // else: enter resume loop
-      }
       try {
-        for (;;) {
+        if (!d->m_initialized) {
+          d->m_initialized = true;
+          auto bhvr = d->make_behavior();
+          if (bhvr) d->become(std::move(bhvr));
+          // else: make_behavior() might have just called become()
+          if (actor_done() && done_cb()) return resume_result::done;
+          // else: enter resume loop
+        }
+        // max_throughput = 0 means infinite
+        size_t increment = max_throughput == 0 ? 0 : 1;
+        if (max_throughput == 0) {
+          max_throughput = 1;
+        }
+        for (size_t i = 0; i < max_throughput; i += increment) {
           auto ptr = d->next_message();
           if (ptr) {
             if (d->invoke_message(ptr)) {
@@ -121,11 +129,16 @@ class event_based_resume {
           } else {
             CAF_LOG_DEBUG("no more element in mailbox; going to block");
             if (d->mailbox().try_block()) {
-              return resumable::resume_later;
+              return resumable::awaiting_message;
             }
             CAF_LOG_DEBUG("try_block() interrupted by new message");
           }
         }
+        if (!d->has_next_message() && d->mailbox().try_block()) {
+          return resumable::awaiting_message;
+        }
+        // time's up
+        return resumable::resume_later;
       }
       catch (actor_exited& what) {
         CAF_LOG_INFO("actor died because of exception: actor_exited, "
@@ -151,7 +164,6 @@ class event_based_resume {
       done_cb();
       return resumable::done;
     }
-
   };
 
   template <class Actor>
@@ -168,7 +180,6 @@ class event_based_resume {
             "to implement blocking actors");
     return false;
   }
-
 };
 
 } // namespace policy

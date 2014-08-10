@@ -70,7 +70,7 @@ class abstract_worker : public execution_unit {
   /**
    * Starts the thread of this worker.
    */
-  virtual void start(size_t id, abstract_coordinator* parent) = 0;
+  //virtual void start(size_t id, abstract_coordinator* parent) = 0;
 
 };
 
@@ -96,7 +96,7 @@ class abstract_coordinator {
   /**
    * Puts `what` into the queue of a randomly chosen worker.
    */
-  void enqueue(resumable* what);
+  virtual void enqueue(resumable* what) = 0;
 
   template <class Duration, class... Data>
   void delayed_send(Duration rel_time, actor_addr from, channel to,
@@ -142,10 +142,13 @@ class abstract_coordinator {
   std::thread m_printer_thread;
 };
 
+template <class Policy>
+class coordinator;
+
 /**
  * Policy-based implementation of the abstract worker base class.
  */
-template <class StealPolicy, class JobQueuePolicy>
+template <class Policy>
 class worker : public abstract_worker {
  public:
   worker(const worker&) = delete;
@@ -165,20 +168,24 @@ class worker : public abstract_worker {
     if (running(m_this_thread) || running(other.m_this_thread)) {
       throw std::runtime_error("running workers cannot be moved");
     }
-    m_queue_policy = std::move(other.m_queue_policy);
-    m_steal_policy = std::move(other.m_steal_policy);
+    m_policy = std::move(other.m_policy);
+    m_policy = std::move(other.m_policy);
     return *this;
   }
+
+  using coordinator_type = coordinator<Policy>;
 
   using job_ptr = resumable*;
 
   using job_queue = detail::producer_consumer_list<resumable>;
 
+  using policy_data = typename Policy::worker_data;
+
   /**
    * Attempt to steal an element from the exposed job queue.
    */
   job_ptr try_steal() override {
-    auto result = m_queue_policy.try_external_dequeue(this);
+    auto result = m_policy.try_external_dequeue(this);
     CAF_LOG_DEBUG_IF(result, "stole actor with id " << id_of(result));
     return result;
   }
@@ -190,7 +197,7 @@ class worker : public abstract_worker {
   void external_enqueue(job_ptr job) override {
     CAF_REQUIRE(job != nullptr);
     CAF_LOG_TRACE("id = " << id() << " actor id " << id_of(job));
-    m_queue_policy.external_enqueue(this, job);
+    m_policy.external_enqueue(this, job);
   }
 
   /**
@@ -201,43 +208,43 @@ class worker : public abstract_worker {
   void exec_later(job_ptr job) override {
     CAF_REQUIRE(job != nullptr);
     CAF_LOG_TRACE("id = " << id() << " actor id " << id_of(job));
-    m_queue_policy.internal_enqueue(this, job);
+    m_policy.internal_enqueue(this, job);
   }
 
   // go on a raid in quest for a shiny new job
   job_ptr raid() {
-    auto result = m_steal_policy.raid(this);
+    auto result = m_policy.raid(this);
     CAF_LOG_DEBUG_IF(result, "got actor with id " << id_of(result));
     return result;
   }
 
-  inline abstract_coordinator* parent() {
+  coordinator_type* parent() {
     return m_parent;
   }
 
-  inline size_t id() const {
+  size_t id() const {
     return m_id;
   }
 
-  inline std::thread& get_thread() {
+  std::thread& get_thread() {
     return m_this_thread;
   }
 
   void detach_all() {
     CAF_LOG_TRACE("");
-    m_queue_policy.consume_all(this, [](resumable* job) {
+    m_policy.foreach_resumable(this, [](resumable* job) {
       job->detach_from_scheduler();
     });
   }
 
-  void start(size_t id, abstract_coordinator* parent) override {
+  void start(size_t id, coordinator_type* parent, size_t max_throughput) {
+    m_max_throughput = max_throughput;
     m_id = id;
     m_parent = parent;
     auto this_worker = this;
     m_this_thread = std::thread{[this_worker] {
-      CAF_LOGC_TRACE("caf::scheduler::worker",
-              "start$lambda",
-              "id = " << this_worker->id());
+      CAF_LOGC_TRACE("caf::scheduler::worker", "start$lambda",
+                     "id = " << this_worker->id());
       this_worker->run();
     }};
   }
@@ -248,60 +255,80 @@ class worker : public abstract_worker {
     return aptr ? aptr->id() : 0;
   }
 
+  policy_data& data() {
+    return m_data;
+  }
+
+  size_t max_throughput() {
+    return m_max_throughput;
+  }
+
  private:
   void run() {
     CAF_LOG_TRACE("worker with ID " << m_id);
     // scheduling loop
     for (;;) {
-      auto job = m_queue_policy.internal_dequeue(this);
+      auto job = m_policy.internal_dequeue(this);
       CAF_REQUIRE(job != nullptr);
       CAF_LOG_DEBUG("resume actor " << id_of(job));
       CAF_PUSH_AID_FROM_PTR(dynamic_cast<abstract_actor*>(job));
-      switch (job->resume(this)) {
+      switch (job->resume(this, m_max_throughput)) {
+        case resumable::resume_later: {
+          m_policy.resume_job_later(this, job);
+          break;
+        }
         case resumable::done: {
           job->detach_from_scheduler();
           break;
         }
-        case resumable::resume_later: {
+        case resumable::awaiting_message: {
+          // resumable will be enqueued again later
           break;
         }
         case resumable::shutdown_execution_unit: {
-          m_queue_policy.clear_internal_queue(this);
+          m_policy.before_shutdown(this);
           return;
         }
       }
-      m_queue_policy.assert_stealable(this);
+      m_policy.after_resume(this);
     }
   }
-
+  // number of messages each actor is allowed to consume per resume
+  size_t m_max_throughput;
   // the worker's thread
   std::thread m_this_thread;
   // the worker's ID received from scheduler
   size_t m_id;
   // pointer to central coordinator
-  abstract_coordinator* m_parent;
-  // policy managing queues
-  JobQueuePolicy m_queue_policy;
-  // policy managing steal operations
-  StealPolicy m_steal_policy;
+  coordinator_type* m_parent;
+  // policy-specific data
+  policy_data m_data;
+  // instance of our policy object
+  Policy m_policy;
 };
 
 /**
  * Policy-based implementation of the abstract coordinator base class.
  */
-template <class StealPolicy, class JobQueuePolicy>
+template <class Policy>
 class coordinator : public abstract_coordinator {
  public:
   using super = abstract_coordinator;
+
+  using policy_data = typename Policy::coordinator_data;
 
   coordinator(size_t nw = std::thread::hardware_concurrency()) : super(nw) {
     // nop
   }
 
-  using worker_type = worker<StealPolicy, JobQueuePolicy>;
+  using worker_type = worker<Policy>;
 
-  abstract_worker* worker_by_id(size_t id) override {
+  worker_type* worker_by_id(size_t id) override {
     return &m_workers[id];
+  }
+
+  policy_data& data() {
+    return m_data;
   }
 
  protected:
@@ -310,21 +337,40 @@ class coordinator : public abstract_coordinator {
     // create & start workers
     m_workers.resize(num_workers());
     for (size_t i = 0; i < num_workers(); ++i) {
-      m_workers[i].start(i, this);
+      m_workers[i].start(i, this, m_max_throughput);
     }
   }
 
   void stop() override {
+    // perform cleanup code of base classe
     super::stop();
-    // wait until all actors are done
-    for (auto& w : m_workers) w.get_thread().join();
-    // clear all queues
-    for (auto& w : m_workers) w.detach_all();
+    // wait until all workers are done
+    for (auto& w : m_workers) {
+      w.get_thread().join();
+    }
+    // run cleanup code for each resumable
+    auto f = [](resumable* job) {
+      job->detach_from_scheduler();
+    };
+    for (auto& w : m_workers) {
+      m_policy.foreach_resumable(&w, f);
+    }
+    m_policy.foreach_central_resumable(this, f);
+  }
+
+  void enqueue(resumable* ptr) {
+    m_policy.central_enqueue(this, ptr);
   }
 
  private:
   // usually of size std::thread::hardware_concurrency()
   std::vector<worker_type> m_workers;
+  // policy-specific data
+  policy_data m_data;
+  // instance of our policy object
+  Policy m_policy;
+  // number of messages each actor is allowed to consume per resume
+  size_t m_max_throughput;
 };
 
 } // namespace scheduler
@@ -339,14 +385,16 @@ void set_scheduler(scheduler::abstract_coordinator* ptr);
 
 /**
  * Sets a user-defined scheduler using given policies. The scheduler
- * is instantiated with `nw` number of workers.
+ * is instantiated with `nw` number of workers and allows each actor
+ * to consume up to `max_throughput` per resume (0 means infinite).
  * @note This function must be used before actor is spawned. Dynamically
  *       changing the scheduler at runtime is not supported.
  * @throws std::logic_error if a scheduler is already defined
  */
-template <class StealPolicy, class JobQueuePolicy>
-void set_scheduler(size_t nw = std::thread::hardware_concurrency()) {
-  set_scheduler(new scheduler::coordinator<StealPolicy, JobQueuePolicy>(nw));
+template <class Policy>
+void set_scheduler(size_t nw = std::thread::hardware_concurrency(),
+                   size_t max_throughput = 0) {
+  set_scheduler(new scheduler::coordinator<Policy>(nw, max_throughput));
 }
 
 } // namespace caf

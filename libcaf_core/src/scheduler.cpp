@@ -34,13 +34,12 @@
 
 #include "caf/actor_ostream.hpp"
 
-#include "caf/policy/fork_join.hpp"
+#include "caf/policy/work_stealing.hpp"
 #include "caf/policy/no_resume.hpp"
 #include "caf/policy/no_scheduling.hpp"
 #include "caf/policy/actor_policies.hpp"
 #include "caf/policy/nestable_invoke.hpp"
 #include "caf/policy/not_prioritizing.hpp"
-#include "caf/policy/iterative_stealing.hpp"
 
 #include "caf/detail/logging.hpp"
 #include "caf/detail/proper_actor.hpp"
@@ -219,7 +218,7 @@ class shutdown_helper : public resumable {
   void detach_from_scheduler() override {
     // nop
   }
-  resumable::resume_result resume(execution_unit* ptr) {
+  resumable::resume_result resume(execution_unit* ptr, size_t) override {
     CAF_LOG_DEBUG("shutdown_helper::resume => shutdown worker");
     auto wptr = dynamic_cast<abstract_worker*>(ptr);
     CAF_REQUIRE(wptr != nullptr);
@@ -247,7 +246,7 @@ abstract_coordinator::~abstract_coordinator() {
 
 // creates a default instance
 abstract_coordinator* abstract_coordinator::create_singleton() {
-  return new coordinator<policy::iterative_stealing, policy::fork_join>;
+  return new coordinator<policy::work_stealing>;
 }
 
 void abstract_coordinator::initialize() {
@@ -300,10 +299,6 @@ abstract_coordinator::abstract_coordinator(size_t nw)
 
 actor abstract_coordinator::printer() const {
   return m_printer.get();
-}
-
-void abstract_coordinator::enqueue(resumable* what) {
-  worker_by_id(m_next_worker++ % m_num_workers)->external_enqueue(what);
 }
 
 } // namespace scheduler

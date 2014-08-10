@@ -74,7 +74,7 @@ class no_scheduling {
       CAF_PUSH_AID(mself->id());
       CAF_LOG_TRACE("");
       for (;;) {
-        if (mself->resume(nullptr) == resumable::done) {
+        if (mself->resume(nullptr, 0) == resumable::done) {
           return;
         }
         // await new data before resuming actor

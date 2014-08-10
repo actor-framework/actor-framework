@@ -28,7 +28,7 @@ class no_resume {
       this->deref();
     }
 
-    resumable::resume_result resume(execution_unit*) {
+    resumable::resume_result resume(execution_unit*, size_t) {
       auto done_cb = [=](uint32_t reason) {
         this->planned_exit_reason(reason);
         this->on_exit();
