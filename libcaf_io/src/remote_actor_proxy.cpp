@@ -58,7 +58,7 @@ remote_actor_proxy::~remote_actor_proxy() {
 
 void remote_actor_proxy::forward_msg(const actor_addr& sender, message_id mid,
                                      message msg) {
-  CAF_LOG_TRACE(CAF_ARG(m_id) << ", " << CAF_TSARG(sender) << ", "
+  CAF_LOG_TRACE(CAF_ARG(id()) << ", " << CAF_TSARG(sender) << ", "
                               << CAF_MARG(mid, integer_value) << ", "
                               << CAF_TSARG(msg));
   m_parent->enqueue(
