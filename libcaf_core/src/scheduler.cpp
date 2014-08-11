@@ -32,9 +32,6 @@
 #include "caf/scoped_actor.hpp"
 #include "caf/system_messages.hpp"
 
-#include "caf/actor_ostream.hpp"
-
-#include "caf/policy/work_stealing.hpp"
 #include "caf/policy/no_resume.hpp"
 #include "caf/policy/no_scheduling.hpp"
 #include "caf/policy/actor_policies.hpp"
@@ -43,11 +40,6 @@
 
 #include "caf/detail/logging.hpp"
 #include "caf/detail/proper_actor.hpp"
-
-
-#include "caf/actor_ostream.hpp"
-
-
 
 namespace caf {
 namespace scheduler {
@@ -210,36 +202,6 @@ void printer_loop(blocking_actor* self) {
  *            implementation of coordinator             *
  ******************************************************************************/
 
-class shutdown_helper : public resumable {
- public:
-  void attach_to_scheduler() override {
-    // nop
-  }
-  void detach_from_scheduler() override {
-    // nop
-  }
-  resumable::resume_result resume(execution_unit* ptr, size_t) override {
-    CAF_LOG_DEBUG("shutdown_helper::resume => shutdown worker");
-    auto wptr = dynamic_cast<abstract_worker*>(ptr);
-    CAF_REQUIRE(wptr != nullptr);
-    std::unique_lock<std::mutex> guard(mtx);
-    last_worker = wptr;
-    cv.notify_all();
-    return resumable::shutdown_execution_unit;
-  }
-  shutdown_helper() : last_worker(nullptr) {
-    // nop
-  }
-  ~shutdown_helper();
-  std::mutex mtx;
-  std::condition_variable cv;
-  abstract_worker* last_worker;
-};
-
-shutdown_helper::~shutdown_helper() {
-  // nop
-}
-
 abstract_coordinator::~abstract_coordinator() {
   // nop
 }
@@ -254,39 +216,6 @@ void abstract_coordinator::initialize() {
   auto ptr = m_timer.get();
   m_timer_thread = std::thread([ptr] { ptr->act(); });
   m_printer_thread = std::thread{printer_loop, m_printer.get()};
-}
-
-void abstract_coordinator::stop() {
-  CAF_LOG_TRACE("");
-  // shutdown workers
-  shutdown_helper sh;
-  std::vector<abstract_worker*> alive_workers;
-  auto num = num_workers();
-  for (size_t i = 0; i < num; ++i) {
-    alive_workers.push_back(worker_by_id(i));
-  }
-  CAF_LOG_DEBUG("enqueue shutdown_helper into each worker");
-  while (!alive_workers.empty()) {
-    alive_workers.back()->external_enqueue(&sh);
-    // since jobs can be stolen, we cannot assume that we have
-    // actually shut down the worker we've enqueued sh to
-    { // lifetime scope of guard
-      std::unique_lock<std::mutex> guard(sh.mtx);
-      sh.cv.wait(guard, [&] { return sh.last_worker != nullptr; });
-    }
-    auto last = alive_workers.end();
-    auto i = std::find(alive_workers.begin(), last, sh.last_worker);
-    sh.last_worker = nullptr;
-    alive_workers.erase(i);
-  }
-  // shutdown utility actors
-  CAF_LOG_DEBUG("send exit messages to timer & printer");
-  anon_send_exit(m_timer->address(), exit_reason::user_shutdown);
-  anon_send_exit(m_printer->address(), exit_reason::user_shutdown);
-  CAF_LOG_DEBUG("join threads of utility actors");
-  m_timer_thread.join();
-  m_printer_thread.join();
-  // join each worker thread for good manners
 }
 
 abstract_coordinator::abstract_coordinator(size_t nw)

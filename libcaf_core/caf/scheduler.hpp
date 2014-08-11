@@ -39,40 +39,13 @@
 #include "caf/spawn_options.hpp"
 #include "caf/execution_unit.hpp"
 
+#include "caf/policy/work_stealing.hpp"
+
 #include "caf/detail/logging.hpp"
 #include "caf/detail/producer_consumer_list.hpp"
 
 namespace caf {
 namespace scheduler {
-
-class abstract_coordinator;
-
-/**
- * Base class for work-stealing workers.
- */
-class abstract_worker : public execution_unit {
-
-  friend class abstract_coordinator;
-
- public:
-
-  /**
-   * Attempt to steal an element from this worker.
-   */
-  virtual resumable* try_steal() = 0;
-
-  /**
-   * Enqueues a new job to the worker's queue from an external
-   * source, i.e., from any other thread.
-   */
-  virtual void external_enqueue(resumable*) = 0;
-
-  /**
-   * Starts the thread of this worker.
-   */
-  //virtual void start(size_t id, abstract_coordinator* parent) = 0;
-
-};
 
 /**
  * A coordinator creates the workers, manages delayed sends and
@@ -112,7 +85,7 @@ class abstract_coordinator {
     return m_num_workers;
   }
 
-  virtual abstract_worker* worker_by_id(size_t id) = 0;
+  //virtual execution_unit* worker_by_id(size_t id) = 0;
 
  protected:
 
@@ -120,9 +93,8 @@ class abstract_coordinator {
 
   virtual void initialize();
 
-  virtual void stop();
+  virtual void stop() = 0;
 
- private:
   // Creates a default instance.
   static abstract_coordinator* create_singleton();
 
@@ -149,7 +121,7 @@ class coordinator;
  * Policy-based implementation of the abstract worker base class.
  */
 template <class Policy>
-class worker : public abstract_worker {
+class worker : public execution_unit {
  public:
   worker(const worker&) = delete;
   worker& operator=(const worker&) = delete;
@@ -182,19 +154,10 @@ class worker : public abstract_worker {
   using policy_data = typename Policy::worker_data;
 
   /**
-   * Attempt to steal an element from the exposed job queue.
-   */
-  job_ptr try_steal() override {
-    auto result = m_policy.try_external_dequeue(this);
-    CAF_LOG_DEBUG_IF(result, "stole actor with id " << id_of(result));
-    return result;
-  }
-
-  /**
    * Enqueues a new job to the worker's queue from an external
    * source, i.e., from any other thread.
    */
-  void external_enqueue(job_ptr job) override {
+  void external_enqueue(job_ptr job) {
     CAF_REQUIRE(job != nullptr);
     CAF_LOG_TRACE("id = " << id() << " actor id " << id_of(job));
     m_policy.external_enqueue(this, job);
@@ -268,7 +231,7 @@ class worker : public abstract_worker {
     CAF_LOG_TRACE("worker with ID " << m_id);
     // scheduling loop
     for (;;) {
-      auto job = m_policy.internal_dequeue(this);
+      auto job = m_policy.dequeue(this);
       CAF_REQUIRE(job != nullptr);
       CAF_LOG_DEBUG("resume actor " << id_of(job));
       CAF_PUSH_AID_FROM_PTR(dynamic_cast<abstract_actor*>(job));
@@ -323,7 +286,7 @@ class coordinator : public abstract_coordinator {
 
   using worker_type = worker<Policy>;
 
-  worker_type* worker_by_id(size_t id) override {
+  worker_type* worker_by_id(size_t id) {//override {
     return &m_workers[id];
   }
 
@@ -343,7 +306,59 @@ class coordinator : public abstract_coordinator {
 
   void stop() override {
     // perform cleanup code of base classe
-    super::stop();
+    CAF_LOG_TRACE("");
+    // shutdown workers
+    class shutdown_helper : public resumable {
+     public:
+      void attach_to_scheduler() override {
+        // nop
+      }
+      void detach_from_scheduler() override {
+        // nop
+      }
+      resumable::resume_result resume(execution_unit* ptr, size_t) override {
+        CAF_LOG_DEBUG("shutdown_helper::resume => shutdown worker");
+        CAF_REQUIRE(ptr != nullptr);
+        std::unique_lock<std::mutex> guard(mtx);
+        last_worker = ptr;
+        cv.notify_all();
+        return resumable::shutdown_execution_unit;
+      }
+      shutdown_helper() : last_worker(nullptr) {
+        // nop
+      }
+      std::mutex mtx;
+      std::condition_variable cv;
+      execution_unit* last_worker;
+    };
+    shutdown_helper sh;
+    std::vector<worker_type*> alive_workers;
+    auto num = num_workers();
+    for (size_t i = 0; i < num; ++i) {
+      alive_workers.push_back(worker_by_id(i));
+    }
+    CAF_LOG_DEBUG("enqueue shutdown_helper into each worker");
+    while (!alive_workers.empty()) {
+      alive_workers.back()->external_enqueue(&sh);
+      // since jobs can be stolen, we cannot assume that we have
+      // actually shut down the worker we've enqueued sh to
+      { // lifetime scope of guard
+        std::unique_lock<std::mutex> guard(sh.mtx);
+        sh.cv.wait(guard, [&] { return sh.last_worker != nullptr; });
+      }
+      auto last = alive_workers.end();
+      auto i = std::find(alive_workers.begin(), last, sh.last_worker);
+      sh.last_worker = nullptr;
+      alive_workers.erase(i);
+    }
+    // shutdown utility actors
+    CAF_LOG_DEBUG("send exit messages to timer & printer");
+    anon_send_exit(this->m_timer->address(), exit_reason::user_shutdown);
+    anon_send_exit(this->m_printer->address(), exit_reason::user_shutdown);
+    CAF_LOG_DEBUG("join threads of utility actors");
+    // join each worker thread for good manners
+    m_timer_thread.join();
+    m_printer_thread.join();
     // wait until all workers are done
     for (auto& w : m_workers) {
       w.get_thread().join();
@@ -391,7 +406,7 @@ void set_scheduler(scheduler::abstract_coordinator* ptr);
  *       changing the scheduler at runtime is not supported.
  * @throws std::logic_error if a scheduler is already defined
  */
-template <class Policy>
+template <class Policy = policy::work_stealing>
 void set_scheduler(size_t nw = std::thread::hardware_concurrency(),
                    size_t max_throughput = 0) {
   set_scheduler(new scheduler::coordinator<Policy>(nw, max_throughput));

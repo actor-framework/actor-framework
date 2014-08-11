@@ -68,18 +68,11 @@ class scheduler_policy {
   void resume_job_later(Worker* self, resumable* job);
 
   /**
-   * Returns `nullptr` if no element could be dequeued immediately.
-   * Called by external sources to try to dequeue an element.
-   */
-  template <class Worker>
-  resumable* try_external_dequeue(Worker* self);
-
-  /**
    * Blocks until a job could be dequeued.
    * Called by the worker itself to acquire a new job.
    */
   template <class Worker>
-  resumable* internal_dequeue(Worker* self);
+  resumable* dequeue(Worker* self);
 
   /**
    * Performs cleanup action before a shutdown takes place.

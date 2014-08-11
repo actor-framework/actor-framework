@@ -95,7 +95,7 @@ class work_stealing {
   resumable* try_steal(Worker* self) {
     auto p = self->parent();
     auto victim = d(self).rengine() % p->num_workers();
-    return try_external_dequeue(p->worker_by_id(victim));
+    return d(p->worker_by_id(victim)).exposed_queue.try_pop();
   }
 
   template <class Coordinator>
@@ -131,12 +131,7 @@ class work_stealing {
   }
 
   template <class Worker>
-  resumable* try_external_dequeue(Worker* self) {
-    return d(self).exposed_queue.try_pop();
-  }
-
-  template <class Worker>
-  resumable* internal_dequeue(Worker* self) {
+  resumable* dequeue(Worker* self) {
     // we wait for new jobs by polling our external queue: first, we
     // assume an active work load on the machine and perform aggresive
     // polling, then we relax our polling a bit and wait 50 us between
