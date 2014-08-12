@@ -73,10 +73,7 @@ class no_scheduling {
     std::thread([=] {
       CAF_PUSH_AID(mself->id());
       CAF_LOG_TRACE("");
-      for (;;) {
-        if (mself->resume(nullptr, 0) == resumable::done) {
-          return;
-        }
+      while (mself->resume(nullptr, 0) != resumable::done) {
         // await new data before resuming actor
         await_data(mself.get());
         CAF_REQUIRE(self->mailbox().blocked() == false);
