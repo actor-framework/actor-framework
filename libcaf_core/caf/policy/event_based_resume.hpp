@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_POLICY_ABSTRACT_EVENT_BASED_ACTOR_HPP
-#define CAF_POLICY_ABSTRACT_EVENT_BASED_ACTOR_HPP
+#ifndef CAF_POLICY_EVENT_BASED_RESUME_HPP
+#define CAF_POLICY_EVENT_BASED_RESUME_HPP
 
 #include <tuple>
 #include <stack>
@@ -195,4 +195,4 @@ class event_based_resume {
 } // namespace policy
 } // namespace caf
 
-#endif // CAF_POLICY_ABSTRACT_EVENT_BASED_ACTOR_HPP
+#endif // CAF_POLICY_EVENT_BASED_RESUME_HPP
