@@ -64,6 +64,7 @@ template <class T>
 void write_int(broker* self, connection_handle hdl, T value) {
   auto cpy = static_cast<T>(htonl(value));
   self->write(hdl, sizeof(T), &cpy);
+  self->flush(hdl);
 }
 
 // utility function for reading an ingeger from incoming data

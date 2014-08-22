@@ -53,6 +53,7 @@ void protobuf_io(broker* self, connection_handle hdl, const actor& buddy) {
     int32_t s = htonl(static_cast<int32_t>(buf.size()));
     self->write(hdl, sizeof(int32_t), &s);
     self->write(hdl, buf.size(), buf.data());
+    self->flush(hdl);
   };
   message_handler default_bhvr = {
     [=](const connection_closed_msg&) {
