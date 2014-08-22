@@ -68,7 +68,7 @@ class event_based_resume {
         d->bhvr_stack().cleanup();
         d->on_exit();
         if (!d->bhvr_stack().empty()) {
-          CAF_LOG_DEBUG("on_exit did set a new behavior in on_exit");
+          CAF_LOG_DEBUG("on_exit did set a new behavior");
           d->planned_exit_reason(exit_reason::not_exited);
           return false; // on_exit did set a new behavior
         }
@@ -79,23 +79,30 @@ class event_based_resume {
         }
         d->cleanup(rsn);
         return true;
-
       };
-      auto actor_done = [&] {
-        return d->bhvr_stack().empty()
-               || d->planned_exit_reason() != exit_reason::not_exited;
+      auto actor_done = [&]() -> bool {
+        if (d->bhvr_stack().empty()
+            || d->planned_exit_reason() != exit_reason::not_exited) {
+          return done_cb();
+        }
+        return false;
       };
       // actors without behavior or that have already defined
       // an exit reason must not be resumed
-      CAF_REQUIRE(!d->m_initialized || !actor_done());
+      CAF_REQUIRE(!d->m_initialized
+                  || (!d->bhvr_stack().empty()
+                      && !d->planned_exit_reason() != exit_reason::not_exited));
       try {
         if (!d->m_initialized) {
           d->m_initialized = true;
           auto bhvr = d->make_behavior();
-          if (bhvr) d->become(std::move(bhvr));
-          // else: make_behavior() might have just called become()
-          if (actor_done() && done_cb()) return resume_result::done;
-          // else: enter resume loop
+          if (bhvr) {
+            // make_behavior() did return a behavior instead of using become()
+            d->become(std::move(bhvr));
+          }
+          if (actor_done()) {
+            return resume_result::done;
+          }
         }
         // max_throughput = 0 means infinite
         size_t increment = max_throughput == 0 ? 0 : 1;
@@ -106,7 +113,7 @@ class event_based_resume {
           auto ptr = d->next_message();
           if (ptr) {
             if (d->invoke_message(ptr)) {
-              if (actor_done() && done_cb()) {
+              if (actor_done()) {
                 CAF_LOG_DEBUG("actor exited");
                 return resume_result::done;
               }
@@ -114,7 +121,7 @@ class event_based_resume {
               // handled, because the actor might have changed
               // its behavior to match 'old' messages now
               while (d->invoke_message_from_cache()) {
-                if (actor_done() && done_cb()) {
+                if (actor_done()) {
                   CAF_LOG_DEBUG("actor exited");
                   return resume_result::done;
                 }
@@ -161,7 +168,10 @@ class event_based_resume {
           d->quit(exit_reason::unhandled_exception);
         }
       }
-      done_cb();
+      if (!done_cb()) {
+        // actor has been "revived", try running it again later
+        return resumable::resume_later;
+      }
       return resumable::done;
     }
   };
