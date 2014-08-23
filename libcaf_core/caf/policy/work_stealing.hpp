@@ -94,7 +94,12 @@ class work_stealing {
   template <class Worker>
   resumable* try_steal(Worker* self) {
     auto p = self->parent();
-    auto victim = d(self).rengine() % p->num_workers();
+    size_t victim;
+    do {
+      // roll the dice to pick a victim other than ourselves
+      victim = d(self).rengine() % p->num_workers();
+    }
+    while (victim == self->id());
     return d(p->worker_by_id(victim)).exposed_queue.try_pop();
   }
 
@@ -122,10 +127,11 @@ class work_stealing {
     // this means we are going to put this job to the very end of our queue
     // by moving everything from the exposed to private queue first and
     // then enqueue job to the exposed queue
-    resumable* ptr = d(self).exposed_queue.try_pop();
-    while (ptr) {
+    auto next = [&] {
+      return d(self).exposed_queue.try_pop();
+    };
+    for (auto ptr = next(); ptr != nullptr; ptr = next()) {
       d(self).private_queue.push_front(ptr);
-      ptr = d(self).exposed_queue.try_pop();
     }
     d(self).exposed_queue.push_back(job);
   }
