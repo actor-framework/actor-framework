@@ -29,21 +29,25 @@ class no_resume {
     }
 
     resumable::resume_result resume(execution_unit*, size_t) {
-      auto done_cb = [=](uint32_t reason) {
-        this->planned_exit_reason(reason);
-        this->on_exit();
-        this->cleanup(reason);
-      };
+      uint32_t rsn = exit_reason::normal;
       try {
         this->act();
-        done_cb(exit_reason::normal);
       }
       catch (actor_exited& e) {
-        done_cb(e.reason());
+        rsn = e.reason();
       }
       catch (...) {
-        done_cb(exit_reason::unhandled_exception);
+        rsn = exit_reason::unhandled_exception;
       }
+      this->planned_exit_reason(rsn);
+      try {
+        this->on_exit();
+      }
+      catch (...) {
+        // simply ignore exception
+      }
+      // exit reason might have been changed by on_exit()
+      this->cleanup(this->planned_exit_reason());
       return resumable::done;
     }
 
