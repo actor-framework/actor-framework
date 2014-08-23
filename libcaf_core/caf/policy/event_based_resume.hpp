@@ -91,7 +91,7 @@ class event_based_resume {
       // an exit reason must not be resumed
       CAF_REQUIRE(!d->m_initialized
                   || (!d->bhvr_stack().empty()
-                      && !d->planned_exit_reason() != exit_reason::not_exited));
+                      && d->planned_exit_reason() == exit_reason::not_exited));
       try {
         if (!d->m_initialized) {
           d->m_initialized = true;
