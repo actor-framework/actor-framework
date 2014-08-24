@@ -173,6 +173,27 @@ class abstract_actor : public abstract_channel {
    */
   virtual std::set<std::string> message_types() const;
 
+  enum actor_state_flag {
+    //                              used by ...
+    trap_exit_flag       = 0x01, // local_actor
+    has_timeout_flag     = 0x02, // mixin::single_timeout
+    is_registered_flag   = 0x04, // no_resume, resumable, and scoped_actor
+    is_initialized_flag  = 0x08, // event-based actors
+    is_running_flag      = 0x10  // broker
+  };
+
+  inline void set_flag(bool enable_flag, actor_state_flag mask) {
+    if (enable_flag) {
+      m_flags |= static_cast<int>(mask);
+    } else {
+      m_flags &= ~static_cast<int>(mask);
+    }
+  }
+
+  inline bool get_flag(actor_state_flag mask) const {
+    return static_cast<bool>(m_flags & static_cast<int>(mask));
+  }
+
  protected:
   /**
    * Creates a non-proxy instance.
@@ -221,12 +242,8 @@ class abstract_actor : public abstract_channel {
     m_host = new_host;
   }
 
- private:
   // cannot be changed after construction
   const actor_id m_id;
-
-  // you're either a proxy or you're not
-  const bool m_is_proxy;
 
   // initially exit_reason::not_exited
   std::atomic<uint32_t> m_exit_reason;
@@ -242,6 +259,9 @@ class abstract_actor : public abstract_channel {
 
   // identifies the execution unit this actor is currently executed by
   execution_unit* m_host;
+
+  // stores several actor-related flags
+  int m_flags;
 };
 
 } // namespace caf

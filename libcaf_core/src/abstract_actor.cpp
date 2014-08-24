@@ -49,18 +49,18 @@ using guard_type = std::unique_lock<std::mutex>;
 abstract_actor::abstract_actor(actor_id aid, node_id nid)
     : super(std::move(nid)),
       m_id(aid),
-      m_is_proxy(true),
       m_exit_reason(exit_reason::not_exited),
-      m_host(nullptr) {
+      m_host(nullptr),
+      m_flags(0) {
   // nop
 }
 
 abstract_actor::abstract_actor()
     : super(detail::singletons::get_node_id()),
       m_id(detail::singletons::get_actor_registry()->next_id()),
-      m_is_proxy(false),
       m_exit_reason(exit_reason::not_exited),
-      m_host(nullptr) {
+      m_host(nullptr),
+      m_flags(0) {
   // nop
 }
 
@@ -180,8 +180,7 @@ actor_addr abstract_actor::address() const {
 
 void abstract_actor::cleanup(uint32_t reason) {
   // log as 'actor'
-  CAF_LOGM_TRACE("caf::actor", CAF_ARG(m_id) << ", " << CAF_ARG(reason) << ", "
-                                             << CAF_ARG(m_is_proxy));
+  CAF_LOGM_TRACE("caf::actor", CAF_ARG(m_id) << ", " << CAF_ARG(reason));
   CAF_REQUIRE(reason != exit_reason::not_exited);
   // move everyhting out of the critical section before processing it
   decltype(m_links) mlinks;

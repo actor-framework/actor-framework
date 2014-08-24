@@ -60,8 +60,7 @@ class down_observer : public attachable {
 } // namespace <anonymous>
 
 local_actor::local_actor()
-    : m_trap_exit(false),
-      m_dummy_node(),
+    : m_dummy_node(),
       m_current_node(&m_dummy_node),
       m_planned_exit_reason(exit_reason::not_exited) {
   // nop
@@ -178,6 +177,8 @@ void local_actor::cleanup(uint32_t reason) {
   CAF_LOG_TRACE(CAF_ARG(reason));
   m_subscriptions.clear();
   super::cleanup(reason);
+  // tell registry we're done
+  is_registered(false);
 }
 
 void local_actor::quit(uint32_t reason) {
@@ -233,6 +234,18 @@ message_id local_actor::sync_send_tuple_impl(message_priority mp,
   }
   dest->enqueue(address(), nri, std::move(what), host());
   return nri.response_id();
+}
+
+void local_actor::is_registered(bool value) {
+  if (is_registered() == value) {
+    return;
+  }
+  if (value) {
+    detail::singletons::get_actor_registry()->inc_running();
+  } else {
+    detail::singletons::get_actor_registry()->dec_running();
+  }
+  set_flag(value, is_registered_flag);
 }
 
 } // namespace caf

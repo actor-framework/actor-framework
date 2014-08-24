@@ -317,7 +317,9 @@ class broker : public extend<local_actor>::
     };
     intrusive_ptr<impl> ptr{new impl{this, std::move(sock)}};
     m_doormen.insert(std::make_pair(ptr->hdl(), ptr));
-    if (initialized()) ptr->launch();
+    if (is_initialized()) {
+      ptr->launch();
+    }
     return ptr->hdl();
   }
 
@@ -383,8 +385,6 @@ class broker : public extend<local_actor>::
 
   using doorman_pointer = intrusive_ptr<doorman>;
 
-  bool initialized() const;
-
   virtual behavior make_behavior() = 0;
 
   /** @endcond */
@@ -427,12 +427,6 @@ class broker : public extend<local_actor>::
 
   policy::not_prioritizing m_priority_policy;
   policy::sequential_invoke m_invoke_policy;
-
-  bool m_initialized;
-
-  bool m_hidden;
-
-  bool m_running;
 
   middleman& m_mm;
 };

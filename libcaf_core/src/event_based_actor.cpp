@@ -25,10 +25,6 @@
 
 namespace caf {
 
-event_based_actor::event_based_actor() : m_initialized(false) {
-  // nop
-}
-
 event_based_actor::~event_based_actor() {
   // nop
 }

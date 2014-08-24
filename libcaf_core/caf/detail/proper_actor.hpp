@@ -44,11 +44,13 @@ class proper_actor_base : public Policies::resume_policy::template
  public:
   template <class... Ts>
   proper_actor_base(Ts&&... args) : super(std::forward<Ts>(args)...) {
-    CAF_REQUIRE(this->m_hidden == true);
+    CAF_REQUIRE(this->is_registered() == false);
   }
 
   // grant access to the actor's mailbox
-  typename Base::mailbox_type& mailbox() { return this->m_mailbox; }
+  typename Base::mailbox_type& mailbox() {
+    return this->m_mailbox;
+  }
 
   // member functions from scheduling policy
 
@@ -65,9 +67,9 @@ class proper_actor_base : public Policies::resume_policy::template
     scheduling_policy().enqueue(dptr(), sender, mid, msg, eu);
   }
 
-  inline void launch(bool is_hidden, execution_unit* host) {
+  inline void launch(bool hidden, execution_unit* host) {
     CAF_LOG_TRACE("");
-    this->hidden(is_hidden);
+    this->is_registered(!hidden);
     this->scheduling_policy().launch(this, host);
   }
 
@@ -141,16 +143,6 @@ class proper_actor_base : public Policies::resume_policy::template
                         awaited_response);
   }
 
-  inline bool hidden() const {
-    return this->m_hidden;
-  }
-
-  void cleanup(uint32_t reason) override {
-    CAF_LOG_TRACE(CAF_ARG(reason));
-    if (!hidden()) detail::singletons::get_actor_registry()->dec_running();
-    super::cleanup(reason);
-  }
-
  protected:
   inline typename Policies::scheduling_policy& scheduling_policy() {
     return m_policies.get_scheduling_policy();
@@ -172,16 +164,6 @@ class proper_actor_base : public Policies::resume_policy::template
     return static_cast<Derived*>(this);
   }
 
-  inline void hidden(bool value) {
-    if (this->m_hidden == value) return;
-    if (value) {
-      detail::singletons::get_actor_registry()->dec_running();
-    } else {
-      detail::singletons::get_actor_registry()->inc_running();
-    }
-    this->m_hidden = value;
-  }
-
  private:
   Policies m_policies;
 };
@@ -197,7 +179,7 @@ class proper_actor
 
  public:
   static_assert(std::is_base_of<local_actor, Base>::value,
-          "Base is not derived from local_actor");
+                "Base is not derived from local_actor");
 
   template <class... Ts>
   proper_actor(Ts&&... args) : super(std::forward<Ts>(args)...) {

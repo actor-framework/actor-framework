@@ -281,14 +281,44 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
    * Checks whether this actor traps exit messages.
    */
   inline bool trap_exit() const {
-    return m_trap_exit;
+    return get_flag(trap_exit_flag);
   }
 
   /**
    * Enables or disables trapping of exit messages.
    */
-  inline void trap_exit(bool new_value) {
-    m_trap_exit = new_value;
+  inline void trap_exit(bool value) {
+    set_flag(value, trap_exit_flag);
+  }
+
+  inline bool has_timeout() const {
+    return get_flag(has_timeout_flag);
+  }
+
+  inline void has_timeout(bool value) {
+    set_flag(value, has_timeout_flag);
+  }
+
+  inline bool is_registered() const {
+    return get_flag(is_registered_flag);
+  }
+
+  void is_registered(bool value);
+
+  inline bool is_initialized() const {
+    return get_flag(is_initialized_flag);
+  }
+
+  inline void is_initialized(bool value) {
+    set_flag(value, is_initialized_flag);
+  }
+
+  inline bool is_running() const {
+    return get_flag(is_running_flag);
+  }
+
+  inline void is_running(bool value) {
+    set_flag(value, is_running_flag);
   }
 
   /**
@@ -489,9 +519,6 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   inline mailbox_element* new_mailbox_element(Ts&&... args) {
     return mailbox_element::create(std::forward<Ts>(args)...);
   }
-
-  // true if this actor receives EXIT messages as ordinary messages
-  bool m_trap_exit;
 
   // identifies the ID of the last sent synchronous request
   message_id m_last_request_id;

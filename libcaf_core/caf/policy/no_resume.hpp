@@ -16,7 +16,7 @@ class no_resume {
   template <class Base, class Derived>
   struct mixin : Base {
     template <class... Ts>
-    mixin(Ts&&... args) : Base(std::forward<Ts>(args)...), m_hidden(true) {
+    mixin(Ts&&... args) : Base(std::forward<Ts>(args)...) {
       // nop
     }
 
@@ -50,8 +50,6 @@ class no_resume {
       this->cleanup(this->planned_exit_reason());
       return resumable::done;
     }
-
-    bool m_hidden;
   };
 
   template <class Actor>

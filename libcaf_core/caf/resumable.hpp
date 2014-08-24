@@ -39,7 +39,7 @@ class resumable {
     shutdown_execution_unit
   };
 
-  resumable();
+  resumable() = default;
 
   virtual ~resumable();
 
@@ -58,9 +58,6 @@ class resumable {
    * or needs to be re-scheduled later.
    */
   virtual resume_result resume(execution_unit*, size_t max_throughput) = 0;
-
- protected:
-  bool m_hidden;
 };
 
 } // namespace caf

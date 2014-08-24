@@ -93,8 +93,8 @@ class event_based_resume {
                   || (!d->bhvr_stack().empty()
                       && d->planned_exit_reason() == exit_reason::not_exited));
       try {
-        if (!d->m_initialized) {
-          d->m_initialized = true;
+        if (!d->is_initialized()) {
+          d->is_initialized(true);
           auto bhvr = d->make_behavior();
           if (bhvr) {
             // make_behavior() did return a behavior instead of using become()

@@ -80,10 +80,7 @@ class single_timeout : public Base {
   }
 
  protected:
-
-  bool m_has_timeout;
   std::uint32_t m_timeout_id;
-
 };
 
 } // namespace caf

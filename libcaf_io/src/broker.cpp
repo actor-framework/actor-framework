@@ -54,7 +54,7 @@ void broker::servant::disconnect() {
     m_disconnected = true;
     remove_from_broker();
     if (m_broker->exit_reason() == exit_reason::not_exited) {
-      if (m_broker->m_running) {
+      if (m_broker->is_running()) {
         CAF_LOG_DEBUG("broker is running, push message to cache");
         // push this message to the cache to make sure we
         // don't have interleaved message handlers
@@ -164,8 +164,8 @@ class broker::continuation {
 void broker::invoke_message(const actor_addr& sender, message_id mid,
                             message& msg) {
   CAF_LOG_TRACE(CAF_TARG(msg, to_string));
-  m_running = true;
-  auto sg = detail::make_scope_guard([=] { m_running = false; });
+  is_running(true);
+  auto sg = detail::make_scope_guard([=] { is_running(false); });
   if (planned_exit_reason() != exit_reason::not_exited
       || bhvr_stack().empty()) {
     CAF_LOG_DEBUG("actor already finished execution"
@@ -268,15 +268,7 @@ void broker::enqueue(const actor_addr& sender, message_id mid, message msg,
                                                 mid, std::move(msg)});
 }
 
-bool broker::initialized() const {
-  return m_initialized;
-}
-
-broker::broker()
-    : m_initialized(false),
-      m_hidden(true),
-      m_running(false),
-      m_mm(*middleman::instance()) {
+broker::broker() : m_mm(*middleman::instance()) {
   // nop
 }
 
@@ -284,34 +276,31 @@ void broker::cleanup(uint32_t reason) {
   CAF_LOG_TRACE(CAF_ARG(reason));
   close_all();
   super::cleanup(reason);
-  if (!m_hidden){
-    detail::singletons::get_actor_registry()->dec_running();
-  }
 }
 
 void broker::launch(bool is_hidden, execution_unit*) {
-  if (!is_hidden) {
-    m_hidden = false;
-    detail::singletons::get_actor_registry()->inc_running();
-  }
+  is_registered(!is_hidden);
   CAF_PUSH_AID(id());
   CAF_LOGF_TRACE("init and launch broker with id " << id());
   // we want to make sure initialization is executed in MM context
   broker_ptr self = this;
-  self->become(on(atom("INITMSG")) >> [self] {
-    CAF_LOGF_TRACE(CAF_MARG(self, get));
-    self->unbecome();
-    // launch backends now, because user-defined initialization
-    // might call functions like add_connection
-    for (auto& kvp : self->m_doormen) {
-      kvp.second->launch();
+  self->become(
+    on(atom("INITMSG")) >> [self] {
+      CAF_LOGF_TRACE(CAF_MARG(self, get));
+      self->unbecome();
+      // launch backends now, because user-defined initialization
+      // might call functions like add_connection
+      for (auto& kvp : self->m_doormen) {
+        kvp.second->launch();
+      }
+      self->is_initialized(true);
+      // run user-defined initialization code
+      auto bhvr = self->make_behavior();
+      if (bhvr) {
+        self->become(std::move(bhvr));
+      }
     }
-    self->m_initialized = true;
-    // run user-defined initialization code
-    auto bhvr = self->make_behavior();
-    if (bhvr)
-      self->become(std::move(bhvr));
-  });
+  );
   self->enqueue(invalid_actor_addr, message_id::invalid,
                 make_message(atom("INITMSG")), nullptr);
 }

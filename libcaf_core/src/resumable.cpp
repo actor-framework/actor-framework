@@ -21,10 +21,6 @@
 
 namespace caf {
 
-resumable::resumable() : m_hidden(true) {
-  // nop
-}
-
 resumable::~resumable() {
   // nop
 }
