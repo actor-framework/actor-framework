@@ -180,7 +180,7 @@ install(DIRECTORY libcaf_core/cppa/
 install(DIRECTORY libcaf_io/caf/ DESTINATION include/caf
         FILES_MATCHING PATTERN "*.hpp")
 # install includes from opencl
-if(EXISTS ${CMAKE_SOURCE_DOR}/libcaf_opencl/caf)
+if(EXISTS ${CMAKE_SOURCE_DIR}/libcaf_opencl/caf)
   install(DIRECTORY libcaf_opencl/caf/ DESTINATION include/caf
         FILES_MATCHING PATTERN "*.hpp")
 endif()
