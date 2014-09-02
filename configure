@@ -48,6 +48,11 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --no-curl-examples          build without libcurl examples
     --no-unit-tests             build without unit tests
     --no-opencl                 build without opencl
+    --no-nexus                  build without nexus
+    --no-shell                  build without shell
+    --no-benchmarks             build without benchmarks
+    --no-probe                  build without probe
+    --no-probe-event            build without probe-event
 
   Debugging:
     --with-runtime-checks       build with requirement checks at runtime
@@ -281,6 +286,21 @@ while [ $# -ne 0 ]; do
             ;;
         --with-erlc=*)
             append_cache_entry CAF_ERLANG_COMPILER FILEPATH "$optarg"
+            ;;
+        --no-nexus*)
+            append_cache_entry CAF_NO_NEXUS BOOL yes
+            ;;
+        --no-shell*)
+            append_cache_entry CAF_NO_SHELL BOOL yes
+            ;;
+        --no-benchmarks*)
+            append_cache_entry CAF_NO_BENCHMARKS BOOL yes
+            ;;
+        --no-probe*)
+            append_cache_entry CAF_NO_PROBE BOOL yes
+            ;;
+        --no-probe-event*)
+            append_cache_entry CAF_NO_PROBE_EVENT BOOL yes
             ;;
         *)
             echo "Invalid option '$1'.  Try $0 --help to see available options."
