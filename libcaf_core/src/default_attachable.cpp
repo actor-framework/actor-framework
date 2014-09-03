@@ -17,70 +17,43 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_ATTACHABLE_HPP
-#define CAF_ATTACHABLE_HPP
+#include "caf/default_attachable.hpp"
 
-#include <memory>
-#include <cstdint>
-#include <typeinfo>
+#include "caf/message.hpp"
+#include "caf/system_messages.hpp"
 
 namespace caf {
 
-class abstract_actor;
+namespace {
 
-/**
- * Callback utility class.
- */
-class attachable {
- public:
-  attachable() = default;
-  attachable(const attachable&) = delete;
-  attachable& operator=(const attachable&) = delete;
+template <class MsgType>
+message make(abstract_actor* self, uint32_t reason) {
+  return make_message(MsgType{self->address(), reason});
+}
 
-  /**
-   * Represents a pointer to a value with its RTTI.
-   */
-  struct token {
-    /**
-     * Denotes the type of ptr.
-     */
-    const std::type_info& subtype;
+} // namespace <anonymous>
 
-    /**
-     * Any value, used to identify attachable instances.
-     */
-    const void* ptr;
+void default_attachable::actor_exited(abstract_actor* self, uint32_t reason) {
+  CAF_REQUIRE(self->address() != m_observer);
+  auto factory = m_type == monitor ? &make<down_msg> : &make<exit_msg>;
+  message msg = factory(self, reason);
+  auto ptr = actor_cast<abstract_actor_ptr>(m_observer);
+  ptr->enqueue(self->address(), message_id{}.with_high_priority(),
+               msg, self->host());
+}
 
-    token(const std::type_info& subtype, const void* ptr);
-  };
-
-  virtual ~attachable();
-
-  /**
-   * Executed if the actor finished execution with given `reason`.
-   * The default implementation does nothing.
-   */
-  virtual void actor_exited(abstract_actor* self, uint32_t reason) = 0;
-
-  /**
-   * Returns `true` if `what` selects this instance, otherwise `false`.
-   */
-  virtual bool matches(const token& what) = 0;
-
-  /**
-   * Returns `true` if `what` selects this instance, otherwise `false`.
-   */
-  template <class T>
-  bool matches(const T& what) {
-    return matches(token{typeid(T), &what});
+bool default_attachable::matches(const token& what) {
+  if (what.subtype != typeid(observe_token)) {
+    return false;
   }
-};
+  auto& ot = *reinterpret_cast<const observe_token*>(what.ptr);
+  return ot.observer == m_observer && ot.type == m_type;
+}
 
-/**
- * @relates attachable
- */
-using attachable_ptr = std::unique_ptr<attachable>;
+default_attachable::default_attachable(actor_addr observer, observe_type type)
+    : m_observer(std::move(observer)),
+      m_type(type) {
+  // nop
+}
 
 } // namespace caf
-
-#endif // CAF_ATTACHABLE_HPP

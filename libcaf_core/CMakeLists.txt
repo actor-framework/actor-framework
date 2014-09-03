@@ -35,6 +35,7 @@ set (LIBCAF_CORE_SRCS
      src/channel.cpp
      src/continue_helper.cpp
      src/decorated_tuple.cpp
+     src/default_attachable.cpp
      src/demangle.cpp
      src/deserializer.cpp
      src/duration.cpp

@@ -79,7 +79,7 @@ class abstract_actor : public abstract_channel {
    * @returns `true` if `ptr` was successfully attached to the actor,
    *          otherwise (actor already exited) `false`.
    */
-  bool attach(attachable_ptr ptr);
+  void attach(attachable_ptr ptr);
 
   /**
    * Convenience function that attaches the functor `f` to this actor. The
@@ -88,20 +88,20 @@ class abstract_actor : public abstract_channel {
    *          otherwise (actor already exited) `false`.
    */
   template <class F>
-  bool attach_functor(F f) {
+  void attach_functor(F f) {
     struct functor_attachable : attachable {
       F m_functor;
       functor_attachable(F arg) : m_functor(std::move(arg)) {
         // nop
       }
-      void actor_exited(uint32_t reason) {
+      void actor_exited(abstract_actor*, uint32_t reason) {
         m_functor(reason);
       }
       bool matches(const attachable::token&) {
         return false;
       }
     };
-    return attach(attachable_ptr{new functor_attachable(std::move(f))});
+    attach(attachable_ptr{new functor_attachable(std::move(f))});
   }
 
   /**
@@ -194,6 +194,14 @@ class abstract_actor : public abstract_channel {
     return static_cast<bool>(m_flags & static_cast<int>(mask));
   }
 
+  /**
+   * Returns the execution unit currently used by this actor.
+   * @warning not thread safe
+   */
+  inline execution_unit* host() const {
+    return m_host;
+  }
+
  protected:
   /**
    * Creates a non-proxy instance.
@@ -229,13 +237,6 @@ class abstract_actor : public abstract_channel {
   }
 
   /**
-   * Returns the execution unit currently used by this actor.
-   */
-  inline execution_unit* host() const {
-    return m_host;
-  }
-
-  /**
    * Sets the execution unit for this actor.
    */
   inline void host(execution_unit* new_host) {
@@ -251,10 +252,7 @@ class abstract_actor : public abstract_channel {
   // guards access to m_exit_reason, m_attachables, and m_links
   std::mutex m_mtx;
 
-  // links to other actors
-  std::vector<abstract_actor_ptr> m_links;
-
-  // attached functors that are executed on cleanup
+  // attached functors that are executed on cleanup (for monitors, links, etc)
   std::vector<attachable_ptr> m_attachables;
 
   // identifies the execution unit this actor is currently executed by

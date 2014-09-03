@@ -17,70 +17,62 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_ATTACHABLE_HPP
-#define CAF_ATTACHABLE_HPP
+#ifndef CAF_DEFAULT_ATTACHABLE_HPP
+#define CAF_DEFAULT_ATTACHABLE_HPP
 
-#include <memory>
-#include <cstdint>
-#include <typeinfo>
+#include "caf/actor_addr.hpp"
+#include "caf/attachable.hpp"
 
 namespace caf {
 
-class abstract_actor;
-
-/**
- * Callback utility class.
- */
-class attachable {
+class default_attachable : public attachable {
  public:
-  attachable() = default;
-  attachable(const attachable&) = delete;
-  attachable& operator=(const attachable&) = delete;
-
-  /**
-   * Represents a pointer to a value with its RTTI.
-   */
-  struct token {
-    /**
-     * Denotes the type of ptr.
-     */
-    const std::type_info& subtype;
-
-    /**
-     * Any value, used to identify attachable instances.
-     */
-    const void* ptr;
-
-    token(const std::type_info& subtype, const void* ptr);
+  enum observe_type {
+    monitor,
+    link
   };
 
-  virtual ~attachable();
+  struct observe_token {
+    actor_addr observer;
+    observe_type type;
+  };
 
-  /**
-   * Executed if the actor finished execution with given `reason`.
-   * The default implementation does nothing.
-   */
-  virtual void actor_exited(abstract_actor* self, uint32_t reason) = 0;
+  void actor_exited(abstract_actor* self, uint32_t reason) override;
 
-  /**
-   * Returns `true` if `what` selects this instance, otherwise `false`.
-   */
-  virtual bool matches(const token& what) = 0;
+  bool matches(const token& what) override;
 
-  /**
-   * Returns `true` if `what` selects this instance, otherwise `false`.
-   */
-  template <class T>
-  bool matches(const T& what) {
-    return matches(token{typeid(T), &what});
+  inline static attachable_ptr make_monitor(actor_addr observer) {
+    return attachable_ptr{new default_attachable(std::move(observer), monitor)};
   }
-};
 
-/**
- * @relates attachable
- */
-using attachable_ptr = std::unique_ptr<attachable>;
+  inline static attachable_ptr make_link(actor_addr observer) {
+    return attachable_ptr{new default_attachable(std::move(observer), link)};
+  }
+
+  class predicate {
+   public:
+    inline predicate(actor_addr observer, observe_type type)
+        : m_observer(std::move(observer)),
+          m_type(type) {
+      // nop
+    }
+
+    inline bool operator()(const attachable_ptr& ptr) const {
+      return ptr->matches(observe_token{m_observer, m_type});
+    }
+
+   private:
+    actor_addr m_observer;
+    observe_type m_type;
+  };
+
+ private:
+  default_attachable(actor_addr observer, observe_type type);
+  actor_addr m_observer;
+  observe_type m_type;
+};
 
 } // namespace caf
 
-#endif // CAF_ATTACHABLE_HPP
+
+#endif // CAF_DEFAULT_ATTACHABLE_HPP

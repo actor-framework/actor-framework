@@ -23,41 +23,11 @@
 #include "caf/scheduler.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/local_actor.hpp"
+#include "caf/default_attachable.hpp"
 
 #include "caf/detail/logging.hpp"
 
 namespace caf {
-
-namespace {
-
-class down_observer : public attachable {
- public:
-  down_observer(actor_addr observer, actor_addr observed)
-      : m_observer(std::move(observer)), m_observed(std::move(observed)) {
-    CAF_REQUIRE(m_observer != invalid_actor_addr);
-    CAF_REQUIRE(m_observed != invalid_actor_addr);
-  }
-
-  void actor_exited(uint32_t reason) {
-    auto ptr = actor_cast<abstract_actor_ptr>(m_observer);
-    ptr->enqueue(m_observed, message_id {}.with_high_priority(),
-                 make_message(down_msg{m_observed, reason}), nullptr);
-  }
-
-  bool matches(const attachable::token& match_token) {
-    if (match_token.subtype == typeid(down_observer)) {
-      auto ptr = reinterpret_cast<const local_actor*>(match_token.ptr);
-      return m_observer == ptr->address();
-    }
-    return false;
-  }
-
- private:
-  actor_addr m_observer;
-  actor_addr m_observed;
-};
-
-} // namespace <anonymous>
 
 local_actor::local_actor()
     : m_dummy_node(),
@@ -71,20 +41,20 @@ local_actor::~local_actor() {
 }
 
 void local_actor::monitor(const actor_addr& whom) {
-  if (!whom) {
+  if (whom == invalid_actor_addr) {
     return;
   }
   auto ptr = actor_cast<abstract_actor_ptr>(whom);
-  ptr->attach(attachable_ptr{new down_observer(address(), whom)});
+  ptr->attach(default_attachable::make_monitor(address()));
 }
 
 void local_actor::demonitor(const actor_addr& whom) {
-  if (!whom) {
+  if (whom == invalid_actor_addr) {
     return;
   }
   auto ptr = actor_cast<abstract_actor_ptr>(whom);
-  attachable::token mtoken{typeid(down_observer), this};
-  ptr->detach(mtoken);
+  default_attachable::observe_token tk{address(), default_attachable::monitor};
+  ptr->detach({typeid(default_attachable::observe_token), &tk});
 }
 
 void local_actor::on_exit() {

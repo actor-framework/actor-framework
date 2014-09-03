@@ -345,7 +345,9 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   /**
    * @copydoc monitor(const actor_addr&)
    */
-  inline void monitor(const actor& whom) { monitor(whom.address()); }
+  inline void monitor(const actor& whom) {
+    monitor(whom.address());
+  }
 
   /**
    * @copydoc monitor(const actor_addr&)
@@ -363,7 +365,9 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   /**
    * Removes a monitor from `whom`.
    */
-  inline void demonitor(const actor& whom) { demonitor(whom.address()); }
+  inline void demonitor(const actor& whom) {
+    demonitor(whom.address());
+  }
 
   /**
    * Can be overridden to perform cleanup code after an actor
