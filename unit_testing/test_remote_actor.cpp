@@ -32,76 +32,72 @@ void reflector(event_based_actor* self) {
 }
 
 void spawn5_server_impl(event_based_actor* self, actor client, group grp) {
-  CAF_LOGF_TRACE(CAF_TARG(client, to_string) << ", "
-                         << CAF_TARG(grp, to_string));
+  CAF_LOGF_TRACE(CAF_TARG(client, to_string)
+                 << ", " << CAF_TARG(grp, to_string));
   CAF_CHECK(grp != invalid_group);
   self->spawn_in_group(grp, reflector);
   self->spawn_in_group(grp, reflector);
   CAF_PRINT("send {'Spawn5'} and await {'ok', actor_vector}");
-  self->sync_send(client, atom("Spawn5"), grp)
-    .then(on(atom("ok"), arg_match) >> [=](const actor_vector& vec) {
-          CAF_PRINT("received vector with " << vec.size()
-                           << " elements");
-          self->send(grp, "Hello reflectors!", 5.0);
-          if (vec.size() != 5) {
-            CAF_PRINTERR(
-              "remote client did not spawn five reflectors!");
-          }
-          for (auto& a : vec) {
-            CAF_PRINT("monitor actor: " << to_string(a));
-            self->monitor(a);
-          }
-        },
-        others() >> [=] {
-          CAF_UNEXPECTED_MSG(self);
-          self->quit(exit_reason::unhandled_exception);
-        },
-        after(chrono::seconds(10)) >> [=] {
-       CAF_UNEXPECTED_TOUT();
-       self->quit(exit_reason::unhandled_exception);
-     })
-    .continue_with([=] {
-       CAF_PRINT("wait for reflected messages");
-       // receive seven reply messages (2 local, 5 remote)
-       auto replies = std::make_shared<int>(0);
-       self->become(
-         on("Hello reflectors!", 5.0) >> [=] {
-           if (++*replies == 7) {
-             CAF_PRINT("wait for DOWN messages");
-             auto downs = std::make_shared<int>(0);
-             self->become(
-               [=](const down_msg& dm) {
-                 if (dm.reason != exit_reason::normal) {
-                   CAF_PRINTERR(
-                     "reflector exited for non-normal exit "
-                     "reason!");
-                 }
-                 if (++*downs == 5) {
-                   CAF_CHECKPOINT();
-                   self->send(client, atom("Spawn5Done"));
-                   self->quit();
-                 }
-               },
-               others() >> [=] {
-                 CAF_UNEXPECTED_MSG(self);
-                 // self->quit(exit_reason::unhandled_exception);
-               },
-               after(chrono::seconds(2)) >> [=] {
-                 CAF_UNEXPECTED_TOUT();
-                 CAF_LOGF_ERROR("did only receive "
-                         << *downs << " down messages");
-                 // self->quit(exit_reason::unhandled_exception);
-               });
-           }
-         },
-         after(std::chrono::seconds(2)) >> [=] {
-           CAF_UNEXPECTED_TOUT();
-           CAF_LOGF_ERROR("did only receive "
-                   << *replies
-                   << " responses to 'Hello reflectors!'");
-           // self->quit(exit_reason::unhandled_exception);
-         });
-     });
+  self->sync_send(client, atom("Spawn5"), grp).then(
+    on(atom("ok"), arg_match) >> [=](const actor_vector& vec) {
+      CAF_PRINT("received vector with " << vec.size() << " elements");
+      self->send(grp, "Hello reflectors!", 5.0);
+      if (vec.size() != 5) {
+        CAF_PRINTERR("remote client did not spawn five reflectors!");
+      }
+      for (auto& a : vec) {
+        CAF_PRINT("monitor actor: " << to_string(a));
+        self->monitor(a);
+      }
+    },
+    others() >> [=] {
+      CAF_UNEXPECTED_MSG(self);
+      self->quit(exit_reason::user_defined);
+    },
+    after(chrono::seconds(10)) >> [=] {
+      CAF_UNEXPECTED_TOUT();
+       self->quit(exit_reason::user_defined);
+     }
+  ).continue_with([=] {
+    CAF_PRINT("wait for reflected messages");
+    // receive seven reply messages (2 local, 5 remote)
+    auto replies = std::make_shared<int>(0);
+    self->become(
+      on("Hello reflectors!", 5.0) >> [=] {
+        if (++*replies == 7) {
+          CAF_PRINT("wait for DOWN messages");
+          auto downs = std::make_shared<int>(0);
+          self->become(
+            [=](const down_msg& dm) {
+              if (dm.reason != exit_reason::normal) {
+                CAF_PRINTERR("reflector exited for non-normal exit reason!");
+              }
+              if (++*downs == 5) {
+                CAF_CHECKPOINT();
+                self->send(client, atom("Spawn5Done"));
+                self->quit();
+              }
+            },
+            others() >> [=] {
+              CAF_UNEXPECTED_MSG(self);
+              self->quit(exit_reason::user_defined);
+            },
+            after(chrono::seconds(2)) >> [=] {
+              CAF_UNEXPECTED_TOUT();
+              CAF_LOGF_ERROR("did only receive " << *downs << " down messages");
+              self->quit(exit_reason::user_defined);
+            }
+          );
+        }
+      },
+      after(std::chrono::seconds(2)) >> [=] {
+        CAF_UNEXPECTED_TOUT();
+        CAF_LOGF_ERROR("did only receive " << *replies
+                       << " responses to 'Hello reflectors!'");
+        self->quit(exit_reason::user_defined);
+      }
+    );
+ });
 }
 
 // receive seven reply messages (2 local, 5 remote)
