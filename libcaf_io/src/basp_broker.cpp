@@ -497,7 +497,10 @@ actor_proxy_ptr basp_broker::make_proxy(const id_type& nid, actor_id aid) {
   auto res = make_counted<remote_actor_proxy>(aid, nid, self);
   res->attach_functor([=](uint32_t) {
     mm->run_later([=] {
-      erase_proxy(nid, aid);
+      // using res->id() instead of aid keeps this actor instance alive
+      // until the original instance terminates, thus preventing subtle
+      // bugs with attachables
+      erase_proxy(nid, res->id());
     });
   });
   // tell remote side we are monitoring this actor now
