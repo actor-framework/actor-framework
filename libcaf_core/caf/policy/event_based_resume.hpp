@@ -89,7 +89,7 @@ class event_based_resume {
       };
       // actors without behavior or that have already defined
       // an exit reason must not be resumed
-      CAF_REQUIRE(!d->m_initialized
+      CAF_REQUIRE(!d->is_initialized()
                   || (!d->bhvr_stack().empty()
                       && d->planned_exit_reason() == exit_reason::not_exited));
       try {
