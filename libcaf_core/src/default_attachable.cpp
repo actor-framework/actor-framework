@@ -21,6 +21,7 @@
 
 #include "caf/message.hpp"
 #include "caf/system_messages.hpp"
+#include "caf/actor_cast.hpp"
 
 namespace caf {
 
