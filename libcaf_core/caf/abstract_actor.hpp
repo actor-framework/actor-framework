@@ -227,12 +227,12 @@ class abstract_actor : public abstract_channel {
   /**
    * Creates a non-proxy instance.
    */
-  abstract_actor();
+  abstract_actor(size_t initial_ref_count = 0);
 
   /**
    * Creates a proxy instance for a proxy running on `nid`.
    */
-  abstract_actor(actor_id aid, node_id nid);
+  abstract_actor(actor_id aid, node_id nid, size_t initial_ref_count = 0);
 
   virtual bool link_impl(linking_operation op, const actor_addr& other);
 

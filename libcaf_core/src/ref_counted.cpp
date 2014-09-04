@@ -21,10 +21,6 @@
 
 namespace caf {
 
-ref_counted::ref_counted() : m_rc(0) {
-  // nop
-}
-
 ref_counted::~ref_counted() {
   // nop
 }
@@ -36,6 +32,10 @@ ref_counted::ref_counted(const ref_counted&) {
 ref_counted& ref_counted::operator=(const ref_counted&) {
   // nop; don't copy reference count
   return *this;
+}
+
+ref_counted::ref_counted(size_t initial_count) : m_rc(initial_count) {
+  // nop
 }
 
 } // namespace caf

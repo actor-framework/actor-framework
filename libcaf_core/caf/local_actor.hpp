@@ -57,7 +57,8 @@ namespace caf {
 class sync_handle_helper;
 
 /**
- * Base class for local running Actors.
+ * Base class for local running actors.
+ * @warning Instances of `local_actor` start with a reference count of 1
  * @extends abstract_actor
  */
 class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {

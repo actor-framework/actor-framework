@@ -24,11 +24,15 @@ namespace caf {
 
 using detail::singletons;
 
-abstract_channel::abstract_channel() : m_node(singletons::get_node_id()) {
+abstract_channel::abstract_channel(size_t initial_ref_count)
+    : ref_counted(initial_ref_count),
+      m_node(singletons::get_node_id()) {
   // nop
 }
 
-abstract_channel::abstract_channel(node_id nid) : m_node(std::move(nid)) {
+abstract_channel::abstract_channel(node_id nid, size_t initial_ref_count)
+    : ref_counted(initial_ref_count),
+      m_node(std::move(nid)) {
   // nop
 }
 
