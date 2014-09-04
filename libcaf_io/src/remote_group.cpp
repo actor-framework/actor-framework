@@ -17,37 +17,43 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/all.hpp"
+#include "caf/io/remote_group.hpp"
 
-#include "caf/io/publish.hpp"
-#include "caf/io/publish_local_groups.hpp"
+#include "caf/scoped_actor.hpp"
+#include "caf/io/remote_actor.hpp"
 
 namespace caf {
 namespace io {
 
-namespace {
-
-struct group_nameserver : event_based_actor {
-  behavior make_behavior() override {
-    return {
-      on(atom("GetGroup"), arg_match) >> [](const std::string& name) {
-        return make_message(atom("Group"), group::get("local", name));
-      }
-    };
+group remote_group(const std::string& group_uri) {
+  // format of group_identifier is group@host:port
+  // a regex would be the natural choice here, but we want to support
+  // older compilers that don't have <regex> implemented (e.g. GCC < 4.9)
+  auto pos1 = group_uri.find('@');
+  auto pos2 = group_uri.find(':');
+  auto last = std::string::npos;
+  if (pos1 == last || pos2 == last || pos1 >= pos2) {
+    throw std::invalid_argument("group_uri has an invalid format");
   }
-};
+  auto name = group_uri.substr(0, pos1);
+  auto host = group_uri.substr(pos1 + 1, pos2 - pos1 - 1);
+  auto port = static_cast<uint16_t>(group_uri.substr(pos2 + 1));
+  return remote_group(name, host, port);
+}
 
-} // namespace <anonymous>
-
-void publish_local_groups(uint16_t port, const char* addr) {
-  auto gn = spawn<group_nameserver, hidden>();
-  try {
-    publish(gn, port, addr);
-  }
-  catch (std::exception&) {
-    anon_send_exit(gn, exit_reason::user_shutdown);
-    throw;
-  }
+group remote_group(const std::string& group_identifier,
+                   const std::string& host,
+                   uint16_t port) {
+  auto group_server = remote_actor(host, port);
+  scoped_actor self;
+  self->send(group_server, atom("GetGroup"), group_identifier);
+  group result;
+  self->receive(
+    on(atom("Group"), arg_match) >> [&](group& grp) {
+      result = std::move(grp);
+    }
+  );
+  return result;
 }
 
 } // namespace io

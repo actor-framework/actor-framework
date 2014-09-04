@@ -17,38 +17,24 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/all.hpp"
+#ifndef CAF_IO_REMOTE_GROUP_HPP
+#define CAF_IO_REMOTE_GROUP_HPP
 
-#include "caf/io/publish.hpp"
-#include "caf/io/publish_local_groups.hpp"
+#include "caf/group.hpp"
 
 namespace caf {
 namespace io {
 
-namespace {
+/**
+ * <group-name>@<host>:<port>
+ */
+group remote_group(const std::string& group_uri);
 
-struct group_nameserver : event_based_actor {
-  behavior make_behavior() override {
-    return {
-      on(atom("GetGroup"), arg_match) >> [](const std::string& name) {
-        return make_message(atom("Group"), group::get("local", name));
-      }
-    };
-  }
-};
-
-} // namespace <anonymous>
-
-void publish_local_groups(uint16_t port, const char* addr) {
-  auto gn = spawn<group_nameserver, hidden>();
-  try {
-    publish(gn, port, addr);
-  }
-  catch (std::exception&) {
-    anon_send_exit(gn, exit_reason::user_shutdown);
-    throw;
-  }
-}
+group remote_group(const std::string& group_identifier,
+                   const std::string& host,
+                   uint16_t port);
 
 } // namespace io
 } // namespace caf
+
+#endif // CAF_IO_REMOTE_GROUP_HPP
