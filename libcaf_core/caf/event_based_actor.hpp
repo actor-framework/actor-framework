@@ -33,7 +33,6 @@
 #include "caf/mixin/behavior_stack_based.hpp"
 
 #include "caf/detail/logging.hpp"
-#include "caf/detail/response_handle_util.hpp"
 
 namespace caf {
 

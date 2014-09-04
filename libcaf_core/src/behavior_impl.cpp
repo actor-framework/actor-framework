@@ -17,33 +17,71 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_RESPONSE_FUTURE_DETAIL_HPP
-#define CAF_DETAIL_RESPONSE_FUTURE_DETAIL_HPP
+#include "caf/detail/behavior_impl.hpp"
 
-#include "caf/on.hpp"
-#include "caf/skip_message.hpp"
-#include "caf/system_messages.hpp"
-
-#include "caf/detail/type_traits.hpp"
+#include "caf/message_handler.hpp"
 
 namespace caf {
 namespace detail {
 
-template <class Actor, class... Fs>
-behavior fs2bhvr(Actor* self, Fs... fs) {
-  auto handle_sync_timeout = [self]() -> skip_message_t {
-    self->handle_sync_timeout();
-    return {};
-  };
-  return behavior{
-    on<sync_timeout_msg>() >> handle_sync_timeout,
-    on<unit_t>() >> skip_message,
-    on<sync_exited_msg>() >> skip_message,
-    (on(any_vals, arg_match) >> std::move(fs))...
-  };
+namespace {
+
+class combinator : public behavior_impl {
+ public:
+  bhvr_invoke_result invoke(message& arg) {
+    auto res = first->invoke(arg);
+    if (!res) return second->invoke(arg);
+    return res;
+  }
+
+  bhvr_invoke_result invoke(const message& arg) {
+    auto res = first->invoke(arg);
+    if (!res) return second->invoke(arg);
+    return res;
+  }
+
+  void handle_timeout() {
+    // the second behavior overrides the timeout handling of
+    // first behavior
+    return second->handle_timeout();
+  }
+
+  pointer copy(const generic_timeout_definition& tdef) const {
+    return new combinator(first, second->copy(tdef));
+  }
+
+  combinator(const pointer& p0, const pointer& p1)
+      : behavior_impl(p1->timeout()),
+        first(p0),
+        second(p1) {
+    // nop
+  }
+
+ private:
+  pointer first;
+  pointer second;
+};
+
+} // namespace <anonymous>
+
+behavior_impl::~behavior_impl() {
+  // nop
+}
+
+behavior_impl::behavior_impl(duration tout) : m_timeout(tout) {
+  // nop
+}
+
+behavior_impl::pointer behavior_impl::or_else(const pointer& other) {
+  CAF_REQUIRE(other != nullptr);
+  return new combinator(this, other);
+}
+
+behavior_impl* new_default_behavior(duration d, std::function<void()> fun) {
+  using impl = default_behavior_impl<dummy_match_expr, std::function<void()>>;
+  dummy_match_expr nop;
+  return new impl(nop, d, std::move(fun));
 }
 
 } // namespace detail
 } // namespace caf
-
-#endif // CAF_DETAIL_RESPONSE_FUTURE_DETAIL_HPP
