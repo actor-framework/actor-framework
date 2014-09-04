@@ -251,6 +251,11 @@ if (CAF_USE_ASIO)
   add_definitions(-DCAF_USE_ASIO)
 endif()
 
+if(CAF_FOR_RIOT)
+  add_definitions(-D__RIOTBUILD_FLAG)
+endif()
+
+
 ################################################################################
 #                    check for biicode build pipeline                          #
 ################################################################################
@@ -269,6 +274,7 @@ IF(BIICODE)
 
   RETURN()
 ENDIF()
+
 
 ################################################################################
 #                           setup for install target                           #
@@ -586,6 +592,7 @@ if(NOT CAF_NO_SUMMARY)
         "\nLog level:         ${LOG_LEVEL_STR}"
         "\nWith mem. mgmt.:   ${CAF_BUILD_MEM_MANAGEMENT}"
         "\nUse Boost ASIO:    ${CAF_USE_ASIO}"
+        "\nFor RIOT-OS:       ${CAF_FOR_RIOT}"
         "\n"
         "\nBuild examples:    ${CAF_BUILD_EXAMPLES}"
         "\nBuild unit tests:  ${CAF_BUILD_UNIT_TESTS}"

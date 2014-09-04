@@ -236,7 +236,20 @@ class single_reader_queue {
     // should be unreachable
     CAF_CRITICAL("invalid result of enqueue()");
   }
+#ifdef __RIOTBUILD_FLAG
+  template <class Mutex, class CondVar>
+  void synchronized_await(Mutex& mtx, CondVar& cv) {
+    CAF_REQUIRE(!closed());
 
+  }
+
+  template <class Mutex, class CondVar, class TimePoint>
+  bool synchronized_await(Mutex& mtx, CondVar& cv, const TimePoint& timeout) {
+    CAF_REQUIRE(!closed());
+
+  }
+
+#else
   template <class Mutex, class CondVar>
   void synchronized_await(Mutex& mtx, CondVar& cv) {
     CAF_ASSERT(!closed());
@@ -263,6 +276,7 @@ class single_reader_queue {
     }
     return true;
   }
+#endif
 
  private:
   // exposed to "outside" access
