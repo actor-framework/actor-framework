@@ -368,7 +368,9 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
    * Can be overridden to perform cleanup code after an actor
    * finished execution.
    */
-  virtual void on_exit();
+  inline void on_exit() {
+    // nop
+  }
 
   /**
    * Returns all joined groups.

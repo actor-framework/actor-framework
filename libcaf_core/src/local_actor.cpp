@@ -57,10 +57,6 @@ void local_actor::demonitor(const actor_addr& whom) {
   ptr->detach({typeid(default_attachable::observe_token), &tk});
 }
 
-void local_actor::on_exit() {
-  // nop
-}
-
 void local_actor::join(const group& what) {
   CAF_LOG_TRACE(CAF_TSARG(what));
   if (what == invalid_group) {

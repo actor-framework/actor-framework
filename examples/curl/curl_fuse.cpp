@@ -105,7 +105,7 @@ class base_actor : public event_based_actor {
     return m_out << m_color << m_name << " (id = " << id() << "): ";
   }
 
-  void on_exit() override {
+  void on_exit() {
     print() << "on_exit" << color::reset_endl;
   }
 
@@ -256,7 +256,7 @@ class curl_worker : public base_actor {
     );
   }
 
-  void on_exit() override {
+  void on_exit() {
     curl_easy_cleanup(m_curl);
     print() << "on_exit" << color::reset_endl;
   }
