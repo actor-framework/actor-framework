@@ -166,18 +166,6 @@ void local_actor::quit(uint32_t reason) {
   if (is_blocking()) {
     throw actor_exited(reason);
   }
-  if (reason == exit_reason::unallowed_function_call) {
-    // this is the only reason that causes an exception
-    cleanup(reason);
-    CAF_LOG_WARNING("actor tried to use a blocking function");
-    // when using receive(), the non-blocking nature of event-based
-    // actors breaks any assumption the user has about his code,
-    // in particular, receive_loop() is a deadlock when not throwing
-    // an exception here
-    aout(this) << "*** warning: event-based actor killed because it tried "
-                  "to use receive()\n";
-    throw actor_exited(reason);
-  }
 }
 
 message_id local_actor::timed_sync_send_tuple_impl(message_priority mp,

@@ -27,7 +27,7 @@ constexpr const char* s_names_table[] = {
   "not_exited",
   "normal",
   "unhandled_exception",
-  "unallowed_function_call",
+  "-invalid-",
   "unhandled_sync_failure",
   "unhandled_sync_timeout"
 };
