@@ -72,49 +72,52 @@ void remote_actor_proxy::enqueue(const actor_addr& sender, message_id mid,
   forward_msg(sender, mid, std::move(m));
 }
 
-void remote_actor_proxy::link_to(const actor_addr& other) {
-  if (link_to_impl(other)) {
-    // causes remote actor to link to (proxy of) other
-    // receiving peer will call: this->local_link_to(other)
-    forward_msg(address(), message_id::invalid,
-                make_message(atom("_Link"), other));
-  }
-}
-
-void remote_actor_proxy::unlink_from(const actor_addr& other) {
-  if (unlink_from_impl(other)) {
-    // causes remote actor to unlink from (proxy of) other
-    forward_msg(address(), message_id::invalid,
-                make_message(atom("_Unlink"), other));
-  }
-}
-
-bool remote_actor_proxy::establish_backlink(const actor_addr& other) {
-  if (super::establish_backlink(other)) {
-    // causes remote actor to unlink from (proxy of) other
-    forward_msg(address(), message_id::invalid,
-                make_message(atom("_Link"), other));
-    return true;
-  }
-  return false;
-}
-
-bool remote_actor_proxy::remove_backlink(const actor_addr& other) {
-  if (super::remove_backlink(other)) {
-    // causes remote actor to unlink from (proxy of) other
-    forward_msg(address(), message_id::invalid,
-                make_message(atom("_Unlink"), other));
-    return true;
+bool remote_actor_proxy::link_impl(linking_operation op,
+                                   const actor_addr& other) {
+  switch (op) {
+    case establish_link_op:
+      if (establish_link_impl(other)) {
+        // causes remote actor to link to (proxy of) other
+        // receiving peer will call: this->local_link_to(other)
+        forward_msg(address(), message_id::invalid,
+                    make_message(atom("_Link"), other));
+        return true;
+      }
+      return false;
+    case remove_link_op:
+      if (remove_link_impl(other)) {
+        // causes remote actor to unlink from (proxy of) other
+        forward_msg(address(), message_id::invalid,
+                    make_message(atom("_Unlink"), other));
+        return true;
+      }
+      return false;
+    case establish_backlink_op:
+      if (super::establish_backlink(other)) {
+        // causes remote actor to unlink from (proxy of) other
+        forward_msg(address(), message_id::invalid,
+                    make_message(atom("_Link"), other));
+        return true;
+      }
+      return false;
+    case remove_backlink_op:
+      if (super::remove_backlink(other)) {
+        // causes remote actor to unlink from (proxy of) other
+        forward_msg(address(), message_id::invalid,
+                    make_message(atom("_Unlink"), other));
+        return true;
+      }
+      return false;
   }
   return false;
 }
 
 void remote_actor_proxy::local_link_to(const actor_addr& other) {
-  link_to_impl(other);
+  establish_link_impl(other);
 }
 
 void remote_actor_proxy::local_unlink_from(const actor_addr& other) {
-  unlink_from_impl(other);
+  remove_link_impl(other);
 }
 
 void remote_actor_proxy::kill_proxy(uint32_t reason) {

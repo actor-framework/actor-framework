@@ -239,7 +239,7 @@ class abstract_actor : public abstract_channel {
    * Called by the runtime system to perform cleanup actions for this actor.
    * Subtypes should always call this member function when overriding it.
    */
-  virtual void cleanup(uint32_t reason);
+  void cleanup(uint32_t reason);
 
   bool establish_link_impl(const actor_addr& other);
 

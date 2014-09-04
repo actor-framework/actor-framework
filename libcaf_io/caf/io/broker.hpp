@@ -379,7 +379,7 @@ class broker : public extend<local_actor>::
  protected:
   broker();
 
-  void cleanup(uint32_t reason) override;
+  void cleanup(uint32_t reason);
 
   using scribe_pointer = intrusive_ptr<scribe>;
 

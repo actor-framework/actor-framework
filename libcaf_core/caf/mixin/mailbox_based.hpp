@@ -49,7 +49,7 @@ class mailbox_based : public Base {
     return mailbox_element::create(std::forward<Ts>(args)...);
   }
 
-  void cleanup(uint32_t reason) override {
+  void cleanup(uint32_t reason) {
     detail::sync_request_bouncer f{reason};
     m_mailbox.close(f);
     Base::cleanup(reason);

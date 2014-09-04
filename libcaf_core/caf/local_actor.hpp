@@ -506,7 +506,7 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
     m_planned_exit_reason = value;
   }
 
-  void cleanup(uint32_t reason) override;
+  void cleanup(uint32_t reason);
 
   inline mailbox_element* dummy_node() {
     return &m_dummy_node;
