@@ -14,7 +14,8 @@ set (LIBCAF_IO_SRCS
      src/hook.cpp
      src/network.cpp
      src/publish_local_groups.cpp
-     src/remote_actor_proxy.cpp)
+     src/remote_actor_proxy.cpp
+     src/remote_group.cpp)
 
 # build shared library if not compiling static only
 if (NOT "${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes")
