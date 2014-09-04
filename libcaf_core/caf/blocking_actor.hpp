@@ -184,7 +184,7 @@ class blocking_actor
     return {make_dequeue_callback(), behavior{std::forward<Ts>(args)...}};
   }
 
-  optional<behavior&> sync_handler(message_id msg_id) override {
+  optional<behavior&> sync_handler(message_id msg_id) {
     auto i = m_sync_handler.find(msg_id);
     if (i != m_sync_handler.end()) return i->second;
     return none;

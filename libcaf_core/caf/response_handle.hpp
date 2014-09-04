@@ -56,22 +56,23 @@ template <class Self, class Result, class Tag>
 class response_handle;
 
 /******************************************************************************
- *               nonblocking + untyped              *
+ *                            nonblocking + untyped                           *
  ******************************************************************************/
 template <class Self>
 class response_handle<Self, message, nonblocking_response_handle_tag> {
-
  public:
-
   response_handle() = delete;
-
   response_handle(const response_handle&) = default;
-
   response_handle& operator=(const response_handle&) = default;
 
-  inline continue_helper then(behavior bhvr) const {
+  response_handle(message_id mid, Self* self) : m_mid(mid), m_self(self) {
+    // nop
+  }
+
+  continue_helper then(behavior bhvr) const {
     m_self->bhvr_stack().push_back(std::move(bhvr), m_mid);
-    return {m_mid, m_self};
+    auto ptr = m_self;
+    return {m_mid, [ptr](message_id mid) { return ptr->sync_handler(mid); }};
   }
 
   template <class... Cs, class... Ts>
@@ -81,77 +82,74 @@ class response_handle<Self, message, nonblocking_response_handle_tag> {
   }
 
   template <class... Fs>
-  typename std::enable_if<detail::all_callable<Fs...>::value,
-              continue_helper>::type
+  typename std::enable_if<
+    detail::all_callable<Fs...>::value,
+    continue_helper
+  >::type
   then(Fs... fs) const {
     return then(detail::fs2bhvr(m_self, fs...));
   }
 
-  response_handle(const message_id& mid, Self* self)
-      : m_mid(mid), m_self(self) {}
-
  private:
-
   message_id m_mid;
-
   Self* m_self;
-
 };
 
 /******************************************************************************
- *              nonblocking + typed               *
+ *                            nonblocking + typed                             *
  ******************************************************************************/
 template <class Self, class... Ts>
 class response_handle<Self, detail::type_list<Ts...>,
-            nonblocking_response_handle_tag> {
-
+                      nonblocking_response_handle_tag> {
  public:
-
   response_handle() = delete;
-
   response_handle(const response_handle&) = default;
-
   response_handle& operator=(const response_handle&) = default;
 
-  template <class F, typename Enable = typename std::enable_if<
-                detail::is_callable<F>::value &&
-                !is_match_expr<F>::value>::type>
-  typed_continue_helper<typename detail::lifted_result_type<
-    typename detail::get_callable_trait<F>::result_type>::type>
+  response_handle(message_id mid, Self* self) : m_mid(mid), m_self(self) {
+    // nop
+  }
+
+  template <class F,
+            class Enable = typename std::enable_if<
+                             detail::is_callable<F>::value
+                             && !is_match_expr<F>::value
+                           >::type>
+  typed_continue_helper<
+    typename detail::lifted_result_type<
+      typename detail::get_callable_trait<F>::result_type
+    >::type>
   then(F fun) {
     detail::assert_types<detail::type_list<Ts...>, F>();
     m_self->bhvr_stack().push_back(behavior{on_arg_match >> fun}, m_mid);
-    return {m_mid, m_self};
+    auto ptr = m_self;
+    return {m_mid, [ptr](message_id mid) { return ptr->sync_handler(mid); }};
   }
 
-  response_handle(const message_id& mid, Self* self)
-      : m_mid(mid), m_self(self) {}
-
  private:
-
   message_id m_mid;
-
   Self* m_self;
-
 };
 
 /******************************************************************************
- *               blocking + untyped               *
+ *                             blocking + untyped                             *
  ******************************************************************************/
 template <class Self>
 class response_handle<Self, message, blocking_response_handle_tag> {
-
  public:
-
   response_handle() = delete;
-
   response_handle(const response_handle&) = default;
-
   response_handle& operator=(const response_handle&) = default;
 
-  void await(behavior& pfun) { m_self->dequeue_response(pfun, m_mid); }
+  response_handle(message_id mid, Self* self) : m_mid(mid), m_self(self) {
+    // nop
+  }
 
-  inline void await(behavior&& pfun) {
+  void await(behavior& pfun) {
+    m_self->dequeue_response(pfun, m_mid);
+  }
+
+  void await(behavior&& pfun) {
     behavior tmp{std::move(pfun)};
     await(tmp);
   }
@@ -168,33 +166,27 @@ class response_handle<Self, message, blocking_response_handle_tag> {
     await(detail::fs2bhvr(m_self, fs...));
   }
 
-  response_handle(const message_id& mid, Self* self)
-      : m_mid(mid), m_self(self) {}
-
  private:
-
   message_id m_mid;
-
   Self* m_self;
-
 };
 
 /******************************************************************************
- *                blocking + typed                *
+ *                              blocking + typed                              *
  ******************************************************************************/
 template <class Self, class... Ts>
 class response_handle<Self, detail::type_list<Ts...>,
-            blocking_response_handle_tag> {
-
+                      blocking_response_handle_tag> {
  public:
-
   using result_types = detail::type_list<Ts...>;
 
   response_handle() = delete;
-
   response_handle(const response_handle&) = default;
-
   response_handle& operator=(const response_handle&) = default;
+
+  response_handle(message_id mid, Self* self) : m_mid(mid), m_self(self) {
+    // nop
+  }
 
   template <class F>
   void await(F fun) {
@@ -217,15 +209,9 @@ class response_handle<Self, detail::type_list<Ts...>,
     m_self->dequeue_response(tmp, m_mid);
   }
 
-  response_handle(const message_id& mid, Self* self)
-      : m_mid(mid), m_self(self) {}
-
  private:
-
   message_id m_mid;
-
   Self* m_self;
-
 };
 
 } // namespace caf

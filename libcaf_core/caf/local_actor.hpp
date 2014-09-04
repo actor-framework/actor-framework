@@ -60,13 +60,8 @@ class sync_handle_helper;
  * @extends abstract_actor
  */
 class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
-
-  using super = combined_type;
-
  public:
-
   using del = detail::disposer;
-
   using mailbox_type = detail::single_reader_queue<mailbox_element, del>;
 
   ~local_actor();
@@ -236,14 +231,13 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
    * Sends a message to `whom` that is delayed by `rel_time`.
    */
   template <class... Ts>
-  void delayed_send(const channel& whom, const duration& rtime,
-            Ts&&... args) {
+  void delayed_send(const channel& whom, const duration& rtime, Ts&&... args) {
     delayed_send_tuple(message_priority::normal, whom, rtime,
-               make_message(std::forward<Ts>(args)...));
+                       make_message(std::forward<Ts>(args)...));
   }
 
   /**************************************************************************
-   *           miscellaneous actor operations           *
+   *                     miscellaneous actor operations                     *
    **************************************************************************/
 
   /**
@@ -415,7 +409,7 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   }
 
   /**************************************************************************
-   *        here be dragons: end of public interface        *
+   *                here be dragons: end of public interface                *
    **************************************************************************/
 
   /** @cond PRIVATE */
@@ -437,7 +431,9 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
     this->m_current_node = ptr;
   }
 
-  inline mailbox_element* current_node() { return this->m_current_node; }
+  inline mailbox_element* current_node() {
+    return this->m_current_node;
+  }
 
   inline message_id new_request_id() {
     auto result = ++m_last_request_id;
@@ -446,36 +442,38 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   }
 
   inline void handle_sync_timeout() {
-    if (m_sync_timeout_handler)
+    if (m_sync_timeout_handler) {
       m_sync_timeout_handler();
-    else
+    } else {
       quit(exit_reason::unhandled_sync_timeout);
+    }
   }
 
   inline void handle_sync_failure() {
-    if (m_sync_failure_handler)
+    if (m_sync_failure_handler) {
       m_sync_failure_handler();
-    else
+    } else {
       quit(exit_reason::unhandled_sync_failure);
+    }
   }
 
   // returns the response ID
   message_id timed_sync_send_tuple_impl(message_priority mp,
-                      const actor& whom,
-                      const duration& rel_time,
-                      message&& what);
+                                        const actor& whom,
+                                        const duration& rel_time,
+                                        message&& what);
 
   // returns the response ID
-  message_id sync_send_tuple_impl(message_priority mp, const actor& whom,
-                  message&& what);
+  message_id sync_send_tuple_impl(message_priority mp,
+                                  const actor& whom,
+                                  message&& what);
 
   // returns the response ID
   template <class... Rs, class... Ts>
   message_id sync_send_tuple_impl(message_priority mp,
-                  const typed_actor<Rs...>& whom,
-                  message&& msg) {
-    return sync_send_tuple_impl(mp, actor{whom.m_ptr.get()},
-                  std::move(msg));
+                                  const typed_actor<Rs...>& whom,
+                                  message&& msg) {
+    return sync_send_tuple_impl(mp, actor{whom.m_ptr.get()}, std::move(msg));
   }
 
   // returns 0 if last_dequeued() is an asynchronous or sync request message,
@@ -513,12 +511,11 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
 
   void cleanup(uint32_t reason) override;
 
-  mailbox_element* dummy_node() { return &m_dummy_node; }
-
-  virtual optional<behavior&> sync_handler(message_id msg_id) = 0;
+  inline mailbox_element* dummy_node() {
+    return &m_dummy_node;
+  }
 
  protected:
-
   template <class... Ts>
   inline mailbox_element* new_mailbox_element(Ts&&... args) {
     return mailbox_element::create(std::forward<Ts>(args)...);
@@ -546,10 +543,9 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   /** @endcond */
 
  private:
-
+  using super = combined_type;
   std::function<void()> m_sync_failure_handler;
   std::function<void()> m_sync_timeout_handler;
-
 };
 
 /**
