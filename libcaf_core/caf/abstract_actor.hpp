@@ -119,10 +119,19 @@ class abstract_actor : public abstract_channel {
     return detach(attachable::token{typeid(T), &what});
   }
 
+  enum linking_operation {
+    establish_link_op,
+    establish_backlink_op,
+    remove_link_op,
+    remove_backlink_op
+  };
+
   /**
    * Links this actor to `whom`.
    */
-  virtual void link_to(const actor_addr& whom);
+  inline void link_to(const actor_addr& whom) {
+    link_impl(establish_link_op, whom);
+  }
 
   /**
    * Links this actor to `whom`.
@@ -135,27 +144,33 @@ class abstract_actor : public abstract_channel {
   /**
    * Unlinks this actor from `whom`.
    */
-  virtual void unlink_from(const actor_addr& whom);
+  inline void unlink_from(const actor_addr& other) {
+    link_impl(remove_link_op, other);
+  }
 
   /**
    * Unlinks this actor from `whom`.
    */
   template <class ActorHandle>
-  void unlink_from(const ActorHandle& whom) {
-    unlink_from(whom.address());
+  void unlink_from(const ActorHandle& other) {
+    unlink_from(other.address());
   }
 
   /**
    * Establishes a link relation between this actor and `other`
    * and returns whether the operation succeeded.
    */
-  virtual bool establish_backlink(const actor_addr& other);
+  inline bool establish_backlink(const actor_addr& other) {
+    return link_impl(establish_backlink_op, other);
+  }
 
   /**
    * Removes the link relation between this actor and `other`
    * and returns whether the operation succeeded.
    */
-  virtual bool remove_backlink(const actor_addr& other);
+  inline bool remove_backlink(const actor_addr& other) {
+    return link_impl(remove_backlink_op, other);
+  }
 
   /**
    * Returns the unique ID of this actor.
@@ -218,21 +233,21 @@ class abstract_actor : public abstract_channel {
    */
   abstract_actor(actor_id aid, node_id nid);
 
+  virtual bool link_impl(linking_operation op, const actor_addr& other);
+
   /**
    * Called by the runtime system to perform cleanup actions for this actor.
    * Subtypes should always call this member function when overriding it.
    */
   virtual void cleanup(uint32_t reason);
 
-  /**
-   * The default implementation for `link_to()`.
-   */
-  bool link_to_impl(const actor_addr& other);
+  bool establish_link_impl(const actor_addr& other);
 
-  /**
-   * The default implementation for {@link unlink_from()}.
-   */
-  bool unlink_from_impl(const actor_addr& other);
+  bool remove_link_impl(const actor_addr& other);
+
+  bool establish_backlink_impl(const actor_addr& other);
+
+  bool remove_backlink_impl(const actor_addr& other);
 
   /**
    * Returns `exit_reason() != exit_reason::not_exited`.

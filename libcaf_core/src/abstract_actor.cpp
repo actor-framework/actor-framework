@@ -65,25 +65,6 @@ abstract_actor::abstract_actor()
   // nop
 }
 
-bool abstract_actor::link_to_impl(const actor_addr& other) {
-  if (other && other != this) {
-    guard_type guard{m_mtx};
-    auto ptr = actor_cast<abstract_actor_ptr>(other);
-    // send exit message if already exited
-    if (exited()) {
-      ptr->enqueue(address(), message_id::invalid,
-                   make_message(exit_msg{address(), exit_reason()}), m_host);
-    }
-    // add link if not already linked to other
-    // (checked by establish_backlink)
-    else if (ptr->establish_backlink(address())) {
-      m_attachables.push_back(default_attachable::make_link(other));
-      return true;
-    }
-  }
-  return false;
-}
-
 void abstract_actor::attach(attachable_ptr ptr) {
   CAF_LOG_TRACE("");
   if (ptr == nullptr) {
@@ -118,28 +99,40 @@ void abstract_actor::detach(const attachable::token& what) {
   // ptr will be destroyed here, without locked mutex
 }
 
-void abstract_actor::link_to(const actor_addr& other) {
-  static_cast<void>(link_to_impl(other));
+bool abstract_actor::link_impl(linking_operation op, const actor_addr& other) {
+  switch (op) {
+    case establish_link_op:
+      return establish_link_impl(other);
+    case establish_backlink_op:
+      return establish_backlink_impl(other);
+    case remove_link_op:
+      return remove_link_impl(other);
+    case remove_backlink_op:
+      return remove_backlink_impl(other);
+  }
+  return false;
 }
 
-void abstract_actor::unlink_from(const actor_addr& other) {
-  static_cast<void>(unlink_from_impl(other));
-}
-
-bool abstract_actor::remove_backlink(const actor_addr& other) {
-  default_attachable::predicate pred(other, default_attachable::link);
+bool abstract_actor::establish_link_impl(const actor_addr& other) {
   if (other && other != this) {
     guard_type guard{m_mtx};
-    auto i = std::find_if(m_attachables.begin(), m_attachables.end(), pred);
-    if (i != m_attachables.end()) {
-      m_attachables.erase(i);
+    auto ptr = actor_cast<abstract_actor_ptr>(other);
+    // send exit message if already exited
+    if (exited()) {
+      ptr->enqueue(address(), message_id::invalid,
+                   make_message(exit_msg{address(), exit_reason()}), m_host);
+    }
+    // add link if not already linked to other
+    // (checked by establish_backlink)
+    else if (ptr->establish_backlink(address())) {
+      m_attachables.push_back(default_attachable::make_link(other));
       return true;
     }
   }
   return false;
 }
 
-bool abstract_actor::establish_backlink(const actor_addr& other) {
+bool abstract_actor::establish_backlink_impl(const actor_addr& other) {
   uint32_t reason = exit_reason::not_exited;
   default_attachable::predicate pred(other, default_attachable::link);
   if (other && other != this) {
@@ -162,7 +155,7 @@ bool abstract_actor::establish_backlink(const actor_addr& other) {
   return false;
 }
 
-bool abstract_actor::unlink_from_impl(const actor_addr& other) {
+bool abstract_actor::remove_link_impl(const actor_addr& other) {
   if (!other) {
     return false;
   }
@@ -175,6 +168,19 @@ bool abstract_actor::unlink_from_impl(const actor_addr& other) {
     CAF_REQUIRE(i != m_attachables.end());
     m_attachables.erase(i);
     return true;
+  }
+  return false;
+}
+
+bool abstract_actor::remove_backlink_impl(const actor_addr& other) {
+  default_attachable::predicate pred(other, default_attachable::link);
+  if (other && other != this) {
+    guard_type guard{m_mtx};
+    auto i = std::find_if(m_attachables.begin(), m_attachables.end(), pred);
+    if (i != m_attachables.end()) {
+      m_attachables.erase(i);
+      return true;
+    }
   }
   return false;
 }
