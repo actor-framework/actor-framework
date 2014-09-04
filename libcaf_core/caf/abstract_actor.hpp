@@ -263,6 +263,16 @@ class abstract_actor : public abstract_channel {
     m_host = new_host;
   }
 
+  inline void attach_impl(attachable_ptr& ptr) {
+    ptr->next.swap(m_attachables_head);
+    m_attachables_head.swap(ptr);
+  }
+
+  static size_t detach_impl(const attachable::token& what,
+                            attachable_ptr& ptr,
+                            bool stop_on_first_hit = false,
+                            bool dry_run = false);
+
   // cannot be changed after construction
   const actor_id m_id;
 
@@ -273,7 +283,7 @@ class abstract_actor : public abstract_channel {
   mutable std::mutex m_mtx;
 
   // attached functors that are executed on cleanup (for monitors, links, etc)
-  std::vector<attachable_ptr> m_attachables;
+  attachable_ptr m_attachables_head;
 
   // identifies the execution unit this actor is currently executed by
   execution_unit* m_host;

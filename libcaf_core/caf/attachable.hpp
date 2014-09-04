@@ -41,6 +41,11 @@ class attachable {
    * Represents a pointer to a value with its RTTI.
    */
   struct token {
+    template <class T>
+    token(const T& tk) : subtype(typeid(T)), ptr(&tk) {
+      // nop
+    }
+
     /**
      * Denotes the type of ptr.
      */
@@ -74,6 +79,8 @@ class attachable {
   bool matches(const T& what) {
     return matches(token{typeid(T), &what});
   }
+
+  std::unique_ptr<attachable> next;
 };
 
 /**

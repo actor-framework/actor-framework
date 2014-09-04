@@ -75,8 +75,7 @@ void abstract_actor::attach(attachable_ptr ptr) {
     guard_type guard{m_mtx};
     reason = m_exit_reason;
     if (reason == exit_reason::not_exited) {
-      m_attachables.push_back(std::move(ptr));
-      CAF_LOG_DEBUG("actor has now " << m_attachables.size() << " attachables");
+      attach_impl(ptr);
       return;
     }
   }
@@ -84,19 +83,27 @@ void abstract_actor::attach(attachable_ptr ptr) {
   ptr->actor_exited(this, reason);
 }
 
-void abstract_actor::detach(const attachable::token& what) {
-  attachable_ptr ptr;
-  { // lifetime scope of guard
-    guard_type guard{m_mtx};
-    auto end = m_attachables.end();
-    auto i = std::find_if(m_attachables.begin(), end,
-                          [&](attachable_ptr& p) { return p->matches(what); });
-    if (i != end) {
-      ptr.swap(*i);
-      m_attachables.erase(i);
-    }
+size_t abstract_actor::detach_impl(const attachable::token& what,
+                                   attachable_ptr& ptr,
+                                   bool stop_on_hit,
+                                   bool dry_run) {
+  if (!ptr) {
+    return 0;
   }
-  // ptr will be destroyed here, without locked mutex
+  if (ptr->matches(what)) {
+    if (!dry_run) {
+      attachable_ptr next;
+      next.swap(ptr->next);
+      ptr.swap(next);
+    }
+    return stop_on_hit ? 1 : 1 + detach_impl(what, ptr, stop_on_hit, dry_run);
+  }
+  return detach_impl(what, ptr->next, stop_on_hit, dry_run);
+}
+
+void abstract_actor::detach(const attachable::token& what) {
+  guard_type guard{m_mtx};
+  detach_impl(what, m_attachables_head);
 }
 
 bool abstract_actor::link_impl(linking_operation op, const actor_addr& other) {
@@ -121,11 +128,11 @@ bool abstract_actor::establish_link_impl(const actor_addr& other) {
     if (exited()) {
       ptr->enqueue(address(), message_id::invalid,
                    make_message(exit_msg{address(), exit_reason()}), m_host);
-    }
-    // add link if not already linked to other
-    // (checked by establish_backlink)
-    else if (ptr->establish_backlink(address())) {
-      m_attachables.push_back(default_attachable::make_link(other));
+    } else if (ptr->establish_backlink(address())) {
+      // add link if not already linked to other
+      // (checked by establish_backlink)
+      auto tmp = default_attachable::make_link(other);
+      attach_impl(tmp);
       return true;
     }
   }
@@ -134,14 +141,14 @@ bool abstract_actor::establish_link_impl(const actor_addr& other) {
 
 bool abstract_actor::establish_backlink_impl(const actor_addr& other) {
   uint32_t reason = exit_reason::not_exited;
-  default_attachable::predicate pred(other, default_attachable::link);
+  default_attachable::observe_token tk{other, default_attachable::link};
   if (other && other != this) {
     guard_type guard{m_mtx};
     reason = m_exit_reason;
     if (reason == exit_reason::not_exited) {
-      auto i = std::find_if(m_attachables.begin(), m_attachables.end(), pred);
-      if (i == m_attachables.end()) {
-        m_attachables.push_back(default_attachable::make_link(other));
+      if (detach_impl(tk, m_attachables_head, true, true) == 0) {
+        auto tmp = default_attachable::make_link(other);
+        attach_impl(tmp);
         return true;
       }
     }
@@ -159,28 +166,22 @@ bool abstract_actor::remove_link_impl(const actor_addr& other) {
   if (!other) {
     return false;
   }
-  default_attachable::predicate pred(other, default_attachable::link);
+  default_attachable::observe_token tk{other, default_attachable::link};
   guard_type guard{m_mtx};
   // remove_backlink returns true if this actor is linked to other
   auto ptr = actor_cast<abstract_actor_ptr>(other);
   if (!exited() && ptr->remove_backlink(address())) {
-    auto i = std::find_if(m_attachables.begin(), m_attachables.end(), pred);
-    CAF_REQUIRE(i != m_attachables.end());
-    m_attachables.erase(i);
+    detach_impl(tk, m_attachables_head, true);
     return true;
   }
   return false;
 }
 
 bool abstract_actor::remove_backlink_impl(const actor_addr& other) {
-  default_attachable::predicate pred(other, default_attachable::link);
+  default_attachable::observe_token tk{other, default_attachable::link};
   if (other && other != this) {
     guard_type guard{m_mtx};
-    auto i = std::find_if(m_attachables.begin(), m_attachables.end(), pred);
-    if (i != m_attachables.end()) {
-      m_attachables.erase(i);
-      return true;
-    }
+    return detach_impl(tk, m_attachables_head, true) > 0;
   }
   return false;
 }
@@ -194,7 +195,7 @@ void abstract_actor::cleanup(uint32_t reason) {
   CAF_LOGM_TRACE("caf::actor", CAF_ARG(m_id) << ", " << CAF_ARG(reason));
   CAF_REQUIRE(reason != exit_reason::not_exited);
   // move everyhting out of the critical section before processing it
-  decltype(m_attachables) mattachables;
+  attachable_ptr head;
   { // lifetime scope of guard
     guard_type guard{m_mtx};
     if (m_exit_reason != exit_reason::not_exited) {
@@ -202,17 +203,15 @@ void abstract_actor::cleanup(uint32_t reason) {
       return;
     }
     m_exit_reason = reason;
-    mattachables.swap(m_attachables);
+    m_attachables_head.swap(head);
   }
-  CAF_LOG_INFO_IF(!is_remote(), "actor with ID "
-                                << m_id << " had " << mattachables.size()
-                                << " attachables; exit reason = "
+  CAF_LOG_INFO_IF(!is_remote(), "cleanup actor with ID "
+                                << m_id << "; exit reason = "
                                 << reason << ", class = "
                                 << detail::demangle(typeid(*this)));
   // send exit messages
-  CAF_LOGM_DEBUG("caf::actor", "run " << mattachables.size() << " attachables");
-  for (attachable_ptr& ptr : mattachables) {
-    ptr->actor_exited(this, reason);
+  for (attachable* i = head.get(); i != nullptr; i = i->next.get()) {
+    i->actor_exited(this, reason);
   }
 }
 

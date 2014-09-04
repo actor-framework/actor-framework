@@ -66,14 +66,12 @@ void local_actor::join(const group& what) {
   if (what == invalid_group) {
     return;
   }
-  abstract_group::subscription_predicate pred{what.ptr()};
+  abstract_group::subscription_token tk{what.ptr()};
   std::unique_lock<std::mutex> guard{m_mtx};
-  auto last = m_attachables.end();
-  auto i = std::find_if(m_attachables.begin(), last, pred);
-  if (i == last) {
+  if (detach_impl(tk, m_attachables_head, true, true) == 0) {
     auto ptr = what->subscribe(address());
     if (ptr) {
-      m_attachables.emplace_back(std::move(ptr));
+      attach_impl(ptr);
     }
   }
 }
@@ -87,9 +85,10 @@ void local_actor::leave(const group& what) {
 
 std::vector<group> local_actor::joined_groups() const {
   std::vector<group> result;
+  result.reserve(20);
   std::unique_lock<std::mutex> guard{m_mtx};
-  for (auto& ptr : m_attachables) {
-    auto sptr = dynamic_cast<abstract_group::subscription*>(ptr.get());
+  for (attachable* i = m_attachables_head.get(); i != 0; i = i->next.get()) {
+    auto sptr = dynamic_cast<abstract_group::subscription*>(i);
     if (sptr) {
       result.emplace_back(sptr->group());
     }
