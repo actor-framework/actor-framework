@@ -875,10 +875,21 @@ void test_spawn() {
   CAF_CHECKPOINT();
 }
 
+class actor_size_getter : public event_based_actor {
+ public:
+  behavior make_behavior() override {
+    CAF_PRINT("size of one event-based actor: " << sizeof(*this) << " bytes");
+    return {};
+  }
+};
+
 } // namespace <anonymous>
 
 int main() {
   CAF_TEST(test_spawn);
+  spawn<actor_size_getter>();
+  await_all_actors_done();
+  CAF_CHECKPOINT();
   test_spawn();
   CAF_CHECKPOINT();
   await_all_actors_done();
