@@ -264,13 +264,14 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
    * If `on_exit()` did not set a new behavior, the actor sends an
    * exit message to all of its linked actors, sets its state to exited
    * and finishes execution.
-   * @note Throws {@link actor_exited} to unwind the stack
-   *       (only) when called in detached actors.
+   *
+   * In case this actor uses the blocking API, this member function unwinds
+   * the stack by throwing an `actor_exited` exception.
    * @warning This member function throws immediately in thread-based actors
    *          that do not use the behavior stack, i.e., actors that use
    *          blocking API calls such as {@link receive()}.
    */
-  virtual void quit(uint32_t reason = exit_reason::normal);
+  void quit(uint32_t reason = exit_reason::normal);
 
   /**
    * Checks whether this actor traps exit messages.
@@ -314,6 +315,14 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
 
   inline void is_running(bool value) {
     set_flag(value, is_running_flag);
+  }
+
+  inline bool is_blocking() const {
+    return get_flag(is_blocking_flag);
+  }
+
+  inline void is_blocking(bool value) {
+    set_flag(value, is_blocking_flag);
   }
 
   /**

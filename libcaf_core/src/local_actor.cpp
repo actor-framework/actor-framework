@@ -162,6 +162,10 @@ void local_actor::cleanup(uint32_t reason) {
 void local_actor::quit(uint32_t reason) {
   CAF_LOG_TRACE("reason = " << reason << ", class "
                             << detail::demangle(typeid(*this)));
+  planned_exit_reason(reason);
+  if (is_blocking()) {
+    throw actor_exited(reason);
+  }
   if (reason == exit_reason::unallowed_function_call) {
     // this is the only reason that causes an exception
     cleanup(reason);
@@ -174,7 +178,6 @@ void local_actor::quit(uint32_t reason) {
                   "to use receive()\n";
     throw actor_exited(reason);
   }
-  planned_exit_reason(reason);
 }
 
 message_id local_actor::timed_sync_send_tuple_impl(message_priority mp,

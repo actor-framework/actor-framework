@@ -27,13 +27,12 @@
 
 namespace caf {
 
-void blocking_actor::await_all_other_actors_done() {
-  detail::singletons::get_actor_registry()->await_running_count_equal(1);
+blocking_actor::blocking_actor() {
+  is_blocking(true);
 }
 
-void blocking_actor::quit(uint32_t reason) {
-  planned_exit_reason(reason);
-  throw actor_exited(reason);
+void blocking_actor::await_all_other_actors_done() {
+  detail::singletons::get_actor_registry()->await_running_count_equal(1);
 }
 
 void blocking_actor::functor_based::create(blocking_actor*, act_fun fun) {

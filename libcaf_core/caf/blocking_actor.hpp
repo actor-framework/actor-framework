@@ -47,6 +47,8 @@ class blocking_actor
  public:
   class functor_based;
 
+  blocking_actor();
+
   /**************************************************************************
    *       utility stuff and receive() member function family       *
    **************************************************************************/
@@ -199,12 +201,6 @@ class blocking_actor
    * Implements the actor's behavior.
    */
   virtual void act() = 0;
-
-  /**
-   * Unwinds the stack by throwing an actor_exited exception.
-   * @throws actor_exited
-   */
-  virtual void quit(uint32_t reason = exit_reason::normal);
 
   /** @cond PRIVATE */
 
