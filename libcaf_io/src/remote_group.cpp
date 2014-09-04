@@ -37,7 +37,7 @@ group remote_group(const std::string& group_uri) {
   }
   auto name = group_uri.substr(0, pos1);
   auto host = group_uri.substr(pos1 + 1, pos2 - pos1 - 1);
-  auto port = static_cast<uint16_t>(group_uri.substr(pos2 + 1));
+  auto port = static_cast<uint16_t>(std::stoi(group_uri.substr(pos2 + 1)));
   return remote_group(name, host, port);
 }
 
