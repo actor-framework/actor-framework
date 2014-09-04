@@ -538,7 +538,7 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   mailbox_element* m_current_node;
 
   // {group => subscription} map of all joined groups
-  std::map<group, abstract_group::subscription> m_subscriptions;
+  //  std::map<group, abstract_group::subscription> m_subscriptions;
 
   // set by quit
   uint32_t m_planned_exit_reason;

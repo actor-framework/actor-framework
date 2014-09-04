@@ -63,22 +63,36 @@ void local_actor::on_exit() {
 
 void local_actor::join(const group& what) {
   CAF_LOG_TRACE(CAF_TSARG(what));
-  if (what && m_subscriptions.count(what) == 0) {
-    CAF_LOG_DEBUG("join group: " << to_string(what));
-    m_subscriptions.insert(std::make_pair(what, what->subscribe(this)));
+  if (what == invalid_group) {
+    return;
+  }
+  abstract_group::subscription_predicate pred{what.ptr()};
+  std::unique_lock<std::mutex> guard{m_mtx};
+  auto last = m_attachables.end();
+  auto i = std::find_if(m_attachables.begin(), last, pred);
+  if (i == last) {
+    auto ptr = what->subscribe(address());
+    if (ptr) {
+      m_attachables.emplace_back(std::move(ptr));
+    }
   }
 }
 
 void local_actor::leave(const group& what) {
-  if (what) {
-    m_subscriptions.erase(what);
+  if (what == invalid_group) {
+    return;
   }
+  detach(abstract_group::subscription_token{what.ptr()});
 }
 
 std::vector<group> local_actor::joined_groups() const {
   std::vector<group> result;
-  for (auto& kvp : m_subscriptions) {
-    result.emplace_back(kvp.first);
+  std::unique_lock<std::mutex> guard{m_mtx};
+  for (auto& ptr : m_attachables) {
+    auto sptr = dynamic_cast<abstract_group::subscription*>(ptr.get());
+    if (sptr) {
+      result.emplace_back(sptr->group());
+    }
   }
   return result;
 }
@@ -145,7 +159,6 @@ response_promise local_actor::make_response_promise() {
 
 void local_actor::cleanup(uint32_t reason) {
   CAF_LOG_TRACE(CAF_ARG(reason));
-  m_subscriptions.clear();
   super::cleanup(reason);
   // tell registry we're done
   is_registered(false);

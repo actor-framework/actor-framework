@@ -114,6 +114,11 @@ class abstract_actor : public abstract_channel {
    */
   void detach(const attachable::token& what);
 
+  template <class T>
+  void detach(const T& what) {
+    return detach(attachable::token{typeid(T), &what});
+  }
+
   /**
    * Links this actor to `whom`.
    */
@@ -250,7 +255,7 @@ class abstract_actor : public abstract_channel {
   std::atomic<uint32_t> m_exit_reason;
 
   // guards access to m_exit_reason, m_attachables, and m_links
-  std::mutex m_mtx;
+  mutable std::mutex m_mtx;
 
   // attached functors that are executed on cleanup (for monitors, links, etc)
   std::vector<attachable_ptr> m_attachables;

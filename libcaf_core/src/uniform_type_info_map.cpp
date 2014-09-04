@@ -32,6 +32,7 @@
 #include "caf/string_algorithms.hpp"
 
 #include "caf/group.hpp"
+#include "caf/channel.hpp"
 #include "caf/message.hpp"
 #include "caf/announce.hpp"
 #include "caf/duration.hpp"
