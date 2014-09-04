@@ -438,7 +438,7 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
 
   inline message_id new_request_id() {
     auto result = ++m_last_request_id;
-    m_pending_responses.push_back(result.response_id());
+    m_pending_responses.push_front(result.response_id());
     return result;
   }
 
@@ -495,11 +495,7 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   }
 
   inline void mark_arrived(message_id response_id) {
-    auto last = m_pending_responses.end();
-    auto i = std::find(m_pending_responses.begin(), last, response_id);
-    if (i != last) {
-      m_pending_responses.erase(i);
-    }
+    m_pending_responses.remove(response_id);
   }
 
   inline uint32_t planned_exit_reason() const {
@@ -526,7 +522,7 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   message_id m_last_request_id;
 
   // identifies all IDs of sync messages waiting for a response
-  std::vector<message_id> m_pending_responses;
+  std::forward_list<message_id> m_pending_responses;
 
   // "default value" for m_current_node
   mailbox_element m_dummy_node;
