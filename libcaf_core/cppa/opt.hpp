@@ -42,7 +42,7 @@ using string_proj = std::function<optional<std::string> (const std::string&)>;
 
 string_proj extract_longopt_arg(const std::string& prefix) {
   return [prefix](const std::string& arg) -> optional<std::string> {
-    if (arg.compare(0, prefix.size(), prefix)) {
+    if (arg.compare(0, prefix.size(), prefix) == 0) {
       return std::string(arg.begin() + prefix.size(), arg.end());
     }
     return none;
