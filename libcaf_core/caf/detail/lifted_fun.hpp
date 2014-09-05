@@ -170,8 +170,6 @@ class lifted_fun {
 
   lifted_fun() = default;
 
-  lifted_fun(lifted_fun&&) = default;
-
   lifted_fun(const lifted_fun&) = default;
 
   lifted_fun& operator=(lifted_fun&&) = default;

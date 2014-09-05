@@ -22,6 +22,7 @@
 
 #include <typeinfo>
 #include <type_traits>
+#include <cstddef>
 
 #include "caf/unit.hpp"
 

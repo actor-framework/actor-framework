@@ -173,8 +173,8 @@ class invoke_policy {
                 // recursively call invoke_fun on the
                 // result to correctly handle stuff like
                 // sync_send(...).then(...).then(...)...
-                return invoke_fun(self, intermediate,
-                          mutable_mid, f2, fhdl);
+                return this->invoke_fun(self, intermediate,
+                             mutable_mid, f2, fhdl);
               }
               return none;
             });
