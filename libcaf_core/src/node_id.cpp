@@ -179,7 +179,12 @@ node_id::data::~data() {
 
 // initializes singleton
 node_id::data* node_id::data::create_singleton() {
-  auto macs = detail::get_mac_addresses();
+  auto ifs = detail::get_mac_addresses();
+  std::vector<std::string> macs;
+  macs.reserve(ifs.size());
+  for (auto& i : ifs) {
+    macs.emplace_back(std::move(i.ethernet_address));
+  }
   auto hd_serial_and_mac_addr = join(macs, "") + detail::get_root_uuid();
   node_id::host_id_type nid;
   detail::ripemd_160(nid, hd_serial_and_mac_addr);

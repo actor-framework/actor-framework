@@ -22,11 +22,17 @@
 
 #include <string>
 #include <vector>
+#include <utility>
 
 namespace caf {
 namespace detail {
 
-std::vector<std::string> get_mac_addresses();
+struct iface_info {
+  std::string interface_name;
+  std::string ethernet_address;
+};
+
+std::vector<iface_info> get_mac_addresses();
 
 } // namespace detail
 } // namespace caf
