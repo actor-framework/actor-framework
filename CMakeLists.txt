@@ -303,7 +303,7 @@ else()
   set(CAF_NO_SHELL yes)
 endif()
 # build probe if not being told otherwise
-if(NOT CAF_NO_PROBE AND EXISTS "${CMAKE_SOURCE_DIR}/probe/caf/")
+if(NOT CAF_NO_PROBE AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_probe/caf/")
   if(NOT CAF_HAS_PROBE_EVENTS)
     message(WARNING "cannot build probe: probe-event submodule missing")
     set(CAF_NO_PROBE yes)
