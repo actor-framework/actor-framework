@@ -2,13 +2,13 @@
 	path = benchmarks
 	url = https://github.com/actor-framework/benchmarks.git
 [submodule "probe-event"]
-	path = probe-event
+	path = libcaf_probe_event
 	url = https://github.com/actor-framework/probe-event.git
 [submodule "nexus"]
 	path = nexus
 	url = https://github.com/actor-framework/nexus.git
 [submodule "probe"]
-	path = probe
+	path = libcaf_probe
 	url = https://github.com/actor-framework/probe.git
 [submodule "shell"]
 	path = shell
