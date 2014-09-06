@@ -22,13 +22,13 @@
 
 #include <list>
 #include <deque>
-#include <mutex>
 #include <atomic>
 #include <memory>
 #include <limits>
-#include <condition_variable> // std::cv_status
 
+#include "caf/mutex.hpp"
 #include "caf/config.hpp"
+#include "caf/condition_variable.hpp"
 
 #include "caf/detail/intrusive_partitioned_list.hpp"
 
@@ -218,6 +218,56 @@ class single_reader_queue {
    *                    support for synchronized access                     *
    **************************************************************************/
 
+#ifdef __RIOTBUILD_FLAG
+  bool synchronized_enqueue(pthread_mutex_t& mtx, pthread_cond_t& cv, pointer new_element) {
+  //template <class Mutex, class CondVar>
+  //bool synchronized_enqueue(Mutex& mtx, CondVar& cv, pointer new_element) {
+
+    switch (enqueue(new_element)) {
+      case enqueue_result::unblocked_reader: {
+        pthread_mutex_lock(&mtx);
+        pthread_cond_signal(&cv);
+        pthread_mutex_unlock(&mtx);
+        return true;
+      }
+    }
+  }
+
+  void synchronized_await(pthread_mutex_t& mtx, pthread_cond_t& cv) {
+  //template <class Mutex, class CondVar>
+  //void synchronized_await(Mutex& mtx, CondVar& cv) {
+    CAF_REQUIRE(!closed());
+    if (!can_fetch_more() && try_block()) { // todo what does the try_block?
+      pthread_mutex_lock(&mtx);
+      while (blocked()) {
+        pthread_cond_wait(&cv,&mtx);
+      }
+      pthread_mutex_unlock(&mtx);
+    }
+  }
+
+  bool synchronized_await(pthread_mutex_t& mtx, pthread_cond_t& cv,const struct timespec& timeout) {
+  //template <class Mutex, class CondVar, class TimePoint>
+  //bool synchronized_await(Mutex& mtx, CondVar& cv, const TimePoint& timeout) {
+    CAF_REQUIRE(!closed());
+    if (!can_fetch_more() && try_block()) {
+      pthread_mutex_lock(&mtx);
+      while (blocked()) {
+        auto rc = pthread_cond_timedwait(&cv,&mtx,&timeout);
+        if (rc == ETIMEDOUT) {
+        //if (cv.wait_until(guard, timeout) == std::cv_status::timeout) {
+          // if we're unable to set the queue from blocked to empty,
+          // than there's a new element in the list
+          pthread_mutex_unlock(&mtx);
+          return !try_unblock();
+        }
+      }
+    }
+    pthread_mutex_unlock(&mtx);
+    return true;
+  }
+
+#else
   template <class Mutex, class CondVar>
   bool synchronized_enqueue(Mutex& mtx, CondVar& cv, pointer new_element) {
     switch (enqueue(new_element)) {
@@ -236,20 +286,7 @@ class single_reader_queue {
     // should be unreachable
     CAF_CRITICAL("invalid result of enqueue()");
   }
-#ifdef __RIOTBUILD_FLAG
-  template <class Mutex, class CondVar>
-  void synchronized_await(Mutex& mtx, CondVar& cv) {
-    CAF_REQUIRE(!closed());
 
-  }
-
-  template <class Mutex, class CondVar, class TimePoint>
-  bool synchronized_await(Mutex& mtx, CondVar& cv, const TimePoint& timeout) {
-    CAF_REQUIRE(!closed());
-
-  }
-
-#else
   template <class Mutex, class CondVar>
   void synchronized_await(Mutex& mtx, CondVar& cv) {
     CAF_ASSERT(!closed());
