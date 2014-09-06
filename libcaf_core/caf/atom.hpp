@@ -31,7 +31,7 @@ namespace caf {
  */
 enum class atom_value : uint64_t {
   /** @cond PRIVATE */
-  dirty_little_hack = 37337
+  dirty_little_hack = 31337
   /** @endcond */
 
 };
