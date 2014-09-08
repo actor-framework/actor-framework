@@ -55,7 +55,7 @@ class response_promise {
   /**
    * Sends `response_message` and invalidates this handle afterwards.
    */
-  void deliver(message response_message);
+  void deliver(message response_message) const;
 
  private:
   actor_addr m_from;

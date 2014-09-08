@@ -32,14 +32,13 @@ response_promise::response_promise(const actor_addr& from, const actor_addr& to,
   CAF_REQUIRE(id.is_response() || !id.valid());
 }
 
-void response_promise::deliver(message msg) {
+void response_promise::deliver(message msg) const {
   if (!m_to) {
     return;
   }
   auto to = actor_cast<abstract_actor_ptr>(m_to);
   auto from = actor_cast<abstract_actor_ptr>(m_from);
   to->enqueue(m_from, m_id, move(msg), from->m_host);
-  m_to = invalid_actor_addr;
 }
 
 } // namespace caf
