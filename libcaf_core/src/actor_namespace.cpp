@@ -87,6 +87,18 @@ size_t actor_namespace::count_proxies(const key_type& node) {
   return (i != m_proxies.end()) ? i->second.size() : 0;
 }
 
+std::vector<actor_proxy_ptr> actor_namespace::get_all(const key_type& node) {
+  std::vector<actor_proxy_ptr> result;
+  auto& submap = m_proxies[node];
+  for (auto& kvp : submap) {
+    auto ptr = kvp.second->get();
+    if (ptr) {
+      result.push_back(ptr);
+    }
+  }
+  return result;
+}
+
 actor_proxy_ptr actor_namespace::get(const key_type& node, actor_id aid) {
   auto& submap = m_proxies[node];
   auto i = submap.find(aid);
