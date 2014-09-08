@@ -74,6 +74,10 @@ class basp_broker : public broker, public actor_namespace::backend {
 
   void init_client(connection_handle hdl, client_handshake_data* data);
 
+  inline actor_namespace& get_namespace() {
+    return m_namespace;
+  }
+
  private:
 
   void erase_proxy(const id_type& nid, actor_id aid);
