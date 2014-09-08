@@ -227,8 +227,8 @@ class string_deserializer : public deserializer, public dummy_backend {
       type_name = "@str";
     } else if (*m_pos == '\'') {
       type_name = "@atom";
-    } else if (*m_pos == '{') {
-      type_name = "@tuple";
+    } else if (isdigit(*m_pos)) {
+      type_name = "@i32";
     } else {
       auto substr_end = next_delimiter();
       if (m_pos == substr_end) {
