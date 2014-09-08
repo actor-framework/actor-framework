@@ -16,6 +16,7 @@
 #include <iostream>
 
 #include "caf/all.hpp"
+#include "caf/io/all.hpp"
 
 // the options_description API is deprecated
 #include "cppa/opt.hpp"
@@ -101,8 +102,10 @@ int main(int argc, char** argv) {
          << ", expected format: <module_name>:<group_id>";
     } else {
       try {
-        auto g = group::get(group_id.substr(0, p),
-                  group_id.substr(p + 1));
+        auto module = group_id.substr(0, p);
+        auto group_uri = group_id.substr(p + 1);
+        auto g = (module == "remote") ? io::remote_group(group_uri)
+                                      : group::get(module, group_uri);
         anon_send(client_actor, atom("join"), g);
       }
       catch (exception& e) {
@@ -127,7 +130,9 @@ int main(int argc, char** argv) {
   match_each (lines, eof, split_line) (
     on("/join", arg_match) >> [&](const string& mod, const string& id) {
       try {
-        anon_send(client_actor, atom("join"), group::get(mod, id));
+        group grp = (mod == "remote") ? io::remote_group(id)
+                                      : group::get(mod, id);
+        anon_send(client_actor, atom("join"), grp);
       }
       catch (exception& e) {
         cerr << "*** exception: " << to_verbose_string(e) << endl;
