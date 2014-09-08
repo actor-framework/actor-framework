@@ -22,6 +22,7 @@
 
 #include "caf/behavior.hpp"
 #include "caf/match_expr.hpp"
+#include "caf/system_messages.hpp"
 #include "caf/typed_continue_helper.hpp"
 
 #include "caf/detail/typed_actor_util.hpp"
@@ -73,44 +74,69 @@ struct valid_input_predicate {
   template <class Expr>
   struct inner {
     using input_types = typename Expr::input_types;
-    using output_types = typename unbox_typed_continue_helper<
-                 typename Expr::output_types
-               >::type;
+    using output_types =
+      typename unbox_typed_continue_helper<
+        typename Expr::output_types
+      >::type;
     // get matching elements for input type
-    using filtered_slist = typename tl_filter<
-                   SList,
-                   tbind<same_input, input_types>::template type
-                 >::type;
+    using filtered_slist =
+      typename tl_filter<
+        SList,
+        tbind<same_input, input_types>::template type
+      >::type;
     static_assert(tl_size<filtered_slist>::value > 0,
-            "cannot assign given match expression to "
-            "typed behavior, because the expression "
-            "contains at least one pattern that is "
-            "not defined in the actor's type");
+                  "cannot assign given match expression to "
+                  "typed behavior, because the expression "
+                  "contains at least one pattern that is "
+                  "not defined in the actor's type");
     static constexpr bool value = tl_exists<
       filtered_slist, tbind<same_output_or_skip_message_t,
-                  output_types>::template type>::value;
+                            output_types>::template type>::value;
     // check whether given output matches in the filtered list
     static_assert(value,
-            "cannot assign given match expression to "
-            "typed behavior, because at least one return "
-            "type does not match");
+                  "cannot assign given match expression to "
+                  "typed behavior, because at least one return "
+                  "type does not match");
   };
 };
+
+template <class T>
+struct is_system_msg_handler : std::false_type { };
+
+template <>
+struct is_system_msg_handler<reacts_to<exit_msg>> : std::true_type { };
+
+template <>
+struct is_system_msg_handler<reacts_to<down_msg>> : std::true_type { };
 
 // Tests whether the input list (IList) matches the
 // signature list (SList) for a typed actor behavior
 template <class SList, class IList>
 struct valid_input {
+  // strip exit_msg and down_msg from input types,
+  // because they're always allowed
+  using adjusted_slist =
+    typename tl_filter_not<
+      SList,
+      is_system_msg_handler
+    >::type;
+  using adjusted_ilist =
+    typename tl_filter_not<
+      IList,
+      is_system_msg_handler
+    >::type;
   // check for each element in IList that there's an element in SList that
   // (1) has an identical input type list
   // (2)  has an identical output type list
   //   OR the output of the element in IList is skip_message_t
   static_assert(detail::tl_is_distinct<IList>::value,
-          "given pattern is not distinct");
+                "given pattern is not distinct");
   static constexpr bool value =
-    detail::tl_size<SList>::value == detail::tl_size<IList>::value &&
-    detail::tl_forall<IList,
-              valid_input_predicate<SList>::template inner>::value;
+    tl_size<adjusted_slist>::value == tl_size<adjusted_ilist>::value
+    && tl_forall<
+         adjusted_ilist,
+         valid_input_predicate<adjusted_slist>::template inner
+       >::value;
 };
 
 // this function is called from typed_behavior<...>::set and its whole
@@ -124,8 +150,8 @@ void static_check_typed_behavior_input() {
   //     input types ... however, it might lead to unexpected results
   //     and would cause a lot of not-so-straightforward code here
   static_assert(is_valid,
-          "given pattern cannot be used to initialize "
-          "typed behavior (exact match needed)");
+                "given pattern cannot be used to initialize "
+                "typed behavior (exact match needed)");
 }
 
 } // namespace detail

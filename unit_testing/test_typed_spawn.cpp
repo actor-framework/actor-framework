@@ -35,7 +35,6 @@ namespace {
 struct my_request {
   int a;
   int b;
-
 };
 
 using server_type = typed_actor<replies_to<my_request>::with<bool>>;
@@ -45,7 +44,11 @@ bool operator==(const my_request& lhs, const my_request& rhs) {
 }
 
 server_type::behavior_type typed_server1() {
-  return {[](const my_request& req) { return req.a == req.b; }};
+  return {
+    [](const my_request& req) {
+      return req.a == req.b;
+    }
+  };
 }
 
 server_type::behavior_type typed_server2(server_type::pointer) {
@@ -246,12 +249,14 @@ int_actor::behavior_type int_fun() {
 }
 
 behavior foo(event_based_actor* self) {
-  return {on_arg_match >> [=](int i, int_actor server) {
-    return self->sync_send(server, i).then([=](int result)->int {
-      self->quit(exit_reason::normal);
-      return result;
-    });
-  }};
+  return {
+    on_arg_match >> [=](int i, int_actor server) {
+      return self->sync_send(server, i).then([=](int result) -> int {
+        self->quit(exit_reason::normal);
+        return result;
+      });
+    }
+  };
 }
 
 void test_sending_typed_actors() {
@@ -262,6 +267,41 @@ void test_sending_typed_actors() {
   self->send_exit(aut, exit_reason::user_shutdown);
 }
 
+int_actor::behavior_type int_fun2(int_actor::pointer self) {
+  self->trap_exit(true);
+  return {
+    [=](int i) {
+      self->monitor(self->last_sender());
+      return i * i;
+    },
+    [=](const down_msg& dm) {
+      CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
+      self->quit();
+    },
+    [=](const exit_msg& em) {
+      CAF_UNEXPECTED_MSG(self);
+    }
+  };
+}
+
+behavior foo2(event_based_actor* self) {
+  return {
+    [=](int i, int_actor server) {
+      return self->sync_send(server, i).then([=](int result) -> int {
+        self->quit(exit_reason::normal);
+        return result;
+      });
+    }
+  };
+}
+
+void test_sending_typed_actors_and_down_msg() {
+  scoped_actor self;
+  auto aut = spawn_typed(int_fun2);
+  self->send(spawn(foo2), 10, aut);
+  self->receive([](int i) { CAF_CHECK_EQUAL(i, 100); });
+}
+
 } // namespace <anonymous>
 
 /******************************************************************************
@@ -270,19 +310,15 @@ void test_sending_typed_actors() {
 
 int main() {
   CAF_TEST(test_typed_spawn);
-
   // announce stuff
   announce<get_state_msg>();
   announce<int_actor>();
   announce<my_request>(&my_request::a, &my_request::b);
-
   // run test series with typed_server(1|2)
   test_typed_spawn(spawn_typed(typed_server1));
-  CAF_CHECKPOINT();
   await_all_actors_done();
   CAF_CHECKPOINT();
   test_typed_spawn(spawn_typed(typed_server2));
-  CAF_CHECKPOINT();
   await_all_actors_done();
   CAF_CHECKPOINT();
   {
@@ -290,24 +326,24 @@ int main() {
     test_typed_spawn(spawn_typed<typed_server3>("hi there", self));
     self->receive(on("hi there") >> CAF_CHECKPOINT_CB());
   }
-  CAF_CHECKPOINT();
   await_all_actors_done();
-
+  CAF_CHECKPOINT();
   // run test series with event_testee
   test_event_testee();
-  CAF_CHECKPOINT();
   await_all_actors_done();
-
+  CAF_CHECKPOINT();
   // run test series with string reverter
   test_simple_string_reverter();
-  CAF_CHECKPOINT();
   await_all_actors_done();
-
+  CAF_CHECKPOINT();
   // run test series with sending of typed actors
   test_sending_typed_actors();
-  CAF_CHECKPOINT();
   await_all_actors_done();
-
+  CAF_CHECKPOINT();
+  // and again plus check whether typed actors can handle system messages
+  test_sending_typed_actors_and_down_msg();
+  await_all_actors_done();
+  CAF_CHECKPOINT();
   // call it a day
   return CAF_TEST_RESULT();
 }
