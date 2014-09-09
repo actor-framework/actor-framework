@@ -883,11 +883,25 @@ class actor_size_getter : public event_based_actor {
   }
 };
 
+void counting_actor(event_based_actor* self) {
+  for (int i = 0; i < 100; ++i) {
+    self->send(self, atom("dummy"));
+  }
+  CAF_CHECK_EQUAL(self->mailbox().count(), 100);
+  for (int i = 0; i < 100; ++i) {
+    self->send(self, atom("dummy"));
+  }
+  CAF_CHECK_EQUAL(self->mailbox().count(), 200);
+}
+
 } // namespace <anonymous>
 
 int main() {
   CAF_TEST(test_spawn);
   spawn<actor_size_getter>();
+  await_all_actors_done();
+  CAF_CHECKPOINT();
+  spawn(counting_actor);
   await_all_actors_done();
   CAF_CHECKPOINT();
   test_spawn();

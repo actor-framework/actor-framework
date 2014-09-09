@@ -47,11 +47,6 @@ class proper_actor_base : public Policies::resume_policy::template
     CAF_REQUIRE(this->is_registered() == false);
   }
 
-  // grant access to the actor's mailbox
-  typename Base::mailbox_type& mailbox() {
-    return this->m_mailbox;
-  }
-
   // member functions from scheduling policy
 
   using timeout_type = typename Policies::scheduling_policy::timeout_type;

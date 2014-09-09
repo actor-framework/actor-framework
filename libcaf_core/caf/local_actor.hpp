@@ -524,12 +524,12 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
     return &m_dummy_node;
   }
 
- protected:
   template <class... Ts>
   inline mailbox_element* new_mailbox_element(Ts&&... args) {
     return mailbox_element::create(std::forward<Ts>(args)...);
   }
 
+ protected:
   // identifies the ID of the last sent synchronous request
   message_id m_last_request_id;
 
