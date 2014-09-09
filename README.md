@@ -59,13 +59,13 @@ Supported Operating Systems
 
 * Linux
 * Mac OS X
-* *Note for MS Windows*: libcppa relies on C++11 features such as variadic templates and unrestricted unions. We will support this platform as soon as Microsoft's compiler implements all required C++11 features.
+* *Note for MS Windows*: CAF relies on C++11 features such as variadic templates and unrestricted unions. We will support Visual Studio as soon as Microsoft's compiler implements all required C++11 features. In the meantime, you can use CAF via MinGW.
 
 
 Scientific Use
 --------------
 
-If you use libcppa in a scientific context, please use the following citation:
+If you use CAF in a scientific context, please use the following citation:
 
 ```
 @inproceedings{cshw-nassp-13,
