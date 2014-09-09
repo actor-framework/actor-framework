@@ -71,7 +71,7 @@ class upgrade_to_unique_lock {
   template <class LockType>
   upgrade_to_unique_lock(LockType& other) {
     m_lockable = other.release();
-    if (m_lockable) m_lockable->lock_upgrade();
+    if (m_lockable) m_lockable->unlock_upgrade_and_lock();
   }
 
   ~upgrade_to_unique_lock() {
