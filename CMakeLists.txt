@@ -12,8 +12,8 @@ endif()
 if(NOT CAF_NO_MEM_MANAGEMENT)
   set(CAF_NO_MEM_MANAGEMENT no)
 endif()
-if(NOT CAF_HAS_PROBE_EVENTS)
-  set(CAF_HAS_PROBE_EVENTS no)
+if(NOT CAF_HAS_RIAC)
+  set(CAF_HAS_RIAC no)
 endif()
 if(NOT CAF_BUILD_STATIC_ONLY)
   set(CAF_BUILD_STATIC_ONLY no)
@@ -205,19 +205,8 @@ set(LIBCAF_INCLUDE_DIRS
     ${CMAKE_SOURCE_DIR}/libcaf_io)
 # path to caf opencl headers
 if(EXISTS ${CMAKE_SOURCE_DIR}/libcaf_opencl/caf)
-  set(LIBCAF_INCLUDE_DIRS 
-      ${CMAKE_SOURCE_DIR}/libcaf_opencl/ ${LIBCAF_INCLUDE_DIRS})
-endif()
-
-# path to probe-event headers (if submodule is loaded)
-if(EXISTS "${CMAKE_SOURCE_DIR}/libcaf_probe_event/caf")
   set(LIBCAF_INCLUDE_DIRS
-      ${CMAKE_SOURCE_DIR}/libcaf_probe_event/ ${LIBCAF_INCLUDE_DIRS})
-  # make files from probe-event show up in IDE
-  file(GLOB PROBE_EVENTS_HDRS
-       "${CMAKE_SOURCE_DIR}/libcaf_probe_event/caf/probe_event/*.hpp")
-  add_custom_target(caf_probe_events_dummy SOURCES ${PROBE_EVENTS_HDRS})
-  set(CAF_HAS_PROBE_EVENTS yes)
+      ${CMAKE_SOURCE_DIR}/libcaf_opencl/ ${LIBCAF_INCLUDE_DIRS})
 endif()
 # all projects need the headers of the core components
 include_directories(${LIBCAF_INCLUDE_DIRS})
@@ -272,15 +261,38 @@ if(NOT CAF_NO_EXAMPLES)
     add_dependencies(opencl_examples libcaf_opencl)
   endif()
 endif()
+# build RIAC if not being told otherwise
+if(NOT CAF_NO_RIAC AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_riac/caf/")
+  message(STATUS "Enter subdirectory probe")
+  add_subdirectory(libcaf_riac)
+  if(CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
+    add_dependencies(libcaf_riacStatic libcaf_ioStatic)
+  endif()
+  if(CAF_BUILD_STATIC_ONLY)
+    set(LIBCAF_LIBRARIES ${LIBCAF_LIBRARIES} libcaf_riacStatic)
+  else()
+    add_dependencies(libcaf_riac libcaf_io)
+    set(LIBCAF_LIBRARIES ${LIBCAF_LIBRARIES} libcaf_riac)
+  endif()
+  # add headers to include directories so other subprojects can use RIAC
+  include_directories(${LIBCAF_INCLUDE_DIRS} "${CMAKE_SOURCE_DIR}/libcaf_riac")
+  # add libcaf_riac to the list of caf libraries
+  set(CAF_HAS_RIAC yes)
+  set(CAF_NO_RIAC no)
+endif()
 # build nexus if not being told otherwise
 if(NOT CAF_NO_NEXUS AND EXISTS "${CMAKE_SOURCE_DIR}/nexus/caf/")
-  if(NOT CAF_HAS_PROBE_EVENTS)
-    message(WARNING "cannot build nexus: probe-event submodule missing")
+  if(NOT CAF_HAS_RIAC)
+    message(WARNING "cannot build nexus without RIAC submodule")
     set(CAF_NO_NEXUS yes)
   else()
     message(STATUS "Enter subdirectory nexus")
     add_subdirectory(nexus)
-    add_dependencies(nexus libcaf_io)
+    if(CAF_BUILD_STATIC_ONLY)
+      add_dependencies(nexus libcaf_riacStatic)
+    else()
+      add_dependencies(nexus libcaf_riac)
+    endif()
     set(CAF_NO_NEXUS no)
   endif()
 else()
@@ -289,43 +301,23 @@ else()
 endif()
 # build shell if not being told otherwise
 if(NOT CAF_NO_SHELL AND EXISTS "${CMAKE_SOURCE_DIR}/shell/caf/")
-  if(NOT CAF_HAS_PROBE_EVENTS)
-    message(WARNING "cannot build shell: probe-event submodule missing")
+  if(NOT CAF_HAS_RIAC)
+    message(WARNING "cannot build shell without RIAC submodule")
     set(CAF_NO_SHELL yes)
   else()
     message(STATUS "Enter subdirectory shell")
     add_subdirectory(shell)
-    add_dependencies(cash libcaf_io)
+    if(CAF_BUILD_STATIC_ONLY)
+      add_dependencies(cash libcaf_riacStatic)
+    else()
+      add_dependencies(cash libcaf_riac)
+    endif()
     set(CAF_NO_SHELL no)
   endif()
 else()
   # make sure variable is set for build log
   set(CAF_NO_SHELL yes)
 endif()
-# build probe if not being told otherwise
-if(NOT CAF_NO_PROBE AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_probe/caf/")
-  if(NOT CAF_HAS_PROBE_EVENTS)
-    message(WARNING "cannot build probe: probe-event submodule missing")
-    set(CAF_NO_PROBE yes)
-  else()
-    message(STATUS "Enter subdirectory probe")
-    add_subdirectory(libcaf_probe)
-    if(CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
-      add_dependencies(libcaf_probeStatic libcaf_ioStatic)
-    endif()
-    if(NOT CAF_BUILD_STATIC_ONLY)
-      add_dependencies(libcaf_probe libcaf_io)
-    endif()
-    set(CAF_NO_PROBE no)
-  endif()
-endif()
-# add probe-event if not told otherwise
-if(NOT CAF_NO_PROBE_EVENT AND EXISTS "${CMAKE_SOURCE_DIR}/probe-event/caf/")
-  message(STATUS "Enter subdirectory probe-event")
-  add_subdirectory(probe-event)
-  set(CAF_NO_PROBE_EVENT no) 
-endif()
-
 # build benchmarks if not being told otherwise
 if(NOT CAF_NO_BENCHMARKS AND EXISTS "${CMAKE_SOURCE_DIR}/benchmarks/caf/")
   message(STATUS "Enter subdirectory benchmarks")
@@ -385,7 +377,7 @@ endmacro()
 invertYesNo(CAF_NO_EXAMPLES CAF_BUILD_EXAMPLES)
 invertYesNo(CAF_NO_UNIT_TESTS CAF_BUILD_UNIT_TESTS)
 invertYesNo(CAF_NO_NEXUS CAF_BUILD_NEXUS)
-invertYesNo(CAF_NO_PROBE CAF_BUILD_PROBE)
+invertYesNo(CAF_NO_RIAC CAF_BUILD_RIAC)
 invertYesNo(CAF_NO_SHELL CAF_BUILD_SHELL)
 invertYesNo(CAF_NO_MEM_MANAGEMENT CAF_BUILD_MEM_MANAGEMENT)
 invertYesNo(CAF_NO_BENCHMARKS CAF_BUILD_BENCHMARKS)
@@ -408,9 +400,9 @@ message(STATUS
         "\n"
         "\nBuild examples:    ${CAF_BUILD_EXAMPLES}"
         "\nBuild unit tests:  ${CAF_BUILD_UNIT_TESTS}"
+        "\nBuild riac:        ${CAF_BUILD_RIAC}"
         "\nBuild nexus:       ${CAF_BUILD_NEXUS}"
         "\nBuild shell:       ${CAF_BUILD_SHELL}"
-        "\nBuild probe:       ${CAF_BUILD_PROBE}"
         "\nBuild benchmarks:  ${CAF_BUILD_BENCHMARKS}"
         "\nBuild opencl:      ${CAF_BUILD_OPENCL}"
         "\n"
