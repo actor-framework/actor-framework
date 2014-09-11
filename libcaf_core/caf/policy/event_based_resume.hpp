@@ -59,6 +59,7 @@ class event_based_resume {
 
     resumable::resume_result resume(execution_unit* new_host,
                                     size_t max_throughput) override {
+      CAF_REQUIRE(max_throughput > 0);
       auto d = static_cast<Derived*>(this);
       d->host(new_host);
       CAF_LOG_TRACE("id = " << d->id());
@@ -105,11 +106,7 @@ class event_based_resume {
           }
         }
         // max_throughput = 0 means infinite
-        size_t increment = max_throughput == 0 ? 0 : 1;
-        if (max_throughput == 0) {
-          max_throughput = 1;
-        }
-        for (size_t i = 0; i < max_throughput; i += increment) {
+        for (size_t i = 0; i < max_throughput; ++i) {
           auto ptr = d->next_message();
           if (ptr) {
             if (d->invoke_message(ptr)) {

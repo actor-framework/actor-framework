@@ -23,6 +23,7 @@
 #include <chrono>
 #include <memory>
 #include <thread>
+#include <limits>
 #include <cstdint>
 #include <functional>
 #include <type_traits>
@@ -280,7 +281,10 @@ class coordinator : public abstract_coordinator {
 
   using policy_data = typename Policy::coordinator_data;
 
-  coordinator(size_t nw = std::thread::hardware_concurrency()) : super(nw) {
+  coordinator(size_t nw = std::thread::hardware_concurrency(),
+              size_t mt = std::numeric_limits<size_t>::max())
+    : super(nw),
+      m_max_throughput(mt) {
     // nop
   }
 
@@ -408,7 +412,10 @@ void set_scheduler(scheduler::abstract_coordinator* ptr);
  */
 template <class Policy = policy::work_stealing>
 void set_scheduler(size_t nw = std::thread::hardware_concurrency(),
-                   size_t max_throughput = 0) {
+                   size_t max_throughput = std::numeric_limits<size_t>::max()) {
+  if (max_throughput == 0) {
+    throw std::invalid_argument("max_throughput must not be 0");
+  }
   set_scheduler(new scheduler::coordinator<Policy>(nw, max_throughput));
 }
 
