@@ -894,6 +894,56 @@ void counting_actor(event_based_actor* self) {
   CAF_CHECK_EQUAL(self->mailbox().count(), 200);
 }
 
+// tests attach_functor() inside of an actor's constructor
+void test_constructor_attach() {
+  class testee : public event_based_actor {
+   public:
+    testee(actor buddy) : m_buddy(buddy) {
+      attach_functor([=](uint32_t reason) {
+        send(m_buddy, atom("done"), reason);
+      });
+    }
+    behavior make_behavior() {
+      return {
+        on(atom("die")) >> [=] {
+          quit(exit_reason::user_shutdown);
+        }
+      };
+    }
+   private:
+    actor m_buddy;
+  };
+  class spawner : public event_based_actor {
+   public:
+    spawner() : m_downs(0) {
+    }
+    behavior make_behavior() {
+      m_testee = spawn<testee, monitored>(this);
+      return {
+        [=](const down_msg& msg) {
+          CAF_CHECK_EQUAL(msg.reason, exit_reason::user_shutdown);
+          if (++m_downs == 2) {
+            quit(msg.reason);
+          }
+        },
+        on(atom("done"), arg_match) >> [=](uint32_t reason) {
+          CAF_CHECK_EQUAL(reason, exit_reason::user_shutdown);
+          if (++m_downs == 2) {
+            quit(reason);
+          }
+        },
+        others() >> [=] {
+          forward_to(m_testee);
+        }
+      };
+    }
+   private:
+    int m_downs;
+    actor m_testee;
+  };
+  anon_send(spawn<spawner>(), atom("die"));
+}
+
 } // namespace <anonymous>
 
 int main() {
@@ -914,6 +964,9 @@ int main() {
     self->spawn<linked>([]() -> behavior { return others() >> [] {}; });
     self->planned_exit_reason(exit_reason::user_defined);
   }
+  await_all_actors_done();
+  CAF_CHECKPOINT();
+  test_constructor_attach();
   await_all_actors_done();
   CAF_CHECKPOINT();
   shutdown();
