@@ -16,10 +16,10 @@ The argument to this function call \emph{must} be a match expression as shown in
 
 \begin{lstlisting}
 auto p0 = spawn_typed(
-  on_arg_match >> [](int a, int b) {
+  [](int a, int b) {
    return static_cast<double>(a) * b;
   },
-  on_arg_match >> [](double a, double b) {
+  [](double a, double b) {
     return std::make_tuple(a * b, a / b);
   }
 );

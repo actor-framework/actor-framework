@@ -47,7 +47,7 @@ When sending a synchronous message, the response handler can be passed by either
 void foo(event_based_actor* self, actor testee) {
   // testee replies with a string to 'get'
   self->sync_send(testee, atom("get")).then(
-    on_arg_match >> [=](const std::string& str) {
+    [=](const std::string& str) {
       // handle str
     },
     after(std::chrono::seconds(30)) >> [=]() {

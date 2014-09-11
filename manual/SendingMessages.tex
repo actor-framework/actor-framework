@@ -31,7 +31,7 @@ void client(event_based_actor* self, const actor& master) {
   become (
     on("foo", arg_match) >> [=](const string& request) {
       return self->sync_send(master, atom("bar"), request).then(
-        on_arg_match >> [=](const std::string& response) {
+        [=](const std::string& response) {
           return response;
         }
       );
