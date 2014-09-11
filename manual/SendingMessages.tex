@@ -1,25 +1,21 @@
 \section{Sending Messages}
 \label{Sec::Send}
 
-Messages can be sent by using the member function \lstinline^send^ or \lstinline^send_tuple^.
-The variadic template function \lstinline^send^ has the following signature.
-
 \begin{lstlisting}
 template<typename... Args>
 void send(actor whom, Args&&... what);
 \end{lstlisting}
 
-The variadic template pack \lstinline^what...^ is converted to a dynamically typed tuple (see Section \ref{Sec::Tuples::DynamicallyTypedTuples}) and then enqueued to the mailbox of \lstinline^whom^.
-
-Using the function \lstinline^send^ is more compact, but does not have any other benefit.
-However, note that you should not use \lstinline^send^ if you already have an instance of \lstinline^message^, because it creates a new tuple containing the old one.
+Messages can be sent by using the member function \lstinline^send^.
+The variadic template parameter pack \lstinline^what...^ is converted to a message and then enqueued to the mailbox of \lstinline^whom^.
 
 \begin{lstlisting}
 void some_fun(event_based_actor* self) {
   actor other = spawn(...);
+  self->send(other, 1, 2, 3);
+  // sending a message directly is also ok:
   auto msg = make_message(1, 2, 3);
-  self->send(other, msg); // oops, creates a new tuple containing msg
-  self->send_tuple(other, msg); // ok
+  self->send(other, msg);
 }
 \end{lstlisting}
 
