@@ -71,8 +71,8 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     CXXFLAGS                    C++ compiler flags
 
   Benchmark Suite Options:
-    --with-scalac               path to scalac executable
-    --with-erlc                 path to erlc executable
+    --with-scalac=FILE          path to scalac executable
+    --with-erlc=FILE            path to erlc executable
 "
 
 

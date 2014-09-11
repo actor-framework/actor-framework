@@ -53,7 +53,7 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
                         "initialize the build configuration.")
 endif()
 # set module path appropriately
-set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
 # set binary output path if not defined by user
 if("${EXECUTABLE_OUTPUT_PATH}" STREQUAL "")
   set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin")
@@ -75,8 +75,8 @@ endif()
 if(NOT NO_COMPILER_CHECK)
   try_run(ProgramResult
           CompilationSucceeded
-          ${CMAKE_BINARY_DIR}
-          ${CMAKE_CURRENT_SOURCE_DIR}/cmake/get_compiler_version.cpp
+          "${CMAKE_BINARY_DIR}"
+          "${CMAKE_CURRENT_SOURCE_DIR}/cmake/get_compiler_version.cpp"
           RUN_OUTPUT_VARIABLE CompilerVersion)
   if(NOT CompilationSucceeded OR NOT ProgramResult EQUAL 0)
     message(FATAL_ERROR "Cannot determine compiler version")
@@ -156,7 +156,7 @@ set(LD_FLAGS ${CMAKE_LD_LIBS})
 ################################################################################
 
 if(CAF_LOG_LEVEL)
-  add_definitions(-DCAF_LOG_LEVEL=${CAF_LOG_LEVEL})
+  add_definitions(-DCAF_LOG_LEVEL="${CAF_LOG_LEVEL}")
 endif()
 
 if(CAF_ENABLE_RUNTIME_CHECKS)
@@ -182,7 +182,7 @@ install(DIRECTORY libcaf_core/cppa/
 install(DIRECTORY libcaf_io/caf/ DESTINATION include/caf
         FILES_MATCHING PATTERN "*.hpp")
 # install includes from opencl
-if(EXISTS ${CMAKE_SOURCE_DIR}/libcaf_opencl/caf)
+if(EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/caf")
   install(DIRECTORY libcaf_opencl/caf/ DESTINATION include/caf
         FILES_MATCHING PATTERN "*.hpp")
 endif()
@@ -193,8 +193,8 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in"
                IMMEDIATE @ONLY)
 # add uninstall target
 add_custom_target(uninstall
-                  COMMAND ${CMAKE_COMMAND} -P
-                  ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
+                  COMMAND "${CMAKE_COMMAND} -P"
+                  "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
 
 
 ################################################################################
@@ -203,15 +203,15 @@ add_custom_target(uninstall
 
 # path to caf core & io headers
 set(LIBCAF_INCLUDE_DIRS
-    ${CMAKE_SOURCE_DIR}/libcaf_core
-    ${CMAKE_SOURCE_DIR}/libcaf_io)
+    "${CMAKE_SOURCE_DIR}/libcaf_core"
+    "${CMAKE_SOURCE_DIR}/libcaf_io")
 # path to caf opencl headers
-if(EXISTS ${CMAKE_SOURCE_DIR}/libcaf_opencl/caf)
+if(EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/caf")
   set(LIBCAF_INCLUDE_DIRS
-      ${CMAKE_SOURCE_DIR}/libcaf_opencl/ ${LIBCAF_INCLUDE_DIRS})
+      "${CMAKE_SOURCE_DIR}/libcaf_opencl/" "${LIBCAF_INCLUDE_DIRS}")
 endif()
 # all projects need the headers of the core components
-include_directories(${LIBCAF_INCLUDE_DIRS})
+include_directories("${LIBCAF_INCLUDE_DIRS}")
 
 
 ################################################################################
@@ -242,7 +242,9 @@ if(NOT CAF_BUILD_STATIC_ONLY)
   add_dependencies(libcaf_io libcaf_core)
 endif()
 # set LIBCAF_LIBRARIES for other subprojects
-set(LIBCAF_LIBRARIES ${LIBCAF_CORE_LIBRARY} ${LIBCAF_IO_LIBRARY} ${LIBCAF_OPENCL_LIBRARY})
+set(LIBCAF_LIBRARIES "${LIBCAF_CORE_LIBRARY}"
+                     "${LIBCAF_IO_LIBRARY}"
+                     "${LIBCAF_OPENCL_LIBRARY}")
 # add unit tests if not being told otherwise
 if(NOT CAF_NO_UNIT_TESTS)
   enable_testing()
@@ -271,13 +273,13 @@ if(NOT CAF_NO_RIAC AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_riac/caf/")
     add_dependencies(libcaf_riacStatic libcaf_ioStatic)
   endif()
   if(CAF_BUILD_STATIC_ONLY)
-    set(LIBCAF_LIBRARIES ${LIBCAF_LIBRARIES} libcaf_riacStatic)
+    set(LIBCAF_LIBRARIES "${LIBCAF_LIBRARIES}" libcaf_riacStatic)
   else()
     add_dependencies(libcaf_riac libcaf_io)
-    set(LIBCAF_LIBRARIES ${LIBCAF_LIBRARIES} libcaf_riac)
+    set(LIBCAF_LIBRARIES "${LIBCAF_LIBRARIES}" libcaf_riac)
   endif()
   # add headers to include directories so other subprojects can use RIAC
-  include_directories(${LIBCAF_INCLUDE_DIRS} "${CMAKE_SOURCE_DIR}/libcaf_riac")
+  include_directories("${LIBCAF_INCLUDE_DIRS}" "${CMAKE_SOURCE_DIR}/libcaf_riac")
   # add libcaf_riac to the list of caf libraries
   set(CAF_HAS_RIAC yes)
   set(CAF_NO_RIAC no)
@@ -337,10 +339,12 @@ endif()
 # check for doxygen and add custom "doc" target to Makefile
 find_package(Doxygen)
 if(DOXYGEN_FOUND)
-  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in"
+                 "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile"
                  @ONLY)
-  add_custom_target(doc ${DOXYGEN_EXECUTABLE} ${CMAKE_HOME_DIRECTORY}/Doxyfile
-                    WORKING_DIRECTORY ${CMAKE_HOME_DIRECTORY}
+  add_custom_target(doc "${DOXYGEN_EXECUTABLE}"
+                    "${CMAKE_HOME_DIRECTORY}/Doxyfile"
+                    WORKING_DIRECTORY "${CMAKE_HOME_DIRECTORY}"
                     COMMENT "Generating API documentation with Doxygen"
                     VERBATIM)
 endif(DOXYGEN_FOUND)
@@ -385,7 +389,7 @@ invertYesNo(CAF_NO_MEM_MANAGEMENT CAF_BUILD_MEM_MANAGEMENT)
 invertYesNo(CAF_NO_BENCHMARKS CAF_BUILD_BENCHMARKS)
 invertYesNo(CAF_NO_OPENCL CAF_BUILD_OPENCL)
 # collect all compiler flags
-string(TOUPPER ${CMAKE_BUILD_TYPE} UPPER_BUILD_TYPE)
+string(TOUPPER "${CMAKE_BUILD_TYPE}" UPPER_BUILD_TYPE)
 set(ALL_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${UPPER_BUILD_TYPE}}")
 # done
 message(STATUS
