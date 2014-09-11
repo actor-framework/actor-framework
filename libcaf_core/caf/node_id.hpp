@@ -159,11 +159,6 @@ class node_id : detail::comparable<node_id>,
 
 };
 
-/**
- * @relates node_id
- */
-std::string to_string(const node_id& what);
-
 } // namespace caf
 
 #endif // CAF_PROCESS_INFORMATION_HPP

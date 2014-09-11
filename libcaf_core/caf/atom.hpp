@@ -37,11 +37,6 @@ enum class atom_value : uint64_t {
 };
 
 /**
- * Returns `what` as a string representation.
- */
-std::string to_string(const atom_value& what);
-
-/**
  * Creates an atom from given string literal.
  */
 template <size_t Size>

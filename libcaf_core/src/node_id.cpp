@@ -123,17 +123,6 @@ node_id::node_id(uint32_t a, const host_id_type& b) : m_data(new data{a, b}) {
   // nop
 }
 
-std::string to_string(const node_id::host_id_type& node_id) {
-  std::ostringstream oss;
-  oss << std::hex;
-  oss.fill('0');
-  for (size_t i = 0; i < node_id::host_id_size; ++i) {
-    oss.width(2);
-    oss << static_cast<uint32_t>(node_id[i]);
-  }
-  return oss.str();
-}
-
 int node_id::compare(const invalid_node_id_t&) const {
   return m_data ? 1 : 0; // invalid instances are always smaller
 }
@@ -160,12 +149,6 @@ int node_id::compare(const node_id& other) const {
     return 1;
   }
   return tmp;
-}
-
-std::string to_string(const node_id& what) {
-  std::ostringstream oss;
-  oss << to_string(what.host_id()) << ":" << what.process_id();
-  return oss.str();
 }
 
 node_id::data::data(uint32_t procid, host_id_type hid)

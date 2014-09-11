@@ -20,41 +20,6 @@
 #ifndef CAF_FROM_STRING_HPP
 #define CAF_FROM_STRING_HPP
 
-#include <string>
-#include <typeinfo>
-#include <exception>
-
-#include "caf/uniform_type_info.hpp"
-
-namespace caf {
-
-/**
- * Converts a string created by `to_string` to its original value.
- */
-uniform_value from_string_impl(const std::string& what);
-
-/**
- * Convenience function that tries to deserializes a value from
- * `what` and converts the result to `T`.
- */
-template <class T>
-optional<T> from_string(const std::string& what) {
-  auto uti = uniform_typeid<T>();
-  auto uv = from_string_impl(what);
-  if (!uv || (*uv->ti) != typeid(T)) {
-    // try again using the type name
-    std::string tmp = uti->name();
-    tmp += " ( ";
-    tmp += what;
-    tmp += " )";
-    uv = from_string_impl(tmp);
-  }
-  if (uv && (*uv->ti) == typeid(T)) {
-    return T{std::move(*reinterpret_cast<T*>(uv->val))};
-  }
-  return none;
-}
-
-} // namespace caf
+#include "caf/string_serialization.hpp"
 
 #endif // CAF_FROM_STRING_HPP

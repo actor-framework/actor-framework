@@ -26,7 +26,12 @@
 #include "caf/string_algorithms.hpp"
 
 #include "caf/atom.hpp"
+#include "caf/actor.hpp"
+#include "caf/channel.hpp"
+#include "caf/message.hpp"
+#include "caf/node_id.hpp"
 #include "caf/to_string.hpp"
+#include "caf/actor_addr.hpp"
 #include "caf/serializer.hpp"
 #include "caf/from_string.hpp"
 #include "caf/deserializer.hpp"
@@ -144,7 +149,7 @@ class string_serializer : public serializer, public dummy_backend {
     if (!isbuiltin(tname))
       out << tname;
     else if (tname.compare(0, 3, "@<>") == 0) {
-      std::vector<std::string> subtypes;
+      std::vector<string> subtypes;
       split(subtypes, tname, is_any_of("+"), token_compress_on);
     }
     m_obj_just_opened = true;
@@ -412,7 +417,7 @@ class string_deserializer : public deserializer, public dummy_backend {
       }
       char c = *m_pos++;
       if (!isxdigit(c)) {
-        std::string errmsg = "unexpected character: '";
+        string errmsg = "unexpected character: '";
         errmsg += c;
         errmsg += "', expected [0-9a-f]";
         throw_malformed(errmsg);
@@ -510,14 +515,74 @@ string to_string_impl(const void* what, const uniform_type_info* utype) {
   return osstr.str();
 }
 
+template <class T>
+inline string to_string_impl(const T& what) {
+  return to_string_impl(&what, uniform_typeid<T>());
+}
+
 } // namespace detail
 
-std::string to_string(const actor_addr& what) {
+string to_string(const message& what) {
+  return detail::to_string_impl(what);
+}
+
+string to_string(const group& what) {
+  return detail::to_string_impl(what);
+}
+
+string to_string(const channel& what) {
+  return detail::to_string_impl(what);
+}
+
+string to_string(const message_id& what) {
+  return detail::to_string_impl(what);
+}
+
+string to_string(const actor_addr& what) {
   if (what == invalid_actor_addr) {
     return "0@00000000000000000000:0";
   }
   std::ostringstream oss;
   oss << what.id() << "@" << to_string(what.node());
+  return oss.str();
+}
+
+string to_string(const actor& what) {
+  return to_string(what.address());
+}
+
+string to_string(const atom_value& what) {
+  auto x = static_cast<uint64_t>(what);
+  string result;
+  result.reserve(11);
+  // don't read characters before we found the leading 0xF
+  // first four bits set?
+  bool read_chars = ((x & 0xF000000000000000) >> 60) == 0xF;
+  uint64_t mask = 0x0FC0000000000000;
+  for (int bitshift = 54; bitshift >= 0; bitshift -= 6, mask >>= 6) {
+    if (read_chars) {
+      result += detail::decoding_table[(x & mask) >> bitshift];
+    } else if (((x & mask) >> bitshift) == 0xF) {
+      read_chars = true;
+    }
+  }
+  return result;
+}
+
+string to_string(const node_id::host_id_type& node_id) {
+  std::ostringstream oss;
+  oss << std::hex;
+  oss.fill('0');
+  for (size_t i = 0; i < node_id::host_id_size; ++i) {
+    oss.width(2);
+    oss << static_cast<uint32_t>(node_id[i]);
+  }
+  return oss.str();
+}
+
+string to_string(const node_id& what) {
+  std::ostringstream oss;
+  oss << to_string(what.host_id()) << ":" << what.process_id();
   return oss.str();
 }
 
