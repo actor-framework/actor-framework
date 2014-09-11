@@ -13,20 +13,24 @@ if (OPENCL_LIBRARIES)
        src/program.cpp)
   # build shared library if not compiling static only
   if(NOT "${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes")
-    add_library(libcaf_opencl SHARED ${LIBCAF_OPENCL_SRCS} ${LIBCAF_OPENCL_HDRS} ${OPENCL_INCLUDE_DIR})
-    target_link_libraries(libcaf_opencl ${LD_FLAGS} ${LIBCAF_CORE_LIBRARY} ${OPENCL_LIBRARIES})
-    set(LIBRARY_SOVERSION ${CAF_VERSION_MAJOR})
+    add_library(libcaf_opencl SHARED ${LIBCAF_OPENCL_SRCS}
+                                     ${LIBCAF_OPENCL_HDRS}
+                                     ${OPENCL_INCLUDE_DIR})
+    target_link_libraries(libcaf_opencl ${LD_FLAGS}
+                                        ${LIBCAF_CORE_LIBRARY}
+                                        ${OPENCL_LIBRARIES})
+    set(LIBRARY_SOVERSION "${CAF_VERSION_MAJOR}")
     set_target_properties(libcaf_opencl
                           PROPERTIES
-                          SOVERSION ${LIBRARY_SOVERSION}
-                          VERSION ${CAF_VERSION}
+                          SOVERSION "${LIBRARY_SOVERSION}"
+                          VERSION "${CAF_VERSION}"
                           OUTPUT_NAME caf_opencl)
     if(NOT MINGW)
       install(TARGETS libcaf_opencl LIBRARY DESTINATION lib)
     endif()
   endif()
   # build static library only if --build-static or --build-static-only was set
-  if("${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes" OR "${CAF_BUILD_STATIC}" STREQUAL "yes")
+  if(CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
     add_library(libcaf_openclStatic STATIC ${LIBCAF_OPENCL_HDRS} ${LIBCAF_OPENCL_SRCS})
     set_target_properties(libcaf_openclStatic PROPERTIES OUTPUT_NAME caf_opencl_static)
     install(TARGETS libcaf_openclStatic ARCHIVE DESTINATION lib)
