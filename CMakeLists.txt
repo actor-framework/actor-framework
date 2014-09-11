@@ -72,28 +72,30 @@ endif()
 ################################################################################
 
 # check for g++ >= 4.7 or clang++ > = 3.2
-try_run(ProgramResult
-        CompilationSucceeded
-        ${CMAKE_BINARY_DIR}
-        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/get_compiler_version.cpp
-        RUN_OUTPUT_VARIABLE CompilerVersion)
-if(NOT CompilationSucceeded OR NOT ProgramResult EQUAL 0)
-  message(FATAL_ERROR "Cannot determine compiler version")
-elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
-  if(CompilerVersion VERSION_GREATER 4.6)
-    message(STATUS "Found g++ version ${CompilerVersion}")
+if(NOT NO_COMPILER_CHECK)
+  try_run(ProgramResult
+          CompilationSucceeded
+          ${CMAKE_BINARY_DIR}
+          ${CMAKE_CURRENT_SOURCE_DIR}/cmake/get_compiler_version.cpp
+          RUN_OUTPUT_VARIABLE CompilerVersion)
+  if(NOT CompilationSucceeded OR NOT ProgramResult EQUAL 0)
+    message(FATAL_ERROR "Cannot determine compiler version")
+  elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+    if(CompilerVersion VERSION_GREATER 4.6)
+      message(STATUS "Found g++ version ${CompilerVersion}")
+    else()
+      message(FATAL_ERROR "g++ >= 4.7 required (found: ${CompilerVersion})")
+    endif()
+  elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    if(CompilerVersion VERSION_GREATER 3.1)
+      message(STATUS "Found clang++ version ${CompilerVersion}")
+    else()
+      message(FATAL_ERROR "clang++ >= 3.2 required (found: ${CompilerVersion})")
+    endif()
   else()
-    message(FATAL_ERROR "g++ >= 4.7 required (found: ${CompilerVersion})")
+    message(FATAL_ERROR "Your C++ compiler does not support C++11 "
+                        "or is not supported")
   endif()
-elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-  if(CompilerVersion VERSION_GREATER 3.1)
-    message(STATUS "Found clang++ version ${CompilerVersion}")
-  else()
-    message(FATAL_ERROR "clang++ >= 3.2 required (found: ${CompilerVersion})")
-  endif()
-else()
-  message(FATAL_ERROR "Your C++ compiler does not support C++11 "
-                      "or is not supported")
 endif()
 # check if the user provided CXXFLAGS, set defaults otherwise
 if(CMAKE_CXX_FLAGS)
