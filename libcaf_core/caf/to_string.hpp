@@ -52,15 +52,13 @@ inline std::string to_string_impl(const T& what) {
 
 } // namespace detail
 
-inline std::string to_string(const message& what) {
-  return detail::to_string_impl(what);
-}
+std::string to_string(const actor_addr& what);
 
 inline std::string to_string(const actor& what) {
-  return detail::to_string_impl(what);
+  return to_string(what.address());
 }
 
-inline std::string to_string(const actor_addr& what) {
+inline std::string to_string(const message& what) {
   return detail::to_string_impl(what);
 }
 

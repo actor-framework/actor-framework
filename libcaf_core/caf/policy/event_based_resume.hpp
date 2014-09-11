@@ -95,13 +95,20 @@ class event_based_resume {
                       && d->planned_exit_reason() == exit_reason::not_exited));
       try {
         if (!d->is_initialized()) {
+          CAF_LOG_DEBUG("initialize actor");
           d->is_initialized(true);
           auto bhvr = d->make_behavior();
+          CAF_LOG_DEBUG_IF(!bhvr, "make_behavior() did not return a behavior, "
+                                  << "bhvr_stack().empty() = "
+                                  << std::boolalpha << d->bhvr_stack().empty());
           if (bhvr) {
             // make_behavior() did return a behavior instead of using become()
+            CAF_LOG_DEBUG("make_behavior() did return a valid behavior");
             d->become(std::move(bhvr));
           }
           if (actor_done()) {
+            CAF_LOG_DEBUG("actor_done() returned true right "
+                          << "after make_behavior()");
             return resume_result::done;
           }
         }

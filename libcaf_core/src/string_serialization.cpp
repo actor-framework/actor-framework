@@ -512,6 +512,15 @@ string to_string_impl(const void* what, const uniform_type_info* utype) {
 
 } // namespace detail
 
+std::string to_string(const actor_addr& what) {
+  if (what == invalid_actor_addr) {
+    return "0@00000000000000000000:0";
+  }
+  std::ostringstream oss;
+  oss << what.id() << "@" << to_string(what.node());
+  return oss.str();
+}
+
 string to_verbose_string(const std::exception& e) {
   std::ostringstream oss;
   oss << detail::demangle(typeid(e)) << ": " << e.what();

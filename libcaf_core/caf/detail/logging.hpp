@@ -26,6 +26,7 @@
 #include <type_traits>
 
 #include "caf/config.hpp"
+#include "caf/to_string.hpp"
 #include "caf/abstract_actor.hpp"
 
 #include "caf/detail/demangle.hpp"

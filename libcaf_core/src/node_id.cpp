@@ -164,7 +164,7 @@ int node_id::compare(const node_id& other) const {
 
 std::string to_string(const node_id& what) {
   std::ostringstream oss;
-  oss << what.process_id() << "@" << to_string(what.host_id());
+  oss << to_string(what.host_id()) << ":" << what.process_id();
   return oss.str();
 }
 

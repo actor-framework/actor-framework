@@ -102,11 +102,13 @@ size_t abstract_actor::detach_impl(const attachable::token& what,
 }
 
 void abstract_actor::detach(const attachable::token& what) {
+  CAF_LOG_TRACE("");
   guard_type guard{m_mtx};
   detach_impl(what, m_attachables_head);
 }
 
 bool abstract_actor::link_impl(linking_operation op, const actor_addr& other) {
+  CAF_LOG_TRACE(CAF_ARG(op) << ", " << CAF_TSARG(other));
   switch (op) {
     case establish_link_op:
       return establish_link_impl(other);
@@ -121,6 +123,7 @@ bool abstract_actor::link_impl(linking_operation op, const actor_addr& other) {
 }
 
 bool abstract_actor::establish_link_impl(const actor_addr& other) {
+  CAF_LOG_TRACE(CAF_TSARG(other));
   if (other && other != this) {
     guard_type guard{m_mtx};
     auto ptr = actor_cast<abstract_actor_ptr>(other);
@@ -140,6 +143,7 @@ bool abstract_actor::establish_link_impl(const actor_addr& other) {
 }
 
 bool abstract_actor::establish_backlink_impl(const actor_addr& other) {
+  CAF_LOG_TRACE(CAF_TSARG(other));
   uint32_t reason = exit_reason::not_exited;
   default_attachable::observe_token tk{other, default_attachable::link};
   if (other && other != this) {
@@ -163,6 +167,7 @@ bool abstract_actor::establish_backlink_impl(const actor_addr& other) {
 }
 
 bool abstract_actor::remove_link_impl(const actor_addr& other) {
+  CAF_LOG_TRACE(CAF_TSARG(other));
   if (!other) {
     return false;
   }
@@ -178,6 +183,7 @@ bool abstract_actor::remove_link_impl(const actor_addr& other) {
 }
 
 bool abstract_actor::remove_backlink_impl(const actor_addr& other) {
+  CAF_LOG_TRACE(CAF_TSARG(other));
   default_attachable::observe_token tk{other, default_attachable::link};
   if (other && other != this) {
     guard_type guard{m_mtx};
@@ -191,8 +197,7 @@ actor_addr abstract_actor::address() const {
 }
 
 void abstract_actor::cleanup(uint32_t reason) {
-  // log as 'actor'
-  CAF_LOGM_TRACE("caf::actor", CAF_ARG(m_id) << ", " << CAF_ARG(reason));
+  CAF_LOG_TRACE(CAF_ARG(reason));
   CAF_REQUIRE(reason != exit_reason::not_exited);
   // move everyhting out of the critical section before processing it
   attachable_ptr head;
