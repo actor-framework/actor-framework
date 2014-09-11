@@ -34,7 +34,9 @@ namespace caf {
 namespace {
 
 struct impl : blocking_actor {
-  void act() override {}
+  void act() override {
+    CAF_LOG_ERROR("act() of scoped_actor impl called");
+  }
 };
 
 blocking_actor* alloc() {
@@ -48,10 +50,11 @@ blocking_actor* alloc() {
 
 void scoped_actor::init(bool hide_actor) {
   m_self.reset(alloc());
-  m_self->is_registered(!hide_actor);
   if (!hide_actor) {
     m_prev = CAF_SET_AID(m_self->id());
   }
+  CAF_LOG_TRACE(CAF_ARG(hide_actor));
+  m_self->is_registered(!hide_actor);
 }
 
 scoped_actor::scoped_actor() {
@@ -63,6 +66,7 @@ scoped_actor::scoped_actor(bool hide_actor) {
 }
 
 scoped_actor::~scoped_actor() {
+  CAF_LOG_TRACE("");
   if (m_self->is_registered()) {
     CAF_SET_AID(m_prev);
   }

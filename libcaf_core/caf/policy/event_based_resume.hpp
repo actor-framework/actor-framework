@@ -61,8 +61,8 @@ class event_based_resume {
                                     size_t max_throughput) override {
       CAF_REQUIRE(max_throughput > 0);
       auto d = static_cast<Derived*>(this);
-      d->host(new_host);
       CAF_LOG_TRACE("id = " << d->id());
+      d->host(new_host);
       auto done_cb = [&]() -> bool {
         CAF_LOG_TRACE("");
         d->bhvr_stack().clear();

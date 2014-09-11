@@ -89,6 +89,7 @@ class invoke_policy {
     if (!node_ptr) {
       return false;
     }
+    CAF_LOG_TRACE("");
     switch (handle_message(self, node_ptr.get(), fun, awaited_response)) {
       case hm_msg_handled:
         node_ptr.reset();

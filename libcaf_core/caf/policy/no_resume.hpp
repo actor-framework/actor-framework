@@ -6,6 +6,7 @@
 
 #include "caf/exception.hpp"
 #include "caf/exit_reason.hpp"
+#include "caf/detail/logging.hpp"
 #include "caf/policy/resume_policy.hpp"
 
 namespace caf {
@@ -29,6 +30,7 @@ class no_resume {
     }
 
     resumable::resume_result resume(execution_unit*, size_t) {
+      CAF_LOG_TRACE("");
       uint32_t rsn = exit_reason::normal;
       try {
         this->act();
