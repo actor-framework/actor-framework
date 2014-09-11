@@ -156,7 +156,7 @@ set(LD_FLAGS ${CMAKE_LD_LIBS})
 ################################################################################
 
 if(CAF_LOG_LEVEL)
-  add_definitions(-DCAF_LOG_LEVEL="${CAF_LOG_LEVEL}")
+  add_definitions(-DCAF_LOG_LEVEL=${CAF_LOG_LEVEL})
 endif()
 
 if(CAF_ENABLE_RUNTIME_CHECKS)
