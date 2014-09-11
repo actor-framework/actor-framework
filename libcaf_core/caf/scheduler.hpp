@@ -405,10 +405,11 @@ void set_scheduler(scheduler::abstract_coordinator* ptr);
 /**
  * Sets a user-defined scheduler using given policies. The scheduler
  * is instantiated with `nw` number of workers and allows each actor
- * to consume up to `max_throughput` per resume (0 means infinite).
+ * to consume up to `max_throughput` per resume (must be > 0).
  * @note This function must be used before actor is spawned. Dynamically
  *       changing the scheduler at runtime is not supported.
  * @throws std::logic_error if a scheduler is already defined
+ * @throws std::invalid_argument if `max_throughput == 0`
  */
 template <class Policy = policy::work_stealing>
 void set_scheduler(size_t nw = std::thread::hardware_concurrency(),
