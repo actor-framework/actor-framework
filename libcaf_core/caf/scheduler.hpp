@@ -30,6 +30,7 @@
 
 #include "caf/fwd.hpp"
 #include "caf/atom.hpp"
+#include "caf/send.hpp"
 #include "caf/actor.hpp"
 #include "caf/channel.hpp"
 #include "caf/message.hpp"
