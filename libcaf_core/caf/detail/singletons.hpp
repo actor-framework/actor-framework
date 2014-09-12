@@ -75,22 +75,22 @@ class singletons {
   // usually guarded by implementation-specific singleton getter
   template <class Factory>
   static abstract_singleton* get_plugin_singleton(size_t id, Factory f) {
-    return lazy_get(get_plugin_singleton(id), f);
+    return lazy_get(get_plugin_singleton(id), get_plugin_mutex(), f);
   }
 
   static void stop_singletons();
 
  private:
-  static std::mutex& get_mutex();
+  static std::mutex& get_plugin_mutex();
 
   static std::atomic<abstract_singleton*>& get_plugin_singleton(size_t id);
 
   // Get instance from @p ptr or crate it on-the-fly using DCLP
   template <class T, class Factory>
-  static T* lazy_get(std::atomic<T*>& ptr, Factory f) {
+  static T* lazy_get(std::atomic<T*>& ptr, std::mutex& mtx, Factory f) {
     auto result = ptr.load(std::memory_order_acquire);
     if (result == nullptr) {
-      std::lock_guard<std::mutex> guard(get_mutex());
+      std::lock_guard<std::mutex> guard(mtx);
       result = ptr.load(std::memory_order_relaxed);
       if (result == nullptr) {
         result = f();
@@ -102,8 +102,8 @@ class singletons {
   }
 
   template <class T>
-  static T* lazy_get(std::atomic<T*>& ptr) {
-    return lazy_get(ptr, [] { return T::create_singleton(); });
+  static T* lazy_get(std::atomic<T*>& ptr, std::mutex& mtx) {
+    return lazy_get(ptr, mtx, [] { return T::create_singleton(); });
   }
 
   template <class T>

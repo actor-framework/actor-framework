@@ -35,15 +35,26 @@ namespace detail {
 
 namespace {
 
-std::mutex s_singletons_mtx;
-
 std::atomic<abstract_singleton*> s_plugins[singletons::max_plugins];
+std::mutex s_plugins_mtx;
+
 std::atomic<scheduler::abstract_coordinator*> s_scheduling_coordinator;
+std::mutex s_scheduling_coordinator_mtx;
+
 std::atomic<uniform_type_info_map*> s_uniform_type_info_map;
+std::mutex s_uniform_type_info_map_mtx;
+
 std::atomic<actor_registry*> s_actor_registry;
+std::mutex s_actor_registry_mtx;
+
 std::atomic<group_manager*> s_group_manager;
+std::mutex s_group_manager_mtx;
+
 std::atomic<node_id::data*> s_node_id;
+std::mutex s_node_id_mtx;
+
 std::atomic<logging*> s_logger;
+std::mutex s_logger_mtx;
 
 } // namespace <anonymous>
 
@@ -51,8 +62,8 @@ abstract_singleton::~abstract_singleton() {
   // nop
 }
 
-std::mutex& singletons::get_mutex() {
-  return s_singletons_mtx;
+std::mutex& singletons::get_plugin_mutex() {
+  return s_plugins_mtx;
 }
 
 void singletons::stop_singletons() {
@@ -84,31 +95,33 @@ void singletons::stop_singletons() {
 }
 
 actor_registry* singletons::get_actor_registry() {
-  return lazy_get(s_actor_registry);
+  return lazy_get(s_actor_registry, s_actor_registry_mtx);
 }
 
 uniform_type_info_map* singletons::get_uniform_type_info_map() {
-  return lazy_get(s_uniform_type_info_map);
+  return lazy_get(s_uniform_type_info_map, s_uniform_type_info_map_mtx);
 }
 
 group_manager* singletons::get_group_manager() {
-  return lazy_get(s_group_manager);
+  return lazy_get(s_group_manager, s_group_manager_mtx);
 }
 
 scheduler::abstract_coordinator* singletons::get_scheduling_coordinator() {
-  return lazy_get(s_scheduling_coordinator);
+  return lazy_get(s_scheduling_coordinator, s_scheduling_coordinator_mtx);
 }
 
 bool singletons::set_scheduling_coordinator(scheduler::abstract_coordinator*p) {
-  return lazy_get(s_scheduling_coordinator, [p] { return p; }) == p;
+  auto res = lazy_get(s_scheduling_coordinator, s_scheduling_coordinator_mtx,
+                      [p] { return p; });
+  return res == p;
 }
 
 node_id singletons::get_node_id() {
-  return node_id{lazy_get(s_node_id)};
+  return node_id{lazy_get(s_node_id, s_node_id_mtx)};
 }
 
 logging* singletons::get_logger() {
-  return lazy_get(s_logger);
+  return lazy_get(s_logger, s_logger_mtx);
 }
 
 std::atomic<abstract_singleton*>& singletons::get_plugin_singleton(size_t id) {
