@@ -139,20 +139,26 @@ class string_serializer : public serializer, public dummy_backend {
         out(mout),
         m_namespace(*this),
         m_after_value(false),
-        m_obj_just_opened(false) {}
+        m_obj_just_opened(false) {
+    // nop
+  }
 
   void begin_object(const uniform_type_info* uti) {
     clear();
     string tname = uti->name();
     m_open_objects.push(tname);
     // do not print type names for strings and atoms
-    if (!isbuiltin(tname))
+    if (!isbuiltin(tname) && tname != "@message") {
+      // suppress output of "@message ( ... )" because it's redundant
+      // since each message immediately calls begin_object(...)
+      // for the typed tuple it's containing
       out << tname;
-    else if (tname.compare(0, 3, "@<>") == 0) {
+      m_obj_just_opened = true;
+    } else if (tname.compare(0, 3, "@<>") == 0) {
       std::vector<string> subtypes;
       split(subtypes, tname, is_any_of("+"), token_compress_on);
+      m_obj_just_opened = true;
     }
-    m_obj_just_opened = true;
   }
 
   void end_object() {
@@ -162,7 +168,8 @@ class string_serializer : public serializer, public dummy_backend {
     }
     m_after_value = true;
     if (!m_open_objects.empty()) {
-      if (!isbuiltin(m_open_objects.top())) {
+      auto& open_obj = m_open_objects.top();
+      if (!isbuiltin(open_obj) && open_obj != "@message") {
         out << (m_after_value ? " )" : ")");
       }
       m_open_objects.pop();
@@ -318,6 +325,12 @@ class string_deserializer : public deserializer, public dummy_backend {
   void read_value(primitive_variant& storage) override {
     integrity_check();
     skip_space_and_comma();
+    if (m_open_objects.top() == "@node") {
+      // example node_id: c5c978f5bc5c7e4975e407bb03c751c9374480d9:63768
+      // deserialization will call read_raw() followed by read_value()
+      // and ':' must be ignored
+      consume(':');
+    }
     string::iterator substr_end;
     auto find_if_cond = [](char c)->bool {
       switch (c) {
@@ -402,8 +415,9 @@ class string_deserializer : public deserializer, public dummy_backend {
 
   void read_raw(size_t buf_size, void* vbuf) override {
     if (buf_size == node_id::host_id_size && !m_open_objects.empty()
-        && m_open_objects.top() == "@node") {
-      // node ids are formatted as process_id@host_id
+        && (m_open_objects.top() == "@actor"
+            || m_open_objects.top() == "@actor_addr")) {
+      // actor addresses are formatted as actor_id@host_id:process_id
       // this read_raw reads the host_id, i.e., we need
       // to skip the '@' character
       consume('@');

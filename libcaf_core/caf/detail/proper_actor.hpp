@@ -56,9 +56,11 @@ class proper_actor_base : public Policies::resume_policy::template
          message msg,
          execution_unit* eu) override {
     CAF_PUSH_AID(dptr()->id());
+    /*
     CAF_LOG_DEBUG(CAF_TARG(sender, to_string)
              << ", " << CAF_MARG(mid, integer_value) << ", "
              << CAF_TARG(msg, to_string));
+    */
     scheduling_policy().enqueue(dptr(), sender, mid, msg, eu);
   }
 

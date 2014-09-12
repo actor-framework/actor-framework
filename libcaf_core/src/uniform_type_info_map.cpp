@@ -339,14 +339,14 @@ void deserialize_impl(message& atref, deserializer* source) {
 }
 
 void serialize_impl(const node_id& nid, serializer* sink) {
-  sink->write_value(nid.process_id());
   sink->write_raw(nid.host_id().size(), nid.host_id().data());
+  sink->write_value(nid.process_id());
 }
 
 void deserialize_impl(node_id& nid, deserializer* source) {
   node_id::host_id_type hid;
-  auto pid = source->read<uint32_t>();
   source->read_raw(node_id::host_id_size, hid.data());
+  auto pid = source->read<uint32_t>();
   auto is_zero = [](uint8_t value) { return value == 0; };
   if (pid == 0 && std::all_of(hid.begin(), hid.end(), is_zero)) {
     // invalid process information

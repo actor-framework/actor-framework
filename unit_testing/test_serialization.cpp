@@ -53,14 +53,12 @@ namespace {
 struct struct_a {
   int x;
   int y;
-
 };
 
 struct struct_b {
   struct_a a;
   int z;
   list<int> ints;
-
 };
 
 using strmap = map<string, u16string>;
@@ -68,12 +66,10 @@ using strmap = map<string, u16string>;
 struct struct_c {
   strmap strings;
   set<int> ints;
-
 };
 
 struct raw_struct {
   string str;
-
 };
 
 bool operator==(const raw_struct& lhs, const raw_struct& rhs) {
@@ -118,7 +114,6 @@ enum class test_enum {
   a,
   b,
   c
-
 };
 
 } // namespace <anonymous>
@@ -145,7 +140,10 @@ int main() {
   auto nid_str = to_string(nid);
   CAF_PRINT("nid_str = " << nid_str);
   auto nid2 = from_string<node_id>(nid_str);
-  CAF_CHECK(nid2 && nid == *nid2);
+  CAF_CHECK(nid2);
+  if (nid2) {
+    CAF_CHECK_EQUAL(to_string(nid), to_string(*nid2));
+  }
 
   /*
     auto oarr = new detail::object_array;
