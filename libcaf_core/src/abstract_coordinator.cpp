@@ -17,6 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/scheduler/abstract_coordinator.hpp"
+
 #include <thread>
 #include <atomic>
 #include <chrono>
@@ -25,18 +27,16 @@
 
 #include "caf/on.hpp"
 #include "caf/send.hpp"
+#include "caf/spawn.hpp"
 #include "caf/anything.hpp"
 #include "caf/to_string.hpp"
-#include "caf/scheduler.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/system_messages.hpp"
 
-#include "caf/policy/no_resume.hpp"
-#include "caf/policy/no_scheduling.hpp"
-#include "caf/policy/actor_policies.hpp"
-#include "caf/policy/nestable_invoke.hpp"
-#include "caf/policy/not_prioritizing.hpp"
+#include "caf/scheduler/coordinator.hpp"
+
+#include "caf/policy/work_stealing.hpp"
 
 #include "caf/detail/logging.hpp"
 #include "caf/detail/proper_actor.hpp"
@@ -79,7 +79,8 @@ inline void insert_dmsg(Map& storage, const duration& d, Ts&&... vs) {
 }
 
 class timer_actor final : public detail::proper_actor<blocking_actor,
-                                                      timer_actor_policies> {
+                                                      timer_actor_policies>,
+                          public spawn_as_is {
  public:
   inline unique_mailbox_element_pointer dequeue() {
     await_data();
@@ -212,31 +213,31 @@ abstract_coordinator* abstract_coordinator::create_singleton() {
 }
 
 void abstract_coordinator::initialize() {
-  // launch threads of utility actors
-  auto ptr = m_timer.get();
-  m_timer_thread = std::thread([ptr] { ptr->act(); });
-  m_printer_thread = std::thread{printer_loop, m_printer.get()};
+  // launch utility actors
+  m_timer = spawn<timer_actor, hidden + detached + blocking_api>();
+  m_printer = spawn<hidden + detached + blocking_api>(printer_loop);
+}
+
+void abstract_coordinator::stop_actors() {
+  CAF_LOG_TRACE("");
+  scoped_actor self(true);
+  self->monitor(m_timer);
+  self->monitor(m_printer);
+  self->send_exit(m_timer, exit_reason::user_shutdown);
+  self->send_exit(m_printer, exit_reason::user_shutdown);
+  int i = 0;
+  self->receive_for(i, 2)(
+    [](const down_msg&) {
+      // nop
+    }
+  );
 }
 
 abstract_coordinator::abstract_coordinator(size_t nw)
-    : m_timer(new timer_actor),
-      m_printer(true),
-      m_next_worker(0),
+    : m_next_worker(0),
       m_num_workers(nw) {
   // nop
 }
 
-actor abstract_coordinator::printer() const {
-  return m_printer.get();
-}
-
 } // namespace scheduler
-
-void set_scheduler(scheduler::abstract_coordinator* impl) {
-  if (!detail::singletons::set_scheduling_coordinator(impl)) {
-    delete impl;
-    throw std::logic_error("scheduler already defined");
-  }
-}
-
 } // namespace caf

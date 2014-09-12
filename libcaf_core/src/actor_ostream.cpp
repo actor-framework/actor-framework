@@ -17,11 +17,13 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/actor_ostream.hpp"
+
 #include "caf/all.hpp"
-#include "caf/scheduler.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/scoped_actor.hpp"
-#include "caf/actor_ostream.hpp"
+
+#include "caf/scheduler/abstract_coordinator.hpp"
 
 #include "caf/detail/singletons.hpp"
 

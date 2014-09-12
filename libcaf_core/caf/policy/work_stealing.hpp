@@ -199,10 +199,12 @@ class work_stealing {
   template <class Worker>
   void after_resume(Worker* self) {
     // give others the opportunity to steal from us
+    /*
     if (d(self).private_queue.size() > 1 && d(self).exposed_queue.empty()) {
       d(self).exposed_queue.push_back(d(self).private_queue.front());
       d(self).private_queue.pop_front();
     }
+    */
   }
 
   template <class Worker, class UnaryFunction>

@@ -29,7 +29,6 @@
 #include "caf/config.hpp"
 #include "caf/extend.hpp"
 #include "caf/behavior.hpp"
-#include "caf/scheduler.hpp"
 
 #include "caf/policy/resume_policy.hpp"
 

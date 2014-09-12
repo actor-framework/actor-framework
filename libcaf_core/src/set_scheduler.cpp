@@ -17,30 +17,19 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/exception.hpp"
-#include "caf/blocking_actor.hpp"
+#include <stdexcept>
 
-#include "caf/detail/logging.hpp"
+#include "caf/set_scheduler.hpp"
 #include "caf/detail/singletons.hpp"
-#include "caf/detail/actor_registry.hpp"
+#include "caf/scheduler/abstract_coordinator.hpp"
 
 namespace caf {
 
-blocking_actor::blocking_actor() {
-  is_blocking(true);
-}
-
-void blocking_actor::await_all_other_actors_done() {
-  detail::singletons::get_actor_registry()->await_running_count_equal(1);
-}
-
-void blocking_actor::functor_based::create(blocking_actor*, act_fun fun) {
-  m_act = fun;
-}
-
-void blocking_actor::functor_based::act() {
-  CAF_LOG_TRACE("");
-  m_act(this);
+void set_scheduler(scheduler::abstract_coordinator* impl) {
+  if (!detail::singletons::set_scheduling_coordinator(impl)) {
+    delete impl;
+    throw std::logic_error("scheduler already defined");
+  }
 }
 
 } // namespace caf

@@ -20,9 +20,10 @@
 #include <atomic>
 
 #include "caf/message.hpp"
-#include "caf/scheduler.hpp"
 #include "caf/exception.hpp"
 #include "caf/local_actor.hpp"
+
+#include "caf/scheduler/abstract_coordinator.hpp"
 
 #include "caf/detail/logging.hpp"
 #include "caf/detail/singletons.hpp"

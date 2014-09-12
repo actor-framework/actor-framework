@@ -23,7 +23,9 @@
 #include <atomic>
 
 #include "caf/message.hpp"
-#include "caf/scheduler.hpp"
+#include "caf/execution_unit.hpp"
+
+#include "caf/scheduler/abstract_coordinator.hpp"
 
 #include "caf/detail/singletons.hpp"
 #include "caf/detail/single_reader_queue.hpp"

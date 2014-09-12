@@ -17,30 +17,45 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/exception.hpp"
-#include "caf/blocking_actor.hpp"
+#ifndef CAF_SET_SCHEDULER_HPP
+#define CAF_SET_SCHEDULER_HPP
 
-#include "caf/detail/logging.hpp"
-#include "caf/detail/singletons.hpp"
-#include "caf/detail/actor_registry.hpp"
+#include <thread>
+#include <limits>
+
+#include "caf/policy/work_stealing.hpp"
+
+#include "caf/scheduler/worker.hpp"
+#include "caf/scheduler/coordinator.hpp"
+#include "caf/scheduler/abstract_coordinator.hpp"
 
 namespace caf {
+/**
+ * Sets a user-defined scheduler.
+ * @note This function must be used before actor is spawned. Dynamically
+ *       changing the scheduler at runtime is not supported.
+ * @throws std::logic_error if a scheduler is already defined
+ */
+void set_scheduler(scheduler::abstract_coordinator* ptr);
 
-blocking_actor::blocking_actor() {
-  is_blocking(true);
-}
-
-void blocking_actor::await_all_other_actors_done() {
-  detail::singletons::get_actor_registry()->await_running_count_equal(1);
-}
-
-void blocking_actor::functor_based::create(blocking_actor*, act_fun fun) {
-  m_act = fun;
-}
-
-void blocking_actor::functor_based::act() {
-  CAF_LOG_TRACE("");
-  m_act(this);
+/**
+ * Sets a user-defined scheduler using given policies. The scheduler
+ * is instantiated with `nw` number of workers and allows each actor
+ * to consume up to `max_throughput` per resume (must be > 0).
+ * @note This function must be used before actor is spawned. Dynamically
+ *       changing the scheduler at runtime is not supported.
+ * @throws std::logic_error if a scheduler is already defined
+ * @throws std::invalid_argument if `max_throughput == 0`
+ */
+template <class Policy = policy::work_stealing>
+void set_scheduler(size_t nw = std::thread::hardware_concurrency(),
+                   size_t max_throughput = std::numeric_limits<size_t>::max()) {
+  if (max_throughput == 0) {
+    throw std::invalid_argument("max_throughput must not be 0");
+  }
+  set_scheduler(new scheduler::coordinator<Policy>(nw, max_throughput));
 }
 
 } // namespace caf
+
+#endif // CAF_SET_SCHEDULER_HPP

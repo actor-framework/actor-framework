@@ -24,7 +24,6 @@
 #include "caf/atom.hpp"
 #include "caf/to_string.hpp"
 #include "caf/message.hpp"
-#include "caf/scheduler.hpp"
 #include "caf/actor_proxy.hpp"
 #include "caf/exit_reason.hpp"
 

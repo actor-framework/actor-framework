@@ -20,7 +20,6 @@
 #include <string>
 #include "caf/all.hpp"
 #include "caf/atom.hpp"
-#include "caf/scheduler.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/default_attachable.hpp"

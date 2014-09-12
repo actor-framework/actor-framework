@@ -22,7 +22,6 @@
 
 #include <type_traits>
 
-#include "caf/scheduler.hpp"
 #include "caf/spawn_fwd.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/spawn_options.hpp"
