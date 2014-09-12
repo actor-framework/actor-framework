@@ -25,7 +25,7 @@
 #include "caf/execution_unit.hpp"
 
 #include "caf/detail/logging.hpp"
-#include "caf/detail/producer_consumer_list.hpp"
+#include "caf/detail/double_ended_queue.hpp"
 
 namespace caf {
 namespace scheduler {
@@ -65,7 +65,7 @@ class worker : public execution_unit {
 
   using job_ptr = resumable*;
 
-  using job_queue = detail::producer_consumer_list<resumable>;
+  using job_queue = detail::double_ended_queue<resumable>;
 
   using policy_data = typename Policy::worker_data;
 

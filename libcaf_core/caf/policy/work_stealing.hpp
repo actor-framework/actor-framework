@@ -28,7 +28,7 @@
 
 #include "caf/resumable.hpp"
 
-#include "caf/detail/producer_consumer_list.hpp"
+#include "caf/detail/double_ended_queue.hpp"
 
 namespace caf {
 namespace policy {
@@ -54,43 +54,38 @@ namespace policy {
 class work_stealing {
  public:
   // A thead-safe queue implementation.
-  using sync_queue = detail::producer_consumer_list<resumable>;
+  using queue_type = detail::double_ended_queue<resumable>;
 
-  // A queue implementation supporting fast push and pop
-  // operations on both ends of the queue.
-  using priv_queue = std::deque<resumable*>;
-
-  // The coordinator has no data since our scheduling is decentralized.
+  // The coordinator has only a counter for round-robin enqueue to its workers.
   struct coordinator_data {
-    size_t next_worker;
+    std::atomic<size_t> next_worker;
     inline coordinator_data() : next_worker(0) {
       // nop
     }
   };
 
-  // Holds the job queues of a worker.
+  // Holds job job queue of a worker and a random number generator.
   struct worker_data {
     // This queue is exposed to other workers that may attempt to steal jobs
     // from it and the central scheduling unit can push new jobs to the queue.
-    sync_queue exposed_queue;
-    // Internal job queue of a worker (not exposed to others).
-    priv_queue private_queue;
+    queue_type queue;
     // needed by our engine
     std::random_device rdevice;
     // needed to generate pseudo random numbers
     std::default_random_engine rengine;
+    // initialize random engine
     inline worker_data() : rdevice(), rengine(rdevice()) {
       // nop
     }
   };
 
-  // convenience function to access the data field
+  // Convenience function to access the data field.
   template <class WorkerOrCoordinator>
   auto d(WorkerOrCoordinator* self) -> decltype(self->data()) {
     return self->data();
   }
 
-  // go on a raid in quest for a shiny new job
+  // Goes on a raid in quest for a shiny new job.
   template <class Worker>
   resumable* try_steal(Worker* self) {
     auto p = self->parent();
@@ -104,7 +99,8 @@ class work_stealing {
       victim = d(self).rengine() % p->num_workers();
     }
     while (victim == self->id());
-    return d(p->worker_by_id(victim)).exposed_queue.try_pop();
+    // steal oldest element from the victim's queue
+    return d(p->worker_by_id(victim)).queue.take_tail();
   }
 
   template <class Coordinator>
@@ -115,12 +111,12 @@ class work_stealing {
 
   template <class Worker>
   void external_enqueue(Worker* self, resumable* job) {
-    d(self).exposed_queue.push_back(job);
+    d(self).queue.append(job);
   }
 
   template <class Worker>
   void internal_enqueue(Worker* self, resumable* job) {
-    d(self).private_queue.push_back(job);
+    d(self).queue.prepend(job);
     // give others the opportunity to steal from us
     after_resume(self);
   }
@@ -129,15 +125,7 @@ class work_stealing {
   void resume_job_later(Worker* self, resumable* job) {
     // job has voluntarily released the CPU to let others run instead
     // this means we are going to put this job to the very end of our queue
-    // by moving everything from the exposed to private queue first and
-    // then enqueue job to the exposed queue
-    auto next = [&] {
-      return d(self).exposed_queue.try_pop();
-    };
-    for (auto ptr = next(); ptr != nullptr; ptr = next()) {
-      d(self).private_queue.push_front(ptr);
-    }
-    d(self).exposed_queue.push_back(job);
+    d(self).queue.append(job);
   }
 
   template <class Worker>
@@ -164,15 +152,9 @@ class work_stealing {
       {101, 0, 1,  std::chrono::microseconds{10000}}
     };
     resumable* job = nullptr;
-    // local poll
-    if (!d(self).private_queue.empty()) {
-      job = d(self).private_queue.back();
-      d(self).private_queue.pop_back();
-      return job;
-    }
     for (auto& strat : strategies) {
       for (size_t i = 0; i < strat.attempts; i += strat.step_size) {
-        job = d(self).exposed_queue.try_pop();
+        job = d(self).queue.take_head();
         if (job) {
           return job;
         }
@@ -192,30 +174,18 @@ class work_stealing {
   }
 
   template <class Worker>
-  void before_shutdown(Worker* self) {
-    // give others the opportunity to steal unfinished jobs
-    for (auto ptr : d(self).private_queue) {
-      d(self).exposed_queue.push_back(ptr);
-    }
-    d(self).private_queue.clear();
+  void before_shutdown(Worker*) {
+    // nop
   }
 
   template <class Worker>
-  void after_resume(Worker* self) {
-    // give others the opportunity to steal from us
-    if (d(self).private_queue.size() > 1 && d(self).exposed_queue.empty()) {
-      d(self).exposed_queue.push_back(d(self).private_queue.front());
-      d(self).private_queue.pop_front();
-    }
+  void after_resume(Worker*) {
+    // nop
   }
 
   template <class Worker, class UnaryFunction>
   void foreach_resumable(Worker* self, UnaryFunction f) {
-    for (auto job : d(self).private_queue) {
-      f(job);
-    }
-    d(self).private_queue.clear();
-    auto next = [&] { return this->d(self).exposed_queue.try_pop(); };
+    auto next = [&] { return this->d(self).queue.take_head(); };
     for (auto job = next(); job != nullptr; job = next()) {
       f(job);
     }

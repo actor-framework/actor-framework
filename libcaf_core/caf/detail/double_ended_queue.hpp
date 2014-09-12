@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_PRODUCER_CONSUMER_LIST_HPP
-#define CAF_PRODUCER_CONSUMER_LIST_HPP
+#ifndef CAF_DETAIL_DOUBLE_ENDED_QUEUE_HPP
+#define CAF_DETAIL_DOUBLE_ENDED_QUEUE_HPP
 
 #include "caf/config.hpp"
 
@@ -69,15 +69,15 @@ inline void sleep_for(const chrono::duration<Rep, Period>& rt) {
 namespace caf {
 namespace detail {
 
-/**
- * A producer-consumer list.
- * For implementation details see http://drdobbs.com/cpp/211601363.
+/*
+ * A thread-safe double-ended queue based on http://drdobbs.com/cpp/211601363.
+ * This implementation is optimized for FIFO, i.e., it supports fast insertion
+ * at the end and fast removal from the beginning. As long as the queue is
+ * only used for FIFO operations, readers do not block writers and vice versa.
  */
 template <class T>
-class producer_consumer_list {
-
+class double_ended_queue {
  public:
-
   using value_type = T;
   using size_type = size_t;
   using difference_type = ptrdiff_t;
@@ -87,115 +87,157 @@ class producer_consumer_list {
   using const_pointer = const value_type*;
 
   class node {
-
    public:
-
     pointer value;
-
     std::atomic<node*> next;
-
-    node(pointer val) : value(val), next(nullptr) {}
-
+    node(pointer val) : value(val), next(nullptr) {
+      // nop
+    }
    private:
-
     static constexpr size_type payload_size =
       sizeof(pointer) + sizeof(std::atomic<node*>);
-
     static constexpr size_type cline_size = CAF_CACHE_LINE_SIZE;
-
     static constexpr size_type pad_size =
       (cline_size * ((payload_size / cline_size) + 1)) - payload_size;
-
     // avoid false sharing
+    static_assert(pad_size > 0, "invalid padding size calculated");
     char pad[pad_size];
-
   };
 
- private:
-
   static_assert(sizeof(node*) < CAF_CACHE_LINE_SIZE,
-          "sizeof(node*) >= CAF_CACHE_LINE_SIZE");
+                "sizeof(node*) >= CAF_CACHE_LINE_SIZE");
 
-  // for one consumer at a time
-  std::atomic<node*> m_first;
-  char m_pad1[CAF_CACHE_LINE_SIZE - sizeof(node*)];
-
-  // for one producers at a time
-  std::atomic<node*> m_last;
-  char m_pad2[CAF_CACHE_LINE_SIZE - sizeof(node*)];
-
-  // shared among producers
-  std::atomic<bool> m_consumer_lock;
-  std::atomic<bool> m_producer_lock;
-
- public:
-
-  producer_consumer_list() {
+  double_ended_queue() {
     auto ptr = new node(nullptr);
-    m_first = ptr;
-    m_last = ptr;
-    m_consumer_lock = false;
-    m_producer_lock = false;
+    m_head = ptr;
+    m_tail = ptr;
+    m_head_lock = false;
+    m_tail_lock = false;
   }
 
-  ~producer_consumer_list() {
-    while (m_first) {
-      node* tmp = m_first;
-      m_first = tmp->next.load();
+  ~double_ended_queue() {
+    while (m_head) {
+      node* tmp = m_head;
+      m_head = tmp->next.load();
       delete tmp;
     }
   }
 
-  inline void push_back(pointer value) {
-    assert(value != nullptr);
+  // acquires only one lock
+  void append(pointer value) {
+    CAF_REQUIRE(value != nullptr);
     node* tmp = new node(value);
-    // acquire exclusivity
-    while (m_producer_lock.exchange(true)) {
-      std::this_thread::yield();
-    }
+    lock_guard guard(m_tail_lock);
     // publish & swing last forward
-    m_last.load()->next = tmp;
-    m_last = tmp;
-    // release exclusivity
-    m_producer_lock = false;
+    m_tail.load()->next = tmp;
+    m_tail = tmp;
   }
 
-  // returns nullptr on failure
-  pointer try_pop() {
-    pointer result = nullptr;
-    while (m_consumer_lock.exchange(true)) {
-      std::this_thread::yield();
+  // acquires both locks
+  void prepend(pointer value) {
+    CAF_REQUIRE(value != nullptr);
+    node* tmp = new node(value);
+    // acquire both locks since we might touch m_last too
+    lock_guard guard1(m_head_lock);
+    lock_guard guard2(m_tail_lock);
+    auto first = m_head.load();
+    auto next = first->next.load();
+    // m_first always points to a dummy with no value,
+    // hence we put the new element second
+    tmp->next = next;
+    first->next = tmp;
+    // in case the queue is empty, we need to swing last forward
+    if (m_tail == first) {
+      m_tail = tmp;
     }
-    // only one consumer allowed
-    node* first = m_first;
-    node* next = m_first.load()->next;
-    if (next) {
+  }
+
+  // acquires only one lock, returns nullptr on failure
+  pointer take_head() {
+    node* first = nullptr;
+    pointer result = nullptr;
+    { // lifetime scope of guard
+      lock_guard guard(m_head_lock);
+      first = m_head;
+      node* next = m_head.load()->next;
+      if (next == nullptr) {
+        return nullptr;
+      }
       // queue is not empty
       result = next->value; // take it out of the node
       next->value = nullptr;
       // swing first forward
-      m_first = next;
+      m_head = next;
       // release exclusivity
-      m_consumer_lock = false;
-      // delete old dummy
-      // first->value = nullptr;
-      delete first;
-      return result;
-    } else {
-      // release exclusivity
-      m_consumer_lock = false;
-      return nullptr;
+      m_head_lock = false;
     }
+    delete first;
+    return result;
   }
 
+  // acquires both locks, returns nullptr on failure
+  pointer take_tail() {
+    pointer result = nullptr;
+    node* last = nullptr;
+    { // lifetime scope of guards
+      lock_guard guard1(m_head_lock);
+      lock_guard guard2(m_tail_lock);
+      last = m_tail;
+      if (m_head == last) {
+        return nullptr;
+      }
+      result = last->value;
+      m_tail = find_predecessor(last);
+      CAF_REQUIRE(m_tail != nullptr);
+      m_tail.load()->next = nullptr;
+    }
+    delete last;
+    return result;
+  }
+
+  // does not lock
   bool empty() const {
     // atomically compares first and last pointer without locks
-    return m_first == m_last;
+    return m_head == m_tail;
   }
 
+ private:
+  // precondition: *both* locks acquired
+  node* find_predecessor(node* what) {
+    for (auto i = m_head.load(); i != nullptr; i = i->next) {
+      if (i->next == what) {
+        return i;
+      }
+    }
+    return nullptr;
+  }
+
+  // guarded by m_head_lock
+  std::atomic<node*> m_head;
+  char m_pad1[CAF_CACHE_LINE_SIZE - sizeof(node*)];
+  // guarded by m_tail_lock
+  std::atomic<node*> m_tail;
+  char m_pad2[CAF_CACHE_LINE_SIZE - sizeof(node*)];
+  // enforce exclusive access
+  std::atomic<bool> m_head_lock;
+  std::atomic<bool> m_tail_lock;
+
+  class lock_guard {
+   public:
+    lock_guard(std::atomic<bool>& lock) : m_lock(lock) {
+      while (m_lock.exchange(true)) {
+        std::this_thread::yield();
+      }
+    }
+    ~lock_guard() {
+      m_lock = false;
+    }
+   private:
+    std::atomic<bool>& m_lock;
+  };
 };
 
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_PRODUCER_CONSUMER_LIST_HPP
+#endif // CAF_DETAIL_DOUBLE_ENDED_QUEUE_HPP
