@@ -94,6 +94,10 @@ class work_stealing {
   template <class Worker>
   resumable* try_steal(Worker* self) {
     auto p = self->parent();
+    if (p->num_workers() < 2) {
+      // you can't steal from yourself, can you?
+      return nullptr;
+    }
     size_t victim;
     do {
       // roll the dice to pick a victim other than ourselves
@@ -199,12 +203,10 @@ class work_stealing {
   template <class Worker>
   void after_resume(Worker* self) {
     // give others the opportunity to steal from us
-    /*
     if (d(self).private_queue.size() > 1 && d(self).exposed_queue.empty()) {
       d(self).exposed_queue.push_back(d(self).private_queue.front());
       d(self).private_queue.pop_front();
     }
-    */
   }
 
   template <class Worker, class UnaryFunction>
