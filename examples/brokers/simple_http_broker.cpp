@@ -10,7 +10,7 @@ using std::endl;
 using namespace caf;
 using namespace caf::io;
 
-constexpr const char http_ok[] = R"__(HTTP/1.1 200 OK
+const char http_ok[] = R"__(HTTP/1.1 200 OK
 Content-Type: text/plain
 Connection: keep-alive
 Transfer-Encoding: chunked
