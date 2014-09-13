@@ -58,4 +58,8 @@ actor_addr actor::address() const {
   return m_ptr ? m_ptr->address() : actor_addr{};
 }
 
+actor_id actor::id() const {
+  return (m_ptr) ? m_ptr->id() : 0;
+}
+
 } // namespace caf

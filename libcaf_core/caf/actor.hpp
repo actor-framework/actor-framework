@@ -147,6 +147,8 @@ class actor : detail::comparable<actor>,
    */
   actor_addr address() const;
 
+  actor_id id() const;
+
  private:
 
   void swap(actor& other);
