@@ -22,6 +22,7 @@
 
 #include <thread>
 #include <limits>
+#include <condition_variable>
 
 #include "caf/scheduler/worker.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
