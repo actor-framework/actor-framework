@@ -133,23 +133,35 @@ class double_ended_queue {
     m_tail = tmp;
   }
 
-  // acquires both locks
+  // acquires both locks if empty()
   void prepend(pointer value) {
     CAF_REQUIRE(value != nullptr);
     node* tmp = new node(value);
+    node* first = nullptr;
+    auto insert = [&] {
+      auto next = first->next.load();
+      // m_first always points to a dummy with no value,
+      // hence we put the new element second
+      tmp->next = next;
+      first->next = tmp;
+    };
     // acquire both locks since we might touch m_last too
     lock_guard guard1(m_head_lock);
-    lock_guard guard2(m_tail_lock);
-    auto first = m_head.load();
-    auto next = first->next.load();
-    // m_first always points to a dummy with no value,
-    // hence we put the new element second
-    tmp->next = next;
-    first->next = tmp;
-    // in case the queue is empty, we need to swing last forward
-    if (m_tail == first) {
-      m_tail = tmp;
+    first = m_head.load();
+    if (first == m_tail) {
+      // acquire second lock as well and move tail after insertion
+      lock_guard guard2(m_tail_lock);
+      // condition still strue?
+      if (first == m_tail) {
+        insert();
+        m_tail = tmp;
+        return;
+      }
+      // else: someone called append() in the meantime,
+      //       release lock and insert as usual
     }
+    // insertion without second lock is safe
+    insert();
   }
 
   // acquires only one lock, returns nullptr on failure
