@@ -40,7 +40,7 @@ namespace caf {
 
 using string_proj = std::function<optional<std::string> (const std::string&)>;
 
-string_proj extract_longopt_arg(const std::string& prefix) {
+inline string_proj extract_longopt_arg(const std::string& prefix) {
   return [prefix](const std::string& arg) -> optional<std::string> {
     if (arg.compare(0, prefix.size(), prefix) == 0) {
       return std::string(arg.begin() + prefix.size(), arg.end());
@@ -145,8 +145,8 @@ inline opt0_rvalue_builder on_opt0(char short_opt,
 /**
  * Returns a function that prints the help text of `desc` to `out`.
  */
-std::function<void()> print_desc(options_description* desc,
-                 std::ostream& out = std::cout) {
+inline std::function<void()> print_desc(options_description* desc,
+                                        std::ostream& out = std::cout) {
   return [&out, desc] {
     if (!desc) return;
     if (desc->empty()) {
