@@ -93,7 +93,7 @@ bool remote_actor_proxy::link_impl(linking_operation op,
       }
       return false;
     case establish_backlink_op:
-      if (super::establish_backlink(other)) {
+      if (establish_backlink_impl(other)) {
         // causes remote actor to unlink from (proxy of) other
         forward_msg(address(), message_id::invalid,
                     make_message(atom("_Link"), other));
@@ -101,7 +101,7 @@ bool remote_actor_proxy::link_impl(linking_operation op,
       }
       return false;
     case remove_backlink_op:
-      if (super::remove_backlink(other)) {
+      if (remove_backlink_impl(other)) {
         // causes remote actor to unlink from (proxy of) other
         forward_msg(address(), message_id::invalid,
                     make_message(atom("_Unlink"), other));

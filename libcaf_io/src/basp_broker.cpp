@@ -48,13 +48,13 @@ behavior basp_broker::make_behavior() {
     // received from underlying broker implementation
     [=](new_data_msg& msg) {
       CAF_LOGM_TRACE("make_behavior$new_data_msg",
-               "handle = " << msg.handle.id());
+                     "handle = " << msg.handle.id());
       new_data(m_ctx[msg.handle], msg.buf);
     },
     // received from underlying broker implementation
     [=](const new_connection_msg& msg) {
       CAF_LOGM_TRACE("make_behavior$new_connection_msg",
-                   "handle = " << msg.handle.id());
+                     "handle = " << msg.handle.id());
       CAF_REQUIRE(m_ctx.count(msg.handle) == 0);
       auto& ctx = m_ctx[msg.handle];
       ctx.hdl = msg.handle;
@@ -65,7 +65,7 @@ behavior basp_broker::make_behavior() {
     // received from underlying broker implementation
     [=](const connection_closed_msg& msg) {
       CAF_LOGM_TRACE("make_behavior$connection_closed_msg",
-                   CAF_MARG(msg.handle, id));
+                     CAF_MARG(msg.handle, id));
       // purge handle from all routes
       std::vector<id_type> lost_connections;
       for (auto& kvp : m_routes) {
@@ -84,10 +84,15 @@ behavior basp_broker::make_behavior() {
           lost_connections.push_back(kvp.first);
         }
       }
-      // remote routes that no longer have any path
+      // remove routes that no longer have any path and kill all proxies
       for (auto& lc : lost_connections) {
         CAF_LOG_DEBUG("no more route to " << to_string(lc));
         m_routes.erase(lc);
+        auto proxies = m_namespace.get_all(lc);
+        m_namespace.erase(lc);
+        for (auto& p : proxies) {
+          p->kill_proxy(exit_reason::remote_link_unreachable);
+        }
       }
       m_ctx.erase(msg.handle);
     },
@@ -98,14 +103,13 @@ behavior basp_broker::make_behavior() {
     },
     // received from proxy instances
     on(atom("_Dispatch"), arg_match) >> [=](const actor_addr& sender,
-                        const actor_addr& receiver,
-                        message_id mid,
-                        const message& msg) {
+                                            const actor_addr& receiver,
+                                            message_id mid,
+                                            const message& msg) {
       CAF_LOGM_TRACE("make_behavior$_Dispatch", "");
       dispatch(sender, receiver, mid, msg);
     },
-    on(atom("_DelProxy"), arg_match) >> [=](const id_type& nid,
-                        actor_id aid) {
+    on(atom("_DelProxy"), arg_match) >> [=](const id_type& nid, actor_id aid) {
       CAF_LOGM_TRACE("make_behavior$_DelProxy",
                    CAF_TSARG(nid) << ", "
                    << CAF_ARG(aid));
@@ -113,7 +117,7 @@ behavior basp_broker::make_behavior() {
     },
     others() >> [=] {
       CAF_LOG_INFO("received unexpected message: "
-             << to_string(last_dequeued()));
+                   << to_string(last_dequeued()));
     }
   };
 }
@@ -167,6 +171,38 @@ void basp_broker::dispatch(const basp::header& hdr, message&& msg) {
     }
   }
   auto dest = singletons::get_actor_registry()->get(hdr.dest_actor);
+  // intercept message used for link signaling
+  if (dest && src == dest) {
+    if (msg.size() == 2 && typeid(actor_addr) == *msg.type_at(1)) {
+      actor_addr other;
+      bool is_unlink = true;
+      // extract arguments
+      msg.apply({
+        on(atom("_Link"), arg_match) >> [&](const actor_addr& addr) {
+          is_unlink = false;
+          other = addr;
+        },
+        on(atom("_Unlink"), arg_match) >> [&](const actor_addr& addr) {
+          other = addr;
+        }
+      });
+      // in both cases, we link a local actor to a proxy
+      if (other != invalid_actor_addr) {
+        auto iptr = actor_cast<intrusive_ptr<abstract_actor>>(other);
+        auto ptr = dynamic_cast<actor_proxy*>(iptr.get());
+        if (ptr) {
+          if (is_unlink) {
+            ptr->local_unlink_from(dest->address());
+          } else {
+            // it's either an unlink request or a new link
+            ptr->local_link_to(dest->address());
+          }
+          // do not actually send this message as it's been already handled
+          return;
+        }
+      }
+    }
+  }
   auto mid = message_id::from_integer_value(hdr.operation_data);
   if (!dest) {
     CAF_LOG_DEBUG("received a message for an invalid actor; "
@@ -209,8 +245,8 @@ void basp_broker::dispatch(const actor_addr& from, const actor_addr& to,
   binary_serializer bs2{buf.begin() + wr_pos, &m_namespace};
   if (from != invalid_actor_addr) {
     // register locally running actors to be able to deserialize them later
-    detail::singletons::get_actor_registry()->put(from.id(), actor_cast
-                                                  <abstract_actor_ptr>(from));
+    auto reg = detail::singletons::get_actor_registry();
+    reg->put(from.id(), actor_cast<abstract_actor_ptr>(from));
   }
   write(bs2,
         {from.node(),                                dest,
@@ -514,8 +550,7 @@ actor_proxy_ptr basp_broker::make_proxy(const id_type& nid, actor_id aid) {
 
 void basp_broker::erase_proxy(const id_type& nid, actor_id aid) {
   CAF_LOGM_TRACE("make_behavior$_DelProxy",
-               CAF_TSARG(nid) << ", "
-               << CAF_ARG(aid));
+                 CAF_TSARG(nid) << ", " << CAF_ARG(aid));
   m_namespace.erase(nid, aid);
   if (m_namespace.empty()) {
     CAF_LOG_DEBUG("no proxy left, request shutdown of connection");
