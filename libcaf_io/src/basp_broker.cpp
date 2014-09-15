@@ -155,22 +155,27 @@ void basp_broker::new_data(connection_context& ctx, buffer_type& buf) {
 }
 
 void basp_broker::dispatch(const basp::header& hdr, message&& msg) {
+  CAF_LOG_TRACE("");
   // TODO: provide hook API to allow ActorShell to
   //       intercept/trace/log each message
   actor_addr src;
   if (hdr.source_node != invalid_node_id
       && hdr.source_actor != invalid_actor_id) {
     if (hdr.source_node != node()) {
+      CAF_LOG_DEBUG("source is a proxy");
       src = m_namespace.get_or_put(hdr.source_node,
                                    hdr.source_actor)->address();
     } else {
+      CAF_LOG_DEBUG("source is a local actor (so he claims)");
       auto ptr = singletons::get_actor_registry()->get(hdr.source_actor);
       if (ptr) {
         src = ptr->address();
       }
     }
   }
+  CAF_LOG_DEBUG_IF(src == invalid_actor_addr, "src == invalid_actor_addr");
   auto dest = singletons::get_actor_registry()->get(hdr.dest_actor);
+  CAF_REQUIRE(!dest || dest->node() == node());
   // intercept message used for link signaling
   if (dest && src == dest) {
     if (msg.size() == 2 && typeid(actor_addr) == *msg.type_at(1)) {
@@ -214,6 +219,8 @@ void basp_broker::dispatch(const basp::header& hdr, message&& msg) {
   }
   parent().notify<hook::message_received>(hdr.source_node, src,
                                           dest->address(), mid, msg);
+  CAF_LOG_DEBUG("enqueue message from " << to_string(src) << " to "
+                << to_string(dest->address()));
   dest->enqueue(src, mid, std::move(msg), nullptr);
 }
 
@@ -243,7 +250,7 @@ void basp_broker::dispatch(const actor_addr& from, const actor_addr& to,
   }
   // write broker message to the reserved space
   binary_serializer bs2{buf.begin() + wr_pos, &m_namespace};
-  if (from != invalid_actor_addr) {
+  if (from != invalid_actor_addr && from.node() == node()) {
     // register locally running actors to be able to deserialize them later
     auto reg = detail::singletons::get_actor_registry();
     reg->put(from.id(), actor_cast<abstract_actor_ptr>(from));
@@ -265,13 +272,6 @@ void basp_broker::read(binary_deserializer& bd, basp::header& msg) {
     .read(msg.payload_len)
     .read(msg.operation)
     .read(msg.operation_data);
-  CAF_LOG_DEBUG("read: "<< CAF_TSARG(msg.source_node)
-                << ", " << CAF_TSARG(msg.dest_node)
-                << ", " << CAF_ARG(msg.source_actor)
-                << ", " << CAF_ARG(msg.dest_actor)
-                << ", " << CAF_ARG(msg.payload_len)
-                << ", " << CAF_ARG(msg.operation)
-                << ", " << CAF_ARG(msg.operation_data));
 }
 
 void basp_broker::write(binary_serializer& bs, const basp::header& msg) {
@@ -287,26 +287,42 @@ void basp_broker::write(binary_serializer& bs, const basp::header& msg) {
 basp_broker::connection_state
 basp_broker::handle_basp_header(connection_context& ctx,
                                 const buffer_type* payload) {
+  CAF_LOG_TRACE(CAF_TARG(ctx.state, static_cast<int>)
+                << ", payload = "
+                << (payload ? payload->size() : 0) << " bytes"
+                << (payload ? "" : " (nullptr)"));
   auto& hdr = ctx.hdr;
   if (!payload && hdr.payload_len > 0) {
     // receive payload first
+    CAF_LOG_DEBUG("await payload");
     return await_payload;
   }
+  CAF_LOG_DEBUG("header => "<< CAF_TSARG(hdr.source_node)
+                << ", " << CAF_TSARG(hdr.dest_node)
+                << ", " << CAF_ARG(hdr.source_actor)
+                << ", " << CAF_ARG(hdr.dest_actor)
+                << ", " << CAF_ARG(hdr.payload_len)
+                << ", " << CAF_ARG(hdr.operation)
+                << ", " << CAF_ARG(hdr.operation_data));
   // forward message if not addressed to us; invalid dest_node implies
   // that msg is a server_handshake
   if (hdr.dest_node != invalid_node_id && hdr.dest_node != node()) {
     auto route = get_route(hdr.dest_node);
     if (route.invalid()) {
-      CAF_LOG_INFO("message dropped: no route to node "
+      CAF_LOG_INFO("cannot forward message: no route to node "
                    << to_string(hdr.dest_node));
       parent().notify<hook::message_forwarding_failed>(hdr.source_node,
                                                        hdr.dest_node, payload);
       return close_connection;
     }
+    CAF_LOG_DEBUG("received message that is not addressed to us -> "
+                  << "forward via " << to_string(route.node));
     auto& buf = wr_buf(route.hdl);
     binary_serializer bs{std::back_inserter(buf), &m_namespace};
     write(bs, hdr);
-    if (payload) buf.insert(buf.end(), payload->begin(), payload->end());
+    if (payload) {
+      buf.insert(buf.end(), payload->begin(), payload->end());
+    }
     flush(route.hdl);
     parent().notify<hook::message_forwarded>(hdr.source_node,
                                              hdr.dest_node, payload);
@@ -627,8 +643,14 @@ void basp_broker::init_handshake_as_sever(connection_context& ctx,
 
 void basp_broker::announce_published_actor(accept_handle hdl,
                                            const abstract_actor_ptr& ptr) {
+  if (!ptr) {
+    return;
+  }
+  CAF_LOG_TRACE("");
   m_published_actors.insert(std::make_pair(hdl, ptr));
-  singletons::get_actor_registry()->put(ptr->id(), ptr);
+  if (ptr->node() == node()) {
+    singletons::get_actor_registry()->put(ptr->id(), ptr);
+  }
 }
 
 } // namespace io
