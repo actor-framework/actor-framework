@@ -17,19 +17,24 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/detail/memory.hpp"
+
 #include <vector>
 #include <typeinfo>
 
-#include "caf/detail/memory.hpp"
 #include "caf/mailbox_element.hpp"
 
 using namespace std;
 
-#ifdef CAF_DISABLE_MEM_MANAGEMENT
+#ifdef CAF_NO_MEM_MANAGEMENT
 
-int caf_memory_keep_compiler_happy() { return 0; }
+int caf_memory_keep_compiler_happy() {
+  // this function shuts up a linker warning saying that the
+  // object file has no symbols
+  return 0;
+}
 
-#else // CAF_DISABLE_MEM_MANAGEMENT
+#else // CAF_NO_MEM_MANAGEMENT
 
 namespace caf {
 namespace detail {
@@ -90,4 +95,4 @@ instance_wrapper::~instance_wrapper() {
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DISABLE_MEM_MANAGEMENT
+#endif // CAF_NO_MEM_MANAGEMENT

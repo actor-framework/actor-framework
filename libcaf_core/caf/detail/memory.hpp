@@ -86,7 +86,7 @@ class instance_wrapper;
 template <class T>
 class basic_memory_cache;
 
-#ifdef CAF_DISABLE_MEM_MANAGEMENT
+#ifdef CAF_NO_MEM_MANAGEMENT
 
 class memory {
 
@@ -106,7 +106,7 @@ class memory {
 
 };
 
-#else // CAF_DISABLE_MEM_MANAGEMENT
+#else // CAF_NO_MEM_MANAGEMENT
 
 template <class T>
 class basic_memory_cache : public memory_cache {
@@ -224,7 +224,7 @@ class memory {
 
 };
 
-#endif // CAF_DISABLE_MEM_MANAGEMENT
+#endif // CAF_NO_MEM_MANAGEMENT
 
 } // namespace detail
 } // namespace caf
