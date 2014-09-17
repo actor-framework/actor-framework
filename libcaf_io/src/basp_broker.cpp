@@ -414,15 +414,19 @@ basp_broker::handle_basp_header(connection_context& ctx,
       }
       auto& ifs = *(ctx.handshake_data->expected_ifs);
       if (!std::includes(ifs.begin(), ifs.end(),
-                 remote_ifs.begin(), remote_ifs.end())) {
+                         remote_ifs.begin(), remote_ifs.end())) {
         auto tostr = [](const std::set<string>& what) -> string {
-          if (what.empty()) return "actor";
+          if (what.empty()) {
+            return "actor";
+          }
           string tmp;
           tmp = "typed_actor<";
           auto i = what.begin();
           auto e = what.end();
           tmp += *i++;
-          while (i != e) tmp += *i++;
+          while (i != e) {
+            tmp += *i++;
+          }
           tmp += ">";
           return tmp;
         };
@@ -431,21 +435,21 @@ basp_broker::handle_basp_header(connection_context& ctx,
         auto& error_msg = *(ctx.handshake_data->error_msg);
         if (ifs.empty()) {
           error_msg = "expected remote actor to be a "
-                "dynamically typed actor but found "
-                "a strongly typed actor of type "
-                + iface_str;
+                      "dynamically typed actor but found "
+                      "a strongly typed actor of type "
+                      + iface_str;
         }
         else if (remote_ifs.empty()) {
           error_msg = "expected remote actor to be a "
-                "strongly typed actor of type "
-                + expected_str +
-                " but found a dynamically typed actor";
+                      "strongly typed actor of type "
+                      + expected_str +
+                      " but found a dynamically typed actor";
         } else {
           error_msg = "expected remote actor to be a "
-                "strongly typed actor of type "
-                + expected_str +
-                " but found a strongly typed actor of type "
-                + iface_str;
+                      "strongly typed actor of type "
+                      + expected_str +
+                      " but found a strongly typed actor of type "
+                      + iface_str;
         }
         // abort with error
         ctx.handshake_data->result->set_value(nullptr);
@@ -460,13 +464,9 @@ basp_broker::handle_basp_header(connection_context& ctx,
         return close_connection;
       }
       if (!try_set_default_route(nid, ctx.hdl)) {
-        CAF_LOG_INFO("multiple connections to "
-                   << to_string(nid)
-                   << " (re-use old one)");
-        auto proxy = m_namespace.get(nid, remote_aid);
-        CAF_LOG_INFO_IF(!proxy,
-                "no proxy for published actor found "
-                "although an open connection exists");
+        CAF_LOG_INFO("multiple connections to " << to_string(nid)
+                     << " (re-use old one)");
+        auto proxy = m_namespace.get_or_put(nid, remote_aid);
         // discard this peer; there's already an open connection
         ctx.handshake_data->result->set_value(std::move(proxy));
         ctx.handshake_data = nullptr;
@@ -476,8 +476,8 @@ basp_broker::handle_basp_header(connection_context& ctx,
       auto& buf = wr_buf(ctx.hdl);
       binary_serializer bs(std::back_inserter(buf), &m_namespace);
       write(bs, {node(), ctx.handshake_data->remote_id,
-             invalid_actor_id, invalid_actor_id,
-             0, basp::client_handshake, 0});
+                 invalid_actor_id, invalid_actor_id,
+                 0, basp::client_handshake, 0});
       // prepare to receive messages
       auto proxy = m_namespace.get_or_put(nid, remote_aid);
       ctx.published_actor = proxy;
