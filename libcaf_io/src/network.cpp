@@ -324,13 +324,15 @@ namespace network {
           CAF_CRITICAL("epoll_ctl() failed");
       }
     }
-    auto remove_from_loop_if_needed = [&](int flag, operation flag_op) {
-      if ((old & flag) && !(e.mask & flag)) {
-        e.ptr->removed_from_loop(flag_op);
-      }
-    };
-    remove_from_loop_if_needed(input_mask, operation::read);
-    remove_from_loop_if_needed(output_mask, operation::write);
+    if (e.ptr) {
+      auto remove_from_loop_if_needed = [&](int flag, operation flag_op) {
+        if ((old & flag) && !(e.mask & flag)) {
+          e.ptr->removed_from_loop(flag_op);
+        }
+      };
+      remove_from_loop_if_needed(input_mask, operation::read);
+      remove_from_loop_if_needed(output_mask, operation::write);
+    }
   }
 
 #else // CAF_EPOLL_MULTIPLEXER
