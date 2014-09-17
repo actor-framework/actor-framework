@@ -242,6 +242,8 @@ namespace network {
     while (m_shadow > 0) {
       int presult = epoll_wait(m_epollfd, m_pollset.data(),
                                static_cast<int>(m_pollset.size()), -1);
+      CAF_LOG_DEBUG("epoll_wait() on " << m_shadow << " sockets reported "
+                    << presult << " event(s)");
       if (presult < 0) {
         switch (errno) {
           case EINTR: {
@@ -270,13 +272,14 @@ namespace network {
   }
 
   void multiplexer::handle(const multiplexer::event& e) {
+    CAF_LOG_TRACE("e.fd = " << e.fd << ", mask = " << e.mask);
+    // ptr is only allowed to nullptr if fd is our pipe
+    // read handle which is only registered for input
     CAF_REQUIRE(e.ptr != nullptr || e.fd == m_pipe.first);
     if (e.ptr && e.ptr->eventbf() == e.mask) {
       // nop
       return;
     }
-    // ptr is only allowed to nullptr if fd is our pipe
-    // read handle which is only registered for input
     auto old = e.ptr ? e.ptr->eventbf() : input_mask;
     if (e.ptr){
       e.ptr->eventbf(e.mask);
@@ -286,12 +289,16 @@ namespace network {
     ee.data.ptr = e.ptr;
     int op;
     if (e.mask == 0) {
+      CAF_LOG_DEBUG("attempt to remove socket " << e.fd << " from epoll");
       op = EPOLL_CTL_DEL;
       --m_shadow;
     } else if (old == 0) {
+      CAF_LOG_DEBUG("attempt to add socket " << e.fd << " to epoll");
       op = EPOLL_CTL_ADD;
       ++m_shadow;
     } else {
+      CAF_LOG_DEBUG("modify epoll event mask for socket " << e.fd
+                    << ": " << old << " -> " << e.mask);
       op = EPOLL_CTL_MOD;
     }
     if (epoll_ctl(m_epollfd, op, e.fd, &ee) < 0) {
@@ -317,6 +324,13 @@ namespace network {
           CAF_CRITICAL("epoll_ctl() failed");
       }
     }
+    auto remove_from_loop_if_needed = [&](int flag, operation flag_op) {
+      if ((old & flag) && !(e.mask & flag)) {
+        e.ptr->removed_from_loop(flag_op);
+      }
+    };
+    remove_from_loop_if_needed(input_mask, operation::read);
+    remove_from_loop_if_needed(output_mask, operation::write);
   }
 
 #else // CAF_EPOLL_MULTIPLEXER
@@ -367,8 +381,8 @@ namespace network {
         presult = ::poll(m_pollset.data(),
                          static_cast<nfds_t>(m_pollset.size()), -1);
 #     endif
-      CAF_LOG_DEBUG("poll() on " << m_pollset.size()
-                    << " reported " << presult << " event(s)");
+      CAF_LOG_DEBUG("poll() on " << m_pollset.size() << " sockets reported "
+                    << presult << " event(s)");
       if (presult < 0) {
         switch (last_socket_error()) {
           case EINTR: {
@@ -453,28 +467,21 @@ namespace network {
     } else if (i->fd == e.fd) { // modify
       if (e.mask == 0) {
         // delete item
-        if (e.ptr) {
-          if (old_mask & input_mask) {
-            e.ptr->removed_from_loop(operation::read);
-          }
-          if (old_mask & output_mask) {
-            e.ptr->removed_from_loop(operation::write);
-          }
-        }
         m_pollset.erase(i);
         m_shadow.erase(j);
       } else {
         // update event mask of existing entry
         CAF_REQUIRE(*j == e.ptr);
-        if (e.ptr) {
-          if (old_mask & input_mask && !(e.mask & input_mask)) {
-            e.ptr->removed_from_loop(operation::read);
-          }
-          if (old_mask & output_mask && !(e.mask & output_mask)) {
-            e.ptr->removed_from_loop(operation::write);
-          }
-        }
         i->events = e.mask;
+      }
+      if (e.ptr) {
+        auto remove_from_loop_if_needed = [&](int flag, operation flag_op) {
+          if ((old_mask & flag) && !(e.mask & flag)) {
+            e.ptr->removed_from_loop(flag_op);
+          }
+        };
+        remove_from_loop_if_needed(input_mask, operation::read);
+        remove_from_loop_if_needed(output_mask, operation::write);
       }
     } else { // insert at iterator pos
       m_pollset.insert(i, new_element);
@@ -568,7 +575,8 @@ void multiplexer::close_pipe() {
 }
 
 void multiplexer::handle_socket_event(native_socket fd, int mask,
-                    event_handler* ptr) {
+                                      event_handler* ptr) {
+  CAF_LOG_TRACE(CAF_ARG(fd) << ", " << CAF_ARG(mask));
   bool checkerror = true;
   if (mask & input_mask) {
     checkerror = false;
@@ -605,6 +613,10 @@ void multiplexer::handle_socket_event(native_socket fd, int mask,
       del(operation::read, fd, nullptr);
     }
   }
+  CAF_LOG_DEBUG_IF(!checkerror && (mask & error_mask),
+                   "ignored error because epoll still reported read or write "
+                   "event; wait until no other event occurs before "
+                   "handling error");
 }
 
 void multiplexer::init() {
