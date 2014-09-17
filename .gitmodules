@@ -9,7 +9,7 @@
 	url = https://github.com/actor-framework/opencl.git
 [submodule "libcaf_riac"]
 	path = libcaf_riac
-	url = git@github.com:actor-framework/riac.git
+	url = https://github.com/actor-framework/riac.git
 [submodule "cash"]
 	path = cash
-	url = git@github.com:actor-framework/cash.git
+	url = https://github.com/actor-framework/cash.git
