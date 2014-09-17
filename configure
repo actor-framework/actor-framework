@@ -50,7 +50,7 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --no-auto-libc++            do not automatically enable libc++ for Clang
     --warnings-as-errors        enables -Werror
     --with-asio                 enable ASIO multiplexer
-    --for-riot                  build CAF for riot
+    --for-riot=DIR              build CAF for riot
                                 - uses RIOT thread impl
                                 - build without memory management
                                 - static build only
@@ -233,10 +233,11 @@ while [ $# -ne 0 ]; do
         --no-compiler-check)
             append_cache_entry CAF_NO_COMPILER_CHECK BOOL yes
             ;;
-        --for-riot)
+        --for-riot=*)
             append_cache_entry CAF_FOR_RIOT BOOL yes
             append_cache_entry CAF_NO_MEM_MANAGEMENT BOOL yes
             append_cache_entry CAF_BUILD_STATIC_ONLY STRING yes
+            append_cache_entry RIOT_BASE_DIR STRING $optarg
             ;;
         --no-auto-libc++)
             append_cache_entry CAF_NO_AUTO_LIBCPP BOOL yes
