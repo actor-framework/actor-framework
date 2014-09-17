@@ -4,12 +4,12 @@
 [submodule "nexus"]
 	path = nexus
 	url = https://github.com/actor-framework/nexus.git
-[submodule "shell"]
-	path = shell
-	url = https://github.com/actor-framework/shell
 [submodule "opencl"]
 	path = libcaf_opencl
 	url = https://github.com/actor-framework/opencl.git
 [submodule "libcaf_riac"]
 	path = libcaf_riac
 	url = git@github.com:actor-framework/riac.git
+[submodule "cash"]
+	path = cash
+	url = git@github.com:actor-framework/cash.git
