@@ -1,10 +1,12 @@
 
-#include <system_error>
+//#include <system_error>
+#include <stdexcept>
 
 extern "C" {
 #include "irq.h"
-#include "vtimer.h"
 #include "sched.h"
+#include "vtimer.h"
+#include "priority_queue.h"
 }
 
 #include "caf/condition_variable.hpp"
@@ -14,32 +16,25 @@ using namespace std::chrono;
 namespace caf {
 
 condition_variable::~condition_variable() {
-  m_queue.first = NULL;   
+  m_queue.first = NULL;
 }
 
 void condition_variable::notify_one() noexcept {
-  printf("notify_one start\n");
   unsigned old_state = disableIRQ();
   priority_queue_node_t *head = priority_queue_remove_head(&m_queue);
   int other_prio = -1;
   if (head != NULL) {
-    printf("notify_one -> head is not NULL\n");
     tcb_t *other_thread = (tcb_t *) sched_threads[head->data];
     if (other_thread) {
-      printf("notify_one -> other thread exists\n");
       other_prio = other_thread->priority;
       sched_set_status(other_thread, STATUS_PENDING);
     }
     head->data = -1u;
   }
   restoreIRQ(old_state);
-  printf("notify_one -> restored irq\n");
   if (other_prio >= 0) {
-    printf("notify_one -> sched_switch incoming\n");
     sched_switch(other_prio);
-    printf("notify_one -> sched_switch called\n");
   }
-  printf("notify_one end\n");
 }
 
 void condition_variable::notify_all() noexcept {
@@ -68,8 +63,8 @@ void condition_variable::notify_all() noexcept {
 
 void condition_variable::wait(unique_lock<mutex>& lock) noexcept {
   if (!lock.owns_lock()) {
-    std::__throw_system_error(EPERM,
-                              "condition_variable::wait: mutex not locked");
+    // std::__throw_system_error(EPERM,
+    throw std::runtime_error("condition_variable::wait: mutex not locked");
   }
   priority_queue_node_t n;
   n.priority = sched_active_thread->priority;
@@ -95,8 +90,8 @@ void condition_variable::wait(unique_lock<mutex>& lock) noexcept {
                                         time_point<system_clock,
                                                    nanoseconds> tp) noexcept {
   if (!lock.owns_lock()) {
-    std::__throw_system_error(EPERM,
-                              "condition_variable::timed wait: mutex not locked");
+    //std::__throw_system_error(EPERM,
+    throw std::runtime_error("condition_variable::timed wait: mutex not locked");
   }
   nanoseconds d = tp.time_since_epoch();
   if (d > nanoseconds(0x59682F000000E941)) {

@@ -23,7 +23,8 @@
 #ifdef __RIOTBUILD_FLAG
 
 #include <utility>
-#include <system_error>
+//#include <system_error>
+#include <stdexcept>
 
 #include <cstdio>
 
@@ -160,10 +161,12 @@ class unique_lock {
 template<class Mutex>
 void unique_lock<Mutex>::lock() {
   if (m_mtx == nullptr) {
-    std::__throw_system_error(EPERM, "unique_lock::lock: references null mutex");
+    //std::__throw_system_error(EPERM, "unique_lock::lock: references null mutex");
+    throw std::runtime_error("unique_lock::lock: references null mutex");
   }
   if (m_owns) {
-    std::__throw_system_error(EDEADLK, "unique_lock::lock: already locked");
+    //std::__throw_system_error(EDEADLK, "unique_lock::lock: already locked");
+    throw std::runtime_error("");
   }
   m_mtx->lock();
   m_owns = true;
@@ -172,11 +175,12 @@ void unique_lock<Mutex>::lock() {
 template<class Mutex>
 bool unique_lock<Mutex>::try_lock() {
   if (m_mtx == nullptr) {
-    std::__throw_system_error(EPERM,
-                              "unique_lock::try_lock: references null mutex");
+    //std::__throw_system_error(EPERM,
+    throw std::runtime_error("unique_lock::try_lock: references null mutex");
   }
   if (m_owns) {
-    std::__throw_system_error(EDEADLK, "unique_lock::try_lock: already locked");
+    //std::__throw_system_error(EDEADLK, "unique_lock::try_lock: already locked");
+    throw std::runtime_error("unique_lock::try_lock lock: already locked");
   }
   m_owns = m_mtx->try_lock();
   return m_owns;
@@ -215,7 +219,8 @@ bool unique_lock<Mutex>::try_lock() {
 template<class Mutex>
 void unique_lock<Mutex>::unlock() {
   if (!m_owns) {
-    std::__throw_system_error(EPERM, "unique_lock::unlock: not locked");
+    //std::__throw_system_error(EPERM, "unique_lock::unlock: not locked");
+    throw std::runtime_error("unique_lock::unlock: not locked");
   }
   m_mtx->unlock();
   m_owns = false;

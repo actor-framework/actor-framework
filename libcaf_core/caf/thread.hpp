@@ -26,11 +26,13 @@
 
 #include <tuple>
 #include <chrono>
+#include <memory>
 #include <utility>
 #include <exception>
 #include <functional>
 #include <type_traits>
-#include <system_error>
+//#include <system_error>
+#include <stdexcept>
 
 extern "C" {
 #include "thread.h"
@@ -191,8 +193,8 @@ thread::thread(F&& f, Args&&... args) {
  if (m_handle >= 0) {
    p.release();
  } else {
-   std::__throw_system_error(static_cast<int>(m_handle),
-                             "Failed to create thread.");
+   //std::__throw_system_error(static_cast<int>(m_handle),
+   throw std::runtime_error("Failed to create thread.");
  }
 }
 
