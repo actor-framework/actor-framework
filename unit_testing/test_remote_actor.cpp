@@ -314,30 +314,46 @@ class server : public event_based_actor {
 
 };
 
-void test_remote_actor(std::string app_path, bool run_remote_actor) {
-  scoped_actor self;
-  auto serv = self->spawn<server, monitored>();
-  uint16_t port = 4242;
-  bool success = false;
-  do {
+template <class F>
+uint16_t at_some_port(uint16_t first_port, F fun) {
+  auto port = first_port;
+  for (;;) {
     try {
-      io::publish(serv, port, "127.0.0.1");
-      auto serv2 = io::remote_actor("127.0.0.1", port);
-      CAF_CHECK(serv == serv2);
-      success = true;
-      CAF_PRINT("running on port " << port);
-      CAF_LOGF_INFO("running on port " << port);
+      fun(port);
+      return port;
     }
     catch (bind_failure&) {
       // try next port
       ++port;
     }
-  } while (!success);
+  }
+}
+
+void test_remote_actor(std::string app_path, bool run_remote_actor) {
+  scoped_actor self;
+  auto serv = self->spawn<server, monitored>();
+  auto publish_serv = [=](uint16_t p) {
+    io::publish(serv, p, "127.0.0.1");
+  };
+  auto publish_groups = [](uint16_t p) {
+    io::publish_local_groups(p);
+  };
+  // publish on two distinct ports and use the latter one afterwards
+  auto port0 = at_some_port(4242, publish_serv);
+  CAF_LOGF_INFO("first publish succeeded on port " << port0);
+  auto port = at_some_port(port0 + 1, publish_serv);
+  CAF_PRINT("running on port " << port);
+  CAF_LOGF_INFO("running on port " << port);
+  // publish local groups as well
+  auto gport = at_some_port(port + 1, publish_groups);
+  auto serv2 = io::remote_actor("127.0.0.1", port);
+  CAF_CHECK(serv == serv2);
   CAF_TEST(test_remote_actor);
   thread child;
   ostringstream oss;
   if (run_remote_actor) {
-    oss << app_path << " -c " << port << to_dev_null;
+    oss << app_path << " -c " << port << " " << port0
+        << " " << gport << to_dev_null;
     // execute client_part() in a separate process,
     // connected via localhost socket
     child = thread([&oss]() {
@@ -372,18 +388,20 @@ int main(int argc, char** argv) {
   cout << "this node is: " << to_string(caf::detail::singletons::get_node_id())
        << endl;
   message_builder{argv + 1, argv + argc}.apply({
-    on("-c", spro<uint16_t>)>> [](uint16_t port) {
+    on("-c", spro<uint16_t>, spro<uint16_t>, spro<uint16_t>)
+    >> [](uint16_t p1, uint16_t p2, uint16_t gport) {
       CAF_LOGF_INFO("run in client mode");
       scoped_actor self;
-      auto serv = io::remote_actor("localhost", port);
+      auto serv = io::remote_actor("localhost", p1);
+      auto serv2 = io::remote_actor("localhost", p2);
       // remote_actor is supposed to return the same server
       // when connecting to the same host again
       {
-        auto server2 = io::remote_actor("localhost", port);
-        CAF_CHECK(serv == server2);
-        auto server3 = io::remote_actor("127.0.0.1", port);
-        CAF_CHECK(serv == server3);
+        CAF_CHECK(serv == io::remote_actor("localhost", p1));
+        CAF_CHECK(serv2 == io::remote_actor("127.0.0.1", p2));
       }
+      // connect to published groups
+      io::remote_group("whatever", "127.0.0.1", gport);
       auto c = self->spawn<client, monitored>(serv);
       self->receive(
         [&](const down_msg& dm) {
@@ -391,13 +409,13 @@ int main(int argc, char** argv) {
           CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
         }
       );
-          },
-          on("-s") >> [&] {
+    },
+    on("-s") >> [&] {
       CAF_PRINT("don't run remote actor (server mode)");
       test_remote_actor(argv[0], false);
-          },
-          on() >> [&] { test_remote_actor(argv[0], true); }, others() >> [&] {
-      CAF_PRINTERR("usage: " << argv[0] << " [-s|-c PORT]");
+    },
+    on() >> [&] { test_remote_actor(argv[0], true); }, others() >> [&] {
+      CAF_PRINTERR("usage: " << argv[0] << " [-s PORT|-c PORT1 PORT2 GROUP_PORT]");
     }
   });
   await_all_actors_done();
