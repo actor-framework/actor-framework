@@ -236,6 +236,7 @@ while [ $# -ne 0 ]; do
         --for-riot=*)
             append_cache_entry CAF_FOR_RIOT BOOL yes
             append_cache_entry CAF_NO_MEM_MANAGEMENT BOOL yes
+            append_cache_entry DISABLE_MEM_MANAGEMENT BOOL yes
             append_cache_entry CAF_BUILD_STATIC_ONLY STRING yes
             append_cache_entry RIOT_BASE_DIR STRING $optarg
             ;;

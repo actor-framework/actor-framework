@@ -31,6 +31,9 @@ endif()
 if(NOT CAF_USE_ASIO)
   set(CAF_USE_ASIO no)
 endif()
+if(NOT CAF_FOR_RIOT)
+  set(CAF_FOR_RIOT no)
+endif()
 
 
 ################################################################################
