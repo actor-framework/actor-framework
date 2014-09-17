@@ -56,7 +56,7 @@ actor_proxy_ptr actor_proxy::anchor::get() {
 }
 
 bool actor_proxy::anchor::try_expire() noexcept {
-  std::lock_guard<detail::shared_spinlock> guard{m_lock};
+  lock_guard<detail::shared_spinlock> guard{m_lock};
   // double-check reference count
   if (m_ptr.load()->get_reference_count() == 0) {
     m_ptr = nullptr;

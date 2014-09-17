@@ -18,12 +18,10 @@
  ******************************************************************************/
 
 #include <ctime>
-#include <thread>
 #include <cstring>
 #include <fstream>
 #include <algorithm>
 #include <pthread.h>
-#include <condition_variable>
 
 #ifndef CAF_WINDOWS
 #include <unistd.h>
@@ -40,7 +38,9 @@
 #include "caf/string_algorithms.hpp"
 
 #include "caf/all.hpp"
+#include "caf/thread.hpp"
 #include "caf/actor_proxy.hpp"
+#include "caf/condition_variable.hpp"
 
 #include "caf/detail/logging.hpp"
 #include "caf/detail/single_reader_queue.hpp"
@@ -78,7 +78,7 @@ class logging_impl : public logging {
  public:
   void initialize() override {
     const char* log_level_table[] = {"ERROR", "WARN", "INFO", "DEBUG", "TRACE"};
-    m_thread = std::thread([this] { (*this)(); });
+    m_thread = thread([this] { (*this)(); });
     std::string msg = "ENTRY log level = ";
     msg += log_level_table[global_log_level];
     log("TRACE", "logging", "run", __FILE__, __LINE__, msg);
@@ -154,7 +154,7 @@ class logging_impl : public logging {
     }
     std::ostringstream line;
     line << time(0) << " " << level << " "
-         << "actor" << get_aid() << " " << std::this_thread::get_id() << " "
+         << "actor" << get_aid() << " " << this_thread::get_id() << " "
          << class_name << " " << function_name << " " << file_name << ":"
          << line_num << " " << msg << std::endl;
     m_queue.synchronized_enqueue(m_queue_mtx, m_queue_cv,
@@ -162,9 +162,9 @@ class logging_impl : public logging {
   }
 
  private:
-  std::thread m_thread;
-  std::mutex m_queue_mtx;
-  std::condition_variable m_queue_cv;
+  thread m_thread;
+  mutex m_queue_mtx;
+  condition_variable m_queue_cv;
   detail::single_reader_queue<log_event> m_queue;
 };
 

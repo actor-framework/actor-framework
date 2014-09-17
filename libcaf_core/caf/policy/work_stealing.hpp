@@ -22,10 +22,10 @@
 
 #include <deque>
 #include <chrono>
-#include <thread>
 #include <random>
 #include <cstddef>
 
+#include "caf/thread.hpp"
 #include "caf/resumable.hpp"
 
 #include "caf/detail/double_ended_queue.hpp"
@@ -163,7 +163,7 @@ class work_stealing {
             return job;
           }
         }
-        std::this_thread::sleep_for(strat.sleep_duration);
+        this_thread::sleep_for(strat.sleep_duration);
       }
     }
     // unreachable, because the last strategy loops

@@ -26,4 +26,5 @@
 #include "caf/scheduler/detached_threads.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 
+
 #endif // CAF_SCHEDULER_HPP

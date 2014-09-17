@@ -19,20 +19,20 @@
 
 #include "caf/scheduler/abstract_coordinator.hpp"
 
-#include <thread>
 #include <atomic>
 #include <chrono>
 #include <iostream>
-#include <condition_variable>
 
 #include "caf/on.hpp"
 #include "caf/send.hpp"
 #include "caf/spawn.hpp"
+#include "caf/thread.hpp"
 #include "caf/anything.hpp"
 #include "caf/to_string.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/system_messages.hpp"
+#include "caf/condition_variable.hpp"
 
 #include "caf/scheduler/coordinator.hpp"
 

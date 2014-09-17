@@ -20,11 +20,11 @@
 #ifndef CAF_DETAIL_SINGLETONS_HPP
 #define CAF_DETAIL_SINGLETONS_HPP
 
-#include <mutex>
 #include <atomic>
 #include <cstddef> // size_t
 
 #include "caf/fwd.hpp"
+#include "caf/mutex.hpp"
 
 #include "caf/node_id.hpp"
 #include "caf/detail/cas_weak.hpp"
@@ -85,7 +85,7 @@ class singletons {
   static void stop_singletons();
 
  private:
-  static std::mutex& get_plugin_mutex();
+  static mutex& get_mutex();
 
   static std::atomic<abstract_singleton*>& get_plugin_singleton(size_t id);
 
@@ -94,7 +94,7 @@ class singletons {
   static T* lazy_get(std::atomic<T*>& ptr, std::mutex& mtx, Factory f) {
     auto result = ptr.load(std::memory_order_acquire);
     if (result == nullptr) {
-      std::lock_guard<std::mutex> guard(mtx);
+      lock_guard<mutex> guard(get_mutex());
       result = ptr.load(std::memory_order_relaxed);
       if (result == nullptr) {
         result = f();

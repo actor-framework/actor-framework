@@ -20,14 +20,13 @@
 #ifndef CAF_IO_NETWORK_DEFAULT_MULTIPLEXER_HPP
 #define CAF_IO_NETWORK_DEFAULT_MULTIPLEXER_HPP
 
-#include <thread>
-
 #include <vector>
 #include <string>
 #include <cstdint>
 
 #include "caf/config.hpp"
 #include "caf/extend.hpp"
+#include "caf/thread.hpp"
 #include "caf/exception.hpp"
 #include "caf/ref_counted.hpp"
 

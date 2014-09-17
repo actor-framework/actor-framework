@@ -23,9 +23,9 @@
 #include <map>
 #include <vector>
 #include <memory>
-#include <thread>
 
 #include "caf/fwd.hpp"
+#include "caf/thread.hpp"
 #include "caf/node_id.hpp"
 #include "caf/actor_namespace.hpp"
 #include "caf/detail/singletons.hpp"
@@ -139,7 +139,7 @@ class middleman : public detail::abstract_singleton {
   // prevents backend from shutting down unless explicitly requested
   network::multiplexer::supervisor_ptr m_backend_supervisor;
   // runs the backend
-  std::thread m_thread;
+  thread m_thread;
   // keeps track of "singleton-like" brokers
   std::map<atom_value, broker_ptr> m_named_brokers;
   // keeps track of anonymous brokers

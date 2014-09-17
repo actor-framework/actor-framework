@@ -20,7 +20,8 @@
 #include "caf/config.hpp"
 
 #include <limits>
-#include <thread>
+
+#include "caf/thread.hpp"
 
 #include "caf/detail/shared_spinlock.hpp"
 
@@ -84,7 +85,7 @@ void shared_spinlock::lock_shared() {
   long v = m_flag.load();
   for (;;) {
     if (v < 0) {
-      // std::this_thread::yield();
+      // this_thread::yield();
       v = m_flag.load();
     } else if (cas_weak(&m_flag, &v, v + 1)) {
       return;

@@ -18,20 +18,20 @@
  ******************************************************************************/
 
 #include <set>
-#include <mutex>
 #include <sstream>
 #include <stdexcept>
-#include <condition_variable>
 
 #include "caf/locks.hpp"
 
 #include "caf/all.hpp"
 #include "caf/group.hpp"
-#include "caf/to_string.hpp"
+#include "caf/mutex.hpp"
 #include "caf/message.hpp"
+#include "caf/to_string.hpp"
 #include "caf/serializer.hpp"
 #include "caf/deserializer.hpp"
 #include "caf/event_based_actor.hpp"
+#include "caf/condition_variable.hpp"
 
 #include "caf/detail/group_manager.hpp"
 
@@ -470,7 +470,7 @@ void group_manager::add_module(std::unique_ptr<abstract_group::module> mptr) {
   }
   auto& mname = mptr->name();
   { // lifetime scope of guard
-    std::lock_guard<std::mutex> guard(m_mmap_mtx);
+    lock_guard<mutex> guard(m_mmap_mtx);
     if (m_mmap.insert(std::make_pair(mname, std::move(mptr))).second) {
       return; // success; don't throw
     }
@@ -482,7 +482,7 @@ void group_manager::add_module(std::unique_ptr<abstract_group::module> mptr) {
 }
 
 abstract_group::module* group_manager::get_module(const std::string& mname) {
-  std::lock_guard<std::mutex> guard(m_mmap_mtx);
+  lock_guard<mutex> guard(m_mmap_mtx);
   auto i = m_mmap.find(mname);
   return (i != m_mmap.end()) ? i->second.get() : nullptr;
 }

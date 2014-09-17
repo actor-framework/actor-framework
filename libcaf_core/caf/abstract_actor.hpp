@@ -21,7 +21,6 @@
 #define CAF_ABSTRACT_ACTOR_HPP
 
 #include <set>
-#include <mutex>
 #include <atomic>
 #include <memory>
 #include <string>
@@ -29,15 +28,16 @@
 #include <cstdint>
 #include <exception>
 #include <type_traits>
-#include <condition_variable>
 
 #include "caf/fwd.hpp"
 #include "caf/node_id.hpp"
+#include "caf/mutex.hpp"
 #include "caf/attachable.hpp"
 #include "caf/message_id.hpp"
 #include "caf/exit_reason.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/abstract_channel.hpp"
+#include "caf/condition_variable.hpp"
 
 #include "caf/detail/type_traits.hpp"
 #include "caf/detail/functor_attachable.hpp"
@@ -301,12 +301,11 @@ class abstract_actor : public abstract_channel {
   // initially set to exit_reason::not_exited
   std::atomic<uint32_t> m_exit_reason;
 
-  // guards access to m_exit_reason, m_attachables, m_links,
-  // and enqueue operations if actor is thread-mapped
-  mutable std::mutex m_mtx;
+  // guards access to m_exit_reason, m_attachables, and m_links
+  mutable mutex m_mtx;
 
   // only used in blocking and thread-mapped actors
-  mutable std::condition_variable m_cv;
+  mutable condition_variable m_cv;
 
   // attached functors that are executed on cleanup (monitors, links, etc)
   attachable_ptr m_attachables_head;

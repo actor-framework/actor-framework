@@ -21,13 +21,13 @@
 #define CAF_DETAIL_ACTOR_REGISTRY_HPP
 
 #include <map>
-#include <mutex>
-#include <thread>
 #include <atomic>
 #include <cstdint>
-#include <condition_variable>
 
+#include "caf/mutex.hpp"
+#include "caf/thread.hpp"
 #include "caf/abstract_actor.hpp"
+#include "caf/condition_variable.hpp"
 #include "caf/detail/shared_spinlock.hpp"
 
 #include "caf/detail/singleton_mixin.hpp"
@@ -83,8 +83,8 @@ class actor_registry : public singleton_mixin<actor_registry> {
   std::atomic<size_t> m_running;
   std::atomic<actor_id> m_ids;
 
-  std::mutex m_running_mtx;
-  std::condition_variable m_running_cv;
+  mutex m_running_mtx;
+  condition_variable m_running_cv;
 
   mutable detail::shared_spinlock m_instances_mtx;
   entries m_entries;

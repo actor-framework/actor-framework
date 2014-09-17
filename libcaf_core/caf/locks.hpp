@@ -20,12 +20,9 @@
 #ifndef CAF_DETAIL_LOCKS_HPP
 #define CAF_DETAIL_LOCKS_HPP
 
-#include <mutex>
+#include "caf/mutex.hpp"
 
 namespace caf {
-
-template <class Lockable>
-using unique_lock = std::unique_lock<Lockable>;
 
 template <class SharedLockable>
 class shared_lock {

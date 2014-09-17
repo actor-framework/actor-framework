@@ -20,11 +20,11 @@
 #include "caf/config.hpp"
 
 #include <map>
-#include <mutex>
 #include <atomic>
 #include <stdexcept>
 
 #include "caf/atom.hpp"
+#include "caf/mutex.hpp"
 #include "caf/config.hpp"
 #include "caf/message.hpp"
 #include "caf/actor_addr.hpp"
@@ -41,7 +41,7 @@
 namespace caf {
 
 namespace {
-using guard_type = std::unique_lock<std::mutex>;
+using guard_type = unique_lock<mutex>;
 } // namespace <anonymous>
 
 // m_exit_reason is guaranteed to be set to 0, i.e., exit_reason::not_exited,

@@ -71,7 +71,7 @@ void local_actor::join(const group& what) {
     return;
   }
   abstract_group::subscription_token tk{what.ptr()};
-  std::unique_lock<std::mutex> guard{m_mtx};
+  unique_lock<mutex> guard{m_mtx};
   if (detach_impl(tk, m_attachables_head, true, true) == 0) {
     auto ptr = what->subscribe(address());
     if (ptr) {
@@ -98,7 +98,7 @@ std::vector<group> local_actor::joined_groups() const {
   std::vector<group> result;
   result.reserve(20);
   attachable::token stk{attachable::token::subscription, nullptr};
-  std::unique_lock<std::mutex> guard{m_mtx};
+  unique_lock<mutex> guard{m_mtx};
   for (attachable* i = m_attachables_head.get(); i != 0; i = i->next.get()) {
     if (i->matches(stk)) {
       auto ptr = static_cast<abstract_group::subscription*>(i);

@@ -21,9 +21,9 @@
 #define CAF_DETAIL_GROUP_MANAGER_HPP
 
 #include <map>
-#include <mutex>
-#include <thread>
 
+#include "caf/mutex.hpp"
+#include "caf/thread.hpp"
 #include "caf/abstract_group.hpp"
 #include "caf/detail/shared_spinlock.hpp"
 
@@ -66,7 +66,7 @@ class group_manager {
   group_manager();
 
   modules_map m_mmap;
-  std::mutex m_mmap_mtx;
+  mutex m_mmap_mtx;
 };
 
 } // namespace detail

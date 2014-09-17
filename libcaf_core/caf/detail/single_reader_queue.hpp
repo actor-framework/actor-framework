@@ -89,11 +89,13 @@ class single_reader_queue {
       if (!e) {
         // if tail is nullptr, the queue has been closed
         m_delete(new_element);
+        printf("enqueue return enqueue_result::queue_closed\n");
         return enqueue_result::queue_closed;
       }
       // a dummy is never part of a non-empty list
       new_element->next = is_dummy(e) ? nullptr : e;
       if (m_stack.compare_exchange_strong(e, new_element)) {
+        printf("enqueue return enqueue_result::unblocked_reader or enqueue_result::success\n");
         return  (e == reader_blocked_dummy()) ? enqueue_result::unblocked_reader
                                               : enqueue_result::success;
       }
@@ -218,70 +220,27 @@ class single_reader_queue {
    *                    support for synchronized access                     *
    **************************************************************************/
 
-#ifdef __RIOTBUILD_FLAG
-  bool synchronized_enqueue(pthread_mutex_t& mtx, pthread_cond_t& cv, pointer new_element) {
-  //template <class Mutex, class CondVar>
-  //bool synchronized_enqueue(Mutex& mtx, CondVar& cv, pointer new_element) {
-
-    switch (enqueue(new_element)) {
-      case enqueue_result::unblocked_reader: {
-        pthread_mutex_lock(&mtx);
-        pthread_cond_signal(&cv);
-        pthread_mutex_unlock(&mtx);
-        return true;
-      }
-    }
-  }
-
-  void synchronized_await(pthread_mutex_t& mtx, pthread_cond_t& cv) {
-  //template <class Mutex, class CondVar>
-  //void synchronized_await(Mutex& mtx, CondVar& cv) {
-    CAF_REQUIRE(!closed());
-    if (!can_fetch_more() && try_block()) { // todo what does the try_block?
-      pthread_mutex_lock(&mtx);
-      while (blocked()) {
-        pthread_cond_wait(&cv,&mtx);
-      }
-      pthread_mutex_unlock(&mtx);
-    }
-  }
-
-  bool synchronized_await(pthread_mutex_t& mtx, pthread_cond_t& cv,const struct timespec& timeout) {
-  //template <class Mutex, class CondVar, class TimePoint>
-  //bool synchronized_await(Mutex& mtx, CondVar& cv, const TimePoint& timeout) {
-    CAF_REQUIRE(!closed());
-    if (!can_fetch_more() && try_block()) {
-      pthread_mutex_lock(&mtx);
-      while (blocked()) {
-        auto rc = pthread_cond_timedwait(&cv,&mtx,&timeout);
-        if (rc == ETIMEDOUT) {
-        //if (cv.wait_until(guard, timeout) == std::cv_status::timeout) {
-          // if we're unable to set the queue from blocked to empty,
-          // than there's a new element in the list
-          pthread_mutex_unlock(&mtx);
-          return !try_unblock();
-        }
-      }
-    }
-    pthread_mutex_unlock(&mtx);
-    return true;
-  }
-
-#else
   template <class Mutex, class CondVar>
   bool synchronized_enqueue(Mutex& mtx, CondVar& cv, pointer new_element) {
     switch (enqueue(new_element)) {
       case enqueue_result::unblocked_reader: {
-        std::unique_lock<Mutex> guard(mtx);
+        printf("synchronized_enqueue -> unblocked_reader\n");
+        unique_lock<Mutex> guard(mtx);
+        printf("synchronized_enqueue -> unblocked_reader -> created guard\n");
         cv.notify_one();
+        printf("synchronized_enqueue -> unblocked_reader -> notified one\n");
         return true;
       }
-      case enqueue_result::success:
+      case enqueue_result::success: {
+        printf("synchronized_enqueue -> success\n");
         // enqueued message to a running actor's mailbox
         return true;
-      case enqueue_result::queue_closed:
+      }
+      case enqueue_result::queue_closed: {
+        printf("synchronized_enqueue -> queue_closed\n");
         // actor no longer alive
         return false;
+      }
     }
     // should be unreachable
     CAF_CRITICAL("invalid result of enqueue()");
@@ -291,7 +250,7 @@ class single_reader_queue {
   void synchronized_await(Mutex& mtx, CondVar& cv) {
     CAF_ASSERT(!closed());
     if (!can_fetch_more() && try_block()) {
-      std::unique_lock<Mutex> guard(mtx);
+      unique_lock<Mutex> guard(mtx);
       while (blocked()) {
         cv.wait(guard);
       }
@@ -302,9 +261,9 @@ class single_reader_queue {
   bool synchronized_await(Mutex& mtx, CondVar& cv, const TimePoint& timeout) {
     CAF_ASSERT(!closed());
     if (!can_fetch_more() && try_block()) {
-      std::unique_lock<Mutex> guard(mtx);
+      unique_lock<Mutex> guard(mtx);
       while (blocked()) {
-        if (cv.wait_until(guard, timeout) == std::cv_status::timeout) {
+        if (cv.wait_until(guard, timeout) == cv_status::timeout) {
           // if we're unable to set the queue from blocked to empty,
           // than there's a new element in the list
           return !try_unblock();
@@ -313,7 +272,6 @@ class single_reader_queue {
     }
     return true;
   }
-#endif
 
  private:
   // exposed to "outside" access
