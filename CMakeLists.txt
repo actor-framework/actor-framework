@@ -301,11 +301,11 @@ else()
   # make sure variable is set for build log
   set(CAF_NO_NEXUS yes)
 endif()
-# build shell if not being told otherwise
+# build cash if not being told otherwise
 if(NOT CAF_NO_CASH AND EXISTS "${CMAKE_SOURCE_DIR}/cash/caf/")
   if(NOT CAF_HAS_RIAC)
-    message(WARNING "cannot build shell without RIAC submodule")
-    set(CAF_NO_SHELL yes)
+    message(WARNING "cannot build cash without RIAC submodule")
+    set(CAF_NO_CASH yes)
   else()
     message(STATUS "Enter subdirectory cash")
     add_subdirectory(cash)
