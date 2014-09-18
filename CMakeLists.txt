@@ -304,13 +304,13 @@ else()
   set(CAF_NO_NEXUS yes)
 endif()
 # build shell if not being told otherwise
-if(NOT CAF_NO_SHELL AND EXISTS "${CMAKE_SOURCE_DIR}/cash/caf/")
+if(NOT CAF_NO_SHELL AND EXISTS "${CMAKE_SOURCE_DIR}/shell/caf/")
   if(NOT CAF_HAS_RIAC)
     message(WARNING "cannot build shell without RIAC submodule")
     set(CAF_NO_SHELL yes)
   else()
     message(STATUS "Enter subdirectory shell")
-    add_subdirectory(cash)
+    add_subdirectory(shell)
     if(CAF_BUILD_STATIC_ONLY)
       add_dependencies(cash libcaf_riacStatic)
     else()
@@ -331,6 +331,16 @@ else()
   # make sure variable is set for build log
   set(CAF_NO_BENCHMARKS yes)
 endif()
+
+
+################################################################################
+#                                 LateX setup                                  #
+################################################################################
+
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/manual/variables.tex.in"
+               "${CMAKE_CURRENT_SOURCE_DIR}/manual/variables.tex"
+               @ONLY)
+
 
 ################################################################################
 #                                Doxygen setup                                 #
