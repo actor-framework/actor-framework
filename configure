@@ -50,7 +50,7 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --no-unit-tests             build without unit tests
     --no-opencl                 build without opencl
     --no-nexus                  build without nexus
-    --no-shell                  build without shell
+    --no-cash                   build without cash
     --no-benchmarks             build without benchmarks
     --no-riac                   build without riac
 
@@ -293,8 +293,8 @@ while [ $# -ne 0 ]; do
         --no-nexus)
             append_cache_entry CAF_NO_NEXUS BOOL yes
             ;;
-        --no-shell)
-            append_cache_entry CAF_NO_SHELL BOOL yes
+        --no-cash)
+            append_cache_entry CAF_NO_CASH BOOL yes
             ;;
         --no-benchmarks)
             append_cache_entry CAF_NO_BENCHMARKS BOOL yes

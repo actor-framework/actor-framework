@@ -302,23 +302,23 @@ else()
   set(CAF_NO_NEXUS yes)
 endif()
 # build shell if not being told otherwise
-if(NOT CAF_NO_SHELL AND EXISTS "${CMAKE_SOURCE_DIR}/shell/caf/")
+if(NOT CAF_NO_CASH AND EXISTS "${CMAKE_SOURCE_DIR}/cash/caf/")
   if(NOT CAF_HAS_RIAC)
     message(WARNING "cannot build shell without RIAC submodule")
     set(CAF_NO_SHELL yes)
   else()
-    message(STATUS "Enter subdirectory shell")
-    add_subdirectory(shell)
+    message(STATUS "Enter subdirectory cash")
+    add_subdirectory(cash)
     if(CAF_BUILD_STATIC_ONLY)
       add_dependencies(cash libcaf_riacStatic)
     else()
       add_dependencies(cash libcaf_riac)
     endif()
-    set(CAF_NO_SHELL no)
+    set(CAF_NO_CASH no)
   endif()
 else()
   # make sure variable is set for build log
-  set(CAF_NO_SHELL yes)
+  set(CAF_NO_CASH yes)
 endif()
 # build benchmarks if not being told otherwise
 if(NOT CAF_NO_BENCHMARKS AND EXISTS "${CMAKE_SOURCE_DIR}/benchmarks/caf/")
@@ -391,7 +391,7 @@ endmacro()
 invertYesNo(CAF_NO_EXAMPLES CAF_BUILD_EXAMPLES)
 invertYesNo(CAF_NO_UNIT_TESTS CAF_BUILD_UNIT_TESTS)
 invertYesNo(CAF_NO_NEXUS CAF_BUILD_NEXUS)
-invertYesNo(CAF_NO_SHELL CAF_BUILD_SHELL)
+invertYesNo(CAF_NO_CASH CAF_BUILD_CASH)
 invertYesNo(CAF_NO_MEM_MANAGEMENT CAF_BUILD_MEM_MANAGEMENT)
 invertYesNo(CAF_NO_BENCHMARKS CAF_BUILD_BENCHMARKS)
 invertYesNo(CAF_NO_OPENCL CAF_BUILD_OPENCL)
@@ -415,7 +415,7 @@ message(STATUS
         "\nBuild unit tests:  ${CAF_BUILD_UNIT_TESTS}"
         "\nBuild riac:        ${CAF_HAS_RIAC}"
         "\nBuild nexus:       ${CAF_BUILD_NEXUS}"
-        "\nBuild shell:       ${CAF_BUILD_SHELL}"
+        "\nBuild cash:        ${CAF_BUILD_CASH}"
         "\nBuild benchmarks:  ${CAF_BUILD_BENCHMARKS}"
         "\nBuild opencl:      ${CAF_BUILD_OPENCL}"
         "\n"
