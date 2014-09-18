@@ -87,10 +87,11 @@ class intrusive_ptr : detail::comparable<intrusive_ptr<T>>,
   }
 
   void reset(pointer new_value = nullptr, bool add_ref = true) {
-    if (m_ptr) {
-      m_ptr->deref();
-    }
+    auto old = m_ptr;
     set_ptr(new_value, add_ref);
+    if (old) {
+      old->deref();
+    }
   }
 
   template <class... Ts>
