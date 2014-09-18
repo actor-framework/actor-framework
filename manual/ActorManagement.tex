@@ -67,6 +67,8 @@ To obtain a string representation of an error code, use \lstinline^cppa::exit_re
   \hline
   \lstinline^unhandled_sync_timeout^ & 5 & Actor was killed, because no timeout handler was set and a synchronous message timed out \\
   \hline
+  \lstinline^unknown^ & 6 & Indicates that an actor has been exited and its state is no longer known \\
+  \hline
   \lstinline^user_shutdown^ & 16 & Actor was killed by a user-generated event \\
   \hline
   \lstinline^remote_link_unreachable^ & 257 & Indicates that a remote actor became unreachable, e.g., due to connection error \\
