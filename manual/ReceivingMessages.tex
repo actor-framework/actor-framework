@@ -133,18 +133,12 @@ This might be desirable if the actor only provides a service and should not do a
 But often, we need to be able to recover if an expected messages does not arrive within a certain time period. The following examples illustrates the usage of \lstinline^after^ to define a timeout.
 
 \begin{lstlisting}
-#include <chrono>
-#include <iostream>
-#include "cppa/cppa.hpp"
-
-using endl;
-
 behavior eager_actor(event_based_actor* self) {
   return {
     [](int i) { /* ... */ },
     [](float i) { /* ... */ },
     others() >> [] { /* ... */ },
-    after(chrono::seconds(10)) >> [] {
+    after(std::chrono::seconds(10)) >> [] {
       aout(self) << "received nothing within 10 seconds..." << endl;
       // ...
     }
