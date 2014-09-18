@@ -12,9 +12,6 @@ endif()
 if(NOT CAF_NO_MEM_MANAGEMENT)
   set(CAF_NO_MEM_MANAGEMENT no)
 endif()
-if(NOT CAF_HAS_RIAC)
-  set(CAF_HAS_RIAC no)
-endif()
 if(NOT CAF_BUILD_STATIC_ONLY)
   set(CAF_BUILD_STATIC_ONLY no)
 endif()
@@ -282,7 +279,8 @@ if(NOT CAF_NO_RIAC AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_riac/caf/")
   include_directories("${LIBCAF_INCLUDE_DIRS}" "${CMAKE_SOURCE_DIR}/libcaf_riac")
   # add libcaf_riac to the list of caf libraries
   set(CAF_HAS_RIAC yes)
-  set(CAF_NO_RIAC no)
+else()
+  set(CAF_HAS_RIAC no)
 endif()
 # build nexus if not being told otherwise
 if(NOT CAF_NO_NEXUS AND EXISTS "${CMAKE_SOURCE_DIR}/nexus/caf/")
@@ -393,7 +391,6 @@ endmacro()
 invertYesNo(CAF_NO_EXAMPLES CAF_BUILD_EXAMPLES)
 invertYesNo(CAF_NO_UNIT_TESTS CAF_BUILD_UNIT_TESTS)
 invertYesNo(CAF_NO_NEXUS CAF_BUILD_NEXUS)
-invertYesNo(CAF_NO_RIAC CAF_BUILD_RIAC)
 invertYesNo(CAF_NO_SHELL CAF_BUILD_SHELL)
 invertYesNo(CAF_NO_MEM_MANAGEMENT CAF_BUILD_MEM_MANAGEMENT)
 invertYesNo(CAF_NO_BENCHMARKS CAF_BUILD_BENCHMARKS)
@@ -416,7 +413,7 @@ message(STATUS
         "\n"
         "\nBuild examples:    ${CAF_BUILD_EXAMPLES}"
         "\nBuild unit tests:  ${CAF_BUILD_UNIT_TESTS}"
-        "\nBuild riac:        ${CAF_BUILD_RIAC}"
+        "\nBuild riac:        ${CAF_HAS_RIAC}"
         "\nBuild nexus:       ${CAF_BUILD_NEXUS}"
         "\nBuild shell:       ${CAF_BUILD_SHELL}"
         "\nBuild benchmarks:  ${CAF_BUILD_BENCHMARKS}"
