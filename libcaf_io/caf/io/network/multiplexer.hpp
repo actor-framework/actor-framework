@@ -62,8 +62,8 @@ class multiplexer {
    * Tries to connect to host `h` on given `port` and returns a
    * new scribe managing the connection on success.
    */
-  virtual connection_handle add_tcp_scribe(broker* ptr, const std::string& h,
-                                            uint16_t port) = 0;
+  virtual connection_handle add_tcp_scribe(broker* ptr, const std::string& host,
+                                           uint16_t port) = 0;
 
   /**
    * Creates a new TCP doorman from a native socket handle.
@@ -72,10 +72,10 @@ class multiplexer {
 
   /**
    * Tries to create a new TCP doorman running on port `p`, optionally
-   * accepting only connections from host `h`.
+   * accepting only connections from IP address `in`.
    */
-  virtual accept_handle add_tcp_doorman(broker* ptr, uint16_t p,
-                                         const char* h = nullptr) = 0;
+  virtual accept_handle add_tcp_doorman(broker* ptr, uint16_t port,
+                                        const char* in = nullptr) = 0;
 
   /**
    * Simple wrapper for runnables
