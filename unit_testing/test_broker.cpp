@@ -146,12 +146,7 @@ void run_server(bool spawn_client, const char* bin_path) {
   bool done = false;
   while (!done) {
     try {
-      spawn_functor(nullptr,
-              [=](broker* bro) {
-                bro->add_acceptor(
-                  network::new_ipv4_acceptor(port));
-              },
-              peer_acceptor_fun, p);
+      io::spawn_io_server(peer_acceptor_fun, port, p);
     }
     catch (bind_failure&) {
       // try next port
