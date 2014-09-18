@@ -250,8 +250,12 @@ class event_handler {
     m_eventbf = eventbf;
   }
 
- protected: // used by the epoll implementation
+  /**
+   * Returns the native socket handle for this handler.
+   */
   virtual native_socket fd() const = 0;
+
+ protected:
   default_multiplexer& m_backend;
   int m_eventbf;
 };
