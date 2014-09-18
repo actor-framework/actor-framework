@@ -44,7 +44,7 @@ behavior connection_worker(broker* self, connection_handle hdl) {
   self->configure_read(hdl, receive_policy::at_most(1024));
   return {
     [=](const new_data_msg& msg) {
-      wout(self) << "received data, send http_ok" << endl;
+      wout(self) << "received HTTP request, send http_ok" << endl;
       self->write(msg.handle, cstr_size(http_ok), http_ok);
       self->quit();
     },
@@ -62,7 +62,8 @@ behavior server(broker* self) {
       auto worker = self->fork(connection_worker, ncm.handle);
       self->monitor(worker);
       self->link_to(worker);
-      sout(self) << "forked connection, worker ID: " << worker.id() << endl;
+      sout(self) << "forked connection, handle ID: " << ncm.handle.id()
+                 << ", worker ID: " << worker.id() << endl;
     },
     [=](const down_msg& dm) {
       sout(self) << "worker with ID " << dm.source.id() << " is done" << endl;
