@@ -17,25 +17,36 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_FWD_HPP
-#define CAF_IO_FWD_HPP
+#ifndef CAF_IO_NETWORK_STREAM_MANAGER_HPP
+#define CAF_IO_NETWORK_STREAM_MANAGER_HPP
+
+#include <cstddef>
+
+#include "caf/io/network/manager.hpp"
 
 namespace caf {
 namespace io {
-
-class basp_broker;
-class broker;
-class middleman;
-class receive_policy;
-class remote_actor_proxy;
-
 namespace network {
 
-class multiplexer;
+/**
+ * A stream manager configures an IO stream and provides callbacks
+ * for incoming data as well as for error handling.
+ */
+class stream_manager : public manager {
+
+ public:
+
+  virtual ~stream_manager();
+
+  /**
+   * Called by the underlying IO device whenever it received data.
+   */
+  virtual void consume(const void* data, size_t num_bytes) = 0;
+
+};
 
 } // namespace network
-
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_FWD_HPP
+#endif // CAF_IO_NETWORK_STREAM_MANAGER_HPP

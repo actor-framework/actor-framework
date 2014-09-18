@@ -17,10 +17,12 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/io/network/default_multiplexer.hpp"
+
 #include "caf/config.hpp"
 #include "caf/exception.hpp"
 
-#include "caf/io/network.hpp"
+#include "caf/io/broker.hpp"
 #include "caf/io/middleman.hpp"
 
 #ifdef CAF_WINDOWS
@@ -151,9 +153,9 @@ namespace network {
   \**************************************************************************/
   std::pair<native_socket, native_socket> create_pipe() {
     socklen_t addrlen = sizeof(sockaddr_in);
-    native_socket socks[2] = {invalid_socket, invalid_socket};
+    native_socket socks[2] = {invalid_native_socket, invalid_native_socket};
     auto listener = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (listener == invalid_socket) {
+    if (listener == invalid_native_socket) {
       throw_io_failure("socket() failed");
     }
     union {
@@ -193,13 +195,13 @@ namespace network {
     // create read-only end of the pipe
     DWORD flags = 0;
     auto read_fd = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, flags);
-    if (read_fd == invalid_socket) {
+    if (read_fd == invalid_native_socket) {
       throw_io_failure("cannot create read handle: WSASocket() failed");
     }
     ccall("connect() failed", ::connect, read_fd, &a.addr, sizeof(a.inaddr));
     // get write-only end of the pipe
     auto write_fd = accept(listener, NULL, NULL);
-    if (write_fd == invalid_socket) {
+    if (write_fd == invalid_native_socket) {
       throw_io_failure("cannot create write handle: accept() failed");
     }
     closesocket(listener);
@@ -210,7 +212,7 @@ namespace network {
 #endif
 
 /******************************************************************************
- *               epoll() vs. poll()               *
+ *                             epoll() vs. poll()                             *
  ******************************************************************************/
 
 #ifdef CAF_EPOLL_MULTIPLEXER
@@ -218,7 +220,9 @@ namespace network {
   // In this implementation, m_shadow is the number of sockets we have
   // registered to epoll.
 
-  multiplexer::multiplexer() : m_epollfd(invalid_socket), m_shadow(1) {
+  default_multiplexer::default_multiplexer()
+      : m_epollfd(invalid_native_socket),
+        m_shadow(1) {
     init();
     m_epollfd = epoll_create1(EPOLL_CLOEXEC);
     if (m_epollfd == -1) {
@@ -237,7 +241,7 @@ namespace network {
     }
   }
 
-  void multiplexer::run() {
+  void default_multiplexer::run() {
     CAF_LOG_TRACE("epoll()-based multiplexer");
     while (m_shadow > 0) {
       int presult = epoll_wait(m_epollfd, m_pollset.data(),
@@ -271,7 +275,7 @@ namespace network {
     }
   }
 
-  void multiplexer::handle(const multiplexer::event& e) {
+  void default_multiplexer::handle(const default_multiplexer::event& e) {
     CAF_LOG_TRACE("e.fd = " << e.fd << ", mask = " << e.mask);
     // ptr is only allowed to nullptr if fd is our pipe
     // read handle which is only registered for input
@@ -349,7 +353,7 @@ namespace network {
   // are sorted by the file descriptor. This allows us to quickly,
   // i.e., O(1), access the actual object when handling socket events.
 
-  multiplexer::multiplexer() : m_epollfd(-1) {
+  default_multiplexer::default_multiplexer() : m_epollfd(-1) {
     init();
     // initial setup
     m_pipe = create_pipe();
@@ -361,7 +365,7 @@ namespace network {
     m_shadow.push_back(nullptr);
   }
 
-  void multiplexer::run() {
+  void default_multiplexer::run() {
     CAF_LOG_TRACE("poll()-based multiplexer; " << CAF_ARG(input_mask)
                   << ", " << CAF_ARG(output_mask)
                   << ", " << CAF_ARG(error_mask));
@@ -369,7 +373,7 @@ namespace network {
     // altering the pollset while traversing it is not exactly a
     // bright idea ...
     struct fd_event {
-      native_socket_t fd;      // our file descriptor
+      native_socket fd;        // our file descriptor
       short           mask;    // the event mask returned by poll()
       short           fd_mask; // the mask associated with fd
       event_handler*  ptr;     // nullptr in case of a pipe event
@@ -431,8 +435,8 @@ namespace network {
     }
   }
 
-  void multiplexer::handle(const multiplexer::event& e) {
-    CAF_REQUIRE(e.fd != invalid_socket);
+  void default_multiplexer::handle(const default_multiplexer::event& e) {
+    CAF_REQUIRE(e.fd != invalid_native_socket);
     CAF_REQUIRE(m_pollset.size() == m_shadow.size());
     CAF_LOGF_TRACE("fd = " << e.fd
             << ", old mask = " << (e.ptr ? e.ptr->eventbf() : -1)
@@ -521,8 +525,8 @@ int del_flag(operation op, int bf) {
   return 0;
 }
 
-void multiplexer::add(operation op, native_socket fd, event_handler* ptr) {
-  CAF_REQUIRE(fd != invalid_socket);
+void default_multiplexer::add(operation op, native_socket fd, event_handler* ptr) {
+  CAF_REQUIRE(fd != invalid_native_socket);
   // ptr == nullptr is only allowed to store our pipe read handle
   // and the pipe read handle is added in the ctor (not allowed here)
   CAF_REQUIRE(ptr != nullptr);
@@ -531,8 +535,8 @@ void multiplexer::add(operation op, native_socket fd, event_handler* ptr) {
   new_event(add_flag, op, fd, ptr);
 }
 
-void multiplexer::del(operation op, native_socket fd, event_handler* ptr) {
-  CAF_REQUIRE(fd != invalid_socket);
+void default_multiplexer::del(operation op, native_socket fd, event_handler* ptr) {
+  CAF_REQUIRE(fd != invalid_native_socket);
   // ptr == nullptr is only allowed when removing our pipe read handle
   CAF_REQUIRE(ptr != nullptr || fd == m_pipe.first);
   CAF_LOG_TRACE(CAF_TARG(op, static_cast<int>)<< ", " << CAF_ARG(fd)
@@ -540,7 +544,7 @@ void multiplexer::del(operation op, native_socket fd, event_handler* ptr) {
   new_event(del_flag, op, fd, ptr);
 }
 
-void multiplexer::wr_dispatch_request(runnable* ptr) {
+void default_multiplexer::wr_dispatch_request(runnable* ptr) {
   intptr_t ptrval = reinterpret_cast<intptr_t>(ptr);
   // on windows, we actually have sockets, otherwise we have file handles
 # ifdef CAF_WINDOWS
@@ -551,7 +555,7 @@ void multiplexer::wr_dispatch_request(runnable* ptr) {
 # endif
 }
 
-multiplexer::runnable* multiplexer::rd_dispatch_request() {
+default_multiplexer::runnable* default_multiplexer::rd_dispatch_request() {
   intptr_t ptrval;
   // on windows, we actually have sockets, otherwise we have file handles
 # ifdef CAF_WINDOWS
@@ -563,20 +567,32 @@ multiplexer::runnable* multiplexer::rd_dispatch_request() {
   return reinterpret_cast<runnable*>(ptrval);;
 }
 
-multiplexer::runnable::~runnable() {
-  // nop
+default_multiplexer& get_multiplexer_singleton() {
+  return static_cast<default_multiplexer&>(middleman::instance()->backend());
 }
 
-multiplexer& get_multiplexer_singleton() {
-  return middleman::instance()->backend();
+multiplexer::supervisor_ptr default_multiplexer::make_supervisor() {
+  class impl : public multiplexer::supervisor {
+   public:
+    impl(default_multiplexer* thisptr) : m_this(thisptr) {
+      // nop
+    }
+    ~impl() {
+      auto ptr = m_this;
+      ptr->dispatch([=] { ptr->close_pipe(); });
+    }
+   private:
+    default_multiplexer* m_this;
+  };
+  return supervisor_ptr{new impl(this)};
 }
 
-void multiplexer::close_pipe() {
+void default_multiplexer::close_pipe() {
   CAF_LOG_TRACE("");
   del(operation::read, m_pipe.first, nullptr);
 }
 
-void multiplexer::handle_socket_event(native_socket fd, int mask,
+void default_multiplexer::handle_socket_event(native_socket fd, int mask,
                                       event_handler* ptr) {
   CAF_LOG_TRACE(CAF_ARG(fd) << ", " << CAF_ARG(mask));
   bool checkerror = true;
@@ -621,7 +637,7 @@ void multiplexer::handle_socket_event(native_socket fd, int mask,
                    "handling error");
 }
 
-void multiplexer::init() {
+void default_multiplexer::init() {
 # ifdef CAF_WINDOWS
     WSADATA WinsockData;
     if (WSAStartup(MAKEWORD(2, 2), &WinsockData) != 0) {
@@ -630,19 +646,125 @@ void multiplexer::init() {
 # endif
 }
 
-multiplexer::~multiplexer() {
+default_multiplexer::~default_multiplexer() {
 # ifdef CAF_WINDOWS
     WSACleanup();
 # endif
-  if (m_epollfd != invalid_socket) {
+  if (m_epollfd != invalid_native_socket) {
     closesocket(m_epollfd);
   }
   closesocket(m_pipe.first);
   closesocket(m_pipe.second);
 }
 
+void default_multiplexer::dispatch_runnable(runnable_ptr ptr) {
+  wr_dispatch_request(ptr.release());
+}
+
+connection_handle default_multiplexer::add_tcp_scribe(broker* self,
+                                                       default_socket&& sock) {
+  CAF_LOG_TRACE("");
+  class impl : public broker::scribe {
+   public:
+    impl(broker* parent, default_socket&& s)
+        : scribe(parent, network::conn_hdl_from_socket(s)),
+          m_launched(false),
+          m_stream(s.backend()) {
+      m_stream.init(std::move(s));
+    }
+    void configure_read(receive_policy::config config) override {
+      CAF_LOGM_TRACE("caf::io::broker::scribe", "");
+      m_stream.configure_read(config);
+      if (!m_launched) launch();
+    }
+    broker::buffer_type& wr_buf() override {
+      return m_stream.wr_buf();
+    }
+    broker::buffer_type& rd_buf() override {
+      return m_stream.rd_buf();
+    }
+    void stop_reading() override {
+      CAF_LOGM_TRACE("caf::io::broker::scribe", "");
+      m_stream.stop_reading();
+      disconnect();
+    }
+    void flush() override {
+      CAF_LOGM_TRACE("caf::io::broker::scribe", "");
+      m_stream.flush(this);
+    }
+    void launch() {
+      CAF_LOGM_TRACE("caf::io::broker::scribe", "");
+      CAF_REQUIRE(!m_launched);
+      m_launched = true;
+      m_stream.start(this);
+    }
+   private:
+    bool m_launched;
+    stream<default_socket> m_stream;
+  };
+  broker::scribe_pointer ptr{new impl{self, std::move(sock)}};
+  self->add_scribe(ptr);
+  return ptr->hdl();
+}
+
+accept_handle default_multiplexer::add_tcp_doorman(broker* self,
+                                                   default_socket_acceptor&& sock) {
+  CAF_LOG_TRACE("sock.fd = " << sock.fd());
+  CAF_REQUIRE(sock.fd() != network::invalid_native_socket);
+  class impl : public broker::doorman {
+   public:
+    impl(broker* parent, default_socket_acceptor&& s)
+        : doorman(parent, network::accept_hdl_from_socket(s)),
+          m_acceptor(s.backend()) {
+      m_acceptor.init(std::move(s));
+    }
+    void new_connection() override {
+      auto& dm = m_acceptor.backend();
+      accept_msg().handle = dm.add_tcp_scribe(parent(),
+                                              std::move(m_acceptor.accepted_socket()));
+      parent()->invoke_message(invalid_actor_addr,
+                               message_id::invalid,
+                               m_accept_msg);
+    }
+    void stop_reading() override {
+      m_acceptor.stop_reading();
+      disconnect();
+    }
+    void launch() override {
+      m_acceptor.start(this);
+    }
+   private:
+    network::acceptor<default_socket_acceptor> m_acceptor;
+  };
+  broker::doorman_pointer ptr{new impl{self, std::move(sock)}};
+  self->add_doorman(ptr);
+  return ptr->hdl();
+}
+
+connection_handle default_multiplexer::add_tcp_scribe(broker* self,
+                                                      native_socket fd) {
+  return add_tcp_scribe(self, default_socket{*this, fd});
+}
+
+connection_handle default_multiplexer::add_tcp_scribe(broker* self,
+                                                      const std::string& host,
+                                                      uint16_t port) {
+  return add_tcp_scribe(self, new_ipv4_connection(host, port));
+}
+
+accept_handle default_multiplexer::add_tcp_doorman(broker* self,
+                                                   native_socket fd) {
+  return add_tcp_doorman(self, default_socket_acceptor{*this, fd});
+}
+
+accept_handle default_multiplexer::add_tcp_doorman(broker* self,
+                                                   uint16_t port,
+                                                   const char* host) {
+  return add_tcp_doorman(self, new_ipv4_acceptor(port, host));
+}
+
 /******************************************************************************
- *         platform-independent implementations (finally)         *
+ *               platform-independent implementations (finally)               *
  ******************************************************************************/
 
 void throw_io_failure(const char* what, bool add_errno) {
@@ -707,7 +829,7 @@ bool try_accept(native_socket& result, native_socket fd) {
   result = ::accept(fd, &addr, &addrlen);
   CAF_LOGF_DEBUG("tried to accept a new connection from from socket "
                  << fd << ", accept returned " << result);
-  if (result == invalid_socket) {
+  if (result == invalid_native_socket) {
     auto err = last_socket_error();
     if (!would_block_or_temporarily_unavailable(err)) {
       return false;
@@ -716,7 +838,9 @@ bool try_accept(native_socket& result, native_socket fd) {
   return true;
 }
 
-event_handler::event_handler() : m_eventbf(0) {
+event_handler::event_handler(default_multiplexer& dm)
+    : m_backend(dm),
+      m_eventbf(0) {
   // nop
 }
 
@@ -724,19 +848,11 @@ event_handler::~event_handler() {
   // nop
 }
 
-supervisor::supervisor(multiplexer& mp) : m_multiplexer(mp) {
-  // nop
-}
-
-supervisor::~supervisor() {
-  auto mptr = &m_multiplexer;
-  m_multiplexer.dispatch([=] { mptr->close_pipe(); }, true);
-}
-
-default_socket::default_socket(multiplexer& parent, native_socket fd)
-    : m_parent(parent), m_fd(fd) {
+default_socket::default_socket(default_multiplexer& parent, native_socket fd)
+    : m_parent(parent),
+      m_fd(fd) {
   CAF_LOG_TRACE(CAF_ARG(fd));
-  if (fd != invalid_socket) {
+  if (fd != invalid_native_socket) {
     // enable nonblocking IO & disable Nagle's algorithm
     nonblocking(m_fd, true);
     tcp_nodelay(m_fd, true);
@@ -745,7 +861,7 @@ default_socket::default_socket(multiplexer& parent, native_socket fd)
 
 default_socket::default_socket(default_socket&& other)
     : m_parent(other.m_parent), m_fd(other.m_fd) {
-  other.m_fd = invalid_socket;
+  other.m_fd = invalid_native_socket;
 }
 
 default_socket& default_socket::operator=(default_socket&& other) {
@@ -754,28 +870,16 @@ default_socket& default_socket::operator=(default_socket&& other) {
 }
 
 default_socket::~default_socket() {
-  if (m_fd != invalid_socket) {
+  if (m_fd != invalid_native_socket) {
     CAF_LOG_DEBUG("close socket " << m_fd);
     closesocket(m_fd);
   }
 }
 
 void default_socket::close_read() {
-  if (m_fd != invalid_socket) {
+  if (m_fd != invalid_native_socket) {
     ::shutdown(m_fd, 0); // 0 identifyies the read channel on Win & UNIX
   }
-}
-
-manager::~manager() {
-  // nop
-}
-
-stream_manager::~stream_manager() {
-  // nop
-}
-
-acceptor_manager::~acceptor_manager() {
-  // nop
 }
 
 struct socket_guard {
@@ -784,11 +888,11 @@ struct socket_guard {
     // nop
   }
   ~socket_guard() {
-    if (m_fd != invalid_socket)
+    if (m_fd != invalid_native_socket)
       closesocket(m_fd);
   }
   void release() {
-    m_fd = invalid_socket;
+    m_fd = invalid_native_socket;
   }
  private:
   native_socket m_fd;
@@ -804,7 +908,7 @@ native_socket new_ipv4_connection_impl(const std::string& host, uint16_t port) {
   sockaddr_in serv_addr;
   hostent* server;
   native_socket fd = socket(AF_INET, SOCK_STREAM, 0);
-  if (fd == invalid_socket) {
+  if (fd == invalid_native_socket) {
     throw network_error("socket creation failed");
   }
   socket_guard sguard(fd);
@@ -841,7 +945,7 @@ native_socket new_ipv4_acceptor_impl(uint16_t port, const char* addr) {
     get_multiplexer_singleton();
 # endif
   native_socket fd = socket(AF_INET, SOCK_STREAM, 0);
-  if (fd == invalid_socket) {
+  if (fd == invalid_native_socket) {
     throw network_error("could not create server socket");
   }
   // sguard closes the socket in case of exception

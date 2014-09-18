@@ -32,7 +32,7 @@
 
 #include "caf/io/hook.hpp"
 #include "caf/io/broker.hpp"
-#include "caf/io/network.hpp"
+#include "caf/io/network/multiplexer.hpp"
 
 namespace caf {
 namespace io {
@@ -78,14 +78,14 @@ class middleman : public detail::abstract_singleton {
    */
   template <class F>
   void run_later(F fun) {
-    m_backend.dispatch(fun);
+    m_backend->dispatch(fun);
   }
 
   /**
    * Returns the IO backend used by this middleman.
    */
   inline network::multiplexer& backend() {
-    return m_backend;
+    return *m_backend;
   }
 
   /**
@@ -128,9 +128,9 @@ class middleman : public detail::abstract_singleton {
   // guarded by singleton-getter `instance`
   middleman();
   // networking backend
-  network::multiplexer m_backend;
+  std::unique_ptr<network::multiplexer> m_backend;
   // prevents backend from shutting down unless explicitly requested
-  network::supervisor* m_supervisor;
+  network::multiplexer::supervisor_ptr m_supervisor;
   // runs the backend
   std::thread m_thread;
   // keeps track of "singleton-like" brokers

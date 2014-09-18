@@ -56,7 +56,7 @@ inline actor remote_actor(Socket fd) {
  * @throws std::invalid_argument Thrown when connecting to a typed actor.
  */
 inline actor remote_actor(const char* host, uint16_t port) {
-  auto res = remote_actor_impl(host, port, std::set<std::string>{});
+  auto res = remote_actor_impl(std::set<std::string>{}, host, port);
   return actor_cast<actor>(res);
 }
 
@@ -64,7 +64,7 @@ inline actor remote_actor(const char* host, uint16_t port) {
  * @copydoc remote_actor(const char*, uint16_t)
  */
 inline actor remote_actor(const std::string& host, uint16_t port) {
-  auto res = remote_actor_impl(host, port, std::set<std::string>{});
+  auto res = remote_actor_impl(std::set<std::string>{}, host, port);
   return actor_cast<actor>(res);
 }
 

@@ -201,12 +201,13 @@ void middleman::add_broker(broker_ptr bptr) {
 
 void middleman::initialize() {
   CAF_LOG_TRACE("");
-  m_supervisor = new network::supervisor{m_backend};
+  m_backend = network::multiplexer::make();
+  m_supervisor = m_backend->make_supervisor();
   m_thread = std::thread([this] {
     CAF_LOGC_TRACE("caf::io::middleman", "initialize$run", "");
-    m_backend.run();
+    m_backend->run();
   });
-  m_backend.m_tid = m_thread.get_id();
+  m_backend->thread_id(m_thread.get_id());
   // announce io-related types
   announce_helper<new_data_msg, new_connection_msg,
                   acceptor_closed_msg, connection_closed_msg,
@@ -217,10 +218,8 @@ void middleman::initialize() {
 
 void middleman::stop() {
   CAF_LOG_TRACE("");
-  m_backend.dispatch([=] {
+  m_backend->dispatch([=] {
     CAF_LOGC_TRACE("caf::io::middleman", "stop$lambda", "");
-    delete m_supervisor;
-    m_supervisor = nullptr;
     // m_managers will be modified while we are stopping each manager,
     // because each manager will call remove(...)
     std::vector<broker_ptr> brokers;
@@ -231,6 +230,7 @@ void middleman::stop() {
       bro->close_all();
     }
   });
+  m_supervisor.reset();
   m_thread.join();
   m_named_brokers.clear();
 }
@@ -239,7 +239,7 @@ void middleman::dispose() {
   delete this;
 }
 
-middleman::middleman() : m_supervisor(nullptr) {
+middleman::middleman() {
   // nop
 }
 

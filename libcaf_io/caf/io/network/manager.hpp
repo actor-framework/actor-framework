@@ -17,25 +17,45 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_FWD_HPP
-#define CAF_IO_FWD_HPP
+#ifndef CAF_IO_NETWORK_MANAGER_HPP
+#define CAF_IO_NETWORK_MANAGER_HPP
+
+#include "caf/ref_counted.hpp"
+#include "caf/intrusive_ptr.hpp"
+
+#include "caf/io/network/operation.hpp"
 
 namespace caf {
 namespace io {
-
-class basp_broker;
-class broker;
-class middleman;
-class receive_policy;
-class remote_actor_proxy;
-
 namespace network {
 
-class multiplexer;
+/**
+ * A manager configures an IO device and provides callbacks
+ * for various IO operations.
+ */
+class manager : public ref_counted {
+ public:
+  virtual ~manager();
+
+  /**
+   * Causes the manager to stop read operations on its IO device.
+   * Unwritten bytes are still send before the socket will be closed.
+   */
+  virtual void stop_reading() = 0;
+
+  /**
+   * Called by the underlying IO device to report failures.
+   */
+  virtual void io_failure(operation op) = 0;
+};
+
+/**
+ * @relates manager
+ */
+using manager_ptr = intrusive_ptr<manager>;
 
 } // namespace network
-
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_FWD_HPP
+#endif // CAF_IO_NETWORK_MANAGER_HPP

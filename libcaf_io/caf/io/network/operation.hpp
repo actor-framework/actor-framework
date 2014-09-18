@@ -17,25 +17,24 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_FWD_HPP
-#define CAF_IO_FWD_HPP
+#ifndef CAF_IO_NETWORK_OPERATION_HPP
+#define CAF_IO_NETWORK_OPERATION_HPP
 
 namespace caf {
 namespace io {
-
-class basp_broker;
-class broker;
-class middleman;
-class receive_policy;
-class remote_actor_proxy;
-
 namespace network {
 
-class multiplexer;
+/**
+ * Identifies network IO operations, i.e., read or write.
+ */
+enum class operation {
+  read,
+  write,
+  propagate_error
+};
 
 } // namespace network
-
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_FWD_HPP
+#endif // CAF_IO_NETWORK_OPERATION_HPP

@@ -52,11 +52,16 @@ class basp_broker : public broker, public actor_namespace::backend {
 
   behavior make_behavior() override;
 
+  /*
   template <class SocketAcceptor>
   void publish(abstract_actor_ptr whom, SocketAcceptor fd) {
     auto hdl = add_acceptor(std::move(fd));
     announce_published_actor(hdl, whom);
   }
+  */
+
+  void announce_published_actor(accept_handle hdl,
+                                const abstract_actor_ptr& whom);
 
   actor_proxy_ptr make_proxy(const id_type&, actor_id) override;
 
@@ -131,9 +136,6 @@ class basp_broker : public broker, public actor_namespace::backend {
 
   optional<skip_message_t> kill_proxy(connection_context& ctx, actor_id aid,
                                       std::uint32_t reason);
-
-  void announce_published_actor(accept_handle hdl,
-                                const abstract_actor_ptr& whom);
 
   void new_data(connection_context& ctx, buffer_type& buf);
 

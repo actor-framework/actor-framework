@@ -17,25 +17,29 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_FWD_HPP
-#define CAF_IO_FWD_HPP
+#ifndef CAF_IO_NETWORK_NATIVE_SOCKET_HPP
+#define CAF_IO_NETWORK_NATIVE_SOCKET_HPP
+
+#include "caf/config.hpp"
+
+#ifdef CAF_WINDOWS
+#  include <winsock2.h>
+#endif
 
 namespace caf {
 namespace io {
-
-class basp_broker;
-class broker;
-class middleman;
-class receive_policy;
-class remote_actor_proxy;
-
 namespace network {
 
-class multiplexer;
+#ifdef CAF_WINDOWS
+  using native_socket = SOCKET;
+  constexpr native_socket invalid_native_socket = INVALID_SOCKET;
+#else
+  using native_socket = int;
+  constexpr native_socket invalid_native_socket = -1;
+#endif
 
 } // namespace network
-
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_FWD_HPP
+#endif // CAF_IO_NETWORK_NATIVE_SOCKET_HPP

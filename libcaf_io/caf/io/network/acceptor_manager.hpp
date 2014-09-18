@@ -17,25 +17,35 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_FWD_HPP
-#define CAF_IO_FWD_HPP
+#ifndef CAF_IO_NETWORK_ACCEPTOR_MANAGER_HPP
+#define CAF_IO_NETWORK_ACCEPTOR_MANAGER_HPP
+
+#include "caf/io/network/manager.hpp"
 
 namespace caf {
 namespace io {
-
-class basp_broker;
-class broker;
-class middleman;
-class receive_policy;
-class remote_actor_proxy;
-
 namespace network {
 
-class multiplexer;
+/**
+ * An acceptor manager configures an acceptor and provides
+ * callbacks for incoming connections as well as for error handling.
+ */
+class acceptor_manager : public manager {
+
+ public:
+
+  ~acceptor_manager();
+
+  /**
+   * Called by the underlying IO device to indicate that
+   * a new connection is awaiting acceptance.
+   */
+  virtual void new_connection() = 0;
+
+};
 
 } // namespace network
-
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_FWD_HPP
+#endif // CAF_IO_NETWORK_ACCEPTOR_MANAGER_HPP

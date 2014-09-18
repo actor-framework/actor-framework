@@ -17,25 +17,16 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_FWD_HPP
-#define CAF_IO_FWD_HPP
+#include "caf/io/network/acceptor_manager.hpp"
 
 namespace caf {
 namespace io {
-
-class basp_broker;
-class broker;
-class middleman;
-class receive_policy;
-class remote_actor_proxy;
-
 namespace network {
 
-class multiplexer;
+acceptor_manager::~acceptor_manager() {
+  // nop
+}
 
 } // namespace network
-
 } // namespace io
 } // namespace caf
-
-#endif // CAF_IO_FWD_HPP

@@ -17,25 +17,44 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_FWD_HPP
-#define CAF_IO_FWD_HPP
+#include "caf/io/network/multiplexer.hpp"
+
+#ifdef CAF_USE_ASIO
+# include "caf/io/network/asio_multiplexer.hpp"
+  using caf_multiplexer_impl = caf::io::network::asio_multiplexer;
+#else
+# include "caf/io/network/default_multiplexer.hpp"
+  using caf_multiplexer_impl = caf::io::network::default_multiplexer;
+#endif
 
 namespace caf {
 namespace io {
-
-class basp_broker;
-class broker;
-class middleman;
-class receive_policy;
-class remote_actor_proxy;
-
 namespace network {
 
-class multiplexer;
+multiplexer::~multiplexer() {
+  // nop
+}
+
+boost::asio::io_service* pimpl() {
+  return nullptr;
+}
+
+multiplexer_ptr multiplexer::make() {
+  return multiplexer_ptr{new caf_multiplexer_impl};
+}
+
+boost::asio::io_service* multiplexer::pimpl() {
+  return nullptr;
+}
+
+multiplexer::supervisor::~supervisor() {
+  // nop
+}
+
+multiplexer::runnable::~runnable() {
+  // nop
+}
 
 } // namespace network
-
 } // namespace io
 } // namespace caf
-
-#endif // CAF_IO_FWD_HPP

@@ -26,6 +26,8 @@
 #include "caf/io/middleman.hpp"
 #include "caf/io/connection_handle.hpp"
 
+#include "caf/io/network/native_socket.hpp"
+
 namespace caf {
 namespace io {
 
@@ -34,9 +36,8 @@ namespace io {
  */
 template <spawn_options Os = no_spawn_options,
      typename F = std::function<void(broker*)>, class... Ts>
-actor spawn_io(F fun, Ts&&... args) {
-  return spawn<broker::functor_based>(std::move(fun),
-                    std::forward<Ts>(args)...);
+actor spawn_io(F fun, Ts&&... vs) {
+  return spawn<broker::functor_based>(std::move(fun), std::forward<Ts>(vs)...);
 }
 
 /**
@@ -45,63 +46,36 @@ actor spawn_io(F fun, Ts&&... args) {
 template <spawn_options Os = no_spawn_options,
       typename F = std::function<void(broker*)>, class... Ts>
 actor spawn_io_client(F fun, const std::string& host,
-            uint16_t port, Ts&&... args) {
-  network::default_socket sock{middleman::instance()->backend()};
-  network::ipv4_connect(sock, host, port);
-  auto hdl = network::conn_hdl_from_socket(sock);
+                      uint16_t port, Ts&&... vs) {
   // provoke compiler error early
-  using fun_res = decltype(fun((broker*) 0, hdl, std::forward<Ts>(args)...));
+  using fun_res = decltype(fun(static_cast<broker*>(nullptr),
+                               connection_handle{},
+                               std::forward<Ts>(vs)...));
   // prevent warning about unused local type
   static_assert(std::is_same<fun_res, fun_res>::value,
-          "your compiler is lying to you");
+                "your compiler is lying to you");
   return spawn_class<broker::functor_based>(
         nullptr,
-        [&](broker* ptr) {
-          auto hdl2 = ptr->add_connection(std::move(sock));
-          CAF_REQUIRE(hdl == hdl2);
-          static_cast<void>(hdl2); // prevent warning
-        },
-        std::move(fun), hdl, std::forward<Ts>(args)...);
-}
-
-struct is_socket_test {
-  template <class T>
-  static auto test(T* ptr) -> decltype(ptr->native_handle(),
-                     std::true_type{});
-  template <class>
-  static auto test(...) -> std::false_type;
-};
-
-template <class T>
-struct is_socket : decltype(is_socket_test::test<T>(0)) {
-};
-
-/**
- * Spawns a new broker as server running on given `port`.
- */
-template <spawn_options Os = no_spawn_options,
-      typename F = std::function<void(broker*)>,
-      typename Socket = network::default_socket_acceptor, class... Ts>
-typename std::enable_if<is_socket<Socket>::value, actor>::type
-spawn_io_server(F fun, Socket sock, Ts&&... args) {
-  return spawn_class<broker::functor_based>(
-        nullptr,
-        [&](broker* ptr) {
-          ptr->add_acceptor(std::move(sock));
-        },
-        std::move(fun), std::forward<Ts>(args)...);
+        [&](broker::functor_based* ptr) {
+          auto mm = middleman::instance();
+          auto hdl = mm->backend().add_tcp_scribe(ptr, host, port);
+          ptr->init(std::move(fun), hdl, std::forward<Ts>(vs)...);
+        });
 }
 
 /**
  * Spawns a new broker as server running on given `port`.
  */
 template <spawn_options Os = no_spawn_options,
-      typename F = std::function<void(broker*)>, class... Ts>
-actor spawn_io_server(F fun, uint16_t port, Ts&&... args) {
-  network::default_socket_acceptor fd{middleman::instance()->backend()};
-  network::ipv4_bind(fd, port);
-  return spawn_io_server(std::move(fun), std::move(fd),
-               std::forward<Ts>(args)...);
+          class F = std::function<void(broker*)>, class... Ts>
+actor spawn_io_server(F fun, uint16_t port, Ts&&... vs) {
+  return spawn_class<broker::functor_based>(
+        nullptr,
+        [&](broker::functor_based* ptr) {
+          auto mm = middleman::instance();
+          mm->backend().add_tcp_doorman(ptr, port);
+          ptr->init(std::move(fun), std::forward<Ts>(vs)...);
+        });
 }
 
 } // namespace io

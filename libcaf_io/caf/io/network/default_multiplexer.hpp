@@ -17,10 +17,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_NETWORK_HPP
-#define CAF_IO_NETWORK_HPP
+#ifndef CAF_IO_NETWORK_DEFAULT_MULTIPLEXER_HPP
+#define CAF_IO_NETWORK_DEFAULT_MULTIPLEXER_HPP
 
 #include <thread>
+
 #include <vector>
 #include <string>
 #include <cstdint>
@@ -36,6 +37,12 @@
 #include "caf/io/accept_handle.hpp"
 #include "caf/io/receive_policy.hpp"
 #include "caf/io/connection_handle.hpp"
+#include "caf/io/network/operation.hpp"
+#include "caf/io/network/multiplexer.hpp"
+#include "caf/io/network/stream_manager.hpp"
+#include "caf/io/network/acceptor_manager.hpp"
+
+#include "caf/io/network/native_socket.hpp"
 
 #include "caf/detail/logging.hpp"
 
@@ -77,12 +84,10 @@ namespace network {
 
 // annoying platform-dependent bootstrapping
 #ifdef CAF_WINDOWS
-  using native_socket_t = SOCKET;
   using setsockopt_ptr = const char*;
   using socket_send_ptr = const char*;
   using socket_recv_ptr = char*;
   using socklen_t = int;
-  constexpr native_socket_t invalid_socket = INVALID_SOCKET;
   inline int last_socket_error() { return WSAGetLastError(); }
   inline bool would_block_or_temporarily_unavailable(int errcode) {
     return errcode == WSAEWOULDBLOCK || errcode == WSATRY_AGAIN;
@@ -90,12 +95,10 @@ namespace network {
   constexpr int ec_out_of_memory = WSAENOBUFS;
   constexpr int ec_interrupted_syscall = WSAEINTR;
 #else
-  using native_socket_t = int;
   using setsockopt_ptr = const void*;
   using socket_send_ptr = const void*;
   using socket_recv_ptr = void*;
-  constexpr native_socket_t invalid_socket = -1;
-  inline void closesocket(native_socket_t fd) { close(fd); }
+  inline void closesocket(int fd) { close(fd); }
   inline int last_socket_error() { return errno; }
   inline bool would_block_or_temporarily_unavailable(int errcode) {
     return errcode == EAGAIN || errcode == EWOULDBLOCK;
@@ -128,11 +131,6 @@ namespace network {
 #endif
 
 /**
- * Platform-specific native socket type.
- */
-using native_socket = native_socket_t;
-
-/**
  * Platform-specific native acceptor socket type.
  */
 using native_socket_acceptor = native_socket;
@@ -141,7 +139,7 @@ inline int64_t int64_from_native_socket(native_socket sock) {
   // on Windows, SOCK is an unsigned value;
   // hence, static_cast<> alone would yield the wrong result,
   // as our io_handle assumes -1 as invalid value
-  return sock == invalid_socket ? -1 : static_cast<int64_t>(sock);
+  return sock == invalid_native_socket ? -1 : static_cast<int64_t>(sock);
 }
 
 /**
@@ -207,27 +205,14 @@ bool write_some(size_t& result, native_socket fd, const void* buf, size_t len);
  */
 bool try_accept(native_socket& result, native_socket fd);
 
-/**
- * Identifies network IO operations, i.e., read or write.
- */
-enum class operation {
-  read,
-  write,
-  propagate_error
-};
-
-class multiplexer;
+class default_multiplexer;
 
 /**
  * A socket IO event handler.
  */
 class event_handler {
-
-  friend class multiplexer;
-
  public:
-
-  event_handler();
+  event_handler(default_multiplexer& dm);
 
   virtual ~event_handler();
 
@@ -245,6 +230,13 @@ class event_handler {
   virtual void removed_from_loop(operation op) = 0;
 
   /**
+   * Returns the `multiplexer` this acceptor belongs to.
+   */
+  inline default_multiplexer& backend() {
+    return m_backend;
+  }
+
+  /**
    * Returns the bit field storing the subscribed events.
    */
   inline int eventbf() const {
@@ -259,24 +251,52 @@ class event_handler {
   }
 
  protected: // used by the epoll implementation
-
   virtual native_socket fd() const = 0;
-
+  default_multiplexer& m_backend;
   int m_eventbf;
-
 };
 
-class supervisor;
+/**
+ * Low-level socket type used as default.
+ */
+class default_socket {
+ public:
+  using socket_type = default_socket;
+
+  default_socket(default_multiplexer& parent,
+                 native_socket sock = invalid_native_socket);
+
+  default_socket(default_socket&& other);
+
+  default_socket& operator=(default_socket&& other);
+
+  ~default_socket();
+
+  void close_read();
+
+  inline native_socket fd() const {
+    return m_fd;
+  }
+
+  inline native_socket native_handle() const {
+    return m_fd;
+  }
+
+  inline default_multiplexer& backend() {
+    return m_parent;
+  }
+
+ private:
+  default_multiplexer& m_parent;
+  native_socket m_fd;
+};
 
 /**
- * Low-level backend for IO multiplexing.
+ * Low-level socket type used as default.
  */
-class multiplexer {
+using default_socket_acceptor = default_socket;
 
-  struct runnable : extend<memory_managed>::with<mixin::memory_cached> {
-    virtual void run() = 0;
-    virtual ~runnable();
-  };
+class default_multiplexer : public multiplexer {
 
   friend class io::middleman; // disambiguate reference
   friend class supervisor;
@@ -289,9 +309,28 @@ class multiplexer {
     event_handler* ptr;
   };
 
-  multiplexer();
+  connection_handle add_tcp_scribe(broker*, default_socket&& sock);
 
-  ~multiplexer();
+  connection_handle add_tcp_scribe(broker*, native_socket fd) override;
+
+  connection_handle add_tcp_scribe(broker*, const std::string& h,
+                                    uint16_t port) override;
+
+  accept_handle add_tcp_doorman(broker*, default_socket&& sock);
+
+  accept_handle add_tcp_doorman(broker*, native_socket fd) override;
+
+  accept_handle add_tcp_doorman(broker*, uint16_t p, const char* h) override;
+
+  void dispatch_runnable(runnable_ptr ptr) override;
+
+  default_multiplexer();
+
+  ~default_multiplexer();
+
+  supervisor_ptr make_supervisor() override;
+
+  void run() override;
 
   template <class F>
   void dispatch(F fun, bool force_delayed_execution = false) {
@@ -314,8 +353,6 @@ class multiplexer {
 
   void del(operation op, native_socket fd, event_handler* ptr);
 
-  void run();
-
  private:
 
   // platform-dependent additional initialization code
@@ -323,7 +360,7 @@ class multiplexer {
 
   template <class F>
   void new_event(F fun, operation op, native_socket fd, event_handler* ptr) {
-    CAF_REQUIRE(fd != invalid_socket);
+    CAF_REQUIRE(fd != invalid_native_socket);
     CAF_REQUIRE(ptr != nullptr || fd == m_pipe.first);
     // the only valid input where ptr == nullptr is our pipe
     // read handle which is only registered for reading
@@ -384,70 +421,7 @@ class multiplexer {
 
 };
 
-multiplexer& get_multiplexer_singleton();
-
-/**
- * Makes sure a {@link multiplexer} does not stop its event loop before the
- * application requests a shutdown. The supervisor informs the multiplexer in
- * its constructor that it must not exit the event loop until the destructor
- * of the supervisor has been called.
- */
-class supervisor {
-
- public:
-
-  supervisor(multiplexer&);
-
-  virtual ~supervisor();
-
- private:
-
-  multiplexer& m_multiplexer;
-
-};
-
-/**
- * Low-level socket type used as default.
- */
-class default_socket {
-
- public:
-
-  using socket_type = default_socket;
-
-  default_socket(multiplexer& parent, native_socket sock = invalid_socket);
-
-  default_socket(default_socket&& other);
-
-  default_socket& operator=(default_socket&& other);
-
-  ~default_socket();
-
-  void close_read();
-
-  inline native_socket fd() const {
-    return m_fd;
-  }
-
-  inline native_socket native_handle() const { // ASIO compatible signature
-    return m_fd;
-  }
-
-  inline multiplexer& backend() {
-    return m_parent;
-  }
-
- private:
-
-  multiplexer& m_parent;
-  native_socket m_fd;
-
-};
-
-/**
- * Low-level socket type used as default.
- */
-using default_socket_acceptor = default_socket;
+default_multiplexer& get_multiplexer_singleton();
 
 template <class T>
 inline connection_handle conn_hdl_from_socket(const T& sock) {
@@ -463,58 +437,12 @@ inline accept_handle accept_hdl_from_socket(const T& sock) {
 
 
 /**
- * A manager configures an IO device and provides callbacks
- * for various IO operations.
- */
-class manager : public ref_counted {
-
- public:
-
-  virtual ~manager();
-
-  /**
-   * Causes the manager to stop read operations on its IO device.
-   * Unwritten bytes are still send before the socket will be closed.
-   */
-  virtual void stop_reading() = 0;
-
-  /**
-   * Called by the underlying IO device to report failures.
-   */
-  virtual void io_failure(operation op) = 0;
-};
-
-/**
- * @relates manager
- */
-using manager_ptr = intrusive_ptr<manager>;
-
-/**
- * A stream manager configures an IO stream and provides callbacks
- * for incoming data as well as for error handling.
- */
-class stream_manager : public manager {
-
- public:
-
-  virtual ~stream_manager();
-
-  /**
-   * Called by the underlying IO device whenever it received data.
-   */
-  virtual void consume(const void* data, size_t num_bytes) = 0;
-
-};
-
-/**
  * A stream capable of both reading and writing. The stream's input
  * data is forwarded to its {@link stream_manager manager}.
  */
 template <class Socket>
 class stream : public event_handler {
-
  public:
-
   /**
    * A smart pointer to a stream manager.
    */
@@ -526,15 +454,18 @@ class stream : public event_handler {
    */
   using buffer_type = std::vector<char>;
 
-  stream(multiplexer& backend) : m_sock(backend), m_writing(false) {
+  stream(default_multiplexer& backend)
+      : event_handler(backend),
+        m_sock(backend),
+        m_writing(false) {
     configure_read(receive_policy::at_most(1024));
   }
 
   /**
    * Returns the `multiplexer` this stream belongs to.
    */
-  inline multiplexer& backend() {
-    return m_sock.backend();
+  inline default_multiplexer& backend() {
+    return static_cast<default_multiplexer&>(m_sock.backend());
   }
 
   /**
@@ -679,13 +610,11 @@ class stream : public event_handler {
   }
 
  protected:
-
   native_socket fd() const override {
     return m_sock.fd();
   }
 
  private:
-
   void read_loop() {
     m_collected = 0;
     switch (m_rd_flag) {
@@ -729,7 +658,6 @@ class stream : public event_handler {
 
   // reading & writing
   Socket        m_sock;
-
   // reading
   manager_ptr     m_reader;
   size_t        m_threshold;
@@ -737,32 +665,12 @@ class stream : public event_handler {
   size_t        m_max;
   receive_policy_flag m_rd_flag;
   buffer_type     m_rd_buf;
-
   // writing
   manager_ptr     m_writer;
   bool        m_writing;
   size_t        m_written;
   buffer_type     m_wr_buf;
   buffer_type     m_wr_offline_buf;
-
-};
-
-/**
- * An acceptor manager configures an acceptor and provides
- * callbacks for incoming connections as well as for error handling.
- */
-class acceptor_manager : public manager {
-
- public:
-
-  ~acceptor_manager();
-
-  /**
-   * Called by the underlying IO device to indicate that
-   * a new connection is awaiting acceptance.
-   */
-  virtual void new_connection() = 0;
-
 };
 
 /**
@@ -785,16 +693,11 @@ class acceptor : public event_handler {
    */
   using manager_ptr = intrusive_ptr<manager_type>;
 
-  acceptor(multiplexer& backend)
-      : m_backend(backend), m_accept_sock(backend), m_sock(backend) {
+  acceptor(default_multiplexer& backend)
+      : event_handler(backend),
+        m_accept_sock(backend),
+        m_sock(backend) {
     // nop
-  }
-
-  /**
-   * Returns the `multiplexer` this acceptor belongs to.
-   */
-  inline multiplexer& backend() {
-    return m_backend;
   }
 
   /**
@@ -846,9 +749,9 @@ class acceptor : public event_handler {
     CAF_LOG_TRACE("m_accept_sock.fd = " << m_accept_sock.fd()
              << ", op = " << static_cast<int>(op));
     if (m_mgr && op == operation::read) {
-      native_socket fd = invalid_socket;
+      native_socket fd = invalid_native_socket;
       if (try_accept(fd, m_accept_sock.fd())) {
-        if (fd != invalid_socket) {
+        if (fd != invalid_native_socket) {
           m_sock = socket_type{backend(), fd};
           m_mgr->new_connection();
         }
@@ -870,10 +773,9 @@ class acceptor : public event_handler {
 
  private:
 
-  multiplexer&   m_backend;
-  manager_ptr  m_mgr;
+  manager_ptr    m_mgr;
   SocketAcceptor m_accept_sock;
-  socket_type  m_sock;
+  socket_type    m_sock;
 
 };
 
@@ -903,4 +805,4 @@ void ipv4_bind(SocketAcceptor& sock,
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_NETWORK_HPP
+#endif // CAF_IO_NETWORK_DEFAULT_MULTIPLEXER_HPP

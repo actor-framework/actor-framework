@@ -31,9 +31,9 @@
 #include "caf/abstract_actor.hpp"
 #include "caf/binary_deserializer.hpp"
 
-#include "caf/io/network.hpp"
 #include "caf/io/middleman.hpp"
 #include "caf/io/basp_broker.hpp"
+#include "caf/io/network/multiplexer.hpp"
 
 #include "caf/detail/logging.hpp"
 
@@ -44,34 +44,32 @@ constexpr uint32_t max_iface_size = 100;
 
 constexpr uint32_t max_iface_clause_size = 500;
 
-template <class Socket>
-abstract_actor_ptr remote_actor_impl(Socket fd,
-                   const std::set<std::string>& ifs) {
+using string_set = std::set<std::string>;
+
+template <class... Ts>
+abstract_actor_ptr remote_actor_impl(const std::set<std::string>& ifs,
+                                     Ts&&... args) {
   auto mm = middleman::instance();
   std::string error_msg;
   std::promise<abstract_actor_ptr> result_promise;
-  // we can't move fd into our lambda in C++11 ...
-  auto fd_ptr = std::make_shared<Socket>(std::move(fd));
-  basp_broker::client_handshake_data hdata{
-    invalid_node_id, &result_promise, &error_msg, &ifs};
-  auto hdata_ptr = &hdata;
-  mm->run_later([=] {
-    auto bro = mm->get_named_broker<basp_broker>(atom("_BASP"));
-    auto hdl = bro->add_connection(std::move(*fd_ptr));
-    bro->init_client(hdl, hdata_ptr);
+  basp_broker::client_handshake_data hdata{invalid_node_id, &result_promise,
+                                           &error_msg, &ifs};
+  mm->run_later([&] {
+    try {
+      auto bro = mm->get_named_broker<basp_broker>(atom("_BASP"));
+      auto hdl = mm->backend().add_tcp_scribe(bro.get(),
+                                               std::forward<Ts>(args)...);
+      bro->init_client(hdl, &hdata);
+    }
+    catch (...) {
+      result_promise.set_exception(std::current_exception());
+    }
   });
   auto result = result_promise.get_future().get();
-  if (!result) throw std::runtime_error(error_msg);
+  if (!result) {
+    throw std::runtime_error(error_msg);
+  }
   return result;
-}
-
-inline abstract_actor_ptr
-remote_actor_impl(const std::string& host, uint16_t port,
-          const std::set<std::string>& ifs) {
-  auto mm = middleman::instance();
-  network::default_socket fd{mm->backend()};
-  network::ipv4_connect(fd, host, port);
-  return remote_actor_impl(std::move(fd), ifs);
 }
 
 } // namespace io

@@ -27,16 +27,19 @@
 #include "caf/extend.hpp"
 #include "caf/local_actor.hpp"
 
-#include "caf/io/network.hpp"
-#include "caf/io/accept_handle.hpp"
-#include "caf/io/system_messages.hpp"
-#include "caf/io/connection_handle.hpp"
-
 #include "caf/mixin/functor_based.hpp"
 #include "caf/mixin/behavior_stack_based.hpp"
 
 #include "caf/policy/not_prioritizing.hpp"
 #include "caf/policy/sequential_invoke.hpp"
+
+#include "caf/io/fwd.hpp"
+#include "caf/io/accept_handle.hpp"
+#include "caf/io/receive_policy.hpp"
+#include "caf/io/system_messages.hpp"
+#include "caf/io/connection_handle.hpp"
+#include "caf/io/network/stream_manager.hpp"
+#include "caf/io/network/acceptor_manager.hpp"
 
 namespace caf {
 namespace io {
@@ -75,6 +78,10 @@ class broker : public extend<local_actor>::
     virtual void remove_from_broker() = 0;
 
     virtual message disconnect_message() = 0;
+
+    inline broker* parent() {
+      return m_broker;
+    }
 
     servant(broker* ptr);
 
@@ -140,6 +147,8 @@ class broker : public extend<local_actor>::
     message m_read_msg;
   };
 
+  using scribe_pointer = intrusive_ptr<scribe>;
+
   /**
    * Manages incoming connections.
    */
@@ -175,6 +184,8 @@ class broker : public extend<local_actor>::
 
     message m_accept_msg;
   };
+
+  using doorman_pointer = intrusive_ptr<doorman>;
 
   class continuation;
 
@@ -241,6 +252,20 @@ class broker : public extend<local_actor>::
                          fun, hdl, std::forward<Ts>(vs)...);
   }
 
+  inline void add_scribe(const scribe_pointer& ptr) {
+    m_scribes.insert(std::make_pair(ptr->hdl(), ptr));
+  }
+
+  inline void add_doorman(const doorman_pointer& ptr) {
+    m_doormen.insert(std::make_pair(ptr->hdl(), ptr));
+    if (is_initialized()) {
+      ptr->launch();
+    }
+  }
+
+  void invoke_message(const actor_addr& sender, message_id mid, message& msg);
+
+  /*
   template <class Socket>
   connection_handle add_connection(Socket sock) {
     CAF_LOG_TRACE("");
@@ -290,7 +315,7 @@ class broker : public extend<local_actor>::
   template <class SocketAcceptor>
   accept_handle add_acceptor(SocketAcceptor sock) {
     CAF_LOG_TRACE("sock.fd = " << sock.fd());
-    CAF_REQUIRE(sock.fd() != network::invalid_socket);
+    CAF_REQUIRE(sock.fd() != network::invalid_native_socket);
     class impl : public doorman {
      public:
       impl(broker* parent, SocketAcceptor&& s)
@@ -322,6 +347,7 @@ class broker : public extend<local_actor>::
     }
     return ptr->hdl();
   }
+  */
 
   void enqueue(const actor_addr&, message_id, message,
                execution_unit*) override;
@@ -381,10 +407,6 @@ class broker : public extend<local_actor>::
 
   void cleanup(uint32_t reason);
 
-  using scribe_pointer = intrusive_ptr<scribe>;
-
-  using doorman_pointer = intrusive_ptr<doorman>;
-
   virtual behavior make_behavior() = 0;
 
   /** @endcond */
@@ -412,9 +434,6 @@ class broker : public extend<local_actor>::
 
   // throws on error
   inline doorman& by_id(accept_handle hdl) { return by_id(hdl, m_doormen); }
-
-  void invoke_message(const actor_addr& sender, message_id mid,
-            message& msg);
 
   bool invoke_message_from_cache();
 
