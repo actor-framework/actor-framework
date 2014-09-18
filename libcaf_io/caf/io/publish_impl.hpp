@@ -35,15 +35,14 @@ namespace caf {
 namespace io {
 
 template <class... Ts>
-void publish_impl(abstract_actor_ptr whom, uint16_t port, Ts&&... args) {
+void publish_impl(abstract_actor_ptr whom, uint16_t port, const char* in) {
   using namespace detail;
   auto mm = middleman::instance();
   std::promise<bool> res;
   mm->run_later([&] {
     auto bro = mm->get_named_broker<basp_broker>(atom("_BASP"));
     try {
-      auto hdl = mm->backend().add_tcp_doorman(bro.get(), port,
-                                                std::forward<Ts>(args)...);
+      auto hdl = mm->backend().add_tcp_doorman(bro.get(), port, in);
       bro->announce_published_actor(hdl, whom);
       mm->notify<hook::actor_published>(whom->address(), port);
       res.set_value(true);

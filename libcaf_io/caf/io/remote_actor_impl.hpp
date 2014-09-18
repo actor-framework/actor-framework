@@ -40,15 +40,9 @@
 namespace caf {
 namespace io {
 
-constexpr uint32_t max_iface_size = 100;
-
-constexpr uint32_t max_iface_clause_size = 500;
-
-using string_set = std::set<std::string>;
-
 template <class... Ts>
 abstract_actor_ptr remote_actor_impl(const std::set<std::string>& ifs,
-                                     Ts&&... args) {
+                                     const std::string& host, uint16_t port) {
   auto mm = middleman::instance();
   std::string error_msg;
   std::promise<abstract_actor_ptr> result_promise;
@@ -57,8 +51,7 @@ abstract_actor_ptr remote_actor_impl(const std::set<std::string>& ifs,
   mm->run_later([&] {
     try {
       auto bro = mm->get_named_broker<basp_broker>(atom("_BASP"));
-      auto hdl = mm->backend().add_tcp_scribe(bro.get(),
-                                               std::forward<Ts>(args)...);
+      auto hdl = mm->backend().add_tcp_scribe(bro.get(), host, port);
       bro->init_client(hdl, &hdata);
     }
     catch (...) {
