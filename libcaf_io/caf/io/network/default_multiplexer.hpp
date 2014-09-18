@@ -127,7 +127,7 @@ namespace network {
   constexpr int error_mask  = EPOLLRDHUP | EPOLLERR | EPOLLHUP;
   constexpr int output_mask = EPOLLOUT;
   using multiplexer_data = epoll_event;
-  using multiplexer_poll_shadow_data = native_socket_t;
+  using multiplexer_poll_shadow_data = native_socket;
 #endif
 
 /**
