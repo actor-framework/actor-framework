@@ -20,6 +20,8 @@
 #ifndef CAF_IO_SPAWN_IO_HPP
 #define CAF_IO_SPAWN_IO_HPP
 
+#include <functional>
+
 #include "caf/spawn.hpp"
 
 #include "caf/io/broker.hpp"
@@ -46,20 +48,27 @@ actor spawn_io(F fun, Ts&&... vs) {
 template <spawn_options Os = no_spawn_options,
       typename F = std::function<void(broker*)>, class... Ts>
 actor spawn_io_client(F fun, const std::string& host,
-                      uint16_t port, Ts&&... vs) {
+                      uint16_t port, Ts&&... args) {
   // provoke compiler error early
   using fun_res = decltype(fun(static_cast<broker*>(nullptr),
                                connection_handle{},
-                               std::forward<Ts>(vs)...));
+                               std::forward<Ts>(args)...));
   // prevent warning about unused local type
   static_assert(std::is_same<fun_res, fun_res>::value,
                 "your compiler is lying to you");
+  // works around an issue with older GCC releases that could not handle
+  // variadic template parameter packs inside lambdas by storing into a
+  // std::function first (using `auto init =` won't compile on Clang)
+  auto mfptr = &broker::functor_based::init<F, connection_handle, Ts...>;
+  using bi = std::function<void (broker::functor_based*, F, connection_handle)>;
+  using namespace std::placeholders;
+  bi init = std::bind(mfptr, _1, _2, _3, std::forward<Ts>(args)...);
   return spawn_class<broker::functor_based>(
         nullptr,
         [&](broker::functor_based* ptr) {
           auto mm = middleman::instance();
           auto hdl = mm->backend().add_tcp_scribe(ptr, host, port);
-          ptr->init(std::move(fun), hdl, std::forward<Ts>(vs)...);
+          init(ptr, fun, hdl);
         });
 }
 
@@ -68,13 +77,18 @@ actor spawn_io_client(F fun, const std::string& host,
  */
 template <spawn_options Os = no_spawn_options,
           class F = std::function<void(broker*)>, class... Ts>
-actor spawn_io_server(F fun, uint16_t port, Ts&&... vs) {
+actor spawn_io_server(F fun, uint16_t port, Ts&&... args) {
+  // same workaround as above
+  auto mfptr = &broker::functor_based::init<F, Ts...>;
+  using bi = std::function<void (broker::functor_based*, F)>;
+  using namespace std::placeholders;
+  bi init = std::bind(mfptr, _1, _2, std::forward<Ts>(args)...);
   return spawn_class<broker::functor_based>(
         nullptr,
         [&](broker::functor_based* ptr) {
           auto mm = middleman::instance();
           mm->backend().add_tcp_doorman(ptr, port);
-          ptr->init(std::move(fun), std::forward<Ts>(vs)...);
+          init(ptr, std::move(fun));
         });
 }
 
