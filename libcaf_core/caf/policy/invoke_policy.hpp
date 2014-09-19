@@ -304,6 +304,8 @@ class invoke_policy {
       if (msg.type_at(0)->equal_to(typeid(exit_msg))) {
         auto& em = msg.get_as<exit_msg>(0);
         CAF_REQUIRE(!mid.valid());
+        // make sure to get rid of attachables if they're no longer needed
+        self->unlink_from(em.source);
         if (self->trap_exit() == false) {
           if (em.reason != exit_reason::normal) {
             self->quit(em.reason);
