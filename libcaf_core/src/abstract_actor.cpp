@@ -168,15 +168,16 @@ bool abstract_actor::establish_backlink_impl(const actor_addr& other) {
 
 bool abstract_actor::remove_link_impl(const actor_addr& other) {
   CAF_LOG_TRACE(CAF_TSARG(other));
-  if (!other) {
+  if (other == invalid_actor_addr || other == this) {
     return false;
   }
   default_attachable::observe_token tk{other, default_attachable::link};
   guard_type guard{m_mtx};
   // remove_backlink returns true if this actor is linked to other
   auto ptr = actor_cast<abstract_actor_ptr>(other);
-  if (!exited() && ptr->remove_backlink(address())) {
-    detach_impl(tk, m_attachables_head, true);
+  if (detach_impl(tk, m_attachables_head, true) > 0) {
+    // tell remote side to remove link as well
+    ptr->remove_backlink(address());
     return true;
   }
   return false;
