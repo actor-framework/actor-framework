@@ -41,6 +41,7 @@ namespace {
 constexpr size_t s_alloc_size = 1024 * 1024;    // allocate ~1mb chunks
 constexpr size_t s_cache_size = 10 * 1024 * 1024; // cache about 10mb per thread
 constexpr size_t s_min_elements = 5;        // don't create < 5 elements
+constexpr size_t s_max_elements = 20;       // don't create > 20 elements
 
 } // namespace <anonymous>
 
@@ -112,7 +113,8 @@ template <class T>
 class basic_memory_cache : public memory_cache {
 
   static constexpr size_t ne = s_alloc_size / sizeof(T);
-  static constexpr size_t dsize = ne > s_min_elements ? ne : s_min_elements;
+  static constexpr size_t ms = ne < s_min_elements ? s_min_elements : ne;
+  static constexpr size_t dsize = ms > s_max_elements ? s_max_elements : ms;
 
   struct wrapper : instance_wrapper {
     ref_counted* parent;
