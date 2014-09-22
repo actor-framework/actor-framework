@@ -155,9 +155,8 @@ void run_server(bool spawn_client, const char* bin_path) {
     done = true;
   }
   CAF_CHECKPOINT();
-  if (!spawn_client) {
-    cout << "server is running on port " << port << endl;
-  } else {
+  cout << "server is running on port " << port << endl;
+  if (spawn_client) {
     ostringstream oss;
     oss << bin_path << " -c " << port << to_dev_null;
     thread child{[&oss] {

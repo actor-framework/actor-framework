@@ -346,14 +346,17 @@ void test_remote_actor(std::string app_path, bool run_remote_actor) {
   CAF_LOGF_INFO("running on port " << port);
   // publish local groups as well
   auto gport = at_some_port(port + 1, publish_groups);
+  // check whether accessing local actors via io::remote_actors works correctly,
+  // i.e., does not return a proxy instance
   auto serv2 = io::remote_actor("127.0.0.1", port);
+  CAF_CHECK(serv2 != invalid_actor && !serv2->is_remote());
   CAF_CHECK(serv == serv2);
   CAF_TEST(test_remote_actor);
   thread child;
   ostringstream oss;
+  oss << app_path << " -c " << port << " " << port0 << " " << gport;
   if (run_remote_actor) {
-    oss << app_path << " -c " << port << " " << port0
-        << " " << gport << to_dev_null;
+    oss << to_dev_null;
     // execute client_part() in a separate process,
     // connected via localhost socket
     child = thread([&oss]() {
@@ -365,7 +368,7 @@ void test_remote_actor(std::string app_path, bool run_remote_actor) {
       }
     });
   } else {
-    CAF_PRINT("actor published at port " << port);
+    CAF_PRINT("please run client: " << oss.str());
   }
   CAF_CHECKPOINT();
   self->receive(
@@ -414,7 +417,10 @@ int main(int argc, char** argv) {
       CAF_PRINT("don't run remote actor (server mode)");
       test_remote_actor(argv[0], false);
     },
-    on() >> [&] { test_remote_actor(argv[0], true); }, others() >> [&] {
+    on() >> [&] {
+      test_remote_actor(argv[0], true);
+    },
+    others() >> [&] {
       CAF_PRINTERR("usage: " << argv[0] << " [-s PORT|-c PORT1 PORT2 GROUP_PORT]");
     }
   });
