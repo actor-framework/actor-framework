@@ -686,7 +686,7 @@ connection_handle default_multiplexer::add_tcp_scribe(broker* self,
     void stop_reading() override {
       CAF_LOGM_TRACE("caf::io::broker::scribe", "");
       m_stream.stop_reading();
-      disconnect();
+      disconnect(false);
     }
     void flush() override {
       CAF_LOGM_TRACE("caf::io::broker::scribe", "");
@@ -728,7 +728,7 @@ accept_handle default_multiplexer::add_tcp_doorman(broker* self,
     }
     void stop_reading() override {
       m_acceptor.stop_reading();
-      disconnect();
+      disconnect(false);
     }
     void launch() override {
       m_acceptor.start(this);

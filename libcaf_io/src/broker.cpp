@@ -44,31 +44,20 @@ broker::servant::servant(broker* ptr) : m_disconnected(false), m_broker(ptr) {
 }
 
 void broker::servant::set_broker(broker* new_broker) {
-  if (!m_disconnected) m_broker = new_broker;
+  if (!m_disconnected) {
+    m_broker = new_broker;
+  }
 }
 
-void broker::servant::disconnect() {
+void broker::servant::disconnect(bool invoke_disconnect_message) {
   CAF_LOG_TRACE("");
   if (!m_disconnected) {
     CAF_LOG_DEBUG("disconnect servant from broker");
     m_disconnected = true;
     remove_from_broker();
-    if (m_broker->exit_reason() == exit_reason::not_exited) {
-      if (m_broker->is_running()) {
-        CAF_LOG_DEBUG("broker is running, push message to cache");
-        // push this message to the cache to make sure we
-        // don't have interleaved message handlers
-        auto e = mailbox_element::create(m_broker->address(),
-                                         message_id::invalid,
-                                         disconnect_message());
-        m_broker->m_priority_policy
-        .push_to_cache(unique_mailbox_element_pointer{e});
-      }
-      else {
-        CAF_LOG_DEBUG("broker is not running, invoke handler");
-        m_broker->enqueue(m_broker->address(), message_id::invalid,
-                          disconnect_message(), nullptr);
-      }
+    if (invoke_disconnect_message) {
+      auto msg = disconnect_message();
+      m_broker->invoke_message(m_broker->address(),message_id::invalid, msg);
     }
   }
 }
@@ -108,7 +97,7 @@ void broker::scribe::io_failure(network::operation op) {
                 << ", " << CAF_TARG(op, static_cast<int>));
   // keep compiler happy when compiling w/o logging
   static_cast<void>(op);
-  disconnect();
+  disconnect(true);
 }
 
 broker::doorman::doorman(broker* parent, accept_handle hdl)
@@ -135,7 +124,7 @@ void broker::doorman::io_failure(network::operation op) {
                         << CAF_TARG(op, static_cast<int>));
   // keep compiler happy when compiling w/o logging
   static_cast<void>(op);
-  disconnect();
+  disconnect(true);
 }
 
 class broker::continuation {
@@ -164,8 +153,6 @@ class broker::continuation {
 void broker::invoke_message(const actor_addr& sender, message_id mid,
                             message& msg) {
   CAF_LOG_TRACE(CAF_TARG(msg, to_string));
-  is_running(true);
-  auto sg = detail::make_scope_guard([=] { is_running(false); });
   if (planned_exit_reason() != exit_reason::not_exited
       || bhvr_stack().empty()) {
     CAF_LOG_DEBUG("actor already finished execution"
@@ -264,8 +251,8 @@ void broker::write(connection_handle hdl, size_t bs, const void* buf) {
 
 void broker::enqueue(const actor_addr& sender, message_id mid, message msg,
                      execution_unit*) {
-  middleman::instance()->run_later(continuation{this, sender,
-                                                mid, std::move(msg)});
+  parent().backend().post(continuation{this, sender,
+                                       mid, std::move(msg)});
 }
 
 broker::broker() : m_mm(*middleman::instance()) {
@@ -276,33 +263,35 @@ void broker::cleanup(uint32_t reason) {
   CAF_LOG_TRACE(CAF_ARG(reason));
   close_all();
   super::cleanup(reason);
+  deref(); // release implicit reference count from middleman
 }
 
 void broker::launch(bool is_hidden, execution_unit*) {
+  // add implicit reference count held by the middleman
+  ref();
   is_registered(!is_hidden);
   CAF_PUSH_AID(id());
-  CAF_LOGF_TRACE("init and launch broker with id " << id());
+  CAF_LOGF_TRACE("init and launch broker with ID " << id());
   // we want to make sure initialization is executed in MM context
-  broker_ptr self = this;
-  self->become(
-    on(atom("INITMSG")) >> [self] {
-      CAF_LOGF_TRACE(CAF_MARG(self, get));
-      self->unbecome();
+  become(
+    on(atom("INITMSG")) >> [=] {
+      CAF_LOGF_TRACE("ID " << id());
+      unbecome();
       // launch backends now, because user-defined initialization
       // might call functions like add_connection
-      for (auto& kvp : self->m_doormen) {
+      for (auto& kvp : m_doormen) {
         kvp.second->launch();
       }
-      self->is_initialized(true);
+      is_initialized(true);
       // run user-defined initialization code
-      auto bhvr = self->make_behavior();
+      auto bhvr = make_behavior();
       if (bhvr) {
-        self->become(std::move(bhvr));
+        become(std::move(bhvr));
       }
     }
   );
-  self->enqueue(invalid_actor_addr, message_id::invalid,
-                make_message(atom("INITMSG")), nullptr);
+  enqueue(invalid_actor_addr, message_id::invalid,
+          make_message(atom("INITMSG")), nullptr);
 }
 
 void broker::configure_read(connection_handle hdl, receive_policy::config cfg) {

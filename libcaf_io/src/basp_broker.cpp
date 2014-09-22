@@ -49,6 +49,7 @@ behavior basp_broker::make_behavior() {
     [=](new_data_msg& msg) {
       CAF_LOGM_TRACE("make_behavior$new_data_msg",
                      "handle = " << msg.handle.id());
+      CAF_REQUIRE(m_ctx.count(msg.handle) > 0);
       new_data(m_ctx[msg.handle], msg.buf);
     },
     // received from underlying broker implementation
@@ -66,6 +67,7 @@ behavior basp_broker::make_behavior() {
     [=](const connection_closed_msg& msg) {
       CAF_LOGM_TRACE("make_behavior$connection_closed_msg",
                      CAF_MARG(msg.handle, id));
+      CAF_REQUIRE(m_ctx.count(msg.handle) > 0);
       // purge handle from all routes
       std::vector<id_type> lost_connections;
       for (auto& kvp : m_routes) {
@@ -123,7 +125,8 @@ behavior basp_broker::make_behavior() {
 }
 
 void basp_broker::new_data(connection_context& ctx, buffer_type& buf) {
-  CAF_LOG_TRACE(CAF_TARG(ctx.state, static_cast<int>));
+  CAF_LOG_TRACE(CAF_TARG(ctx.state, static_cast<int>) << ", "
+                CAF_MARG(ctx.hdl, id));
   m_current_context = &ctx;
   connection_state next_state;
   switch (ctx.state) {
@@ -133,6 +136,7 @@ void basp_broker::new_data(connection_context& ctx, buffer_type& buf) {
       if (!basp::valid(ctx.hdr)) {
         CAF_LOG_INFO("invalid broker message received");
         close(ctx.hdl);
+        m_ctx.erase(ctx.hdl);
         return;
       }
       next_state = handle_basp_header(ctx);
@@ -146,6 +150,7 @@ void basp_broker::new_data(connection_context& ctx, buffer_type& buf) {
   CAF_LOG_DEBUG("transition: " << ctx.state << " -> " << next_state);
   if (next_state == close_connection) {
     close(ctx.hdl);
+    m_ctx.erase(ctx.hdl);
     return;
   }
   ctx.state = next_state;
@@ -352,7 +357,7 @@ basp_broker::handle_basp_header(connection_context& ctx,
       } else {
         auto mm = middleman::instance();
         entry.first->attach_functor([=](uint32_t reason) {
-          mm->run_later([=] {
+          mm->backend().dispatch([=] {
             CAF_LOGM_TRACE("handle_basp_header$proxy_functor",
                          CAF_ARG(reason));
             auto bro = mm->get_named_broker<basp_broker>(atom("_BASP"));
@@ -548,7 +553,7 @@ actor_proxy_ptr basp_broker::make_proxy(const id_type& nid, actor_id aid) {
   auto mm = middleman::instance();
   auto res = make_counted<remote_actor_proxy>(aid, nid, self);
   res->attach_functor([=](uint32_t) {
-    mm->run_later([=] {
+    mm->backend().dispatch([=] {
       // using res->id() instead of aid keeps this actor instance alive
       // until the original instance terminates, thus preventing subtle
       // bugs with attachables

@@ -56,12 +56,8 @@ using broker_ptr = intrusive_ptr<broker>;
 class broker : public extend<local_actor>::
                       with<mixin::behavior_stack_based<behavior>::impl>,
                public spawn_as_is {
-
-  friend class policy::sequential_invoke;
-
-  using super = combined_type;
-
  public:
+  using super = combined_type;
 
   using buffer_type = std::vector<char>;
 
@@ -80,18 +76,18 @@ class broker : public extend<local_actor>::
     virtual message disconnect_message() = 0;
 
     inline broker* parent() {
-      return m_broker;
+      return m_broker.get();
     }
 
     servant(broker* ptr);
 
     void set_broker(broker* ptr);
 
-    void disconnect();
+    void disconnect(bool invoke_disconnect_message);
 
     bool m_disconnected;
 
-    broker* m_broker;
+    intrusive_ptr<broker> m_broker;
   };
 
   /**
@@ -264,90 +260,6 @@ class broker : public extend<local_actor>::
   }
 
   void invoke_message(const actor_addr& sender, message_id mid, message& msg);
-
-  /*
-  template <class Socket>
-  connection_handle add_connection(Socket sock) {
-    CAF_LOG_TRACE("");
-    class impl : public scribe {
-     public:
-      impl(broker* parent, Socket&& s)
-          : scribe(parent, network::conn_hdl_from_socket(s)),
-            m_launched(false),
-            m_stream(parent->backend()) {
-        m_stream.init(std::move(s));
-      }
-      void configure_read(receive_policy::config config) override {
-        CAF_LOGM_TRACE("caf::io::broker::scribe", "");
-        m_stream.configure_read(config);
-        if (!m_launched) launch();
-      }
-      buffer_type& wr_buf() override {
-        return m_stream.wr_buf();
-      }
-      buffer_type& rd_buf() override {
-        return m_stream.rd_buf();
-      }
-      void stop_reading() override {
-        CAF_LOGM_TRACE("caf::io::broker::scribe", "");
-        m_stream.stop_reading();
-        disconnect();
-      }
-      void flush() override {
-        CAF_LOGM_TRACE("caf::io::broker::scribe", "");
-        m_stream.flush(this);
-      }
-      void launch() {
-        CAF_LOGM_TRACE("caf::io::broker::scribe", "");
-        CAF_REQUIRE(!m_launched);
-        m_launched = true;
-        m_stream.start(this);
-      }
-     private:
-      bool m_launched;
-      network::stream<Socket> m_stream;
-    };
-    intrusive_ptr<impl> ptr{new impl{this, std::move(sock)}};
-    m_scribes.insert(std::make_pair(ptr->hdl(), ptr));
-    return ptr->hdl();
-  }
-
-  template <class SocketAcceptor>
-  accept_handle add_acceptor(SocketAcceptor sock) {
-    CAF_LOG_TRACE("sock.fd = " << sock.fd());
-    CAF_REQUIRE(sock.fd() != network::invalid_native_socket);
-    class impl : public doorman {
-     public:
-      impl(broker* parent, SocketAcceptor&& s)
-          : doorman(parent, network::accept_hdl_from_socket(s)),
-            m_acceptor(parent->backend()) {
-        m_acceptor.init(std::move(s));
-      }
-      void new_connection() override {
-        accept_msg().handle = m_broker->add_connection(
-              std::move(m_acceptor.accepted_socket()));
-        m_broker->invoke_message(invalid_actor_addr,
-                     message_id::invalid,
-                     m_accept_msg);
-      }
-      void stop_reading() override {
-        m_acceptor.stop_reading();
-        disconnect();
-      }
-      void launch() override {
-        m_acceptor.start(this);
-      }
-     private:
-      network::acceptor<SocketAcceptor> m_acceptor;
-    };
-    intrusive_ptr<impl> ptr{new impl{this, std::move(sock)}};
-    m_doormen.insert(std::make_pair(ptr->hdl(), ptr));
-    if (is_initialized()) {
-      ptr->launch();
-    }
-    return ptr->hdl();
-  }
-  */
 
   void enqueue(const actor_addr&, message_id, message,
                execution_unit*) override;
