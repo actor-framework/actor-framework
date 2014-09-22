@@ -336,23 +336,6 @@ class default_multiplexer : public multiplexer {
 
   void run() override;
 
-  template <class F>
-  void dispatch(F fun, bool force_delayed_execution = false) {
-    if (!force_delayed_execution && std::this_thread::get_id() == m_tid) {
-      fun();
-      return;
-    }
-    struct impl : runnable {
-      F f;
-      impl(F&& mf) : f(std::move(mf)) { }
-      void run() override {
-        f();
-      }
-    };
-    runnable* ptr = detail::memory::create<impl>(std::move(fun));
-    wr_dispatch_request(ptr);
-  }
-
   void add(operation op, native_socket fd, event_handler* ptr);
 
   void del(operation op, native_socket fd, event_handler* ptr);
