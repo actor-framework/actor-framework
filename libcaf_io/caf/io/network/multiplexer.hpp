@@ -122,6 +122,14 @@ class multiplexer {
       fun();
       return;
     }
+    post(std::move(fun));
+  }
+
+  /**
+   * Invokes @p fun in the multiplexer's event loop.
+   */
+  template <class F>
+  void post(F fun) {
     struct impl : runnable {
       F f;
       impl(F&& mf) : f(std::move(mf)) { }

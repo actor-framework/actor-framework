@@ -78,7 +78,7 @@ class middleman : public detail::abstract_singleton {
    */
   template <class F>
   void run_later(F fun) {
-    m_backend->dispatch(fun);
+    m_backend->post(fun);
   }
 
   /**
@@ -105,7 +105,7 @@ class middleman : public detail::abstract_singleton {
   void add_hook(Ts&&... args) {
     // if only we could move a unique_ptr into a lambda in C++11
     auto ptr = new C(std::forward<Ts>(args)...);
-    run_later([=] {
+    backend().dispatch([=] {
       ptr->next.swap(m_hooks);
       m_hooks.reset(ptr);
     });
