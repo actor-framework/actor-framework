@@ -63,10 +63,6 @@ class broker;
   \hline
   \lstinline^size_t num_connections()^ & Returns the number of open connections \\
   \hline
-  \lstinline^template <class Socket>^ \lstinline^connection_handle^ \lstinline^add_connection(Socket)^ & Adds a new connection using given socket \\
-  \hline
-  \lstinline^template <class Socket>^ \lstinline^accept_handle^ \lstinline^add_acceptor(Socket)^ & Adds a new acceptor using given socket acceptor \\
-  \hline
   \lstinline^void close(connection_handle hdl)^ & Closes a connection \\
   \hline
   \lstinline^void close(accept_handle hdl)^ & Closes an acceptor \\
