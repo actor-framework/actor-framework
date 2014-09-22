@@ -312,14 +312,6 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
     set_flag(value, is_initialized_flag);
   }
 
-  inline bool is_running() const {
-    return get_flag(is_running_flag);
-  }
-
-  inline void is_running(bool value) {
-    set_flag(value, is_running_flag);
-  }
-
   inline bool is_blocking() const {
     return get_flag(is_blocking_flag);
   }

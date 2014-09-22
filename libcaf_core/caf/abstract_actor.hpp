@@ -197,8 +197,7 @@ class abstract_actor : public abstract_channel {
     has_timeout_flag     = 0x02, // mixin::single_timeout
     is_registered_flag   = 0x04, // no_resume, resumable, and scoped_actor
     is_initialized_flag  = 0x08, // event-based actors
-    is_running_flag      = 0x10, // broker
-    is_blocking_flag     = 0x20  // blocking_actor
+    is_blocking_flag     = 0x10  // blocking_actor
   };
 
   inline void set_flag(bool enable_flag, actor_state_flag mask) {
