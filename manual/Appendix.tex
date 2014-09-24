@@ -168,3 +168,9 @@ The following table summarizes the changes made to the API.
   \lstinline^accept_handle^, \lstinline^connection_handle^, \lstinline^publish^, \lstinline^remote_actor^, \lstinline^max_msg_size^, \lstinline^typed_publish^, \lstinline^typed_remote_actor^, \lstinline^publish_local_groups^, \lstinline^new_connection_msg^, \lstinline^new_data_msg^, \lstinline^connection_closed_msg^, \lstinline^acceptor_closed_msg^ & These classes concern I/O functionality and have thus been moved to \lstinline^caf::io^. \\
   \hline
 \end{tabular*}
+
+\subsubsection{0.10 $\Rightarrow$ 0.11}
+
+Version 0.11 introduced new, optional components.
+The core library itself, however, mainly received optimizations and bugfixes with one exception: the member function \lstinline^on_exit^ is no longer virtual.
+You can still provide it to define a custom exit handler, but you must not use \lstinline^override^.
