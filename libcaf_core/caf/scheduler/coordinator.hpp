@@ -22,6 +22,7 @@
 
 #include <thread>
 #include <limits>
+#include <memory>
 #include <condition_variable>
 
 #include "caf/scheduler/worker.hpp"
@@ -50,7 +51,7 @@ class coordinator : public abstract_coordinator {
   using worker_type = worker<Policy>;
 
   worker_type* worker_by_id(size_t id) {//override {
-    return &m_workers[id];
+    return m_workers[id].get();
   }
 
   policy_data& data() {
@@ -60,15 +61,19 @@ class coordinator : public abstract_coordinator {
  protected:
   void initialize() override {
     super::initialize();
-    // create & start workers
+    // create workers
     m_workers.resize(num_workers());
     for (size_t i = 0; i < num_workers(); ++i) {
-      m_workers[i].start(i, this, m_max_throughput);
+      auto& ref = m_workers[i];
+      ref.reset(new worker_type(i, this, m_max_throughput));
+    }
+    // start all workers now that all workers have been initialized
+    for (auto& w : m_workers) {
+      w->start();
     }
   }
 
   void stop() override {
-    // perform cleanup code of base classe
     CAF_LOG_TRACE("");
     // shutdown workers
     class shutdown_helper : public resumable {
@@ -94,38 +99,37 @@ class coordinator : public abstract_coordinator {
       std::condition_variable cv;
       execution_unit* last_worker;
     };
+    // use a set to keep track of remaining workers
     shutdown_helper sh;
-    std::vector<worker_type*> alive_workers;
+    std::set<worker_type*> alive_workers;
     auto num = num_workers();
     for (size_t i = 0; i < num; ++i) {
-      alive_workers.push_back(worker_by_id(i));
+      alive_workers.insert(worker_by_id(i));
     }
     CAF_LOG_DEBUG("enqueue shutdown_helper into each worker");
     while (!alive_workers.empty()) {
-      alive_workers.back()->external_enqueue(&sh);
+      (*alive_workers.begin())->external_enqueue(&sh);
       // since jobs can be stolen, we cannot assume that we have
       // actually shut down the worker we've enqueued sh to
       { // lifetime scope of guard
         std::unique_lock<std::mutex> guard(sh.mtx);
         sh.cv.wait(guard, [&] { return sh.last_worker != nullptr; });
       }
-      auto last = alive_workers.end();
-      auto i = std::find(alive_workers.begin(), last, sh.last_worker);
+      alive_workers.erase(static_cast<worker_type*>(sh.last_worker));
       sh.last_worker = nullptr;
-      alive_workers.erase(i);
     }
     // shutdown utility actors
     stop_actors();
     // wait until all workers are done
     for (auto& w : m_workers) {
-      w.get_thread().join();
+      w->get_thread().join();
     }
     // run cleanup code for each resumable
     auto f = [](resumable* job) {
       job->detach_from_scheduler();
     };
     for (auto& w : m_workers) {
-      m_policy.foreach_resumable(&w, f);
+      m_policy.foreach_resumable(w.get(), f);
     }
     m_policy.foreach_central_resumable(this, f);
   }
@@ -136,7 +140,7 @@ class coordinator : public abstract_coordinator {
 
  private:
   // usually of size std::thread::hardware_concurrency()
-  std::vector<worker_type> m_workers;
+  std::vector<std::unique_ptr<worker_type>> m_workers;
   // policy-specific data
   policy_data m_data;
   // instance of our policy object

@@ -39,35 +39,28 @@ class coordinator;
 template <class Policy>
 class worker : public execution_unit {
  public:
+  using job_ptr = resumable*;
+  using coordinator_ptr = coordinator<Policy>*;
+  using policy_data = typename Policy::worker_data;
+
+  worker(size_t id, coordinator_ptr parent, size_t max_throughput) {
+    m_max_throughput = max_throughput;
+    m_id = id;
+    m_parent = parent;
+  }
+
+  void start() {
+    CAF_REQUIRE(m_this_thread.get_id() == std::thread::id{});
+    auto this_worker = this;
+    m_this_thread = std::thread{[this_worker] {
+      CAF_LOGC_TRACE("caf::scheduler::worker", "start$lambda",
+                     "id = " << this_worker->id());
+      this_worker->run();
+    }};
+  }
+
   worker(const worker&) = delete;
   worker& operator=(const worker&) = delete;
-
-  worker() = default;
-
-  worker(worker&& other) {
-    *this = std::move(other); // delegate to move assignment operator
-  }
-
-  worker& operator=(worker&& other) {
-    // cannot be moved once m_this_thread is up and running
-    auto running = [](std::thread& t) {
-      return t.get_id() != std::thread::id{};
-    };
-    if (running(m_this_thread) || running(other.m_this_thread)) {
-      throw std::runtime_error("running workers cannot be moved");
-    }
-    m_policy = std::move(other.m_policy);
-    m_policy = std::move(other.m_policy);
-    return *this;
-  }
-
-  using coordinator_type = coordinator<Policy>;
-
-  using job_ptr = resumable*;
-
-  using job_queue = detail::double_ended_queue<resumable>;
-
-  using policy_data = typename Policy::worker_data;
 
   /**
    * Enqueues a new job to the worker's queue from an external
@@ -97,7 +90,7 @@ class worker : public execution_unit {
     return result;
   }
 
-  coordinator_type* parent() {
+  coordinator_ptr parent() {
     return m_parent;
   }
 
@@ -116,22 +109,10 @@ class worker : public execution_unit {
     });
   }
 
-  void start(size_t id, coordinator_type* parent, size_t max_throughput) {
-    m_max_throughput = max_throughput;
-    m_id = id;
-    m_parent = parent;
-    auto this_worker = this;
-    m_this_thread = std::thread{[this_worker] {
-      CAF_LOGC_TRACE("caf::scheduler::worker", "start$lambda",
-                     "id = " << this_worker->id());
-      this_worker->run();
-    }};
-  }
-
   actor_id id_of(resumable* ptr) {
-    abstract_actor* aptr = ptr ? dynamic_cast<abstract_actor*>(ptr)
+    abstract_actor* dptr = ptr ? dynamic_cast<abstract_actor*>(ptr)
                                : nullptr;
-    return aptr ? aptr->id() : 0;
+    return dptr ? dptr->id() : 0;
   }
 
   policy_data& data() {
@@ -179,7 +160,7 @@ class worker : public execution_unit {
   // the worker's ID received from scheduler
   size_t m_id;
   // pointer to central coordinator
-  coordinator_type* m_parent;
+  coordinator_ptr m_parent;
   // policy-specific data
   policy_data m_data;
   // instance of our policy object
