@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_POLICY_ABSTRACT_EVENT_BASED_ACTOR_HPP
-#define CAF_POLICY_ABSTRACT_EVENT_BASED_ACTOR_HPP
+#ifndef CAF_POLICY_EVENT_BASED_RESUME_HPP
+#define CAF_POLICY_EVENT_BASED_RESUME_HPP
 
 #include <tuple>
 #include <stack>
@@ -29,7 +29,6 @@
 #include "caf/config.hpp"
 #include "caf/extend.hpp"
 #include "caf/behavior.hpp"
-#include "caf/scheduler.hpp"
 
 #include "caf/policy/resume_policy.hpp"
 
@@ -39,32 +38,37 @@ namespace caf {
 namespace policy {
 
 class event_based_resume {
-
  public:
 
   // Base must be a mailbox-based actor
   template <class Base, class Derived>
   struct mixin : Base, resumable {
-
     template <class... Ts>
-    mixin(Ts&&... args)
-        : Base(std::forward<Ts>(args)...) {}
+    mixin(Ts&&... args) : Base(std::forward<Ts>(args)...) {
+      // nop
+    }
 
-    void attach_to_scheduler() override { this->ref(); }
+    void attach_to_scheduler() override {
+      this->ref();
+    }
 
-    void detach_from_scheduler() override { this->deref(); }
+    void detach_from_scheduler() override {
+      this->deref();
+    }
 
-    resumable::resume_result resume(execution_unit* new_host) override {
+    resumable::resume_result resume(execution_unit* new_host,
+                                    size_t max_throughput) override {
+      CAF_REQUIRE(max_throughput > 0);
       auto d = static_cast<Derived*>(this);
-      d->host(new_host);
       CAF_LOG_TRACE("id = " << d->id());
+      d->host(new_host);
       auto done_cb = [&]() -> bool {
         CAF_LOG_TRACE("");
         d->bhvr_stack().clear();
         d->bhvr_stack().cleanup();
         d->on_exit();
         if (!d->bhvr_stack().empty()) {
-          CAF_LOG_DEBUG("on_exit did set a new behavior in on_exit");
+          CAF_LOG_DEBUG("on_exit did set a new behavior");
           d->planned_exit_reason(exit_reason::not_exited);
           return false; // on_exit did set a new behavior
         }
@@ -75,30 +79,45 @@ class event_based_resume {
         }
         d->cleanup(rsn);
         return true;
-
       };
-      auto actor_done = [&] {
-        return d->bhvr_stack().empty() ||
-             d->planned_exit_reason() != exit_reason::not_exited;
-
+      auto actor_done = [&]() -> bool {
+        if (d->bhvr_stack().empty()
+            || d->planned_exit_reason() != exit_reason::not_exited) {
+          return done_cb();
+        }
+        return false;
       };
       // actors without behavior or that have already defined
       // an exit reason must not be resumed
-      CAF_REQUIRE(!d->m_initialized || !actor_done());
-      if (!d->m_initialized) {
-        d->m_initialized = true;
-        auto bhvr = d->make_behavior();
-        if (bhvr) d->become(std::move(bhvr));
-        // else: make_behavior() might have just called become()
-        if (actor_done() && done_cb()) return resume_result::done;
-        // else: enter resume loop
-      }
+      CAF_REQUIRE(!d->is_initialized()
+                  || (!d->bhvr_stack().empty()
+                      && d->planned_exit_reason() == exit_reason::not_exited));
+      std::exception_ptr eptr = nullptr;
       try {
-        for (;;) {
+        if (!d->is_initialized()) {
+          CAF_LOG_DEBUG("initialize actor");
+          d->is_initialized(true);
+          auto bhvr = d->make_behavior();
+          CAF_LOG_DEBUG_IF(!bhvr, "make_behavior() did not return a behavior, "
+                                  << "bhvr_stack().empty() = "
+                                  << std::boolalpha << d->bhvr_stack().empty());
+          if (bhvr) {
+            // make_behavior() did return a behavior instead of using become()
+            CAF_LOG_DEBUG("make_behavior() did return a valid behavior");
+            d->become(std::move(bhvr));
+          }
+          if (actor_done()) {
+            CAF_LOG_DEBUG("actor_done() returned true right "
+                          << "after make_behavior()");
+            return resume_result::done;
+          }
+        }
+        // max_throughput = 0 means infinite
+        for (size_t i = 0; i < max_throughput; ++i) {
           auto ptr = d->next_message();
           if (ptr) {
             if (d->invoke_message(ptr)) {
-              if (actor_done() && done_cb()) {
+              if (actor_done()) {
                 CAF_LOG_DEBUG("actor exited");
                 return resume_result::done;
               }
@@ -106,7 +125,7 @@ class event_based_resume {
               // handled, because the actor might have changed
               // its behavior to match 'old' messages now
               while (d->invoke_message_from_cache()) {
-                if (actor_done() && done_cb()) {
+                if (actor_done()) {
                   CAF_LOG_DEBUG("actor exited");
                   return resume_result::done;
                 }
@@ -121,11 +140,16 @@ class event_based_resume {
           } else {
             CAF_LOG_DEBUG("no more element in mailbox; going to block");
             if (d->mailbox().try_block()) {
-              return resumable::resume_later;
+              return resumable::awaiting_message;
             }
             CAF_LOG_DEBUG("try_block() interrupted by new message");
           }
         }
+        if (!d->has_next_message() && d->mailbox().try_block()) {
+          return resumable::awaiting_message;
+        }
+        // time's up
+        return resumable::resume_later;
       }
       catch (actor_exited& what) {
         CAF_LOG_INFO("actor died because of exception: actor_exited, "
@@ -135,23 +159,34 @@ class event_based_resume {
         }
       }
       catch (std::exception& e) {
-        CAF_LOG_WARNING("actor died because of exception: "
-                 << detail::demangle(typeid(e))
-                 << ", what() = " << e.what());
+        CAF_LOG_INFO("actor died because of an exception: "
+                     << detail::demangle(typeid(e))
+                     << ", what() = " << e.what());
         if (d->exit_reason() == exit_reason::not_exited) {
           d->quit(exit_reason::unhandled_exception);
         }
+        eptr = std::current_exception();
       }
       catch (...) {
-        CAF_LOG_WARNING("actor died because of an unknown exception");
+        CAF_LOG_INFO("actor died because of an unknown exception");
         if (d->exit_reason() == exit_reason::not_exited) {
           d->quit(exit_reason::unhandled_exception);
         }
+        eptr = std::current_exception();
       }
-      done_cb();
+      if (eptr) {
+        auto opt_reason = d->handle(eptr);
+        if (opt_reason) {
+          // use exit reason defined by custom handler
+          d->planned_exit_reason(*opt_reason);
+        }
+      }
+      if (!actor_done()) {
+        // actor has been "revived", try running it again later
+        return resumable::resume_later;
+      }
       return resumable::done;
     }
-
   };
 
   template <class Actor>
@@ -168,10 +203,9 @@ class event_based_resume {
             "to implement blocking actors");
     return false;
   }
-
 };
 
 } // namespace policy
 } // namespace caf
 
-#endif // CAF_POLICY_ABSTRACT_EVENT_BASED_ACTOR_HPP
+#endif // CAF_POLICY_EVENT_BASED_RESUME_HPP

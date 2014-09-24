@@ -875,10 +875,148 @@ void test_spawn() {
   CAF_CHECKPOINT();
 }
 
+class actor_size_getter : public event_based_actor {
+ public:
+  behavior make_behavior() override {
+    CAF_PRINT("size of one event-based actor: " << sizeof(*this) << " bytes");
+    return {};
+  }
+};
+
+void counting_actor(event_based_actor* self) {
+  for (int i = 0; i < 100; ++i) {
+    self->send(self, atom("dummy"));
+  }
+  CAF_CHECK_EQUAL(self->mailbox().count(), 100);
+  for (int i = 0; i < 100; ++i) {
+    self->send(self, atom("dummy"));
+  }
+  CAF_CHECK_EQUAL(self->mailbox().count(), 200);
+}
+
+// tests attach_functor() inside of an actor's constructor
+void test_constructor_attach() {
+  class testee : public event_based_actor {
+   public:
+    testee(actor buddy) : m_buddy(buddy) {
+      attach_functor([=](uint32_t reason) {
+        send(m_buddy, atom("done"), reason);
+      });
+    }
+    behavior make_behavior() {
+      return {
+        on(atom("die")) >> [=] {
+          quit(exit_reason::user_shutdown);
+        }
+      };
+    }
+   private:
+    actor m_buddy;
+  };
+  class spawner : public event_based_actor {
+   public:
+    spawner() : m_downs(0) {
+    }
+    behavior make_behavior() {
+      m_testee = spawn<testee, monitored>(this);
+      return {
+        [=](const down_msg& msg) {
+          CAF_CHECK_EQUAL(msg.reason, exit_reason::user_shutdown);
+          if (++m_downs == 2) {
+            quit(msg.reason);
+          }
+        },
+        on(atom("done"), arg_match) >> [=](uint32_t reason) {
+          CAF_CHECK_EQUAL(reason, exit_reason::user_shutdown);
+          if (++m_downs == 2) {
+            quit(reason);
+          }
+        },
+        others() >> [=] {
+          forward_to(m_testee);
+        }
+      };
+    }
+   private:
+    int m_downs;
+    actor m_testee;
+  };
+  anon_send(spawn<spawner>(), atom("die"));
+}
+
+class exception_testee : public event_based_actor {
+ public:
+  exception_testee() {
+    set_exception_handler([](const std::exception_ptr& eptr) -> optional<uint32_t> {
+      return exit_reason::user_defined + 2;
+    });
+  }
+  behavior make_behavior() override {
+    return {
+      others() >> [] {
+        throw std::runtime_error("whatever");
+      }
+    };
+  }
+};
+
+void test_custom_exception_handler() {
+  auto handler = [](const std::exception_ptr& eptr) -> optional<uint32_t> {
+    try {
+      std::rethrow_exception(eptr);
+    }
+    catch (std::runtime_error&) {
+      return exit_reason::user_defined;
+    }
+    catch (...) {
+      // "fall through"
+    }
+    return exit_reason::user_defined + 1;
+  };
+  scoped_actor self;
+  auto testee1 = self->spawn<monitored>([=](event_based_actor* eb_self) {
+    eb_self->set_exception_handler(handler);
+    throw std::runtime_error("ping");
+  });
+  auto testee2 = self->spawn<monitored>([=](event_based_actor* eb_self) {
+    eb_self->set_exception_handler(handler);
+    throw std::logic_error("pong");
+  });
+  auto testee3 = self->spawn<exception_testee, monitored>();
+  self->send(testee3, "foo");
+  // receive all down messages
+  auto i = 0;
+  self->receive_for(i, 3)(
+    [&](const down_msg& dm) {
+      if (dm.source == testee1) {
+        CAF_CHECK_EQUAL(dm.reason, exit_reason::user_defined);
+      }
+      else if (dm.source == testee2) {
+        CAF_CHECK_EQUAL(dm.reason, exit_reason::user_defined + 1);
+      }
+      else if (dm.source == testee3) {
+        CAF_CHECK_EQUAL(dm.reason, exit_reason::user_defined + 2);
+      }
+      else {
+        CAF_CHECK(false); // report error
+      }
+    }
+  );
+}
+
 } // namespace <anonymous>
 
 int main() {
   CAF_TEST(test_spawn);
+  spawn<actor_size_getter>();
+  await_all_actors_done();
+  CAF_CHECKPOINT();
+  spawn(counting_actor);
+  await_all_actors_done();
+  CAF_CHECKPOINT();
+  test_custom_exception_handler();
+  await_all_actors_done();
+  CAF_CHECKPOINT();
   test_spawn();
   CAF_CHECKPOINT();
   await_all_actors_done();
@@ -889,6 +1027,9 @@ int main() {
     self->spawn<linked>([]() -> behavior { return others() >> [] {}; });
     self->planned_exit_reason(exit_reason::user_defined);
   }
+  await_all_actors_done();
+  CAF_CHECKPOINT();
+  test_constructor_attach();
   await_all_actors_done();
   CAF_CHECKPOINT();
   shutdown();

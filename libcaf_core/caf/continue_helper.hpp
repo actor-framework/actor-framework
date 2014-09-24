@@ -38,8 +38,9 @@ class local_actor;
 class continue_helper {
  public:
   using message_id_wrapper_tag = int;
+  using getter = std::function<optional<behavior&> (message_id msg_id)>;
 
-  continue_helper(message_id mid, local_actor* self);
+  continue_helper(message_id mid, getter get_sync_handler);
 
   /**
    * Adds the continuation `fun` to the synchronous message handler
@@ -64,7 +65,8 @@ class continue_helper {
 
  private:
   message_id m_mid;
-  local_actor* m_self;
+  getter m_getter;
+  //local_actor* m_self;
 };
 
 } // namespace caf

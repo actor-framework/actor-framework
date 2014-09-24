@@ -46,13 +46,21 @@ class intrusive_ptr : detail::comparable<intrusive_ptr<T>>,
   using reference = T&    ;
   using const_reference = const T&;
 
-  constexpr intrusive_ptr() : m_ptr(nullptr) { }
+  constexpr intrusive_ptr() : m_ptr(nullptr) {
+    // nop
+  }
 
-  intrusive_ptr(pointer raw_ptr) { set_ptr(raw_ptr); }
+  intrusive_ptr(pointer raw_ptr, bool add_ref = true) {
+    set_ptr(raw_ptr, add_ref);
+  }
 
-  intrusive_ptr(intrusive_ptr&& other) : m_ptr(other.release()) { }
+  intrusive_ptr(intrusive_ptr&& other) : m_ptr(other.release()) {
+    // nop
+  }
 
-  intrusive_ptr(const intrusive_ptr& other) { set_ptr(other.get()); }
+  intrusive_ptr(const intrusive_ptr& other) {
+    set_ptr(other.get(), true);
+  }
 
   template <class Y>
   intrusive_ptr(intrusive_ptr<Y> other) : m_ptr(other.release()) {
@@ -60,7 +68,9 @@ class intrusive_ptr : detail::comparable<intrusive_ptr<T>>,
             "Y* is not assignable to T*");
   }
 
-  ~intrusive_ptr() { if (m_ptr) m_ptr->deref(); }
+  ~intrusive_ptr() {
+    if (m_ptr) m_ptr->deref();
+  }
 
   inline void swap(intrusive_ptr& other) {
     std::swap(m_ptr, other.m_ptr);
@@ -76,17 +86,12 @@ class intrusive_ptr : detail::comparable<intrusive_ptr<T>>,
     return result;
   }
 
-  /**
-   * Sets this pointer to `ptr` without modifying reference count.
-   */
-  void adopt(pointer ptr) {
-    reset();
-    m_ptr = ptr;
-  }
-
-  void reset(pointer new_value = nullptr) {
-    if (m_ptr) m_ptr->deref();
-    set_ptr(new_value);
+  void reset(pointer new_value = nullptr, bool add_ref = true) {
+    auto old = m_ptr;
+    set_ptr(new_value, add_ref);
+    if (old) {
+      old->deref();
+    }
   }
 
   template <class... Ts>
@@ -150,11 +155,12 @@ class intrusive_ptr : detail::comparable<intrusive_ptr<T>>,
 
   pointer m_ptr;
 
-  inline void set_ptr(pointer raw_ptr) {
+  inline void set_ptr(pointer raw_ptr, bool add_ref) {
     m_ptr = raw_ptr;
-    if (raw_ptr) raw_ptr->ref();
+    if (raw_ptr && add_ref) {
+      raw_ptr->ref();
+    }
   }
-
 };
 
 /**

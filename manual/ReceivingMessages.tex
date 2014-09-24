@@ -42,58 +42,49 @@ The following example illustrates a more advanced state-based actor that impleme
 \clearpage
 \begin{lstlisting}
 class fixed_stack : public sb_actor<fixed_stack> {
-
-    friend class sb_actor<fixed_stack>;
-
+ public:
+  fixed_stack(size_t max) : max_size(max)  {
+    assert(max_size > 0);
+    full = (
+      on(atom("push"), arg_match) >> [=](int) { /* discard */ },
+      on(atom("pop")) >> [=]() -> tuple<atom_value, int> {
+        auto result = data.back();
+        data.pop_back();
+        if (data.empty()) become(empty);
+        else become(filled);
+        return {atom("ok"), result};
+      }
+    );
+    filled = (
+      on(atom("push"), arg_match) >> [=](int what) {
+        data.push_back(what);
+        if (data.size() == max_size) become(full);
+      },
+      on(atom("pop")) >> [=]() -> tuple<atom_value, int> {
+        auto result = data.back();
+        data.pop_back();
+        if (data.empty()) become(empty);
+        return {atom("ok"), result};
+      }
+    );
+    empty = (
+      on(atom("push"), arg_match) >> [=](int what) {
+        data.push_back(what);
+        if (data.size() == max_size) become(full);
+        else become(filled);
+      },
+      on(atom("pop")) >> [=] {
+        return atom("failure");
+      }
+    );
+  }
+ private:
     size_t max_size;
-
     vector<int> data;
-
     behavior full;
     behavior filled;
     behavior empty;
-
     behavior& init_state = empty;
-
- public:
-
-    fixed_stack(size_t max) : max_size(max)  {
-        assert(max_size > 0);
-        full = (
-            on(atom("push"), arg_match) >> [=](int) { /* discard */ },
-            on(atom("pop")) >> [=]() -> tuple<atom_value, int> {
-                auto result = data.back();
-                data.pop_back();
-                if (data.empty()) become(empty);
-                else become(filled);
-                return {atom("ok"), result};
-            }
-        );
-        filled = (
-            on(atom("push"), arg_match) >> [=](int what) {
-                data.push_back(what);
-                if (data.size() == max_size) become(full);
-            },
-            on(atom("pop")) >> [=]() -> tuple<atom_value, int> {
-                auto result = data.back();
-                data.pop_back();
-                if (data.empty()) become(empty);
-                return {atom("ok"), result};
-            }
-        );
-        empty = (
-            on(atom("push"), arg_match) >> [=](int what) {
-                data.push_back(what);
-                if (data.size() == max_size) become(full);
-                else become(filled);
-            },
-            on(atom("pop")) >> [=] {
-                return atom("failure");
-            }
-        );
-
-    }
-
 };
 \end{lstlisting}
 
@@ -142,18 +133,12 @@ This might be desirable if the actor only provides a service and should not do a
 But often, we need to be able to recover if an expected messages does not arrive within a certain time period. The following examples illustrates the usage of \lstinline^after^ to define a timeout.
 
 \begin{lstlisting}
-#include <chrono>
-#include <iostream>
-#include "cppa/cppa.hpp"
-
-using endl;
-
 behavior eager_actor(event_based_actor* self) {
   return {
     [](int i) { /* ... */ },
     [](float i) { /* ... */ },
     others() >> [] { /* ... */ },
-    after(chrono::seconds(10)) >> [] {
+    after(std::chrono::seconds(10)) >> [] {
       aout(self) << "received nothing within 10 seconds..." << endl;
       // ...
     }

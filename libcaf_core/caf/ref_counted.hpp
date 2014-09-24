@@ -34,33 +34,38 @@ namespace caf {
  */
 class ref_counted : public memory_managed {
  public:
-  ref_counted();
-
-  ref_counted(const ref_counted&);
-
-  ref_counted& operator=(const ref_counted&);
-
   ~ref_counted();
+  ref_counted(const ref_counted&);
+  ref_counted& operator=(const ref_counted&);
+  explicit ref_counted(size_t initial_count = 0);
 
   /**
    * Increases reference count by one.
    */
-  inline void ref() { ++m_rc; }
+  inline void ref() {
+    ++m_rc;
+  }
 
   /**
    * Decreases reference count by one and calls `request_deletion`
    * when it drops to zero.
    */
   inline void deref() {
-    if (--m_rc == 0) request_deletion();
+    if (--m_rc == 0) {
+      request_deletion();
+    }
   }
 
   /**
    * Queries whether there is exactly one reference.
    */
-  inline bool unique() const { return m_rc == 1; }
+  inline bool unique() const {
+    return m_rc == 1;
+  }
 
-  inline size_t get_reference_count() const { return m_rc; }
+  inline size_t get_reference_count() const {
+    return m_rc;
+  }
 
  private:
   std::atomic<size_t> m_rc;

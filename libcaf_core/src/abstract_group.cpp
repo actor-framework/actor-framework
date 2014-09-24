@@ -27,16 +27,22 @@
 
 namespace caf {
 
-abstract_group::subscription::subscription(const channel& s,
-                                           const abstract_group_ptr& g)
-    : m_subscriber(s), m_group(g) {
+abstract_group::subscription::subscription(const abstract_group_ptr& g)
+    : m_group(g) {
   // nop
 }
 
-abstract_group::subscription::~subscription() {
-  if (valid()) {
-    m_group->unsubscribe(m_subscriber);
+void abstract_group::subscription::actor_exited(abstract_actor* self,
+                                                uint32_t reason) {
+  m_group->unsubscribe(self->address());
+}
+
+bool abstract_group::subscription::matches(const token& what) {
+  if (what.subtype != typeid(subscription_token)) {
+    return false;
   }
+  auto& ot = *reinterpret_cast<const subscription_token*>(what.ptr);
+  return ot.group == m_group;
 }
 
 abstract_group::module::module(std::string name) : m_name(std::move(name)) {

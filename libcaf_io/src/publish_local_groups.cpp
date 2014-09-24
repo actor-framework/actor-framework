@@ -30,11 +30,8 @@ namespace {
 struct group_nameserver : event_based_actor {
   behavior make_behavior() override {
     return {
-      on(atom("GET_GROUP"), arg_match) >> [](const std::string& name) {
-        return make_message(atom("GROUP"), group::get("local", name));
-      },
-      on(atom("SHUTDOWN")) >> [=] {
-        quit();
+      on(atom("GetGroup"), arg_match) >> [](const std::string& name) {
+        return make_message(atom("Group"), group::get("local", name));
       }
     };
   }
@@ -48,8 +45,7 @@ void publish_local_groups(uint16_t port, const char* addr) {
     publish(gn, port, addr);
   }
   catch (std::exception&) {
-    gn->enqueue(invalid_actor_addr, message_id::invalid,
-                make_message(atom("SHUTDOWN")), nullptr);
+    anon_send_exit(gn, exit_reason::user_shutdown);
     throw;
   }
 }

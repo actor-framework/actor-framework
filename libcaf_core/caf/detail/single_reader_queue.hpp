@@ -24,6 +24,7 @@
 #include <mutex>
 #include <atomic>
 #include <memory>
+#include <limits>
 #include <condition_variable> // std::cv_status
 
 #include "caf/config.hpp"
@@ -192,6 +193,17 @@ class single_reader_queue {
     clear();
   }
 
+  size_t count(size_t max_count = std::numeric_limits<size_t>::max()) {
+    size_t res = 0;
+    fetch_new_data();
+    auto ptr = m_head;
+    while (ptr && res < max_count) {
+      ptr = ptr->next;
+      ++res;
+    }
+    return res;
+  }
+
   /**************************************************************************
    *                    support for synchronized access                     *
    **************************************************************************/
@@ -252,16 +264,19 @@ class single_reader_queue {
 
   // atomically sets m_stack back and enqueues all elements to the cache
   bool fetch_new_data(pointer end_ptr) {
-    CAF_REQUIRE(m_head == nullptr);
     CAF_REQUIRE(end_ptr == nullptr || end_ptr == stack_empty_dummy());
     pointer e = m_stack.load();
     // must not be called on a closed queue
     CAF_REQUIRE(e != nullptr);
+    // fetching data while blocked is an error
+    CAF_REQUIRE(e != reader_blocked_dummy());
     // it's enough to check this once, since only the owner is allowed
     // to close the queue and only the owner is allowed to call this
     // member function
     while (e != end_ptr) {
       if (m_stack.compare_exchange_weak(e, end_ptr)) {
+        // fetching data while blocked is an error
+        CAF_REQUIRE(e != reader_blocked_dummy());
         if (is_dummy(e)) {
           // only use-case for this is closing a queue
           CAF_REQUIRE(end_ptr == nullptr);

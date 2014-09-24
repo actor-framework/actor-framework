@@ -17,6 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/scheduler/abstract_coordinator.hpp"
+
 #include <thread>
 #include <atomic>
 #include <chrono>
@@ -25,30 +27,19 @@
 
 #include "caf/on.hpp"
 #include "caf/send.hpp"
+#include "caf/spawn.hpp"
 #include "caf/anything.hpp"
 #include "caf/to_string.hpp"
-#include "caf/scheduler.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/system_messages.hpp"
 
-#include "caf/actor_ostream.hpp"
+#include "caf/scheduler/coordinator.hpp"
 
-#include "caf/policy/fork_join.hpp"
-#include "caf/policy/no_resume.hpp"
-#include "caf/policy/no_scheduling.hpp"
-#include "caf/policy/actor_policies.hpp"
-#include "caf/policy/nestable_invoke.hpp"
-#include "caf/policy/not_prioritizing.hpp"
-#include "caf/policy/iterative_stealing.hpp"
+#include "caf/policy/work_stealing.hpp"
 
 #include "caf/detail/logging.hpp"
 #include "caf/detail/proper_actor.hpp"
-
-
-#include "caf/actor_ostream.hpp"
-
-
 
 namespace caf {
 namespace scheduler {
@@ -60,8 +51,6 @@ namespace scheduler {
 namespace {
 
 using hrc = std::chrono::high_resolution_clock;
-
-using time_point = hrc::time_point;
 
 using timer_actor_policies = policy::actor_policies<policy::no_scheduling,
                                                     policy::not_prioritizing,
@@ -88,14 +77,15 @@ inline void insert_dmsg(Map& storage, const duration& d, Ts&&... vs) {
 }
 
 class timer_actor final : public detail::proper_actor<blocking_actor,
-                                                      timer_actor_policies> {
+                                                      timer_actor_policies>,
+                          public spawn_as_is {
  public:
   inline unique_mailbox_element_pointer dequeue() {
     await_data();
     return next_message();
   }
 
-  inline unique_mailbox_element_pointer try_dequeue(const time_point& tp) {
+  inline unique_mailbox_element_pointer try_dequeue(const hrc::time_point& tp) {
     if (scheduling_policy().await_data(this, tp)) {
       return next_message();
     }
@@ -103,25 +93,23 @@ class timer_actor final : public detail::proper_actor<blocking_actor,
   }
 
   void act() override {
+    trap_exit(true);
     // setup & local variables
     bool done = false;
     unique_mailbox_element_pointer msg_ptr;
-    auto tout = hrc::now();
-    std::multimap<decltype(tout), delayed_msg> messages;
+    std::multimap<hrc::time_point, delayed_msg> messages;
     // message handling rules
     message_handler mfun{
-      on(atom("_Send"), arg_match) >> [&](const duration& d,
-                                          actor_addr& from, channel& to,
-                                          message_id mid, message& tup) {
+      [&](const duration& d, actor_addr& from, channel& to,
+          message_id mid, message& msg) {
          insert_dmsg(messages, d, std::move(from),
-               std::move(to), mid, std::move(tup));
+                     std::move(to), mid, std::move(msg));
       },
       [&](const exit_msg&) {
         done = true;
       },
       others() >> [&] {
-        std::cerr << "coordinator::timer_loop: UNKNOWN MESSAGE: "
-              << to_string(msg_ptr->msg) << std::endl;
+        CAF_LOG_ERROR("unexpected: " << to_string(msg_ptr->msg));
       }
     };
     // loop
@@ -130,7 +118,7 @@ class timer_actor final : public detail::proper_actor<blocking_actor,
         if (messages.empty())
           msg_ptr = dequeue();
         else {
-          tout = hrc::now();
+          auto tout = hrc::now();
           // handle timeouts (send messages)
           auto it = messages.begin();
           while (it != messages.end() && (it->first) <= tout) {
@@ -173,19 +161,18 @@ void printer_loop(blocking_actor* self) {
   self->receive_while([&] { return running; })(
     on(atom("add"), arg_match) >> [&](std::string& str) {
       auto s = self->last_sender();
-      if (!str.empty() && s) {
-        auto i = out.find(s);
-        if (i == out.end()) {
-          i = out.insert(make_pair(s, std::move(str))).first;
-          // monitor actor to flush its output on exit
-          self->monitor(s);
-          flush_if_needed(i->second);
-        } else {
-          auto& ref = i->second;
-          ref += std::move(str);
-          flush_if_needed(ref);
-        }
+      if (str.empty() || s == invalid_actor_addr) {
+        return;
       }
+      auto i = out.find(s);
+      if (i == out.end()) {
+        i = out.insert(make_pair(s, std::move(str))).first;
+        // monitor actor to flush its output on exit
+        self->monitor(s);
+      } else {
+        i->second += std::move(str);
+      }
+      flush_if_needed(i->second);
     },
     on(atom("flush")) >> [&] {
       flush_output(self->last_sender());
@@ -197,10 +184,9 @@ void printer_loop(blocking_actor* self) {
     [&](const exit_msg&) {
       running = false;
     },
-    others() >> [self] {
-      std::cerr << "*** unexpected: "
-            << to_string(self->last_dequeued())
-            << std::endl;
+    others() >> [&] {
+      std::cerr << "*** unexpected: " << to_string(self->last_dequeued())
+                << std::endl;
     }
   );
 }
@@ -211,108 +197,41 @@ void printer_loop(blocking_actor* self) {
  *            implementation of coordinator             *
  ******************************************************************************/
 
-class shutdown_helper : public resumable {
- public:
-  void attach_to_scheduler() override {
-    // nop
-  }
-  void detach_from_scheduler() override {
-    // nop
-  }
-  resumable::resume_result resume(execution_unit* ptr) {
-    CAF_LOG_DEBUG("shutdown_helper::resume => shutdown worker");
-    auto wptr = dynamic_cast<abstract_worker*>(ptr);
-    CAF_REQUIRE(wptr != nullptr);
-    std::unique_lock<std::mutex> guard(mtx);
-    last_worker = wptr;
-    cv.notify_all();
-    return resumable::shutdown_execution_unit;
-  }
-  shutdown_helper() : last_worker(nullptr) {
-    // nop
-  }
-  ~shutdown_helper();
-  std::mutex mtx;
-  std::condition_variable cv;
-  abstract_worker* last_worker;
-};
-
-shutdown_helper::~shutdown_helper() {
-  // nop
-}
-
 abstract_coordinator::~abstract_coordinator() {
   // nop
 }
 
 // creates a default instance
 abstract_coordinator* abstract_coordinator::create_singleton() {
-  return new coordinator<policy::iterative_stealing, policy::fork_join>;
+  return new coordinator<policy::work_stealing>;
 }
 
 void abstract_coordinator::initialize() {
-  // launch threads of utility actors
-  auto ptr = m_timer.get();
-  m_timer_thread = std::thread([ptr] { ptr->act(); });
-  m_printer_thread = std::thread{printer_loop, m_printer.get()};
+  // launch utility actors
+  m_timer = spawn<timer_actor, hidden + detached + blocking_api>();
+  m_printer = spawn<hidden + detached + blocking_api>(printer_loop);
 }
 
-void abstract_coordinator::stop() {
+void abstract_coordinator::stop_actors() {
   CAF_LOG_TRACE("");
-  // shutdown workers
-  shutdown_helper sh;
-  std::vector<abstract_worker*> alive_workers;
-  auto num = num_workers();
-  for (size_t i = 0; i < num; ++i) {
-    alive_workers.push_back(worker_by_id(i));
-  }
-  CAF_LOG_DEBUG("enqueue shutdown_helper into each worker");
-  while (!alive_workers.empty()) {
-    alive_workers.back()->external_enqueue(&sh);
-    // since jobs can be stolen, we cannot assume that we have
-    // actually shut down the worker we've enqueued sh to
-    { // lifetime scope of guard
-      std::unique_lock<std::mutex> guard(sh.mtx);
-      sh.cv.wait(guard, [&] { return sh.last_worker != nullptr; });
+  scoped_actor self(true);
+  self->monitor(m_timer);
+  self->monitor(m_printer);
+  self->send_exit(m_timer, exit_reason::user_shutdown);
+  self->send_exit(m_printer, exit_reason::user_shutdown);
+  int i = 0;
+  self->receive_for(i, 2)(
+    [](const down_msg&) {
+      // nop
     }
-    auto last = alive_workers.end();
-    auto i = std::find(alive_workers.begin(), last, sh.last_worker);
-    sh.last_worker = nullptr;
-    alive_workers.erase(i);
-  }
-  // shutdown utility actors
-  CAF_LOG_DEBUG("send exit messages to timer & printer");
-  anon_send_exit(m_timer->address(), exit_reason::user_shutdown);
-  anon_send_exit(m_printer->address(), exit_reason::user_shutdown);
-  CAF_LOG_DEBUG("join threads of utility actors");
-  m_timer_thread.join();
-  m_printer_thread.join();
-  // join each worker thread for good manners
+  );
 }
 
 abstract_coordinator::abstract_coordinator(size_t nw)
-    : m_timer(new timer_actor),
-      m_printer(true),
-      m_next_worker(0),
+    : m_next_worker(0),
       m_num_workers(nw) {
   // nop
 }
 
-actor abstract_coordinator::printer() const {
-  return m_printer.get();
-}
-
-void abstract_coordinator::enqueue(resumable* what) {
-  worker_by_id(m_next_worker++ % m_num_workers)->external_enqueue(what);
-}
-
 } // namespace scheduler
-
-void set_scheduler(scheduler::abstract_coordinator* impl) {
-  if (!detail::singletons::set_scheduling_coordinator(impl)) {
-    delete impl;
-    throw std::logic_error("scheduler already defined");
-  }
-}
-
 } // namespace caf

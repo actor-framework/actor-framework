@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_POLICY_JOB_QUEUE_POLICY_HPP
-#define CAF_POLICY_JOB_QUEUE_POLICY_HPP
+#ifndef CAF_POLICY_SCHEDULER_POLICY_HPP
+#define CAF_POLICY_SCHEDULER_POLICY_HPP
 
 #include "caf/fwd.hpp"
 
@@ -26,12 +26,26 @@ namespace caf {
 namespace policy {
 
 /**
- * This concept class describes the interface of a policy class
- * for managing the queue(s) of a scheduler worker.
+ * This concept class describes a policy for worker
+ * and coordinator of the scheduler.
  */
-class job_queue_policy {
-
+class scheduler_policy {
  public:
+  /**
+   * Policy-specific data fields for the coordinator.
+   */
+  struct coordinator_data { };
+
+  /**
+   * Policy-specific data fields for the worker.
+   */
+  struct worker_data { };
+
+  /**
+   * Enqueues a new job to coordinator.
+   */
+  template <class Coordinator>
+  void central_enqueue(Coordinator* self, resumable* job);
 
   /**
    * Enqueues a new job to the worker's queue from an
@@ -48,42 +62,46 @@ class job_queue_policy {
   void internal_enqueue(Worker* self, resumable* job);
 
   /**
-   * Returns `nullptr` if no element could be dequeued immediately.
-   * Called by external sources to try to dequeue an element.
+   * Called whenever resumable returned for reason `resumable::resume_later`.
    */
   template <class Worker>
-  resumable* try_external_dequeue(Worker* self);
+  void resume_job_later(Worker* self, resumable* job);
 
   /**
    * Blocks until a job could be dequeued.
    * Called by the worker itself to acquire a new job.
    */
   template <class Worker>
-  resumable* internal_dequeue(Worker* self);
+  resumable* dequeue(Worker* self);
 
   /**
-   * Moves all elements form the internal queue to the external queue.
+   * Performs cleanup action before a shutdown takes place.
    */
   template <class Worker>
-  void clear_internal_queue(Worker* self);
+  void before_shutdown(Worker* self);
 
   /**
-   * Tries to move at least one element from the internal queue to
-   * the external queue if possible to allow others to steal from us.
+   * Called whenever an actor has been resumed. This function can
+   * prepare some fields before the next resume operation takes place
+   * or perform cleanup actions between to actor runs.
    */
   template <class Worker>
-  void assert_stealable(Worker* self);
+  void after_resume(Worker* self);
 
   /**
-   * Applies given functor to all elements in all queues and
-   * clears all queues afterwards.
+   * Applies given functor to all resumables attached to a worker.
    */
   template <class Worker, typename UnaryFunction>
-  void consume_all(Worker* self, UnaryFunction f);
+  void foreach_resumable(Worker* self, UnaryFunction f);
 
+  /**
+   * Applies given functor to all resumables attached to the coordinator.
+   */
+  template <class Coordinator, typename UnaryFunction>
+  void foreach_central_resumable(Coordinator* self, UnaryFunction f);
 };
 
 } // namespace policy
 } // namespace caf
 
-#endif // CAF_POLICY_JOB_QUEUE_POLICY_HPP
+#endif // CAF_POLICY_SCHEDULER_POLICY_HPP

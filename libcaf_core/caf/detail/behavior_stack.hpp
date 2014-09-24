@@ -76,7 +76,7 @@ class behavior_stack {
   }
 
   inline void push_back(behavior&& what,
-              message_id response_id = message_id::invalid) {
+              message_id response_id = invalid_message_id) {
     m_elements.emplace_back(std::move(what), response_id);
   }
 

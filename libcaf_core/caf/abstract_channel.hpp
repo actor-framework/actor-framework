@@ -56,9 +56,9 @@ class abstract_channel : public ref_counted {
 
  protected:
 
-  abstract_channel();
+  abstract_channel(size_t initial_ref_count = 0);
 
-  abstract_channel(node_id nid);
+  abstract_channel(node_id nid, size_t initial_ref_count = 0);
 
  private:
 

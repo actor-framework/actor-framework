@@ -47,10 +47,9 @@ foreach (comp ${Libcaf_FIND_COMPONENTS})
               ../../${HDRHINT}
               ../../../${HDRHINT})
   mark_as_advanced(LIBCAF_INCLUDE_DIR_${UPPERCOMP})
-  if ("${LIBCAF_INCLUDE_DIR_${UPPERCOMP}}" STREQUAL "LIBCAF_INCLUDE_DIR_${UPPERCOMP}-NOTFOUND")
-    # exit on first error
-    break ()
-  else ()
+  if (NOT "${LIBCAF_INCLUDE_DIR_${UPPERCOMP}}" STREQUAL "LIBCAF_INCLUDE_DIR_${UPPERCOMP}-NOTFOUND")
+    # mark as found (set back to false in case library cannot be found)
+    set(Libcaf_${comp}_FOUND true)
     # add to LIBCAF_INCLUDE_DIRS only if path isn't already set
     set(duplicate false)
     foreach (p ${LIBCAF_INCLUDE_DIRS})
@@ -61,36 +60,39 @@ foreach (comp ${Libcaf_FIND_COMPONENTS})
     if (NOT duplicate)
       set(LIBCAF_INCLUDE_DIRS ${LIBCAF_INCLUDE_DIRS} ${LIBCAF_INCLUDE_DIR_${UPPERCOMP}})
     endif()
-  endif ()
-  # look for (.dll|.so|.dylib) file, again giving hints for non-installed CAFs
-  find_library(LIBCAF_LIBRARY_${UPPERCOMP}
-               NAMES
-                 "caf_${comp}"
-               HINTS
-                 ${LIBCAF_ROOT_DIR}/lib
-                 /usr/lib
-                 /usr/local/lib
-                 /opt/local/lib
-                 /sw/lib
-                 ${CMAKE_INSTALL_PREFIX}/lib
-                 ../actor-framework/build/lib
-                 ../../actor-framework/build/lib
-                 ../../../actor-framework/build/lib)
-  mark_as_advanced(LIBCAF_LIBRARY_${UPPERCOMP})
-  if ("${LIBCAF_LIBRARY_${UPPERCOMP}}" STREQUAL "LIBCAF_LIBRARY-NOTFOUND")
-    # exit on first error
-    break ()
-  else ()
-    set(LIBCAF_LIBRARIES ${LIBCAF_LIBRARIES} ${LIBCAF_LIBRARY_${UPPERCOMP}})
+    # look for (.dll|.so|.dylib) file, again giving hints for non-installed CAFs
+    # skip probe_event as it is header only
+    if (NOT ${comp} STREQUAL "probe_event")
+      find_library(LIBCAF_LIBRARY_${UPPERCOMP}
+                   NAMES
+                     "caf_${comp}"
+                   HINTS
+                     ${LIBCAF_ROOT_DIR}/lib
+                     /usr/lib
+                     /usr/local/lib
+                     /opt/local/lib
+                     /sw/lib
+                     ${CMAKE_INSTALL_PREFIX}/lib
+                     ../actor-framework/build/lib
+                     ../../actor-framework/build/lib
+                     ../../../actor-framework/build/lib)
+      mark_as_advanced(LIBCAF_LIBRARY_${UPPERCOMP})
+      if ("${LIBCAF_LIBRARY_${UPPERCOMP}}" STREQUAL "LIBCAF_LIBRARY-NOTFOUND")
+        set(Libcaf_${comp}_FOUND false)
+      else ()
+        set(LIBCAF_LIBRARIES ${LIBCAF_LIBRARIES} ${LIBCAF_LIBRARY_${UPPERCOMP}})
+      endif ()
+    endif ()
   endif ()
 endforeach ()
 
-# final steps to tell CMake we're done
+# let CMake check whether all requested components have been found
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Libcaf
-                                  DEFAULT_MSG
-                                  LIBCAF_LIBRARIES
-                                  LIBCAF_INCLUDE_DIRS)
+                                  FOUND_VAR LIBCAF_FOUND
+                                  REQUIRED_VARS LIBCAF_LIBRARIES LIBCAF_INCLUDE_DIRS
+                                  HANDLE_COMPONENTS)
+# final step to tell CMake we're done
 mark_as_advanced(LIBCAF_ROOT_DIR
                  LIBCAF_LIBRARIES
                  LIBCAF_INCLUDE_DIRS)

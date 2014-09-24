@@ -45,7 +45,7 @@ struct invalid_group_t {
 constexpr invalid_group_t invalid_group = invalid_group_t{};
 
 class group : detail::comparable<group>,
-        detail::comparable<group, invalid_group_t> {
+              detail::comparable<group, invalid_group_t> {
 
   template <class T, typename U>
   friend T actor_cast(const U&);
@@ -87,11 +87,10 @@ class group : detail::comparable<group>,
 
   /**
    * Get a pointer to the group associated with
-   * `group_identifier` from the module `module_name`.
+   * `identifier` from the module `mod_name`.
    * @threadsafe
    */
-  static group get(const std::string& module_name,
-           const std::string& group_identifier);
+  static group get(const std::string& mod_name, const std::string& identifier);
 
   /**
    * Returns an anonymous group.
@@ -114,12 +113,12 @@ class group : detail::comparable<group>,
   static abstract_group::module_ptr
   get_module(const std::string& module_name);
 
+  inline const abstract_group_ptr& ptr() const {
+    return m_ptr;
+  }
+
  private:
-
-  inline abstract_group* get() const { return m_ptr.get(); }
-
   abstract_group_ptr m_ptr;
-
 };
 
 } // namespace caf

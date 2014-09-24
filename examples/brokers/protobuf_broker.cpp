@@ -53,6 +53,7 @@ void protobuf_io(broker* self, connection_handle hdl, const actor& buddy) {
     int32_t s = htonl(static_cast<int32_t>(buf.size()));
     self->write(hdl, sizeof(int32_t), &s);
     self->write(hdl, buf.size(), buf.data());
+    self->flush(hdl);
   };
   message_handler default_bhvr = {
     [=](const connection_closed_msg&) {
@@ -145,7 +146,7 @@ optional<uint16_t> as_u16(const std::string& str) {
 }
 
 int main(int argc, char** argv) {
-  match(std::vector<string>{argv + 1, argv + argc}) (
+  message_builder{argv + 1, argv + argc}.apply({
     on("-s", as_u16) >> [&](uint16_t port) {
       cout << "run in server mode" << endl;
       auto pong_actor = spawn(pong);
@@ -163,9 +164,9 @@ int main(int argc, char** argv) {
     others() >> [] {
       cerr << "use with eihter '-s PORT' as server or "
           "'-c HOST PORT' as client"
-         << endl;
+           << endl;
     }
-  );
+  });
   await_all_actors_done();
   shutdown();
 }

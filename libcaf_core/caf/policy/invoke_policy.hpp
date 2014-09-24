@@ -89,6 +89,7 @@ class invoke_policy {
     if (!node_ptr) {
       return false;
     }
+    CAF_LOG_TRACE("");
     switch (handle_message(self, node_ptr.get(), fun, awaited_response)) {
       case hm_msg_handled:
         node_ptr.reset();
@@ -173,8 +174,8 @@ class invoke_policy {
                 // recursively call invoke_fun on the
                 // result to correctly handle stuff like
                 // sync_send(...).then(...).then(...)...
-                return invoke_fun(self, intermediate,
-                          mutable_mid, f2, fhdl);
+                return this->invoke_fun(self, intermediate,
+                             mutable_mid, f2, fhdl);
               }
               return none;
             });
@@ -303,6 +304,8 @@ class invoke_policy {
       if (msg.type_at(0)->equal_to(typeid(exit_msg))) {
         auto& em = msg.get_as<exit_msg>(0);
         CAF_REQUIRE(!mid.valid());
+        // make sure to get rid of attachables if they're no longer needed
+        self->unlink_from(em.source);
         if (self->trap_exit() == false) {
           if (em.reason != exit_reason::normal) {
             self->quit(em.reason);

@@ -64,6 +64,7 @@ template <class T>
 void write_int(broker* self, connection_handle hdl, T value) {
   auto cpy = static_cast<T>(htonl(value));
   self->write(hdl, sizeof(T), &cpy);
+  self->flush(hdl);
 }
 
 // utility function for reading an ingeger from incoming data
@@ -155,7 +156,7 @@ optional<uint16_t> as_u16(const std::string& str) {
 }
 
 int main(int argc, char** argv) {
-  match(std::vector<string>{argv + 1, argv + argc}) (
+  message_builder{argv + 1, argv + argc}.apply({
     on("-s", as_u16) >> [&](uint16_t port) {
       cout << "run in server mode" << endl;
       auto pong_actor = spawn(pong);
@@ -172,9 +173,9 @@ int main(int argc, char** argv) {
     },
     others() >> [] {
       cerr << "use with eihter '-s PORT' as server or '-c HOST PORT' as client"
-         << endl;
+           << endl;
     }
-  );
+  });
   await_all_actors_done();
   shutdown();
 }

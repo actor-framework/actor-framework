@@ -29,6 +29,12 @@ class middleman;
 class receive_policy;
 class remote_actor_proxy;
 
+namespace network {
+
+class multiplexer;
+
+} // namespace network
+
 } // namespace io
 } // namespace caf
 

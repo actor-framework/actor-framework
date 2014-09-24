@@ -20,6 +20,8 @@
 #ifndef CAF_RESUMABLE_HPP
 #define CAF_RESUMABLE_HPP
 
+#include <cstddef> // size_t
+
 namespace caf {
 
 class execution_unit;
@@ -32,12 +34,12 @@ class resumable {
  public:
   enum resume_result {
     resume_later,
+    awaiting_message,
     done,
     shutdown_execution_unit
-
   };
 
-  resumable();
+  resumable() = default;
 
   virtual ~resumable();
 
@@ -55,10 +57,7 @@ class resumable {
    * Resume any pending computation until it is either finished
    * or needs to be re-scheduled later.
    */
-  virtual resume_result resume(execution_unit*) = 0;
-
- protected:
-  bool m_hidden;
+  virtual resume_result resume(execution_unit*, size_t max_throughput) = 0;
 };
 
 } // namespace caf

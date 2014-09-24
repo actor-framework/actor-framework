@@ -75,7 +75,7 @@ uint16_t run_server() {
   for (;;) {
     try {
       io::typed_publish(ref, port, "127.0.0.1");
-      CAF_LOGF_DEBUG("running on port " << port);
+      CAF_PRINT("running on port " << port);
       return port;
     }
     catch (bind_failure&) {
@@ -88,28 +88,33 @@ uint16_t run_server() {
 int main(int argc, char** argv) {
   announce<ping>(&ping::value);
   announce<pong>(&pong::value);
-  message_builder { argv + 1, argv + argc }
-  .apply({on("-c", spro<uint16_t>)>> [](uint16_t port) {
-        run_client("localhost", port);
-      },
-      on("-s") >> [] { run_server(); }, on() >> [&] {
-    auto port = run_server();
-    CAF_CHECKPOINT();
-    ostringstream oss;
-    oss << argv[0] << " -c " << port << to_dev_null;
-    // execute client_part() in a separate process,
-    // connected via localhost socket
-    auto child = thread([&oss]() {
-      CAF_LOGC_TRACE("NONE", "main$thread_launcher", "");
-      string cmdstr = oss.str();
-      if (system(cmdstr.c_str()) != 0) {
-        CAF_PRINTERR("FATAL: command \"" << cmdstr << "\" failed!");
-        abort();
-      }
-    });
-    CAF_CHECKPOINT();
-    child.join();
-  }});
+  message_builder{argv + 1, argv + argc}.apply({
+    on("-c", spro<uint16_t>)>> [](uint16_t port) {
+      CAF_PRINT("run in client mode");
+      run_client("localhost", port);
+    },
+    on("-s") >> [] {
+      run_server();
+    },
+    on() >> [&] {
+      auto port = run_server();
+      CAF_CHECKPOINT();
+      ostringstream oss;
+      oss << argv[0] << " -c " << port << to_dev_null;
+      // execute client_part() in a separate process,
+      // connected via localhost socket
+      auto child = thread([&oss]() {
+        CAF_LOGC_TRACE("NONE", "main$thread_launcher", "");
+        string cmdstr = oss.str();
+        if (system(cmdstr.c_str()) != 0) {
+          CAF_PRINTERR("FATAL: command \"" << cmdstr << "\" failed!");
+          abort();
+        }
+      });
+      CAF_CHECKPOINT();
+      child.join();
+    }
+  });
   CAF_CHECKPOINT();
   await_all_actors_done();
   shutdown();

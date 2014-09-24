@@ -17,17 +17,12 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/scheduler.hpp"
 #include "caf/message_id.hpp"
 #include "caf/event_based_actor.hpp"
 
 #include "caf/detail/singletons.hpp"
 
 namespace caf {
-
-event_based_actor::event_based_actor() : m_initialized(false) {
-  // nop
-}
 
 event_based_actor::~event_based_actor() {
   // nop

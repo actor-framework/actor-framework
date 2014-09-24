@@ -30,8 +30,7 @@ channel::channel(const actor& other)
   // nop
 }
 
-channel::channel(const group& other)
-    : m_ptr(actor_cast<abstract_channel_ptr>(other)) {
+channel::channel(const group& other) : m_ptr(other.ptr()) {
   // nop
 }
 

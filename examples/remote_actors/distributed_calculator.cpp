@@ -85,7 +85,7 @@ void client_bhvr(event_based_actor* self, const string& host,
     return none;
   };
   self->become (
-    on(pred, arg_match) >> [=](atom_value op, int lhs, int rhs) {
+    on(pred, val<int>, val<int>) >> [=](atom_value op, int lhs, int rhs) {
       self->sync_send_tuple(server, self->last_dequeued()).then(
         on(atom("result"), arg_match) >> [=](int result) {
           aout(self) << lhs << " "

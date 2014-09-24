@@ -17,34 +17,44 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_POLICY_STEAL_POLICY_HPP
-#define CAF_POLICY_STEAL_POLICY_HPP
+#include "caf/io/remote_group.hpp"
 
-#include <cstddef>
-
-#include "caf/fwd.hpp"
+#include "caf/scoped_actor.hpp"
+#include "caf/io/remote_actor.hpp"
 
 namespace caf {
-namespace policy {
+namespace io {
 
-/**
- * This concept class describes the interface of a policy class
- * for stealing jobs from other workers.
- */
-class steal_policy {
+group remote_group(const std::string& group_uri) {
+  // format of group_identifier is group@host:port
+  // a regex would be the natural choice here, but we want to support
+  // older compilers that don't have <regex> implemented (e.g. GCC < 4.9)
+  auto pos1 = group_uri.find('@');
+  auto pos2 = group_uri.find(':');
+  auto last = std::string::npos;
+  if (pos1 == last || pos2 == last || pos1 >= pos2) {
+    throw std::invalid_argument("group_uri has an invalid format");
+  }
+  auto name = group_uri.substr(0, pos1);
+  auto host = group_uri.substr(pos1 + 1, pos2 - pos1 - 1);
+  auto port = static_cast<uint16_t>(std::stoi(group_uri.substr(pos2 + 1)));
+  return remote_group(name, host, port);
+}
 
- public:
+group remote_group(const std::string& group_identifier,
+                   const std::string& host,
+                   uint16_t port) {
+  auto group_server = remote_actor(host, port);
+  scoped_actor self;
+  self->send(group_server, atom("GetGroup"), group_identifier);
+  group result;
+  self->receive(
+    on(atom("Group"), arg_match) >> [&](group& grp) {
+      result = std::move(grp);
+    }
+  );
+  return result;
+}
 
-  /**
-   * Go on a raid in quest for a shiny new job. Returns `nullptr`
-   * if no other worker provided any work to steal.
-   */
-  template <class Worker>
-  resumable* raid(Worker* self);
-
-};
-
-} // namespace policy
+} // namespace io
 } // namespace caf
-
-#endif // CAF_POLICY_STEAL_POLICY_HPP

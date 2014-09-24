@@ -34,13 +34,14 @@ namespace io {
  * Publishes `whom` at `port`. The connection is managed by the middleman.
  * @param whom Actor that should be published at `port`.
  * @param port Unused TCP port.
- * @param addr The IP address to listen to or `INADDR_ANY` if `addr == nullptr`.
+ * @param addr The IP address to listen to or `INADDR_ANY` if `in == nullptr`.
  * @throws bind_failure
  */
-inline void publish(caf::actor whom, uint16_t port,
-          const char* addr = nullptr) {
-  if (!whom) return;
-  io::publish_impl(actor_cast<abstract_actor_ptr>(whom), port, addr);
+inline void publish(caf::actor whom, uint16_t port, const char* in = nullptr) {
+  if (!whom) {
+    return;
+  }
+  io::publish_impl(actor_cast<abstract_actor_ptr>(whom), port, in);
 }
 
 /**
@@ -48,9 +49,11 @@ inline void publish(caf::actor whom, uint16_t port,
  */
 template <class... Rs>
 void typed_publish(typed_actor<Rs...> whom, uint16_t port,
-           const char* addr = nullptr) {
-  if (!whom) return;
-  io::publish_impl(actor_cast<abstract_actor_ptr>(whom), port, addr);
+                   const char* in = nullptr) {
+  if (!whom) {
+    return;
+  }
+  io::publish_impl(actor_cast<abstract_actor_ptr>(whom), port, in);
 }
 
 } // namespace io

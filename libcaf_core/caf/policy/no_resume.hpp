@@ -6,6 +6,7 @@
 
 #include "caf/exception.hpp"
 #include "caf/exit_reason.hpp"
+#include "caf/detail/logging.hpp"
 #include "caf/policy/resume_policy.hpp"
 
 namespace caf {
@@ -16,7 +17,7 @@ class no_resume {
   template <class Base, class Derived>
   struct mixin : Base {
     template <class... Ts>
-    mixin(Ts&&... args) : Base(std::forward<Ts>(args)...), m_hidden(true) {
+    mixin(Ts&&... args) : Base(std::forward<Ts>(args)...) {
       // nop
     }
 
@@ -28,26 +29,35 @@ class no_resume {
       this->deref();
     }
 
-    resumable::resume_result resume(execution_unit*) {
-      auto done_cb = [=](uint32_t reason) {
-        this->planned_exit_reason(reason);
-        this->on_exit();
-        this->cleanup(reason);
-      };
+    resumable::resume_result resume(execution_unit*, size_t) {
+      CAF_LOG_TRACE("");
+      uint32_t rsn = exit_reason::normal;
+      std::exception_ptr eptr = nullptr;
       try {
         this->act();
-        done_cb(exit_reason::normal);
       }
       catch (actor_exited& e) {
-        done_cb(e.reason());
+        rsn = e.reason();
       }
       catch (...) {
-        done_cb(exit_reason::unhandled_exception);
+        rsn = exit_reason::unhandled_exception;
+        eptr = std::current_exception();
       }
+      if (eptr) {
+        auto opt_reason = this->handle(eptr);
+        rsn = *opt_reason;
+      }
+      this->planned_exit_reason(rsn);
+      try {
+        this->on_exit();
+      }
+      catch (...) {
+        // simply ignore exception
+      }
+      // exit reason might have been changed by on_exit()
+      this->cleanup(this->planned_exit_reason());
       return resumable::done;
     }
-
-    bool m_hidden;
   };
 
   template <class Actor>

@@ -479,6 +479,16 @@ struct type_at<0, T0, Ts...> {
   using type = T0;
 };
 
+template <class T>
+struct is_optional : std::false_type {
+  // no members
+};
+
+template <class T>
+struct is_optional<optional<T>> : std::true_type {
+  // no members
+};
+
 } // namespace detail
 } // namespace caf
 

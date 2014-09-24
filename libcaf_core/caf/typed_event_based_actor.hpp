@@ -44,10 +44,6 @@ class typed_event_based_actor : public
          mixin::behavior_stack_based<typed_behavior<Rs...>>::template impl,
          mixin::sync_sender<nonblocking_response_handle_tag>::template impl> {
  public:
-  typed_event_based_actor() : m_initialized(false) {
-    // nop
-  }
-
   using signatures = detail::type_list<Rs...>;
 
   using behavior_type = typed_behavior<Rs...>;
@@ -58,7 +54,6 @@ class typed_event_based_actor : public
 
  protected:
   virtual behavior_type make_behavior() = 0;
-  bool m_initialized;
 };
 
 } // namespace caf

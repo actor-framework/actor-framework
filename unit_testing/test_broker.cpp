@@ -146,12 +146,7 @@ void run_server(bool spawn_client, const char* bin_path) {
   bool done = false;
   while (!done) {
     try {
-      spawn_functor(nullptr,
-              [=](broker* bro) {
-                bro->add_acceptor(
-                  network::new_ipv4_acceptor(port));
-              },
-              peer_acceptor_fun, p);
+      io::spawn_io_server(peer_acceptor_fun, port, p);
     }
     catch (bind_failure&) {
       // try next port
@@ -160,9 +155,8 @@ void run_server(bool spawn_client, const char* bin_path) {
     done = true;
   }
   CAF_CHECKPOINT();
-  if (!spawn_client) {
-    cout << "server is running on port " << port << endl;
-  } else {
+  cout << "server is running on port " << port << endl;
+  if (spawn_client) {
     ostringstream oss;
     oss << bin_path << " -c " << port << to_dev_null;
     thread child{[&oss] {

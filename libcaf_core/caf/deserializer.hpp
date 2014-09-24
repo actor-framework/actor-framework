@@ -86,7 +86,7 @@ class deserializer {
   template <class T>
   inline T read(const uniform_type_info* uti) {
     T result;
-    uti->deserialize(&result, uti);
+    uti->deserialize(&result, this);
     return result;
   }
 

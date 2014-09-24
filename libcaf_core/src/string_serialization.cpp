@@ -26,7 +26,12 @@
 #include "caf/string_algorithms.hpp"
 
 #include "caf/atom.hpp"
+#include "caf/actor.hpp"
+#include "caf/channel.hpp"
+#include "caf/message.hpp"
+#include "caf/node_id.hpp"
 #include "caf/to_string.hpp"
+#include "caf/actor_addr.hpp"
 #include "caf/serializer.hpp"
 #include "caf/from_string.hpp"
 #include "caf/deserializer.hpp"
@@ -134,20 +139,26 @@ class string_serializer : public serializer, public dummy_backend {
         out(mout),
         m_namespace(*this),
         m_after_value(false),
-        m_obj_just_opened(false) {}
+        m_obj_just_opened(false) {
+    // nop
+  }
 
   void begin_object(const uniform_type_info* uti) {
     clear();
     string tname = uti->name();
     m_open_objects.push(tname);
     // do not print type names for strings and atoms
-    if (!isbuiltin(tname))
+    if (!isbuiltin(tname) && tname != "@message") {
+      // suppress output of "@message ( ... )" because it's redundant
+      // since each message immediately calls begin_object(...)
+      // for the typed tuple it's containing
       out << tname;
-    else if (tname.compare(0, 3, "@<>") == 0) {
-      std::vector<std::string> subtypes;
+      m_obj_just_opened = true;
+    } else if (tname.compare(0, 3, "@<>") == 0) {
+      std::vector<string> subtypes;
       split(subtypes, tname, is_any_of("+"), token_compress_on);
+      m_obj_just_opened = true;
     }
-    m_obj_just_opened = true;
   }
 
   void end_object() {
@@ -157,7 +168,8 @@ class string_serializer : public serializer, public dummy_backend {
     }
     m_after_value = true;
     if (!m_open_objects.empty()) {
-      if (!isbuiltin(m_open_objects.top())) {
+      auto& open_obj = m_open_objects.top();
+      if (!isbuiltin(open_obj) && open_obj != "@message") {
         out << (m_after_value ? " )" : ")");
       }
       m_open_objects.pop();
@@ -227,8 +239,8 @@ class string_deserializer : public deserializer, public dummy_backend {
       type_name = "@str";
     } else if (*m_pos == '\'') {
       type_name = "@atom";
-    } else if (*m_pos == '{') {
-      type_name = "@tuple";
+    } else if (isdigit(*m_pos)) {
+      type_name = "@i32";
     } else {
       auto substr_end = next_delimiter();
       if (m_pos == substr_end) {
@@ -313,6 +325,12 @@ class string_deserializer : public deserializer, public dummy_backend {
   void read_value(primitive_variant& storage) override {
     integrity_check();
     skip_space_and_comma();
+    if (m_open_objects.top() == "@node") {
+      // example node_id: c5c978f5bc5c7e4975e407bb03c751c9374480d9:63768
+      // deserialization will call read_raw() followed by read_value()
+      // and ':' must be ignored
+      consume(':');
+    }
     string::iterator substr_end;
     auto find_if_cond = [](char c)->bool {
       switch (c) {
@@ -397,8 +415,9 @@ class string_deserializer : public deserializer, public dummy_backend {
 
   void read_raw(size_t buf_size, void* vbuf) override {
     if (buf_size == node_id::host_id_size && !m_open_objects.empty()
-        && m_open_objects.top() == "@node") {
-      // node ids are formatted as process_id@host_id
+        && (m_open_objects.top() == "@actor"
+            || m_open_objects.top() == "@actor_addr")) {
+      // actor addresses are formatted as actor_id@host_id:process_id
       // this read_raw reads the host_id, i.e., we need
       // to skip the '@' character
       consume('@');
@@ -412,7 +431,7 @@ class string_deserializer : public deserializer, public dummy_backend {
       }
       char c = *m_pos++;
       if (!isxdigit(c)) {
-        std::string errmsg = "unexpected character: '";
+        string errmsg = "unexpected character: '";
         errmsg += c;
         errmsg += "', expected [0-9a-f]";
         throw_malformed(errmsg);
@@ -510,7 +529,76 @@ string to_string_impl(const void* what, const uniform_type_info* utype) {
   return osstr.str();
 }
 
+template <class T>
+inline string to_string_impl(const T& what) {
+  return to_string_impl(&what, uniform_typeid<T>());
+}
+
 } // namespace detail
+
+string to_string(const message& what) {
+  return detail::to_string_impl(what);
+}
+
+string to_string(const group& what) {
+  return detail::to_string_impl(what);
+}
+
+string to_string(const channel& what) {
+  return detail::to_string_impl(what);
+}
+
+string to_string(const message_id& what) {
+  return detail::to_string_impl(what);
+}
+
+string to_string(const actor_addr& what) {
+  if (what == invalid_actor_addr) {
+    return "0@00000000000000000000:0";
+  }
+  std::ostringstream oss;
+  oss << what.id() << "@" << to_string(what.node());
+  return oss.str();
+}
+
+string to_string(const actor& what) {
+  return to_string(what.address());
+}
+
+string to_string(const atom_value& what) {
+  auto x = static_cast<uint64_t>(what);
+  string result;
+  result.reserve(11);
+  // don't read characters before we found the leading 0xF
+  // first four bits set?
+  bool read_chars = ((x & 0xF000000000000000) >> 60) == 0xF;
+  uint64_t mask = 0x0FC0000000000000;
+  for (int bitshift = 54; bitshift >= 0; bitshift -= 6, mask >>= 6) {
+    if (read_chars) {
+      result += detail::decoding_table[(x & mask) >> bitshift];
+    } else if (((x & mask) >> bitshift) == 0xF) {
+      read_chars = true;
+    }
+  }
+  return result;
+}
+
+string to_string(const node_id::host_id_type& node_id) {
+  std::ostringstream oss;
+  oss << std::hex;
+  oss.fill('0');
+  for (size_t i = 0; i < node_id::host_id_size; ++i) {
+    oss.width(2);
+    oss << static_cast<uint32_t>(node_id[i]);
+  }
+  return oss.str();
+}
+
+string to_string(const node_id& what) {
+  std::ostringstream oss;
+  oss << to_string(what.host_id()) << ":" << what.process_id();
+  return oss.str();
+}
 
 string to_verbose_string(const std::exception& e) {
   std::ostringstream oss;

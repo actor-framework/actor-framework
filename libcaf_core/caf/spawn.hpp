@@ -22,7 +22,6 @@
 
 #include <type_traits>
 
-#include "caf/scheduler.hpp"
 #include "caf/spawn_fwd.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/spawn_options.hpp"
@@ -109,6 +108,9 @@ intrusive_ptr<C> spawn_impl(execution_unit* host,
       detail::proper_actor<C, policy_token>
     >::type;
   auto ptr = detail::make_counted<actor_impl>(std::forward<Ts>(args)...);
+  // actors start with a reference count of 1, hence we need to deref ptr once
+  CAF_REQUIRE(!ptr->unique());
+  ptr->deref();
   CAF_LOGF_DEBUG("spawned actor with ID " << ptr->id());
   CAF_PUSH_AID(ptr->id());
   before_launch_fun(ptr.get());

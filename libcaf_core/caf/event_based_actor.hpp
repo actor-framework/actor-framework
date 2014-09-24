@@ -33,7 +33,6 @@
 #include "caf/mixin/behavior_stack_based.hpp"
 
 #include "caf/detail/logging.hpp"
-#include "caf/detail/response_handle_util.hpp"
 
 namespace caf {
 
@@ -55,7 +54,7 @@ class event_based_actor
    */
   void forward_to(const actor& whom);
 
-  event_based_actor();
+  event_based_actor() = default;
 
   ~event_based_actor();
 
@@ -66,8 +65,6 @@ class event_based_actor
    * Returns the initial actor behavior.
    */
   virtual behavior make_behavior() = 0;
-
-  bool m_initialized;
 };
 
 class event_based_actor::functor_based : public extend<event_based_actor>::

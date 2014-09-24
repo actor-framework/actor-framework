@@ -17,26 +17,44 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/atom.hpp"
+#include "caf/io/network/multiplexer.hpp"
+
+#ifdef CAF_USE_ASIO
+# include "caf/io/network/asio_multiplexer.hpp"
+  using caf_multiplexer_impl = caf::io::network::asio_multiplexer;
+#else
+# include "caf/io/network/default_multiplexer.hpp"
+  using caf_multiplexer_impl = caf::io::network::default_multiplexer;
+#endif
 
 namespace caf {
+namespace io {
+namespace network {
 
-std::string to_string(const atom_value& what) {
-  auto x = static_cast<uint64_t>(what);
-  std::string result;
-  result.reserve(11);
-  // don't read characters before we found the leading 0xF
-  // first four bits set?
-  bool read_chars = ((x & 0xF000000000000000) >> 60) == 0xF;
-  uint64_t mask = 0x0FC0000000000000;
-  for (int bitshift = 54; bitshift >= 0; bitshift -= 6, mask >>= 6) {
-    if (read_chars) {
-      result += detail::decoding_table[(x & mask) >> bitshift];
-    } else if (((x & mask) >> bitshift) == 0xF) {
-      read_chars = true;
-    }
-  }
-  return result;
+multiplexer::~multiplexer() {
+  // nop
 }
 
+boost::asio::io_service* pimpl() {
+  return nullptr;
+}
+
+multiplexer_ptr multiplexer::make() {
+  return multiplexer_ptr{new caf_multiplexer_impl};
+}
+
+boost::asio::io_service* multiplexer::pimpl() {
+  return nullptr;
+}
+
+multiplexer::supervisor::~supervisor() {
+  // nop
+}
+
+multiplexer::runnable::~runnable() {
+  // nop
+}
+
+} // namespace network
+} // namespace io
 } // namespace caf

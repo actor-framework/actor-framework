@@ -27,9 +27,10 @@ constexpr const char* s_names_table[] = {
   "not_exited",
   "normal",
   "unhandled_exception",
-  "unallowed_function_call",
+  "-invalid-",
   "unhandled_sync_failure",
-  "unhandled_sync_timeout"
+  "unhandled_sync_timeout",
+  "unknown"
 };
 } // namespace <anonymous>
 
@@ -37,13 +38,15 @@ const char* as_string(uint32_t value) {
   if (value <= unhandled_sync_timeout) {
     return s_names_table[value];
   }
-  if (value == remote_link_unreachable) {
-    return "remote_link_unreachable";
+  switch (value) {
+    case user_shutdown: return "user_shutdown";
+    case remote_link_unreachable: return "remote_link_unreachable";
+    default:
+      if (value < user_defined) {
+        return "-invalid-";
+      }
+      return "-user defined-";
   }
-  if (value >= user_defined) {
-    return "user_defined";
-  }
-  return "illegal_exit_reason";
 }
 
 } // namespace exit_reason

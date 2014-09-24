@@ -34,8 +34,17 @@ class functor_based : public Base {
 
   using void_fun = std::function<void(pointer)>;
 
+  functor_based() {
+    // nop
+  }
+
   template <class F, class... Ts>
   functor_based(F f, Ts&&... vs) {
+    init(std::move(f), std::forward<Ts>(vs)...);
+  }
+
+  template <class F, class... Ts>
+  void init(F f, Ts&&... vs) {
     using trait = typename detail::get_callable_trait<F>::type;
     using arg_types = typename trait::arg_types;
     using result_type = typename trait::result_type;

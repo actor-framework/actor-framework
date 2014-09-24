@@ -47,6 +47,8 @@ class blocking_actor
  public:
   class functor_based;
 
+  blocking_actor();
+
   /**************************************************************************
    *       utility stuff and receive() member function family       *
    **************************************************************************/
@@ -184,7 +186,7 @@ class blocking_actor
     return {make_dequeue_callback(), behavior{std::forward<Ts>(args)...}};
   }
 
-  optional<behavior&> sync_handler(message_id msg_id) override {
+  optional<behavior&> sync_handler(message_id msg_id) {
     auto i = m_sync_handler.find(msg_id);
     if (i != m_sync_handler.end()) return i->second;
     return none;
@@ -200,12 +202,6 @@ class blocking_actor
    */
   virtual void act() = 0;
 
-  /**
-   * Unwinds the stack by throwing an actor_exited exception.
-   * @throws actor_exited
-   */
-  virtual void quit(uint32_t reason = exit_reason::normal);
-
   /** @cond PRIVATE */
 
   // required from invoke_policy; unused in blocking actors
@@ -219,7 +215,7 @@ class blocking_actor
 
   // required by receive() member function family
   inline void dequeue(behavior& bhvr) {
-    dequeue_response(bhvr, message_id::invalid);
+    dequeue_response(bhvr, invalid_message_id);
   }
 
   // implemented by detail::proper_actor

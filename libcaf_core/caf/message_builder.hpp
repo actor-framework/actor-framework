@@ -39,7 +39,6 @@ class message_builder {
   message_builder();
   message_builder(const message_builder&) = delete;
   message_builder& operator=(const message_builder&) = delete;
-
   ~message_builder();
 
   /**

@@ -17,33 +17,28 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_RESPONSE_FUTURE_DETAIL_HPP
-#define CAF_DETAIL_RESPONSE_FUTURE_DETAIL_HPP
+#ifndef CAF_CHECK_TYPED_INPUT_HPP
+#define CAF_CHECK_TYPED_INPUT_HPP
 
-#include "caf/on.hpp"
-#include "caf/skip_message.hpp"
-#include "caf/system_messages.hpp"
-
-#include "caf/detail/type_traits.hpp"
+#include "caf/detail/type_list.hpp"
+#include "caf/detail/typed_actor_util.hpp"
 
 namespace caf {
-namespace detail {
 
-template <class Actor, class... Fs>
-behavior fs2bhvr(Actor* self, Fs... fs) {
-  auto handle_sync_timeout = [self]() -> skip_message_t {
-    self->handle_sync_timeout();
-    return {};
-  };
-  return behavior{
-    on<sync_timeout_msg>() >> handle_sync_timeout,
-    on<unit_t>() >> skip_message,
-    on<sync_exited_msg>() >> skip_message,
-    (on(any_vals, arg_match) >> std::move(fs))...
-  };
+/**
+ * Checks whether `R` does support an input of type `{Ls...}` via a
+ * static assertion (always returns 0).
+ */
+template <template <class...> class R, class... Rs,
+          template <class...> class L, class... Ls>
+constexpr int check_typed_input(const R<Rs...>&, const L<Ls...>&) {
+  static_assert(detail::tl_find_if<
+                  detail::type_list<Rs...>,
+                  detail::input_is<detail::type_list<Ls...>>::template eval
+                >::value >= 0, "typed actor does not support given input");
+  return 0;
 }
 
-} // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_RESPONSE_FUTURE_DETAIL_HPP
+#endif // CAF_CHECK_TYPED_INPUT_HPP

@@ -31,15 +31,10 @@ namespace caf {
  */
 enum class atom_value : uint64_t {
   /** @cond PRIVATE */
-  dirty_little_hack = 37337
+  dirty_little_hack = 31337
   /** @endcond */
 
 };
-
-/**
- * Returns `what` as a string representation.
- */
-std::string to_string(const atom_value& what);
 
 /**
  * Creates an atom from given string literal.

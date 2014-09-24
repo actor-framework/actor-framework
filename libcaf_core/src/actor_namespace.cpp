@@ -46,8 +46,8 @@ void actor_namespace::write(serializer* sink, const actor_addr& addr) {
     node_id::host_id_type zero;
     std::fill(zero.begin(), zero.end(), 0);
     sink->write_value(static_cast<actor_id>(0));         // actor id
-    sink->write_value(static_cast<uint32_t>(0));         // process id
     sink->write_raw(node_id::host_id_size, zero.data()); // host id
+    sink->write_value(static_cast<uint32_t>(0));         // process id
   } else {
     // register locally running actors to be able to deserialize them later
     if (!addr.is_remote()) {
@@ -56,8 +56,8 @@ void actor_namespace::write(serializer* sink, const actor_addr& addr) {
     }
     auto pinf = addr.node();
     sink->write_value(addr.id());                                  // actor id
-    sink->write_value(pinf.process_id());                          // process id
     sink->write_raw(node_id::host_id_size, pinf.host_id().data()); // host id
+    sink->write_value(pinf.process_id());                          // process id
   }
 }
 
@@ -65,8 +65,8 @@ actor_addr actor_namespace::read(deserializer* source) {
   CAF_REQUIRE(source != nullptr);
   node_id::host_id_type hid;
   auto aid = source->read<uint32_t>();                 // actor id
-  auto pid = source->read<uint32_t>();                 // process id
   source->read_raw(node_id::host_id_size, hid.data()); // host id
+  auto pid = source->read<uint32_t>();                 // process id
   node_id this_node = detail::singletons::get_node_id();
   if (aid == 0 && pid == 0) {
     // 0:0 identifies an invalid actor
@@ -85,6 +85,18 @@ actor_addr actor_namespace::read(deserializer* source) {
 size_t actor_namespace::count_proxies(const key_type& node) {
   auto i = m_proxies.find(node);
   return (i != m_proxies.end()) ? i->second.size() : 0;
+}
+
+std::vector<actor_proxy_ptr> actor_namespace::get_all(const key_type& node) {
+  std::vector<actor_proxy_ptr> result;
+  auto& submap = m_proxies[node];
+  for (auto& kvp : submap) {
+    auto ptr = kvp.second->get();
+    if (ptr) {
+      result.push_back(ptr);
+    }
+  }
+  return result;
 }
 
 actor_proxy_ptr actor_namespace::get(const key_type& node, actor_id aid) {

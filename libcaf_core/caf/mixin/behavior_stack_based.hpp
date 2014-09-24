@@ -92,7 +92,7 @@ class behavior_stack_based_impl : public single_timeout<Base, Subtype> {
     return m_bhvr_stack.back();
   }
 
-  optional<behavior&> sync_handler(message_id msg_id) override {
+  optional<behavior&> sync_handler(message_id msg_id) {
     return m_bhvr_stack.sync_handler(msg_id);
   }
 
@@ -111,7 +111,7 @@ class behavior_stack_based_impl : public single_timeout<Base, Subtype> {
       // request next timeout if behavior stack is not empty
       // and timeout handler did not set a new timeout, e.g.,
       // by calling become()
-      if (!this->has_active_timeout() && has_behavior()) {
+      if (!this->has_timeout() && has_behavior()) {
         this->request_timeout(get_behavior().timeout());
       }
     }

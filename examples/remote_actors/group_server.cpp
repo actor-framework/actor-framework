@@ -8,10 +8,9 @@
  * - ./build/bin/group_chat -g remote:chatroom@localhost:4242 -n bob          *
 \ ******************************************************************************/
 
+#include <cstdlib>
 #include <string>
 #include <iostream>
-
-#include "cppa/opt.hpp"
 
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
@@ -19,21 +18,33 @@
 using namespace std;
 using namespace caf;
 
+optional<uint16_t> to_port(const string& arg) {
+  char* last = nullptr;
+  auto res = strtol(arg.c_str(), &last, 10);
+  if (last == (arg.c_str() + arg.size()) && res > 1024) {
+    return res;
+  }
+  return none;
+}
+
+optional<uint16_t> long_port(const string& arg) {
+  if (arg.compare(0, 7, "--port=") == 0) {
+    return to_port(arg.substr(7));
+  }
+  return none;
+}
+
 int main(int argc, char** argv) {
   uint16_t port = 0;
-  options_description desc;
-  bool args_valid = match_stream<string>(argv + 1, argv + argc) (
-    on_opt1('p', "port", &desc, "set port") >> rd_arg(port),
-    on_opt0('h', "help", &desc, "print help") >> print_desc_and_exit(&desc)
-  );
+  message_builder{argv + 1, argv + argc}.apply({
+    (on("-p", to_port) || on(long_port)) >> [&](uint16_t arg) {
+      port = arg;
+    }
+  });
   if (port <= 1024) {
     cerr << "*** no port > 1024 given" << endl;
-    args_valid = false;
-  }
-  if (!args_valid) {
-    // print_desc(&desc) returns a function printing the stored help text
-    auto desc_printer = print_desc(&desc);
-    desc_printer();
+    cout << "options:" << endl
+         << "  -p <arg1> | --port=<arg1>               set port" << endl;
     return 1;
   }
   try {
@@ -57,9 +68,12 @@ int main(int argc, char** argv) {
   cout << "type 'quit' to shutdown the server" << endl;
   string line;
   while (getline(cin, line)) {
-    if (line == "quit") return 0;
-    else cout << "illegal command" << endl;
+    if (line == "quit") {
+      return 0;
+    }
+    else {
+      cerr << "illegal command" << endl;
+    }
   }
   shutdown();
-  return 0;
 }

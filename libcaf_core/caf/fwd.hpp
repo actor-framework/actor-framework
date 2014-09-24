@@ -36,6 +36,7 @@ class node_id;
 class behavior;
 class resumable;
 class actor_addr;
+class message_id;
 class local_actor;
 class actor_proxy;
 class scoped_actor;
@@ -54,6 +55,9 @@ struct invalid_actor_addr_t;
 
 // enums
 enum class atom_value : uint64_t;
+
+// aliases
+using actor_id = uint32_t;
 
 // intrusive pointer types
 using abstract_group_ptr = intrusive_ptr<abstract_group>;

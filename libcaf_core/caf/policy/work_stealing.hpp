@@ -17,28 +17,26 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_POLICY_FORK_JOIN_HPP
-#define CAF_POLICY_FORK_JOIN_HPP
+#ifndef CAF_POLICY_WORK_STEALING_HPP
+#define CAF_POLICY_WORK_STEALING_HPP
 
 #include <deque>
 #include <chrono>
 #include <thread>
+#include <random>
 #include <cstddef>
 
 #include "caf/resumable.hpp"
 
-#include "caf/detail/producer_consumer_list.hpp"
+#include "caf/detail/double_ended_queue.hpp"
 
 namespace caf {
 namespace policy {
 
 /**
- * An implementation of the `job_queue_policy` concept for fork-join
- * like processing of actors.
- *
- * This work-stealing fork-join implementation uses two queues: a
- * synchronized queue accessible by other threads and an internal queue.
- * Access to the synchronized queue is minimized.
+ * Implements scheduling of actors via work stealing. This implementation uses
+ * two queues: a synchronized queue accessible by other threads and an internal
+ * queue. Access to the synchronized queue is minimized.
  * The reasoning behind this design decision is that it
  * has been shown that stealing actually is very rare for most workloads [1].
  * Hence, implementations should focus on the performance in
@@ -51,58 +49,87 @@ namespace policy {
  *
  * [1] http://dl.acm.org/citation.cfm?doid=2398857.2384639
  *
- * @relates job_queue_policy
+ * @extends scheduler_policy
  */
-class fork_join {
-
+class work_stealing {
  public:
+  // A thead-safe queue implementation.
+  using queue_type = detail::double_ended_queue<resumable>;
 
-  fork_join() = default;
-
-  fork_join(fork_join&& other) {
-    // delegate to move assignment operator
-    *this = std::move(other);
-  }
-
-  fork_join& operator=(fork_join&& other) {
-    m_private_queue = std::move(other.m_private_queue);
-    auto next = [&] { return other.m_exposed_queue.try_pop(); };
-    for (auto j = next(); j != nullptr; j = next()) {
-      m_exposed_queue.push_back(j);
+  // The coordinator has only a counter for round-robin enqueue to its workers.
+  struct coordinator_data {
+    std::atomic<size_t> next_worker;
+    inline coordinator_data() : next_worker(0) {
+      // nop
     }
-    return *this;
+  };
+
+  // Holds job job queue of a worker and a random number generator.
+  struct worker_data {
+    // This queue is exposed to other workers that may attempt to steal jobs
+    // from it and the central scheduling unit can push new jobs to the queue.
+    queue_type queue;
+    // needed by our engine
+    std::random_device rdevice;
+    // needed to generate pseudo random numbers
+    std::default_random_engine rengine;
+    // initialize random engine
+    inline worker_data() : rdevice(), rengine(rdevice()) {
+      // nop
+    }
+  };
+
+  // Convenience function to access the data field.
+  template <class WorkerOrCoordinator>
+  auto d(WorkerOrCoordinator* self) -> decltype(self->data()) {
+    return self->data();
   }
 
-  /**
-   * A thead-safe queue implementation.
-   */
-  using sync_queue = detail::producer_consumer_list<resumable>;
-
-  /**
-   * A queue implementation supporting fast push and pop
-   *    operations on both ends of the queue.
-   */
-  using priv_queue = std::deque<resumable*>;
-
+  // Goes on a raid in quest for a shiny new job.
   template <class Worker>
-  void external_enqueue(Worker*, resumable* job) {
-    m_exposed_queue.push_back(job);
+  resumable* try_steal(Worker* self) {
+    auto p = self->parent();
+    if (p->num_workers() < 2) {
+      // you can't steal from yourself, can you?
+      return nullptr;
+    }
+    size_t victim;
+    do {
+      // roll the dice to pick a victim other than ourselves
+      victim = d(self).rengine() % p->num_workers();
+    }
+    while (victim == self->id());
+    // steal oldest element from the victim's queue
+    return d(p->worker_by_id(victim)).queue.take_tail();
+  }
+
+  template <class Coordinator>
+  void central_enqueue(Coordinator* self, resumable* job) {
+    auto w = self->worker_by_id(d(self).next_worker++ % self->num_workers());
+    w->external_enqueue(job);
   }
 
   template <class Worker>
-  void internal_enqueue(Worker* ptr, resumable* job) {
-    m_exposed_queue.push_back(job);
+  void external_enqueue(Worker* self, resumable* job) {
+    d(self).queue.append(job);
+  }
+
+  template <class Worker>
+  void internal_enqueue(Worker* self, resumable* job) {
+    d(self).queue.prepend(job);
     // give others the opportunity to steal from us
-    assert_stealable(ptr);
+    after_resume(self);
   }
 
   template <class Worker>
-  resumable* try_external_dequeue(Worker*) {
-    return m_exposed_queue.try_pop();
+  void resume_job_later(Worker* self, resumable* job) {
+    // job has voluntarily released the CPU to let others run instead
+    // this means we are going to put this job to the very end of our queue
+    d(self).queue.append(job);
   }
 
   template <class Worker>
-  resumable* internal_dequeue(Worker* self) {
+  resumable* dequeue(Worker* self) {
     // we wait for new jobs by polling our external queue: first, we
     // assume an active work load on the machine and perform aggresive
     // polling, then we relax our polling a bit and wait 50 us between
@@ -113,7 +140,7 @@ class fork_join {
     struct poll_strategy {
       size_t attempts;
       size_t step_size;
-      size_t raid_interval;
+      size_t steal_interval;
       std::chrono::microseconds sleep_duration;
     };
     constexpr poll_strategy strategies[3] = {
@@ -125,21 +152,15 @@ class fork_join {
       {101, 0, 1,  std::chrono::microseconds{10000}}
     };
     resumable* job = nullptr;
-    // local poll
-    if (!m_private_queue.empty()) {
-      job = m_private_queue.back();
-      m_private_queue.pop_back();
-      return job;
-    }
     for (auto& strat : strategies) {
       for (size_t i = 0; i < strat.attempts; i += strat.step_size) {
-        job = m_exposed_queue.try_pop();
+        job = d(self).queue.take_head();
         if (job) {
           return job;
         }
         // try to steal every X poll attempts
-        if ((i % strat.raid_interval) == 0) {
-          job = self->raid();
+        if ((i % strat.steal_interval) == 0) {
+          job = try_steal(self);
           if (job) {
             return job;
           }
@@ -153,47 +174,30 @@ class fork_join {
   }
 
   template <class Worker>
-  void clear_internal_queue(Worker*) {
-    // give others the opportunity to steal unfinished jobs
-    for (auto ptr : m_private_queue) {
-      m_exposed_queue.push_back(ptr);
-    }
-    m_private_queue.clear();
+  void before_shutdown(Worker*) {
+    // nop
   }
 
   template <class Worker>
-  void assert_stealable(Worker*) {
-    // give others the opportunity to steal from us
-    if (m_private_queue.size() > 1 && m_exposed_queue.empty()) {
-      m_exposed_queue.push_back(m_private_queue.front());
-      m_private_queue.pop_front();
-    }
+  void after_resume(Worker*) {
+    // nop
   }
 
-  template <class Worker, typename UnaryFunction>
-  void consume_all(Worker*, UnaryFunction f) {
-    for (auto job : m_private_queue) {
-      f(job);
-    }
-    m_private_queue.clear();
-    auto next = [&] { return this->m_exposed_queue.try_pop(); };
+  template <class Worker, class UnaryFunction>
+  void foreach_resumable(Worker* self, UnaryFunction f) {
+    auto next = [&] { return this->d(self).queue.take_head(); };
     for (auto job = next(); job != nullptr; job = next()) {
       f(job);
     }
   }
 
- private:
-
-  // this queue is exposed to other workers that may attempt to steal jobs
-  // from it and the central scheduling unit can push new jobs to the queue
-  sync_queue m_exposed_queue;
-
-  // internal job queue
-  priv_queue m_private_queue;
-
+  template <class Coordinator, class UnaryFunction>
+  void foreach_central_resumable(Coordinator*, UnaryFunction) {
+    // nop
+  }
 };
 
 } // namespace policy
 } // namespace caf
 
-#endif // CAF_POLICY_FORK_JOIN_HPP
+#endif // CAF_POLICY_WORK_STEALING_HPP

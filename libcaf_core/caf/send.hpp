@@ -23,7 +23,12 @@
 #include "caf/actor.hpp"
 #include "caf/channel.hpp"
 #include "caf/message.hpp"
+#include "caf/actor_cast.hpp"
 #include "caf/actor_addr.hpp"
+#include "caf/message_id.hpp"
+#include "caf/typed_actor.hpp"
+#include "caf/system_messages.hpp"
+#include "caf/check_typed_input.hpp"
 
 namespace caf {
 
@@ -31,9 +36,9 @@ namespace caf {
  * Sends `to` a message under the identity of `from`.
  */
 inline void send_tuple_as(const actor& from, const channel& to, message msg) {
-  if (to)
-    to->enqueue(from.address(), message_id::invalid, std::move(msg),
-          nullptr);
+  if (to) {
+    to->enqueue(from.address(), invalid_message_id, std::move(msg), nullptr);
+  }
 }
 
 /**
@@ -52,24 +57,42 @@ inline void anon_send_tuple(const channel& to, message msg) {
 }
 
 /**
- * Anonymously sends `to` a message.
+ * Anonymously sends `whom` a message.
  */
 template <class... Ts>
-inline void anon_send(const channel& to, Ts&&... args) {
+void anon_send(const channel& to, Ts&&... args) {
   send_as(invalid_actor, to, std::forward<Ts>(args)...);
 }
 
-// implemented in local_actor.cpp
+/**
+ * Anonymously sends `whom` a message.
+ */
+template <class... Rs, class... Ts>
+void anon_send(const typed_actor<Rs...>& whom, Ts&&... args) {
+  check_typed_input(whom,
+                    detail::type_list<typename detail::implicit_conversions<
+                      typename detail::rm_const_and_ref<Ts>::type
+                    >::type...>{});
+  anon_send(actor_cast<channel>(whom), std::forward<Ts>(args)...);
+}
+
 /**
  * Anonymously sends `whom` an exit message.
  */
-void anon_send_exit(const actor_addr& whom, uint32_t reason);
+inline void anon_send_exit(const actor_addr& whom, uint32_t reason) {
+  if (!whom){
+    return;
+  }
+  auto ptr = actor_cast<actor>(whom);
+  ptr->enqueue(invalid_actor_addr, message_id {}.with_high_priority(),
+               make_message(exit_msg{invalid_actor_addr, reason}), nullptr);
+}
 
 /**
  * Anonymously sends `whom` an exit message.
  */
 template <class ActorHandle>
-inline void anon_send_exit(const ActorHandle& whom, uint32_t reason) {
+void anon_send_exit(const ActorHandle& whom, uint32_t reason) {
   anon_send_exit(whom.address(), reason);
 }
 

@@ -30,13 +30,18 @@ namespace caf {
 
 template <class OutputList>
 class typed_continue_helper {
-
  public:
-
   using message_id_wrapper_tag = int;
+  using getter = std::function<optional<behavior&> (message_id msg_id)>;
 
-  typed_continue_helper(message_id mid, local_actor* self)
-      : m_ch(mid, self) {}
+  typed_continue_helper(message_id mid, getter get_sync_handler)
+      : m_ch(mid, std::move(get_sync_handler)) {
+    // nop
+  }
+
+  typed_continue_helper(continue_helper ch) : m_ch(std::move(ch)) {
+    // nop
+  }
 
   template <class F>
   typed_continue_helper<typename detail::get_callable_trait<F>::result_type>
@@ -46,14 +51,12 @@ class typed_continue_helper {
     return {m_ch};
   }
 
-  inline message_id get_message_id() const { return m_ch.get_message_id(); }
-
-  typed_continue_helper(continue_helper ch) : m_ch(std::move(ch)) {}
+  message_id get_message_id() const {
+    return m_ch.get_message_id();
+  }
 
  private:
-
   continue_helper m_ch;
-
 };
 
 } // namespace caf

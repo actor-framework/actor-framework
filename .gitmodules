@@ -1,0 +1,15 @@
+[submodule "benchmarks"]
+	path = benchmarks
+	url = https://github.com/actor-framework/benchmarks.git
+[submodule "nexus"]
+	path = nexus
+	url = https://github.com/actor-framework/nexus.git
+[submodule "opencl"]
+	path = libcaf_opencl
+	url = https://github.com/actor-framework/opencl.git
+[submodule "libcaf_riac"]
+	path = libcaf_riac
+	url = https://github.com/actor-framework/riac.git
+[submodule "cash"]
+	path = cash
+	url = https://github.com/actor-framework/cash.git

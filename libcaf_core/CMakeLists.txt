@@ -11,6 +11,7 @@ file(GLOB LIBCAF_CORE_HDRS "caf/*.hpp"
                            "caf/detail/*.hpp"
                            "caf/policy/*.hpp"
                            "caf/mixin/*.hpp"
+                           "caf/scheduler/*.hpp"
                            "cppa/*.hpp")
 
 # list cpp files excluding platform-dependent files
@@ -18,6 +19,7 @@ set (LIBCAF_CORE_SRCS
      src/abstract_actor.cpp
      src/abstract_channel.cpp
      src/abstract_group.cpp
+     src/abstract_coordinator.cpp
      src/actor.cpp
      src/actor_addr.cpp
      src/actor_companion.cpp
@@ -25,16 +27,17 @@ set (LIBCAF_CORE_SRCS
      src/actor_ostream.cpp
      src/actor_proxy.cpp
      src/actor_registry.cpp
-     src/atom.cpp
      src/attachable.cpp
      src/behavior.cpp
      src/behavior_stack.cpp
+     src/behavior_impl.cpp
      src/binary_deserializer.cpp
      src/binary_serializer.cpp
      src/blocking_actor.cpp
      src/channel.cpp
      src/continue_helper.cpp
      src/decorated_tuple.cpp
+     src/default_attachable.cpp
      src/demangle.cpp
      src/deserializer.cpp
      src/duration.cpp
@@ -61,8 +64,8 @@ set (LIBCAF_CORE_SRCS
      src/response_promise.cpp
      src/resumable.cpp
      src/ripemd_160.cpp
-     src/scheduler.cpp
      src/scoped_actor.cpp
+     src/set_scheduler.cpp
      src/serializer.cpp
      src/shared_spinlock.cpp
      src/shutdown.cpp
