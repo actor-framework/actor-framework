@@ -268,11 +268,15 @@ class single_reader_queue {
     pointer e = m_stack.load();
     // must not be called on a closed queue
     CAF_REQUIRE(e != nullptr);
+    // fetching data while blocked is an error
+    CAF_REQUIRE(e != reader_blocked_dummy());
     // it's enough to check this once, since only the owner is allowed
     // to close the queue and only the owner is allowed to call this
     // member function
     while (e != end_ptr) {
       if (m_stack.compare_exchange_weak(e, end_ptr)) {
+        // fetching data while blocked is an error
+        CAF_REQUIRE(e != reader_blocked_dummy());
         if (is_dummy(e)) {
           // only use-case for this is closing a queue
           CAF_REQUIRE(end_ptr == nullptr);
