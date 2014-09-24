@@ -56,7 +56,7 @@ class local_group : public abstract_group {
                   << CAF_TARG(msg, to_string));
     shared_guard guard(m_mtx);
     for (auto& s : m_subscribers) {
-      actor_cast<abstract_actor_ptr>(s)->enqueue(sender, message_id::invalid,
+      actor_cast<abstract_actor_ptr>(s)->enqueue(sender, invalid_message_id,
                                                  msg, host);
     }
   }
@@ -66,7 +66,7 @@ class local_group : public abstract_group {
     CAF_LOG_TRACE(CAF_TARG(sender, to_string) << ", "
                   << CAF_TARG(msg, to_string));
     send_all_subscribers(sender, msg, host);
-    m_broker->enqueue(sender, message_id::invalid, msg, host);
+    m_broker->enqueue(sender, invalid_message_id, msg, host);
   }
 
   std::pair<bool, size_t> add_subscriber(const actor_addr& who) {
@@ -176,7 +176,7 @@ class local_broker : public event_based_actor {
                   << " acquaintances; " << CAF_TSARG(sender) << ", "
                   << CAF_TSARG(what));
     for (auto& acquaintance : m_acquaintances) {
-      acquaintance->enqueue(sender, message_id::invalid, what, host());
+      acquaintance->enqueue(sender, invalid_message_id, what, host());
     }
   }
 

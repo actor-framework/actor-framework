@@ -62,7 +62,7 @@ void remote_actor_proxy::forward_msg(const actor_addr& sender, message_id mid,
                               << CAF_MARG(mid, integer_value) << ", "
                               << CAF_TSARG(msg));
   m_parent->enqueue(
-    invalid_actor_addr, message_id::invalid,
+    invalid_actor_addr, invalid_message_id,
     make_message(atom("_Dispatch"), sender, address(), mid, std::move(msg)),
     nullptr);
 }
@@ -79,7 +79,7 @@ bool remote_actor_proxy::link_impl(linking_operation op,
       if (establish_link_impl(other)) {
         // causes remote actor to link to (proxy of) other
         // receiving peer will call: this->local_link_to(other)
-        forward_msg(address(), message_id::invalid,
+        forward_msg(address(), invalid_message_id,
                     make_message(atom("_Link"), other));
         return true;
       }
@@ -87,7 +87,7 @@ bool remote_actor_proxy::link_impl(linking_operation op,
     case remove_link_op:
       if (remove_link_impl(other)) {
         // causes remote actor to unlink from (proxy of) other
-        forward_msg(address(), message_id::invalid,
+        forward_msg(address(), invalid_message_id,
                     make_message(atom("_Unlink"), other));
         return true;
       }
@@ -95,7 +95,7 @@ bool remote_actor_proxy::link_impl(linking_operation op,
     case establish_backlink_op:
       if (establish_backlink_impl(other)) {
         // causes remote actor to unlink from (proxy of) other
-        forward_msg(address(), message_id::invalid,
+        forward_msg(address(), invalid_message_id,
                     make_message(atom("_Link"), other));
         return true;
       }
@@ -103,7 +103,7 @@ bool remote_actor_proxy::link_impl(linking_operation op,
     case remove_backlink_op:
       if (remove_backlink_impl(other)) {
         // causes remote actor to unlink from (proxy of) other
-        forward_msg(address(), message_id::invalid,
+        forward_msg(address(), invalid_message_id,
                     make_message(atom("_Unlink"), other));
         return true;
       }

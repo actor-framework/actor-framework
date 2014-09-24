@@ -723,7 +723,7 @@ accept_handle default_multiplexer::add_tcp_doorman(broker* self,
       accept_msg().handle = dm.add_tcp_scribe(parent(),
                                               std::move(m_acceptor.accepted_socket()));
       parent()->invoke_message(invalid_actor_addr,
-                               message_id::invalid,
+                               invalid_message_id,
                                m_accept_msg);
     }
     void stop_reading() override {

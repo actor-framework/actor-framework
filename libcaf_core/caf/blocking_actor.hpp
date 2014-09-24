@@ -215,7 +215,7 @@ class blocking_actor
 
   // required by receive() member function family
   inline void dequeue(behavior& bhvr) {
-    dequeue_response(bhvr, message_id::invalid);
+    dequeue_response(bhvr, invalid_message_id);
   }
 
   // implemented by detail::proper_actor

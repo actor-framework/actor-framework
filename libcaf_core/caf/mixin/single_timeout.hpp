@@ -51,7 +51,7 @@ class single_timeout : public Base {
       auto msg = make_message(timeout_msg{tid});
       if (d.is_zero()) {
         // immediately enqueue timeout message if duration == 0s
-        this->enqueue(this->address(), message_id::invalid,
+        this->enqueue(this->address(), invalid_message_id,
                       std::move(msg), this->host());
       } else
         this->delayed_send_tuple(this, d, std::move(msg));

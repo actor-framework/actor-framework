@@ -296,7 +296,7 @@ class proper_actor<Base, Policies, true>
     auto msg = make_message(timeout_msg{tid});
     if (d.is_zero()) {
       // immediately enqueue timeout message if duration == 0s
-      this->enqueue(this->address(), message_id::invalid,
+      this->enqueue(this->address(), invalid_message_id,
                     std::move(msg), this->host());
       // auto e = this->new_mailbox_element(this, std::move(msg));
       // this->m_mailbox.enqueue(e);

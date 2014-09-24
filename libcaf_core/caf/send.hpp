@@ -37,7 +37,7 @@ namespace caf {
  */
 inline void send_tuple_as(const actor& from, const channel& to, message msg) {
   if (to) {
-    to->enqueue(from.address(), message_id::invalid, std::move(msg), nullptr);
+    to->enqueue(from.address(), invalid_message_id, std::move(msg), nullptr);
   }
 }
 

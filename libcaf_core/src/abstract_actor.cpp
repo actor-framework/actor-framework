@@ -129,7 +129,7 @@ bool abstract_actor::establish_link_impl(const actor_addr& other) {
     auto ptr = actor_cast<abstract_actor_ptr>(other);
     // send exit message if already exited
     if (exited()) {
-      ptr->enqueue(address(), message_id::invalid,
+      ptr->enqueue(address(), invalid_message_id,
                    make_message(exit_msg{address(), exit_reason()}), m_host);
     } else if (ptr->establish_backlink(address())) {
       // add link if not already linked to other
@@ -160,7 +160,7 @@ bool abstract_actor::establish_backlink_impl(const actor_addr& other) {
   // send exit message without lock
   if (reason != exit_reason::not_exited) {
     auto ptr = actor_cast<abstract_actor_ptr>(other);
-    ptr->enqueue(address(), message_id::invalid,
+    ptr->enqueue(address(), invalid_message_id,
                  make_message(exit_msg{address(), exit_reason()}), m_host);
   }
   return false;

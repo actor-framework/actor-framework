@@ -119,7 +119,7 @@ void local_actor::forward_message(const actor& dest, message_priority prio) {
               : m_current_node->mid.with_normal_priority();
   dest->enqueue(m_current_node->sender, id, m_current_node->msg, host());
   // treat this message as asynchronous message from now on
-  m_current_node->mid = message_id::invalid;
+  m_current_node->mid = invalid_message_id;
 }
 
 void local_actor::send_tuple(message_priority prio, const channel& dest,

@@ -57,7 +57,7 @@ void broker::servant::disconnect(bool invoke_disconnect_message) {
     remove_from_broker();
     if (invoke_disconnect_message) {
       auto msg = disconnect_message();
-      m_broker->invoke_message(m_broker->address(),message_id::invalid, msg);
+      m_broker->invoke_message(m_broker->address(),invalid_message_id, msg);
     }
   }
 }
@@ -87,7 +87,7 @@ void broker::scribe::consume(const void*, size_t num_bytes) {
   buf.resize(num_bytes);                       // make sure size is correct
   read_msg().buf.swap(buf);                    // swap into message
   m_broker->invoke_message(invalid_actor_addr, // call client
-                           message_id::invalid, m_read_msg);
+                           invalid_message_id, m_read_msg);
   read_msg().buf.swap(buf); // swap buffer back to stream
   flush();                  // implicit flush of wr_buf()
 }
@@ -290,7 +290,7 @@ void broker::launch(bool is_hidden, execution_unit*) {
       }
     }
   );
-  enqueue(invalid_actor_addr, message_id::invalid,
+  enqueue(invalid_actor_addr, invalid_message_id,
           make_message(atom("INITMSG")), nullptr);
 }
 
