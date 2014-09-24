@@ -104,22 +104,23 @@ class double_ended_queue {
     char pad[pad_size];
   };
 
+  using unique_node_ptr = std::unique_ptr<node>;
+
   static_assert(sizeof(node*) < CAF_CACHE_LINE_SIZE,
                 "sizeof(node*) >= CAF_CACHE_LINE_SIZE");
 
-  double_ended_queue() {
+  double_ended_queue()
+      : m_head_lock(ATOMIC_FLAG_INIT),
+        m_tail_lock(ATOMIC_FLAG_INIT) {
     auto ptr = new node(nullptr);
     m_head = ptr;
     m_tail = ptr;
-    m_head_lock = false;
-    m_tail_lock = false;
   }
 
   ~double_ended_queue() {
     while (m_head) {
-      node* tmp = m_head;
+      unique_node_ptr tmp{m_head.load()};
       m_head = tmp->next.load();
-      delete tmp;
     }
   }
 
@@ -133,77 +134,69 @@ class double_ended_queue {
     m_tail = tmp;
   }
 
-  // acquires both locks if empty()
+  // acquires both locks
   void prepend(pointer value) {
     CAF_REQUIRE(value != nullptr);
     node* tmp = new node(value);
     node* first = nullptr;
-    auto insert = [&] {
-      auto next = first->next.load();
-      // m_first always points to a dummy with no value,
-      // hence we put the new element second
-      tmp->next = next;
-      first->next = tmp;
-    };
     // acquire both locks since we might touch m_last too
     lock_guard guard1(m_head_lock);
+    lock_guard guard2(m_tail_lock);
     first = m_head.load();
-    if (first == m_tail) {
-      // acquire second lock as well and move tail after insertion
-      lock_guard guard2(m_tail_lock);
-      // condition still strue?
-      if (first == m_tail) {
-        insert();
-        m_tail = tmp;
-        return;
-      }
-      // else: someone called append() in the meantime,
-      //       release lock and insert as usual
+    CAF_REQUIRE(first != nullptr);
+    auto next = first->next.load();
+    // m_first always points to a dummy with no value,
+    // hence we put the new element second
+    if (next == nullptr) {
+      // queue is empty
+      CAF_REQUIRE(first == m_tail);
+      m_tail = tmp;
+    } else {
+      CAF_REQUIRE(first != m_tail);
+      tmp->next = next;
     }
-    // insertion without second lock is safe
-    insert();
+    first->next = tmp;
   }
 
   // acquires only one lock, returns nullptr on failure
   pointer take_head() {
-    node* first = nullptr;
+    unique_node_ptr first;
     pointer result = nullptr;
     { // lifetime scope of guard
       lock_guard guard(m_head_lock);
-      first = m_head;
+      first.reset(m_head.load());
       node* next = m_head.load()->next;
       if (next == nullptr) {
+        // queue is empty
+        first.release();
         return nullptr;
       }
-      // queue is not empty
-      result = next->value; // take it out of the node
+      // take it out of the node & swing first forward
+      result = next->value;
       next->value = nullptr;
-      // swing first forward
       m_head = next;
-      // release exclusivity
-      m_head_lock = false;
     }
-    delete first;
     return result;
   }
 
   // acquires both locks, returns nullptr on failure
   pointer take_tail() {
     pointer result = nullptr;
-    node* last = nullptr;
+    unique_node_ptr last;
     { // lifetime scope of guards
       lock_guard guard1(m_head_lock);
       lock_guard guard2(m_tail_lock);
-      last = m_tail;
-      if (m_head == last) {
+      CAF_REQUIRE(m_head != nullptr);
+      last.reset(m_tail.load());
+      if (last.get() == m_head.load()) {
+        last.release();
         return nullptr;
       }
       result = last->value;
-      m_tail = find_predecessor(last);
+      m_tail = find_predecessor(last.get());
       CAF_REQUIRE(m_tail != nullptr);
       m_tail.load()->next = nullptr;
     }
-    delete last;
     return result;
   }
 
@@ -231,21 +224,21 @@ class double_ended_queue {
   std::atomic<node*> m_tail;
   char m_pad2[CAF_CACHE_LINE_SIZE - sizeof(node*)];
   // enforce exclusive access
-  std::atomic<bool> m_head_lock;
-  std::atomic<bool> m_tail_lock;
+  std::atomic_flag m_head_lock;
+  std::atomic_flag m_tail_lock;
 
   class lock_guard {
    public:
-    lock_guard(std::atomic<bool>& lock) : m_lock(lock) {
-      while (m_lock.exchange(true)) {
+    lock_guard(std::atomic_flag& lock) : m_lock(lock) {
+      while (lock.test_and_set(std::memory_order_acquire)) {
         std::this_thread::yield();
       }
     }
     ~lock_guard() {
-      m_lock = false;
+      m_lock.clear(std::memory_order_release);
     }
    private:
-    std::atomic<bool>& m_lock;
+    std::atomic_flag& m_lock;
   };
 };
 
