@@ -52,8 +52,6 @@ namespace {
 
 using hrc = std::chrono::high_resolution_clock;
 
-using time_point = hrc::time_point;
-
 using timer_actor_policies = policy::actor_policies<policy::no_scheduling,
                                                     policy::not_prioritizing,
                                                     policy::no_resume,
@@ -87,7 +85,7 @@ class timer_actor final : public detail::proper_actor<blocking_actor,
     return next_message();
   }
 
-  inline unique_mailbox_element_pointer try_dequeue(const time_point& tp) {
+  inline unique_mailbox_element_pointer try_dequeue(const hrc::time_point& tp) {
     if (scheduling_policy().await_data(this, tp)) {
       return next_message();
     }
@@ -95,25 +93,23 @@ class timer_actor final : public detail::proper_actor<blocking_actor,
   }
 
   void act() override {
+    trap_exit(true);
     // setup & local variables
     bool done = false;
     unique_mailbox_element_pointer msg_ptr;
-    auto tout = hrc::now();
-    std::multimap<decltype(tout), delayed_msg> messages;
+    std::multimap<hrc::time_point, delayed_msg> messages;
     // message handling rules
     message_handler mfun{
-      on(atom("_Send"), arg_match) >> [&](const duration& d,
-                                          actor_addr& from, channel& to,
-                                          message_id mid, message& tup) {
+      [&](const duration& d, actor_addr& from, channel& to,
+          message_id mid, message& msg) {
          insert_dmsg(messages, d, std::move(from),
-               std::move(to), mid, std::move(tup));
+                     std::move(to), mid, std::move(msg));
       },
       [&](const exit_msg&) {
         done = true;
       },
       others() >> [&] {
-        std::cerr << "coordinator::timer_loop: UNKNOWN MESSAGE: "
-              << to_string(msg_ptr->msg) << std::endl;
+        CAF_LOG_ERROR("unexpected: " << to_string(msg_ptr->msg));
       }
     };
     // loop
@@ -122,7 +118,7 @@ class timer_actor final : public detail::proper_actor<blocking_actor,
         if (messages.empty())
           msg_ptr = dequeue();
         else {
-          tout = hrc::now();
+          auto tout = hrc::now();
           // handle timeouts (send messages)
           auto it = messages.begin();
           while (it != messages.end() && (it->first) <= tout) {
@@ -165,19 +161,18 @@ void printer_loop(blocking_actor* self) {
   self->receive_while([&] { return running; })(
     on(atom("add"), arg_match) >> [&](std::string& str) {
       auto s = self->last_sender();
-      if (!str.empty() && s) {
-        auto i = out.find(s);
-        if (i == out.end()) {
-          i = out.insert(make_pair(s, std::move(str))).first;
-          // monitor actor to flush its output on exit
-          self->monitor(s);
-          flush_if_needed(i->second);
-        } else {
-          auto& ref = i->second;
-          ref += std::move(str);
-          flush_if_needed(ref);
-        }
+      if (str.empty() || s == invalid_actor_addr) {
+        return;
       }
+      auto i = out.find(s);
+      if (i == out.end()) {
+        i = out.insert(make_pair(s, std::move(str))).first;
+        // monitor actor to flush its output on exit
+        self->monitor(s);
+      } else {
+        i->second += std::move(str);
+      }
+      flush_if_needed(i->second);
     },
     on(atom("flush")) >> [&] {
       flush_output(self->last_sender());
@@ -189,10 +184,9 @@ void printer_loop(blocking_actor* self) {
     [&](const exit_msg&) {
       running = false;
     },
-    others() >> [self] {
-      std::cerr << "*** unexpected: "
-            << to_string(self->last_dequeued())
-            << std::endl;
+    others() >> [&] {
+      std::cerr << "*** unexpected: " << to_string(self->last_dequeued())
+                << std::endl;
     }
   );
 }

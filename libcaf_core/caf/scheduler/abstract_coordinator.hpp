@@ -65,9 +65,8 @@ class abstract_coordinator {
   void delayed_send(Duration rel_time, actor_addr from, channel to,
                     message_id mid, message data) {
     m_timer->enqueue(invalid_actor_addr, invalid_message_id,
-                     make_message(atom("_Send"), duration{rel_time},
-                                  std::move(from), std::move(to), mid,
-                                  std::move(data)),
+                     make_message(duration{rel_time}, std::move(from),
+                                  std::move(to), mid, std::move(data)),
                      nullptr);
   }
 
