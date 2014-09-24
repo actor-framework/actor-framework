@@ -43,10 +43,11 @@ class worker : public execution_unit {
   using coordinator_ptr = coordinator<Policy>*;
   using policy_data = typename Policy::worker_data;
 
-  worker(size_t id, coordinator_ptr parent, size_t max_throughput) {
-    m_max_throughput = max_throughput;
-    m_id = id;
-    m_parent = parent;
+  worker(size_t id, coordinator_ptr parent, size_t max_throughput)
+      : m_max_throughput(max_throughput),
+        m_id(id),
+        m_parent(parent) {
+    // nop
   }
 
   void start() {
@@ -81,13 +82,6 @@ class worker : public execution_unit {
     CAF_REQUIRE(job != nullptr);
     CAF_LOG_TRACE("id = " << id() << " actor id " << id_of(job));
     m_policy.internal_enqueue(this, job);
-  }
-
-  // go on a raid in quest for a shiny new job
-  job_ptr raid() {
-    auto result = m_policy.raid(this);
-    CAF_LOG_DEBUG_IF(result, "got actor with id " << id_of(result));
-    return result;
   }
 
   coordinator_ptr parent() {
