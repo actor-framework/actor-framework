@@ -31,7 +31,7 @@ if (NOT "${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes")
                         SOVERSION ${LIBRARY_SOVERSION}
                         VERSION ${CAF_VERSION}
                         OUTPUT_NAME caf_io)
-  if(NOT MINGW)
+  if(NOT WIN32)
     install(TARGETS libcaf_io LIBRARY DESTINATION lib)
   endif()
 endif ()
@@ -40,12 +40,16 @@ endif ()
 if ("${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes" OR "${CAF_BUILD_STATIC}" STREQUAL "yes")
   add_library(libcaf_ioStatic STATIC ${LIBCAF_IO_HDRS} ${LIBCAF_IO_SRCS})
   set_target_properties(libcaf_ioStatic PROPERTIES OUTPUT_NAME caf_io_static)
-  install(TARGETS libcaf_ioStatic ARCHIVE DESTINATION lib)
+  if(NOT WIN32)
+    install(TARGETS libcaf_ioStatic ARCHIVE DESTINATION lib)
+  endif()
 endif ()
 
 link_directories(${LD_DIRS})
 include_directories(. ${INCLUDE_DIRS})
 
 # install includes
-install(DIRECTORY caf/ DESTINATION include/caf FILES_MATCHING PATTERN "*.hpp")
-install(DIRECTORY cppa/ DESTINATION include/cppa FILES_MATCHING PATTERN "*.hpp")
+if(NOT WIN32)
+  install(DIRECTORY caf/ DESTINATION include/caf FILES_MATCHING PATTERN "*.hpp")
+  install(DIRECTORY cppa/ DESTINATION include/cppa FILES_MATCHING PATTERN "*.hpp")
+endif()
