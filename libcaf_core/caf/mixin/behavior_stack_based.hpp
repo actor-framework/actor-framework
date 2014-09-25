@@ -59,14 +59,13 @@ class behavior_stack_based_impl : public single_timeout<Base, Subtype> {
 
   void become(behavior_type bhvr) { do_become(std::move(bhvr), true); }
 
-  template <bool Discard>
-  void become(behavior_policy<Discard>, behavior_type bhvr) {
-    do_become(std::move(bhvr), Discard);
+  inline void become(const keep_behavior_t&, behavior_type bhvr) {
+    do_become(std::move(bhvr), false);
   }
 
   template <class T, class... Ts>
   inline typename std::enable_if<
-    !is_behavior_policy<typename std::decay<T>::type>::value,
+    !std::is_same<keep_behavior_t, typename std::decay<T>::type>::value,
     void>::type
   become(T&& arg, Ts&&... args) {
     do_become(
@@ -74,9 +73,9 @@ class behavior_stack_based_impl : public single_timeout<Base, Subtype> {
       true);
   }
 
-  template <bool Discard, class... Ts>
-  void become(behavior_policy<Discard>, Ts&&... args) {
-    do_become(behavior_type{std::forward<Ts>(args)...}, Discard);
+  template <class... Ts>
+  void become(const keep_behavior_t&, Ts&&... args) {
+    do_become(behavior_type{std::forward<Ts>(args)...}, false);
   }
 
   inline void unbecome() { m_bhvr_stack.pop_async_back(); }

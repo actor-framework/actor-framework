@@ -22,27 +22,11 @@
 
 namespace caf {
 
-template <bool DiscardBehavior>
-struct behavior_policy {
-  static constexpr bool discard_old = DiscardBehavior;
-
+struct keep_behavior_t {
+  constexpr keep_behavior_t() {
+    // nop
+  }
 };
-
-template <class T>
-struct is_behavior_policy : std::false_type {};
-
-template <bool DiscardBehavior>
-struct is_behavior_policy<behavior_policy<DiscardBehavior>> : std::true_type {};
-
-using keep_behavior_t = behavior_policy<false>;
-using discard_behavior_t = behavior_policy<true>;
-
-/**
- * Policy tag that causes {@link event_based_actor::become} to
- * discard the current behavior.
- * @relates local_actor
- */
-constexpr discard_behavior_t discard_behavior = discard_behavior_t{};
 
 /**
  * Policy tag that causes {@link event_based_actor::become} to
