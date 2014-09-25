@@ -36,10 +36,10 @@ namespace caf {
 namespace policy {
 
 class nestable_invoke : public invoke_policy<nestable_invoke> {
-
  public:
-
-  inline bool hm_should_skip(mailbox_element* node) { return node->marked; }
+  inline bool hm_should_skip(mailbox_element* node) {
+    return node->marked;
+  }
 
   template <class Actor>
   inline mailbox_element* hm_begin(Actor* self, mailbox_element* node) {
@@ -54,15 +54,14 @@ class nestable_invoke : public invoke_policy<nestable_invoke> {
   inline void hm_cleanup(Actor* self, mailbox_element* previous) {
     self->current_node()->marked = false;
     self->current_node(previous);
+    self->pop_timeout();
   }
 
   template <class Actor>
   inline void hm_revert(Actor* self, mailbox_element* previous) {
-    self->current_node()->marked = false;
-    self->current_node(previous);
-    self->pop_timeout();
+    // same operation for blocking, i.e., nestable, invoke
+    hm_cleanup(self, previous);
   }
-
 };
 
 } // namespace policy
