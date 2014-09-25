@@ -271,15 +271,16 @@ class optional<T&> {
 /** @relates optional */
 template <class T, typename U>
 bool operator==(const optional<T>& lhs, const optional<U>& rhs) {
-  if ((lhs) && (rhs)) return *lhs == *rhs;
-  return false;
+  if ((lhs) && (rhs)) {
+    return *lhs == *rhs;
+  }
+  return !lhs && !rhs;
 }
 
 /** @relates optional */
 template <class T, typename U>
 bool operator==(const optional<T>& lhs, const U& rhs) {
-  if (lhs) return *lhs == rhs;
-  return false;
+  return (lhs) ? *lhs == rhs : false;
 }
 
 /** @relates optional */
