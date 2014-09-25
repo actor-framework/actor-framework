@@ -315,61 +315,47 @@ unit_t guarded(Predicate, const detail::wrapped<T>&) {
   return {};
 }
 
-template <class T, bool Callable = detail::is_callable<T>::value>
-struct to_guard {
-  static std::function<optional<T>(const T&)> _(const T& value) {
-    return guarded<T>(std::equal_to<T>{}, value);
-  }
-
-};
-
-template <>
-struct to_guard<anything, false> {
-  template <class U>
-  static unit_t _(const U&) {
-    return {};
-  }
-
-};
+inline unit_t to_guard(const anything&) {
+  return {};
+}
 
 template <class T>
-struct to_guard<detail::wrapped<T>, false> : to_guard<anything> {};
+unit_t to_guard(detail::wrapped<T> (*)()) {
+  return {};
+}
 
 template <class T>
-struct to_guard<T, true> {
-  using ct = typename detail::get_callable_trait<T>::type;
-  using arg_types = typename ct::arg_types;
-  static_assert(detail::tl_size<arg_types>::value == 1,
-                "projection/guard must take exactly one argument");
-  static_assert(detail::is_optional<typename ct::result_type>::value,
-                "projection/guard must return an optional value");
-  using value_type =
-    typename std::conditional<
-      std::is_function<T>::value,
-      T*,
-      T
-    >::type;
-  static value_type _(value_type val) {
-    return val;
-  }
-};
+unit_t to_guard(const detail::wrapped<T>&) {
+  return {};
+}
 
 template <class T>
-struct to_guard<detail::wrapped<T>(), true> : to_guard<anything> {};
+std::function<optional<typename detail::strip_and_convert<T>::type>(
+  const typename detail::strip_and_convert<T>::type&)>
+to_guard(const T& value,
+         typename std::enable_if<!detail::is_callable<T>::value>::type* = 0) {
+  using type = typename detail::strip_and_convert<T>::type;
+  return guarded<type>(std::equal_to<type>{}, value);
+}
+
+template <class F>
+F to_guard(F fun,
+           typename std::enable_if<detail::is_callable<F>::value>::type* = 0) {
+  return fun;
+}
 
 template <class T, class... Ts>
 auto on(const T& arg, const Ts&... args)
-  -> detail::rvalue_builder<
-      detail::type_list<
-        decltype(to_guard<typename detail::strip_and_convert<T>::type>::_(
-          arg)),
-        decltype(to_guard<
-          typename detail::strip_and_convert<Ts>::type>::_(args))...>,
-      detail::type_list<typename detail::pattern_type<T>::type,
-              typename detail::pattern_type<Ts>::type...>> {
-  return {detail::rvalue_builder_args_ctor{},
-      to_guard<typename detail::strip_and_convert<T>::type>::_(arg),
-      to_guard<typename detail::strip_and_convert<Ts>::type>::_(args)...};
+-> detail::rvalue_builder<
+    detail::type_list<
+      decltype(to_guard(arg)),
+      decltype(to_guard(args))...
+    >,
+    detail::type_list<
+      typename detail::pattern_type<T>::type,
+      typename detail::pattern_type<Ts>::type...>
+    > {
+  return {detail::rvalue_builder_args_ctor{}, to_guard(arg), to_guard(args)...};
 }
 
 inline detail::rvalue_builder<detail::empty_type_list, detail::empty_type_list>
