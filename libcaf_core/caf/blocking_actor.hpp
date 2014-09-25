@@ -30,6 +30,8 @@
 #include "caf/mailbox_element.hpp"
 #include "caf/response_handle.hpp"
 
+#include "caf/detail/type_traits.hpp"
+
 #include "caf/mixin/sync_sender.hpp"
 #include "caf/mixin/mailbox_based.hpp"
 
@@ -242,8 +244,11 @@ class blocking_actor::functor_based : public blocking_actor {
 
   template <class F, class... Ts>
   functor_based(F f, Ts&&... vs) {
+    using trait = typename detail::get_callable_trait<F>::type;
+    using arg0 = typename detail::tl_head<typename trait::arg_types>::type;
     blocking_actor* dummy = nullptr;
-    create(dummy, f, std::forward<Ts>(vs)...);
+    std::integral_constant<bool, std::is_same<arg0, blocking_actor*>::value> tk;
+    create(dummy, tk, f, std::forward<Ts>(vs)...);
   }
 
  protected:
@@ -252,22 +257,14 @@ class blocking_actor::functor_based : public blocking_actor {
  private:
   void create(blocking_actor*, act_fun);
 
-  template <class Actor, typename F, typename T0, class... Ts>
-  auto create(Actor* dummy, F f, T0&& v0, Ts&&... vs)
-    -> typename std::enable_if<std::is_same<
-        decltype(f(dummy, std::forward<T0>(v0), std::forward<Ts>(vs)...)),
-        void>::value>::type {
-    create(dummy, std::bind(f, std::placeholders::_1, std::forward<T0>(v0),
-                std::forward<Ts>(vs)...));
+  template <class Actor, typename F, class... Ts>
+  void create(Actor* dummy, std::true_type, F f, Ts&&... vs) {
+    create(dummy, std::bind(f, std::placeholders::_1, std::forward<Ts>(vs)...));
   }
 
-  template <class Actor, typename F, typename T0, class... Ts>
-  auto create(Actor* dummy, F f, T0&& v0, Ts&&... vs)
-    -> typename std::enable_if<std::is_same<
-        decltype(f(std::forward<T0>(v0), std::forward<Ts>(vs)...)),
-        void>::value>::type {
-    std::function<void()> fun =
-      std::bind(f, std::forward<T0>(v0), std::forward<Ts>(vs)...);
+  template <class Actor, typename F, class... Ts>
+  void create(Actor* dummy, std::false_type, F f, Ts&&... vs) {
+    std::function<void()> fun = std::bind(f, std::forward<Ts>(vs)...);
     create(dummy, [fun](Actor*) { fun(); });
   }
 
