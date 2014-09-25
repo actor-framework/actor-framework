@@ -53,28 +53,14 @@ class message_handler {
   message_handler& operator=(const message_handler&) = default;
 
   /**
-   * A pointer to the underlying implementation.
-   */
+  * A pointer to the underlying implementation.
+  */
   using impl_ptr = intrusive_ptr<detail::behavior_impl>;
-
-  /**
-   * Returns a pointer to the implementation.
-   */
-  inline const impl_ptr& as_behavior_impl() const {
-    return m_impl;
-  }
 
   /**
    * Creates a message handler from @p ptr.
    */
   message_handler(impl_ptr ptr);
-
-  /**
-   * Checks whether the message handler is not empty.
-   */
-  inline operator bool() const {
-    return static_cast<bool>(m_impl);
-  }
 
   /**
    * Create a message handler a list of match expressions,
@@ -86,13 +72,26 @@ class message_handler {
   }
 
   /**
+   * Returns a pointer to the implementation.
+   */
+  inline const impl_ptr& as_behavior_impl() const {
+    return m_impl;
+  }
+
+  /**
+   * Checks whether the message handler is not empty.
+   */
+  inline operator bool() const {
+    return static_cast<bool>(m_impl);
+  }
+
+  /**
    * Assigns new message handlers.
    */
-  template <class T, class... Ts>
-  void assign(T&& v, Ts&&... vs) {
-    m_impl = detail::match_expr_concat(
-               detail::lift_to_match_expr(std::forward<T>(v)),
-               detail::lift_to_match_expr(std::forward<Ts>(vs))...);
+  template <class... Ts>
+  void assign(Ts&&... vs) {
+    using namespace detail;
+    m_impl = match_expr_concat(lift_to_match_expr(std::forward<Ts>(vs))...);
   }
 
   /**
@@ -109,8 +108,11 @@ class message_handler {
    */
   template <class... Ts>
   typename std::conditional<
-    detail::disjunction<may_have_timeout<
-      typename std::decay<Ts>::type>::value...>::value,
+    detail::disjunction<
+      may_have_timeout<
+        typename std::decay<Ts>::type
+      >::value...
+    >::value,
     behavior,
     message_handler
   >::type
@@ -124,7 +126,7 @@ class message_handler {
     if (m_impl) {
       return m_impl->or_else(tmp.as_behavior_impl());
     }
-    return tmp;
+    return tmp.as_behavior_impl();
   }
 
  private:

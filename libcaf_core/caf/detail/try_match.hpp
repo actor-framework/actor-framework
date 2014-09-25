@@ -82,7 +82,7 @@ struct meta_elements;
 template <class... Ts>
 struct meta_elements<type_list<Ts...>> {
   std::array<meta_element, sizeof...(Ts)> arr;
-  meta_elements() : arr{{meta_element_factory<Ts>::create()...}} {
+  meta_elements() : arr({meta_element_factory<Ts>::create()...}) {
     // nop
   }
 };

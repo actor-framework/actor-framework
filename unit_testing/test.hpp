@@ -21,9 +21,9 @@
 #include "caf/detail/scope_guard.hpp"
 
 #ifndef CAF_WINDOWS
-constexpr char to_dev_null[] = " &>/dev/null";
+const char to_dev_null[] = " &>/dev/null";
 #else
-constexpr char to_dev_null[] = "";
+const char to_dev_null[] = "";
 #endif // CAF_WINDOWS
 
 void set_default_test_settings();
@@ -78,8 +78,8 @@ template <bool V, typename T1, typename T2>
 struct enable_integral
     : std::enable_if<
         both_integral<T1, T2>::value == V
-        && not std::is_pointer<T1>::value
-        && not std::is_pointer<T2>::value> { };
+        && !std::is_pointer<T1>::value
+        && !std::is_pointer<T2>::value> { };
 
 template <class T>
 const T& caf_stream_arg(const T& value) {

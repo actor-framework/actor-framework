@@ -23,7 +23,11 @@
 namespace caf {
 namespace detail {
 
-struct arg_match_t {};
+struct arg_match_t {
+  constexpr arg_match_t() {
+    // nop
+  }
+};
 
 } // namespace detail
 } // namespace caf

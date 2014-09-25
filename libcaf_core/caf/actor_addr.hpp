@@ -35,8 +35,9 @@
 namespace caf {
 
 struct invalid_actor_addr_t {
-  constexpr invalid_actor_addr_t() {}
-
+  constexpr invalid_actor_addr_t() {
+    // nop
+  }
 };
 
 /**

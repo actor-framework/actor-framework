@@ -17,46 +17,19 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/exception.hpp"
-#include "caf/blocking_actor.hpp"
+#ifndef CAF_DETAIL_GET_PROCESS_ID_HPP
+#define CAF_DETAIL_GET_PROCESS_ID_HPP
 
-#include "caf/detail/logging.hpp"
-#include "caf/detail/singletons.hpp"
-#include "caf/detail/actor_registry.hpp"
+#include <string>
+#include <vector>
+#include <utility>
 
 namespace caf {
+namespace detail {
 
-blocking_actor::blocking_actor() {
-  is_blocking(true);
-}
+unsigned get_process_id();
 
-blocking_actor::~blocking_actor() {
-  // avoid weak-vtables warning
-}
-
-void blocking_actor::await_all_other_actors_done() {
-  detail::singletons::get_actor_registry()->await_running_count_equal(1);
-}
-
-void blocking_actor::functor_based::create(blocking_actor*, act_fun fun) {
-  m_act = fun;
-}
-
-void blocking_actor::functor_based::act() {
-  CAF_LOG_TRACE("");
-  m_act(this);
-}
-
-blocking_actor::receive_loop_helper::receive_loop_helper(loop_fun loop)
-    : m_loop(std::move(loop)) {
-  // nop
-}
-
-blocking_actor::do_receive_helper::do_receive_helper(blocking_actor* self,
-                                                     behavior bhvr)
-    : m_self(self),
-      m_bhvr(std::move(bhvr)) {
-  // nop
-}
-
+} // namespace detail
 } // namespace caf
+
+#endif // CAF_DETAIL_GET_PROCESS_ID_HPP

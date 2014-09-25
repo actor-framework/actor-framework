@@ -58,52 +58,32 @@ class blocking_actor
    **************************************************************************/
   using timeout_type = std::chrono::high_resolution_clock::time_point;
 
-  struct receive_while_helper {
-
-    std::function<void(behavior&)> m_dq;
-    std::function<bool()> m_stmt;
-
-    template <class... Ts>
-    void operator()(Ts&&... args) {
-      static_assert(sizeof...(Ts) > 0,
-              "operator() requires at least one argument");
-      behavior bhvr{std::forward<Ts>(args)...};
-      while (m_stmt()) m_dq(bhvr);
-    }
-
-  };
-
-  template <class T>
-  struct receive_for_helper {
-
-    std::function<void(behavior&)> m_dq;
-    T& begin;
-    T end;
+  class receive_loop_helper {
+   public:
+    using loop_fun = std::function<void (behavior&)>;
+    receive_loop_helper(loop_fun loop);
 
     template <class... Ts>
-    void operator()(Ts&&... args) {
-      behavior bhvr{std::forward<Ts>(args)...};
-      for (; begin != end; ++begin) m_dq(bhvr);
-    }
+    void operator()(Ts&&... args);
 
+  private:
+    loop_fun m_loop;
   };
 
-  struct do_receive_helper {
-
-    std::function<void(behavior&)> m_dq;
-    behavior m_bhvr;
+  class do_receive_helper {
+   public:
+    do_receive_helper(blocking_actor* self, behavior bhvr);
 
     template <class Statement>
-    void until(Statement stmt) {
-      do {
-        m_dq(m_bhvr);
-      } while (stmt() == false);
-    }
+    void until(Statement stmt);
 
-    void until(const bool& bvalue) {
+    inline void until(const bool& bvalue) {
       until([&] { return bvalue; });
     }
 
+   private:
+    blocking_actor* m_self;
+    behavior m_bhvr;
   };
 
   /**
@@ -142,9 +122,14 @@ class blocking_actor
    * );
    * ~~~
    */
-  template <class T>
-  receive_for_helper<T> receive_for(T& begin, const T& end) {
-    return {make_dequeue_callback(), begin, end};
+  template <class BeginIter, class EndIter>
+  receive_loop_helper receive_for(BeginIter& begin, EndIter end) {
+    auto loop = [this, &begin, end](behavior& bhvr) {
+      for (; begin != end; ++begin) {
+        dequeue(bhvr);
+      }
+    };
+    return receive_loop_helper(loop);
   }
 
   /**
@@ -161,11 +146,16 @@ class blocking_actor
    * );
    * ~~~
    */
-  template <class Statement>
-  receive_while_helper receive_while(Statement stmt) {
+  template <class Stmt>
+  receive_loop_helper receive_while(Stmt stmt) {
     static_assert(std::is_same<bool, decltype(stmt())>::value,
-            "functor or function does not return a boolean");
-    return {make_dequeue_callback(), stmt};
+                 "stmt() does not return bool");
+    auto loop = [=](behavior& bhvr) {
+      while (stmt()) {
+        dequeue(bhvr);
+      }
+    };
+    return receive_loop_helper(loop);
   }
 
   /**
@@ -187,7 +177,7 @@ class blocking_actor
    */
   template <class... Ts>
   do_receive_helper do_receive(Ts&&... args) {
-    return {make_dequeue_callback(), behavior{std::forward<Ts>(args)...}};
+    return do_receive_helper(this, behavior{std::forward<Ts>(args)...});
   }
 
   optional<behavior&> sync_handler(message_id msg_id) {
@@ -228,20 +218,24 @@ class blocking_actor
   /** @endcond */
 
  private:
-
-  // helper function to implement receive_(for|while) and do_receive
-  std::function<void(behavior&)> make_dequeue_callback() {
-    return [=](behavior& bhvr) { dequeue(bhvr); };
-  }
-
   std::map<message_id, behavior> m_sync_handler;
-
 };
 
+template <class... Ts>
+void blocking_actor::receive_loop_helper::operator()(Ts&&... args) {
+  behavior bhvr{std::forward<Ts>(args)...};
+  m_loop(bhvr);
+}
+
+template <class Statement>
+void blocking_actor::do_receive_helper::until(Statement stmt) {
+  do {
+    m_self->dequeue(m_bhvr);
+  } while (stmt() == false);
+}
+
 class blocking_actor::functor_based : public blocking_actor {
-
  public:
-
   using act_fun = std::function<void(blocking_actor*)>;
 
   template <class F, class... Ts>
@@ -249,8 +243,9 @@ class blocking_actor::functor_based : public blocking_actor {
     using trait = typename detail::get_callable_trait<F>::type;
     using arg0 = typename detail::tl_head<typename trait::arg_types>::type;
     blocking_actor* dummy = nullptr;
-    std::integral_constant<bool, std::is_same<arg0, blocking_actor*>::value> tk;
-    create(dummy, tk, f, std::forward<Ts>(vs)...);
+    constexpr bool uses_selfptr = std::is_same<arg0, blocking_actor*>::value;
+    std::integral_constant<bool, uses_selfptr> token;
+    create(dummy, token, f, std::forward<Ts>(vs)...);
   }
 
  protected:

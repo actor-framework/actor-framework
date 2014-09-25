@@ -158,8 +158,9 @@ class sync_sender_impl : public Base {
     typename detail::deduce_output_type<
       detail::type_list<Rs...>,
       typename detail::implicit_conversions<
-        typename std::decay<Ts>::type>::type...
-      >::type,
+        typename std::decay<Ts>::type
+      >::type...
+    >::type,
     ResponseHandleTag>
   sync_send(message_priority prio, const typed_actor<Rs...>& dest,
         Ts&&... what) {
@@ -176,7 +177,9 @@ class sync_sender_impl : public Base {
     typename detail::deduce_output_type<
       detail::type_list<Rs...>,
       detail::type_list<typename detail::implicit_conversions<
-        typename std::decay<Ts>::type>::type...>>::type,
+                          typename std::decay<Ts>::type
+                        >::type...>
+    >::type,
     ResponseHandleTag>
   sync_send(const typed_actor<Rs...>& dest, Ts&&... what) {
     return sync_send_impl(

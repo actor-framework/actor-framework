@@ -38,10 +38,12 @@
 #include "caf/policy/cooperative_scheduling.hpp"
 
 #include "caf/detail/logging.hpp"
+#include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/detail/make_counted.hpp"
 #include "caf/detail/proper_actor.hpp"
 #include "caf/detail/typed_actor_util.hpp"
+#include "caf/detail/infer_typed_handle.hpp"
 #include "caf/detail/implicit_conversions.hpp"
 
 namespace caf {
@@ -167,9 +169,10 @@ intrusive_ptr<C> spawn_class(execution_unit* host,
  */
 template <spawn_options Os, typename BeforeLaunch, typename F, class... Ts>
 actor spawn_functor(execution_unit* eu, BeforeLaunch cb, F fun, Ts&&... args) {
-  using trait = typename detail::get_callable_trait<F>::type;
-  using arg_types = typename trait::arg_types;
-  using first_arg = typename detail::tl_head<arg_types>::type;
+  using first_arg = 
+    typename detail::tl_head<
+      typename detail::get_callable_trait<F>::arg_types
+    >::type;
   using base_class =
     typename std::conditional<
       std::is_pointer<first_arg>::value,
@@ -288,10 +291,10 @@ class functor_based_typed_actor : public typed_event_based_actor<Rs...> {
     using trait = typename detail::get_callable_trait<F>::type;
     using arg_types = typename trait::arg_types;
     using result_type = typename trait::result_type;
+    using first_arg = typename detail::tl_head<arg_types>::type;
     constexpr bool returns_behavior =
       std::is_same<result_type, behavior_type>::value;
-    constexpr bool uses_first_arg = std::is_same<
-      typename detail::tl_head<arg_types>::type, pointer>::value;
+    constexpr bool uses_first_arg = std::is_same<first_arg, pointer>::value;
     std::integral_constant<bool, returns_behavior> token1;
     std::integral_constant<bool, uses_first_arg> token2;
     set(token1, token2, std::move(fun), std::forward<Ts>(args)...);
@@ -313,16 +316,17 @@ class functor_based_typed_actor : public typed_event_based_actor<Rs...> {
   void set(std::false_type, std::true_type, F fun) {
     // void (pointer)
     m_fun = [fun](pointer ptr) {
-      fun(ptr);
+      const_cast<F&>(fun)(ptr);
       return behavior_type{};
-
     };
   }
 
   template <class F>
   void set(std::true_type, std::false_type, F fun) {
     // behavior_type ()
-    m_fun = [fun](pointer) { return fun(); };
+    m_fun = [fun](pointer) {
+      return const_cast<F&>(fun)();
+    };
   }
 
   // (false_type, false_type) is an invalid functor for typed actors
@@ -330,14 +334,14 @@ class functor_based_typed_actor : public typed_event_based_actor<Rs...> {
   template <class Token, typename F, typename T0, class... Ts>
   void set(Token t1, std::true_type t2, F fun, T0&& arg0, Ts&&... args) {
     set(t1, t2,
-      std::bind(fun, std::placeholders::_1, std::forward<T0>(arg0),
-            std::forward<Ts>(args)...));
+        std::bind(fun, std::placeholders::_1, std::forward<T0>(arg0),
+                  std::forward<Ts>(args)...));
   }
 
   template <class Token, typename F, typename T0, class... Ts>
   void set(Token t1, std::false_type t2, F fun, T0&& arg0, Ts&&... args) {
     set(t1, t2,
-      std::bind(fun, std::forward<T0>(arg0), std::forward<Ts>(args)...));
+        std::bind(fun, std::forward<T0>(arg0), std::forward<Ts>(args)...));
   }
 
   // we convert any of the three accepted signatures to this one
@@ -399,17 +403,32 @@ spawn_typed_functor(execution_unit* eu, BeforeLaunch bl, F fun, Ts&&... args) {
  * invoke the functor. This function delegates its arguments to
  * `spawn_typed_functor`.
  */
-template <spawn_options Os = no_spawn_options, typename F, class... Ts>
-typename infer_typed_actor_handle<
-  typename detail::get_callable_trait<F>::result_type,
-  typename detail::tl_head<
-    typename detail::get_callable_trait<F>::arg_types
-  >::type
->::type
-spawn_typed(F fun, Ts&&... args) {
-  return spawn_typed_functor<Os>(nullptr, empty_before_launch_callback{},
-                                 std::move(fun), std::forward<Ts>(args)...);
+template <spawn_options Os = no_spawn_options, class R, class... As, class... Ts>
+typename detail::infer_typed_handle<R, As...>::handle_type
+spawn_typed(R (*fun)(As...), Ts&&... vs) {
+  using impl = typename detail::infer_typed_handle<R, As...>::functor_base_type;
+  return spawn_class<impl, Os>(nullptr,
+                               empty_before_launch_callback{},
+                               fun, std::forward<Ts>(vs)...);
 }
+
+/**
+ * Returns a new typed actor from a functor. The first element
+ * of `args` must be the functor, the remaining arguments are used to
+ * invoke the functor. This function delegates its arguments to
+ * `spawn_typed_functor`.
+ */
+/*
+template <spawn_options Os, class F, class... Ts>
+auto spawn_typed(F fun, Ts&&... args)
+-> decltype(spawn_typed_functor<Os>(nullptr, empty_before_launch_callback{},
+                                    std::move(fun), std::forward<Ts>(args)...)) {
+  return spawn_typed_functor<no_spawn_options>(nullptr,
+                                               empty_before_launch_callback{},
+                                               std::move(fun),
+                                               std::forward<Ts>(args)...);
+}
+*/
 
 /** @} */
 

@@ -71,33 +71,35 @@ class functor_based : public Base {
   void set(std::false_type, std::true_type, F fun) {
     // void (pointer)
     m_make_behavior = [fun](pointer ptr) {
-      fun(ptr);
+      // for whatever reason, our copy of fun is const
+      // while operator() of std::bind(...) isn't (at least on MSVC)
+      const_cast<F&>(fun)(ptr);
       return behavior{};
-
     };
   }
 
   template <class F>
   void set(std::true_type, std::false_type, F fun) {
     // behavior (void)
-    m_make_behavior = [fun](pointer) { return fun(); };
+    m_make_behavior = [fun](pointer) { 
+      return const_cast<F&>(fun)();
+    };
   }
 
   template <class F>
   void set(std::false_type, std::false_type, F fun) {
     // void (void)
     m_make_behavior = [fun](pointer) {
-      fun();
+      const_cast<F&>(fun)();
       return behavior{};
-
     };
   }
 
   template <class Token, typename F, typename T0, class... Ts>
   void set(Token t1, std::true_type t2, F fun, T0&& arg0, Ts&&... args) {
     set(t1, t2,
-      std::bind(fun, std::placeholders::_1, std::forward<T0>(arg0),
-            std::forward<Ts>(args)...));
+        std::bind(fun, std::placeholders::_1, std::forward<T0>(arg0),
+                  std::forward<Ts>(args)...));
   }
 
   template <class Token, typename F, typename T0, class... Ts>

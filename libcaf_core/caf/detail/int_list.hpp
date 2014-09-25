@@ -52,8 +52,12 @@ struct il_right;
 
 template <long... Is, size_t N>
 struct il_right<int_list<Is...>, N> {
-  using type = typename il_right_impl<(N > sizeof...(Is) ? sizeof...(Is) : N),
-                                      sizeof...(Is), Is...>::type;
+  using type = 
+    typename il_right_impl<
+      (N > sizeof...(Is) ? sizeof...(Is) : N),
+      sizeof...(Is),
+	  Is...
+	>::type;
 };
 
 /**
@@ -62,17 +66,13 @@ struct il_right<int_list<Is...>, N> {
 template <class List, long Pos = 0, typename Indices = int_list<>>
 struct il_indices;
 
-template <template <class...> class List, long... Is, long Pos>
-struct il_indices<List<>, Pos, int_list<Is...>> {
+template <long... Is, long Pos>
+struct il_indices<type_list<>, Pos, int_list<Is...>> {
   using type = int_list<Is...>;
 };
 
-template <template <class...> class List,
-     typename T0,
-     class... Ts,
-     long Pos,
-     long... Is>
-struct il_indices<List<T0, Ts...>, Pos, int_list<Is...>> {
+template <typename T0, class... Ts, long Pos, long... Is>
+struct il_indices<type_list<T0, Ts...>, Pos, int_list<Is...>> {
   // always use type_list to forward remaining Ts... arguments
   using type =
     typename il_indices<
@@ -83,7 +83,7 @@ struct il_indices<List<T0, Ts...>, Pos, int_list<Is...>> {
 };
 
 template <class T>
-typename il_indices<T>::type get_indices(const T&) {
+typename il_indices<typename tl_convert<T>::type>::type get_indices(const T&) {
   return {};
 }
 

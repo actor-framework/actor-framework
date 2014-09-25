@@ -82,7 +82,7 @@ class tuple_vals : public message_data {
   template <class... Us>
   tuple_vals(Us&&... args)
       : m_data(std::forward<Us>(args)...),
-        m_types{{tuple_vals_type_helper<Ts>::get()...}} {
+        m_types({tuple_vals_type_helper<Ts>::get()...}) {
     // nop
   }
 

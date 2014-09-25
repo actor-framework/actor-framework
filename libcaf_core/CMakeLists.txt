@@ -46,6 +46,7 @@ set (LIBCAF_CORE_SRCS
      src/exit_reason.cpp
      src/forwarding_actor_proxy.cpp
      src/get_mac_addresses.cpp
+	 src/get_process_id.cpp
      src/get_root_uuid.cpp
      src/group.cpp
      src/group_manager.cpp
@@ -78,7 +79,7 @@ set (LIBCAF_CORE_SRCS
      src/uniform_type_info_map.cpp)
 
 # build shared library if not compiling static only
-if (NOT "${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes")
+if (NOT CAF_BUILD_STATIC_ONLY)
   add_library(libcaf_core SHARED ${LIBCAF_CORE_SRCS} ${LIBCAF_CORE_HDRS})
   target_link_libraries(libcaf_core ${LD_FLAGS})
   set(LIBRARY_SOVERSION ${CAF_VERSION_MAJOR})
@@ -93,9 +94,9 @@ if (NOT "${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes")
 endif ()
 
 # build static library only if --build-static or --build-static-only was set
-if ("${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes" OR "${CAF_BUILD_STATIC}" STREQUAL "yes")
+if (CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
   add_library(libcaf_coreStatic STATIC ${LIBCAF_CORE_HDRS} ${LIBCAF_CORE_SRCS})
-  set_target_properties(libcaf_coreStatic PROPERTIES OUTPUT_NAME caf_core_static)
+  set_target_properties(libcaf_coreStatic PROPERTIES OUTPUT_NAME caf_core)
   if(NOT WIN32)
     install(TARGETS libcaf_coreStatic ARCHIVE DESTINATION lib)
   endif()

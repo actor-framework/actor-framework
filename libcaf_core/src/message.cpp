@@ -261,7 +261,7 @@ message::cli_res message::filter_cli(std::vector<cli_arg> cliargs) const {
   if (opts.count("help") == 1) {
     std::cout << helptext << std::endl;
   }
-  return {res, std::move(opts), std::move(helptext)};
+  return cli_res{res, std::move(opts), std::move(helptext)};
 }
 
 } // namespace caf

@@ -64,6 +64,11 @@ struct send_to_self {
 
 int main() {
   CAF_TEST(test_atom);
+  auto zzz = (0xF << 18)
+             | (detail::atom_encode('a') << 12)
+             | (detail::atom_encode('b') << 6)
+             | detail::atom_encode('c');
+  CAF_CHECK_EQUAL(static_cast<uint64_t>(atom("abc")), zzz);
   // check if there are leading bits that distinguish "zzz" and "000 "
   CAF_CHECK_NOT_EQUAL(atom("zzz"), atom("000 "));
   // check if there are leading bits that distinguish "abc" and " abc"
@@ -72,6 +77,8 @@ int main() {
   CAF_CHECK_EQUAL(atom("   "), atom("@!?"));
   // check to_string impl.
   CAF_CHECK_EQUAL(to_string(s_foo), "FooBar");
+  // check to_string impl.
+  CAF_CHECK_EQUAL(to_string(atom("ok")), "ok");
   scoped_actor self;
   send_to_self f{self.get()};
   f(atom("foo"), static_cast<uint32_t>(42));

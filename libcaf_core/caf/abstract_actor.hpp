@@ -192,7 +192,7 @@ class abstract_actor : public abstract_channel {
   }
 
   inline bool get_flag(actor_state_flag mask) const {
-    return static_cast<bool>(m_flags & static_cast<int>(mask));
+    return (m_flags & static_cast<int>(mask)) != 0;
   }
 
   /**

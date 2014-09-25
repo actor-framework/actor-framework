@@ -38,7 +38,9 @@ namespace caf {
 class scoped_actor;
 
 struct invalid_actor_t {
-  constexpr invalid_actor_t() {}
+  constexpr invalid_actor_t() {
+    // nop
+  }
 };
 
 /**

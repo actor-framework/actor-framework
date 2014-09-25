@@ -29,49 +29,50 @@ namespace detail {
 template <class T>
 struct boxed {
   using type = detail::wrapped<T>;
-
+  constexpr boxed() {
+    // nop
+  }
 };
 
 template <class T>
 struct boxed<detail::wrapped<T>> {
   using type = detail::wrapped<T>;
-
+  constexpr boxed() {
+    // nop
+  }
 };
 
 template <>
 struct boxed<anything> {
   using type = anything;
-
+  constexpr boxed() {
+    // nop
+  }
 };
 
 template <class T>
 struct is_boxed {
   static constexpr bool value = false;
-
 };
 
 template <class T>
 struct is_boxed<detail::wrapped<T>> {
   static constexpr bool value = true;
-
 };
 
 template <class T>
 struct is_boxed<detail::wrapped<T>()> {
   static constexpr bool value = true;
-
 };
 
 template <class T>
 struct is_boxed<detail::wrapped<T>(&)()> {
   static constexpr bool value = true;
-
 };
 
 template <class T>
 struct is_boxed<detail::wrapped<T>(*)()> {
   static constexpr bool value = true;
-
 };
 
 } // namespace detail

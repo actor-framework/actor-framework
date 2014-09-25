@@ -26,13 +26,17 @@ namespace detail {
 template <class T>
 struct wrapped {
   using type = T;
-
+  constexpr wrapped() {
+    // nop
+  }
 };
 
 template <class T>
 struct wrapped<wrapped<T>> {
   using type = typename wrapped<T>::type;
-
+  constexpr wrapped() {
+    // nop
+  }
 };
 
 } // namespace detail

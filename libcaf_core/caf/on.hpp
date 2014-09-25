@@ -85,31 +85,28 @@ struct boxed_and_callable_to_void
   : to_void_impl<is_boxed<T>::value || detail::is_callable<T>::value, T> {};
 
 class behavior_rvalue_builder {
-
  public:
-
   constexpr behavior_rvalue_builder(const duration& d) : m_tout(d) {}
 
   template <class F>
   timeout_definition<F> operator>>(F&& f) const {
-    return {m_tout, std::forward<F>(f)};
+    return timeout_definition<F>{m_tout, std::forward<F>(f)};
   }
 
  private:
-
   duration m_tout;
-
 };
 
 struct rvalue_builder_args_ctor {};
 
 template <class Left, class Right>
 struct disjunct_rvalue_builders {
-
  public:
-
   disjunct_rvalue_builders(Left l, Right r)
-      : m_left(std::move(l)), m_right(std::move(r)) {}
+      : m_left(std::move(l)), 
+        m_right(std::move(r)) {
+    // nop
+  }
 
   template <class Expr>
   auto operator>>(Expr expr)
@@ -120,10 +117,8 @@ struct disjunct_rvalue_builders {
   }
 
  private:
-
   Left m_left;
   Right m_right;
-
 };
 
 struct tuple_maker {
@@ -132,7 +127,6 @@ struct tuple_maker {
     -> decltype(std::make_tuple(std::forward<Ts>(args)...)) {
     return std::make_tuple(std::forward<Ts>(args)...);
   }
-
 };
 
 template <class Transformers, class Pattern>
@@ -195,7 +189,6 @@ struct rvalue_builder {
   operator||(rvalue_builder<T, P> other) const {
     return {*this, std::move(other)};
   }
-
 };
 
 template <bool IsCallable, typename T>
@@ -203,7 +196,7 @@ struct pattern_type_ {
   using ctrait = detail::get_callable_trait<T>;
   using args = typename ctrait::arg_types;
   static_assert(detail::tl_size<args>::value == 1,
-          "only unary functions allowed");
+                "only unary functions allowed");
   using type =
     typename std::decay<
       typename detail::tl_head<args>::type
@@ -306,13 +299,11 @@ __unspecified__ lift_to_match_expr(T arg);
 #else
 
 template <class T>
-constexpr typename detail::boxed<T>::type val() {
+typename detail::boxed<T>::type val() {
   return typename detail::boxed<T>::type();
 }
 
-using boxed_arg_match_t = typename detail::boxed<detail::arg_match_t>::type;
-
-constexpr boxed_arg_match_t arg_match = boxed_arg_match_t();
+constexpr detail::arg_match_t arg_match = detail::arg_match_t{};
 
 template <class T, typename Predicate>
 std::function<optional<T>(const T&)> guarded(Predicate p, T value) {
@@ -327,6 +318,10 @@ std::function<optional<T>(const T&)> guarded(Predicate p, T value) {
 // special case covering arg_match as argument to guarded()
 template <class T, typename Predicate>
 unit_t guarded(Predicate, const detail::wrapped<T>&) {
+  return unit;
+}
+
+inline unit_t to_guard(const detail::arg_match_t&) {
   return unit;
 }
 
@@ -411,7 +406,7 @@ decltype(on(A0, A1, A2, A3, val<Ts>()...)) on() {
 }
 
 template <class Rep, class Period>
-constexpr detail::behavior_rvalue_builder
+detail::behavior_rvalue_builder
 after(const std::chrono::duration<Rep, Period>& d) {
   return {duration(d)};
 }
@@ -423,9 +418,7 @@ inline decltype(on<anything>()) others() { return on<anything>(); }
 namespace detail {
 
 class on_the_fly_rvalue_builder {
-
  public:
-
   constexpr on_the_fly_rvalue_builder() {}
 
   template <class Expr>
@@ -441,7 +434,6 @@ class on_the_fly_rvalue_builder {
       >::type;
     return result_type{std::move(expr)};
   }
-
 };
 
 } // namespace detail

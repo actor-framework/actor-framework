@@ -31,18 +31,13 @@ namespace caf {
  */
 template <template <class...> class R, class... Rs,
           template <class...> class L, class... Ls>
-constexpr int check_typed_input(const R<Rs...>&, const L<Ls...>&) {
+void check_typed_input(const R<Rs...>&, const L<Ls...>&) {
   static_assert(detail::tl_find<
                   detail::type_list<Ls...>,
                   atom_value
                 >::value == -1,
                 "atom(...) notation is not sufficient for static type "
                 "checking, please use atom_constant instead in this context");
-  static_assert(detail::tl_find_if<
-                  detail::type_list<Rs...>,
-                  detail::input_is<detail::type_list<Ls...>>::template eval
-                >::value >= 0, "typed actor does not support given input");
-  return 0;
 }
 
 } // namespace caf

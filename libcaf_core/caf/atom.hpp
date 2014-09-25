@@ -40,10 +40,14 @@ enum class atom_value : uint64_t {
  * Creates an atom from given string literal.
  */
 template <size_t Size>
-constexpr atom_value atom(char const (&str)[Size]) {
+constexpr atom_value atom(const char (&str)[Size]) {
   // last character is the NULL terminator
   static_assert(Size <= 11, "only 10 characters are allowed");
-  return static_cast<atom_value>(detail::atom_val(str, 0xF));
+# ifdef CAF_MSVC
+  return static_cast<atom_value>(detail::atom_val(0, Size, str));
+# else
+  return static_cast<atom_value>(detail::atom_val(str));
+# endif
 }
 
 /**

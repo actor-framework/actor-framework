@@ -35,14 +35,13 @@ struct ieee_754_trait;
 
 template <>
 struct ieee_754_trait<float> {
-  static constexpr uint32_t bits = 32;   // number of bits
-  static constexpr uint32_t expbits = 8; // bits used for exponent
-  static constexpr float zero = 0.0f;    // the value 0
-  static constexpr float p5 = 0.5f;      // the value 0.5
+  inline uint32_t bits() { return 32; }   // number of bits
+  inline uint32_t expbits() { return 8; } // bits for exponent
+  inline float zero() { return 0.0f; }    // the value 0
+  inline float p5() { return 0.5f; }      // the value 0.5
   using packed_type = uint32_t;          // unsigned integer type
   using signed_packed_type = int32_t;    // signed integer type
   using float_type = float;              // floating point type
-
 };
 
 template <>
@@ -50,14 +49,13 @@ struct ieee_754_trait<uint32_t> : ieee_754_trait<float> {};
 
 template <>
 struct ieee_754_trait<double> {
-  static constexpr uint64_t bits = 64;
-  static constexpr uint64_t expbits = 11;
-  static constexpr double zero = 0.0;
-  static constexpr double p5 = 0.5;
+  inline uint32_t bits() { return 64; }    // number of bits
+  inline uint32_t expbits() { return 11; } // bits for exponent
+  inline float zero() { return 0.0; }      // the value 0
+  inline float p5() { return 0.5; }        // the value 0.5
   using packed_type = uint64_t;
   using signed_packed_type = int64_t;
   using float_type = double;
-
 };
 
 template <>
@@ -65,13 +63,14 @@ struct ieee_754_trait<uint64_t> : ieee_754_trait<double> {};
 
 template <class T>
 typename ieee_754_trait<T>::packed_type pack754(T f) {
-  typedef ieee_754_trait<T> trait; // using trait = ... fails on GCC 4.7
-  using result_type = typename trait::packed_type;
+  ieee_754_trait<T> trait;
+  using result_type = typename ieee_754_trait<T>::packed_type;
   // filter special type
-  if (std::fabs(f) <= trait::zero) {
-    return 0; // only true if f equals +0 or -0
+  if (fabs(f) <= trait.zero()) {
+    // only true if f equals +0 or -0
+    return 0;
   }
-  auto significandbits = trait::bits - trait::expbits - 1; // -1 for sign bit
+  auto significandbits = trait.bits() - trait.expbits() - 1; // -1 for sign bit
   // check sign and begin normalization
   result_type sign;
   T fnorm;
@@ -96,31 +95,34 @@ typename ieee_754_trait<T>::packed_type pack754(T f) {
   // calculate 2^significandbits
   auto pownum = static_cast<T>(result_type{1} << significandbits);
   // calculate the binary form (non-float) of the significand data
-  auto significand = static_cast<result_type>(fnorm * (pownum + trait::p5));
+  auto significand = static_cast<result_type>(fnorm * (pownum + trait.p5()));
   // get the biased exponent
-  auto exp = shift + ((1 << (trait::expbits - 1)) - 1); // shift + bias
+  auto exp = shift + ((1 << (trait.expbits() - 1)) - 1); // shift + bias
   // return the final answer
-  return (sign << (trait::bits - 1))
-         | (exp << (trait::bits - trait::expbits - 1)) | significand;
+  return (sign << (trait.bits() - 1))
+         | (exp << (trait.bits() - trait.expbits() - 1))
+         | significand;
 }
 
 template <class T>
 typename ieee_754_trait<T>::float_type unpack754(T i) {
-  typedef ieee_754_trait<T> trait; // using trait = ... fails on GCC 4.7
-  using signed_type = typename trait::signed_packed_type;
-  using result_type = typename trait::float_type;
-  if (i == 0) return trait::zero;
-  auto significandbits = trait::bits - trait::expbits - 1; // -1 for sign bit
+  ieee_754_trait<T> trait; // using trait = ... fails on GCC 4.7
+  using signed_type = typename ieee_754_trait<T>::signed_packed_type;
+  using result_type = typename ieee_754_trait<T>::float_type;
+  if (i == 0) {
+    return trait.zero();
+  }
+  auto significandbits = trait.bits() - trait.expbits() - 1; // -1 for sign bit
   // pull the significand: mask, convert back to float + add the one back on
   auto result = static_cast<result_type>(i & ((T{1} << significandbits) - 1));
   result /= static_cast<result_type>(T{1} << significandbits);
   result += static_cast<result_type>(1);
   // deal with the exponent
   auto si = static_cast<signed_type>(i);
-  auto bias = (1 << (trait::expbits - 1)) - 1;
-  auto pownum = static_cast<signed_type>(1) << trait::expbits;
-  auto shift = static_cast<signed_type>(
-    ((si >> significandbits) & (pownum - 1)) - bias);
+  auto bias = (1 << (trait.expbits() - 1)) - 1;
+  auto pownum = static_cast<signed_type>(1) << trait.expbits();
+  auto shift = static_cast<signed_type>(((si >> significandbits) & (pownum - 1))
+                                        - bias);
   while (shift > 0) {
     result *= static_cast<result_type>(2);
     --shift;
@@ -130,7 +132,7 @@ typename ieee_754_trait<T>::float_type unpack754(T i) {
     ++shift;
   }
   // sign it
-  result *= (i >> (trait::bits - 1)) & 1 ? -1 : 1;
+  result *= (i >> (trait.bits() - 1)) & 1 ? -1 : 1;
   return result;
 }
 

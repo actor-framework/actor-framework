@@ -115,7 +115,8 @@ if(MORE_WARNINGS)
                "-Wno-global-constructors -Wno-missing-prototypes "
                "-Wno-c++98-compat-pedantic -Wno-unused-member-function "
                "-Wno-unused-const-variable -Wno-switch-enum "
-               "-Wno-missing-noreturn -Wno-covered-switch-default")
+               "-Wno-missing-noreturn -Wno-covered-switch-default "
+               "-Wno-missing-braces")
   elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
     set(WFLAGS "-Waddress -Wall -Warray-bounds "
                "-Wattributes -Wbuiltin-macro-redefined -Wcast-align "
@@ -142,7 +143,7 @@ if(MORE_WARNINGS)
   set(EXTRA_FLAGS "${EXTRA_FLAGS} ${WFLAGS_STR}")
 endif()
 # add -stdlib=libc++ when using Clang
-if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+if(${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
   message(STATUS "NOTE: Automatically added -stdlib=libc++ flag, "
                  "you can override this by defining CMAKE_CXX_FLAGS "
                  "(see 'configure --help')")
@@ -274,6 +275,7 @@ if(NOT CAF_BUILD_STATIC_ONLY)
 else()
   set(LIBCAF_CORE_LIBRARY libcaf_coreStatic)
 endif()
+message(STATUS "LIBCAF_CORE_LIBRARY = ${LIBCAF_CORE_LIBRARY}")
 message(STATUS "Enter subdirectory libcaf_io")
 add_subdirectory(libcaf_io)
 # set io lib for sub directories
@@ -282,6 +284,7 @@ if(NOT CAF_BUILD_STATIC_ONLY)
 else()
   set(LIBCAF_IO_LIBRARY libcaf_ioStatic)
 endif()
+message(STATUS "LIBCAF_IO_LIBRARY = ${LIBCAF_IO_LIBRARY}")
 # set opencl lib for sub directories if not told otherwise
 if(NOT CAF_NO_OPENCL AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
   message(STATUS "Enter subdirectory libcaf_opencl")
@@ -294,11 +297,10 @@ if(NOT CAF_NO_OPENCL AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/CMakeLists.tx
   endif()
 endif()
 # tell CMake caf_io depends on caf_core
-if(CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
-  add_dependencies(libcaf_ioStatic libcaf_coreStatic)
-endif()
 if(NOT CAF_BUILD_STATIC_ONLY)
-  add_dependencies(libcaf_io libcaf_core)
+  set(libcaf_ioStatic libcaf_coreStatic)
+else()
+  set(libcaf_io libcaf_core)
 endif()
 # set LIBCAF_LIBRARIES for other subprojects
 set(LIBCAF_LIBRARIES "${LIBCAF_CORE_LIBRARY}"
@@ -309,7 +311,7 @@ if(NOT CAF_NO_UNIT_TESTS)
   enable_testing()
   message(STATUS "Enter subdirectory unit_testing")
   add_subdirectory(unit_testing)
-  add_dependencies(all_unit_tests libcaf_io)
+  add_dependencies(all_unit_tests ${LIBCAF_IO_LIBRARY})
   if(NOT CAF_NO_OPENCL AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
     add_subdirectory(libcaf_opencl/unit_testing)
   endif()

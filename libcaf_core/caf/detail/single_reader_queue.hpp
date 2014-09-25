@@ -29,6 +29,10 @@
 
 #include "caf/config.hpp"
 
+#if defined(CAF_WINDOWS) && defined(max)
+#undef max
+#endif
+
 namespace caf {
 namespace detail {
 
