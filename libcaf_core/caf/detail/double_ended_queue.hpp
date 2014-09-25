@@ -109,18 +109,19 @@ class double_ended_queue {
   static_assert(sizeof(node*) < CAF_CACHE_LINE_SIZE,
                 "sizeof(node*) >= CAF_CACHE_LINE_SIZE");
 
-  double_ended_queue()
-      : m_head_lock(ATOMIC_FLAG_INIT),
-        m_tail_lock(ATOMIC_FLAG_INIT) {
+  double_ended_queue() {
+    m_head_lock.clear();
+    m_tail_lock.clear();
     auto ptr = new node(nullptr);
     m_head = ptr;
     m_tail = ptr;
   }
 
   ~double_ended_queue() {
-    while (m_head) {
-      unique_node_ptr tmp{m_head.load()};
-      m_head = tmp->next.load();
+    auto ptr = m_head.load();
+    while (ptr) {
+      unique_node_ptr tmp{ptr};
+      ptr = tmp->next.load();
     }
   }
 
