@@ -551,7 +551,8 @@ void default_multiplexer::wr_dispatch_request(runnable* ptr) {
     ::send(m_pipe.second, reinterpret_cast<socket_send_ptr>(&ptrval),
            sizeof(ptrval), 0);
 # else
-    ::write(m_pipe.second, &ptrval, sizeof(ptrval));
+    auto unused = ::write(m_pipe.second, &ptrval, sizeof(ptrval));
+    static_cast<void>(unused);
 # endif
 }
 
@@ -562,7 +563,8 @@ default_multiplexer::runnable* default_multiplexer::rd_dispatch_request() {
     ::recv(m_pipe.first, reinterpret_cast<socket_recv_ptr>(&ptrval),
            sizeof(ptrval), 0);
 # else
-    ::read(m_pipe.first, &ptrval, sizeof(ptrval));
+    auto unused = ::read(m_pipe.first, &ptrval, sizeof(ptrval));
+    static_cast<void>(unused);
 # endif
   return reinterpret_cast<runnable*>(ptrval);;
 }
