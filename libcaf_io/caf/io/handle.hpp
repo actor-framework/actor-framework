@@ -36,7 +36,9 @@ class handle : detail::comparable<Subtype> {
     // nop
   }
 
-  handle(const Subtype& other) { m_id = other.id(); }
+  handle(const Subtype& other) {
+    m_id = other.id(); 
+  }
 
   handle(const handle& other) = default;
 
@@ -48,25 +50,37 @@ class handle : detail::comparable<Subtype> {
   /**
    * Returns the unique identifier of this handle.
    */
-  inline int64_t id() const { return m_id; }
+  int64_t id() const {
+    return m_id; 
+  }
 
   /**
    * Sets the unique identifier of this handle.
    */
-  inline void set_id(int64_t value) { m_id = value; }
+  void set_id(int64_t value) {
+    m_id = value;
+  }
 
-  inline int64_t compare(const Subtype& other) const {
+  int64_t compare(const Subtype& other) const {
     return m_id - other.id();
   }
 
-  inline bool invalid() const { return m_id == -1; }
+  bool invalid() const { 
+    return m_id == InvalidId;
+  }
 
-  static inline Subtype from_int(int64_t id) {
+  void set_invalid() {
+    set_id(InvalidId);
+  }
+
+  static Subtype from_int(int64_t id) {
     return {id};
   }
 
  protected:
-  inline handle(int64_t handle_id) : m_id{handle_id} {}
+  handle(int64_t handle_id) : m_id{handle_id} {
+    // nop
+  }
 
  private:
   int64_t m_id;

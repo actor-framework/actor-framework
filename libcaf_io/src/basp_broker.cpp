@@ -74,7 +74,7 @@ behavior basp_broker::make_behavior() {
         auto& entry = kvp.second;
         if (entry.first.hdl == msg.handle) {
           CAF_LOG_DEBUG("lost direct connection to " << to_string(kvp.first));
-          entry.first.hdl = invalid_connection_handle;
+          entry.first.hdl.set_invalid();
         }
         auto last = entry.second.end();
         auto i = std::lower_bound(entry.second.begin(), last, msg.handle,
