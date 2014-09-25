@@ -27,7 +27,6 @@
 #include "caf/optional.hpp"
 #include "cppa/cow_tuple.hpp"
 
-#include "caf/detail/type_traits.hpp"
 #include "caf/detail/limited_vector.hpp"
 
 #include "caf/opencl/global.hpp"
@@ -77,7 +76,7 @@ struct cl_spawn_helper<R(Ts...), void> {
     using std::move;
     using std::forward;
     map_arg_fun f0 = [](message msg) {
-      return tuple_cast<typename detail::rm_const_and_ref<
+      return tuple_cast<typename std::decay<
         typename carr_to_vec<Ts>::type>::type...>(msg);
     };
     map_res_fun f1 = [](result_type& result) {

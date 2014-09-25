@@ -56,7 +56,7 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
 
  public:
   using args_tuple =
-    cow_tuple<typename detail::rm_const_and_ref<Args>::type...>;
+    cow_tuple<typename std::decay<Args>::type...>;
 
   using arg_mapping = std::function<optional<args_tuple>(message)>;
   using result_mapping = std::function<message(Ret&)>;
