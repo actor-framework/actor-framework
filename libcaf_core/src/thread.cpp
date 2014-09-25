@@ -1,6 +1,8 @@
 
 #include <time.h>
 
+#include <cerrno>
+
 #include "caf/thread.hpp"
 
 namespace caf {
