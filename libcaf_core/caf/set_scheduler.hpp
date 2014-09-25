@@ -29,6 +29,8 @@
 #include "caf/scheduler/coordinator.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 
+#include "caf/detail/disable_msvc_defs.hpp"
+
 namespace caf {
 /**
  * Sets a user-defined scheduler.

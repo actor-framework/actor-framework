@@ -29,6 +29,11 @@
 
 #include "caf/detail/safe_equal.hpp"
 
+#ifdef CAF_MSVC
+#pragma warning(push)
+#pragma warning(disable : 4624)
+#endif
+
 namespace caf {
 
 /**
@@ -333,5 +338,9 @@ bool operator!=(const none_t&, const optional<T>& val) {
 }
 
 } // namespace caf
+
+#ifdef CAF_MSVC
+#pragma warning(pop)
+#endif
 
 #endif // CAF_OPTIONAL_HPP

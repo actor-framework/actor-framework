@@ -31,6 +31,7 @@
 #include <type_traits>
 
 #include "caf/fwd.hpp"
+#include "caf/config.hpp"
 #include "caf/node_id.hpp"
 #include "caf/attachable.hpp"
 #include "caf/message_id.hpp"
@@ -40,6 +41,11 @@
 
 #include "caf/detail/type_traits.hpp"
 #include "caf/detail/functor_attachable.hpp"
+
+#ifdef CAF_MSVC
+#pragma warning(push)
+#pragma warning(disable : 4800)
+#endif
 
 namespace caf {
 
@@ -297,5 +303,9 @@ class abstract_actor : public abstract_channel {
 };
 
 } // namespace caf
+
+#ifdef CAF_MSVC
+#pragma warning(pop)
+#endif
 
 #endif // CAF_ABSTRACT_ACTOR_HPP

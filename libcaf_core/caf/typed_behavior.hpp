@@ -174,7 +174,7 @@ class typed_actor;
 namespace mixin {
 template <class, class, class>
 class behavior_stack_based_impl;
-}
+} // namespace mixin
 
 template <class... Rs>
 class typed_behavior {

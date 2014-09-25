@@ -52,6 +52,8 @@
 # include <fcntl.h>
 #endif
 
+#include "caf/detail/disable_msvc_defs.hpp"
+
 namespace caf {
 namespace io {
 

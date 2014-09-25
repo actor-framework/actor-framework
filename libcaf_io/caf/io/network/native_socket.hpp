@@ -20,6 +20,8 @@
 #ifndef CAF_IO_NETWORK_NATIVE_SOCKET_HPP
 #define CAF_IO_NETWORK_NATIVE_SOCKET_HPP
 
+#include <cstddef>
+
 #include "caf/config.hpp"
 
 namespace caf {
@@ -27,7 +29,7 @@ namespace io {
 namespace network {
 
 #ifdef CAF_WINDOWS
-  using native_socket = unsigned;
+  using native_socket = size_t;
   constexpr native_socket invalid_native_socket = static_cast<unsigned>(-1);
   inline int64_t int64_from_native_socket(native_socket sock) {
     return sock == invalid_native_socket ? -1 : static_cast<uint64_t>(sock);

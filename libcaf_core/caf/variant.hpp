@@ -20,11 +20,17 @@
 #ifndef CAF_VARIANT_HPP
 #define CAF_VARIANT_HPP
 
+#include "caf/config.hpp"
 #include "caf/static_visitor.hpp"
 
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/detail/variant_data.hpp"
+
+#ifdef CAF_MSVC
+#pragma warning(push)
+#pragma warning(disable : 4624)
+#endif
 
 #define CAF_VARIANT_CASE(x)                                                    \
   case x:                                                                      \
@@ -317,5 +323,9 @@ typename Visitor::result_type apply_visitor(Visitor& visitor,
 }
 
 } // namespace caf
+
+#ifdef CAF_MSVC
+#pragma warning(pop)
+#endif
 
 #endif // CAF_VARIANT_HPP

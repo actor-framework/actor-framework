@@ -25,7 +25,7 @@ set (LIBCAF_IO_SRCS
      src/multiplexer.cpp)
 
 # build shared library if not compiling static only
-if (NOT "${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes")
+if (NOT CAF_BUILD_STATIC_ONLY)
   add_library(libcaf_io SHARED ${LIBCAF_IO_SRCS} ${LIBCAF_IO_HDRS})
   target_link_libraries(libcaf_io ${LD_FLAGS} ${LIBCAF_CORE_LIBRARY})
   set(LIBRARY_SOVERSION ${CAF_VERSION_MAJOR})
@@ -40,9 +40,9 @@ if (NOT "${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes")
 endif ()
 
 # build static library only if --build-static or --build-static-only was set
-if ("${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes" OR "${CAF_BUILD_STATIC}" STREQUAL "yes")
+if (CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
   add_library(libcaf_ioStatic STATIC ${LIBCAF_IO_HDRS} ${LIBCAF_IO_SRCS})
-  set_target_properties(libcaf_ioStatic PROPERTIES OUTPUT_NAME caf_io_static)
+  set_target_properties(libcaf_ioStatic PROPERTIES OUTPUT_NAME caf_io)
   if(NOT WIN32)
     install(TARGETS libcaf_ioStatic ARCHIVE DESTINATION lib)
   endif()

@@ -56,6 +56,15 @@ actor spawn_io_client(F fun, const std::string& host,
   // prevent warning about unused local type
   static_assert(std::is_same<fun_res, fun_res>::value,
                 "your compiler is lying to you");
+# ifdef CAF_MSVC
+  return spawn_class<broker::functor_based>(
+        nullptr,
+        [&](broker::functor_based* ptr) {
+          auto mm = middleman::instance();
+          auto hdl = mm->backend().add_tcp_scribe(ptr, host, port);
+          ptr->init(fun, hdl, std::forward<Ts>(args)...);
+  });
+# else
   // works around an issue with older GCC releases that could not handle
   // variadic template parameter packs inside lambdas by storing into a
   // std::function first (using `auto init =` won't compile on Clang)
@@ -70,6 +79,7 @@ actor spawn_io_client(F fun, const std::string& host,
           auto hdl = mm->backend().add_tcp_scribe(ptr, host, port);
           init(ptr, fun, hdl);
         });
+# endif
 }
 
 /**
@@ -78,6 +88,15 @@ actor spawn_io_client(F fun, const std::string& host,
 template <spawn_options Os = no_spawn_options,
           class F = std::function<void(broker*)>, class... Ts>
 actor spawn_io_server(F fun, uint16_t port, Ts&&... args) {
+# ifdef CAF_MSVC
+  return spawn_class<broker::functor_based>(
+       nullptr,
+       [&](broker::functor_based* ptr) {
+         auto mm = middleman::instance();
+         mm->backend().add_tcp_doorman(ptr, port);
+         ptr->init(std::move(fun), std::forward<Ts>(args)...);
+       });
+# else
   // same workaround as above
   auto mfptr = &broker::functor_based::init<F, Ts...>;
   using bi = std::function<void (broker::functor_based*, F)>;
@@ -90,6 +109,7 @@ actor spawn_io_server(F fun, uint16_t port, Ts&&... args) {
           mm->backend().add_tcp_doorman(ptr, port);
           init(ptr, std::move(fun));
         });
+# endif
 }
 
 } // namespace io

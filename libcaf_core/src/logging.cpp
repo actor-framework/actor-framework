@@ -17,17 +17,20 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/config.hpp"
+#include "caf/detail/logging.hpp"
+
 #include <ctime>
 #include <thread>
 #include <cstring>
 #include <fstream>
 #include <algorithm>
-#include <pthread.h>
 #include <condition_variable>
 
-#ifndef CAF_WINDOWS
-#include <unistd.h>
-#include <sys/types.h>
+#ifdef CAF_MSVC
+#include <Windows.h>
+#else
+#include <pthread.h>
 #endif
 
 #include "caf/config.hpp"
@@ -42,7 +45,7 @@
 #include "caf/all.hpp"
 #include "caf/actor_proxy.hpp"
 
-#include "caf/detail/logging.hpp"
+#include "caf/detail/get_process_id.hpp"
 #include "caf/detail/single_reader_queue.hpp"
 
 namespace caf {
@@ -50,13 +53,19 @@ namespace detail {
 
 namespace {
 
+#ifdef CAF_MSVC
+thread_local actor_id t_self_id;
+#else
 __thread actor_id t_self_id;
+#endif
 
-constexpr struct pop_aid_log_event_t {
+struct pop_aid_log_event_t {
   constexpr pop_aid_log_event_t() {
     // nop
   }
-} pop_aid_log_event;
+};
+
+constexpr auto pop_aid_log_event = pop_aid_log_event_t{};
 
 struct log_event {
   log_event* next;
@@ -95,7 +104,7 @@ class logging_impl : public logging {
 
   void operator()() {
     std::ostringstream fname;
-    fname << "actor_log_" << getpid() << "_" << time(0) << ".log";
+    fname << "actor_log_" << get_process_id() << "_" << time(0) << ".log";
     std::fstream out(fname.str().c_str(), std::ios::out | std::ios::app);
     std::unique_ptr<log_event> event;
     for (;;) {

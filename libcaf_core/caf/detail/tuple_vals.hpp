@@ -80,10 +80,13 @@ class tuple_vals : public message_data {
   tuple_vals(const tuple_vals&) = default;
 
   template <class... Us>
-  tuple_vals(Us&&... args)
-      : m_data(std::forward<Us>(args)...),
-        m_types{{tuple_vals_type_helper<Ts>::get()...}} {
-    // nop
+  tuple_vals(Us&&... args) : m_data(std::forward<Us>(args)...) {
+    // this is a complicated way to do things... but it's the only way
+    // supported by all GCC releases as well as MSVC
+    std::initializer_list<tuple_vals_rtti> il = {
+      tuple_vals_type_helper<Ts>::get()...
+    };
+    std::copy(il.begin(), il.end(), std::begin(m_types));
   }
 
   data_type& data() {
@@ -140,7 +143,7 @@ class tuple_vals : public message_data {
 
  private:
   data_type m_data;
-  std::array<tuple_vals_rtti, sizeof...(Ts)> m_types;
+  tuple_vals_rtti m_types[sizeof...(Ts)];
 };
 
 } // namespace detail

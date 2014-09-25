@@ -22,7 +22,14 @@
 
 namespace caf {
 
-struct none_t { inline explicit operator bool() const { return false; } };
+struct none_t {
+  constexpr none_t() {
+    // nop
+  }
+  inline explicit operator bool() const {
+    return false;
+  }
+};
 
 static constexpr none_t none = none_t{};
 

@@ -21,9 +21,15 @@
 #define CAF_ABSTRACT_CHANNEL_HPP
 
 #include "caf/fwd.hpp"
+#include "caf/config.hpp"
 #include "caf/node_id.hpp"
 #include "caf/message_id.hpp"
 #include "caf/ref_counted.hpp"
+
+#ifdef CAF_MSVC
+#pragma warning(push)
+#pragma warning(disable : 4800)
+#endif
 
 namespace caf {
 
@@ -103,5 +109,9 @@ class abstract_channel : public ref_counted {
 using abstract_channel_ptr = intrusive_ptr<abstract_channel>;
 
 } // namespace caf
+
+#ifdef CAF_MSVC
+#pragma warning(pop)
+#endif
 
 #endif // CAF_ABSTRACT_CHANNEL_HPP

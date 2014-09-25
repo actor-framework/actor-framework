@@ -31,6 +31,8 @@
 #include "caf/detail/actor_registry.hpp"
 #include "caf/detail/uniform_type_info_map.hpp"
 
+#include "caf/detail/disable_msvc_defs.hpp"
+
 namespace caf {
 namespace detail {
 

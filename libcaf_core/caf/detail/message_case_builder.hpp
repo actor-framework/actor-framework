@@ -190,12 +190,7 @@ struct pattern_projection_zipper<anything, Y> {
   using type = none_t;
 };
 
-template <class Projections, class Pattern,
-          bool UsesArgMatch =
-            std::is_same<
-              arg_match_t,
-              typename tl_back<Pattern>::type
-            >::value>
+template <class Projections, class Pattern, bool UsesArgMatch>
 class advanced_match_case_builder : public message_case_builder {
  public:
   using guards_tuple =

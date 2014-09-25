@@ -193,7 +193,7 @@ class trivial_match_case : public match_case {
     intermediate_tuple it;
     detail::meta_elements<pattern> ms;
     // check if try_match() reports success
-    if (!detail::try_match(msg, ms.arr.data(), ms.arr.size(), it.data)) {
+    if (!detail::try_match(msg, ms.data(), ms.size(), it.data)) {
       return match_case::no_match;
     }
     // detach msg before invoking m_fun if needed
@@ -443,13 +443,20 @@ class advanced_match_case_impl : public
     intermediate_tuple it;
     detail::meta_elements<pattern> ms;
     // check if try_match() reports success
-    if (!detail::try_match(msg, ms.arr.data(), ms.arr.size(), it.data)) {
+    if (!detail::try_match(msg, ms.data(), ms.size(), it.data)) {
       return false;
     }
     match_case_zipper zip;
-    using indices_type = typename detail::il_indices<intermediate_tuple>::type;
-    //indices_type indices;
-    typename detail::il_take<indices_type, detail::tl_size<projections>::value - num_fun_args>::type lefts;
+    using indices_type =
+      typename detail::il_indices<
+        typename intermediate_tuple::types
+      >::type;
+    using left_indices =
+      typename detail::il_take<
+        indices_type,
+        detail::tl_size<projections>::value - num_fun_args
+      >::type;
+    left_indices lefts;
     typename detail::il_right<indices_type, num_fun_args>::type rights;
     has_none hn;
     // check if guards of discarded arguments are fulfilled

@@ -47,4 +47,16 @@ void blocking_actor::functor_based::act() {
   m_act(this);
 }
 
+blocking_actor::receive_loop_helper::receive_loop_helper(loop_fun loop)
+    : m_loop(std::move(loop)) {
+  // nop
+}
+
+blocking_actor::do_receive_helper::do_receive_helper(blocking_actor* self,
+                                                     behavior bhvr)
+    : m_self(self),
+      m_bhvr(std::move(bhvr)) {
+  // nop
+}
+
 } // namespace caf

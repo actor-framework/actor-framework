@@ -22,6 +22,7 @@
 
 #include <cstddef>
 
+#include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
 
 namespace caf {
@@ -30,6 +31,8 @@ namespace detail {
 // tuple-like access to an array of void pointers
 template <class... T>
 struct pseudo_tuple {
+  using types = type_list<T...>;
+
   using pointer = void*;
   using const_pointer = const void*;
 

@@ -27,6 +27,7 @@
 #include <chrono>
 #include <thread>
 #include <atomic>
+#include <memory>
 #include <cassert>
 
 // GCC hack

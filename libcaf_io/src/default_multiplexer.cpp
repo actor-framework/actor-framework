@@ -230,8 +230,8 @@ namespace network {
     ccall(cc_zero, "listen() failed", listen, listener, 1);
     // create read-only end of the pipe
     DWORD flags = 0;
-    auto read_fd = ccall(cc_valid_socket, WSASocket, AF_INET, SOCK_STREAM,
-                         0, NULL, 0, flags);
+    auto read_fd = ccall(cc_valid_socket, "WSASocket() failed", WSASocket,
+                         AF_INET, SOCK_STREAM, 0, NULL, 0, flags);
     ccall(cc_zero, "connect() failed", connect, read_fd,
           &a.addr, int{sizeof(a.inaddr)});
     // get write-only end of the pipe

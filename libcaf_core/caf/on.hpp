@@ -92,7 +92,7 @@ constexpr typename detail::boxed<T>::type val() {
  * of a given callback, must be the last argument to `on()`.
  */
 
-constexpr auto arg_match = typename detail::boxed<detail::arg_match_t>::type();
+constexpr detail::arg_match_t arg_match = detail::arg_match_t();
 
 /**
  * Generates function objects from a binary predicate and a value.
@@ -110,6 +110,10 @@ std::function<optional<T>(const T&)> guarded(BinaryPredicate p, T value) {
 // special case covering arg_match as argument to guarded()
 template <class T, typename Predicate>
 unit_t guarded(Predicate, const detail::wrapped<T>&) {
+  return unit;
+}
+
+inline unit_t to_guard(const detail::arg_match_t&) {
   return unit;
 }
 
@@ -150,16 +154,23 @@ auto to_guard(const atom_constant<V>&) -> decltype(to_guard(V)) {
 /**
  * Returns a generator for `match_case` objects.
  */
-template <class... Ts>
-auto on(const Ts&... args)
+template <class T, class... Ts>
+auto on(T arg, Ts... args)
 -> detail::advanced_match_case_builder<
     detail::type_list<
+      decltype(to_guard(arg)),
       decltype(to_guard(args))...
     >,
     detail::type_list<
-      typename detail::pattern_type<typename std::decay<Ts>::type>::type...>
-    > {
-  return {detail::variadic_ctor{}, to_guard(args)...};
+      typename detail::pattern_type<T>::type,
+      typename detail::pattern_type<Ts>::type...
+    >,
+    std::is_same<
+      detail::arg_match_t,
+      typename detail::tl_back<detail::type_list<T, Ts...>>::type
+    >::value
+  > {
+  return {detail::variadic_ctor{}, to_guard(arg), to_guard(args)...};
 }
 
 /**
@@ -221,7 +232,7 @@ constexpr auto others = detail::catch_all_match_case_builder();
  * Semantically equal to `on(arg_match)`, but uses a (faster)
  * special-purpose `match_case` implementation.
  */
-constexpr auto on_arg_match = detail::trivial_match_case_builder();
+constexpr detail::trivial_match_case_builder on_arg_match = detail::trivial_match_case_builder();
 
 } // namespace caf
 

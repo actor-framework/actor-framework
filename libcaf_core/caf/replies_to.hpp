@@ -75,10 +75,10 @@ struct typed_mpi<detail::type_list<Is...>,
     std::string output_opt1[] = {type_name_access<Ls>::get()...};
     // Rs... is allowed to be empty, hence we need to add a dummy element
     // to make sure this array is not of size 0 (to prevent compiler errors)
-    std::string output_opt2[] = {std::string(), type_name_access<Rs>::get()...};
+    std::string output_opt2[sizeof...(Rs) + 1] = {type_name_access<Rs>::get()...};
     return replies_to_type_name(sizeof...(Is), input,
                                 sizeof...(Ls), output_opt1,
-                                sizeof...(Rs), output_opt2 + 1);
+                                sizeof...(Rs), output_opt2);
   }
 };
 

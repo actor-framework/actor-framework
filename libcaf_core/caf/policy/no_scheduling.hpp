@@ -28,6 +28,7 @@
 
 #include "caf/duration.hpp"
 #include "caf/exit_reason.hpp"
+#include "caf/actor_ostream.hpp"
 
 #include "caf/policy/scheduling_policy.hpp"
 
@@ -38,10 +39,7 @@
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/detail/single_reader_queue.hpp"
 
-
-#include "caf/actor_ostream.hpp"
-
-
+#include "caf/detail/disable_msvc_defs.hpp"
 
 namespace caf {
 namespace policy {
