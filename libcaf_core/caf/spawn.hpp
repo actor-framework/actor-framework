@@ -124,7 +124,7 @@ intrusive_ptr<C> spawn_impl(execution_unit* host,
  */
 template <class T>
 typename std::conditional<
-  is_convertible_to_actor<typename detail::rm_const_and_ref<T>::type>::value,
+  is_convertible_to_actor<typename std::decay<T>::type>::value,
   actor,
   T&&
 >::type
@@ -138,7 +138,7 @@ spawn_fwd(typename std::remove_reference<T>::type& arg) noexcept {
  */
 template <class T>
 typename std::conditional<
-  is_convertible_to_actor<typename detail::rm_const_and_ref<T>::type>::value,
+  is_convertible_to_actor<typename std::decay<T>::type>::value,
   actor,
   T&&
 >::type

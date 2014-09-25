@@ -192,7 +192,7 @@ class response_handle<Self, detail::type_list<Ts...>,
     using arg_types =
       typename detail::tl_map<
         typename detail::get_callable_trait<F>::arg_types,
-        detail::rm_const_and_ref
+        std::decay
       >::type;
     static constexpr size_t fun_args = detail::tl_size<arg_types>::value;
     static_assert(fun_args <= detail::tl_size<result_types>::value,

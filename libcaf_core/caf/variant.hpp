@@ -202,7 +202,7 @@ class variant {
 
   template <class U>
   void set(U&& arg) {
-    using type = typename detail::rm_const_and_ref<U>::type;
+    using type = typename std::decay<U>::type;
     static constexpr int type_id = detail::tl_find_if<
                        types,
                        detail::tbind<

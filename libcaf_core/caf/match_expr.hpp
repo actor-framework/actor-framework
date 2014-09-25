@@ -410,7 +410,7 @@ struct get_case<false, Expr, Trans, Pattern> {
   using rhs_pattern =
     typename detail::tl_map<
       typename detail::get_callable_trait<Expr>::arg_types,
-      detail::rm_const_and_ref
+      std::decay
     >::type;
   using type =
     typename get_case_<
@@ -468,7 +468,7 @@ Result unroll_expr(PPFPs& fs, uint64_t bitmask, long_constant<N>,
   }
   if ((bitmask & (0x01 << N)) == 0) return none;
   auto& f = get<N>(fs);
-  using Fun = typename detail::rm_const_and_ref<decltype(f)>::type;
+  using Fun = typename std::decay<decltype(f)>::type;
   using pattern_type = typename Fun::pattern_type;
   //using policy = detail::invoke_util<pattern_type>;
   typedef detail::invoke_util<pattern_type> policy; // using fails on GCC 4.7
@@ -493,7 +493,7 @@ template <class Case, long N, class Tuple>
 inline uint64_t calc_bitmask(Case& fs, long_constant<N>,
                const std::type_info& tinf, const Tuple& tup) {
   auto& f = get<N>(fs);
-  using Fun = typename detail::rm_const_and_ref<decltype(f)>::type;
+  using Fun = typename std::decay<decltype(f)>::type;
   using pattern_type = typename Fun::pattern_type;
   using policy = detail::invoke_util<pattern_type>;
   uint64_t result = policy::can_invoke(tinf, tup) ? (0x01 << N) : 0x00;
@@ -525,7 +525,7 @@ struct mexpr_fwd {
       IsManipulator,
       T,
       typename detail::implicit_conversions<
-        typename detail::rm_const_and_ref<T>::type
+        typename std::decay<T>::type
       >::type
     >::type;
 };

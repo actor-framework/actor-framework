@@ -49,7 +49,7 @@ template <class T>
 struct purge_refs {
   using type =
     typename purge_refs_impl<
-      typename detail::rm_const_and_ref<T>::type
+      typename std::decay<T>::type
     >::type;
 };
 

@@ -157,14 +157,14 @@ class sync_sender_impl : public Base {
     typename detail::deduce_output_type<
       detail::type_list<Rs...>,
       typename detail::implicit_conversions<
-        typename detail::rm_const_and_ref<Ts>::type>::type...>::type,
+        typename std::decay<Ts>::type>::type...>::type,
     ResponseHandleTag>
   sync_send(message_priority prio, const typed_actor<Rs...>& dest,
         Ts&&... what) {
     return sync_send_impl(
       prio, dest,
       detail::type_list<typename detail::implicit_conversions<
-        typename detail::rm_const_and_ref<Ts>::type>::type...>{},
+        typename std::decay<Ts>::type>::type...>{},
       make_message(std::forward<Ts>(what)...));
   }
 
@@ -174,13 +174,13 @@ class sync_sender_impl : public Base {
     typename detail::deduce_output_type<
       detail::type_list<Rs...>,
       detail::type_list<typename detail::implicit_conversions<
-        typename detail::rm_const_and_ref<Ts>::type>::type...>>::type,
+        typename std::decay<Ts>::type>::type...>>::type,
     ResponseHandleTag>
   sync_send(const typed_actor<Rs...>& dest, Ts&&... what) {
     return sync_send_impl(
       message_priority::normal, dest,
       detail::type_list<typename detail::implicit_conversions<
-        typename detail::rm_const_and_ref<Ts>::type>::type...>{},
+        typename std::decay<Ts>::type>::type...>{},
       make_message(std::forward<Ts>(what)...));
   }
 
@@ -232,7 +232,7 @@ class sync_sender_impl : public Base {
     typename detail::deduce_output_type<
       detail::type_list<Rs...>,
       typename detail::implicit_conversions<
-        typename detail::rm_const_and_ref<Ts>::type>::type...>::type,
+        typename std::decay<Ts>::type>::type...>::type,
     ResponseHandleTag>
   timed_sync_send(message_priority prio, const typed_actor<Rs...>& dest,
           const duration& rtime, Ts&&... what) {
@@ -247,7 +247,7 @@ class sync_sender_impl : public Base {
     typename detail::deduce_output_type<
       detail::type_list<Rs...>,
       typename detail::implicit_conversions<
-        typename detail::rm_const_and_ref<Ts>::type>::type...>::type,
+        typename std::decay<Ts>::type>::type...>::type,
     ResponseHandleTag>
   timed_sync_send(const typed_actor<Rs...>& dest, const duration& rtime,
           Ts&&... what) {

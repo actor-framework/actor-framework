@@ -200,7 +200,7 @@ struct pattern_type_ {
   static_assert(detail::tl_size<args>::value == 1,
           "only unary functions allowed");
   using type =
-    typename detail::rm_const_and_ref<
+    typename std::decay<
       typename detail::tl_head<args>::type
     >::type;
 };
@@ -209,7 +209,7 @@ template <class T>
 struct pattern_type_<false, T> {
   using type =
     typename implicit_conversions<
-      typename detail::rm_const_and_ref<
+      typename std::decay<
         typename detail::unboxed<T>::type
       >::type
     >::type;

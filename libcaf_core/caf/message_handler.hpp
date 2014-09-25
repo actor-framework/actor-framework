@@ -96,7 +96,7 @@ class message_handler {
   template <class... Ts>
   typename std::conditional<
     detail::disjunction<may_have_timeout<
-      typename detail::rm_const_and_ref<Ts>::type>::value...>::value,
+      typename std::decay<Ts>::type>::value...>::value,
     behavior,
     message_handler
   >::type

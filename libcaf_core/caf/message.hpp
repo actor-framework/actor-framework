@@ -295,7 +295,7 @@ inline bool operator!=(const message& lhs, const message& rhs) {
  */
 template <class T, class... Ts>
 typename std::enable_if<
-  !std::is_same<message, typename detail::rm_const_and_ref<T>::type>::value
+  !std::is_same<message, typename std::decay<T>::type>::value
   || (sizeof...(Ts) > 0),
   message
 >::type

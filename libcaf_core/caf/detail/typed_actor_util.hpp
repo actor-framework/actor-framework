@@ -54,7 +54,7 @@ struct deduce_signature_helper<std::tuple<Rs...>, type_list<Ts...>> {
 template <class T>
 struct deduce_signature {
   using result_ = typename implicit_conversions<typename T::result_type>::type;
-  using arg_t = typename tl_map<typename T::arg_types, rm_const_and_ref>::type;
+  using arg_t = typename tl_map<typename T::arg_types, std::decay>::type;
   using type = typename deduce_signature_helper<result_, arg_t>::type;
 };
 
@@ -72,7 +72,7 @@ inline void assert_types() {
   using arg_types =
     typename tl_map<
       typename get_callable_trait<F>::arg_types,
-      rm_const_and_ref
+      std::decay
     >::type;
   static constexpr size_t fun_args = tl_size<arg_types>::value;
   static_assert(fun_args <= tl_size<OutputList>::value,

@@ -64,7 +64,7 @@ template <class T>
 struct strip_and_convert {
   using type =
     typename implicit_conversions<
-      typename rm_const_and_ref<T>::type
+      typename std::decay<T>::type
     >::type;
 };
 

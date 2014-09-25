@@ -121,11 +121,11 @@ compound_member(C& (Parent::*getter)(), const Ts&... args) {
 template <class Parent, class GRes, class SRes, class SArg, class... Ts>
 std::pair<std::pair<GRes (Parent::*)() const, SRes (Parent::*)(SArg)>,
           detail::abstract_uniform_type_info<
-            typename detail::rm_const_and_ref<GRes>::type>*>
+            typename std::decay<GRes>::type>*>
 compound_member(const std::pair<GRes (Parent::*)() const,
                 SRes (Parent::*)(SArg)>& gspair,
                 const Ts&... args) {
-  using mtype = typename detail::rm_const_and_ref<GRes>::type;
+  using mtype = typename std::decay<GRes>::type;
   return {gspair, new detail::default_uniform_type_info<mtype>(args...)};
 }
 

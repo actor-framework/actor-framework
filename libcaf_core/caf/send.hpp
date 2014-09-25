@@ -71,7 +71,7 @@ template <class... Rs, class... Ts>
 void anon_send(const typed_actor<Rs...>& whom, Ts&&... args) {
   check_typed_input(whom,
                     detail::type_list<typename detail::implicit_conversions<
-                      typename detail::rm_const_and_ref<Ts>::type
+                      typename std::decay<Ts>::type
                     >::type...>{});
   anon_send(actor_cast<channel>(whom), std::forward<Ts>(args)...);
 }

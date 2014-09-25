@@ -60,7 +60,7 @@ class message_builder {
    */
   template <class Iter>
   message_builder& append(Iter first, Iter last) {
-    using vtype = typename detail::rm_const_and_ref<decltype(*first)>::type;
+    using vtype = typename std::decay<decltype(*first)>::type;
     using converted = typename detail::implicit_conversions<vtype>::type;
     auto uti = uniform_typeid<converted>();
     for (; first != last; ++first) {
