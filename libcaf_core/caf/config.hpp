@@ -76,7 +76,7 @@
 #  define CAF_ANNOTATE_FALLTHROUGH static_cast<void>(0)
 #elif defined(_MSC_VER)
 #  define CAF_MSVC
-#  define CAF_DEPRECATED __declspec(deprecated)
+#  define CAF_DEPRECATED
 #  define CAF_PUSH_WARNINGS
 #  define CAF_POP_WARNINGS
 #  define CAF_ANNOTATE_FALLTHROUGH static_cast<void>(0)
