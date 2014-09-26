@@ -63,7 +63,6 @@ void condition_variable::notify_all() noexcept {
 
 void condition_variable::wait(unique_lock<mutex>& lock) noexcept {
   if (!lock.owns_lock()) {
-    // std::__throw_system_error(EPERM,
     throw std::runtime_error("condition_variable::wait: mutex not locked");
   }
   priority_queue_node_t n;
@@ -90,7 +89,6 @@ void condition_variable::wait(unique_lock<mutex>& lock) noexcept {
                                         time_point<system_clock,
                                                    nanoseconds> tp) noexcept {
   if (!lock.owns_lock()) {
-    //std::__throw_system_error(EPERM,
     throw std::runtime_error("condition_variable::timed wait: mutex not locked");
   }
   nanoseconds d = tp.time_since_epoch();

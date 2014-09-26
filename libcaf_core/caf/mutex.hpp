@@ -161,11 +161,9 @@ class unique_lock {
 template<class Mutex>
 void unique_lock<Mutex>::lock() {
   if (m_mtx == nullptr) {
-    //std::__throw_system_error(EPERM, "unique_lock::lock: references null mutex");
     throw std::runtime_error("unique_lock::lock: references null mutex");
   }
   if (m_owns) {
-    //std::__throw_system_error(EDEADLK, "unique_lock::lock: already locked");
     throw std::runtime_error("");
   }
   m_mtx->lock();
@@ -175,11 +173,9 @@ void unique_lock<Mutex>::lock() {
 template<class Mutex>
 bool unique_lock<Mutex>::try_lock() {
   if (m_mtx == nullptr) {
-    //std::__throw_system_error(EPERM,
     throw std::runtime_error("unique_lock::try_lock: references null mutex");
   }
   if (m_owns) {
-    //std::__throw_system_error(EDEADLK, "unique_lock::try_lock: already locked");
     throw std::runtime_error("unique_lock::try_lock lock: already locked");
   }
   m_owns = m_mtx->try_lock();
@@ -191,12 +187,10 @@ bool unique_lock<Mutex>::try_lock() {
 //bool unique_lock<Mutex>
 //  ::try_lock_for(const std::chrono::duration<Rep,Period>& timeout_duration) {
 //  if (m_mtx == nullptr) {
-//    std::__throw_system_error(EPERM, "unique_lock::try_lock_for:"
-//                                     " references null mutex");
+//    throw std::runtime_error("unique_lock::try_lock_for: references null mutex");
 //  }
 //  if (m_owns) {
-//    std::__throw_system_error(EDEADLK,
-//                              "unique_lock::try_lock_for: already locked");
+//    throw std::runtime_error("unique_lock::try_lock_for: already locked");
 //  }
 //  m_owns = m_mtx->try_lock_until(timeout_duration);
 //  return m_owns;
@@ -207,10 +201,10 @@ bool unique_lock<Mutex>::try_lock() {
 //bool unique_lock<Mutex>
 //  ::try_lock_until(const chrono::time_point<Clock, Duration>& timeout_time) {
 //    if (m_mtx == nullptr)
-//        __throw_system_error(EPERM, "unique_lock::try_lock_until: "
+//        throw std::runtime_error("unique_lock::try_lock_until: "
 //                                    "references null mutex");
 //    if (m_owns)
-//        __throw_system_error(EDEADLK, "unique_lock::try_lock_until: "
+//        throw std::runtime_error("unique_lock::try_lock_until: "
 //                                      "already locked");
 //    m_owns = m_mtx->try_lock_until(timeout_time);
 //    return m_owns;
@@ -219,7 +213,6 @@ bool unique_lock<Mutex>::try_lock() {
 template<class Mutex>
 void unique_lock<Mutex>::unlock() {
   if (!m_owns) {
-    //std::__throw_system_error(EPERM, "unique_lock::unlock: not locked");
     throw std::runtime_error("unique_lock::unlock: not locked");
   }
   m_mtx->unlock();
