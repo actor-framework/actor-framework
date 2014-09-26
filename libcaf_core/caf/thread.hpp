@@ -20,8 +20,6 @@
 #ifndef CAF_THREAD_HPP
 #define CAF_THREAD_HPP
 
-#include <time.h>
-
 #ifdef __RIOTBUILD_FLAG
 
 #include <tuple>
@@ -35,6 +33,7 @@
 #include <stdexcept>
 
 extern "C" {
+#include <time.h>
 #include "thread.h"
 }
 
@@ -193,7 +192,6 @@ thread::thread(F&& f, Args&&... args) {
  if (m_handle >= 0) {
    p.release();
  } else {
-   //std::__throw_system_error(static_cast<int>(m_handle),
    throw std::runtime_error("Failed to create thread.");
  }
 }
@@ -214,6 +212,8 @@ inline void swap (thread& lhs, thread& rhs) noexcept {
 } // namespace caf
 
 #else
+
+#include <time.h>
 
 #include <thread>
 
