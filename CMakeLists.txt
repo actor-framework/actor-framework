@@ -135,7 +135,7 @@ if(ENABLE_ADDRESS_SANITIZER)
   message(STATUS "Enable address sanitizer")
 endif(ENABLE_ADDRESS_SANITIZER)
 # -pthread is ignored on MacOSX, enable it for all other platforms
-if(NOT APPLE)
+if(NOT APPLE AND NOT WIN32)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 endif()
 # extra setup steps needed on MinGW
