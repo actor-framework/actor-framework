@@ -64,9 +64,9 @@ class proper_actor_base : public Policies::resume_policy::template
     scheduling_policy().enqueue(dptr(), sender, mid, msg, eu);
   }
 
-  inline void launch(bool hidden, execution_unit* host) {
+  inline void launch(bool hide, execution_unit* host) {
     CAF_LOG_TRACE("");
-    this->is_registered(!hidden);
+    this->is_registered(!hide);
     this->scheduling_policy().launch(this, host);
   }
 
