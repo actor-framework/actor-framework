@@ -21,6 +21,7 @@
 #define CAF_ATOM_HPP
 
 #include <string>
+#include <type_traits>
 
 #include "caf/detail/atom_val.hpp"
 
@@ -45,6 +46,9 @@ constexpr atom_value atom(char const (&str)[Size]) {
   static_assert(Size <= 11, "only 10 characters are allowed");
   return static_cast<atom_value>(detail::atom_val(str, 0xF));
 }
+
+template <atom_value Value>
+using atom_constant = std::integral_constant<atom_value, Value>;
 
 } // namespace caf
 

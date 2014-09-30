@@ -17,39 +17,28 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_TUPLE_ITERATOR_HPP
-#define CAF_DETAIL_TUPLE_ITERATOR_HPP
+#ifndef CAF_DETAIL_MESSAGE_ITERATOR_HPP
+#define CAF_DETAIL_MESSAGE_ITERATOR_HPP
 
 #include <cstddef>
 
-#include "caf/config.hpp"
+#include "caf/fwd.hpp"
 
 namespace caf {
 namespace detail {
 
-template <class Tuple>
+class message_data;
+
 class message_iterator {
-
-  size_t m_pos;
-  const Tuple* m_tuple;
-
  public:
+  using pointer = message_data*;
+  using const_pointer = const message_data*;
 
-  inline message_iterator(const Tuple* tup, size_t pos = 0)
-      : m_pos(pos), m_tuple(tup) {}
+  message_iterator(const_pointer data, size_t pos = 0);
 
   message_iterator(const message_iterator&) = default;
 
   message_iterator& operator=(const message_iterator&) = default;
-
-  inline bool operator==(const message_iterator& other) const {
-    CAF_REQUIRE(other.m_tuple == other.m_tuple);
-    return other.m_pos == m_pos;
-  }
-
-  inline bool operator!=(const message_iterator& other) const {
-    return !(*this == other);
-  }
 
   inline message_iterator& operator++() {
     ++m_pos;
@@ -57,13 +46,12 @@ class message_iterator {
   }
 
   inline message_iterator& operator--() {
-    CAF_REQUIRE(m_pos > 0);
     --m_pos;
     return *this;
   }
 
   inline message_iterator operator+(size_t offset) {
-    return {m_tuple, m_pos + offset};
+    return {m_data, m_pos + offset};
   }
 
   inline message_iterator& operator+=(size_t offset) {
@@ -72,29 +60,46 @@ class message_iterator {
   }
 
   inline message_iterator operator-(size_t offset) {
-    CAF_REQUIRE(m_pos >= offset);
-    return {m_tuple, m_pos - offset};
+    return {m_data, m_pos - offset};
   }
 
   inline message_iterator& operator-=(size_t offset) {
-    CAF_REQUIRE(m_pos >= offset);
     m_pos -= offset;
     return *this;
   }
 
-  inline size_t position() const { return m_pos; }
-
-  inline const void* value() const { return m_tuple->at(m_pos); }
-
-  inline const uniform_type_info* type() const {
-    return m_tuple->type_at(m_pos);
+  inline size_t position() const {
+    return m_pos;
   }
 
-  inline message_iterator& operator*() { return *this; }
+  inline const_pointer data() const {
+    return m_data;
+  }
 
+  const void* value() const;
+
+  const uniform_type_info* type() const;
+
+  inline message_iterator& operator*() {
+    return *this;
+  }
+
+ private:
+  size_t m_pos;
+  const message_data* m_data;
 };
+
+inline bool operator==(const message_iterator& lhs,
+                       const message_iterator& rhs) {
+  return lhs.data() == rhs.data() && lhs.position() == rhs.position();
+}
+
+inline bool operator!=(const message_iterator& lhs,
+                       const message_iterator& rhs) {
+  return !(lhs == rhs);
+}
 
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_TUPLE_ITERATOR_HPP
+#endif // CAF_DETAIL_MESSAGE_ITERATOR_HPP

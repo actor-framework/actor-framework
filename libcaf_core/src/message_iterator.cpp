@@ -17,50 +17,26 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_PSEUDO_TUPLE_HPP
-#define CAF_PSEUDO_TUPLE_HPP
+#include "caf/detail/message_iterator.hpp"
 
-#include <cstddef>
-
-#include "caf/detail/type_traits.hpp"
+#include "caf/detail/message_data.hpp"
 
 namespace caf {
 namespace detail {
 
-// tuple-like access to an array of void pointers
-template <class... T>
-struct pseudo_tuple {
-  using pointer = void*;
-  using const_pointer = const void*;
-
-  pointer data[sizeof...(T) > 0 ? sizeof...(T) : 1];
-
-  inline const_pointer at(size_t p) const { return data[p]; }
-
-  inline pointer mutable_at(size_t p) { return data[p]; }
-
-  inline pointer& operator[](size_t p) { return data[p]; }
-
-};
-
-template <size_t N, class... Ts>
-const typename detail::type_at<N, Ts...>::type&
-get(const detail::pseudo_tuple<Ts...>& tv) {
-  static_assert(N < sizeof...(Ts), "N >= tv.size()");
-  auto vp = tv.at(N);
-  CAF_REQUIRE(vp != nullptr);
-  return *reinterpret_cast<const typename detail::type_at<N, Ts...>::type*>(vp);
+message_iterator::message_iterator(const_pointer data, size_t pos)
+    : m_pos(pos),
+      m_data(data) {
+  // nop
 }
 
-template <size_t N, class... Ts>
-typename detail::type_at<N, Ts...>::type& get(detail::pseudo_tuple<Ts...>& tv) {
-  static_assert(N < sizeof...(Ts), "N >= tv.size()");
-  auto vp = tv.mutable_at(N);
-  CAF_REQUIRE(vp != nullptr);
-  return *reinterpret_cast<typename detail::type_at<N, Ts...>::type*>(vp);
+const void* message_iterator::value() const {
+  return m_data->at(m_pos);
+}
+
+const uniform_type_info* message_iterator::type() const {
+  return m_data->type_at(m_pos);
 }
 
 } // namespace detail
 } // namespace caf
-
-#endif // CAF_PSEUDO_TUPLE_HPP

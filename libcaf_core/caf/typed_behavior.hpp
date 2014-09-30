@@ -233,7 +233,7 @@ class typed_behavior {
         detail::type_list<typename detail::deduce_mpi<Cs>::type...>,
         detail::is_hidden_msg_handler
       >::type;
-    detail::static_asserter<signatures, mpi, detail::ctm> asserter;
+    detail::static_asserter<signatures, mpi, detail::ctm>::verify_match();
     // final (type-erasure) step
     m_bhvr = std::move(expr);
   }

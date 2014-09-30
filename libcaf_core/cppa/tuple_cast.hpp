@@ -133,8 +133,11 @@ auto moving_tuple_cast(message& tup)
     }
   }
   // same for nil, leading, and trailing
-  if (std::equal(sub.begin(), sub.end(),
-           arr_pos, detail::types_only_eq)) {
+  auto eq = [](const detail::message_iterator& lhs,
+               const uniform_type_info* rhs) {
+    return lhs.type() == rhs;
+  };
+  if (std::equal(sub.begin(), sub.end(), arr_pos, eq)) {
     return result_type::from(sub);
   }
   return none;

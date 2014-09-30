@@ -27,9 +27,13 @@ message_data::message_data(bool is_dynamic) : m_is_dynamic(is_dynamic) {
 }
 
 bool message_data::equals(const message_data& other) const {
+  auto full_eq = [](const message_iterator& lhs, const message_iterator& rhs) {
+    return lhs.type() == rhs.type()
+        && lhs.type()->equals(lhs.value(), rhs.value());
+  };
   return this == &other
          || (size() == other.size()
-             && std::equal(begin(), end(), other.begin(), detail::full_eq));
+             && std::equal(begin(), end(), other.begin(), full_eq));
 }
 
 message_data::message_data(const message_data& other)

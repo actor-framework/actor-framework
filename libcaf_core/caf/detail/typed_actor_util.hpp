@@ -138,7 +138,9 @@ struct type_checker<type_pair<Opt1, Opt2>, F1, F2> {
 
 template <class A, class B, template <class, class> class Predicate>
 struct static_asserter {
-  static_assert(Predicate<A, B>::value, "exact match needed");
+  static void verify_match() {
+    static_assert(Predicate<A, B>::value, "exact match needed");
+  }
 };
 
 template <class T>
@@ -163,15 +165,21 @@ struct deduce_lifted_output_type<type_list<typed_continue_helper<R>>> {
 
 template <class Signatures, typename InputTypes>
 struct deduce_output_type {
-  static constexpr int input_pos = tl_find_if<
-                     Signatures,
-                     input_is<InputTypes>::template eval
-                   >::value;
-  static_assert(input_pos >= 0, "typed actor does not support given input");
+  static_assert(tl_find<
+                  InputTypes,
+                  atom_value
+                >::value == -1,
+                "atom(...) notation is not sufficient for static type "
+                "checking, please use atom_constant instead in this context");
+  static constexpr int input_pos =
+    tl_find_if<
+      Signatures,
+      input_is<InputTypes>::template eval
+    >::value;
+  static_assert(input_pos != -1, "typed actor does not support given input");
   using signature = typename tl_at<Signatures, input_pos>::type;
-  using type =
-    detail::type_pair<typename signature::output_opt1_types,
-                      typename signature::output_opt2_types>;
+  using type = detail::type_pair<typename signature::output_opt1_types,
+                                 typename signature::output_opt2_types>;
 };
 
 template <class... Ts>

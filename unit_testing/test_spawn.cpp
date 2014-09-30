@@ -630,6 +630,141 @@ void counting_actor(event_based_actor* self) {
   CAF_CHECK_EQUAL(self->mailbox().count(), 200);
 }
 
+// tests attach_functor() inside of an actor's constructor
+void test_constructor_attach() {
+  class testee : public event_based_actor {
+   public:
+    testee(actor buddy) : m_buddy(buddy) {
+      attach_functor([=](uint32_t reason) {
+        send(m_buddy, atom("done"), reason);
+      });
+    }
+    behavior make_behavior() {
+      return {
+        on(atom("die")) >> [=] {
+          quit(exit_reason::user_shutdown);
+        }
+      };
+    }
+   private:
+    actor m_buddy;
+  };
+  class spawner : public event_based_actor {
+   public:
+    spawner() : m_downs(0) {
+    }
+    behavior make_behavior() {
+      m_testee = spawn<testee, monitored>(this);
+      return {
+        [=](const down_msg& msg) {
+          CAF_CHECK_EQUAL(msg.reason, exit_reason::user_shutdown);
+          if (++m_downs == 2) {
+            quit(msg.reason);
+          }
+        },
+        on(atom("done"), arg_match) >> [=](uint32_t reason) {
+          CAF_CHECK_EQUAL(reason, exit_reason::user_shutdown);
+          if (++m_downs == 2) {
+            quit(reason);
+          }
+        },
+        others() >> [=] {
+          forward_to(m_testee);
+        }
+      };
+    }
+   private:
+    int m_downs;
+    actor m_testee;
+  };
+  anon_send(spawn<spawner>(), atom("die"));
+}
+
+class exception_testee : public event_based_actor {
+ public:
+  exception_testee() {
+    set_exception_handler([](const std::exception_ptr& eptr) -> optional<uint32_t> {
+      return exit_reason::user_defined + 2;
+    });
+  }
+  behavior make_behavior() override {
+    return {
+      others() >> [] {
+        throw std::runtime_error("whatever");
+      }
+    };
+  }
+};
+
+void test_custom_exception_handler() {
+  auto handler = [](const std::exception_ptr& eptr) -> optional<uint32_t> {
+    try {
+      std::rethrow_exception(eptr);
+    }
+    catch (std::runtime_error&) {
+      return exit_reason::user_defined;
+    }
+    catch (...) {
+      // "fall through"
+    }
+    return exit_reason::user_defined + 1;
+  };
+  scoped_actor self;
+  auto testee1 = self->spawn<monitored>([=](event_based_actor* eb_self) {
+    eb_self->set_exception_handler(handler);
+    throw std::runtime_error("ping");
+  });
+  auto testee2 = self->spawn<monitored>([=](event_based_actor* eb_self) {
+    eb_self->set_exception_handler(handler);
+    throw std::logic_error("pong");
+  });
+  auto testee3 = self->spawn<exception_testee, monitored>();
+  self->send(testee3, "foo");
+  // receive all down messages
+  auto i = 0;
+  self->receive_for(i, 3)(
+    [&](const down_msg& dm) {
+      if (dm.source == testee1) {
+        CAF_CHECK_EQUAL(dm.reason, exit_reason::user_defined);
+      }
+      else if (dm.source == testee2) {
+        CAF_CHECK_EQUAL(dm.reason, exit_reason::user_defined + 1);
+      }
+      else if (dm.source == testee3) {
+        CAF_CHECK_EQUAL(dm.reason, exit_reason::user_defined + 2);
+      }
+      else {
+        CAF_CHECK(false); // report error
+      }
+    }
+  );
+}
+
+using abc_atom = atom_constant<atom("abc")>;
+
+using typed_testee = typed_actor<replies_to<abc_atom>::with<std::string>>;
+
+typed_testee::behavior_type testee(typed_testee::pointer self) {
+  return {
+    [](abc_atom) {
+      CAF_PRINT("received abc_atom");
+      return "abc";
+    }
+  };
+}
+
+void test_typed_testee() {
+  CAF_PRINT("test_typed_testee");
+  scoped_actor self;
+  auto x = spawn_typed(testee);
+  self->sync_send(x, abc_atom()).await(
+    [](const std::string& str) {
+      CAF_CHECK_EQUAL(str, "abc");
+    }
+  );
+  self->send_exit(x, exit_reason::user_shutdown);
+}
+
 } // namespace <anonymous>
 
 int main() {
@@ -638,6 +773,10 @@ int main() {
   await_all_actors_done();
   CAF_CHECKPOINT();
   test_spawn();
+  CAF_CHECKPOINT();
+  await_all_actors_done();
+  CAF_CHECKPOINT();
+  test_typed_testee();
   CAF_CHECKPOINT();
   await_all_actors_done();
   CAF_CHECKPOINT();

@@ -59,6 +59,7 @@ set (LIBCAF_CORE_SRCS
      src/message_builder.cpp
      src/message_data.cpp
      src/message_handler.cpp
+     src/message_iterator.cpp
      src/node_id.cpp
      src/ref_counted.cpp
      src/response_promise.cpp
@@ -74,6 +75,7 @@ set (LIBCAF_CORE_SRCS
      src/string_algorithms.cpp
      src/string_serialization.cpp
      src/sync_request_bouncer.cpp
+     src/try_match.cpp
      src/uniform_type_info.cpp
      src/uniform_type_info_map.cpp)
 

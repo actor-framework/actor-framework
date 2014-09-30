@@ -650,10 +650,7 @@ class default_meta_message : public uniform_type_info {
     return false;
   }
   bool equals(const void* instance1, const void* instance2) const override {
-    auto& lhs = *cast(instance1);
-    auto& rhs = *cast(instance2);
-    full_eq_type cmp;
-    return std::equal(lhs.begin(), lhs.end(), rhs.begin(), cmp);
+    return *cast(instance1) == *cast(instance2);
   }
 
  private:
