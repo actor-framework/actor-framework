@@ -40,7 +40,7 @@ class typed_event_based_actor;
 
 /**
  * Identifies a strongly typed actor.
- * @tparam Rs Interface as `replies_to<`...>::with<...> parameter pack.
+ * @tparam Rs Interface as `replies_to<...>::with<...>` parameter pack.
  */
 template <class... Rs>
 class typed_actor
