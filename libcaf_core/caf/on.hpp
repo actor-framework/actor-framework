@@ -312,21 +312,21 @@ std::function<optional<T>(const T&)> guarded(Predicate p, T value) {
 // special case covering arg_match as argument to guarded()
 template <class T, typename Predicate>
 unit_t guarded(Predicate, const detail::wrapped<T>&) {
-  return {};
+  return unit;
 }
 
 inline unit_t to_guard(const anything&) {
-  return {};
+  return unit;
 }
 
 template <class T>
 unit_t to_guard(detail::wrapped<T> (*)()) {
-  return {};
+  return unit;
 }
 
 template <class T>
 unit_t to_guard(const detail::wrapped<T>&) {
-  return {};
+  return unit;
 }
 
 template <class T>
@@ -385,7 +385,7 @@ decltype(on(A0, A1, A2, val<Ts>()...)) on() {
 }
 
 template <atom_value A0, atom_value A1, atom_value A2, atom_value A3,
-      class... Ts>
+          class... Ts>
 decltype(on(A0, A1, A2, A3, val<Ts>()...)) on() {
   return on(A0, A1, A2, A3, val<Ts>()...);
 }

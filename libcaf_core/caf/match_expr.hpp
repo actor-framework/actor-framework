@@ -52,12 +52,12 @@ struct long_constant {
 using minus1l = long_constant<-1l>;
 
 template <class T1, typename T2>
-inline T2& deduce_const(T1&, T2& rhs) {
+T2& deduce_const(T1&, T2& rhs) {
   return rhs;
 }
 
 template <class T1, typename T2>
-inline const T2& deduce_const(const T1&, T2& rhs) {
+const T2& deduce_const(const T1&, T2& rhs) {
   return rhs;
 }
 
@@ -88,14 +88,12 @@ struct invoke_util_impl : invoke_util_base<FilteredPattern> {
       >::type;
     std::vector<size_t> mv;
     if (type_token == typeid(FilteredPattern)) {
-      for (size_t i = 0; i < detail::tl_size<FilteredPattern>::value;
-         ++i) {
+      for (size_t i = 0; i < detail::tl_size<FilteredPattern>::value; ++i) {
         result[i] = const_cast<void*>(tup.at(i));
       }
       return true;
     } else if (mimpl(tup, mv)) {
-      for (size_t i = 0; i < detail::tl_size<FilteredPattern>::value;
-         ++i) {
+      for (size_t i = 0; i < detail::tl_size<FilteredPattern>::value; ++i) {
         result[i] = const_cast<void*>(tup.at(mv[i]));
       }
       return true;
@@ -112,8 +110,8 @@ struct invoke_util_impl<wildcard_position::nil, detail::empty_type_list,
 
   template <class PtrType, class Tuple>
   static bool prepare_invoke(typename super::tuple_type&,
-                 const std::type_info& type_token, bool, PtrType*,
-                 Tuple& tup) {
+                             const std::type_info& type_token, bool, PtrType*,
+                             Tuple& tup) {
     return can_invoke(type_token, tup);
   }
 
@@ -149,11 +147,14 @@ struct invoke_util_impl<wildcard_position::nil, Pattern,
   }
 
   template <class PtrType, class Tuple>
-  static bool prepare_invoke(
-    tuple_type& result, const std::type_info&, bool, PtrType*, Tuple& tup,
-    typename std::enable_if<
-      std::is_same<typename std::remove_const<Tuple>::type,
-             detail::message_data>::value == false>::type* = 0) {
+  static bool prepare_invoke(tuple_type& result, const std::type_info&,
+                             bool, PtrType*, Tuple& tup,
+                             typename std::enable_if<
+                               !std::is_same<
+                                 typename std::remove_const<Tuple>::type,
+                                 detail::message_data
+                               >::value
+                             >::type* = 0) {
     std::integral_constant<
       bool, detail::tl_binary_forall<
             typename detail::tl_map<typename Tuple::types,
@@ -163,28 +164,37 @@ struct invoke_util_impl<wildcard_position::nil, Pattern,
   }
 
   template <class PtrType, class Tuple>
-  static bool prepare_invoke(
-    typename super::tuple_type& result, const std::type_info& arg_types,
-    bool dynamically_typed, PtrType* native_arg, Tuple& tup,
-    typename std::enable_if<
-      std::is_same<typename std::remove_const<Tuple>::type,
-             detail::message_data>::value == true>::type* = 0) {
+  static bool prepare_invoke(typename super::tuple_type& res,
+                             const std::type_info& arg_types,
+                             bool dynamically_typed, PtrType* native_arg,
+                             Tuple& tup,
+                             typename std::enable_if<
+                               std::is_same<
+                                 typename std::remove_const<Tuple>::type,
+                                 detail::message_data
+                               >::value
+                             >::type* = 0) {
+    auto fill_from_tup = [&] {
+      for (size_t i = 0; i < sizeof...(Ts); ++i) {
+        res[i] = const_cast<void*>(tup.at(i));
+      }
+    };
     if (arg_types == typeid(detail::type_list<Ts...>)) {
-      if (native_arg) {
-        using cast_type =
-          typename std::conditional<
-            std::is_const<PtrType>::value,
-            const native_data_type*,
-            native_data_type*
-          >::type;
-        auto arg = reinterpret_cast<cast_type>(native_arg);
-        for (size_t i = 0; i < sizeof...(Ts); ++i) {
-          result[i] = const_cast<void*>(
-            tup_ptr_access<0, sizeof...(Ts)>::get(i, *arg));
-        }
+      if (native_arg == nullptr) {
+        fill_from_tup();
         return true;
       }
-      // 'fall through'
+      using cast_type =
+        typename std::conditional<
+          std::is_const<PtrType>::value,
+          const native_data_type*,
+          native_data_type*
+        >::type;
+      auto p = reinterpret_cast<cast_type>(native_arg);
+      for (size_t i = 0; i < sizeof...(Ts); ++i) {
+        res[i] = const_cast<void*>(tup_ptr_access<0, sizeof...(Ts)>::get(i, *p));
+      }
+      return true;
     } else if (dynamically_typed) {
       auto& arr = arr_type::arr;
       if (tup.size() != sizeof...(Ts)) {
@@ -195,13 +205,10 @@ struct invoke_util_impl<wildcard_position::nil, Pattern,
           return false;
         }
       }
-      // 'fall through'
-    } else
-      return false;
-    for (size_t i = 0; i < sizeof...(Ts); ++i) {
-      result[i] = const_cast<void*>(tup.at(i));
+      fill_from_tup();
+      return true;
     }
-    return true;
+    return false;
   }
 
   template <class Tuple>
@@ -217,14 +224,13 @@ struct invoke_util_impl<wildcard_position::leading, detail::type_list<anything>,
   using super = invoke_util_base<detail::empty_type_list>;
 
   template <class Tuple>
-  static inline bool can_invoke(const std::type_info&, const Tuple&) {
+  static bool can_invoke(const std::type_info&, const Tuple&) {
     return true;
   }
 
   template <class PtrType, typename Tuple>
-  static inline bool prepare_invoke(typename super::tuple_type&,
-                    const std::type_info&, bool, PtrType*,
-                    Tuple&) {
+  static bool prepare_invoke(typename super::tuple_type&, const std::type_info&,
+                             bool, PtrType*, Tuple&) {
     return true;
   }
 };
@@ -313,13 +319,12 @@ struct invoke_util : invoke_util_impl<get_wildcard_position<Pattern>(), Pattern,
 
 template <class Expr, class Projecs, class Signature, class Pattern>
 class match_expr_case : public get_lifted_fun<Expr, Projecs, Signature>::type {
-  using super = typename get_lifted_fun<Expr, Projecs, Signature>::type;
-
  public:
+  using super = typename get_lifted_fun<Expr, Projecs, Signature>::type;
   template <class... Ts>
-  match_expr_case(Ts&&... args)
-      : super(std::forward<Ts>(args)...) {}
-
+  match_expr_case(Ts&&... args) : super(std::forward<Ts>(args)...) {
+    // nop
+  }
   using pattern_type = Pattern;
 };
 
@@ -401,7 +406,6 @@ struct get_case_ {
 template <bool Complete, class Expr, class Trans, class Pattern>
 struct get_case {
   using type = typename get_case_<Expr, Trans, Pattern>::type;
-
 };
 
 template <class Expr, class Trans, class Pattern>
@@ -428,16 +432,15 @@ struct has_bool_result {
   using result_type = typename Fun::result_type;
   static constexpr bool value = std::is_same<bool, result_type>::value;
   using token_type = std::integral_constant<bool, value>;
-
 };
 
 template <class T>
-inline bool unroll_expr_result_valid(const T&) {
+bool unroll_expr_result_valid(const T&) {
   return true;
 }
 
 template <class T>
-inline bool unroll_expr_result_valid(const optional<T>& opt) {
+bool unroll_expr_result_valid(const optional<T>& opt) {
   return static_cast<bool>(opt);
 }
 
@@ -447,24 +450,26 @@ inline variant<none_t, unit_t> unroll_expr_result_unbox(bool& value) {
 }
 
 template <class T>
-inline T& unroll_expr_result_unbox(optional<T>& opt) {
+T& unroll_expr_result_unbox(optional<T>& opt) {
   return *opt;
 }
 
 template <class Result, class PPFPs, typename PtrType, class Tuple>
 Result unroll_expr(PPFPs&, uint64_t, minus1l, const std::type_info&, bool,
-           PtrType*, Tuple&) {
+                   PtrType*, Tuple&) {
   return none;
 }
 
 template <class Result, class PPFPs, long N, typename PtrType, class Tuple>
 Result unroll_expr(PPFPs& fs, uint64_t bitmask, long_constant<N>,
-           const std::type_info& type_token, bool is_dynamic,
-           PtrType* ptr, Tuple& tup) {
+                   const std::type_info& type_token, bool is_dynamic,
+                   PtrType* ptr, Tuple& tup) {
   /* recursively evaluate sub expressions */ {
     Result res = unroll_expr<Result>(fs, bitmask, long_constant<N - 1>{},
-                     type_token, is_dynamic, ptr, tup);
-    if (!get<none_t>(&res)) return res;
+                                     type_token, is_dynamic, ptr, tup);
+    if (!get<none_t>(&res)) {
+      return res;
+    }
   }
   if ((bitmask & (0x01 << N)) == 0) return none;
   auto& f = get<N>(fs);
@@ -484,13 +489,12 @@ Result unroll_expr(PPFPs& fs, uint64_t bitmask, long_constant<N>,
 }
 
 template <class PPFPs, class Tuple>
-inline uint64_t calc_bitmask(PPFPs&, minus1l, const std::type_info&,
-               const Tuple&) {
+uint64_t calc_bitmask(PPFPs&, minus1l, const std::type_info&, const Tuple&) {
   return 0x00;
 }
 
 template <class Case, long N, class Tuple>
-inline uint64_t calc_bitmask(Case& fs, long_constant<N>,
+uint64_t calc_bitmask(Case& fs, long_constant<N>,
                const std::type_info& tinf, const Tuple& tup) {
   auto& f = get<N>(fs);
   using Fun = typename std::decay<decltype(f)>::type;
@@ -503,19 +507,16 @@ inline uint64_t calc_bitmask(Case& fs, long_constant<N>,
 template <bool IsManipulator, typename T0, typename T1>
 struct mexpr_fwd_ {
   using type = T1;
-
 };
 
 template <class T>
 struct mexpr_fwd_<false, const T&, T> {
   using type = std::reference_wrapper<const T>;
-
 };
 
 template <class T>
 struct mexpr_fwd_<true, T&, T> {
   using type = std::reference_wrapper<T>;
-
 };
 
 template <bool IsManipulator, typename T>
@@ -547,12 +548,12 @@ inline const message& detach_if_needed(const message& tup, std::false_type) {
 }
 
 template <class Ptr>
-inline void* fetch_native_data(Ptr& ptr, std::true_type) {
+void* fetch_native_data(Ptr& ptr, std::true_type) {
   return ptr->mutable_native_data();
 }
 
 template <class Ptr>
-inline const void* fetch_native_data(const Ptr& ptr, std::false_type) {
+const void* fetch_native_data(const Ptr& ptr, std::false_type) {
   return ptr->native_data();
 }
 
@@ -591,10 +592,8 @@ struct match_result_from_type_list<detail::type_list<Ts...>> {
  */
 template <class... Cs>
 class match_expr {
-
-  static_assert(sizeof...(Cs) < 64, "too many functions");
-
  public:
+  static_assert(sizeof...(Cs) < 64, "too many functions");
 
   using cases_list = detail::type_list<Cs...>;
 
@@ -613,11 +612,8 @@ class match_expr {
 
   using idx_token_type = detail::long_constant<sizeof...(Cs) - 1l>;
 
-  static constexpr idx_token_type idx_token = idx_token_type{};
-
   template <class T, class... Ts>
-  match_expr(T arg, Ts&&... args)
-      : m_cases(std::move(arg), std::forward<Ts>(args)...) {
+  match_expr(T v, Ts&&... vs) : m_cases(std::move(v), std::forward<Ts>(vs)...) {
     init();
   }
 
@@ -625,13 +621,19 @@ class match_expr {
     init();
   }
 
-  match_expr(const match_expr& other) : m_cases(other.m_cases) { init(); }
+  match_expr(const match_expr& other) : m_cases(other.m_cases) {
+    init();
+  }
 
-  inline result_type operator()(const message& tup) { return apply(tup); }
+  result_type operator()(const message& tup) {
+    return apply(tup);
+  }
 
-  inline result_type operator()(message& tup) { return apply(tup); }
+  result_type operator()(message& tup) {
+    return apply(tup);
+  }
 
-  inline result_type operator()(message&& tup) {
+  result_type operator()(message&& tup) {
     message tmp{tup};
     return apply(tmp);
   }
@@ -643,7 +645,9 @@ class match_expr {
 
   /** @cond PRIVATE */
 
-  inline const std::tuple<Cs...>& cases() const { return m_cases; }
+  const std::tuple<Cs...>& cases() const {
+    return m_cases;
+  }
 
   intrusive_ptr<detail::behavior_impl> as_behavior_impl() const {
     // return new pfun_impl(*this);
@@ -655,10 +659,9 @@ class match_expr {
   /** @endcond */
 
  private:
-
-  // structure: std::tuple< std::tuple<type_list<...>, ...>,
-  //            std::tuple<type_list<...>, ...>,
-  //            ...>
+  // structure: std::tuple<std::tuple<type_list<...>, ...>,
+  //                       std::tuple<type_list<...>, ...>,
+  //                       ...>
   std::tuple<Cs...> m_cases;
 
   static constexpr size_t cache_size = 10;
@@ -673,18 +676,22 @@ class match_expr {
 
   cache_element m_dummy;
 
-  static inline void advance_(size_t& i) { i = (i + 1) % cache_size; }
+  static void advance_(size_t& i) {
+    i = (i + 1) % cache_size;
+  }
 
-  inline size_t find_token_pos(const std::type_info* type_token) {
+  size_t find_token_pos(const std::type_info* type_token) {
     for (size_t i = m_cache_begin; i != m_cache_end; advance_(i)) {
-      if (m_cache[i].first == type_token) return i;
+      if (m_cache[i].first == type_token) {
+        return i;
+      }
     }
     return m_cache_end;
   }
 
   template <class Tuple>
   uint64_t get_cache_entry(const std::type_info* type_token,
-               const Tuple& value) {
+                           const Tuple& value) {
     CAF_REQUIRE(type_token != nullptr);
     if (value.dynamically_typed()) {
       return m_dummy.second; // all groups enabled
@@ -694,10 +701,12 @@ class match_expr {
     if (i == m_cache_end) {
       // ... 'create' one (override oldest element in cache if full)
       advance_(m_cache_end);
-      if (m_cache_end == m_cache_begin) advance_(m_cache_begin);
+      if (m_cache_end == m_cache_begin) {
+        advance_(m_cache_begin);
+      }
       m_cache[i].first = type_token;
-      m_cache[i].second =
-        calc_bitmask(m_cases, idx_token, *type_token, value);
+      idx_token_type idx_token;
+      m_cache[i].second = calc_bitmask(m_cases, idx_token, *type_token, value);
     }
     return m_cache[i].second;
   }
@@ -713,13 +722,14 @@ class match_expr {
 
   template <class Tuple>
   result_type apply(Tuple& tup) {
+    idx_token_type idx_token;
     if (tup.empty()) {
       detail::tuple_dummy td;
       auto td_token_ptr = td.type_token();
       auto td_bitmask = get_cache_entry(td_token_ptr, td);
-      return detail::unroll_expr<result_type>(
-        m_cases, td_bitmask, idx_token, *td_token_ptr, false,
-        static_cast<void*>(nullptr), td);
+      return detail::unroll_expr<result_type>(m_cases, td_bitmask, idx_token,
+                                              *td_token_ptr, false,
+                                              static_cast<void*>(nullptr), td);
     }
     std::integral_constant<bool, has_manipulator> mutator_token;
     // returns either a reference or a new object
@@ -731,27 +741,20 @@ class match_expr {
     auto bitmask = get_cache_entry(token_ptr, *vals);
     auto dynamically_typed = vals->dynamically_typed();
     return detail::unroll_expr<result_type>(m_cases, bitmask, idx_token,
-                        *token_ptr, dynamically_typed,
-                        ndp, *vals);
+                                            *token_ptr, dynamically_typed,
+                                            ndp, *vals);
   }
-
 };
 
 template <class T>
-struct is_match_expr {
-  static constexpr bool value = false;
-
-};
+struct is_match_expr : std::false_type { };
 
 template <class... Cs>
-struct is_match_expr<match_expr<Cs...>> {
-  static constexpr bool value = true;
-
-};
+struct is_match_expr<match_expr<Cs...>> : std::true_type { };
 
 template <class... Lhs, class... Rhs>
-inline match_expr<Lhs..., Rhs...> operator, (const match_expr<Lhs...>& lhs,
-                       const match_expr<Rhs...>& rhs) {
+match_expr<Lhs..., Rhs...> operator,(const match_expr<Lhs...>& lhs,
+                                     const match_expr<Rhs...>& rhs) {
   return lhs.or_else(rhs);
 }
 
@@ -772,9 +775,12 @@ const match_expr<Cs...>& match_expr_collect(const match_expr<Cs...>& arg) {
 
 template <class T, class... Ts>
 typename detail::tl_apply<
-  typename detail::tl_concat<typename T::cases_list,
-                 typename Ts::cases_list...>::type,
-  match_expr>::type
+  typename detail::tl_concat<
+    typename T::cases_list,
+    typename Ts::cases_list...
+  >::type,
+  match_expr
+>::type
 match_expr_collect(const T& arg, const Ts&... args) {
   return {std::tuple_cat(arg.cases(), args.cases()...)};
 }
@@ -792,7 +798,7 @@ behavior_impl_ptr extract(const match_expr<Cs...>& arg) {
 
 template <class... As, class... Bs>
 match_expr<As..., Bs...> combine(const match_expr<As...>& lhs,
-                 const match_expr<Bs...>& rhs) {
+                                 const match_expr<Bs...>& rhs) {
   return lhs.or_else(rhs);
 }
 
@@ -800,7 +806,7 @@ match_expr<As..., Bs...> combine(const match_expr<As...>& lhs,
 // otherwise turns everything into behavior_impl_ptr
 template <class... As, class... Bs>
 const match_expr<As...>& combine_fwd(const match_expr<As...>& lhs,
-                   const match_expr<Bs...>&) {
+                                     const match_expr<Bs...>&) {
   return lhs;
 }
 
@@ -816,27 +822,28 @@ behavior_impl_ptr match_expr_concat(const T& arg) {
 
 template <class F>
 behavior_impl_ptr match_expr_concat(const message_handler& arg0,
-                  const timeout_definition<F>& arg) {
+                                    const timeout_definition<F>& arg) {
   return extract(arg0)->copy(arg);
 }
 
 template <class... Cs, typename F>
 behavior_impl_ptr match_expr_concat(const match_expr<Cs...>& arg0,
-                  const timeout_definition<F>& arg) {
+                                    const timeout_definition<F>& arg) {
   return new default_behavior_impl<match_expr<Cs...>, F>{arg0, arg};
 }
 
 template <class T0, typename T1, class... Ts>
 behavior_impl_ptr match_expr_concat(const T0& arg0, const T1& arg1,
-                  const Ts&... args) {
-  return match_expr_concat(
-    combine(combine_fwd(arg0, arg1), combine_fwd(arg1, arg0)), args...);
+                                    const Ts&... args) {
+  return match_expr_concat(combine(combine_fwd(arg0, arg1),
+                                   combine_fwd(arg1, arg0)),
+                           args...);
 }
 
 // some more convenience functions
 
 template <class F,
-         class E = typename std::enable_if<is_callable<F>::value>::type>
+          class E = typename std::enable_if<is_callable<F>::value>::type>
 match_expr<typename get_case<false, F, type_list<>, type_list<>>::type>
 lift_to_match_expr(F fun) {
   using result_type =
@@ -850,8 +857,8 @@ lift_to_match_expr(F fun) {
 }
 
 template <class T,
-         class E = typename std::enable_if<!is_callable<T>::value>::type>
-inline T lift_to_match_expr(T arg) {
+          class E = typename std::enable_if<!is_callable<T>::value>::type>
+T lift_to_match_expr(T arg) {
   return arg;
 }
 
