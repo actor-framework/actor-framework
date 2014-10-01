@@ -61,8 +61,10 @@ class actor_ostream {
   }
 
   template <class T>
-  inline typename std::enable_if<!std::is_convertible<T, std::string>::value && !std::is_convertible<T, message>::value, actor_ostream&>::type operator<<(
-    T&& arg) {
+  inline typename std::enable_if<
+    !std::is_convertible<T, std::string>::value &&
+    !std::is_convertible<T, message>::value, actor_ostream&
+  >::type operator<<(T&& arg) {
     return write(std::to_string(std::forward<T>(arg)));
   }
 

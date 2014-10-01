@@ -35,15 +35,15 @@ namespace caf {
  */
 template <class T>
 class intrusive_ptr : detail::comparable<intrusive_ptr<T>>,
-            detail::comparable<intrusive_ptr<T>, const T*>,
-            detail::comparable<intrusive_ptr<T>, std::nullptr_t> {
+                      detail::comparable<intrusive_ptr<T>, const T*>,
+                      detail::comparable<intrusive_ptr<T>, std::nullptr_t> {
 
  public:
 
-  using pointer = T*    ;
+  using pointer = T*;
   using const_pointer = const T*;
-  using element_type = T     ;
-  using reference = T&    ;
+  using element_type = T;
+  using reference = T&;
   using const_reference = const T&;
 
   constexpr intrusive_ptr() : m_ptr(nullptr) {
@@ -69,7 +69,9 @@ class intrusive_ptr : detail::comparable<intrusive_ptr<T>>,
   }
 
   ~intrusive_ptr() {
-    if (m_ptr) m_ptr->deref();
+    if (m_ptr) {
+      m_ptr->deref();
+    }
   }
 
   inline void swap(intrusive_ptr& other) {
