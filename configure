@@ -73,6 +73,7 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --with-scalac=FILE          path to Scala compiler
     --with-erlc=FILE            path to Erlang compiler
     --with-charmc=FILE          path to Charm++ compiler
+    --with-salsa=FILE           path to SALSA Lite jar
 "
 
 
@@ -293,6 +294,9 @@ while [ $# -ne 0 ]; do
             ;;
         --with-charmc=*)
             append_cache_entry CAF_CHARM_COMPILER FILEPATH "$optarg"
+            ;;
+        --with-salsa=*)
+            append_cache_entry CAF_SALSA_JAR FILEPATH "$optarg"
             ;;
         --no-nexus)
             append_cache_entry CAF_NO_NEXUS BOOL yes
