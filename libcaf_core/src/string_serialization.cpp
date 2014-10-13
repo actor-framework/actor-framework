@@ -254,7 +254,14 @@ class string_deserializer : public deserializer, public dummy_backend {
     // suppress leading parenthesis for built-in types
     m_obj_had_left_parenthesis.push(try_consume('('));
     auto uti_map = detail::singletons::get_uniform_type_info_map();
-    return uti_map->by_uniform_name(type_name);
+    auto res = uti_map->by_uniform_name(type_name);
+    if (!res) {
+      std::string err = "read type name \"";
+      err += type_name;
+      err += "\" but no such type is known";
+      throw std::runtime_error(err);
+    }
+    return res;
   }
 
   void end_object() override {
