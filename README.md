@@ -14,7 +14,7 @@ On the Web
 * __Manual (PDF)__: http://actor-framework.github.io/actor-framework/manual/manual.pdf
 * __Doxygen (HTML)__: http://actor-framework.github.io/actor-framework/index.html
 * __Mailing List__: https://groups.google.com/d/forum/actor-framework
-* __Deveoper Blog__: https://libcppa.blogspot.com
+* __Developer Blog__: https://libcppa.blogspot.com
 
 
 Get the Sources
