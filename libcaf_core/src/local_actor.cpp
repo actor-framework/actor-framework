@@ -76,10 +76,13 @@ void local_actor::join(const group& what) {
 }
 
 void local_actor::leave(const group& what) {
+  CAF_LOG_TRACE(CAF_TSARG(what));
   if (what == invalid_group) {
     return;
   }
-  detach(abstract_group::subscription_token{what.ptr()});
+  if (detach(abstract_group::subscription_token{what.ptr()}) > 0) {
+    what->unsubscribe(address());
+  }
 }
 
 std::vector<group> local_actor::joined_groups() const {

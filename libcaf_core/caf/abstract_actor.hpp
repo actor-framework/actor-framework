@@ -110,10 +110,10 @@ class abstract_actor : public abstract_channel {
   /**
    * Detaches the first attached object that matches `what`.
    */
-  void detach(const attachable::token& what);
+  size_t detach(const attachable::token& what);
 
   template <class T>
-  void detach(const T& what) {
+  size_t detach(const T& what) {
     return detach(attachable::token{typeid(T), &what});
   }
 

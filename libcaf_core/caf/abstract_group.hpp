@@ -41,6 +41,7 @@ namespace caf {
 
 class group;
 class serializer;
+class local_actor;
 class deserializer;
 
 /**
@@ -50,6 +51,7 @@ class abstract_group : public abstract_channel {
  public:
   friend class detail::group_manager;
   friend class detail::peer_connection;
+  friend class local_actor;
 
   ~abstract_group();
 

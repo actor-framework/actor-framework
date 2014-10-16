@@ -87,11 +87,14 @@ size_t abstract_actor::detach_impl(const attachable::token& what,
                                    attachable_ptr& ptr,
                                    bool stop_on_hit,
                                    bool dry_run) {
+  CAF_LOGF_TRACE("");
   if (!ptr) {
+    CAF_LOGF_DEBUG("invalid ptr");
     return 0;
   }
   if (ptr->matches(what)) {
     if (!dry_run) {
+      CAF_LOGF_DEBUG("removed element");
       attachable_ptr next;
       next.swap(ptr->next);
       ptr.swap(next);
@@ -101,10 +104,10 @@ size_t abstract_actor::detach_impl(const attachable::token& what,
   return detach_impl(what, ptr->next, stop_on_hit, dry_run);
 }
 
-void abstract_actor::detach(const attachable::token& what) {
+size_t abstract_actor::detach(const attachable::token& what) {
   CAF_LOG_TRACE("");
   guard_type guard{m_mtx};
-  detach_impl(what, m_attachables_head);
+  return detach_impl(what, m_attachables_head);
 }
 
 bool abstract_actor::link_impl(linking_operation op, const actor_addr& other) {
