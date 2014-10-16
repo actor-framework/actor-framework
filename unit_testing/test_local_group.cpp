@@ -1,62 +1,35 @@
-#include "caf/config.hpp"
-
-#include <map>
-#include <list>
-#include <mutex>
-#include <iostream>
-#include <algorithm>
-
+#include <chrono>
 #include "test.hpp"
-
-#include "caf/on.hpp"
 #include "caf/all.hpp"
-#include "caf/actor.hpp"
-#include "caf/abstract_group.hpp"
-#include "caf/ref_counted.hpp"
-#include "caf/intrusive_ptr.hpp"
 
-using std::cout;
-using std::endl;
-
-using std::string;
 using namespace caf;
 
-void testee(event_based_actor* self, int current_value, int final_result) {
+void testee(event_based_actor* self) {
+  auto counter = std::make_shared<int>(0);
+  auto grp = group::get("local", "test");
+  self->join(grp);
+  CAF_CHECKPOINT();
   self->become(
-    [=](int result) {
-      auto next = result + current_value;
-      if (next >= final_result) {
-        self->quit();
-      } else {
-        testee(self, next, final_result);
-      }
+    on(atom("msg")) >> [=] {
+      CAF_CHECKPOINT();
+      ++*counter;
+      self->leave(grp);
+      self->send(grp, atom("msg"));
     },
-    after(std::chrono::seconds(2)) >> [=] {
-      CAF_UNEXPECTED_TOUT();
-      self->quit(exit_reason::user_shutdown);
+    on(atom("over")) >> [=] {
+      // this actor should receive only 1 message
+      CAF_CHECK(*counter == 1);
+      self->quit();
     }
   );
+  self->send(grp, atom("msg"));
+  self->delayed_send(self, std::chrono::seconds(1), atom("over"));
 }
 
 int main() {
   CAF_TEST(test_local_group);
-  /*
-  auto foo_group = group::get("local", "foo");
-  auto master = spawn_in_group(foo_group, testee, 0, 10);
-  for (int i = 0; i < 5; ++i) {
-    // spawn five workers and let them join local/foo
-    spawn_in_group(foo_group, [master] {
-      become(
-        [master](int v) {
-          send(master, v);
-          self->quit();
-        }
-      );
-    });
-  }
-  send(foo_group, 2);
+  spawn(testee);
   await_all_actors_done();
   shutdown();
-  */
   return CAF_TEST_RESULT();
 }
