@@ -28,8 +28,9 @@ event_based_actor::~event_based_actor() {
   // nop
 }
 
-void event_based_actor::forward_to(const actor& whom) {
-  forward_message(whom, message_priority::normal);
+void event_based_actor::forward_to(const actor& whom,
+                                   message_priority prio) {
+  forward_message(whom, prio);
 }
 
 behavior event_based_actor::functor_based::make_behavior() {
