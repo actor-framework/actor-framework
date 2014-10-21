@@ -220,17 +220,13 @@ class message {
    * The type token `&typeid(void)` indicates that this tuple is dynamically
    * typed, i.e., the types where not available at compile time.
    */
-  inline const std::type_info* type_token() const {
-    return m_vals->type_token();
-  }
+  const std::type_info* type_token() const;
 
   /**
    * Checks whether this tuple is dynamically typed, i.e.,
    * its types were not known at compile time.
    */
-  inline bool dynamically_typed() const {
-    return m_vals->dynamically_typed();
-  }
+  bool dynamically_typed() const;
 
   /**
    * Applies @p handler to this message and returns the result

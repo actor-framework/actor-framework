@@ -37,7 +37,6 @@
 #include "caf/detail/matches.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/lifted_fun.hpp"
-#include "caf/detail/tuple_dummy.hpp"
 #include "caf/detail/pseudo_tuple.hpp"
 #include "caf/detail/behavior_impl.hpp"
 
@@ -547,14 +546,12 @@ inline const message& detach_if_needed(const message& tup, std::false_type) {
   return tup;
 }
 
-template <class Ptr>
-void* fetch_native_data(Ptr& ptr, std::true_type) {
-  return ptr->mutable_native_data();
+inline void* fetch_native_data(message& msg, std::true_type) {
+  return msg.empty() ? nullptr : msg.vals()->mutable_native_data();
 }
 
-template <class Ptr>
-const void* fetch_native_data(const Ptr& ptr, std::false_type) {
-  return ptr->native_data();
+inline const void* fetch_native_data(const message& msg, std::false_type) {
+  return msg.empty() ? nullptr : msg.vals()->native_data();
 }
 
 template <class T>
@@ -723,23 +720,15 @@ class match_expr {
   template <class Tuple>
   result_type apply(Tuple& tup) {
     idx_token_type idx_token;
-    if (tup.empty()) {
-      detail::tuple_dummy td;
-      auto td_token_ptr = td.type_token();
-      auto td_bitmask = get_cache_entry(td_token_ptr, td);
-      return detail::unroll_expr<result_type>(m_cases, td_bitmask, idx_token,
-                                              *td_token_ptr, false,
-                                              static_cast<void*>(nullptr), td);
-    }
     std::integral_constant<bool, has_manipulator> mutator_token;
     // returns either a reference or a new object
     using detached = decltype(detail::detach_if_needed(tup, mutator_token));
     detached tref = detail::detach_if_needed(tup, mutator_token);
     auto& vals = tref.vals();
-    auto ndp = fetch_native_data(vals, mutator_token);
-    auto token_ptr = vals->type_token();
-    auto bitmask = get_cache_entry(token_ptr, *vals);
-    auto dynamically_typed = vals->dynamically_typed();
+    auto ndp = detail::fetch_native_data(tref, mutator_token);
+    auto token_ptr = tref.type_token();
+    auto bitmask = get_cache_entry(token_ptr, tref);
+    auto dynamically_typed = tref.dynamically_typed();
     return detail::unroll_expr<result_type>(m_cases, bitmask, idx_token,
                                             *token_ptr, dynamically_typed,
                                             ndp, *vals);
