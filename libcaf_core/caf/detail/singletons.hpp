@@ -70,8 +70,6 @@ class singletons {
 
   static uniform_type_info_map* get_uniform_type_info_map();
 
-  static message_data* get_tuple_dummy();
-
   // usually guarded by implementation-specific singleton getter
   template <class Factory>
   static abstract_singleton* get_plugin_singleton(size_t id, Factory f) {
