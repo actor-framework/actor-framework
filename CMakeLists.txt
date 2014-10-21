@@ -140,12 +140,13 @@ if(NOT APPLE AND NOT WIN32)
 endif()
 # extra setup steps needed on MinGW
 if(MINGW)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWIN32")
+  add_definitions(-D_WIN32_WINNT=0x0600)
+  add_definitions(-DWIN32)
   include(GenerateExportHeader)
   set(LD_FLAGS "ws2_32 -liphlpapi")
 endif()
 # needed by subprojects
-set(LD_FLAGS ${CMAKE_LD_LIBS})
+set(LD_FLAGS ${LD_FLAGS} ${CMAKE_LD_LIBS})
 
 
 ################################################################################
