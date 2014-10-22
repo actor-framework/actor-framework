@@ -32,9 +32,8 @@ abstract_group::subscription::subscription(const abstract_group_ptr& g)
   // nop
 }
 
-void abstract_group::subscription::actor_exited(abstract_actor* self,
-                                                uint32_t reason) {
-  m_group->unsubscribe(self->address());
+void abstract_group::subscription::actor_exited(abstract_actor* ptr, uint32_t) {
+  m_group->unsubscribe(ptr->address());
 }
 
 bool abstract_group::subscription::matches(const token& what) {
