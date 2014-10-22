@@ -34,7 +34,7 @@
 #include "caf/detail/type_traits.hpp"
 #include "caf/detail/left_or_right.hpp"
 
-#include "caf/detail/matches.hpp"
+#include "caf/detail/matcher.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/lifted_fun.hpp"
 #include "caf/detail/pseudo_tuple.hpp"
@@ -60,262 +60,6 @@ const T2& deduce_const(const T1&, T2& rhs) {
   return rhs;
 }
 
-template <class Filtered>
-struct invoke_util_base {
-  using tuple_type = typename detail::tl_apply<Filtered, pseudo_tuple>::type;
-};
-
-// covers wildcard_position::multiple and wildcard_position::in_between
-template <wildcard_position, class Pattern, class FilteredPattern>
-struct invoke_util_impl : invoke_util_base<FilteredPattern> {
-  using super = invoke_util_base<FilteredPattern>;
-
-  template <class Tuple>
-  static bool can_invoke(const std::type_info& type_token, const Tuple& tup) {
-    typename select_matcher<Tuple, Pattern>::type mimpl;
-    return type_token == typeid(FilteredPattern) || mimpl(tup);
-  }
-
-  template <class PtrType, class Tuple>
-  static bool prepare_invoke(typename super::tuple_type& result,
-                             const std::type_info& type_token, bool, PtrType*,
-                             Tuple& tup) {
-    using mimpl =
-      typename select_matcher<
-        typename std::remove_const<Tuple>::type,
-        Pattern
-      >::type;
-    std::vector<size_t> mv;
-    if (type_token == typeid(FilteredPattern)) {
-      for (size_t i = 0; i < detail::tl_size<FilteredPattern>::value; ++i) {
-        result[i] = const_cast<void*>(tup.at(i));
-      }
-      return true;
-    } else if (mimpl(tup, mv)) {
-      for (size_t i = 0; i < detail::tl_size<FilteredPattern>::value; ++i) {
-        result[i] = const_cast<void*>(tup.at(mv[i]));
-      }
-      return true;
-    }
-    return false;
-  }
-};
-
-template <>
-struct invoke_util_impl<wildcard_position::nil, detail::empty_type_list,
-                        detail::empty_type_list>
-    : invoke_util_base<detail::empty_type_list> {
-  using super = invoke_util_base<detail::empty_type_list>;
-
-  template <class PtrType, class Tuple>
-  static bool prepare_invoke(typename super::tuple_type&,
-                             const std::type_info& type_token, bool, PtrType*,
-                             Tuple& tup) {
-    return can_invoke(type_token, tup);
-  }
-
-  template <class Tuple>
-  static bool can_invoke(const std::type_info& arg_types, const Tuple&) {
-    return arg_types == typeid(detail::empty_type_list);
-  }
-};
-
-template <class Pattern, class... Ts>
-struct invoke_util_impl<wildcard_position::nil, Pattern,
-                        detail::type_list<Ts...>>
-    : invoke_util_base<detail::type_list<Ts...>> {
-  using super = invoke_util_base<detail::type_list<Ts...>>;
-
-  using tuple_type = typename super::tuple_type;
-
-  using native_data_type = std::tuple<Ts...>;
-
-  using arr_type = typename detail::static_types_array<Ts...>;
-
-  template <class Tup>
-  static bool prepare_invoke(std::false_type, tuple_type&, Tup&) {
-    return false;
-  }
-
-  template <class Tup>
-  static bool prepare_invoke(std::true_type, tuple_type& result, Tup& tup) {
-    for (size_t i = 0; i < sizeof...(Ts); ++i) {
-      result[i] = const_cast<void*>(tup.at(i));
-    }
-    return true;
-  }
-
-  template <class PtrType, class Tuple>
-  static bool prepare_invoke(tuple_type& result, const std::type_info&,
-                             bool, PtrType*, Tuple& tup,
-                             typename std::enable_if<
-                               !std::is_same<
-                                 typename std::remove_const<Tuple>::type,
-                                 detail::message_data
-                               >::value
-                             >::type* = 0) {
-    std::integral_constant<
-      bool, detail::tl_binary_forall<
-            typename detail::tl_map<typename Tuple::types,
-                        detail::purge_refs>::type,
-            detail::type_list<Ts...>, std::is_same>::value> token;
-    return prepare_invoke(token, result, tup);
-  }
-
-  template <class PtrType, class Tuple>
-  static bool prepare_invoke(typename super::tuple_type& res,
-                             const std::type_info& arg_types,
-                             bool dynamically_typed, PtrType* native_arg,
-                             Tuple& tup,
-                             typename std::enable_if<
-                               std::is_same<
-                                 typename std::remove_const<Tuple>::type,
-                                 detail::message_data
-                               >::value
-                             >::type* = 0) {
-    auto fill_from_tup = [&] {
-      for (size_t i = 0; i < sizeof...(Ts); ++i) {
-        res[i] = const_cast<void*>(tup.at(i));
-      }
-    };
-    if (arg_types == typeid(detail::type_list<Ts...>)) {
-      if (native_arg == nullptr) {
-        fill_from_tup();
-        return true;
-      }
-      using cast_type =
-        typename std::conditional<
-          std::is_const<PtrType>::value,
-          const native_data_type*,
-          native_data_type*
-        >::type;
-      auto p = reinterpret_cast<cast_type>(native_arg);
-      for (size_t i = 0; i < sizeof...(Ts); ++i) {
-        res[i] = const_cast<void*>(tup_ptr_access<0, sizeof...(Ts)>::get(i, *p));
-      }
-      return true;
-    } else if (dynamically_typed) {
-      auto& arr = arr_type::arr;
-      if (tup.size() != sizeof...(Ts)) {
-        return false;
-      }
-      for (size_t i = 0; i < sizeof...(Ts); ++i) {
-        if (arr[i] != tup.type_at(i)) {
-          return false;
-        }
-      }
-      fill_from_tup();
-      return true;
-    }
-    return false;
-  }
-
-  template <class Tuple>
-  static bool can_invoke(const std::type_info& arg_types, const Tuple&) {
-    return arg_types == typeid(detail::type_list<Ts...>);
-  }
-};
-
-template <>
-struct invoke_util_impl<wildcard_position::leading, detail::type_list<anything>,
-                        detail::empty_type_list>
-    : invoke_util_base<detail::empty_type_list> {
-  using super = invoke_util_base<detail::empty_type_list>;
-
-  template <class Tuple>
-  static bool can_invoke(const std::type_info&, const Tuple&) {
-    return true;
-  }
-
-  template <class PtrType, typename Tuple>
-  static bool prepare_invoke(typename super::tuple_type&, const std::type_info&,
-                             bool, PtrType*, Tuple&) {
-    return true;
-  }
-};
-
-template <class Pattern, class... Ts>
-struct invoke_util_impl<wildcard_position::trailing, Pattern,
-                        detail::type_list<Ts...>>
-    : invoke_util_base<detail::type_list<Ts...>> {
-  using super = invoke_util_base<detail::type_list<Ts...>>;
-
-  template <class Tuple>
-  static bool can_invoke(const std::type_info& arg_types, const Tuple& tup) {
-    if (arg_types == typeid(detail::type_list<Ts...>)) {
-      return true;
-    }
-    using arr_type = detail::static_types_array<Ts...>;
-    auto& arr = arr_type::arr;
-    if (tup.size() < sizeof...(Ts)) {
-      return false;
-    }
-    for (size_t i = 0; i < sizeof...(Ts); ++i) {
-      if (arr[i] != tup.type_at(i)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  template <class PtrType, class Tuple>
-  static bool prepare_invoke(typename super::tuple_type& result,
-                 const std::type_info& arg_types, bool, PtrType*,
-                 Tuple& tup) {
-    if (!can_invoke(arg_types, tup)) return false;
-    for (size_t i = 0; i < sizeof...(Ts); ++i) {
-      result[i] = const_cast<void*>(tup.at(i));
-    }
-    return true;
-  }
-};
-
-template <class Pattern, class... Ts>
-struct invoke_util_impl<wildcard_position::leading, Pattern,
-                        detail::type_list<Ts...>>
-    : invoke_util_base<detail::type_list<Ts...>> {
-  using super = invoke_util_base<detail::type_list<Ts...>>;
-
-  template <class Tuple>
-  static bool can_invoke(const std::type_info& arg_types, const Tuple& tup) {
-    if (arg_types == typeid(detail::type_list<Ts...>)) {
-      return true;
-    }
-    using arr_type = detail::static_types_array<Ts...>;
-    auto& arr = arr_type::arr;
-    if (tup.size() < sizeof...(Ts)) return false;
-    size_t i = tup.size() - sizeof...(Ts);
-    size_t j = 0;
-    while (j < sizeof...(Ts)) {
-      if (arr[j++] != tup.type_at(i++)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  template <class PtrType, class Tuple>
-  static bool prepare_invoke(typename super::tuple_type& result,
-                             const std::type_info& arg_types, bool, PtrType*,
-                             Tuple& tup) {
-    if (!can_invoke(arg_types, tup)) return false;
-    size_t i = tup.size() - sizeof...(Ts);
-    size_t j = 0;
-    while (j < sizeof...(Ts)) {
-      result[j++] = const_cast<void*>(tup.at(i++));
-    }
-    return true;
-  }
-};
-
-template <class Pattern>
-struct invoke_util : invoke_util_impl<get_wildcard_position<Pattern>(), Pattern,
-                                      typename detail::tl_filter_not_type<
-                                        Pattern,
-                                        anything>::type
-                                      > {
-};
-
 template <class Expr, class Projecs, class Signature, class Pattern>
 class match_expr_case : public get_lifted_fun<Expr, Projecs, Signature>::type {
  public:
@@ -324,7 +68,17 @@ class match_expr_case : public get_lifted_fun<Expr, Projecs, Signature>::type {
   match_expr_case(Ts&&... args) : super(std::forward<Ts>(args)...) {
     // nop
   }
-  using pattern_type = Pattern;
+  using pattern = Pattern;
+  using filtered_pattern =
+    typename detail::tl_filter_not_type<
+    Pattern,
+    anything
+  >::type;
+  using intermediate_tuple =
+    typename detail::tl_apply<
+    filtered_pattern,
+    detail::pseudo_tuple
+  >::type;
 };
 
 template <class Expr, class Transformers, class Pattern>
@@ -453,33 +207,32 @@ T& unroll_expr_result_unbox(optional<T>& opt) {
   return *opt;
 }
 
-template <class Result, class PPFPs, typename PtrType, class Tuple>
-Result unroll_expr(PPFPs&, uint64_t, minus1l, const std::type_info&, bool,
-                   PtrType*, Tuple&) {
+template <class Result, class PPFPs, class Msg>
+Result unroll_expr(PPFPs&, uint64_t, minus1l, Msg&) {
+  // end of recursion
   return none;
 }
 
-template <class Result, class PPFPs, long N, typename PtrType, class Tuple>
-Result unroll_expr(PPFPs& fs, uint64_t bitmask, long_constant<N>,
-                   const std::type_info& type_token, bool is_dynamic,
-                   PtrType* ptr, Tuple& tup) {
-  /* recursively evaluate sub expressions */ {
-    Result res = unroll_expr<Result>(fs, bitmask, long_constant<N - 1>{},
-                                     type_token, is_dynamic, ptr, tup);
+template <class Result, class PPFPs, long N, class Msg>
+Result unroll_expr(PPFPs& fs, uint64_t bitmask, long_constant<N>, Msg& msg) {
+  { // recursively evaluate sub expressions
+    Result res = unroll_expr<Result>(fs, bitmask, long_constant<N - 1>{}, msg);
     if (!get<none_t>(&res)) {
       return res;
     }
   }
-  if ((bitmask & (0x01 << N)) == 0) return none;
+  if ((bitmask & (0x01 << N)) == 0) {
+    // case is disabled via bitmask
+    return none;
+  }
   auto& f = get<N>(fs);
-  using Fun = typename std::decay<decltype(f)>::type;
-  using pattern_type = typename Fun::pattern_type;
-  //using policy = detail::invoke_util<pattern_type>;
-  typedef detail::invoke_util<pattern_type> policy; // using fails on GCC 4.7
-  typename policy::tuple_type targs;
-  if (policy::prepare_invoke(targs, type_token, is_dynamic, ptr, tup)) {
+  using ft = typename std::decay<decltype(f)>::type;
+  detail::matcher<typename ft::pattern, typename ft::filtered_pattern> match;
+  typename ft::intermediate_tuple targs;
+  if (match(msg, &targs)) {
+  //if (policy::prepare_invoke(targs, type_token, is_dynamic, ptr, tup)) {
     auto is = detail::get_indices(targs);
-    auto res = detail::apply_args(f, is, deduce_const(tup, targs));
+    auto res = detail::apply_args(f, is, deduce_const(msg, targs));
     if (unroll_expr_result_valid(res)) {
       return std::move(unroll_expr_result_unbox(res));
     }
@@ -496,10 +249,9 @@ template <class Case, long N, class Tuple>
 uint64_t calc_bitmask(Case& fs, long_constant<N>,
                const std::type_info& tinf, const Tuple& tup) {
   auto& f = get<N>(fs);
-  using Fun = typename std::decay<decltype(f)>::type;
-  using pattern_type = typename Fun::pattern_type;
-  using policy = detail::invoke_util<pattern_type>;
-  uint64_t result = policy::can_invoke(tinf, tup) ? (0x01 << N) : 0x00;
+  using ft = typename std::decay<decltype(f)>::type;
+  detail::matcher<typename ft::pattern, typename ft::filtered_pattern> match;
+  uint64_t result = match(tup, nullptr) ? (0x01 << N) : 0x00;
   return result | calc_bitmask(fs, long_constant<N - 1l>(), tinf, tup);
 }
 
@@ -717,21 +469,15 @@ class match_expr {
     m_cache_begin = m_cache_end = 0;
   }
 
-  template <class Tuple>
-  result_type apply(Tuple& tup) {
+  template <class Msg>
+  result_type apply(Msg& msg) {
     idx_token_type idx_token;
     std::integral_constant<bool, has_manipulator> mutator_token;
     // returns either a reference or a new object
-    using detached = decltype(detail::detach_if_needed(tup, mutator_token));
-    detached tref = detail::detach_if_needed(tup, mutator_token);
-    auto& vals = tref.vals();
-    auto ndp = detail::fetch_native_data(tref, mutator_token);
-    auto token_ptr = tref.type_token();
-    auto bitmask = get_cache_entry(token_ptr, tref);
-    auto dynamically_typed = tref.dynamically_typed();
-    return detail::unroll_expr<result_type>(m_cases, bitmask, idx_token,
-                                            *token_ptr, dynamically_typed,
-                                            ndp, *vals);
+    using detached = decltype(detail::detach_if_needed(msg, mutator_token));
+    detached mref = detail::detach_if_needed(msg, mutator_token);
+    auto bitmask = get_cache_entry(mref.type_token(), mref);
+    return detail::unroll_expr<result_type>(m_cases, bitmask, idx_token, mref);
   }
 };
 

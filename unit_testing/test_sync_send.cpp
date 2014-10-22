@@ -301,7 +301,11 @@ void test_sync_send() {
   });
   self->on_sync_failure(CAF_UNEXPECTED_MSG_CB_REF(self));
   self->timed_sync_send(c, std::chrono::milliseconds(500), atom("HiThere"))
-    .await(CAF_FAILURE_CB("C replied to 'HiThere'!"));
+  .await(
+    on(val<atom_value>) >> [&] {
+      cout << "C did reply to 'HiThere'" << endl;
+    }
+  );
   CAF_CHECK_EQUAL(timeout_occured, true);
   self->on_sync_failure(CAF_UNEXPECTED_MSG_CB_REF(self));
   self->sync_send(c, atom("gogo")).await(CAF_CHECKPOINT_CB());
