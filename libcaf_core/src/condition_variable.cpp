@@ -1,5 +1,6 @@
 
 //#include <system_error>
+#include <cstdio>
 #include <stdexcept>
 
 extern "C" {
@@ -22,13 +23,17 @@ condition_variable::~condition_variable() {
 void condition_variable::notify_one() noexcept {
   unsigned old_state = disableIRQ();
   priority_queue_node_t *head = priority_queue_remove_head(&m_queue);
+  printf("[notify_one] head is %x with data %u\n", head, head->data);
+  printf("[notify_one] data %u\n", head->data);
   int other_prio = -1;
   if (head != NULL) {
     tcb_t *other_thread = (tcb_t *) sched_threads[head->data];
+    printf("[notify_one] other thread is %x at %x\n", other_thread, head->data);
     if (other_thread) {
       other_prio = other_thread->priority;
       sched_set_status(other_thread, STATUS_PENDING);
     }
+    printf("[notify_one] setting data to -1u\n");
     head->data = -1u;
   }
   restoreIRQ(old_state);
@@ -53,6 +58,7 @@ void condition_variable::notify_all() noexcept {
       other_prio = max_prio(other_prio, other_thread->priority);
       sched_set_status(other_thread, STATUS_PENDING);
     }
+    printf("[notify_all] setting data to -1u\n");
     head->data = -1u;
   }
   restoreIRQ(old_state);
@@ -70,9 +76,17 @@ void condition_variable::wait(unique_lock<mutex>& lock) noexcept {
   n.data = sched_active_pid;
   n.next = NULL;
 
+  printf("[wait] adding node: %x with data %x\n", &n, n.data);
+
   /* the signaling thread may not hold the mutex, the queue is not thread safe */
   unsigned old_state = disableIRQ();
   priority_queue_add(&m_queue, &n);
+
+  printf("[wait] node added: %x with data %x\n", &n, n.data);
+  priority_queue_node_t *head = priority_queue_remove_head(&m_queue);
+  printf("[wait] head is: %x with data %x\n", head, head->data);
+  priority_queue_add(&m_queue, &n);
+
   restoreIRQ(old_state);
   mutex_unlock_and_sleep(lock.mutex()->native_handle());
   if (n.data != -1u) {
@@ -85,9 +99,9 @@ void condition_variable::wait(unique_lock<mutex>& lock) noexcept {
   mutex_lock(lock.mutex()->native_handle());
 }
 
- void condition_variable::do_timed_wait(unique_lock<mutex>& lock,
-                                        time_point<system_clock,
-                                                   nanoseconds> tp) noexcept {
+void condition_variable::do_timed_wait(unique_lock<mutex>& lock,
+                                       time_point<system_clock,
+                                                  nanoseconds> tp) noexcept {
   if (!lock.owns_lock()) {
     throw std::runtime_error("condition_variable::timed wait: mutex not locked");
   }
