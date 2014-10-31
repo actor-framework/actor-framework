@@ -48,6 +48,7 @@ namespace caf {
 
 namespace {
   constexpr kernel_pid_t thread_uninitialized = -1;
+  constexpr size_t stack_size = KERNEL_CONF_STACKSIZE_MAIN;
 }
 
 class thread_id {
@@ -147,11 +148,15 @@ class thread {
   thread(const thread&) = delete;
   inline thread(thread&& t) noexcept : m_handle{t.m_handle} {
     t.m_handle = thread_uninitialized;
+    std::swap(m_stack, t.m_stack);
   }
   thread& operator=(const thread&) = delete;
   thread& operator=(thread&&) noexcept;
 
-  void swap(thread& t) noexcept { std::swap(m_handle, t.m_handle); }
+  void swap(thread& t) noexcept {
+    std::swap(m_handle, t.m_handle);
+    std::swap(m_stack, t.m_stack);
+  }
 
   inline bool joinable() const noexcept { return false; }
   void join();
@@ -162,7 +167,7 @@ class thread {
   static unsigned hardware_concurrency() noexcept;
 
   kernel_pid_t m_handle;
-  char m_stack[KERNEL_CONF_STACKSIZE_MAIN];
+  std::unique_ptr<char[]> m_stack;
 };
 
 void swap(thread& lhs, thread& rhs) noexcept;
@@ -179,29 +184,33 @@ void* thread_proxy(void* vp) {
 template <class F, class ...Args,
          class
         >
-thread::thread(F&& f, Args&&... args) {
- using namespace std;
- using func_and_args = tuple<typename decay<F>::type,
-                             typename decay<Args>::type...>;
- std::unique_ptr<func_and_args> p(new func_and_args(decay_copy(forward<F>(f)),
-                                    decay_copy(forward<Args>(args))...));
- m_handle = thread_create(m_stack, sizeof(m_stack),
-                          PRIORITY_MAIN - 1, 0, // CREATE_WOUT_YIELD
-                          &thread_proxy<func_and_args>,
-                          p.get(), "caf_thread");
- if (m_handle >= 0) {
-   p.release();
- } else {
-   throw std::runtime_error("Failed to create thread.");
- }
+thread::thread(F&& f, Args&&... args) : m_stack(new char[stack_size]) {
+  using namespace std;
+  using func_and_args = tuple<typename decay<F>::type,
+                              typename decay<Args>::type...>;
+//  if(!m_stack) {
+//    m_stack = std::unique_ptr<char[]>(new char[stack_size]);
+//  }
+  std::unique_ptr<func_and_args> p(new func_and_args(decay_copy(forward<F>(f)),
+                                     decay_copy(forward<Args>(args))...));
+  m_handle = thread_create(m_stack.get(), stack_size,
+                           PRIORITY_MAIN - 1, 0, // CREATE_WOUT_YIELD
+                           &thread_proxy<func_and_args>,
+                           p.get(), "caf_thread");
+  if (m_handle >= 0) {
+    p.release();
+  } else {
+    throw std::runtime_error("Failed to create thread.");
+  }
 }
 
 inline thread& thread::operator=(thread&& other) noexcept {
-  if (m_handle != 0) {
+  if (m_handle != thread_uninitialized || m_stack) {
     std::terminate();
   }
   m_handle = other.m_handle;
-  other.m_handle = 0;
+  other.m_handle = thread_uninitialized;
+  std::swap(m_stack, other.m_stack);
   return *this;
 }
 
