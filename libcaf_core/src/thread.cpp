@@ -9,11 +9,10 @@ namespace caf {
 
 thread::~thread() {
   // not needed, as our thread is always detachted
-  printf("thread::~thread thread is dead\n");
   //sched_task_exit();
   //dINT();
   //sched_threads[sched_active_pid] = NULL;
-  sched_num_threads--;
+  --sched_num_threads;
   //sched_set_status((tcb_t *)sched_active_thread, STATUS_STOPPED);
   //sched_active_thread = NULL;
   //cpu_switch_context_exit();
