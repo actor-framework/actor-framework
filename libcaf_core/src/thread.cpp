@@ -9,13 +9,15 @@ namespace caf {
 
 thread::~thread() {
   // not needed, as our thread is always detachted
-  //sched_task_exit();
-  //dINT();
-  //sched_threads[sched_active_pid] = NULL;
-  --sched_num_threads;
-  //sched_set_status((tcb_t *)sched_active_thread, STATUS_STOPPED);
-  //sched_active_thread = NULL;
-  //cpu_switch_context_exit();
+  if (m_stack && m_handle != thread_uninitialized) {
+    //sched_task_exit();
+    //dINT();
+    //sched_threads[sched_active_pid] = NULL;
+    --sched_num_threads;
+    //sched_set_status((tcb_t *)sched_active_thread, STATUS_STOPPED);
+    //sched_active_thread = NULL;
+    //cpu_switch_context_exit();
+  }
 }
 
 void thread::join() {
@@ -24,6 +26,10 @@ void thread::join() {
 
 void thread::detach() {
   // I believe there is no equivalent on RIOT
+  if (m_stack) {
+    m_stack.release();
+    m_handle = thread_uninitialized;
+  }
 }
 
 unsigned thread::hardware_concurrency() noexcept {
