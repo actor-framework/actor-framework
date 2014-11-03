@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 2.8)
 project(caf C CXX)
 
+# silence policy CMP0042 warning by enabling RPATH explicitly
+if(APPLE AND NOT DEFINED CMAKE_MACOSX_RPATH)
+  set(CMAKE_MACOSX_RPATH true)
+endif()
 
 ################################################################################
 #   make sure all variables are set to "no" if undefined for summary output    #
