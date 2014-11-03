@@ -93,7 +93,7 @@ class unique_lock {
     : m_mtx{&mtx}, m_owns{ mtx.try_lock() } { }
   inline unique_lock(mutex_type& mtx, adopt_lock_t)
     : m_mtx{&mtx}, m_owns{true} { }
-  template<class Clock, class Duration>
+//  template<class Clock, class Duration>
 //  inline unique_lock(mutex_type& mtx,
 //                     const std::chrono::time_point<Clock,
 //                                                   Duration>& timeout_time)
@@ -102,11 +102,11 @@ class unique_lock {
 //  inline unique_lock(mutex_type& mtx,
 //                     const chrono::duration<Rep,Period>& timeout_duration)
 //    : m_mtx{&mtx}, m_owns{mtx.try_lock_for(timeout_duration)} { }
-//  inline ~unique_lock() {
-//    if (m_owns) {
-//      m_mtx->unlock();
-//    }
-//  }
+  inline ~unique_lock() {
+    if (m_owns) {
+      m_mtx->unlock();
+    }
+  }
   inline unique_lock(unique_lock&& lock) noexcept
     : m_mtx{lock.m_mtx},
       m_owns{lock.m_owns} {
