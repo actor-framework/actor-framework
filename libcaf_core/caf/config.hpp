@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -37,7 +37,7 @@
  * whereas each number is a two-digit decimal number without
  * leading zeros (e.g. 900 is version 0.9.0).
  */
-#define CAF_VERSION 1100
+#define CAF_VERSION 1101
 
 #define CAF_MAJOR_VERSION (CAF_VERSION / 10000)
 #define CAF_MINOR_VERSION ((CAF_VERSION / 100) % 100)
