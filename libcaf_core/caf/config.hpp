@@ -28,9 +28,6 @@
 // CAF_LOG_LEVEL:
 //   - denotes the amount of logging, ranging from error messages only (0)
 //     to complete traces (4)
-//
-// CAF_OPENCL:
-//   - enables optional OpenCL module
 
 /**
  * Denotes the libcaf version in the format {MAJOR}{MINOR}{PATCH},
