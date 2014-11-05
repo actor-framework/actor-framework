@@ -9,11 +9,11 @@ network transparent messaging, and more.
 On the Web
 ----------
 
-* __Project Homepage__: http://www.actor-framework.org
+* __Homepage__: http://www.actor-framework.org
 * __Developer Blog__: http://blog.actor-framework.org
-* __Manual (HTML)__: http://actor-framework.github.io/actor-framework/manual/index.html
-* __Manual (PDF)__: http://actor-framework.github.io/actor-framework/manual/manual.pdf
-* __Doxygen (HTML)__: http://actor-framework.github.io/actor-framework/index.html
+* __Doxygen (HTML)__: http://www.actor-framework.org/doc
+* __Manual (HTML)__: http://www.actor-framework.org/manual
+* __Manual (PDF)__: http://www.actor-framework.org/pdf/manual.pdf
 * __Mailing List__: https://groups.google.com/d/forum/actor-framework
 
 
