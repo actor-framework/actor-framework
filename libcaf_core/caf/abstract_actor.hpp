@@ -39,6 +39,7 @@
 #include "caf/abstract_channel.hpp"
 
 #include "caf/detail/type_traits.hpp"
+#include "caf/detail/functor_attachable.hpp"
 
 namespace caf {
 
@@ -90,16 +91,7 @@ class abstract_actor : public abstract_channel {
    */
   template <class F>
   void attach_functor(F f) {
-    struct functor_attachable : attachable {
-      F m_functor;
-      functor_attachable(F arg) : m_functor(std::move(arg)) {
-        // nop
-      }
-      void actor_exited(abstract_actor*, uint32_t reason) {
-        m_functor(reason);
-      }
-    };
-    attach(attachable_ptr{new functor_attachable(std::move(f))});
+    attach(attachable_ptr{new detail::functor_attachable<F>(std::move(f))});
   }
 
   /**
