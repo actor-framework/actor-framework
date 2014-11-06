@@ -17,45 +17,44 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_PUBLISH_IMPL_HPP
-#define CAF_IO_PUBLISH_IMPL_HPP
+#ifndef CAF_IO_UNPUBLISH_HPP
+#define CAF_IO_UNPUBLISH_HPP
 
-#include <future>
+#include <cstdint>
 
+#include "caf/actor.hpp"
 #include "caf/actor_cast.hpp"
-
-#include "caf/abstract_actor.hpp"
-#include "caf/detail/singletons.hpp"
-#include "caf/detail/actor_registry.hpp"
-
-#include "caf/io/middleman.hpp"
-#include "caf/io/basp_broker.hpp"
+#include "caf/typed_actor.hpp"
 
 namespace caf {
 namespace io {
 
-template <class... Ts>
-void publish_impl(abstract_actor_ptr whom, uint16_t port, const char* in) {
-  using namespace detail;
-  auto mm = middleman::instance();
-  std::promise<bool> res;
-  mm->run_later([&] {
-    auto bro = mm->get_named_broker<basp_broker>(atom("_BASP"));
-    try {
-      auto hdl = mm->backend().add_tcp_doorman(bro.get(), port, in);
-      bro->announce_published_actor(hdl, whom);
-      mm->notify<hook::actor_published>(whom->address(), port);
-      res.set_value(true);
-    }
-    catch (...) {
-      res.set_exception(std::current_exception());
-    }
-  });
-  // block caller and re-throw exception here in case of an error
-  res.get_future().get();
+void unpublish_impl(abstract_actor_ptr whom, uint16_t port, bool block_caller);
+
+/**
+ * Unpublishes `whom` by closing `port`.
+ * @param whom Actor that should be unpublished at `port`.
+ * @param port TCP port.
+ */
+inline void unpublish(caf::actor whom, uint16_t port) {
+  if (!whom) {
+    return;
+  }
+  unpublish_impl(actor_cast<abstract_actor_ptr>(whom), port, true);
+}
+
+/**
+ * @copydoc unpublish(actor,uint16_t)
+ */
+template <class... Rs>
+void typed_unpublish(typed_actor<Rs...> whom, uint16_t port) {
+  if (!whom) {
+    return;
+  }
+  unpublish_impl(actor_cast<abstract_actor_ptr>(whom), port, true);
 }
 
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_PUBLISH_IMPL_HPP
+#endif // CAF_IO_UNPUBLISH_HPP

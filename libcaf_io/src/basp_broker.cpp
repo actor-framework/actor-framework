@@ -26,6 +26,7 @@
 
 #include "caf/io/basp.hpp"
 #include "caf/io/middleman.hpp"
+#include "caf/io/unpublish.hpp"
 #include "caf/io/basp_broker.hpp"
 #include "caf/io/remote_actor_proxy.hpp"
 
@@ -61,7 +62,7 @@ behavior basp_broker::make_behavior() {
       ctx.hdl = msg.handle;
       ctx.handshake_data = nullptr;
       ctx.state = await_client_handshake;
-      init_handshake_as_sever(ctx, m_published_actors[msg.source]->address());
+      init_handshake_as_sever(ctx, m_acceptors[msg.source].first->address());
     },
     // received from underlying broker implementation
     [=](const connection_closed_msg& msg) {
@@ -99,9 +100,17 @@ behavior basp_broker::make_behavior() {
       m_ctx.erase(msg.handle);
     },
     // received from underlying broker implementation
-    [=](const acceptor_closed_msg&) {
+    [=](const acceptor_closed_msg& msg) {
       CAF_LOGM_TRACE("make_behavior$acceptor_closed_msg", "");
-      // nop
+      auto i = m_acceptors.find(msg.handle);
+      if (i == m_acceptors.end()) {
+        CAF_LOG_INFO("accept handle no longer in use");
+        return;
+      }
+      if (m_open_ports.erase(i->second.second) == 0) {
+        CAF_LOG_INFO("accept handle was not bound to a port");
+      }
+      m_acceptors.erase(i);
     },
     // received from proxy instances
     on(atom("_Dispatch"), arg_match) >> [=](const actor_addr& sender,
@@ -646,16 +655,45 @@ void basp_broker::init_handshake_as_sever(connection_context& ctx,
   configure_read(ctx.hdl, receive_policy::exactly(basp::header_size));
 }
 
-void basp_broker::announce_published_actor(accept_handle hdl,
-                                           const abstract_actor_ptr& ptr) {
+void basp_broker::add_published_actor(accept_handle hdl,
+                                      const abstract_actor_ptr& ptr,
+                                      uint16_t port) {
+  CAF_LOG_TRACE("");
   if (!ptr) {
     return;
   }
   CAF_LOG_TRACE("");
-  m_published_actors.insert(std::make_pair(hdl, ptr));
+  m_acceptors.insert(std::make_pair(hdl, std::make_pair(ptr, port)));
+  m_open_ports.insert(std::make_pair(port, hdl));
+  ptr->attach_functor([port](abstract_actor* self, uint32_t) {
+    unpublish_impl(self, port, false);
+  });
   if (ptr->node() == node()) {
     singletons::get_actor_registry()->put(ptr->id(), ptr);
   }
+}
+
+void basp_broker::remove_published_actor(const abstract_actor_ptr& whom,
+                                         uint16_t port) {
+  CAF_LOG_TRACE("");
+  auto i = m_open_ports.find(port);
+  if (i == m_open_ports.end()) {
+    return;
+  }
+  auto j = m_acceptors.find(i->second);
+  if (j == m_acceptors.end()) {
+    CAF_LOG_ERROR("accept handle for port " << port
+                  << " not found in m_published_actors");
+    m_open_ports.erase(i);
+    return;
+  }
+  if (j->second.first != whom) {
+    CAF_LOG_INFO("port has been bound to a different actor already");
+    return;
+  }
+  close(j->first);
+  m_open_ports.erase(i);
+  m_acceptors.erase(j);
 }
 
 } // namespace io

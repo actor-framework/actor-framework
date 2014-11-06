@@ -17,47 +17,65 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_PUBLISH_HPP
-#define CAF_IO_PUBLISH_HPP
+#include <thread>
+#include <atomic>
 
-#include <cstdint>
+#include "test.hpp"
 
-#include "caf/actor.hpp"
-#include "caf/actor_cast.hpp"
-#include "caf/typed_actor.hpp"
+#include "caf/all.hpp"
+#include "caf/io/all.hpp"
 
-namespace caf {
-namespace io {
+using namespace caf;
 
-void publish_impl(abstract_actor_ptr whom, uint16_t port, const char* in);
+namespace {
 
-/**
- * Publishes `whom` at `port`. The connection is managed by the middleman.
- * @param whom Actor that should be published at `port`.
- * @param port Unused TCP port.
- * @param addr The IP address to listen to or `INADDR_ANY` if `in == nullptr`.
- * @throws bind_failure
- */
-inline void publish(caf::actor whom, uint16_t port, const char* in = nullptr) {
-  if (!whom) {
-    return;
+std::atomic<long> s_dtor_called;
+
+class dummy : public event_based_actor {
+ public:
+  ~dummy() {
+    ++s_dtor_called;
   }
-  publish_impl(actor_cast<abstract_actor_ptr>(whom), port, in);
+  behavior make_behavior() override {
+    return {
+      others() >> CAF_UNEXPECTED_MSG_CB(this)
+    };
+  }
+};
+
+uint16_t publish_at_some_port(uint16_t first_port, actor whom) {
+  auto port = first_port;
+  for (;;) {
+    try {
+      io::publish(whom, port);
+      return port;
+    }
+    catch (bind_failure&) {
+      // try next port
+      ++port;
+    }
+  }
 }
 
-/**
- * @copydoc publish(actor,uint16_t,const char*)
- */
-template <class... Rs>
-void typed_publish(typed_actor<Rs...> whom, uint16_t port,
-                   const char* in = nullptr) {
-  if (!whom) {
-    return;
+} // namespace <anonymous>
+
+int main() {
+  CAF_TEST(test_unpublish);
+  auto d = spawn<dummy>();
+  auto port = publish_at_some_port(4242, d);
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  io::unpublish(d, port);
+  // must fail now
+  try {
+    auto oops = io::remote_actor("127.0.0.1", port);
+    CAF_FAILURE("unexpected: remote actor succeeded!");
+  } catch (network_error&) {
+    CAF_CHECKPOINT();
   }
-  publish_impl(actor_cast<abstract_actor_ptr>(whom), port, in);
+  anon_send_exit(d, exit_reason::user_shutdown);
+  d = invalid_actor;
+  await_all_actors_done();
+  shutdown();
+  CAF_CHECK_EQUAL(s_dtor_called.load(), 1);
+  return CAF_TEST_RESULT();
 }
-
-} // namespace io
-} // namespace caf
-
-#endif // CAF_IO_PUBLISH_HPP
