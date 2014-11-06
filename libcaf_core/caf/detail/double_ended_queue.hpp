@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -30,7 +30,7 @@
 #include <cassert>
 
 // GCC hack
-#if !defined(_GLIBCXX_USE_SCHED_YIELD) && !defined(__clang__)
+#if defined(CAF_GCC) && !defined(_GLIBCXX_USE_SCHED_YIELD)
 #include <time.h>
 namespace std {
 namespace this_thread {
@@ -47,7 +47,7 @@ inline void yield() noexcept {
 #endif
 
 // another GCC hack
-#if !defined(_GLIBCXX_USE_NANOSLEEP) && !defined(__clang__)
+#if defined(CAF_GCC) && !defined(_GLIBCXX_USE_NANOSLEEP)
 #include <time.h>
 namespace std {
 namespace this_thread {
@@ -109,18 +109,19 @@ class double_ended_queue {
   static_assert(sizeof(node*) < CAF_CACHE_LINE_SIZE,
                 "sizeof(node*) >= CAF_CACHE_LINE_SIZE");
 
-  double_ended_queue()
-      : m_head_lock(ATOMIC_FLAG_INIT),
-        m_tail_lock(ATOMIC_FLAG_INIT) {
+  double_ended_queue() {
+    m_head_lock.clear();
+    m_tail_lock.clear();
     auto ptr = new node(nullptr);
     m_head = ptr;
     m_tail = ptr;
   }
 
   ~double_ended_queue() {
-    while (m_head) {
-      unique_node_ptr tmp{m_head.load()};
-      m_head = tmp->next.load();
+    auto ptr = m_head.load();
+    while (ptr) {
+      unique_node_ptr tmp{ptr};
+      ptr = tmp->next.load();
     }
   }
 

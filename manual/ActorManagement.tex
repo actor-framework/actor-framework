@@ -42,7 +42,7 @@ actor worker = ...;
 self->monitor(worker);
 // wait until worker exited
 self->become (
-  on(const down_msg& d) >> [] {
+  [](const down_msg& d) {
     if (d.reason == exit_reason::normal) {
       // worker finished computation
     } else {

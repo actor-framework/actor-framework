@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -28,16 +28,13 @@
 // CAF_LOG_LEVEL:
 //   - denotes the amount of logging, ranging from error messages only (0)
 //     to complete traces (4)
-//
-// CAF_OPENCL:
-//   - enables optional OpenCL module
 
 /**
  * Denotes the libcaf version in the format {MAJOR}{MINOR}{PATCH},
  * whereas each number is a two-digit decimal number without
  * leading zeros (e.g. 900 is version 0.9.0).
  */
-#define CAF_VERSION 1100
+#define CAF_VERSION 1101
 
 #define CAF_MAJOR_VERSION (CAF_VERSION / 10000)
 #define CAF_MINOR_VERSION ((CAF_VERSION / 100) % 100)
@@ -76,7 +73,7 @@
 #  define CAF_ANNOTATE_FALLTHROUGH static_cast<void>(0)
 #elif defined(_MSC_VER)
 #  define CAF_MSVC
-#  define CAF_DEPRECATED __declspec(deprecated)
+#  define CAF_DEPRECATED
 #  define CAF_PUSH_WARNINGS
 #  define CAF_POP_WARNINGS
 #  define CAF_ANNOTATE_FALLTHROUGH static_cast<void>(0)

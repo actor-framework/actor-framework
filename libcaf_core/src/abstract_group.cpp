@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -32,9 +32,8 @@ abstract_group::subscription::subscription(const abstract_group_ptr& g)
   // nop
 }
 
-void abstract_group::subscription::actor_exited(abstract_actor* self,
-                                                uint32_t reason) {
-  m_group->unsubscribe(self->address());
+void abstract_group::subscription::actor_exited(abstract_actor* ptr, uint32_t) {
+  m_group->unsubscribe(ptr->address());
 }
 
 bool abstract_group::subscription::matches(const token& what) {

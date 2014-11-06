@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -179,7 +179,7 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   void send(const typed_actor<Rs...>& whom, Ts... what) {
     check_typed_input(whom,
                       detail::type_list<typename detail::implicit_conversions<
-                        typename detail::rm_const_and_ref<Ts>::type
+                        typename std::decay<Ts>::type
                       >::type...>{});
     send_tuple(message_priority::normal, actor{whom.m_ptr.get()},
                make_message(std::forward<Ts>(what)...));

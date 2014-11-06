@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -192,7 +192,7 @@ class response_handle<Self, detail::type_list<Ts...>,
     using arg_types =
       typename detail::tl_map<
         typename detail::get_callable_trait<F>::arg_types,
-        detail::rm_const_and_ref
+        std::decay
       >::type;
     static constexpr size_t fun_args = detail::tl_size<arg_types>::value;
     static_assert(fun_args <= detail::tl_size<result_types>::value,

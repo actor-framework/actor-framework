@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -52,7 +52,8 @@ class event_based_actor
   /**
    * Forwards the last received message to `whom`.
    */
-  void forward_to(const actor& whom);
+  void forward_to(const actor& whom,
+                  message_priority = message_priority::normal);
 
   event_based_actor() = default;
 

@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 2.8)
 project(caf C CXX)
 
+# silence policy CMP0042 warning by enabling RPATH explicitly
+if(APPLE AND NOT DEFINED CMAKE_MACOSX_RPATH)
+  set(CMAKE_MACOSX_RPATH true)
+endif()
 
 ################################################################################
 #   make sure all variables are set to "no" if undefined for summary output    #
@@ -69,7 +73,7 @@ endif()
 ################################################################################
 
 # check for g++ >= 4.7 or clang++ > = 3.2
-if(NOT NO_COMPILER_CHECK)
+if(NOT WIN32 AND NOT NO_COMPILER_CHECK)
   try_run(ProgramResult
           CompilationSucceeded
           "${CMAKE_BINARY_DIR}"
@@ -135,17 +139,18 @@ if(ENABLE_ADDRESS_SANITIZER)
   message(STATUS "Enable address sanitizer")
 endif(ENABLE_ADDRESS_SANITIZER)
 # -pthread is ignored on MacOSX, enable it for all other platforms
-if(NOT APPLE)
+if(NOT APPLE AND NOT WIN32)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 endif()
 # extra setup steps needed on MinGW
 if(MINGW)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWIN32")
+  add_definitions(-D_WIN32_WINNT=0x0600)
+  add_definitions(-DWIN32)
   include(GenerateExportHeader)
   set(LD_FLAGS "ws2_32 -liphlpapi")
 endif()
 # needed by subprojects
-set(LD_FLAGS ${CMAKE_LD_LIBS})
+set(LD_FLAGS ${LD_FLAGS} ${CMAKE_LD_LIBS})
 
 
 ################################################################################

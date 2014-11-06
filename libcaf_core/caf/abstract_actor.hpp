@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -110,10 +110,10 @@ class abstract_actor : public abstract_channel {
   /**
    * Detaches the first attached object that matches `what`.
    */
-  void detach(const attachable::token& what);
+  size_t detach(const attachable::token& what);
 
   template <class T>
-  void detach(const T& what) {
+  size_t detach(const T& what) {
     return detach(attachable::token{typeid(T), &what});
   }
 

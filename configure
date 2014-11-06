@@ -14,6 +14,17 @@ use this configure script to access CMake equivalent functionality.\
 command="$0 $*"
 dirname_0=`dirname $0`
 sourcedir=`cd $dirname_0 && pwd`
+benchmark_suite_options=""
+if [ -d "$sourcedir/benchmarks/caf" ] ; then
+benchmark_suite_options="\
+
+  Benchmark Suite Options:
+    --with-scalac=FILE          path to Scala compiler
+    --with-erlc=FILE            path to Erlang compiler
+    --with-charmc=FILE          path to Charm++ compiler
+    --with-salsa=FILE           path to SALSA Lite jar
+"
+fi
 usage="\
 Usage: $0 [OPTION]... [VAR=VALUE]...
 
@@ -68,11 +79,7 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
   Influential Environment Variables (only on first invocation):
     CXX                         C++ compiler command
     CXXFLAGS                    C++ compiler flags
-
-  Benchmark Suite Options:
-    --with-scalac=FILE          path to scalac executable
-    --with-erlc=FILE            path to erlc executable
-"
+$benchmark_suite_options"
 
 
 # Appends a CMake cache entry definition to the CMakeCacheEntries variable.
@@ -289,6 +296,12 @@ while [ $# -ne 0 ]; do
             ;;
         --with-erlc=*)
             append_cache_entry CAF_ERLANG_COMPILER FILEPATH "$optarg"
+            ;;
+        --with-charmc=*)
+            append_cache_entry CAF_CHARM_COMPILER FILEPATH "$optarg"
+            ;;
+        --with-salsa=*)
+            append_cache_entry CAF_SALSA_JAR FILEPATH "$optarg"
             ;;
         --no-nexus)
             append_cache_entry CAF_NO_NEXUS BOOL yes

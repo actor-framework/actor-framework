@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -60,7 +60,7 @@ class message_builder {
    */
   template <class Iter>
   message_builder& append(Iter first, Iter last) {
-    using vtype = typename detail::rm_const_and_ref<decltype(*first)>::type;
+    using vtype = typename std::decay<decltype(*first)>::type;
     using converted = typename detail::implicit_conversions<vtype>::type;
     auto uti = uniform_typeid<converted>();
     for (; first != last; ++first) {

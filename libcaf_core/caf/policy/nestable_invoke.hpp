@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -36,10 +36,10 @@ namespace caf {
 namespace policy {
 
 class nestable_invoke : public invoke_policy<nestable_invoke> {
-
  public:
-
-  inline bool hm_should_skip(mailbox_element* node) { return node->marked; }
+  inline bool hm_should_skip(mailbox_element* node) {
+    return node->marked;
+  }
 
   template <class Actor>
   inline mailbox_element* hm_begin(Actor* self, mailbox_element* node) {
@@ -54,15 +54,14 @@ class nestable_invoke : public invoke_policy<nestable_invoke> {
   inline void hm_cleanup(Actor* self, mailbox_element* previous) {
     self->current_node()->marked = false;
     self->current_node(previous);
+    self->pop_timeout();
   }
 
   template <class Actor>
   inline void hm_revert(Actor* self, mailbox_element* previous) {
-    self->current_node()->marked = false;
-    self->current_node(previous);
-    self->pop_timeout();
+    // same operation for blocking, i.e., nestable, invoke
+    hm_cleanup(self, previous);
   }
-
 };
 
 } // namespace policy

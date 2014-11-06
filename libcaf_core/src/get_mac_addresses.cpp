@@ -154,6 +154,7 @@ std::vector<iface_info> get_mac_addresses() {
 
 // windows
 
+#include <ws2tcpip.h>
 #include <winsock2.h>
 #include <vector>
 #include <string>

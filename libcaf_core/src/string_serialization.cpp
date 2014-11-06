@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -254,7 +254,14 @@ class string_deserializer : public deserializer, public dummy_backend {
     // suppress leading parenthesis for built-in types
     m_obj_had_left_parenthesis.push(try_consume('('));
     auto uti_map = detail::singletons::get_uniform_type_info_map();
-    return uti_map->by_uniform_name(type_name);
+    auto res = uti_map->by_uniform_name(type_name);
+    if (!res) {
+      std::string err = "read type name \"";
+      err += type_name;
+      err += "\" but no such type is known";
+      throw std::runtime_error(err);
+    }
+    return res;
   }
 
   void end_object() override {

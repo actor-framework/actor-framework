@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -121,11 +121,11 @@ compound_member(C& (Parent::*getter)(), const Ts&... args) {
 template <class Parent, class GRes, class SRes, class SArg, class... Ts>
 std::pair<std::pair<GRes (Parent::*)() const, SRes (Parent::*)(SArg)>,
           detail::abstract_uniform_type_info<
-            typename detail::rm_const_and_ref<GRes>::type>*>
+            typename std::decay<GRes>::type>*>
 compound_member(const std::pair<GRes (Parent::*)() const,
                 SRes (Parent::*)(SArg)>& gspair,
                 const Ts&... args) {
-  using mtype = typename detail::rm_const_and_ref<GRes>::type;
+  using mtype = typename std::decay<GRes>::type;
   return {gspair, new detail::default_uniform_type_info<mtype>(args...)};
 }
 

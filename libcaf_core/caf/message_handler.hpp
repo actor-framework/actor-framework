@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -96,7 +96,7 @@ class message_handler {
   template <class... Ts>
   typename std::conditional<
     detail::disjunction<may_have_timeout<
-      typename detail::rm_const_and_ref<Ts>::type>::value...>::value,
+      typename std::decay<Ts>::type>::value...>::value,
     behavior,
     message_handler
   >::type

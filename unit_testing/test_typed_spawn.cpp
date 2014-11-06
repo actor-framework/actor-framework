@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -278,7 +278,7 @@ int_actor::behavior_type int_fun2(int_actor::pointer self) {
       CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
       self->quit();
     },
-    [=](const exit_msg& em) {
+    [=](const exit_msg&) {
       CAF_UNEXPECTED_MSG(self);
     }
   };

@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -93,6 +93,14 @@ message message::drop_right(size_t n) const {
 
 optional<message> message::apply(message_handler handler) {
   return handler(*this);
+}
+
+const std::type_info* message::type_token() const {
+  return m_vals ? m_vals->type_token() : &typeid(detail::empty_type_list);
+}
+
+bool message::dynamically_typed() const {
+  return m_vals ? m_vals->dynamically_typed() : false;
 }
 
 } // namespace caf

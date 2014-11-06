@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -432,7 +432,7 @@ template <class C, typename GRes, typename SRes, typename SArg>
 uniform_type_info_ptr new_member_tinfo(GRes (C::*getter)() const,
                                        SRes (C::*setter)(SArg)) {
   using access_policy = getter_setter_access_policy<C, GRes, SRes, SArg>;
-  using value_type = typename detail::rm_const_and_ref<GRes>::type;
+  using value_type = typename std::decay<GRes>::type;
   using result_type = member_tinfo<value_type, access_policy>;
   return uniform_type_info_ptr(
     new result_type(access_policy(getter, setter)));
@@ -443,7 +443,7 @@ uniform_type_info_ptr new_member_tinfo(GRes (C::*getter)() const,
                                        SRes (C::*setter)(SArg),
                      uniform_type_info_ptr meminf) {
   using access_policy = getter_setter_access_policy<C, GRes, SRes, SArg>;
-  using value_type = typename detail::rm_const_and_ref<GRes>::type;
+  using value_type = typename std::decay<GRes>::type;
   using tinfo = member_tinfo<value_type, access_policy,
                              forwarding_serialize_policy>;
   return uniform_type_info_ptr(new tinfo(access_policy(getter, setter),
@@ -538,7 +538,7 @@ class default_uniform_type_info : public detail::abstract_uniform_type_info<T> {
                   SR (C::*)(ST)    // setter with one argument
                   >,
             detail::abstract_uniform_type_info<
-              typename detail::rm_const_and_ref<GR>::type>*>& pr,
+              typename std::decay<GR>::type>*>& pr,
     Ts&&... args) {
     m_members.push_back(new_member_tinfo(pr.first.first, pr.first.second,
                        uniform_type_info_ptr(pr.second)));

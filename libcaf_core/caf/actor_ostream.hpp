@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -61,8 +61,10 @@ class actor_ostream {
   }
 
   template <class T>
-  inline typename std::enable_if<!std::is_convertible<T, std::string>::value && !std::is_convertible<T, message>::value, actor_ostream&>::type operator<<(
-    T&& arg) {
+  inline typename std::enable_if<
+    !std::is_convertible<T, std::string>::value &&
+    !std::is_convertible<T, message>::value, actor_ostream&
+  >::type operator<<(T&& arg) {
     return write(std::to_string(std::forward<T>(arg)));
   }
 

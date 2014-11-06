@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -26,6 +26,7 @@
 #include "caf/actor_cast.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/message_id.hpp"
+#include "caf/message_priority.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/check_typed_input.hpp"
@@ -41,6 +42,17 @@ inline void send_tuple_as(const actor& from, const channel& to, message msg) {
   }
 }
 
+inline void send_tuple_as(const actor& from, const channel& to,
+                          message_priority prio, message msg) {
+  if (to) {
+    message_id id;
+    if (prio == message_priority::high) {
+      id = id.with_high_priority();
+    }
+    to->enqueue(from.address(), id, std::move(msg), nullptr);
+  }
+}
+
 /**
  * Sends `to` a message under the identity of `from`.
  */
@@ -49,11 +61,22 @@ void send_as(const actor& from, const channel& to, Ts&&... args) {
   send_tuple_as(from, to, make_message(std::forward<Ts>(args)...));
 }
 
+template <class... Ts>
+void send_as(const actor& from, const channel& to, message_priority prio,
+             Ts&&... args) {
+  send_tuple_as(from, to, prio, make_message(std::forward<Ts>(args)...));
+}
+
 /**
  * Anonymously sends `to` a message.
  */
 inline void anon_send_tuple(const channel& to, message msg) {
   send_tuple_as(invalid_actor, to, std::move(msg));
+}
+
+inline void anon_send_tuple(const channel& to, message_priority prio,
+                            message msg) {
+  send_tuple_as(invalid_actor, to, prio, std::move(msg));
 }
 
 /**
@@ -64,6 +87,11 @@ void anon_send(const channel& to, Ts&&... args) {
   send_as(invalid_actor, to, std::forward<Ts>(args)...);
 }
 
+template <class... Ts>
+void anon_send(const channel& to, message_priority prio, Ts&&... args) {
+  send_as(invalid_actor, to, prio, std::forward<Ts>(args)...);
+}
+
 /**
  * Anonymously sends `whom` a message.
  */
@@ -71,9 +99,19 @@ template <class... Rs, class... Ts>
 void anon_send(const typed_actor<Rs...>& whom, Ts&&... args) {
   check_typed_input(whom,
                     detail::type_list<typename detail::implicit_conversions<
-                      typename detail::rm_const_and_ref<Ts>::type
+                      typename std::decay<Ts>::type
                     >::type...>{});
   anon_send(actor_cast<channel>(whom), std::forward<Ts>(args)...);
+}
+
+template <class... Rs, class... Ts>
+void anon_send(const typed_actor<Rs...>& whom, message_priority prio,
+               Ts&&... args) {
+  check_typed_input(whom,
+                    detail::type_list<typename detail::implicit_conversions<
+                      typename std::decay<Ts>::type
+                    >::type...>{});
+  anon_send(actor_cast<channel>(whom), prio, std::forward<Ts>(args)...);
 }
 
 /**
@@ -84,7 +122,7 @@ inline void anon_send_exit(const actor_addr& whom, uint32_t reason) {
     return;
   }
   auto ptr = actor_cast<actor>(whom);
-  ptr->enqueue(invalid_actor_addr, message_id {}.with_high_priority(),
+  ptr->enqueue(invalid_actor_addr, message_id{}.with_high_priority(),
                make_message(exit_msg{invalid_actor_addr, reason}), nullptr);
 }
 

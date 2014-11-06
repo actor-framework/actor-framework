@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -35,15 +35,15 @@ namespace caf {
  */
 template <class T>
 class intrusive_ptr : detail::comparable<intrusive_ptr<T>>,
-            detail::comparable<intrusive_ptr<T>, const T*>,
-            detail::comparable<intrusive_ptr<T>, std::nullptr_t> {
+                      detail::comparable<intrusive_ptr<T>, const T*>,
+                      detail::comparable<intrusive_ptr<T>, std::nullptr_t> {
 
  public:
 
-  using pointer = T*    ;
+  using pointer = T*;
   using const_pointer = const T*;
-  using element_type = T     ;
-  using reference = T&    ;
+  using element_type = T;
+  using reference = T&;
   using const_reference = const T&;
 
   constexpr intrusive_ptr() : m_ptr(nullptr) {
@@ -69,7 +69,9 @@ class intrusive_ptr : detail::comparable<intrusive_ptr<T>>,
   }
 
   ~intrusive_ptr() {
-    if (m_ptr) m_ptr->deref();
+    if (m_ptr) {
+      m_ptr->deref();
+    }
   }
 
   inline void swap(intrusive_ptr& other) {
