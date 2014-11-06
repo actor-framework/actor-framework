@@ -67,6 +67,10 @@ class single_timeout : public Base {
     return waits_for_timeout(tid);
   }
 
+  uint32_t active_timeout_id() const {
+    return m_timeout_id;
+  }
+
   void reset_timeout() {
     this->has_timeout(false);
   }
