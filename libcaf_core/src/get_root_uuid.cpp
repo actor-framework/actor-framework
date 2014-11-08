@@ -26,7 +26,7 @@ constexpr char uuid_format[] = "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF";
 } // namespace <anonmyous>
 #endif // CAF_MACOS
 
-#ifdef CAF_MACOS
+#if defined(CAF_MACOS)
 
 namespace {
 
@@ -61,7 +61,7 @@ std::string get_root_uuid() {
 } // namespace detail
 } // namespace caf
 
-#elif defined(CAF_LINUX)
+#elif defined(CAF_LINUX) || defined(CAF_BSD)
 
 #include <vector>
 #include <string>

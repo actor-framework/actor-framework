@@ -96,6 +96,8 @@
 #   if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,16)
 #   define CAF_POLL_IMPL
 #   endif
+#elif defined(__FreeBSD__)
+#  define CAF_BSD
 #elif defined(WIN32) || defined(_WIN32)
 #  define CAF_WINDOWS
 #else
