@@ -17,36 +17,46 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_TYPED_REMOTE_ACTOR_HELPER_HPP
-#define CAF_IO_TYPED_REMOTE_ACTOR_HELPER_HPP
+#include "caf/io/remote_actor.hpp"
 
-#include "caf/actor_cast.hpp"
-#include "caf/typed_actor.hpp"
+#include <set>
+#include <ios>
+#include <string>
+#include <vector>
+#include <future>
+#include <cstdint>
+#include <algorithm>
 
-#include "caf/typed_actor.hpp"
+#include "caf/abstract_actor.hpp"
+#include "caf/binary_deserializer.hpp"
 
-#include "caf/detail/type_list.hpp"
+#include "caf/io/middleman.hpp"
+#include "caf/io/basp_broker.hpp"
+#include "caf/io/network/multiplexer.hpp"
 
-#include "caf/io/remote_actor_impl.hpp"
+#include "caf/detail/logging.hpp"
 
 namespace caf {
 namespace io {
 
-template <class List>
-struct typed_remote_actor_helper;
-
-template <template <class...> class List, class... Ts>
-struct typed_remote_actor_helper<List<Ts...>> {
-  using return_type = typed_actor<Ts...>;
-  template <class... Vs>
-  return_type operator()(Vs&&... vs) {
-    auto iface = return_type::message_types();
-    auto tmp = remote_actor_impl(std::move(iface), std::forward<Vs>(vs)...);
-    return actor_cast<return_type>(tmp);
-  }
-};
+abstract_actor_ptr remote_actor_impl(const std::set<std::string>& ifs,
+                                     const std::string& host, uint16_t port) {
+  auto mm = middleman::instance();
+  std::promise<abstract_actor_ptr> res;
+  basp_broker::client_handshake_data hdata{invalid_node_id, &res, &ifs};
+  mm->run_later([&] {
+    try {
+      auto bro = mm->get_named_broker<basp_broker>(atom("_BASP"));
+      auto hdl = mm->backend().add_tcp_scribe(bro.get(), host, port);
+      bro->init_client(hdl, &hdata);
+    }
+    catch (...) {
+      res.set_exception(std::current_exception());
+    }
+  });
+  return res.get_future().get();
+}
 
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_TYPED_REMOTE_ACTOR_HELPER_HPP

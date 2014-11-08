@@ -67,7 +67,6 @@ class basp_broker : public broker, public actor_namespace::backend {
   struct client_handshake_data {
     id_type remote_id;
     std::promise<abstract_actor_ptr>* result;
-    std::string* error_msg;
     const std::set<std::string>* expected_ifs;
 
   };
