@@ -37,25 +37,25 @@ namespace detail {
 namespace {
 
 std::atomic<abstract_singleton*> s_plugins[singletons::max_plugins];
-std::mutex s_plugins_mtx;
+mutex s_plugins_mtx;
 
 std::atomic<scheduler::abstract_coordinator*> s_scheduling_coordinator;
-std::mutex s_scheduling_coordinator_mtx;
+mutex s_scheduling_coordinator_mtx;
 
 std::atomic<uniform_type_info_map*> s_uniform_type_info_map;
-std::mutex s_uniform_type_info_map_mtx;
+mutex s_uniform_type_info_map_mtx;
 
 std::atomic<actor_registry*> s_actor_registry;
-std::mutex s_actor_registry_mtx;
+mutex s_actor_registry_mtx;
 
 std::atomic<group_manager*> s_group_manager;
-std::mutex s_group_manager_mtx;
+mutex s_group_manager_mtx;
 
 std::atomic<node_id::data*> s_node_id;
-std::mutex s_node_id_mtx;
+mutex s_node_id_mtx;
 
 std::atomic<logging*> s_logger;
-std::mutex s_logger_mtx;
+mutex s_logger_mtx;
 
 } // namespace <anonymous>
 

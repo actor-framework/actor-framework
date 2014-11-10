@@ -91,7 +91,7 @@ class singletons {
 
   // Get instance from @p ptr or crate it on-the-fly using DCLP
   template <class T, class Factory>
-  static T* lazy_get(std::atomic<T*>& ptr, std::mutex& mtx, Factory f) {
+  static T* lazy_get(std::atomic<T*>& ptr, mutex& mtx, Factory f) {
     auto result = ptr.load(std::memory_order_acquire);
     if (result == nullptr) {
       lock_guard<mutex> guard(get_mutex());
@@ -106,7 +106,7 @@ class singletons {
   }
 
   template <class T>
-  static T* lazy_get(std::atomic<T*>& ptr, std::mutex& mtx) {
+  static T* lazy_get(std::atomic<T*>& ptr, mutex& mtx) {
     return lazy_get(ptr, mtx, [] { return T::create_singleton(); });
   }
 
