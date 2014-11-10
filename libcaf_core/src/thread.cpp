@@ -9,14 +9,16 @@ namespace caf {
 
 thread::~thread() {
   // not needed, as our thread is always detachted
-  if (m_stack && m_handle != thread_uninitialized) {
-    //sched_task_exit();
-    //dINT();
-    //sched_threads[sched_active_pid] = NULL;
-    --sched_num_threads;
-    //sched_set_status((tcb_t *)sched_active_thread, STATUS_STOPPED);
-    //sched_active_thread = NULL;
-    //cpu_switch_context_exit();
+  if (m_handle != thread_uninitialized) {
+    throw std::runtime_error("Thread is not joined or detached!");
+  }
+}
+
+void thread::join() {
+  if (m_handle != thread_uninitialized) {
+    m_data->joining_thread = sched_active_pid;
+    m_handle = thread_uninitialized;
+    thread_sleep();
   }
 }
 
@@ -25,9 +27,7 @@ void thread::join() {
 }
 
 void thread::detach() {
-  // I believe there is no equivalent on RIOT
-  if (m_stack) {
-    m_stack.release();
+  if (m_handle != thread_uninitialized) {
     m_handle = thread_uninitialized;
   }
 }

@@ -27,19 +27,20 @@
 #include <memory>
 #include <utility>
 #include <exception>
+#include <stdexcept>
 #include <functional>
 #include <type_traits>
-//#include <system_error>
-#include <stdexcept>
 
 extern "C" {
 #include <time.h>
 #include "thread.h"
 }
 
-#include "mutex.hpp"
-#include "condition_variable.hpp"
-#include "thread_util.hpp"
+#include "caf/mutex.hpp"
+#include "caf/ref_counted.hpp"
+#include "caf/thread_util.hpp"
+#include "caf/intrusive_ptr.hpp"
+#include "caf/condition_variable.hpp"
 
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/apply_args.hpp"
@@ -50,6 +51,12 @@ namespace {
   constexpr kernel_pid_t thread_uninitialized = -1;
   constexpr size_t stack_size = KERNEL_CONF_STACKSIZE_MAIN;
 }
+
+struct thread_data : ref_counted {
+  thread_data() : joining_thread{thread_uninitialized} { };
+  kernel_pid_t joining_thread;
+  char stack[stack_size];
+};
 
 class thread_id {
   template <class T,class Traits>
@@ -148,14 +155,14 @@ class thread {
   thread(const thread&) = delete;
   inline thread(thread&& t) noexcept : m_handle{t.m_handle} {
     t.m_handle = thread_uninitialized;
-    std::swap(m_stack, t.m_stack);
+    std::swap(m_data, t.m_data);
   }
   thread& operator=(const thread&) = delete;
   thread& operator=(thread&&) noexcept;
 
   void swap(thread& t) noexcept {
+    std::swap(m_data, t.m_data);
     std::swap(m_handle, t.m_handle);
-    std::swap(m_stack, t.m_stack);
   }
 
   inline bool joinable() const noexcept { return false; }
@@ -167,7 +174,7 @@ class thread {
   static unsigned hardware_concurrency() noexcept;
 
   kernel_pid_t m_handle;
-  std::unique_ptr<char[]> m_stack;
+  intrusive_ptr<thread_data> m_data;
 };
 
 void swap(thread& lhs, thread& rhs) noexcept;
@@ -175,25 +182,38 @@ void swap(thread& lhs, thread& rhs) noexcept;
 template <class F>
 void* thread_proxy(void* vp) {
   std::unique_ptr<F> p(static_cast<F*>(vp));
+  intrusive_ptr<thread_data> data{std::get<0>(*p)};
+  data->deref(); // remove count incremented in constructor
   auto indices =
-    detail::get_right_indices<caf::detail::tl_size<F>::value - 1>(*p);
-  detail::apply_args(std::get<0>(*p), indices, *p);
+    detail::get_right_indices<caf::detail::tl_size<F>::value - 2>(*p);
+  detail::apply_args(std::get<1>(*p), indices, *p);
+  if (data->joining_thread != thread_uninitialized) {
+    thread_wakeup(data->joining_thread);
+  }
+  //sched_task_exit();
+  //dINT();
+  //sched_threads[sched_active_pid] = NULL;
+  --sched_num_threads;
+  //sched_set_status((tcb_t *)sched_active_thread, STATUS_STOPPED);
+  //sched_active_thread = NULL;
+  //cpu_switch_context_exit();
   return nullptr;
 }
 
 template <class F, class ...Args,
          class
         >
-thread::thread(F&& f, Args&&... args) : m_stack(new char[stack_size]) {
+thread::thread(F&& f, Args&&... args) : m_data{new thread_data()} {
   using namespace std;
-  using func_and_args = tuple<typename decay<F>::type,
+  using func_and_args = tuple<typename decay<thread_data*>::type,
+                              typename decay<F>::type,
                               typename decay<Args>::type...>;
-//  if(!m_stack) {
-//    m_stack = std::unique_ptr<char[]>(new char[stack_size]);
-//  }
-  std::unique_ptr<func_and_args> p(new func_and_args(decay_copy(forward<F>(f)),
+  std::unique_ptr<func_and_args> p(new func_and_args(
+                                     decay_copy(forward<thread_data*>(m_data.get())),
+                                     decay_copy(forward<F>(f)),
                                      decay_copy(forward<Args>(args))...));
-  m_handle = thread_create(m_stack.get(), stack_size,
+  m_data->ref(); // maintain count in case obj is destroyed before thread runs
+  m_handle = thread_create(m_data->stack, stack_size,
                            PRIORITY_MAIN - 1, 0, // CREATE_WOUT_YIELD
                            &thread_proxy<func_and_args>,
                            p.get(), "caf_thread");
@@ -205,12 +225,11 @@ thread::thread(F&& f, Args&&... args) : m_stack(new char[stack_size]) {
 }
 
 inline thread& thread::operator=(thread&& other) noexcept {
-  if (m_handle != thread_uninitialized || m_stack) {
+  if (m_handle != thread_uninitialized) {
     std::terminate();
   }
   m_handle = other.m_handle;
   other.m_handle = thread_uninitialized;
-  std::swap(m_stack, other.m_stack);
   return *this;
 }
 
