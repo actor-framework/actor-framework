@@ -16,12 +16,18 @@ The optional \lstinline^addr^ parameter can be used to listen only to the given 
 Otherwise, the actor accepts all incoming connections (\lstinline^INADDR_ANY^).
 
 \begin{lstlisting}
-io::publish(self, 4242);
+publish(self, 4242);
 self->become (
   on(atom("ping"), arg_match) >> [](int i) {
     return make_message(atom("pong"), i);
   }
 );
+\end{lstlisting}
+
+To close a socket, e.g., to allow other actors to be published at the port, the function \lstinline^unpublish^ can be used:
+
+\begin{lstlisting}
+void unpublish(caf::actor whom, uint16_t port)
 \end{lstlisting}
 
 \subsection{Connecting to Remote Actors}
