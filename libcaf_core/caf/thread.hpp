@@ -32,8 +32,9 @@
 #include <type_traits>
 
 extern "C" {
-#include <time.h>
+#include "time.h"
 #include "thread.h"
+#include "kernel_internal.h"
 }
 
 #include "caf/mutex.hpp"
@@ -153,9 +154,12 @@ class thread {
   ~thread();
 
   thread(const thread&) = delete;
-  inline thread(thread&& t) noexcept : m_handle{t.m_handle} {
+  inline thread(thread&& t) noexcept
+    : m_handle{t.m_handle},
+      m_data{t.m_data} {
     t.m_handle = thread_uninitialized;
-    std::swap(m_data, t.m_data);
+    //std::swap(m_data, t.m_data);
+    t.m_data.reset();
   }
   thread& operator=(const thread&) = delete;
   thread& operator=(thread&&) noexcept;
@@ -165,7 +169,9 @@ class thread {
     std::swap(m_handle, t.m_handle);
   }
 
-  inline bool joinable() const noexcept { return false; }
+  inline bool joinable() const noexcept {
+    return m_handle != thread_uninitialized;
+  }
   void join();
   void detach();
   inline id get_id() const noexcept { return m_handle; }
@@ -186,17 +192,16 @@ void* thread_proxy(void* vp) {
   data->deref(); // remove count incremented in constructor
   auto indices =
     detail::get_right_indices<caf::detail::tl_size<F>::value - 2>(*p);
-  detail::apply_args(std::get<1>(*p), indices, *p);
+  try {
+    detail::apply_args(std::get<1>(*p), indices, *p);
+  } catch (...) {
+    // nop
+  }
   if (data->joining_thread != thread_uninitialized) {
     thread_wakeup(data->joining_thread);
   }
-  //sched_task_exit();
-  //dINT();
-  //sched_threads[sched_active_pid] = NULL;
-  --sched_num_threads;
-  //sched_set_status((tcb_t *)sched_active_thread, STATUS_STOPPED);
-  //sched_active_thread = NULL;
-  //cpu_switch_context_exit();
+  // some riot cleanup code
+  sched_task_exit();
   return nullptr;
 }
 
@@ -230,6 +235,7 @@ inline thread& thread::operator=(thread&& other) noexcept {
   }
   m_handle = other.m_handle;
   other.m_handle = thread_uninitialized;
+  std::swap(m_data, other.m_data);
   return *this;
 }
 
