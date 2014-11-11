@@ -34,7 +34,12 @@ void event_based_actor::forward_to(const actor& whom,
 }
 
 behavior event_based_actor::functor_based::make_behavior() {
-  return m_make_behavior(this);
+  auto res = m_make_behavior(this);
+  // reset make_behavior_fun to get rid of any
+  // references held by the function object
+  make_behavior_fun tmp;
+  m_make_behavior.swap(tmp);
+  return res;
 }
 
 } // namespace caf
