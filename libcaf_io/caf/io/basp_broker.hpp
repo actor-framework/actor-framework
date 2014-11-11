@@ -52,16 +52,11 @@ class basp_broker : public broker, public actor_namespace::backend {
 
   behavior make_behavior() override;
 
-  /*
-  template <class SocketAcceptor>
-  void publish(abstract_actor_ptr whom, SocketAcceptor fd) {
-    auto hdl = add_acceptor(std::move(fd));
-    announce_published_actor(hdl, whom);
-  }
-  */
+  void add_published_actor(accept_handle hdl,
+                           const abstract_actor_ptr& whom,
+                           uint16_t port);
 
-  void announce_published_actor(accept_handle hdl,
-                                const abstract_actor_ptr& whom);
+  void remove_published_actor(const abstract_actor_ptr& whom, uint16_t port);
 
   actor_proxy_ptr make_proxy(const id_type&, actor_id) override;
 
@@ -72,7 +67,6 @@ class basp_broker : public broker, public actor_namespace::backend {
   struct client_handshake_data {
     id_type remote_id;
     std::promise<abstract_actor_ptr>* result;
-    std::string* error_msg;
     const std::set<std::string>* expected_ifs;
 
   };
@@ -203,8 +197,8 @@ class basp_broker : public broker, public actor_namespace::backend {
 
   actor_namespace m_namespace; // manages proxies
   std::map<connection_handle, connection_context> m_ctx;
-  std::map<accept_handle, abstract_actor_ptr>
-  m_published_actors;
+  std::map<accept_handle, std::pair<abstract_actor_ptr, uint16_t>> m_acceptors;
+  std::map<uint16_t, accept_handle> m_open_ports;
   routing_table m_routes; // stores non-direct routes
   std::set<blacklist_entry, blacklist_less> m_blacklist; // stores invalidated
                                // routes

@@ -17,47 +17,39 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_PUBLISH_HPP
-#define CAF_IO_PUBLISH_HPP
+#include "caf/io/unpublish.hpp"
 
-#include <cstdint>
+#include "caf/send.hpp"
+#include "caf/scoped_actor.hpp"
 
-#include "caf/actor.hpp"
-#include "caf/actor_cast.hpp"
-#include "caf/typed_actor.hpp"
+#include "caf/io/middleman.hpp"
+#include "caf/io/unpublish.hpp"
+#include "caf/io/basp_broker.hpp"
 
 namespace caf {
 namespace io {
 
-void publish_impl(abstract_actor_ptr whom, uint16_t port, const char* in);
-
-/**
- * Publishes `whom` at `port`. The connection is managed by the middleman.
- * @param whom Actor that should be published at `port`.
- * @param port Unused TCP port.
- * @param addr The IP address to listen to or `INADDR_ANY` if `in == nullptr`.
- * @throws bind_failure
- */
-inline void publish(caf::actor whom, uint16_t port, const char* in = nullptr) {
-  if (!whom) {
-    return;
+void unpublish_impl(abstract_actor_ptr whom, uint16_t port, bool block_caller) {
+  auto mm = middleman::instance();
+  if (block_caller) {
+    scoped_actor self;
+    mm->run_later([&] {
+      auto bro = mm->get_named_broker<basp_broker>(atom("_BASP"));
+      bro->remove_published_actor(whom, port);
+      anon_send(self, atom("done"));
+    });
+    self->receive(
+      on(atom("done")) >> [] {
+        // ok, basp_broker is done
+      }
+    );
+  } else {
+    mm->run_later([whom, port, mm] {
+      auto bro = mm->get_named_broker<basp_broker>(atom("_BASP"));
+      bro->remove_published_actor(whom, port);
+    });
   }
-  publish_impl(actor_cast<abstract_actor_ptr>(whom), port, in);
-}
-
-/**
- * @copydoc publish(actor,uint16_t,const char*)
- */
-template <class... Rs>
-void typed_publish(typed_actor<Rs...> whom, uint16_t port,
-                   const char* in = nullptr) {
-  if (!whom) {
-    return;
-  }
-  publish_impl(actor_cast<abstract_actor_ptr>(whom), port, in);
 }
 
 } // namespace io
 } // namespace caf
-
-#endif // CAF_IO_PUBLISH_HPP

@@ -19,6 +19,8 @@ using namespace caf;
 
 namespace {
 
+atomic<long> s_destructors_called;
+
 using string_pair = std::pair<std::string, std::string>;
 
 using actor_vector = vector<actor>;
@@ -162,6 +164,10 @@ class client : public event_based_actor {
     return spawn_ping();
   }
 
+  ~client() {
+    ++s_destructors_called;
+  }
+
  private:
 
   behavior spawn_ping() {
@@ -230,9 +236,17 @@ class server : public event_based_actor {
 
  public:
 
-  behavior make_behavior() override { return await_spawn_ping(); }
+  behavior make_behavior() override {
+    return await_spawn_ping();
+  }
 
-  server(bool run_in_loop = false) : m_run_in_loop(run_in_loop) {}
+  server(bool run_in_loop = false) : m_run_in_loop(run_in_loop) {
+    // nop
+  }
+
+  ~server() {
+    ++s_destructors_called;
+  }
 
  private:
 
@@ -351,7 +365,6 @@ void test_remote_actor(std::string app_path, bool run_remote_actor) {
   auto serv2 = io::remote_actor("127.0.0.1", port);
   CAF_CHECK(serv2 != invalid_actor && !serv2->is_remote());
   CAF_CHECK(serv == serv2);
-  CAF_TEST(test_remote_actor);
   thread child;
   ostringstream oss;
   oss << app_path << " -c " << port << " " << port0 << " " << gport;
@@ -387,6 +400,7 @@ void test_remote_actor(std::string app_path, bool run_remote_actor) {
 } // namespace <anonymous>
 
 int main(int argc, char** argv) {
+  CAF_TEST(test_remote_actor);
   announce<actor_vector>();
   cout << "this node is: " << to_string(caf::detail::singletons::get_node_id())
        << endl;
@@ -426,5 +440,8 @@ int main(int argc, char** argv) {
   });
   await_all_actors_done();
   shutdown();
+  // we either spawn a server or a client, in both cases
+  // there must have been exactly one dtor called
+  CAF_CHECK_EQUAL(s_destructors_called.load(), 1);
   return CAF_TEST_RESULT();
 }

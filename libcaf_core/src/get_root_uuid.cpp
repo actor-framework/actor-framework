@@ -26,7 +26,7 @@ constexpr char uuid_format[] = "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF";
 } // namespace <anonmyous>
 #endif // CAF_MACOS
 
-#ifdef CAF_MACOS
+#if defined(CAF_MACOS)
 
 namespace {
 
@@ -61,23 +61,15 @@ std::string get_root_uuid() {
 } // namespace detail
 } // namespace caf
 
-#elif defined(CAF_LINUX)
+#elif defined(CAF_LINUX) || defined(CAF_BSD)
 
 #include <vector>
 #include <string>
-#include <cctype>
 #include <fstream>
 #include <sstream>
 #include <iostream>
 #include <iterator>
 #include <algorithm>
-#include <stdio.h>
-#include <sys/ioctl.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <net/if.h>
-#include <cstring>
-#include <unistd.h>
 #include <iostream>
 
 #include "caf/string_algorithms.hpp"
@@ -123,49 +115,6 @@ bool operator!=(const columns_iterator& lhs, const columns_iterator& rhs) {
 } // namespace <anonymous>
 
 std::string get_root_uuid() {
-  int sck = socket(AF_INET, SOCK_DGRAM, 0);
-  if (sck < 0) {
-    perror("socket");
-    return "";
-  }
-  // query available interfaces
-  char buf[1024];
-  ifconf ifc;
-  ifc.ifc_len = sizeof(buf);
-  ifc.ifc_buf = buf;
-  if (ioctl(sck, SIOCGIFCONF, &ifc) < 0) {
-    perror("ioctl(SIOCGIFCONF)");
-    return "";
-  }
-  vector<string> hw_addresses;
-  auto ctoi = [](char c)->unsigned {
-    return static_cast<unsigned char>(c);
-  };
-  // iterate through interfaces.
-  auto ifr = ifc.ifc_req;
-  size_t num_ifs = ifc.ifc_len / sizeof(ifreq);
-  for (size_t i = 0; i < num_ifs; i++) {
-    auto& item = ifr[i];
-    // get MAC address
-    if (ioctl(sck, SIOCGIFHWADDR, &item) < 0) {
-      perror("ioctl(SIOCGIFHWADDR)");
-      return "";
-    }
-    // convert MAC address to standard string representation
-    std::ostringstream oss;
-    oss << std::hex;
-    oss.width(2);
-    oss << ctoi(item.ifr_hwaddr.sa_data[0]);
-    for (size_t i = 1; i < 6; ++i) {
-      oss << ":";
-      oss.width(2);
-      oss << ctoi(item.ifr_hwaddr.sa_data[i]);
-    }
-    auto addr = oss.str();
-    if (addr != "00:00:00:00:00:00") {
-      hw_addresses.push_back(std::move(addr));
-    }
-  }
   string uuid;
   ifstream fs;
   fs.open("/etc/fstab", std::ios_base::in);

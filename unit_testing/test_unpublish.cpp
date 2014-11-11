@@ -17,45 +17,65 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_PUBLISH_IMPL_HPP
-#define CAF_IO_PUBLISH_IMPL_HPP
+#include <thread>
+#include <atomic>
 
-#include <future>
+#include "test.hpp"
 
-#include "caf/actor_cast.hpp"
+#include "caf/all.hpp"
+#include "caf/io/all.hpp"
 
-#include "caf/abstract_actor.hpp"
-#include "caf/detail/singletons.hpp"
-#include "caf/detail/actor_registry.hpp"
+using namespace caf;
 
-#include "caf/io/middleman.hpp"
-#include "caf/io/basp_broker.hpp"
+namespace {
 
-namespace caf {
-namespace io {
+std::atomic<long> s_dtor_called;
 
-template <class... Ts>
-void publish_impl(abstract_actor_ptr whom, uint16_t port, const char* in) {
-  using namespace detail;
-  auto mm = middleman::instance();
-  std::promise<bool> res;
-  mm->run_later([&] {
-    auto bro = mm->get_named_broker<basp_broker>(atom("_BASP"));
+class dummy : public event_based_actor {
+ public:
+  ~dummy() {
+    ++s_dtor_called;
+  }
+  behavior make_behavior() override {
+    return {
+      others() >> CAF_UNEXPECTED_MSG_CB(this)
+    };
+  }
+};
+
+uint16_t publish_at_some_port(uint16_t first_port, actor whom) {
+  auto port = first_port;
+  for (;;) {
     try {
-      auto hdl = mm->backend().add_tcp_doorman(bro.get(), port, in);
-      bro->announce_published_actor(hdl, whom);
-      mm->notify<hook::actor_published>(whom->address(), port);
-      res.set_value(true);
+      io::publish(whom, port);
+      return port;
     }
-    catch (...) {
-      res.set_exception(std::current_exception());
+    catch (bind_failure&) {
+      // try next port
+      ++port;
     }
-  });
-  // block caller and re-throw exception here in case of an error
-  res.get_future().get();
+  }
 }
 
-} // namespace io
-} // namespace caf
+} // namespace <anonymous>
 
-#endif // CAF_IO_PUBLISH_IMPL_HPP
+int main() {
+  CAF_TEST(test_unpublish);
+  auto d = spawn<dummy>();
+  auto port = publish_at_some_port(4242, d);
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  io::unpublish(d, port);
+  // must fail now
+  try {
+    auto oops = io::remote_actor("127.0.0.1", port);
+    CAF_FAILURE("unexpected: remote actor succeeded!");
+  } catch (network_error&) {
+    CAF_CHECKPOINT();
+  }
+  anon_send_exit(d, exit_reason::user_shutdown);
+  d = invalid_actor;
+  await_all_actors_done();
+  shutdown();
+  CAF_CHECK_EQUAL(s_dtor_called.load(), 1);
+  return CAF_TEST_RESULT();
+}

@@ -112,11 +112,20 @@ class event_based_resume {
             return resume_result::done;
           }
         }
+        auto had_tout = d->has_timeout();
+        auto tout = d->active_timeout_id();
+        int handled_msgs = 0;
+        auto reset_timeout_if_needed = [&] {
+          if (had_tout && handled_msgs > 0 && tout == d->active_timeout_id()) {
+            d->request_timeout(d->get_behavior().timeout());
+          }
+        };
         // max_throughput = 0 means infinite
         for (size_t i = 0; i < max_throughput; ++i) {
           auto ptr = d->next_message();
           if (ptr) {
             if (d->invoke_message(ptr)) {
+              ++handled_msgs;
               if (actor_done()) {
                 CAF_LOG_DEBUG("actor exited");
                 return resume_result::done;
@@ -140,12 +149,14 @@ class event_based_resume {
           } else {
             CAF_LOG_DEBUG("no more element in mailbox; going to block");
             if (d->mailbox().try_block()) {
+              reset_timeout_if_needed();
               return resumable::awaiting_message;
             }
             CAF_LOG_DEBUG("try_block() interrupted by new message");
           }
         }
         if (!d->has_next_message() && d->mailbox().try_block()) {
+          reset_timeout_if_needed();
           return resumable::awaiting_message;
         }
         // time's up

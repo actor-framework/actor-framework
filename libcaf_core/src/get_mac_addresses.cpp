@@ -1,7 +1,7 @@
 #include "caf/config.hpp"
 #include "caf/detail/get_mac_addresses.hpp"
 
-#ifdef CAF_MACOS
+#if defined(CAF_MACOS) || defined(CAF_BSD)
 
 #include <sys/types.h>
 #include <sys/socket.h>

@@ -17,36 +17,44 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_TYPED_REMOTE_ACTOR_HELPER_HPP
-#define CAF_IO_TYPED_REMOTE_ACTOR_HELPER_HPP
+#ifndef CAF_IO_UNPUBLISH_HPP
+#define CAF_IO_UNPUBLISH_HPP
 
+#include <cstdint>
+
+#include "caf/actor.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/typed_actor.hpp"
-
-#include "caf/typed_actor.hpp"
-
-#include "caf/detail/type_list.hpp"
-
-#include "caf/io/remote_actor_impl.hpp"
 
 namespace caf {
 namespace io {
 
-template <class List>
-struct typed_remote_actor_helper;
+void unpublish_impl(abstract_actor_ptr whom, uint16_t port, bool block_caller);
 
-template <template <class...> class List, class... Ts>
-struct typed_remote_actor_helper<List<Ts...>> {
-  using return_type = typed_actor<Ts...>;
-  template <class... Vs>
-  return_type operator()(Vs&&... vs) {
-    auto iface = return_type::message_types();
-    auto tmp = remote_actor_impl(std::move(iface), std::forward<Vs>(vs)...);
-    return actor_cast<return_type>(tmp);
+/**
+ * Unpublishes `whom` by closing `port`.
+ * @param whom Actor that should be unpublished at `port`.
+ * @param port TCP port.
+ */
+inline void unpublish(caf::actor whom, uint16_t port) {
+  if (!whom) {
+    return;
   }
-};
+  unpublish_impl(actor_cast<abstract_actor_ptr>(whom), port, true);
+}
+
+/**
+ * @copydoc unpublish(actor,uint16_t)
+ */
+template <class... Rs>
+void typed_unpublish(typed_actor<Rs...> whom, uint16_t port) {
+  if (!whom) {
+    return;
+  }
+  unpublish_impl(actor_cast<abstract_actor_ptr>(whom), port, true);
+}
 
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_TYPED_REMOTE_ACTOR_HELPER_HPP
+#endif // CAF_IO_UNPUBLISH_HPP

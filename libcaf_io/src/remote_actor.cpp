@@ -17,8 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_REMOTE_ACTOR_IMPL_HPP
-#define CAF_IO_REMOTE_ACTOR_IMPL_HPP
+#include "caf/io/remote_actor.hpp"
 
 #include <set>
 #include <ios>
@@ -40,14 +39,11 @@
 namespace caf {
 namespace io {
 
-template <class... Ts>
 abstract_actor_ptr remote_actor_impl(const std::set<std::string>& ifs,
                                      const std::string& host, uint16_t port) {
   auto mm = middleman::instance();
-  std::string error_msg;
-  std::promise<abstract_actor_ptr> result_promise;
-  basp_broker::client_handshake_data hdata{invalid_node_id, &result_promise,
-                                           &error_msg, &ifs};
+  std::promise<abstract_actor_ptr> res;
+  basp_broker::client_handshake_data hdata{invalid_node_id, &res, &ifs};
   mm->run_later([&] {
     try {
       auto bro = mm->get_named_broker<basp_broker>(atom("_BASP"));
@@ -55,17 +51,12 @@ abstract_actor_ptr remote_actor_impl(const std::set<std::string>& ifs,
       bro->init_client(hdl, &hdata);
     }
     catch (...) {
-      result_promise.set_exception(std::current_exception());
+      res.set_exception(std::current_exception());
     }
   });
-  auto result = result_promise.get_future().get();
-  if (!result) {
-    throw std::runtime_error(error_msg);
-  }
-  return result;
+  return res.get_future().get();
 }
 
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_REMOTE_ACTOR_IMPL_HPP

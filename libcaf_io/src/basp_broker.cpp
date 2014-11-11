@@ -17,6 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/exception.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/binary_deserializer.hpp"
 
@@ -26,6 +27,7 @@
 
 #include "caf/io/basp.hpp"
 #include "caf/io/middleman.hpp"
+#include "caf/io/unpublish.hpp"
 #include "caf/io/basp_broker.hpp"
 #include "caf/io/remote_actor_proxy.hpp"
 
@@ -61,13 +63,21 @@ behavior basp_broker::make_behavior() {
       ctx.hdl = msg.handle;
       ctx.handshake_data = nullptr;
       ctx.state = await_client_handshake;
-      init_handshake_as_sever(ctx, m_published_actors[msg.source]->address());
+      init_handshake_as_sever(ctx, m_acceptors[msg.source].first->address());
     },
     // received from underlying broker implementation
     [=](const connection_closed_msg& msg) {
       CAF_LOGM_TRACE("make_behavior$connection_closed_msg",
                      CAF_MARG(msg.handle, id));
-      CAF_REQUIRE(m_ctx.count(msg.handle) > 0);
+      auto j = m_ctx.find(msg.handle);
+      if (j != m_ctx.end()) {
+        auto hd = j->second.handshake_data;
+        if (hd) {
+          network_error err{"disconnect during handshake"};
+          hd->result->set_exception(std::make_exception_ptr(err));
+        }
+        m_ctx.erase(j);
+      }
       // purge handle from all routes
       std::vector<id_type> lost_connections;
       for (auto& kvp : m_routes) {
@@ -96,12 +106,19 @@ behavior basp_broker::make_behavior() {
           p->kill_proxy(exit_reason::remote_link_unreachable);
         }
       }
-      m_ctx.erase(msg.handle);
     },
     // received from underlying broker implementation
-    [=](const acceptor_closed_msg&) {
+    [=](const acceptor_closed_msg& msg) {
       CAF_LOGM_TRACE("make_behavior$acceptor_closed_msg", "");
-      // nop
+      auto i = m_acceptors.find(msg.handle);
+      if (i == m_acceptors.end()) {
+        CAF_LOG_INFO("accept handle no longer in use");
+        return;
+      }
+      if (m_open_ports.erase(i->second.second) == 0) {
+        CAF_LOG_INFO("accept handle was not bound to a port");
+      }
+      m_acceptors.erase(i);
     },
     // received from proxy instances
     on(atom("_Dispatch"), arg_match) >> [=](const actor_addr& sender,
@@ -430,6 +447,7 @@ basp_broker::handle_basp_header(connection_context& ctx,
           auto e = what.end();
           tmp += *i++;
           while (i != e) {
+            tmp += ",";
             tmp += *i++;
           }
           tmp += ">";
@@ -437,7 +455,7 @@ basp_broker::handle_basp_header(connection_context& ctx,
         };
         auto iface_str = tostr(remote_ifs);
         auto expected_str = tostr(ifs);
-        auto& error_msg = *(ctx.handshake_data->error_msg);
+        std::string error_msg;
         if (ifs.empty()) {
           error_msg = "expected remote actor to be a "
                       "dynamically typed actor but found "
@@ -457,7 +475,8 @@ basp_broker::handle_basp_header(connection_context& ctx,
                       + iface_str;
         }
         // abort with error
-        ctx.handshake_data->result->set_value(nullptr);
+        std::runtime_error err{error_msg};
+        ctx.handshake_data->result->set_exception(std::make_exception_ptr(err));
         return close_connection;
       }
       auto nid = ctx.handshake_data->remote_id;
@@ -646,16 +665,45 @@ void basp_broker::init_handshake_as_sever(connection_context& ctx,
   configure_read(ctx.hdl, receive_policy::exactly(basp::header_size));
 }
 
-void basp_broker::announce_published_actor(accept_handle hdl,
-                                           const abstract_actor_ptr& ptr) {
+void basp_broker::add_published_actor(accept_handle hdl,
+                                      const abstract_actor_ptr& ptr,
+                                      uint16_t port) {
+  CAF_LOG_TRACE("");
   if (!ptr) {
     return;
   }
   CAF_LOG_TRACE("");
-  m_published_actors.insert(std::make_pair(hdl, ptr));
+  m_acceptors.insert(std::make_pair(hdl, std::make_pair(ptr, port)));
+  m_open_ports.insert(std::make_pair(port, hdl));
+  ptr->attach_functor([port](abstract_actor* self, uint32_t) {
+    unpublish_impl(self, port, false);
+  });
   if (ptr->node() == node()) {
     singletons::get_actor_registry()->put(ptr->id(), ptr);
   }
+}
+
+void basp_broker::remove_published_actor(const abstract_actor_ptr& whom,
+                                         uint16_t port) {
+  CAF_LOG_TRACE("");
+  auto i = m_open_ports.find(port);
+  if (i == m_open_ports.end()) {
+    return;
+  }
+  auto j = m_acceptors.find(i->second);
+  if (j == m_acceptors.end()) {
+    CAF_LOG_ERROR("accept handle for port " << port
+                  << " not found in m_published_actors");
+    m_open_ports.erase(i);
+    return;
+  }
+  if (j->second.first != whom) {
+    CAF_LOG_INFO("port has been bound to a different actor already");
+    return;
+  }
+  close(j->first);
+  m_open_ports.erase(i);
+  m_acceptors.erase(j);
 }
 
 } // namespace io

@@ -28,11 +28,25 @@
 
 #include "caf/io/middleman.hpp"
 
-#include "caf/io/remote_actor_impl.hpp"
-#include "caf/io/typed_remote_actor_helper.hpp"
-
 namespace caf {
 namespace io {
+
+abstract_actor_ptr remote_actor_impl(const std::set<std::string>& ifs,
+                                     const std::string& host, uint16_t port);
+
+template <class List>
+struct typed_remote_actor_helper;
+
+template <template <class...> class List, class... Ts>
+struct typed_remote_actor_helper<List<Ts...>> {
+  using return_type = typed_actor<Ts...>;
+  template <class... Vs>
+  return_type operator()(Vs&&... vs) {
+    auto iface = return_type::message_types();
+    auto tmp = remote_actor_impl(std::move(iface), std::forward<Vs>(vs)...);
+    return actor_cast<return_type>(tmp);
+  }
+};
 
 /**
  * Establish a new connection to the actor at `host` on given `port`.
