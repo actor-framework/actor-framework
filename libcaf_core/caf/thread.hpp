@@ -54,7 +54,7 @@ namespace {
 }
 
 struct thread_data : ref_counted {
-  thread_data() : joining_thread{thread_uninitialized} { };
+  thread_data() : joining_thread{thread_uninitialized} { }
   kernel_pid_t joining_thread;
   char stack[stack_size];
 };
@@ -158,7 +158,6 @@ class thread {
     : m_handle{t.m_handle},
       m_data{t.m_data} {
     t.m_handle = thread_uninitialized;
-    //std::swap(m_data, t.m_data);
     t.m_data.reset();
   }
   thread& operator=(const thread&) = delete;
