@@ -85,40 +85,4 @@ void condition_variable::wait(unique_lock<mutex>& lock) noexcept {
   mutex_lock(lock.mutex()->native_handle());
 }
 
-void condition_variable::do_timed_wait(unique_lock<mutex>& lock,
-                                       time_point<system_clock,
-                                                  nanoseconds> tp) noexcept {
-  if (!lock.owns_lock()) {
-    throw std::runtime_error("condition_variable::timed wait: mutex not locked");
-  }
-  nanoseconds d = tp.time_since_epoch();
-  if (d > nanoseconds(0x59682F000000E941)) {
-    d = nanoseconds(0x59682F000000E941);
-  }
-  timespec ts;
-  seconds s = duration_cast<seconds>(d);
-  typedef decltype(ts.tv_sec) ts_sec;
-  constexpr ts_sec ts_sec_max = std::numeric_limits<ts_sec>::max();
-  if (s.count() < ts_sec_max) {
-    ts.tv_sec = static_cast<ts_sec>(s.count());
-    ts.tv_nsec = static_cast<decltype(ts.tv_nsec)>((d - s).count());
-  } else {
-    ts.tv_sec = ts_sec_max;
-    ts.tv_nsec = std::giga::num - 1;
-  }
-  timex_t now, then, reltime;
-  // vtimer_now(&now) does not seem to work, so lets use chrono ...
-  system_clock::time_point sys_now = system_clock::now();
-  auto duration = sys_now.time_since_epoch();
-  now.seconds = duration_cast<seconds>(duration).count();
-  now.microseconds = (duration_cast<microseconds>(duration) - duration_cast<seconds>(duration)).count();
-  then.seconds = ts.tv_sec;
-  then.microseconds = ts.tv_nsec / 1000u;
-  reltime = timex_sub(then, now);
-  vtimer_t timer;
-  vtimer_set_wakeup(&timer, reltime, sched_active_pid);
-  wait(lock);
-  vtimer_remove(&timer);
- }
-
 } // namespace caf

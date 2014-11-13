@@ -27,6 +27,11 @@
 
 #include "mutex.hpp"
 
+extern "C" {
+#include "sched.h"
+#include "vtimer.h"
+}
+
 namespace caf {
 
 enum class cv_status { no_timeout, timeout };
@@ -36,7 +41,6 @@ class condition_variable {
  public:
   using native_handle_type = priority_queue_t*;
 
-  // constexpr condition_variable() : m_queue{NULL} { }
   inline condition_variable() {
     m_queue.first = NULL;
   }
@@ -67,10 +71,6 @@ class condition_variable {
  private:
   condition_variable(const condition_variable&);
   condition_variable& operator=(const condition_variable&);
-
-  void do_timed_wait(unique_lock<mutex>& lock,
-                     std::chrono::time_point<std::chrono::system_clock,
-                                             std::chrono::nanoseconds>) noexcept;
 
   priority_queue_t m_queue;
 };
@@ -122,18 +122,22 @@ cv_status condition_variable::wait_for(unique_lock<mutex>& lock,
     if (timeout_duration <= timeout_duration.zero()) {
       return cv_status::timeout;
     }
-    typedef time_point<system_clock, duration<long double, std::nano>> tpf;
-    typedef time_point<system_clock, nanoseconds> tpi;
-    tpf tpf_max = tpi::max();
-    system_clock::time_point sys_now = system_clock::now();
-    steady_clock::time_point sdy_now = steady_clock::now();
-    if (tpf_max - timeout_duration > sys_now) {
-      do_timed_wait(lock, sys_now + ceil<nanoseconds>(timeout_duration));
+    timex_t timeout, before, after;
+    auto s = duration_cast<seconds>(timeout_duration);
+    timeout.seconds = s.count();
+    timeout.microseconds = (duration_cast<microseconds>(timeout_duration) - s).count();
+    vtimer_now(&before);
+    vtimer_t timer;
+    vtimer_set_wakeup(&timer, timeout, sched_active_pid);
+    wait(lock);
+    vtimer_now(&after);
+    vtimer_remove(&timer);
+    auto passed = timex_sub(after,before);
+    if (passed.seconds >= timeout.seconds && passed.microseconds >= timeout.microseconds) {
+      return cv_status::timeout;
     } else {
-      do_timed_wait(lock, tpi::max());
+      return cv_status::no_timeout;
     }
-    return steady_clock::now() - sdy_now < timeout_duration ?
-      cv_status::no_timeout : cv_status::timeout;
 }
 
 template <class Rep, class Period, class Predicate>
