@@ -104,7 +104,7 @@ class square_matrix {
   static constexpr size_t num_elements = Size * Size;
 
   static void announce() {
-    caf::announce<square_matrix>(&square_matrix::m_data);
+    caf::announce<square_matrix>("square_matrix", &square_matrix::m_data);
   }
 
   square_matrix(square_matrix&&) = default;
@@ -311,7 +311,7 @@ void test_opencl() {
 int main() {
   CAF_TEST(tkest_opencl);
 
-  announce<ivec>();
+  announce<ivec>("ivec");
   matrix_type::announce();
 
   test_opencl();

@@ -68,7 +68,7 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
          size_t result_size) {
     if (global_dims.empty()) {
       auto str = "OpenCL kernel needs at least 1 global dimension.";
-      CAF_LOGM_ERROR(detail::demangle(typeid(actor_facade)).c_str(), str);
+      CAF_LOGM_ERROR("caf::opencl::actor_facade", str);
       throw std::runtime_error(str);
     }
     auto check_vec = [&](const dim_vec& vec, const char* name) {
@@ -76,7 +76,7 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
         std::ostringstream oss;
         oss << name << " vector is not empty, but "
             << "its size differs from global dimensions vector's size";
-        CAF_LOGM_ERROR(detail::demangle<actor_facade>().c_str(), oss.str());
+        CAF_LOGM_ERROR("caf::opencl::actor_facade", oss.str());
         throw std::runtime_error(oss.str());
       }
     };
@@ -88,7 +88,7 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
     if (err != CL_SUCCESS) {
       std::ostringstream oss;
       oss << "clCreateKernel: " << get_opencl_error(err);
-      CAF_LOGM_ERROR(detail::demangle<actor_facade>().c_str(), oss.str());
+      CAF_LOGM_ERROR("caf::opencl::actor_facade", oss.str());
       throw std::runtime_error(oss.str());
     }
     if (result_size == 0) {

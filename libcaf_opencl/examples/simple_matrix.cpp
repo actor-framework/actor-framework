@@ -105,7 +105,7 @@ void multiplier(event_based_actor* self) {
 }
 
 int main() {
-  announce<vector<float>>();
+  announce<vector<float>>("float_vector");
   spawn(multiplier);
   await_all_actors_done();
   shutdown();

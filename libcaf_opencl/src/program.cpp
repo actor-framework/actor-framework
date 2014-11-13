@@ -48,7 +48,7 @@ program program::create(const char* kernel_source, const char* options,
     oss << "Device id " << device_id
         << " is not a vaild device. Maximum id is: " << (devices.size() - 1)
         << ".";
-    CAF_LOGM_ERROR(detail::demangle<program>().c_str(), oss.str());
+    CAF_LOGM_ERROR("caf::opencl::program", oss.str());
     throw runtime_error(oss.str());
   }
 

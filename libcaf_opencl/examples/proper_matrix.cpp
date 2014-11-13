@@ -181,7 +181,7 @@ void multiplier(event_based_actor* self) {
 int main() {
   // matrix_type ist not a simple type,
   // it must be annouced to libcaf
-  announce<matrix_type>();
+  announce<matrix_type>("matrix_type");
   spawn(multiplier);
   await_all_actors_done();
   shutdown();
