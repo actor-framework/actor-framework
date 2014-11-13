@@ -122,17 +122,17 @@ cv_status condition_variable::wait_for(unique_lock<mutex>& lock,
     if (timeout_duration <= timeout_duration.zero()) {
       return cv_status::timeout;
     }
-    typedef time_point<system_clock, duration<long double, std::nano>> __sys_tpf;
-    typedef time_point<system_clock, nanoseconds> __sys_tpi;
-    __sys_tpf _Max = __sys_tpi::max();
-    system_clock::time_point __s_now = system_clock::now();
-    steady_clock::time_point __c_now = steady_clock::now();
-    if (_Max - timeout_duration > __s_now) {
-      do_timed_wait(lock, __s_now + ceil<nanoseconds>(timeout_duration));
+    typedef time_point<system_clock, duration<long double, std::nano>> tpf;
+    typedef time_point<system_clock, nanoseconds> tpi;
+    tpf tpf_max = tpi::max();
+    system_clock::time_point sys_now = system_clock::now();
+    steady_clock::time_point sdy_now = steady_clock::now();
+    if (tpf_max - timeout_duration > sys_now) {
+      do_timed_wait(lock, sys_now + ceil<nanoseconds>(timeout_duration));
     } else {
-      do_timed_wait(lock, __sys_tpi::max());
+      do_timed_wait(lock, tpi::max());
     }
-    return steady_clock::now() - __c_now < timeout_duration ?
+    return steady_clock::now() - sdy_now < timeout_duration ?
       cv_status::no_timeout : cv_status::timeout;
 }
 
