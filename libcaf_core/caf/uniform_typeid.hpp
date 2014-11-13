@@ -17,24 +17,23 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_TO_UNIFORM_NAME_HPP
-#define CAF_DETAIL_TO_UNIFORM_NAME_HPP
+#ifndef CAF_UNIFORM_TYPEID_HPP
+#define CAF_UNIFORM_TYPEID_HPP
 
-#include <string>
 #include <typeinfo>
 
 namespace caf {
-namespace detail {
 
-std::string to_uniform_name(const std::string& demangled_name);
-std::string to_uniform_name(const std::type_info& tinfo);
+class uniform_type_info;
+
+const uniform_type_info* uniform_typeid(const std::type_info& tinf,
+                                        bool allow_nullptr = false);
 
 template <class T>
-inline std::string to_uniform_name() {
-  return to_uniform_name(typeid(T));
+const uniform_type_info* uniform_typeid(bool allow_nullptr = false) {
+  return uniform_typeid(typeid(T), allow_nullptr);
 }
 
-} // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_TO_UNIFORM_NAME_HPP
+#endif // CAF_UNIFORM_TYPEID_HPP

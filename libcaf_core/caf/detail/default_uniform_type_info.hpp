@@ -248,16 +248,22 @@ template <class T, class AccessPolicy,
           bool IsEmptyType = std::is_class<T>::value&& std::is_empty<T>::value>
 class member_tinfo : public detail::abstract_uniform_type_info<T> {
  public:
+  using super = detail::abstract_uniform_type_info<T>;
   member_tinfo(AccessPolicy apol, SerializePolicy spol)
-      : m_apol(std::move(apol)), m_spol(std::move(spol)) {
+      : super("--member--"),
+        m_apol(std::move(apol)), m_spol(std::move(spol)) {
     // nop
   }
 
-  member_tinfo(AccessPolicy apol) : m_apol(std::move(apol)) {
+  member_tinfo(AccessPolicy apol)
+      : super("--member--"),
+        m_apol(std::move(apol)) {
     // nop
   }
 
-  member_tinfo() = default;
+  member_tinfo() : super("--member--") {
+    // nop
+  }
 
   void serialize(const void* vptr, serializer* s) const override {
     m_spol(m_apol(vptr), s);
@@ -289,15 +295,19 @@ template <class T, class A, class S>
 class member_tinfo<T, A, S, false, true>
     : public detail::abstract_uniform_type_info<T> {
  public:
-  member_tinfo(const A&, const S&) {
+  using super = detail::abstract_uniform_type_info<T>;
+
+  member_tinfo(const A&, const S&) : super("--member--") {
     // nop
   }
 
-  member_tinfo(const A&) {
+  member_tinfo(const A&) : super("--member--") {
     // nop
   }
 
-  member_tinfo() = default;
+  member_tinfo() : super("--member--") {
+    // nop
+  }
 
   void serialize(const void*, serializer*) const override {
     // nop
@@ -312,14 +322,24 @@ template <class T, class AccessPolicy, class SerializePolicy>
 class member_tinfo<T, AccessPolicy, SerializePolicy, true, false>
     : public detail::abstract_uniform_type_info<T> {
  public:
+  using super = detail::abstract_uniform_type_info<T>;
   using value_type = typename std::underlying_type<T>::type;
 
   member_tinfo(AccessPolicy apol, SerializePolicy spol)
-      : m_apol(std::move(apol)), m_spol(std::move(spol)) {}
+      : super("--member--"),
+        m_apol(std::move(apol)), m_spol(std::move(spol)) {
+    // nop
+  }
 
-  member_tinfo(AccessPolicy apol) : m_apol(std::move(apol)) {}
+  member_tinfo(AccessPolicy apol)
+      : super("--member--"),
+        m_apol(std::move(apol)) {
+    // nop
+  }
 
-  member_tinfo() = default;
+  member_tinfo() : super("--member--") {
+    // nop
+  }
 
   void serialize(const void* p, serializer* s) const override {
     auto val = m_apol(p);
@@ -453,12 +473,15 @@ uniform_type_info_ptr new_member_tinfo(GRes (C::*getter)() const,
 template <class T>
 class default_uniform_type_info : public detail::abstract_uniform_type_info<T> {
  public:
+  using super = detail::abstract_uniform_type_info<T>;
+
   template <class... Ts>
-  default_uniform_type_info(Ts&&... args) {
+  default_uniform_type_info(std::string tname, Ts&&... args)
+      : super(std::move(tname)) {
     push_back(std::forward<Ts>(args)...);
   }
 
-  default_uniform_type_info() {
+  default_uniform_type_info(std::string tname) : super(std::move(tname)) {
     using result_type = member_tinfo<T, fake_access_policy<T>>;
     m_members.push_back(uniform_type_info_ptr(new result_type));
   }
@@ -552,9 +575,10 @@ template <class... Rs>
 class default_uniform_type_info<typed_actor<Rs...>> :
     public detail::abstract_uniform_type_info<typed_actor<Rs...>> {
  public:
+  using super = detail::abstract_uniform_type_info<typed_actor<Rs...>>;
   using handle_type = typed_actor<Rs...>;
 
-  default_uniform_type_info() {
+  default_uniform_type_info(std::string tname) : super(std::move(tname)) {
     sub_uti = uniform_typeid<actor>();
   }
 

@@ -60,7 +60,7 @@ std::string to_string(const node_id& what);
 std::string to_string(const atom_value& what);
 
 /**
- * Converts `e` to a string including the demangled type of `e` and `e.what()`.
+ * Converts `e` to a string including `e.what()`.
  */
 std::string to_verbose_string(const std::exception& e);
 

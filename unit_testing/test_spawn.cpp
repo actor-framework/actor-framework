@@ -166,28 +166,26 @@ void testee1(event_based_actor* self) {
   });
 }
 
-template <class Testee>
 string behavior_test(scoped_actor& self, actor et) {
-  string testee_name = detail::to_uniform_name(typeid(Testee));
-  CAF_LOGF_TRACE(CAF_TARG(et, to_string) << ", " << CAF_ARG(testee_name));
+  CAF_LOGF_TRACE(CAF_TARG(et, to_string));
   string result;
   self->send(et, 1);
   self->send(et, 2);
   self->send(et, 3);
   self->send(et, .1f);
-  self->send(et, "hello " + testee_name);
+  self->send(et, "hello");
   self->send(et, .2f);
   self->send(et, .3f);
-  self->send(et, "hello again " + testee_name);
-  self->send(et, "goodbye " + testee_name);
+  self->send(et, "hello again");
+  self->send(et, "goodbye");
   self->send(et, atom("get_state"));
   self->receive (
     [&](const string& str) {
       result = str;
     },
     after(chrono::minutes(1)) >> [&]() {
-      CAF_LOGF_ERROR(testee_name << " does not reply");
-      throw runtime_error(testee_name + " does not reply");
+      CAF_LOGF_ERROR("actor does not reply");
+      throw runtime_error("actor does not reply");
     }
   );
   self->send_exit(et, exit_reason::user_shutdown);
@@ -529,9 +527,9 @@ void test_spawn() {
   self->await_all_other_actors_done();
   CAF_CHECKPOINT();
 
-  auto res1 = behavior_test<testee_actor>(self, spawn<blocking_api>(testee_actor{}));
+  auto res1 = behavior_test(self, spawn<blocking_api>(testee_actor{}));
   CAF_CHECK_EQUAL("wait4int", res1);
-  CAF_CHECK_EQUAL(behavior_test<event_testee>(self, spawn<event_testee>()), "wait4int");
+  CAF_CHECK_EQUAL(behavior_test(self, spawn<event_testee>()), "wait4int");
   self->await_all_other_actors_done();
   CAF_CHECKPOINT();
 

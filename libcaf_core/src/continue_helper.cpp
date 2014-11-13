@@ -31,7 +31,7 @@ continue_helper& continue_helper::continue_with(behavior::continuation_fun f) {
     behavior cpy = *ref_opt;
     *ref_opt = cpy.add_continuation(std::move(f));
   } else {
-    CAF_LOG_ERROR("failed to add continuation");
+    CAF_LOGF_ERROR("failed to add continuation");
   }
   return *this;
 }

@@ -217,7 +217,7 @@ void abstract_actor::cleanup(uint32_t reason) {
   CAF_LOG_INFO_IF(!is_remote(), "cleanup actor with ID "
                                 << m_id << "; exit reason = "
                                 << reason << ", class = "
-                                << detail::demangle(typeid(*this)));
+                                << class_name());
   // send exit messages
   for (attachable* i = head.get(); i != nullptr; i = i->next.get()) {
     i->actor_exited(this, reason);

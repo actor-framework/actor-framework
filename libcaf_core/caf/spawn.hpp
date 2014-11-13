@@ -69,7 +69,7 @@ intrusive_ptr<C> spawn_impl(execution_unit* host,
                 "spawned without blocking_api_flag");
   static_assert(is_unbound(Os),
                 "top-level spawns cannot have monitor or link flag");
-  CAF_LOGF_TRACE("spawn " << detail::demangle<C>());
+  CAF_LOGF_TRACE("");
   using scheduling_policy =
     typename std::conditional<
       has_detach_flag(Os) || has_blocking_api_flag(Os),

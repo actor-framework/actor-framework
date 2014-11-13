@@ -166,8 +166,8 @@ void local_actor::cleanup(uint32_t reason) {
 }
 
 void local_actor::quit(uint32_t reason) {
-  CAF_LOG_TRACE("reason = " << reason << ", class "
-                            << detail::demangle(typeid(*this)));
+  CAF_LOG_TRACE("reason = " << reason << ", class = "
+                            << class_name());
   planned_exit_reason(reason);
   if (is_blocking()) {
     throw actor_exited(reason);

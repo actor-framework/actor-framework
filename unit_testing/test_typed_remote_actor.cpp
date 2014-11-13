@@ -86,8 +86,8 @@ uint16_t run_server() {
 }
 
 int main(int argc, char** argv) {
-  announce<ping>(&ping::value);
-  announce<pong>(&pong::value);
+  announce<ping>("ping", &ping::value);
+  announce<pong>("pong", &pong::value);
   message_builder{argv + 1, argv + argc}.apply({
     on("-c", spro<uint16_t>)>> [](uint16_t port) {
       CAF_PRINT("run in client mode");

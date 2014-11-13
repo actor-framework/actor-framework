@@ -29,7 +29,6 @@
 #include "caf/to_string.hpp"
 #include "caf/abstract_actor.hpp"
 
-#include "caf/detail/demangle.hpp"
 #include "caf/detail/singletons.hpp"
 #include "caf/detail/scope_guard.hpp"
 
@@ -184,7 +183,7 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
   caf::detail::singletons::get_logger()->set_aid(aid_arg)
 #endif
 
-#define CAF_CLASS_NAME caf::detail::demangle(typeid(decltype(*this))).c_str()
+#define CAF_CLASS_NAME typeid(*this).name()
 
 #define CAF_PRINT0(lvlname, classname, funname, msg)                           \
   CAF_LOG_IMPL(lvlname, classname, funname, msg)

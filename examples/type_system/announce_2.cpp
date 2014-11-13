@@ -54,8 +54,8 @@ void testee(event_based_actor* self) {
 int main(int, char**) {
   // if a class uses getter and setter member functions,
   // we pass those to the announce function as { getter, setter } pairs.
-  announce<foo>(make_pair(&foo::a, &foo::set_a),
-          make_pair(&foo::b, &foo::set_b));
+  announce<foo>("foo", make_pair(&foo::a, &foo::set_a),
+                make_pair(&foo::b, &foo::set_b));
   {
     scoped_actor self;
     auto t = spawn(testee);

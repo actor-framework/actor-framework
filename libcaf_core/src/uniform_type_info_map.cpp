@@ -116,7 +116,8 @@ using static_type_table = type_list<bool,
                                     std::u16string,
                                     std::u32string,
                                     std::map<std::string, std::string>,
-                                    std::vector<char>>;
+                                    std::vector<char>,
+                                    std::vector<std::string>>;
 } // namespace <anonymous>
 
 template <class T>
@@ -451,6 +452,30 @@ inline void serialize_impl(const sync_timeout_msg&, serializer*) {
 
 inline void deserialize_impl(const sync_timeout_msg&, deserializer*) {
   // nop
+}
+
+inline void serialize_impl(const std::map<std::string, std::string>& smap,
+                           serializer* sink) {
+  default_serialize_policy sp;
+  sp(smap, sink);
+}
+
+inline void deserialize_impl(std::map<std::string, std::string>& smap,
+                             deserializer* source) {
+  default_serialize_policy sp;
+  sp(smap, source);
+}
+
+template <class T>
+inline void serialize_impl(const std::vector<T>& vec, serializer* sink) {
+  default_serialize_policy sp;
+  sp(vec, sink);
+}
+
+template <class T>
+inline void deserialize_impl(std::vector<T>& vec, deserializer* source) {
+  default_serialize_policy sp;
+  sp(vec, source);
 }
 
 bool types_equal(const std::type_info* lhs, const std::type_info* rhs) {
@@ -795,7 +820,7 @@ class utim_impl : public uniform_type_info_map {
                                    uti_impl<std::string>,
                                    uti_impl<std::u16string>,
                                    uti_impl<std::u32string>,
-                                   default_uniform_type_info<strmap>,
+                                   uti_impl<strmap>,
                                    uti_impl<bool>,
                                    uti_impl<float>,
                                    uti_impl<double>,
@@ -808,8 +833,8 @@ class utim_impl : public uniform_type_info_map {
                                    int_tinfo<uint32_t>,
                                    int_tinfo<int64_t>,
                                    int_tinfo<uint64_t>,
-                                   default_uniform_type_info<charbuf>,
-                                   default_uniform_type_info<strvec>>;
+                                   uti_impl<charbuf>,
+                                   uti_impl<strvec>>;
 
   builtin_types m_storage;
 

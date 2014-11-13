@@ -108,23 +108,20 @@ int main(int, char**) {
   // it takes a pointer to the non-trivial member as first argument
   // followed by all "sub-members" either as member pointer or
   // { getter, setter } pair
-  announce<bar>(compound_member(&bar::f,
-                  make_pair(&foo::a, &foo::set_a),
-                  make_pair(&foo::b, &foo::set_b)),
-          &bar::i);
-
+  auto meta_bar_f = [] {
+    return compound_member(&bar::f,
+                           make_pair(&foo::a, &foo::set_a),
+                           make_pair(&foo::b, &foo::set_b));
+  };
+  // with meta_bar_f, we can now announce bar
+  announce<bar>("bar", meta_bar_f(), &bar::i);
   // baz has non-trivial data members with getter/setter pair
   // and getter returning a mutable reference
-  announce<baz>(compound_member(make_pair(&baz::f, &baz::set_f),
-                  make_pair(&foo::a, &foo::set_a),
-                  make_pair(&foo::b, &foo::set_b)),
-          // compound member that has a compound member
-          compound_member(&baz::b,
-                  compound_member(&bar::f,
-                          make_pair(&foo::a, &foo::set_a),
-                          make_pair(&foo::b, &foo::set_b)),
-                  &bar::i));
-
+  announce<baz>("baz", compound_member(make_pair(&baz::f, &baz::set_f),
+                                       make_pair(&foo::a, &foo::set_a),
+                                       make_pair(&foo::b, &foo::set_b)),
+                // compound member that has a compound member
+                compound_member(&baz::b, meta_bar_f(), &bar::i));
   // spawn a testee that receives two messages
   auto t = spawn(testee, 2);
   {

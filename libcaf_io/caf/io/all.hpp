@@ -25,6 +25,7 @@
 #include "caf/io/spawn_io.hpp"
 #include "caf/io/middleman.hpp"
 #include "caf/io/unpublish.hpp"
+#include "caf/io/basp_broker.hpp"
 #include "caf/io/max_msg_size.hpp"
 #include "caf/io/remote_actor.hpp"
 #include "caf/io/remote_group.hpp"

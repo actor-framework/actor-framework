@@ -40,10 +40,8 @@
 #include "caf/uniform_type_info.hpp"
 
 #include "caf/detail/logging.hpp"
-#include "caf/detail/demangle.hpp"
 #include "caf/detail/singletons.hpp"
 #include "caf/detail/actor_registry.hpp"
-#include "caf/detail/to_uniform_name.hpp"
 #include "caf/detail/uniform_type_info_map.hpp"
 
 namespace caf {
@@ -73,8 +71,8 @@ const uniform_type_info* uniform_type_info::from(const std::type_info& tinf) {
   auto result = uti_map().by_rtti(tinf);
   if (result == nullptr) {
     std::string error = "uniform_type_info::by_type_info(): ";
-    error += detail::to_uniform_name(tinf);
-    error += " is an unknown typeid name";
+    error += tinf.name();
+    error += " has not been announced";
     CAF_LOGM_ERROR("caf::uniform_type_info", error);
     throw std::runtime_error(error);
   }
@@ -99,8 +97,18 @@ std::vector<const uniform_type_info*> uniform_type_info::instances() {
   return uti_map().get_all();
 }
 
-const uniform_type_info* uniform_typeid(const std::type_info& tinfo) {
-  return uniform_type_info::from(tinfo);
+const uniform_type_info* uniform_typeid(const std::type_info& tinf,
+                                        bool allow_nullptr) {
+  auto result = uti_map().by_rtti(tinf);
+  if (result == nullptr && !allow_nullptr) {
+    std::string error = "uniform_typeid(): ";
+    error += tinf.name();
+    error += " has not been announced";
+    CAF_LOGM_ERROR("caf::uniform_type_info", error);
+    throw std::runtime_error(error);
+  }
+
+  return result;
 }
 
 } // namespace caf

@@ -93,7 +93,7 @@ class rd_arg_functor {
     auto opt = conv_arg_impl<T>::_(arg);
     if (!opt) {
       std::cerr << "*** error: cannot convert \"" << arg << "\" to "
-                << detail::demangle(typeid(T).name())
+                << typeid(T).name()
                 << " [option: \"" << m_storage->arg_name << "\"]"
                 << std::endl;
       return false;
@@ -126,7 +126,7 @@ class add_arg_functor {
     auto opt = conv_arg_impl<T>::_(arg);
     if (!opt) {
       std::cerr << "*** error: cannot convert \"" << arg << "\" to "
-                << detail::demangle(typeid(T))
+                << typeid(T).name()
                 << " [option: \"" << m_storage->arg_name << "\"]"
                 << std::endl;
       return false;

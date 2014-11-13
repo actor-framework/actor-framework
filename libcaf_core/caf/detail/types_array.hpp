@@ -23,14 +23,10 @@
 #include <atomic>
 #include <typeinfo>
 
+#include "caf/uniform_typeid.hpp"
+
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
-
-// forward declarations
-namespace caf {
-class uniform_type_info;
-const uniform_type_info* uniform_typeid(const std::type_info&);
-} // namespace caf
 
 namespace caf {
 namespace detail {

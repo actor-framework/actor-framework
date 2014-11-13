@@ -401,7 +401,7 @@ void test_remote_actor(std::string app_path, bool run_remote_actor) {
 
 int main(int argc, char** argv) {
   CAF_TEST(test_remote_actor);
-  announce<actor_vector>();
+  announce<actor_vector>("actor_vector");
   cout << "this node is: " << to_string(caf::detail::singletons::get_node_id())
        << endl;
   message_builder{argv + 1, argv + argc}.apply({

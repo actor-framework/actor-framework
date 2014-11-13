@@ -10,8 +10,6 @@
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/type_list.hpp"
 
-#include "caf/detail/demangle.hpp"
-
 using std::cout;
 using std::endl;
 using std::is_same;
@@ -53,10 +51,7 @@ int main() {
   using il0 = int_list<0, 1, 2, 3, 4, 5>;
   using il1 = int_list<4, 5>;
   using il2 = typename il_right<il0, 2>::type;
-  CAF_CHECK_VERBOSE((is_same<il2, il1>::value),
-             "il_right<il0, 2> returned "
-               << detail::demangle<il2>()
-               << "expected: " << detail::demangle<il1>());
+  CAF_CHECK((is_same<il2, il1>::value));
 
   /* test tl_is_strict_subset */ {
     using list_a = type_list<int, float, double>;

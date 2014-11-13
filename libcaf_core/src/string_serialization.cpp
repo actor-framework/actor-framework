@@ -609,7 +609,7 @@ string to_string(const node_id& what) {
 
 string to_verbose_string(const std::exception& e) {
   std::ostringstream oss;
-  oss << detail::demangle(typeid(e)) << ": " << e.what();
+  oss << "std::exception, what(): " << e.what();
   return oss.str();
 }
 

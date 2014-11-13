@@ -38,7 +38,6 @@ set (LIBCAF_CORE_SRCS
      src/continue_helper.cpp
      src/decorated_tuple.cpp
      src/default_attachable.cpp
-     src/demangle.cpp
      src/deserializer.cpp
      src/duration.cpp
      src/event_based_actor.cpp
@@ -73,7 +72,6 @@ set (LIBCAF_CORE_SRCS
      src/string_algorithms.cpp
      src/string_serialization.cpp
      src/sync_request_bouncer.cpp
-     src/to_uniform_name.cpp
      src/uniform_type_info.cpp
      src/uniform_type_info_map.cpp)
 

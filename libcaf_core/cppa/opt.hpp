@@ -32,8 +32,6 @@
 #include "caf/on.hpp"
 #include "caf/optional.hpp"
 
-#include "caf/detail/demangle.hpp"
-
 #include "cppa/opt_impls.hpp"
 
 namespace caf {

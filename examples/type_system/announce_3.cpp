@@ -68,14 +68,15 @@ int main(int, char**) {
   foo_setter s2 = &foo::b;
 
   // equal to example 3
-  announce<foo>(make_pair(g1, s1), make_pair(g2, s2));
+  announce<foo>("foo", make_pair(g1, s1), make_pair(g2, s2));
 
   // alternative syntax that uses casts instead of variables
   // (returns false since foo is already announced)
-  announce<foo>(make_pair(static_cast<foo_getter>(&foo::a),
-              static_cast<foo_setter>(&foo::a)),
-          make_pair(static_cast<foo_getter>(&foo::b),
-              static_cast<foo_setter>(&foo::b)));
+  announce<foo>("foo",
+                make_pair(static_cast<foo_getter>(&foo::a),
+                          static_cast<foo_setter>(&foo::a)),
+                make_pair(static_cast<foo_getter>(&foo::b),
+                          static_cast<foo_setter>(&foo::b)));
 
   // spawn a new testee and send it a foo
   {

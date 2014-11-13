@@ -177,7 +177,7 @@ void test_event_testee() {
   self->send(et, "goodbye event testee!");
   typed_actor<replies_to<get_state_msg>::with<string>> sub_et = et;
   // $:: is the anonymous namespace
-  set<string> iface{"caf::replies_to<$::get_state_msg>::with<@str>",
+  set<string> iface{"caf::replies_to<get_state_msg>::with<@str>",
                     "caf::replies_to<@str>::with<void>",
                     "caf::replies_to<float>::with<void>",
                     "caf::replies_to<@i32>::with<@i32>"};
@@ -311,9 +311,9 @@ void test_sending_typed_actors_and_down_msg() {
 int main() {
   CAF_TEST(test_typed_spawn);
   // announce stuff
-  announce<get_state_msg>();
-  announce<int_actor>();
-  announce<my_request>(&my_request::a, &my_request::b);
+  announce<get_state_msg>("get_state_msg");
+  announce<int_actor>("int_actor");
+  announce<my_request>("my_request", &my_request::a, &my_request::b);
   // run test series with typed_server(1|2)
   test_typed_spawn(spawn_typed(typed_server1));
   await_all_actors_done();
