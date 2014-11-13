@@ -70,15 +70,14 @@ void condition_variable::wait(unique_lock<mutex>& lock) noexcept {
   n.priority = sched_active_thread->priority;
   n.data = sched_active_pid;
   n.next = NULL;
-
-  /* the signaling thread may not hold the mutex, the queue is not thread safe */
+  // the signaling thread may not hold the mutex, the queue is not thread safe
   unsigned old_state = disableIRQ();
   priority_queue_add(&m_queue, &n);
   restoreIRQ(old_state);
   mutex_unlock_and_sleep(lock.mutex()->native_handle());
   if (n.data != -1u) {
-    /* on signaling n.data is set to -1u */
-    /* if it isn't set, then the wakeup is either spurious or a timer wakeup */
+    // on signaling n.data is set to -1u
+    // if it isn't set, then the wakeup is either spurious or a timer wakeup
     old_state = disableIRQ();
     priority_queue_remove(&m_queue, &n);
     restoreIRQ(old_state);
@@ -107,35 +106,18 @@ void condition_variable::do_timed_wait(unique_lock<mutex>& lock,
     ts.tv_sec = ts_sec_max;
     ts.tv_nsec = std::giga::num - 1;
   }
-  // auto rc = pthread_cond_timedwait(&cond, lock.mutex()->native_handle(), &ts);
   timex_t now, then, reltime;
-  vtimer_now(&now);
+  // vtimer_now(&now) does not seem to work, so lets use chrono ...
+  system_clock::time_point sys_now = system_clock::now();
+  auto duration = sys_now.time_since_epoch();
+  now.seconds = duration_cast<seconds>(duration).count();
+  now.microseconds = (duration_cast<microseconds>(duration) - duration_cast<seconds>(duration)).count();
   then.seconds = ts.tv_sec;
   then.microseconds = ts.tv_nsec / 1000u;
   reltime = timex_sub(then, now);
   vtimer_t timer;
   vtimer_set_wakeup(&timer, reltime, sched_active_pid);
-
   wait(lock);
-//  priority_queue_node_t n;
-//  n.priority = sched_active_thread->priority;
-//  n.data = sched_active_pid;
-//  n.next = NULL;
-//  /* the signaling thread may not hold the mutex, the queue is not thread safe */
-//  unsigned old_state = disableIRQ();
-//  priority_queue_add(&m_queue), &n);
-//  restoreIRQ(old_state);
-//  mutex_unlock_and_sleep(&m_queue);
-//  if (n.data != -1u) {
-//    /* on signaling n.data is set to -1u */
-//    /* if it isn't set, then the wakeup is either spurious or a timer wakeup */
-//    old_state = disableIRQ();
-//    priority_queue_remove(&m_queue, &n);
-//    restoreIRQ(old_state);
-//  }
-//  mutex_lock(mutex);
-
-
   vtimer_remove(&timer);
  }
 
