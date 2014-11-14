@@ -1,11 +1,26 @@
+/******************************************************************************
+ *                       ____    _    _____                                   *
+ *                      / ___|  / \  |  ___|    C++                           *
+ *                     | |     / _ \ | |_       Actor                         *
+ *                     | |___ / ___ \|  _|      Framework                     *
+ *                      \____/_/   \_|_|                                      *
+ *                                                                            *
+ * Copyright (C) 2011 - 2014                                                  *
+ * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
+ * Raphael Hiesgen <raphael.hiesgen (at) haw-hamburg.de>                      *
+ *                                                                            *
+ * Distributed under the terms and conditions of the BSD 3-Clause License or  *
+ * (at your option) under the terms and conditions of the Boost Software      *
+ * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ *                                                                            *
+ * If you did not receive a copy of the license files, see                    *
+ * http://opensource.org/licenses/BSD-3-Clause and                            *
+ * http://www.boost.org/LICENSE_1_0.txt.                                      *
+ ******************************************************************************/
 
 #include "caf/mutex.hpp"
 
 namespace caf {
-
-// const defer_lock_t defer_lock = {};
-// const try_to_lock_t try_to_lock = {};
-// const adopt_lock_t adopt_lock = {};
 
 mutex::~mutex() {
   // nop
