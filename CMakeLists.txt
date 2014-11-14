@@ -22,6 +22,9 @@ endif()
 if(NOT CAF_BUILD_STATIC)
   set(CAF_BUILD_STATIC no)
 endif()
+if(NOT CAF_NO_OPENCL)
+  set(CAF_NO_OPENCL no)
+endif()
 
 
 ################################################################################
@@ -184,7 +187,7 @@ install(DIRECTORY libcaf_core/cppa/
 install(DIRECTORY libcaf_io/caf/ DESTINATION include/caf
         FILES_MATCHING PATTERN "*.hpp")
 # install includes from opencl
-if(EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/caf")
+if(EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
   install(DIRECTORY libcaf_opencl/caf/ DESTINATION include/caf
         FILES_MATCHING PATTERN "*.hpp")
 endif()
@@ -208,7 +211,7 @@ set(LIBCAF_INCLUDE_DIRS
     "${CMAKE_SOURCE_DIR}/libcaf_core"
     "${CMAKE_SOURCE_DIR}/libcaf_io")
 # path to caf opencl headers
-if(EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/caf")
+if(EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
   set(LIBCAF_INCLUDE_DIRS
       "${CMAKE_SOURCE_DIR}/libcaf_opencl/" "${LIBCAF_INCLUDE_DIRS}")
 endif()
@@ -230,7 +233,7 @@ add_subdirectory(libcaf_io)
 # set io lib for sub directories
 set(LIBCAF_IO_LIBRARY libcaf_io)
 # set opencl lib for sub directories if not told otherwise
-if(NOT CAF_NO_OPENCL AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/caf")
+if(NOT CAF_NO_OPENCL AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
   message(STATUS "Enter subdirectory libcaf_opencl")
   find_package(OPENCL REQUIRED)
   add_subdirectory(libcaf_opencl)
@@ -253,7 +256,7 @@ if(NOT CAF_NO_UNIT_TESTS)
   message(STATUS "Enter subdirectory unit_testing")
   add_subdirectory(unit_testing)
   add_dependencies(all_unit_tests libcaf_io)
-  if(NOT CAF_NO_OPENCL AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/caf")
+  if(NOT CAF_NO_OPENCL AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
     add_subdirectory(libcaf_opencl/unit_testing)
   endif()
 endif()
@@ -262,13 +265,13 @@ if(NOT CAF_NO_EXAMPLES)
   message(STATUS "Enter subdirectory examples")
   add_subdirectory(examples)
   add_dependencies(all_examples libcaf_io)
-  if(NOT CAF_NO_OPENCL AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/caf")
+  if(NOT CAF_NO_OPENCL AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
     add_subdirectory(libcaf_opencl/examples)
     add_dependencies(opencl_examples libcaf_opencl)
   endif()
 endif()
 # build RIAC if not being told otherwise
-if(NOT CAF_NO_RIAC AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_riac/caf/")
+if(NOT CAF_NO_RIAC AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_riac/CMakeLists.txt")
   message(STATUS "Enter subdirectory probe")
   add_subdirectory(libcaf_riac)
   if(CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
@@ -288,7 +291,7 @@ else()
   set(CAF_HAS_RIAC no)
 endif()
 # build nexus if not being told otherwise
-if(NOT CAF_NO_NEXUS AND EXISTS "${CMAKE_SOURCE_DIR}/nexus/caf/")
+if(NOT CAF_NO_NEXUS AND EXISTS "${CMAKE_SOURCE_DIR}/nexus/CMakeLists.txt")
   if(NOT CAF_HAS_RIAC)
     message(WARNING "cannot build nexus without RIAC submodule")
     set(CAF_NO_NEXUS yes)
@@ -307,7 +310,7 @@ else()
   set(CAF_NO_NEXUS yes)
 endif()
 # build cash if not being told otherwise
-if(NOT CAF_NO_CASH AND EXISTS "${CMAKE_SOURCE_DIR}/cash/caf/")
+if(NOT CAF_NO_CASH AND EXISTS "${CMAKE_SOURCE_DIR}/cash/CMakeLists.txt")
   if(NOT CAF_HAS_RIAC)
     message(WARNING "cannot build cash without RIAC submodule")
     set(CAF_NO_CASH yes)
@@ -326,7 +329,7 @@ else()
   set(CAF_NO_CASH yes)
 endif()
 # build benchmarks if not being told otherwise
-if(NOT CAF_NO_BENCHMARKS AND EXISTS "${CMAKE_SOURCE_DIR}/benchmarks/caf/")
+if(NOT CAF_NO_BENCHMARKS AND EXISTS "${CMAKE_SOURCE_DIR}/benchmarks/CMakeLists.txt")
   message(STATUS "Enter subdirectory benchmarks")
   add_subdirectory(benchmarks)
   add_dependencies(all_benchmarks libcaf_io)
