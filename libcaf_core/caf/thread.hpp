@@ -24,7 +24,6 @@
 #ifdef __RIOTBUILD_FLAG
 
 #include <tuple>
-#include <chrono>
 #include <memory>
 #include <utility>
 #include <exception>
@@ -39,6 +38,7 @@ extern "C" {
 }
 
 #include "caf/mutex.hpp"
+#include "caf/chrono.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/thread_util.hpp"
 #include "caf/intrusive_ptr.hpp"

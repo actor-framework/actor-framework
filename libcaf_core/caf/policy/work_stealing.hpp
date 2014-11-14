@@ -21,10 +21,10 @@
 #define CAF_POLICY_WORK_STEALING_HPP
 
 #include <deque>
-#include <chrono>
 #include <random>
 #include <cstddef>
 
+#include "caf/chrono.hpp"
 #include "caf/thread.hpp"
 #include "caf/resumable.hpp"
 

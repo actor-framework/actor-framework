@@ -24,10 +24,11 @@
 
 #define CAF_CACHE_LINE_SIZE 64
 
-#include <chrono>
 #include <thread>
 #include <atomic>
 #include <cassert>
+
+#include "caf/chrono.hpp"
 
 // GCC hack
 #if defined(CAF_GCC) && !defined(_GLIBCXX_USE_SCHED_YIELD)

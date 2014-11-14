@@ -21,6 +21,9 @@
 #ifndef CAF_CHRONO_HPP
 #define CAF_CHRONO_HPP
 
+#include <chrono>
+#include <cstdio>
+
 #ifdef __RIOTBUILD_FLAG
 
 extern "C" {
@@ -29,18 +32,80 @@ extern "C" {
 }
 
 namespace caf {
-namespace chrono {
 
+class duration;
 
+namespace {
+  constexpr uint32_t microsec_in_secs = 1000000;
+} // namespace anaonymous
 
-} // namespace chrono
+class time_point {
+  using native_handle_type = timex_t;
+
+ public:
+  inline time_point() : m_handle{0,0} { }
+  inline time_point(timex_t&& tp) : m_handle(tp) { }
+  constexpr time_point(const time_point& tp) = default;
+  constexpr time_point(time_point&& tp) = default;
+
+  inline native_handle_type native_handle() const { return m_handle; }
+
+  time_point& operator+=(const caf::duration& d);
+  template<class Rep, class Period>
+  inline time_point& operator+=(const std::chrono::duration<Rep,Period>& d) {
+    auto s = std::chrono::duration_cast<std::chrono::seconds>(d);
+    auto m = (std::chrono::duration_cast<std::chrono::microseconds>(d) - s);
+    m_handle.seconds += s.count();
+    m_handle.microseconds += m.count();
+    adjust_overhead();
+    return *this;
+  }
+
+  inline uint32_t seconds() const { return m_handle.seconds; }
+  inline uint32_t microseconds() const { return m_handle.microseconds; }
+
+ private:
+  timex_t m_handle;
+  void inline adjust_overhead() {
+    while (m_handle.microseconds >= microsec_in_secs) {
+      m_handle.seconds += 1;
+      m_handle.microseconds -= microsec_in_secs;
+    }
+  }
+};
+
+inline time_point now() {
+  timex_t tp;
+  vtimer_now(&tp);
+  return time_point(std::move(tp));
+}
+
+inline bool operator<(const time_point& lhs, const time_point& rhs) {
+    return lhs.seconds() < rhs.seconds() ||
+           (lhs.seconds() == rhs.seconds() &&
+            lhs.microseconds() < rhs.microseconds());
+}
+
+inline bool operator>(const time_point& lhs, const time_point& rhs) {
+    return rhs < lhs;
+}
+
+inline bool operator<=(const time_point& lhs, const time_point& rhs) {
+    return !(rhs < lhs);
+}
+
+inline bool operator>=(const time_point& lhs, const time_point& rhs) {
+    return !(lhs < rhs);
+}
+
 } // namespace caf
 
 #else
 
-#include <chrono>
-
 namespace caf {
+
+using time_point = std::chrono::high_resolution_clock::time_point;
+using now = std::chrono::high_resolution_clock::now();
 
 // todo mapping for caf
 

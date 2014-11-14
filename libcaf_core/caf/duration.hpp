@@ -21,9 +21,10 @@
 #define CAF_DURATION_HPP
 
 #include <string>
-#include <chrono>
 #include <cstdint>
 #include <stdexcept>
+
+#include "caf/chrono.hpp"
 
 namespace caf {
 

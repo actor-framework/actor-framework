@@ -18,13 +18,27 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-extern "C" {
-#include "vtimer.h"
-}
-
-using namespace std;
+#include "caf/chrono.hpp"
+#include "caf/duration.hpp"
 
 namespace caf {
 
+time_point& time_point::operator+=(const duration& d) {
+    switch (d.unit) {
+      case time_unit::seconds:
+        m_handle.seconds += static_cast<uint32_t>(d.count);
+        break;
+      case time_unit::microseconds:
+        m_handle.microseconds += static_cast<uint32_t>(d.count);
+        break;
+      case time_unit::milliseconds:
+        m_handle.microseconds += static_cast<uint32_t>(1000 * d.count);
+        break;
+      case time_unit::invalid:
+        break;
+    }
+    adjust_overhead();
+    return *this;
+  }
 
 } // namespace caf

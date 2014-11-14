@@ -20,12 +20,12 @@
 #include "caf/scheduler/abstract_coordinator.hpp"
 
 #include <atomic>
-#include <chrono>
 #include <iostream>
 
 #include "caf/on.hpp"
 #include "caf/send.hpp"
 #include "caf/spawn.hpp"
+#include "caf/chrono.hpp"
 #include "caf/thread.hpp"
 #include "caf/anything.hpp"
 #include "caf/to_string.hpp"
@@ -96,7 +96,7 @@ class timer_actor : public blocking_actor {
     // setup & local variables
     bool received_exit = false;
     mailbox_element_ptr msg_ptr;
-    std::multimap<hrc::time_point, delayed_msg> messages;
+    std::multimap<time_point, delayed_msg> messages;
     // message handling rules
     message_handler mfun{
       [&](const duration& d, actor_addr& from, channel& to,
@@ -117,7 +117,7 @@ class timer_actor : public blocking_actor {
         if (messages.empty())
           msg_ptr = dequeue();
         else {
-          auto tout = hrc::now();
+          auto tout = now();
           // handle timeouts (send messages)
           auto it = messages.begin();
           while (it != messages.end() && (it->first) <= tout) {

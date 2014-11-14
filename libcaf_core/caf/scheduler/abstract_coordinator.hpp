@@ -20,13 +20,13 @@
 #ifndef CAF_SCHEDULER_ABSTRACT_COORDINATOR_HPP
 #define CAF_SCHEDULER_ABSTRACT_COORDINATOR_HPP
 
-#include <chrono>
 #include <atomic>
 #include <cstddef>
 
 #include "caf/fwd.hpp"
 #include "caf/atom.hpp"
 #include "caf/actor.hpp"
+#include "caf/chrono.hpp"
 #include "caf/channel.hpp"
 #include "caf/message.hpp"
 #include "caf/duration.hpp"

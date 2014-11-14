@@ -20,15 +20,15 @@
 #ifndef CAF_ON_HPP
 #define CAF_ON_HPP
 
-#include <chrono>
 #include <memory>
 #include <functional>
 #include <type_traits>
 
 #include "caf/unit.hpp"
 #include "caf/atom.hpp"
-#include "caf/anything.hpp"
+#include "caf/chrono.hpp"
 #include "caf/message.hpp"
+#include "caf/anything.hpp"
 #include "caf/duration.hpp"
 #include "caf/skip_message.hpp"
 #include "caf/may_have_timeout.hpp"
