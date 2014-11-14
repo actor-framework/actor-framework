@@ -103,4 +103,17 @@ void condition_variable::wait(unique_lock<mutex>& lock) noexcept {
   mutex_lock(lock.mutex()->native_handle());
 }
 
+cv_status condition_variable::wait_until(unique_lock<mutex>& lock,
+                                         const time_point& timeout_time) {
+  vtimer_t timer;
+  vtimer_set_wakeup_timepoint(&timer, timeout_time.native_handle(),
+                              sched_active_pid);
+  wait(lock);
+  timex_t after;
+  vtimer_now(&after);
+  vtimer_remove(&timer);
+  auto cmp = timex_cmp(after,timeout_time.native_handle());
+  return cmp < 1  ? cv_status::no_timeout : cv_status::timeout;
+}
+
 } // namespace caf
