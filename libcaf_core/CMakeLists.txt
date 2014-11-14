@@ -86,9 +86,10 @@ set (LIBCAF_CORE_SRCS
 
 if (CAF_FOR_RIOT)
 set (LIBCAF_CORE_SRCS
-     src/thread.cpp
-     src/mutex.cpp
+     src/chrono.cpp
      src/condition_variable.cpp
+     src/mutex.cpp
+     src/thread.cpp
      ${LIBCAF_CORE_SRCS})
 endif()
 
