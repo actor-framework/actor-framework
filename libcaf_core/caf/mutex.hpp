@@ -70,7 +70,7 @@ class lock_guard {
  public:
   using mutex_type = Mutex;
 
-  inline explicit lock_guard(mutex_type& mtx) : m_mtx{mtx} { m_mtx.lock(); }
+  inline explicit lock_guard(mutex_type& mtx) : m_mtx(mtx) { m_mtx.lock(); }
   inline lock_guard(mutex_type& mtx, adopt_lock_t) : m_mtx{mtx} {}
   inline ~lock_guard() { m_mtx.unlock(); }
 

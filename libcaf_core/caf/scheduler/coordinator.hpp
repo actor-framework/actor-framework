@@ -88,7 +88,7 @@ class coordinator : public abstract_coordinator {
       resumable::resume_result resume(execution_unit* ptr, size_t) override {
         CAF_LOG_DEBUG("shutdown_helper::resume => shutdown worker");
         CAF_ASSERT(ptr != nullptr);
-        std::unique_lock<std::mutex> guard(mtx);
+        nique_lock<mutex> guard(mtx);
         last_worker = ptr;
         cv.notify_all();
         return resumable::shutdown_execution_unit;
@@ -96,8 +96,8 @@ class coordinator : public abstract_coordinator {
       shutdown_helper() : last_worker(nullptr) {
         // nop
       }
-      std::mutex mtx;
-      std::condition_variable cv;
+      mutex mtx;
+      condition_variable cv;
       execution_unit* last_worker;
     };
     // use a set to keep track of remaining workers
@@ -113,7 +113,7 @@ class coordinator : public abstract_coordinator {
       // since jobs can be stolen, we cannot assume that we have
       // actually shut down the worker we've enqueued sh to
       { // lifetime scope of guard
-        std::unique_lock<std::mutex> guard(sh.mtx);
+        unique_lock<mutex> guard(sh.mtx);
         sh.cv.wait(guard, [&] { return sh.last_worker != nullptr; });
       }
       alive_workers.erase(static_cast<worker_type*>(sh.last_worker));

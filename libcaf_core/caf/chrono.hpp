@@ -23,6 +23,7 @@
 
 #include <chrono>
 #include <cstdio>
+#include <algorithm>
 
 #ifdef __RIOTBUILD_FLAG
 
