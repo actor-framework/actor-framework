@@ -20,10 +20,10 @@
 #define CAF_SUITE unpublish
 #include "caf/test/unit_test.hpp"
 
-#include <thread>
 #include <atomic>
 
 #include "caf/all.hpp"
+#include "caf/thread.hpp"
 #include "caf/io/all.hpp"
 
 using namespace caf;

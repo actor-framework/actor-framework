@@ -53,7 +53,7 @@ class worker : public execution_unit {
   void start() {
     CAF_ASSERT(m_this_thread.get_id() == std::thread::id{});
     auto this_worker = this;
-    m_this_thread = std::thread{[this_worker] {
+    m_this_thread = thread{[this_worker] {
       CAF_LOGF_TRACE("id = " << this_worker->id());
       this_worker->run();
     }};
@@ -91,7 +91,7 @@ class worker : public execution_unit {
     return m_id;
   }
 
-  std::thread& get_thread() {
+  thread& get_thread() {
     return m_this_thread;
   }
 
@@ -155,7 +155,7 @@ class worker : public execution_unit {
   // number of messages each actor is allowed to consume per resume
   size_t m_max_throughput;
   // the worker's thread
-  std::thread m_this_thread;
+  thread m_this_thread;
   // the worker's ID received from scheduler
   size_t m_id;
   // pointer to central coordinator

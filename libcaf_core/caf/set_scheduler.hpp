@@ -20,8 +20,9 @@
 #ifndef CAF_SET_SCHEDULER_HPP
 #define CAF_SET_SCHEDULER_HPP
 
-#include <thread>
 #include <limits>
+
+#include "caf/thread.hpp"
 
 #include "caf/policy/work_stealing.hpp"
 
@@ -48,7 +49,7 @@ void set_scheduler(scheduler::abstract_coordinator* ptr);
  * @throws std::invalid_argument if `max_throughput == 0`
  */
 template <class Policy = policy::work_stealing>
-void set_scheduler(size_t nw = std::thread::hardware_concurrency(),
+void set_scheduler(size_t nw = thread::hardware_concurrency(),
                    size_t max_throughput = std::numeric_limits<size_t>::max()) {
   if (max_throughput == 0) {
     throw std::invalid_argument("max_throughput must not be 0");

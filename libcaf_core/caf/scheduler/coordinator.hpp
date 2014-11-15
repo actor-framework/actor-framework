@@ -20,10 +20,11 @@
 #ifndef CAF_SCHEDULER_COORDINATOR_HPP
 #define CAF_SCHEDULER_COORDINATOR_HPP
 
-#include <thread>
 #include <limits>
 #include <memory>
-#include <condition_variable>
+
+#include "caf/thread.hpp"
+#include "caf/condition_variable.hpp"
 
 #include "caf/scheduler/worker.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
@@ -41,7 +42,7 @@ class coordinator : public abstract_coordinator {
 
   using policy_data = typename Policy::coordinator_data;
 
-  coordinator(size_t nw = std::max(std::thread::hardware_concurrency(), 4u),
+  coordinator(size_t nw = std::max(thread::hardware_concurrency(), 4u),
               size_t mt = std::numeric_limits<size_t>::max())
     : super(nw),
       m_max_throughput(mt) {
@@ -139,7 +140,7 @@ class coordinator : public abstract_coordinator {
   }
 
  private:
-  // usually of size std::thread::hardware_concurrency()
+  // usually of size thread::hardware_concurrency()
   std::vector<std::unique_ptr<worker_type>> m_workers;
   // policy-specific data
   policy_data m_data;

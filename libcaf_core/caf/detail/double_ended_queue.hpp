@@ -24,11 +24,11 @@
 
 #define CAF_CACHE_LINE_SIZE 64
 
-#include <thread>
 #include <atomic>
 #include <cassert>
 
 #include "caf/chrono.hpp"
+#include "caf/thread.hpp"
 
 // GCC hack
 #if defined(CAF_GCC) && !defined(_GLIBCXX_USE_SCHED_YIELD)
@@ -233,7 +233,7 @@ class double_ended_queue {
    public:
     lock_guard(std::atomic_flag& lock) : m_lock(lock) {
       while (lock.test_and_set(std::memory_order_acquire)) {
-        std::this_thread::yield();
+        this_thread::yield();
       }
     }
     ~lock_guard() {
