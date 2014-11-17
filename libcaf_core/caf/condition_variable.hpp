@@ -24,15 +24,13 @@
 #ifdef __RIOTBUILD_FLAG
 
 
-#include "mutex.hpp"
+#include "sched.h"
+#include "vtimer.h"
+
+#include "caf/mutex.hpp"
 
 #include "caf/chrono.hpp"
 
-
-extern "C" {
-#include "sched.h"
-#include "vtimer.h"
-}
 
 namespace caf {
 
@@ -116,7 +114,7 @@ cv_status condition_variable::wait_for(unique_lock<mutex>& lock,
   timex_t timeout, before, after;
   auto s = duration_cast<seconds>(timeout_duration);
   timeout.seconds = s.count();
-  timeout.microseconds = (duration_cast<microseconds>(timeout_duration) - s).count();
+  timeout.microseconds = (duration_cast<microseconds>(timeout_duration - s)).count();
   vtimer_now(&before);
   vtimer_t timer;
   vtimer_set_wakeup(&timer, timeout, sched_active_pid);

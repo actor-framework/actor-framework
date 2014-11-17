@@ -23,15 +23,10 @@
 
 #ifdef __RIOTBUILD_FLAG
 
-#include <utility>
-//#include <system_error>
-#include <stdexcept>
-
-#include <cstdio>
-
-extern "C" {
 #include "mutex.h"
-}
+
+#include <utility>
+#include <stdexcept>
 
 namespace caf {
 
@@ -94,15 +89,6 @@ class unique_lock {
     : m_mtx{&mtx}, m_owns{ mtx.try_lock() } { }
   inline unique_lock(mutex_type& mtx, adopt_lock_t)
     : m_mtx{&mtx}, m_owns{true} { }
-//  template<class Clock, class Duration>
-//  inline unique_lock(mutex_type& mtx,
-//                     const std::chrono::time_point<Clock,
-//                                                   Duration>& timeout_time)
-//    : m_mtx{&mtx}, m_owns{mtx.try_lock_until(timeout_time)} { }
-//  template<class Rep, class Period>
-//  inline unique_lock(mutex_type& mtx,
-//                     const chrono::duration<Rep,Period>& timeout_duration)
-//    : m_mtx{&mtx}, m_owns{mtx.try_lock_for(timeout_duration)} { }
   inline ~unique_lock() {
     if (m_owns) {
       m_mtx->unlock();
@@ -182,34 +168,6 @@ bool unique_lock<Mutex>::try_lock() {
   m_owns = m_mtx->try_lock();
   return m_owns;
 }
-
-//template<class Mutex>
-//template<class Rep, class Period>
-//bool unique_lock<Mutex>
-//  ::try_lock_for(const std::chrono::duration<Rep,Period>& timeout_duration) {
-//  if (m_mtx == nullptr) {
-//    throw std::runtime_error("unique_lock::try_lock_for: references null mutex");
-//  }
-//  if (m_owns) {
-//    throw std::runtime_error("unique_lock::try_lock_for: already locked");
-//  }
-//  m_owns = m_mtx->try_lock_until(timeout_duration);
-//  return m_owns;
-//}
-
-//template <class Mutex>
-//template <class Clock, class Duration>
-//bool unique_lock<Mutex>
-//  ::try_lock_until(const chrono::time_point<Clock, Duration>& timeout_time) {
-//    if (m_mtx == nullptr)
-//        throw std::runtime_error("unique_lock::try_lock_until: "
-//                                    "references null mutex");
-//    if (m_owns)
-//        throw std::runtime_error("unique_lock::try_lock_until: "
-//                                      "already locked");
-//    m_owns = m_mtx->try_lock_until(timeout_time);
-//    return m_owns;
-//}
 
 template<class Mutex>
 void unique_lock<Mutex>::unlock() {

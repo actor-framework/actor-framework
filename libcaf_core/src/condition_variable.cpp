@@ -21,12 +21,10 @@
 #include <cstdio>
 #include <stdexcept>
 
-extern "C" {
 #include "irq.h"
 #include "sched.h"
 #include "vtimer.h"
 #include "priority_queue.h"
-}
 
 #include "caf/condition_variable.hpp"
 

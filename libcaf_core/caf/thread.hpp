@@ -23,6 +23,10 @@
 
 #ifdef __RIOTBUILD_FLAG
 
+#include "time.h"
+#include "thread.h"
+#include "kernel_internal.h"
+
 #include <tuple>
 #include <memory>
 #include <utility>
@@ -30,12 +34,6 @@
 #include <stdexcept>
 #include <functional>
 #include <type_traits>
-
-extern "C" {
-#include "time.h"
-#include "thread.h"
-#include "kernel_internal.h"
-}
 
 #include "caf/mutex.hpp"
 #include "caf/chrono.hpp"

@@ -27,10 +27,8 @@
 
 #ifdef __RIOTBUILD_FLAG
 
-extern "C" {
 #include "time.h"
 #include "vtimer.h"
-}
 
 namespace caf {
 

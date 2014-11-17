@@ -18,9 +18,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-extern "C" {
 #include "vtimer.h"
-}
 
 #include <cerrno>
 #include <system_error>
