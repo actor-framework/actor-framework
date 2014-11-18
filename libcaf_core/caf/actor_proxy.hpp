@@ -38,8 +38,8 @@ class actor_proxy;
 using actor_proxy_ptr = intrusive_ptr<actor_proxy>;
 
 /**
- * Represents a remote actor.
- * @extends abstract_actor
+ * Represents an actor running on a remote machine,
+ * or different hardware, or in a separate process.
  */
 class actor_proxy : public abstract_actor {
  public:

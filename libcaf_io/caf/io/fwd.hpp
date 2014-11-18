@@ -27,7 +27,6 @@ class basp_broker;
 class broker;
 class middleman;
 class receive_policy;
-class remote_actor_proxy;
 
 namespace network {
 

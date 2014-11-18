@@ -29,10 +29,10 @@
 #include "caf/actor_namespace.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/binary_deserializer.hpp"
+#include "caf/forwarding_actor_proxy.hpp"
 
 #include "caf/io/basp.hpp"
 #include "caf/io/broker.hpp"
-#include "caf/io/remote_actor_proxy.hpp"
 
 namespace caf {
 namespace io {

@@ -35,7 +35,6 @@
 
 #include "caf/io/middleman.hpp"
 #include "caf/io/system_messages.hpp"
-#include "caf/io/remote_actor_proxy.hpp"
 
 #include "caf/detail/logging.hpp"
 #include "caf/detail/ripemd_160.hpp"

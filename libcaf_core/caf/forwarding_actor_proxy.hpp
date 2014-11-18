@@ -17,27 +17,24 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_REMOTE_ACTOR_PROXY_HPP
-#define CAF_IO_REMOTE_ACTOR_PROXY_HPP
+#ifndef CAF_FORWARDING_ACTOR_PROXY_HPP
+#define CAF_FORWARDING_ACTOR_PROXY_HPP
 
-#include "caf/extend.hpp"
+#include "caf/actor.hpp"
 #include "caf/actor_proxy.hpp"
 
-#include "caf/mixin/memory_cached.hpp"
-
-#include "caf/detail/single_reader_queue.hpp"
+#include "caf/detail/shared_spinlock.hpp"
 
 namespace caf {
-namespace io {
 
 /**
  * Implements a simple proxy forwarding all operations to a manager.
  */
-class remote_actor_proxy : public actor_proxy {
+class forwarding_actor_proxy : public actor_proxy {
  public:
-  remote_actor_proxy(actor_id mid, node_id pinfo, actor parent);
+  forwarding_actor_proxy(actor_id mid, node_id pinfo, actor parent);
 
-  ~remote_actor_proxy();
+  ~forwarding_actor_proxy();
 
   void enqueue(const actor_addr&, message_id,
                message, execution_unit*) override;
@@ -50,12 +47,17 @@ class remote_actor_proxy : public actor_proxy {
 
   void kill_proxy(uint32_t reason) override;
 
+  actor manager() const;
+
+  void manager(actor new_manager);
+
  private:
   void forward_msg(const actor_addr& sender, message_id mid, message msg);
+
+  mutable detail::shared_spinlock m_manager_mtx;
   actor m_manager;
 };
 
-} // namespace io
 } // namespace caf
 
-#endif // CAF_IO_REMOTE_ACTOR_PROXY_HPP
+#endif // CAF_FORWARDING_ACTOR_PROXY_HPP

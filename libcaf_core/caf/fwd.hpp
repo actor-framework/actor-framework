@@ -47,6 +47,7 @@ class blocking_actor;
 class message_handler;
 class uniform_type_info;
 class event_based_actor;
+class forwarding_actor_proxy;
 
 // structs
 struct anything;

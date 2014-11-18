@@ -17,9 +17,12 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/io/basp_broker.hpp"
+
 #include "caf/exception.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/binary_deserializer.hpp"
+#include "caf/forwarding_actor_proxy.hpp"
 
 #include "caf/detail/singletons.hpp"
 #include "caf/detail/make_counted.hpp"
@@ -28,8 +31,6 @@
 #include "caf/io/basp.hpp"
 #include "caf/io/middleman.hpp"
 #include "caf/io/unpublish.hpp"
-#include "caf/io/basp_broker.hpp"
-#include "caf/io/remote_actor_proxy.hpp"
 
 using std::string;
 
@@ -570,7 +571,7 @@ actor_proxy_ptr basp_broker::make_proxy(const id_type& nid, actor_id aid) {
   // receive a kill_proxy_instance message
   intrusive_ptr<basp_broker> self = this;
   auto mm = middleman::instance();
-  auto res = make_counted<remote_actor_proxy>(aid, nid, self);
+  auto res = make_counted<forwarding_actor_proxy>(aid, nid, self);
   res->attach_functor([=](uint32_t) {
     mm->backend().dispatch([=] {
       // using res->id() instead of aid keeps this actor instance alive

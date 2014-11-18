@@ -16,7 +16,6 @@ set (LIBCAF_IO_SRCS
      src/publish.cpp
      src/publish_local_groups.cpp
      src/remote_actor.cpp
-     src/remote_actor_proxy.cpp
      src/remote_group.cpp
      src/manager.cpp
      src/stream_manager.cpp
