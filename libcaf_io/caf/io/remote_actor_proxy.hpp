@@ -28,39 +28,16 @@
 #include "caf/detail/single_reader_queue.hpp"
 
 namespace caf {
-namespace detail {
-
-class memory;
-
-} // namespace detail
-} // namespace caf
-
-namespace caf {
 namespace io {
 
-class middleman;
-
-class sync_request_info : public extend<memory_managed>::
-                                 with<mixin::memory_cached> {
-  friend class detail::memory;
- public:
-  using pointer = sync_request_info*;
-
-  ~sync_request_info();
-
-  pointer next;       // intrusive next pointer
-  actor_addr sender; // points to the sender of the message
-  message_id mid;  // sync message ID
-
- private:
-  sync_request_info(actor_addr sptr, message_id id);
-};
-
+/**
+ * Implements a simple proxy forwarding all operations to a manager.
+ */
 class remote_actor_proxy : public actor_proxy {
-  using super = actor_proxy;
  public:
-  remote_actor_proxy(actor_id mid, node_id pinfo,
-             actor parent);
+  remote_actor_proxy(actor_id mid, node_id pinfo, actor parent);
+
+  ~remote_actor_proxy();
 
   void enqueue(const actor_addr&, message_id,
                message, execution_unit*) override;
@@ -73,15 +50,10 @@ class remote_actor_proxy : public actor_proxy {
 
   void kill_proxy(uint32_t reason) override;
 
- protected:
-  ~remote_actor_proxy();
-
  private:
   void forward_msg(const actor_addr& sender, message_id mid, message msg);
-  actor m_parent;
+  actor m_manager;
 };
-
-using remote_actor_proxy_ptr = intrusive_ptr<remote_actor_proxy>;
 
 } // namespace io
 } // namespace caf
