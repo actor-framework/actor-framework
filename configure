@@ -19,6 +19,8 @@ if [ -d "$sourcedir/benchmarks/caf" ] ; then
 benchmark_suite_options="\
 
   Benchmark Suite Options:
+    --with-javac=FILE           path to Java compiler
+    --with-java=FILE            path to Java Runtime
     --with-scalac=FILE          path to Scala compiler
     --with-erlc=FILE            path to Erlang compiler
     --with-charmc=FILE          path to Charm++ compiler
@@ -290,6 +292,12 @@ while [ $# -ne 0 ]; do
             ;;
         --build-static-only)
             append_cache_entry CAF_BUILD_STATIC_ONLY STRING yes
+            ;;
+        --with-javac=*)
+            append_cache_entry CAF_JAVA_COMPILER FILEPATH "$optarg"
+            ;;
+        --with-java=*)
+            append_cache_entry CAF_JAVA_BIN FILEPATH "$optarg"
             ;;
         --with-scalac=*)
             append_cache_entry CAF_SCALA_COMPILER FILEPATH "$optarg"
