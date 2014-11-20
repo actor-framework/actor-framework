@@ -188,7 +188,7 @@ if(CAF_ENABLE_ADDRESS_SANITIZER)
   set(CMAKE_CXX_FLAGS "${CXXFLAGS_BACKUP}")
 endif(CAF_ENABLE_ADDRESS_SANITIZER)
 # -pthread is ignored on MacOSX but required on other platforms
-if(NOT APPLE AND NOT WIN32)
+if(NOT APPLE AND NOT WIN32 AND NOT CMAKE_CROSSCOMPILING)
   set(EXTRA_FLAGS "${EXTRA_FLAGS} -pthread")
 endif()
 # -fPIC generates warnings on MinGW plus extra setup steps needed on MinGW
@@ -256,8 +256,16 @@ endif()
 
 if(CAF_FOR_RIOT)
   add_definitions(-D__RIOTBUILD_FLAG)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32")
-  set(LD_FLAGS "${LD_FLAGS} -m32")
+  if (NOT CMAKE_CROSSCOMPILING)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32")
+    set(LD_FLAGS "${LD_FLAGS} -m32")
+  endif()
+  if (CROSS_CXX_FLAGS)
+    message(STATUS "Setting CMAKE_CXX_FLAGS to ${CROSS_CXX_FLAGS}")
+    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CROSS_C_FLAGS}")
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CROSS_CXX_FLAGS}")
+  endif()
+  message(STATUS "using compiler ${CMAKE_C_COMPILER} and ${CMAKE_CXX_COMPILER}")
 endif()
 
 
