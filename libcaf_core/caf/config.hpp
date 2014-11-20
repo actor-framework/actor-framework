@@ -152,6 +152,8 @@
 #  define CAF_BSD
 #elif defined(WIN32) || defined(_WIN32)
 #  define CAF_WINDOWS
+#elif defined(__RIOTBUILD_FLAG)
+#  undef CAF_ENABLE_RUNTIME_CHECKS
 #else
 #  error Platform and/or compiler not supportet
 #endif
