@@ -25,7 +25,7 @@
 
 #ifdef CAF_WINDOWS
 #include <winerror.h>
-#else
+#elif !defined(__RIOTBUILD_FLAG)
 #include <errno.h>
 #include <sys/socket.h>
 #include <sys/un.h>
