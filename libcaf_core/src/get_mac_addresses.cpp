@@ -148,6 +148,26 @@ std::vector<iface_info> get_mac_addresses() {
 } // namespace detail
 } // namespace caf
 
+#elif defined(__RIOTBUILD_FLAG)
+
+#include <vector>
+
+namespace caf {
+namespace detail {
+
+std::vector<iface_info> get_mac_addresses() {
+  // we are currently working with the stm32f4discovery
+  // which does not have a transceiver module
+  // so here is our random mac address
+  // as it should be (http://xkcd.com/221/)
+  std::vector<iface_info> result;
+  result.push_back({"RIOT_DUMMY_MAC","4"});
+  return result;
+}
+
+} // namespace detail
+} // namespace caf
+
 #else
 
 // windows
