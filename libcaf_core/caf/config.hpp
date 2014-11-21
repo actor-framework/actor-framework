@@ -189,4 +189,18 @@
   printf("%s:%u: critical error: '%s'\n", __FILE__, __LINE__, error);          \
   abort()
 
+// arm cross compilers don't offer to_string
+#ifdef __RIOTBUILD_FLAG
+#include <string>
+#include <sstream>
+namespace std {
+template <class T>
+std::string to_string(T value) {
+  std::stringstream ss;
+  ss << value;
+  return ss.str();
+}
+} // namespace caf
+#endif
+
 #endif // CAF_CONFIG_HPP
