@@ -257,6 +257,23 @@ struct is_mutable_ref {
 };
 
 /**
+ * Checks whether `T::static_type_name()` exists.
+ */
+template <class T>
+class has_static_type_name {
+ private:
+  template <class U,
+            class = typename std::enable_if<
+                      !std::is_member_pointer<decltype(&U::is_baz)>::value
+                    >::type>
+  static std::true_type sfinae_fun(int);
+  template <class>
+  static std::false_type sfinae_fun(...);
+ public:
+  static constexpr bool value = decltype(sfinae_fun<T>(0))::value;
+};
+
+/**
  * Returns either `T` or `T::type` if `T` is an option.
  */
 template <class T>

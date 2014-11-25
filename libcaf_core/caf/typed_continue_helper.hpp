@@ -46,7 +46,7 @@ class typed_continue_helper {
   template <class F>
   typed_continue_helper<typename detail::get_callable_trait<F>::result_type>
   continue_with(F fun) {
-    detail::assert_types<OutputList, F>();
+    detail::type_checker<OutputList, F>::check();
     m_ch.continue_with(std::move(fun));
     return {m_ch};
   }

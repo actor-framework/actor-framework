@@ -51,7 +51,7 @@ struct blocking_response_handle_tag {};
  * This helper class identifies an expected response message
  * and enables `sync_send(...).then(...)`.
  */
-template <class Self, class Result, class Tag>
+template <class Self, class ResultOptPairOrMessage, class Tag>
 class response_handle;
 
 /******************************************************************************
@@ -92,9 +92,8 @@ class response_handle<Self, message, nonblocking_response_handle_tag> {
 /******************************************************************************
  *                            nonblocking + typed                             *
  ******************************************************************************/
-template <class Self, class... Ts>
-class response_handle<Self, detail::type_list<Ts...>,
-                      nonblocking_response_handle_tag> {
+template <class Self, class TypedOutputPair>
+class response_handle<Self, TypedOutputPair, nonblocking_response_handle_tag> {
  public:
   response_handle() = delete;
   response_handle(const response_handle&) = default;
@@ -104,20 +103,23 @@ class response_handle<Self, detail::type_list<Ts...>,
     // nop
   }
 
-  template <class F,
-            class Enable = typename std::enable_if<
-                             detail::is_callable<F>::value
-                             && !is_match_expr<F>::value
-                           >::type>
+  template <class... Fs>
   typed_continue_helper<
     typename detail::lifted_result_type<
-      typename detail::get_callable_trait<F>::result_type
+      typename detail::common_result_type<
+        typename detail::get_callable_trait<Fs>::result_type...
+      >::type
     >::type>
-  then(F fun) {
-    detail::assert_types<detail::type_list<Ts...>, F>();
+  then(Fs... fs) {
+    static_assert(sizeof...(Fs) > 0, "at least one functor is requried");
+    static_assert(detail::conjunction<detail::is_callable<Fs>::value...>::value,
+                  "all arguments must be callable");
+    static_assert(detail::conjunction<!is_match_expr<Fs>::value...>::value,
+                  "match expressions are not allowed in this context");
+    detail::type_checker<TypedOutputPair, Fs...>::check();
     auto selfptr = m_self;
     behavior tmp{
-      fun,
+      fs...,
       on<sync_timeout_msg>() >> [selfptr]() -> skip_message_t {
         selfptr->handle_sync_timeout();
         return {};
@@ -173,12 +175,9 @@ class response_handle<Self, message, blocking_response_handle_tag> {
 /******************************************************************************
  *                              blocking + typed                              *
  ******************************************************************************/
-template <class Self, class... Ts>
-class response_handle<Self, detail::type_list<Ts...>,
-                      blocking_response_handle_tag> {
+template <class Self, class OutputPair>
+class response_handle<Self, OutputPair, blocking_response_handle_tag> {
  public:
-  using result_types = detail::type_list<Ts...>;
-
   response_handle() = delete;
   response_handle(const response_handle&) = default;
   response_handle& operator=(const response_handle&) = default;
@@ -187,26 +186,27 @@ class response_handle<Self, detail::type_list<Ts...>,
     // nop
   }
 
-  template <class F>
-  void await(F fun) {
-    using arg_types =
-      typename detail::tl_map<
-        typename detail::get_callable_trait<F>::arg_types,
-        std::decay
-      >::type;
-    static constexpr size_t fun_args = detail::tl_size<arg_types>::value;
-    static_assert(fun_args <= detail::tl_size<result_types>::value,
-                  "functor takes too much arguments");
-    using recv_types =
-      typename detail::tl_right<
-        result_types,
-        fun_args
-      >::type;
-    static_assert(std::is_same<arg_types, recv_types>::value,
-                  "wrong functor signature");
+  static constexpr bool is_either_or_handle =
+    !std::is_same<
+      none_t,
+      typename OutputPair::second
+    >::value;
+
+  template <class... Fs>
+  void await(Fs... fs) {
+    static_assert(sizeof...(Fs) > 0,
+                  "at least one argument is required");
+    static_assert((is_either_or_handle && sizeof...(Fs) == 2)
+                  || sizeof...(Fs) == 1,
+                  "wrong number of functors");
+    static_assert(detail::conjunction<detail::is_callable<Fs>::value...>::value,
+                  "all arguments must be callable");
+    static_assert(detail::conjunction<!is_match_expr<Fs>::value...>::value,
+                  "match expressions are not allowed in this context");
+    detail::type_checker<OutputPair, Fs...>::check();
     auto selfptr = m_self;
     behavior tmp{
-      fun,
+      fs...,
       on<sync_timeout_msg>() >> [selfptr]() -> skip_message_t {
         selfptr->handle_sync_timeout();
         return {};

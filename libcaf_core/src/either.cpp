@@ -17,77 +17,25 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_FWD_HPP
-#define CAF_FWD_HPP
+#include "caf/either.hpp"
 
-#include <cstdint>
+#include "caf/to_string.hpp"
+#include "caf/string_algorithms.hpp"
 
 namespace caf {
 
-template <class>
-class intrusive_ptr;
-
-// classes
-class actor;
-class group;
-class message;
-class channel;
-class node_id;
-class behavior;
-class resumable;
-class actor_addr;
-class message_id;
-class local_actor;
-class actor_proxy;
-class scoped_actor;
-class execution_unit;
-class abstract_actor;
-class abstract_group;
-class blocking_actor;
-class message_handler;
-class uniform_type_info;
-class event_based_actor;
-class forwarding_actor_proxy;
-class illegal_message_element;
-
-// structs
-struct anything;
-struct invalid_actor_t;
-struct invalid_actor_addr_t;
-
-// enums
-enum class atom_value : uint64_t;
-
-// aliases
-using actor_id = uint32_t;
-
-// intrusive pointer types
-using abstract_group_ptr = intrusive_ptr<abstract_group>;
-using actor_proxy_ptr = intrusive_ptr<actor_proxy>;
-
-// functions
-template <class T, typename U>
-T actor_cast(const U&);
-
-namespace io {
-  class broker;
-  class middleman;
-} // namespace io
-
-namespace scheduler {
-  class abstract_worker;
-  class abstract_coordinator;
-} // namespace scheduler
-
-namespace detail {
-  class logging;
-  class singletons;
-  class message_data;
-  class group_manager;
-  class actor_registry;
-  class uniform_type_info_map;
-} // namespace detail
+std::string either_or_else_type_name(size_t lefts_size,
+                                     const std::string* lefts,
+                                     size_t rights_size,
+                                     const std::string* rights) {
+  std::string glue = ",";
+  std::string result;
+  result = "caf::either<";
+  result += join(lefts, lefts + lefts_size, glue);
+  result += ">::or_else<";
+  result += join(rights, rights + rights_size, glue);
+  result += ">";
+  return result;
+}
 
 } // namespace caf
-
-#endif // CAF_FWD_HPP

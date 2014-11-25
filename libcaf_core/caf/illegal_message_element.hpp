@@ -17,75 +17,25 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STRING_SERIALIZATION_HPP
-#define CAF_STRING_SERIALIZATION_HPP
+#ifndef CAF_ILLEGAL_MESSAGE_ELEMENT_HPP
+#define CAF_ILLEGAL_MESSAGE_ELEMENT_HPP
 
-#include <string>
-
-#include "caf/fwd.hpp"
-#include "caf/optional.hpp"
-#include "caf/uniform_type_info.hpp"
-
-namespace std {
-class exception;
-}
+#include <type_traits>
 
 namespace caf {
 
-std::string to_string(const message& what);
-
-std::string to_string(const group& what);
-
-std::string to_string(const channel& what);
-
-std::string to_string(const message_id& what);
-
-std::string to_string(const actor_addr& what);
-
-std::string to_string(const actor& what);
-
 /**
- * @relates node_id
+ * Marker class identifying classes in CAF that are not allowed
+ * to be used as message element.
  */
-std::string to_string(const node_id& what);
+struct illegal_message_element {
+  // no members (marker class)
+};
 
-/**
- * Returns `what` as a string representation.
- */
-std::string to_string(const atom_value& what);
-
-/**
- * Converts `e` to a string including `e.what()`.
- */
-std::string to_verbose_string(const std::exception& e);
-
-/**
- * Converts a string created by `to_string` to its original value.
- */
-uniform_value from_string_impl(const std::string& what);
-
-/**
- * Convenience function that tries to deserializes a value from
- * `what` and converts the result to `T`.
- */
 template <class T>
-optional<T> from_string(const std::string& what) {
-  auto uti = uniform_typeid<T>();
-  auto uv = from_string_impl(what);
-  if (!uv || (*uv->ti) != typeid(T)) {
-    // try again using the type name
-    std::string tmp = uti->name();
-    tmp += " ( ";
-    tmp += what;
-    tmp += " )";
-    uv = from_string_impl(tmp);
-  }
-  if (uv && (*uv->ti) == typeid(T)) {
-    return T{std::move(*reinterpret_cast<T*>(uv->val))};
-  }
-  return none;
-}
+struct is_illegal_message_element
+  : std::is_base_of<illegal_message_element, T> { };
 
 } // namespace caf
 
-#endif // CAF_STRING_SERIALIZATION_HPP
+#endif // CAF_ILLEGAL_MESSAGE_ELEMENT_HPP

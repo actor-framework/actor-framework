@@ -17,75 +17,33 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STRING_SERIALIZATION_HPP
-#define CAF_STRING_SERIALIZATION_HPP
+#ifndef CAF_TYPE_NAME_ACCESS_HPP
+#define CAF_TYPE_NAME_ACCESS_HPP
 
 #include <string>
 
-#include "caf/fwd.hpp"
-#include "caf/optional.hpp"
+#include "caf/uniform_typeid.hpp"
 #include "caf/uniform_type_info.hpp"
 
-namespace std {
-class exception;
-}
+#include "caf/detail/type_traits.hpp"
 
 namespace caf {
 
-std::string to_string(const message& what);
+template <class T, bool HasTypeName = detail::has_static_type_name<T>::value>
+struct type_name_access {
+  static std::string get() {
+    auto uti = uniform_typeid<T>(true);
+    return uti ? uti->name() : "void";
+  }
+};
 
-std::string to_string(const group& what);
-
-std::string to_string(const channel& what);
-
-std::string to_string(const message_id& what);
-
-std::string to_string(const actor_addr& what);
-
-std::string to_string(const actor& what);
-
-/**
- * @relates node_id
- */
-std::string to_string(const node_id& what);
-
-/**
- * Returns `what` as a string representation.
- */
-std::string to_string(const atom_value& what);
-
-/**
- * Converts `e` to a string including `e.what()`.
- */
-std::string to_verbose_string(const std::exception& e);
-
-/**
- * Converts a string created by `to_string` to its original value.
- */
-uniform_value from_string_impl(const std::string& what);
-
-/**
- * Convenience function that tries to deserializes a value from
- * `what` and converts the result to `T`.
- */
 template <class T>
-optional<T> from_string(const std::string& what) {
-  auto uti = uniform_typeid<T>();
-  auto uv = from_string_impl(what);
-  if (!uv || (*uv->ti) != typeid(T)) {
-    // try again using the type name
-    std::string tmp = uti->name();
-    tmp += " ( ";
-    tmp += what;
-    tmp += " )";
-    uv = from_string_impl(tmp);
+struct type_name_access<T, true> {
+  static std::string get() {
+    return T::static_type_name();
   }
-  if (uv && (*uv->ti) == typeid(T)) {
-    return T{std::move(*reinterpret_cast<T*>(uv->val))};
-  }
-  return none;
-}
+};
 
 } // namespace caf
 
-#endif // CAF_STRING_SERIALIZATION_HPP
+#endif // CAF_TYPE_NAME_ACCESS_HPP

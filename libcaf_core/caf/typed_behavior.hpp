@@ -20,11 +20,13 @@
 #ifndef TYPED_BEHAVIOR_HPP
 #define TYPED_BEHAVIOR_HPP
 
+#include "caf/either.hpp"
 #include "caf/behavior.hpp"
 #include "caf/match_expr.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/typed_continue_helper.hpp"
 
+#include "caf/detail/ctm.hpp"
 #include "caf/detail/typed_actor_util.hpp"
 
 namespace caf {
@@ -46,17 +48,27 @@ struct input_only<detail::type_list<Ts...>> {
 
 using skip_list = detail::type_list<skip_message_t>;
 
+template <class Opt1, class Opt2>
+struct collapse_replies_to_statement {
+  using type = typename either<Opt1>::template or_else<Opt2>;
+};
+
+template <class List>
+struct collapse_replies_to_statement<List, none_t> {
+  using type = List;
+};
+
+/*
 template <class List>
 struct unbox_typed_continue_helper {
-  // do nothing if List is actually a list, i.e., not a typed_continue_helper
   using type = List;
 };
 
 template <class List>
-struct unbox_typed_continue_helper<
-  detail::type_list<typed_continue_helper<List>>> {
+struct unbox_typed_continue_helper<typed_continue_helper<List>> {
   using type = List;
 };
+*/
 
 template <class Input, class RepliesToWith>
 struct same_input : std::is_same<Input, typename RepliesToWith::input_types> {};
@@ -75,8 +87,9 @@ struct valid_input_predicate {
   struct inner {
     using input_types = typename Expr::input_types;
     using output_types =
-      typename unbox_typed_continue_helper<
-        typename Expr::output_types
+      typename collapse_replies_to_statement<
+        typename Expr::output_opt1_types,
+        typename Expr::output_opt2_types
       >::type;
     // get matching elements for input type
     using filtered_slist =
@@ -215,10 +228,12 @@ class typed_behavior {
 
   template <class... Cs>
   void set(match_expr<Cs...>&& expr) {
-    using input =
-      detail::type_list<typename detail::deduce_signature<Cs>::type...>;
-    // check types
-    detail::static_check_typed_behavior_input<signatures, input>();
+    using mpi =
+      typename detail::tl_filter_not<
+        detail::type_list<typename detail::deduce_mpi<Cs>::type...>,
+        detail::is_hidden_msg_handler
+      >::type;
+    detail::static_asserter<signatures, mpi, detail::ctm> asserter;
     // final (type-erasure) step
     m_bhvr = std::move(expr);
   }

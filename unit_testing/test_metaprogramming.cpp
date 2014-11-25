@@ -7,6 +7,7 @@
 
 #include "caf/uniform_type_info.hpp"
 
+#include "caf/detail/ctm.hpp"
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/type_list.hpp"
 
@@ -26,6 +27,32 @@ struct is_int<int> : std::true_type {};
 int main() {
 
   CAF_TEST(test_metaprogramming);
+
+
+
+  CAF_CHECK((ctm<type_list<int, float, double>, type_list<double, int, float>>::value));
+  CAF_CHECK((! ctm<type_list<int, float, double>, type_list<double, int, float, int>>::value));
+  CAF_CHECK((! ctm<type_list<int, float, double>, type_list<>>::value));
+  CAF_CHECK((! ctm<type_list<>, type_list<double, int, float, int>>::value));
+
+  using if1 = type_list<replies_to<int, double>::with<void>,
+                        replies_to<int>::with<int>>;
+  using if2 = type_list<replies_to<int>::with<int>,
+                        replies_to<int, double>::with<void>>;
+  using if3 = type_list<replies_to<int, double>::with<void>>;
+  using if4 = type_list<replies_to<int>::with<skip_message_t>,
+                        replies_to<int, double>::with<void>>;
+  CAF_CHECK((ctm<if1, if2>::value));
+  CAF_CHECK((! ctm<if1, if3>::value));
+  CAF_CHECK((! ctm<if2, if3>::value));
+  CAF_CHECK((ctm<if1, if4>::value));
+  CAF_CHECK((ctm<if2, if4>::value));
+  CAF_CHECK((ctm<if4, if1>::value));
+  CAF_CHECK((ctm<if4, if2>::value));
+
+  return 0;
+
+
 
   using l1 = type_list<int, float, std::string>;
   using r1 = typename tl_reverse<l1>::type;

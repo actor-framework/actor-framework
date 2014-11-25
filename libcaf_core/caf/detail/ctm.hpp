@@ -17,75 +17,56 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STRING_SERIALIZATION_HPP
-#define CAF_STRING_SERIALIZATION_HPP
+#ifndef CAF_DETAIL_CTM_HPP
+#define CAF_DETAIL_CTM_HPP
 
-#include <string>
+#include "caf/replies_to.hpp"
 
-#include "caf/fwd.hpp"
-#include "caf/optional.hpp"
-#include "caf/uniform_type_info.hpp"
-
-namespace std {
-class exception;
-}
+#include "caf/detail/type_list.hpp"
+#include "caf/detail/typed_actor_util.hpp"
 
 namespace caf {
+namespace detail {
 
-std::string to_string(const message& what);
+// CTM: Compile-Time Match
 
-std::string to_string(const group& what);
+// left hand side is the MPI we are comparing to, this is *not* commutative
+template <class A, class B>
+struct ctm_cmp : std::false_type { };
 
-std::string to_string(const channel& what);
-
-std::string to_string(const message_id& what);
-
-std::string to_string(const actor_addr& what);
-
-std::string to_string(const actor& what);
-
-/**
- * @relates node_id
- */
-std::string to_string(const node_id& what);
-
-/**
- * Returns `what` as a string representation.
- */
-std::string to_string(const atom_value& what);
-
-/**
- * Converts `e` to a string including `e.what()`.
- */
-std::string to_verbose_string(const std::exception& e);
-
-/**
- * Converts a string created by `to_string` to its original value.
- */
-uniform_value from_string_impl(const std::string& what);
-
-/**
- * Convenience function that tries to deserializes a value from
- * `what` and converts the result to `T`.
- */
 template <class T>
-optional<T> from_string(const std::string& what) {
-  auto uti = uniform_typeid<T>();
-  auto uv = from_string_impl(what);
-  if (!uv || (*uv->ti) != typeid(T)) {
-    // try again using the type name
-    std::string tmp = uti->name();
-    tmp += " ( ";
-    tmp += what;
-    tmp += " )";
-    uv = from_string_impl(tmp);
-  }
-  if (uv && (*uv->ti) == typeid(T)) {
-    return T{std::move(*reinterpret_cast<T*>(uv->val))};
-  }
-  return none;
-}
+struct ctm_cmp<T, T> : std::true_type { };
 
+template <class In, class Out>
+struct ctm_cmp<typed_mpi<In, Out, empty_type_list>,
+               typed_mpi<In, type_list<typed_continue_helper<Out>>, empty_type_list>>
+    : std::true_type { };
+
+template <class In, class L, class R>
+struct ctm_cmp<typed_mpi<In, L, R>,
+               typed_mpi<In, type_list<skip_message_t>, empty_type_list>>
+    : std::true_type { };
+
+template <class A, class B>
+struct ctm : std::false_type { };
+
+template <>
+struct ctm<empty_type_list, empty_type_list> : std::true_type { };
+
+template <class A, class... As, class... Bs>
+struct ctm<type_list<A, As...>, type_list<Bs...>>
+    : std::conditional<
+        sizeof...(As) + 1 != sizeof...(Bs),
+        std::false_type,
+        ctm<type_list<As...>,
+          typename tl_filter_not<
+            type_list<Bs...>,
+            tbind<ctm_cmp, A>::template type
+          >::type
+        >
+      >::type { };
+
+} // namespace detail
 } // namespace caf
 
-#endif // CAF_STRING_SERIALIZATION_HPP
+#endif // CAF_DETAIL_CTM_HPP

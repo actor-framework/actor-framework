@@ -62,6 +62,7 @@ set (LIBCAF_CORE_SRCS
      src/node_id.cpp
      src/ref_counted.cpp
      src/response_promise.cpp
+     src/replies_to.cpp
      src/resumable.cpp
      src/ripemd_160.cpp
      src/scoped_actor.cpp

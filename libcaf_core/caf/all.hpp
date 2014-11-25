@@ -29,6 +29,7 @@
 #include "caf/match.hpp"
 #include "caf/spawn.hpp"
 #include "caf/config.hpp"
+#include "caf/either.hpp"
 #include "caf/extend.hpp"
 #include "caf/channel.hpp"
 #include "caf/message.hpp"

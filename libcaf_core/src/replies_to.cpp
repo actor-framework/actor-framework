@@ -17,77 +17,37 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_FWD_HPP
-#define CAF_FWD_HPP
+#include "caf/replies_to.hpp"
 
-#include <cstdint>
+#include "caf/to_string.hpp"
+#include "caf/string_algorithms.hpp"
 
 namespace caf {
 
-template <class>
-class intrusive_ptr;
-
-// classes
-class actor;
-class group;
-class message;
-class channel;
-class node_id;
-class behavior;
-class resumable;
-class actor_addr;
-class message_id;
-class local_actor;
-class actor_proxy;
-class scoped_actor;
-class execution_unit;
-class abstract_actor;
-class abstract_group;
-class blocking_actor;
-class message_handler;
-class uniform_type_info;
-class event_based_actor;
-class forwarding_actor_proxy;
-class illegal_message_element;
-
-// structs
-struct anything;
-struct invalid_actor_t;
-struct invalid_actor_addr_t;
-
-// enums
-enum class atom_value : uint64_t;
-
-// aliases
-using actor_id = uint32_t;
-
-// intrusive pointer types
-using abstract_group_ptr = intrusive_ptr<abstract_group>;
-using actor_proxy_ptr = intrusive_ptr<actor_proxy>;
-
-// functions
-template <class T, typename U>
-T actor_cast(const U&);
-
-namespace io {
-  class broker;
-  class middleman;
-} // namespace io
-
-namespace scheduler {
-  class abstract_worker;
-  class abstract_coordinator;
-} // namespace scheduler
-
-namespace detail {
-  class logging;
-  class singletons;
-  class message_data;
-  class group_manager;
-  class actor_registry;
-  class uniform_type_info_map;
-} // namespace detail
+std::string replies_to_type_name(size_t input_size,
+                                 const std::string* input,
+                                 size_t output_opt1_size,
+                                 const std::string* output_opt1,
+                                 size_t output_opt2_size,
+                                 const std::string* output_opt2) {
+  std::string glue = ",";
+  std::string result;
+  // 'void' is not an announced type, hence we check whether uniform_typeid
+  // did return a valid pointer to identify 'void' (this has the
+  // possibility of false positives, but those will be catched anyways)
+  result = "caf::replies_to<";
+  result += join(input, input + input_size, glue);
+  if (output_opt2_size == 0) {
+    result += ">::with<";
+    result += join(output_opt1, output_opt1 + output_opt1_size, glue);
+  } else {
+    result += ">::with_either<";
+    result += join(output_opt1, output_opt1 + output_opt1_size, glue);
+    result += ">::or_else<";
+    result += join(output_opt2, output_opt2 + output_opt2_size, glue);
+  }
+  result += ">";
+  return result;
+}
 
 } // namespace caf
-
-#endif // CAF_FWD_HPP

@@ -49,7 +49,7 @@ class typed_event_based_actor : public
   using behavior_type = typed_behavior<Rs...>;
 
   std::set<std::string> message_types() const override {
-    return {Rs::as_string()...};
+    return {Rs::static_type_name()...};
   }
 
  protected:
