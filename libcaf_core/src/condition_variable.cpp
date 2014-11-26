@@ -22,6 +22,7 @@
 #include <stdexcept>
 
 #include "irq.h"
+#include "irq_arch.h"
 #include "sched.h"
 #include "vtimer.h"
 #include "priority_queue.h"
