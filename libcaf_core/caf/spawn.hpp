@@ -114,7 +114,7 @@ intrusive_ptr<C> spawn_impl(execution_unit* host,
   CAF_LOGF_DEBUG("spawned actor with ID " << ptr->id());
   CAF_PUSH_AID(ptr->id());
   before_launch_fun(ptr.get());
-  ptr->launch(has_hide_flag(Os), host);
+  ptr->launch(has_hide_flag(Os), has_lazy_init_flag(Os), host);
   return ptr;
 }
 

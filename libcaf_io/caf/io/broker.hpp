@@ -297,7 +297,7 @@ class broker : public extend<local_actor>::
 
   class functor_based;
 
-  void launch(bool is_hidden, execution_unit*);
+  void launch(bool is_hidden, bool, execution_unit*);
 
   // <backward_compatibility version="0.9">
 

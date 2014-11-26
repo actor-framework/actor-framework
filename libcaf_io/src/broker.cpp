@@ -266,7 +266,7 @@ void broker::cleanup(uint32_t reason) {
   deref(); // release implicit reference count from middleman
 }
 
-void broker::launch(bool is_hidden, execution_unit*) {
+void broker::launch(bool is_hidden, bool, execution_unit*) {
   // add implicit reference count held by the middleman
   ref();
   is_registered(!is_hidden);
