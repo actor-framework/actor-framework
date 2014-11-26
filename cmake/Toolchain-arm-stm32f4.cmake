@@ -21,6 +21,7 @@ set(CMAKE_CXX_COMPILER_ID_RUN TRUE)
 set(CMAKE_CXX_COMPILER_ID GNU)
 set(CMAKE_CXX_COMPILER_FORCED TRUE)
 
+add_definitions(-DCOREIF_NG=1)
 include_directories("${RIOT_BASE_DIR}/boards/stm32f4discovery/include/.")
 
 #SET(CMAKE_FIND_ROOT_PATH  /home/noir/Downloads/gcc-arm-none-eabi-4_8-2014q3/arm-none-eabi/ /home/noir/Downloads/gcc-arm-none-eabi-4_8-2014q3/)
@@ -35,7 +36,9 @@ include_directories("${RIOT_BASE_DIR}/boards/stm32f4discovery/include/.")
 # RIOT headers
 # SET(CMAKE_FIND_ROOT_PATH )
 
-SET(CROSS_CXX_FLAGS "-static-libgcc -static-libstdc++ -static -Os -s -march=armv7-m -mtune=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -mthumb -mno-thumb-interwork -mfpu=vfp -mfix-cortex-m3-ldrd -mlittle-endian -nostartfiles -ffunction-sections -fdata-sections -fno-builtin") # -march=armv7-m -mcpu=cortex-m4
-SET(CROSS_C_FLAGS "-static-libgcc -static-libstdc++ -static -Os -s -march=armv7-m -mtune=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -mthumb -mno-thumb-interwork -mfpu=vfp -mfix-cortex-m3-ldrd -mlittle-endian -nostartfiles -ffunction-sections -fdata-sections -fno-builtin") # -march=armv7-m -mcpu=cortex-m4
+SET(CROSS_CXX_FLAGS "-static-libgcc -static-libstdc++ -static -Os -s -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -mthumb -mno-thumb-interwork -mfpu=vfp -mfix-cortex-m3-ldrd -mlittle-endian -nostartfiles -ffunction-sections -fdata-sections -fno-builtin") # -march=armv7-m -mtune=cortex-m4
+SET(CROSS_C_FLAGS "-static-libgcc -static-libstdc++ -static -Os -s -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -mthumb -mno-thumb-interwork -mfpu=vfp -mfix-cortex-m3-ldrd -mlittle-endian -nostartfiles -ffunction-sections -fdata-sections -fno-builtin") # -march=armv7-m -mtune=cortex-m4
+#SET(CROSS_CXX_FLAGS "-static-libgcc -static-libstdc++ -static -Os -s -march=armv7-m -mtune=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -mthumb -mno-thumb-interwork -mfpu=vfp -mfix-cortex-m3-ldrd -mlittle-endian -nostartfiles -ffunction-sections -fdata-sections -fno-builtin")
+#SET(CROSS_C_FLAGS "-static-libgcc -static-libstdc++ -static -Os -s -march=armv7-m -mtune=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -mthumb -mno-thumb-interwork -mfpu=vfp -mfix-cortex-m3-ldrd -mlittle-endian -nostartfiles -ffunction-sections -fdata-sections -fno-builtin")
 SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "-static-libgcc -static-libstdc++ -static -Os -s")
 SET(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "-static-libgcc -static-libstdc++ -static -Os -s")

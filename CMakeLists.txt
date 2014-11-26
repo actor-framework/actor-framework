@@ -365,6 +365,7 @@ if(CAF_FOR_RIOT)
   include_directories("${RIOT_BASE_DIR}/sys/include/.")
   include_directories("${RIOT_BASE_DIR}/sys/net/include/.")
   include_directories("${RIOT_BASE_DIR}/core/include/.")
+  include_directories("${RIOT_BASE_DIR}/core/include/arch/.")
   include_directories("${RIOT_BASE_DIR}/cpu/native/include/.")
 endif()
 

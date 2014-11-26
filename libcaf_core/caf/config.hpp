@@ -153,6 +153,7 @@
 #elif defined(WIN32) || defined(_WIN32)
 #  define CAF_WINDOWS
 #elif defined(__RIOTBUILD_FLAG)
+#  define CAF_RIOT
 #  undef CAF_ENABLE_RUNTIME_CHECKS
 #else
 #  error Platform and/or compiler not supportet

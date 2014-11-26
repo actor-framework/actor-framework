@@ -237,4 +237,17 @@ std::string get_root_uuid() {
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_WINDOWS
+#elif defined(CAF_RIOT)
+
+namespace caf {
+namespace detail {
+
+std::string get_root_uuid() {
+  std::string uuid("23");
+  return uuid;
+}
+
+} // namespace detail
+} // namespace caf
+
+#endif // CAF_RIOT
