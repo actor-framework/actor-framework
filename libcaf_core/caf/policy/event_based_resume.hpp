@@ -125,6 +125,7 @@ class event_based_resume {
           auto ptr = d->next_message();
           if (ptr) {
             if (d->invoke_message(ptr)) {
+              d->bhvr_stack().cleanup();
               ++handled_msgs;
               if (actor_done()) {
                 CAF_LOG_DEBUG("actor exited");
