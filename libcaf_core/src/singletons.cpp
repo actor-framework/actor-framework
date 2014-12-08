@@ -63,7 +63,7 @@ abstract_singleton::~abstract_singleton() {
   // nop
 }
 
-std::mutex& singletons::get_plugin_mutex() {
+mutex& singletons::get_plugin_mutex() {
   return s_plugins_mtx;
 }
 

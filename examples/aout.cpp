@@ -3,11 +3,11 @@
 \******************************************************************************/
 
 #include <random>
-#include <chrono>
 #include <cstdlib>
 #include <iostream>
 
 #include "caf/all.hpp"
+#include "caf/chrono.hpp"
 
 using namespace caf;
 using std::endl;

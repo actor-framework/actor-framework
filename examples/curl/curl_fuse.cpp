@@ -277,7 +277,7 @@ class curl_worker : public base_actor {
             }
           }
           // avoid 100% cpu utilization if remote side is not accessible
-          std::this_thread::sleep_for(std::chrono::milliseconds(100));
+          this_thread::sleep_for(std::chrono::milliseconds(100));
         }
       }
     );
@@ -392,7 +392,7 @@ int main() {
     self->spawn<client, detached>(master);
     // poll CTRL+C flag every second
     while (!shutdown_flag) {
-      std::this_thread::sleep_for(std::chrono::seconds(1));
+      this_thread::sleep_for(std::chrono::seconds(1));
     }
     aout(self) << color::cyan << "received CTRL+C" << color::reset_endl;
     // shutdown actors
