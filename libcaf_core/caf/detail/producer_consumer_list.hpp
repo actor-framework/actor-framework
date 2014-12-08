@@ -24,11 +24,11 @@
 
 #define CAF_CACHE_LINE_SIZE 64
 
-#include <chrono>
 #include <atomic>
 #include <cassert>
 
 #include "caf/thread.hpp"
+#include "caf/chrono.hpp"
 
 namespace caf {
 namespace detail {

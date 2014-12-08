@@ -2,10 +2,11 @@
  * This example illustrates how to do time-triggered loops in libcaf.         *
 \ ******************************************************************************/
 
-#include <chrono>
 #include <iostream>
 #include <algorithm>
+
 #include "caf/all.hpp"
+#include "caf/chrono.hpp"
 
 using std::cout;
 using std::endl;

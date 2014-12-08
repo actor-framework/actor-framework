@@ -85,7 +85,7 @@ class singletons {
   static void stop_singletons();
 
  private:
-  static mutex& get_mutex();
+  static mutex& get_plugin_mutex();
 
   static std::atomic<abstract_singleton*>& get_plugin_singleton(size_t id);
 
@@ -94,7 +94,7 @@ class singletons {
   static T* lazy_get(std::atomic<T*>& ptr, mutex& mtx, Factory f) {
     auto result = ptr.load(std::memory_order_acquire);
     if (result == nullptr) {
-      lock_guard<mutex> guard(get_mutex());
+      lock_guard<mutex> guard(get_plugin_mutex());
       result = ptr.load(std::memory_order_relaxed);
       if (result == nullptr) {
         result = f();

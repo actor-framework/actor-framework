@@ -5,11 +5,11 @@
 
 #include <map>
 #include <vector>
-#include <chrono>
 #include <sstream>
 #include <iostream>
 
 #include "caf/all.hpp"
+#include "caf/chrono.hpp"
 
 using std::cout;
 using std::cerr;

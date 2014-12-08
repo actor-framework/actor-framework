@@ -1,7 +1,8 @@
 #include <iostream>
-#include <chrono>
 
 #include "caf/all.hpp"
+#include "caf/chrono.hpp"
+
 #include "caf/io/all.hpp"
 
 using std::cout;
