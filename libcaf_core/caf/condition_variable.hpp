@@ -94,24 +94,7 @@ bool condition_variable::wait_until(unique_lock<mutex>& lock,
 template <class Rep, class Period>
 cv_status condition_variable::wait_for(unique_lock<mutex>& lock,
                    const std::chrono::duration<Rep, Period>& timeout_duration) {
-  using namespace std::chrono;
-  using std::chrono::duration;
-  if (timeout_duration <= timeout_duration.zero()) {
-    return cv_status::timeout;
-  }
-  timex_t timeout, before, after;
-  auto s = duration_cast<seconds>(timeout_duration);
-  timeout.seconds = s.count();
-  timeout.microseconds = (duration_cast<microseconds>(timeout_duration - s)).count();
-  vtimer_now(&before);
-  vtimer_t timer;
-  vtimer_set_wakeup(&timer, timeout, sched_active_pid);
-  wait(lock);
-  vtimer_now(&after);
-  vtimer_remove(&timer);
-  auto passed = timex_sub(after,before);
-  auto cmp = timex_cmp(passed, timeout);
-  return cmp < 1  ? cv_status::no_timeout : cv_status::timeout;
+  return wait_until(lock, now() + timeout_duration);
 }
 
 template <class Rep, class Period, class Predicate>
