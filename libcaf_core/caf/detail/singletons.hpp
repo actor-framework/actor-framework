@@ -94,7 +94,7 @@ class singletons {
   static T* lazy_get(std::atomic<T*>& ptr, mutex& mtx, Factory f) {
     auto result = ptr.load(std::memory_order_acquire);
     if (result == nullptr) {
-      lock_guard<mutex> guard(get_plugin_mutex());
+      lock_guard<mutex> guard(mtx);
       result = ptr.load(std::memory_order_relaxed);
       if (result == nullptr) {
         result = f();
