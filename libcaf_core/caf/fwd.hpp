@@ -48,12 +48,12 @@ class message_handler;
 class uniform_type_info;
 class event_based_actor;
 class forwarding_actor_proxy;
-class illegal_message_element;
 
 // structs
 struct anything;
 struct invalid_actor_t;
 struct invalid_actor_addr_t;
+struct illegal_message_element;
 
 // enums
 enum class atom_value : uint64_t;
