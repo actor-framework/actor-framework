@@ -28,7 +28,6 @@
 #include "vtimer.h"
 
 #include "caf/mutex.hpp"
-
 #include "caf/chrono.hpp"
 
 
@@ -72,17 +71,6 @@ class condition_variable {
 
   priority_queue_t m_queue;
 };
-
-template <class T, class Rep, class Period>
-inline typename std::enable_if<std::chrono::__is_duration<T>::value,T>::type
-ceil(std::chrono::duration<Rep, Period> duration) {
-  using namespace std::chrono;
-  T res = duration_cast<T>(duration);
-  if (res < duration) {
-    ++res;
-  }
-  return res;
-}
 
 template <class Predicate>
 void condition_variable::wait(unique_lock<mutex>& lock, Predicate pred) {
@@ -130,8 +118,7 @@ template <class Rep, class Period, class Predicate>
 inline bool condition_variable::wait_for(unique_lock<mutex>& lock,
                      const std::chrono::duration<Rep, Period>& timeout_duration,
                      Predicate pred) {
-    return wait_until(lock, std::chrono::steady_clock::now() + timeout_duration,
-                      std::move(pred));
+    return wait_until(lock, now() + timeout_duration, std::move(pred));
 }
 
 } // namespace caf

@@ -126,14 +126,14 @@ namespace this_thread {
     mutex mtx;
     condition_variable cv;
     unique_lock<mutex> lk(mtx);
-    while(Clock::now() < sleep_time) {
+    while(now() < sleep_time) {
       cv.wait_until(lk,sleep_time);
     }
   }
   template <class Period>
   inline void sleep_until(const std::chrono::time_point<std::chrono::steady_clock,
                                                         Period>& sleep_time) {
-      sleep_for(sleep_time - std::chrono::steady_clock::now());
+      sleep_for(sleep_time - now());
   }
 } // namespace this_thread
 
