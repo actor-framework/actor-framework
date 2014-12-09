@@ -43,6 +43,8 @@ class time_point {
 
  public:
   inline time_point() : m_handle{0,0} { }
+  inline time_point(uint32_t seconds, uint32_t microseconds)
+    : m_handle{seconds, microseconds} { adjust_overhead(); }
   inline time_point(timex_t&& tp) : m_handle(tp) { }
   constexpr time_point(const time_point& tp) = default;
   constexpr time_point(time_point&& tp) = default;
@@ -58,6 +60,12 @@ class time_point {
     m_handle.microseconds += m.count();
     adjust_overhead();
     return *this;
+  }
+  template<class Rep, class Period>
+  inline time_point operator+(const std::chrono::duration<Rep,Period>& d) {
+    time_point result{seconds(), microseconds()};
+    result += d;
+    return result;
   }
 
   inline uint32_t seconds() const { return m_handle.seconds; }
