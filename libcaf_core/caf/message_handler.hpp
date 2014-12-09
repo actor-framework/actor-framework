@@ -70,6 +70,13 @@ class message_handler {
   message_handler(impl_ptr ptr);
 
   /**
+   * Checks whether the message handler is not empty.
+   */
+  inline operator bool() const {
+    return static_cast<bool>(m_impl);
+  }
+
+  /**
    * Create a message handler a list of match expressions,
    * functors, or other message handlers.
    */
