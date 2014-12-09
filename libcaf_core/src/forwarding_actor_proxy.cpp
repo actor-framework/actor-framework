@@ -49,7 +49,7 @@ actor forwarding_actor_proxy::manager() const {
 }
 
 void forwarding_actor_proxy::manager(actor new_manager) {
-  std::unique_lock<detail::shared_spinlock> m_guard(m_manager_mtx);
+  unique_lock<detail::shared_spinlock> m_guard(m_manager_mtx);
   m_manager.swap(new_manager);
 }
 
