@@ -38,35 +38,17 @@ class local_actor;
 class continue_helper {
  public:
   using message_id_wrapper_tag = int;
-  using getter = std::function<optional<behavior&> (message_id msg_id)>;
-
-  continue_helper(message_id mid, getter get_sync_handler);
-
-  /**
-   * Adds the continuation `fun` to the synchronous message handler
-   * that is invoked if the response handler successfully returned.
-   */
-  template <class F>
-  continue_helper& continue_with(F fun) {
-    return continue_with(behavior::continuation_fun{
-      message_handler{on(any_vals, arg_match) >> fun}});
-  }
-
-  /**
-   * Adds the continuation `fun` to the synchronous message handler
-   * that is invoked if the response handler successfully returned.
-   */
-  continue_helper& continue_with(behavior::continuation_fun fun);
+  continue_helper(message_id mid);
 
   /**
    * Returns the ID of the expected response message.
    */
-  message_id get_message_id() const { return m_mid; }
+  message_id get_message_id() const {
+    return m_mid;
+  }
 
  private:
   message_id m_mid;
-  getter m_getter;
-  //local_actor* m_self;
 };
 
 } // namespace caf

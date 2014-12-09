@@ -44,11 +44,6 @@ class behavior {
  public:
   friend class message_handler;
 
-  /**
-   * The type of continuations that can be used to extend an existing behavior.
-   */
-  using continuation_fun = std::function<optional<message>(message&)>;
-
   behavior() = default;
   behavior(behavior&&) = default;
   behavior(const behavior&) = default;
@@ -114,12 +109,6 @@ class behavior {
   optional<message> operator()(T&& arg) {
     return (m_impl) ? m_impl->invoke(std::forward<T>(arg)) : none;
   }
-
-  /**
-   * Adds a continuation to this behavior that is executed
-   * whenever this behavior was successfully applied to a message.
-   */
-  behavior add_continuation(continuation_fun fun);
 
   /**
    * Checks whether this behavior is not empty.

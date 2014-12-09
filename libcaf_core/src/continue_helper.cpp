@@ -22,18 +22,8 @@
 
 namespace caf {
 
-continue_helper::continue_helper(message_id mid, getter g)
-    : m_mid(mid), m_getter(std::move(g)) {}
-
-continue_helper& continue_helper::continue_with(behavior::continuation_fun f) {
-  auto ref_opt = m_getter(m_mid); //m_self->sync_handler(m_mid);
-  if (ref_opt) {
-    behavior cpy = *ref_opt;
-    *ref_opt = cpy.add_continuation(std::move(f));
-  } else {
-    CAF_LOGF_ERROR("failed to add continuation");
-  }
-  return *this;
+continue_helper::continue_helper(message_id mid) : m_mid(mid) {
+  // nop
 }
 
 } // namespace caf

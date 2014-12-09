@@ -66,18 +66,17 @@ class typed_server3 : public server_type::base {
 };
 
 void client(event_based_actor* self, actor parent, server_type serv) {
-  self->sync_send(serv, my_request{0, 0})
-    .then([](bool value)->int {
-       CAF_CHECK_EQUAL(value, true);
-       return 42;
-     })
-    .continue_with([=](int ival) {
-       CAF_CHECK_EQUAL(ival, 42);
-       self->sync_send(serv, my_request{10, 20}).then([=](bool value) {
-         CAF_CHECK_EQUAL(value, false);
-         self->send(parent, atom("passed"));
-       });
-     });
+  self->sync_send(serv, my_request{0, 0}).then(
+    [=](bool value) {
+      CAF_CHECK_EQUAL(value, true);
+      self->sync_send(serv, my_request{10, 20}).then(
+        [=](bool value) {
+          CAF_CHECK_EQUAL(value, false);
+          self->send(parent, atom("passed"));
+        }
+      );
+    }
+  );
 }
 
 void test_typed_spawn(server_type ts) {

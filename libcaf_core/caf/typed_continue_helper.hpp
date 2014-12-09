@@ -32,23 +32,13 @@ template <class OutputList>
 class typed_continue_helper {
  public:
   using message_id_wrapper_tag = int;
-  using getter = std::function<optional<behavior&> (message_id msg_id)>;
 
-  typed_continue_helper(message_id mid, getter get_sync_handler)
-      : m_ch(mid, std::move(get_sync_handler)) {
+  typed_continue_helper(message_id mid) : m_ch(mid) {
     // nop
   }
 
   typed_continue_helper(continue_helper ch) : m_ch(std::move(ch)) {
     // nop
-  }
-
-  template <class F>
-  typed_continue_helper<typename detail::get_callable_trait<F>::result_type>
-  continue_with(F fun) {
-    detail::type_checker<OutputList, F>::check();
-    m_ch.continue_with(std::move(fun));
-    return {m_ch};
   }
 
   message_id get_message_id() const {

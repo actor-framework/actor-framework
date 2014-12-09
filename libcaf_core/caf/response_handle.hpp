@@ -80,8 +80,7 @@ class response_handle<Self, message, nonblocking_response_handle_tag> {
       }
     };
     m_self->bhvr_stack().push_back(std::move(bhvr), m_mid);
-    auto ptr = m_self;
-    return {m_mid, [ptr](message_id mid) { return ptr->sync_handler(mid); }};
+    return {m_mid};
   }
 
  private:
@@ -126,8 +125,7 @@ class response_handle<Self, TypedOutputPair, nonblocking_response_handle_tag> {
       }
     };
     m_self->bhvr_stack().push_back(std::move(tmp), m_mid);
-    auto get = [selfptr](message_id mid) { return selfptr->sync_handler(mid); };
-    return {m_mid, get};
+    return {m_mid};
   }
 
  private:
