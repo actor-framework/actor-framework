@@ -73,22 +73,31 @@ void sleep_for(const chrono::nanoseconds& ns) {
   using namespace chrono;
   if (ns > nanoseconds::zero()) {
     seconds s = duration_cast<seconds>(ns);
-    timespec ts;
-    using ts_sec = decltype(ts.tv_sec);
-    constexpr ts_sec ts_sec_max = numeric_limits<ts_sec>::max();
-    if (s.count() < ts_sec_max) {
-      ts.tv_sec = static_cast<ts_sec>(s.count());
-      ts.tv_nsec = static_cast<decltype(ts.tv_nsec)>((ns-s).count());
-    } else {
-      ts.tv_sec = ts_sec_max;
-      ts.tv_nsec = giga::num - 1;
-    }
+    microseconds ms = duration_cast<microseconds>(ns);
     timex_t reltime;
-    reltime.seconds = ts.tv_sec;
-    reltime.microseconds = ts.tv_nsec / 1000u;
+    constexpr uint32_t uint32_max = numeric_limits<uint32_t>::max();
+    if (s.count() < uint32_max) {
+      reltime.seconds      = static_cast<uint32_t>(s.count());
+      reltime.microseconds =
+        static_cast<uint32_t>(duration_cast<microseconds>((ms-s)).count());
+    } else {
+      reltime.seconds      = uint32_max;
+      reltime.microseconds = uint32_max;
+    }
     vtimer_t timer;
     vtimer_set_wakeup(&timer, reltime, sched_active_pid);
     thread_sleep();
+    vtimer_remove(&timer);
+  }
+}
+
+void sleep_until(const time_point& sleep_time) {
+  using namespace std::chrono;
+  mutex mtx;
+  condition_variable cv;
+  unique_lock<mutex> lk(mtx);
+  while(now() < sleep_time) {
+    cv.wait_until(lk,sleep_time);
   }
 }
 

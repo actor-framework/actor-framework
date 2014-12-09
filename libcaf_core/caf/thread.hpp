@@ -120,21 +120,7 @@ namespace this_thread {
       sleep_for(ns);
     }
   }
-  template <class Clock, class Period>
-  void sleep_until(const std::chrono::time_point<Clock, Period>& sleep_time) {
-    using namespace std::chrono;
-    mutex mtx;
-    condition_variable cv;
-    unique_lock<mutex> lk(mtx);
-    while(now() < sleep_time) {
-      cv.wait_until(lk,sleep_time);
-    }
-  }
-  template <class Period>
-  inline void sleep_until(const std::chrono::time_point<std::chrono::steady_clock,
-                                                        Period>& sleep_time) {
-      sleep_for(sleep_time - now());
-  }
+  void sleep_until(const time_point& sleep_time);
 } // namespace this_thread
 
 class thread {
