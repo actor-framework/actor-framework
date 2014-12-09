@@ -111,7 +111,13 @@ class message_handler {
     // using a behavior is safe here, because we "cast"
     // it back to a message_handler when appropriate
     behavior tmp{std::forward<Ts>(args)...};
-    return m_impl->or_else(tmp.as_behavior_impl());
+    if (! tmp) {
+      return *this;
+    }
+    if (m_impl) {
+      return m_impl->or_else(tmp.as_behavior_impl());
+    }
+    return tmp;
   }
 
  private:
