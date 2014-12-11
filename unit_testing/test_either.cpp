@@ -6,7 +6,7 @@ using namespace caf;
 
 using foo = typed_actor<replies_to<int>::with_either<int>::or_else<float>>;
 
-foo::behavior_type my_foo(foo::pointer self) {
+foo::behavior_type my_foo() {
   return {
     [](int arg) -> either<int>::or_else<float> {
       if (arg == 42) {
