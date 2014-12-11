@@ -27,9 +27,9 @@ namespace detail {
  * Barton–Nackman trick implementation.
  * `Subclass` must provide a compare member function that compares
  * to instances of `T` and returns an integer x with:
- * - `x < 0</tt> if <tt>*this < other
- * - `x > 0</tt> if <tt>*this > other
- * - `x == 0</tt> if <tt>*this == other
+ * - `x < 0` if `*this < other`
+ * - `x > 0` if `*this > other`
+ * - `x == 0` if `*this == other`
  */
 template <class Subclass, class T = Subclass>
 class comparable {

@@ -207,8 +207,8 @@ class is_forward_iterator {
 };
 
 /**
- * Checks wheter `T` has `begin()</tt> and <tt>end() member
- *    functions returning forward iterators.
+ * Checks wheter `T` has `begin()` and `end()` member
+ * functions returning forward iterators.
  */
 template <class T>
 class is_iterable {
