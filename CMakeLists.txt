@@ -101,31 +101,45 @@ if(NOT WIN32 AND NOT NO_COMPILER_CHECK)
                         "or is not supported")
   endif()
 endif()
+# set optional build flags
+set(CXX_EXTRA_FLAGS "")
+# add "-Werror" flag if --pedantic-build is used
+if(CXX_WARNINGS_AS_ERROS)
+  set(CXX_EXTRA_FLAGS "-Werror")
+endif()
+# enable a ton of warnings if --more-clang-warnings is used
+if(MORE_CLANG_WARNINGS AND "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+  set(CXX_EXTRA_FLAGS "${CXX_EXTRA_FLAGS} -Weverything -Wno-c++98-compat "
+                       "-Wno-padded -Wno-documentation-unknown-command "
+                       "-Wno-exit-time-destructors -Wno-global-constructors "
+                       "-Wno-missing-prototypes -Wno-c++98-compat-pedantic "
+                       "-Wno-unused-member-function "
+                       "-Wno-unused-const-variable")
+endif()
+# add -stdlib=libc++ when using Clang
+if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+  message(STATUS "NOTE: Automatically added -stdlib=libc++ flag, "
+                 "you can override this by defining CMAKE_CXX_FLAGS "
+                 "(see 'configure --help')")
+  set(CXX_EXTRA_FLAGS "${CXX_EXTRA_FLAGS} -stdlib=libc++")
+endif()
+# enable address sanitizer if requested by the user
+if(ENABLE_ADDRESS_SANITIZER)
+  message(STATUS "Enable address sanitizer")
+  set(CXX_EXTRA_FLAGS "${CXX_EXTRA_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+endif(ENABLE_ADDRESS_SANITIZER)
+# -pthread is ignored on MacOSX but required on other platforms
+if(NOT APPLE AND NOT WIN32)
+  set(CXX_EXTRA_FLAGS "${CXX_EXTRA_FLAGS} -pthread")
+endif()
 # check if the user provided CXXFLAGS, set defaults otherwise
 if(CMAKE_CXX_FLAGS)
-  set(CXXFLAGS_PROVIDED true)
   set(CMAKE_CXX_FLAGS_DEBUG          "")
   set(CMAKE_CXX_FLAGS_MINSIZEREL     "")
   set(CMAKE_CXX_FLAGS_RELEASE        "")
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "")
 else()
-  set(CXXFLAGS_PROVIDED false)
-  if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-    message(STATUS "NOTE: Automatically added -stdlib=libc++ flag, "
-                   "you can override this by defining CMAKE_CXX_FLAGS "
-                   "(see 'configure --help')")
-    set(CMAKE_CXX_FLAGS "-std=c++11 -stdlib=libc++ -fPIC")
-    if(MORE_CLANG_WARNINGS)
-      set(CMAKE_CXX_FLAGS "-pedantic -Weverything -Wno-c++98-compat "
-                          "-Wno-padded -Wno-documentation-unknown-command "
-                          "-Wno-exit-time-destructors -Wno-global-constructors "
-                          "-Wno-missing-prototypes -Wno-c++98-compat-pedantic "
-                          "-Wno-unused-member-function "
-                          "-Wno-unused-const-variable")
-    endif()
-  else()
-    set(CMAKE_CXX_FLAGS "-std=c++11 -Wextra -Wall -pedantic -fPIC")
-  endif()
+  set(CMAKE_CXX_FLAGS "-std=c++11 -Wextra -Wall -pedantic -fPIC ${CXX_EXTRA_FLAGS}")
   set(CMAKE_CXX_FLAGS_DEBUG          "-O0 -g")
   set(CMAKE_CXX_FLAGS_MINSIZEREL     "-Os")
   set(CMAKE_CXX_FLAGS_RELEASE        "-O3 -DNDEBUG")
@@ -134,16 +148,6 @@ endif()
 # set build default build type to RelWithDebInfo if not set
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
-endif()
-# enable clang's address sanitizer if requested by the user
-if(ENABLE_ADDRESS_SANITIZER)
-  set(CMAKE_CXX_FLAGS
-      "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
-  message(STATUS "Enable address sanitizer")
-endif(ENABLE_ADDRESS_SANITIZER)
-# -pthread is ignored on MacOSX, enable it for all other platforms
-if(NOT APPLE AND NOT WIN32)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 endif()
 # extra setup steps needed on MinGW
 if(MINGW)

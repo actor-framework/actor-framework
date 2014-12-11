@@ -47,6 +47,7 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --build-static-only         build as static library only
     --more-clang-warnings       enables most of Clang's warning flags
     --no-compiler-check         disable compiler version check
+    --warnings-as-errors        enables -Werror
 
   Installation Directories:
     --prefix=PREFIX             installation directory [/usr/local]
@@ -223,6 +224,9 @@ while [ $# -ne 0 ]; do
             ;;
         --no-compiler-check)
             append_cache_entry NO_COMPILER_CHECK BOOL yes
+            ;;
+        --warnings-as-errors)
+            append_cache_entry CXX_WARNINGS_AS_ERROS BOOL yes
             ;;
         --with-log-level=*)
             level=`echo "$optarg" | tr '[:lower:]' '[:upper:]'`
