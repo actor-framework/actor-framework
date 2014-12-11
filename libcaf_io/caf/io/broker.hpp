@@ -268,7 +268,7 @@ class broker : public extend<local_actor>::
   static broker_ptr from(F fun) {
     // transform to STD function here, because GCC is unable
     // to select proper overload otherwise ...
-    using fres = decltype(fun((broker*)nullptr));
+    using fres = decltype(fun(static_cast<broker*>(nullptr)));
     std::function<fres(broker*)> stdfun{std::move(fun)};
     return from_impl(std::move(stdfun));
   }

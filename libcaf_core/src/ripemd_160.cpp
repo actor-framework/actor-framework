@@ -69,8 +69,10 @@ using dword = uint32_t;
 
 // collect four bytes into one word:
 #define BYTES_TO_DWORD(strptr)                                                 \
-  (((dword) * ((strptr) + 3) << 24) | ((dword) * ((strptr) + 2) << 16)         \
-   | ((dword) * ((strptr) + 1) << 8) | ((dword) * (strptr)))
+  ((static_cast<dword>(*((strptr) + 3)) << 24)                                 \
+   | (static_cast<dword>(*((strptr) + 2)) << 16)                               \
+   | (static_cast<dword>(*((strptr) + 1)) << 8)                                \
+   | (static_cast<dword>(*(strptr))))
 
 // ROL(x, n) cyclically rotates x over n bits to the left
 // x must be of an unsigned 32 bits type and 0 <= n < 32.
@@ -360,10 +362,10 @@ void MDfinish(dword* MDbuf, const byte* strptr, dword lswlen, dword mswlen) {
   // put bytes from strptr into X
   for (unsigned int i = 0; i < (lswlen & 63); ++i) {
     // byte i goes into word X[i div 4] at pos.  8*(i mod 4)
-    X[i >> 2] ^= (dword) * strptr++ << (8 * (i & 3));
+    X[i >> 2] ^= static_cast<dword>(*strptr++) << (8 * (i & 3));
   }
   // append the bit m_n == 1
-  X[(lswlen >> 2) & 15] ^= (dword)1 << (8 * (lswlen & 3) + 7);
+  X[(lswlen >> 2) & 15] ^= static_cast<dword>(1) << (8 * (lswlen & 3) + 7);
   if ((lswlen & 63) > 55) {
     // length goes to next block
     compress(MDbuf, X);

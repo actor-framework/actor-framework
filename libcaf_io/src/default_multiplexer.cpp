@@ -478,7 +478,7 @@ namespace network {
       } else {
         // update event mask of existing entry
         CAF_REQUIRE(*j == e.ptr);
-        i->events = e.mask;
+        i->events = static_cast<short>(e.mask);
       }
       if (e.ptr) {
         auto remove_from_loop_if_needed = [&](int flag, operation flag_op) {
@@ -503,7 +503,7 @@ int add_flag(operation op, int bf) {
       return bf | input_mask;
     case operation::write:
       return bf | output_mask;
-    default:
+    case operation::propagate_error:
       CAF_LOGF_ERROR("unexpected operation");
       break;
   }
@@ -517,7 +517,7 @@ int del_flag(operation op, int bf) {
       return bf & ~input_mask;
     case operation::write:
       return bf & ~output_mask;
-    default:
+    case operation::propagate_error:
       CAF_LOGF_ERROR("unexpected operation");
       break;
   }
@@ -926,7 +926,8 @@ native_socket new_ipv4_connection_impl(const std::string& host, uint16_t port) {
           static_cast<size_t>(server->h_length));
   serv_addr.sin_port = htons(port);
   CAF_LOGF_DEBUG("call connect()");
-  if (connect(fd, (const sockaddr*)&serv_addr, sizeof(serv_addr)) != 0) {
+  if (connect(fd, reinterpret_cast<const sockaddr*>(&serv_addr),
+              sizeof(serv_addr)) != 0) {
     CAF_LOGF_ERROR("could not connect to to " << host << " on port " << port);
     throw network_error("could not connect to host");
   }
@@ -958,7 +959,7 @@ native_socket new_ipv4_acceptor_impl(uint16_t port, const char* addr) {
     throw_io_failure("unable to set SO_REUSEADDR");
   }
   struct sockaddr_in serv_addr;
-  memset((char*)&serv_addr, 0, sizeof(serv_addr));
+  memset(&serv_addr, 0, sizeof(serv_addr));
   serv_addr.sin_family = AF_INET;
   if (!addr) {
     serv_addr.sin_addr.s_addr = INADDR_ANY;
@@ -966,7 +967,8 @@ native_socket new_ipv4_acceptor_impl(uint16_t port, const char* addr) {
     throw network_error("invalid IPv4 address");
   }
   serv_addr.sin_port = htons(port);
-  if (bind(fd, (sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
+  if (bind(fd, reinterpret_cast<sockaddr*>(&serv_addr),
+           sizeof(serv_addr)) < 0) {
     throw bind_failure(last_socket_error_as_string());
   }
   if (listen(fd, SOMAXCONN) != 0) {
