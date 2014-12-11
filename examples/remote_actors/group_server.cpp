@@ -8,8 +8,8 @@
  * - ./build/bin/group_chat -g remote:chatroom@localhost:4242 -n bob          *
 \ ******************************************************************************/
 
-#include <cstdlib>
 #include <string>
+#include <cstdlib>
 #include <iostream>
 
 #include "caf/all.hpp"
@@ -20,9 +20,9 @@ using namespace caf;
 
 optional<uint16_t> to_port(const string& arg) {
   char* last = nullptr;
-  auto res = strtol(arg.c_str(), &last, 10);
-  if (last == (arg.c_str() + arg.size()) && res > 1024) {
-    return res;
+  auto res = strtoul(arg.c_str(), &last, 10);
+  if (last == (arg.c_str() + arg.size()) && res <= 65536) {
+    return static_cast<uint16_t>(res);
   }
   return none;
 }

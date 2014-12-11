@@ -263,7 +263,7 @@ void basp_broker::dispatch(const actor_addr& from, const actor_addr& to,
   }
   auto& buf = wr_buf(route.hdl);
   // reserve space in the buffer to write the broker message later on
-  auto wr_pos = buf.size();
+  auto wr_pos = static_cast<ptrdiff_t>(buf.size());
   char placeholder[basp::header_size];
   buf.insert(buf.end(), std::begin(placeholder), std::end(placeholder));
   auto before = buf.size();
@@ -639,7 +639,7 @@ void basp_broker::init_handshake_as_sever(connection_context& ctx,
   CAF_LOG_TRACE(CAF_ARG(this));
   CAF_REQUIRE(node() != invalid_node_id);
   auto& buf = wr_buf(ctx.hdl);
-  auto wrpos = buf.size();
+  auto wrpos = static_cast<ptrdiff_t>(buf.size());
   char padding[basp::header_size];
   buf.insert(buf.end(), std::begin(padding), std::end(padding));
   auto before = buf.size();

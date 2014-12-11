@@ -336,7 +336,7 @@ class single_reader_queue {
   pointer reader_blocked_dummy() {
     // we are not going to dereference this pointer either
     return reinterpret_cast<pointer>(reinterpret_cast<intptr_t>(this)
-                                     + sizeof(void*));
+                                     + static_cast<intptr_t>(sizeof(void*)));
   }
 
   bool is_dummy(pointer ptr) {
