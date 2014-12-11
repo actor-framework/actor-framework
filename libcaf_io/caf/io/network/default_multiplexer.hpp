@@ -356,8 +356,8 @@ class default_multiplexer : public multiplexer {
     CAF_LOG_TRACE(CAF_TARG(op, static_cast<int>)
              << ", " << CAF_ARG(fd) << ", " CAF_ARG(ptr)
              << ", " << CAF_ARG(old_bf));
-    auto event_less = [](const event& e, native_socket fd) -> bool {
-      return e.fd < fd;
+    auto event_less = [](const event& e, native_socket arg) -> bool {
+      return e.fd < arg;
     };
     auto last = m_events.end();
     auto i = std::lower_bound(m_events.begin(), last, fd, event_less);
@@ -483,7 +483,7 @@ class stream : public event_handler {
     switch (op) {
       case operation::read:  m_reader.reset(); break;
       case operation::write: m_writer.reset(); break;
-      default: break;
+      case operation::propagate_error: break;
     }
   }
 
