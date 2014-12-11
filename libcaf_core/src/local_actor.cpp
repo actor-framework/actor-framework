@@ -32,7 +32,7 @@ namespace caf {
 // later on in spawn(); this prevents subtle bugs that lead to segfaults,
 // e.g., when calling address() in the ctor of a derived class
 local_actor::local_actor()
-    : super(1),
+    : super(size_t{1}),
       m_dummy_node(),
       m_current_node(&m_dummy_node),
       m_planned_exit_reason(exit_reason::not_exited) {
