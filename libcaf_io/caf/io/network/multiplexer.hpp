@@ -91,7 +91,7 @@ class multiplexer {
    * Makes sure the multipler does not exit its event loop until
    * the destructor of `supervisor` has been called.
    */
-  struct supervisor {
+  class supervisor {
    public:
     virtual ~supervisor();
   };
