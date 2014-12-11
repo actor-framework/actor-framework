@@ -42,7 +42,7 @@ void caf_unexpected_timeout(const char* file, size_t line);
 
 #define CAF_PRINT(message) CAF_PRINTC(__FILE__, __LINE__, message)
 
-#if CAF_LOG_LEVEL > 1
+#if defined(CAF_LOG_LEVEL) && CAF_LOG_LEVEL > 1
 #define CAF_PRINTERRC(fname, linenum, msg)                  \
   CAF_LOGF_ERROR(CAF_STREAMIFY(fname, linenum, msg));            \
   std::cerr << "ERROR: " << CAF_STREAMIFY(fname, linenum, msg) << std::endl

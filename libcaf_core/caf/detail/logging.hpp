@@ -200,7 +200,7 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 #define CAF_PRINT_IF1(stmt, lvlname, classname, funname, msg)                  \
   CAF_PRINT_IF0(stmt, lvlname, classname, funname, msg)
 
-#if CAF_LOG_LEVEL < CAF_TRACE
+#if !defined(CAF_LOG_LEVEL) || CAF_LOG_LEVEL < CAF_TRACE
 #define CAF_PRINT4(arg0, arg1, arg2, arg3)
 #else
 #define CAF_PRINT4(lvlname, classname, funname, msg)                           \
@@ -210,7 +210,7 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
   }
 #endif
 
-#if CAF_LOG_LEVEL < CAF_DEBUG
+#if !defined(CAF_LOG_LEVEL) || CAF_LOG_LEVEL < CAF_DEBUG
 #define CAF_PRINT3(arg0, arg1, arg2, arg3)
 #define CAF_PRINT_IF3(arg0, arg1, arg2, arg3, arg4)
 #else
@@ -220,7 +220,7 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
   CAF_PRINT_IF0(stmt, lvlname, classname, funname, msg)
 #endif
 
-#if CAF_LOG_LEVEL < CAF_INFO
+#if !defined(CAF_LOG_LEVEL) || CAF_LOG_LEVEL < CAF_INFO
 #define CAF_PRINT2(arg0, arg1, arg2, arg3)
 #define CAF_PRINT_IF2(arg0, arg1, arg2, arg3, arg4)
 #else
