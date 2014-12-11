@@ -280,7 +280,7 @@ while [ $# -ne 0 ]; do
             append_cache_entry CAF_NO_CURL_EXAMPLES STRING yes
             ;;
         --no-unit-tests)
-            append_cache_entry CAF_NO_UNIT_TESTS STRING yes
+            append_cache_entry CAF_NO_UNIT_TESTS STRING  yes
             ;;
         --no-opencl)
             append_cache_entry CAF_NO_OPENCL STRING yes
