@@ -35,7 +35,7 @@ void publish_impl(abstract_actor_ptr whom, uint16_t port, const char* in);
  * Publishes `whom` at `port`. The connection is managed by the middleman.
  * @param whom Actor that should be published at `port`.
  * @param port Unused TCP port.
- * @param addr The IP address to listen to or `INADDR_ANY` if `in == nullptr`.
+ * @param in The IP address to listen to or `INADDR_ANY` if `in == nullptr`.
  * @throws bind_failure
  */
 inline void publish(caf::actor whom, uint16_t port, const char* in = nullptr) {
