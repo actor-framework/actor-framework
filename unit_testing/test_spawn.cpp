@@ -683,7 +683,7 @@ void test_constructor_attach() {
 class exception_testee : public event_based_actor {
  public:
   exception_testee() {
-    set_exception_handler([](const std::exception_ptr& eptr) -> optional<uint32_t> {
+    set_exception_handler([](const std::exception_ptr&) -> optional<uint32_t> {
       return exit_reason::user_defined + 2;
     });
   }
@@ -744,7 +744,7 @@ using abc_atom = atom_constant<atom("abc")>;
 
 using typed_testee = typed_actor<replies_to<abc_atom>::with<std::string>>;
 
-typed_testee::behavior_type testee(typed_testee::pointer self) {
+typed_testee::behavior_type testee() {
   return {
     [](abc_atom) {
       CAF_PRINT("received abc_atom");
@@ -779,6 +779,10 @@ int main() {
   test_typed_testee();
   CAF_CHECKPOINT();
   await_all_actors_done();
+  CAF_CHECKPOINT();
+  test_constructor_attach();
+  CAF_CHECKPOINT();
+  test_custom_exception_handler();
   CAF_CHECKPOINT();
   // test setting exit reasons for scoped actors
   { // lifetime scope of self
