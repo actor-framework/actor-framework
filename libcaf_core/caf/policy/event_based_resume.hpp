@@ -171,8 +171,8 @@ class event_based_resume {
         }
       }
       catch (std::exception& e) {
-        CAF_LOG_INFO("actor died because of an exception, what() = "
-                     << e.what());
+        CAF_LOG_INFO("actor died because of an exception, what: " << e.what());
+        static_cast<void>(e); // keep compiler happy when not logging
         if (d->exit_reason() == exit_reason::not_exited) {
           d->quit(exit_reason::unhandled_exception);
         }
