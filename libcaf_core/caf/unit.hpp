@@ -23,11 +23,17 @@
 namespace caf {
 
 struct unit_t {
-  constexpr unit_t() {}
-  constexpr unit_t(const unit_t&) {}
+  constexpr unit_t() {
+    // nop
+  }
+  constexpr unit_t(const unit_t&) {
+    // nop
+  }
   template <class T>
-  explicit constexpr unit_t(T&&) {}
-
+  explicit constexpr unit_t(T&&) {
+    // nop
+  }
+  unit_t& operator=(const unit_t&) = default;
 };
 
 static constexpr unit_t unit = unit_t{};
@@ -35,25 +41,21 @@ static constexpr unit_t unit = unit_t{};
 template <class T>
 struct lift_void {
   using type = T;
-
 };
 
 template <>
 struct lift_void<void> {
   using type = unit_t;
-
 };
 
 template <class T>
 struct unlift_void {
   using type = T;
-
 };
 
 template <>
 struct unlift_void<unit_t> {
   using type = void;
-
 };
 
 } // namespace caf
