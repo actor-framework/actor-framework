@@ -170,8 +170,8 @@ void broker::invoke_message(const actor_addr& sender, message_id mid,
   std::swap(msg, m_dummy_node.msg);
   try {
     auto bhvr = bhvr_stack().back();
-    auto mid = bhvr_stack().back_id();
-    switch (m_invoke_policy.handle_message(this, &m_dummy_node, bhvr, mid)) {
+    auto bid = bhvr_stack().back_id();
+    switch (m_invoke_policy.handle_message(this, &m_dummy_node, bhvr, bid)) {
       case policy::hm_msg_handled: {
         CAF_LOG_DEBUG("handle_message returned hm_msg_handled");
         while (!bhvr_stack().empty()
@@ -187,7 +187,7 @@ void broker::invoke_message(const actor_addr& sender, message_id mid,
       case policy::hm_skip_msg:
       case policy::hm_cache_msg: {
         CAF_LOG_DEBUG("handle_message returned hm_skip_msg or hm_cache_msg");
-        auto e = mailbox_element::create(sender, mid,
+        auto e = mailbox_element::create(sender, bid,
                                          std::move(m_dummy_node.msg));
         m_priority_policy.push_to_cache(unique_mailbox_element_pointer{e});
         break;
