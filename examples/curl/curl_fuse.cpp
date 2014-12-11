@@ -101,6 +101,8 @@ class base_actor : public event_based_actor {
     // nop
   }
 
+  ~base_actor();
+
   inline actor_ostream& print() {
     return m_out << m_color << m_name << " (id = " << id() << "): ";
   }
@@ -117,6 +119,10 @@ class base_actor : public event_based_actor {
   actor_ostream m_out;
 };
 
+base_actor::~base_actor() {
+  // avoid weak-vtables warning
+}
+
 // encapsulates an HTTP request
 class client_job : public base_actor {
  public:
@@ -124,6 +130,8 @@ class client_job : public base_actor {
       : base_actor(std::move(parent), "client_job", color::blue) {
     // nop
   }
+
+  ~client_job();
 
  protected:
   behavior make_behavior() override {
@@ -149,6 +157,10 @@ class client_job : public base_actor {
   }
 };
 
+client_job::~client_job() {
+  // avoid weak-vtables warning
+}
+
 // spawns HTTP requests
 class client : public base_actor {
  public:
@@ -157,6 +169,8 @@ class client : public base_actor {
       : base_actor(parent, "client", color::green), m_count(0) {
     // nop
   }
+
+  ~client();
 
  protected:
   behavior make_behavior() override {
@@ -185,14 +199,19 @@ class client : public base_actor {
   size_t m_count;
 };
 
+client::~client() {
+  // avoid weak-vtables warning
+}
+
 // manages a CURL session
 class curl_worker : public base_actor {
  public:
-
   curl_worker(const actor& parent)
       : base_actor(parent, "curl_worker", color::yellow) {
     // nop
   }
+
+  ~curl_worker();
 
  protected:
   behavior make_behavior() override {
@@ -275,12 +294,19 @@ class curl_worker : public base_actor {
   buffer_type m_buf;
 };
 
+curl_worker::~curl_worker() {
+  // avoid weak-vtables warning
+}
+
+
 // manages {num_curl_workers} workers with a round-robin protocol
 class curl_master : public base_actor {
  public:
   curl_master() : base_actor(invalid_actor, "curl_master", color::magenta) {
     // nop
   }
+
+  ~curl_master();
 
  protected:
   behavior make_behavior() override {
@@ -337,8 +363,14 @@ class curl_master : public base_actor {
   std::vector<actor> m_busy_worker;
 };
 
+curl_master::~curl_master() {
+  // avoid weak-vtables warning
+}
+
 // signal handling for ctrl+c
+namespace {
 std::atomic<bool> shutdown_flag{false};
+} // namespace <anonymous>
 
 int main() {
   // random number setup

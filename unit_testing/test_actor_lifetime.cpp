@@ -9,7 +9,9 @@ using std::cout;
 using std::endl;
 using namespace caf;
 
+namespace {
 std::atomic<long> s_dudes;
+} // namespace <anonymous>
 
 class dude : public event_based_actor {
  public:
@@ -17,9 +19,7 @@ class dude : public event_based_actor {
     ++s_dudes;
   }
 
-  ~dude() {
-    --s_dudes;
-  }
+  ~dude();
 
   behavior make_behavior() {
     return {
@@ -29,6 +29,12 @@ class dude : public event_based_actor {
     };
   }
 };
+
+dude::~dude() {
+  // avoid weak-vtables warning
+  --s_dudes;
+}
+
 
 behavior linking_dude(event_based_actor* self, const actor& other_dude) {
   CAF_CHECKPOINT();

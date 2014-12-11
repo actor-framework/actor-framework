@@ -30,6 +30,10 @@ blocking_actor::blocking_actor() {
   is_blocking(true);
 }
 
+blocking_actor::~blocking_actor() {
+  // avoid weak-vtables warning
+}
+
 void blocking_actor::await_all_other_actors_done() {
   detail::singletons::get_actor_registry()->await_running_count_equal(1);
 }

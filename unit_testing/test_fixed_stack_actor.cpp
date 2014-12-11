@@ -41,6 +41,9 @@ class fixed_stack : public sb_actor<fixed_stack> {
       }
     );
   }
+
+  ~fixed_stack();
+
  private:
   size_t max_size = 10;
   std::vector<int> data;
@@ -49,6 +52,11 @@ class fixed_stack : public sb_actor<fixed_stack> {
   behavior empty;
   behavior& init_state = empty;
 };
+
+fixed_stack::~fixed_stack() {
+  // avoid weak-vtables warning
+}
+
 
 void test_fixed_stack_actor() {
   scoped_actor self;
