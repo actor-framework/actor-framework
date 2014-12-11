@@ -67,11 +67,11 @@ class typed_server3 : public server_type::base {
 
 void client(event_based_actor* self, actor parent, server_type serv) {
   self->sync_send(serv, my_request{0, 0}).then(
-    [=](bool value) {
-      CAF_CHECK_EQUAL(value, true);
+    [=](bool val1) {
+      CAF_CHECK_EQUAL(val1, true);
       self->sync_send(serv, my_request{10, 20}).then(
-        [=](bool value) {
-          CAF_CHECK_EQUAL(value, false);
+        [=](bool val2) {
+          CAF_CHECK_EQUAL(val2, false);
           self->send(parent, atom("passed"));
         }
       );
