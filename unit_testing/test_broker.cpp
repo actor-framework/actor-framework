@@ -24,6 +24,8 @@
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 
+#include "caf/string_algorithms.hpp"
+
 using namespace std;
 using namespace caf;
 using namespace caf::io;
@@ -157,16 +159,7 @@ void run_server(bool spawn_client, const char* bin_path) {
   CAF_CHECKPOINT();
   cout << "server is running on port " << port << endl;
   if (spawn_client) {
-    ostringstream oss;
-    oss << bin_path << " -c " << port << to_dev_null;
-    thread child{[&oss] {
-      CAF_LOGC_TRACE("NONE", "main$thread_launcher", "");
-      auto cmdstr = oss.str();
-      if (system(cmdstr.c_str()) != 0) {
-        CAF_PRINTERR("FATAL: command failed: " << cmdstr);
-        abort();
-      }
-    }};
+    auto child = run_program(bin_path, "-c", port);
     CAF_CHECKPOINT();
     child.join();
   }
@@ -189,7 +182,6 @@ int main(int argc, char** argv) {
     },
     on() >> [&] {
       run_server(true, argv[0]);
-
     },
     others() >> [&] {
        cerr << "usage: " << argv[0] << " [-c PORT]" << endl;

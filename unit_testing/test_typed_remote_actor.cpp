@@ -99,18 +99,9 @@ int main(int argc, char** argv) {
     on() >> [&] {
       auto port = run_server();
       CAF_CHECKPOINT();
-      ostringstream oss;
-      oss << argv[0] << " -c " << port << to_dev_null;
       // execute client_part() in a separate process,
       // connected via localhost socket
-      auto child = thread([&oss]() {
-        CAF_LOGC_TRACE("NONE", "main$thread_launcher", "");
-        string cmdstr = oss.str();
-        if (system(cmdstr.c_str()) != 0) {
-          CAF_PRINTERR("FATAL: command \"" << cmdstr << "\" failed!");
-          abort();
-        }
-      });
+      auto child = run_program(argv[0], "-c", port);
       CAF_CHECKPOINT();
       child.join();
     }

@@ -2,6 +2,7 @@
 
 #include "test.hpp"
 #include "caf/all.hpp"
+#include "caf/string_algorithms.hpp"
 
 using namespace std;
 using namespace caf;
@@ -67,4 +68,22 @@ void verbose_terminate() {
 void set_default_test_settings() {
   set_terminate(verbose_terminate);
   cout.unsetf(ios_base::unitbuf);
+}
+
+std::thread run_program_impl(const char* cpath, std::vector<std::string> args) {
+  string path = cpath;
+  replace_all(path, "'", "\\'");
+  ostringstream oss;
+  oss << "'" << path << "'";
+  for (auto& arg : args) {
+    oss << " " << arg;
+  }
+  oss << to_dev_null;
+  string cmdstr = oss.str();
+  return thread{[cmdstr] {
+    if (system(cmdstr.c_str()) != 0) {
+      CAF_PRINTERR("FATAL: command line failed: " << cmdstr);
+      abort();
+    }
+  }};
 }

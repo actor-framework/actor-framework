@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include <thread>
 #include <cstring>
 #include <cstddef>
 #include <sstream>
@@ -199,10 +200,25 @@ caf::optional<T> spro(const std::string& str) {
   return caf::none;
 }
 
-std::vector<std::string> split(const std::string& str, char delim = ' ',
-                 bool keep_empties = true);
+std::thread run_program_impl(const char* path, std::vector<std::string> args);
 
-std::map<std::string, std::string> get_kv_pairs(int argc, char** argv,
-                        int begin = 1);
+template <class T>
+typename std::enable_if<
+  std::is_arithmetic<T>::value,
+  std::string
+>::type
+convert_to_str(T value) {
+  return std::to_string(value);
+}
+
+inline std::string convert_to_str(std::string value) {
+  return std::move(value);
+}
+
+template <class... Ts>
+std::thread run_program(const char* path, Ts&&... args) {
+  std::vector<std::string> vec{convert_to_str(std::forward<Ts>(args))...};
+  return run_program_impl(path, std::move(vec));
+}
 
 #endif // TEST_HPP

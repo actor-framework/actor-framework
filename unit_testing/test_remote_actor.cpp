@@ -342,7 +342,7 @@ uint16_t at_some_port(uint16_t first_port, F fun) {
   }
 }
 
-void test_remote_actor(std::string app_path, bool run_remote_actor) {
+void test_remote_actor(const char* app_path, bool run_remote_actor) {
   scoped_actor self;
   auto serv = self->spawn<server, monitored>();
   auto publish_serv = [=](uint16_t p) {
@@ -365,22 +365,11 @@ void test_remote_actor(std::string app_path, bool run_remote_actor) {
   CAF_CHECK(serv2 != invalid_actor && !serv2->is_remote());
   CAF_CHECK(serv == serv2);
   thread child;
-  ostringstream oss;
-  oss << app_path << " -c " << port << " " << port0 << " " << gport;
   if (run_remote_actor) {
-    oss << to_dev_null;
-    // execute client_part() in a separate process,
-    // connected via localhost socket
-    child = thread([&oss]() {
-      CAF_LOGC_TRACE("NONE", "main$thread_launcher", "");
-      string cmdstr = oss.str();
-      if (system(cmdstr.c_str()) != 0) {
-        CAF_PRINTERR("FATAL: command \"" << cmdstr << "\" failed!");
-        abort();
-      }
-    });
+    child = run_program(app_path, "-c", port, port0, gport);
   } else {
-    CAF_PRINT("please run client: " << oss.str());
+    CAF_PRINT("please run client with: "
+              << "-c " << port << " " << port0 << " " << gport);
   }
   CAF_CHECKPOINT();
   self->receive(
@@ -391,7 +380,9 @@ void test_remote_actor(std::string app_path, bool run_remote_actor) {
   );
   // wait until separate process (in sep. thread) finished execution
   CAF_CHECKPOINT();
-  if (run_remote_actor) child.join();
+  if (run_remote_actor) {
+    child.join();
+  }
   CAF_CHECKPOINT();
   self->await_all_other_actors_done();
 }
