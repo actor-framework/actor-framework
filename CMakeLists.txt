@@ -108,12 +108,36 @@ if(CXX_WARNINGS_AS_ERROS)
   set(EXTRA_FLAGS "-Werror")
 endif()
 # enable a ton of warnings if --more-clang-warnings is used
-if(MORE_CLANG_WARNINGS AND "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-  set(WFLAGS "-Weverything -Wno-c++98-compat -Wno-padded -Wno-missing-noreturn "
-             "-Wno-documentation-unknown-command -Wno-exit-time-destructors "
-             "-Wno-global-constructors -Wno-missing-prototypes "
-             "-Wno-c++98-compat-pedantic -Wno-unused-member-function "
-             "-Wno-unused-const-variable -Wno-switch-enum")
+if(MORE_WARNINGS)
+  if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    set(WFLAGS "-Weverything -Wno-c++98-compat -Wno-padded "
+               "-Wno-documentation-unknown-command -Wno-exit-time-destructors "
+               "-Wno-global-constructors -Wno-missing-prototypes "
+               "-Wno-c++98-compat-pedantic -Wno-unused-member-function "
+               "-Wno-unused-const-variable -Wno-switch-enum "
+               "-Wno-missing-noreturn")
+  elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+    set(WFLAGS "-Waddress -Waggressive-loop-optimizations -Wall -Warray-bounds "
+               "-Wattributes -Wbuiltin-macro-redefined -Wcast-align "
+               "-Wcast-qual -Wchar-subscripts -Wclobbered -Wcomment "
+               "-Wconversion -Wconversion-null -Wcoverage-mismatch "
+               "-Wcpp -Wdelete-non-virtual-dtor -Wdeprecated "
+               "-Wdeprecated-declarations -Wdiv-by-zero -Wdouble-promotion "
+               "-Wempty-body -Wendif-labels -Wenum-compare -Wextra "
+               "-Wfloat-equal -Wformat -Wfree-nonheap-object "
+               "-Wignored-qualifiers -Winherited-variadic-ctor -Winit-self "
+               "-Winline -Wint-to-pointer-cast -Winvalid-memory-model "
+               "-Winvalid-offsetof -Wlogical-op -Wmain -Wmaybe-uninitialized "
+               "-Wmissing-braces -Wmissing-field-initializers -Wmultichar "
+               "-Wnarrowing -Wnoexcept -Wnon-template-friend "
+               "-Wnon-virtual-dtor -Wnonnull -Wold-style-cast -Woverflow "
+               "-Woverlength-strings -Wparentheses -Wpedantic "
+               "-Wpmf-conversions -Wpointer-arith -Wreorder "
+               "-Wreturn-local-addr -Wreturn-type -Wsequence-point -Wshadow "
+               "-Wsign-compare -Wsign-promo -Wswitch -Wtype-limits -Wundef "
+               "-Wuninitialized -Wunused -Wvirtual-move-assign -Wvla "
+               "-Wwrite-strings -Wzero-as-null-pointer-constant")
+  endif()
   string(REPLACE ";" "" WFLAGS_STR ${WFLAGS})
   set(EXTRA_FLAGS "${EXTRA_FLAGS} ${WFLAGS_STR}")
 endif()
@@ -411,7 +435,8 @@ invertYesNo(CAF_NO_BENCHMARKS CAF_BUILD_BENCHMARKS)
 invertYesNo(CAF_NO_OPENCL CAF_BUILD_OPENCL)
 # collect all compiler flags
 string(TOUPPER "${CMAKE_BUILD_TYPE}" UPPER_BUILD_TYPE)
-set(ALL_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${UPPER_BUILD_TYPE}}")
+set(ALL_CXX_FLAGS
+    "${CMAKE_CXX_FLAGS} ${EXTRA_FLAGS} ${CMAKE_CXX_FLAGS_${UPPER_BUILD_TYPE}}")
 # done
 message(STATUS
         "\n====================|  Build Summary  |===================="
