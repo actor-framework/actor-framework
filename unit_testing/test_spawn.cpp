@@ -371,13 +371,13 @@ void test_spawn() {
   CAF_CHECKPOINT();
 
   CAF_PRINT("test delayed_send()");
-  self->delayed_send(self, chrono::seconds(1), 1, 2, 3);
+  self->delayed_send(self, chrono::milliseconds(1), 1, 2, 3);
   self->receive(on(1, 2, 3) >> [] { });
   self->await_all_other_actors_done();
   CAF_CHECKPOINT();
 
   CAF_PRINT("test timeout");
-  self->receive(after(chrono::seconds(1)) >> [] { });
+  self->receive(after(chrono::milliseconds(1)) >> [] { });
   CAF_CHECKPOINT();
 
   spawn(testee1);
@@ -432,7 +432,7 @@ void test_spawn() {
   );
   self->receive (
     on("goodbye!") >> CAF_CHECKPOINT_CB(),
-    after(std::chrono::seconds(5)) >> CAF_UNEXPECTED_TOUT_CB()
+    after(std::chrono::seconds(1)) >> CAF_UNEXPECTED_TOUT_CB()
   );
   self->receive (
     [&](const down_msg& dm) {
@@ -446,7 +446,7 @@ void test_spawn() {
   self->sync_send(sync_testee, "!?").await(
     on<sync_exited_msg>() >> CAF_CHECKPOINT_CB(),
     others() >> CAF_UNEXPECTED_MSG_CB_REF(self),
-    after(chrono::milliseconds(5)) >> CAF_UNEXPECTED_TOUT_CB()
+    after(chrono::milliseconds(1)) >> CAF_UNEXPECTED_TOUT_CB()
   );
 
   CAF_CHECKPOINT();
@@ -551,7 +551,7 @@ void test_spawn() {
   self->link_to(pong_actor);
   int i = 0;
   int flags = 0;
-  self->delayed_send(self, chrono::seconds(1), atom("FooBar"));
+  self->delayed_send(self, chrono::milliseconds(10), atom("FooBar"));
   // wait for DOWN and EXIT messages of pong
   self->receive_for(i, 4) (
     [&](const exit_msg& em) {
@@ -576,7 +576,7 @@ void test_spawn() {
     others() >> [&]() {
       CAF_FAILURE("unexpected message: " << to_string(self->last_dequeued()));
     },
-    after(chrono::seconds(5)) >> [&]() {
+    after(chrono::milliseconds(10)) >> [&]() {
       CAF_FAILURE("timeout in file " << __FILE__ << " in line " << __LINE__);
     }
   );
