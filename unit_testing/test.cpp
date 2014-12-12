@@ -11,9 +11,13 @@ namespace {
 atomic<size_t> s_error_count{0};
 }
 
-size_t caf_error_count() { return s_error_count; }
+size_t caf_error_count() {
+  return s_error_count;
+}
 
-void caf_inc_error_count() { ++s_error_count; }
+void caf_inc_error_count() {
+  ++s_error_count;
+}
 
 string caf_fill4(size_t value) {
   string result = to_string(value);
