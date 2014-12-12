@@ -102,35 +102,37 @@ if(NOT WIN32 AND NOT NO_COMPILER_CHECK)
   endif()
 endif()
 # set optional build flags
-set(CXX_EXTRA_FLAGS "")
+set(EXTRA_FLAGS "")
 # add "-Werror" flag if --pedantic-build is used
 if(CXX_WARNINGS_AS_ERROS)
-  set(CXX_EXTRA_FLAGS "-Werror")
+  set(EXTRA_FLAGS "-Werror")
 endif()
 # enable a ton of warnings if --more-clang-warnings is used
 if(MORE_CLANG_WARNINGS AND "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-  set(CXX_EXTRA_FLAGS "${CXX_EXTRA_FLAGS} -Weverything -Wno-c++98-compat "
-                       "-Wno-padded -Wno-documentation-unknown-command "
-                       "-Wno-exit-time-destructors -Wno-global-constructors "
-                       "-Wno-missing-prototypes -Wno-c++98-compat-pedantic "
-                       "-Wno-unused-member-function "
-                       "-Wno-unused-const-variable")
+  set(WFLAGS "-Weverything -Wno-c++98-compat -Wno-padded -Wno-missing-noreturn "
+             "-Wno-documentation-unknown-command -Wno-exit-time-destructors "
+             "-Wno-global-constructors -Wno-missing-prototypes "
+             "-Wno-c++98-compat-pedantic -Wno-unused-member-function "
+             "-Wno-unused-const-variable -Wno-switch-enum")
+  string(REPLACE ";" "" WFLAGS_STR ${WFLAGS})
+  set(EXTRA_FLAGS "${EXTRA_FLAGS} ${WFLAGS_STR}")
 endif()
 # add -stdlib=libc++ when using Clang
 if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
   message(STATUS "NOTE: Automatically added -stdlib=libc++ flag, "
                  "you can override this by defining CMAKE_CXX_FLAGS "
                  "(see 'configure --help')")
-  set(CXX_EXTRA_FLAGS "${CXX_EXTRA_FLAGS} -stdlib=libc++")
+  set(EXTRA_FLAGS "${EXTRA_FLAGS} -stdlib=libc++")
 endif()
 # enable address sanitizer if requested by the user
 if(ENABLE_ADDRESS_SANITIZER)
   message(STATUS "Enable address sanitizer")
-  set(CXX_EXTRA_FLAGS "${CXX_EXTRA_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+  set(EXTRA_FLAGS
+      "${EXTRA_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
 endif(ENABLE_ADDRESS_SANITIZER)
 # -pthread is ignored on MacOSX but required on other platforms
 if(NOT APPLE AND NOT WIN32)
-  set(CXX_EXTRA_FLAGS "${CXX_EXTRA_FLAGS} -pthread")
+  set(EXTRA_FLAGS "${EXTRA_FLAGS} -pthread")
 endif()
 # check if the user provided CXXFLAGS, set defaults otherwise
 if(CMAKE_CXX_FLAGS)
@@ -139,7 +141,7 @@ if(CMAKE_CXX_FLAGS)
   set(CMAKE_CXX_FLAGS_RELEASE        "")
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "")
 else()
-  set(CMAKE_CXX_FLAGS "-std=c++11 -Wextra -Wall -pedantic -fPIC ${CXX_EXTRA_FLAGS}")
+  set(CMAKE_CXX_FLAGS "-std=c++11 -Wextra -Wall -pedantic -fPIC ${EXTRA_FLAGS}")
   set(CMAKE_CXX_FLAGS_DEBUG          "-O0 -g")
   set(CMAKE_CXX_FLAGS_MINSIZEREL     "-Os")
   set(CMAKE_CXX_FLAGS_RELEASE        "-O3 -DNDEBUG")
