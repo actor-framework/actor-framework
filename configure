@@ -91,7 +91,7 @@ $benchmark_suite_options"
 #   $3 is the cache entry variable value
 append_cache_entry ()
 {
-    CMakeCacheEntries="$CMakeCacheEntries -D $1:$2=$3"
+    CMakeCacheEntries="$CMakeCacheEntries \"-D $1:$2=$3\""
 }
 
 # Creates a build directory via CMake.
@@ -102,6 +102,7 @@ append_cache_entry ()
 #   $5 is the CMake generator.
 configure ()
 {
+
     CMakeCacheEntries=$CMakeDefaultCache
 
     if [ -n "$1" ]; then
@@ -138,23 +139,23 @@ configure ()
         append_cache_entry LIBRARY_OUTPUT_PATH PATH "$absolute_builddir/lib"
     fi
 
-    if [ -d $workdir ]; then
+    if [ -d "$workdir" ]; then
         # If a build directory exists, check if it has a CMake cache.
-        if [ -f $workdir/CMakeCache.txt ]; then
+        if [ -f "$workdir/CMakeCache.txt" ]; then
             # If the CMake cache exists, delete it so that this configuration
             # is not tainted by a previous one.
-            rm -f $workdir/CMakeCache.txt
+            rm -f "$workdir/CMakeCache.txt"
         fi
     else
-        mkdir -p $workdir
+        mkdir -p "$workdir"
     fi
 
-    cd $workdir
+    cd "$workdir"
 
     if [ -n "$5" ]; then
-        cmake -G "$5" $CMakeCacheEntries $sourcedir
+        cmake -G "$5" $CMakeCacheEntries "$sourcedir"
     else
-        cmake $CMakeCacheEntries $sourcedir
+        cmake $CMakeCacheEntries "$sourcedir"
     fi
 
     echo "# This is the command used to configure this build" > config.status
@@ -262,13 +263,13 @@ while [ $# -ne 0 ]; do
             append_cache_entry CMAKE_BUILD_TYPE STRING $optarg
             ;;
         --build-dir=*)
-            builddir=$optarg
+            builddir="$optarg"
             ;;
         --bin-dir=*)
-            bindir=$optarg
+            bindir="$optarg"
             ;;
         --lib-dir=*)
-            libdir=$optarg
+            libdir="$optarg"
             ;;
         --dual-build)
             dualbuild=1
