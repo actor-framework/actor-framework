@@ -131,11 +131,11 @@ inline void caf_check_value(V1 v1, V2 v2, const char* fname, size_t line,
   CAF_PRINT(#LineOfCode << " = " << (LineOfCode));
 
 #define CAF_TEST(testname)                                                     \
-  ::std::thread{[] {                                                           \
+  ::std::thread([] {                                                           \
     ::std::this_thread::sleep_for(std::chrono::seconds(10));                   \
     ::std::cerr << "WATCHDOG: unit test did finish within 10s, abort\n";       \
     ::abort();                                                                 \
-  }}.detach();                                                                 \
+  }).detach();                                                                 \
   auto caf_test_scope_guard = ::caf::detail::make_scope_guard([] {             \
     std::cout << caf_error_count() << " error(s) detected" << std::endl;       \
   });                                                                          \

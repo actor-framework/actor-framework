@@ -84,10 +84,10 @@ std::thread run_program_impl(const char* cpath, std::vector<std::string> args) {
   }
   oss << to_dev_null;
   string cmdstr = oss.str();
-  return thread{[cmdstr] {
+  return thread([cmdstr] {
     if (system(cmdstr.c_str()) != 0) {
       CAF_PRINTERR("FATAL: command line failed: " << cmdstr);
       abort();
     }
-  }};
+  });
 }

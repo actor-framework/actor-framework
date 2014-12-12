@@ -45,13 +45,19 @@ abstract_actor_ptr remote_actor_impl(const std::set<std::string>& ifs,
   std::promise<abstract_actor_ptr> res;
   basp_broker::client_handshake_data hdata{invalid_node_id, &res, &ifs};
   mm->run_later([&] {
+    std::exception_ptr eptr;
     try {
       auto bro = mm->get_named_broker<basp_broker>(atom("_BASP"));
       auto hdl = mm->backend().add_tcp_scribe(bro.get(), host, port);
       bro->init_client(hdl, &hdata);
     }
     catch (...) {
-      res.set_exception(std::current_exception());
+      eptr = std::current_exception();
+    }
+    // accessing `res` inside the catch block triggers
+    // a silly compiler error on GCC 4.7
+    if (eptr) {
+      res.set_exception(std::move(eptr));
     }
   });
   return res.get_future().get();
