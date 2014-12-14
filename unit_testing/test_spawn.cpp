@@ -5,7 +5,6 @@
 #include <functional>
 
 #include "test.hpp"
-#include "ping_pong.hpp"
 
 #include "caf/all.hpp"
 
@@ -713,7 +712,7 @@ void test_spawn() {
   self->await_all_other_actors_done();
   // test sending message to self via scoped_actor
   self->send(self, atom("check"));
-  self->receive (
+  self->receive(
     on(atom("check")) >> [] {
       CAF_CHECKPOINT();
     }
