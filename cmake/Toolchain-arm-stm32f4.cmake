@@ -21,7 +21,7 @@ set(CMAKE_CXX_COMPILER_ID_RUN TRUE)
 set(CMAKE_CXX_COMPILER_ID GNU)
 set(CMAKE_CXX_COMPILER_FORCED TRUE)
 
-add_definitions(-DCOREIF_NG=1)
+add_definitions(-DCOREIF_NG=1) # required for exceptions on this board with RIOT
 include_directories("${RIOT_BASE_DIR}/boards/stm32f4discovery/include/.")
 
 #SET(CMAKE_FIND_ROOT_PATH  /home/noir/Downloads/gcc-arm-none-eabi-4_8-2014q3/arm-none-eabi/ /home/noir/Downloads/gcc-arm-none-eabi-4_8-2014q3/)
