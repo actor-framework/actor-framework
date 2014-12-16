@@ -13,11 +13,11 @@ class fixed_stack : public sb_actor<fixed_stack> {
   fixed_stack(size_t max) : max_size(max)  {
     full = (
       on(atom("push"), arg_match) >> [=](int) { /* discard */ },
-      on(atom("pop")) >> [=]() -> std::tuple<atom_value, int> {
+      on(atom("pop")) >> [=]() -> message {
         auto result = data.back();
         data.pop_back();
         become(filled);
-        return {atom("ok"), result};
+        return make_message(atom("ok"), result);
       }
     );
     filled = (
@@ -25,11 +25,11 @@ class fixed_stack : public sb_actor<fixed_stack> {
         data.push_back(what);
         if (data.size() == max_size) become(full);
       },
-      on(atom("pop")) >> [=]() -> std::tuple<atom_value, int> {
+      on(atom("pop")) >> [=]() -> message {
         auto result = data.back();
         data.pop_back();
         if (data.empty()) become(empty);
-        return {atom("ok"), result};
+        return make_message(atom("ok"), result);
       }
     );
     empty = (
