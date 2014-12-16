@@ -50,7 +50,7 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --warnings-as-errors        enables -Werror
 
   Installation Directories:
-    --prefix=PREFIX             installation directory [/usr/local]
+    --prefix=THE_PREFIX         installation directory [/usr/local]
 
   Add Optional Features:
     --enable-perftools          build with Google perftools
@@ -281,7 +281,7 @@ while [ $# -ne 0 ]; do
             append_cache_entry CAF_NO_QT_EXAMPLES STRING yes
             ;;
         --no-protobuf-examples)
-            append_cache_entry CAF_NO_PROTOBUF_EXAMPLES STRING yes
+            append_cache_entry  CAF_NO_PROTOBUF_EXAMPLES STRING yes
             ;;
         --no-curl-examples)
             append_cache_entry CAF_NO_CURL_EXAMPLES STRING yes
