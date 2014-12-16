@@ -767,10 +767,10 @@ accept_handle default_multiplexer::add_tcp_doorman(broker* self,
   return add_tcp_doorman(self, default_socket_acceptor{*this, fd});
 }
 
-accept_handle default_multiplexer::add_tcp_doorman(broker* self,
-                                                   uint16_t port,
-                                                   const char* host) {
-  return add_tcp_doorman(self, new_ipv4_acceptor(port, host));
+accept_handle default_multiplexer::add_tcp_doorman(broker* self, uint16_t port,
+                                                   const char* host,
+                                                   bool reuse_addr) {
+  return add_tcp_doorman(self, new_ipv4_acceptor(port, host, reuse_addr));
 }
 
 /******************************************************************************
@@ -949,9 +949,9 @@ default_socket new_ipv4_connection(const std::string& host, uint16_t port) {
   return default_socket{backend, new_ipv4_connection_impl(host, port)};
 }
 
-native_socket new_ipv4_acceptor_impl(uint16_t port, const char* addr) {
-  CAF_LOGF_TRACE(CAF_ARG(port)
-          << ", addr = " << (addr ? addr : "nullptr"));
+native_socket new_ipv4_acceptor_impl(uint16_t port, const char* addr,
+                                     bool reuse_addr) {
+  CAF_LOGF_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
 # ifdef CAF_WINDOWS
     // make sure TCP has been initialized via WSAStartup
     get_multiplexer_singleton();
@@ -962,10 +962,12 @@ native_socket new_ipv4_acceptor_impl(uint16_t port, const char* addr) {
   }
   // sguard closes the socket in case of exception
   socket_guard sguard(fd);
-  int on = 1;
-  if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
-                 reinterpret_cast<setsockopt_ptr>(&on), sizeof(on)) < 0) {
-    throw_io_failure("unable to set SO_REUSEADDR");
+  if (reuse_addr) {
+    int on = 1;
+    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
+                   reinterpret_cast<setsockopt_ptr>(&on), sizeof(on)) < 0) {
+      throw_io_failure("unable to set SO_REUSEADDR");
+    }
   }
   struct sockaddr_in serv_addr;
   memset(&serv_addr, 0, sizeof(serv_addr));
@@ -989,10 +991,12 @@ native_socket new_ipv4_acceptor_impl(uint16_t port, const char* addr) {
   return fd;
 }
 
-default_socket_acceptor new_ipv4_acceptor(uint16_t port, const char* addr) {
+default_socket_acceptor new_ipv4_acceptor(uint16_t port, const char* addr,
+                                          bool reuse) {
   CAF_LOGF_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
   auto& backend = get_multiplexer_singleton();
-  return default_socket_acceptor{backend, new_ipv4_acceptor_impl(port, addr)};
+  return default_socket_acceptor{backend,
+                                 new_ipv4_acceptor_impl(port, addr, reuse)};
 }
 
 } // namespace network

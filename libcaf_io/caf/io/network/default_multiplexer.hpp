@@ -324,7 +324,8 @@ class default_multiplexer : public multiplexer {
 
   accept_handle add_tcp_doorman(broker*, native_socket fd) override;
 
-  accept_handle add_tcp_doorman(broker*, uint16_t p, const char* h) override;
+  accept_handle add_tcp_doorman(broker*, uint16_t p, const char* h,
+                                bool reuse_addr) override;
 
   void dispatch_runnable(runnable_ptr ptr) override;
 
@@ -775,10 +776,9 @@ void ipv4_connect(Socket& sock, const std::string& host, uint16_t port) {
   sock = new_ipv4_connection(host, port);
 }
 
-native_socket new_ipv4_acceptor_impl(uint16_t port, const char* addr);
-
 default_socket_acceptor new_ipv4_acceptor(uint16_t port,
-                      const char* addr = nullptr);
+                                          const char* addr = nullptr,
+                                          bool reuse_addr = false);
 
 template <class SocketAcceptor>
 void ipv4_bind(SocketAcceptor& sock,

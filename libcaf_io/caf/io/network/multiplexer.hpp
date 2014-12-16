@@ -75,7 +75,8 @@ class multiplexer {
    * accepting only connections from IP address `in`.
    */
   virtual accept_handle add_tcp_doorman(broker* ptr, uint16_t port,
-                                        const char* in = nullptr) = 0;
+                                        const char* in = nullptr,
+                                        bool reuse_addr = false) = 0;
 
   /**
    * Simple wrapper for runnables

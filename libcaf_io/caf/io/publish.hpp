@@ -29,7 +29,8 @@
 namespace caf {
 namespace io {
 
-void publish_impl(abstract_actor_ptr whom, uint16_t port, const char* in);
+void publish_impl(abstract_actor_ptr whom, uint16_t port,
+                  const char* in, bool reuse_addr);
 
 /**
  * Publishes `whom` at `port`. The connection is managed by the middleman.
@@ -38,11 +39,12 @@ void publish_impl(abstract_actor_ptr whom, uint16_t port, const char* in);
  * @param in The IP address to listen to or `INADDR_ANY` if `in == nullptr`.
  * @throws bind_failure
  */
-inline void publish(caf::actor whom, uint16_t port, const char* in = nullptr) {
+inline void publish(caf::actor whom, uint16_t port, const char* in = nullptr,
+                    bool reuse_addr = false) {
   if (!whom) {
     return;
   }
-  publish_impl(actor_cast<abstract_actor_ptr>(whom), port, in);
+  publish_impl(actor_cast<abstract_actor_ptr>(whom), port, in, reuse_addr);
 }
 
 /**
@@ -50,11 +52,11 @@ inline void publish(caf::actor whom, uint16_t port, const char* in = nullptr) {
  */
 template <class... Rs>
 void typed_publish(typed_actor<Rs...> whom, uint16_t port,
-                   const char* in = nullptr) {
+                   const char* in = nullptr, bool reuse_addr = false) {
   if (!whom) {
     return;
   }
-  publish_impl(actor_cast<abstract_actor_ptr>(whom), port, in);
+  publish_impl(actor_cast<abstract_actor_ptr>(whom), port, in, reuse_addr);
 }
 
 } // namespace io
