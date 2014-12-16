@@ -94,7 +94,7 @@ class cow_tuple<Head, Tail...> {
     return cow_tuple<Tail...>::offset_subtuple(m_vals, 1);
   }
 
-  inline operator message() {
+  inline operator message() const {
     return message{m_vals};
   }
 
