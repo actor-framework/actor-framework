@@ -40,10 +40,6 @@
 #include "caf/detail/apply_args.hpp"
 #include "caf/detail/type_traits.hpp"
 
-// <backward_compatibility version="0.9">
-#include "cppa/cow_tuple.hpp"
-// </backward_compatibility>
-
 namespace caf {
 
 class message_handler;
@@ -73,7 +69,8 @@ struct optional_message_visitor_enable_tpl {
         skip_message_t,
         optional<skip_message_t>
       >::value
-      && !is_message_id_wrapper<T>::value;
+      && !is_message_id_wrapper<T>::value
+      && !std::is_convertible<T, message>::value;
 };
 
 struct optional_message_visitor : static_visitor<bhvr_invoke_result> {
@@ -128,12 +125,14 @@ struct optional_message_visitor : static_visitor<bhvr_invoke_result> {
     return detail::apply_args(*this, detail::get_indices(value), value);
   }
 
-  // <backward_compatibility version="0.9">
-  template <class... Ts>
-  bhvr_invoke_result operator()(cow_tuple<Ts...>& value) const {
-    return static_cast<message>(std::move(value));
+  template <class T>
+  typename std::enable_if<
+    std::is_convertible<T, message>::value,
+    bhvr_invoke_result
+  >::type
+  operator()(const T& value) const {
+    return static_cast<message>(value);
   }
-  // </backward_compatibility>
 
 };
 
