@@ -32,6 +32,8 @@
 #include "caf/detail/types_array.hpp"
 #include "caf/detail/decorated_tuple.hpp"
 
+#include "cppa/cow_tuple.hpp"
+
 namespace caf {
 
 template <class TupleIter, class PatternIter,
