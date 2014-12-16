@@ -43,6 +43,14 @@
 
 using std::string;
 
+namespace {
+#ifdef CAF_MACOS
+constexpr int no_sigpipe_flag = SO_NOSIGPIPE;
+#else
+constexpr int no_sigpipe_flag = MSG_NOSIGNAL;
+#endif
+} // namespace <anonymous>
+
 namespace caf {
 namespace io {
 namespace network {
@@ -549,7 +557,7 @@ void default_multiplexer::wr_dispatch_request(runnable* ptr) {
   // on windows, we actually have sockets, otherwise we have file handles
 # ifdef CAF_WINDOWS
     ::send(m_pipe.second, reinterpret_cast<socket_send_ptr>(&ptrval),
-           sizeof(ptrval), 0);
+           sizeof(ptrval), no_sigpipe_flag);
 # else
     auto unused = ::write(m_pipe.second, &ptrval, sizeof(ptrval));
     static_cast<void>(unused);
@@ -814,7 +822,8 @@ bool read_some(size_t& result, native_socket fd, void* buf, size_t len) {
 
 bool write_some(size_t& result, native_socket fd, const void* buf, size_t len) {
   CAF_LOGF_TRACE(CAF_ARG(fd) << ", " << CAF_ARG(len));
-  auto sres = ::send(fd, reinterpret_cast<socket_send_ptr>(buf), len, 0);
+  auto sres = ::send(fd, reinterpret_cast<socket_send_ptr>(buf),
+                     len, no_sigpipe_flag);
   CAF_LOGF_DEBUG("tried to write " << len << " bytes to socket " << fd
                                    << ", send returned " << sres);
   if (is_error(sres, true))
