@@ -1,3 +1,4 @@
+#include <tuple>
 #include <vector>
 
 #include "test.hpp"
@@ -12,7 +13,7 @@ class fixed_stack : public sb_actor<fixed_stack> {
   fixed_stack(size_t max) : max_size(max)  {
     full = (
       on(atom("push"), arg_match) >> [=](int) { /* discard */ },
-      on(atom("pop")) >> [=]() -> cow_tuple<atom_value, int> {
+      on(atom("pop")) >> [=]() -> std::tuple<atom_value, int> {
         auto result = data.back();
         data.pop_back();
         become(filled);
@@ -24,7 +25,7 @@ class fixed_stack : public sb_actor<fixed_stack> {
         data.push_back(what);
         if (data.size() == max_size) become(full);
       },
-      on(atom("pop")) >> [=]() -> cow_tuple<atom_value, int> {
+      on(atom("pop")) >> [=]() -> std::tuple<atom_value, int> {
         auto result = data.back();
         data.pop_back();
         if (data.empty()) become(empty);

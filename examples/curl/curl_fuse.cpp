@@ -222,7 +222,7 @@ class curl_worker : public base_actor {
     return (
       on(atom("read"), arg_match)
       >> [=](const std::string& fname, uint64_t offset, uint64_t range)
-      -> cow_tuple<atom_value, buffer_type> {
+         -> message {
         print() << "read" << color::reset_endl;
         for (;;) {
           m_buf.clear();
@@ -260,7 +260,7 @@ class curl_worker : public base_actor {
                         << color::reset_endl;
                 // tell parent that this worker is done
                 send(m_parent, atom("finished"));
-                return make_cow_tuple(atom("reply"), m_buf);
+                return make_message(atom("reply"), m_buf);
               case 404: // file does not exist
                 print() << "http error: download failed with "
                         << "'HTTP RETURN CODE': 404 (file does "

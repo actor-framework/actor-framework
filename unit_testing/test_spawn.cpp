@@ -504,7 +504,7 @@ void test_spawn() {
   auto f = [](const string& name) -> behavior {
     return (
       on(atom("get_name")) >> [name] {
-        return make_cow_tuple(atom("name"), name);
+        return make_message(atom("name"), name);
       }
     );
   };
