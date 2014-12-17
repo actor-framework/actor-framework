@@ -290,7 +290,7 @@ while [ $# -ne 0 ]; do
             append_cache_entry CAF_NO_UNIT_TESTS STRING yes
             ;;
         --no-opencl)
-            append_cache_entry CAF_NO_OPENCL STRING yes
+            append_cache_entry CAF_NO_OPENCL STRING no
             ;;
         --build-static)
             append_cache_entry CAF_BUILD_STATIC STRING yes
