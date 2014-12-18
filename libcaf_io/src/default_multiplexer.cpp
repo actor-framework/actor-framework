@@ -767,10 +767,12 @@ accept_handle default_multiplexer::add_tcp_doorman(broker* self,
   return add_tcp_doorman(self, default_socket_acceptor{*this, fd});
 }
 
-accept_handle default_multiplexer::add_tcp_doorman(broker* self, uint16_t port,
-                                                   const char* host,
-                                                   bool reuse_addr) {
-  return add_tcp_doorman(self, new_ipv4_acceptor(port, host, reuse_addr));
+std::pair<accept_handle, uint16_t>
+default_multiplexer::add_tcp_doorman(broker* self, uint16_t port,
+                                     const char* host, bool reuse_addr) {
+  auto acceptor = new_ipv4_acceptor(port, host, reuse_addr);
+  auto bound_port = acceptor.second;
+  return {add_tcp_doorman(self, std::move(acceptor.first)), bound_port};
 }
 
 /******************************************************************************
@@ -949,8 +951,8 @@ default_socket new_ipv4_connection(const std::string& host, uint16_t port) {
   return default_socket{backend, new_ipv4_connection_impl(host, port)};
 }
 
-native_socket new_ipv4_acceptor_impl(uint16_t port, const char* addr,
-                                     bool reuse_addr) {
+std::pair<native_socket, uint16_t>
+new_ipv4_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr) {
   CAF_LOGF_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
 # ifdef CAF_WINDOWS
     // make sure TCP has been initialized via WSAStartup
@@ -983,20 +985,29 @@ native_socket new_ipv4_acceptor_impl(uint16_t port, const char* addr,
     throw bind_failure(last_socket_error_as_string());
   }
   if (listen(fd, SOMAXCONN) != 0) {
-    throw network_error("listen() failed");
+    throw network_error("listen() failed: " + last_socket_error_as_string());
+  }
+  if (port == 0) {
+    socklen_t len = sizeof(serv_addr);
+    if (getsockname(fd, reinterpret_cast<sockaddr*>(&serv_addr), &len) < 0) {
+      throw network_error("getsockname(): " + last_socket_error_as_string());
+    }
   }
   // ok, no exceptions so far
   sguard.release();
-  CAF_LOGF_DEBUG("sockfd = " << fd);
-  return fd;
+  CAF_LOGF_DEBUG("sockfd = " << fd << ", port = " << ntohs(serv_addr.sin_port));
+  return {fd, ntohs(serv_addr.sin_port)};
 }
 
-default_socket_acceptor new_ipv4_acceptor(uint16_t port, const char* addr,
-                                          bool reuse) {
+std::pair<default_socket_acceptor, uint16_t>
+new_ipv4_acceptor(uint16_t port, const char* addr, bool reuse) {
   CAF_LOGF_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
   auto& backend = get_multiplexer_singleton();
-  return default_socket_acceptor{backend,
-                                 new_ipv4_acceptor_impl(port, addr, reuse)};
+  auto acceptor = new_ipv4_acceptor_impl(port, addr, reuse);
+  auto bound_port = acceptor.second;
+  CAF_REQUIRE(bound_port == port);
+  return {default_socket_acceptor{backend, std::move(acceptor.first)},
+                                  bound_port};
 }
 
 } // namespace network

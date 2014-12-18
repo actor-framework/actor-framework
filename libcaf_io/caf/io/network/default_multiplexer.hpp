@@ -313,19 +313,19 @@ class default_multiplexer : public multiplexer {
     event_handler* ptr;
   };
 
-  connection_handle add_tcp_scribe(broker*, default_socket&& sock);
+  connection_handle add_tcp_scribe(broker*, default_socket_acceptor&& sock);
 
   connection_handle add_tcp_scribe(broker*, native_socket fd) override;
 
   connection_handle add_tcp_scribe(broker*, const std::string& h,
                                     uint16_t port) override;
 
-  accept_handle add_tcp_doorman(broker*, default_socket&& sock);
+  accept_handle add_tcp_doorman(broker*, default_socket_acceptor&& sock);
 
   accept_handle add_tcp_doorman(broker*, native_socket fd) override;
 
-  accept_handle add_tcp_doorman(broker*, uint16_t p, const char* h,
-                                bool reuse_addr) override;
+  std::pair<accept_handle, uint16_t>
+  add_tcp_doorman(broker*, uint16_t p, const char* h, bool reuse_addr) override;
 
   void dispatch_runnable(runnable_ptr ptr) override;
 
@@ -776,16 +776,18 @@ void ipv4_connect(Socket& sock, const std::string& host, uint16_t port) {
   sock = new_ipv4_connection(host, port);
 }
 
-default_socket_acceptor new_ipv4_acceptor(uint16_t port,
-                                          const char* addr = nullptr,
-                                          bool reuse_addr = false);
+std::pair<default_socket_acceptor, uint16_t>
+new_ipv4_acceptor(uint16_t port, const char* addr = nullptr,
+                  bool reuse_addr = false);
 
 template <class SocketAcceptor>
-void ipv4_bind(SocketAcceptor& sock,
+uint16_t ipv4_bind(SocketAcceptor& sock,
          uint16_t port,
          const char* addr = nullptr) {
   CAF_LOGF_TRACE(CAF_ARG(port));
-  sock = new_ipv4_acceptor(port, addr);
+  auto acceptor = new_ipv4_acceptor(port, addr);
+  sock = std::move(acceptor.first);
+  return acceptor.second;
 }
 
 } // namespace network

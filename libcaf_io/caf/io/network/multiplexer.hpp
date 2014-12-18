@@ -74,9 +74,9 @@ class multiplexer {
    * Tries to create a new TCP doorman running on port `p`, optionally
    * accepting only connections from IP address `in`.
    */
-  virtual accept_handle add_tcp_doorman(broker* ptr, uint16_t port,
-                                        const char* in = nullptr,
-                                        bool reuse_addr = false) = 0;
+  virtual std::pair<accept_handle, uint16_t>
+  add_tcp_doorman(broker* ptr, uint16_t port, const char* in = nullptr,
+                  bool reuse_addr = false) = 0;
 
   /**
    * Simple wrapper for runnables
