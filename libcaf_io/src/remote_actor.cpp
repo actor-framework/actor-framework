@@ -27,6 +27,8 @@
 #include <cstdint>
 #include <algorithm>
 
+#include "caf/send.hpp"
+#include "caf/scoped_actor.hpp"
 #include "caf/abstract_actor.hpp"
 #include "caf/binary_deserializer.hpp"
 
@@ -39,28 +41,39 @@
 namespace caf {
 namespace io {
 
-abstract_actor_ptr remote_actor_impl(const std::set<std::string>& ifs,
+abstract_actor_ptr remote_actor_impl(std::set<std::string> ifs,
                                      const std::string& host, uint16_t port) {
   auto mm = middleman::instance();
-  std::promise<abstract_actor_ptr> res;
-  basp_broker::client_handshake_data hdata{invalid_node_id, &res, &ifs};
+  scoped_actor self;
+  actor selfhdl = self;
+  basp_broker::client_handshake_data hdata{invalid_node_id,
+                                           selfhdl, std::move(ifs)};
   mm->run_later([&] {
-    std::exception_ptr eptr;
+    std::string err;
     try {
       auto bro = mm->get_named_broker<basp_broker>(atom("_BASP"));
       auto hdl = mm->backend().add_tcp_scribe(bro.get(), host, port);
       bro->init_client(hdl, &hdata);
     }
-    catch (...) {
-      eptr = std::current_exception();
+    catch (std::exception& e) {
+      err = e.what();
     }
-    // accessing `res` inside the catch block triggers
-    // a silly compiler error on GCC 4.7
-    if (eptr) {
-      res.set_exception(std::move(eptr));
+    // accessing variables from the outer scope inside the
+    // catch block triggers a silly compiler error on GCC 4.7
+    if (!err.empty()) {
+      anon_send(selfhdl, atom("ERROR"), std::move(err));
     }
   });
-  return res.get_future().get();
+  abstract_actor_ptr result;
+  self->receive(
+    on(atom("OK"), arg_match) >> [&](const actor& res) {
+      result = actor_cast<abstract_actor_ptr>(res);
+    },
+    on(atom("ERROR"), arg_match) >> [](std::string& str) {
+      throw network_error(std::move(str));
+    }
+  );
+  return result;
 }
 
 } // namespace io

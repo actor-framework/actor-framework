@@ -17,15 +17,16 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include <future>
+#include "caf/io/publish.hpp"
 
+#include "caf/send.hpp"
 #include "caf/actor_cast.hpp"
-
+#include "caf/scoped_actor.hpp"
 #include "caf/abstract_actor.hpp"
+
 #include "caf/detail/singletons.hpp"
 #include "caf/detail/actor_registry.hpp"
 
-#include "caf/io/publish.hpp"
 #include "caf/io/middleman.hpp"
 #include "caf/io/basp_broker.hpp"
 
@@ -36,21 +37,35 @@ void publish_impl(abstract_actor_ptr whom, uint16_t port,
                   const char* in, bool reuse_addr) {
   using namespace detail;
   auto mm = middleman::instance();
-  std::promise<bool> res;
+  scoped_actor self;
+  actor selfhdl = self;
   mm->run_later([&] {
     auto bro = mm->get_named_broker<basp_broker>(atom("_BASP"));
     try {
       auto hdl = mm->backend().add_tcp_doorman(bro.get(), port, in, reuse_addr);
       bro->add_published_actor(hdl, whom, port);
       mm->notify<hook::actor_published>(whom->address(), port);
-      res.set_value(true);
+      anon_send(selfhdl, atom("OK"));
     }
-    catch (...) {
-      res.set_exception(std::current_exception());
+    catch (bind_failure& e) {
+      anon_send(selfhdl, atom("BIND_FAIL"), e.what());
+    }
+    catch (network_error& e) {
+      anon_send(selfhdl, atom("ERROR"), e.what());
     }
   });
   // block caller and re-throw exception here in case of an error
-  res.get_future().get();
+  self->receive(
+    on(atom("OK")) >> [] {
+      // success
+    },
+    on(atom("BIND_FAIL"), arg_match) >> [](std::string& str) {
+      throw bind_failure(std::move(str));
+    },
+    on(atom("ERROR"), arg_match) >> [](std::string& str) {
+      throw network_error(std::move(str));
+    }
+  );
 }
 
 } // namespace io

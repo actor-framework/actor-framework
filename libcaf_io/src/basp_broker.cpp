@@ -74,8 +74,7 @@ behavior basp_broker::make_behavior() {
       if (j != m_ctx.end()) {
         auto hd = j->second.handshake_data;
         if (hd) {
-          network_error err{"disconnect during handshake"};
-          hd->result->set_exception(std::make_exception_ptr(err));
+          send(hd->client, atom("ERROR"), "disconnect during handshake");
         }
         m_ctx.erase(j);
       }
@@ -435,7 +434,7 @@ basp_broker::handle_basp_header(connection_context& ctx,
         auto str = bd.read<string>();
         remote_ifs.insert(std::move(str));
       }
-      auto& ifs = *(ctx.handshake_data->expected_ifs);
+      auto& ifs = ctx.handshake_data->expected_ifs;
       if (!std::includes(ifs.begin(), ifs.end(),
                          remote_ifs.begin(), remote_ifs.end())) {
         auto tostr = [](const std::set<string>& what) -> string {
@@ -476,15 +475,14 @@ basp_broker::handle_basp_header(connection_context& ctx,
                       + iface_str;
         }
         // abort with error
-        std::runtime_error err{error_msg};
-        ctx.handshake_data->result->set_exception(std::make_exception_ptr(err));
+        send(ctx.handshake_data->client, atom("ERROR"), std::move(error_msg));
         return close_connection;
       }
       auto nid = ctx.handshake_data->remote_id;
       if (nid == node()) {
         CAF_LOG_INFO("incoming connection from self: drop connection");
         auto res = detail::singletons::get_actor_registry()->get(remote_aid);
-        ctx.handshake_data->result->set_value(std::move(res));
+        send(ctx.handshake_data->client, atom("OK"), actor_cast<actor>(res));
         ctx.handshake_data = nullptr;
         return close_connection;
       }
@@ -493,7 +491,7 @@ basp_broker::handle_basp_header(connection_context& ctx,
                      << " (re-use old one)");
         auto proxy = m_namespace.get_or_put(nid, remote_aid);
         // discard this peer; there's already an open connection
-        ctx.handshake_data->result->set_value(std::move(proxy));
+        send(ctx.handshake_data->client, atom("OK"), actor_cast<actor>(proxy));
         ctx.handshake_data = nullptr;
         return close_connection;
       }
@@ -506,7 +504,7 @@ basp_broker::handle_basp_header(connection_context& ctx,
       // prepare to receive messages
       auto proxy = m_namespace.get_or_put(nid, remote_aid);
       ctx.published_actor = proxy;
-      ctx.handshake_data->result->set_value(std::move(proxy));
+      send(ctx.handshake_data->client, atom("OK"), actor_cast<actor>(proxy));
       ctx.handshake_data = nullptr;
       parent().notify<hook::new_connection_established>(nid);
       break;
