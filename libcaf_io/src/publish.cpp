@@ -33,8 +33,8 @@
 namespace caf {
 namespace io {
 
-void publish_impl(abstract_actor_ptr whom, uint16_t port,
-                  const char* in, bool reuse_addr) {
+uint16_t publish_impl(abstract_actor_ptr whom, uint16_t port,
+                      const char* in, bool reuse_addr) {
   using namespace detail;
   auto mm = middleman::instance();
   scoped_actor self;
@@ -43,9 +43,9 @@ void publish_impl(abstract_actor_ptr whom, uint16_t port,
     auto bro = mm->get_named_broker<basp_broker>(atom("_BASP"));
     try {
       auto hdl = mm->backend().add_tcp_doorman(bro.get(), port, in, reuse_addr);
-      bro->add_published_actor(hdl, whom, port);
-      mm->notify<hook::actor_published>(whom->address(), port);
-      anon_send(selfhdl, atom("OK"));
+      bro->add_published_actor(std::move(hdl.first), whom, hdl.second);
+      mm->notify<hook::actor_published>(whom->address(), hdl.second);
+      anon_send(selfhdl, atom("OK"), hdl.second);
     }
     catch (bind_failure& e) {
       anon_send(selfhdl, atom("BIND_FAIL"), e.what());
@@ -54,10 +54,11 @@ void publish_impl(abstract_actor_ptr whom, uint16_t port,
       anon_send(selfhdl, atom("ERROR"), e.what());
     }
   });
+  uint16_t bound_port = 0;
   // block caller and re-throw exception here in case of an error
   self->receive(
-    on(atom("OK")) >> [] {
-      // success
+    on(atom("OK"), arg_match) >> [&](uint16_t p) {
+      bound_port = p;
     },
     on(atom("BIND_FAIL"), arg_match) >> [](std::string& str) {
       throw bind_failure(std::move(str));
@@ -66,6 +67,7 @@ void publish_impl(abstract_actor_ptr whom, uint16_t port,
       throw network_error(std::move(str));
     }
   );
+  return bound_port;
 }
 
 } // namespace io

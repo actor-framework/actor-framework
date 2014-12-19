@@ -7,13 +7,21 @@ All functions shown in this section can be accessed by including the header \lst
 \subsection{Publishing of Actors}
 
 \begin{lstlisting}
-void publish(actor whom, std::uint16_t port, const char* addr = 0)
+uint16_t publish(actor whom, uint16_t port, const char* addr = 0, bool reuse_addr = false)
 \end{lstlisting}
 
 The function \lstinline^publish^ binds an actor to a given port.
-It throws \lstinline^network_error^ if socket related errors occur or \lstinline^bind_failure^ if the specified port is already in use.
-The optional \lstinline^addr^ parameter can be used to listen only to the given IP address.
+To choose the next high-level port available available for binding, one can specify \lstinline^port == 0^ and retrieves the bound port as return value.
+The return value is equal to \lstinline^port^ if \lstinline^port != 0^.
+The function throws \lstinline^network_error^ if socket related errors occur or \lstinline^bind_failure^ if the specified port is already in use.
+The optional \lstinline^addr^ parameter can be used to listen only to the given address.
 Otherwise, the actor accepts all incoming connections (\lstinline^INADDR_ANY^).
+The flag \lstinline^reuse_addr^ controls the behavior when binding an IP
+address to a port, with the same semantics as the BSD socket flag \lstinline^SO_REUSEADDR^.
+For example, if \lstinline^reuse_addr = false^, binding two sockets to 0.0.0.0:42 and 10.0.0.1:42 will fail with \texttt{EADDRINUSE} since 0.0.0.0 includes 10.0.0.1. 
+With \lstinline^reuse_addr = true^ binding would succeed because 10.0.0.1 and
+0.0.0.0 are not literally equal addresses.
+
 
 \begin{lstlisting}
 publish(self, 4242);

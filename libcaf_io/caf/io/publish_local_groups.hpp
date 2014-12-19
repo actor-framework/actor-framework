@@ -27,10 +27,12 @@ namespace io {
 
 /**
  * Makes *all* local groups accessible via network on address `addr` and `port`.
+ * @returns The actual port the OS uses after `bind()`. If `port == 0` the OS
+ *          chooses a random high-level port.
  * @throws bind_failure
  * @throws network_error
  */
-void publish_local_groups(uint16_t port, const char* addr = nullptr);
+uint16_t publish_local_groups(uint16_t port, const char* addr = nullptr);
 
 } // namespace io
 } // namespace caf
