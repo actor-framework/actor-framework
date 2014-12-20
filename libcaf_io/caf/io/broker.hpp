@@ -264,21 +264,6 @@ class broker : public extend<local_actor>::
   void enqueue(const actor_addr&, message_id, message,
                execution_unit*) override;
 
-  template <class F>
-  static broker_ptr from(F fun) {
-    // transform to STD function here, because GCC is unable
-    // to select proper overload otherwise ...
-    using fres = decltype(fun(static_cast<broker*>(nullptr)));
-    std::function<fres(broker*)> stdfun{std::move(fun)};
-    return from_impl(std::move(stdfun));
-  }
-
-  template <class F, typename T, class... Ts>
-  static broker_ptr from(F fun, T&& v, Ts&&... vs) {
-    return from(std::bind(fun, std::placeholders::_1, std::forward<T>(v),
-                          std::forward<Ts>(vs)...));
-  }
-
   /**
    * Closes all connections and acceptors.
    */
