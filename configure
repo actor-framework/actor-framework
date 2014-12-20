@@ -91,7 +91,16 @@ $benchmark_suite_options"
 #   $3 is the cache entry variable value
 append_cache_entry ()
 {
-    CMakeCacheEntries="$CMakeCacheEntries \"-D $1:$2=$3\""
+    case "$3" in
+        *\ * )
+            # string contains whitespace
+            CMakeCacheEntries="$CMakeCacheEntries -D \"$1:$2=$3\""
+            ;;
+        *)
+            # string contains whitespace
+            CMakeCacheEntries="$CMakeCacheEntries -D $1:$2=$3"
+            ;;
+    esac
 }
 
 # Creates a build directory via CMake.
