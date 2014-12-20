@@ -504,8 +504,8 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   // returns 0 if last_dequeued() is an asynchronous or sync request message,
   // a response id generated from the request id otherwise
   inline message_id get_response_id() {
-    auto id = m_current_node->mid;
-    return (id.is_request()) ? id.response_id() : message_id();
+    auto mid = m_current_node->mid;
+    return (mid.is_request()) ? mid.response_id() : message_id();
   }
 
   void reply_message(message&& what);

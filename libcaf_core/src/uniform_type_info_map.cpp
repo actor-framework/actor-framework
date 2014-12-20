@@ -600,10 +600,10 @@ protected:
 
 class default_meta_message : public uniform_type_info {
  public:
-  default_meta_message(const std::string& name) {
-    m_name = name;
+  default_meta_message(const std::string& tname) {
+    m_name = tname;
     std::vector<std::string> elements;
-    split(elements, name, is_any_of("+"));
+    split(elements, tname, is_any_of("+"));
     auto uti_map = detail::singletons::get_uniform_type_info_map();
     CAF_REQUIRE(elements.size() > 0 && elements.front() == "@<>");
     // ignore first element, because it's always "@<>"

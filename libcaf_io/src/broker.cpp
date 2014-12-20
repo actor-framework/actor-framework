@@ -62,8 +62,9 @@ void broker::servant::disconnect(bool invoke_disconnect_message) {
   }
 }
 
-broker::scribe::scribe(broker* parent, connection_handle hdl)
-    : servant(parent), m_hdl(hdl) {
+broker::scribe::scribe(broker* ptr, connection_handle conn_hdl)
+    : servant(ptr),
+      m_hdl(conn_hdl) {
   std::vector<char> tmp;
   m_read_msg = make_message(new_data_msg{m_hdl, std::move(tmp)});
 }
@@ -100,8 +101,8 @@ void broker::scribe::io_failure(network::operation op) {
   disconnect(true);
 }
 
-broker::doorman::doorman(broker* parent, accept_handle hdl)
-    : servant(parent), m_hdl(hdl) {
+broker::doorman::doorman(broker* ptr, accept_handle acc_hdl)
+    : servant(ptr), m_hdl(acc_hdl) {
   auto hdl2 = connection_handle::from_int(-1);
   m_accept_msg = make_message(new_connection_msg{m_hdl, hdl2});
 }
@@ -334,8 +335,8 @@ void broker::close_all() {
 
 std::vector<connection_handle> broker::connections() const {
   std::vector<connection_handle> result;
-  for (auto& scribe : m_scribes) {
-    result.push_back(scribe.first);
+  for (auto& kvp : m_scribes) {
+    result.push_back(kvp.first);
   }
   return result;
 }

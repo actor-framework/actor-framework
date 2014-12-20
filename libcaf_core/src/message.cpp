@@ -33,7 +33,7 @@ message::message(message&& other) : m_vals(std::move(other.m_vals)) {
   // nop
 }
 
-message::message(const data_ptr& vals) : m_vals(vals) {
+message::message(const data_ptr& ptr) : m_vals(ptr) {
   // nop
 }
 

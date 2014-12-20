@@ -676,8 +676,8 @@ connection_handle default_multiplexer::add_tcp_scribe(broker* self,
   CAF_LOG_TRACE("");
   class impl : public broker::scribe {
    public:
-    impl(broker* parent, default_socket&& s)
-        : scribe(parent, network::conn_hdl_from_socket(s)),
+    impl(broker* ptr, default_socket&& s)
+        : scribe(ptr, network::conn_hdl_from_socket(s)),
           m_launched(false),
           m_stream(s.backend()) {
       m_stream.init(std::move(s));
@@ -723,8 +723,8 @@ accept_handle default_multiplexer::add_tcp_doorman(broker* self,
   CAF_REQUIRE(sock.fd() != network::invalid_native_socket);
   class impl : public broker::doorman {
    public:
-    impl(broker* parent, default_socket_acceptor&& s)
-        : doorman(parent, network::accept_hdl_from_socket(s)),
+    impl(broker* ptr, default_socket_acceptor&& s)
+        : doorman(ptr, network::accept_hdl_from_socket(s)),
           m_acceptor(s.backend()) {
       m_acceptor.init(std::move(s));
     }
@@ -861,11 +861,11 @@ event_handler::~event_handler() {
   // nop
 }
 
-default_socket::default_socket(default_multiplexer& parent, native_socket fd)
-    : m_parent(parent),
-      m_fd(fd) {
-  CAF_LOG_TRACE(CAF_ARG(fd));
-  if (fd != invalid_native_socket) {
+default_socket::default_socket(default_multiplexer& ref, native_socket sockfd)
+    : m_parent(ref),
+      m_fd(sockfd) {
+  CAF_LOG_TRACE(CAF_ARG(sockfd));
+  if (sockfd != invalid_native_socket) {
     // enable nonblocking IO & disable Nagle's algorithm
     nonblocking(m_fd, true);
     tcp_nodelay(m_fd, true);

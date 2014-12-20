@@ -24,9 +24,9 @@
 namespace caf {
 namespace detail {
 
-message_iterator::message_iterator(const_pointer data, size_t pos)
+message_iterator::message_iterator(const_pointer dataptr, size_t pos)
     : m_pos(pos),
-      m_data(data) {
+      m_data(dataptr) {
   // nop
 }
 

@@ -35,7 +35,7 @@ struct float_or_int : event_based_actor {
 
 struct popular_actor : event_based_actor { // popular actors have a buddy
   actor m_buddy;
-  popular_actor(const actor& buddy) : m_buddy(buddy) {
+  popular_actor(const actor& buddy_arg) : m_buddy(buddy_arg) {
     // nop
   }
   inline const actor& buddy() const {
@@ -62,7 +62,7 @@ struct popular_actor : event_based_actor { // popular actors have a buddy
 \ ******************************************************************************/
 
 struct A : popular_actor {
-  A(const actor& buddy) : popular_actor(buddy) {
+  A(const actor& buddy_arg) : popular_actor(buddy_arg) {
     // nop
   }
   behavior make_behavior() override {
@@ -85,7 +85,7 @@ struct A : popular_actor {
 };
 
 struct B : popular_actor {
-  B(const actor& buddy) : popular_actor(buddy) {
+  B(const actor& buddy_arg) : popular_actor(buddy_arg) {
     // nop
   }
   behavior make_behavior() override {
@@ -127,7 +127,7 @@ struct C : event_based_actor {
 \ ******************************************************************************/
 
 struct D : popular_actor {
-  D(const actor& buddy) : popular_actor(buddy) {}
+  D(const actor& buddy_arg) : popular_actor(buddy_arg) {}
   behavior make_behavior() override {
     return {
       others() >> [=] {

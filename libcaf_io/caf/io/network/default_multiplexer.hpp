@@ -246,8 +246,8 @@ class event_handler {
   /**
    * Sets the bit field storing the subscribed events.
    */
-  inline void eventbf(int eventbf) {
-    m_eventbf = eventbf;
+  inline void eventbf(int value) {
+    m_eventbf = value;
   }
 
   /**
@@ -442,9 +442,9 @@ class stream : public event_handler {
    */
   using buffer_type = std::vector<char>;
 
-  stream(default_multiplexer& backend)
-      : event_handler(backend),
-        m_sock(backend),
+  stream(default_multiplexer& backend_ref)
+      : event_handler(backend_ref),
+        m_sock(backend_ref),
         m_writing(false) {
     configure_read(receive_policy::at_most(1024));
   }
@@ -466,8 +466,8 @@ class stream : public event_handler {
   /**
    * Initializes this stream, setting the socket handle to `fd`.
    */
-  void init(Socket fd) {
-    m_sock = std::move(fd);
+  void init(Socket sockfd) {
+    m_sock = std::move(sockfd);
   }
 
   /**
@@ -681,10 +681,10 @@ class acceptor : public event_handler {
    */
   using manager_ptr = intrusive_ptr<manager_type>;
 
-  acceptor(default_multiplexer& backend)
-      : event_handler(backend),
-        m_accept_sock(backend),
-        m_sock(backend) {
+  acceptor(default_multiplexer& backend_ref)
+      : event_handler(backend_ref),
+        m_accept_sock(backend_ref),
+        m_sock(backend_ref) {
     // nop
   }
 
@@ -737,10 +737,10 @@ class acceptor : public event_handler {
     CAF_LOG_TRACE("m_accept_sock.fd = " << m_accept_sock.fd()
              << ", op = " << static_cast<int>(op));
     if (m_mgr && op == operation::read) {
-      native_socket fd = invalid_native_socket;
-      if (try_accept(fd, m_accept_sock.fd())) {
-        if (fd != invalid_native_socket) {
-          m_sock = socket_type{backend(), fd};
+      native_socket sockfd = invalid_native_socket;
+      if (try_accept(sockfd, m_accept_sock.fd())) {
+        if (sockfd != invalid_native_socket) {
+          m_sock = socket_type{backend(), sockfd};
           m_mgr->new_connection();
         }
       }

@@ -103,13 +103,13 @@ void local_actor::reply_message(message&& what) {
   if (!whom) {
     return;
   }
-  auto& id = m_current_node->mid;
-  if (id.valid() == false || id.is_response()) {
+  auto& mid = m_current_node->mid;
+  if (mid.valid() == false || mid.is_response()) {
     send_tuple(actor_cast<channel>(whom), std::move(what));
-  } else if (!id.is_answered()) {
+  } else if (!mid.is_answered()) {
     auto ptr = actor_cast<actor>(whom);
-    ptr->enqueue(address(), id.response_id(), std::move(what), host());
-    id.mark_as_answered();
+    ptr->enqueue(address(), mid.response_id(), std::move(what), host());
+    mid.mark_as_answered();
   }
 }
 
@@ -117,10 +117,10 @@ void local_actor::forward_message(const actor& dest, message_priority prio) {
   if (!dest) {
     return;
   }
-  auto id = (prio == message_priority::high)
-              ? m_current_node->mid.with_high_priority()
-              : m_current_node->mid.with_normal_priority();
-  dest->enqueue(m_current_node->sender, id, m_current_node->msg, host());
+  auto mid = (prio == message_priority::high)
+               ? m_current_node->mid.with_high_priority()
+               : m_current_node->mid.with_normal_priority();
+  dest->enqueue(m_current_node->sender, mid, m_current_node->msg, host());
   // treat this message as asynchronous message from now on
   m_current_node->mid = invalid_message_id;
 }
@@ -130,11 +130,11 @@ void local_actor::send_tuple(message_priority prio, const channel& dest,
   if (!dest) {
     return;
   }
-  message_id id;
+  message_id mid;
   if (prio == message_priority::high) {
-    id = id.with_high_priority();
+    mid = mid.with_high_priority();
   }
-  dest->enqueue(address(), id, std::move(what), host());
+  dest->enqueue(address(), mid, std::move(what), host());
 }
 
 void local_actor::send_exit(const actor_addr& whom, uint32_t reason) {
