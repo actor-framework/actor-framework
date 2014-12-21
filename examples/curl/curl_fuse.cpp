@@ -38,6 +38,7 @@
 // C++ includes
 #include <string>
 #include <vector>
+#include <random>
 #include <iostream>
 
 // libcurl
@@ -46,7 +47,7 @@
 // libcaf
 #include "caf/all.hpp"
 
-// disable some clang warnings here caused by CURL and srand(time(nullptr))
+// disable some clang warnings here caused by CURL
 #ifdef __clang__
 #   pragma clang diagnostic ignored "-Wshorten-64-to-32"
 #   pragma clang diagnostic ignored "-Wdisabled-macro-expansion"
@@ -166,7 +167,10 @@ class client : public base_actor {
  public:
 
   client(const actor& parent)
-      : base_actor(parent, "client", color::green), m_count(0) {
+      : base_actor(parent, "client", color::green),
+        m_count(0),
+        m_re(m_rd()),
+        m_dist(min_req_interval, max_req_interval) {
     // nop
   }
 
@@ -189,7 +193,7 @@ class client : public base_actor {
         // and should thus be spawned in a separate thread
         spawn<client_job, detached+linked>(m_parent);
         // compute random delay until next job is launched
-        auto delay = (rand() + min_req_interval) % max_req_interval;
+        auto delay = m_dist(m_re);
         delayed_send(this, milliseconds(delay), atom("next"));
       }
     );
@@ -197,6 +201,9 @@ class client : public base_actor {
 
  private:
   size_t m_count;
+  std::random_device m_rd;
+  std::default_random_engine m_re;
+  std::uniform_int_distribution<int> m_dist;
 };
 
 client::~client() {
@@ -374,7 +381,6 @@ std::atomic<bool> shutdown_flag{false};
 
 int main() {
   // random number setup
-  srand(time(nullptr));
   // install signal handler
   struct sigaction act;
   act.sa_handler = [](int) { shutdown_flag = true; };
