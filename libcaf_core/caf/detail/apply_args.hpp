@@ -20,6 +20,8 @@
 #ifndef CAF_DETAIL_APPLY_ARGS_HPP
 #define CAF_DETAIL_APPLY_ARGS_HPP
 
+#include <utility>
+
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/type_list.hpp"
 
