@@ -65,6 +65,8 @@ namespace {
 using byte = unsigned char;
 using dword = uint32_t;
 
+static_assert(sizeof(dword) == sizeof(unsigned), "platform not supported");
+
 // macro definitions
 
 // collect four bytes into one word:
@@ -95,28 +97,28 @@ using dword = uint32_t;
 
 #define GG(a, b, c, d, e, x, s)                                                \
   {                                                                            \
-    (a) += G((b), (c), (d)) + (x) + 0x5a827999UL;                              \
+    (a) += G((b), (c), (d)) + (x) + 0x5a827999U;                               \
     (a) = ROL((a), (s)) + (e);                                                 \
     (c) = ROL((c), 10);                                                        \
   }
 
 #define HH(a, b, c, d, e, x, s)                                                \
   {                                                                            \
-    (a) += H((b), (c), (d)) + (x) + 0x6ed9eba1UL;                              \
+    (a) += H((b), (c), (d)) + (x) + 0x6ed9eba1U;                               \
     (a) = ROL((a), (s)) + (e);                                                 \
     (c) = ROL((c), 10);                                                        \
   }
 
 #define II(a, b, c, d, e, x, s)                                                \
   {                                                                            \
-    (a) += I((b), (c), (d)) + (x) + 0x8f1bbcdcUL;                              \
+    (a) += I((b), (c), (d)) + (x) + 0x8f1bbcdcU;                               \
     (a) = ROL((a), (s)) + (e);                                                 \
     (c) = ROL((c), 10);                                                        \
   }
 
 #define JJ(a, b, c, d, e, x, s)                                                \
   {                                                                            \
-    (a) += J((b), (c), (d)) + (x) + 0xa953fd4eUL;                              \
+    (a) += J((b), (c), (d)) + (x) + 0xa953fd4eU;                               \
     (a) = ROL((a), (s)) + (e);                                                 \
     (c) = ROL((c), 10);                                                        \
   }
@@ -130,28 +132,28 @@ using dword = uint32_t;
 
 #define GGG(a, b, c, d, e, x, s)                                               \
   {                                                                            \
-    (a) += G((b), (c), (d)) + (x) + 0x7a6d76e9UL;                              \
+    (a) += G((b), (c), (d)) + (x) + 0x7a6d76e9U;                               \
     (a) = ROL((a), (s)) + (e);                                                 \
     (c) = ROL((c), 10);                                                        \
   }
 
 #define HHH(a, b, c, d, e, x, s)                                               \
   {                                                                            \
-    (a) += H((b), (c), (d)) + (x) + 0x6d703ef3UL;                              \
+    (a) += H((b), (c), (d)) + (x) + 0x6d703ef3U;                               \
     (a) = ROL((a), (s)) + (e);                                                 \
     (c) = ROL((c), 10);                                                        \
   }
 
 #define III(a, b, c, d, e, x, s)                                               \
   {                                                                            \
-    (a) += I((b), (c), (d)) + (x) + 0x5c4dd124UL;                              \
+    (a) += I((b), (c), (d)) + (x) + 0x5c4dd124U;                               \
     (a) = ROL((a), (s)) + (e);                                                 \
     (c) = ROL((c), 10);                                                        \
   }
 
 #define JJJ(a, b, c, d, e, x, s)                                               \
   {                                                                            \
-    (a) += J((b), (c), (d)) + (x) + 0x50a28be6UL;                              \
+    (a) += J((b), (c), (d)) + (x) + 0x50a28be6U;                               \
     (a) = ROL((a), (s)) + (e);                                                 \
     (c) = ROL((c), 10);                                                        \
   }
