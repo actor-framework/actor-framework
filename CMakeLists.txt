@@ -117,7 +117,7 @@ if(MORE_WARNINGS)
                "-Wno-unused-const-variable -Wno-switch-enum "
                "-Wno-missing-noreturn")
   elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
-    set(WFLAGS "-Waddress -Waggressive-loop-optimizations -Wall -Warray-bounds "
+    set(WFLAGS "-Waddress -Wall -Warray-bounds "
                "-Wattributes -Wbuiltin-macro-redefined -Wcast-align "
                "-Wcast-qual -Wchar-subscripts -Wclobbered -Wcomment "
                "-Wconversion -Wconversion-null -Wcoverage-mismatch "
@@ -125,19 +125,20 @@ if(MORE_WARNINGS)
                "-Wdeprecated-declarations -Wdiv-by-zero -Wdouble-promotion "
                "-Wempty-body -Wendif-labels -Wenum-compare -Wextra "
                "-Wfloat-equal -Wformat -Wfree-nonheap-object "
-               "-Wignored-qualifiers -Winherited-variadic-ctor -Winit-self "
+               "-Wignored-qualifiers -Winit-self "
                "-Winline -Wint-to-pointer-cast -Winvalid-memory-model "
                "-Winvalid-offsetof -Wlogical-op -Wmain -Wmaybe-uninitialized "
                "-Wmissing-braces -Wmissing-field-initializers -Wmultichar "
                "-Wnarrowing -Wnoexcept -Wnon-template-friend "
-               "-Wnon-virtual-dtor -Wnonnull -Wold-style-cast -Woverflow "
-               "-Woverlength-strings -Wparentheses -Wpedantic "
+               "-Wnon-virtual-dtor -Wnonnull -Woverflow "
+               "-Woverlength-strings -Wparentheses "
                "-Wpmf-conversions -Wpointer-arith -Wreorder "
-               "-Wreturn-local-addr -Wreturn-type -Wsequence-point -Wshadow "
+               "-Wreturn-type -Wsequence-point -Wshadow "
                "-Wsign-compare -Wsign-promo -Wswitch -Wtype-limits -Wundef "
-               "-Wuninitialized -Wunused -Wvirtual-move-assign -Wvla "
-               "-Wwrite-strings -Wzero-as-null-pointer-constant")
+               "-Wuninitialized -Wunused -Wvla -Wwrite-strings"
+)
   endif()
+  # convert CMake list to a single string, erasing the ";" separators
   string(REPLACE ";" "" WFLAGS_STR ${WFLAGS})
   set(EXTRA_FLAGS "${EXTRA_FLAGS} ${WFLAGS_STR}")
 endif()
@@ -395,6 +396,12 @@ if(DOXYGEN_FOUND)
                     VERBATIM)
 endif(DOXYGEN_FOUND)
 
+
+################################################################################
+#                     Add additional project files to GUI                      #
+################################################################################
+
+add_custom_target(gui_dummy SOURCES configure)
 
 ################################################################################
 #                                print summary                                 #
