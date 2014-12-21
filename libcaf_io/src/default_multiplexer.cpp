@@ -1005,7 +1005,7 @@ new_ipv4_acceptor(uint16_t port, const char* addr, bool reuse) {
   auto& backend = get_multiplexer_singleton();
   auto acceptor = new_ipv4_acceptor_impl(port, addr, reuse);
   auto bound_port = acceptor.second;
-  CAF_REQUIRE(bound_port == port);
+  CAF_REQUIRE(port == 0 || bound_port == port);
   return {default_socket_acceptor{backend, std::move(acceptor.first)},
                                   bound_port};
 }
