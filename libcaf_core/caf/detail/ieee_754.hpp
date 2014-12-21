@@ -68,7 +68,9 @@ typename ieee_754_trait<T>::packed_type pack754(T f) {
   typedef ieee_754_trait<T> trait; // using trait = ... fails on GCC 4.7
   using result_type = typename trait::packed_type;
   // filter special type
-  if (fabs(f) <= trait::zero) return 0; // only true if f equals +0 or -0
+  if (std::fabs(f) <= trait::zero) {
+    return 0; // only true if f equals +0 or -0
+  }
   auto significandbits = trait::bits - trait::expbits - 1; // -1 for sign bit
   // check sign and begin normalization
   result_type sign;
