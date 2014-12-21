@@ -151,9 +151,21 @@ if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
 endif()
 # enable address sanitizer if requested by the user
 if(ENABLE_ADDRESS_SANITIZER)
-  message(STATUS "Enable address sanitizer")
-  set(EXTRA_FLAGS
-      "${EXTRA_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+  # check whether address sanitizer is available
+  set(CXXFLAGS_BACKUP "${CMAKE_CXX_FLAGS}")
+  set(CMAKE_CXX_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
+  try_run(ProgramResult
+          CompilationSucceeded
+          "${CMAKE_BINARY_DIR}"
+          "${CMAKE_CURRENT_SOURCE_DIR}/cmake/get_compiler_version.cpp")
+  if(NOT CompilationSucceeded)
+    message(WARNING "Address Sanitizer is not available on selected compiler")
+  else()
+    message(STATUS "Enable Address Sanitizer")
+    set(EXTRA_FLAGS "${EXTRA_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+  endif()
+  # restore CXX flags
+  set(CMAKE_CXX_FLAGS "${CXXFLAGS_BACKUP}")
 endif(ENABLE_ADDRESS_SANITIZER)
 # -pthread is ignored on MacOSX but required on other platforms
 if(NOT APPLE AND NOT WIN32)
