@@ -134,7 +134,7 @@ if(MORE_WARNINGS)
                "-Woverlength-strings -Wparentheses "
                "-Wpmf-conversions -Wpointer-arith -Wreorder "
                "-Wreturn-type -Wsequence-point -Wshadow "
-               "-Wsign-compare -Wsign-promo -Wswitch -Wtype-limits -Wundef "
+               "-Wsign-compare -Wswitch -Wtype-limits -Wundef "
                "-Wuninitialized -Wunused -Wvla -Wwrite-strings"
 )
   endif()
