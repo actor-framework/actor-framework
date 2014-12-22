@@ -92,8 +92,8 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
       throw std::runtime_error(oss.str());
     }
     if (result_size == 0) {
-      result_size = std::accumulate(global_dims.begin(), global_dims.end(), 1,
-                                    std::multiplies<size_t>{});
+      result_size = std::accumulate(global_dims.begin(), global_dims.end(),
+                                    size_t{1}, std::multiplies<size_t>{});
     }
     return new actor_facade<Ret(Args...)>{
       prog,       kernel,              global_dims,           offsets,
