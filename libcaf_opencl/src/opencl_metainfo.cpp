@@ -19,10 +19,64 @@
 
 #include "caf/opencl/opencl_metainfo.hpp"
 
-using namespace std;
+#define CAF_CLF(funname) #funname , funname
 
 namespace caf {
 namespace opencl {
+
+namespace {
+
+void throwcl(const char* fname, cl_int err) {
+  if (err != CL_SUCCESS) {
+    std::string errstr = fname;
+    errstr += ": ";
+    errstr += get_opencl_error(err);
+    throw std::runtime_error(std::move(errstr));
+  }
+}
+
+// call convention for simply calling a function, not using the last argument
+template <class F, class... Ts>
+void callcl(const char* fname, F f, Ts&&... vs) {
+  throwcl(fname, f(std::forward<Ts>(vs)..., nullptr));
+}
+
+// call convention with `result` argument at the end returning `err`, not
+// using the second last argument (set to nullptr) nor the one before (set to 0)
+template <class R, class F, class... Ts>
+R v1get(const char* fname, F f, Ts&&... vs) {
+  R result;
+  throwcl(fname, f(std::forward<Ts>(vs)..., cl_uint{0}, nullptr, &result));
+  return result;
+}
+
+// call convention with `err` argument at the end returning `result`
+template <class F, class... Ts>
+auto v2get(const char* fname, F f, Ts&&... vs)
+-> decltype(f(std::forward<Ts>(vs)..., nullptr)) {
+  cl_int err;
+  auto result = f(std::forward<Ts>(vs)..., &err);
+  throwcl(fname, err);
+  return result;
+}
+
+// call convention with `result` argument at second last position (preceeded by
+// its size) followed by an ingored void* argument (nullptr) returning `err`
+template <class R, class F, class... Ts>
+R v3get(const char* fname, F f, Ts&&... vs) {
+  R result;
+  throwcl(fname, f(std::forward<Ts>(vs)..., sizeof(R), &result, nullptr));
+  return result;
+}
+
+void pfn_notify(const char* errinfo, const void*, size_t, void*) {
+  CAF_LOGC_ERROR("caf::opencl::opencl_metainfo", "initialize",
+                 "\n##### Error message via pfn_notify #####\n"
+                 << errinfo <<
+                 "\n########################################");
+}
+
+} // namespace <anonymous>
 
 opencl_metainfo* opencl_metainfo::instance() {
   auto sid = detail::singletons::opencl_plugin_id;
@@ -36,131 +90,64 @@ const std::vector<device_info> opencl_metainfo::get_devices() const {
 }
 
 void opencl_metainfo::initialize() {
-  cl_int err{0};
   // get number of available platforms
-  cl_uint number_of_platforms;
-  err = clGetPlatformIDs(0, nullptr, &number_of_platforms);
-  if (err != CL_SUCCESS) {
-    ostringstream oss;
-    oss << "clGetPlatformIDs (getting number of platforms): "
-        << get_opencl_error(err);
-    CAF_LOGMF(CAF_ERROR, oss.str());
-    throw logic_error(oss.str());
-  }
+  auto num_platforms = v1get<cl_uint>(CAF_CLF(clGetPlatformIDs));
   // get platform ids
-  vector<cl_platform_id> ids(number_of_platforms);
-  err = clGetPlatformIDs(ids.size(), ids.data(), nullptr);
-  if (err != CL_SUCCESS) {
-    ostringstream oss;
-    oss << "clGetPlatformIDs (getting platform ids): " << get_opencl_error(err);
-    CAF_LOGMF(CAF_ERROR, oss.str());
-    throw logic_error(oss.str());
+  std::vector<cl_platform_id> platforms(num_platforms);
+  callcl(CAF_CLF(clGetPlatformIDs), num_platforms, platforms.data());
+  if (platforms.empty()) {
+    throw std::runtime_error("no OpenCL platform found");
   }
-  // find gpu devices on our platform
-  int pid{0};
-  cl_uint num_devices{0};
-  cl_device_type dev_type{CL_DEVICE_TYPE_GPU};
-  err = clGetDeviceIDs(ids[pid], dev_type, 0, nullptr, &num_devices);
-  if (err == CL_DEVICE_NOT_FOUND) {
-    CAF_LOG_TRACE("No gpu devices found. Looking for cpu devices.");
-    cout << "No gpu devices found. Looking for cpu devices." << endl;
+  // support multiple platforms -> "for (auto platform : platforms)"?
+  auto platform = platforms.front();
+  // detect how many devices we got
+  cl_uint num_devs = 0;
+  cl_device_type dev_type = CL_DEVICE_TYPE_GPU;
+  // try get some GPU devices and try falling back to CPU devices on error
+  try {
+    num_devs = v1get<cl_uint>(CAF_CLF(clGetDeviceIDs), platform, dev_type);
+  }
+  catch (std::runtime_error&) {
     dev_type = CL_DEVICE_TYPE_CPU;
-    err = clGetDeviceIDs(ids[pid], dev_type, 0, nullptr, &num_devices);
+    num_devs = v1get<cl_uint>(CAF_CLF(clGetDeviceIDs), platform, dev_type);
   }
-  if (err != CL_SUCCESS) {
-    ostringstream oss;
-    oss << "clGetDeviceIDs: " << get_opencl_error(err);
-    CAF_LOGMF(CAF_ERROR, oss.str());
-    throw runtime_error(oss.str());
-  }
-  vector<cl_device_id> devices(num_devices);
-  err =
-    clGetDeviceIDs(ids[pid], dev_type, num_devices, devices.data(), nullptr);
-  if (err != CL_SUCCESS) {
-    ostringstream oss;
-    oss << "clGetDeviceIDs: " << get_opencl_error(err);
-    CAF_LOGMF(CAF_ERROR, oss.str());
-    throw runtime_error(oss.str());
-  }
-  auto pfn_notify = [](const char* errinfo, const void*, size_t, void*) {
-    CAF_LOGC_ERROR("caf::opencl::opencl_metainfo", "initialize",
-                   "\n##### Error message via pfn_notify #####\n" +
-                     string(errinfo) +
-                     "\n########################################");
-  };
+  // get available devices
+  std::vector<cl_device_id> ds(num_devs);
+  callcl(CAF_CLF(clGetDeviceIDs), platform, dev_type, num_devs, ds.data());
+  std::vector<device_ptr> devices(num_devs);
+  // lift raw pointer as returned by OpenCL to C++ smart pointers
+  auto lift = [](cl_device_id ptr) { return device_ptr{ptr, false}; };
+  std::transform(ds.begin(), ds.end(), devices.begin(), lift);
   // create a context
-  m_context.adopt(clCreateContext(0, devices.size(), devices.data(), pfn_notify,
-                                  nullptr, &err));
-  if (err != CL_SUCCESS) {
-    ostringstream oss;
-    oss << "clCreateContext: " << get_opencl_error(err);
-    CAF_LOGMF(CAF_ERROR, oss.str());
-    throw runtime_error(oss.str());
-  }
-  for (auto& d : devices) {
-    CAF_LOG_TRACE("Creating command queue for device(s).");
-    device_ptr device;
-    device.adopt(d);
-    size_t return_size{0};
-    static constexpr size_t buf_size = 128;
-    char buf[buf_size];
-    err = clGetDeviceInfo(device.get(), CL_DEVICE_NAME, buf_size, buf,
-                          &return_size);
-    if (err != CL_SUCCESS) {
-      CAF_LOGMF(CAF_ERROR,
-                "clGetDeviceInfo (CL_DEVICE_NAME): " << get_opencl_error(err));
-      fill(buf, buf + buf_size, 0);
-    }
+  m_context.adopt(v2get(CAF_CLF(clCreateContext), nullptr, num_devs, ds.data(),
+                        pfn_notify, nullptr));
+  for (auto& device : devices) {
+    CAF_LOG_DEBUG("creating command queue for device(s)");
     command_queue_ptr cmd_queue;
-    cmd_queue.adopt(clCreateCommandQueue(m_context.get(), device.get(),
-                                         CL_QUEUE_PROFILING_ENABLE, &err));
-    if (err != CL_SUCCESS) {
-      CAF_LOGMF(CAF_DEBUG, "Could not create command queue for device "
-                             << buf << ": " << get_opencl_error(err));
-    } else {
-      size_t max_work_group_size{0};
-      err = clGetDeviceInfo(device.get(), CL_DEVICE_MAX_WORK_GROUP_SIZE,
-                            sizeof(size_t), &max_work_group_size, &return_size);
-      if (err != CL_SUCCESS) {
-        ostringstream oss;
-        oss << "clGetDeviceInfo ("
-            << "CL_DEVICE_MAX_WORK_GROUP_SIZE): " << get_opencl_error(err);
-        CAF_LOGMF(CAF_ERROR, oss.str());
-        throw runtime_error(oss.str());
-      }
-      cl_uint max_work_item_dimensions = 0;
-      err = clGetDeviceInfo(device.get(), CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS,
-                            sizeof(cl_uint), &max_work_item_dimensions,
-                            &return_size);
-      if (err != CL_SUCCESS) {
-        ostringstream oss;
-        oss << "clGetDeviceInfo ("
-            << "CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS): " << get_opencl_error(err);
-        CAF_LOGMF(CAF_ERROR, oss.str());
-        throw runtime_error(oss.str());
-      }
-      dim_vec max_work_items_per_dim(max_work_item_dimensions);
-      err = clGetDeviceInfo(device.get(), CL_DEVICE_MAX_WORK_ITEM_SIZES,
-                            sizeof(size_t) * max_work_item_dimensions,
-                            max_work_items_per_dim.data(), &return_size);
-      if (err != CL_SUCCESS) {
-        ostringstream oss;
-        oss << "clGetDeviceInfo ("
-            << "CL_DEVICE_MAX_WORK_ITEM_SIZES): " << get_opencl_error(err);
-        CAF_LOGMF(CAF_ERROR, oss.str());
-        throw runtime_error(oss.str());
-      }
-      device_info dev_info{device, cmd_queue, max_work_group_size,
-                           max_work_item_dimensions, max_work_items_per_dim};
-      m_devices.push_back(move(dev_info));
+    try {
+      cmd_queue.adopt(v2get(CAF_CLF(clCreateCommandQueue), m_context.get(),
+                            device.get(), CL_QUEUE_PROFILING_ENABLE));
+    }
+    catch (std::runtime_error&) {
+      CAF_LOG_DEBUG("unable to create command queue for device");
+    }
+    if (cmd_queue) {
+      auto max_wgs = v3get<size_t>(CAF_CLF(clGetDeviceInfo), device.get(),
+                                   CL_DEVICE_MAX_WORK_GROUP_SIZE);
+      auto max_wid = v3get<cl_uint>(CAF_CLF(clGetDeviceInfo), device.get(),
+                                    CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS);
+      dim_vec max_wi_per_dim(max_wid);
+      callcl(CAF_CLF(clGetDeviceInfo), device.get(),
+             CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(size_t) * max_wid,
+             max_wi_per_dim.data());
+      m_devices.push_back(device_info{std::move(device), std::move(cmd_queue),
+                                      max_wgs, max_wid, max_wi_per_dim});
     }
   }
   if (m_devices.empty()) {
-    ostringstream oss;
-    oss << "Could not create a command queue for "
-        << "any present device.";
-    CAF_LOGMF(CAF_ERROR, oss.str());
-    throw runtime_error(oss.str());
+    std::string errstr = "could not create a command queue for any device";
+    CAF_LOG_ERROR(errstr);
+    throw std::runtime_error(std::move(errstr));
   }
 }
 
@@ -169,7 +156,7 @@ void opencl_metainfo::dispose() {
 }
 
 void opencl_metainfo::stop() {
-  // noop
+  // nop
 }
 
 } // namespace opencl
