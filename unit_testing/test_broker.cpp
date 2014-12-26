@@ -138,31 +138,27 @@ behavior peer_acceptor_fun(broker* self, const actor& buddy) {
       self->fork(peer_fun, msg.handle, buddy);
       self->quit();
     },
+    on(atom("publish")) >> [=] {
+      return self->add_tcp_doorman(0, "127.0.0.1").second;
+    },
     others() >> CAF_UNEXPECTED_MSG_CB(self)
   };
 }
 
 void run_server(bool spawn_client, const char* bin_path) {
-  auto p = spawn(pong);
-  uint16_t port = 4242;
-  bool done = false;
-  while (!done) {
-    try {
-      io::spawn_io_server(peer_acceptor_fun, port, p);
+  scoped_actor self;
+  auto serv = io::spawn_io(peer_acceptor_fun, spawn(pong));
+  self->sync_send(serv, atom("publish")).await(
+    [&](uint16_t port) {
+      CAF_CHECKPOINT();
+      cout << "server is running on port " << port << endl;
+      if (spawn_client) {
+        auto child = run_program(bin_path, "-c", port);
+        CAF_CHECKPOINT();
+        child.join();
+      }
     }
-    catch (bind_failure&) {
-      // try next port
-      ++port;
-    }
-    done = true;
-  }
-  CAF_CHECKPOINT();
-  cout << "server is running on port " << port << endl;
-  if (spawn_client) {
-    auto child = run_program(bin_path, "-c", port);
-    CAF_CHECKPOINT();
-    child.join();
-  }
+  );
 }
 
 int main(int argc, char** argv) {
