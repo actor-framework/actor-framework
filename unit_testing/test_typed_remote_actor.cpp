@@ -70,19 +70,9 @@ void run_client(const char* host, uint16_t port) {
 }
 
 uint16_t run_server() {
-  auto ref = spawn_typed(server);
-  uint16_t port = 4242;
-  for (;;) {
-    try {
-      io::typed_publish(ref, port, "127.0.0.1");
-      CAF_PRINT("running on port " << port);
-      return port;
-    }
-    catch (bind_failure&) {
-      // try next port
-      ++port;
-    }
-  }
+  auto port = io::typed_publish(spawn_typed(server), 0, "127.0.0.1");
+  CAF_PRINT("running on port " << port);
+  return port;
 }
 
 int main(int argc, char** argv) {
