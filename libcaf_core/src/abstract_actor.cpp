@@ -121,8 +121,9 @@ bool abstract_actor::link_impl(linking_operation op, const actor_addr& other) {
       return remove_link_impl(other);
     case remove_backlink_op:
       return remove_backlink_impl(other);
+    default:
+      return false;
   }
-  return false;
 }
 
 bool abstract_actor::establish_link_impl(const actor_addr& other) {

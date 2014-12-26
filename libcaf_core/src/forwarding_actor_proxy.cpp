@@ -83,7 +83,7 @@ bool forwarding_actor_proxy::link_impl(linking_operation op,
                     make_message(atom("_Link"), other));
         return true;
       }
-      return false;
+      break;
     case remove_link_op:
       if (remove_link_impl(other)) {
         // causes remote actor to unlink from (proxy of) other
@@ -91,7 +91,7 @@ bool forwarding_actor_proxy::link_impl(linking_operation op,
                     make_message(atom("_Unlink"), other));
         return true;
       }
-      return false;
+      break;
     case establish_backlink_op:
       if (establish_backlink_impl(other)) {
         // causes remote actor to unlink from (proxy of) other
@@ -99,7 +99,7 @@ bool forwarding_actor_proxy::link_impl(linking_operation op,
                     make_message(atom("_Link"), other));
         return true;
       }
-      return false;
+      break;
     case remove_backlink_op:
       if (remove_backlink_impl(other)) {
         // causes remote actor to unlink from (proxy of) other
@@ -107,7 +107,7 @@ bool forwarding_actor_proxy::link_impl(linking_operation op,
                     make_message(atom("_Unlink"), other));
         return true;
       }
-      return false;
+      break;
   }
   return false;
 }
