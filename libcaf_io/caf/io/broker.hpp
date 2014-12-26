@@ -252,12 +252,18 @@ class broker : public extend<local_actor>::
     m_scribes.insert(std::make_pair(ptr->hdl(), ptr));
   }
 
+  connection_handle add_tcp_scribe(const std::string& host, uint16_t port);
+
   inline void add_doorman(const doorman_pointer& ptr) {
     m_doormen.insert(std::make_pair(ptr->hdl(), ptr));
     if (is_initialized()) {
       ptr->launch();
     }
   }
+
+  std::pair<accept_handle, uint16_t> add_tcp_doorman(uint16_t port = 0,
+                                                     const char* in = nullptr,
+                                                     bool reuse_addr = false);
 
   void invoke_message(const actor_addr& sender, message_id mid, message& msg);
 
