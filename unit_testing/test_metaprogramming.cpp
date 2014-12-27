@@ -47,12 +47,6 @@ int main() {
   CAF_CHECK((! ctm<if2, if3>::value));
   CAF_CHECK((ctm<if1, if4>::value));
   CAF_CHECK((ctm<if2, if4>::value));
-  CAF_CHECK((ctm<if4, if1>::value));
-  CAF_CHECK((ctm<if4, if2>::value));
-
-  return 0;
-
-
 
   using l1 = type_list<int, float, std::string>;
   using r1 = typename tl_reverse<l1>::type;
