@@ -35,7 +35,6 @@ dude::~dude() {
   --s_dudes;
 }
 
-
 behavior linking_dude(event_based_actor* self, const actor& other_dude) {
   CAF_CHECKPOINT();
   self->trap_exit(true);
@@ -44,7 +43,8 @@ behavior linking_dude(event_based_actor* self, const actor& other_dude) {
   CAF_CHECKPOINT();
   return {
     [self](const exit_msg&) {
-      CAF_CHECKPOINT();
+      // must not been destroyed here
+      CAF_CHECK_EQUAL(s_dudes.load(), 1);
       self->send(self, atom("check"));
     },
     on(atom("check")) >> [self] {
@@ -62,7 +62,8 @@ behavior monitoring_dude(event_based_actor* self, actor other_dude) {
   CAF_CHECKPOINT();
   return {
     [self](const down_msg&) {
-      CAF_CHECKPOINT();
+      // must not been destroyed here
+      CAF_CHECK_EQUAL(s_dudes.load(), 1);
       self->send(self, atom("check"));
     },
     on(atom("check")) >> [self] {
@@ -73,15 +74,28 @@ behavior monitoring_dude(event_based_actor* self, actor other_dude) {
   };
 }
 
+template <spawn_options O1, spawn_options O2>
+void run() {
+  spawn<O1>(linking_dude, spawn<dude, O2>());
+  await_all_actors_done();
+  spawn<O1>(monitoring_dude, spawn<dude, O2>());
+  await_all_actors_done();
+}
+
 void test_actor_lifetime() {
-  spawn(monitoring_dude, spawn<dude>());
-  await_all_actors_done();
-  spawn(linking_dude, spawn<dude>());
-  await_all_actors_done();
+  CAF_PRINT("run<no_spawn_options, no_spawn_options>");
+  run<no_spawn_options, no_spawn_options>();
+  CAF_PRINT("run<detached, no_spawn_options>");
+  run<detached, no_spawn_options>();
+  CAF_PRINT("run<no_spawn_options, detached>");
+  run<no_spawn_options, detached>();
+  CAF_PRINT("run<detached, detached>");
+  run<detached, detached>();
 }
 
 int main() {
   CAF_TEST(test_actor_lifetime);
   test_actor_lifetime();
+  CAF_CHECK_EQUAL(s_dudes.load(), 0);
   return CAF_TEST_RESULT();
 }
