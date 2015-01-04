@@ -10,16 +10,16 @@ using std::endl;
 using namespace caf;
 
 namespace {
-std::atomic<long> s_dudes;
+std::atomic<long> s_testees;
 } // namespace <anonymous>
 
-class dude : public event_based_actor {
+class testee : public event_based_actor {
  public:
-  dude() {
-    ++s_dudes;
+  testee() {
+    ++s_testees;
   }
 
-  ~dude();
+  ~testee();
 
   behavior make_behavior() {
     return {
@@ -30,45 +30,32 @@ class dude : public event_based_actor {
   }
 };
 
-dude::~dude() {
+testee::~testee() {
   // avoid weak-vtables warning
-  --s_dudes;
+  --s_testees;
 }
 
-behavior linking_dude(event_based_actor* self, const actor& other_dude) {
+template <class ExitMsgType>
+behavior tester(event_based_actor* self, const actor& aut) {
   CAF_CHECKPOINT();
-  self->trap_exit(true);
-  self->link_to(other_dude);
-  anon_send_exit(other_dude, exit_reason::user_shutdown);
+  if (std::is_same<ExitMsgType, exit_msg>::value) {
+    self->trap_exit(true);
+    self->link_to(aut);
+  } else {
+    self->monitor(aut);
+  }
+  CAF_CHECKPOINT();
+  anon_send_exit(aut, exit_reason::user_shutdown);
   CAF_CHECKPOINT();
   return {
-    [self](const exit_msg&) {
+    [self](const ExitMsgType&) {
       // must not been destroyed here
-      CAF_CHECK_EQUAL(s_dudes.load(), 1);
+      CAF_CHECK_EQUAL(s_testees.load(), 1);
       self->send(self, atom("check"));
     },
     on(atom("check")) >> [self] {
       // make sure dude's dtor has been called
-      CAF_CHECK_EQUAL(s_dudes.load(), 0);
-      self->quit();
-    }
-  };
-}
-
-behavior monitoring_dude(event_based_actor* self, actor other_dude) {
-  CAF_CHECKPOINT();
-  self->monitor(other_dude);
-  anon_send_exit(other_dude, exit_reason::user_shutdown);
-  CAF_CHECKPOINT();
-  return {
-    [self](const down_msg&) {
-      // must not been destroyed here
-      CAF_CHECK_EQUAL(s_dudes.load(), 1);
-      self->send(self, atom("check"));
-    },
-    on(atom("check")) >> [self] {
-      // make sure dude's dtor has been called
-      CAF_CHECK_EQUAL(s_dudes.load(), 0);
+      CAF_CHECK_EQUAL(s_testees.load(), 0);
       self->quit();
     }
   };
@@ -76,9 +63,11 @@ behavior monitoring_dude(event_based_actor* self, actor other_dude) {
 
 template <spawn_options O1, spawn_options O2>
 void run() {
-  spawn<O1>(linking_dude, spawn<dude, O2>());
+  CAF_PRINT("run test using links");
+  spawn<O1>(tester<exit_msg>, spawn<testee, O2>());
   await_all_actors_done();
-  spawn<O1>(monitoring_dude, spawn<dude, O2>());
+  CAF_PRINT("run test using monitors");
+  spawn<O1>(tester<down_msg>, spawn<testee, O2>());
   await_all_actors_done();
 }
 
@@ -96,6 +85,6 @@ void test_actor_lifetime() {
 int main() {
   CAF_TEST(test_actor_lifetime);
   test_actor_lifetime();
-  CAF_CHECK_EQUAL(s_dudes.load(), 0);
+  CAF_CHECK_EQUAL(s_testees.load(), 0);
   return CAF_TEST_RESULT();
 }
