@@ -49,9 +49,13 @@ behavior tester(event_based_actor* self, const actor& aut) {
   CAF_CHECKPOINT();
   return {
     [self](const ExitMsgType&) {
-      // must not been destroyed here
+      // must be still alive at this point
       CAF_CHECK_EQUAL(s_testees.load(), 1);
-      self->send(self, atom("check"));
+      // testee might be still running its cleanup code in
+      // another worker thread; by waiting some milliseconds, we make sure
+      // testee had enough time to return control to the scheduler
+      // which in turn destroys it by dropping the last remaining reference
+      self->delayed_send(self, std::chrono::milliseconds(30), atom("check"));
     },
     on(atom("check")) >> [self] {
       // make sure dude's dtor has been called
