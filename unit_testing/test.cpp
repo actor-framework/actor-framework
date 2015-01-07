@@ -74,7 +74,7 @@ void set_default_test_settings() {
   cout.unsetf(ios_base::unitbuf);
 }
 
-std::thread run_program_impl(const char* cpath, std::vector<std::string> args) {
+std::thread run_program_impl(actor rc, const char* cpath, vector<string> args) {
   string path = cpath;
   replace_all(path, "'", "\\'");
   ostringstream oss;
@@ -82,12 +82,20 @@ std::thread run_program_impl(const char* cpath, std::vector<std::string> args) {
   for (auto& arg : args) {
     oss << " " << arg;
   }
-  oss << to_dev_null;
+  oss << " 2>&1";
   string cmdstr = oss.str();
-  return thread([cmdstr] {
-    if (system(cmdstr.c_str()) != 0) {
-      CAF_PRINTERR("FATAL: command line failed: " << cmdstr);
-      abort();
+  return std::thread([cmdstr, rc] {
+    string output;
+    auto fp = popen(cmdstr.c_str(), "r");
+    if (!fp) {
+       CAF_PRINTERR("FATAL: command line failed: " << cmdstr);
+       abort();
     }
+    char buf[512];
+    while (fgets(buf, sizeof(buf), fp)) {
+      output += buf;
+    }
+    pclose(fp);
+    anon_send(rc, output);
   });
 }

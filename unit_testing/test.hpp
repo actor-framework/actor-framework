@@ -205,7 +205,7 @@ caf::optional<T> spro(const std::string& str) {
   return caf::none;
 }
 
-std::thread run_program_impl(const char* path, std::vector<std::string> args);
+std::thread run_program_impl(caf::actor, const char*, std::vector<std::string>);
 
 template <class T>
 typename std::enable_if<
@@ -221,9 +221,9 @@ inline std::string convert_to_str(std::string value) {
 }
 
 template <class... Ts>
-std::thread run_program(const char* path, Ts&&... args) {
+std::thread run_program(caf::actor listener, const char* path, Ts&&... args) {
   std::vector<std::string> vec{convert_to_str(std::forward<Ts>(args))...};
-  return run_program_impl(path, std::move(vec));
+  return run_program_impl(listener, path, std::move(vec));
 }
 
 #endif // TEST_HPP

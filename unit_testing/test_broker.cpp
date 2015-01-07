@@ -153,10 +153,17 @@ void run_server(bool spawn_client, const char* bin_path) {
       CAF_CHECKPOINT();
       cout << "server is running on port " << port << endl;
       if (spawn_client) {
-        auto child = run_program(bin_path, "-c", port);
+        auto child = run_program(self, bin_path, "-c", port);
         CAF_CHECKPOINT();
         child.join();
       }
+    }
+  );
+  self->await_all_other_actors_done();
+  self->receive(
+    [](const std::string& output) {
+      cout << endl << endl << "*** output of client program ***"
+           << endl << output << endl;
     }
   );
 }

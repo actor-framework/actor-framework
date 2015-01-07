@@ -91,13 +91,19 @@ int main(int argc, char** argv) {
       CAF_CHECKPOINT();
       // execute client_part() in a separate process,
       // connected via localhost socket
-      auto child = run_program(argv[0], "-c", port);
+      scoped_actor self;
+      auto child = run_program(self, argv[0], "-c", port);
       CAF_CHECKPOINT();
       child.join();
+      self->await_all_other_actors_done();
+      self->receive(
+        [](const std::string& output) {
+          cout << endl << endl << "*** output of client program ***"
+               << endl << output << endl;
+        }
+      );
     }
   });
-  CAF_CHECKPOINT();
-  await_all_actors_done();
   shutdown();
   return CAF_TEST_RESULT();
 }

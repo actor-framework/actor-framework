@@ -348,7 +348,7 @@ void test_remote_actor(const char* app_path, bool run_remote_actor) {
   CAF_CHECK(serv == serv2);
   thread child;
   if (run_remote_actor) {
-    child = run_program(app_path, "-c", port2, port1, gport);
+    child = run_program(self, app_path, "-c", port2, port1, gport);
   } else {
     CAF_PRINT("please run client with: "
               << "-c " << port2 << " " << port1 << " " << gport);
@@ -362,11 +362,17 @@ void test_remote_actor(const char* app_path, bool run_remote_actor) {
   );
   // wait until separate process (in sep. thread) finished execution
   CAF_CHECKPOINT();
+  self->await_all_other_actors_done();
+  CAF_CHECKPOINT();
   if (run_remote_actor) {
     child.join();
+    self->receive(
+      [](const std::string& output) {
+        cout << endl << endl << "*** output of client program ***"
+             << endl << output << endl;
+      }
+    );
   }
-  CAF_CHECKPOINT();
-  self->await_all_other_actors_done();
 }
 
 } // namespace <anonymous>
