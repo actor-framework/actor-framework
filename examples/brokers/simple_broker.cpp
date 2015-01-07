@@ -67,12 +67,25 @@ void write_int(broker* self, connection_handle hdl, T value) {
   self->flush(hdl);
 }
 
+void write_int(broker* self, connection_handle hdl, uint64_t value) {
+  // write two uint32 values instead (htonl does not work for 64bit integers)
+  write_int(self, hdl, static_cast<uint32_t>(value));
+  write_int(self, hdl, static_cast<uint32_t>(value >> sizeof(uint32_t)));
+}
+
 // utility function for reading an ingeger from incoming data
 template <class T>
-T read_int(const void* data) {
-  T value;
-  memcpy(&value, data, sizeof(T));
-  return static_cast<T>(ntohl(value));
+void read_int(const void* data, T& storage) {
+  memcpy(&storage, data, sizeof(T));
+  storage = static_cast<T>(ntohl(storage));
+}
+
+void read_int(const void* data, uint64_t& storage) {
+  uint32_t first;
+  uint32_t second;
+  read_int(data, first);
+  read_int(reinterpret_cast<const char*>(data) + sizeof(uint32_t), second);
+  storage = first | (static_cast<uint64_t>(second) << sizeof(uint32_t));
 }
 
 // implemenation of our broker
@@ -115,12 +128,14 @@ behavior broker_impl(broker* self, connection_handle hdl, const actor& buddy) {
     },
     [=](const new_data_msg& msg) {
       // read the atom value as uint64_t from buffer
-      auto atm_val = read_int<uint64_t>(msg.buf.data());
+      uint64_t atm_val;
+      read_int(msg.buf.data(), atm_val);
       // cast to original type
       auto atm = static_cast<atom_value>(atm_val);
       // read integer value from buffer, jumping to the correct
       // position via offset_data(...)
-      auto ival = read_int<int32_t>(msg.buf.data() + sizeof(uint64_t));
+      int32_t ival;
+      read_int(msg.buf.data() + sizeof(uint64_t), ival);
       // show some output
       aout(self) << "received {" << to_string(atm) << ", " << ival << "}"
              << endl;

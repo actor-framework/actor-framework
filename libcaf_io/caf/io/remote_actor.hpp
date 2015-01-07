@@ -31,7 +31,7 @@
 namespace caf {
 namespace io {
 
-abstract_actor_ptr remote_actor_impl(const std::set<std::string>& ifs,
+abstract_actor_ptr remote_actor_impl(std::set<std::string> ifs,
                                      const std::string& host, uint16_t port);
 
 template <class List>

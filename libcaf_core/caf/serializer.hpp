@@ -26,8 +26,6 @@
 #include "caf/uniform_type_info.hpp"
 #include "caf/primitive_variant.hpp"
 
-#include "caf/detail/to_uniform_name.hpp"
-
 namespace caf {
 
 class actor_namespace;
@@ -111,8 +109,7 @@ template <class T>
 serializer& operator<<(serializer& s, const T& what) {
   auto mtype = uniform_typeid<T>();
   if (mtype == nullptr) {
-    throw std::logic_error("no uniform type info found for "
-                           + detail::to_uniform_name(typeid(T)));
+    throw std::logic_error("no uniform type info found for T");
   }
   mtype->serialize(&what, &s);
   return s;

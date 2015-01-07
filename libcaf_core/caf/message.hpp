@@ -181,16 +181,12 @@ class message {
   /**
    * Returns an iterator to the beginning.
    */
-  inline const_iterator begin() const {
-    return m_vals->begin();
-  }
+  const_iterator begin() const;
 
   /**
    * Returns an iterator to the end.
    */
-  inline const_iterator end() const {
-    return m_vals->end();
-  }
+  const_iterator end() const;
 
   /**
    * Returns a copy-on-write pointer to the internal data.
@@ -285,6 +281,16 @@ inline bool operator!=(const message& lhs, const message& rhs) {
   return !(lhs == rhs);
 }
 
+template <class T>
+struct lift_message_element {
+  using type = T;
+};
+
+template <class T, T V>
+struct lift_message_element<std::integral_constant<T, V>> {
+  using type = T;
+};
+
 /**
  * Creates a new `message` containing the elements `args...`.
  * @relates message
@@ -296,10 +302,14 @@ typename std::enable_if<
   message
 >::type
 make_message(T&& arg, Ts&&... args) {
-  using namespace detail;
-  using data = tuple_vals<typename strip_and_convert<T>::type,
-                          typename strip_and_convert<Ts>::type...>;
-  auto ptr = new data(std::forward<T>(arg), std::forward<Ts>(args)...);
+  using storage
+    = detail::tuple_vals<typename lift_message_element<
+                           typename detail::strip_and_convert<T>::type
+                         >::type,
+                         typename lift_message_element<
+                           typename detail::strip_and_convert<Ts>::type
+                         >::type...>;
+  auto ptr = new storage(std::forward<T>(arg), std::forward<Ts>(args)...);
   return message{detail::message_data::ptr{ptr}};
 }
 

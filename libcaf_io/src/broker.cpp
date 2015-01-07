@@ -62,8 +62,9 @@ void broker::servant::disconnect(bool invoke_disconnect_message) {
   }
 }
 
-broker::scribe::scribe(broker* parent, connection_handle hdl)
-    : servant(parent), m_hdl(hdl) {
+broker::scribe::scribe(broker* ptr, connection_handle conn_hdl)
+    : servant(ptr),
+      m_hdl(conn_hdl) {
   std::vector<char> tmp;
   m_read_msg = make_message(new_data_msg{m_hdl, std::move(tmp)});
 }
@@ -100,8 +101,8 @@ void broker::scribe::io_failure(network::operation op) {
   disconnect(true);
 }
 
-broker::doorman::doorman(broker* parent, accept_handle hdl)
-    : servant(parent), m_hdl(hdl) {
+broker::doorman::doorman(broker* ptr, accept_handle acc_hdl)
+    : servant(ptr), m_hdl(acc_hdl) {
   auto hdl2 = connection_handle::from_int(-1);
   m_accept_msg = make_message(new_connection_msg{m_hdl, hdl2});
 }
@@ -170,8 +171,8 @@ void broker::invoke_message(const actor_addr& sender, message_id mid,
   std::swap(msg, m_dummy_node.msg);
   try {
     auto bhvr = bhvr_stack().back();
-    auto mid = bhvr_stack().back_id();
-    switch (m_invoke_policy.handle_message(this, &m_dummy_node, bhvr, mid)) {
+    auto bid = bhvr_stack().back_id();
+    switch (m_invoke_policy.handle_message(this, &m_dummy_node, bhvr, bid)) {
       case policy::hm_msg_handled: {
         CAF_LOG_DEBUG("handle_message returned hm_msg_handled");
         while (!bhvr_stack().empty()
@@ -187,7 +188,7 @@ void broker::invoke_message(const actor_addr& sender, message_id mid,
       case policy::hm_skip_msg:
       case policy::hm_cache_msg: {
         CAF_LOG_DEBUG("handle_message returned hm_skip_msg or hm_cache_msg");
-        auto e = mailbox_element::create(sender, mid,
+        auto e = mailbox_element::create(sender, bid,
                                          std::move(m_dummy_node.msg));
         m_priority_policy.push_to_cache(unique_mailbox_element_pointer{e});
         break;
@@ -266,7 +267,7 @@ void broker::cleanup(uint32_t reason) {
   deref(); // release implicit reference count from middleman
 }
 
-void broker::launch(bool is_hidden, execution_unit*) {
+void broker::launch(bool is_hidden, bool, execution_unit*) {
   // add implicit reference count held by the middleman
   ref();
   is_registered(!is_hidden);
@@ -334,8 +335,8 @@ void broker::close_all() {
 
 std::vector<connection_handle> broker::connections() const {
   std::vector<connection_handle> result;
-  for (auto& scribe : m_scribes) {
-    result.push_back(scribe.first);
+  for (auto& kvp : m_scribes) {
+    result.push_back(kvp.first);
   }
   return result;
 }
@@ -350,6 +351,16 @@ behavior broker::functor_based::make_behavior() {
 
 network::multiplexer& broker::backend() {
   return m_mm.backend();
+}
+
+connection_handle broker::add_tcp_scribe(const std::string& hst, uint16_t prt) {
+  return backend().add_tcp_scribe(this, hst, prt);
+}
+
+
+std::pair<accept_handle, uint16_t>
+broker::add_tcp_doorman(uint16_t port, const char* in, bool reuse_addr) {
+  return backend().add_tcp_doorman(this, port, in, reuse_addr);
 }
 
 } // namespace io

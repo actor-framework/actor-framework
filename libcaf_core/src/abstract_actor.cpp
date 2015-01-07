@@ -121,8 +121,9 @@ bool abstract_actor::link_impl(linking_operation op, const actor_addr& other) {
       return remove_link_impl(other);
     case remove_backlink_op:
       return remove_backlink_impl(other);
+    default:
+      return false;
   }
-  return false;
 }
 
 bool abstract_actor::establish_link_impl(const actor_addr& other) {
@@ -217,7 +218,7 @@ void abstract_actor::cleanup(uint32_t reason) {
   CAF_LOG_INFO_IF(!is_remote(), "cleanup actor with ID "
                                 << m_id << "; exit reason = "
                                 << reason << ", class = "
-                                << detail::demangle(typeid(*this)));
+                                << class_name());
   // send exit messages
   for (attachable* i = head.get(); i != nullptr; i = i->next.get()) {
     i->actor_exited(this, reason);

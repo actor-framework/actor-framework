@@ -70,6 +70,13 @@ class message_handler {
   message_handler(impl_ptr ptr);
 
   /**
+   * Checks whether the message handler is not empty.
+   */
+  inline operator bool() const {
+    return static_cast<bool>(m_impl);
+  }
+
+  /**
    * Create a message handler a list of match expressions,
    * functors, or other message handlers.
    */
@@ -104,7 +111,13 @@ class message_handler {
     // using a behavior is safe here, because we "cast"
     // it back to a message_handler when appropriate
     behavior tmp{std::forward<Ts>(args)...};
-    return m_impl->or_else(tmp.as_behavior_impl());
+    if (! tmp) {
+      return *this;
+    }
+    if (m_impl) {
+      return m_impl->or_else(tmp.as_behavior_impl());
+    }
+    return tmp;
   }
 
  private:

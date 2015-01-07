@@ -77,11 +77,11 @@ int main(int, char**) {
 
   // announces foo to the libcaf type system;
   // the function expects member pointers to all elements of foo
-  announce<foo>(&foo::a, &foo::b);
+  announce<foo>("foo", &foo::a, &foo::b);
 
   // announce foo2 to the libcaf type system,
   // note that recursive containers are managed automatically by libcaf
-  announce<foo2>(&foo2::a, &foo2::b);
+  announce<foo2>("foo2", &foo2::a, &foo2::b);
 
   foo2 vd;
   vd.a = 5;
@@ -98,17 +98,11 @@ int main(int, char**) {
 
   assert(vd == vd2);
 
-  // announce std::pair<int, int> to the type system;
-  // NOTE: foo_pair is NOT distinguishable from foo_pair2!
-  auto uti = announce<foo_pair>(&foo_pair::first, &foo_pair::second);
-
-  // since foo_pair and foo_pair2 are not distinguishable since typedefs
-  // do not 'create' an own type, this announce fails, since
-  // std::pair<int, int> is already announced
-  assert(announce<foo_pair2>(&foo_pair2::first, &foo_pair2::second) == uti);
+  // announce std::pair<int, int> to the type system
+  announce<foo_pair>("foo_pair", &foo_pair::first, &foo_pair::second);
 
   // libcaf returns the same uniform_type_info
-  // instance for foo_pair and foo_pair2
+  // instance for the type aliases foo_pair and foo_pair2
   assert(uniform_typeid<foo_pair>() == uniform_typeid<foo_pair2>());
 
   // spawn a testee that receives two messages
@@ -124,4 +118,3 @@ int main(int, char**) {
   shutdown();
   return 0;
 }
-

@@ -62,7 +62,7 @@ class middleman : public detail::abstract_singleton {
       return static_cast<Impl*>(i->second.get());
     }
     intrusive_ptr<Impl> result{new Impl};
-    result->launch(true, nullptr);
+    result->launch(true, false, nullptr);
     m_named_brokers.insert(std::make_pair(name, result));
     return result;
   }

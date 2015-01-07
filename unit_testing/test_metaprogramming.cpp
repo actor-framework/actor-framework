@@ -7,10 +7,9 @@
 
 #include "caf/uniform_type_info.hpp"
 
+#include "caf/detail/ctm.hpp"
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/type_list.hpp"
-
-#include "caf/detail/demangle.hpp"
 
 using std::cout;
 using std::endl;
@@ -28,6 +27,26 @@ struct is_int<int> : std::true_type {};
 int main() {
 
   CAF_TEST(test_metaprogramming);
+
+
+
+  CAF_CHECK((ctm<type_list<int, float, double>, type_list<double, int, float>>::value));
+  CAF_CHECK((! ctm<type_list<int, float, double>, type_list<double, int, float, int>>::value));
+  CAF_CHECK((! ctm<type_list<int, float, double>, type_list<>>::value));
+  CAF_CHECK((! ctm<type_list<>, type_list<double, int, float, int>>::value));
+
+  using if1 = type_list<replies_to<int, double>::with<void>,
+                        replies_to<int>::with<int>>;
+  using if2 = type_list<replies_to<int>::with<int>,
+                        replies_to<int, double>::with<void>>;
+  using if3 = type_list<replies_to<int, double>::with<void>>;
+  using if4 = type_list<replies_to<int>::with<skip_message_t>,
+                        replies_to<int, double>::with<void>>;
+  CAF_CHECK((ctm<if1, if2>::value));
+  CAF_CHECK((! ctm<if1, if3>::value));
+  CAF_CHECK((! ctm<if2, if3>::value));
+  CAF_CHECK((ctm<if1, if4>::value));
+  CAF_CHECK((ctm<if2, if4>::value));
 
   using l1 = type_list<int, float, std::string>;
   using r1 = typename tl_reverse<l1>::type;
@@ -53,10 +72,7 @@ int main() {
   using il0 = int_list<0, 1, 2, 3, 4, 5>;
   using il1 = int_list<4, 5>;
   using il2 = typename il_right<il0, 2>::type;
-  CAF_CHECK_VERBOSE((is_same<il2, il1>::value),
-             "il_right<il0, 2> returned "
-               << detail::demangle<il2>()
-               << "expected: " << detail::demangle<il1>());
+  CAF_CHECK((is_same<il2, il1>::value));
 
   /* test tl_is_strict_subset */ {
     using list_a = type_list<int, float, double>;

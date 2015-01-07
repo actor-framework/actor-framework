@@ -46,6 +46,8 @@ class message_builder::dynamic_msg_data : public detail::message_data {
     // nop
   }
 
+  ~dynamic_msg_data();
+
   const void* at(size_t pos) const override {
     CAF_REQUIRE(pos < size());
     return m_elements[pos]->val;
@@ -75,6 +77,10 @@ class message_builder::dynamic_msg_data : public detail::message_data {
 
   std::vector<uniform_value> m_elements;
 };
+
+message_builder::dynamic_msg_data::~dynamic_msg_data() {
+  // avoid weak-vtables warning
+}
 
 message_builder::message_builder() {
   init();

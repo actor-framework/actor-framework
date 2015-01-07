@@ -22,6 +22,9 @@ endif()
 if(NOT CAF_BUILD_STATIC)
   set(CAF_BUILD_STATIC no)
 endif()
+if(NOT CAF_NO_OPENCL)
+  set(CAF_NO_OPENCL no)
+endif()
 
 
 ################################################################################
@@ -98,31 +101,83 @@ if(NOT WIN32 AND NOT NO_COMPILER_CHECK)
                         "or is not supported")
   endif()
 endif()
+# set optional build flags
+set(EXTRA_FLAGS "")
+# add "-Werror" flag if --pedantic-build is used
+if(CXX_WARNINGS_AS_ERROS)
+  set(EXTRA_FLAGS "-Werror")
+endif()
+# enable a ton of warnings if --more-clang-warnings is used
+if(MORE_WARNINGS)
+  if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    set(WFLAGS "-Weverything -Wno-c++98-compat -Wno-padded "
+               "-Wno-documentation-unknown-command -Wno-exit-time-destructors "
+               "-Wno-global-constructors -Wno-missing-prototypes "
+               "-Wno-c++98-compat-pedantic -Wno-unused-member-function "
+               "-Wno-unused-const-variable -Wno-switch-enum "
+               "-Wno-missing-noreturn -Wno-covered-switch-default")
+  elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+    set(WFLAGS "-Waddress -Wall -Warray-bounds "
+               "-Wattributes -Wbuiltin-macro-redefined -Wcast-align "
+               "-Wcast-qual -Wchar-subscripts -Wclobbered -Wcomment "
+               "-Wconversion -Wconversion-null -Wcoverage-mismatch "
+               "-Wcpp -Wdelete-non-virtual-dtor -Wdeprecated "
+               "-Wdeprecated-declarations -Wdiv-by-zero -Wdouble-promotion "
+               "-Wempty-body -Wendif-labels -Wenum-compare -Wextra "
+               "-Wfloat-equal -Wformat -Wfree-nonheap-object "
+               "-Wignored-qualifiers -Winit-self "
+               "-Winline -Wint-to-pointer-cast -Winvalid-memory-model "
+               "-Winvalid-offsetof -Wlogical-op -Wmain -Wmaybe-uninitialized "
+               "-Wmissing-braces -Wmissing-field-initializers -Wmultichar "
+               "-Wnarrowing -Wnoexcept -Wnon-template-friend "
+               "-Wnon-virtual-dtor -Wnonnull -Woverflow "
+               "-Woverlength-strings -Wparentheses "
+               "-Wpmf-conversions -Wpointer-arith -Wreorder "
+               "-Wreturn-type -Wsequence-point -Wshadow "
+               "-Wsign-compare -Wswitch -Wtype-limits -Wundef "
+               "-Wuninitialized -Wunused -Wvla -Wwrite-strings")
+  endif()
+  # convert CMake list to a single string, erasing the ";" separators
+  string(REPLACE ";" "" WFLAGS_STR ${WFLAGS})
+  set(EXTRA_FLAGS "${EXTRA_FLAGS} ${WFLAGS_STR}")
+endif()
+# add -stdlib=libc++ when using Clang
+if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+  message(STATUS "NOTE: Automatically added -stdlib=libc++ flag, "
+                 "you can override this by defining CMAKE_CXX_FLAGS "
+                 "(see 'configure --help')")
+  set(EXTRA_FLAGS "${EXTRA_FLAGS} -stdlib=libc++")
+endif()
+# enable address sanitizer if requested by the user
+if(ENABLE_ADDRESS_SANITIZER)
+  # check whether address sanitizer is available
+  set(CXXFLAGS_BACKUP "${CMAKE_CXX_FLAGS}")
+  set(CMAKE_CXX_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
+  try_run(ProgramResult
+          CompilationSucceeded
+          "${CMAKE_BINARY_DIR}"
+          "${CMAKE_CURRENT_SOURCE_DIR}/cmake/get_compiler_version.cpp")
+  if(NOT CompilationSucceeded)
+    message(WARNING "Address Sanitizer is not available on selected compiler")
+  else()
+    message(STATUS "Enable Address Sanitizer")
+    set(EXTRA_FLAGS "${EXTRA_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+  endif()
+  # restore CXX flags
+  set(CMAKE_CXX_FLAGS "${CXXFLAGS_BACKUP}")
+endif(ENABLE_ADDRESS_SANITIZER)
+# -pthread is ignored on MacOSX but required on other platforms
+if(NOT APPLE AND NOT WIN32)
+  set(EXTRA_FLAGS "${EXTRA_FLAGS} -pthread")
+endif()
 # check if the user provided CXXFLAGS, set defaults otherwise
 if(CMAKE_CXX_FLAGS)
-  set(CXXFLAGS_PROVIDED true)
   set(CMAKE_CXX_FLAGS_DEBUG          "")
   set(CMAKE_CXX_FLAGS_MINSIZEREL     "")
   set(CMAKE_CXX_FLAGS_RELEASE        "")
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "")
 else()
-  set(CXXFLAGS_PROVIDED false)
-  if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-    message(STATUS "NOTE: Automatically added -stdlib=libc++ flag, "
-                   "you can override this by defining CMAKE_CXX_FLAGS "
-                   "(see 'configure --help')")
-    set(CMAKE_CXX_FLAGS "-std=c++11 -stdlib=libc++ -fPIC")
-    if(MORE_CLANG_WARNINGS)
-      set(CMAKE_CXX_FLAGS "-pedantic -Weverything -Wno-c++98-compat "
-                          "-Wno-padded -Wno-documentation-unknown-command "
-                          "-Wno-exit-time-destructors -Wno-global-constructors "
-                          "-Wno-missing-prototypes -Wno-c++98-compat-pedantic "
-                          "-Wno-unused-member-function "
-                          "-Wno-unused-const-variable")
-    endif()
-  else()
-    set(CMAKE_CXX_FLAGS "-std=c++11 -Wextra -Wall -pedantic -fPIC")
-  endif()
+  set(CMAKE_CXX_FLAGS "-std=c++11 -Wextra -Wall -pedantic -fPIC ${EXTRA_FLAGS}")
   set(CMAKE_CXX_FLAGS_DEBUG          "-O0 -g")
   set(CMAKE_CXX_FLAGS_MINSIZEREL     "-Os")
   set(CMAKE_CXX_FLAGS_RELEASE        "-O3 -DNDEBUG")
@@ -131,16 +186,6 @@ endif()
 # set build default build type to RelWithDebInfo if not set
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
-endif()
-# enable clang's address sanitizer if requested by the user
-if(ENABLE_ADDRESS_SANITIZER)
-  set(CMAKE_CXX_FLAGS
-      "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
-  message(STATUS "Enable address sanitizer")
-endif(ENABLE_ADDRESS_SANITIZER)
-# -pthread is ignored on MacOSX, enable it for all other platforms
-if(NOT APPLE AND NOT WIN32)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 endif()
 # extra setup steps needed on MinGW
 if(MINGW)
@@ -184,7 +229,7 @@ install(DIRECTORY libcaf_core/cppa/
 install(DIRECTORY libcaf_io/caf/ DESTINATION include/caf
         FILES_MATCHING PATTERN "*.hpp")
 # install includes from opencl
-if(EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/caf")
+if(EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
   install(DIRECTORY libcaf_opencl/caf/ DESTINATION include/caf
         FILES_MATCHING PATTERN "*.hpp")
 endif()
@@ -208,7 +253,7 @@ set(LIBCAF_INCLUDE_DIRS
     "${CMAKE_SOURCE_DIR}/libcaf_core"
     "${CMAKE_SOURCE_DIR}/libcaf_io")
 # path to caf opencl headers
-if(EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/caf")
+if(EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
   set(LIBCAF_INCLUDE_DIRS
       "${CMAKE_SOURCE_DIR}/libcaf_opencl/" "${LIBCAF_INCLUDE_DIRS}")
 endif()
@@ -230,7 +275,7 @@ add_subdirectory(libcaf_io)
 # set io lib for sub directories
 set(LIBCAF_IO_LIBRARY libcaf_io)
 # set opencl lib for sub directories if not told otherwise
-if(NOT CAF_NO_OPENCL AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/caf")
+if(NOT CAF_NO_OPENCL AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
   message(STATUS "Enter subdirectory libcaf_opencl")
   find_package(OPENCL REQUIRED)
   add_subdirectory(libcaf_opencl)
@@ -253,7 +298,7 @@ if(NOT CAF_NO_UNIT_TESTS)
   message(STATUS "Enter subdirectory unit_testing")
   add_subdirectory(unit_testing)
   add_dependencies(all_unit_tests libcaf_io)
-  if(NOT CAF_NO_OPENCL AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/caf")
+  if(NOT CAF_NO_OPENCL AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
     add_subdirectory(libcaf_opencl/unit_testing)
   endif()
 endif()
@@ -262,13 +307,13 @@ if(NOT CAF_NO_EXAMPLES)
   message(STATUS "Enter subdirectory examples")
   add_subdirectory(examples)
   add_dependencies(all_examples libcaf_io)
-  if(NOT CAF_NO_OPENCL AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/caf")
+  if(NOT CAF_NO_OPENCL AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
     add_subdirectory(libcaf_opencl/examples)
     add_dependencies(opencl_examples libcaf_opencl)
   endif()
 endif()
 # build RIAC if not being told otherwise
-if(NOT CAF_NO_RIAC AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_riac/caf/")
+if(NOT CAF_NO_RIAC AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_riac/CMakeLists.txt")
   message(STATUS "Enter subdirectory probe")
   add_subdirectory(libcaf_riac)
   if(CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
@@ -288,7 +333,7 @@ else()
   set(CAF_HAS_RIAC no)
 endif()
 # build nexus if not being told otherwise
-if(NOT CAF_NO_NEXUS AND EXISTS "${CMAKE_SOURCE_DIR}/nexus/caf/")
+if(NOT CAF_NO_NEXUS AND EXISTS "${CMAKE_SOURCE_DIR}/nexus/CMakeLists.txt")
   if(NOT CAF_HAS_RIAC)
     message(WARNING "cannot build nexus without RIAC submodule")
     set(CAF_NO_NEXUS yes)
@@ -307,7 +352,7 @@ else()
   set(CAF_NO_NEXUS yes)
 endif()
 # build cash if not being told otherwise
-if(NOT CAF_NO_CASH AND EXISTS "${CMAKE_SOURCE_DIR}/cash/caf/")
+if(NOT CAF_NO_CASH AND EXISTS "${CMAKE_SOURCE_DIR}/cash/CMakeLists.txt")
   if(NOT CAF_HAS_RIAC)
     message(WARNING "cannot build cash without RIAC submodule")
     set(CAF_NO_CASH yes)
@@ -326,7 +371,7 @@ else()
   set(CAF_NO_CASH yes)
 endif()
 # build benchmarks if not being told otherwise
-if(NOT CAF_NO_BENCHMARKS AND EXISTS "${CMAKE_SOURCE_DIR}/benchmarks/caf/")
+if(NOT CAF_NO_BENCHMARKS AND EXISTS "${CMAKE_SOURCE_DIR}/benchmarks/CMakeLists.txt")
   message(STATUS "Enter subdirectory benchmarks")
   add_subdirectory(benchmarks)
   add_dependencies(all_benchmarks libcaf_io)
@@ -362,6 +407,12 @@ if(DOXYGEN_FOUND)
                     VERBATIM)
 endif(DOXYGEN_FOUND)
 
+
+################################################################################
+#                     Add additional project files to GUI                      #
+################################################################################
+
+add_custom_target(gui_dummy SOURCES configure)
 
 ################################################################################
 #                                print summary                                 #

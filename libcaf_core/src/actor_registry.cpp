@@ -91,7 +91,7 @@ uint32_t actor_registry::next_id() {
 }
 
 void actor_registry::inc_running() {
-# if CAF_LOG_LEVEL >= CAF_DEBUG
+# if defined(CAF_LOG_LEVEL) && CAF_LOG_LEVEL >= CAF_DEBUG
     CAF_LOG_DEBUG("new value = " << ++m_running);
 # else
     ++m_running;

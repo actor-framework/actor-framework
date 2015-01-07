@@ -246,8 +246,8 @@ class event_handler {
   /**
    * Sets the bit field storing the subscribed events.
    */
-  inline void eventbf(int eventbf) {
-    m_eventbf = eventbf;
+  inline void eventbf(int value) {
+    m_eventbf = value;
   }
 
   /**
@@ -313,18 +313,19 @@ class default_multiplexer : public multiplexer {
     event_handler* ptr;
   };
 
-  connection_handle add_tcp_scribe(broker*, default_socket&& sock);
+  connection_handle add_tcp_scribe(broker*, default_socket_acceptor&& sock);
 
   connection_handle add_tcp_scribe(broker*, native_socket fd) override;
 
   connection_handle add_tcp_scribe(broker*, const std::string& h,
                                     uint16_t port) override;
 
-  accept_handle add_tcp_doorman(broker*, default_socket&& sock);
+  accept_handle add_tcp_doorman(broker*, default_socket_acceptor&& sock);
 
   accept_handle add_tcp_doorman(broker*, native_socket fd) override;
 
-  accept_handle add_tcp_doorman(broker*, uint16_t p, const char* h) override;
+  std::pair<accept_handle, uint16_t>
+  add_tcp_doorman(broker*, uint16_t p, const char* h, bool reuse_addr) override;
 
   void dispatch_runnable(runnable_ptr ptr) override;
 
@@ -356,8 +357,8 @@ class default_multiplexer : public multiplexer {
     CAF_LOG_TRACE(CAF_TARG(op, static_cast<int>)
              << ", " << CAF_ARG(fd) << ", " CAF_ARG(ptr)
              << ", " << CAF_ARG(old_bf));
-    auto event_less = [](const event& e, native_socket fd) -> bool {
-      return e.fd < fd;
+    auto event_less = [](const event& e, native_socket arg) -> bool {
+      return e.fd < arg;
     };
     auto last = m_events.end();
     auto i = std::lower_bound(m_events.begin(), last, fd, event_less);
@@ -441,9 +442,9 @@ class stream : public event_handler {
    */
   using buffer_type = std::vector<char>;
 
-  stream(default_multiplexer& backend)
-      : event_handler(backend),
-        m_sock(backend),
+  stream(default_multiplexer& backend_ref)
+      : event_handler(backend_ref),
+        m_sock(backend_ref),
         m_writing(false) {
     configure_read(receive_policy::at_most(1024));
   }
@@ -465,8 +466,8 @@ class stream : public event_handler {
   /**
    * Initializes this stream, setting the socket handle to `fd`.
    */
-  void init(Socket fd) {
-    m_sock = std::move(fd);
+  void init(Socket sockfd) {
+    m_sock = std::move(sockfd);
   }
 
   /**
@@ -483,7 +484,7 @@ class stream : public event_handler {
     switch (op) {
       case operation::read:  m_reader.reset(); break;
       case operation::write: m_writer.reset(); break;
-      default: break;
+      case operation::propagate_error: break;
     }
   }
 
@@ -680,10 +681,10 @@ class acceptor : public event_handler {
    */
   using manager_ptr = intrusive_ptr<manager_type>;
 
-  acceptor(default_multiplexer& backend)
-      : event_handler(backend),
-        m_accept_sock(backend),
-        m_sock(backend) {
+  acceptor(default_multiplexer& backend_ref)
+      : event_handler(backend_ref),
+        m_accept_sock(backend_ref),
+        m_sock(backend_ref) {
     // nop
   }
 
@@ -736,10 +737,10 @@ class acceptor : public event_handler {
     CAF_LOG_TRACE("m_accept_sock.fd = " << m_accept_sock.fd()
              << ", op = " << static_cast<int>(op));
     if (m_mgr && op == operation::read) {
-      native_socket fd = invalid_native_socket;
-      if (try_accept(fd, m_accept_sock.fd())) {
-        if (fd != invalid_native_socket) {
-          m_sock = socket_type{backend(), fd};
+      native_socket sockfd = invalid_native_socket;
+      if (try_accept(sockfd, m_accept_sock.fd())) {
+        if (sockfd != invalid_native_socket) {
+          m_sock = socket_type{backend(), sockfd};
           m_mgr->new_connection();
         }
       }
@@ -775,17 +776,18 @@ void ipv4_connect(Socket& sock, const std::string& host, uint16_t port) {
   sock = new_ipv4_connection(host, port);
 }
 
-native_socket new_ipv4_acceptor_impl(uint16_t port, const char* addr);
-
-default_socket_acceptor new_ipv4_acceptor(uint16_t port,
-                      const char* addr = nullptr);
+std::pair<default_socket_acceptor, uint16_t>
+new_ipv4_acceptor(uint16_t port, const char* addr = nullptr,
+                  bool reuse_addr = false);
 
 template <class SocketAcceptor>
-void ipv4_bind(SocketAcceptor& sock,
+uint16_t ipv4_bind(SocketAcceptor& sock,
          uint16_t port,
          const char* addr = nullptr) {
   CAF_LOGF_TRACE(CAF_ARG(port));
-  sock = new_ipv4_acceptor(port, addr);
+  auto acceptor = new_ipv4_acceptor(port, addr);
+  sock = std::move(acceptor.first);
+  return acceptor.second;
 }
 
 } // namespace network

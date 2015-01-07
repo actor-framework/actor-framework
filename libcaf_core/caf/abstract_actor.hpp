@@ -78,16 +78,12 @@ class abstract_actor : public abstract_channel {
   /**
    * Attaches `ptr` to this actor. The actor will call `ptr->detach(...)` on
    * exit, or immediately if it already finished execution.
-   * @returns `true` if `ptr` was successfully attached to the actor,
-   *          otherwise (actor already exited) `false`.
    */
   void attach(attachable_ptr ptr);
 
   /**
    * Convenience function that attaches the functor `f` to this actor. The
    * actor executes `f()` on exit or immediatley if it is not running.
-   * @returns `true` if `f` was successfully attached to the actor,
-   *          otherwise (actor already exited) `false`.
    */
   template <class F>
   void attach_functor(F f) {

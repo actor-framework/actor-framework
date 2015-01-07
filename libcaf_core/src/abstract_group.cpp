@@ -44,7 +44,7 @@ bool abstract_group::subscription::matches(const token& what) {
   return ot.group == m_group;
 }
 
-abstract_group::module::module(std::string name) : m_name(std::move(name)) {
+abstract_group::module::module(std::string mname) : m_name(std::move(mname)) {
   // nop
 }
 

@@ -207,8 +207,8 @@ class is_forward_iterator {
 };
 
 /**
- * Checks wheter `T` has `begin()</tt> and <tt>end() member
- *    functions returning forward iterators.
+ * Checks wheter `T` has `begin()` and `end()` member
+ * functions returning forward iterators.
  */
 template <class T>
 class is_iterable {
@@ -254,6 +254,23 @@ template <class T>
 struct is_mutable_ref {
   static constexpr bool value = std::is_reference<T>::value
                                 && !std::is_const<T>::value;
+};
+
+/**
+ * Checks whether `T::static_type_name()` exists.
+ */
+template <class T>
+class has_static_type_name {
+ private:
+  template <class U,
+            class = typename std::enable_if<
+                      !std::is_member_pointer<decltype(&U::is_baz)>::value
+                    >::type>
+  static std::true_type sfinae_fun(int);
+  template <class>
+  static std::false_type sfinae_fun(...);
+ public:
+  static constexpr bool value = decltype(sfinae_fun<T>(0))::value;
 };
 
 /**
@@ -461,6 +478,16 @@ struct is_optional : std::false_type {
 
 template <class T>
 struct is_optional<optional<T>> : std::true_type {
+  // no members
+};
+
+template <class T>
+struct is_integral_constant : std::false_type {
+  // no members
+};
+
+template <class T, T V>
+struct is_integral_constant<std::integral_constant<T, V>> : std::true_type {
   // no members
 };
 

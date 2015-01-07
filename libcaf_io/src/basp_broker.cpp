@@ -17,9 +17,12 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/io/basp_broker.hpp"
+
 #include "caf/exception.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/binary_deserializer.hpp"
+#include "caf/forwarding_actor_proxy.hpp"
 
 #include "caf/detail/singletons.hpp"
 #include "caf/detail/make_counted.hpp"
@@ -28,8 +31,6 @@
 #include "caf/io/basp.hpp"
 #include "caf/io/middleman.hpp"
 #include "caf/io/unpublish.hpp"
-#include "caf/io/basp_broker.hpp"
-#include "caf/io/remote_actor_proxy.hpp"
 
 using std::string;
 
@@ -73,8 +74,7 @@ behavior basp_broker::make_behavior() {
       if (j != m_ctx.end()) {
         auto hd = j->second.handshake_data;
         if (hd) {
-          network_error err{"disconnect during handshake"};
-          hd->result->set_exception(std::make_exception_ptr(err));
+          send(hd->client, atom("ERROR"), "disconnect during handshake");
         }
         m_ctx.erase(j);
       }
@@ -262,7 +262,7 @@ void basp_broker::dispatch(const actor_addr& from, const actor_addr& to,
   }
   auto& buf = wr_buf(route.hdl);
   // reserve space in the buffer to write the broker message later on
-  auto wr_pos = buf.size();
+  auto wr_pos = static_cast<ptrdiff_t>(buf.size());
   char placeholder[basp::header_size];
   buf.insert(buf.end(), std::begin(placeholder), std::end(placeholder));
   auto before = buf.size();
@@ -434,7 +434,7 @@ basp_broker::handle_basp_header(connection_context& ctx,
         auto str = bd.read<string>();
         remote_ifs.insert(std::move(str));
       }
-      auto& ifs = *(ctx.handshake_data->expected_ifs);
+      auto& ifs = ctx.handshake_data->expected_ifs;
       if (!std::includes(ifs.begin(), ifs.end(),
                          remote_ifs.begin(), remote_ifs.end())) {
         auto tostr = [](const std::set<string>& what) -> string {
@@ -475,15 +475,14 @@ basp_broker::handle_basp_header(connection_context& ctx,
                       + iface_str;
         }
         // abort with error
-        std::runtime_error err{error_msg};
-        ctx.handshake_data->result->set_exception(std::make_exception_ptr(err));
+        send(ctx.handshake_data->client, atom("ERROR"), std::move(error_msg));
         return close_connection;
       }
       auto nid = ctx.handshake_data->remote_id;
       if (nid == node()) {
         CAF_LOG_INFO("incoming connection from self: drop connection");
         auto res = detail::singletons::get_actor_registry()->get(remote_aid);
-        ctx.handshake_data->result->set_value(std::move(res));
+        send(ctx.handshake_data->client, atom("OK"), actor_cast<actor>(res));
         ctx.handshake_data = nullptr;
         return close_connection;
       }
@@ -492,7 +491,7 @@ basp_broker::handle_basp_header(connection_context& ctx,
                      << " (re-use old one)");
         auto proxy = m_namespace.get_or_put(nid, remote_aid);
         // discard this peer; there's already an open connection
-        ctx.handshake_data->result->set_value(std::move(proxy));
+        send(ctx.handshake_data->client, atom("OK"), actor_cast<actor>(proxy));
         ctx.handshake_data = nullptr;
         return close_connection;
       }
@@ -505,7 +504,7 @@ basp_broker::handle_basp_header(connection_context& ctx,
       // prepare to receive messages
       auto proxy = m_namespace.get_or_put(nid, remote_aid);
       ctx.published_actor = proxy;
-      ctx.handshake_data->result->set_value(std::move(proxy));
+      send(ctx.handshake_data->client, atom("OK"), actor_cast<actor>(proxy));
       ctx.handshake_data = nullptr;
       parent().notify<hook::new_connection_established>(nid);
       break;
@@ -570,7 +569,7 @@ actor_proxy_ptr basp_broker::make_proxy(const id_type& nid, actor_id aid) {
   // receive a kill_proxy_instance message
   intrusive_ptr<basp_broker> self = this;
   auto mm = middleman::instance();
-  auto res = make_counted<remote_actor_proxy>(aid, nid, self);
+  auto res = make_counted<forwarding_actor_proxy>(aid, nid, self);
   res->attach_functor([=](uint32_t) {
     mm->backend().dispatch([=] {
       // using res->id() instead of aid keeps this actor instance alive
@@ -638,7 +637,7 @@ void basp_broker::init_handshake_as_sever(connection_context& ctx,
   CAF_LOG_TRACE(CAF_ARG(this));
   CAF_REQUIRE(node() != invalid_node_id);
   auto& buf = wr_buf(ctx.hdl);
-  auto wrpos = buf.size();
+  auto wrpos = static_cast<ptrdiff_t>(buf.size());
   char padding[basp::header_size];
   buf.insert(buf.end(), std::begin(padding), std::end(padding));
   auto before = buf.size();

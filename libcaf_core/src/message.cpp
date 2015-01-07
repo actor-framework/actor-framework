@@ -33,7 +33,7 @@ message::message(message&& other) : m_vals(std::move(other.m_vals)) {
   // nop
 }
 
-message::message(const data_ptr& vals) : m_vals(vals) {
+message::message(const data_ptr& ptr) : m_vals(ptr) {
   // nop
 }
 
@@ -101,6 +101,17 @@ const std::type_info* message::type_token() const {
 
 bool message::dynamically_typed() const {
   return m_vals ? m_vals->dynamically_typed() : false;
+}
+
+message::const_iterator message::begin() const {
+  return m_vals ? m_vals->begin() : const_iterator{nullptr, 0};
+}
+
+/**
+ * Returns an iterator to the end.
+ */
+message::const_iterator message::end() const {
+  return m_vals ? m_vals->end() : const_iterator{nullptr, 0};
 }
 
 } // namespace caf

@@ -125,6 +125,7 @@ class event_based_resume {
           auto ptr = d->next_message();
           if (ptr) {
             if (d->invoke_message(ptr)) {
+              d->bhvr_stack().cleanup();
               ++handled_msgs;
               if (actor_done()) {
                 CAF_LOG_DEBUG("actor exited");
@@ -170,9 +171,8 @@ class event_based_resume {
         }
       }
       catch (std::exception& e) {
-        CAF_LOG_INFO("actor died because of an exception: "
-                     << detail::demangle(typeid(e))
-                     << ", what() = " << e.what());
+        CAF_LOG_INFO("actor died because of an exception, what: " << e.what());
+        static_cast<void>(e); // keep compiler happy when not logging
         if (d->exit_reason() == exit_reason::not_exited) {
           d->quit(exit_reason::unhandled_exception);
         }

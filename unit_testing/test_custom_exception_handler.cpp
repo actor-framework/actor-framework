@@ -6,6 +6,7 @@ using namespace caf;
 
 class exception_testee : public event_based_actor {
  public:
+  ~exception_testee();
   exception_testee() {
     set_exception_handler([](const std::exception_ptr&) -> optional<uint32_t> {
       return exit_reason::user_defined + 2;
@@ -19,6 +20,11 @@ class exception_testee : public event_based_actor {
     };
   }
 };
+
+exception_testee::~exception_testee() {
+  // avoid weak-vtables warning
+}
+
 
 void test_custom_exception_handler() {
   auto handler = [](const std::exception_ptr& eptr) -> optional<uint32_t> {

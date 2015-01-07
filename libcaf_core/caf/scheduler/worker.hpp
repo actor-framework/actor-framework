@@ -43,10 +43,10 @@ class worker : public execution_unit {
   using coordinator_ptr = coordinator<Policy>*;
   using policy_data = typename Policy::worker_data;
 
-  worker(size_t id, coordinator_ptr parent, size_t max_throughput)
-      : m_max_throughput(max_throughput),
-        m_id(id),
-        m_parent(parent) {
+  worker(size_t worker_id, coordinator_ptr worker_parent, size_t throughput)
+      : m_max_throughput(throughput),
+        m_id(worker_id),
+        m_parent(worker_parent) {
     // nop
   }
 

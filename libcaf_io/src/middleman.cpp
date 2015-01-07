@@ -35,7 +35,6 @@
 
 #include "caf/io/middleman.hpp"
 #include "caf/io/system_messages.hpp"
-#include "caf/io/remote_actor_proxy.hpp"
 
 #include "caf/detail/logging.hpp"
 #include "caf/detail/ripemd_160.hpp"
@@ -117,7 +116,7 @@ deserialize_impl(T& dm, deserializer* source) {
 template <class T>
 class uti_impl : public uniform_type_info {
  public:
-  uti_impl() : m_native(&typeid(T)), m_name(detail::demangle<T>()) {
+  uti_impl(const char* tname) : m_native(&typeid(T)), m_name(tname) {
     // nop
   }
 
@@ -165,23 +164,10 @@ class uti_impl : public uniform_type_info {
   std::string m_name;
 };
 
-template <class... Ts>
-struct announce_helper;
-
-template <class T, class... Ts>
-struct announce_helper<T, Ts...> {
-  static inline void exec() {
-    announce(typeid(T), uniform_type_info_ptr{new uti_impl<T>});
-    announce_helper<Ts...>::exec();
-  }
-};
-
-template <>
-struct announce_helper<> {
-  static inline void exec() {
-    // end of recursion
-  }
-};
+template <class T>
+void do_announce(const char* tname) {
+  announce(typeid(T), uniform_type_info_ptr{new uti_impl<T>(tname)});
+}
 
 } // namespace <anonymous>
 
@@ -209,11 +195,16 @@ void middleman::initialize() {
   });
   m_backend->thread_id(m_thread.get_id());
   // announce io-related types
-  announce_helper<new_data_msg, new_connection_msg,
-                  acceptor_closed_msg, connection_closed_msg,
-                  accept_handle, acceptor_closed_msg,
-                  connection_closed_msg, connection_handle,
-                  new_connection_msg, new_data_msg>::exec();
+  do_announce<new_data_msg>("caf::io::new_data_msg");
+  do_announce<new_connection_msg>("caf::io::new_connection_msg");
+  do_announce<acceptor_closed_msg>("caf::io::acceptor_closed_msg");
+  do_announce<connection_closed_msg>("caf::io::connection_closed_msg");
+  do_announce<accept_handle>("caf::io::accept_handle");
+  do_announce<acceptor_closed_msg>("caf::io::acceptor_closed_msg");
+  do_announce<connection_closed_msg>("caf::io::connection_closed_msg");
+  do_announce<connection_handle>("caf::io::connection_handle");
+  do_announce<new_connection_msg>("caf::io::new_connection_msg");
+  do_announce<new_data_msg>("caf::io::new_data_msg");
 }
 
 void middleman::stop() {

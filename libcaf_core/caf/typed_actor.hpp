@@ -131,7 +131,7 @@ class typed_actor
   }
 
   static std::set<std::string> message_types() {
-    return {detail::to_uniform_name<Rs>()...};
+    return {Rs::static_type_name()...};
   }
 
   explicit operator bool() const { return static_cast<bool>(m_ptr); }

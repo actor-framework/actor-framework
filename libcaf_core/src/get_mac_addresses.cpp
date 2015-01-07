@@ -134,10 +134,10 @@ std::vector<iface_info> get_mac_addresses() {
     oss << hex;
     oss.width(2);
     oss << ctoi(item->ifr_hwaddr.sa_data[0]);
-    for (size_t i = 1; i < 6; ++i) {
+    for (size_t j = 1; j < 6; ++j) {
       oss << ":";
       oss.width(2);
-      oss << ctoi(item->ifr_hwaddr.sa_data[i]);
+      oss << ctoi(item->ifr_hwaddr.sa_data[j]);
     }
     auto addr = oss.str();
     if (addr != "00:00:00:00:00:00") {

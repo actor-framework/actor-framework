@@ -51,6 +51,8 @@ class blocking_actor
 
   blocking_actor();
 
+  ~blocking_actor();
+
   /**************************************************************************
    *       utility stuff and receive() member function family       *
    **************************************************************************/

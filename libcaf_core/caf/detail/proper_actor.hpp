@@ -64,10 +64,10 @@ class proper_actor_base : public Policies::resume_policy::template
     scheduling_policy().enqueue(dptr(), sender, mid, msg, eu);
   }
 
-  inline void launch(bool hide, execution_unit* host) {
+  inline void launch(bool hide, bool lazy, execution_unit* eu) {
     CAF_LOG_TRACE("");
     this->is_registered(!hide);
-    this->scheduling_policy().launch(this, host);
+    this->scheduling_policy().launch(this, eu, lazy);
   }
 
   template <class F>
@@ -255,17 +255,17 @@ class proper_actor<Base, Policies, true>
       }
       restore_cache();
     }
-    bool has_timeout = false;
+    bool timeout_valid = false;
     uint32_t timeout_id;
     // request timeout if needed
     if (bhvr.timeout().valid()) {
-      has_timeout = true;
+      timeout_valid = true;
       timeout_id = this->request_timeout(bhvr.timeout());
     }
     // workaround for GCC 4.7 bug (const this when capturing refs)
     auto& pending_timeouts = m_pending_timeouts;
     auto guard = detail::make_scope_guard([&] {
-      if (has_timeout) {
+      if (timeout_valid) {
         auto e = pending_timeouts.end();
         auto i = std::find(pending_timeouts.begin(), e, timeout_id);
         if (i != e) {

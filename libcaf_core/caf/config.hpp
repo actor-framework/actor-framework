@@ -34,7 +34,7 @@
  * whereas each number is a two-digit decimal number without
  * leading zeros (e.g. 900 is version 0.9.0).
  */
-#define CAF_VERSION 1102
+#define CAF_VERSION 1200
 
 #define CAF_MAJOR_VERSION (CAF_VERSION / 10000)
 #define CAF_MINOR_VERSION ((CAF_VERSION / 100) % 100)
@@ -61,7 +61,18 @@
     _Pragma("clang diagnostic ignored \"-Wconversion\"")                       \
     _Pragma("clang diagnostic ignored \"-Wcast-align\"")                       \
     _Pragma("clang diagnostic ignored \"-Wundef\"")                            \
-    _Pragma("clang diagnostic ignored \"-Wnested-anon-types\"")
+    _Pragma("clang diagnostic ignored \"-Wnested-anon-types\"")                \
+    _Pragma("clang diagnostic ignored \"-Wdeprecated\"")                       \
+    _Pragma("clang diagnostic ignored \"-Wdisabled-macro-expansion\"")         \
+    _Pragma("clang diagnostic ignored \"-Wdocumentation\"")                    \
+    _Pragma("clang diagnostic ignored \"-Wfloat-equal\"")                      \
+    _Pragma("clang diagnostic ignored \"-Wimplicit-fallthrough\"")             \
+    _Pragma("clang diagnostic ignored \"-Wold-style-cast\"")                   \
+    _Pragma("clang diagnostic ignored \"-Wshadow\"")                           \
+    _Pragma("clang diagnostic ignored \"-Wshorten-64-to-32\"")                 \
+    _Pragma("clang diagnostic ignored \"-Wsign-conversion\"")                  \
+    _Pragma("clang diagnostic ignored \"-Wundef\"")                            \
+    _Pragma("clang diagnostic ignored \"-Wweak-vtables\"")
 #  define CAF_POP_WARNINGS                          \
     _Pragma("clang diagnostic pop")
 #  define CAF_ANNOTATE_FALLTHROUGH [[clang::fallthrough]]
@@ -104,44 +115,32 @@
 #  error Platform and/or compiler not supportet
 #endif
 
-#include <memory>
 #include <cstdio>
 #include <cstdlib>
 
 // import backtrace and backtrace_symbols_fd into caf::detail
-#ifdef CAF_WINDOWS
-#include "caf/detail/execinfo_windows.hpp"
-#else
-#include <execinfo.h>
-namespace caf {
-namespace detail {
-using ::backtrace;
-using ::backtrace_symbols_fd;
-} // namespace detail
-} // namespace caf
-
-#endif
-
-#ifdef CAF_ENABLE_RUNTIME_CHECKS
-#   define CAF_REQUIRE__(stmt, file, line)                                     \
-    printf("%s:%u: requirement failed '%s'\n", file, line, stmt); {            \
-      void* array[10];                                                         \
-      auto caf_bt_size = ::caf::detail::backtrace(array, 10);                  \
-      ::caf::detail::backtrace_symbols_fd(array, caf_bt_size, 2);              \
-    } abort()
-#   define CAF_REQUIRE(stmt)                                                   \
-    if (static_cast<bool>(stmt) == false) {                                    \
-      CAF_REQUIRE__(#stmt, __FILE__, __LINE__);                                \
-    } static_cast<void>(0)
-#else
-#   define CAF_REQUIRE(unused) static_cast<void>(0)
-#endif
-
-#define CAF_CRITICAL__(error, file, line) {                                    \
-    printf("%s:%u: critical error: '%s'\n", file, line, error);                \
-    exit(7);                                                                   \
+#ifndef CAF_ENABLE_RUNTIME_CHECKS
+# define CAF_REQUIRE(unused) static_cast<void>(0)
+#elif defined(CAF_WINDOWS) || defined(CAF_BSD)
+# define CAF_REQUIRE(stmt)                                                     \
+  if (static_cast<bool>(stmt) == false) {                                      \
+    printf("%s:%u: requirement failed '%s'\n", __FILE__, __LINE__, #stmt);     \
+    abort();                                                                   \
   } static_cast<void>(0)
+#else // defined(CAF_LINUX) || defined(CAF_MACOS)
+# include <execinfo.h>
+# define CAF_REQUIRE(stmt)                                                     \
+  if (static_cast<bool>(stmt) == false) {                                      \
+    printf("%s:%u: requirement failed '%s'\n", __FILE__, __LINE__, #stmt);     \
+    void* array[10];                                                           \
+    auto caf_bt_size = ::backtrace(array, 10);                                 \
+    ::backtrace_symbols_fd(array, caf_bt_size, 2);                             \
+    abort();                                                                   \
+  } static_cast<void>(0)
+#endif
 
-#define CAF_CRITICAL(error) CAF_CRITICAL__(error, __FILE__, __LINE__)
+#define CAF_CRITICAL(error)                                                    \
+  printf("%s:%u: critical error: '%s'\n", __FILE__, __LINE__, error);          \
+  abort()
 
 #endif // CAF_CONFIG_HPP

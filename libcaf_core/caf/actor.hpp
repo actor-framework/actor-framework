@@ -149,9 +149,9 @@ class actor : detail::comparable<actor>,
 
   actor_id id() const;
 
- private:
-
   void swap(actor& other);
+
+ private:
 
   inline abstract_actor* get() const {
     return m_ptr.get();

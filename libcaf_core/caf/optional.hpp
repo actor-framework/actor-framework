@@ -27,6 +27,8 @@
 #include "caf/unit.hpp"
 #include "caf/config.hpp"
 
+#include "caf/detail/safe_equal.hpp"
+
 namespace caf {
 
 /**
@@ -272,7 +274,7 @@ class optional<T&> {
 template <class T, typename U>
 bool operator==(const optional<T>& lhs, const optional<U>& rhs) {
   if ((lhs) && (rhs)) {
-    return *lhs == *rhs;
+    return detail::safe_equal(*lhs, *rhs);
   }
   return !lhs && !rhs;
 }

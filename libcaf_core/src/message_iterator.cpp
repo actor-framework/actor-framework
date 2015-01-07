@@ -17,24 +17,26 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_DEMANGLE_HPP
-#define CAF_DETAIL_DEMANGLE_HPP
+#include "caf/detail/message_iterator.hpp"
 
-#include <string>
-#include <typeinfo>
+#include "caf/detail/message_data.hpp"
 
 namespace caf {
 namespace detail {
 
-std::string demangle(const char* typeid_name);
-std::string demangle(const std::type_info& tinf);
+message_iterator::message_iterator(const_pointer dataptr, size_t pos)
+    : m_pos(pos),
+      m_data(dataptr) {
+  // nop
+}
 
-template <class T>
-inline std::string demangle() {
-  return demangle(typeid(T));
+const void* message_iterator::value() const {
+  return m_data->at(m_pos);
+}
+
+const uniform_type_info* message_iterator::type() const {
+  return m_data->type_at(m_pos);
 }
 
 } // namespace detail
 } // namespace caf
-
-#endif // CAF_DETAIL_DEMANGLE_HPP

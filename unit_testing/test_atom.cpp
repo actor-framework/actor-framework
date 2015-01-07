@@ -21,6 +21,29 @@ using namespace caf;
 
 namespace {
 constexpr auto s_foo = atom("FooBar");
+using abc_atom = atom_constant<atom("abc")>;
+}
+
+using testee = typed_actor<replies_to<abc_atom>::with<int>>;
+
+testee::behavior_type testee_impl(testee::pointer self) {
+  return {
+    [=](abc_atom) {
+      self->quit();
+      return 42;
+    }
+  };
+}
+
+void test_typed_atom_interface() {
+  scoped_actor self;
+  auto tst = spawn_typed(testee_impl);
+  self->sync_send(tst, abc_atom()).await(
+    [](int i) {
+      CAF_CHECK_EQUAL(i, 42);
+    },
+    CAF_UNEXPECTED_MSG_CB_REF(self)
+  );
 }
 
 template <atom_value AtomValue, class... Types>
@@ -36,7 +59,6 @@ struct send_to_self {
     m_self->send(m_self, std::forward<Ts>(args)...);
   }
   blocking_actor* m_self;
-
 };
 
 int main() {
@@ -53,22 +75,19 @@ int main() {
   send_to_self f{self.get()};
   f(atom("foo"), static_cast<uint32_t>(42));
   f(atom(":Attach"), atom(":Baz"), "cstring");
-  // m(atom("b"), atom("a"), atom("c"), 23.f, 1.f, 1.f);
   f(1.f);
   f(atom("a"), atom("b"), atom("c"), 23.f);
   bool matched_pattern[3] = {false, false, false};
   int i = 0;
+  CAF_CHECKPOINT();
   for (i = 0; i < 3; ++i) {
     self->receive(
-      //}
-      // self->receive_for(i, 3) (
       on(atom("foo"), arg_match) >> [&](uint32_t value) {
         CAF_CHECKPOINT();
         matched_pattern[0] = true;
         CAF_CHECK_EQUAL(value, 42);
       },
-      on(atom(":Attach"), atom(":Baz"), arg_match) >>
-        [&](const string& str) {
+      on(atom(":Attach"), atom(":Baz"), arg_match) >> [&](const string& str) {
         CAF_CHECKPOINT();
         matched_pattern[1] = true;
         CAF_CHECK_EQUAL(str, "cstring");
@@ -83,6 +102,17 @@ int main() {
   self->receive(
     // "erase" message { atom("b"), atom("a"), atom("c"), 23.f }
     others() >> CAF_CHECKPOINT_CB(),
-    after(std::chrono::seconds(0)) >> CAF_UNEXPECTED_TOUT_CB());
+    after(std::chrono::seconds(0)) >> CAF_UNEXPECTED_TOUT_CB()
+  );
+  atom_value x = atom("abc");
+  atom_value y = abc_atom();
+  CAF_CHECK_EQUAL(x, y);
+  auto msg = make_message(abc_atom());
+  self->send(self, msg);
+  self->receive(
+    on(atom("abc")) >> CAF_CHECKPOINT_CB(),
+    others() >> CAF_UNEXPECTED_MSG_CB_REF(self)
+  );
+  test_typed_atom_interface();
   return CAF_TEST_RESULT();
 }

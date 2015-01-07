@@ -29,6 +29,7 @@
 #include "caf/intrusive_ptr.hpp"
 
 #include "caf/atom.hpp"
+#include "caf/either.hpp"
 #include "caf/message.hpp"
 #include "caf/duration.hpp"
 #include "caf/ref_counted.hpp"
@@ -38,10 +39,6 @@
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/apply_args.hpp"
 #include "caf/detail/type_traits.hpp"
-
-// <backward_compatibility version="0.9">
-#include "cppa/cow_tuple.hpp"
-// </backward_compatibility>
 
 namespace caf {
 
@@ -72,7 +69,8 @@ struct optional_message_visitor_enable_tpl {
         skip_message_t,
         optional<skip_message_t>
       >::value
-      && !is_message_id_wrapper<T>::value;
+      && !is_message_id_wrapper<T>::value
+      && !std::is_convertible<T, message>::value;
 };
 
 struct optional_message_visitor : static_visitor<bhvr_invoke_result> {
@@ -95,15 +93,19 @@ struct optional_message_visitor : static_visitor<bhvr_invoke_result> {
   }
 
   template <class T, class... Ts>
-  typename std::enable_if<optional_message_visitor_enable_tpl<T>::value,
-              bhvr_invoke_result>::type
+  typename std::enable_if<
+    optional_message_visitor_enable_tpl<T>::value,
+    bhvr_invoke_result
+  >::type
   operator()(T& v, Ts&... vs) const {
     return make_message(std::move(v), std::move(vs)...);
   }
 
   template <class T>
-  typename std::enable_if<is_message_id_wrapper<T>::value,
-              bhvr_invoke_result>::type
+  typename std::enable_if<
+    is_message_id_wrapper<T>::value,
+    bhvr_invoke_result
+  >::type
   operator()(T& value) const {
     return make_message(atom("MESSAGE_ID"),
               value.get_message_id().integer_value());
@@ -113,17 +115,24 @@ struct optional_message_visitor : static_visitor<bhvr_invoke_result> {
     return std::move(value);
   }
 
+  template <class L, class R>
+  bhvr_invoke_result operator()(either_or_t<L, R>& value) const {
+    return std::move(value.value);
+  }
+
   template <class... Ts>
   bhvr_invoke_result operator()(std::tuple<Ts...>& value) const {
     return detail::apply_args(*this, detail::get_indices(value), value);
   }
 
-  // <backward_compatibility version="0.9">
-  template <class... Ts>
-  bhvr_invoke_result operator()(cow_tuple<Ts...>& value) const {
-    return static_cast<message>(std::move(value));
+  template <class T>
+  typename std::enable_if<
+    std::is_convertible<T, message>::value,
+    bhvr_invoke_result
+  >::type
+  operator()(const T& value) const {
+    return static_cast<message>(value);
   }
-  // </backward_compatibility>
 
 };
 

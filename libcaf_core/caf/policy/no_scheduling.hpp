@@ -65,7 +65,7 @@ class no_scheduling {
   }
 
   template <class Actor>
-  void launch(Actor* self, execution_unit*) {
+  void launch(Actor* self, execution_unit*, bool) {
     CAF_REQUIRE(self != nullptr);
     CAF_PUSH_AID(self->id());
     CAF_LOG_TRACE(CAF_ARG(self));

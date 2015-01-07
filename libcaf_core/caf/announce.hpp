@@ -79,8 +79,8 @@ namespace caf {
  */
 
 /**
- * Adds a new mapping to the type system. Returns `false` if a mapping
- * for `tinfo` already exists, otherwise `true`.
+ * Adds a new mapping to the type system. Returns `utype.get()` on
+ * success, otherwise a pointer to the previously installed singleton.
  * @warning `announce` is **not** thead-safe!
  */
 const uniform_type_info* announce(const std::type_info& tinfo,
@@ -95,7 +95,7 @@ const uniform_type_info* announce(const std::type_info& tinfo,
 template <class C, class Parent, class... Ts>
 std::pair<C Parent::*, detail::abstract_uniform_type_info<C>*>
 compound_member(C Parent::*c_ptr, const Ts&... args) {
-  return {c_ptr, new detail::default_uniform_type_info<C>(args...)};
+  return {c_ptr, new detail::default_uniform_type_info<C>("???", args...)};
 }
 
 // deals with getter returning a mutable reference
@@ -108,7 +108,7 @@ compound_member(C Parent::*c_ptr, const Ts&... args) {
 template <class C, class Parent, class... Ts>
 std::pair<C& (Parent::*)(), detail::abstract_uniform_type_info<C>*>
 compound_member(C& (Parent::*getter)(), const Ts&... args) {
-  return {getter, new detail::default_uniform_type_info<C>(args...)};
+  return {getter, new detail::default_uniform_type_info<C>("???", args...)};
 }
 
 // deals with getter/setter pair
@@ -126,16 +126,17 @@ compound_member(const std::pair<GRes (Parent::*)() const,
                 SRes (Parent::*)(SArg)>& gspair,
                 const Ts&... args) {
   using mtype = typename std::decay<GRes>::type;
-  return {gspair, new detail::default_uniform_type_info<mtype>(args...)};
+  return {gspair, new detail::default_uniform_type_info<mtype>("???", args...)};
 }
 
 /**
- * Adds a new type mapping for `C` to the type system.
+ * Adds a new type mapping for `C` to the type system
+ * using `tname` as its uniform name.
  * @warning `announce` is **not** thead-safe!
  */
 template <class C, class... Ts>
-inline const uniform_type_info* announce(const Ts&... args) {
-  auto ptr = new detail::default_uniform_type_info<C>(args...);
+inline const uniform_type_info* announce(std::string tname, const Ts&... args) {
+  auto ptr = new detail::default_uniform_type_info<C>(std::move(tname), args...);
   return announce(typeid(C), uniform_type_info_ptr{ptr});
 }
 

@@ -81,12 +81,15 @@ inline bool nonzero(T aid) {
 /**
  * Send from server, i.e., the node with a published actor, to client,
  * i.e., node that initiates a new connection using remote_actor().
- * @param source_node     ID of server
- * @param dest_node       invalid
- * @param source_actor    Optional: ID of published actor
- * @param dest_actor      0
- * @param payload_len     Optional: size of actor id + interface definition
- * @param operation_data  BASP version of the server
+ *
+ * Field          | Assignment
+ * ---------------|----------------------------------------------------------
+ * source_node    | ID of server
+ * dest_node      | invalid
+ * source_actor   | Optional: ID of published actor
+ * dest_actor     | 0
+ * payload_len    | Optional: size of actor id + interface definition
+ * operation_data | BASP version of the server
  */
 constexpr uint32_t server_handshake = 0x00;
 
@@ -96,18 +99,21 @@ inline bool server_handshake_valid(const header& hdr) {
        && zero(hdr.dest_actor)
        && nonzero(hdr.operation_data)
        && (   (nonzero(hdr.source_actor) && nonzero(hdr.payload_len))
-         || (zero(hdr.source_actor) && zero(hdr.payload_len)));
+           || (zero(hdr.source_actor) && zero(hdr.payload_len)));
 }
 
 /**
  * Send from client to server after it has successfully received the
  * server_handshake to establish the connection.
- * @param source_node     ID of client
- * @param dest_node       ID of server
- * @param source_actor    0
- * @param dest_actor      0
- * @param payload_len     0
- * @param operation_data  0
+ *
+ * Field          | Assignment
+ * ---------------|----------------------------------------------------------
+ * source_node    | ID of client
+ * dest_node      | ID of server
+ * source_actor   | 0
+ * dest_actor     | 0
+ * payload_len    | 0
+ * operation_data | 0
  */
 constexpr uint32_t client_handshake = 0x01;
 
@@ -124,12 +130,15 @@ inline bool client_handshake_valid(const header& hdr) {
 /**
  * Transmits a message from source_node:source_actor to
  * dest_node:dest_actor.
- * @param source_node     ID of sending node (invalid in case of anon_send)
- * @param dest_node       ID of receiving node
- * @param source_actor    ID of sending actor (invalid in case of anon_send)
- * @param dest_actor      ID of receiving actor, must not be invalid
- * @param payload_len     size of serialized message object, must not be 0
- * @param operation_data  message ID (0 for asynchronous messages)
+ *
+ * Field          | Assignment
+ * ---------------|----------------------------------------------------------
+ * source_node    | ID of sending node (invalid in case of anon_send)
+ * dest_node      | ID of receiving node
+ * source_actor   | ID of sending actor (invalid in case of anon_send)
+ * dest_actor     | ID of receiving actor, must not be invalid
+ * payload_len    | size of serialized message object, must not be 0
+ * operation_data | message ID (0 for asynchronous messages)
  */
 constexpr uint32_t dispatch_message = 0x02;
 
@@ -144,12 +153,15 @@ inline bool dispatch_message_valid(const header& hdr) {
  * instance for one of its actors. Causes the receiving node to attach
  * a functor to the actor that triggers a kill_proxy_instance
  * message on termination.
- * @param source_node     ID of sending node
- * @param dest_node       ID of receiving node
- * @param source_actor    0
- * @param dest_actor      ID of monitored actor
- * @param payload_len     0
- * @param operation_data  0
+ *
+ * Field          | Assignment
+ * ---------------|----------------------------------------------------------
+ * source_node    | ID of sending node
+ * dest_node      | ID of receiving node
+ * source_actor   | 0
+ * dest_actor     | ID of monitored actor
+ * payload_len    | 0
+ * operation_data | 0
  */
 constexpr uint32_t announce_proxy_instance = 0x03;
 
@@ -166,12 +178,15 @@ inline bool announce_proxy_instance_valid(const header& hdr) {
 /**
  * Informs the receiving node that it has a proxy for an actor
  * that has been terminated.
- * @param source_node     ID of sending node
- * @param dest_node       ID of receiving node
- * @param source_actor    ID of monitored actor
- * @param dest_actor      0
- * @param payload_len     0
- * @param operation_data  exit reason (uint32)
+ *
+ * Field          | Assignment
+ * ---------------|----------------------------------------------------------
+ * source_node    | ID of sending node
+ * dest_node      | ID of receiving node
+ * source_actor   | ID of monitored actor
+ * dest_actor     | 0
+ * payload_len    | 0
+ * operation_data | exit reason (uint32)
  */
 constexpr uint32_t kill_proxy_instance = 0x04;
 

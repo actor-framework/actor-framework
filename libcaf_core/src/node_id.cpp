@@ -68,8 +68,9 @@ void host_id_from_string(const std::string& hash,
   for (size_t i = 0; i < node_id.size(); ++i) {
     // read two characters, each representing 4 bytes
     auto& val = node_id[i];
-    val = static_cast<uint8_t>(hex_char_value(*j++) << 4);
-    val |= hex_char_value(*j++);
+    val = static_cast<uint8_t>(hex_char_value(j[0]) << 4)
+          | hex_char_value(j[1]);
+    j += 2;
   }
 }
 
@@ -84,8 +85,9 @@ bool equal(const std::string& hash, const node_id::host_id_type& node_id) {
     for (size_t i = 0; i < node_id.size(); ++i) {
       // read two characters, each representing 4 bytes
       uint8_t val;
-      val = static_cast<uint8_t>(hex_char_value(*j++) << 4);
-      val |= hex_char_value(*j++);
+      val = static_cast<uint8_t>(hex_char_value(j[0]) << 4)
+            | hex_char_value(j[1]);
+      j += 2;
       if (val != node_id[i]) {
         return false;
       }

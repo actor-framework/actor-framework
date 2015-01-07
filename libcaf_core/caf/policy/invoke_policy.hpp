@@ -153,36 +153,22 @@ class invoke_policy {
         auto id = res->template get_as<uint64_t>(1);
         auto msg_id = message_id::from_integer_value(id);
         auto ref_opt = self->sync_handler(msg_id);
-        // calls self->response_promise() if hdl is a dummy
-        // argument, forwards hdl otherwise to reply to the
-        // original request message
-        auto fhdl = fetch_response_promise(self, hdl);
+        // install a behavior that calls the user-defined behavior
+        // and using the result of its inner behavior as response
         if (ref_opt) {
-          behavior cpy = *ref_opt;
-          *ref_opt =
-            cpy.add_continuation([=](message & intermediate)
-                         ->optional<message> {
-              if (!intermediate.empty()) {
-                // do no use lamba expresion type to
-                // avoid recursive template instantiaton
-                behavior::continuation_fun f2 = [=](
-                  message & m)->optional<message> {
-                  return std::move(m);
-
-                };
-                auto mutable_mid = mid;
-                // recursively call invoke_fun on the
-                // result to correctly handle stuff like
-                // sync_send(...).then(...).then(...)...
-                return this->invoke_fun(self, intermediate,
-                             mutable_mid, f2, fhdl);
+          auto fhdl = fetch_response_promise(self, hdl);
+          behavior inner = *ref_opt;
+          *ref_opt = behavior {
+            others() >> [=] {
+              // inner is const inside this lambda and mutable a C++14 feature
+              behavior cpy = inner;
+              auto inner_res = cpy(self->last_dequeued());
+              if (inner_res) {
+                fhdl.deliver(*inner_res);
               }
-              return none;
-            });
+            }
+          };
         }
-        // reset res to prevent "outer" invoke_fun
-        // from handling the result again
-        res->reset();
       } else {
         // respond by using the result of 'fun'
         CAF_LOG_DEBUG("respond via response_promise");

@@ -38,6 +38,7 @@
 // C++ includes
 #include <string>
 #include <vector>
+#include <random>
 #include <iostream>
 
 // libcurl
@@ -46,7 +47,7 @@
 // libcaf
 #include "caf/all.hpp"
 
-// disable some clang warnings here caused by CURL and srand(time(nullptr))
+// disable some clang warnings here caused by CURL
 #ifdef __clang__
 #   pragma clang diagnostic ignored "-Wshorten-64-to-32"
 #   pragma clang diagnostic ignored "-Wdisabled-macro-expansion"
@@ -101,6 +102,8 @@ class base_actor : public event_based_actor {
     // nop
   }
 
+  ~base_actor();
+
   inline actor_ostream& print() {
     return m_out << m_color << m_name << " (id = " << id() << "): ";
   }
@@ -117,6 +120,10 @@ class base_actor : public event_based_actor {
   actor_ostream m_out;
 };
 
+base_actor::~base_actor() {
+  // avoid weak-vtables warning
+}
+
 // encapsulates an HTTP request
 class client_job : public base_actor {
  public:
@@ -124,6 +131,8 @@ class client_job : public base_actor {
       : base_actor(std::move(parent), "client_job", color::blue) {
     // nop
   }
+
+  ~client_job();
 
  protected:
   behavior make_behavior() override {
@@ -149,14 +158,23 @@ class client_job : public base_actor {
   }
 };
 
+client_job::~client_job() {
+  // avoid weak-vtables warning
+}
+
 // spawns HTTP requests
 class client : public base_actor {
  public:
 
   client(const actor& parent)
-      : base_actor(parent, "client", color::green), m_count(0) {
+      : base_actor(parent, "client", color::green),
+        m_count(0),
+        m_re(m_rd()),
+        m_dist(min_req_interval, max_req_interval) {
     // nop
   }
+
+  ~client();
 
  protected:
   behavior make_behavior() override {
@@ -175,7 +193,7 @@ class client : public base_actor {
         // and should thus be spawned in a separate thread
         spawn<client_job, detached+linked>(m_parent);
         // compute random delay until next job is launched
-        auto delay = (rand() + min_req_interval) % max_req_interval;
+        auto delay = m_dist(m_re);
         delayed_send(this, milliseconds(delay), atom("next"));
       }
     );
@@ -183,16 +201,24 @@ class client : public base_actor {
 
  private:
   size_t m_count;
+  std::random_device m_rd;
+  std::default_random_engine m_re;
+  std::uniform_int_distribution<int> m_dist;
 };
+
+client::~client() {
+  // avoid weak-vtables warning
+}
 
 // manages a CURL session
 class curl_worker : public base_actor {
  public:
-
   curl_worker(const actor& parent)
       : base_actor(parent, "curl_worker", color::yellow) {
     // nop
   }
+
+  ~curl_worker();
 
  protected:
   behavior make_behavior() override {
@@ -203,7 +229,7 @@ class curl_worker : public base_actor {
     return (
       on(atom("read"), arg_match)
       >> [=](const std::string& fname, uint64_t offset, uint64_t range)
-      -> cow_tuple<atom_value, buffer_type> {
+         -> message {
         print() << "read" << color::reset_endl;
         for (;;) {
           m_buf.clear();
@@ -241,7 +267,7 @@ class curl_worker : public base_actor {
                         << color::reset_endl;
                 // tell parent that this worker is done
                 send(m_parent, atom("finished"));
-                return make_cow_tuple(atom("reply"), m_buf);
+                return make_message(atom("reply"), m_buf);
               case 404: // file does not exist
                 print() << "http error: download failed with "
                         << "'HTTP RETURN CODE': 404 (file does "
@@ -275,12 +301,19 @@ class curl_worker : public base_actor {
   buffer_type m_buf;
 };
 
+curl_worker::~curl_worker() {
+  // avoid weak-vtables warning
+}
+
+
 // manages {num_curl_workers} workers with a round-robin protocol
 class curl_master : public base_actor {
  public:
   curl_master() : base_actor(invalid_actor, "curl_master", color::magenta) {
     // nop
   }
+
+  ~curl_master();
 
  protected:
   behavior make_behavior() override {
@@ -337,12 +370,17 @@ class curl_master : public base_actor {
   std::vector<actor> m_busy_worker;
 };
 
+curl_master::~curl_master() {
+  // avoid weak-vtables warning
+}
+
 // signal handling for ctrl+c
+namespace {
 std::atomic<bool> shutdown_flag{false};
+} // namespace <anonymous>
 
 int main() {
   // random number setup
-  srand(time(nullptr));
   // install signal handler
   struct sigaction act;
   act.sa_handler = [](int) { shutdown_flag = true; };

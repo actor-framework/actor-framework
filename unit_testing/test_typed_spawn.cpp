@@ -66,18 +66,17 @@ class typed_server3 : public server_type::base {
 };
 
 void client(event_based_actor* self, actor parent, server_type serv) {
-  self->sync_send(serv, my_request{0, 0})
-    .then([](bool value)->int {
-       CAF_CHECK_EQUAL(value, true);
-       return 42;
-     })
-    .continue_with([=](int ival) {
-       CAF_CHECK_EQUAL(ival, 42);
-       self->sync_send(serv, my_request{10, 20}).then([=](bool value) {
-         CAF_CHECK_EQUAL(value, false);
-         self->send(parent, atom("passed"));
-       });
-     });
+  self->sync_send(serv, my_request{0, 0}).then(
+    [=](bool val1) {
+      CAF_CHECK_EQUAL(val1, true);
+      self->sync_send(serv, my_request{10, 20}).then(
+        [=](bool val2) {
+          CAF_CHECK_EQUAL(val2, false);
+          self->send(parent, atom("passed"));
+        }
+      );
+    }
+  );
 }
 
 void test_typed_spawn(server_type ts) {
@@ -177,7 +176,7 @@ void test_event_testee() {
   self->send(et, "goodbye event testee!");
   typed_actor<replies_to<get_state_msg>::with<string>> sub_et = et;
   // $:: is the anonymous namespace
-  set<string> iface{"caf::replies_to<$::get_state_msg>::with<@str>",
+  set<string> iface{"caf::replies_to<get_state_msg>::with<@str>",
                     "caf::replies_to<@str>::with<void>",
                     "caf::replies_to<float>::with<void>",
                     "caf::replies_to<@i32>::with<@i32>"};
@@ -311,9 +310,9 @@ void test_sending_typed_actors_and_down_msg() {
 int main() {
   CAF_TEST(test_typed_spawn);
   // announce stuff
-  announce<get_state_msg>();
-  announce<int_actor>();
-  announce<my_request>(&my_request::a, &my_request::b);
+  announce<get_state_msg>("get_state_msg");
+  announce<int_actor>("int_actor");
+  announce<my_request>("my_request", &my_request::a, &my_request::b);
   // run test series with typed_server(1|2)
   test_typed_spawn(spawn_typed(typed_server1));
   await_all_actors_done();

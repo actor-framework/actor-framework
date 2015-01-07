@@ -252,6 +252,8 @@ class broker : public extend<local_actor>::
     m_scribes.insert(std::make_pair(ptr->hdl(), ptr));
   }
 
+  connection_handle add_tcp_scribe(const std::string& host, uint16_t port);
+
   inline void add_doorman(const doorman_pointer& ptr) {
     m_doormen.insert(std::make_pair(ptr->hdl(), ptr));
     if (is_initialized()) {
@@ -259,25 +261,14 @@ class broker : public extend<local_actor>::
     }
   }
 
+  std::pair<accept_handle, uint16_t> add_tcp_doorman(uint16_t port = 0,
+                                                     const char* in = nullptr,
+                                                     bool reuse_addr = false);
+
   void invoke_message(const actor_addr& sender, message_id mid, message& msg);
 
   void enqueue(const actor_addr&, message_id, message,
                execution_unit*) override;
-
-  template <class F>
-  static broker_ptr from(F fun) {
-    // transform to STD function here, because GCC is unable
-    // to select proper overload otherwise ...
-    using fres = decltype(fun((broker*)nullptr));
-    std::function<fres(broker*)> stdfun{std::move(fun)};
-    return from_impl(std::move(stdfun));
-  }
-
-  template <class F, typename T, class... Ts>
-  static broker_ptr from(F fun, T&& v, Ts&&... vs) {
-    return from(std::bind(fun, std::placeholders::_1, std::forward<T>(v),
-                          std::forward<Ts>(vs)...));
-  }
 
   /**
    * Closes all connections and acceptors.
@@ -297,7 +288,7 @@ class broker : public extend<local_actor>::
 
   class functor_based;
 
-  void launch(bool is_hidden, execution_unit*);
+  void launch(bool is_hidden, bool, execution_unit*);
 
   // <backward_compatibility version="0.9">
 

@@ -47,15 +47,17 @@ template <size_t N, class... Ts>
 const typename detail::type_at<N, Ts...>::type&
 get(const detail::pseudo_tuple<Ts...>& tv) {
   static_assert(N < sizeof...(Ts), "N >= tv.size()");
-  return *reinterpret_cast<const typename detail::type_at<N, Ts...>::type*>(
-        tv.at(N));
+  auto vp = tv.at(N);
+  CAF_REQUIRE(vp != nullptr);
+  return *reinterpret_cast<const typename detail::type_at<N, Ts...>::type*>(vp);
 }
 
 template <size_t N, class... Ts>
 typename detail::type_at<N, Ts...>::type& get(detail::pseudo_tuple<Ts...>& tv) {
   static_assert(N < sizeof...(Ts), "N >= tv.size()");
-  return *reinterpret_cast<typename detail::type_at<N, Ts...>::type*>(
-        tv.mutable_at(N));
+  auto vp = tv.mutable_at(N);
+  CAF_REQUIRE(vp != nullptr);
+  return *reinterpret_cast<typename detail::type_at<N, Ts...>::type*>(vp);
 }
 
 } // namespace detail

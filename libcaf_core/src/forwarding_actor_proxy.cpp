@@ -17,63 +17,63 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/forwarding_actor_proxy.hpp"
+
 #include "caf/send.hpp"
+#include "caf/locks.hpp"
 #include "caf/to_string.hpp"
 
-#include "caf/io/middleman.hpp"
-#include "caf/io/remote_actor_proxy.hpp"
-
-#include "caf/detail/memory.hpp"
 #include "caf/detail/logging.hpp"
-#include "caf/detail/singletons.hpp"
-#include "caf/detail/sync_request_bouncer.hpp"
 
 using namespace std;
 
 namespace caf {
-namespace io {
 
-inline sync_request_info* new_req_info(actor_addr sptr, message_id id) {
-  return detail::memory::create<sync_request_info>(std::move(sptr), id);
-}
-
-sync_request_info::~sync_request_info() {
-  // nop
-}
-
-sync_request_info::sync_request_info(actor_addr sptr, message_id id)
-    : next(nullptr), sender(std::move(sptr)), mid(id) {
-  // nop
-}
-
-remote_actor_proxy::remote_actor_proxy(actor_id aid, node_id nid, actor parent)
-    : super(aid, nid), m_parent(parent) {
-  CAF_REQUIRE(parent != invalid_actor);
+forwarding_actor_proxy::forwarding_actor_proxy(actor_id aid, node_id nid,
+                                               actor mgr)
+    : actor_proxy(aid, nid),
+      m_manager(mgr) {
+  CAF_REQUIRE(mgr != invalid_actor);
   CAF_LOG_INFO(CAF_ARG(aid) << ", " << CAF_TARG(nid, to_string));
 }
 
-remote_actor_proxy::~remote_actor_proxy() {
-  anon_send(m_parent, make_message(atom("_DelProxy"), node(), id()));
+forwarding_actor_proxy::~forwarding_actor_proxy() {
+  anon_send(m_manager, make_message(atom("_DelProxy"), node(), id()));
 }
 
-void remote_actor_proxy::forward_msg(const actor_addr& sender, message_id mid,
-                                     message msg) {
+actor forwarding_actor_proxy::manager() const {
+  actor result;
+  {
+    shared_lock<detail::shared_spinlock> m_guard(m_manager_mtx);
+    result = m_manager;
+  }
+  return result;
+}
+
+void forwarding_actor_proxy::manager(actor new_manager) {
+  std::unique_lock<detail::shared_spinlock> m_guard(m_manager_mtx);
+  m_manager.swap(new_manager);
+}
+
+void forwarding_actor_proxy::forward_msg(const actor_addr& sender,
+                                         message_id mid, message msg) {
   CAF_LOG_TRACE(CAF_ARG(id()) << ", " << CAF_TSARG(sender) << ", "
                               << CAF_MARG(mid, integer_value) << ", "
                               << CAF_TSARG(msg));
-  m_parent->enqueue(
-    invalid_actor_addr, invalid_message_id,
-    make_message(atom("_Dispatch"), sender, address(), mid, std::move(msg)),
-    nullptr);
+  shared_lock<detail::shared_spinlock> m_guard(m_manager_mtx);
+  m_manager->enqueue(invalid_actor_addr, invalid_message_id,
+                     make_message(atom("_Dispatch"), sender,
+                                  address(), mid, std::move(msg)),
+                     nullptr);
 }
 
-void remote_actor_proxy::enqueue(const actor_addr& sender, message_id mid,
-                                 message m, execution_unit*) {
+void forwarding_actor_proxy::enqueue(const actor_addr& sender, message_id mid,
+                                     message m, execution_unit*) {
   forward_msg(sender, mid, std::move(m));
 }
 
-bool remote_actor_proxy::link_impl(linking_operation op,
-                                   const actor_addr& other) {
+bool forwarding_actor_proxy::link_impl(linking_operation op,
+                                       const actor_addr& other) {
   switch (op) {
     case establish_link_op:
       if (establish_link_impl(other)) {
@@ -83,7 +83,7 @@ bool remote_actor_proxy::link_impl(linking_operation op,
                     make_message(atom("_Link"), other));
         return true;
       }
-      return false;
+      break;
     case remove_link_op:
       if (remove_link_impl(other)) {
         // causes remote actor to unlink from (proxy of) other
@@ -91,7 +91,7 @@ bool remote_actor_proxy::link_impl(linking_operation op,
                     make_message(atom("_Unlink"), other));
         return true;
       }
-      return false;
+      break;
     case establish_backlink_op:
       if (establish_backlink_impl(other)) {
         // causes remote actor to unlink from (proxy of) other
@@ -99,7 +99,7 @@ bool remote_actor_proxy::link_impl(linking_operation op,
                     make_message(atom("_Link"), other));
         return true;
       }
-      return false;
+      break;
     case remove_backlink_op:
       if (remove_backlink_impl(other)) {
         // causes remote actor to unlink from (proxy of) other
@@ -107,22 +107,21 @@ bool remote_actor_proxy::link_impl(linking_operation op,
                     make_message(atom("_Unlink"), other));
         return true;
       }
-      return false;
+      break;
   }
   return false;
 }
 
-void remote_actor_proxy::local_link_to(const actor_addr& other) {
+void forwarding_actor_proxy::local_link_to(const actor_addr& other) {
   establish_link_impl(other);
 }
 
-void remote_actor_proxy::local_unlink_from(const actor_addr& other) {
+void forwarding_actor_proxy::local_unlink_from(const actor_addr& other) {
   remove_link_impl(other);
 }
 
-void remote_actor_proxy::kill_proxy(uint32_t reason) {
+void forwarding_actor_proxy::kill_proxy(uint32_t reason) {
   cleanup(reason);
 }
 
-} // namespace io
 } // namespace caf

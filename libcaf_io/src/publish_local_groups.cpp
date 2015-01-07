@@ -39,10 +39,10 @@ struct group_nameserver : event_based_actor {
 
 } // namespace <anonymous>
 
-void publish_local_groups(uint16_t port, const char* addr) {
+uint16_t publish_local_groups(uint16_t port, const char* addr) {
   auto gn = spawn<group_nameserver, hidden>();
   try {
-    publish(gn, port, addr);
+    return publish(gn, port, addr);
   }
   catch (std::exception&) {
     anon_send_exit(gn, exit_reason::user_shutdown);

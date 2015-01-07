@@ -40,13 +40,18 @@ class cooperative_scheduling {
   using timeout_type = int;
 
   template <class Actor>
-  inline void launch(Actor* self, execution_unit* host) {
+  inline void launch(Actor* self, execution_unit* host, bool lazy) {
     // detached in scheduler::worker::run
     self->attach_to_scheduler();
-    if (host)
+    if (lazy) {
+      self->mailbox().try_block();
+      return;
+    }
+    if (host) {
       host->exec_later(self);
-    else
+    } else {
       detail::singletons::get_scheduling_coordinator()->enqueue(self);
+    }
   }
 
   template <class Actor>

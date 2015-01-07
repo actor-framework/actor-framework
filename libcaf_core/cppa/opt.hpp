@@ -32,8 +32,6 @@
 #include "caf/on.hpp"
 #include "caf/optional.hpp"
 
-#include "caf/detail/demangle.hpp"
-
 #include "cppa/opt_impls.hpp"
 
 namespace caf {
@@ -43,7 +41,8 @@ using string_proj = std::function<optional<std::string> (const std::string&)>;
 inline string_proj extract_longopt_arg(const std::string& prefix) {
   return [prefix](const std::string& arg) -> optional<std::string> {
     if (arg.compare(0, prefix.size(), prefix) == 0) {
-      return std::string(arg.begin() + prefix.size(), arg.end());
+      return std::string(arg.begin() + static_cast<ptrdiff_t>(prefix.size()),
+                         arg.end());
     }
     return none;
   };

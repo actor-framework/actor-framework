@@ -64,8 +64,8 @@ actor_exited::~actor_exited() noexcept {
   // nop
 }
 
-actor_exited::actor_exited(uint32_t reason) : caf_exception(ae_what(reason)) {
-  m_reason = reason;
+actor_exited::actor_exited(uint32_t rsn) : caf_exception(ae_what(rsn)) {
+  m_reason = rsn;
 }
 
 network_error::network_error(const std::string& str) : super(str) {

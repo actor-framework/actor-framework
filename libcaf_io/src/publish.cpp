@@ -17,39 +17,57 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include <future>
+#include "caf/io/publish.hpp"
 
+#include "caf/send.hpp"
 #include "caf/actor_cast.hpp"
-
+#include "caf/scoped_actor.hpp"
 #include "caf/abstract_actor.hpp"
+
 #include "caf/detail/singletons.hpp"
 #include "caf/detail/actor_registry.hpp"
 
-#include "caf/io/publish.hpp"
 #include "caf/io/middleman.hpp"
 #include "caf/io/basp_broker.hpp"
 
 namespace caf {
 namespace io {
 
-void publish_impl(abstract_actor_ptr whom, uint16_t port, const char* in) {
+uint16_t publish_impl(abstract_actor_ptr whom, uint16_t port,
+                      const char* in, bool reuse_addr) {
   using namespace detail;
   auto mm = middleman::instance();
-  std::promise<bool> res;
+  scoped_actor self;
+  actor selfhdl = self;
   mm->run_later([&] {
     auto bro = mm->get_named_broker<basp_broker>(atom("_BASP"));
     try {
-      auto hdl = mm->backend().add_tcp_doorman(bro.get(), port, in);
-      bro->add_published_actor(hdl, whom, port);
-      mm->notify<hook::actor_published>(whom->address(), port);
-      res.set_value(true);
+      auto hdl = mm->backend().add_tcp_doorman(bro.get(), port, in, reuse_addr);
+      bro->add_published_actor(std::move(hdl.first), whom, hdl.second);
+      mm->notify<hook::actor_published>(whom->address(), hdl.second);
+      anon_send(selfhdl, atom("OK"), hdl.second);
     }
-    catch (...) {
-      res.set_exception(std::current_exception());
+    catch (bind_failure& e) {
+      anon_send(selfhdl, atom("BIND_FAIL"), e.what());
+    }
+    catch (network_error& e) {
+      anon_send(selfhdl, atom("ERROR"), e.what());
     }
   });
+  uint16_t bound_port = 0;
   // block caller and re-throw exception here in case of an error
-  res.get_future().get();
+  self->receive(
+    on(atom("OK"), arg_match) >> [&](uint16_t p) {
+      bound_port = p;
+    },
+    on(atom("BIND_FAIL"), arg_match) >> [](std::string& str) {
+      throw bind_failure(std::move(str));
+    },
+    on(atom("ERROR"), arg_match) >> [](std::string& str) {
+      throw network_error(std::move(str));
+    }
+  );
+  return bound_port;
 }
 
 } // namespace io

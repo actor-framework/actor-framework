@@ -30,7 +30,7 @@ group::group(const invalid_group_t&) : m_ptr(nullptr) {
   // nop
 }
 
-group::group(abstract_group_ptr ptr) : m_ptr(std::move(ptr)) {
+group::group(abstract_group_ptr gptr) : m_ptr(std::move(gptr)) {
   // nop
 }
 

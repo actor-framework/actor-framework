@@ -34,7 +34,7 @@
 #include "caf/detail/type_traits.hpp"
 #include "caf/detail/left_or_right.hpp"
 
-#include "caf/detail/matcher.hpp"
+#include "caf/detail/try_match.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/lifted_fun.hpp"
 #include "caf/detail/pseudo_tuple.hpp"
@@ -227,10 +227,9 @@ Result unroll_expr(PPFPs& fs, uint64_t bitmask, long_constant<N>, Msg& msg) {
   }
   auto& f = get<N>(fs);
   using ft = typename std::decay<decltype(f)>::type;
-  detail::matcher<typename ft::pattern, typename ft::filtered_pattern> match;
+  meta_elements<typename ft::pattern> ms;
   typename ft::intermediate_tuple targs;
-  if (match(msg, &targs)) {
-  //if (policy::prepare_invoke(targs, type_token, is_dynamic, ptr, tup)) {
+  if (try_match(msg, ms.arr.data(), ms.arr.size(), targs.data)) {
     auto is = detail::get_indices(targs);
     auto res = detail::apply_args(f, is, deduce_const(msg, targs));
     if (unroll_expr_result_valid(res)) {
@@ -240,19 +239,21 @@ Result unroll_expr(PPFPs& fs, uint64_t bitmask, long_constant<N>, Msg& msg) {
   return none;
 }
 
-template <class PPFPs, class Tuple>
-uint64_t calc_bitmask(PPFPs&, minus1l, const std::type_info&, const Tuple&) {
+template <class PPFPs>
+uint64_t calc_bitmask(PPFPs&, minus1l, const std::type_info&, const message&) {
   return 0x00;
 }
 
-template <class Case, long N, class Tuple>
+template <class Case, long N>
 uint64_t calc_bitmask(Case& fs, long_constant<N>,
-               const std::type_info& tinf, const Tuple& tup) {
+                      const std::type_info& tinf, const message& msg) {
   auto& f = get<N>(fs);
   using ft = typename std::decay<decltype(f)>::type;
-  detail::matcher<typename ft::pattern, typename ft::filtered_pattern> match;
-  uint64_t result = match(tup, nullptr) ? (0x01 << N) : 0x00;
-  return result | calc_bitmask(fs, long_constant<N - 1l>(), tinf, tup);
+  meta_elements<typename ft::pattern> ms;
+  uint64_t result = try_match(msg, ms.arr.data(), ms.arr.size(), nullptr)
+                    ? (0x01 << N)
+                    : 0x00;
+  return result | calc_bitmask(fs, long_constant<N - 1l>(), tinf, msg);
 }
 
 template <bool IsManipulator, typename T0, typename T1>

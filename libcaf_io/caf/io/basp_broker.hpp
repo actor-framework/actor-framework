@@ -29,10 +29,10 @@
 #include "caf/actor_namespace.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/binary_deserializer.hpp"
+#include "caf/forwarding_actor_proxy.hpp"
 
 #include "caf/io/basp.hpp"
 #include "caf/io/broker.hpp"
-#include "caf/io/remote_actor_proxy.hpp"
 
 namespace caf {
 namespace io {
@@ -66,9 +66,8 @@ class basp_broker : public broker, public actor_namespace::backend {
 
   struct client_handshake_data {
     id_type remote_id;
-    std::promise<abstract_actor_ptr>* result;
-    const std::set<std::string>* expected_ifs;
-
+    actor client;
+    std::set<std::string> expected_ifs;
   };
 
   void init_client(connection_handle hdl, client_handshake_data* data);
@@ -116,9 +115,6 @@ class basp_broker : public broker, public actor_namespace::backend {
   void read(binary_deserializer& bs, basp::header& msg);
 
   void write(binary_serializer& bs, const basp::header& msg);
-
-  void send(const connection_context& ctx, const basp::header& msg,
-            message payload);
 
   void send_kill_proxy_instance(const id_type& nid, actor_id aid,
                                 uint32_t reason);

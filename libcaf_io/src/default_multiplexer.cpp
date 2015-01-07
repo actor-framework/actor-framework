@@ -43,6 +43,14 @@
 
 using std::string;
 
+namespace {
+#ifdef CAF_MACOS
+constexpr int no_sigpipe_flag = SO_NOSIGPIPE;
+#else
+constexpr int no_sigpipe_flag = MSG_NOSIGNAL;
+#endif
+} // namespace <anonymous>
+
 namespace caf {
 namespace io {
 namespace network {
@@ -478,7 +486,7 @@ namespace network {
       } else {
         // update event mask of existing entry
         CAF_REQUIRE(*j == e.ptr);
-        i->events = e.mask;
+        i->events = static_cast<short>(e.mask);
       }
       if (e.ptr) {
         auto remove_from_loop_if_needed = [&](int flag, operation flag_op) {
@@ -503,7 +511,7 @@ int add_flag(operation op, int bf) {
       return bf | input_mask;
     case operation::write:
       return bf | output_mask;
-    default:
+    case operation::propagate_error:
       CAF_LOGF_ERROR("unexpected operation");
       break;
   }
@@ -517,7 +525,7 @@ int del_flag(operation op, int bf) {
       return bf & ~input_mask;
     case operation::write:
       return bf & ~output_mask;
-    default:
+    case operation::propagate_error:
       CAF_LOGF_ERROR("unexpected operation");
       break;
   }
@@ -549,7 +557,7 @@ void default_multiplexer::wr_dispatch_request(runnable* ptr) {
   // on windows, we actually have sockets, otherwise we have file handles
 # ifdef CAF_WINDOWS
     ::send(m_pipe.second, reinterpret_cast<socket_send_ptr>(&ptrval),
-           sizeof(ptrval), 0);
+           sizeof(ptrval), no_sigpipe_flag);
 # else
     auto unused = ::write(m_pipe.second, &ptrval, sizeof(ptrval));
     static_cast<void>(unused);
@@ -668,8 +676,8 @@ connection_handle default_multiplexer::add_tcp_scribe(broker* self,
   CAF_LOG_TRACE("");
   class impl : public broker::scribe {
    public:
-    impl(broker* parent, default_socket&& s)
-        : scribe(parent, network::conn_hdl_from_socket(s)),
+    impl(broker* ptr, default_socket&& s)
+        : scribe(ptr, network::conn_hdl_from_socket(s)),
           m_launched(false),
           m_stream(s.backend()) {
       m_stream.init(std::move(s));
@@ -715,8 +723,8 @@ accept_handle default_multiplexer::add_tcp_doorman(broker* self,
   CAF_REQUIRE(sock.fd() != network::invalid_native_socket);
   class impl : public broker::doorman {
    public:
-    impl(broker* parent, default_socket_acceptor&& s)
-        : doorman(parent, network::accept_hdl_from_socket(s)),
+    impl(broker* ptr, default_socket_acceptor&& s)
+        : doorman(ptr, network::accept_hdl_from_socket(s)),
           m_acceptor(s.backend()) {
       m_acceptor.init(std::move(s));
     }
@@ -759,10 +767,12 @@ accept_handle default_multiplexer::add_tcp_doorman(broker* self,
   return add_tcp_doorman(self, default_socket_acceptor{*this, fd});
 }
 
-accept_handle default_multiplexer::add_tcp_doorman(broker* self,
-                                                   uint16_t port,
-                                                   const char* host) {
-  return add_tcp_doorman(self, new_ipv4_acceptor(port, host));
+std::pair<accept_handle, uint16_t>
+default_multiplexer::add_tcp_doorman(broker* self, uint16_t port,
+                                     const char* host, bool reuse_addr) {
+  auto acceptor = new_ipv4_acceptor(port, host, reuse_addr);
+  auto bound_port = acceptor.second;
+  return {add_tcp_doorman(self, std::move(acceptor.first)), bound_port};
 }
 
 /******************************************************************************
@@ -814,7 +824,8 @@ bool read_some(size_t& result, native_socket fd, void* buf, size_t len) {
 
 bool write_some(size_t& result, native_socket fd, const void* buf, size_t len) {
   CAF_LOGF_TRACE(CAF_ARG(fd) << ", " << CAF_ARG(len));
-  auto sres = ::send(fd, reinterpret_cast<socket_send_ptr>(buf), len, 0);
+  auto sres = ::send(fd, reinterpret_cast<socket_send_ptr>(buf),
+                     len, no_sigpipe_flag);
   CAF_LOGF_DEBUG("tried to write " << len << " bytes to socket " << fd
                                    << ", send returned " << sres);
   if (is_error(sres, true))
@@ -850,11 +861,11 @@ event_handler::~event_handler() {
   // nop
 }
 
-default_socket::default_socket(default_multiplexer& parent, native_socket fd)
-    : m_parent(parent),
-      m_fd(fd) {
-  CAF_LOG_TRACE(CAF_ARG(fd));
-  if (fd != invalid_native_socket) {
+default_socket::default_socket(default_multiplexer& ref, native_socket sockfd)
+    : m_parent(ref),
+      m_fd(sockfd) {
+  CAF_LOG_TRACE(CAF_ARG(sockfd));
+  if (sockfd != invalid_native_socket) {
     // enable nonblocking IO & disable Nagle's algorithm
     nonblocking(m_fd, true);
     tcp_nodelay(m_fd, true);
@@ -926,7 +937,8 @@ native_socket new_ipv4_connection_impl(const std::string& host, uint16_t port) {
           static_cast<size_t>(server->h_length));
   serv_addr.sin_port = htons(port);
   CAF_LOGF_DEBUG("call connect()");
-  if (connect(fd, (const sockaddr*)&serv_addr, sizeof(serv_addr)) != 0) {
+  if (connect(fd, reinterpret_cast<const sockaddr*>(&serv_addr),
+              sizeof(serv_addr)) != 0) {
     CAF_LOGF_ERROR("could not connect to to " << host << " on port " << port);
     throw network_error("could not connect to host");
   }
@@ -939,9 +951,9 @@ default_socket new_ipv4_connection(const std::string& host, uint16_t port) {
   return default_socket{backend, new_ipv4_connection_impl(host, port)};
 }
 
-native_socket new_ipv4_acceptor_impl(uint16_t port, const char* addr) {
-  CAF_LOGF_TRACE(CAF_ARG(port)
-          << ", addr = " << (addr ? addr : "nullptr"));
+std::pair<native_socket, uint16_t>
+new_ipv4_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr) {
+  CAF_LOGF_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
 # ifdef CAF_WINDOWS
     // make sure TCP has been initialized via WSAStartup
     get_multiplexer_singleton();
@@ -952,13 +964,15 @@ native_socket new_ipv4_acceptor_impl(uint16_t port, const char* addr) {
   }
   // sguard closes the socket in case of exception
   socket_guard sguard(fd);
-  int on = 1;
-  if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
-                 reinterpret_cast<setsockopt_ptr>(&on), sizeof(on)) < 0) {
-    throw_io_failure("unable to set SO_REUSEADDR");
+  if (reuse_addr) {
+    int on = 1;
+    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
+                   reinterpret_cast<setsockopt_ptr>(&on), sizeof(on)) < 0) {
+      throw_io_failure("unable to set SO_REUSEADDR");
+    }
   }
   struct sockaddr_in serv_addr;
-  memset((char*)&serv_addr, 0, sizeof(serv_addr));
+  memset(&serv_addr, 0, sizeof(serv_addr));
   serv_addr.sin_family = AF_INET;
   if (!addr) {
     serv_addr.sin_addr.s_addr = INADDR_ANY;
@@ -966,22 +980,34 @@ native_socket new_ipv4_acceptor_impl(uint16_t port, const char* addr) {
     throw network_error("invalid IPv4 address");
   }
   serv_addr.sin_port = htons(port);
-  if (bind(fd, (sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
+  if (bind(fd, reinterpret_cast<sockaddr*>(&serv_addr),
+           sizeof(serv_addr)) < 0) {
     throw bind_failure(last_socket_error_as_string());
   }
   if (listen(fd, SOMAXCONN) != 0) {
-    throw network_error("listen() failed");
+    throw network_error("listen() failed: " + last_socket_error_as_string());
+  }
+  if (port == 0) {
+    socklen_t len = sizeof(serv_addr);
+    if (getsockname(fd, reinterpret_cast<sockaddr*>(&serv_addr), &len) < 0) {
+      throw network_error("getsockname(): " + last_socket_error_as_string());
+    }
   }
   // ok, no exceptions so far
   sguard.release();
-  CAF_LOGF_DEBUG("sockfd = " << fd);
-  return fd;
+  CAF_LOGF_DEBUG("sockfd = " << fd << ", port = " << ntohs(serv_addr.sin_port));
+  return {fd, ntohs(serv_addr.sin_port)};
 }
 
-default_socket_acceptor new_ipv4_acceptor(uint16_t port, const char* addr) {
+std::pair<default_socket_acceptor, uint16_t>
+new_ipv4_acceptor(uint16_t port, const char* addr, bool reuse) {
   CAF_LOGF_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
   auto& backend = get_multiplexer_singleton();
-  return default_socket_acceptor{backend, new_ipv4_acceptor_impl(port, addr)};
+  auto acceptor = new_ipv4_acceptor_impl(port, addr, reuse);
+  auto bound_port = acceptor.second;
+  CAF_REQUIRE(port == 0 || bound_port == port);
+  return {default_socket_acceptor{backend, std::move(acceptor.first)},
+                                  bound_port};
 }
 
 } // namespace network

@@ -166,7 +166,7 @@ class double_ended_queue {
     { // lifetime scope of guard
       lock_guard guard(m_head_lock);
       first.reset(m_head.load());
-      node* next = m_head.load()->next;
+      node* next = first->next;
       if (next == nullptr) {
         // queue is empty
         first.release();

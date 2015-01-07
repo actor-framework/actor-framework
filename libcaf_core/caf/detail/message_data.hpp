@@ -31,7 +31,6 @@
 #include "caf/uniform_type_info.hpp"
 
 #include "caf/detail/type_list.hpp"
-
 #include "caf/detail/message_iterator.hpp"
 
 namespace caf {
@@ -74,7 +73,7 @@ class message_data : public ref_counted {
 
   bool equals(const message_data& other) const;
 
-  using const_iterator = message_iterator<message_data>;
+  using const_iterator = message_iterator;
 
   inline const_iterator begin() const {
     return {this};
@@ -132,37 +131,6 @@ class message_data : public ref_counted {
   bool m_is_dynamic;
 
 };
-
-struct full_eq_type {
-  constexpr full_eq_type() {}
-  template <class Tuple>
-  inline bool operator()(const message_iterator<Tuple>& lhs,
-               const message_iterator<Tuple>& rhs) const {
-    return lhs.type() == rhs.type() &&
-         lhs.type()->equals(lhs.value(), rhs.value());
-  }
-
-};
-
-struct types_only_eq_type {
-  constexpr types_only_eq_type() {}
-  template <class Tuple>
-  inline bool operator()(const message_iterator<Tuple>& lhs,
-               const uniform_type_info* rhs) const {
-    return lhs.type() == rhs;
-  }
-  template <class Tuple>
-  inline bool operator()(const uniform_type_info* lhs,
-               const message_iterator<Tuple>& rhs) const {
-    return lhs == rhs.type();
-  }
-
-};
-
-namespace {
-constexpr full_eq_type full_eq;
-constexpr types_only_eq_type types_only_eq;
-} // namespace <anonymous>
 
 std::string get_tuple_type_names(const detail::message_data&);
 
