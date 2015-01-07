@@ -50,7 +50,7 @@ Dependencies
 Supported Compilers
 -------------------
 
-* GCC >= 4.7
+* GCC >= 4.7.2
 * Clang >= 3.2
 
 
@@ -59,6 +59,7 @@ Supported Operating Systems
 
 * Linux
 * Mac OS X
+* FreeBSD 10
 * *Note for MS Windows*: CAF relies on C++11 features such as variadic templates and unrestricted unions. We will support Visual Studio as soon as Microsoft's compiler implements all required C++11 features. In the meantime, you can use CAF via MinGW.
 
 
