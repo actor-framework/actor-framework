@@ -576,7 +576,7 @@ void test_spawn() {
     others() >> [&]() {
       CAF_FAILURE("unexpected message: " << to_string(self->last_dequeued()));
     },
-    after(chrono::milliseconds(10)) >> [&]() {
+    after(chrono::milliseconds(500)) >> [&]() {
       CAF_FAILURE("timeout in file " << __FILE__ << " in line " << __LINE__);
     }
   );
