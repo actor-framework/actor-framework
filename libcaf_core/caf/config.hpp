@@ -61,7 +61,18 @@
     _Pragma("clang diagnostic ignored \"-Wconversion\"")                       \
     _Pragma("clang diagnostic ignored \"-Wcast-align\"")                       \
     _Pragma("clang diagnostic ignored \"-Wundef\"")                            \
-    _Pragma("clang diagnostic ignored \"-Wnested-anon-types\"")
+    _Pragma("clang diagnostic ignored \"-Wnested-anon-types\"")                \
+    _Pragma("clang diagnostic ignored \"-Wdeprecated\"")                       \
+    _Pragma("clang diagnostic ignored \"-Wdisabled-macro-expansion\"")         \
+    _Pragma("clang diagnostic ignored \"-Wdocumentation\"")                    \
+    _Pragma("clang diagnostic ignored \"-Wfloat-equal\"")                      \
+    _Pragma("clang diagnostic ignored \"-Wimplicit-fallthrough\"")             \
+    _Pragma("clang diagnostic ignored \"-Wold-style-cast\"")                   \
+    _Pragma("clang diagnostic ignored \"-Wshadow\"")                           \
+    _Pragma("clang diagnostic ignored \"-Wshorten-64-to-32\"")                 \
+    _Pragma("clang diagnostic ignored \"-Wsign-conversion\"")                  \
+    _Pragma("clang diagnostic ignored \"-Wundef\"")                            \
+    _Pragma("clang diagnostic ignored \"-Wweak-vtables\"")
 #  define CAF_POP_WARNINGS                          \
     _Pragma("clang diagnostic pop")
 #  define CAF_ANNOTATE_FALLTHROUGH [[clang::fallthrough]]
