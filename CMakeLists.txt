@@ -115,7 +115,7 @@ if(MORE_WARNINGS)
                "-Wno-global-constructors -Wno-missing-prototypes "
                "-Wno-c++98-compat-pedantic -Wno-unused-member-function "
                "-Wno-unused-const-variable -Wno-switch-enum "
-               "-Wno-missing-noreturn")
+               "-Wno-missing-noreturn -Wno-covered-switch-default")
   elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
     set(WFLAGS "-Waddress -Wall -Warray-bounds "
                "-Wattributes -Wbuiltin-macro-redefined -Wcast-align "
@@ -135,8 +135,7 @@ if(MORE_WARNINGS)
                "-Wpmf-conversions -Wpointer-arith -Wreorder "
                "-Wreturn-type -Wsequence-point -Wshadow "
                "-Wsign-compare -Wswitch -Wtype-limits -Wundef "
-               "-Wuninitialized -Wunused -Wvla -Wwrite-strings"
-)
+               "-Wuninitialized -Wunused -Wvla -Wwrite-strings")
   endif()
   # convert CMake list to a single string, erasing the ";" separators
   string(REPLACE ";" "" WFLAGS_STR ${WFLAGS})
@@ -454,8 +453,7 @@ invertYesNo(CAF_NO_BENCHMARKS CAF_BUILD_BENCHMARKS)
 invertYesNo(CAF_NO_OPENCL CAF_BUILD_OPENCL)
 # collect all compiler flags
 string(TOUPPER "${CMAKE_BUILD_TYPE}" UPPER_BUILD_TYPE)
-set(ALL_CXX_FLAGS
-    "${CMAKE_CXX_FLAGS} ${EXTRA_FLAGS} ${CMAKE_CXX_FLAGS_${UPPER_BUILD_TYPE}}")
+set(ALL_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${UPPER_BUILD_TYPE}}")
 # done
 message(STATUS
         "\n====================|  Build Summary  |===================="
