@@ -172,6 +172,7 @@ void testee(event_based_actor* self, size_t remaining) {
 int main() {
   // the tree_type_info is owned by libcaf after this function call
   announce(typeid(tree), std::unique_ptr<uniform_type_info>{new tree_type_info});
+  announce<tree_vector>("tree_vector");
 
   tree t0; // create a tree and fill it with some data
 
@@ -203,7 +204,6 @@ int main() {
     self->send(t, t0);
 
     // send a vector of trees
-    announce<tree_vector>("tree_vector");
     tree_vector tvec;
     tvec.push_back(t0);
     tvec.push_back(t0);

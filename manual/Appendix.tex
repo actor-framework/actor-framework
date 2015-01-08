@@ -174,3 +174,19 @@ The following table summarizes the changes made to the API.
 Version 0.11 introduced new, optional components.
 The core library itself, however, mainly received optimizations and bugfixes with one exception: the member function \lstinline^on_exit^ is no longer virtual.
 You can still provide it to define a custom exit handler, but you must not use \lstinline^override^.
+
+\clearpage
+\subsubsection{0.11 $\Rightarrow$ 0.12}
+
+Version 0.12 removed two features:
+
+\begin{itemize}
+\item
+Type names are no longer demangled automatically.
+Hence, users must explicitly pass the type name as first argument when using \lstinline^announce^, i.e., \lstinline^announce<my_class>(...)^ becomes \lstinline^announce<my_class>("my_class", ...)^.
+
+\item
+Synchronous send blocks no longer support \lstinline^continue_with^.
+This feature has been removed without substitution.
+\end{itemize}
+
