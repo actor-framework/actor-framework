@@ -43,8 +43,7 @@ Accessing shared memory segments concurrently can cause undefined behavior that 
 However, sharing \textit{data} between actors is fine, as long as the data is \textit{immutable} and its lifetime is guaranteed to outlive all actors.
 The simplest way to meet the lifetime guarantee is by storing the data in smart pointers such as \lstinline^std::shared_ptr^.
 Nevertheless, the recommended way of sharing informations is message passing.
-Sending data to multiple actors does not necessarily result in copying the data several times.
-Read Section \ref{Sec::Tuples} to learn more about \lib's copy-on-write optimization for tuples.
+Sending the same message to multiple actors does not result in copying the data several times.
 \end{itemize}
 
 \subsection{Constructors of Class-based Actors}
