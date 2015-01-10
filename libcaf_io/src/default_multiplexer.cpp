@@ -602,11 +602,24 @@ void default_multiplexer::close_pipe() {
   del(operation::read, m_pipe.first, nullptr);
 }
 
+bool default_multiplexer::socket_had_rd_shutdown_event(native_socket fd) {
+  auto last = m_events.end();
+  auto i = std::lower_bound(m_events.begin(), last, fd, event_less{});
+  if (i != last && i->fd == fd) {
+    // socket is about to be shut down for read if
+    // its new bitmask does not have the input_mask flag
+    return (i->mask & input_mask) == 0;
+  }
+  return false;
+}
+
 void default_multiplexer::handle_socket_event(native_socket fd, int mask,
                                       event_handler* ptr) {
   CAF_LOG_TRACE(CAF_ARG(fd) << ", " << CAF_ARG(mask));
   bool checkerror = true;
-  if (mask & input_mask) {
+  // ignore read events if a previous event caused
+  // this socket to be shut down for reading
+  if ((mask & input_mask) && !socket_had_rd_shutdown_event(fd)) {
     checkerror = false;
     if (ptr) {
       ptr->handle_event(operation::read);

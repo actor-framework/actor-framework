@@ -313,6 +313,18 @@ class default_multiplexer : public multiplexer {
     event_handler* ptr;
   };
 
+  struct event_less {
+    inline bool operator()(native_socket lhs, const event& rhs) const {
+      return lhs < rhs.fd;
+    }
+    inline bool operator()(const event& lhs, native_socket rhs) const {
+      return lhs.fd < rhs;
+    }
+    inline bool operator()(const event& lhs, const event& rhs) const {
+      return lhs.fd < rhs.fd;
+    }
+  };
+
   connection_handle add_tcp_scribe(broker*, default_socket_acceptor&& sock);
 
   connection_handle add_tcp_scribe(broker*, native_socket fd) override;
@@ -357,11 +369,8 @@ class default_multiplexer : public multiplexer {
     CAF_LOG_TRACE(CAF_TARG(op, static_cast<int>)
              << ", " << CAF_ARG(fd) << ", " CAF_ARG(ptr)
              << ", " << CAF_ARG(old_bf));
-    auto event_less = [](const event& e, native_socket arg) -> bool {
-      return e.fd < arg;
-    };
     auto last = m_events.end();
-    auto i = std::lower_bound(m_events.begin(), last, fd, event_less);
+    auto i = std::lower_bound(m_events.begin(), last, fd, event_less{});
     if (i != last && i->fd == fd) {
       CAF_REQUIRE(ptr == i->ptr);
       // squash events together
@@ -390,6 +399,8 @@ class default_multiplexer : public multiplexer {
   }
 
   void handle(const event& event);
+
+  bool socket_had_rd_shutdown_event(native_socket fd);
 
   void handle_socket_event(native_socket fd, int mask, event_handler* ptr);
 
