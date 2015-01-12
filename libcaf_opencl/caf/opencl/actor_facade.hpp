@@ -162,7 +162,7 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
     cl_int err{0};
     // rotate left (output buffer to the end)
     rotate(begin(arguments), begin(arguments) + 1, end(arguments));
-    for (size_t i = 0; i < arguments.size(); ++i) {
+    for (cl_uint i = 0; i < arguments.size(); ++i) {
       err = clSetKernelArg(m_kernel.get(), i, sizeof(cl_mem),
                            static_cast<void*>(&arguments[i]));
       CAF_LOG_ERROR_IF(err != CL_SUCCESS,

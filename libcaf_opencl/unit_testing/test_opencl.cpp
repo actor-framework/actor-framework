@@ -266,8 +266,8 @@ void test_opencl() {
 
   // test for manuel return size selection
   const int max_workgroup_size = static_cast<int>(get_max_workgroup_size(0,1)); // max workgroup size (1d)
-  const size_t reduce_buffer_size = max_workgroup_size * 8;
-  const size_t reduce_local_size  = max_workgroup_size;
+  const size_t reduce_buffer_size = static_cast<size_t>(max_workgroup_size * 8);
+  const size_t reduce_local_size  = static_cast<size_t>(max_workgroup_size);
   const size_t reduce_work_groups = reduce_buffer_size / reduce_local_size;
   const size_t reduce_global_size = reduce_buffer_size;
   const size_t reduce_result_size = reduce_work_groups;

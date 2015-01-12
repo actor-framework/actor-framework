@@ -69,12 +69,14 @@ class command : public ref_counted {
     auto data_or_nullptr = [](const dim_vec& vec) {
       return vec.empty() ? nullptr : vec.data();
     };
+    // OpenCL expects cl_uint (unsigned int), hence the cast
     err = clEnqueueNDRangeKernel(
       m_queue.get(), m_actor_facade->m_kernel.get(),
-      m_actor_facade->m_global_dimensions.size(),
+      static_cast<cl_uint>(m_actor_facade->m_global_dimensions.size()),
       data_or_nullptr(m_actor_facade->m_global_offsets),
       data_or_nullptr(m_actor_facade->m_global_dimensions),
-      data_or_nullptr(m_actor_facade->m_local_dimensions), m_events.size(),
+      data_or_nullptr(m_actor_facade->m_local_dimensions),
+      static_cast<cl_uint>(m_events.size()),
       (m_events.empty() ? nullptr : m_events.data()), &event_k);
     if (err != CL_SUCCESS) {
       CAF_LOGMF(CAF_ERROR, "clEnqueueNDRangeKernel: " << get_opencl_error(err));
@@ -115,7 +117,7 @@ class command : public ref_counted {
   }
 
  private:
-  int m_result_size;
+  size_t m_result_size;
   response_promise m_handle;
   intrusive_ptr<T> m_actor_facade;
   command_queue_ptr m_queue;
