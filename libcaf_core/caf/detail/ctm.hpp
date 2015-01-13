@@ -21,6 +21,7 @@
 #define CAF_DETAIL_CTM_HPP
 
 #include "caf/replies_to.hpp"
+#include "caf/typed_response_promise.hpp"
 
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/typed_actor_util.hpp"
@@ -42,9 +43,19 @@ struct ctm_cmp<typed_mpi<In, Out, empty_type_list>,
                typed_mpi<In, type_list<typed_continue_helper<Out>>, empty_type_list>>
     : std::true_type { };
 
+template <class In, class Out>
+struct ctm_cmp<typed_mpi<In, Out, empty_type_list>,
+               typed_mpi<In, type_list<typed_response_promise<Out>>, empty_type_list>>
+    : std::true_type { };
+
 template <class In, class L, class R>
 struct ctm_cmp<typed_mpi<In, L, R>,
                typed_mpi<In, type_list<skip_message_t>, empty_type_list>>
+    : std::true_type { };
+
+template <class In, class L, class R>
+struct ctm_cmp<typed_mpi<In, L, R>,
+               typed_mpi<In, type_list<typed_response_promise<either_or_t<L, R>>>, empty_type_list>>
     : std::true_type { };
 
 template <class A, class B>
