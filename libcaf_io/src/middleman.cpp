@@ -188,7 +188,7 @@ void middleman::add_broker(broker_ptr bptr) {
 void middleman::initialize() {
   CAF_LOG_TRACE("");
   m_backend = network::multiplexer::make();
-  m_supervisor = m_backend->make_supervisor();
+  m_backend_supervisor = m_backend->make_supervisor();
   m_thread = std::thread([this] {
     CAF_LOGC_TRACE("caf::io::middleman", "initialize$run", "");
     m_backend->run();
@@ -221,7 +221,7 @@ void middleman::stop() {
       bro->close_all();
     }
   });
-  m_supervisor.reset();
+  m_backend_supervisor.reset();
   m_thread.join();
   m_named_brokers.clear();
 }

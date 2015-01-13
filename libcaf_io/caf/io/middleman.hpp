@@ -130,7 +130,7 @@ class middleman : public detail::abstract_singleton {
   // networking backend
   std::unique_ptr<network::multiplexer> m_backend;
   // prevents backend from shutting down unless explicitly requested
-  network::multiplexer::supervisor_ptr m_supervisor;
+  network::multiplexer::supervisor_ptr m_backend_supervisor;
   // runs the backend
   std::thread m_thread;
   // keeps track of "singleton-like" brokers
