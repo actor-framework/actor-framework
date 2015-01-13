@@ -787,6 +787,9 @@ void ipv4_connect(Socket& sock, const std::string& host, uint16_t port) {
   sock = new_ipv4_connection(host, port);
 }
 
+std::pair<native_socket, uint16_t>
+new_ipv4_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr);
+
 std::pair<default_socket_acceptor, uint16_t>
 new_ipv4_acceptor(uint16_t port, const char* addr = nullptr,
                   bool reuse_addr = false);
