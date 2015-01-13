@@ -53,43 +53,34 @@ namespace caf {
 namespace detail {
 
 namespace {
-const char* mapped_type_names[][2] = {
-  {"bool",                  "bool"                  },
-  {"caf::actor",            "@actor"                },
-  {"caf::actor_addr",       "@addr"                 },
-  {"caf::atom_value",       "@atom"                 },
-  {"caf::channel",          "@channel"              },
-  {"caf::down_msg",         "@down"                 },
-  {"caf::duration",         "@duration"             },
-  {"caf::exit_msg",         "@exit"                 },
-  {"caf::group",            "@group"                },
-  {"caf::group_down_msg",   "@group_down"           },
-  {"caf::message",          "@message"              },
-  {"caf::message_id",       "@message_id"           },
-  {"caf::node_id",          "@node"                 },
-  {"caf::sync_exited_msg",  "@sync_exited"          },
-  {"caf::sync_timeout_msg", "@sync_timeout"         },
-  {"caf::timeout_msg",      "@timeout"              },
-  {"caf::unit_t",           "@unit"                 },
-  {"double",                "double"                },
-  {"float",                 "float"                 },
-  {"long double",           "@ldouble"              },
-  // std::string
-  {"std::basic_string<@i8,std::char_traits<@i8>,std::allocator<@i8>>", "@str"},
-  // std::u16string
-  {"std::basic_string<@u16,std::char_traits<@u16>,std::allocator<@u16>>",
-   "@u16str"},
-  // std::u32string
-  {"std::basic_string<@u32,std::char_traits<@u32>,std::allocator<@u32>>",
-   "@u32str"},
-  // std::map<std::string,std::string>
-  {"std::map<@str,@str,std::less<@str>,"
-   "std::allocator<std::pair<const @str,@str>>>",
-   "@strmap"},
-  // std::vector<char>
-  {"std::vector<@i8,std::allocator<@i8>>", "@charbuf"},
-  // std::vector<std::string>
-  {"std::vector<@str,std::allocator<@str>>", "@strvec"}
+const char* mapped_type_names[] = {
+  "bool",
+  "@actor",
+  "@addr",
+  "@atom",
+  "@channel",
+  "@down",
+  "@duration",
+  "@exit",
+  "@group",
+  "@group_down",
+  "@message",
+  "@message_id",
+  "@node",
+  "@sync_exited",
+  "@sync_timeout",
+  "@timeout",
+  "@unit",
+  "double",
+  "float",
+  "@ldouble",
+  "@str",
+  "@u16str",
+  "@u32str",
+  "@strmap",
+  "@charbuf",
+  "@strvec",
+  "@strset"
 };
 // the order of this table must be *identical* to mapped_type_names
 using static_type_table = type_list<bool,
@@ -117,19 +108,20 @@ using static_type_table = type_list<bool,
                                     std::u32string,
                                     std::map<std::string, std::string>,
                                     std::vector<char>,
-                                    std::vector<std::string>>;
+                                    std::vector<std::string>,
+                                    std::set<std::string>>;
 } // namespace <anonymous>
 
 template <class T>
 constexpr const char* mapped_name() {
-  return mapped_type_names[detail::tl_find<static_type_table, T>::value][1];
+  return mapped_type_names[detail::tl_find<static_type_table, T>::value];
 }
 
 // maps sizeof(T) => {unsigned name, signed name}
 /* extern */ const char* mapped_int_names[][2] = {
   {nullptr, nullptr}, // no int type with 0 bytes
-  {"@u8", "@i8"},
-  {"@u16", "@i16"},
+  {"@u8",   "@i8"},
+  {"@u16",  "@i16"},
   {nullptr, nullptr}, // no int type with 3 bytes
   {"@u32", "@i32"},
   {nullptr, nullptr}, // no int type with 5 bytes
@@ -137,31 +129,6 @@ constexpr const char* mapped_name() {
   {nullptr, nullptr}, // no int type with 7 bytes
   {"@u64", "@i64"}
 };
-
-const char* mapped_name_by_decorated_name(const char* cstr) {
-  using namespace std;
-  auto cmp = [&](const char** lhs) { return strcmp(lhs[0], cstr) == 0; };
-  auto e = end(mapped_type_names);
-  auto i = find_if(begin(mapped_type_names), e, cmp);
-  if (i != e){
-    return (*i)[1];
-  }
-  // for some reason, GCC returns "std::string" as RTTI type name
-  // instead of std::basic_string<...>, this also affects clang-compiled
-  // code when used with GCC's libstdc++
-  if (strcmp("std::string", cstr) == 0) {
-    return mapped_name<std::string>();
-  }
-  return cstr; // no mapping found
-}
-
-std::string mapped_name_by_decorated_name(std::string&& str) {
-  auto res = mapped_name_by_decorated_name(str.c_str());
-  if (res == str.c_str()) {
-    return std::move(str);
-  }
-  return res;
-}
 
 namespace {
 
@@ -454,28 +421,18 @@ inline void deserialize_impl(const sync_timeout_msg&, deserializer*) {
   // nop
 }
 
-inline void serialize_impl(const std::map<std::string, std::string>& smap,
-                           serializer* sink) {
+template <class T>
+typename std::enable_if<is_iterable<T>::value>::type
+serialize_impl(const T& iterable, serializer* sink) {
   default_serialize_policy sp;
-  sp(smap, sink);
-}
-
-inline void deserialize_impl(std::map<std::string, std::string>& smap,
-                             deserializer* source) {
-  default_serialize_policy sp;
-  sp(smap, source);
+  sp(iterable, sink);
 }
 
 template <class T>
-inline void serialize_impl(const std::vector<T>& vec, serializer* sink) {
+typename std::enable_if<is_iterable<T>::value>::type
+deserialize_impl(T& iterable, deserializer* sink) {
   default_serialize_policy sp;
-  sp(vec, sink);
-}
-
-template <class T>
-inline void deserialize_impl(std::vector<T>& vec, deserializer* source) {
-  default_serialize_policy sp;
-  sp(vec, source);
+  sp(iterable, sink);
 }
 
 bool types_equal(const std::type_info* lhs, const std::type_info* rhs) {
@@ -831,7 +788,8 @@ class utim_impl : public uniform_type_info_map {
                                    int_tinfo<int64_t>,
                                    int_tinfo<uint64_t>,
                                    uti_impl<charbuf>,
-                                   uti_impl<strvec>>;
+                                   uti_impl<strvec>,
+                                   uti_impl<std::set<std::string>>>;
 
   builtin_types m_storage;
 
