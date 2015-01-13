@@ -34,7 +34,6 @@ enum class atom_value : uint64_t {
   /** @cond PRIVATE */
   dirty_little_hack = 31337
   /** @endcond */
-
 };
 
 /**
@@ -47,8 +46,32 @@ constexpr atom_value atom(char const (&str)[Size]) {
   return static_cast<atom_value>(detail::atom_val(str, 0xF));
 }
 
+/**
+ * Type alias for treating atom constants at compile-time
+ * (cf. "Int-ToType" idiom).
+ */
 template <atom_value Value>
 using atom_constant = std::integral_constant<atom_value, Value>;
+
+/**
+ * Generic 'GET' atom for request operations.
+ */
+using get_atom = atom_constant<atom("GET")>;
+
+/**
+ * Generic 'PUT' atom for request operations.
+ */
+using put_atom = atom_constant<atom("PUT")>;
+
+/**
+ * Generic 'OK' atom for response messages.
+ */
+using ok_atom = atom_constant<atom("OK")>;
+
+/**
+ * Generic 'ERROR' atom for response messages.
+ */
+using error_atom = atom_constant<atom("ERROR")>;
 
 } // namespace caf
 
