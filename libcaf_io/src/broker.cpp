@@ -361,10 +361,17 @@ connection_handle broker::add_tcp_scribe(const std::string& hst, uint16_t prt) {
   return backend().add_tcp_scribe(this, hst, prt);
 }
 
+connection_handle broker::add_tcp_scribe(network::native_socket fd) {
+  return backend().add_tcp_scribe(this, fd);
+}
 
 std::pair<accept_handle, uint16_t>
 broker::add_tcp_doorman(uint16_t port, const char* in, bool reuse_addr) {
   return backend().add_tcp_doorman(this, port, in, reuse_addr);
+}
+
+accept_handle broker::add_tcp_doorman(network::native_socket fd) {
+  return backend().add_tcp_doorman(this, fd);
 }
 
 } // namespace io

@@ -38,6 +38,7 @@
 #include "caf/io/receive_policy.hpp"
 #include "caf/io/system_messages.hpp"
 #include "caf/io/connection_handle.hpp"
+#include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/stream_manager.hpp"
 #include "caf/io/network/acceptor_manager.hpp"
 
@@ -254,6 +255,8 @@ class broker : public extend<local_actor>::
 
   connection_handle add_tcp_scribe(const std::string& host, uint16_t port);
 
+  connection_handle add_tcp_scribe(network::native_socket fd);
+
   inline void add_doorman(const doorman_pointer& ptr) {
     m_doormen.insert(std::make_pair(ptr->hdl(), ptr));
     if (is_initialized()) {
@@ -264,6 +267,8 @@ class broker : public extend<local_actor>::
   std::pair<accept_handle, uint16_t> add_tcp_doorman(uint16_t port = 0,
                                                      const char* in = nullptr,
                                                      bool reuse_addr = false);
+
+  accept_handle add_tcp_doorman(network::native_socket fd);
 
   void invoke_message(const actor_addr& sender, message_id mid, message& msg);
 
