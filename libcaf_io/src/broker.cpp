@@ -260,6 +260,10 @@ broker::broker() : m_mm(*middleman::instance()) {
   // nop
 }
 
+broker::broker(middleman& ptr) : m_mm(ptr) {
+  // nop
+}
+
 void broker::cleanup(uint32_t reason) {
   CAF_LOG_TRACE(CAF_ARG(reason));
   close_all();

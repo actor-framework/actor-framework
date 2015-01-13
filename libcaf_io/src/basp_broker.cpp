@@ -46,6 +46,12 @@ basp_broker::basp_broker() : m_namespace(*this) {
   CAF_LOG_DEBUG("BASP broker started: " << to_string(node()));
 }
 
+basp_broker::basp_broker(middleman& ref) : broker(ref), m_namespace(*this) {
+  m_meta_msg = uniform_typeid<message>();
+  m_meta_id_type = uniform_typeid<node_id>();
+  CAF_LOG_DEBUG("BASP broker started: " << to_string(node()));
+}
+
 behavior basp_broker::make_behavior() {
   return {
     // received from underlying broker implementation

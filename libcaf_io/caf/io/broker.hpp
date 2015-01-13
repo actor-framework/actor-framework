@@ -308,6 +308,8 @@ class broker : public extend<local_actor>::
  protected:
   broker();
 
+  broker(middleman& parent_ref);
+
   void cleanup(uint32_t reason);
 
   virtual behavior make_behavior() = 0;

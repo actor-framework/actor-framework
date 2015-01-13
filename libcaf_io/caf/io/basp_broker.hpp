@@ -50,6 +50,8 @@ class basp_broker : public broker, public actor_namespace::backend {
 
   basp_broker();
 
+  basp_broker(middleman& parent_ref);
+
   behavior make_behavior() override;
 
   void add_published_actor(accept_handle hdl,
