@@ -68,7 +68,7 @@ behavior basp_broker::make_behavior() {
       CAF_REQUIRE(m_ctx.count(msg.handle) == 0);
       auto& ctx = m_ctx[msg.handle];
       ctx.hdl = msg.handle;
-      ctx.handshake_data = nullptr;
+      ctx.handshake_data = none;
       ctx.state = await_client_handshake;
       init_handshake_as_sever(ctx, m_acceptors[msg.source].first->address());
     },
@@ -80,7 +80,8 @@ behavior basp_broker::make_behavior() {
       if (j != m_ctx.end()) {
         auto hd = j->second.handshake_data;
         if (hd) {
-          send(hd->client, atom("ERROR"), "disconnect during handshake");
+          send(hd->client, error_atom{}, hd->request_id,
+               "disconnect during handshake");
         }
         m_ctx.erase(j);
       }
@@ -140,8 +141,26 @@ behavior basp_broker::make_behavior() {
                    << CAF_ARG(aid));
       erase_proxy(nid, aid);
     },
+    // received from middleman actor
+    [=](put_atom, network::native_socket fd, const actor_addr& whom, uint16_t port) {
+      auto hdl = add_tcp_doorman(fd);
+      add_published_actor(hdl, actor_cast<abstract_actor_ptr>(whom), port);
+      parent().notify<hook::actor_published>(whom, port);
+    },
+    [=](get_atom, network::native_socket fd, int64_t request_id, actor client, std::set<std::string>& expected_ifs) {
+      auto hdl = add_tcp_scribe(fd);
+      auto& ctx = m_ctx[hdl];
+      ctx.hdl = hdl;
+      ctx.handshake_data = client_handshake_data{};
+      auto& hdata = *ctx.handshake_data;
+      hdata.request_id = request_id;
+      hdata.client = client;
+      hdata.expected_ifs.swap(expected_ifs);
+      init_handshake_as_client(ctx);
+    },
+    // catch-all error handler
     others() >> [=] {
-      CAF_LOG_INFO("received unexpected message: "
+      CAF_LOG_ERROR("received unexpected message: "
                    << to_string(last_dequeued()));
     }
   };
@@ -422,7 +441,7 @@ basp_broker::handle_basp_header(connection_context& ctx,
     }
     case basp::server_handshake: {
       CAF_REQUIRE(payload != nullptr);
-      if (ctx.handshake_data == nullptr) {
+      if (!ctx.handshake_data) {
         CAF_LOG_INFO("received unexpected server handshake");
         return close_connection;
       }
@@ -431,7 +450,6 @@ basp_broker::handle_basp_header(connection_context& ctx,
         return close_connection;
       }
       ctx.remote_id = hdr.source_node;
-      ctx.handshake_data->remote_id = hdr.source_node;
       binary_deserializer bd{payload->data(), payload->size(), &m_namespace};
       auto remote_aid = bd.read<uint32_t>();
       auto remote_ifs_size = bd.read<uint32_t>();
@@ -441,6 +459,8 @@ basp_broker::handle_basp_header(connection_context& ctx,
         remote_ifs.insert(std::move(str));
       }
       auto& ifs = ctx.handshake_data->expected_ifs;
+      auto hsclient = ctx.handshake_data->client;
+      auto hsid = ctx.handshake_data->request_id;
       if (!std::includes(ifs.begin(), ifs.end(),
                          remote_ifs.begin(), remote_ifs.end())) {
         auto tostr = [](const std::set<string>& what) -> string {
@@ -481,15 +501,15 @@ basp_broker::handle_basp_header(connection_context& ctx,
                       + iface_str;
         }
         // abort with error
-        send(ctx.handshake_data->client, atom("ERROR"), std::move(error_msg));
+        send(hsclient, error_atom{}, hsid, std::move(error_msg));
         return close_connection;
       }
-      auto nid = ctx.handshake_data->remote_id;
+      auto nid = hdr.source_node;
       if (nid == node()) {
         CAF_LOG_INFO("incoming connection from self: drop connection");
         auto res = detail::singletons::get_actor_registry()->get(remote_aid);
-        send(ctx.handshake_data->client, atom("OK"), actor_cast<actor>(res));
-        ctx.handshake_data = nullptr;
+        send(hsclient, ok_atom{}, hsid, res->address());
+        ctx.handshake_data = none;
         return close_connection;
       }
       if (!try_set_default_route(nid, ctx.hdl)) {
@@ -497,21 +517,21 @@ basp_broker::handle_basp_header(connection_context& ctx,
                      << " (re-use old one)");
         auto proxy = m_namespace.get_or_put(nid, remote_aid);
         // discard this peer; there's already an open connection
-        send(ctx.handshake_data->client, atom("OK"), actor_cast<actor>(proxy));
-        ctx.handshake_data = nullptr;
+        send(hsclient, ok_atom{}, hsid, proxy->address());
+        ctx.handshake_data = none;
         return close_connection;
       }
       // finalize handshake
       auto& buf = wr_buf(ctx.hdl);
       binary_serializer bs(std::back_inserter(buf), &m_namespace);
-      write(bs, {node(), ctx.handshake_data->remote_id,
+      write(bs, {node(), nid,
                  invalid_actor_id, invalid_actor_id,
                  0, basp::client_handshake, 0});
       // prepare to receive messages
       auto proxy = m_namespace.get_or_put(nid, remote_aid);
       ctx.published_actor = proxy;
-      send(ctx.handshake_data->client, atom("OK"), actor_cast<actor>(proxy));
-      ctx.handshake_data = nullptr;
+      send(hsclient, ok_atom{}, hsid, proxy->address());
+      ctx.handshake_data = none;
       parent().notify<hook::new_connection_established>(nid);
       break;
     }
@@ -622,19 +642,9 @@ bool basp_broker::try_set_default_route(const id_type& nid,
   return false;
 }
 
-void basp_broker::init_client(connection_handle hdl,
-                              client_handshake_data* data) {
-  CAF_LOG_TRACE("hdl = " << hdl.id());
-  auto& ctx = m_ctx[hdl];
-  ctx.hdl = hdl;
-  init_handshake_as_client(ctx, data);
-}
-
-void basp_broker::init_handshake_as_client(connection_context& ctx,
-                                           client_handshake_data* ptr) {
+void basp_broker::init_handshake_as_client(connection_context& ctx) {
   CAF_LOG_TRACE(CAF_ARG(this));
   ctx.state = await_server_handshake;
-  ctx.handshake_data = ptr;
   configure_read(ctx.hdl, receive_policy::exactly(basp::header_size));
 }
 

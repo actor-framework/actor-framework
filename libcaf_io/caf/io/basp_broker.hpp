@@ -67,12 +67,10 @@ class basp_broker : public broker, public actor_namespace::backend {
           message_id mid, const message& msg);
 
   struct client_handshake_data {
-    id_type remote_id;
+    int64_t request_id;
     actor client;
     std::set<std::string> expected_ifs;
   };
-
-  void init_client(connection_handle hdl, client_handshake_data* data);
 
   inline actor_namespace& get_namespace() {
     return m_namespace;
@@ -96,14 +94,13 @@ class basp_broker : public broker, public actor_namespace::backend {
     await_payload,
     // connection is going to be shut down because of an error
     close_connection
-
   };
 
   struct connection_context {
     connection_state state;
     connection_handle hdl;
     id_type remote_id;
-    client_handshake_data* handshake_data;
+    optional<client_handshake_data> handshake_data;
     basp::header hdr;
     // keep a reference to the published actor of
     // the remote node to prevent this particular
@@ -111,7 +108,6 @@ class basp_broker : public broker, public actor_namespace::backend {
     // a bug where re-using an "old" connection via
     // remote_actor() could return an expired proxy
     actor published_actor;
-
   };
 
   void read(binary_deserializer& bs, basp::header& msg);
@@ -131,8 +127,7 @@ class basp_broker : public broker, public actor_namespace::backend {
 
   void new_data(connection_context& ctx, buffer_type& buf);
 
-  void init_handshake_as_client(connection_context& ctx,
-                                client_handshake_data* ptr);
+  void init_handshake_as_client(connection_context& ctx);
 
   void init_handshake_as_sever(connection_context& ctx,
                                actor_addr published_actor);

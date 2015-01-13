@@ -35,39 +35,22 @@ namespace io {
 
 uint16_t publish_impl(abstract_actor_ptr whom, uint16_t port,
                       const char* in, bool reuse_addr) {
-  using namespace detail;
-  auto mm = middleman::instance();
+  std::string str;
+  if (in != nullptr) {
+    str = in;
+  }
+  auto mm = get_middleman_actor();
   scoped_actor self;
-  actor selfhdl = self;
-  mm->run_later([&] {
-    auto bro = mm->get_named_broker<basp_broker>(atom("_BASP"));
-    try {
-      auto hdl = mm->backend().add_tcp_doorman(bro.get(), port, in, reuse_addr);
-      bro->add_published_actor(std::move(hdl.first), whom, hdl.second);
-      mm->notify<hook::actor_published>(whom->address(), hdl.second);
-      anon_send(selfhdl, atom("OK"), hdl.second);
-    }
-    catch (bind_failure& e) {
-      anon_send(selfhdl, atom("BIND_FAIL"), e.what());
-    }
-    catch (network_error& e) {
-      anon_send(selfhdl, atom("ERROR"), e.what());
-    }
-  });
-  uint16_t bound_port = 0;
-  // block caller and re-throw exception here in case of an error
-  self->receive(
-    on(atom("OK"), arg_match) >> [&](uint16_t p) {
-      bound_port = p;
+  uint16_t result;
+  self->sync_send(mm, put_atom{}, whom->address(), port, str, reuse_addr).await(
+    [&](ok_atom, uint16_t res) {
+      result = res;
     },
-    on(atom("BIND_FAIL"), arg_match) >> [](std::string& str) {
-      throw bind_failure(std::move(str));
-    },
-    on(atom("ERROR"), arg_match) >> [](std::string& str) {
-      throw network_error(std::move(str));
+    [&](error_atom, std::string& msg) {
+      throw network_error(std::move(msg));
     }
   );
-  return bound_port;
+  return result;
 }
 
 } // namespace io

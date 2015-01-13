@@ -31,10 +31,13 @@
 #include "caf/announce.hpp"
 #include "caf/to_string.hpp"
 #include "caf/actor_proxy.hpp"
+#include "caf/scoped_actor.hpp"
 #include "caf/uniform_type_info.hpp"
 
 #include "caf/io/middleman.hpp"
+#include "caf/io/basp_broker.hpp"
 #include "caf/io/system_messages.hpp"
+#include "caf/io/network/default_multiplexer.hpp"
 
 #include "caf/detail/logging.hpp"
 #include "caf/detail/ripemd_160.hpp"
@@ -173,6 +176,121 @@ void do_announce(const char* tname) {
 
 using detail::make_counted;
 
+using middleman_actor_base = middleman_actor::extend<
+                               reacts_to<ok_atom, int64_t, actor_addr>,
+                               reacts_to<error_atom, int64_t, std::string>
+                             >::type;
+
+class middleman_actor_impl : public middleman_actor_base::base {
+ public:
+  middleman_actor_impl(actor default_broker)
+      : m_broker(default_broker),
+        m_next_request_id(0) {
+    // nop
+  }
+
+  ~middleman_actor_impl();
+
+  using get_op_result = either<ok_atom, actor_addr>::or_else<error_atom, std::string>;
+
+  using get_op_promise = typed_response_promise<get_op_result>;
+
+  middleman_actor_base::behavior_type make_behavior() {
+    return {
+      [=](put_atom, const actor_addr& whom, uint16_t port,
+          const std::string& addr, bool reuse_addr) {
+        return put(whom, port, addr.c_str(), reuse_addr);
+      },
+      [=](put_atom, const actor_addr& whom, uint16_t port,
+          const std::string& addr) {
+        return put(whom, port, addr.c_str());
+      },
+      [=](put_atom, const actor_addr& whom, uint16_t port, bool reuse_addr) {
+        return put(whom, port, nullptr, reuse_addr);
+      },
+      [=](put_atom, const actor_addr& whom, uint16_t port) {
+        return put(whom, port);
+      },
+      [=](get_atom, const std::string& host, uint16_t port,
+          std::set<std::string>& expected_ifs) {
+        return get(host, port, std::move(expected_ifs));
+      },
+      [=](get_atom, const std::string& host, uint16_t port) {
+        return get(host, port, std::set<std::string>());
+      },
+      [=](ok_atom ok, int64_t request_id, actor_addr result) {
+        auto i = m_pending_requests.find(request_id);
+        if (i == m_pending_requests.end()) {
+          CAF_LOG_ERROR("invalid request id: " << request_id);
+          return;
+        }
+        i->second.deliver(get_op_result{ok, result});
+        m_pending_requests.erase(i);
+      },
+      [=](error_atom error, int64_t request_id, std::string& reason) {
+        auto i = m_pending_requests.find(request_id);
+        if (i == m_pending_requests.end()) {
+          CAF_LOG_ERROR("invalid request id: " << request_id);
+          return;
+        }
+        i->second.deliver(get_op_result{error, std::move(reason)});
+        m_pending_requests.erase(i);
+      }
+    };
+  }
+
+ private:
+  either<ok_atom, uint16_t>::or_else<error_atom, std::string>
+  put(const actor_addr& whom, uint16_t port,
+      const char* in = nullptr, bool reuse_addr = false) {
+    network::native_socket fd;
+    uint16_t actual_port;
+    try {
+      // treat empty strings like nullptr
+      if (in != nullptr && in[0] == '\0') {
+        in = nullptr;
+      }
+      auto res = network::new_ipv4_acceptor_impl(port, in, reuse_addr);
+      fd = res.first;
+      actual_port = res.second;
+    }
+    catch (bind_failure& err) {
+      return {error_atom{}, std::string("bind_failure: ") + err.what()};
+    }
+    catch (network_error& err) {
+      return {error_atom{}, std::string("network_error: ") + err.what()};
+    }
+    send(m_broker, put_atom{}, fd, whom, actual_port);
+    return {ok_atom{}, actual_port};
+  }
+
+  get_op_promise get(const std::string& host, uint16_t port,
+                     std::set<std::string> expected_ifs) {
+    get_op_promise result = make_response_promise();
+    try {
+      auto fd = network::new_ipv4_connection_impl(host, port);
+      auto req_id = m_next_request_id++;
+      send(m_broker, get_atom{}, fd, req_id, actor{this}, std::move(expected_ifs));
+      m_pending_requests.insert(std::make_pair(req_id, result));
+    }
+    catch (network_error& err) {
+      // fullfil promise immediately
+      std::string msg = "network_error: ";
+      msg += err.what();
+      result.deliver(get_op_result{error_atom{}, std::move(msg)});
+    }
+    return result;
+  }
+
+  actor m_broker;
+  int64_t m_next_request_id;
+  std::map<int64_t, get_op_promise> m_pending_requests;
+};
+
+middleman_actor_impl::~middleman_actor_impl() {
+  // nop
+}
+
 middleman* middleman::instance() {
   auto sid = detail::singletons::middleman_plugin_id;
   auto fac = [] { return new middleman; };
@@ -205,6 +323,8 @@ void middleman::initialize() {
   do_announce<connection_handle>("caf::io::connection_handle");
   do_announce<new_connection_msg>("caf::io::new_connection_msg");
   do_announce<new_data_msg>("caf::io::new_data_msg");
+  actor mgr = get_named_broker<basp_broker>(atom("_BASP"));
+  m_manager = spawn_typed<middleman_actor_impl, detached + hidden>(mgr);
 }
 
 void middleman::stop() {
@@ -224,6 +344,14 @@ void middleman::stop() {
   m_backend_supervisor.reset();
   m_thread.join();
   m_named_brokers.clear();
+  scoped_actor self(true);
+  self->monitor(m_manager);
+  self->send_exit(m_manager, exit_reason::user_shutdown);
+  self->receive(
+    [](const down_msg&) {
+      // nop
+    }
+  );
 }
 
 void middleman::dispose() {
@@ -236,6 +364,14 @@ middleman::middleman() {
 
 middleman::~middleman() {
   // nop
+}
+
+middleman_actor middleman::actor_handle() {
+  return m_manager;
+}
+
+middleman_actor get_middleman_actor() {
+  return middleman::instance()->actor_handle();
 }
 
 } // namespace io
