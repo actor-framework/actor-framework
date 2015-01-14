@@ -55,6 +55,25 @@ class basp_broker : public broker, public actor_namespace::backend {
 
   actor_proxy_ptr make_proxy(const node_id&, actor_id) override;
 
+  class payload_writer {
+   public:
+    payload_writer() = default;
+    payload_writer(const payload_writer&) = default;
+    payload_writer& operator=(const payload_writer&) = default;
+    virtual ~payload_writer();
+    virtual void write(binary_serializer&) = 0;
+  };
+
+  void dispatch(connection_handle hdl, uint32_t operation,
+                const node_id& src_node, actor_id src_actor,
+                const node_id& dest_node, actor_id dest_actor,
+                uint64_t op_data = 0, payload_writer* writer = nullptr);
+
+  node_id dispatch(uint32_t operation, const node_id& src_node,
+                   actor_id src_actor, const node_id& dest_node,
+                   actor_id dest_actor, uint64_t op_data = 0,
+                   payload_writer* writer = nullptr);
+
   // dispatches a message from a local actor to a remote node
   void dispatch(const actor_addr& from, const actor_addr& to,
                 message_id mid, const message& msg);
@@ -73,7 +92,7 @@ class basp_broker : public broker, public actor_namespace::backend {
   void erase_proxy(const node_id& nid, actor_id aid);
 
   // dispatches a message from a remote node to a local actor
-  void dispatch(const basp::header& msg, message&& payload);
+  void local_dispatch(const basp::header& msg, message&& payload);
 
   enum connection_state {
     // client just started, await handshake from server

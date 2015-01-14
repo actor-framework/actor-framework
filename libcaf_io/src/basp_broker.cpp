@@ -40,6 +40,34 @@ namespace io {
 using detail::singletons;
 using detail::make_counted;
 
+basp_broker::payload_writer::~payload_writer() {
+  // nop
+}
+
+template <class F>
+class functor_payload_writer : public basp_broker::payload_writer {
+ public:
+  functor_payload_writer(F fun) : m_fun(fun) {
+    // nop
+  }
+
+  functor_payload_writer(const functor_payload_writer&) = default;
+
+  functor_payload_writer& operator=(const functor_payload_writer&) = default;
+
+  void write(binary_serializer& sink) override {
+    m_fun(sink);
+  }
+
+ private:
+  F m_fun;
+};
+
+template <class F>
+functor_payload_writer<F> make_payload_writer(F fun) {
+  return {fun};
+}
+
 basp_broker::basp_broker() : m_namespace(*this) {
   m_meta_msg = uniform_typeid<message>();
   m_meta_id_type = uniform_typeid<node_id>();
@@ -204,7 +232,7 @@ void basp_broker::new_data(connection_context& ctx, buffer_type& buf) {
                                                     : basp::header_size));
 }
 
-void basp_broker::dispatch(const basp::header& hdr, message&& msg) {
+void basp_broker::local_dispatch(const basp::header& hdr, message&& msg) {
   CAF_LOG_TRACE("");
   // TODO: provide hook API to allow ActorShell to
   //       intercept/trace/log each message
@@ -274,44 +302,71 @@ void basp_broker::dispatch(const basp::header& hdr, message&& msg) {
   dest->enqueue(src, mid, std::move(msg), nullptr);
 }
 
+void basp_broker::dispatch(connection_handle hdl, uint32_t operation,
+                           const node_id& src_node, actor_id src_actor,
+                           const node_id& dest_node, actor_id dest_actor,
+                           uint64_t op_data, payload_writer* writer) {
+  auto& buf = wr_buf(hdl);
+  if (writer) {
+    // reserve space in the buffer to write the broker message later on
+    auto wr_pos = static_cast<ptrdiff_t>(buf.size());
+    char placeholder[basp::header_size];
+    buf.insert(buf.end(), std::begin(placeholder), std::end(placeholder));
+    auto before = buf.size();
+    { // lifetime scope of first serializer (write payload)
+      binary_serializer bs1{std::back_inserter(buf), &m_namespace};
+      writer->write(bs1);
+    }
+    // write broker message to the reserved space
+    binary_serializer bs2{buf.begin() + wr_pos, &m_namespace};
+    auto payload_len = static_cast<uint32_t>(buf.size() - before);
+    write(bs2, {src_node,    dest_node, src_actor,   dest_actor,
+                payload_len, operation, op_data});
+  } else {
+    binary_serializer bs(std::back_inserter(wr_buf(hdl)), &m_namespace);
+    write(bs, {src_node, dest_node, src_actor, dest_actor,
+               0, operation, op_data});
+  }
+  flush(hdl);
+}
+
+node_id basp_broker::dispatch(uint32_t operation, const node_id& src_node,
+                              actor_id src_actor, const node_id& dest_node,
+                              actor_id dest_actor, uint64_t op_data,
+                              payload_writer* writer) {
+  auto route = get_route(dest_node);
+  if (route.invalid()) {
+    CAF_LOG_INFO("unable to dispatch message: no route to "
+                 << CAF_TSARG(dest_node));
+    return invalid_node_id;
+  }
+  dispatch(route.hdl, operation, src_node, src_actor, dest_node, dest_actor,
+           op_data, writer);
+  return route.node;
+}
+
 void basp_broker::dispatch(const actor_addr& from, const actor_addr& to,
                            message_id mid, const message& msg) {
-  CAF_LOG_TRACE(CAF_TARG(from, to_string)
-                << ", " << CAF_MARG(mid, integer_value) << ", "
-                << CAF_TARG(to, to_string) << ", " << CAF_TARG(msg, to_string));
-  CAF_REQUIRE(to != nullptr);
-  auto dest = to.node();
-  auto route = get_route(dest);
-  if (route.invalid()) {
-    parent().notify<hook::message_sending_failed>(from, to, mid, msg);
-    CAF_LOG_INFO("unable to dispatch message: no route to "
-                 << to_string(dest) << ", message: " << to_string(msg));
+  CAF_LOG_TRACE(CAF_TSARG(from) << ", " << CAF_MARG(mid, integer_value)
+                << ", " << CAF_TSARG(to) << ", " << CAF_TSARG(msg));
+  if (to == invalid_actor_addr) {
     return;
   }
-  auto& buf = wr_buf(route.hdl);
-  // reserve space in the buffer to write the broker message later on
-  auto wr_pos = static_cast<ptrdiff_t>(buf.size());
-  char placeholder[basp::header_size];
-  buf.insert(buf.end(), std::begin(placeholder), std::end(placeholder));
-  auto before = buf.size();
-  { // write payload, lifetime scope of first serializer
-    binary_serializer bs1{std::back_inserter(buf), &m_namespace};
-    bs1.write(msg, m_meta_msg);
-  }
-  // write broker message to the reserved space
-  binary_serializer bs2{buf.begin() + wr_pos, &m_namespace};
   if (from != invalid_actor_addr && from.node() == node()) {
     // register locally running actors to be able to deserialize them later
     auto reg = detail::singletons::get_actor_registry();
     reg->put(from.id(), actor_cast<abstract_actor_ptr>(from));
   }
-  write(bs2,
-        {from.node(),                                dest,
-         from.id(),                                  to.id(),
-         static_cast<uint32_t>(buf.size() - before), basp::dispatch_message,
-         mid.integer_value()});
-  flush(route.hdl);
-  parent().notify<hook::message_sent>(from, route.node, to, mid, msg);
+  auto writer = make_payload_writer([&](binary_serializer& sink) {
+    sink.write(msg, m_meta_msg);
+  });
+  auto route_node = dispatch(basp::dispatch_message, from.node(), from.id(),
+                             to.node(), to.id(), mid.integer_value(), &writer);
+  if (route_node == invalid_node_id) {
+    parent().notify<hook::message_sending_failed>(from, to, mid, msg);
+  } else {
+    parent().notify<hook::message_sent>(from, route_node, to, mid, msg);
+  }
 }
 
 void basp_broker::read(binary_deserializer& bd, basp::header& msg) {
@@ -388,7 +443,7 @@ basp_broker::handle_basp_header(connection_context& ctx,
       binary_deserializer bd{payload->data(), payload->size(), &m_namespace};
       message content;
       bd.read(content, m_meta_msg);
-      dispatch(ctx.hdr, std::move(content));
+      local_dispatch(ctx.hdr, std::move(content));
       break;
     }
     case basp::announce_proxy_instance: {
@@ -525,11 +580,8 @@ basp_broker::handle_basp_header(connection_context& ctx,
         return close_connection;
       }
       // finalize handshake
-      auto& buf = wr_buf(ctx.hdl);
-      binary_serializer bs(std::back_inserter(buf), &m_namespace);
-      write(bs, {node(), nid,
-                 invalid_actor_id, invalid_actor_id,
-                 0, basp::client_handshake, 0});
+      dispatch(ctx.hdl, basp::client_handshake,
+               node(), invalid_actor_id, nid, invalid_actor_id);
       // prepare to receive messages
       auto proxy = m_namespace.get_or_put(nid, remote_aid);
       ctx.published_actor = proxy;
@@ -545,18 +597,11 @@ basp_broker::handle_basp_header(connection_context& ctx,
 void basp_broker::send_kill_proxy_instance(const node_id& nid, actor_id aid,
                                            uint32_t reason) {
   CAF_LOG_TRACE(CAF_TSARG(nid) << ", " << CAF_ARG(aid) << CAF_ARG(reason));
-  auto route = get_route(nid);
-  CAF_LOG_DEBUG(CAF_MARG(route.hdl, id));
-  if (route.invalid()) {
+  auto route_node = dispatch(basp::kill_proxy_instance, node(), aid,
+                             nid, invalid_actor_id, reason);
+  if (route_node == invalid_node_id) {
     CAF_LOG_INFO("message dropped, no route to node: " << to_string(nid));
-    return;
   }
-  auto& buf = wr_buf(route.hdl);
-  binary_serializer bs(std::back_inserter(buf), &m_namespace);
-  write(bs,
-        {node(), nid,                       aid,             invalid_actor_id,
-         0,      basp::kill_proxy_instance, uint64_t{reason}});
-  flush(route.hdl);
 }
 
 basp_broker::connection_info basp_broker::get_route(const node_id& dest) {
@@ -608,10 +653,8 @@ actor_proxy_ptr basp_broker::make_proxy(const node_id& nid, actor_id aid) {
     });
   });
   // tell remote side we are monitoring this actor now
-  binary_serializer bs(std::back_inserter(wr_buf(route.hdl)), &m_namespace);
-  write(bs, {node(), nid, invalid_actor_id, aid,
-             0, basp::announce_proxy_instance, 0});
-  // run hooks
+  dispatch(route.hdl, basp::announce_proxy_instance,
+           node(), invalid_actor_id, nid, aid);
   parent().notify<hook::new_remote_actor>(res->address());
   return res;
 }
@@ -655,30 +698,22 @@ void basp_broker::init_handshake_as_server(connection_context& ctx,
                                            actor_addr addr) {
   CAF_LOG_TRACE(CAF_ARG(this));
   CAF_REQUIRE(node() != invalid_node_id);
-  auto& buf = wr_buf(ctx.hdl);
-  auto wrpos = static_cast<ptrdiff_t>(buf.size());
-  char padding[basp::header_size];
-  buf.insert(buf.end(), std::begin(padding), std::end(padding));
-  auto before = buf.size();
-  { // lifetime scope of first serializer
-    binary_serializer bs1(std::back_inserter(buf), &m_namespace);
-    bs1 << addr.id();
-    auto sigs = addr.message_types();
-    bs1 << static_cast<uint32_t>(sigs.size());
-    for (auto& sig : sigs) {
-      bs1 << sig;
-    }
+  if (addr != invalid_actor_addr) {
+    auto writer = make_payload_writer([&](binary_serializer& sink) {
+      sink << addr.id();
+      auto sigs = addr.message_types();
+      sink << static_cast<uint32_t>(sigs.size());
+      for (auto& sig : sigs) {
+        sink << sig;
+      }
+    });
+    dispatch(ctx.hdl, basp::server_handshake, node(), addr.id(),
+             invalid_node_id, invalid_actor_id, basp::version, &writer);
+  } else {
+    dispatch(ctx.hdl, basp::server_handshake, node(), invalid_actor_id,
+             invalid_node_id, invalid_actor_id, basp::version);
   }
-  // fill padded region with the actual broker message
-  binary_serializer bs2(buf.begin() + wrpos, &m_namespace);
-  auto payload_len = buf.size() - before;
-  write(bs2, {node(),                             invalid_node_id,
-              addr.id(),                          0,
-              static_cast<uint32_t>(payload_len), basp::server_handshake,
-              basp::version});
-  CAF_LOG_DEBUG("buf.size() " << buf.size());
-  flush(ctx.hdl);
-  // setup for receiving client handshake
+  // prepare for receiving client handshake
   ctx.state = await_client_handshake;
   configure_read(ctx.hdl, receive_policy::exactly(basp::header_size));
 }
