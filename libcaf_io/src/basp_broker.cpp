@@ -86,7 +86,7 @@ behavior basp_broker::make_behavior() {
         m_ctx.erase(j);
       }
       // purge handle from all routes
-      std::vector<id_type> lost_connections;
+      std::vector<node_id> lost_connections;
       for (auto& kvp : m_routes) {
         auto& entry = kvp.second;
         if (entry.first.hdl == msg.handle) {
@@ -135,27 +135,30 @@ behavior basp_broker::make_behavior() {
       CAF_LOGM_TRACE("make_behavior$_Dispatch", "");
       dispatch(sender, receiver, mid, msg);
     },
-    on(atom("_DelProxy"), arg_match) >> [=](const id_type& nid, actor_id aid) {
+    on(atom("_DelProxy"), arg_match) >> [=](const node_id& nid, actor_id aid) {
       CAF_LOGM_TRACE("make_behavior$_DelProxy",
                    CAF_TSARG(nid) << ", "
                    << CAF_ARG(aid));
       erase_proxy(nid, aid);
     },
     // received from middleman actor
-    [=](put_atom, network::native_socket fd, const actor_addr& whom, uint16_t port) {
+    [=](put_atom, network::native_socket fd,
+        const actor_addr& whom, uint16_t port) {
       auto hdl = add_tcp_doorman(fd);
       add_published_actor(hdl, actor_cast<abstract_actor_ptr>(whom), port);
       parent().notify<hook::actor_published>(whom, port);
     },
-    [=](get_atom, network::native_socket fd, int64_t request_id, actor client, std::set<std::string>& expected_ifs) {
+    [=](get_atom, network::native_socket fd, int64_t request_id,
+        actor client, std::set<std::string>& expected_ifs) {
       auto hdl = add_tcp_scribe(fd);
       auto& ctx = m_ctx[hdl];
       ctx.hdl = hdl;
-      ctx.handshake_data = client_handshake_data{};
-      auto& hdata = *ctx.handshake_data;
-      hdata.request_id = request_id;
-      hdata.client = client;
-      hdata.expected_ifs.swap(expected_ifs);
+      // PODs are not movable, so passing expected_ifs to the ctor  would cause
+      // a copy; we avoid this by calling the ctor with an empty set and
+      // swap afterwards with expected_ifs
+      ctx.handshake_data = client_handshake_data{request_id, client,
+                                                 std::set<std::string>()};
+      ctx.handshake_data->expected_ifs.swap(expected_ifs);
       init_handshake_as_client(ctx);
     },
     // catch-all error handler
@@ -539,7 +542,7 @@ basp_broker::handle_basp_header(connection_context& ctx,
   return await_header;
 }
 
-void basp_broker::send_kill_proxy_instance(const id_type& nid, actor_id aid,
+void basp_broker::send_kill_proxy_instance(const node_id& nid, actor_id aid,
                                            uint32_t reason) {
   CAF_LOG_TRACE(CAF_TSARG(nid) << ", " << CAF_ARG(aid) << CAF_ARG(reason));
   auto route = get_route(nid);
@@ -556,7 +559,7 @@ void basp_broker::send_kill_proxy_instance(const id_type& nid, actor_id aid,
   flush(route.hdl);
 }
 
-basp_broker::connection_info basp_broker::get_route(const id_type& dest) {
+basp_broker::connection_info basp_broker::get_route(const node_id& dest) {
   connection_info res;
   auto i = m_routes.find(dest);
   if (i != m_routes.end()) {
@@ -569,7 +572,7 @@ basp_broker::connection_info basp_broker::get_route(const id_type& dest) {
   return res;
 }
 
-actor_proxy_ptr basp_broker::make_proxy(const id_type& nid, actor_id aid) {
+actor_proxy_ptr basp_broker::make_proxy(const node_id& nid, actor_id aid) {
   CAF_LOG_TRACE(CAF_TSARG(nid) << ", "
               << CAF_ARG(aid));
   CAF_REQUIRE(m_current_context != nullptr);
@@ -607,13 +610,13 @@ actor_proxy_ptr basp_broker::make_proxy(const id_type& nid, actor_id aid) {
   // tell remote side we are monitoring this actor now
   binary_serializer bs(std::back_inserter(wr_buf(route.hdl)), &m_namespace);
   write(bs, {node(), nid, invalid_actor_id, aid,
-         0, basp::announce_proxy_instance, 0});
+             0, basp::announce_proxy_instance, 0});
   // run hooks
   parent().notify<hook::new_remote_actor>(res->address());
   return res;
 }
 
-void basp_broker::erase_proxy(const id_type& nid, actor_id aid) {
+void basp_broker::erase_proxy(const node_id& nid, actor_id aid) {
   CAF_LOGM_TRACE("make_behavior$_DelProxy",
                  CAF_TSARG(nid) << ", " << CAF_ARG(aid));
   m_namespace.erase(nid, aid);
@@ -622,14 +625,14 @@ void basp_broker::erase_proxy(const id_type& nid, actor_id aid) {
   }
 }
 
-void basp_broker::add_route(const id_type& nid, connection_handle hdl) {
+void basp_broker::add_route(const node_id& nid, connection_handle hdl) {
   if (m_blacklist.count(std::make_pair(nid, hdl)) == 0) {
     parent().notify<hook::new_route_added>(m_current_context->remote_id, nid);
     m_routes[nid].second.insert({hdl, nid});
   }
 }
 
-bool basp_broker::try_set_default_route(const id_type& nid,
+bool basp_broker::try_set_default_route(const node_id& nid,
                                         connection_handle hdl) {
   CAF_REQUIRE(!hdl.invalid());
   auto& entry = m_routes[nid];
@@ -649,7 +652,7 @@ void basp_broker::init_handshake_as_client(connection_context& ctx) {
 }
 
 void basp_broker::init_handshake_as_server(connection_context& ctx,
-                                          actor_addr addr) {
+                                           actor_addr addr) {
   CAF_LOG_TRACE(CAF_ARG(this));
   CAF_REQUIRE(node() != invalid_node_id);
   auto& buf = wr_buf(ctx.hdl);

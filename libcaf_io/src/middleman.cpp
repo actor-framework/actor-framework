@@ -191,7 +191,8 @@ class middleman_actor_impl : public middleman_actor_base::base {
 
   ~middleman_actor_impl();
 
-  using get_op_result = either<ok_atom, actor_addr>::or_else<error_atom, std::string>;
+  using get_op_result = either<ok_atom, actor_addr>
+                        ::or_else<error_atom, std::string>;
 
   using get_op_promise = typed_response_promise<get_op_result>;
 
@@ -211,12 +212,12 @@ class middleman_actor_impl : public middleman_actor_base::base {
       [=](put_atom, const actor_addr& whom, uint16_t port) {
         return put(whom, port);
       },
-      [=](get_atom, const std::string& host, uint16_t port,
+      [=](get_atom, const std::string& hostname, uint16_t port,
           std::set<std::string>& expected_ifs) {
-        return get(host, port, std::move(expected_ifs));
+        return get(hostname, port, std::move(expected_ifs));
       },
-      [=](get_atom, const std::string& host, uint16_t port) {
-        return get(host, port, std::set<std::string>());
+      [=](get_atom, const std::string& hostname, uint16_t port) {
+        return get(hostname, port, std::set<std::string>());
       },
       [=](ok_atom ok, int64_t request_id, actor_addr result) {
         auto i = m_pending_requests.find(request_id);
@@ -264,13 +265,14 @@ class middleman_actor_impl : public middleman_actor_base::base {
     return {ok_atom{}, actual_port};
   }
 
-  get_op_promise get(const std::string& host, uint16_t port,
+  get_op_promise get(const std::string& hostname, uint16_t port,
                      std::set<std::string> expected_ifs) {
     get_op_promise result = make_response_promise();
     try {
-      auto fd = network::new_ipv4_connection_impl(host, port);
+      auto fd = network::new_ipv4_connection_impl(hostname, port);
       auto req_id = m_next_request_id++;
-      send(m_broker, get_atom{}, fd, req_id, actor{this}, std::move(expected_ifs));
+      send(m_broker, get_atom{}, fd, req_id,
+           actor{this}, std::move(expected_ifs));
       m_pending_requests.insert(std::make_pair(req_id, result));
     }
     catch (network_error& err) {
