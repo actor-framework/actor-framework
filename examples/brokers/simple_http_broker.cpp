@@ -74,12 +74,12 @@ int main(int argc, const char **argv) {
     on("-p", as_u16) >> [&](uint16_t port) {
       cout << "*** run in server mode listen on: " << port << endl;
       cout << "*** to quit the program, simply press <enter>" << endl;
-      auto sever_actor = spawn_io_server(server, port);
+      auto server_actor = spawn_io_server(server, port);
       // wait for any input
       std::string dummy;
       std::getline(std::cin, dummy);
       // kill server
-      anon_send_exit(sever_actor, exit_reason::user_shutdown);
+      anon_send_exit(server_actor, exit_reason::user_shutdown);
     },
     others() >> [] {
       cerr << "use with '-p PORT' as server on port" << endl;

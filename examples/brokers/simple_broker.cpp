@@ -175,8 +175,8 @@ int main(int argc, char** argv) {
     on("-s", as_u16) >> [&](uint16_t port) {
       cout << "run in server mode" << endl;
       auto pong_actor = spawn(pong);
-      auto sever_actor = spawn_io_server(server, port, pong_actor);
-      print_on_exit(sever_actor, "server");
+      auto server_actor = spawn_io_server(server, port, pong_actor);
+      print_on_exit(server_actor, "server");
       print_on_exit(pong_actor, "pong");
     },
     on("-c", val<string>, as_u16) >> [&](const string& host, uint16_t port) {

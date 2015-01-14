@@ -129,7 +129,7 @@ class basp_broker : public broker, public actor_namespace::backend {
 
   void init_handshake_as_client(connection_context& ctx);
 
-  void init_handshake_as_sever(connection_context& ctx,
+  void init_handshake_as_server(connection_context& ctx,
                                actor_addr published_actor);
 
   void serialize_msg(const actor_addr& sender, message_id mid,

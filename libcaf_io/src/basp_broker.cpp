@@ -70,7 +70,7 @@ behavior basp_broker::make_behavior() {
       ctx.hdl = msg.handle;
       ctx.handshake_data = none;
       ctx.state = await_client_handshake;
-      init_handshake_as_sever(ctx, m_acceptors[msg.source].first->address());
+      init_handshake_as_server(ctx, m_acceptors[msg.source].first->address());
     },
     // received from underlying broker implementation
     [=](const connection_closed_msg& msg) {
@@ -648,7 +648,7 @@ void basp_broker::init_handshake_as_client(connection_context& ctx) {
   configure_read(ctx.hdl, receive_policy::exactly(basp::header_size));
 }
 
-void basp_broker::init_handshake_as_sever(connection_context& ctx,
+void basp_broker::init_handshake_as_server(connection_context& ctx,
                                           actor_addr addr) {
   CAF_LOG_TRACE(CAF_ARG(this));
   CAF_REQUIRE(node() != invalid_node_id);
