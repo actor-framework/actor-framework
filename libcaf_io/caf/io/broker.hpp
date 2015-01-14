@@ -255,6 +255,8 @@ class broker : public extend<local_actor>::
 
   connection_handle add_tcp_scribe(const std::string& host, uint16_t port);
 
+  void assign_tcp_scribe(connection_handle hdl);
+
   connection_handle add_tcp_scribe(network::native_socket fd);
 
   inline void add_doorman(const doorman_pointer& ptr) {
@@ -267,6 +269,8 @@ class broker : public extend<local_actor>::
   std::pair<accept_handle, uint16_t> add_tcp_doorman(uint16_t port = 0,
                                                      const char* in = nullptr,
                                                      bool reuse_addr = false);
+
+  void assign_tcp_doorman(accept_handle hdl);
 
   accept_handle add_tcp_doorman(network::native_socket fd);
 

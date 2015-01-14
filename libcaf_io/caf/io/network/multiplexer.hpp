@@ -30,6 +30,8 @@
 #include "caf/io/fwd.hpp"
 #include "caf/io/accept_handle.hpp"
 #include "caf/io/connection_handle.hpp"
+
+#include "caf/io/network/protocol.hpp"
 #include "caf/io/network/native_socket.hpp"
 
 #include "caf/mixin/memory_cached.hpp"
@@ -54,25 +56,58 @@ class multiplexer {
   virtual ~multiplexer();
 
   /**
+   * Tries to connect to `host` on given `port` and returns an unbound
+   * connection handle on success.
+   * @threadsafe
+   */
+  virtual connection_handle new_tcp_scribe(const std::string& host,
+                                           uint16_t port) = 0;
+
+  /**
+   * Assigns an unbound scribe identified by `hdl` to `ptr`.
+   * @warning Do not call from outside the multiplexer's event loop.
+   */
+  virtual void assign_tcp_scribe(broker* ptr, connection_handle hdl) = 0;
+
+  /**
    * Creates a new TCP doorman from a native socket handle.
+   * @warning Do not call from outside the multiplexer's event loop.
    */
   virtual connection_handle add_tcp_scribe(broker* ptr, native_socket fd) = 0;
 
   /**
    * Tries to connect to host `h` on given `port` and returns a
    * new scribe managing the connection on success.
+   * @warning Do not call from outside the multiplexer's event loop.
    */
   virtual connection_handle add_tcp_scribe(broker* ptr, const std::string& host,
                                            uint16_t port) = 0;
 
   /**
+   * Tries to create an unbound TCP doorman running `port`, optionally
+   * accepting only connections from IP address `in`.
+   * @warning Do not call from outside the multiplexer's event loop.
+   */
+  virtual std::pair<accept_handle, uint16_t>
+  new_tcp_doorman(uint16_t port, const char* in = nullptr,
+                  bool reuse_addr = false) = 0;
+
+  /**
+   * Assigns an unbound doorman identified by `hdl` to `ptr`.
+   * @warning Do not call from outside the multiplexer's event loop.
+   */
+  virtual void assign_tcp_doorman(broker* ptr, accept_handle hdl) = 0;
+
+  /**
    * Creates a new TCP doorman from a native socket handle.
+   * @warning Do not call from outside the multiplexer's event loop.
    */
   virtual accept_handle add_tcp_doorman(broker* ptr, native_socket fd) = 0;
 
   /**
    * Tries to create a new TCP doorman running on port `p`, optionally
    * accepting only connections from IP address `in`.
+   * @warning Do not call from outside the multiplexer's event loop.
    */
   virtual std::pair<accept_handle, uint16_t>
   add_tcp_doorman(broker* ptr, uint16_t port, const char* in = nullptr,
@@ -116,6 +151,7 @@ class multiplexer {
 
   /**
    * Invokes @p fun in the multiplexer's event loop.
+   * @threadsafe
    */
   template <class F>
   void dispatch(F fun) {
@@ -128,6 +164,7 @@ class multiplexer {
 
   /**
    * Invokes @p fun in the multiplexer's event loop.
+   * @threadsafe
    */
   template <class F>
   void post(F fun) {

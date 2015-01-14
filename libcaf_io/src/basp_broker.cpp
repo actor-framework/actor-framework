@@ -170,15 +170,15 @@ behavior basp_broker::make_behavior() {
       erase_proxy(nid, aid);
     },
     // received from middleman actor
-    [=](put_atom, network::native_socket fd,
+    [=](put_atom, accept_handle hdl,
         const actor_addr& whom, uint16_t port) {
-      auto hdl = add_tcp_doorman(fd);
+      assign_tcp_doorman(hdl);
       add_published_actor(hdl, actor_cast<abstract_actor_ptr>(whom), port);
       parent().notify<hook::actor_published>(whom, port);
     },
-    [=](get_atom, network::native_socket fd, int64_t request_id,
+    [=](get_atom, connection_handle hdl, int64_t request_id,
         actor client, std::set<std::string>& expected_ifs) {
-      auto hdl = add_tcp_scribe(fd);
+      assign_tcp_scribe(hdl);
       auto& ctx = m_ctx[hdl];
       ctx.hdl = hdl;
       // PODs are not movable, so passing expected_ifs to the ctor  would cause

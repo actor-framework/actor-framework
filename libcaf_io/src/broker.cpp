@@ -361,8 +361,16 @@ connection_handle broker::add_tcp_scribe(const std::string& hst, uint16_t prt) {
   return backend().add_tcp_scribe(this, hst, prt);
 }
 
+void broker::assign_tcp_scribe(connection_handle hdl) {
+  backend().assign_tcp_scribe(this, hdl);
+}
+
 connection_handle broker::add_tcp_scribe(network::native_socket fd) {
   return backend().add_tcp_scribe(this, fd);
+}
+
+void broker::assign_tcp_doorman(accept_handle hdl) {
+  backend().assign_tcp_doorman(this, hdl);
 }
 
 std::pair<accept_handle, uint16_t>

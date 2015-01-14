@@ -37,7 +37,6 @@
 #include "caf/io/middleman.hpp"
 #include "caf/io/basp_broker.hpp"
 #include "caf/io/system_messages.hpp"
-#include "caf/io/network/default_multiplexer.hpp"
 
 #include "caf/detail/logging.hpp"
 #include "caf/detail/ripemd_160.hpp"
@@ -183,9 +182,10 @@ using middleman_actor_base = middleman_actor::extend<
 
 class middleman_actor_impl : public middleman_actor_base::base {
  public:
-  middleman_actor_impl(actor default_broker)
+  middleman_actor_impl(middleman& mref, actor default_broker)
       : m_broker(default_broker),
-        m_next_request_id(0) {
+        m_next_request_id(0),
+        m_parent(mref) {
     // nop
   }
 
@@ -244,15 +244,15 @@ class middleman_actor_impl : public middleman_actor_base::base {
   either<ok_atom, uint16_t>::or_else<error_atom, std::string>
   put(const actor_addr& whom, uint16_t port,
       const char* in = nullptr, bool reuse_addr = false) {
-    network::native_socket fd;
+    accept_handle hdl;
     uint16_t actual_port;
     try {
       // treat empty strings like nullptr
       if (in != nullptr && in[0] == '\0') {
         in = nullptr;
       }
-      auto res = network::new_ipv4_acceptor_impl(port, in, reuse_addr);
-      fd = res.first;
+      auto res = m_parent.backend().new_tcp_doorman(port, in, reuse_addr);
+      hdl = res.first;
       actual_port = res.second;
     }
     catch (bind_failure& err) {
@@ -261,7 +261,7 @@ class middleman_actor_impl : public middleman_actor_base::base {
     catch (network_error& err) {
       return {error_atom{}, std::string("network_error: ") + err.what()};
     }
-    send(m_broker, put_atom{}, fd, whom, actual_port);
+    send(m_broker, put_atom{}, hdl, whom, actual_port);
     return {ok_atom{}, actual_port};
   }
 
@@ -269,9 +269,9 @@ class middleman_actor_impl : public middleman_actor_base::base {
                      std::set<std::string> expected_ifs) {
     get_op_promise result = make_response_promise();
     try {
-      auto fd = network::new_ipv4_connection_impl(hostname, port);
+      auto hdl = m_parent.backend().new_tcp_scribe(hostname, port);
       auto req_id = m_next_request_id++;
-      send(m_broker, get_atom{}, fd, req_id,
+      send(m_broker, get_atom{}, hdl, req_id,
            actor{this}, std::move(expected_ifs));
       m_pending_requests.insert(std::make_pair(req_id, result));
     }
@@ -286,6 +286,7 @@ class middleman_actor_impl : public middleman_actor_base::base {
 
   actor m_broker;
   int64_t m_next_request_id;
+  middleman& m_parent;
   std::map<int64_t, get_op_promise> m_pending_requests;
 };
 
@@ -326,7 +327,7 @@ void middleman::initialize() {
   do_announce<new_connection_msg>("caf::io::new_connection_msg");
   do_announce<new_data_msg>("caf::io::new_data_msg");
   actor mgr = get_named_broker<basp_broker>(atom("_BASP"));
-  m_manager = spawn_typed<middleman_actor_impl, detached + hidden>(mgr);
+  m_manager = spawn_typed<middleman_actor_impl, detached + hidden>(*this, mgr);
 }
 
 void middleman::stop() {

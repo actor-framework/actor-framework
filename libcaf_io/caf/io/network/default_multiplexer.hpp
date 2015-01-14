@@ -135,13 +135,6 @@ namespace network {
  */
 using native_socket_acceptor = native_socket;
 
-inline int64_t int64_from_native_socket(native_socket sock) {
-  // on Windows, SOCK is an unsigned value;
-  // hence, static_cast<> alone would yield the wrong result,
-  // as our io_handle assumes -1 as invalid value
-  return sock == invalid_native_socket ? -1 : static_cast<int64_t>(sock);
-}
-
 /**
  * Returns the last socket error as human-readable string.
  */
@@ -325,6 +318,10 @@ class default_multiplexer : public multiplexer {
     }
   };
 
+  connection_handle new_tcp_scribe(const std::string&, uint16_t) override;
+
+  void assign_tcp_scribe(broker* ptr, connection_handle hdl) override;
+
   connection_handle add_tcp_scribe(broker*, default_socket_acceptor&& sock);
 
   connection_handle add_tcp_scribe(broker*, native_socket fd) override;
@@ -332,12 +329,17 @@ class default_multiplexer : public multiplexer {
   connection_handle add_tcp_scribe(broker*, const std::string& h,
                                     uint16_t port) override;
 
+  std::pair<accept_handle, uint16_t>
+  new_tcp_doorman(uint16_t p, const char* in, bool rflag) override;
+
+  void assign_tcp_doorman(broker* ptr, accept_handle hdl) override;
+
   accept_handle add_tcp_doorman(broker*, default_socket_acceptor&& sock);
 
   accept_handle add_tcp_doorman(broker*, native_socket fd) override;
 
   std::pair<accept_handle, uint16_t>
-  add_tcp_doorman(broker*, uint16_t p, const char* h, bool reuse_addr) override;
+  add_tcp_doorman(broker*, uint16_t p, const char* in, bool rflag) override;
 
   void dispatch_runnable(runnable_ptr ptr) override;
 
