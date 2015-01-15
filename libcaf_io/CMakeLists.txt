@@ -12,6 +12,7 @@ set (LIBCAF_IO_SRCS
      src/max_msg_size.cpp
      src/middleman.cpp
      src/hook.cpp
+     src/interfaces.cpp
      src/default_multiplexer.cpp
      src/publish.cpp
      src/publish_local_groups.cpp
