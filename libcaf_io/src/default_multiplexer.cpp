@@ -20,10 +20,14 @@
 #include "caf/io/network/default_multiplexer.hpp"
 
 #include "caf/config.hpp"
+#include "caf/optional.hpp"
 #include "caf/exception.hpp"
 
 #include "caf/io/broker.hpp"
 #include "caf/io/middleman.hpp"
+
+#include "caf/io/network/protocol.hpp"
+#include "caf/io/network/interfaces.hpp"
 
 #ifdef CAF_WINDOWS
 # include <winsock2.h>
@@ -51,6 +55,8 @@ namespace {
 #else // BSD or Linux
   constexpr int no_sigpipe_flag = MSG_NOSIGNAL;
 #endif
+  constexpr auto ipv4 = caf::io::network::protocol::ipv4;
+  constexpr auto ipv6 = caf::io::network::protocol::ipv6;
 } // namespace <anonymous>
 
 namespace caf {
@@ -768,7 +774,7 @@ accept_handle default_multiplexer::add_tcp_doorman(broker* self,
 
 connection_handle default_multiplexer::new_tcp_scribe(const std::string& host,
                                                       uint16_t port) {
-  auto fd = new_ipv4_connection_impl(host, port);
+  auto fd = new_tcp_connection_impl(host, port);
   return connection_handle::from_int(int64_from_native_socket(fd));
 }
 
@@ -785,14 +791,14 @@ connection_handle default_multiplexer::add_tcp_scribe(broker* self,
 connection_handle default_multiplexer::add_tcp_scribe(broker* self,
                                                       const std::string& host,
                                                       uint16_t port) {
-  return add_tcp_scribe(self, new_ipv4_connection(host, port));
+  return add_tcp_scribe(self, new_tcp_connection(host, port));
 }
 
 
 std::pair<accept_handle, uint16_t>
 default_multiplexer::new_tcp_doorman(uint16_t port, const char* in,
                                      bool reuse_addr) {
-  auto res = new_ipv4_acceptor_impl(port, in, reuse_addr);
+  auto res = new_tcp_acceptor_impl(port, in, reuse_addr);
   return {accept_handle::from_int(int64_from_native_socket(res.first)),
           res.second};
 }
@@ -809,7 +815,7 @@ accept_handle default_multiplexer::add_tcp_doorman(broker* self,
 std::pair<accept_handle, uint16_t>
 default_multiplexer::add_tcp_doorman(broker* self, uint16_t port,
                                      const char* host, bool reuse_addr) {
-  auto acceptor = new_ipv4_acceptor(port, host, reuse_addr);
+  auto acceptor = new_tcp_acceptor(port, host, reuse_addr);
   auto bound_port = acceptor.second;
   return {add_tcp_doorman(self, std::move(acceptor.first)), bound_port};
 }
@@ -943,62 +949,183 @@ struct socket_guard {
     if (m_fd != invalid_native_socket)
       closesocket(m_fd);
   }
-  void release() {
+  native_socket release() {
+    auto fd = m_fd;
     m_fd = invalid_native_socket;
+    return fd;
   }
  private:
   native_socket m_fd;
 };
 
-native_socket new_ipv4_connection_impl(const std::string& host, uint16_t port) {
+in_addr& addr_of(sockaddr_in& what) {
+  return what.sin_addr;
+}
+
+sa_family_t& family_of(sockaddr_in& what) {
+  return what.sin_family;
+}
+
+in_port_t& port_of(sockaddr_in& what) {
+  return what.sin_port;
+}
+
+in6_addr& addr_of(sockaddr_in6& what) {
+  return what.sin6_addr;
+}
+
+sa_family_t& family_of(sockaddr_in6& what) {
+  return what.sin6_family;
+}
+
+in_port_t& port_of(sockaddr_in6& what) {
+  return what.sin6_port;
+}
+
+in_port_t& port_of(sockaddr& what) {
+  switch (what.sa_family) {
+    case AF_INET:
+      return port_of(reinterpret_cast<sockaddr_in&>(what));
+    case AF_INET6:
+      return port_of(reinterpret_cast<sockaddr_in6&>(what));
+    default:
+      break;
+  }
+  throw std::invalid_argument("invalid protocol family");
+}
+
+template <int Family>
+bool ip_connect(native_socket fd, const std::string& host, uint16_t port) {
+  static_assert(Family == AF_INET || Family == AF_INET6, "invalid family");
+  using sockaddr_type =
+    typename std::conditional<
+      Family == AF_INET,
+      sockaddr_in,
+      sockaddr_in6
+    >::type;
+  sockaddr_type sa;
+  memset(&sa, 0, sizeof(sockaddr_type));
+  inet_pton(Family, host.c_str(), &addr_of(sa));
+  family_of(sa) = Family;
+  port_of(sa)   = htons(port);
+  return connect(fd, reinterpret_cast<const sockaddr*>(&sa), sizeof(sa)) == 0;
+}
+
+native_socket new_tcp_connection_impl(const std::string& host, uint16_t port,
+                                      optional<protocol> preferred) {
   CAF_LOGF_TRACE(CAF_ARG(host) << ", " << CAF_ARG(port));
   CAF_LOGF_INFO("try to connect to " << host << " on port " << port);
 # ifdef CAF_WINDOWS
     // make sure TCP has been initialized via WSAStartup
     get_multiplexer_singleton();
 # endif
-  sockaddr_in serv_addr;
-  hostent* server;
-  native_socket fd = socket(AF_INET, SOCK_STREAM, 0);
-  if (fd == invalid_native_socket) {
-    throw network_error("socket creation failed");
-  }
-  socket_guard sguard(fd);
-  server = gethostbyname(host.c_str());
-  if (!server) {
+  auto res = interfaces::get_addrinfo_of_host(host, preferred);
+  if (!res) {
     std::string errstr = "no such host: ";
     errstr += host;
     throw network_error(std::move(errstr));
   }
-  memset(&serv_addr, 0, sizeof(serv_addr));
-  serv_addr.sin_family = AF_INET;
-  memmove(&serv_addr.sin_addr.s_addr, server->h_addr,
-          static_cast<size_t>(server->h_length));
-  serv_addr.sin_port = htons(port);
-  CAF_LOGF_DEBUG("call connect()");
-  if (connect(fd, reinterpret_cast<const sockaddr*>(&serv_addr),
-              sizeof(serv_addr)) != 0) {
+  auto proto = res->second;
+  CAF_REQUIRE(proto == ipv4 || proto == ipv6);
+  auto fd = socket(proto == ipv4 ? AF_INET : AF_INET6, SOCK_STREAM, 0);
+  if (fd == invalid_native_socket) {
+    throw network_error("socket creation failed");
+  }
+  socket_guard sguard(fd);
+  if (proto == ipv6) {
+    if (ip_connect<AF_INET6>(fd, res->first, port)) {
+      return fd;
+    }
+    // IPv4 fallback
+    return new_tcp_connection_impl(host, port, ipv4);
+  }
+  if (!ip_connect<AF_INET>(fd, res->first, port)) {
     CAF_LOGF_ERROR("could not connect to to " << host << " on port " << port);
     throw network_error("could not connect to host");
   }
-  sguard.release();
-  return fd;
+  return sguard.release();
 }
 
-default_socket new_ipv4_connection(const std::string& host, uint16_t port) {
+default_socket new_tcp_connection(const std::string& host, uint16_t port) {
   auto& backend = get_multiplexer_singleton();
-  return default_socket{backend, new_ipv4_connection_impl(host, port)};
+  return default_socket{backend, new_tcp_connection_impl(host, port)};
 }
 
-std::pair<native_socket, uint16_t>
-new_ipv4_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr) {
+template <class SockAddrType>
+void read_port(native_socket fd, SockAddrType& sa) {
+  socklen_t len = sizeof(SockAddrType);
+  if (getsockname(fd, reinterpret_cast<sockaddr*>(&sa)  , &len) != 0) {
+    throw network_error("getsockname(): " + last_socket_error_as_string());
+  }
+}
+
+void set_inaddr_any(native_socket, sockaddr_in& sa) {
+  sa.sin_addr.s_addr = INADDR_ANY;
+}
+
+void set_inaddr_any(native_socket fd, sockaddr_in6& sa) {
+  sa.sin6_addr = in6addr_any;
+  // also accept ipv4 requests on this socket
+  int off = 0;
+  if (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY,
+                 reinterpret_cast<setsockopt_ptr>(&off), sizeof(off)) != 0) {
+    throw network_error("unable to unset IPV6_V6ONLY");
+  }
+}
+
+template <int Family>
+uint16_t new_ip_acceptor_impl(native_socket fd, uint16_t port,
+                              const char* addr) {
+  static_assert(Family == AF_INET || Family == AF_INET6, "invalid family");
   CAF_LOGF_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
 # ifdef CAF_WINDOWS
     // make sure TCP has been initialized via WSAStartup
     get_multiplexer_singleton();
 # endif
-  native_socket fd = socket(AF_INET, SOCK_STREAM, 0);
-  if (fd == invalid_native_socket) {
+  using sockaddr_type =
+    typename std::conditional<
+      Family == AF_INET,
+      sockaddr_in,
+      sockaddr_in6
+    >::type;
+  sockaddr_type sa;
+  memset(&sa, 0, sizeof(sockaddr_type));
+  family_of(sa) = Family;
+  if (!addr) {
+    set_inaddr_any(fd, sa);
+  } else if (::inet_pton(Family, addr, &addr_of(sa)) <= 0) {
+    std::string err("invalid IP address: ");
+    err += addr;
+    throw network_error(std::move(err));
+  }
+  port_of(sa) = htons(port);
+  if (bind(fd, reinterpret_cast<sockaddr*>(&sa), sizeof(sa)) != 0) {
+    throw bind_failure(last_socket_error_as_string());
+  }
+  read_port(fd, sa);
+  return ntohs(port_of(sa));
+}
+
+std::pair<native_socket, uint16_t>
+new_tcp_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr) {
+  CAF_LOGF_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
+# ifdef CAF_WINDOWS
+    // make sure TCP has been initialized via WSAStartup
+    get_multiplexer_singleton();
+# endif
+  protocol proto = ipv6;
+  if (addr) {
+    auto addrs = interfaces::get_addrinfo_of_host(addr);
+    if (!addrs) {
+      std::string errstr = "no such host: ";
+      errstr += addr;
+      throw network_error(std::move(errstr));
+    }
+    proto = addrs->second;
+    CAF_REQUIRE(proto == ipv4 || proto == ipv6);
+  }
+  native_socket fd = socket(proto == ipv4 ? AF_INET : AF_INET6, SOCK_STREAM, 0);
+  if(fd == invalid_native_socket) {
     throw network_error("could not create server socket");
   }
   // sguard closes the socket in case of exception
@@ -1010,39 +1137,21 @@ new_ipv4_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr) {
       throw_io_failure("unable to set SO_REUSEADDR");
     }
   }
-  struct sockaddr_in serv_addr;
-  memset(&serv_addr, 0, sizeof(serv_addr));
-  serv_addr.sin_family = AF_INET;
-  if (!addr) {
-    serv_addr.sin_addr.s_addr = INADDR_ANY;
-  } else if (::inet_pton(AF_INET, addr, &serv_addr.sin_addr) <= 0) {
-    throw network_error("invalid IPv4 address");
-  }
-  serv_addr.sin_port = htons(port);
-  if (bind(fd, reinterpret_cast<sockaddr*>(&serv_addr),
-           sizeof(serv_addr)) < 0) {
-    throw bind_failure(last_socket_error_as_string());
-  }
+  auto p = proto == ipv4 ? new_ip_acceptor_impl<AF_INET>(fd, port, addr)
+                         : new_ip_acceptor_impl<AF_INET6>(fd, port, addr);
   if (listen(fd, SOMAXCONN) != 0) {
     throw network_error("listen() failed: " + last_socket_error_as_string());
   }
-  if (port == 0) {
-    socklen_t len = sizeof(serv_addr);
-    if (getsockname(fd, reinterpret_cast<sockaddr*>(&serv_addr), &len) < 0) {
-      throw network_error("getsockname(): " + last_socket_error_as_string());
-    }
-  }
   // ok, no exceptions so far
-  sguard.release();
-  CAF_LOGF_DEBUG("sockfd = " << fd << ", port = " << ntohs(serv_addr.sin_port));
-  return {fd, ntohs(serv_addr.sin_port)};
+  CAF_LOGF_DEBUG("sockfd = " << fd << ", port = " << p);
+  return {sguard.release(), p};
 }
 
 std::pair<default_socket_acceptor, uint16_t>
-new_ipv4_acceptor(uint16_t port, const char* addr, bool reuse) {
+new_tcp_acceptor(uint16_t port, const char* addr, bool reuse) {
   CAF_LOGF_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
   auto& backend = get_multiplexer_singleton();
-  auto acceptor = new_ipv4_acceptor_impl(port, addr, reuse);
+  auto acceptor = new_tcp_acceptor_impl(port, addr, reuse);
   auto bound_port = acceptor.second;
   CAF_REQUIRE(port == 0 || bound_port == port);
   return {default_socket_acceptor{backend, std::move(acceptor.first)},

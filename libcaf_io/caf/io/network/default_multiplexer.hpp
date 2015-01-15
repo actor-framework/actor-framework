@@ -419,7 +419,6 @@ class default_multiplexer : public multiplexer {
   std::pair<native_socket, native_socket> m_pipe;
 
   std::thread::id m_tid;
-
 };
 
 default_multiplexer& get_multiplexer_singleton();
@@ -658,20 +657,20 @@ class stream : public event_handler {
   }
 
   // reading & writing
-  Socket        m_sock;
+  Socket              m_sock;
   // reading
-  manager_ptr     m_reader;
-  size_t        m_threshold;
-  size_t        m_collected;
-  size_t        m_max;
+  manager_ptr         m_reader;
+  size_t              m_threshold;
+  size_t              m_collected;
+  size_t              m_max;
   receive_policy_flag m_rd_flag;
-  buffer_type     m_rd_buf;
+  buffer_type         m_rd_buf;
   // writing
-  manager_ptr     m_writer;
-  bool        m_writing;
-  size_t        m_written;
-  buffer_type     m_wr_buf;
-  buffer_type     m_wr_offline_buf;
+  manager_ptr         m_writer;
+  bool                m_writing;
+  size_t              m_written;
+  buffer_type         m_wr_buf;
+  buffer_type         m_wr_offline_buf;
 };
 
 /**
@@ -763,7 +762,9 @@ class acceptor : public event_handler {
   void removed_from_loop(operation op) override {
     CAF_LOG_TRACE("m_accept_sock.fd = " << m_accept_sock.fd()
              << "op = " << static_cast<int>(op));
-    if (op == operation::read) m_mgr.reset();
+    if (op == operation::read) {
+      m_mgr.reset();
+    }
   }
 
  protected:
@@ -780,31 +781,17 @@ class acceptor : public event_handler {
 
 };
 
-native_socket new_ipv4_connection_impl(const std::string&, uint16_t);
+native_socket new_tcp_connection_impl(const std::string&, uint16_t,
+                                      optional<protocol> preferred = none);
 
-default_socket new_ipv4_connection(const std::string& host, uint16_t port);
-
-template <class Socket>
-void ipv4_connect(Socket& sock, const std::string& host, uint16_t port) {
-  sock = new_ipv4_connection(host, port);
-}
+default_socket new_tcp_connection(const std::string& host, uint16_t port);
 
 std::pair<native_socket, uint16_t>
-new_ipv4_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr);
+new_tcp_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr);
 
 std::pair<default_socket_acceptor, uint16_t>
-new_ipv4_acceptor(uint16_t port, const char* addr = nullptr,
-                  bool reuse_addr = false);
-
-template <class SocketAcceptor>
-uint16_t ipv4_bind(SocketAcceptor& sock,
-         uint16_t port,
-         const char* addr = nullptr) {
-  CAF_LOGF_TRACE(CAF_ARG(port));
-  auto acceptor = new_ipv4_acceptor(port, addr);
-  sock = std::move(acceptor.first);
-  return acceptor.second;
-}
+new_tcp_acceptor(uint16_t port, const char* addr = nullptr,
+                 bool reuse_addr = false);
 
 } // namespace network
 } // namespace io

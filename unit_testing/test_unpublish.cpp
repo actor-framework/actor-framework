@@ -65,6 +65,7 @@ int main() {
   auto port = publish_at_some_port(4242, d);
   std::this_thread::sleep_for(std::chrono::milliseconds(50));
   io::unpublish(d, port);
+  CAF_CHECKPOINT();
   // must fail now
   try {
     auto oops = io::remote_actor("127.0.0.1", port);

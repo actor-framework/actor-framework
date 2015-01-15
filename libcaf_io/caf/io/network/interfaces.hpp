@@ -25,6 +25,8 @@
 #include <string>
 #include <utility>
 
+#include "caf/optional.hpp"
+
 #include "caf/io/network/protocol.hpp"
 
 namespace caf {
@@ -57,6 +59,12 @@ class interfaces {
    */
   static std::vector<std::string> list_addresses(protocol proc,
                                                  bool include_localhost = true);
+
+  /**
+   * Returns `pair<string, protocol>` for given host address.
+   **/
+  static optional<std::pair<std::string, protocol>>
+  get_addrinfo_of_host(const std::string& host, optional<protocol> preferred = none);
 };
 
 } // namespace network
