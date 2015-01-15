@@ -7,6 +7,7 @@
  *                                                                            *
  * Copyright (C) 2011 - 2014                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
+ * Raphael Hiesgen <raphael.hiesgen (at) haw-hamburg.de>                      *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -17,66 +18,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/opencl/opencl_err.hpp"
 #include "caf/opencl/opencl_metainfo.hpp"
-
-#define CAF_CLF(funname) #funname , funname
 
 namespace caf {
 namespace opencl {
-
-namespace {
-
-void throwcl(const char* fname, cl_int err) {
-  if (err != CL_SUCCESS) {
-    std::string errstr = fname;
-    errstr += ": ";
-    errstr += get_opencl_error(err);
-    throw std::runtime_error(std::move(errstr));
-  }
-}
-
-// call convention for simply calling a function, not using the last argument
-template <class F, class... Ts>
-void callcl(const char* fname, F f, Ts&&... vs) {
-  throwcl(fname, f(std::forward<Ts>(vs)..., nullptr));
-}
-
-// call convention with `result` argument at the end returning `err`, not
-// using the second last argument (set to nullptr) nor the one before (set to 0)
-template <class R, class F, class... Ts>
-R v1get(const char* fname, F f, Ts&&... vs) {
-  R result;
-  throwcl(fname, f(std::forward<Ts>(vs)..., cl_uint{0}, nullptr, &result));
-  return result;
-}
-
-// call convention with `err` argument at the end returning `result`
-template <class F, class... Ts>
-auto v2get(const char* fname, F f, Ts&&... vs)
--> decltype(f(std::forward<Ts>(vs)..., nullptr)) {
-  cl_int err;
-  auto result = f(std::forward<Ts>(vs)..., &err);
-  throwcl(fname, err);
-  return result;
-}
-
-// call convention with `result` argument at second last position (preceeded by
-// its size) followed by an ingored void* argument (nullptr) returning `err`
-template <class R, class F, class... Ts>
-R v3get(const char* fname, F f, Ts&&... vs) {
-  R result;
-  throwcl(fname, f(std::forward<Ts>(vs)..., sizeof(R), &result, nullptr));
-  return result;
-}
-
-void pfn_notify(const char* errinfo, const void*, size_t, void*) {
-  CAF_LOGC_ERROR("caf::opencl::opencl_metainfo", "initialize",
-                 "\n##### Error message via pfn_notify #####\n"
-                 << errinfo <<
-                 "\n########################################");
-}
-
-} // namespace <anonymous>
 
 opencl_metainfo* opencl_metainfo::instance() {
   auto sid = detail::singletons::opencl_plugin_id;
@@ -94,7 +40,7 @@ void opencl_metainfo::initialize() {
   auto num_platforms = v1get<cl_uint>(CAF_CLF(clGetPlatformIDs));
   // get platform ids
   std::vector<cl_platform_id> platforms(num_platforms);
-  callcl(CAF_CLF(clGetPlatformIDs), num_platforms, platforms.data());
+  v2callcl(CAF_CLF(clGetPlatformIDs), num_platforms, platforms.data());
   if (platforms.empty()) {
     throw std::runtime_error("no OpenCL platform found");
   }
@@ -113,7 +59,7 @@ void opencl_metainfo::initialize() {
   }
   // get available devices
   std::vector<cl_device_id> ds(num_devs);
-  callcl(CAF_CLF(clGetDeviceIDs), platform, dev_type, num_devs, ds.data());
+  v2callcl(CAF_CLF(clGetDeviceIDs), platform, dev_type, num_devs, ds.data());
   std::vector<device_ptr> devices(num_devs);
   // lift raw pointer as returned by OpenCL to C++ smart pointers
   auto lift = [](cl_device_id ptr) { return device_ptr{ptr, false}; };
@@ -138,7 +84,7 @@ void opencl_metainfo::initialize() {
       auto max_wid = v3get<cl_uint>(CAF_CLF(clGetDeviceInfo), device.get(),
                       static_cast<unsigned>(CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS));
       dim_vec max_wi_per_dim(max_wid);
-      callcl(CAF_CLF(clGetDeviceInfo), device.get(),
+      v2callcl(CAF_CLF(clGetDeviceInfo), device.get(),
              static_cast<unsigned>(CL_DEVICE_MAX_WORK_ITEM_SIZES),
              sizeof(size_t) * max_wid,
              max_wi_per_dim.data());

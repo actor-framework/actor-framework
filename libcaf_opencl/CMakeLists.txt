@@ -10,7 +10,9 @@ if (OPENCL_LIBRARIES)
   set (LIBCAF_OPENCL_SRCS
        src/global.cpp
        src/opencl_metainfo.cpp
-       src/program.cpp)
+       src/program.cpp
+       src/opencl_err.cpp
+       )
   # build shared library if not compiling static only
   if(NOT "${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes")
     add_library(libcaf_opencl SHARED ${LIBCAF_OPENCL_SRCS}
