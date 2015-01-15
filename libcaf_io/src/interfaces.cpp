@@ -75,10 +75,10 @@ void for_each_device(bool include_localhost, F fun) {
     if (include_localhost) {
       fun(i, family);
     } else if (family == AF_INET || family == AF_INET6) {
-      auto ok = getnameinfo(i->ifa_addr,
-                            family == AF_INET ? sizeof(sockaddr_in)
-                                              : sizeof(sockaddr_in6),
-                            host, NI_MAXHOST, nullptr, 0, 0);
+      auto len = static_cast<socklen_t>(family == AF_INET
+                                          ? sizeof(sockaddr_in)
+                                          : sizeof(sockaddr_in6));
+      auto ok = getnameinfo(i->ifa_addr, len, host, NI_MAXHOST, nullptr, 0, 0);
       if (ok == 0 && strcmp("localhost", host) != 0) {
         fun(i, family);
       }
