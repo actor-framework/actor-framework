@@ -23,7 +23,9 @@
 #include <iostream>
 
 #include "caf/detail/singletons.hpp"
+
 #include "caf/opencl/program.hpp"
+#include "caf/opencl/opencl_err.hpp"
 #include "caf/opencl/opencl_metainfo.hpp"
 
 using namespace std;
@@ -52,20 +54,16 @@ program program::create(const char* kernel_source, const char* options,
     throw runtime_error(oss.str());
   }
 
-  cl_int err{0};
-
   // create program object from kernel source
   size_t kernel_source_length = strlen(kernel_source);
   program_ptr pptr;
-  pptr.adopt(clCreateProgramWithSource(context.get(), 1, &kernel_source,
-                                       &kernel_source_length, &err));
-  if (err != CL_SUCCESS) {
-    throw runtime_error("clCreateProgramWithSource: " + get_opencl_error(err));
-  }
+  pptr.adopt(v2get(CAF_CLF(clCreateProgramWithSource),context.get(), 1,
+                   &kernel_source, &kernel_source_length));
 
   // build programm from program object
   auto dev_tmp = devices[device_id].m_device.get();
-  err = clBuildProgram(pptr.get(), 1, &dev_tmp, options, nullptr, nullptr);
+  cl_int err = clBuildProgram(pptr.get(), 1, &dev_tmp,
+                              options,nullptr, nullptr);
   if (err != CL_SUCCESS) {
     ostringstream oss;
     oss << "clBuildProgram: " << get_opencl_error(err);

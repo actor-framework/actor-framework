@@ -30,6 +30,7 @@
 #include "caf/abstract_actor.hpp"
 #include "caf/response_promise.hpp"
 #include "caf/opencl/smart_ptr.hpp"
+#include "caf/opencl/opencl_err.hpp"
 #include "caf/detail/scope_guard.hpp"
 
 namespace caf {
@@ -52,25 +53,22 @@ class command : public ref_counted {
         m_msg(msg) {}
 
   ~command() {
-    cl_int err{0};
     for (auto& e : m_events) {
-      err = clReleaseEvent(e);
-      if (err != CL_SUCCESS) {
-        CAF_LOGMF(CAF_ERROR, "clReleaseEvent: " << get_opencl_error(err));
-      }
+      v1callcl(CAF_CLF(clReleaseEvent),e);
     }
   }
 
   void enqueue() {
+    // Errors in this function can not be handled by opencl_err.hpp
+    // because they require non-standard error handling
     CAF_LOG_TRACE("command::enqueue()");
     this->ref(); // reference held by the OpenCL comand queue
-    cl_int err{0};
     cl_event event_k;
     auto data_or_nullptr = [](const dim_vec& vec) {
       return vec.empty() ? nullptr : vec.data();
     };
     // OpenCL expects cl_uint (unsigned int), hence the cast
-    err = clEnqueueNDRangeKernel(
+    cl_int err = clEnqueueNDRangeKernel(
       m_queue.get(), m_actor_facade->m_kernel.get(),
       static_cast<cl_uint>(m_actor_facade->m_global_dimensions.size()),
       data_or_nullptr(m_actor_facade->m_global_offsets),

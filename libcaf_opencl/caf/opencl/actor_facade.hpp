@@ -40,6 +40,7 @@
 #include "caf/opencl/command.hpp"
 #include "caf/opencl/program.hpp"
 #include "caf/opencl/smart_ptr.hpp"
+#include "caf/opencl/opencl_err.hpp"
 
 namespace caf {
 namespace opencl {
@@ -82,15 +83,9 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
     };
     check_vec(offsets, "offsets");
     check_vec(local_dims, "local dimensions");
-    cl_int err{0};
     kernel_ptr kernel;
-    kernel.adopt(clCreateKernel(prog.m_program.get(), kernel_name, &err));
-    if (err != CL_SUCCESS) {
-      std::ostringstream oss;
-      oss << "clCreateKernel: " << get_opencl_error(err);
-      CAF_LOGM_ERROR("caf::opencl::actor_facade", oss.str());
-      throw std::runtime_error(oss.str());
-    }
+    kernel.adopt(v2get(CAF_CLF(clCreateKernel), prog.m_program.get(),
+                       kernel_name));
     if (result_size == 0) {
       result_size = std::accumulate(global_dims.begin(), global_dims.end(),
                                     size_t{1}, std::multiplies<size_t>{});
@@ -159,14 +154,11 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
   size_t m_result_size;
 
   void add_arguments_to_kernel_rec(evnt_vec&, args_vec& arguments) {
-    cl_int err{0};
     // rotate left (output buffer to the end)
     rotate(begin(arguments), begin(arguments) + 1, end(arguments));
     for (cl_uint i = 0; i < arguments.size(); ++i) {
-      err = clSetKernelArg(m_kernel.get(), i, sizeof(cl_mem),
-                           static_cast<void*>(&arguments[i]));
-      CAF_LOG_ERROR_IF(err != CL_SUCCESS,
-                       "clSetKernelArg: " << get_opencl_error(err));
+      v1callcl(CAF_CLF(clSetKernelArg), m_kernel.get(), i,
+               sizeof(cl_mem), static_cast<void*>(&arguments[i]));
     }
     clFlush(m_queue.get());
   }
@@ -174,21 +166,12 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
   template <typename T0, typename... Ts>
   void add_arguments_to_kernel_rec(evnt_vec& events, args_vec& arguments,
                                    T0& arg0, Ts&... args) {
-    cl_int err{0};
     size_t buffer_size = sizeof(typename T0::value_type) * arg0.size();
-    auto buffer = clCreateBuffer(m_context.get(), CL_MEM_READ_ONLY, buffer_size,
-                                 nullptr, &err);
-    if (err != CL_SUCCESS) {
-      CAF_LOGMF(CAF_ERROR, "clCreateBuffer: " << get_opencl_error(err));
-      return;
-    }
-    cl_event event;
-    err = clEnqueueWriteBuffer(m_queue.get(), buffer, CL_FALSE, 0, buffer_size,
-                               arg0.data(), 0, nullptr, &event);
-    if (err != CL_SUCCESS) {
-      CAF_LOGMF(CAF_ERROR, "clEnqueueWriteBuffer: " << get_opencl_error(err));
-      return;
-    }
+    auto buffer = v2get(CAF_CLF(clCreateBuffer), m_context.get(),
+                        CL_MEM_READ_ONLY, buffer_size, nullptr);
+    cl_event event = v1get<cl_event>(CAF_CLF(clEnqueueWriteBuffer),
+                                     m_queue.get(), buffer, CL_FALSE,
+                                     0,buffer_size, arg0.data());
     events.push_back(std::move(event));
     mem_ptr tmp;
     tmp.adopt(std::move(buffer));
@@ -200,14 +183,8 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
   void add_arguments_to_kernel(evnt_vec& events, args_vec& arguments,
                                size_t ret_size, Ts&&... args) {
     arguments.clear();
-    cl_int err{0};
-    auto buf =
-      clCreateBuffer(m_context.get(), CL_MEM_WRITE_ONLY,
-                     sizeof(typename R::value_type) * ret_size, nullptr, &err);
-    if (err != CL_SUCCESS) {
-      CAF_LOGMF(CAF_ERROR, "clCreateBuffer: " << get_opencl_error(err));
-      return;
-    }
+    auto buf = v2get(CAF_CLF(clCreateBuffer), m_context.get(), CL_MEM_WRITE_ONLY,
+                     sizeof(typename R::value_type) * ret_size, nullptr);
     mem_ptr tmp;
     tmp.adopt(std::move(buf));
     arguments.push_back(tmp);
