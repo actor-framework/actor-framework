@@ -57,7 +57,7 @@ program program::create(const char* kernel_source, const char* options,
   // create program object from kernel source
   size_t kernel_source_length = strlen(kernel_source);
   program_ptr pptr;
-  pptr.adopt(v2get(CAF_CLF(clCreateProgramWithSource),context.get(), 1,
+  pptr.adopt(v2get(CAF_CLF(clCreateProgramWithSource),context.get(), cl_uint{1},
                    &kernel_source, &kernel_source_length));
 
   // build programm from program object

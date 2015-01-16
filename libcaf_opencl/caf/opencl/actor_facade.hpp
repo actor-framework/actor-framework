@@ -168,10 +168,10 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
                                    T0& arg0, Ts&... args) {
     size_t buffer_size = sizeof(typename T0::value_type) * arg0.size();
     auto buffer = v2get(CAF_CLF(clCreateBuffer), m_context.get(),
-                        CL_MEM_READ_ONLY, buffer_size, nullptr);
+                        cl_mem_flags{CL_MEM_READ_ONLY}, buffer_size, nullptr);
     cl_event event = v1get<cl_event>(CAF_CLF(clEnqueueWriteBuffer),
-                                     m_queue.get(), buffer, CL_FALSE,
-                                     0,buffer_size, arg0.data());
+                                     m_queue.get(), buffer, cl_bool{CL_FALSE},
+                                     cl_uint{0},buffer_size, arg0.data());
     events.push_back(std::move(event));
     mem_ptr tmp;
     tmp.adopt(std::move(buffer));
@@ -183,7 +183,8 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
   void add_arguments_to_kernel(evnt_vec& events, args_vec& arguments,
                                size_t ret_size, Ts&&... args) {
     arguments.clear();
-    auto buf = v2get(CAF_CLF(clCreateBuffer), m_context.get(), CL_MEM_WRITE_ONLY,
+    auto buf = v2get(CAF_CLF(clCreateBuffer), m_context.get(),
+                     cl_mem_flags{CL_MEM_WRITE_ONLY},
                      sizeof(typename R::value_type) * ret_size, nullptr);
     mem_ptr tmp;
     tmp.adopt(std::move(buf));

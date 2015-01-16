@@ -73,19 +73,19 @@ void opencl_metainfo::initialize() {
     try {
       cmd_queue.adopt(v2get(CAF_CLF(clCreateCommandQueue),
                             m_context.get(), device.get(),
-                            static_cast<unsigned>(CL_QUEUE_PROFILING_ENABLE)));
+                            unsigned{CL_QUEUE_PROFILING_ENABLE}));
     }
     catch (std::runtime_error&) {
       CAF_LOG_DEBUG("unable to create command queue for device");
     }
     if (cmd_queue) {
       auto max_wgs = v3get<size_t>(CAF_CLF(clGetDeviceInfo), device.get(),
-                      static_cast<unsigned>(CL_DEVICE_MAX_WORK_GROUP_SIZE));
+                      unsigned{CL_DEVICE_MAX_WORK_GROUP_SIZE});
       auto max_wid = v3get<cl_uint>(CAF_CLF(clGetDeviceInfo), device.get(),
-                      static_cast<unsigned>(CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS));
+                      unsigned{CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS});
       dim_vec max_wi_per_dim(max_wid);
       v2callcl(CAF_CLF(clGetDeviceInfo), device.get(),
-             static_cast<unsigned>(CL_DEVICE_MAX_WORK_ITEM_SIZES),
+             unsigned{CL_DEVICE_MAX_WORK_ITEM_SIZES},
              sizeof(size_t) * max_wid,
              max_wi_per_dim.data());
       m_devices.push_back(device_info{std::move(device), std::move(cmd_queue),
