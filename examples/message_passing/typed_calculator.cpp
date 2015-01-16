@@ -61,14 +61,14 @@ void tester(event_based_actor* self, const calculator_type& testee) {
   // first test: 2 + 1 = 3
   self->sync_send(testee, plus_request{2, 1}).then(
     [=](int r1) {
-      assert(r1 == 3);
       // second test: 2 - 1 = 1
       self->sync_send(testee, minus_request{2, 1}).then(
         [=](int r2) {
-          assert(r2 == 1);
           // both tests succeeded
-          aout(self) << "AUT (actor under test) seems to be ok"
-                 << endl;
+          if (r1 == 3 && r2 == 1) {
+            aout(self) << "AUT (actor under test) seems to be ok"
+                       << endl;
+          }
           self->send(testee, shutdown_request{});
         }
       );

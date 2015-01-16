@@ -105,11 +105,12 @@ behavior broker_impl(broker* self, connection_handle hdl, const actor& buddy) {
       // brokers can multiplex any number of connections, however
       // this example assumes io_fsm to manage a broker with
       // exactly one connection
-      assert(msg.handle == hdl);
-      aout(self) << "connection closed" << endl;
-      // force buddy to quit
-      self->send_exit(buddy, exit_reason::remote_link_unreachable);
-      self->quit(exit_reason::remote_link_unreachable);
+      if (msg.handle == hdl) {
+        aout(self) << "connection closed" << endl;
+        // force buddy to quit
+        self->send_exit(buddy, exit_reason::remote_link_unreachable);
+        self->quit(exit_reason::remote_link_unreachable);
+      }
     },
     [=](atom_value av, int32_t i) {
       assert(av == atom("ping") || av == atom("pong"));
