@@ -18,6 +18,9 @@ macro(add name folder)
                         ${LIBCAF_LIBRARIES}
                         ${PTHREAD_LIBRARIES}
                         ${WSLIB})
+  set_target_properties(${name}
+    PROPERTIES RUNTIME_OUTPUT_DIRECTORY bin/examples)
+  install(FILES ${folder}/${name}.cpp DESTINATION share/caf/examples/${folder})
   add_dependencies(${name} all_examples)
 endmacro()
 
