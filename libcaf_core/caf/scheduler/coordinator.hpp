@@ -41,7 +41,7 @@ class coordinator : public abstract_coordinator {
 
   using policy_data = typename Policy::coordinator_data;
 
-  coordinator(size_t nw = std::thread::hardware_concurrency(),
+  coordinator(size_t nw = std::max(std::thread::hardware_concurrency(), 4u),
               size_t mt = std::numeric_limits<size_t>::max())
     : super(nw),
       m_max_throughput(mt) {
