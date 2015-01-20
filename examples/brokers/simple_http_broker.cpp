@@ -11,6 +11,8 @@ using std::endl;
 using namespace caf;
 using namespace caf::io;
 
+using tick_atom = atom_constant<atom("tick")>;
+
 const char http_ok[] = R"__(HTTP/1.1 200 OK
 Content-Type: text/plain
 Connection: keep-alive
@@ -44,7 +46,7 @@ behavior connection_worker(broker* self, connection_handle hdl) {
 
 behavior server(broker* self) {
   auto counter = std::make_shared<int>(0);
-  self->delayed_send(self, std::chrono::seconds(1), atom("tick"));
+  self->delayed_send(self, std::chrono::seconds(1), tick_atom::value);
   return {
     [=](const new_connection_msg& ncm) {
       auto worker = self->fork(connection_worker, ncm.handle);
@@ -54,10 +56,10 @@ behavior server(broker* self) {
     [=](const down_msg&) {
       ++*counter;
     },
-    on(atom("tick")) >> [=] {
+    [=](tick_atom) {
       aout(self) << "Finished " << *counter << " requests per second." << endl;
       *counter = 0;
-      self->delayed_send(self, std::chrono::seconds(1), atom("tick"));
+      self->delayed_send(self, std::chrono::seconds(1), tick_atom::value);
     },
     others() >> [=] {
       aout(self) << "unexpected: " << to_string(self->last_dequeued()) << endl;

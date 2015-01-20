@@ -13,42 +13,37 @@ using std::cout;
 using std::endl;
 using namespace caf;
 
-// implementation using the blocking API
-void blocking_math_fun(blocking_actor* self) {
-  bool done = false;
-  self->do_receive (
-    // "arg_match" matches the parameter types of given lambda expression
-    // thus, it's equal to
-    // - on<atom("plus"), int, int>()
-    // - on(atom("plus"), val<int>, val<int>)
-    on(atom("plus"), arg_match) >> [](int a, int b) {
-      return std::make_tuple(atom("result"), a + b);
-    },
-    on(atom("minus"), arg_match) >> [](int a, int b) {
-      return std::make_tuple(atom("result"), a - b);
-    },
-    on(atom("quit")) >> [&]() {
-      // note: this actor uses the blocking API, hence self->quit()
-      //     would force stack unwinding by throwing an exception
-      done = true;
-    }
-  ).until(done);
-}
+using plus_atom = atom_constant<atom("plus")>;
+using minus_atom = atom_constant<atom("minus")>;
 
-void calculator(event_based_actor* self) {
-  // execute this behavior until actor terminates
-  self->become (
-    on(atom("plus"), arg_match) >> [](int a, int b) {
-      return std::make_tuple(atom("result"), a + b);
+// implementation using the blocking API
+void blocking_calculator(blocking_actor* self) {
+  self->receive_loop (
+    [](plus_atom, int a, int b) {
+      return a + b;
     },
-    on(atom("minus"), arg_match) >> [](int a, int b) {
-      return std::make_tuple(atom("result"), a - b);
+    [](minus_atom, int a, int b) {
+      return a - b;
     },
-    on(atom("quit")) >> [=] {
-      // terminate actor with normal exit reason
-      self->quit();
+    others() >> [=] {
+      cout << "unexpected: " << to_string(self->last_dequeued()) << endl;
     }
   );
+}
+
+// execute this behavior until actor terminates
+behavior calculator(event_based_actor* self) {
+  return behavior{
+    [](plus_atom, int a, int b) {
+      return a + b;
+    },
+    [](minus_atom, int a, int b) {
+      return a - b;
+    },
+    others() >> [=] {
+      cout << "unexpected: " << to_string(self->last_dequeued()) << endl;
+    }
+  };
 }
 
 void tester(event_based_actor* self, const actor& testee) {
@@ -59,15 +54,14 @@ void tester(event_based_actor* self, const actor& testee) {
     self->quit(exit_reason::user_shutdown);
   });
   // first test: 2 + 1 = 3
-  self->sync_send(testee, atom("plus"), 2, 1).then(
-    on(atom("result"), 3) >> [=] {
+  self->sync_send(testee, plus_atom::value, 2, 1).then(
+    on(3) >> [=] {
       // second test: 2 - 1 = 1
-      self->sync_send(testee, atom("minus"), 2, 1).then(
-        on(atom("result"), 1) >> [=] {
+      self->sync_send(testee, minus_atom::value, 2, 1).then(
+        on(1) >> [=] {
           // both tests succeeded
-          aout(self) << "AUT (actor under test) seems to be ok"
-                 << endl;
-          self->send(testee, atom("quit"));
+          aout(self) << "AUT (actor under test) seems to be ok" << endl;
+          self->quit(exit_reason::user_shutdown);
         }
       );
     }
@@ -75,8 +69,11 @@ void tester(event_based_actor* self, const actor& testee) {
 }
 
 int main() {
+  cout << "test blocking actor" << endl;
+  spawn(tester, spawn<blocking_api>(blocking_calculator));
+  await_all_actors_done();
+  cout << "test event-based actor" << endl;
   spawn(tester, spawn(calculator));
   await_all_actors_done();
   shutdown();
-  return 0;
 }

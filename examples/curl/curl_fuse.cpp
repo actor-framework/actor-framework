@@ -7,25 +7,25 @@
  *                                                                            *
  * Schematic view:                                                            *
  *                                                                            *
- *    client    |  client_job  |  curl_master   |  curl_worker                *
- *      /--------------|*|-------------\     /-------------|*|                *
- *       /---------------|*|--------------\   /                               *
- *      /----------------|*|---------------\   /                              *
+ *    client      |    client_job    |    curl_master    |    curl_worker     *
+ *          /--------------|*|-------------\       /-------------|*|          *
+ *         /---------------|*|--------------\     /                           *
+ *        /----------------|*|---------------\   /                            *
  *     |*| ----------------|*|----------------|*|----------------|*|          *
- *      \________________|*|_______________/   \                              *
- *       \_______________|*|______________/   \                               *
- *      \______________|*|_____________/     \-------------|*|                *
+ *        \________________|*|_______________/   \                            *
+ *         \_______________|*|______________/     \                           *
+ *          \______________|*|_____________/       \-------------|*|          *
  *                                                                            *
  *                                                                            *
  * Communication pattern:                                                     *
  *                                                                            *
- *        client_job    curl_master     curl_worker                           *
- *          |          |          |                                           *
- *          | ----(read)-----> |          |                                   *
- *          |          | --(forward)----> |                                   *
- *          |                   |---\                                         *
- *          |                   |   |                                         *
- *          |                   |<--/                                         *
+ *        client_job      curl_master        curl_worker                      *
+ *          |                  |                  |                           *
+ *          | ----(read)-----> |                  |                           *
+ *          |                  | --(forward)----> |                           *
+ *          |                                     |---\                       *
+ *          |                                     |   |                       *
+ *          |                                     |<--/                       *
  *          | <-------------(reply)-------------- |                           *
  *          X                                                                 *
 \ ******************************************************************************/
@@ -49,14 +49,20 @@
 
 // disable some clang warnings here caused by CURL
 #ifdef __clang__
-#   pragma clang diagnostic ignored "-Wshorten-64-to-32"
-#   pragma clang diagnostic ignored "-Wdisabled-macro-expansion"
-#   pragma clang diagnostic ignored "-Wunused-const-variable"
+# pragma clang diagnostic ignored "-Wshorten-64-to-32"
+# pragma clang diagnostic ignored "-Wdisabled-macro-expansion"
+# pragma clang diagnostic ignored "-Wunused-const-variable"
 #endif // __clang__
 
 using namespace caf;
 
 using buffer_type = std::vector<char>;
+
+using read_atom = atom_constant<atom("read")>;
+using fail_atom = atom_constant<atom("fail")>;
+using next_atom = atom_constant<atom("next")>;
+using reply_atom = atom_constant<atom("reply")>;
+using finished_atom = atom_constant<atom("finished")>;
 
 namespace color {
 
@@ -137,24 +143,19 @@ class client_job : public base_actor {
  protected:
   behavior make_behavior() override {
     print() << "init" << color::reset_endl;
-    send(m_parent,
-       atom("read"),
-       "http://www.example.com/index.html",
-       static_cast<uint64_t>(0),
-       static_cast<uint64_t>(4095));
-    return (
-      on(atom("reply"), arg_match) >> [=](const buffer_type& buf) {
-        print() << "successfully received "
-            << buf.size()
-            << " bytes"
-            << color::reset_endl;
+    send(m_parent, read_atom::value, "http://www.example.com/index.html",
+         uint64_t{0}, uint64_t{4095});
+    return {
+      [=](reply_atom, const buffer_type& buf) {
+        print() << "successfully received " << buf.size() << " bytes"
+                << color::reset_endl;
         quit();
       },
-      on(atom("fail")) >> [=] {
+      [=](fail_atom) {
         print() << "failure" << color::reset_endl;
         quit();
       }
-    );
+    };
   }
 };
 
@@ -182,9 +183,9 @@ class client : public base_actor {
     link_to(m_parent);
     print() << "init" << color::reset_endl;
     // start 'loop'
-    send(this, atom("next"));
+    send(this, next_atom::value);
     return (
-      on(atom("next")) >> [=] {
+      [=](next_atom) {
         print() << "spawn new client_job (nr. "
             << ++m_count
             << ")"
@@ -194,7 +195,7 @@ class client : public base_actor {
         spawn<client_job, detached+linked>(m_parent);
         // compute random delay until next job is launched
         auto delay = m_dist(m_re);
-        delayed_send(this, milliseconds(delay), atom("next"));
+        delayed_send(this, milliseconds(delay), next_atom::value);
       }
     );
   }
@@ -227,9 +228,8 @@ class curl_worker : public base_actor {
     curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, &curl_worker::cb);
     curl_easy_setopt(m_curl, CURLOPT_NOSIGNAL, 1);
     return (
-      on(atom("read"), arg_match)
-      >> [=](const std::string& fname, uint64_t offset, uint64_t range)
-         -> message {
+      [=](read_atom, const std::string& fname, uint64_t offset, uint64_t range)
+      -> message {
         print() << "read" << color::reset_endl;
         for (;;) {
           m_buf.clear();
@@ -266,8 +266,8 @@ class curl_worker : public base_actor {
                         << hc
                         << color::reset_endl;
                 // tell parent that this worker is done
-                send(m_parent, atom("finished"));
-                return make_message(atom("reply"), m_buf);
+                send(m_parent, finished_atom::value);
+                return make_message(reply_atom::value, m_buf);
               case 404: // file does not exist
                 print() << "http error: download failed with "
                         << "'HTTP RETURN CODE': 404 (file does "
@@ -305,7 +305,6 @@ curl_worker::~curl_worker() {
   // avoid weak-vtables warning
 }
 
-
 // manages {num_curl_workers} workers with a round-robin protocol
 class curl_master : public base_actor {
  public:
@@ -324,45 +323,37 @@ class curl_master : public base_actor {
     }
     auto worker_finished = [=] {
       auto sender = last_sender();
-      auto i = std::find(m_busy_worker.begin(),
-                 m_busy_worker.end(),
-                 sender);
+      auto i = std::find(m_busy_worker.begin(), m_busy_worker.end(), sender);
       m_idle_worker.push_back(*i);
       m_busy_worker.erase(i);
       print() << "worker is done" << color::reset_endl;
     };
-    print() << "spawned "
-        << m_idle_worker.size()
-        << " worker"
-        << color::reset_endl;
-    return (
-      on(atom("read"), arg_match) >> [=](const std::string&,
-                         uint64_t,
-                         uint64_t) {
+    print() << "spawned " << m_idle_worker.size()
+            << " worker(s)" << color::reset_endl;
+    return {
+      [=](read_atom, const std::string&, uint64_t, uint64_t) {
         print() << "received {'read'}" << color::reset_endl;
-        // forward job to first idle worker
-        actor worker = m_idle_worker.front();
-        m_idle_worker.erase(m_idle_worker.begin());
+        // forward job to an idle worker
+        actor worker = m_idle_worker.back();
+        m_idle_worker.pop_back();
         m_busy_worker.push_back(worker);
         forward_to(worker);
-        print() << m_busy_worker.size()
-            << " active jobs"
-            << color::reset_endl;
+        print() << m_busy_worker.size() << " active jobs" << color::reset_endl;
         if (m_idle_worker.empty()) {
           // wait until at least one worker finished its job
           become (
             keep_behavior,
-            on(atom("finished")) >> [=] {
+            [=](finished_atom) {
               worker_finished();
               unbecome();
             }
           );
         }
       },
-      on(atom("finished")) >> [=] {
+      [=](finished_atom) {
         worker_finished();
       }
-    );
+    };
   }
 
  private:
@@ -409,9 +400,9 @@ int main() {
     act.sa_handler = [](int) { abort(); };
     set_sighandler();
     aout(self) << color::cyan
-           << "await CURL; this may take a while "
-            "(press CTRL+C again to abort)"
-           << color::reset_endl;
+               << "await CURL; this may take a while "
+                  "(press CTRL+C again to abort)"
+               << color::reset_endl;
     self->await_all_other_actors_done();
   }
   // shutdown libcaf

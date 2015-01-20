@@ -29,6 +29,10 @@ using namespace std;
 using namespace caf;
 using namespace caf::io;
 
+using ping_atom = atom_constant<atom("ping")>;
+using pong_atom = atom_constant<atom("pong")>;
+using kickoff_atom = atom_constant<atom("kickoff")>;
+
 // utility function to print an exit message with custom name
 void print_on_exit(const actor& ptr, const std::string& name) {
   ptr->attach_functor([=](std::uint32_t reason) {
@@ -39,12 +43,12 @@ void print_on_exit(const actor& ptr, const std::string& name) {
 behavior ping(event_based_actor* self, size_t num_pings) {
   auto count = make_shared<size_t>(0);
   return {
-    on(atom("kickoff"), arg_match) >> [=](const actor& pong) {
-      self->send(pong, atom("ping"), int32_t(1));
+    [=](kickoff_atom, const actor& pong) {
+      self->send(pong, ping_atom::value, int32_t(1));
       self->become (
-        on(atom("pong"), arg_match) >> [=](int32_t value) -> message {
+        [=](pong_atom, int32_t value) -> message {
           if (++*count >= num_pings) self->quit();
-          return make_message(atom("ping"), value + 1);
+          return make_message(ping_atom::value, value + 1);
         }
       );
     }
@@ -53,8 +57,8 @@ behavior ping(event_based_actor* self, size_t num_pings) {
 
 behavior pong() {
   return {
-    on(atom("ping"), arg_match) >> [](int32_t value) {
-      return make_message(atom("pong"), value);
+    [](ping_atom, int32_t value) {
+      return make_message(pong_atom::value, value);
     }
   };
 }
@@ -113,9 +117,8 @@ behavior broker_impl(broker* self, connection_handle hdl, const actor& buddy) {
       }
     },
     [=](atom_value av, int32_t i) {
-      assert(av == atom("ping") || av == atom("pong"));
-      aout(self) << "send {" << to_string(av) << ", " << i << "}"
-             << endl;
+      assert(av == ping_atom::value || av == pong_atom::value);
+      aout(self) << "send {" << to_string(av) << ", " << i << "}" << endl;
       // cast atom to its underlying type, i.e., uint64_t
       write_int(self, hdl, static_cast<uint64_t>(av));
       write_int(self, hdl, i);
@@ -185,7 +188,7 @@ int main(int argc, char** argv) {
       auto io_actor = spawn_io_client(broker_impl, host, port, ping_actor);
       print_on_exit(io_actor, "protobuf_io");
       print_on_exit(ping_actor, "ping");
-      send_as(io_actor, ping_actor, atom("kickoff"), io_actor);
+      send_as(io_actor, ping_actor, kickoff_atom::value, io_actor);
     },
     others() >> [] {
       cerr << "use with eihter '-s PORT' as server or '-c HOST PORT' as client"
