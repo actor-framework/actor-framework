@@ -481,16 +481,6 @@ struct is_optional<optional<T>> : std::true_type {
   // no members
 };
 
-template <class T>
-struct is_integral_constant : std::false_type {
-  // no members
-};
-
-template <class T, T V>
-struct is_integral_constant<std::integral_constant<T, V>> : std::true_type {
-  // no members
-};
-
 } // namespace detail
 } // namespace caf
 
