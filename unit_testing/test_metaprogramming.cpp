@@ -28,13 +28,6 @@ int main() {
 
   CAF_TEST(test_metaprogramming);
 
-
-
-  CAF_CHECK((ctm<type_list<int, float, double>, type_list<double, int, float>>::value));
-  CAF_CHECK((! ctm<type_list<int, float, double>, type_list<double, int, float, int>>::value));
-  CAF_CHECK((! ctm<type_list<int, float, double>, type_list<>>::value));
-  CAF_CHECK((! ctm<type_list<>, type_list<double, int, float, int>>::value));
-
   using if1 = type_list<replies_to<int, double>::with<void>,
                         replies_to<int>::with<int>>;
   using if2 = type_list<replies_to<int>::with<int>,

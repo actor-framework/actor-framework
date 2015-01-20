@@ -226,4 +226,10 @@ std::thread run_program(caf::actor listener, const char* path, Ts&&... args) {
   return run_program_impl(listener, path, std::move(vec));
 }
 
+using ping_atom = caf::atom_constant<caf::atom("ping")>;
+using pong_atom = caf::atom_constant<caf::atom("pong")>;
+using check_atom = caf::atom_constant<caf::atom("check")>;
+using passed_atom = caf::atom_constant<caf::atom("passed")>;
+using kickoff_atom = caf::atom_constant<caf::atom("kickoff")>;
+
 #endif // TEST_HPP

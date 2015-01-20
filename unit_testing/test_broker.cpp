@@ -34,18 +34,17 @@ void ping(event_based_actor* self, size_t num_pings) {
   CAF_PRINT("num_pings: " << num_pings);
   auto count = std::make_shared<size_t>(0);
   self->become(
-    on(atom("kickoff"), arg_match) >> [=](const actor& pong) {
+    [=](kickoff_atom, const actor& pong) {
       CAF_CHECKPOINT();
-      self->send(pong, atom("ping"), 1);
+      self->send(pong, ping_atom::value, 1);
       self->become(
-      on(atom("pong"), arg_match) >>
-      [=](int value)->std::tuple<atom_value, int> {
+      [=](pong_atom, int value)->std::tuple<atom_value, int> {
         if (++*count >= num_pings) {
           CAF_PRINT("received " << num_pings
                  << " pings, call self->quit");
           self->quit();
         }
-        return std::make_tuple(atom("ping"), value + 1);
+        return std::make_tuple(ping_atom::value, value + 1);
       },
       others() >> CAF_UNEXPECTED_MSG_CB(self));
     },
@@ -56,14 +55,13 @@ void ping(event_based_actor* self, size_t num_pings) {
 void pong(event_based_actor* self) {
   CAF_CHECKPOINT();
   self->become(
-    on(atom("ping"), arg_match) >> [=](int value)
-                       ->std::tuple<atom_value, int> {
+    [=](ping_atom, int value) -> std::tuple<atom_value, int> {
       CAF_CHECKPOINT();
       self->monitor(self->last_sender());
       // set next behavior
       self->become(
-        on(atom("ping"), arg_match) >> [](int val) {
-          return std::make_tuple(atom("pong"), val);
+        [](ping_atom, int val) {
+          return std::make_tuple(pong_atom::value, val);
         },
         [=](const down_msg& dm) {
           CAF_PRINT("received down_msg{" << dm.reason << "}");
@@ -72,7 +70,7 @@ void pong(event_based_actor* self) {
         others() >> CAF_UNEXPECTED_MSG_CB(self)
       );
       // reply to 'ping'
-      return std::make_tuple(atom("pong"), value);
+      return std::make_tuple(pong_atom::value, value);
     },
     others() >> CAF_UNEXPECTED_MSG_CB(self));
 }
@@ -113,17 +111,19 @@ void peer_fun(broker* self, connection_handle hdl, const actor& buddy) {
       memcpy(&value, msg.buf.data() + sizeof(atom_value), sizeof(int));
       self->send(buddy, type, value);
     },
-    on(atom("ping"), arg_match) >> [=](int value) {
+    [=](ping_atom, int value) {
       CAF_PRINT("received ping{" << value << "}");
-      write(atom("ping"), value);
+      write(ping_atom::value, value);
     },
-    on(atom("pong"), arg_match) >> [=](int value) {
+    [=](pong_atom, int value) {
       CAF_PRINT("received pong{" << value << "}");
-      write(atom("pong"), value);
+      write(pong_atom::value, value);
     },
     [=](const down_msg& dm) {
       CAF_PRINT("received down_msg");
-      if (dm.source == buddy) self->quit(dm.reason);
+      if (dm.source == buddy) {
+        self->quit(dm.reason);
+      }
     },
     others() >> CAF_UNEXPECTED_MSG_CB(self)
   );
@@ -177,7 +177,7 @@ int main(int argc, char** argv) {
       CAF_CHECKPOINT();
       auto cl = spawn_io_client(peer_fun, "localhost", port, p);
       CAF_CHECKPOINT();
-      anon_send(p, atom("kickoff"), cl);
+      anon_send(p, kickoff_atom::value, cl);
       CAF_CHECKPOINT();
     },
     on("-s")  >> [&] {

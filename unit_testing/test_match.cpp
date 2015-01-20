@@ -7,6 +7,9 @@
 using namespace caf;
 using namespace std;
 
+using hi_atom = atom_constant<atom("hi")>;
+using ho_atom = atom_constant<atom("ho")>;
+
 optional<int> even_int(int i) {
   if (i % 2 == 0) {
     return i;
@@ -86,13 +89,11 @@ function<void()> f(int idx) {
 }
 
 void test_atoms() {
-  {
-    auto expr = on(atom("hi")) >> f(0);
-    CAF_CHECK(invoked(0, expr, atom("hi")));
-    CAF_CHECK(not_invoked(expr, atom("ho")));
-    CAF_CHECK(not_invoked(expr, atom("hi"), atom("hi")));
-    CAF_CHECK(not_invoked(expr, "hi"));
-  }
+  auto expr = on(hi_atom::value) >> f(0);
+  CAF_CHECK(invoked(0, expr, hi_atom::value));
+  CAF_CHECK(not_invoked(expr, ho_atom::value));
+  CAF_CHECK(not_invoked(expr, hi_atom::value, hi_atom::value));
+  CAF_CHECK(not_invoked(expr, hi_atom::value));
 }
 
 void test_custom_projections() {

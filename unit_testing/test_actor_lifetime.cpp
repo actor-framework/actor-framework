@@ -55,9 +55,10 @@ behavior tester(event_based_actor* self, const actor& aut) {
       // another worker thread; by waiting some milliseconds, we make sure
       // testee had enough time to return control to the scheduler
       // which in turn destroys it by dropping the last remaining reference
-      self->delayed_send(self, std::chrono::milliseconds(30), atom("check"));
+      self->delayed_send(self, std::chrono::milliseconds(30),
+                         check_atom::value);
     },
-    on(atom("check")) >> [self] {
+    [self](check_atom) {
       // make sure dude's dtor has been called
       CAF_CHECK_EQUAL(s_testees.load(), 0);
       self->quit();

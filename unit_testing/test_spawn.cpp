@@ -26,30 +26,30 @@ class event_testee : public sb_actor<event_testee> {
  public:
 
   event_testee() {
-    wait4string = (
-      on<string>() >> [=] {
+    wait4string = behavior{
+      [=](const std::string&) {
         become(wait4int);
       },
-      on<atom("get_state")>() >> [=] {
+      [=](get_atom) {
         return "wait4string";
       }
-    );
-    wait4float = (
-      on<float>() >> [=] {
+    };
+    wait4float = behavior{
+      [=](float) {
         become(wait4string);
       },
-      on<atom("get_state")>() >> [=] {
+      [=](get_atom) {
         return "wait4float";
       }
-    );
-    wait4int = (
-      on<int>() >> [=] {
+    };
+    wait4int = behavior{
+      [=](int) {
         become(wait4float);
       },
-      on<atom("get_state")>() >> [=] {
+      [=](get_atom) {
         return "wait4int";
       }
-    );
+    };
   }
 
 };
@@ -121,7 +121,7 @@ class testee_actor {
       on<string>() >> [&] {
         string_received = true;
       },
-      on<atom("get_state")>() >> [&] {
+      [&](get_atom) {
         return "wait4string";
       }
     )
@@ -134,7 +134,7 @@ class testee_actor {
       on<float>() >> [&] {
         float_received = true;
       },
-      on<atom("get_state")>() >> [&] {
+      [&](get_atom) {
         return "wait4float";
       }
     )
@@ -149,7 +149,7 @@ class testee_actor {
       on<int>() >> [&] {
         wait4float(self);
       },
-      on<atom("get_state")>() >> [&] {
+      [&](get_atom) {
         return "wait4int";
       }
     );
@@ -178,7 +178,7 @@ string behavior_test(scoped_actor& self, actor et) {
   self->send(et, .3f);
   self->send(et, "hello again");
   self->send(et, "goodbye");
-  self->send(et, atom("get_state"));
+  self->send(et, get_atom::value);
   self->receive (
     [&](const string& str) {
       result = str;

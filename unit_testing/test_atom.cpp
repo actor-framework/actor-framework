@@ -36,6 +36,7 @@ testee::behavior_type testee_impl(testee::pointer self) {
 }
 
 void test_typed_atom_interface() {
+  CAF_CHECKPOINT();
   scoped_actor self;
   auto tst = spawn_typed(testee_impl);
   self->sync_send(tst, abc_atom()).await(
@@ -105,7 +106,7 @@ int main() {
     after(std::chrono::seconds(0)) >> CAF_UNEXPECTED_TOUT_CB()
   );
   atom_value x = atom("abc");
-  atom_value y = abc_atom();
+  atom_value y = abc_atom::value;
   CAF_CHECK_EQUAL(x, y);
   auto msg = make_message(abc_atom());
   self->send(self, msg);
