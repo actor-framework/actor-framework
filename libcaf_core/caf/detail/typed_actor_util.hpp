@@ -165,12 +165,6 @@ struct deduce_lifted_output_type<type_list<typed_continue_helper<R>>> {
 
 template <class Signatures, typename InputTypes>
 struct deduce_output_type {
-  static_assert(tl_find<
-                  InputTypes,
-                  atom_value
-                >::value == -1,
-                "atom(...) notation is not sufficient for static type "
-                "checking, please use atom_constant instead in this context");
   static constexpr int input_pos =
     tl_find_if<
       Signatures,
