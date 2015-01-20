@@ -60,11 +60,8 @@ class behavior {
    * and up to one timeout (if set, the timeout has to be the last argument).
    */
   template <class T, class... Ts>
-  behavior(const T& arg, Ts&&... args)
-      : m_impl(detail::match_expr_concat(
-                 detail::lift_to_match_expr(arg),
-                 detail::lift_to_match_expr(std::forward<Ts>(args))...)) {
-    // nop
+  behavior(const T& arg, Ts&&... args) {
+    assign(arg, std::forward<Ts>(args)...);
   }
 
   /**
@@ -84,6 +81,16 @@ class behavior {
   behavior(const duration& d, F f)
       : m_impl(detail::new_default_behavior(d, f)) {
     // nop
+  }
+
+  /**
+   * Assigns new handlers.
+   */
+  template <class T, class... Ts>
+  void assign(T&& v, Ts&&... vs) {
+    m_impl = detail::match_expr_concat(
+               detail::lift_to_match_expr(std::forward<T>(v)),
+               detail::lift_to_match_expr(std::forward<Ts>(vs))...);
   }
 
   /**
