@@ -28,13 +28,34 @@ bool is_wildcard(const meta_element& me) {
   return me.type == nullptr;
 }
 
-bool match_element(const std::type_info* type, const message_iterator& iter,
-                   void** storage) {
+bool match_element(const atom_value&, const std::type_info* type,
+                   const message_iterator& iter, void** storage) {
   if (!iter.type()->equal_to(*type)) {
     return false;
   }
   if (storage) {
     *storage = const_cast<void*>(iter.value());
+  }
+  return true;
+}
+
+bool match_atom_constant(const atom_value& value, const std::type_info* type,
+                         const message_iterator& iter, void** storage) {
+  auto uti = iter.type();
+  if (!uti->equal_to(*type)) {
+    return false;
+  }
+  if (storage) {
+    if (!uti->equals(iter.value(), &value)) {
+      return false;
+    }
+    // This assignment casts `uniform_type_info*` to `atom_constant<V>*`.
+    // This type violation could theoretically cause undefined behavior.
+    // However, `uti` does have an address that is guaranteed to be valid
+    // throughout the runtime of the program and the atom constant
+    // does not have any members. Hence, this is nonetheless safe since
+    // we are never actually going to dereference the pointer.
+    *storage = const_cast<void*>(reinterpret_cast<const void*>(uti));
   }
   return true;
 }
@@ -92,7 +113,7 @@ bool try_match(message_iterator mbegin, message_iterator mend,
       return false; // no submatch found
     }
     // inspect current element
-    if (!pbegin->fun(pbegin->type, mbegin, storage.current())) {
+    if (!pbegin->fun(pbegin->v, pbegin->type, mbegin, storage.current())) {
       // type mismatch
       return false;
     }

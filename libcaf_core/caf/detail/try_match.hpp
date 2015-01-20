@@ -24,6 +24,7 @@
 #include <numeric>
 #include <typeinfo>
 
+#include "caf/atom.hpp"
 #include "caf/message.hpp"
 #include "caf/wildcard_position.hpp"
 
@@ -33,56 +34,37 @@
 namespace caf {
 namespace detail {
 
-bool match_element(const std::type_info* type, const message_iterator& iter,
-                   void** storage);
+bool match_element(const atom_value&, const std::type_info* type,
+                   const message_iterator& iter, void** storage);
 
-template <class T>
-bool match_integral_constant_element(const std::type_info* type,
-                                     const message_iterator& iter,
-                                     void** storage) {
-  auto value = T::value;
-  auto uti = iter.type();
-  if (!uti->equal_to(*type) || !uti->equals(iter.value(), &value)) {
-    return false;
-  }
-  if (storage) {
-    // This assignment implicitly casts `T*` to `integral_constant<T, V>*`.
-    // This type violation could theoretically cause undefined behavior.
-    // However, `T::value` does have an address that is guaranteed to be valid
-    // throughout the runtime of the program and the integral constant
-    // objects does not have any members. Hence, this is nonetheless safe.
-    auto ptr = reinterpret_cast<const void*>(&T::value);
-    // Again, this const cast is always safe because we will never derefence
-    // this pointer since `integral_constant<T, V>` has no members.
-    *storage = const_cast<void*>(ptr);
-  }
-  return true;
-}
+bool match_atom_constant(const atom_value&, const std::type_info* type,
+                         const message_iterator& iter, void** storage);
 
 struct meta_element {
+  atom_value v;
   const std::type_info* type;
-  bool (*fun)(const std::type_info*, const message_iterator&, void**);
+  bool (*fun)(const atom_value&, const std::type_info*,
+              const message_iterator&, void**);
 };
 
 template <class T>
 struct meta_element_factory {
   static meta_element create() {
-    return {&typeid(T), match_element};
+    return {static_cast<atom_value>(0), &typeid(T), match_element};
   }
 };
 
-template <class T, T V>
-struct meta_element_factory<std::integral_constant<T, V>> {
+template <atom_value V>
+struct meta_element_factory<atom_constant<V>> {
   static meta_element create() {
-    return {&typeid(T),
-            match_integral_constant_element<std::integral_constant<T, V>>};
+    return {V, &typeid(atom_value), match_atom_constant};
   }
 };
 
 template <>
 struct meta_element_factory<anything> {
   static meta_element create() {
-    return {nullptr, nullptr};
+    return {static_cast<atom_value>(0), nullptr, nullptr};
   }
 };
 

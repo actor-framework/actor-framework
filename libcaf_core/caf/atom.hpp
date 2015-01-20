@@ -47,11 +47,27 @@ constexpr atom_value atom(char const (&str)[Size]) {
 }
 
 /**
- * Type alias for treating atom constants at compile-time
- * (cf. "Int-ToType" idiom).
+ * Lifts an `atom_value` to a compile-time constant.
  */
-template <atom_value Value>
-using atom_constant = std::integral_constant<atom_value, Value>;
+template <atom_value V>
+struct atom_constant {
+  constexpr atom_constant() {
+    // nop
+  }
+  /**
+   * Returns the wrapped value.
+   */
+  constexpr operator atom_value() const {
+    return V;
+  }
+  /**
+   * Returns an instance *of this constant* (*not* an `atom_value`).
+   */
+  static const atom_constant value;
+};
+
+template <atom_value V>
+const atom_constant<V> atom_constant<V>::value = atom_constant<V>{};
 
 /**
  * Generic 'GET' atom for request operations.
