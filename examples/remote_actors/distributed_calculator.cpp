@@ -166,7 +166,12 @@ void client_repl(const string& host, uint16_t port) {
         auto lhs = toint(lsub);
         auto rhs = toint(rsub);
         if (lhs && rhs) {
-          auto op = (*pos == '+') ? plus_atom::value : minus_atom::value;
+          atom_value op;
+          if (*pos == '+') {
+            op = plus_atom::value;
+          } else {
+            op = minus_atom::value;
+          }
           anon_send(client, op, *lhs, *rhs);
         }
       }
