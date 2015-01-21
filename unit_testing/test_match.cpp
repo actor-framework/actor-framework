@@ -93,7 +93,6 @@ void test_atoms() {
   CAF_CHECK(invoked(0, expr, hi_atom::value));
   CAF_CHECK(not_invoked(expr, ho_atom::value));
   CAF_CHECK(not_invoked(expr, hi_atom::value, hi_atom::value));
-  CAF_CHECK(not_invoked(expr, hi_atom::value));
 }
 
 void test_custom_projections() {
