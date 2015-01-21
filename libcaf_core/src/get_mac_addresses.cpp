@@ -156,23 +156,21 @@ std::vector<iface_info> get_mac_addresses() {
 
 #include <ws2tcpip.h>
 #include <winsock2.h>
+#include <iphlpapi.h>
+
+#include <memory>
 #include <vector>
 #include <string>
 #include <cctype>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <fstream>
 #include <sstream>
 #include <iostream>
 #include <iterator>
 #include <algorithm>
-#include <stdio.h>
 
-#include <cstring>
-//#include <unistd.h>
-#include <iostream>
-#include <winsock2.h>
-#include <iphlpapi.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include "caf/detail/singletons.hpp"
 
 namespace {
