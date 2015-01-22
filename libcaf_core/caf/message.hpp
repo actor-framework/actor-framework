@@ -133,23 +133,6 @@ class message {
   const uniform_type_info* type_at(size_t p) const;
 
   /**
-   * Returns true if this message has the types @p Ts.
-   */
-  template <class... Ts>
-  bool has_types() const {
-    if (size() != sizeof...(Ts)) {
-      return false;
-    }
-    const std::type_info* ts[] = {&typeid(Ts)...};
-    for (size_t i = 0; i < sizeof...(Ts); ++i) {
-      if (!type_at(i)->equal_to(*ts[i])) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  /**
    * Returns @c true if `*this == other, otherwise false.
    */
   bool equals(const message& other) const;

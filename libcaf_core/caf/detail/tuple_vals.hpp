@@ -25,7 +25,6 @@
 
 #include "caf/detail/type_list.hpp"
 
-#include "caf/detail/types_array.hpp"
 #include "caf/detail/message_data.hpp"
 
 namespace caf {
@@ -64,12 +63,12 @@ class tuple_vals : public message_data {
 
   using data_type = std::tuple<Ts...>;
 
-  using element_types = types_array<Ts...>;
-
   tuple_vals(const tuple_vals&) = default;
 
   template <class... Us>
-  tuple_vals(Us&&... args) : m_data(std::forward<Us>(args)...) {
+  tuple_vals(Us&&... args)
+      : m_data(std::forward<Us>(args)...),
+        m_types{{uniform_typeid<Ts>()...}} {
     // nop
   }
 
@@ -116,15 +115,9 @@ class tuple_vals : public message_data {
   }
 
  private:
-
   data_type m_data;
-
-  static types_array<Ts...> m_types;
-
+  std::array<const uniform_type_info*, sizeof...(Ts)> m_types;
 };
-
-template <class... Ts>
-types_array<Ts...> tuple_vals<Ts...>::m_types;
 
 } // namespace detail
 } // namespace caf

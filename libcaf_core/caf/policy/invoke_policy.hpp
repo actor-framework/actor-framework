@@ -147,7 +147,9 @@ class invoke_policy {
       }
     } else {
       CAF_LOGF_DEBUG("res = " << to_string(*res));
-      if (res->template has_types<atom_value, uint64_t>()
+      if (res->size() == 2
+          && res->type_at(0) == uniform_typeid<atom_value>()
+          && res->type_at(1) == uniform_typeid<uint64_t>()
           && res->template get_as<atom_value>(0) == atom("MESSAGE_ID")) {
         CAF_LOG_DEBUG("message handler returned a message id wrapper");
         auto id = res->template get_as<uint64_t>(1);

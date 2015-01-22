@@ -30,7 +30,6 @@
 #include "caf/deserializer.hpp"
 
 #include "caf/detail/type_traits.hpp"
-#include "caf/detail/types_array.hpp"
 #include "caf/detail/abstract_uniform_type_info.hpp"
 
 
@@ -164,7 +163,7 @@ class default_serialize_policy {
 
   template <class T>
   void simpl(const T& val, serializer* s, recursive_impl) const {
-    static_types_array<T>::arr[0]->serialize(&val, s);
+    uniform_typeid<T>()->serialize(&val, s);
   }
 
   template <class T>
@@ -217,7 +216,7 @@ class default_serialize_policy {
 
   template <class T>
   void dimpl(T& storage, deserializer* d, recursive_impl) const {
-    static_types_array<T>::arr[0]->deserialize(&storage, d);
+    uniform_typeid<T>()->deserialize(&storage, d);
   }
 };
 
