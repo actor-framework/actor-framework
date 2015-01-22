@@ -208,22 +208,18 @@ T& unroll_expr_result_unbox(optional<T>& opt) {
 }
 
 template <class Result, class PPFPs, class Msg>
-Result unroll_expr(PPFPs&, uint64_t, minus1l, Msg&) {
+Result unroll_expr(PPFPs&, minus1l, Msg&) {
   // end of recursion
   return none;
 }
 
 template <class Result, class PPFPs, long N, class Msg>
-Result unroll_expr(PPFPs& fs, uint64_t bitmask, long_constant<N>, Msg& msg) {
+Result unroll_expr(PPFPs& fs, long_constant<N>, Msg& msg) {
   { // recursively evaluate sub expressions
-    Result res = unroll_expr<Result>(fs, bitmask, long_constant<N - 1>{}, msg);
+    Result res = unroll_expr<Result>(fs, long_constant<N - 1>{}, msg);
     if (!get<none_t>(&res)) {
       return res;
     }
-  }
-  if ((bitmask & (0x01 << N)) == 0) {
-    // case is disabled via bitmask
-    return none;
   }
   auto& f = get<N>(fs);
   using ft = typename std::decay<decltype(f)>::type;
@@ -430,37 +426,6 @@ class match_expr {
     i = (i + 1) % cache_size;
   }
 
-  size_t find_token_pos(const std::type_info* type_token) {
-    for (size_t i = m_cache_begin; i != m_cache_end; advance_(i)) {
-      if (m_cache[i].first == type_token) {
-        return i;
-      }
-    }
-    return m_cache_end;
-  }
-
-  template <class Tuple>
-  uint64_t get_cache_entry(const std::type_info* type_token,
-                           const Tuple& value) {
-    CAF_REQUIRE(type_token != nullptr);
-    if (value.dynamically_typed()) {
-      return m_dummy.second; // all groups enabled
-    }
-    size_t i = find_token_pos(type_token);
-    // if we didn't found a cache entry ...
-    if (i == m_cache_end) {
-      // ... 'create' one (override oldest element in cache if full)
-      advance_(m_cache_end);
-      if (m_cache_end == m_cache_begin) {
-        advance_(m_cache_begin);
-      }
-      m_cache[i].first = type_token;
-      idx_token_type idx_token;
-      m_cache[i].second = calc_bitmask(m_cases, idx_token, *type_token, value);
-    }
-    return m_cache[i].second;
-  }
-
   void init() {
     m_dummy.second = std::numeric_limits<uint64_t>::max();
     m_cache.resize(cache_size);
@@ -477,8 +442,7 @@ class match_expr {
     // returns either a reference or a new object
     using detached = decltype(detail::detach_if_needed(msg, mutator_token));
     detached mref = detail::detach_if_needed(msg, mutator_token);
-    auto bitmask = get_cache_entry(mref.type_token(), mref);
-    return detail::unroll_expr<result_type>(m_cases, bitmask, idx_token, mref);
+    return detail::unroll_expr<result_type>(m_cases, idx_token, mref);
   }
 };
 

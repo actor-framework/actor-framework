@@ -137,9 +137,6 @@ inline bool operator==(const unit_t&, const unit_t&) {
 }
 
 template <class T>
-struct type_token { };
-
-template <class T>
 inline typename std::enable_if<detail::is_primitive<T>::value>::type
 serialize_impl(const T& val, serializer* sink) {
   sink->write_value(val);

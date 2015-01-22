@@ -69,8 +69,9 @@ class tuple_vals : public message_data {
   tuple_vals(const tuple_vals&) = default;
 
   template <class... Us>
-  tuple_vals(Us&&... args)
-      : super(false), m_data(std::forward<Us>(args)...) {}
+  tuple_vals(Us&&... args) : m_data(std::forward<Us>(args)...) {
+    // nop
+  }
 
   const void* native_data() const { return &m_data; }
 
@@ -106,10 +107,6 @@ class tuple_vals : public message_data {
       return m_data == (o->m_data);
     }
     return message_data::equals(other);
-  }
-
-  const std::type_info* type_token() const {
-    return detail::static_type_list<Ts...>::list;
   }
 
   const std::string* tuple_type_names() const override {

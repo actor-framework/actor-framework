@@ -42,8 +42,7 @@ class message_data : public ref_counted {
 
  public:
 
-  message_data(bool dynamically_typed);
-  message_data(const message_data& other);
+  message_data();
 
   // mutators
   virtual void* mutable_at(size_t pos) = 0;
@@ -59,17 +58,6 @@ class message_data : public ref_counted {
   // returns either tdata<...> object or nullptr (default) if tuple
   // is not a 'native' implementation
   virtual const void* native_data() const;
-
-  // Identifies the type of the implementation.
-  // A statically typed tuple implementation can use some optimizations,
-  // e.g., "impl_type() == statically_typed" implies that type_token()
-  // identifies all possible instances of a given tuple implementation
-  inline bool dynamically_typed() const { return m_is_dynamic; }
-
-  // uniquely identifies this category (element types) of messages
-  // override this member function only if impl_type() == statically_typed
-  // (default returns &typeid(void))
-  virtual const std::type_info* type_token() const;
 
   bool equals(const message_data& other) const;
 
@@ -125,11 +113,6 @@ class message_data : public ref_counted {
     intrusive_ptr<message_data> m_ptr;
 
   };
-
- private:
-
-  bool m_is_dynamic;
-
 };
 
 std::string get_tuple_type_names(const detail::message_data&);

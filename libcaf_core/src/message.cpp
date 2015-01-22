@@ -95,14 +95,6 @@ optional<message> message::apply(message_handler handler) {
   return handler(*this);
 }
 
-const std::type_info* message::type_token() const {
-  return m_vals ? m_vals->type_token() : &typeid(detail::empty_type_list);
-}
-
-bool message::dynamically_typed() const {
-  return m_vals ? m_vals->dynamically_typed() : false;
-}
-
 message::const_iterator message::begin() const {
   return m_vals ? m_vals->begin() : const_iterator{nullptr, 0};
 }

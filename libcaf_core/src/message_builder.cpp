@@ -31,18 +31,18 @@ class message_builder::dynamic_msg_data : public detail::message_data {
 
   using message_data::const_iterator;
 
-  dynamic_msg_data() : super(true) {
+  dynamic_msg_data() {
     // nop
   }
 
-  dynamic_msg_data(const dynamic_msg_data& other) : super(true) {
+  dynamic_msg_data(const dynamic_msg_data& other) {
     for (auto& d : other.m_elements) {
       m_elements.push_back(d->copy());
     }
   }
 
   dynamic_msg_data(std::vector<uniform_value>&& data)
-      : super(true), m_elements(std::move(data)) {
+      : m_elements(std::move(data)) {
     // nop
   }
 

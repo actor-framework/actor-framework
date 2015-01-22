@@ -211,15 +211,6 @@ class message {
   }
 
   /**
-   * Returns either `&typeid(detail::type_list<Ts...>)`, where
-   * `Ts...` are the element types, or `&typeid(void)`.
-   *
-   * The type token `&typeid(void)` indicates that this tuple is dynamically
-   * typed, i.e., the types where not available at compile time.
-   */
-  const std::type_info* type_token() const;
-
-  /**
    * Checks whether this tuple is dynamically typed, i.e.,
    * its types were not known at compile time.
    */
