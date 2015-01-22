@@ -35,6 +35,7 @@ class default_attachable : public attachable {
   struct observe_token {
     actor_addr observer;
     observe_type type;
+    static constexpr size_t token_type = attachable::token::observer;
   };
 
   void actor_exited(abstract_actor* self, uint32_t reason) override;

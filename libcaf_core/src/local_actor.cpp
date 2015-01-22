@@ -57,7 +57,7 @@ void local_actor::demonitor(const actor_addr& whom) {
   }
   auto ptr = actor_cast<abstract_actor_ptr>(whom);
   default_attachable::observe_token tk{address(), default_attachable::monitor};
-  ptr->detach({typeid(default_attachable::observe_token), &tk});
+  ptr->detach(tk);
 }
 
 void local_actor::join(const group& what) {

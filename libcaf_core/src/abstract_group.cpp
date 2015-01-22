@@ -37,7 +37,7 @@ void abstract_group::subscription::actor_exited(abstract_actor* ptr, uint32_t) {
 }
 
 bool abstract_group::subscription::matches(const token& what) {
-  if (what.subtype != typeid(subscription_token)) {
+  if (what.subtype != attachable::token::subscription) {
     return false;
   }
   auto& ot = *reinterpret_cast<const subscription_token*>(what.ptr);

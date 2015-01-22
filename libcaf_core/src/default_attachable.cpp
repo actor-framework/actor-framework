@@ -44,7 +44,7 @@ void default_attachable::actor_exited(abstract_actor* self, uint32_t reason) {
 }
 
 bool default_attachable::matches(const token& what) {
-  if (what.subtype != typeid(observe_token)) {
+  if (what.subtype != attachable::token::observer) {
     return false;
   }
   auto& ot = *reinterpret_cast<const observe_token*>(what.ptr);

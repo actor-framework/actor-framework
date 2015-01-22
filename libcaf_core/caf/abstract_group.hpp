@@ -59,6 +59,7 @@ class abstract_group : public abstract_channel {
 
   struct subscription_token {
     intrusive_ptr<abstract_group> group;
+    static constexpr size_t token_type = attachable::token::subscription;
   };
 
   class subscription_predicate {

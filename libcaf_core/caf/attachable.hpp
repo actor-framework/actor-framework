@@ -41,25 +41,40 @@ class attachable {
   attachable& operator=(const attachable&) = delete;
 
   /**
-   * Represents a pointer to a value with its RTTI.
+   * Represents a pointer to a value with its subtype as type ID number.
    */
   struct token {
+    /**
+     * Identifies a non-matchable subtype.
+     */
+    static constexpr size_t anonymous = 0;
+
+    /**
+     * Identifies `abstract_group::subscription`.
+     */
+    static constexpr size_t subscription = 1;
+
+    /**
+     * Identifies `default_attachable::observe_token`.
+     */
+    static constexpr size_t observer = 2;
+
     template <class T>
-    token(const T& tk) : subtype(typeid(T)), ptr(&tk) {
+    token(const T& tk) : subtype(T::token_type), ptr(&tk) {
       // nop
     }
 
     /**
      * Denotes the type of ptr.
      */
-    const std::type_info& subtype;
+    size_t subtype;
 
     /**
      * Any value, used to identify attachable instances.
      */
     const void* ptr;
 
-    token(const std::type_info& subtype, const void* ptr);
+    token(size_t subtype, const void* ptr);
   };
 
   virtual ~attachable();
@@ -89,7 +104,7 @@ class attachable {
    */
   template <class T>
   bool matches(const T& what) {
-    return matches(token{typeid(T), &what});
+    return matches(token{T::token_type, &what});
   }
 
   std::unique_ptr<attachable> next;
