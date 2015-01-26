@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -44,11 +44,8 @@ class proper_actor_base : public Policies::resume_policy::template
  public:
   template <class... Ts>
   proper_actor_base(Ts&&... args) : super(std::forward<Ts>(args)...) {
-    CAF_REQUIRE(this->m_hidden == true);
+    CAF_REQUIRE(this->is_registered() == false);
   }
-
-  // grant access to the actor's mailbox
-  typename Base::mailbox_type& mailbox() { return this->m_mailbox; }
 
   // member functions from scheduling policy
 
@@ -59,16 +56,18 @@ class proper_actor_base : public Policies::resume_policy::template
          message msg,
          execution_unit* eu) override {
     CAF_PUSH_AID(dptr()->id());
+    /*
     CAF_LOG_DEBUG(CAF_TARG(sender, to_string)
              << ", " << CAF_MARG(mid, integer_value) << ", "
              << CAF_TARG(msg, to_string));
+    */
     scheduling_policy().enqueue(dptr(), sender, mid, msg, eu);
   }
 
-  inline void launch(bool is_hidden, execution_unit* host) {
+  inline void launch(bool hide, bool lazy, execution_unit* eu) {
     CAF_LOG_TRACE("");
-    this->hidden(is_hidden);
-    this->scheduling_policy().launch(this, host);
+    this->is_registered(!hide);
+    this->scheduling_policy().launch(this, eu, lazy);
   }
 
   template <class F>
@@ -141,16 +140,6 @@ class proper_actor_base : public Policies::resume_policy::template
                         awaited_response);
   }
 
-  inline bool hidden() const {
-    return this->m_hidden;
-  }
-
-  void cleanup(uint32_t reason) override {
-    CAF_LOG_TRACE(CAF_ARG(reason));
-    if (!hidden()) detail::singletons::get_actor_registry()->dec_running();
-    super::cleanup(reason);
-  }
-
  protected:
   inline typename Policies::scheduling_policy& scheduling_policy() {
     return m_policies.get_scheduling_policy();
@@ -172,16 +161,6 @@ class proper_actor_base : public Policies::resume_policy::template
     return static_cast<Derived*>(this);
   }
 
-  inline void hidden(bool value) {
-    if (this->m_hidden == value) return;
-    if (value) {
-      detail::singletons::get_actor_registry()->dec_running();
-    } else {
-      detail::singletons::get_actor_registry()->inc_running();
-    }
-    this->m_hidden = value;
-  }
-
  private:
   Policies m_policies;
 };
@@ -197,7 +176,7 @@ class proper_actor
 
  public:
   static_assert(std::is_base_of<local_actor, Base>::value,
-          "Base is not derived from local_actor");
+                "Base is not derived from local_actor");
 
   template <class... Ts>
   proper_actor(Ts&&... args) : super(std::forward<Ts>(args)...) {
@@ -276,17 +255,17 @@ class proper_actor<Base, Policies, true>
       }
       restore_cache();
     }
-    bool has_timeout = false;
+    bool timeout_valid = false;
     uint32_t timeout_id;
     // request timeout if needed
     if (bhvr.timeout().valid()) {
-      has_timeout = true;
+      timeout_valid = true;
       timeout_id = this->request_timeout(bhvr.timeout());
     }
     // workaround for GCC 4.7 bug (const this when capturing refs)
     auto& pending_timeouts = m_pending_timeouts;
     auto guard = detail::make_scope_guard([&] {
-      if (has_timeout) {
+      if (timeout_valid) {
         auto e = pending_timeouts.end();
         auto i = std::find(pending_timeouts.begin(), e, timeout_id);
         if (i != e) {
@@ -317,7 +296,7 @@ class proper_actor<Base, Policies, true>
     auto msg = make_message(timeout_msg{tid});
     if (d.is_zero()) {
       // immediately enqueue timeout message if duration == 0s
-      this->enqueue(this->address(), message_id::invalid,
+      this->enqueue(this->address(), invalid_message_id,
                     std::move(msg), this->host());
       // auto e = this->new_mailbox_element(this, std::move(msg));
       // this->m_mailbox.enqueue(e);

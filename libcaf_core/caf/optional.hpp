@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -26,6 +26,8 @@
 #include "caf/none.hpp"
 #include "caf/unit.hpp"
 #include "caf/config.hpp"
+
+#include "caf/detail/safe_equal.hpp"
 
 namespace caf {
 
@@ -271,15 +273,16 @@ class optional<T&> {
 /** @relates optional */
 template <class T, typename U>
 bool operator==(const optional<T>& lhs, const optional<U>& rhs) {
-  if ((lhs) && (rhs)) return *lhs == *rhs;
-  return false;
+  if ((lhs) && (rhs)) {
+    return detail::safe_equal(*lhs, *rhs);
+  }
+  return !lhs && !rhs;
 }
 
 /** @relates optional */
 template <class T, typename U>
 bool operator==(const optional<T>& lhs, const U& rhs) {
-  if (lhs) return *lhs == rhs;
-  return false;
+  return (lhs) ? *lhs == rhs : false;
 }
 
 /** @relates optional */

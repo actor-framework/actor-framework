@@ -10,26 +10,31 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/detail/memory.hpp"
+
 #include <vector>
 #include <typeinfo>
 
-#include "caf/detail/memory.hpp"
 #include "caf/mailbox_element.hpp"
 
 using namespace std;
 
-#ifdef CAF_DISABLE_MEM_MANAGEMENT
+#ifdef CAF_NO_MEM_MANAGEMENT
 
-int caf_memory_keep_compiler_happy() { return 0; }
+int caf_memory_keep_compiler_happy() {
+  // this function shuts up a linker warning saying that the
+  // object file has no symbols
+  return 0;
+}
 
-#else // CAF_DISABLE_MEM_MANAGEMENT
+#else // CAF_NO_MEM_MANAGEMENT
 
 namespace caf {
 namespace detail {
@@ -90,4 +95,4 @@ instance_wrapper::~instance_wrapper() {
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DISABLE_MEM_MANAGEMENT
+#endif // CAF_NO_MEM_MANAGEMENT

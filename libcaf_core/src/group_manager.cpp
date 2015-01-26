@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -56,7 +56,8 @@ class local_group : public abstract_group {
                   << CAF_TARG(msg, to_string));
     shared_guard guard(m_mtx);
     for (auto& s : m_subscribers) {
-      s->enqueue(sender, message_id::invalid, msg, host);
+      actor_cast<abstract_actor_ptr>(s)->enqueue(sender, invalid_message_id,
+                                                 msg, host);
     }
   }
 
@@ -65,11 +66,11 @@ class local_group : public abstract_group {
     CAF_LOG_TRACE(CAF_TARG(sender, to_string) << ", "
                   << CAF_TARG(msg, to_string));
     send_all_subscribers(sender, msg, host);
-    m_broker->enqueue(sender, message_id::invalid, msg, host);
+    m_broker->enqueue(sender, invalid_message_id, msg, host);
   }
 
-  std::pair<bool, size_t> add_subscriber(const channel& who) {
-    CAF_LOG_TRACE(CAF_TARG(who, to_string));
+  std::pair<bool, size_t> add_subscriber(const actor_addr& who) {
+    CAF_LOG_TRACE(""); // serializing who would cause a deadlock
     exclusive_guard guard(m_mtx);
     if (who && m_subscribers.insert(who).second) {
       return {true, m_subscribers.size()};
@@ -77,23 +78,23 @@ class local_group : public abstract_group {
     return {false, m_subscribers.size()};
   }
 
-  std::pair<bool, size_t> erase_subscriber(const channel& who) {
-    CAF_LOG_TRACE(CAF_TARG(who, to_string));
+  std::pair<bool, size_t> erase_subscriber(const actor_addr& who) {
+    CAF_LOG_TRACE(""); // serializing who would cause a deadlock
     exclusive_guard guard(m_mtx);
     auto success = m_subscribers.erase(who) > 0;
     return {success, m_subscribers.size()};
   }
 
-  abstract_group::subscription subscribe(const channel& who) {
-    CAF_LOG_TRACE(CAF_TARG(who, to_string));
+  attachable_ptr subscribe(const actor_addr& who) override {
+    CAF_LOG_TRACE(""); // serializing who would cause a deadlock
     if (add_subscriber(who).first) {
-      return {who, this};
+      return subscription::make(this);
     }
     return {};
   }
 
-  void unsubscribe(const channel& who) {
-    CAF_LOG_TRACE(CAF_TARG(who, to_string));
+  void unsubscribe(const actor_addr& who) override {
+    CAF_LOG_TRACE(""); // serializing who would cause a deadlock
     erase_subscriber(who);
   }
 
@@ -107,7 +108,7 @@ class local_group : public abstract_group {
 
  protected:
   detail::shared_spinlock m_mtx;
-  std::set<channel> m_subscribers;
+  std::set<actor_addr> m_subscribers;
   actor m_broker;
 };
 
@@ -175,7 +176,7 @@ class local_broker : public event_based_actor {
                   << " acquaintances; " << CAF_TSARG(sender) << ", "
                   << CAF_TSARG(what));
     for (auto& acquaintance : m_acquaintances) {
-      acquaintance->enqueue(sender, message_id::invalid, what, host());
+      acquaintance->enqueue(sender, invalid_message_id, what, host());
     }
   }
 
@@ -203,22 +204,22 @@ class local_group_proxy : public local_group {
     m_proxy_broker = spawn<proxy_broker, hidden>(this);
   }
 
-  abstract_group::subscription subscribe(const channel& who) {
-    CAF_LOG_TRACE(CAF_TSARG(who));
+  attachable_ptr subscribe(const actor_addr& who) override {
+    CAF_LOG_TRACE(""); // serializing who would cause a deadlock
     auto res = add_subscriber(who);
     if (res.first) {
       if (res.second == 1) {
         // join the remote source
         anon_send(m_broker, atom("JOIN"), m_proxy_broker);
       }
-      return {who, this};
+      return subscription::make(this);
     }
-    CAF_LOG_WARNING("channel " << to_string(who) << " already joined");
+    CAF_LOG_WARNING("actor already joined group");
     return {};
   }
 
-  void unsubscribe(const channel& who) {
-    CAF_LOG_TRACE(CAF_TSARG(who));
+  void unsubscribe(const actor_addr& who) override {
+    CAF_LOG_TRACE(""); // serializing who would cause a deadlock
     auto res = erase_subscriber(who);
     if (res.first && res.second == 0) {
       // leave the remote source,

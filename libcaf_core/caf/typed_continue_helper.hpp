@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -30,30 +30,23 @@ namespace caf {
 
 template <class OutputList>
 class typed_continue_helper {
-
  public:
-
   using message_id_wrapper_tag = int;
 
-  typed_continue_helper(message_id mid, local_actor* self)
-      : m_ch(mid, self) {}
-
-  template <class F>
-  typed_continue_helper<typename detail::get_callable_trait<F>::result_type>
-  continue_with(F fun) {
-    detail::assert_types<OutputList, F>();
-    m_ch.continue_with(std::move(fun));
-    return {m_ch};
+  typed_continue_helper(message_id mid) : m_ch(mid) {
+    // nop
   }
 
-  inline message_id get_message_id() const { return m_ch.get_message_id(); }
+  typed_continue_helper(continue_helper ch) : m_ch(std::move(ch)) {
+    // nop
+  }
 
-  typed_continue_helper(continue_helper ch) : m_ch(std::move(ch)) {}
+  message_id get_message_id() const {
+    return m_ch.get_message_id();
+  }
 
  private:
-
   continue_helper m_ch;
-
 };
 
 } // namespace caf

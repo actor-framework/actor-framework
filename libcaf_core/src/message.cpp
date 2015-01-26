@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -33,7 +33,7 @@ message::message(message&& other) : m_vals(std::move(other.m_vals)) {
   // nop
 }
 
-message::message(const data_ptr& vals) : m_vals(vals) {
+message::message(const data_ptr& ptr) : m_vals(ptr) {
   // nop
 }
 
@@ -93,6 +93,25 @@ message message::drop_right(size_t n) const {
 
 optional<message> message::apply(message_handler handler) {
   return handler(*this);
+}
+
+const std::type_info* message::type_token() const {
+  return m_vals ? m_vals->type_token() : &typeid(detail::empty_type_list);
+}
+
+bool message::dynamically_typed() const {
+  return m_vals ? m_vals->dynamically_typed() : false;
+}
+
+message::const_iterator message::begin() const {
+  return m_vals ? m_vals->begin() : const_iterator{nullptr, 0};
+}
+
+/**
+ * Returns an iterator to the end.
+ */
+message::const_iterator message::end() const {
+  return m_vals ? m_vals->end() : const_iterator{nullptr, 0};
 }
 
 } // namespace caf

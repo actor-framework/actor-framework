@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -32,18 +32,17 @@
 #include "caf/on.hpp"
 #include "caf/optional.hpp"
 
-#include "caf/detail/demangle.hpp"
-
 #include "cppa/opt_impls.hpp"
 
 namespace caf {
 
 using string_proj = std::function<optional<std::string> (const std::string&)>;
 
-string_proj extract_longopt_arg(const std::string& prefix) {
+inline string_proj extract_longopt_arg(const std::string& prefix) {
   return [prefix](const std::string& arg) -> optional<std::string> {
-    if (arg.compare(0, prefix.size(), prefix)) {
-      return std::string(arg.begin() + prefix.size(), arg.end());
+    if (arg.compare(0, prefix.size(), prefix) == 0) {
+      return std::string(arg.begin() + static_cast<ptrdiff_t>(prefix.size()),
+                         arg.end());
     }
     return none;
   };
@@ -67,6 +66,10 @@ detail::add_arg_functor<T> add_arg(std::vector<T>& storage) {
   return {storage};
 }
 
+/**
+ * Right-hand side of a match expression for a program option
+ * reading a boolean flag.
+ */
 inline std::function<void()> set_flag(bool& storage) {
   return [&] { storage = true; };
 }
@@ -98,8 +101,7 @@ using opt_rvalue_builder =
 using opt0_rvalue_builder = decltype(on(std::string{}) || on(std::string{}));
 
 /**
- * Left-hand side of a match expression for a program option with
- *    one argument.
+ * Left-hand side of a match expression for a program option with one argument.
  */
 inline opt_rvalue_builder on_opt1(char short_opt,
                   std::string long_opt,
@@ -115,22 +117,8 @@ inline opt_rvalue_builder on_opt1(char short_opt,
   const char short_flag_arr[] = {'-', short_opt, '\0' };
   const char* lhs_str = short_flag_arr;
   std::string prefix = "--";
-  prefix += long_opt;
+  prefix += std::move(long_opt);
   prefix += "=";
-  std::function<optional<std::string> (const std::string&)> kvp =
-    [prefix](const std::string& input) -> optional<std::string> {
-      if (std::equal(std::begin(prefix), std::end(prefix), std::begin(input))) {
-        return input.substr(prefix.size());
-      }
-      else if (std::equal(std::begin(prefix) + 1, std::end(prefix), std::begin(input))) {
-        return input.substr(prefix.size() - 1);
-      }
-      return none;
-    };
-  std::vector<std::string> opts;
-  opts.push_back(lhs_str);
-  opts.push_back("--" + long_opt);
-  opts.push_back("-" + long_opt);
   return on(extract_longopt_arg(prefix)) || on(lhs_str, val<std::string>);
 }
 
@@ -138,31 +126,31 @@ inline opt_rvalue_builder on_opt1(char short_opt,
  * Left-hand side of a match expression for a program option with no argument.
  */
 inline opt0_rvalue_builder on_opt0(char short_opt,
-                   std::string long_opt,
-                   options_description* desc = nullptr,
-                   std::string help_text = "",
-                   std::string help_group = "general options") {
+                                   std::string long_opt,
+                                   options_description* desc = nullptr,
+                                   std::string help_text = "",
+                                   std::string help_group = "general options") {
   if (desc) {
     option_info oinf{help_text, 0};
-    (*desc)[help_group].insert(std::make_pair(
-                   std::make_pair(short_opt, long_opt),
-                   std::move(oinf)));
+    (*desc)[help_group].insert(std::make_pair(std::make_pair(short_opt,
+                                                             long_opt),
+                                              std::move(oinf)));
   }
   const char short_flag_arr[] = {'-', short_opt, '\0' };
   std::string short_opt_string = short_flag_arr;
-  return on(long_opt) || on(short_opt_string);
+  return on("--" + long_opt) || on(short_opt_string);
 }
 
 /**
  * Returns a function that prints the help text of `desc` to `out`.
  */
-std::function<void()> print_desc(options_description* desc,
-                 std::ostream& out = std::cout) {
+inline std::function<void()> print_desc(options_description* desc,
+                                        std::ostream& out = std::cout) {
   return [&out, desc] {
     if (!desc) return;
     if (desc->empty()) {
       out << "please use '-h' or '--help' for a list "
-           "of available program options\n";
+             "of available program options\n";
     }
     for (auto& opt_group : *desc) {
       out << opt_group.first << ":\n";
@@ -197,8 +185,8 @@ std::function<void()> print_desc(options_description* desc,
  *    and then calls `exit(exit_reason).
  */
 inline std::function<void()> print_desc_and_exit(options_description* desc,
-                         std::ostream& out = std::cout,
-                         int exit_reason = 0) {
+                                                 std::ostream& out = std::cout,
+                                                 int exit_reason = 0) {
   auto fun = print_desc(desc, out);
   return [=] {
     fun();

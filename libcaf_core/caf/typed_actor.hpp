@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -40,7 +40,7 @@ class typed_event_based_actor;
 
 /**
  * Identifies a strongly typed actor.
- * @tparam Rs Interface as `replies_to<`...>::with<...> parameter pack.
+ * @tparam Rs Interface as `replies_to<...>::with<...>` parameter pack.
  */
 template <class... Rs>
 class typed_actor
@@ -59,6 +59,11 @@ class typed_actor
   friend T actor_cast(const U&);
 
  public:
+
+  template <class... Es>
+  struct extend {
+    using type = typed_actor<Rs..., Es...>;
+  };
 
   /**
    * Identifies the behavior type actors of this kind use
@@ -126,7 +131,7 @@ class typed_actor
   }
 
   static std::set<std::string> message_types() {
-    return {detail::to_uniform_name<Rs>()...};
+    return {Rs::static_type_name()...};
   }
 
   explicit operator bool() const { return static_cast<bool>(m_ptr); }

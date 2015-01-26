@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -30,6 +30,8 @@
 #include "caf/mailbox_element.hpp"
 #include "caf/response_handle.hpp"
 
+#include "caf/detail/type_traits.hpp"
+
 #include "caf/mixin/sync_sender.hpp"
 #include "caf/mixin/mailbox_based.hpp"
 
@@ -46,6 +48,10 @@ class blocking_actor
                   mixin::sync_sender<blocking_response_handle_tag>::impl> {
  public:
   class functor_based;
+
+  blocking_actor();
+
+  ~blocking_actor();
 
   /**************************************************************************
    *       utility stuff and receive() member function family       *
@@ -184,7 +190,7 @@ class blocking_actor
     return {make_dequeue_callback(), behavior{std::forward<Ts>(args)...}};
   }
 
-  optional<behavior&> sync_handler(message_id msg_id) override {
+  optional<behavior&> sync_handler(message_id msg_id) {
     auto i = m_sync_handler.find(msg_id);
     if (i != m_sync_handler.end()) return i->second;
     return none;
@@ -200,12 +206,6 @@ class blocking_actor
    */
   virtual void act() = 0;
 
-  /**
-   * Unwinds the stack by throwing an actor_exited exception.
-   * @throws actor_exited
-   */
-  virtual void quit(uint32_t reason = exit_reason::normal);
-
   /** @cond PRIVATE */
 
   // required from invoke_policy; unused in blocking actors
@@ -219,7 +219,7 @@ class blocking_actor
 
   // required by receive() member function family
   inline void dequeue(behavior& bhvr) {
-    dequeue_response(bhvr, message_id::invalid);
+    dequeue_response(bhvr, invalid_message_id);
   }
 
   // implemented by detail::proper_actor
@@ -246,8 +246,11 @@ class blocking_actor::functor_based : public blocking_actor {
 
   template <class F, class... Ts>
   functor_based(F f, Ts&&... vs) {
+    using trait = typename detail::get_callable_trait<F>::type;
+    using arg0 = typename detail::tl_head<typename trait::arg_types>::type;
     blocking_actor* dummy = nullptr;
-    create(dummy, f, std::forward<Ts>(vs)...);
+    std::integral_constant<bool, std::is_same<arg0, blocking_actor*>::value> tk;
+    create(dummy, tk, f, std::forward<Ts>(vs)...);
   }
 
  protected:
@@ -256,22 +259,14 @@ class blocking_actor::functor_based : public blocking_actor {
  private:
   void create(blocking_actor*, act_fun);
 
-  template <class Actor, typename F, typename T0, class... Ts>
-  auto create(Actor* dummy, F f, T0&& v0, Ts&&... vs)
-    -> typename std::enable_if<std::is_same<
-        decltype(f(dummy, std::forward<T0>(v0), std::forward<Ts>(vs)...)),
-        void>::value>::type {
-    create(dummy, std::bind(f, std::placeholders::_1, std::forward<T0>(v0),
-                std::forward<Ts>(vs)...));
+  template <class Actor, typename F, class... Ts>
+  void create(Actor* dummy, std::true_type, F f, Ts&&... vs) {
+    create(dummy, std::bind(f, std::placeholders::_1, std::forward<Ts>(vs)...));
   }
 
-  template <class Actor, typename F, typename T0, class... Ts>
-  auto create(Actor* dummy, F f, T0&& v0, Ts&&... vs)
-    -> typename std::enable_if<std::is_same<
-        decltype(f(std::forward<T0>(v0), std::forward<Ts>(vs)...)),
-        void>::value>::type {
-    std::function<void()> fun =
-      std::bind(f, std::forward<T0>(v0), std::forward<Ts>(vs)...);
+  template <class Actor, typename F, class... Ts>
+  void create(Actor* dummy, std::false_type, F f, Ts&&... vs) {
+    std::function<void()> fun = std::bind(f, std::forward<Ts>(vs)...);
     create(dummy, [fun](Actor*) { fun(); });
   }
 

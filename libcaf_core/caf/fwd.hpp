@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -36,6 +36,7 @@ class node_id;
 class behavior;
 class resumable;
 class actor_addr;
+class message_id;
 class local_actor;
 class actor_proxy;
 class scoped_actor;
@@ -46,14 +47,19 @@ class blocking_actor;
 class message_handler;
 class uniform_type_info;
 class event_based_actor;
+class forwarding_actor_proxy;
 
 // structs
 struct anything;
 struct invalid_actor_t;
 struct invalid_actor_addr_t;
+struct illegal_message_element;
 
 // enums
 enum class atom_value : uint64_t;
+
+// aliases
+using actor_id = uint32_t;
 
 // intrusive pointer types
 using abstract_group_ptr = intrusive_ptr<abstract_group>;

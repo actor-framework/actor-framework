@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -46,6 +46,8 @@ class message_builder::dynamic_msg_data : public detail::message_data {
     // nop
   }
 
+  ~dynamic_msg_data();
+
   const void* at(size_t pos) const override {
     CAF_REQUIRE(pos < size());
     return m_elements[pos]->val;
@@ -75,6 +77,10 @@ class message_builder::dynamic_msg_data : public detail::message_data {
 
   std::vector<uniform_value> m_elements;
 };
+
+message_builder::dynamic_msg_data::~dynamic_msg_data() {
+  // avoid weak-vtables warning
+}
 
 message_builder::message_builder() {
   init();

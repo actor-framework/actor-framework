@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -29,22 +29,19 @@ namespace io {
  * Generic handle type for identifying connections.
  */
 class connection_handle : public handle<connection_handle> {
-
+ public:
   friend class handle<connection_handle>;
-
   using super = handle<connection_handle>;
 
- public:
-
-  constexpr connection_handle() {}
+  constexpr connection_handle() {
+    // nop
+  }
 
  private:
-
-  inline connection_handle(int64_t handle_id) : super{handle_id} {}
-
+  inline connection_handle(int64_t handle_id) : super{handle_id} {
+    // nop
+  }
 };
-
-constexpr connection_handle invalid_connection_handle = connection_handle{};
 
 } // namespace io
 } // namespace caf

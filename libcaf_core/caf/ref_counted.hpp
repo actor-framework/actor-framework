@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -34,33 +34,38 @@ namespace caf {
  */
 class ref_counted : public memory_managed {
  public:
-  ref_counted();
-
-  ref_counted(const ref_counted&);
-
-  ref_counted& operator=(const ref_counted&);
-
   ~ref_counted();
+  ref_counted(const ref_counted&);
+  ref_counted& operator=(const ref_counted&);
+  explicit ref_counted(size_t initial_count = 0);
 
   /**
    * Increases reference count by one.
    */
-  inline void ref() { ++m_rc; }
+  inline void ref() {
+    ++m_rc;
+  }
 
   /**
    * Decreases reference count by one and calls `request_deletion`
    * when it drops to zero.
    */
   inline void deref() {
-    if (--m_rc == 0) request_deletion();
+    if (--m_rc == 0) {
+      request_deletion();
+    }
   }
 
   /**
    * Queries whether there is exactly one reference.
    */
-  inline bool unique() const { return m_rc == 1; }
+  inline bool unique() const {
+    return m_rc == 1;
+  }
 
-  inline size_t get_reference_count() const { return m_rc; }
+  inline size_t get_reference_count() const {
+    return m_rc;
+  }
 
  private:
   std::atomic<size_t> m_rc;

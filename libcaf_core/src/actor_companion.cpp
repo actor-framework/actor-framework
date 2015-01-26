@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -42,7 +42,7 @@ void actor_companion::enqueue(const actor_addr& sender, message_id mid,
   message_pointer ptr{memory::create<mailbox_element>(sender, mid,
                                                       std::move(content))};
   shared_lock<lock_type> guard(m_lock);
-  if (!m_on_enqueue) {
+  if (m_on_enqueue) {
     m_on_enqueue(std::move(ptr));
   }
 }

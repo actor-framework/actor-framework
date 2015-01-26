@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -34,8 +34,17 @@ class functor_based : public Base {
 
   using void_fun = std::function<void(pointer)>;
 
+  functor_based() {
+    // nop
+  }
+
   template <class F, class... Ts>
   functor_based(F f, Ts&&... vs) {
+    init(std::move(f), std::forward<Ts>(vs)...);
+  }
+
+  template <class F, class... Ts>
+  void init(F f, Ts&&... vs) {
     using trait = typename detail::get_callable_trait<F>::type;
     using arg_types = typename trait::arg_types;
     using result_type = typename trait::result_type;

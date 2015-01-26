@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -40,8 +40,8 @@ enum class spawn_options : int {
   detach_flag = 0x04,
   hide_flag = 0x08,
   blocking_api_flag = 0x10,
-  priority_aware_flag = 0x20
-
+  priority_aware_flag = 0x20,
+  lazy_init_flag = 0x40
 };
 #endif
 
@@ -94,6 +94,12 @@ constexpr spawn_options blocking_api = spawn_options::blocking_api_flag;
  * @note This implicitly causes the actor to run in its own thread.
  */
 constexpr spawn_options priority_aware = spawn_options::priority_aware_flag;
+
+/**
+ * Causes the new actor to delay its
+ * initialization until a message arrives.
+ */
+constexpr spawn_options lazy_init = spawn_options::lazy_init_flag;
 
 /**
  * Checks wheter `haystack` contains `needle`.
@@ -149,6 +155,14 @@ constexpr bool has_monitor_flag(spawn_options opts) {
  */
 constexpr bool has_blocking_api_flag(spawn_options opts) {
   return has_spawn_option(opts, blocking_api);
+}
+
+/**
+ * Checks wheter the {@link lazy_init} flag is set in `opts`.
+ * @relates spawn_options
+ */
+constexpr bool has_lazy_init_flag(spawn_options opts) {
+  return has_spawn_option(opts, lazy_init);
 }
 
 /** @} */

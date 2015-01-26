@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -32,10 +32,9 @@ namespace mixin {
 
 template <class Base, class Subtype>
 class mailbox_based : public Base {
-
-  using del = detail::disposer;
-
  public:
+  using del = detail::disposer;
+  using mailbox_type = detail::single_reader_queue<mailbox_element, del>;
 
   ~mailbox_based() {
     if (!m_mailbox.closed()) {
@@ -44,29 +43,25 @@ class mailbox_based : public Base {
     }
   }
 
-  template <class... Ts>
-  inline mailbox_element* new_mailbox_element(Ts&&... args) {
-    return mailbox_element::create(std::forward<Ts>(args)...);
-  }
-
-  void cleanup(uint32_t reason) override {
+  void cleanup(uint32_t reason) {
     detail::sync_request_bouncer f{reason};
     m_mailbox.close(f);
     Base::cleanup(reason);
   }
 
- protected:
+  mailbox_type& mailbox() {
+    return m_mailbox;
+  }
 
+ protected:
   using combined_type = mailbox_based;
 
-  using mailbox_type = detail::single_reader_queue<mailbox_element, del>;
-
   template <class... Ts>
-  mailbox_based(Ts&&... args)
-      : Base(std::forward<Ts>(args)...) {}
+  mailbox_based(Ts&&... args) : Base(std::forward<Ts>(args)...) {
+    // nop
+  }
 
   mailbox_type m_mailbox;
-
 };
 
 } // namespace mixin

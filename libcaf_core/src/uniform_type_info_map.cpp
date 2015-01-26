@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -32,6 +32,7 @@
 #include "caf/string_algorithms.hpp"
 
 #include "caf/group.hpp"
+#include "caf/channel.hpp"
 #include "caf/message.hpp"
 #include "caf/announce.hpp"
 #include "caf/duration.hpp"
@@ -115,7 +116,8 @@ using static_type_table = type_list<bool,
                                     std::u16string,
                                     std::u32string,
                                     std::map<std::string, std::string>,
-                                    std::vector<char>>;
+                                    std::vector<char>,
+                                    std::vector<std::string>>;
 } // namespace <anonymous>
 
 template <class T>
@@ -338,14 +340,14 @@ void deserialize_impl(message& atref, deserializer* source) {
 }
 
 void serialize_impl(const node_id& nid, serializer* sink) {
-  sink->write_value(nid.process_id());
   sink->write_raw(nid.host_id().size(), nid.host_id().data());
+  sink->write_value(nid.process_id());
 }
 
 void deserialize_impl(node_id& nid, deserializer* source) {
   node_id::host_id_type hid;
-  auto pid = source->read<uint32_t>();
   source->read_raw(node_id::host_id_size, hid.data());
+  auto pid = source->read<uint32_t>();
   auto is_zero = [](uint8_t value) { return value == 0; };
   if (pid == 0 && std::all_of(hid.begin(), hid.end(), is_zero)) {
     // invalid process information
@@ -450,6 +452,30 @@ inline void serialize_impl(const sync_timeout_msg&, serializer*) {
 
 inline void deserialize_impl(const sync_timeout_msg&, deserializer*) {
   // nop
+}
+
+inline void serialize_impl(const std::map<std::string, std::string>& smap,
+                           serializer* sink) {
+  default_serialize_policy sp;
+  sp(smap, sink);
+}
+
+inline void deserialize_impl(std::map<std::string, std::string>& smap,
+                             deserializer* source) {
+  default_serialize_policy sp;
+  sp(smap, source);
+}
+
+template <class T>
+inline void serialize_impl(const std::vector<T>& vec, serializer* sink) {
+  default_serialize_policy sp;
+  sp(vec, sink);
+}
+
+template <class T>
+inline void deserialize_impl(std::vector<T>& vec, deserializer* source) {
+  default_serialize_policy sp;
+  sp(vec, source);
 }
 
 bool types_equal(const std::type_info* lhs, const std::type_info* rhs) {
@@ -574,10 +600,10 @@ protected:
 
 class default_meta_message : public uniform_type_info {
  public:
-  default_meta_message(const std::string& name) {
-    m_name = name;
+  default_meta_message(const std::string& tname) {
+    m_name = tname;
     std::vector<std::string> elements;
-    split(elements, name, is_any_of("+"));
+    split(elements, tname, is_any_of("+"));
     auto uti_map = detail::singletons::get_uniform_type_info_map();
     CAF_REQUIRE(elements.size() > 0 && elements.front() == "@<>");
     // ignore first element, because it's always "@<>"
@@ -624,10 +650,7 @@ class default_meta_message : public uniform_type_info {
     return false;
   }
   bool equals(const void* instance1, const void* instance2) const override {
-    auto& lhs = *cast(instance1);
-    auto& rhs = *cast(instance2);
-    full_eq_type cmp;
-    return std::equal(lhs.begin(), lhs.end(), rhs.begin(), cmp);
+    return *cast(instance1) == *cast(instance2);
   }
 
  private:
@@ -794,7 +817,7 @@ class utim_impl : public uniform_type_info_map {
                                    uti_impl<std::string>,
                                    uti_impl<std::u16string>,
                                    uti_impl<std::u32string>,
-                                   default_uniform_type_info<strmap>,
+                                   uti_impl<strmap>,
                                    uti_impl<bool>,
                                    uti_impl<float>,
                                    uti_impl<double>,
@@ -807,8 +830,8 @@ class utim_impl : public uniform_type_info_map {
                                    int_tinfo<uint32_t>,
                                    int_tinfo<int64_t>,
                                    int_tinfo<uint64_t>,
-                                   default_uniform_type_info<charbuf>,
-                                   default_uniform_type_info<strvec>>;
+                                   uti_impl<charbuf>,
+                                   uti_impl<strvec>>;
 
   builtin_types m_storage;
 

@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -51,11 +51,10 @@ template <class List, size_t N>
 struct il_right;
 
 template <long... Is, size_t N>
-struct il_right<int_list<Is...>, N> : il_right_impl<(N > sizeof...(Is)
-                             ? sizeof...(Is)
-                             : N),
-                          sizeof...(Is),
-                          Is...> { };
+struct il_right<int_list<Is...>, N> {
+  using type = typename il_right_impl<(N > sizeof...(Is) ? sizeof...(Is) : N),
+                                      sizeof...(Is), Is...>::type;
+};
 
 /**
  * Creates indices for `List` beginning at `Pos`.
@@ -84,13 +83,13 @@ struct il_indices<List<T0, Ts...>, Pos, int_list<Is...>> {
 };
 
 template <class T>
-constexpr auto get_indices(const T&) -> typename il_indices<T>::type {
+typename il_indices<T>::type get_indices(const T&) {
   return {};
 }
 
-template <size_t Num, typename T>
-constexpr auto get_right_indices(const T&)
--> typename il_right<typename il_indices<T>::type, Num>::type {
+template <size_t Num, class T>
+typename il_right<typename il_indices<T>::type, Num>::type
+get_right_indices(const T&) {
   return {};
 }
 

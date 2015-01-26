@@ -16,10 +16,10 @@ The argument to this function call \emph{must} be a match expression as shown in
 
 \begin{lstlisting}
 auto p0 = spawn_typed(
-  on_arg_match >> [](int a, int b) {
+  [](int a, int b) {
    return static_cast<double>(a) * b;
   },
-  on_arg_match >> [](double a, double b) {
+  [](double a, double b) {
     return std::make_tuple(a * b, a / b);
   }
 );
@@ -121,9 +121,11 @@ void tester(event_based_actor* self, const calculator_type& testee) {
 
 int main() {
     // announce custom message types
-    announce<shutdown_request>();
-    announce<plus_request>(&plus_request::a, &plus_request::b);
-    announce<minus_request>(&minus_request::a, &minus_request::b);
+    announce<shutdown_request>("shutdown_request");
+    announce<plus_request>("plus_request",
+                           &plus_request::a, &plus_request::b);
+    announce<minus_request>("minus_request",
+                            &minus_request::a, &minus_request::b);
     // test function-based impl
     spawn(tester, spawn_typed(typed_calculator));
     await_all_actors_done();

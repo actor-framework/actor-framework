@@ -47,7 +47,7 @@ When sending a synchronous message, the response handler can be passed by either
 void foo(event_based_actor* self, actor testee) {
   // testee replies with a string to 'get'
   self->sync_send(testee, atom("get")).then(
-    on_arg_match >> [=](const std::string& str) {
+    [=](const std::string& str) {
       // handle str
     },
     after(std::chrono::seconds(30)) >> [=]() {
@@ -85,24 +85,4 @@ void foo(event_based_actor* self, actor testee) {
   timed_sync_send(testee, std::chrono::seconds(30), atom("get")).then(
     [=](const std::string& str) { /* handle str */ }
   );
-\end{lstlisting}
-
-\clearpage
-\subsubsection{Continuations for Event-based Actors}
-
-\lib supports continuations to enable chaining of send/receive statements.
-The functions \lstinline^then^ returns a helper object offering the member function \lstinline^continue_with^, which takes a functor $f$ without arguments.
-After receiving a message, $f$ is invoked if and only if the received messages was handled successfully, i.e., neither \lstinline^sync_failure^ nor \lstinline^sync_timeout^ occurred.
-
-\begin{lstlisting}
-void foo(event_based_actor* self) {
-  actor d_or_s = ...; // replies with either a double or a string
-  sync_send(d_or_s, atom("get")).then(
-    [=](double value) { /* functor f1 */ },
-    [=](const string& value) { /* functor f2*/ }
-  ).continue_with([=] {
-    // this continuation is invoked in both cases
-    // *after* f1 or f2 is done, but *not* in case
-    // of sync_failure or sync_timeout
-  });
 \end{lstlisting}

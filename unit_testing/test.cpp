@@ -2,6 +2,7 @@
 
 #include "test.hpp"
 #include "caf/all.hpp"
+#include "caf/string_algorithms.hpp"
 
 using namespace std;
 using namespace caf;
@@ -10,9 +11,13 @@ namespace {
 atomic<size_t> s_error_count{0};
 }
 
-size_t caf_error_count() { return s_error_count; }
+size_t caf_error_count() {
+  return s_error_count;
+}
 
-void caf_inc_error_count() { ++s_error_count; }
+void caf_inc_error_count() {
+  ++s_error_count;
+}
 
 string caf_fill4(size_t value) {
   string result = to_string(value);
@@ -67,4 +72,30 @@ void verbose_terminate() {
 void set_default_test_settings() {
   set_terminate(verbose_terminate);
   cout.unsetf(ios_base::unitbuf);
+}
+
+std::thread run_program_impl(actor rc, const char* cpath, vector<string> args) {
+  string path = cpath;
+  replace_all(path, "'", "\\'");
+  ostringstream oss;
+  oss << "'" << path << "'";
+  for (auto& arg : args) {
+    oss << " " << arg;
+  }
+  oss << " 2>&1";
+  string cmdstr = oss.str();
+  return std::thread([cmdstr, rc] {
+    string output;
+    auto fp = popen(cmdstr.c_str(), "r");
+    if (!fp) {
+       CAF_PRINTERR("FATAL: command line failed: " << cmdstr);
+       abort();
+    }
+    char buf[512];
+    while (fgets(buf, sizeof(buf), fp)) {
+      output += buf;
+    }
+    pclose(fp);
+    anon_send(rc, output);
+  });
 }

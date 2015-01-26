@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include <thread>
 #include <cstring>
 #include <cstddef>
 #include <sstream>
@@ -42,7 +43,7 @@ void caf_unexpected_timeout(const char* file, size_t line);
 
 #define CAF_PRINT(message) CAF_PRINTC(__FILE__, __LINE__, message)
 
-#if CAF_LOG_LEVEL > 1
+#if defined(CAF_LOG_LEVEL) && CAF_LOG_LEVEL > 1
 #define CAF_PRINTERRC(fname, linenum, msg)                  \
   CAF_LOGF_ERROR(CAF_STREAMIFY(fname, linenum, msg));            \
   std::cerr << "ERROR: " << CAF_STREAMIFY(fname, linenum, msg) << std::endl
@@ -129,11 +130,16 @@ inline void caf_check_value(V1 v1, V2 v2, const char* fname, size_t line,
 #define CAF_VERBOSE_EVAL(LineOfCode)                      \
   CAF_PRINT(#LineOfCode << " = " << (LineOfCode));
 
-#define CAF_TEST(testname)                          \
-  auto caf_test_scope_guard = ::caf::detail::make_scope_guard([] {     \
-    std::cout << caf_error_count() << " error(s) detected" << std::endl;  \
-  });                                    \
-  set_default_test_settings();                         \
+#define CAF_TEST(testname)                                                     \
+  ::std::thread([] {                                                           \
+    ::std::this_thread::sleep_for(std::chrono::seconds(10));                   \
+    ::std::cerr << "WATCHDOG: unit test did finish within 10s, abort\n";       \
+    ::abort();                                                                 \
+  }).detach();                                                                 \
+  auto caf_test_scope_guard = ::caf::detail::make_scope_guard([] {             \
+    std::cout << caf_error_count() << " error(s) detected" << std::endl;       \
+  });                                                                          \
+  set_default_test_settings();                                                 \
   CAF_LOGF_INFO("run unit test " << #testname)
 
 #define CAF_TEST_RESULT() ((caf_error_count() == 0) ? 0 : -1)
@@ -199,10 +205,25 @@ caf::optional<T> spro(const std::string& str) {
   return caf::none;
 }
 
-std::vector<std::string> split(const std::string& str, char delim = ' ',
-                 bool keep_empties = true);
+std::thread run_program_impl(caf::actor, const char*, std::vector<std::string>);
 
-std::map<std::string, std::string> get_kv_pairs(int argc, char** argv,
-                        int begin = 1);
+template <class T>
+typename std::enable_if<
+  std::is_arithmetic<T>::value,
+  std::string
+>::type
+convert_to_str(T value) {
+  return std::to_string(value);
+}
+
+inline std::string convert_to_str(std::string value) {
+  return std::move(value);
+}
+
+template <class... Ts>
+std::thread run_program(caf::actor listener, const char* path, Ts&&... args) {
+  std::vector<std::string> vec{convert_to_str(std::forward<Ts>(args))...};
+  return run_program_impl(listener, path, std::move(vec));
+}
 
 #endif // TEST_HPP

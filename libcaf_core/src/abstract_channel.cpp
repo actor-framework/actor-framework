@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -24,11 +24,15 @@ namespace caf {
 
 using detail::singletons;
 
-abstract_channel::abstract_channel() : m_node(singletons::get_node_id()) {
+abstract_channel::abstract_channel(size_t initial_ref_count)
+    : ref_counted(initial_ref_count),
+      m_node(singletons::get_node_id()) {
   // nop
 }
 
-abstract_channel::abstract_channel(node_id nid) : m_node(std::move(nid)) {
+abstract_channel::abstract_channel(node_id nid, size_t initial_ref_count)
+    : ref_counted(initial_ref_count),
+      m_node(std::move(nid)) {
   // nop
 }
 

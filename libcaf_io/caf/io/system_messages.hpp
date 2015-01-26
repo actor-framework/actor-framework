@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -41,11 +41,17 @@ struct new_connection_msg {
   connection_handle handle;
 };
 
+/**
+ * @relates new_connection_msg
+ */
 inline bool operator==(const new_connection_msg& lhs,
                        const new_connection_msg& rhs) {
   return lhs.source == rhs.source && lhs.handle == rhs.handle;
 }
 
+/**
+ * @relates new_connection_msg
+ */
 inline bool operator!=(const new_connection_msg& lhs,
                        const new_connection_msg& rhs) {
   return !(lhs == rhs);
@@ -65,10 +71,16 @@ struct new_data_msg {
   std::vector<char> buf;
 };
 
+/**
+ * @relates new_data_msg
+ */
 inline bool operator==(const new_data_msg& lhs, const new_data_msg& rhs) {
   return lhs.handle == rhs.handle && lhs.buf == rhs.buf;
 }
 
+/**
+ * @relates new_data_msg
+ */
 inline bool operator!=(const new_data_msg& lhs, const new_data_msg& rhs) {
   return !(lhs == rhs);
 }
@@ -83,11 +95,17 @@ struct connection_closed_msg {
   connection_handle handle;
 };
 
+/**
+ * @relates connection_closed_msg
+ */
 inline bool operator==(const connection_closed_msg& lhs,
                        const connection_closed_msg& rhs) {
   return lhs.handle == rhs.handle;
 }
 
+/**
+ * @relates connection_closed_msg
+ */
 inline bool operator!=(const connection_closed_msg& lhs,
                        const connection_closed_msg& rhs) {
   return !(lhs == rhs);
@@ -103,11 +121,17 @@ struct acceptor_closed_msg {
   accept_handle handle;
 };
 
+/**
+ * @relates acceptor_closed_msg
+ */
 inline bool operator==(const acceptor_closed_msg& lhs,
                        const acceptor_closed_msg& rhs) {
   return lhs.handle == rhs.handle;
 }
 
+/**
+ * @relates acceptor_closed_msg
+ */
 inline bool operator!=(const acceptor_closed_msg& lhs,
                        const acceptor_closed_msg& rhs) {
   return !(lhs == rhs);

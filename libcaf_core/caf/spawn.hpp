@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -22,7 +22,6 @@
 
 #include <type_traits>
 
-#include "caf/scheduler.hpp"
 #include "caf/spawn_fwd.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/spawn_options.hpp"
@@ -70,7 +69,7 @@ intrusive_ptr<C> spawn_impl(execution_unit* host,
                 "spawned without blocking_api_flag");
   static_assert(is_unbound(Os),
                 "top-level spawns cannot have monitor or link flag");
-  CAF_LOGF_TRACE("spawn " << detail::demangle<C>());
+  CAF_LOGF_TRACE("");
   using scheduling_policy =
     typename std::conditional<
       has_detach_flag(Os) || has_blocking_api_flag(Os),
@@ -109,10 +108,13 @@ intrusive_ptr<C> spawn_impl(execution_unit* host,
       detail::proper_actor<C, policy_token>
     >::type;
   auto ptr = detail::make_counted<actor_impl>(std::forward<Ts>(args)...);
+  // actors start with a reference count of 1, hence we need to deref ptr once
+  CAF_REQUIRE(!ptr->unique());
+  ptr->deref();
   CAF_LOGF_DEBUG("spawned actor with ID " << ptr->id());
   CAF_PUSH_AID(ptr->id());
   before_launch_fun(ptr.get());
-  ptr->launch(has_hide_flag(Os), host);
+  ptr->launch(has_hide_flag(Os), has_lazy_init_flag(Os), host);
   return ptr;
 }
 
@@ -122,7 +124,7 @@ intrusive_ptr<C> spawn_impl(execution_unit* host,
  */
 template <class T>
 typename std::conditional<
-  is_convertible_to_actor<typename detail::rm_const_and_ref<T>::type>::value,
+  is_convertible_to_actor<typename std::decay<T>::type>::value,
   actor,
   T&&
 >::type
@@ -136,7 +138,7 @@ spawn_fwd(typename std::remove_reference<T>::type& arg) noexcept {
  */
 template <class T>
 typename std::conditional<
-  is_convertible_to_actor<typename detail::rm_const_and_ref<T>::type>::value,
+  is_convertible_to_actor<typename std::decay<T>::type>::value,
   actor,
   T&&
 >::type

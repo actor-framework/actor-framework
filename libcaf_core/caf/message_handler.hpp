@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -70,6 +70,13 @@ class message_handler {
   message_handler(impl_ptr ptr);
 
   /**
+   * Checks whether the message handler is not empty.
+   */
+  inline operator bool() const {
+    return static_cast<bool>(m_impl);
+  }
+
+  /**
    * Create a message handler a list of match expressions,
    * functors, or other message handlers.
    */
@@ -96,7 +103,7 @@ class message_handler {
   template <class... Ts>
   typename std::conditional<
     detail::disjunction<may_have_timeout<
-      typename detail::rm_const_and_ref<Ts>::type>::value...>::value,
+      typename std::decay<Ts>::type>::value...>::value,
     behavior,
     message_handler
   >::type
@@ -104,7 +111,13 @@ class message_handler {
     // using a behavior is safe here, because we "cast"
     // it back to a message_handler when appropriate
     behavior tmp{std::forward<Ts>(args)...};
-    return m_impl->or_else(tmp.as_behavior_impl());
+    if (! tmp) {
+      return *this;
+    }
+    if (m_impl) {
+      return m_impl->or_else(tmp.as_behavior_impl());
+    }
+    return tmp;
   }
 
  private:

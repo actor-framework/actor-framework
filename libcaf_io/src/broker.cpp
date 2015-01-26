@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -44,37 +44,27 @@ broker::servant::servant(broker* ptr) : m_disconnected(false), m_broker(ptr) {
 }
 
 void broker::servant::set_broker(broker* new_broker) {
-  if (!m_disconnected) m_broker = new_broker;
+  if (!m_disconnected) {
+    m_broker = new_broker;
+  }
 }
 
-void broker::servant::disconnect() {
+void broker::servant::disconnect(bool invoke_disconnect_message) {
   CAF_LOG_TRACE("");
   if (!m_disconnected) {
     CAF_LOG_DEBUG("disconnect servant from broker");
     m_disconnected = true;
     remove_from_broker();
-    if (m_broker->exit_reason() == exit_reason::not_exited) {
-      if (m_broker->m_running) {
-        CAF_LOG_DEBUG("broker is running, push message to cache");
-        // push this message to the cache to make sure we
-        // don't have interleaved message handlers
-        auto e = mailbox_element::create(m_broker->address(),
-                                         message_id::invalid,
-                                         disconnect_message());
-        m_broker->m_priority_policy
-        .push_to_cache(unique_mailbox_element_pointer{e});
-      }
-      else {
-        CAF_LOG_DEBUG("broker is not running, invoke handler");
-        m_broker->enqueue(m_broker->address(), message_id::invalid,
-                          disconnect_message(), nullptr);
-      }
+    if (invoke_disconnect_message) {
+      auto msg = disconnect_message();
+      m_broker->invoke_message(m_broker->address(),invalid_message_id, msg);
     }
   }
 }
 
-broker::scribe::scribe(broker* parent, connection_handle hdl)
-    : super(parent), m_hdl(hdl) {
+broker::scribe::scribe(broker* ptr, connection_handle conn_hdl)
+    : servant(ptr),
+      m_hdl(conn_hdl) {
   std::vector<char> tmp;
   m_read_msg = make_message(new_data_msg{m_hdl, std::move(tmp)});
 }
@@ -98,7 +88,7 @@ void broker::scribe::consume(const void*, size_t num_bytes) {
   buf.resize(num_bytes);                       // make sure size is correct
   read_msg().buf.swap(buf);                    // swap into message
   m_broker->invoke_message(invalid_actor_addr, // call client
-                           message_id::invalid, m_read_msg);
+                           invalid_message_id, m_read_msg);
   read_msg().buf.swap(buf); // swap buffer back to stream
   flush();                  // implicit flush of wr_buf()
 }
@@ -108,11 +98,11 @@ void broker::scribe::io_failure(network::operation op) {
                 << ", " << CAF_TARG(op, static_cast<int>));
   // keep compiler happy when compiling w/o logging
   static_cast<void>(op);
-  disconnect();
+  disconnect(true);
 }
 
-broker::doorman::doorman(broker* parent, accept_handle hdl)
-    : super(parent), m_hdl(hdl) {
+broker::doorman::doorman(broker* ptr, accept_handle acc_hdl)
+    : servant(ptr), m_hdl(acc_hdl) {
   auto hdl2 = connection_handle::from_int(-1);
   m_accept_msg = make_message(new_connection_msg{m_hdl, hdl2});
 }
@@ -135,7 +125,7 @@ void broker::doorman::io_failure(network::operation op) {
                         << CAF_TARG(op, static_cast<int>));
   // keep compiler happy when compiling w/o logging
   static_cast<void>(op);
-  disconnect();
+  disconnect(true);
 }
 
 class broker::continuation {
@@ -164,8 +154,6 @@ class broker::continuation {
 void broker::invoke_message(const actor_addr& sender, message_id mid,
                             message& msg) {
   CAF_LOG_TRACE(CAF_TARG(msg, to_string));
-  m_running = true;
-  auto sg = detail::make_scope_guard([=] { m_running = false; });
   if (planned_exit_reason() != exit_reason::not_exited
       || bhvr_stack().empty()) {
     CAF_LOG_DEBUG("actor already finished execution"
@@ -183,8 +171,8 @@ void broker::invoke_message(const actor_addr& sender, message_id mid,
   std::swap(msg, m_dummy_node.msg);
   try {
     auto bhvr = bhvr_stack().back();
-    auto mid = bhvr_stack().back_id();
-    switch (m_invoke_policy.handle_message(this, &m_dummy_node, bhvr, mid)) {
+    auto bid = bhvr_stack().back_id();
+    switch (m_invoke_policy.handle_message(this, &m_dummy_node, bhvr, bid)) {
       case policy::hm_msg_handled: {
         CAF_LOG_DEBUG("handle_message returned hm_msg_handled");
         while (!bhvr_stack().empty()
@@ -200,7 +188,7 @@ void broker::invoke_message(const actor_addr& sender, message_id mid,
       case policy::hm_skip_msg:
       case policy::hm_cache_msg: {
         CAF_LOG_DEBUG("handle_message returned hm_skip_msg or hm_cache_msg");
-        auto e = mailbox_element::create(sender, mid,
+        auto e = mailbox_element::create(sender, bid,
                                          std::move(m_dummy_node.msg));
         m_priority_policy.push_to_cache(unique_mailbox_element_pointer{e});
         break;
@@ -264,19 +252,11 @@ void broker::write(connection_handle hdl, size_t bs, const void* buf) {
 
 void broker::enqueue(const actor_addr& sender, message_id mid, message msg,
                      execution_unit*) {
-  middleman::instance()->run_later(continuation{this, sender,
-                                                mid, std::move(msg)});
+  parent().backend().post(continuation{this, sender,
+                                       mid, std::move(msg)});
 }
 
-bool broker::initialized() const {
-  return m_initialized;
-}
-
-broker::broker()
-    : m_initialized(false),
-      m_hidden(true),
-      m_running(false),
-      m_mm(*middleman::instance()) {
+broker::broker() : m_mm(*middleman::instance()) {
   // nop
 }
 
@@ -284,36 +264,35 @@ void broker::cleanup(uint32_t reason) {
   CAF_LOG_TRACE(CAF_ARG(reason));
   close_all();
   super::cleanup(reason);
-  if (!m_hidden){
-    detail::singletons::get_actor_registry()->dec_running();
-  }
+  deref(); // release implicit reference count from middleman
 }
 
-void broker::launch(bool is_hidden, execution_unit*) {
-  if (!is_hidden) {
-    m_hidden = false;
-    detail::singletons::get_actor_registry()->inc_running();
-  }
+void broker::launch(bool is_hidden, bool, execution_unit*) {
+  // add implicit reference count held by the middleman
+  ref();
+  is_registered(!is_hidden);
   CAF_PUSH_AID(id());
-  CAF_LOGF_TRACE("init and launch broker with id " << id());
+  CAF_LOGF_TRACE("init and launch broker with ID " << id());
   // we want to make sure initialization is executed in MM context
-  broker_ptr self = this;
-  self->become(on(atom("INITMSG")) >> [self] {
-    CAF_LOGF_TRACE(CAF_MARG(self, get));
-    self->unbecome();
-    // launch backends now, because user-defined initialization
-    // might call functions like add_connection
-    for (auto& kvp : self->m_doormen) {
-      kvp.second->launch();
+  become(
+    on(atom("INITMSG")) >> [=] {
+      CAF_LOGF_TRACE("ID " << id());
+      unbecome();
+      // launch backends now, because user-defined initialization
+      // might call functions like add_connection
+      for (auto& kvp : m_doormen) {
+        kvp.second->launch();
+      }
+      is_initialized(true);
+      // run user-defined initialization code
+      auto bhvr = make_behavior();
+      if (bhvr) {
+        become(std::move(bhvr));
+      }
     }
-    self->m_initialized = true;
-    // run user-defined initialization code
-    auto bhvr = self->make_behavior();
-    if (bhvr)
-      self->become(std::move(bhvr));
-  });
-  self->enqueue(invalid_actor_addr, message_id::invalid,
-                make_message(atom("INITMSG")), nullptr);
+  );
+  enqueue(invalid_actor_addr, invalid_message_id,
+          make_message(atom("INITMSG")), nullptr);
 }
 
 void broker::configure_read(connection_handle hdl, receive_policy::config cfg) {
@@ -356,8 +335,8 @@ void broker::close_all() {
 
 std::vector<connection_handle> broker::connections() const {
   std::vector<connection_handle> result;
-  for (auto& scribe : m_scribes) {
-    result.push_back(scribe.first);
+  for (auto& kvp : m_scribes) {
+    result.push_back(kvp.first);
   }
   return result;
 }
@@ -372,6 +351,16 @@ behavior broker::functor_based::make_behavior() {
 
 network::multiplexer& broker::backend() {
   return m_mm.backend();
+}
+
+connection_handle broker::add_tcp_scribe(const std::string& hst, uint16_t prt) {
+  return backend().add_tcp_scribe(this, hst, prt);
+}
+
+
+std::pair<accept_handle, uint16_t>
+broker::add_tcp_doorman(uint16_t port, const char* in, bool reuse_addr) {
+  return backend().add_tcp_doorman(this, port, in, reuse_addr);
 }
 
 } // namespace io

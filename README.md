@@ -9,12 +9,12 @@ network transparent messaging, and more.
 On the Web
 ----------
 
-* __Project Homepage__: http://www.actor-framework.org
-* __Manual (HTML)__: http://actor-framework.github.io/actor-framework/manual/index.html
-* __Manual (PDF)__: http://actor-framework.github.io/actor-framework/manual/manual.pdf
-* __Doxygen (HTML)__: http://actor-framework.github.io/actor-framework/index.html
+* __Homepage__: http://www.actor-framework.org
+* __Developer Blog__: http://blog.actor-framework.org
+* __Doxygen (HTML)__: http://www.actor-framework.org/doc
+* __Manual (HTML)__: http://www.actor-framework.org/manual
+* __Manual (PDF)__: http://www.actor-framework.org/pdf/manual.pdf
 * __Mailing List__: https://groups.google.com/d/forum/actor-framework
-* __Deveoper Blog__: https://libcppa.blogspot.com
 
 
 Get the Sources
@@ -50,7 +50,7 @@ Dependencies
 Supported Compilers
 -------------------
 
-* GCC >= 4.7
+* GCC >= 4.7.2
 * Clang >= 3.2
 
 
@@ -59,13 +59,14 @@ Supported Operating Systems
 
 * Linux
 * Mac OS X
-* *Note for MS Windows*: libcppa relies on C++11 features such as variadic templates and unrestricted unions. We will support this platform as soon as Microsoft's compiler implements all required C++11 features.
+* FreeBSD 10
+* *Note for MS Windows*: CAF relies on C++11 features such as variadic templates and unrestricted unions. We will support Visual Studio as soon as Microsoft's compiler implements all required C++11 features. In the meantime, you can use CAF via MinGW.
 
 
 Scientific Use
 --------------
 
-If you use libcppa in a scientific context, please use the following citation:
+If you use CAF in a scientific context, please use the following citation:
 
 ```
 @inproceedings{cshw-nassp-13,

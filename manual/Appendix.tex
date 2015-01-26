@@ -127,9 +127,9 @@ The APIs of typed and untyped actors have been harmonized.
 Typed actors can now be published in the network and also use all operations untyped actors can.
 
 \clearpage
-\subsubsection{0.9 $\Rightarrow$ 0.10 (\texttt{libcppa} $\Rightarrow$ \texttt{libcaf})}
+\subsubsection{0.9 $\Rightarrow$ 0.10 (\texttt{libcppa} $\Rightarrow$ CAF)}
 
-The first release under the new name \texttt{libcaf} is an overhaul of the entire library.
+The first release under the new name CAF is an overhaul of the entire library.
 Some classes have been renamed or relocated, others have been removed.
 The purpose of this refactoring was to make the library easier to grasp and to make its API more consistent.
 All classes now live in the namespace \lstinline^caf^ and all headers have the top level folder ``caf'' instead of ``cppa''.
@@ -168,3 +168,25 @@ The following table summarizes the changes made to the API.
   \lstinline^accept_handle^, \lstinline^connection_handle^, \lstinline^publish^, \lstinline^remote_actor^, \lstinline^max_msg_size^, \lstinline^typed_publish^, \lstinline^typed_remote_actor^, \lstinline^publish_local_groups^, \lstinline^new_connection_msg^, \lstinline^new_data_msg^, \lstinline^connection_closed_msg^, \lstinline^acceptor_closed_msg^ & These classes concern I/O functionality and have thus been moved to \lstinline^caf::io^. \\
   \hline
 \end{tabular*}
+
+\subsubsection{0.10 $\Rightarrow$ 0.11}
+
+Version 0.11 introduced new, optional components.
+The core library itself, however, mainly received optimizations and bugfixes with one exception: the member function \lstinline^on_exit^ is no longer virtual.
+You can still provide it to define a custom exit handler, but you must not use \lstinline^override^.
+
+\clearpage
+\subsubsection{0.11 $\Rightarrow$ 0.12}
+
+Version 0.12 removed two features:
+
+\begin{itemize}
+\item
+Type names are no longer demangled automatically.
+Hence, users must explicitly pass the type name as first argument when using \lstinline^announce^, i.e., \lstinline^announce<my_class>(...)^ becomes \lstinline^announce<my_class>("my_class", ...)^.
+
+\item
+Synchronous send blocks no longer support \lstinline^continue_with^.
+This feature has been removed without substitution.
+\end{itemize}
+

@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -23,7 +23,9 @@
 #include <atomic>
 
 #include "caf/message.hpp"
-#include "caf/scheduler.hpp"
+#include "caf/execution_unit.hpp"
+
+#include "caf/scheduler/abstract_coordinator.hpp"
 
 #include "caf/detail/singletons.hpp"
 #include "caf/detail/single_reader_queue.hpp"
@@ -38,13 +40,18 @@ class cooperative_scheduling {
   using timeout_type = int;
 
   template <class Actor>
-  inline void launch(Actor* self, execution_unit* host) {
+  inline void launch(Actor* self, execution_unit* host, bool lazy) {
     // detached in scheduler::worker::run
     self->attach_to_scheduler();
-    if (host)
+    if (lazy) {
+      self->mailbox().try_block();
+      return;
+    }
+    if (host) {
       host->exec_later(self);
-    else
+    } else {
       detail::singletons::get_scheduling_coordinator()->enqueue(self);
+    }
   }
 
   template <class Actor>

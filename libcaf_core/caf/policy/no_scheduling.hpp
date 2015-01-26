@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -23,6 +23,7 @@
 #include <mutex>
 #include <thread>
 #include <chrono>
+#include <limits>
 #include <condition_variable>
 
 #include "caf/duration.hpp"
@@ -64,7 +65,7 @@ class no_scheduling {
   }
 
   template <class Actor>
-  void launch(Actor* self, execution_unit*) {
+  void launch(Actor* self, execution_unit*, bool) {
     CAF_REQUIRE(self != nullptr);
     CAF_PUSH_AID(self->id());
     CAF_LOG_TRACE(CAF_ARG(self));
@@ -73,10 +74,8 @@ class no_scheduling {
     std::thread([=] {
       CAF_PUSH_AID(mself->id());
       CAF_LOG_TRACE("");
-      for (;;) {
-        if (mself->resume(nullptr) == resumable::done) {
-          return;
-        }
+      auto max_throughput = std::numeric_limits<size_t>::max();
+      while (mself->resume(nullptr, max_throughput) != resumable::done) {
         // await new data before resuming actor
         await_data(mself.get());
         CAF_REQUIRE(self->mailbox().blocked() == false);

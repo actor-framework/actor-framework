@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -25,8 +25,6 @@
 
 #include "caf/uniform_type_info.hpp"
 #include "caf/primitive_variant.hpp"
-
-#include "caf/detail/to_uniform_name.hpp"
 
 namespace caf {
 
@@ -111,8 +109,7 @@ template <class T>
 serializer& operator<<(serializer& s, const T& what) {
   auto mtype = uniform_typeid<T>();
   if (mtype == nullptr) {
-    throw std::logic_error("no uniform type info found for "
-                           + detail::to_uniform_name(typeid(T)));
+    throw std::logic_error("no uniform type info found for T");
   }
   mtype->serialize(&what, &s);
   return s;

@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -76,7 +76,7 @@ class behavior_stack {
   }
 
   inline void push_back(behavior&& what,
-              message_id response_id = message_id::invalid) {
+              message_id response_id = invalid_message_id) {
     m_elements.emplace_back(std::move(what), response_id);
   }
 

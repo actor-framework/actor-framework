@@ -13,4 +13,5 @@ manual/build-pdf/*
 manual/build-html/*
 manual/*.toc
 manual/manual.html
+manual/variables.tex
 *.swp

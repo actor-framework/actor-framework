@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -25,12 +25,11 @@
 #include "caf/message_id.hpp"
 #include "caf/typed_behavior.hpp"
 #include "caf/continue_helper.hpp"
+#include "caf/system_messages.hpp"
 #include "caf/typed_continue_helper.hpp"
 
 #include "caf/detail/type_list.hpp"
-
 #include "caf/detail/typed_actor_util.hpp"
-#include "caf/detail/response_handle_util.hpp"
 
 namespace caf {
 
@@ -52,180 +51,171 @@ struct blocking_response_handle_tag {};
  * This helper class identifies an expected response message
  * and enables `sync_send(...).then(...)`.
  */
-template <class Self, class Result, class Tag>
+template <class Self, class ResultOptPairOrMessage, class Tag>
 class response_handle;
 
 /******************************************************************************
- *               nonblocking + untyped              *
+ *                            nonblocking + untyped                           *
  ******************************************************************************/
 template <class Self>
 class response_handle<Self, message, nonblocking_response_handle_tag> {
-
  public:
-
   response_handle() = delete;
-
   response_handle(const response_handle&) = default;
-
   response_handle& operator=(const response_handle&) = default;
 
-  inline continue_helper then(behavior bhvr) const {
-    m_self->bhvr_stack().push_back(std::move(bhvr), m_mid);
-    return {m_mid, m_self};
+  response_handle(message_id mid, Self* self) : m_mid(mid), m_self(self) {
+    // nop
   }
 
-  template <class... Cs, class... Ts>
-  continue_helper then(const match_expr<Cs...>& arg,
-             const Ts&... args) const {
-    return then(behavior{arg, args...});
+  template <class T, class... Ts>
+  continue_helper then(T arg, Ts&&... args) const {
+    auto selfptr = m_self;
+    behavior bhvr{
+      std::move(arg),
+      std::forward<Ts>(args)...,
+      on<sync_timeout_msg>() >> [selfptr]() -> skip_message_t {
+        selfptr->handle_sync_timeout();
+        return {};
+      }
+    };
+    m_self->bhvr_stack().push_back(std::move(bhvr), m_mid);
+    return {m_mid};
+  }
+
+ private:
+  message_id m_mid;
+  Self* m_self;
+};
+
+/******************************************************************************
+ *                            nonblocking + typed                             *
+ ******************************************************************************/
+template <class Self, class TypedOutputPair>
+class response_handle<Self, TypedOutputPair, nonblocking_response_handle_tag> {
+ public:
+  response_handle() = delete;
+  response_handle(const response_handle&) = default;
+  response_handle& operator=(const response_handle&) = default;
+
+  response_handle(message_id mid, Self* self) : m_mid(mid), m_self(self) {
+    // nop
   }
 
   template <class... Fs>
-  typename std::enable_if<detail::all_callable<Fs...>::value,
-              continue_helper>::type
-  then(Fs... fs) const {
-    return then(detail::fs2bhvr(m_self, fs...));
+  typed_continue_helper<
+    typename detail::lifted_result_type<
+      typename detail::common_result_type<
+        typename detail::get_callable_trait<Fs>::result_type...
+      >::type
+    >::type>
+  then(Fs... fs) {
+    static_assert(sizeof...(Fs) > 0, "at least one functor is requried");
+    static_assert(detail::conjunction<detail::is_callable<Fs>::value...>::value,
+                  "all arguments must be callable");
+    static_assert(detail::conjunction<!is_match_expr<Fs>::value...>::value,
+                  "match expressions are not allowed in this context");
+    detail::type_checker<TypedOutputPair, Fs...>::check();
+    auto selfptr = m_self;
+    behavior tmp{
+      fs...,
+      on<sync_timeout_msg>() >> [selfptr]() -> skip_message_t {
+        selfptr->handle_sync_timeout();
+        return {};
+      }
+    };
+    m_self->bhvr_stack().push_back(std::move(tmp), m_mid);
+    return {m_mid};
   }
 
-  response_handle(const message_id& mid, Self* self)
-      : m_mid(mid), m_self(self) {}
-
  private:
-
   message_id m_mid;
-
   Self* m_self;
-
 };
 
 /******************************************************************************
- *              nonblocking + typed               *
- ******************************************************************************/
-template <class Self, class... Ts>
-class response_handle<Self, detail::type_list<Ts...>,
-            nonblocking_response_handle_tag> {
-
- public:
-
-  response_handle() = delete;
-
-  response_handle(const response_handle&) = default;
-
-  response_handle& operator=(const response_handle&) = default;
-
-  template <class F, typename Enable = typename std::enable_if<
-                detail::is_callable<F>::value &&
-                !is_match_expr<F>::value>::type>
-  typed_continue_helper<typename detail::lifted_result_type<
-    typename detail::get_callable_trait<F>::result_type>::type>
-  then(F fun) {
-    detail::assert_types<detail::type_list<Ts...>, F>();
-    m_self->bhvr_stack().push_back(behavior{on_arg_match >> fun}, m_mid);
-    return {m_mid, m_self};
-  }
-
-  response_handle(const message_id& mid, Self* self)
-      : m_mid(mid), m_self(self) {}
-
- private:
-
-  message_id m_mid;
-
-  Self* m_self;
-
-};
-
-/******************************************************************************
- *               blocking + untyped               *
+ *                             blocking + untyped                             *
  ******************************************************************************/
 template <class Self>
 class response_handle<Self, message, blocking_response_handle_tag> {
-
  public:
-
   response_handle() = delete;
-
   response_handle(const response_handle&) = default;
-
   response_handle& operator=(const response_handle&) = default;
 
-  void await(behavior& pfun) { m_self->dequeue_response(pfun, m_mid); }
-
-  inline void await(behavior&& pfun) {
-    behavior tmp{std::move(pfun)};
-    await(tmp);
+  response_handle(message_id mid, Self* self) : m_mid(mid), m_self(self) {
+    // nop
   }
 
-  template <class... Cs, class... Ts>
-  void await(const match_expr<Cs...>& arg, const Ts&... args) {
-    behavior bhvr{arg, args...};
-    await(bhvr);
+  void await(behavior& bhvr) {
+    m_self->dequeue_response(bhvr, m_mid);
   }
 
-  template <class... Fs>
-  typename std::enable_if<detail::all_callable<Fs...>::value>::type
-  await(Fs... fs) {
-    await(detail::fs2bhvr(m_self, fs...));
+  template <class T, class... Ts>
+  void await(T arg, Ts&&... args) const {
+    auto selfptr = m_self;
+    behavior bhvr{
+      std::move(arg),
+      std::forward<Ts>(args)...,
+      on<sync_timeout_msg>() >> [selfptr]() -> skip_message_t {
+        selfptr->handle_sync_timeout();
+        return {};
+      }
+    };
+    m_self->dequeue_response(bhvr, m_mid);
   }
-
-  response_handle(const message_id& mid, Self* self)
-      : m_mid(mid), m_self(self) {}
 
  private:
-
   message_id m_mid;
-
   Self* m_self;
-
 };
 
 /******************************************************************************
- *                blocking + typed                *
+ *                              blocking + typed                              *
  ******************************************************************************/
-template <class Self, class... Ts>
-class response_handle<Self, detail::type_list<Ts...>,
-            blocking_response_handle_tag> {
-
+template <class Self, class OutputPair>
+class response_handle<Self, OutputPair, blocking_response_handle_tag> {
  public:
-
-  using result_types = detail::type_list<Ts...>;
-
   response_handle() = delete;
-
   response_handle(const response_handle&) = default;
-
   response_handle& operator=(const response_handle&) = default;
 
-  template <class F>
-  void await(F fun) {
-    using arg_types =
-      typename detail::tl_map<
-        typename detail::get_callable_trait<F>::arg_types,
-        detail::rm_const_and_ref
-      >::type;
-    static constexpr size_t fun_args = detail::tl_size<arg_types>::value;
-    static_assert(fun_args <= detail::tl_size<result_types>::value,
-            "functor takes too much arguments");
-    using recv_types =
-      typename detail::tl_right<
-        result_types,
-        fun_args
-      >::type;
-    static_assert(std::is_same<arg_types, recv_types>::value,
-            "wrong functor signature");
-    behavior tmp = detail::fs2bhvr(m_self, fun);
+  response_handle(message_id mid, Self* self) : m_mid(mid), m_self(self) {
+    // nop
+  }
+
+  static constexpr bool is_either_or_handle =
+    !std::is_same<
+      none_t,
+      typename OutputPair::second
+    >::value;
+
+  template <class... Fs>
+  void await(Fs... fs) {
+    static_assert(sizeof...(Fs) > 0,
+                  "at least one argument is required");
+    static_assert((is_either_or_handle && sizeof...(Fs) == 2)
+                  || sizeof...(Fs) == 1,
+                  "wrong number of functors");
+    static_assert(detail::conjunction<detail::is_callable<Fs>::value...>::value,
+                  "all arguments must be callable");
+    static_assert(detail::conjunction<!is_match_expr<Fs>::value...>::value,
+                  "match expressions are not allowed in this context");
+    detail::type_checker<OutputPair, Fs...>::check();
+    auto selfptr = m_self;
+    behavior tmp{
+      fs...,
+      on<sync_timeout_msg>() >> [selfptr]() -> skip_message_t {
+        selfptr->handle_sync_timeout();
+        return {};
+      }
+    };
     m_self->dequeue_response(tmp, m_mid);
   }
 
-  response_handle(const message_id& mid, Self* self)
-      : m_mid(mid), m_self(self) {}
-
  private:
-
   message_id m_mid;
-
   Self* m_self;
-
 };
 
 } // namespace caf

@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -23,6 +23,8 @@
 #include "test.hpp"
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
+
+#include "caf/string_algorithms.hpp"
 
 using namespace std;
 using namespace caf;
@@ -136,46 +138,34 @@ behavior peer_acceptor_fun(broker* self, const actor& buddy) {
       self->fork(peer_fun, msg.handle, buddy);
       self->quit();
     },
+    on(atom("publish")) >> [=] {
+      return self->add_tcp_doorman(0, "127.0.0.1").second;
+    },
     others() >> CAF_UNEXPECTED_MSG_CB(self)
   };
 }
 
 void run_server(bool spawn_client, const char* bin_path) {
-  auto p = spawn(pong);
-  uint16_t port = 4242;
-  bool done = false;
-  while (!done) {
-    try {
-      spawn_functor(nullptr,
-              [=](broker* bro) {
-                bro->add_acceptor(
-                  network::new_ipv4_acceptor(port));
-              },
-              peer_acceptor_fun, p);
-    }
-    catch (bind_failure&) {
-      // try next port
-      ++port;
-    }
-    done = true;
-  }
-  CAF_CHECKPOINT();
-  if (!spawn_client) {
-    cout << "server is running on port " << port << endl;
-  } else {
-    ostringstream oss;
-    oss << bin_path << " -c " << port << to_dev_null;
-    thread child{[&oss] {
-      CAF_LOGC_TRACE("NONE", "main$thread_launcher", "");
-      auto cmdstr = oss.str();
-      if (system(cmdstr.c_str()) != 0) {
-        CAF_PRINTERR("FATAL: command failed: " << cmdstr);
-        abort();
+  scoped_actor self;
+  auto serv = io::spawn_io(peer_acceptor_fun, spawn(pong));
+  self->sync_send(serv, atom("publish")).await(
+    [&](uint16_t port) {
+      CAF_CHECKPOINT();
+      cout << "server is running on port " << port << endl;
+      if (spawn_client) {
+        auto child = run_program(self, bin_path, "-c", port);
+        CAF_CHECKPOINT();
+        child.join();
       }
-    }};
-    CAF_CHECKPOINT();
-    child.join();
-  }
+    }
+  );
+  self->await_all_other_actors_done();
+  self->receive(
+    [](const std::string& output) {
+      cout << endl << endl << "*** output of client program ***"
+           << endl << output << endl;
+    }
+  );
 }
 
 int main(int argc, char** argv) {
@@ -195,7 +185,6 @@ int main(int argc, char** argv) {
     },
     on() >> [&] {
       run_server(true, argv[0]);
-
     },
     others() >> [&] {
        cerr << "usage: " << argv[0] << " [-c PORT]" << endl;

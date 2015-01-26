@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -23,14 +23,10 @@
 #include <atomic>
 #include <typeinfo>
 
+#include "caf/uniform_typeid.hpp"
+
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
-
-// forward declarations
-namespace caf {
-class uniform_type_info;
-const uniform_type_info* uniform_typeid(const std::type_info&);
-} // namespace caf
 
 namespace caf {
 namespace detail {
@@ -88,7 +84,7 @@ struct types_array_impl {
   static constexpr bool builtin_only = true;
   inline bool is_pure() const { return true; }
   // all types are builtin, perform lookup on constuction
-  const uniform_type_info* data[sizeof...(T)];
+  const uniform_type_info* data[sizeof...(T) == 0 ? 1 : sizeof...(T)];
   types_array_impl() : data{ta_util<caf_tinf, true, T>::get()...} {}
   inline const uniform_type_info* operator[](size_t p) const {
     return data[p];
@@ -103,7 +99,7 @@ struct types_array_impl<false, T...> {
   static constexpr bool builtin_only = false;
   inline bool is_pure() const { return false; }
   // contains std::type_info for all non-builtin types
-  const std::type_info* tinfo_data[sizeof...(T)];
+  const std::type_info* tinfo_data[sizeof...(T) == 0 ? 1 : sizeof...(T)];
   // contains uniform_type_infos for builtin types and lazy initializes
   // non-builtin types at runtime
   mutable std::atomic<const uniform_type_info*> data[sizeof...(T)];

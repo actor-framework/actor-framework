@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -43,11 +43,6 @@ class message_handler;
 class behavior {
  public:
   friend class message_handler;
-
-  /**
-   * The type of continuations that can be used to extend an existing behavior.
-   */
-  using continuation_fun = std::function<optional<message>(message&)>;
 
   behavior() = default;
   behavior(behavior&&) = default;
@@ -114,12 +109,6 @@ class behavior {
   optional<message> operator()(T&& arg) {
     return (m_impl) ? m_impl->invoke(std::forward<T>(arg)) : none;
   }
-
-  /**
-   * Adds a continuation to this behavior that is executed
-   * whenever this behavior was successfully applied to a message.
-   */
-  behavior add_continuation(continuation_fun fun);
 
   /**
    * Checks whether this behavior is not empty.

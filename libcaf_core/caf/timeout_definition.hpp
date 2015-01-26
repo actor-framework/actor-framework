@@ -10,15 +10,15 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef TIMEOUT_DEFINITION_HPP
-#define TIMEOUT_DEFINITION_HPP
+#ifndef CAF_TIMEOUT_DEFINITION_HPP
+#define CAF_TIMEOUT_DEFINITION_HPP
 
 #include <functional>
 
@@ -27,20 +27,25 @@
 namespace caf {
 
 namespace detail {
+
 class behavior_impl;
-}
+
+behavior_impl* new_default_behavior(duration d, std::function<void()> fun);
+
+} // namespace detail
 
 template <class F>
 struct timeout_definition {
   static constexpr bool may_have_timeout = true;
   duration timeout;
   F handler;
-  detail::behavior_impl* as_behavior_impl() const;
-
+  detail::behavior_impl* as_behavior_impl() const {
+    return detail::new_default_behavior(timeout, handler);
+  }
 };
 
 using generic_timeout_definition = timeout_definition<std::function<void()>>;
 
 } // namespace caf
 
-#endif // TIMEOUT_DEFINITION_HPP
+#endif // CAF_TIMEOUT_DEFINITION_HPP

@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -23,7 +23,8 @@
 #include <string>
 #include <memory>
 
-#include "caf/channel.hpp"
+#include "caf/actor_addr.hpp"
+#include "caf/attachable.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/abstract_channel.hpp"
 
@@ -40,6 +41,7 @@ namespace caf {
 
 class group;
 class serializer;
+class local_actor;
 class deserializer;
 
 /**
@@ -49,32 +51,50 @@ class abstract_group : public abstract_channel {
  public:
   friend class detail::group_manager;
   friend class detail::peer_connection;
+  friend class local_actor;
 
   ~abstract_group();
 
   class subscription;
 
+  struct subscription_token {
+    intrusive_ptr<abstract_group> group;
+  };
+
+  class subscription_predicate {
+   public:
+    inline subscription_predicate(intrusive_ptr<abstract_group> group)
+        : m_group(std::move(group)) {
+      // nop
+    }
+    inline bool operator()(const attachable_ptr& ptr) {
+      return ptr->matches(subscription_token{m_group});
+    }
+   private:
+    intrusive_ptr<abstract_group> m_group;
+  };
+
   // needs access to unsubscribe()
   friend class subscription;
 
   // unsubscribes its channel from the group on destruction
-  class subscription {
+  class subscription : public attachable {
    public:
-    friend class abstract_group;
-    subscription(const subscription&) = delete;
-    subscription& operator=(const subscription&) = delete;
-    subscription() = default;
-    subscription(subscription&&) = default;
-    subscription(const channel& s, const intrusive_ptr<abstract_group>& g);
+    subscription(const intrusive_ptr<abstract_group>& g);
 
-    ~subscription();
+    void actor_exited(abstract_actor* self, uint32_t reason) override;
 
-    inline bool valid() const {
-      return (m_subscriber) && (m_group);
+    bool matches(const token& what) override;
+
+    static inline attachable_ptr make(intrusive_ptr<abstract_group> ptr) {
+      return attachable_ptr{new subscription(std::move(ptr))};
+    }
+
+    const intrusive_ptr<abstract_group>& group() const {
+      return m_group;
     }
 
    private:
-    channel m_subscriber;
     intrusive_ptr<abstract_group> m_group;
   };
 
@@ -126,12 +146,12 @@ class abstract_group : public abstract_channel {
   /**
    * Subscribes `who` to this group and returns a subscription object.
    */
-  virtual subscription subscribe(const channel& who) = 0;
+  virtual attachable_ptr subscribe(const actor_addr& who) = 0;
 
  protected:
   abstract_group(module_ptr module, std::string group_id);
   // called by subscription objects
-  virtual void unsubscribe(const channel& who) = 0;
+  virtual void unsubscribe(const actor_addr& who) = 0;
   module_ptr m_module;
   std::string m_identifier;
 };

@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -181,16 +181,12 @@ class message {
   /**
    * Returns an iterator to the beginning.
    */
-  inline const_iterator begin() const {
-    return m_vals->begin();
-  }
+  const_iterator begin() const;
 
   /**
    * Returns an iterator to the end.
    */
-  inline const_iterator end() const {
-    return m_vals->end();
-  }
+  const_iterator end() const;
 
   /**
    * Returns a copy-on-write pointer to the internal data.
@@ -220,17 +216,13 @@ class message {
    * The type token `&typeid(void)` indicates that this tuple is dynamically
    * typed, i.e., the types where not available at compile time.
    */
-  inline const std::type_info* type_token() const {
-    return m_vals->type_token();
-  }
+  const std::type_info* type_token() const;
 
   /**
    * Checks whether this tuple is dynamically typed, i.e.,
    * its types were not known at compile time.
    */
-  inline bool dynamically_typed() const {
-    return m_vals->dynamically_typed();
-  }
+  bool dynamically_typed() const;
 
   /**
    * Applies @p handler to this message and returns the result
@@ -289,21 +281,35 @@ inline bool operator!=(const message& lhs, const message& rhs) {
   return !(lhs == rhs);
 }
 
+template <class T>
+struct lift_message_element {
+  using type = T;
+};
+
+template <class T, T V>
+struct lift_message_element<std::integral_constant<T, V>> {
+  using type = T;
+};
+
 /**
  * Creates a new `message` containing the elements `args...`.
  * @relates message
  */
 template <class T, class... Ts>
 typename std::enable_if<
-  !std::is_same<message, typename detail::rm_const_and_ref<T>::type>::value
+  !std::is_same<message, typename std::decay<T>::type>::value
   || (sizeof...(Ts) > 0),
   message
 >::type
 make_message(T&& arg, Ts&&... args) {
-  using namespace detail;
-  using data = tuple_vals<typename strip_and_convert<T>::type,
-                          typename strip_and_convert<Ts>::type...>;
-  auto ptr = new data(std::forward<T>(arg), std::forward<Ts>(args)...);
+  using storage
+    = detail::tuple_vals<typename lift_message_element<
+                           typename detail::strip_and_convert<T>::type
+                         >::type,
+                         typename lift_message_element<
+                           typename detail::strip_and_convert<Ts>::type
+                         >::type...>;
+  auto ptr = new storage(std::forward<T>(arg), std::forward<Ts>(args)...);
   return message{detail::message_data::ptr{ptr}};
 }
 

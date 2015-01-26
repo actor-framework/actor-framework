@@ -14,6 +14,19 @@ use this configure script to access CMake equivalent functionality.\
 command="$0 $*"
 dirname_0=`dirname $0`
 sourcedir=`cd $dirname_0 && pwd`
+benchmark_suite_options=""
+if [ -d "$sourcedir/benchmarks/caf" ] ; then
+benchmark_suite_options="\
+
+  Benchmark Suite Options:
+    --with-javac=FILE           path to Java compiler
+    --with-java=FILE            path to Java Runtime
+    --with-scalac=FILE          path to Scala compiler
+    --with-erlc=FILE            path to Erlang compiler
+    --with-charmc=FILE          path to Charm++ compiler
+    --with-salsa=FILE           path to SALSA Lite jar
+"
+fi
 usage="\
 Usage: $0 [OPTION]... [VAR=VALUE]...
 
@@ -32,7 +45,9 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --dual-build                build using both gcc and clang
     --build-static              build as static and shared library
     --build-static-only         build as static library only
-    --more-clang-warnings       enables most of Clang's warning flags
+    --more-warnings             enables most warnings
+    --no-compiler-check         disable compiler version check
+    --warnings-as-errors        enables -Werror
 
   Installation Directories:
     --prefix=PREFIX             installation directory [/usr/local]
@@ -47,6 +62,11 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --no-protobuf-examples      build without Google Protobuf examples
     --no-curl-examples          build without libcurl examples
     --no-unit-tests             build without unit tests
+    --no-opencl                 build without opencl
+    --no-nexus                  build without nexus
+    --no-cash                   build without cash
+    --no-benchmarks             build without benchmarks
+    --no-riac                   build without riac
 
   Debugging:
     --with-runtime-checks       build with requirement checks at runtime
@@ -56,14 +76,12 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
                                   - INFO
                                   - DEBUG
                                   - TRACE
-                                (implicitly sets --enable-debug)
-    --enable-address-sanitizer  build with Clang's address sanitizer
+    --with-address-sanitizer    build with address sanitizer if available
 
-  Influential Environment Variables (only on first invocation
-  per build directory):
+  Influential Environment Variables (only on first invocation):
     CXX                         C++ compiler command
     CXXFLAGS                    C++ compiler flags
-"
+$benchmark_suite_options"
 
 
 # Appends a CMake cache entry definition to the CMakeCacheEntries variable.
@@ -72,7 +90,16 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
 #   $3 is the cache entry variable value
 append_cache_entry ()
 {
-    CMakeCacheEntries="$CMakeCacheEntries -D $1:$2=$3"
+    case "$3" in
+        *\ * )
+            # string contains whitespace
+            CMakeCacheEntries="$CMakeCacheEntries -D \"$1:$2=$3\""
+            ;;
+        *)
+            # string contains whitespace
+            CMakeCacheEntries="$CMakeCacheEntries -D $1:$2=$3"
+            ;;
+    esac
 }
 
 # Creates a build directory via CMake.
@@ -83,6 +110,7 @@ append_cache_entry ()
 #   $5 is the CMake generator.
 configure ()
 {
+
     CMakeCacheEntries=$CMakeDefaultCache
 
     if [ -n "$1" ]; then
@@ -119,23 +147,23 @@ configure ()
         append_cache_entry LIBRARY_OUTPUT_PATH PATH "$absolute_builddir/lib"
     fi
 
-    if [ -d $workdir ]; then
+    if [ -d "$workdir" ]; then
         # If a build directory exists, check if it has a CMake cache.
-        if [ -f $workdir/CMakeCache.txt ]; then
+        if [ -f "$workdir/CMakeCache.txt" ]; then
             # If the CMake cache exists, delete it so that this configuration
             # is not tainted by a previous one.
-            rm -f $workdir/CMakeCache.txt
+            rm -f "$workdir/CMakeCache.txt"
         fi
     else
-        mkdir -p $workdir
+        mkdir -p "$workdir"
     fi
 
-    cd $workdir
+    cd "$workdir"
 
     if [ -n "$5" ]; then
-        cmake -G "$5" $CMakeCacheEntries $sourcedir
+        cmake -G "$5" $CMakeCacheEntries "$sourcedir"
     else
-        cmake $CMakeCacheEntries $sourcedir
+        cmake $CMakeCacheEntries "$sourcedir"
     fi
 
     echo "# This is the command used to configure this build" > config.status
@@ -181,27 +209,37 @@ while [ $# -ne 0 ]; do
             append_cache_entry CMAKE_INSTALL_PREFIX PATH $optarg
             ;;
         --with-runtime-checks)
-            append_cache_entry CAF_ENABLE_RUNTIME_CHECKS BOOL true
+            append_cache_entry CAF_ENABLE_RUNTIME_CHECKS BOOL yes
             ;;
         --enable-debug)
             echo "*** warning: --enable-debug is deprecated, please use --with-runtime-checks instead"
-            append_cache_entry CAF_ENABLE_RUNTIME_CHECKS BOOL true
+            append_cache_entry CAF_ENABLE_RUNTIME_CHECKS BOOL yes
             ;;
         --enable-address-sanitizer)
-            append_cache_entry ENABLE_ADDRESS_SANITIZER BOOL true
+            echo "*** warning: --enable-address-sanitizer is deprecated, please use --with-address-sanitizer instead"
+            append_cache_entry ENABLE_ADDRESS_SANITIZER BOOL yes
+            ;;
+        --with-address-sanitizer)
+            append_cache_entry ENABLE_ADDRESS_SANITIZER BOOL yes
             ;;
         --no-memory-management)
-            append_cache_entry DISABLE_MEM_MANAGEMENT BOOL true
+            append_cache_entry CAF_NO_MEM_MANAGEMENT BOOL yes
             ;;
         --without-memory-management)
             echo "*** WARNING: --without-memory-management is deprecated"
-            append_cache_entry DISABLE_MEM_MANAGEMENT BOOL true
+            append_cache_entry DISABLE_MEM_MANAGEMENT BOOL yes
             ;;
         --standalone-build)
             echo "*** WARNING: --standalone-build is deprecated"
             ;;
-        --more-clang-warnings)
-            append_cache_entry MORE_CLANG_WARNINGS BOOL true
+        --more-warnings)
+            append_cache_entry MORE_WARNINGS BOOL yes
+            ;;
+        --no-compiler-check)
+            append_cache_entry NO_COMPILER_CHECK BOOL yes
+            ;;
+        --warnings-as-errors)
+            append_cache_entry CXX_WARNINGS_AS_ERROS BOOL yes
             ;;
         --with-log-level=*)
             level=`echo "$optarg" | tr '[:lower:]' '[:upper:]'`
@@ -237,37 +275,70 @@ while [ $# -ne 0 ]; do
             append_cache_entry CMAKE_BUILD_TYPE STRING $optarg
             ;;
         --build-dir=*)
-            builddir=$optarg
+            builddir="$optarg"
             ;;
         --bin-dir=*)
-            bindir=$optarg
+            bindir="$optarg"
             ;;
         --lib-dir=*)
-            libdir=$optarg
+            libdir="$optarg"
             ;;
         --dual-build)
             dualbuild=1
             ;;
         --no-examples)
-            append_cache_entry CAF_NO_EXAMPLES STRING yes
+            append_cache_entry CAF_NO_EXAMPLES BOOL yes
             ;;
         --no-qt-examples)
-            append_cache_entry CAF_NO_QT_EXAMPLES STRING yes
+            append_cache_entry CAF_NO_QT_EXAMPLES BOOL yes
             ;;
         --no-protobuf-examples)
-            append_cache_entry CAF_NO_PROTOBUF_EXAMPLES STRING yes
+            append_cache_entry CAF_NO_PROTOBUF_EXAMPLES BOOL yes
             ;;
         --no-curl-examples)
-            append_cache_entry CAF_NO_CURL_EXAMPLES STRING yes
+            append_cache_entry CAF_NO_CURL_EXAMPLES BOOL yes
             ;;
         --no-unit-tests)
-            append_cache_entry CAF_NO_UNIT_TESTS STRING yes
+            append_cache_entry CAF_NO_UNIT_TESTS BOOL yes
+            ;;
+        --no-opencl)
+            append_cache_entry CAF_NO_OPENCL BOOL yes
             ;;
         --build-static)
-            append_cache_entry CAF_BUILD_STATIC STRING yes
+            append_cache_entry CAF_BUILD_STATIC BOOL yes
             ;;
         --build-static-only)
-            append_cache_entry CAF_BUILD_STATIC_ONLY STRING yes
+            append_cache_entry CAF_BUILD_STATIC_ONLY BOOL yes
+            ;;
+        --with-javac=*)
+            append_cache_entry CAF_JAVA_COMPILER FILEPATH "$optarg"
+            ;;
+        --with-java=*)
+            append_cache_entry CAF_JAVA_BIN FILEPATH "$optarg"
+            ;;
+        --with-scalac=*)
+            append_cache_entry CAF_SCALA_COMPILER FILEPATH "$optarg"
+            ;;
+        --with-erlc=*)
+            append_cache_entry CAF_ERLANG_COMPILER FILEPATH "$optarg"
+            ;;
+        --with-charmc=*)
+            append_cache_entry CAF_CHARM_COMPILER FILEPATH "$optarg"
+            ;;
+        --with-salsa=*)
+            append_cache_entry CAF_SALSA_JAR FILEPATH "$optarg"
+            ;;
+        --no-nexus)
+            append_cache_entry CAF_NO_NEXUS BOOL yes
+            ;;
+        --no-cash)
+            append_cache_entry CAF_NO_CASH BOOL yes
+            ;;
+        --no-benchmarks)
+            append_cache_entry CAF_NO_BENCHMARKS BOOL yes
+            ;;
+        --no-riac)
+            append_cache_entry CAF_NO_RIAC BOOL yes
             ;;
         *)
             echo "Invalid option '$1'.  Try $0 --help to see available options."

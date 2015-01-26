@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -82,24 +82,24 @@ class lifted_fun_invoker {
 
   using arg_types = typename get_callable_trait<F>::arg_types;
 
-  static constexpr size_t args = tl_size<arg_types>::value;
+  static constexpr size_t num_args = tl_size<arg_types>::value;
 
  public:
 
   lifted_fun_invoker(F& fun) : f(fun) {}
 
   template <class... Ts>
-  typename std::enable_if<sizeof...(Ts) == args, R>::type
-  operator()(Ts&... args) const {
-    if (has_none(args...)) return none;
-    return f(unopt(args)...);
+  typename std::enable_if<sizeof...(Ts) == num_args, R>::type
+  operator()(Ts&... vs) const {
+    if (has_none(vs...)) return none;
+    return f(unopt(vs)...);
   }
 
   template <class T, class... Ts>
-  typename std::enable_if<(sizeof...(Ts) + 1 > args), R>::type
-  operator()(T& arg, Ts&... args) const {
-    if (has_none(arg)) return none;
-    return (*this)(args...);
+  typename std::enable_if<(sizeof...(Ts) + 1 > num_args), R>::type
+  operator()(T& v, Ts&... vs) const {
+    if (has_none(v)) return none;
+    return (*this)(vs...);
   }
 
  private:
@@ -113,25 +113,25 @@ class lifted_fun_invoker<bool, F> {
 
   using arg_types = typename get_callable_trait<F>::arg_types;
 
-  static constexpr size_t args = tl_size<arg_types>::value;
+  static constexpr size_t num_args = tl_size<arg_types>::value;
 
  public:
 
   lifted_fun_invoker(F& fun) : f(fun) {}
 
   template <class... Ts>
-  typename std::enable_if<sizeof...(Ts) == args, bool>::type
-  operator()(Ts&&... args) const {
-    if (has_none(args...)) return false;
-    f(unopt(args)...);
+  typename std::enable_if<sizeof...(Ts) == num_args, bool>::type
+  operator()(Ts&&... vs) const {
+    if (has_none(vs...)) return false;
+    f(unopt(vs)...);
     return true;
   }
 
   template <class T, class... Ts>
-  typename std::enable_if<(sizeof...(Ts) + 1 > args), bool>::type
-  operator()(T&& arg, Ts&&... args) const {
+  typename std::enable_if<(sizeof...(Ts) + 1 > num_args), bool>::type
+  operator()(T&& arg, Ts&&... vs) const {
     if (has_none(arg)) return false;
-    return (*this)(args...);
+    return (*this)(vs...);
   }
 
  private:
@@ -169,8 +169,6 @@ class lifted_fun {
   using arg_types = type_list<Args...>;
 
   lifted_fun() = default;
-
-  lifted_fun(lifted_fun&&) = default;
 
   lifted_fun(const lifted_fun&) = default;
 

@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -32,51 +32,51 @@ namespace mixin {
  */
 template <class Base, class Subtype>
 class single_timeout : public Base {
-
-  using super = Base;
-
  public:
+  using super = Base;
 
   using combined_type = single_timeout;
 
   template <class... Ts>
   single_timeout(Ts&&... args)
-      : super(std::forward<Ts>(args)...)
-      , m_has_timeout(false)
-      , m_timeout_id(0) {}
+      : super(std::forward<Ts>(args)...),
+        m_timeout_id(0) {
+    // nop
+  }
 
   void request_timeout(const duration& d) {
     if (d.valid()) {
-      m_has_timeout = true;
+      this->has_timeout(true);
       auto tid = ++m_timeout_id;
       auto msg = make_message(timeout_msg{tid});
       if (d.is_zero()) {
         // immediately enqueue timeout message if duration == 0s
-        this->enqueue(this->address(), message_id::invalid,
+        this->enqueue(this->address(), invalid_message_id,
                       std::move(msg), this->host());
       } else
         this->delayed_send_tuple(this, d, std::move(msg));
     } else
-      m_has_timeout = false;
+      this->has_timeout(false);
   }
 
-  inline bool waits_for_timeout(uint32_t timeout_id) const {
-    return m_has_timeout && m_timeout_id == timeout_id;
+  bool waits_for_timeout(uint32_t timeout_id) const {
+    return this->has_timeout() && m_timeout_id == timeout_id;
   }
 
-  inline bool is_active_timeout(uint32_t tid) const {
+  bool is_active_timeout(uint32_t tid) const {
     return waits_for_timeout(tid);
   }
 
-  inline bool has_active_timeout() const { return m_has_timeout; }
+  uint32_t active_timeout_id() const {
+    return m_timeout_id;
+  }
 
-  inline void reset_timeout() { m_has_timeout = false; }
+  void reset_timeout() {
+    this->has_timeout(false);
+  }
 
  protected:
-
-  bool m_has_timeout;
   uint32_t m_timeout_id;
-
 };
 
 } // namespace mixin

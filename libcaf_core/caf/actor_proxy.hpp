@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -38,8 +38,8 @@ class actor_proxy;
 using actor_proxy_ptr = intrusive_ptr<actor_proxy>;
 
 /**
- * Represents a remote actor.
- * @extends abstract_actor
+ * Represents an actor running on a remote machine,
+ * or different hardware, or in a separate process.
  */
 class actor_proxy : public abstract_actor {
  public:

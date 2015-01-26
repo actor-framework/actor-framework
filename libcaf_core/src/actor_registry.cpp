@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -91,7 +91,7 @@ uint32_t actor_registry::next_id() {
 }
 
 void actor_registry::inc_running() {
-# if CAF_LOG_LEVEL >= CAF_DEBUG
+# if defined(CAF_LOG_LEVEL) && CAF_LOG_LEVEL >= CAF_DEBUG
     CAF_LOG_DEBUG("new value = " << ++m_running);
 # else
     ++m_running;

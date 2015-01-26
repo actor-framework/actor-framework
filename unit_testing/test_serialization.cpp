@@ -53,14 +53,12 @@ namespace {
 struct struct_a {
   int x;
   int y;
-
 };
 
 struct struct_b {
   struct_a a;
   int z;
   list<int> ints;
-
 };
 
 using strmap = map<string, u16string>;
@@ -68,12 +66,10 @@ using strmap = map<string, u16string>;
 struct struct_c {
   strmap strings;
   set<int> ints;
-
 };
 
 struct raw_struct {
   string str;
-
 };
 
 bool operator==(const raw_struct& lhs, const raw_struct& rhs) {
@@ -81,6 +77,10 @@ bool operator==(const raw_struct& lhs, const raw_struct& rhs) {
 }
 
 struct raw_struct_type_info : detail::abstract_uniform_type_info<raw_struct> {
+  using super = detail::abstract_uniform_type_info<raw_struct>;
+  raw_struct_type_info() : super("raw_struct") {
+    // nop
+  }
   void serialize(const void* ptr, serializer* sink) const override {
     auto rs = reinterpret_cast<const raw_struct*>(ptr);
     sink->write_value(static_cast<uint32_t>(rs->str.size()));
@@ -96,7 +96,6 @@ struct raw_struct_type_info : detail::abstract_uniform_type_info<raw_struct> {
   bool equals(const void* lhs, const void* rhs) const override {
     return deref(lhs) == deref(rhs);
   }
-
 };
 
 void test_ieee_754() {
@@ -118,7 +117,6 @@ enum class test_enum {
   a,
   b,
   c
-
 };
 
 } // namespace <anonymous>
@@ -126,7 +124,7 @@ enum class test_enum {
 int main() {
   CAF_TEST(test_serialization);
 
-  announce<test_enum>();
+  announce<test_enum>("test_enum");
 
   test_ieee_754();
 
@@ -138,14 +136,16 @@ int main() {
   CAF_CHECK_EQUAL(detail::impl_id<strmap>(), 2);
   CAF_CHECK_EQUAL(token::value, 2);
 
-  announce(typeid(raw_struct),
-       uniform_type_info_ptr{new raw_struct_type_info});
+  announce(typeid(raw_struct), uniform_type_info_ptr{new raw_struct_type_info});
 
   auto nid = detail::singletons::get_node_id();
   auto nid_str = to_string(nid);
   CAF_PRINT("nid_str = " << nid_str);
   auto nid2 = from_string<node_id>(nid_str);
-  CAF_CHECK(nid2 && nid == *nid2);
+  CAF_CHECK(nid2);
+  if (nid2) {
+    CAF_CHECK_EQUAL(to_string(nid), to_string(*nid2));
+  }
 
   /*
     auto oarr = new detail::object_array;

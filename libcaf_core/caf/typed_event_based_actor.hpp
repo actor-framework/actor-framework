@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -44,21 +44,16 @@ class typed_event_based_actor : public
          mixin::behavior_stack_based<typed_behavior<Rs...>>::template impl,
          mixin::sync_sender<nonblocking_response_handle_tag>::template impl> {
  public:
-  typed_event_based_actor() : m_initialized(false) {
-    // nop
-  }
-
   using signatures = detail::type_list<Rs...>;
 
   using behavior_type = typed_behavior<Rs...>;
 
   std::set<std::string> message_types() const override {
-    return {detail::to_uniform_name<Rs>()...};
+    return {Rs::static_type_name()...};
   }
 
  protected:
   virtual behavior_type make_behavior() = 0;
-  bool m_initialized;
 };
 
 } // namespace caf

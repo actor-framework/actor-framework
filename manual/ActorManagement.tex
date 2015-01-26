@@ -42,7 +42,7 @@ actor worker = ...;
 self->monitor(worker);
 // wait until worker exited
 self->become (
-  on(const down_msg& d) >> [] {
+  [](const down_msg& d) {
     if (d.reason == exit_reason::normal) {
       // worker finished computation
     } else {
@@ -66,6 +66,8 @@ To obtain a string representation of an error code, use \lstinline^cppa::exit_re
   \lstinline^unhandled_sync_failure^ & 4 & Actor was killed due to an unexpected synchronous response message \\
   \hline
   \lstinline^unhandled_sync_timeout^ & 5 & Actor was killed, because no timeout handler was set and a synchronous message timed out \\
+  \hline
+  \lstinline^unknown^ & 6 & Indicates that an actor has been exited and its state is no longer known \\
   \hline
   \lstinline^user_shutdown^ & 16 & Actor was killed by a user-generated event \\
   \hline

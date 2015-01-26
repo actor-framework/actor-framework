@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -68,7 +68,9 @@ typename ieee_754_trait<T>::packed_type pack754(T f) {
   typedef ieee_754_trait<T> trait; // using trait = ... fails on GCC 4.7
   using result_type = typename trait::packed_type;
   // filter special type
-  if (fabs(f) <= trait::zero) return 0; // only true if f equals +0 or -0
+  if (std::fabs(f) <= trait::zero) {
+    return 0; // only true if f equals +0 or -0
+  }
   auto significandbits = trait::bits - trait::expbits - 1; // -1 for sign bit
   // check sign and begin normalization
   result_type sign;
@@ -92,14 +94,14 @@ typename ieee_754_trait<T>::packed_type pack754(T f) {
   }
   fnorm = fnorm - static_cast<T>(1);
   // calculate 2^significandbits
-  auto pownum = static_cast<result_type>(1) << significandbits;
+  auto pownum = static_cast<T>(result_type{1} << significandbits);
   // calculate the binary form (non-float) of the significand data
   auto significand = static_cast<result_type>(fnorm * (pownum + trait::p5));
   // get the biased exponent
   auto exp = shift + ((1 << (trait::expbits - 1)) - 1); // shift + bias
   // return the final answer
-  return (sign << (trait::bits - 1)) |
-       (exp << (trait::bits - trait::expbits - 1)) | significand;
+  return (sign << (trait::bits - 1))
+         | (exp << (trait::bits - trait::expbits - 1)) | significand;
 }
 
 template <class T>
@@ -109,11 +111,10 @@ typename ieee_754_trait<T>::float_type unpack754(T i) {
   using result_type = typename trait::float_type;
   if (i == 0) return trait::zero;
   auto significandbits = trait::bits - trait::expbits - 1; // -1 for sign bit
-  // pull the significand
-  result_type result =
-    (i & ((static_cast<T>(1) << significandbits) - 1)); // mask
-  result /= (static_cast<T>(1) << significandbits); // convert back to float
-  result += static_cast<result_type>(1);      // add the one back on
+  // pull the significand: mask, convert back to float + add the one back on
+  auto result = static_cast<result_type>(i & ((T{1} << significandbits) - 1));
+  result /= static_cast<result_type>(T{1} << significandbits);
+  result += static_cast<result_type>(1);
   // deal with the exponent
   auto si = static_cast<signed_type>(i);
   auto bias = (1 << (trait::expbits - 1)) - 1;

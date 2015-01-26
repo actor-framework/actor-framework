@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -27,19 +27,24 @@
 
 namespace caf {
 
-abstract_group::subscription::subscription(const channel& s,
-                                           const abstract_group_ptr& g)
-    : m_subscriber(s), m_group(g) {
+abstract_group::subscription::subscription(const abstract_group_ptr& g)
+    : m_group(g) {
   // nop
 }
 
-abstract_group::subscription::~subscription() {
-  if (valid()) {
-    m_group->unsubscribe(m_subscriber);
-  }
+void abstract_group::subscription::actor_exited(abstract_actor* ptr, uint32_t) {
+  m_group->unsubscribe(ptr->address());
 }
 
-abstract_group::module::module(std::string name) : m_name(std::move(name)) {
+bool abstract_group::subscription::matches(const token& what) {
+  if (what.subtype != typeid(subscription_token)) {
+    return false;
+  }
+  auto& ot = *reinterpret_cast<const subscription_token*>(what.ptr);
+  return ot.group == m_group;
+}
+
+abstract_group::module::module(std::string mname) : m_name(std::move(mname)) {
   // nop
 }
 

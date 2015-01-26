@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -71,7 +71,7 @@ class upgrade_to_unique_lock {
   template <class LockType>
   upgrade_to_unique_lock(LockType& other) {
     m_lockable = other.release();
-    if (m_lockable) m_lockable->lock_upgrade();
+    if (m_lockable) m_lockable->unlock_upgrade_and_lock();
   }
 
   ~upgrade_to_unique_lock() {

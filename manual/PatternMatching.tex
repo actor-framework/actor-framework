@@ -129,7 +129,6 @@ others() >> [] {
 }
 \end{lstlisting}
 
-\clearpage
 \subsection{Projections and Extractors}
 
 Projections perform type conversions or extract data from a given input.
@@ -149,7 +148,7 @@ message_handler fun {
   on(intproj) >> [](int i) {
     // case 1: successfully converted a string
   },
-  on_arg_match >> [](const string& str) {
+  [](const string& str) {
     // case 2: str is not an integer
   }
 };
@@ -164,15 +163,21 @@ A pattern does not match if a projection failed.
 The types for the pattern are deduced from the functor's signature.
 If the functor returns an \lstinline^option<T>^, then \lstinline^T^ is deduced.
 
-%\clearpage
-%\subsection{Match Expressions}
+\subsection{Dynamically Building Messages}
 
+Usually, messages are created implicitly when sending messages but can also be created explicitly using \lstinline^make_message^.
+In both cases, types and number of elements is fixed at compile time.
+To allow for fully dynamic message generation, \lib also offers a third option to create messages by using a \lstinline^message_builder^:
 
-
-
-
-
-
-
-
-
+\begin{lstlisting}
+message_builder mb;
+// prefix message with some atom
+mb.append(atom("strings"));
+// fill message with some strings
+std::vector<std::string> strings{/*...*/};
+for (auto& str : strings) {
+  mb.append(str);
+}
+// create the message
+message msg = mb.to_message();
+\end{lstlisting}

@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -23,8 +23,13 @@
 #include <memory>
 #include <cstdint>
 #include <typeinfo>
+#include <exception>
+
+#include "caf/optional.hpp"
 
 namespace caf {
+
+class abstract_actor;
 
 /**
  * Callback utility class.
@@ -39,6 +44,11 @@ class attachable {
    * Represents a pointer to a value with its RTTI.
    */
   struct token {
+    template <class T>
+    token(const T& tk) : subtype(typeid(T)), ptr(&tk) {
+      // nop
+    }
+
     /**
      * Denotes the type of ptr.
      */
@@ -55,15 +65,34 @@ class attachable {
   virtual ~attachable();
 
   /**
+   * Executed if the actor did not handle an exception and must
+   * not return `none` if this attachable did handle `eptr`.
+   * Note that the first handler to handle `eptr` "wins" and no other
+   * handler will be invoked.
+   * @returns The exit reason the actor should use.
+   */
+  virtual optional<uint32_t> handle_exception(const std::exception_ptr& eptr);
+
+  /**
    * Executed if the actor finished execution with given `reason`.
    * The default implementation does nothing.
    */
-  virtual void actor_exited(uint32_t reason) = 0;
+  virtual void actor_exited(abstract_actor* self, uint32_t reason);
 
   /**
-   * Returns `true` if `what` selects this instance, otherwise false.
+   * Returns `true` if `what` selects this instance, otherwise `false`.
    */
-  virtual bool matches(const token& what) = 0;
+  virtual bool matches(const token& what);
+
+  /**
+   * Returns `true` if `what` selects this instance, otherwise `false`.
+   */
+  template <class T>
+  bool matches(const T& what) {
+    return matches(token{typeid(T), &what});
+  }
+
+  std::unique_ptr<attachable> next;
 };
 
 /**

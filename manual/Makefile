@@ -1,5 +1,5 @@
 DIRS := build-html build-pdf
-SOURCES = ActorManagement.tex Actors.tex Appendix.tex CommonPitfalls.tex CopyOnWriteTuples.tex FirstSteps.tex GroupCommunication.tex MessagePriorities.tex NetworkTransparency.tex PatternMatching.tex ReceivingMessages.tex SendingMessages.tex StronglyTypedActors.tex SpawningActors.tex SynchronousMessages.tex TypeSystem.tex manual.tex
+SOURCES = ActorManagement.tex Actors.tex Appendix.tex CommonPitfalls.tex FirstSteps.tex GroupCommunication.tex MessagePriorities.tex NetworkTransparency.tex PatternMatching.tex ReceivingMessages.tex SendingMessages.tex StronglyTypedActors.tex SpawningActors.tex SynchronousMessages.tex TypeSystem.tex manual.tex
 
 all: pdf html
 

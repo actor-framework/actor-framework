@@ -1,7 +1,7 @@
 #include "caf/config.hpp"
 #include "caf/detail/get_mac_addresses.hpp"
 
-#ifdef CAF_MACOS
+#if defined(CAF_MACOS) || defined(CAF_BSD)
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -22,9 +22,9 @@
 namespace caf {
 namespace detail {
 
-std::vector<std::string> get_mac_addresses() {
+std::vector<iface_info> get_mac_addresses() {
   int mib[6];
-  std::vector<std::string> result;
+  std::vector<iface_info> result;
   mib[0] = CTL_NET;
   mib[1] = AF_ROUTE;
   mib[2] = 0;
@@ -66,7 +66,7 @@ std::vector<std::string> get_mac_addresses() {
     }
     auto addr = oss.str();
     if (addr != "00:00:00:00:00:00") {
-      result.push_back(std::move(addr));
+      result.push_back({i->if_name, std::move(addr)});
     }
   }
   if_freenameindex(indices);
@@ -100,7 +100,7 @@ using namespace std;
 namespace caf {
 namespace detail {
 
-std::vector<std::string> get_mac_addresses() {
+std::vector<iface_info> get_mac_addresses() {
   // get a socket handle
   int sck = socket(AF_INET, SOCK_DGRAM, 0);
   if (sck < 0) {
@@ -116,7 +116,7 @@ std::vector<std::string> get_mac_addresses() {
     perror("ioctl(SIOCGIFCONF)");
     return {};
   }
-  vector<string> hw_addresses;
+  vector<iface_info> result;
   auto ctoi = [](char c)->unsigned {
     return static_cast<unsigned char>(c);
   };
@@ -134,17 +134,17 @@ std::vector<std::string> get_mac_addresses() {
     oss << hex;
     oss.width(2);
     oss << ctoi(item->ifr_hwaddr.sa_data[0]);
-    for (size_t i = 1; i < 6; ++i) {
+    for (size_t j = 1; j < 6; ++j) {
       oss << ":";
       oss.width(2);
-      oss << ctoi(item->ifr_hwaddr.sa_data[i]);
+      oss << ctoi(item->ifr_hwaddr.sa_data[j]);
     }
     auto addr = oss.str();
     if (addr != "00:00:00:00:00:00") {
-      hw_addresses.push_back(std::move(addr));
+      result.push_back({item->ifr_name, std::move(addr)});
     }
   }
-  return hw_addresses;
+  return result;
 }
 
 } // namespace detail
@@ -154,6 +154,7 @@ std::vector<std::string> get_mac_addresses() {
 
 // windows
 
+#include <ws2tcpip.h>
 #include <winsock2.h>
 #include <vector>
 #include <string>
@@ -193,9 +194,9 @@ using namespace std;
 namespace caf {
 namespace detail {
 
-std::vector<std::string> get_mac_addresses() {
+std::vector<iface_info> get_mac_addresses() {
   // result vector
-  vector<string> hw_addresses;
+  vector<iface_info> result;
   // flags to pass to GetAdaptersAddresses
   ULONG flags = GAA_FLAG_INCLUDE_PREFIX;
   // default to unspecified address family (both)
@@ -232,7 +233,7 @@ std::vector<std::string> get_mac_addresses() {
         }
         auto hw_addr = oss.str();
         if (hw_addr != "00:00:00:00:00:00") {
-          hw_addresses.push_back(std::move(hw_addr));
+          result.push_back({addr->AdapterName, std::move(hw_addr)});
         }
       }
     }
@@ -243,7 +244,7 @@ std::vector<std::string> get_mac_addresses() {
       perror("Call to GetAdaptersAddresses failed with error");
     }
   }
-  return hw_addresses;
+  return result;
 }
 
 } // namespace detail

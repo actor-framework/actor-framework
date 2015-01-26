@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -29,19 +29,15 @@
 #include <type_traits>
 
 #include "caf/config.hpp"
+#include "caf/uniform_typeid.hpp"
 
 #include "caf/detail/type_traits.hpp"
-
-#include "caf/detail/demangle.hpp"
-#include "caf/detail/to_uniform_name.hpp"
 
 namespace caf {
 
 class serializer;
 class deserializer;
 class uniform_type_info;
-
-const uniform_type_info* uniform_typeid(const std::type_info&);
 
 struct uniform_value_t;
 
@@ -203,8 +199,8 @@ class uniform_type_info {
   /**
    * Creates a copy of `other`.
    */
-  virtual uniform_value
-  create(const uniform_value& other = uniform_value{}) const = 0;
+  virtual uniform_value create(const uniform_value& other
+                               = uniform_value{}) const = 0;
 
   /**
    * Deserializes an object of this type from `source`.
@@ -279,18 +275,14 @@ using uniform_type_info_ptr = std::unique_ptr<uniform_type_info>;
 /**
  * @relates uniform_type_info
  */
-template <class T>
-inline const uniform_type_info* uniform_typeid() {
-  return uniform_typeid(typeid(T));
-}
+
 
 /**
  * @relates uniform_type_info
  */
 inline bool operator==(const uniform_type_info& lhs,
-             const uniform_type_info& rhs) {
-  // uniform_type_info instances are singletons,
-  // thus, equal == identical
+                       const uniform_type_info& rhs) {
+  // uniform_type_info instances are singletons
   return &lhs == &rhs;
 }
 
@@ -306,7 +298,7 @@ inline bool operator!=(const uniform_type_info& lhs,
  * @relates uniform_type_info
  */
 inline bool operator==(const uniform_type_info& lhs,
-             const std::type_info& rhs) {
+                       const std::type_info& rhs) {
   return lhs.equal_to(rhs);
 }
 
@@ -314,7 +306,7 @@ inline bool operator==(const uniform_type_info& lhs,
  * @relates uniform_type_info
  */
 inline bool operator!=(const uniform_type_info& lhs,
-             const std::type_info& rhs) {
+                       const std::type_info& rhs) {
   return !(lhs.equal_to(rhs));
 }
 
@@ -322,7 +314,7 @@ inline bool operator!=(const uniform_type_info& lhs,
  * @relates uniform_type_info
  */
 inline bool operator==(const std::type_info& lhs,
-             const uniform_type_info& rhs) {
+                       const uniform_type_info& rhs) {
   return rhs.equal_to(lhs);
 }
 
@@ -330,7 +322,7 @@ inline bool operator==(const std::type_info& lhs,
  * @relates uniform_type_info
  */
 inline bool operator!=(const std::type_info& lhs,
-             const uniform_type_info& rhs) {
+                       const uniform_type_info& rhs) {
   return !(rhs.equal_to(lhs));
 }
 

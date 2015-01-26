@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -36,21 +36,12 @@ static constexpr uint32_t not_exited = 0x00000;
 static constexpr uint32_t normal = 0x00001;
 
 /**
- * Indicates that an actor finished execution
- *    because of an unhandled exception.
+ * Indicates that an actor finished execution because of an unhandled exception.
  */
 static constexpr uint32_t unhandled_exception = 0x00002;
 
 /**
- * Indicates that an event-based actor
- *    tried to use {@link receive()} or a strongly typed actor tried
- *    to call {@link become()}.
- */
-static constexpr uint32_t unallowed_function_call = 0x00003;
-
-/**
- * Indicates that the actor received an unexpected
- *    synchronous reply message.
+ * Indicates that the actor received an unexpected synchronous reply message.
  */
 static constexpr uint32_t unhandled_sync_failure = 0x00004;
 
@@ -61,30 +52,30 @@ static constexpr uint32_t unhandled_sync_timeout = 0x00005;
 
 /**
  * Indicates that the exit reason for this actor is unknown, i.e.,
- *    the actor has been terminated and no longer exists.
+ * the actor has been terminated and no longer exists.
  */
 static constexpr uint32_t unknown = 0x00006;
 
 /**
- * Indicates that the actor was forced to shutdown by
- *    a user-generated event.
+ * Indicates that the actor was forced to shutdown by a user-generated event.
  */
 static constexpr uint32_t user_shutdown = 0x00010;
 
 /**
- * Indicates that an actor finishied execution
- *    because a connection to a remote link was
- *    closed unexpectedly.
+ * Indicates that an actor finishied execution because a connection
+ * to a remote link was closed unexpectedly.
  */
 static constexpr uint32_t remote_link_unreachable = 0x00101;
 
 /**
- * Any user defined exit reason should have a
- *    value greater or equal to prevent collisions
- *    with default defined exit reasons.
+ * Any user defined exit reason should have a value greater or
+ * equal to prevent collisions with default defined exit reasons.
  */
 static constexpr uint32_t user_defined = 0x10000;
 
+/**
+ * Returns a string representation of given exit reason.
+ */
 const char* as_string(uint32_t value);
 
 } // namespace exit_reason

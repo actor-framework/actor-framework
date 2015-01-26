@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -27,6 +27,7 @@
 #include "caf/duration.hpp"
 #include "caf/response_handle.hpp"
 #include "caf/message_priority.hpp"
+#include "caf/check_typed_input.hpp"
 
 namespace caf {
 namespace mixin {
@@ -35,7 +36,6 @@ template <class Base, class Subtype, class ResponseHandleTag>
 class sync_sender_impl : public Base {
 
  public:
-
   using response_handle_type = response_handle<Subtype, message,
                                                ResponseHandleTag>;
 
@@ -129,10 +129,12 @@ class sync_sender_impl : public Base {
    **************************************************************************/
 
   template <class... Rs, class... Ts>
-  response_handle<
-    Subtype, typename detail::deduce_output_type<
-           detail::type_list<Rs...>, detail::type_list<Ts...>>::type,
-    ResponseHandleTag>
+  response_handle<Subtype,
+                  typename detail::deduce_output_type<
+                    detail::type_list<Rs...>,
+                    detail::type_list<Ts...>
+                  >::type,
+                  ResponseHandleTag>
   sync_send_tuple(message_priority prio, const typed_actor<Rs...>& dest,
           std::tuple<Ts...> what) {
     return sync_send_impl(prio, dest, detail::type_list<Ts...>{},
@@ -156,14 +158,15 @@ class sync_sender_impl : public Base {
     typename detail::deduce_output_type<
       detail::type_list<Rs...>,
       typename detail::implicit_conversions<
-        typename detail::rm_const_and_ref<Ts>::type>::type...>::type,
+        typename std::decay<Ts>::type>::type...
+      >::type,
     ResponseHandleTag>
   sync_send(message_priority prio, const typed_actor<Rs...>& dest,
         Ts&&... what) {
     return sync_send_impl(
       prio, dest,
       detail::type_list<typename detail::implicit_conversions<
-        typename detail::rm_const_and_ref<Ts>::type>::type...>{},
+        typename std::decay<Ts>::type>::type...>{},
       make_message(std::forward<Ts>(what)...));
   }
 
@@ -173,13 +176,13 @@ class sync_sender_impl : public Base {
     typename detail::deduce_output_type<
       detail::type_list<Rs...>,
       detail::type_list<typename detail::implicit_conversions<
-        typename detail::rm_const_and_ref<Ts>::type>::type...>>::type,
+        typename std::decay<Ts>::type>::type...>>::type,
     ResponseHandleTag>
   sync_send(const typed_actor<Rs...>& dest, Ts&&... what) {
     return sync_send_impl(
       message_priority::normal, dest,
       detail::type_list<typename detail::implicit_conversions<
-        typename detail::rm_const_and_ref<Ts>::type>::type...>{},
+        typename std::decay<Ts>::type>::type...>{},
       make_message(std::forward<Ts>(what)...));
   }
 
@@ -231,7 +234,7 @@ class sync_sender_impl : public Base {
     typename detail::deduce_output_type<
       detail::type_list<Rs...>,
       typename detail::implicit_conversions<
-        typename detail::rm_const_and_ref<Ts>::type>::type...>::type,
+        typename std::decay<Ts>::type>::type...>::type,
     ResponseHandleTag>
   timed_sync_send(message_priority prio, const typed_actor<Rs...>& dest,
           const duration& rtime, Ts&&... what) {
@@ -246,7 +249,7 @@ class sync_sender_impl : public Base {
     typename detail::deduce_output_type<
       detail::type_list<Rs...>,
       typename detail::implicit_conversions<
-        typename detail::rm_const_and_ref<Ts>::type>::type...>::type,
+        typename std::decay<Ts>::type>::type...>::type,
     ResponseHandleTag>
   timed_sync_send(const typed_actor<Rs...>& dest, const duration& rtime,
           Ts&&... what) {
@@ -264,7 +267,7 @@ class sync_sender_impl : public Base {
     ResponseHandleTag>
   sync_send_impl(message_priority prio, const typed_actor<Rs...>& dest,
            detail::type_list<Ts...> token, message&& what) {
-    dptr()->check_typed_input(dest, token);
+    check_typed_input(dest, token);
     return {dptr()->sync_send_tuple_impl(prio, dest, std::move(what)),
         dptr()};
   }

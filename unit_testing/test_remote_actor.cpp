@@ -19,6 +19,8 @@ using namespace caf;
 
 namespace {
 
+atomic<long> s_destructors_called;
+
 using string_pair = std::pair<std::string, std::string>;
 
 using actor_vector = vector<actor>;
@@ -32,76 +34,71 @@ void reflector(event_based_actor* self) {
 }
 
 void spawn5_server_impl(event_based_actor* self, actor client, group grp) {
-  CAF_LOGF_TRACE(CAF_TARG(client, to_string) << ", "
-                         << CAF_TARG(grp, to_string));
+  CAF_LOGF_TRACE(CAF_TARG(client, to_string)
+                 << ", " << CAF_TARG(grp, to_string));
   CAF_CHECK(grp != invalid_group);
   self->spawn_in_group(grp, reflector);
   self->spawn_in_group(grp, reflector);
   CAF_PRINT("send {'Spawn5'} and await {'ok', actor_vector}");
-  self->sync_send(client, atom("Spawn5"), grp)
-    .then(on(atom("ok"), arg_match) >> [=](const actor_vector& vec) {
-          CAF_PRINT("received vector with " << vec.size()
-                           << " elements");
-          self->send(grp, "Hello reflectors!", 5.0);
-          if (vec.size() != 5) {
-            CAF_PRINTERR(
-              "remote client did not spawn five reflectors!");
-          }
-          for (auto& a : vec) {
-            CAF_PRINT("monitor actor: " << to_string(a));
-            self->monitor(a);
+  self->sync_send(client, atom("Spawn5"), grp).then(
+    on(atom("ok"), arg_match) >> [=](const actor_vector& vec) {
+      CAF_PRINT("received vector with " << vec.size() << " elements");
+      self->send(grp, "Hello reflectors!", 5.0);
+      if (vec.size() != 5) {
+        CAF_PRINTERR("remote client did not spawn five reflectors!");
+      }
+      for (auto& a : vec) {
+        CAF_PRINT("monitor actor: " << to_string(a));
+        self->monitor(a);
+      }
+      CAF_PRINT("wait for reflected messages");
+      // receive seven reply messages (2 local, 5 remote)
+      auto replies = std::make_shared<int>(0);
+      self->become(
+        on("Hello reflectors!", 5.0) >> [=] {
+          if (++*replies == 7) {
+            CAF_PRINT("wait for DOWN messages");
+            auto downs = std::make_shared<int>(0);
+            self->become(
+              [=](const down_msg& dm) {
+                if (dm.reason != exit_reason::normal) {
+                  CAF_PRINTERR("reflector exited for non-normal exit reason!");
+                }
+                if (++*downs == 5) {
+                  CAF_CHECKPOINT();
+                  self->send(client, atom("Spawn5Done"));
+                  self->quit();
+                }
+              },
+              others() >> [=] {
+                CAF_UNEXPECTED_MSG(self);
+                self->quit(exit_reason::user_defined);
+              },
+              after(chrono::seconds(2)) >> [=] {
+                CAF_UNEXPECTED_TOUT();
+                CAF_LOGF_ERROR("did only receive " << *downs << " down messages");
+                self->quit(exit_reason::user_defined);
+              }
+            );
           }
         },
-        others() >> [=] {
-          CAF_UNEXPECTED_MSG(self);
-          self->quit(exit_reason::unhandled_exception);
-        },
-        after(chrono::seconds(10)) >> [=] {
-       CAF_UNEXPECTED_TOUT();
-       self->quit(exit_reason::unhandled_exception);
-     })
-    .continue_with([=] {
-       CAF_PRINT("wait for reflected messages");
-       // receive seven reply messages (2 local, 5 remote)
-       auto replies = std::make_shared<int>(0);
-       self->become(
-         on("Hello reflectors!", 5.0) >> [=] {
-           if (++*replies == 7) {
-             CAF_PRINT("wait for DOWN messages");
-             auto downs = std::make_shared<int>(0);
-             self->become(
-               [=](const down_msg& dm) {
-                 if (dm.reason != exit_reason::normal) {
-                   CAF_PRINTERR(
-                     "reflector exited for non-normal exit "
-                     "reason!");
-                 }
-                 if (++*downs == 5) {
-                   CAF_CHECKPOINT();
-                   self->send(client, atom("Spawn5Done"));
-                   self->quit();
-                 }
-               },
-               others() >> [=] {
-                 CAF_UNEXPECTED_MSG(self);
-                 // self->quit(exit_reason::unhandled_exception);
-               },
-               after(chrono::seconds(2)) >> [=] {
-                 CAF_UNEXPECTED_TOUT();
-                 CAF_LOGF_ERROR("did only receive "
-                         << *downs << " down messages");
-                 // self->quit(exit_reason::unhandled_exception);
-               });
-           }
-         },
-         after(std::chrono::seconds(2)) >> [=] {
-           CAF_UNEXPECTED_TOUT();
-           CAF_LOGF_ERROR("did only receive "
-                   << *replies
-                   << " responses to 'Hello reflectors!'");
-           // self->quit(exit_reason::unhandled_exception);
-         });
-     });
+        after(std::chrono::seconds(2)) >> [=] {
+          CAF_UNEXPECTED_TOUT();
+          CAF_LOGF_ERROR("did only receive " << *replies
+                         << " responses to 'Hello reflectors!'");
+          self->quit(exit_reason::user_defined);
+        }
+      );
+    },
+    others() >> [=] {
+      CAF_UNEXPECTED_MSG(self);
+      self->quit(exit_reason::user_defined);
+    },
+    after(chrono::seconds(10)) >> [=] {
+      CAF_UNEXPECTED_TOUT();
+      self->quit(exit_reason::user_defined);
+    }
+  );
 }
 
 // receive seven reply messages (2 local, 5 remote)
@@ -164,6 +161,10 @@ class client : public event_based_actor {
 
   behavior make_behavior() override {
     return spawn_ping();
+  }
+
+  ~client() {
+    ++s_destructors_called;
   }
 
  private:
@@ -234,9 +235,17 @@ class server : public event_based_actor {
 
  public:
 
-  behavior make_behavior() override { return await_spawn_ping(); }
+  behavior make_behavior() override {
+    return await_spawn_ping();
+  }
 
-  server(bool run_in_loop = false) : m_run_in_loop(run_in_loop) {}
+  server(bool run_in_loop = false) : m_run_in_loop(run_in_loop) {
+    // nop
+  }
+
+  ~server() {
+    ++s_destructors_called;
+  }
 
  private:
 
@@ -318,42 +327,31 @@ class server : public event_based_actor {
 
 };
 
-void test_remote_actor(std::string app_path, bool run_remote_actor) {
+void test_remote_actor(const char* app_path, bool run_remote_actor) {
   scoped_actor self;
   auto serv = self->spawn<server, monitored>();
-  uint16_t port = 4242;
-  bool success = false;
-  do {
-    try {
-      io::publish(serv, port, "127.0.0.1");
-      auto serv2 = io::remote_actor("127.0.0.1", port);
-      CAF_CHECK(serv == serv2);
-      success = true;
-      CAF_PRINT("running on port " << port);
-      CAF_LOGF_INFO("running on port " << port);
-    }
-    catch (bind_failure&) {
-      // try next port
-      ++port;
-    }
-  } while (!success);
-  CAF_TEST(test_remote_actor);
+  // publish on two distinct ports and use the latter one afterwards
+  auto port1 = io::publish(serv, 0, "127.0.0.1");
+  CAF_CHECK(port1 > 0);
+  CAF_PRINT("first publish succeeded on port " << port1);
+  auto port2 = io::publish(serv, 0, "127.0.0.1");
+  CAF_CHECK(port2 > 0);
+  CAF_PRINT("second publish succeeded on port " << port1);
+  CAF_LOGF_INFO("running on port " << port2);
+  // publish local groups as well
+  auto gport = io::publish_local_groups(0);
+  CAF_CHECK(gport > 0);
+  // check whether accessing local actors via io::remote_actors works correctly,
+  // i.e., does not return a proxy instance
+  auto serv2 = io::remote_actor("127.0.0.1", port2);
+  CAF_CHECK(serv2 != invalid_actor && !serv2->is_remote());
+  CAF_CHECK(serv == serv2);
   thread child;
-  ostringstream oss;
   if (run_remote_actor) {
-    oss << app_path << " -c " << port << to_dev_null;
-    // execute client_part() in a separate process,
-    // connected via localhost socket
-    child = thread([&oss]() {
-      CAF_LOGC_TRACE("NONE", "main$thread_launcher", "");
-      string cmdstr = oss.str();
-      if (system(cmdstr.c_str()) != 0) {
-        CAF_PRINTERR("FATAL: command \"" << cmdstr << "\" failed!");
-        abort();
-      }
-    });
+    child = run_program(self, app_path, "-c", port2, port1, gport);
   } else {
-    CAF_PRINT("actor published at port " << port);
+    CAF_PRINT("please run client with: "
+              << "-c " << port2 << " " << port1 << " " << gport);
   }
   CAF_CHECKPOINT();
   self->receive(
@@ -364,30 +362,41 @@ void test_remote_actor(std::string app_path, bool run_remote_actor) {
   );
   // wait until separate process (in sep. thread) finished execution
   CAF_CHECKPOINT();
-  if (run_remote_actor) child.join();
-  CAF_CHECKPOINT();
   self->await_all_other_actors_done();
+  CAF_CHECKPOINT();
+  if (run_remote_actor) {
+    child.join();
+    self->receive(
+      [](const std::string& output) {
+        cout << endl << endl << "*** output of client program ***"
+             << endl << output << endl;
+      }
+    );
+  }
 }
 
 } // namespace <anonymous>
 
 int main(int argc, char** argv) {
-  announce<actor_vector>();
-  cout << "this node is: "
-     << to_string(caf::detail::singletons::get_node_id()) << endl;
+  CAF_TEST(test_remote_actor);
+  announce<actor_vector>("actor_vector");
+  cout << "this node is: " << to_string(caf::detail::singletons::get_node_id())
+       << endl;
   message_builder{argv + 1, argv + argc}.apply({
-    on("-c", spro<uint16_t>)>> [](uint16_t port) {
+    on("-c", spro<uint16_t>, spro<uint16_t>, spro<uint16_t>)
+    >> [](uint16_t p1, uint16_t p2, uint16_t gport) {
       CAF_LOGF_INFO("run in client mode");
       scoped_actor self;
-      auto serv = io::remote_actor("localhost", port);
+      auto serv = io::remote_actor("localhost", p1);
+      auto serv2 = io::remote_actor("localhost", p2);
       // remote_actor is supposed to return the same server
       // when connecting to the same host again
       {
-        auto server2 = io::remote_actor("localhost", port);
-        CAF_CHECK(serv == server2);
-        auto server3 = io::remote_actor("127.0.0.1", port);
-        CAF_CHECK(serv == server3);
+        CAF_CHECK(serv == io::remote_actor("localhost", p1));
+        CAF_CHECK(serv2 == io::remote_actor("127.0.0.1", p2));
       }
+      // connect to published groups
+      io::remote_group("whatever", "127.0.0.1", gport);
       auto c = self->spawn<client, monitored>(serv);
       self->receive(
         [&](const down_msg& dm) {
@@ -404,10 +413,13 @@ int main(int argc, char** argv) {
       test_remote_actor(argv[0], true);
     },
     others() >> [&] {
-      CAF_PRINTERR("usage: " << argv[0] << " [-s|-c PORT]");
+      CAF_PRINTERR("usage: " << argv[0] << " [-s PORT|-c PORT1 PORT2 GROUP_PORT]");
     }
   });
   await_all_actors_done();
   shutdown();
+  // we either spawn a server or a client, in both cases
+  // there must have been exactly one dtor called
+  CAF_CHECK_EQUAL(s_destructors_called.load(), 1);
   return CAF_TEST_RESULT();
 }

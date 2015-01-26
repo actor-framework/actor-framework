@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -68,8 +68,9 @@ void host_id_from_string(const std::string& hash,
   for (size_t i = 0; i < node_id.size(); ++i) {
     // read two characters, each representing 4 bytes
     auto& val = node_id[i];
-    val = static_cast<uint8_t>(hex_char_value(*j++) << 4);
-    val |= hex_char_value(*j++);
+    val = static_cast<uint8_t>(hex_char_value(j[0]) << 4)
+          | hex_char_value(j[1]);
+    j += 2;
   }
 }
 
@@ -84,8 +85,9 @@ bool equal(const std::string& hash, const node_id::host_id_type& node_id) {
     for (size_t i = 0; i < node_id.size(); ++i) {
       // read two characters, each representing 4 bytes
       uint8_t val;
-      val = static_cast<uint8_t>(hex_char_value(*j++) << 4);
-      val |= hex_char_value(*j++);
+      val = static_cast<uint8_t>(hex_char_value(j[0]) << 4)
+            | hex_char_value(j[1]);
+      j += 2;
       if (val != node_id[i]) {
         return false;
       }
@@ -123,17 +125,6 @@ node_id::node_id(uint32_t a, const host_id_type& b) : m_data(new data{a, b}) {
   // nop
 }
 
-std::string to_string(const node_id::host_id_type& node_id) {
-  std::ostringstream oss;
-  oss << std::hex;
-  oss.fill('0');
-  for (size_t i = 0; i < node_id::host_id_size; ++i) {
-    oss.width(2);
-    oss << static_cast<uint32_t>(node_id[i]);
-  }
-  return oss.str();
-}
-
 int node_id::compare(const invalid_node_id_t&) const {
   return m_data ? 1 : 0; // invalid instances are always smaller
 }
@@ -162,12 +153,6 @@ int node_id::compare(const node_id& other) const {
   return tmp;
 }
 
-std::string to_string(const node_id& what) {
-  std::ostringstream oss;
-  oss << what.process_id() << "@" << to_string(what.host_id());
-  return oss.str();
-}
-
 node_id::data::data(uint32_t procid, host_id_type hid)
     : process_id(procid), host_id(hid) {
   // nop
@@ -179,7 +164,12 @@ node_id::data::~data() {
 
 // initializes singleton
 node_id::data* node_id::data::create_singleton() {
-  auto macs = detail::get_mac_addresses();
+  auto ifs = detail::get_mac_addresses();
+  std::vector<std::string> macs;
+  macs.reserve(ifs.size());
+  for (auto& i : ifs) {
+    macs.emplace_back(std::move(i.ethernet_address));
+  }
   auto hd_serial_and_mac_addr = join(macs, "") + detail::get_root_uuid();
   node_id::host_id_type nid;
   detail::ripemd_160(nid, hd_serial_and_mac_addr);

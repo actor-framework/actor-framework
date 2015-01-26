@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -200,7 +200,7 @@ struct pattern_type_ {
   static_assert(detail::tl_size<args>::value == 1,
           "only unary functions allowed");
   using type =
-    typename detail::rm_const_and_ref<
+    typename std::decay<
       typename detail::tl_head<args>::type
     >::type;
 };
@@ -209,7 +209,7 @@ template <class T>
 struct pattern_type_<false, T> {
   using type =
     typename implicit_conversions<
-      typename detail::rm_const_and_ref<
+      typename std::decay<
         typename detail::unboxed<T>::type
       >::type
     >::type;
@@ -312,69 +312,50 @@ std::function<optional<T>(const T&)> guarded(Predicate p, T value) {
 // special case covering arg_match as argument to guarded()
 template <class T, typename Predicate>
 unit_t guarded(Predicate, const detail::wrapped<T>&) {
-  return {};
+  return unit;
 }
 
-template <class T, bool Callable = detail::is_callable<T>::value>
-struct to_guard {
-  static std::function<optional<T>(const T&)> _(const T& value) {
-    return guarded<T>(std::equal_to<T>{}, value);
-  }
-
-};
-
-template <>
-struct to_guard<anything, false> {
-  template <class U>
-  static unit_t _(const U&) {
-    return {};
-  }
-
-};
+inline unit_t to_guard(const anything&) {
+  return unit;
+}
 
 template <class T>
-struct to_guard<detail::wrapped<T>, false> : to_guard<anything> {};
+unit_t to_guard(detail::wrapped<T> (*)()) {
+  return unit;
+}
 
 template <class T>
-struct is_optional : std::false_type {};
+unit_t to_guard(const detail::wrapped<T>&) {
+  return unit;
+}
 
 template <class T>
-struct is_optional<optional<T>> : std::true_type {};
+std::function<optional<typename detail::strip_and_convert<T>::type>(
+  const typename detail::strip_and_convert<T>::type&)>
+to_guard(const T& value,
+         typename std::enable_if<!detail::is_callable<T>::value>::type* = 0) {
+  using type = typename detail::strip_and_convert<T>::type;
+  return guarded<type>(std::equal_to<type>{}, value);
+}
 
-template <class T>
-struct to_guard<T, true> {
-  using ct = typename detail::get_callable_trait<T>::type;
-  using arg_types = typename ct::arg_types;
-  static_assert(detail::tl_size<arg_types>::value == 1,
-          "projection/guard must take exactly one argument");
-  static_assert(is_optional<typename ct::result_type>::value,
-          "projection/guard must return an optional value");
-  using value_type =
-    typename std::conditional<
-      std::is_function<T>::value,
-      T*,
-      T
-    >::type;
-  static value_type _(value_type val) { return val; }
-
-};
-
-template <class T>
-struct to_guard<detail::wrapped<T>(), true> : to_guard<anything> {};
+template <class F>
+F to_guard(F fun,
+           typename std::enable_if<detail::is_callable<F>::value>::type* = 0) {
+  return fun;
+}
 
 template <class T, class... Ts>
 auto on(const T& arg, const Ts&... args)
-  -> detail::rvalue_builder<
-      detail::type_list<
-        decltype(to_guard<typename detail::strip_and_convert<T>::type>::_(
-          arg)),
-        decltype(to_guard<
-          typename detail::strip_and_convert<Ts>::type>::_(args))...>,
-      detail::type_list<typename detail::pattern_type<T>::type,
-              typename detail::pattern_type<Ts>::type...>> {
-  return {detail::rvalue_builder_args_ctor{},
-      to_guard<typename detail::strip_and_convert<T>::type>::_(arg),
-      to_guard<typename detail::strip_and_convert<Ts>::type>::_(args)...};
+-> detail::rvalue_builder<
+    detail::type_list<
+      decltype(to_guard(arg)),
+      decltype(to_guard(args))...
+    >,
+    detail::type_list<
+      typename detail::pattern_type<T>::type,
+      typename detail::pattern_type<Ts>::type...>
+    > {
+  return {detail::rvalue_builder_args_ctor{}, to_guard(arg), to_guard(args)...};
 }
 
 inline detail::rvalue_builder<detail::empty_type_list, detail::empty_type_list>
@@ -404,7 +385,7 @@ decltype(on(A0, A1, A2, val<Ts>()...)) on() {
 }
 
 template <atom_value A0, atom_value A1, atom_value A2, atom_value A3,
-      class... Ts>
+          class... Ts>
 decltype(on(A0, A1, A2, A3, val<Ts>()...)) on() {
   return on(A0, A1, A2, A3, val<Ts>()...);
 }

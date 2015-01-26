@@ -107,14 +107,14 @@ T& append(T& storage, U&& u, Us&&... us) {
 
 int main() {
   CAF_TEST(test_uniform_type);
-  auto announce1 = announce<foo>(&foo::value);
-  auto announce2 = announce<foo>(&foo::value);
-  auto announce3 = announce<foo>(&foo::value);
-  auto announce4 = announce<foo>(&foo::value);
+  auto announce1 = announce<foo>("foo", &foo::value);
+  auto announce2 = announce<foo>("foo", &foo::value);
+  auto announce3 = announce<foo>("foo", &foo::value);
+  auto announce4 = announce<foo>("foo", &foo::value);
   CAF_CHECK(announce1 == announce2);
   CAF_CHECK(announce1 == announce3);
   CAF_CHECK(announce1 == announce4);
-  CAF_CHECK_EQUAL(announce1->name(), "$::foo");
+  CAF_CHECK_EQUAL(announce1->name(), "foo");
   {
     auto uti = uniform_typeid<atom_value>();
     CAF_CHECK(uti != nullptr);
@@ -124,7 +124,7 @@ int main() {
   // the uniform_type_info implementation is correct
   std::set<std::string> expected = {
     // local types
-    "$::foo", // <anonymous namespace>::foo
+    "foo", // <anonymous namespace>::foo
     // primitive types
     "bool",         "@i8",   "@i16",
     "@i32",         "@i64", // signed integer names
@@ -166,7 +166,7 @@ int main() {
                        "caf::io::new_data_msg"));
   }
   // check whether enums can be announced as members
-  announce<test_enum>();
-  announce<test_struct>(&test_struct::test_value);
+  announce<test_enum>("test_enum");
+  announce<test_struct>("test_struct", &test_struct::test_value);
   return CAF_TEST_RESULT();
 }

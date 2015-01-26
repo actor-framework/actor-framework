@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -31,6 +31,7 @@
 #include "caf/actor_cast.hpp"
 #include "caf/abstract_actor.hpp"
 #include "caf/system_messages.hpp"
+#include "caf/default_attachable.hpp"
 
 #include "caf/detail/logging.hpp"
 #include "caf/detail/singletons.hpp"
@@ -41,110 +42,121 @@ namespace caf {
 
 namespace {
 using guard_type = std::unique_lock<std::mutex>;
-}
+} // namespace <anonymous>
 
 // m_exit_reason is guaranteed to be set to 0, i.e., exit_reason::not_exited,
 // by std::atomic<> constructor
 
-abstract_actor::abstract_actor(actor_id aid, node_id nid)
-    : super(std::move(nid)),
+abstract_actor::abstract_actor(actor_id aid, node_id nid, size_t initial_count)
+    : super(std::move(nid), initial_count),
       m_id(aid),
-      m_is_proxy(true),
       m_exit_reason(exit_reason::not_exited),
-      m_host(nullptr) {
+      m_host(nullptr),
+      m_flags(0) {
   // nop
 }
 
-abstract_actor::abstract_actor()
-    : super(detail::singletons::get_node_id()),
+abstract_actor::abstract_actor(size_t initial_count)
+    : super(detail::singletons::get_node_id(), initial_count),
       m_id(detail::singletons::get_actor_registry()->next_id()),
-      m_is_proxy(false),
       m_exit_reason(exit_reason::not_exited),
-      m_host(nullptr) {
+      m_host(nullptr),
+      m_flags(0) {
   // nop
 }
 
-bool abstract_actor::link_to_impl(const actor_addr& other) {
-  if (other && other != this) {
-    guard_type guard{m_mtx};
-    auto ptr = actor_cast<abstract_actor_ptr>(other);
-    // send exit message if already exited
-    if (exited()) {
-      ptr->enqueue(address(), message_id::invalid,
-                   make_message(exit_msg{address(), exit_reason()}), m_host);
-    }
-    // add link if not already linked to other
-    // (checked by establish_backlink)
-    else if (ptr->establish_backlink(address())) {
-      m_links.push_back(ptr);
-      return true;
-    }
-  }
-  return false;
-}
-
-bool abstract_actor::attach(attachable_ptr ptr) {
+void abstract_actor::attach(attachable_ptr ptr) {
+  CAF_LOG_TRACE("");
   if (ptr == nullptr) {
-    guard_type guard{m_mtx};
-    return m_exit_reason == exit_reason::not_exited;
+    return;
   }
   uint32_t reason;
   { // lifetime scope of guard
     guard_type guard{m_mtx};
     reason = m_exit_reason;
     if (reason == exit_reason::not_exited) {
-      m_attachables.push_back(std::move(ptr));
-      return true;
+      attach_impl(ptr);
+      return;
     }
   }
-  ptr->actor_exited(reason);
-  return false;
+  CAF_LOG_DEBUG("cannot attach functor to terminated actor: call immediately");
+  ptr->actor_exited(this, reason);
 }
 
-void abstract_actor::detach(const attachable::token& what) {
-  attachable_ptr ptr;
-  { // lifetime scope of guard
-    guard_type guard{m_mtx};
-    auto end = m_attachables.end();
-    auto i = std::find_if(m_attachables.begin(), end,
-                          [&](attachable_ptr& p) { return p->matches(what); });
-    if (i != end) {
-      ptr = std::move(*i);
-      m_attachables.erase(i);
-    }
+size_t abstract_actor::detach_impl(const attachable::token& what,
+                                   attachable_ptr& ptr,
+                                   bool stop_on_hit,
+                                   bool dry_run) {
+  CAF_LOGF_TRACE("");
+  if (!ptr) {
+    CAF_LOGF_DEBUG("invalid ptr");
+    return 0;
   }
-  // ptr will be destroyed here, without locked mutex
+  if (ptr->matches(what)) {
+    if (!dry_run) {
+      CAF_LOGF_DEBUG("removed element");
+      attachable_ptr next;
+      next.swap(ptr->next);
+      ptr.swap(next);
+    }
+    return stop_on_hit ? 1 : 1 + detach_impl(what, ptr, stop_on_hit, dry_run);
+  }
+  return detach_impl(what, ptr->next, stop_on_hit, dry_run);
 }
 
-void abstract_actor::link_to(const actor_addr& other) {
-  static_cast<void>(link_to_impl(other));
+size_t abstract_actor::detach(const attachable::token& what) {
+  CAF_LOG_TRACE("");
+  guard_type guard{m_mtx};
+  return detach_impl(what, m_attachables_head);
 }
 
-void abstract_actor::unlink_from(const actor_addr& other) {
-  static_cast<void>(unlink_from_impl(other));
+bool abstract_actor::link_impl(linking_operation op, const actor_addr& other) {
+  CAF_LOG_TRACE(CAF_ARG(op) << ", " << CAF_TSARG(other));
+  switch (op) {
+    case establish_link_op:
+      return establish_link_impl(other);
+    case establish_backlink_op:
+      return establish_backlink_impl(other);
+    case remove_link_op:
+      return remove_link_impl(other);
+    case remove_backlink_op:
+      return remove_backlink_impl(other);
+    default:
+      return false;
+  }
 }
 
-bool abstract_actor::remove_backlink(const actor_addr& other) {
+bool abstract_actor::establish_link_impl(const actor_addr& other) {
+  CAF_LOG_TRACE(CAF_TSARG(other));
   if (other && other != this) {
     guard_type guard{m_mtx};
-    auto i = std::find(m_links.begin(), m_links.end(), other);
-    if (i != m_links.end()) {
-      m_links.erase(i);
+    auto ptr = actor_cast<abstract_actor_ptr>(other);
+    // send exit message if already exited
+    if (exited()) {
+      ptr->enqueue(address(), invalid_message_id,
+                   make_message(exit_msg{address(), exit_reason()}), m_host);
+    } else if (ptr->establish_backlink(address())) {
+      // add link if not already linked to other
+      // (checked by establish_backlink)
+      auto tmp = default_attachable::make_link(other);
+      attach_impl(tmp);
       return true;
     }
   }
   return false;
 }
 
-bool abstract_actor::establish_backlink(const actor_addr& other) {
+bool abstract_actor::establish_backlink_impl(const actor_addr& other) {
+  CAF_LOG_TRACE(CAF_TSARG(other));
   uint32_t reason = exit_reason::not_exited;
+  default_attachable::observe_token tk{other, default_attachable::link};
   if (other && other != this) {
     guard_type guard{m_mtx};
     reason = m_exit_reason;
     if (reason == exit_reason::not_exited) {
-      auto i = std::find(m_links.begin(), m_links.end(), other);
-      if (i == m_links.end()) {
-        m_links.push_back(actor_cast<abstract_actor_ptr>(other));
+      if (detach_impl(tk, m_attachables_head, true, true) == 0) {
+        auto tmp = default_attachable::make_link(other);
+        attach_impl(tmp);
         return true;
       }
     }
@@ -152,24 +164,35 @@ bool abstract_actor::establish_backlink(const actor_addr& other) {
   // send exit message without lock
   if (reason != exit_reason::not_exited) {
     auto ptr = actor_cast<abstract_actor_ptr>(other);
-    ptr->enqueue(address(), message_id::invalid,
+    ptr->enqueue(address(), invalid_message_id,
                  make_message(exit_msg{address(), exit_reason()}), m_host);
   }
   return false;
 }
 
-bool abstract_actor::unlink_from_impl(const actor_addr& other) {
-  if (!other) {
+bool abstract_actor::remove_link_impl(const actor_addr& other) {
+  CAF_LOG_TRACE(CAF_TSARG(other));
+  if (other == invalid_actor_addr || other == this) {
     return false;
   }
+  default_attachable::observe_token tk{other, default_attachable::link};
   guard_type guard{m_mtx};
   // remove_backlink returns true if this actor is linked to other
   auto ptr = actor_cast<abstract_actor_ptr>(other);
-  if (!exited() && ptr->remove_backlink(address())) {
-    auto i = std::find(m_links.begin(), m_links.end(), ptr);
-    CAF_REQUIRE(i != m_links.end());
-    m_links.erase(i);
+  if (detach_impl(tk, m_attachables_head, true) > 0) {
+    // tell remote side to remove link as well
+    ptr->remove_backlink(address());
     return true;
+  }
+  return false;
+}
+
+bool abstract_actor::remove_backlink_impl(const actor_addr& other) {
+  CAF_LOG_TRACE(CAF_TSARG(other));
+  default_attachable::observe_token tk{other, default_attachable::link};
+  if (other && other != this) {
+    guard_type guard{m_mtx};
+    return detach_impl(tk, m_attachables_head, true) > 0;
   }
   return false;
 }
@@ -179,13 +202,10 @@ actor_addr abstract_actor::address() const {
 }
 
 void abstract_actor::cleanup(uint32_t reason) {
-  // log as 'actor'
-  CAF_LOGM_TRACE("caf::actor", CAF_ARG(m_id) << ", " << CAF_ARG(reason) << ", "
-                                             << CAF_ARG(m_is_proxy));
+  CAF_LOG_TRACE(CAF_ARG(reason));
   CAF_REQUIRE(reason != exit_reason::not_exited);
   // move everyhting out of the critical section before processing it
-  decltype(m_links) mlinks;
-  decltype(m_attachables) mattachables;
+  attachable_ptr head;
   { // lifetime scope of guard
     guard_type guard{m_mtx};
     if (m_exit_reason != exit_reason::not_exited) {
@@ -193,33 +213,39 @@ void abstract_actor::cleanup(uint32_t reason) {
       return;
     }
     m_exit_reason = reason;
-    mlinks = std::move(m_links);
-    mattachables = std::move(m_attachables);
-    // make sure lists are empty
-    m_links.clear();
-    m_attachables.clear();
+    m_attachables_head.swap(head);
   }
-  CAF_LOG_INFO_IF(!is_remote(), "actor with ID "
-                                << m_id << " had " << mlinks.size()
-                                << " links and " << mattachables.size()
-                                << " attached functors; exit reason = "
+  CAF_LOG_INFO_IF(!is_remote(), "cleanup actor with ID "
+                                << m_id << "; exit reason = "
                                 << reason << ", class = "
-                                << detail::demangle(typeid(*this)));
+                                << class_name());
   // send exit messages
-  auto msg = make_message(exit_msg{address(), reason});
-  CAF_LOGM_DEBUG("caf::actor", "send EXIT to " << mlinks.size() << " links");
-  for (auto& aptr : mlinks) {
-    aptr->enqueue(address(), message_id {}.with_high_priority(), msg, m_host);
-  }
-  CAF_LOGM_DEBUG("caf::actor", "run " << mattachables.size() << " attachables");
-  for (attachable_ptr& ptr : mattachables) {
-    ptr->actor_exited(reason);
+  for (attachable* i = head.get(); i != nullptr; i = i->next.get()) {
+    i->actor_exited(this, reason);
   }
 }
 
 std::set<std::string> abstract_actor::message_types() const {
   // defaults to untyped
   return std::set<std::string>{};
+}
+
+optional<uint32_t> abstract_actor::handle(const std::exception_ptr& eptr) {
+  { // lifetime scope of guard
+    guard_type guard{m_mtx};
+    for (auto i = m_attachables_head.get(); i != nullptr; i = i->next.get()) {
+      try {
+        auto result = i->handle_exception(eptr);
+        if (result) {
+          return *result;
+        }
+      }
+      catch (...) {
+        // ignore exceptions
+      }
+    }
+  }
+  return none;
 }
 
 } // namespace caf

@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -32,31 +32,6 @@
 
 namespace caf {
 namespace detail {
-
-/**
- * Equal to std::remove_const<std::remove_reference<T>::type>.
- */
-template <class T>
-struct rm_const_and_ref {
-  using type = T;
-};
-
-template <class T>
-struct rm_const_and_ref<const T&> {
-  using type = T;
-};
-
-template <class T>
-struct rm_const_and_ref<const T> {
-  using type = T;
-};
-
-template <class T>
-struct rm_const_and_ref<T&> {
-  using type = T;
-};
-
-// template <> struct rm_const_and_ref<void> { };
 
 /**
  * Joins all bool constants using operator &&.
@@ -117,17 +92,17 @@ struct is_array_of {
  */
 template <class T0, typename T1>
 struct deduce_ref_type {
-  using type = typename detail::rm_const_and_ref<T1>::type;
+  using type = typename std::decay<T1>::type;
 };
 
 template <class T0, typename T1>
 struct deduce_ref_type<T0&, T1> {
-  using type = typename detail::rm_const_and_ref<T1>::type&;
+  using type = typename std::decay<T1>::type&;
 };
 
 template <class T0, typename T1>
 struct deduce_ref_type<const T0&, T1> {
-  using type = const typename detail::rm_const_and_ref<T1>::type&;
+  using type = const typename std::decay<T1>::type&;
 };
 
 /**
@@ -210,7 +185,7 @@ class is_forward_iterator {
   static bool sfinae_fun(
     C* iter,
     // check for 'C::value_type C::operator*()' returning a non-void type
-    typename rm_const_and_ref<decltype(*(*iter))>::type* = 0,
+    typename std::decay<decltype(*(*iter))>::type* = 0,
     // check for 'C& C::operator++()'
     typename std::enable_if<
       std::is_same<C&, decltype(++(*iter))>::value>::type* = 0,
@@ -232,8 +207,8 @@ class is_forward_iterator {
 };
 
 /**
- * Checks wheter `T` has `begin()</tt> and <tt>end() member
- *    functions returning forward iterators.
+ * Checks wheter `T` has `begin()` and `end()` member
+ * functions returning forward iterators.
  */
 template <class T>
 class is_iterable {
@@ -242,12 +217,12 @@ class is_iterable {
   static bool sfinae_fun(
     const C* cc,
     // check for 'C::begin()' returning a forward iterator
-    typename std::enable_if<
-      detail::is_forward_iterator<decltype(cc->begin())>::value>::type* =
-      0,
+    typename std::enable_if<is_forward_iterator<decltype(cc->begin())>::value>::
+      type* = 0,
     // check for 'C::end()' returning the same kind of forward iterator
-    typename std::enable_if<std::is_same<
-      decltype(cc->begin()), decltype(cc->end())>::value>::type* = 0) {
+    typename std::enable_if<std::is_same<decltype(cc->begin()),
+                                         decltype(cc->end())>::value>::type
+    * = 0) {
     return true;
   }
 
@@ -257,7 +232,7 @@ class is_iterable {
   using result_type = decltype(sfinae_fun(static_cast<const T*>(nullptr)));
 
  public:
-  static constexpr bool value = detail::is_primitive<T>::value == false &&
+  static constexpr bool value = is_primitive<T>::value == false &&
                   std::is_same<bool, result_type>::value;
 };
 
@@ -279,6 +254,23 @@ template <class T>
 struct is_mutable_ref {
   static constexpr bool value = std::is_reference<T>::value
                                 && !std::is_const<T>::value;
+};
+
+/**
+ * Checks whether `T::static_type_name()` exists.
+ */
+template <class T>
+class has_static_type_name {
+ private:
+  template <class U,
+            class = typename std::enable_if<
+                      !std::is_member_pointer<decltype(&U::is_baz)>::value
+                    >::type>
+  static std::true_type sfinae_fun(int);
+  template <class>
+  static std::false_type sfinae_fun(...);
+ public:
+  static constexpr bool value = decltype(sfinae_fun<T>(0))::value;
 };
 
 /**
@@ -358,7 +350,7 @@ struct get_callable_trait_helper<false, false, C> {
 template <class T>
 struct get_callable_trait {
   // type without cv qualifiers
-  using bare_type = typename rm_const_and_ref<T>::type;
+  using bare_type = typename std::decay<T>::type;
   // if T is a function pointer, this type identifies the function
   using signature_type = typename std::remove_pointer<bare_type>::type;
   using type =
@@ -392,7 +384,7 @@ struct is_callable {
 
   static void _fun(void*) { }
 
-  using pointer = typename rm_const_and_ref<T>::type*;
+  using pointer = typename std::decay<T>::type*;
 
   using result_type = decltype(_fun(static_cast<pointer>(nullptr)));
 
@@ -477,6 +469,26 @@ struct type_at<N, T0, Ts...> {
 template <class T0, class... Ts>
 struct type_at<0, T0, Ts...> {
   using type = T0;
+};
+
+template <class T>
+struct is_optional : std::false_type {
+  // no members
+};
+
+template <class T>
+struct is_optional<optional<T>> : std::true_type {
+  // no members
+};
+
+template <class T>
+struct is_integral_constant : std::false_type {
+  // no members
+};
+
+template <class T, T V>
+struct is_integral_constant<std::integral_constant<T, V>> : std::true_type {
+  // no members
 };
 
 } // namespace detail

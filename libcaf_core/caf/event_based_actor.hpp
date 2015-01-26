@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -33,7 +33,6 @@
 #include "caf/mixin/behavior_stack_based.hpp"
 
 #include "caf/detail/logging.hpp"
-#include "caf/detail/response_handle_util.hpp"
 
 namespace caf {
 
@@ -53,9 +52,10 @@ class event_based_actor
   /**
    * Forwards the last received message to `whom`.
    */
-  void forward_to(const actor& whom);
+  void forward_to(const actor& whom,
+                  message_priority = message_priority::normal);
 
-  event_based_actor();
+  event_based_actor() = default;
 
   ~event_based_actor();
 
@@ -66,8 +66,6 @@ class event_based_actor
    * Returns the initial actor behavior.
    */
   virtual behavior make_behavior() = 0;
-
-  bool m_initialized;
 };
 
 class event_based_actor::functor_based : public extend<event_based_actor>::

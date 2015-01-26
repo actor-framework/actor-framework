@@ -9,154 +9,175 @@ using namespace caf;
 
 namespace {
 
-struct sync_mirror : sb_actor<sync_mirror> {
-
-  behavior init_state;
-
-  sync_mirror() {
-    init_state = (others() >> [=] { return last_dequeued(); });
+struct sync_mirror : event_based_actor {
+  behavior make_behavior() override {
+    return {
+      others() >> [=] {
+        return last_dequeued();
+      }
+    };
   }
-
 };
 
 // replies to 'f' with 0.0f and to 'i' with 0
-struct float_or_int : sb_actor<float_or_int> {
-  behavior init_state = (on(atom("f")) >> [] { return 0.0f; },
-               on(atom("i")) >> [] { return 0; });
-
+struct float_or_int : event_based_actor {
+  behavior make_behavior() override {
+    return {
+      on(atom("f")) >> [] {
+        return 0.0f;
+      },
+      on(atom("i")) >> [] {
+        return 0;
+      }
+    };
+  }
 };
 
 struct popular_actor : event_based_actor { // popular actors have a buddy
   actor m_buddy;
-  popular_actor(const actor& buddy) : m_buddy(buddy) {}
-  inline const actor& buddy() const { return m_buddy; }
+  popular_actor(const actor& buddy_arg) : m_buddy(buddy_arg) {
+    // nop
+  }
+  inline const actor& buddy() const {
+    return m_buddy;
+  }
   void report_failure() {
     send(buddy(), atom("failure"));
     quit();
   }
-
 };
 
 /******************************************************************************\
- *                test case 1:                *
- *                                      *
- *          A          B          C           *
- *          |          |          |           *
- *          | --(sync_send)--> |          |           *
- *          |          | --(forward)----> |           *
- *          |          X          |---\         *
- *          |                   |   |         *
- *          |                   |<--/         *
- *          | <-------------(reply)-------------- |           *
- *          X                   X           *
+ *                                test case 1:                                *
+ *                                                                            *
+ *                  A                  B                  C                   *
+ *                  |                  |                  |                   *
+ *                  | --(sync_send)--> |                  |                   *
+ *                  |                  | --(forward)----> |                   *
+ *                  |                  X                  |---\               *
+ *                  |                                     |   |               *
+ *                  |                                     |<--/               *
+ *                  | <-------------(reply)-------------- |                   *
+ *                  X                                     X                   *
 \ ******************************************************************************/
 
 struct A : popular_actor {
-  A(const actor& buddy) : popular_actor(buddy) {}
+  A(const actor& buddy_arg) : popular_actor(buddy_arg) {
+    // nop
+  }
   behavior make_behavior() override {
-    return (on(atom("go"), arg_match) >> [=](const actor& next) {
-          CAF_CHECKPOINT();
-          sync_send(next, atom("gogo")).then([=] {
+    return {
+      on(atom("go"), arg_match) >> [=](const actor& next) {
+        CAF_CHECKPOINT();
+        sync_send(next, atom("gogo")).then(
+          [=](atom_value) {
             CAF_CHECKPOINT();
             send(buddy(), atom("success"));
             quit();
-          });
-        },
-        others() >> [=] { report_failure(); });
+          }
+        );
+      },
+      others() >> [=] {
+        report_failure();
+      }
+    };
   }
-
 };
 
 struct B : popular_actor {
-  B(const actor& buddy) : popular_actor(buddy) {}
-  behavior make_behavior() override {
-    return (others() >> [=] {
-      CAF_CHECKPOINT();
-      forward_to(buddy());
-      quit();
-    });
+  B(const actor& buddy_arg) : popular_actor(buddy_arg) {
+    // nop
   }
-
+  behavior make_behavior() override {
+    return {
+      others() >> [=] {
+        CAF_CHECKPOINT();
+        forward_to(buddy());
+        quit();
+      }
+    };
+  }
 };
 
-struct C : sb_actor<C> {
-  behavior init_state;
-  C() {
-    init_state = (on(atom("gogo")) >> [=]()->atom_value {
-      CAF_CHECKPOINT();
-      quit();
-      return atom("gogogo");
-    });
+struct C : event_based_actor {
+  behavior make_behavior() override {
+    return {
+      on(atom("gogo")) >> [=]() -> atom_value {
+        CAF_CHECKPOINT();
+        quit();
+        return atom("gogogo");
+      }
+    };
   }
-
 };
 
 /******************************************************************************\
- *                test case 2:                *
- *                                      *
- *          A          D          C           *
- *          |          |          |           *
- *          | --(sync_send)--> |          |           *
- *          |          | --(sync_send)--> |           *
- *          |          |          |---\         *
- *          |          |          |   |         *
- *          |          |          |<--/         *
- *          |          | <---(reply)----- |           *
- *          | <---(reply)----- |                    *
- *          X          X                    *
+ *                                test case 2:                                *
+ *                                                                            *
+ *                  A                  D                  C                   *
+ *                  |                  |                  |                   *
+ *                  | --(sync_send)--> |                  |                   *
+ *                  |                  | --(sync_send)--> |                   *
+ *                  |                  |                  |---\               *
+ *                  |                  |                  |   |               *
+ *                  |                  |                  |<--/               *
+ *                  |                  | <---(reply)----- |                   *
+ *                  | <---(reply)----- |                                      *
+ *                  X                  X                                      *
 \ ******************************************************************************/
 
 struct D : popular_actor {
-  D(const actor& buddy) : popular_actor(buddy) {}
+  D(const actor& buddy_arg) : popular_actor(buddy_arg) {}
   behavior make_behavior() override {
-    return (others() >> [=] {
-      /*
-      response_promise handle = make_response_promise();
-      sync_send_tuple(buddy(), last_dequeued()).then([=] {
-        reply_to(handle, last_dequeued());
-        quit();
-      });
-      //*/
-      return sync_send_tuple(buddy(), last_dequeued())
-        .then([=]()->message {
-           quit();
-           return last_dequeued();
-         }); //*/
-    });
+    return {
+      others() >> [=] {
+        return sync_send_tuple(buddy(), last_dequeued()).then(
+          others() >> [=]() -> message {
+            quit();
+            return last_dequeued();
+          }
+        );
+      }
+    };
   }
-
 };
 
 /******************************************************************************\
- *                test case 3:                *
- *                                      *
- *        Client       Server       Worker        *
- *          |          |          |           *
- *          |          | <---(idle)------ |           *
- *          | ---(request)---> |          |           *
- *          |          | ---(request)---> |           *
- *          |          |          |---\         *
- *          |          X          |   |         *
- *          |                   |<--/         *
- *          | <------------(response)------------ |           *
- *          X                             *
+ *                                test case 3:                                *
+ *                                                                            *
+ *                Client            Server              Worker                *
+ *                  |                  |                  |                   *
+ *                  |                  | <---(idle)------ |                   *
+ *                  | ---(request)---> |                  |                   *
+ *                  |                  | ---(request)---> |                   *
+ *                  |                  |                  |---\               *
+ *                  |                  X                  |   |               *
+ *                  |                                     |<--/               *
+ *                  | <------------(response)------------ |                   *
+ *                  X                                                         *
 \ ******************************************************************************/
 
 struct server : event_based_actor {
-
   behavior make_behavior() override {
-    auto die = [=] { quit(exit_reason::user_shutdown); };
-    return (on(atom("idle"), arg_match) >> [=](actor worker) {
-          become(keep_behavior,
-               on(atom("request")) >> [=] {
-                 forward_to(worker);
-                 unbecome(); // await next idle message
-               },
-               on(atom("idle")) >> skip_message, others() >> die);
-        },
-        on(atom("request")) >> skip_message, others() >> die);
+    auto die = [=] {
+      quit(exit_reason::user_shutdown);
+    };
+    return {
+      on(atom("idle"), arg_match) >> [=](actor worker) {
+        become(
+          keep_behavior,
+          on(atom("request")) >> [=] {
+            forward_to(worker);
+            unbecome(); // await next idle message
+          },
+          on(atom("idle")) >> skip_message,
+          others() >> die
+        );
+      },
+      on(atom("request")) >> skip_message,
+      others() >> die
+    };
   }
-
 };
 
 void test_sync_send() {
@@ -177,17 +198,24 @@ void test_sync_send() {
     s->on_sync_failure([=] {
       CAF_FAILURE("received: " << to_string(s->last_dequeued()));
     });
-    s->sync_send(foi, atom("i"))
-      .await([&](int i) {
-             CAF_CHECK_EQUAL(i, 0);
-             ++invocations;
-           },
-           [&](float) { CAF_UNEXPECTED_MSG(s); });
-    s->sync_send(foi, atom("f"))
-      .await([&](int) { CAF_UNEXPECTED_MSG(s); }, [&](float f) {
-         CAF_CHECK_EQUAL(f, 0.f);
-         ++invocations;
-       });
+    s->sync_send(foi, atom("i")).await(
+      [&](int i) {
+        CAF_CHECK_EQUAL(i, 0);
+        ++invocations;
+      },
+      [&](float) {
+        CAF_UNEXPECTED_MSG(s);
+      }
+    );
+    s->sync_send(foi, atom("f")).await(
+      [&](int) {
+        CAF_UNEXPECTED_MSG(s);
+      },
+      [&](float f) {
+        CAF_CHECK_EQUAL(f, 0.f);
+        ++invocations;
+      }
+    );
     CAF_CHECK_EQUAL(invocations, 2);
     CAF_PRINT("trigger sync failure");
     // provoke invocation of s->handle_sync_failure()
@@ -216,34 +244,35 @@ void test_sync_send() {
   self->send_exit(mirror, exit_reason::user_shutdown);
   self->await_all_other_actors_done();
   CAF_CHECKPOINT();
-  auto non_normal_down_msg = [](down_msg dm)->optional<down_msg> {
-    if (dm.reason != exit_reason::normal) return dm;
+  auto non_normal_down_msg = [](down_msg dm) -> optional<down_msg> {
+    if (dm.reason != exit_reason::normal) {
+      return dm;
+    }
     return none;
-
   };
   auto await_success_message = [&] {
-    self->receive(on(atom("success")) >> CAF_CHECKPOINT_CB(),
-            on(atom("failure")) >>
-              CAF_FAILURE_CB("A didn't receive sync response"),
-            on(non_normal_down_msg) >> [&](const down_msg& dm) {
-      CAF_FAILURE("A exited for reason " << dm.reason);
-    });
-
+    self->receive(
+      on(atom("success")) >> CAF_CHECKPOINT_CB(),
+      on(atom("failure")) >> CAF_FAILURE_CB("A didn't receive sync response"),
+      on(non_normal_down_msg) >> [&](const down_msg& dm) {
+        CAF_FAILURE("A exited for reason " << dm.reason);
+      }
+    );
   };
-  self->send(self->spawn<A, monitored>(self), atom("go"),
-         spawn<B>(spawn<C>()));
+  self->send(self->spawn<A, monitored>(self), atom("go"), spawn<B>(spawn<C>()));
   await_success_message();
   CAF_CHECKPOINT();
   self->await_all_other_actors_done();
-  self->send(self->spawn<A, monitored>(self), atom("go"),
-         spawn<D>(spawn<C>()));
+  self->send(self->spawn<A, monitored>(self), atom("go"), spawn<D>(spawn<C>()));
   await_success_message();
   CAF_CHECKPOINT();
   self->await_all_other_actors_done();
   CAF_CHECKPOINT();
   self->timed_sync_send(self, std::chrono::milliseconds(50), atom("NoWay"))
-    .await(on<sync_timeout_msg>() >> CAF_CHECKPOINT_CB(),
-         others() >> CAF_UNEXPECTED_MSG_CB_REF(self));
+  .await(
+    on<sync_timeout_msg>() >> CAF_CHECKPOINT_CB(),
+    others() >> CAF_UNEXPECTED_MSG_CB_REF(self)
+  );
   // we should have received two DOWN messages with normal exit reason
   // plus 'NoWay'
   int i = 0;
@@ -253,9 +282,8 @@ void test_sync_send() {
     },
     on(atom("NoWay")) >> [] {
       CAF_CHECKPOINT();
-      CAF_PRINT(
-        "trigger \"actor did not reply to a "
-        "synchronous request message\"");
+      CAF_PRINT("trigger \"actor did not reply to a "
+                "synchronous request message\"");
     },
     others() >> CAF_UNEXPECTED_MSG_CB_REF(self),
     after(std::chrono::seconds(0)) >> CAF_UNEXPECTED_TOUT_CB());
@@ -273,7 +301,11 @@ void test_sync_send() {
   });
   self->on_sync_failure(CAF_UNEXPECTED_MSG_CB_REF(self));
   self->timed_sync_send(c, std::chrono::milliseconds(500), atom("HiThere"))
-    .await(CAF_FAILURE_CB("C replied to 'HiThere'!"));
+  .await(
+    on(val<atom_value>) >> [&] {
+      cout << "C did reply to 'HiThere'" << endl;
+    }
+  );
   CAF_CHECK_EQUAL(timeout_occured, true);
   self->on_sync_failure(CAF_UNEXPECTED_MSG_CB_REF(self));
   self->sync_send(c, atom("gogo")).await(CAF_CHECKPOINT_CB());

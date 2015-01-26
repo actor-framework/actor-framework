@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -26,7 +26,6 @@
 
 #include "caf/detail/type_traits.hpp"
 
-#include "caf/detail/to_uniform_name.hpp"
 #include "caf/detail/uniform_type_info_map.hpp"
 
 namespace caf {
@@ -61,13 +60,8 @@ class abstract_uniform_type_info : public uniform_type_info {
 
  protected:
 
-  abstract_uniform_type_info() {
-    auto uname = detail::to_uniform_name<T>();
-    auto cname = detail::mapped_name_by_decorated_name(uname.c_str());
-    if (cname == uname.c_str())
-      m_name = std::move(uname);
-    else
-      m_name = cname;
+  abstract_uniform_type_info(std::string tname) {
+    m_name = detail::mapped_name_by_decorated_name(std::move(tname));
   }
 
   static inline const T& deref(const void* ptr) {

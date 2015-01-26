@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -72,21 +72,22 @@ void splice(std::string& str, const std::string& glue, T&& arg, Ts&&... args) {
   splice(str, glue, std::forward<Ts>(args)...);
 }
 
-template <size_t WhatSize, size_t WithSize>
+template <ptrdiff_t WhatSize, ptrdiff_t WithSize>
 void replace_all(std::string& str,
                  const char (&what)[WhatSize],
                  const char (&with)[WithSize]) {
   // end(what) - 1 points to the null-terminator
-  auto next = [&](std::string::iterator pos) -> std::string::iterator{
+  auto next = [&](std::string::iterator pos) -> std::string::iterator {
     return std::search(pos, str.end(), std::begin(what), std::end(what) - 1);
   };
   auto i = next(std::begin(str));
   while (i != std::end(str)) {
-    auto before = static_cast<size_t>(std::distance(std::begin(str), i));
+    auto before = std::distance(std::begin(str), i);
+    CAF_REQUIRE(before >= 0);
     str.replace(i, i + WhatSize - 1, with);
     // i became invalidated -> use new iterator pointing
     // to the first character after the replaced text
-    i = next(std::begin(str) + before + (WithSize - 1));
+    i = next(str.begin() + before + (WithSize - 1));
   }
 }
 

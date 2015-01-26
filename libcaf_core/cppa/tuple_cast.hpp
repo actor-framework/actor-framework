@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -31,6 +31,8 @@
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/types_array.hpp"
 #include "caf/detail/decorated_tuple.hpp"
+
+#include "cppa/cow_tuple.hpp"
 
 namespace caf {
 
@@ -133,8 +135,11 @@ auto moving_tuple_cast(message& tup)
     }
   }
   // same for nil, leading, and trailing
-  if (std::equal(sub.begin(), sub.end(),
-           arr_pos, detail::types_only_eq)) {
+  auto eq = [](const detail::message_iterator& lhs,
+               const uniform_type_info* rhs) {
+    return lhs.type() == rhs;
+  };
+  if (std::equal(sub.begin(), sub.end(), arr_pos, eq)) {
     return result_type::from(sub);
   }
   return none;

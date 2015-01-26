@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -45,7 +45,7 @@ struct invalid_group_t {
 constexpr invalid_group_t invalid_group = invalid_group_t{};
 
 class group : detail::comparable<group>,
-        detail::comparable<group, invalid_group_t> {
+              detail::comparable<group, invalid_group_t> {
 
   template <class T, typename U>
   friend T actor_cast(const U&);
@@ -87,11 +87,10 @@ class group : detail::comparable<group>,
 
   /**
    * Get a pointer to the group associated with
-   * `group_identifier` from the module `module_name`.
+   * `identifier` from the module `mod_name`.
    * @threadsafe
    */
-  static group get(const std::string& module_name,
-           const std::string& group_identifier);
+  static group get(const std::string& mod_name, const std::string& identifier);
 
   /**
    * Returns an anonymous group.
@@ -114,12 +113,12 @@ class group : detail::comparable<group>,
   static abstract_group::module_ptr
   get_module(const std::string& module_name);
 
+  inline const abstract_group_ptr& ptr() const {
+    return m_ptr;
+  }
+
  private:
-
-  inline abstract_group* get() const { return m_ptr.get(); }
-
   abstract_group_ptr m_ptr;
-
 };
 
 } // namespace caf

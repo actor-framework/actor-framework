@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -22,18 +22,8 @@
 
 namespace caf {
 
-continue_helper::continue_helper(message_id mid, local_actor* self)
-    : m_mid(mid), m_self(self) {}
-
-continue_helper& continue_helper::continue_with(behavior::continuation_fun f) {
-  auto ref_opt = m_self->sync_handler(m_mid);
-  if (ref_opt) {
-    behavior cpy = *ref_opt;
-    *ref_opt = cpy.add_continuation(std::move(f));
-  } else {
-    CAF_LOG_ERROR("failed to add continuation");
-  }
-  return *this;
+continue_helper::continue_helper(message_id mid) : m_mid(mid) {
+  // nop
 }
 
 } // namespace caf

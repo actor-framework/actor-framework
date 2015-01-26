@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -21,6 +21,7 @@
 #define CAF_ATOM_HPP
 
 #include <string>
+#include <type_traits>
 
 #include "caf/detail/atom_val.hpp"
 
@@ -31,15 +32,10 @@ namespace caf {
  */
 enum class atom_value : uint64_t {
   /** @cond PRIVATE */
-  dirty_little_hack = 37337
+  dirty_little_hack = 31337
   /** @endcond */
 
 };
-
-/**
- * Returns `what` as a string representation.
- */
-std::string to_string(const atom_value& what);
 
 /**
  * Creates an atom from given string literal.
@@ -50,6 +46,9 @@ constexpr atom_value atom(char const (&str)[Size]) {
   static_assert(Size <= 11, "only 10 characters are allowed");
   return static_cast<atom_value>(detail::atom_val(str, 0xF));
 }
+
+template <atom_value Value>
+using atom_constant = std::integral_constant<atom_value, Value>;
 
 } // namespace caf
 

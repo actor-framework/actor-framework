@@ -10,18 +10,20 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/actor_ostream.hpp"
+
 #include "caf/all.hpp"
-#include "caf/scheduler.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/scoped_actor.hpp"
-#include "caf/actor_ostream.hpp"
+
+#include "caf/scheduler/abstract_coordinator.hpp"
 
 #include "caf/detail/singletons.hpp"
 

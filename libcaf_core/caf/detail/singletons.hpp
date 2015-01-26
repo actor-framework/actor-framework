@@ -10,16 +10,17 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_SINGLETON_MANAGER_HPP
-#define CAF_SINGLETON_MANAGER_HPP
+#ifndef CAF_DETAIL_SINGLETONS_HPP
+#define CAF_DETAIL_SINGLETONS_HPP
 
+#include <mutex>
 #include <atomic>
 #include <cstddef> // size_t
 
@@ -43,18 +44,16 @@ class abstract_singleton {
 };
 
 class singletons {
-
+ public:
   singletons() = delete;
 
- public:
-
-  static constexpr size_t max_plugin_singletons = 3;
+  static constexpr size_t max_plugins = 3;
 
   static constexpr size_t middleman_plugin_id = 0;   // io lib
 
-  static constexpr size_t opencl_plugin_id = 1;    // OpenCL lib
+  static constexpr size_t opencl_plugin_id = 1;      // OpenCL lib
 
-  static constexpr size_t probe_plugin_id = 2;     // probe hooks
+  static constexpr size_t probe_plugin_id = 2;       // probe hooks
 
   static logging* get_logger();
 
@@ -71,48 +70,38 @@ class singletons {
 
   static uniform_type_info_map* get_uniform_type_info_map();
 
-  static message_data* get_tuple_dummy();
-
   // usually guarded by implementation-specific singleton getter
   template <class Factory>
   static abstract_singleton* get_plugin_singleton(size_t id, Factory f) {
-    return lazy_get(get_plugin_singleton(id), f);
+    return lazy_get(get_plugin_singleton(id), get_plugin_mutex(), f);
   }
 
   static void stop_singletons();
 
  private:
+  static std::mutex& get_plugin_mutex();
 
   static std::atomic<abstract_singleton*>& get_plugin_singleton(size_t id);
 
-  /*
-   * Type `T` has to provide: `static T* create_singleton()`,
-   * `void initialize()`, `void stop()`, and `dispose()`.
-   */
-  template <class T, typename Factory>
-  static T* lazy_get(std::atomic<T*>& ptr, Factory f) {
-    T* result = ptr.load();
-    while (result == nullptr) {
-      auto tmp = f();
-      // double check if singleton is still undefined
-      if (ptr.load() == nullptr) {
-        tmp->initialize();
-        if (ptr.compare_exchange_weak(result, tmp)) {
-          result = tmp;
-        } else {
-          tmp->stop();
-          tmp->dispose();
-        }
-      } else {
-        tmp->dispose();
+  // Get instance from @p ptr or crate it on-the-fly using DCLP
+  template <class T, class Factory>
+  static T* lazy_get(std::atomic<T*>& ptr, std::mutex& mtx, Factory f) {
+    auto result = ptr.load(std::memory_order_acquire);
+    if (result == nullptr) {
+      std::lock_guard<std::mutex> guard(mtx);
+      result = ptr.load(std::memory_order_relaxed);
+      if (result == nullptr) {
+        result = f();
+        result->initialize();
+        ptr.store(result, std::memory_order_release);
       }
     }
     return result;
   }
 
   template <class T>
-  static T* lazy_get(std::atomic<T*>& ptr) {
-    return lazy_get(ptr, [] { return T::create_singleton(); });
+  static T* lazy_get(std::atomic<T*>& ptr, std::mutex& mtx) {
+    return lazy_get(ptr, mtx, [] { return T::create_singleton(); });
   }
 
   template <class T>
@@ -123,21 +112,20 @@ class singletons {
 
   template <class T>
   static void dispose(std::atomic<T*>& ptr) {
+    auto p = ptr.load();
     for (;;) {
-      auto p = ptr.load();
       if (p == nullptr) {
         return;
-      } else if (ptr.compare_exchange_weak(p, nullptr)) {
+      }
+      if (ptr.compare_exchange_weak(p, nullptr)) {
         p->dispose();
-        ptr = nullptr;
         return;
       }
     }
   }
-
 };
 
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_SINGLETON_MANAGER_HPP
+#endif // CAF_DETAIL_SINGLETONS_HPP

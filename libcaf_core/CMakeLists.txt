@@ -11,6 +11,7 @@ file(GLOB LIBCAF_CORE_HDRS "caf/*.hpp"
                            "caf/detail/*.hpp"
                            "caf/policy/*.hpp"
                            "caf/mixin/*.hpp"
+                           "caf/scheduler/*.hpp"
                            "cppa/*.hpp")
 
 # list cpp files excluding platform-dependent files
@@ -18,6 +19,7 @@ set (LIBCAF_CORE_SRCS
      src/abstract_actor.cpp
      src/abstract_channel.cpp
      src/abstract_group.cpp
+     src/abstract_coordinator.cpp
      src/actor.cpp
      src/actor_addr.cpp
      src/actor_companion.cpp
@@ -25,23 +27,24 @@ set (LIBCAF_CORE_SRCS
      src/actor_ostream.cpp
      src/actor_proxy.cpp
      src/actor_registry.cpp
-     src/atom.cpp
      src/attachable.cpp
      src/behavior.cpp
      src/behavior_stack.cpp
+     src/behavior_impl.cpp
      src/binary_deserializer.cpp
      src/binary_serializer.cpp
      src/blocking_actor.cpp
      src/channel.cpp
      src/continue_helper.cpp
      src/decorated_tuple.cpp
-     src/demangle.cpp
+     src/default_attachable.cpp
      src/deserializer.cpp
      src/duration.cpp
      src/event_based_actor.cpp
      src/exception.cpp
      src/execution_unit.cpp
      src/exit_reason.cpp
+     src/forwarding_actor_proxy.cpp
      src/get_mac_addresses.cpp
      src/get_root_uuid.cpp
      src/group.cpp
@@ -56,13 +59,15 @@ set (LIBCAF_CORE_SRCS
      src/message_builder.cpp
      src/message_data.cpp
      src/message_handler.cpp
+     src/message_iterator.cpp
      src/node_id.cpp
      src/ref_counted.cpp
      src/response_promise.cpp
+     src/replies_to.cpp
      src/resumable.cpp
      src/ripemd_160.cpp
-     src/scheduler.cpp
      src/scoped_actor.cpp
+     src/set_scheduler.cpp
      src/serializer.cpp
      src/shared_spinlock.cpp
      src/shutdown.cpp
@@ -70,7 +75,7 @@ set (LIBCAF_CORE_SRCS
      src/string_algorithms.cpp
      src/string_serialization.cpp
      src/sync_request_bouncer.cpp
-     src/to_uniform_name.cpp
+     src/try_match.cpp
      src/uniform_type_info.cpp
      src/uniform_type_info_map.cpp)
 
@@ -84,7 +89,7 @@ if (NOT "${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes")
                         SOVERSION ${LIBRARY_SOVERSION}
                         VERSION ${CAF_VERSION}
                         OUTPUT_NAME caf_core)
-  if(NOT MINGW)
+  if(NOT WIN32)
     install(TARGETS libcaf_core LIBRARY DESTINATION lib)
   endif()
 endif ()
@@ -93,7 +98,7 @@ endif ()
 if ("${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes" OR "${CAF_BUILD_STATIC}" STREQUAL "yes")
   add_library(libcaf_coreStatic STATIC ${LIBCAF_CORE_HDRS} ${LIBCAF_CORE_SRCS})
   set_target_properties(libcaf_coreStatic PROPERTIES OUTPUT_NAME caf_core_static)
-  if(NOT MINGW)
+  if(NOT WIN32)
     install(TARGETS libcaf_coreStatic ARCHIVE DESTINATION lib)
   endif()
 endif ()

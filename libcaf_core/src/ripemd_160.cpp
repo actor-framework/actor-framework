@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -65,12 +65,16 @@ namespace {
 using byte = unsigned char;
 using dword = uint32_t;
 
+static_assert(sizeof(dword) == sizeof(unsigned), "platform not supported");
+
 // macro definitions
 
 // collect four bytes into one word:
 #define BYTES_TO_DWORD(strptr)                                                 \
-  (((dword) * ((strptr) + 3) << 24) | ((dword) * ((strptr) + 2) << 16)         \
-   | ((dword) * ((strptr) + 1) << 8) | ((dword) * (strptr)))
+  ((static_cast<dword>(*((strptr) + 3)) << 24)                                 \
+   | (static_cast<dword>(*((strptr) + 2)) << 16)                               \
+   | (static_cast<dword>(*((strptr) + 1)) << 8)                                \
+   | (static_cast<dword>(*(strptr))))
 
 // ROL(x, n) cyclically rotates x over n bits to the left
 // x must be of an unsigned 32 bits type and 0 <= n < 32.
@@ -93,28 +97,28 @@ using dword = uint32_t;
 
 #define GG(a, b, c, d, e, x, s)                                                \
   {                                                                            \
-    (a) += G((b), (c), (d)) + (x) + 0x5a827999UL;                              \
+    (a) += G((b), (c), (d)) + (x) + 0x5a827999U;                               \
     (a) = ROL((a), (s)) + (e);                                                 \
     (c) = ROL((c), 10);                                                        \
   }
 
 #define HH(a, b, c, d, e, x, s)                                                \
   {                                                                            \
-    (a) += H((b), (c), (d)) + (x) + 0x6ed9eba1UL;                              \
+    (a) += H((b), (c), (d)) + (x) + 0x6ed9eba1U;                               \
     (a) = ROL((a), (s)) + (e);                                                 \
     (c) = ROL((c), 10);                                                        \
   }
 
 #define II(a, b, c, d, e, x, s)                                                \
   {                                                                            \
-    (a) += I((b), (c), (d)) + (x) + 0x8f1bbcdcUL;                              \
+    (a) += I((b), (c), (d)) + (x) + 0x8f1bbcdcU;                               \
     (a) = ROL((a), (s)) + (e);                                                 \
     (c) = ROL((c), 10);                                                        \
   }
 
 #define JJ(a, b, c, d, e, x, s)                                                \
   {                                                                            \
-    (a) += J((b), (c), (d)) + (x) + 0xa953fd4eUL;                              \
+    (a) += J((b), (c), (d)) + (x) + 0xa953fd4eU;                               \
     (a) = ROL((a), (s)) + (e);                                                 \
     (c) = ROL((c), 10);                                                        \
   }
@@ -128,28 +132,28 @@ using dword = uint32_t;
 
 #define GGG(a, b, c, d, e, x, s)                                               \
   {                                                                            \
-    (a) += G((b), (c), (d)) + (x) + 0x7a6d76e9UL;                              \
+    (a) += G((b), (c), (d)) + (x) + 0x7a6d76e9U;                               \
     (a) = ROL((a), (s)) + (e);                                                 \
     (c) = ROL((c), 10);                                                        \
   }
 
 #define HHH(a, b, c, d, e, x, s)                                               \
   {                                                                            \
-    (a) += H((b), (c), (d)) + (x) + 0x6d703ef3UL;                              \
+    (a) += H((b), (c), (d)) + (x) + 0x6d703ef3U;                               \
     (a) = ROL((a), (s)) + (e);                                                 \
     (c) = ROL((c), 10);                                                        \
   }
 
 #define III(a, b, c, d, e, x, s)                                               \
   {                                                                            \
-    (a) += I((b), (c), (d)) + (x) + 0x5c4dd124UL;                              \
+    (a) += I((b), (c), (d)) + (x) + 0x5c4dd124U;                               \
     (a) = ROL((a), (s)) + (e);                                                 \
     (c) = ROL((c), 10);                                                        \
   }
 
 #define JJJ(a, b, c, d, e, x, s)                                               \
   {                                                                            \
-    (a) += J((b), (c), (d)) + (x) + 0x50a28be6UL;                              \
+    (a) += J((b), (c), (d)) + (x) + 0x50a28be6U;                               \
     (a) = ROL((a), (s)) + (e);                                                 \
     (c) = ROL((c), 10);                                                        \
   }
@@ -360,10 +364,10 @@ void MDfinish(dword* MDbuf, const byte* strptr, dword lswlen, dword mswlen) {
   // put bytes from strptr into X
   for (unsigned int i = 0; i < (lswlen & 63); ++i) {
     // byte i goes into word X[i div 4] at pos.  8*(i mod 4)
-    X[i >> 2] ^= (dword) * strptr++ << (8 * (i & 3));
+    X[i >> 2] ^= static_cast<dword>(*strptr++) << (8 * (i & 3));
   }
   // append the bit m_n == 1
-  X[(lswlen >> 2) & 15] ^= (dword)1 << (8 * (lswlen & 3) + 7);
+  X[(lswlen >> 2) & 15] ^= static_cast<dword>(1) << (8 * (lswlen & 3) + 7);
   if ((lswlen & 63) > 55) {
     // length goes to next block
     compress(MDbuf, X);

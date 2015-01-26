@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -28,6 +28,18 @@ attachable::~attachable() {
 attachable::token::token(const std::type_info& tinfo, const void* vptr)
     : subtype(tinfo), ptr(vptr) {
   // nop
+}
+
+optional<uint32_t> attachable::handle_exception(const std::exception_ptr&) {
+  return none;
+}
+
+void attachable::actor_exited(abstract_actor*, uint32_t) {
+  // nop
+}
+
+bool attachable::matches(const token&) {
+  return false;
 }
 
 } // namespace caf

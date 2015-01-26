@@ -10,7 +10,7 @@
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -30,11 +30,8 @@ namespace {
 struct group_nameserver : event_based_actor {
   behavior make_behavior() override {
     return {
-      on(atom("GET_GROUP"), arg_match) >> [](const std::string& name) {
-        return make_message(atom("GROUP"), group::get("local", name));
-      },
-      on(atom("SHUTDOWN")) >> [=] {
-        quit();
+      on(atom("GetGroup"), arg_match) >> [](const std::string& name) {
+        return make_message(atom("Group"), group::get("local", name));
       }
     };
   }
@@ -42,14 +39,13 @@ struct group_nameserver : event_based_actor {
 
 } // namespace <anonymous>
 
-void publish_local_groups(uint16_t port, const char* addr) {
+uint16_t publish_local_groups(uint16_t port, const char* addr) {
   auto gn = spawn<group_nameserver, hidden>();
   try {
-    publish(gn, port, addr);
+    return publish(gn, port, addr);
   }
   catch (std::exception&) {
-    gn->enqueue(invalid_actor_addr, message_id::invalid,
-                make_message(atom("SHUTDOWN")), nullptr);
+    anon_send_exit(gn, exit_reason::user_shutdown);
     throw;
   }
 }
