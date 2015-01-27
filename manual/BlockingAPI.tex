@@ -99,7 +99,7 @@ Analogous to \lstinline^sync_send(...).then(...)^ for event-based actors, blocki
 \begin{lstlisting}
 void foo(blocking_actor* self, actor testee) {
   // testee replies with a string to 'get'
-  self->sync_send(testee, atom("get")).await(
+  self->sync_send(testee, get_atom::value).await(
     [&](const std::string& str) {
       // handle str
     },

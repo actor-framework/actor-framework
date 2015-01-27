@@ -19,7 +19,6 @@ void some_fun(event_based_actor* self) {
 }
 \end{lstlisting}
 
-\clearpage
 \subsection{Replying to Messages}
 \label{Sec::Send::Reply}
 
@@ -27,33 +26,34 @@ The return value of a message handler is used as response message.
 Actors can also use the result of a \lstinline^sync_send^ to answer to a request, as shown below.
 
 \begin{lstlisting}
-void client(event_based_actor* self, const actor& master) {
-  become (
-    on("foo", arg_match) >> [=](const string& request) {
-      return self->sync_send(master, atom("bar"), request).then(
+behavior client(event_based_actor* self, const actor& master) {
+  return {
+    [=](const string& request) {
+      return self->sync_send(master, request).then(
         [=](const std::string& response) {
           return response;
         }
       );
     }
-  );
+  };
 };
 \end{lstlisting}
 
 \subsection{Delaying Messages}
 
-Messages can be delayed, e.g., to implement time-based polling strategies, by using one of \lstinline^delayed_send^, \lstinline^delayed_send_tuple^, \lstinline^delayed_reply^, or \lstinline^delayed_reply_tuple^.
-The following example illustrates a polling strategy using \lstinline^delayed_send^.
+Messages can be delayed by using the function \lstinline^delayed_send^.
 
 \begin{lstlisting}
+using poll_atom = atom_constant<atom("poll")>;
 behavior poller(event_based_actor* self) {
-  self->delayed_send(self, std::chrono::seconds(1), atom("poll"));
+  using std::chrono::seconds;
+  self->delayed_send(self, seconds(1), poll_atom::value);
   return {
-    on(atom("poll")) >> [] {
+    [](poll_atom) {
       // poll a resource
       // ...
       // schedule next polling
-      self->delayed_send(self, std::chrono::seconds(1), atom("poll"));
+      self->delayed_send(self, seconds(1), poll_atom::value);
     }
   };
 }

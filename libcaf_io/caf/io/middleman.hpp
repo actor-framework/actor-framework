@@ -32,13 +32,14 @@
 
 #include "caf/io/hook.hpp"
 #include "caf/io/broker.hpp"
+#include "caf/io/middleman_actor.hpp"
 #include "caf/io/network/multiplexer.hpp"
 
 namespace caf {
 namespace io {
 
 /**
- * Manages brokers.
+ * Manages brokers and network backends.
  */
 class middleman : public detail::abstract_singleton {
  public:
@@ -52,6 +53,11 @@ class middleman : public detail::abstract_singleton {
   static middleman* instance();
 
   /**
+   * Returns a handle to the actor managing the middleman singleton.
+   */
+  middleman_actor actor_handle();
+
+  /**
    * Returns the broker associated with `name` or creates a
    * new instance of type `Impl`.
    */
@@ -61,7 +67,7 @@ class middleman : public detail::abstract_singleton {
     if (i != m_named_brokers.end()) {
       return static_cast<Impl*>(i->second.get());
     }
-    intrusive_ptr<Impl> result{new Impl};
+    intrusive_ptr<Impl> result{new Impl(*this)};
     result->launch(true, false, nullptr);
     m_named_brokers.insert(std::make_pair(name, result));
     return result;
@@ -130,7 +136,7 @@ class middleman : public detail::abstract_singleton {
   // networking backend
   std::unique_ptr<network::multiplexer> m_backend;
   // prevents backend from shutting down unless explicitly requested
-  network::multiplexer::supervisor_ptr m_supervisor;
+  network::multiplexer::supervisor_ptr m_backend_supervisor;
   // runs the backend
   std::thread m_thread;
   // keeps track of "singleton-like" brokers
@@ -139,6 +145,8 @@ class middleman : public detail::abstract_singleton {
   std::set<broker_ptr> m_brokers;
   // user-defined hooks
   hook_uptr m_hooks;
+  // actor offering asyncronous IO by managing this singleton instance
+  middleman_actor m_manager;
 };
 
 } // namespace io

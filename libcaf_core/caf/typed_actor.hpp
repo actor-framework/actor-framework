@@ -27,6 +27,7 @@
 #include "caf/replies_to.hpp"
 #include "caf/abstract_actor.hpp"
 #include "caf/typed_behavior.hpp"
+#include "caf/typed_response_promise.hpp"
 
 namespace caf {
 

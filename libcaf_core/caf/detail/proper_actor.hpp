@@ -301,7 +301,7 @@ class proper_actor<Base, Policies, true>
       // auto e = this->new_mailbox_element(this, std::move(msg));
       // this->m_mailbox.enqueue(e);
     } else {
-      this->delayed_send_tuple(this, d, std::move(msg));
+      this->delayed_send(this, d, std::move(msg));
     }
     m_pending_timeouts.push_back(tid);
     return tid;

@@ -2,30 +2,23 @@
 \label{Sec::Sync}
 
 \lib supports both asynchronous and synchronous communication.
-The member functions \lstinline^sync_send^ and \lstinline^sync_send_tuple^ send synchronous request messages.
+The member function \lstinline^sync_send^ sends synchronous request messages.
 
 \begin{lstlisting}
 template<typename... Args>
 __unspecified__ sync_send(actor whom, Args&&... what);
 
-__unspecified__ sync_send_tuple(actor whom, message what);
-
 template<typename Duration, typename... Args>
 __unspecified__ timed_sync_send(actor whom,
                                 Duration timeout,
                                 Args&&... what);
-
-template<typename Duration, typename... Args>
-__unspecified__ timed_sync_send_tuple(actor whom,
-                                      Duration timeout,
-                                      message what);
 \end{lstlisting}
 
-A synchronous message is sent to the receiving actor's mailbox like any other asynchronous message.
+A synchronous message is sent to the receiving actor's mailbox like any other (asynchronous) message.
 The response message, on the other hand, is treated separately.
 
 The difference between \lstinline^sync_send^ and \lstinline^timed_sync_send^ is how timeouts are handled.
-The behavior of \lstinline^sync_send^ is analogous to \lstinline^send^, i.e., timeouts are specified by using \lstinline^after(...)^ statements (see \ref{Sec::Receive::Timeouts}).
+The behavior of \lstinline^sync_send^ is analogous to \lstinline^send^, i.e., timeouts are specified by using \lstinline^after(...)^ statements (see Section \ref{Sec::Receive::Timeouts}).
 When using \lstinline^timed_sync_send^ function, \lstinline^after(...)^ statements are ignored and the actor will receive a \lstinline^sync_timeout_msg^ after the given duration instead.
 
 \subsection{Error Messages}
@@ -46,7 +39,7 @@ When sending a synchronous message, the response handler can be passed by either
 \begin{lstlisting}
 void foo(event_based_actor* self, actor testee) {
   // testee replies with a string to 'get'
-  self->sync_send(testee, atom("get")).then(
+  self->sync_send(testee, get_atom::value).then(
     [=](const std::string& str) {
       // handle str
     },
@@ -82,7 +75,7 @@ void foo(event_based_actor* self, actor testee) {
     aout << "timeout occured" << endl;
   };
   // set response handler by using "then"
-  timed_sync_send(testee, std::chrono::seconds(30), atom("get")).then(
+  timed_sync_send(testee, std::chrono::seconds(30), get_atom::value).then(
     [=](const std::string& str) { /* handle str */ }
   );
 \end{lstlisting}

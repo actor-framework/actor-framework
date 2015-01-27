@@ -81,11 +81,18 @@ class message_handler {
    * functors, or other message handlers.
    */
   template <class T, class... Ts>
-  message_handler(const T& arg, Ts&&... args)
-      : m_impl(detail::match_expr_concat(
-                 detail::lift_to_match_expr(arg),
-                 detail::lift_to_match_expr(std::forward<Ts>(args))...)) {
-    // nop
+  message_handler(const T& v, Ts&&... vs) {
+    assign(v, std::forward<Ts>(vs)...);
+  }
+
+  /**
+   * Assigns new message handlers.
+   */
+  template <class T, class... Ts>
+  void assign(T&& v, Ts&&... vs) {
+    m_impl = detail::match_expr_concat(
+               detail::lift_to_match_expr(std::forward<T>(v)),
+               detail::lift_to_match_expr(std::forward<Ts>(vs))...);
   }
 
   /**

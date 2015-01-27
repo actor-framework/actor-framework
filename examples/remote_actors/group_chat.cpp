@@ -24,6 +24,9 @@
 using namespace std;
 using namespace caf;
 
+using join_atom = atom_constant<atom("join")>;
+using broadcast_atom = atom_constant<atom("broadcast")>;
+
 struct line { string str; };
 
 istream& operator>>(istream& is, line& l) {
@@ -46,12 +49,12 @@ message split_line(const line& l) {
 
 void client(event_based_actor* self, const string& name) {
   self->become (
-    on(atom("broadcast"), arg_match) >> [=](const string& message) {
+    [=](broadcast_atom, const string& message) {
       for(auto& dest : self->joined_groups()) {
         self->send(dest, name + ": " + message);
       }
     },
-    on(atom("join"), arg_match) >> [=](const group& what) {
+    [=](join_atom, const group& what) {
       for (auto g : self->joined_groups()) {
         cout << "*** leave " << to_string(g) << endl;
         self->send(self, g, name + " has left the chatroom");
@@ -106,7 +109,7 @@ int main(int argc, char** argv) {
         auto group_uri = group_id.substr(p + 1);
         auto g = (module == "remote") ? io::remote_group(group_uri)
                                       : group::get(module, group_uri);
-        anon_send(client_actor, atom("join"), g);
+        anon_send(client_actor, join_atom::value, g);
       }
       catch (exception& e) {
         ostringstream err;
@@ -132,7 +135,7 @@ int main(int argc, char** argv) {
       try {
         group grp = (mod == "remote") ? io::remote_group(id)
                                       : group::get(mod, id);
-        anon_send(client_actor, atom("join"), grp);
+        anon_send(client_actor, join_atom::value, grp);
       }
       catch (exception& e) {
         cerr << "*** exception: " << to_verbose_string(e) << endl;
@@ -150,7 +153,7 @@ int main(int argc, char** argv) {
     },
     others() >> [&] {
       if (!s_last_line.empty()) {
-        anon_send(client_actor, atom("broadcast"), s_last_line);
+        anon_send(client_actor, broadcast_atom::value, s_last_line);
       }
     }
   );
@@ -158,5 +161,4 @@ int main(int argc, char** argv) {
   anon_send_exit(client_actor, exit_reason::user_shutdown);
   await_all_actors_done();
   shutdown();
-  return 0;
 }

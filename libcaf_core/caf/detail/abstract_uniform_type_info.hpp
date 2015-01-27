@@ -60,8 +60,8 @@ class abstract_uniform_type_info : public uniform_type_info {
 
  protected:
 
-  abstract_uniform_type_info(std::string tname) {
-    m_name = detail::mapped_name_by_decorated_name(std::move(tname));
+  abstract_uniform_type_info(std::string tname) : m_name(std::move(tname)) {
+    // nop
   }
 
   static inline const T& deref(const void* ptr) {

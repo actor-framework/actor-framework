@@ -27,17 +27,21 @@
 using namespace std;
 using namespace caf;
 
+using plus_atom = atom_constant<atom("plus")>;
+using minus_atom = atom_constant<atom("minus")>;
+using result_atom = atom_constant<atom("result")>;
+using rebind_atom = atom_constant<atom("rebind")>;
+using connect_atom = atom_constant<atom("connect")>;
+using reconnect_atom = atom_constant<atom("reconnect")>;
+
 // our "service"
 void calculator(event_based_actor* self) {
   self->become (
-    on(atom("plus"), arg_match) >> [](int a, int b) -> message {
-      return make_message(atom("result"), a + b);
+    [](plus_atom, int a, int b) -> message {
+      return make_message(result_atom::value, a + b);
     },
-    on(atom("minus"), arg_match) >> [](int a, int b) -> message {
-      return make_message(atom("result"), a - b);
-    },
-    on(atom("quit")) >> [=] {
-      self->quit();
+    [](minus_atom, int a, int b) -> message {
+      return make_message(result_atom::value, a - b);
     }
   );
 }
@@ -57,7 +61,7 @@ void client_bhvr(event_based_actor* self, const string& host,
   if (!self->has_sync_failure_handler()) {
     self->on_sync_failure([=] {
       aout(self) << "*** lost connection to " << host
-             << ":" << port << endl;
+                 << ":" << port << endl;
       client_bhvr(self, host, port, invalid_actor);
     });
   }
@@ -73,38 +77,33 @@ void client_bhvr(event_based_actor* self, const string& host,
     }
     catch (exception&) {
       aout(self) << "connection failed, try again in 3s" << endl;
-      self->delayed_send(self, chrono::seconds(3), atom("reconnect"));
+      self->delayed_send(self, chrono::seconds(3), reconnect_atom::value);
     }
   }
-  // our predicate guarding the first callback
-  auto pred = [=](atom_value val) -> optional<atom_value> {
-    if (server != invalid_actor
-        && (val == atom("plus") || val == atom("minus"))) {
-      return val;
-    }
-    return none;
+  auto sync_send_request = [=](int lhs, const char* op, int rhs) {
+    self->sync_send_tuple(server, self->last_dequeued()).then(
+      [=](result_atom, int result) {
+        aout(self) << lhs << " " << op << " " << rhs << " = " << result << endl;
+      }
+    );
   };
   self->become (
-    on(pred, val<int>, val<int>) >> [=](atom_value op, int lhs, int rhs) {
-      self->sync_send_tuple(server, self->last_dequeued()).then(
-        on(atom("result"), arg_match) >> [=](int result) {
-          aout(self) << lhs << " "
-                 << to_string(op) << " "
-                 << rhs << " = "
-                 << result << endl;
-        }
-      );
+    [=](plus_atom, int lhs, int rhs) {
+      sync_send_request(lhs, "+", rhs);
+    },
+    [=](minus_atom, int lhs, int rhs) {
+      sync_send_request(lhs, "-", rhs);
     },
     [=](const down_msg&) {
       aout(self) << "*** server down, try to reconnect ..." << endl;
       client_bhvr(self, host, port, invalid_actor);
     },
-    on(atom("rebind"), arg_match) >> [=](const string& nhost, uint16_t nport) {
+    [=](rebind_atom, const string& nhost, uint16_t nport) {
       aout(self) << "*** rebind to new server: "
              << nhost << ":" << nport << endl;
       client_bhvr(self, nhost, nport, invalid_actor);
     },
-    on(atom("reconnect")) >> [=] {
+    [=](rebind_atom) {
       client_bhvr(self, host, port, invalid_actor);
     }
   );
@@ -133,8 +132,8 @@ void client_repl(const string& host, uint16_t port) {
           try {
             auto lport = std::stoul(sport);
             if (lport < std::numeric_limits<uint16_t>::max()) {
-              anon_send(client, atom("rebind"), move(nhost),
-                    static_cast<uint16_t>(lport));
+              anon_send(client, rebind_atom::value, move(nhost),
+                        static_cast<uint16_t>(lport));
             }
             else {
               cout << lport << " is not a valid port" << endl;
@@ -167,7 +166,12 @@ void client_repl(const string& host, uint16_t port) {
         auto lhs = toint(lsub);
         auto rhs = toint(rsub);
         if (lhs && rhs) {
-          auto op = (*pos == '+') ? atom("plus") : atom("minus");
+          atom_value op;
+          if (*pos == '+') {
+            op = plus_atom::value;
+          } else {
+            op = minus_atom::value;
+          }
           anon_send(client, op, *lhs, *rhs);
         }
       }

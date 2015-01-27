@@ -18,160 +18,176 @@ using namespace caf;
 
 namespace {
 
+// atoms for chopstick interface
+using put_atom = atom_constant<atom("put")>;
+using take_atom = atom_constant<atom("take")>;
+using busy_atom = atom_constant<atom("busy")>;
+using taken_atom = atom_constant<atom("taken")>;
+
+// atoms for philosopher interface
+using eat_atom = atom_constant<atom("eat")>;
+using think_atom = atom_constant<atom("think")>;
+
+// a chopstick
+using chopstick = typed_actor<replies_to<take_atom>
+                              ::with_either<taken_atom>
+                              ::or_else<busy_atom>,
+                              reacts_to<put_atom>>;
+
+chopstick::behavior_type taken_chopstick(chopstick::pointer self, actor_addr);
+
 // either taken by a philosopher or available
-void chopstick(event_based_actor* self) {
-  self->become(
-    on(atom("take"), arg_match) >> [=](const actor& philos) {
-      // tell philosopher it took this chopstick
-      self->send(philos, atom("taken"), self);
-      // await 'put' message and reject other 'take' messages
-      self->become(
-        // allows us to return to the previous behavior
-        keep_behavior,
-        on(atom("take"), arg_match) >> [=](const actor& other) {
-          self->send(other, atom("busy"), self);
-        },
-        on(atom("put"), philos) >> [=] {
-          // return to previous behaivor, i.e., await next 'take'
-          self->unbecome();
-        }
-      );
+chopstick::behavior_type available_chopstick(chopstick::pointer self) {
+  return {
+    [=](take_atom) {
+      self->become(taken_chopstick(self, self->last_sender()));
+      return taken_atom::value;
+    },
+    [](put_atom) {
+      cerr << "chopstick received unexpected 'put'" << endl;
     }
-  );
+  };
 }
 
-/* See: http://www.dalnefre.com/wp/2010/08/dining-philosophers-in-humus/
+chopstick::behavior_type taken_chopstick(chopstick::pointer self,
+                                         actor_addr user) {
+  return {
+    [](take_atom) {
+      return busy_atom::value;
+    },
+    [=](put_atom) {
+      if (self->last_sender() == user) {
+        self->become(available_chopstick(self));
+      }
+    }
+  };
+}
+
+/* Based on: http://www.dalnefre.com/wp/2010/08/dining-philosophers-in-humus/
  *
  *
- *                +-------------+  {(busy|taken), Y}
+ *                +-------------+     {busy|taken}
  *      /-------->|  thinking   |<------------------\
  *      |         +-------------+                   |
  *      |                |                          |
  *      |                | {eat}                    |
  *      |                |                          |
  *      |                V                          |
- *      |         +-------------+ {busy, X}  +-------------+
+ *      |         +-------------+  {busy}    +-------------+
  *      |         |   hungry    |----------->|   denied    |
  *      |         +-------------+            +-------------+
  *      |                |
- *      |                | {taken, X}
+ *      |                | {taken}
  *      |                |
  *      |                V
  *      |         +-------------+
- *      |         | wait_for(Y) |
+ *      |         |   granted   |
  *      |         +-------------+
  *      |           |    |
- *      | {busy, Y} |    | {taken, Y}
+ *      |  {busy}   |    | {taken}
  *      \-----------/    |
  *      |                V
  *      | {think} +-------------+
  *      \---------|   eating    |
  *                +-------------+
- *
- *
- * [ X = left  => Y = right ]
- * [ X = right => Y = left  ]
  */
 
 class philosopher : public event_based_actor {
  public:
-  philosopher(const std::string& n, const actor& l, const actor& r)
-      : name(n), left(l), right(r) {
+  philosopher(const std::string& n, const chopstick& l, const chopstick& r)
+      : name(n),
+        left(l),
+        right(r) {
     // a philosopher that receives {eat} stops thinking and becomes hungry
-    thinking = (
-      on(atom("eat")) >> [=] {
+    thinking = behavior{
+      [=](eat_atom) {
         become(hungry);
-        send(left, atom("take"), this);
-        send(right, atom("take"), this);
+        send(left, take_atom::value);
+        send(right, take_atom::value);
       }
-    );
+    };
     // wait for the first answer of a chopstick
-    hungry = (
-      on(atom("taken"), left) >> [=] {
-        become(waiting_for(right));
+    hungry = behavior{
+      [=](taken_atom) {
+        become(granted);
       },
-      on(atom("taken"), right) >> [=] {
-        become(waiting_for(left));
-      },
-      on<atom("busy"), actor>() >> [=] {
+      [=](busy_atom) {
         become(denied);
       }
-    );
-    // philosopher was not able to obtain the first chopstick
-    denied = (
-      on(atom("taken"), arg_match) >> [=](const actor& ptr) {
-        send(ptr, atom("put"), this);
-        send(this, atom("eat"));
-        become(thinking);
+    };
+    // philosopher was able to obtain the first chopstick
+    granted = behavior{
+      [=](taken_atom) {
+        aout(this) << name
+                   << " has picked up chopsticks with IDs "
+                   << left->id() << " and " << right->id()
+                   << " and starts to eat\n";
+        // eat some time
+        delayed_send(this, seconds(5), think_atom::value);
+        become(eating);
       },
-      on<atom("busy"), actor>() >> [=] {
-        send(this, atom("eat"));
+      [=](busy_atom) {
+        send(last_sender() == left ? right : left, put_atom::value);
+        send(this, eat_atom::value);
         become(thinking);
       }
-    );
+    };
+    // philosopher was *not* able to obtain the first chopstick
+    denied = behavior{
+      [=](taken_atom) {
+        send(last_sender() == left ? left : right, put_atom::value);
+        send(this, eat_atom::value);
+        become(thinking);
+      },
+      [=](busy_atom) {
+        send(this, eat_atom::value);
+        become(thinking);
+      }
+    };
     // philosopher obtained both chopstick and eats (for five seconds)
-    eating = (
-      on(atom("think")) >> [=] {
-        send(left, atom("put"), this);
-        send(right, atom("put"), this);
-        delayed_send(this, seconds(5), atom("eat"));
+    eating = behavior{
+      [=](think_atom) {
+        send(left, put_atom::value);
+        send(right, put_atom::value);
+        delayed_send(this, seconds(5), eat_atom::value);
         aout(this) << name << " puts down his chopsticks and starts to think\n";
         become(thinking);
       }
-    );
+    };
   }
 
  protected:
   behavior make_behavior() override {
     // start thinking
-    send(this, atom("think"));
+    send(this, think_atom::value);
     // philosophers start to think after receiving {think}
     return (
-      on(atom("think")) >> [=] {
+      [=](think_atom) {
         aout(this) << name << " starts to think\n";
-        delayed_send(this, seconds(5), atom("eat"));
+        delayed_send(this, seconds(5), eat_atom::value);
         become(thinking);
       }
     );
   }
 
  private:
-  // wait for second chopstick
-  behavior waiting_for(const actor& what) {
-    return {
-      on(atom("taken"), what) >> [=] {
-        aout(this) << name
-                   << " has picked up chopsticks with IDs "
-                   << left->id() << " and " << right->id()
-                   << " and starts to eat\n";
-        // eat some time
-        delayed_send(this, seconds(5), atom("think"));
-        become(eating);
-      },
-      on(atom("busy"), what) >> [=] {
-        send((what == left) ? right : left, atom("put"), this);
-        send(this, atom("eat"));
-        become(thinking);
-      }
-    };
-  }
-
-  std::string name;   // the name of this philosopher
-  actor       left;   // left chopstick
-  actor       right;  // right chopstick
-  behavior    thinking;
-  behavior    hungry; // tries to take chopsticks
-  behavior    denied; // could not get chopsticks
-  behavior    eating; // wait for some time, then go thinking again
+  std::string name;     // the name of this philosopher
+  chopstick   left;     // left chopstick
+  chopstick   right;    // right chopstick
+  behavior    thinking; // initial behavior
+  behavior    hungry;   // tries to take chopsticks
+  behavior    granted;  // has one chopstick and waits for the second one
+  behavior    denied;   // could not get first chopsticks
+  behavior    eating;   // waits for some time, then go thinking again
 };
 
 void dining_philosophers() {
   scoped_actor self;
   // create five chopsticks
   aout(self) << "chopstick ids are:";
-  std::vector<actor> chopsticks;
+  std::vector<chopstick> chopsticks;
   for (size_t i = 0; i < 5; ++i) {
-    chopsticks.push_back(spawn(chopstick));
+    chopsticks.push_back(spawn_typed(available_chopstick));
     aout(self) << " " << chopsticks.back()->id();
   }
   aout(self) << endl;
@@ -190,5 +206,4 @@ int main(int, char**) {
   // real philosophers are never done
   await_all_actors_done();
   shutdown();
-  return 0;
 }

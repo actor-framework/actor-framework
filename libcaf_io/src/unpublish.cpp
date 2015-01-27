@@ -22,32 +22,27 @@
 #include "caf/send.hpp"
 #include "caf/scoped_actor.hpp"
 
-#include "caf/io/middleman.hpp"
 #include "caf/io/unpublish.hpp"
 #include "caf/io/basp_broker.hpp"
+#include "caf/io/middleman_actor.hpp"
 
 namespace caf {
 namespace io {
 
-void unpublish_impl(abstract_actor_ptr whom, uint16_t port, bool block_caller) {
-  auto mm = middleman::instance();
+void unpublish_impl(const actor_addr& whom, uint16_t port, bool block_caller) {
+  auto mm = get_middleman_actor();
   if (block_caller) {
     scoped_actor self;
-    mm->run_later([&] {
-      auto bro = mm->get_named_broker<basp_broker>(atom("_BASP"));
-      bro->remove_published_actor(whom, port);
-      anon_send(self, atom("done"));
-    });
-    self->receive(
-      on(atom("done")) >> [] {
+    self->sync_send(mm, delete_atom::value, whom, port).await(
+      [](ok_atom) {
+        // ok, basp_broker is done
+      },
+      [](error_atom, const std::string&) {
         // ok, basp_broker is done
       }
     );
   } else {
-    mm->run_later([whom, port, mm] {
-      auto bro = mm->get_named_broker<basp_broker>(atom("_BASP"));
-      bro->remove_published_actor(whom, port);
-    });
+    anon_send(mm, delete_atom::value, whom, port);
   }
 }
 

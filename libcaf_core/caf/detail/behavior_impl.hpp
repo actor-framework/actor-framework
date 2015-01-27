@@ -34,7 +34,9 @@
 #include "caf/duration.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/skip_message.hpp"
+#include "caf/response_promise.hpp"
 #include "caf/timeout_definition.hpp"
+#include "caf/typed_response_promise.hpp"
 
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/apply_args.hpp"
@@ -60,6 +62,15 @@ struct is_message_id_wrapper {
 };
 
 template <class T>
+struct is_response_promise : std::false_type { };
+
+template <>
+struct is_response_promise<response_promise> : std::true_type { };
+
+template <class T>
+struct is_response_promise<typed_response_promise<T>> : std::true_type { };
+
+template <class T>
 struct optional_message_visitor_enable_tpl {
   static constexpr bool value =
       !detail::is_one_of<
@@ -70,7 +81,8 @@ struct optional_message_visitor_enable_tpl {
         optional<skip_message_t>
       >::value
       && !is_message_id_wrapper<T>::value
-      && !std::is_convertible<T, message>::value;
+      && !std::is_convertible<T, message>::value
+      && !is_response_promise<T>::value;
 };
 
 struct optional_message_visitor : static_visitor<bhvr_invoke_result> {
@@ -89,6 +101,15 @@ struct optional_message_visitor : static_visitor<bhvr_invoke_result> {
 
   inline bhvr_invoke_result operator()(const optional<skip_message_t>& val) const {
     if (val) return none;
+    return message{};
+  }
+
+  inline bhvr_invoke_result operator()(const response_promise&) const {
+    return message{};
+  }
+
+  template <class T>
+  inline bhvr_invoke_result operator()(const typed_response_promise<T>&) const {
     return message{};
   }
 

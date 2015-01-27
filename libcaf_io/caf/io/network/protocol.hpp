@@ -17,78 +17,23 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_FWD_HPP
-#define CAF_FWD_HPP
+#ifndef CAF_IO_NETWORK_PROTOCOL_HPP
+#define CAF_IO_NETWORK_PROTOCOL_HPP
 
-#include <cstdint>
+#include <cstddef>
 
 namespace caf {
-
-template <class>
-class intrusive_ptr;
-
-// classes
-class actor;
-class group;
-class message;
-class channel;
-class node_id;
-class behavior;
-class resumable;
-class actor_addr;
-class message_id;
-class local_actor;
-class actor_proxy;
-class scoped_actor;
-class execution_unit;
-class abstract_actor;
-class abstract_group;
-class blocking_actor;
-class message_handler;
-class uniform_type_info;
-class event_based_actor;
-class forwarding_actor_proxy;
-
-// structs
-struct anything;
-struct invalid_actor_t;
-struct invalid_actor_addr_t;
-struct illegal_message_element;
-
-// enums
-enum class atom_value : uint64_t;
-
-// aliases
-using actor_id = uint32_t;
-
-// intrusive pointer types
-using abstract_actor_ptr = intrusive_ptr<abstract_actor>;
-using abstract_group_ptr = intrusive_ptr<abstract_group>;
-using actor_proxy_ptr = intrusive_ptr<actor_proxy>;
-
-// functions
-template <class T, typename U>
-T actor_cast(const U&);
-
 namespace io {
-  class broker;
-  class middleman;
+namespace network {
+
+enum class protocol : uint32_t {
+  ethernet,
+  ipv4,
+  ipv6
+};
+
+} // namespace network
 } // namespace io
-
-namespace scheduler {
-  class abstract_worker;
-  class abstract_coordinator;
-} // namespace scheduler
-
-namespace detail {
-  class logging;
-  class singletons;
-  class message_data;
-  class group_manager;
-  class actor_registry;
-  class uniform_type_info_map;
-} // namespace detail
-
 } // namespace caf
 
-#endif // CAF_FWD_HPP
+#endif // CAF_IO_NETWORK_PROTOCOL_HPP

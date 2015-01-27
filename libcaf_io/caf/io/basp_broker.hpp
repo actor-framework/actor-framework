@@ -41,47 +41,60 @@ namespace io {
  * A broker implementation for the Binary Actor System Protocol (BASP).
  */
 class basp_broker : public broker, public actor_namespace::backend {
-
-  using super = broker;
-
  public:
-
-  using id_type = node_id;
-
   basp_broker();
+
+  basp_broker(middleman& parent_ref);
 
   behavior make_behavior() override;
 
-  void add_published_actor(accept_handle hdl,
-                           const abstract_actor_ptr& whom,
+  void add_published_actor(accept_handle hdl, const abstract_actor_ptr& whom,
                            uint16_t port);
 
-  void remove_published_actor(const abstract_actor_ptr& whom, uint16_t port);
+  bool remove_published_actor(const abstract_actor_ptr& whom);
 
-  actor_proxy_ptr make_proxy(const id_type&, actor_id) override;
+  bool remove_published_actor(const abstract_actor_ptr& whom, uint16_t port);
+
+  actor_proxy_ptr make_proxy(const node_id&, actor_id) override;
+
+  class payload_writer {
+   public:
+    payload_writer() = default;
+    payload_writer(const payload_writer&) = default;
+    payload_writer& operator=(const payload_writer&) = default;
+    virtual ~payload_writer();
+    virtual void write(binary_serializer&) = 0;
+  };
+
+  void dispatch(connection_handle hdl, uint32_t operation,
+                const node_id& src_node, actor_id src_actor,
+                const node_id& dest_node, actor_id dest_actor,
+                uint64_t op_data = 0, payload_writer* writer = nullptr);
+
+  node_id dispatch(uint32_t operation, const node_id& src_node,
+                   actor_id src_actor, const node_id& dest_node,
+                   actor_id dest_actor, uint64_t op_data = 0,
+                   payload_writer* writer = nullptr);
 
   // dispatches a message from a local actor to a remote node
   void dispatch(const actor_addr& from, const actor_addr& to,
-          message_id mid, const message& msg);
+                message_id mid, const message& msg);
 
   struct client_handshake_data {
-    id_type remote_id;
+    int64_t request_id;
     actor client;
     std::set<std::string> expected_ifs;
   };
-
-  void init_client(connection_handle hdl, client_handshake_data* data);
 
   inline actor_namespace& get_namespace() {
     return m_namespace;
   }
 
  private:
-
-  void erase_proxy(const id_type& nid, actor_id aid);
+  void erase_proxy(const node_id& nid, actor_id aid);
 
   // dispatches a message from a remote node to a local actor
-  void dispatch(const basp::header& msg, message&& payload);
+  void local_dispatch(const basp::header& msg, message&& payload);
 
   enum connection_state {
     // client just started, await handshake from server
@@ -94,14 +107,13 @@ class basp_broker : public broker, public actor_namespace::backend {
     await_payload,
     // connection is going to be shut down because of an error
     close_connection
-
   };
 
   struct connection_context {
     connection_state state;
     connection_handle hdl;
-    id_type remote_id;
-    client_handshake_data* handshake_data;
+    node_id remote_id;
+    optional<client_handshake_data> handshake_data;
     basp::header hdr;
     // keep a reference to the published actor of
     // the remote node to prevent this particular
@@ -109,14 +121,13 @@ class basp_broker : public broker, public actor_namespace::backend {
     // a bug where re-using an "old" connection via
     // remote_actor() could return an expired proxy
     actor published_actor;
-
   };
 
   void read(binary_deserializer& bs, basp::header& msg);
 
   void write(binary_serializer& bs, const basp::header& msg);
 
-  void send_kill_proxy_instance(const id_type& nid, actor_id aid,
+  void send_kill_proxy_instance(const node_id& nid, actor_id aid,
                                 uint32_t reason);
 
   connection_state handle_basp_header(connection_context& ctx,
@@ -129,18 +140,17 @@ class basp_broker : public broker, public actor_namespace::backend {
 
   void new_data(connection_context& ctx, buffer_type& buf);
 
-  void init_handshake_as_client(connection_context& ctx,
-                                client_handshake_data* ptr);
+  void init_handshake_as_client(connection_context& ctx);
 
-  void init_handshake_as_sever(connection_context& ctx,
-                               actor_addr published_actor);
+  void init_handshake_as_server(connection_context& ctx,
+                                actor_addr published_actor);
 
   void serialize_msg(const actor_addr& sender, message_id mid,
                      const message& msg, buffer_type& wr_buf);
 
-  bool try_set_default_route(const id_type& nid, connection_handle hdl);
+  bool try_set_default_route(const node_id& nid, connection_handle hdl);
 
-  void add_route(const id_type& nid, connection_handle hdl);
+  void add_route(const node_id& nid, connection_handle hdl);
 
   struct connection_info {
     connection_handle hdl;
@@ -156,7 +166,7 @@ class basp_broker : public broker, public actor_namespace::backend {
     }
   };
 
-  connection_info get_route(const id_type& dest);
+  connection_info get_route(const node_id& dest);
 
   struct connection_info_less {
     inline bool operator()(const connection_info& lhs,
@@ -169,7 +179,7 @@ class basp_broker : public broker, public actor_namespace::backend {
     }
   };
 
-  using blacklist_entry = std::pair<id_type, connection_handle>;
+  using blacklist_entry = std::pair<node_id, connection_handle>;
 
   // (default route, [alternative routes])
   using routing_table_entry = std::pair<connection_info,
@@ -186,7 +196,7 @@ class basp_broker : public broker, public actor_namespace::backend {
   };
 
   // dest => hops
-  using routing_table = std::map<id_type, routing_table_entry>;
+  using routing_table = std::map<node_id, routing_table_entry>;
 
   // sender => request ID
   using pending_request = std::pair<actor_addr, message_id>;
@@ -197,9 +207,8 @@ class basp_broker : public broker, public actor_namespace::backend {
   std::map<uint16_t, accept_handle> m_open_ports;
   routing_table m_routes; // stores non-direct routes
   std::set<blacklist_entry, blacklist_less> m_blacklist; // stores invalidated
-                               // routes
+                                                         // routes
   std::set<pending_request> m_pending_requests;
-  //std::map<id_type, connection_handle> m_nodes;
 
   // needed to keep track to which node we are talking to at the moment
   connection_context* m_current_context;
@@ -208,7 +217,6 @@ class basp_broker : public broker, public actor_namespace::backend {
   const uniform_type_info* m_meta_hdr;
   const uniform_type_info* m_meta_msg;
   const uniform_type_info* m_meta_id_type;
-
 };
 
 } // namespace io

@@ -72,7 +72,7 @@ void client(event_based_actor* self, actor parent, server_type serv) {
       self->sync_send(serv, my_request{10, 20}).then(
         [=](bool val2) {
           CAF_CHECK_EQUAL(val2, false);
-          self->send(parent, atom("passed"));
+          self->send(parent, passed_atom::value);
         }
       );
     }
@@ -105,7 +105,9 @@ void test_typed_spawn(server_type ts) {
   );
   self->spawn<monitored>(client, self, ts);
   self->receive(
-    on(atom("passed")) >> CAF_CHECKPOINT_CB()
+    [](passed_atom) {
+      CAF_CHECKPOINT();
+    }
   );
   self->receive(
     [](const down_msg& dmsg) {

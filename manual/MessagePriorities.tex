@@ -6,18 +6,21 @@ This flag causes the actor to use a priority-aware mailbox implementation.
 It is not possible to change this implementation dynamically at runtime.
 
 \begin{lstlisting}
+using a_atom = atom_constant<atom("a")>;
+using b_atom = atom_constant<atom("b")>;
+
 behavior testee(event_based_actor* self) {
   // send 'b' with normal priority
-  self->send(self, atom("b"));
+  self->send(self, b_atom::value);
   // send 'a' with high priority
-  self->send(message_priority::high, self, atom("a"));
+  self->send(message_priority::high, self, a_atom::value);
   // terminate after receiving a 'b'
   return {
-    on(atom("b")) >> [=] {
+    [=](b_atom) {
       aout(self) << "received 'b' => quit" << endl;
       self->quit();
     },
-    on(atom("a")) >> [=] {
+    [=](a_atom) {
       aout(self) << "received 'a'" << endl;
     },
   };

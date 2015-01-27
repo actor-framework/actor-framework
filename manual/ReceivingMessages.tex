@@ -41,50 +41,56 @@ The following example illustrates a more advanced state-based actor that impleme
 
 \clearpage
 \begin{lstlisting}
+using pop_atom = atom_constant<atom("pop")>;
+using push_atom = atom_constant<atom("push")>;
+
 class fixed_stack : public sb_actor<fixed_stack> {
  public:
   fixed_stack(size_t max) : max_size(max)  {
-    assert(max_size > 0);
-    full = (
-      on(atom("push"), arg_match) >> [=](int) { /* discard */ },
-      on(atom("pop")) >> [=]() -> tuple<atom_value, int> {
+    full.assign(
+      [=](push_atom, int) {
+        /* discard */
+      },
+      [=](pop_atom) -> message {
         auto result = data.back();
         data.pop_back();
-        if (data.empty()) become(empty);
-        else become(filled);
-        return {atom("ok"), result};
+        become(filled);
+        return make_message(ok_atom::value, result);
       }
     );
-    filled = (
-      on(atom("push"), arg_match) >> [=](int what) {
+    filled.assign(
+      [=](push_atom, int what) {
         data.push_back(what);
-        if (data.size() == max_size) become(full);
+        if (data.size() == max_size) {
+          become(full);
+        }
       },
-      on(atom("pop")) >> [=]() -> tuple<atom_value, int> {
+      [=](pop_atom) -> message {
         auto result = data.back();
         data.pop_back();
-        if (data.empty()) become(empty);
-        return {atom("ok"), result};
+        if (data.empty()) {
+          become(empty);
+        }
+        return make_message(ok_atom::value, result);
       }
     );
-    empty = (
-      on(atom("push"), arg_match) >> [=](int what) {
+    empty.assign(
+      [=](push_atom, int what) {
         data.push_back(what);
-        if (data.size() == max_size) become(full);
-        else become(filled);
+        become(filled);
       },
-      on(atom("pop")) >> [=] {
-        return atom("failure");
+      [=](pop_atom) {
+        return error_atom::value;
       }
     );
   }
- private:
-    size_t max_size;
-    vector<int> data;
-    behavior full;
-    behavior filled;
-    behavior empty;
-    behavior& init_state = empty;
+
+  size_t max_size;
+  std::vector<int> data;
+  behavior full;
+  behavior filled;
+  behavior empty;
+  behavior& init_state = empty;
 };
 \end{lstlisting}
 
@@ -168,24 +174,31 @@ Afterwards, the server returns to its initial behavior, i.e., awaits the next \l
 The server actor will exit for reason \lstinline^user_defined^ whenever it receives a message that is neither a request, nor an idle message.
 
 \begin{lstlisting}
+using idle_atom = atom_constant<atom("idle")>;
+using request_atom = atom_constant<atom("request")>;
+
 behavior server(event_based_actor* self) {
   auto die = [=] { self->quit(exit_reason::user_defined); };
   return {
-    on(atom("idle")) >> [=] {
+    [=](idle_atom) {
       auto worker = last_sender();
       self->become (
         keep_behavior,
-        on(atom("request")) >> [=] {
+        [=](request_atom) {
           // forward request to idle worker
           self->forward_to(worker);
           // await next idle message
           self->unbecome();
         },
-        on(atom("idle")) >> skip_message,
+        [=](idle_atom) {
+          return skip_message();
+        },
         others() >> die
       );
     },
-    on(atom("request")) >> skip_message,
+    [=](request_atom) {
+      return skip_message();
+    },
     others() >> die
   };
 }

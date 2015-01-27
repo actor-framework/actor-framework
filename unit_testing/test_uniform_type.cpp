@@ -25,8 +25,9 @@ namespace {
 
 struct foo {
   int value;
-  explicit foo(int val = 0) : value(val) {}
-
+  explicit foo(int val = 0) : value(val) {
+    // nop
+  }
 };
 
 inline bool operator==(const foo& lhs, const foo& rhs) {
@@ -124,38 +125,41 @@ int main() {
   // the uniform_type_info implementation is correct
   std::set<std::string> expected = {
     // local types
-    "foo", // <anonymous namespace>::foo
+    "foo",
     // primitive types
-    "bool",         "@i8",   "@i16",
-    "@i32",         "@i64", // signed integer names
-    "@u8",        "@u16",  "@u32",
-    "@u64",                    // unsigned integer names
-    "@str",         "@u16str", "@u32str",  // strings
-    "float",        "double",  "@ldouble", // floating points
+    "bool",
+    "@i8",      "@i16",     "@i32",     "@i64",     // signed integer names
+    "@u8",      "@u16",     "@u32",     "@u64",     // unsigned integer names
+    "@str",     "@u16str",  "@u32str",              // strings
+    "float",    "double",   "@ldouble",             // floating points
     // default announced types
-    "@unit",        // unit_t
-    "@actor",       // actor
-    "@addr",        // actor_addr
-    "@atom",        // atom_value
-    "@channel",       // channel
-    "@charbuf",       // vector<char>
-    "@down",        // down_msg
-    "@duration",      // duration
-    "@exit",        // exit_msg
-    "@group",       // group
-    "@group_down",    // group_down_msg
-    "@message",       // message
-    "@message_id",    // message_id
-    "@node",        // node_id
-    "@strmap",      // map<string,string>
-    "@timeout",       // timeout_msg
-    "@sync_exited",     // sync_exited_msg
-    "@sync_timeout",    // sync_timeout_msg
-    "@strvec"       // vector<string>
+    "@unit",         // unit_t
+    "@actor",        // actor
+    "@addr",         // actor_addr
+    "@atom",         // atom_value
+    "@channel",      // channel
+    "@charbuf",      // vector<char>
+    "@down",         // down_msg
+    "@duration",     // duration
+    "@exit",         // exit_msg
+    "@group",        // group
+    "@group_down",   // group_down_msg
+    "@message",      // message
+    "@message_id",   // message_id
+    "@node",         // node_id
+    "@strmap",       // map<string,string>
+    "@timeout",      // timeout_msg
+    "@sync_exited",  // sync_exited_msg
+    "@sync_timeout", // sync_timeout_msg
+    "@strvec",       // vector<string>
+    "@strset"        // set<string>
   };
+  CAF_CHECKPOINT();
   if (check_types(expected)) {
+    CAF_CHECKPOINT();
     // causes the middleman to create its singleton
     io::middleman::instance();
+    CAF_CHECKPOINT();
     // ok, check whether middleman announces its types correctly
     check_types(append(expected,
                        "caf::io::accept_handle",
@@ -164,9 +168,12 @@ int main() {
                        "caf::io::connection_closed_msg",
                        "caf::io::new_connection_msg",
                        "caf::io::new_data_msg"));
+    CAF_CHECKPOINT();
   }
   // check whether enums can be announced as members
   announce<test_enum>("test_enum");
   announce<test_struct>("test_struct", &test_struct::test_value);
+  CAF_CHECKPOINT();
+  shutdown();
   return CAF_TEST_RESULT();
 }

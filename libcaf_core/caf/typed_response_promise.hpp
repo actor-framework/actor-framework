@@ -17,78 +17,56 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_FWD_HPP
-#define CAF_FWD_HPP
+#ifndef CAF_TYPED_RESPONSE_PROMISE_HPP
+#define CAF_TYPED_RESPONSE_PROMISE_HPP
 
-#include <cstdint>
+#include "caf/either.hpp"
+#include "caf/response_promise.hpp"
 
 namespace caf {
 
-template <class>
-class intrusive_ptr;
+template <class T>
+class typed_response_promise {
+ public:
+  typed_response_promise(response_promise promise) : m_promise(promise) {
+    // nop
+  }
 
-// classes
-class actor;
-class group;
-class message;
-class channel;
-class node_id;
-class behavior;
-class resumable;
-class actor_addr;
-class message_id;
-class local_actor;
-class actor_proxy;
-class scoped_actor;
-class execution_unit;
-class abstract_actor;
-class abstract_group;
-class blocking_actor;
-class message_handler;
-class uniform_type_info;
-class event_based_actor;
-class forwarding_actor_proxy;
+  explicit operator bool() const {
+    // handle is valid if it has a receiver
+    return static_cast<bool>(m_promise);
+  }
 
-// structs
-struct anything;
-struct invalid_actor_t;
-struct invalid_actor_addr_t;
-struct illegal_message_element;
+  void deliver(T what) const {
+    m_promise.deliver(make_message(std::move(what)));
+  }
 
-// enums
-enum class atom_value : uint64_t;
 
-// aliases
-using actor_id = uint32_t;
+ private:
+  response_promise m_promise;
+};
 
-// intrusive pointer types
-using abstract_actor_ptr = intrusive_ptr<abstract_actor>;
-using abstract_group_ptr = intrusive_ptr<abstract_group>;
-using actor_proxy_ptr = intrusive_ptr<actor_proxy>;
+template <class L, class R>
+class typed_response_promise<either_or_t<L, R>> {
+ public:
+  typed_response_promise(response_promise promise) : m_promise(promise) {
+    // nop
+  }
 
-// functions
-template <class T, typename U>
-T actor_cast(const U&);
+  explicit operator bool() const {
+    // handle is valid if it has a receiver
+    return static_cast<bool>(m_promise);
+  }
 
-namespace io {
-  class broker;
-  class middleman;
-} // namespace io
+  void deliver(either_or_t<L, R> what) const {
+    m_promise.deliver(what.value);
+  }
 
-namespace scheduler {
-  class abstract_worker;
-  class abstract_coordinator;
-} // namespace scheduler
 
-namespace detail {
-  class logging;
-  class singletons;
-  class message_data;
-  class group_manager;
-  class actor_registry;
-  class uniform_type_info_map;
-} // namespace detail
+ private:
+  response_promise m_promise;
+};
 
 } // namespace caf
 
-#endif // CAF_FWD_HPP
+#endif // CAF_TYPED_RESPONSE_PROMISE_HPP

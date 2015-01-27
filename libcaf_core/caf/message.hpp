@@ -22,6 +22,7 @@
 
 #include <type_traits>
 
+#include "caf/atom.hpp"
 #include "caf/config.hpp"
 
 #include "caf/detail/int_list.hpp"
@@ -282,13 +283,13 @@ inline bool operator!=(const message& lhs, const message& rhs) {
 }
 
 template <class T>
-struct lift_message_element {
+struct unbox_message_element {
   using type = T;
 };
 
-template <class T, T V>
-struct lift_message_element<std::integral_constant<T, V>> {
-  using type = T;
+template <atom_value V>
+struct unbox_message_element<atom_constant<V>> {
+  using type = atom_value;
 };
 
 /**
@@ -303,10 +304,10 @@ typename std::enable_if<
 >::type
 make_message(T&& arg, Ts&&... args) {
   using storage
-    = detail::tuple_vals<typename lift_message_element<
+    = detail::tuple_vals<typename unbox_message_element<
                            typename detail::strip_and_convert<T>::type
                          >::type,
-                         typename lift_message_element<
+                         typename unbox_message_element<
                            typename detail::strip_and_convert<Ts>::type
                          >::type...>;
   auto ptr = new storage(std::forward<T>(arg), std::forward<Ts>(args)...);

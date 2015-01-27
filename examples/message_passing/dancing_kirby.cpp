@@ -13,6 +13,8 @@ using std::pair;
 
 using namespace caf;
 
+using step_atom = atom_constant<atom("step")>;
+
 // ASCII art figures
 constexpr const char* figures[] = {
   "<(^.^<)",
@@ -29,11 +31,6 @@ constexpr animation_step animation_steps[] = {
   {1,  9}, {2, 10}, {2, 11}, {2, 12}, {2, 13}, {1, 13}, {0, 13},
   {0, 12}, {0, 11}, {0, 10}, {0,  9}, {0,  8}, {0,  7}, {1,  7}
 };
-
-template <class T, size_t S>
-constexpr size_t array_size(const T (&) [S]) {
-  return S;
-}
 
 constexpr size_t animation_width = 20;
 
@@ -55,19 +52,20 @@ void draw_kirby(const animation_step& animation) {
 // uses a message-based loop to iterate over all animation steps
 void dancing_kirby(event_based_actor* self) {
   // let's get it started
-  self->send(self, atom("Step"), size_t{0});
+  self->send(self, step_atom::value, size_t{0});
   self->become (
-    on(atom("Step"), array_size(animation_steps)) >> [=] {
-      // we've printed all animation steps (done)
-      cout << endl;
-      self->quit();
-    },
-    on(atom("Step"), arg_match) >> [=](size_t step) {
+    [=](step_atom, size_t step) {
+      if (step == sizeof(animation_step)) {
+        // we've printed all animation steps (done)
+        cout << endl;
+        self->quit();
+        return;
+      }
       // print given step
       draw_kirby(animation_steps[step]);
       // animate next step in 150ms
       self->delayed_send(self, std::chrono::milliseconds(150),
-                         atom("Step"), step + 1);
+                         step_atom::value, step + 1);
     }
   );
 }
@@ -76,5 +74,4 @@ int main() {
   spawn(dancing_kirby);
   await_all_actors_done();
   shutdown();
-  return 0;
 }

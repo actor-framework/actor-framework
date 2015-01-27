@@ -76,7 +76,7 @@ class response_handle<Self, message, nonblocking_response_handle_tag> {
       std::forward<Ts>(args)...,
       on<sync_timeout_msg>() >> [selfptr]() -> skip_message_t {
         selfptr->handle_sync_timeout();
-        return {};
+        return skip_message();
       }
     };
     m_self->bhvr_stack().push_back(std::move(bhvr), m_mid);

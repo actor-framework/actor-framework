@@ -18,6 +18,7 @@ macro(add name folder)
                         ${LIBCAF_LIBRARIES}
                         ${PTHREAD_LIBRARIES}
                         ${WSLIB})
+  install(FILES ${folder}/${name}.cpp DESTINATION share/caf/examples/${folder})
   add_dependencies(${name} all_examples)
 endmacro()
 

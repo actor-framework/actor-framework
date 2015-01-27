@@ -27,10 +27,8 @@
 namespace caf {
 namespace detail {
 
-struct iface_info {
-  std::string interface_name;
-  std::string ethernet_address;
-};
+using iface_info = std::pair<std::string /* interface name */,
+                             std::string /* interface address */>;
 
 std::vector<iface_info> get_mac_addresses();
 

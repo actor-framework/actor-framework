@@ -17,76 +17,50 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_POLICY_MIDDLEMAN_SCHEDULING_HPP
-#define CAF_POLICY_MIDDLEMAN_SCHEDULING_HPP
+#ifndef CAF_IO_NETWORK_ADDRESSES_HPP
+#define CAF_IO_NETWORK_ADDRESSES_HPP
 
+#include <map>
+#include <vector>
+#include <string>
 #include <utility>
 
-#include "caf/singletons.hpp"
-#include "caf/intrusive_ptr.hpp"
-
-#include "caf/io/middleman.hpp"
-
-#include "caf/policy/cooperative_scheduling.hpp"
+#include "caf/io/network/protocol.hpp"
 
 namespace caf {
-namespace policy {
+namespace io {
+namespace network {
 
-// Actor must implement invoke_message
-class middleman_scheduling {
+// {interface_name => {protocol => address}}
+using interfaces_map = std::map<std::string,
+                                std::map<protocol,
+                                         std::vector<std::string>>>;
 
+/**
+ * Utility class bundling access to network interface names and addresses.
+ */
+class interfaces {
  public:
+  /**
+   * Returns a map listing each interface by its name.
+   */
+  static interfaces_map list_all(bool include_localhost = true);
 
-  template <class Actor>
-  class continuation {
+  /**
+   * Returns all addresses for all devices for all protocols.
+   */
+  static std::map<protocol, std::vector<std::string>>
+  list_addresses(bool include_localhost = true);
 
-   public:
-
-    using pointer = intrusive_ptr<Actor>;
-
-    continuation(pointer ptr, msg_hdr_cref hdr, message&& msg)
-    : m_self(std::move(ptr)), m_hdr(hdr), m_data(std::move(msg)) { }
-
-    inline void operator()() const {
-      m_self->invoke_message(m_hdr, std::move(m_data));
-    }
-
-   private:
-
-    pointer    m_self;
-    message_header m_hdr;
-    message    m_data;
-
-  };
-
-  using timeout_type = int;
-
-  // this does return nullptr
-  template <class Actor, typename F>
-  inline void fetch_messages(Actor*, F) {
-    // clients cannot fetch messages
-  }
-
-  template <class Actor, typename F>
-  inline void fetch_messages(Actor* self, F cb, timeout_type) {
-    // a call to this call is always preceded by init_timeout,
-    // which will trigger a timeout message
-    fetch_messages(self, cb);
-  }
-
-  template <class Actor>
-  inline void launch(Actor*) {
-    // nothing to do
-  }
-
-  template <class Actor>
-  void enqueue(Actor* self, msg_hdr_cref hdr, message& msg) {
-    get_middleman()->run_later(continuation<Actor>{self, hdr, std::move(msg)});
-  }
-
+  /**
+   * Returns all addresses for all devices for given protocol.
+   */
+  static std::vector<std::string> list_addresses(protocol proc,
+                                                 bool include_localhost = true);
 };
 
-} // namespace policy
+} // namespace network
+} // namespace io
 } // namespace caf
 
-#endif // CAF_POLICY_MIDDLEMAN_SCHEDULING_HPP
+#endif // CAF_IO_NETWORK_ADDRESSES_HPP

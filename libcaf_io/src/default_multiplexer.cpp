@@ -45,9 +45,11 @@ using std::string;
 
 namespace {
 #ifdef CAF_MACOS
-constexpr int no_sigpipe_flag = SO_NOSIGPIPE;
-#else
-constexpr int no_sigpipe_flag = MSG_NOSIGNAL;
+  constexpr int no_sigpipe_flag = SO_NOSIGPIPE;
+#elif defined(CAF_WINDOWS)
+  constexpr int no_sigpipe_flag = 0; // does not exist on Windows
+#else // BSD or Linux
+  constexpr int no_sigpipe_flag = MSG_NOSIGNAL;
 #endif
 } // namespace <anonymous>
 
@@ -764,6 +766,17 @@ accept_handle default_multiplexer::add_tcp_doorman(broker* self,
   return ptr->hdl();
 }
 
+connection_handle default_multiplexer::new_tcp_scribe(const std::string& host,
+                                                      uint16_t port) {
+  auto fd = new_ipv4_connection_impl(host, port);
+  return connection_handle::from_int(int64_from_native_socket(fd));
+}
+
+void default_multiplexer::assign_tcp_scribe(broker* ptr,
+                                            connection_handle hdl) {
+  add_tcp_scribe(ptr, static_cast<native_socket>(hdl.id()));
+}
+
 connection_handle default_multiplexer::add_tcp_scribe(broker* self,
                                                       native_socket fd) {
   return add_tcp_scribe(self, default_socket{*this, fd});
@@ -773,6 +786,19 @@ connection_handle default_multiplexer::add_tcp_scribe(broker* self,
                                                       const std::string& host,
                                                       uint16_t port) {
   return add_tcp_scribe(self, new_ipv4_connection(host, port));
+}
+
+
+std::pair<accept_handle, uint16_t>
+default_multiplexer::new_tcp_doorman(uint16_t port, const char* in,
+                                     bool reuse_addr) {
+  auto res = new_ipv4_acceptor_impl(port, in, reuse_addr);
+  return {accept_handle::from_int(int64_from_native_socket(res.first)),
+          res.second};
+}
+
+void default_multiplexer::assign_tcp_doorman(broker* ptr, accept_handle hdl) {
+  add_tcp_doorman(ptr, static_cast<native_socket>(hdl.id()));
 }
 
 accept_handle default_multiplexer::add_tcp_doorman(broker* self,

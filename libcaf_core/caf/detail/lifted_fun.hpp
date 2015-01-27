@@ -148,10 +148,15 @@ class lifted_fun_invoker<bool, F> {
  */
 template <class F, class ListOfProjections, class... Args>
 class lifted_fun {
-
  public:
+  using plain_result_type = typename get_callable_trait<F>::result_type;
 
-  using result_type = typename get_callable_trait<F>::result_type;
+  using result_type =
+    typename std::conditional<
+      std::is_reference<plain_result_type>::value,
+      plain_result_type,
+      typename std::remove_const<plain_result_type>::type
+    >::type;
 
   // Let F be "R (Ts...)" then lifted_fun<F...> returns optional<R>
   // unless R is void in which case bool is returned

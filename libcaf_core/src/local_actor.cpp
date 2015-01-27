@@ -105,7 +105,7 @@ void local_actor::reply_message(message&& what) {
   }
   auto& mid = m_current_node->mid;
   if (mid.valid() == false || mid.is_response()) {
-    send_tuple(actor_cast<channel>(whom), std::move(what));
+    send(actor_cast<channel>(whom), std::move(what));
   } else if (!mid.is_answered()) {
     auto ptr = actor_cast<actor>(whom);
     ptr->enqueue(address(), mid.response_id(), std::move(what), host());
@@ -125,8 +125,8 @@ void local_actor::forward_message(const actor& dest, message_priority prio) {
   m_current_node->mid = invalid_message_id;
 }
 
-void local_actor::send_tuple(message_priority prio, const channel& dest,
-                             message what) {
+void local_actor::send_impl(message_priority prio, const channel& dest,
+                            message&& what) {
   if (!dest) {
     return;
   }
@@ -141,8 +141,8 @@ void local_actor::send_exit(const actor_addr& whom, uint32_t reason) {
   send(actor_cast<actor>(whom), exit_msg{address(), reason});
 }
 
-void local_actor::delayed_send_tuple(message_priority prio, const channel& dest,
-                                     const duration& rel_time, message msg) {
+void local_actor::delayed_send_impl(message_priority prio, const channel& dest,
+                                    const duration& rel_time, message msg) {
   message_id mid;
   if (prio == message_priority::high) {
     mid = mid.with_high_priority();

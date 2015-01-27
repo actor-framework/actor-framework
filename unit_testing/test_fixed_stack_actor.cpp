@@ -7,38 +7,47 @@
 
 using namespace caf;
 
+using pop_atom = atom_constant<atom("pop")>;
+using push_atom = atom_constant<atom("push")>;
+
 class fixed_stack : public sb_actor<fixed_stack> {
  public:
   friend class sb_actor<fixed_stack>;
   fixed_stack(size_t max) : max_size(max)  {
-    full = (
-      on(atom("push"), arg_match) >> [=](int) { /* discard */ },
-      on(atom("pop")) >> [=]() -> message {
+    full.assign(
+      [=](push_atom, int) {
+        /* discard */
+      },
+      [=](pop_atom) -> message {
         auto result = data.back();
         data.pop_back();
         become(filled);
-        return make_message(atom("ok"), result);
+        return make_message(ok_atom::value, result);
       }
     );
-    filled = (
-      on(atom("push"), arg_match) >> [=](int what) {
+    filled.assign(
+      [=](push_atom, int what) {
         data.push_back(what);
-        if (data.size() == max_size) become(full);
+        if (data.size() == max_size) {
+          become(full);
+        }
       },
-      on(atom("pop")) >> [=]() -> message {
+      [=](pop_atom) -> message {
         auto result = data.back();
         data.pop_back();
-        if (data.empty()) become(empty);
-        return make_message(atom("ok"), result);
+        if (data.empty()) {
+          become(empty);
+        }
+        return make_message(ok_atom::value, result);
       }
     );
-    empty = (
-      on(atom("push"), arg_match) >> [=](int what) {
+    empty.assign(
+      [=](push_atom, int what) {
         data.push_back(what);
         become(filled);
       },
-      on(atom("pop")) >> [=] {
-        return atom("failure");
+      [=](pop_atom) {
+        return error_atom::value;
       }
     );
   }
@@ -58,19 +67,20 @@ fixed_stack::~fixed_stack() {
   // avoid weak-vtables warning
 }
 
-
 void test_fixed_stack_actor() {
   scoped_actor self;
   auto st = spawn<fixed_stack>(size_t{10});
   // push 20 values
-  for (int i = 0; i < 20; ++i) self->send(st, atom("push"), i);
+  for (int i = 0; i < 20; ++i) self->send(st, push_atom::value, i);
   // pop 20 times
-  for (int i = 0; i < 20; ++i) self->send(st, atom("pop"));
+  for (int i = 0; i < 20; ++i) self->send(st, pop_atom::value);
   // expect 10 failure messages
   {
     int i = 0;
     self->receive_for(i, 10) (
-      on(atom("failure")) >> CAF_CHECKPOINT_CB()
+      [](error_atom) {
+        CAF_CHECKPOINT();
+      }
     );
     CAF_CHECKPOINT();
   }
@@ -79,7 +89,7 @@ void test_fixed_stack_actor() {
     std::vector<int> values;
     int i = 0;
     self->receive_for(i, 10) (
-      on(atom("ok"), arg_match) >> [&](int value) {
+      [&](ok_atom, int value) {
         values.push_back(value);
       }
     );

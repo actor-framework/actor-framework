@@ -11,76 +11,35 @@ Hence, we provide an internal domain-specific language to match incoming message
 \subsection{Basics}
 \label{Sec::PatternMatching::Basics}
 
-A match expression begins with a call to the function \lstinline^on^, which returns an intermediate object providing \lstinline^operator>>^.
-The right-hand side of the operator denotes a callback, usually a lambda expression, that should be invoked if a tuple matches the types given to \lstinline^on^,
-as shown in the example below.
+Actors can store a set of message callbacks using either \lstinline^behavior^ or \lstinline^message_handler^.
+The difference between the two is that the former stores an optional timeout.
+The most basic way to define a pattern is to store a set of lambda expressions using one of the two container types.
 
 \begin{lstlisting}
-on<int>() >> [](int i) { /*...*/ }
-on<int, float>() >> [](int i, float f) { /*...*/ }
-on<int, int, int>() >> [](int a, int b, int c) { /*...*/ }
-\end{lstlisting}
-
-The result of \lstinline^operator>>^ is a \textit{match statement}.
-A message handler can consist of any number of match statements.
-At most one callback is invoked, since the evaluation stops at the first match.
-
-\begin{lstlisting}
-message_handler fun {
-  on<int>() >> [](int i) {
-    // case1
-  },
-  on<int>() >> [](int i) {
-    // case2; never invoked, since case1 always matches first
-  }
+behavior bhvr1{
+  [](int i) { /*...*/ },
+  [](int i, float f) { /*...*/ },
+  [](int a, int b, int c) { /*...*/ }
 };
 \end{lstlisting}
 
-The function ``\lstinline^on^'' can be used in two ways.
-Either with template parameters only or with function parameters only.
-The latter version deduces all types from its arguments and matches for both type and value.
-To match for any value of a given type, ``\lstinline^val^'' can be used, as shown in the following example.
+In our first example, \lstinline^bhvr1^ models a pattern accepting messages that consist of either exactly one \lstinline^int^, or one \lstinline^int^ followed by a \lstinline^float^, or three \lstinline^int^s.
+Any other message is not matched and will remain in the mailbox until it is consumed eventually.
+This caching mechanism allows actors to ignore messages until a state change replaces its message handler.
+However, this can lead to a memory leak if an actor receives messages it handles in no state.
+To allow actors to specify a default message handlers for otherwise unmatched messages, \lib provides the function \lstinline^others()^.
 
 \begin{lstlisting}
-on(42) >> [](int i) { assert(i == 42); }
-on("hello world") >> [] { /* ... */ }
-on("print", val<std::string>) >> [](const std::string& what) {
-  // ...
-}
+behavior bhvr2{
+  [](int i) { /*...*/ },
+  [](int i, float f) { /*...*/ },
+  [](int a, int b, int c) { /*...*/ },
+  others() >> [] { /*...*/ }
+};
 \end{lstlisting}
 
-\textbf{Note:} The given callback can have less arguments than the pattern.
-But it is only allowed to skip arguments from left to right.
-
-\begin{lstlisting}
-on<int, float, double>() >> [](double) { /*...*/ }             // ok
-on<int, float, double>() >> [](float, double) { /*...*/ }      // ok
-on<int, float, double>() >> [](int, float, double) { /*...*/ } // ok
-
-on<int, float, double>() >> [](int i) { /*...*/ } // compiler error
-\end{lstlisting}
-
-\subsection{Reducing Redundancy with ``\lstinline^arg_match^'' and ``\lstinline^on_arg_match^''}
-
-Our previous examples always used the most verbose form, which is quite redundant, since you have to type the types twice -- as template parameter and as argument type for the lambda.
-To avoid such redundancy, \lstinline^arg_match^ can be used as last argument to the function \lstinline^on^.
-This causes the compiler to deduce all further types from the signature of the given callback.
-
-\begin{lstlisting}
-on<int, int>() >> [](int a, int b) { /*...*/ }
-// is equal to:
-on(arg_match) >> [](int a, int b) { /*...*/ }
-\end{lstlisting}
-
-Note that the second version does call \lstinline^on^ without template parameters.
-Furthermore, \lstinline^arg_match^ must be passed as last parameter.
-If all types should be deduced from the callback signature, \lstinline^on_arg_match^ can be used.
-It is equal to \lstinline^on(arg_match)^.
-However, when using a pattern to initialize the behavior of an actor, \lstinline^on_arg_match^ is used implicitly whenever a functor is passed without preceding it with an \lstinline^on^ clause.
-
-\begin{lstlisting}
-on_arg_match >> [](const std::string& str) { /*...*/ }
-\end{lstlisting}
+Please note the change in syntax for the default case.
+The lambda expression passed to the constructor of \lstinline^behavior^ is prefixed by a ''match expression'' and the operator \lstinline^>>^.
 
 \subsection{Atoms}
 \label{Sec::PatternMatching::Atoms}
@@ -97,13 +56,95 @@ Legal characters are ``\lstinline[language=C++]^_0-9A-Za-z^'' and the whitespace
 Atoms are created using the \lstinline^constexpr^ function \lstinline^atom^, as the following example illustrates.
 
 \begin{lstlisting}
-on(atom("add"), arg_match) >> [](int a, int b) { /*...*/ },
-on(atom("multiply"), arg_match) >> [](int a, int b) { /*...*/ },
+atom_value a1 = atom("add");
+atom_value a2 = atom("multiply");
 // ...
 \end{lstlisting}
 
-\textbf{Note}: The compiler cannot enforce the restrictions at compile time, except for a length check.
+\textbf{Warning}: The compiler cannot enforce the restrictions at compile time, except for a length check.
 The assertion \lstinline^atom("!?") != atom("?!")^ is not true, because each invalid character is mapped to the whitespace character.
+
+An \lstinline^atom_value^ alone does not help us statically annotate function handlers.
+To accomplish this, \lib offers compile-time \emph{atom constants}.
+
+\begin{lstlisting}
+using add_atom = atom_constant<atom("add")>;
+using multiply_atom = atom_constant<atom("multiply")>;
+\end{lstlisting}
+
+Using the constants, we can now define message passing interfaces in a convenient way.
+\begin{lstlisting}
+behavior do_math{
+  [](add_atom, int a, int b) {
+    return a + b;
+  },
+  [](multiply_atom, int a, int b) {
+    return a * b;
+  }
+};
+\end{lstlisting}
+
+Atom constants define a static member \lstinline^value^ that can be used on the caller side (see Section \ref{Sec::Send}), e.g., \lstinline^send(math_actor, add_atom::value, 1, 2)^.
+Please note that the static \lstinline^value^ member does \emph{not} have the type \lstinline^atom_value^, unlike \lstinline^std::integral_constant^ for example.
+
+\clearpage
+\subsection{Match Expressions}
+
+Match expressions are an advanced feature of \lib and allow you to match on values and to extract data while matching.
+Using lambda expressions and atom constants---cf. \ref{Sec::PatternMatching::Atoms}---suffices for most use cases.
+A match expression begins with a call to the function \lstinline^on^, which returns an intermediate object providing \lstinline^operator>>^.
+The function \lstinline^others()^ is an alias for \lstinline^on<anything>()^.
+The right-hand side of the operator denotes a callback, usually a lambda expression, that should be invoked if a tuple matches the types given to \lstinline^on^,
+
+When using the basic syntax, \lib generates the match expression automatically.
+A verbose version of the \lstinline^bhvr1^ from \ref{Sec::PatternMatching::Basics} is shown below.
+
+\begin{lstlisting}
+behavior verbose_bhvr1{
+  on<int>() >> [](int i) { /*...*/ },
+  on<int, float>() >> [](int i, float f) { /*...*/ },
+  on<int, int, int>() >> [](int a, int b, int c) { /*...*/ }
+};
+\end{lstlisting}
+
+The function \lstinline^on^ can be used in two ways.
+Either with template parameters only or with function parameters only.
+The latter version deduces all types from its arguments and matches for both type and value.
+To match for any value of a given type, the template \lstinline^val<T>^ can be used, as shown in the following example.
+
+\begin{lstlisting}
+behavior bhvr3{
+  on(42) >> [](int i) { assert(i == 42); },
+  on("hello world") >> [] { /* ... */ },
+  on("print", val<std::string>) >> [](const std::string& what) {
+  // ...
+  }
+};
+\end{lstlisting}
+
+\textbf{Note:} The given callback can have less arguments than the pattern.
+But it is only allowed to skip arguments from left to right.
+
+\begin{lstlisting}
+on<int, float, double>() >> [](double) { /*...*/ }             // ok
+on<int, float, double>() >> [](float, double) { /*...*/ }      // ok
+on<int, float, double>() >> [](int, float, double) { /*...*/ } // ok
+
+on<int, float, double>() >> [](int i) { /*...*/ } // compiler error
+\end{lstlisting}
+
+To avoid redundancy when working with match expressions, \lstinline^arg_match^ can be used as last argument to the function \lstinline^on^.
+This causes the compiler to deduce all further types from the signature of any given callback.
+
+\begin{lstlisting}
+on<int, int>() >> [](int a, int b) { /*...*/ }
+// is equal to:
+on(arg_match) >> [](int a, int b) { /*...*/ }
+\end{lstlisting}
+
+Note that \lstinline^arg_match^ must be passed as last parameter.
+If all types should be deduced from the callback signature, \lstinline^on_arg_match^ can be used, which is an alias for \lstinline^on(arg_match)^.
+However, \lstinline^on_arg_match^ is used implicitly whenever a callback is used without preceding match expression.
 
 \clearpage
 \subsection{Wildcards}
@@ -166,13 +207,13 @@ If the functor returns an \lstinline^option<T>^, then \lstinline^T^ is deduced.
 \subsection{Dynamically Building Messages}
 
 Usually, messages are created implicitly when sending messages but can also be created explicitly using \lstinline^make_message^.
-In both cases, types and number of elements is fixed at compile time.
+In both cases, types and number of elements are known at compile time.
 To allow for fully dynamic message generation, \lib also offers a third option to create messages by using a \lstinline^message_builder^:
 
 \begin{lstlisting}
 message_builder mb;
 // prefix message with some atom
-mb.append(atom("strings"));
+mb.append(strings_atom::value);
 // fill message with some strings
 std::vector<std::string> strings{/*...*/};
 for (auto& str : strings) {

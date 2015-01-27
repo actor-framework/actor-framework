@@ -22,20 +22,22 @@
 
 #include "caf/config.hpp"
 
-#ifdef CAF_WINDOWS
-#  include <winsock2.h>
-#endif
-
 namespace caf {
 namespace io {
 namespace network {
 
 #ifdef CAF_WINDOWS
-  using native_socket = SOCKET;
-  constexpr native_socket invalid_native_socket = INVALID_SOCKET;
+  using native_socket = unsigned;
+  constexpr native_socket invalid_native_socket = static_cast<unsigned>(-1);
+  inline int64_t int64_from_native_socket(native_socket sock) {
+    return sock == invalid_native_socket ? -1 : static_cast<uint64_t>(sock);
+  }
 #else
   using native_socket = int;
   constexpr native_socket invalid_native_socket = -1;
+  inline int64_t int64_from_native_socket(native_socket sock) {
+    return static_cast<int64_t>(sock);
+  }
 #endif
 
 } // namespace network

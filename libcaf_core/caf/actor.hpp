@@ -57,7 +57,7 @@ struct is_convertible_to_actor {
 
 /**
  * Identifies an untyped actor. Can be used with derived types
- * of `event_based_actor`, `blocking_actor`, `actor_proxy`.
+ * of `event_based_actor`, `blocking_actor`, and `actor_proxy`.
  */
 class actor : detail::comparable<actor>,
               detail::comparable<actor, actor_addr>,

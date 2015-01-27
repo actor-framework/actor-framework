@@ -7,11 +7,13 @@ All functions shown in this section can be accessed by including the header \lst
 \subsection{Publishing of Actors}
 
 \begin{lstlisting}
-uint16_t publish(actor whom, uint16_t port, const char* addr = 0, bool reuse_addr = false)
+uint16_t publish(actor whom, uint16_t port,
+                 const char* addr = nullptr,
+                 bool reuse_addr = false)
 \end{lstlisting}
 
 The function \lstinline^publish^ binds an actor to a given port.
-To choose the next high-level port available available for binding, one can specify \lstinline^port == 0^ and retrieves the bound port as return value.
+To choose the next high-level port available for binding, one can specify \lstinline^port == 0^ and retrieves the bound port as return value.
 The return value is equal to \lstinline^port^ if \lstinline^port != 0^.
 The function throws \lstinline^network_error^ if socket related errors occur or \lstinline^bind_failure^ if the specified port is already in use.
 The optional \lstinline^addr^ parameter can be used to listen only to the given address.
@@ -26,18 +28,20 @@ With \lstinline^reuse_addr = true^ binding would succeed because 10.0.0.1 and
 \begin{lstlisting}
 publish(self, 4242);
 self->become (
-  on(atom("ping"), arg_match) >> [](int i) {
-    return make_message(atom("pong"), i);
+  [](ping_atom, int i) {
+    return std::make_tuple(pong_atom::value, i);
   }
 );
 \end{lstlisting}
 
-To close a socket, e.g., to allow other actors to be published at the port, the function \lstinline^unpublish^ can be used:
+To close a socket, e.g., to allow other actors to be published at the port, the function \lstinline^unpublish^ can be used.
+This function is called implicitly if a published actor terminates.
 
 \begin{lstlisting}
 void unpublish(caf::actor whom, uint16_t port)
 \end{lstlisting}
 
+\clearpage
 \subsection{Connecting to Remote Actors}
 
 \begin{lstlisting}
@@ -49,13 +53,14 @@ A \lstinline^network_error^ is thrown if the connection failed.
 
 \begin{lstlisting}
 auto pong = remote_actor("localhost", 4242);
-self->send(pong, atom("ping"), 0);
+self->send(pong, ping_atom::value, 0);
 self->become (
-  on(atom("pong"), 10) >> [=] {
-    self->quit();
-  },
-  on(atom("pong"), arg_match) >> [=](int i) {
-    return make_message(atom("ping"), i+1);
+  [=](pong_value, int i) {
+    if (i >= 10) {
+      self->quit();
+      return;
+    }
+    self->send(pong, ping_atom::value, i + 1);
   }
 );
 \end{lstlisting}
