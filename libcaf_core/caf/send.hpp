@@ -33,6 +33,18 @@
 
 namespace caf {
 
+// mark outdated functions as deprecated
+inline void send_tuple_as(const actor& from, const channel& to,
+                          message msg) CAF_DEPRECATED;
+
+inline void send_tuple_as(const actor& from, const channel& to,
+                          message_priority prio, message msg) CAF_DEPRECATED;
+
+inline void anon_send_tuple(const channel& to, message msg) CAF_DEPRECATED;
+
+inline void anon_send_tuple(const channel& to, message_priority prio,
+                            message msg) CAF_DEPRECATED;
+
 /**
  * Sends `to` a message under the identity of `from`.
  */
@@ -54,29 +66,38 @@ inline void send_tuple_as(const actor& from, const channel& to,
 }
 
 /**
+ * Sends `to` a message under the identity of `from` with priority `prio`.
+ */
+template <class... Ts>
+void send_as(const actor& from, message_priority prio, const channel& to,
+             Ts&&... args) {
+  if (!to) {
+    return;
+  }
+  message_id mid;
+  to->enqueue(from.address(),
+              prio == message_priority::high ? mid.with_high_priority() : mid,
+              make_message(std::forward<Ts>(args)...), nullptr);
+}
+
+/**
  * Sends `to` a message under the identity of `from`.
  */
 template <class... Ts>
 void send_as(const actor& from, const channel& to, Ts&&... args) {
-  send_tuple_as(from, to, make_message(std::forward<Ts>(args)...));
-}
-
-template <class... Ts>
-void send_as(const actor& from, const channel& to, message_priority prio,
-             Ts&&... args) {
-  send_tuple_as(from, to, prio, make_message(std::forward<Ts>(args)...));
+  send_as(from, to, make_message(std::forward<Ts>(args)...));
 }
 
 /**
  * Anonymously sends `to` a message.
  */
 inline void anon_send_tuple(const channel& to, message msg) {
-  send_tuple_as(invalid_actor, to, std::move(msg));
+  send_as(invalid_actor, to, std::move(msg));
 }
 
 inline void anon_send_tuple(const channel& to, message_priority prio,
                             message msg) {
-  send_tuple_as(invalid_actor, to, prio, std::move(msg));
+  send_as(invalid_actor, to, prio, std::move(msg));
 }
 
 /**

@@ -283,7 +283,7 @@ void test_spawn() {
   CAF_PRINT("test self->send()");
   self->send(self, 1, 2, 3, true);
   self->receive(on(1, 2, 3, true) >> [] { });
-  self->send_tuple(self, message{});
+  self->send(self, message{});
   self->receive(on() >> [] { });
   self->await_all_other_actors_done();
   CAF_CHECKPOINT();
@@ -472,8 +472,8 @@ void test_spawn() {
   );
   // kill joe and bob
   auto poison_pill = make_message(atom("done"));
-  anon_send_tuple(joe, poison_pill);
-  anon_send_tuple(bob, poison_pill);
+  anon_send(joe, poison_pill);
+  anon_send(bob, poison_pill);
   self->await_all_other_actors_done();
 
   function<actor (const string&, const actor&)> spawn_next;
@@ -489,7 +489,7 @@ void test_spawn() {
     s->become (
       others() >> [=] {
         // forward message and die
-        s->send_tuple(pal, s->last_dequeued());
+        s->send(pal, s->last_dequeued());
         s->quit();
       }
     );

@@ -54,7 +54,7 @@ class single_timeout : public Base {
         this->enqueue(this->address(), invalid_message_id,
                       std::move(msg), this->host());
       } else
-        this->delayed_send_tuple(this, d, std::move(msg));
+        this->delayed_send(this, d, std::move(msg));
     } else
       this->has_timeout(false);
   }

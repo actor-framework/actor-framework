@@ -138,20 +138,8 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   }
 
   /**************************************************************************
-   *             send asynchronous messages             *
+   *                       send asynchronous messages                       *
    **************************************************************************/
-
-  /**
-   * Sends `what` to the receiver specified in `dest`.
-   */
-  void send_tuple(message_priority prio, const channel& whom, message what);
-
-  /**
-   * Sends `what` to the receiver specified in `dest`.
-   */
-  inline void send_tuple(const channel& whom, message what) {
-    send_tuple(message_priority::normal, whom, std::move(what));
-  }
 
   /**
    * Sends `{what...} to `whom` using the priority `prio`.
@@ -159,7 +147,7 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   template <class... Ts>
   inline void send(message_priority prio, const channel& whom, Ts&&... what) {
     static_assert(sizeof...(Ts) > 0, "sizeof...(Ts) == 0");
-    send_tuple(prio, whom, make_message(std::forward<Ts>(what)...));
+    send_impl(prio, whom, make_message(std::forward<Ts>(what)...));
   }
 
   /**
@@ -168,8 +156,8 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   template <class... Ts>
   inline void send(const channel& whom, Ts&&... what) {
     static_assert(sizeof...(Ts) > 0, "sizeof...(Ts) == 0");
-    send_tuple(message_priority::normal, whom,
-           make_message(std::forward<Ts>(what)...));
+    send_impl(message_priority::normal, whom,
+              make_message(std::forward<Ts>(what)...));
   }
 
   /**
@@ -181,8 +169,8 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
                       detail::type_list<typename detail::implicit_conversions<
                         typename std::decay<Ts>::type
                       >::type...>{});
-    send_tuple(message_priority::normal, actor{whom.m_ptr.get()},
-               make_message(std::forward<Ts>(what)...));
+    send_impl(message_priority::normal, actor{whom.m_ptr.get()},
+              make_message(std::forward<Ts>(what)...));
   }
 
   /**
@@ -206,28 +194,13 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   }
 
   /**
-   * Sends a message to `whom` with priority `prio`
-   * that is delayed by `rel_time`.
-   */
-  void delayed_send_tuple(message_priority prio, const channel& whom,
-                          const duration& rtime, message data);
-
-  /**
-   * Sends a message to `whom` that is delayed by `rel_time`.
-   */
-  inline void delayed_send_tuple(const channel& whom, const duration& rtime,
-                                 message data) {
-    delayed_send_tuple(message_priority::normal, whom, rtime, std::move(data));
-  }
-
-  /**
    * Sends a message to `whom` using priority `prio`
    * that is delayed by `rel_time`.
    */
   template <class... Ts>
   void delayed_send(message_priority prio, const channel& whom,
                     const duration& rtime, Ts&&... args) {
-    delayed_send_tuple(prio, whom, rtime,
+    delayed_send_impl(prio, whom, rtime,
                        make_message(std::forward<Ts>(args)...));
   }
 
@@ -236,8 +209,8 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
    */
   template <class... Ts>
   void delayed_send(const channel& whom, const duration& rtime, Ts&&... args) {
-    delayed_send_tuple(message_priority::normal, whom, rtime,
-                       make_message(std::forward<Ts>(args)...));
+    delayed_send_impl(message_priority::normal, whom, rtime,
+                      make_message(std::forward<Ts>(args)...));
   }
 
   /**************************************************************************
@@ -434,6 +407,24 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   }
 
   /**************************************************************************
+   *                        outdated member functions                       *
+   **************************************************************************/
+
+  // <backward_compatibility version="0.9">
+  inline void send_tuple(message_priority prio, const channel& whom,
+                         message what) CAF_DEPRECATED;
+
+  inline void send_tuple(const channel& whom, message what) CAF_DEPRECATED;
+
+  inline void delayed_send_tuple(message_priority prio, const channel& whom,
+                                 const duration& rtime,
+                                 message data) CAF_DEPRECATED;
+
+  inline void delayed_send_tuple(const channel& whom, const duration& rtime,
+                                 message data) CAF_DEPRECATED;
+  // </backward_compatibility>
+
+  /**************************************************************************
    *                here be dragons: end of public interface                *
    **************************************************************************/
 
@@ -561,6 +552,9 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   /** @endcond */
 
  private:
+  void send_impl(message_priority prio, const channel& dest, message&& what);
+  void delayed_send_impl(message_priority prio, const channel& whom,
+                         const duration& rtime, message data);
   using super = combined_type;
   std::function<void()> m_sync_failure_handler;
   std::function<void()> m_sync_timeout_handler;
@@ -571,6 +565,30 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
  * @relates local_actor
  */
 using local_actor_ptr = intrusive_ptr<local_actor>;
+
+// <backward_compatibility version="0.9">
+inline void local_actor::send_tuple(message_priority prio, const channel& whom,
+                                    message what) {
+  send_impl(prio, whom, std::move(what));
+}
+
+inline void local_actor::send_tuple(const channel& whom, message what) {
+  send_impl(message_priority::normal, whom, std::move(what));
+}
+
+inline void local_actor::delayed_send_tuple(message_priority prio,
+                                            const channel& whom,
+                                            const duration& rtime,
+                                            message data) {
+  delayed_send_impl(prio, whom, rtime, std::move(data));
+}
+
+inline void local_actor::delayed_send_tuple(const channel& whom,
+                                            const duration& rtime,
+                                            message data) {
+  delayed_send_impl(message_priority::normal, whom, rtime, std::move(data));
+}
+// </backward_compatibility>
 
 } // namespace caf
 
