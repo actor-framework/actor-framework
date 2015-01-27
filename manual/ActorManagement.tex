@@ -18,7 +18,7 @@ self->trap_exit(true);
 self->link_to(worker);
 // wait until worker exited
 self->become (
-  [](const exit_msg& e) >> [=] {
+  [=](const exit_msg& e) {
     if (e.reason == exit_reason::normal) {
       // worker finished computation
     else {
@@ -54,8 +54,8 @@ self->become (
 
 \subsection{Error Codes}
 
-All error codes are defined in the namespace \lstinline^cppa::exit_reason^.
-To obtain a string representation of an error code, use \lstinline^cppa::exit_reason::as_string(uint32_t)^.
+All error codes are defined in the namespace \lstinline^caf::exit_reason^.
+To obtain a string representation of an error code, use \lstinline^caf::exit_reason::as_string(uint32_t)^.
 
 \begin{tabular*}{\textwidth}{m{0.35\textwidth}m{0.08\textwidth}m{0.5\textwidth}}
   \hline
@@ -81,23 +81,24 @@ To obtain a string representation of an error code, use \lstinline^cppa::exit_re
 
 Actors can attach cleanup code to other actors.
 This code is executed immediately if the actor has already exited.
-Keep in mind that \lstinline^self^ refers to the currently running actor.
-Thus, \lstinline^self^ refers to the terminating actor and not to the actor that attached a functor to it.
 
 \begin{lstlisting}
-auto worker = spawn(...);
-actor observer = self;
-// "monitor" spawned actor
-worker->attach_functor([observer](std::uint32_t reason) {
-  // this callback is invoked from worker
-  anon_send(observer, atom("DONE"));
-});
-// wait until worker exited
-self->become (
-  on(atom("DONE")) >> [] {
-    // worker terminated
-  }
-);
+using done_atom = atom_constant<atom("done")>;
+
+behavior supervisor(event_based_actor* self, actor worker) {
+  actor observer = self;
+  // "monitor" spawned actor
+  worker->attach_functor([observer](std::uint32_t reason) {
+    // this callback is invoked from worker
+    anon_send(observer, done_atom::value);
+  });
+  // wait until worker exited
+  return {
+    [](done_atom) {
+      // ... worker terminated ...
+    }
+  };
+}
 \end{lstlisting}
 
 \textbf{Note}: It is possible to attach code to remote actors, but the cleanup code will run on the local machine.

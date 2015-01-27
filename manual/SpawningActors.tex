@@ -1,27 +1,26 @@
 \section{Spawning Actors}
 
 Actors are created using the function \lstinline^spawn^.
-%The arguments passed to \lstinline^spawn^ depend on the actor's implementation.
-%\subsection{Using \lstinline^spawn^ to Create Actors from Functors or Classes}
-The easiest way to implement actors is to use functors, e.g., a free function or lambda expression.
+The easiest way to implement actors is to use functors, e.g., a free function or a lambda expression.
 The arguments to the functor are passed to \lstinline^spawn^ as additional arguments.
 The function \lstinline^spawn^ also takes optional flags as template parameter.
 %The optional template parameter of \lstinline^spawn^ decides whether an actor should run in its own thread or takes place in the cooperative scheduling.
-The flag \lstinline^detached^ causes \lstinline^spawn^ to create a thread-mapped actor (opt-out of the cooperative scheduling), the flag \lstinline^linked^ links the newly created actor to its parent -- not available on top-level spawn -- and the flag \lstinline^monitored^ automatically adds a monitor to the new actor.
-Actors that make use of the blocking API (see Section \ref{Sec::BlockingAPI}) must be spawned using the flag \lstinline^blocking_api^.
+The flag \lstinline^detached^ causes \lstinline^spawn^ to assign a dedicated thread to the actor, i.e., to opt-out of the cooperative scheduling.
+Convenience flags like \lstinline^linked^ or \lstinline^monitored^ automatically link or monitor to the newly created actor.
+Naturally, these two flags are not available on ``top-level'' spawns.
+Actors that make use of the blocking API---see Section \ref{Sec::BlockingAPI}---must be spawned using the flag \lstinline^blocking_api^.
 Flags are concatenated using the operator \lstinline^+^, as shown in the examples below.
 
 \begin{lstlisting}
-#include "cppa/cppa.hpp"
-
-using namespace cppa;
+#include "caf/all.hpp"
+using namespace caf;
 
 void my_actor1();
 void my_actor2(event_based_actor*, int arg1, const std::string& arg2);
-void ugly_duckling();
+void ugly_duckling(blocking_actor*);
 
 class my_actor3 : public event_based_actor { /* ... */ };
-class my_actor4 : public sb_actor<my_actor4> {
+class my_actor4 : public event_based_actor {
   public: my_actor4(int some_value) { /* ... */ }
   /* ... */
 };
@@ -30,26 +29,26 @@ class my_actor4 : public sb_actor<my_actor4> {
 // we have to spawn it using the self pointer, otherwise
 // we can use the free function 'spawn' (top-level spawn)
 void server(event_based_actor* self) {
-  // spawn function-based actors
-  auto a0 = spawn(my_actor1);
+  // spawn functor-based actors
+  auto a0 = self->spawn(my_actor1);
   auto a1 = self->spawn<linked>(my_actor2, 42, "hello actor");
   auto a2 = self->spawn<monitored>([] { /* ... */ });
-  auto a3 = spawn([](int) { /* ... */ }, 42);
+  auto a3 = self->spawn([](int) { /* ... */ }, 42);
   // spawn thread-mapped actors
-  auto a4 = spawn<detached>(my_actor1);
+  auto a4 = self->spawn<detached>(my_actor1);
   auto a5 = self->spawn<detached + linked>([] { /* ... */ });
-  auto a6 = spawn<detached>(my_actor2, 0, "zero");
+  auto a6 = self->spawn<detached>(my_actor2, 0, "zero");
   // spawn class-based actors
-  auto a7 = spawn<my_actor3>();
+  auto a7 = self->spawn<my_actor3>();
   auto a8 = self->spawn<my_actor4, monitored>(42);
-  // spawn thread-mapped actors using a class
-  auto a9 = spawn<my_actor4, detached>(42);
+  // spawn and detach class-based actors
+  auto a9 = self->spawn<my_actor4, detached>(42);
   // spawn actors that need access to the blocking API
   auto aa = self->spawn<blocking_api>(ugly_duckling);
   // compiler error: my_actor2 captures the implicit
   // self pointer as event_based_actor* and thus cannot
-  // be spawned using blocking_api flag
-  /*-auto ab = self->spawn<blocking_api>(my_actor2);-*/
+  // be spawned using the `blocking_api` flag
+  // --- auto ab = self->spawn<blocking_api>(my_actor2);
 }
 \end{lstlisting}
 
