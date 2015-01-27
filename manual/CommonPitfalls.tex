@@ -23,17 +23,6 @@ It is not possible to transfer a handle to a response to another actor.
 
 \end{itemize}
 
-\subsection{Sending Messages}
-
-\begin{itemize}
-
-\item
-\lstinline^send(whom, ...)^ is defined as \lstinline^send_tuple(whom, make_message(...))^.
-Hence, a message sent via \lstinline^send(whom, self->last_dequeued())^ will not yield the expected result, since it wraps \lstinline^self->last_dequeued()^ into another \lstinline^message^ instance.
-The correct way of forwarding messages is \lstinline^self->forward_to(whom)^.
-
-\end{itemize}
-
 \subsection{Sharing}
 
 \begin{itemize}

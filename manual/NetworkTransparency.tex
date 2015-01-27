@@ -28,8 +28,8 @@ With \lstinline^reuse_addr = true^ binding would succeed because 10.0.0.1 and
 \begin{lstlisting}
 publish(self, 4242);
 self->become (
-  on(atom("ping"), arg_match) >> [](int i) {
-    return make_message(atom("pong"), i);
+  [](ping_atom, int i) {
+    return std::make_tuple(pong_atom::value, i);
   }
 );
 \end{lstlisting}
@@ -53,13 +53,14 @@ A \lstinline^network_error^ is thrown if the connection failed.
 
 \begin{lstlisting}
 auto pong = remote_actor("localhost", 4242);
-self->send(pong, atom("ping"), 0);
+self->send(pong, ping_atom::value, 0);
 self->become (
-  on(atom("pong"), 10) >> [=] {
-    self->quit();
-  },
-  on(atom("pong"), arg_match) >> [=](int i) {
-    return make_message(atom("ping"), i+1);
+  [=](pong_value, int i) {
+    if (i >= 10) {
+      self->quit();
+      return;
+    }
+    self->send(pong, ping_atom::value, i + 1);
   }
 );
 \end{lstlisting}
