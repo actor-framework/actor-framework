@@ -51,7 +51,9 @@ class basp_broker : public broker, public actor_namespace::backend {
   void add_published_actor(accept_handle hdl, const abstract_actor_ptr& whom,
                            uint16_t port);
 
-  void remove_published_actor(const abstract_actor_ptr& whom, uint16_t port);
+  bool remove_published_actor(const abstract_actor_ptr& whom);
+
+  bool remove_published_actor(const abstract_actor_ptr& whom, uint16_t port);
 
   actor_proxy_ptr make_proxy(const node_id&, actor_id) override;
 

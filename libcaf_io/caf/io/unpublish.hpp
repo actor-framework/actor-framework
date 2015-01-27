@@ -29,29 +29,19 @@
 namespace caf {
 namespace io {
 
-void unpublish_impl(abstract_actor_ptr whom, uint16_t port, bool block_caller);
+void unpublish_impl(const actor_addr& whom, uint16_t port, bool block_caller);
 
 /**
  * Unpublishes `whom` by closing `port`.
  * @param whom Actor that should be unpublished at `port`.
  * @param port TCP port.
  */
-inline void unpublish(caf::actor whom, uint16_t port) {
+template <class Handle>
+void unpublish(const Handle& whom, uint16_t port) {
   if (!whom) {
     return;
   }
-  unpublish_impl(actor_cast<abstract_actor_ptr>(whom), port, true);
-}
-
-/**
- * @copydoc unpublish(actor,uint16_t)
- */
-template <class... Rs>
-void typed_unpublish(typed_actor<Rs...> whom, uint16_t port) {
-  if (!whom) {
-    return;
-  }
-  unpublish_impl(actor_cast<abstract_actor_ptr>(whom), port, true);
+  unpublish_impl(whom.address(), port, true);
 }
 
 } // namespace io

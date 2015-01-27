@@ -32,8 +32,8 @@
 #include "caf/abstract_actor.hpp"
 #include "caf/binary_deserializer.hpp"
 
-#include "caf/io/middleman.hpp"
 #include "caf/io/basp_broker.hpp"
+#include "caf/io/middleman_actor.hpp"
 #include "caf/io/network/multiplexer.hpp"
 
 #include "caf/detail/logging.hpp"

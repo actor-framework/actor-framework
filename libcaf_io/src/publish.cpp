@@ -27,8 +27,8 @@
 #include "caf/detail/singletons.hpp"
 #include "caf/detail/actor_registry.hpp"
 
-#include "caf/io/middleman.hpp"
 #include "caf/io/basp_broker.hpp"
+#include "caf/io/middleman_actor.hpp"
 
 namespace caf {
 namespace io {

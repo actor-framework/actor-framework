@@ -32,39 +32,11 @@
 
 #include "caf/io/hook.hpp"
 #include "caf/io/broker.hpp"
+#include "caf/io/middleman_actor.hpp"
 #include "caf/io/network/multiplexer.hpp"
 
 namespace caf {
 namespace io {
-
-/**
- * API for asynchronous networking operations.
- */
-using middleman_actor =
-  typed_actor<
-    replies_to<put_atom, actor_addr, uint16_t, std::string, bool>
-    ::with_either<ok_atom, uint16_t>
-    ::or_else<error_atom, std::string>,
-    replies_to<put_atom, actor_addr, uint16_t, std::string>
-    ::with_either<ok_atom, uint16_t>
-    ::or_else<error_atom, std::string>,
-    replies_to<put_atom, actor_addr, uint16_t, bool>
-    ::with_either<ok_atom, uint16_t>
-    ::or_else<error_atom, std::string>,
-    replies_to<put_atom, actor_addr, uint16_t>
-    ::with_either<ok_atom, uint16_t>
-    ::or_else<error_atom, std::string>,
-    replies_to<get_atom, std::string, uint16_t, std::set<std::string>>
-    ::with_either<ok_atom, actor_addr>
-    ::or_else<error_atom, std::string>,
-    replies_to<get_atom, std::string, uint16_t>
-    ::with_either<ok_atom, actor_addr>
-    ::or_else<error_atom, std::string>>;
-
-/**
- * Returns a handle for asynchronous networking operations.
- */
-middleman_actor get_middleman_actor();
 
 /**
  * Manages brokers and network backends.

@@ -24,9 +24,9 @@
 #include <string>
 #include <cstdint>
 
+#include "caf/fwd.hpp"
 #include "caf/actor_cast.hpp"
-
-#include "caf/io/middleman.hpp"
+#include "caf/typed_actor.hpp"
 
 namespace caf {
 namespace io {

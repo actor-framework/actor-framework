@@ -176,6 +176,7 @@ void do_announce(const char* tname) {
 using detail::make_counted;
 
 using middleman_actor_base = middleman_actor::extend<
+                               reacts_to<ok_atom, int64_t>,
                                reacts_to<ok_atom, int64_t, actor_addr>,
                                reacts_to<error_atom, int64_t, std::string>
                              >::type;
@@ -184,8 +185,8 @@ class middleman_actor_impl : public middleman_actor_base::base {
  public:
   middleman_actor_impl(middleman& mref, actor default_broker)
       : m_broker(default_broker),
-        m_next_request_id(0),
-        m_parent(mref) {
+        m_parent(mref),
+        m_next_request_id(0) {
     // nop
   }
 
@@ -195,6 +196,10 @@ class middleman_actor_impl : public middleman_actor_base::base {
                         ::or_else<error_atom, std::string>;
 
   using get_op_promise = typed_response_promise<get_op_result>;
+
+  using del_op_result = either<ok_atom>::or_else<error_atom, std::string>;
+
+  using del_op_promise = typed_response_promise<del_op_result>;
 
   middleman_actor_base::behavior_type make_behavior() {
     return {
@@ -219,13 +224,28 @@ class middleman_actor_impl : public middleman_actor_base::base {
       [=](get_atom, const std::string& hostname, uint16_t port) {
         return get(hostname, port, std::set<std::string>());
       },
+      [=](delete_atom, const actor_addr& whom) {
+        return del(whom);
+      },
+      [=](delete_atom, const actor_addr& whom, uint16_t port) {
+        return del(whom, port);
+      },
+      [=](ok_atom ok, int64_t request_id) {
+        auto i = m_pending_requests.find(request_id);
+        if (i == m_pending_requests.end()) {
+          CAF_LOG_ERROR("invalid request id: " << request_id);
+          return;
+        }
+        i->second.deliver(del_op_result{ok}.value);
+        m_pending_requests.erase(i);
+      },
       [=](ok_atom ok, int64_t request_id, actor_addr result) {
         auto i = m_pending_requests.find(request_id);
         if (i == m_pending_requests.end()) {
           CAF_LOG_ERROR("invalid request id: " << request_id);
           return;
         }
-        i->second.deliver(get_op_result{ok, result});
+        i->second.deliver(get_op_result{ok, result}.value);
         m_pending_requests.erase(i);
       },
       [=](error_atom error, int64_t request_id, std::string& reason) {
@@ -234,7 +254,7 @@ class middleman_actor_impl : public middleman_actor_base::base {
           CAF_LOG_ERROR("invalid request id: " << request_id);
           return;
         }
-        i->second.deliver(get_op_result{error, std::move(reason)});
+        i->second.deliver(get_op_result{error, std::move(reason)}.value);
         m_pending_requests.erase(i);
       }
     };
@@ -267,7 +287,7 @@ class middleman_actor_impl : public middleman_actor_base::base {
 
   get_op_promise get(const std::string& hostname, uint16_t port,
                      std::set<std::string> expected_ifs) {
-    get_op_promise result = make_response_promise();
+    auto result = make_response_promise();
     try {
       auto hdl = m_parent.backend().new_tcp_scribe(hostname, port);
       auto req_id = m_next_request_id++;
@@ -279,15 +299,23 @@ class middleman_actor_impl : public middleman_actor_base::base {
       // fullfil promise immediately
       std::string msg = "network_error: ";
       msg += err.what();
-      result.deliver(get_op_result{error_atom{}, std::move(msg)});
+      result.deliver(get_op_result{error_atom{}, std::move(msg)}.value);
     }
     return result;
   }
 
+  del_op_promise del(const actor_addr& whom, uint16_t port = 0) {
+    auto result = make_response_promise();
+    auto req_id = m_next_request_id++;
+    send(m_broker, delete_atom::value, req_id, whom, port);
+    m_pending_requests.insert(std::make_pair(req_id, result));
+    return result;
+  }
+
   actor m_broker;
-  int64_t m_next_request_id;
   middleman& m_parent;
-  std::map<int64_t, get_op_promise> m_pending_requests;
+  int64_t m_next_request_id;
+  std::map<int64_t, response_promise> m_pending_requests;
 };
 
 middleman_actor_impl::~middleman_actor_impl() {

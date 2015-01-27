@@ -80,6 +80,11 @@ using get_atom = atom_constant<atom("GET")>;
 using put_atom = atom_constant<atom("PUT")>;
 
 /**
+ * Generic 'DELETE' atom for request operations.
+ */
+using delete_atom = atom_constant<atom("DELETE")>;
+
+/**
  * Generic 'OK' atom for response messages.
  */
 using ok_atom = atom_constant<atom("OK")>;

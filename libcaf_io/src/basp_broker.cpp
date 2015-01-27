@@ -189,6 +189,23 @@ behavior basp_broker::make_behavior() {
       ctx.handshake_data->expected_ifs.swap(expected_ifs);
       init_handshake_as_client(ctx);
     },
+    [=](delete_atom, int64_t request_id, const actor_addr& whom, uint16_t port)
+    -> message {
+      if (whom == invalid_actor_addr) {
+        return make_message(error_atom::value, "whom == invalid_actor_addr");
+      }
+      auto ptr = actor_cast<abstract_actor_ptr>(whom);
+      if (port == 0) {
+        if (!remove_published_actor(ptr)) {
+          return make_message(error_atom::value, "no mapping found");
+        }
+      } else {
+        if (!remove_published_actor(ptr, port)) {
+          return make_message(error_atom::value, "port not bound to actor");
+        }
+      }
+      return make_message(ok_atom::value, request_id);
+    },
     // catch-all error handler
     others() >> [=] {
       CAF_LOG_ERROR("received unexpected message: "
@@ -729,34 +746,52 @@ void basp_broker::add_published_actor(accept_handle hdl,
   m_acceptors.insert(std::make_pair(hdl, std::make_pair(ptr, port)));
   m_open_ports.insert(std::make_pair(port, hdl));
   ptr->attach_functor([port](abstract_actor* self, uint32_t) {
-    unpublish_impl(self, port, false);
+    unpublish_impl(self->address(), port, false);
   });
   if (ptr->node() == node()) {
     singletons::get_actor_registry()->put(ptr->id(), ptr);
   }
 }
 
-void basp_broker::remove_published_actor(const abstract_actor_ptr& whom,
+bool basp_broker::remove_published_actor(const abstract_actor_ptr& whom) {
+  size_t erased_elements = 0;
+  auto last = m_acceptors.end();
+  auto i = m_acceptors.begin();
+  while (i != last) {
+    if (i->second.first == whom) {
+      close(i->first);
+      m_open_ports.erase(i->second.second);
+      i = m_acceptors.erase(i);
+    }
+    else {
+      ++i;
+    }
+  }
+  return erased_elements > 0;
+}
+
+bool basp_broker::remove_published_actor(const abstract_actor_ptr& whom,
                                          uint16_t port) {
   CAF_LOG_TRACE("");
   auto i = m_open_ports.find(port);
   if (i == m_open_ports.end()) {
-    return;
+    return false;
   }
   auto j = m_acceptors.find(i->second);
   if (j == m_acceptors.end()) {
     CAF_LOG_ERROR("accept handle for port " << port
                   << " not found in m_published_actors");
     m_open_ports.erase(i);
-    return;
+    return false;
   }
   if (j->second.first != whom) {
     CAF_LOG_INFO("port has been bound to a different actor already");
-    return;
+    return false;
   }
   close(j->first);
   m_open_ports.erase(i);
   m_acceptors.erase(j);
+  return true;
 }
 
 } // namespace io
