@@ -21,6 +21,7 @@
 #define CAF_DETAIL_MESSAGE_ITERATOR_HPP
 
 #include <cstddef>
+#include <typeinfo>
 
 #include "caf/fwd.hpp"
 
@@ -78,7 +79,12 @@ class message_iterator {
 
   const void* value() const;
 
-  const uniform_type_info* type() const;
+  bool match_element(uint16_t typenr, const std::type_info* rtti) const;
+
+  template <class T>
+  const T& value_as() const {
+    return *reinterpret_cast<const T*>(value());
+  }
 
   inline message_iterator& operator*() {
     return *this;

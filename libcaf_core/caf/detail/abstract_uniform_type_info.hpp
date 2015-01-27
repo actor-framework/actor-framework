@@ -37,17 +37,17 @@ namespace detail {
  */
 template <class T>
 class abstract_uniform_type_info : public uniform_type_info {
-
  public:
-
-  bool equal_to(const std::type_info& tinfo) const override {
-    return typeid(T) == tinfo;
+  const char* name() const override {
+    return m_name.c_str();
   }
-
-  const char* name() const { return m_name.c_str(); }
 
   message as_message(void* instance) const override {
     return make_message(deref(instance));
+  }
+
+  bool equal_to(const std::type_info& tinfo) const override {
+    return m_native == &tinfo || *m_native == tinfo;
   }
 
   bool equals(const void* lhs, const void* rhs) const override {
@@ -59,25 +59,30 @@ class abstract_uniform_type_info : public uniform_type_info {
   }
 
  protected:
-
-  abstract_uniform_type_info(std::string tname) : m_name(std::move(tname)) {
+  abstract_uniform_type_info(std::string tname)
+      : m_name(std::move(tname)),
+        m_native(&typeid(T)) {
     // nop
   }
 
-  static inline const T& deref(const void* ptr) {
+  static const T& deref(const void* ptr) {
     return *reinterpret_cast<const T*>(ptr);
   }
 
-  static inline T& deref(void* ptr) { return *reinterpret_cast<T*>(ptr); }
+  static T& deref(void* ptr) {
+    return *reinterpret_cast<T*>(ptr);
+  }
 
   // can be overridden in subclasses to compare POD types
   // by comparing each individual member
-  virtual bool pod_mems_equals(const T&, const T&) const { return false; }
+  virtual bool pod_mems_equals(const T&, const T&) const {
+    return false;
+  }
 
   std::string m_name;
+  const std::type_info* m_native;
 
  private:
-
   template <class C>
   typename std::enable_if<std::is_empty<C>::value, bool>::type
   eq(const C&, const C&) const {
@@ -99,7 +104,6 @@ class abstract_uniform_type_info : public uniform_type_info {
   eq(const C& lhs, const C& rhs) const {
     return pod_mems_equals(lhs, rhs);
   }
-
 };
 
 } // namespace detail

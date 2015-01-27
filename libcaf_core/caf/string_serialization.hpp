@@ -72,7 +72,7 @@ template <class T>
 optional<T> from_string(const std::string& what) {
   auto uti = uniform_typeid<T>();
   auto uv = from_string_impl(what);
-  if (!uv || (*uv->ti) != typeid(T)) {
+  if (!uv || uv->ti != uti) {
     // try again using the type name
     std::string tmp = uti->name();
     tmp += " ( ";
@@ -80,7 +80,7 @@ optional<T> from_string(const std::string& what) {
     tmp += " )";
     uv = from_string_impl(tmp);
   }
-  if (uv && (*uv->ti) == typeid(T)) {
+  if (uv && uv->ti == uti) {
     return T{std::move(*reinterpret_cast<T*>(uv->val))};
   }
   return none;

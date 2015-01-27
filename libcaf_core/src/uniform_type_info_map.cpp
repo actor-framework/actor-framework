@@ -42,6 +42,7 @@
 #include "caf/message_builder.hpp"
 
 #include "caf/detail/logging.hpp"
+#include "caf/detail/type_nr.hpp"
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/singletons.hpp"
 #include "caf/detail/scope_guard.hpp"
@@ -52,82 +53,42 @@
 namespace caf {
 namespace detail {
 
-namespace {
-const char* mapped_type_names[] = {
-  "bool",
+const char* numbered_type_names[] = {
   "@actor",
   "@addr",
   "@atom",
   "@channel",
+  "@charbuf",
   "@down",
   "@duration",
   "@exit",
   "@group",
   "@group_down",
+  "@i16",
+  "@i32",
+  "@i64",
+  "@i8",
+  "@ldouble",
   "@message",
   "@message_id",
   "@node",
+  "@str",
+  "@strmap",
+  "@strset",
+  "@strvec",
   "@sync_exited",
   "@sync_timeout",
   "@timeout",
-  "@unit",
-  "double",
-  "float",
-  "@ldouble",
-  "@str",
+  "@u16",
   "@u16str",
+  "@u32",
   "@u32str",
-  "@strmap",
-  "@charbuf",
-  "@strvec",
-  "@strset"
-};
-// the order of this table must be *identical* to mapped_type_names
-using static_type_table = type_list<bool,
-                                    actor,
-                                    actor_addr,
-                                    atom_value,
-                                    channel,
-                                    down_msg,
-                                    duration,
-                                    exit_msg,
-                                    group,
-                                    group_down_msg,
-                                    message,
-                                    message_id,
-                                    node_id,
-                                    sync_exited_msg,
-                                    sync_timeout_msg,
-                                    timeout_msg,
-                                    unit_t,
-                                    double,
-                                    float,
-                                    long double,
-                                    std::string,
-                                    std::u16string,
-                                    std::u32string,
-                                    std::map<std::string, std::string>,
-                                    std::vector<char>,
-                                    std::vector<std::string>,
-                                    std::set<std::string>>;
-} // namespace <anonymous>
-
-template <class T>
-constexpr const char* mapped_name() {
-  return mapped_type_names[detail::tl_find<static_type_table, T>::value];
-}
-
-// maps sizeof(T) => {unsigned name, signed name}
-/* extern */ const char* mapped_int_names[][2] = {
-  {nullptr, nullptr}, // no int type with 0 bytes
-  {"@u8",   "@i8"},
-  {"@u16",  "@i16"},
-  {nullptr, nullptr}, // no int type with 3 bytes
-  {"@u32", "@i32"},
-  {nullptr, nullptr}, // no int type with 5 bytes
-  {nullptr, nullptr}, // no int type with 6 bytes
-  {nullptr, nullptr}, // no int type with 7 bytes
-  {"@u64", "@i64"}
+  "@u64",
+  "@u8",
+  "@unit",
+  "bool",
+  "double",
+  "float"
 };
 
 namespace {
@@ -289,7 +250,7 @@ void serialize_impl(const message& tup, serializer* sink) {
   }
   sink->begin_object(uti);
   for (size_t i = 0; i < tup.size(); ++i) {
-    tup.type_at(i)->serialize(tup.at(i), sink);
+    uniform_type_info::from(tup.uniform_name_at(i))->serialize(tup.at(i), sink);
   }
   sink->end_object();
 }
@@ -432,39 +393,53 @@ deserialize_impl(T& iterable, deserializer* sink) {
   sp(iterable, sink);
 }
 
-bool types_equal(const std::type_info* lhs, const std::type_info* rhs) {
-  // in some cases (when dealing with dynamic libraries),
-  // address can be different although types are equal
-  return lhs == rhs || *lhs == *rhs;
-}
-
 template <class T>
-class uti_base : public uniform_type_info {
- protected:
-  uti_base() : m_native(&typeid(T)) {
+class uti_impl : public uniform_type_info {
+ public:
+  static_assert(detail::type_nr<T>::value > 0, "type_nr<T>::value == 0");
+
+  uti_impl() : uniform_type_info(detail::type_nr<T>::value) {
     // nop
   }
-  bool equal_to(const std::type_info& ti) const override {
-    return types_equal(m_native, &ti);
+
+  const char* name() const override {
+    return numbered_type_names[detail::type_nr<T>::value - 1];
   }
+
+  bool equal_to(const std::type_info&) const override {
+    // CAF never compares builtin types using RTTI
+    return false;
+  }
+
   bool equals(const void* lhs, const void* rhs) const override {
     // return detail::safe_equal(deref(lhs), deref(rhs));
     // return deref(lhs) == deref(rhs);
     return eq(deref(lhs), deref(rhs));
   }
+
   uniform_value create(const uniform_value& other) const override {
     return create_impl<T>(other);
   }
+
   message as_message(void* instance) const override {
     return make_message(deref(instance));
   }
+
   static inline const T& deref(const void* ptr) {
     return *reinterpret_cast<const T*>(ptr);
   }
+
   static inline T& deref(void* ptr) {
     return *reinterpret_cast<T*>(ptr);
   }
-  const std::type_info* m_native;
+
+  void serialize(const void* instance, serializer* sink) const override {
+    serialize_impl(deref(instance), sink);
+  }
+
+  void deserialize(void* instance, deserializer* source) const override {
+    deserialize_impl(deref(instance), source);
+  }
 
  private:
   template <class U>
@@ -472,6 +447,7 @@ class uti_base : public uniform_type_info {
   eq(const U& lhs, const U& rhs) const {
     return detail::safe_equal(lhs, rhs);
   }
+
   template <class U>
   typename std::enable_if<!std::is_floating_point<U>::value, bool>::type
   eq(const U& lhs, const U& rhs) const {
@@ -480,40 +456,11 @@ class uti_base : public uniform_type_info {
 };
 
 template <class T>
-class uti_impl : public uti_base<T> {
+class int_tinfo : public uniform_type_info {
  public:
-  using super = uti_base<T>;
-
-  const char* name() const {
-    return mapped_name<T>();
+  int_tinfo() : uniform_type_info(detail::type_nr<T>::value) {
+    // nop
   }
-
- protected:
-  void serialize(const void* instance, serializer* sink) const {
-    serialize_impl(super::deref(instance), sink);
-  }
-  void deserialize(void* instance, deserializer* source) const {
-    deserialize_impl(super::deref(instance), source);
-  }
-};
-
-class abstract_int_tinfo : public uniform_type_info {
- public:
-  void add_native_type(const std::type_info& ti) {
-    // only push back if not already set
-    auto predicate = [&](const std::type_info* ptr) { return ptr == &ti; };
-    if (std::none_of(m_natives.begin(), m_natives.end(), predicate))
-      m_natives.push_back(&ti);
-  }
-
- protected:
-  std::vector<const std::type_info*> m_natives;
-};
-
-// unfortunately, one integer type can be mapped to multiple types
-template <class T>
-class int_tinfo : public abstract_int_tinfo {
- public:
   void serialize(const void* instance, serializer* sink) const override {
     sink->write_value(deref(instance));
   }
@@ -528,12 +475,6 @@ class int_tinfo : public abstract_int_tinfo {
   }
 
 protected:
-  bool equal_to(const std::type_info& ti) const override {
-    auto tptr = &ti;
-    return std::any_of(
-      m_natives.begin(), m_natives.end(),
-      [tptr](const std::type_info* ptr) { return types_equal(ptr, tptr); });
-  }
   bool equals(const void* lhs, const void* rhs) const override {
     return deref(lhs) == deref(rhs);
   }
@@ -600,9 +541,11 @@ class default_meta_message : public uniform_type_info {
     }
     *cast(ptr) = mb.to_message();
   }
+
   bool equal_to(const std::type_info&) const override {
     return false;
   }
+
   bool equals(const void* instance1, const void* instance2) const override {
     return *cast(instance1) == *cast(instance2);
   }
@@ -618,17 +561,6 @@ class default_meta_message : public uniform_type_info {
   std::vector<const uniform_type_info*> m_elements;
 };
 
-template <class T>
-void push_native_type(abstract_int_tinfo* m[][2]) {
-  m[sizeof(T)][std::is_signed<T>::value ? 1 : 0]->add_native_type(typeid(T));
-}
-
-template <class T0, typename T1, class... Ts>
-void push_native_type(abstract_int_tinfo* m[][2]) {
-  push_native_type<T0>(m);
-  push_native_type<T1, Ts...>(m);
-}
-
 template <class Iterator>
 struct builtin_types_helper {
   Iterator pos;
@@ -643,10 +575,27 @@ struct builtin_types_helper {
   }
 };
 
-class utim_impl : public uniform_type_info_map {
+constexpr size_t builtins = detail::type_nrs - 1;
 
+using builtins_t = std::integral_constant<size_t, builtins>;
+
+using type_array = std::array<const uniform_type_info*, builtins>;
+
+template <class T>
+void fill_uti_arr(builtins_t, type_array&, const T&) {
+  // end of recursion
+}
+
+template <size_t N, class T>
+void fill_uti_arr(std::integral_constant<size_t, N>, type_array& arr, const T& tup) {
+  arr[N] = &std::get<N>(tup);
+  fill_uti_arr(std::integral_constant<size_t, N+1>{}, arr, tup);
+}
+
+class utim_impl : public uniform_type_info_map {
  public:
   void initialize() {
+  /*
     // maps sizeof(integer_type) to {signed_type, unsigned_type}
     constexpr auto u8t  = tl_find<builtin_types, int_tinfo<uint8_t>>::value;
     constexpr auto i8t  = tl_find<builtin_types, int_tinfo<int8_t>>::value;
@@ -675,34 +624,36 @@ class utim_impl : public uniform_type_info_map {
                      unsigned long long, wchar_t, int8_t, uint8_t, int16_t,
                      uint16_t, int32_t, uint32_t, int64_t, uint64_t, char16_t,
                      char32_t, size_t, ptrdiff_t, intptr_t>(mapping);
-    // fill builtin types *in sorted order* (by uniform name)
-    auto i = m_builtin_types.begin();
-    builtin_types_helper<decltype(i)> h{i};
-    auto indices = detail::get_indices(m_storage);
-    detail::apply_args(h, indices, m_storage);
+  */
+    fill_uti_arr(std::integral_constant<size_t, 0>{},
+                 m_builtin_types, m_storage);
     // make sure our builtin types are sorted
-    auto cmp = [](pointer lhs, pointer rhs) {
-      return strcmp(lhs->name(), rhs->name()) < 0;
-    };
-    std::sort(m_builtin_types.begin(), m_builtin_types.end(), cmp);
+    CAF_REQUIRE(std::is_sorted(m_builtin_types.begin(),
+                               m_builtin_types.end(),
+                               [](pointer lhs, pointer rhs) {
+                                 return strcmp(lhs->name(), rhs->name()) < 0;
+                               }));
+  }
+
+  virtual pointer by_type_nr(uint16_t nr) const {
+    CAF_REQUIRE(nr > 0);
+    return m_builtin_types[nr - 1];
   }
 
   pointer by_rtti(const std::type_info& ti) const {
     shared_lock<detail::shared_spinlock> guard(m_lock);
-    auto res = find_rtti(m_builtin_types, ti);
-    return (res) ? res : find_rtti(m_user_types, ti);
+    return find_rtti(ti);
   }
 
   pointer by_uniform_name(const std::string& name) {
-    pointer result = nullptr;
-    { // lifetime scope of guard
+    pointer result = find_name(m_builtin_types, name);
+    if (!result) {
       shared_lock<detail::shared_spinlock> guard(m_lock);
-      result = find_name(m_builtin_types, name);
-      result = (result) ? result : find_name(m_user_types, name);
+      result = find_name(m_user_types, name);
     }
     if (!result && name.compare(0, 3, "@<>") == 0) {
       // create tuple UTI on-the-fly
-      result = insert(uniform_type_info_ptr{new default_meta_message(name)});
+      result = insert(nullptr, uniform_type_info_ptr{new default_meta_message(name)});
     }
     return result;
   }
@@ -716,15 +667,15 @@ class utim_impl : public uniform_type_info_map {
     return res;
   }
 
-  pointer insert(uniform_type_info_ptr uti) {
+  pointer insert(const std::type_info* ti, uniform_type_info_ptr uti) {
     unique_lock<detail::shared_spinlock> guard(m_lock);
     auto e = m_user_types.end();
     auto i = std::lower_bound(m_user_types.begin(), e, uti.get(),
-                              [](uniform_type_info* lhs, pointer rhs) {
+                              [](pointer lhs, pointer rhs) {
       return strcmp(lhs->name(), rhs->name()) < 0;
     });
     if (i == e) {
-      m_user_types.push_back(uti.release());
+      m_user_types.push_back(enriched_pointer{uti.release(), ti});
       return m_user_types.back();
     } else {
       if (strcmp(uti->name(), (*i)->name()) == 0) {
@@ -733,7 +684,7 @@ class utim_impl : public uniform_type_info_map {
       }
       // insert after lower bound (vector is always sorted)
       auto new_pos = std::distance(m_user_types.begin(), i);
-      m_user_types.insert(i, uti.release());
+      m_user_types.insert(i, enriched_pointer{uti.release(), ti});
       return m_user_types[static_cast<size_t>(new_pos)];
     }
   }
@@ -752,65 +703,80 @@ class utim_impl : public uniform_type_info_map {
 
   using strvec = std::vector<std::string>;
 
-  using builtin_types = std::tuple<uti_impl<node_id>,
-                                   uti_impl<channel>,
-                                   uti_impl<down_msg>,
-                                   uti_impl<exit_msg>,
-                                   uti_impl<actor>,
+  using builtin_types = std::tuple<uti_impl<actor>,
                                    uti_impl<actor_addr>,
+                                   uti_impl<atom_value>,
+                                   uti_impl<channel>,
+                                   uti_impl<charbuf>,
+                                   uti_impl<down_msg>,
+                                   uti_impl<duration>,
+                                   uti_impl<exit_msg>,
                                    uti_impl<group>,
                                    uti_impl<group_down_msg>,
+                                   uti_impl<int16_t>,
+                                   uti_impl<int32_t>,
+                                   uti_impl<int64_t>,
+                                   uti_impl<int8_t>,
+                                   uti_impl<long double>,
                                    uti_impl<message>,
                                    uti_impl<message_id>,
-                                   uti_impl<duration>,
+                                   uti_impl<node_id>,
+                                   uti_impl<std::string>,
+                                   uti_impl<strmap>,
+                                   uti_impl<std::set<std::string>>,
+                                   uti_impl<strvec>,
                                    uti_impl<sync_exited_msg>,
                                    uti_impl<sync_timeout_msg>,
                                    uti_impl<timeout_msg>,
-                                   uti_impl<unit_t>,
-                                   uti_impl<atom_value>,
-                                   uti_impl<std::string>,
+                                   uti_impl<uint16_t>,
                                    uti_impl<std::u16string>,
+                                   uti_impl<uint32_t>,
                                    uti_impl<std::u32string>,
-                                   uti_impl<strmap>,
+                                   uti_impl<uint64_t>,
+                                   uti_impl<uint8_t>,
+                                   uti_impl<unit_t>,
                                    uti_impl<bool>,
-                                   uti_impl<float>,
                                    uti_impl<double>,
-                                   uti_impl<long double>,
-                                   int_tinfo<int8_t>,
-                                   int_tinfo<uint8_t>,
-                                   int_tinfo<int16_t>,
-                                   int_tinfo<uint16_t>,
-                                   int_tinfo<int32_t>,
-                                   int_tinfo<uint32_t>,
-                                   int_tinfo<int64_t>,
-                                   int_tinfo<uint64_t>,
-                                   uti_impl<charbuf>,
-                                   uti_impl<strvec>,
-                                   uti_impl<std::set<std::string>>>;
+                                   uti_impl<float>>;
 
   builtin_types m_storage;
 
-  // both containers are sorted by uniform name
+  struct enriched_pointer {
+    pointer first;
+    const std::type_info* second;
+    operator pointer() const {
+      return first;
+    }
+    pointer operator->() const {
+      return first;
+    }
+  };
+
+  using pointer_pair = std::pair<uniform_type_info*, std::type_info*>;
+
+  // bot containers are sorted by uniform name (m_user_types: second->name())
   std::array<pointer, std::tuple_size<builtin_types>::value> m_builtin_types;
-  std::vector<uniform_type_info*> m_user_types;
+  std::vector<enriched_pointer> m_user_types;
   mutable detail::shared_spinlock m_lock;
 
-  template <class Container>
-  pointer find_rtti(const Container& c, const std::type_info& ti) const {
-    auto e = c.end();
-    auto i = std::find_if(c.begin(), e,
-                [&](pointer p) { return p->equal_to(ti); });
-    return (i == e) ? nullptr : *i;
+  pointer find_rtti(const std::type_info& ti) const {
+    for (auto& utype : m_user_types) {
+      if (utype.second && (utype.second == &ti || *utype.second == ti)) {
+        return utype.first;
+      }
+    }
+    return nullptr;
   }
 
   template <class Container>
   pointer find_name(const Container& c, const std::string& name) const {
     auto e = c.end();
+    auto cmp = [](pointer lhs, const std::string& rhs) {
+      return lhs->name() < rhs;
+    };
     // both containers are sorted
-    auto i = std::lower_bound(
-      c.begin(), e, name,
-      [](pointer p, const std::string& n) { return p->name() < n; });
-    return (i != e && (*i)->name() == name) ? *i : nullptr;
+    auto i = std::lower_bound(c.begin(), e, name, cmp);
+    return (i != e && name == (*i)->name()) ? *i : nullptr;
   }
 
 };

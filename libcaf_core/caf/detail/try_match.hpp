@@ -26,45 +26,53 @@
 
 #include "caf/atom.hpp"
 #include "caf/message.hpp"
+#include "caf/uniform_typeid.hpp"
 #include "caf/wildcard_position.hpp"
 
+#include "caf/detail/type_nr.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/pseudo_tuple.hpp"
 
 namespace caf {
 namespace detail {
 
-bool match_element(const atom_value&, const std::type_info* type,
-                   const message_iterator& iter, void** storage);
-
-bool match_atom_constant(const atom_value&, const std::type_info* type,
-                         const message_iterator& iter, void** storage);
-
 struct meta_element {
   atom_value v;
+  uint16_t typenr;
   const std::type_info* type;
-  bool (*fun)(const atom_value&, const std::type_info*,
-              const message_iterator&, void**);
+  bool (*fun)(const meta_element&, const message_iterator&, void**);
+};
+
+bool match_element(const meta_element&, const message_iterator&, void**);
+
+bool match_atom_constant(const meta_element&, const message_iterator&, void**);
+
+template <class T, uint16_t TN = detail::type_nr<T>::value>
+struct meta_element_factory {
+  static meta_element create() {
+    return {static_cast<atom_value>(0), TN, nullptr, match_element};
+  }
 };
 
 template <class T>
-struct meta_element_factory {
+struct meta_element_factory<T, 0> {
   static meta_element create() {
-    return {static_cast<atom_value>(0), &typeid(T), match_element};
+    return {static_cast<atom_value>(0), 0, &typeid(T), match_element};
   }
 };
 
 template <atom_value V>
-struct meta_element_factory<atom_constant<V>> {
+struct meta_element_factory<atom_constant<V>, 0> {
   static meta_element create() {
-    return {V, &typeid(atom_value), match_atom_constant};
+    return {V, detail::type_nr<atom_value>::value,
+            nullptr, match_atom_constant};
   }
 };
 
 template <>
-struct meta_element_factory<anything> {
+struct meta_element_factory<anything, 0> {
   static meta_element create() {
-    return {static_cast<atom_value>(0), nullptr, nullptr};
+    return {static_cast<atom_value>(0), 0, nullptr, nullptr};
   }
 };
 

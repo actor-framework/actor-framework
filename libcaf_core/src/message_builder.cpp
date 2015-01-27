@@ -31,19 +31,24 @@ class message_builder::dynamic_msg_data : public detail::message_data {
 
   using message_data::const_iterator;
 
-  dynamic_msg_data() {
+  dynamic_msg_data() : m_type_token(0xFFFFFFFF) {
     // nop
   }
 
-  dynamic_msg_data(const dynamic_msg_data& other) {
+  dynamic_msg_data(const dynamic_msg_data& other)
+      : m_type_token(other.m_type_token) {
     for (auto& d : other.m_elements) {
       m_elements.push_back(d->copy());
     }
   }
 
   dynamic_msg_data(std::vector<uniform_value>&& data)
-      : m_elements(std::move(data)) {
-    // nop
+      : m_elements(std::move(data)),
+        m_type_token(0xFFFFFFFF) {
+    for (auto& e : m_elements) {
+      m_type_token <<= 6;
+      m_type_token |= e->ti->type_nr();
+    }
   }
 
   ~dynamic_msg_data();
@@ -66,9 +71,23 @@ class message_builder::dynamic_msg_data : public detail::message_data {
     return new dynamic_msg_data(*this);
   }
 
-  const uniform_type_info* type_at(size_t pos) const override {
-    CAF_REQUIRE(pos < size());
-    return m_elements[pos]->ti;
+  bool match_element(size_t pos, uint16_t typenr,
+                     const std::type_info* rtti) const override {
+    CAF_REQUIRE(typenr != 0 || rtti != nullptr);
+    auto uti = m_elements[pos]->ti;
+    return uti->type_nr() == typenr || uti->equal_to(*rtti);
+  }
+
+  const char* uniform_name_at(size_t pos) const override {
+    return m_elements[pos]->ti->name();
+  }
+
+  uint16_t type_nr_at(size_t pos) const override {
+    return m_elements[pos]->ti->type_nr();
+  }
+
+  uint32_t type_token() const override {
+    return m_type_token;
   }
 
   const std::string* tuple_type_names() const override {
@@ -76,6 +95,7 @@ class message_builder::dynamic_msg_data : public detail::message_data {
   }
 
   std::vector<uniform_value> m_elements;
+  uint32_t m_type_token;
 };
 
 message_builder::dynamic_msg_data::~dynamic_msg_data() {

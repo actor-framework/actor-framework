@@ -25,12 +25,13 @@ namespace detail {
 using pattern_iterator = const meta_element*;
 
 bool is_wildcard(const meta_element& me) {
-  return me.type == nullptr;
+  return me.typenr == 0 && me.type == nullptr;
 }
 
-bool match_element(const atom_value&, const std::type_info* type,
-                   const message_iterator& iter, void** storage) {
-  if (!iter.type()->equal_to(*type)) {
+bool match_element(const meta_element& me, const message_iterator& iter,
+                   void** storage) {
+  CAF_REQUIRE(me.typenr != 0 || me.type != nullptr);
+  if (!iter.match_element(me.typenr, me.type)) {
     return false;
   }
   if (storage) {
@@ -39,23 +40,23 @@ bool match_element(const atom_value&, const std::type_info* type,
   return true;
 }
 
-bool match_atom_constant(const atom_value& value, const std::type_info* type,
-                         const message_iterator& iter, void** storage) {
-  auto uti = iter.type();
-  if (!uti->equal_to(*type)) {
+bool match_atom_constant(const meta_element& me, const message_iterator& iter,
+                         void** storage) {
+  CAF_REQUIRE(me.typenr == detail::type_nr<atom_value>::value);
+  if (!iter.match_element(detail::type_nr<atom_value>::value, nullptr)) {
     return false;
   }
   if (storage) {
-    if (!uti->equals(iter.value(), &value)) {
+    if (iter.value_as<atom_value>() != me.v) {
       return false;
     }
-    // This assignment casts `uniform_type_info*` to `atom_constant<V>*`.
+    // This assignment casts `atom_value` to `atom_constant<V>*`.
     // This type violation could theoretically cause undefined behavior.
     // However, `uti` does have an address that is guaranteed to be valid
     // throughout the runtime of the program and the atom constant
     // does not have any members. Hence, this is nonetheless safe since
     // we are never actually going to dereference the pointer.
-    *storage = const_cast<void*>(reinterpret_cast<const void*>(uti));
+    *storage = const_cast<void*>(iter.value());
   }
   return true;
 }
@@ -113,7 +114,7 @@ bool try_match(message_iterator mbegin, message_iterator mend,
       return false; // no submatch found
     }
     // inspect current element
-    if (!pbegin->fun(pbegin->v, pbegin->type, mbegin, storage.current())) {
+    if (!pbegin->fun(*pbegin, mbegin, storage.current())) {
       // type mismatch
       return false;
     }

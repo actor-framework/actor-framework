@@ -65,14 +65,22 @@ class decorated_tuple : public message_data {
 
   const void* at(size_t pos) const override;
 
-  const uniform_type_info* type_at(size_t pos) const override;
+  bool match_element(size_t pos, uint16_t typenr,
+                     const std::type_info* rtti) const override;
+
+  uint32_t type_token() const override;
+
+  const char* uniform_name_at(size_t pos) const override;
 
   const std::string* tuple_type_names() const override;
+
+  uint16_t type_nr_at(size_t pos) const override;
 
  private:
 
   pointer m_decorated;
   vector_type m_mapping;
+  uint32_t m_type_token;
 
   void init();
 

@@ -27,13 +27,31 @@ message_data::message_data() {
 }
 
 bool message_data::equals(const message_data& other) const {
-  auto full_eq = [](const message_iterator& lhs, const message_iterator& rhs) {
-    return lhs.type() == rhs.type()
-        && lhs.type()->equals(lhs.value(), rhs.value());
-  };
-  return this == &other
-         || (size() == other.size()
-             && std::equal(begin(), end(), other.begin(), full_eq));
+  if (this == &other) {
+    return true;
+  }
+  auto n = size();
+  if (n != other.size()) {
+    return false;
+  }
+  // step 1, get and compare type names
+  std::vector<const char*> type_names;
+  for (size_t i = 0; i < n; ++i) {
+    auto lhs = uniform_name_at(i);
+    auto rhs = other.uniform_name_at(i);
+    if (lhs != rhs && strcmp(lhs, rhs) != 0) {
+      return false; // type mismatch
+    }
+    type_names.push_back(lhs);
+  }
+  // step 2: compare each value individually
+  for (size_t i = 0; i < n; ++i) {
+    auto uti = uniform_type_info::from(type_names[i]);
+    if (!uti->equals(at(i), other.at(i))) {
+      return false;
+    }
+  }
+  return true;
 }
 
 const void* message_data::native_data() const {
@@ -47,9 +65,8 @@ void* message_data::mutable_native_data() {
 std::string get_tuple_type_names(const detail::message_data& tup) {
   std::string result = "@<>";
   for (size_t i = 0; i < tup.size(); ++i) {
-    auto uti = tup.type_at(i);
     result += "+";
-    result += uti->name();
+    result += tup.uniform_name_at(i);
   }
   return result;
 }

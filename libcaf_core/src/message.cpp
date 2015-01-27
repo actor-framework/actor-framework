@@ -56,9 +56,13 @@ const void* message::at(size_t p) const {
   return m_vals->at(p);
 }
 
-const uniform_type_info* message::type_at(size_t p) const {
-  CAF_REQUIRE(m_vals);
-  return m_vals->type_at(p);
+bool message::match_element(size_t pos, uint16_t typenr,
+                            const std::type_info* rtti) const {
+  return m_vals->match_element(pos, typenr, rtti);
+}
+
+const char* message::uniform_name_at(size_t pos) const {
+  return m_vals->uniform_name_at(pos);
 }
 
 bool message::equals(const message& other) const {

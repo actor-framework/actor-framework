@@ -71,14 +71,20 @@ class match_expr_case : public get_lifted_fun<Expr, Projecs, Signature>::type {
   using pattern = Pattern;
   using filtered_pattern =
     typename detail::tl_filter_not_type<
-    Pattern,
-    anything
-  >::type;
+      Pattern,
+      anything
+    >::type;
+  static constexpr bool has_wildcard =
+    !std::is_same<
+      pattern,
+      filtered_pattern
+    >::value;
+  static constexpr uint32_t type_token = make_type_token_from_list<pattern>();
   using intermediate_tuple =
-    typename detail::tl_apply<
-    filtered_pattern,
-    detail::pseudo_tuple
-  >::type;
+      typename detail::tl_apply<
+      filtered_pattern,
+      detail::pseudo_tuple
+    >::type;
 };
 
 template <class Expr, class Transformers, class Pattern>
@@ -225,7 +231,8 @@ Result unroll_expr(PPFPs& fs, long_constant<N>, Msg& msg) {
   using ft = typename std::decay<decltype(f)>::type;
   meta_elements<typename ft::pattern> ms;
   typename ft::intermediate_tuple targs;
-  if (try_match(msg, ms.arr.data(), ms.arr.size(), targs.data)) {
+  if ((ft::has_wildcard || ft::type_token == msg.type_token())
+      && try_match(msg, ms.arr.data(), ms.arr.size(), targs.data)) {
     auto is = detail::get_indices(targs);
     auto res = detail::apply_args(f, is, deduce_const(msg, targs));
     if (unroll_expr_result_valid(res)) {
@@ -233,23 +240,6 @@ Result unroll_expr(PPFPs& fs, long_constant<N>, Msg& msg) {
     }
   }
   return none;
-}
-
-template <class PPFPs>
-uint64_t calc_bitmask(PPFPs&, minus1l, const std::type_info&, const message&) {
-  return 0x00;
-}
-
-template <class Case, long N>
-uint64_t calc_bitmask(Case& fs, long_constant<N>,
-                      const std::type_info& tinf, const message& msg) {
-  auto& f = get<N>(fs);
-  using ft = typename std::decay<decltype(f)>::type;
-  meta_elements<typename ft::pattern> ms;
-  uint64_t result = try_match(msg, ms.arr.data(), ms.arr.size(), nullptr)
-                    ? (0x01 << N)
-                    : 0x00;
-  return result | calc_bitmask(fs, long_constant<N - 1l>(), tinf, msg);
 }
 
 template <bool IsManipulator, typename T0, typename T1>

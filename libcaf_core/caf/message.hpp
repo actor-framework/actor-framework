@@ -127,10 +127,15 @@ class message {
   const void* at(size_t p) const;
 
   /**
-   * Gets {@link uniform_type_info uniform type information}
-   * of the element at position @p p.
+   * Tries to match element at position `pos` to given RTTI.
+   * @param pos Index of element in question.
+   * @param typenr Number of queried type or `0` for custom types.
+   * @param rtti Queried type or `nullptr` for builtin types.
    */
-  const uniform_type_info* type_at(size_t p) const;
+  bool match_element(size_t pos, uint16_t typenr,
+                     const std::type_info* rtti) const;
+
+  const char* uniform_name_at(size_t pos) const;
 
   /**
    * Returns @c true if `*this == other, otherwise false.
@@ -149,7 +154,7 @@ class message {
    */
   template <class T>
   inline const T& get_as(size_t p) const {
-    CAF_REQUIRE(*(type_at(p)) == typeid(T));
+    CAF_REQUIRE(match_element(p, detail::type_nr<T>::value, &typeid(T)));
     return *reinterpret_cast<const T*>(at(p));
   }
 
@@ -158,7 +163,7 @@ class message {
    */
   template <class T>
   inline T& get_as_mutable(size_t p) {
-    CAF_REQUIRE(*(type_at(p)) == typeid(T));
+    CAF_REQUIRE(match_element(p, detail::type_nr<T>::value, &typeid(T)));
     return *reinterpret_cast<T*>(mutable_at(p));
   }
 
@@ -206,6 +211,10 @@ class message {
   optional<message> apply(message_handler handler);
 
   /** @cond PRIVATE */
+
+  inline uint32_t type_token() const {
+    return m_vals->type_token();
+  }
 
   inline void force_detach() {
     m_vals.detach();

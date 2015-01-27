@@ -50,14 +50,31 @@ class message_data : public ref_counted {
 
   // accessors
   virtual size_t size() const = 0;
+
   virtual message_data* copy() const = 0;
+
   virtual const void* at(size_t pos) const = 0;
-  virtual const uniform_type_info* type_at(size_t pos) const = 0;
+
   virtual const std::string* tuple_type_names() const = 0;
+
+  /**
+   * Tries to match element at position `pos` to given RTTI.
+   * @param pos Index of element in question.
+   * @param typenr Number of queried type or `0` for custom types.
+   * @param rtti Queried type or `nullptr` for builtin types.
+   */
+  virtual bool match_element(size_t pos, uint16_t typenr,
+                             const std::type_info* rtti) const = 0;
+
+  virtual uint32_t type_token() const = 0;
 
   // returns either tdata<...> object or nullptr (default) if tuple
   // is not a 'native' implementation
   virtual const void* native_data() const;
+
+  virtual const char* uniform_name_at(size_t pos) const = 0;
+
+  virtual uint16_t type_nr_at(size_t pos) const = 0;
 
   bool equals(const message_data& other) const;
 

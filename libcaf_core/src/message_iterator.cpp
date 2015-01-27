@@ -34,8 +34,9 @@ const void* message_iterator::value() const {
   return m_data->at(m_pos);
 }
 
-const uniform_type_info* message_iterator::type() const {
-  return m_data->type_at(m_pos);
+bool message_iterator::match_element(uint16_t typenr,
+                                     const std::type_info* rtti) const {
+  return m_data->match_element(m_pos, typenr, rtti);
 }
 
 } // namespace detail
