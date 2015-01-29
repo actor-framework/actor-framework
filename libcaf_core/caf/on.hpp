@@ -162,8 +162,7 @@ struct rvalue_builder {
   rvalue_builder(fun_container arg1) : m_funs(std::move(arg1)) {}
 
   template <class Expr>
-  match_expr<
-    typename get_case<is_complete, Expr, Transformers, Pattern>::type>
+  match_expr<typename get_case<is_complete, Expr, Transformers, Pattern>::type>
   operator>>(Expr expr) const {
     using lifted_expr =
       typename get_case<
@@ -177,10 +176,16 @@ struct rvalue_builder {
     using trimmed_projections = typename tl_trim<Transformers>::type;
     tuple_maker f;
     auto lhs = apply_args(f, get_indices(trimmed_projections{}), m_funs);
-    typename tl_apply<
-      typename tl_slice<target, tl_size<trimmed_projections>::value,
-                tl_size<target>::value>::type,
-      std::tuple>::type rhs;
+    using rhs_type =
+      typename tl_apply<
+        typename tl_slice<
+          target,
+          tl_size<trimmed_projections>::value,
+          tl_size<target>::value
+        >::type,
+        std::tuple
+      >::type;
+    rhs_type rhs;
     // done
     return lifted_expr{std::move(expr), std::tuple_cat(lhs, rhs)};
   }
@@ -311,7 +316,7 @@ constexpr boxed_arg_match_t arg_match = boxed_arg_match_t();
 
 template <class T, typename Predicate>
 std::function<optional<T>(const T&)> guarded(Predicate p, T value) {
-  return [=](const T& other)->optional<T> {
+  return [=](const T& other) -> optional<T> {
     if (p(other, value)) {
       return value;
     }
