@@ -130,8 +130,7 @@ bool try_match(message_iterator mbegin, message_iterator mend,
 
 bool try_match(const message& msg, pattern_iterator pb, size_t ps, void** out) {
   set_commit_rollback scr{out};
-  auto res = try_match(msg.begin(), msg.end(), pb, pb + ps, scr);
-  return res;
+  return try_match(msg.begin(), msg.end(), pb, pb + ps, scr);
 }
 
 } // namespace detail
