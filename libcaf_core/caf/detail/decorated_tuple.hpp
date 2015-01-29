@@ -72,8 +72,6 @@ class decorated_tuple : public message_data {
 
   const char* uniform_name_at(size_t pos) const override;
 
-  const std::string* tuple_type_names() const override;
-
   uint16_t type_nr_at(size_t pos) const override;
 
  private:

@@ -232,13 +232,7 @@ void deserialize_impl(channel& ptrref, deserializer* source) {
 void serialize_impl(const message& tup, serializer* sink) {
   std::string dynamic_name; // used if tup holds an object_array
   // ttn can be nullptr even if tuple is not empty (in case of object_array)
-  const std::string* ttn = tup.empty() ? nullptr : tup.tuple_type_names();
-  const char* tname = ttn ? ttn->data() : (tup.empty() ? "@<>" : nullptr);
-  if (!tname) {
-    // tuple is not empty, i.e., we are dealing with an object array
-    dynamic_name = detail::get_tuple_type_names(*tup.vals());
-    tname = dynamic_name.c_str();
-  }
+  std::string tname = tup.empty() ? "@<>" : tup.tuple_type_names();
   auto uti_map = detail::singletons::get_uniform_type_info_map();
   auto uti = uti_map->by_uniform_name(tname);
   if (uti == nullptr) {

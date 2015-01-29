@@ -55,7 +55,7 @@ class message_data : public ref_counted {
 
   virtual const void* at(size_t pos) const = 0;
 
-  virtual const std::string* tuple_type_names() const = 0;
+  std::string tuple_type_names() const;
 
   /**
    * Tries to match element at position `pos` to given RTTI.
@@ -131,8 +131,6 @@ class message_data : public ref_counted {
 
   };
 };
-
-std::string get_tuple_type_names(const detail::message_data&);
 
 } // namespace detail
 } // namespace caf

@@ -120,12 +120,6 @@ class tuple_vals : public message_data {
     return const_cast<void*>(at(pos));
   }
 
-  const std::string* tuple_type_names() const override {
-    // produced name is equal for all instances
-    static std::string result = get_tuple_type_names(*this);
-    return &result;
-  }
-
   bool match_element(size_t pos, uint16_t typenr,
                      const std::type_info* rtti) const override {
     CAF_REQUIRE(pos < size());

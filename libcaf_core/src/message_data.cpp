@@ -62,11 +62,11 @@ void* message_data::mutable_native_data() {
   return nullptr;
 }
 
-std::string get_tuple_type_names(const detail::message_data& tup) {
+std::string message_data::tuple_type_names() const {
   std::string result = "@<>";
-  for (size_t i = 0; i < tup.size(); ++i) {
+  for (size_t i = 0; i < size(); ++i) {
     result += "+";
-    result += tup.uniform_name_at(i);
+    result += uniform_name_at(i);
   }
   return result;
 }
