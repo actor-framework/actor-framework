@@ -18,7 +18,11 @@
  ******************************************************************************/
 
 #include "caf/message.hpp"
+
+#include <iostream>
+
 #include "caf/message_handler.hpp"
+#include "caf/string_algorithms.hpp"
 
 #include "caf/detail/singletons.hpp"
 #include "caf/detail/decorated_tuple.hpp"
@@ -90,8 +94,17 @@ message message::drop_right(size_t n) const {
     return message{};
   }
   std::vector<size_t> mapping(size() - n);
-  size_t i = 0;
-  std::generate(mapping.begin(), mapping.end(), [&] { return i++; });
+  std::iota(mapping.begin(), mapping.end(), size_t{0});
+  return message{detail::decorated_tuple::create(m_vals, std::move(mapping))};
+}
+
+message message::slice(size_t pos, size_t n) const {
+  auto s = size();
+  if (pos >= s) {
+    return message{};
+  }
+  std::vector<size_t> mapping(std::min(s - pos, n));
+  std::iota(mapping.begin(), mapping.end(), pos);
   return message{detail::decorated_tuple::create(m_vals, std::move(mapping))};
 }
 
@@ -103,11 +116,160 @@ message::const_iterator message::begin() const {
   return m_vals ? m_vals->begin() : const_iterator{nullptr, 0};
 }
 
-/**
- * Returns an iterator to the end.
- */
 message::const_iterator message::end() const {
   return m_vals ? m_vals->end() : const_iterator{nullptr, 0};
+}
+
+message message::filter_impl(size_t start, message_handler handler) const {
+  auto s = size();
+  for (size_t i = start; i < s; ++i) {
+    for (size_t n = (s - i) ; n > 0; --n) {
+      auto res = handler(slice(i, n));
+      if (res) {
+        std::vector<size_t> mapping(s);
+        std::iota(mapping.begin(), mapping.end(), size_t{0});
+        auto first = mapping.begin() + static_cast<ptrdiff_t>(i);
+        auto last = first + static_cast<ptrdiff_t>(n);
+        mapping.erase(first, last);
+        if (mapping.empty()) {
+          return message{};
+        }
+        message next{detail::decorated_tuple::create(m_vals,
+                                                     std::move(mapping))};
+        return next.filter_impl(i, handler);
+      }
+    }
+  }
+  return *this;
+}
+
+message message::filter(message_handler handler) const {
+  return filter_impl(0, handler);
+}
+
+message::cli_res message::filter_cli(std::vector<cli_arg> cliargs) const {
+  std::set<std::string> opts;
+  cli_arg dummy{"help,h", ""};
+  std::map<std::string, cli_arg*> shorts;
+  std::map<std::string, cli_arg*> longs;
+  shorts["-h"] = &dummy;
+  shorts["-?"] = &dummy;
+  longs["--help"] = &dummy;
+  for (auto& cliarg : cliargs) {
+    std::vector<std::string> s;
+    split(s, cliarg.name, is_any_of(","), token_compress_on);
+    if (s.size() == 2 && s.back().size() == 1) {
+      longs["--" + s.front()] = &cliarg;
+      shorts["-" + s.back()] = &cliarg;
+    } else if (s.size() == 1) {
+      longs[s.front()] = &cliarg;
+    } else {
+      throw std::invalid_argument("invalid option name: " + cliarg.name);
+    }
+  }
+  auto insert_opt_name = [&](const cli_arg* ptr) {
+    auto separator = ptr->name.find(',');
+    if (separator == std::string::npos) {
+      opts.insert(ptr->name);
+    } else {
+      opts.insert(ptr->name.substr(0, separator));
+    }
+  };
+  auto res = filter({
+    [&](const std::string& arg) -> optional<skip_message_t> {
+      if (arg.empty() || arg.front() != '-') {
+        return skip_message();
+      }
+      auto i = shorts.find(arg);
+      if (i != shorts.end()) {
+        if (i->second->fun) {
+          return skip_message();
+        }
+        insert_opt_name(i->second);
+        return none;
+      }
+      auto eq_pos = arg.find('=');
+      auto j = longs.find(arg.substr(0, eq_pos));
+      if (j != longs.end()) {
+        if (j->second->fun) {
+          if (eq_pos == std::string::npos) {
+            std::cerr << "missing argument to " << arg << std::endl;
+            return none;
+          }
+          if (!j->second->fun(arg.substr(eq_pos + 1))) {
+            std::cerr << "invalid value for option "
+                      << j->second->name << ": " << arg << std::endl;
+            return none;
+          }
+          insert_opt_name(j->second);
+          return none;
+        }
+        insert_opt_name(j->second);
+        return none;
+      }
+      std::cerr << "unknown command line option: " << arg << std::endl;
+      return none;
+    },
+    [&](const std::string& arg1,
+        const std::string& arg2) -> optional<skip_message_t> {
+      if (arg1.size() < 2 || arg1[0] != '-' || arg1[1] == '-') {
+        return skip_message();
+      }
+      auto i = shorts.find(arg1);
+      if (i != shorts.end() && i->second->fun) {
+        if (!i->second->fun(arg2)) {
+          std::cerr << "invalid value for option "
+                    << i->second->name << ": " << arg2 << std::endl;
+          return none;
+        }
+        insert_opt_name(i->second);
+        return none;
+      }
+      std::cerr << "unknown command line option: " << arg1 << std::endl;
+      return none;
+    }
+  });
+  size_t name_width = 0;
+  for (auto& ca : cliargs) {
+    // name field contains either only "--<long_name>" or
+    // "-<short name> [--<long name>]" depending on whether or not
+    // a ',' appears in the name
+    auto nw = ca.name.find(',') == std::string::npos
+              ? ca.name.size() + 2  // "--<name>"
+              : ca.name.size() + 5; // "-X [--<name>]" (minus trailing ",X")
+    if (ca.fun) {
+      nw += 4; // trailing " arg"
+    }
+    name_width = std::max(name_width, nw);
+  }
+  std::ostringstream oss;
+  oss << std::left;
+  oss << "Allowed options:" << std::endl;
+  for (auto& ca : cliargs) {
+    std::string lhs;
+    auto separator = ca.name.find(',');
+    if (separator == std::string::npos) {
+      lhs += "--";
+      lhs += ca.name;
+    } else {
+      lhs += "-";
+      lhs += ca.name.back();
+      lhs += " [--";
+      lhs += ca.name.substr(0, separator);
+      lhs += "]";
+    }
+    if (ca.fun) {
+      lhs += " arg";
+    }
+    oss << "  ";
+    oss.width(static_cast<std::streamsize>(name_width));
+    oss << lhs << "  : " << ca.text << std::endl;
+  }
+  auto helptext = oss.str();
+  if (opts.count("help") == 1) {
+    std::cout << helptext << std::endl;
+  }
+  return {res, std::move(opts), std::move(helptext)};
 }
 
 } // namespace caf

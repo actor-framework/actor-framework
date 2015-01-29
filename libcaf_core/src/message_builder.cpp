@@ -90,10 +90,6 @@ class message_builder::dynamic_msg_data : public detail::message_data {
     return m_type_token;
   }
 
-  const std::string* tuple_type_names() const override {
-    return nullptr; // get_tuple_type_names(*this);
-  }
-
   std::vector<uniform_value> m_elements;
   uint32_t m_type_token;
 };

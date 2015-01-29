@@ -20,10 +20,13 @@
 #ifndef CAF_MESSAGE_HPP
 #define CAF_MESSAGE_HPP
 
+#include <tuple>
 #include <type_traits>
 
 #include "caf/atom.hpp"
 #include "caf/config.hpp"
+#include "caf/from_string.hpp"
+#include "caf/skip_message.hpp"
 
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/comparable.hpp"
@@ -93,28 +96,33 @@ class message {
   }
 
   /**
-   * Creates a new tuple with all but the first n values.
+   * Creates a new message with all but the first n values.
    */
   message drop(size_t n) const;
 
   /**
-   * Creates a new tuple with all but the last n values.
+   * Creates a new message with all but the last n values.
    */
   message drop_right(size_t n) const;
 
   /**
-   * Creates a new tuple from the first n values.
+   * Creates a new message from the first n values.
    */
   inline message take(size_t n) const {
     return n >= size() ? *this : drop_right(size() - n);
   }
 
   /**
-   * Creates a new tuple from the last n values.
+   * Creates a new message from the last n values.
    */
   inline message take_right(size_t n) const {
     return n >= size() ? *this : drop(size() - n);
   }
+
+  /**
+   * Creates a new message of size `n` starting at element `pos`.
+   */
+  message slice(size_t pos, size_t n) const;
 
   /**
    * Gets a mutable pointer to the element at position @p p.
@@ -199,21 +207,91 @@ class message {
   }
 
   /**
-   * Checks whether this tuple is dynamically typed, i.e.,
+   * Checks whether this message is dynamically typed, i.e.,
    * its types were not known at compile time.
    */
   bool dynamically_typed() const;
 
   /**
-   * Applies @p handler to this message and returns the result
+   * Applies `handler` to this message and returns the result
    *  of `handler(*this)`.
    */
   optional<message> apply(message_handler handler);
 
+  /**
+   * Returns a new message consisting of all elements that were *not*
+   * matched by `handler`.
+   */
+  message filter(message_handler handler) const;
+
+  /**
+   * Stores the name of a command line option ("<long name>[,<short name>]")
+   * along with a description and a callback.
+   */
+  struct cli_arg {
+    std::string name;
+    std::string text;
+    std::function<bool (const std::string&)> fun;
+    inline cli_arg(std::string nstr, std::string tstr)
+        : name(std::move(nstr)),
+          text(std::move(tstr)) {
+      // nop
+    }
+    inline cli_arg(std::string nstr, std::string tstr, std::string& arg)
+        : name(std::move(nstr)),
+          text(std::move(tstr)) {
+      fun = [&arg](const std::string& str) -> bool{
+        arg = str;
+        return true;
+      };
+    }
+    inline cli_arg(std::string nstr, std::string tstr, std::vector<std::string>& arg)
+        : name(std::move(nstr)),
+          text(std::move(tstr)) {
+      fun = [&arg](const std::string& str) -> bool {
+        arg.push_back(str);
+        return true;
+      };
+    }
+    template <class T>
+    cli_arg(std::string nstr, std::string tstr, T& arg)
+        : name(std::move(nstr)),
+          text(std::move(tstr)) {
+      fun = [&arg](const std::string& str) -> bool {
+        auto res = from_string<T>(str);
+        if (!res) {
+          return false;
+        }
+        arg = *res;
+        return true;
+      };
+    }
+    template <class T>
+    cli_arg(std::string nstr, std::string tstr, std::vector<T>& arg)
+        : name(std::move(nstr)),
+          text(std::move(tstr)) {
+      fun = [&arg](const std::string& str) -> bool {
+        auto res = from_string<T>(str);
+        if (!res) {
+          return false;
+        }
+        arg.push_back(*res);
+        return true;
+      };
+    }
+  };
+
+  struct cli_res;
+
+  /**
+   * A simplistic interface for using `filter` to parse command line options.
+   */
+  cli_res filter_cli(std::vector<cli_arg> args) const;
+
   /** @cond PRIVATE */
 
   inline uint32_t type_token() const {
-    return m_vals->type_token();
+    return m_vals ? m_vals->type_token() : 0xFFFFFFFF;
   }
 
   inline void force_detach() {
@@ -224,7 +302,7 @@ class message {
 
   explicit message(raw_ptr);
 
-  inline const std::string* tuple_type_names() const {
+  inline std::string tuple_type_names() const {
     return m_vals->tuple_type_names();
   }
 
@@ -246,9 +324,26 @@ class message {
   /** @endcond */
 
  private:
-
+  message filter_impl(size_t start, message_handler handler) const;
   data_ptr m_vals;
+};
 
+/**
+ * Stores the result of `message::filter_cli`.
+ */
+struct message::cli_res {
+  /**
+   * Stores the remaining (unmatched) arguments.
+   */
+  message remainder;
+  /**
+   * Stores the names of all active options.
+   */
+  std::set<std::string> opts;
+  /**
+   * Stores the automatically generated help text.
+   */
+  std::string helptext;
 };
 
 /**
