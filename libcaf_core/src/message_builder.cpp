@@ -31,24 +31,19 @@ class message_builder::dynamic_msg_data : public detail::message_data {
 
   using message_data::const_iterator;
 
-  dynamic_msg_data() : m_type_token(0xFFFFFFFF) {
+  dynamic_msg_data() {
     // nop
   }
 
-  dynamic_msg_data(const dynamic_msg_data& other)
-      : m_type_token(other.m_type_token) {
+  dynamic_msg_data(const dynamic_msg_data& other) {
     for (auto& d : other.m_elements) {
       m_elements.push_back(d->copy());
     }
   }
 
   dynamic_msg_data(std::vector<uniform_value>&& data)
-      : m_elements(std::move(data)),
-        m_type_token(0xFFFFFFFF) {
-    for (auto& e : m_elements) {
-      m_type_token <<= 6;
-      m_type_token |= e->ti->type_nr();
-    }
+      : m_elements(std::move(data)) {
+    // nop
   }
 
   ~dynamic_msg_data();
@@ -75,7 +70,10 @@ class message_builder::dynamic_msg_data : public detail::message_data {
                      const std::type_info* rtti) const override {
     CAF_REQUIRE(typenr != 0 || rtti != nullptr);
     auto uti = m_elements[pos]->ti;
-    return uti->type_nr() == typenr || uti->equal_to(*rtti);
+    if (uti->type_nr() != typenr) {
+      return false;
+    }
+    return typenr != 0 || uti->equal_to(*rtti);
   }
 
   const char* uniform_name_at(size_t pos) const override {
@@ -87,11 +85,14 @@ class message_builder::dynamic_msg_data : public detail::message_data {
   }
 
   uint32_t type_token() const override {
-    return m_type_token;
+    uint32_t result = 0xFFFFFFFF;
+    for (auto& e : m_elements) {
+      result = (result << 6) | e->ti->type_nr();
+    }
+    return result;
   }
 
   std::vector<uniform_value> m_elements;
-  uint32_t m_type_token;
 };
 
 message_builder::dynamic_msg_data::~dynamic_msg_data() {
