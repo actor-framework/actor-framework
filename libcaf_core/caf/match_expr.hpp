@@ -350,16 +350,12 @@ class match_expr {
 
   template <class T, class... Ts>
   match_expr(T v, Ts&&... vs) : m_cases(std::move(v), std::forward<Ts>(vs)...) {
-    init();
+    // nop
   }
 
-  match_expr(match_expr&& other) : m_cases(std::move(other.m_cases)) {
-    init();
-  }
+  match_expr(match_expr&& other) = default;
 
-  match_expr(const match_expr& other) : m_cases(other.m_cases) {
-    init();
-  }
+  match_expr(const match_expr& other) = default;
 
   result_type operator()(const message& tup) {
     return apply(tup);
@@ -403,27 +399,6 @@ class match_expr {
   static constexpr size_t cache_size = 10;
 
   using cache_element = std::pair<const std::type_info*, uint64_t>;
-
-  std::vector<cache_element> m_cache;
-
-  // ring buffer like access to m_cache
-  size_t m_cache_begin;
-  size_t m_cache_end;
-
-  cache_element m_dummy;
-
-  static void advance_(size_t& i) {
-    i = (i + 1) % cache_size;
-  }
-
-  void init() {
-    m_dummy.second = std::numeric_limits<uint64_t>::max();
-    m_cache.resize(cache_size);
-    for (auto& entry : m_cache) {
-      entry.first = nullptr;
-    }
-    m_cache_begin = m_cache_end = 0;
-  }
 
   template <class Msg>
   result_type apply(Msg& msg) {
