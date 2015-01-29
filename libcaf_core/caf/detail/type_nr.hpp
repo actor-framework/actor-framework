@@ -27,6 +27,7 @@
 #include <cstdint>
 
 #include "caf/fwd.hpp"
+#include "caf/atom.hpp"
 
 #include "caf/detail/type_list.hpp"
 
@@ -94,6 +95,11 @@ CAF_DETAIL_TYPE_NR(32, unit_t)                   // @unit
 CAF_DETAIL_TYPE_NR(33, bool)                     // bool
 CAF_DETAIL_TYPE_NR(34, double)                   // double
 CAF_DETAIL_TYPE_NR(35, float)                    // float
+
+template <atom_value V>
+struct type_nr<atom_constant<V>> {
+  static constexpr uint16_t value = type_nr<atom_value>::value;
+};
 
 static constexpr size_t type_nrs = 36;
 
