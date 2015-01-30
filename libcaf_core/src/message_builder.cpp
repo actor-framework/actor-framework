@@ -31,19 +31,23 @@ class message_builder::dynamic_msg_data : public detail::message_data {
 
   using message_data::const_iterator;
 
-  dynamic_msg_data() {
+  dynamic_msg_data() : m_type_token(0xFFFFFFFF) {
     // nop
   }
 
-  dynamic_msg_data(const dynamic_msg_data& other) {
-    for (auto& d : other.m_elements) {
-      m_elements.push_back(d->copy());
+  dynamic_msg_data(const dynamic_msg_data& other) : m_type_token(0xFFFFFFFF) {
+    for (auto& e : other.m_elements) {
+      add_to_type_token(e->ti->type_nr());
+      m_elements.push_back(e->copy());
     }
   }
 
   dynamic_msg_data(std::vector<uniform_value>&& data)
-      : m_elements(std::move(data)) {
-    // nop
+      : m_elements(std::move(data)),
+        m_type_token(0xFFFFFFFF) {
+    for (auto& e : m_elements) {
+      add_to_type_token(e->ti->type_nr());
+    }
   }
 
   ~dynamic_msg_data();
@@ -85,14 +89,20 @@ class message_builder::dynamic_msg_data : public detail::message_data {
   }
 
   uint32_t type_token() const override {
-    uint32_t result = 0xFFFFFFFF;
-    for (auto& e : m_elements) {
-      result = (result << 6) | e->ti->type_nr();
-    }
-    return result;
+    return m_type_token;
+  }
+
+  void append(uniform_value&& what) {
+    add_to_type_token(what->ti->type_nr());
+    m_elements.push_back(std::move(what));
+  }
+
+  void add_to_type_token(uint16_t typenr) {
+    m_type_token = (m_type_token << 6) | typenr;
   }
 
   std::vector<uniform_value> m_elements;
+  uint32_t m_type_token;
 };
 
 message_builder::dynamic_msg_data::~dynamic_msg_data() {
@@ -127,7 +137,7 @@ bool message_builder::empty() const {
 }
 
 message_builder& message_builder::append(uniform_value what) {
-  data()->m_elements.push_back(std::move(what));
+  data()->append(std::move(what));
   return *this;
 }
 
