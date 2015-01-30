@@ -19,6 +19,8 @@
 
 #include "caf/detail/message_data.hpp"
 
+#include <cstring>
+
 namespace caf {
 namespace detail {
 
