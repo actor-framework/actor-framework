@@ -26,7 +26,6 @@
 #include "caf/unit.hpp"
 #include "caf/actor.hpp"
 #include "caf/group.hpp"
-#include "caf/match.hpp"
 #include "caf/spawn.hpp"
 #include "caf/config.hpp"
 #include "caf/either.hpp"
