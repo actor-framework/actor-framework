@@ -770,9 +770,11 @@ class utim_impl : public uniform_type_info_map {
     };
     // both containers are sorted
     auto i = std::lower_bound(c.begin(), e, name, cmp);
-    return (i != e && name == (*i)->name()) ? *i : nullptr;
+    if (i != e && name == (*i)->name()) {
+      return *i;
+    }
+    return nullptr;
   }
-
 };
 
 } // namespace <anonymous>
