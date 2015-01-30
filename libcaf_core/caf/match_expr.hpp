@@ -353,9 +353,9 @@ class match_expr {
     // nop
   }
 
-  match_expr(match_expr&& other) = default;
+  match_expr(match_expr&&) = default;
 
-  match_expr(const match_expr& other) = default;
+  match_expr(const match_expr&) = default;
 
   result_type operator()(const message& tup) {
     return apply(tup);
