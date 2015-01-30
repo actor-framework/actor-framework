@@ -18,6 +18,8 @@
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 
+#include "caf/string_algorithms.hpp"
+
 using namespace std;
 using namespace caf;
 
@@ -127,35 +129,39 @@ int main(int argc, char** argv) {
       return none;
     };
   };
-  istream_iterator<line> lines(cin);
   istream_iterator<line> eof;
-  match_each (lines, eof, split_line) (
-    on("/join", arg_match) >> [&](const string& mod, const string& id) {
-      try {
-        group grp = (mod == "remote") ? io::remote_group(id)
-                                      : group::get(mod, id);
-        anon_send(client_actor, join_atom::value, grp);
+  vector<string> words;
+  for (istream_iterator<line> i(cin); i != eof; ++i) {
+    words.clear();
+    split(words, i->str, is_any_of(" "));
+    message_builder(words.begin(), words.end()).apply({
+      on("/join", arg_match) >> [&](const string& mod, const string& id) {
+        try {
+          group grp = (mod == "remote") ? io::remote_group(id)
+                                        : group::get(mod, id);
+          anon_send(client_actor, join_atom::value, grp);
+        }
+        catch (exception& e) {
+          cerr << "*** exception: " << to_verbose_string(e) << endl;
+        }
+      },
+      on("/quit") >> [&] {
+        // close STDIN; causes this match loop to quit
+        cin.setstate(ios_base::eofbit);
+      },
+      on(starts_with("/"), any_vals) >> [&] {
+        cout <<  "*** available commands:\n"
+             "  /join <module> <group> join a new chat channel\n"
+             "  /quit          quit the program\n"
+             "  /help          print this text\n" << flush;
+      },
+      others() >> [&] {
+        if (!s_last_line.empty()) {
+          anon_send(client_actor, broadcast_atom::value, s_last_line);
+        }
       }
-      catch (exception& e) {
-        cerr << "*** exception: " << to_verbose_string(e) << endl;
-      }
-    },
-    on("/quit") >> [&] {
-      // close STDIN; causes this match loop to quit
-      cin.setstate(ios_base::eofbit);
-    },
-    on(starts_with("/"), any_vals) >> [&] {
-      cout <<  "*** available commands:\n"
-           "  /join <module> <group> join a new chat channel\n"
-           "  /quit          quit the program\n"
-           "  /help          print this text\n" << flush;
-    },
-    others() >> [&] {
-      if (!s_last_line.empty()) {
-        anon_send(client_actor, broadcast_atom::value, s_last_line);
-      }
-    }
-  );
+    });
+  }
   // force actor to quit
   anon_send_exit(client_actor, exit_reason::user_shutdown);
   await_all_actors_done();

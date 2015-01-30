@@ -52,7 +52,6 @@ set (LIBCAF_CORE_SRCS
      src/local_actor.cpp
      src/logging.cpp
      src/mailbox_element.cpp
-     src/match.cpp
      src/memory.cpp
      src/memory_managed.cpp
      src/message.cpp

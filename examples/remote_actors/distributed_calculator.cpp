@@ -124,7 +124,9 @@ void client_repl(const string& host, uint16_t port) {
       anon_send_exit(client, exit_reason::user_shutdown);
       return;
     } else if (equal(begin(connect), end(connect) - 1, begin(line))) {
-      match_split(line, ' ') (
+      vector<string> words;
+      split(words, line, is_any_of(" "));
+      message_builder(words.begin(), words.end()).apply({
         on("connect", arg_match) >> [&](string& nhost, string& sport) {
           try {
             auto lport = std::stoul(sport);
@@ -144,7 +146,7 @@ void client_repl(const string& host, uint16_t port) {
         others() >> [] {
           cout << "*** usage: connect <host> <port>" << endl;
         }
-      );
+      });
     } else {
       auto toint = [](const string& str) -> optional<int> {
         try { return {std::stoi(str)}; }
