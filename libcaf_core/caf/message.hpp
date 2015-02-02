@@ -134,15 +134,6 @@ class message {
    */
   const void* at(size_t p) const;
 
-  /**
-   * Tries to match element at position `pos` to given RTTI.
-   * @param pos Index of element in question.
-   * @param typenr Number of queried type or `0` for custom types.
-   * @param rtti Queried type or `nullptr` for builtin types.
-   */
-  bool match_element(size_t pos, uint16_t typenr,
-                     const std::type_info* rtti) const;
-
   const char* uniform_name_at(size_t pos) const;
 
   /**
@@ -288,6 +279,30 @@ class message {
    */
   cli_res filter_cli(std::vector<cli_arg> args) const;
 
+  /**
+   * Queries whether the element at `pos` is of type `T`.
+   * @param pos Index of element in question.
+   */
+  template <class T>
+  bool match_element(size_t pos) const {
+    const std::type_info* rtti = nullptr;
+    if (detail::type_nr<T>::value == 0) {
+      rtti = &typeid(T);
+    }
+    return match_element(pos, detail::type_nr<T>::value, rtti);
+  }
+
+  /**
+   * Queries whether the types of this message are `Ts...`.
+   */
+  template <class... Ts>
+  bool match_elements() const {
+    std::integral_constant<size_t, 0> p0;
+    detail::type_list<Ts...> tlist;
+    return size() == sizeof...(Ts) && match_elements_impl(p0, tlist);
+  }
+
+
   /** @cond PRIVATE */
 
   inline uint32_t type_token() const {
@@ -321,9 +336,37 @@ class message {
     return detail::apply_args(f, detail::get_indices(tup), tup);
   }
 
+  /**
+   * Tries to match element at position `pos` to given RTTI.
+   * @param pos Index of element in question.
+   * @param typenr Number of queried type or `0` for custom types.
+   * @param rtti Queried type or `nullptr` for builtin types.
+   */
+  bool match_element(size_t pos, uint16_t typenr,
+                     const std::type_info* rtti) const;
+
+  template <class T, class... Ts>
+  bool match_elements(detail::type_list<T, Ts...> list) const {
+    std::integral_constant<size_t, 0> p0;
+    return size() == (sizeof...(Ts) + 1) && match_elements_impl(p0, list);
+  }
+
   /** @endcond */
 
  private:
+  template <size_t P>
+  bool match_elements_impl(std::integral_constant<size_t, P>,
+                           detail::type_list<>) const {
+    return true; // end of recursion
+  }
+  template <size_t P, class T, class... Ts>
+  bool match_elements_impl(std::integral_constant<size_t, P>,
+                           detail::type_list<T, Ts...>) const {
+    std::integral_constant<size_t, P + 1> next_p;
+    detail::type_list<Ts...> next_list;
+    return match_element<T>(P)
+        && match_elements_impl(next_p, next_list);
+  }
   message filter_impl(size_t start, message_handler handler) const;
   data_ptr m_vals;
 };

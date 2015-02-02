@@ -289,7 +289,7 @@ class invoke_policy {
     const message& msg = node->msg;
     auto mid = node->mid;
     if (msg.size() == 1) {
-      if (msg.match_element(0, detail::type_nr<exit_msg>::value, nullptr)) {
+      if (msg.match_element<exit_msg>(0)) {
         auto& em = msg.get_as<exit_msg>(0);
         CAF_REQUIRE(!mid.valid());
         // make sure to get rid of attachables if they're no longer needed
@@ -301,7 +301,7 @@ class invoke_policy {
           }
           return msg_type::normal_exit;
         }
-      } else if (msg.match_element(0, detail::type_nr<timeout_msg>::value, nullptr)) {
+      } else if (msg.match_element<timeout_msg>(0)) {
         auto& tm = msg.get_as<timeout_msg>(0);
         auto tid = tm.timeout_id;
         CAF_REQUIRE(!mid.valid());
@@ -310,8 +310,7 @@ class invoke_policy {
         }
         return self->waits_for_timeout(tid) ? msg_type::inactive_timeout
                                             : msg_type::expired_timeout;
-      } else if (mid.is_response()
-                 && msg.match_element(0, detail::type_nr<sync_timeout_msg>::value, nullptr)) {
+      } else if (mid.is_response() && msg.match_element<sync_timeout_msg>(0)) {
         return msg_type::timeout_response;
       }
     }
