@@ -31,30 +31,20 @@
 #include "caf/uniform_type_info.hpp"
 
 #include "caf/detail/type_list.hpp"
-#include "caf/detail/message_iterator.hpp"
 
 namespace caf {
 namespace detail {
 
 class message_data : public ref_counted {
-
-  using super = ref_counted;
-
  public:
-
-  message_data();
-
   // mutators
   virtual void* mutable_at(size_t pos) = 0;
   virtual void* mutable_native_data();
 
   // accessors
   virtual size_t size() const = 0;
-
   virtual message_data* copy() const = 0;
-
   virtual const void* at(size_t pos) const = 0;
-
   std::string tuple_type_names() const;
 
   /**
@@ -77,22 +67,6 @@ class message_data : public ref_counted {
   virtual uint16_t type_nr_at(size_t pos) const = 0;
 
   bool equals(const message_data& other) const;
-
-  using const_iterator = message_iterator;
-
-  inline const_iterator begin() const {
-    return {this};
-  }
-  inline const_iterator cbegin() const {
-    return {this};
-  }
-
-  inline const_iterator end() const {
-    return {this, size()};
-  }
-  inline const_iterator cend() const {
-    return {this, size()};
-  }
 
   class ptr {
 

@@ -112,14 +112,6 @@ optional<message> message::apply(message_handler handler) {
   return handler(*this);
 }
 
-message::const_iterator message::begin() const {
-  return m_vals ? m_vals->begin() : const_iterator{nullptr, 0};
-}
-
-message::const_iterator message::end() const {
-  return m_vals ? m_vals->end() : const_iterator{nullptr, 0};
-}
-
 message message::filter_impl(size_t start, message_handler handler) const {
   auto s = size();
   for (size_t i = start; i < s; ++i) {

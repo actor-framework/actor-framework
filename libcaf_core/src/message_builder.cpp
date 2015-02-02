@@ -29,8 +29,6 @@ class message_builder::dynamic_msg_data : public detail::message_data {
  public:
   using super = message_data;
 
-  using message_data::const_iterator;
-
   dynamic_msg_data() : m_type_token(0xFFFFFFFF) {
     // nop
   }

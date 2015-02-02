@@ -58,7 +58,6 @@ set (LIBCAF_CORE_SRCS
      src/message_builder.cpp
      src/message_data.cpp
      src/message_handler.cpp
-     src/message_iterator.cpp
      src/node_id.cpp
      src/ref_counted.cpp
      src/response_promise.cpp

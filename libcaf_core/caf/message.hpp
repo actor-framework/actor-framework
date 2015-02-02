@@ -59,11 +59,6 @@ class message {
   using data_ptr = detail::message_data::ptr;
 
   /**
-   * An iterator to access each element as `const void*.
-   */
-  using const_iterator = detail::message_data::const_iterator;
-
-  /**
    * Creates an empty tuple.
    */
   message() = default;
@@ -165,16 +160,6 @@ class message {
     CAF_REQUIRE(match_element(p, detail::type_nr<T>::value, &typeid(T)));
     return *reinterpret_cast<T*>(mutable_at(p));
   }
-
-  /**
-   * Returns an iterator to the beginning.
-   */
-  const_iterator begin() const;
-
-  /**
-   * Returns an iterator to the end.
-   */
-  const_iterator end() const;
 
   /**
    * Returns a copy-on-write pointer to the internal data.

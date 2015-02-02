@@ -24,10 +24,6 @@
 namespace caf {
 namespace detail {
 
-message_data::message_data() {
-  // nop
-}
-
 bool message_data::equals(const message_data& other) const {
   if (this == &other) {
     return true;

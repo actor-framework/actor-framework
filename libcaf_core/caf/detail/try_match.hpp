@@ -40,12 +40,12 @@ struct meta_element {
   atom_value v;
   uint16_t typenr;
   const std::type_info* type;
-  bool (*fun)(const meta_element&, const message_iterator&, void**);
+  bool (*fun)(const meta_element&, const message&, size_t, void**);
 };
 
-bool match_element(const meta_element&, const message_iterator&, void**);
+bool match_element(const meta_element&, const message&, size_t, void**);
 
-bool match_atom_constant(const meta_element&, const message_iterator&, void**);
+bool match_atom_constant(const meta_element&, const message&, size_t, void**);
 
 template <class T, uint16_t TN = detail::type_nr<T>::value>
 struct meta_element_factory {
