@@ -9,6 +9,11 @@ using namespace caf;
 
 namespace {
 atomic<size_t> s_error_count{0};
+std::mutex s_stdout_mtx;
+}
+
+std::mutex& caf_stdout_mtx() {
+  return s_stdout_mtx;
 }
 
 size_t caf_error_count() {
