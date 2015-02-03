@@ -37,10 +37,9 @@ message make(abstract_actor* self, uint32_t reason) {
 void default_attachable::actor_exited(abstract_actor* self, uint32_t reason) {
   CAF_REQUIRE(self->address() != m_observer);
   auto factory = m_type == monitor ? &make<down_msg> : &make<exit_msg>;
-  message msg = factory(self, reason);
   auto ptr = actor_cast<abstract_actor_ptr>(m_observer);
   ptr->enqueue(self->address(), message_id{}.with_high_priority(),
-               msg, self->host());
+               factory(self, reason), self->host());
 }
 
 bool default_attachable::matches(const token& what) {
