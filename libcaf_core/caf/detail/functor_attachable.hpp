@@ -39,6 +39,7 @@ struct functor_attachable : attachable {
   void actor_exited(abstract_actor* self, uint32_t reason) override {
     m_functor(self, reason);
   }
+  static constexpr size_t token_type = attachable::token::anonymous;
 };
 
 template <class F>

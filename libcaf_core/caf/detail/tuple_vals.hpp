@@ -25,7 +25,6 @@
 
 #include "caf/detail/type_list.hpp"
 
-#include "caf/detail/types_array.hpp"
 #include "caf/detail/message_data.hpp"
 
 namespace caf {
@@ -53,81 +52,104 @@ struct tup_ptr_access<Pos, Max, false> {
   }
 };
 
+using tuple_vals_rtti = std::pair<uint16_t, const std::type_info*>;
+
+template <class T, uint16_t N = type_nr<T>::value>
+struct tuple_vals_type_helper {
+  static tuple_vals_rtti get() {
+    return {N, nullptr};
+  }
+};
+
+template <class T>
+struct tuple_vals_type_helper<T, 0> {
+  static tuple_vals_rtti get() {
+    return {0, &typeid(T)};
+  }
+};
+
 template <class... Ts>
 class tuple_vals : public message_data {
-
+ public:
   static_assert(sizeof...(Ts) > 0, "tuple_vals is not allowed to be empty");
 
   using super = message_data;
 
- public:
-
   using data_type = std::tuple<Ts...>;
-
-  using element_types = types_array<Ts...>;
 
   tuple_vals(const tuple_vals&) = default;
 
   template <class... Us>
   tuple_vals(Us&&... args)
-      : super(false), m_data(std::forward<Us>(args)...) {}
+      : m_data(std::forward<Us>(args)...),
+        m_types{{tuple_vals_type_helper<Ts>::get()...}} {
+    // nop
+  }
 
-  const void* native_data() const { return &m_data; }
+  const void* native_data() const override {
+    return &m_data;
+  }
 
-  void* mutable_native_data() { return &m_data; }
+  void* mutable_native_data() override {
+    return &m_data;
+  }
 
-  inline data_type& data() { return m_data; }
+  data_type& data() {
+    return m_data;
+  }
 
-  inline const data_type& data() const { return m_data; }
+  const data_type& data() const {
+    return m_data;
+  }
 
-  size_t size() const { return sizeof...(Ts); }
+  size_t size() const override {
+    return sizeof...(Ts);
+  }
 
-  tuple_vals* copy() const { return new tuple_vals(*this); }
+  tuple_vals* copy() const override {
+    return new tuple_vals(*this);
+  }
 
-  const void* at(size_t pos) const {
+  const void* at(size_t pos) const override {
     CAF_REQUIRE(pos < size());
     return tup_ptr_access<0, sizeof...(Ts)>::get(pos, m_data);
   }
 
-  void* mutable_at(size_t pos) {
+  void* mutable_at(size_t pos) override {
     CAF_REQUIRE(pos < size());
     return const_cast<void*>(at(pos));
   }
 
-  const uniform_type_info* type_at(size_t pos) const {
+  bool match_element(size_t pos, uint16_t typenr,
+                     const std::type_info* rtti) const override {
     CAF_REQUIRE(pos < size());
-    return m_types[pos];
-  }
-
-  bool equals(const message_data& other) const {
-    if (size() != other.size()) return false;
-    const tuple_vals* o = dynamic_cast<const tuple_vals*>(&other);
-    if (o) {
-      return m_data == (o->m_data);
+    auto& et = m_types[pos];
+    if (et.first != typenr) {
+      return false;
     }
-    return message_data::equals(other);
+    return et.first != 0 || et.second == rtti || *et.second == *rtti;
   }
 
-  const std::type_info* type_token() const {
-    return detail::static_type_list<Ts...>::list;
+  uint32_t type_token() const override {
+    return make_type_token<Ts...>();
   }
 
-  const std::string* tuple_type_names() const override {
-    // produced name is equal for all instances
-    static std::string result = get_tuple_type_names(*this);
-    return &result;
+  const char* uniform_name_at(size_t pos) const override {
+    auto& et = m_types[pos];
+    if (et.first != 0) {
+      return numbered_type_names[et.first - 1];
+    }
+    return uniform_typeid(*et.second)->name();
+  }
+
+  uint16_t type_nr_at(size_t pos) const override {
+    return m_types[pos].first;
   }
 
  private:
-
   data_type m_data;
-
-  static types_array<Ts...> m_types;
-
+  std::array<tuple_vals_rtti, sizeof...(Ts)> m_types;
 };
-
-template <class... Ts>
-types_array<Ts...> tuple_vals<Ts...>::m_types;
 
 } // namespace detail
 } // namespace caf

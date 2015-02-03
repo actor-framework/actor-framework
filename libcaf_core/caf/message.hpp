@@ -20,10 +20,13 @@
 #ifndef CAF_MESSAGE_HPP
 #define CAF_MESSAGE_HPP
 
+#include <tuple>
 #include <type_traits>
 
 #include "caf/atom.hpp"
 #include "caf/config.hpp"
+#include "caf/from_string.hpp"
+#include "caf/skip_message.hpp"
 
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/comparable.hpp"
@@ -54,11 +57,6 @@ class message {
    * A (COW) smart pointer to the data.
    */
   using data_ptr = detail::message_data::ptr;
-
-  /**
-   * An iterator to access each element as `const void*.
-   */
-  using const_iterator = detail::message_data::const_iterator;
 
   /**
    * Creates an empty tuple.
@@ -93,28 +91,33 @@ class message {
   }
 
   /**
-   * Creates a new tuple with all but the first n values.
+   * Creates a new message with all but the first n values.
    */
   message drop(size_t n) const;
 
   /**
-   * Creates a new tuple with all but the last n values.
+   * Creates a new message with all but the last n values.
    */
   message drop_right(size_t n) const;
 
   /**
-   * Creates a new tuple from the first n values.
+   * Creates a new message from the first n values.
    */
   inline message take(size_t n) const {
     return n >= size() ? *this : drop_right(size() - n);
   }
 
   /**
-   * Creates a new tuple from the last n values.
+   * Creates a new message from the last n values.
    */
   inline message take_right(size_t n) const {
     return n >= size() ? *this : drop(size() - n);
   }
+
+  /**
+   * Creates a new message of size `n` starting at element `pos`.
+   */
+  message slice(size_t pos, size_t n) const;
 
   /**
    * Gets a mutable pointer to the element at position @p p.
@@ -126,28 +129,7 @@ class message {
    */
   const void* at(size_t p) const;
 
-  /**
-   * Gets {@link uniform_type_info uniform type information}
-   * of the element at position @p p.
-   */
-  const uniform_type_info* type_at(size_t p) const;
-
-  /**
-   * Returns true if this message has the types @p Ts.
-   */
-  template <class... Ts>
-  bool has_types() const {
-    if (size() != sizeof...(Ts)) {
-      return false;
-    }
-    const std::type_info* ts[] = {&typeid(Ts)...};
-    for (size_t i = 0; i < sizeof...(Ts); ++i) {
-      if (!type_at(i)->equal_to(*ts[i])) {
-        return false;
-      }
-    }
-    return true;
-  }
+  const char* uniform_name_at(size_t pos) const;
 
   /**
    * Returns @c true if `*this == other, otherwise false.
@@ -166,7 +148,7 @@ class message {
    */
   template <class T>
   inline const T& get_as(size_t p) const {
-    CAF_REQUIRE(*(type_at(p)) == typeid(T));
+    CAF_REQUIRE(match_element(p, detail::type_nr<T>::value, &typeid(T)));
     return *reinterpret_cast<const T*>(at(p));
   }
 
@@ -175,19 +157,9 @@ class message {
    */
   template <class T>
   inline T& get_as_mutable(size_t p) {
-    CAF_REQUIRE(*(type_at(p)) == typeid(T));
+    CAF_REQUIRE(match_element(p, detail::type_nr<T>::value, &typeid(T)));
     return *reinterpret_cast<T*>(mutable_at(p));
   }
-
-  /**
-   * Returns an iterator to the beginning.
-   */
-  const_iterator begin() const;
-
-  /**
-   * Returns an iterator to the end.
-   */
-  const_iterator end() const;
 
   /**
    * Returns a copy-on-write pointer to the internal data.
@@ -211,27 +183,116 @@ class message {
   }
 
   /**
-   * Returns either `&typeid(detail::type_list<Ts...>)`, where
-   * `Ts...` are the element types, or `&typeid(void)`.
-   *
-   * The type token `&typeid(void)` indicates that this tuple is dynamically
-   * typed, i.e., the types where not available at compile time.
-   */
-  const std::type_info* type_token() const;
-
-  /**
-   * Checks whether this tuple is dynamically typed, i.e.,
+   * Checks whether this message is dynamically typed, i.e.,
    * its types were not known at compile time.
    */
   bool dynamically_typed() const;
 
   /**
-   * Applies @p handler to this message and returns the result
+   * Applies `handler` to this message and returns the result
    *  of `handler(*this)`.
    */
   optional<message> apply(message_handler handler);
 
+  /**
+   * Returns a new message consisting of all elements that were *not*
+   * matched by `handler`.
+   */
+  message filter(message_handler handler) const;
+
+  /**
+   * Stores the name of a command line option ("<long name>[,<short name>]")
+   * along with a description and a callback.
+   */
+  struct cli_arg {
+    std::string name;
+    std::string text;
+    std::function<bool (const std::string&)> fun;
+    inline cli_arg(std::string nstr, std::string tstr)
+        : name(std::move(nstr)),
+          text(std::move(tstr)) {
+      // nop
+    }
+    inline cli_arg(std::string nstr, std::string tstr, std::string& arg)
+        : name(std::move(nstr)),
+          text(std::move(tstr)) {
+      fun = [&arg](const std::string& str) -> bool{
+        arg = str;
+        return true;
+      };
+    }
+    inline cli_arg(std::string nstr, std::string tstr, std::vector<std::string>& arg)
+        : name(std::move(nstr)),
+          text(std::move(tstr)) {
+      fun = [&arg](const std::string& str) -> bool {
+        arg.push_back(str);
+        return true;
+      };
+    }
+    template <class T>
+    cli_arg(std::string nstr, std::string tstr, T& arg)
+        : name(std::move(nstr)),
+          text(std::move(tstr)) {
+      fun = [&arg](const std::string& str) -> bool {
+        auto res = from_string<T>(str);
+        if (!res) {
+          return false;
+        }
+        arg = *res;
+        return true;
+      };
+    }
+    template <class T>
+    cli_arg(std::string nstr, std::string tstr, std::vector<T>& arg)
+        : name(std::move(nstr)),
+          text(std::move(tstr)) {
+      fun = [&arg](const std::string& str) -> bool {
+        auto res = from_string<T>(str);
+        if (!res) {
+          return false;
+        }
+        arg.push_back(*res);
+        return true;
+      };
+    }
+  };
+
+  struct cli_res;
+
+  /**
+   * A simplistic interface for using `filter` to parse command line options.
+   */
+  cli_res filter_cli(std::vector<cli_arg> args) const;
+
+  /**
+   * Queries whether the element at `pos` is of type `T`.
+   * @param pos Index of element in question.
+   */
+  template <class T>
+  bool match_element(size_t pos) const {
+    const std::type_info* rtti = nullptr;
+    if (detail::type_nr<T>::value == 0) {
+      rtti = &typeid(T);
+    }
+    return match_element(pos, detail::type_nr<T>::value, rtti);
+  }
+
+  /**
+   * Queries whether the types of this message are `Ts...`.
+   */
+  template <class... Ts>
+  bool match_elements() const {
+    std::integral_constant<size_t, 0> p0;
+    detail::type_list<Ts...> tlist;
+    return size() == sizeof...(Ts) && match_elements_impl(p0, tlist);
+  }
+
+
   /** @cond PRIVATE */
+
+  inline uint32_t type_token() const {
+    return m_vals ? m_vals->type_token() : 0xFFFFFFFF;
+  }
 
   inline void force_detach() {
     m_vals.detach();
@@ -241,7 +302,7 @@ class message {
 
   explicit message(raw_ptr);
 
-  inline const std::string* tuple_type_names() const {
+  inline std::string tuple_type_names() const {
     return m_vals->tuple_type_names();
   }
 
@@ -260,12 +321,57 @@ class message {
     return detail::apply_args(f, detail::get_indices(tup), tup);
   }
 
+  /**
+   * Tries to match element at position `pos` to given RTTI.
+   * @param pos Index of element in question.
+   * @param typenr Number of queried type or `0` for custom types.
+   * @param rtti Queried type or `nullptr` for builtin types.
+   */
+  bool match_element(size_t pos, uint16_t typenr,
+                     const std::type_info* rtti) const;
+
+  template <class T, class... Ts>
+  bool match_elements(detail::type_list<T, Ts...> list) const {
+    std::integral_constant<size_t, 0> p0;
+    return size() == (sizeof...(Ts) + 1) && match_elements_impl(p0, list);
+  }
+
   /** @endcond */
 
  private:
-
+  template <size_t P>
+  bool match_elements_impl(std::integral_constant<size_t, P>,
+                           detail::type_list<>) const {
+    return true; // end of recursion
+  }
+  template <size_t P, class T, class... Ts>
+  bool match_elements_impl(std::integral_constant<size_t, P>,
+                           detail::type_list<T, Ts...>) const {
+    std::integral_constant<size_t, P + 1> next_p;
+    detail::type_list<Ts...> next_list;
+    return match_element<T>(P)
+        && match_elements_impl(next_p, next_list);
+  }
+  message filter_impl(size_t start, message_handler handler) const;
   data_ptr m_vals;
+};
 
+/**
+ * Stores the result of `message::filter_cli`.
+ */
+struct message::cli_res {
+  /**
+   * Stores the remaining (unmatched) arguments.
+   */
+  message remainder;
+  /**
+   * Stores the names of all active options.
+   */
+  std::set<std::string> opts;
+  /**
+   * Stores the automatically generated help text.
+   */
+  std::string helptext;
 };
 
 /**

@@ -23,7 +23,6 @@
 #include <string>
 
 #include "caf/either.hpp"
-#include "caf/uniform_typeid.hpp"
 #include "caf/type_name_access.hpp"
 #include "caf/uniform_type_info.hpp"
 #include "caf/illegal_message_element.hpp"

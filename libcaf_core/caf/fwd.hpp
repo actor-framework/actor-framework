@@ -33,6 +33,7 @@ class group;
 class message;
 class channel;
 class node_id;
+class duration;
 class behavior;
 class resumable;
 class actor_addr;
@@ -50,8 +51,15 @@ class event_based_actor;
 class forwarding_actor_proxy;
 
 // structs
+struct unit_t;
 struct anything;
+struct exit_msg;
+struct down_msg;
+struct timeout_msg;
+struct group_down_msg;
 struct invalid_actor_t;
+struct sync_exited_msg;
+struct sync_timeout_msg;
 struct invalid_actor_addr_t;
 struct illegal_message_element;
 

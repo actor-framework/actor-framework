@@ -116,54 +116,21 @@ deserialize_impl(T& dm, deserializer* source) {
 }
 
 template <class T>
-class uti_impl : public uniform_type_info {
+class uti_impl : public detail::abstract_uniform_type_info<T> {
  public:
-  uti_impl(const char* tname) : m_native(&typeid(T)), m_name(tname) {
+  using super = detail::abstract_uniform_type_info<T>;
+
+  uti_impl(const char* tname) : super(tname) {
     // nop
   }
 
-  bool equal_to(const std::type_info& ti) const override {
-    // in some cases (when dealing with dynamic libraries),
-    // address can be different although types are equal
-    return m_native == &ti || *m_native == ti;
-  }
-
-  bool equals(const void* lhs, const void* rhs) const override {
-    return deref(lhs) == deref(rhs);
-  }
-
-  uniform_value create(const uniform_value& other) const override {
-    return this->create_impl<T>(other);
-  }
-
-  message as_message(void* instance) const override {
-    return make_message(deref(instance));
-  }
-
-  const char* name() const {
-    return m_name.c_str();
-  }
-
- protected:
   void serialize(const void* instance, serializer* sink) const {
-    serialize_impl(deref(instance), sink);
+    serialize_impl(super::deref(instance), sink);
   }
 
   void deserialize(void* instance, deserializer* source) const {
-    deserialize_impl(deref(instance), source);
+    deserialize_impl(super::deref(instance), source);
   }
-
- private:
-  static inline T& deref(void* ptr) {
-    return *reinterpret_cast<T*>(ptr);
-  }
-
-  static inline const T& deref(const void* ptr) {
-    return *reinterpret_cast<const T*>(ptr);
-  }
-
-  const std::type_info* m_native;
-  std::string m_name;
 };
 
 template <class T>

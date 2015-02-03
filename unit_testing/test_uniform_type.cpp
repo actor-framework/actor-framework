@@ -18,6 +18,8 @@
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 
+#include "caf/detail/type_nr.hpp"
+
 using std::cout;
 using std::endl;
 
@@ -106,8 +108,61 @@ T& append(T& storage, U&& u, Us&&... us) {
   return append(storage, std::forward<Us>(us)...);
 }
 
+void check_builtin_type_nrs() {
+  std::map<std::string, uint16_t> nrs;
+  nrs["bool"] = detail::type_nr<bool>::value;
+  nrs["@i8"] = detail::type_nr<int8_t>::value;
+  nrs["@i16"] = detail::type_nr<int16_t>::value;
+  nrs["@i32"] = detail::type_nr<int32_t>::value;
+  nrs["@i64"] = detail::type_nr<int64_t>::value;
+  nrs["@u8"] = detail::type_nr<uint8_t>::value;
+  nrs["@u16"] = detail::type_nr<uint16_t>::value;
+  nrs["@u32"] =  detail::type_nr<uint32_t>::value;
+  nrs["@u64"] = detail::type_nr<uint64_t>::value;
+  nrs["@str"] = detail::type_nr<std::string>::value;
+  nrs["@u16str"] = detail::type_nr<std::u16string>::value;
+  nrs["@u32str"] = detail::type_nr<std::u32string>::value;
+  nrs["float"] = detail::type_nr<float>::value;
+  nrs["double"] = detail::type_nr<double>::value;
+  nrs["@ldouble"] = detail::type_nr<long double>::value;
+  nrs["@unit"] = detail::type_nr<unit_t>::value;
+  nrs["@actor"] = detail::type_nr<actor>::value;
+  nrs["@addr"] = detail::type_nr<actor_addr>::value;
+  nrs["@atom"] = detail::type_nr<atom_value>::value;
+  nrs["@channel"] = detail::type_nr<channel>::value;
+  nrs["@charbuf"] = detail::type_nr<std::vector<char>>::value;
+  nrs["@down"] = detail::type_nr<down_msg>::value;
+  nrs["@duration"] = detail::type_nr<duration>::value;
+  nrs["@exit"] = detail::type_nr<exit_msg>::value;
+  nrs["@group"] = detail::type_nr<group>::value;
+  nrs["@group_down"] = detail::type_nr<group_down_msg>::value;
+  nrs["@message"] = detail::type_nr<message>::value;
+  nrs["@message_id"] = detail::type_nr<message_id>::value;
+  nrs["@node"] = detail::type_nr<node_id>::value;
+  nrs["@strmap"] = detail::type_nr<std::map<std::string, std::string>>::value;
+  nrs["@timeout"] = detail::type_nr<timeout_msg>::value;
+  nrs["@sync_exited"] = detail::type_nr<sync_exited_msg>::value;
+  nrs["@sync_timeout"] = detail::type_nr<sync_timeout_msg>::value;
+  nrs["@strvec"] = detail::type_nr<std::vector<std::string>>::value;
+  nrs["@strset"] = detail::type_nr<std::set<std::string>>::value;
+  auto types = uniform_type_info::instances();
+  for (auto tinfo : types) {
+    auto i = nrs.find(tinfo->name());
+    if (i == nrs.end()) {
+      CAF_FAILURE("could not find " << tinfo->name() << " in nrs map");
+    } else {
+      if (tinfo->type_nr() != i->second) {
+        CAF_FAILURE(tinfo->name() << " has wrong type nr, expected "
+                    << i->second << ", found " << tinfo->type_nr());
+      }
+    }
+  }
+  CAF_CHECKPOINT();
+}
+
 int main() {
   CAF_TEST(test_uniform_type);
+  check_builtin_type_nrs();
   auto announce1 = announce<foo>("foo", &foo::value);
   auto announce2 = announce<foo>("foo", &foo::value);
   auto announce3 = announce<foo>("foo", &foo::value);

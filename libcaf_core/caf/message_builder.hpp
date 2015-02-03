@@ -90,6 +90,14 @@ class message_builder {
    */
   message to_message();
 
+  inline message filter(message_handler f) {
+    return to_message().filter(f);
+  }
+
+  inline message::cli_res filter_cli(std::vector<message::cli_arg> args) {
+    return to_message().filter_cli(std::move(args));
+  }
+
   /**
    * Convenience function for `to_message().apply(handler).
    */
@@ -117,7 +125,9 @@ class message_builder {
 
   template <class T>
   message_builder&
-  append_impl(typename detail::implicit_conversions<T>::type what) {
+  append_impl(typename unbox_message_element<
+                typename detail::implicit_conversions<T>::type
+              >::type what) {
     using type = decltype(what);
     auto uti = uniform_typeid<type>();
     auto uval = uti->create();

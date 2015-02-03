@@ -11,28 +11,37 @@ using namespace caf;
 
 namespace {
 std::atomic<long> s_testees;
+std::atomic<long> s_pending_on_exits;
 } // namespace <anonymous>
 
 class testee : public event_based_actor {
  public:
-  testee() {
-    ++s_testees;
-  }
-
+  testee();
   ~testee();
-
-  behavior make_behavior() {
-    return {
-      others() >> [=] {
-        return last_dequeued();
-      }
-    };
-  }
+  void on_exit();
+  behavior make_behavior() override;
 };
+
+testee::testee() {
+  ++s_testees;
+  ++s_pending_on_exits;
+}
 
 testee::~testee() {
   // avoid weak-vtables warning
   --s_testees;
+}
+
+void testee::on_exit() {
+  --s_pending_on_exits;
+}
+
+behavior testee::make_behavior() {
+  return {
+    others() >> [=] {
+      return last_dequeued();
+    }
+  };
 }
 
 template <class ExitMsgType>
@@ -48,9 +57,12 @@ behavior tester(event_based_actor* self, const actor& aut) {
   anon_send_exit(aut, exit_reason::user_shutdown);
   CAF_CHECKPOINT();
   return {
-    [self](const ExitMsgType&) {
+    [self](const ExitMsgType& msg) {
       // must be still alive at this point
       CAF_CHECK_EQUAL(s_testees.load(), 1);
+      CAF_CHECK_EQUAL(msg.reason, exit_reason::user_shutdown);
+      CAF_CHECK_EQUAL(self->last_dequeued().vals()->get_reference_count(), 1);
+      CAF_CHECK(&msg == self->last_dequeued().at(0));
       // testee might be still running its cleanup code in
       // another worker thread; by waiting some milliseconds, we make sure
       // testee had enough time to return control to the scheduler
@@ -59,18 +71,22 @@ behavior tester(event_based_actor* self, const actor& aut) {
                          check_atom::value);
     },
     [self](check_atom) {
-      // make sure dude's dtor has been called
+      // make sure aut's dtor and on_exit() have been called
       CAF_CHECK_EQUAL(s_testees.load(), 0);
+      CAF_CHECK_EQUAL(s_pending_on_exits.load(), 0);
       self->quit();
     }
   };
 }
+
+#define BREAK_ON_ERROR() if (CAF_TEST_RESULT() > 0) return
 
 template <spawn_options O1, spawn_options O2>
 void run() {
   CAF_PRINT("run test using links");
   spawn<O1>(tester<exit_msg>, spawn<testee, O2>());
   await_all_actors_done();
+  BREAK_ON_ERROR();
   CAF_PRINT("run test using monitors");
   spawn<O1>(tester<down_msg>, spawn<testee, O2>());
   await_all_actors_done();
@@ -79,10 +95,13 @@ void run() {
 void test_actor_lifetime() {
   CAF_PRINT("run<no_spawn_options, no_spawn_options>");
   run<no_spawn_options, no_spawn_options>();
+  BREAK_ON_ERROR();
   CAF_PRINT("run<detached, no_spawn_options>");
   run<detached, no_spawn_options>();
+  BREAK_ON_ERROR();
   CAF_PRINT("run<no_spawn_options, detached>");
   run<no_spawn_options, detached>();
+  BREAK_ON_ERROR();
   CAF_PRINT("run<detached, detached>");
   run<detached, detached>();
 }
@@ -90,6 +109,5 @@ void test_actor_lifetime() {
 int main() {
   CAF_TEST(test_actor_lifetime);
   test_actor_lifetime();
-  CAF_CHECK_EQUAL(s_testees.load(), 0);
   return CAF_TEST_RESULT();
 }

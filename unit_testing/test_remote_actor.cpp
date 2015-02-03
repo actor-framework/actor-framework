@@ -20,6 +20,7 @@ using namespace caf;
 namespace {
 
 atomic<long> s_destructors_called;
+atomic<long> s_on_exit_called;
 
 using string_pair = std::pair<std::string, std::string>;
 
@@ -163,6 +164,10 @@ class client : public event_based_actor {
     return spawn_ping();
   }
 
+  void on_exit() {
+    ++s_on_exit_called;
+  }
+
   ~client() {
     ++s_destructors_called;
   }
@@ -241,6 +246,10 @@ class server : public event_based_actor {
 
   server(bool run_in_loop = false) : m_run_in_loop(run_in_loop) {
     // nop
+  }
+
+  void on_exit() {
+    ++s_on_exit_called;
   }
 
   ~server() {
@@ -421,5 +430,6 @@ int main(int argc, char** argv) {
   // we either spawn a server or a client, in both cases
   // there must have been exactly one dtor called
   CAF_CHECK_EQUAL(s_destructors_called.load(), 1);
+  CAF_CHECK_EQUAL(s_on_exit_called.load(), 1);
   return CAF_TEST_RESULT();
 }

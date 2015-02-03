@@ -158,9 +158,9 @@ uniform_value make_uniform_value(const uniform_type_info* ti, Ts&&... args) {
  *   \@_::foo
  */
 class uniform_type_info {
-
+ public:
   friend bool operator==(const uniform_type_info& lhs,
-               const uniform_type_info& rhs);
+                         const uniform_type_info& rhs);
 
   // disable copy and move constructors
   uniform_type_info(uniform_type_info&&) = delete;
@@ -169,8 +169,6 @@ class uniform_type_info {
   // disable assignment operators
   uniform_type_info& operator=(uniform_type_info&&) = delete;
   uniform_type_info& operator=(const uniform_type_info&) = delete;
-
- public:
 
   virtual ~uniform_type_info();
 
@@ -254,9 +252,15 @@ class uniform_type_info {
    */
   virtual message as_message(void* instance) const = 0;
 
- protected:
+  /**
+   * Returns a unique number for builtin types or 0.
+   */
+  uint16_t type_nr() const {
+    return m_type_nr;
+  }
 
-  uniform_type_info() = default;
+ protected:
+  uniform_type_info(uint16_t typenr = 0);
 
   template <class T>
   uniform_value create_impl(const uniform_value& other) const {
@@ -268,6 +272,8 @@ class uniform_type_info {
     return make_uniform_value<T>(this);
   }
 
+ private:
+  uint16_t m_type_nr;
 };
 
 using uniform_type_info_ptr = std::unique_ptr<uniform_type_info>;
@@ -292,38 +298,6 @@ inline bool operator==(const uniform_type_info& lhs,
 inline bool operator!=(const uniform_type_info& lhs,
              const uniform_type_info& rhs) {
   return !(lhs == rhs);
-}
-
-/**
- * @relates uniform_type_info
- */
-inline bool operator==(const uniform_type_info& lhs,
-                       const std::type_info& rhs) {
-  return lhs.equal_to(rhs);
-}
-
-/**
- * @relates uniform_type_info
- */
-inline bool operator!=(const uniform_type_info& lhs,
-                       const std::type_info& rhs) {
-  return !(lhs.equal_to(rhs));
-}
-
-/**
- * @relates uniform_type_info
- */
-inline bool operator==(const std::type_info& lhs,
-                       const uniform_type_info& rhs) {
-  return rhs.equal_to(lhs);
-}
-
-/**
- * @relates uniform_type_info
- */
-inline bool operator!=(const std::type_info& lhs,
-                       const uniform_type_info& rhs) {
-  return !(rhs.equal_to(lhs));
 }
 
 } // namespace caf

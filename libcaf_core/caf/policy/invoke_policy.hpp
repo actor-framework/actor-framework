@@ -147,7 +147,9 @@ class invoke_policy {
       }
     } else {
       CAF_LOGF_DEBUG("res = " << to_string(*res));
-      if (res->template has_types<atom_value, uint64_t>()
+      if (res->size() == 2
+          && res->match_element(0, detail::type_nr<atom_value>::value, nullptr)
+          && res->match_element(1, detail::type_nr<uint64_t>::value, nullptr)
           && res->template get_as<atom_value>(0) == atom("MESSAGE_ID")) {
         CAF_LOG_DEBUG("message handler returned a message id wrapper");
         auto id = res->template get_as<uint64_t>(1);
@@ -287,7 +289,7 @@ class invoke_policy {
     const message& msg = node->msg;
     auto mid = node->mid;
     if (msg.size() == 1) {
-      if (msg.type_at(0)->equal_to(typeid(exit_msg))) {
+      if (msg.match_element<exit_msg>(0)) {
         auto& em = msg.get_as<exit_msg>(0);
         CAF_REQUIRE(!mid.valid());
         // make sure to get rid of attachables if they're no longer needed
@@ -299,7 +301,7 @@ class invoke_policy {
           }
           return msg_type::normal_exit;
         }
-      } else if (msg.type_at(0)->equal_to(typeid(timeout_msg))) {
+      } else if (msg.match_element<timeout_msg>(0)) {
         auto& tm = msg.get_as<timeout_msg>(0);
         auto tid = tm.timeout_id;
         CAF_REQUIRE(!mid.valid());
@@ -308,8 +310,7 @@ class invoke_policy {
         }
         return self->waits_for_timeout(tid) ? msg_type::inactive_timeout
                                             : msg_type::expired_timeout;
-      } else if (msg.type_at(0)->equal_to(typeid(sync_timeout_msg))
-                 && mid.is_response()) {
+      } else if (mid.is_response() && msg.match_element<sync_timeout_msg>(0)) {
         return msg_type::timeout_response;
       }
     }

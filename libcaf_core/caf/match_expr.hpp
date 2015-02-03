@@ -71,14 +71,20 @@ class match_expr_case : public get_lifted_fun<Expr, Projecs, Signature>::type {
   using pattern = Pattern;
   using filtered_pattern =
     typename detail::tl_filter_not_type<
-    Pattern,
-    anything
-  >::type;
+      Pattern,
+      anything
+    >::type;
+  static constexpr bool has_wildcard =
+    !std::is_same<
+      pattern,
+      filtered_pattern
+    >::value;
+  static constexpr uint32_t type_token = make_type_token_from_list<pattern>();
   using intermediate_tuple =
-    typename detail::tl_apply<
-    filtered_pattern,
-    detail::pseudo_tuple
-  >::type;
+      typename detail::tl_apply<
+      filtered_pattern,
+      detail::pseudo_tuple
+    >::type;
 };
 
 template <class Expr, class Transformers, class Pattern>
@@ -208,28 +214,25 @@ T& unroll_expr_result_unbox(optional<T>& opt) {
 }
 
 template <class Result, class PPFPs, class Msg>
-Result unroll_expr(PPFPs&, uint64_t, minus1l, Msg&) {
+Result unroll_expr(PPFPs&, minus1l, Msg&) {
   // end of recursion
   return none;
 }
 
 template <class Result, class PPFPs, long N, class Msg>
-Result unroll_expr(PPFPs& fs, uint64_t bitmask, long_constant<N>, Msg& msg) {
+Result unroll_expr(PPFPs& fs, long_constant<N>, Msg& msg) {
   { // recursively evaluate sub expressions
-    Result res = unroll_expr<Result>(fs, bitmask, long_constant<N - 1>{}, msg);
+    Result res = unroll_expr<Result>(fs, long_constant<N - 1>{}, msg);
     if (!get<none_t>(&res)) {
       return res;
     }
-  }
-  if ((bitmask & (0x01 << N)) == 0) {
-    // case is disabled via bitmask
-    return none;
   }
   auto& f = get<N>(fs);
   using ft = typename std::decay<decltype(f)>::type;
   meta_elements<typename ft::pattern> ms;
   typename ft::intermediate_tuple targs;
-  if (try_match(msg, ms.arr.data(), ms.arr.size(), targs.data)) {
+  if ((ft::has_wildcard || ft::type_token == msg.type_token())
+      && try_match(msg, ms.arr.data(), ms.arr.size(), targs.data)) {
     auto is = detail::get_indices(targs);
     auto res = detail::apply_args(f, is, deduce_const(msg, targs));
     if (unroll_expr_result_valid(res)) {
@@ -237,23 +240,6 @@ Result unroll_expr(PPFPs& fs, uint64_t bitmask, long_constant<N>, Msg& msg) {
     }
   }
   return none;
-}
-
-template <class PPFPs>
-uint64_t calc_bitmask(PPFPs&, minus1l, const std::type_info&, const message&) {
-  return 0x00;
-}
-
-template <class Case, long N>
-uint64_t calc_bitmask(Case& fs, long_constant<N>,
-                      const std::type_info& tinf, const message& msg) {
-  auto& f = get<N>(fs);
-  using ft = typename std::decay<decltype(f)>::type;
-  meta_elements<typename ft::pattern> ms;
-  uint64_t result = try_match(msg, ms.arr.data(), ms.arr.size(), nullptr)
-                    ? (0x01 << N)
-                    : 0x00;
-  return result | calc_bitmask(fs, long_constant<N - 1l>(), tinf, msg);
 }
 
 template <bool IsManipulator, typename T0, typename T1>
@@ -364,16 +350,12 @@ class match_expr {
 
   template <class T, class... Ts>
   match_expr(T v, Ts&&... vs) : m_cases(std::move(v), std::forward<Ts>(vs)...) {
-    init();
+    // nop
   }
 
-  match_expr(match_expr&& other) : m_cases(std::move(other.m_cases)) {
-    init();
-  }
+  match_expr(match_expr&&) = default;
 
-  match_expr(const match_expr& other) : m_cases(other.m_cases) {
-    init();
-  }
+  match_expr(const match_expr&) = default;
 
   result_type operator()(const message& tup) {
     return apply(tup);
@@ -418,58 +400,6 @@ class match_expr {
 
   using cache_element = std::pair<const std::type_info*, uint64_t>;
 
-  std::vector<cache_element> m_cache;
-
-  // ring buffer like access to m_cache
-  size_t m_cache_begin;
-  size_t m_cache_end;
-
-  cache_element m_dummy;
-
-  static void advance_(size_t& i) {
-    i = (i + 1) % cache_size;
-  }
-
-  size_t find_token_pos(const std::type_info* type_token) {
-    for (size_t i = m_cache_begin; i != m_cache_end; advance_(i)) {
-      if (m_cache[i].first == type_token) {
-        return i;
-      }
-    }
-    return m_cache_end;
-  }
-
-  template <class Tuple>
-  uint64_t get_cache_entry(const std::type_info* type_token,
-                           const Tuple& value) {
-    CAF_REQUIRE(type_token != nullptr);
-    if (value.dynamically_typed()) {
-      return m_dummy.second; // all groups enabled
-    }
-    size_t i = find_token_pos(type_token);
-    // if we didn't found a cache entry ...
-    if (i == m_cache_end) {
-      // ... 'create' one (override oldest element in cache if full)
-      advance_(m_cache_end);
-      if (m_cache_end == m_cache_begin) {
-        advance_(m_cache_begin);
-      }
-      m_cache[i].first = type_token;
-      idx_token_type idx_token;
-      m_cache[i].second = calc_bitmask(m_cases, idx_token, *type_token, value);
-    }
-    return m_cache[i].second;
-  }
-
-  void init() {
-    m_dummy.second = std::numeric_limits<uint64_t>::max();
-    m_cache.resize(cache_size);
-    for (auto& entry : m_cache) {
-      entry.first = nullptr;
-    }
-    m_cache_begin = m_cache_end = 0;
-  }
-
   template <class Msg>
   result_type apply(Msg& msg) {
     idx_token_type idx_token;
@@ -477,8 +407,7 @@ class match_expr {
     // returns either a reference or a new object
     using detached = decltype(detail::detach_if_needed(msg, mutator_token));
     detached mref = detail::detach_if_needed(msg, mutator_token);
-    auto bitmask = get_cache_entry(mref.type_token(), mref);
-    return detail::unroll_expr<result_type>(m_cases, bitmask, idx_token, mref);
+    return detail::unroll_expr<result_type>(m_cases, idx_token, mref);
   }
 };
 

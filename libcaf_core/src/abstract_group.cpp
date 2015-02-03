@@ -37,11 +37,14 @@ void abstract_group::subscription::actor_exited(abstract_actor* ptr, uint32_t) {
 }
 
 bool abstract_group::subscription::matches(const token& what) {
-  if (what.subtype != typeid(subscription_token)) {
+  if (what.subtype != attachable::token::subscription) {
     return false;
   }
-  auto& ot = *reinterpret_cast<const subscription_token*>(what.ptr);
-  return ot.group == m_group;
+  if (what.ptr) {
+    auto& ot = *reinterpret_cast<const subscription_token*>(what.ptr);
+    return ot.group == m_group;
+  }
+  return true;
 }
 
 abstract_group::module::module(std::string mname) : m_name(std::move(mname)) {
@@ -53,7 +56,9 @@ const std::string& abstract_group::module::name() {
 }
 
 abstract_group::abstract_group(abstract_group::module_ptr mod, std::string id)
-    : m_module(mod), m_identifier(std::move(id)) {
+    : abstract_channel(abstract_channel::is_abstract_group_flag),
+      m_module(mod),
+      m_identifier(std::move(id)) {
   // nop
 }
 

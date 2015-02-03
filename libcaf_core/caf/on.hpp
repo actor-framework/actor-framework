@@ -162,8 +162,7 @@ struct rvalue_builder {
   rvalue_builder(fun_container arg1) : m_funs(std::move(arg1)) {}
 
   template <class Expr>
-  match_expr<
-    typename get_case<is_complete, Expr, Transformers, Pattern>::type>
+  match_expr<typename get_case<is_complete, Expr, Transformers, Pattern>::type>
   operator>>(Expr expr) const {
     using lifted_expr =
       typename get_case<
@@ -177,10 +176,16 @@ struct rvalue_builder {
     using trimmed_projections = typename tl_trim<Transformers>::type;
     tuple_maker f;
     auto lhs = apply_args(f, get_indices(trimmed_projections{}), m_funs);
-    typename tl_apply<
-      typename tl_slice<target, tl_size<trimmed_projections>::value,
-                tl_size<target>::value>::type,
-      std::tuple>::type rhs;
+    using rhs_type =
+      typename tl_apply<
+        typename tl_slice<
+          target,
+          tl_size<trimmed_projections>::value,
+          tl_size<target>::value
+        >::type,
+        std::tuple
+      >::type;
+    rhs_type rhs;
     // done
     return lifted_expr{std::move(expr), std::tuple_cat(lhs, rhs)};
   }
@@ -216,9 +221,18 @@ struct pattern_type_<false, T> {
 };
 
 template <class T>
-struct pattern_type
-  : pattern_type_<
-      detail::is_callable<T>::value && !detail::is_boxed<T>::value, T> { };
+struct pattern_type {
+  using type =
+    typename pattern_type_<
+      detail::is_callable<T>::value && !detail::is_boxed<T>::value,
+      T
+    >::type;
+};
+
+template <atom_value V>
+struct pattern_type<atom_constant<V>> {
+  using type = atom_value;
+};
 
 } // namespace detail
 } // namespace caf
@@ -302,11 +316,12 @@ constexpr boxed_arg_match_t arg_match = boxed_arg_match_t();
 
 template <class T, typename Predicate>
 std::function<optional<T>(const T&)> guarded(Predicate p, T value) {
-  return[=](const T & other)->optional<T> {
-    if (p(other, value)) return value;
-  return none;
-
-};
+  return [=](const T& other) -> optional<T> {
+    if (p(other, value)) {
+      return value;
+    }
+    return none;
+  };
 }
 
 // special case covering arg_match as argument to guarded()
@@ -342,6 +357,11 @@ template <class F>
 F to_guard(F fun,
            typename std::enable_if<detail::is_callable<F>::value>::type* = 0) {
   return fun;
+}
+
+template <atom_value V>
+auto to_guard(const atom_constant<V>&) -> decltype(to_guard(V)) {
+  return to_guard(V);
 }
 
 template <class T, class... Ts>

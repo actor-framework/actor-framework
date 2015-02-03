@@ -33,28 +33,26 @@ namespace policy {
  * An actor that is scheduled or otherwise managed.
  */
 class sequential_invoke : public invoke_policy<sequential_invoke> {
-
  public:
-
-  inline bool hm_should_skip(mailbox_element*) { return false; }
-
-  template <class Actor>
-  inline mailbox_element* hm_begin(Actor* self, mailbox_element* node) {
-    auto previous = self->current_node();
-    self->current_node(node);
-    return previous;
+  inline bool hm_should_skip(mailbox_element*) {
+    return false;
   }
 
   template <class Actor>
-  inline void hm_cleanup(Actor* self, mailbox_element*) {
+  mailbox_element* hm_begin(Actor* self, mailbox_element* node) {
+    self->current_node(node);
+    return nullptr;
+  }
+
+  template <class Actor>
+  void hm_cleanup(Actor* self, mailbox_element*) {
     self->current_node(self->dummy_node());
   }
 
   template <class Actor>
-  inline void hm_revert(Actor* self, mailbox_element* previous) {
-    self->current_node(previous);
+  void hm_revert(Actor* self, mailbox_element*) {
+    self->current_node(self->dummy_node());
   }
-
 };
 
 } // namespace policy

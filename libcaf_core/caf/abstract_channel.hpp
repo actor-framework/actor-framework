@@ -34,6 +34,9 @@ namespace caf {
  */
 class abstract_channel : public ref_counted {
  public:
+  friend class abstract_actor;
+  friend class abstract_group;
+
   virtual ~abstract_channel();
 
   /**
@@ -54,17 +57,34 @@ class abstract_channel : public ref_counted {
    */
   bool is_remote() const;
 
+  enum channel_type_flag {
+    is_abstract_actor_flag = 0x100000,
+    is_abstract_group_flag = 0x200000
+  };
+
+  inline bool is_abstract_actor() const {
+    return m_flags & static_cast<int>(is_abstract_actor_flag);
+  }
+
+  inline bool is_abstract_group() const {
+    return m_flags & static_cast<int>(is_abstract_group_flag);
+  }
+
  protected:
-
-  abstract_channel(size_t initial_ref_count = 0);
-
-  abstract_channel(node_id nid, size_t initial_ref_count = 0);
+  /**
+   * Accumulates several state and type flags. Subtypes may use only the
+   * first 20 bits, i.e., the bitmask 0xFFF00000 is reserved for
+   * channel-related flags.
+   */
+  int m_flags;
 
  private:
-
+  // can only be called from abstract_actor and abstract_group
+  abstract_channel(channel_type_flag subtype, size_t initial_ref_count = 0);
+  abstract_channel(channel_type_flag subtype, node_id nid,
+                   size_t initial_ref_count = 0);
   // identifies the node of this channel
   node_id m_node;
-
 };
 
 /**

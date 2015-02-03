@@ -31,20 +31,12 @@
 #include "caf/uniform_type_info.hpp"
 
 #include "caf/detail/type_list.hpp"
-#include "caf/detail/message_iterator.hpp"
 
 namespace caf {
 namespace detail {
 
 class message_data : public ref_counted {
-
-  using super = ref_counted;
-
  public:
-
-  message_data(bool dynamically_typed);
-  message_data(const message_data& other);
-
   // mutators
   virtual void* mutable_at(size_t pos) = 0;
   virtual void* mutable_native_data();
@@ -53,41 +45,28 @@ class message_data : public ref_counted {
   virtual size_t size() const = 0;
   virtual message_data* copy() const = 0;
   virtual const void* at(size_t pos) const = 0;
-  virtual const uniform_type_info* type_at(size_t pos) const = 0;
-  virtual const std::string* tuple_type_names() const = 0;
+  std::string tuple_type_names() const;
+
+  /**
+   * Tries to match element at position `pos` to given RTTI.
+   * @param pos Index of element in question.
+   * @param typenr Number of queried type or `0` for custom types.
+   * @param rtti Queried type or `nullptr` for builtin types.
+   */
+  virtual bool match_element(size_t pos, uint16_t typenr,
+                             const std::type_info* rtti) const = 0;
+
+  virtual uint32_t type_token() const = 0;
 
   // returns either tdata<...> object or nullptr (default) if tuple
   // is not a 'native' implementation
   virtual const void* native_data() const;
 
-  // Identifies the type of the implementation.
-  // A statically typed tuple implementation can use some optimizations,
-  // e.g., "impl_type() == statically_typed" implies that type_token()
-  // identifies all possible instances of a given tuple implementation
-  inline bool dynamically_typed() const { return m_is_dynamic; }
+  virtual const char* uniform_name_at(size_t pos) const = 0;
 
-  // uniquely identifies this category (element types) of messages
-  // override this member function only if impl_type() == statically_typed
-  // (default returns &typeid(void))
-  virtual const std::type_info* type_token() const;
+  virtual uint16_t type_nr_at(size_t pos) const = 0;
 
   bool equals(const message_data& other) const;
-
-  using const_iterator = message_iterator;
-
-  inline const_iterator begin() const {
-    return {this};
-  }
-  inline const_iterator cbegin() const {
-    return {this};
-  }
-
-  inline const_iterator end() const {
-    return {this, size()};
-  }
-  inline const_iterator cend() const {
-    return {this, size()};
-  }
 
   class ptr {
 
@@ -125,14 +104,7 @@ class message_data : public ref_counted {
     intrusive_ptr<message_data> m_ptr;
 
   };
-
- private:
-
-  bool m_is_dynamic;
-
 };
-
-std::string get_tuple_type_names(const detail::message_data&);
 
 } // namespace detail
 } // namespace caf

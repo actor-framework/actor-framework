@@ -273,7 +273,7 @@ void basp_broker::local_dispatch(const basp::header& hdr, message&& msg) {
   CAF_REQUIRE(!dest || dest->node() == node());
   // intercept message used for link signaling
   if (dest && src == dest) {
-    if (msg.size() == 2 && typeid(actor_addr) == *msg.type_at(1)) {
+    if (msg.match_elements<atom_value, actor_addr>()) {
       actor_addr other;
       bool is_unlink = true;
       // extract arguments

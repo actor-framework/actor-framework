@@ -58,9 +58,13 @@ uniform_value_t::~uniform_value_t() {
   // nop
 }
 
-const uniform_type_info* announce(const std::type_info&,
-                  uniform_type_info_ptr utype) {
-  return uti_map().insert(std::move(utype));
+const uniform_type_info* announce(const std::type_info& ti,
+                                  uniform_type_info_ptr utype) {
+  return uti_map().insert(&ti, std::move(utype));
+}
+
+uniform_type_info::uniform_type_info(uint16_t typenr) : m_type_nr(typenr) {
+  // nop
 }
 
 uniform_type_info::~uniform_type_info() {
@@ -95,6 +99,11 @@ uniform_value uniform_type_info::deserialize(deserializer* src) const {
 
 std::vector<const uniform_type_info*> uniform_type_info::instances() {
   return uti_map().get_all();
+}
+
+const uniform_type_info* uniform_typeid_by_nr(uint16_t nr) {
+  CAF_REQUIRE(nr > 0 && nr < detail::type_nrs);
+  return uti_map().by_type_nr(nr);
 }
 
 const uniform_type_info* uniform_typeid(const std::type_info& tinf,

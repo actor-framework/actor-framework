@@ -25,38 +25,36 @@ namespace detail {
 using pattern_iterator = const meta_element*;
 
 bool is_wildcard(const meta_element& me) {
-  return me.type == nullptr;
+  return me.typenr == 0 && me.type == nullptr;
 }
 
-bool match_element(const atom_value&, const std::type_info* type,
-                   const message_iterator& iter, void** storage) {
-  if (!iter.type()->equal_to(*type)) {
+bool match_element(const meta_element& me, const message& msg,
+                   size_t pos, void** storage) {
+  CAF_REQUIRE(me.typenr != 0 || me.type != nullptr);
+  if (!msg.match_element(pos, me.typenr, me.type)) {
     return false;
   }
-  if (storage) {
-    *storage = const_cast<void*>(iter.value());
-  }
+  *storage = const_cast<void*>(msg.at(pos));
   return true;
 }
 
-bool match_atom_constant(const atom_value& value, const std::type_info* type,
-                         const message_iterator& iter, void** storage) {
-  auto uti = iter.type();
-  if (!uti->equal_to(*type)) {
+bool match_atom_constant(const meta_element& me, const message& msg,
+                         size_t pos, void** storage) {
+  CAF_REQUIRE(me.typenr == detail::type_nr<atom_value>::value);
+  if (!msg.match_element(pos, detail::type_nr<atom_value>::value, nullptr)) {
     return false;
   }
-  if (storage) {
-    if (!uti->equals(iter.value(), &value)) {
-      return false;
-    }
-    // This assignment casts `uniform_type_info*` to `atom_constant<V>*`.
-    // This type violation could theoretically cause undefined behavior.
-    // However, `uti` does have an address that is guaranteed to be valid
-    // throughout the runtime of the program and the atom constant
-    // does not have any members. Hence, this is nonetheless safe since
-    // we are never actually going to dereference the pointer.
-    *storage = const_cast<void*>(reinterpret_cast<const void*>(uti));
+  auto ptr = msg.at(pos);
+  if (me.v != *reinterpret_cast<const atom_value*>(ptr)) {
+    return false;
   }
+  // This assignment casts `atom_value` to `atom_constant<V>*`.
+  // This type violation could theoretically cause undefined behavior.
+  // However, `uti` does have an address that is guaranteed to be valid
+  // throughout the runtime of the program and the atom constant
+  // does not have any members. Hence, this is nonetheless safe since
+  // we are never actually going to dereference the pointer.
+  *storage = const_cast<void*>(ptr);
   return true;
 }
 
@@ -72,7 +70,7 @@ class set_commit_rollback {
     ++m_pos;
   }
   inline pointer current() {
-    return m_data? &m_data[m_pos] : nullptr;
+    return &m_data[m_pos];
   }
   inline void commit() {
     m_fallback_pos = m_pos;
@@ -86,10 +84,10 @@ class set_commit_rollback {
   size_t m_fallback_pos;
 };
 
-bool try_match(message_iterator mbegin, message_iterator mend,
+bool try_match(const message& msg, size_t msg_pos, size_t msg_size,
                pattern_iterator pbegin, pattern_iterator pend,
                set_commit_rollback& storage) {
-  while (mbegin != mend) {
+  while (msg_pos < msg_size) {
     if (pbegin == pend) {
       return false;
     }
@@ -103,8 +101,8 @@ bool try_match(message_iterator mbegin, message_iterator mend,
       // safe current mapping as fallback
       storage.commit();
       // iterate over remaining values until we found a match
-      for (; mbegin != mend; ++mbegin) {
-        if (try_match(mbegin, mend, pbegin, pend, storage)) {
+      for (; msg_pos < msg_size; ++msg_pos) {
+        if (try_match(msg, msg_pos, msg_size, pbegin, pend, storage)) {
           return true;
         }
         // restore mapping to fallback (delete invalid mappings)
@@ -113,13 +111,13 @@ bool try_match(message_iterator mbegin, message_iterator mend,
       return false; // no submatch found
     }
     // inspect current element
-    if (!pbegin->fun(pbegin->v, pbegin->type, mbegin, storage.current())) {
+    if (!pbegin->fun(*pbegin, msg, msg_pos, storage.current())) {
       // type mismatch
       return false;
     }
     // next iteration
     storage.inc();
-    ++mbegin;
+    ++msg_pos;
     ++pbegin;
   }
   // we found a match if we've inspected each element and consumed
@@ -128,9 +126,10 @@ bool try_match(message_iterator mbegin, message_iterator mend,
 }
 
 bool try_match(const message& msg, pattern_iterator pb, size_t ps, void** out) {
+  CAF_REQUIRE(out != nullptr);
+  CAF_REQUIRE(msg.empty() || msg.vals()->get_reference_count() > 0);
   set_commit_rollback scr{out};
-  auto res = try_match(msg.begin(), msg.end(), pb, pb + ps, scr);
-  return res;
+  return try_match(msg, 0, msg.size(), pb, pb + ps, scr);
 }
 
 } // namespace detail

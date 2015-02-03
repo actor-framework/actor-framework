@@ -25,8 +25,8 @@ attachable::~attachable() {
   // nop
 }
 
-attachable::token::token(const std::type_info& tinfo, const void* vptr)
-    : subtype(tinfo), ptr(vptr) {
+attachable::token::token(size_t typenr, const void* vptr)
+    : subtype(typenr), ptr(vptr) {
   // nop
 }
 

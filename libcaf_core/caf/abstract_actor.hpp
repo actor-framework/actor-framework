@@ -100,11 +100,6 @@ class abstract_actor : public abstract_channel {
    */
   size_t detach(const attachable::token& what);
 
-  template <class T>
-  size_t detach(const T& what) {
-    return detach(attachable::token{typeid(T), &what});
-  }
-
   enum linking_operation {
     establish_link_op,
     establish_backlink_op,
@@ -281,8 +276,6 @@ class abstract_actor : public abstract_channel {
   // identifies the execution unit this actor is currently executed by
   execution_unit* m_host;
 
-  // stores several actor-related flags
-  int m_flags;
 };
 
 } // namespace caf
