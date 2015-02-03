@@ -276,8 +276,6 @@ class abstract_actor : public abstract_channel {
   // identifies the execution unit this actor is currently executed by
   execution_unit* m_host;
 
-  // stores several actor-related flags
-  int m_flags;
 };
 
 } // namespace caf

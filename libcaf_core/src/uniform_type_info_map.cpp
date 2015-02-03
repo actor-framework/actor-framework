@@ -182,23 +182,19 @@ void serialize_impl(const channel& chref, serializer* sink) {
   } else {
     // raw pointer
     auto rptr = actor_cast<abstract_channel*>(chref);
-    // raw actor pointer
-    abstract_actor_ptr aptr = dynamic_cast<abstract_actor*>(rptr);
-    if (aptr != nullptr) {
+    CAF_REQUIRE(rptr->is_abstract_actor() || rptr->is_abstract_group());
+    if (rptr->is_abstract_actor()) {
+      // raw actor pointer
+      abstract_actor_ptr aptr = static_cast<abstract_actor*>(rptr);
       flag = 1;
       sink->write_value(flag);
       serialize_impl(actor_cast<actor>(aptr), sink);
     } else {
       // get raw group pointer and store it inside a group handle
-      group tmp{dynamic_cast<abstract_group*>(rptr)};
-      if (tmp) {
-        flag = 2;
-        sink->write_value(flag);
-        serialize_impl(tmp, sink);
-      } else {
-        CAF_LOGF_ERROR("ptr is neither an actor nor a group");
-        wr_nullptr();
-      }
+      group tmp{static_cast<abstract_group*>(rptr)};
+      flag = 2;
+      sink->write_value(flag);
+      serialize_impl(tmp, sink);
     }
   }
 }
