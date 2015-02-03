@@ -88,11 +88,12 @@ void local_actor::leave(const group& what) {
 std::vector<group> local_actor::joined_groups() const {
   std::vector<group> result;
   result.reserve(20);
+  attachable::token stk{attachable::token::subscription, nullptr};
   std::unique_lock<std::mutex> guard{m_mtx};
   for (attachable* i = m_attachables_head.get(); i != 0; i = i->next.get()) {
-    auto sptr = dynamic_cast<abstract_group::subscription*>(i);
-    if (sptr) {
-      result.emplace_back(sptr->group());
+    if (i->matches(stk)) {
+      auto ptr = static_cast<abstract_group::subscription*>(i);
+      result.emplace_back(ptr->group());
     }
   }
   return result;

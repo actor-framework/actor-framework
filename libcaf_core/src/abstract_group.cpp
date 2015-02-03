@@ -40,8 +40,11 @@ bool abstract_group::subscription::matches(const token& what) {
   if (what.subtype != attachable::token::subscription) {
     return false;
   }
-  auto& ot = *reinterpret_cast<const subscription_token*>(what.ptr);
-  return ot.group == m_group;
+  if (what.ptr) {
+    auto& ot = *reinterpret_cast<const subscription_token*>(what.ptr);
+    return ot.group == m_group;
+  }
+  return true;
 }
 
 abstract_group::module::module(std::string mname) : m_name(std::move(mname)) {
