@@ -34,9 +34,7 @@ bool match_element(const meta_element& me, const message& msg,
   if (!msg.match_element(pos, me.typenr, me.type)) {
     return false;
   }
-  if (storage) {
-    *storage = const_cast<void*>(msg.at(pos));
-  }
+  *storage = const_cast<void*>(msg.at(pos));
   return true;
 }
 
@@ -46,19 +44,17 @@ bool match_atom_constant(const meta_element& me, const message& msg,
   if (!msg.match_element(pos, detail::type_nr<atom_value>::value, nullptr)) {
     return false;
   }
-  if (storage) {
-    auto ptr = msg.at(pos);
-    if (me.v != *reinterpret_cast<const atom_value*>(ptr)) {
-      return false;
-    }
-    // This assignment casts `atom_value` to `atom_constant<V>*`.
-    // This type violation could theoretically cause undefined behavior.
-    // However, `uti` does have an address that is guaranteed to be valid
-    // throughout the runtime of the program and the atom constant
-    // does not have any members. Hence, this is nonetheless safe since
-    // we are never actually going to dereference the pointer.
-    *storage = const_cast<void*>(ptr);
+  auto ptr = msg.at(pos);
+  if (me.v != *reinterpret_cast<const atom_value*>(ptr)) {
+    return false;
   }
+  // This assignment casts `atom_value` to `atom_constant<V>*`.
+  // This type violation could theoretically cause undefined behavior.
+  // However, `uti` does have an address that is guaranteed to be valid
+  // throughout the runtime of the program and the atom constant
+  // does not have any members. Hence, this is nonetheless safe since
+  // we are never actually going to dereference the pointer.
+  *storage = const_cast<void*>(ptr);
   return true;
 }
 
@@ -74,7 +70,7 @@ class set_commit_rollback {
     ++m_pos;
   }
   inline pointer current() {
-    return m_data? &m_data[m_pos] : nullptr;
+    return &m_data[m_pos];
   }
   inline void commit() {
     m_fallback_pos = m_pos;
@@ -130,6 +126,8 @@ bool try_match(const message& msg, size_t msg_pos, size_t msg_size,
 }
 
 bool try_match(const message& msg, pattern_iterator pb, size_t ps, void** out) {
+  CAF_REQUIRE(out != nullptr);
+  CAF_REQUIRE(msg.empty() || msg.vals()->get_reference_count() > 0);
   set_commit_rollback scr{out};
   return try_match(msg, 0, msg.size(), pb, pb + ps, scr);
 }

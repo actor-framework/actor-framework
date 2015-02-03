@@ -87,10 +87,8 @@ struct meta_elements<type_list<Ts...>> {
   }
 };
 
-bool try_match(const message& msg,
-               const meta_element* pattern_begin,
-               size_t pattern_size,
-               void** out = nullptr);
+bool try_match(const message& msg, const meta_element* pattern_begin,
+               size_t pattern_size, void** out);
 
 } // namespace detail
 } // namespace caf
