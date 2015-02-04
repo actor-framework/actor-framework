@@ -24,9 +24,10 @@
 #include "caf/detail/type_traits.hpp"
 #include "caf/detail/variant_data.hpp"
 
-#define CAF_VARIANT_CASE(x)                           \
-  case x: return visitor(from.get(std::integral_constant<int,        \
-                     x < max_type_id ? x : max_type_id >()))
+#define CAF_VARIANT_CASE(x)                                                    \
+  case x:                                                                      \
+    return visitor(from.get(                                                   \
+      std::integral_constant<int, (x < max_type_id ? x : max_type_id)>()))
 
 namespace caf {
 
@@ -36,7 +37,7 @@ struct variant_assign_helper {
   T& lhs;
   variant_assign_helper(T& lhs_ref) : lhs(lhs_ref) { }
   template <class U>
-  inline void operator()(const U& rhs) const {
+  void operator()(const U& rhs) const {
     lhs = rhs;
   }
 };
@@ -47,17 +48,18 @@ struct variant_move_helper {
   T& lhs;
   variant_move_helper(T& lhs_ref) : lhs(lhs_ref) { }
   template <class U>
-  inline void operator()(U& rhs) const {
+  void operator()(U& rhs) const {
     lhs = std::move(rhs);
   }
 };
 
-template <class T, typename U,
-     bool Enable = std::is_integral<T>::value && std::is_integral<U>::value>
+template <class T, class U,
+          bool Enable = std::is_integral<T>::value
+                        && std::is_integral<U>::value>
 struct is_equal_int_type {
-  static constexpr bool value =
-         sizeof(T) == sizeof(U)
-      && std::is_signed<T>::value == std::is_signed<U>::value;
+  static constexpr bool value = sizeof(T) == sizeof(U)
+                                && std::is_signed<T>::value
+                                   == std::is_signed<U>::value;
 };
 
 template <class T, typename U>
@@ -70,26 +72,25 @@ struct is_equal_int_type<T, U, false> : std::false_type { };
  * `uint8_t != unsigned char on some compilers.
  */
 template <class T, typename U>
-struct is_same_ish : std::conditional<
-             std::is_same<T, U>::value,
-             std::true_type,
-             is_equal_int_type<T, U>
-           >::type { };
+struct is_same_ish
+    : std::conditional<
+        std::is_same<T, U>::value,
+        std::true_type,
+        is_equal_int_type<T, U>
+      >::type { };
 
 /**
  * A variant represents always a valid value of one of the types `Ts...`.
  */
 template <class... Ts>
 class variant {
-
  public:
-
   using types = detail::type_list<Ts...>;
 
   static constexpr int max_type_id = sizeof...(Ts) - 1;
 
   static_assert(!detail::tl_exists<types, std::is_reference>::value,
-          "Cannot create a variant of references");
+                "Cannot create a variant of references");
 
   variant& operator=(const variant& other) {
     variant_assign_helper<variant> helper{*this};
@@ -134,20 +135,19 @@ class variant {
   }
 
   /** @cond PRIVATE */
-
   template <int Pos>
-  inline bool is(std::integral_constant<int, Pos>) const {
+  bool is(std::integral_constant<int, Pos>) const {
     return m_type == Pos;
   }
 
   template <int Pos>
-  inline const typename detail::tl_at<types, Pos>::type&
+  const typename detail::tl_at<types, Pos>::type&
   get(std::integral_constant<int, Pos> token) const {
     return m_data.get(token);
   }
 
   template <int Pos>
-  inline typename detail::tl_at<types, Pos>::type&
+  typename detail::tl_at<types, Pos>::type&
   get(std::integral_constant<int, Pos> token) {
     return m_data.get(token);
   }
@@ -161,11 +161,9 @@ class variant {
   typename Visitor::result_type apply(Visitor& visitor) {
     return apply_impl(*this, visitor);
   }
-
   /** @endcond */
 
  private:
-
   template <class Self, typename Visitor>
   static typename Visitor::result_type  apply_impl(Self& from, Visitor& visitor) {
     switch (from.m_type) {
@@ -222,30 +220,29 @@ class variant {
   }
 
   template <class... Us>
-  inline void set(const variant<Us...>& other) {
+  void set(const variant<Us...>& other) {
     using namespace detail;
     static_assert(tl_is_strict_subset<type_list<Us...>, types>::value,
-            "cannot set variant of type A to variant of type B "
-            "unless the element types of A are a strict subset of "
-            "the element types of B");
+                  "cannot set variant of type A to variant of type B "
+                  "unless the element types of A are a strict subset of "
+                  "the element types of B");
     variant_assign_helper<variant> helper{*this};
     other.apply(helper);
   }
 
   template <class... Us>
-  inline void set(variant<Us...>&& other) {
+  void set(variant<Us...>&& other) {
     using namespace detail;
     static_assert(tl_is_strict_subset<type_list<Us...>, types>::value,
-            "cannot set variant of type A to variant of type B "
-            "unless the element types of A are a strict subset of "
-            "the element types of B");
+                  "cannot set variant of type A to variant of type B "
+                  "unless the element types of A are a strict subset of "
+                  "the element types of B");
     variant_move_helper<variant> helper{*this};
     other.apply(helper);
   }
 
   int m_type;
   detail::variant_data<typename lift_void<Ts>::type...> m_data;
-
 };
 
 /**
@@ -254,9 +251,10 @@ class variant {
 template <class T, class... Us>
 T& get(variant<Us...>& value) {
   using namespace detail;
-  constexpr int type_id = tl_find_if<type_list<Us...>,
-                     tbind<is_same_ish, T>::template type
-              >::value;
+  constexpr int type_id = tl_find_if<
+                            type_list<Us...>,
+                            tbind<is_same_ish, T>::template type
+                          >::value;
   std::integral_constant<int, type_id> token;
   // silence compiler error about "binding to unrelated types" such as
   // 'signed char' to 'char' (which is obvious bullshit)
@@ -278,11 +276,14 @@ const T& get(const variant<Us...>& value) {
 template <class T, class... Us>
 T* get(variant<Us...>* value) {
   using namespace detail;
-  constexpr int type_id = tl_find_if<type_list<Us...>,
-                     tbind<is_same_ish, T>::template type
-              >::value;
+  constexpr int type_id = tl_find_if<
+                            type_list<Us...>,
+                            tbind<is_same_ish, T>::template type
+                          >::value;
   std::integral_constant<int, type_id> token;
-  if (value->is(token)) return &get<T>(*value);
+  if (value->is(token)) {
+    return &get<T>(*value);
+  }
   return nullptr;
 }
 
