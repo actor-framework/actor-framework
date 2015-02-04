@@ -74,6 +74,7 @@ message_data* message_data::ptr::get_detached() {
   if (!p->unique()) {
     auto np = p->copy();
     m_ptr.reset(np);
+    CAF_REQUIRE(np->unique());
     return np;
   }
   return p;

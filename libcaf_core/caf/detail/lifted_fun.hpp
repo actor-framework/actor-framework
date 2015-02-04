@@ -35,21 +35,16 @@
 namespace caf {
 namespace detail {
 
-class lifted_fun_zipper {
-
- public:
-
+struct lifted_fun_zipper {
   template <class F, typename T>
   auto operator()(const F& fun, T& arg) -> decltype(fun(arg)) const {
     return fun(arg);
   }
-
   // forward everything as reference if no guard/transformation is set
   template <class T>
   auto operator()(const unit_t&, T& arg) const -> decltype(std::ref(arg)) {
     return std::ref(arg);
   }
-
 };
 
 template <class T>
@@ -67,62 +62,64 @@ inline bool has_none() {
 }
 
 template <class T, class... Ts>
-inline bool has_none(const T&, const Ts&... vs) {
+bool has_none(const T&, const Ts&... vs) {
   return has_none(vs...);
 }
 
 template <class T, class... Ts>
-inline bool has_none(const optional<T>& v, const Ts&... vs) {
+bool has_none(const optional<T>& v, const Ts&... vs) {
   return !v || has_none(vs...);
 }
 
 // allows F to have fewer arguments than the lifted_fun calling it
 template <class R, typename F>
 class lifted_fun_invoker {
-
+ public:
   using arg_types = typename get_callable_trait<F>::arg_types;
-
   static constexpr size_t num_args = tl_size<arg_types>::value;
 
- public:
-
-  lifted_fun_invoker(F& fun) : f(fun) {}
+  lifted_fun_invoker(F& fun) : f(fun) {
+    // nop
+  }
 
   template <class... Ts>
   typename std::enable_if<sizeof...(Ts) == num_args, R>::type
   operator()(Ts&... vs) const {
-    if (has_none(vs...)) return none;
+    if (has_none(vs...)) {
+      return none;
+    }
     return f(unopt(vs)...);
   }
 
   template <class T, class... Ts>
   typename std::enable_if<(sizeof...(Ts) + 1 > num_args), R>::type
   operator()(T& v, Ts&... vs) const {
-    if (has_none(v)) return none;
+    if (has_none(v)) {
+      return none;
+    }
     return (*this)(vs...);
   }
 
  private:
-
   F& f;
-
 };
 
 template <class F>
 class lifted_fun_invoker<bool, F> {
-
+ public:
   using arg_types = typename get_callable_trait<F>::arg_types;
-
   static constexpr size_t num_args = tl_size<arg_types>::value;
 
- public:
-
-  lifted_fun_invoker(F& fun) : f(fun) {}
+  lifted_fun_invoker(F& fun) : f(fun) {
+    // nop
+  }
 
   template <class... Ts>
   typename std::enable_if<sizeof...(Ts) == num_args, bool>::type
   operator()(Ts&&... vs) const {
-    if (has_none(vs...)) return false;
+    if (has_none(vs...)) {
+      return false;
+    }
     f(unopt(vs)...);
     return true;
   }
@@ -130,14 +127,14 @@ class lifted_fun_invoker<bool, F> {
   template <class T, class... Ts>
   typename std::enable_if<(sizeof...(Ts) + 1 > num_args), bool>::type
   operator()(T&& arg, Ts&&... vs) const {
-    if (has_none(arg)) return false;
+    if (has_none(arg)) {
+      return false;
+    }
     return (*this)(vs...);
   }
 
  private:
-
   F& f;
-
 };
 
 /**
@@ -181,7 +178,9 @@ class lifted_fun {
 
   lifted_fun& operator=(const lifted_fun&) = default;
 
-  lifted_fun(F f) : m_fun(std::move(f)) {}
+  lifted_fun(F f) : m_fun(std::move(f)) {
+    // nop
+  }
 
   lifted_fun(F f, projections ps) : m_fun(std::move(f)), m_ps(std::move(ps)) {
     // nop

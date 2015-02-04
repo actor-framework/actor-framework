@@ -251,10 +251,13 @@ struct is_legal_tuple_type {
  * Checks wheter `T` is a non-const reference.
  */
 template <class T>
-struct is_mutable_ref {
-  static constexpr bool value = std::is_reference<T>::value
-                                && !std::is_const<T>::value;
-};
+struct is_mutable_ref : std::false_type { };
+
+template <class T>
+struct is_mutable_ref<const T&> : std::false_type { };
+
+template <class T>
+struct is_mutable_ref<T&> : std::true_type { };
 
 /**
  * Checks whether `T::static_type_name()` exists.

@@ -160,7 +160,7 @@ class invoke_policy {
         if (ref_opt) {
           auto fhdl = fetch_response_promise(self, hdl);
           behavior inner = *ref_opt;
-          *ref_opt = behavior {
+          ref_opt->assign(
             others() >> [=] {
               // inner is const inside this lambda and mutable a C++14 feature
               behavior cpy = inner;
@@ -169,7 +169,7 @@ class invoke_policy {
                 fhdl.deliver(*inner_res);
               }
             }
-          };
+          );
         }
       } else {
         // respond by using the result of 'fun'

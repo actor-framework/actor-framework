@@ -30,14 +30,7 @@ class combinator : public behavior_impl {
  public:
   bhvr_invoke_result invoke(message& arg) {
     auto res = first->invoke(arg);
-    if (!res) return second->invoke(arg);
-    return res;
-  }
-
-  bhvr_invoke_result invoke(const message& arg) {
-    auto res = first->invoke(arg);
-    if (!res) return second->invoke(arg);
-    return res;
+    return res ? res : second->invoke(arg);
   }
 
   void handle_timeout() {
@@ -78,9 +71,8 @@ behavior_impl::pointer behavior_impl::or_else(const pointer& other) {
 }
 
 behavior_impl* new_default_behavior(duration d, std::function<void()> fun) {
-  using impl = default_behavior_impl<dummy_match_expr, std::function<void()>>;
   dummy_match_expr nop;
-  return new impl(nop, d, std::move(fun));
+  return new default_behavior_impl<dummy_match_expr>(nop, d, std::move(fun));
 }
 
 } // namespace detail

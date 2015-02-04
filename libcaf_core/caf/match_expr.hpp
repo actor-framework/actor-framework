@@ -43,13 +43,6 @@
 namespace caf {
 namespace detail {
 
-template <long N>
-struct long_constant {
-  static constexpr long value = N;
-};
-
-using minus1l = long_constant<-1l>;
-
 template <class T1, typename T2>
 T2& deduce_const(T1&, T2& rhs) {
   return rhs;
@@ -186,25 +179,10 @@ struct get_case<false, Expr, Trans, Pattern> {
     >::type;
 };
 
-template <class Fun>
-struct has_bool_result {
-  using result_type = typename Fun::result_type;
-  static constexpr bool value = std::is_same<bool, result_type>::value;
-  using token_type = std::integral_constant<bool, value>;
-};
-
-template <class T>
-bool unroll_expr_result_valid(const T&) {
-  return true;
-}
-
-template <class T>
-bool unroll_expr_result_valid(const optional<T>& opt) {
-  return static_cast<bool>(opt);
-}
-
-inline variant<none_t, unit_t> unroll_expr_result_unbox(bool& value) {
-  if (value) return unit;
+inline variant<none_t, unit_t> unroll_expr_result_unbox(bool value) {
+  if (value) {
+    return unit;
+  }
   return none;
 }
 
@@ -213,34 +191,28 @@ T& unroll_expr_result_unbox(optional<T>& opt) {
   return *opt;
 }
 
-template <class Result, class PPFPs, class Msg>
-Result unroll_expr(PPFPs&, minus1l, Msg&) {
-  // end of recursion
-  return none;
-}
+template <class Result>
+struct unroll_expr {
+  Result operator()(message&) const {
+    // end of recursion
+    return none;
+  }
 
-template <class Result, class PPFPs, long N, class Msg>
-Result unroll_expr(PPFPs& fs, long_constant<N>, Msg& msg) {
-  { // recursively evaluate sub expressions
-    Result res = unroll_expr<Result>(fs, long_constant<N - 1>{}, msg);
-    if (!get<none_t>(&res)) {
-      return res;
+  template <class F, class... Fs>
+  Result operator()(message& msg, F& f, Fs&... fs) const {
+    meta_elements<typename F::pattern> ms;
+    typename F::intermediate_tuple targs;
+    if ((F::has_wildcard || F::type_token == msg.type_token())
+        && try_match(msg, ms.arr.data(), ms.arr.size(), targs.data)) {
+      auto is = detail::get_indices(targs);
+      auto res = detail::apply_args(f, is, deduce_const(msg, targs));
+      if (res) {
+        return std::move(unroll_expr_result_unbox(res));
+      }
     }
+    return (*this)(msg, fs...);
   }
-  auto& f = get<N>(fs);
-  using ft = typename std::decay<decltype(f)>::type;
-  meta_elements<typename ft::pattern> ms;
-  typename ft::intermediate_tuple targs;
-  if ((ft::has_wildcard || ft::type_token == msg.type_token())
-      && try_match(msg, ms.arr.data(), ms.arr.size(), targs.data)) {
-    auto is = detail::get_indices(targs);
-    auto res = detail::apply_args(f, is, deduce_const(msg, targs));
-    if (unroll_expr_result_valid(res)) {
-      return std::move(unroll_expr_result_unbox(res));
-    }
-  }
-  return none;
-}
+};
 
 template <bool IsManipulator, typename T0, typename T1>
 struct mexpr_fwd_ {
@@ -269,20 +241,12 @@ struct mexpr_fwd {
     >::type;
 };
 
-// detach_if_needed(message tup, bool do_detach)
-inline message& detach_if_needed(message& tup, std::true_type) {
-  tup.force_detach();
-  return tup;
+inline void detach_if_needed(message& msg, std::true_type) {
+  msg.force_detach();
 }
 
-inline message detach_if_needed(const message& tup, std::true_type) {
-  message cpy{tup};
-  cpy.force_detach();
-  return cpy;
-}
-
-inline const message& detach_if_needed(const message& tup, std::false_type) {
-  return tup;
+inline void detach_if_needed(const message&, std::false_type) {
+  // nop
 }
 
 inline void* fetch_native_data(message& msg, std::true_type) {
@@ -298,14 +262,12 @@ struct is_manipulator_case {
   // static constexpr bool value = T::second_type::manipulates_args;
   using arg_types = typename T::arg_types;
   static constexpr bool value = tl_exists<arg_types, is_mutable_ref>::value;
-
 };
 
 template <class T>
 struct get_case_result {
   // using type = typename T::second_type::result_type;
   using type = typename T::result_type;
-
 };
 
 } // namespace detail
@@ -319,7 +281,6 @@ struct match_result_from_type_list;
 template <class... Ts>
 struct match_result_from_type_list<detail::type_list<Ts...>> {
   using type = variant<none_t, typename lift_void<Ts>::type...>;
-
 };
 
 /**
@@ -343,11 +304,6 @@ class match_expr {
       >::type
     >::type;
 
-  static constexpr bool has_manipulator =
-    detail::tl_exists<cases_list, detail::is_manipulator_case>::value;
-
-  using idx_token_type = detail::long_constant<sizeof...(Cs) - 1l>;
-
   template <class T, class... Ts>
   match_expr(T v, Ts&&... vs) : m_cases(std::move(v), std::forward<Ts>(vs)...) {
     // nop
@@ -357,17 +313,16 @@ class match_expr {
 
   match_expr(const match_expr&) = default;
 
-  result_type operator()(const message& tup) {
-    return apply(tup);
-  }
-
-  result_type operator()(message& tup) {
-    return apply(tup);
-  }
-
-  result_type operator()(message&& tup) {
-    message tmp{tup};
-    return apply(tmp);
+  result_type operator()(message& msg) {
+    using mutator_token = std::integral_constant<bool,
+                                                 detail::tl_exists<
+                                                   cases_list,
+                                                   detail::is_manipulator_case
+                                                 >::value>;
+    detail::detach_if_needed(msg, mutator_token{});
+    auto indices = detail::get_indices(m_cases);
+    detail::unroll_expr<result_type> f;
+    return detail::apply_args_prefixed(f, indices, m_cases, msg);
   }
 
   template <class... Ds>
@@ -395,20 +350,6 @@ class match_expr {
   //                       std::tuple<type_list<...>, ...>,
   //                       ...>
   std::tuple<Cs...> m_cases;
-
-  static constexpr size_t cache_size = 10;
-
-  using cache_element = std::pair<const std::type_info*, uint64_t>;
-
-  template <class Msg>
-  result_type apply(Msg& msg) {
-    idx_token_type idx_token;
-    std::integral_constant<bool, has_manipulator> mutator_token;
-    // returns either a reference or a new object
-    using detached = decltype(detail::detach_if_needed(msg, mutator_token));
-    detached mref = detail::detach_if_needed(msg, mutator_token);
-    return detail::unroll_expr<result_type>(m_cases, idx_token, mref);
-  }
 };
 
 template <class T>
@@ -507,22 +448,26 @@ behavior_impl_ptr match_expr_concat(const T0& arg0, const T1& arg1,
 
 // some more convenience functions
 
-template <class F,
-          class E = typename std::enable_if<is_callable<F>::value>::type>
-match_expr<typename get_case<false, F, type_list<>, type_list<>>::type>
-lift_to_match_expr(F fun) {
+template <class T,
+          class E = typename std::enable_if<
+                      is_callable<T>::value && !is_match_expr<T>::value
+                    >::type>
+match_expr<typename get_case<false, T, type_list<>, type_list<>>::type>
+lift_to_match_expr(T arg) {
   using result_type =
     typename get_case<
       false,
-      F,
+      T,
       detail::empty_type_list,
       detail::empty_type_list
     >::type;
-  return result_type{std::move(fun)};
+  return result_type{std::move(arg)};
 }
 
 template <class T,
-          class E = typename std::enable_if<!is_callable<T>::value>::type>
+          class E = typename std::enable_if<
+                      !is_callable<T>::value || is_match_expr<T>::value
+                    >::type>
 T lift_to_match_expr(T arg) {
   return arg;
 }
