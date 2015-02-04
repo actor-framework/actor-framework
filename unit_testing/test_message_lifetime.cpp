@@ -27,7 +27,7 @@ testee::~testee() {
 behavior testee::make_behavior() {
   return {
     others() >> [=] {
-      CAF_CHECK_EQUAL(last_dequeued().vals()->get_reference_count(), 2);
+      CAF_CHECK_EQUAL(last_dequeued().cvals()->get_reference_count(), 2);
       quit();
       return last_dequeued();
     }
@@ -59,22 +59,51 @@ behavior tester::make_behavior() {
   send(m_aut, m_msg);
   return {
     on(1, 2, 3) >> [=] {
-      CAF_CHECK(last_dequeued().vals()->get_reference_count() >= 2);
-      CAF_CHECK(last_dequeued().vals().get() == m_msg.vals().get());
+      CAF_CHECK_EQUAL(last_dequeued().cvals()->get_reference_count(), 2);
+      CAF_CHECK(last_dequeued().cvals().get() == m_msg.cvals().get());
     },
     [=](const down_msg& dm) {
       CAF_CHECK(dm.source == m_aut);
       CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
-      CAF_CHECK_EQUAL(last_dequeued().vals()->get_reference_count(), 1);
+      CAF_CHECK_EQUAL(last_dequeued().cvals()->get_reference_count(), 1);
       quit();
     },
     others() >> CAF_UNEXPECTED_MSG_CB(this)
   };
 }
 
+void test_message_lifetime_in_scoped_actor() {
+  auto msg = make_message(1, 2, 3);
+  scoped_actor self;
+  self->send(self, msg);
+  self->receive(
+    on(1, 2, 3) >> [&] {
+      CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 2);
+      CAF_CHECK_EQUAL(self->last_dequeued().cvals()->get_reference_count(), 2);
+      CAF_CHECK(self->last_dequeued().cvals().get() == msg.cvals().get());
+    }
+  );
+  CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 1);
+  msg = make_message(42);
+  self->send(self, msg);
+  self->receive(
+    [&](int& value) {
+      CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 1);
+      CAF_CHECK_EQUAL(self->last_dequeued().cvals()->get_reference_count(), 1);
+      CAF_CHECK(self->last_dequeued().cvals().get() != msg.cvals().get());
+      value = 10;
+    }
+  );
+  CAF_CHECK_EQUAL(msg.get_as<int>(0), 42);
+}
+
 void test_message_lifetime() {
-  // put some preassure on the scheduler
-  for (size_t i = 0; i < 1000; ++i) {
+  test_message_lifetime_in_scoped_actor();
+  if (CAF_TEST_RESULT() != 0) {
+    return;
+  }
+  // put some preassure on the scheduler (check for thread safety)
+  for (size_t i = 0; i < 100; ++i) {
     spawn<tester>(spawn<testee>());
   }
 }
