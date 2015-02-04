@@ -173,8 +173,6 @@ class behavior_impl : public ref_counted {
 
   virtual bhvr_invoke_result invoke(message&) = 0;
 
-  virtual bhvr_invoke_result invoke(const message&) = 0;
-
   inline bhvr_invoke_result invoke(message&& arg) {
     message tmp(std::move(arg));
     return invoke(tmp);
@@ -206,7 +204,7 @@ struct dummy_match_expr {
   }
 };
 
-template <class MatchExpr, typename F>
+template <class MatchExpr, class F = std::function<void()>>
 class default_behavior_impl : public behavior_impl {
  public:
   template <class Expr>
@@ -223,25 +221,18 @@ class default_behavior_impl : public behavior_impl {
     // nop
   }
 
-  bhvr_invoke_result invoke(message& tup) {
-    auto res = m_expr(tup);
-    optional_message_visitor omv;
-    return apply_visitor(omv, res);
-  }
-
-  bhvr_invoke_result invoke(const message& tup) {
-    auto res = m_expr(tup);
+  bhvr_invoke_result invoke(message& msg) override {
+    auto res = m_expr(msg);
     optional_message_visitor omv;
     return apply_visitor(omv, res);
   }
 
   typename behavior_impl::pointer
-  copy(const generic_timeout_definition& tdef) const {
-    return new default_behavior_impl<MatchExpr, std::function<void()>>(m_expr,
-                                                                       tdef);
+  copy(const generic_timeout_definition& tdef) const override {
+    return new default_behavior_impl<MatchExpr>(m_expr, tdef);
   }
 
-  void handle_timeout() {
+  void handle_timeout() override {
     m_fun();
   }
 
