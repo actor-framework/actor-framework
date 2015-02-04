@@ -25,7 +25,7 @@ ref_counted::~ref_counted() {
   // nop
 }
 
-ref_counted::ref_counted(const ref_counted&) {
+ref_counted::ref_counted(const ref_counted&) : m_rc(0) {
   // nop; don't copy reference count
 }
 
