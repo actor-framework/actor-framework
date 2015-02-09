@@ -28,6 +28,7 @@
 
 #include "caf/detail/logging.hpp"
 
+#include "caf/policy/invoke_policy.hpp"
 #include "caf/policy/scheduling_policy.hpp"
 
 namespace caf {
@@ -39,9 +40,9 @@ namespace detail {
 template <class Base, class Derived, class Policies>
 class proper_actor_base : public Policies::resume_policy::template
                                  mixin<Base, Derived> {
+ public:
   using super = typename Policies::resume_policy::template mixin<Base, Derived>;
 
- public:
   template <class... Ts>
   proper_actor_base(Ts&&... args) : super(std::forward<Ts>(args)...) {
     CAF_REQUIRE(this->is_registered() == false);
@@ -51,20 +52,12 @@ class proper_actor_base : public Policies::resume_policy::template
 
   using timeout_type = typename Policies::scheduling_policy::timeout_type;
 
-  void enqueue(const actor_addr& sender,
-         message_id mid,
-         message msg,
-         execution_unit* eu) override {
-    CAF_PUSH_AID(dptr()->id());
-    /*
-    CAF_LOG_DEBUG(CAF_TARG(sender, to_string)
-             << ", " << CAF_MARG(mid, integer_value) << ", "
-             << CAF_TARG(msg, to_string));
-    */
+  void enqueue(const actor_addr& sender, message_id mid,
+               message msg, execution_unit* eu) override {
     scheduling_policy().enqueue(dptr(), sender, mid, msg, eu);
   }
 
-  inline void launch(bool hide, bool lazy, execution_unit* eu) {
+  void launch(bool hide, bool lazy, execution_unit* eu) {
     CAF_LOG_TRACE("");
     this->is_registered(!hide);
     this->scheduling_policy().launch(this, eu, lazy);
@@ -87,43 +80,16 @@ class proper_actor_base : public Policies::resume_policy::template
 
   // member functions from priority policy
 
-  inline unique_mailbox_element_pointer next_message() {
+  unique_mailbox_element_pointer next_message() {
     return priority_policy().next_message(dptr());
   }
 
-  inline bool has_next_message() {
+  bool has_next_message() {
     return priority_policy().has_next_message(dptr());
   }
 
-  inline void push_to_cache(unique_mailbox_element_pointer ptr) {
-    priority_policy().push_to_cache(std::move(ptr));
-  }
-
-  using cache_iterator = typename Policies::priority_policy::cache_iterator;
-
-  inline bool cache_empty() {
-    return priority_policy().cache_empty();
-  }
-
-  inline cache_iterator cache_begin() {
-    return priority_policy().cache_begin();
-  }
-
-  inline cache_iterator cache_end() {
-    return priority_policy().cache_end();
-  }
-
-  inline unique_mailbox_element_pointer cache_take_first() {
-    return priority_policy().cache_take_first();
-  }
-
-  template <class Iterator>
-  inline void cache_prepend(Iterator first, Iterator last) {
-    priority_policy().cache_prepend(first, last);
-  }
-
-  inline void cache_erase(cache_iterator iter) {
-    priority_policy().cache_erase(iter);
+  void push_to_cache(unique_mailbox_element_pointer ptr) {
+    priority_policy().push_to_cache(dptr(), std::move(ptr));
   }
 
   // member functions from resume policy
@@ -133,31 +99,30 @@ class proper_actor_base : public Policies::resume_policy::template
   // member functions from invoke policy
 
   template <class PartialFunctionOrBehavior>
-  inline bool invoke_message(unique_mailbox_element_pointer& ptr,
-                 PartialFunctionOrBehavior& fun,
-                 message_id awaited_response) {
-    return invoke_policy().invoke_message(dptr(), ptr, fun,
-                        awaited_response);
+  policy::invoke_message_result invoke_message(mailbox_element& me,
+                                               PartialFunctionOrBehavior& fun,
+                                               message_id awaited_response) {
+    return invoke_policy().invoke_message(dptr(), me, fun, awaited_response);
   }
 
  protected:
-  inline typename Policies::scheduling_policy& scheduling_policy() {
+  typename Policies::scheduling_policy& scheduling_policy() {
     return m_policies.get_scheduling_policy();
   }
 
-  inline typename Policies::priority_policy& priority_policy() {
+  typename Policies::priority_policy& priority_policy() {
     return m_policies.get_priority_policy();
   }
 
-  inline typename Policies::resume_policy& resume_policy() {
+  typename Policies::resume_policy& resume_policy() {
     return m_policies.get_resume_policy();
   }
 
-  inline typename Policies::invoke_policy& invoke_policy() {
+  typename Policies::invoke_policy& invoke_policy() {
     return m_policies.get_invoke_policy();
   }
 
-  inline Derived* dptr() {
+  Derived* dptr() {
     return static_cast<Derived*>(this);
   }
 
@@ -172,11 +137,11 @@ template <class Base, class Policies,
 class proper_actor
     : public proper_actor_base<Base, proper_actor<Base, Policies, false>,
                                Policies> {
-  using super = proper_actor_base<Base, proper_actor, Policies>;
-
  public:
   static_assert(std::is_base_of<local_actor, Base>::value,
                 "Base is not derived from local_actor");
+
+  using super = proper_actor_base<Base, proper_actor, Policies>;
 
   template <class... Ts>
   proper_actor(Ts&&... args) : super(std::forward<Ts>(args)...) {
@@ -185,30 +150,16 @@ class proper_actor
 
   // required by event_based_resume::mixin::resume
 
-  bool invoke_message(unique_mailbox_element_pointer& ptr) {
+  policy::invoke_message_result invoke_message(mailbox_element& me) {
     CAF_LOG_TRACE("");
     auto bhvr = this->bhvr_stack().back();
     auto mid = this->bhvr_stack().back_id();
-    return this->invoke_policy().invoke_message(this, ptr, bhvr, mid);
+    return this->invoke_policy().invoke_message(this, me, bhvr, mid);
   }
 
   bool invoke_message_from_cache() {
     CAF_LOG_TRACE("");
-    auto bhvr = this->bhvr_stack().back();
-    auto mid = this->bhvr_stack().back_id();
-    auto e = this->cache_end();
-    CAF_LOG_DEBUG(std::distance(this->cache_begin(), e)
-             << " elements in cache");
-    for (auto i = this->cache_begin(); i != e; ++i) {
-      auto im = this->invoke_policy().invoke_message(this, *i, bhvr, mid);
-      if (im || !*i) {
-        this->cache_erase(i);
-        if (im) return true;
-        // start anew, because we have invalidated our iterators now
-        return invoke_message_from_cache();
-      }
-    }
-    return false;
+    return this->priority_policy().invoke_from_cache(this);
   }
 };
 
@@ -226,11 +177,11 @@ class proper_actor<Base, Policies, true>
 
   // 'import' optional blocking member functions from policies
 
-  inline void await_data() {
+  void await_data() {
     this->scheduling_policy().await_data(this);
   }
 
-  inline void await_ready() {
+  void await_ready() {
     this->resume_policy().await_ready(this);
   }
 
@@ -238,22 +189,8 @@ class proper_actor<Base, Policies, true>
 
   void dequeue_response(behavior& bhvr, message_id mid) override {
     // try to dequeue from cache first
-    if (!this->cache_empty()) {
-      std::vector<unique_mailbox_element_pointer> tmp_vec;
-      auto restore_cache = [&] {
-        if (!tmp_vec.empty()) {
-          this->cache_prepend(tmp_vec.begin(), tmp_vec.end());
-        }
-      };
-      while (!this->cache_empty()) {
-        auto tmp = this->cache_take_first();
-        if (this->invoke_message(tmp, bhvr, mid)) {
-          restore_cache();
-          return;
-        } else
-          tmp_vec.push_back(std::move(tmp));
-      }
-      restore_cache();
+    if (this->priority_policy().invoke_from_cache(this, bhvr, mid)) {
+      return;
     }
     bool timeout_valid = false;
     uint32_t timeout_id;
@@ -275,15 +212,17 @@ class proper_actor<Base, Policies, true>
     });
     // read incoming messages
     for (;;) {
+      this->await_ready();
       auto msg = this->next_message();
-      if (!msg) {
-        this->await_ready();
-      } else {
-        if (this->invoke_message(msg, bhvr, mid)) {
-          // we're done
+      switch (this->invoke_message(*msg, bhvr, mid)) {
+        case policy::im_success:
           return;
-        }
-        if (msg) this->push_to_cache(std::move(msg));
+        case policy::im_skipped:
+          this->push_to_cache(std::move(msg));
+          break;
+        default:
+          // delete msg
+          break;
       }
     }
   }
@@ -307,7 +246,7 @@ class proper_actor<Base, Policies, true>
     return tid;
   }
 
-  inline void handle_timeout(behavior& bhvr, uint32_t timeout_id) {
+  void handle_timeout(behavior& bhvr, uint32_t timeout_id) {
     auto e = m_pending_timeouts.end();
     auto i = std::find(m_pending_timeouts.begin(), e, timeout_id);
     CAF_LOG_WARNING_IF(i == e, "ignored unexpected timeout");
@@ -318,24 +257,24 @@ class proper_actor<Base, Policies, true>
   }
 
   // required by nestable invoke policy
-  inline void pop_timeout() {
+  void pop_timeout() {
     m_pending_timeouts.pop_back();
   }
 
   // required by nestable invoke policy;
   // adds a dummy timeout to the pending timeouts to prevent
   // nestable invokes to trigger an inactive timeout
-  inline void push_timeout() {
+  void push_timeout() {
     m_pending_timeouts.push_back(++m_next_timeout_id);
   }
 
-  inline bool waits_for_timeout(uint32_t timeout_id) const {
+  bool waits_for_timeout(uint32_t timeout_id) const {
     auto e = m_pending_timeouts.end();
     auto i = std::find(m_pending_timeouts.begin(), e, timeout_id);
     return i != e;
   }
 
-  inline bool is_active_timeout(uint32_t tid) const {
+  bool is_active_timeout(uint32_t tid) const {
     return !m_pending_timeouts.empty() && m_pending_timeouts.back() == tid;
   }
 

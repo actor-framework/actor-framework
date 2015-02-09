@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_THREADED_HPP
-#define CAF_THREADED_HPP
+#ifndef CAF_POLICY_NESTABLE_INVOKE_HPP
+#define CAF_POLICY_NESTABLE_INVOKE_HPP
 
 #include <mutex>
 #include <chrono>
@@ -37,28 +37,28 @@ namespace policy {
 
 class nestable_invoke : public invoke_policy<nestable_invoke> {
  public:
-  inline bool hm_should_skip(mailbox_element* node) {
-    return node->marked;
+  inline bool hm_should_skip(mailbox_element& node) {
+    return node.marked;
   }
 
   template <class Actor>
-  inline mailbox_element* hm_begin(Actor* self, mailbox_element* node) {
+  mailbox_element* hm_begin(Actor* self, mailbox_element& node) {
     auto previous = self->current_node();
-    self->current_node(node);
+    self->current_node(&node);
     self->push_timeout();
-    node->marked = true;
+    node.marked = true;
     return previous;
   }
 
   template <class Actor>
-  inline void hm_cleanup(Actor* self, mailbox_element* previous) {
+  void hm_cleanup(Actor* self, mailbox_element* previous) {
     self->current_node()->marked = false;
     self->current_node(previous);
     self->pop_timeout();
   }
 
   template <class Actor>
-  inline void hm_revert(Actor* self, mailbox_element* previous) {
+  void hm_revert(Actor* self, mailbox_element* previous) {
     // same operation for blocking, i.e., nestable, invoke
     hm_cleanup(self, previous);
   }
@@ -67,4 +67,4 @@ class nestable_invoke : public invoke_policy<nestable_invoke> {
 } // namespace policy
 } // namespace caf
 
-#endif // CAF_THREADED_HPP
+#endif // CAF_POLICY_NESTABLE_INVOKE_HPP

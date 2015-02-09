@@ -34,13 +34,13 @@ namespace policy {
  */
 class sequential_invoke : public invoke_policy<sequential_invoke> {
  public:
-  inline bool hm_should_skip(mailbox_element*) {
+  inline bool hm_should_skip(mailbox_element&) {
     return false;
   }
 
   template <class Actor>
-  mailbox_element* hm_begin(Actor* self, mailbox_element* node) {
-    self->current_node(node);
+  mailbox_element* hm_begin(Actor* self, mailbox_element& node) {
+    self->current_node(&node);
     return nullptr;
   }
 

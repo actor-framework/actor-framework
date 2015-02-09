@@ -172,8 +172,8 @@ void broker::invoke_message(const actor_addr& sender, message_id mid,
   try {
     auto bhvr = bhvr_stack().back();
     auto bid = bhvr_stack().back_id();
-    switch (m_invoke_policy.handle_message(this, &m_dummy_node, bhvr, bid)) {
-      case policy::hm_msg_handled: {
+    switch (m_invoke_policy.invoke_message(this, m_dummy_node, bhvr, bid)) {
+      case policy::im_success: {
         CAF_LOG_DEBUG("handle_message returned hm_msg_handled");
         while (!bhvr_stack().empty()
                && planned_exit_reason() == exit_reason::not_exited
@@ -182,15 +182,14 @@ void broker::invoke_message(const actor_addr& sender, message_id mid,
         }
         break;
       }
-      case policy::hm_drop_msg:
+      case policy::im_dropped:
         CAF_LOG_DEBUG("handle_message returned hm_drop_msg");
         break;
-      case policy::hm_skip_msg:
-      case policy::hm_cache_msg: {
+      case policy::im_skipped: {
         CAF_LOG_DEBUG("handle_message returned hm_skip_msg or hm_cache_msg");
         auto e = mailbox_element::create(sender, bid,
                                          std::move(m_dummy_node.msg));
-        m_priority_policy.push_to_cache(unique_mailbox_element_pointer{e});
+        m_cache.push_back(unique_mailbox_element_pointer{e});
         break;
       }
     }
@@ -227,17 +226,20 @@ bool broker::invoke_message_from_cache() {
   CAF_LOG_TRACE("");
   auto bhvr = bhvr_stack().back();
   auto mid = bhvr_stack().back_id();
-  auto e = m_priority_policy.cache_end();
-  CAF_LOG_DEBUG(std::distance(m_priority_policy.cache_begin(), e)
-                << " elements in cache");
-  for (auto i = m_priority_policy.cache_begin(); i != e; ++i) {
-    auto res = m_invoke_policy.invoke_message(this, *i, bhvr, mid);
-    if (res || !*i) {
-      m_priority_policy.cache_erase(i);
-      if (res){
+  auto i = m_cache.begin();
+  auto e = m_cache.end();
+  CAF_LOG_DEBUG(std::distance(i, e) << " elements in cache");
+  while (i != e) {
+    switch (m_invoke_policy.invoke_message(this, *(i->get()), bhvr, mid)) {
+      case policy::im_success:
+        m_cache.erase(i);
         return true;
-      }
-      return invoke_message_from_cache();
+      case policy::im_skipped:
+        ++i;
+        break;
+      case policy::im_dropped:
+        i = m_cache.erase(i);
+        break;
     }
   }
   return false;

@@ -296,6 +296,7 @@ simple_mirror::~simple_mirror() {
 behavior simple_mirror::make_behavior() {
   return {
     others() >> [=] {
+      CAF_CHECKPOINT();
       return last_dequeued();
     }
   };

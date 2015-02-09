@@ -36,18 +36,17 @@ namespace caf {
 class local_actor;
 
 class mailbox_element : public extend<memory_managed>::
-                 with<mixin::memory_cached> {
-
-  friend class local_actor;
-  friend class detail::memory;
-
+                               with<mixin::memory_cached> {
  public:
-
   mailbox_element* next; // intrusive next pointer
-  bool marked;       // denotes if this node is currently processed
+  mailbox_element* prev; // intrusive previous pointer
+  bool marked;           // denotes if this node is currently processed
   actor_addr sender;
   message_id mid;
-  message msg; // 'content field'
+  message msg;           // 'content field'
+
+  mailbox_element();
+  mailbox_element(actor_addr sender, message_id id, message data);
 
   ~mailbox_element();
 
@@ -59,15 +58,12 @@ class mailbox_element : public extend<memory_managed>::
   template <class T>
   static mailbox_element* create(actor_addr sender, message_id id, T&& data) {
     return detail::memory::create<mailbox_element>(std::move(sender), id,
-                             std::forward<T>(data));
+                                                   std::forward<T>(data));
   }
 
- private:
-
-  mailbox_element() = default;
-
-  mailbox_element(actor_addr sender, message_id id, message data);
-
+  inline bool is_high_priority() const {
+    return mid.is_high_priority();
+  }
 };
 
 using unique_mailbox_element_pointer =

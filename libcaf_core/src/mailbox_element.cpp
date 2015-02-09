@@ -21,12 +21,22 @@
 
 namespace caf {
 
+mailbox_element::mailbox_element()
+    : next(nullptr),
+      prev(nullptr),
+      marked(false) {
+  // nop
+}
+
 mailbox_element::mailbox_element(actor_addr arg0, message_id arg1, message arg2)
     : next(nullptr),
+      prev(nullptr),
       marked(false),
       sender(std::move(arg0)),
       mid(arg1),
-      msg(std::move(arg2)) {}
+      msg(std::move(arg2)) {
+  // nop
+}
 
 mailbox_element::~mailbox_element() {
   // nop

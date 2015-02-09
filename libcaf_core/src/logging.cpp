@@ -53,7 +53,11 @@ constexpr struct pop_aid_log_event_t {
 
 struct log_event {
   log_event* next;
+  log_event* prev;
   std::string msg;
+  log_event(std::string logmsg = "") : msg(std::move(logmsg)) {
+    // nop
+  }
 };
 
 #ifndef CAF_LOG_LEVEL
@@ -75,7 +79,7 @@ class logging_impl : public logging {
   void stop() {
     log("TRACE", "logging", "run", __FILE__, __LINE__, "EXIT");
     // an empty string means: shut down
-    m_queue.synchronized_enqueue(m_queue_mtx, m_queue_cv, new log_event{0, ""});
+    m_queue.synchronized_enqueue(m_queue_mtx, m_queue_cv, new log_event{""});
     m_thread.join();
   }
 
@@ -123,7 +127,7 @@ class logging_impl : public logging {
          << class_name << " " << function_name << " " << file_name << ":"
          << line_num << " " << msg << std::endl;
     m_queue.synchronized_enqueue(m_queue_mtx, m_queue_cv,
-                                 new log_event{nullptr, line.str()});
+                                 new log_event{line.str()});
   }
 
  private:

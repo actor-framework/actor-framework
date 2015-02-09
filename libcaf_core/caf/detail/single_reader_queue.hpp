@@ -21,6 +21,7 @@
 #define CAF_SINGLE_READER_QUEUE_HPP
 
 #include <list>
+#include <deque>
 #include <mutex>
 #include <atomic>
 #include <memory>
@@ -28,6 +29,8 @@
 #include <condition_variable> // std::cv_status
 
 #include "caf/config.hpp"
+
+#include "caf/detail/intrusive_partitioned_list.hpp"
 
 namespace caf {
 namespace detail {
@@ -63,6 +66,9 @@ class single_reader_queue {
  public:
   using value_type = T;
   using pointer = value_type*;
+  using deleter_type = Delete;
+  using unique_pointer = std::unique_ptr<value_type, deleter_type>;
+  using cache_type = intrusive_partitioned_list<value_type, deleter_type>;
 
   /**
    * Tries to dequeue a new element from the mailbox.
@@ -115,7 +121,7 @@ class single_reader_queue {
    */
   bool empty() {
     CAF_REQUIRE(!closed());
-    return m_head == nullptr && is_dummy(m_stack.load());
+    return m_cache.empty() && m_head == nullptr && is_dummy(m_stack.load());
   }
 
   /**
@@ -194,7 +200,10 @@ class single_reader_queue {
   }
 
   size_t count(size_t max_count = std::numeric_limits<size_t>::max()) {
-    size_t res = 0;
+    size_t res = m_cache.count(max_count);
+    if (res >= max_count) {
+      return res;
+    }
     fetch_new_data();
     auto ptr = m_head;
     while (ptr && res < max_count) {
@@ -202,6 +211,15 @@ class single_reader_queue {
       ++res;
     }
     return res;
+  }
+
+  // note: the cache is intended to be used by the owner, the queue itself
+  //       never accesses the cache other than for counting;
+  //       the first partition of the cache is meant to be used to store and
+  //       sort messages that were not processed yet, while the second
+  //       partition is meant to store skipped messages
+  cache_type& cache() {
+    return m_cache;
   }
 
   /**************************************************************************
@@ -260,7 +278,8 @@ class single_reader_queue {
 
   // accessed only by the owner
   pointer m_head;
-  Delete m_delete;
+  deleter_type m_delete;
+  intrusive_partitioned_list<value_type, deleter_type> m_cache;
 
   // atomically sets m_stack back and enqueues all elements to the cache
   bool fetch_new_data(pointer end_ptr) {

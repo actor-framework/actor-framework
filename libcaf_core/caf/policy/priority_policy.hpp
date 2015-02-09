@@ -20,25 +20,19 @@
 #ifndef CAF_PRIORITY_POLICY_HPP
 #define CAF_PRIORITY_POLICY_HPP
 
-namespace caf {
-class mailbox_element;
-} // namespace caf
+#include "caf/mailbox_element.hpp"
 
 namespace caf {
 namespace policy {
 
 /**
- * The priority_policy *concept* class. Please note that this
- * class is **not** implemented. It merely explains all
- * required member functions.
+ * The priority_policy *concept* class. Please note that this class is **not**
+ * implemented. It merely explains all required member functions.
  */
 class priority_policy {
-
  public:
-
   /**
-   * Returns the next message from the mailbox or `nullptr`
-   * if it's empty.
+   * Returns the next message from the mailbox or `nullptr` if it's empty.
    */
   template <class Actor>
   unique_mailbox_element_pointer next_message(Actor* self);
@@ -49,18 +43,18 @@ class priority_policy {
   template <class Actor>
   bool has_next_message(Actor* self);
 
-  void push_to_cache(unique_mailbox_element_pointer ptr);
+  /**
+   * Stores the message in a cache for later retrieval.
+   */
+  template <class Actor>
+  void push_to_cache(Actor* self, unique_mailbox_element_pointer ptr);
 
-  using cache_type = std::vector<unique_mailbox_element_pointer>;
-
-  using cache_iterator = cache_type::iterator;
-
-  cache_iterator cache_begin();
-
-  cache_iterator cache_end();
-
-  void cache_erase(cache_iterator iter);
-
+  /**
+   * Removes the first element from the cache matching predicate `p`.
+   * @returns `true` if an element was removed, `false` otherwise.
+   */
+  template <class Actor, class Predicate>
+  bool invoke_from_cache(Actor* self, Predicate p);
 };
 
 } // namespace policy

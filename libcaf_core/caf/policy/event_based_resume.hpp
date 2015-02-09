@@ -30,6 +30,7 @@
 #include "caf/extend.hpp"
 #include "caf/behavior.hpp"
 
+#include "caf/policy/invoke_policy.hpp"
 #include "caf/policy/resume_policy.hpp"
 
 #include "caf/detail/logging.hpp"
@@ -124,28 +125,30 @@ class event_based_resume {
         for (size_t i = 0; i < max_throughput; ++i) {
           auto ptr = d->next_message();
           if (ptr) {
-            if (d->invoke_message(ptr)) {
-              d->bhvr_stack().cleanup();
-              ++handled_msgs;
-              if (actor_done()) {
-                CAF_LOG_DEBUG("actor exited");
-                return resume_result::done;
-              }
-              // continue from cache if current message was
-              // handled, because the actor might have changed
-              // its behavior to match 'old' messages now
-              while (d->invoke_message_from_cache()) {
+            switch (d->invoke_message(*ptr)) {
+              case policy::im_success:
+                d->bhvr_stack().cleanup();
+                ++handled_msgs;
                 if (actor_done()) {
                   CAF_LOG_DEBUG("actor exited");
                   return resume_result::done;
                 }
-              }
-            }
-            // add ptr to cache if invoke_message
-            // did not reset it (i.e. skipped, but not dropped)
-            if (ptr) {
-              CAF_LOG_DEBUG("add message to cache");
-              d->push_to_cache(std::move(ptr));
+                // continue from cache if current message was
+                // handled, because the actor might have changed
+                // its behavior to match 'old' messages now
+                while (d->invoke_message_from_cache()) {
+                  if (actor_done()) {
+                    CAF_LOG_DEBUG("actor exited");
+                    return resume_result::done;
+                  }
+                }
+                break;
+              case policy::im_skipped:
+                d->push_to_cache(std::move(ptr));
+                break;
+              case policy::im_dropped:
+                // destroy msg
+                break;
             }
           } else {
             CAF_LOG_DEBUG("no more element in mailbox; going to block");

@@ -21,6 +21,7 @@
 
 #include "test.hpp"
 
+#include "caf/policy/prioritizing.hpp"
 #include "caf/detail/single_reader_queue.hpp"
 
 using std::begin;
@@ -32,10 +33,17 @@ size_t s_iint_instances = 0;
 
 struct iint {
   iint* next;
+  iint* prev;
   int value;
-  inline iint(int val = 0) : next(nullptr), value(val) { ++s_iint_instances; }
-  ~iint() { --s_iint_instances; }
-
+  bool is_high_priority() const {
+    return value % 2 == 0;
+  }
+  iint(int val = 0) : next(nullptr), prev(nullptr), value(val) {
+    ++s_iint_instances;
+  }
+  ~iint() {
+    --s_iint_instances;
+  }
 };
 
 inline bool operator==(const iint& lhs, const iint& rhs) {
@@ -48,27 +56,48 @@ inline bool operator==(int lhs, const iint& rhs) { return lhs == rhs.value; }
 
 using iint_queue = caf::detail::single_reader_queue<iint>;
 
+struct pseudo_actor {
+  using mailbox_type = caf::detail::single_reader_queue<iint>;
+  mailbox_type mbox;
+  mailbox_type& mailbox() {
+    return mbox;
+  }
+};
+
 int main() {
   CAF_TEST(test_intrusive_containers);
-
-  caf::detail::single_reader_queue<iint> q;
-  q.enqueue(new iint(1));
-  q.enqueue(new iint(2));
-  q.enqueue(new iint(3));
-
-  CAF_CHECK_EQUAL(3, s_iint_instances);
-
-  auto x = q.try_pop();
-  CAF_CHECK_EQUAL(x->value, 1);
-  delete x;
-  x = q.try_pop();
+  pseudo_actor self;
+  auto baseline = s_iint_instances;
+  CAF_CHECK_EQUAL(baseline, 3); // "begin", "separator", and "end"
+  self.mbox.enqueue(new iint(1));
+  self.mbox.enqueue(new iint(2));
+  self.mbox.enqueue(new iint(3));
+  self.mbox.enqueue(new iint(4));
+  CAF_CHECK_EQUAL(baseline + 4, s_iint_instances);
+  caf::policy::prioritizing policy;
+  // first "high priority message"
+  CAF_CHECK_EQUAL(self.mbox.count(), 4);
+  CAF_CHECK_EQUAL(policy.has_next_message(&self), true);
+  auto x = policy.next_message(&self);
   CAF_CHECK_EQUAL(x->value, 2);
-  delete x;
-  x = q.try_pop();
+  // second "high priority message"
+  CAF_CHECK_EQUAL(self.mbox.count(), 3);
+  CAF_CHECK_EQUAL(policy.has_next_message(&self), true);
+  x = policy.next_message(&self);
+  CAF_CHECK_EQUAL(x->value, 4);
+  // first "low priority message"
+  CAF_CHECK_EQUAL(self.mbox.count(), 2);
+  CAF_CHECK_EQUAL(policy.has_next_message(&self), true);
+  x = policy.next_message(&self);
+  CAF_CHECK_EQUAL(x->value, 1);
+  // first "low priority message"
+  CAF_CHECK_EQUAL(self.mbox.count(), 1);
+  CAF_CHECK_EQUAL(policy.has_next_message(&self), true);
+  x = policy.next_message(&self);
   CAF_CHECK_EQUAL(x->value, 3);
-  delete x;
-  x = q.try_pop();
-  CAF_CHECK(x == nullptr);
-
+  x.reset();
+  // back to baseline
+  CAF_CHECK_EQUAL(self.mbox.count(), 0);
+  CAF_CHECK_EQUAL(baseline, s_iint_instances);
   return CAF_TEST_RESULT();
 }

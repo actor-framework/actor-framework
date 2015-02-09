@@ -358,10 +358,10 @@ class broker : public extend<local_actor>::
   std::map<accept_handle, doorman_pointer> m_doormen;
   std::map<connection_handle, scribe_pointer> m_scribes;
 
-  policy::not_prioritizing m_priority_policy;
   policy::sequential_invoke m_invoke_policy;
 
   middleman& m_mm;
+  std::deque<unique_mailbox_element_pointer> m_cache;
 };
 
 class broker::functor_based : public extend<broker>::
