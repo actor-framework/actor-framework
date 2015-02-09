@@ -29,7 +29,7 @@ behavior testee::make_behavior() {
     others() >> [=] {
       CAF_CHECK_EQUAL(last_dequeued().cvals()->get_reference_count(), 2);
       quit();
-      return last_dequeued();
+      return std::move(last_dequeued());
     }
   };
 }
@@ -97,6 +97,7 @@ void test_message_lifetime_in_scoped_actor() {
   CAF_CHECK_EQUAL(msg.get_as<int>(0), 42);
 }
 
+template <spawn_options Os>
 void test_message_lifetime() {
   test_message_lifetime_in_scoped_actor();
   if (CAF_TEST_RESULT() != 0) {
@@ -104,13 +105,17 @@ void test_message_lifetime() {
   }
   // put some preassure on the scheduler (check for thread safety)
   for (size_t i = 0; i < 100; ++i) {
-    spawn<tester>(spawn<testee>());
+    spawn<tester>(spawn<testee, Os>());
   }
 }
 
 int main() {
   CAF_TEST(test_message_lifetime);
-  test_message_lifetime();
+  CAF_PRINT("test_message_lifetime<no_spawn_options>");
+  test_message_lifetime<no_spawn_options>();
+  await_all_actors_done();
+  CAF_PRINT("test_message_lifetime<priority_aware>");
+  test_message_lifetime<priority_aware>();
   await_all_actors_done();
   shutdown();
   return CAF_TEST_RESULT();
