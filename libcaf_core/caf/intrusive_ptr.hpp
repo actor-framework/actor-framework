@@ -25,6 +25,7 @@
 #include <stdexcept>
 #include <type_traits>
 
+#include "caf/ref_counted.hpp"
 #include "caf/detail/comparable.hpp"
 
 namespace caf {
@@ -37,9 +38,7 @@ template <class T>
 class intrusive_ptr : detail::comparable<intrusive_ptr<T>>,
                       detail::comparable<intrusive_ptr<T>, const T*>,
                       detail::comparable<intrusive_ptr<T>, std::nullptr_t> {
-
  public:
-
   using pointer = T*;
   using const_pointer = const T*;
   using element_type = T;
@@ -65,16 +64,16 @@ class intrusive_ptr : detail::comparable<intrusive_ptr<T>>,
   template <class Y>
   intrusive_ptr(intrusive_ptr<Y> other) : m_ptr(other.release()) {
     static_assert(std::is_convertible<Y*, T*>::value,
-            "Y* is not assignable to T*");
+                  "Y* is not assignable to T*");
   }
 
   ~intrusive_ptr() {
     if (m_ptr) {
-      m_ptr->deref();
+      intrusive_ptr_release(m_ptr);
     }
   }
 
-  inline void swap(intrusive_ptr& other) {
+  void swap(intrusive_ptr& other) {
     std::swap(m_ptr, other.m_ptr);
   }
 
@@ -92,7 +91,7 @@ class intrusive_ptr : detail::comparable<intrusive_ptr<T>>,
     auto old = m_ptr;
     set_ptr(new_value, add_ref);
     if (old) {
-      old->deref();
+      intrusive_ptr_release(old);
     }
   }
 
@@ -124,22 +123,35 @@ class intrusive_ptr : detail::comparable<intrusive_ptr<T>>,
     return *this;
   }
 
-  inline pointer get() const { return m_ptr; }
-  inline pointer operator->() const { return m_ptr; }
-  inline reference operator*() const { return *m_ptr; }
+  pointer get() const {
+    return m_ptr;
+  }
 
-  inline bool operator!() const { return m_ptr == nullptr; }
-  inline explicit operator bool() const { return m_ptr != nullptr; }
+  pointer operator->() const {
+    return m_ptr;
+  }
 
-  inline ptrdiff_t compare(const_pointer ptr) const {
+  reference operator*() const {
+    return *m_ptr;
+  }
+
+  bool operator!() const {
+    return m_ptr == nullptr;
+  }
+
+  explicit operator bool() const {
+    return m_ptr != nullptr;
+  }
+
+  ptrdiff_t compare(const_pointer ptr) const {
     return static_cast<ptrdiff_t>(get() - ptr);
   }
 
-  inline ptrdiff_t compare(const intrusive_ptr& other) const {
+  ptrdiff_t compare(const intrusive_ptr& other) const {
     return compare(other.get());
   }
 
-  inline ptrdiff_t compare(std::nullptr_t) const {
+  ptrdiff_t compare(std::nullptr_t) const {
     return reinterpret_cast<ptrdiff_t>(get());
   }
 
@@ -154,15 +166,14 @@ class intrusive_ptr : detail::comparable<intrusive_ptr<T>>,
   }
 
  private:
-
-  pointer m_ptr;
-
-  inline void set_ptr(pointer raw_ptr, bool add_ref) {
+  void set_ptr(pointer raw_ptr, bool add_ref) {
     m_ptr = raw_ptr;
     if (raw_ptr && add_ref) {
-      raw_ptr->ref();
+      intrusive_ptr_add_ref(raw_ptr);
     }
   }
+
+  pointer m_ptr;
 };
 
 /**
