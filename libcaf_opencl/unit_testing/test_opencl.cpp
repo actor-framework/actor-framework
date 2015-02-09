@@ -9,14 +9,13 @@
 #include "caf/all.hpp"
 #include "caf/opencl/spawn_cl.hpp"
 
-using namespace std;
 using namespace caf;
 using namespace caf::opencl;
 
 namespace {
 
-using ivec = vector<int>;
-using fvec = vector<float>;
+using ivec = std::vector<int>;
+using fvec = std::vector<float>;
 
 constexpr size_t matrix_size = 4;
 constexpr size_t array_size = 32;
@@ -28,11 +27,11 @@ constexpr const char* kernel_name_compiler_flag = "compiler_flag";
 constexpr const char* kernel_name_reduce = "reduce";
 constexpr const char* kernel_name_const = "const_mod";
 
-constexpr const char* compiler_flag = "-D OPENCL_CPPA_TEST_FLAG";
+constexpr const char* compiler_flag = "-D CAF_OPENCL_TEST_FLAG";
 
 constexpr const char* kernel_source = R"__(
   __kernel void matrix_square(__global int* matrix,
-                __global int* output) {
+                              __global int* output) {
     size_t size = get_global_size(0); // == get_global_size_(1);
     size_t x = get_global_id(0);
     size_t y = get_global_id(1);
@@ -52,13 +51,13 @@ constexpr const char* kernel_source_error = R"__(
 
 constexpr const char* kernel_source_compiler_flag = R"__(
   __kernel void compiler_flag(__global int* input,
-                __global int* output) {
+                              __global int* output) {
     size_t x = get_global_id(0);
-#ifdef OPENCL_CPPA_TEST_FLAG
+#   ifdef CAF_OPENCL_TEST_FLAG
     output[x] = input[x];
-#else
+#   else
     output[x] = 0;
-#endif
+#   endif
   }
 )__";
 
@@ -66,12 +65,11 @@ constexpr const char* kernel_source_compiler_flag = R"__(
 // opencl-optimization-case-study-simple-reductions
 constexpr const char* kernel_source_reduce = R"__(
   __kernel void reduce(__global int* buffer,
-             __global int* result) {
+                       __global int* result) {
     __local int scratch[512];
     int local_index = get_local_id(0);
     scratch[local_index] = buffer[get_global_id(0)];
     barrier(CLK_LOCAL_MEM_FENCE);
-
     for(int offset = get_local_size(0) / 2; offset > 0; offset = offset / 2) {
       if (local_index < offset) {
         int other = scratch[local_index + offset];
@@ -88,19 +86,17 @@ constexpr const char* kernel_source_reduce = R"__(
 
 constexpr const char* kernel_source_const = R"__(
   __kernel void const_mod(__constant int* input,
-              __global int* output) {
+                          __global int* output) {
     size_t idx = get_global_id(0);
     output[idx] = input[0];
   }
 )__";
 
-}
+} // namespace <anonymous>
 
 template<size_t Size>
 class square_matrix {
-
  public:
-
   static constexpr size_t num_elements = Size * Size;
 
   static void announce() {
@@ -112,51 +108,74 @@ class square_matrix {
   square_matrix& operator=(square_matrix&&) = default;
   square_matrix& operator=(const square_matrix&) = default;
 
-  square_matrix() : m_data(num_elements) { }
+  square_matrix() : m_data(num_elements) {
+    // nop
+  }
 
   explicit square_matrix(ivec d) : m_data(move(d)) {
     assert(m_data.size() == num_elements);
   }
 
-  inline float& operator()(size_t column, size_t row) {
+  float& operator()(size_t column, size_t row) {
     return m_data[column + row * Size];
   }
 
-  inline const float& operator()(size_t column, size_t row) const {
+  const float& operator()(size_t column, size_t row) const {
     return m_data[column + row * Size];
-  }
-
-  inline void iota_fill() {
-    iota(m_data.begin(), m_data.end(), 0);
   }
 
   typedef typename ivec::const_iterator const_iterator;
 
-  const_iterator begin() const { return m_data.begin(); }
+  const_iterator begin() const {
+    return m_data.begin();
+  }
 
-  const_iterator end() const { return m_data.end(); }
+  const_iterator end() const {
+    return m_data.end();
+  }
 
-  ivec& data() { return m_data; }
+  ivec& data() {
+    return m_data;
+  }
 
-  const ivec& data() const { return m_data; }
+  const ivec& data() const {
+    return m_data;
+  }
 
-  void data(ivec new_data) { m_data = std::move(new_data); }
+  void data(ivec new_data) {
+    m_data = std::move(new_data);
+  }
 
  private:
-
   ivec m_data;
-
 };
 
+
+template <class T>
+std::vector<T> make_iota_vector(size_t num_elements) {
+  std::vector<T> result;
+  result.resize(num_elements);
+  std::iota(result.begin(), result.end(), T{0});
+  return result;
+}
+
+template <size_t Size>
+square_matrix<Size> make_iota_matrix() {
+  square_matrix<Size> result;
+  std::iota(result.data().begin(), result.data().end(), 0);
+  return result;
+}
+
+
 template<size_t Size>
-inline bool operator==(const square_matrix<Size>& lhs,
-             const square_matrix<Size>& rhs) {
-  return equal(lhs.begin(), lhs.end(), rhs.begin());
+bool operator==(const square_matrix<Size>& lhs,
+                const square_matrix<Size>& rhs) {
+  return lhs.data() == rhs.data();
 }
 
 template<size_t Size>
-inline bool operator!=(const square_matrix<Size>& lhs,
-             const square_matrix<Size>& rhs) {
+bool operator!=(const square_matrix<Size>& lhs,
+                const square_matrix<Size>& rhs) {
   return !(lhs == rhs);
 }
 
@@ -170,154 +189,117 @@ size_t get_max_workgroup_size(size_t device_id, size_t dimension) {
 }
 
 void test_opencl() {
-
   scoped_actor self;
-
-  const ivec expected1{  56,  62,  68,  74
-            , 152, 174, 196, 218
-            , 248, 286, 324, 362
-            , 344, 398, 452, 506};
-
-  auto worker1 = spawn_cl<ivec(ivec&)>(program::create(kernel_source),
-                     kernel_name,
-                     {matrix_size, matrix_size});
-  ivec m1(matrix_size * matrix_size);
-  iota(begin(m1), end(m1), 0);
-  self->send(worker1, move(m1));
+  const ivec expected1{ 56,  62,  68,  74,
+                       152, 174, 196, 218,
+                       248, 286, 324, 362,
+                       344, 398, 452, 506};
+  auto w1 = spawn_cl<ivec (ivec&)>(program::create(kernel_source),
+                                   kernel_name,
+                                   {matrix_size, matrix_size});
+  self->send(w1, make_iota_vector<int>(matrix_size * matrix_size));
   self->receive (
-    on_arg_match >> [&] (const ivec& result) {
-      CAF_CHECK(equal(begin(expected1), end(expected1), begin(result)));
+    [&](const ivec& result) {
+      CAF_CHECK(result == expected1);
     }
   );
-
-  auto worker2 = spawn_cl<ivec(ivec&)>(kernel_source,
-                     kernel_name,
-                     {matrix_size, matrix_size});
-  ivec m2(matrix_size * matrix_size);
-  iota(begin(m2), end(m2), 0);
-  self->send(worker2, move(m2));
+  auto w2 = spawn_cl<ivec (ivec&)>(kernel_source, kernel_name,
+                                   {matrix_size, matrix_size});
+  self->send(w2, make_iota_vector<int>(matrix_size * matrix_size));
   self->receive (
-    on_arg_match >> [&] (const ivec& result) {
-      CAF_CHECK(equal(begin(expected1), end(expected1), begin(result)));
+    [&](const ivec& result) {
+      CAF_CHECK(result == expected1);
     }
   );
-
-  const matrix_type expected2(move(expected1));
-
-  auto map_args = [] (message msg) -> optional<cow_tuple<ivec>> {
-    auto opt = tuple_cast<matrix_type>(msg);
-    if (opt) {
-      return make_cow_tuple(move(get_ref<0>(*opt).data()));
-    }
-    return none;
+  const matrix_type expected2(std::move(expected1));
+  auto map_arg = [](message& msg) -> optional<message> {
+    return msg.apply(
+      [](matrix_type& mx) {
+        return make_message(std::move(mx.data()));
+      }
+    );
   };
-
-  auto map_results = [] (ivec& result) -> message {
-    return make_message(matrix_type{move(result)});
+  auto map_res = [](ivec& result) -> message {
+    return make_message(matrix_type{std::move(result)});
   };
-
-  matrix_type m3;
-  m3.iota_fill();
-  auto worker3 = spawn_cl(program::create(kernel_source), kernel_name,
-              map_args, map_results,
-              {matrix_size, matrix_size});
-  self->send(worker3, move(m3));
+  auto w3 = spawn_cl<ivec (ivec&)>(program::create(kernel_source), kernel_name,
+                                   map_arg, map_res, {matrix_size, matrix_size});
+  self->send(w3, make_iota_matrix<matrix_size>());
   self->receive (
-    on_arg_match >> [&] (const matrix_type& result) {
+    [&](const matrix_type& result) {
       CAF_CHECK(expected2 == result);
     }
   );
-
-  matrix_type m4;
-  m4.iota_fill();
-  auto worker4 = spawn_cl(kernel_source, kernel_name,
-              map_args, map_results,
-              {matrix_size, matrix_size}
-  );
-  self->send(worker4, move(m4));
+  auto w4 = spawn_cl<ivec (ivec&)>(kernel_source, kernel_name,
+                                   map_arg, map_res,
+                                   {matrix_size, matrix_size});
+  self->send(w4, make_iota_matrix<matrix_size>());
   self->receive (
-    on_arg_match >> [&] (const matrix_type& result) {
+    [&](const matrix_type& result) {
       CAF_CHECK(expected2 == result);
     }
   );
-
   try {
-    program create_error = program::create(kernel_source_error);
+    auto create_error = program::create(kernel_source_error);
   }
-  catch (const exception& exc) {
-    cout << exc.what() << endl;
+  catch (const std::exception& exc) {
+    CAF_PRINT(exc.what());
     CAF_CHECK_EQUAL("clBuildProgram: CL_BUILD_PROGRAM_FAILURE", exc.what());
   }
-
   // test for opencl compiler flags
-  ivec arr5(array_size);
-  iota(begin(arr5), end(arr5), 0);
   auto prog5 = program::create(kernel_source_compiler_flag, compiler_flag);
-  auto worker5 = spawn_cl<ivec(ivec&)>(prog5, kernel_name_compiler_flag, {array_size});
-  self->send(worker5, move(arr5));
-
-  ivec expected3(array_size);
-  iota(begin(expected3), end(expected3), 0);
+  auto w5 = spawn_cl<ivec (ivec&)>(prog5, kernel_name_compiler_flag, {array_size});
+  self->send(w5, make_iota_vector<int>(array_size));
+  auto expected3 = make_iota_vector<int>(array_size);
   self->receive (
-    on_arg_match >> [&] (const ivec& result) {
-      CAF_CHECK(equal(begin(expected3), end(expected3), begin(result)));
+    [&](const ivec& result) {
+      CAF_CHECK(result == expected3);
     }
   );
 
-  // test for manuel return size selection
-  const int max_workgroup_size = static_cast<int>(get_max_workgroup_size(0,1)); // max workgroup size (1d)
-  const size_t reduce_buffer_size = static_cast<size_t>(max_workgroup_size * 8);
-  const size_t reduce_local_size  = static_cast<size_t>(max_workgroup_size);
-  const size_t reduce_work_groups = reduce_buffer_size / reduce_local_size;
-  const size_t reduce_global_size = reduce_buffer_size;
-  const size_t reduce_result_size = reduce_work_groups;
-
-  ivec arr6(reduce_buffer_size);
-  int n{static_cast<int>(arr6.capacity())};
-  generate(begin(arr6), end(arr6), [&]{ return --n; });
-  auto worker6 = spawn_cl<ivec(ivec&)>(kernel_source_reduce,
-                     kernel_name_reduce,
-                     {reduce_global_size},
-                     {},
-                     {reduce_local_size},
-                     reduce_result_size);
-  self->send(worker6, move(arr6));
-  const ivec expected4{ max_workgroup_size * 7, max_workgroup_size * 6,
-              max_workgroup_size * 5, max_workgroup_size * 4,
-              max_workgroup_size * 3, max_workgroup_size * 2,
-              max_workgroup_size, 0 };
-  self->receive (
-    on_arg_match >> [&] (const ivec& result) {
-      CAF_CHECK(equal(begin(expected4), end(expected4), begin(result)));
+  // test for manuel return size selection (max workgroup size 1d)
+  const int max_workgroup_size = static_cast<int>(get_max_workgroup_size(0,1));
+  const int reduce_buffer_size = max_workgroup_size * 8;
+  const int reduce_local_size  = max_workgroup_size;
+  const int reduce_work_groups = reduce_buffer_size / reduce_local_size;
+  const int reduce_global_size = reduce_buffer_size;
+  const int reduce_result_size = reduce_work_groups;
+  ivec arr6(static_cast<size_t>(reduce_buffer_size));
+  int n = static_cast<int>(arr6.capacity());
+  std::generate(arr6.begin(), arr6.end(), [&]{ return --n; });
+  auto w6 = spawn_cl<ivec (ivec&)>(kernel_source_reduce, kernel_name_reduce,
+                                   {static_cast<size_t>(reduce_global_size)},
+                                   {},
+                                   {static_cast<size_t>(reduce_local_size)},
+                                   static_cast<size_t>(reduce_result_size));
+  self->send(w6, move(arr6));
+  ivec expected4{max_workgroup_size * 7, max_workgroup_size * 6,
+                 max_workgroup_size * 5, max_workgroup_size * 4,
+                 max_workgroup_size * 3, max_workgroup_size * 2,
+                 max_workgroup_size,     0};
+  self->receive(
+    [&](const ivec& result) {
+      CAF_CHECK(result == expected4);
     }
   );
-
   // constant memory arguments
   const ivec arr7{magic_number};
-  auto worker7 = spawn_cl<ivec(ivec&)>(kernel_source_const,
-                     kernel_name_const,
-                     {magic_number});
-  self->send(worker7, move(arr7));
+  auto w7 = spawn_cl<ivec (ivec&)>(kernel_source_const, kernel_name_const,
+                                   {magic_number});
+  self->send(w7, move(arr7));
   ivec expected5(magic_number);
   fill(begin(expected5), end(expected5), magic_number);
   self->receive(
-    on_arg_match >> [&] (const ivec& result) {
-      CAF_CHECK(equal(begin(expected5), end(expected5), begin(result)));
+    [&](const ivec& result) {
+      CAF_CHECK(result == expected5);
     }
   );
-
 }
 
 int main() {
-  CAF_TEST(tkest_opencl);
-
-  announce<ivec>("ivec");
-  matrix_type::announce();
-
+  CAF_TEST(test_opencl);
   test_opencl();
   await_all_actors_done();
   shutdown();
-
   return CAF_TEST_RESULT();
 }
-
