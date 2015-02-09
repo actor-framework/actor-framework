@@ -22,26 +22,30 @@
 
 #include <string>
 
+#include "caf/config.hpp"
 #include "caf/detail/limited_vector.hpp"
 
-#if defined __APPLE__ || defined(MACOSX)
-#include <OpenCL/opencl.h>
+#ifdef CAF_MACOS
+# include <OpenCL/opencl.h>
 #else
-#include <CL/opencl.h>
+# include <CL/opencl.h>
 #endif
+
+// needed for OpenCL 1.0 compatibility (works around missing clReleaseDevice)
+extern "C" {
+cl_int clReleaseDeviceDummy(cl_device_id);
+cl_int clRetainDeviceDummy(cl_device_id);
+} // extern "C"
 
 namespace caf {
 namespace opencl {
 
 /**
- * @brief A vector of up to three elements used for OpenCL dimensions.
+ * A vector of up to three elements used for OpenCL dimensions.
  */
 using dim_vec = detail::limited_vector<size_t, 3>;
 
 std::string get_opencl_error(cl_int err);
-
-cl_int clReleaseDeviceDummy(cl_device_id);
-cl_int clRetainDeviceDummy(cl_device_id);
 
 } // namespace opencl
 } // namespace caf

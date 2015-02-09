@@ -44,7 +44,6 @@ program program::create(const char* kernel_source, const char* options,
   auto metainfo = opencl_metainfo::instance();
   auto devices  = metainfo->get_devices();
   auto context  = metainfo->m_context;
-
   if (devices.size() <= device_id) {
     ostringstream oss;
     oss << "Device id " << device_id
@@ -53,13 +52,12 @@ program program::create(const char* kernel_source, const char* options,
     CAF_LOGM_ERROR("caf::opencl::program", oss.str());
     throw runtime_error(oss.str());
   }
-
   // create program object from kernel source
   size_t kernel_source_length = strlen(kernel_source);
   program_ptr pptr;
-  pptr.adopt(v2get(CAF_CLF(clCreateProgramWithSource),context.get(), cl_uint{1},
-                   &kernel_source, &kernel_source_length));
-
+  auto rawptr = v2get(CAF_CLF(clCreateProgramWithSource),context.get(),
+                      cl_uint{1}, &kernel_source, &kernel_source_length);
+  pptr.reset(rawptr, false);
   // build programm from program object
   auto dev_tmp = devices[device_id].m_device.get();
   cl_int err = clBuildProgram(pptr.get(), 1, &dev_tmp,

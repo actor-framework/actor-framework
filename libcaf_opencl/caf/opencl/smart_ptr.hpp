@@ -24,104 +24,33 @@
 #include <algorithm>
 #include <type_traits>
 
-namespace caf {
-namespace opencl {
+#include "caf/intrusive_ptr.hpp"
 
-template <class T, cl_int (*ref)(T), cl_int (*deref)(T)>
-class smart_ptr {
- public:
-  using element_type = typename std::remove_pointer<T>::type;
-  using pointer = element_type*;
-  using reference = element_type&;
-  using const_pointer = const element_type*;
-  using const_reference = const element_type&;
+#include "caf/opencl/global.hpp"
 
-  smart_ptr(pointer ptr = nullptr, bool inc_ref_count = true) : m_ptr(nullptr) {
-    reset(ptr, inc_ref_count);
-  }
+#define CAF_OPENCL_PTR_ALIAS(aliasname, cltype, claddref, clrelease)           \
+  inline void intrusive_ptr_add_ref(cltype ptr) { claddref(ptr); }             \
+  inline void intrusive_ptr_release(cltype ptr) { clrelease(ptr); }            \
+  namespace caf {                                                              \
+  namespace opencl {                                                           \
+  using aliasname = intrusive_ptr<std::remove_pointer<cltype>::type>;          \
+  } /* namespace opencl */                                                     \
+  } // namespace caf
 
-  ~smart_ptr() {
-    reset();
-  }
+CAF_OPENCL_PTR_ALIAS(mem_ptr, cl_mem, clRetainMemObject, clReleaseMemObject)
 
-  smart_ptr(smart_ptr&& other) : m_ptr(nullptr) {
-    swap(other);
-  }
+CAF_OPENCL_PTR_ALIAS(event_ptr, cl_event, clRetainEvent, clReleaseEvent)
 
-  smart_ptr(const smart_ptr& other) : m_ptr(nullptr) {
-    reset(other.m_ptr);
-  }
+CAF_OPENCL_PTR_ALIAS(kernel_ptr, cl_kernel, clRetainKernel, clReleaseKernel)
 
-  smart_ptr& operator=(pointer ptr) {
-    reset(ptr);
-    return *this;
-  }
+CAF_OPENCL_PTR_ALIAS(context_ptr, cl_context, clRetainContext, clReleaseContext)
 
-  smart_ptr& operator=(smart_ptr&& other) {
-    swap(other);
-    return *this;
-  }
+CAF_OPENCL_PTR_ALIAS(program_ptr, cl_program, clRetainProgram, clReleaseProgram)
 
-  smart_ptr& operator=(const smart_ptr& other) {
-    smart_ptr tmp{other};
-    swap(tmp);
-    return *this;
-  }
+CAF_OPENCL_PTR_ALIAS(device_ptr, cl_device_id,
+                     clRetainDeviceDummy, clReleaseDeviceDummy)
 
-  void swap(smart_ptr& other) {
-    std::swap(m_ptr, other.m_ptr);
-  }
-
-  void reset(pointer ptr = nullptr, bool inc_ref_count = true) {
-    if (m_ptr) {
-      deref(m_ptr);
-    }
-    m_ptr = ptr;
-    if (ptr && inc_ref_count) {
-      ref(ptr);
-    }
-  }
-
-  // does not modify reference count of ptr
-  void adopt(pointer ptr) {
-    reset(ptr, false);
-  }
-
-  pointer get() const {
-    return m_ptr;
-  }
-
-  pointer operator->() const {
-    return m_ptr;
-  }
-
-  reference operator*() const {
-    return *m_ptr;
-  }
-
-  bool operator!() const {
-    return m_ptr == nullptr;
-  }
-
-  explicit operator bool() const {
-    return m_ptr != nullptr;
-  }
-
- private:
-  pointer m_ptr;
-};
-
-using mem_ptr = smart_ptr<cl_mem, clRetainMemObject, clReleaseMemObject>;
-using event_ptr = smart_ptr<cl_event, clRetainEvent, clReleaseEvent>;
-using kernel_ptr = smart_ptr<cl_kernel, clRetainKernel, clReleaseKernel>;
-using context_ptr = smart_ptr<cl_context, clRetainContext, clReleaseContext>;
-using program_ptr = smart_ptr<cl_program, clRetainProgram, clReleaseProgram>;
-using device_ptr =
-  smart_ptr<cl_device_id, clRetainDeviceDummy, clReleaseDeviceDummy>;
-using command_queue_ptr =
-  smart_ptr<cl_command_queue, clRetainCommandQueue, clReleaseCommandQueue>;
-
-} // namespace opencl
-} // namespace caf
+CAF_OPENCL_PTR_ALIAS(command_queue_ptr, cl_command_queue,
+                     clRetainCommandQueue, clReleaseCommandQueue)
 
 #endif // CAF_OPENCL_SMART_PTR_HPP

@@ -65,15 +65,17 @@ void opencl_metainfo::initialize() {
   auto lift = [](cl_device_id ptr) { return device_ptr{ptr, false}; };
   std::transform(ds.begin(), ds.end(), devices.begin(), lift);
   // create a context
-  m_context.adopt(v2get(CAF_CLF(clCreateContext), nullptr, num_devs, ds.data(),
-                        pfn_notify, nullptr));
+  m_context.reset(v2get(CAF_CLF(clCreateContext), nullptr, num_devs, ds.data(),
+                        pfn_notify, nullptr),
+                  false);
   for (auto& device : devices) {
     CAF_LOG_DEBUG("creating command queue for device(s)");
     command_queue_ptr cmd_queue;
     try {
-      cmd_queue.adopt(v2get(CAF_CLF(clCreateCommandQueue),
+      cmd_queue.reset(v2get(CAF_CLF(clCreateCommandQueue),
                             m_context.get(), device.get(),
-                            unsigned{CL_QUEUE_PROFILING_ENABLE}));
+                            unsigned{CL_QUEUE_PROFILING_ENABLE}),
+                      false);
     }
     catch (std::runtime_error&) {
       CAF_LOG_DEBUG("unable to create command queue for device");

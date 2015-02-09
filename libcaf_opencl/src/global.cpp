@@ -19,6 +19,14 @@
 
 #include "caf/opencl/global.hpp"
 
+cl_int clReleaseDeviceDummy(cl_device_id) {
+  return 0;
+}
+
+cl_int clRetainDeviceDummy(cl_device_id) {
+  return 0;
+}
+
 namespace caf {
 namespace opencl {
 
@@ -122,9 +130,6 @@ std::string get_opencl_error(cl_int err) {
       return "UNKNOWN_ERROR";
   }
 }
-
-cl_int clReleaseDeviceDummy(cl_device_id) { return 0; }
-cl_int clRetainDeviceDummy(cl_device_id) { return 0; }
 
 } // namespace opencl
 } // namespace caf
