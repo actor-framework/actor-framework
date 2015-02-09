@@ -38,7 +38,6 @@ namespace opencl {
 
 template <typename T, typename R>
 class command : public ref_counted {
-
  public:
   command(response_promise handle, intrusive_ptr<T> actor_facade,
           std::vector<cl_event> events, std::vector<mem_ptr> arguments,
@@ -49,8 +48,10 @@ class command : public ref_counted {
         m_queue(actor_facade->m_queue),
         m_events(std::move(events)),
         m_arguments(std::move(arguments)),
-        m_result(m_result_size),
-        m_msg(msg) {}
+        m_result(result_size),
+        m_msg(msg) {
+    // nop
+  }
 
   ~command() {
     for (auto& e : m_events) {
@@ -125,7 +126,9 @@ class command : public ref_counted {
   message m_msg; // required to keep the argument buffers alive (async copy)
 
   void handle_results() {
-    m_handle.deliver(m_actor_facade->m_map_result(m_result));
+    auto& map_fun = m_actor_facade->m_map_result;
+    auto msg = map_fun ? map_fun(m_result) : make_message(std::move(m_result));
+    m_handle.deliver(std::move(msg));
   }
 };
 
