@@ -41,7 +41,7 @@
 
 namespace caf {
 namespace mixin {
-        
+
 template<typename Base, int EventId = static_cast<int>(QEvent::User + 31337)>
 class actor_widget : public Base {
 
@@ -75,8 +75,8 @@ class actor_widget : public Base {
         if (event->type() == static_cast<QEvent::Type>(EventId)) {
             auto ptr = dynamic_cast<event_type*>(event);
             if (ptr) {
-                m_invoke.handle_message(m_companion.get(),
-                                        ptr->mptr.release(),
+                m_invoke.invoke_message(m_companion.get(),
+                                        *ptr->mptr.get(),
                                         m_companion->bhvr_stack().back(),
                                         m_companion->bhvr_stack().back_id());
                 return true;
