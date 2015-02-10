@@ -99,24 +99,24 @@ class philosopher : public event_based_actor {
         left(l),
         right(r) {
     // a philosopher that receives {eat} stops thinking and becomes hungry
-    thinking = behavior{
+    thinking.assign(
       [=](eat_atom) {
         become(hungry);
         send(left, take_atom::value);
         send(right, take_atom::value);
       }
-    };
+    );
     // wait for the first answer of a chopstick
-    hungry = behavior{
+    hungry.assign(
       [=](taken_atom) {
         become(granted);
       },
       [=](busy_atom) {
         become(denied);
       }
-    };
+    );
     // philosopher was able to obtain the first chopstick
-    granted = behavior{
+    granted.assign(
       [=](taken_atom) {
         aout(this) << name
                    << " has picked up chopsticks with IDs "
@@ -131,9 +131,9 @@ class philosopher : public event_based_actor {
         send(this, eat_atom::value);
         become(thinking);
       }
-    };
+    );
     // philosopher was *not* able to obtain the first chopstick
-    denied = behavior{
+    denied.assign(
       [=](taken_atom) {
         send(last_sender() == left ? left : right, put_atom::value);
         send(this, eat_atom::value);
@@ -143,9 +143,9 @@ class philosopher : public event_based_actor {
         send(this, eat_atom::value);
         become(thinking);
       }
-    };
+    );
     // philosopher obtained both chopstick and eats (for five seconds)
-    eating = behavior{
+    eating.assign(
       [=](think_atom) {
         send(left, put_atom::value);
         send(right, put_atom::value);
@@ -153,7 +153,7 @@ class philosopher : public event_based_actor {
         aout(this) << name << " puts down his chopsticks and starts to think\n";
         become(thinking);
       }
-    };
+    );
   }
 
  protected:
