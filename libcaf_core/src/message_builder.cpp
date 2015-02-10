@@ -99,6 +99,11 @@ class message_builder::dynamic_msg_data : public detail::message_data {
     m_type_token = (m_type_token << 6) | typenr;
   }
 
+  void clear() {
+    m_elements.clear();
+    m_type_token = 0xFFFFFFFF;
+  }
+
   std::vector<uniform_value> m_elements;
   uint32_t m_type_token;
 };
@@ -123,7 +128,7 @@ void message_builder::init() {
 }
 
 void message_builder::clear() {
-  data()->m_elements.clear();
+  data()->clear();
 }
 
 size_t message_builder::size() const {
