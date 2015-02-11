@@ -19,8 +19,8 @@
 
 #include "caf/io/network/interfaces.hpp"
 
-#include <errno.h>
 #include <netdb.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <net/if.h>
@@ -142,6 +142,39 @@ std::vector<std::string> interfaces::list_addresses(protocol proc,
       break;
   }
   return result;
+}
+
+optional<std::pair<std::string, protocol>>
+interfaces::native_address(const std::string& host,
+                                 optional<protocol> preferred) {
+  addrinfo hint;
+  memset(&hint, 0, sizeof(hint));
+  hint.ai_socktype = SOCK_STREAM;
+  if (preferred) {
+    hint.ai_family = *preferred == protocol::ipv4 ? AF_INET : AF_INET6;
+  }
+  addrinfo* tmp = nullptr;
+  if (getaddrinfo(host.c_str(), nullptr, &hint, &tmp)) {
+    return none;
+  }
+  std::unique_ptr<addrinfo, decltype(freeaddrinfo)*> addrs{tmp, freeaddrinfo};
+  for (auto i = addrs.get(); i != nullptr; i = i->ai_next) {
+    auto family = i->ai_family;
+    if (family == AF_INET || family == AF_INET6) {
+      char buffer[INET6_ADDRSTRLEN];
+      auto res = family == AF_INET
+          ? inet_ntop(family,
+                     &reinterpret_cast<sockaddr_in*>(i->ai_addr)->sin_addr,
+                     buffer, sizeof(buffer))
+          : inet_ntop(family,
+                     &reinterpret_cast<sockaddr_in6*>(i->ai_addr)->sin6_addr,
+                     buffer, sizeof(buffer));
+      if (res != nullptr) {
+        return {{res, family == AF_INET ? protocol::ipv4 : protocol::ipv6}};
+      }
+    }
+  }
+  return none;
 }
 
 } // namespace network

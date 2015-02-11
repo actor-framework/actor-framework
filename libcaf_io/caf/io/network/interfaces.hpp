@@ -17,13 +17,15 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_NETWORK_ADDRESSES_HPP
-#define CAF_IO_NETWORK_ADDRESSES_HPP
+#ifndef CAF_IO_NETWORK_INTERFACES_HPP
+#define CAF_IO_NETWORK_INTERFACES_HPP
 
 #include <map>
 #include <vector>
 #include <string>
 #include <utility>
+
+#include "caf/optional.hpp"
 
 #include "caf/io/network/protocol.hpp"
 
@@ -57,10 +59,16 @@ class interfaces {
    */
   static std::vector<std::string> list_addresses(protocol proc,
                                                  bool include_localhost = true);
+
+  /**
+   * Returns a native IPv4 or IPv6 translation of `host`.
+   **/
+  static optional<std::pair<std::string, protocol>>
+  native_address(const std::string& host, optional<protocol> preferred = none);
 };
 
 } // namespace network
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_NETWORK_ADDRESSES_HPP
+#endif // CAF_IO_NETWORK_INTERFACES_HPP
