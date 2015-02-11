@@ -345,7 +345,7 @@ void test_remote_actor(const char* app_path, bool run_remote_actor) {
   CAF_PRINT("first publish succeeded on port " << port1);
   auto port2 = io::publish(serv, 0, "127.0.0.1");
   CAF_CHECK(port2 > 0);
-  CAF_PRINT("second publish succeeded on port " << port1);
+  CAF_PRINT("second publish succeeded on port " << port2);
   CAF_LOGF_INFO("running on port " << port2);
   // publish local groups as well
   auto gport = io::publish_local_groups(0);
