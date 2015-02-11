@@ -33,16 +33,13 @@ namespace network {
  * for incoming data as well as for error handling.
  */
 class stream_manager : public manager {
-
  public:
-
-  virtual ~stream_manager();
+  ~stream_manager();
 
   /**
    * Called by the underlying IO device whenever it received data.
    */
   virtual void consume(const void* data, size_t num_bytes) = 0;
-
 };
 
 } // namespace network

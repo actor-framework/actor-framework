@@ -145,7 +145,7 @@ std::vector<std::string> interfaces::list_addresses(protocol proc,
 }
 
 optional<std::pair<std::string, protocol>>
-interfaces::get_addrinfo_of_host(const std::string& host,
+interfaces::native_address(const std::string& host,
                                  optional<protocol> preferred) {
   addrinfo hint;
   memset(&hint, 0, sizeof(hint));

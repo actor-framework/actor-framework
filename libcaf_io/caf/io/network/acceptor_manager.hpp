@@ -31,9 +31,7 @@ namespace network {
  * callbacks for incoming connections as well as for error handling.
  */
 class acceptor_manager : public manager {
-
  public:
-
   ~acceptor_manager();
 
   /**
@@ -41,7 +39,6 @@ class acceptor_manager : public manager {
    * a new connection is awaiting acceptance.
    */
   virtual void new_connection() = 0;
-
 };
 
 } // namespace network

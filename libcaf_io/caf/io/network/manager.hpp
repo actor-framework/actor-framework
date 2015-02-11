@@ -35,7 +35,7 @@ namespace network {
  */
 class manager : public ref_counted {
  public:
-  virtual ~manager();
+  ~manager();
 
   /**
    * Causes the manager to stop read operations on its IO device.
@@ -48,11 +48,6 @@ class manager : public ref_counted {
    */
   virtual void io_failure(operation op) = 0;
 };
-
-/**
- * @relates manager
- */
-using manager_ptr = intrusive_ptr<manager>;
 
 } // namespace network
 } // namespace io
