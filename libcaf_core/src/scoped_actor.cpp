@@ -49,7 +49,7 @@ blocking_actor* alloc() {
 } // namespace <anonymous>
 
 void scoped_actor::init(bool hide_actor) {
-  m_self.reset(alloc());
+  m_self.reset(alloc(), false);
   if (!hide_actor) {
     m_prev = CAF_SET_AID(m_self->id());
   }
