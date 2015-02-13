@@ -298,7 +298,7 @@ class message {
     m_vals.detach();
   }
 
-  void reset(data_ptr new_ptr = nullptr);
+  void reset(raw_ptr new_ptr = nullptr);
 
   explicit message(raw_ptr);
 

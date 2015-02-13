@@ -17,10 +17,10 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_RECURSIVE_QUEUE_NODE_HPP
-#define CAF_RECURSIVE_QUEUE_NODE_HPP
+#ifndef CAF_MAILBOX_ELEMENT_HPP
+#define CAF_MAILBOX_ELEMENT_HPP
 
-#include <cstdint>
+#include <cstddef>
 
 #include "caf/extend.hpp"
 #include "caf/message.hpp"
@@ -30,7 +30,11 @@
 
 #include "caf/mixin/memory_cached.hpp"
 
+#include "caf/detail/embedded.hpp"
 #include "caf/detail/disposer.hpp"
+#include "caf/detail/tuple_vals.hpp"
+#include "caf/detail/pair_storage.hpp"
+#include "caf/detail/message_data.hpp"
 
 namespace caf {
 
@@ -57,7 +61,23 @@ class mailbox_element : public extend<memory_managed>::
 
   using unique_ptr = std::unique_ptr<mailbox_element, detail::disposer>;
 
-  static unique_ptr create(actor_addr sender, message_id id, message msg);
+  static unique_ptr make(actor_addr sender, message_id id, message msg);
+
+  template <class... Vs>
+  static unique_ptr make_joint(actor_addr sender, message_id id, Vs&&... vs) {
+    using value_storage =
+      detail::tuple_vals<
+        typename unbox_message_element<
+          typename detail::strip_and_convert<Vs>::type
+        >::type...
+      >;
+    std::integral_constant<size_t, 2> tk;
+    using storage = detail::pair_storage<mailbox_element, value_storage>;
+    auto ptr = detail::memory::create<storage>(tk, std::move(sender), id,
+                                               std::forward<Vs>(vs)...);
+    ptr->first.msg.reset(&(ptr->second));
+    return unique_ptr{&(ptr->first)};
+  }
 
   inline bool is_high_priority() const {
     return mid.is_high_priority();
@@ -68,4 +88,4 @@ using mailbox_element_ptr = std::unique_ptr<mailbox_element, detail::disposer>;
 
 } // namespace caf
 
-#endif // CAF_RECURSIVE_QUEUE_NODE_HPP
+#endif // CAF_MAILBOX_ELEMENT_HPP

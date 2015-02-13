@@ -143,35 +143,33 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
    **************************************************************************/
 
   /**
-   * Sends `{what...} to `whom` using the priority `prio`.
+   * Sends `{vs...} to `whom` using the priority `prio`.
    */
-  template <class... Ts>
-  inline void send(message_priority prio, const channel& whom, Ts&&... what) {
-    static_assert(sizeof...(Ts) > 0, "sizeof...(Ts) == 0");
-    send_impl(prio, whom, make_message(std::forward<Ts>(what)...));
+  template <class... Vs>
+  inline void send(message_priority prio, const channel& whom, Vs&&... vs) {
+    static_assert(sizeof...(Vs) > 0, "sizeof...(Vs) == 0");
+    fast_send(prio, whom, std::forward<Vs>(vs)...);
+  }
+
+  /**
+   * Sends `{vs...} to `whom` using normal priority.
+   */
+  template <class... Vs>
+  inline void send(const channel& whom, Vs&&... vs) {
+    static_assert(sizeof...(Vs) > 0, "sizeof...(Vs) == 0");
+    fast_send(message_priority::normal, whom, std::forward<Vs>(vs)...);
   }
 
   /**
    * Sends `{what...} to `whom`.
    */
-  template <class... Ts>
-  inline void send(const channel& whom, Ts&&... what) {
-    static_assert(sizeof...(Ts) > 0, "sizeof...(Ts) == 0");
-    send_impl(message_priority::normal, whom,
-              make_message(std::forward<Ts>(what)...));
-  }
-
-  /**
-   * Sends `{what...} to `whom`.
-   */
-  template <class... Rs, class... Ts>
-  void send(const typed_actor<Rs...>& whom, Ts... what) {
+  template <class... Rs, class... Vs>
+  void send(const typed_actor<Rs...>& whom, Vs&&... vs) {
     check_typed_input(whom,
                       detail::type_list<typename detail::implicit_conversions<
-                        typename std::decay<Ts>::type
+                        typename std::decay<Vs>::type
                       >::type...>{});
-    send_impl(message_priority::normal, actor{whom.m_ptr.get()},
-              make_message(std::forward<Ts>(what)...));
+    fast_send(message_priority::normal, whom, std::forward<Vs>(vs)...);
   }
 
   /**
@@ -202,7 +200,7 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   void delayed_send(message_priority prio, const channel& whom,
                     const duration& rtime, Ts&&... args) {
     delayed_send_impl(prio, whom, rtime,
-                       make_message(std::forward<Ts>(args)...));
+                      make_message(std::forward<Ts>(args)...));
   }
 
   /**
@@ -530,7 +528,7 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
 
   template <class... Ts>
   inline mailbox_element_ptr new_mailbox_element(Ts&&... args) {
-    return mailbox_element::create(std::forward<Ts>(args)...);
+    return mailbox_element::make(std::forward<Ts>(args)...);
   }
 
  protected:
@@ -553,7 +551,37 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   /** @endcond */
 
  private:
-  void send_impl(message_priority prio, const channel& dest, message&& what);
+  template <class... Vs>
+  void fast_send_impl(message_priority mp, abstract_channel* dest, Vs&&... vs) {
+    if (!dest) {
+      return;
+    }
+    dest->enqueue(mailbox_element::make_joint(address(), message_id::make(mp),
+                                              std::forward<Vs>(vs)...),
+                  host());
+  }
+
+  template <class T, class V0, class... Vs>
+  typename std::enable_if<
+    !std::is_same<typename std::decay<V0>::type, message>::value
+  >::type
+  fast_send(message_priority mp, const T& dest, V0&& v0, Vs&&... vs) {
+    fast_send_impl(mp, actor_cast<abstract_channel*>(dest),
+                   std::forward<V0>(v0), std::forward<Vs>(vs)...);
+  }
+
+  template <class T>
+  void fast_send(message_priority mp, const T& dest, message what) {
+    send_impl(mp, actor_cast<abstract_channel*>(dest), std::move(what));
+  }
+
+  void send_impl(message_priority prio, abstract_channel* dest, message&& what);
+
+  template <class T>
+  void send_impl(message_priority prio, const T& dest, message&& what) {
+    send_impl(prio, actor_cast<abstract_channel*>(dest), std::move(what));
+  }
+
   void delayed_send_impl(message_priority prio, const channel& whom,
                          const duration& rtime, message data);
   using super = combined_type;

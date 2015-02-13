@@ -23,6 +23,7 @@
 #include <cstdint>
 
 #include "caf/config.hpp"
+#include "caf/message_priority.hpp"
 #include "caf/detail/comparable.hpp"
 
 namespace caf {
@@ -112,6 +113,11 @@ class message_id : detail::comparable<message_id> {
     message_id result;
     result.m_value = value;
     return result;
+  }
+
+  static inline message_id make(message_priority prio) {
+    message_id res;
+    return prio == message_priority::high ? res.with_high_priority() : res;
   }
 
   long compare(const message_id& other) const {

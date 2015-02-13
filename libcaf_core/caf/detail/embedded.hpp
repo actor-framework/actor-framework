@@ -17,58 +17,43 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/mailbox_element.hpp"
+#ifndef CAF_DETAIL_EMBEDDED_HPP
+#define CAF_DETAIL_EMBEDDED_HPP
+
+#include "caf/ref_counted.hpp"
+#include "caf/intrusive_ptr.hpp"
 
 namespace caf {
+namespace detail {
 
-mailbox_element::mailbox_element()
-    : next(nullptr),
-      prev(nullptr),
-      marked(false) {
-  // nop
-}
+template <class Base>
+class embedded : public Base {
+ public:
+  template <class... Vs>
+  embedded(intrusive_ptr<ref_counted> storage, Vs&&... vs)
+      : Base(std::forward<Vs>(vs)...),
+        m_storage(std::move(storage)) {
+    // nop
+  }
 
-mailbox_element::mailbox_element(actor_addr arg0, message_id arg1)
-    : next(nullptr),
-      prev(nullptr),
-      marked(false),
-      sender(std::move(arg0)),
-      mid(arg1) {
-  // nop
-}
+  ~embedded() {
+    // nop
+  }
 
-mailbox_element::mailbox_element(actor_addr arg0, message_id arg1, message arg2)
-    : next(nullptr),
-      prev(nullptr),
-      marked(false),
-      sender(std::move(arg0)),
-      mid(arg1),
-      msg(std::move(arg2)) {
-  // nop
-}
+  void request_deletion() override {
+    intrusive_ptr<ref_counted> guard;
+    guard.swap(m_storage);
+    // this code assumes that embedded is part of pair_storage<>,
+    // i.e., this object lives inside a union!
+    this->~embedded();
+  }
 
-mailbox_element::~mailbox_element() {
-  // nop
-}
+ protected:
+  intrusive_ptr<ref_counted> m_storage;
+};
 
-mailbox_element_ptr mailbox_element::make(actor_addr sender, message_id id,
-                                            message msg) {
-  auto ptr = detail::memory::create<mailbox_element>(std::move(sender), id,
-                                                     std::move(msg));
-  return mailbox_element_ptr{ptr};
-}
-
-/*
-mailbox_element::joint::joint(ref_counted* v0, actor_addr&& v1, message_id v2)
-    : embedded<mailbox_element>(v0, std::move(v1), v2) {
-  // nop
-}
-
-void mailbox_element::joint::request_deletion() {
-  sender = invalid_actor_addr;
-  msg.reset();
-  m_storage->deref();
-}
-*/
-
+} // namespace detail
 } // namespace caf
+
+#endif // CAF_DETAIL_EMBEDDED_HPP
+

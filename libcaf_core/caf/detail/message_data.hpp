@@ -69,29 +69,44 @@ class message_data : public ref_counted {
   bool equals(const message_data& other) const;
 
   class ptr {
-
    public:
-
     ptr() = default;
     ptr(ptr&&) = default;
     ptr(const ptr&) = default;
     ptr& operator=(ptr&&) = default;
     ptr& operator=(const ptr&) = default;
 
-    inline ptr(const std::nullptr_t&) {
+    inline explicit ptr(message_data* p) : m_ptr(p) {
       // nop
     }
 
-    inline explicit ptr(message_data* p) : m_ptr(p) {}
+    inline void detach() {
+      static_cast<void>(get_detached());
+    }
 
-    inline void detach() { static_cast<void>(get_detached()); }
+    inline message_data* operator->() {
+      return get_detached();
+    }
 
-    inline message_data* operator->() { return get_detached(); }
-    inline message_data& operator*() { return *get_detached(); }
-    inline const message_data* operator->() const { return m_ptr.get(); }
-    inline const message_data& operator*() const { return *m_ptr.get(); }
-    inline void swap(ptr& other) { m_ptr.swap(other.m_ptr); }
-    inline void reset(message_data* p = nullptr) { m_ptr.reset(p); }
+    inline message_data& operator*() {
+      return *get_detached();
+    }
+
+    inline const message_data* operator->() const {
+      return m_ptr.get();
+    }
+
+    inline const message_data& operator*() const {
+      return *m_ptr.get();
+    }
+
+    inline void swap(ptr& other) {
+      m_ptr.swap(other.m_ptr);
+    }
+
+    inline void reset(message_data* p = nullptr) {
+      m_ptr.reset(p);
+    }
 
     inline explicit operator bool() const {
       return static_cast<bool>(m_ptr);
@@ -102,11 +117,8 @@ class message_data : public ref_counted {
     }
 
    private:
-
     message_data* get_detached();
-
     intrusive_ptr<message_data> m_ptr;
-
   };
 };
 

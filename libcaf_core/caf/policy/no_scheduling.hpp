@@ -52,9 +52,9 @@ class no_scheduling {
   using timeout_type = std::chrono::high_resolution_clock::time_point;
 
   template <class Actor>
-  void enqueue(Actor* self, const actor_addr& sender, message_id mid,
-               message& msg, execution_unit*) {
-    auto ptr = self->new_mailbox_element(sender, mid, std::move(msg));
+  void enqueue(Actor* self, mailbox_element_ptr ptr, execution_unit*) {
+    auto mid = ptr->mid;
+    auto sender = ptr->sender;
     // returns false if mailbox has been closed
     if (!self->mailbox().synchronized_enqueue(m_mtx, m_cv, ptr.release())) {
       if (mid.is_request()) {

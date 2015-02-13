@@ -54,7 +54,14 @@ class proper_actor_base : public Policies::resume_policy::template
 
   void enqueue(const actor_addr& sender, message_id mid,
                message msg, execution_unit* eu) override {
-    scheduling_policy().enqueue(dptr(), sender, mid, msg, eu);
+    auto d = dptr();
+    scheduling_policy().enqueue(d, d->new_mailbox_element(sender, mid,
+                                                          std::move(msg)),
+                                eu);
+  }
+
+  void enqueue(mailbox_element_ptr what, execution_unit* eu) override {
+    scheduling_policy().enqueue(dptr(), std::move(what), eu);
   }
 
   void launch(bool hide, bool lazy, execution_unit* eu) {

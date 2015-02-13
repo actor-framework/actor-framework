@@ -53,9 +53,9 @@ class cooperative_scheduling {
   }
 
   template <class Actor>
-  void enqueue(Actor* self, const actor_addr& sender, message_id mid,
-               message& msg, execution_unit* eu) {
-    auto ptr = self->new_mailbox_element(sender, mid, std::move(msg));
+  void enqueue(Actor* self, mailbox_element_ptr ptr, execution_unit* eu) {
+    auto mid = ptr->mid;
+    auto sender = ptr->sender;
     switch (self->mailbox().enqueue(ptr.release())) {
       case detail::enqueue_result::unblocked_reader: {
         // re-schedule actor

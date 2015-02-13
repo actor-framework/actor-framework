@@ -17,58 +17,53 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/mailbox_element.hpp"
+#ifndef CAF_DETAIL_PAIR_STORAGE_HPP
+#define CAF_DETAIL_PAIR_STORAGE_HPP
+
+#include "caf/extend.hpp"
+#include "caf/ref_counted.hpp"
+
+#include "caf/detail/embedded.hpp"
+
+#include "caf/mixin/memory_cached.hpp"
 
 namespace caf {
+namespace detail {
 
-mailbox_element::mailbox_element()
-    : next(nullptr),
-      prev(nullptr),
-      marked(false) {
-  // nop
-}
+template <class FirstType, class SecondType>
+class pair_storage : public extend<ref_counted>::
+                            with<mixin::memory_cached> {
+ public:
+  union { embedded<FirstType> first; };
+  union { embedded<SecondType> second; };
 
-mailbox_element::mailbox_element(actor_addr arg0, message_id arg1)
-    : next(nullptr),
-      prev(nullptr),
-      marked(false),
-      sender(std::move(arg0)),
-      mid(arg1) {
-  // nop
-}
+  template <class... Vs>
+  pair_storage(std::integral_constant<size_t, 0>, Vs&&... vs)
+      : first(this),
+        second(this, std::forward<Vs>(vs)...) {
+    // nop
+  }
 
-mailbox_element::mailbox_element(actor_addr arg0, message_id arg1, message arg2)
-    : next(nullptr),
-      prev(nullptr),
-      marked(false),
-      sender(std::move(arg0)),
-      mid(arg1),
-      msg(std::move(arg2)) {
-  // nop
-}
+  template <class V0, class... Vs>
+  pair_storage(std::integral_constant<size_t, 1>, V0&& v0, Vs&&... vs)
+      : first(this, std::forward<V0>(v0)),
+        second(this, std::forward<Vs>(vs)...) {
+    // nop
+  }
 
-mailbox_element::~mailbox_element() {
-  // nop
-}
+  template <class V0, class V1, class... Vs>
+  pair_storage(std::integral_constant<size_t, 2>, V0&& v0, V1&& v1, Vs&&... vs)
+      : first(this, std::forward<V0>(v0), std::forward<V1>(v1)),
+        second(this, std::forward<Vs>(vs)...) {
+    // nop
+  }
 
-mailbox_element_ptr mailbox_element::make(actor_addr sender, message_id id,
-                                            message msg) {
-  auto ptr = detail::memory::create<mailbox_element>(std::move(sender), id,
-                                                     std::move(msg));
-  return mailbox_element_ptr{ptr};
-}
+  ~pair_storage() {
+    // nop
+  }
+};
 
-/*
-mailbox_element::joint::joint(ref_counted* v0, actor_addr&& v1, message_id v2)
-    : embedded<mailbox_element>(v0, std::move(v1), v2) {
-  // nop
-}
-
-void mailbox_element::joint::request_deletion() {
-  sender = invalid_actor_addr;
-  msg.reset();
-  m_storage->deref();
-}
-*/
-
+} // namespace detail
 } // namespace caf
+
+#endif // CAF_DETAIL_PAIR_STORAGE_HPP
