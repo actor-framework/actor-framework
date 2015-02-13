@@ -37,6 +37,7 @@
 #include "caf/mixin/memory_cached.hpp"
 
 #include "caf/detail/memory.hpp"
+#include "caf/detail/disposer.hpp"
 
 namespace boost {
 namespace asio {

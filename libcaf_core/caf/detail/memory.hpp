@@ -45,13 +45,6 @@ constexpr size_t s_max_elements = 20;       // don't create > 20 elements
 
 } // namespace <anonymous>
 
-struct disposer {
-  inline void operator()(memory_managed* ptr) const {
-    ptr->request_deletion();
-  }
-
-};
-
 class instance_wrapper {
 
  public:

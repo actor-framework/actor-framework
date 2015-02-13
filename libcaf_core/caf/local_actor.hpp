@@ -49,6 +49,7 @@
 #include "caf/mixin/memory_cached.hpp"
 
 #include "caf/detail/logging.hpp"
+#include "caf/detail/disposer.hpp"
 #include "caf/detail/behavior_stack.hpp"
 #include "caf/detail/typed_actor_util.hpp"
 #include "caf/detail/single_reader_queue.hpp"

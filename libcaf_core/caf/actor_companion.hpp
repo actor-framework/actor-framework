@@ -29,7 +29,7 @@
 #include "caf/mixin/sync_sender.hpp"
 #include "caf/mixin/behavior_stack_based.hpp"
 
-#include "caf/detail/memory.hpp"
+#include "caf/detail/disposer.hpp"
 #include "caf/detail/shared_spinlock.hpp"
 
 namespace caf {
@@ -39,16 +39,13 @@ namespace caf {
  * callback to another object, thus serving as gateway to
  * allow any object to interact with other actors.
  */
-class actor_companion : public extend<local_actor, actor_companion>::
-                 with<mixin::behavior_stack_based<behavior>::impl,
-                  mixin::sync_sender<nonblocking_response_handle_tag>::impl> {
-
-  using lock_type = detail::shared_spinlock;
-
+class actor_companion
+  : public extend<local_actor, actor_companion>::
+           with<mixin::behavior_stack_based<behavior>::impl,
+                mixin::sync_sender<nonblocking_response_handle_tag>::impl> {
  public:
-
+  using lock_type = detail::shared_spinlock;
   using message_pointer = std::unique_ptr<mailbox_element, detail::disposer>;
-
   using enqueue_handler = std::function<void (message_pointer)>;
 
   /**
@@ -64,16 +61,14 @@ class actor_companion : public extend<local_actor, actor_companion>::
   void on_enqueue(enqueue_handler handler);
 
   void enqueue(const actor_addr& sender, message_id mid,
-         message content, execution_unit* host) override;
+               message content, execution_unit* host) override;
 
  private:
-
   // set by parent to define custom enqueue action
   enqueue_handler m_on_enqueue;
 
   // guards access to m_handler
   lock_type m_lock;
-
 };
 
 /**

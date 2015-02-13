@@ -20,6 +20,7 @@
 #ifndef CAF_FWD_HPP
 #define CAF_FWD_HPP
 
+#include <memory>
 #include <cstdint>
 
 namespace caf {
@@ -45,6 +46,7 @@ class execution_unit;
 class abstract_actor;
 class abstract_group;
 class blocking_actor;
+class mailbox_element;
 class message_handler;
 class uniform_type_info;
 class event_based_actor;
@@ -90,12 +92,15 @@ namespace scheduler {
 
 namespace detail {
   class logging;
+  class disposer;
   class singletons;
   class message_data;
   class group_manager;
   class actor_registry;
   class uniform_type_info_map;
 } // namespace detail
+
+using mailbox_element_ptr = std::unique_ptr<mailbox_element, detail::disposer>;
 
 } // namespace caf
 

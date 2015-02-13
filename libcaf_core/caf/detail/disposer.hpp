@@ -17,55 +17,23 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_RECURSIVE_QUEUE_NODE_HPP
-#define CAF_RECURSIVE_QUEUE_NODE_HPP
+#ifndef CAF_DETAIL_DISPOSER_HPP
+#define CAF_DETAIL_DISPOSER_HPP
 
-#include <cstdint>
-
-#include "caf/extend.hpp"
-#include "caf/message.hpp"
-#include "caf/actor_addr.hpp"
-#include "caf/message_id.hpp"
-#include "caf/ref_counted.hpp"
-
-#include "caf/mixin/memory_cached.hpp"
-
-#include "caf/detail/disposer.hpp"
+#include "caf/memory_managed.hpp"
 
 namespace caf {
+namespace detail {
 
-class mailbox_element : public extend<memory_managed>::
-                               with<mixin::memory_cached> {
+class disposer {
  public:
-  mailbox_element* next; // intrusive next pointer
-  mailbox_element* prev; // intrusive previous pointer
-  bool marked;           // denotes if this node is currently processed
-  actor_addr sender;
-  message_id mid;
-  message msg;           // 'content field'
-
-  mailbox_element();
-  mailbox_element(actor_addr sender, message_id id);
-  mailbox_element(actor_addr sender, message_id id, message data);
-
-  ~mailbox_element();
-
-  mailbox_element(mailbox_element&&) = delete;
-  mailbox_element(const mailbox_element&) = delete;
-  mailbox_element& operator=(mailbox_element&&) = delete;
-  mailbox_element& operator=(const mailbox_element&) = delete;
-
-  using unique_ptr = std::unique_ptr<mailbox_element, detail::disposer>;
-
-  static unique_ptr create(actor_addr sender, message_id id, message msg);
-
-  inline bool is_high_priority() const {
-    return mid.is_high_priority();
+  inline void operator()(memory_managed* ptr) const {
+    ptr->request_deletion();
   }
 };
 
-using mailbox_element_ptr = std::unique_ptr<mailbox_element, detail::disposer>;
-
+} // namespace detail
 } // namespace caf
 
-#endif // CAF_RECURSIVE_QUEUE_NODE_HPP
+#endif // CAF_DETAIL_DISPOSER_HPP
+
