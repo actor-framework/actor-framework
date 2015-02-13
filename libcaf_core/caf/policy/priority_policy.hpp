@@ -35,7 +35,7 @@ class priority_policy {
    * Returns the next message from the mailbox or `nullptr` if it's empty.
    */
   template <class Actor>
-  unique_mailbox_element_pointer next_message(Actor* self);
+  mailbox_element_ptr next_message(Actor* self);
 
   /**
    * Queries whether the mailbox is not empty.
@@ -47,7 +47,7 @@ class priority_policy {
    * Stores the message in a cache for later retrieval.
    */
   template <class Actor>
-  void push_to_cache(Actor* self, unique_mailbox_element_pointer ptr);
+  void push_to_cache(Actor* self, mailbox_element_ptr ptr);
 
   /**
    * Removes the first element from the cache matching predicate `p`.

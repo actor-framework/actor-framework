@@ -361,7 +361,7 @@ class broker : public extend<local_actor>::
   policy::sequential_invoke m_invoke_policy;
 
   middleman& m_mm;
-  std::deque<unique_mailbox_element_pointer> m_cache;
+  std::deque<mailbox_element_ptr> m_cache;
 };
 
 class broker::functor_based : public extend<broker>::

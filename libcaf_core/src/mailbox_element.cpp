@@ -28,6 +28,15 @@ mailbox_element::mailbox_element()
   // nop
 }
 
+mailbox_element::mailbox_element(actor_addr arg0, message_id arg1)
+    : next(nullptr),
+      prev(nullptr),
+      marked(false),
+      sender(std::move(arg0)),
+      mid(arg1) {
+  // nop
+}
+
 mailbox_element::mailbox_element(actor_addr arg0, message_id arg1, message arg2)
     : next(nullptr),
       prev(nullptr),
@@ -40,6 +49,13 @@ mailbox_element::mailbox_element(actor_addr arg0, message_id arg1, message arg2)
 
 mailbox_element::~mailbox_element() {
   // nop
+}
+
+mailbox_element_ptr mailbox_element::create(actor_addr sender, message_id id,
+                                            message msg) {
+  auto ptr = detail::memory::create<mailbox_element>(std::move(sender), id,
+                                                     std::move(msg));
+  return mailbox_element_ptr{ptr};
 }
 
 } // namespace caf

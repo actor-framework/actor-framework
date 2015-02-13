@@ -56,7 +56,7 @@ class no_scheduling {
                message& msg, execution_unit*) {
     auto ptr = self->new_mailbox_element(sender, mid, std::move(msg));
     // returns false if mailbox has been closed
-    if (!self->mailbox().synchronized_enqueue(m_mtx, m_cv, ptr)) {
+    if (!self->mailbox().synchronized_enqueue(m_mtx, m_cv, ptr.release())) {
       if (mid.is_request()) {
         detail::sync_request_bouncer srb{self->exit_reason()};
         srb(sender, mid);

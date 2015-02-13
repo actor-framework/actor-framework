@@ -528,7 +528,7 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   }
 
   template <class... Ts>
-  inline mailbox_element* new_mailbox_element(Ts&&... args) {
+  inline mailbox_element_ptr new_mailbox_element(Ts&&... args) {
     return mailbox_element::create(std::forward<Ts>(args)...);
   }
 

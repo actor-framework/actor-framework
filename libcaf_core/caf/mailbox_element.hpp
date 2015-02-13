@@ -30,10 +30,7 @@
 
 #include "caf/mixin/memory_cached.hpp"
 
-// needs access to constructor + destructor to initialize m_dummy_node
 namespace caf {
-
-class local_actor;
 
 class mailbox_element : public extend<memory_managed>::
                                with<mixin::memory_cached> {
@@ -46,6 +43,7 @@ class mailbox_element : public extend<memory_managed>::
   message msg;           // 'content field'
 
   mailbox_element();
+  mailbox_element(actor_addr sender, message_id id);
   mailbox_element(actor_addr sender, message_id id, message data);
 
   ~mailbox_element();
@@ -55,19 +53,16 @@ class mailbox_element : public extend<memory_managed>::
   mailbox_element& operator=(mailbox_element&&) = delete;
   mailbox_element& operator=(const mailbox_element&) = delete;
 
-  template <class T>
-  static mailbox_element* create(actor_addr sender, message_id id, T&& data) {
-    return detail::memory::create<mailbox_element>(std::move(sender), id,
-                                                   std::forward<T>(data));
-  }
+  using unique_ptr = std::unique_ptr<mailbox_element, detail::disposer>;
+
+  static unique_ptr create(actor_addr sender, message_id id, message msg);
 
   inline bool is_high_priority() const {
     return mid.is_high_priority();
   }
 };
 
-using unique_mailbox_element_pointer =
-  std::unique_ptr<mailbox_element, detail::disposer>;
+using mailbox_element_ptr = std::unique_ptr<mailbox_element, detail::disposer>;
 
 } // namespace caf
 

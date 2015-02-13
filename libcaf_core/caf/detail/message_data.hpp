@@ -78,6 +78,10 @@ class message_data : public ref_counted {
     ptr& operator=(ptr&&) = default;
     ptr& operator=(const ptr&) = default;
 
+    inline ptr(const std::nullptr_t&) {
+      // nop
+    }
+
     inline explicit ptr(message_data* p) : m_ptr(p) {}
 
     inline void detach() { static_cast<void>(get_detached()); }

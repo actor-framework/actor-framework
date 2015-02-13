@@ -80,7 +80,7 @@ class proper_actor_base : public Policies::resume_policy::template
 
   // member functions from priority policy
 
-  unique_mailbox_element_pointer next_message() {
+  mailbox_element_ptr next_message() {
     return priority_policy().next_message(dptr());
   }
 
@@ -88,7 +88,7 @@ class proper_actor_base : public Policies::resume_policy::template
     return priority_policy().has_next_message(dptr());
   }
 
-  void push_to_cache(unique_mailbox_element_pointer ptr) {
+  void push_to_cache(mailbox_element_ptr ptr) {
     priority_policy().push_to_cache(dptr(), std::move(ptr));
   }
 

@@ -78,7 +78,7 @@ class prioritizing {
   }
 
   template <class Actor>
-  void push_to_cache(Actor* self, unique_mailbox_element_pointer ptr) {
+  void push_to_cache(Actor* self, mailbox_element_ptr ptr) {
     auto high_prio = [](const mailbox_element& val) {
       return val.is_high_priority();
     };

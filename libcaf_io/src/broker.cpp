@@ -187,9 +187,9 @@ void broker::invoke_message(const actor_addr& sender, message_id mid,
         break;
       case policy::im_skipped: {
         CAF_LOG_DEBUG("handle_message returned hm_skip_msg or hm_cache_msg");
-        auto e = mailbox_element::create(sender, bid,
-                                         std::move(m_dummy_node.msg));
-        m_cache.push_back(unique_mailbox_element_pointer{e});
+        auto ptr = mailbox_element::create(sender, bid,
+                                           std::move(m_dummy_node.msg));
+        m_cache.push_back(std::move(ptr));
         break;
       }
     }
