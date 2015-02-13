@@ -39,19 +39,13 @@ class sequential_invoke : public invoke_policy<sequential_invoke> {
   }
 
   template <class Actor>
-  mailbox_element* hm_begin(Actor* self, mailbox_element& node) {
-    self->current_node(&node);
-    return nullptr;
+  void hm_begin(Actor* self, mailbox_element_ptr& node) {
+    node.swap(self->current_element());
   }
 
   template <class Actor>
-  void hm_cleanup(Actor* self, mailbox_element*) {
-    self->current_node(self->dummy_node());
-  }
-
-  template <class Actor>
-  void hm_revert(Actor* self, mailbox_element*) {
-    self->current_node(self->dummy_node());
+  void hm_cleanup(Actor* self, mailbox_element_ptr& node) {
+    node.swap(self->current_element());
   }
 };
 

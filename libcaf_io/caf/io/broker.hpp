@@ -30,8 +30,9 @@
 #include "caf/mixin/functor_based.hpp"
 #include "caf/mixin/behavior_stack_based.hpp"
 
-#include "caf/policy/not_prioritizing.hpp"
 #include "caf/policy/sequential_invoke.hpp"
+
+#include "caf/detail/intrusive_partitioned_list.hpp"
 
 #include "caf/io/fwd.hpp"
 #include "caf/io/accept_handle.hpp"
@@ -274,10 +275,18 @@ class broker : public extend<local_actor>::
 
   accept_handle add_tcp_doorman(network::native_socket fd);
 
+  policy::invoke_message_result invoke_message(mailbox_element_ptr& msg,
+                                               behavior& bhvr,
+                                               message_id mid);
+
+  void invoke_message(mailbox_element_ptr& msg);
+
   void invoke_message(const actor_addr& sender, message_id mid, message& msg);
 
-  void enqueue(const actor_addr&, message_id, message,
-               execution_unit*) override;
+  void enqueue(const actor_addr&, message_id,
+               message, execution_unit*) override;
+
+  void enqueue(mailbox_element_ptr, execution_unit*) override;
 
   /**
    * Closes all connections and acceptors.
@@ -361,7 +370,7 @@ class broker : public extend<local_actor>::
   policy::sequential_invoke m_invoke_policy;
 
   middleman& m_mm;
-  std::deque<mailbox_element_ptr> m_cache;
+  detail::intrusive_partitioned_list<mailbox_element, detail::disposer> m_cache;
 };
 
 class broker::functor_based : public extend<broker>::

@@ -42,25 +42,18 @@ class nestable_invoke : public invoke_policy<nestable_invoke> {
   }
 
   template <class Actor>
-  mailbox_element* hm_begin(Actor* self, mailbox_element& node) {
-    auto previous = self->current_node();
-    self->current_node(&node);
-    self->push_timeout();
-    node.marked = true;
-    return previous;
+  void hm_begin(Actor* self, mailbox_element_ptr& node) {
+    node->marked = true;
+    node.swap(self->current_element());
   }
 
   template <class Actor>
-  void hm_cleanup(Actor* self, mailbox_element* previous) {
-    self->current_node()->marked = false;
-    self->current_node(previous);
-    self->pop_timeout();
-  }
-
-  template <class Actor>
-  void hm_revert(Actor* self, mailbox_element* previous) {
-    // same operation for blocking, i.e., nestable, invoke
-    hm_cleanup(self, previous);
+  void hm_cleanup(Actor* self, mailbox_element_ptr& node) {
+    auto& ref = self->current_element();
+    if (ref) {
+      ref->marked = false;
+    }
+    ref.swap(node);
   }
 };
 

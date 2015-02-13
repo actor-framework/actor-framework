@@ -130,49 +130,47 @@ void broker::doorman::io_failure(network::operation op) {
 
 class broker::continuation {
  public:
-  continuation(broker_ptr ptr, actor_addr from, message_id mid, message&& msg)
-      : m_self(std::move(ptr)),
-        m_from(from),
-        m_mid(mid),
-        m_data(std::move(msg)) {
+  continuation(broker_ptr bptr, mailbox_element_ptr mptr)
+      : m_self(std::move(bptr)),
+        m_ptr(std::move(mptr)) {
     // nop
   }
 
   inline void operator()() {
     CAF_PUSH_AID(m_self->id());
     CAF_LOG_TRACE("");
-    m_self->invoke_message(m_from, m_mid, m_data);
+    m_self->invoke_message(m_ptr);
   }
 
  private:
   broker_ptr m_self;
-  actor_addr m_from;
-  message_id m_mid;
-  message m_data;
+  mailbox_element_ptr m_ptr;
 };
 
-void broker::invoke_message(const actor_addr& sender, message_id mid,
-                            message& msg) {
+policy::invoke_message_result broker::invoke_message(mailbox_element_ptr& msg,
+                                                     behavior& bhvr,
+                                                     message_id mid) {
+  return m_invoke_policy.invoke_message(this, msg, bhvr, mid);
+}
+
+void broker::invoke_message(mailbox_element_ptr& ptr) {
   CAF_LOG_TRACE(CAF_TARG(msg, to_string));
   if (planned_exit_reason() != exit_reason::not_exited
       || bhvr_stack().empty()) {
     CAF_LOG_DEBUG("actor already finished execution"
                   << ", planned_exit_reason = " << planned_exit_reason()
                   << ", bhvr_stack().empty() = " << bhvr_stack().empty());
-    if (mid.valid()) {
+    if (ptr->mid.valid()) {
       detail::sync_request_bouncer srb{exit_reason()};
-      srb(sender, mid);
+      srb(ptr->sender, ptr->mid);
     }
     return;
   }
   // prepare actor for invocation of message handler
-  m_dummy_node.sender = sender;
-  m_dummy_node.mid = mid;
-  std::swap(msg, m_dummy_node.msg);
   try {
     auto bhvr = bhvr_stack().back();
     auto bid = bhvr_stack().back_id();
-    switch (m_invoke_policy.invoke_message(this, m_dummy_node, bhvr, bid)) {
+    switch (invoke_message(ptr, bhvr, bid)) {
       case policy::im_success: {
         CAF_LOG_DEBUG("handle_message returned hm_msg_handled");
         while (!bhvr_stack().empty()
@@ -187,9 +185,9 @@ void broker::invoke_message(const actor_addr& sender, message_id mid,
         break;
       case policy::im_skipped: {
         CAF_LOG_DEBUG("handle_message returned hm_skip_msg or hm_cache_msg");
-        auto ptr = mailbox_element::make(sender, bid,
-                                           std::move(m_dummy_node.msg));
-        m_cache.push_back(std::move(ptr));
+        if (ptr) {
+          m_cache.push_second_back(ptr.release());
+        }
         break;
       }
     }
@@ -205,9 +203,6 @@ void broker::invoke_message(const actor_addr& sender, message_id mid,
     CAF_LOG_ERROR("broker killed due to an unknown exception");
     quit(exit_reason::unhandled_exception);
   }
-  // restore dummy node
-  m_dummy_node.sender = invalid_actor_addr;
-  std::swap(m_dummy_node.msg, msg);
   // cleanup if needed
   if (planned_exit_reason() != exit_reason::not_exited) {
     cleanup(planned_exit_reason());
@@ -222,27 +217,23 @@ void broker::invoke_message(const actor_addr& sender, message_id mid,
   }
 }
 
+void broker::invoke_message(const actor_addr& v0, message_id v1, message& v2) {
+  auto ptr = mailbox_element::make(v0, v1, message{});
+  ptr->msg.swap(v2);
+  invoke_message(ptr);
+  if (ptr) {
+    ptr->msg.swap(v2);
+  }
+}
+
 bool broker::invoke_message_from_cache() {
   CAF_LOG_TRACE("");
   auto bhvr = bhvr_stack().back();
-  auto mid = bhvr_stack().back_id();
-  auto i = m_cache.begin();
-  auto e = m_cache.end();
+  auto bid = bhvr_stack().back_id();
+  auto i = m_cache.second_begin();
+  auto e = m_cache.second_end();
   CAF_LOG_DEBUG(std::distance(i, e) << " elements in cache");
-  while (i != e) {
-    switch (m_invoke_policy.invoke_message(this, *(i->get()), bhvr, mid)) {
-      case policy::im_success:
-        m_cache.erase(i);
-        return true;
-      case policy::im_skipped:
-        ++i;
-        break;
-      case policy::im_dropped:
-        i = m_cache.erase(i);
-        break;
-    }
-  }
-  return false;
+  return m_cache.invoke(this, i, e, bhvr, bid);
 }
 
 void broker::write(connection_handle hdl, size_t bs, const void* buf) {
@@ -252,10 +243,13 @@ void broker::write(connection_handle hdl, size_t bs, const void* buf) {
   out.insert(out.end(), first, last);
 }
 
+void broker::enqueue(mailbox_element_ptr ptr, execution_unit*) {
+  parent().backend().post(continuation{this, std::move(ptr)});
+}
+
 void broker::enqueue(const actor_addr& sender, message_id mid, message msg,
-                     execution_unit*) {
-  parent().backend().post(continuation{this, sender,
-                                       mid, std::move(msg)});
+                     execution_unit* eu) {
+  enqueue(mailbox_element::make(sender, mid, std::move(msg)), eu);
 }
 
 broker::broker() : m_mm(*middleman::instance()) {

@@ -86,14 +86,14 @@ class invoke_policy {
   //   - yes: cleanup()
   //   - no: revert(...) -> set self back to state it had before begin()
   template <class Actor, class Fun>
-  invoke_message_result invoke_message(Actor* self, mailbox_element& node,
+  invoke_message_result invoke_message(Actor* self, mailbox_element_ptr& node,
                                        Fun& fun, message_id awaited_response) {
     CAF_LOG_TRACE("");
     bool handle_sync_failure_on_mismatch = true;
-    if (dptr()->hm_should_skip(node)) {
+    if (dptr()->hm_should_skip(*node)) {
       return im_skipped;
     }
-    switch (this->filter_msg(self, node)) {
+    switch (this->filter_msg(self, *node)) {
       case msg_type::normal_exit:
         CAF_LOG_DEBUG("dropped normal exit signal");
         return im_dropped;
@@ -113,7 +113,7 @@ class invoke_policy {
         return im_success;
       case msg_type::timeout: {
         CAF_LOG_DEBUG("handle timeout message");
-        auto& tm = node.msg.get_as<timeout_msg>(0);
+        auto& tm = node->msg.get_as<timeout_msg>(0);
         self->handle_timeout(fun, tm.timeout_id);
         if (awaited_response.valid()) {
           self->mark_arrived(awaited_response);
@@ -126,12 +126,12 @@ class invoke_policy {
         CAF_ANNOTATE_FALLTHROUGH;
       case msg_type::sync_response:
         CAF_LOG_DEBUG("handle as synchronous response: "
-                 << CAF_TARG(node.msg, to_string) << ", "
-                 << CAF_MARG(node.mid, integer_value) << ", "
+                 << CAF_TARG(node->msg, to_string) << ", "
+                 << CAF_MARG(node->mid, integer_value) << ", "
                  << CAF_MARG(awaited_response, integer_value));
-        if (awaited_response.valid() && node.mid == awaited_response) {
-          auto previous_node = dptr()->hm_begin(self, node);
-          auto res = invoke_fun(self, node.msg, node.mid, fun);
+        if (awaited_response.valid() && node->mid == awaited_response) {
+          dptr()->hm_begin(self, node);
+          auto res = invoke_fun(self, fun);
           if (!res && handle_sync_failure_on_mismatch) {
             CAF_LOG_WARNING("sync failure occured in actor "
                      << "with ID " << self->id());
@@ -139,20 +139,19 @@ class invoke_policy {
           }
           self->mark_arrived(awaited_response);
           self->remove_handler(awaited_response);
-          dptr()->hm_cleanup(self, previous_node);
+          dptr()->hm_cleanup(self, node);
           return im_success;
         }
         return im_skipped;
       case msg_type::ordinary:
         if (!awaited_response.valid()) {
-          auto previous_node = dptr()->hm_begin(self, node);
-          auto res = invoke_fun(self, node.msg, node.mid, fun);
+          dptr()->hm_begin(self, node);
+          auto res = invoke_fun(self, fun);
+          dptr()->hm_cleanup(self, node);
           if (res) {
-            dptr()->hm_cleanup(self, previous_node);
             return im_success;
           }
           // no match (restore self members)
-          dptr()->hm_revert(self, previous_node);
         }
         CAF_LOG_DEBUG_IF(awaited_response.valid(),
                   "ignored message; await response: "
@@ -180,14 +179,14 @@ class invoke_policy {
   // - extracts response message from handler
   // - returns true if fun was successfully invoked
   template <class Actor, class Fun, class MaybeResponseHdl = int>
-  optional<message> invoke_fun(Actor* self, message& msg, message_id& mid,
-                               Fun& fun,
+  optional<message> invoke_fun(Actor* self, Fun& fun,
                                MaybeResponseHdl hdl = MaybeResponseHdl{}) {
 #   ifdef CAF_LOG_LEVEL
       auto msg_str = to_string(msg);
 #   endif
     CAF_LOG_TRACE(CAF_MARG(mid, integer_value) << ", msg = " << msg_str);
-    auto res = fun(msg); // might change mid
+    auto mid = self->current_element()->mid;
+    auto res = fun(self->current_element()->msg);
     CAF_LOG_DEBUG_IF(res, "actor did consume message: " << msg_str);
     CAF_LOG_DEBUG_IF(!res, "actor did ignore message: " << msg_str);
     if (!res) {

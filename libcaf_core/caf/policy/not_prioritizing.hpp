@@ -48,26 +48,13 @@ class not_prioritizing {
     self->mailbox().cache().push_second_back(ptr.release());
   }
 
-  template <class Actor, class... Ts>
-  bool invoke_from_cache(Actor* self, Ts&... args) {
+  template <class Actor, class... Vs>
+  bool invoke_from_cache(Actor* self, Vs&... args) {
     auto& cache = self->mailbox().cache();
     auto i = cache.second_begin();
     auto e = cache.second_end();
     CAF_LOG_DEBUG(std::distance(i, e) << " elements in cache");
-    while (i != e) {
-      switch (self->invoke_message(*i, args...)) {
-        case im_dropped:
-          i = cache.erase(i);
-          break;
-        case im_success:
-          cache.erase(i);
-          return true;
-        default:
-          ++i;
-          break;
-      }
-    }
-    return false;
+    return cache.invoke(self, i, e, args...);
   }
 };
 

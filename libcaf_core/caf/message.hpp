@@ -300,6 +300,8 @@ class message {
 
   void reset(raw_ptr new_ptr = nullptr);
 
+  void swap(message& other);
+
   explicit message(raw_ptr);
 
   inline std::string tuple_type_names() const {

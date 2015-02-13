@@ -23,6 +23,8 @@
 #include <memory>
 #include <iterator>
 
+#include "caf/policy/invoke_policy.hpp"
+
 namespace caf {
 namespace detail {
 
@@ -171,6 +173,41 @@ class intrusive_partitioned_list {
 
   void push_second_back(pointer val) {
     insert(second_end(), val);
+  }
+
+  template <class Actor, class... Vs>
+  bool invoke(Actor* self, iterator first, iterator last, Vs&... vs) {
+    pointer prev = first->prev;
+    pointer next = first->next;
+    auto patch = [&] {
+      prev->next = next;
+      next->prev = prev;
+    };
+    while (first != last) {
+      std::unique_ptr<value_type, deleter_type> tmp{first.ptr};
+      switch (self->invoke_message(tmp, vs...)) {
+        case policy::im_dropped:
+          patch();
+          first = next;
+          next = first->next;
+          break;
+        case policy::im_success:
+          patch();
+          return true;
+        default:
+          if (tmp) {
+            prev = tmp.release();
+            first = next;
+            next = first->next;
+          } else {
+            patch();
+            first = next;
+            next = first->next;
+          }
+          break;
+      }
+    }
+    return false;
   }
 
   size_t count(iterator first, iterator last, size_t max_count) {

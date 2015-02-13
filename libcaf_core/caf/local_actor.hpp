@@ -296,16 +296,12 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
    * Returns the last message that was dequeued from the actor's mailbox.
    * @warning Only set during callback invocation.
    */
-  inline message& last_dequeued() {
-    return m_current_node->msg;
-  }
+  message& last_dequeued();
 
   /**
    * Returns the address of the last sender of the last dequeued message.
    */
-  inline actor_addr& last_sender() {
-    return m_current_node->sender;
-  }
+  actor_addr& last_sender();
 
   /**
    * Adds a unidirectional `monitor` to `whom`.
@@ -442,12 +438,8 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
     return res;
   }
 
-  inline void current_node(mailbox_element* ptr) {
-    this->m_current_node = ptr;
-  }
-
-  inline mailbox_element* current_node() {
-    return this->m_current_node;
+  inline mailbox_element_ptr& current_element() {
+    return m_current_element;
   }
 
   inline message_id new_request_id() {
@@ -494,7 +486,7 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   // returns 0 if last_dequeued() is an asynchronous or sync request message,
   // a response id generated from the request id otherwise
   inline message_id get_response_id() {
-    auto mid = m_current_node->mid;
+    auto mid = m_current_element->mid;
     return (mid.is_request()) ? mid.response_id() : message_id();
   }
 
@@ -522,10 +514,6 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
 
   void cleanup(uint32_t reason);
 
-  inline mailbox_element* dummy_node() {
-    return &m_dummy_node;
-  }
-
   template <class... Ts>
   inline mailbox_element_ptr new_mailbox_element(Ts&&... args) {
     return mailbox_element::make(std::forward<Ts>(args)...);
@@ -538,12 +526,13 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   // identifies all IDs of sync messages waiting for a response
   std::forward_list<message_id> m_pending_responses;
 
-  // "default value" for m_current_node
-  mailbox_element m_dummy_node;
+  // "default value" for m_current_element
+  actor_addr m_dummy_sender;
+  message m_dummy_message;
 
   // points to m_dummy_node if no callback is currently invoked,
   // points to the node under processing otherwise
-  mailbox_element* m_current_node;
+  mailbox_element_ptr m_current_element;
 
   // set by quit
   uint32_t m_planned_exit_reason;

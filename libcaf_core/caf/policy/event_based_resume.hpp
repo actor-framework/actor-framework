@@ -125,7 +125,7 @@ class event_based_resume {
         for (size_t i = 0; i < max_throughput; ++i) {
           auto ptr = d->next_message();
           if (ptr) {
-            switch (d->invoke_message(*ptr)) {
+            switch (d->invoke_message(ptr)) {
               case policy::im_success:
                 d->bhvr_stack().cleanup();
                 ++handled_msgs;
@@ -144,6 +144,7 @@ class event_based_resume {
                 }
                 break;
               case policy::im_skipped:
+                CAF_REQUIRE(ptr != nullptr);
                 d->push_to_cache(std::move(ptr));
                 break;
               case policy::im_dropped:

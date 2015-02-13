@@ -106,7 +106,7 @@ class proper_actor_base : public Policies::resume_policy::template
   // member functions from invoke policy
 
   template <class PartialFunctionOrBehavior>
-  policy::invoke_message_result invoke_message(mailbox_element& me,
+  policy::invoke_message_result invoke_message(mailbox_element_ptr& me,
                                                PartialFunctionOrBehavior& fun,
                                                message_id awaited_response) {
     return invoke_policy().invoke_message(dptr(), me, fun, awaited_response);
@@ -157,7 +157,7 @@ class proper_actor
 
   // required by event_based_resume::mixin::resume
 
-  policy::invoke_message_result invoke_message(mailbox_element& me) {
+  policy::invoke_message_result invoke_message(mailbox_element_ptr& me) {
     CAF_LOG_TRACE("");
     auto bhvr = this->bhvr_stack().back();
     auto mid = this->bhvr_stack().back_id();
@@ -221,11 +221,13 @@ class proper_actor<Base, Policies, true>
     for (;;) {
       this->await_ready();
       auto msg = this->next_message();
-      switch (this->invoke_message(*msg, bhvr, mid)) {
+      switch (this->invoke_message(msg, bhvr, mid)) {
         case policy::im_success:
           return;
         case policy::im_skipped:
-          this->push_to_cache(std::move(msg));
+          if (msg) {
+            this->push_to_cache(std::move(msg));
+          }
           break;
         default:
           // delete msg
