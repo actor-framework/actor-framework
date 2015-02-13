@@ -50,7 +50,7 @@ struct test_struct {
 using namespace caf;
 
 template <class T>
-std::string tostr(T value, size_t fieldwidth = 2) {
+std::string tostr(T value, std::streamsize fieldwidth = 2) {
   std::ostringstream oss;
   oss.width(fieldwidth);
   oss << value;
@@ -90,10 +90,10 @@ bool check_types(const std::map<std::string, uint16_t>& expected) {
     if (i == last) {
       return dummy;
     }
-    std::ostringstream oss;
-    oss << left << setw(16) << i->first << "[" << tostr(i->second) << "]";
+    std::ostringstream tmp;
+    tmp << left << setw(16) << i->first << "[" << tostr(i->second) << "]";
     ++i;
-    return oss.str();
+    return tmp.str();
   };
   while (fi != fe || ei != ee) {
     CAF_PRINT(out(fi, fe) << "  |  " << out(ei, ee));
