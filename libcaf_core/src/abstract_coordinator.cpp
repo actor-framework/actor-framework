@@ -76,9 +76,9 @@ inline void insert_dmsg(Map& storage, const duration& d, Ts&&... vs) {
   storage.insert(std::make_pair(std::move(tout), std::move(dmsg)));
 }
 
-class timer_actor final : public detail::proper_actor<blocking_actor,
-                                                      timer_actor_policies>,
-                          public spawn_as_is {
+class timer_actor : public detail::proper_actor<blocking_actor,
+                                                timer_actor_policies>,
+                    public spawn_as_is {
  public:
   inline mailbox_element_ptr dequeue() {
     await_data();

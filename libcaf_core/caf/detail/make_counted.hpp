@@ -24,23 +24,26 @@
 
 #include "caf/ref_counted.hpp"
 
-#include "caf/mixin/memory_cached.hpp"
-
 #include "caf/detail/memory.hpp"
+#include "caf/detail/type_traits.hpp"
 
 namespace caf {
 namespace detail {
 
 template <class T, class... Ts>
-typename std::enable_if<mixin::is_memory_cached<T>::value,
-            intrusive_ptr<T>>::type
+typename std::enable_if<
+  detail::is_memory_cached<T>::value,
+  intrusive_ptr<T>
+>::type
 make_counted(Ts&&... args) {
   return {detail::memory::create<T>(std::forward<Ts>(args)...)};
 }
 
 template <class T, class... Ts>
-typename std::enable_if<!mixin::is_memory_cached<T>::value,
-            intrusive_ptr<T>>::type
+typename std::enable_if<
+  !detail::is_memory_cached<T>::value,
+  intrusive_ptr<T>
+>::type
 make_counted(Ts&&... args) {
   return {new T(std::forward<Ts>(args)...)};
 }

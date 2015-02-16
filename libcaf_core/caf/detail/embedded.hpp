@@ -27,7 +27,7 @@ namespace caf {
 namespace detail {
 
 template <class Base>
-class embedded : public Base {
+class embedded final : public Base {
  public:
   template <class... Vs>
   embedded(intrusive_ptr<ref_counted> storage, Vs&&... vs)

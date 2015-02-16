@@ -28,19 +28,20 @@
 #include "caf/message_id.hpp"
 #include "caf/ref_counted.hpp"
 
-#include "caf/mixin/memory_cached.hpp"
-
+#include "caf/detail/memory.hpp"
 #include "caf/detail/embedded.hpp"
 #include "caf/detail/disposer.hpp"
 #include "caf/detail/tuple_vals.hpp"
 #include "caf/detail/pair_storage.hpp"
 #include "caf/detail/message_data.hpp"
+#include "caf/detail/memory_cache_flag_type.hpp"
 
 namespace caf {
 
-class mailbox_element : public extend<memory_managed>::
-                               with<mixin::memory_cached> {
+class mailbox_element : public memory_managed {
  public:
+  static constexpr auto memory_cache_flag = detail::needs_embedding;
+
   mailbox_element* next; // intrusive next pointer
   mailbox_element* prev; // intrusive previous pointer
   bool marked;           // denotes if this node is currently processed

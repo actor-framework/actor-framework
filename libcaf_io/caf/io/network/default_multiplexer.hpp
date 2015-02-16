@@ -31,8 +31,6 @@
 #include "caf/exception.hpp"
 #include "caf/ref_counted.hpp"
 
-#include "caf/mixin/memory_cached.hpp"
-
 #include "caf/io/fwd.hpp"
 #include "caf/io/accept_handle.hpp"
 #include "caf/io/receive_policy.hpp"

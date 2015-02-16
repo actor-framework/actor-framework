@@ -88,10 +88,6 @@ void memory::add_cache_map_entry(const type_info* tinf,
   cache[tinf].reset(instance);
 }
 
-instance_wrapper::~instance_wrapper() {
-  // nop
-}
-
 } // namespace detail
 } // namespace caf
 

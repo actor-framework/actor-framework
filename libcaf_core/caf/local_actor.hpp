@@ -46,13 +46,12 @@
 #include "caf/message_priority.hpp"
 #include "caf/check_typed_input.hpp"
 
-#include "caf/mixin/memory_cached.hpp"
-
 #include "caf/detail/logging.hpp"
 #include "caf/detail/disposer.hpp"
 #include "caf/detail/behavior_stack.hpp"
 #include "caf/detail/typed_actor_util.hpp"
 #include "caf/detail/single_reader_queue.hpp"
+#include "caf/detail/memory_cache_flag_type.hpp"
 
 namespace caf {
 
@@ -64,10 +63,12 @@ class sync_handle_helper;
  * @warning Instances of `local_actor` start with a reference count of 1
  * @extends abstract_actor
  */
-class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
+class local_actor : public abstract_actor {
  public:
   using del = detail::disposer;
   using mailbox_type = detail::single_reader_queue<mailbox_element, del>;
+
+  static constexpr auto memory_cache_flag = detail::needs_embedding;
 
   ~local_actor();
 
@@ -573,7 +574,7 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
 
   void delayed_send_impl(message_priority prio, const channel& whom,
                          const duration& rtime, message data);
-  using super = combined_type;
+
   std::function<void()> m_sync_failure_handler;
   std::function<void()> m_sync_timeout_handler;
 };

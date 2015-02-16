@@ -32,7 +32,7 @@ namespace caf {
 // later on in spawn(); this prevents subtle bugs that lead to segfaults,
 // e.g., when calling address() in the ctor of a derived class
 local_actor::local_actor()
-    : super(size_t{1}),
+    : abstract_actor(size_t{1}),
       m_planned_exit_reason(exit_reason::not_exited) {
   // nop
 }
@@ -165,7 +165,7 @@ response_promise local_actor::make_response_promise() {
 
 void local_actor::cleanup(uint32_t reason) {
   CAF_LOG_TRACE(CAF_ARG(reason));
-  super::cleanup(reason);
+  abstract_actor::cleanup(reason);
   // tell registry we're done
   is_registered(false);
 }
