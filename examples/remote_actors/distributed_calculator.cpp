@@ -184,7 +184,7 @@ void client_repl(const string& host, uint16_t port) {
 int main(int argc, char** argv) {
   uint16_t port = 0;
   string host = "localhost";
-  auto res = message_builder(argv + 1, argv + argc).to_message().filter_cli({
+  auto res = message_builder(argv + 1, argv + argc).filter_cli({
     {"port,p", "set port (either to publish at or to connect to)", port},
     {"host,H", "set host (client mode only, default: localhost)", host},
     {"server,s", "run in server mode"},
