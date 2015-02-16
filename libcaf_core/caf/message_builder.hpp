@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OBJECT_ARRAY_HPP
-#define CAF_OBJECT_ARRAY_HPP
+#ifndef CAF_MESSAGE_BUILDER_HPP
+#define CAF_MESSAGE_BUILDER_HPP
 
 #include <vector>
 
@@ -26,19 +26,18 @@
 #include "caf/message_handler.hpp"
 #include "caf/uniform_type_info.hpp"
 
-#include "caf/detail/message_data.hpp"
-
 namespace caf {
 
 /**
- * Provides a convenient interface to create a {@link message}
+ * Provides a convenient interface for createing `message` objects
  * from a series of values using the member function `append`.
  */
 class message_builder {
  public:
-  message_builder();
   message_builder(const message_builder&) = delete;
   message_builder& operator=(const message_builder&) = delete;
+
+  message_builder();
   ~message_builder();
 
   /**
@@ -51,7 +50,7 @@ class message_builder {
   }
 
   /**
-   * Adds `what` to the elements of the internal buffer.
+   * Adds `what` to the elements of the buffer.
    */
   message_builder& append(uniform_value what);
 
@@ -72,7 +71,7 @@ class message_builder {
   }
 
   /**
-   * Adds `what` to the elements of the internal buffer.
+   * Adds `what` to the elements of the buffer.
    */
   template <class T>
   message_builder& append(T what) {
@@ -80,43 +79,50 @@ class message_builder {
   }
 
   /**
-   * Converts the internal buffer to an actual message object.
-   *
-   * It is worth mentioning that a call to `to_message` does neither
-   * invalidate the `message_builder` instance nor clears the internal
-   * buffer. However, calling any non-const member function afterwards
-   * can cause the `message_builder` to detach its data, i.e.,
-   * copy it if there is more than one reference to it.
+   * Converts the buffer to an actual message object without
+   * invalidating this message builder (nor clearing it).
    */
-  message to_message();
+  message to_message() const;
 
-  inline message filter(message_handler f) {
+  /**
+   * Converts the buffer to an actual message object and transfers
+   * ownership of the data to it, leaving this object in an invalid state.
+   * @warning Calling *any*  member function on this object afterwards
+   *          is undefined behavior (dereferencing a `nullptr`)
+   */
+  message move_to_message();
+
+  /**
+   * @copydoc message::filter
+   */
+  inline message filter(message_handler f) const {
     return to_message().filter(f);
   }
 
-  inline message::cli_res filter_cli(std::vector<message::cli_arg> args) {
+  /**
+   * @copydoc message::filter_cli
+   */
+  inline message::cli_res filter_cli(std::vector<message::cli_arg> args) const {
     return to_message().filter_cli(std::move(args));
   }
 
   /**
-   * Convenience function for `to_message().apply(handler).
+   * @copydoc message::apply
    */
-  inline optional<message> apply(message_handler handler) {
-    return to_message().apply(std::move(handler));
-  }
+  optional<message> apply(message_handler handler);
 
   /**
-   * Removes all elements from the internal buffer.
+   * Removes all elements from the buffer.
    */
   void clear();
 
   /**
-   * Returns whether the internal buffer is empty.
+   * Returns whether the buffer is empty.
    */
   bool empty() const;
 
   /**
-   * Returns the number of elements in the internal buffer.
+   * Returns the number of elements in the buffer.
    */
   size_t size() const;
 
@@ -146,4 +152,4 @@ class message_builder {
 
 } // namespace caf
 
-#endif // CAF_OBJECT_ARRAY_HPP
+#endif // CAF_MESSAGE_BUILDER_HPP

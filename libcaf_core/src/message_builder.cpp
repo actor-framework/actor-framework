@@ -23,12 +23,12 @@
 #include "caf/message_handler.hpp"
 #include "caf/uniform_type_info.hpp"
 
+#include "caf/detail/message_data.hpp"
+
 namespace caf {
 
 class message_builder::dynamic_msg_data : public detail::message_data {
  public:
-  using super = message_data;
-
   dynamic_msg_data() : m_type_token(0xFFFFFFFF) {
     // nop
   }
@@ -144,8 +144,27 @@ message_builder& message_builder::append(uniform_value what) {
   return *this;
 }
 
-message message_builder::to_message() {
-  return message{data()};
+message message_builder::to_message() const {
+  // this const_cast is safe, because the message is
+  // guaranteed to detach its data before modifying it
+  return message{const_cast<dynamic_msg_data*>(data())};
+}
+
+message message_builder::move_to_message() {
+  message result;
+  result.vals().reset(static_cast<dynamic_msg_data*>(m_data.release()), false);
+  return result;
+}
+
+optional<message> message_builder::apply(message_handler handler) {
+  // avoid detaching of m_data by moving the data to a message object,
+  // calling message::apply and moving the data back
+  message::data_ptr ptr;
+  ptr.reset(static_cast<dynamic_msg_data*>(m_data.release()), false);
+  message msg{std::move(ptr)};
+  auto res = msg.apply(std::move(handler));
+  m_data.reset(msg.vals().release(), false);
+  return res;
 }
 
 message_builder::dynamic_msg_data* message_builder::data() {
