@@ -249,14 +249,6 @@ inline void detach_if_needed(const message&, std::false_type) {
   // nop
 }
 
-inline void* fetch_native_data(message& msg, std::true_type) {
-  return msg.empty() ? nullptr : msg.vals()->mutable_native_data();
-}
-
-inline const void* fetch_native_data(const message& msg, std::false_type) {
-  return msg.empty() ? nullptr : msg.vals()->native_data();
-}
-
 template <class T>
 struct is_manipulator_case {
   // static constexpr bool value = T::second_type::manipulates_args;

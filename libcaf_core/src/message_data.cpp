@@ -24,6 +24,10 @@
 namespace caf {
 namespace detail {
 
+message_data::~message_data() {
+  // nop
+}
+
 bool message_data::equals(const message_data& other) const {
   if (this == &other) {
     return true;
@@ -50,14 +54,6 @@ bool message_data::equals(const message_data& other) const {
     }
   }
   return true;
-}
-
-const void* message_data::native_data() const {
-  return nullptr;
-}
-
-void* message_data::mutable_native_data() {
-  return nullptr;
 }
 
 std::string message_data::tuple_type_names() const {

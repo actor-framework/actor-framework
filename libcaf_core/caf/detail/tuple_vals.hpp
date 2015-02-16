@@ -86,14 +86,6 @@ class tuple_vals : public message_data {
     // nop
   }
 
-  const void* native_data() const override {
-    return &m_data;
-  }
-
-  void* mutable_native_data() override {
-    return &m_data;
-  }
-
   data_type& data() {
     return m_data;
   }

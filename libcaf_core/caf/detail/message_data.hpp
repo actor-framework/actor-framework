@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_ABSTRACT_TUPLE_HPP
-#define CAF_ABSTRACT_TUPLE_HPP
+#ifndef CAF_DETAIL_MESSAGE_DATA_HPP
+#define CAF_DETAIL_MESSAGE_DATA_HPP
 
 #include <string>
 #include <iterator>
@@ -37,57 +37,96 @@ namespace detail {
 
 class message_data : public ref_counted {
  public:
-  // mutators
-  virtual void* mutable_at(size_t pos) = 0;
-  virtual void* mutable_native_data();
+  message_data() = default;
+  message_data(const message_data&) = default;
+  ~message_data();
 
-  // accessors
-  virtual size_t size() const = 0;
-  virtual message_data* copy() const = 0;
-  virtual const void* at(size_t pos) const = 0;
+  /****************************************************************************
+   *                                modifiers                                 *
+   ****************************************************************************/
+
+  virtual void* mutable_at(size_t pos) = 0;
+
+  /****************************************************************************
+   *                                observers                                 *
+   ****************************************************************************/
+
+  // computes "@<>+..." formatted type name
   std::string tuple_type_names() const;
 
-  /**
-   * Tries to match element at position `pos` to given RTTI.
-   * @param pos Index of element in question.
-   * @param typenr Number of queried type or `0` for custom types.
-   * @param rtti Queried type or `nullptr` for builtin types.
-   */
+  // compares each element using uniform_type_info objects
+  bool equals(const message_data& other) const;
+
+  virtual size_t size() const = 0;
+
+  virtual message_data* copy() const = 0;
+
+  virtual const void* at(size_t pos) const = 0;
+
+  // Tries to match element at position `pos` to given RTTI.
   virtual bool match_element(size_t pos, uint16_t typenr,
                              const std::type_info* rtti) const = 0;
 
   virtual uint32_t type_token() const = 0;
 
-  // returns either tdata<...> object or nullptr (default) if tuple
-  // is not a 'native' implementation
-  virtual const void* native_data() const;
-
   virtual const char* uniform_name_at(size_t pos) const = 0;
 
   virtual uint16_t type_nr_at(size_t pos) const = 0;
 
-  bool equals(const message_data& other) const;
+  /****************************************************************************
+   *                               nested types                               *
+   ****************************************************************************/
 
   class ptr {
-
    public:
-
     ptr() = default;
     ptr(ptr&&) = default;
     ptr(const ptr&) = default;
     ptr& operator=(ptr&&) = default;
     ptr& operator=(const ptr&) = default;
 
-    inline explicit ptr(message_data* p) : m_ptr(p) {}
+    inline explicit ptr(message_data* p) : m_ptr(p) {
+      // nop
+    }
 
-    inline void detach() { static_cast<void>(get_detached()); }
+    /**************************************************************************
+     *                               modifiers                                *
+     **************************************************************************/
 
-    inline message_data* operator->() { return get_detached(); }
-    inline message_data& operator*() { return *get_detached(); }
-    inline const message_data* operator->() const { return m_ptr.get(); }
-    inline const message_data& operator*() const { return *m_ptr.get(); }
-    inline void swap(ptr& other) { m_ptr.swap(other.m_ptr); }
-    inline void reset(message_data* p = nullptr) { m_ptr.reset(p); }
+    inline void swap(ptr& other) {
+      m_ptr.swap(other.m_ptr);
+    }
+
+    inline void reset(message_data* p = nullptr, bool add_ref = true) {
+      m_ptr.reset(p, add_ref);
+    }
+
+    inline message_data* release() {
+      return m_ptr.release();
+    }
+
+    inline void detach() {
+      static_cast<void>(get_detached());
+    }
+
+    inline message_data* operator->() {
+      return get_detached();
+    }
+
+    inline message_data& operator*() {
+      return *get_detached();
+    }
+    /**************************************************************************
+     *                               observers                                *
+     **************************************************************************/
+
+    inline const message_data* operator->() const {
+      return m_ptr.get();
+    }
+
+    inline const message_data& operator*() const {
+      return *m_ptr.get();
+    }
 
     inline explicit operator bool() const {
       return static_cast<bool>(m_ptr);
@@ -98,15 +137,12 @@ class message_data : public ref_counted {
     }
 
    private:
-
     message_data* get_detached();
-
     intrusive_ptr<message_data> m_ptr;
-
   };
 };
 
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_ABSTRACT_TUPLE_HPP
+#endif // CAF_DETAIL_MESSAGE_DATA_HPP
