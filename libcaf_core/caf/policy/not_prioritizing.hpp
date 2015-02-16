@@ -34,8 +34,10 @@ namespace policy {
 class not_prioritizing {
  public:
   template <class Actor>
-  mailbox_element_ptr next_message(Actor* self) {
-    return mailbox_element_ptr{self->mailbox().try_pop()};
+  typename Actor::mailbox_type::unique_pointer next_message(Actor* self) {
+    typename Actor::mailbox_type::unique_pointer result;
+    result.reset(self->mailbox().try_pop());
+    return result;
   }
 
   template <class Actor>
@@ -44,7 +46,8 @@ class not_prioritizing {
   }
 
   template <class Actor>
-  void push_to_cache(Actor* self, mailbox_element_ptr ptr) {
+  void push_to_cache(Actor* self,
+                     typename Actor::mailbox_type::unique_pointer ptr) {
     self->mailbox().cache().push_second_back(ptr.release());
   }
 
