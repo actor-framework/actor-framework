@@ -264,4 +264,28 @@ message::cli_res message::filter_cli(std::vector<cli_arg> cliargs) const {
   return {res, std::move(opts), std::move(helptext)};
 }
 
+message::cli_arg::cli_arg(std::string nstr, std::string tstr)
+    : name(std::move(nstr)),
+      text(std::move(tstr)) {
+  // nop
+}
+
+message::cli_arg::cli_arg(std::string nstr, std::string tstr, std::string& arg)
+    : name(std::move(nstr)),
+      text(std::move(tstr)) {
+  fun = [&arg](const std::string& str) -> bool {
+    arg = str;
+    return true;
+  };
+}
+
+message::cli_arg::cli_arg(std::string nstr, std::string tstr,
+                          std::vector<std::string>& arg)
+    : name(std::move(nstr)), text(std::move(tstr)) {
+  fun = [&arg](const std::string& str) -> bool {
+    arg.push_back(str);
+    return true;
+  };
+}
+
 } // namespace caf
