@@ -1,6 +1,32 @@
 \section{Common Pitfalls}
 \label{Sec::Pitfalls}
 
+\subsection{Defining Patterns}
+
+\begin{itemize}
+\item C++ evaluates comma-separated expressions from left-to-right, using only the last element as return type of the whole expression. This means that message handlers and behaviors must \emph{not} be initialized like this:
+\begin{lstlisting}
+message_handler wrong = (
+  [](int i) { /*...*/ },
+  [](float f) { /*...*/ }
+);
+\end{lstlisting}
+The correct way to initialize message handlers and behaviors is to either use the constructor or the member function \lstinline^assign^:
+\begin{lstlisting}
+message_handler ok1{
+  [](int i) { /*...*/ },
+  [](float f) { /*...*/ }
+};
+
+message_handler ok2;
+// some place later
+ok2.assign(
+  [](int i) { /*...*/ },
+  [](float f) { /*...*/ }
+);
+\end{lstlisting}
+\end{itemize}
+
 \subsection{Event-Based API}
 
 \begin{itemize}
@@ -15,7 +41,6 @@ Thus, one should \textit{always} capture by value in lambda expressions, because
 \item
 A handle returned by \lstinline^sync_send^ represents \emph{exactly one} response message.
 Therefore, it is not possible to receive more than one response message.
-%Calling \lstinline^reply^ more than once will result in lost messages and calling \lstinline^handle_response^ or \lstinline^receive_response^ more than once on a future will throw an exception.
 
 \item
 The handle returned by \lstinline^sync_send^ is bound to the calling actor.
@@ -23,6 +48,7 @@ It is not possible to transfer a handle to a response to another actor.
 
 \end{itemize}
 
+\clearpage
 \subsection{Sharing}
 
 \begin{itemize}
