@@ -33,7 +33,9 @@ class message_builder::dynamic_msg_data : public detail::message_data {
     // nop
   }
 
-  dynamic_msg_data(const dynamic_msg_data& other) : m_type_token(0xFFFFFFFF) {
+  dynamic_msg_data(const dynamic_msg_data& other)
+      : detail::message_data(other),
+        m_type_token(0xFFFFFFFF) {
     for (auto& e : other.m_elements) {
       add_to_type_token(e->ti->type_nr());
       m_elements.push_back(e->copy());
