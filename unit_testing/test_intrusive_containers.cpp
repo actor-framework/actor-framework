@@ -27,9 +27,13 @@
 using std::begin;
 using std::end;
 
+using namespace caf;
+
 namespace {
+
 size_t s_iint_instances = 0;
-}
+
+} // namespace <anonymous>
 
 struct iint {
   iint* next;
@@ -54,18 +58,52 @@ inline bool operator==(const iint& lhs, int rhs) { return lhs.value == rhs; }
 
 inline bool operator==(int lhs, const iint& rhs) { return lhs == rhs.value; }
 
-using iint_queue = caf::detail::single_reader_queue<iint>;
+using iint_queue = detail::single_reader_queue<iint>;
 
 struct pseudo_actor {
-  using mailbox_type = caf::detail::single_reader_queue<iint>;
+  using mailbox_type = detail::single_reader_queue<iint>;
+  using uptr = mailbox_type::unique_pointer;
   mailbox_type mbox;
+
   mailbox_type& mailbox() {
     return mbox;
   }
+
+  policy::invoke_message_result invoke_message(uptr& ptr, int i) {
+    if (ptr->value == 1) {
+      ptr.reset();
+      return policy::im_dropped;
+    }
+    if (ptr->value == i) {
+      // call reset on some of our messages
+      if (ptr->is_high_priority()) {
+        ptr.reset();
+      }
+      return policy::im_success;
+    }
+    return policy::im_skipped;
+  }
+
+  template <class Policy>
+  policy::invoke_message_result invoke_message(uptr& ptr, Policy& policy, int i,
+                                               std::vector<int>& remaining) {
+    switch (invoke_message(ptr, i)) {
+      case policy::im_dropped:
+        return policy::im_dropped;
+      case policy::im_skipped:
+        return policy::im_skipped;
+      case policy::im_success:
+        if (!remaining.empty()) {
+          auto next = remaining.front();
+          remaining.erase(remaining.begin());
+          policy.invoke_from_cache(this, policy, next, remaining);
+        }
+        return policy::im_success;
+    }
+  }
 };
 
-int main() {
-  CAF_TEST(test_intrusive_containers);
+void test_prioritizing_dequeue() {
   pseudo_actor self;
   auto baseline = s_iint_instances;
   CAF_CHECK_EQUAL(baseline, 3); // "begin", "separator", and "end"
@@ -74,7 +112,7 @@ int main() {
   self.mbox.enqueue(new iint(3));
   self.mbox.enqueue(new iint(4));
   CAF_CHECK_EQUAL(baseline + 4, s_iint_instances);
-  caf::policy::prioritizing policy;
+  policy::prioritizing policy;
   // first "high priority message"
   CAF_CHECK_EQUAL(self.mbox.count(), 4);
   CAF_CHECK_EQUAL(policy.has_next_message(&self), true);
@@ -99,5 +137,80 @@ int main() {
   // back to baseline
   CAF_CHECK_EQUAL(self.mbox.count(), 0);
   CAF_CHECK_EQUAL(baseline, s_iint_instances);
+}
+
+template <class Policy>
+void test_invoke_from_cache() {
+  pseudo_actor self;
+  auto baseline = s_iint_instances;
+  CAF_CHECK_EQUAL(baseline, 3); // "begin", "separator", and "end"
+  self.mbox.enqueue(new iint(1));
+  self.mbox.enqueue(new iint(2));
+  self.mbox.enqueue(new iint(3));
+  self.mbox.enqueue(new iint(4));
+  self.mbox.enqueue(new iint(5));
+  Policy policy;
+  CAF_CHECK_EQUAL(self.mbox.count(), 5);
+  // fill cache
+  auto ptr = policy.next_message(&self);
+  while (ptr) {
+    policy.push_to_cache(&self, std::move(ptr));
+    ptr = policy.next_message(&self);
+  }
+  CAF_CHECK_EQUAL(self.mbox.count(), 5);
+  // dequeue 3, 2, 4, 1, note: 1 is dropped on first dequeue
+  int expected;
+  //std::vector<int> expected{3, 2, 4, 5};
+  size_t remaining = 4;
+  //for (auto& i : expected) {
+    CAF_CHECK(policy.invoke_from_cache(&self, expected = 3));
+    CAF_CHECK_EQUAL(self.mbox.count(), --remaining);
+    CAF_CHECK(policy.invoke_from_cache(&self, expected = 2));
+    CAF_CHECK_EQUAL(self.mbox.count(), --remaining);
+    CAF_CHECK(policy.invoke_from_cache(&self, expected = 4));
+    CAF_CHECK_EQUAL(self.mbox.count(), --remaining);
+    CAF_CHECK(policy.invoke_from_cache(&self, expected = 5));
+    CAF_CHECK_EQUAL(self.mbox.count(), --remaining);
+  //}
+}
+
+template <class Policy>
+void test_recursive_invoke_from_cache() {
+  pseudo_actor self;
+  auto baseline = s_iint_instances;
+  CAF_CHECK_EQUAL(baseline, 3); // "begin", "separator", and "end"
+  self.mbox.enqueue(new iint(1));
+  self.mbox.enqueue(new iint(2));
+  self.mbox.enqueue(new iint(3));
+  self.mbox.enqueue(new iint(4));
+  self.mbox.enqueue(new iint(5));
+  Policy policy;
+  CAF_CHECK_EQUAL(self.mbox.count(), 5);
+  // fill cache
+  auto ptr = policy.next_message(&self);
+  while (ptr) {
+    policy.push_to_cache(&self, std::move(ptr));
+    ptr = policy.next_message(&self);
+  }
+  CAF_CHECK_EQUAL(self.mbox.count(), 5);
+  // dequeue 3, 2, 4, 1, note: 1 is dropped on first dequeue
+  std::vector<int> remaining{2, 4, 5};
+  int first = 3;
+  policy.invoke_from_cache(&self, policy, first, remaining);
+  CAF_CHECK_EQUAL(self.mbox.count(), 0);
+}
+
+int main() {
+  CAF_TEST(test_intrusive_containers);
+  CAF_CHECKPOINT();
+  test_prioritizing_dequeue();
+  CAF_PRINT("test_invoke_from_cache<policy::prioritizing>");
+  test_invoke_from_cache<policy::prioritizing>();
+  CAF_PRINT("test_invoke_from_cache<policy::not_prioritizing>");
+  test_invoke_from_cache<policy::not_prioritizing>();
+  CAF_PRINT("test_recursive_invoke_from_cache<policy::prioritizing>");
+  test_recursive_invoke_from_cache<policy::prioritizing>();
+  CAF_PRINT("test_recursive_invoke_from_cache<policy::not_prioritizing>");
+  test_recursive_invoke_from_cache<policy::not_prioritizing>();
   return CAF_TEST_RESULT();
 }
