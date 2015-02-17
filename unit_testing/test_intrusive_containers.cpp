@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -88,7 +88,7 @@ struct pseudo_actor {
   policy::invoke_message_result invoke_message(uptr& ptr, Policy& policy, int i,
                                                std::vector<int>& remaining) {
     auto res = invoke_message(ptr, i);
-    if (res == im_success && !remaining.empty()) {
+    if (res == policy::im_success && !remaining.empty()) {
       auto next = remaining.front();
       remaining.erase(remaining.begin());
       policy.invoke_from_cache(this, policy, next, remaining);

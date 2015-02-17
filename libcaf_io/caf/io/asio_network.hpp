@@ -8,7 +8,7 @@
  *                                                                            *
  *                                                                            *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the Boost Software License, Version 1.0. See             *
