@@ -172,9 +172,9 @@ class invoke_policy {
       return none;
     }
     if (res->empty()) {
-      // make sure synchronous requests
-      // always receive a response
-      if (mid.is_request() && !mid.is_answered()) {
+      // make sure synchronous requests always receive a response;
+      // note: !current_element() means client has forwarded the request
+      if (self->current_element() && mid.is_request() && !mid.is_answered()) {
         CAF_LOG_WARNING("actor with ID " << self->id()
                         << " did not reply to a synchronous request message");
         auto fhdl = fetch_response_promise(self, hdl);
