@@ -55,8 +55,8 @@ class proper_actor_base : public Policies::resume_policy::template
   void enqueue(const actor_addr& sender, message_id mid,
                message msg, execution_unit* eu) override {
     auto d = dptr();
-    scheduling_policy().enqueue(d, d->new_mailbox_element(sender, mid,
-                                                          std::move(msg)),
+    scheduling_policy().enqueue(d, mailbox_element::make(sender, mid,
+                                                         std::move(msg)),
                                 eu);
   }
 
@@ -125,7 +125,7 @@ class proper_actor_base : public Policies::resume_policy::template
     return m_policies.get_resume_policy();
   }
 
-  typename Policies::invoke_policy& invoke_policy() {
+  typename policy::invoke_policy& invoke_policy() {
     return m_policies.get_invoke_policy();
   }
 
@@ -246,8 +246,6 @@ class proper_actor<Base, Policies, true>
       // immediately enqueue timeout message if duration == 0s
       this->enqueue(this->address(), invalid_message_id,
                     std::move(msg), this->host());
-      // auto e = this->new_mailbox_element(this, std::move(msg));
-      // this->m_mailbox.enqueue(e);
     } else {
       this->delayed_send(this, d, std::move(msg));
     }
@@ -265,14 +263,13 @@ class proper_actor<Base, Policies, true>
     }
   }
 
-  // required by nestable invoke policy
+  // required by invoke policy
   void pop_timeout() {
     m_pending_timeouts.pop_back();
   }
 
-  // required by nestable invoke policy;
-  // adds a dummy timeout to the pending timeouts to prevent
-  // nestable invokes to trigger an inactive timeout
+  // required by invoke policy; adds a dummy timeout to the pending
+  // timeouts to prevent invokes to trigger an inactive timeout
   void push_timeout() {
     m_pending_timeouts.push_back(++m_next_timeout_id);
   }

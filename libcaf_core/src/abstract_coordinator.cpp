@@ -54,8 +54,7 @@ using hrc = std::chrono::high_resolution_clock;
 
 using timer_actor_policies = policy::actor_policies<policy::no_scheduling,
                                                     policy::not_prioritizing,
-                                                    policy::no_resume,
-                                                    policy::nestable_invoke>;
+                                                    policy::no_resume>;
 
 struct delayed_msg {
   actor_addr from;

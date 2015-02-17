@@ -17,39 +17,39 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_THREADLESS_HPP
-#define CAF_THREADLESS_HPP
+#ifndef CAF_MAILBOX_BASED_ACTOR_HPP
+#define CAF_MAILBOX_BASED_ACTOR_HPP
 
-#include "caf/atom.hpp"
-#include "caf/behavior.hpp"
-#include "caf/duration.hpp"
+#include <type_traits>
 
-#include "caf/policy/invoke_policy.hpp"
+#include "caf/local_actor.hpp"
+#include "caf/mailbox_element.hpp"
+
+#include "caf/detail/sync_request_bouncer.hpp"
+#include "caf/detail/single_reader_queue.hpp"
 
 namespace caf {
-namespace policy {
 
 /**
- * An actor that is scheduled or otherwise managed.
+ * Base class for local running actors using a mailbox.
  */
-class sequential_invoke : public invoke_policy<sequential_invoke> {
+class mailbox_based_actor : public local_actor {
  public:
-  inline bool hm_should_skip(mailbox_element&) {
-    return false;
+  using del = detail::disposer;
+  using mailbox_type = detail::single_reader_queue<mailbox_element, del>;
+
+  ~mailbox_based_actor();
+
+  void cleanup(uint32_t reason);
+
+  inline mailbox_type& mailbox() {
+    return m_mailbox;
   }
 
-  template <class Actor>
-  void hm_begin(Actor* self, mailbox_element_ptr& node) {
-    node.swap(self->current_element());
-  }
-
-  template <class Actor>
-  void hm_cleanup(Actor* self, mailbox_element_ptr& node) {
-    node.swap(self->current_element());
-  }
+ protected:
+  mailbox_type m_mailbox;
 };
 
-} // namespace policy
 } // namespace caf
 
-#endif // CAF_THREADLESS_HPP
+#endif // CAF_MAILBOX_BASED_ACTOR_HPP

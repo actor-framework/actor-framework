@@ -23,9 +23,9 @@
 #include "caf/replies_to.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/typed_behavior.hpp"
+#include "caf/mailbox_based_actor.hpp"
 
 #include "caf/mixin/sync_sender.hpp"
-#include "caf/mixin/mailbox_based.hpp"
 #include "caf/mixin/behavior_stack_based.hpp"
 
 namespace caf {
@@ -39,9 +39,8 @@ namespace caf {
  */
 template <class... Rs>
 class typed_event_based_actor : public
-    extend<local_actor, typed_event_based_actor<Rs...>>::template
-    with<mixin::mailbox_based,
-         mixin::behavior_stack_based<typed_behavior<Rs...>>::template impl,
+    extend<mailbox_based_actor, typed_event_based_actor<Rs...>>::template
+    with<mixin::behavior_stack_based<typed_behavior<Rs...>>::template impl,
          mixin::sync_sender<nonblocking_response_handle_tag>::template impl> {
  public:
   using signatures = detail::type_list<Rs...>;

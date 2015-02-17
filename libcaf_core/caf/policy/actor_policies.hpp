@@ -20,16 +20,15 @@
 #ifndef CAF_POLICY_POLICIES_HPP
 #define CAF_POLICY_POLICIES_HPP
 
+#include "caf/policy/invoke_policy.hpp"
+
 namespace caf {
 namespace policy {
 
 /**
  * A container for actor-related policies.
  */
-template <class SchedulingPolicy,
-     class PriorityPolicy,
-     class ResumePolicy,
-     class InvokePolicy>
+template <class SchedulingPolicy, class PriorityPolicy, class ResumePolicy>
 class actor_policies {
 
  public:
@@ -39,8 +38,6 @@ class actor_policies {
   using priority_policy = PriorityPolicy;
 
   using resume_policy = ResumePolicy;
-
-  using invoke_policy = InvokePolicy;
 
   inline scheduling_policy& get_scheduling_policy() {
     return m_scheduling_policy;

@@ -30,8 +30,6 @@
 #include "caf/mixin/functor_based.hpp"
 #include "caf/mixin/behavior_stack_based.hpp"
 
-#include "caf/policy/sequential_invoke.hpp"
-
 #include "caf/detail/intrusive_partitioned_list.hpp"
 
 #include "caf/io/fwd.hpp"
@@ -367,7 +365,7 @@ class broker : public extend<local_actor>::
   std::map<accept_handle, doorman_pointer> m_doormen;
   std::map<connection_handle, scribe_pointer> m_scribes;
 
-  policy::sequential_invoke m_invoke_policy;
+  policy::invoke_policy m_invoke_policy;
 
   middleman& m_mm;
   detail::intrusive_partitioned_list<mailbox_element, detail::disposer> m_cache;

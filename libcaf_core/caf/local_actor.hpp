@@ -60,8 +60,6 @@ class sync_handle_helper;
 
 /**
  * Base class for local running actors.
- * @warning Instances of `local_actor` start with a reference count of 1
- * @extends abstract_actor
  */
 class local_actor : public abstract_actor {
  public:
@@ -73,7 +71,7 @@ class local_actor : public abstract_actor {
   ~local_actor();
 
   /**************************************************************************
-   *              spawn untyped actors              *
+   *                          spawn untyped actors                          *
    **************************************************************************/
 
   template <class C, spawn_options Os = no_spawn_options, class... Ts>
@@ -109,7 +107,7 @@ class local_actor : public abstract_actor {
   }
 
   /**************************************************************************
-   *               spawn typed actors               *
+   *                           spawn typed actors                           *
    **************************************************************************/
 
   template <class C, spawn_options Os = no_spawn_options, class... Ts>
@@ -514,11 +512,6 @@ class local_actor : public abstract_actor {
   }
 
   void cleanup(uint32_t reason);
-
-  template <class... Ts>
-  inline mailbox_element_ptr new_mailbox_element(Ts&&... args) {
-    return mailbox_element::make(std::forward<Ts>(args)...);
-  }
 
  protected:
   // identifies the ID of the last sent synchronous request

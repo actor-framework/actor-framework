@@ -31,9 +31,7 @@
 #include "caf/policy/prioritizing.hpp"
 #include "caf/policy/no_scheduling.hpp"
 #include "caf/policy/actor_policies.hpp"
-#include "caf/policy/nestable_invoke.hpp"
 #include "caf/policy/not_prioritizing.hpp"
-#include "caf/policy/sequential_invoke.hpp"
 #include "caf/policy/event_based_resume.hpp"
 #include "caf/policy/cooperative_scheduling.hpp"
 
@@ -88,18 +86,11 @@ intrusive_ptr<C> spawn_impl(execution_unit* host,
       policy::no_resume,
       policy::event_based_resume
     >::type;
-  using invoke_policy =
-    typename std::conditional<
-      has_blocking_api_flag(Os),
-      policy::nestable_invoke,
-      policy::sequential_invoke
-    >::type;
   using policy_token =
     policy::actor_policies<
       scheduling_policy,
       priority_policy,
-      resume_policy,
-      invoke_policy
+      resume_policy
     >;
   using actor_impl =
     typename std::conditional<

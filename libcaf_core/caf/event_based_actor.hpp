@@ -26,9 +26,9 @@
 #include "caf/extend.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/response_handle.hpp"
+#include "caf/mailbox_based_actor.hpp"
 
 #include "caf/mixin/sync_sender.hpp"
-#include "caf/mixin/mailbox_based.hpp"
 #include "caf/mixin/functor_based.hpp"
 #include "caf/mixin/behavior_stack_based.hpp"
 
@@ -44,9 +44,8 @@ namespace caf {
  * @extends local_actor
  */
 class event_based_actor
-    : public extend<local_actor, event_based_actor>::
-             with<mixin::mailbox_based,
-                  mixin::behavior_stack_based<behavior>::impl,
+    : public extend<mailbox_based_actor, event_based_actor>::
+             with<mixin::behavior_stack_based<behavior>::impl,
                   mixin::sync_sender<nonblocking_response_handle_tag>::impl> {
  public:
   /**
