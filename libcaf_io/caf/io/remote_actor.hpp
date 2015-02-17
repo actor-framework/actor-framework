@@ -54,7 +54,8 @@ struct typed_remote_actor_helper<List<Ts...>> {
  * @param port TCP port.
  * @returns An {@link actor_ptr} to the proxy instance
  *          representing a remote actor.
- * @throws std::invalid_argument Thrown when connecting to a typed actor.
+ * @throws network_error Thrown on connection error or
+ *                       when connecting to a typed actor.
  */
 inline actor remote_actor(const std::string& host, uint16_t port) {
   auto res = remote_actor_impl(std::set<std::string>{}, host, port);
@@ -67,7 +68,8 @@ inline actor remote_actor(const std::string& host, uint16_t port) {
  * @param port TCP port.
  * @returns An {@link actor_ptr} to the proxy instance
  *          representing a typed remote actor.
- * @throws std::invalid_argument Thrown when connecting to a typed actor.
+ * @throws network_error Thrown on connection error or when connecting
+ *                       to an untyped otherwise unexpected actor.
  */
 template <class List>
 typename typed_remote_actor_helper<List>::return_type
