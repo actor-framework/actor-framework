@@ -174,50 +174,52 @@ class invoke_policy {
     if (res->empty()) {
       // make sure synchronous requests always receive a response;
       // note: !current_element() means client has forwarded the request
-      if (self->current_element() && mid.is_request() && !mid.is_answered()) {
-        CAF_LOG_WARNING("actor with ID " << self->id()
-                        << " did not reply to a synchronous request message");
-        auto fhdl = fetch_response_promise(self, hdl);
-        if (fhdl) {
-          fhdl.deliver(make_message(unit));
-        }
-      }
-    } else {
-      CAF_LOGF_DEBUG("res = " << to_string(*res));
-      if (res->size() == 2
-          && res->match_element(0, detail::type_nr<atom_value>::value, nullptr)
-          && res->match_element(1, detail::type_nr<uint64_t>::value, nullptr)
-          && res->template get_as<atom_value>(0) == atom("MESSAGE_ID")) {
-        CAF_LOG_DEBUG("message handler returned a message id wrapper");
-        auto id = res->template get_as<uint64_t>(1);
-        auto msg_id = message_id::from_integer_value(id);
-        auto ref_opt = self->sync_handler(msg_id);
-        // install a behavior that calls the user-defined behavior
-        // and using the result of its inner behavior as response
-        if (ref_opt) {
+      auto& ptr = self->current_element();
+      if (ptr) {
+        mid = ptr->mid;
+        if (mid.is_request() && !mid.is_answered()) {
+          CAF_LOG_WARNING("actor with ID " << self->id()
+                          << " did not reply to a synchronous request message");
           auto fhdl = fetch_response_promise(self, hdl);
-          behavior inner = *ref_opt;
-          ref_opt->assign(
-            others() >> [=] {
-              // inner is const inside this lambda and mutable a C++14 feature
-              behavior cpy = inner;
-              auto inner_res = cpy(self->last_dequeued());
-              if (inner_res) {
-                fhdl.deliver(*inner_res);
-              }
-            }
-          );
-        }
-      } else {
-        // respond by using the result of 'fun'
-        CAF_LOG_DEBUG("respond via response_promise");
-        auto fhdl = fetch_response_promise(self, hdl);
-        if (fhdl) {
-          fhdl.deliver(std::move(*res));
-          // inform caller about success
-          return message{};
+          if (fhdl) {
+            fhdl.deliver(make_message(unit));
+          }
         }
       }
+      return res;
+    }
+    CAF_LOGF_DEBUG("res = " << to_string(*res));
+    if (res->template match_elements<atom_value, uint64_t>()
+        && res->template get_as<atom_value>(0) == atom("MESSAGE_ID")) {
+      CAF_LOG_DEBUG("message handler returned a message id wrapper");
+      auto id = res->template get_as<uint64_t>(1);
+      auto msg_id = message_id::from_integer_value(id);
+      auto ref_opt = self->sync_handler(msg_id);
+      // install a behavior that calls the user-defined behavior
+      // and using the result of its inner behavior as response
+      if (ref_opt) {
+        auto fhdl = fetch_response_promise(self, hdl);
+        behavior inner = *ref_opt;
+        ref_opt->assign(
+          others() >> [=] {
+            // inner is const inside this lambda and mutable a C++14 feature
+            behavior cpy = inner;
+            auto inner_res = cpy(self->last_dequeued());
+            if (inner_res) {
+              fhdl.deliver(*inner_res);
+            }
+          }
+        );
+      }
+      return res;
+    }
+    // respond by using the result of 'fun'
+    CAF_LOG_DEBUG("respond via response_promise");
+    auto fhdl = fetch_response_promise(self, hdl);
+    if (fhdl) {
+      fhdl.deliver(std::move(*res));
+      // inform caller about success by returning not none
+      return message{};
     }
     return res;
   }
