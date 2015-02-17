@@ -400,11 +400,11 @@ class local_actor : public abstract_actor {
     attach(attachable_ptr{new functor_attachable(std::move(f))});
   }
 
+  // <backward_compatibility version="0.9">
   /**************************************************************************
    *                        outdated member functions                       *
    **************************************************************************/
 
-  // <backward_compatibility version="0.9">
   inline void send_tuple(message_priority prio, const channel& whom,
                          message what) CAF_DEPRECATED;
 
@@ -464,23 +464,11 @@ class local_actor : public abstract_actor {
   }
 
   // returns the response ID
-  message_id timed_sync_send_tuple_impl(message_priority mp,
-                                        const actor& whom,
-                                        const duration& rel_time,
-                                        message&& what);
+  message_id timed_sync_send_impl(message_priority, const actor&,
+                                  const duration&, message&&);
 
   // returns the response ID
-  message_id sync_send_tuple_impl(message_priority mp,
-                                  const actor& whom,
-                                  message&& what);
-
-  // returns the response ID
-  template <class... Rs, class... Ts>
-  message_id sync_send_tuple_impl(message_priority mp,
-                                  const typed_actor<Rs...>& whom,
-                                  message&& msg) {
-    return sync_send_tuple_impl(mp, actor{whom.m_ptr.get()}, std::move(msg));
-  }
+  message_id sync_send_impl(message_priority, const actor&, message&&);
 
   // returns 0 if last_dequeued() is an asynchronous or sync request message,
   // a response id generated from the request id otherwise

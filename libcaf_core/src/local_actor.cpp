@@ -179,14 +179,12 @@ void local_actor::quit(uint32_t reason) {
   }
 }
 
-message_id local_actor::timed_sync_send_tuple_impl(message_priority mp,
-                                                   const actor& dest,
-                                                   const duration& rtime,
-                                                   message&& what) {
+message_id local_actor::timed_sync_send_impl(message_priority mp,
+                                             const actor& dest,
+                                             const duration& rtime,
+                                             message&& what) {
   if (!dest) {
-    throw std::invalid_argument(
-      "cannot send synchronous message "
-      "to invalid_actor");
+    throw std::invalid_argument("cannot sync_send to invalid_actor");
   }
   auto nri = new_request_id();
   if (mp == message_priority::high) {
@@ -200,13 +198,11 @@ message_id local_actor::timed_sync_send_tuple_impl(message_priority mp,
   return rri;
 }
 
-message_id local_actor::sync_send_tuple_impl(message_priority mp,
+message_id local_actor::sync_send_impl(message_priority mp,
                                              const actor& dest,
                                              message&& what) {
   if (!dest) {
-    throw std::invalid_argument(
-      "cannot send synchronous message "
-      "to invalid_actor");
+    throw std::invalid_argument("cannot sync_send to invalid_actor");
   }
   auto nri = new_request_id();
   if (mp == message_priority::high) {

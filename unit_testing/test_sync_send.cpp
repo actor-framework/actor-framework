@@ -158,7 +158,7 @@ class D : public popular_actor {
   behavior make_behavior() override {
     return {
       others() >> [=] {
-        return sync_send_tuple(buddy(), last_dequeued()).then(
+        return sync_send(buddy(), last_dequeued()).then(
           others() >> [=]() -> message {
             quit();
             return last_dequeued();
