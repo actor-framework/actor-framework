@@ -193,3 +193,8 @@ Synchronous send blocks no longer support \lstinline^continue_with^.
 This feature has been removed without substitution.
 \end{itemize}
 
+\subsubsection{0.12 $\Rightarrow$ 0.13}
+
+This release removes the (since 0.9 deprecated) \lstinline^cppa^ headers and deprecates all \lstinline^*_send_tuple^ versions (simply use the function without \lstinline^_tuple^ suffix).
+
+In case you were using the old \lstinline^cppa::options_description^ API, you can migrate to the new API for filtering command line arguments (cf. \ref{Sec::Messages::FilterCLI}).
