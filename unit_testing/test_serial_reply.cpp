@@ -58,7 +58,7 @@ void test_serial_reply() {
   );
   { // lifetime scope of self
     scoped_actor self;
-    cout << "ID of main: " << self->id() << endl;
+    CAF_PRINT("ID of main: " << self->id());
     self->sync_send(master, atom("hi there")).await(
       on(atom("hiho")) >> [] {
         CAF_CHECKPOINT();

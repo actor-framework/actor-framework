@@ -48,12 +48,9 @@ void run_client(const char* host, uint16_t port) {
   try {
     io::remote_actor(host, port);
   }
-  catch (std::runtime_error& e) {
+  catch (network_error& e) {
     cout << e.what() << endl;
     CAF_CHECKPOINT();
-  }
-  catch (std::exception& e) {
-    cerr << "unexpected: " << e.what() << endl;
   }
   CAF_CHECKPOINT();
   auto serv = io::typed_remote_actor<server_type>(host, port);
