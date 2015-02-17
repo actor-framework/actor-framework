@@ -87,19 +87,13 @@ struct pseudo_actor {
   template <class Policy>
   policy::invoke_message_result invoke_message(uptr& ptr, Policy& policy, int i,
                                                std::vector<int>& remaining) {
-    switch (invoke_message(ptr, i)) {
-      case policy::im_dropped:
-        return policy::im_dropped;
-      case policy::im_skipped:
-        return policy::im_skipped;
-      case policy::im_success:
-        if (!remaining.empty()) {
-          auto next = remaining.front();
-          remaining.erase(remaining.begin());
-          policy.invoke_from_cache(this, policy, next, remaining);
-        }
-        return policy::im_success;
+    auto res = invoke_message(ptr, i);
+    if (res == im_success && !remaining.empty()) {
+      auto next = remaining.front();
+      remaining.erase(remaining.begin());
+      policy.invoke_from_cache(this, policy, next, remaining);
     }
+    return res;
   }
 };
 
