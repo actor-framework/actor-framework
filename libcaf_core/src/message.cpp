@@ -46,8 +46,12 @@ message& message::operator=(message&& other) {
   return *this;
 }
 
-void message::reset() {
-  m_vals.reset();
+void message::reset(raw_ptr new_ptr) {
+  m_vals.reset(new_ptr);
+}
+
+void message::swap(message& other) {
+  m_vals.swap(other.m_vals);
 }
 
 void* message::mutable_at(size_t p) {

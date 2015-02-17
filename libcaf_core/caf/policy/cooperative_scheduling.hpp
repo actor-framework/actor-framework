@@ -34,13 +34,11 @@ namespace caf {
 namespace policy {
 
 class cooperative_scheduling {
-
  public:
-
   using timeout_type = int;
 
   template <class Actor>
-  inline void launch(Actor* self, execution_unit* host, bool lazy) {
+  void launch(Actor* self, execution_unit* host, bool lazy) {
     // detached in scheduler::worker::run
     self->attach_to_scheduler();
     if (lazy) {
@@ -55,17 +53,17 @@ class cooperative_scheduling {
   }
 
   template <class Actor>
-  void enqueue(Actor* self, const actor_addr& sender, message_id mid,
-         message& msg, execution_unit* eu) {
-    auto e = self->new_mailbox_element(sender, mid, std::move(msg));
-    switch (self->mailbox().enqueue(e)) {
+  void enqueue(Actor* self, mailbox_element_ptr ptr, execution_unit* eu) {
+    auto mid = ptr->mid;
+    auto sender = ptr->sender;
+    switch (self->mailbox().enqueue(ptr.release())) {
       case detail::enqueue_result::unblocked_reader: {
         // re-schedule actor
-        if (eu)
+        if (eu) {
           eu->exec_later(self);
-        else
-          detail::singletons::get_scheduling_coordinator()->enqueue(
-            self);
+        } else {
+          detail::singletons::get_scheduling_coordinator()->enqueue(self);
+        }
         break;
       }
       case detail::enqueue_result::queue_closed: {
@@ -80,7 +78,6 @@ class cooperative_scheduling {
         break;
     }
   }
-
 };
 
 } // namespace policy

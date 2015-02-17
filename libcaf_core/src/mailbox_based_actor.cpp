@@ -17,54 +17,21 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_POLICY_NESTABLE_INVOKE_HPP
-#define CAF_POLICY_NESTABLE_INVOKE_HPP
-
-#include <mutex>
-#include <chrono>
-#include <condition_variable>
-
-#include "caf/exit_reason.hpp"
-#include "caf/mailbox_element.hpp"
-
-#include "caf/detail/sync_request_bouncer.hpp"
-#include "caf/detail/single_reader_queue.hpp"
-
-#include "caf/policy/invoke_policy.hpp"
+#include "caf/mailbox_based_actor.hpp"
 
 namespace caf {
-namespace policy {
 
-class nestable_invoke : public invoke_policy<nestable_invoke> {
- public:
-  inline bool hm_should_skip(mailbox_element& node) {
-    return node.marked;
+mailbox_based_actor::~mailbox_based_actor() {
+  if (!m_mailbox.closed()) {
+    detail::sync_request_bouncer f{this->exit_reason()};
+    m_mailbox.close(f);
   }
+}
 
-  template <class Actor>
-  mailbox_element* hm_begin(Actor* self, mailbox_element& node) {
-    auto previous = self->current_node();
-    self->current_node(&node);
-    self->push_timeout();
-    node.marked = true;
-    return previous;
-  }
+void mailbox_based_actor::cleanup(uint32_t reason) {
+  detail::sync_request_bouncer f{reason};
+  m_mailbox.close(f);
+  local_actor::cleanup(reason);
+}
 
-  template <class Actor>
-  void hm_cleanup(Actor* self, mailbox_element* previous) {
-    self->current_node()->marked = false;
-    self->current_node(previous);
-    self->pop_timeout();
-  }
-
-  template <class Actor>
-  void hm_revert(Actor* self, mailbox_element* previous) {
-    // same operation for blocking, i.e., nestable, invoke
-    hm_cleanup(self, previous);
-  }
-};
-
-} // namespace policy
 } // namespace caf
-
-#endif // CAF_POLICY_NESTABLE_INVOKE_HPP

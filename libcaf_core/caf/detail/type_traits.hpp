@@ -267,13 +267,29 @@ class has_static_type_name {
  private:
   template <class U,
             class = typename std::enable_if<
-                      !std::is_member_pointer<decltype(&U::is_baz)>::value
+                      !std::is_member_pointer<decltype(&U::static_type_name)>::value
                     >::type>
   static std::true_type sfinae_fun(int);
   template <class>
   static std::false_type sfinae_fun(...);
  public:
   static constexpr bool value = decltype(sfinae_fun<T>(0))::value;
+};
+
+/**
+ * Checks whether `T::memory_cache_flag` exists.
+ */
+template <class T>
+class is_memory_cached {
+ private:
+  template <class U, bool = U::memory_cache_flag>
+  static std::true_type check(int);
+
+  template <class>
+  static std::false_type check(...);
+
+ public:
+  static constexpr bool value = decltype(check<T>(0))::value;
 };
 
 /**

@@ -86,12 +86,11 @@ class scheduling_policy {
   timed_fetch_result fetch_messages(Actor* self, F cb, timeout_type abs_time);
 
   /**
-   * Enqueues given message to the actor's mailbox and take any
-   * steps to resume the actor if it's currently blocked.
+   * Enqueues given message to the actor's mailbox and takes any
+   * steps necessary to resume the actor if it's currently blocked.
    */
   template <class Actor>
-  void enqueue(Actor* self, const actor_addr& sender, message_id mid,
-         message& msg, execution_unit* host);
+  void enqueue(Actor* self, mailbox_element_ptr ptr, execution_unit* host);
 
   /**
    * Starts the given actor either by launching a thread or enqueuing

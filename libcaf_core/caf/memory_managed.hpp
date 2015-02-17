@@ -22,10 +22,6 @@
 
 namespace caf {
 
-namespace detail {
-struct disposer;
-}
-
 /**
  * This base enables derived classes to enforce a different
  * allocation strategy than new/delete by providing a virtual
@@ -33,8 +29,6 @@ struct disposer;
  */
 class memory_managed {
  public:
-  friend struct detail::disposer;
-
   /**
    * Default implementations calls `delete this, but can
    * be overriden in case deletion depends on some condition or

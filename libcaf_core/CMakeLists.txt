@@ -51,6 +51,7 @@ set (LIBCAF_CORE_SRCS
      src/group_manager.cpp
      src/local_actor.cpp
      src/logging.cpp
+     src/mailbox_based_actor.cpp
      src/mailbox_element.cpp
      src/memory.cpp
      src/memory_managed.cpp

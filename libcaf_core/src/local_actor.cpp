@@ -32,15 +32,21 @@ namespace caf {
 // later on in spawn(); this prevents subtle bugs that lead to segfaults,
 // e.g., when calling address() in the ctor of a derived class
 local_actor::local_actor()
-    : super(size_t{1}),
-      m_dummy_node(),
-      m_current_node(&m_dummy_node),
+    : abstract_actor(size_t{1}),
       m_planned_exit_reason(exit_reason::not_exited) {
   // nop
 }
 
 local_actor::~local_actor() {
   // nop
+}
+
+message& local_actor::last_dequeued() {
+  return m_current_element ? m_current_element->msg : m_dummy_message;
+}
+
+actor_addr& local_actor::last_sender() {
+  return m_current_element ? m_current_element->sender : m_dummy_sender;
 }
 
 void local_actor::monitor(const actor_addr& whom) {
@@ -100,11 +106,11 @@ std::vector<group> local_actor::joined_groups() const {
 }
 
 void local_actor::reply_message(message&& what) {
-  auto& whom = m_current_node->sender;
+  auto& whom = m_current_element->sender;
   if (!whom) {
     return;
   }
-  auto& mid = m_current_node->mid;
+  auto& mid = m_current_element->mid;
   if (mid.valid() == false || mid.is_response()) {
     send(actor_cast<channel>(whom), std::move(what));
   } else if (!mid.is_answered()) {
@@ -118,24 +124,19 @@ void local_actor::forward_message(const actor& dest, message_priority prio) {
   if (!dest) {
     return;
   }
-  auto mid = (prio == message_priority::high)
-               ? m_current_node->mid.with_high_priority()
-               : m_current_node->mid.with_normal_priority();
-  dest->enqueue(m_current_node->sender, mid, m_current_node->msg, host());
-  // treat this message as asynchronous message from now on
-  m_current_node->mid = invalid_message_id;
+  auto mid = m_current_element->mid;
+  m_current_element->mid = prio == message_priority::high
+                           ? mid.with_high_priority()
+                           : mid.with_normal_priority();
+  dest->enqueue(std::move(m_current_element), host());
 }
 
-void local_actor::send_impl(message_priority prio, const channel& dest,
+void local_actor::send_impl(message_priority prio, abstract_channel* dest,
                             message&& what) {
   if (!dest) {
     return;
   }
-  message_id mid;
-  if (prio == message_priority::high) {
-    mid = mid.with_high_priority();
-  }
-  dest->enqueue(address(), mid, std::move(what), host());
+  dest->enqueue(address(), message_id::make(prio), std::move(what), host());
 }
 
 void local_actor::send_exit(const actor_addr& whom, uint32_t reason) {
@@ -153,15 +154,18 @@ void local_actor::delayed_send_impl(message_priority prio, const channel& dest,
 }
 
 response_promise local_actor::make_response_promise() {
-  auto n = m_current_node;
-  response_promise result{address(), n->sender, n->mid.response_id()};
-  n->mid.mark_as_answered();
+  auto& ptr = m_current_element;
+  if (!ptr) {
+    return response_promise{};
+  }
+  response_promise result{address(), ptr->sender, ptr->mid.response_id()};
+  ptr->mid.mark_as_answered();
   return result;
 }
 
 void local_actor::cleanup(uint32_t reason) {
   CAF_LOG_TRACE(CAF_ARG(reason));
-  super::cleanup(reason);
+  abstract_actor::cleanup(reason);
   // tell registry we're done
   is_registered(false);
 }

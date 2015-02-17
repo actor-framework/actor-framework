@@ -37,63 +37,55 @@
 #include "caf/actor_companion.hpp"
 #include "caf/message_handler.hpp"
 
-#include "caf/policy/sequential_invoke.hpp"
-
 namespace caf {
 namespace mixin {
 
 template<typename Base, int EventId = static_cast<int>(QEvent::User + 31337)>
 class actor_widget : public Base {
-
  public:
+  typedef typename actor_companion::message_pointer message_pointer;
 
-    typedef typename actor_companion::message_pointer message_pointer;
-
-    struct event_type : public QEvent {
-
-        message_pointer mptr;
-
-        event_type(message_pointer ptr)
-        : QEvent(static_cast<QEvent::Type>(EventId)), mptr(std::move(ptr)) { }
-
-    };
-
-    template<typename... Ts>
-    actor_widget(Ts&&... args) : Base(std::forward<Ts>(args)...) {
-        m_companion.reset(detail::memory::create<actor_companion>());
-        m_companion->on_enqueue([=](message_pointer ptr) {
-            qApp->postEvent(this, new event_type(std::move(ptr)));
-        });
+  struct event_type : public QEvent {
+    message_pointer mptr;
+    event_type(message_pointer ptr)
+        : QEvent(static_cast<QEvent::Type>(EventId)), mptr(std::move(ptr)) {
+      // nop
     }
+  };
 
-    template<typename T>
-    void set_message_handler(T pfun) {
-        m_companion->become(pfun(m_companion.get()));
-    }
+  template <typename... Ts>
+  actor_widget(Ts&&... args) : Base(std::forward<Ts>(args)...) {
+    m_companion.reset(detail::memory::create<actor_companion>());
+    m_companion->on_enqueue([=](message_pointer ptr) {
+      qApp->postEvent(this, new event_type(std::move(ptr)));
+    });
+  }
 
-    virtual bool event(QEvent* event) {
-        if (event->type() == static_cast<QEvent::Type>(EventId)) {
-            auto ptr = dynamic_cast<event_type*>(event);
-            if (ptr) {
-                m_invoke.invoke_message(m_companion.get(),
-                                        *ptr->mptr.get(),
-                                        m_companion->bhvr_stack().back(),
-                                        m_companion->bhvr_stack().back_id());
-                return true;
-            }
-        }
-        return Base::event(event);
-    }
+  template <typename T>
+  void set_message_handler(T pfun) {
+    m_companion->become(pfun(m_companion.get()));
+  }
 
-    actor as_actor() const {
-        return m_companion;
+  virtual bool event(QEvent* event) {
+    if (event->type() == static_cast<QEvent::Type>(EventId)) {
+      auto ptr = dynamic_cast<event_type*>(event);
+      if (ptr) {
+        m_invoke.invoke_message(m_companion.get(), ptr->mptr,
+                                m_companion->bhvr_stack().back(),
+                                m_companion->bhvr_stack().back_id());
+        return true;
+      }
     }
+    return Base::event(event);
+  }
+
+  actor as_actor() const {
+    return m_companion;
+  }
 
  private:
-
-    policy::sequential_invoke m_invoke;
+    policy::invoke_policy m_invoke;
     actor_companion_ptr m_companion;
-
 };
 
 } // namespace mixin

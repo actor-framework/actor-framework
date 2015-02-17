@@ -17,11 +17,13 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_INTRUSIVE_LIST_HPP
-#define CAF_DETAIL_INTRUSIVE_LIST_HPP
+#ifndef CAF_DETAIL_INTRUSIVE_PARTITIONED_LIST_HPP
+#define CAF_DETAIL_INTRUSIVE_PARTITIONED_LIST_HPP
 
 #include <memory>
 #include <iterator>
+
+#include "caf/policy/invoke_policy.hpp"
 
 namespace caf {
 namespace detail {
@@ -173,6 +175,49 @@ class intrusive_partitioned_list {
     insert(second_end(), val);
   }
 
+  template <class Actor, class... Vs>
+  bool invoke(Actor* self, iterator first, iterator last, Vs&... vs) {
+    pointer prev = first->prev;
+    pointer next = first->next;
+    auto move_on = [&](bool first_valid) {
+      if (first_valid) {
+        prev = first.ptr;
+      }
+      first = next;
+      next = first->next;
+    };
+    while (first != last) {
+      std::unique_ptr<value_type, deleter_type> tmp{first.ptr};
+      // since this function can be called recursively during
+      // self->invoke_message(tmp, vs...), we have to remove the
+      // element from the list proactively and put it back in if
+      // it's safe, i.e., if invoke_message returned im_skipped
+      prev->next = next;
+      next->prev = prev;
+      switch (self->invoke_message(tmp, vs...)) {
+        case policy::im_dropped:
+          move_on(false);
+          break;
+        case policy::im_success:
+          return true;
+        case policy::im_skipped:
+          if (tmp) {
+            // re-integrate tmp and move on
+            prev->next = tmp.get();
+            next->prev = tmp.release();
+            move_on(true);
+          }
+          else {
+            // only happens if the user does something
+            // really, really stupid; check it nonetheless
+            move_on(false);
+          }
+          break;
+      }
+    }
+    return false;
+  }
+
   size_t count(iterator first, iterator last, size_t max_count) {
     size_t result = 0;
     while (first != last && result < max_count) {
@@ -197,4 +242,4 @@ class intrusive_partitioned_list {
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_INTRUSIVE_LIST_HPP
+#endif // CAF_DETAIL_INTRUSIVE_PARTITIONED_LIST_HPP

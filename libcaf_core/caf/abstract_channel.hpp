@@ -46,6 +46,15 @@ class abstract_channel : public ref_counted {
                        message content, execution_unit* host) = 0;
 
   /**
+   * Enqueues a new message wrapped in a `mailbox_element` to the channel.
+   * This variant is used by actors whenever it is possible to allocate
+   * mailbox element and message on the same memory block and is thus
+   * more efficient. Non-actors use the default implementation which simply
+   * calls the pure virtual version.
+   */
+  virtual void enqueue(mailbox_element_ptr what, execution_unit* host);
+
+  /**
    * Returns the ID of the node this actor is running on.
    */
   inline node_id node() const {

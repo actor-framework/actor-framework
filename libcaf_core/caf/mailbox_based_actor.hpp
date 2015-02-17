@@ -17,69 +17,39 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_MIXIN_SINGLE_TIMEOUT_HPP
-#define CAF_MIXIN_SINGLE_TIMEOUT_HPP
+#ifndef CAF_MAILBOX_BASED_ACTOR_HPP
+#define CAF_MAILBOX_BASED_ACTOR_HPP
 
-#include "caf/message.hpp"
-#include "caf/duration.hpp"
-#include "caf/system_messages.hpp"
+#include <type_traits>
+
+#include "caf/local_actor.hpp"
+#include "caf/mailbox_element.hpp"
+
+#include "caf/detail/sync_request_bouncer.hpp"
+#include "caf/detail/single_reader_queue.hpp"
 
 namespace caf {
-namespace mixin {
 
 /**
- * Mixin for actors using a non-nestable message processing.
+ * Base class for local running actors using a mailbox.
  */
-template <class Base, class Subtype>
-class single_timeout : public Base {
+class mailbox_based_actor : public local_actor {
  public:
-  using super = Base;
+  using del = detail::disposer;
+  using mailbox_type = detail::single_reader_queue<mailbox_element, del>;
 
-  using combined_type = single_timeout;
+  ~mailbox_based_actor();
 
-  template <class... Ts>
-  single_timeout(Ts&&... args)
-      : super(std::forward<Ts>(args)...),
-        m_timeout_id(0) {
-    // nop
-  }
+  void cleanup(uint32_t reason);
 
-  void request_timeout(const duration& d) {
-    if (d.valid()) {
-      this->has_timeout(true);
-      auto tid = ++m_timeout_id;
-      auto msg = make_message(timeout_msg{tid});
-      if (d.is_zero()) {
-        // immediately enqueue timeout message if duration == 0s
-        this->enqueue(this->address(), invalid_message_id,
-                      std::move(msg), this->host());
-      } else
-        this->delayed_send(this, d, std::move(msg));
-    } else
-      this->has_timeout(false);
-  }
-
-  bool waits_for_timeout(uint32_t timeout_id) const {
-    return this->has_timeout() && m_timeout_id == timeout_id;
-  }
-
-  bool is_active_timeout(uint32_t tid) const {
-    return waits_for_timeout(tid);
-  }
-
-  uint32_t active_timeout_id() const {
-    return m_timeout_id;
-  }
-
-  void reset_timeout() {
-    this->has_timeout(false);
+  inline mailbox_type& mailbox() {
+    return m_mailbox;
   }
 
  protected:
-  uint32_t m_timeout_id;
+  mailbox_type m_mailbox;
 };
 
-} // namespace mixin
 } // namespace caf
 
-#endif // CAF_MIXIN_SINGLE_TIMEOUT_HPP
+#endif // CAF_MAILBOX_BASED_ACTOR_HPP

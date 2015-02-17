@@ -22,7 +22,6 @@
 #include "caf/policy/no_resume.hpp"
 #include "caf/policy/no_scheduling.hpp"
 #include "caf/policy/actor_policies.hpp"
-#include "caf/policy/nestable_invoke.hpp"
 #include "caf/policy/not_prioritizing.hpp"
 
 #include "caf/detail/singletons.hpp"
@@ -41,8 +40,7 @@ struct impl : blocking_actor {
 
 blocking_actor* alloc() {
   using namespace policy;
-  using policies = actor_policies<no_scheduling, not_prioritizing,
-                                  no_resume, nestable_invoke>;
+  using policies = actor_policies<no_scheduling, not_prioritizing, no_resume>;
   return new detail::proper_actor<impl, policies>;
 }
 

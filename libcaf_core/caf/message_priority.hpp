@@ -27,7 +27,6 @@ namespace caf {
 enum class message_priority : uint32_t {
   normal,
   high
-
 };
 
 } // namespace caf

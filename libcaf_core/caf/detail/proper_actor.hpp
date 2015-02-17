@@ -54,7 +54,14 @@ class proper_actor_base : public Policies::resume_policy::template
 
   void enqueue(const actor_addr& sender, message_id mid,
                message msg, execution_unit* eu) override {
-    scheduling_policy().enqueue(dptr(), sender, mid, msg, eu);
+    auto d = dptr();
+    scheduling_policy().enqueue(d, mailbox_element::make(sender, mid,
+                                                         std::move(msg)),
+                                eu);
+  }
+
+  void enqueue(mailbox_element_ptr what, execution_unit* eu) override {
+    scheduling_policy().enqueue(dptr(), std::move(what), eu);
   }
 
   void launch(bool hide, bool lazy, execution_unit* eu) {
@@ -80,7 +87,7 @@ class proper_actor_base : public Policies::resume_policy::template
 
   // member functions from priority policy
 
-  unique_mailbox_element_pointer next_message() {
+  mailbox_element_ptr next_message() {
     return priority_policy().next_message(dptr());
   }
 
@@ -88,7 +95,7 @@ class proper_actor_base : public Policies::resume_policy::template
     return priority_policy().has_next_message(dptr());
   }
 
-  void push_to_cache(unique_mailbox_element_pointer ptr) {
+  void push_to_cache(mailbox_element_ptr ptr) {
     priority_policy().push_to_cache(dptr(), std::move(ptr));
   }
 
@@ -99,7 +106,7 @@ class proper_actor_base : public Policies::resume_policy::template
   // member functions from invoke policy
 
   template <class PartialFunctionOrBehavior>
-  policy::invoke_message_result invoke_message(mailbox_element& me,
+  policy::invoke_message_result invoke_message(mailbox_element_ptr& me,
                                                PartialFunctionOrBehavior& fun,
                                                message_id awaited_response) {
     return invoke_policy().invoke_message(dptr(), me, fun, awaited_response);
@@ -118,7 +125,7 @@ class proper_actor_base : public Policies::resume_policy::template
     return m_policies.get_resume_policy();
   }
 
-  typename Policies::invoke_policy& invoke_policy() {
+  typename policy::invoke_policy& invoke_policy() {
     return m_policies.get_invoke_policy();
   }
 
@@ -150,7 +157,7 @@ class proper_actor
 
   // required by event_based_resume::mixin::resume
 
-  policy::invoke_message_result invoke_message(mailbox_element& me) {
+  policy::invoke_message_result invoke_message(mailbox_element_ptr& me) {
     CAF_LOG_TRACE("");
     auto bhvr = this->bhvr_stack().back();
     auto mid = this->bhvr_stack().back_id();
@@ -214,11 +221,13 @@ class proper_actor<Base, Policies, true>
     for (;;) {
       this->await_ready();
       auto msg = this->next_message();
-      switch (this->invoke_message(*msg, bhvr, mid)) {
+      switch (this->invoke_message(msg, bhvr, mid)) {
         case policy::im_success:
           return;
         case policy::im_skipped:
-          this->push_to_cache(std::move(msg));
+          if (msg) {
+            this->push_to_cache(std::move(msg));
+          }
           break;
         default:
           // delete msg
@@ -237,8 +246,6 @@ class proper_actor<Base, Policies, true>
       // immediately enqueue timeout message if duration == 0s
       this->enqueue(this->address(), invalid_message_id,
                     std::move(msg), this->host());
-      // auto e = this->new_mailbox_element(this, std::move(msg));
-      // this->m_mailbox.enqueue(e);
     } else {
       this->delayed_send(this, d, std::move(msg));
     }
@@ -256,14 +263,13 @@ class proper_actor<Base, Policies, true>
     }
   }
 
-  // required by nestable invoke policy
+  // required by invoke policy
   void pop_timeout() {
     m_pending_timeouts.pop_back();
   }
 
-  // required by nestable invoke policy;
-  // adds a dummy timeout to the pending timeouts to prevent
-  // nestable invokes to trigger an inactive timeout
+  // required by invoke policy; adds a dummy timeout to the pending
+  // timeouts to prevent invokes to trigger an inactive timeout
   void push_timeout() {
     m_pending_timeouts.push_back(++m_next_timeout_id);
   }

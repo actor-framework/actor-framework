@@ -54,8 +54,7 @@ using hrc = std::chrono::high_resolution_clock;
 
 using timer_actor_policies = policy::actor_policies<policy::no_scheduling,
                                                     policy::not_prioritizing,
-                                                    policy::no_resume,
-                                                    policy::nestable_invoke>;
+                                                    policy::no_resume>;
 
 struct delayed_msg {
   actor_addr from;
@@ -76,27 +75,27 @@ inline void insert_dmsg(Map& storage, const duration& d, Ts&&... vs) {
   storage.insert(std::make_pair(std::move(tout), std::move(dmsg)));
 }
 
-class timer_actor final : public detail::proper_actor<blocking_actor,
-                                                      timer_actor_policies>,
-                          public spawn_as_is {
+class timer_actor : public detail::proper_actor<blocking_actor,
+                                                timer_actor_policies>,
+                    public spawn_as_is {
  public:
-  inline unique_mailbox_element_pointer dequeue() {
+  inline mailbox_element_ptr dequeue() {
     await_data();
     return next_message();
   }
 
-  inline unique_mailbox_element_pointer try_dequeue(const hrc::time_point& tp) {
+  inline mailbox_element_ptr try_dequeue(const hrc::time_point& tp) {
     if (scheduling_policy().await_data(this, tp)) {
       return next_message();
     }
-    return unique_mailbox_element_pointer{};
+    return mailbox_element_ptr{};
   }
 
   void act() override {
     trap_exit(true);
     // setup & local variables
     bool done = false;
-    unique_mailbox_element_pointer msg_ptr;
+    mailbox_element_ptr msg_ptr;
     std::multimap<hrc::time_point, delayed_msg> messages;
     // message handling rules
     message_handler mfun{

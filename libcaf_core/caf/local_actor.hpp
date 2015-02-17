@@ -46,12 +46,12 @@
 #include "caf/message_priority.hpp"
 #include "caf/check_typed_input.hpp"
 
-#include "caf/mixin/memory_cached.hpp"
-
 #include "caf/detail/logging.hpp"
+#include "caf/detail/disposer.hpp"
 #include "caf/detail/behavior_stack.hpp"
 #include "caf/detail/typed_actor_util.hpp"
 #include "caf/detail/single_reader_queue.hpp"
+#include "caf/detail/memory_cache_flag_type.hpp"
 
 namespace caf {
 
@@ -60,18 +60,18 @@ class sync_handle_helper;
 
 /**
  * Base class for local running actors.
- * @warning Instances of `local_actor` start with a reference count of 1
- * @extends abstract_actor
  */
-class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
+class local_actor : public abstract_actor {
  public:
   using del = detail::disposer;
   using mailbox_type = detail::single_reader_queue<mailbox_element, del>;
 
+  static constexpr auto memory_cache_flag = detail::needs_embedding;
+
   ~local_actor();
 
   /**************************************************************************
-   *              spawn untyped actors              *
+   *                          spawn untyped actors                          *
    **************************************************************************/
 
   template <class C, spawn_options Os = no_spawn_options, class... Ts>
@@ -107,7 +107,7 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   }
 
   /**************************************************************************
-   *               spawn typed actors               *
+   *                           spawn typed actors                           *
    **************************************************************************/
 
   template <class C, spawn_options Os = no_spawn_options, class... Ts>
@@ -142,35 +142,33 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
    **************************************************************************/
 
   /**
-   * Sends `{what...} to `whom` using the priority `prio`.
+   * Sends `{vs...} to `whom` using the priority `prio`.
    */
-  template <class... Ts>
-  inline void send(message_priority prio, const channel& whom, Ts&&... what) {
-    static_assert(sizeof...(Ts) > 0, "sizeof...(Ts) == 0");
-    send_impl(prio, whom, make_message(std::forward<Ts>(what)...));
+  template <class... Vs>
+  inline void send(message_priority prio, const channel& whom, Vs&&... vs) {
+    static_assert(sizeof...(Vs) > 0, "sizeof...(Vs) == 0");
+    fast_send(prio, whom, std::forward<Vs>(vs)...);
+  }
+
+  /**
+   * Sends `{vs...} to `whom` using normal priority.
+   */
+  template <class... Vs>
+  inline void send(const channel& whom, Vs&&... vs) {
+    static_assert(sizeof...(Vs) > 0, "sizeof...(Vs) == 0");
+    fast_send(message_priority::normal, whom, std::forward<Vs>(vs)...);
   }
 
   /**
    * Sends `{what...} to `whom`.
    */
-  template <class... Ts>
-  inline void send(const channel& whom, Ts&&... what) {
-    static_assert(sizeof...(Ts) > 0, "sizeof...(Ts) == 0");
-    send_impl(message_priority::normal, whom,
-              make_message(std::forward<Ts>(what)...));
-  }
-
-  /**
-   * Sends `{what...} to `whom`.
-   */
-  template <class... Rs, class... Ts>
-  void send(const typed_actor<Rs...>& whom, Ts... what) {
+  template <class... Rs, class... Vs>
+  void send(const typed_actor<Rs...>& whom, Vs&&... vs) {
     check_typed_input(whom,
                       detail::type_list<typename detail::implicit_conversions<
-                        typename std::decay<Ts>::type
+                        typename std::decay<Vs>::type
                       >::type...>{});
-    send_impl(message_priority::normal, actor{whom.m_ptr.get()},
-              make_message(std::forward<Ts>(what)...));
+    fast_send(message_priority::normal, whom, std::forward<Vs>(vs)...);
   }
 
   /**
@@ -201,7 +199,7 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   void delayed_send(message_priority prio, const channel& whom,
                     const duration& rtime, Ts&&... args) {
     delayed_send_impl(prio, whom, rtime,
-                       make_message(std::forward<Ts>(args)...));
+                      make_message(std::forward<Ts>(args)...));
   }
 
   /**
@@ -297,16 +295,12 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
    * Returns the last message that was dequeued from the actor's mailbox.
    * @warning Only set during callback invocation.
    */
-  inline message& last_dequeued() {
-    return m_current_node->msg;
-  }
+  message& last_dequeued();
 
   /**
    * Returns the address of the last sender of the last dequeued message.
    */
-  inline actor_addr& last_sender() {
-    return m_current_node->sender;
-  }
+  actor_addr& last_sender();
 
   /**
    * Adds a unidirectional `monitor` to `whom`.
@@ -443,12 +437,8 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
     return res;
   }
 
-  inline void current_node(mailbox_element* ptr) {
-    this->m_current_node = ptr;
-  }
-
-  inline mailbox_element* current_node() {
-    return this->m_current_node;
+  inline mailbox_element_ptr& current_element() {
+    return m_current_element;
   }
 
   inline message_id new_request_id() {
@@ -495,7 +485,7 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   // returns 0 if last_dequeued() is an asynchronous or sync request message,
   // a response id generated from the request id otherwise
   inline message_id get_response_id() {
-    auto mid = m_current_node->mid;
+    auto mid = m_current_element->mid;
     return (mid.is_request()) ? mid.response_id() : message_id();
   }
 
@@ -523,15 +513,6 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
 
   void cleanup(uint32_t reason);
 
-  inline mailbox_element* dummy_node() {
-    return &m_dummy_node;
-  }
-
-  template <class... Ts>
-  inline mailbox_element* new_mailbox_element(Ts&&... args) {
-    return mailbox_element::create(std::forward<Ts>(args)...);
-  }
-
  protected:
   // identifies the ID of the last sent synchronous request
   message_id m_last_request_id;
@@ -539,12 +520,13 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   // identifies all IDs of sync messages waiting for a response
   std::forward_list<message_id> m_pending_responses;
 
-  // "default value" for m_current_node
-  mailbox_element m_dummy_node;
+  // "default value" for m_current_element
+  actor_addr m_dummy_sender;
+  message m_dummy_message;
 
   // points to m_dummy_node if no callback is currently invoked,
   // points to the node under processing otherwise
-  mailbox_element* m_current_node;
+  mailbox_element_ptr m_current_element;
 
   // set by quit
   uint32_t m_planned_exit_reason;
@@ -552,10 +534,40 @@ class local_actor : public extend<abstract_actor>::with<mixin::memory_cached> {
   /** @endcond */
 
  private:
-  void send_impl(message_priority prio, const channel& dest, message&& what);
+  template <class... Vs>
+  void fast_send_impl(message_priority mp, abstract_channel* dest, Vs&&... vs) {
+    if (!dest) {
+      return;
+    }
+    dest->enqueue(mailbox_element::make_joint(address(), message_id::make(mp),
+                                              std::forward<Vs>(vs)...),
+                  host());
+  }
+
+  template <class T, class V0, class... Vs>
+  typename std::enable_if<
+    !std::is_same<typename std::decay<V0>::type, message>::value
+  >::type
+  fast_send(message_priority mp, const T& dest, V0&& v0, Vs&&... vs) {
+    fast_send_impl(mp, actor_cast<abstract_channel*>(dest),
+                   std::forward<V0>(v0), std::forward<Vs>(vs)...);
+  }
+
+  template <class T>
+  void fast_send(message_priority mp, const T& dest, message what) {
+    send_impl(mp, actor_cast<abstract_channel*>(dest), std::move(what));
+  }
+
+  void send_impl(message_priority prio, abstract_channel* dest, message&& what);
+
+  template <class T>
+  void send_impl(message_priority prio, const T& dest, message&& what) {
+    send_impl(prio, actor_cast<abstract_channel*>(dest), std::move(what));
+  }
+
   void delayed_send_impl(message_priority prio, const channel& whom,
                          const duration& rtime, message data);
-  using super = combined_type;
+
   std::function<void()> m_sync_failure_handler;
   std::function<void()> m_sync_timeout_handler;
 };

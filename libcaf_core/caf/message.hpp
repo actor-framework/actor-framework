@@ -307,8 +307,6 @@ class message {
 
   explicit message(const data_ptr& vals);
 
-  void reset();
-
   inline data_ptr& vals() {
     return m_vals;
   }
@@ -328,6 +326,10 @@ class message {
   inline void force_detach() {
     m_vals.detach();
   }
+
+  void reset(raw_ptr new_ptr = nullptr);
+
+  void swap(message& other);
 
   inline std::string tuple_type_names() const {
     return m_vals->tuple_type_names();

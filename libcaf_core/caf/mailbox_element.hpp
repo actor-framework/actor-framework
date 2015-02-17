@@ -17,10 +17,10 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_RECURSIVE_QUEUE_NODE_HPP
-#define CAF_RECURSIVE_QUEUE_NODE_HPP
+#ifndef CAF_MAILBOX_ELEMENT_HPP
+#define CAF_MAILBOX_ELEMENT_HPP
 
-#include <cstdint>
+#include <cstddef>
 
 #include "caf/extend.hpp"
 #include "caf/message.hpp"
@@ -28,16 +28,20 @@
 #include "caf/message_id.hpp"
 #include "caf/ref_counted.hpp"
 
-#include "caf/mixin/memory_cached.hpp"
+#include "caf/detail/memory.hpp"
+#include "caf/detail/embedded.hpp"
+#include "caf/detail/disposer.hpp"
+#include "caf/detail/tuple_vals.hpp"
+#include "caf/detail/pair_storage.hpp"
+#include "caf/detail/message_data.hpp"
+#include "caf/detail/memory_cache_flag_type.hpp"
 
-// needs access to constructor + destructor to initialize m_dummy_node
 namespace caf {
 
-class local_actor;
-
-class mailbox_element : public extend<memory_managed>::
-                               with<mixin::memory_cached> {
+class mailbox_element : public memory_managed {
  public:
+  static constexpr auto memory_cache_flag = detail::needs_embedding;
+
   mailbox_element* next; // intrusive next pointer
   mailbox_element* prev; // intrusive previous pointer
   bool marked;           // denotes if this node is currently processed
@@ -46,6 +50,7 @@ class mailbox_element : public extend<memory_managed>::
   message msg;           // 'content field'
 
   mailbox_element();
+  mailbox_element(actor_addr sender, message_id id);
   mailbox_element(actor_addr sender, message_id id, message data);
 
   ~mailbox_element();
@@ -55,10 +60,24 @@ class mailbox_element : public extend<memory_managed>::
   mailbox_element& operator=(mailbox_element&&) = delete;
   mailbox_element& operator=(const mailbox_element&) = delete;
 
-  template <class T>
-  static mailbox_element* create(actor_addr sender, message_id id, T&& data) {
-    return detail::memory::create<mailbox_element>(std::move(sender), id,
-                                                   std::forward<T>(data));
+  using unique_ptr = std::unique_ptr<mailbox_element, detail::disposer>;
+
+  static unique_ptr make(actor_addr sender, message_id id, message msg);
+
+  template <class... Vs>
+  static unique_ptr make_joint(actor_addr sender, message_id id, Vs&&... vs) {
+    using value_storage =
+      detail::tuple_vals<
+        typename unbox_message_element<
+          typename detail::strip_and_convert<Vs>::type
+        >::type...
+      >;
+    std::integral_constant<size_t, 2> tk;
+    using storage = detail::pair_storage<mailbox_element, value_storage>;
+    auto ptr = detail::memory::create<storage>(tk, std::move(sender), id,
+                                               std::forward<Vs>(vs)...);
+    ptr->first.msg.reset(&(ptr->second));
+    return unique_ptr{&(ptr->first)};
   }
 
   inline bool is_high_priority() const {
@@ -66,9 +85,8 @@ class mailbox_element : public extend<memory_managed>::
   }
 };
 
-using unique_mailbox_element_pointer =
-  std::unique_ptr<mailbox_element, detail::disposer>;
+using mailbox_element_ptr = std::unique_ptr<mailbox_element, detail::disposer>;
 
 } // namespace caf
 
-#endif // CAF_RECURSIVE_QUEUE_NODE_HPP
+#endif // CAF_MAILBOX_ELEMENT_HPP

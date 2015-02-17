@@ -29,6 +29,9 @@
 #include "caf/config.hpp"
 #include "caf/ref_counted.hpp"
 
+#include "caf/detail/embedded.hpp"
+#include "caf/detail/memory_cache_flag_type.hpp"
+
 namespace caf {
 class mailbox_element;
 } // namespace caf
@@ -45,147 +48,133 @@ constexpr size_t s_max_elements = 20;       // don't create > 20 elements
 
 } // namespace <anonymous>
 
-struct disposer {
-  inline void operator()(memory_managed* ptr) const {
-    ptr->request_deletion();
-  }
-
-};
-
-class instance_wrapper {
-
- public:
-
-  virtual ~instance_wrapper();
-
-  // calls the destructor
-  virtual void destroy() = 0;
-
-  // releases memory
-  virtual void deallocate() = 0;
-
-};
+using embedded_storage = std::pair<intrusive_ptr<ref_counted>, void*>;
 
 class memory_cache {
-
  public:
-
   virtual ~memory_cache();
-
-  // calls dtor and either releases memory or re-uses it later
-  virtual void release_instance(void*) = 0;
-
-  virtual std::pair<instance_wrapper*, void*> new_instance() = 0;
-
-  // casts `ptr` to the derived type and returns it
-  virtual void* downcast(memory_managed* ptr) = 0;
-
+  virtual embedded_storage new_embedded_storage() = 0;
 };
-
-class instance_wrapper;
 
 template <class T>
 class basic_memory_cache;
 
 #ifdef CAF_NO_MEM_MANAGEMENT
 
+template <class T>
+struct rc_storage : public ref_counted {
+  T instance;
+  template <class... Vs>
+  rc_storage(Vs&&... vs) : instance(this, std::forward<Vs>(vs)...) {
+    // nop
+  }
+};
+
+template <class T>
+T* unbox_rc_storage(T* ptr) {
+  return ptr;
+}
+
+template <class T>
+T* unbox_rc_storage(rc_storage<T>* ptr) {
+  return &(ptr->instance);
+}
+
 class memory {
-
-  memory() = delete;
-
  public:
+  memory() = delete;
 
   // Allocates storage, initializes a new object, and returns the new instance.
   template <class T, class... Ts>
   static T* create(Ts&&... args) {
-    return new T(std::forward<Ts>(args)...);
+    using embedded_t =
+      typename std::conditional<
+        T::memory_cache_flag == provides_embedding,
+        rc_storage<T>,
+        T
+       >::type;
+    return unbox_rc_storage(new embedded_t(std::forward<Ts>(args)...));
   }
 
   static inline memory_cache* get_cache_map_entry(const std::type_info*) {
     return nullptr;
   }
-
 };
 
 #else // CAF_NO_MEM_MANAGEMENT
 
 template <class T>
 class basic_memory_cache : public memory_cache {
-
+ public:
   static constexpr size_t ne = s_alloc_size / sizeof(T);
   static constexpr size_t ms = ne < s_min_elements ? s_min_elements : ne;
   static constexpr size_t dsize = ms > s_max_elements ? s_max_elements : ms;
 
-  struct wrapper : instance_wrapper {
-    ref_counted* parent;
+  static_assert(dsize > 0, "dsize == 0");
+
+  using embedded_t =
+    typename std::conditional<
+      T::memory_cache_flag == needs_embedding,
+      embedded<T>,
+      T
+     >::type;
+
+  struct wrapper {
     union {
-      T instance;
-
+      embedded_t instance;
     };
-    wrapper() : parent(nullptr) {}
-    ~wrapper() {}
-    void destroy() { instance.~T(); }
-    void deallocate() { parent->deref(); }
 
+    wrapper() {
+      // nop
+    }
+
+    ~wrapper() {
+      // nop
+    }
   };
 
   class storage : public ref_counted {
-
    public:
-
-    storage() {
-      for (auto& elem : data) {
-        // each instance has a reference to its parent
-        elem.parent = this;
-        ref(); // deref() is called in wrapper::deallocate
-      }
+    storage() : m_pos(0) {
+      // nop
     }
 
-    using iterator = wrapper*;
+    ~storage() {
+      // nop
+    }
 
-    iterator begin() { return data; }
+    bool has_next() {
+      return m_pos < dsize;
+    }
 
-    iterator end() { return begin() + dsize; }
+    embedded_t* next() {
+      return &(m_data[m_pos++].instance);
+    }
 
    private:
-
-    wrapper data[dsize];
-
+    size_t m_pos;
+    wrapper m_data[dsize];
   };
 
- public:
-
-  std::vector<wrapper*> cached_elements;
-
-  basic_memory_cache() { cached_elements.reserve(dsize); }
-
-  ~basic_memory_cache() {
-    for (auto e : cached_elements) e->deallocate();
-  }
-
-  void* downcast(memory_managed* ptr) { return static_cast<T*>(ptr); }
-
-  void release_instance(void* vptr) override {
-    CAF_REQUIRE(vptr != nullptr);
-    auto ptr = reinterpret_cast<T*>(vptr);
-    CAF_REQUIRE(ptr->outer_memory != nullptr);
-    auto wptr = static_cast<wrapper*>(ptr->outer_memory);
-    wptr->destroy();
-    wptr->deallocate();
-  }
-
-  std::pair<instance_wrapper*, void*> new_instance() override {
-    if (cached_elements.empty()) {
-      auto elements = new storage;
-      for (auto i = elements->begin(); i != elements->end(); ++i) {
-        cached_elements.push_back(i);
-      }
+  embedded_storage new_embedded_storage() override {
+    // allocate cache on-the-fly
+    if (!m_cache) {
+      m_cache.reset(new storage);
     }
-    wrapper* wptr = cached_elements.back();
-    cached_elements.pop_back();
-    return std::make_pair(wptr, &(wptr->instance));
+    auto res = m_cache->next();
+    if (m_cache->has_next()) {
+      return {m_cache, res};
+    }
+    // we got the last element out of the cache; pass the reference to the
+    // client to avoid pointless increase/decrease ops on the reference count
+    embedded_storage result;
+    result.first.reset(m_cache.release(), false);
+    result.second = res;
+    return result;
   }
 
+ private:
+  intrusive_ptr<storage> m_cache;
 };
 
 class memory {
@@ -198,13 +187,19 @@ class memory {
  public:
 
   // Allocates storage, initializes a new object, and returns the new instance.
-  template <class T, class... Ts>
-  static T* create(Ts&&... args) {
+  template <class T, class... Vs>
+  static T* create(Vs&&... vs) {
+    using embedded_t =
+      typename std::conditional<
+        T::memory_cache_flag == needs_embedding,
+        embedded<T>,
+        T
+       >::type;
     auto mc = get_or_set_cache_map_entry<T>();
-    auto p = mc->new_instance();
-    auto result = new (p.second) T(std::forward<Ts>(args)...);
-    result->outer_memory = p.first;
-    return result;
+    auto es = mc->new_embedded_storage();
+    auto ptr = reinterpret_cast<embedded_t*>(es.second);
+    new (ptr) embedded_t(std::move(es.first), std::forward<Vs>(vs)...);
+    return ptr;
   }
 
   static memory_cache* get_cache_map_entry(const std::type_info* tinf);
@@ -212,7 +207,7 @@ class memory {
  private:
 
   static void add_cache_map_entry(const std::type_info* tinf,
-                  memory_cache* instance);
+                                  memory_cache* instance);
 
   template <class T>
   static inline memory_cache* get_or_set_cache_map_entry() {

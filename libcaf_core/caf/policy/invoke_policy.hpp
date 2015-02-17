@@ -32,7 +32,6 @@
 #include "caf/exit_reason.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/system_messages.hpp"
-#include "caf/message_handler.hpp"
 #include "caf/response_promise.hpp"
 
 #include "caf/detail/memory.hpp"
@@ -42,28 +41,15 @@
 namespace caf {
 namespace policy {
 
-enum receive_policy_flag {
-  // receives can be nested
-  rp_nestable,
-  // receives are guaranteed to be sequential
-  rp_sequential
-};
-
 enum invoke_message_result {
   im_success,
   im_skipped,
   im_dropped
 };
 
-template <receive_policy_flag X>
-struct rp_flag {
-  using type = std::integral_constant<receive_policy_flag, X>;
-};
-
 /**
  * Base class for invoke policies.
  */
-template <class Derived>
 class invoke_policy {
  public:
   enum class msg_type {
@@ -85,15 +71,13 @@ class invoke_policy {
   //   - self could process message?
   //   - yes: cleanup()
   //   - no: revert(...) -> set self back to state it had before begin()
-  template <class Actor, class Fun>
-  invoke_message_result invoke_message(Actor* self, mailbox_element& node,
-                                       Fun& fun, message_id awaited_response) {
+  template <class Actor>
+  invoke_message_result invoke_message(Actor* self, mailbox_element_ptr& node,
+                                       behavior& fun,
+                                       message_id awaited_response) {
     CAF_LOG_TRACE("");
     bool handle_sync_failure_on_mismatch = true;
-    if (dptr()->hm_should_skip(node)) {
-      return im_skipped;
-    }
-    switch (this->filter_msg(self, node)) {
+    switch (this->filter_msg(self, *node)) {
       case msg_type::normal_exit:
         CAF_LOG_DEBUG("dropped normal exit signal");
         return im_dropped;
@@ -113,7 +97,7 @@ class invoke_policy {
         return im_success;
       case msg_type::timeout: {
         CAF_LOG_DEBUG("handle timeout message");
-        auto& tm = node.msg.get_as<timeout_msg>(0);
+        auto& tm = node->msg.get_as<timeout_msg>(0);
         self->handle_timeout(fun, tm.timeout_id);
         if (awaited_response.valid()) {
           self->mark_arrived(awaited_response);
@@ -126,12 +110,12 @@ class invoke_policy {
         CAF_ANNOTATE_FALLTHROUGH;
       case msg_type::sync_response:
         CAF_LOG_DEBUG("handle as synchronous response: "
-                 << CAF_TARG(node.msg, to_string) << ", "
-                 << CAF_MARG(node.mid, integer_value) << ", "
+                 << CAF_TARG(node->msg, to_string) << ", "
+                 << CAF_MARG(node->mid, integer_value) << ", "
                  << CAF_MARG(awaited_response, integer_value));
-        if (awaited_response.valid() && node.mid == awaited_response) {
-          auto previous_node = dptr()->hm_begin(self, node);
-          auto res = invoke_fun(self, node.msg, node.mid, fun);
+        if (awaited_response.valid() && node->mid == awaited_response) {
+          node.swap(self->current_element());
+          auto res = invoke_fun(self, fun);
           if (!res && handle_sync_failure_on_mismatch) {
             CAF_LOG_WARNING("sync failure occured in actor "
                      << "with ID " << self->id());
@@ -139,20 +123,18 @@ class invoke_policy {
           }
           self->mark_arrived(awaited_response);
           self->remove_handler(awaited_response);
-          dptr()->hm_cleanup(self, previous_node);
+          node.swap(self->current_element());
           return im_success;
         }
         return im_skipped;
       case msg_type::ordinary:
         if (!awaited_response.valid()) {
-          auto previous_node = dptr()->hm_begin(self, node);
-          auto res = invoke_fun(self, node.msg, node.mid, fun);
+          node.swap(self->current_element());
+          auto res = invoke_fun(self, fun);
+          node.swap(self->current_element());
           if (res) {
-            dptr()->hm_cleanup(self, previous_node);
             return im_success;
           }
-          // no match (restore self members)
-          dptr()->hm_revert(self, previous_node);
         }
         CAF_LOG_DEBUG_IF(awaited_response.valid(),
                   "ignored message; await response: "
@@ -162,10 +144,6 @@ class invoke_policy {
     // should be unreachable
     CAF_CRITICAL("invalid message type");
   }
-
-  using nestable = typename rp_flag<rp_nestable>::type;
-
-  using sequential = typename rp_flag<rp_sequential>::type;
 
   template <class Actor>
   response_promise fetch_response_promise(Actor* cl, int) {
@@ -180,14 +158,14 @@ class invoke_policy {
   // - extracts response message from handler
   // - returns true if fun was successfully invoked
   template <class Actor, class Fun, class MaybeResponseHdl = int>
-  optional<message> invoke_fun(Actor* self, message& msg, message_id& mid,
-                               Fun& fun,
+  optional<message> invoke_fun(Actor* self, Fun& fun,
                                MaybeResponseHdl hdl = MaybeResponseHdl{}) {
 #   ifdef CAF_LOG_LEVEL
       auto msg_str = to_string(msg);
 #   endif
     CAF_LOG_TRACE(CAF_MARG(mid, integer_value) << ", msg = " << msg_str);
-    auto res = fun(msg); // might change mid
+    auto mid = self->current_element()->mid;
+    auto res = fun(self->current_element()->msg);
     CAF_LOG_DEBUG_IF(res, "actor did consume message: " << msg_str);
     CAF_LOG_DEBUG_IF(!res, "actor did ignore message: " << msg_str);
     if (!res) {
@@ -244,20 +222,10 @@ class invoke_policy {
     return res;
   }
 
- protected:
-  Derived* dptr() {
-    return static_cast<Derived*>(this);
-  }
-
  private:
-  void handle_timeout(message_handler&) {
-    CAF_CRITICAL("handle_timeout(message_handler&)");
-  }
-
   // identifies 'special' messages that should not be processed normally:
   // - system messages such as EXIT (if self doesn't trap exits) and TIMEOUT
   // - expired synchronous response messages
-
   template <class Actor>
   msg_type filter_msg(Actor* self, mailbox_element& node) {
     const message& msg = node.msg;

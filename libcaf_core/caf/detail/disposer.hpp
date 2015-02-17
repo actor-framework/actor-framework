@@ -17,54 +17,23 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_MIXIN_MAILBOX_BASED_HPP
-#define CAF_MIXIN_MAILBOX_BASED_HPP
+#ifndef CAF_DETAIL_DISPOSER_HPP
+#define CAF_DETAIL_DISPOSER_HPP
 
-#include <type_traits>
-
-#include "caf/mailbox_element.hpp"
-
-#include "caf/detail/sync_request_bouncer.hpp"
-#include "caf/detail/single_reader_queue.hpp"
+#include "caf/memory_managed.hpp"
 
 namespace caf {
-namespace mixin {
+namespace detail {
 
-template <class Base, class Subtype>
-class mailbox_based : public Base {
+class disposer {
  public:
-  using del = detail::disposer;
-  using mailbox_type = detail::single_reader_queue<mailbox_element, del>;
-
-  ~mailbox_based() {
-    if (!m_mailbox.closed()) {
-      detail::sync_request_bouncer f{this->exit_reason()};
-      m_mailbox.close(f);
-    }
+  inline void operator()(memory_managed* ptr) const {
+    ptr->request_deletion();
   }
-
-  void cleanup(uint32_t reason) {
-    detail::sync_request_bouncer f{reason};
-    m_mailbox.close(f);
-    Base::cleanup(reason);
-  }
-
-  mailbox_type& mailbox() {
-    return m_mailbox;
-  }
-
- protected:
-  using combined_type = mailbox_based;
-
-  template <class... Ts>
-  mailbox_based(Ts&&... args) : Base(std::forward<Ts>(args)...) {
-    // nop
-  }
-
-  mailbox_type m_mailbox;
 };
 
-} // namespace mixin
+} // namespace detail
 } // namespace caf
 
-#endif // CAF_MIXIN_MAILBOX_BASED_HPP
+#endif // CAF_DETAIL_DISPOSER_HPP
+

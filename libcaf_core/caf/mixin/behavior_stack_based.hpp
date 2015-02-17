@@ -25,52 +25,48 @@
 #include "caf/behavior_policy.hpp"
 #include "caf/response_handle.hpp"
 
-#include "caf/mixin/single_timeout.hpp"
-
 #include "caf/detail/behavior_stack.hpp"
 
 namespace caf {
 namespace mixin {
 
 template <class Base, class Subtype, class BehaviorType>
-class behavior_stack_based_impl : public single_timeout<Base, Subtype> {
-
-  using super = single_timeout<Base, Subtype>;
-
+class behavior_stack_based_impl : public Base {
  public:
-
   // types and constructors
-
   using behavior_type = BehaviorType;
-
   using combined_type = behavior_stack_based_impl;
-
   using response_handle_type = response_handle<behavior_stack_based_impl,
                                                message,
                                                nonblocking_response_handle_tag>;
 
   template <class... Ts>
   behavior_stack_based_impl(Ts&&... vs)
-      : super(std::forward<Ts>(vs)...) {}
+      : Base(std::forward<Ts>(vs)...),
+        m_timeout_id(0) {
+    // nop
+  }
 
-  /**************************************************************************
-   *          become() member function family           *
-   **************************************************************************/
+  /****************************************************************************
+   *                     become() member function family                      *
+   ****************************************************************************/
 
-  void become(behavior_type bhvr) { do_become(std::move(bhvr), true); }
+  void become(behavior_type bhvr) {
+    do_become(std::move(bhvr), true);
+  }
 
-  inline void become(const keep_behavior_t&, behavior_type bhvr) {
+  void become(const keep_behavior_t&, behavior_type bhvr) {
     do_become(std::move(bhvr), false);
   }
 
   template <class T, class... Ts>
-  inline typename std::enable_if<
+  typename std::enable_if<
     !std::is_same<keep_behavior_t, typename std::decay<T>::type>::value,
-    void>::type
+    void
+  >::type
   become(T&& arg, Ts&&... args) {
-    do_become(
-      behavior_type{std::forward<T>(arg), std::forward<Ts>(args)...},
-      true);
+    do_become(behavior_type{std::forward<T>(arg), std::forward<Ts>(args)...},
+              true);
   }
 
   template <class... Ts>
@@ -78,15 +74,19 @@ class behavior_stack_based_impl : public single_timeout<Base, Subtype> {
     do_become(behavior_type{std::forward<Ts>(args)...}, false);
   }
 
-  inline void unbecome() { m_bhvr_stack.pop_async_back(); }
+  void unbecome() {
+    m_bhvr_stack.pop_async_back();
+  }
 
-  /**************************************************************************
-   *       convenience member function for stack manipulation       *
-   **************************************************************************/
+  /****************************************************************************
+   *            convenience member function for stack manipulation            *
+   ****************************************************************************/
 
-  inline bool has_behavior() const { return m_bhvr_stack.empty() == false; }
+  bool has_behavior() const {
+    return m_bhvr_stack.empty() == false;
+  }
 
-  inline behavior& get_behavior() {
+  behavior& get_behavior() {
     CAF_REQUIRE(m_bhvr_stack.empty() == false);
     return m_bhvr_stack.back();
   }
@@ -95,13 +95,48 @@ class behavior_stack_based_impl : public single_timeout<Base, Subtype> {
     return m_bhvr_stack.sync_handler(msg_id);
   }
 
-  inline void remove_handler(message_id mid) { m_bhvr_stack.erase(mid); }
+  void remove_handler(message_id mid) {
+    m_bhvr_stack.erase(mid);
+  }
 
-  inline detail::behavior_stack& bhvr_stack() { return m_bhvr_stack; }
+  detail::behavior_stack& bhvr_stack() {
+    return m_bhvr_stack;
+  }
 
-  /**************************************************************************
-   *       extended timeout handling (handle_timeout mem fun)       *
-   **************************************************************************/
+  /****************************************************************************
+   *                             timeout handling                             *
+   ****************************************************************************/
+
+  void request_timeout(const duration& d) {
+    if (d.valid()) {
+      this->has_timeout(true);
+      auto tid = ++m_timeout_id;
+      auto msg = make_message(timeout_msg{tid});
+      if (d.is_zero()) {
+        // immediately enqueue timeout message if duration == 0s
+        this->enqueue(this->address(), invalid_message_id,
+                      std::move(msg), this->host());
+      } else
+        this->delayed_send(this, d, std::move(msg));
+    } else
+      this->has_timeout(false);
+  }
+
+  bool waits_for_timeout(uint32_t timeout_id) const {
+    return this->has_timeout() && m_timeout_id == timeout_id;
+  }
+
+  bool is_active_timeout(uint32_t tid) const {
+    return waits_for_timeout(tid);
+  }
+
+  uint32_t active_timeout_id() const {
+    return m_timeout_id;
+  }
+
+  void reset_timeout() {
+    this->has_timeout(false);
+  }
 
   void handle_timeout(behavior& bhvr, uint32_t timeout_id) {
     if (this->is_active_timeout(timeout_id)) {
@@ -117,31 +152,34 @@ class behavior_stack_based_impl : public single_timeout<Base, Subtype> {
   }
 
  private:
-
   void do_become(behavior_type bhvr, bool discard_old) {
     if (discard_old) this->m_bhvr_stack.pop_async_back();
-    // since we know we extend single_timeout, we can be sure
     // request_timeout simply resets the timeout when it's invalid
     this->request_timeout(bhvr.timeout());
     this->m_bhvr_stack.push_back(std::move(unbox(bhvr)));
   }
 
-  static inline behavior& unbox(behavior& arg) { return arg; }
+  static behavior& unbox(behavior& arg) {
+    return arg;
+  }
 
   template <class... Ts>
-  static inline behavior& unbox(typed_behavior<Ts...>& arg) {
+  static behavior& unbox(typed_behavior<Ts...>& arg) {
     return arg.unbox();
   }
 
   // utility for getting a pointer-to-derived-type
-  Subtype* dptr() { return static_cast<Subtype*>(this); }
+  Subtype* dptr() {
+    return static_cast<Subtype*>(this);
+  }
 
   // utility for getting a const pointer-to-derived-type
-  const Subtype* dptr() const { return static_cast<const Subtype*>(this); }
+  const Subtype* dptr() const {
+    return static_cast<const Subtype*>(this);
+  }
 
-  // allows actors to keep previous behaviors and enables unbecome()
   detail::behavior_stack m_bhvr_stack;
-
+  uint32_t m_timeout_id;
 };
 
 /**
@@ -150,22 +188,19 @@ class behavior_stack_based_impl : public single_timeout<Base, Subtype> {
  */
 template <class BehaviorType>
 class behavior_stack_based {
-
  public:
-
   template <class Base, class Subtype>
   class impl : public behavior_stack_based_impl<Base, Subtype, BehaviorType> {
-
-    using super = behavior_stack_based_impl<Base, Subtype, BehaviorType>;
-
    public:
+    using super = behavior_stack_based_impl<Base, Subtype, BehaviorType>;
 
     using combined_type = impl;
 
     template <class... Ts>
     impl(Ts&&... args)
-        : super(std::forward<Ts>(args)...) {}
-
+        : super(std::forward<Ts>(args)...) {
+      // nop
+    }
   };
 };
 

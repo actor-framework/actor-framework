@@ -17,45 +17,43 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_THREADLESS_HPP
-#define CAF_THREADLESS_HPP
+#ifndef CAF_DETAIL_EMBEDDED_HPP
+#define CAF_DETAIL_EMBEDDED_HPP
 
-#include "caf/atom.hpp"
-#include "caf/behavior.hpp"
-#include "caf/duration.hpp"
-
-#include "caf/policy/invoke_policy.hpp"
+#include "caf/ref_counted.hpp"
+#include "caf/intrusive_ptr.hpp"
 
 namespace caf {
-namespace policy {
+namespace detail {
 
-/**
- * An actor that is scheduled or otherwise managed.
- */
-class sequential_invoke : public invoke_policy<sequential_invoke> {
+template <class Base>
+class embedded final : public Base {
  public:
-  inline bool hm_should_skip(mailbox_element&) {
-    return false;
+  template <class... Vs>
+  embedded(intrusive_ptr<ref_counted> storage, Vs&&... vs)
+      : Base(std::forward<Vs>(vs)...),
+        m_storage(std::move(storage)) {
+    // nop
   }
 
-  template <class Actor>
-  mailbox_element* hm_begin(Actor* self, mailbox_element& node) {
-    self->current_node(&node);
-    return nullptr;
+  ~embedded() {
+    // nop
   }
 
-  template <class Actor>
-  void hm_cleanup(Actor* self, mailbox_element*) {
-    self->current_node(self->dummy_node());
+  void request_deletion() override {
+    intrusive_ptr<ref_counted> guard;
+    guard.swap(m_storage);
+    // this code assumes that embedded is part of pair_storage<>,
+    // i.e., this object lives inside a union!
+    this->~embedded();
   }
 
-  template <class Actor>
-  void hm_revert(Actor* self, mailbox_element*) {
-    self->current_node(self->dummy_node());
-  }
+ protected:
+  intrusive_ptr<ref_counted> m_storage;
 };
 
-} // namespace policy
+} // namespace detail
 } // namespace caf
 
-#endif // CAF_THREADLESS_HPP
+#endif // CAF_DETAIL_EMBEDDED_HPP
+
