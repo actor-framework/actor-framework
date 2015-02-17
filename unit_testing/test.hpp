@@ -56,14 +56,14 @@ void caf_unexpected_timeout(const char* file, size_t line);
       std::lock_guard<std::mutex> guard{caf_stdout_mtx()};                     \
       std::cerr << "ERROR: " << CAF_STREAMIFY(fname, line, msg) << std::endl;  \
     }                                                                          \
-    static_cast<void>(0)
+    caf_inc_error_count()
 #else
 #  define CAF_PRINTERRC(fname, line, msg)                                      \
     {                                                                          \
       std::lock_guard<std::mutex> guard{caf_stdout_mtx()};                     \
       std::cerr << "ERROR: " << CAF_STREAMIFY(fname, line, msg) << std::endl;  \
     }                                                                          \
-    static_cast<void>(0)
+    caf_inc_error_count();
 #endif
 
 #define CAF_PRINTERR(message) CAF_PRINTERRC(__FILE__, __LINE__, message)
@@ -106,9 +106,8 @@ template <class V1, typename V2>
 inline void caf_failed(const V1& v1, const V2& v2, const char* fname,
             size_t line_number) {
   CAF_PRINTERRC(fname, line_number,
-           "expected value: " << caf_stream_arg(v2)
-                    << ", found: " << caf_stream_arg(v1));
-  caf_inc_error_count();
+                "expected value: " << caf_stream_arg(v2)
+                << ", found: " << caf_stream_arg(v1));
 }
 
 inline void caf_check_value(const std::string& v1, const std::string& v2,
@@ -174,7 +173,6 @@ inline void caf_check_value(V1 v1, V2 v2, const char* fname, size_t line,
 #define CAF_CHECK(line_of_code)                                                \
   if (!(line_of_code)) {                                                       \
     CAF_PRINTERR(#line_of_code);                                               \
-    caf_inc_error_count();                                                     \
   } else {                                                                     \
     CAF_PRINT("passed");                                                       \
   }                                                                            \
@@ -189,7 +187,6 @@ inline void caf_check_value(V1 v1, V2 v2, const char* fname, size_t line,
 #define CAF_FAILURE(err_msg)                                                   \
   {                                                                            \
     CAF_PRINTERR("ERROR: " << err_msg);                                        \
-    caf_inc_error_count();                                                     \
   }                                                                            \
   static_cast<void>(0)
 
