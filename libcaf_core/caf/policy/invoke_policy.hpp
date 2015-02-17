@@ -189,29 +189,8 @@ class invoke_policy {
       return res;
     }
     CAF_LOGF_DEBUG("res = " << to_string(*res));
-    if (res->template match_elements<atom_value, uint64_t>()
-        && res->template get_as<atom_value>(0) == atom("MESSAGE_ID")) {
-      CAF_LOG_DEBUG("message handler returned a message id wrapper");
-      auto id = res->template get_as<uint64_t>(1);
-      auto msg_id = message_id::from_integer_value(id);
-      auto ref_opt = self->sync_handler(msg_id);
-      // install a behavior that calls the user-defined behavior
-      // and using the result of its inner behavior as response
-      if (ref_opt) {
-        auto fhdl = fetch_response_promise(self, hdl);
-        behavior inner = *ref_opt;
-        ref_opt->assign(
-          others() >> [=] {
-            // inner is const inside this lambda and mutable a C++14 feature
-            behavior cpy = inner;
-            auto inner_res = cpy(self->last_dequeued());
-            if (inner_res) {
-              fhdl.deliver(*inner_res);
-            }
-          }
-        );
-      }
-      return res;
+    if (handle_message_id_res(self, *res, none)) {
+      return message{};
     }
     // respond by using the result of 'fun'
     CAF_LOG_DEBUG("respond via response_promise");
@@ -225,42 +204,76 @@ class invoke_policy {
   }
 
  private:
+  // enables `return sync_send(...).then(...)`
+  template <class Actor>
+  bool handle_message_id_res(Actor* self, message& res,
+                             optional<response_promise> hdl) {
+    if (res.match_elements<atom_value, uint64_t>()
+        && res.get_as<atom_value>(0) == atom("MESSAGE_ID")) {
+      CAF_LOG_DEBUG("message handler returned a message id wrapper");
+      auto id = res.get_as<uint64_t>(1);
+      auto msg_id = message_id::from_integer_value(id);
+      auto ref_opt = self->sync_handler(msg_id);
+      // install a behavior that calls the user-defined behavior
+      // and using the result of its inner behavior as response
+      if (ref_opt) {
+        response_promise fhdl = hdl ? *hdl : self->make_response_promise();
+        behavior inner = *ref_opt;
+        ref_opt->assign(
+          others() >> [=] {
+            // inner is const inside this lambda and mutable a C++14 feature
+            behavior cpy = inner;
+            auto inner_res = cpy(self->last_dequeued());
+            if (inner_res && !handle_message_id_res(self, *inner_res, fhdl)) {
+              fhdl.deliver(*inner_res);
+            }
+          }
+        );
+        return true;
+      }
+    }
+    return false;
+  }
+
   // identifies 'special' messages that should not be processed normally:
-  // - system messages such as EXIT (if self doesn't trap exits) and TIMEOUT
+  // - system messages such as exit_msg and timeout_msg
   // - expired synchronous response messages
   template <class Actor>
   msg_type filter_msg(Actor* self, mailbox_element& node) {
     const message& msg = node.msg;
     auto mid = node.mid;
-    if (msg.size() == 1) {
-      if (msg.match_element<exit_msg>(0)) {
-        auto& em = msg.get_as<exit_msg>(0);
-        CAF_REQUIRE(!mid.valid());
-        // make sure to get rid of attachables if they're no longer needed
-        self->unlink_from(em.source);
-        if (self->trap_exit() == false) {
-          if (em.reason != exit_reason::normal) {
-            self->quit(em.reason);
-            return msg_type::non_normal_exit;
-          }
-          return msg_type::normal_exit;
-        }
-      } else if (msg.match_element<timeout_msg>(0)) {
-        auto& tm = msg.get_as<timeout_msg>(0);
-        auto tid = tm.timeout_id;
-        CAF_REQUIRE(!mid.valid());
-        if (self->is_active_timeout(tid)) {
-          return msg_type::timeout;
-        }
-        return self->waits_for_timeout(tid) ? msg_type::inactive_timeout
-                                            : msg_type::expired_timeout;
-      } else if (mid.is_response() && msg.match_element<sync_timeout_msg>(0)) {
+    if (mid.is_response()) {
+      if (msg.match_elements<sync_timeout_msg>()) {
         return msg_type::timeout_response;
       }
-    }
-    if (mid.is_response()) {
       return self->awaits(mid) ? msg_type::sync_response
                                : msg_type::expired_sync_response;
+    }
+    if (msg.size() != 1) {
+      return msg_type::ordinary;
+    }
+    if (msg.match_element<timeout_msg>(0)) {
+      auto& tm = msg.get_as<timeout_msg>(0);
+      auto tid = tm.timeout_id;
+      CAF_REQUIRE(!mid.valid());
+      if (self->is_active_timeout(tid)) {
+        return msg_type::timeout;
+      }
+      return self->waits_for_timeout(tid) ? msg_type::inactive_timeout
+                                          : msg_type::expired_timeout;
+    }
+    if (msg.match_element<exit_msg>(0)) {
+      auto& em = msg.get_as<exit_msg>(0);
+      CAF_REQUIRE(!mid.valid());
+      // make sure to get rid of attachables if they're no longer needed
+      self->unlink_from(em.source);
+      if (self->trap_exit() == false) {
+        if (em.reason != exit_reason::normal) {
+          self->quit(em.reason);
+          return msg_type::non_normal_exit;
+        }
+        return msg_type::normal_exit;
+      }
     }
     return msg_type::ordinary;
   }
