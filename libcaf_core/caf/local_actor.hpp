@@ -164,10 +164,13 @@ class local_actor : public abstract_actor {
    */
   template <class... Rs, class... Vs>
   void send(const typed_actor<Rs...>& whom, Vs&&... vs) {
-    check_typed_input(whom,
-                      detail::type_list<typename detail::implicit_conversions<
-                        typename std::decay<Vs>::type
-                      >::type...>{});
+    using token =
+      detail::type_list<
+        typename detail::implicit_conversions<
+          typename std::decay<Vs>::type
+        >::type...>;
+    token tk;
+    check_typed_input(whom, tk);
     fast_send(message_priority::normal, whom, std::forward<Vs>(vs)...);
   }
 

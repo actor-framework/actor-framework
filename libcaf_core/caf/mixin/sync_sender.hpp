@@ -119,7 +119,18 @@ class sync_sender_impl : public Base {
                   >::type,
                   HandleTag>
   sync_send(const typed_actor<Rs...>& dest, Vs&&... vs) {
-    return sync_send(message_priority::normal, dest, std::forward<Vs>(vs)...);
+    static_assert(sizeof...(Vs) > 0, "no message to send");
+    using token =
+      detail::type_list<
+        typename detail::implicit_conversions<
+          typename std::decay<Vs>::type
+        >::type...>;
+    token tk;
+    check_typed_input(dest, tk);
+    return {dptr()->sync_send_impl(message_priority::normal,
+                                   actor_cast<actor>(dest),
+                                   make_message(std::forward<Vs>(vs)...)),
+            dptr()};
   }
 
   /****************************************************************************
