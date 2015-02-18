@@ -40,6 +40,7 @@ set (LIBCAF_CORE_SRCS
      src/default_attachable.cpp
      src/deserializer.cpp
      src/duration.cpp
+     src/either.cpp
      src/event_based_actor.cpp
      src/exception.cpp
      src/execution_unit.cpp
