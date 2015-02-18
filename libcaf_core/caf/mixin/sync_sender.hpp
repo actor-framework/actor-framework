@@ -224,11 +224,11 @@ class sync_sender_impl : public Base {
                            std::forward<Vs>(vs)...);
   }
 
-  // <backward_compatibility version="0.9">
   /****************************************************************************
-   *                         outdated member functions                        *
+   *                       deprecated member functions                        *
    ****************************************************************************/
 
+  // <backward_compatibility version="0.9">
   response_handle_type sync_send_tuple(message_priority prio, const actor& dest,
                                        message what) CAF_DEPRECATED;
 

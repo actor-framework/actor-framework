@@ -22,8 +22,6 @@
 #include "caf/local_actor.hpp"
 #include "caf/response_promise.hpp"
 
-using std::move;
-
 namespace caf {
 
 response_promise::response_promise(const actor_addr& from, const actor_addr& to,
@@ -38,7 +36,7 @@ void response_promise::deliver(message msg) const {
   }
   auto to = actor_cast<abstract_actor_ptr>(m_to);
   auto from = actor_cast<abstract_actor_ptr>(m_from);
-  to->enqueue(m_from, m_id, move(msg), from->m_host);
+  to->enqueue(m_from, m_id, std::move(msg), from->host());
 }
 
 } // namespace caf

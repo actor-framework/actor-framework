@@ -37,11 +37,10 @@
 namespace caf {
 
 /**
- * A cooperatively scheduled, event-based actor implementation.
- * This is the recommended base class for user-defined actors and is used
- * implicitly when spawning functor-based actors without the
- * `blocking_api` flag.
- * @extends local_actor
+ * A cooperatively scheduled, event-based actor implementation. This is the
+ * recommended base class for user-defined actors and is used implicitly when
+ * spawning functor-based actors without the `blocking_api` flag.
+ * @extends mailbox_based_actor
  */
 class event_based_actor
     : public extend<mailbox_based_actor, event_based_actor>::

@@ -30,7 +30,7 @@ void reflector(event_based_actor* self) {
   self->become(others() >> [=] {
     CAF_PRINT("reflect and quit");
     self->quit();
-    return self->last_dequeued();
+    return self->current_message();
   });
 }
 
@@ -221,7 +221,7 @@ class client : public event_based_actor {
     CAF_PRINT("test group communication via network (inverted setup)");
     become(on(atom("GClient")) >> [=]()->message {
       CAF_CHECKPOINT();
-      auto cptr = last_sender();
+      auto cptr = current_sender();
       auto s5c = spawn<monitored>(spawn5_client);
       // set next behavior
       await_down(this, s5c, [=] {
@@ -262,7 +262,7 @@ class server : public event_based_actor {
     CAF_PRINT("await {'SpawnPing'}");
     return (on(atom("SpawnPing")) >> [=]()->message {
       CAF_PRINT("received {'SpawnPing'}");
-      auto client = last_sender();
+      auto client = current_sender();
       if (!client) {
         CAF_PRINT("last_sender() invalid!");
       }
@@ -290,21 +290,23 @@ class server : public event_based_actor {
   void await_foobars() {
     CAF_PRINT("await foobars");
     auto foobars = make_shared<int>(0);
-    become(on(atom("foo"), atom("bar"), arg_match) >> [=](int i)->message {
-      ++*foobars;
-      if (i == 99) {
-        CAF_CHECK_EQUAL(*foobars, 100);
-        test_group_comm();
+    become(
+      on(atom("foo"), atom("bar"), arg_match) >> [=](int i)->message {
+        ++*foobars;
+        if (i == 99) {
+          CAF_CHECK_EQUAL(*foobars, 100);
+          test_group_comm();
+        }
+        return std::move(current_message());
       }
-      return last_dequeued();
-    });
+    );
   }
 
   void test_group_comm() {
     CAF_PRINT("test group communication via network");
     become(on(atom("GClient")) >> [=]()->message {
       CAF_CHECKPOINT();
-      auto cptr = last_sender();
+      auto cptr = current_sender();
       auto s5c = spawn<monitored>(spawn5_client);
       await_down(this, s5c, [=] {
         CAF_CHECKPOINT();

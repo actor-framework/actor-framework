@@ -27,9 +27,9 @@ testee::~testee() {
 behavior testee::make_behavior() {
   return {
     others() >> [=] {
-      CAF_CHECK_EQUAL(last_dequeued().cvals()->get_reference_count(), 2);
+      CAF_CHECK_EQUAL(current_message().cvals()->get_reference_count(), 2);
       quit();
-      return std::move(last_dequeued());
+      return std::move(current_message());
     }
   };
 }
@@ -59,13 +59,13 @@ behavior tester::make_behavior() {
   send(m_aut, m_msg);
   return {
     on(1, 2, 3) >> [=] {
-      CAF_CHECK_EQUAL(last_dequeued().cvals()->get_reference_count(), 2);
-      CAF_CHECK(last_dequeued().cvals().get() == m_msg.cvals().get());
+      CAF_CHECK_EQUAL(current_message().cvals()->get_reference_count(), 2);
+      CAF_CHECK(current_message().cvals().get() == m_msg.cvals().get());
     },
     [=](const down_msg& dm) {
       CAF_CHECK(dm.source == m_aut);
       CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
-      CAF_CHECK_EQUAL(last_dequeued().cvals()->get_reference_count(), 1);
+      CAF_CHECK_EQUAL(current_message().cvals()->get_reference_count(), 1);
       quit();
     },
     others() >> CAF_UNEXPECTED_MSG_CB(this)
@@ -79,8 +79,8 @@ void test_message_lifetime_in_scoped_actor() {
   self->receive(
     on(1, 2, 3) >> [&] {
       CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 2);
-      CAF_CHECK_EQUAL(self->last_dequeued().cvals()->get_reference_count(), 2);
-      CAF_CHECK(self->last_dequeued().cvals().get() == msg.cvals().get());
+      CAF_CHECK_EQUAL(self->current_message().cvals()->get_reference_count(), 2);
+      CAF_CHECK(self->current_message().cvals().get() == msg.cvals().get());
     }
   );
   CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 1);
@@ -89,8 +89,8 @@ void test_message_lifetime_in_scoped_actor() {
   self->receive(
     [&](int& value) {
       CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 1);
-      CAF_CHECK_EQUAL(self->last_dequeued().cvals()->get_reference_count(), 1);
-      CAF_CHECK(self->last_dequeued().cvals().get() != msg.cvals().get());
+      CAF_CHECK_EQUAL(self->current_message().cvals()->get_reference_count(), 1);
+      CAF_CHECK(self->current_message().cvals().get() != msg.cvals().get());
       value = 10;
     }
   );

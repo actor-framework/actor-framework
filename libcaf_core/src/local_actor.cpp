@@ -41,14 +41,6 @@ local_actor::~local_actor() {
   // nop
 }
 
-message& local_actor::last_dequeued() {
-  return m_current_element ? m_current_element->msg : m_dummy_message;
-}
-
-actor_addr& local_actor::last_sender() {
-  return m_current_element ? m_current_element->sender : m_dummy_sender;
-}
-
 void local_actor::monitor(const actor_addr& whom) {
   if (whom == invalid_actor_addr) {
     return;
@@ -212,16 +204,24 @@ message_id local_actor::sync_send_impl(message_priority mp,
   return nri.response_id();
 }
 
-void local_actor::is_registered(bool value) {
-  if (is_registered() == value) {
-    return;
+//<backward_compatibility version="0.12">
+message& local_actor::last_dequeued() {
+  if (!m_current_element) {
+    auto errstr = "last_dequeued called after forward_to or not in a callback";
+    CAF_LOG_ERROR(errstr);
+    throw std::logic_error(errstr);
   }
-  if (value) {
-    detail::singletons::get_actor_registry()->inc_running();
-  } else {
-    detail::singletons::get_actor_registry()->dec_running();
-  }
-  set_flag(value, is_registered_flag);
+  return m_current_element->msg;
 }
+
+actor_addr& local_actor::last_sender() {
+  if (!m_current_element) {
+    auto errstr = "last_sender called after forward_to or not in a callback";
+    CAF_LOG_ERROR(errstr);
+    throw std::logic_error(errstr);
+  }
+  return m_current_element->sender;
+}
+//</backward_compatibility>
 
 } // namespace caf

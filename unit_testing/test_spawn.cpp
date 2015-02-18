@@ -273,7 +273,7 @@ behavior echo_actor::make_behavior() {
   return {
     others() >> [=]() -> message {
       quit(exit_reason::normal);
-      return last_dequeued();
+      return current_message();
     }
   };
 }
@@ -297,7 +297,7 @@ behavior simple_mirror::make_behavior() {
   return {
     others() >> [=] {
       CAF_CHECKPOINT();
-      return last_dequeued();
+      return current_message();
     }
   };
 }
@@ -499,7 +499,7 @@ void test_spawn() {
       on("hi", arg_match) >> [&](actor from) {
         s->sync_send(from, "whassup?", s).await(
           on_arg_match >> [&](const string& str) -> string {
-            CAF_CHECK(s->last_sender() != nullptr);
+            CAF_CHECK(s->current_sender() != nullptr);
             CAF_CHECK_EQUAL(str, "nothing");
             return "goodbye!";
           },
@@ -597,7 +597,7 @@ void test_spawn() {
       return {
         others() >> [=] {
           // forward message and die
-          send(m_pal, last_dequeued());
+          send(m_pal, current_message());
           quit();
         }
       };
@@ -698,7 +698,7 @@ void test_spawn() {
       flags |= 0x08;
     },
     others() >> [&]() {
-      CAF_FAILURE("unexpected message: " << to_string(self->last_dequeued()));
+      CAF_FAILURE("unexpected message: " << to_string(self->current_message()));
     },
     after(chrono::milliseconds(500)) >> [&]() {
       CAF_FAILURE("timeout in file " << __FILE__ << " in line " << __LINE__);

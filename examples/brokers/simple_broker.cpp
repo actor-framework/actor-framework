@@ -147,7 +147,7 @@ behavior broker_impl(broker* self, connection_handle hdl, const actor& buddy) {
       self->send(buddy, atm, ival);
     },
     others() >> [=] {
-      cout << "unexpected: " << to_string(self->last_dequeued()) << endl;
+      cout << "unexpected: " << to_string(self->current_message()) << endl;
     }
   };
 }
@@ -165,7 +165,7 @@ behavior server(broker* self, const actor& buddy) {
       self->quit();
     },
     others() >> [=] {
-      cout << "unexpected: " << to_string(self->last_dequeued()) << endl;
+      cout << "unexpected: " << to_string(self->current_message()) << endl;
     }
   };
 }

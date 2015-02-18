@@ -11,8 +11,8 @@ using namespace caf;
 void test_serial_reply() {
   auto mirror_behavior = [=](event_based_actor* self) {
     self->become(others() >> [=]() -> message {
-      CAF_PRINT("return self->last_dequeued()");
-      return self->last_dequeued();
+      CAF_PRINT("return self->current_message()");
+      return self->current_message();
     });
   };
   auto master = spawn([=](event_based_actor* self) {

@@ -62,7 +62,7 @@ behavior server(broker* self) {
       self->delayed_send(self, std::chrono::seconds(1), tick_atom::value);
     },
     others() >> [=] {
-      aout(self) << "unexpected: " << to_string(self->last_dequeued()) << endl;
+      aout(self) << "unexpected: " << to_string(self->current_message()) << endl;
     }
   };
 }

@@ -35,7 +35,7 @@ namespace caf {
  * checking. This is the recommended base class for user-defined actors and is
  * used implicitly when spawning typed, functor-based actors without the
  * `blocking_api` flag.
- * @extends local_actor
+ * @extends mailbox_based_actor
  */
 template <class... Rs>
 class typed_event_based_actor : public

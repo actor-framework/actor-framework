@@ -114,7 +114,7 @@ class invoke_policy {
                  << CAF_MARG(node->mid, integer_value) << ", "
                  << CAF_MARG(awaited_response, integer_value));
         if (awaited_response.valid() && node->mid == awaited_response) {
-          node.swap(self->current_element());
+          node.swap(self->current_mailbox_element());
           auto res = invoke_fun(self, fun);
           if (!res && handle_sync_failure_on_mismatch) {
             CAF_LOG_WARNING("sync failure occured in actor "
@@ -123,15 +123,15 @@ class invoke_policy {
           }
           self->mark_arrived(awaited_response);
           self->remove_handler(awaited_response);
-          node.swap(self->current_element());
+          node.swap(self->current_mailbox_element());
           return im_success;
         }
         return im_skipped;
       case msg_type::ordinary:
         if (!awaited_response.valid()) {
-          node.swap(self->current_element());
+          node.swap(self->current_mailbox_element());
           auto res = invoke_fun(self, fun);
-          node.swap(self->current_element());
+          node.swap(self->current_mailbox_element());
           if (res) {
             return im_success;
           }
@@ -164,8 +164,8 @@ class invoke_policy {
       auto msg_str = to_string(msg);
 #   endif
     CAF_LOG_TRACE(CAF_MARG(mid, integer_value) << ", msg = " << msg_str);
-    auto mid = self->current_element()->mid;
-    auto res = fun(self->current_element()->msg);
+    auto mid = self->current_mailbox_element()->mid;
+    auto res = fun(self->current_mailbox_element()->msg);
     CAF_LOG_DEBUG_IF(res, "actor did consume message: " << msg_str);
     CAF_LOG_DEBUG_IF(!res, "actor did ignore message: " << msg_str);
     if (!res) {
@@ -173,8 +173,8 @@ class invoke_policy {
     }
     if (res->empty()) {
       // make sure synchronous requests always receive a response;
-      // note: !current_element() means client has forwarded the request
-      auto& ptr = self->current_element();
+      // note: !current_mailbox_element() means client has forwarded the request
+      auto& ptr = self->current_mailbox_element();
       if (ptr) {
         mid = ptr->mid;
         if (mid.is_request() && !mid.is_answered()) {
@@ -223,7 +223,7 @@ class invoke_policy {
           others() >> [=] {
             // inner is const inside this lambda and mutable a C++14 feature
             behavior cpy = inner;
-            auto inner_res = cpy(self->last_dequeued());
+            auto inner_res = cpy(self->current_message());
             if (inner_res && !handle_message_id_res(self, *inner_res, fhdl)) {
               fhdl.deliver(*inner_res);
             }

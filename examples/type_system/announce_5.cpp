@@ -143,8 +143,8 @@ void testee(event_based_actor* self, size_t remaining) {
     [=](const tree& tmsg) {
       // prints the tree in its serialized format:
       // @<> ( { tree ( 0, { 10, { 11, { }, 12, { }, 13, { } }, 20, { 21, { }, 22, { } } } ) } )
-      cout << "to_string(self->last_dequeued()): "
-         << to_string(self->last_dequeued())
+      cout << "to_string(self->current_message()): "
+         << to_string(self->current_message())
          << endl;
       // prints the tree using the print member function:
       // 0 { 10 { 11, 12, 13 } , 20 { 21, 22 } }
@@ -161,7 +161,7 @@ void testee(event_based_actor* self, size_t remaining) {
       //   tree ( 0, { 10, { 11, { }, 12, { }, 13, { } }, 20, { 21, { }, 22, { } } } )
       //   )
       // } )
-      cout << "to_string: " << to_string(self->last_dequeued()) << endl;
+      cout << "to_string: " << to_string(self->current_message()) << endl;
       set_next_behavior();
     }
   );

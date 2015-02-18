@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_BLOCKING_UNTYPED_ACTOR_HPP
-#define CAF_BLOCKING_UNTYPED_ACTOR_HPP
+#ifndef CAF_BLOCKING_ACTOR_HPP
+#define CAF_BLOCKING_ACTOR_HPP
 
 #include "caf/none.hpp"
 
@@ -40,7 +40,7 @@ namespace caf {
 /**
  * A thread-mapped or context-switching actor using a blocking
  * receive rather than a behavior-stack based message processing.
- * @extends local_actor
+ * @extends mailbox_based_actor
  */
 class blocking_actor
     : public extend<mailbox_based_actor, blocking_actor>::
@@ -55,10 +55,10 @@ class blocking_actor
   /**************************************************************************
    *       utility stuff and receive() member function family       *
    **************************************************************************/
+
   using timeout_type = std::chrono::high_resolution_clock::time_point;
 
   struct receive_while_helper {
-
     std::function<void(behavior&)> m_dq;
     std::function<bool()> m_stmt;
 
@@ -69,12 +69,10 @@ class blocking_actor
       behavior bhvr{std::forward<Ts>(args)...};
       while (m_stmt()) m_dq(bhvr);
     }
-
   };
 
   template <class T>
   struct receive_for_helper {
-
     std::function<void(behavior&)> m_dq;
     T& begin;
     T end;
@@ -84,11 +82,9 @@ class blocking_actor
       behavior bhvr{std::forward<Ts>(args)...};
       for (; begin != end; ++begin) m_dq(bhvr);
     }
-
   };
 
   struct do_receive_helper {
-
     std::function<void(behavior&)> m_dq;
     behavior m_bhvr;
 
@@ -102,7 +98,6 @@ class blocking_actor
     void until(const bool& bvalue) {
       until([&] { return bvalue; });
     }
-
   };
 
   /**
@@ -227,20 +222,16 @@ class blocking_actor
   /** @endcond */
 
  private:
-
   // helper function to implement receive_(for|while) and do_receive
   std::function<void(behavior&)> make_dequeue_callback() {
     return [=](behavior& bhvr) { dequeue(bhvr); };
   }
 
   std::map<message_id, behavior> m_sync_handler;
-
 };
 
 class blocking_actor::functor_based : public blocking_actor {
-
  public:
-
   using act_fun = std::function<void(blocking_actor*)>;
 
   template <class F, class... Ts>
@@ -274,4 +265,4 @@ class blocking_actor::functor_based : public blocking_actor {
 
 } // namespace caf
 
-#endif // CAF_BLOCKING_UNTYPED_ACTOR_HPP
+#endif // CAF_BLOCKING_ACTOR_HPP

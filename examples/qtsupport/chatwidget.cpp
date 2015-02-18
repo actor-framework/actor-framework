@@ -37,7 +37,7 @@ ChatWidget::ChatWidget(QWidget* parent, Qt::WindowFlags f)
             },
             [=](const string& txt) {
                 // don't print own messages
-                if (self != self->last_sender()) {
+                if (self != self->current_sender()) {
                     print(QString::fromUtf8(txt.c_str()));
                 }
             },

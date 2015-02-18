@@ -140,12 +140,12 @@ class local_broker : public event_based_actor {
         CAF_LOGC_TRACE("caf::local_broker", "init$FORWARD",
                        CAF_TARG(what, to_string));
         // local forwarding
-        m_group->send_all_subscribers(last_sender(), what, host());
+        m_group->send_all_subscribers(current_sender(), what, host());
         // forward to all acquaintances
         send_to_acquaintances(what);
       },
       [=](const down_msg&) {
-        auto sender = last_sender();
+        auto sender = current_sender();
         CAF_LOGC_TRACE("caf::local_broker", "init$DOWN",
                        CAF_TARG(sender, to_string));
         if (sender) {
@@ -160,7 +160,7 @@ class local_broker : public event_based_actor {
         }
       },
       others() >> [=] {
-        auto msg = last_dequeued();
+        auto msg = current_message();
         CAF_LOGC_TRACE("caf::local_broker", "init$others",
                        CAF_TARG(msg, to_string));
         send_to_acquaintances(msg);
@@ -171,7 +171,7 @@ class local_broker : public event_based_actor {
  private:
   void send_to_acquaintances(const message& what) {
     // send to all remote subscribers
-    auto sender = last_sender();
+    auto sender = current_sender();
     CAF_LOG_DEBUG("forward message to " << m_acquaintances.size()
                   << " acquaintances; " << CAF_TSARG(sender) << ", "
                   << CAF_TSARG(what));
@@ -248,11 +248,10 @@ class proxy_broker : public event_based_actor {
   }
 
   behavior make_behavior() {
-    return {
-      others() >> [=] {
-        m_group->send_all_subscribers(last_sender(), last_dequeued(), host());
-      }
-    };
+    return {others() >> [=] {
+      m_group->send_all_subscribers(current_sender(), current_message(),
+                                    host());
+    }};
   }
 
  private:

@@ -40,7 +40,7 @@ chopstick::behavior_type taken_chopstick(chopstick::pointer self, actor_addr);
 chopstick::behavior_type available_chopstick(chopstick::pointer self) {
   return {
     [=](take_atom) {
-      self->become(taken_chopstick(self, self->last_sender()));
+      self->become(taken_chopstick(self, self->current_sender()));
       return taken_atom::value;
     },
     [](put_atom) {
@@ -56,7 +56,7 @@ chopstick::behavior_type taken_chopstick(chopstick::pointer self,
       return busy_atom::value;
     },
     [=](put_atom) {
-      if (self->last_sender() == user) {
+      if (self->current_sender() == user) {
         self->become(available_chopstick(self));
       }
     }
@@ -127,7 +127,7 @@ class philosopher : public event_based_actor {
         become(eating);
       },
       [=](busy_atom) {
-        send(last_sender() == left ? right : left, put_atom::value);
+        send(current_sender() == left ? right : left, put_atom::value);
         send(this, eat_atom::value);
         become(thinking);
       }
@@ -135,7 +135,7 @@ class philosopher : public event_based_actor {
     // philosopher was *not* able to obtain the first chopstick
     denied.assign(
       [=](taken_atom) {
-        send(last_sender() == left ? left : right, put_atom::value);
+        send(current_sender() == left ? left : right, put_atom::value);
         send(this, eat_atom::value);
         become(thinking);
       },

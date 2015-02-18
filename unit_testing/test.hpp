@@ -195,7 +195,7 @@ inline void caf_check_value(V1 v1, V2 v2, const char* fname, size_t line,
 #define CAF_UNEXPECTED_TOUT() caf_unexpected_timeout(__FILE__, __LINE__)
 
 #define CAF_UNEXPECTED_MSG(selfptr)                                            \
-  caf_unexpected_message(__FILE__, __LINE__, selfptr->last_dequeued())
+  caf_unexpected_message(__FILE__, __LINE__, selfptr->current_message())
 
 // some convenience macros for defining callbacks
 #define CAF_CHECKPOINT_CB()                                                    \

@@ -26,7 +26,7 @@ struct sync_mirror : event_based_actor {
   behavior make_behavior() override {
     return {
       others() >> [=] {
-        return last_dequeued();
+        return current_message();
       }
     };
   }
@@ -158,10 +158,10 @@ class D : public popular_actor {
   behavior make_behavior() override {
     return {
       others() >> [=] {
-        return sync_send(buddy(), last_dequeued()).then(
+        return sync_send(buddy(), std::move(current_message())).then(
           others() >> [=]() -> message {
             quit();
-            return last_dequeued();
+            return std::move(current_message());
           }
         );
       }
@@ -211,7 +211,7 @@ class server : public event_based_actor {
 void test_sync_send() {
   scoped_actor self;
   self->on_sync_failure([&] {
-    CAF_FAILURE("received: " << to_string(self->last_dequeued()));
+    CAF_FAILURE("received: " << to_string(self->current_message()));
   });
   self->spawn<monitored + blocking_api>([](blocking_actor* s) {
     CAF_LOGC_TRACE("NONE", "main$sync_failure_test", "id = " << s->id());
@@ -224,7 +224,7 @@ void test_sync_send() {
       }
     );
     s->on_sync_failure([=] {
-      CAF_FAILURE("received: " << to_string(s->last_dequeued()));
+      CAF_FAILURE("received: " << to_string(s->current_message()));
     });
     s->sync_send(foi, i_atom::value).await(
       [&](int i) {
@@ -369,10 +369,10 @@ void test_sync_send() {
     s->sync_send(serv, request_atom::value).await(
       [=](response_atom) {
         CAF_CHECKPOINT();
-        CAF_CHECK_EQUAL(s->last_sender(), work);
+        CAF_CHECK_EQUAL(s->current_sender(), work);
       },
       others() >> [&] {
-        CAF_PRINTERR("unexpected message: " << to_string(s->last_dequeued()));
+        CAF_PRINTERR("unexpected message: " << to_string(s->current_message()));
       }
     );
     // first 'request', then 'idle'
@@ -381,7 +381,7 @@ void test_sync_send() {
     handle.await(
       [=](response_atom) {
         CAF_CHECKPOINT();
-        CAF_CHECK_EQUAL(s->last_sender(), work);
+        CAF_CHECK_EQUAL(s->current_sender(), work);
       },
       others() >> CAF_UNEXPECTED_MSG_CB(s)
     );

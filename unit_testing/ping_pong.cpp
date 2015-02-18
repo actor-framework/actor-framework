@@ -17,22 +17,22 @@ size_t s_pongs = 0;
 behavior ping_behavior(local_actor* self, size_t num_pings) {
   return {
     [=](pong_atom, int value) -> message {
-      if (!self->last_sender()) {
+      if (!self->current_sender()) {
         CAF_PRINT("last_sender() invalid!");
       }
       CAF_PRINT("received {'pong', " << value << "}");
-      // cout << to_string(self->last_dequeued()) << endl;
+      // cout << to_string(self->current_message()) << endl;
       if (++s_pongs >= num_pings) {
         CAF_PRINT("reached maximum, send {'EXIT', user_defined} "
                << "to last sender and quit with normal reason");
-        self->send_exit(self->last_sender(),
+        self->send_exit(self->current_sender(),
                 exit_reason::user_shutdown);
         self->quit();
       }
       return make_message(ping_atom::value, value);
     },
     others() >> [=] {
-      CAF_LOGF_ERROR("unexpected; " << to_string(self->last_dequeued()));
+      CAF_LOGF_ERROR("unexpected; " << to_string(self->current_message()));
       self->quit(exit_reason::user_shutdown);
     }
   };
@@ -45,7 +45,7 @@ behavior pong_behavior(local_actor* self) {
       return make_message(pong_atom::value, value + 1);
     },
     others() >> [=] {
-      CAF_LOGF_ERROR("unexpected; " << to_string(self->last_dequeued()));
+      CAF_LOGF_ERROR("unexpected; " << to_string(self->current_sender()));
       self->quit(exit_reason::user_shutdown);
     }
   };

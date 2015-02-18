@@ -54,13 +54,13 @@ void client(event_based_actor* self, const string& name) {
     },
     [=](const string& txt) {
       // don't print own messages
-      if (self->last_sender() != self) cout << txt << endl;
+      if (self->current_sender() != self) cout << txt << endl;
     },
     [=](const group_down_msg& g) {
       cout << "*** chatroom offline: " << to_string(g.source) << endl;
     },
     others() >> [=]() {
-      cout << "unexpected: " << to_string(self->last_dequeued()) << endl;
+      cout << "unexpected: " << to_string(self->current_message()) << endl;
     }
   );
 }

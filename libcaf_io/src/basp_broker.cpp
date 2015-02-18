@@ -209,7 +209,7 @@ behavior basp_broker::make_behavior() {
     // catch-all error handler
     others() >> [=] {
       CAF_LOG_ERROR("received unexpected message: "
-                   << to_string(last_dequeued()));
+                   << to_string(current_message()));
     }
   };
 }

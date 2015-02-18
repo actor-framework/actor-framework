@@ -57,7 +57,7 @@ void pong(event_based_actor* self) {
   self->become(
     [=](ping_atom, int value) -> std::tuple<atom_value, int> {
       CAF_CHECKPOINT();
-      self->monitor(self->last_sender());
+      self->monitor(self->current_sender());
       // set next behavior
       self->become(
         [](ping_atom, int val) {

@@ -272,7 +272,7 @@ int_actor::behavior_type int_fun2(int_actor::pointer self) {
   self->trap_exit(true);
   return {
     [=](int i) {
-      self->monitor(self->last_sender());
+      self->monitor(self->current_sender());
       return i * i;
     },
     [=](const down_msg& dm) {

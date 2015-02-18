@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_CONTEXT_HPP
-#define CAF_CONTEXT_HPP
+#ifndef CAF_LOCAL_ACTOR_HPP
+#define CAF_LOCAL_ACTOR_HPP
 
 #include <atomic>
 #include <cstdint>
@@ -63,160 +63,170 @@ class sync_handle_helper;
  */
 class local_actor : public abstract_actor {
  public:
+  /*
   using del = detail::disposer;
   using mailbox_type = detail::single_reader_queue<mailbox_element, del>;
+  */
 
   static constexpr auto memory_cache_flag = detail::needs_embedding;
 
   ~local_actor();
 
-  /**************************************************************************
-   *                          spawn untyped actors                          *
-   **************************************************************************/
+  /****************************************************************************
+   *                           spawn untyped actors                           *
+   ****************************************************************************/
 
-  template <class C, spawn_options Os = no_spawn_options, class... Ts>
-  actor spawn(Ts&&... args) {
+  template <class T, spawn_options Os = no_spawn_options, class... Vs>
+  actor spawn(Vs&&... vs) {
     constexpr auto os = make_unbound(Os);
-    auto res = spawn_class<C, os>(host(), empty_before_launch_callback{},
-                    std::forward<Ts>(args)...);
+    auto res = spawn_class<T, os>(host(), empty_before_launch_callback{},
+                                  std::forward<Vs>(vs)...);
     return eval_opts(Os, std::move(res));
   }
 
-  template <spawn_options Os = no_spawn_options, class... Ts>
-  actor spawn(Ts&&... args) {
+  template <spawn_options Os = no_spawn_options, class... Vs>
+  actor spawn(Vs&&... vs) {
     constexpr auto os = make_unbound(Os);
     auto res = spawn_functor<os>(host(), empty_before_launch_callback{},
-                   std::forward<Ts>(args)...);
+                                 std::forward<Vs>(vs)...);
     return eval_opts(Os, std::move(res));
   }
 
-  template <class C, spawn_options Os, class... Ts>
-  actor spawn_in_group(const group& grp, Ts&&... args) {
+  template <class T, spawn_options Os, class... Vs>
+  actor spawn_in_group(const group& grp, Vs&&... vs) {
     constexpr auto os = make_unbound(Os);
-    auto res = spawn_class<C, os>(host(), group_subscriber{grp},
-                    std::forward<Ts>(args)...);
+    auto res = spawn_class<T, os>(host(), group_subscriber{grp},
+                                  std::forward<Vs>(vs)...);
     return eval_opts(Os, std::move(res));
   }
 
-  template <spawn_options Os = no_spawn_options, class... Ts>
-  actor spawn_in_group(const group& grp, Ts&&... args) {
+  template <spawn_options Os = no_spawn_options, class... Vs>
+  actor spawn_in_group(const group& grp, Vs&&... vs) {
     constexpr auto os = make_unbound(Os);
     auto res = spawn_functor<os>(host(), group_subscriber{grp},
-                   std::forward<Ts>(args)...);
+                                 std::forward<Vs>(vs)...);
     return eval_opts(Os, std::move(res));
   }
 
-  /**************************************************************************
-   *                           spawn typed actors                           *
-   **************************************************************************/
+  /****************************************************************************
+   *                            spawn typed actors                            *
+   ****************************************************************************/
 
-  template <class C, spawn_options Os = no_spawn_options, class... Ts>
+  template <class T, spawn_options Os = no_spawn_options, class... Vs>
   typename actor_handle_from_signature_list<
-    typename C::signatures
+    typename T::signatures
   >::type
-  spawn_typed(Ts&&... args) {
+  spawn_typed(Vs&&... vs) {
     constexpr auto os = make_unbound(Os);
-    auto res = spawn_class<C, os>(host(), empty_before_launch_callback{},
-                    std::forward<Ts>(args)...);
+    auto res = spawn_class<T, os>(host(), empty_before_launch_callback{},
+                    std::forward<Vs>(vs)...);
     return eval_opts(Os, std::move(res));
   }
 
-  template <spawn_options Os = no_spawn_options, typename F, class... Ts>
+  template <spawn_options Os = no_spawn_options, typename F, class... Vs>
   typename infer_typed_actor_handle<
     typename detail::get_callable_trait<F>::result_type,
     typename detail::tl_head<
       typename detail::get_callable_trait<F>::arg_types
     >::type
   >::type
-  spawn_typed(F fun, Ts&&... args) {
+  spawn_typed(F fun, Vs&&... vs) {
     constexpr auto os = make_unbound(Os);
     auto res = caf::spawn_typed_functor<os>(host(),
                                             empty_before_launch_callback{},
                                             std::move(fun),
-                                            std::forward<Ts>(args)...);
+                                            std::forward<Vs>(vs)...);
     return eval_opts(Os, std::move(res));
   }
 
-  /**************************************************************************
-   *                       send asynchronous messages                       *
-   **************************************************************************/
+  /****************************************************************************
+   *                        send asynchronous messages                        *
+   ****************************************************************************/
 
   /**
-   * Sends `{vs...} to `whom` using the priority `prio`.
+   * Sends `{vs...} to `dest` using the priority `prio`.
    */
   template <class... Vs>
-  inline void send(message_priority prio, const channel& whom, Vs&&... vs) {
+  inline void send(message_priority prio, const channel& dest, Vs&&... vs) {
     static_assert(sizeof...(Vs) > 0, "sizeof...(Vs) == 0");
-    fast_send(prio, whom, std::forward<Vs>(vs)...);
+    fast_send(prio, dest, std::forward<Vs>(vs)...);
   }
 
   /**
-   * Sends `{vs...} to `whom` using normal priority.
+   * Sends `{vs...} to `dest` using normal priority.
    */
   template <class... Vs>
-  inline void send(const channel& whom, Vs&&... vs) {
+  inline void send(const channel& dest, Vs&&... vs) {
     static_assert(sizeof...(Vs) > 0, "sizeof...(Vs) == 0");
-    fast_send(message_priority::normal, whom, std::forward<Vs>(vs)...);
+    fast_send(message_priority::normal, dest, std::forward<Vs>(vs)...);
   }
 
   /**
-   * Sends `{what...} to `whom`.
+   * Sends `{vs...} to `dest` using the priority `prio`.
    */
-  template <class... Rs, class... Vs>
-  void send(const typed_actor<Rs...>& whom, Vs&&... vs) {
+  template <class... Ts, class... Vs>
+  void send(message_priority prio, const typed_actor<Ts...>& dest, Vs&&... vs) {
     using token =
       detail::type_list<
         typename detail::implicit_conversions<
           typename std::decay<Vs>::type
         >::type...>;
     token tk;
-    check_typed_input(whom, tk);
-    fast_send(message_priority::normal, whom, std::forward<Vs>(vs)...);
+    check_typed_input(dest, tk);
+    fast_send(prio, dest, std::forward<Vs>(vs)...);
   }
 
   /**
-   * Sends an exit message to `whom`.
+   * Sends `{vs...} to `dest` using normal priority.
    */
-  void send_exit(const actor_addr& whom, uint32_t reason);
-
-  /**
-   * Sends an exit message to `whom`.
-   */
-  inline void send_exit(const actor& whom, uint32_t reason) {
-    send_exit(whom.address(), reason);
+  template <class... Ts, class... Vs>
+  void send(const typed_actor<Ts...>& dest, Vs&&... vs) {
+    send(message_priority::normal, dest, std::forward<Vs>(vs)...);
   }
 
   /**
-   * Sends an exit message to `whom`.
+   * Sends an exit message to `dest`.
    */
-  template <class... Rs>
-  void send_exit(const typed_actor<Rs...>& whom, uint32_t reason) {
-    send_exit(whom.address(), reason);
+  void send_exit(const actor_addr& dest, uint32_t reason);
+
+  /**
+   * Sends an exit message to `dest`.
+   */
+  inline void send_exit(const actor& dest, uint32_t reason) {
+    send_exit(dest.address(), reason);
   }
 
   /**
-   * Sends a message to `whom` using priority `prio`
-   * that is delayed by `rel_time`.
-   */
-  template <class... Ts>
-  void delayed_send(message_priority prio, const channel& whom,
-                    const duration& rtime, Ts&&... args) {
-    delayed_send_impl(prio, whom, rtime,
-                      make_message(std::forward<Ts>(args)...));
-  }
-
-  /**
-   * Sends a message to `whom` that is delayed by `rel_time`.
+   * Sends an exit message to `dest`.
    */
   template <class... Ts>
-  void delayed_send(const channel& whom, const duration& rtime, Ts&&... args) {
-    delayed_send_impl(message_priority::normal, whom, rtime,
-                      make_message(std::forward<Ts>(args)...));
+  void send_exit(const typed_actor<Ts...>& dest, uint32_t reason) {
+    send_exit(dest.address(), reason);
   }
 
-  /**************************************************************************
-   *                     miscellaneous actor operations                     *
-   **************************************************************************/
+  /**
+   * Sends a message to `dest` that is delayed by `rel_time`
+   * using the priority `prio`.
+   */
+  template <class... Vs>
+  void delayed_send(message_priority prio, const channel& dest,
+                    const duration& rtime, Vs&&... vs) {
+    delayed_send_impl(prio, dest, rtime,
+                      make_message(std::forward<Vs>(vs)...));
+  }
+
+  /**
+   * Sends a message to `dest` that is delayed by `rel_time`.
+   */
+  template <class... Vs>
+  void delayed_send(const channel& dest, const duration& rtime, Vs&&... vs) {
+    delayed_send_impl(message_priority::normal, dest, rtime,
+                      make_message(std::forward<Vs>(vs)...));
+  }
+
+  /****************************************************************************
+   *                      miscellaneous actor operations                      *
+   ****************************************************************************/
 
   /**
    * Causes this actor to subscribe to the group `what`.
@@ -264,46 +274,25 @@ class local_actor : public abstract_actor {
     set_flag(value, trap_exit_flag);
   }
 
-  inline bool has_timeout() const {
-    return get_flag(has_timeout_flag);
-  }
-
-  inline void has_timeout(bool value) {
-    set_flag(value, has_timeout_flag);
-  }
-
-  inline bool is_registered() const {
-    return get_flag(is_registered_flag);
-  }
-
-  void is_registered(bool value);
-
-  inline bool is_initialized() const {
-    return get_flag(is_initialized_flag);
-  }
-
-  inline void is_initialized(bool value) {
-    set_flag(value, is_initialized_flag);
-  }
-
-  inline bool is_blocking() const {
-    return get_flag(is_blocking_flag);
-  }
-
-  inline void is_blocking(bool value) {
-    set_flag(value, is_blocking_flag);
+  /**
+   * Returns the currently processed message.
+   * @warning Only set during callback invocation. Calling this member function
+   *          is undefined behavior (dereferencing a `nullptr`) when not in a
+   *          callback or `forward_to` has been called previously.
+   */
+  inline message& current_message() {
+    return m_current_element->msg;
   }
 
   /**
-   * Returns the last message that was dequeued from the actor's mailbox.
-   * @warning Only set during callback invocation.
+   * Returns the address of the sender of the current message.
+   * @warning Only set during callback invocation. Calling this member function
+   *          is undefined behavior (dereferencing a `nullptr`) when not in a
+   *          callback or `forward_to` has been called previously.
    */
-  message& last_dequeued();
-
-  /**
-   * Returns the address of the last sender of the last dequeued message.
-   */
-  actor_addr& last_sender();
+  inline actor_addr& current_sender() {
+    return m_current_element->sender;
+  }
 
   /**
    * Adds a unidirectional `monitor` to `whom`.
@@ -321,8 +310,8 @@ class local_actor : public abstract_actor {
   /**
    * @copydoc monitor(const actor_addr&)
    */
-  template <class... Rs>
-  inline void monitor(const typed_actor<Rs...>& whom) {
+  template <class... Ts>
+  inline void monitor(const typed_actor<Ts...>& whom) {
     monitor(whom.address());
   }
 
@@ -403,11 +392,17 @@ class local_actor : public abstract_actor {
     attach(attachable_ptr{new functor_attachable(std::move(f))});
   }
 
-  // <backward_compatibility version="0.9">
-  /**************************************************************************
-   *                        outdated member functions                       *
-   **************************************************************************/
+  /****************************************************************************
+   *                       deprecated member functions                        *
+   ****************************************************************************/
 
+  // <backward_compatibility version="0.12">
+  message& last_dequeued() CAF_DEPRECATED;
+
+  actor_addr& last_sender() CAF_DEPRECATED;
+  // </backward_compatibility>
+
+  // <backward_compatibility version="0.9">
   inline void send_tuple(message_priority prio, const channel& whom,
                          message what) CAF_DEPRECATED;
 
@@ -421,9 +416,9 @@ class local_actor : public abstract_actor {
                                  message data) CAF_DEPRECATED;
   // </backward_compatibility>
 
-  /**************************************************************************
-   *                here be dragons: end of public interface                *
-   **************************************************************************/
+  /****************************************************************************
+   *                 here be dragons: end of public interface                 *
+   ****************************************************************************/
 
   /** @cond PRIVATE */
 
@@ -440,7 +435,7 @@ class local_actor : public abstract_actor {
     return res;
   }
 
-  inline mailbox_element_ptr& current_element() {
+  inline mailbox_element_ptr& current_mailbox_element() {
     return m_current_element;
   }
 
@@ -510,10 +505,6 @@ class local_actor : public abstract_actor {
 
   // identifies all IDs of sync messages waiting for a response
   std::forward_list<message_id> m_pending_responses;
-
-  // "default value" for m_current_element
-  actor_addr m_dummy_sender;
-  message m_dummy_message;
 
   // points to m_dummy_node if no callback is currently invoked,
   // points to the node under processing otherwise
@@ -595,4 +586,4 @@ inline void local_actor::delayed_send_tuple(const channel& whom,
 
 } // namespace caf
 
-#endif // CAF_CONTEXT_HPP
+#endif // CAF_LOCAL_ACTOR_HPP

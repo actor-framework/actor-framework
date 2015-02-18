@@ -78,7 +78,7 @@ void client_bhvr(event_based_actor* self, const string& host,
     }
   }
   auto sync_send_request = [=](int lhs, const char* op, int rhs) {
-    self->sync_send(server, self->last_dequeued()).then(
+    self->sync_send(server, self->current_message()).then(
       [=](result_atom, int result) {
         aout(self) << lhs << " " << op << " " << rhs << " = " << result << endl;
       }
