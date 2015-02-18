@@ -35,17 +35,6 @@ istream& operator>>(istream& is, line& l) {
 
 namespace { string s_last_line; }
 
-message split_line(const line& l) {
-  istringstream strs(l.str);
-  s_last_line = move(l.str);
-  string tmp;
-  message_builder mb;
-  while (getline(strs, tmp, ' ')) {
-    if (!tmp.empty()) mb.append(std::move(tmp));
-  }
-  return mb.to_message();
-}
-
 void client(event_based_actor* self, const string& name) {
   self->become (
     [=](broadcast_atom, const string& message) {
@@ -113,7 +102,6 @@ int main(int argc, char** argv) {
         anon_send(client_actor, join_atom::value, g);
       }
       catch (exception& e) {
-        ostringstream err;
         cerr << "*** exception: group::get(\"" << group_id.substr(0, p)
            << "\", \"" << group_id.substr(p + 1) << "\") failed; "
            << to_verbose_string(e) << endl;

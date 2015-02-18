@@ -1,13 +1,13 @@
 /******************************************************************************
- * This example shows how to implement serialize/deserialize to announce    *
- * non-trivial data structures to the libcaf type system.          *
- *                                      *
- * Announce() auto-detects STL compliant containers and provides        *
- * an easy way to tell libcaf how to serialize user defined types.       *
- * See announce_example 1-4 for usage examples.                 *
- *                                      *
- * You should use "hand written" serialize/deserialize implementations    *
- * if and only if there is no other way.                    *
+ * This example shows how to implement serialize/deserialize to announce      *
+ * non-trivial data structures to the libcaf type system.                     *
+ *                                                                            *
+ * Announce() auto-detects STL compliant containers and provides              *
+ * an easy way to tell libcaf how to serialize user defined types.            *
+ * See announce_example 1-4 for usage examples.                               *
+ *                                                                            *
+ * You should use "hand written" serialize/deserialize implementations        *
+ * if and only if there is no other way.                                      *
  ******************************************************************************/
 
 #include <cstdint>

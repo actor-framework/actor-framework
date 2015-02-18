@@ -215,7 +215,8 @@ client::~client() {
 class curl_worker : public base_actor {
  public:
   curl_worker(const actor& parent)
-      : base_actor(parent, "curl_worker", color::yellow) {
+      : base_actor(parent, "curl_worker", color::yellow),
+        m_curl(nullptr) {
     // nop
   }
 

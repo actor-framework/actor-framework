@@ -52,7 +52,6 @@ int main(int argc, char** argv) {
       try {
         gptr = group::get(group_id.substr(0, p), group_id.substr(p + 1));
       } catch (exception& e) {
-        ostringstream err;
         cerr << "*** exception: group::get(\"" << group_id.substr(0, p)
              << "\", \"" << group_id.substr(p + 1) << "\") failed; "
              << to_verbose_string(e) << endl;

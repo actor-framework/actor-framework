@@ -72,10 +72,3 @@ void pong(blocking_actor* self, actor ping_actor) {
   self->send(ping_actor, pong_atom::value, 0); // kickoff
   self->receive_loop(pong_behavior(self));
 }
-
-void event_based_pong(event_based_actor* self, actor ping_actor) {
-  CAF_LOGF_TRACE("ping_actor = " << to_string(ping_actor));
-  CAF_REQUIRE(ping_actor != invalid_actor);
-  self->send(ping_actor, pong_atom::value, 0); // kickoff
-  self->become(pong_behavior(self));
-}

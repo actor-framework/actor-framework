@@ -93,9 +93,6 @@ struct raw_struct_type_info : detail::abstract_uniform_type_info<raw_struct> {
     rs->str.resize(size);
     source->read_raw(size, &(rs->str[0]));
   }
-  bool equals(const void* lhs, const void* rhs) const override {
-    return deref(lhs) == deref(rhs);
-  }
 };
 
 void test_ieee_754() {

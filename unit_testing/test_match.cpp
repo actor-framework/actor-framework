@@ -10,20 +10,6 @@ using namespace std;
 using hi_atom = atom_constant<atom("hi")>;
 using ho_atom = atom_constant<atom("ho")>;
 
-optional<int> even_int(int i) {
-  if (i % 2 == 0) {
-    return i;
-  }
-  return none;
-}
-
-optional<const vector<int>&> sorted_vec(const vector<int>& vec) {
-  if (is_sorted(vec.begin(), vec.end())) {
-    return vec;
-  }
-  return none;
-}
-
 function<optional<string>(const string&)> starts_with(const string& s) {
   return [=](const string& str) -> optional<string> {
     cout << "starts_with guard called" << endl;
@@ -33,14 +19,6 @@ function<optional<string>(const string&)> starts_with(const string& s) {
     }
     return none;
   };
-}
-
-optional<vector<string>> kvp_split(const string& str) {
-  auto pos = str.find('=');
-  if (pos != string::npos && pos == str.rfind('=')) {
-    return vector<string>{str.substr(0, pos), str.substr(pos+1)};
-  }
-  return none;
 }
 
 optional<int> toint(const string& str) {
