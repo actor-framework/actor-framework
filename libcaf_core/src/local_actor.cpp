@@ -204,7 +204,7 @@ message_id local_actor::sync_send_impl(message_priority mp,
   return nri.response_id();
 }
 
-//<backward_compatibility version="0.12">
+// <backward_compatibility version="0.12">
 message& local_actor::last_dequeued() {
   if (!m_current_element) {
     auto errstr = "last_dequeued called after forward_to or not in a callback";
@@ -222,6 +222,6 @@ actor_addr& local_actor::last_sender() {
   }
   return m_current_element->sender;
 }
-//</backward_compatibility>
+// </backward_compatibility>
 
 } // namespace caf

@@ -48,11 +48,10 @@ struct uniform_value_t {
   void* val;
   virtual uniform_value copy() = 0;
   virtual ~uniform_value_t();
-
 };
 
 template <class T, class... Ts>
-uniform_value make_uniform_value(const uniform_type_info* ti, Ts&&... args) {
+uniform_value make_uniform_value(const uniform_type_info* uti, Ts&&... args) {
   struct container : uniform_value_t {
     T value;
     container(const uniform_type_info* ptr, T arg) : value(std::move(arg)) {
@@ -62,9 +61,8 @@ uniform_value make_uniform_value(const uniform_type_info* ti, Ts&&... args) {
     uniform_value copy() override {
       return uniform_value{new container(ti, value)};
     }
-
   };
-  return uniform_value{new container(ti, T(std::forward<Ts>(args)...))};
+  return uniform_value{new container(uti, T(std::forward<Ts>(args)...))};
 }
 
 /**
@@ -276,12 +274,10 @@ class uniform_type_info {
   uint16_t m_type_nr;
 };
 
-using uniform_type_info_ptr = std::unique_ptr<uniform_type_info>;
-
 /**
  * @relates uniform_type_info
  */
-
+using uniform_type_info_ptr = std::unique_ptr<uniform_type_info>;
 
 /**
  * @relates uniform_type_info

@@ -118,6 +118,19 @@ enum class test_enum {
 
 } // namespace <anonymous>
 
+void test_string_serialization() {
+  auto input = make_message("hello \"actor world\"!", atom("foo"));
+  auto s = to_string(input);
+  CAF_CHECK_EQUAL(s, R"#(@<>+@str+@atom ( "hello \"actor world\"!", 'foo' ))#");
+  auto m = from_string<message>(s);
+  if (!m) {
+    CAF_PRINTERR("from_string failed");
+    return;
+  }
+  CAF_CHECK(*m == input);
+  CAF_CHECK_EQUAL(to_string(*m), to_string(input));
+}
+
 int main() {
   CAF_TEST(test_serialization);
 
@@ -143,6 +156,8 @@ int main() {
   if (nid2) {
     CAF_CHECK_EQUAL(to_string(nid), to_string(*nid2));
   }
+
+  test_string_serialization();
 
   /*
     auto oarr = new detail::object_array;

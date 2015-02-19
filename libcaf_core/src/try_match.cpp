@@ -69,7 +69,7 @@ class set_commit_rollback {
   inline void inc() {
     ++m_pos;
   }
-  inline pointer current() {
+  inline pointer current() const {
     return &m_data[m_pos];
   }
   inline void commit() {

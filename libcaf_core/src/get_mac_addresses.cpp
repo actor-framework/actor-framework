@@ -180,7 +180,7 @@ constexpr size_t max_iterations = 3;
 
 struct c_free {
   template <class T>
-  void operator()(T* ptr) {
+  void operator()(T* ptr) const {
     free(ptr);
   }
 };

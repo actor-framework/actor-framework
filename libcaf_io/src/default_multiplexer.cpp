@@ -204,12 +204,8 @@ namespace network {
     a.inaddr.sin_family = AF_INET;
     a.inaddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     a.inaddr.sin_port = 0;
-    bool success = false;
     // makes sure all sockets are closed in case of an error
     auto guard = detail::make_scope_guard([&] {
-      if (success) {
-        return; // everyhting's fine
-      }
       auto e = WSAGetLastError();
       closesocket(listener);
       closesocket(socks[0]);
@@ -242,7 +238,7 @@ namespace network {
     auto write_fd = ccall(cc_valid_socket, "accept() failed",
                           accept, listener, NULL, NULL);
     closesocket(listener);
-    success = true;
+    guard.disable();
     return {read_fd, write_fd};
   }
 
