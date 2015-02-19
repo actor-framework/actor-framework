@@ -36,9 +36,9 @@ However, the classes \lstinline^message^ and \lstinline^message_builder^ allow m
   \hline
   \lstinline^message slice(size_t p, size_t n)^ & Creates a new message from \lstinline^[p, p + n)^ \\
   \hline
-  \lstinline^message filter(message_handler)^ & See \ref{Sec::Messages::Filter} \\
+  \lstinline^message extract(message_handler)^ & See \ref{Sec::Messages::Extract} \\
   \hline
-  \lstinline^message filter_cli(...)^ & See \ref{Sec::Messages::FilterCLI} \\
+  \lstinline^message extract_opts(...)^ & See \ref{Sec::Messages::ExtractOpts} \\
   \hline
   \\
   \multicolumn{2}{l}{\textbf{Modifiers}\vspace{3pt}} \\
@@ -78,9 +78,9 @@ However, the classes \lstinline^message^ and \lstinline^message_builder^ allow m
   \hline
   \lstinline^template <class Iter>^ \lstinline^append(Iter first, Iter last)^ & Adds all elements from range \lstinline^[first, last)^ \\
   \hline
-  \lstinline^message filter(message_handler)^ & See \ref{Sec::Messages::Filter} \\
+  \lstinline^message extract(message_handler)^ & See \ref{Sec::Messages::Extract} \\
   \hline
-  \lstinline^message filter_cli(...)^ & See \ref{Sec::Messages::FilterCLI} \\
+  \lstinline^message extract_opts(...)^ & See \ref{Sec::Messages::ExtractOpts} \\
   \hline
   \\
   \multicolumn{2}{l}{\textbf{Modifiers}\vspace{3pt}} \\
@@ -93,18 +93,19 @@ However, the classes \lstinline^message^ and \lstinline^message_builder^ allow m
 }
 
 \clearpage
-\subsection{Filtering}
-\label{Sec::Messages::Filter}
+\subsection{Extracting}
+\label{Sec::Messages::Extract}
 
+The member function \lstinline^message::extract^ removes matched elements from a message. x
 Messages are filtered by repeatedly applying a message handler to the greatest remaining slice, whereas slices are generated in the sequence \lstinline^[0, size)^, \lstinline^[0, size-1)^, \lstinline^...^, \lstinline^[1, size-1)^, \lstinline^...^, \lstinline^[size-1, size)^.
-Whenever a slice matches, it is removed from the message and the next slice starts at the same index on the reduced message.
+Whenever a slice is matched, it is removed from the message and the next slice starts at the same index on the reduced message.
 
 For example:
 
 \begin{lstlisting}
 auto msg = make_message(1, 2.f, 3.f, 4);
-// filter float and integer pairs
-auto msg2 = msg.filter({
+// remove float and integer pairs
+auto msg2 = msg.extract({
   [](float, float) { },
   [](int, int) { }
 });
@@ -123,20 +124,20 @@ Step-by-step explanation:
   \item Slice 7: \lstinline^(4)^, no match
 \end{itemize}
 
-Slice 7 is \lstinline^(4)^, i.e., does not contain the first element, because the match on slice 6 occurred at index position 1. The function filter iterates a message only once, from left to right. The result of \lstinline^message::filter^ is the remainder, i.e., a message consisting of all unmatched elements.
+Slice 7 is \lstinline^(4)^, i.e., does not contain the first element, because the match on slice 6 occurred at index position 1. The function \lstinline^extract^ iterates a message only once, from left to right.
+The returned message contains the remaining, i.e., unmatched, elements.
 
 \clearpage
-\subsection{Filter and Command Line Arguments}
-\label{Sec::Messages::FilterCLI}
+\subsection{Extracting Command Line Options}
+\label{Sec::Messages::ExtractOpts}
 
-The class \lstinline^message^ also contains a convenience interface to \lstinline^filter^ for parsing command line arguments: \lstinline^filter_cli^.
-This member function provides a simplistic interface for defining a command line argument parsers:
+The class \lstinline^message^ also contains a convenience interface to \lstinline^extract^ for parsing command line options: the member function \lstinline^extract_opts^.
 
 \begin{lstlisting}
 int main(int argc, char** argv) {
   uint16_t port;
   string host = "localhost";
-  auto res = message_builder(argv + 1, argv + argc).filter_cli({
+  auto res = message_builder(argv + 1, argv + argc).extract_opts({
     {"port,p", "set port", port},
     {"host,H", "set host (default: localhost)", host},
     {"verbose,v", "enable verbose mode"}
@@ -147,11 +148,20 @@ int main(int argc, char** argv) {
     return 0;
   }
   if (!res.remainder.empty()) {
-    // ... filter did not consume all CLI arguments ...
+    // ... extract did not consume all CLI options ...
   }
   if (res.opts.count("verbose") > 0) {
     // ... enable verbose mode ...
   }
   // ...
 }
+
+/*
+Output of ./program_name -h:
+
+Allowed options:
+  -p [--port] arg  : set port
+  -H [--host] arg  : set host (default: localhost)
+  -v [--verbose]   : enable verbose mode
+*/
 \end{lstlisting}

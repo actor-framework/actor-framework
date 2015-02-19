@@ -166,7 +166,7 @@ Thus, you should not depend on a certain clock resolution.
 Unmatched messages are skipped automatically by \lib's runtime system.
 This is true for \textit{all} actor implementations.
 To allow actors to skip messages manually, \lstinline^skip_message^ can be used.
-This is in particular useful whenever an actor switches between behaviors, but wants to use a default rule created by \lstinline^others()^ to filter messages that are not handled by any of its behaviors.
+This is in particular useful whenever an actor switches between behaviors, but wants to use a default rule created by \lstinline^others()^ to catch messages that are not handled by any of its behaviors.
 
 The following example illustrates a simple server actor that dispatches requests to workers.
 After receiving an \lstinline^'idle'^ message, it awaits a request that is then forwarded to the idle worker.
