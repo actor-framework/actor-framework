@@ -142,7 +142,7 @@ if(MORE_WARNINGS)
   set(EXTRA_FLAGS "${EXTRA_FLAGS} ${WFLAGS_STR}")
 endif()
 # add -stdlib=libc++ when using Clang
-if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+if(NOT NO_AUTO_LIBCPP AND "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
   message(STATUS "NOTE: Automatically added -stdlib=libc++ flag, "
                  "you can override this by defining CMAKE_CXX_FLAGS "
                  "(see 'configure --help')")

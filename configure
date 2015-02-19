@@ -47,13 +47,11 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --build-static-only         build as static library only
     --more-warnings             enables most warnings
     --no-compiler-check         disable compiler version check
+    --no-auto-libc++            do not automatically enable libc++ for Clang
     --warnings-as-errors        enables -Werror
 
   Installation Directories:
     --prefix=PREFIX             installation directory [/usr/local]
-
-  Add Optional Features:
-    --enable-perftools          build with Google perftools
 
   Remove Standard Features (even if all dependencies are available):
     --no-memory-management      build without memory management
@@ -237,6 +235,9 @@ while [ $# -ne 0 ]; do
             ;;
         --no-compiler-check)
             append_cache_entry NO_COMPILER_CHECK BOOL yes
+            ;;
+        --no-auto-libc++)
+            append_cache_entry NO_AUTO_LIBCPP BOOL yes
             ;;
         --warnings-as-errors)
             append_cache_entry CXX_WARNINGS_AS_ERROS BOOL yes
