@@ -68,7 +68,7 @@ void client(event_based_actor* self, const string& name) {
 int main(int argc, char** argv) {
   string name;
   string group_id;
-  auto res = message_builder(argv + 1, argv + argc).filter_cli({
+  auto res = message_builder(argv + 1, argv + argc).extract_opts({
     {"name,n", "set name", name},
     {"group,g", "join group", group_id}
   });

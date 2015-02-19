@@ -116,7 +116,7 @@ optional<message> message::apply(message_handler handler) {
   return handler(*this);
 }
 
-message message::filter_impl(size_t start, message_handler handler) const {
+message message::extract_impl(size_t start, message_handler handler) const {
   auto s = size();
   for (size_t i = start; i < s; ++i) {
     for (size_t n = (s - i) ; n > 0; --n) {
@@ -132,18 +132,18 @@ message message::filter_impl(size_t start, message_handler handler) const {
         }
         message next{detail::decorated_tuple::create(m_vals,
                                                      std::move(mapping))};
-        return next.filter_impl(i, handler);
+        return next.extract_impl(i, handler);
       }
     }
   }
   return *this;
 }
 
-message message::filter(message_handler handler) const {
-  return filter_impl(0, handler);
+message message::extract(message_handler handler) const {
+  return extract_impl(0, handler);
 }
 
-message::cli_res message::filter_cli(std::vector<cli_arg> cliargs) const {
+message::cli_res message::extract_opts(std::vector<cli_arg> cliargs) const {
   std::set<std::string> opts;
   cli_arg dummy{"help,h", ""};
   std::map<std::string, cli_arg*> shorts;
@@ -171,7 +171,7 @@ message::cli_res message::filter_cli(std::vector<cli_arg> cliargs) const {
       opts.insert(ptr->name.substr(0, separator));
     }
   };
-  auto res = filter({
+  auto res = extract({
     [&](const std::string& arg) -> optional<skip_message_t> {
       if (arg.empty() || arg.front() != '-') {
         return skip_message();

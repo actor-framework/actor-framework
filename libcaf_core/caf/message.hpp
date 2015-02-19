@@ -169,8 +169,8 @@ class message {
    *
    * ~~~
    * auto msg = make_message(1, 2.f, 3.f, 4);
-   * // filter float and integer pairs
-   * auto msg2 = msg.filter({
+   * // extract float and integer pairs
+   * auto msg2 = msg.extract({
    *   [](float, float) { },
    *   [](int, int) { }
    * });
@@ -187,10 +187,10 @@ class message {
    * - Slice 7: `(4)`, no match
    *
    * Slice 7 is `(4)`, i.e., does not contain the first element, because the
-   * match on slice 6 occurred at index position 1. The function `filter`
+   * match on slice 6 occurred at index position 1. The function `extract`
    * iterates a message only once, from left to right.
    */
-  message filter(message_handler handler) const;
+  message extract(message_handler handler) const;
 
   /**
    * Stores the name of a command line option ("<long name>[,<short name>]")
@@ -246,14 +246,14 @@ class message {
   struct cli_res;
 
   /**
-   * A simplistic interface for using `filter` to parse command line options.
+   * A simplistic interface for using `extract` to parse command line options.
    * Usage example:
    *
    * ~~~
    * int main(int argc, char** argv) {
    *   uint16_t port;
    *   string host = "localhost";
-   *   auto res = message_builder(argv + 1, argv + argc).filter_cli({
+   *   auto res = message_builder(argv + 1, argv + argc).extract_opts({
    *     {"port,p", "set port", port},
    *     {"host,H", "set host (default: localhost)", host},
    *     {"verbose,v", "enable verbose mode"}
@@ -264,7 +264,7 @@ class message {
    *     return 0;
    *   }
    *   if (!res.remainder.empty()) {
-   *     // ... filter did not consume all CLI arguments ...
+   *     // ... extract did not consume all CLI arguments ...
    *   }
    *   if (res.opts.count("verbose") > 0) {
    *     // ... enable verbose mode ...
@@ -273,7 +273,7 @@ class message {
    * }
    * ~~~
    */
-  cli_res filter_cli(std::vector<cli_arg> args) const;
+  cli_res extract_opts(std::vector<cli_arg> args) const;
 
   /**
    * Queries whether the element at position `p` is of type `T`.
@@ -373,13 +373,13 @@ class message {
     return match_element<T>(P) && match_elements_impl(next_p, next_list);
   }
 
-  message filter_impl(size_t start, message_handler handler) const;
+  message extract_impl(size_t start, message_handler handler) const;
 
   data_ptr m_vals;
 };
 
 /**
- * Stores the result of `message::filter_cli`.
+ * Stores the result of `message::extract_opts`.
  */
 struct message::cli_res {
   /**

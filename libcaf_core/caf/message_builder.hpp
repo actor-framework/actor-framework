@@ -93,17 +93,17 @@ class message_builder {
   message move_to_message();
 
   /**
-   * @copydoc message::filter
+   * @copydoc message::extract
    */
-  inline message filter(message_handler f) const {
-    return to_message().filter(f);
+  inline message extract(message_handler f) const {
+    return to_message().extract(f);
   }
 
   /**
-   * @copydoc message::filter_cli
+   * @copydoc message::extract_opts
    */
-  inline message::cli_res filter_cli(std::vector<message::cli_arg> args) const {
-    return to_message().filter_cli(std::move(args));
+  inline message::cli_res extract_opts(std::vector<message::cli_arg> args) const {
+    return to_message().extract_opts(std::move(args));
   }
 
   /**

@@ -30,7 +30,7 @@ using namespace caf;
 int main(int argc, char** argv) {
   string name;
   string group_id;
-  auto res = message_builder(argv + 1, argv + argc).filter_cli({
+  auto res = message_builder(argv + 1, argv + argc).extract_opts({
     {"name,n", "set chat name", name},
     {"group,g", "join chat group", group_id}
   });

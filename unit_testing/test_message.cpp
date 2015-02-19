@@ -45,14 +45,14 @@ void test_slice() {
   CAF_CHECK_EQUAL(to_string(m2), to_string(make_message(3, 4)));
 }
 
-void test_filter1(int lhs1, int lhs2, int lhs3, int rhs1, int rhs2, int val) {
+void test_extract1(int lhs1, int lhs2, int lhs3, int rhs1, int rhs2, int val) {
   auto m1 = make_message(lhs1, lhs2, lhs3);
   auto m2 = make_message(rhs1, rhs2);
-  auto m3 = m1.filter(on(val) >> [] {});
+  auto m3 = m1.extract(on(val) >> [] {});
   CAF_CHECK_EQUAL(to_string(m2), to_string(m3));
 }
 
-void test_filter2() {
+void test_extract2() {
   auto m1 = make_message(1.0, 2.0, 3.0);
   auto m2 = make_message(1, 2, 1.0, 2.0, 3.0);
   auto m3 = make_message(1.0, 1, 2, 2.0, 3.0);
@@ -64,19 +64,19 @@ void test_filter2() {
     [](int, int) { },
     [](float, float) { }
   };
-  CAF_CHECK_EQUAL(to_string(m2.filter(f)), to_string(m1));
-  CAF_CHECK_EQUAL(to_string(m3.filter(f)), to_string(m1));
-  CAF_CHECK_EQUAL(to_string(m4.filter(f)), to_string(m1));
-  CAF_CHECK_EQUAL(to_string(m5.filter(f)), to_string(m1));
-  CAF_CHECK_EQUAL(to_string(m6.filter(f)), to_string(m1));
-  CAF_CHECK_EQUAL(to_string(m7.filter(f)), to_string(m1));
+  CAF_CHECK_EQUAL(to_string(m2.extract(f)), to_string(m1));
+  CAF_CHECK_EQUAL(to_string(m3.extract(f)), to_string(m1));
+  CAF_CHECK_EQUAL(to_string(m4.extract(f)), to_string(m1));
+  CAF_CHECK_EQUAL(to_string(m5.extract(f)), to_string(m1));
+  CAF_CHECK_EQUAL(to_string(m6.extract(f)), to_string(m1));
+  CAF_CHECK_EQUAL(to_string(m7.extract(f)), to_string(m1));
 }
 
-void test_filter3() {
+void test_extract3() {
   auto m1 = make_message(1);
-  CAF_CHECK_EQUAL(to_string(m1.filter([](int) {})), to_string(message{}));
+  CAF_CHECK_EQUAL(to_string(m1.extract([](int) {})), to_string(message{}));
   auto m2 = make_message(1.0, 2, 3, 4.0);
-  auto m3 = m2.filter({
+  auto m3 = m2.extract({
     [](int, int) { },
     [](double, double) { }
   });
@@ -84,10 +84,10 @@ void test_filter3() {
   CAF_CHECK_EQUAL(to_string(m3), to_string(make_message(1.0, 4.0)));
 }
 
-void test_filter_cli() {
+void test_extract_opts() {
   auto f = [](std::vector<std::string> args) {
     std::string filename;
-    auto res = message_builder(args.begin(), args.end()).filter_cli({
+    auto res = message_builder(args.begin(), args.end()).extract_opts({
       {"version,v", "print version"},
       {"file,f", "set output file", filename},
       {"whatever", "do whatever"}
@@ -109,12 +109,12 @@ int main() {
   CAF_TEST(message);
   test_drop();
   test_slice();
-  test_filter1(1, 2, 3, 2, 3, 1);
-  test_filter1(1, 2, 3, 1, 3, 2);
-  test_filter1(1, 2, 3, 1, 2, 3);
-  test_filter2();
-  test_filter3();
-  test_filter_cli();
+  test_extract1(1, 2, 3, 2, 3, 1);
+  test_extract1(1, 2, 3, 1, 3, 2);
+  test_extract1(1, 2, 3, 1, 2, 3);
+  test_extract2();
+  test_extract3();
+  test_extract_opts();
   test_type_token();
   return CAF_TEST_RESULT();
 }
