@@ -406,10 +406,9 @@ namespace network {
     // altering the pollset while traversing it is not exactly a
     // bright idea ...
     struct fd_event {
-      native_socket fd;        // our file descriptor
-      short           mask;    // the event mask returned by poll()
-      short           fd_mask; // the mask associated with fd
-      event_handler*  ptr;     // nullptr in case of a pipe event
+      native_socket  fd;      // our file descriptor
+      short          mask;    // the event mask returned by poll()
+      event_handler* ptr;     // nullptr in case of a pipe event
     };
     std::vector<fd_event> poll_res;
     while (!m_pollset.empty()) {
@@ -449,7 +448,7 @@ namespace network {
         if (pfd.revents != 0) {
           CAF_LOG_DEBUG("event on socket " << pfd.fd
                         << ", revents = " << pfd.revents);
-          poll_res.push_back({pfd.fd, pfd.revents, pfd.events, m_shadow[i]});
+          poll_res.push_back({pfd.fd, pfd.revents, m_shadow[i]});
           pfd.revents = 0;
           --presult; // stop as early as possible
         }

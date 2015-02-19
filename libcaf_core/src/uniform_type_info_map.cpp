@@ -226,7 +226,6 @@ void deserialize_impl(channel& ptrref, deserializer* source) {
 }
 
 void serialize_impl(const message& tup, serializer* sink) {
-  std::string dynamic_name; // used if tup holds an object_array
   // ttn can be nullptr even if tuple is not empty (in case of object_array)
   std::string tname = tup.empty() ? "@<>" : tup.tuple_type_names();
   auto uti_map = detail::singletons::get_uniform_type_info_map();
@@ -485,8 +484,7 @@ protected:
 
 class default_meta_message : public uniform_type_info {
  public:
-  default_meta_message(const std::string& tname) {
-    m_name = tname;
+  default_meta_message(const std::string& tname) : m_name(tname) {
     std::vector<std::string> elements;
     split(elements, tname, is_any_of("+"));
     auto uti_map = detail::singletons::get_uniform_type_info_map();
@@ -555,11 +553,11 @@ template <class Iterator>
 struct builtin_types_helper {
   Iterator pos;
   builtin_types_helper(Iterator first) : pos(first) {}
-  inline void operator()() {
+  void operator()() const {
     // end of recursion
   }
   template <class T, class... Ts>
-  inline void operator()(T& arg, Ts&... args) {
+  void operator()(T& arg, Ts&... args) {
     *pos++ = &arg;
     (*this)(args...);
   }
