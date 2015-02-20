@@ -91,6 +91,19 @@ class intrusive_partitioned_list {
     m_tail.prev = &m_separator;
   }
 
+  ~intrusive_partitioned_list() {
+    clear();
+  }
+
+  void clear() {
+    while (!first_empty()) {
+      erase(first_begin());
+    }
+    while (!second_empty()) {
+      erase(second_begin());
+    }
+  }
+
   iterator first_begin() {
     return m_head.next;
   }

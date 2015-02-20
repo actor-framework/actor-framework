@@ -136,6 +136,8 @@ class broker::continuation {
     // nop
   }
 
+  continuation(continuation&&) = default;
+
   inline void operator()() {
     CAF_PUSH_AID(m_self->id());
     CAF_LOG_TRACE("");
@@ -155,8 +157,7 @@ policy::invoke_message_result broker::invoke_message(mailbox_element_ptr& msg,
 
 void broker::invoke_message(mailbox_element_ptr& ptr) {
   CAF_LOG_TRACE(CAF_TARG(msg, to_string));
-  if (planned_exit_reason() != exit_reason::not_exited
-      || bhvr_stack().empty()) {
+  if (exit_reason() != exit_reason::not_exited || bhvr_stack().empty()) {
     CAF_LOG_DEBUG("actor already finished execution"
                   << ", planned_exit_reason = " << planned_exit_reason()
                   << ", bhvr_stack().empty() = " << bhvr_stack().empty());
@@ -206,14 +207,10 @@ void broker::invoke_message(mailbox_element_ptr& ptr) {
   // cleanup if needed
   if (planned_exit_reason() != exit_reason::not_exited) {
     cleanup(planned_exit_reason());
-    // release implicit reference count held by MM
-    // deref();
   } else if (bhvr_stack().empty()) {
     CAF_LOG_DEBUG("bhvr_stack().empty(), quit for normal exit reason");
     quit(exit_reason::normal);
     cleanup(planned_exit_reason());
-    // release implicit reference count held by MM
-    // deref();
   }
 }
 
@@ -262,9 +259,19 @@ broker::broker(middleman& ptr) : m_mm(ptr) {
 
 void broker::cleanup(uint32_t reason) {
   CAF_LOG_TRACE(CAF_ARG(reason));
+  planned_exit_reason(reason);
+  on_exit();
   close_all();
+  CAF_REQUIRE(m_doormen.empty());
+  CAF_REQUIRE(m_scribes.empty());
+  CAF_REQUIRE(current_mailbox_element() == nullptr);
+  m_cache.clear();
   super::cleanup(reason);
   deref(); // release implicit reference count from middleman
+}
+
+void broker::on_exit() {
+  // nop
 }
 
 void broker::launch(bool is_hidden, bool, execution_unit*) {

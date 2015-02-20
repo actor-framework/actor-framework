@@ -42,9 +42,9 @@ namespace io {
  */
 class basp_broker : public broker, public actor_namespace::backend {
  public:
-  basp_broker();
-
   basp_broker(middleman& parent_ref);
+
+  ~basp_broker();
 
   behavior make_behavior() override;
 
@@ -89,6 +89,9 @@ class basp_broker : public broker, public actor_namespace::backend {
   inline actor_namespace& get_namespace() {
     return m_namespace;
   }
+
+ protected:
+  void on_exit() override;
 
  private:
   void erase_proxy(const node_id& nid, actor_id aid);

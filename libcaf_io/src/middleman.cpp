@@ -159,6 +159,11 @@ class middleman_actor_impl : public middleman_actor_base::base {
 
   ~middleman_actor_impl();
 
+  void on_exit() {
+    m_pending_requests.clear();
+    m_broker = invalid_actor;
+  }
+
   using get_op_result = either<ok_atom, actor_addr>
                         ::or_else<error_atom, std::string>;
 
@@ -331,12 +336,10 @@ void middleman::stop() {
     CAF_LOGC_TRACE("caf::io::middleman", "stop$lambda", "");
     // m_managers will be modified while we are stopping each manager,
     // because each manager will call remove(...)
-    std::vector<broker_ptr> brokers;
     for (auto& kvp : m_named_brokers) {
-      brokers.push_back(kvp.second);
-    }
-    for (auto& bro : brokers) {
-      bro->close_all();
+      if (kvp.second->exit_reason() == exit_reason::not_exited) {
+        kvp.second->cleanup(exit_reason::normal);
+      }
     }
   });
   m_backend_supervisor.reset();

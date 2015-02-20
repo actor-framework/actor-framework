@@ -68,16 +68,14 @@ functor_payload_writer<F> make_payload_writer(F fun) {
   return {fun};
 }
 
-basp_broker::basp_broker() : m_namespace(*this) {
+basp_broker::basp_broker(middleman& pref) : broker(pref), m_namespace(*this) {
   m_meta_msg = uniform_typeid<message>();
   m_meta_id_type = uniform_typeid<node_id>();
   CAF_LOG_DEBUG("BASP broker started: " << to_string(node()));
 }
 
-basp_broker::basp_broker(middleman& pref) : broker(pref), m_namespace(*this) {
-  m_meta_msg = uniform_typeid<message>();
-  m_meta_id_type = uniform_typeid<node_id>();
-  CAF_LOG_DEBUG("BASP broker started: " << to_string(node()));
+basp_broker::~basp_broker() {
+  // nop
 }
 
 behavior basp_broker::make_behavior() {
@@ -178,7 +176,15 @@ behavior basp_broker::make_behavior() {
     },
     [=](get_atom, connection_handle hdl, int64_t request_id,
         actor client, std::set<std::string>& expected_ifs) {
-      assign_tcp_scribe(hdl);
+      try {
+        assign_tcp_scribe(hdl);
+      }
+      catch (std::exception&) {
+        CAF_LOG_DEBUG("failed to assign scribe from handle");
+        send(client, error_atom{}, request_id,
+             "failed to assign scribe from handle");
+        return;
+      }
       auto& ctx = m_ctx[hdl];
       ctx.hdl = hdl;
       // PODs are not movable, so passing expected_ifs to the ctor  would cause
@@ -674,6 +680,15 @@ actor_proxy_ptr basp_broker::make_proxy(const node_id& nid, actor_id aid) {
            node(), invalid_actor_id, nid, aid);
   parent().notify<hook::new_remote_actor>(res->address());
   return res;
+}
+
+void basp_broker::on_exit() {
+  m_ctx.clear();
+  m_acceptors.clear();
+  m_open_ports.clear();
+  m_routes.clear();
+  m_blacklist.clear();
+  m_pending_requests.clear();
 }
 
 void basp_broker::erase_proxy(const node_id& nid, actor_id aid) {

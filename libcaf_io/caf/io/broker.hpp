@@ -306,6 +306,8 @@ class broker : public extend<local_actor>::
 
   void launch(bool is_hidden, bool, execution_unit*);
 
+  void cleanup(uint32_t reason);
+
   // <backward_compatibility version="0.9">
 
   static constexpr auto at_least = receive_policy_flag::at_least;
@@ -326,9 +328,13 @@ class broker : public extend<local_actor>::
 
   broker(middleman& parent_ref);
 
-  void cleanup(uint32_t reason);
-
   virtual behavior make_behavior() = 0;
+
+  /**
+   * Can be overridden to perform cleanup code before the
+   * broker closes all its connections.
+   */
+  virtual void on_exit();
 
   /** @endcond */
 

@@ -169,8 +169,8 @@ void deserialize_impl(group& gref, deserializer* source) {
 }
 
 void serialize_impl(const channel& chref, serializer* sink) {
-  // channel is an abstract base class that's either an actor or a group
-  // to indicate that, we write a flag first, that is
+  // abstract_channel is an abstract base class that's either an actor
+  // or a group; we prefix the serialized data using a flag:
   //   0 if ptr == nullptr
   //   1 if ptr points to an actor
   //   2 if ptr points to a group
