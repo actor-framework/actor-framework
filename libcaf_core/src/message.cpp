@@ -89,7 +89,7 @@ message message::drop(size_t n) const {
   std::vector<size_t> mapping (size() - n);
   size_t i = n;
   std::generate(mapping.begin(), mapping.end(), [&] { return i++; });
-  return message {detail::decorated_tuple::create(m_vals, mapping)};
+  return message {detail::decorated_tuple::make(m_vals, mapping)};
 }
 
 message message::drop_right(size_t n) const {
@@ -102,7 +102,7 @@ message message::drop_right(size_t n) const {
   }
   std::vector<size_t> mapping(size() - n);
   std::iota(mapping.begin(), mapping.end(), size_t{0});
-  return message{detail::decorated_tuple::create(m_vals, std::move(mapping))};
+  return message{detail::decorated_tuple::make(m_vals, std::move(mapping))};
 }
 
 message message::slice(size_t pos, size_t n) const {
@@ -112,7 +112,7 @@ message message::slice(size_t pos, size_t n) const {
   }
   std::vector<size_t> mapping(std::min(s - pos, n));
   std::iota(mapping.begin(), mapping.end(), pos);
-  return message{detail::decorated_tuple::create(m_vals, std::move(mapping))};
+  return message{detail::decorated_tuple::make(m_vals, std::move(mapping))};
 }
 
 optional<message> message::apply(message_handler handler) {
@@ -133,8 +133,7 @@ message message::extract_impl(size_t start, message_handler handler) const {
         if (mapping.empty()) {
           return message{};
         }
-        message next{detail::decorated_tuple::create(m_vals,
-                                                     std::move(mapping))};
+        message next{detail::decorated_tuple::make(m_vals, std::move(mapping))};
         return next.extract_impl(i, handler);
       }
     }

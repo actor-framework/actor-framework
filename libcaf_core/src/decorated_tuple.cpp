@@ -22,11 +22,7 @@
 namespace caf {
 namespace detail {
 
-using vector_type = std::vector<size_t>;
-
-using pointer = message_data::ptr;
-
-pointer decorated_tuple::create(pointer d, vector_type v) {
+decorated_tuple::pointer decorated_tuple::make(pointer d, vector_type v) {
   auto ptr = dynamic_cast<const decorated_tuple*>(d.get());
   if (ptr) {
     d = ptr->decorated();
@@ -73,7 +69,10 @@ uint16_t decorated_tuple::type_nr_at(size_t pos) const {
   return m_decorated->type_nr_at(m_mapping[pos]);
 }
 
-void decorated_tuple::init() {
+decorated_tuple::decorated_tuple(pointer&& d, vector_type&& v)
+    : m_decorated(std::move(d)),
+      m_mapping(std::move(v)),
+      m_type_token(0xFFFFFFFF) {
   CAF_REQUIRE(m_mapping.empty()
               || *(std::max_element(m_mapping.begin(), m_mapping.end()))
                  < static_cast<const pointer&>(m_decorated)->size());
@@ -82,13 +81,6 @@ void decorated_tuple::init() {
     m_type_token <<= 6;
     m_type_token |= m_decorated->type_nr_at(m_mapping[i]);
   }
-}
-
-decorated_tuple::decorated_tuple(pointer d, vector_type&& v)
-    : m_decorated(std::move(d)),
-      m_mapping(std::move(v)),
-      m_type_token(0xFFFFFFFF) {
-  init();
 }
 
 } // namespace detail

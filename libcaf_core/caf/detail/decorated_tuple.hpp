@@ -36,19 +36,15 @@ namespace caf {
 namespace detail {
 
 class decorated_tuple : public message_data {
-
-  using super = message_data;
-
-  decorated_tuple& operator=(const decorated_tuple&) = delete;
-
  public:
+  decorated_tuple& operator=(const decorated_tuple&) = delete;
 
   using vector_type = std::vector<size_t>;
 
   using pointer = message_data::ptr;
 
   // creates a typed subtuple from `d` with mapping `v`
-  static pointer create(pointer d, vector_type v);
+  static pointer make(pointer d, vector_type v);
 
   void* mutable_at(size_t pos) override;
 
@@ -67,26 +63,21 @@ class decorated_tuple : public message_data {
 
   uint16_t type_nr_at(size_t pos) const override;
 
-  const pointer& decorated() const {
+  inline const pointer& decorated() const {
     return m_decorated;
   }
 
-  const vector_type& mapping() const {
+  inline const vector_type& mapping() const {
     return m_mapping;
   }
 
  private:
+  decorated_tuple(pointer&&, vector_type&&);
+  decorated_tuple(const decorated_tuple&) = default;
 
   pointer m_decorated;
   vector_type m_mapping;
   uint32_t m_type_token;
-
-  void init();
-
-  decorated_tuple(pointer, vector_type&&);
-
-  decorated_tuple(const decorated_tuple&) = default;
-
 };
 
 } // namespace detail
