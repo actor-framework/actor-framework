@@ -156,7 +156,7 @@ policy::invoke_message_result broker::invoke_message(mailbox_element_ptr& msg,
 }
 
 void broker::invoke_message(mailbox_element_ptr& ptr) {
-  CAF_LOG_TRACE(CAF_TARG(msg, to_string));
+  CAF_LOG_TRACE(CAF_TARG(ptr->msg, to_string));
   if (exit_reason() != exit_reason::not_exited || bhvr_stack().empty()) {
     CAF_LOG_DEBUG("actor already finished execution"
                   << ", planned_exit_reason = " << planned_exit_reason()
