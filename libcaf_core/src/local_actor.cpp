@@ -124,7 +124,7 @@ void local_actor::forward_message(const actor& dest, message_priority prio) {
 }
 
 void local_actor::send_impl(message_priority prio, abstract_channel* dest,
-                            message&& what) {
+                            message what) {
   if (!dest) {
     return;
   }
@@ -191,8 +191,8 @@ message_id local_actor::timed_sync_send_impl(message_priority mp,
 }
 
 message_id local_actor::sync_send_impl(message_priority mp,
-                                             const actor& dest,
-                                             message&& what) {
+                                       const actor& dest,
+                                       message&& what) {
   if (!dest) {
     throw std::invalid_argument("cannot sync_send to invalid_actor");
   }

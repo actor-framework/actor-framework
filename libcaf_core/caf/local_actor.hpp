@@ -144,28 +144,27 @@ class local_actor : public abstract_actor {
    ****************************************************************************/
 
   /**
-   * Sends `{vs...} to `dest` using the priority `prio`.
+   * Sends `{vs...} to `dest` using the priority `mp`.
    */
   template <class... Vs>
-  inline void send(message_priority prio, const channel& dest, Vs&&... vs) {
+  void send(message_priority mp, const channel& dest, Vs&&... vs) {
     static_assert(sizeof...(Vs) > 0, "sizeof...(Vs) == 0");
-    fast_send(prio, dest, std::forward<Vs>(vs)...);
+    send_impl(mp, actor_cast<abstract_channel*>(dest), std::forward<Vs>(vs)...);
   }
 
   /**
    * Sends `{vs...} to `dest` using normal priority.
    */
   template <class... Vs>
-  inline void send(const channel& dest, Vs&&... vs) {
-    static_assert(sizeof...(Vs) > 0, "sizeof...(Vs) == 0");
-    fast_send(message_priority::normal, dest, std::forward<Vs>(vs)...);
+  void send(const channel& dest, Vs&&... vs) {
+    send(message_priority::normal, dest, std::forward<Vs>(vs)...);
   }
 
   /**
-   * Sends `{vs...} to `dest` using the priority `prio`.
+   * Sends `{vs...} to `dest` using the priority `mp`.
    */
   template <class... Ts, class... Vs>
-  void send(message_priority prio, const typed_actor<Ts...>& dest, Vs&&... vs) {
+  void send(message_priority mp, const typed_actor<Ts...>& dest, Vs&&... vs) {
     using token =
       detail::type_list<
         typename detail::implicit_conversions<
@@ -173,7 +172,7 @@ class local_actor : public abstract_actor {
         >::type...>;
     token tk;
     check_typed_input(dest, tk);
-    fast_send(prio, dest, std::forward<Vs>(vs)...);
+    send_impl(mp, actor_cast<abstract_channel*>(dest), std::forward<Vs>(vs)...);
   }
 
   /**
@@ -192,27 +191,19 @@ class local_actor : public abstract_actor {
   /**
    * Sends an exit message to `dest`.
    */
-  inline void send_exit(const actor& dest, uint32_t reason) {
-    send_exit(dest.address(), reason);
-  }
-
-  /**
-   * Sends an exit message to `dest`.
-   */
-  template <class... Ts>
-  void send_exit(const typed_actor<Ts...>& dest, uint32_t reason) {
+  template <class ActorHandle>
+  void send_exit(const ActorHandle& dest, uint32_t reason) {
     send_exit(dest.address(), reason);
   }
 
   /**
    * Sends a message to `dest` that is delayed by `rel_time`
-   * using the priority `prio`.
+   * using the priority `mp`.
    */
   template <class... Vs>
-  void delayed_send(message_priority prio, const channel& dest,
+  void delayed_send(message_priority mp, const channel& dest,
                     const duration& rtime, Vs&&... vs) {
-    delayed_send_impl(prio, dest, rtime,
-                      make_message(std::forward<Vs>(vs)...));
+    delayed_send_impl(mp, dest, rtime, make_message(std::forward<Vs>(vs)...));
   }
 
   /**
@@ -403,12 +394,12 @@ class local_actor : public abstract_actor {
   // </backward_compatibility>
 
   // <backward_compatibility version="0.9">
-  inline void send_tuple(message_priority prio, const channel& whom,
+  inline void send_tuple(message_priority mp, const channel& whom,
                          message what) CAF_DEPRECATED;
 
   inline void send_tuple(const channel& whom, message what) CAF_DEPRECATED;
 
-  inline void delayed_send_tuple(message_priority prio, const channel& whom,
+  inline void delayed_send_tuple(message_priority mp, const channel& whom,
                                  const duration& rtime,
                                  message data) CAF_DEPRECATED;
 
@@ -477,7 +468,7 @@ class local_actor : public abstract_actor {
 
   void reply_message(message&& what);
 
-  void forward_message(const actor& new_receiver, message_priority prio);
+  void forward_message(const actor& dest, message_priority mp);
 
   inline bool awaits(message_id response_id) {
     CAF_REQUIRE(response_id.is_response());
@@ -516,38 +507,23 @@ class local_actor : public abstract_actor {
   /** @endcond */
 
  private:
-  template <class... Vs>
-  void fast_send_impl(message_priority mp, abstract_channel* dest, Vs&&... vs) {
+  template <class V, class... Vs>
+  typename std::enable_if<
+    !std::is_same<typename std::decay<V>::type, message>::value
+  >::type
+  send_impl(message_priority mp, abstract_channel* dest, V&& v, Vs&&... vs) {
     if (!dest) {
       return;
     }
     dest->enqueue(mailbox_element::make_joint(address(), message_id::make(mp),
+                                              std::forward<V>(v),
                                               std::forward<Vs>(vs)...),
                   host());
   }
 
-  template <class T, class V0, class... Vs>
-  typename std::enable_if<
-    !std::is_same<typename std::decay<V0>::type, message>::value
-  >::type
-  fast_send(message_priority mp, const T& dest, V0&& v0, Vs&&... vs) {
-    fast_send_impl(mp, actor_cast<abstract_channel*>(dest),
-                   std::forward<V0>(v0), std::forward<Vs>(vs)...);
-  }
+  void send_impl(message_priority mp, abstract_channel* dest, message what);
 
-  template <class T>
-  void fast_send(message_priority mp, const T& dest, message what) {
-    send_impl(mp, actor_cast<abstract_channel*>(dest), std::move(what));
-  }
-
-  void send_impl(message_priority prio, abstract_channel* dest, message&& what);
-
-  template <class T>
-  void send_impl(message_priority prio, const T& dest, message&& what) {
-    send_impl(prio, actor_cast<abstract_channel*>(dest), std::move(what));
-  }
-
-  void delayed_send_impl(message_priority prio, const channel& whom,
+  void delayed_send_impl(message_priority mp, const channel& whom,
                          const duration& rtime, message data);
 
   std::function<void()> m_sync_failure_handler;
@@ -561,26 +537,30 @@ class local_actor : public abstract_actor {
 using local_actor_ptr = intrusive_ptr<local_actor>;
 
 // <backward_compatibility version="0.9">
-inline void local_actor::send_tuple(message_priority prio, const channel& whom,
+inline void local_actor::send_tuple(message_priority mp, const channel& whom,
                                     message what) {
-  send_impl(prio, whom, std::move(what));
+  send_impl(mp, actor_cast<abstract_channel*>(whom), std::move(what));
 }
 
 inline void local_actor::send_tuple(const channel& whom, message what) {
-  send_impl(message_priority::normal, whom, std::move(what));
+  send_impl(message_priority::normal, actor_cast<abstract_channel*>(whom),
+            std::move(what));
 }
 
-inline void local_actor::delayed_send_tuple(message_priority prio,
+inline void local_actor::delayed_send_tuple(message_priority mp,
                                             const channel& whom,
                                             const duration& rtime,
                                             message data) {
-  delayed_send_impl(prio, whom, rtime, std::move(data));
+  delayed_send_impl(mp, actor_cast<abstract_channel*>(whom), rtime,
+                    std::move(data));
 }
 
 inline void local_actor::delayed_send_tuple(const channel& whom,
                                             const duration& rtime,
                                             message data) {
-  delayed_send_impl(message_priority::normal, whom, rtime, std::move(data));
+  delayed_send_impl(message_priority::normal,
+                    actor_cast<abstract_channel*>(whom), rtime,
+                    std::move(data));
 }
 // </backward_compatibility>
 
