@@ -22,6 +22,22 @@
 namespace caf {
 namespace detail {
 
+using vector_type = std::vector<size_t>;
+
+using pointer = message_data::ptr;
+
+pointer decorated_tuple::create(pointer d, vector_type v) {
+  auto ptr = dynamic_cast<const decorated_tuple*>(d.get());
+  if (ptr) {
+    d = ptr->decorated();
+    auto& pmap = ptr->mapping();
+    for (size_t i = 0; i < v.size(); ++i) {
+      v[i] = pmap[v[i]];
+    }
+  }
+  return pointer{new decorated_tuple(std::move(d), std::move(v))};
+}
+
 void* decorated_tuple::mutable_at(size_t pos) {
   CAF_REQUIRE(pos < size());
   return m_decorated->mutable_at(m_mapping[pos]);
@@ -68,27 +84,11 @@ void decorated_tuple::init() {
   }
 }
 
-void decorated_tuple::init(size_t offset) {
-  if (offset < m_decorated->size()) {
-    size_t i = offset;
-    size_t new_size = m_decorated->size() - offset;
-    m_mapping.resize(new_size);
-    std::generate(m_mapping.begin(), m_mapping.end(), [&] { return i++; });
-  }
-  init();
-}
-
 decorated_tuple::decorated_tuple(pointer d, vector_type&& v)
     : m_decorated(std::move(d)),
       m_mapping(std::move(v)),
       m_type_token(0xFFFFFFFF) {
   init();
-}
-
-decorated_tuple::decorated_tuple(pointer d, size_t offset)
-    : m_decorated(std::move(d)),
-      m_type_token(0xFFFFFFFF) {
-  init(offset);
 }
 
 } // namespace detail

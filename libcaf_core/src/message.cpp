@@ -86,7 +86,10 @@ message message::drop(size_t n) const {
   if (n >= size()) {
     return message{};
   }
-  return message{detail::decorated_tuple::create(m_vals, n)};
+  std::vector<size_t> mapping (size() - n);
+  size_t i = n;
+  std::generate(mapping.begin(), mapping.end(), [&] { return i++; });
+  return message {detail::decorated_tuple::create(m_vals, mapping)};
 }
 
 message message::drop_right(size_t n) const {
