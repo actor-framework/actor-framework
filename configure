@@ -209,26 +209,11 @@ while [ $# -ne 0 ]; do
         --with-runtime-checks)
             append_cache_entry CAF_ENABLE_RUNTIME_CHECKS BOOL yes
             ;;
-        --enable-debug)
-            echo "*** warning: --enable-debug is deprecated, please use --with-runtime-checks instead"
-            append_cache_entry CAF_ENABLE_RUNTIME_CHECKS BOOL yes
-            ;;
-        --enable-address-sanitizer)
-            echo "*** warning: --enable-address-sanitizer is deprecated, please use --with-address-sanitizer instead"
-            append_cache_entry ENABLE_ADDRESS_SANITIZER BOOL yes
-            ;;
         --with-address-sanitizer)
             append_cache_entry ENABLE_ADDRESS_SANITIZER BOOL yes
             ;;
         --no-memory-management)
             append_cache_entry CAF_NO_MEM_MANAGEMENT BOOL yes
-            ;;
-        --without-memory-management)
-            echo "*** WARNING: --without-memory-management is deprecated"
-            append_cache_entry DISABLE_MEM_MANAGEMENT BOOL yes
-            ;;
-        --standalone-build)
-            echo "*** WARNING: --standalone-build is deprecated"
             ;;
         --more-warnings)
             append_cache_entry MORE_WARNINGS BOOL yes
