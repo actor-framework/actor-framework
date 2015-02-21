@@ -132,7 +132,8 @@ void local_actor::send_impl(message_priority prio, abstract_channel* dest,
 }
 
 void local_actor::send_exit(const actor_addr& whom, uint32_t reason) {
-  send(actor_cast<actor>(whom), exit_msg{address(), reason});
+  send(message_priority::high, actor_cast<actor>(whom),
+       exit_msg{address(), reason});
 }
 
 void local_actor::delayed_send_impl(message_priority prio, const channel& dest,
