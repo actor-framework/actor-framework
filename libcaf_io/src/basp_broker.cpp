@@ -777,6 +777,7 @@ bool basp_broker::remove_published_actor(const abstract_actor_ptr& whom) {
       close(i->first);
       m_open_ports.erase(i->second.second);
       i = m_acceptors.erase(i);
+      ++erased_elements;
     }
     else {
       ++i;
