@@ -90,7 +90,7 @@ std::thread run_program_impl(actor rc, const char* cpath, vector<string> args) {
   string path = cpath;
   replace_all(path, "'", "\\'");
   ostringstream oss;
-  oss << "'" << path << "'";
+  oss << path;
   for (auto& arg : args) {
     oss << " " << arg;
   }
