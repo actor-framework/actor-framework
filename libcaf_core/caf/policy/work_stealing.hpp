@@ -117,8 +117,6 @@ class work_stealing {
   template <class Worker>
   void internal_enqueue(Worker* self, resumable* job) {
     d(self).queue.prepend(job);
-    // give others the opportunity to steal from us
-    after_resume(self);
   }
 
   template <class Worker>
@@ -179,7 +177,17 @@ class work_stealing {
   }
 
   template <class Worker>
-  void after_resume(Worker*) {
+  void before_resume(Worker*, resumable*) {
+    // nop
+  }
+
+  template <class Worker>
+  void after_resume(Worker*, resumable*) {
+    // nop
+  }
+
+  template <class Worker>
+  void after_completion(Worker*, resumable*) {
     // nop
   }
 

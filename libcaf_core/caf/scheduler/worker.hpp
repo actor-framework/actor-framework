@@ -126,25 +126,31 @@ class worker : public execution_unit {
       CAF_REQUIRE(job != nullptr);
       CAF_LOG_DEBUG("resume actor " << id_of(job));
       CAF_PUSH_AID_FROM_PTR(dynamic_cast<abstract_actor*>(job));
+      m_policy.before_resume(this, job);
       switch (job->resume(this, m_max_throughput)) {
         case resumable::resume_later: {
           m_policy.resume_job_later(this, job);
+          m_policy.after_resume(this, job);
           break;
         }
         case resumable::done: {
+          m_policy.after_resume(this, job);
+          m_policy.after_completion(this, job);
           job->detach_from_scheduler();
           break;
         }
         case resumable::awaiting_message: {
           // resumable will be enqueued again later
+          m_policy.after_resume(this, job);
           break;
         }
         case resumable::shutdown_execution_unit: {
+          m_policy.after_resume(this, job);
+          m_policy.after_completion(this, job);
           m_policy.before_shutdown(this);
           return;
         }
       }
-      m_policy.after_resume(this);
     }
   }
   // number of messages each actor is allowed to consume per resume

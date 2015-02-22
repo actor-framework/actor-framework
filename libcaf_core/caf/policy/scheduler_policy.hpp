@@ -81,12 +81,24 @@ class scheduler_policy {
   void before_shutdown(Worker* self);
 
   /**
+   * Called immediately before resuming an actor.
+   */
+  template <class Worker>
+  void before_resume(Worker* self, resumable* job);
+
+  /**
    * Called whenever an actor has been resumed. This function can
    * prepare some fields before the next resume operation takes place
    * or perform cleanup actions between to actor runs.
    */
   template <class Worker>
-  void after_resume(Worker* self);
+  void after_resume(Worker* self, resumable* job);
+
+  /**
+   * Called whenever an actor has completed a job.
+   */
+  template <class Worker>
+  void after_completion(Worker* self, resumable* job);
 
   /**
    * Applies given functor to all resumables attached to a worker.
