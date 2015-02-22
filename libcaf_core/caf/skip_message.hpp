@@ -20,6 +20,8 @@
 #ifndef CAF_MATCH_HINT_HPP
 #define CAF_MATCH_HINT_HPP
 
+#include <ostream>
+
 namespace caf {
 
 /**

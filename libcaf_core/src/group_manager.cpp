@@ -159,7 +159,7 @@ class local_broker : public event_based_actor {
           }
         }
       },
-      others() >> [=] {
+      others >> [=] {
         auto msg = current_message();
         CAF_LOGC_TRACE("caf::local_broker", "init$others",
                        CAF_TARG(msg, to_string));
@@ -248,7 +248,7 @@ class proxy_broker : public event_based_actor {
   }
 
   behavior make_behavior() {
-    return {others() >> [=] {
+    return {others >> [=] {
       m_group->send_all_subscribers(current_sender(), current_message(),
                                     host());
     }};

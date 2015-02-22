@@ -49,8 +49,8 @@ void fill_mb(message_builder& mb, const T& v, const Ts&... vs) {
   fill_mb(mb.append(v), vs...);
 }
 
-template <class Expr, class... Ts>
-ptrdiff_t invoked(Expr& expr, const Ts&... args) {
+template <class... Ts>
+ptrdiff_t invoked(message_handler expr, const Ts&... args) {
   vector<message> msgs;
   msgs.push_back(make_message(args...));
   message_builder mb;
@@ -106,9 +106,7 @@ void test_custom_projections() {
       guard_called = true;
       return arg;
     };
-    auto expr = (
-      on(guard) >> f(0)
-    );
+    auto expr = on(guard) >> f(0);
     CAF_CHECK_EQUAL(invoked(expr, 42), 0);
     CAF_CHECK_EQUAL(guard_called, true);
   }

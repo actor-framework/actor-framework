@@ -38,7 +38,7 @@ class dummy : public event_based_actor {
   }
   behavior make_behavior() override {
     return {
-      others() >> CAF_UNEXPECTED_MSG_CB(this)
+      others >> CAF_UNEXPECTED_MSG_CB(this)
     };
   }
 };

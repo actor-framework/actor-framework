@@ -46,9 +46,9 @@ void ping(event_based_actor* self, size_t num_pings) {
         }
         return std::make_tuple(ping_atom::value, value + 1);
       },
-      others() >> CAF_UNEXPECTED_MSG_CB(self));
+      others >> CAF_UNEXPECTED_MSG_CB(self));
     },
-    others() >> CAF_UNEXPECTED_MSG_CB(self)
+    others >> CAF_UNEXPECTED_MSG_CB(self)
   );
 }
 
@@ -67,12 +67,12 @@ void pong(event_based_actor* self) {
           CAF_PRINT("received down_msg{" << dm.reason << "}");
           self->quit(dm.reason);
         },
-        others() >> CAF_UNEXPECTED_MSG_CB(self)
+        others >> CAF_UNEXPECTED_MSG_CB(self)
       );
       // reply to 'ping'
       return std::make_tuple(pong_atom::value, value);
     },
-    others() >> CAF_UNEXPECTED_MSG_CB(self));
+    others >> CAF_UNEXPECTED_MSG_CB(self));
 }
 
 void peer_fun(broker* self, connection_handle hdl, const actor& buddy) {
@@ -125,7 +125,7 @@ void peer_fun(broker* self, connection_handle hdl, const actor& buddy) {
         self->quit(dm.reason);
       }
     },
-    others() >> CAF_UNEXPECTED_MSG_CB(self)
+    others >> CAF_UNEXPECTED_MSG_CB(self)
   );
 }
 
@@ -141,7 +141,7 @@ behavior peer_acceptor_fun(broker* self, const actor& buddy) {
     on(atom("publish")) >> [=] {
       return self->add_tcp_doorman(0, "127.0.0.1").second;
     },
-    others() >> CAF_UNEXPECTED_MSG_CB(self)
+    others >> CAF_UNEXPECTED_MSG_CB(self)
   };
 }
 
@@ -186,7 +186,7 @@ int main(int argc, char** argv) {
     on() >> [&] {
       run_server(true, argv[0]);
     },
-    others() >> [&] {
+    others >> [&] {
        cerr << "usage: " << argv[0] << " [-c PORT]" << endl;
     }
   });

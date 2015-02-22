@@ -28,4 +28,17 @@ behavior::behavior(const message_handler& mh) : m_impl(mh.as_behavior_impl()) {
   // nop
 }
 
+void behavior::assign(message_handler other) {
+  m_impl.swap(other.m_impl);
+}
+
+void behavior::assign(behavior other) {
+  m_impl.swap(other.m_impl);
+}
+
+void behavior::assign(detail::behavior_impl* ptr) {
+  CAF_REQUIRE(ptr != nullptr);
+  m_impl.reset(ptr);
+}
+
 } // namespace caf

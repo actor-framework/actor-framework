@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_MATCHES_HPP
-#define CAF_DETAIL_MATCHES_HPP
+#ifndef CAF_DETAIL_TRY_MATCH_HPP
+#define CAF_DETAIL_TRY_MATCH_HPP
 
 #include <array>
 #include <numeric>
@@ -93,4 +93,4 @@ bool try_match(const message& msg, const meta_element* pattern_begin,
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_MATCHES_HPP
+#endif // CAF_DETAIL_TRY_MATCH_HPP

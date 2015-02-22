@@ -102,7 +102,7 @@ int main() {
   CAF_CHECK(matched_pattern[0] && matched_pattern[1] && matched_pattern[2]);
   self->receive(
     // "erase" message { atom("b"), atom("a"), atom("c"), 23.f }
-    others() >> CAF_CHECKPOINT_CB(),
+    others >> CAF_CHECKPOINT_CB(),
     after(std::chrono::seconds(0)) >> CAF_UNEXPECTED_TOUT_CB()
   );
   atom_value x = atom("abc");
@@ -112,7 +112,7 @@ int main() {
   self->send(self, msg);
   self->receive(
     on(atom("abc")) >> CAF_CHECKPOINT_CB(),
-    others() >> CAF_UNEXPECTED_MSG_CB_REF(self)
+    others >> CAF_UNEXPECTED_MSG_CB_REF(self)
   );
   test_typed_atom_interface();
   return CAF_TEST_RESULT();

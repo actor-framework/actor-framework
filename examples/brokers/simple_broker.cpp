@@ -146,7 +146,7 @@ behavior broker_impl(broker* self, connection_handle hdl, const actor& buddy) {
       // send composed message to our buddy
       self->send(buddy, atm, ival);
     },
-    others() >> [=] {
+    others >> [=] {
       cout << "unexpected: " << to_string(self->current_message()) << endl;
     }
   };
@@ -164,7 +164,7 @@ behavior server(broker* self, const actor& buddy) {
       aout(self) << "quit server (only accept 1 connection)" << endl;
       self->quit();
     },
-    others() >> [=] {
+    others >> [=] {
       cout << "unexpected: " << to_string(self->current_message()) << endl;
     }
   };
@@ -190,7 +190,7 @@ int main(int argc, char** argv) {
       print_on_exit(ping_actor, "ping");
       send_as(io_actor, ping_actor, kickoff_atom::value, io_actor);
     },
-    others() >> [] {
+    others >> [] {
       cerr << "use with eihter '-s PORT' as server or '-c HOST PORT' as client"
            << endl;
     }

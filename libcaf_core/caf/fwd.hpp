@@ -28,6 +28,9 @@ namespace caf {
 template <class>
 class intrusive_ptr;
 
+template <class>
+class optional;
+
 // classes
 class actor;
 class group;

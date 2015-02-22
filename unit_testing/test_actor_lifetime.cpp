@@ -38,7 +38,7 @@ void testee::on_exit() {
 
 behavior testee::make_behavior() {
   return {
-    others() >> [=] {
+    others >> [=] {
       return current_message();
     }
   };

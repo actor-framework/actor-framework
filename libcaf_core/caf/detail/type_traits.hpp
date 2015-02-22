@@ -382,6 +382,7 @@ struct get_callable_trait {
   using result_type = typename type::result_type;
   using arg_types = typename type::arg_types;
   using fun_type = typename type::fun_type;
+  static constexpr size_t num_args = tl_size<arg_types>::value;
 };
 
 /**

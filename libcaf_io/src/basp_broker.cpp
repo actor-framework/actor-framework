@@ -216,7 +216,7 @@ behavior basp_broker::make_behavior() {
       return make_message(ok_atom::value, request_id);
     },
     // catch-all error handler
-    others() >> [=] {
+    others >> [=] {
       CAF_LOG_ERROR("received unexpected message: "
                    << to_string(current_message()));
     }

@@ -106,7 +106,7 @@ actor spawn_event_testee2(actor parent) {
 struct chopstick : public sb_actor<chopstick> {
 
   behavior taken_by(actor whom) {
-    return (
+    return {
       on<atom("take")>() >> [=] {
         return atom("busy");
       },
@@ -116,7 +116,7 @@ struct chopstick : public sb_actor<chopstick> {
       on(atom("break")) >> [=] {
         quit();
       }
-    );
+    };
   }
 
   behavior available;
@@ -271,7 +271,7 @@ echo_actor::~echo_actor() {
 
 behavior echo_actor::make_behavior() {
   return {
-    others() >> [=]() -> message {
+    others >> [=]() -> message {
       quit(exit_reason::normal);
       return current_message();
     }
@@ -295,7 +295,7 @@ simple_mirror::~simple_mirror() {
 
 behavior simple_mirror::make_behavior() {
   return {
-    others() >> [=] {
+    others >> [=] {
       CAF_CHECKPOINT();
       return current_message();
     }
@@ -306,7 +306,7 @@ behavior high_priority_testee(event_based_actor* self) {
   self->send(self, atom("b"));
   self->send(message_priority::high, self, atom("a"));
   // 'a' must be self->received before 'b'
-  return (
+  return {
     on(atom("b")) >> [=] {
       CAF_FAILURE("received 'b' before 'a'");
       self->quit();
@@ -318,11 +318,11 @@ behavior high_priority_testee(event_based_actor* self) {
           CAF_CHECKPOINT();
           self->quit();
         },
-        others() >> CAF_UNEXPECTED_MSG_CB(self)
+        others >> CAF_UNEXPECTED_MSG_CB(self)
       );
     },
-    others() >> CAF_UNEXPECTED_MSG_CB(self)
-  );
+    others >> CAF_UNEXPECTED_MSG_CB(self)
+  };
 }
 
 struct high_priority_testee_class : event_based_actor {
@@ -349,13 +349,13 @@ struct slave : event_based_actor {
   behavior make_behavior() override {
     link_to(master);
     trap_exit(true);
-    return (
+    return {
       [=](const exit_msg& msg) {
         CAF_PRINT("slave: received exit message");
         quit(msg.reason);
       },
-      others() >> CAF_UNEXPECTED_MSG_CB(this)
-    );
+      others >> CAF_UNEXPECTED_MSG_CB(this)
+    };
   }
 
   actor master;
@@ -382,7 +382,7 @@ void test_spawn() {
 
   CAF_PRINT("test self->receive with zero timeout");
   self->receive (
-    others() >> CAF_UNEXPECTED_MSG_CB_REF(self),
+    others >> CAF_UNEXPECTED_MSG_CB_REF(self),
     after(chrono::seconds(0)) >> [] { /* mailbox empty */ }
   );
   self->await_all_other_actors_done();
@@ -393,7 +393,7 @@ void test_spawn() {
     self->send(mirror, "hello mirror");
     self->receive (
       on("hello mirror") >> CAF_CHECKPOINT_CB(),
-      others() >> CAF_UNEXPECTED_MSG_CB_REF(self)
+      others >> CAF_UNEXPECTED_MSG_CB_REF(self)
     );
     self->send_exit(mirror, exit_reason::user_shutdown);
     self->receive (
@@ -403,7 +403,7 @@ void test_spawn() {
         }
         else { CAF_UNEXPECTED_MSG_CB_REF(self); }
       },
-      others() >> CAF_UNEXPECTED_MSG_CB_REF(self)
+      others >> CAF_UNEXPECTED_MSG_CB_REF(self)
     );
     self->await_all_other_actors_done();
     CAF_CHECKPOINT();
@@ -414,7 +414,7 @@ void test_spawn() {
     self->send(mirror, "hello mirror");
     self->receive (
       on("hello mirror") >> CAF_CHECKPOINT_CB(),
-      others() >> CAF_UNEXPECTED_MSG_CB_REF(self)
+      others >> CAF_UNEXPECTED_MSG_CB_REF(self)
     );
     self->send_exit(mirror, exit_reason::user_shutdown);
     self->receive (
@@ -424,7 +424,7 @@ void test_spawn() {
         }
         else { CAF_UNEXPECTED_MSG(self); }
       },
-      others() >> CAF_UNEXPECTED_MSG_CB_REF(self)
+      others >> CAF_UNEXPECTED_MSG_CB_REF(self)
     );
     self->await_all_other_actors_done();
     CAF_CHECKPOINT();
@@ -436,7 +436,7 @@ void test_spawn() {
     self->send(mirror, "hello mirror");
     self->receive (
       on("hello mirror") >> CAF_CHECKPOINT_CB(),
-      others() >> CAF_UNEXPECTED_MSG_CB_REF(self)
+      others >> CAF_UNEXPECTED_MSG_CB_REF(self)
     );
     self->send_exit(mirror, exit_reason::user_shutdown);
     self->receive (
@@ -446,7 +446,7 @@ void test_spawn() {
         }
         else { CAF_UNEXPECTED_MSG(self); }
       },
-      others() >> CAF_UNEXPECTED_MSG_CB_REF(self)
+      others >> CAF_UNEXPECTED_MSG_CB_REF(self)
     );
     self->await_all_other_actors_done();
     CAF_CHECKPOINT();
@@ -457,7 +457,7 @@ void test_spawn() {
   self->send(mecho, "hello echo");
   self->receive (
     on("hello echo") >> [] { },
-    others() >> CAF_UNEXPECTED_MSG_CB_REF(self)
+    others >> CAF_UNEXPECTED_MSG_CB_REF(self)
   );
   self->await_all_other_actors_done();
   CAF_CHECKPOINT();
@@ -488,7 +488,7 @@ void test_spawn() {
       self->send(cstk, atom("put"), self);
       self->send(cstk, atom("break"));
     },
-    others() >> CAF_UNEXPECTED_MSG_CB_REF(self)
+    others >> CAF_UNEXPECTED_MSG_CB_REF(self)
   );
   self->await_all_other_actors_done();
   CAF_CHECKPOINT();
@@ -509,7 +509,7 @@ void test_spawn() {
           }
         );
       },
-      others() >> CAF_UNEXPECTED_MSG_CB_REF(s)
+      others >> CAF_UNEXPECTED_MSG_CB_REF(s)
     );
   });
   self->monitor(sync_testee);
@@ -537,7 +537,7 @@ void test_spawn() {
 
   self->sync_send(sync_testee, "!?").await(
     on<sync_exited_msg>() >> CAF_CHECKPOINT_CB(),
-    others() >> CAF_UNEXPECTED_MSG_CB_REF(self),
+    others >> CAF_UNEXPECTED_MSG_CB_REF(self),
     after(chrono::milliseconds(1)) >> CAF_UNEXPECTED_TOUT_CB()
   );
 
@@ -572,7 +572,7 @@ void test_spawn() {
   self->send(bob, 1, "hello actor");
   self->receive (
     on(4, "hello actor from Bob from Joe") >> CAF_CHECKPOINT_CB(),
-    others() >> CAF_UNEXPECTED_MSG_CB_REF(self)
+    others >> CAF_UNEXPECTED_MSG_CB_REF(self)
   );
   // kill joe and bob
   auto poison_pill = make_message(atom("done"));
@@ -595,7 +595,7 @@ void test_spawn() {
         m_pal = spawn<kr34t0r>("Bob", this);
       }
       return {
-        others() >> [=] {
+        others >> [=] {
           // forward message and die
           send(m_pal, current_message());
           quit();
@@ -661,7 +661,7 @@ void test_spawn() {
     }
     behavior make_behavior() override {
       return {
-        others() >> CAF_UNEXPECTED_MSG_CB(this)
+        others >> CAF_UNEXPECTED_MSG_CB(this)
       };
     }
   };
@@ -697,7 +697,7 @@ void test_spawn() {
       CAF_CHECK(val == atom("FooBar"));
       flags |= 0x08;
     },
-    others() >> [&]() {
+    others >> [&]() {
       CAF_FAILURE("unexpected message: " << to_string(self->current_message()));
     },
     after(chrono::milliseconds(500)) >> [&]() {
@@ -808,7 +808,7 @@ void test_constructor_attach() {
             quit(reason);
           }
         },
-        others() >> [=] {
+        others >> [=] {
           forward_to(m_testee);
         }
       };
@@ -829,7 +829,7 @@ class exception_testee : public event_based_actor {
   }
   behavior make_behavior() override {
     return {
-      others() >> [] {
+      others >> [] {
         throw std::runtime_error("whatever");
       }
     };
@@ -929,7 +929,7 @@ int main() {
   // test setting exit reasons for scoped actors
   { // lifetime scope of self
     scoped_actor self;
-    self->spawn<linked>([]() -> behavior { return others() >> [] {}; });
+    self->spawn<linked>([]() -> behavior { return others >> [] {}; });
     self->planned_exit_reason(exit_reason::user_defined);
   }
   await_all_actors_done();

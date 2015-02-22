@@ -34,7 +34,6 @@
 #include "caf/behavior.hpp"
 #include "caf/spawn_fwd.hpp"
 #include "caf/message_id.hpp"
-#include "caf/match_expr.hpp"
 #include "caf/exit_reason.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/spawn_options.hpp"

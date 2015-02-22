@@ -340,12 +340,12 @@ void broker::close_all() {
   }
 }
 
-bool broker::valid(connection_handle handle) {
-  return m_scribes.count(handle) > 0;
+bool broker::valid(connection_handle hdl) {
+  return m_scribes.count(hdl) > 0;
 }
 
-bool broker::valid(accept_handle handle) {
-  return m_doormen.count(handle) > 0;
+bool broker::valid(accept_handle hdl) {
+  return m_doormen.count(hdl) > 0;
 }
 
 std::vector<connection_handle> broker::connections() const {

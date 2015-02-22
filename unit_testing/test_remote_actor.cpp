@@ -27,7 +27,7 @@ using string_pair = std::pair<std::string, std::string>;
 using actor_vector = vector<actor>;
 
 void reflector(event_based_actor* self) {
-  self->become(others() >> [=] {
+  self->become(others >> [=] {
     CAF_PRINT("reflect and quit");
     self->quit();
     return self->current_message();
@@ -71,7 +71,7 @@ void spawn5_server_impl(event_based_actor* self, actor client, group grp) {
                   self->quit();
                 }
               },
-              others() >> [=] {
+              others >> [=] {
                 CAF_UNEXPECTED_MSG(self);
                 self->quit(exit_reason::user_defined);
               },
@@ -91,7 +91,7 @@ void spawn5_server_impl(event_based_actor* self, actor client, group grp) {
         }
       );
     },
-    others() >> [=] {
+    others >> [=] {
       CAF_UNEXPECTED_MSG(self);
       self->quit(exit_reason::user_defined);
     },
@@ -423,7 +423,7 @@ int main(int argc, char** argv) {
     on() >> [&] {
       test_remote_actor(argv[0], true);
     },
-    others() >> [&] {
+    others >> [&] {
       CAF_PRINTERR("usage: " << argv[0] << " [-s PORT|-c PORT1 PORT2 GROUP_PORT]");
     }
   });

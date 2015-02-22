@@ -26,7 +26,7 @@ namespace detail {
 
 namespace {
 
-class combinator : public behavior_impl {
+class combinator final : public behavior_impl {
  public:
   bhvr_invoke_result invoke(message& arg) {
     auto res = first->invoke(arg);
@@ -50,6 +50,12 @@ class combinator : public behavior_impl {
     // nop
   }
 
+ protected:
+  match_case** get_cases(size_t&) {
+    // never called
+    return nullptr;
+  }
+
  private:
   pointer first;
   pointer second;
@@ -61,18 +67,30 @@ behavior_impl::~behavior_impl() {
   // nop
 }
 
-behavior_impl::behavior_impl(duration tout) : m_timeout(tout) {
+behavior_impl::behavior_impl(duration tout)
+    : m_timeout(tout),
+      m_begin(nullptr),
+      m_end(nullptr) {
+  // nop
+}
+
+bhvr_invoke_result behavior_impl::invoke(message& msg) {
+  auto msg_token = msg.type_token();
+  bhvr_invoke_result res;
+  std::find_if(m_begin, m_end, [&](const match_case_info& x) {
+    return (x.has_wildcard || x.type_token == msg_token)
+           && x.ptr->invoke(res, msg) != match_case::no_match;
+  });
+  return res;
+}
+
+void behavior_impl::handle_timeout() {
   // nop
 }
 
 behavior_impl::pointer behavior_impl::or_else(const pointer& other) {
   CAF_REQUIRE(other != nullptr);
   return new combinator(this, other);
-}
-
-behavior_impl* new_default_behavior(duration d, std::function<void()> fun) {
-  dummy_match_expr nop;
-  return new default_behavior_impl<dummy_match_expr>(nop, d, std::move(fun));
 }
 
 } // namespace detail

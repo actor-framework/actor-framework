@@ -59,7 +59,7 @@ void client(event_based_actor* self, const string& name) {
     [=](const group_down_msg& g) {
       cout << "*** chatroom offline: " << to_string(g.source) << endl;
     },
-    others() >> [=]() {
+    others >> [=]() {
       cout << "unexpected: " << to_string(self->current_message()) << endl;
     }
   );
@@ -143,7 +143,7 @@ int main(int argc, char** argv) {
              "  /quit          quit the program\n"
              "  /help          print this text\n" << flush;
       },
-      others() >> [&] {
+      others >> [&] {
         if (!s_last_line.empty()) {
           anon_send(client_actor, broadcast_atom::value, s_last_line);
         }

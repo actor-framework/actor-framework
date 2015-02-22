@@ -26,6 +26,7 @@
 #include <utility>
 #include <type_traits>
 
+#include "caf/fwd.hpp"
 #include "caf/none.hpp"
 #include "caf/intrusive_ptr.hpp"
 
@@ -46,6 +47,8 @@ namespace caf {
  */
 class message_handler {
  public:
+  friend class behavior;
+
   message_handler() = default;
   message_handler(message_handler&&) = default;
   message_handler(const message_handler&) = default;
@@ -88,12 +91,16 @@ class message_handler {
   /**
    * Assigns new message handlers.
    */
-  template <class T, class... Ts>
-  void assign(T&& v, Ts&&... vs) {
-    m_impl = detail::match_expr_concat(
-               detail::lift_to_match_expr(std::forward<T>(v)),
-               detail::lift_to_match_expr(std::forward<Ts>(vs))...);
+  template <class... Vs>
+  void assign(Vs... vs) {
+    static_assert(sizeof...(Vs) > 0, "assign without arguments called");
+    m_impl = detail::make_behavior(vs...);
   }
+
+  /**
+   * Equal to `*this = other`.
+   */
+  void assign(message_handler other);
 
   /**
    * Runs this handler and returns its (optional) result.
@@ -110,7 +117,8 @@ class message_handler {
   template <class... Ts>
   typename std::conditional<
     detail::disjunction<may_have_timeout<
-      typename std::decay<Ts>::type>::value...>::value,
+      typename std::decay<Ts>::type>::value...
+    >::value,
     behavior,
     message_handler
   >::type
@@ -124,34 +132,12 @@ class message_handler {
     if (m_impl) {
       return m_impl->or_else(tmp.as_behavior_impl());
     }
-    return tmp;
+    return tmp.as_behavior_impl();
   }
 
  private:
   impl_ptr m_impl;
 };
-
-/**
- * Enables concatenation of message handlers by using a list
- * of commata separated handlers.
- * @relates message_handler
- */
-template <class... Cases>
-message_handler operator,(const match_expr<Cases...>& mexpr,
-                          const message_handler& pfun) {
-  return mexpr.as_behavior_impl()->or_else(pfun.as_behavior_impl());
-}
-
-/**
- * Enables concatenation of message handlers by using a list
- * of commata separated handlers.
- * @relates message_handler
- */
-template <class... Cases>
-message_handler operator,(const message_handler& pfun,
-                          const match_expr<Cases...>& mexpr) {
-  return pfun.as_behavior_impl()->or_else(mexpr.as_behavior_impl());
-}
 
 } // namespace caf
 

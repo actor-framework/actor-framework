@@ -46,7 +46,6 @@
 #include "caf/to_string.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/attachable.hpp"
-#include "caf/match_expr.hpp"
 #include "caf/message_id.hpp"
 #include "caf/replies_to.hpp"
 #include "caf/serializer.hpp"

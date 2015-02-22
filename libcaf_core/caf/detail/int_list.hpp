@@ -56,6 +56,28 @@ struct il_right<int_list<Is...>, N> {
                                       sizeof...(Is), Is...>::type;
 };
 
+template <bool Done, size_t Num, class List, long... Is>
+struct il_take_impl;
+
+template <class List, long... Is>
+struct il_take_impl<true, 0, List, Is...> {
+  using type = List;
+};
+
+template <size_t Num, long... Rs, long I, long... Is>
+struct il_take_impl<false, Num, int_list<Rs...>, I, Is...> {
+  using type = typename il_take_impl<Num == 1, Num - 1, int_list<Rs..., I>, Is...>::type;
+};
+
+template <class List, size_t N>
+struct il_take;
+
+template <long... Is, size_t N>
+struct il_take<int_list<Is...>, N> {
+  using type = typename il_take_impl<N == 0, N, int_list<>, Is...>::type;
+};
+
+
 /**
  * Creates indices for `List` beginning at `Pos`.
  */

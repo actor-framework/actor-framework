@@ -20,6 +20,8 @@
 #ifndef CAF_VARIANT_HPP
 #define CAF_VARIANT_HPP
 
+#include "caf/static_visitor.hpp"
+
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/detail/variant_data.hpp"
@@ -295,11 +297,6 @@ const T* get(const variant<Us...>* value) {
   // compiler implicitly restores const because of the return type
   return get<T>(const_cast<variant<Us...>*>(value));
 }
-
-template <class Result = void>
-struct static_visitor {
-  using result_type = Result;
-};
 
 /**
  * @relates variant

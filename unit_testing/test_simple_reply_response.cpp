@@ -7,7 +7,7 @@ using namespace caf;
 void test_simple_reply_response() {
   auto s = spawn([](event_based_actor* self) -> behavior {
     return (
-      others() >> [=]() -> message {
+      others >> [=]() -> message {
         CAF_CHECK(self->current_message() == make_message(ok_atom::value));
         self->quit();
         return self->current_message();
@@ -17,7 +17,7 @@ void test_simple_reply_response() {
   scoped_actor self;
   self->send(s, ok_atom::value);
   self->receive(
-    others() >> [&] {
+    others >> [&] {
       CAF_CHECK(self->current_message() == make_message(ok_atom::value));
     }
   );

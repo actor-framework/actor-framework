@@ -17,23 +17,16 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_TUPLE_ZIP_HPP
-#define CAF_DETAIL_TUPLE_ZIP_HPP
-
-#include <tuple>
-
-#include "caf/detail/int_list.hpp"
+#include "caf/match_case.hpp"
 
 namespace caf {
-namespace detail {
 
-template <class F, long... Is, class Tup0, class Tup1>
-auto tuple_zip(F& f, detail::int_list<Is...>, Tup0&& tup0, Tup1&& tup1)
--> decltype(std::make_tuple(f(get<Is>(tup0), get<Is>(tup1))...)) {
-  return std::make_tuple(f(get<Is>(tup0), get<Is>(tup1))...);
+match_case::~match_case() {
+  // nop
 }
 
-} // namespace detail
-} // namespace caf
+match_case::match_case(bool hw, uint32_t tt) : m_has_wildcard(hw), m_token(tt) {
+  // nop
+}
 
-#endif // CAF_DETAIL_TUPLE_ZIP_HPP
+} // namespace caf

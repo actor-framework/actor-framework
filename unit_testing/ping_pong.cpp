@@ -31,7 +31,7 @@ behavior ping_behavior(local_actor* self, size_t num_pings) {
       }
       return make_message(ping_atom::value, value);
     },
-    others() >> [=] {
+    others >> [=] {
       CAF_LOGF_ERROR("unexpected; " << to_string(self->current_message()));
       self->quit(exit_reason::user_shutdown);
     }
@@ -44,7 +44,7 @@ behavior pong_behavior(local_actor* self) {
       CAF_PRINT("received {'ping', " << value << "}");
       return make_message(pong_atom::value, value + 1);
     },
-    others() >> [=] {
+    others >> [=] {
       CAF_LOGF_ERROR("unexpected; " << to_string(self->current_sender()));
       self->quit(exit_reason::user_shutdown);
     }

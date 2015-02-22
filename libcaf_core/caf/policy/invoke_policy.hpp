@@ -59,7 +59,6 @@ class invoke_policy {
     inactive_timeout,      // a currently inactive timeout
     expired_sync_response, // a sync response that already timed out
     timeout,               // triggers currently active timeout
-    timeout_response,      // triggers timeout of a sync message
     ordinary,              // an asynchronous message or sync. request
     sync_response          // a synchronous response
   };
@@ -76,7 +75,6 @@ class invoke_policy {
                                        behavior& fun,
                                        message_id awaited_response) {
     CAF_LOG_TRACE("");
-    bool handle_sync_failure_on_mismatch = true;
     switch (this->filter_msg(self, *node)) {
       case msg_type::normal_exit:
         CAF_LOG_DEBUG("dropped normal exit signal");
@@ -105,25 +103,29 @@ class invoke_policy {
         }
         return im_success;
       }
-      case msg_type::timeout_response:
-        handle_sync_failure_on_mismatch = false;
-        CAF_ANNOTATE_FALLTHROUGH;
       case msg_type::sync_response:
         CAF_LOG_DEBUG("handle as synchronous response: "
-                 << CAF_TARG(node->msg, to_string) << ", "
-                 << CAF_MARG(node->mid, integer_value) << ", "
-                 << CAF_MARG(awaited_response, integer_value));
+                      << CAF_TARG(node->msg, to_string) << ", "
+                      << CAF_MARG(node->mid, integer_value) << ", "
+                      << CAF_MARG(awaited_response, integer_value));
         if (awaited_response.valid() && node->mid == awaited_response) {
+          bool is_sync_tout = node->msg.match_elements<sync_timeout_msg>();
           node.swap(self->current_mailbox_element());
           auto res = invoke_fun(self, fun);
-          if (!res && handle_sync_failure_on_mismatch) {
-            CAF_LOG_WARNING("sync failure occured in actor "
-                     << "with ID " << self->id());
-            self->handle_sync_failure();
-          }
+          node.swap(self->current_mailbox_element());
           self->mark_arrived(awaited_response);
           self->remove_handler(awaited_response);
-          node.swap(self->current_mailbox_element());
+          if (!res) {
+            if (is_sync_tout) {
+              CAF_LOG_WARNING("sync timeout occured in actor "
+                              << "with ID " << self->id());
+              self->handle_sync_timeout();
+            } else {
+              CAF_LOG_WARNING("sync failure occured in actor "
+                              << "with ID " << self->id());
+              self->handle_sync_failure();
+            }
+          }
           return im_success;
         }
         return im_skipped;
@@ -220,7 +222,7 @@ class invoke_policy {
         response_promise fhdl = hdl ? *hdl : self->make_response_promise();
         behavior inner = *ref_opt;
         ref_opt->assign(
-          others() >> [=] {
+          others >> [=] {
             // inner is const inside this lambda and mutable a C++14 feature
             behavior cpy = inner;
             auto inner_res = cpy(self->current_message());
@@ -243,9 +245,6 @@ class invoke_policy {
     const message& msg = node.msg;
     auto mid = node.mid;
     if (mid.is_response()) {
-      if (msg.match_elements<sync_timeout_msg>()) {
-        return msg_type::timeout_response;
-      }
       return self->awaits(mid) ? msg_type::sync_response
                                : msg_type::expired_sync_response;
     }

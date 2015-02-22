@@ -17,23 +17,16 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_TUPLE_ZIP_HPP
-#define CAF_DETAIL_TUPLE_ZIP_HPP
-
-#include <tuple>
-
-#include "caf/detail/int_list.hpp"
+#ifndef CAF_STATIC_VISITOR_HPP
+#define CAF_STATIC_VISITOR_HPP
 
 namespace caf {
-namespace detail {
 
-template <class F, long... Is, class Tup0, class Tup1>
-auto tuple_zip(F& f, detail::int_list<Is...>, Tup0&& tup0, Tup1&& tup1)
--> decltype(std::make_tuple(f(get<Is>(tup0), get<Is>(tup1))...)) {
-  return std::make_tuple(f(get<Is>(tup0), get<Is>(tup1))...);
-}
+template <class Result = void>
+struct static_visitor {
+  using result_type = Result;
+};
 
-} // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_TUPLE_ZIP_HPP
+#endif // CAF_STATIC_VISITOR_HPP

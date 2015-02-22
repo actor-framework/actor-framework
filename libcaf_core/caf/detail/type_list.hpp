@@ -223,12 +223,29 @@ struct tl_slice {
 };
 
 /**
- * Zips two lists of equal size.
- *
- * Creates a list formed from the two lists `ListA` and `ListB,`
- * e.g., tl_zip<type_list<int, double>, type_list<float, string>>::type
- * is type_list<type_pair<int, float>, type_pair<double, string>>.
+ * Creates a new list containing the last `N` elements.
  */
+template <class List, size_t NewSize, size_t OldSize = tl_size<List>::value>
+struct tl_right {
+  static constexpr size_t first_idx = OldSize > NewSize ? OldSize - NewSize : 0;
+  using type = typename tl_slice<List, first_idx, OldSize>::type;
+};
+
+template <class List, size_t N>
+struct tl_right<List, N, N> {
+  using type = List;
+};
+
+template <size_t N>
+struct tl_right<empty_type_list, N, 0> {
+  using type = empty_type_list;
+};
+
+template <>
+struct tl_right<empty_type_list, 0, 0> {
+  using type = empty_type_list;
+};
+
 template <class ListA, class ListB,
           template <class, typename> class Fun = to_type_pair>
 struct tl_zip_impl;
@@ -241,7 +258,14 @@ struct tl_zip_impl<type_list<LhsElements...>, type_list<RhsElements...>, Fun> {
   using type = type_list<typename Fun<LhsElements, RhsElements>::type...>;
 };
 
-template <class ListA, class ListB, template <class, typename> class Fun>
+/**
+ * Zips two lists of equal size.
+ *
+ * Creates a list formed from the two lists `ListA` and `ListB,`
+ * e.g., tl_zip<type_list<int, double>, type_list<float, string>>::type
+ * is type_list<type_pair<int, float>, type_pair<double, string>>.
+ */
+template <class ListA, class ListB, template <class, class> class Fun>
 struct tl_zip {
   static constexpr size_t sizea = tl_size<ListA>::value;
   static constexpr size_t sizeb = tl_size<ListB>::value;
@@ -250,6 +274,19 @@ struct tl_zip {
     typename tl_zip_impl<
       typename tl_slice<ListA, 0, result_size>::type,
       typename tl_slice<ListB, 0, result_size>::type,
+      Fun
+    >::type;
+};
+
+/**
+ * Equal to `zip(right(ListA, N), right(ListB, N), Fun)`.
+ */
+template <class ListA, class ListB, template <class, class> class Fun, size_t N>
+struct tl_zip_right {
+  using type =
+    typename tl_zip_impl<
+      typename tl_right<ListA, N>::type,
+      typename tl_right<ListB, N>::type,
       Fun
     >::type;
 };
@@ -509,7 +546,14 @@ struct tl_push_front;
 template <class... ListTs, class What>
 struct tl_push_front<type_list<ListTs...>, What> {
   using type = type_list<What, ListTs...>;
+};
 
+/**
+ * Alias for `tl_push_front<List, What>`.
+ */
+template <class What, class List>
+struct tl_cons : tl_push_front<List, What> {
+  // nop
 };
 
 // list map(list, trait)
@@ -760,21 +804,6 @@ struct tl_is_distinct {
     tl_size<L>::value == tl_size<typename tl_distinct<L>::type>::value;
 };
 
-/**
- * Creates a new list containing the last `N` elements.
- */
-template <class List, size_t N>
-struct tl_right {
-  static constexpr size_t list_size = tl_size<List>::value;
-  static constexpr size_t first_idx = (list_size > N) ? (list_size - N) : 0;
-  using type = typename tl_slice<List, first_idx, list_size>::type;
-};
-
-template <size_t N>
-struct tl_right<empty_type_list, N> {
-  using type = empty_type_list;
-};
-
 // list resize(list, size, fill_type)
 
 template <class List, bool OldSizeLessNewSize, size_t OldSize, size_t NewSize,
@@ -991,6 +1020,16 @@ struct tl_equal {
   static constexpr bool value =
     tl_is_strict_subset<ListA, ListB>::value
     && tl_is_strict_subset<ListB, ListA>::value;
+};
+
+template <size_t N, class T>
+struct tl_replicate {
+  using type = typename tl_cons<T, typename tl_replicate<N - 1, T>::type>::type;
+};
+
+template <class T>
+struct tl_replicate<0, T> {
+  using type = type_list<>;
 };
 
 } // namespace detail

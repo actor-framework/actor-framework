@@ -14,7 +14,7 @@ class exception_testee : public event_based_actor {
   }
   behavior make_behavior() override {
     return {
-      others() >> [] {
+      others >> [] {
         throw std::runtime_error("whatever");
       }
     };

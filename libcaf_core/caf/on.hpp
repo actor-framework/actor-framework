@@ -30,188 +30,25 @@
 #include "caf/anything.hpp"
 #include "caf/message.hpp"
 #include "caf/duration.hpp"
-#include "caf/match_expr.hpp"
 #include "caf/skip_message.hpp"
 #include "caf/may_have_timeout.hpp"
 #include "caf/timeout_definition.hpp"
 
+#include "caf/detail/boxed.hpp"
+#include "caf/detail/unboxed.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/arg_match_t.hpp"
 #include "caf/detail/type_traits.hpp"
-
-#include "caf/detail/boxed.hpp"
-#include "caf/detail/unboxed.hpp"
+#include "caf/detail/tail_argument_token.hpp"
 #include "caf/detail/implicit_conversions.hpp"
+#include "caf/detail/message_case_builder.hpp"
 
 namespace caf {
 namespace detail {
 
-template <bool IsFun, typename T>
-struct add_ptr_to_fun_ {
-  using type = T*;
-
-};
-
-template <class T>
-struct add_ptr_to_fun_<false, T> {
-  using type = T;
-
-};
-
-template <class T>
-struct add_ptr_to_fun : add_ptr_to_fun_<std::is_function<T>::value, T> {};
-
-template <bool ToVoid, typename T>
-struct to_void_impl {
-  using type = unit_t;
-
-};
-
-template <class T>
-struct to_void_impl<false, T> {
-  using type = typename add_ptr_to_fun<T>::type;
-
-};
-
-template <class T>
-struct boxed_to_void : to_void_impl<is_boxed<T>::value, T> {};
-
-template <class T>
-struct boxed_to_void<std::function<
-  optional<T>(const T&)>> : to_void_impl<is_boxed<T>::value, T> {};
-
-template <class T>
-struct boxed_and_callable_to_void
-  : to_void_impl<is_boxed<T>::value || detail::is_callable<T>::value, T> {};
-
-class behavior_rvalue_builder {
-
- public:
-
-  constexpr behavior_rvalue_builder(const duration& d) : m_tout(d) {}
-
-  template <class F>
-  timeout_definition<F> operator>>(F&& f) const {
-    return {m_tout, std::forward<F>(f)};
-  }
-
- private:
-
-  duration m_tout;
-
-};
-
-struct rvalue_builder_args_ctor {};
-
-template <class Left, class Right>
-struct disjunct_rvalue_builders {
-
- public:
-
-  disjunct_rvalue_builders(Left l, Right r)
-      : m_left(std::move(l)), m_right(std::move(r)) {}
-
-  template <class Expr>
-  auto operator>>(Expr expr)
-    -> decltype((*(static_cast<Left*>(nullptr)) >> expr)
-            .or_else(*(static_cast<Right*>(nullptr)) >>
-                 expr)) const {
-    return (m_left >> expr).or_else(m_right >> expr);
-  }
-
- private:
-
-  Left m_left;
-  Right m_right;
-
-};
-
-struct tuple_maker {
-  template <class... Ts>
-  inline auto operator()(Ts&&... args)
-    -> decltype(std::make_tuple(std::forward<Ts>(args)...)) {
-    return std::make_tuple(std::forward<Ts>(args)...);
-  }
-
-};
-
-template <class Transformers, class Pattern>
-struct rvalue_builder {
-
-  using back_type = typename detail::tl_back<Pattern>::type;
-
-  static constexpr bool is_complete =
-    !std::is_same<detail::arg_match_t, back_type>::value;
-
-  using fun_container =
-    typename detail::tl_apply<
-      Transformers,
-      std::tuple
-    >::type;
-
-  fun_container m_funs;
-
- public:
-
-  rvalue_builder() = default;
-
-  template <class... Ts>
-  rvalue_builder(rvalue_builder_args_ctor, const Ts&... args)
-      : m_funs(args...) {}
-
-  rvalue_builder(fun_container arg1) : m_funs(std::move(arg1)) {}
-
-  template <class Expr>
-  match_expr<typename get_case<is_complete, Expr, Transformers, Pattern>::type>
-  operator>>(Expr expr) const {
-    using lifted_expr =
-      typename get_case<
-        is_complete,
-        Expr,
-        Transformers,
-        Pattern
-      >::type;
-    // adjust m_funs to exactly match expected projections in match case
-    using target = typename lifted_expr::projections_list;
-    using trimmed_projections = typename tl_trim<Transformers>::type;
-    tuple_maker f;
-    auto lhs = apply_args(f, get_indices(trimmed_projections{}), m_funs);
-    using rhs_type =
-      typename tl_apply<
-        typename tl_slice<
-          target,
-          tl_size<trimmed_projections>::value,
-          tl_size<target>::value
-        >::type,
-        std::tuple
-      >::type;
-    rhs_type rhs;
-    // done
-    return lifted_expr{std::move(expr), std::tuple_cat(lhs, rhs)};
-  }
-
-  template <class T, class P>
-  disjunct_rvalue_builders<rvalue_builder, rvalue_builder<T, P>>
-  operator||(rvalue_builder<T, P> other) const {
-    return {*this, std::move(other)};
-  }
-
-};
-
-template <bool IsCallable, typename T>
-struct pattern_type_ {
-  using ctrait = detail::get_callable_trait<T>;
-  using args = typename ctrait::arg_types;
-  static_assert(detail::tl_size<args>::value == 1,
-          "only unary functions allowed");
-  using type =
-    typename std::decay<
-      typename detail::tl_head<args>::type
-    >::type;
-};
-
-template <class T>
-struct pattern_type_<false, T> {
+template <class T, bool IsFun = detail::is_callable<T>::value
+                                && !detail::is_boxed<T>::value>
+struct pattern_type {
   using type =
     typename implicit_conversions<
       typename std::decay<
@@ -221,17 +58,15 @@ struct pattern_type_<false, T> {
 };
 
 template <class T>
-struct pattern_type {
+struct pattern_type<T, true> {
+  using ctrait = detail::get_callable_trait<T>;
+  using args = typename ctrait::arg_types;
+  static_assert(detail::tl_size<args>::value == 1,
+                "only unary functions are allowed as projections");
   using type =
-    typename pattern_type_<
-      detail::is_callable<T>::value && !detail::is_boxed<T>::value,
-      T
+    typename std::decay<
+      typename detail::tl_head<args>::type
     >::type;
-};
-
-template <atom_value V>
-struct pattern_type<atom_constant<V>> {
-  using type = atom_value;
 };
 
 } // namespace detail
@@ -242,80 +77,28 @@ namespace caf {
 /**
  * A wildcard that matches any number of any values.
  */
-constexpr anything any_vals = anything{};
-
-#ifdef CAF_DOCUMENTATION
-
-/**
- * A wildcard that matches the argument types
- * of a given callback. Must be the last argument to {@link on()}.
- * @see {@link math_actor_example.cpp Math Actor Example}
- */
-constexpr __unspecified__ arg_match;
-
-/**
- * Left-hand side of a partial function expression.
- *
- * Equal to `on(arg_match).
- */
-constexpr __unspecified__ on_arg_match;
+constexpr auto any_vals = anything();
 
 /**
  * A wildcard that matches any value of type `T`.
- * @see {@link math_actor_example.cpp Math Actor Example}
  */
-template <class T>
-__unspecified__ val();
-
-/**
- * Left-hand side of a partial function expression that matches values.
- *
- * This overload can be used with the wildcards {@link caf::val val},
- * {@link caf::any_vals any_vals} and {@link caf::arg_match arg_match}.
- */
-template <class T, class... Ts>
-__unspecified__ on(const T& arg, const Ts&... args);
-
-/**
- * Left-hand side of a partial function expression that matches types.
- *
- * This overload matches types only. The type {@link caf::anything anything}
- * can be used as wildcard to match any number of elements of any types.
- */
-template <class... Ts>
-__unspecified__ on();
-
-/**
- * Left-hand side of a partial function expression that matches types.
- *
- * This overload matches up to four leading atoms.
- * The type {@link caf::anything anything}
- * can be used as wildcard to match any number of elements of any types.
- */
-template <atom_value... Atoms, class... Ts>
-__unspecified__ on();
-
-/**
- * Converts `arg` to a match expression by returning
- *    `on_arg_match >> arg if `arg` is a callable type,
- *    otherwise returns `arg`.
- */
-template <class T>
-__unspecified__ lift_to_match_expr(T arg);
-
-#else
-
 template <class T>
 constexpr typename detail::boxed<T>::type val() {
   return typename detail::boxed<T>::type();
 }
 
-using boxed_arg_match_t = typename detail::boxed<detail::arg_match_t>::type;
+/**
+ * A wildcard that matches the argument types
+ * of a given callback, must be the last argument to `on()`.
+ */
 
-constexpr boxed_arg_match_t arg_match = boxed_arg_match_t();
+constexpr auto arg_match = typename detail::boxed<detail::arg_match_t>::type();
 
-template <class T, typename Predicate>
-std::function<optional<T>(const T&)> guarded(Predicate p, T value) {
+/**
+ * Generates function objects from a binary predicate and a value.
+ */
+template <class T, typename BinaryPredicate>
+std::function<optional<T>(const T&)> guarded(BinaryPredicate p, T value) {
   return [=](const T& other) -> optional<T> {
     if (p(other, value)) {
       return value;
@@ -364,91 +147,81 @@ auto to_guard(const atom_constant<V>&) -> decltype(to_guard(V)) {
   return to_guard(V);
 }
 
-template <class T, class... Ts>
-auto on(const T& arg, const Ts&... args)
--> detail::rvalue_builder<
+/**
+ * Returns a generator for `match_case` objects.
+ */
+template <class... Ts>
+auto on(const Ts&... args)
+-> detail::advanced_match_case_builder<
     detail::type_list<
-      decltype(to_guard(arg)),
       decltype(to_guard(args))...
     >,
     detail::type_list<
-      typename detail::pattern_type<T>::type,
-      typename detail::pattern_type<Ts>::type...>
+      typename detail::pattern_type<typename std::decay<Ts>::type>::type...>
     > {
-  return {detail::rvalue_builder_args_ctor{}, to_guard(arg), to_guard(args)...};
+  return {detail::variadic_ctor{}, to_guard(args)...};
 }
 
-inline detail::rvalue_builder<detail::empty_type_list, detail::empty_type_list>
-on() {
-  return {};
+/**
+ * Returns a generator for `match_case` objects.
+ */
+template <class T, class... Ts>
+decltype(on(val<T>(), val<Ts>()...)) on() {
+  return on(val<T>(), val<Ts>()...);
 }
 
-template <class T0, class... Ts>
-detail::rvalue_builder<detail::empty_type_list, detail::type_list<T0, Ts...>>
-on() {
-  return {};
-}
-
+/**
+ * Returns a generator for `match_case` objects.
+ */
 template <atom_value A0, class... Ts>
 decltype(on(A0, val<Ts>()...)) on() {
   return on(A0, val<Ts>()...);
 }
 
+/**
+ * Returns a generator for `match_case` objects.
+ */
 template <atom_value A0, atom_value A1, class... Ts>
 decltype(on(A0, A1, val<Ts>()...)) on() {
   return on(A0, A1, val<Ts>()...);
 }
 
+/**
+ * Returns a generator for `match_case` objects.
+ */
 template <atom_value A0, atom_value A1, atom_value A2, class... Ts>
 decltype(on(A0, A1, A2, val<Ts>()...)) on() {
   return on(A0, A1, A2, val<Ts>()...);
 }
 
+/**
+ * Returns a generator for `match_case` objects.
+ */
 template <atom_value A0, atom_value A1, atom_value A2, atom_value A3,
           class... Ts>
 decltype(on(A0, A1, A2, A3, val<Ts>()...)) on() {
   return on(A0, A1, A2, A3, val<Ts>()...);
 }
 
+/**
+ * Returns a generator for timeouts.
+ */
 template <class Rep, class Period>
-constexpr detail::behavior_rvalue_builder
+constexpr detail::timeout_definition_builder
 after(const std::chrono::duration<Rep, Period>& d) {
   return {duration(d)};
 }
 
-inline decltype(on<anything>()) others() { return on<anything>(); }
+/**
+ * Generates catch-all `match_case` objects.
+ */
+constexpr auto others = detail::catch_all_match_case_builder();
 
-// some more convenience
-
-namespace detail {
-
-class on_the_fly_rvalue_builder {
-
- public:
-
-  constexpr on_the_fly_rvalue_builder() {}
-
-  template <class Expr>
-  match_expr<typename get_case<false, Expr, detail::empty_type_list,
-                 detail::empty_type_list>::type>
-  operator>>(Expr expr) const {
-    using result_type =
-      typename get_case<
-        false,
-        Expr,
-        detail::empty_type_list,
-        detail::empty_type_list
-      >::type;
-    return result_type{std::move(expr)};
-  }
-
-};
-
-} // namespace detail
-
-constexpr detail::on_the_fly_rvalue_builder on_arg_match;
-
-#endif // CAF_DOCUMENTATION
+/**
+ * Semantically equal to `on(arg_match)`, but uses a (faster)
+ * special-purpose `match_case` implementation.
+ */
+constexpr auto on_arg_match = detail::trivial_match_case_builder();
 
 } // namespace caf
 

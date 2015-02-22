@@ -31,25 +31,21 @@ namespace detail {
 template <class Left, typename Right>
 struct left_or_right {
   using type = Left;
-
 };
 
 template <class Right>
 struct left_or_right<unit_t, Right> {
   using type = Right;
-
 };
 
 template <class Right>
 struct left_or_right<unit_t&, Right> {
   using type = Right;
-
 };
 
 template <class Right>
 struct left_or_right<const unit_t&, Right> {
   using type = Right;
-
 };
 
 /**
@@ -58,13 +54,11 @@ struct left_or_right<const unit_t&, Right> {
 template <class Left, typename Right>
 struct if_not_left {
   using type = unit_t;
-
 };
 
 template <class Right>
 struct if_not_left<unit_t, Right> {
   using type = Right;
-
 };
 
 } // namespace detail

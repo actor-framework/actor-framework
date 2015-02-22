@@ -107,7 +107,7 @@ class timer_actor : public detail::proper_actor<blocking_actor,
       [&](const exit_msg&) {
         done = true;
       },
-      others() >> [&] {
+      others >> [&] {
         CAF_LOG_ERROR("unexpected: " << to_string(msg_ptr->msg));
       }
     };
@@ -183,7 +183,7 @@ void printer_loop(blocking_actor* self) {
     [&](const exit_msg&) {
       running = false;
     },
-    others() >> [&] {
+    others >> [&] {
       std::cerr << "*** unexpected: " << to_string(self->current_message())
                 << std::endl;
     }

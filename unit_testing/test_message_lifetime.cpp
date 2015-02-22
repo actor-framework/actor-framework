@@ -26,7 +26,7 @@ testee::~testee() {
 
 behavior testee::make_behavior() {
   return {
-    others() >> [=] {
+    others >> [=] {
       CAF_CHECK_EQUAL(current_message().cvals()->get_reference_count(), 2);
       quit();
       return std::move(current_message());
@@ -68,7 +68,7 @@ behavior tester::make_behavior() {
       CAF_CHECK_EQUAL(current_message().cvals()->get_reference_count(), 1);
       quit();
     },
-    others() >> CAF_UNEXPECTED_MSG_CB(this)
+    others >> CAF_UNEXPECTED_MSG_CB(this)
   };
 }
 

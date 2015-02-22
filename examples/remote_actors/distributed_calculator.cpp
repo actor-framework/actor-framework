@@ -143,7 +143,7 @@ void client_repl(const string& host, uint16_t port) {
                << endl;
           }
         },
-        others() >> [] {
+        others >> [] {
           cout << "*** usage: connect <host> <port>" << endl;
         }
       });

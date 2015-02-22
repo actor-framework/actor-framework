@@ -10,7 +10,7 @@ using namespace caf;
 
 void test_serial_reply() {
   auto mirror_behavior = [=](event_based_actor* self) {
-    self->become(others() >> [=]() -> message {
+    self->become(others >> [=]() -> message {
       CAF_PRINT("return self->current_message()");
       return self->current_message();
     });
@@ -63,7 +63,7 @@ void test_serial_reply() {
       on(atom("hiho")) >> [] {
         CAF_CHECKPOINT();
       },
-      others() >> CAF_UNEXPECTED_MSG_CB_REF(self)
+      others >> CAF_UNEXPECTED_MSG_CB_REF(self)
     );
     self->send_exit(master, exit_reason::user_shutdown);
   }

@@ -17,12 +17,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef TYPED_BEHAVIOR_HPP
-#define TYPED_BEHAVIOR_HPP
+#ifndef CAF_TYPED_BEHAVIOR_HPP
+#define CAF_TYPED_BEHAVIOR_HPP
 
 #include "caf/either.hpp"
 #include "caf/behavior.hpp"
-#include "caf/match_expr.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/typed_continue_helper.hpp"
 
@@ -179,13 +178,16 @@ class behavior_stack_based_impl;
 
 template <class... Rs>
 class typed_behavior {
+ public:
   template <class... OtherRs>
   friend class typed_actor;
+
   template <class, class, class>
   friend class mixin::behavior_stack_based_impl;
+
   template <class...>
   friend class functor_based_typed_actor;
- public:
+
   typed_behavior(typed_behavior&&) = default;
   typed_behavior(const typed_behavior&) = default;
   typed_behavior& operator=(typed_behavior&&) = default;
@@ -193,17 +195,9 @@ class typed_behavior {
 
   using signatures = detail::type_list<Rs...>;
 
-  template <class T, class... Ts>
-  typed_behavior(T arg, Ts&&... args) {
-    set(match_expr_collect(
-      detail::lift_to_match_expr(std::move(arg)),
-      detail::lift_to_match_expr(std::forward<Ts>(args))...));
-  }
-
-  template <class... Cs>
-  typed_behavior& operator=(match_expr<Cs...> expr) {
-    set(std::move(expr));
-    return *this;
+  template <class... Vs>
+  typed_behavior(Vs... vs) {
+    set(detail::make_behavior(vs...));
   }
 
   explicit operator bool() const {
@@ -213,29 +207,33 @@ class typed_behavior {
   /**
     * Invokes the timeout callback.
     */
-  inline void handle_timeout() { m_bhvr.handle_timeout(); }
+  void handle_timeout() {
+    m_bhvr.handle_timeout();
+  }
 
   /**
    * Returns the duration after which receives using
    * this behavior should time out.
    */
-  inline const duration& timeout() const { return m_bhvr.timeout(); }
+  const duration& timeout() const {
+    return m_bhvr.timeout();
+  }
 
  private:
   typed_behavior() = default;
 
   behavior& unbox() { return m_bhvr; }
 
-  template <class... Cs>
-  void set(match_expr<Cs...>&& expr) {
+  template <class... Ts>
+  void set(detail::default_behavior_impl<std::tuple<Ts...>>* ptr) {
     using mpi =
       typename detail::tl_filter_not<
-        detail::type_list<typename detail::deduce_mpi<Cs>::type...>,
+        detail::type_list<typename detail::deduce_mpi<Ts>::type...>,
         detail::is_hidden_msg_handler
       >::type;
     detail::static_asserter<signatures, mpi, detail::ctm>::verify_match();
     // final (type-erasure) step
-    m_bhvr = std::move(expr);
+    m_bhvr.assign(static_cast<detail::behavior_impl*>(ptr));
   }
 
   behavior m_bhvr;
@@ -243,4 +241,4 @@ class typed_behavior {
 
 } // namespace caf
 
-#endif // TYPED_BEHAVIOR_HPP
+#endif // CAF_TYPED_BEHAVIOR_HPP

@@ -41,7 +41,7 @@ void test_constructor_attach() {
             quit(reason);
           }
         },
-        others() >> [=] {
+        others >> [=] {
           forward_to(m_testee);
         }
       };

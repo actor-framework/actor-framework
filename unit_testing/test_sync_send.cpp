@@ -25,7 +25,7 @@ using hi_there_atom = atom_constant<atom("HiThere")>;
 struct sync_mirror : event_based_actor {
   behavior make_behavior() override {
     return {
-      others() >> [=] {
+      others >> [=] {
         return current_message();
       }
     };
@@ -97,7 +97,7 @@ class A : public popular_actor {
           }
         );
       },
-      others() >> [=] {
+      others >> [=] {
         report_failure();
       }
     };
@@ -112,7 +112,7 @@ class B : public popular_actor {
 
   behavior make_behavior() override {
     return {
-      others() >> [=] {
+      others >> [=] {
         CAF_CHECKPOINT();
         forward_to(buddy());
         quit();
@@ -157,9 +157,9 @@ class D : public popular_actor {
 
   behavior make_behavior() override {
     return {
-      others() >> [=] {
+      others >> [=] {
         return sync_send(buddy(), std::move(current_message())).then(
-          others() >> [=]() -> message {
+          others >> [=]() -> message {
             quit();
             return std::move(current_message());
           }
@@ -199,11 +199,11 @@ class server : public event_based_actor {
             unbecome(); // await next idle message
           },
           on(idle_atom::value) >> skip_message,
-          others() >> die
+          others >> die
         );
       },
       on(request_atom::value) >> skip_message,
-      others() >> die
+      others >> die
     };
   }
 };
@@ -263,7 +263,7 @@ void test_sync_send() {
     [&](const down_msg& dm) {
       CAF_CHECK_EQUAL(dm.reason, exit_reason::user_shutdown);
     },
-    others() >> CAF_UNEXPECTED_MSG_CB_REF(self)
+    others >> CAF_UNEXPECTED_MSG_CB_REF(self)
   );
   auto mirror = spawn<sync_mirror>();
   bool continuation_called = false;
@@ -307,7 +307,7 @@ void test_sync_send() {
   CAF_CHECKPOINT();
   self->timed_sync_send(self, milliseconds(50), no_way_atom::value).await(
     on<sync_timeout_msg>() >> CAF_CHECKPOINT_CB(),
-    others() >> CAF_UNEXPECTED_MSG_CB_REF(self)
+    others >> CAF_UNEXPECTED_MSG_CB_REF(self)
   );
   // we should have received two DOWN messages with normal exit reason
   // plus 'NoWay'
@@ -321,13 +321,13 @@ void test_sync_send() {
       CAF_PRINT("trigger \"actor did not reply to a "
                 "synchronous request message\"");
     },
-    others() >> CAF_UNEXPECTED_MSG_CB_REF(self),
+    others >> CAF_UNEXPECTED_MSG_CB_REF(self),
     after(milliseconds(0)) >> CAF_UNEXPECTED_TOUT_CB()
   );
   CAF_CHECKPOINT();
   // mailbox should be empty now
   self->receive(
-    others() >> CAF_UNEXPECTED_MSG_CB_REF(self),
+    others >> CAF_UNEXPECTED_MSG_CB_REF(self),
     after(milliseconds(0)) >> CAF_CHECKPOINT_CB()
   );
   // check wheter continuations are invoked correctly
@@ -371,7 +371,7 @@ void test_sync_send() {
         CAF_CHECKPOINT();
         CAF_CHECK_EQUAL(s->current_sender(), work);
       },
-      others() >> [&] {
+      others >> [&] {
         CAF_PRINTERR("unexpected message: " << to_string(s->current_message()));
       }
     );
@@ -383,19 +383,19 @@ void test_sync_send() {
         CAF_CHECKPOINT();
         CAF_CHECK_EQUAL(s->current_sender(), work);
       },
-      others() >> CAF_UNEXPECTED_MSG_CB(s)
+      others >> CAF_UNEXPECTED_MSG_CB(s)
     );
     s->send(s, "Ever danced with the devil in the pale moonlight?");
     // response: {'EXIT', exit_reason::user_shutdown}
     s->receive_loop(
-      others() >> CAF_UNEXPECTED_MSG_CB(s)
+      others >> CAF_UNEXPECTED_MSG_CB(s)
     );
   });
   self->receive(
     [&](const down_msg& dm) {
       CAF_CHECK_EQUAL(dm.reason, exit_reason::user_shutdown);
     },
-    others() >> CAF_UNEXPECTED_MSG_CB_REF(self)
+    others >> CAF_UNEXPECTED_MSG_CB_REF(self)
   );
 }
 

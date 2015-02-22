@@ -68,17 +68,9 @@ class response_handle<Self, message, nonblocking_response_handle_tag> {
     // nop
   }
 
-  template <class T, class... Ts>
-  continue_helper then(T arg, Ts&&... args) const {
-    auto selfptr = m_self;
-    behavior bhvr{
-      std::move(arg),
-      std::forward<Ts>(args)...,
-      on<sync_timeout_msg>() >> [selfptr]() -> skip_message_t {
-        selfptr->handle_sync_timeout();
-        return skip_message();
-      }
-    };
+  template <class... Vs>
+  continue_helper then(Vs&&... vs) const {
+    behavior bhvr{std::forward<Vs>(vs)...};
     m_self->bhvr_stack().push_back(std::move(bhvr), m_mid);
     return {m_mid};
   }
@@ -113,17 +105,12 @@ class response_handle<Self, TypedOutputPair, nonblocking_response_handle_tag> {
     static_assert(sizeof...(Fs) > 0, "at least one functor is requried");
     static_assert(detail::conjunction<detail::is_callable<Fs>::value...>::value,
                   "all arguments must be callable");
-    static_assert(detail::conjunction<!is_match_expr<Fs>::value...>::value,
-                  "match expressions are not allowed in this context");
+    static_assert(detail::conjunction<
+                    !std::is_base_of<match_case, Fs>::value...
+                  >::value,
+                  "match cases are not allowed in this context");
     detail::type_checker<TypedOutputPair, Fs...>::check();
-    auto selfptr = m_self;
-    behavior tmp{
-      fs...,
-      on<sync_timeout_msg>() >> [selfptr]() -> skip_message_t {
-        selfptr->handle_sync_timeout();
-        return {};
-      }
-    };
+    behavior tmp{std::move(fs)...};
     m_self->bhvr_stack().push_back(std::move(tmp), m_mid);
     return {m_mid};
   }
@@ -151,17 +138,9 @@ class response_handle<Self, message, blocking_response_handle_tag> {
     m_self->dequeue_response(bhvr, m_mid);
   }
 
-  template <class T, class... Ts>
-  void await(T arg, Ts&&... args) const {
-    auto selfptr = m_self;
-    behavior bhvr{
-      std::move(arg),
-      std::forward<Ts>(args)...,
-      on<sync_timeout_msg>() >> [selfptr]() -> skip_message_t {
-        selfptr->handle_sync_timeout();
-        return {};
-      }
-    };
+  template <class... Vs>
+  void await(Vs&&... vs) const {
+    behavior bhvr{std::forward<Vs>(vs)...};
     m_self->dequeue_response(bhvr, m_mid);
   }
 
@@ -199,17 +178,12 @@ class response_handle<Self, OutputPair, blocking_response_handle_tag> {
                   "wrong number of functors");
     static_assert(detail::conjunction<detail::is_callable<Fs>::value...>::value,
                   "all arguments must be callable");
-    static_assert(detail::conjunction<!is_match_expr<Fs>::value...>::value,
-                  "match expressions are not allowed in this context");
+    static_assert(detail::conjunction<
+                    !std::is_base_of<match_case, Fs>::value...
+                  >::value,
+                  "match cases are not allowed in this context");
     detail::type_checker<OutputPair, Fs...>::check();
-    auto selfptr = m_self;
-    behavior tmp{
-      fs...,
-      on<sync_timeout_msg>() >> [selfptr]() -> skip_message_t {
-        selfptr->handle_sync_timeout();
-        return {};
-      }
-    };
+    behavior tmp{std::move(fs)...};
     m_self->dequeue_response(tmp, m_mid);
   }
 
