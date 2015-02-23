@@ -43,47 +43,38 @@ class dummy : public event_based_actor {
   }
 };
 
-uint16_t publish_at_some_port(uint16_t first_port, actor whom) {
-  auto port = first_port;
-  for (;;) {
-    try {
-      io::publish(whom, port);
-      return port;
-    }
-    catch (bind_failure&) {
-      // try next port
-      ++port;
-    }
-  }
-}
-
-actor invalid_unpublish(uint16_t port) {
+void test_invalid_unpublish(const actor& published, uint16_t port) {
   auto d = spawn<dummy>();
   io::unpublish(d, port);
+  auto ra = io::remote_actor("127.0.0.1", port);
+  CAF_CHECK(ra != d);
+  CAF_CHECK(ra == published);
   anon_send_exit(d, exit_reason::user_shutdown);
-  d = invalid_actor;
-  return io::remote_actor("127.0.0.1", port);
+}
+
+void test_unpublish() {
+  auto d = spawn<dummy>();
+  auto port = io::publish(d, 0);
+  CAF_CHECKPOINT();
+  test_invalid_unpublish(d, port);
+  CAF_CHECKPOINT();
+  io::unpublish(d, port);
+  CAF_CHECKPOINT();
+  // must fail now
+  try {
+    io::remote_actor("127.0.0.1", port);
+    CAF_FAILURE("unexpected: remote actor succeeded!");
+  } catch (network_error&) {
+    CAF_CHECKPOINT();
+  }
+  anon_send_exit(d, exit_reason::user_shutdown);
 }
 
 } // namespace <anonymous>
 
 int main() {
   CAF_TEST(test_unpublish);
-  auto d = spawn<dummy>();
-  auto port = publish_at_some_port(4242, d);
-  std::this_thread::sleep_for(std::chrono::milliseconds(50));
-  CAF_CHECK_EQUAL(invalid_unpublish(port), d);
-  io::unpublish(d, port);
-  CAF_CHECKPOINT();
-  // must fail now
-  try {
-    auto oops = io::remote_actor("127.0.0.1", port);
-    CAF_FAILURE("unexpected: remote actor succeeded!");
-  } catch (network_error&) {
-    CAF_CHECKPOINT();
-  }
-  anon_send_exit(d, exit_reason::user_shutdown);
-  d = invalid_actor;
+  test_unpublish();
   await_all_actors_done();
   shutdown();
   CAF_CHECK_EQUAL(s_dtor_called.load(), 2);
