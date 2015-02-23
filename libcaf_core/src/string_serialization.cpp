@@ -196,16 +196,6 @@ class string_serializer : public serializer, public dummy_backend {
     m_after_value = true;
   }
 
-  void write_tuple(size_t size, const primitive_variant* values) {
-    clear();
-    out << "{";
-    const primitive_variant* end = values + size;
-    for (; values != end; ++values) {
-      write_value(*values);
-    }
-    out << (m_after_value ? " }" : "}");
-  }
-
   void write_raw(size_t num_bytes, const void* buf) {
     clear();
     auto first = reinterpret_cast<const unsigned char*>(buf);

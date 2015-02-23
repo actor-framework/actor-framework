@@ -69,7 +69,7 @@ struct pseudo_actor {
     return mbox;
   }
 
-  policy::invoke_message_result invoke_message(uptr& ptr, int i) {
+  static policy::invoke_message_result invoke_message(uptr& ptr, int i) {
     if (ptr->value == 1) {
       ptr.reset();
       return policy::im_dropped;

@@ -55,7 +55,10 @@ struct log_event {
   log_event* next;
   log_event* prev;
   std::string msg;
-  log_event(std::string logmsg = "") : msg(std::move(logmsg)) {
+  log_event(std::string logmsg = "")
+      : next(nullptr),
+        prev(nullptr),
+        msg(std::move(logmsg)) {
     // nop
   }
 };
@@ -68,7 +71,7 @@ struct log_event {
 
 class logging_impl : public logging {
  public:
-  void initialize() {
+  void initialize() override {
     const char* log_level_table[] = {"ERROR", "WARN", "INFO", "DEBUG", "TRACE"};
     m_thread = std::thread([this] { (*this)(); });
     std::string msg = "ENTRY log level = ";
@@ -76,7 +79,7 @@ class logging_impl : public logging {
     log("TRACE", "logging", "run", __FILE__, __LINE__, msg);
   }
 
-  void stop() {
+  void stop() override {
     log("TRACE", "logging", "run", __FILE__, __LINE__, "EXIT");
     // an empty string means: shut down
     m_queue.synchronized_enqueue(m_queue_mtx, m_queue_cv, new log_event{""});
