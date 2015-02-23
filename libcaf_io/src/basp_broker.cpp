@@ -203,11 +203,13 @@ behavior basp_broker::make_behavior() {
       auto ptr = actor_cast<abstract_actor_ptr>(whom);
       if (port == 0) {
         if (!remove_published_actor(ptr)) {
-          return make_message(error_atom::value, "no mapping found");
+          return make_message(error_atom::value, request_id,
+                              "no mapping found");
         }
       } else {
         if (!remove_published_actor(ptr, port)) {
-          return make_message(error_atom::value, "port not bound to actor");
+          return make_message(error_atom::value, request_id,
+                              "port not bound to actor");
         }
       }
       return make_message(ok_atom::value, request_id);

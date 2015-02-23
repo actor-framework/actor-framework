@@ -37,8 +37,9 @@ void unpublish_impl(const actor_addr& whom, uint16_t port, bool block_caller) {
       [](ok_atom) {
         // ok, basp_broker is done
       },
-      [](error_atom, const std::string&) {
+      [&](error_atom, const std::string& err) {
         // ok, basp_broker is done
+        CAF_LOGF_ERROR(err << ", " << CAF_ARG(port) << ", " << CAF_TSARG(whom));
       }
     );
   } else {
