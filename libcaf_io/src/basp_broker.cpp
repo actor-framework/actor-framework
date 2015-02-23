@@ -106,7 +106,7 @@ behavior basp_broker::make_behavior() {
       if (j != m_ctx.end()) {
         auto hd = j->second.handshake_data;
         if (hd) {
-          send(hd->client, error_atom{}, hd->request_id,
+          send(hd->client, error_atom::value, hd->request_id,
                "disconnect during handshake");
         }
         m_ctx.erase(j);
@@ -181,7 +181,7 @@ behavior basp_broker::make_behavior() {
       }
       catch (std::exception&) {
         CAF_LOG_DEBUG("failed to assign scribe from handle");
-        send(client, error_atom{}, request_id,
+        send(client, error_atom::value, request_id,
              "failed to assign scribe from handle");
         return;
       }
@@ -198,7 +198,8 @@ behavior basp_broker::make_behavior() {
     [=](delete_atom, int64_t request_id, const actor_addr& whom, uint16_t port)
     -> message {
       if (whom == invalid_actor_addr) {
-        return make_message(error_atom::value, "whom == invalid_actor_addr");
+        return make_message(error_atom::value, request_id,
+                            "whom == invalid_actor_addr");
       }
       auto ptr = actor_cast<abstract_actor_ptr>(whom);
       if (port == 0) {
@@ -584,14 +585,14 @@ basp_broker::handle_basp_header(connection_context& ctx,
                       + iface_str;
         }
         // abort with error
-        send(hsclient, error_atom{}, hsid, std::move(error_msg));
+        send(hsclient, error_atom::value, hsid, std::move(error_msg));
         return close_connection;
       }
       auto nid = hdr.source_node;
       if (nid == node()) {
         CAF_LOG_INFO("incoming connection from self: drop connection");
         auto res = detail::singletons::get_actor_registry()->get(remote_aid);
-        send(hsclient, ok_atom{}, hsid, res->address());
+        send(hsclient, ok_atom::value, hsid, res->address());
         ctx.handshake_data = none;
         return close_connection;
       }
@@ -600,7 +601,7 @@ basp_broker::handle_basp_header(connection_context& ctx,
                      << " (re-use old one)");
         auto proxy = m_namespace.get_or_put(nid, remote_aid);
         // discard this peer; there's already an open connection
-        send(hsclient, ok_atom{}, hsid, proxy->address());
+        send(hsclient, ok_atom::value, hsid, proxy->address());
         ctx.handshake_data = none;
         return close_connection;
       }
@@ -610,7 +611,7 @@ basp_broker::handle_basp_header(connection_context& ctx,
       // prepare to receive messages
       auto proxy = m_namespace.get_or_put(nid, remote_aid);
       ctx.published_actor = proxy;
-      send(hsclient, ok_atom{}, hsid, proxy->address());
+      send(hsclient, ok_atom::value, hsid, proxy->address());
       ctx.handshake_data = none;
       parent().notify<hook::new_connection_established>(nid);
       break;
@@ -759,7 +760,6 @@ void basp_broker::add_published_actor(accept_handle hdl,
   if (!ptr) {
     return;
   }
-  CAF_LOG_TRACE("");
   m_acceptors.insert(std::make_pair(hdl, std::make_pair(ptr, port)));
   m_open_ports.insert(std::make_pair(port, hdl));
   ptr->attach_functor([port](abstract_actor* self, uint32_t) {
@@ -771,13 +771,19 @@ void basp_broker::add_published_actor(accept_handle hdl,
 }
 
 bool basp_broker::remove_published_actor(const abstract_actor_ptr& whom) {
+  CAF_LOG_TRACE("");
+  CAF_REQUIRE(whom != nullptr);
   size_t erased_elements = 0;
   auto last = m_acceptors.end();
   auto i = m_acceptors.begin();
   while (i != last) {
-    if (i->second.first == whom) {
+    auto& kvp = i->second;
+    if (kvp.first == whom) {
+      CAF_REQUIRE(valid(i->first));
       close(i->first);
-      m_open_ports.erase(i->second.second);
+      if (m_open_ports.erase(kvp.second) == 0) {
+        CAF_LOG_ERROR("inconsistent data: no open port for acceptor!");
+      }
       i = m_acceptors.erase(i);
       ++erased_elements;
     }
@@ -791,24 +797,26 @@ bool basp_broker::remove_published_actor(const abstract_actor_ptr& whom) {
 bool basp_broker::remove_published_actor(const abstract_actor_ptr& whom,
                                          uint16_t port) {
   CAF_LOG_TRACE("");
+  CAF_REQUIRE(whom != nullptr);
+  CAF_REQUIRE(port != 0);
   auto i = m_open_ports.find(port);
   if (i == m_open_ports.end()) {
     return false;
   }
+  CAF_REQUIRE(valid(i->second));
   auto j = m_acceptors.find(i->second);
-  if (j == m_acceptors.end()) {
-    CAF_LOG_ERROR("accept handle for port " << port
-                  << " not found in m_published_actors");
-    m_open_ports.erase(i);
-    return false;
-  }
   if (j->second.first != whom) {
-    CAF_LOG_INFO("port has been bound to a different actor already");
+    CAF_LOG_INFO("port has been bound to a different actor");
     return false;
   }
-  close(j->first);
+  close(i->second);
   m_open_ports.erase(i);
-  m_acceptors.erase(j);
+  if (j == m_acceptors.end()) {
+    CAF_LOG_ERROR("inconsistent data: accept handle for port " << port
+                  << " not found in m_published_actors");
+  } else {
+    m_acceptors.erase(j);
+  }
   return true;
 }
 

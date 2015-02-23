@@ -302,6 +302,16 @@ class broker : public extend<local_actor>::
    */
   void close(accept_handle handle);
 
+  /**
+   * Checks whether a connection for `handle` exists.
+   */
+  bool valid(connection_handle handle);
+
+  /**
+   * Checks whether an acceptor for `handle` exists.
+   */
+  bool valid(accept_handle handle);
+
   class functor_based;
 
   void launch(bool is_hidden, bool, execution_unit*);

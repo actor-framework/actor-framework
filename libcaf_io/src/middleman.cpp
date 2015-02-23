@@ -160,7 +160,8 @@ class middleman_actor_impl : public middleman_actor_base::base {
   ~middleman_actor_impl();
 
   void on_exit() {
-    m_pending_requests.clear();
+    m_pending_gets.clear();
+    m_pending_deletes.clear();
     m_broker = invalid_actor;
   }
 
@@ -172,6 +173,8 @@ class middleman_actor_impl : public middleman_actor_base::base {
   using del_op_result = either<ok_atom>::or_else<error_atom, std::string>;
 
   using del_op_promise = typed_response_promise<del_op_result>;
+
+  using map_type = std::map<int64_t, response_promise>;
 
   middleman_actor_base::behavior_type make_behavior() {
     return {
@@ -203,31 +206,38 @@ class middleman_actor_impl : public middleman_actor_base::base {
         return del(whom, port);
       },
       [=](ok_atom ok, int64_t request_id) {
-        auto i = m_pending_requests.find(request_id);
-        if (i == m_pending_requests.end()) {
+        // not legal for get results
+        CAF_REQUIRE(m_pending_gets.count(request_id) == 0);
+        auto i = m_pending_deletes.find(request_id);
+        if (i == m_pending_deletes.end()) {
           CAF_LOG_ERROR("invalid request id: " << request_id);
           return;
         }
         i->second.deliver(del_op_result{ok}.value);
-        m_pending_requests.erase(i);
+        m_pending_deletes.erase(i);
       },
       [=](ok_atom ok, int64_t request_id, actor_addr result) {
-        auto i = m_pending_requests.find(request_id);
-        if (i == m_pending_requests.end()) {
+        // not legal for delete results
+        CAF_REQUIRE(m_pending_deletes.count(request_id) == 0);
+        auto i = m_pending_gets.find(request_id);
+        if (i == m_pending_gets.end()) {
           CAF_LOG_ERROR("invalid request id: " << request_id);
           return;
         }
         i->second.deliver(get_op_result{ok, result}.value);
-        m_pending_requests.erase(i);
+        m_pending_gets.erase(i);
       },
       [=](error_atom error, int64_t request_id, std::string& reason) {
-        auto i = m_pending_requests.find(request_id);
-        if (i == m_pending_requests.end()) {
+        auto fget = [&](response_promise& rp) {
+          rp.deliver(get_op_result{error, std::move(reason)}.value);
+        };
+        auto fdel = [&](response_promise& rp) {
+          rp.deliver(del_op_result{error, std::move(reason)}.value);
+        };
+        if (!finalize_request(m_pending_gets, request_id, fget)
+            && !finalize_request(m_pending_deletes, request_id, fdel)) {
           CAF_LOG_ERROR("invalid request id: " << request_id);
-          return;
         }
-        i->second.deliver(get_op_result{error, std::move(reason)}.value);
-        m_pending_requests.erase(i);
       }
     };
   }
@@ -248,13 +258,13 @@ class middleman_actor_impl : public middleman_actor_base::base {
       actual_port = res.second;
     }
     catch (bind_failure& err) {
-      return {error_atom{}, std::string("bind_failure: ") + err.what()};
+      return {error_atom::value, std::string("bind_failure: ") + err.what()};
     }
     catch (network_error& err) {
-      return {error_atom{}, std::string("network_error: ") + err.what()};
+      return {error_atom::value, std::string("network_error: ") + err.what()};
     }
-    send(m_broker, put_atom{}, hdl, whom, actual_port);
-    return {ok_atom{}, actual_port};
+    send(m_broker, put_atom::value, hdl, whom, actual_port);
+    return {ok_atom::value, actual_port};
   }
 
   get_op_promise get(const std::string& hostname, uint16_t port,
@@ -263,15 +273,15 @@ class middleman_actor_impl : public middleman_actor_base::base {
     try {
       auto hdl = m_parent.backend().new_tcp_scribe(hostname, port);
       auto req_id = m_next_request_id++;
-      send(m_broker, get_atom{}, hdl, req_id,
+      send(m_broker, get_atom::value, hdl, req_id,
            actor{this}, std::move(expected_ifs));
-      m_pending_requests.insert(std::make_pair(req_id, result));
+      m_pending_gets.insert(std::make_pair(req_id, result));
     }
     catch (network_error& err) {
       // fullfil promise immediately
       std::string msg = "network_error: ";
       msg += err.what();
-      result.deliver(get_op_result{error_atom{}, std::move(msg)}.value);
+      result.deliver(get_op_result{error_atom::value, std::move(msg)}.value);
     }
     return result;
   }
@@ -280,14 +290,26 @@ class middleman_actor_impl : public middleman_actor_base::base {
     auto result = make_response_promise();
     auto req_id = m_next_request_id++;
     send(m_broker, delete_atom::value, req_id, whom, port);
-    m_pending_requests.insert(std::make_pair(req_id, result));
+    m_pending_deletes.insert(std::make_pair(req_id, result));
     return result;
+  }
+
+  template <class F>
+  bool finalize_request(map_type& storage, uint64_t req_id, F fun) {
+    auto i = storage.find(req_id);
+    if (i == storage.end()) {
+      return false;
+    }
+    fun(i->second);
+    storage.erase(i);
+    return true;
   }
 
   actor m_broker;
   middleman& m_parent;
   int64_t m_next_request_id;
-  std::map<int64_t, response_promise> m_pending_requests;
+  map_type m_pending_gets;
+  map_type m_pending_deletes;
 };
 
 middleman_actor_impl::~middleman_actor_impl() {
