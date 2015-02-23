@@ -129,8 +129,8 @@ class worker : public execution_unit {
       m_policy.before_resume(this, job);
       switch (job->resume(this, m_max_throughput)) {
         case resumable::resume_later: {
-          m_policy.resume_job_later(this, job);
           m_policy.after_resume(this, job);
+          m_policy.resume_job_later(this, job);
           break;
         }
         case resumable::done: {
