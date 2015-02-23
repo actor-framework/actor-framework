@@ -57,6 +57,14 @@ uint16_t publish_at_some_port(uint16_t first_port, actor whom) {
   }
 }
 
+actor invalid_unpublish(uint16_t port) {
+  auto d = spawn<dummy>();
+  io::unpublish(d, port);
+  anon_send_exit(d, exit_reason::user_shutdown);
+  d = invalid_actor;
+  return io::remote_actor("127.0.0.1", port);
+}
+
 } // namespace <anonymous>
 
 int main() {
@@ -64,6 +72,7 @@ int main() {
   auto d = spawn<dummy>();
   auto port = publish_at_some_port(4242, d);
   std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  CAF_CHECK_EQUAL(invalid_unpublish(port), d);
   io::unpublish(d, port);
   CAF_CHECKPOINT();
   // must fail now
@@ -77,6 +86,6 @@ int main() {
   d = invalid_actor;
   await_all_actors_done();
   shutdown();
-  CAF_CHECK_EQUAL(s_dtor_called.load(), 1);
+  CAF_CHECK_EQUAL(s_dtor_called.load(), 2);
   return CAF_TEST_RESULT();
 }
