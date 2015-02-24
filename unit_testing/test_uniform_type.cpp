@@ -159,6 +159,8 @@ int main() {
     {"double", tnr<double>()},
     {"@ldouble", tnr<long double>()},
     // default announced types
+    {"@<>", 0},
+    {"@<>+@atom", 0},
     {"@unit", tnr<unit_t>()},
     {"@actor", tnr<actor>()},
     {"@addr", tnr<actor_addr>()},
@@ -180,6 +182,9 @@ int main() {
     {"@strvec", tnr<std::vector<std::string>>()},
     {"@strset", tnr<std::set<std::string>>()}
   };
+  auto sptr = detail::singletons::get_uniform_type_info_map();
+  sptr->by_uniform_name("@<>");
+  sptr->by_uniform_name("@<>+@atom");
   CAF_CHECKPOINT();
   if (check_types(expected)) {
     CAF_CHECKPOINT();
