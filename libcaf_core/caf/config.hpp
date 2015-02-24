@@ -114,6 +114,9 @@
 #else
 #  error Platform and/or compiler not supportet
 #endif
+#if defined(CAF_MACOS) || defined(CAF_LINUX) || defined(CAF_BSD)
+#  define CAF_POSIX
+#endif
 
 #include <cstdio>
 #include <cstdlib>
