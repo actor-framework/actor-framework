@@ -81,7 +81,6 @@ void singletons::stop_singletons() {
   stop(s_group_manager);
   CAF_LOGF_DEBUG("stop type info map");
   stop(s_uniform_type_info_map);
-  stop(s_logger);
   stop(s_node_id);
   // dispose singletons, i.e., release memory
   dispose(s_scheduling_coordinator);
@@ -91,6 +90,8 @@ void singletons::stop_singletons() {
   dispose(s_actor_registry);
   dispose(s_group_manager);
   dispose(s_uniform_type_info_map);
+  // final steps
+  stop(s_logger);
   dispose(s_logger);
   dispose(s_node_id);
 }

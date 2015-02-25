@@ -204,7 +204,7 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 #define CAF_PRINT4(arg0, arg1, arg2, arg3)
 #else
 #define CAF_PRINT4(lvlname, classname, funname, msg)                           \
-  caf::detail::logging::trace_helper {                                         \
+  caf::detail::logging::trace_helper caf_log_trace_temporary_object {          \
     classname, funname, __FILE__, __LINE__,                                    \
       (caf::detail::oss_wr{} << msg).str()                                     \
   }

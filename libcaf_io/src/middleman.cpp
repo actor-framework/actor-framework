@@ -160,6 +160,7 @@ class middleman_actor_impl : public middleman_actor_base::base {
   ~middleman_actor_impl();
 
   void on_exit() {
+    CAF_LOG_TRACE("");
     m_pending_gets.clear();
     m_pending_deletes.clear();
     m_broker = invalid_actor;
@@ -246,6 +247,8 @@ class middleman_actor_impl : public middleman_actor_base::base {
   either<ok_atom, uint16_t>::or_else<error_atom, std::string>
   put(const actor_addr& whom, uint16_t port,
       const char* in = nullptr, bool reuse_addr = false) {
+    CAF_LOG_TRACE(CAF_TSARG(whom) << ", " << CAF_ARG(port)
+                  << ", " << CAF_ARG(reuse_addr));
     accept_handle hdl;
     uint16_t actual_port;
     try {
@@ -269,6 +272,7 @@ class middleman_actor_impl : public middleman_actor_base::base {
 
   get_op_promise get(const std::string& hostname, uint16_t port,
                      std::set<std::string> expected_ifs) {
+    CAF_LOG_TRACE(CAF_ARG(hostname) << ", " << CAF_ARG(port));
     auto result = make_response_promise();
     try {
       auto hdl = m_parent.backend().new_tcp_scribe(hostname, port);
@@ -313,10 +317,11 @@ class middleman_actor_impl : public middleman_actor_base::base {
 };
 
 middleman_actor_impl::~middleman_actor_impl() {
-  // nop
+  CAF_LOG_TRACE("");
 }
 
 middleman* middleman::instance() {
+  CAF_LOGF_TRACE("");
   auto sid = detail::singletons::middleman_plugin_id;
   auto fac = [] { return new middleman; };
   auto res = detail::singletons::get_plugin_singleton(sid, fac);

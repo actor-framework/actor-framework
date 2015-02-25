@@ -32,7 +32,7 @@ namespace io {
 namespace network {
 
 multiplexer::~multiplexer() {
-  // nop
+  CAF_LOG_TRACE("");
 }
 
 boost::asio::io_service* pimpl() {
@@ -40,6 +40,7 @@ boost::asio::io_service* pimpl() {
 }
 
 multiplexer_ptr multiplexer::make() {
+  CAF_LOGF_TRACE("");
   return multiplexer_ptr{new caf_multiplexer_impl};
 }
 

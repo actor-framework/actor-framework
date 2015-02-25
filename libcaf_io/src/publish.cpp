@@ -24,6 +24,7 @@
 #include "caf/scoped_actor.hpp"
 #include "caf/abstract_actor.hpp"
 
+#include "caf/detail/logging.hpp"
 #include "caf/detail/singletons.hpp"
 #include "caf/detail/actor_registry.hpp"
 
@@ -34,7 +35,13 @@ namespace caf {
 namespace io {
 
 uint16_t publish_impl(abstract_actor_ptr whom, uint16_t port,
-                      const char* in, bool reuse_addr) {
+                      const char* in, bool reuse) {
+  if (whom == nullptr) {
+    throw std::invalid_argument("cannot publish an invalid actor");
+  }
+  CAF_LOGF_TRACE("whom = " << to_string(whom->address())
+                 << ", " << CAF_ARG(port) << ", in = " << (in ? in : "")
+                 << ", " << CAF_ARG(reuse));
   std::string str;
   if (in != nullptr) {
     str = in;
@@ -42,7 +49,7 @@ uint16_t publish_impl(abstract_actor_ptr whom, uint16_t port,
   auto mm = get_middleman_actor();
   scoped_actor self;
   uint16_t result;
-  self->sync_send(mm, put_atom{}, whom->address(), port, str, reuse_addr).await(
+  self->sync_send(mm, put_atom::value, whom->address(), port, str, reuse).await(
     [&](ok_atom, uint16_t res) {
       result = res;
     },

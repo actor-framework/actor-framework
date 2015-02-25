@@ -75,7 +75,7 @@ basp_broker::basp_broker(middleman& pref) : broker(pref), m_namespace(*this) {
 }
 
 basp_broker::~basp_broker() {
-  // nop
+  CAF_LOG_TRACE("");
 }
 
 behavior basp_broker::make_behavior() {
@@ -168,18 +168,32 @@ behavior basp_broker::make_behavior() {
       erase_proxy(nid, aid);
     },
     // received from middleman actor
-    [=](put_atom, accept_handle hdl,
-        const actor_addr& whom, uint16_t port) {
-      assign_tcp_doorman(hdl);
+    [=](put_atom, accept_handle hdl, const actor_addr& whom, uint16_t port) {
+      CAF_LOGM_TRACE("make_behavior$put_atom",
+                     CAF_ARG(hdl.id()) << ", "<< CAF_TSARG(whom)
+                     << ", " << CAF_ARG(port));
+      if (hdl.invalid() || whom == invalid_actor_addr) {
+        return;
+      }
+      try {
+        assign_tcp_doorman(hdl);
+      }
+      catch (...) {
+        CAF_LOG_DEBUG("failed to assign doorman from handle");
+        return;
+      }
       add_published_actor(hdl, actor_cast<abstract_actor_ptr>(whom), port);
       parent().notify<hook::actor_published>(whom, port);
     },
     [=](get_atom, connection_handle hdl, int64_t request_id,
         actor client, std::set<std::string>& expected_ifs) {
+      CAF_LOGM_TRACE("make_behavior$get_atom",
+                     CAF_ARG(hdl.id()) << ", " << CAF_ARG(request_id)
+                     << ", " << CAF_TSARG(client));
       try {
         assign_tcp_scribe(hdl);
       }
-      catch (std::exception&) {
+      catch (...) {
         CAF_LOG_DEBUG("failed to assign scribe from handle");
         send(client, error_atom::value, request_id,
              "failed to assign scribe from handle");
@@ -197,6 +211,9 @@ behavior basp_broker::make_behavior() {
     },
     [=](delete_atom, int64_t request_id, const actor_addr& whom, uint16_t port)
     -> message {
+      CAF_LOGM_TRACE("make_behavior$delete_atom",
+                     CAF_ARG(request_id) << ", " << CAF_TSARG(whom)
+                     << ", " << CAF_ARG(port));
       if (whom == invalid_actor_addr) {
         return make_message(error_atom::value, request_id,
                             "whom == invalid_actor_addr");
@@ -686,6 +703,7 @@ actor_proxy_ptr basp_broker::make_proxy(const node_id& nid, actor_id aid) {
 }
 
 void basp_broker::on_exit() {
+  CAF_LOG_TRACE("");
   m_ctx.clear();
   m_acceptors.clear();
   m_open_ports.clear();

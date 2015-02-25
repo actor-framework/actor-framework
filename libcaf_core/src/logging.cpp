@@ -30,6 +30,13 @@
 #include <sys/types.h>
 #endif
 
+#include "caf/config.hpp"
+
+#if defined(CAF_LINUX) || defined(CAF_MACOS)
+# include <cxxabi.h>
+#endif
+
+
 #include "caf/string_algorithms.hpp"
 
 #include "caf/all.hpp"
@@ -108,7 +115,33 @@ class logging_impl : public logging {
   void log(const char* level, const char* c_class_name,
            const char* function_name, const char* c_full_file_name,
            int line_num, const std::string& msg) override {
+#   if defined(CAF_LINUX) || defined(CAF_MACOS)
+    int stat = 0;
+    std::unique_ptr<char, decltype(free)*> real_class_name{nullptr, free};
+    auto tmp = abi::__cxa_demangle(c_class_name, 0, 0, &stat);
+    real_class_name.reset(tmp);
+    std::string class_name = stat == 0 ? real_class_name.get() : c_class_name;
+    replace_all(class_name, " ", "");
+    replace_all(class_name, "::", ".");
+    replace_all(class_name, "(anonymousnamespace)", "$anon$");
+    real_class_name.reset();
+    // hide CAF magic in logs
+    auto strip_magic = [&](const char* prefix_begin, const char* prefix_end) {
+      auto last = class_name.end();
+      auto i = std::search(class_name.begin(), last, prefix_begin, prefix_end);
+      auto e = std::find(i, last, ',');
+      if (i != e) {
+        std::string substr(i + (prefix_end - prefix_begin), e);
+        class_name.swap(substr);
+      }
+    };
+    char prefix1[] = "caf.detail.proper_actor<";
+    char prefix2[] = "caf.detail.embedded<";
+    strip_magic(prefix1, prefix1 + (sizeof(prefix1) - 1));
+    strip_magic(prefix2, prefix2 + (sizeof(prefix2) - 1));
+#   else
     std::string class_name = c_class_name;
+#   endif
     replace_all(class_name, "::", ".");
     replace_all(class_name, "(anonymous namespace)", "$anon$");
     std::string file_name;

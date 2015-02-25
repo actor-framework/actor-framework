@@ -582,24 +582,33 @@ void default_multiplexer::wr_dispatch_request(runnable* ptr) {
   intptr_t ptrval = reinterpret_cast<intptr_t>(ptr);
   // on windows, we actually have sockets, otherwise we have file handles
 # ifdef CAF_WINDOWS
-    ::send(m_pipe.second, reinterpret_cast<socket_send_ptr>(&ptrval),
-           sizeof(ptrval), no_sigpipe_flag);
+    auto res = ::send(m_pipe.second, reinterpret_cast<socket_send_ptr>(&ptrval),
+                      sizeof(ptrval), no_sigpipe_flag);
 # else
-    auto unused = ::write(m_pipe.second, &ptrval, sizeof(ptrval));
-    static_cast<void>(unused);
+    auto res = ::write(m_pipe.second, &ptrval, sizeof(ptrval));
 # endif
+  if (res <= 0) {
+    // pipe closed, discard runnable
+    ptr->request_deletion();
+  } else if (static_cast<size_t>(res) < sizeof(ptrval)) {
+    // must not happen: wrote invalid pointer to pipe
+    std::cerr << "[CAF] Fatal error: wrote invalid data to pipe" << std::endl;
+    abort();
+  }
 }
 
 default_multiplexer::runnable* default_multiplexer::rd_dispatch_request() {
   intptr_t ptrval;
   // on windows, we actually have sockets, otherwise we have file handles
 # ifdef CAF_WINDOWS
-    ::recv(m_pipe.first, reinterpret_cast<socket_recv_ptr>(&ptrval),
-           sizeof(ptrval), 0);
+    auto res = recv(m_pipe.first, reinterpret_cast<socket_recv_ptr>(&ptrval),
+                    sizeof(ptrval), 0);
 # else
-    auto unused = ::read(m_pipe.first, &ptrval, sizeof(ptrval));
-    static_cast<void>(unused);
+    auto res = read(m_pipe.first, &ptrval, sizeof(ptrval));
 # endif
+  if (res != sizeof(ptrval)) {
+    return nullptr;
+  }
   return reinterpret_cast<runnable*>(ptrval);;
 }
 
@@ -699,8 +708,16 @@ default_multiplexer::~default_multiplexer() {
   if (m_epollfd != invalid_native_socket) {
     closesocket(m_epollfd);
   }
-  closesocket(m_pipe.first);
+  // close write handle first
   closesocket(m_pipe.second);
+  // flush pipe before closing it
+  nonblocking(m_pipe.first, true);
+  auto ptr = rd_dispatch_request();
+  while (ptr) {
+    ptr->request_deletion();
+    ptr = rd_dispatch_request();
+  }
+  closesocket(m_pipe.first);
 # ifdef CAF_WINDOWS
     WSACleanup();
 # endif

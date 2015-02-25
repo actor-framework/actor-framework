@@ -36,7 +36,7 @@ namespace caf {
 namespace io {
 
 broker::servant::~servant() {
-  // nop
+  CAF_LOG_TRACE("");
 }
 
 broker::servant::servant(broker* ptr) : m_disconnected(false), m_broker(ptr) {

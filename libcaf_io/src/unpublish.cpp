@@ -29,17 +29,17 @@
 namespace caf {
 namespace io {
 
-void unpublish_impl(const actor_addr& whom, uint16_t port, bool block_caller) {
+void unpublish_impl(const actor_addr& whom, uint16_t port, bool blocking) {
+  CAF_LOGF_TRACE(CAF_TSARG(whom) << ", " << CAF_ARG(port) << CAF_ARG(blocking));
   auto mm = get_middleman_actor();
-  if (block_caller) {
+  if (blocking) {
     scoped_actor self;
     self->sync_send(mm, delete_atom::value, whom, port).await(
       [](ok_atom) {
         // ok, basp_broker is done
       },
-      [&](error_atom, const std::string& err) {
+      [](error_atom, const std::string&) {
         // ok, basp_broker is done
-        CAF_LOGF_ERROR(err << ", " << CAF_ARG(port) << ", " << CAF_TSARG(whom));
       }
     );
   } else {

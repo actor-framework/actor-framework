@@ -227,10 +227,8 @@ void abstract_actor::cleanup(uint32_t reason) {
     m_exit_reason = reason;
     m_attachables_head.swap(head);
   }
-  CAF_LOG_INFO_IF(!is_remote(), "cleanup actor with ID "
-                                << m_id << "; exit reason = "
-                                << reason << ", class = "
-                                << CAF_CLASS_NAME);
+  CAF_LOG_INFO_IF(!is_remote(), "cleanup actor with ID " << m_id
+                                << "; exit reason = " << reason);
   // send exit messages
   for (attachable* i = head.get(); i != nullptr; i = i->next.get()) {
     i->actor_exited(this, reason);
