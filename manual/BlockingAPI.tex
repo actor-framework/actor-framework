@@ -60,7 +60,7 @@ receive_for(i, 10) (
 size_t received = 0;
 do {
   receive (
-    others() >> [&]() {
+    others >> [&]() {
       ++received;
     }
   );
@@ -69,7 +69,7 @@ do {
 \begin{lstlisting}
 size_t received = 0;
 do_receive (
-  others() >> [&]() {
+  others >> [&]() {
     ++received;
   }
 ).until([&] { return received >= 10; });
