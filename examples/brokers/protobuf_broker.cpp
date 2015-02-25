@@ -79,11 +79,11 @@ void protobuf_io(broker* self, connection_handle hdl, const actor& buddy) {
         self->quit(dm.reason);
       }
     },
-    others() >> [=] {
-      cout << "unexpected: " << to_string(self->last_dequeued()) << endl;
+    others >> [=] {
+      cout << "unexpected: " << to_string(self->current_message()) << endl;
     }
   };
-  message_handler await_protobuf_data {
+  auto await_protobuf_data = message_handler {
     [=](const new_data_msg& msg) {
       org::libcppa::PingOrPong p;
       p.ParseFromArray(msg.buf.data(), static_cast<int>(msg.buf.size()));
@@ -100,10 +100,9 @@ void protobuf_io(broker* self, connection_handle hdl, const actor& buddy) {
       // receive next length prefix
       self->configure_read(hdl, receive_policy::exactly(sizeof(int32_t)));
       self->unbecome();
-    },
-    default_bhvr
-  };
-  message_handler await_length_prefix {
+    }
+  }.or_else(default_bhvr);
+  auto await_length_prefix = message_handler {
     [=](const new_data_msg& msg) {
       int32_t num_bytes;
       memcpy(&num_bytes, msg.buf.data(), sizeof(int32_t));
@@ -117,9 +116,8 @@ void protobuf_io(broker* self, connection_handle hdl, const actor& buddy) {
       auto nb = static_cast<size_t>(num_bytes);
       self->configure_read(hdl, receive_policy::exactly(nb));
       self->become(keep_behavior, await_protobuf_data);
-    },
-    default_bhvr
-  };
+    }
+  }.or_else(default_bhvr);
   // initial setup
   self->configure_read(hdl, receive_policy::exactly(sizeof(int32_t)));
   self->become(await_length_prefix);
@@ -135,8 +133,8 @@ behavior server(broker* self, actor buddy) {
       // only accept 1 connection in our example
       self->quit();
     },
-    others() >> [=] {
-      cout << "unexpected: " << to_string(self->last_dequeued()) << endl;
+    others >> [=] {
+      cout << "unexpected: " << to_string(self->current_message()) << endl;
     }
   };
 }
@@ -161,7 +159,7 @@ int main(int argc, char** argv) {
       print_on_exit(ping_actor, "ping");
       send_as(io_actor, ping_actor, atom("kickoff"), io_actor);
     },
-    others() >> [] {
+    others >> [] {
       cerr << "use with eihter '-s PORT' as server or "
           "'-c HOST PORT' as client"
            << endl;
