@@ -1,4 +1,7 @@
+#include <mutex>
 #include <atomic>
+#include <thread>
+#include <condition_variable>
 
 #include "test.hpp"
 #include "caf/all.hpp"
@@ -8,9 +11,45 @@ using namespace std;
 using namespace caf;
 
 namespace {
+
 atomic<size_t> s_error_count{0};
 std::mutex s_stdout_mtx;
-}
+
+class watchdog {
+ public:
+  watchdog() {
+    m_thread = thread([&] {
+      auto tp = chrono::high_resolution_clock::now() + chrono::seconds(10);
+      unique_lock<mutex> guard{m_mtx};
+      while (!m_canceled
+             && m_cv.wait_until(guard, tp) != cv_status::timeout) {
+        // spin
+      }
+      if (!m_canceled) {
+        std::lock_guard<std::mutex> io_guard{s_stdout_mtx};
+        cerr << "WATCHDOG: unit test did finish within 10s, abort" << endl;
+        abort();
+      }
+    });
+  }
+  ~watchdog() {
+    { // lifetime scope of guard
+      std::lock_guard<std::mutex> guard{m_mtx};
+      m_canceled = true;
+      m_cv.notify_all();
+    }
+    m_thread.join();
+  }
+
+  volatile bool m_canceled = false;
+  std::mutex m_mtx;
+  std::condition_variable m_cv;
+  std::thread m_thread;
+};
+
+watchdog* s_watchdog;
+
+} // namespace <anonymous>
 
 std::mutex& caf_stdout_mtx() {
   return s_stdout_mtx;
@@ -22,6 +61,14 @@ size_t caf_error_count() {
 
 void caf_inc_error_count() {
   ++s_error_count;
+}
+
+void caf_launch_watchdog() {
+  s_watchdog = new watchdog;
+}
+
+void caf_cancel_watchdog() {
+  delete s_watchdog;
 }
 
 string caf_fill4(size_t value) {

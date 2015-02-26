@@ -73,6 +73,7 @@ uint16_t run_server() {
 }
 
 int main(int argc, char** argv) {
+  CAF_TEST(test_typed_remote_actor)
   announce<ping>("ping", &ping::value);
   announce<pong>("pong", &pong::value);
   message_builder{argv + 1, argv + argc}.apply({

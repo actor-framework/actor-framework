@@ -79,7 +79,7 @@ behavior tester(event_based_actor* self, const actor& aut) {
   };
 }
 
-#define BREAK_ON_ERROR() if (CAF_TEST_RESULT() > 0) return
+#define BREAK_ON_ERROR() if (caf_error_count() > 0) return
 
 template <spawn_options O1, spawn_options O2>
 void run() {

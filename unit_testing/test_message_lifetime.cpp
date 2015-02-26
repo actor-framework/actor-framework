@@ -100,7 +100,7 @@ void test_message_lifetime_in_scoped_actor() {
 template <spawn_options Os>
 void test_message_lifetime() {
   test_message_lifetime_in_scoped_actor();
-  if (CAF_TEST_RESULT() != 0) {
+  if (caf_error_count() != 0) {
     return;
   }
   // put some preassure on the scheduler (check for thread safety)
