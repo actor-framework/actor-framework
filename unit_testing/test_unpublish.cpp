@@ -76,7 +76,7 @@ int main() {
   CAF_TEST(test_unpublish);
   test_unpublish();
   await_all_actors_done();
-  shutdown();
   CAF_CHECK_EQUAL(s_dtor_called.load(), 2);
+  shutdown();
   return CAF_TEST_RESULT();
 }
