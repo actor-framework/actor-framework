@@ -58,7 +58,12 @@ class my_class {
    * Does something (maybe).
    */
   void do_something();
-
+  
+  /**
+   * Does something else.
+   */
+  void do_something_else();
+  
  private:
   std::string m_name;
 };
@@ -107,6 +112,19 @@ void my_class::do_something() {
               << "... Do you really think I'm willing to do something "
                  "for you after insulting me like that?"
               << std::endl;
+  }
+}
+
+void::my_class::do_something_else() {
+  switch (default_name[0]) { 
+    case 'a':
+      // handle a
+      break;
+    case 'b':
+      // handle b
+      break;
+    default:
+      handle_default();
   }
 }
 
