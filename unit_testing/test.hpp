@@ -40,7 +40,6 @@ void caf_unexpected_timeout(const char* file, size_t line);
   caf_strip_path(fname) << ":" << caf_fill4(line) << " " << message
 
 #define CAF_PRINTC(filename, line, message)                                    \
-  CAF_LOGF_INFO(CAF_STREAMIFY(filename, line, message));                       \
   {                                                                            \
     std::lock_guard<std::mutex> guard{caf_stdout_mtx()};                       \
     std::cout << CAF_STREAMIFY(filename, line, message) << std::endl;          \
@@ -49,22 +48,12 @@ void caf_unexpected_timeout(const char* file, size_t line);
 
 #define CAF_PRINT(message) CAF_PRINTC(__FILE__, __LINE__, message)
 
-#if defined(CAF_LOG_LEVEL) && CAF_LOG_LEVEL > 1
-#  define CAF_PRINTERRC(fname, line, msg)                                      \
-    CAF_LOGF_ERROR(CAF_STREAMIFY(fname, line, msg));                           \
-    {                                                                          \
-      std::lock_guard<std::mutex> guard{caf_stdout_mtx()};                     \
-      std::cerr << "ERROR: " << CAF_STREAMIFY(fname, line, msg) << std::endl;  \
-    }                                                                          \
-    caf_inc_error_count()
-#else
-#  define CAF_PRINTERRC(fname, line, msg)                                      \
-    {                                                                          \
-      std::lock_guard<std::mutex> guard{caf_stdout_mtx()};                     \
-      std::cerr << "ERROR: " << CAF_STREAMIFY(fname, line, msg) << std::endl;  \
-    }                                                                          \
-    caf_inc_error_count();
-#endif
+#define CAF_PRINTERRC(fname, line, msg)                                        \
+  {                                                                            \
+    std::lock_guard<std::mutex> guard{caf_stdout_mtx()};                       \
+    std::cerr << "ERROR: " << CAF_STREAMIFY(fname, line, msg) << std::endl;    \
+  }                                                                            \
+  caf_inc_error_count();
 
 #define CAF_PRINTERR(message) CAF_PRINTERRC(__FILE__, __LINE__, message)
 
