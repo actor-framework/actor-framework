@@ -76,7 +76,14 @@ int main() {
   CAF_TEST(test_unpublish);
   test_unpublish();
   await_all_actors_done();
-  CAF_CHECK_EQUAL(s_dtor_called.load(), 2);
   shutdown();
+  // we cannot use CAF_CHECK_EQUAL here because it will also log
+  // an error (logger has been destroyed in shutdown)
+  auto dtors_called = s_dtor_called.load();
+  if (s_dtor_called.load() != 2) {
+    std::cerr << "ERROR: " << caf_strip_path(__FILE__) << ":" << __LINE__
+              << " expected value: 2, found: " << dtors_called << std::endl;
+    caf_inc_error_count();
+  }
   return CAF_TEST_RESULT();
 }
