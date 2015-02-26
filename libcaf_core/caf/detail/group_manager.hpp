@@ -32,11 +32,22 @@
 namespace caf {
 namespace detail {
 
-class group_manager : public singleton_mixin<group_manager> {
-
-  friend class singleton_mixin<group_manager>;
-
+class group_manager {
  public:
+
+  inline void dispose() {
+    delete this;
+  }
+
+  static inline group_manager* create_singleton() {
+    return new group_manager;
+  }
+
+  void stop();
+
+  inline void initialize() {
+    // nop
+  }
 
   ~group_manager();
 
@@ -50,14 +61,12 @@ class group_manager : public singleton_mixin<group_manager> {
   abstract_group::module_ptr get_module(const std::string& module_name);
 
  private:
-
   using modules_map = std::map<std::string, abstract_group::unique_module_ptr>;
-
-  modules_map m_mmap;
-  std::mutex m_mmap_mtx;
 
   group_manager();
 
+  modules_map m_mmap;
+  std::mutex m_mmap_mtx;
 };
 
 } // namespace detail

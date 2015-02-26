@@ -69,6 +69,8 @@ std::mutex& singletons::get_plugin_mutex() {
 
 void singletons::stop_singletons() {
   // stop singletons, i.e., make sure no background threads/actors are running
+  CAF_LOGF_DEBUG("stop group manager");
+  stop(s_group_manager);
   CAF_LOGF_DEBUG("stop scheduler");
   stop(s_scheduling_coordinator);
   CAF_LOGF_DEBUG("stop plugins");
@@ -77,8 +79,6 @@ void singletons::stop_singletons() {
   }
   CAF_LOGF_DEBUG("stop actor registry");
   stop(s_actor_registry);
-  CAF_LOGF_DEBUG("stop group manager");
-  stop(s_group_manager);
   CAF_LOGF_DEBUG("stop type info map");
   stop(s_uniform_type_info_map);
   stop(s_node_id);

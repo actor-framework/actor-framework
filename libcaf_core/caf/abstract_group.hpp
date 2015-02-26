@@ -109,6 +109,11 @@ class abstract_group : public abstract_channel {
     virtual ~module();
 
     /**
+     * Stops all groups from this module.
+     */
+    virtual void stop() = 0;
+
+    /**
      * Returns the name of this module implementation.
      * @threadsafe
      */
@@ -148,6 +153,11 @@ class abstract_group : public abstract_channel {
    * Subscribes `who` to this group and returns a subscription object.
    */
   virtual attachable_ptr subscribe(const actor_addr& who) = 0;
+
+  /**
+   * Stops any background actors or threads and IO handles.
+   */
+  virtual void stop() = 0;
 
  protected:
   abstract_group(module_ptr module, std::string group_id);

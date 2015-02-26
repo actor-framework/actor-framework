@@ -51,6 +51,10 @@ abstract_group::module::module(std::string mname) : m_name(std::move(mname)) {
   // nop
 }
 
+void abstract_group::module::stop() {
+  // nop
+}
+
 const std::string& abstract_group::module::name() {
   return m_name;
 }
