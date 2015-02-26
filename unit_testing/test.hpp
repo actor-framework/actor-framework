@@ -141,8 +141,7 @@ void caf_cancel_watchdog();
 
 #define CAF_TEST(testname)                                                     \
   caf_launch_watchdog();                                                       \
-  set_default_test_settings();                                                 \
-  CAF_LOGF_INFO("run unit test " << #testname)
+  set_default_test_settings();
 
 #define CAF_TEST_RESULT()                                                      \
   caf_cancel_watchdog(), ((caf_error_count() == 0) ? 0 : -1)

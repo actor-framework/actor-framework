@@ -214,7 +214,6 @@ void test_sync_send() {
     CAF_FAILURE("received: " << to_string(self->current_message()));
   });
   self->spawn<monitored + blocking_api>([](blocking_actor* s) {
-    CAF_LOGC_TRACE("NONE", "main$sync_failure_test", "id = " << s->id());
     int invocations = 0;
     auto foi = s->spawn<float_or_int, linked>();
     s->send(foi, i_atom::value);

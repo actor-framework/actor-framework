@@ -35,8 +35,6 @@ void reflector(event_based_actor* self) {
 }
 
 void spawn5_server_impl(event_based_actor* self, actor client, group grp) {
-  CAF_LOGF_TRACE(CAF_TARG(client, to_string)
-                 << ", " << CAF_TARG(grp, to_string));
   CAF_CHECK(grp != invalid_group);
   self->spawn_in_group(grp, reflector);
   self->spawn_in_group(grp, reflector);
@@ -76,8 +74,7 @@ void spawn5_server_impl(event_based_actor* self, actor client, group grp) {
                 self->quit(exit_reason::user_defined);
               },
               after(chrono::seconds(2)) >> [=] {
-                CAF_UNEXPECTED_TOUT();
-                CAF_LOGF_ERROR("did only receive " << *downs << " down messages");
+                CAF_PRINTERR("did only receive " << *downs << " down messages");
                 self->quit(exit_reason::user_defined);
               }
             );
@@ -85,8 +82,6 @@ void spawn5_server_impl(event_based_actor* self, actor client, group grp) {
         },
         after(std::chrono::seconds(2)) >> [=] {
           CAF_UNEXPECTED_TOUT();
-          CAF_LOGF_ERROR("did only receive " << *replies
-                         << " responses to 'Hello reflectors!'");
           self->quit(exit_reason::user_defined);
         }
       );
@@ -199,7 +194,6 @@ class client : public event_based_actor {
     if (i == 100)
       test_group_comm();
     else {
-      CAF_LOG_DEBUG("send message nr. " << (i + 1));
       sync_send(m_server, atom("foo"), atom("bar"), i)
         .then(on(atom("foo"), atom("bar"), i) >> [=] {
            send_foobars(i + 1);
@@ -348,7 +342,6 @@ void test_remote_actor(const char* app_path, bool run_remote_actor) {
   auto port2 = io::publish(serv, 0, "127.0.0.1");
   CAF_CHECK(port2 > 0);
   CAF_PRINT("second publish succeeded on port " << port2);
-  CAF_LOGF_INFO("running on port " << port2);
   // publish local groups as well
   auto gport = io::publish_local_groups(0);
   CAF_CHECK(gport > 0);
@@ -396,7 +389,6 @@ int main(int argc, char** argv) {
   message_builder{argv + 1, argv + argc}.apply({
     on("-c", spro<uint16_t>, spro<uint16_t>, spro<uint16_t>)
     >> [](uint16_t p1, uint16_t p2, uint16_t gport) {
-      CAF_LOGF_INFO("run in client mode");
       scoped_actor self;
       auto serv = io::remote_actor("localhost", p1);
       auto serv2 = io::remote_actor("localhost", p2);

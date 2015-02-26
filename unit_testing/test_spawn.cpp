@@ -84,7 +84,6 @@ actor spawn_event_testee2(actor parent) {
       dec_actor_instances();
     }
     behavior wait4timeout(int remaining) {
-      CAF_LOG_TRACE(CAF_ARG(remaining));
       return {
         after(chrono::milliseconds(1)) >> [=] {
           CAF_PRINT(CAF_ARG(remaining));
@@ -218,17 +217,14 @@ testee1::~testee1() {
 }
 
 behavior testee1::make_behavior() {
-  CAF_LOGF_TRACE("");
   return {
     after(chrono::milliseconds(10)) >> [=] {
-      CAF_LOGF_TRACE("");
       unbecome();
     }
   };
 }
 
 string behavior_test(scoped_actor& self, actor et) {
-  CAF_LOGF_TRACE(CAF_TARG(et, to_string));
   string result;
   self->send(et, 1);
   self->send(et, 2);
@@ -245,7 +241,7 @@ string behavior_test(scoped_actor& self, actor et) {
       result = str;
     },
     after(chrono::minutes(1)) >> [&]() {
-      CAF_LOGF_ERROR("actor does not reply");
+      CAF_PRINTERR("actor does not reply");
       throw runtime_error("actor does not reply");
     }
   );

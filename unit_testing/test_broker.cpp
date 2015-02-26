@@ -89,7 +89,6 @@ void peer_fun(broker* self, connection_handle hdl, const actor& buddy) {
   self->configure_read(
     hdl, receive_policy::exactly(sizeof(atom_value) + sizeof(int)));
   auto write = [=](atom_value type, int value) {
-    CAF_LOGF_DEBUG("write: " << value);
     auto& buf = self->wr_buf(hdl);
     auto first = reinterpret_cast<char*>(&type);
     buf.insert(buf.end(), first, first + sizeof(atom_value));

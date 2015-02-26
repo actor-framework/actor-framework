@@ -187,11 +187,15 @@ void test_event_testee() {
   // we expect three 42s
   int i = 0;
   self->receive_for(i, 3)([](int value) { CAF_CHECK_EQUAL(value, 42); });
-  self->receive([&](const string& str) { result = str; },
-          after(chrono::minutes(1)) >> [&]() {
-    CAF_LOGF_ERROR("event_testee does not reply");
-    throw runtime_error("event_testee does not reply");
-  });
+  self->receive(
+    [&](const string& str) {
+      result = str;
+    },
+    after(chrono::minutes(1)) >> [&] {
+      CAF_PRINTERR("event_testee does not reply");
+      throw runtime_error("event_testee does not reply");
+    }
+  );
   self->send_exit(et, exit_reason::user_shutdown);
   self->await_all_other_actors_done();
   CAF_CHECK_EQUAL(result, "wait4int");
