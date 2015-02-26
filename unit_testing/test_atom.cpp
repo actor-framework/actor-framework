@@ -115,5 +115,6 @@ int main() {
     others >> CAF_UNEXPECTED_MSG_CB_REF(self)
   );
   test_typed_atom_interface();
+  shutdown();
   return CAF_TEST_RESULT();
 }

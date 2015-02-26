@@ -49,6 +49,7 @@ int main() {
       CAF_CHECK(!j.empty());
     }
   }
+  shutdown();
   return CAF_TEST_RESULT();
 }
 

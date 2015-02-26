@@ -116,5 +116,6 @@ int main() {
   test_extract3();
   test_extract_opts();
   test_type_token();
+  shutdown();
   return CAF_TEST_RESULT();
 }

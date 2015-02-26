@@ -206,5 +206,6 @@ int main() {
   test_recursive_invoke_from_cache<policy::prioritizing>();
   CAF_PRINT("test_recursive_invoke_from_cache<policy::not_prioritizing>");
   test_recursive_invoke_from_cache<policy::not_prioritizing>();
+  shutdown();
   return CAF_TEST_RESULT();
 }

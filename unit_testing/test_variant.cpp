@@ -25,5 +25,6 @@ int main() {
   CAF_CHECK_EQUAL(apply_visitor(tv, v2), "42");
   v2 = 0.2f;
   CAF_CHECK_EQUAL(apply_visitor(tv, v2), std::to_string(0.2f));
+  shutdown();
   return CAF_TEST_RESULT();
 }

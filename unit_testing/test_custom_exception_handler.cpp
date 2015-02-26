@@ -73,5 +73,6 @@ void test_custom_exception_handler() {
 int main() {
   CAF_TEST(test_custom_exception_handler);
   test_custom_exception_handler();
+  shutdown();
   return CAF_TEST_RESULT();
 }

@@ -73,5 +73,6 @@ void test_serial_reply() {
 int main() {
   CAF_TEST(test_serial_reply);
   test_serial_reply();
+  shutdown();
   return CAF_TEST_RESULT();
 }

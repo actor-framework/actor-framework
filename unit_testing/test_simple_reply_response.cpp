@@ -27,5 +27,6 @@ void test_simple_reply_response() {
 int main() {
   CAF_TEST(test_simple_reply_response);
   test_simple_reply_response();
+  shutdown();
   return CAF_TEST_RESULT();
 }

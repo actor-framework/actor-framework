@@ -75,6 +75,6 @@ int main() {
     CAF_CHECK((tl_is_strict_subset<list_a, list_a>::value));
     CAF_CHECK((tl_is_strict_subset<list_b, list_b>::value));
   }
-
+  shutdown();
   return CAF_TEST_RESULT();
 }

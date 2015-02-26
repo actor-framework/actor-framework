@@ -345,6 +345,6 @@ int main() {
   test_sending_typed_actors_and_down_msg();
   await_all_actors_done();
   CAF_CHECKPOINT();
-  // call it a day
+  shutdown();
   return CAF_TEST_RESULT();
 }

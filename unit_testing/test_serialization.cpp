@@ -307,5 +307,6 @@ int main() {
     }
     catch (std::exception& e) { CAF_FAILURE(to_verbose_string(e)); }
   */
+  shutdown();
   return CAF_TEST_RESULT();
 }

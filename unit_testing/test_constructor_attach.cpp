@@ -56,5 +56,6 @@ void test_constructor_attach() {
 int main() {
   CAF_TEST(test_constructor_attach);
   test_constructor_attach();
+  shutdown();
   return CAF_TEST_RESULT();
 }

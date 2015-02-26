@@ -146,6 +146,10 @@ oss_wr operator<<(oss_wr&& lhs, T rhs) {
 #define CAF_LVL_NAME3() "DEBUG"
 #define CAF_LVL_NAME4() "TRACE"
 
+#define CAF_CONCAT_(LHS, RHS) LHS ## RHS
+#define CAF_CONCAT(LHS, RHS) CAF_CONCAT_(LHS, RHS)
+#define CAF_UNIFYN(NAME) CAF_CONCAT(NAME, __LINE__)
+
 #define CAF_PRINT_ERROR_IMPL(lvlname, classname, funname, message)             \
   {                                                                            \
     std::cerr << "[" << lvlname << "] " << classname << "::" << funname        \
@@ -171,15 +175,15 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
                                               << std::boolalpha                \
                                               << message).str())
 #define CAF_PUSH_AID(aid_arg)                                                  \
-  auto prev_aid_in_scope                                                       \
+  auto CAF_UNIFYN(caf_aid_tmp)                                                 \
     = caf::detail::singletons::get_logger()->set_aid(aid_arg);                 \
-  auto aid_pop_sg = caf::detail::make_scope_guard([=] {                        \
-    caf::detail::singletons::get_logger()->set_aid(prev_aid_in_scope);         \
+  auto CAF_UNIFYN(aid_aid_tmp_guard) = caf::detail::make_scope_guard([=] {     \
+    caf::detail::singletons::get_logger()->set_aid(CAF_UNIFYN(caf_aid_tmp));   \
   })
 #define CAF_PUSH_AID_FROM_PTR(some_ptr)                                        \
-  auto aid_ptr_argument = some_ptr;                                            \
-  CAF_PUSH_AID(aid_ptr_argument ? aid_ptr_argument->id() : 0)
-#define CAF_SET_AID(aid_arg)                          \
+  auto CAF_UNIFYN(caf_aid_ptr) = some_ptr;                                     \
+  CAF_PUSH_AID(CAF_UNIFYN(caf_aid_ptr) ? CAF_UNIFYN(caf_aid_ptr)->id() : 0)
+#define CAF_SET_AID(aid_arg)                                                   \
   caf::detail::singletons::get_logger()->set_aid(aid_arg)
 #endif
 
@@ -204,7 +208,7 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 #define CAF_PRINT4(arg0, arg1, arg2, arg3)
 #else
 #define CAF_PRINT4(lvlname, classname, funname, msg)                           \
-  caf::detail::logging::trace_helper caf_log_trace_temporary_object {          \
+  caf::detail::logging::trace_helper CAF_UNIFYN(caf_log_trace_)  {             \
     classname, funname, __FILE__, __LINE__,                                    \
       (caf::detail::oss_wr{} << msg).str()                                     \
   }

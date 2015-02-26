@@ -406,5 +406,6 @@ int main() {
   test_sync_send();
   await_all_actors_done();
   CAF_CHECKPOINT();
+  shutdown();
   return CAF_TEST_RESULT();
 }

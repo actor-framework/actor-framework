@@ -53,5 +53,6 @@ void test_or_else() {
 int main() {
   CAF_TEST(test_or_else);
   test_or_else();
+  shutdown();
   return CAF_TEST_RESULT();
 }

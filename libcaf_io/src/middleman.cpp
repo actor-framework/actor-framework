@@ -299,7 +299,7 @@ class middleman_actor_impl : public middleman_actor_base::base {
   }
 
   template <class F>
-  bool finalize_request(map_type& storage, uint64_t req_id, F fun) {
+  bool finalize_request(map_type& storage, int64_t req_id, F fun) {
     auto i = storage.find(req_id);
     if (i == storage.end()) {
       return false;

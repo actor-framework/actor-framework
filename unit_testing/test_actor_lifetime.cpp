@@ -109,5 +109,6 @@ void test_actor_lifetime() {
 int main() {
   CAF_TEST(test_actor_lifetime);
   test_actor_lifetime();
+  shutdown();
   return CAF_TEST_RESULT();
 }

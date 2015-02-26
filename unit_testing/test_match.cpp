@@ -179,5 +179,6 @@ int main() {
   test_atoms();
   test_custom_projections();
   test_arg_match();
+  shutdown();
   return CAF_TEST_RESULT();
 }

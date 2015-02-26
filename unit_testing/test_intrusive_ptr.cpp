@@ -123,5 +123,6 @@ int main() {
   }
   CAF_CHECK_EQUAL(class0_instances, 0);
   CAF_CHECK_EQUAL(class1_instances, 0);
+  shutdown();
   return CAF_TEST_RESULT();
 }
