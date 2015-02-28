@@ -216,14 +216,15 @@ class profiled_coordinator : public coordinator<Policy> {
   void remove_job(actor_id job) {
     std::lock_guard<std::mutex> job_guard{m_job_mtx};
     auto j = m_jobs.find(job);
-    CAF_REQUIRE(j != m_jobs.end());
-    if (job != 0) {
-      auto now = clock_type::now().time_since_epoch();
-      auto wallclock = m_system_start + (now - m_clock_start);
-      std::lock_guard<std::mutex> file_guard{m_file_mtx};
-      record(wallclock, "actor", job, j->second);
+    if (j != m_jobs.end()) {
+      if (job != 0) {
+        auto now = clock_type::now().time_since_epoch();
+        auto wallclock = m_system_start + (now - m_clock_start);
+        std::lock_guard<std::mutex> file_guard{m_file_mtx};
+        record(wallclock, "actor", job, j->second);
+      }
+      m_jobs.erase(j);
     }
-    m_jobs.erase(j);
   }
 
   template <class Time, class Label>
