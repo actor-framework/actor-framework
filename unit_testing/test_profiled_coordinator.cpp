@@ -7,5 +7,6 @@ using namespace caf;
 int main() {
   CAF_TEST(test_profiled_coordinator);
   set_scheduler(new scheduler::profiled_coordinator<>{"/dev/null"});
-  return 0;
+  shutdown();
+  return CAF_TEST_RESULT();
 }
