@@ -777,6 +777,10 @@ uniform_type_info_map* uniform_type_info_map::create_singleton() {
   return new utim_impl;
 }
 
+void uniform_type_info_map::stop() {
+  CAF_LOG_TRACE("");
+}
+
 uniform_type_info_map::~uniform_type_info_map() {
   // nop
 }

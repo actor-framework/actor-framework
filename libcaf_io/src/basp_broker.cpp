@@ -82,15 +82,13 @@ behavior basp_broker::make_behavior() {
   return {
     // received from underlying broker implementation
     [=](new_data_msg& msg) {
-      CAF_LOGM_TRACE("make_behavior$new_data_msg",
-                     "handle = " << msg.handle.id());
+      CAF_LOG_TRACE("handle = " << msg.handle.id());
       CAF_REQUIRE(m_ctx.count(msg.handle) > 0);
       new_data(m_ctx[msg.handle], msg.buf);
     },
     // received from underlying broker implementation
     [=](const new_connection_msg& msg) {
-      CAF_LOGM_TRACE("make_behavior$new_connection_msg",
-                     "handle = " << msg.handle.id());
+      CAF_LOG_TRACE("handle = " << msg.handle.id());
       CAF_REQUIRE(m_ctx.count(msg.handle) == 0);
       auto& ctx = m_ctx[msg.handle];
       ctx.hdl = msg.handle;
@@ -100,8 +98,7 @@ behavior basp_broker::make_behavior() {
     },
     // received from underlying broker implementation
     [=](const connection_closed_msg& msg) {
-      CAF_LOGM_TRACE("make_behavior$connection_closed_msg",
-                     CAF_MARG(msg.handle, id));
+      CAF_LOG_TRACE(CAF_MARG(msg.handle, id));
       auto j = m_ctx.find(msg.handle);
       if (j != m_ctx.end()) {
         auto hd = j->second.handshake_data;
@@ -142,7 +139,7 @@ behavior basp_broker::make_behavior() {
     },
     // received from underlying broker implementation
     [=](const acceptor_closed_msg& msg) {
-      CAF_LOGM_TRACE("make_behavior$acceptor_closed_msg", "");
+      CAF_LOG_TRACE("");
       auto i = m_acceptors.find(msg.handle);
       if (i == m_acceptors.end()) {
         CAF_LOG_INFO("accept handle no longer in use");
@@ -158,20 +155,17 @@ behavior basp_broker::make_behavior() {
                                             const actor_addr& receiver,
                                             message_id mid,
                                             const message& msg) {
-      CAF_LOGM_TRACE("make_behavior$_Dispatch", "");
+      CAF_LOG_TRACE("");
       dispatch(sender, receiver, mid, msg);
     },
     on(atom("_DelProxy"), arg_match) >> [=](const node_id& nid, actor_id aid) {
-      CAF_LOGM_TRACE("make_behavior$_DelProxy",
-                   CAF_TSARG(nid) << ", "
-                   << CAF_ARG(aid));
+      CAF_LOG_TRACE(CAF_TSARG(nid) << ", " << CAF_ARG(aid));
       erase_proxy(nid, aid);
     },
     // received from middleman actor
     [=](put_atom, accept_handle hdl, const actor_addr& whom, uint16_t port) {
-      CAF_LOGM_TRACE("make_behavior$put_atom",
-                     CAF_ARG(hdl.id()) << ", "<< CAF_TSARG(whom)
-                     << ", " << CAF_ARG(port));
+      CAF_LOG_TRACE(CAF_ARG(hdl.id()) << ", "<< CAF_TSARG(whom)
+                    << ", " << CAF_ARG(port));
       if (hdl.invalid() || whom == invalid_actor_addr) {
         return;
       }
@@ -187,9 +181,8 @@ behavior basp_broker::make_behavior() {
     },
     [=](get_atom, connection_handle hdl, int64_t request_id,
         actor client, std::set<std::string>& expected_ifs) {
-      CAF_LOGM_TRACE("make_behavior$get_atom",
-                     CAF_ARG(hdl.id()) << ", " << CAF_ARG(request_id)
-                     << ", " << CAF_TSARG(client));
+      CAF_LOG_TRACE(CAF_ARG(hdl.id()) << ", " << CAF_ARG(request_id)
+                    << ", " << CAF_TSARG(client));
       try {
         assign_tcp_scribe(hdl);
       }
@@ -211,9 +204,8 @@ behavior basp_broker::make_behavior() {
     },
     [=](delete_atom, int64_t request_id, const actor_addr& whom, uint16_t port)
     -> message {
-      CAF_LOGM_TRACE("make_behavior$delete_atom",
-                     CAF_ARG(request_id) << ", " << CAF_TSARG(whom)
-                     << ", " << CAF_ARG(port));
+      CAF_LOG_TRACE(CAF_ARG(request_id) << ", " << CAF_TSARG(whom)
+                    << ", " << CAF_ARG(port));
       if (whom == invalid_actor_addr) {
         return make_message(error_atom::value, request_id,
                             "whom == invalid_actor_addr");
@@ -501,8 +493,7 @@ basp_broker::handle_basp_header(connection_context& ctx,
         auto mm = middleman::instance();
         entry.first->attach_functor([=](uint32_t reason) {
           mm->backend().dispatch([=] {
-            CAF_LOGM_TRACE("handle_basp_header$proxy_functor",
-                         CAF_ARG(reason));
+            CAF_LOG_TRACE(CAF_ARG(reason));
             auto bro = mm->get_named_broker<basp_broker>(atom("_BASP"));
             bro->send_kill_proxy_instance(nid, aid, reason);
           });
@@ -713,8 +704,7 @@ void basp_broker::on_exit() {
 }
 
 void basp_broker::erase_proxy(const node_id& nid, actor_id aid) {
-  CAF_LOGM_TRACE("make_behavior$_DelProxy",
-                 CAF_TSARG(nid) << ", " << CAF_ARG(aid));
+  CAF_LOG_TRACE(CAF_TSARG(nid) << ", " << CAF_ARG(aid));
   m_namespace.erase(nid, aid);
   if (m_namespace.empty()) {
     CAF_LOG_DEBUG("no proxy left, request shutdown of connection");

@@ -187,8 +187,6 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
   caf::detail::singletons::get_logger()->set_aid(aid_arg)
 #endif
 
-#define CAF_CLASS_NAME typeid(*this).name()
-
 #define CAF_PRINT0(lvlname, classname, funname, msg)                           \
   CAF_LOG_IMPL(lvlname, classname, funname, msg)
 
@@ -254,7 +252,8 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
  * @def CAF_LOGMF
  * Logs a message inside a member function.
  */
-#define CAF_LOGMF(level, msg) CAF_LOGC(level, CAF_CLASS_NAME, __func__, msg)
+#define CAF_LOGMF(level, msg)                                                  \
+  CAF_LOGC(level, typeid(*this).name(), __func__, msg)
 
 /**
  * @def CAF_LOGC
@@ -276,7 +275,7 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
  * Logs a message inside a member function.
  */
 #define CAF_LOGMF_IF(stmt, level, msg)                                         \
-  CAF_LOGC_IF(stmt, level, CAF_CLASS_NAME, __func__, msg)
+  CAF_LOGC_IF(stmt, level, typeid(*this).name(), __func__, msg)
 
 // convenience macros to safe some typing when printing arguments
 #define CAF_ARG(arg) #arg << " = " << arg
@@ -300,31 +299,6 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 #define CAF_LOG_INFO_IF(stmt, msg) CAF_LOGMF_IF(stmt, CAF_INFO, msg)
 #define CAF_LOG_TRACE_IF(stmt, msg) CAF_LOGMF_IF(stmt, CAF_TRACE, msg)
 
-#define CAF_LOGC_ERROR(cname, fun, msg) CAF_LOGC(CAF_ERROR, cname, fun, msg)
-
-#define CAF_LOGC_WARNING(cname, fun, msg) CAF_LOGC(CAF_WARNING, cname, fun, msg)
-
-#define CAF_LOGC_DEBUG(cname, fun, msg) CAF_LOGC(CAF_DEBUG, cname, fun, msg)
-
-#define CAF_LOGC_INFO(cname, fun, msg) CAF_LOGC(CAF_INFO, cname, fun, msg)
-
-#define CAF_LOGC_TRACE(cname, fun, msg) CAF_LOGC(CAF_TRACE, cname, fun, msg)
-
-#define CAF_LOGC_ERROR_IF(stmt, cname, fun, msg)                               \
-  CAF_LOGC_IF(stmt, CAF_ERROR, cname, fun, msg)
-
-#define CAF_LOGC_WARNING_IF(stmt, cname, fun, msg)                             \
-  CAF_LOGC_IF(stmt, CAF_WARNING, cname, fun, msg)
-
-#define CAF_LOGC_DEBUG_IF(stmt, cname, fun, msg)                               \
-  CAF_LOGC_IF(stmt, CAF_DEBUG, cname, fun, msg)
-
-#define CAF_LOGC_INFO_IF(stmt, cname, fun, msg)                                \
-  CAF_LOGC_IF(stmt, CAF_INFO, cname, fun, msg)
-
-#define CAF_LOGC_TRACE_IF(stmt, cname, fun, msg)                               \
-  CAF_LOGC_IF(stmt, CAF_TRACE, cname, fun, msg)
-
 #define CAF_LOGF_ERROR(msg) CAF_LOGF(CAF_ERROR, msg)
 #define CAF_LOGF_WARNING(msg) CAF_LOGF(CAF_WARNING, msg)
 #define CAF_LOGF_DEBUG(msg) CAF_LOGF(CAF_DEBUG, msg)
@@ -336,30 +310,5 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 #define CAF_LOGF_DEBUG_IF(stmt, msg) CAF_LOGF_IF(stmt, CAF_DEBUG, msg)
 #define CAF_LOGF_INFO_IF(stmt, msg) CAF_LOGF_IF(stmt, CAF_INFO, msg)
 #define CAF_LOGF_TRACE_IF(stmt, msg) CAF_LOGF_IF(stmt, CAF_TRACE, msg)
-
-#define CAF_LOGM_ERROR(cname, msg) CAF_LOGC(CAF_ERROR, cname, __func__, msg)
-
-#define CAF_LOGM_WARNING(cname, msg) CAF_LOGC(CAF_WARNING, cname, msg)
-
-#define CAF_LOGM_DEBUG(cname, msg) CAF_LOGC(CAF_DEBUG, cname, __func__, msg)
-
-#define CAF_LOGM_INFO(cname, msg) CAF_LOGC(CAF_INFO, cname, msg)
-
-#define CAF_LOGM_TRACE(cname, msg) CAF_LOGC(CAF_TRACE, cname, __func__, msg)
-
-#define CAF_LOGM_ERROR_IF(stmt, cname, msg)                                    \
-  CAF_LOGC_IF(stmt, CAF_ERROR, cname, __func__, msg)
-
-#define CAF_LOGM_WARNING_IF(stmt, cname, msg)                                  \
-  CAF_LOGC_IF(stmt, CAF_WARNING, cname, msg)
-
-#define CAF_LOGM_DEBUG_IF(stmt, cname, msg)                                    \
-  CAF_LOGC_IF(stmt, CAF_DEBUG, cname, __func__, msg)
-
-#define CAF_LOGM_INFO_IF(stmt, cname, msg)                                     \
-  CAF_LOGC_IF(stmt, CAF_INFO, cname, __func__, msg)
-
-#define CAF_LOGM_TRACE_IF(stmt, cname, msg)                                    \
-  CAF_LOGC_IF(stmt, CAF_TRACE, cname, __func__, msg)
 
 #endif // CAF_LOGGING_HPP

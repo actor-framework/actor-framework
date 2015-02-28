@@ -38,6 +38,8 @@
 #include "caf/policy/profiled.hpp"
 #include "caf/policy/work_stealing.hpp"
 
+#include "caf/detail/logging.hpp"
+
 namespace caf {
 namespace scheduler {
 
@@ -173,6 +175,7 @@ class profiled_coordinator : public coordinator<Policy> {
   }
 
   void stop() override {
+    CAF_LOG_TRACE("");
     super::stop();
     auto now = clock_type::now().time_since_epoch();
     auto wallclock = m_system_start + (now - m_clock_start);

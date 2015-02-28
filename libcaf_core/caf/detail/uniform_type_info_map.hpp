@@ -81,7 +81,7 @@ class uniform_type_info_map {
 
   inline void dispose() { delete this; }
 
-  inline void stop() { }
+  void stop();
 
   virtual void initialize() = 0;
 

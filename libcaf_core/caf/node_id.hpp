@@ -52,12 +52,8 @@ constexpr invalid_node_id_t invalid_node_id = invalid_node_id_t{};
  * the running system-level process on that machine.
  */
 class node_id : detail::comparable<node_id>,
-        detail::comparable<node_id, invalid_node_id_t> {
-
-  using super = ref_counted;
-
+                detail::comparable<node_id, invalid_node_id_t> {
  public:
-
   node_id() = default;
 
   node_id(const invalid_node_id_t&);
@@ -80,14 +76,14 @@ class node_id : detail::comparable<node_id>,
    * A reference counted container for host ID and process ID.
    */
   class data : public ref_counted {
-
    public:
+    // for singleton API
+    void stop();
 
     // for singleton API
-    inline void stop() { }
-
-    // for singleton API
-    inline void dispose() { deref(); }
+    inline void dispose() {
+      deref();
+    }
 
     // for singleton API
     inline void initialize() {
@@ -107,7 +103,6 @@ class node_id : detail::comparable<node_id>,
     uint32_t process_id;
 
     host_id_type host_id;
-
   };
 
   ~node_id();
@@ -154,9 +149,7 @@ class node_id : detail::comparable<node_id>,
   /** @endcond */
 
  private:
-
   intrusive_ptr<data> m_data;
-
 };
 
 } // namespace caf

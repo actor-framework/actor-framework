@@ -162,14 +162,13 @@ class invoke_policy {
   template <class Actor, class Fun, class MaybeResponseHdl = int>
   optional<message> invoke_fun(Actor* self, Fun& fun,
                                MaybeResponseHdl hdl = MaybeResponseHdl{}) {
-    auto mid = self->current_mailbox_element()->mid;
-    auto res = fun(self->current_mailbox_element()->msg);
 #   ifdef CAF_LOG_LEVEL
-      auto msg_str = res ? to_string(*res) : "none";
+    auto msg = to_string(self->current_mailbox_element()->msg);
 #   endif
-    CAF_LOG_TRACE(CAF_MARG(mid, integer_value) << "m, msg = " << msg_str);
-    CAF_LOG_DEBUG_IF(res, "actor did consume message: " << msg_str);
-    CAF_LOG_DEBUG_IF(!res, "actor did ignore message: " << msg_str);
+    auto mid = self->current_mailbox_element()->mid;
+    CAF_LOG_TRACE(CAF_MARG(mid, integer_value) << ", " << CAF_ARG(msg));
+    auto res = fun(self->current_mailbox_element()->msg);
+    CAF_LOG_DEBUG(msg << " => " << to_string(res));
     if (!res) {
       return none;
     }

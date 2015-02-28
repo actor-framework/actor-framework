@@ -206,39 +206,18 @@ class middleman_actor_impl : public middleman_actor_base::base {
       [=](delete_atom, const actor_addr& whom, uint16_t port) {
         return del(whom, port);
       },
-      [=](ok_atom ok, int64_t request_id) {
+      [=](ok_atom, int64_t request_id) {
         // not legal for get results
         CAF_REQUIRE(m_pending_gets.count(request_id) == 0);
-        auto i = m_pending_deletes.find(request_id);
-        if (i == m_pending_deletes.end()) {
-          CAF_LOG_ERROR("invalid request id: " << request_id);
-          return;
-        }
-        i->second.deliver(del_op_result{ok}.value);
-        m_pending_deletes.erase(i);
+        handle_ok<del_op_result>(m_pending_deletes, request_id);
       },
-      [=](ok_atom ok, int64_t request_id, actor_addr result) {
+      [=](ok_atom, int64_t request_id, actor_addr& result) {
         // not legal for delete results
         CAF_REQUIRE(m_pending_deletes.count(request_id) == 0);
-        auto i = m_pending_gets.find(request_id);
-        if (i == m_pending_gets.end()) {
-          CAF_LOG_ERROR("invalid request id: " << request_id);
-          return;
-        }
-        i->second.deliver(get_op_result{ok, result}.value);
-        m_pending_gets.erase(i);
+        handle_ok<get_op_result>(m_pending_gets, request_id, std::move(result));
       },
-      [=](error_atom error, int64_t request_id, std::string& reason) {
-        auto fget = [&](response_promise& rp) {
-          rp.deliver(get_op_result{error, std::move(reason)}.value);
-        };
-        auto fdel = [&](response_promise& rp) {
-          rp.deliver(del_op_result{error, std::move(reason)}.value);
-        };
-        if (!finalize_request(m_pending_gets, request_id, fget)
-            && !finalize_request(m_pending_deletes, request_id, fdel)) {
-          CAF_LOG_ERROR("invalid request id: " << request_id);
-        }
+      [=](error_atom, int64_t request_id, std::string& reason) {
+        handle_error(request_id, reason);
       }
     };
   }
@@ -291,6 +270,7 @@ class middleman_actor_impl : public middleman_actor_base::base {
   }
 
   del_op_promise del(const actor_addr& whom, uint16_t port = 0) {
+    CAF_LOG_TRACE(CAF_TSARG(whom) << ", " << CAF_ARG(port));
     auto result = make_response_promise();
     auto req_id = m_next_request_id++;
     send(m_broker, delete_atom::value, req_id, whom, port);
@@ -298,15 +278,43 @@ class middleman_actor_impl : public middleman_actor_base::base {
     return result;
   }
 
+  template <class T, class... Vs>
+  void handle_ok(map_type& storage, int64_t request_id, Vs&&... vs) {
+    CAF_LOG_TRACE(CAF_ARG(request_id));
+    auto i = storage.find(request_id);
+    if (i == storage.end()) {
+      CAF_LOG_ERROR("request id not found: " << request_id);
+      return;
+    }
+    i->second.deliver(T{ok_atom::value, std::forward<Vs>(vs)...}.value);
+    storage.erase(i);
+  }
+
   template <class F>
   bool finalize_request(map_type& storage, int64_t req_id, F fun) {
+    CAF_LOG_TRACE(CAF_ARG(req_id));
     auto i = storage.find(req_id);
     if (i == storage.end()) {
+      CAF_LOG_INFO("request ID not found in storage");
       return false;
     }
     fun(i->second);
     storage.erase(i);
     return true;
+  }
+
+  void handle_error(int64_t request_id, std::string& reason) {
+    CAF_LOG_TRACE(CAF_ARG(request_id) << ", " << CAF_ARG(reason));
+    auto fget = [&](response_promise& rp) {
+      rp.deliver(get_op_result{error_atom::value, std::move(reason)}.value);
+    };
+    auto fdel = [&](response_promise& rp) {
+      rp.deliver(del_op_result{error_atom::value, std::move(reason)}.value);
+    };
+    if (!finalize_request(m_pending_gets, request_id, fget)
+        && !finalize_request(m_pending_deletes, request_id, fdel)) {
+      CAF_LOG_ERROR("invalid request id: " << request_id);
+    }
   }
 
   actor m_broker;
@@ -338,7 +346,7 @@ void middleman::initialize() {
   m_backend = network::multiplexer::make();
   m_backend_supervisor = m_backend->make_supervisor();
   m_thread = std::thread([this] {
-    CAF_LOGC_TRACE("caf::io::middleman", "initialize$run", "");
+    CAF_LOG_TRACE("");
     m_backend->run();
   });
   m_backend->thread_id(m_thread.get_id());
@@ -360,7 +368,7 @@ void middleman::initialize() {
 void middleman::stop() {
   CAF_LOG_TRACE("");
   m_backend->dispatch([=] {
-    CAF_LOGC_TRACE("caf::io::middleman", "stop$lambda", "");
+    CAF_LOG_TRACE("");
     // m_managers will be modified while we are stopping each manager,
     // because each manager will call remove(...)
     for (auto& kvp : m_named_brokers) {

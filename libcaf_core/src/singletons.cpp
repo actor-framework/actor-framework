@@ -83,14 +83,20 @@ void singletons::stop_singletons() {
   stop(s_uniform_type_info_map);
   stop(s_node_id);
   // dispose singletons, i.e., release memory
+  CAF_LOGF_DEBUG("dispose scheduler");
   dispose(s_scheduling_coordinator);
+  CAF_LOGF_DEBUG("dispose plugins");
   for (auto& plugin : s_plugins) {
     dispose(plugin);
   }
+  CAF_LOGF_DEBUG("dispose registry");
   dispose(s_actor_registry);
+  CAF_LOGF_DEBUG("dispose group manager");
   dispose(s_group_manager);
+  CAF_LOGF_DEBUG("dispose map");
   dispose(s_uniform_type_info_map);
   // final steps
+  CAF_LOGF_DEBUG("stop and dispose logger, bye");
   stop(s_logger);
   dispose(s_logger);
   dispose(s_node_id);

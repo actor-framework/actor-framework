@@ -206,6 +206,7 @@ abstract_coordinator* abstract_coordinator::create_singleton() {
 }
 
 void abstract_coordinator::initialize() {
+  CAF_LOG_TRACE("");
   // launch utility actors
   m_timer = spawn<timer_actor, hidden + detached + blocking_api>();
   m_printer = spawn<hidden + detached + blocking_api>(printer_loop);

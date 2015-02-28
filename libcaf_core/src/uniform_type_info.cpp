@@ -77,7 +77,7 @@ const uniform_type_info* uniform_type_info::from(const std::type_info& tinf) {
     std::string error = "uniform_type_info::by_type_info(): ";
     error += tinf.name();
     error += " has not been announced";
-    CAF_LOGM_ERROR("caf::uniform_type_info", error);
+    CAF_LOGF_ERROR(error);
     throw std::runtime_error(error);
   }
   return result;
@@ -113,7 +113,7 @@ const uniform_type_info* uniform_typeid(const std::type_info& tinf,
     std::string error = "uniform_typeid(): ";
     error += tinf.name();
     error += " has not been announced";
-    CAF_LOGM_ERROR("caf::uniform_type_info", error);
+    CAF_LOGF_ERROR(error);
     throw std::runtime_error(error);
   }
 

@@ -357,9 +357,8 @@ class default_multiplexer : public multiplexer {
     // read handle which is only registered for reading
     auto old_bf = ptr ? ptr->eventbf() : input_mask;
     //auto bf = fun(op, old_bf);
-    CAF_LOG_TRACE(CAF_TARG(op, static_cast<int>)
-             << ", " << CAF_ARG(fd) << ", " CAF_ARG(ptr)
-             << ", " << CAF_ARG(old_bf));
+    CAF_LOG_TRACE(CAF_TSARG(op) << ", " << CAF_ARG(fd) << ", " CAF_ARG(ptr)
+                  << ", " << CAF_ARG(old_bf));
     auto last = m_events.end();
     auto i = std::lower_bound(m_events.begin(), last, fd, event_less{});
     if (i != last && i->fd == fd) {
@@ -384,6 +383,8 @@ class default_multiplexer : public multiplexer {
         CAF_LOG_DEBUG("event has no effect (discarded): "
                  << CAF_ARG(bf) << ", " << CAF_ARG(old_bf));
       } else {
+        CAF_LOG_DEBUG("added handler " << ptr << " on fd " << fd << " for "
+                      << to_string(op) << " operations");
         m_events.insert(i, event{fd, bf, ptr});
       }
     }
@@ -534,7 +535,7 @@ class stream : public event_handler {
   }
 
   void stop_reading() {
-    CAF_LOGM_TRACE("caf::io::network::stream", "");
+    CAF_LOG_TRACE("");
     m_sock.close_read();
     backend().del(operation::read, m_sock.fd(), this);
   }

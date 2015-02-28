@@ -52,7 +52,7 @@ abstract_group::module::module(std::string mname) : m_name(std::move(mname)) {
 }
 
 void abstract_group::module::stop() {
-  // nop
+  CAF_LOG_TRACE("");
 }
 
 const std::string& abstract_group::module::name() {

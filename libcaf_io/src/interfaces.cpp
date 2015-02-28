@@ -33,6 +33,7 @@
 
 #include <memory>
 
+#include "caf/detail/logging.hpp"
 #include "caf/detail/get_mac_addresses.hpp"
 
 namespace caf {
@@ -146,7 +147,8 @@ std::vector<std::string> interfaces::list_addresses(protocol proc,
 
 optional<std::pair<std::string, protocol>>
 interfaces::native_address(const std::string& host,
-                                 optional<protocol> preferred) {
+                           optional<protocol> preferred) {
+  CAF_LOGF_TRACE(CAF_ARG(host) << ", " << CAF_TSARG(preferred));
   addrinfo hint;
   memset(&hint, 0, sizeof(hint));
   hint.ai_socktype = SOCK_STREAM;

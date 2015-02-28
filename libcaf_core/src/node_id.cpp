@@ -31,6 +31,7 @@
 #include "caf/serializer.hpp"
 #include "caf/primitive_variant.hpp"
 
+#include "caf/detail/logging.hpp"
 #include "caf/detail/singletons.hpp"
 #include "caf/detail/ripemd_160.hpp"
 #include "caf/detail/safe_equal.hpp"
@@ -162,8 +163,13 @@ node_id::data::~data() {
   // nop
 }
 
+void node_id::data::stop() {
+  CAF_LOG_TRACE("");
+}
+
 // initializes singleton
 node_id::data* node_id::data::create_singleton() {
+  CAF_LOGF_TRACE("");
   auto ifs = detail::get_mac_addresses();
   std::vector<std::string> macs;
   macs.reserve(ifs.size());

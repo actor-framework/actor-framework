@@ -54,8 +54,7 @@ class worker : public execution_unit {
     CAF_REQUIRE(m_this_thread.get_id() == std::thread::id{});
     auto this_worker = this;
     m_this_thread = std::thread{[this_worker] {
-      CAF_LOGC_TRACE("caf::scheduler::worker", "start$lambda",
-                     "id = " << this_worker->id());
+      CAF_LOGF_TRACE("id = " << this_worker->id());
       this_worker->run();
     }};
   }

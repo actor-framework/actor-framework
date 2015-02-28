@@ -131,6 +131,7 @@ class local_group : public abstract_group {
   void serialize(serializer* sink);
 
   void stop() override {
+    CAF_LOG_TRACE("");
     anon_send_exit(m_broker, exit_reason::user_shutdown);
     m_latch.wait();
   }
@@ -169,22 +170,19 @@ class local_broker : public event_based_actor {
   behavior make_behavior() override {
     return {
       on(atom("JOIN"), arg_match) >> [=](const actor& other) {
-        CAF_LOGC_TRACE("caf::local_broker", "init$JOIN",
-                       CAF_TARG(other, to_string));
+        CAF_LOG_TRACE(CAF_TSARG(other));
         if (other && m_acquaintances.insert(other).second) {
           monitor(other);
         }
       },
       on(atom("LEAVE"), arg_match) >> [=](const actor& other) {
-        CAF_LOGC_TRACE("caf::local_broker", "init$LEAVE",
-                       CAF_TARG(other, to_string));
+        CAF_LOG_TRACE(CAF_TSARG(other));
         if (other && m_acquaintances.erase(other) > 0) {
           demonitor(other);
         }
       },
       on(atom("_Forward"), arg_match) >> [=](const message& what) {
-        CAF_LOGC_TRACE("caf::local_broker", "init$FORWARD",
-                       CAF_TARG(what, to_string));
+        CAF_LOG_TRACE(CAF_TSARG(what));
         // local forwarding
         m_group->send_all_subscribers(current_sender(), what, host());
         // forward to all acquaintances
@@ -192,8 +190,7 @@ class local_broker : public event_based_actor {
       },
       [=](const down_msg&) {
         auto sender = current_sender();
-        CAF_LOGC_TRACE("caf::local_broker", "init$DOWN",
-                       CAF_TARG(sender, to_string));
+        CAF_LOG_TRACE(CAF_TSARG(sender));
         if (sender) {
           auto first = m_acquaintances.begin();
           auto last = m_acquaintances.end();
@@ -207,8 +204,7 @@ class local_broker : public event_based_actor {
       },
       others >> [=] {
         auto msg = current_message();
-        CAF_LOGC_TRACE("caf::local_broker", "init$others",
-                       CAF_TARG(msg, to_string));
+        CAF_LOG_TRACE(CAF_TSARG(msg));
         send_to_acquaintances(msg);
       }
     };
@@ -282,6 +278,7 @@ class local_group_proxy : public local_group {
   }
 
   void stop() override {
+    CAF_LOG_TRACE("");
     anon_send_exit(m_proxy_broker, exit_reason::user_shutdown);
     m_latch.wait();
   }
@@ -378,6 +375,7 @@ class local_group_module : public abstract_group::module {
   }
 
   void stop() override {
+    CAF_LOG_TRACE("");
     std::map<std::string, local_group_ptr> imap;
     std::map<actor, local_group_ptr> pmap;
     { // critical section
@@ -427,6 +425,7 @@ std::atomic<size_t> m_ad_hoc_id;
 } // namespace <anonymous>
 
 void group_manager::stop() {
+  CAF_LOG_TRACE("");
   modules_map mm;
   { // critical section
     std::lock_guard<std::mutex> guard(m_mmap_mtx);

@@ -419,7 +419,9 @@ int main(int argc, char** argv) {
       CAF_PRINTERR("usage: " << argv[0] << " [-s PORT|-c PORT1 PORT2 GROUP_PORT]");
     }
   });
+  CAF_CHECKPOINT();
   await_all_actors_done();
+  CAF_CHECKPOINT();
   shutdown();
   // we either spawn a server or a client, in both cases
   // there must have been exactly one dtor called

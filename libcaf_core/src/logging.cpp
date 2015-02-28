@@ -129,7 +129,8 @@ class logging_impl : public logging {
     auto strip_magic = [&](const char* prefix_begin, const char* prefix_end) {
       auto last = class_name.end();
       auto i = std::search(class_name.begin(), last, prefix_begin, prefix_end);
-      auto e = std::find(i, last, ',');
+      auto comma_or_angle_bracket = [](char c) { return c == ',' || c == '>'; };
+      auto e = std::find_if(i, last, comma_or_angle_bracket);
       if (i != e) {
         std::string substr(i + (prefix_end - prefix_begin), e);
         class_name.swap(substr);
@@ -142,8 +143,6 @@ class logging_impl : public logging {
 #   else
     std::string class_name = c_class_name;
 #   endif
-    replace_all(class_name, "::", ".");
-    replace_all(class_name, "(anonymous namespace)", "$anon$");
     std::string file_name;
     std::string full_file_name = c_full_file_name;
     auto ri = find(full_file_name.rbegin(), full_file_name.rend(), '/');

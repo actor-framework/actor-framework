@@ -32,6 +32,12 @@ enum class protocol : uint32_t {
   ipv6
 };
 
+constexpr const char* to_string(protocol value) {
+  return value == protocol::ethernet ? "ethernet"
+                                     : (value == protocol::ipv4 ? "ipv4"
+                                                                : "ipv6");
+}
+
 } // namespace network
 } // namespace io
 } // namespace caf

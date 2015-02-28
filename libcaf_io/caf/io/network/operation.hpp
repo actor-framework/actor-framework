@@ -33,6 +33,12 @@ enum class operation {
   propagate_error
 };
 
+constexpr const char* to_string(operation op) {
+  return op == operation::read ? "read"
+                               : (op == operation::write ? "write"
+                                                         : "propagate_error");
+}
+
 } // namespace network
 } // namespace io
 } // namespace caf

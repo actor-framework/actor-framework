@@ -369,27 +369,34 @@ network::multiplexer& broker::backend() {
 }
 
 connection_handle broker::add_tcp_scribe(const std::string& hst, uint16_t prt) {
+  CAF_LOG_TRACE(CAF_ARG(hst) << ", " << CAF_ARG(prt));
   return backend().add_tcp_scribe(this, hst, prt);
 }
 
 void broker::assign_tcp_scribe(connection_handle hdl) {
+  CAF_LOG_TRACE(CAF_MARG(hdl, id));
   backend().assign_tcp_scribe(this, hdl);
 }
 
 connection_handle broker::add_tcp_scribe(network::native_socket fd) {
+  CAF_LOG_TRACE(CAF_ARG(fd));
   return backend().add_tcp_scribe(this, fd);
 }
 
 void broker::assign_tcp_doorman(accept_handle hdl) {
+  CAF_LOG_TRACE(CAF_MARG(hdl, id));
   backend().assign_tcp_doorman(this, hdl);
 }
 
 std::pair<accept_handle, uint16_t>
 broker::add_tcp_doorman(uint16_t port, const char* in, bool reuse_addr) {
+  CAF_LOG_TRACE(CAF_ARG(port) << ", in = " << (in ? in : "nullptr")
+                << ", " << CAF_ARG(reuse_addr));
   return backend().add_tcp_doorman(this, port, in, reuse_addr);
 }
 
 accept_handle broker::add_tcp_doorman(network::native_socket fd) {
+  CAF_LOG_TRACE(CAF_ARG(fd));
   return backend().add_tcp_doorman(this, fd);
 }
 
