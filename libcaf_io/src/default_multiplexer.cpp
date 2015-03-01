@@ -299,7 +299,7 @@ namespace network {
       for (; iter != last; ++iter) {
         auto ptr = reinterpret_cast<event_handler*>(iter->data.ptr);
         auto fd = ptr ? ptr->fd() : m_pipe.first;
-        handle_socket_event(fd, iter->events, ptr);
+        handle_socket_event(fd, static_cast<int>(iter->events), ptr);
       }
       for (auto& me : m_events) {
         handle(me);
@@ -322,7 +322,7 @@ namespace network {
       e.ptr->eventbf(e.mask);
     }
     epoll_event ee;
-    ee.events = e.mask;
+    ee.events = static_cast<uint32_t>(e.mask);
     ee.data.ptr = e.ptr;
     int op;
     if (e.mask == 0) {

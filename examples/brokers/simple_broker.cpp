@@ -66,7 +66,8 @@ behavior pong() {
 // utility function for sending an integer type
 template <class T>
 void write_int(broker* self, connection_handle hdl, T value) {
-  auto cpy = static_cast<T>(htonl(value));
+  using unsigned_type = typename std::make_signed<T>::type;
+  auto cpy = static_cast<T>(htonl(static_cast<unsigned_type>(value)));
   self->write(hdl, sizeof(T), &cpy);
   self->flush(hdl);
 }
@@ -80,8 +81,9 @@ void write_int(broker* self, connection_handle hdl, uint64_t value) {
 // utility function for reading an ingeger from incoming data
 template <class T>
 void read_int(const void* data, T& storage) {
+  using unsigned_type = typename std::make_signed<T>::type;
   memcpy(&storage, data, sizeof(T));
-  storage = static_cast<T>(ntohl(storage));
+  storage = static_cast<T>(ntohl(static_cast<unsigned_type>(storage)));
 }
 
 void read_int(const void* data, uint64_t& storage) {
