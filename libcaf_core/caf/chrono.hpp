@@ -112,7 +112,7 @@ inline bool operator>=(const time_point& lhs, const time_point& rhs) {
 namespace caf {
 
 using time_point = std::chrono::high_resolution_clock::time_point;
-inline time_point<std::chrono::high_resolution_clock> now() {
+inline auto now() -> decltype(time_point()) {
   return std::chrono::high_resolution_clock::now();
 }
 

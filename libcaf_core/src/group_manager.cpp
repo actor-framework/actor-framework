@@ -21,10 +21,10 @@
 #include <sstream>
 #include <stdexcept>
 
-#include "caf/locks.hpp"
 
 #include "caf/all.hpp"
 #include "caf/group.hpp"
+#include "caf/locks.hpp"
 #include "caf/mutex.hpp"
 #include "caf/message.hpp"
 #include "caf/to_string.hpp"
@@ -429,7 +429,7 @@ void group_manager::stop() {
   CAF_LOG_TRACE("");
   modules_map mm;
   { // critical section
-    std::lock_guard<std::mutex> guard(m_mmap_mtx);
+    lock_guard<mutex> guard(m_mmap_mtx);
     mm.swap(m_mmap);
   }
   for (auto& kvp : mm) {
