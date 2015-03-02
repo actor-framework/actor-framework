@@ -35,6 +35,7 @@ set (LIBCAF_CORE_SRCS
      src/binary_serializer.cpp
      src/blocking_actor.cpp
      src/channel.cpp
+     src/concatenated_tuple.cpp
      src/continue_helper.cpp
      src/decorated_tuple.cpp
      src/default_attachable.cpp

@@ -105,6 +105,19 @@ void test_type_token() {
   CAF_CHECK_EQUAL(m1.type_token(), detail::make_type_token<get_atom>());
 }
 
+void test_concat() {
+  auto m1 = make_message(get_atom::value);
+  auto m2 = make_message(uint32_t{1});
+  auto m3 = message::concat(m1, m2);
+  CAF_CHECK_EQUAL(to_string(m3), to_string(m1 + m2));
+  CAF_CHECK_EQUAL(to_string(m3), to_string(make_message(get_atom::value,
+                                                        uint32_t{1})));
+  auto m4 = make_message(get_atom::value, uint32_t{1},
+                         get_atom::value, uint32_t{1});
+  CAF_CHECK_EQUAL(to_string(message::concat(m3, message{}, m1, m2)),
+                  to_string(m4));
+}
+
 int main() {
   CAF_TEST(message);
   test_drop();
@@ -116,6 +129,7 @@ int main() {
   test_extract3();
   test_extract_opts();
   test_type_token();
+  test_concat();
   shutdown();
   return CAF_TEST_RESULT();
 }
