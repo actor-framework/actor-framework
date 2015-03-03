@@ -33,8 +33,7 @@ void throwcl(const char* fname, cl_int err) {
 }
 
 void pfn_notify(const char* errinfo, const void*, size_t, void*) {
-  CAF_LOGC_ERROR("caf::opencl::opencl_metainfo", "initialize",
-                 "\n##### Error message via pfn_notify #####\n"
+  CAF_LOGF_ERROR("\n##### Error message via pfn_notify #####\n"
                  << errinfo <<
                  "\n########################################");
 }

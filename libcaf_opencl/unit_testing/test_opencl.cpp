@@ -15,7 +15,6 @@ using namespace caf::opencl;
 namespace {
 
 using ivec = std::vector<int>;
-using fvec = std::vector<float>;
 
 constexpr size_t matrix_size = 4;
 constexpr size_t array_size = 32;
@@ -166,7 +165,6 @@ square_matrix<Size> make_iota_matrix() {
   return result;
 }
 
-
 template<size_t Size>
 bool operator==(const square_matrix<Size>& lhs,
                 const square_matrix<Size>& rhs) {
@@ -298,6 +296,8 @@ void test_opencl() {
 
 int main() {
   CAF_TEST(test_opencl);
+  announce<ivec>("ivec");
+  matrix_type::announce();
   test_opencl();
   await_all_actors_done();
   shutdown();
