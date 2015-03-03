@@ -149,4 +149,8 @@ void actor_namespace::erase(const key_type& inf, actor_id aid) {
   }
 }
 
+void actor_namespace::clear() {
+  m_proxies.clear();
+}
+
 } // namespace caf

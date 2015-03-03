@@ -110,6 +110,23 @@ class actor_namespace {
    */
   bool empty() const;
 
+  /**
+   * Deletes all proxies.
+   */
+  void clear();
+
+  template <class F>
+  void for_each(F fun) {
+    for (auto& outer : m_proxies) {
+      for (auto& inner : outer.second) {
+        auto ptr = inner.second->get();
+        if (ptr) {
+          fun(ptr);
+        }
+      }
+    }
+  }
+
  private:
   backend& m_backend;
   std::map<key_type, proxy_map> m_proxies;
