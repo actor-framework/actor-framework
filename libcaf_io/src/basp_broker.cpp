@@ -696,9 +696,11 @@ actor_proxy_ptr basp_broker::make_proxy(const node_id& nid, actor_id aid) {
 void basp_broker::on_exit() {
   CAF_LOG_TRACE("");
   // kill all remaining proxies
-  m_namespace.for_each([](const actor_proxy_ptr& ptr) {
-    ptr->kill_proxy(exit_reason::remote_link_unreachable);
-  });
+  auto proxies = m_namespace.get_all();
+  for (auto& proxy : proxies) {
+    CAF_REQUIRE(proxy != nullptr);
+    proxy->kill_proxy(exit_reason::remote_link_unreachable);
+  }
   m_namespace.clear();
   // remove all remaining state
   m_ctx.clear();

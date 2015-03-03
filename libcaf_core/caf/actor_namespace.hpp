@@ -81,6 +81,11 @@ class actor_namespace {
   /**
    * Returns all proxies for `node`.
    */
+  std::vector<actor_proxy_ptr> get_all();
+
+  /**
+   * Returns all proxies for `node`.
+   */
   std::vector<actor_proxy_ptr> get_all(const key_type& node);
 
   /**
@@ -114,18 +119,6 @@ class actor_namespace {
    * Deletes all proxies.
    */
   void clear();
-
-  template <class F>
-  void for_each(F fun) {
-    for (auto& outer : m_proxies) {
-      for (auto& inner : outer.second) {
-        auto ptr = inner.second->get();
-        if (ptr) {
-          fun(ptr);
-        }
-      }
-    }
-  }
 
  private:
   backend& m_backend;
