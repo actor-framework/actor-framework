@@ -66,7 +66,7 @@ class actor_widget : public Base {
     m_companion->become(pfun(m_companion.get()));
   }
 
-  virtual bool event(QEvent* event) {
+  bool event(QEvent* event) override {
     if (event->type() == static_cast<QEvent::Type>(EventId)) {
       auto ptr = dynamic_cast<event_type*>(event);
       if (ptr) {

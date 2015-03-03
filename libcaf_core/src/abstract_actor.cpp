@@ -131,10 +131,9 @@ bool abstract_actor::link_impl(linking_operation op, const actor_addr& other) {
       return establish_backlink_impl(other);
     case remove_link_op:
       return remove_link_impl(other);
-    case remove_backlink_op:
-      return remove_backlink_impl(other);
     default:
-      return false;
+      CAF_REQUIRE(op == remove_backlink_op);
+      return remove_backlink_impl(other);
   }
 }
 
