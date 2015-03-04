@@ -94,6 +94,11 @@ using ok_atom = atom_constant<atom("OK")>;
  */
 using error_atom = atom_constant<atom("ERROR")>;
 
+/**
+ * Generic 'SYS' atom.
+ */
+using sys_atom = atom_constant<atom("SYS")>;
+
 } // namespace caf
 
 #endif // CAF_ATOM_HPP

@@ -41,6 +41,7 @@ class duration;
 class behavior;
 class resumable;
 class actor_addr;
+class actor_pool;
 class message_id;
 class local_actor;
 class actor_proxy;

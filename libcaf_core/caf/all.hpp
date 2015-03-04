@@ -45,6 +45,7 @@
 #include "caf/spawn_fwd.hpp"
 #include "caf/to_string.hpp"
 #include "caf/actor_addr.hpp"
+#include "caf/actor_pool.hpp"
 #include "caf/attachable.hpp"
 #include "caf/message_id.hpp"
 #include "caf/replies_to.hpp"
