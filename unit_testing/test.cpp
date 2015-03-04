@@ -20,7 +20,7 @@ class watchdog {
   watchdog() {
     m_thread = thread([&] {
       auto tp = chrono::high_resolution_clock::now() + chrono::seconds(10);
-      unique_lock<mutex> guard{m_mtx};
+      std::unique_lock<mutex> guard{m_mtx};
       while (!m_canceled
              && m_cv.wait_until(guard, tp) != cv_status::timeout) {
         // spin

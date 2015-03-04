@@ -25,6 +25,7 @@ set (LIBCAF_CORE_SRCS
      src/actor_companion.cpp
      src/actor_namespace.cpp
      src/actor_ostream.cpp
+     src/actor_pool.cpp
      src/actor_proxy.cpp
      src/actor_registry.cpp
      src/attachable.cpp
