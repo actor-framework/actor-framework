@@ -91,21 +91,21 @@ actor actor_pool::make(size_t num_workers, factory fac, policy pol) {
 }
 
 void actor_pool::enqueue(const actor_addr& sender, message_id mid,
-                         message content, execution_unit* host) {
+                         message content, execution_unit* eu) {
   upgrade_lock<detail::shared_spinlock> guard{m_mtx};
-  if (filter(guard, sender, mid, content, host)) {
+  if (filter(guard, sender, mid, content, eu)) {
     return;
   }
   auto ptr = mailbox_element::make(std::move(sender), mid, std::move(content));
-  m_policy(guard, m_workers, ptr, host);
+  m_policy(guard, m_workers, ptr, eu);
 }
 
-void actor_pool::enqueue(mailbox_element_ptr what, execution_unit* host) {
+void actor_pool::enqueue(mailbox_element_ptr what, execution_unit* eu) {
   upgrade_lock<detail::shared_spinlock> guard{m_mtx};
-  if (filter(guard, what->sender, what->mid, what->msg, host)) {
+  if (filter(guard, what->sender, what->mid, what->msg, eu)) {
     return;
   }
-  m_policy(guard, m_workers, what, host);
+  m_policy(guard, m_workers, what, eu);
 }
 
 actor_pool::actor_pool() {

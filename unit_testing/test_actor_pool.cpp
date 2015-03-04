@@ -40,11 +40,15 @@ worker::~worker() {
   // nop
 }
 
+actor spawn_worker() {
+  return spawn<worker>();
+}
+
 void test_actor_pool() {
   scoped_actor self;
-  auto w = actor_pool::make(5, spawn<worker>, actor_pool::round_robin{});
+  auto w = actor_pool::make(5, spawn_worker, actor_pool::round_robin{});
   self->monitor(w);
-  self->send(w, sys_atom::value, put_atom::value, spawn<worker>());
+  self->send(w, sys_atom::value, put_atom::value, spawn_worker());
   std::vector<actor_addr> workers;
   for (int i = 0; i < 6; ++i) {
     self->sync_send(w, i, i).await(
@@ -93,7 +97,7 @@ void test_actor_pool() {
 
 void test_broadcast_actor_pool() {
   scoped_actor self;
-  auto w = actor_pool::make(5, spawn<worker>, actor_pool::broadcast{});
+  auto w = actor_pool::make(5, spawn_worker, actor_pool::broadcast{});
   self->send(w, 1, 2);
   for (int i = 0; i < 5; ++i) {
     self->receive(
@@ -111,7 +115,7 @@ void test_broadcast_actor_pool() {
 
 void test_random_actor_pool() {
   scoped_actor self;
-  auto w = actor_pool::make(5, spawn<worker>, actor_pool::random{});
+  auto w = actor_pool::make(5, spawn_worker, actor_pool::random{});
   for (int i = 0; i < 5; ++i) {
     self->sync_send(w, 1, 2).await(
       [&](int res) {
