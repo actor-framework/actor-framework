@@ -23,21 +23,34 @@
 
 using namespace caf;
 
+namespace {
+
+std::atomic<size_t> s_ctors;
+std::atomic<size_t> s_dtors;
+
+} // namespace <anonymous>
+
 class worker : public event_based_actor {
  public:
+  worker();
   ~worker();
-
-  behavior make_behavior() override {
-    return {
-      [](int x, int y) {
-        return x + y;
-      }
-    };
-  }
+  behavior make_behavior() override;
 };
 
+worker::worker() {
+  ++s_ctors;
+}
+
 worker::~worker() {
-  // nop
+  ++s_dtors;
+}
+
+behavior worker::make_behavior() {
+  return {
+    [](int x, int y) {
+      return x + y;
+    }
+  };
 }
 
 actor spawn_worker() {
@@ -74,9 +87,27 @@ void test_actor_pool() {
                 && std::equal(workers.begin(), workers.end(), ws.begin()));
     }
   );
+  anon_send_exit(workers.back(), exit_reason::user_shutdown);
+  self->receive(
+    [&](const down_msg& dm) {
+      CAF_CHECK(dm.source == workers.back());
+      workers.pop_back();
+      // check whether actor pool removed failed worker
+      self->sync_send(w, sys_atom::value, get_atom::value).await(
+        [&](std::vector<actor>& ws) {
+          std::sort(ws.begin(), ws.end());
+          CAF_CHECK(workers.size() == ws.size()
+                    && std::equal(workers.begin(), workers.end(), ws.begin()));
+        }
+      );
+    },
+    after(std::chrono::milliseconds(250)) >> [] {
+      CAF_PRINTERR("didn't receive a down message");
+    }
+  );
   CAF_CHECKPOINT();
   self->send_exit(w, exit_reason::user_shutdown);
-  for (int i = 0; i < 7; ++i) {
+  for (int i = 0; i < 6; ++i) {
     self->receive(
       [&](const down_msg& dm) {
         auto last = workers.end();
@@ -97,18 +128,24 @@ void test_actor_pool() {
 
 void test_broadcast_actor_pool() {
   scoped_actor self;
-  auto w = actor_pool::make(5, spawn_worker, actor_pool::broadcast{});
+  auto spawn5 = []() {
+    return actor_pool::make(5, spawn_worker, actor_pool::broadcast{});
+  };
+  auto w = actor_pool::make(5, spawn5, actor_pool::broadcast{});
   self->send(w, 1, 2);
-  for (int i = 0; i < 5; ++i) {
-    self->receive(
-      [&](int res) {
-        CAF_CHECK_EQUAL(res, 3);
-      },
-      after(std::chrono::milliseconds(250)) >> [] {
-        CAF_PRINTERR("didn't receive a down message");
-      }
-    );
-  }
+  std::vector<int> results;
+  int i = 0;
+  self->receive_for(i, 25)(
+    [&](int res) {
+      results.push_back(res);
+    },
+    after(std::chrono::milliseconds(250)) >> [] {
+      CAF_PRINTERR("didn't receive a result");
+    }
+  );
+  CAF_CHECK_EQUAL(results.size(), 25);
+  CAF_CHECK(std::all_of(results.begin(), results.end(),
+                        [](int res) { return res == 3; }));
   self->send_exit(w, exit_reason::user_shutdown);
   self->await_all_other_actors_done();
 }
@@ -137,6 +174,7 @@ int main() {
   test_random_actor_pool();
   await_all_actors_done();
   shutdown();
+  CAF_CHECK_EQUAL(s_dtors.load(), s_ctors.load());
   return CAF_TEST_RESULT();
 }
 

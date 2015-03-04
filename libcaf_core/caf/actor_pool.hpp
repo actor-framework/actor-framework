@@ -45,9 +45,10 @@ namespace caf {
  * whereas `{'SYS', 'GET'}` returns a `vector<actor>` containing all workers.
  *
  * Note that the pool *always*  sends exit messages to all of its workers
- * when forced to quit. While active, the pool assumes all of its
- * workers to be alive as well. In particular, the pool does *not* monitor
- * its workers. Messages dispatched to dead workers are lost.
+ * when forced to quit. The pool monitors all of its workers. Messages queued
+ * up in a worker's mailbox are lost, i.e., the pool itself does not buffer
+ * and resend messages. Advanced caching or resend strategies can be
+ * implemented in a policy.
  *
  * It is wort mentioning that the pool is *not* an event-based actor.
  * Neither does it live in its own thread. Messages are dispatched immediately
@@ -127,6 +128,7 @@ class actor_pool : public abstract_actor {
   detail::shared_spinlock m_mtx;
   std::vector<actor> m_workers;
   policy m_policy;
+  uint32_t m_planned_reason;
 };
 
 } // namespace caf

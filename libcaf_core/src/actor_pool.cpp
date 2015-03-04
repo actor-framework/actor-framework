@@ -20,6 +20,7 @@
 #include "caf/actor_pool.hpp"
 
 #include "caf/send.hpp"
+#include "caf/default_attachable.hpp"
 
 #include "caf/detail/sync_request_bouncer.hpp"
 
@@ -84,8 +85,11 @@ actor actor_pool::make(policy pol) {
 actor actor_pool::make(size_t num_workers, factory fac, policy pol) {
   auto res = make(std::move(pol));
   auto ptr = static_cast<actor_pool*>(actor_cast<abstract_actor*>(res));
+  auto res_addr = ptr->address();
   for (size_t i = 0; i < num_workers; ++i) {
-    ptr->m_workers.push_back(fac());
+    auto worker = fac();
+    worker->attach(default_attachable::make_monitor(res_addr));
+    ptr->m_workers.push_back(worker);
   }
   return res;
 }
@@ -96,7 +100,7 @@ void actor_pool::enqueue(const actor_addr& sender, message_id mid,
   if (filter(guard, sender, mid, content, eu)) {
     return;
   }
-  auto ptr = mailbox_element::make(std::move(sender), mid, std::move(content));
+  auto ptr = mailbox_element::make(sender, mid, std::move(content));
   m_policy(guard, m_workers, ptr, eu);
 }
 
@@ -108,14 +112,14 @@ void actor_pool::enqueue(mailbox_element_ptr what, execution_unit* eu) {
   m_policy(guard, m_workers, what, eu);
 }
 
-actor_pool::actor_pool() {
+actor_pool::actor_pool() : m_planned_reason(caf::exit_reason::not_exited) {
   is_registered(true);
 }
 
 bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
                         const actor_addr& sender, message_id mid,
                         const message& msg, execution_unit* host) {
-  auto rsn = exit_reason();
+  auto rsn = m_planned_reason;
   if (rsn != caf::exit_reason::not_exited) {
     guard.unlock();
     if (mid.valid()) {
@@ -125,22 +129,41 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
     return true;
   }
   if (msg.match_elements<exit_msg>()) {
+    std::vector<actor> workers;
     // send exit messages *always* to all workers and clear vector afterwards
+    // but first swap m_workers out of the critical section
     upgrade_to_unique_lock<detail::shared_spinlock> unique_guard{guard};
-    for (auto& w : m_workers) {
+    m_workers.swap(workers);
+    m_planned_reason = msg.get_as<exit_msg>(0).reason;
+    unique_guard.unlock();
+    for (auto& w : workers) {
       anon_send(w, msg);
     }
-    m_workers.clear();
-    guard.unlock();
-    // we can safely run our cleanup code concurrently
-    // as abstract_actor has its own lock
-    cleanup(msg.get_as<exit_msg>(0).reason);
+    // we can safely run our cleanup code here
+    // because abstract_actor has its own lock
+    cleanup(m_planned_reason);
     is_registered(false);
     return true;
   }
-  if (msg.match_elements<sys_atom, put_atom, actor>()) {
+  if (msg.match_elements<down_msg>()) {
+    // remove failed worker from pool
+    auto& dm = msg.get_as<down_msg>(0);
     upgrade_to_unique_lock<detail::shared_spinlock> unique_guard{guard};
-    m_workers.push_back(msg.get_as<actor>(2));
+    auto last = m_workers.end();
+    auto i = std::find(m_workers.begin(), m_workers.end(), dm.source);
+    if (i != last) {
+      m_workers.erase(i);
+    }
+    return true;
+  }
+  if (msg.match_elements<sys_atom, put_atom, actor>()) {
+    auto& worker = msg.get_as<actor>(2);
+    if (worker == invalid_actor) {
+      return true;
+    }
+    worker->attach(default_attachable::make_monitor(address()));
+    upgrade_to_unique_lock<detail::shared_spinlock> unique_guard{guard};
+    m_workers.push_back(worker);
     return true;
   }
   if (msg.match_elements<sys_atom, delete_atom, actor>()) {
