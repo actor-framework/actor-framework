@@ -113,6 +113,7 @@ namespace network {
   }
 
   void nonblocking(native_socket fd, bool new_value) {
+    CAF_LOGF_TRACE(CAF_ARG(fd) << ", " << CAF_ARG(new_value));
     // read flags for fd
     auto rf = ccall(cc_not_minus1, "cannot read flags", fcntl, fd, F_GETFL, 0);
     // calculate and set new flags
@@ -864,6 +865,7 @@ default_multiplexer::add_tcp_doorman(broker* self, uint16_t port,
  ******************************************************************************/
 
 void tcp_nodelay(native_socket fd, bool new_value) {
+  CAF_LOGF_TRACE(CAF_ARG(fd) << ", " << CAF_ARG(new_value));
   int flag = new_value ? 1 : 0;
   ccall(cc_zero, "unable to set TCP_NODELAY", setsockopt, fd, IPPROTO_TCP,
         TCP_NODELAY, reinterpret_cast<setsockopt_ptr>(&flag),
@@ -965,7 +967,7 @@ default_socket::~default_socket() {
 
 void default_socket::close_read() {
   if (m_fd != invalid_native_socket) {
-    ::shutdown(m_fd, 0); // 0 identifyies the read channel on Win & UNIX
+    ::shutdown(m_fd, 0); // 0 identifies the read channel on Win & UNIX
   }
 }
 
@@ -976,14 +978,20 @@ class socket_guard {
   }
 
   ~socket_guard() {
-    if (m_fd != invalid_native_socket)
-      closesocket(m_fd);
+    close();
   }
 
   native_socket release() {
     auto fd = m_fd;
     m_fd = invalid_native_socket;
     return fd;
+  }
+
+  void close() {
+    if (m_fd != invalid_native_socket) {
+      closesocket(m_fd);
+      m_fd = invalid_native_socket;
+    }
   }
 
  private:
@@ -1066,9 +1074,10 @@ native_socket new_tcp_connection_impl(const std::string& host, uint16_t port,
   socket_guard sguard(fd);
   if (proto == ipv6) {
     if (ip_connect<AF_INET6>(fd, res->first, port)) {
-      CAF_LOGF_INFO("successfully connected to host");
-      return fd;
+      CAF_LOGF_INFO("successfully connected to host via IPv6");
+      return sguard.release();
     }
+    sguard.close();
     // IPv4 fallback
     return new_tcp_connection_impl(host, port, ipv4);
   }
@@ -1076,6 +1085,7 @@ native_socket new_tcp_connection_impl(const std::string& host, uint16_t port,
     CAF_LOGF_ERROR("could not connect to to " << host << " on port " << port);
     throw network_error("could not connect to " + host);
   }
+  CAF_LOGF_INFO("successfully connected to host via IPv4");
   return sguard.release();
 }
 

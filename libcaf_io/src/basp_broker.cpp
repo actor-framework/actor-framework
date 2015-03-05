@@ -186,10 +186,10 @@ behavior basp_broker::make_behavior() {
       try {
         assign_tcp_scribe(hdl);
       }
-      catch (...) {
-        CAF_LOG_DEBUG("failed to assign scribe from handle");
+      catch (std::exception& e) {
+        CAF_LOG_DEBUG("failed to assign scribe from handle: " << e.what());
         send(client, error_atom::value, request_id,
-             "failed to assign scribe from handle");
+             std::string("failed to assign scribe from handle: ") + e.what());
         return;
       }
       auto& ctx = m_ctx[hdl];
