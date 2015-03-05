@@ -118,7 +118,7 @@ actor_pool::actor_pool() : m_planned_reason(caf::exit_reason::not_exited) {
 
 bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
                         const actor_addr& sender, message_id mid,
-                        const message& msg, execution_unit* host) {
+                        const message& msg, execution_unit* eu) {
   auto rsn = m_planned_reason;
   if (rsn != caf::exit_reason::not_exited) {
     guard.unlock();
@@ -182,7 +182,7 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
     actor_cast<abstract_actor*>(sender)->enqueue(invalid_actor_addr,
                                                  mid.response_id(),
                                                  make_message(std::move(cpy)),
-                                                 host);
+                                                 eu);
     return true;
   }
   if (m_workers.empty()) {
@@ -191,7 +191,7 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
       // tell client we have ignored this sync message by sending
       // and empty message back
       auto ptr = actor_cast<abstract_actor_ptr>(sender);
-      ptr->enqueue(invalid_actor_addr, mid.response_id(), message{}, host);
+      ptr->enqueue(invalid_actor_addr, mid.response_id(), message{}, eu);
     }
     return true;
   }
