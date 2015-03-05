@@ -23,6 +23,10 @@
 #include <iomanip>
 #include <algorithm>
 
+#include <iostream>
+
+
+
 #include "caf/string_algorithms.hpp"
 
 #include "caf/atom.hpp"
@@ -305,7 +309,10 @@ class string_deserializer : public deserializer, public dummy_backend {
     }
     void operator()(string& what) { what = str; }
     void operator()(atom_value& what) {
-      what = static_cast<atom_value>(detail::atom_val(str.c_str(), 0xF));
+      char cstr[10];
+      memset(cstr, 0, sizeof(cstr));
+      strcpy(cstr, str.c_str());
+      what = atom(cstr);
     }
     void operator()(u16string&) {
       throw std::runtime_error(
@@ -562,12 +569,13 @@ string to_string(const atom_value& what) {
   // first four bits set?
   bool read_chars = ((x & 0xF000000000000000) >> 60) == 0xF;
   uint64_t mask = 0x0FC0000000000000;
-  for (int bitshift = 54; bitshift >= 0; bitshift -= 6, mask >>= 6) {
+  for (int bitshift = 54; bitshift >= 0; bitshift -= 6) {
     if (read_chars) {
-      result += detail::decoding_table[(x & mask) >> bitshift];
+      result += detail::atom_decode((x & mask) >> bitshift);
     } else if (((x & mask) >> bitshift) == 0xF) {
       read_chars = true;
     }
+    mask = (mask >> 6);
   }
   return result;
 }

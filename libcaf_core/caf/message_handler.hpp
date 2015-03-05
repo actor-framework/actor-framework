@@ -56,9 +56,23 @@ class message_handler {
   message_handler& operator=(const message_handler&) = default;
 
   /**
-   * A pointer to the underlying implementation.
-   */
+  * A pointer to the underlying implementation.
+  */
   using impl_ptr = intrusive_ptr<detail::behavior_impl>;
+
+  /**
+   * Creates a message handler from @p ptr.
+   */
+  message_handler(impl_ptr ptr);
+
+  /**
+   * Create a message handler a list of match expressions,
+   * functors, or other message handlers.
+   */
+  template <class T, class... Ts>
+  message_handler(const T& v, Ts&&... vs) {
+    assign(v, std::forward<Ts>(vs)...);
+  }
 
   /**
    * Returns a pointer to the implementation.
@@ -68,24 +82,10 @@ class message_handler {
   }
 
   /**
-   * Creates a message handler from @p ptr.
-   */
-  message_handler(impl_ptr ptr);
-
-  /**
    * Checks whether the message handler is not empty.
    */
   inline operator bool() const {
     return static_cast<bool>(m_impl);
-  }
-
-  /**
-   * Create a message handler a list of match expressions,
-   * functors, or other message handlers.
-   */
-  template <class T, class... Ts>
-  message_handler(const T& v, Ts&&... vs) {
-    assign(v, std::forward<Ts>(vs)...);
   }
 
   /**
@@ -116,8 +116,10 @@ class message_handler {
    */
   template <class... Ts>
   typename std::conditional<
-    detail::disjunction<may_have_timeout<
-      typename std::decay<Ts>::type>::value...
+    detail::disjunction<
+      may_have_timeout<
+        typename std::decay<Ts>::type
+      >::value...
     >::value,
     behavior,
     message_handler

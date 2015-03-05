@@ -1,11 +1,17 @@
+#include "test.hpp"
+
 #include <mutex>
+#include <cstdio>
 #include <atomic>
 #include <thread>
 #include <condition_variable>
 
-#include "test.hpp"
 #include "caf/all.hpp"
 #include "caf/string_algorithms.hpp"
+
+#ifdef CAF_MSVC
+# include <windows.h>
+#endif
 
 using namespace std;
 using namespace caf;
@@ -126,6 +132,38 @@ void set_default_test_settings() {
   cout.unsetf(ios_base::unitbuf);
 }
 
+#ifdef CAF_MSVC
+std::thread run_program_impl(actor rc, const char* cpath, vector<string> args) {
+  string path = cpath;
+  replace_all(path, "'", "\\'");
+  ostringstream oss;
+  oss << path;
+  for (auto& arg : args) {
+    oss << " " << arg;
+  }
+  return std::thread([](std::string cmdstr) {
+    STARTUPINFO si;
+    PROCESS_INFORMATION pi;
+    ZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+    ZeroMemory(&pi, sizeof(pi));
+    CreateProcess(nullptr, // no module name
+                  &cmdstr[0], // command line
+                  nullptr, // process handle not inheritable
+                  nullptr, // thread handle not inheritable
+                  false, // no handle inheritance
+                  0, // no creation flags
+                  nullptr, // use parent's environment
+                  nullptr, // use parent's directory
+                  &si,
+                  &pi);
+    // be a good parent and wait for our little child
+    WaitForSingleObject(pi.hProcess, INFINITE);
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+  }, oss.str());
+}
+#else
 std::thread run_program_impl(actor rc, const char* cpath, vector<string> args) {
   string path = cpath;
   replace_all(path, "'", "\\'");
@@ -151,3 +189,4 @@ std::thread run_program_impl(actor rc, const char* cpath, vector<string> args) {
     anon_send(rc, output);
   });
 }
+#endif

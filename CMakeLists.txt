@@ -115,7 +115,8 @@ if(MORE_WARNINGS)
                "-Wno-global-constructors -Wno-missing-prototypes "
                "-Wno-c++98-compat-pedantic -Wno-unused-member-function "
                "-Wno-unused-const-variable -Wno-switch-enum "
-               "-Wno-missing-noreturn -Wno-covered-switch-default")
+               "-Wno-missing-noreturn -Wno-covered-switch-default "
+               "-Wno-missing-braces")
   elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
     set(WFLAGS "-Waddress -Wall -Warray-bounds "
                "-Wattributes -Wbuiltin-macro-redefined -Wcast-align "
@@ -306,11 +307,10 @@ if(NOT CAF_NO_OPENCL AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/CMakeLists.tx
   endif()
 endif()
 # tell CMake caf_io depends on caf_core
-if(CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
-  add_dependencies(libcaf_ioStatic libcaf_coreStatic)
-endif()
 if(NOT CAF_BUILD_STATIC_ONLY)
-  add_dependencies(libcaf_io libcaf_core)
+  set(libcaf_ioStatic libcaf_coreStatic)
+else()
+  set(libcaf_io libcaf_core)
 endif()
 # set LIBCAF_LIBRARIES for other subprojects
 set(LIBCAF_LIBRARIES "${LIBCAF_CORE_LIBRARY}"
@@ -321,7 +321,7 @@ if(NOT CAF_NO_UNIT_TESTS)
   enable_testing()
   message(STATUS "Enter subdirectory unit_testing")
   add_subdirectory(unit_testing)
-  add_dependencies(all_unit_tests libcaf_io)
+  add_dependencies(all_unit_tests ${LIBCAF_IO_LIBRARY})
   if(NOT CAF_NO_OPENCL AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
     add_subdirectory(libcaf_opencl/unit_testing)
   endif()

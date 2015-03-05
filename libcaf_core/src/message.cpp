@@ -27,6 +27,8 @@
 #include "caf/detail/singletons.hpp"
 #include "caf/detail/decorated_tuple.hpp"
 
+#include "caf/detail/disable_msvc_defs.hpp"
+
 namespace caf {
 
 message::message(detail::message_data* ptr) : m_vals(ptr) {
@@ -267,7 +269,7 @@ message::cli_res message::extract_opts(std::vector<cli_arg> cliargs) const {
   if (opts.count("help") == 1) {
     std::cout << helptext << std::endl;
   }
-  return {res, std::move(opts), std::move(helptext)};
+  return cli_res{res, std::move(opts), std::move(helptext)};
 }
 
 message::cli_arg::cli_arg(std::string nstr, std::string tstr)

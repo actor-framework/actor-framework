@@ -126,7 +126,8 @@ class optional_message_visitor : public static_visitor<optional<message>> {
 
   template <class... Ts>
   opt_msg operator()(std::tuple<Ts...>& value) const {
-    return apply_args(*this, get_indices(value), value);
+    typename il_indices<type_list<Ts...>>::type indices;
+    return apply_args(*this, indices, value);
   }
 };
 

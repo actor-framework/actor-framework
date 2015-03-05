@@ -49,6 +49,7 @@
 #include "caf/detail/disposer.hpp"
 #include "caf/detail/behavior_stack.hpp"
 #include "caf/detail/typed_actor_util.hpp"
+#include "caf/detail/infer_typed_handle.hpp"
 #include "caf/detail/single_reader_queue.hpp"
 #include "caf/detail/memory_cache_flag_type.hpp"
 
@@ -118,23 +119,17 @@ class local_actor : public abstract_actor {
   spawn_typed(Vs&&... vs) {
     constexpr auto os = make_unbound(Os);
     auto res = spawn_class<T, os>(host(), empty_before_launch_callback{},
-                    std::forward<Vs>(vs)...);
+                                  std::forward<Vs>(vs)...);
     return eval_opts(Os, std::move(res));
   }
 
-  template <spawn_options Os = no_spawn_options, typename F, class... Vs>
-  typename infer_typed_actor_handle<
-    typename detail::get_callable_trait<F>::result_type,
-    typename detail::tl_head<
-      typename detail::get_callable_trait<F>::arg_types
-    >::type
-  >::type
-  spawn_typed(F fun, Vs&&... vs) {
+  template <spawn_options Os = no_spawn_options, class R, class... As, class... Ts>
+  typename detail::infer_typed_handle<R, As...>::handle_type
+  spawn_typed(R (*fun)(As...), Ts&&... vs) {
+    using impl = typename detail::infer_typed_handle<R, As...>::functor_base_type;
     constexpr auto os = make_unbound(Os);
-    auto res = caf::spawn_typed_functor<os>(host(),
-                                            empty_before_launch_callback{},
-                                            std::move(fun),
-                                            std::forward<Vs>(vs)...);
+    auto res = spawn_class<impl, os>(host(), empty_before_launch_callback{},
+                                     fun, std::forward<Ts>(vs)...);
     return eval_opts(Os, std::move(res));
   }
 

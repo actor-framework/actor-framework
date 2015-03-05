@@ -25,6 +25,8 @@
 
 #include "caf/policy/invoke_policy.hpp"
 
+#include "caf/detail/disable_msvc_defs.hpp"
+
 namespace caf {
 namespace detail {
 

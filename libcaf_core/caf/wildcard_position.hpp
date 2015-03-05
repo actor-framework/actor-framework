@@ -42,21 +42,22 @@ enum class wildcard_position {
  * Gets the position of `anything` from the type list `Types`.
  */
 template <class Types>
-constexpr wildcard_position get_wildcard_position() {
-  return detail::tl_count<Types, is_anything>::value > 1
-         ? wildcard_position::multiple
-         : (detail::tl_count<Types, is_anything>::value == 1
-            ? (std::is_same<
-                 typename detail::tl_head<Types>::type, anything
-               >::value
-               ? wildcard_position::leading
-               : (std::is_same<
-                    typename detail::tl_back<Types>::type, anything
-                  >::value
-                  ? wildcard_position::trailing
-                  : wildcard_position::in_between))
-            : wildcard_position::nil);
-}
+struct get_wildcard_position {
+  static constexpr wildcard_position value =
+    detail::tl_count<Types, is_anything>::value > 1
+    ? wildcard_position::multiple
+    : (detail::tl_count<Types, is_anything>::value == 1
+      ? (std::is_same<
+           typename detail::tl_head<Types>::type, anything
+         >::value
+        ? wildcard_position::leading
+        : (std::is_same<
+             typename detail::tl_back<Types>::type, anything
+           >::value
+          ? wildcard_position::trailing
+          : wildcard_position::in_between))
+      : wildcard_position::nil);
+};
 
 } // namespace caf
 

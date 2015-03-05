@@ -28,7 +28,9 @@ namespace caf {
  * Acts as wildcard expression in patterns.
  */
 struct anything {
-  // no content
+  constexpr anything() {
+    // nop
+  }
 };
 
 /**

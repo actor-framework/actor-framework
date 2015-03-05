@@ -345,7 +345,8 @@ class message {
   template <class... Ts>
   inline message move_from_tuple(std::tuple<Ts...>&& tup) {
     move_from_tuple_helper f;
-    return detail::apply_args(f, detail::get_indices(tup), tup);
+    typename detail::il_indices<detail::type_list<Ts...>>::type indices;
+    return detail::apply_args(f, indices, tup);
   }
 
   bool match_element(size_t p, uint16_t tnr, const std::type_info* rtti) const;

@@ -19,6 +19,8 @@
 
 #include "caf/detail/decorated_tuple.hpp"
 
+#include "caf/detail/disable_msvc_defs.hpp"
+
 namespace caf {
 namespace detail {
 

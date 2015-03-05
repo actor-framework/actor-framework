@@ -44,19 +44,21 @@
 
 #include "caf/detail/logging.hpp"
 
+#ifdef CAF_MSVC
+using ssize_t = std::make_signed<size_t>::type;
+#endif
+
 #ifdef CAF_WINDOWS
-#   include <w32api.h>
-#   undef _WIN32_WINNT
-#   undef WINVER
-#   define _WIN32_WINNT WindowsVista
-#   define WINVER WindowsVista
-#   include <ws2tcpip.h>
-#   include <winsock2.h>
-#   include <ws2ipdef.h>
+#  ifndef CAF_MSVC
+#    include <w32api.h>
+#  endif
+#  include <ws2tcpip.h>
+#  include <winsock2.h>
+#  include <ws2ipdef.h>
 #else
-#   include <unistd.h>
-#   include <errno.h>
-#   include <sys/socket.h>
+#  include <unistd.h>
+#  include <errno.h>
+#  include <sys/socket.h>
 #endif
 
 // poll vs epoll backend
@@ -75,6 +77,8 @@
 # define CAF_EPOLL_MULTIPLEXER
 # include <sys/epoll.h>
 #endif
+
+#include "caf/detail/disable_msvc_defs.hpp"
 
 namespace caf {
 namespace io {

@@ -77,14 +77,30 @@ struct meta_element_factory<anything, 0> {
 };
 
 template <class TypeList>
-struct meta_elements;
+class meta_elements;
 
 template <class... Ts>
-struct meta_elements<type_list<Ts...>> {
-  std::array<meta_element, sizeof...(Ts)> arr;
-  meta_elements() : arr{{meta_element_factory<Ts>::create()...}} {
-    // nop
+class meta_elements<type_list<Ts...>> {
+ public:
+  meta_elements() {
+    // this is a complicated way to do things... but it's the only way
+    // supported by all GCC releases as well as MSVC
+    std::initializer_list<meta_element> il = {
+      meta_element_factory<Ts>::create()...
+    };
+    std::copy(il.begin(), il.end(), std::begin(arr));
   }
+
+  meta_element* data() {
+    return arr;
+  }
+
+  size_t size() const {
+    return sizeof...(Ts);
+  }
+
+ private:
+  meta_element arr[sizeof...(Ts) > 0 ? sizeof...(Ts) : 1];
 };
 
 bool try_match(const message& msg, const meta_element* pattern_begin,

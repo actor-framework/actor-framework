@@ -158,6 +158,9 @@ std::vector<iface_info> get_mac_addresses() {
 #include <winsock2.h>
 #include <iphlpapi.h>
 
+#pragma comment(lib, "ws2_32.lib")
+#pragma comment(lib, "iphlpapi.lib")
+
 #include <memory>
 #include <vector>
 #include <string>
