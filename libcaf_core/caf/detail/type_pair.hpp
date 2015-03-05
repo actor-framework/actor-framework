@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_TYPE_PAIR_HPP
-#define CAF_TYPE_PAIR_HPP
+#ifndef CAF_DETAIL_TYPE_PAIR_HPP
+#define CAF_DETAIL_TYPE_PAIR_HPP
 
 namespace caf {
 namespace detail {
@@ -27,28 +27,24 @@ template <class First, typename Second>
 struct type_pair {
   using first = First;
   using second = Second;
-
 };
 
 template <class First, typename Second>
 struct to_type_pair {
   using type = type_pair<First, Second>;
-
 };
 
 template <class What>
 struct is_type_pair {
   static constexpr bool value = false;
-
 };
 
 template <class First, typename Second>
 struct is_type_pair<type_pair<First, Second>> {
   static constexpr bool value = true;
-
 };
 
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_TYPE_PAIR_HPP
+#endif // CAF_DETAIL_TYPE_PAIR_HPP

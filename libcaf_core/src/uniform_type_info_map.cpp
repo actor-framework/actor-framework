@@ -55,7 +55,9 @@ namespace detail {
 
 const char* numbered_type_names[] = {
   "@actor",
+  "@actorvec",
   "@addr",
+  "@addrvec",
   "@atom",
   "@channel",
   "@charbuf",
@@ -445,6 +447,11 @@ class uti_impl : public uniform_type_info {
 };
 
 template <class T>
+struct get_uti_impl {
+  using type = uti_impl<T>;
+};
+
+template <class T>
 class int_tinfo : public uniform_type_info {
  public:
   int_tinfo() : uniform_type_info(detail::type_nr<T>::value) {
@@ -583,36 +590,6 @@ void fill_uti_arr(std::integral_constant<size_t, N>, type_array& arr, const T& t
 class utim_impl : public uniform_type_info_map {
  public:
   void initialize() {
-  /*
-    // maps sizeof(integer_type) to {signed_type, unsigned_type}
-    constexpr auto u8t  = tl_find<builtin_types, int_tinfo<uint8_t>>::value;
-    constexpr auto i8t  = tl_find<builtin_types, int_tinfo<int8_t>>::value;
-    constexpr auto u16t = tl_find<builtin_types, int_tinfo<uint16_t>>::value;
-    constexpr auto i16t = tl_find<builtin_types, int_tinfo<int16_t>>::value;
-    constexpr auto u32t = tl_find<builtin_types, int_tinfo<uint32_t>>::value;
-    constexpr auto i32t = tl_find<builtin_types, int_tinfo<int32_t>>::value;
-    constexpr auto u64t = tl_find<builtin_types, int_tinfo<uint64_t>>::value;
-    constexpr auto i64t = tl_find<builtin_types, int_tinfo<int64_t>>::value;
-    abstract_int_tinfo* mapping[][2] = {
-      {nullptr, nullptr}, // no integer type for sizeof(T) == 0
-      {&get<u8t>(m_storage), &get<i8t>(m_storage)},
-      {&get<u16t>(m_storage), &get<i16t>(m_storage)},
-      {nullptr, nullptr}, // no integer type for sizeof(T) == 3
-      {&get<u32t>(m_storage), &get<i32t>(m_storage)},
-      {nullptr, nullptr}, // no integer type for sizeof(T) == 5
-      {nullptr, nullptr}, // no integer type for sizeof(T) == 6
-      {nullptr, nullptr}, // no integer type for sizeof(T) == 7
-      {&get<u64t>(m_storage), &get<i64t>(m_storage)}
-    };
-    push_native_type<char, signed char, unsigned char, short, signed short,
-                     unsigned short, short int, signed short int,
-                     unsigned short int, int, signed int, unsigned int,
-                     long int, signed long int, unsigned long int, long,
-                     signed long, unsigned long, long long, signed long long,
-                     unsigned long long, wchar_t, int8_t, uint8_t, int16_t,
-                     uint16_t, int32_t, uint32_t, int64_t, uint64_t, char16_t,
-                     char32_t, size_t, ptrdiff_t, intptr_t>(mapping);
-  */
     fill_uti_arr(std::integral_constant<size_t, 0>{},
                  m_builtin_types, m_storage);
     // make sure our builtin types are sorted
@@ -691,41 +668,14 @@ class utim_impl : public uniform_type_info_map {
 
   using strvec = std::vector<std::string>;
 
-  using builtin_types = std::tuple<uti_impl<actor>,
-                                   uti_impl<actor_addr>,
-                                   uti_impl<atom_value>,
-                                   uti_impl<channel>,
-                                   uti_impl<charbuf>,
-                                   uti_impl<down_msg>,
-                                   uti_impl<duration>,
-                                   uti_impl<exit_msg>,
-                                   uti_impl<group>,
-                                   uti_impl<group_down_msg>,
-                                   uti_impl<int16_t>,
-                                   uti_impl<int32_t>,
-                                   uti_impl<int64_t>,
-                                   uti_impl<int8_t>,
-                                   uti_impl<long double>,
-                                   uti_impl<message>,
-                                   uti_impl<message_id>,
-                                   uti_impl<node_id>,
-                                   uti_impl<std::string>,
-                                   uti_impl<strmap>,
-                                   uti_impl<std::set<std::string>>,
-                                   uti_impl<strvec>,
-                                   uti_impl<sync_exited_msg>,
-                                   uti_impl<sync_timeout_msg>,
-                                   uti_impl<timeout_msg>,
-                                   uti_impl<uint16_t>,
-                                   uti_impl<std::u16string>,
-                                   uti_impl<uint32_t>,
-                                   uti_impl<std::u32string>,
-                                   uti_impl<uint64_t>,
-                                   uti_impl<uint8_t>,
-                                   uti_impl<unit_t>,
-                                   uti_impl<bool>,
-                                   uti_impl<double>,
-                                   uti_impl<float>>;
+  using builtin_types =
+    typename tl_apply<
+      typename tl_map<
+        sorted_builtin_types,
+        get_uti_impl
+      >::type,
+      std::tuple
+    >::type;
 
   builtin_types m_storage;
 
@@ -743,7 +693,7 @@ class utim_impl : public uniform_type_info_map {
   using pointer_pair = std::pair<uniform_type_info*, std::type_info*>;
 
   // bot containers are sorted by uniform name (m_user_types: second->name())
-  std::array<pointer, std::tuple_size<builtin_types>::value> m_builtin_types;
+  std::array<pointer, type_nrs - 1> m_builtin_types;
   std::vector<enriched_pointer> m_user_types;
   mutable detail::shared_spinlock m_lock;
 

@@ -34,104 +34,96 @@
 namespace caf {
 namespace detail {
 
-#define CAF_DETAIL_TYPE_NR(number, tname)                                      \
-  template <>                                                                  \
-  struct type_nr<tname> {                                                      \
-    static constexpr uint16_t value = number;                                  \
-  };
-
-template <class T,
-          bool IntegralConstant = std::is_integral<T>::value,
-          size_t = sizeof(T)>
-struct type_nr_helper {
-  static constexpr uint16_t value = 0;
-};
-
-template <class T>
-struct type_nr {
-  static constexpr uint16_t value = type_nr_helper<T>::value;
-};
-
-template <>
-struct type_nr<void> {
-  static constexpr uint16_t value = 0;
-};
-
 using strmap = std::map<std::string, std::string>;
 
 // WARNING: types are sorted by uniform name
-CAF_DETAIL_TYPE_NR( 1, actor)                    // @actor
-CAF_DETAIL_TYPE_NR( 2, actor_addr)               // @addr
-CAF_DETAIL_TYPE_NR( 3, atom_value)               // @atom
-CAF_DETAIL_TYPE_NR( 4, channel)                  // @channel
-CAF_DETAIL_TYPE_NR( 5, std::vector<char>)        // @charbuf
-CAF_DETAIL_TYPE_NR( 6, down_msg)                 // @down
-CAF_DETAIL_TYPE_NR( 7, duration)                 // @duration
-CAF_DETAIL_TYPE_NR( 8, exit_msg)                 // @exit
-CAF_DETAIL_TYPE_NR( 9, group)                    // @group
-CAF_DETAIL_TYPE_NR(10, group_down_msg)           // @group_down
-CAF_DETAIL_TYPE_NR(11, int16_t)                  // @i16
-CAF_DETAIL_TYPE_NR(12, int32_t)                  // @i32
-CAF_DETAIL_TYPE_NR(13, int64_t)                  // @i64
-CAF_DETAIL_TYPE_NR(14, int8_t)                   // @i8
-CAF_DETAIL_TYPE_NR(15, long double)              // @ldouble
-CAF_DETAIL_TYPE_NR(16, message)                  // @message
-CAF_DETAIL_TYPE_NR(17, message_id)               // @message_id
-CAF_DETAIL_TYPE_NR(18, node_id)                  // @node
-CAF_DETAIL_TYPE_NR(19, std::string)              // @str
-CAF_DETAIL_TYPE_NR(20, strmap)                   // @strmap
-CAF_DETAIL_TYPE_NR(21, std::set<std::string>)    // @strset
-CAF_DETAIL_TYPE_NR(22, std::vector<std::string>) // @strvec
-CAF_DETAIL_TYPE_NR(23, sync_exited_msg)          // @sync_exited
-CAF_DETAIL_TYPE_NR(24, sync_timeout_msg)         // @sync_timeout
-CAF_DETAIL_TYPE_NR(25, timeout_msg)              // @timeout
-CAF_DETAIL_TYPE_NR(26, uint16_t)                 // @u16
-CAF_DETAIL_TYPE_NR(27, std::u16string)           // @u16_str
-CAF_DETAIL_TYPE_NR(28, uint32_t)                 // @u32
-CAF_DETAIL_TYPE_NR(29, std::u32string)           // @u32_str
-CAF_DETAIL_TYPE_NR(30, uint64_t)                 // @u64
-CAF_DETAIL_TYPE_NR(31, uint8_t)                  // @u8
-CAF_DETAIL_TYPE_NR(32, unit_t)                   // @unit
-CAF_DETAIL_TYPE_NR(33, bool)                     // bool
-CAF_DETAIL_TYPE_NR(34, double)                   // double
-CAF_DETAIL_TYPE_NR(35, float)                    // float
+using sorted_builtin_types =
+  type_list<
+    actor,                    // @actor
+    std::vector<actor>,       // @actorvec
+    actor_addr,               // @addr
+    std::vector<actor_addr>,  // @addrvec
+    atom_value,               // @atom
+    channel,                  // @channel
+    std::vector<char>,        // @charbuf
+    down_msg,                 // @down
+    duration,                 // @duration
+    exit_msg,                 // @exit
+    group,                    // @group
+    group_down_msg,           // @group_down
+    int16_t,                  // @i16
+    int32_t,                  // @i32
+    int64_t,                  // @i64
+    int8_t,                   // @i8
+    long double,              // @ldouble
+    message,                  // @message
+    message_id,               // @message_id
+    node_id,                  // @node
+    std::string,              // @str
+    strmap,                   // @strmap
+    std::set<std::string>,    // @strset
+    std::vector<std::string>, // @strvec
+    sync_exited_msg,          // @sync_exited
+    sync_timeout_msg,         // @sync_timeout
+    timeout_msg,              // @timeout
+    uint16_t,                 // @u16
+    std::u16string,           // @u16_str
+    uint32_t,                 // @u32
+    std::u32string,           // @u32_str
+    uint64_t,                 // @u64
+    uint8_t,                  // @u8
+    unit_t,                   // @unit
+    bool,                     // bool
+    double,                   // double
+    float                     // float
+  >;
+
+using int_types_by_size =
+  type_list<                      // bytes
+    void,                         // 0
+    type_pair<int8_t, uint8_t>,   // 1
+    type_pair<int16_t, uint16_t>, // 2
+    void,                         // 3
+    type_pair<int32_t, uint32_t>, // 4
+    void,                         // 5
+    void,                         // 6
+    void,                         // 7
+    type_pair<int64_t, uint64_t>  // 8
+  >;
+
+template <class T, bool IsIntegral = std::is_integral<T>::value>
+struct type_nr {
+  static constexpr uint16_t value =
+    static_cast<uint16_t>(tl_find<sorted_builtin_types, T>::value + 1);
+};
+
+template <class T>
+struct type_nr<T, true> {
+  using tpair = typename tl_at<int_types_by_size, sizeof(T)>::type;
+  using type =
+    typename std::conditional<
+      std::is_signed<T>::value,
+      typename tpair::first,
+      typename tpair::second
+    >::type;
+  static constexpr uint16_t value =
+    static_cast<uint16_t>(tl_find<sorted_builtin_types, type>::value + 1);
+};
+
+template <>
+struct type_nr<bool, true> {
+  static constexpr uint16_t value =
+    static_cast<uint16_t>(tl_find<sorted_builtin_types, bool>::value + 1);
+};
 
 template <atom_value V>
-struct type_nr<atom_constant<V>> {
+struct type_nr<atom_constant<V>, false> {
   static constexpr uint16_t value = type_nr<atom_value>::value;
 };
 
-static constexpr size_t type_nrs = 36;
+static constexpr size_t type_nrs = tl_size<sorted_builtin_types>::value + 1;
 
 extern const char* numbered_type_names[];
-
-template <class T>
-struct type_nr_helper<T, true, 1> {
-  static constexpr uint16_t value = std::is_signed<T>::value
-                                      ? type_nr<int8_t>::value
-                                      : type_nr<uint8_t>::value;
-};
-
-template <class T>
-struct type_nr_helper<T, true, 2> {
-  static constexpr uint16_t value = std::is_signed<T>::value
-                                      ? type_nr<int16_t>::value
-                                      : type_nr<uint16_t>::value;
-};
-
-template <class T>
-struct type_nr_helper<T, true, 4> {
-  static constexpr uint16_t value = std::is_signed<T>::value
-                                      ? type_nr<int32_t>::value
-                                      : type_nr<uint32_t>::value;
-};
-
-template <class T>
-struct type_nr_helper<T, true, 8> {
-  static constexpr uint16_t value = std::is_signed<T>::value
-                                      ? type_nr<int64_t>::value
-                                      : type_nr<uint64_t>::value;
-};
 
 template <uint32_t R, uint16_t... Is>
 struct type_token_helper;
