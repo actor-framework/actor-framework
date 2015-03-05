@@ -89,6 +89,11 @@ void test_actor_pool() {
   );
   anon_send_exit(workers.back(), exit_reason::user_shutdown);
   self->receive(
+    after(std::chrono::milliseconds(25)) >> [] {
+      // wait some time to give the pool time to remove the failed worker
+    }
+  );
+  self->receive(
     [&](const down_msg& dm) {
       CAF_CHECK(dm.source == workers.back());
       workers.pop_back();
