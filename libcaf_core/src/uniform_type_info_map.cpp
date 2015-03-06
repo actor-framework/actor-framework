@@ -728,7 +728,7 @@ uniform_type_info_map* uniform_type_info_map::create_singleton() {
 }
 
 void uniform_type_info_map::stop() {
-  CAF_LOG_TRACE("");
+  // nop
 }
 
 uniform_type_info_map::~uniform_type_info_map() {
