@@ -57,6 +57,11 @@ static constexpr uint32_t unhandled_sync_timeout = 0x00005;
 static constexpr uint32_t unknown = 0x00006;
 
 /**
+ * Indicates that an actor pool unexpectedly ran out of workers.
+ */
+static constexpr uint32_t out_of_workers = 0x00007;
+
+/**
  * Indicates that the actor was forced to shutdown by a user-generated event.
  */
 static constexpr uint32_t user_shutdown = 0x00010;

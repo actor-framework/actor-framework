@@ -77,7 +77,7 @@ actor_pool::~actor_pool() {
 
 actor actor_pool::make(policy pol) {
   intrusive_ptr<actor_pool> ptr;
-  ptr.reset(new actor_pool);
+  ptr = make_counted<actor_pool>();
   ptr->m_policy = std::move(pol);
   return actor_cast<actor>(ptr);
 }
@@ -139,10 +139,7 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
     for (auto& w : workers) {
       anon_send(w, msg);
     }
-    // we can safely run our cleanup code here
-    // because abstract_actor has its own lock
-    cleanup(m_planned_reason);
-    is_registered(false);
+    quit();
     return true;
   }
   if (msg.match_elements<down_msg>()) {
@@ -153,6 +150,11 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
     auto i = std::find(m_workers.begin(), m_workers.end(), dm.source);
     if (i != last) {
       m_workers.erase(i);
+    }
+    if (m_workers.empty()) {
+      m_planned_reason = exit_reason::out_of_workers;
+      unique_guard.unlock();
+      quit();
     }
     return true;
   }
@@ -196,6 +198,13 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
     return true;
   }
   return false;
+}
+
+void actor_pool::quit() {
+  // we can safely run our cleanup code here without holding
+  // m_mtx because abstract_actor has its own lock
+  cleanup(m_planned_reason);
+  is_registered(false);
 }
 
 } // namespace caf

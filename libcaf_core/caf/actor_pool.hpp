@@ -119,11 +119,14 @@ class actor_pool : public abstract_actor {
 
   void enqueue(mailbox_element_ptr what, execution_unit* host) override;
 
- private:
   actor_pool();
 
+ private:
   bool filter(upgrade_lock<detail::shared_spinlock>&, const actor_addr& sender,
               message_id mid, const message& content, execution_unit* host);
+
+  // call without m_mtx held
+  void quit();
 
   detail::shared_spinlock m_mtx;
   std::vector<actor> m_workers;
