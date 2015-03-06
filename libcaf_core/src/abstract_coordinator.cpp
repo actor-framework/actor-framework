@@ -214,11 +214,11 @@ void abstract_coordinator::initialize() {
 
 void abstract_coordinator::stop_actors() {
   CAF_LOG_TRACE("");
-  scoped_actor self(true);
+  scoped_actor self{true};
   self->monitor(m_timer);
   self->monitor(m_printer);
-  self->send_exit(m_timer, exit_reason::user_shutdown);
-  self->send_exit(m_printer, exit_reason::user_shutdown);
+  anon_send_exit(m_timer, exit_reason::user_shutdown);
+  anon_send_exit(m_printer, exit_reason::user_shutdown);
   int i = 0;
   self->receive_for(i, 2)(
     [](const down_msg&) {

@@ -24,11 +24,11 @@
 #include <unistd.h>
 #include <sys/types.h>
 
-#include "caf/string_algorithms.hpp"
-
 #include "caf/config.hpp"
 #include "caf/node_id.hpp"
 #include "caf/serializer.hpp"
+#include "caf/make_counted.hpp"
+#include "caf/string_algorithms.hpp"
 #include "caf/primitive_variant.hpp"
 
 #include "caf/detail/logging.hpp"
@@ -179,9 +179,9 @@ node_id::data* node_id::data::create_singleton() {
   auto hd_serial_and_mac_addr = join(macs, "") + detail::get_root_uuid();
   node_id::host_id_type nid;
   detail::ripemd_160(nid, hd_serial_and_mac_addr);
-  auto ptr = new node_id::data(static_cast<uint32_t>(getpid()), nid);
-  ptr->ref(); // implicit ref count held by detail::singletons
-  return ptr;
+  auto ptr = make_counted<node_id::data>(static_cast<uint32_t>(getpid()), nid);
+  // note: ptr has a ref count of 1 -> implicitly held by detail::singletons
+  return ptr.release();
 }
 
 uint32_t node_id::process_id() const {

@@ -199,11 +199,17 @@ class server : public event_based_actor {
             unbecome(); // await next idle message
           },
           on(idle_atom::value) >> skip_message,
-          others >> die
+          others >> [=] {
+            CAF_UNEXPECTED_MSG(this);
+            die();
+          }
         );
       },
       on(request_atom::value) >> skip_message,
-      others >> die
+      others >> [=] {
+        CAF_UNEXPECTED_MSG(this);
+        die();
+      }
     };
   }
 };
@@ -376,7 +382,7 @@ void test_sync_send() {
     );
     // first 'request', then 'idle'
     auto handle = s->sync_send(serv, request_atom::value);
-    send_as(work, serv, idle_atom::value);
+    send_as(work, serv, idle_atom::value, work);
     handle.await(
       [=](response_atom) {
         CAF_CHECKPOINT();
@@ -384,11 +390,7 @@ void test_sync_send() {
       },
       others >> CAF_UNEXPECTED_MSG_CB(s)
     );
-    s->send(s, "Ever danced with the devil in the pale moonlight?");
-    // response: {'EXIT', exit_reason::user_shutdown}
-    s->receive_loop(
-      others >> CAF_UNEXPECTED_MSG_CB(s)
-    );
+    s->quit(exit_reason::user_shutdown);
   });
   self->receive(
     [&](const down_msg& dm) {

@@ -65,8 +65,10 @@ template <class T>
 struct rc_storage : public ref_counted {
   T instance;
   template <class... Vs>
-  rc_storage(Vs&&... vs) : instance(this, std::forward<Vs>(vs)...) {
-    // nop
+  rc_storage(Vs&&... vs)
+      : instance(intrusive_ptr<ref_counted>(this, false),
+        std::forward<Vs>(vs)...) {
+    CAF_REQUIRE(get_reference_count() >= 1);
   }
 };
 
@@ -159,7 +161,7 @@ class basic_memory_cache : public memory_cache {
   embedded_storage new_embedded_storage() override {
     // allocate cache on-the-fly
     if (!m_cache) {
-      m_cache.reset(new storage);
+      m_cache.reset(new storage, false); // starts with ref count of 1
     }
     auto res = m_cache->next();
     if (m_cache->has_next()) {
@@ -168,7 +170,7 @@ class basic_memory_cache : public memory_cache {
     // we got the last element out of the cache; pass the reference to the
     // client to avoid pointless increase/decrease ops on the reference count
     embedded_storage result;
-    result.first.reset(m_cache.release(), false);
+    result.first = std::move(m_cache);
     result.second = res;
     return result;
   }

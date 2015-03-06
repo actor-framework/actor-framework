@@ -27,6 +27,7 @@
 #include "caf/variant.hpp"
 #include "caf/optional.hpp"
 #include "caf/match_case.hpp"
+#include "caf/make_counted.hpp"
 #include "caf/intrusive_ptr.hpp"
 
 #include "caf/atom.hpp"
@@ -132,7 +133,7 @@ class default_behavior_impl : public behavior_impl {
 
   typename behavior_impl::pointer
   copy(const generic_timeout_definition& tdef) const override {
-    return new default_behavior_impl<Tuple>(m_cases, tdef);
+    return make_counted<default_behavior_impl<Tuple>>(m_cases, tdef);
   }
 
   void handle_timeout() override {
@@ -155,13 +156,14 @@ class default_behavior_impl : public behavior_impl {
 // ra  = reorganize arguments
 
 template <class R, class... Ts>
-R* make_behavior_eor(std::tuple<Ts...> match_cases) {
-  return new R(std::move(match_cases));
+intrusive_ptr<R> make_behavior_eor(std::tuple<Ts...> match_cases) {
+  return make_counted<R>(std::move(match_cases));
 }
 
 template <class R, class... Ts, class F>
-R* make_behavior_eor(std::tuple<Ts...> match_cases, timeout_definition<F>& td) {
-  return new R(std::move(match_cases), std::move(td));
+intrusive_ptr<R> make_behavior_eor(std::tuple<Ts...> match_cases,
+                                   timeout_definition<F>& td) {
+  return make_counted<R>(std::move(match_cases), std::move(td));
 }
 
 template <class F, bool IsMC = std::is_base_of<match_case, F>::value>
@@ -201,13 +203,13 @@ struct join_std_tuples<std::tuple<Ts...>, std::tuple<Us...>, Rs...>
 // this function reorganizes its arguments to shift the timeout definition
 // to the front (receives it at the tail)
 template <class R, class F, class... Vs>
-R* make_behavior_ra(timeout_definition<F>& tdef,
-                    tail_argument_token&, Vs... vs) {
+intrusive_ptr<R> make_behavior_ra(timeout_definition<F>& tdef,
+                                  tail_argument_token&, Vs... vs) {
   return make_behavior_eor<R>(std::tuple_cat(to_match_case_tuple(vs)...), tdef);
 }
 
 template <class R, class... Vs>
-R* make_behavior_ra(tail_argument_token&, Vs... vs) {
+intrusive_ptr<R> make_behavior_ra(tail_argument_token&, Vs... vs) {
   return make_behavior_eor<R>(std::tuple_cat(to_match_case_tuple(vs)...));
 }
 
@@ -215,7 +217,7 @@ R* make_behavior_ra(tail_argument_token&, Vs... vs) {
 template <class R, class V, class... Vs>
 typename std::enable_if<
   !std::is_same<V, tail_argument_token>::value,
-  R*
+  intrusive_ptr<R>
 >::type
 make_behavior_ra(V& v, Vs&... vs) {
   return make_behavior_ra<R>(vs..., v);
@@ -224,11 +226,12 @@ make_behavior_ra(V& v, Vs&... vs) {
 // this function reorganizes its arguments to shift the timeout definition
 // to the front (receives it at the tail)
 template <class... Vs>
-default_behavior_impl<
-  typename join_std_tuples<
-    typename lift_to_mctuple<Vs>::type...
-  >::type
->*
+intrusive_ptr<
+  default_behavior_impl<
+    typename join_std_tuples<
+      typename lift_to_mctuple<Vs>::type...
+    >::type
+  >>
 make_behavior(Vs&... vs) {
   using result_type =
     default_behavior_impl<

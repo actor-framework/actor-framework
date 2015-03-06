@@ -36,9 +36,4 @@ void behavior::assign(behavior other) {
   m_impl.swap(other.m_impl);
 }
 
-void behavior::assign(detail::behavior_impl* ptr) {
-  CAF_REQUIRE(ptr != nullptr);
-  m_impl.reset(ptr);
-}
-
 } // namespace caf

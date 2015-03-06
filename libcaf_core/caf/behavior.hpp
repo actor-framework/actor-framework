@@ -73,20 +73,16 @@ class behavior {
   }
 
   /**
-   * Creates a behavior using `d` and `f` as timeout definition
-   * without message handler.
-   */
-  //template <class F>
-  //behavior(duration d, F f) : m_impl(detail::make_behavior(d, f)) {
-    // nop
-  //}
-
-  /**
    * Assigns new handlers.
    */
   template <class... Vs>
   void assign(Vs... vs) {
+    static_assert(sizeof...(Vs) > 0, "assign() called without arguments");
     m_impl = detail::make_behavior(vs...);
+  }
+
+  void assign(intrusive_ptr<detail::behavior_impl> ptr) {
+    m_impl.swap(ptr);
   }
 
   /**
@@ -141,8 +137,6 @@ class behavior {
   inline behavior(impl_ptr ptr) : m_impl(std::move(ptr)) {
     // nop
   }
-
-  void assign(detail::behavior_impl*);
 
   /** @endcond */
 

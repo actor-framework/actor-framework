@@ -62,11 +62,6 @@ class sync_handle_helper;
  */
 class local_actor : public abstract_actor {
  public:
-  /*
-  using del = detail::disposer;
-  using mailbox_type = detail::single_reader_queue<mailbox_element, del>;
-  */
-
   static constexpr auto memory_cache_flag = detail::needs_embedding;
 
   ~local_actor();

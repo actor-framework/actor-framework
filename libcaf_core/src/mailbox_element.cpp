@@ -58,17 +58,4 @@ mailbox_element_ptr mailbox_element::make(actor_addr sender, message_id id,
   return mailbox_element_ptr{ptr};
 }
 
-/*
-mailbox_element::joint::joint(ref_counted* v0, actor_addr&& v1, message_id v2)
-    : embedded<mailbox_element>(v0, std::move(v1), v2) {
-  // nop
-}
-
-void mailbox_element::joint::request_deletion() {
-  sender = invalid_actor_addr;
-  msg.reset();
-  m_storage->deref();
-}
-*/
-
 } // namespace caf

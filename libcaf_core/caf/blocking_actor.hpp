@@ -219,6 +219,8 @@ class blocking_actor
   // implemented by detail::proper_actor
   virtual void dequeue_response(behavior& bhvr, message_id mid) = 0;
 
+  void cleanup(uint32_t reason);
+
   /** @endcond */
 
  private:
@@ -242,6 +244,8 @@ class blocking_actor::functor_based : public blocking_actor {
     std::integral_constant<bool, std::is_same<arg0, blocking_actor*>::value> tk;
     create(dummy, tk, f, std::forward<Ts>(vs)...);
   }
+
+  void cleanup(uint32_t reason);
 
  protected:
   void act() override;

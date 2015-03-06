@@ -772,9 +772,10 @@ void test_constructor_attach() {
    public:
     testee(actor buddy) : m_buddy(buddy) {
       attach_functor([=](uint32_t reason) {
-        send(m_buddy, atom("done"), reason);
+        send(buddy, atom("done"), reason);
       });
     }
+
     behavior make_behavior() {
       return {
         on(atom("die")) >> [=] {
@@ -782,12 +783,18 @@ void test_constructor_attach() {
         }
       };
     }
+
+    void on_exit() {
+      m_buddy = invalid_actor;
+    }
+
    private:
     actor m_buddy;
   };
   class spawner : public event_based_actor {
    public:
     spawner() : m_downs(0) {
+      // nop
     }
     behavior make_behavior() {
       m_testee = spawn<testee, monitored>(this);
@@ -809,6 +816,11 @@ void test_constructor_attach() {
         }
       };
     }
+
+    void on_exit() {
+      m_testee = invalid_actor;
+    }
+
    private:
     int m_downs;
     actor m_testee;

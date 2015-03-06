@@ -26,6 +26,7 @@
 #include "caf/atom.hpp"
 #include "caf/config.hpp"
 #include "caf/from_string.hpp"
+#include "caf/make_counted.hpp"
 #include "caf/skip_message.hpp"
 
 #include "caf/detail/int_list.hpp"
@@ -327,7 +328,7 @@ class message {
     m_vals.detach();
   }
 
-  void reset(raw_ptr new_ptr = nullptr);
+  void reset(raw_ptr new_ptr = nullptr, bool add_ref = true);
 
   void swap(message& other);
 
@@ -444,8 +445,8 @@ make_message(V&& v, Vs&&... vs) {
                          typename unbox_message_element<
                            typename detail::strip_and_convert<Vs>::type
                          >::type...>;
-  auto ptr = new storage(std::forward<V>(v), std::forward<Vs>(vs)...);
-  return message{detail::message_data::ptr{ptr}};
+  auto ptr = make_counted<storage>(std::forward<V>(v), std::forward<Vs>(vs)...);
+  return message{detail::message_data::ptr{std::move(ptr)}};
 }
 
 /**

@@ -165,12 +165,12 @@ class abstract_actor : public abstract_channel {
   /**
    * Creates a non-proxy instance.
    */
-  abstract_actor(size_t initial_ref_count = 0);
+  abstract_actor();
 
   /**
    * Creates a proxy instance for a proxy running on `nid`.
    */
-  abstract_actor(actor_id aid, node_id nid, size_t initial_ref_count = 0);
+  abstract_actor(actor_id aid, node_id nid);
 
   /**
    * Called by the runtime system to perform cleanup actions for this actor.

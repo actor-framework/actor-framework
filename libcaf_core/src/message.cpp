@@ -46,8 +46,8 @@ message& message::operator=(message&& other) {
   return *this;
 }
 
-void message::reset(raw_ptr new_ptr) {
-  m_vals.reset(new_ptr);
+void message::reset(raw_ptr new_ptr, bool add_ref) {
+  m_vals.reset(new_ptr, add_ref);
 }
 
 void message::swap(message& other) {

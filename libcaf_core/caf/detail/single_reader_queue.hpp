@@ -163,10 +163,8 @@ class single_reader_queue {
    * @warning Call only from the reader (owner).
    */
   void close() {
-    clear_cached_elements();
-    if (fetch_new_data(nullptr)) {
-      clear_cached_elements();
-    }
+    auto nop = [](const T&) { };
+    close(nop);
   }
 
   /**
@@ -180,23 +178,17 @@ class single_reader_queue {
     if (fetch_new_data(nullptr)) {
       clear_cached_elements(f);
     }
+    m_cache.clear(std::move(f));
   }
 
   single_reader_queue() : m_head(nullptr) {
     m_stack = stack_empty_dummy();
   }
 
-  void clear() {
-    if (!closed()) {
-      clear_cached_elements();
-      if (fetch_new_data()) {
-        clear_cached_elements();
-      }
-    }
-  }
-
   ~single_reader_queue() {
-    clear();
+    if (!closed()) {
+      close();
+    }
   }
 
   size_t count(size_t max_count = std::numeric_limits<size_t>::max()) {
@@ -326,14 +318,6 @@ class single_reader_queue {
       return result;
     }
     return nullptr;
-  }
-
-  void clear_cached_elements() {
-    while (m_head != nullptr) {
-      auto next = m_head->next;
-      m_delete(m_head);
-      m_head = next;
-    }
   }
 
   template <class F>

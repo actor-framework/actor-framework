@@ -104,6 +104,18 @@ class intrusive_partitioned_list {
     }
   }
 
+  template <class F>
+  void clear(F f) {
+    while (!first_empty()) {
+      f(first_front());
+      erase(first_begin());
+    }
+    while (!second_empty()) {
+      f(second_front());
+      erase(second_begin());
+    }
+  }
+
   iterator first_begin() {
     return m_head.next;
   }
