@@ -57,7 +57,7 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
                         "initialize the build configuration.")
 endif()
 # set module path appropriately
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 # set binary output path if not defined by user
 if("${EXECUTABLE_OUTPUT_PATH}" STREQUAL "")
   set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin")
