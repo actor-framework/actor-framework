@@ -1,0 +1,377 @@
+#!/usr/bin/env Rscript --vanilla
+#
+# Generates plots from CAF profiler output.
+#
+# The script takes a profiler log file on standard input and generates one plot
+# according to the command line options given. In general, the script generates
+# plots at the granularity of worker threads as well as individual actors.
+
+suppressPackageStartupMessages(library(colorspace))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(plyr))
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(reshape2))
+suppressPackageStartupMessages(library(grid))
+suppressPackageStartupMessages(library(scales)) # pretty_breaks
+suppressPackageStartupMessages(library(optparse))
+
+# ----------------------------------------------------------------------------
+#                              Helper Functions
+# ----------------------------------------------------------------------------
+
+# Generates a diverging color palette of a given size.
+#   - http://tools.medialab.sciences-po.fr/iwanthue
+#   - https://gist.github.com/johnbaums/45b49da5e260a9fc1cd7
+iwanthue <- function(n, hmin=0, hmax=360, cmin=0, cmax=180, lmin=0, lmax=100) {
+  stopifnot(hmin >= 0, cmin >= 0, lmin >= 0,
+            hmax <= 360, cmax <= 180, lmax <= 100,
+            hmin <= hmax, cmin <= cmax, lmin <= lmax,
+            n > 0)
+  lab <- LAB(as.matrix(expand.grid(seq(0, 100, 1),
+                                   seq(-100, 100, 5),
+                                   seq(-110, 100, 5))))
+  if (any((hmin != 0 || cmin != 0 || lmin != 0 ||
+           hmax != 360 || cmax != 180 || lmax != 100))) {
+    hcl <- as(lab, 'polarLUV')
+    hcl_coords <- coords(hcl)
+    hcl <- hcl[which(hcl_coords[, 'H'] <= hmax & hcl_coords[, 'H'] >= hmin &
+                     hcl_coords[, 'C'] <= cmax & hcl_coords[, 'C'] >= cmin &
+                     hcl_coords[, 'L'] <= lmax & hcl_coords[, 'L'] >= lmin), ]
+    #hcl <- hcl[-which(is.na(coords(hcl)[, 2]))]
+    lab <- as(hcl, 'LAB')
+  }
+  lab <- lab[which(!is.na(hex(lab))), ]
+  clus <- kmeans(coords(lab), n, iter.max=50)
+  hex(LAB(clus$centers))
+}
+
+# Generates a palette with equally spaced hues around the color wheel.
+color_hue <- function(n, l=65) {
+  hues <- seq(15, 375, length=n+1)
+  hcl(h=hues, l=l, c=100)[1:n]
+}
+
+# Generates labels microsecond ticks.
+make_usec_labels <- function(ticks=10^(0:9), sep="") {
+  fuse <- function(x, u) paste(x, u, sep=sep)
+  unitize <- function(us) {
+    if (us < 1e3)
+      return(fuse(round(us), "us"))
+    else if (us < 1e6)
+      return(fuse(round(us / 1e3, 1), "ms"))
+    else if (us < 60 * 1e6)
+      return(fuse(round(us / 1e6, 1), "s"))
+    else if (us < 60 * 60 * 1e6)
+      return(fuse(round(us / (60 * 1e6), 1), "m"))
+    else
+      return(fuse(round(us / (60 * 60 * 1e6), 1), "h"))
+  }
+  sapply(ticks, unitize)
+}
+
+# FIXME: crappy hack to get a log transformation that keeps 0s as 0s instead of
+# setting them to -Inf. This only "makes sense" because we have almost no
+# values in [0,1]. The only reason why we need such a thing is to get prettier
+# scatterplots where the points don't hang directly on top of the axes lines.
+# Another annoying artifact of this hack is that annotation logticks
+# between 0 and the first order of magnitude are wrong.
+# Possible solution: coord_trans()
+log_magic_trans <- function(base=10) {
+  magic <- 1.000000042
+  trans <- function(x) {
+    stopifnot(! magic %in% x)
+    r <- x
+    r[r == 1] <- magic
+    r <- log(r, base)
+    r[is.infinite(r)] <- 0
+    r
+  }
+  inv <- function(x) {
+    r <- x
+    r[r == base^magic] <- 1
+    r <- base^x
+    r[r == 1] <- 0
+    r
+  }
+  trans_new(paste0("log-magic-", format(base)), trans, inv,
+            log_breaks(base=base), domain=c(0, Inf))
+}
+
+# Dyanmic time scale that flips to logarithmic if our data is more than two
+# orders of magnitude apart.
+scale_time <- function(.data, fun) {
+  trans <- NULL
+  breaks <- NULL
+  if (log10(diff(range(.data))) > 2) {
+    #trans <- log10_trans()
+    #breaks <- 10^(0:10)
+    trans <- log_magic_trans()
+    breaks <- c(0, 10^(1:10))
+  } else {
+    trans <- identity_trans()
+    breaks <- pretty_breaks(10)(.data)
+  }
+  fun(breaks=breaks, labels=make_usec_labels(breaks), trans=trans)
+}
+
+scale_x_time <- function(.data) scale_time(.data, fun=scale_x_continuous)
+scale_y_time <- function(.data) scale_time(.data, fun=scale_y_continuous)
+
+# Adds a geom_point to an existing plot for a profile. If the the profile has
+# labels, the function adds one geom_point per label, with (1) layers sorted by
+# decreasing number of points and (2) alpha scaled inversely proportional to
+# the number of points.
+add_points <- function(p, .data) {
+  r <- p
+  # Add one layer per label, sorted by per-label point frequency to avoid
+  # hiding smaller point groups behind big point clouds.
+  f <- table(.data$label)
+  o <- names(rev(sort(f))) # order of layers
+  pts <- lapply(o, function(x) { force(x); geom_point(subset=.(label == x)) })
+  r <- Reduce("+", pts, r)
+  # Give each layer its own color and assign it it custom alpha value
+  # inversely proportional to the point frequency.
+  n <- length(f)
+  stopifnot(n > 0)
+  # Scales a vector to the interval [amin, 1] inversely proportional to the
+  # point values.
+  make_alpha <- function(x, amin=0.4) {
+    stopifnot(amin > 0, amin < 1)
+    1 - log(x) / (max(log(x)) + amin * max(log(x)))
+  }
+  r <- r + aes(color=label, alpha=label) +
+    scale_color_manual(name="ID", values=as.vector(iwanthue(n))) +
+    guides(color=guide_legend(override.aes=list(size=4)))
+  # Turn each point into a shape and slightly increase alpha.
+  if (n > 25) {
+    write("** ignoring shapification: more than 25 unique labels", stderr())
+    r <- r +
+      scale_alpha_manual(values=as.list(make_alpha(f)), guide='none')
+  } else {
+    r <- r + aes(shape=label) +
+      scale_shape_manual(name="ID", values=rev(order(f))) +
+      scale_alpha_manual(values=as.list(make_alpha(f, 0.5)), guide='none')
+  }
+  r
+}
+
+# ----------------------------------------------------------------------------
+#                               Plot Functions
+# ----------------------------------------------------------------------------
+
+# Plots system and user CPU utilization over time.
+plot_utilization_time <- function(.data, color.sys="red", color.usr="blue") {
+  ggplot(.data) +
+    aes(x=clock) +
+    geom_point(aes(y=usr/time), shape=4, color=color.usr) +
+    geom_point(aes(y=sys/time), shape=1, color=color.sys) +
+    geom_line(aes(y=usr/time), color=color.usr) +
+    geom_line(aes(y=sys/time), color=color.sys) +
+    scale_y_continuous(breaks=seq(0,1,length=5)) +
+    labs(x="Time", y="CPU utilization") +
+    theme(axis.ticks=element_blank(), axis.text.x=element_blank()) +
+    facet_wrap(~ id, ncol=4)
+}
+
+# Plots the total CPU utilization in a scatterplot, where the axes denote user
+# and system CPU utilization. The point radius is scaled logarithmically to the
+# runtime.
+plot_utilization_scatter <- function(.data) {
+  p <- ggplot(.data, aes(x=usr/time, y=sys/time, size=time)) +
+    scale_size(name="Runtime (secs)", range=c(2, 10),
+               breaks=pretty_breaks(5),
+               labels=round(pretty_breaks(5)(.data$time/1e6), 2)) +
+    labs(x="User CPU utilization", y="System CPU utilization")
+  add_points(p, .data)
+}
+
+# Plots the CPU time in a scatterplot, where axes denote absolute runtime for
+# CPU time in user and system mode. The point radius is scaled to utilization.
+plot_time_scatter <- function(.data) {
+  p <- ggplot(.data, aes(x=usr, y=sys, size=(usr+sys)/time)) +
+    scale_size(name="Utilization", range=c(1,6)) +
+    #scale_size_area(name="Utilization", max_size=6) +
+    scale_x_time(.data$usr) +
+    scale_y_time(.data$sys) +
+# TODO: re-enable when fixing the magic transformation.
+#    annotation_logticks(color="grey") +
+    xlab("User CPU time") + ylab("System CPU time")
+  add_points(p, .data)
+}
+
+# Plots CPU time as boxplot per label.
+plot_time_boxplot <- function(.data) {
+  totals <- .data %>% group_by(label) %>% summarize(sort=sum(usr+sys))
+  lvls <- rev(totals[order(totals$sort), ]$label)
+  xs <- .data %>% group_by(label) %>% mutate(util=sum(cpu)/sum(time))
+  # Do not drop zeros on log transformation.
+  xs$cpu <- mapvalues(xs$cpu, 0, 1, warn_missing=FALSE)
+  xs$label <- factor(xs$label, levels=lvls)
+  ggplot(xs) +
+    aes(x=label, y=cpu, fill=util) +
+# TODO: re-enable when fixing the magic transformation.
+#    annotation_logticks(sides="lr", color="grey") +
+    geom_boxplot(outlier.color="grey") +
+    labs(x="ID", y="CPU time") +
+    scale_y_time(xs$cpu) +
+    scale_fill_gradient(name="Utilization", low="red", high="green") +
+    theme(axis.text.x=element_text(angle=90, vjust=.5, hjust=1))
+}
+
+# Plots CPU utilization as boxplot per label.
+plot_utilization_boxplot <- function(.data) {
+  totals <- .data %>% group_by(label) %>% summarize(sort=sum(cpu))
+  lvls <- rev(totals[order(totals$sort), ]$label)
+  xs <- .data %>% group_by(label) %>% mutate(dom=sum(usr-sys)/sum(usr+sys))
+  xs$label <- factor(xs$label, levels=lvls)
+  ggplot(xs) +
+    aes(x=label, y=util, fill=dom) +
+    geom_boxplot() +
+    labs(x="ID", y="CPU utilization") +
+    scale_fill_gradient2(name="Domination",
+                         low="red", mid="white", high="green",
+                         breaks=c(-.5, .5), labels=c("System", "User")) +
+    theme(axis.text.x=element_text(angle=90, vjust=.5, hjust=1))
+}
+
+
+# Plots the total runtime where each bar consists of system (bottom) and user
+# (top) CPU time.
+plot_time_barplot <- function(.data) {
+  sums <- .data %>% group_by(label) %>% summarize(usr=sum(usr), sys=sum(sys))
+  molten <- melt(sums, .(label))
+  molten <- molten[order(molten$variable, decreasing=TRUE),] # sys at bottom
+  lvls <- rev(sums[order(sums$usr + sums$sys), ]$label)
+  molten$label <- factor(molten$label, levels=lvls) # highest bar on the left
+  ticks <- pretty_breaks(10)(sums$usr + sums$sys)
+  ggplot(molten) +
+    aes(x=label, y=value, fill=variable) +
+    geom_bar(stat="identity") +
+    xlab("ID") +
+    scale_y_continuous(name="CPU time", breaks=ticks,
+                       labels=make_usec_labels(ticks)) +
+    scale_fill_manual(name="CPU time", values=rev(color_hue(2)),
+                      labels=c("User", "Sytem")) +
+    theme(axis.text.x=element_text(angle=90, vjust=.5, hjust=1),
+          legend.justification=c(1,1), legend.position=c(1,1))
+}
+
+# ----------------------------------------------------------------------------
+#                            Command Line Parsing
+# ----------------------------------------------------------------------------
+
+option_list <- list(
+  make_option(c("-a", "--actors"), action="store_true", default=F,
+              help="generate plots involving actors"),
+  make_option(c("-w", "--workers"), action="store_true", default=F,
+              help="generate plots involving workers"),
+  make_option(c("-l", "--labels"), default=NULL,
+              help="two-column file mapping IDs to labels"),
+  make_option(c("-f", "--font-size"), type="integer", default=12,
+              metavar="number", help="font base size [%default]"),
+  make_option(c("-s", "--squeeze"), action="store_true", default=F,
+              help="make plot edages as small as possible [%default]"),
+  make_option(c("-o", "--output"), default="png",
+              help="the image format of the output [%default]"),
+  make_option(c("-r", "--read"), default="stdin",
+              help="read CAF profile from file [-]"),
+  make_option(c("-e", "--extension"), default="png",
+              help="file extension of output file [%default]"),
+  make_option(c("-h", "--help"), action="store_true", default=F,
+              help="display this help and exit")
+  )
+
+opt <- parse_args(OptionParser(option_list=option_list,
+                               add_help_option=F))
+
+# If neither --actors nor --workers given, set 'em both.
+if (! opt$actors && ! opt$workers) {
+  opt$actors <- TRUE
+  opt$workers <- TRUE
+}
+
+# ----------------------------------------------------------------------------
+#                               Plot Generation
+# ----------------------------------------------------------------------------
+
+# Setup theme.
+options(scipen=1000)
+theme_set(theme_bw(base_size=opt$`font-size`))
+theme_update(legend.key=element_rect(colour="white"))
+if (opt$squeeze)
+  theme_update(legend.key.width=unit(3, "lines"),
+               plot.margin=unit(rep(0, 4), "lines"))
+
+record <- function(name, fun, ...) {
+  filename <- paste("plot", name, sep="-")
+  filename <- paste(filename, opt$extension, sep=".")
+  write(paste("-- generating", filename), stderr())
+  ggsave(filename, fun(...), height=10, width=10)
+}
+
+make_zero <- function(x) mapvalues(x, NaN, 0, warn_missing=FALSE)
+
+make_profile <- function(filename) {
+  d1 <- function(x) c(x[1], diff(x))
+  read.table(filename, header=T) %>%
+    group_by(id, type) %>%
+    arrange(time) %>%
+    transmute(clock=clock, time=d1(time), usr=d1(usr), sys=d1(sys)) %>%
+    filter(time > 0) %>%
+    mutate(cpu=usr+sys, util=cpu/time, dom=make_zero((usr-sys)/cpu))
+}
+
+make_workers <- function(prof) {
+  x <- prof %>% filter(type == "worker")
+  x$label <- factor(x$id)
+  x
+}
+
+make_actors <- function(prof, labels=NULL) {
+  x <- prof %>% filter(type == "actor")
+  if (is.null(labels)) {
+    x$label <- factor(x$id)
+  } else {
+    ls <- read.table(labels, col.names=c("id", "label"))
+    x <- left_join(x, ls, "id")
+    x$label <- droplevels(x$label)
+    x$label <- addNA(x$label)
+    levels(x$label) <- mapvalues(levels(x$label), NA, "OTHER")
+  }
+  x
+}
+
+summarize.prof <- function(x) {
+  summarize(x, usr=sum(usr), sys=sum(sys), cpu=sum(cpu), time=sum(time),
+            util=sum(cpu)/sum(time), dom=make_zero(sum(usr-sys)/sum(cpu)))
+}
+
+prof <- make_profile(file(opt$read))
+
+if (opt$workers) {
+  workers <- make_workers(prof)
+  workers.by_id <- workers %>% group_by(id, label) %>% summarize.prof
+  record("worker-time-bar", plot_time_barplot, workers)
+  record("worker-time-facets", plot_utilization_time, workers)
+  record("worker-time-scatter", plot_time_scatter, workers)
+  record("worker-time-scatter-id", plot_time_scatter, workers.by_id)
+  record("worker-util-box", plot_utilization_boxplot, workers)
+  record("worker-util-scatter", plot_utilization_scatter, workers)
+  record("worker-util-scatter-id", plot_utilization_scatter, workers.by_id)
+}
+
+if (opt$actors) {
+  actors <- make_actors(prof, opt$labels)
+  actors.by_id <- actors %>% group_by(id, label) %>% summarize.prof
+  actors.by_label <- actors.by_id %>% group_by(label) %>% summarize.prof
+  record("actor-time-bar", plot_time_barplot, actors.by_label)
+  record("actor-time-scatter", plot_time_scatter, actors)
+  record("actor-time-scatter-id", plot_time_scatter, actors.by_id)
+  record("actor-time-scatter-label", plot_time_scatter, actors.by_label)
+  record("actor-time-box", plot_time_boxplot, actors)
+  record("actor-time-box-id", plot_time_boxplot, actors.by_id)
+  record("actor-util-box", plot_utilization_boxplot, actors)
+  record("actor-util-box-id", plot_utilization_boxplot, actors.by_id)
+  record("actor-util-scatter-id", plot_utilization_scatter, actors.by_id)
+  record("actor-util-scatter-label", plot_utilization_scatter, actors.by_label)
+}
