@@ -17,6 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include <string>
+
 #include "caf/opencl/global.hpp"
 
 cl_int clReleaseDeviceDummy(cl_device_id) {
@@ -126,8 +128,22 @@ std::string get_opencl_error(cl_int err) {
       return "CL_INVALID_MIP_LEVEL";
     case CL_INVALID_GLOBAL_WORK_SIZE:
       return "CL_INVALID_GLOBAL_WORK_SIZE";
+    // error codes used by extensions
+    // see: http://streamcomputing.eu/blog/2013-04-28/opencl-1-2-error-codes/
+    case -1000:
+      return "CL_INVALID_GL_SHAREGROUP_REFERENCE_KHR";
+    case -1001:
+      return "No valid ICDs found";
+    case -1002:
+      return "CL_INVALID_D3D10_DEVICE_KHR";
+    case -1003:
+      return "CL_INVALID_D3D10_RESOURCE_KHR";
+    case -1004:
+      return "CL_D3D10_RESOURCE_ALREADY_ACQUIRED_KHR";
+    case -1005:
+      return "CL_D3D10_RESOURCE_NOT_ACQUIRED_KHR";
     default:
-      return "UNKNOWN_ERROR";
+      return "UNKNOWN_ERROR: " + std::to_string(err);
   }
 }
 
