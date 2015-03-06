@@ -23,7 +23,6 @@
 using namespace std;
 using namespace caf;
 
-using join_atom = atom_constant<atom("join")>;
 using broadcast_atom = atom_constant<atom("broadcast")>;
 
 struct line { string str; };
