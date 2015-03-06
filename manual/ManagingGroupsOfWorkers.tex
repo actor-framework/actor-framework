@@ -1,40 +1,38 @@
 \section{Managing Groups of Workers}
 \label{Sec::WorkerGroups}
 
-When managing a set of workers, requests are often dispatched from a central actor to a set of workers.
-The class \lstinline^actor_pool^ implements a lightweight abstraction for managing a set of workers using a dispatching policy.
+When managing a set of workers, a central actor often dispatches requests to a set of workers.
+For this purpose, the class \lstinline^actor_pool^ implements a lightweight abstraction for managing a set of workers using a dispatching policy.
 
-Pools are created using the static member function \lstinline^make^. It takes either one argument (the policy) or three (nr. of workers, factory function for workers, and policy).
-After construction, new workers can be added via $('SYS', 'PUT', worker)$ messages.
+Pools are created using the static member function \lstinline^make^, which takes either one argument (the policy) or three (number of workers, factory function for workers, and dispatching policy).
+After construction, one can add new workers via messages of the form $('SYS', 'PUT', worker)$, remove workers with $('SYS', 'DELETE', worker)$, and retrieve the set of workers as \lstinline^vector<actor>^ via $('SYS', 'GET')$.
 For example, adding \lstinline^worker^ to \lstinline^my_pool^ could be done using \lstinline^send(my_pool, sys_atom::value, put_atom::value, worker)^.
-$('SYS', 'DELETE', worker)$ messages remove a worker from the set and $('SYS', 'GET')$ returns a \lstinline^vector<actor>^ containing all workers.
 
-An actor pool assumes ownership of its workers.
+An actor pool takes ownership of its workers.
 When forced to quit, it sends an exit messages to all of its workers, forcing them to quit as well.
 The pool also monitors all of its workers.
 
-It is wort mentioning that the pool does not cache any messages per default.
-Messages queued up in a worker's mailbox are lost per default, i.e., not moved to another worker.
-Advanced caching or resend strategies can be implemented in a policy.
+Pools does not cache messages by default, but enqueue them directly in a workers mailbox. Consequently, a terminating worker loses all unprocessed messages.
+For more advanced caching strategies, such as reliable message delivery, users can implement their own dispatching policies. 
 
 \subsection{Predefined Dispatching Policies}
 
-The actor pool class contains a set of predefined policies for convenience.
+The actor pool class comes with a set predefined policies for convenience.
 
 \subsubsection{\lstinline^actor_pool::round_robin^}
 
 This policy forwards incoming requests in a round-robin manner to workers.
-This policy does not guarantee that messages are consumed, i.e., work items are lost if the worker exits before processing all of its messages.
+There is no guarantee that messages are consumed, i.e., work items are lost if the worker exits before processing all of its messages.
 
 \subsubsection{\lstinline^actor_pool::broadcast^}
 
 This policy forwards \emph{each} message to \emph{all} workers.
-Synchronous messages to the pool will be received by all workers, but the client will only recognize the first arriving response message---or error---and discard other results.
+Synchronous messages to the pool will be received by all workers, but the client will only recognize the first arriving response message---or error---and discard subsequent messages.
 Note that this is not caused by the policy itself, but a consequence of forwarding synchronous messages to more than one actor.
 
 \subsubsection{\lstinline^actor_pool::random^}
 
-This policy forwards incoming requests in a random order.
+This policy forwards incoming requests to one worker from the pool chosen uniformly at random.
 Analogous to \lstinline^round_robin^, this policy does not cache or redispatch messages.
 
 \subsection{Example}
