@@ -48,35 +48,28 @@ using upgrade_to_unique_guard = upgrade_to_unique_lock<detail::shared_spinlock>;
 class local_broker;
 class local_group_module;
 
-// simple handshake for one central component and X clients
-class latch {
- public:
-  latch(int value) : m_value(value) {
-    // nop
-  }
-
-  void wait() {
-    std::unique_lock<std::mutex> guard{m_mtx};
-    while (m_value != 0) {
-      m_cv.wait(guard);
+void await_all_locals_down(std::initializer_list<actor> xs) {
+  CAF_LOGF_TRACE("");
+  size_t awaited_down_msgs = 0;
+  scoped_actor self{true};
+  for (auto& x : xs) {
+    if (x != invalid_actor && !x.is_remote()) {
+      self->monitor(x);
+      self->send_exit(x, exit_reason::user_shutdown);
+      ++awaited_down_msgs;
     }
   }
-
-  void count_down() {
-    std::unique_lock<std::mutex> guard;
-    --m_value;
-    m_cv.notify_one();
+  for (size_t i = 0; i < awaited_down_msgs; ++i) {
+    self->receive(
+      [](const down_msg&) {
+        // nop
+      },
+      after(std::chrono::seconds(1)) >> [&] {
+        throw std::logic_error("at least one actor did not quit within 1s");
+      }
+    );
   }
-
-  ~latch() {
-    CAF_REQUIRE(m_value == 0);
-  }
-
- private:
-  volatile int m_value;
-  std::mutex m_mtx;
-  std::condition_variable m_cv;
-};
+}
 
 class local_group : public abstract_group {
  public:
@@ -132,8 +125,8 @@ class local_group : public abstract_group {
 
   void stop() override {
     CAF_LOG_TRACE("");
-    anon_send_exit(m_broker, exit_reason::user_shutdown);
-    m_latch.wait();
+    await_all_locals_down({m_broker});
+    m_broker = invalid_actor;
   }
 
   const actor& broker() const {
@@ -148,40 +141,36 @@ class local_group : public abstract_group {
   detail::shared_spinlock m_mtx;
   std::set<actor_addr> m_subscribers;
   actor m_broker;
-  latch m_latch;
 };
 
 using local_group_ptr = intrusive_ptr<local_group>;
 
 class local_broker : public event_based_actor {
  public:
-  local_broker(local_group_ptr g, latch* hv)
-      : m_group(std::move(g)),
-        m_hv(hv) {
+  local_broker(local_group_ptr g) : m_group(std::move(g)) {
     // nop
   }
 
   void on_exit() {
     m_acquaintances.clear();
-    m_hv->count_down();
     m_group.reset();
   }
 
   behavior make_behavior() override {
     return {
-      on(atom("JOIN"), arg_match) >> [=](const actor& other) {
+      [=](join_atom, const actor& other) {
         CAF_LOG_TRACE(CAF_TSARG(other));
         if (other && m_acquaintances.insert(other).second) {
           monitor(other);
         }
       },
-      on(atom("LEAVE"), arg_match) >> [=](const actor& other) {
+      [=](leave_atom, const actor& other) {
         CAF_LOG_TRACE(CAF_TSARG(other));
         if (other && m_acquaintances.erase(other) > 0) {
           demonitor(other);
         }
       },
-      on(atom("_Forward"), arg_match) >> [=](const message& what) {
+      [=](forward_atom, const message& what) {
         CAF_LOG_TRACE(CAF_TSARG(what));
         // local forwarding
         m_group->send_all_subscribers(current_sender(), what, host());
@@ -224,10 +213,9 @@ class local_broker : public event_based_actor {
 
   local_group_ptr m_group;
   std::set<actor> m_acquaintances;
-  latch* m_hv;
 };
 
-// Send a "JOIN" message to the original group if a proxy
+// Send a join message to the original group if a proxy
 // has local subscriptions and a "LEAVE" message to the original group
 // if there's no subscription left.
 
@@ -243,7 +231,7 @@ class local_group_proxy : public local_group {
     CAF_REQUIRE(m_broker == invalid_actor);
     CAF_REQUIRE(remote_broker != invalid_actor);
     m_broker = std::move(remote_broker);
-    m_proxy_broker = spawn<proxy_broker, hidden>(&m_latch, this);
+    m_proxy_broker = spawn<proxy_broker, hidden>(this);
   }
 
   attachable_ptr subscribe(const actor_addr& who) override {
@@ -252,7 +240,7 @@ class local_group_proxy : public local_group {
     if (res.first) {
       if (res.second == 1) {
         // join the remote source
-        anon_send(m_broker, atom("JOIN"), m_proxy_broker);
+        anon_send(m_broker, join_atom::value, m_proxy_broker);
       }
       return subscription::make(this);
     }
@@ -266,7 +254,7 @@ class local_group_proxy : public local_group {
     if (res.first && res.second == 0) {
       // leave the remote source,
       // because there's no more subscriber on this node
-      anon_send(m_broker, atom("LEAVE"), m_proxy_broker);
+      anon_send(m_broker, leave_atom::value, m_proxy_broker);
     }
   }
 
@@ -274,13 +262,15 @@ class local_group_proxy : public local_group {
                execution_unit* eu) override {
     // forward message to the broker
     m_broker->enqueue(sender, mid,
-                      make_message(atom("_Forward"), std::move(msg)), eu);
+                      make_message(forward_atom::value, std::move(msg)),
+                      eu);
   }
 
   void stop() override {
     CAF_LOG_TRACE("");
-    anon_send_exit(m_proxy_broker, exit_reason::user_shutdown);
-    m_latch.wait();
+    await_all_locals_down({m_proxy_broker, m_broker});
+    m_proxy_broker = invalid_actor;
+    m_broker = invalid_actor;
   }
 
  private:
@@ -291,9 +281,7 @@ using local_group_proxy_ptr = intrusive_ptr<local_group_proxy>;
 
 class proxy_broker : public event_based_actor {
  public:
-  proxy_broker(latch* grp_latch, local_group_proxy_ptr grp)
-      : m_latch(grp_latch),
-        m_group(std::move(grp)) {
+  proxy_broker(local_group_proxy_ptr grp) : m_group(std::move(grp)) {
     // nop
   }
 
@@ -308,17 +296,16 @@ class proxy_broker : public event_based_actor {
 
   void on_exit() {
     m_group.reset();
-    m_latch->count_down();
   }
 
  private:
-  latch* m_latch;
   local_group_proxy_ptr m_group;
 };
 
 class local_group_module : public abstract_group::module {
  public:
   using super = abstract_group::module;
+
   local_group_module()
       : super("local"), m_actor_utype(uniform_typeid<actor>()) {
     // nop
@@ -329,18 +316,17 @@ class local_group_module : public abstract_group::module {
     auto i = m_instances.find(identifier);
     if (i != m_instances.end()) {
       return {i->second};
-    } else {
-      auto tmp = make_counted<local_group>(true, this, identifier);
-      { // lifetime scope of uguard
-        upgrade_to_unique_guard uguard(guard);
-        auto p = m_instances.insert(make_pair(identifier, tmp));
-        // someone might preempt us
-        if (p.first->second != tmp) {
-          tmp->stop();
-        }
-        return {p.first->second};
-      }
     }
+    auto tmp = make_counted<local_group>(true, this, identifier);
+    upgrade_to_unique_guard uguard(guard);
+    auto p = m_instances.insert(make_pair(identifier, tmp));
+    auto result = p.first->second;
+    uguard.unlock();
+    // someone might preempt us
+    if (result != tmp) {
+      tmp->stop();
+    }
+    return {result};
   }
 
   group deserialize(deserializer* source) override {
@@ -401,13 +387,11 @@ class local_group_module : public abstract_group::module {
 };
 
 local_group::local_group(bool do_spawn, local_group_module* mod, std::string id)
-    : abstract_group(mod, std::move(id)),
-      m_latch(1) {
+    : abstract_group(mod, std::move(id)) {
   if (do_spawn) {
-    m_broker = spawn<local_broker, hidden>(this, &m_latch);
+    m_broker = spawn<local_broker, hidden>(this);
   }
-  // else: derived class spawns an actor and
-  //       uses the latch for overriding stop()
+  // else: derived class spawns m_broker
 }
 
 local_group::~local_group() {
@@ -420,7 +404,7 @@ void local_group::serialize(serializer* sink) {
   static_cast<local_group_module*>(m_module)->serialize(this, sink);
 }
 
-std::atomic<size_t> m_ad_hoc_id;
+std::atomic<size_t> s_ad_hoc_id;
 
 } // namespace <anonymous>
 
@@ -447,7 +431,7 @@ group_manager::group_manager() {
 
 group group_manager::anonymous() {
   std::string id = "__#";
-  id += std::to_string(++m_ad_hoc_id);
+  id += std::to_string(++s_ad_hoc_id);
   return get_module("local")->get(id);
 }
 
