@@ -147,6 +147,11 @@ class actor : detail::comparable<actor>,
    */
   actor_addr address() const;
 
+  /**
+   * Returns whether this is an handle to a remote actor.
+   */
+  bool is_remote() const;
+
   actor_id id() const;
 
   void swap(actor& other);

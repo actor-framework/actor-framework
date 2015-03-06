@@ -58,6 +58,10 @@ actor_addr actor::address() const {
   return m_ptr ? m_ptr->address() : actor_addr{};
 }
 
+bool actor::is_remote() const {
+  return m_ptr ? m_ptr->is_remote() : false;
+}
+
 actor_id actor::id() const {
   return (m_ptr) ? m_ptr->id() : 0;
 }
