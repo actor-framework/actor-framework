@@ -89,9 +89,9 @@ class abstract_channel : public ref_counted {
 
  private:
   // can only be called from abstract_actor and abstract_group
-  abstract_channel(channel_type_flag subtype, size_t initial_ref_count = 0);
-  abstract_channel(channel_type_flag subtype, node_id nid,
-                   size_t initial_ref_count = 0);
+  abstract_channel(channel_type_flag subtype);
+  abstract_channel(channel_type_flag subtype, node_id nid);
+
   // identifies the node of this channel
   node_id m_node;
 };

@@ -85,7 +85,7 @@ class message_data : public ref_counted {
     ptr& operator=(ptr&&) = default;
     ptr& operator=(const ptr&) = default;
 
-    inline explicit ptr(message_data* p) : m_ptr(p) {
+    inline ptr(intrusive_ptr<message_data> p) : m_ptr(std::move(p)) {
       // nop
     }
 

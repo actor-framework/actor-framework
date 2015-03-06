@@ -18,8 +18,8 @@
  ******************************************************************************/
 
 #include "caf/none.hpp"
-
 #include "caf/config.hpp"
+#include "caf/make_counted.hpp"
 
 #include "caf/detail/logging.hpp"
 #include "caf/detail/singletons.hpp"
@@ -28,7 +28,6 @@
 #include "caf/io/broker.hpp"
 #include "caf/io/middleman.hpp"
 
-#include "caf/detail/make_counted.hpp"
 #include "caf/detail/actor_registry.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 

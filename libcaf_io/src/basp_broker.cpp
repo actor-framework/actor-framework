@@ -20,12 +20,12 @@
 #include "caf/io/basp_broker.hpp"
 
 #include "caf/exception.hpp"
+#include "caf/make_counted.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/forwarding_actor_proxy.hpp"
 
 #include "caf/detail/singletons.hpp"
-#include "caf/detail/make_counted.hpp"
 #include "caf/detail/actor_registry.hpp"
 
 #include "caf/io/basp.hpp"
@@ -38,7 +38,6 @@ namespace caf {
 namespace io {
 
 using detail::singletons;
-using detail::make_counted;
 
 basp_broker::payload_writer::~payload_writer() {
   // nop

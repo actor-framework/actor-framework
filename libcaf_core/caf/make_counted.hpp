@@ -17,38 +17,46 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_MAKE_COUNTED_HPP
-#define CAF_DETAIL_MAKE_COUNTED_HPP
-
-#include "caf/intrusive_ptr.hpp"
+#ifndef CAF_MAKE_COUNTED_HPP
+#define CAF_MAKE_COUNTED_HPP
 
 #include "caf/ref_counted.hpp"
+#include "caf/intrusive_ptr.hpp"
 
 #include "caf/detail/memory.hpp"
 #include "caf/detail/type_traits.hpp"
 
 namespace caf {
-namespace detail {
 
+/**
+ * Constructs an object of type `T` in an `intrusive_ptr`.
+ * @relates ref_counted
+ * @relates intrusive_ptr
+ */
 template <class T, class... Ts>
 typename std::enable_if<
   detail::is_memory_cached<T>::value,
   intrusive_ptr<T>
 >::type
 make_counted(Ts&&... args) {
-  return {detail::memory::create<T>(std::forward<Ts>(args)...)};
+  return intrusive_ptr<T>(detail::memory::create<T>(std::forward<Ts>(args)...),
+                          false);
 }
 
+/**
+ * Constructs an object of type `T` in an `intrusive_ptr`.
+ * @relates ref_counted
+ * @relates intrusive_ptr
+ */
 template <class T, class... Ts>
 typename std::enable_if<
   !detail::is_memory_cached<T>::value,
   intrusive_ptr<T>
 >::type
 make_counted(Ts&&... args) {
-  return {new T(std::forward<Ts>(args)...)};
+  return intrusive_ptr<T>(new T(std::forward<Ts>(args)...), false);
 }
 
-} // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_MAKE_COUNTED_HPP
+#endif // CAF_MAKE_COUNTED_HPP

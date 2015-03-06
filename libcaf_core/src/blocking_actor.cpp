@@ -38,6 +38,11 @@ void blocking_actor::await_all_other_actors_done() {
   detail::singletons::get_actor_registry()->await_running_count_equal(1);
 }
 
+void blocking_actor::cleanup(uint32_t reason) {
+  m_sync_handler.clear();
+  mailbox_based_actor::cleanup(reason);
+}
+
 void blocking_actor::functor_based::create(blocking_actor*, act_fun fun) {
   m_act = fun;
 }
@@ -45,6 +50,11 @@ void blocking_actor::functor_based::create(blocking_actor*, act_fun fun) {
 void blocking_actor::functor_based::act() {
   CAF_LOG_TRACE("");
   m_act(this);
+}
+
+void blocking_actor::functor_based::cleanup(uint32_t reason) {
+  m_act = nullptr;
+  blocking_actor::cleanup(reason);
 }
 
 } // namespace caf

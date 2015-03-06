@@ -225,7 +225,7 @@ class typed_behavior {
   behavior& unbox() { return m_bhvr; }
 
   template <class... Ts>
-  void set(detail::default_behavior_impl<std::tuple<Ts...>>* ptr) {
+  void set(intrusive_ptr<detail::default_behavior_impl<std::tuple<Ts...>>> bp) {
     using mpi =
       typename detail::tl_filter_not<
         detail::type_list<typename detail::deduce_mpi<Ts>::type...>,
@@ -233,7 +233,8 @@ class typed_behavior {
       >::type;
     detail::static_asserter<signatures, mpi, detail::ctm>::verify_match();
     // final (type-erasure) step
-    m_bhvr.assign(static_cast<detail::behavior_impl*>(ptr));
+    intrusive_ptr<detail::behavior_impl> ptr = std::move(bp);
+    m_bhvr.assign(std::move(ptr));
   }
 
   behavior m_bhvr;

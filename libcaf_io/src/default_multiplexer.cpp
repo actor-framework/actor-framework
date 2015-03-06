@@ -22,6 +22,7 @@
 #include "caf/config.hpp"
 #include "caf/optional.hpp"
 #include "caf/exception.hpp"
+#include "caf/make_counted.hpp"
 
 #include "caf/io/broker.hpp"
 #include "caf/io/middleman.hpp"
@@ -767,7 +768,7 @@ connection_handle default_multiplexer::add_tcp_scribe(broker* self,
     bool m_launched;
     stream<default_socket> m_stream;
   };
-  broker::scribe_pointer ptr{new impl{self, std::move(sock)}};
+  broker::scribe_pointer ptr = make_counted<impl>(self, std::move(sock));
   self->add_scribe(ptr);
   return ptr->hdl();
 }
@@ -804,7 +805,7 @@ default_multiplexer::add_tcp_doorman(broker* self,
    private:
     network::acceptor<default_socket_acceptor> m_acceptor;
   };
-  broker::doorman_pointer ptr{new impl{self, std::move(sock)}};
+  broker::doorman_pointer ptr = make_counted<impl>(self, std::move(sock));
   self->add_doorman(ptr);
   return ptr->hdl();
 }

@@ -47,18 +47,18 @@ using guard_type = std::unique_lock<std::mutex>;
 // m_exit_reason is guaranteed to be set to 0, i.e., exit_reason::not_exited,
 // by std::atomic<> constructor
 
-abstract_actor::abstract_actor(actor_id aid, node_id nid, size_t initial_count)
+abstract_actor::abstract_actor(actor_id aid, node_id nid)
     : abstract_channel(abstract_channel::is_abstract_actor_flag,
-                       std::move(nid), initial_count),
+                       std::move(nid)),
       m_id(aid),
       m_exit_reason(exit_reason::not_exited),
       m_host(nullptr) {
   // nop
 }
 
-abstract_actor::abstract_actor(size_t initial_count)
+abstract_actor::abstract_actor()
     : abstract_channel(abstract_channel::is_abstract_actor_flag,
-                       detail::singletons::get_node_id(), initial_count),
+                       detail::singletons::get_node_id()),
       m_id(detail::singletons::get_actor_registry()->next_id()),
       m_exit_reason(exit_reason::not_exited),
       m_host(nullptr) {

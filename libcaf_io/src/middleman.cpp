@@ -31,6 +31,7 @@
 #include "caf/announce.hpp"
 #include "caf/to_string.hpp"
 #include "caf/actor_proxy.hpp"
+#include "caf/make_counted.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/uniform_type_info.hpp"
 
@@ -42,7 +43,6 @@
 #include "caf/detail/ripemd_160.hpp"
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/singletons.hpp"
-#include "caf/detail/make_counted.hpp"
 #include "caf/detail/get_root_uuid.hpp"
 #include "caf/detail/actor_registry.hpp"
 #include "caf/detail/get_mac_addresses.hpp"
@@ -139,8 +139,6 @@ void do_announce(const char* tname) {
 }
 
 } // namespace <anonymous>
-
-using detail::make_counted;
 
 using middleman_actor_base = middleman_actor::extend<
                                reacts_to<ok_atom, int64_t>,

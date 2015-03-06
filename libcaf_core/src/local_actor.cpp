@@ -31,9 +31,7 @@ namespace caf {
 // local actors are created with a reference count of one that is adjusted
 // later on in spawn(); this prevents subtle bugs that lead to segfaults,
 // e.g., when calling address() in the ctor of a derived class
-local_actor::local_actor()
-    : abstract_actor(size_t{1}),
-      m_planned_exit_reason(exit_reason::not_exited) {
+local_actor::local_actor() : m_planned_exit_reason(exit_reason::not_exited) {
   // nop
 }
 

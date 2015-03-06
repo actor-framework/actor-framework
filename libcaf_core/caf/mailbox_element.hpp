@@ -76,7 +76,7 @@ class mailbox_element : public memory_managed {
     using storage = detail::pair_storage<mailbox_element, value_storage>;
     auto ptr = detail::memory::create<storage>(tk, std::move(sender), id,
                                                std::forward<Vs>(vs)...);
-    ptr->first.msg.reset(&(ptr->second));
+    ptr->first.msg.reset(&(ptr->second), false);
     return unique_ptr{&(ptr->first)};
   }
 
