@@ -26,6 +26,7 @@
 
 #include "caf/detail/singletons.hpp"
 #include "caf/detail/decorated_tuple.hpp"
+#include "caf/detail/concatenated_tuple.hpp"
 
 namespace caf {
 
@@ -292,6 +293,18 @@ message::cli_arg::cli_arg(std::string nstr, std::string tstr,
     arg.push_back(str);
     return true;
   };
+}
+
+message message::concat_impl(std::initializer_list<data_ptr> xs) {
+  auto not_nullptr = [](const data_ptr& ptr) { return ptr.get() != nullptr; };
+  switch (std::count_if(xs.begin(), xs.end(), not_nullptr)) {
+    case 0:
+      return message{};
+    case 1:
+      return message{*std::find_if(xs.begin(), xs.end(), not_nullptr)};
+    default:
+      return message{detail::concatenated_tuple::make(xs)};
+  }
 }
 
 } // namespace caf

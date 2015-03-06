@@ -39,7 +39,6 @@
 #include "caf/detail/implicit_conversions.hpp"
 
 namespace caf {
-
 class message_handler;
 
 /**
@@ -108,6 +107,14 @@ class message {
    * Creates a new message of size `n` starting at the element at position `p`.
    */
   message slice(size_t p, size_t n) const;
+
+  /**
+   * Concatinate messages
+   */
+  template <class... Ts>
+  static message concat(const Ts&... xs) {
+    return concat_impl({xs.vals()...});
+  }
 
   /**
    * Returns a mutable pointer to the element at position `p`.
@@ -376,6 +383,8 @@ class message {
 
   message extract_impl(size_t start, message_handler handler) const;
 
+  static message concat_impl(std::initializer_list<data_ptr> ptrs);
+
   data_ptr m_vals;
 };
 
@@ -411,6 +420,13 @@ inline bool operator==(const message& lhs, const message& rhs) {
  */
 inline bool operator!=(const message& lhs, const message& rhs) {
   return !(lhs == rhs);
+}
+
+/**
+ * @relates message
+ */
+inline message operator+(const message& lhs, const message& rhs) {
+  return message::concat(lhs, rhs);
 }
 
 /**

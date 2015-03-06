@@ -143,6 +143,10 @@ constexpr uint32_t make_type_token() {
   return type_token_helper<0xFFFFFFFF, type_nr<Ts>::value...>::value;
 }
 
+constexpr uint32_t add_to_type_token(uint32_t token, uint16_t tnr) {
+  return (token << 6) | tnr;
+}
+
 template <class T>
 struct make_type_token_from_list_helper;
 
