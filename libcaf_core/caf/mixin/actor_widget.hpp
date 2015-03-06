@@ -34,6 +34,7 @@
 #include <QEvent>
 #include <QApplication>
 
+#include "caf/make_counted.hpp"
 #include "caf/actor_companion.hpp"
 #include "caf/message_handler.hpp"
 
@@ -55,7 +56,7 @@ class actor_widget : public Base {
 
   template <typename... Ts>
   actor_widget(Ts&&... args) : Base(std::forward<Ts>(args)...) {
-    m_companion.reset(detail::memory::create<actor_companion>());
+    m_companion = make_counted<actor_companion>();
     m_companion->on_enqueue([=](message_pointer ptr) {
       qApp->postEvent(this, new event_type(std::move(ptr)));
     });

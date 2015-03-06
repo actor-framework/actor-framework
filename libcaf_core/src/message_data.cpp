@@ -65,13 +65,12 @@ std::string message_data::tuple_type_names() const {
   return result;
 }
 
-message_data* message_data::ptr::get_detached() {
+message_data* message_data::cow_ptr::get_detached() {
   auto p = m_ptr.get();
   if (!p->unique()) {
-    auto np = p->copy();
-    CAF_REQUIRE(np->unique());
-    m_ptr.reset(np, false);
-    return np;
+    auto cptr = p->copy();
+    m_ptr.swap(cptr.m_ptr);
+    return m_ptr.get();
   }
   return p;
 }

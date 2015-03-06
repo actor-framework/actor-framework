@@ -41,16 +41,16 @@ class decorated_tuple : public message_data {
 
   using vector_type = std::vector<size_t>;
 
-  using pointer = message_data::ptr;
+  using message_data::cow_ptr;
 
   // creates a typed subtuple from `d` with mapping `v`
-  static pointer make(pointer d, vector_type v);
+  static cow_ptr make(cow_ptr d, vector_type v);
 
   void* mutable_at(size_t pos) override;
 
   size_t size() const override;
 
-  decorated_tuple* copy() const override;
+  cow_ptr copy() const override;
 
   const void* at(size_t pos) const override;
 
@@ -63,7 +63,7 @@ class decorated_tuple : public message_data {
 
   uint16_t type_nr_at(size_t pos) const override;
 
-  inline const pointer& decorated() const {
+  inline const cow_ptr& decorated() const {
     return m_decorated;
   }
 
@@ -72,10 +72,10 @@ class decorated_tuple : public message_data {
   }
 
  private:
-  decorated_tuple(pointer&&, vector_type&&);
+  decorated_tuple(cow_ptr&&, vector_type&&);
   decorated_tuple(const decorated_tuple&) = default;
 
-  pointer m_decorated;
+  cow_ptr m_decorated;
   vector_type m_mapping;
   uint32_t m_type_token;
 };

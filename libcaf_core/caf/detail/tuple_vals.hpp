@@ -98,8 +98,8 @@ class tuple_vals : public message_data {
     return sizeof...(Ts);
   }
 
-  tuple_vals* copy() const override {
-    return new tuple_vals(*this);
+  message_data::cow_ptr copy() const override {
+    return message_data::cow_ptr(new tuple_vals(*this), false);
   }
 
   const void* at(size_t pos) const override {

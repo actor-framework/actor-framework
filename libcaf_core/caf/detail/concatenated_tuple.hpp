@@ -32,16 +32,16 @@ class concatenated_tuple : public message_data {
  public:
   concatenated_tuple& operator=(const concatenated_tuple&) = delete;
 
-  using pointer = message_data::ptr;
-  using vector_type = std::vector<pointer>;
+  using message_data::cow_ptr;
+  using vector_type = std::vector<cow_ptr>;
 
-  static pointer make(std::initializer_list<pointer> xs);
+  static cow_ptr make(std::initializer_list<cow_ptr> xs);
 
   void* mutable_at(size_t pos) override;
 
   size_t size() const override;
 
-  concatenated_tuple* copy() const override;
+  cow_ptr copy() const override;
 
   const void* at(size_t pos) const override;
 

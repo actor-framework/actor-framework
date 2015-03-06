@@ -162,6 +162,7 @@ class basic_memory_cache : public memory_cache {
     // allocate cache on-the-fly
     if (!m_cache) {
       m_cache.reset(new storage, false); // starts with ref count of 1
+      CAF_REQUIRE(m_cache->unique());
     }
     auto res = m_cache->next();
     if (m_cache->has_next()) {
@@ -170,7 +171,7 @@ class basic_memory_cache : public memory_cache {
     // we got the last element out of the cache; pass the reference to the
     // client to avoid pointless increase/decrease ops on the reference count
     embedded_storage result;
-    result.first = std::move(m_cache);
+    result.first.reset(m_cache.release(), false);
     result.second = res;
     return result;
   }

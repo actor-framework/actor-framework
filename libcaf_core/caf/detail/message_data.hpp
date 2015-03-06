@@ -59,8 +59,6 @@ class message_data : public ref_counted {
 
   virtual size_t size() const = 0;
 
-  virtual message_data* copy() const = 0;
-
   virtual const void* at(size_t pos) const = 0;
 
   // Tries to match element at position `pos` to given RTTI.
@@ -77,15 +75,19 @@ class message_data : public ref_counted {
    *                               nested types                               *
    ****************************************************************************/
 
-  class ptr {
+  class cow_ptr {
    public:
-    ptr() = default;
-    ptr(ptr&&) = default;
-    ptr(const ptr&) = default;
-    ptr& operator=(ptr&&) = default;
-    ptr& operator=(const ptr&) = default;
+    cow_ptr() = default;
+    cow_ptr(cow_ptr&&) = default;
+    cow_ptr(const cow_ptr&) = default;
+    cow_ptr& operator=(cow_ptr&&) = default;
+    cow_ptr& operator=(const cow_ptr&) = default;
 
-    inline ptr(intrusive_ptr<message_data> p) : m_ptr(std::move(p)) {
+    inline cow_ptr(intrusive_ptr<message_data> p) : m_ptr(std::move(p)) {
+      // nop
+    }
+
+    inline cow_ptr(message_data* ptr, bool add_ref) : m_ptr(ptr, add_ref) {
       // nop
     }
 
@@ -93,7 +95,7 @@ class message_data : public ref_counted {
      *                               modifiers                                *
      **************************************************************************/
 
-    inline void swap(ptr& other) {
+    inline void swap(cow_ptr& other) {
       m_ptr.swap(other.m_ptr);
     }
 
@@ -140,6 +142,8 @@ class message_data : public ref_counted {
     message_data* get_detached();
     intrusive_ptr<message_data> m_ptr;
   };
+
+  virtual cow_ptr copy() const = 0;
 };
 
 } // namespace detail

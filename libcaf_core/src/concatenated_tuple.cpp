@@ -27,7 +27,7 @@
 namespace caf {
 namespace detail {
 
-auto concatenated_tuple::make(std::initializer_list<pointer> xs) -> pointer {
+auto concatenated_tuple::make(std::initializer_list<cow_ptr> xs) -> cow_ptr {
   auto result = make_counted<concatenated_tuple>();
   for (auto& x : xs) {
     if (x) {
@@ -41,7 +41,7 @@ auto concatenated_tuple::make(std::initializer_list<pointer> xs) -> pointer {
     }
   }
   result->init();
-  return pointer{std::move(result)};
+  return cow_ptr{std::move(result)};
 }
 
 void* concatenated_tuple::mutable_at(size_t pos) {
@@ -54,8 +54,8 @@ size_t concatenated_tuple::size() const {
   return m_size;
 }
 
-concatenated_tuple* concatenated_tuple::copy() const {
-  return new concatenated_tuple(*this);
+message_data::cow_ptr concatenated_tuple::copy() const {
+  return cow_ptr(new concatenated_tuple(*this), false);
 }
 
 const void* concatenated_tuple::at(size_t pos) const {
@@ -106,7 +106,7 @@ void concatenated_tuple::init() {
       m_type_token = add_to_type_token(m_type_token, m->type_nr_at(i));
     }
   }
-  auto acc_size = [](size_t tmp, const pointer& val) {
+  auto acc_size = [](size_t tmp, const cow_ptr& val) {
     return tmp + val->size();
   };
   m_size = std::accumulate(m_data.begin(), m_data.end(), size_t{0}, acc_size);

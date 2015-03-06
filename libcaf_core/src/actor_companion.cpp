@@ -39,8 +39,7 @@ void actor_companion::on_enqueue(enqueue_handler handler) {
 void actor_companion::enqueue(const actor_addr& sender, message_id mid,
                               message content, execution_unit*) {
   using detail::memory;
-  message_pointer ptr{memory::create<mailbox_element>(sender, mid,
-                                                      std::move(content))};
+  auto ptr = mailbox_element::make(sender, mid, std::move(content));
   shared_lock<lock_type> guard(m_lock);
   if (m_on_enqueue) {
     m_on_enqueue(std::move(ptr));

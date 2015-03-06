@@ -22,7 +22,7 @@
 namespace caf {
 namespace detail {
 
-decorated_tuple::pointer decorated_tuple::make(pointer d, vector_type v) {
+decorated_tuple::cow_ptr decorated_tuple::make(cow_ptr d, vector_type v) {
   auto ptr = dynamic_cast<const decorated_tuple*>(d.get());
   if (ptr) {
     d = ptr->decorated();
@@ -31,7 +31,7 @@ decorated_tuple::pointer decorated_tuple::make(pointer d, vector_type v) {
       v[i] = pmap[v[i]];
     }
   }
-  return pointer{new decorated_tuple(std::move(d), std::move(v))};
+  return cow_ptr{new decorated_tuple(std::move(d), std::move(v))};
 }
 
 void* decorated_tuple::mutable_at(size_t pos) {
@@ -43,8 +43,8 @@ size_t decorated_tuple::size() const {
   return m_mapping.size();
 }
 
-decorated_tuple* decorated_tuple::copy() const {
-  return new decorated_tuple(*this);
+message_data::cow_ptr decorated_tuple::copy() const {
+  return cow_ptr(new decorated_tuple(*this), false);
 }
 
 const void* decorated_tuple::at(size_t pos) const {
@@ -69,13 +69,13 @@ uint16_t decorated_tuple::type_nr_at(size_t pos) const {
   return m_decorated->type_nr_at(m_mapping[pos]);
 }
 
-decorated_tuple::decorated_tuple(pointer&& d, vector_type&& v)
+decorated_tuple::decorated_tuple(cow_ptr&& d, vector_type&& v)
     : m_decorated(std::move(d)),
       m_mapping(std::move(v)),
       m_type_token(0xFFFFFFFF) {
   CAF_REQUIRE(m_mapping.empty()
               || *(std::max_element(m_mapping.begin(), m_mapping.end()))
-                 < static_cast<const pointer&>(m_decorated)->size());
+                 < static_cast<const cow_ptr&>(m_decorated)->size());
   // calculate type token
   for (size_t i = 0; i < m_mapping.size(); ++i) {
     m_type_token <<= 6;

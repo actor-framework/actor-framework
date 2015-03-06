@@ -309,7 +309,7 @@ class message {
 
   using raw_ptr = detail::message_data*;
 
-  using data_ptr = detail::message_data::ptr;
+  using data_ptr = detail::message_data::cow_ptr;
 
   explicit message(raw_ptr);
 
@@ -462,7 +462,7 @@ make_message(V&& v, Vs&&... vs) {
                            typename detail::strip_and_convert<Vs>::type
                          >::type...>;
   auto ptr = make_counted<storage>(std::forward<V>(v), std::forward<Vs>(vs)...);
-  return message{detail::message_data::ptr{std::move(ptr)}};
+  return message{detail::message_data::cow_ptr{std::move(ptr)}};
 }
 
 /**

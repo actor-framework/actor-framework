@@ -66,8 +66,8 @@ class message_builder::dynamic_msg_data : public detail::message_data {
     return m_elements.size();
   }
 
-  dynamic_msg_data* copy() const override {
-    return new dynamic_msg_data(*this);
+  cow_ptr copy() const override {
+    return cow_ptr(new dynamic_msg_data(*this), false);
   }
 
   bool match_element(size_t pos, uint16_t typenr,
@@ -174,8 +174,8 @@ message_builder::dynamic_msg_data* message_builder::data() {
   // operations on m_data can cause race conditions if
   // someone else holds a reference to m_data
   if (!m_data->unique()) {
-    intrusive_ptr<ref_counted> tmp{std::move(m_data)};
-    m_data.reset(static_cast<dynamic_msg_data*>(tmp.get())->copy());
+    auto tmp = static_cast<dynamic_msg_data*>(m_data.get())->copy();
+    m_data.reset(tmp.release(), false);
   }
   return static_cast<dynamic_msg_data*>(m_data.get());
 }
