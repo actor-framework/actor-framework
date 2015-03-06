@@ -85,9 +85,8 @@ program program::create(const char* kernel_source, const char* options,
                             sizeof(buffer[0]) * buildlog_buffer_size,
                             buffer.data(), nullptr);
 
-      CAF_LOGC_ERROR("caf::opencl::program", "create",
-                     "Build log:\n" + string(buffer.data()) +
-                       "\n########################################");
+      CAF_LOGF_ERROR("Build log:\n" + string(buffer.data()) +
+                     "\n########################################");
     }
 #endif
     throw runtime_error(oss.str());
