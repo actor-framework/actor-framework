@@ -311,8 +311,6 @@ class message {
 
   using data_ptr = detail::message_data::cow_ptr;
 
-  explicit message(raw_ptr);
-
   explicit message(const data_ptr& vals);
 
   inline data_ptr& vals() {

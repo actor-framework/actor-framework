@@ -67,7 +67,7 @@ class message_builder::dynamic_msg_data : public detail::message_data {
   }
 
   cow_ptr copy() const override {
-    return cow_ptr(new dynamic_msg_data(*this), false);
+    return make_counted<dynamic_msg_data>(*this);
   }
 
   bool match_element(size_t pos, uint16_t typenr,
@@ -126,7 +126,7 @@ void message_builder::init() {
   // this should really be done by delegating
   // constructors, but we want to support
   // some compilers without that feature...
-  m_data.reset(new dynamic_msg_data);
+  m_data = make_counted<dynamic_msg_data>();
 }
 
 void message_builder::clear() {
@@ -149,7 +149,9 @@ message_builder& message_builder::append(uniform_value what) {
 message message_builder::to_message() const {
   // this const_cast is safe, because the message is
   // guaranteed to detach its data before modifying it
-  return message{const_cast<dynamic_msg_data*>(data())};
+  detail::message_data::cow_ptr ptr;
+  ptr.reset(const_cast<dynamic_msg_data*>(data()));
+  return message{std::move(ptr)};
 }
 
 message message_builder::move_to_message() {

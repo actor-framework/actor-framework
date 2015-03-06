@@ -43,6 +43,8 @@ class decorated_tuple : public message_data {
 
   using message_data::cow_ptr;
 
+  decorated_tuple(cow_ptr&&, vector_type&&);
+
   // creates a typed subtuple from `d` with mapping `v`
   static cow_ptr make(cow_ptr d, vector_type v);
 
@@ -72,7 +74,6 @@ class decorated_tuple : public message_data {
   }
 
  private:
-  decorated_tuple(cow_ptr&&, vector_type&&);
   decorated_tuple(const decorated_tuple&) = default;
 
   cow_ptr m_decorated;

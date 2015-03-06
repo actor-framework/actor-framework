@@ -19,6 +19,8 @@
 
 #include "caf/detail/decorated_tuple.hpp"
 
+#include "caf/make_counted.hpp"
+
 namespace caf {
 namespace detail {
 
@@ -31,7 +33,7 @@ decorated_tuple::cow_ptr decorated_tuple::make(cow_ptr d, vector_type v) {
       v[i] = pmap[v[i]];
     }
   }
-  return cow_ptr{new decorated_tuple(std::move(d), std::move(v))};
+  return make_counted<decorated_tuple>(std::move(d), std::move(v));
 }
 
 void* decorated_tuple::mutable_at(size_t pos) {

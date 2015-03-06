@@ -346,7 +346,8 @@ class local_group_module : public abstract_group::module {
     if (i != m_proxies.end()) {
       return {i->second};
     }
-    local_group_ptr tmp{new local_group_proxy{broker, this, identifier}};
+    local_group_ptr tmp = make_counted<local_group_proxy>(broker, this,
+                                                          identifier);
     upgrade_to_unique_guard uguard(guard);
     auto p = m_proxies.insert(std::make_pair(broker, tmp));
     // someone might preempt us

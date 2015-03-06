@@ -30,10 +30,6 @@
 
 namespace caf {
 
-message::message(detail::message_data* ptr) : m_vals(ptr) {
-  // nop
-}
-
 message::message(message&& other) : m_vals(std::move(other.m_vals)) {
   // nop
 }

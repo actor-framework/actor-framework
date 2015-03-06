@@ -37,7 +37,9 @@ actor_proxy::anchor::anchor(actor_proxy* instance) : m_ptr(instance) {
   // nop
 }
 
-actor_proxy::anchor::~anchor() {}
+actor_proxy::anchor::~anchor() {
+  // nop
+}
 
 bool actor_proxy::anchor::expired() const {
   return !m_ptr;
@@ -70,7 +72,8 @@ actor_proxy::~actor_proxy() {
 }
 
 actor_proxy::actor_proxy(actor_id aid, node_id nid)
-    : abstract_actor(aid, nid), m_anchor(new anchor{this}) {
+    : abstract_actor(aid, nid),
+      m_anchor(make_counted<anchor>(this)) {
   // nop
 }
 

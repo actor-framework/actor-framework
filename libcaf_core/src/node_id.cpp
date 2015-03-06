@@ -117,12 +117,13 @@ node_id::node_id(intrusive_ptr<data> dataptr) : m_data(std::move(dataptr)) {
 }
 
 node_id::node_id(uint32_t procid, const std::string& b) {
-  m_data.reset(new data);
+  m_data = make_counted<data>();
   m_data->process_id = procid;
   host_id_from_string(b, m_data->host_id);
 }
 
-node_id::node_id(uint32_t a, const host_id_type& b) : m_data(new data{a, b}) {
+node_id::node_id(uint32_t a, const host_id_type& b)
+    : m_data(make_counted<data>(a, b)) {
   // nop
 }
 

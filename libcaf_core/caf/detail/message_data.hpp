@@ -83,7 +83,8 @@ class message_data : public ref_counted {
     cow_ptr& operator=(cow_ptr&&) = default;
     cow_ptr& operator=(const cow_ptr&) = default;
 
-    inline cow_ptr(intrusive_ptr<message_data> p) : m_ptr(std::move(p)) {
+    template <class T>
+    cow_ptr(intrusive_ptr<T> p) : m_ptr(std::move(p)) {
       // nop
     }
 
