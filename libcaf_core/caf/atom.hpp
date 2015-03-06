@@ -95,9 +95,27 @@ using ok_atom = atom_constant<atom("OK")>;
 using error_atom = atom_constant<atom("ERROR")>;
 
 /**
- * Generic 'SYS' atom.
+ * Marker 'SYS' atom for prefixing messages to a forwarding chain
+ * to address an otherwise transparent actor.
  */
 using sys_atom = atom_constant<atom("SYS")>;
+
+/**
+ * Generic 'JOIN' atom, e.g., for signaling group subscriptions.
+ */
+using join_atom = atom_constant<atom("JOIN")>;
+
+/**
+ * Generic 'LEAVE' atom, e.g., for signaling group unsubscriptions.
+ */
+using leave_atom = atom_constant<atom("LEAVE")>;
+
+/**
+ * Generic 'FORWARD' atom, e.g., for signaling an actor that it
+ * should drop the first element and forward the remainder to
+ * a list of predefined receivers.
+ */
+using forward_atom = atom_constant<atom("FORWARD")>;
 
 } // namespace caf
 
