@@ -116,11 +116,11 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
     args_vec arguments;
     add_arguments_to_kernel<Ret>(events, arguments, m_result_size,
                                  content, indices);
-    auto cmd = detail::make_counted<command_type>(handle, this,
-                                                  std::move(events),
-                                                  std::move(arguments),
-                                                  m_result_size,
-                                                  std::move(content));
+    auto cmd = make_counted<command_type>(handle, this,
+                                          std::move(events),
+                                          std::move(arguments),
+                                          m_result_size,
+                                          std::move(content));
     cmd->enqueue();
   }
 
