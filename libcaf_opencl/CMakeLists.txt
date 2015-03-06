@@ -5,7 +5,7 @@ project(caf_opencl C CXX)
 # e.g., for creating proper Xcode projects
 file(GLOB LIBCAF_OPENCL_HDRS "caf/opencl/*.hpp")
 
-if (OPENCL_LIBRARIES)
+if (OpenCL_LIBRARIES)
   # list cpp files excluding platform-dependent files
   set (LIBCAF_OPENCL_SRCS
        src/global.cpp
@@ -17,10 +17,10 @@ if (OPENCL_LIBRARIES)
   if(NOT "${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes")
     add_library(libcaf_opencl SHARED ${LIBCAF_OPENCL_SRCS}
                                      ${LIBCAF_OPENCL_HDRS}
-                                     ${OPENCL_INCLUDE_DIR})
+                                     ${OpenCL_INCLUDE_DIRS})
     target_link_libraries(libcaf_opencl ${LD_FLAGS}
                                         ${LIBCAF_CORE_LIBRARY}
-                                        ${OPENCL_LIBRARIES})
+                                        ${OpenCL_LIBRARIES})
     set(LIBRARY_SOVERSION "${CAF_VERSION_MAJOR}")
     set_target_properties(libcaf_opencl
                           PROPERTIES

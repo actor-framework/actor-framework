@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 project(caf_examples_opencl CXX)
 
-if(OPENCL_LIBRARIES)
+if(OpenCL_LIBRARIES)
   add_custom_target(opencl_examples)
   include_directories(${LIBCAF_INCLUDE_DIRS})
   if(${CMAKE_SYSTEM_NAME} MATCHES "Window")
@@ -16,7 +16,7 @@ if(OPENCL_LIBRARIES)
                           ${LIBCAF_LIBRARIES}
                           ${PTHREAD_LIBRARIES}
                           ${WSLIB}
-                          ${OPENCL_LIBRARIES})
+                          ${OpenCL_LIBRARIES})
     add_dependencies(${name} all_examples)
   endmacro()
   add(proper_matrix .)
