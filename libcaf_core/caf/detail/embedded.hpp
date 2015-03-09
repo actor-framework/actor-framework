@@ -29,9 +29,9 @@ namespace detail {
 template <class Base>
 class embedded final : public Base {
  public:
-  template <class... Vs>
-  embedded(intrusive_ptr<ref_counted> storage, Vs&&... vs)
-      : Base(std::forward<Vs>(vs)...),
+  template <class... Ts>
+  embedded(intrusive_ptr<ref_counted> storage, Ts&&... xs)
+      : Base(std::forward<Ts>(xs)...),
         m_storage(std::move(storage)) {
     // nop
   }

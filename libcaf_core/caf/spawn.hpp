@@ -234,13 +234,13 @@ actor spawn_in_group(const group& grp, Ts&&... args) {
 /**
  * Base class for strongly typed actors using a functor-based implementation.
  */
-template <class... Rs>
-class functor_based_typed_actor : public typed_event_based_actor<Rs...> {
+template <class... Sigs>
+class functor_based_typed_actor : public typed_event_based_actor<Sigs...> {
  public:
   /**
    * Base class for actors using given interface.
    */
-  using base = typed_event_based_actor<Rs...>;
+  using base = typed_event_based_actor<Sigs...>;
 
   /**
    * Pointer to the base class.
@@ -339,14 +339,14 @@ class functor_based_typed_actor : public typed_event_based_actor<Rs...> {
 template <class Result, class FirstArg>
 struct infer_typed_actor_base;
 
-template <class... Rs, class FirstArg>
-struct infer_typed_actor_base<typed_behavior<Rs...>, FirstArg> {
-  using type = functor_based_typed_actor<Rs...>;
+template <class... Sigs, class FirstArg>
+struct infer_typed_actor_base<typed_behavior<Sigs...>, FirstArg> {
+  using type = functor_based_typed_actor<Sigs...>;
 };
 
-template <class... Rs>
-struct infer_typed_actor_base<void, typed_event_based_actor<Rs...>*> {
-  using type = functor_based_typed_actor<Rs...>;
+template <class... Sigs>
+struct infer_typed_actor_base<void, typed_event_based_actor<Sigs...>*> {
+  using type = functor_based_typed_actor<Sigs...>;
 };
 
 /**

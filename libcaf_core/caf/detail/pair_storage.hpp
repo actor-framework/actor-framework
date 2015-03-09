@@ -57,27 +57,27 @@ class pair_storage {
   union { embedded<FirstType> first; };
   union { embedded<SecondType> second; };
 
-  template <class... Vs>
+  template <class... Ts>
   pair_storage(intrusive_ptr<ref_counted> storage,
-               std::integral_constant<size_t, 0>, Vs&&... vs)
+               std::integral_constant<size_t, 0>, Ts&&... xs)
       : first(storage),
-        second(std::move(storage), std::forward<Vs>(vs)...) {
+        second(std::move(storage), std::forward<Ts>(xs)...) {
     // nop
   }
 
-  template <class V0, class... Vs>
+  template <class T, class... Ts>
   pair_storage(intrusive_ptr<ref_counted> storage,
-               std::integral_constant<size_t, 1>, V0&& v0, Vs&&... vs)
-      : first(storage, std::forward<V0>(v0)),
-        second(std::move(storage), std::forward<Vs>(vs)...) {
+               std::integral_constant<size_t, 1>, T&& x, Ts&&... xs)
+      : first(storage, std::forward<T>(x)),
+        second(std::move(storage), std::forward<Ts>(xs)...) {
     // nop
   }
 
-  template <class V0, class V1, class... Vs>
+  template <class T0, class T1, class... Ts>
   pair_storage(intrusive_ptr<ref_counted> storage,
-               std::integral_constant<size_t, 2>, V0&& v0, V1&& v1, Vs&&... vs)
-      : first(storage, std::forward<V0>(v0), std::forward<V1>(v1)),
-        second(std::move(storage), std::forward<Vs>(vs)...) {
+               std::integral_constant<size_t, 2>, T0&& x0, T1&& x1, Ts&&... xs)
+      : first(storage, std::forward<T0>(x0), std::forward<T1>(x1)),
+        second(std::move(storage), std::forward<Ts>(xs)...) {
     // nop
   }
 

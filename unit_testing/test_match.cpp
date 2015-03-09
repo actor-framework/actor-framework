@@ -45,8 +45,8 @@ void fill_mb(message_builder&) {
 }
 
 template <class T, class... Ts>
-void fill_mb(message_builder& mb, const T& v, const Ts&... vs) {
-  fill_mb(mb.append(v), vs...);
+void fill_mb(message_builder& mb, const T& x, const Ts&... xs) {
+  fill_mb(mb.append(x), xs...);
 }
 
 template <class... Ts>

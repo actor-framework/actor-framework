@@ -64,18 +64,18 @@ class mailbox_element : public memory_managed {
 
   static unique_ptr make(actor_addr sender, message_id id, message msg);
 
-  template <class... Vs>
-  static unique_ptr make_joint(actor_addr sender, message_id id, Vs&&... vs) {
+  template <class... Ts>
+  static unique_ptr make_joint(actor_addr sender, message_id id, Ts&&... xs) {
     using value_storage =
       detail::tuple_vals<
         typename unbox_message_element<
-          typename detail::strip_and_convert<Vs>::type
+          typename detail::strip_and_convert<Ts>::type
         >::type...
       >;
     std::integral_constant<size_t, 2> tk;
     using storage = detail::pair_storage<mailbox_element, value_storage>;
     auto ptr = detail::memory::create<storage>(tk, std::move(sender), id,
-                                               std::forward<Vs>(vs)...);
+                                               std::forward<Ts>(xs)...);
     ptr->first.msg.reset(&(ptr->second), false);
     return unique_ptr{&(ptr->first)};
   }

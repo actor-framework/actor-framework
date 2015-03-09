@@ -71,11 +71,11 @@ class message_builder {
   }
 
   /**
-   * Adds `what` to the elements of the buffer.
+   * Adds `x` to the elements of the buffer.
    */
   template <class T>
-  message_builder& append(T what) {
-    return append_impl<T>(std::move(what));
+  message_builder& append(T x) {
+    return append_impl<T>(std::move(x));
   }
 
   /**

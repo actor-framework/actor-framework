@@ -237,12 +237,12 @@ class blocking_actor::functor_based : public blocking_actor {
   using act_fun = std::function<void(blocking_actor*)>;
 
   template <class F, class... Ts>
-  functor_based(F f, Ts&&... vs) {
+  functor_based(F f, Ts&&... xs) {
     using trait = typename detail::get_callable_trait<F>::type;
     using arg0 = typename detail::tl_head<typename trait::arg_types>::type;
     blocking_actor* dummy = nullptr;
     std::integral_constant<bool, std::is_same<arg0, blocking_actor*>::value> tk;
-    create(dummy, tk, f, std::forward<Ts>(vs)...);
+    create(dummy, tk, f, std::forward<Ts>(xs)...);
   }
 
   void cleanup(uint32_t reason);
@@ -254,13 +254,13 @@ class blocking_actor::functor_based : public blocking_actor {
   void create(blocking_actor*, act_fun);
 
   template <class Actor, typename F, class... Ts>
-  void create(Actor* dummy, std::true_type, F f, Ts&&... vs) {
-    create(dummy, std::bind(f, std::placeholders::_1, std::forward<Ts>(vs)...));
+  void create(Actor* dummy, std::true_type, F f, Ts&&... xs) {
+    create(dummy, std::bind(f, std::placeholders::_1, std::forward<Ts>(xs)...));
   }
 
   template <class Actor, typename F, class... Ts>
-  void create(Actor* dummy, std::false_type, F f, Ts&&... vs) {
-    std::function<void()> fun = std::bind(f, std::forward<Ts>(vs)...);
+  void create(Actor* dummy, std::false_type, F f, Ts&&... xs) {
+    std::function<void()> fun = std::bind(f, std::forward<Ts>(xs)...);
     create(dummy, [fun](Actor*) { fun(); });
   }
 

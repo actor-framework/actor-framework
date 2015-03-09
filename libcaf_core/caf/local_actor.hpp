@@ -70,35 +70,35 @@ class local_actor : public abstract_actor {
    *                           spawn untyped actors                           *
    ****************************************************************************/
 
-  template <class T, spawn_options Os = no_spawn_options, class... Vs>
-  actor spawn(Vs&&... vs) {
+  template <class T, spawn_options Os = no_spawn_options, class... Ts>
+  actor spawn(Ts&&... xs) {
     constexpr auto os = make_unbound(Os);
     auto res = spawn_class<T, os>(host(), empty_before_launch_callback{},
-                                  std::forward<Vs>(vs)...);
+                                  std::forward<Ts>(xs)...);
     return eval_opts(Os, std::move(res));
   }
 
-  template <spawn_options Os = no_spawn_options, class... Vs>
-  actor spawn(Vs&&... vs) {
+  template <spawn_options Os = no_spawn_options, class... Ts>
+  actor spawn(Ts&&... xs) {
     constexpr auto os = make_unbound(Os);
     auto res = spawn_functor<os>(host(), empty_before_launch_callback{},
-                                 std::forward<Vs>(vs)...);
+                                 std::forward<Ts>(xs)...);
     return eval_opts(Os, std::move(res));
   }
 
-  template <class T, spawn_options Os, class... Vs>
-  actor spawn_in_group(const group& grp, Vs&&... vs) {
+  template <class T, spawn_options Os, class... Ts>
+  actor spawn_in_group(const group& grp, Ts&&... xs) {
     constexpr auto os = make_unbound(Os);
     auto res = spawn_class<T, os>(host(), group_subscriber{grp},
-                                  std::forward<Vs>(vs)...);
+                                  std::forward<Ts>(xs)...);
     return eval_opts(Os, std::move(res));
   }
 
-  template <spawn_options Os = no_spawn_options, class... Vs>
-  actor spawn_in_group(const group& grp, Vs&&... vs) {
+  template <spawn_options Os = no_spawn_options, class... Ts>
+  actor spawn_in_group(const group& grp, Ts&&... xs) {
     constexpr auto os = make_unbound(Os);
     auto res = spawn_functor<os>(host(), group_subscriber{grp},
-                                 std::forward<Vs>(vs)...);
+                                 std::forward<Ts>(xs)...);
     return eval_opts(Os, std::move(res));
   }
 
@@ -106,30 +106,30 @@ class local_actor : public abstract_actor {
    *                            spawn typed actors                            *
    ****************************************************************************/
 
-  template <class T, spawn_options Os = no_spawn_options, class... Vs>
+  template <class T, spawn_options Os = no_spawn_options, class... Ts>
   typename actor_handle_from_signature_list<
     typename T::signatures
   >::type
-  spawn_typed(Vs&&... vs) {
+  spawn_typed(Ts&&... xs) {
     constexpr auto os = make_unbound(Os);
     auto res = spawn_class<T, os>(host(), empty_before_launch_callback{},
-                    std::forward<Vs>(vs)...);
+                    std::forward<Ts>(xs)...);
     return eval_opts(Os, std::move(res));
   }
 
-  template <spawn_options Os = no_spawn_options, typename F, class... Vs>
+  template <spawn_options Os = no_spawn_options, typename F, class... Ts>
   typename infer_typed_actor_handle<
     typename detail::get_callable_trait<F>::result_type,
     typename detail::tl_head<
       typename detail::get_callable_trait<F>::arg_types
     >::type
   >::type
-  spawn_typed(F fun, Vs&&... vs) {
+  spawn_typed(F fun, Ts&&... xs) {
     constexpr auto os = make_unbound(Os);
     auto res = caf::spawn_typed_functor<os>(host(),
                                             empty_before_launch_callback{},
                                             std::move(fun),
-                                            std::forward<Vs>(vs)...);
+                                            std::forward<Ts>(xs)...);
     return eval_opts(Os, std::move(res));
   }
 
@@ -138,43 +138,43 @@ class local_actor : public abstract_actor {
    ****************************************************************************/
 
   /**
-   * Sends `{vs...} to `dest` using the priority `mp`.
+   * Sends `{xs...} to `dest` using the priority `mp`.
    */
-  template <class... Vs>
-  void send(message_priority mp, const channel& dest, Vs&&... vs) {
-    static_assert(sizeof...(Vs) > 0, "sizeof...(Vs) == 0");
-    send_impl(mp, actor_cast<abstract_channel*>(dest), std::forward<Vs>(vs)...);
+  template <class... Ts>
+  void send(message_priority mp, const channel& dest, Ts&&... xs) {
+    static_assert(sizeof...(Ts) > 0, "sizeof...(Ts) == 0");
+    send_impl(mp, actor_cast<abstract_channel*>(dest), std::forward<Ts>(xs)...);
   }
 
   /**
-   * Sends `{vs...} to `dest` using normal priority.
+   * Sends `{xs...} to `dest` using normal priority.
    */
-  template <class... Vs>
-  void send(const channel& dest, Vs&&... vs) {
-    send(message_priority::normal, dest, std::forward<Vs>(vs)...);
+  template <class... Ts>
+  void send(const channel& dest, Ts&&... xs) {
+    send(message_priority::normal, dest, std::forward<Ts>(xs)...);
   }
 
   /**
-   * Sends `{vs...} to `dest` using the priority `mp`.
+   * Sends `{xs...} to `dest` using the priority `mp`.
    */
-  template <class... Ts, class... Vs>
-  void send(message_priority mp, const typed_actor<Ts...>& dest, Vs&&... vs) {
+  template <class... Sigs, class... Ts>
+  void send(message_priority mp, const typed_actor<Sigs...>& dest, Ts&&... xs) {
     using token =
       detail::type_list<
         typename detail::implicit_conversions<
-          typename std::decay<Vs>::type
+          typename std::decay<Ts>::type
         >::type...>;
     token tk;
     check_typed_input(dest, tk);
-    send_impl(mp, actor_cast<abstract_channel*>(dest), std::forward<Vs>(vs)...);
+    send_impl(mp, actor_cast<abstract_channel*>(dest), std::forward<Ts>(xs)...);
   }
 
   /**
-   * Sends `{vs...} to `dest` using normal priority.
+   * Sends `{xs...} to `dest` using normal priority.
    */
-  template <class... Ts, class... Vs>
-  void send(const typed_actor<Ts...>& dest, Vs&&... vs) {
-    send(message_priority::normal, dest, std::forward<Vs>(vs)...);
+  template <class... Sigs, class... Ts>
+  void send(const typed_actor<Sigs...>& dest, Ts&&... xs) {
+    send(message_priority::normal, dest, std::forward<Ts>(xs)...);
   }
 
   /**
@@ -194,19 +194,19 @@ class local_actor : public abstract_actor {
    * Sends a message to `dest` that is delayed by `rel_time`
    * using the priority `mp`.
    */
-  template <class... Vs>
+  template <class... Ts>
   void delayed_send(message_priority mp, const channel& dest,
-                    const duration& rtime, Vs&&... vs) {
-    delayed_send_impl(mp, dest, rtime, make_message(std::forward<Vs>(vs)...));
+                    const duration& rtime, Ts&&... xs) {
+    delayed_send_impl(mp, dest, rtime, make_message(std::forward<Ts>(xs)...));
   }
 
   /**
    * Sends a message to `dest` that is delayed by `rel_time`.
    */
-  template <class... Vs>
-  void delayed_send(const channel& dest, const duration& rtime, Vs&&... vs) {
+  template <class... Ts>
+  void delayed_send(const channel& dest, const duration& rtime, Ts&&... xs) {
     delayed_send_impl(message_priority::normal, dest, rtime,
-                      make_message(std::forward<Vs>(vs)...));
+                      make_message(std::forward<Ts>(xs)...));
   }
 
   /****************************************************************************
@@ -501,17 +501,17 @@ class local_actor : public abstract_actor {
   /** @endcond */
 
  private:
-  template <class V, class... Vs>
+  template <class T, class... Ts>
   typename std::enable_if<
-    !std::is_same<typename std::decay<V>::type, message>::value
+    !std::is_same<typename std::decay<T>::type, message>::value
   >::type
-  send_impl(message_priority mp, abstract_channel* dest, V&& v, Vs&&... vs) {
+  send_impl(message_priority mp, abstract_channel* dest, T&& x, Ts&&... xs) {
     if (!dest) {
       return;
     }
     dest->enqueue(mailbox_element::make_joint(address(), message_id::make(mp),
-                                              std::forward<V>(v),
-                                              std::forward<Vs>(vs)...),
+                                              std::forward<T>(x),
+                                              std::forward<Ts>(xs)...),
                   host());
   }
 

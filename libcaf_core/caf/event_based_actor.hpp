@@ -70,7 +70,7 @@ class event_based_actor::functor_based : public extend<event_based_actor>::
                                                 with<mixin::functor_based> {
  public:
   template <class... Ts>
-  functor_based(Ts&&... vs) : combined_type(std::forward<Ts>(vs)...) {
+  functor_based(Ts&&... xs) : combined_type(std::forward<Ts>(xs)...) {
     // nop
   }
   behavior make_behavior() override;

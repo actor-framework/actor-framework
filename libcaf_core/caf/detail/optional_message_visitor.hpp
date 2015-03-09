@@ -105,8 +105,8 @@ class optional_message_visitor : public static_visitor<optional<message>> {
     optional_message_visitor_enable_tpl<T>::value,
     opt_msg
   >::type
-  operator()(T& v, Ts&... vs) const {
-    return make_message(std::move(v), std::move(vs)...);
+  operator()(T& x, Ts&... xs) const {
+    return make_message(std::move(x), std::move(xs)...);
   }
 
   template <class T>

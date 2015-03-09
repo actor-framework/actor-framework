@@ -31,8 +31,8 @@ namespace detail {
 // this utterly useless function works around a bug in Clang that causes
 // the compiler to reject the trailing return type of apply_args because
 // "get" is not defined (it's found during ADL)
-template<long Pos, class... Vs>
-typename tl_at<type_list<Vs...>, Pos>::type get(const type_list<Vs...>&);
+template<long Pos, class... Ts>
+typename tl_at<type_list<Ts...>, Pos>::type get(const type_list<Ts...>&);
 
 template <class F, long... Is, class Tuple>
 auto apply_args(F& f, detail::int_list<Is...>, Tuple&& tup)
@@ -40,22 +40,22 @@ auto apply_args(F& f, detail::int_list<Is...>, Tuple&& tup)
   return f(get<Is>(tup)...);
 }
 
-template <class F, class Tuple, class... Vs>
-auto apply_args_prefixed(F& f, detail::int_list<>, Tuple&, Vs&&... vs)
--> decltype(f(std::forward<Vs>(vs)...)) {
-  return f(std::forward<Vs>(vs)...);
+template <class F, class Tuple, class... Ts>
+auto apply_args_prefixed(F& f, detail::int_list<>, Tuple&, Ts&&... xs)
+-> decltype(f(std::forward<Ts>(xs)...)) {
+  return f(std::forward<Ts>(xs)...);
 }
 
-template <class F, long... Is, class Tuple, class... Vs>
-auto apply_args_prefixed(F& f, detail::int_list<Is...>, Tuple& tup, Vs&&... vs)
--> decltype(f(std::forward<Vs>(vs)..., get<Is>(tup)...)) {
-  return f(std::forward<Vs>(vs)..., get<Is>(tup)...);
+template <class F, long... Is, class Tuple, class... Ts>
+auto apply_args_prefixed(F& f, detail::int_list<Is...>, Tuple& tup, Ts&&... xs)
+-> decltype(f(std::forward<Ts>(xs)..., get<Is>(tup)...)) {
+  return f(std::forward<Ts>(xs)..., get<Is>(tup)...);
 }
 
-template <class F, long... Is, class Tuple, class... Vs>
-auto apply_args_suffxied(F& f, detail::int_list<Is...>, Tuple& tup, Vs&&... vs)
--> decltype(f(get<Is>(tup)..., std::forward<Vs>(vs)...)) {
-  return f(get<Is>(tup)..., std::forward<Vs>(vs)...);
+template <class F, long... Is, class Tuple, class... Ts>
+auto apply_args_suffxied(F& f, detail::int_list<Is...>, Tuple& tup, Ts&&... xs)
+-> decltype(f(get<Is>(tup)..., std::forward<Ts>(xs)...)) {
+  return f(get<Is>(tup)..., std::forward<Ts>(xs)...);
 }
 
 } // namespace detail

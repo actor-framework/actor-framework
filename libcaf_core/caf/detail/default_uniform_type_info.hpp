@@ -570,12 +570,12 @@ class default_uniform_type_info : public detail::abstract_uniform_type_info<T> {
   std::vector<uniform_type_info_ptr> m_members;
 };
 
-template <class... Rs>
-class default_uniform_type_info<typed_actor<Rs...>> :
-    public detail::abstract_uniform_type_info<typed_actor<Rs...>> {
+template <class... Sigs>
+class default_uniform_type_info<typed_actor<Sigs...>> :
+    public detail::abstract_uniform_type_info<typed_actor<Sigs...>> {
  public:
-  using super = detail::abstract_uniform_type_info<typed_actor<Rs...>>;
-  using handle_type = typed_actor<Rs...>;
+  using super = detail::abstract_uniform_type_info<typed_actor<Sigs...>>;
+  using handle_type = typed_actor<Sigs...>;
 
   default_uniform_type_info(std::string tname) : super(std::move(tname)) {
     sub_uti = uniform_typeid<actor>();

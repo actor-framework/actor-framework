@@ -53,8 +53,8 @@ inline uint16_t publish(caf::actor whom, uint16_t port,
 /**
  * @copydoc publish(actor,uint16_t,const char*)
  */
-template <class... Rs>
-uint16_t typed_publish(typed_actor<Rs...> whom, uint16_t port,
+template <class... Sigs>
+uint16_t typed_publish(typed_actor<Sigs...> whom, uint16_t port,
                        const char* in = nullptr, bool reuse_addr = false) {
   if (!whom) {
     return 0;

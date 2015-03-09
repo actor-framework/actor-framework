@@ -41,8 +41,8 @@ class behavior_stack_based_impl : public Base {
                                                nonblocking_response_handle_tag>;
 
   template <class... Ts>
-  behavior_stack_based_impl(Ts&&... vs)
-      : Base(std::forward<Ts>(vs)...),
+  behavior_stack_based_impl(Ts&&... xs)
+      : Base(std::forward<Ts>(xs)...),
         m_timeout_id(0) {
     // nop
   }

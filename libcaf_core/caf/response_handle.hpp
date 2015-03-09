@@ -68,9 +68,9 @@ class response_handle<Self, message, nonblocking_response_handle_tag> {
     // nop
   }
 
-  template <class... Vs>
-  continue_helper then(Vs&&... vs) const {
-    behavior bhvr{std::forward<Vs>(vs)...};
+  template <class... Ts>
+  continue_helper then(Ts&&... xs) const {
+    behavior bhvr{std::forward<Ts>(xs)...};
     m_self->bhvr_stack().push_back(std::move(bhvr), m_mid);
     return {m_mid};
   }
@@ -138,9 +138,9 @@ class response_handle<Self, message, blocking_response_handle_tag> {
     m_self->dequeue_response(bhvr, m_mid);
   }
 
-  template <class... Vs>
-  void await(Vs&&... vs) const {
-    behavior bhvr{std::forward<Vs>(vs)...};
+  template <class... Ts>
+  void await(Ts&&... xs) const {
+    behavior bhvr{std::forward<Ts>(xs)...};
     m_self->dequeue_response(bhvr, m_mid);
   }
 

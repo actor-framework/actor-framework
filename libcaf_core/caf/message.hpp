@@ -343,8 +343,8 @@ class message {
 
   struct move_from_tuple_helper {
     template <class... Ts>
-    inline message operator()(Ts&... vs) {
-      return make_message(std::move(vs)...);
+    inline message operator()(Ts&... xs) {
+      return make_message(std::move(xs)...);
     }
   };
 
@@ -442,24 +442,24 @@ struct unbox_message_element<atom_constant<V>> {
 };
 
 /**
- * Returns a new `message` containing the values `(v, vs...)`.
+ * Returns a new `message` containing the values `(x, xs...)`.
  * @relates message
  */
-template <class V, class... Vs>
+template <class V, class... Ts>
 typename std::enable_if<
   !std::is_same<message, typename std::decay<V>::type>::value
-  || (sizeof...(Vs) > 0),
+  || (sizeof...(Ts) > 0),
   message
 >::type
-make_message(V&& v, Vs&&... vs) {
+make_message(V&& x, Ts&&... xs) {
   using storage
     = detail::tuple_vals<typename unbox_message_element<
                            typename detail::strip_and_convert<V>::type
                          >::type,
                          typename unbox_message_element<
-                           typename detail::strip_and_convert<Vs>::type
+                           typename detail::strip_and_convert<Ts>::type
                          >::type...>;
-  auto ptr = make_counted<storage>(std::forward<V>(v), std::forward<Vs>(vs)...);
+  auto ptr = make_counted<storage>(std::forward<V>(x), std::forward<Ts>(xs)...);
   return message{detail::message_data::cow_ptr{std::move(ptr)}};
 }
 

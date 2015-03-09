@@ -59,9 +59,9 @@ class behavior {
    * The list of arguments can contain match expressions, message handlers,
    * and up to one timeout (if set, the timeout has to be the last argument).
    */
-  template <class V, class... Vs>
-  behavior(V v, Vs... vs) {
-    assign(std::move(v), std::move(vs)...);
+  template <class T, class... Ts>
+  behavior(T x, Ts... xs) {
+    assign(std::move(x), std::move(xs)...);
   }
 
   /**
@@ -75,10 +75,10 @@ class behavior {
   /**
    * Assigns new handlers.
    */
-  template <class... Vs>
-  void assign(Vs... vs) {
-    static_assert(sizeof...(Vs) > 0, "assign() called without arguments");
-    m_impl = detail::make_behavior(vs...);
+  template <class... Ts>
+  void assign(Ts... xs) {
+    static_assert(sizeof...(Ts) > 0, "assign() called without arguments");
+    m_impl = detail::make_behavior(xs...);
   }
 
   void assign(intrusive_ptr<detail::behavior_impl> ptr) {

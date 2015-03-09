@@ -28,21 +28,21 @@
 namespace caf {
 
 /**
- * Checks whether `R` does support an input of type `{Ls...}` via a
+ * Checks whether `R` does support an input of type `{Ts...}` via a
  * static assertion (always returns 0).
  */
-template <class... Rs, class... Ls>
-void check_typed_input(const typed_actor<Rs...>&,
-                       const detail::type_list<Ls...>&) {
+template <class... Sigs, class... Ts>
+void check_typed_input(const typed_actor<Sigs...>&,
+                       const detail::type_list<Ts...>&) {
   static_assert(detail::tl_find<
-                  detail::type_list<Ls...>,
+                  detail::type_list<Ts...>,
                   atom_value
                 >::value == -1,
                 "atom(...) notation is not sufficient for static type "
                 "checking, please use atom_constant instead in this context");
   static_assert(detail::tl_find_if<
-                  detail::type_list<Rs...>,
-                  detail::input_is<detail::type_list<Ls...>>::template eval
+                  detail::type_list<Sigs...>,
+                  detail::input_is<detail::type_list<Ts...>>::template eval
                 >::value >= 0,
                 "typed actor does not support given input");
 }

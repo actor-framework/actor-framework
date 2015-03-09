@@ -37,18 +37,18 @@ namespace caf {
  * `blocking_api` flag.
  * @extends mailbox_based_actor
  */
-template <class... Rs>
+template <class... Sigs>
 class typed_event_based_actor : public
-    extend<mailbox_based_actor, typed_event_based_actor<Rs...>>::template
-    with<mixin::behavior_stack_based<typed_behavior<Rs...>>::template impl,
+    extend<mailbox_based_actor, typed_event_based_actor<Sigs...>>::template
+    with<mixin::behavior_stack_based<typed_behavior<Sigs...>>::template impl,
          mixin::sync_sender<nonblocking_response_handle_tag>::template impl> {
  public:
-  using signatures = detail::type_list<Rs...>;
+  using signatures = detail::type_list<Sigs...>;
 
-  using behavior_type = typed_behavior<Rs...>;
+  using behavior_type = typed_behavior<Sigs...>;
 
   std::set<std::string> message_types() const override {
-    return {Rs::static_type_name()...};
+    return {Sigs::static_type_name()...};
   }
 
  protected:

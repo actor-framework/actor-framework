@@ -84,17 +84,17 @@ class message_handler {
    * functors, or other message handlers.
    */
   template <class T, class... Ts>
-  message_handler(const T& v, Ts&&... vs) {
-    assign(v, std::forward<Ts>(vs)...);
+  message_handler(const T& v, Ts&&... xs) {
+    assign(v, std::forward<Ts>(xs)...);
   }
 
   /**
    * Assigns new message handlers.
    */
-  template <class... Vs>
-  void assign(Vs... vs) {
-    static_assert(sizeof...(Vs) > 0, "assign without arguments called");
-    m_impl = detail::make_behavior(vs...);
+  template <class... Ts>
+  void assign(Ts... xs) {
+    static_assert(sizeof...(Ts) > 0, "assign without arguments called");
+    m_impl = detail::make_behavior(xs...);
   }
 
   /**

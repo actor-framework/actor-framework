@@ -43,93 +43,93 @@ class sync_sender_impl : public Base {
    ****************************************************************************/
 
   /**
-   * Sends `{vs...}` as a synchronous message to `dest` with priority `prio`.
+   * Sends `{xs...}` as a synchronous message to `dest` with priority `mp`.
    * @returns A handle identifying a future-like handle to the response.
    * @warning The returned handle is actor specific and the response to the
    *          sent message cannot be received by another actor.
    * @throws std::invalid_argument if `dest == invalid_actor`
    */
-  template <class... Vs>
-  response_handle_type sync_send(message_priority prio, const actor& dest,
-                                 Vs&&... vs) {
-    static_assert(sizeof...(Vs) > 0, "no message to send");
-    return {dptr()->sync_send_impl(prio, dest,
-                                   make_message(std::forward<Vs>(vs)...)),
+  template <class... Ts>
+  response_handle_type sync_send(message_priority mp, const actor& dest,
+                                 Ts&&... xs) {
+    static_assert(sizeof...(Ts) > 0, "no message to send");
+    return {dptr()->sync_send_impl(mp, dest,
+                                   make_message(std::forward<Ts>(xs)...)),
             dptr()};
   }
 
   /**
-   * Sends `{vs...}` as a synchronous message to `dest`.
+   * Sends `{xs...}` as a synchronous message to `dest`.
    * @returns A handle identifying a future-like handle to the response.
    * @warning The returned handle is actor specific and the response to the
    *          sent message cannot be received by another actor.
    * @throws std::invalid_argument if `dest == invalid_actor`
    */
-  template <class... Vs>
-  response_handle_type sync_send(const actor& dest, Vs&&... vs) {
-    return sync_send(message_priority::normal, dest, std::forward<Vs>(vs)...);
+  template <class... Ts>
+  response_handle_type sync_send(const actor& dest, Ts&&... xs) {
+    return sync_send(message_priority::normal, dest, std::forward<Ts>(xs)...);
   }
 
   /**
-   * Sends `{vs...}` as a synchronous message to `dest` with priority `prio`.
+   * Sends `{xs...}` as a synchronous message to `dest` with priority `mp`.
    * @returns A handle identifying a future-like handle to the response.
    * @warning The returned handle is actor specific and the response to the
    *          sent message cannot be received by another actor.
    * @throws std::invalid_argument if `dest == invalid_actor`
    */
-  template <class... Rs, class... Vs>
+  template <class... Sigs, class... Ts>
   response_handle<Subtype,
                   typename detail::deduce_output_type<
-                    detail::type_list<Rs...>,
+                    detail::type_list<Sigs...>,
                     detail::type_list<
                       typename detail::implicit_conversions<
-                        typename std::decay<Vs>::type
+                        typename std::decay<Ts>::type
                       >::type...>
                   >::type,
                   HandleTag>
-  sync_send(message_priority prio, const typed_actor<Rs...>& dest, Vs&&... vs) {
-    static_assert(sizeof...(Vs) > 0, "no message to send");
+  sync_send(message_priority mp, const typed_actor<Sigs...>& dest, Ts&&... xs) {
+    static_assert(sizeof...(Ts) > 0, "no message to send");
     using token =
       detail::type_list<
         typename detail::implicit_conversions<
-          typename std::decay<Vs>::type
+          typename std::decay<Ts>::type
         >::type...>;
     token tk;
     check_typed_input(dest, tk);
-    return {dptr()->sync_send_impl(prio, actor_cast<actor>(dest),
-                                   make_message(std::forward<Vs>(vs)...)),
+    return {dptr()->sync_send_impl(mp, actor_cast<actor>(dest),
+                                   make_message(std::forward<Ts>(xs)...)),
             dptr()};
   }
 
   /**
-   * Sends `{vs...}` as a synchronous message to `dest`.
+   * Sends `{xs...}` as a synchronous message to `dest`.
    * @returns A handle identifying a future-like handle to the response.
    * @warning The returned handle is actor specific and the response to the
    *          sent message cannot be received by another actor.
    * @throws std::invalid_argument if `dest == invalid_actor`
    */
-  template <class... Rs, class... Vs>
+  template <class... Sigs, class... Ts>
   response_handle<Subtype,
                   typename detail::deduce_output_type<
-                    detail::type_list<Rs...>,
+                    detail::type_list<Sigs...>,
                     detail::type_list<
                       typename detail::implicit_conversions<
-                        typename std::decay<Vs>::type
+                        typename std::decay<Ts>::type
                       >::type...>
                   >::type,
                   HandleTag>
-  sync_send(const typed_actor<Rs...>& dest, Vs&&... vs) {
-    static_assert(sizeof...(Vs) > 0, "no message to send");
+  sync_send(const typed_actor<Sigs...>& dest, Ts&&... xs) {
+    static_assert(sizeof...(Ts) > 0, "no message to send");
     using token =
       detail::type_list<
         typename detail::implicit_conversions<
-          typename std::decay<Vs>::type
+          typename std::decay<Ts>::type
         >::type...>;
     token tk;
     check_typed_input(dest, tk);
     return {dptr()->sync_send_impl(message_priority::normal,
                                    actor_cast<actor>(dest),
-                                   make_message(std::forward<Vs>(vs)...)),
+                                   make_message(std::forward<Ts>(xs)...)),
             dptr()};
   }
 
@@ -138,90 +138,90 @@ class sync_sender_impl : public Base {
    ****************************************************************************/
 
   /**
-   * Sends `{vs...}` as a synchronous message to `dest` with priority `prio`
+   * Sends `{xs...}` as a synchronous message to `dest` with priority `mp`
    * and relative timeout `rtime`.
    * @returns A handle identifying a future-like handle to the response.
    * @warning The returned handle is actor specific and the response to the
    *          sent message cannot be received by another actor.
    * @throws std::invalid_argument if `dest == invalid_actor`
    */
-  template <class... Vs>
-  response_handle_type timed_sync_send(message_priority prio, const actor& dest,
-                                       const duration& rtime, Vs&&... vs) {
-    static_assert(sizeof...(Vs) > 0, "no message to send");
-    return {dptr()->timed_sync_send_impl(prio, dest, rtime,
-                                         make_message(std::forward<Vs>(vs)...)),
+  template <class... Ts>
+  response_handle_type timed_sync_send(message_priority mp, const actor& dest,
+                                       const duration& rtime, Ts&&... xs) {
+    static_assert(sizeof...(Ts) > 0, "no message to send");
+    return {dptr()->timed_sync_send_impl(mp, dest, rtime,
+                                         make_message(std::forward<Ts>(xs)...)),
             dptr()};
   }
 
   /**
-   * Sends `{vs...}` as a synchronous message to `dest` with
+   * Sends `{xs...}` as a synchronous message to `dest` with
    * relative timeout `rtime`.
    * @returns A handle identifying a future-like handle to the response.
    * @warning The returned handle is actor specific and the response to the
    *          sent message cannot be received by another actor.
    * @throws std::invalid_argument if `dest == invalid_actor`
    */
-  template <class... Vs>
+  template <class... Ts>
   response_handle_type timed_sync_send(const actor& dest, const duration& rtime,
-                                       Vs&&... vs) {
+                                       Ts&&... xs) {
     return timed_sync_send(message_priority::normal, dest, rtime,
-                           std::forward<Vs>(vs)...);
+                           std::forward<Ts>(xs)...);
   }
 
   /**
-   * Sends `{vs...}` as a synchronous message to `dest` with priority `prio`
+   * Sends `{xs...}` as a synchronous message to `dest` with priority `mp`
    * and relative timeout `rtime`.
    * @returns A handle identifying a future-like handle to the response.
    * @warning The returned handle is actor specific and the response to the
    *          sent message cannot be received by another actor.
    * @throws std::invalid_argument if `dest == invalid_actor`
    */
-  template <class... Rs, class... Vs>
+  template <class... Sigs, class... Ts>
   response_handle<Subtype,
                   typename detail::deduce_output_type<
-                    detail::type_list<Rs...>,
+                    detail::type_list<Sigs...>,
                     typename detail::implicit_conversions<
-                      typename std::decay<Vs>::type
+                      typename std::decay<Ts>::type
                     >::type...
                   >::type,
                   HandleTag>
-  timed_sync_send(message_priority prio, const typed_actor<Rs...>& dest,
-                  const duration& rtime, Vs&&... vs) {
-    static_assert(sizeof...(Vs) > 0, "no message to send");
+  timed_sync_send(message_priority mp, const typed_actor<Sigs...>& dest,
+                  const duration& rtime, Ts&&... xs) {
+    static_assert(sizeof...(Ts) > 0, "no message to send");
     using token =
       detail::type_list<
         typename detail::implicit_conversions<
-          typename std::decay<Vs>::type
+          typename std::decay<Ts>::type
         >::type...>;
     token tk;
     check_typed_input(dest, tk);
-    return {dptr()->timed_sync_send_impl(prio, actor_cast<actor>(dest), rtime,
-                                         make_message(std::forward<Vs>(vs)...)),
+    return {dptr()->timed_sync_send_impl(mp, actor_cast<actor>(dest), rtime,
+                                         make_message(std::forward<Ts>(xs)...)),
             dptr()};
   }
 
   /**
-   * Sends `{vs...}` as a synchronous message to `dest` with
+   * Sends `{xs...}` as a synchronous message to `dest` with
    * relative timeout `rtime`.
    * @returns A handle identifying a future-like handle to the response.
    * @warning The returned handle is actor specific and the response to the
    *          sent message cannot be received by another actor.
    * @throws std::invalid_argument if `dest == invalid_actor`
    */
-  template <class... Rs, class... Vs>
+  template <class... Sigs, class... Ts>
   response_handle<Subtype,
                   typename detail::deduce_output_type<
-                    detail::type_list<Rs...>,
+                    detail::type_list<Sigs...>,
                     typename detail::implicit_conversions<
-                      typename std::decay<Vs>::type
+                      typename std::decay<Ts>::type
                     >::type...
                   >::type,
                   HandleTag>
-  timed_sync_send(const typed_actor<Rs...>& dest, const duration& rtime,
-                  Vs&&... vs) {
+  timed_sync_send(const typed_actor<Sigs...>& dest, const duration& rtime,
+                  Ts&&... xs) {
     return timed_sync_send(message_priority::normal, dest, rtime,
-                           std::forward<Vs>(vs)...);
+                           std::forward<Ts>(xs)...);
   }
 
   /****************************************************************************
@@ -229,13 +229,13 @@ class sync_sender_impl : public Base {
    ****************************************************************************/
 
   // <backward_compatibility version="0.9">
-  response_handle_type sync_send_tuple(message_priority prio, const actor& dest,
+  response_handle_type sync_send_tuple(message_priority mp, const actor& dest,
                                        message what) CAF_DEPRECATED;
 
   response_handle_type sync_send_tuple(const actor& dest,
                                        message what) CAF_DEPRECATED;
 
-  response_handle_type timed_sync_send_tuple(message_priority prio,
+  response_handle_type timed_sync_send_tuple(message_priority mp,
                                              const actor& dest,
                                              const duration& rtime,
                                              message what) CAF_DEPRECATED;
@@ -261,9 +261,9 @@ class sync_sender {
 // <backward_compatibility version="0.9">
 template <class B, class S, class H>
 typename sync_sender_impl<B, S, H>::response_handle_type
-sync_sender_impl<B, S, H>::sync_send_tuple(message_priority prio,
+sync_sender_impl<B, S, H>::sync_send_tuple(message_priority mp,
                                            const actor& dest, message what) {
-  return sync_send(prio, dest, std::move(what));
+  return sync_send(mp, dest, std::move(what));
 }
 
 template <class B, class S, class H>
@@ -274,11 +274,11 @@ sync_sender_impl<B, S, H>::sync_send_tuple(const actor& dest, message what) {
 
 template <class B, class S, class H>
 typename sync_sender_impl<B, S, H>::response_handle_type
-sync_sender_impl<B, S, H>::timed_sync_send_tuple(message_priority prio,
+sync_sender_impl<B, S, H>::timed_sync_send_tuple(message_priority mp,
                                                  const actor& dest,
                                                  const duration& rtime,
                                                  message msg) {
-  return timed_sync_send(prio, dest, rtime, std::move(msg));
+  return timed_sync_send(mp, dest, rtime, std::move(msg));
 }
 
 template <class B, class S, class H>

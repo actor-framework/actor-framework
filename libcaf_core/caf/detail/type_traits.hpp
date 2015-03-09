@@ -41,17 +41,12 @@ struct conjunction;
 
 template <>
 struct conjunction<> {
-  static constexpr bool value = false;
+  static constexpr bool value = true;
 };
 
-template <bool V0>
-struct conjunction<V0> {
-  static constexpr bool value = V0;
-};
-
-template <bool V0, bool V1, bool... Vs>
-struct conjunction<V0, V1, Vs...> {
-  static constexpr bool value = V0 && conjunction<V1, Vs...>::value;
+template <bool X, bool... Xs>
+struct conjunction<X, Xs...> {
+  static constexpr bool value = X && conjunction<Xs...>::value;
 };
 
 /**
@@ -60,14 +55,14 @@ struct conjunction<V0, V1, Vs...> {
 template <bool... BoolConstants>
 struct disjunction;
 
-template <bool V0, bool... Vs>
-struct disjunction<V0, Vs...> {
-  static constexpr bool value = V0 || disjunction<Vs...>::value;
-};
-
 template <>
 struct disjunction<> {
   static constexpr bool value = false;
+};
+
+template <bool X, bool... Xs>
+struct disjunction<X, Xs...> {
+  static constexpr bool value = X || disjunction<Xs...>::value;
 };
 
 /**

@@ -30,7 +30,7 @@
 
 namespace caf {
 
-template <class... Rs>
+template <class... Sigs>
 class functor_based_typed_actor;
 
 namespace detail {
@@ -56,18 +56,6 @@ template <class List>
 struct collapse_replies_to_statement<List, none_t> {
   using type = List;
 };
-
-/*
-template <class List>
-struct unbox_typed_continue_helper {
-  using type = List;
-};
-
-template <class List>
-struct unbox_typed_continue_helper<typed_continue_helper<List>> {
-  using type = List;
-};
-*/
 
 template <class Input, class RepliesToWith>
 struct same_input : std::is_same<Input, typename RepliesToWith::input_types> {};
@@ -168,7 +156,7 @@ void static_check_typed_behavior_input() {
 
 } // namespace detail
 
-template <class... Rs>
+template <class... Sigs>
 class typed_actor;
 
 namespace mixin {
@@ -176,10 +164,10 @@ template <class, class, class>
 class behavior_stack_based_impl;
 }
 
-template <class... Rs>
+template <class... Sigs>
 class typed_behavior {
  public:
-  template <class... OtherRs>
+  template <class... OtherSigs>
   friend class typed_actor;
 
   template <class, class, class>
@@ -193,11 +181,11 @@ class typed_behavior {
   typed_behavior& operator=(typed_behavior&&) = default;
   typed_behavior& operator=(const typed_behavior&) = default;
 
-  using signatures = detail::type_list<Rs...>;
+  using signatures = detail::type_list<Sigs...>;
 
-  template <class... Vs>
-  typed_behavior(Vs... vs) {
-    set(detail::make_behavior(vs...));
+  template <class... Ts>
+  typed_behavior(Ts... xs) {
+    set(detail::make_behavior(xs...));
   }
 
   explicit operator bool() const {

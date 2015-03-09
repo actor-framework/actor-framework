@@ -276,15 +276,15 @@ class middleman_actor_impl : public middleman_actor_base::base {
     return result;
   }
 
-  template <class T, class... Vs>
-  void handle_ok(map_type& storage, int64_t request_id, Vs&&... vs) {
+  template <class T, class... Ts>
+  void handle_ok(map_type& storage, int64_t request_id, Ts&&... xs) {
     CAF_LOG_TRACE(CAF_ARG(request_id));
     auto i = storage.find(request_id);
     if (i == storage.end()) {
       CAF_LOG_ERROR("request id not found: " << request_id);
       return;
     }
-    i->second.deliver(T{ok_atom::value, std::forward<Vs>(vs)...}.value);
+    i->second.deliver(T{ok_atom::value, std::forward<Ts>(xs)...}.value);
     storage.erase(i);
   }
 

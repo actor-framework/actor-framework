@@ -38,8 +38,8 @@ namespace io {
  */
 template <spawn_options Os = no_spawn_options,
      typename F = std::function<void(broker*)>, class... Ts>
-actor spawn_io(F fun, Ts&&... vs) {
-  return spawn<broker::functor_based>(std::move(fun), std::forward<Ts>(vs)...);
+actor spawn_io(F fun, Ts&&... xs) {
+  return spawn<broker::functor_based>(std::move(fun), std::forward<Ts>(xs)...);
 }
 
 /**

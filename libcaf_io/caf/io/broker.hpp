@@ -226,9 +226,9 @@ class broker : public extend<local_actor>::
   /** @cond PRIVATE */
 
   template <class F, class... Ts>
-  actor fork(F fun, connection_handle hdl, Ts&&... vs) {
+  actor fork(F fun, connection_handle hdl, Ts&&... xs) {
     // provoke compile-time errors early
-    using fun_res = decltype(fun(this, hdl, std::forward<Ts>(vs)...));
+    using fun_res = decltype(fun(this, hdl, std::forward<Ts>(xs)...));
     // prevent warning about unused local type
     static_assert(std::is_same<fun_res, fun_res>::value,
                   "your compiler is lying to you");
@@ -245,7 +245,7 @@ class broker : public extend<local_actor>::
                                     forked->m_scribes.insert(
                                       std::make_pair(sptr->hdl(), sptr));
                                   },
-                         fun, hdl, std::forward<Ts>(vs)...);
+                         fun, hdl, std::forward<Ts>(xs)...);
   }
 
   inline void add_scribe(const scribe_pointer& ptr) {
@@ -393,7 +393,7 @@ class broker::functor_based : public extend<broker>::
   using super = combined_type;
 
   template <class... Ts>
-  functor_based(Ts&&... vs) : super(std::forward<Ts>(vs)...) {
+  functor_based(Ts&&... xs) : super(std::forward<Ts>(xs)...) {
     // nop
   }
 

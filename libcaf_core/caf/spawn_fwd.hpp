@@ -76,23 +76,23 @@ template <class TypedBehavior, class FirstArg>
 struct infer_typed_actor_handle;
 
 // infer actor type from result type if possible
-template <class... Rs, class FirstArg>
-struct infer_typed_actor_handle<typed_behavior<Rs...>, FirstArg> {
-  using type = typed_actor<Rs...>;
+template <class... Sigs, class FirstArg>
+struct infer_typed_actor_handle<typed_behavior<Sigs...>, FirstArg> {
+  using type = typed_actor<Sigs...>;
 };
 
 // infer actor type from first argument if result type is void
-template <class... Rs>
-struct infer_typed_actor_handle<void, typed_event_based_actor<Rs...>*> {
-  using type = typed_actor<Rs...>;
+template <class... Sigs>
+struct infer_typed_actor_handle<void, typed_event_based_actor<Sigs...>*> {
+  using type = typed_actor<Sigs...>;
 };
 
 template <class SignatureList>
 struct actor_handle_from_signature_list;
 
-template <class... Rs>
-struct actor_handle_from_signature_list<detail::type_list<Rs...>> {
-  using type = typed_actor<Rs...>;
+template <class... Sigs>
+struct actor_handle_from_signature_list<detail::type_list<Sigs...>> {
+  using type = typed_actor<Sigs...>;
 };
 
 template <spawn_options Os, typename BeforeLaunch, typename F, class... Ts>

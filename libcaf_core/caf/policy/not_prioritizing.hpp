@@ -51,8 +51,8 @@ class not_prioritizing {
     self->mailbox().cache().push_second_back(ptr.release());
   }
 
-  template <class Actor, class... Vs>
-  bool invoke_from_cache(Actor* self, Vs&... args) {
+  template <class Actor, class... Ts>
+  bool invoke_from_cache(Actor* self, Ts&... args) {
     auto& cache = self->mailbox().cache();
     auto i = cache.second_begin();
     auto e = cache.second_end();

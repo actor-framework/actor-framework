@@ -200,8 +200,8 @@ class intrusive_partitioned_list {
     insert(second_end(), val);
   }
 
-  template <class Actor, class... Vs>
-  bool invoke(Actor* self, iterator first, iterator last, Vs&... vs) {
+  template <class Actor, class... Ts>
+  bool invoke(Actor* self, iterator first, iterator last, Ts&... xs) {
     pointer prev = first->prev;
     pointer next = first->next;
     auto move_on = [&](bool first_valid) {
@@ -214,12 +214,12 @@ class intrusive_partitioned_list {
     while (first != last) {
       std::unique_ptr<value_type, deleter_type> tmp{first.ptr};
       // since this function can be called recursively during
-      // self->invoke_message(tmp, vs...), we have to remove the
+      // self->invoke_message(tmp, xs...), we have to remove the
       // element from the list proactively and put it back in if
       // it's safe, i.e., if invoke_message returned im_skipped
       prev->next = next;
       next->prev = prev;
-      switch (self->invoke_message(tmp, vs...)) {
+      switch (self->invoke_message(tmp, xs...)) {
         case policy::im_dropped:
           move_on(false);
           break;

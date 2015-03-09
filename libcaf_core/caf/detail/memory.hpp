@@ -64,10 +64,10 @@ class basic_memory_cache;
 template <class T>
 struct rc_storage : public ref_counted {
   T instance;
-  template <class... Vs>
-  rc_storage(Vs&&... vs)
+  template <class... Ts>
+  rc_storage(Ts&&... xs)
       : instance(intrusive_ptr<ref_counted>(this, false),
-        std::forward<Vs>(vs)...) {
+        std::forward<Ts>(xs)...) {
     CAF_REQUIRE(get_reference_count() >= 1);
   }
 };
@@ -190,8 +190,8 @@ class memory {
  public:
 
   // Allocates storage, initializes a new object, and returns the new instance.
-  template <class T, class... Vs>
-  static T* create(Vs&&... vs) {
+  template <class T, class... Ts>
+  static T* create(Ts&&... xs) {
     using embedded_t =
       typename std::conditional<
         T::memory_cache_flag == needs_embedding,
@@ -201,7 +201,7 @@ class memory {
     auto mc = get_or_set_cache_map_entry<T>();
     auto es = mc->new_embedded_storage();
     auto ptr = reinterpret_cast<embedded_t*>(es.second);
-    new (ptr) embedded_t(std::move(es.first), std::forward<Vs>(vs)...);
+    new (ptr) embedded_t(std::move(es.first), std::forward<Ts>(xs)...);
     return ptr;
   }
 

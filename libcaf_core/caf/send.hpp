@@ -36,104 +36,104 @@ namespace caf {
 /**
  * Sends `to` a message under the identity of `from` with priority `prio`.
  */
-template <class... Vs>
+template <class... Ts>
 void send_as(const actor& from, message_priority prio,
-             const channel& to, Vs&&... vs) {
+             const channel& to, Ts&&... xs) {
   if (!to) {
     return;
   }
   message_id mid;
   to->enqueue(from.address(),
               prio == message_priority::high ? mid.with_high_priority() : mid,
-              make_message(std::forward<Vs>(vs)...), nullptr);
+              make_message(std::forward<Ts>(xs)...), nullptr);
 }
 
 /**
  * Sends `to` a message under the identity of `from`.
  */
-template <class... Vs>
-void send_as(const actor& from, const channel& to, Vs&&... vs) {
-  send_as(from, message_priority::normal, to, std::forward<Vs>(vs)...);
+template <class... Ts>
+void send_as(const actor& from, const channel& to, Ts&&... xs) {
+  send_as(from, message_priority::normal, to, std::forward<Ts>(xs)...);
 }
 
 /**
  * Sends `to` a message under the identity of `from` with priority `prio`.
  */
-template <class... Rs, class... Vs>
+template <class... Sigs, class... Ts>
 void send_as(const actor& from, message_priority prio,
-             const typed_actor<Rs...>& to, Vs&&... vs) {
+             const typed_actor<Sigs...>& to, Ts&&... xs) {
   using token =
     detail::type_list<
       typename detail::implicit_conversions<
-        typename std::decay<Vs>::type
+        typename std::decay<Ts>::type
       >::type...>;
   token tk;
   check_typed_input(to, tk);
-  send_as(from, prio, actor_cast<channel>(to), std::forward<Vs>(vs)...);
+  send_as(from, prio, actor_cast<channel>(to), std::forward<Ts>(xs)...);
 }
 
 /**
  * Sends `to` a message under the identity of `from`.
  */
-template <class... Rs, class... Vs>
-void send_as(const actor& from, const typed_actor<Rs...>& to, Vs&&... vs) {
+template <class... Sigs, class... Ts>
+void send_as(const actor& from, const typed_actor<Sigs...>& to, Ts&&... xs) {
   using token =
     detail::type_list<
       typename detail::implicit_conversions<
-        typename std::decay<Vs>::type
+        typename std::decay<Ts>::type
       >::type...>;
   token tk;
   check_typed_input(to, tk);
   send_as(from, message_priority::normal,
-          actor_cast<channel>(to), std::forward<Vs>(vs)...);
+          actor_cast<channel>(to), std::forward<Ts>(xs)...);
 }
 
 /**
  * Anonymously sends `to` a message with priority `prio`.
  */
-template <class... Vs>
-void anon_send(message_priority prio, const channel& to, Vs&&... vs) {
-  send_as(invalid_actor, prio, to, std::forward<Vs>(vs)...);
+template <class... Ts>
+void anon_send(message_priority prio, const channel& to, Ts&&... xs) {
+  send_as(invalid_actor, prio, to, std::forward<Ts>(xs)...);
 }
 
 /**
  * Anonymously sends `to` a message.
  */
-template <class... Vs>
-void anon_send(const channel& to, Vs&&... vs) {
-  send_as(invalid_actor, message_priority::normal, to, std::forward<Vs>(vs)...);
+template <class... Ts>
+void anon_send(const channel& to, Ts&&... xs) {
+  send_as(invalid_actor, message_priority::normal, to, std::forward<Ts>(xs)...);
 }
 
 /**
  * Anonymously sends `to` a message with priority `prio`.
  */
-template <class... Rs, class... Vs>
-void anon_send(message_priority prio, const typed_actor<Rs...>& to,
-               Vs&&... vs) {
+template <class... Sigs, class... Ts>
+void anon_send(message_priority prio, const typed_actor<Sigs...>& to,
+               Ts&&... xs) {
   using token =
     detail::type_list<
       typename detail::implicit_conversions<
-        typename std::decay<Vs>::type
+        typename std::decay<Ts>::type
       >::type...>;
   token tk;
   check_typed_input(to, tk);
-  anon_send(prio, actor_cast<channel>(to), std::forward<Vs>(vs)...);
+  anon_send(prio, actor_cast<channel>(to), std::forward<Ts>(xs)...);
 }
 
 /**
  * Anonymously sends `to` a message.
  */
-template <class... Rs, class... Vs>
-void anon_send(const typed_actor<Rs...>& to, Vs&&... vs) {
+template <class... Sigs, class... Ts>
+void anon_send(const typed_actor<Sigs...>& to, Ts&&... xs) {
   using token =
     detail::type_list<
       typename detail::implicit_conversions<
-        typename std::decay<Vs>::type
+        typename std::decay<Ts>::type
       >::type...>;
   token tk;
   check_typed_input(to, tk);
   anon_send(message_priority::normal, actor_cast<channel>(to),
-            std::forward<Vs>(vs)...);
+            std::forward<Ts>(xs)...);
 }
 
 /**

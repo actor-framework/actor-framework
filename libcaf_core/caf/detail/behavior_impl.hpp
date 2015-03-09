@@ -194,53 +194,53 @@ struct join_std_tuples<T> {
   using type = T;
 };
 
-template <class... Ts, class... Us, class... Rs>
-struct join_std_tuples<std::tuple<Ts...>, std::tuple<Us...>, Rs...>
-    : join_std_tuples<std::tuple<Ts..., Us...>, Rs...> {
+template <class... Prefix, class... Infix, class... Suffix>
+struct join_std_tuples<std::tuple<Prefix...>, std::tuple<Infix...>, Suffix...>
+    : join_std_tuples<std::tuple<Prefix..., Infix...>, Suffix...> {
   // nop
 };
 
 // this function reorganizes its arguments to shift the timeout definition
 // to the front (receives it at the tail)
-template <class R, class F, class... Vs>
-intrusive_ptr<R> make_behavior_ra(timeout_definition<F>& tdef,
-                                  tail_argument_token&, Vs... vs) {
-  return make_behavior_eor<R>(std::tuple_cat(to_match_case_tuple(vs)...), tdef);
+template <class R, class F, class... Ts>
+intrusive_ptr<R> make_behavior_ra(timeout_definition<F>& td,
+                                  tail_argument_token&, Ts... xs) {
+  return make_behavior_eor<R>(std::tuple_cat(to_match_case_tuple(xs)...), td);
 }
 
-template <class R, class... Vs>
-intrusive_ptr<R> make_behavior_ra(tail_argument_token&, Vs... vs) {
-  return make_behavior_eor<R>(std::tuple_cat(to_match_case_tuple(vs)...));
+template <class R, class... Ts>
+intrusive_ptr<R> make_behavior_ra(tail_argument_token&, Ts... xs) {
+  return make_behavior_eor<R>(std::tuple_cat(to_match_case_tuple(xs)...));
 }
 
 // for some reason, this call is ambigious on GCC without enable_if
-template <class R, class V, class... Vs>
+template <class R, class V, class... Ts>
 typename std::enable_if<
   !std::is_same<V, tail_argument_token>::value,
   intrusive_ptr<R>
 >::type
-make_behavior_ra(V& v, Vs&... vs) {
-  return make_behavior_ra<R>(vs..., v);
+make_behavior_ra(V& v, Ts&... xs) {
+  return make_behavior_ra<R>(xs..., v);
 }
 
 // this function reorganizes its arguments to shift the timeout definition
 // to the front (receives it at the tail)
-template <class... Vs>
+template <class... Ts>
 intrusive_ptr<
   default_behavior_impl<
     typename join_std_tuples<
-      typename lift_to_mctuple<Vs>::type...
+      typename lift_to_mctuple<Ts>::type...
     >::type
   >>
-make_behavior(Vs&... vs) {
+make_behavior(Ts&... xs) {
   using result_type =
     default_behavior_impl<
       typename join_std_tuples<
-        typename lift_to_mctuple<Vs>::type...
+        typename lift_to_mctuple<Ts>::type...
       >::type
     >;
   tail_argument_token eoa;
-  return make_behavior_ra<result_type>(vs..., eoa);
+  return make_behavior_ra<result_type>(xs..., eoa);
 }
 
 using behavior_impl_ptr = intrusive_ptr<behavior_impl>;

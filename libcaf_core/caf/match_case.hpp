@@ -95,14 +95,14 @@ struct has_none {
     return false;
   }
 
-  template <class V, class... Vs>
-  bool operator()(const V&, const Vs&... vs) const {
-    return (*this)(vs...);
+  template <class T, class... Ts>
+  bool operator()(const T&, const Ts&... xs) const {
+    return (*this)(xs...);
   }
 
-  template <class V, class... Vs>
-  bool operator()(const optional<V>& v, const Vs&... vs) const {
-    return !v || (*this)(vs...);
+  template <class T, class... Ts>
+  bool operator()(const optional<T>& x, const Ts&... xs) const {
+    return !x || (*this)(xs...);
   }
 };
 
@@ -113,9 +113,9 @@ class lfinvoker {
     // nop
   }
 
-  template <class... Vs>
-  typename detail::get_callable_trait<F>::result_type operator()(Vs&&... vs) {
-    return m_fun(unopt(std::forward<Vs>(vs))...);
+  template <class... Ts>
+  typename detail::get_callable_trait<F>::result_type operator()(Ts&&... xs) {
+    return m_fun(unopt(std::forward<Ts>(xs))...);
   }
 
  private:
@@ -129,9 +129,9 @@ class lfinvoker<true, F> {
     // nop
   }
 
-  template <class... Vs>
-  unit_t operator()(Vs&&... vs) {
-    m_fun(unopt(std::forward<Vs>(vs))...);
+  template <class... Ts>
+  unit_t operator()(Ts&&... xs) {
+    m_fun(unopt(std::forward<Ts>(xs))...);
     return unit;
   }
 

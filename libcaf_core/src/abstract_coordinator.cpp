@@ -68,10 +68,10 @@ inline void deliver(delayed_msg& dm) {
 }
 
 template <class Map, class... Ts>
-inline void insert_dmsg(Map& storage, const duration& d, Ts&&... vs) {
+inline void insert_dmsg(Map& storage, const duration& d, Ts&&... xs) {
   auto tout = hrc::now();
   tout += d;
-  delayed_msg dmsg{std::forward<Ts>(vs)...};
+  delayed_msg dmsg{std::forward<Ts>(xs)...};
   storage.insert(std::make_pair(std::move(tout), std::move(dmsg)));
 }
 

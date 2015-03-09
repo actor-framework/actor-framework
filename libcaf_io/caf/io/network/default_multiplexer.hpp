@@ -59,7 +59,7 @@
 #   include <sys/socket.h>
 #endif
 
-// poll vs epoll backend
+// poll xs epoll backend
 #if !defined(CAF_LINUX) || defined(CAF_POLL_IMPL) // poll() multiplexer
 # define CAF_POLL_MULTIPLEXER
 # ifndef CAF_WINDOWS
@@ -105,7 +105,7 @@ namespace network {
   constexpr int ec_interrupted_syscall = EINTR;
 #endif
 
-// poll vs epoll backend
+// poll xs epoll backend
 #if !defined(CAF_LINUX) || defined(CAF_POLL_IMPL) // poll() multiplexer
 # ifdef CAF_WINDOWS
     // From the MSDN: If the POLLPRI flag is set on a socket for the Microsoft
