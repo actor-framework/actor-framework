@@ -348,7 +348,7 @@ if [ -n "$dualbuild" ]; then
     fi
 
     for i in gcc clang; do
-        compiler=`eval echo \$$i`
+        eval "compiler=\$$i"
         configure $compiler $i "" "" $CMakeGenerator
     done
 else
