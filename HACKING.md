@@ -238,6 +238,17 @@ Naming
   };
   ```
 
+- Use `T` for generic, unconstrained template parameters and `x`
+  for generic function arguments. Suffix both with `s` for
+  template parameter packs:
+  ```cpp
+  
+  template <class... Ts>
+  void print(const Ts&... xs) {
+    // ...
+  }
+  ```
+
 
 Headers
 =======
@@ -349,7 +360,7 @@ extra rules for formatting metaprogramming code.
   ```
 
 
-Rvalue references
+Rvalue References
 =================
 
 - Use rvalue references whenever it makes sense.
@@ -364,3 +375,45 @@ Preprocessor Macros
   functions or proper constants.
 
 - Macro names use the form `CAF_<COMPONENT>_<NAME>`.
+
+
+General Git Rules
+=================
+
+- The first line is a capitalized summary and has at most 50 characters.
+
+- The second line is left empty.
+
+- Optional long descriptions begin on the third line with a at most 72
+  characters per line.
+
+- Write commit messages in the imperative: "Fix bug" and not "Fixes bug"
+  or "Fixed bug".
+
+
+Git Branches and Work Flow
+==========================
+
+- The `master` branch always reflects a *production-ready* state, i.e.,
+  the latest release version.
+
+- The `develop` branch is the main branch. Every time it reaches a stable
+  point it is merged back to `master` for a new release. The `develop` branch
+  reflects the latest state of development and should always compile.
+
+- Simple bugfixes consisting of a single commit can be pushed to `develop`.
+
+- Fixes for critical issues can be pushed to the `master` (and `develop`)
+  branch after talking to the maintainer
+  (and then cause a new release immediately).
+
+- New features or non-trivial fixes are developed in a *topic branch* using
+  the naming convention `topic/short-description`. Topic branches are merged
+  off from `develop`. Finishing topic branches includes these steps:
+  + Create a *pull request* to `develop` on GitHub
+  + Wait for the results of Jenkins and fix any issues that might come up
+  + Squash your commits if necessary once Jenkins succeeds
+  + Ask the maintainer to review your changes if you have green light from
+    Jenkins and a clean Git history for your work
+  + The maintainer will merge the topic branch back into `develop` after the
+    review phase is done (and you once again have a clean Git history)
