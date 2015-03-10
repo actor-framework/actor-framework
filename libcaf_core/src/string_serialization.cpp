@@ -37,6 +37,7 @@
 #include "caf/deserializer.hpp"
 #include "caf/skip_message.hpp"
 #include "caf/actor_namespace.hpp"
+#include "caf/mailbox_element.hpp"
 #include "caf/primitive_variant.hpp"
 #include "caf/uniform_type_info.hpp"
 
@@ -554,6 +555,23 @@ string to_string(const actor& what) {
   return to_string(what.address());
 }
 
+string to_string(const node_id::host_id_type& node_id) {
+  std::ostringstream oss;
+  oss << std::hex;
+  oss.fill('0');
+  for (size_t i = 0; i < node_id::host_id_size; ++i) {
+    oss.width(2);
+    oss << static_cast<uint32_t>(node_id[i]);
+  }
+  return oss.str();
+}
+
+string to_string(const node_id& what) {
+  std::ostringstream oss;
+  oss << to_string(what.host_id()) << ":" << what.process_id();
+  return oss.str();
+}
+
 string to_string(const atom_value& what) {
   auto x = static_cast<uint64_t>(what);
   string result;
@@ -572,21 +590,16 @@ string to_string(const atom_value& what) {
   return result;
 }
 
-string to_string(const node_id::host_id_type& node_id) {
-  std::ostringstream oss;
-  oss << std::hex;
-  oss.fill('0');
-  for (size_t i = 0; i < node_id::host_id_size; ++i) {
-    oss.width(2);
-    oss << static_cast<uint32_t>(node_id[i]);
-  }
-  return oss.str();
-}
-
-string to_string(const node_id& what) {
-  std::ostringstream oss;
-  oss << to_string(what.host_id()) << ":" << what.process_id();
-  return oss.str();
+std::string to_string(const mailbox_element& what) {
+  std::string result;
+  result += "@mailbox_element ( ";
+  result += to_string(what.sender);
+  result += ", ";
+  result += std::to_string(what.mid.integer_value());
+  result += ", ";
+  result += to_string(what.msg);
+  result += " )";
+  return result;
 }
 
 string to_verbose_string(const std::exception& e) {

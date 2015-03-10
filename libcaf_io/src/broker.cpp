@@ -155,18 +155,12 @@ class broker::continuation {
   mailbox_element_ptr m_ptr;
 };
 
-policy::invoke_message_result broker::invoke_message(mailbox_element_ptr& msg,
-                                                     behavior& bhvr,
-                                                     message_id mid) {
-  return m_invoke_policy.invoke_message(this, msg, bhvr, mid);
-}
-
 void broker::invoke_message(mailbox_element_ptr& ptr) {
   CAF_LOG_TRACE(CAF_TARG(ptr->msg, to_string));
-  if (exit_reason() != exit_reason::not_exited || bhvr_stack().empty()) {
+  if (exit_reason() != exit_reason::not_exited || !has_behavior()) {
     CAF_LOG_DEBUG("actor already finished execution"
                   << ", planned_exit_reason = " << planned_exit_reason()
-                  << ", bhvr_stack().empty() = " << bhvr_stack().empty());
+                  << ", has_behavior() = " << has_behavior());
     if (ptr->mid.valid()) {
       detail::sync_request_bouncer srb{exit_reason()};
       srb(ptr->sender, ptr->mid);
@@ -175,22 +169,24 @@ void broker::invoke_message(mailbox_element_ptr& ptr) {
   }
   // prepare actor for invocation of message handler
   try {
-    auto bhvr = bhvr_stack().back();
-    auto bid = bhvr_stack().back_id();
-    switch (invoke_message(ptr, bhvr, bid)) {
-      case policy::im_success: {
+    auto& bhvr = this->awaits_response()
+                 ? this->awaited_response_handler()
+                 : this->bhvr_stack().back();
+    auto bid = this->awaited_response_id();
+    switch (local_actor::invoke_message(ptr, bhvr, bid)) {
+      case im_success: {
         CAF_LOG_DEBUG("handle_message returned hm_msg_handled");
-        while (!bhvr_stack().empty()
+        while (has_behavior()
                && planned_exit_reason() == exit_reason::not_exited
                && invoke_message_from_cache()) {
           // rinse and repeat
         }
         break;
       }
-      case policy::im_dropped:
+      case im_dropped:
         CAF_LOG_DEBUG("handle_message returned hm_drop_msg");
         break;
-      case policy::im_skipped: {
+      case im_skipped: {
         CAF_LOG_DEBUG("handle_message returned hm_skip_msg or hm_cache_msg");
         if (ptr) {
           m_cache.push_second_back(ptr.release());
@@ -210,11 +206,13 @@ void broker::invoke_message(mailbox_element_ptr& ptr) {
     CAF_LOG_ERROR("broker killed due to an unknown exception");
     quit(exit_reason::unhandled_exception);
   }
-  // cleanup if needed
+  // safe to actually release behaviors now
+  bhvr_stack().cleanup();
+  // cleanup actor if needed
   if (planned_exit_reason() != exit_reason::not_exited) {
     cleanup(planned_exit_reason());
-  } else if (bhvr_stack().empty()) {
-    CAF_LOG_DEBUG("bhvr_stack().empty(), quit for normal exit reason");
+  } else if (!has_behavior()) {
+    CAF_LOG_DEBUG("no behavior set, quit for normal exit reason");
     quit(exit_reason::normal);
     cleanup(planned_exit_reason());
   }
@@ -231,12 +229,14 @@ void broker::invoke_message(const actor_addr& v0, message_id v1, message& v2) {
 
 bool broker::invoke_message_from_cache() {
   CAF_LOG_TRACE("");
-  auto bhvr = bhvr_stack().back();
-  auto bid = bhvr_stack().back_id();
+  auto& bhvr = this->awaits_response()
+               ? this->awaited_response_handler()
+               : this->bhvr_stack().back();
+  auto bid = this->awaited_response_id();
   auto i = m_cache.second_begin();
   auto e = m_cache.second_end();
   CAF_LOG_DEBUG(std::distance(i, e) << " elements in cache");
-  return m_cache.invoke(this, i, e, bhvr, bid);
+  return m_cache.invoke(static_cast<local_actor*>(this), i, e, bhvr, bid);
 }
 
 void broker::write(connection_handle hdl, size_t bs, const void* buf) {
@@ -280,7 +280,7 @@ void broker::on_exit() {
   // nop
 }
 
-void broker::launch(bool is_hidden, bool, execution_unit*) {
+void broker::launch(execution_unit*, bool, bool is_hidden) {
   // add implicit reference count held by the middleman
   ref();
   is_registered(!is_hidden);
@@ -360,6 +360,10 @@ std::vector<connection_handle> broker::connections() const {
     result.push_back(kvp.first);
   }
   return result;
+}
+
+void broker::initialize() {
+  // nop
 }
 
 broker::functor_based::~functor_based() {

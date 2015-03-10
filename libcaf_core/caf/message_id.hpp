@@ -115,7 +115,8 @@ class message_id : detail::comparable<message_id> {
     return result;
   }
 
-  static inline message_id make(message_priority prio) {
+  static inline message_id make(message_priority prio
+                                = message_priority::normal) {
     message_id res;
     return prio == message_priority::high ? res.with_high_priority() : res;
   }

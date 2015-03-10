@@ -29,6 +29,7 @@
 #include "caf/config.hpp"
 #include "caf/node_id.hpp"
 #include "caf/announce.hpp"
+#include "caf/exception.hpp"
 #include "caf/to_string.hpp"
 #include "caf/actor_proxy.hpp"
 #include "caf/make_counted.hpp"

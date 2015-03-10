@@ -20,6 +20,9 @@
 #ifndef CAF_BLOCKING_ACTOR_HPP
 #define CAF_BLOCKING_ACTOR_HPP
 
+#include <mutex>
+#include <condition_variable>
+
 #include "caf/none.hpp"
 
 #include "caf/on.hpp"
@@ -29,7 +32,6 @@
 #include "caf/typed_actor.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/response_handle.hpp"
-#include "caf/mailbox_based_actor.hpp"
 
 #include "caf/detail/type_traits.hpp"
 
@@ -40,10 +42,10 @@ namespace caf {
 /**
  * A thread-mapped or context-switching actor using a blocking
  * receive rather than a behavior-stack based message processing.
- * @extends mailbox_based_actor
+ * @extends local_actor
  */
 class blocking_actor
-    : public extend<mailbox_based_actor, blocking_actor>::
+    : public extend<local_actor, blocking_actor>::
              with<mixin::sync_sender<blocking_response_handle_tag>::impl> {
  public:
   class functor_based;
@@ -184,12 +186,6 @@ class blocking_actor
     return {make_dequeue_callback(), behavior{std::forward<Ts>(args)...}};
   }
 
-  optional<behavior&> sync_handler(message_id msg_id) {
-    auto i = m_sync_handler.find(msg_id);
-    if (i != m_sync_handler.end()) return i->second;
-    return none;
-  }
-
   /**
    * Blocks this actor until all other actors are done.
    */
@@ -202,34 +198,17 @@ class blocking_actor
 
   /** @cond PRIVATE */
 
-  // required from invoke_policy; unused in blocking actors
-  inline void remove_handler(message_id) {}
+  void initialize() override;
 
-  // required by receive() member function family
-  inline void dequeue(behavior&& bhvr) {
-    behavior tmp{std::move(bhvr)};
-    dequeue(tmp);
-  }
-
-  // required by receive() member function family
-  inline void dequeue(behavior& bhvr) {
-    dequeue_response(bhvr, invalid_message_id);
-  }
-
-  // implemented by detail::proper_actor
-  virtual void dequeue_response(behavior& bhvr, message_id mid) = 0;
-
-  void cleanup(uint32_t reason);
+  void dequeue(behavior& bhvr, message_id mid = invalid_message_id);
 
   /** @endcond */
 
- private:
+ protected:
   // helper function to implement receive_(for|while) and do_receive
   std::function<void(behavior&)> make_dequeue_callback() {
     return [=](behavior& bhvr) { dequeue(bhvr); };
   }
-
-  std::map<message_id, behavior> m_sync_handler;
 };
 
 class blocking_actor::functor_based : public blocking_actor {

@@ -70,8 +70,7 @@ class response_handle<Self, message, nonblocking_response_handle_tag> {
 
   template <class... Ts>
   continue_helper then(Ts&&... xs) const {
-    behavior bhvr{std::forward<Ts>(xs)...};
-    m_self->bhvr_stack().push_back(std::move(bhvr), m_mid);
+    m_self->set_response_handler(m_mid, behavior{std::forward<Ts>(xs)...});
     return {m_mid};
   }
 
@@ -110,8 +109,7 @@ class response_handle<Self, TypedOutputPair, nonblocking_response_handle_tag> {
                   >::value,
                   "match cases are not allowed in this context");
     detail::type_checker<TypedOutputPair, Fs...>::check();
-    behavior tmp{std::move(fs)...};
-    m_self->bhvr_stack().push_back(std::move(tmp), m_mid);
+    m_self->set_response_handler(m_mid, behavior{std::move(fs)...});
     return {m_mid};
   }
 
@@ -135,13 +133,13 @@ class response_handle<Self, message, blocking_response_handle_tag> {
   }
 
   void await(behavior& bhvr) {
-    m_self->dequeue_response(bhvr, m_mid);
+    m_self->dequeue(bhvr, m_mid);
   }
 
   template <class... Ts>
   void await(Ts&&... xs) const {
     behavior bhvr{std::forward<Ts>(xs)...};
-    m_self->dequeue_response(bhvr, m_mid);
+    m_self->dequeue(bhvr, m_mid);
   }
 
  private:
@@ -184,7 +182,7 @@ class response_handle<Self, OutputPair, blocking_response_handle_tag> {
                   "match cases are not allowed in this context");
     detail::type_checker<OutputPair, Fs...>::check();
     behavior tmp{std::move(fs)...};
-    m_self->dequeue_response(tmp, m_mid);
+    m_self->dequeue(tmp, m_mid);
   }
 
  private:

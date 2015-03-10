@@ -23,10 +23,9 @@
 #include "caf/replies_to.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/typed_behavior.hpp"
-#include "caf/mailbox_based_actor.hpp"
+#include "caf/abstract_event_based_actor.hpp"
 
 #include "caf/mixin/sync_sender.hpp"
-#include "caf/mixin/behavior_stack_based.hpp"
 
 namespace caf {
 
@@ -35,13 +34,11 @@ namespace caf {
  * checking. This is the recommended base class for user-defined actors and is
  * used implicitly when spawning typed, functor-based actors without the
  * `blocking_api` flag.
- * @extends mailbox_based_actor
+ * @extends local_actor
  */
 template <class... Sigs>
-class typed_event_based_actor : public
-    extend<mailbox_based_actor, typed_event_based_actor<Sigs...>>::template
-    with<mixin::behavior_stack_based<typed_behavior<Sigs...>>::template impl,
-         mixin::sync_sender<nonblocking_response_handle_tag>::template impl> {
+class typed_event_based_actor
+    : public abstract_event_based_actor<typed_behavior<Sigs...>, true> {
  public:
   using signatures = detail::type_list<Sigs...>;
 
@@ -49,6 +46,19 @@ class typed_event_based_actor : public
 
   std::set<std::string> message_types() const override {
     return {Sigs::static_type_name()...};
+  }
+
+  void initialize() override {
+    this->is_initialized(true);
+    auto bhvr = make_behavior();
+    CAF_LOG_DEBUG_IF(!bhvr, "make_behavior() did not return a behavior, "
+                            << "has_behavior() = "
+                            << std::boolalpha << this->has_behavior());
+    if (bhvr) {
+      // make_behavior() did return a behavior instead of using become()
+      CAF_LOG_DEBUG("make_behavior() did return a valid behavior");
+      this->do_become(std::move(bhvr.unbox()), true);
+    }
   }
 
  protected:

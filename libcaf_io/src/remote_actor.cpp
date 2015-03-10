@@ -28,6 +28,7 @@
 #include <algorithm>
 
 #include "caf/send.hpp"
+#include "caf/exception.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/abstract_actor.hpp"
 #include "caf/binary_deserializer.hpp"

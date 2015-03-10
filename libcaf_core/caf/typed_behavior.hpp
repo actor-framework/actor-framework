@@ -207,10 +207,16 @@ class typed_behavior {
     return m_bhvr.timeout();
   }
 
+  /** @cond PRIVATE */
+
+  behavior& unbox() {
+    return m_bhvr;
+  }
+
+  /** @endcond */
+
  private:
   typed_behavior() = default;
-
-  behavior& unbox() { return m_bhvr; }
 
   template <class... Ts>
   void set(intrusive_ptr<detail::default_behavior_impl<std::tuple<Ts...>>> bp) {

@@ -38,11 +38,6 @@ void blocking_actor::await_all_other_actors_done() {
   detail::singletons::get_actor_registry()->await_running_count_equal(1);
 }
 
-void blocking_actor::cleanup(uint32_t reason) {
-  m_sync_handler.clear();
-  mailbox_based_actor::cleanup(reason);
-}
-
 void blocking_actor::functor_based::create(blocking_actor*, act_fun fun) {
   m_act = fun;
 }
@@ -55,6 +50,37 @@ void blocking_actor::functor_based::act() {
 void blocking_actor::functor_based::cleanup(uint32_t reason) {
   m_act = nullptr;
   blocking_actor::cleanup(reason);
+}
+
+void blocking_actor::initialize() {
+  // nop
+}
+
+void blocking_actor::dequeue(behavior& bhvr, message_id mid) {
+  // try to dequeue from cache first
+  if (invoke_from_cache(bhvr, mid)) {
+    return;
+  }
+  // requesting an invalid timeout will reset our active timeout
+  auto timeout_id = request_timeout(bhvr.timeout());
+  // read incoming messages
+  for (;;) {
+    await_data();
+    auto msg = next_message();
+    switch (invoke_message(msg, bhvr, mid)) {
+      case im_success:
+        reset_timeout(timeout_id);
+        return;
+      case im_skipped:
+        if (msg) {
+          push_to_cache(std::move(msg));
+        }
+        break;
+      default:
+        // delete msg
+        break;
+    }
+  }
 }
 
 } // namespace caf

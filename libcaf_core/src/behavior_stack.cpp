@@ -28,63 +28,18 @@ using namespace std;
 namespace caf {
 namespace detail {
 
-struct behavior_stack_mover : iterator<output_iterator_tag, void,
-                                       void, void, void> {
- public:
-  behavior_stack_mover(behavior_stack* st) : m_stack(st) {}
-
-  behavior_stack_mover& operator=(behavior_stack::element_type&& rval) {
-    m_stack->m_erased_elements.emplace_back(move(rval.first));
-    return *this;
-  }
-
-  behavior_stack_mover& operator*() {
-    return *this;
-  }
-
-  behavior_stack_mover& operator++() {
-    return *this;
-  }
-
-  behavior_stack_mover operator++(int) {
-    return *this;
-  }
-
- private:
-  behavior_stack* m_stack;
-};
-
-inline behavior_stack_mover move_iter(behavior_stack* bs) {
-  return {bs};
-}
-
-optional<behavior&> behavior_stack::sync_handler(message_id expected_response) {
-  if (expected_response.valid()) {
-    auto e = m_elements.rend();
-    auto i = find_if(m_elements.rbegin(), e, [=](element_type& val) {
-      return val.second == expected_response;
-    });
-    if (i != e) {
-      return i->first;
-    }
-  }
-  return none;
-}
-
-void behavior_stack::pop_async_back() {
+void behavior_stack::pop_back() {
   if (m_elements.empty()) {
     return;
   }
-  if (!m_elements.back().second.valid()) {
-    erase_at(m_elements.end() - 1);
-  } else {
-    rerase_if([](const element_type& e) { return e.second.valid() == false; });
-  }
+  m_erased_elements.push_back(std::move(m_elements.back()));
+  m_elements.pop_back();
 }
 
 void behavior_stack::clear() {
-  if (m_elements.empty() == false) {
-    std::move(m_elements.begin(), m_elements.end(), move_iter(this));
+  if (!m_elements.empty()) {
+    std::move(m_elements.begin(), m_elements.end(),
+              std::back_inserter(m_erased_elements));
     m_elements.clear();
   }
 }

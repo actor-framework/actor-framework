@@ -26,11 +26,9 @@
 #include "caf/extend.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/response_handle.hpp"
-#include "caf/mailbox_based_actor.hpp"
+#include "caf/abstract_event_based_actor.hpp"
 
-#include "caf/mixin/sync_sender.hpp"
 #include "caf/mixin/functor_based.hpp"
-#include "caf/mixin/behavior_stack_based.hpp"
 
 #include "caf/detail/logging.hpp"
 
@@ -40,12 +38,9 @@ namespace caf {
  * A cooperatively scheduled, event-based actor implementation. This is the
  * recommended base class for user-defined actors and is used implicitly when
  * spawning functor-based actors without the `blocking_api` flag.
- * @extends mailbox_based_actor
+ * @extends local_actor
  */
-class event_based_actor
-    : public extend<mailbox_based_actor, event_based_actor>::
-             with<mixin::behavior_stack_based<behavior>::impl,
-                  mixin::sync_sender<nonblocking_response_handle_tag>::impl> {
+class event_based_actor : public abstract_event_based_actor<behavior, true> {
  public:
   /**
    * Forwards the last received message to `whom`.
@@ -59,6 +54,8 @@ class event_based_actor
 
   class functor_based;
 
+  void initialize() override;
+
  protected:
   /**
    * Returns the initial actor behavior.
@@ -66,6 +63,11 @@ class event_based_actor
   virtual behavior make_behavior() = 0;
 };
 
+/**
+ * Implicitly used whenever spawning a cooperatively scheduled actor
+ * using a function of function object.
+ * @extends event_based_actor
+ */
 class event_based_actor::functor_based : public extend<event_based_actor>::
                                                 with<mixin::functor_based> {
  public:

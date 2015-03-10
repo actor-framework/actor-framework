@@ -73,6 +73,11 @@ std::string to_string(const node_id& what);
 std::string to_string(const atom_value& what);
 
 /**
+ * @relates mailbox_element
+ */
+std::string to_string(const mailbox_element& what);
+
+/**
  * @relates optional
  */
 template <class T>

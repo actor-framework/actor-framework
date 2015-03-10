@@ -28,29 +28,14 @@
 #include "caf/spawn_options.hpp"
 #include "caf/typed_event_based_actor.hpp"
 
-#include "caf/policy/no_resume.hpp"
-#include "caf/policy/prioritizing.hpp"
-#include "caf/policy/no_scheduling.hpp"
-#include "caf/policy/actor_policies.hpp"
-#include "caf/policy/not_prioritizing.hpp"
-#include "caf/policy/event_based_resume.hpp"
-#include "caf/policy/cooperative_scheduling.hpp"
-
 #include "caf/detail/logging.hpp"
 #include "caf/detail/type_traits.hpp"
-#include "caf/detail/proper_actor.hpp"
 #include "caf/detail/typed_actor_util.hpp"
 #include "caf/detail/implicit_conversions.hpp"
 
 namespace caf {
 
 class execution_unit;
-
-/**
- * Marker interface that prevents `spawn` from wrapping the a class
- * in a `proper_actor` when spawning new instances.
- */
-class spawn_as_is {};
 
 /**
  * Returns a newly spawned instance of type `C` using `args...` as constructor
@@ -68,41 +53,17 @@ intrusive_ptr<C> spawn_impl(execution_unit* host,
   static_assert(is_unbound(Os),
                 "top-level spawns cannot have monitor or link flag");
   CAF_LOGF_TRACE("");
-  using scheduling_policy =
-    typename std::conditional<
-      has_detach_flag(Os) || has_blocking_api_flag(Os),
-      policy::no_scheduling,
-      policy::cooperative_scheduling
-    >::type;
-  using priority_policy =
-    typename std::conditional<
-      has_priority_aware_flag(Os),
-      policy::prioritizing,
-      policy::not_prioritizing
-    >::type;
-  using resume_policy =
-    typename std::conditional<
-      has_blocking_api_flag(Os),
-      policy::no_resume,
-      policy::event_based_resume
-    >::type;
-  using policy_token =
-    policy::actor_policies<
-      scheduling_policy,
-      priority_policy,
-      resume_policy
-    >;
-  using actor_impl =
-    typename std::conditional<
-      std::is_base_of<spawn_as_is, C>::value,
-      C,
-      detail::proper_actor<C, policy_token>
-    >::type;
-  auto ptr = make_counted<actor_impl>(std::forward<Ts>(args)...);
+  auto ptr = make_counted<C>(std::forward<Ts>(args)...);
   CAF_LOGF_DEBUG("spawned actor with ID " << ptr->id());
   CAF_PUSH_AID(ptr->id());
+  if (has_priority_aware_flag(Os)) {
+    ptr->is_priority_aware(true);
+  }
+  if (has_detach_flag(Os) || has_blocking_api_flag(Os)) {
+    ptr->is_detached(true);
+  }
   before_launch_fun(ptr.get());
-  ptr->launch(has_hide_flag(Os), has_lazy_init_flag(Os), host);
+  ptr->launch(host, has_lazy_init_flag(Os), has_hide_flag(Os));
   return ptr;
 }
 
