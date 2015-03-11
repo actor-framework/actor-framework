@@ -559,14 +559,16 @@ class default_meta_message : public uniform_type_info {
 template <class Iterator>
 struct builtin_types_helper {
   Iterator pos;
-  builtin_types_helper(Iterator first) : pos(first) {}
+  builtin_types_helper(Iterator first) : pos(first) {
+    // nop
+  }
   void operator()() const {
     // end of recursion
   }
   template <class T, class... Ts>
-  void operator()(T& arg, Ts&... args) {
-    *pos++ = &arg;
-    (*this)(args...);
+  void operator()(T& x, Ts&... xs) {
+    *pos++ = &x;
+    (*this)(xs...);
   }
 };
 

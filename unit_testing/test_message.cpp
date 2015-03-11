@@ -85,9 +85,9 @@ void test_extract3() {
 }
 
 void test_extract_opts() {
-  auto f = [](std::vector<std::string> args) {
+  auto f = [](std::vector<std::string> xs) {
     std::string filename;
-    auto res = message_builder(args.begin(), args.end()).extract_opts({
+    auto res = message_builder(xs.begin(), xs.end()).extract_opts({
       {"version,v", "print version"},
       {"file,f", "set output file", filename},
       {"whatever", "do whatever"}

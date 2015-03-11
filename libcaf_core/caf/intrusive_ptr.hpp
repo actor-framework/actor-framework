@@ -96,8 +96,8 @@ class intrusive_ptr : detail::comparable<intrusive_ptr<T>>,
   }
 
   template <class... Ts>
-  void emplace(Ts&&... args) {
-    reset(new T(std::forward<Ts>(args)...));
+  void emplace(Ts&&... xs) {
+    reset(new T(std::forward<Ts>(xs)...));
   }
 
   intrusive_ptr& operator=(pointer ptr) {

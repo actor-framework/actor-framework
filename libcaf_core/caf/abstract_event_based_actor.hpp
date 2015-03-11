@@ -66,14 +66,14 @@ class abstract_event_based_actor : public
     !std::is_same<keep_behavior_t, typename std::decay<T>::type>::value,
     void
   >::type
-  become(T&& arg, Ts&&... args) {
-    behavior_type bhvr{std::forward<T>(arg), std::forward<Ts>(args)...};
+  become(T&& x, Ts&&... xs) {
+    behavior_type bhvr{std::forward<T>(x), std::forward<Ts>(xs)...};
     this->do_become(std::move(unbox(bhvr)), true);
   }
 
   template <class... Ts>
-  void become(const keep_behavior_t&, Ts&&... args) {
-    behavior_type bhvr{std::forward<Ts>(args)...};
+  void become(const keep_behavior_t&, Ts&&... xs) {
+    behavior_type bhvr{std::forward<Ts>(xs)...};
     this->do_become(std::move(unbox(bhvr)), false);
   }
 
@@ -83,12 +83,12 @@ class abstract_event_based_actor : public
 
  private:
   template <class... Ts>
-  static behavior& unbox(typed_behavior<Ts...>& arg) {
-    return arg.unbox();
+  static behavior& unbox(typed_behavior<Ts...>& x) {
+    return x.unbox();
   }
 
-  static inline behavior& unbox(behavior& bhvr) {
-    return bhvr;
+  static inline behavior& unbox(behavior& x) {
+    return x;
   }
 };
 

@@ -111,12 +111,10 @@ class behavior {
   }
 
   /**
-   * Returns a value if `arg` was matched by one of the
-   * handler of this behavior, returns `nothing` otherwise.
+   * Runs this handler and returns its (optional) result.
    */
-  template <class T>
-  optional<message> operator()(T&& arg) {
-    return (m_impl) ? m_impl->invoke(std::forward<T>(arg)) : none;
+  inline optional<message> operator()(message& arg) {
+    return (m_impl) ? m_impl->invoke(arg) : none;
   }
 
   /**

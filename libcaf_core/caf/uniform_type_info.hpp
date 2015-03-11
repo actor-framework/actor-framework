@@ -51,7 +51,7 @@ struct uniform_value_t {
 };
 
 template <class T, class... Ts>
-uniform_value make_uniform_value(const uniform_type_info* uti, Ts&&... args) {
+uniform_value make_uniform_value(const uniform_type_info* uti, Ts&&... xs) {
   struct container : uniform_value_t {
     T value;
     container(const uniform_type_info* ptr, T arg) : value(std::move(arg)) {
@@ -62,7 +62,7 @@ uniform_value make_uniform_value(const uniform_type_info* uti, Ts&&... args) {
       return uniform_value{new container(ti, value)};
     }
   };
-  return uniform_value{new container(uti, T(std::forward<Ts>(args)...))};
+  return uniform_value{new container(uti, T(std::forward<Ts>(xs)...))};
 }
 
 /**

@@ -38,8 +38,8 @@ typename std::enable_if<
   detail::is_memory_cached<T>::value,
   intrusive_ptr<T>
 >::type
-make_counted(Ts&&... args) {
-  return intrusive_ptr<T>(detail::memory::create<T>(std::forward<Ts>(args)...),
+make_counted(Ts&&... xs) {
+  return intrusive_ptr<T>(detail::memory::create<T>(std::forward<Ts>(xs)...),
                           false);
 }
 
@@ -53,8 +53,8 @@ typename std::enable_if<
   !detail::is_memory_cached<T>::value,
   intrusive_ptr<T>
 >::type
-make_counted(Ts&&... args) {
-  return intrusive_ptr<T>(new T(std::forward<Ts>(args)...), false);
+make_counted(Ts&&... xs) {
+  return intrusive_ptr<T>(new T(std::forward<Ts>(xs)...), false);
 }
 
 } // namespace caf

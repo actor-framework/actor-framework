@@ -120,7 +120,8 @@ message message::extract_impl(size_t start, message_handler handler) const {
   auto s = size();
   for (size_t i = start; i < s; ++i) {
     for (size_t n = (s - i) ; n > 0; --n) {
-      auto res = handler(slice(i, n));
+      auto next_slice = slice(i, n);
+      auto res = handler(next_slice);
       if (res) {
         std::vector<size_t> mapping(s);
         std::iota(mapping.begin(), mapping.end(), size_t{0});
@@ -142,7 +143,7 @@ message message::extract(message_handler handler) const {
   return extract_impl(0, handler);
 }
 
-message::cli_res message::extract_opts(std::vector<cli_arg> cliargs) const {
+message::cli_res message::extract_opts(std::vector<cli_arg> xs) const {
   std::set<std::string> opts;
   cli_arg dummy{"help,h", ""};
   std::map<std::string, cli_arg*> shorts;
@@ -150,7 +151,7 @@ message::cli_res message::extract_opts(std::vector<cli_arg> cliargs) const {
   shorts["-h"] = &dummy;
   shorts["-?"] = &dummy;
   longs["--help"] = &dummy;
-  for (auto& cliarg : cliargs) {
+  for (auto& cliarg : xs) {
     std::vector<std::string> s;
     split(s, cliarg.name, is_any_of(","), token_compress_on);
     if (s.size() == 2 && s.back().size() == 1) {
@@ -225,7 +226,7 @@ message::cli_res message::extract_opts(std::vector<cli_arg> cliargs) const {
     }
   });
   size_t name_width = 0;
-  for (auto& ca : cliargs) {
+  for (auto& ca : xs) {
     // name field contains either only "--<long_name>" or
     // "-<short name> [--<long name>]" depending on whether or not
     // a ',' appears in the name
@@ -240,7 +241,7 @@ message::cli_res message::extract_opts(std::vector<cli_arg> cliargs) const {
   std::ostringstream oss;
   oss << std::left;
   oss << "Allowed options:" << std::endl;
-  for (auto& ca : cliargs) {
+  for (auto& ca : xs) {
     std::string lhs;
     auto separator = ca.name.find(',');
     if (separator == std::string::npos) {

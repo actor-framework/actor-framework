@@ -84,10 +84,10 @@ bool cc_valid_socket(caf::io::network::native_socket fd) {
 
 // calls a C function and throws a `network_error` if `p` returns false
 template <class Predicate, class F, class... Ts>
-auto ccall(Predicate p, const char* errmsg, F f, Ts&&... args)
--> decltype(f(std::forward<Ts>(args)...)) {
+auto ccall(Predicate p, const char* errmsg, F f, Ts&&... xs)
+-> decltype(f(std::forward<Ts>(xs)...)) {
   using namespace caf::io::network;
-  auto result = f(std::forward<Ts>(args)...);
+  auto result = f(std::forward<Ts>(xs)...);
   if (!p(result)) {
     std::ostringstream oss;
     oss << errmsg << ": " << last_socket_error_as_string()

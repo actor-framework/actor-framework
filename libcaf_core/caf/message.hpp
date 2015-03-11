@@ -281,7 +281,7 @@ class message {
    * }
    * ~~~
    */
-  cli_res extract_opts(std::vector<cli_arg> args) const;
+  cli_res extract_opts(std::vector<cli_arg> xs) const;
 
   /**
    * Queries whether the element at position `p` is of type `T`.

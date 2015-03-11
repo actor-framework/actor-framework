@@ -50,11 +50,11 @@ void fill_mb(message_builder& mb, const T& x, const Ts&... xs) {
 }
 
 template <class... Ts>
-ptrdiff_t invoked(message_handler expr, const Ts&... args) {
+ptrdiff_t invoked(message_handler expr, const Ts&... xs) {
   vector<message> msgs;
-  msgs.push_back(make_message(args...));
+  msgs.push_back(make_message(xs...));
   message_builder mb;
-  fill_mb(mb, args...);
+  fill_mb(mb, xs...);
   msgs.push_back(mb.to_message());
   set<ptrdiff_t> results;
   for (auto& msg : msgs) {

@@ -88,14 +88,14 @@ class memory {
 
   // Allocates storage, initializes a new object, and returns the new instance.
   template <class T, class... Ts>
-  static T* create(Ts&&... args) {
+  static T* create(Ts&&... xs) {
     using embedded_t =
       typename std::conditional<
         T::memory_cache_flag == provides_embedding,
         rc_storage<T>,
         T
        >::type;
-    return unbox_rc_storage(new embedded_t(std::forward<Ts>(args)...));
+    return unbox_rc_storage(new embedded_t(std::forward<Ts>(xs)...));
   }
 
   static inline memory_cache* get_cache_map_entry(const std::type_info*) {

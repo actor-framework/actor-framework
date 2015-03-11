@@ -55,10 +55,12 @@ void foo() {
 }
 
 struct send_to_self {
-  send_to_self(blocking_actor* self) : m_self(self) {}
+  send_to_self(blocking_actor* self) : m_self(self) {
+    // nop
+  }
   template <class... Ts>
-  void operator()(Ts&&... args) {
-    m_self->send(m_self, std::forward<Ts>(args)...);
+  void operator()(Ts&&... xs) {
+    m_self->send(m_self, std::forward<Ts>(xs)...);
   }
   blocking_actor* m_self;
 };

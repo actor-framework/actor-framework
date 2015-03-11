@@ -97,9 +97,9 @@ class message_case_pair_builder : public message_case_builder {
 
 struct tuple_maker {
   template <class... Ts>
-  inline auto operator()(Ts&&... args)
-    -> decltype(std::make_tuple(std::forward<Ts>(args)...)) {
-    return std::make_tuple(std::forward<Ts>(args)...);
+  inline auto operator()(Ts&&... xs)
+    -> decltype(std::make_tuple(std::forward<Ts>(xs)...)) {
+    return std::make_tuple(std::forward<Ts>(xs)...);
   }
 };
 

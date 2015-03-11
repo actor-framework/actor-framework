@@ -53,7 +53,7 @@ class singleton_mixin : public Base {
 
  protected:
   template <class... Ts>
-  singleton_mixin(Ts&&... args) : Base(std::forward<Ts>(args)...) {
+  singleton_mixin(Ts&&... xs) : Base(std::forward<Ts>(xs)...) {
     // nop
   }
 

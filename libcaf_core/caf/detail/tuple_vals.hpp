@@ -80,8 +80,8 @@ class tuple_vals : public message_data {
   tuple_vals(const tuple_vals&) = default;
 
   template <class... Us>
-  tuple_vals(Us&&... args)
-      : m_data(std::forward<Us>(args)...),
+  tuple_vals(Us&&... xs)
+      : m_data(std::forward<Us>(xs)...),
         m_types{{tuple_vals_type_helper<Ts>::get()...}} {
     // nop
   }

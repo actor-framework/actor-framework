@@ -102,8 +102,8 @@ class message_builder {
   /**
    * @copydoc message::extract_opts
    */
-  inline message::cli_res extract_opts(std::vector<message::cli_arg> args) const {
-    return to_message().extract_opts(std::move(args));
+  inline message::cli_res extract_opts(std::vector<message::cli_arg> xs) const {
+    return to_message().extract_opts(std::move(xs));
   }
 
   /**

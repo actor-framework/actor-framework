@@ -109,9 +109,9 @@ class middleman : public detail::abstract_singleton {
    * Adds a new hook to the middleman.
    */
   template<class C, typename... Ts>
-  void add_hook(Ts&&... args) {
+  void add_hook(Ts&&... xs) {
     // if only we could move a unique_ptr into a lambda in C++11
-    auto ptr = new C(std::forward<Ts>(args)...);
+    auto ptr = new C(std::forward<Ts>(xs)...);
     backend().dispatch([=] {
       ptr->next.swap(m_hooks);
       m_hooks.reset(ptr);

@@ -32,23 +32,27 @@
 namespace caf {
 
 template <class C,
-     spawn_options Os = no_spawn_options,
-     typename BeforeLaunch = std::function<void (C*)>,
-     class... Ts>
+          spawn_options Os = no_spawn_options,
+          class BeforeLaunch = std::function<void (C*)>,
+          class... Ts>
 intrusive_ptr<C> spawn_class(execution_unit* host,
-                             BeforeLaunch before_launch_fun, Ts&&... args);
+                             BeforeLaunch before_launch_fun,
+                             Ts&&... xs);
 
 template <spawn_options Os = no_spawn_options,
-      typename BeforeLaunch = void (*)(abstract_actor*),
-      typename F = behavior (*)(), class... Ts>
-actor spawn_functor(execution_unit* host, BeforeLaunch before_launch_fun, F fun,
-                    Ts&&... args);
+          class BeforeLaunch = void (*)(abstract_actor*),
+          class F = behavior (*)(),
+          class... Ts>
+actor spawn_functor(execution_unit* host,
+                    BeforeLaunch before_launch_fun,
+                    F fun,
+                    Ts&&... xs);
 
 class group_subscriber {
-
  public:
-
-  inline group_subscriber(const group& grp) : m_grp(grp) {}
+  inline group_subscriber(const group& grp) : m_grp(grp) {
+    // nop
+  }
 
   template <class T>
   inline void operator()(T* ptr) const {
@@ -56,9 +60,7 @@ class group_subscriber {
   }
 
  private:
-
   group m_grp;
-
 };
 
 struct empty_before_launch_callback {
@@ -69,7 +71,7 @@ struct empty_before_launch_callback {
 };
 
 /******************************************************************************
- *                typed actors                *
+ *                                typed actors                                *
  ******************************************************************************/
 
 template <class TypedBehavior, class FirstArg>
@@ -102,7 +104,7 @@ typename infer_typed_actor_handle<
     typename detail::get_callable_trait<F>::arg_types
   >::type
 >::type
-spawn_typed_functor(execution_unit*, BeforeLaunch bl, F fun, Ts&&... args);
+spawn_typed_functor(execution_unit*, BeforeLaunch bl, F fun, Ts&&... xs);
 
 } // namespace caf
 

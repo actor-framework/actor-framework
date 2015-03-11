@@ -63,13 +63,15 @@ std::string join(const Container& c, const std::string& glue) {
 }
 
 // end of recursion
-inline void splice(std::string&, const std::string&) { }
+inline void splice(std::string&, const std::string&) {
+  // nop
+}
 
 template <class T, class... Ts>
-void splice(std::string& str, const std::string& glue, T&& arg, Ts&&... args) {
+void splice(std::string& str, const std::string& glue, T&& arg, Ts&&... xs) {
   str += glue;
   str += std::forward<T>(arg);
-  splice(str, glue, std::forward<Ts>(args)...);
+  splice(str, glue, std::forward<Ts>(xs)...);
 }
 
 template <ptrdiff_t WhatSize, ptrdiff_t WithSize>

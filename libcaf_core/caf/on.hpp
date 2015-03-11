@@ -151,15 +151,15 @@ auto to_guard(const atom_constant<V>&) -> decltype(to_guard(V)) {
  * Returns a generator for `match_case` objects.
  */
 template <class... Ts>
-auto on(const Ts&... args)
+auto on(const Ts&... xs)
 -> detail::advanced_match_case_builder<
     detail::type_list<
-      decltype(to_guard(args))...
+      decltype(to_guard(xs))...
     >,
     detail::type_list<
       typename detail::pattern_type<typename std::decay<Ts>::type>::type...>
     > {
-  return {detail::variadic_ctor{}, to_guard(args)...};
+  return {detail::variadic_ctor{}, to_guard(xs)...};
 }
 
 /**

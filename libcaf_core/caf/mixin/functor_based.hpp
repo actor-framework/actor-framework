@@ -94,16 +94,14 @@ class functor_based : public Base {
   }
 
   template <class Token, typename F, typename T0, class... Ts>
-  void set(Token t1, std::true_type t2, F fun, T0&& arg0, Ts&&... args) {
-    set(t1, t2,
-      std::bind(fun, std::placeholders::_1, std::forward<T0>(arg0),
-            std::forward<Ts>(args)...));
+  void set(Token t1, std::true_type t2, F fun, T0&& x, Ts&&... xs) {
+    set(t1, t2, std::bind(fun, std::placeholders::_1, std::forward<T0>(x),
+            std::forward<Ts>(xs)...));
   }
 
   template <class Token, typename F, typename T0, class... Ts>
-  void set(Token t1, std::false_type t2, F fun, T0&& arg0, Ts&&... args) {
-    set(t1, t2,
-      std::bind(fun, std::forward<T0>(arg0), std::forward<Ts>(args)...));
+  void set(Token t1, std::false_type t2, F fun, T0&& x, Ts&&... xs) {
+    set(t1, t2, std::bind(fun, std::forward<T0>(x), std::forward<Ts>(xs)...));
   }
 };
 

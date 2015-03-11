@@ -226,8 +226,8 @@ class local_group_proxy : public local_group {
   using super = local_group;
 
   template <class... Ts>
-  local_group_proxy(actor remote_broker, Ts&&... args)
-      : super(false, std::forward<Ts>(args)...) {
+  local_group_proxy(actor remote_broker, Ts&&... xs)
+      : super(false, std::forward<Ts>(xs)...) {
     CAF_REQUIRE(m_broker == invalid_actor);
     CAF_REQUIRE(remote_broker != invalid_actor);
     m_broker = std::move(remote_broker);

@@ -38,14 +38,14 @@ namespace caf {
 class execution_unit;
 
 /**
- * Returns a newly spawned instance of type `C` using `args...` as constructor
+ * Returns a newly spawned instance of type `C` using `xs...` as constructor
  * arguments. The instance will be added to the job list of `host`. However,
  * before the instance is launched, `before_launch_fun` will be called, e.g.,
  * to join a group before the actor is running.
  */
 template <class C, spawn_options Os, class BeforeLaunch, class... Ts>
 intrusive_ptr<C> spawn_impl(execution_unit* host,
-                            BeforeLaunch before_launch_fun, Ts&&... args) {
+                            BeforeLaunch before_launch_fun, Ts&&... xs) {
   static_assert(!std::is_base_of<blocking_actor, C>::value
                 || has_blocking_api_flag(Os),
                 "C is derived from blocking_actor but "
@@ -53,7 +53,7 @@ intrusive_ptr<C> spawn_impl(execution_unit* host,
   static_assert(is_unbound(Os),
                 "top-level spawns cannot have monitor or link flag");
   CAF_LOGF_TRACE("");
-  auto ptr = make_counted<C>(std::forward<Ts>(args)...);
+  auto ptr = make_counted<C>(std::forward<Ts>(xs)...);
   CAF_LOGF_DEBUG("spawned actor with ID " << ptr->id());
   CAF_PUSH_AID(ptr->id());
   if (has_priority_aware_flag(Os)) {
@@ -104,9 +104,9 @@ spawn_fwd(typename std::remove_reference<T>::type&& arg) noexcept {
  */
 template <class C, spawn_options Os, typename BeforeLaunch, class... Ts>
 intrusive_ptr<C> spawn_class(execution_unit* host,
-                             BeforeLaunch before_launch_fun, Ts&&... args) {
+                             BeforeLaunch before_launch_fun, Ts&&... xs) {
   return spawn_impl<C, Os>(host, before_launch_fun,
-                           spawn_fwd<Ts>(args)...);
+                           spawn_fwd<Ts>(xs)...);
 }
 
 /**
@@ -115,7 +115,7 @@ intrusive_ptr<C> spawn_class(execution_unit* host,
  * selects a proper implementation class and then delegates to `spawn_class`.
  */
 template <spawn_options Os, typename BeforeLaunch, typename F, class... Ts>
-actor spawn_functor(execution_unit* eu, BeforeLaunch cb, F fun, Ts&&... args) {
+actor spawn_functor(execution_unit* eu, BeforeLaunch cb, F fun, Ts&&... xs) {
   using trait = typename detail::get_callable_trait<F>::type;
   using arg_types = typename trait::arg_types;
   using first_arg = typename detail::tl_head<arg_types>::type;
@@ -138,7 +138,7 @@ actor spawn_functor(execution_unit* eu, BeforeLaunch cb, F fun, Ts&&... args) {
                 "non-blocking functor-based actors "
                 "cannot be spawned using the blocking_api flag");
   using impl_class = typename base_class::functor_based;
-  return spawn_class<impl_class, Os>(eu, cb, fun, std::forward<Ts>(args)...);
+  return spawn_class<impl_class, Os>(eu, cb, fun, std::forward<Ts>(xs)...);
 }
 
 /**
@@ -147,49 +147,49 @@ actor spawn_functor(execution_unit* eu, BeforeLaunch cb, F fun, Ts&&... args) {
  */
 
 /**
- * Returns a new actor of type `C` using `args...` as constructor
+ * Returns a new actor of type `C` using `xs...` as constructor
  * arguments. The behavior of `spawn` can be modified by setting `Os`, e.g.,
  * to opt-out of the cooperative scheduling.
  */
 template <class C, spawn_options Os = no_spawn_options, class... Ts>
-actor spawn(Ts&&... args) {
+actor spawn(Ts&&... xs) {
   return spawn_class<C, Os>(nullptr, empty_before_launch_callback{},
-                            std::forward<Ts>(args)...);
+                            std::forward<Ts>(xs)...);
 }
 
 /**
  * Returns a new functor-based actor. The first argument must be the functor,
- * the remainder of `args...` is used to invoke the functor.
+ * the remainder of `xs...` is used to invoke the functor.
  * The behavior of `spawn` can be modified by setting `Os`, e.g.,
  * to opt-out of the cooperative scheduling.
  */
 template <spawn_options Os = no_spawn_options, class... Ts>
-actor spawn(Ts&&... args) {
+actor spawn(Ts&&... xs) {
   static_assert(sizeof...(Ts) > 0, "too few arguments provided");
   return spawn_functor<Os>(nullptr, empty_before_launch_callback{},
-                           std::forward<Ts>(args)...);
+                           std::forward<Ts>(xs)...);
 }
 
 /**
  * Returns a new actor that immediately, i.e., before this function
- * returns, joins `grp` of type `C` using `args` as constructor arguments
+ * returns, joins `grp` of type `C` using `xs` as constructor arguments
  */
 template <class C, spawn_options Os = no_spawn_options, class... Ts>
-actor spawn_in_group(const group& grp, Ts&&... args) {
+actor spawn_in_group(const group& grp, Ts&&... xs) {
   return spawn_class<C, Os>(nullptr, group_subscriber{grp},
-                 std::forward<Ts>(args)...);
+                 std::forward<Ts>(xs)...);
 }
 
 /**
  * Returns a new actor that immediately, i.e., before this function
- * returns, joins `grp`. The first element of `args` must
+ * returns, joins `grp`. The first element of `xs` must
  * be the functor, the remaining arguments its arguments.
  */
 template <spawn_options Os = no_spawn_options, class... Ts>
-actor spawn_in_group(const group& grp, Ts&&... args) {
+actor spawn_in_group(const group& grp, Ts&&... xs) {
   static_assert(sizeof...(Ts) > 0, "too few arguments provided");
   return spawn_functor<Os>(nullptr, group_subscriber{grp},
-               std::forward<Ts>(args)...);
+               std::forward<Ts>(xs)...);
 }
 
 /**
@@ -229,11 +229,11 @@ class functor_based_typed_actor : public typed_event_based_actor<Sigs...> {
   using one_arg_fun2 = std::function<void(pointer)>;
 
   /**
-   * Creates a new instance from given functor, binding `args...`
+   * Creates a new instance from given functor, binding `xs...`
    * to the functor.
    */
   template <class F, class... Ts>
-  functor_based_typed_actor(F fun, Ts&&... args) {
+  functor_based_typed_actor(F fun, Ts&&... xs) {
     using trait = typename detail::get_callable_trait<F>::type;
     using arg_types = typename trait::arg_types;
     using result_type = typename trait::result_type;
@@ -243,7 +243,7 @@ class functor_based_typed_actor : public typed_event_based_actor<Sigs...> {
       typename detail::tl_head<arg_types>::type, pointer>::value;
     std::integral_constant<bool, returns_behavior> token1;
     std::integral_constant<bool, uses_first_arg> token2;
-    set(token1, token2, std::move(fun), std::forward<Ts>(args)...);
+    set(token1, token2, std::move(fun), std::forward<Ts>(xs)...);
   }
 
  protected:
@@ -277,16 +277,16 @@ class functor_based_typed_actor : public typed_event_based_actor<Sigs...> {
   // (false_type, false_type) is an invalid functor for typed actors
 
   template <class Token, typename F, typename T0, class... Ts>
-  void set(Token t1, std::true_type t2, F fun, T0&& arg0, Ts&&... args) {
+  void set(Token t1, std::true_type t2, F fun, T0&& arg0, Ts&&... xs) {
     set(t1, t2,
       std::bind(fun, std::placeholders::_1, std::forward<T0>(arg0),
-            std::forward<Ts>(args)...));
+            std::forward<Ts>(xs)...));
   }
 
   template <class Token, typename F, typename T0, class... Ts>
-  void set(Token t1, std::false_type t2, F fun, T0&& arg0, Ts&&... args) {
+  void set(Token t1, std::false_type t2, F fun, T0&& arg0, Ts&&... xs) {
     set(t1, t2,
-      std::bind(fun, std::forward<T0>(arg0), std::forward<Ts>(args)...));
+      std::bind(fun, std::forward<T0>(arg0), std::forward<Ts>(xs)...));
   }
 
   // we convert any of the three accepted signatures to this one
@@ -311,14 +311,14 @@ struct infer_typed_actor_base<void, typed_event_based_actor<Sigs...>*> {
 };
 
 /**
- * Returns a new typed actor of type `C` using `args...` as
+ * Returns a new typed actor of type `C` using `xs...` as
  * constructor arguments.
  */
 template <class C, spawn_options Os = no_spawn_options, class... Ts>
 typename actor_handle_from_signature_list<typename C::signatures>::type
-spawn_typed(Ts&&... args) {
+spawn_typed(Ts&&... xs) {
   return spawn_class<C, Os>(nullptr, empty_before_launch_callback{},
-                            std::forward<Ts>(args)...);
+                            std::forward<Ts>(xs)...);
 }
 
 /**
@@ -331,7 +331,7 @@ typename infer_typed_actor_handle<
     typename detail::get_callable_trait<F>::arg_types
   >::type
 >::type
-spawn_typed_functor(execution_unit* eu, BeforeLaunch bl, F fun, Ts&&... args) {
+spawn_typed_functor(execution_unit* eu, BeforeLaunch bl, F fun, Ts&&... xs) {
   using impl =
     typename infer_typed_actor_base<
       typename detail::get_callable_trait<F>::result_type,
@@ -339,12 +339,12 @@ spawn_typed_functor(execution_unit* eu, BeforeLaunch bl, F fun, Ts&&... args) {
         typename detail::get_callable_trait<F>::arg_types
       >::type
     >::type;
-  return spawn_class<impl, Os>(eu, bl, fun, std::forward<Ts>(args)...);
+  return spawn_class<impl, Os>(eu, bl, fun, std::forward<Ts>(xs)...);
 }
 
 /**
  * Returns a new typed actor from a functor. The first element
- * of `args` must be the functor, the remaining arguments are used to
+ * of `xs` must be the functor, the remaining arguments are used to
  * invoke the functor. This function delegates its arguments to
  * `spawn_typed_functor`.
  */
@@ -355,9 +355,9 @@ typename infer_typed_actor_handle<
     typename detail::get_callable_trait<F>::arg_types
   >::type
 >::type
-spawn_typed(F fun, Ts&&... args) {
+spawn_typed(F fun, Ts&&... xs) {
   return spawn_typed_functor<Os>(nullptr, empty_before_launch_callback{},
-                                 std::move(fun), std::forward<Ts>(args)...);
+                                 std::move(fun), std::forward<Ts>(xs)...);
 }
 
 /** @} */

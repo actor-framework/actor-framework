@@ -65,10 +65,10 @@ class blocking_actor
     std::function<bool()> m_stmt;
 
     template <class... Ts>
-    void operator()(Ts&&... args) {
+    void operator()(Ts&&... xs) {
       static_assert(sizeof...(Ts) > 0,
               "operator() requires at least one argument");
-      behavior bhvr{std::forward<Ts>(args)...};
+      behavior bhvr{std::forward<Ts>(xs)...};
       while (m_stmt()) m_dq(bhvr);
     }
   };
@@ -80,8 +80,8 @@ class blocking_actor
     T end;
 
     template <class... Ts>
-    void operator()(Ts&&... args) {
-      behavior bhvr{std::forward<Ts>(args)...};
+    void operator()(Ts&&... xs) {
+      behavior bhvr{std::forward<Ts>(xs)...};
       for (; begin != end; ++begin) m_dq(bhvr);
     }
   };
@@ -107,9 +107,9 @@ class blocking_actor
    * matched by given behavior.
    */
   template <class... Ts>
-  void receive(Ts&&... args) {
+  void receive(Ts&&... xs) {
     static_assert(sizeof...(Ts), "at least one argument required");
-    behavior bhvr{std::forward<Ts>(args)...};
+    behavior bhvr{std::forward<Ts>(xs)...};
     dequeue(bhvr);
   }
 
@@ -118,8 +118,8 @@ class blocking_actor
    * not cause a temporary behavior object per iteration.
    */
   template <class... Ts>
-  void receive_loop(Ts&&... args) {
-    behavior bhvr{std::forward<Ts>(args)...};
+  void receive_loop(Ts&&... xs) {
+    behavior bhvr{std::forward<Ts>(xs)...};
     for (;;) dequeue(bhvr);
   }
 
@@ -182,8 +182,8 @@ class blocking_actor
    * ~~~
    */
   template <class... Ts>
-  do_receive_helper do_receive(Ts&&... args) {
-    return {make_dequeue_callback(), behavior{std::forward<Ts>(args)...}};
+  do_receive_helper do_receive(Ts&&... xs) {
+    return {make_dequeue_callback(), behavior{std::forward<Ts>(xs)...}};
   }
 
   /**

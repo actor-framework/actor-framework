@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_PARTIAL_FUNCTION_HPP
-#define CAF_PARTIAL_FUNCTION_HPP
+#ifndef CAF_MESSAGE_HANDLER_HPP
+#define CAF_MESSAGE_HANDLER_HPP
 
 #include <list>
 #include <vector>
@@ -105,14 +105,13 @@ class message_handler {
   /**
    * Runs this handler and returns its (optional) result.
    */
-  template <class T>
-  optional<message> operator()(T&& arg) {
-    return (m_impl) ? m_impl->invoke(std::forward<T>(arg)) : none;
+  inline optional<message> operator()(message& arg) {
+    return (m_impl) ? m_impl->invoke(arg) : none;
   }
 
   /**
    * Returns a new handler that concatenates this handler
-   * with a new handler from `args...`.
+   * with a new handler from `xs...`.
    */
   template <class... Ts>
   typename std::conditional<
@@ -122,10 +121,10 @@ class message_handler {
     behavior,
     message_handler
   >::type
-  or_else(Ts&&... args) const {
+  or_else(Ts&&... xs) const {
     // using a behavior is safe here, because we "cast"
     // it back to a message_handler when appropriate
-    behavior tmp{std::forward<Ts>(args)...};
+    behavior tmp{std::forward<Ts>(xs)...};
     if (! tmp) {
       return *this;
     }
@@ -141,4 +140,4 @@ class message_handler {
 
 } // namespace caf
 
-#endif // CAF_PARTIAL_FUNCTION_HPP
+#endif // CAF_MESSAGE_HANDLER_HPP
