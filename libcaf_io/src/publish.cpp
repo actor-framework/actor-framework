@@ -20,6 +20,7 @@
 #include "caf/io/publish.hpp"
 
 #include "caf/send.hpp"
+#include "caf/exception.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/abstract_actor.hpp"

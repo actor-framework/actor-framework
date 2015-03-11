@@ -69,7 +69,7 @@ class middleman : public detail::abstract_singleton {
     }
     auto result = make_counted<Impl>(*this);
     CAF_REQUIRE(result->unique());
-    result->launch(true, false, nullptr);
+    result->launch(nullptr, false, true);
     m_named_brokers.insert(std::make_pair(name, result));
     return result;
   }

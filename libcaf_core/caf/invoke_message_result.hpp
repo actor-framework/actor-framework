@@ -17,47 +17,18 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_PRIORITY_POLICY_HPP
-#define CAF_PRIORITY_POLICY_HPP
-
-#include "caf/mailbox_element.hpp"
+#ifndef CAF_INVOKE_MESSAGE_RESULT_HPP
+#define CAF_INVOKE_MESSAGE_RESULT_HPP
 
 namespace caf {
-namespace policy {
 
-/**
- * The priority_policy *concept* class. Please note that this class is **not**
- * implemented. It merely explains all required member functions.
- */
-class priority_policy {
- public:
-  /**
-   * Returns the next message from the mailbox or `nullptr` if it's empty.
-   */
-  template <class Actor>
-  mailbox_element_ptr next_message(Actor* self);
-
-  /**
-   * Queries whether the mailbox is not empty.
-   */
-  template <class Actor>
-  bool has_next_message(Actor* self);
-
-  /**
-   * Stores the message in a cache for later retrieval.
-   */
-  template <class Actor>
-  void push_to_cache(Actor* self, mailbox_element_ptr ptr);
-
-  /**
-   * Removes the first element from the cache matching predicate `p`.
-   * @returns `true` if an element was removed, `false` otherwise.
-   */
-  template <class Actor, class Predicate>
-  bool invoke_from_cache(Actor* self, Predicate p);
+enum invoke_message_result {
+  im_success,
+  im_skipped,
+  im_dropped
 };
 
-} // namespace policy
 } // namespace caf
 
-#endif // CAF_PRIORITY_POLICY_HPP
+#endif // CAF_INVOKE_MESSAGE_RESULT_HPP
+

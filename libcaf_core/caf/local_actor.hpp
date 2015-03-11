@@ -26,6 +26,8 @@
 #include <functional>
 #include <forward_list>
 
+#include "caf/fwd.hpp"
+
 #include "caf/actor.hpp"
 #include "caf/extend.hpp"
 #include "caf/message.hpp"
@@ -33,6 +35,7 @@
 #include "caf/duration.hpp"
 #include "caf/behavior.hpp"
 #include "caf/spawn_fwd.hpp"
+#include "caf/resumable.hpp"
 #include "caf/message_id.hpp"
 #include "caf/exit_reason.hpp"
 #include "caf/typed_actor.hpp"
@@ -44,6 +47,7 @@
 #include "caf/response_promise.hpp"
 #include "caf/message_priority.hpp"
 #include "caf/check_typed_input.hpp"
+#include "caf/invoke_message_result.hpp"
 
 #include "caf/detail/logging.hpp"
 #include "caf/detail/disposer.hpp"
@@ -54,14 +58,15 @@
 
 namespace caf {
 
-// forward declarations
-class sync_handle_helper;
-
 /**
- * Base class for local running actors.
+ * Base class for actors running on this node, either
+ * living in an own thread or cooperatively scheduled.
  */
-class local_actor : public abstract_actor {
+class local_actor : public abstract_actor, public resumable {
  public:
+  using mailbox_type = detail::single_reader_queue<mailbox_element,
+                                                   detail::disposer>;
+
   static constexpr auto memory_cache_flag = detail::needs_embedding;
 
   ~local_actor();
@@ -138,7 +143,7 @@ class local_actor : public abstract_actor {
    ****************************************************************************/
 
   /**
-   * Sends `{xs...} to `dest` using the priority `mp`.
+   * Sends `{xs...}` to `dest` using the priority `mp`.
    */
   template <class... Ts>
   void send(message_priority mp, const channel& dest, Ts&&... xs) {
@@ -147,7 +152,7 @@ class local_actor : public abstract_actor {
   }
 
   /**
-   * Sends `{xs...} to `dest` using normal priority.
+   * Sends `{xs...}` to `dest` using normal priority.
    */
   template <class... Ts>
   void send(const channel& dest, Ts&&... xs) {
@@ -155,7 +160,7 @@ class local_actor : public abstract_actor {
   }
 
   /**
-   * Sends `{xs...} to `dest` using the priority `mp`.
+   * Sends `{xs...}` to `dest` using the priority `mp`.
    */
   template <class... Sigs, class... Ts>
   void send(message_priority mp, const typed_actor<Sigs...>& dest, Ts&&... xs) {
@@ -170,7 +175,7 @@ class local_actor : public abstract_actor {
   }
 
   /**
-   * Sends `{xs...} to `dest` using normal priority.
+   * Sends `{xs...}` to `dest` using normal priority.
    */
   template <class... Sigs, class... Ts>
   void send(const typed_actor<Sigs...>& dest, Ts&&... xs) {
@@ -316,9 +321,7 @@ class local_actor : public abstract_actor {
    * Can be overridden to perform cleanup code after an actor
    * finished execution.
    */
-  inline void on_exit() {
-    // nop
-  }
+  virtual void on_exit();
 
   /**
    * Returns all joined groups.
@@ -402,6 +405,16 @@ class local_actor : public abstract_actor {
   // </backward_compatibility>
 
   /****************************************************************************
+   *           override pure virtual member functions of resumable            *
+   ****************************************************************************/
+
+  void attach_to_scheduler() override;
+
+  void detach_from_scheduler() override;
+
+  resumable::resume_result resume(execution_unit*, size_t) override;
+
+  /****************************************************************************
    *                 here be dragons: end of public interface                 *
    ****************************************************************************/
 
@@ -422,12 +435,6 @@ class local_actor : public abstract_actor {
 
   inline mailbox_element_ptr& current_mailbox_element() {
     return m_current_element;
-  }
-
-  inline message_id new_request_id() {
-    auto result = ++m_last_request_id;
-    m_pending_responses.push_front(result.response_id());
-    return result;
   }
 
   inline void handle_sync_timeout() {
@@ -464,16 +471,6 @@ class local_actor : public abstract_actor {
 
   void forward_message(const actor& dest, message_priority mp);
 
-  inline bool awaits(message_id response_id) {
-    CAF_REQUIRE(response_id.is_response());
-    return std::any_of(m_pending_responses.begin(), m_pending_responses.end(),
-                       [=](message_id other) { return response_id == other; });
-  }
-
-  inline void mark_arrived(message_id response_id) {
-    m_pending_responses.remove(response_id);
-  }
-
   inline uint32_t planned_exit_reason() const {
     return m_planned_exit_reason;
   }
@@ -482,14 +479,96 @@ class local_actor : public abstract_actor {
     m_planned_exit_reason = value;
   }
 
+  inline detail::behavior_stack& bhvr_stack() {
+    return m_bhvr_stack;
+  }
+
+  inline mailbox_type& mailbox() {
+    return m_mailbox;
+  }
+
+  inline bool has_behavior() {
+    return !m_bhvr_stack.empty() || !m_pending_responses.empty();
+  }
+
+  behavior& get_behavior() {
+    if (!m_pending_responses.empty()) {
+      return m_pending_responses.front().second;
+    }
+    return m_bhvr_stack.back();
+  }
+
+  virtual void initialize() = 0;
+
   void cleanup(uint32_t reason);
 
+  // an actor can have multiple pending timeouts, but only
+  // the latest one is active (i.e. the m_pending_timeouts.back())
+
+  uint32_t request_timeout(const duration& d);
+
+  void handle_timeout(behavior& bhvr, uint32_t timeout_id);
+
+  void reset_timeout(uint32_t timeout_id);
+
+  // @pre has_timeout()
+  bool is_active_timeout(uint32_t tid) const;
+
+  // @pre has_timeout()
+  uint32_t active_timeout_id() const;
+
+  invoke_message_result invoke_message(mailbox_element_ptr& node,
+                                       behavior& fun,
+                                       message_id awaited_response);
+
+  using pending_response = std::pair<message_id, behavior>;
+
+  message_id new_request_id();
+
+  void mark_arrived(message_id response_id);
+
+  bool awaits_response() const;
+
+  bool awaits(message_id response_id) const;
+
+  optional<pending_response&> find_pending_response(message_id mid);
+
+  void set_response_handler(message_id response_id, behavior bhvr);
+
+  behavior& awaited_response_handler();
+
+  message_id awaited_response_id();
+
+  // these functions are dispatched via the actor policies table
+
+  void launch(execution_unit* eu, bool lazy, bool hide);
+
+  void enqueue(const actor_addr&, message_id,
+               message, execution_unit*) override;
+
+  void enqueue(mailbox_element_ptr, execution_unit*) override;
+
+  mailbox_element_ptr next_message();
+
+  bool has_next_message();
+
+  void push_to_cache(mailbox_element_ptr);
+
+  bool invoke_from_cache();
+
+  bool invoke_from_cache(behavior&, message_id);
+
  protected:
+  void do_become(behavior bhvr, bool discard_old);
+
+  // used only in thread-mapped actors
+  void await_data();
+
   // identifies the ID of the last sent synchronous request
   message_id m_last_request_id;
 
   // identifies all IDs of sync messages waiting for a response
-  std::forward_list<message_id> m_pending_responses;
+  std::forward_list<pending_response> m_pending_responses;
 
   // points to m_dummy_node if no callback is currently invoked,
   // points to the node under processing otherwise
@@ -497,6 +576,15 @@ class local_actor : public abstract_actor {
 
   // set by quit
   uint32_t m_planned_exit_reason;
+
+  // identifies the timeout messages we are currently waiting for
+  uint32_t m_timeout_id;
+
+  // used by both event-based and blocking actors
+  detail::behavior_stack m_bhvr_stack;
+
+  // used by both event-based and blocking actors
+  mailbox_type m_mailbox;
 
   /** @endcond */
 

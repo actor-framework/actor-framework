@@ -25,9 +25,9 @@
 
 #include "caf/local_actor.hpp"
 #include "caf/mailbox_element.hpp"
+#include "caf/abstract_event_based_actor.hpp"
 
 #include "caf/mixin/sync_sender.hpp"
-#include "caf/mixin/behavior_stack_based.hpp"
 
 #include "caf/detail/disposer.hpp"
 #include "caf/detail/shared_spinlock.hpp"
@@ -38,11 +38,9 @@ namespace caf {
  * An co-existing forwarding all messages through a user-defined
  * callback to another object, thus serving as gateway to
  * allow any object to interact with other actors.
+ * @extends local_actor
  */
-class actor_companion
-  : public extend<local_actor, actor_companion>::
-           with<mixin::behavior_stack_based<behavior>::impl,
-                mixin::sync_sender<nonblocking_response_handle_tag>::impl> {
+class actor_companion : public abstract_event_based_actor<behavior, true> {
  public:
   using lock_type = detail::shared_spinlock;
   using message_pointer = std::unique_ptr<mailbox_element, detail::disposer>;
@@ -59,6 +57,8 @@ class actor_companion
    * @warning `handler` needs to be thread-safe
    */
   void on_enqueue(enqueue_handler handler);
+
+  void enqueue(mailbox_element_ptr what, execution_unit* host) override;
 
   void enqueue(const actor_addr& sender, message_id mid,
                message content, execution_unit* host) override;

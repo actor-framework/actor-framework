@@ -69,26 +69,26 @@ struct pseudo_actor {
     return mbox;
   }
 
-  static policy::invoke_message_result invoke_message(uptr& ptr, int i) {
+  static invoke_message_result invoke_message(uptr& ptr, int i) {
     if (ptr->value == 1) {
       ptr.reset();
-      return policy::im_dropped;
+      return im_dropped;
     }
     if (ptr->value == i) {
       // call reset on some of our messages
       if (ptr->is_high_priority()) {
         ptr.reset();
       }
-      return policy::im_success;
+      return im_success;
     }
-    return policy::im_skipped;
+    return im_skipped;
   }
 
   template <class Policy>
-  policy::invoke_message_result invoke_message(uptr& ptr, Policy& policy, int i,
-                                               std::vector<int>& remaining) {
+  invoke_message_result invoke_message(uptr& ptr, Policy& policy, int i,
+                                       std::vector<int>& remaining) {
     auto res = invoke_message(ptr, i);
-    if (res == policy::im_success && !remaining.empty()) {
+    if (res == im_success && !remaining.empty()) {
       auto next = remaining.front();
       remaining.erase(remaining.begin());
       policy.invoke_from_cache(this, policy, next, remaining);

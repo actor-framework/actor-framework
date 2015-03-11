@@ -28,7 +28,6 @@
 #include "caf/local_actor.hpp"
 
 #include "caf/mixin/functor_based.hpp"
-#include "caf/mixin/behavior_stack_based.hpp"
 
 #include "caf/detail/intrusive_partitioned_list.hpp"
 
@@ -53,11 +52,9 @@ using broker_ptr = intrusive_ptr<broker>;
  * A broker mediates between actor systems and other components in the network.
  * @extends local_actor
  */
-class broker : public extend<local_actor>::
-                      with<mixin::behavior_stack_based<behavior>::impl>,
-               public spawn_as_is {
+class broker : public abstract_event_based_actor<behavior, false> {
  public:
-  using super = combined_type;
+  using super = abstract_event_based_actor<behavior, false>;
 
   using buffer_type = std::vector<char>;
 
@@ -225,6 +222,8 @@ class broker : public extend<local_actor>::
 
   /** @cond PRIVATE */
 
+  void initialize() override;
+
   template <class F, class... Ts>
   actor fork(F fun, connection_handle hdl, Ts&&... xs) {
     // provoke compile-time errors early
@@ -273,10 +272,6 @@ class broker : public extend<local_actor>::
 
   accept_handle add_tcp_doorman(network::native_socket fd);
 
-  policy::invoke_message_result invoke_message(mailbox_element_ptr& msg,
-                                               behavior& bhvr,
-                                               message_id mid);
-
   void invoke_message(mailbox_element_ptr& msg);
 
   void invoke_message(const actor_addr& sender, message_id mid, message& msg);
@@ -314,7 +309,7 @@ class broker : public extend<local_actor>::
 
   class functor_based;
 
-  void launch(bool is_hidden, bool, execution_unit*);
+  void launch(execution_unit* eu, bool lazy, bool hide);
 
   void cleanup(uint32_t reason);
 
@@ -380,8 +375,6 @@ class broker : public extend<local_actor>::
 
   std::map<accept_handle, doorman_pointer> m_doormen;
   std::map<connection_handle, scribe_pointer> m_scribes;
-
-  policy::invoke_policy m_invoke_policy;
 
   middleman& m_mm;
   detail::intrusive_partitioned_list<mailbox_element, detail::disposer> m_cache;

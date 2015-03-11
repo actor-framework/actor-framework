@@ -85,7 +85,6 @@ class actor_widget : public Base {
   }
 
  private:
-    policy::invoke_policy m_invoke;
     actor_companion_ptr m_companion;
 };
 

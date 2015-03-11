@@ -33,6 +33,19 @@ void event_based_actor::forward_to(const actor& whom,
   forward_message(whom, prio);
 }
 
+void event_based_actor::initialize() {
+  is_initialized(true);
+  auto bhvr = make_behavior();
+  CAF_LOG_DEBUG_IF(!bhvr, "make_behavior() did not return a behavior, "
+                          << "has_behavior() = "
+                          << std::boolalpha << this->has_behavior());
+  if (bhvr) {
+    // make_behavior() did return a behavior instead of using become()
+    CAF_LOG_DEBUG("make_behavior() did return a valid behavior");
+    become(std::move(bhvr));
+  }
+}
+
 behavior event_based_actor::functor_based::make_behavior() {
   auto res = m_make_behavior(this);
   // reset make_behavior_fun to get rid of any

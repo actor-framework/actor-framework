@@ -29,6 +29,7 @@ using testee = typed_actor<replies_to<abc_atom>::with<int>>;
 testee::behavior_type testee_impl(testee::pointer self) {
   return {
     [=](abc_atom) {
+      CAF_CHECKPOINT();
       self->quit();
       return 42;
     }
@@ -39,7 +40,7 @@ void test_typed_atom_interface() {
   CAF_CHECKPOINT();
   scoped_actor self;
   auto tst = spawn_typed(testee_impl);
-  self->sync_send(tst, abc_atom()).await(
+  self->sync_send(tst, abc_atom::value).await(
     [](int i) {
       CAF_CHECK_EQUAL(i, 42);
     },

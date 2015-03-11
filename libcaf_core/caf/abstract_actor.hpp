@@ -29,6 +29,7 @@
 #include <cstdint>
 #include <exception>
 #include <type_traits>
+#include <condition_variable>
 
 #include "caf/fwd.hpp"
 #include "caf/node_id.hpp"
@@ -161,6 +162,13 @@ class abstract_actor : public abstract_channel {
     return m_host;
   }
 
+  /**
+   * Sets the execution unit for this actor.
+   */
+  inline void host(execution_unit* new_host) {
+    m_host = new_host;
+  }
+
  protected:
   /**
    * Creates a non-proxy instance.
@@ -185,13 +193,6 @@ class abstract_actor : public abstract_channel {
     return exit_reason() != exit_reason::not_exited;
   }
 
-  /**
-   * Sets the execution unit for this actor.
-   */
-  inline void host(execution_unit* new_host) {
-    m_host = new_host;
-  }
-
   /****************************************************************************
    *                 here be dragons: end of public interface                 *
    ****************************************************************************/
@@ -212,7 +213,9 @@ class abstract_actor : public abstract_channel {
     has_timeout_flag       = 0x02, // mixin::single_timeout
     is_registered_flag     = 0x04, // no_resume, resumable, and scoped_actor
     is_initialized_flag    = 0x08, // event-based actors
-    is_blocking_flag       = 0x10  // blocking_actor
+    is_blocking_flag       = 0x10, // blocking_actor
+    is_detached_flag       = 0x20, // local_actor (set by spawn)
+    is_priority_aware_flag = 0x40  // local_actor (set by spawn)
   };
 
   inline void set_flag(bool enable_flag, actor_state_flag mask) {
@@ -254,6 +257,25 @@ class abstract_actor : public abstract_channel {
     set_flag(value, is_blocking_flag);
   }
 
+  inline bool is_detached() const {
+    return get_flag(is_detached_flag);
+  }
+
+  inline void is_detached(bool value) {
+    set_flag(value, is_detached_flag);
+  }
+
+  inline bool is_priority_aware() const {
+    return get_flag(is_priority_aware_flag);
+  }
+
+  inline void is_priority_aware(bool value) {
+    set_flag(value, is_priority_aware_flag);
+  }
+
+  // Tries to run a custom exception handler for `eptr`.
+  optional<uint32_t> handle(const std::exception_ptr& eptr);
+
  protected:
   virtual bool link_impl(linking_operation op, const actor_addr& other);
 
@@ -275,17 +297,18 @@ class abstract_actor : public abstract_channel {
                             bool stop_on_first_hit = false,
                             bool dry_run = false);
 
-  // Tries to run a custom exception handler for `eptr`.
-  optional<uint32_t> handle(const std::exception_ptr& eptr);
-
   // cannot be changed after construction
   const actor_id m_id;
 
   // initially set to exit_reason::not_exited
   std::atomic<uint32_t> m_exit_reason;
 
-  // guards access to m_exit_reason, m_attachables, and m_links
+  // guards access to m_exit_reason, m_attachables, m_links,
+  // and enqueue operations if actor is thread-mapped
   mutable std::mutex m_mtx;
+
+  // only used in blocking and thread-mapped actors
+  mutable std::condition_variable m_cv;
 
   // attached functors that are executed on cleanup (monitors, links, etc)
   attachable_ptr m_attachables_head;

@@ -77,11 +77,13 @@ behavior_impl::behavior_impl(duration tout)
 bhvr_invoke_result behavior_impl::invoke(message& msg) {
   auto msg_token = msg.type_token();
   bhvr_invoke_result res;
-  std::find_if(m_begin, m_end, [&](const match_case_info& x) {
-    return (x.has_wildcard || x.type_token == msg_token)
-           && x.ptr->invoke(res, msg) != match_case::no_match;
-  });
-  return res;
+  for (auto i = m_begin; i != m_end; ++i) {
+    if ((i->has_wildcard || i->type_token == msg_token)
+        && i->ptr->invoke(res, msg) != match_case::no_match) {
+      return res;
+    }
+  }
+  return none;
 }
 
 void behavior_impl::handle_timeout() {

@@ -136,10 +136,8 @@ class logging_impl : public logging {
         class_name.swap(substr);
       }
     };
-    char prefix1[] = "caf.detail.proper_actor<";
-    char prefix2[] = "caf.detail.embedded<";
+    char prefix1[] = "caf.detail.embedded<";
     strip_magic(prefix1, prefix1 + (sizeof(prefix1) - 1));
-    strip_magic(prefix2, prefix2 + (sizeof(prefix2) - 1));
 #   else
     std::string class_name = c_class_name;
 #   endif

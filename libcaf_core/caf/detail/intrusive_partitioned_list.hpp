@@ -23,7 +23,7 @@
 #include <memory>
 #include <iterator>
 
-#include "caf/policy/invoke_policy.hpp"
+#include "caf/invoke_message_result.hpp"
 
 namespace caf {
 namespace detail {
@@ -200,8 +200,9 @@ class intrusive_partitioned_list {
     insert(second_end(), val);
   }
 
-  template <class Actor, class... Ts>
-  bool invoke(Actor* self, iterator first, iterator last, Ts&... xs) {
+  template <class Actor>
+  bool invoke(Actor* self, iterator first, iterator last,
+              behavior& bhvr, message_id mid) {
     pointer prev = first->prev;
     pointer next = first->next;
     auto move_on = [&](bool first_valid) {
@@ -219,13 +220,13 @@ class intrusive_partitioned_list {
       // it's safe, i.e., if invoke_message returned im_skipped
       prev->next = next;
       next->prev = prev;
-      switch (self->invoke_message(tmp, xs...)) {
-        case policy::im_dropped:
+      switch (self->invoke_message(tmp, bhvr, mid)) {
+        case im_dropped:
           move_on(false);
           break;
-        case policy::im_success:
+        case im_success:
           return true;
-        case policy::im_skipped:
+        case im_skipped:
           if (tmp) {
             // re-integrate tmp and move on
             prev->next = tmp.get();

@@ -39,7 +39,6 @@
 #include "caf/policy/work_stealing.hpp"
 
 #include "caf/detail/logging.hpp"
-#include "caf/detail/proper_actor.hpp"
 
 namespace caf {
 namespace scheduler {
@@ -51,10 +50,6 @@ namespace scheduler {
 namespace {
 
 using hrc = std::chrono::high_resolution_clock;
-
-using timer_actor_policies = policy::actor_policies<policy::no_scheduling,
-                                                    policy::not_prioritizing,
-                                                    policy::no_resume>;
 
 struct delayed_msg {
   actor_addr from;
@@ -75,17 +70,22 @@ inline void insert_dmsg(Map& storage, const duration& d, Ts&&... xs) {
   storage.insert(std::make_pair(std::move(tout), std::move(dmsg)));
 }
 
-class timer_actor : public detail::proper_actor<blocking_actor,
-                                                timer_actor_policies>,
-                    public spawn_as_is {
+class timer_actor : public blocking_actor {
  public:
   inline mailbox_element_ptr dequeue() {
-    await_data();
+    blocking_actor::await_data();
     return next_message();
   }
 
-  inline mailbox_element_ptr try_dequeue(const hrc::time_point& tp) {
-    if (scheduling_policy().await_data(this, tp)) {
+  bool await_data(const hrc::time_point& tp) {
+    if (has_next_message()) {
+      return true;
+    }
+    return mailbox().synchronized_await(m_mtx, m_cv, tp);
+  }
+
+  mailbox_element_ptr try_dequeue(const hrc::time_point& tp) {
+    if (await_data(tp)) {
       return next_message();
     }
     return mailbox_element_ptr{};
@@ -94,7 +94,7 @@ class timer_actor : public detail::proper_actor<blocking_actor,
   void act() override {
     trap_exit(true);
     // setup & local variables
-    bool done = false;
+    bool received_exit = false;
     mailbox_element_ptr msg_ptr;
     std::multimap<hrc::time_point, delayed_msg> messages;
     // message handling rules
@@ -105,14 +105,14 @@ class timer_actor : public detail::proper_actor<blocking_actor,
                      std::move(to), mid, std::move(msg));
       },
       [&](const exit_msg&) {
-        done = true;
+        received_exit = true;
       },
       others >> [&] {
         CAF_LOG_ERROR("unexpected: " << to_string(msg_ptr->msg));
       }
     };
     // loop
-    while (!done) {
+    while (!received_exit) {
       while (!msg_ptr) {
         if (messages.empty())
           msg_ptr = dequeue();
