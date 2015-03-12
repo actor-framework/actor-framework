@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -23,27 +23,31 @@
 #include "caf/message_handler.hpp"
 #include "caf/uniform_type_info.hpp"
 
+#include "caf/detail/message_data.hpp"
+
 namespace caf {
 
 class message_builder::dynamic_msg_data : public detail::message_data {
  public:
-  using super = message_data;
-
-  using message_data::const_iterator;
-
-  dynamic_msg_data() : super(true) {
+  dynamic_msg_data() : m_type_token(0xFFFFFFFF) {
     // nop
   }
 
-  dynamic_msg_data(const dynamic_msg_data& other) : super(true) {
-    for (auto& d : other.m_elements) {
-      m_elements.push_back(d->copy());
+  dynamic_msg_data(const dynamic_msg_data& other)
+      : detail::message_data(other),
+        m_type_token(0xFFFFFFFF) {
+    for (auto& e : other.m_elements) {
+      add_to_type_token(e->ti->type_nr());
+      m_elements.push_back(e->copy());
     }
   }
 
   dynamic_msg_data(std::vector<uniform_value>&& data)
-      : super(true), m_elements(std::move(data)) {
-    // nop
+      : m_elements(std::move(data)),
+        m_type_token(0xFFFFFFFF) {
+    for (auto& e : m_elements) {
+      add_to_type_token(e->ti->type_nr());
+    }
   }
 
   ~dynamic_msg_data();
@@ -62,20 +66,48 @@ class message_builder::dynamic_msg_data : public detail::message_data {
     return m_elements.size();
   }
 
-  dynamic_msg_data* copy() const override {
-    return new dynamic_msg_data(*this);
+  cow_ptr copy() const override {
+    return make_counted<dynamic_msg_data>(*this);
   }
 
-  const uniform_type_info* type_at(size_t pos) const override {
-    CAF_REQUIRE(pos < size());
-    return m_elements[pos]->ti;
+  bool match_element(size_t pos, uint16_t typenr,
+                     const std::type_info* rtti) const override {
+    CAF_REQUIRE(typenr != 0 || rtti != nullptr);
+    auto uti = m_elements[pos]->ti;
+    if (uti->type_nr() != typenr) {
+      return false;
+    }
+    return typenr != 0 || uti->equal_to(*rtti);
   }
 
-  const std::string* tuple_type_names() const override {
-    return nullptr; // get_tuple_type_names(*this);
+  const char* uniform_name_at(size_t pos) const override {
+    return m_elements[pos]->ti->name();
+  }
+
+  uint16_t type_nr_at(size_t pos) const override {
+    return m_elements[pos]->ti->type_nr();
+  }
+
+  uint32_t type_token() const override {
+    return m_type_token;
+  }
+
+  void append(uniform_value&& what) {
+    add_to_type_token(what->ti->type_nr());
+    m_elements.push_back(std::move(what));
+  }
+
+  void add_to_type_token(uint16_t typenr) {
+    m_type_token = (m_type_token << 6) | typenr;
+  }
+
+  void clear() {
+    m_elements.clear();
+    m_type_token = 0xFFFFFFFF;
   }
 
   std::vector<uniform_value> m_elements;
+  uint32_t m_type_token;
 };
 
 message_builder::dynamic_msg_data::~dynamic_msg_data() {
@@ -94,11 +126,11 @@ void message_builder::init() {
   // this should really be done by delegating
   // constructors, but we want to support
   // some compilers without that feature...
-  m_data.reset(new dynamic_msg_data);
+  m_data = make_counted<dynamic_msg_data>();
 }
 
 void message_builder::clear() {
-  data()->m_elements.clear();
+  data()->clear();
 }
 
 size_t message_builder::size() const {
@@ -110,12 +142,33 @@ bool message_builder::empty() const {
 }
 
 message_builder& message_builder::append(uniform_value what) {
-  data()->m_elements.push_back(std::move(what));
+  data()->append(std::move(what));
   return *this;
 }
 
-message message_builder::to_message() {
-  return message{data()};
+message message_builder::to_message() const {
+  // this const_cast is safe, because the message is
+  // guaranteed to detach its data before modifying it
+  detail::message_data::cow_ptr ptr;
+  ptr.reset(const_cast<dynamic_msg_data*>(data()));
+  return message{std::move(ptr)};
+}
+
+message message_builder::move_to_message() {
+  message result;
+  result.vals().reset(static_cast<dynamic_msg_data*>(m_data.release()), false);
+  return result;
+}
+
+optional<message> message_builder::apply(message_handler handler) {
+  // avoid detaching of m_data by moving the data to a message object,
+  // calling message::apply and moving the data back
+  message::data_ptr ptr;
+  ptr.reset(static_cast<dynamic_msg_data*>(m_data.release()), false);
+  message msg{std::move(ptr)};
+  auto res = msg.apply(std::move(handler));
+  m_data.reset(msg.vals().release(), false);
+  return res;
 }
 
 message_builder::dynamic_msg_data* message_builder::data() {
@@ -123,8 +176,8 @@ message_builder::dynamic_msg_data* message_builder::data() {
   // operations on m_data can cause race conditions if
   // someone else holds a reference to m_data
   if (!m_data->unique()) {
-    intrusive_ptr<ref_counted> tmp{std::move(m_data)};
-    m_data.reset(static_cast<dynamic_msg_data*>(tmp.get())->copy());
+    auto tmp = static_cast<dynamic_msg_data*>(m_data.get())->copy();
+    m_data.reset(tmp.release(), false);
   }
   return static_cast<dynamic_msg_data*>(m_data.get());
 }

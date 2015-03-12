@@ -29,6 +29,7 @@ using testee = typed_actor<replies_to<abc_atom>::with<int>>;
 testee::behavior_type testee_impl(testee::pointer self) {
   return {
     [=](abc_atom) {
+      CAF_CHECKPOINT();
       self->quit();
       return 42;
     }
@@ -39,7 +40,7 @@ void test_typed_atom_interface() {
   CAF_CHECKPOINT();
   scoped_actor self;
   auto tst = spawn_typed(testee_impl);
-  self->sync_send(tst, abc_atom()).await(
+  self->sync_send(tst, abc_atom::value).await(
     [](int i) {
       CAF_CHECK_EQUAL(i, 42);
     },
@@ -54,10 +55,12 @@ void foo() {
 }
 
 struct send_to_self {
-  send_to_self(blocking_actor* self) : m_self(self) {}
+  send_to_self(blocking_actor* self) : m_self(self) {
+    // nop
+  }
   template <class... Ts>
-  void operator()(Ts&&... args) {
-    m_self->send(m_self, std::forward<Ts>(args)...);
+  void operator()(Ts&&... xs) {
+    m_self->send(m_self, std::forward<Ts>(xs)...);
   }
   blocking_actor* m_self;
 };
@@ -102,7 +105,7 @@ int main() {
   CAF_CHECK(matched_pattern[0] && matched_pattern[1] && matched_pattern[2]);
   self->receive(
     // "erase" message { atom("b"), atom("a"), atom("c"), 23.f }
-    others() >> CAF_CHECKPOINT_CB(),
+    others >> CAF_CHECKPOINT_CB(),
     after(std::chrono::seconds(0)) >> CAF_UNEXPECTED_TOUT_CB()
   );
   atom_value x = atom("abc");
@@ -112,8 +115,9 @@ int main() {
   self->send(self, msg);
   self->receive(
     on(atom("abc")) >> CAF_CHECKPOINT_CB(),
-    others() >> CAF_UNEXPECTED_MSG_CB_REF(self)
+    others >> CAF_UNEXPECTED_MSG_CB_REF(self)
   );
   test_typed_atom_interface();
+  shutdown();
   return CAF_TEST_RESULT();
 }

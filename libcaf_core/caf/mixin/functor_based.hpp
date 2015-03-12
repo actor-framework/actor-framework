@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -39,12 +39,12 @@ class functor_based : public Base {
   }
 
   template <class F, class... Ts>
-  functor_based(F f, Ts&&... vs) {
-    init(std::move(f), std::forward<Ts>(vs)...);
+  functor_based(F f, Ts&&... xs) {
+    init(std::move(f), std::forward<Ts>(xs)...);
   }
 
   template <class F, class... Ts>
-  void init(F f, Ts&&... vs) {
+  void init(F f, Ts&&... xs) {
     using trait = typename detail::get_callable_trait<F>::type;
     using arg_types = typename trait::arg_types;
     using result_type = typename trait::result_type;
@@ -54,7 +54,7 @@ class functor_based : public Base {
       typename detail::tl_head<arg_types>::type, pointer>::value;
     std::integral_constant<bool, returns_behavior> token1;
     std::integral_constant<bool, uses_first_arg> token2;
-    set(token1, token2, std::move(f), std::forward<Ts>(vs)...);
+    set(token1, token2, std::move(f), std::forward<Ts>(xs)...);
   }
 
  protected:
@@ -94,16 +94,14 @@ class functor_based : public Base {
   }
 
   template <class Token, typename F, typename T0, class... Ts>
-  void set(Token t1, std::true_type t2, F fun, T0&& arg0, Ts&&... args) {
-    set(t1, t2,
-      std::bind(fun, std::placeholders::_1, std::forward<T0>(arg0),
-            std::forward<Ts>(args)...));
+  void set(Token t1, std::true_type t2, F fun, T0&& x, Ts&&... xs) {
+    set(t1, t2, std::bind(fun, std::placeholders::_1, std::forward<T0>(x),
+            std::forward<Ts>(xs)...));
   }
 
   template <class Token, typename F, typename T0, class... Ts>
-  void set(Token t1, std::false_type t2, F fun, T0&& arg0, Ts&&... args) {
-    set(t1, t2,
-      std::bind(fun, std::forward<T0>(arg0), std::forward<Ts>(args)...));
+  void set(Token t1, std::false_type t2, F fun, T0&& x, Ts&&... xs) {
+    set(t1, t2, std::bind(fun, std::forward<T0>(x), std::forward<Ts>(xs)...));
   }
 };
 

@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -58,9 +58,13 @@ uniform_value_t::~uniform_value_t() {
   // nop
 }
 
-const uniform_type_info* announce(const std::type_info&,
-                  uniform_type_info_ptr utype) {
-  return uti_map().insert(std::move(utype));
+const uniform_type_info* announce(const std::type_info& ti,
+                                  uniform_type_info_ptr utype) {
+  return uti_map().insert(&ti, std::move(utype));
+}
+
+uniform_type_info::uniform_type_info(uint16_t typenr) : m_type_nr(typenr) {
+  // nop
 }
 
 uniform_type_info::~uniform_type_info() {
@@ -73,7 +77,7 @@ const uniform_type_info* uniform_type_info::from(const std::type_info& tinf) {
     std::string error = "uniform_type_info::by_type_info(): ";
     error += tinf.name();
     error += " has not been announced";
-    CAF_LOGM_ERROR("caf::uniform_type_info", error);
+    CAF_LOGF_ERROR(error);
     throw std::runtime_error(error);
   }
   return result;
@@ -97,6 +101,11 @@ std::vector<const uniform_type_info*> uniform_type_info::instances() {
   return uti_map().get_all();
 }
 
+const uniform_type_info* uniform_typeid_by_nr(uint16_t nr) {
+  CAF_REQUIRE(nr > 0 && nr < detail::type_nrs);
+  return uti_map().by_type_nr(nr);
+}
+
 const uniform_type_info* uniform_typeid(const std::type_info& tinf,
                                         bool allow_nullptr) {
   auto result = uti_map().by_rtti(tinf);
@@ -104,7 +113,7 @@ const uniform_type_info* uniform_typeid(const std::type_info& tinf,
     std::string error = "uniform_typeid(): ";
     error += tinf.name();
     error += " has not been announced";
-    CAF_LOGM_ERROR("caf::uniform_type_info", error);
+    CAF_LOGF_ERROR(error);
     throw std::runtime_error(error);
   }
 

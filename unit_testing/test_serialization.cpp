@@ -93,9 +93,6 @@ struct raw_struct_type_info : detail::abstract_uniform_type_info<raw_struct> {
     rs->str.resize(size);
     source->read_raw(size, &(rs->str[0]));
   }
-  bool equals(const void* lhs, const void* rhs) const override {
-    return deref(lhs) == deref(rhs);
-  }
 };
 
 void test_ieee_754() {
@@ -120,6 +117,19 @@ enum class test_enum {
 };
 
 } // namespace <anonymous>
+
+void test_string_serialization() {
+  auto input = make_message("hello \"actor world\"!", atom("foo"));
+  auto s = to_string(input);
+  CAF_CHECK_EQUAL(s, R"#(@<>+@str+@atom ( "hello \"actor world\"!", 'foo' ))#");
+  auto m = from_string<message>(s);
+  if (!m) {
+    CAF_PRINTERR("from_string failed");
+    return;
+  }
+  CAF_CHECK(*m == input);
+  CAF_CHECK_EQUAL(to_string(*m), to_string(input));
+}
 
 int main() {
   CAF_TEST(test_serialization);
@@ -146,6 +156,8 @@ int main() {
   if (nid2) {
     CAF_CHECK_EQUAL(to_string(nid), to_string(*nid2));
   }
+
+  test_string_serialization();
 
   /*
     auto oarr = new detail::object_array;
@@ -295,5 +307,6 @@ int main() {
     }
     catch (std::exception& e) { CAF_FAILURE(to_verbose_string(e)); }
   */
+  shutdown();
   return CAF_TEST_RESULT();
 }

@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -86,10 +86,6 @@ void memory::add_cache_map_entry(const type_info* tinf,
                                  memory_cache* instance) {
   auto& cache = get_cache_map();
   cache[tinf].reset(instance);
-}
-
-instance_wrapper::~instance_wrapper() {
-  // nop
 }
 
 } // namespace detail

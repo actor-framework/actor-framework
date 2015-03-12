@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -22,6 +22,8 @@
 
 #include <utility>
 
+#include "caf/detail/logging.hpp"
+
 namespace caf {
 namespace detail {
 
@@ -30,38 +32,61 @@ class singletons;
 // a mixin for simple singleton classes
 template <class Derived, class Base = void>
 class singleton_mixin : public Base {
-
+ private:
   friend class singletons;
 
-  inline static Derived* create_singleton() { return new Derived; }
-  inline void dispose() { delete this; }
-  inline void stop() { }
-  inline void initialize() {}
+  static Derived* create_singleton() {
+    return new Derived;
+  }
+
+  void dispose() {
+    delete this;
+  }
+
+  void stop() {
+    CAF_LOG_TRACE("");
+  }
+
+  void initialize() {
+    CAF_LOG_TRACE("");
+  }
 
  protected:
-
   template <class... Ts>
-  singleton_mixin(Ts&&... args)
-      : Base(std::forward<Ts>(args)...) {}
+  singleton_mixin(Ts&&... xs) : Base(std::forward<Ts>(xs)...) {
+    // nop
+  }
 
-  virtual ~singleton_mixin() {}
-
+  virtual ~singleton_mixin() {
+    CAF_LOG_TRACE("");
+  }
 };
 
 template <class Derived>
 class singleton_mixin<Derived, void> {
-
+ private:
   friend class singletons;
 
-  inline static Derived* create_singleton() { return new Derived; }
-  inline void dispose() { delete this; }
-  inline void stop() { }
-  inline void initialize() { }
+  static Derived* create_singleton() {
+    return new Derived;
+  }
+
+  void dispose() {
+    delete this;
+  }
+
+  void stop() {
+    CAF_LOG_TRACE("");
+  }
+
+  void initialize() {
+    CAF_LOG_TRACE("");
+  }
 
  protected:
-
-  virtual ~singleton_mixin() { }
-
+  virtual ~singleton_mixin() {
+    CAF_LOG_TRACE("");
+  }
 };
 
 } // namespace detail

@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -88,56 +88,55 @@ const uniform_type_info* announce(const std::type_info& tinfo,
 
 // deals with member pointer
 /**
- * Creates meta information for a non-trivial member `C`, whereas
- * `args` are the "sub-members" of `c_ptr`.
+ * Creates meta information for a non-trivial `Member`,
+ * whereas `xs` are the "sub-members" of `Member`.
  * @see {@link announce_4.cpp announce example 4}
  */
-template <class C, class Parent, class... Ts>
-std::pair<C Parent::*, detail::abstract_uniform_type_info<C>*>
-compound_member(C Parent::*c_ptr, const Ts&... args) {
-  return {c_ptr, new detail::default_uniform_type_info<C>("???", args...)};
+template <class Member, class Parent, class... Ts>
+std::pair<Member Parent::*, detail::abstract_uniform_type_info<Member>*>
+compound_member(Member Parent::*memptr, const Ts&... xs) {
+  return {memptr, new detail::default_uniform_type_info<Member>("???", xs...)};
 }
 
 // deals with getter returning a mutable reference
 /**
- * Creates meta information for a non-trivial member accessed
- * via a getter returning a mutable reference, whereas
- * `args` are the "sub-members" of `c_ptr`.
+ * Creates meta information for a non-trivial `Member` accessed
+ * via the getter member function `getter` returning a mutable reference,
+ * whereas `xs` are the "sub-members" of `Member`.
  * @see {@link announce_4.cpp announce example 4}
  */
-template <class C, class Parent, class... Ts>
-std::pair<C& (Parent::*)(), detail::abstract_uniform_type_info<C>*>
-compound_member(C& (Parent::*getter)(), const Ts&... args) {
-  return {getter, new detail::default_uniform_type_info<C>("???", args...)};
+template <class Member, class Parent, class... Ts>
+std::pair<Member& (Parent::*)(), detail::abstract_uniform_type_info<Member>*>
+compound_member(Member& (Parent::*getter)(), const Ts&... xs) {
+  return {getter, new detail::default_uniform_type_info<Member>("???", xs...)};
 }
 
 // deals with getter/setter pair
 /**
- * Creates meta information for a non-trivial member accessed
- * via a pair of getter and setter member function pointers, whereas
- * `args` are the "sub-members" of `c_ptr`.
+ * Creates meta information for a non-trivial `Member` accessed
+ * via the pair of getter and setter member function pointers `gspair`,
+ * whereas `xs` are the "sub-members" of `Member`.
  * @see {@link announce_4.cpp announce example 4}
  */
 template <class Parent, class GRes, class SRes, class SArg, class... Ts>
 std::pair<std::pair<GRes (Parent::*)() const, SRes (Parent::*)(SArg)>,
-          detail::abstract_uniform_type_info<
-            typename std::decay<GRes>::type>*>
+          detail::abstract_uniform_type_info<typename std::decay<GRes>::type>*>
 compound_member(const std::pair<GRes (Parent::*)() const,
-                SRes (Parent::*)(SArg)>& gspair,
-                const Ts&... args) {
+                                SRes (Parent::*)(SArg)>& gspair,
+                const Ts&... xs) {
   using mtype = typename std::decay<GRes>::type;
-  return {gspair, new detail::default_uniform_type_info<mtype>("???", args...)};
+  return {gspair, new detail::default_uniform_type_info<mtype>("???", xs...)};
 }
 
 /**
- * Adds a new type mapping for `C` to the type system
- * using `tname` as its uniform name.
+ * Adds a new type mapping for `T` to the type system using `tname`
+ * as its uniform name and the list of member pointers `xs`.
  * @warning `announce` is **not** thead-safe!
  */
-template <class C, class... Ts>
-inline const uniform_type_info* announce(std::string tname, const Ts&... args) {
-  auto ptr = new detail::default_uniform_type_info<C>(std::move(tname), args...);
-  return announce(typeid(C), uniform_type_info_ptr{ptr});
+template <class T, class... Ts>
+inline const uniform_type_info* announce(std::string tname, const Ts&... xs) {
+  auto ptr = new detail::default_uniform_type_info<T>(std::move(tname), xs...);
+  return announce(typeid(T), uniform_type_info_ptr{ptr});
 }
 
 /**

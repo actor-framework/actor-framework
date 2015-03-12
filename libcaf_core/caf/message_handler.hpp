@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_PARTIAL_FUNCTION_HPP
-#define CAF_PARTIAL_FUNCTION_HPP
+#ifndef CAF_MESSAGE_HANDLER_HPP
+#define CAF_MESSAGE_HANDLER_HPP
 
 #include <list>
 #include <vector>
@@ -26,6 +26,7 @@
 #include <utility>
 #include <type_traits>
 
+#include "caf/fwd.hpp"
 #include "caf/none.hpp"
 #include "caf/intrusive_ptr.hpp"
 
@@ -46,6 +47,8 @@ namespace caf {
  */
 class message_handler {
  public:
+  friend class behavior;
+
   message_handler() = default;
   message_handler(message_handler&&) = default;
   message_handler(const message_handler&) = default;
@@ -81,78 +84,60 @@ class message_handler {
    * functors, or other message handlers.
    */
   template <class T, class... Ts>
-  message_handler(const T& v, Ts&&... vs) {
-    assign(v, std::forward<Ts>(vs)...);
+  message_handler(const T& v, Ts&&... xs) {
+    assign(v, std::forward<Ts>(xs)...);
   }
 
   /**
    * Assigns new message handlers.
    */
-  template <class T, class... Ts>
-  void assign(T&& v, Ts&&... vs) {
-    m_impl = detail::match_expr_concat(
-               detail::lift_to_match_expr(std::forward<T>(v)),
-               detail::lift_to_match_expr(std::forward<Ts>(vs))...);
+  template <class... Ts>
+  void assign(Ts... xs) {
+    static_assert(sizeof...(Ts) > 0, "assign without arguments called");
+    m_impl = detail::make_behavior(xs...);
   }
+
+  /**
+   * Equal to `*this = other`.
+   */
+  void assign(message_handler other);
 
   /**
    * Runs this handler and returns its (optional) result.
    */
-  template <class T>
-  optional<message> operator()(T&& arg) {
-    return (m_impl) ? m_impl->invoke(std::forward<T>(arg)) : none;
+  inline optional<message> operator()(message& arg) {
+    return (m_impl) ? m_impl->invoke(arg) : none;
   }
 
   /**
    * Returns a new handler that concatenates this handler
-   * with a new handler from `args...`.
+   * with a new handler from `xs...`.
    */
   template <class... Ts>
   typename std::conditional<
     detail::disjunction<may_have_timeout<
-      typename std::decay<Ts>::type>::value...>::value,
+      typename std::decay<Ts>::type>::value...
+    >::value,
     behavior,
     message_handler
   >::type
-  or_else(Ts&&... args) const {
+  or_else(Ts&&... xs) const {
     // using a behavior is safe here, because we "cast"
     // it back to a message_handler when appropriate
-    behavior tmp{std::forward<Ts>(args)...};
+    behavior tmp{std::forward<Ts>(xs)...};
     if (! tmp) {
       return *this;
     }
     if (m_impl) {
       return m_impl->or_else(tmp.as_behavior_impl());
     }
-    return tmp;
+    return tmp.as_behavior_impl();
   }
 
  private:
   impl_ptr m_impl;
 };
 
-/**
- * Enables concatenation of message handlers by using a list
- * of commata separated handlers.
- * @relates message_handler
- */
-template <class... Cases>
-message_handler operator,(const match_expr<Cases...>& mexpr,
-                          const message_handler& pfun) {
-  return mexpr.as_behavior_impl()->or_else(pfun.as_behavior_impl());
-}
-
-/**
- * Enables concatenation of message handlers by using a list
- * of commata separated handlers.
- * @relates message_handler
- */
-template <class... Cases>
-message_handler operator,(const message_handler& pfun,
-                          const match_expr<Cases...>& mexpr) {
-  return pfun.as_behavior_impl()->or_else(mexpr.as_behavior_impl());
-}
-
 } // namespace caf
 
-#endif // CAF_PARTIAL_FUNCTION_HPP
+#endif // CAF_MESSAGE_HANDLER_HPP

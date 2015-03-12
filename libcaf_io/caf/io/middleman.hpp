@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -67,8 +67,9 @@ class middleman : public detail::abstract_singleton {
     if (i != m_named_brokers.end()) {
       return static_cast<Impl*>(i->second.get());
     }
-    intrusive_ptr<Impl> result{new Impl(*this)};
-    result->launch(true, false, nullptr);
+    auto result = make_counted<Impl>(*this);
+    CAF_REQUIRE(result->unique());
+    result->launch(nullptr, false, true);
     m_named_brokers.insert(std::make_pair(name, result));
     return result;
   }
@@ -108,9 +109,9 @@ class middleman : public detail::abstract_singleton {
    * Adds a new hook to the middleman.
    */
   template<class C, typename... Ts>
-  void add_hook(Ts&&... args) {
+  void add_hook(Ts&&... xs) {
     // if only we could move a unique_ptr into a lambda in C++11
-    auto ptr = new C(std::forward<Ts>(args)...);
+    auto ptr = new C(std::forward<Ts>(xs)...);
     backend().dispatch([=] {
       ptr->next.swap(m_hooks);
       m_hooks.reset(ptr);

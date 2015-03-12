@@ -122,7 +122,7 @@ std::vector<iface_info> get_mac_addresses() {
   };
   // iterate through interfaces
   auto ifr = ifc.ifc_req;
-  auto num_ifaces = ifc.ifc_len / sizeof(struct ifreq);
+  auto num_ifaces = static_cast<size_t>(ifc.ifc_len) / sizeof(ifreq);
   for (size_t i = 0; i < num_ifaces; ++i) {
     auto item = &ifr[i];
     // get mac address
@@ -180,7 +180,7 @@ constexpr size_t max_iterations = 3;
 
 struct c_free {
   template <class T>
-  void operator()(T* ptr) {
+  void operator()(T* ptr) const {
     free(ptr);
   }
 };

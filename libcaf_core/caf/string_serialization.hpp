@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -32,16 +32,34 @@ class exception;
 
 namespace caf {
 
+/**
+ * @relates message
+ */
 std::string to_string(const message& what);
 
+/**
+ * @relates group
+ */
 std::string to_string(const group& what);
 
+/**
+ * @relates channel
+ */
 std::string to_string(const channel& what);
 
+/**
+ * @relates message_id
+ */
 std::string to_string(const message_id& what);
 
+/**
+ * @relates actor_addr
+ */
 std::string to_string(const actor_addr& what);
 
+/**
+ * @relates actor
+ */
 std::string to_string(const actor& what);
 
 /**
@@ -50,9 +68,25 @@ std::string to_string(const actor& what);
 std::string to_string(const node_id& what);
 
 /**
- * Returns `what` as a string representation.
+ * @relates atom_value
  */
 std::string to_string(const atom_value& what);
+
+/**
+ * @relates mailbox_element
+ */
+std::string to_string(const mailbox_element& what);
+
+/**
+ * @relates optional
+ */
+template <class T>
+std::string to_string(const optional<T>& what) {
+  if (!what) {
+    return "none";
+  }
+  return to_string(*what);
+}
 
 /**
  * Converts `e` to a string including `e.what()`.
@@ -72,7 +106,7 @@ template <class T>
 optional<T> from_string(const std::string& what) {
   auto uti = uniform_typeid<T>();
   auto uv = from_string_impl(what);
-  if (!uv || (*uv->ti) != typeid(T)) {
+  if (!uv || uv->ti != uti) {
     // try again using the type name
     std::string tmp = uti->name();
     tmp += " ( ";
@@ -80,7 +114,7 @@ optional<T> from_string(const std::string& what) {
     tmp += " )";
     uv = from_string_impl(tmp);
   }
-  if (uv && (*uv->ti) == typeid(T)) {
+  if (uv && uv->ti == uti) {
     return T{std::move(*reinterpret_cast<T*>(uv->val))};
   }
   return none;

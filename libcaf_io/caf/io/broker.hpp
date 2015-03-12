@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -28,10 +28,8 @@
 #include "caf/local_actor.hpp"
 
 #include "caf/mixin/functor_based.hpp"
-#include "caf/mixin/behavior_stack_based.hpp"
 
-#include "caf/policy/not_prioritizing.hpp"
-#include "caf/policy/sequential_invoke.hpp"
+#include "caf/detail/intrusive_partitioned_list.hpp"
 
 #include "caf/io/fwd.hpp"
 #include "caf/io/accept_handle.hpp"
@@ -54,11 +52,9 @@ using broker_ptr = intrusive_ptr<broker>;
  * A broker mediates between actor systems and other components in the network.
  * @extends local_actor
  */
-class broker : public extend<local_actor>::
-                      with<mixin::behavior_stack_based<behavior>::impl>,
-               public spawn_as_is {
+class broker : public abstract_event_based_actor<behavior, false> {
  public:
-  using super = combined_type;
+  using super = abstract_event_based_actor<behavior, false>;
 
   using buffer_type = std::vector<char>;
 
@@ -226,10 +222,12 @@ class broker : public extend<local_actor>::
 
   /** @cond PRIVATE */
 
+  void initialize() override;
+
   template <class F, class... Ts>
-  actor fork(F fun, connection_handle hdl, Ts&&... vs) {
+  actor fork(F fun, connection_handle hdl, Ts&&... xs) {
     // provoke compile-time errors early
-    using fun_res = decltype(fun(this, hdl, std::forward<Ts>(vs)...));
+    using fun_res = decltype(fun(this, hdl, std::forward<Ts>(xs)...));
     // prevent warning about unused local type
     static_assert(std::is_same<fun_res, fun_res>::value,
                   "your compiler is lying to you");
@@ -246,7 +244,7 @@ class broker : public extend<local_actor>::
                                     forked->m_scribes.insert(
                                       std::make_pair(sptr->hdl(), sptr));
                                   },
-                         fun, hdl, std::forward<Ts>(vs)...);
+                         fun, hdl, std::forward<Ts>(xs)...);
   }
 
   inline void add_scribe(const scribe_pointer& ptr) {
@@ -274,10 +272,14 @@ class broker : public extend<local_actor>::
 
   accept_handle add_tcp_doorman(network::native_socket fd);
 
+  void invoke_message(mailbox_element_ptr& msg);
+
   void invoke_message(const actor_addr& sender, message_id mid, message& msg);
 
-  void enqueue(const actor_addr&, message_id, message,
-               execution_unit*) override;
+  void enqueue(const actor_addr&, message_id,
+               message, execution_unit*) override;
+
+  void enqueue(mailbox_element_ptr, execution_unit*) override;
 
   /**
    * Closes all connections and acceptors.
@@ -295,9 +297,21 @@ class broker : public extend<local_actor>::
    */
   void close(accept_handle handle);
 
+  /**
+   * Checks whether a connection for `handle` exists.
+   */
+  bool valid(connection_handle handle);
+
+  /**
+   * Checks whether an acceptor for `handle` exists.
+   */
+  bool valid(accept_handle handle);
+
   class functor_based;
 
-  void launch(bool is_hidden, bool, execution_unit*);
+  void launch(execution_unit* eu, bool lazy, bool hide);
+
+  void cleanup(uint32_t reason);
 
   // <backward_compatibility version="0.9">
 
@@ -319,9 +333,13 @@ class broker : public extend<local_actor>::
 
   broker(middleman& parent_ref);
 
-  void cleanup(uint32_t reason);
-
   virtual behavior make_behavior() = 0;
+
+  /**
+   * Can be overridden to perform cleanup code before the
+   * broker closes all its connections.
+   */
+  virtual void on_exit();
 
   /** @endcond */
 
@@ -358,10 +376,8 @@ class broker : public extend<local_actor>::
   std::map<accept_handle, doorman_pointer> m_doormen;
   std::map<connection_handle, scribe_pointer> m_scribes;
 
-  policy::not_prioritizing m_priority_policy;
-  policy::sequential_invoke m_invoke_policy;
-
   middleman& m_mm;
+  detail::intrusive_partitioned_list<mailbox_element, detail::disposer> m_cache;
 };
 
 class broker::functor_based : public extend<broker>::
@@ -370,7 +386,7 @@ class broker::functor_based : public extend<broker>::
   using super = combined_type;
 
   template <class... Ts>
-  functor_based(Ts&&... vs) : super(std::forward<Ts>(vs)...) {
+  functor_based(Ts&&... xs) : super(std::forward<Ts>(xs)...) {
     // nop
   }
 

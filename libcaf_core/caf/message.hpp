@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -20,10 +20,14 @@
 #ifndef CAF_MESSAGE_HPP
 #define CAF_MESSAGE_HPP
 
+#include <tuple>
 #include <type_traits>
 
 #include "caf/atom.hpp"
 #include "caf/config.hpp"
+#include "caf/from_string.hpp"
+#include "caf/make_counted.hpp"
+#include "caf/skip_message.hpp"
 
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/comparable.hpp"
@@ -35,33 +39,16 @@
 #include "caf/detail/implicit_conversions.hpp"
 
 namespace caf {
-
 class message_handler;
 
 /**
- * Describes a fixed-length copy-on-write tuple with elements of any type.
+ * Describes a fixed-length, copy-on-write, type-erased
+ * tuple with elements of any type.
  */
 class message {
-
  public:
-
   /**
-   * A raw pointer to the data.
-   */
-  using raw_ptr = detail::message_data*;
-
-  /**
-   * A (COW) smart pointer to the data.
-   */
-  using data_ptr = detail::message_data::ptr;
-
-  /**
-   * An iterator to access each element as `const void*.
-   */
-  using const_iterator = detail::message_data::const_iterator;
-
-  /**
-   * Creates an empty tuple.
+   * Creates an empty message.
    */
   message() = default;
 
@@ -86,68 +73,63 @@ class message {
   message& operator=(const message&) = default;
 
   /**
-   * Gets the size of this tuple.
+   * Returns the size of this message.
    */
   inline size_t size() const {
     return m_vals ? m_vals->size() : 0;
   }
 
   /**
-   * Creates a new tuple with all but the first n values.
+   * Creates a new message with all but the first n values.
    */
   message drop(size_t n) const;
 
   /**
-   * Creates a new tuple with all but the last n values.
+   * Creates a new message with all but the last n values.
    */
   message drop_right(size_t n) const;
 
   /**
-   * Creates a new tuple from the first n values.
+   * Creates a new message from the first n values.
    */
   inline message take(size_t n) const {
     return n >= size() ? *this : drop_right(size() - n);
   }
 
   /**
-   * Creates a new tuple from the last n values.
+   * Creates a new message from the last n values.
    */
   inline message take_right(size_t n) const {
     return n >= size() ? *this : drop(size() - n);
   }
 
   /**
-   * Gets a mutable pointer to the element at position @p p.
+   * Creates a new message of size `n` starting at the element at position `p`.
+   */
+  message slice(size_t p, size_t n) const;
+
+  /**
+   * Concatinate messages
+   */
+  template <class... Ts>
+  static message concat(const Ts&... xs) {
+    return concat_impl({xs.vals()...});
+  }
+
+  /**
+   * Returns a mutable pointer to the element at position `p`.
    */
   void* mutable_at(size_t p);
 
   /**
-   * Gets a const pointer to the element at position @p p.
+   * Returns a const pointer to the element at position `p`.
    */
   const void* at(size_t p) const;
 
   /**
-   * Gets {@link uniform_type_info uniform type information}
-   * of the element at position @p p.
+   * Returns the uniform type name for the element at position `p`.
    */
-  const uniform_type_info* type_at(size_t p) const;
-
-  /**
-   * Returns true if this message has the types @p Ts.
-   */
-  template <class... Ts>
-  bool has_types() const {
-    if (size() != sizeof...(Ts)) {
-      return false;
-    }
-    const std::type_info* ts[] = {&typeid(Ts)...};
-    for (size_t i = 0; i < sizeof...(Ts); ++i) {
-      if (!type_at(i)->equal_to(*ts[i])) {
-        return false;
-      }
-    }
-    return true;
-  }
+  const char* uniform_name_at(size_t p) const;
 
   /**
    * Returns @c true if `*this == other, otherwise false.
@@ -162,95 +144,207 @@ class message {
   }
 
   /**
-   * Returns the value at @p as instance of @p T.
+   * Returns the value at position `p` as const reference of type `T`.
    */
   template <class T>
-  inline const T& get_as(size_t p) const {
-    CAF_REQUIRE(*(type_at(p)) == typeid(T));
+  const T& get_as(size_t p) const {
+    CAF_REQUIRE(match_element(p, detail::type_nr<T>::value, &typeid(T)));
     return *reinterpret_cast<const T*>(at(p));
   }
 
   /**
-   * Returns the value at @p as mutable data_ptr& of type @p T&.
+   * Returns the value at position `p` as mutable reference of type `T`.
    */
   template <class T>
-  inline T& get_as_mutable(size_t p) {
-    CAF_REQUIRE(*(type_at(p)) == typeid(T));
+  T& get_as_mutable(size_t p) {
+    CAF_REQUIRE(match_element(p, detail::type_nr<T>::value, &typeid(T)));
     return *reinterpret_cast<T*>(mutable_at(p));
   }
 
   /**
-   * Returns an iterator to the beginning.
+   * Returns `handler(*this)`.
    */
-  const_iterator begin() const;
+  optional<message> apply(message_handler handler);
 
   /**
-   * Returns an iterator to the end.
+   * Filters this message by applying slices of it to `handler` and  returns
+   * the remaining elements of this operation. Slices are generated in the
+   * sequence `[0, size)`, `[0, size-1)`, `...` , `[1, size-1)`, `...`,
+   * `[size-1, size)`. Whenever a slice matches, it is removed from the message
+   * and the next slice starts at the *same* index on the reduced message.
+   *
+   * For example:
+   *
+   * ~~~
+   * auto msg = make_message(1, 2.f, 3.f, 4);
+   * // extract float and integer pairs
+   * auto msg2 = msg.extract({
+   *   [](float, float) { },
+   *   [](int, int) { }
+   * });
+   * assert(msg2 == make_message(1, 4));
+   * ~~~
+   *
+   * Step-by-step explanation:
+   * - Slice 1: `(1, 2.f, 3.f, 4)`, no match
+   * - Slice 2: `(1, 2.f, 3.f)`, no match
+   * - Slice 3: `(1, 2.f)`, no match
+   * - Slice 4: `(1)`, no match
+   * - Slice 5: `(2.f, 3.f, 4)`, no match
+   * - Slice 6: `(2.f, 3.f)`, *match*; new message is `(1, 4)`
+   * - Slice 7: `(4)`, no match
+   *
+   * Slice 7 is `(4)`, i.e., does not contain the first element, because the
+   * match on slice 6 occurred at index position 1. The function `extract`
+   * iterates a message only once, from left to right.
    */
-  const_iterator end() const;
+  message extract(message_handler handler) const;
 
   /**
-   * Returns a copy-on-write pointer to the internal data.
+   * Stores the name of a command line option ("<long name>[,<short name>]")
+   * along with a description and a callback.
    */
+  struct cli_arg {
+
+    /**
+     * Full name of this CLI argument using format "<long name>[,<short name>]"
+     */
+    std::string name;
+
+    /**
+     * Desciption of this CLI argument for the auto-generated help text.
+     */
+    std::string text;
+
+    /**
+     * Returns `true` on a match, `false` otherwise.
+     */
+    std::function<bool (const std::string&)> fun;
+
+    /**
+     * Creates a CLI argument without data.
+     */
+    cli_arg(std::string name, std::string text);
+
+    /**
+     * Creates a CLI argument storing its matched argument in `dest`.
+     */
+    cli_arg(std::string name, std::string text, std::string& dest);
+
+    /**
+     * Creates a CLI argument appending matched arguments to `dest`.
+     */
+    cli_arg(std::string name, std::string text, std::vector<std::string>& dest);
+
+    /**
+     * Creates a CLI argument for converting from strings,
+     * storing its matched argument in `dest`.
+     */
+    template <class T>
+    cli_arg(std::string name, std::string text, T& dest);
+
+    /**
+     * Creates a CLI argument for converting from strings,
+     * appending matched arguments to `dest`.
+     */
+    template <class T>
+    cli_arg(std::string name, std::string text, std::vector<T>& dest);
+  };
+
+  struct cli_res;
+
+  /**
+   * A simplistic interface for using `extract` to parse command line options.
+   * Usage example:
+   *
+   * ~~~
+   * int main(int argc, char** argv) {
+   *   uint16_t port;
+   *   string host = "localhost";
+   *   auto res = message_builder(argv + 1, argv + argc).extract_opts({
+   *     {"port,p", "set port", port},
+   *     {"host,H", "set host (default: localhost)", host},
+   *     {"verbose,v", "enable verbose mode"}
+   *   });
+   *   if (res.opts.count("help") > 0) {
+   *     // CLI arguments contained "-h", "--help", or "-?" (builtin);
+   *     // note: the help text has already been printed to stdout
+   *     return 0;
+   *   }
+   *   if (!res.remainder.empty()) {
+   *     // ... extract did not consume all CLI arguments ...
+   *   }
+   *   if (res.opts.count("verbose") > 0) {
+   *     // ... enable verbose mode ...
+   *   }
+   *   // ...
+   * }
+   * ~~~
+   */
+  cli_res extract_opts(std::vector<cli_arg> xs) const;
+
+  /**
+   * Queries whether the element at position `p` is of type `T`.
+   */
+  template <class T>
+  bool match_element(size_t p) const {
+    const std::type_info* rtti = nullptr;
+    if (detail::type_nr<T>::value == 0) {
+      rtti = &typeid(T);
+    }
+    return match_element(p, detail::type_nr<T>::value, rtti);
+  }
+
+  /**
+   * Queries whether the types of this message are `Ts...`.
+   */
+  template <class... Ts>
+  bool match_elements() const {
+    std::integral_constant<size_t, 0> p0;
+    detail::type_list<Ts...> tlist;
+    return size() == sizeof...(Ts) && match_elements_impl(p0, tlist);
+  }
+
+  /** @cond PRIVATE */
+
+  using raw_ptr = detail::message_data*;
+
+  using data_ptr = detail::message_data::cow_ptr;
+
+  explicit message(const data_ptr& vals);
+
   inline data_ptr& vals() {
     return m_vals;
   }
 
-  /**
-   * Returns a const copy-on-write pointer to the internal data.
-   */
   inline const data_ptr& vals() const {
     return m_vals;
   }
 
-  /**
-   * Returns a const copy-on-write pointer to the internal data.
-   */
   inline const data_ptr& cvals() const {
     return m_vals;
   }
 
-  /**
-   * Returns either `&typeid(detail::type_list<Ts...>)`, where
-   * `Ts...` are the element types, or `&typeid(void)`.
-   *
-   * The type token `&typeid(void)` indicates that this tuple is dynamically
-   * typed, i.e., the types where not available at compile time.
-   */
-  const std::type_info* type_token() const;
-
-  /**
-   * Checks whether this tuple is dynamically typed, i.e.,
-   * its types were not known at compile time.
-   */
-  bool dynamically_typed() const;
-
-  /**
-   * Applies @p handler to this message and returns the result
-   *  of `handler(*this)`.
-   */
-  optional<message> apply(message_handler handler);
-
-  /** @cond PRIVATE */
+  inline uint32_t type_token() const {
+    return m_vals ? m_vals->type_token() : 0xFFFFFFFF;
+  }
 
   inline void force_detach() {
     m_vals.detach();
   }
 
-  void reset();
+  void reset(raw_ptr new_ptr = nullptr, bool add_ref = true);
 
-  explicit message(raw_ptr);
+  void swap(message& other);
 
-  inline const std::string* tuple_type_names() const {
+  inline std::string tuple_type_names() const {
     return m_vals->tuple_type_names();
   }
 
-  explicit message(const data_ptr& vals);
-
   struct move_from_tuple_helper {
     template <class... Ts>
-    inline message operator()(Ts&... vs) {
-      return make_message(std::move(vs)...);
+    inline message operator()(Ts&... xs) {
+      return make_message(std::move(xs)...);
     }
   };
 
@@ -260,12 +354,56 @@ class message {
     return detail::apply_args(f, detail::get_indices(tup), tup);
   }
 
+  bool match_element(size_t p, uint16_t tnr, const std::type_info* rtti) const;
+
+  template <class T, class... Ts>
+  bool match_elements(detail::type_list<T, Ts...> list) const {
+    std::integral_constant<size_t, 0> p0;
+    return size() == (sizeof...(Ts) + 1) && match_elements_impl(p0, list);
+  }
+
   /** @endcond */
 
  private:
+  template <size_t P>
+  bool match_elements_impl(std::integral_constant<size_t, P>,
+                           detail::type_list<>) const {
+    return true; // end of recursion
+  }
+
+  template <size_t P, class T, class... Ts>
+  bool match_elements_impl(std::integral_constant<size_t, P>,
+                           detail::type_list<T, Ts...>) const {
+    std::integral_constant<size_t, P + 1> next_p;
+    detail::type_list<Ts...> next_list;
+    return match_element<T>(P) && match_elements_impl(next_p, next_list);
+  }
+
+  message extract_impl(size_t start, message_handler handler) const;
+
+  static message concat_impl(std::initializer_list<data_ptr> ptrs);
 
   data_ptr m_vals;
+};
 
+/**
+ * Stores the result of `message::extract_opts`.
+ */
+struct message::cli_res {
+  /**
+   * Stores the remaining (unmatched) arguments.
+   */
+  message remainder;
+
+  /**
+   * Stores the names of all active options.
+   */
+  std::set<std::string> opts;
+
+  /**
+   * Stores the automatically generated help text.
+   */
+  std::string helptext;
 };
 
 /**
@@ -282,6 +420,17 @@ inline bool operator!=(const message& lhs, const message& rhs) {
   return !(lhs == rhs);
 }
 
+/**
+ * @relates message
+ */
+inline message operator+(const message& lhs, const message& rhs) {
+  return message::concat(lhs, rhs);
+}
+
+/**
+ * Unboxes atom constants, i.e., converts `atom_constant<V>` to `V`.
+ * @relates message
+ */
 template <class T>
 struct unbox_message_element {
   using type = T;
@@ -293,25 +442,25 @@ struct unbox_message_element<atom_constant<V>> {
 };
 
 /**
- * Creates a new `message` containing the elements `args...`.
+ * Returns a new `message` containing the values `(x, xs...)`.
  * @relates message
  */
-template <class T, class... Ts>
+template <class V, class... Ts>
 typename std::enable_if<
-  !std::is_same<message, typename std::decay<T>::type>::value
+  !std::is_same<message, typename std::decay<V>::type>::value
   || (sizeof...(Ts) > 0),
   message
 >::type
-make_message(T&& arg, Ts&&... args) {
+make_message(V&& x, Ts&&... xs) {
   using storage
     = detail::tuple_vals<typename unbox_message_element<
-                           typename detail::strip_and_convert<T>::type
+                           typename detail::strip_and_convert<V>::type
                          >::type,
                          typename unbox_message_element<
                            typename detail::strip_and_convert<Ts>::type
                          >::type...>;
-  auto ptr = new storage(std::forward<T>(arg), std::forward<Ts>(args)...);
-  return message{detail::message_data::ptr{ptr}};
+  auto ptr = make_counted<storage>(std::forward<V>(x), std::forward<Ts>(xs)...);
+  return message{detail::message_data::cow_ptr{std::move(ptr)}};
 }
 
 /**
@@ -320,6 +469,38 @@ make_message(T&& arg, Ts&&... args) {
  */
 inline message make_message(message other) {
   return std::move(other);
+}
+
+/******************************************************************************
+ *                  template member function implementations                  *
+ ******************************************************************************/
+
+template <class T>
+message::cli_arg::cli_arg(std::string nstr, std::string tstr, T& arg)
+    : name(std::move(nstr)),
+      text(std::move(tstr)) {
+  fun = [&arg](const std::string& str) -> bool {
+    auto res = from_string<T>(str);
+    if (!res) {
+      return false;
+    }
+    arg = *res;
+    return true;
+  };
+}
+
+template <class T>
+message::cli_arg::cli_arg(std::string nstr, std::string tstr, std::vector<T>& arg)
+    : name(std::move(nstr)),
+      text(std::move(tstr)) {
+  fun = [&arg](const std::string& str) -> bool {
+    auto res = from_string<T>(str);
+    if (!res) {
+      return false;
+    }
+    arg.push_back(*res);
+    return true;
+  };
 }
 
 } // namespace caf

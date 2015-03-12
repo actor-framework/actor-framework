@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -47,21 +47,21 @@ using guard_type = std::unique_lock<std::mutex>;
 // m_exit_reason is guaranteed to be set to 0, i.e., exit_reason::not_exited,
 // by std::atomic<> constructor
 
-abstract_actor::abstract_actor(actor_id aid, node_id nid, size_t initial_count)
-    : super(std::move(nid), initial_count),
+abstract_actor::abstract_actor(actor_id aid, node_id nid)
+    : abstract_channel(abstract_channel::is_abstract_actor_flag,
+                       std::move(nid)),
       m_id(aid),
       m_exit_reason(exit_reason::not_exited),
-      m_host(nullptr),
-      m_flags(0) {
+      m_host(nullptr) {
   // nop
 }
 
-abstract_actor::abstract_actor(size_t initial_count)
-    : super(detail::singletons::get_node_id(), initial_count),
+abstract_actor::abstract_actor()
+    : abstract_channel(abstract_channel::is_abstract_actor_flag,
+                       detail::singletons::get_node_id()),
       m_id(detail::singletons::get_actor_registry()->next_id()),
       m_exit_reason(exit_reason::not_exited),
-      m_host(nullptr),
-      m_flags(0) {
+      m_host(nullptr) {
   // nop
 }
 
@@ -110,6 +110,18 @@ size_t abstract_actor::detach(const attachable::token& what) {
   return detach_impl(what, m_attachables_head);
 }
 
+void abstract_actor::is_registered(bool value) {
+  if (is_registered() == value) {
+    return;
+  }
+  if (value) {
+    detail::singletons::get_actor_registry()->inc_running();
+  } else {
+    detail::singletons::get_actor_registry()->dec_running();
+  }
+  set_flag(value, is_registered_flag);
+}
+
 bool abstract_actor::link_impl(linking_operation op, const actor_addr& other) {
   CAF_LOG_TRACE(CAF_ARG(op) << ", " << CAF_TSARG(other));
   switch (op) {
@@ -119,10 +131,9 @@ bool abstract_actor::link_impl(linking_operation op, const actor_addr& other) {
       return establish_backlink_impl(other);
     case remove_link_op:
       return remove_link_impl(other);
-    case remove_backlink_op:
-      return remove_backlink_impl(other);
     default:
-      return false;
+      CAF_REQUIRE(op == remove_backlink_op);
+      return remove_backlink_impl(other);
   }
 }
 
@@ -215,10 +226,8 @@ void abstract_actor::cleanup(uint32_t reason) {
     m_exit_reason = reason;
     m_attachables_head.swap(head);
   }
-  CAF_LOG_INFO_IF(!is_remote(), "cleanup actor with ID "
-                                << m_id << "; exit reason = "
-                                << reason << ", class = "
-                                << class_name());
+  CAF_LOG_INFO_IF(!is_remote(), "cleanup actor with ID " << m_id
+                                << "; exit reason = " << reason);
   // send exit messages
   for (attachable* i = head.get(); i != nullptr; i = i->next.get()) {
     i->actor_exited(this, reason);

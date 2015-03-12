@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -34,9 +34,9 @@
 #include "caf/io/network/protocol.hpp"
 #include "caf/io/network/native_socket.hpp"
 
-#include "caf/mixin/memory_cached.hpp"
-
 #include "caf/detail/memory.hpp"
+#include "caf/detail/disposer.hpp"
+#include "caf/detail/memory_cache_flag_type.hpp"
 
 namespace boost {
 namespace asio {
@@ -116,7 +116,8 @@ class multiplexer {
   /**
    * Simple wrapper for runnables
    */
-  struct runnable : extend<memory_managed>::with<mixin::memory_cached> {
+  struct runnable : memory_managed {
+    static constexpr auto memory_cache_flag = detail::needs_embedding;
     virtual void run() = 0;
     virtual ~runnable();
   };

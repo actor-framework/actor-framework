@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -187,11 +187,15 @@ void test_event_testee() {
   // we expect three 42s
   int i = 0;
   self->receive_for(i, 3)([](int value) { CAF_CHECK_EQUAL(value, 42); });
-  self->receive([&](const string& str) { result = str; },
-          after(chrono::minutes(1)) >> [&]() {
-    CAF_LOGF_ERROR("event_testee does not reply");
-    throw runtime_error("event_testee does not reply");
-  });
+  self->receive(
+    [&](const string& str) {
+      result = str;
+    },
+    after(chrono::minutes(1)) >> [&] {
+      CAF_PRINTERR("event_testee does not reply");
+      throw runtime_error("event_testee does not reply");
+    }
+  );
   self->send_exit(et, exit_reason::user_shutdown);
   self->await_all_other_actors_done();
   CAF_CHECK_EQUAL(result, "wait4int");
@@ -272,7 +276,7 @@ int_actor::behavior_type int_fun2(int_actor::pointer self) {
   self->trap_exit(true);
   return {
     [=](int i) {
-      self->monitor(self->last_sender());
+      self->monitor(self->current_sender());
       return i * i;
     },
     [=](const down_msg& dm) {
@@ -345,6 +349,6 @@ int main() {
   test_sending_typed_actors_and_down_msg();
   await_all_actors_done();
   CAF_CHECKPOINT();
-  // call it a day
+  shutdown();
   return CAF_TEST_RESULT();
 }

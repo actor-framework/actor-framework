@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -24,13 +24,14 @@
 #include <unistd.h>
 #include <sys/types.h>
 
-#include "caf/string_algorithms.hpp"
-
 #include "caf/config.hpp"
 #include "caf/node_id.hpp"
 #include "caf/serializer.hpp"
+#include "caf/make_counted.hpp"
+#include "caf/string_algorithms.hpp"
 #include "caf/primitive_variant.hpp"
 
+#include "caf/detail/logging.hpp"
 #include "caf/detail/singletons.hpp"
 #include "caf/detail/ripemd_160.hpp"
 #include "caf/detail/safe_equal.hpp"
@@ -116,12 +117,13 @@ node_id::node_id(intrusive_ptr<data> dataptr) : m_data(std::move(dataptr)) {
 }
 
 node_id::node_id(uint32_t procid, const std::string& b) {
-  m_data.reset(new data);
+  m_data = make_counted<data>();
   m_data->process_id = procid;
   host_id_from_string(b, m_data->host_id);
 }
 
-node_id::node_id(uint32_t a, const host_id_type& b) : m_data(new data{a, b}) {
+node_id::node_id(uint32_t a, const host_id_type& b)
+    : m_data(make_counted<data>(a, b)) {
   // nop
 }
 
@@ -162,8 +164,13 @@ node_id::data::~data() {
   // nop
 }
 
+void node_id::data::stop() {
+  // nop
+}
+
 // initializes singleton
 node_id::data* node_id::data::create_singleton() {
+  CAF_LOGF_TRACE("");
   auto ifs = detail::get_mac_addresses();
   std::vector<std::string> macs;
   macs.reserve(ifs.size());
@@ -173,9 +180,9 @@ node_id::data* node_id::data::create_singleton() {
   auto hd_serial_and_mac_addr = join(macs, "") + detail::get_root_uuid();
   node_id::host_id_type nid;
   detail::ripemd_160(nid, hd_serial_and_mac_addr);
-  auto ptr = new node_id::data(static_cast<uint32_t>(getpid()), nid);
-  ptr->ref(); // implicit ref count held by detail::singletons
-  return ptr;
+  auto ptr = make_counted<node_id::data>(static_cast<uint32_t>(getpid()), nid);
+  // note: ptr has a ref count of 1 -> implicitly held by detail::singletons
+  return ptr.release();
 }
 
 uint32_t node_id::process_id() const {

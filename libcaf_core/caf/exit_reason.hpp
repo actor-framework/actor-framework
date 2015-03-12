@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -55,6 +55,11 @@ static constexpr uint32_t unhandled_sync_timeout = 0x00005;
  * the actor has been terminated and no longer exists.
  */
 static constexpr uint32_t unknown = 0x00006;
+
+/**
+ * Indicates that an actor pool unexpectedly ran out of workers.
+ */
+static constexpr uint32_t out_of_workers = 0x00007;
 
 /**
  * Indicates that the actor was forced to shutdown by a user-generated event.

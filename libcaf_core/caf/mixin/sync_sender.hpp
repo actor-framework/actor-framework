@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -32,259 +32,259 @@
 namespace caf {
 namespace mixin {
 
-template <class Base, class Subtype, class ResponseHandleTag>
+template <class Base, class Subtype, class HandleTag>
 class sync_sender_impl : public Base {
-
  public:
-  using response_handle_type = response_handle<Subtype, message,
-                                               ResponseHandleTag>;
+  using response_handle_type = response_handle<Subtype, message, HandleTag>;
 
-  /**************************************************************************
-   *           sync_send[_tuple](actor, ...)            *
-   **************************************************************************/
-
-  /**
-   * Sends `what` as a synchronous message to `whom`.
-   * @param dest Receiver of the message.
-   * @param what Message content as tuple.
-   * @returns A handle identifying a future to the response of `whom`.
-   * @warning The returned handle is actor specific and the response to the
-   *      sent message cannot be received by another actor.
-   * @throws std::invalid_argument if `whom == nullptr
-   */
-  response_handle_type sync_send_tuple(message_priority prio,
-                     const actor& dest, message what) {
-    return {dptr()->sync_send_tuple_impl(prio, dest, std::move(what)),
-        dptr()};
-  }
-
-  response_handle_type sync_send_tuple(const actor& dest, message what) {
-    return sync_send_tuple(message_priority::normal, dest, std::move(what));
-  }
+  /****************************************************************************
+   *                              sync_send(...)                              *
+   ****************************************************************************/
 
   /**
-   * Sends `{what...}` as a synchronous message to `whom`.
-   * @param dest Receiver of the message.
-   * @param what Message elements.
-   * @returns A handle identifying a future to the response of `whom`.
+   * Sends `{xs...}` as a synchronous message to `dest` with priority `mp`.
+   * @returns A handle identifying a future-like handle to the response.
    * @warning The returned handle is actor specific and the response to the
    *          sent message cannot be received by another actor.
-   * @throws std::invalid_argument if `whom == nullptr`
+   * @throws std::invalid_argument if `dest == invalid_actor`
    */
   template <class... Ts>
-  response_handle_type sync_send(message_priority prio, const actor& dest,
-                   Ts&&... what) {
+  response_handle_type sync_send(message_priority mp, const actor& dest,
+                                 Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
-    return sync_send_tuple(prio, dest,
-                 make_message(std::forward<Ts>(what)...));
+    return {dptr()->sync_send_impl(mp, dest, std::forward<Ts>(xs)...),
+            dptr()};
   }
 
+  /**
+   * Sends `{xs...}` as a synchronous message to `dest`.
+   * @returns A handle identifying a future-like handle to the response.
+   * @warning The returned handle is actor specific and the response to the
+   *          sent message cannot be received by another actor.
+   * @throws std::invalid_argument if `dest == invalid_actor`
+   */
   template <class... Ts>
-  response_handle_type sync_send(const actor& dest, Ts&&... what) {
-    static_assert(sizeof...(Ts) > 0, "no message to send");
-    return sync_send_tuple(message_priority::normal, dest,
-                 make_message(std::forward<Ts>(what)...));
+  response_handle_type sync_send(const actor& dest, Ts&&... xs) {
+    return sync_send(message_priority::normal, dest, std::forward<Ts>(xs)...);
   }
 
-  /**************************************************************************
-   *          timed_sync_send[_tuple](actor, ...)           *
-   **************************************************************************/
-
-  response_handle_type timed_sync_send_tuple(message_priority prio,
-                         const actor& dest,
-                         const duration& rtime,
-                         message what) {
-    return {dptr()->timed_sync_send_tuple_impl(prio, dest, rtime,
-                           std::move(what)),
-        dptr()};
-  }
-
-  response_handle_type timed_sync_send_tuple(const actor& dest,
-                         const duration& rtime,
-                         message what) {
-    return {dptr()->timed_sync_send_tuple_impl(
-          message_priority::normal, dest, rtime, std::move(what)),
-        dptr()};
-  }
-
-  template <class... Ts>
-  response_handle_type timed_sync_send(message_priority prio,
-                     const actor& dest,
-                     const duration& rtime, Ts&&... what) {
-    static_assert(sizeof...(Ts) > 0, "no message to send");
-    return timed_sync_send_tuple(prio, dest, rtime,
-                   make_message(std::forward<Ts>(what)...));
-  }
-
-  template <class... Ts>
-  response_handle_type timed_sync_send(const actor& dest,
-                     const duration& rtime, Ts&&... what) {
-    static_assert(sizeof...(Ts) > 0, "no message to send");
-    return timed_sync_send_tuple(message_priority::normal, dest, rtime,
-                   make_message(std::forward<Ts>(what)...));
-  }
-
-  /**************************************************************************
-   *        sync_send[_tuple](typed_actor<...>, ...)        *
-   **************************************************************************/
-
-  template <class... Rs, class... Ts>
+  /**
+   * Sends `{xs...}` as a synchronous message to `dest` with priority `mp`.
+   * @returns A handle identifying a future-like handle to the response.
+   * @warning The returned handle is actor specific and the response to the
+   *          sent message cannot be received by another actor.
+   * @throws std::invalid_argument if `dest == invalid_actor`
+   */
+  template <class... Sigs, class... Ts>
   response_handle<Subtype,
                   typename detail::deduce_output_type<
-                    detail::type_list<Rs...>,
-                    detail::type_list<Ts...>
+                    detail::type_list<Sigs...>,
+                    detail::type_list<
+                      typename detail::implicit_conversions<
+                        typename std::decay<Ts>::type
+                      >::type...>
                   >::type,
-                  ResponseHandleTag>
-  sync_send_tuple(message_priority prio, const typed_actor<Rs...>& dest,
-          std::tuple<Ts...> what) {
-    return sync_send_impl(prio, dest, detail::type_list<Ts...>{},
-                          message::move_from_tuple(std::move(what)));
-  }
-
-  template <class... Rs, class... Ts>
-  response_handle<
-    Subtype, typename detail::deduce_output_type<
-           detail::type_list<Rs...>, detail::type_list<Ts...>>::type,
-    ResponseHandleTag>
-  sync_send_tuple(const typed_actor<Rs...>& dest, std::tuple<Ts...> what) {
-    return sync_send_impl(message_priority::normal, dest,
-                          detail::type_list<Ts...>{},
-                          message::move_from_tuple(std::move(what)));
-  }
-
-  template <class... Rs, class... Ts>
-  response_handle<
-    Subtype,
-    typename detail::deduce_output_type<
-      detail::type_list<Rs...>,
-      typename detail::implicit_conversions<
-        typename std::decay<Ts>::type>::type...
-      >::type,
-    ResponseHandleTag>
-  sync_send(message_priority prio, const typed_actor<Rs...>& dest,
-        Ts&&... what) {
-    return sync_send_impl(
-      prio, dest,
-      detail::type_list<typename detail::implicit_conversions<
-        typename std::decay<Ts>::type>::type...>{},
-      make_message(std::forward<Ts>(what)...));
-  }
-
-  template <class... Rs, class... Ts>
-  response_handle<
-    Subtype,
-    typename detail::deduce_output_type<
-      detail::type_list<Rs...>,
-      detail::type_list<typename detail::implicit_conversions<
-        typename std::decay<Ts>::type>::type...>>::type,
-    ResponseHandleTag>
-  sync_send(const typed_actor<Rs...>& dest, Ts&&... what) {
-    return sync_send_impl(
-      message_priority::normal, dest,
-      detail::type_list<typename detail::implicit_conversions<
-        typename std::decay<Ts>::type>::type...>{},
-      make_message(std::forward<Ts>(what)...));
-  }
-
-  /**************************************************************************
-   *       timed_sync_send[_tuple](typed_actor<...>, ...)       *
-   **************************************************************************/
-
-  /*
-  template <class... Rs, class... Ts>
-  response_handle<
-    Subtype,
-    typename detail::deduce_output_type<
-      detail::type_list<Rs...>,
-      detail::type_list<Ts...>
-    >::type,
-    ResponseHandleTag
-  >
-  timed_sync_send_tuple(message_priority prio,
-              const typed_actor<Rs...>& dest,
-              const duration& rtime,
-              cow_tuple<Ts...> what) {
-    return {dptr()->timed_sync_send_tuple_impl(prio, dest, rtime,
-                           std::move(what)),
-        dptr()};
-  }
-
-  template <class... Rs, class... Ts>
-  response_handle<
-    Subtype,
-    typename detail::deduce_output_type<
-      detail::type_list<Rs...>,
-      detail::type_list<Ts...>
-    >::type,
-    ResponseHandleTag
-  >
-  timed_sync_send_tuple(const typed_actor<Rs...>& dest,
-              const duration& rtime,
-              cow_tuple<Ts...> what) {
-    return {dptr()->timed_sync_send_tuple_impl(message_priority::normal,
-                           dest, rtime,
-                           std::move(what)),
-        dptr()};
-  }
-  */
-
-  template <class... Rs, class... Ts>
-  response_handle<
-    Subtype,
-    typename detail::deduce_output_type<
-      detail::type_list<Rs...>,
-      typename detail::implicit_conversions<
-        typename std::decay<Ts>::type>::type...>::type,
-    ResponseHandleTag>
-  timed_sync_send(message_priority prio, const typed_actor<Rs...>& dest,
-          const duration& rtime, Ts&&... what) {
+                  HandleTag>
+  sync_send(message_priority mp, const typed_actor<Sigs...>& dest, Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
-    return timed_sync_send_tuple(prio, dest, rtime,
-                   make_message(std::forward<Ts>(what)...));
+    using token =
+      detail::type_list<
+        typename detail::implicit_conversions<
+          typename std::decay<Ts>::type
+        >::type...>;
+    token tk;
+    check_typed_input(dest, tk);
+    return {dptr()->sync_send_impl(mp, dest, std::forward<Ts>(xs)...),
+            dptr()};
   }
 
-  template <class... Rs, class... Ts>
-  response_handle<
-    Subtype,
-    typename detail::deduce_output_type<
-      detail::type_list<Rs...>,
-      typename detail::implicit_conversions<
-        typename std::decay<Ts>::type>::type...>::type,
-    ResponseHandleTag>
-  timed_sync_send(const typed_actor<Rs...>& dest, const duration& rtime,
-          Ts&&... what) {
+  /**
+   * Sends `{xs...}` as a synchronous message to `dest`.
+   * @returns A handle identifying a future-like handle to the response.
+   * @warning The returned handle is actor specific and the response to the
+   *          sent message cannot be received by another actor.
+   * @throws std::invalid_argument if `dest == invalid_actor`
+   */
+  template <class... Sigs, class... Ts>
+  response_handle<Subtype,
+                  typename detail::deduce_output_type<
+                    detail::type_list<Sigs...>,
+                    detail::type_list<
+                      typename detail::implicit_conversions<
+                        typename std::decay<Ts>::type
+                      >::type...>
+                  >::type,
+                  HandleTag>
+  sync_send(const typed_actor<Sigs...>& dest, Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
-    return timed_sync_send_tuple(message_priority::normal, dest, rtime,
-                   make_message(std::forward<Ts>(what)...));
+    using token =
+      detail::type_list<
+        typename detail::implicit_conversions<
+          typename std::decay<Ts>::type
+        >::type...>;
+    token tk;
+    check_typed_input(dest, tk);
+    return {dptr()->sync_send_impl(message_priority::normal,
+                                   dest, std::forward<Ts>(xs)...),
+            dptr()};
   }
+
+  /****************************************************************************
+   *                           timed_sync_send(...)                           *
+   ****************************************************************************/
+
+  /**
+   * Sends `{xs...}` as a synchronous message to `dest` with priority `mp`
+   * and relative timeout `rtime`.
+   * @returns A handle identifying a future-like handle to the response.
+   * @warning The returned handle is actor specific and the response to the
+   *          sent message cannot be received by another actor.
+   * @throws std::invalid_argument if `dest == invalid_actor`
+   */
+  template <class... Ts>
+  response_handle_type timed_sync_send(message_priority mp, const actor& dest,
+                                       const duration& rtime, Ts&&... xs) {
+    static_assert(sizeof...(Ts) > 0, "no message to send");
+    return {dptr()->timed_sync_send_impl(mp, dest, rtime,
+                                         std::forward<Ts>(xs)...),
+            dptr()};
+  }
+
+  /**
+   * Sends `{xs...}` as a synchronous message to `dest` with
+   * relative timeout `rtime`.
+   * @returns A handle identifying a future-like handle to the response.
+   * @warning The returned handle is actor specific and the response to the
+   *          sent message cannot be received by another actor.
+   * @throws std::invalid_argument if `dest == invalid_actor`
+   */
+  template <class... Ts>
+  response_handle_type timed_sync_send(const actor& dest, const duration& rtime,
+                                       Ts&&... xs) {
+    return timed_sync_send(message_priority::normal, dest, rtime,
+                           std::forward<Ts>(xs)...);
+  }
+
+  /**
+   * Sends `{xs...}` as a synchronous message to `dest` with priority `mp`
+   * and relative timeout `rtime`.
+   * @returns A handle identifying a future-like handle to the response.
+   * @warning The returned handle is actor specific and the response to the
+   *          sent message cannot be received by another actor.
+   * @throws std::invalid_argument if `dest == invalid_actor`
+   */
+  template <class... Sigs, class... Ts>
+  response_handle<Subtype,
+                  typename detail::deduce_output_type<
+                    detail::type_list<Sigs...>,
+                    typename detail::implicit_conversions<
+                      typename std::decay<Ts>::type
+                    >::type...
+                  >::type,
+                  HandleTag>
+  timed_sync_send(message_priority mp, const typed_actor<Sigs...>& dest,
+                  const duration& rtime, Ts&&... xs) {
+    static_assert(sizeof...(Ts) > 0, "no message to send");
+    using token =
+      detail::type_list<
+        typename detail::implicit_conversions<
+          typename std::decay<Ts>::type
+        >::type...>;
+    token tk;
+    check_typed_input(dest, tk);
+    return {dptr()->timed_sync_send_impl(mp, dest, rtime,
+                                         std::forward<Ts>(xs)...),
+            dptr()};
+  }
+
+  /**
+   * Sends `{xs...}` as a synchronous message to `dest` with
+   * relative timeout `rtime`.
+   * @returns A handle identifying a future-like handle to the response.
+   * @warning The returned handle is actor specific and the response to the
+   *          sent message cannot be received by another actor.
+   * @throws std::invalid_argument if `dest == invalid_actor`
+   */
+  template <class... Sigs, class... Ts>
+  response_handle<Subtype,
+                  typename detail::deduce_output_type<
+                    detail::type_list<Sigs...>,
+                    typename detail::implicit_conversions<
+                      typename std::decay<Ts>::type
+                    >::type...
+                  >::type,
+                  HandleTag>
+  timed_sync_send(const typed_actor<Sigs...>& dest, const duration& rtime,
+                  Ts&&... xs) {
+    return timed_sync_send(message_priority::normal, dest, rtime,
+                           std::forward<Ts>(xs)...);
+  }
+
+  /****************************************************************************
+   *                       deprecated member functions                        *
+   ****************************************************************************/
+
+  // <backward_compatibility version="0.9">
+  response_handle_type sync_send_tuple(message_priority mp, const actor& dest,
+                                       message what) CAF_DEPRECATED;
+
+  response_handle_type sync_send_tuple(const actor& dest,
+                                       message what) CAF_DEPRECATED;
+
+  response_handle_type timed_sync_send_tuple(message_priority mp,
+                                             const actor& dest,
+                                             const duration& rtime,
+                                             message what) CAF_DEPRECATED;
+
+  response_handle_type timed_sync_send_tuple(const actor& dest,
+                                             const duration& rtime,
+                                             message what) CAF_DEPRECATED;
+  // </backward_compatibility>
 
  private:
-
-  template <class... Rs, class... Ts>
-  response_handle<
-    Subtype, typename detail::deduce_output_type<
-           detail::type_list<Rs...>, detail::type_list<Ts...>>::type,
-    ResponseHandleTag>
-  sync_send_impl(message_priority prio, const typed_actor<Rs...>& dest,
-           detail::type_list<Ts...> token, message&& what) {
-    check_typed_input(dest, token);
-    return {dptr()->sync_send_tuple_impl(prio, dest, std::move(what)),
-        dptr()};
+  Subtype* dptr() {
+    return static_cast<Subtype*>(this);
   }
-
-  inline Subtype* dptr() { return static_cast<Subtype*>(this); }
-
 };
 
 template <class ResponseHandleTag>
 class sync_sender {
-
  public:
-
   template <class Base, class Subtype>
   using impl = sync_sender_impl<Base, Subtype, ResponseHandleTag>;
-
 };
+
+// <backward_compatibility version="0.9">
+template <class B, class S, class H>
+typename sync_sender_impl<B, S, H>::response_handle_type
+sync_sender_impl<B, S, H>::sync_send_tuple(message_priority mp,
+                                           const actor& dest, message what) {
+  return sync_send(mp, dest, std::move(what));
+}
+
+template <class B, class S, class H>
+typename sync_sender_impl<B, S, H>::response_handle_type
+sync_sender_impl<B, S, H>::sync_send_tuple(const actor& dest, message what) {
+  return sync_send(message_priority::normal, dest, std::move(what));
+}
+
+template <class B, class S, class H>
+typename sync_sender_impl<B, S, H>::response_handle_type
+sync_sender_impl<B, S, H>::timed_sync_send_tuple(message_priority mp,
+                                                 const actor& dest,
+                                                 const duration& rtime,
+                                                 message msg) {
+  return timed_sync_send(mp, dest, rtime, std::move(msg));
+}
+
+template <class B, class S, class H>
+typename sync_sender_impl<B, S, H>::response_handle_type
+sync_sender_impl<B, S, H>::timed_sync_send_tuple(const actor& dest,
+                                                 const duration& rtime,
+                                                 message msg) {
+  return timed_sync_send(message_priority::normal, dest, rtime, std::move(msg));
+}
+// </backward_compatibility>
 
 } // namespace mixin
 } // namespace caf

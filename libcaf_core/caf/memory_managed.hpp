@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -22,10 +22,6 @@
 
 namespace caf {
 
-namespace detail {
-struct disposer;
-}
-
 /**
  * This base enables derived classes to enforce a different
  * allocation strategy than new/delete by providing a virtual
@@ -33,8 +29,6 @@ struct disposer;
  */
 class memory_managed {
  public:
-  friend struct detail::disposer;
-
   /**
    * Default implementations calls `delete this, but can
    * be overriden in case deletion depends on some condition or

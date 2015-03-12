@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -59,6 +59,7 @@ class abstract_group : public abstract_channel {
 
   struct subscription_token {
     intrusive_ptr<abstract_group> group;
+    static constexpr size_t token_type = attachable::token::subscription;
   };
 
   class subscription_predicate {
@@ -108,6 +109,11 @@ class abstract_group : public abstract_channel {
     virtual ~module();
 
     /**
+     * Stops all groups from this module.
+     */
+    virtual void stop() = 0;
+
+    /**
      * Returns the name of this module implementation.
      * @threadsafe
      */
@@ -147,6 +153,11 @@ class abstract_group : public abstract_channel {
    * Subscribes `who` to this group and returns a subscription object.
    */
   virtual attachable_ptr subscribe(const actor_addr& who) = 0;
+
+  /**
+   * Stops any background actors or threads and IO handles.
+   */
+  virtual void stop() = 0;
 
  protected:
   abstract_group(module_ptr module, std::string group_id);

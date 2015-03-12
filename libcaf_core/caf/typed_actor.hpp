@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -36,18 +36,19 @@ class local_actor;
 
 struct invalid_actor_addr_t;
 
-template <class... Rs>
+template <class... Sigs>
 class typed_event_based_actor;
 
 /**
  * Identifies a strongly typed actor.
- * @tparam Rs Interface as `replies_to<...>::with<...>` parameter pack.
+ * @tparam Sigs Signature of this actor as `replies_to<...>::with<...>`
+ *              parameter pack.
  */
-template <class... Rs>
+template <class... Sigs>
 class typed_actor
-  : detail::comparable<typed_actor<Rs...>>,
-    detail::comparable<typed_actor<Rs...>, actor_addr>,
-    detail::comparable<typed_actor<Rs...>, invalid_actor_addr_t> {
+  : detail::comparable<typed_actor<Sigs...>>,
+    detail::comparable<typed_actor<Sigs...>, actor_addr>,
+    detail::comparable<typed_actor<Sigs...>, invalid_actor_addr_t> {
 
   friend class local_actor;
 
@@ -63,24 +64,24 @@ class typed_actor
 
   template <class... Es>
   struct extend {
-    using type = typed_actor<Rs..., Es...>;
+    using type = typed_actor<Sigs..., Es...>;
   };
 
   /**
    * Identifies the behavior type actors of this kind use
    * for their behavior stack.
    */
-  using behavior_type = typed_behavior<Rs...>;
+  using behavior_type = typed_behavior<Sigs...>;
 
   /**
    * Identifies pointers to instances of this kind of actor.
    */
-  using pointer = typed_event_based_actor<Rs...>*;
+  using pointer = typed_event_based_actor<Sigs...>*;
 
   /**
    * Identifies the base class for this kind of actor.
    */
-  using base = typed_event_based_actor<Rs...>;
+  using base = typed_event_based_actor<Sigs...>;
 
   typed_actor() = default;
   typed_actor(typed_actor&&) = default;
@@ -88,13 +89,13 @@ class typed_actor
   typed_actor& operator=(typed_actor&&) = default;
   typed_actor& operator=(const typed_actor&) = default;
 
-  template <class... OtherRs>
-  typed_actor(const typed_actor<OtherRs...>& other) {
+  template <class... OtherSigs>
+  typed_actor(const typed_actor<OtherSigs...>& other) {
     set(std::move(other));
   }
 
-  template <class... OtherRs>
-  typed_actor& operator=(const typed_actor<OtherRs...>& other) {
+  template <class... OtherSigs>
+  typed_actor& operator=(const typed_actor<OtherSigs...>& other) {
     set(std::move(other));
     return *this;
   }
@@ -132,7 +133,7 @@ class typed_actor
   }
 
   static std::set<std::string> message_types() {
-    return {Rs::static_type_name()...};
+    return {Sigs::static_type_name()...};
   }
 
   explicit operator bool() const { return static_cast<bool>(m_ptr); }
@@ -151,15 +152,15 @@ class typed_actor
             "'this' must be a strict subset of 'other'");
   }
 
-  template <class... OtherRs>
-  inline void set(const typed_actor<OtherRs...>& other) {
-    check_signatures<detail::type_list<Rs...>, detail::type_list<OtherRs...>>();
+  template <class... OtherSigs>
+  inline void set(const typed_actor<OtherSigs...>& other) {
+    check_signatures<detail::type_list<Sigs...>, detail::type_list<OtherSigs...>>();
     m_ptr = other.m_ptr;
   }
 
   template <class Impl>
   inline void set(intrusive_ptr<Impl>& other) {
-    check_signatures<detail::type_list<Rs...>, typename Impl::signatures>();
+    check_signatures<detail::type_list<Sigs...>, typename Impl::signatures>();
     m_ptr = std::move(other);
   }
 

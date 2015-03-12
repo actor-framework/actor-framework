@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -32,23 +32,27 @@
 namespace caf {
 
 template <class C,
-     spawn_options Os = no_spawn_options,
-     typename BeforeLaunch = std::function<void (C*)>,
-     class... Ts>
+          spawn_options Os = no_spawn_options,
+          class BeforeLaunch = std::function<void (C*)>,
+          class... Ts>
 intrusive_ptr<C> spawn_class(execution_unit* host,
-                             BeforeLaunch before_launch_fun, Ts&&... args);
+                             BeforeLaunch before_launch_fun,
+                             Ts&&... xs);
 
 template <spawn_options Os = no_spawn_options,
-      typename BeforeLaunch = void (*)(abstract_actor*),
-      typename F = behavior (*)(), class... Ts>
-actor spawn_functor(execution_unit* host, BeforeLaunch before_launch_fun, F fun,
-                    Ts&&... args);
+          class BeforeLaunch = void (*)(abstract_actor*),
+          class F = behavior (*)(),
+          class... Ts>
+actor spawn_functor(execution_unit* host,
+                    BeforeLaunch before_launch_fun,
+                    F fun,
+                    Ts&&... xs);
 
 class group_subscriber {
-
  public:
-
-  inline group_subscriber(const group& grp) : m_grp(grp) {}
+  inline group_subscriber(const group& grp) : m_grp(grp) {
+    // nop
+  }
 
   template <class T>
   inline void operator()(T* ptr) const {
@@ -56,9 +60,7 @@ class group_subscriber {
   }
 
  private:
-
   group m_grp;
-
 };
 
 struct empty_before_launch_callback {
@@ -69,30 +71,30 @@ struct empty_before_launch_callback {
 };
 
 /******************************************************************************
- *                typed actors                *
+ *                                typed actors                                *
  ******************************************************************************/
 
 template <class TypedBehavior, class FirstArg>
 struct infer_typed_actor_handle;
 
 // infer actor type from result type if possible
-template <class... Rs, class FirstArg>
-struct infer_typed_actor_handle<typed_behavior<Rs...>, FirstArg> {
-  using type = typed_actor<Rs...>;
+template <class... Sigs, class FirstArg>
+struct infer_typed_actor_handle<typed_behavior<Sigs...>, FirstArg> {
+  using type = typed_actor<Sigs...>;
 };
 
 // infer actor type from first argument if result type is void
-template <class... Rs>
-struct infer_typed_actor_handle<void, typed_event_based_actor<Rs...>*> {
-  using type = typed_actor<Rs...>;
+template <class... Sigs>
+struct infer_typed_actor_handle<void, typed_event_based_actor<Sigs...>*> {
+  using type = typed_actor<Sigs...>;
 };
 
 template <class SignatureList>
 struct actor_handle_from_signature_list;
 
-template <class... Rs>
-struct actor_handle_from_signature_list<detail::type_list<Rs...>> {
-  using type = typed_actor<Rs...>;
+template <class... Sigs>
+struct actor_handle_from_signature_list<detail::type_list<Sigs...>> {
+  using type = typed_actor<Sigs...>;
 };
 
 template <spawn_options Os, typename BeforeLaunch, typename F, class... Ts>
@@ -102,7 +104,7 @@ typename infer_typed_actor_handle<
     typename detail::get_callable_trait<F>::arg_types
   >::type
 >::type
-spawn_typed_functor(execution_unit*, BeforeLaunch bl, F fun, Ts&&... args);
+spawn_typed_functor(execution_unit*, BeforeLaunch bl, F fun, Ts&&... xs);
 
 } // namespace caf
 

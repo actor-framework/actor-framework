@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -38,8 +38,8 @@ namespace io {
  */
 template <spawn_options Os = no_spawn_options,
      typename F = std::function<void(broker*)>, class... Ts>
-actor spawn_io(F fun, Ts&&... vs) {
-  return spawn<broker::functor_based>(std::move(fun), std::forward<Ts>(vs)...);
+actor spawn_io(F fun, Ts&&... xs) {
+  return spawn<broker::functor_based>(std::move(fun), std::forward<Ts>(xs)...);
 }
 
 /**
@@ -48,11 +48,11 @@ actor spawn_io(F fun, Ts&&... vs) {
 template <spawn_options Os = no_spawn_options,
       typename F = std::function<void(broker*)>, class... Ts>
 actor spawn_io_client(F fun, const std::string& host,
-                      uint16_t port, Ts&&... args) {
+                      uint16_t port, Ts&&... xs) {
   // provoke compiler error early
   using fun_res = decltype(fun(static_cast<broker*>(nullptr),
                                connection_handle{},
-                               std::forward<Ts>(args)...));
+                               std::forward<Ts>(xs)...));
   // prevent warning about unused local type
   static_assert(std::is_same<fun_res, fun_res>::value,
                 "your compiler is lying to you");
@@ -62,7 +62,7 @@ actor spawn_io_client(F fun, const std::string& host,
   auto mfptr = &broker::functor_based::init<F, connection_handle, Ts...>;
   using bi = std::function<void (broker::functor_based*, F, connection_handle)>;
   using namespace std::placeholders;
-  bi init = std::bind(mfptr, _1, _2, _3, std::forward<Ts>(args)...);
+  bi init = std::bind(mfptr, _1, _2, _3, std::forward<Ts>(xs)...);
   return spawn_class<broker::functor_based>(
         nullptr,
         [&](broker::functor_based* ptr) {
@@ -77,12 +77,12 @@ actor spawn_io_client(F fun, const std::string& host,
  */
 template <spawn_options Os = no_spawn_options,
           class F = std::function<void(broker*)>, class... Ts>
-actor spawn_io_server(F fun, uint16_t port, Ts&&... args) {
+actor spawn_io_server(F fun, uint16_t port, Ts&&... xs) {
   // same workaround as above
   auto mfptr = &broker::functor_based::init<F, Ts...>;
   using bi = std::function<void (broker::functor_based*, F)>;
   using namespace std::placeholders;
-  bi init = std::bind(mfptr, _1, _2, std::forward<Ts>(args)...);
+  bi init = std::bind(mfptr, _1, _2, std::forward<Ts>(xs)...);
   return spawn_class<broker::functor_based>(
         nullptr,
         [&](broker::functor_based* ptr) {

@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -35,29 +35,27 @@ template<long Pos, class... Ts>
 typename tl_at<type_list<Ts...>, Pos>::type get(const type_list<Ts...>&);
 
 template <class F, long... Is, class Tuple>
-inline auto apply_args(F& f, detail::int_list<Is...>, Tuple&& tup)
+auto apply_args(F& f, detail::int_list<Is...>, Tuple&& tup)
 -> decltype(f(get<Is>(tup)...)) {
   return f(get<Is>(tup)...);
 }
 
 template <class F, class Tuple, class... Ts>
-inline auto apply_args_prefixed(F& f, detail::int_list<>, Tuple&, Ts&&... args)
--> decltype(f(std::forward<Ts>(args)...)) {
-  return f(std::forward<Ts>(args)...);
+auto apply_args_prefixed(F& f, detail::int_list<>, Tuple&, Ts&&... xs)
+-> decltype(f(std::forward<Ts>(xs)...)) {
+  return f(std::forward<Ts>(xs)...);
 }
 
 template <class F, long... Is, class Tuple, class... Ts>
-inline auto apply_args_prefixed(F& f, detail::int_list<Is...>, Tuple& tup,
-                Ts&&... args)
--> decltype(f(std::forward<Ts>(args)..., get<Is>(tup)...)) {
-  return f(std::forward<Ts>(args)..., get<Is>(tup)...);
+auto apply_args_prefixed(F& f, detail::int_list<Is...>, Tuple& tup, Ts&&... xs)
+-> decltype(f(std::forward<Ts>(xs)..., get<Is>(tup)...)) {
+  return f(std::forward<Ts>(xs)..., get<Is>(tup)...);
 }
 
 template <class F, long... Is, class Tuple, class... Ts>
-inline auto apply_args_suffxied(F& f, detail::int_list<Is...>, Tuple& tup,
-                Ts&&... args)
--> decltype(f(get<Is>(tup)..., std::forward<Ts>(args)...)) {
-  return f(get<Is>(tup)..., std::forward<Ts>(args)...);
+auto apply_args_suffxied(F& f, detail::int_list<Is...>, Tuple& tup, Ts&&... xs)
+-> decltype(f(get<Is>(tup)..., std::forward<Ts>(xs)...)) {
+  return f(get<Is>(tup)..., std::forward<Ts>(xs)...);
 }
 
 } // namespace detail

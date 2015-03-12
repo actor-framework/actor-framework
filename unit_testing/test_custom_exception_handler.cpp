@@ -14,7 +14,7 @@ class exception_testee : public event_based_actor {
   }
   behavior make_behavior() override {
     return {
-      others() >> [] {
+      others >> [] {
         throw std::runtime_error("whatever");
       }
     };
@@ -73,5 +73,6 @@ void test_custom_exception_handler() {
 int main() {
   CAF_TEST(test_custom_exception_handler);
   test_custom_exception_handler();
+  shutdown();
   return CAF_TEST_RESULT();
 }

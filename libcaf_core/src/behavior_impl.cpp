@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -26,18 +26,11 @@ namespace detail {
 
 namespace {
 
-class combinator : public behavior_impl {
+class combinator final : public behavior_impl {
  public:
   bhvr_invoke_result invoke(message& arg) {
     auto res = first->invoke(arg);
-    if (!res) return second->invoke(arg);
-    return res;
-  }
-
-  bhvr_invoke_result invoke(const message& arg) {
-    auto res = first->invoke(arg);
-    if (!res) return second->invoke(arg);
-    return res;
+    return res ? res : second->invoke(arg);
   }
 
   void handle_timeout() {
@@ -57,6 +50,12 @@ class combinator : public behavior_impl {
     // nop
   }
 
+ protected:
+  match_case** get_cases(size_t&) {
+    // never called
+    return nullptr;
+  }
+
  private:
   pointer first;
   pointer second;
@@ -68,19 +67,32 @@ behavior_impl::~behavior_impl() {
   // nop
 }
 
-behavior_impl::behavior_impl(duration tout) : m_timeout(tout) {
+behavior_impl::behavior_impl(duration tout)
+    : m_timeout(tout),
+      m_begin(nullptr),
+      m_end(nullptr) {
+  // nop
+}
+
+bhvr_invoke_result behavior_impl::invoke(message& msg) {
+  auto msg_token = msg.type_token();
+  bhvr_invoke_result res;
+  for (auto i = m_begin; i != m_end; ++i) {
+    if ((i->has_wildcard || i->type_token == msg_token)
+        && i->ptr->invoke(res, msg) != match_case::no_match) {
+      return res;
+    }
+  }
+  return none;
+}
+
+void behavior_impl::handle_timeout() {
   // nop
 }
 
 behavior_impl::pointer behavior_impl::or_else(const pointer& other) {
   CAF_REQUIRE(other != nullptr);
-  return new combinator(this, other);
-}
-
-behavior_impl* new_default_behavior(duration d, std::function<void()> fun) {
-  using impl = default_behavior_impl<dummy_match_expr, std::function<void()>>;
-  dummy_match_expr nop;
-  return new impl(nop, d, std::move(fun));
+  return make_counted<combinator>(this, other);
 }
 
 } // namespace detail

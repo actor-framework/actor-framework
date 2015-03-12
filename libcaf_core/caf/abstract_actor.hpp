@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -29,9 +29,10 @@
 #include <cstdint>
 #include <exception>
 #include <type_traits>
+#include <condition_variable>
 
-#include "caf/node_id.hpp"
 #include "caf/fwd.hpp"
+#include "caf/node_id.hpp"
 #include "caf/attachable.hpp"
 #include "caf/message_id.hpp"
 #include "caf/exit_reason.hpp"
@@ -42,11 +43,6 @@
 #include "caf/detail/functor_attachable.hpp"
 
 namespace caf {
-
-class actor_addr;
-class serializer;
-class deserializer;
-class execution_unit;
 
 /**
  * A unique actor ID.
@@ -59,21 +55,12 @@ using actor_id = uint32_t;
  */
 constexpr actor_id invalid_actor_id = 0;
 
-class actor;
-class abstract_actor;
-class response_promise;
-
 using abstract_actor_ptr = intrusive_ptr<abstract_actor>;
 
 /**
  * Base class for all actor implementations.
  */
 class abstract_actor : public abstract_channel {
-  // needs access to m_host
-  friend class response_promise;
-  // java-like access to base class
-  using super = abstract_channel;
-
  public:
   /**
    * Attaches `ptr` to this actor. The actor will call `ptr->detach(...)` on
@@ -99,18 +86,6 @@ class abstract_actor : public abstract_channel {
    * Detaches the first attached object that matches `what`.
    */
   size_t detach(const attachable::token& what);
-
-  template <class T>
-  size_t detach(const T& what) {
-    return detach(attachable::token{typeid(T), &what});
-  }
-
-  enum linking_operation {
-    establish_link_op,
-    establish_backlink_op,
-    remove_link_op,
-    remove_backlink_op
-  };
 
   /**
    * Links this actor to `whom`.
@@ -179,27 +154,6 @@ class abstract_actor : public abstract_channel {
    */
   virtual std::set<std::string> message_types() const;
 
-  enum actor_state_flag {
-    //                              used by ...
-    trap_exit_flag       = 0x01, // local_actor
-    has_timeout_flag     = 0x02, // mixin::single_timeout
-    is_registered_flag   = 0x04, // no_resume, resumable, and scoped_actor
-    is_initialized_flag  = 0x08, // event-based actors
-    is_blocking_flag     = 0x10  // blocking_actor
-  };
-
-  inline void set_flag(bool enable_flag, actor_state_flag mask) {
-    if (enable_flag) {
-      m_flags |= static_cast<int>(mask);
-    } else {
-      m_flags &= ~static_cast<int>(mask);
-    }
-  }
-
-  inline bool get_flag(actor_state_flag mask) const {
-    return static_cast<bool>(m_flags & static_cast<int>(mask));
-  }
-
   /**
    * Returns the execution unit currently used by this actor.
    * @warning not thread safe
@@ -208,32 +162,29 @@ class abstract_actor : public abstract_channel {
     return m_host;
   }
 
+  /**
+   * Sets the execution unit for this actor.
+   */
+  inline void host(execution_unit* new_host) {
+    m_host = new_host;
+  }
+
  protected:
   /**
    * Creates a non-proxy instance.
    */
-  abstract_actor(size_t initial_ref_count = 0);
+  abstract_actor();
 
   /**
    * Creates a proxy instance for a proxy running on `nid`.
    */
-  abstract_actor(actor_id aid, node_id nid, size_t initial_ref_count = 0);
-
-  virtual bool link_impl(linking_operation op, const actor_addr& other);
+  abstract_actor(actor_id aid, node_id nid);
 
   /**
    * Called by the runtime system to perform cleanup actions for this actor.
    * Subtypes should always call this member function when overriding it.
    */
   void cleanup(uint32_t reason);
-
-  bool establish_link_impl(const actor_addr& other);
-
-  bool remove_link_impl(const actor_addr& other);
-
-  bool establish_backlink_impl(const actor_addr& other);
-
-  bool remove_backlink_impl(const actor_addr& other);
 
   /**
    * Returns `exit_reason() != exit_reason::not_exited`.
@@ -242,12 +193,99 @@ class abstract_actor : public abstract_channel {
     return exit_reason() != exit_reason::not_exited;
   }
 
-  /**
-   * Sets the execution unit for this actor.
-   */
-  inline void host(execution_unit* new_host) {
-    m_host = new_host;
+  /****************************************************************************
+   *                 here be dragons: end of public interface                 *
+   ****************************************************************************/
+
+ public:
+  /** @cond PRIVATE */
+
+  enum linking_operation {
+    establish_link_op,
+    establish_backlink_op,
+    remove_link_op,
+    remove_backlink_op
+  };
+
+  enum actor_state_flag {
+    //                                used by ...
+    trap_exit_flag         = 0x01, // local_actor
+    has_timeout_flag       = 0x02, // mixin::single_timeout
+    is_registered_flag     = 0x04, // no_resume, resumable, and scoped_actor
+    is_initialized_flag    = 0x08, // event-based actors
+    is_blocking_flag       = 0x10, // blocking_actor
+    is_detached_flag       = 0x20, // local_actor (set by spawn)
+    is_priority_aware_flag = 0x40  // local_actor (set by spawn)
+  };
+
+  inline void set_flag(bool enable_flag, actor_state_flag mask) {
+    m_flags = enable_flag ? m_flags | static_cast<int>(mask)
+                          : m_flags & ~static_cast<int>(mask);
   }
+
+  inline bool get_flag(actor_state_flag mask) const {
+    return static_cast<bool>(m_flags & static_cast<int>(mask));
+  }
+
+  inline bool has_timeout() const {
+    return get_flag(has_timeout_flag);
+  }
+
+  inline void has_timeout(bool value) {
+    set_flag(value, has_timeout_flag);
+  }
+
+  inline bool is_registered() const {
+    return get_flag(is_registered_flag);
+  }
+
+  void is_registered(bool value);
+
+  inline bool is_initialized() const {
+    return get_flag(is_initialized_flag);
+  }
+
+  inline void is_initialized(bool value) {
+    set_flag(value, is_initialized_flag);
+  }
+
+  inline bool is_blocking() const {
+    return get_flag(is_blocking_flag);
+  }
+
+  inline void is_blocking(bool value) {
+    set_flag(value, is_blocking_flag);
+  }
+
+  inline bool is_detached() const {
+    return get_flag(is_detached_flag);
+  }
+
+  inline void is_detached(bool value) {
+    set_flag(value, is_detached_flag);
+  }
+
+  inline bool is_priority_aware() const {
+    return get_flag(is_priority_aware_flag);
+  }
+
+  inline void is_priority_aware(bool value) {
+    set_flag(value, is_priority_aware_flag);
+  }
+
+  // Tries to run a custom exception handler for `eptr`.
+  optional<uint32_t> handle(const std::exception_ptr& eptr);
+
+ protected:
+  virtual bool link_impl(linking_operation op, const actor_addr& other);
+
+  bool establish_link_impl(const actor_addr& other);
+
+  bool remove_link_impl(const actor_addr& other);
+
+  bool establish_backlink_impl(const actor_addr& other);
+
+  bool remove_backlink_impl(const actor_addr& other);
 
   inline void attach_impl(attachable_ptr& ptr) {
     ptr->next.swap(m_attachables_head);
@@ -259,30 +297,26 @@ class abstract_actor : public abstract_channel {
                             bool stop_on_first_hit = false,
                             bool dry_run = false);
 
-  /** @cond PRIVATE */
-  /*
-   * Tries to run a custom exception handler for `eptr`.
-   */
-  optional<uint32_t> handle(const std::exception_ptr& eptr);
-  /** @endcond */
-
   // cannot be changed after construction
   const actor_id m_id;
 
-  // initially exit_reason::not_exited
+  // initially set to exit_reason::not_exited
   std::atomic<uint32_t> m_exit_reason;
 
-  // guards access to m_exit_reason, m_attachables, and m_links
+  // guards access to m_exit_reason, m_attachables, m_links,
+  // and enqueue operations if actor is thread-mapped
   mutable std::mutex m_mtx;
 
-  // attached functors that are executed on cleanup (for monitors, links, etc)
+  // only used in blocking and thread-mapped actors
+  mutable std::condition_variable m_cv;
+
+  // attached functors that are executed on cleanup (monitors, links, etc)
   attachable_ptr m_attachables_head;
 
   // identifies the execution unit this actor is currently executed by
   execution_unit* m_host;
 
-  // stores several actor-related flags
-  int m_flags;
+  /** @endcond */
 };
 
 } // namespace caf

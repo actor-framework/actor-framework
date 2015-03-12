@@ -1,4 +1,5 @@
 #include <stack>
+#include <atomic>
 #include <chrono>
 #include <iostream>
 #include <functional>
@@ -13,54 +14,76 @@ using namespace caf;
 
 namespace {
 
-class event_testee : public sb_actor<event_testee> {
+std::atomic<long> s_max_actor_instances;
+std::atomic<long> s_actor_instances;
 
-  friend class sb_actor<event_testee>;
+void inc_actor_instances() {
+  long v1 = ++s_actor_instances;
+  long v2 = s_max_actor_instances.load();
+  while (v1 > v2) {
+    s_max_actor_instances.compare_exchange_weak(v2, v1);
+  }
+}
+
+void dec_actor_instances() {
+  --s_actor_instances;
+}
+
+class event_testee : public sb_actor<event_testee> {
+ public:
+  event_testee();
+  ~event_testee();
 
   behavior wait4string;
   behavior wait4float;
   behavior wait4int;
 
   behavior& init_state = wait4int;
-
- public:
-
-  event_testee() {
-    wait4string = behavior{
-      [=](const std::string&) {
-        become(wait4int);
-      },
-      [=](get_atom) {
-        return "wait4string";
-      }
-    };
-    wait4float = behavior{
-      [=](float) {
-        become(wait4string);
-      },
-      [=](get_atom) {
-        return "wait4float";
-      }
-    };
-    wait4int = behavior{
-      [=](int) {
-        become(wait4float);
-      },
-      [=](get_atom) {
-        return "wait4int";
-      }
-    };
-  }
-
 };
+
+event_testee::event_testee() {
+  inc_actor_instances();
+  wait4string.assign(
+    [=](const std::string&) {
+      become(wait4int);
+    },
+    [=](get_atom) {
+      return "wait4string";
+    }
+  );
+  wait4float.assign(
+    [=](float) {
+      become(wait4string);
+    },
+    [=](get_atom) {
+      return "wait4float";
+    }
+  );
+  wait4int.assign(
+    [=](int) {
+      become(wait4float);
+    },
+    [=](get_atom) {
+      return "wait4int";
+    }
+  );
+}
+
+event_testee::~event_testee() {
+  dec_actor_instances();
+}
 
 // quits after 5 timeouts
 actor spawn_event_testee2(actor parent) {
   struct impl : event_based_actor {
     actor parent;
-    impl(actor parent_actor) : parent(parent_actor) { }
+    impl(actor parent_actor) : parent(parent_actor) {
+      inc_actor_instances();
+    }
+    ~impl() {
+      dec_actor_instances();
+    }
     behavior wait4timeout(int remaining) {
-      CAF_LOG_TRACE(CAF_ARG(remaining));
       return {
         after(chrono::milliseconds(1)) >> [=] {
           CAF_PRINT(CAF_ARG(remaining));
@@ -82,7 +105,7 @@ actor spawn_event_testee2(actor parent) {
 struct chopstick : public sb_actor<chopstick> {
 
   behavior taken_by(actor whom) {
-    return (
+    return {
       on<atom("take")>() >> [=] {
         return atom("busy");
       },
@@ -92,82 +115,116 @@ struct chopstick : public sb_actor<chopstick> {
       on(atom("break")) >> [=] {
         quit();
       }
-    );
+    };
   }
 
   behavior available;
 
   behavior& init_state = available;
 
-  chopstick() {
-    available = (
-      on(atom("take"), arg_match) >> [=](actor whom) -> atom_value {
-        become(taken_by(whom));
-        return atom("taken");
-      },
-      on(atom("break")) >> [=] {
-        quit();
-      }
-    );
-  }
-
+  chopstick();
+  ~chopstick();
 };
 
-class testee_actor {
+chopstick::chopstick() {
+  inc_actor_instances();
+  available.assign(
+    on(atom("take"), arg_match) >> [=](actor whom) -> atom_value {
+      become(taken_by(whom));
+      return atom("taken");
+    },
+    on(atom("break")) >> [=] {
+      quit();
+    }
+  );
+}
 
-  void wait4string(blocking_actor* self) {
-    bool string_received = false;
-    self->do_receive (
-      on<string>() >> [&] {
-        string_received = true;
-      },
-      [&](get_atom) {
-        return "wait4string";
-      }
-    )
-    .until([&] { return string_received; });
-  }
+chopstick::~chopstick() {
+  dec_actor_instances();
+}
 
-  void wait4float(blocking_actor* self) {
-    bool float_received = false;
-    self->do_receive (
-      on<float>() >> [&] {
-        float_received = true;
-      },
-      [&](get_atom) {
-        return "wait4float";
-      }
-    )
-    .until([&] { return float_received; });
-    wait4string(self);
-  }
-
+class testee_actor : public blocking_actor {
  public:
+  testee_actor();
+  ~testee_actor();
+  void act() override;
 
-  void operator()(blocking_actor* self) {
-    self->receive_loop (
-      on<int>() >> [&] {
-        wait4float(self);
-      },
-      [&](get_atom) {
-        return "wait4int";
-      }
-    );
-  }
-
+ private:
+  void wait4string();
+  void wait4float();
 };
+
+testee_actor::testee_actor() {
+  inc_actor_instances();
+}
+
+testee_actor::~testee_actor() {
+  dec_actor_instances();
+}
+
+void testee_actor::act() {
+  receive_loop (
+    [&](int) {
+      wait4float();
+    },
+    [&](get_atom) {
+      return "wait4int";
+    }
+  );
+}
+
+void testee_actor::wait4string() {
+  bool string_received = false;
+  do_receive (
+    [&](const string&) {
+      string_received = true;
+    },
+    [&](get_atom) {
+      return "wait4string";
+    }
+  )
+  .until([&] { return string_received; });
+}
+
+void testee_actor::wait4float() {
+  bool float_received = false;
+  do_receive (
+    [&](float) {
+      float_received = true;
+    },
+    [&](get_atom) {
+      return "wait4float";
+    }
+  )
+  .until([&] { return float_received; });
+  wait4string();
+}
 
 // self->receives one timeout and quits
-void testee1(event_based_actor* self) {
-  CAF_LOGF_TRACE("");
-  self->become(after(chrono::milliseconds(10)) >> [=] {
-    CAF_LOGF_TRACE("");
-    self->unbecome();
-  });
+class testee1 : public event_based_actor {
+ public:
+  testee1();
+  ~testee1();
+  behavior make_behavior() override;
+};
+
+testee1::testee1() {
+  inc_actor_instances();
+}
+
+testee1::~testee1() {
+  dec_actor_instances();
+}
+
+behavior testee1::make_behavior() {
+  return {
+    after(chrono::milliseconds(10)) >> [=] {
+      unbecome();
+    }
+  };
 }
 
 string behavior_test(scoped_actor& self, actor et) {
-  CAF_LOGF_TRACE(CAF_TARG(et, to_string));
   string result;
   self->send(et, 1);
   self->send(et, 2);
@@ -184,7 +241,7 @@ string behavior_test(scoped_actor& self, actor et) {
       result = str;
     },
     after(chrono::minutes(1)) >> [&]() {
-      CAF_LOGF_ERROR("actor does not reply");
+      CAF_PRINTERR("actor does not reply");
       throw runtime_error("actor does not reply");
     }
   );
@@ -193,19 +250,50 @@ string behavior_test(scoped_actor& self, actor et) {
   return result;
 }
 
-behavior echo_actor(event_based_actor* self) {
-  return (
-    others() >> [=]() -> message {
-      self->quit(exit_reason::normal);
-      return self->last_dequeued();
-    }
-  );
+class echo_actor : public event_based_actor {
+ public:
+  echo_actor();
+  ~echo_actor();
+  behavior make_behavior() override;
+};
+
+echo_actor::echo_actor() {
+  inc_actor_instances();
 }
 
-behavior simple_mirror(event_based_actor* self) {
+echo_actor::~echo_actor() {
+  dec_actor_instances();
+}
+
+behavior echo_actor::make_behavior() {
   return {
-    others() >> [=] {
-      return self->last_dequeued();
+    others >> [=]() -> message {
+      quit(exit_reason::normal);
+      return current_message();
+    }
+  };
+}
+
+class simple_mirror : public event_based_actor {
+ public:
+  simple_mirror();
+  ~simple_mirror();
+  behavior make_behavior() override;
+};
+
+simple_mirror::simple_mirror() {
+  inc_actor_instances();
+}
+
+simple_mirror::~simple_mirror() {
+  dec_actor_instances();
+}
+
+behavior simple_mirror::make_behavior() {
+  return {
+    others >> [=] {
+      CAF_CHECKPOINT();
+      return current_message();
     }
   };
 }
@@ -214,7 +302,7 @@ behavior high_priority_testee(event_based_actor* self) {
   self->send(self, atom("b"));
   self->send(message_priority::high, self, atom("a"));
   // 'a' must be self->received before 'b'
-  return (
+  return {
     on(atom("b")) >> [=] {
       CAF_FAILURE("received 'b' before 'a'");
       self->quit();
@@ -226,11 +314,11 @@ behavior high_priority_testee(event_based_actor* self) {
           CAF_CHECKPOINT();
           self->quit();
         },
-        others() >> CAF_UNEXPECTED_MSG_CB(self)
+        others >> CAF_UNEXPECTED_MSG_CB(self)
       );
     },
-    others() >> CAF_UNEXPECTED_MSG_CB(self)
-  );
+    others >> CAF_UNEXPECTED_MSG_CB(self)
+  };
 }
 
 struct high_priority_testee_class : event_based_actor {
@@ -257,13 +345,13 @@ struct slave : event_based_actor {
   behavior make_behavior() override {
     link_to(master);
     trap_exit(true);
-    return (
+    return {
       [=](const exit_msg& msg) {
         CAF_PRINT("slave: received exit message");
         quit(msg.reason);
       },
-      others() >> CAF_UNEXPECTED_MSG_CB(this)
-    );
+      others >> CAF_UNEXPECTED_MSG_CB(this)
+    };
   }
 
   actor master;
@@ -290,18 +378,18 @@ void test_spawn() {
 
   CAF_PRINT("test self->receive with zero timeout");
   self->receive (
-    others() >> CAF_UNEXPECTED_MSG_CB_REF(self),
+    others >> CAF_UNEXPECTED_MSG_CB_REF(self),
     after(chrono::seconds(0)) >> [] { /* mailbox empty */ }
   );
   self->await_all_other_actors_done();
   CAF_CHECKPOINT();
 
   CAF_PRINT("test mirror"); {
-    auto mirror = self->spawn<monitored>(simple_mirror);
+    auto mirror = self->spawn<simple_mirror, monitored>();
     self->send(mirror, "hello mirror");
     self->receive (
       on("hello mirror") >> CAF_CHECKPOINT_CB(),
-      others() >> CAF_UNEXPECTED_MSG_CB_REF(self)
+      others >> CAF_UNEXPECTED_MSG_CB_REF(self)
     );
     self->send_exit(mirror, exit_reason::user_shutdown);
     self->receive (
@@ -311,18 +399,18 @@ void test_spawn() {
         }
         else { CAF_UNEXPECTED_MSG_CB_REF(self); }
       },
-      others() >> CAF_UNEXPECTED_MSG_CB_REF(self)
+      others >> CAF_UNEXPECTED_MSG_CB_REF(self)
     );
     self->await_all_other_actors_done();
     CAF_CHECKPOINT();
   }
 
   CAF_PRINT("test detached mirror"); {
-    auto mirror = self->spawn<monitored+detached>(simple_mirror);
+    auto mirror = self->spawn<simple_mirror, monitored+detached>();
     self->send(mirror, "hello mirror");
     self->receive (
       on("hello mirror") >> CAF_CHECKPOINT_CB(),
-      others() >> CAF_UNEXPECTED_MSG_CB_REF(self)
+      others >> CAF_UNEXPECTED_MSG_CB_REF(self)
     );
     self->send_exit(mirror, exit_reason::user_shutdown);
     self->receive (
@@ -332,19 +420,19 @@ void test_spawn() {
         }
         else { CAF_UNEXPECTED_MSG(self); }
       },
-      others() >> CAF_UNEXPECTED_MSG_CB_REF(self)
+      others >> CAF_UNEXPECTED_MSG_CB_REF(self)
     );
     self->await_all_other_actors_done();
     CAF_CHECKPOINT();
   }
 
   CAF_PRINT("test priority aware mirror"); {
-    auto mirror = self->spawn<monitored+priority_aware>(simple_mirror);
+    auto mirror = self->spawn<simple_mirror, monitored + priority_aware>();
     CAF_CHECKPOINT();
     self->send(mirror, "hello mirror");
     self->receive (
       on("hello mirror") >> CAF_CHECKPOINT_CB(),
-      others() >> CAF_UNEXPECTED_MSG_CB_REF(self)
+      others >> CAF_UNEXPECTED_MSG_CB_REF(self)
     );
     self->send_exit(mirror, exit_reason::user_shutdown);
     self->receive (
@@ -354,18 +442,18 @@ void test_spawn() {
         }
         else { CAF_UNEXPECTED_MSG(self); }
       },
-      others() >> CAF_UNEXPECTED_MSG_CB_REF(self)
+      others >> CAF_UNEXPECTED_MSG_CB_REF(self)
     );
     self->await_all_other_actors_done();
     CAF_CHECKPOINT();
   }
 
   CAF_PRINT("test echo actor");
-  auto mecho = spawn(echo_actor);
+  auto mecho = spawn<echo_actor>();
   self->send(mecho, "hello echo");
   self->receive (
     on("hello echo") >> [] { },
-    others() >> CAF_UNEXPECTED_MSG_CB_REF(self)
+    others >> CAF_UNEXPECTED_MSG_CB_REF(self)
   );
   self->await_all_other_actors_done();
   CAF_CHECKPOINT();
@@ -380,7 +468,7 @@ void test_spawn() {
   self->receive(after(chrono::milliseconds(1)) >> [] { });
   CAF_CHECKPOINT();
 
-  spawn(testee1);
+  spawn<testee1>();
   self->await_all_other_actors_done();
   CAF_CHECKPOINT();
 
@@ -396,7 +484,7 @@ void test_spawn() {
       self->send(cstk, atom("put"), self);
       self->send(cstk, atom("break"));
     },
-    others() >> CAF_UNEXPECTED_MSG_CB_REF(self)
+    others >> CAF_UNEXPECTED_MSG_CB_REF(self)
   );
   self->await_all_other_actors_done();
   CAF_CHECKPOINT();
@@ -407,7 +495,7 @@ void test_spawn() {
       on("hi", arg_match) >> [&](actor from) {
         s->sync_send(from, "whassup?", s).await(
           on_arg_match >> [&](const string& str) -> string {
-            CAF_CHECK(s->last_sender() != nullptr);
+            CAF_CHECK(s->current_sender() != nullptr);
             CAF_CHECK_EQUAL(str, "nothing");
             return "goodbye!";
           },
@@ -417,7 +505,7 @@ void test_spawn() {
           }
         );
       },
-      others() >> CAF_UNEXPECTED_MSG_CB_REF(s)
+      others >> CAF_UNEXPECTED_MSG_CB_REF(s)
     );
   });
   self->monitor(sync_testee);
@@ -445,30 +533,42 @@ void test_spawn() {
 
   self->sync_send(sync_testee, "!?").await(
     on<sync_exited_msg>() >> CAF_CHECKPOINT_CB(),
-    others() >> CAF_UNEXPECTED_MSG_CB_REF(self),
+    others >> CAF_UNEXPECTED_MSG_CB_REF(self),
     after(chrono::milliseconds(1)) >> CAF_UNEXPECTED_TOUT_CB()
   );
 
   CAF_CHECKPOINT();
+  struct inflater : public event_based_actor {
+   public:
+    inflater(string name, actor buddy)
+        : m_name(std::move(name)),
+          m_buddy(std::move(buddy)) {
+      inc_actor_instances();
+    }
+    ~inflater() {
+      dec_actor_instances();
+    }
+    behavior make_behavior() override {
+      return {
+        [=](int n, const string& str) {
+          send(m_buddy, n * 2, str + " from " + m_name);
+        },
+        on(atom("done")) >> [=] {
+          quit();
+        }
+      };
+    }
 
-  auto inflater = [](event_based_actor* s, const string& name, actor buddy) {
-    CAF_LOGF_TRACE(CAF_ARG(s) << ", " << CAF_ARG(name)
-            << ", " << CAF_TARG(buddy, to_string));
-    s->become(
-      [=](int n, const string& str) {
-        s->send(buddy, n * 2, str + " from " + name);
-      },
-      on(atom("done")) >> [=] {
-        s->quit();
-      }
-    );
+   private:
+    string m_name;
+    actor m_buddy;
   };
-  auto joe = spawn(inflater, "Joe", self);
-  auto bob = spawn(inflater, "Bob", joe);
+  auto joe = spawn<inflater>("Joe", self);
+  auto bob = spawn<inflater>("Bob", joe);
   self->send(bob, 1, "hello actor");
   self->receive (
     on(4, "hello actor from Bob from Joe") >> CAF_CHECKPOINT_CB(),
-    others() >> CAF_UNEXPECTED_MSG_CB_REF(self)
+    others >> CAF_UNEXPECTED_MSG_CB_REF(self)
   );
   // kill joe and bob
   auto poison_pill = make_message(atom("done"));
@@ -476,28 +576,37 @@ void test_spawn() {
   anon_send(bob, poison_pill);
   self->await_all_other_actors_done();
 
-  function<actor (const string&, const actor&)> spawn_next;
-  // it's safe to capture spawn_next as reference here, because
-  // - it is guaranteeed to outlive kr34t0r by general scoping rules
-  // - the lambda is always executed in the current actor's thread
-  // but using spawn_next in a message handler could
-  // still cause undefined behavior!
-  auto kr34t0r = [&spawn_next](event_based_actor* s, const string& name, actor pal) {
-    if (name == "Joe" && !pal) {
-      pal = spawn_next("Bob", s);
+  class kr34t0r : public event_based_actor {
+   public:
+    kr34t0r(string name, actor pal)
+        : m_name(std::move(name)),
+          m_pal(std::move(pal)) {
+      inc_actor_instances();
     }
-    s->become (
-      others() >> [=] {
-        // forward message and die
-        s->send(pal, s->last_dequeued());
-        s->quit();
+    ~kr34t0r() {
+      dec_actor_instances();
+    }
+    behavior make_behavior() override {
+      if (m_name == "Joe" && m_pal == invalid_actor) {
+        m_pal = spawn<kr34t0r>("Bob", this);
       }
-    );
+      return {
+        others >> [=] {
+          // forward message and die
+          send(m_pal, current_message());
+          quit();
+        }
+      };
+    }
+    void on_exit() {
+      m_pal = invalid_actor; // break cycle
+    }
+
+   private:
+    string m_name;
+    actor m_pal;
   };
-  spawn_next = [&kr34t0r](const string& name, const actor& pal) {
-    return spawn(kr34t0r, name, pal);
-  };
-  auto joe_the_second = spawn(kr34t0r, "Joe", invalid_actor);
+  auto joe_the_second = spawn<kr34t0r>("Joe", invalid_actor);
   self->send(joe_the_second, atom("done"));
   self->await_all_other_actors_done();
 
@@ -527,7 +636,7 @@ void test_spawn() {
   self->await_all_other_actors_done();
   CAF_CHECKPOINT();
 
-  auto res1 = behavior_test(self, spawn<blocking_api>(testee_actor{}));
+  auto res1 = behavior_test(self, spawn<testee_actor, blocking_api>());
   CAF_CHECK_EQUAL("wait4int", res1);
   CAF_CHECK_EQUAL(behavior_test(self, spawn<event_testee>()), "wait4int");
   self->await_all_other_actors_done();
@@ -535,13 +644,24 @@ void test_spawn() {
 
   // create some actors linked to one single actor
   // and kill them all through killing the link
-  auto legion = spawn([](event_based_actor* s) {
-    CAF_PRINT("spawn 100 actors");
-    for (int i = 0; i < 100; ++i) {
-      s->spawn<event_testee, linked>();
+  class legion_actor : public event_based_actor {
+   public:
+    legion_actor() {
+      inc_actor_instances();
+      for (int i = 0; i < 100; ++i) {
+        spawn<event_testee, linked>();
+      }
     }
-    s->become(others() >> CAF_UNEXPECTED_MSG_CB(s));
-  });
+    ~legion_actor() {
+      dec_actor_instances();
+    }
+    behavior make_behavior() override {
+      return {
+        others >> CAF_UNEXPECTED_MSG_CB(this)
+      };
+    }
+  };
+  auto legion = spawn<legion_actor>();
   self->send_exit(legion, exit_reason::user_shutdown);
   self->await_all_other_actors_done();
   CAF_CHECKPOINT();
@@ -573,8 +693,8 @@ void test_spawn() {
       CAF_CHECK(val == atom("FooBar"));
       flags |= 0x08;
     },
-    others() >> [&]() {
-      CAF_FAILURE("unexpected message: " << to_string(self->last_dequeued()));
+    others >> [&]() {
+      CAF_FAILURE("unexpected message: " << to_string(self->current_message()));
     },
     after(chrono::milliseconds(500)) >> [&]() {
       CAF_FAILURE("timeout in file " << __FILE__ << " in line " << __LINE__);
@@ -619,15 +739,31 @@ void test_spawn() {
   CAF_CHECKPOINT();
 }
 
-void counting_actor(event_based_actor* self) {
+class counting_actor : public event_based_actor {
+ public:
+  counting_actor();
+  ~counting_actor();
+  behavior make_behavior() override;
+};
+
+counting_actor::counting_actor() {
+  inc_actor_instances();
+}
+
+counting_actor::~counting_actor() {
+  dec_actor_instances();
+}
+
+behavior counting_actor::make_behavior() {
   for (int i = 0; i < 100; ++i) {
-    self->send(self, atom("dummy"));
+    send(this, atom("dummy"));
   }
-  CAF_CHECK_EQUAL(self->mailbox().count(), 100);
+  CAF_CHECK_EQUAL(mailbox().count(), 100);
   for (int i = 0; i < 100; ++i) {
-    self->send(self, atom("dummy"));
+    send(this, atom("dummy"));
   }
-  CAF_CHECK_EQUAL(self->mailbox().count(), 200);
+  CAF_CHECK_EQUAL(mailbox().count(), 200);
+  return {};
 }
 
 // tests attach_functor() inside of an actor's constructor
@@ -636,9 +772,10 @@ void test_constructor_attach() {
    public:
     testee(actor buddy) : m_buddy(buddy) {
       attach_functor([=](uint32_t reason) {
-        send(m_buddy, atom("done"), reason);
+        send(buddy, atom("done"), reason);
       });
     }
+
     behavior make_behavior() {
       return {
         on(atom("die")) >> [=] {
@@ -646,12 +783,18 @@ void test_constructor_attach() {
         }
       };
     }
+
+    void on_exit() {
+      m_buddy = invalid_actor;
+    }
+
    private:
     actor m_buddy;
   };
   class spawner : public event_based_actor {
    public:
     spawner() : m_downs(0) {
+      // nop
     }
     behavior make_behavior() {
       m_testee = spawn<testee, monitored>(this);
@@ -668,11 +811,16 @@ void test_constructor_attach() {
             quit(reason);
           }
         },
-        others() >> [=] {
+        others >> [=] {
           forward_to(m_testee);
         }
       };
     }
+
+    void on_exit() {
+      m_testee = invalid_actor;
+    }
+
    private:
     int m_downs;
     actor m_testee;
@@ -689,7 +837,7 @@ class exception_testee : public event_based_actor {
   }
   behavior make_behavior() override {
     return {
-      others() >> [] {
+      others >> [] {
         throw std::runtime_error("whatever");
       }
     };
@@ -769,8 +917,10 @@ void test_typed_testee() {
 
 int main() {
   CAF_TEST(test_spawn);
-  spawn(counting_actor);
-  await_all_actors_done();
+  { // lifetime scope of temporary counting_actor handle
+    spawn<counting_actor>();
+    await_all_actors_done();
+  }
   CAF_CHECKPOINT();
   test_spawn();
   CAF_CHECKPOINT();
@@ -787,12 +937,14 @@ int main() {
   // test setting exit reasons for scoped actors
   { // lifetime scope of self
     scoped_actor self;
-    self->spawn<linked>([]() -> behavior { return others() >> [] {}; });
+    self->spawn<linked>([]() -> behavior { return others >> [] {}; });
     self->planned_exit_reason(exit_reason::user_defined);
   }
   await_all_actors_done();
   CAF_CHECKPOINT();
   shutdown();
   CAF_CHECKPOINT();
+  CAF_CHECK_EQUAL(s_actor_instances.load(), 0);
+  CAF_PRINT("max. nr. of actor instances: " << s_max_actor_instances.load());
   return CAF_TEST_RESULT();
 }

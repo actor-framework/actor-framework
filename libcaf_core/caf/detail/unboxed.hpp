@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -22,39 +22,41 @@
 
 #include <memory>
 
+#include "caf/atom.hpp"
 #include "caf/detail/wrapped.hpp"
 
 namespace caf {
 namespace detail {
 
+// strips `wrapped` and converts `atom_constant` to `atom_value`
 template <class T>
 struct unboxed {
   using type = T;
-
 };
 
 template <class T>
 struct unboxed<detail::wrapped<T>> {
   using type = typename detail::wrapped<T>::type;
-
 };
 
 template <class T>
 struct unboxed<detail::wrapped<T>(&)()> {
   using type = typename detail::wrapped<T>::type;
-
 };
 
 template <class T>
 struct unboxed<detail::wrapped<T>()> {
   using type = typename detail::wrapped<T>::type;
-
 };
 
 template <class T>
 struct unboxed<detail::wrapped<T>(*)()> {
   using type = typename detail::wrapped<T>::type;
+};
 
+template <atom_value V>
+struct unboxed<atom_constant<V>> {
+  using type = atom_value;
 };
 
 } // namespace detail

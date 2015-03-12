@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -29,8 +29,10 @@
 #include "caf/config.hpp"
 #include "caf/node_id.hpp"
 #include "caf/announce.hpp"
+#include "caf/exception.hpp"
 #include "caf/to_string.hpp"
 #include "caf/actor_proxy.hpp"
+#include "caf/make_counted.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/uniform_type_info.hpp"
 
@@ -42,7 +44,6 @@
 #include "caf/detail/ripemd_160.hpp"
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/singletons.hpp"
-#include "caf/detail/make_counted.hpp"
 #include "caf/detail/get_root_uuid.hpp"
 #include "caf/detail/actor_registry.hpp"
 #include "caf/detail/get_mac_addresses.hpp"
@@ -116,54 +117,21 @@ deserialize_impl(T& dm, deserializer* source) {
 }
 
 template <class T>
-class uti_impl : public uniform_type_info {
+class uti_impl : public detail::abstract_uniform_type_info<T> {
  public:
-  uti_impl(const char* tname) : m_native(&typeid(T)), m_name(tname) {
+  using super = detail::abstract_uniform_type_info<T>;
+
+  uti_impl(const char* tname) : super(tname) {
     // nop
   }
 
-  bool equal_to(const std::type_info& ti) const override {
-    // in some cases (when dealing with dynamic libraries),
-    // address can be different although types are equal
-    return m_native == &ti || *m_native == ti;
-  }
-
-  bool equals(const void* lhs, const void* rhs) const override {
-    return deref(lhs) == deref(rhs);
-  }
-
-  uniform_value create(const uniform_value& other) const override {
-    return this->create_impl<T>(other);
-  }
-
-  message as_message(void* instance) const override {
-    return make_message(deref(instance));
-  }
-
-  const char* name() const {
-    return m_name.c_str();
-  }
-
- protected:
   void serialize(const void* instance, serializer* sink) const {
-    serialize_impl(deref(instance), sink);
+    serialize_impl(super::deref(instance), sink);
   }
 
   void deserialize(void* instance, deserializer* source) const {
-    deserialize_impl(deref(instance), source);
+    deserialize_impl(super::deref(instance), source);
   }
-
- private:
-  static inline T& deref(void* ptr) {
-    return *reinterpret_cast<T*>(ptr);
-  }
-
-  static inline const T& deref(const void* ptr) {
-    return *reinterpret_cast<const T*>(ptr);
-  }
-
-  const std::type_info* m_native;
-  std::string m_name;
 };
 
 template <class T>
@@ -172,8 +140,6 @@ void do_announce(const char* tname) {
 }
 
 } // namespace <anonymous>
-
-using detail::make_counted;
 
 using middleman_actor_base = middleman_actor::extend<
                                reacts_to<ok_atom, int64_t>,
@@ -192,6 +158,13 @@ class middleman_actor_impl : public middleman_actor_base::base {
 
   ~middleman_actor_impl();
 
+  void on_exit() {
+    CAF_LOG_TRACE("");
+    m_pending_gets.clear();
+    m_pending_deletes.clear();
+    m_broker = invalid_actor;
+  }
+
   using get_op_result = either<ok_atom, actor_addr>
                         ::or_else<error_atom, std::string>;
 
@@ -200,6 +173,8 @@ class middleman_actor_impl : public middleman_actor_base::base {
   using del_op_result = either<ok_atom>::or_else<error_atom, std::string>;
 
   using del_op_promise = typed_response_promise<del_op_result>;
+
+  using map_type = std::map<int64_t, response_promise>;
 
   middleman_actor_base::behavior_type make_behavior() {
     return {
@@ -230,32 +205,18 @@ class middleman_actor_impl : public middleman_actor_base::base {
       [=](delete_atom, const actor_addr& whom, uint16_t port) {
         return del(whom, port);
       },
-      [=](ok_atom ok, int64_t request_id) {
-        auto i = m_pending_requests.find(request_id);
-        if (i == m_pending_requests.end()) {
-          CAF_LOG_ERROR("invalid request id: " << request_id);
-          return;
-        }
-        i->second.deliver(del_op_result{ok}.value);
-        m_pending_requests.erase(i);
+      [=](ok_atom, int64_t request_id) {
+        // not legal for get results
+        CAF_REQUIRE(m_pending_gets.count(request_id) == 0);
+        handle_ok<del_op_result>(m_pending_deletes, request_id);
       },
-      [=](ok_atom ok, int64_t request_id, actor_addr result) {
-        auto i = m_pending_requests.find(request_id);
-        if (i == m_pending_requests.end()) {
-          CAF_LOG_ERROR("invalid request id: " << request_id);
-          return;
-        }
-        i->second.deliver(get_op_result{ok, result}.value);
-        m_pending_requests.erase(i);
+      [=](ok_atom, int64_t request_id, actor_addr& result) {
+        // not legal for delete results
+        CAF_REQUIRE(m_pending_deletes.count(request_id) == 0);
+        handle_ok<get_op_result>(m_pending_gets, request_id, std::move(result));
       },
-      [=](error_atom error, int64_t request_id, std::string& reason) {
-        auto i = m_pending_requests.find(request_id);
-        if (i == m_pending_requests.end()) {
-          CAF_LOG_ERROR("invalid request id: " << request_id);
-          return;
-        }
-        i->second.deliver(get_op_result{error, std::move(reason)}.value);
-        m_pending_requests.erase(i);
+      [=](error_atom, int64_t request_id, std::string& reason) {
+        handle_error(request_id, reason);
       }
     };
   }
@@ -264,6 +225,8 @@ class middleman_actor_impl : public middleman_actor_base::base {
   either<ok_atom, uint16_t>::or_else<error_atom, std::string>
   put(const actor_addr& whom, uint16_t port,
       const char* in = nullptr, bool reuse_addr = false) {
+    CAF_LOG_TRACE(CAF_TSARG(whom) << ", " << CAF_ARG(port)
+                  << ", " << CAF_ARG(reuse_addr));
     accept_handle hdl;
     uint16_t actual_port;
     try {
@@ -276,53 +239,96 @@ class middleman_actor_impl : public middleman_actor_base::base {
       actual_port = res.second;
     }
     catch (bind_failure& err) {
-      return {error_atom{}, std::string("bind_failure: ") + err.what()};
+      return {error_atom::value, std::string("bind_failure: ") + err.what()};
     }
     catch (network_error& err) {
-      return {error_atom{}, std::string("network_error: ") + err.what()};
+      return {error_atom::value, std::string("network_error: ") + err.what()};
     }
-    send(m_broker, put_atom{}, hdl, whom, actual_port);
-    return {ok_atom{}, actual_port};
+    send(m_broker, put_atom::value, hdl, whom, actual_port);
+    return {ok_atom::value, actual_port};
   }
 
   get_op_promise get(const std::string& hostname, uint16_t port,
                      std::set<std::string> expected_ifs) {
+    CAF_LOG_TRACE(CAF_ARG(hostname) << ", " << CAF_ARG(port));
     auto result = make_response_promise();
     try {
       auto hdl = m_parent.backend().new_tcp_scribe(hostname, port);
       auto req_id = m_next_request_id++;
-      send(m_broker, get_atom{}, hdl, req_id,
+      send(m_broker, get_atom::value, hdl, req_id,
            actor{this}, std::move(expected_ifs));
-      m_pending_requests.insert(std::make_pair(req_id, result));
+      m_pending_gets.insert(std::make_pair(req_id, result));
     }
     catch (network_error& err) {
       // fullfil promise immediately
       std::string msg = "network_error: ";
       msg += err.what();
-      result.deliver(get_op_result{error_atom{}, std::move(msg)}.value);
+      result.deliver(get_op_result{error_atom::value, std::move(msg)}.value);
     }
     return result;
   }
 
   del_op_promise del(const actor_addr& whom, uint16_t port = 0) {
+    CAF_LOG_TRACE(CAF_TSARG(whom) << ", " << CAF_ARG(port));
     auto result = make_response_promise();
     auto req_id = m_next_request_id++;
     send(m_broker, delete_atom::value, req_id, whom, port);
-    m_pending_requests.insert(std::make_pair(req_id, result));
+    m_pending_deletes.insert(std::make_pair(req_id, result));
     return result;
+  }
+
+  template <class T, class... Ts>
+  void handle_ok(map_type& storage, int64_t request_id, Ts&&... xs) {
+    CAF_LOG_TRACE(CAF_ARG(request_id));
+    auto i = storage.find(request_id);
+    if (i == storage.end()) {
+      CAF_LOG_ERROR("request id not found: " << request_id);
+      return;
+    }
+    i->second.deliver(T{ok_atom::value, std::forward<Ts>(xs)...}.value);
+    storage.erase(i);
+  }
+
+  template <class F>
+  bool finalize_request(map_type& storage, int64_t req_id, F fun) {
+    CAF_LOG_TRACE(CAF_ARG(req_id));
+    auto i = storage.find(req_id);
+    if (i == storage.end()) {
+      CAF_LOG_INFO("request ID not found in storage");
+      return false;
+    }
+    fun(i->second);
+    storage.erase(i);
+    return true;
+  }
+
+  void handle_error(int64_t request_id, std::string& reason) {
+    CAF_LOG_TRACE(CAF_ARG(request_id) << ", " << CAF_ARG(reason));
+    auto fget = [&](response_promise& rp) {
+      rp.deliver(get_op_result{error_atom::value, std::move(reason)}.value);
+    };
+    auto fdel = [&](response_promise& rp) {
+      rp.deliver(del_op_result{error_atom::value, std::move(reason)}.value);
+    };
+    if (!finalize_request(m_pending_gets, request_id, fget)
+        && !finalize_request(m_pending_deletes, request_id, fdel)) {
+      CAF_LOG_ERROR("invalid request id: " << request_id);
+    }
   }
 
   actor m_broker;
   middleman& m_parent;
   int64_t m_next_request_id;
-  std::map<int64_t, response_promise> m_pending_requests;
+  map_type m_pending_gets;
+  map_type m_pending_deletes;
 };
 
 middleman_actor_impl::~middleman_actor_impl() {
-  // nop
+  CAF_LOG_TRACE("");
 }
 
 middleman* middleman::instance() {
+  CAF_LOGF_TRACE("");
   auto sid = detail::singletons::middleman_plugin_id;
   auto fac = [] { return new middleman; };
   auto res = detail::singletons::get_plugin_singleton(sid, fac);
@@ -339,7 +345,7 @@ void middleman::initialize() {
   m_backend = network::multiplexer::make();
   m_backend_supervisor = m_backend->make_supervisor();
   m_thread = std::thread([this] {
-    CAF_LOGC_TRACE("caf::io::middleman", "initialize$run", "");
+    CAF_LOG_TRACE("");
     m_backend->run();
   });
   m_backend->thread_id(m_thread.get_id());
@@ -361,15 +367,13 @@ void middleman::initialize() {
 void middleman::stop() {
   CAF_LOG_TRACE("");
   m_backend->dispatch([=] {
-    CAF_LOGC_TRACE("caf::io::middleman", "stop$lambda", "");
+    CAF_LOG_TRACE("");
     // m_managers will be modified while we are stopping each manager,
     // because each manager will call remove(...)
-    std::vector<broker_ptr> brokers;
     for (auto& kvp : m_named_brokers) {
-      brokers.push_back(kvp.second);
-    }
-    for (auto& bro : brokers) {
-      bro->close_all();
+      if (kvp.second->exit_reason() == exit_reason::not_exited) {
+        kvp.second->cleanup(exit_reason::normal);
+      }
     }
   });
   m_backend_supervisor.reset();

@@ -18,13 +18,11 @@
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 
-// the options_description API is deprecated
-#include "cppa/opt.hpp"
+#include "caf/string_algorithms.hpp"
 
 using namespace std;
 using namespace caf;
 
-using join_atom = atom_constant<atom("join")>;
 using broadcast_atom = atom_constant<atom("broadcast")>;
 
 struct line { string str; };
@@ -35,17 +33,6 @@ istream& operator>>(istream& is, line& l) {
 }
 
 namespace { string s_last_line; }
-
-message split_line(const line& l) {
-  istringstream strs(l.str);
-  s_last_line = move(l.str);
-  string tmp;
-  message_builder mb;
-  while (getline(strs, tmp, ' ')) {
-    if (!tmp.empty()) mb.append(std::move(tmp));
-  }
-  return mb.to_message();
-}
 
 void client(event_based_actor* self, const string& name) {
   self->become (
@@ -66,13 +53,13 @@ void client(event_based_actor* self, const string& name) {
     },
     [=](const string& txt) {
       // don't print own messages
-      if (self->last_sender() != self) cout << txt << endl;
+      if (self->current_sender() != self) cout << txt << endl;
     },
     [=](const group_down_msg& g) {
       cout << "*** chatroom offline: " << to_string(g.source) << endl;
     },
-    others() >> [=]() {
-      cout << "unexpected: " << to_string(self->last_dequeued()) << endl;
+    others >> [=]() {
+      cout << "unexpected: " << to_string(self->current_message()) << endl;
     }
   );
 }
@@ -80,14 +67,16 @@ void client(event_based_actor* self, const string& name) {
 int main(int argc, char** argv) {
   string name;
   string group_id;
-  options_description desc;
-  bool args_valid = match_stream<string>(argv + 1, argv + argc) (
-    on_opt1('n', "name", &desc, "set name") >> rd_arg(name),
-    on_opt1('g', "group", &desc, "join group <arg1>") >> rd_arg(group_id),
-    on_opt0('h', "help", &desc, "print help") >> print_desc_and_exit(&desc)
-  );
-  if (!args_valid) {
-    print_desc_and_exit(&desc)();
+  auto res = message_builder(argv + 1, argv + argc).extract_opts({
+    {"name,n", "set name", name},
+    {"group,g", "join group", group_id}
+  });
+  if (!res.remainder.empty()) {
+    std::cout << res.helptext << std::endl;
+    return 1;
+  }
+  if (res.opts.count("help") > 0) {
+    return 0;
   }
   while (name.empty()) {
     cout << "please enter your name: " << flush;
@@ -112,7 +101,6 @@ int main(int argc, char** argv) {
         anon_send(client_actor, join_atom::value, g);
       }
       catch (exception& e) {
-        ostringstream err;
         cerr << "*** exception: group::get(\"" << group_id.substr(0, p)
            << "\", \"" << group_id.substr(p + 1) << "\") failed; "
            << to_verbose_string(e) << endl;
@@ -128,35 +116,39 @@ int main(int argc, char** argv) {
       return none;
     };
   };
-  istream_iterator<line> lines(cin);
   istream_iterator<line> eof;
-  match_each (lines, eof, split_line) (
-    on("/join", arg_match) >> [&](const string& mod, const string& id) {
-      try {
-        group grp = (mod == "remote") ? io::remote_group(id)
-                                      : group::get(mod, id);
-        anon_send(client_actor, join_atom::value, grp);
+  vector<string> words;
+  for (istream_iterator<line> i(cin); i != eof; ++i) {
+    words.clear();
+    split(words, i->str, is_any_of(" "));
+    message_builder(words.begin(), words.end()).apply({
+      on("/join", arg_match) >> [&](const string& mod, const string& id) {
+        try {
+          group grp = (mod == "remote") ? io::remote_group(id)
+                                        : group::get(mod, id);
+          anon_send(client_actor, join_atom::value, grp);
+        }
+        catch (exception& e) {
+          cerr << "*** exception: " << to_verbose_string(e) << endl;
+        }
+      },
+      on("/quit") >> [&] {
+        // close STDIN; causes this match loop to quit
+        cin.setstate(ios_base::eofbit);
+      },
+      on(starts_with("/"), any_vals) >> [&] {
+        cout <<  "*** available commands:\n"
+             "  /join <module> <group> join a new chat channel\n"
+             "  /quit          quit the program\n"
+             "  /help          print this text\n" << flush;
+      },
+      others >> [&] {
+        if (!s_last_line.empty()) {
+          anon_send(client_actor, broadcast_atom::value, s_last_line);
+        }
       }
-      catch (exception& e) {
-        cerr << "*** exception: " << to_verbose_string(e) << endl;
-      }
-    },
-    on("/quit") >> [&] {
-      // close STDIN; causes this match loop to quit
-      cin.setstate(ios_base::eofbit);
-    },
-    on(starts_with("/"), any_vals) >> [&] {
-      cout <<  "*** available commands:\n"
-           "  /join <module> <group> join a new chat channel\n"
-           "  /quit          quit the program\n"
-           "  /help          print this text\n" << flush;
-    },
-    others() >> [&] {
-      if (!s_last_line.empty()) {
-        anon_send(client_actor, broadcast_atom::value, s_last_line);
-      }
-    }
-  );
+    });
+  }
   // force actor to quit
   anon_send_exit(client_actor, exit_reason::user_shutdown);
   await_all_actors_done();

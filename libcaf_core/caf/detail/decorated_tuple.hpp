@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -36,73 +36,49 @@ namespace caf {
 namespace detail {
 
 class decorated_tuple : public message_data {
-
-  using super = message_data;
-
-  decorated_tuple& operator=(const decorated_tuple&) = delete;
-
  public:
+  decorated_tuple& operator=(const decorated_tuple&) = delete;
 
   using vector_type = std::vector<size_t>;
 
-  using pointer = message_data::ptr;
+  using message_data::cow_ptr;
 
-  using rtti = const std::type_info*;
+  decorated_tuple(cow_ptr&&, vector_type&&);
 
-  // creates a dynamically typed subtuple from `d` with an offset
-  static inline pointer create(pointer d, vector_type v) {
-    return pointer{new decorated_tuple(std::move(d), std::move(v))};
-  }
-
-  // creates a statically typed subtuple from `d` with an offset
-  static inline pointer create(pointer d, rtti ti, vector_type v) {
-    return pointer{new decorated_tuple(std::move(d), ti, std::move(v))};
-  }
-
-  // creates a dynamically typed subtuple from `d` with an offset
-  static inline pointer create(pointer d, size_t offset) {
-    return pointer{new decorated_tuple(std::move(d), offset)};
-  }
-
-  // creates a statically typed subtuple from `d` with an offset
-  static inline pointer create(pointer d, rtti ti, size_t offset) {
-    return pointer{new decorated_tuple(std::move(d), ti, offset)};
-  }
+  // creates a typed subtuple from `d` with mapping `v`
+  static cow_ptr make(cow_ptr d, vector_type v);
 
   void* mutable_at(size_t pos) override;
 
   size_t size() const override;
 
-  decorated_tuple* copy() const override;
+  cow_ptr copy() const override;
 
   const void* at(size_t pos) const override;
 
-  const uniform_type_info* type_at(size_t pos) const override;
+  bool match_element(size_t pos, uint16_t typenr,
+                     const std::type_info* rtti) const override;
 
-  const std::string* tuple_type_names() const override;
+  uint32_t type_token() const override;
 
-  rtti type_token() const override;
+  const char* uniform_name_at(size_t pos) const override;
+
+  uint16_t type_nr_at(size_t pos) const override;
+
+  inline const cow_ptr& decorated() const {
+    return m_decorated;
+  }
+
+  inline const vector_type& mapping() const {
+    return m_mapping;
+  }
 
  private:
-
-  pointer m_decorated;
-  rtti m_token;
-  vector_type m_mapping;
-
-  void init();
-
-  void init(size_t);
-
-  decorated_tuple(pointer, size_t);
-
-  decorated_tuple(pointer, rtti, size_t);
-
-  decorated_tuple(pointer, vector_type&&);
-
-  decorated_tuple(pointer, rtti, vector_type&&);
-
   decorated_tuple(const decorated_tuple&) = default;
 
+  cow_ptr m_decorated;
+  vector_type m_mapping;
+  uint32_t m_type_token;
 };
 
 } // namespace detail

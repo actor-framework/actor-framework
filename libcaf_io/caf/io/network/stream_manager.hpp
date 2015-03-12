@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -33,16 +33,13 @@ namespace network {
  * for incoming data as well as for error handling.
  */
 class stream_manager : public manager {
-
  public:
-
-  virtual ~stream_manager();
+  ~stream_manager();
 
   /**
    * Called by the underlying IO device whenever it received data.
    */
   virtual void consume(const void* data, size_t num_bytes) = 0;
-
 };
 
 } // namespace network

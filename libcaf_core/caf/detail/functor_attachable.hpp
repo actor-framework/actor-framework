@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -39,6 +39,7 @@ struct functor_attachable : attachable {
   void actor_exited(abstract_actor* self, uint32_t reason) override {
     m_functor(self, reason);
   }
+  static constexpr size_t token_type = attachable::token::anonymous;
 };
 
 template <class F>

@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -19,14 +19,9 @@
 
 #include "caf/scoped_actor.hpp"
 
-#include "caf/policy/no_resume.hpp"
-#include "caf/policy/no_scheduling.hpp"
-#include "caf/policy/actor_policies.hpp"
-#include "caf/policy/nestable_invoke.hpp"
-#include "caf/policy/not_prioritizing.hpp"
+#include "caf/spawn_options.hpp"
 
 #include "caf/detail/singletons.hpp"
-#include "caf/detail/proper_actor.hpp"
 #include "caf/detail/actor_registry.hpp"
 
 namespace caf {
@@ -34,22 +29,19 @@ namespace caf {
 namespace {
 
 struct impl : blocking_actor {
+  impl() {
+    is_detached(true);
+  }
+
   void act() override {
     CAF_LOG_ERROR("act() of scoped_actor impl called");
   }
 };
 
-blocking_actor* alloc() {
-  using namespace policy;
-  using policies = actor_policies<no_scheduling, not_prioritizing,
-                                  no_resume, nestable_invoke>;
-  return new detail::proper_actor<impl, policies>;
-}
-
 } // namespace <anonymous>
 
 void scoped_actor::init(bool hide_actor) {
-  m_self.reset(alloc());
+  m_self.reset(new impl, false);
   if (!hide_actor) {
     m_prev = CAF_SET_AID(m_self->id());
   }

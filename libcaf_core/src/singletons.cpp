@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -69,29 +69,34 @@ std::mutex& singletons::get_plugin_mutex() {
 
 void singletons::stop_singletons() {
   // stop singletons, i.e., make sure no background threads/actors are running
-  CAF_LOGF_DEBUG("stop scheduler");
-  stop(s_scheduling_coordinator);
   CAF_LOGF_DEBUG("stop plugins");
   for (auto& plugin : s_plugins) {
     stop(plugin);
   }
-  CAF_LOGF_DEBUG("stop actor registry");
-  stop(s_actor_registry);
   CAF_LOGF_DEBUG("stop group manager");
   stop(s_group_manager);
-  CAF_LOGF_DEBUG("stop type info map");
-  stop(s_uniform_type_info_map);
-  stop(s_logger);
-  stop(s_node_id);
+  CAF_LOGF_DEBUG("stop scheduler");
+  stop(s_scheduling_coordinator);
+  CAF_LOGF_DEBUG("stop actor registry");
+  stop(s_actor_registry);
   // dispose singletons, i.e., release memory
-  dispose(s_scheduling_coordinator);
+  CAF_LOGF_DEBUG("dispose plugins");
   for (auto& plugin : s_plugins) {
     dispose(plugin);
   }
-  dispose(s_actor_registry);
+  CAF_LOGF_DEBUG("dispose group manager");
   dispose(s_group_manager);
-  dispose(s_uniform_type_info_map);
+  CAF_LOGF_DEBUG("dispose scheduler");
+  dispose(s_scheduling_coordinator);
+  CAF_LOGF_DEBUG("dispose registry");
+  dispose(s_actor_registry);
+  // final steps
+  CAF_LOGF_DEBUG("stop and dispose logger, bye");
+  stop(s_logger);
   dispose(s_logger);
+  stop(s_uniform_type_info_map);
+  dispose(s_uniform_type_info_map);
+  stop(s_node_id);
   dispose(s_node_id);
 }
 

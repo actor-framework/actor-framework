@@ -61,8 +61,8 @@ behavior server(broker* self) {
       *counter = 0;
       self->delayed_send(self, std::chrono::seconds(1), tick_atom::value);
     },
-    others() >> [=] {
-      aout(self) << "unexpected: " << to_string(self->last_dequeued()) << endl;
+    others >> [=] {
+      aout(self) << "unexpected: " << to_string(self->current_message()) << endl;
     }
   };
 }
@@ -83,7 +83,7 @@ int main(int argc, const char **argv) {
       // kill server
       anon_send_exit(server_actor, exit_reason::user_shutdown);
     },
-    others() >> [] {
+    others >> [] {
       cerr << "use with '-p PORT' as server on port" << endl;
     }
   });

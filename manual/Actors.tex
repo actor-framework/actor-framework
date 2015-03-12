@@ -1,4 +1,5 @@
 \section{Actors}
+\label{Sec::Actors}
 
 \lib provides several actor implementations, each covering a particular use case.
 The class \lstinline^local_actor^ is the base class for all implementations, except for (remote) proxy actors.
@@ -17,6 +18,7 @@ When dealing with typed actors, the types are \lstinline^typed_event_based_actor
 
 \clearpage
 \subsection{Interface}
+\label{Sec::Actors::Interfaces}
 
 \begin{lstlisting}
 class local_actor;
@@ -26,22 +28,22 @@ class local_actor;
 \begin{tabular*}{\textwidth}{m{0.45\textwidth}m{0.5\textwidth}}
   \multicolumn{2}{m{\linewidth}}{\large{\textbf{Member functions}}\vspace{3pt}} \\
   \\
-  \hline
-  \lstinline^quit(uint32_t reason = normal)^ & Finishes execution of this actor \\
-  \hline
-  \\
   \multicolumn{2}{l}{\textbf{Observers}\vspace{3pt}} \\
+  \hline
+  \lstinline^actor_addr address()^ & Returns the address of this actor \\
   \hline
   \lstinline^bool trap_exit()^ & Checks whether this actor traps exit messages \\
   \hline
-  \lstinline^message last_dequeued()^ & Returns the last message that was dequeued from the actor's mailbox\newline\textbf{Note}: Only set during callback invocation \\
+  \lstinline^message& current_message()^ & Returns the currently processed message\newline\textbf{Warning}: Only set during callback invocation; calling this function after forwarding the message or while not in a callback is undefined behavior \\
   \hline
-  \lstinline^actor_addr last_sender()^ & Returns the sender of the last dequeued message\newline\textbf{Note}: Only set during callback invocation \\
+  \lstinline^actor_addr& current_sender()^ & Returns the sender of the current message\newline\textbf{Warning}: Only set during callback invocation; calling this function after forwarding the message or while not in a callback is undefined behavior \\
   \hline
   \lstinline^vector<group> joined_groups()^ & Returns all subscribed groups \\
   \hline
   \\
   \multicolumn{2}{l}{\textbf{Modifiers}\vspace{3pt}} \\
+  \hline
+  \lstinline^quit(uint32_t reason = normal)^ & Finishes execution of this actor \\
   \hline
   \lstinline^void trap_exit(bool enabled)^ & Enables or disables trapping of exit messages \\
   \hline
@@ -53,7 +55,7 @@ class local_actor;
   \hline
   \lstinline^void on_sync_timeout(auto fun)^ & Sets a handler, i.e., a functor taking no arguments, for \lstinline^timed_sync_send^ timeout messages (default action is to kill the actor for reason \lstinline^unhandled_sync_timeout^) \\
   \hline
-  \lstinline^void monitor(actor whom)^ & Adds a unidirectional monitor to \lstinline^whom^ (see Section \ref{Sec::Management::Monitors}) \\
+  \lstinline^void monitor(actor whom)^ & Unidirectionally monitors \lstinline^whom^ (see Section \ref{Sec::Management::Monitors}) \\
   \hline
   \lstinline^void demonitor(actor whom)^ & Removes a monitor from \lstinline^whom^ \\
   \hline

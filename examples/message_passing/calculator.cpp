@@ -25,8 +25,8 @@ void blocking_calculator(blocking_actor* self) {
     [](minus_atom, int a, int b) {
       return a - b;
     },
-    others() >> [=] {
-      cout << "unexpected: " << to_string(self->last_dequeued()) << endl;
+    others >> [=] {
+      cout << "unexpected: " << to_string(self->current_message()) << endl;
     }
   );
 }
@@ -40,8 +40,8 @@ behavior calculator(event_based_actor* self) {
     [](minus_atom, int a, int b) {
       return a - b;
     },
-    others() >> [=] {
-      cout << "unexpected: " << to_string(self->last_dequeued()) << endl;
+    others >> [=] {
+      cout << "unexpected: " << to_string(self->current_message()) << endl;
     }
   };
 }

@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_ABSTRACT_TUPLE_HPP
-#define CAF_ABSTRACT_TUPLE_HPP
+#ifndef CAF_DETAIL_MESSAGE_DATA_HPP
+#define CAF_DETAIL_MESSAGE_DATA_HPP
 
 #include <string>
 #include <iterator>
@@ -31,84 +31,105 @@
 #include "caf/uniform_type_info.hpp"
 
 #include "caf/detail/type_list.hpp"
-#include "caf/detail/message_iterator.hpp"
 
 namespace caf {
 namespace detail {
 
 class message_data : public ref_counted {
-
-  using super = ref_counted;
-
  public:
+  message_data() = default;
+  message_data(const message_data&) = default;
+  ~message_data();
 
-  message_data(bool dynamically_typed);
-  message_data(const message_data& other);
+  /****************************************************************************
+   *                                modifiers                                 *
+   ****************************************************************************/
 
-  // mutators
   virtual void* mutable_at(size_t pos) = 0;
-  virtual void* mutable_native_data();
 
-  // accessors
-  virtual size_t size() const = 0;
-  virtual message_data* copy() const = 0;
-  virtual const void* at(size_t pos) const = 0;
-  virtual const uniform_type_info* type_at(size_t pos) const = 0;
-  virtual const std::string* tuple_type_names() const = 0;
+  /****************************************************************************
+   *                                observers                                 *
+   ****************************************************************************/
 
-  // returns either tdata<...> object or nullptr (default) if tuple
-  // is not a 'native' implementation
-  virtual const void* native_data() const;
+  // computes "@<>+..." formatted type name
+  std::string tuple_type_names() const;
 
-  // Identifies the type of the implementation.
-  // A statically typed tuple implementation can use some optimizations,
-  // e.g., "impl_type() == statically_typed" implies that type_token()
-  // identifies all possible instances of a given tuple implementation
-  inline bool dynamically_typed() const { return m_is_dynamic; }
-
-  // uniquely identifies this category (element types) of messages
-  // override this member function only if impl_type() == statically_typed
-  // (default returns &typeid(void))
-  virtual const std::type_info* type_token() const;
-
+  // compares each element using uniform_type_info objects
   bool equals(const message_data& other) const;
 
-  using const_iterator = message_iterator;
+  virtual size_t size() const = 0;
 
-  inline const_iterator begin() const {
-    return {this};
-  }
-  inline const_iterator cbegin() const {
-    return {this};
-  }
+  virtual const void* at(size_t pos) const = 0;
 
-  inline const_iterator end() const {
-    return {this, size()};
-  }
-  inline const_iterator cend() const {
-    return {this, size()};
-  }
+  // Tries to match element at position `pos` to given RTTI.
+  virtual bool match_element(size_t pos, uint16_t typenr,
+                             const std::type_info* rtti) const = 0;
 
-  class ptr {
+  virtual uint32_t type_token() const = 0;
 
+  virtual const char* uniform_name_at(size_t pos) const = 0;
+
+  virtual uint16_t type_nr_at(size_t pos) const = 0;
+
+  /****************************************************************************
+   *                               nested types                               *
+   ****************************************************************************/
+
+  class cow_ptr {
    public:
+    cow_ptr() = default;
+    cow_ptr(cow_ptr&&) = default;
+    cow_ptr(const cow_ptr&) = default;
+    cow_ptr& operator=(cow_ptr&&) = default;
+    cow_ptr& operator=(const cow_ptr&) = default;
 
-    ptr() = default;
-    ptr(ptr&&) = default;
-    ptr(const ptr&) = default;
-    ptr& operator=(ptr&&) = default;
-    ptr& operator=(const ptr&) = default;
+    template <class T>
+    cow_ptr(intrusive_ptr<T> p) : m_ptr(std::move(p)) {
+      // nop
+    }
 
-    inline explicit ptr(message_data* p) : m_ptr(p) {}
+    inline cow_ptr(message_data* ptr, bool add_ref) : m_ptr(ptr, add_ref) {
+      // nop
+    }
 
-    inline void detach() { static_cast<void>(get_detached()); }
+    /**************************************************************************
+     *                               modifiers                                *
+     **************************************************************************/
 
-    inline message_data* operator->() { return get_detached(); }
-    inline message_data& operator*() { return *get_detached(); }
-    inline const message_data* operator->() const { return m_ptr.get(); }
-    inline const message_data& operator*() const { return *m_ptr.get(); }
-    inline void swap(ptr& other) { m_ptr.swap(other.m_ptr); }
-    inline void reset(message_data* p = nullptr) { m_ptr.reset(p); }
+    inline void swap(cow_ptr& other) {
+      m_ptr.swap(other.m_ptr);
+    }
+
+    inline void reset(message_data* p = nullptr, bool add_ref = true) {
+      m_ptr.reset(p, add_ref);
+    }
+
+    inline message_data* release() {
+      return m_ptr.release();
+    }
+
+    inline void detach() {
+      static_cast<void>(get_detached());
+    }
+
+    inline message_data* operator->() {
+      return get_detached();
+    }
+
+    inline message_data& operator*() {
+      return *get_detached();
+    }
+    /**************************************************************************
+     *                               observers                                *
+     **************************************************************************/
+
+    inline const message_data* operator->() const {
+      return m_ptr.get();
+    }
+
+    inline const message_data& operator*() const {
+      return *m_ptr.get();
+    }
 
     inline explicit operator bool() const {
       return static_cast<bool>(m_ptr);
@@ -119,22 +140,14 @@ class message_data : public ref_counted {
     }
 
    private:
-
     message_data* get_detached();
-
     intrusive_ptr<message_data> m_ptr;
-
   };
 
- private:
-
-  bool m_is_dynamic;
-
+  virtual cow_ptr copy() const = 0;
 };
-
-std::string get_tuple_type_names(const detail::message_data&);
 
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_ABSTRACT_TUPLE_HPP
+#endif // CAF_DETAIL_MESSAGE_DATA_HPP

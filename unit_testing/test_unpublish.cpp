@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -38,44 +38,45 @@ class dummy : public event_based_actor {
   }
   behavior make_behavior() override {
     return {
-      others() >> CAF_UNEXPECTED_MSG_CB(this)
+      others >> CAF_UNEXPECTED_MSG_CB(this)
     };
   }
 };
 
-uint16_t publish_at_some_port(uint16_t first_port, actor whom) {
-  auto port = first_port;
-  for (;;) {
-    try {
-      io::publish(whom, port);
-      return port;
-    }
-    catch (bind_failure&) {
-      // try next port
-      ++port;
-    }
+void test_invalid_unpublish(const actor& published, uint16_t port) {
+  auto d = spawn<dummy>();
+  io::unpublish(d, port);
+  auto ra = io::remote_actor("127.0.0.1", port);
+  CAF_CHECK(ra != d);
+  CAF_CHECK(ra == published);
+  anon_send_exit(d, exit_reason::user_shutdown);
+}
+
+void test_unpublish() {
+  auto d = spawn<dummy>();
+  auto port = io::publish(d, 0);
+  CAF_CHECKPOINT();
+  test_invalid_unpublish(d, port);
+  CAF_CHECKPOINT();
+  io::unpublish(d, port);
+  CAF_CHECKPOINT();
+  // must fail now
+  try {
+    io::remote_actor("127.0.0.1", port);
+    CAF_FAILURE("unexpected: remote actor succeeded!");
+  } catch (network_error&) {
+    CAF_CHECKPOINT();
   }
+  anon_send_exit(d, exit_reason::user_shutdown);
 }
 
 } // namespace <anonymous>
 
 int main() {
   CAF_TEST(test_unpublish);
-  auto d = spawn<dummy>();
-  auto port = publish_at_some_port(4242, d);
-  std::this_thread::sleep_for(std::chrono::milliseconds(50));
-  io::unpublish(d, port);
-  // must fail now
-  try {
-    auto oops = io::remote_actor("127.0.0.1", port);
-    CAF_FAILURE("unexpected: remote actor succeeded!");
-  } catch (network_error&) {
-    CAF_CHECKPOINT();
-  }
-  anon_send_exit(d, exit_reason::user_shutdown);
-  d = invalid_actor;
+  test_unpublish();
   await_all_actors_done();
   shutdown();
-  CAF_CHECK_EQUAL(s_dtor_called.load(), 1);
+  CAF_CHECK_EQUAL(s_dtor_called.load(), 2);
   return CAF_TEST_RESULT();
 }

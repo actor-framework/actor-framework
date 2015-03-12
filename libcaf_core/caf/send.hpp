@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -38,90 +38,102 @@ namespace caf {
  */
 template <class... Ts>
 void send_as(const actor& from, message_priority prio,
-             const channel& to, Ts&&... vs) {
+             const channel& to, Ts&&... xs) {
   if (!to) {
     return;
   }
   message_id mid;
   to->enqueue(from.address(),
               prio == message_priority::high ? mid.with_high_priority() : mid,
-              make_message(std::forward<Ts>(vs)...), nullptr);
+              make_message(std::forward<Ts>(xs)...), nullptr);
 }
 
 /**
  * Sends `to` a message under the identity of `from`.
  */
 template <class... Ts>
-void send_as(const actor& from, const channel& to, Ts&&... vs) {
-  send_as(from, message_priority::normal, to, std::forward<Ts>(vs)...);
+void send_as(const actor& from, const channel& to, Ts&&... xs) {
+  send_as(from, message_priority::normal, to, std::forward<Ts>(xs)...);
 }
 
 /**
  * Sends `to` a message under the identity of `from` with priority `prio`.
  */
-template <class... Rs, class... Ts>
+template <class... Sigs, class... Ts>
 void send_as(const actor& from, message_priority prio,
-             const typed_actor<Rs...>& to, Ts&&... vs) {
-  check_typed_input(to,
-                    detail::type_list<typename detail::implicit_conversions<
-                      typename std::decay<Ts>::type
-                    >::type...>{});
-  send_as(from, prio, actor_cast<channel>(to), std::forward<Ts>(vs)...);
+             const typed_actor<Sigs...>& to, Ts&&... xs) {
+  using token =
+    detail::type_list<
+      typename detail::implicit_conversions<
+        typename std::decay<Ts>::type
+      >::type...>;
+  token tk;
+  check_typed_input(to, tk);
+  send_as(from, prio, actor_cast<channel>(to), std::forward<Ts>(xs)...);
 }
 
 /**
  * Sends `to` a message under the identity of `from`.
  */
-template <class... Rs, class... Ts>
-void send_as(const actor& from, const typed_actor<Rs...>& to, Ts&&... vs) {
-  check_typed_input(to,
-                    detail::type_list<typename detail::implicit_conversions<
-                      typename std::decay<Ts>::type
-                    >::type...>{});
+template <class... Sigs, class... Ts>
+void send_as(const actor& from, const typed_actor<Sigs...>& to, Ts&&... xs) {
+  using token =
+    detail::type_list<
+      typename detail::implicit_conversions<
+        typename std::decay<Ts>::type
+      >::type...>;
+  token tk;
+  check_typed_input(to, tk);
   send_as(from, message_priority::normal,
-          actor_cast<channel>(to), std::forward<Ts>(vs)...);
+          actor_cast<channel>(to), std::forward<Ts>(xs)...);
 }
 
 /**
  * Anonymously sends `to` a message with priority `prio`.
  */
 template <class... Ts>
-void anon_send(message_priority prio, const channel& to, Ts&&... vs) {
-  send_as(invalid_actor, prio, to, std::forward<Ts>(vs)...);
+void anon_send(message_priority prio, const channel& to, Ts&&... xs) {
+  send_as(invalid_actor, prio, to, std::forward<Ts>(xs)...);
 }
 
 /**
  * Anonymously sends `to` a message.
  */
 template <class... Ts>
-void anon_send(const channel& to, Ts&&... vs) {
-  send_as(invalid_actor, message_priority::normal, to, std::forward<Ts>(vs)...);
+void anon_send(const channel& to, Ts&&... xs) {
+  send_as(invalid_actor, message_priority::normal, to, std::forward<Ts>(xs)...);
 }
 
 /**
  * Anonymously sends `to` a message with priority `prio`.
  */
-template <class... Rs, class... Ts>
-void anon_send(message_priority prio, const typed_actor<Rs...>& to,
-               Ts&&... vs) {
-  check_typed_input(to,
-                    detail::type_list<typename detail::implicit_conversions<
-                      typename std::decay<Ts>::type
-                    >::type...>{});
-  anon_send(prio, actor_cast<channel>(to), std::forward<Ts>(vs)...);
+template <class... Sigs, class... Ts>
+void anon_send(message_priority prio, const typed_actor<Sigs...>& to,
+               Ts&&... xs) {
+  using token =
+    detail::type_list<
+      typename detail::implicit_conversions<
+        typename std::decay<Ts>::type
+      >::type...>;
+  token tk;
+  check_typed_input(to, tk);
+  anon_send(prio, actor_cast<channel>(to), std::forward<Ts>(xs)...);
 }
 
 /**
  * Anonymously sends `to` a message.
  */
-template <class... Rs, class... Ts>
-void anon_send(const typed_actor<Rs...>& to, Ts&&... vs) {
-  check_typed_input(to,
-                    detail::type_list<typename detail::implicit_conversions<
-                      typename std::decay<Ts>::type
-                    >::type...>{});
+template <class... Sigs, class... Ts>
+void anon_send(const typed_actor<Sigs...>& to, Ts&&... xs) {
+  using token =
+    detail::type_list<
+      typename detail::implicit_conversions<
+        typename std::decay<Ts>::type
+      >::type...>;
+  token tk;
+  check_typed_input(to, tk);
   anon_send(message_priority::normal, actor_cast<channel>(to),
-            std::forward<Ts>(vs)...);
+            std::forward<Ts>(xs)...);
 }
 
 /**
@@ -173,7 +185,6 @@ inline void anon_send_tuple(const channel& to, message_priority prio,
                             message msg) {
   send_as(invalid_actor, prio, to, std::move(msg));
 }
-
 // </backward_compatibility>
 
 } // namespace caf

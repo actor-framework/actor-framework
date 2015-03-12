@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -26,7 +26,6 @@
 #include "caf/unit.hpp"
 #include "caf/actor.hpp"
 #include "caf/group.hpp"
-#include "caf/match.hpp"
 #include "caf/spawn.hpp"
 #include "caf/config.hpp"
 #include "caf/either.hpp"
@@ -46,8 +45,8 @@
 #include "caf/spawn_fwd.hpp"
 #include "caf/to_string.hpp"
 #include "caf/actor_addr.hpp"
+#include "caf/actor_pool.hpp"
 #include "caf/attachable.hpp"
-#include "caf/match_expr.hpp"
 #include "caf/message_id.hpp"
 #include "caf/replies_to.hpp"
 #include "caf/serializer.hpp"

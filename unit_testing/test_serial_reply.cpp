@@ -10,9 +10,9 @@ using namespace caf;
 
 void test_serial_reply() {
   auto mirror_behavior = [=](event_based_actor* self) {
-    self->become(others() >> [=]() -> message {
-      CAF_PRINT("return self->last_dequeued()");
-      return self->last_dequeued();
+    self->become(others >> [=]() -> message {
+      CAF_PRINT("return self->current_message()");
+      return self->current_message();
     });
   };
   auto master = spawn([=](event_based_actor* self) {
@@ -58,12 +58,12 @@ void test_serial_reply() {
   );
   { // lifetime scope of self
     scoped_actor self;
-    cout << "ID of main: " << self->id() << endl;
+    CAF_PRINT("ID of main: " << self->id());
     self->sync_send(master, atom("hi there")).await(
       on(atom("hiho")) >> [] {
         CAF_CHECKPOINT();
       },
-      others() >> CAF_UNEXPECTED_MSG_CB_REF(self)
+      others >> CAF_UNEXPECTED_MSG_CB_REF(self)
     );
     self->send_exit(master, exit_reason::user_shutdown);
   }
@@ -73,5 +73,6 @@ void test_serial_reply() {
 int main() {
   CAF_TEST(test_serial_reply);
   test_serial_reply();
+  shutdown();
   return CAF_TEST_RESULT();
 }

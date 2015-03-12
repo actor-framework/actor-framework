@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -26,13 +26,11 @@ namespace detail {
 template <class T>
 struct wrapped {
   using type = T;
-
 };
 
 template <class T>
 struct wrapped<wrapped<T>> {
   using type = typename wrapped<T>::type;
-
 };
 
 } // namespace detail

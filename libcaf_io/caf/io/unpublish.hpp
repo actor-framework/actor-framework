@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -32,12 +32,12 @@ namespace io {
 void unpublish_impl(const actor_addr& whom, uint16_t port, bool block_caller);
 
 /**
- * Unpublishes `whom` by closing `port`.
+ * Unpublishes `whom` by closing `port` or all assigned ports if `port == 0`.
  * @param whom Actor that should be unpublished at `port`.
  * @param port TCP port.
  */
 template <class Handle>
-void unpublish(const Handle& whom, uint16_t port) {
+void unpublish(const Handle& whom, uint16_t port = 0) {
   if (!whom) {
     return;
   }

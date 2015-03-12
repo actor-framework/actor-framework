@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OBJECT_ARRAY_HPP
-#define CAF_OBJECT_ARRAY_HPP
+#ifndef CAF_MESSAGE_BUILDER_HPP
+#define CAF_MESSAGE_BUILDER_HPP
 
 #include <vector>
 
@@ -26,19 +26,18 @@
 #include "caf/message_handler.hpp"
 #include "caf/uniform_type_info.hpp"
 
-#include "caf/detail/message_data.hpp"
-
 namespace caf {
 
 /**
- * Provides a convenient interface to create a {@link message}
+ * Provides a convenient interface for createing `message` objects
  * from a series of values using the member function `append`.
  */
 class message_builder {
  public:
-  message_builder();
   message_builder(const message_builder&) = delete;
   message_builder& operator=(const message_builder&) = delete;
+
+  message_builder();
   ~message_builder();
 
   /**
@@ -51,7 +50,7 @@ class message_builder {
   }
 
   /**
-   * Adds `what` to the elements of the internal buffer.
+   * Adds `what` to the elements of the buffer.
    */
   message_builder& append(uniform_value what);
 
@@ -72,43 +71,58 @@ class message_builder {
   }
 
   /**
-   * Adds `what` to the elements of the internal buffer.
+   * Adds `x` to the elements of the buffer.
    */
   template <class T>
-  message_builder& append(T what) {
-    return append_impl<T>(std::move(what));
+  message_builder& append(T x) {
+    return append_impl<T>(std::move(x));
   }
 
   /**
-   * Converts the internal buffer to an actual message object.
-   *
-   * It is worth mentioning that a call to `to_message` does neither
-   * invalidate the `message_builder` instance nor clears the internal
-   * buffer. However, calling any non-const member function afterwards
-   * can cause the `message_builder` to detach its data, i.e.,
-   * copy it if there is more than one reference to it.
+   * Converts the buffer to an actual message object without
+   * invalidating this message builder (nor clearing it).
    */
-  message to_message();
+  message to_message() const;
 
   /**
-   * Convenience function for `to_message().apply(handler).
+   * Converts the buffer to an actual message object and transfers
+   * ownership of the data to it, leaving this object in an invalid state.
+   * @warning Calling *any*  member function on this object afterwards
+   *          is undefined behavior (dereferencing a `nullptr`)
    */
-  inline optional<message> apply(message_handler handler) {
-    return to_message().apply(std::move(handler));
+  message move_to_message();
+
+  /**
+   * @copydoc message::extract
+   */
+  inline message extract(message_handler f) const {
+    return to_message().extract(f);
   }
 
   /**
-   * Removes all elements from the internal buffer.
+   * @copydoc message::extract_opts
+   */
+  inline message::cli_res extract_opts(std::vector<message::cli_arg> xs) const {
+    return to_message().extract_opts(std::move(xs));
+  }
+
+  /**
+   * @copydoc message::apply
+   */
+  optional<message> apply(message_handler handler);
+
+  /**
+   * Removes all elements from the buffer.
    */
   void clear();
 
   /**
-   * Returns whether the internal buffer is empty.
+   * Returns whether the buffer is empty.
    */
   bool empty() const;
 
   /**
-   * Returns the number of elements in the internal buffer.
+   * Returns the number of elements in the buffer.
    */
   size_t size() const;
 
@@ -117,7 +131,9 @@ class message_builder {
 
   template <class T>
   message_builder&
-  append_impl(typename detail::implicit_conversions<T>::type what) {
+  append_impl(typename unbox_message_element<
+                typename detail::implicit_conversions<T>::type
+              >::type what) {
     using type = decltype(what);
     auto uti = uniform_typeid<type>();
     auto uval = uti->create();
@@ -136,4 +152,4 @@ class message_builder {
 
 } // namespace caf
 
-#endif // CAF_OBJECT_ARRAY_HPP
+#endif // CAF_MESSAGE_BUILDER_HPP

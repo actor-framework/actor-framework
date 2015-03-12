@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -32,7 +32,7 @@ namespace io {
 namespace network {
 
 multiplexer::~multiplexer() {
-  // nop
+  CAF_LOG_TRACE("");
 }
 
 boost::asio::io_service* pimpl() {
@@ -40,6 +40,7 @@ boost::asio::io_service* pimpl() {
 }
 
 multiplexer_ptr multiplexer::make() {
+  CAF_LOGF_TRACE("");
   return multiplexer_ptr{new caf_multiplexer_impl};
 }
 

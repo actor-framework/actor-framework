@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -45,6 +45,42 @@ void blocking_actor::functor_based::create(blocking_actor*, act_fun fun) {
 void blocking_actor::functor_based::act() {
   CAF_LOG_TRACE("");
   m_act(this);
+}
+
+void blocking_actor::functor_based::cleanup(uint32_t reason) {
+  m_act = nullptr;
+  blocking_actor::cleanup(reason);
+}
+
+void blocking_actor::initialize() {
+  // nop
+}
+
+void blocking_actor::dequeue(behavior& bhvr, message_id mid) {
+  // try to dequeue from cache first
+  if (invoke_from_cache(bhvr, mid)) {
+    return;
+  }
+  // requesting an invalid timeout will reset our active timeout
+  auto timeout_id = request_timeout(bhvr.timeout());
+  // read incoming messages
+  for (;;) {
+    await_data();
+    auto msg = next_message();
+    switch (invoke_message(msg, bhvr, mid)) {
+      case im_success:
+        reset_timeout(timeout_id);
+        return;
+      case im_skipped:
+        if (msg) {
+          push_to_cache(std::move(msg));
+        }
+        break;
+      default:
+        // delete msg
+        break;
+    }
+  }
 }
 
 } // namespace caf

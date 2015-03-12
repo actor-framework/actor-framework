@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -81,6 +81,11 @@ class actor_namespace {
   /**
    * Returns all proxies for `node`.
    */
+  std::vector<actor_proxy_ptr> get_all();
+
+  /**
+   * Returns all proxies for `node`.
+   */
   std::vector<actor_proxy_ptr> get_all(const key_type& node);
 
   /**
@@ -109,6 +114,11 @@ class actor_namespace {
    * Queries whether there are any proxies left.
    */
   bool empty() const;
+
+  /**
+   * Deletes all proxies.
+   */
+  void clear();
 
  private:
   backend& m_backend;

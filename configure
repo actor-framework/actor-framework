@@ -47,13 +47,11 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --build-static-only         build as static library only
     --more-warnings             enables most warnings
     --no-compiler-check         disable compiler version check
+    --no-auto-libc++            do not automatically enable libc++ for Clang
     --warnings-as-errors        enables -Werror
 
   Installation Directories:
     --prefix=PREFIX             installation directory [/usr/local]
-
-  Add Optional Features:
-    --enable-perftools          build with Google perftools
 
   Remove Standard Features (even if all dependencies are available):
     --no-memory-management      build without memory management
@@ -138,13 +136,13 @@ configure ()
     if [ -n "$3" ]; then
         append_cache_entry EXECUTABLE_OUTPUT_PATH PATH "$3"
     else
-        append_cache_entry EXECUTABLE_OUTPUT_PATH PATH "$absolute_builddir/bin"
+        append_cache_entry EXECUTABLE_OUTPUT_PATH PATH "$workdir/bin"
     fi
 
     if [ -n "$4" ]; then
         append_cache_entry LIBRARY_OUTPUT_PATH PATH "$4"
     else
-        append_cache_entry LIBRARY_OUTPUT_PATH PATH "$absolute_builddir/lib"
+        append_cache_entry LIBRARY_OUTPUT_PATH PATH "$workdir/lib"
     fi
 
     if [ -d "$workdir" ]; then
@@ -211,32 +209,20 @@ while [ $# -ne 0 ]; do
         --with-runtime-checks)
             append_cache_entry CAF_ENABLE_RUNTIME_CHECKS BOOL yes
             ;;
-        --enable-debug)
-            echo "*** warning: --enable-debug is deprecated, please use --with-runtime-checks instead"
-            append_cache_entry CAF_ENABLE_RUNTIME_CHECKS BOOL yes
-            ;;
-        --enable-address-sanitizer)
-            echo "*** warning: --enable-address-sanitizer is deprecated, please use --with-address-sanitizer instead"
-            append_cache_entry ENABLE_ADDRESS_SANITIZER BOOL yes
-            ;;
         --with-address-sanitizer)
             append_cache_entry ENABLE_ADDRESS_SANITIZER BOOL yes
             ;;
         --no-memory-management)
             append_cache_entry CAF_NO_MEM_MANAGEMENT BOOL yes
             ;;
-        --without-memory-management)
-            echo "*** WARNING: --without-memory-management is deprecated"
-            append_cache_entry DISABLE_MEM_MANAGEMENT BOOL yes
-            ;;
-        --standalone-build)
-            echo "*** WARNING: --standalone-build is deprecated"
-            ;;
         --more-warnings)
             append_cache_entry MORE_WARNINGS BOOL yes
             ;;
         --no-compiler-check)
             append_cache_entry NO_COMPILER_CHECK BOOL yes
+            ;;
+        --no-auto-libc++)
+            append_cache_entry NO_AUTO_LIBCPP BOOL yes
             ;;
         --warnings-as-errors)
             append_cache_entry CXX_WARNINGS_AS_ERROS BOOL yes
@@ -362,7 +348,7 @@ if [ -n "$dualbuild" ]; then
     fi
 
     for i in gcc clang; do
-        compiler=`eval echo \$$i`
+        eval "compiler=\$$i"
         configure $compiler $i "" "" $CMakeGenerator
     done
 else

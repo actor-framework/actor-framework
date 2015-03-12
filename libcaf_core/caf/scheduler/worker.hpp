@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -54,8 +54,7 @@ class worker : public execution_unit {
     CAF_REQUIRE(m_this_thread.get_id() == std::thread::id{});
     auto this_worker = this;
     m_this_thread = std::thread{[this_worker] {
-      CAF_LOGC_TRACE("caf::scheduler::worker", "start$lambda",
-                     "id = " << this_worker->id());
+      CAF_LOGF_TRACE("id = " << this_worker->id());
       this_worker->run();
     }};
   }
@@ -126,25 +125,31 @@ class worker : public execution_unit {
       CAF_REQUIRE(job != nullptr);
       CAF_LOG_DEBUG("resume actor " << id_of(job));
       CAF_PUSH_AID_FROM_PTR(dynamic_cast<abstract_actor*>(job));
+      m_policy.before_resume(this, job);
       switch (job->resume(this, m_max_throughput)) {
         case resumable::resume_later: {
+          m_policy.after_resume(this, job);
           m_policy.resume_job_later(this, job);
           break;
         }
         case resumable::done: {
+          m_policy.after_resume(this, job);
+          m_policy.after_completion(this, job);
           job->detach_from_scheduler();
           break;
         }
         case resumable::awaiting_message: {
           // resumable will be enqueued again later
+          m_policy.after_resume(this, job);
           break;
         }
         case resumable::shutdown_execution_unit: {
+          m_policy.after_resume(this, job);
+          m_policy.after_completion(this, job);
           m_policy.before_shutdown(this);
           return;
         }
       }
-      m_policy.after_resume(this);
     }
   }
   // number of messages each actor is allowed to consume per resume

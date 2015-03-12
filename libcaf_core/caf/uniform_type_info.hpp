@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -48,11 +48,10 @@ struct uniform_value_t {
   void* val;
   virtual uniform_value copy() = 0;
   virtual ~uniform_value_t();
-
 };
 
 template <class T, class... Ts>
-uniform_value make_uniform_value(const uniform_type_info* ti, Ts&&... args) {
+uniform_value make_uniform_value(const uniform_type_info* uti, Ts&&... xs) {
   struct container : uniform_value_t {
     T value;
     container(const uniform_type_info* ptr, T arg) : value(std::move(arg)) {
@@ -62,9 +61,8 @@ uniform_value make_uniform_value(const uniform_type_info* ti, Ts&&... args) {
     uniform_value copy() override {
       return uniform_value{new container(ti, value)};
     }
-
   };
-  return uniform_value{new container(ti, T(std::forward<Ts>(args)...))};
+  return uniform_value{new container(uti, T(std::forward<Ts>(xs)...))};
 }
 
 /**
@@ -158,9 +156,9 @@ uniform_value make_uniform_value(const uniform_type_info* ti, Ts&&... args) {
  *   \@_::foo
  */
 class uniform_type_info {
-
+ public:
   friend bool operator==(const uniform_type_info& lhs,
-               const uniform_type_info& rhs);
+                         const uniform_type_info& rhs);
 
   // disable copy and move constructors
   uniform_type_info(uniform_type_info&&) = delete;
@@ -169,8 +167,6 @@ class uniform_type_info {
   // disable assignment operators
   uniform_type_info& operator=(uniform_type_info&&) = delete;
   uniform_type_info& operator=(const uniform_type_info&) = delete;
-
- public:
 
   virtual ~uniform_type_info();
 
@@ -254,9 +250,15 @@ class uniform_type_info {
    */
   virtual message as_message(void* instance) const = 0;
 
- protected:
+  /**
+   * Returns a unique number for builtin types or 0.
+   */
+  uint16_t type_nr() const {
+    return m_type_nr;
+  }
 
-  uniform_type_info() = default;
+ protected:
+  uniform_type_info(uint16_t typenr = 0);
 
   template <class T>
   uniform_value create_impl(const uniform_value& other) const {
@@ -268,14 +270,14 @@ class uniform_type_info {
     return make_uniform_value<T>(this);
   }
 
+ private:
+  uint16_t m_type_nr;
 };
-
-using uniform_type_info_ptr = std::unique_ptr<uniform_type_info>;
 
 /**
  * @relates uniform_type_info
  */
-
+using uniform_type_info_ptr = std::unique_ptr<uniform_type_info>;
 
 /**
  * @relates uniform_type_info
@@ -292,38 +294,6 @@ inline bool operator==(const uniform_type_info& lhs,
 inline bool operator!=(const uniform_type_info& lhs,
              const uniform_type_info& rhs) {
   return !(lhs == rhs);
-}
-
-/**
- * @relates uniform_type_info
- */
-inline bool operator==(const uniform_type_info& lhs,
-                       const std::type_info& rhs) {
-  return lhs.equal_to(rhs);
-}
-
-/**
- * @relates uniform_type_info
- */
-inline bool operator!=(const uniform_type_info& lhs,
-                       const std::type_info& rhs) {
-  return !(lhs.equal_to(rhs));
-}
-
-/**
- * @relates uniform_type_info
- */
-inline bool operator==(const std::type_info& lhs,
-                       const uniform_type_info& rhs) {
-  return rhs.equal_to(lhs);
-}
-
-/**
- * @relates uniform_type_info
- */
-inline bool operator!=(const std::type_info& lhs,
-                       const uniform_type_info& rhs) {
-  return !(rhs.equal_to(lhs));
 }
 
 } // namespace caf

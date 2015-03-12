@@ -104,5 +104,6 @@ void test_fixed_stack_actor() {
 int main() {
   CAF_TEST(test_fixed_stack_actor);
   test_fixed_stack_actor();
+  shutdown();
   return CAF_TEST_RESULT();
 }

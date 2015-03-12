@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -56,6 +56,10 @@ void actor::swap(actor& other) {
 
 actor_addr actor::address() const {
   return m_ptr ? m_ptr->address() : actor_addr{};
+}
+
+bool actor::is_remote() const {
+  return m_ptr ? m_ptr->is_remote() : false;
 }
 
 actor_id actor::id() const {

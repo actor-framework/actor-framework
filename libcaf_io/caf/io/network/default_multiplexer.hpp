@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -30,8 +30,6 @@
 #include "caf/extend.hpp"
 #include "caf/exception.hpp"
 #include "caf/ref_counted.hpp"
-
-#include "caf/mixin/memory_cached.hpp"
 
 #include "caf/io/fwd.hpp"
 #include "caf/io/accept_handle.hpp"
@@ -61,7 +59,7 @@
 #   include <sys/socket.h>
 #endif
 
-// poll vs epoll backend
+// poll xs epoll backend
 #if !defined(CAF_LINUX) || defined(CAF_POLL_IMPL) // poll() multiplexer
 # define CAF_POLL_MULTIPLEXER
 # ifndef CAF_WINDOWS
@@ -107,7 +105,7 @@ namespace network {
   constexpr int ec_interrupted_syscall = EINTR;
 #endif
 
-// poll vs epoll backend
+// poll xs epoll backend
 #if !defined(CAF_LINUX) || defined(CAF_POLL_IMPL) // poll() multiplexer
 # ifdef CAF_WINDOWS
     // From the MSDN: If the POLLPRI flag is set on a socket for the Microsoft
@@ -152,12 +150,6 @@ void nonblocking(native_socket fd, bool new_value);
  * and the latter is the write handle.
  */
 std::pair<native_socket, native_socket> create_pipe();
-
-/**
- * Throws network_error with given error message and
- * the platform-specific error code if `add_errno` is `true`.
- */
-void throw_io_failure(const char* what, bool add_errno = true);
 
 /**
  * Returns true if `fd` is configured as nodelay socket.
@@ -223,6 +215,11 @@ class event_handler {
   virtual void removed_from_loop(operation op) = 0;
 
   /**
+   * Returns the native socket handle for this handler.
+   */
+  virtual native_socket fd() const = 0;
+
+  /**
    * Returns the `multiplexer` this acceptor belongs to.
    */
   inline default_multiplexer& backend() {
@@ -242,11 +239,6 @@ class event_handler {
   inline void eventbf(int value) {
     m_eventbf = value;
   }
-
-  /**
-   * Returns the native socket handle for this handler.
-   */
-  virtual native_socket fd() const = 0;
 
  protected:
   default_multiplexer& m_backend;
@@ -294,11 +286,9 @@ class default_socket {
 using default_socket_acceptor = default_socket;
 
 class default_multiplexer : public multiplexer {
-
+ public:
   friend class io::middleman; // disambiguate reference
   friend class supervisor;
-
- public:
 
   struct event {
     native_socket fd;
@@ -356,7 +346,6 @@ class default_multiplexer : public multiplexer {
   void del(operation op, native_socket fd, event_handler* ptr);
 
  private:
-
   // platform-dependent additional initialization code
   void init();
 
@@ -368,9 +357,8 @@ class default_multiplexer : public multiplexer {
     // read handle which is only registered for reading
     auto old_bf = ptr ? ptr->eventbf() : input_mask;
     //auto bf = fun(op, old_bf);
-    CAF_LOG_TRACE(CAF_TARG(op, static_cast<int>)
-             << ", " << CAF_ARG(fd) << ", " CAF_ARG(ptr)
-             << ", " << CAF_ARG(old_bf));
+    CAF_LOG_TRACE(CAF_TSARG(op) << ", " << CAF_ARG(fd) << ", " CAF_ARG(ptr)
+                  << ", " << CAF_ARG(old_bf));
     auto last = m_events.end();
     auto i = std::lower_bound(m_events.begin(), last, fd, event_less{});
     if (i != last && i->fd == fd) {
@@ -395,6 +383,8 @@ class default_multiplexer : public multiplexer {
         CAF_LOG_DEBUG("event has no effect (discarded): "
                  << CAF_ARG(bf) << ", " << CAF_ARG(old_bf));
       } else {
+        CAF_LOG_DEBUG("added handler " << ptr << " on fd " << fd << " for "
+                      << to_string(op) << " operations");
         m_events.insert(i, event{fd, bf, ptr});
       }
     }
@@ -417,21 +407,18 @@ class default_multiplexer : public multiplexer {
   std::vector<event> m_events; // always sorted by .fd
   multiplexer_poll_shadow_data m_shadow;
   std::pair<native_socket, native_socket> m_pipe;
-
-  std::thread::id m_tid;
-
 };
 
 default_multiplexer& get_multiplexer_singleton();
 
 template <class T>
-inline connection_handle conn_hdl_from_socket(const T& sock) {
+connection_handle conn_hdl_from_socket(const T& sock) {
   return connection_handle::from_int(
         int64_from_native_socket(sock.native_handle()));
 }
 
 template <class T>
-inline accept_handle accept_hdl_from_socket(const T& sock) {
+accept_handle accept_hdl_from_socket(const T& sock) {
   return accept_handle::from_int(
         int64_from_native_socket(sock.native_handle()));
 }
@@ -463,16 +450,9 @@ class stream : public event_handler {
   }
 
   /**
-   * Returns the `multiplexer` this stream belongs to.
-   */
-  inline default_multiplexer& backend() {
-    return static_cast<default_multiplexer&>(m_sock.backend());
-  }
-
-  /**
    * Returns the IO socket.
    */
-  inline Socket& socket_handle() {
+  Socket& socket_handle() {
     return m_sock;
   }
 
@@ -502,8 +482,7 @@ class stream : public event_handler {
   }
 
   /**
-   * Configures how much data will be provided
-   * for the next `consume` callback.
+   * Configures how much data will be provided for the next `consume` callback.
    * @warning Must not be called outside the IO multiplexers event loop
    *          once the stream has been started.
    */
@@ -514,7 +493,7 @@ class stream : public event_handler {
 
   /**
    * Copies data to the write buffer.
-   * @note Not thread safe.
+   * @warning Not thread safe.
    */
   void write(const void* buf, size_t num_bytes) {
     CAF_LOG_TRACE("num_bytes: " << num_bytes);
@@ -556,12 +535,12 @@ class stream : public event_handler {
   }
 
   void stop_reading() {
-    CAF_LOGM_TRACE("caf::io::network::stream", "");
+    CAF_LOG_TRACE("");
     m_sock.close_read();
     backend().del(operation::read, m_sock.fd(), this);
   }
 
-  void handle_event(operation op) {
+  void handle_event(operation op) override {
     CAF_LOG_TRACE("op = " << static_cast<int>(op));
     switch (op) {
       case operation::read: {
@@ -610,7 +589,6 @@ class stream : public event_handler {
     }
   }
 
- protected:
   native_socket fd() const override {
     return m_sock.fd();
   }
@@ -658,20 +636,20 @@ class stream : public event_handler {
   }
 
   // reading & writing
-  Socket        m_sock;
+  Socket m_sock;
   // reading
-  manager_ptr     m_reader;
-  size_t        m_threshold;
-  size_t        m_collected;
-  size_t        m_max;
+  manager_ptr m_reader;
+  size_t m_threshold;
+  size_t m_collected;
+  size_t m_max;
   receive_policy_flag m_rd_flag;
-  buffer_type     m_rd_buf;
+  buffer_type m_rd_buf;
   // writing
-  manager_ptr     m_writer;
-  bool        m_writing;
-  size_t        m_written;
-  buffer_type     m_wr_buf;
-  buffer_type     m_wr_offline_buf;
+  manager_ptr m_writer;
+  bool m_writing;
+  size_t m_written;
+  buffer_type m_wr_buf;
+  buffer_type m_wr_offline_buf;
 };
 
 /**
@@ -679,9 +657,7 @@ class stream : public event_handler {
  */
 template <class SocketAcceptor>
 class acceptor : public event_handler {
-
  public:
-
   using socket_type = typename SocketAcceptor::socket_type;
 
   /**
@@ -704,7 +680,7 @@ class acceptor : public event_handler {
   /**
    * Returns the IO socket.
    */
-  inline SocketAcceptor& socket_handle() {
+  SocketAcceptor& socket_handle() {
     return m_accept_sock;
   }
 
@@ -712,7 +688,7 @@ class acceptor : public event_handler {
    * Returns the accepted socket. This member function should
    * be called only from the `new_connection` callback.
    */
-  inline socket_type& accepted_socket() {
+  socket_type& accepted_socket() {
     return m_sock;
   }
 
@@ -763,48 +739,32 @@ class acceptor : public event_handler {
   void removed_from_loop(operation op) override {
     CAF_LOG_TRACE("m_accept_sock.fd = " << m_accept_sock.fd()
              << "op = " << static_cast<int>(op));
-    if (op == operation::read) m_mgr.reset();
+    if (op == operation::read) {
+      m_mgr.reset();
+    }
   }
-
- protected:
 
   native_socket fd() const override {
     return m_accept_sock.fd();
   }
 
  private:
-
-  manager_ptr    m_mgr;
+  manager_ptr m_mgr;
   SocketAcceptor m_accept_sock;
-  socket_type    m_sock;
-
+  socket_type m_sock;
 };
 
-native_socket new_ipv4_connection_impl(const std::string&, uint16_t);
+native_socket new_tcp_connection_impl(const std::string&, uint16_t,
+                                      optional<protocol> preferred = none);
 
-default_socket new_ipv4_connection(const std::string& host, uint16_t port);
-
-template <class Socket>
-void ipv4_connect(Socket& sock, const std::string& host, uint16_t port) {
-  sock = new_ipv4_connection(host, port);
-}
+default_socket new_tcp_connection(const std::string& host, uint16_t port);
 
 std::pair<native_socket, uint16_t>
-new_ipv4_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr);
+new_tcp_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr);
 
 std::pair<default_socket_acceptor, uint16_t>
-new_ipv4_acceptor(uint16_t port, const char* addr = nullptr,
-                  bool reuse_addr = false);
-
-template <class SocketAcceptor>
-uint16_t ipv4_bind(SocketAcceptor& sock,
-         uint16_t port,
-         const char* addr = nullptr) {
-  CAF_LOGF_TRACE(CAF_ARG(port));
-  auto acceptor = new_ipv4_acceptor(port, addr);
-  sock = std::move(acceptor.first);
-  return acceptor.second;
-}
+new_tcp_acceptor(uint16_t port, const char* addr = nullptr,
+                 bool reuse_addr = false);
 
 } // namespace network
 } // namespace io

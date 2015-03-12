@@ -18,6 +18,8 @@
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 
+#include "caf/detail/type_nr.hpp"
+
 using std::cout;
 using std::endl;
 
@@ -47,50 +49,54 @@ struct test_struct {
 
 using namespace caf;
 
-bool check_types(const std::set<std::string>& expected) {
+template <class T>
+std::string tostr(T value, std::streamsize fieldwidth = 2) {
+  std::ostringstream oss;
+  oss.width(fieldwidth);
+  oss << value;
+  return oss.str();
+}
+
+bool check_types(const std::map<std::string, uint16_t>& expected) {
   // holds the type names we see at runtime
-  std::set<std::string> found;
+  std::map<std::string, uint16_t> found;
   // fetch all available type names
   auto types = uniform_type_info::instances();
   for (auto tinfo : types) {
-    found.insert(tinfo->name());
+    found.insert(std::make_pair(tinfo->name(), tinfo->type_nr()));
   }
-  // compare the two sets
-  CAF_CHECK_EQUAL(expected.size(), found.size());
-  bool expected_equals_found = false;
-  if (expected.size() == found.size()
-    && std::equal(found.begin(), found.end(), expected.begin())) {
+  // compare the two maps
+  if (expected == found) {
     CAF_CHECKPOINT();
     return true;
   }
   CAF_CHECK(false);
-  if (!expected_equals_found) {
-    std::string(41, ' ');
-    std::ostringstream oss(std::string(41, ' '));
-    oss.seekp(0);
-    oss << "found (" << found.size() << ")";
-    oss.seekp(22);
-    oss << "expected (" << expected.size() << ")";
-    std::string lhs;
-    std::string rhs;
-    CAF_PRINT(oss.str());
-    CAF_PRINT(std::string(41, '-'));
-    auto fi = found.begin();
-    auto fe = found.end();
-    auto ei = expected.begin();
-    auto ee = expected.end();
-    while (fi != fe || ei != ee) {
-      if (fi != fe)
-        lhs = *fi++;
-      else
-        lhs.clear();
-      if (ei != ee)
-        rhs = *ei++;
-      else
-        rhs.clear();
-      lhs.resize(20, ' ');
-      CAF_PRINT(lhs << "| " << rhs);
+  using const_iterator = std::map<std::string, uint16_t>::const_iterator;
+  using std::setw;
+  using std::left;
+  std::ostringstream oss;
+  oss << left << setw(20) << ("found (" + tostr(found.size(), 1) + ")")
+      << "  |  expected (" << expected.size() << ")";
+  CAF_PRINT(oss.str());
+  oss.seekp(0);
+  oss << std::setfill('-') << setw(22) << "" << "|" << setw(22) << "";
+  CAF_PRINT(oss.str());
+  auto fi = found.cbegin();
+  auto fe = found.cend();
+  auto ei = expected.cbegin();
+  auto ee = expected.cend();
+  std::string dummy(20, ' ');
+  auto out = [&](const_iterator& i, const_iterator last) -> std::string {
+    if (i == last) {
+      return dummy;
     }
+    std::ostringstream tmp;
+    tmp << left << setw(16) << i->first << "[" << tostr(i->second) << "]";
+    ++i;
+    return tmp.str();
+  };
+  while (fi != fe || ei != ee) {
+    CAF_PRINT(out(fi, fe) << "  |  " << out(ei, ee));
   }
   return false;
 }
@@ -102,8 +108,13 @@ T& append(T& storage) {
 
 template <class T, typename U, class... Us>
 T& append(T& storage, U&& u, Us&&... us) {
-  storage.insert(std::forward<U>(u));
+  storage.insert(std::make_pair(std::forward<U>(u), uint16_t{0}));
   return append(storage, std::forward<Us>(us)...);
+}
+
+template <class T>
+constexpr uint16_t tnr() {
+  return detail::type_nr<T>::value;
 }
 
 int main() {
@@ -121,39 +132,61 @@ int main() {
     CAF_CHECK(uti != nullptr);
     CAF_CHECK_EQUAL(uti->name(), "@atom");
   }
+  using detail::type_nr;
   // these types (and only those) are present if
   // the uniform_type_info implementation is correct
-  std::set<std::string> expected = {
+  std::map<std::string, uint16_t> expected{
     // local types
-    "foo",
+    {"foo", 0},
     // primitive types
-    "bool",
-    "@i8",      "@i16",     "@i32",     "@i64",     // signed integer names
-    "@u8",      "@u16",     "@u32",     "@u64",     // unsigned integer names
-    "@str",     "@u16str",  "@u32str",              // strings
-    "float",    "double",   "@ldouble",             // floating points
+    {"bool", tnr<bool>()},
+    // signed integer names
+    {"@i8", tnr<int8_t>()},
+    {"@i16", tnr<int16_t>()},
+    {"@i32", tnr<int32_t>()},
+    {"@i64", tnr<int64_t>()},
+    // unsigned integer names
+    {"@u8", tnr<uint8_t>()},
+    {"@u16", tnr<uint16_t>()},
+    {"@u32", tnr<uint32_t>()},
+    {"@u64", tnr<uint64_t>()},
+    // strings
+    {"@str", tnr<std::string>()},
+    {"@u16str", tnr<std::u16string>()},
+    {"@u32str", tnr<std::u32string>()},
+    // floating points
+    {"float", tnr<float>()},
+    {"double", tnr<double>()},
+    {"@ldouble", tnr<long double>()},
     // default announced types
-    "@unit",         // unit_t
-    "@actor",        // actor
-    "@addr",         // actor_addr
-    "@atom",         // atom_value
-    "@channel",      // channel
-    "@charbuf",      // vector<char>
-    "@down",         // down_msg
-    "@duration",     // duration
-    "@exit",         // exit_msg
-    "@group",        // group
-    "@group_down",   // group_down_msg
-    "@message",      // message
-    "@message_id",   // message_id
-    "@node",         // node_id
-    "@strmap",       // map<string,string>
-    "@timeout",      // timeout_msg
-    "@sync_exited",  // sync_exited_msg
-    "@sync_timeout", // sync_timeout_msg
-    "@strvec",       // vector<string>
-    "@strset"        // set<string>
+    {"@<>", 0},
+    {"@<>+@atom", 0},
+    {"@unit", tnr<unit_t>()},
+    {"@actor", tnr<actor>()},
+    {"@actorvec", tnr<std::vector<actor>>()},
+    {"@addr", tnr<actor_addr>()},
+    {"@addrvec", tnr<std::vector<actor_addr>>()},
+    {"@atom", tnr<atom_value>()},
+    {"@channel", tnr<channel>()},
+    {"@charbuf", tnr<std::vector<char>>()},
+    {"@down", tnr<down_msg>()},
+    {"@duration", tnr<duration>()},
+    {"@exit", tnr<exit_msg>()},
+    {"@group", tnr<group>()},
+    {"@group_down", tnr<group_down_msg>()},
+    {"@message", tnr<message>()},
+    {"@message_id", tnr<message_id>()},
+    {"@node", tnr<node_id>()},
+    {"@strmap", tnr<std::map<std::string,std::string>>()},
+    {"@timeout", tnr<timeout_msg>()},
+    {"@sync_exited", tnr<sync_exited_msg>()},
+    {"@sync_timeout", tnr<sync_timeout_msg>()},
+    {"@strvec", tnr<std::vector<std::string>>()},
+    {"@strset", tnr<std::set<std::string>>()}
   };
+  auto sptr = detail::singletons::get_uniform_type_info_map();
+  sptr->by_uniform_name("@<>");
+  sptr->by_uniform_name("@<>+@atom");
   CAF_CHECKPOINT();
   if (check_types(expected)) {
     CAF_CHECKPOINT();
@@ -174,6 +207,7 @@ int main() {
   announce<test_enum>("test_enum");
   announce<test_struct>("test_struct", &test_struct::test_value);
   CAF_CHECKPOINT();
+  check_types(append(expected, "test_enum", "test_struct"));
   shutdown();
   return CAF_TEST_RESULT();
 }

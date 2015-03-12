@@ -21,9 +21,6 @@
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 
-// the options_description API is deprecated
-#include "cppa/opt.hpp"
-
 using namespace std;
 using namespace caf;
 
@@ -81,7 +78,7 @@ void client_bhvr(event_based_actor* self, const string& host,
     }
   }
   auto sync_send_request = [=](int lhs, const char* op, int rhs) {
-    self->sync_send_tuple(server, self->last_dequeued()).then(
+    self->sync_send(server, self->current_message()).then(
       [=](result_atom, int result) {
         aout(self) << lhs << " " << op << " " << rhs << " = " << result << endl;
       }
@@ -127,7 +124,9 @@ void client_repl(const string& host, uint16_t port) {
       anon_send_exit(client, exit_reason::user_shutdown);
       return;
     } else if (equal(begin(connect), end(connect) - 1, begin(line))) {
-      match_split(line, ' ') (
+      vector<string> words;
+      split(words, line, is_any_of(" "));
+      message_builder(words.begin(), words.end()).apply({
         on("connect", arg_match) >> [&](string& nhost, string& sport) {
           try {
             auto lport = std::stoul(sport);
@@ -144,10 +143,10 @@ void client_repl(const string& host, uint16_t port) {
                << endl;
           }
         },
-        others() >> [] {
+        others >> [] {
           cout << "*** usage: connect <host> <port>" << endl;
         }
-      );
+      });
     } else {
       auto toint = [](const string& str) -> optional<int> {
         try { return {std::stoi(str)}; }
@@ -183,41 +182,40 @@ void client_repl(const string& host, uint16_t port) {
 }
 
 int main(int argc, char** argv) {
-  string mode;
-  string host;
   uint16_t port = 0;
-  options_description desc;
-  auto set_mode = [&](const string& arg) -> function<bool()> {
-    return [arg, &mode]() -> bool {
-      if (!mode.empty()) {
-        cerr << "mode already set to " << mode << endl;
-        return false;
-      }
-      mode = move(arg);
-      return true;
-    };
-  };
-  string copts = "client options";
-  string sopts = "server options";
-  bool args_valid = match_stream<string> (argv + 1, argv + argc) (
-    on_opt1('p', "port",   &desc, "set port") >> rd_arg(port),
-    on_opt1('H', "host",   &desc, "set host (default: localhost)", copts) >> rd_arg(host),
-    on_opt0('s', "server", &desc, "run in server mode", sopts) >> set_mode("server"),
-    on_opt0('c', "client", &desc, "run in client mode", copts) >> set_mode("client"),
-    on_opt0('h', "help",   &desc, "print help") >> print_desc_and_exit(&desc)
-  );
-  if (!args_valid || port == 0 || mode.empty()) {
-    if (port == 0) cerr << "*** no port specified" << endl;
-    if (mode.empty()) cerr << "*** no mode specified" << endl;
-    cerr << endl;
-    auto description_printer = print_desc(&desc, cerr);
-    description_printer();
-    return -1;
+  string host = "localhost";
+  auto res = message_builder(argv + 1, argv + argc).extract_opts({
+    {"port,p", "set port (either to publish at or to connect to)", port},
+    {"host,H", "set host (client mode only, default: localhost)", host},
+    {"server,s", "run in server mode"},
+    {"client,c", "run in client mode"}
+  });
+  if (res.opts.count("help") > 0) {
+    return 0;
   }
-  if (mode == "server") {
+  if (!res.remainder.empty()) {
+    cerr << "*** invalid command line options" << endl << res.helptext << endl;
+    return 1;
+  }
+  bool is_server = res.opts.count("server") > 0;
+  if (is_server == (res.opts.count("client") > 0)) {
+    if (is_server) {
+      cerr << "*** cannot be server and client at the same time" << endl;
+    } else {
+      cerr << "*** either --server or --client option must be set" << endl;
+    }
+    return 1;
+  }
+  if (!is_server && port == 0) {
+    cerr << "*** no port to server specified" << endl;
+    return 1;
+  }
+  if (is_server) {
     try {
       // try to publish math actor at given port
-      io::publish(spawn(calculator), port);
+      cout << "*** try publish at port " << port << endl;
+      auto p = io::publish(spawn(calculator), port);
+      cout << "*** server successfully published at port " << p << endl;
     }
     catch (exception& e) {
       cerr << "*** unable to publish math actor at port " << port << "\n"
@@ -226,10 +224,8 @@ int main(int argc, char** argv) {
     }
   }
   else {
-    if (host.empty()) host = "localhost";
     client_repl(host, port);
   }
   await_all_actors_done();
   shutdown();
-  return 0;
 }

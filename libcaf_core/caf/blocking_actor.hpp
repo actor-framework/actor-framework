@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -17,8 +17,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_BLOCKING_UNTYPED_ACTOR_HPP
-#define CAF_BLOCKING_UNTYPED_ACTOR_HPP
+#ifndef CAF_BLOCKING_ACTOR_HPP
+#define CAF_BLOCKING_ACTOR_HPP
+
+#include <mutex>
+#include <condition_variable>
 
 #include "caf/none.hpp"
 
@@ -33,7 +36,6 @@
 #include "caf/detail/type_traits.hpp"
 
 #include "caf/mixin/sync_sender.hpp"
-#include "caf/mixin/mailbox_based.hpp"
 
 namespace caf {
 
@@ -44,8 +46,7 @@ namespace caf {
  */
 class blocking_actor
     : public extend<local_actor, blocking_actor>::
-             with<mixin::mailbox_based,
-                  mixin::sync_sender<blocking_response_handle_tag>::impl> {
+             with<mixin::sync_sender<blocking_response_handle_tag>::impl> {
  public:
   class functor_based;
 
@@ -56,40 +57,36 @@ class blocking_actor
   /**************************************************************************
    *       utility stuff and receive() member function family       *
    **************************************************************************/
+
   using timeout_type = std::chrono::high_resolution_clock::time_point;
 
   struct receive_while_helper {
-
     std::function<void(behavior&)> m_dq;
     std::function<bool()> m_stmt;
 
     template <class... Ts>
-    void operator()(Ts&&... args) {
+    void operator()(Ts&&... xs) {
       static_assert(sizeof...(Ts) > 0,
               "operator() requires at least one argument");
-      behavior bhvr{std::forward<Ts>(args)...};
+      behavior bhvr{std::forward<Ts>(xs)...};
       while (m_stmt()) m_dq(bhvr);
     }
-
   };
 
   template <class T>
   struct receive_for_helper {
-
     std::function<void(behavior&)> m_dq;
     T& begin;
     T end;
 
     template <class... Ts>
-    void operator()(Ts&&... args) {
-      behavior bhvr{std::forward<Ts>(args)...};
+    void operator()(Ts&&... xs) {
+      behavior bhvr{std::forward<Ts>(xs)...};
       for (; begin != end; ++begin) m_dq(bhvr);
     }
-
   };
 
   struct do_receive_helper {
-
     std::function<void(behavior&)> m_dq;
     behavior m_bhvr;
 
@@ -103,7 +100,6 @@ class blocking_actor
     void until(const bool& bvalue) {
       until([&] { return bvalue; });
     }
-
   };
 
   /**
@@ -111,9 +107,9 @@ class blocking_actor
    * matched by given behavior.
    */
   template <class... Ts>
-  void receive(Ts&&... args) {
+  void receive(Ts&&... xs) {
     static_assert(sizeof...(Ts), "at least one argument required");
-    behavior bhvr{std::forward<Ts>(args)...};
+    behavior bhvr{std::forward<Ts>(xs)...};
     dequeue(bhvr);
   }
 
@@ -122,8 +118,8 @@ class blocking_actor
    * not cause a temporary behavior object per iteration.
    */
   template <class... Ts>
-  void receive_loop(Ts&&... args) {
-    behavior bhvr{std::forward<Ts>(args)...};
+  void receive_loop(Ts&&... xs) {
+    behavior bhvr{std::forward<Ts>(xs)...};
     for (;;) dequeue(bhvr);
   }
 
@@ -186,14 +182,8 @@ class blocking_actor
    * ~~~
    */
   template <class... Ts>
-  do_receive_helper do_receive(Ts&&... args) {
-    return {make_dequeue_callback(), behavior{std::forward<Ts>(args)...}};
-  }
-
-  optional<behavior&> sync_handler(message_id msg_id) {
-    auto i = m_sync_handler.find(msg_id);
-    if (i != m_sync_handler.end()) return i->second;
-    return none;
+  do_receive_helper do_receive(Ts&&... xs) {
+    return {make_dequeue_callback(), behavior{std::forward<Ts>(xs)...}};
   }
 
   /**
@@ -208,50 +198,33 @@ class blocking_actor
 
   /** @cond PRIVATE */
 
-  // required from invoke_policy; unused in blocking actors
-  inline void remove_handler(message_id) {}
+  void initialize() override;
 
-  // required by receive() member function family
-  inline void dequeue(behavior&& bhvr) {
-    behavior tmp{std::move(bhvr)};
-    dequeue(tmp);
-  }
-
-  // required by receive() member function family
-  inline void dequeue(behavior& bhvr) {
-    dequeue_response(bhvr, invalid_message_id);
-  }
-
-  // implemented by detail::proper_actor
-  virtual void dequeue_response(behavior& bhvr, message_id mid) = 0;
+  void dequeue(behavior& bhvr, message_id mid = invalid_message_id);
 
   /** @endcond */
 
- private:
-
+ protected:
   // helper function to implement receive_(for|while) and do_receive
   std::function<void(behavior&)> make_dequeue_callback() {
     return [=](behavior& bhvr) { dequeue(bhvr); };
   }
-
-  std::map<message_id, behavior> m_sync_handler;
-
 };
 
 class blocking_actor::functor_based : public blocking_actor {
-
  public:
-
   using act_fun = std::function<void(blocking_actor*)>;
 
   template <class F, class... Ts>
-  functor_based(F f, Ts&&... vs) {
+  functor_based(F f, Ts&&... xs) {
     using trait = typename detail::get_callable_trait<F>::type;
     using arg0 = typename detail::tl_head<typename trait::arg_types>::type;
     blocking_actor* dummy = nullptr;
     std::integral_constant<bool, std::is_same<arg0, blocking_actor*>::value> tk;
-    create(dummy, tk, f, std::forward<Ts>(vs)...);
+    create(dummy, tk, f, std::forward<Ts>(xs)...);
   }
+
+  void cleanup(uint32_t reason);
 
  protected:
   void act() override;
@@ -260,13 +233,13 @@ class blocking_actor::functor_based : public blocking_actor {
   void create(blocking_actor*, act_fun);
 
   template <class Actor, typename F, class... Ts>
-  void create(Actor* dummy, std::true_type, F f, Ts&&... vs) {
-    create(dummy, std::bind(f, std::placeholders::_1, std::forward<Ts>(vs)...));
+  void create(Actor* dummy, std::true_type, F f, Ts&&... xs) {
+    create(dummy, std::bind(f, std::placeholders::_1, std::forward<Ts>(xs)...));
   }
 
   template <class Actor, typename F, class... Ts>
-  void create(Actor* dummy, std::false_type, F f, Ts&&... vs) {
-    std::function<void()> fun = std::bind(f, std::forward<Ts>(vs)...);
+  void create(Actor* dummy, std::false_type, F f, Ts&&... xs) {
+    std::function<void()> fun = std::bind(f, std::forward<Ts>(xs)...);
     create(dummy, [fun](Actor*) { fun(); });
   }
 
@@ -275,4 +248,4 @@ class blocking_actor::functor_based : public blocking_actor {
 
 } // namespace caf
 
-#endif // CAF_BLOCKING_UNTYPED_ACTOR_HPP
+#endif // CAF_BLOCKING_ACTOR_HPP

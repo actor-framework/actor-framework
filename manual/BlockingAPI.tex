@@ -60,7 +60,7 @@ receive_for(i, 10) (
 size_t received = 0;
 do {
   receive (
-    others() >> [&]() {
+    others >> [&]() {
       ++received;
     }
   );
@@ -69,7 +69,7 @@ do {
 \begin{lstlisting}
 size_t received = 0;
 do_receive (
-  others() >> [&]() {
+  others >> [&]() {
     ++received;
   }
 ).until([&] { return received >= 10; });
@@ -109,3 +109,25 @@ void foo(blocking_actor* self, actor testee) {
   );
 }
 \end{lstlisting}
+
+\subsection{Mixing Actors and Threads with Scoped Actors}
+
+The class \lstinline^scoped_actor^ offers a simple way of communicating with CAF actors from non-actor contexts.
+It overloads \lstinline^operator->^ to return a \lstinline^blocking_actor*^.
+Hence, it behaves like the implicit \lstinline^self^ pointer in functor-based actors, only that it ceases to exist at scope end.
+
+\begin{lstlisting}
+void test() {
+  scoped_actor self;
+  // spawn some monitored actor
+  auto aut = self->spawn<monitored>(my_actor_impl);
+  self->sync_send(aut, "hi there").await(
+    ... // handle response
+  );
+  // self will be destroyed automatically here; any
+  // actor monitoring it will receive down messages etc.
+}
+\end{lstlisting}
+
+Note that \lstinline^scoped_actor^ throws an \lstinline^actor_exited^ exception when forced to quit for some reason, e.g., via an \lstinline^exit_msg^.
+Whenever a \lstinline^scoped_actor^ might end up receiving an \lstinline^exit_msg^ (because it links itself to another actor for example), the caller either needs to handle the exception or the actor needs to process \lstinline^exit_msg^ manually via \lstinline^self->trap_exit(true)^.

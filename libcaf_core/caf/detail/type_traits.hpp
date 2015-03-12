@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -41,17 +41,12 @@ struct conjunction;
 
 template <>
 struct conjunction<> {
-  static constexpr bool value = false;
+  static constexpr bool value = true;
 };
 
-template <bool V0>
-struct conjunction<V0> {
-  static constexpr bool value = V0;
-};
-
-template <bool V0, bool V1, bool... Vs>
-struct conjunction<V0, V1, Vs...> {
-  static constexpr bool value = V0 && conjunction<V1, Vs...>::value;
+template <bool X, bool... Xs>
+struct conjunction<X, Xs...> {
+  static constexpr bool value = X && conjunction<Xs...>::value;
 };
 
 /**
@@ -60,14 +55,14 @@ struct conjunction<V0, V1, Vs...> {
 template <bool... BoolConstants>
 struct disjunction;
 
-template <bool V0, bool... Vs>
-struct disjunction<V0, Vs...> {
-  static constexpr bool value = V0 || disjunction<Vs...>::value;
-};
-
 template <>
 struct disjunction<> {
   static constexpr bool value = false;
+};
+
+template <bool X, bool... Xs>
+struct disjunction<X, Xs...> {
+  static constexpr bool value = X || disjunction<Xs...>::value;
 };
 
 /**
@@ -251,10 +246,13 @@ struct is_legal_tuple_type {
  * Checks wheter `T` is a non-const reference.
  */
 template <class T>
-struct is_mutable_ref {
-  static constexpr bool value = std::is_reference<T>::value
-                                && !std::is_const<T>::value;
-};
+struct is_mutable_ref : std::false_type { };
+
+template <class T>
+struct is_mutable_ref<const T&> : std::false_type { };
+
+template <class T>
+struct is_mutable_ref<T&> : std::true_type { };
 
 /**
  * Checks whether `T::static_type_name()` exists.
@@ -264,13 +262,29 @@ class has_static_type_name {
  private:
   template <class U,
             class = typename std::enable_if<
-                      !std::is_member_pointer<decltype(&U::is_baz)>::value
+                      !std::is_member_pointer<decltype(&U::static_type_name)>::value
                     >::type>
   static std::true_type sfinae_fun(int);
   template <class>
   static std::false_type sfinae_fun(...);
  public:
   static constexpr bool value = decltype(sfinae_fun<T>(0))::value;
+};
+
+/**
+ * Checks whether `T::memory_cache_flag` exists.
+ */
+template <class T>
+class is_memory_cached {
+ private:
+  template <class U, bool = U::memory_cache_flag>
+  static std::true_type check(int);
+
+  template <class>
+  static std::false_type check(...);
+
+ public:
+  static constexpr bool value = decltype(check<T>(0))::value;
 };
 
 /**
@@ -363,6 +377,7 @@ struct get_callable_trait {
   using result_type = typename type::result_type;
   using arg_types = typename type::arg_types;
   using fun_type = typename type::fun_type;
+  static constexpr size_t num_args = tl_size<arg_types>::value;
 };
 
 /**

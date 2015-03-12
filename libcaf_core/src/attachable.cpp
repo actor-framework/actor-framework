@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -25,8 +25,8 @@ attachable::~attachable() {
   // nop
 }
 
-attachable::token::token(const std::type_info& tinfo, const void* vptr)
-    : subtype(tinfo), ptr(vptr) {
+attachable::token::token(size_t typenr, const void* vptr)
+    : subtype(typenr), ptr(vptr) {
   // nop
 }
 

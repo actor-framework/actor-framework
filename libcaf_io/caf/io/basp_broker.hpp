@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -42,9 +42,9 @@ namespace io {
  */
 class basp_broker : public broker, public actor_namespace::backend {
  public:
-  basp_broker();
-
   basp_broker(middleman& parent_ref);
+
+  ~basp_broker();
 
   behavior make_behavior() override;
 
@@ -89,6 +89,9 @@ class basp_broker : public broker, public actor_namespace::backend {
   inline actor_namespace& get_namespace() {
     return m_namespace;
   }
+
+ protected:
+  void on_exit() override;
 
  private:
   void erase_proxy(const node_id& nid, actor_id aid);

@@ -59,5 +59,6 @@ void test_either() {
 int main() {
   CAF_TEST(test_either);
   test_either();
+  shutdown();
   return CAF_TEST_RESULT();
 }

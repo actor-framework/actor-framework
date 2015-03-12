@@ -57,7 +57,7 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
                         "initialize the build configuration.")
 endif()
 # set module path appropriately
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 # set binary output path if not defined by user
 if("${EXECUTABLE_OUTPUT_PATH}" STREQUAL "")
   set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin")
@@ -141,12 +141,24 @@ if(MORE_WARNINGS)
   string(REPLACE ";" "" WFLAGS_STR ${WFLAGS})
   set(EXTRA_FLAGS "${EXTRA_FLAGS} ${WFLAGS_STR}")
 endif()
-# add -stdlib=libc++ when using Clang
-if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-  message(STATUS "NOTE: Automatically added -stdlib=libc++ flag, "
-                 "you can override this by defining CMAKE_CXX_FLAGS "
-                 "(see 'configure --help')")
-  set(EXTRA_FLAGS "${EXTRA_FLAGS} -stdlib=libc++")
+# add -stdlib=libc++ when using Clang if possible
+if(NOT NO_AUTO_LIBCPP AND "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+  set(CXXFLAGS_BACKUP "${CMAKE_CXX_FLAGS}")
+  set(CMAKE_CXX_FLAGS "-std=c++11 -stdlib=libc++")
+  try_run(ProgramResult
+          CompilationSucceeded
+          "${CMAKE_BINARY_DIR}"
+          "${CMAKE_CURRENT_SOURCE_DIR}/cmake/get_compiler_version.cpp"
+          RUN_OUTPUT_VARIABLE CompilerVersion)
+  if(NOT CompilationSucceeded OR NOT ProgramResult EQUAL 0)
+    message(STATUS "Use clang with GCC' libstdc++")
+  else()
+    message(STATUS "Automatically added '-stdlib=libc++' flag "
+                   "(NO_AUTO_LIBCPP not defined)")
+    set(EXTRA_FLAGS "${EXTRA_FLAGS} -stdlib=libc++")
+  endif()
+  # restore CXX flags
+  set(CMAKE_CXX_FLAGS "${CXXFLAGS_BACKUP}")
 endif()
 # enable address sanitizer if requested by the user
 if(ENABLE_ADDRESS_SANITIZER)

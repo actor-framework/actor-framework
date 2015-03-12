@@ -25,6 +25,7 @@ set (LIBCAF_CORE_SRCS
      src/actor_companion.cpp
      src/actor_namespace.cpp
      src/actor_ostream.cpp
+     src/actor_pool.cpp
      src/actor_proxy.cpp
      src/actor_registry.cpp
      src/attachable.cpp
@@ -35,11 +36,13 @@ set (LIBCAF_CORE_SRCS
      src/binary_serializer.cpp
      src/blocking_actor.cpp
      src/channel.cpp
+     src/concatenated_tuple.cpp
      src/continue_helper.cpp
      src/decorated_tuple.cpp
      src/default_attachable.cpp
      src/deserializer.cpp
      src/duration.cpp
+     src/either.cpp
      src/event_based_actor.cpp
      src/exception.cpp
      src/execution_unit.cpp
@@ -49,17 +52,16 @@ set (LIBCAF_CORE_SRCS
      src/get_root_uuid.cpp
      src/group.cpp
      src/group_manager.cpp
+     src/match_case.cpp
      src/local_actor.cpp
      src/logging.cpp
      src/mailbox_element.cpp
-     src/match.cpp
      src/memory.cpp
      src/memory_managed.cpp
      src/message.cpp
      src/message_builder.cpp
      src/message_data.cpp
      src/message_handler.cpp
-     src/message_iterator.cpp
      src/node_id.cpp
      src/ref_counted.cpp
      src/response_promise.cpp

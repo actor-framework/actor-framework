@@ -12,8 +12,6 @@ void event_based_ping(caf::event_based_actor*, size_t num_pings);
 
 void pong(caf::blocking_actor*, caf::actor ping_actor);
 
-void event_based_pong(caf::event_based_actor*, caf::actor ping_actor);
-
 // returns the number of messages ping received
 size_t pongs();
 

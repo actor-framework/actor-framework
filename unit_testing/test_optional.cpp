@@ -8,6 +8,7 @@ using namespace std;
 using namespace caf;
 
 int main() {
+  CAF_TEST(test_optional);
   {
     optional<int> i,j;
     CAF_CHECK(i == j);
@@ -49,6 +50,7 @@ int main() {
       CAF_CHECK(!j.empty());
     }
   }
+  shutdown();
   return CAF_TEST_RESULT();
 }
 

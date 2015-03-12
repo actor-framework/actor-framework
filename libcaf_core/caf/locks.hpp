@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -29,9 +29,7 @@ using unique_lock = std::unique_lock<Lockable>;
 
 template <class SharedLockable>
 class shared_lock {
-
  public:
-
   using lockable = SharedLockable;
 
   explicit shared_lock(lockable& arg) : m_lockable(&arg) {
@@ -39,11 +37,18 @@ class shared_lock {
   }
 
   ~shared_lock() {
-    if (m_lockable) m_lockable->unlock_shared();
+    unlock();
   }
 
   bool owns_lock() const {
     return m_lockable != nullptr;
+  }
+
+  void unlock() {
+    if (m_lockable) {
+      m_lockable->unlock_shared();
+      m_lockable = nullptr;
+    }
   }
 
   lockable* release() {
@@ -53,9 +58,7 @@ class shared_lock {
   }
 
  private:
-
   lockable* m_lockable;
-
 };
 
 template <class SharedLockable>
@@ -63,9 +66,7 @@ using upgrade_lock = shared_lock<SharedLockable>;
 
 template <class UpgradeLockable>
 class upgrade_to_unique_lock {
-
  public:
-
   using lockable = UpgradeLockable;
 
   template <class LockType>
@@ -75,17 +76,22 @@ class upgrade_to_unique_lock {
   }
 
   ~upgrade_to_unique_lock() {
-    if (m_lockable) m_lockable->unlock();
+    unlock();
   }
 
   bool owns_lock() const {
     return m_lockable != nullptr;
   }
 
+  void unlock() {
+    if (m_lockable) {
+      m_lockable->unlock();
+      m_lockable = nullptr;
+    }
+  }
+
  private:
-
   lockable* m_lockable;
-
 };
 
 } // namespace caf

@@ -57,5 +57,6 @@ int main() {
   CAF_CHECK_EQUAL(vec7.size(), 5);
   CAF_CHECK((std::all_of(vec7.begin(), vec7.end(),
               [](int i) { return i == 0; })));
+  caf::shutdown();
   return CAF_TEST_RESULT();
 }

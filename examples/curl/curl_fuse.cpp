@@ -215,7 +215,8 @@ client::~client() {
 class curl_worker : public base_actor {
  public:
   curl_worker(const actor& parent)
-      : base_actor(parent, "curl_worker", color::yellow) {
+      : base_actor(parent, "curl_worker", color::yellow),
+        m_curl(nullptr) {
     // nop
   }
 
@@ -322,7 +323,7 @@ class curl_master : public base_actor {
       m_idle_worker.push_back(spawn<curl_worker, detached+linked>(this));
     }
     auto worker_finished = [=] {
-      auto sender = last_sender();
+      auto sender = current_sender();
       auto i = std::find(m_busy_worker.begin(), m_busy_worker.end(), sender);
       m_idle_worker.push_back(*i);
       m_busy_worker.erase(i);

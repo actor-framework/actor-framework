@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -63,13 +63,15 @@ std::string join(const Container& c, const std::string& glue) {
 }
 
 // end of recursion
-inline void splice(std::string&, const std::string&) { }
+inline void splice(std::string&, const std::string&) {
+  // nop
+}
 
 template <class T, class... Ts>
-void splice(std::string& str, const std::string& glue, T&& arg, Ts&&... args) {
+void splice(std::string& str, const std::string& glue, T&& arg, Ts&&... xs) {
   str += glue;
   str += std::forward<T>(arg);
-  splice(str, glue, std::forward<Ts>(args)...);
+  splice(str, glue, std::forward<Ts>(xs)...);
 }
 
 template <ptrdiff_t WhatSize, ptrdiff_t WithSize>

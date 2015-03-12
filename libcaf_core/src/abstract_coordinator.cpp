@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -39,7 +39,6 @@
 #include "caf/policy/work_stealing.hpp"
 
 #include "caf/detail/logging.hpp"
-#include "caf/detail/proper_actor.hpp"
 
 namespace caf {
 namespace scheduler {
@@ -51,11 +50,6 @@ namespace scheduler {
 namespace {
 
 using hrc = std::chrono::high_resolution_clock;
-
-using timer_actor_policies = policy::actor_policies<policy::no_scheduling,
-                                                    policy::not_prioritizing,
-                                                    policy::no_resume,
-                                                    policy::nestable_invoke>;
 
 struct delayed_msg {
   actor_addr from;
@@ -69,34 +63,39 @@ inline void deliver(delayed_msg& dm) {
 }
 
 template <class Map, class... Ts>
-inline void insert_dmsg(Map& storage, const duration& d, Ts&&... vs) {
+inline void insert_dmsg(Map& storage, const duration& d, Ts&&... xs) {
   auto tout = hrc::now();
   tout += d;
-  delayed_msg dmsg{std::forward<Ts>(vs)...};
+  delayed_msg dmsg{std::forward<Ts>(xs)...};
   storage.insert(std::make_pair(std::move(tout), std::move(dmsg)));
 }
 
-class timer_actor final : public detail::proper_actor<blocking_actor,
-                                                      timer_actor_policies>,
-                          public spawn_as_is {
+class timer_actor : public blocking_actor {
  public:
-  inline unique_mailbox_element_pointer dequeue() {
-    await_data();
+  inline mailbox_element_ptr dequeue() {
+    blocking_actor::await_data();
     return next_message();
   }
 
-  inline unique_mailbox_element_pointer try_dequeue(const hrc::time_point& tp) {
-    if (scheduling_policy().await_data(this, tp)) {
+  bool await_data(const hrc::time_point& tp) {
+    if (has_next_message()) {
+      return true;
+    }
+    return mailbox().synchronized_await(m_mtx, m_cv, tp);
+  }
+
+  mailbox_element_ptr try_dequeue(const hrc::time_point& tp) {
+    if (await_data(tp)) {
       return next_message();
     }
-    return unique_mailbox_element_pointer{};
+    return mailbox_element_ptr{};
   }
 
   void act() override {
     trap_exit(true);
     // setup & local variables
-    bool done = false;
-    unique_mailbox_element_pointer msg_ptr;
+    bool received_exit = false;
+    mailbox_element_ptr msg_ptr;
     std::multimap<hrc::time_point, delayed_msg> messages;
     // message handling rules
     message_handler mfun{
@@ -106,14 +105,14 @@ class timer_actor final : public detail::proper_actor<blocking_actor,
                      std::move(to), mid, std::move(msg));
       },
       [&](const exit_msg&) {
-        done = true;
+        received_exit = true;
       },
-      others() >> [&] {
+      others >> [&] {
         CAF_LOG_ERROR("unexpected: " << to_string(msg_ptr->msg));
       }
     };
     // loop
-    while (!done) {
+    while (!received_exit) {
       while (!msg_ptr) {
         if (messages.empty())
           msg_ptr = dequeue();
@@ -160,7 +159,7 @@ void printer_loop(blocking_actor* self) {
   bool running = true;
   self->receive_while([&] { return running; })(
     on(atom("add"), arg_match) >> [&](std::string& str) {
-      auto s = self->last_sender();
+      auto s = self->current_sender();
       if (str.empty() || s == invalid_actor_addr) {
         return;
       }
@@ -175,7 +174,7 @@ void printer_loop(blocking_actor* self) {
       flush_if_needed(i->second);
     },
     on(atom("flush")) >> [&] {
-      flush_output(self->last_sender());
+      flush_output(self->current_sender());
     },
     [&](const down_msg& dm) {
       flush_output(dm.source);
@@ -184,8 +183,8 @@ void printer_loop(blocking_actor* self) {
     [&](const exit_msg&) {
       running = false;
     },
-    others() >> [&] {
-      std::cerr << "*** unexpected: " << to_string(self->last_dequeued())
+    others >> [&] {
+      std::cerr << "*** unexpected: " << to_string(self->current_message())
                 << std::endl;
     }
   );
@@ -207,6 +206,7 @@ abstract_coordinator* abstract_coordinator::create_singleton() {
 }
 
 void abstract_coordinator::initialize() {
+  CAF_LOG_TRACE("");
   // launch utility actors
   m_timer = spawn<timer_actor, hidden + detached + blocking_api>();
   m_printer = spawn<hidden + detached + blocking_api>(printer_loop);
@@ -214,11 +214,11 @@ void abstract_coordinator::initialize() {
 
 void abstract_coordinator::stop_actors() {
   CAF_LOG_TRACE("");
-  scoped_actor self(true);
+  scoped_actor self{true};
   self->monitor(m_timer);
   self->monitor(m_printer);
-  self->send_exit(m_timer, exit_reason::user_shutdown);
-  self->send_exit(m_printer, exit_reason::user_shutdown);
+  anon_send_exit(m_timer, exit_reason::user_shutdown);
+  anon_send_exit(m_printer, exit_reason::user_shutdown);
   int i = 0;
   self->receive_for(i, 2)(
     [](const down_msg&) {

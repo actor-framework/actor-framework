@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -53,8 +53,8 @@ inline uint16_t publish(caf::actor whom, uint16_t port,
 /**
  * @copydoc publish(actor,uint16_t,const char*)
  */
-template <class... Rs>
-uint16_t typed_publish(typed_actor<Rs...> whom, uint16_t port,
+template <class... Sigs>
+uint16_t typed_publish(typed_actor<Sigs...> whom, uint16_t port,
                        const char* in = nullptr, bool reuse_addr = false) {
   if (!whom) {
     return 0;

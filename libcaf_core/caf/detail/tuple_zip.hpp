@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -29,8 +29,8 @@ namespace detail {
 
 template <class F, long... Is, class Tup0, class Tup1>
 auto tuple_zip(F& f, detail::int_list<Is...>, Tup0&& tup0, Tup1&& tup1)
--> decltype(std::make_tuple(f(std::get<Is>(tup0), std::get<Is>(tup1))...)) {
-  return std::make_tuple(f(std::get<Is>(tup0), std::get<Is>(tup1))...);
+-> decltype(std::make_tuple(f(get<Is>(tup0), get<Is>(tup1))...)) {
+  return std::make_tuple(f(get<Is>(tup0), get<Is>(tup1))...);
 }
 
 } // namespace detail

@@ -14,7 +14,7 @@ A class-based actor is a subtype of \lstinline^event_based_actor^ and must imple
 class printer : public event_based_actor {
   behavior make_behavior() override {
     return {
-      others() >> [] {
+      others >> [] {
         cout << to_string(last_dequeued()) << endl;
       }
     };
@@ -28,7 +28,7 @@ This base class simply returns \lstinline^init_state^ (defined in the subclass) 
 \begin{lstlisting}
 struct printer : sb_actor<printer> {
   behavior init_state {
-    others() >> [] {
+    others >> [] {
       cout << to_string(last_dequeued()) << endl;
     }
   };
@@ -143,7 +143,7 @@ behavior eager_actor(event_based_actor* self) {
   return {
     [](int i) { /* ... */ },
     [](float i) { /* ... */ },
-    others() >> [] { /* ... */ },
+    others >> [] { /* ... */ },
     after(std::chrono::seconds(10)) >> [] {
       aout(self) << "received nothing within 10 seconds..." << endl;
       // ...
@@ -166,7 +166,7 @@ Thus, you should not depend on a certain clock resolution.
 Unmatched messages are skipped automatically by \lib's runtime system.
 This is true for \textit{all} actor implementations.
 To allow actors to skip messages manually, \lstinline^skip_message^ can be used.
-This is in particular useful whenever an actor switches between behaviors, but wants to use a default rule created by \lstinline^others()^ to filter messages that are not handled by any of its behaviors.
+This is in particular useful whenever an actor switches between behaviors, but wants to use a default rule created by \lstinline^others^ to catch messages that are not handled by any of its behaviors.
 
 The following example illustrates a simple server actor that dispatches requests to workers.
 After receiving an \lstinline^'idle'^ message, it awaits a request that is then forwarded to the idle worker.
@@ -193,13 +193,13 @@ behavior server(event_based_actor* self) {
         [=](idle_atom) {
           return skip_message();
         },
-        others() >> die
+        others >> die
       );
     },
     [=](request_atom) {
       return skip_message();
     },
-    others() >> die
+    others >> die
   };
 }
 \end{lstlisting}

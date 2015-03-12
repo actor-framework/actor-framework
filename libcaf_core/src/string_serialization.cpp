@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -37,6 +37,7 @@
 #include "caf/deserializer.hpp"
 #include "caf/skip_message.hpp"
 #include "caf/actor_namespace.hpp"
+#include "caf/mailbox_element.hpp"
 #include "caf/primitive_variant.hpp"
 #include "caf/uniform_type_info.hpp"
 
@@ -196,16 +197,6 @@ class string_serializer : public serializer, public dummy_backend {
     m_after_value = true;
   }
 
-  void write_tuple(size_t size, const primitive_variant* values) {
-    clear();
-    out << "{";
-    const primitive_variant* end = values + size;
-    for (; values != end; ++values) {
-      write_value(*values);
-    }
-    out << (m_after_value ? " }" : "}");
-  }
-
   void write_raw(size_t num_bytes, const void* buf) {
     clear();
     auto first = reinterpret_cast<const unsigned char*>(buf);
@@ -338,8 +329,9 @@ class string_deserializer : public deserializer, public dummy_backend {
       // and ':' must be ignored
       consume(':');
     }
+    auto str_end = m_str.end();
     string::iterator substr_end;
-    auto find_if_cond = [](char c)->bool {
+    auto find_if_pred = [](char c) -> bool {
       switch (c) {
         case ')':
         case '}':
@@ -351,70 +343,61 @@ class string_deserializer : public deserializer, public dummy_backend {
           return false;
       }
     };
+    char needle = (get<string>(&storage)) ? '"' : '\'';
     if (get<string>(&storage) || get<atom_value>(&storage)) {
-      char needle = (get<string>(&storage)) ? '"' : '\'';
-      if (*m_pos == needle) {
-        // skip leading "
-        ++m_pos;
-        char last_char = needle;
-        auto find_if_str_cond = [&last_char, needle ](char c)->bool {
-          if (c == needle && last_char != '\\') {
-            return true;
-          }
-          last_char = c;
-          return false;
-        };
-        substr_end = find_if(m_pos, m_str.end(), find_if_str_cond);
-      } else {
-        substr_end = find_if(m_pos, m_str.end(), find_if_cond);
+      if (*m_pos != needle) {
+        throw std::runtime_error("expected opening quotation mark");
+      }
+      auto pred = [needle](char prev, char curr) {
+        return prev != '\\' && curr == needle;
+      };
+      substr_end = std::adjacent_find(m_pos, str_end, pred);
+      if (substr_end != str_end) {
+        ++m_pos; // skip opening quote
+        ++substr_end; // set iterator to position of closing quote
       }
     } else {
-      substr_end = find_if(m_pos, m_str.end(), find_if_cond);
+      substr_end = find_if(m_pos, str_end, find_if_pred);
     }
-    if (substr_end == m_str.end()) {
+    if (substr_end == str_end) {
       throw std::runtime_error("malformed string (unterminated value)");
     }
     string substr(m_pos, substr_end);
     m_pos += static_cast<difference_type>(substr.size());
     if (get<string>(&storage) || get<atom_value>(&storage)) {
-      char needle = (get<string>(&storage)) ? '"' : '\'';
       // skip trailing "
-      if (*m_pos != needle) {
+      if (m_pos == str_end || *m_pos != needle) {
         string error_msg;
         error_msg = "malformed string, expected '";
         error_msg += needle;
         error_msg += "' found '";
-        error_msg += *m_pos;
+        if (m_pos == str_end) {
+          error_msg += "-end of string-";
+        } else {
+          error_msg += *m_pos;
+        }
         error_msg += "'";
         throw std::runtime_error(error_msg);
       }
       ++m_pos;
       // replace '\"' by '"'
-      char last_char = ' ';
-      auto cond = [&last_char, needle ](char c)->bool {
-        if (c == needle && last_char == '\\') {
-          return true;
-        }
-        last_char = c;
-        return false;
+      auto pred = [needle](char prev, char curr) {
+        return prev == '\\' && curr == needle;
       };
       string tmp;
-      auto sbegin = substr.begin();
-      auto send = substr.end();
-      for (auto i = find_if(sbegin, send, cond); i != send;
-           i = find_if(i, send, cond)) {
-        --i;
-        tmp.append(sbegin, i);
-        tmp += needle;
-        i += 2;
-        sbegin = i;
-      }
-      if (sbegin != substr.begin()) {
-        tmp.append(sbegin, send);
-      }
-      if (!tmp.empty()) {
-        substr = std::move(tmp);
-      }
+      auto prev = substr.begin();
+      auto last = substr.end();
+      do {
+        auto i = std::adjacent_find(prev, last, pred);
+        tmp.append(prev, i);
+        if (i == last) {
+          prev = last;
+        } else {
+          tmp += needle;
+          prev = i + 2;
+        }
+      } while (prev != last);
+      substr.swap(tmp);
     }
     from_string_reader fsr(substr);
     apply_visitor(fsr, storage);
@@ -572,6 +555,23 @@ string to_string(const actor& what) {
   return to_string(what.address());
 }
 
+string to_string(const node_id::host_id_type& node_id) {
+  std::ostringstream oss;
+  oss << std::hex;
+  oss.fill('0');
+  for (size_t i = 0; i < node_id::host_id_size; ++i) {
+    oss.width(2);
+    oss << static_cast<uint32_t>(node_id[i]);
+  }
+  return oss.str();
+}
+
+string to_string(const node_id& what) {
+  std::ostringstream oss;
+  oss << to_string(what.host_id()) << ":" << what.process_id();
+  return oss.str();
+}
+
 string to_string(const atom_value& what) {
   auto x = static_cast<uint64_t>(what);
   string result;
@@ -590,21 +590,16 @@ string to_string(const atom_value& what) {
   return result;
 }
 
-string to_string(const node_id::host_id_type& node_id) {
-  std::ostringstream oss;
-  oss << std::hex;
-  oss.fill('0');
-  for (size_t i = 0; i < node_id::host_id_size; ++i) {
-    oss.width(2);
-    oss << static_cast<uint32_t>(node_id[i]);
-  }
-  return oss.str();
-}
-
-string to_string(const node_id& what) {
-  std::ostringstream oss;
-  oss << to_string(what.host_id()) << ":" << what.process_id();
-  return oss.str();
+std::string to_string(const mailbox_element& what) {
+  std::string result;
+  result += "@mailbox_element ( ";
+  result += to_string(what.sender);
+  result += ", ";
+  result += std::to_string(what.mid.integer_value());
+  result += ", ";
+  result += to_string(what.msg);
+  result += " )";
+  return result;
 }
 
 string to_verbose_string(const std::exception& e) {

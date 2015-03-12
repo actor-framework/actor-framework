@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -34,7 +34,7 @@
  * whereas each number is a two-digit decimal number without
  * leading zeros (e.g. 900 is version 0.9.0).
  */
-#define CAF_VERSION 1202
+#define CAF_VERSION 1300
 
 #define CAF_MAJOR_VERSION (CAF_VERSION / 10000)
 #define CAF_MINOR_VERSION ((CAF_VERSION / 100) % 100)
@@ -113,6 +113,9 @@
 #  define CAF_WINDOWS
 #else
 #  error Platform and/or compiler not supportet
+#endif
+#if defined(CAF_MACOS) || defined(CAF_LINUX) || defined(CAF_BSD)
+#  define CAF_POSIX
 #endif
 
 #include <cstdio>

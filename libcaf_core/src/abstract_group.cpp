@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -37,15 +37,22 @@ void abstract_group::subscription::actor_exited(abstract_actor* ptr, uint32_t) {
 }
 
 bool abstract_group::subscription::matches(const token& what) {
-  if (what.subtype != typeid(subscription_token)) {
+  if (what.subtype != attachable::token::subscription) {
     return false;
   }
-  auto& ot = *reinterpret_cast<const subscription_token*>(what.ptr);
-  return ot.group == m_group;
+  if (what.ptr) {
+    auto& ot = *reinterpret_cast<const subscription_token*>(what.ptr);
+    return ot.group == m_group;
+  }
+  return true;
 }
 
 abstract_group::module::module(std::string mname) : m_name(std::move(mname)) {
   // nop
+}
+
+void abstract_group::module::stop() {
+  CAF_LOG_TRACE("");
 }
 
 const std::string& abstract_group::module::name() {
@@ -53,7 +60,9 @@ const std::string& abstract_group::module::name() {
 }
 
 abstract_group::abstract_group(abstract_group::module_ptr mod, std::string id)
-    : m_module(mod), m_identifier(std::move(id)) {
+    : abstract_channel(abstract_channel::is_abstract_group_flag),
+      m_module(mod),
+      m_identifier(std::move(id)) {
   // nop
 }
 

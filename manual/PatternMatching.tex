@@ -27,14 +27,14 @@ In our first example, \lstinline^bhvr1^ models a pattern accepting messages that
 Any other message is not matched and will remain in the mailbox until it is consumed eventually.
 This caching mechanism allows actors to ignore messages until a state change replaces its message handler.
 However, this can lead to a memory leak if an actor receives messages it handles in no state.
-To allow actors to specify a default message handlers for otherwise unmatched messages, \lib provides the function \lstinline^others()^.
+To allow actors to specify a default message handlers for otherwise unmatched messages, \lib provides \lstinline^others^.
 
 \begin{lstlisting}
 behavior bhvr2{
   [](int i) { /*...*/ },
   [](int i, float f) { /*...*/ },
   [](int a, int b, int c) { /*...*/ },
-  others() >> [] { /*...*/ }
+  others >> [] { /*...*/ }
 };
 \end{lstlisting}
 
@@ -88,15 +88,13 @@ Atom constants define a static member \lstinline^value^ that can be used on the 
 Please note that the static \lstinline^value^ member does \emph{not} have the type \lstinline^atom_value^, unlike \lstinline^std::integral_constant^ for example.
 
 \clearpage
-\subsection{Match Expressions}
+\subsection{Advanced Match Cases}
 
-Match expressions are an advanced feature of \lib and allow you to match on values and to extract data while matching.
-Using lambda expressions and atom constants---cf. \ref{Sec::PatternMatching::Atoms}---suffices for most use cases.
-A match expression begins with a call to the function \lstinline^on^, which returns an intermediate object providing \lstinline^operator>>^.
-The function \lstinline^others()^ is an alias for \lstinline^on<anything>()^.
+Match cases are an advanced feature of \lib and allow you to match on values and to transform data while matching.
+A match case begins with a call to the function \lstinline^on^, which returns an intermediate object providing \lstinline^operator>>^.
 The right-hand side of the operator denotes a callback, usually a lambda expression, that should be invoked if a tuple matches the types given to \lstinline^on^,
 
-When using the basic syntax, \lib generates the match expression automatically.
+When using the basic syntax, \lib generates the match case automatically.
 A verbose version of the \lstinline^bhvr1^ from \ref{Sec::PatternMatching::Basics} is shown below.
 
 \begin{lstlisting}
@@ -107,6 +105,7 @@ behavior verbose_bhvr1{
 };
 \end{lstlisting}
 
+It is worth mentioning that passing the lambdas directly is more efficient, since it allows \lib to select a special-purpose implementation.
 The function \lstinline^on^ can be used in two ways.
 Either with template parameters only or with function parameters only.
 The latter version deduces all types from its arguments and matches for both type and value.
@@ -143,7 +142,7 @@ on(arg_match) >> [](int a, int b) { /*...*/ }
 \end{lstlisting}
 
 Note that \lstinline^arg_match^ must be passed as last parameter.
-If all types should be deduced from the callback signature, \lstinline^on_arg_match^ can be used, which is an alias for \lstinline^on(arg_match)^.
+If all types should be deduced from the callback signature, \lstinline^on_arg_match^ can be used, which is a faster alternative for \lstinline^on(arg_match)^.
 However, \lstinline^on_arg_match^ is used implicitly whenever a callback is used without preceding match expression.
 
 \clearpage
@@ -152,7 +151,7 @@ However, \lstinline^on_arg_match^ is used implicitly whenever a callback is used
 
 The type \lstinline^anything^ can be used as wildcard to match any number of any types.
 %The \lstinline^constexpr^ value \lstinline^any_vals^ can be used as function argument if \lstinline^on^ is used without template paremeters.
-A pattern created by \lstinline^on<anything>()^ or its alias \lstinline^others()^ is useful to define a default case.
+A pattern created by \lstinline^on<anything>()^ or its alias \lstinline^others^ is useful to define a default case.
 For patterns defined without template parameters, the \lstinline^constexpr^ value \lstinline^any_vals^ can be used as function argument.
 The constant \lstinline^any_vals^ is of type \lstinline^anything^ and is nothing but syntactic sugar for defining patterns.
 
@@ -164,18 +163,18 @@ on(any_vals, arg_match) >> [](int i) {
   // tuple with int as last element
   // "on(any_vals, arg_match)" is equal to "on(anything{}, arg_match)"
 },
-others() >> [] {
+others >> [] {
   // everything else (default handler)
-  // "others()" is equal to "on<anything>()" and "on(any_vals)"
+  // "others" is equal to "on<anything>()" and "on(any_vals)"
 }
 \end{lstlisting}
 
-\subsection{Projections and Extractors}
+\subsection{Projections}
 
 Projections perform type conversions or extract data from a given input.
 If a callback expects an integer but the received message contains a string, a projection can be used to perform a type conversion on-the-fly.
-This conversion should be free of side-effects and, in particular, shall not throw exceptions, because a failed projection is not an error.
-A pattern simply does not match if a projection failed.
+This conversion must not have side-effects and must not throw exceptions.
+A failed projection is not an error, it simply indicates that a pattern is not matched.
 Let us have a look at a simple example.
 
 \begin{lstlisting}

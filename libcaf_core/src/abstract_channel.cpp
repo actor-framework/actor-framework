@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -18,26 +18,32 @@
  ******************************************************************************/
 
 #include "caf/abstract_channel.hpp"
+
+#include "caf/mailbox_element.hpp"
 #include "caf/detail/singletons.hpp"
 
 namespace caf {
 
 using detail::singletons;
 
-abstract_channel::abstract_channel(size_t initial_ref_count)
-    : ref_counted(initial_ref_count),
+abstract_channel::abstract_channel(channel_type_flag subtype)
+    : m_flags(static_cast<int>(subtype)),
       m_node(singletons::get_node_id()) {
   // nop
 }
 
-abstract_channel::abstract_channel(node_id nid, size_t initial_ref_count)
-    : ref_counted(initial_ref_count),
+abstract_channel::abstract_channel(channel_type_flag subtype, node_id nid)
+    : m_flags(static_cast<int>(subtype)),
       m_node(std::move(nid)) {
   // nop
 }
 
 abstract_channel::~abstract_channel() {
   // nop
+}
+
+void abstract_channel::enqueue(mailbox_element_ptr what, execution_unit* host) {
+  enqueue(what->sender, what->mid, what->msg, host);
 }
 
 bool abstract_channel::is_remote() const {

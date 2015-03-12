@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -29,9 +29,10 @@
 namespace caf {
 namespace io {
 
-void unpublish_impl(const actor_addr& whom, uint16_t port, bool block_caller) {
+void unpublish_impl(const actor_addr& whom, uint16_t port, bool blocking) {
+  CAF_LOGF_TRACE(CAF_TSARG(whom) << ", " << CAF_ARG(port) << CAF_ARG(blocking));
   auto mm = get_middleman_actor();
-  if (block_caller) {
+  if (blocking) {
     scoped_actor self;
     self->sync_send(mm, delete_atom::value, whom, port).await(
       [](ok_atom) {

@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -36,7 +36,7 @@ template <class Derived, class Base = event_based_actor>
 class sb_actor : public Base {
 public:
   static_assert(std::is_base_of<event_based_actor, Base>::value,
-          "Base must be event_based_actor or a derived type");
+                "Base must be event_based_actor or a derived type");
 
   /**
    * Overrides {@link event_based_actor::make_behavior()} and sets
@@ -50,8 +50,9 @@ public:
   using combined_type = sb_actor;
 
   template <class... Ts>
-  sb_actor(Ts&&... args)
-      : Base(std::forward<Ts>(args)...) {}
+  sb_actor(Ts&&... xs) : Base(std::forward<Ts>(xs)...) {
+    // nop
+  }
 };
 
 } // namespace caf

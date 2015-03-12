@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -93,6 +93,29 @@ using ok_atom = atom_constant<atom("OK")>;
  * Generic 'ERROR' atom for response messages.
  */
 using error_atom = atom_constant<atom("ERROR")>;
+
+/**
+ * Marker 'SYS' atom for prefixing messages to a forwarding chain
+ * to address an otherwise transparent actor.
+ */
+using sys_atom = atom_constant<atom("SYS")>;
+
+/**
+ * Generic 'JOIN' atom, e.g., for signaling group subscriptions.
+ */
+using join_atom = atom_constant<atom("JOIN")>;
+
+/**
+ * Generic 'LEAVE' atom, e.g., for signaling group unsubscriptions.
+ */
+using leave_atom = atom_constant<atom("LEAVE")>;
+
+/**
+ * Generic 'FORWARD' atom, e.g., for signaling an actor that it
+ * should drop the first element and forward the remainder to
+ * a list of predefined receivers.
+ */
+using forward_atom = atom_constant<atom("FORWARD")>;
 
 } // namespace caf
 

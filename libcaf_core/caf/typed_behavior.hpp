@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -17,12 +17,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef TYPED_BEHAVIOR_HPP
-#define TYPED_BEHAVIOR_HPP
+#ifndef CAF_TYPED_BEHAVIOR_HPP
+#define CAF_TYPED_BEHAVIOR_HPP
 
 #include "caf/either.hpp"
 #include "caf/behavior.hpp"
-#include "caf/match_expr.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/typed_continue_helper.hpp"
 
@@ -31,7 +30,7 @@
 
 namespace caf {
 
-template <class... Rs>
+template <class... Sigs>
 class functor_based_typed_actor;
 
 namespace detail {
@@ -57,18 +56,6 @@ template <class List>
 struct collapse_replies_to_statement<List, none_t> {
   using type = List;
 };
-
-/*
-template <class List>
-struct unbox_typed_continue_helper {
-  using type = List;
-};
-
-template <class List>
-struct unbox_typed_continue_helper<typed_continue_helper<List>> {
-  using type = List;
-};
-*/
 
 template <class Input, class RepliesToWith>
 struct same_input : std::is_same<Input, typename RepliesToWith::input_types> {};
@@ -169,7 +156,7 @@ void static_check_typed_behavior_input() {
 
 } // namespace detail
 
-template <class... Rs>
+template <class... Sigs>
 class typed_actor;
 
 namespace mixin {
@@ -177,33 +164,28 @@ template <class, class, class>
 class behavior_stack_based_impl;
 }
 
-template <class... Rs>
+template <class... Sigs>
 class typed_behavior {
-  template <class... OtherRs>
+ public:
+  template <class... OtherSigs>
   friend class typed_actor;
+
   template <class, class, class>
   friend class mixin::behavior_stack_based_impl;
+
   template <class...>
   friend class functor_based_typed_actor;
- public:
+
   typed_behavior(typed_behavior&&) = default;
   typed_behavior(const typed_behavior&) = default;
   typed_behavior& operator=(typed_behavior&&) = default;
   typed_behavior& operator=(const typed_behavior&) = default;
 
-  using signatures = detail::type_list<Rs...>;
+  using signatures = detail::type_list<Sigs...>;
 
-  template <class T, class... Ts>
-  typed_behavior(T arg, Ts&&... args) {
-    set(match_expr_collect(
-      detail::lift_to_match_expr(std::move(arg)),
-      detail::lift_to_match_expr(std::forward<Ts>(args))...));
-  }
-
-  template <class... Cs>
-  typed_behavior& operator=(match_expr<Cs...> expr) {
-    set(std::move(expr));
-    return *this;
+  template <class... Ts>
+  typed_behavior(Ts... xs) {
+    set(detail::make_behavior(xs...));
   }
 
   explicit operator bool() const {
@@ -213,29 +195,40 @@ class typed_behavior {
   /**
     * Invokes the timeout callback.
     */
-  inline void handle_timeout() { m_bhvr.handle_timeout(); }
+  void handle_timeout() {
+    m_bhvr.handle_timeout();
+  }
 
   /**
    * Returns the duration after which receives using
    * this behavior should time out.
    */
-  inline const duration& timeout() const { return m_bhvr.timeout(); }
+  const duration& timeout() const {
+    return m_bhvr.timeout();
+  }
+
+  /** @cond PRIVATE */
+
+  behavior& unbox() {
+    return m_bhvr;
+  }
+
+  /** @endcond */
 
  private:
   typed_behavior() = default;
 
-  behavior& unbox() { return m_bhvr; }
-
-  template <class... Cs>
-  void set(match_expr<Cs...>&& expr) {
+  template <class... Ts>
+  void set(intrusive_ptr<detail::default_behavior_impl<std::tuple<Ts...>>> bp) {
     using mpi =
       typename detail::tl_filter_not<
-        detail::type_list<typename detail::deduce_mpi<Cs>::type...>,
+        detail::type_list<typename detail::deduce_mpi<Ts>::type...>,
         detail::is_hidden_msg_handler
       >::type;
     detail::static_asserter<signatures, mpi, detail::ctm>::verify_match();
     // final (type-erasure) step
-    m_bhvr = std::move(expr);
+    intrusive_ptr<detail::behavior_impl> ptr = std::move(bp);
+    m_bhvr.assign(std::move(ptr));
   }
 
   behavior m_bhvr;
@@ -243,4 +236,4 @@ class typed_behavior {
 
 } // namespace caf
 
-#endif // TYPED_BEHAVIOR_HPP
+#endif // CAF_TYPED_BEHAVIOR_HPP

@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -26,11 +26,11 @@
 #include "caf/none.hpp"
 
 #include "caf/duration.hpp"
-#include "caf/match_expr.hpp"
 #include "caf/timeout_definition.hpp"
 
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
+#include "caf/detail/behavior_impl.hpp"
 
 namespace caf {
 
@@ -60,38 +60,40 @@ class behavior {
    * and up to one timeout (if set, the timeout has to be the last argument).
    */
   template <class T, class... Ts>
-  behavior(const T& arg, Ts&&... args) {
-    assign(arg, std::forward<Ts>(args)...);
+  behavior(T x, Ts... xs) {
+    assign(std::move(x), std::move(xs)...);
   }
 
   /**
    * Creates a behavior from `tdef` without message handler.
    */
   template <class F>
-  behavior(const timeout_definition<F>& tdef)
-      : m_impl(detail::new_default_behavior(tdef.timeout, tdef.handler)) {
-    // nop
-  }
-
-  /**
-   * Creates a behavior using `d` and `f` as timeout definition
-   * without message handler.
-   */
-  template <class F>
-  behavior(const duration& d, F f)
-      : m_impl(detail::new_default_behavior(d, f)) {
+  behavior(timeout_definition<F> tdef) : m_impl(detail::make_behavior(tdef)) {
     // nop
   }
 
   /**
    * Assigns new handlers.
    */
-  template <class T, class... Ts>
-  void assign(T&& v, Ts&&... vs) {
-    m_impl = detail::match_expr_concat(
-               detail::lift_to_match_expr(std::forward<T>(v)),
-               detail::lift_to_match_expr(std::forward<Ts>(vs))...);
+  template <class... Ts>
+  void assign(Ts... xs) {
+    static_assert(sizeof...(Ts) > 0, "assign() called without arguments");
+    m_impl = detail::make_behavior(xs...);
   }
+
+  void assign(intrusive_ptr<detail::behavior_impl> ptr) {
+    m_impl.swap(ptr);
+  }
+
+  /**
+   * Equal to `*this = other`.
+   */
+  void assign(message_handler other);
+
+  /**
+   * Equal to `*this = other`.
+   */
+  void assign(behavior other);
 
   /**
    * Invokes the timeout callback if set.
@@ -109,12 +111,10 @@ class behavior {
   }
 
   /**
-   * Returns a value if `arg` was matched by one of the
-   * handler of this behavior, returns `nothing` otherwise.
+   * Runs this handler and returns its (optional) result.
    */
-  template <class T>
-  optional<message> operator()(T&& arg) {
-    return (m_impl) ? m_impl->invoke(std::forward<T>(arg)) : none;
+  inline optional<message> operator()(message& arg) {
+    return (m_impl) ? m_impl->invoke(arg) : none;
   }
 
   /**
@@ -141,16 +141,6 @@ class behavior {
  private:
   impl_ptr m_impl;
 };
-
-/**
- * Creates a behavior from a match expression and a timeout definition.
- * @relates behavior
- */
-template <class... Cs, typename F>
-behavior operator,(const match_expr<Cs...>& lhs,
-                   const timeout_definition<F>& rhs) {
-  return {lhs, rhs};
-}
 
 } // namespace caf
 

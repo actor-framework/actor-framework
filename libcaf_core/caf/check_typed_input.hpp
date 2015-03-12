@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -20,29 +20,31 @@
 #ifndef CAF_CHECK_TYPED_INPUT_HPP
 #define CAF_CHECK_TYPED_INPUT_HPP
 
+#include "caf/typed_actor.hpp"
+
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/typed_actor_util.hpp"
 
 namespace caf {
 
 /**
- * Checks whether `R` does support an input of type `{Ls...}` via a
+ * Checks whether `R` does support an input of type `{Ts...}` via a
  * static assertion (always returns 0).
  */
-template <template <class...> class R, class... Rs,
-          template <class...> class L, class... Ls>
-constexpr int check_typed_input(const R<Rs...>&, const L<Ls...>&) {
+template <class... Sigs, class... Ts>
+void check_typed_input(const typed_actor<Sigs...>&,
+                       const detail::type_list<Ts...>&) {
   static_assert(detail::tl_find<
-                  detail::type_list<Ls...>,
+                  detail::type_list<Ts...>,
                   atom_value
                 >::value == -1,
                 "atom(...) notation is not sufficient for static type "
                 "checking, please use atom_constant instead in this context");
   static_assert(detail::tl_find_if<
-                  detail::type_list<Rs...>,
-                  detail::input_is<detail::type_list<Ls...>>::template eval
-                >::value >= 0, "typed actor does not support given input");
-  return 0;
+                  detail::type_list<Sigs...>,
+                  detail::input_is<detail::type_list<Ts...>>::template eval
+                >::value >= 0,
+                "typed actor does not support given input");
 }
 
 } // namespace caf

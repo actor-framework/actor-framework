@@ -37,7 +37,7 @@ ChatWidget::ChatWidget(QWidget* parent, Qt::WindowFlags f)
             },
             [=](const string& txt) {
                 // don't print own messages
-                if (self != self->last_sender()) {
+                if (self != self->current_sender()) {
                     print(QString::fromUtf8(txt.c_str()));
                 }
             },
@@ -55,7 +55,9 @@ void ChatWidget::sendChatMessage() {
     });
     QString line = input()->text();
     if (line.startsWith('/')) {
-        match_split(line.midRef(1).toUtf8().constData(), ' ') (
+        vector<string> words;
+        split(words, line.midRef(1).toUtf8().constData(), is_any_of(" "));
+        message_builder(words.begin(), words.end()).apply({
             on("join", arg_match) >> [=](const string& mod, const string& g) {
                 group gptr;
                 try { gptr = group::get(mod, g); }
@@ -74,7 +76,7 @@ void ChatWidget::sendChatMessage() {
                       "/join <module> <group id>\n"
                       "/setName <new name>\n");
             }
-        );
+        });
         return;
     }
     if (m_name.empty()) {

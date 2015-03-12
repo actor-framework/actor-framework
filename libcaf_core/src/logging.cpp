@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -30,6 +30,13 @@
 #include <sys/types.h>
 #endif
 
+#include "caf/config.hpp"
+
+#if defined(CAF_LINUX) || defined(CAF_MACOS)
+# include <cxxabi.h>
+#endif
+
+
 #include "caf/string_algorithms.hpp"
 
 #include "caf/all.hpp"
@@ -53,7 +60,14 @@ constexpr struct pop_aid_log_event_t {
 
 struct log_event {
   log_event* next;
+  log_event* prev;
   std::string msg;
+  log_event(std::string logmsg = "")
+      : next(nullptr),
+        prev(nullptr),
+        msg(std::move(logmsg)) {
+    // nop
+  }
 };
 
 #ifndef CAF_LOG_LEVEL
@@ -64,7 +78,7 @@ struct log_event {
 
 class logging_impl : public logging {
  public:
-  void initialize() {
+  void initialize() override {
     const char* log_level_table[] = {"ERROR", "WARN", "INFO", "DEBUG", "TRACE"};
     m_thread = std::thread([this] { (*this)(); });
     std::string msg = "ENTRY log level = ";
@@ -72,10 +86,10 @@ class logging_impl : public logging {
     log("TRACE", "logging", "run", __FILE__, __LINE__, msg);
   }
 
-  void stop() {
+  void stop() override {
     log("TRACE", "logging", "run", __FILE__, __LINE__, "EXIT");
     // an empty string means: shut down
-    m_queue.synchronized_enqueue(m_queue_mtx, m_queue_cv, new log_event{0, ""});
+    m_queue.synchronized_enqueue(m_queue_mtx, m_queue_cv, new log_event{""});
     m_thread.join();
   }
 
@@ -101,9 +115,32 @@ class logging_impl : public logging {
   void log(const char* level, const char* c_class_name,
            const char* function_name, const char* c_full_file_name,
            int line_num, const std::string& msg) override {
-    std::string class_name = c_class_name;
+#   if defined(CAF_LINUX) || defined(CAF_MACOS)
+    int stat = 0;
+    std::unique_ptr<char, decltype(free)*> real_class_name{nullptr, free};
+    auto tmp = abi::__cxa_demangle(c_class_name, 0, 0, &stat);
+    real_class_name.reset(tmp);
+    std::string class_name = stat == 0 ? real_class_name.get() : c_class_name;
+    replace_all(class_name, " ", "");
     replace_all(class_name, "::", ".");
-    replace_all(class_name, "(anonymous namespace)", "$anon$");
+    replace_all(class_name, "(anonymousnamespace)", "$anon$");
+    real_class_name.reset();
+    // hide CAF magic in logs
+    auto strip_magic = [&](const char* prefix_begin, const char* prefix_end) {
+      auto last = class_name.end();
+      auto i = std::search(class_name.begin(), last, prefix_begin, prefix_end);
+      auto comma_or_angle_bracket = [](char c) { return c == ',' || c == '>'; };
+      auto e = std::find_if(i, last, comma_or_angle_bracket);
+      if (i != e) {
+        std::string substr(i + (prefix_end - prefix_begin), e);
+        class_name.swap(substr);
+      }
+    };
+    char prefix1[] = "caf.detail.embedded<";
+    strip_magic(prefix1, prefix1 + (sizeof(prefix1) - 1));
+#   else
+    std::string class_name = c_class_name;
+#   endif
     std::string file_name;
     std::string full_file_name = c_full_file_name;
     auto ri = find(full_file_name.rbegin(), full_file_name.rend(), '/');
@@ -123,7 +160,7 @@ class logging_impl : public logging {
          << class_name << " " << function_name << " " << file_name << ":"
          << line_num << " " << msg << std::endl;
     m_queue.synchronized_enqueue(m_queue_mtx, m_queue_cv,
-                                 new log_event{nullptr, line.str()});
+                                 new log_event{line.str()});
   }
 
  private:

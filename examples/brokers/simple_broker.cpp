@@ -66,7 +66,8 @@ behavior pong() {
 // utility function for sending an integer type
 template <class T>
 void write_int(broker* self, connection_handle hdl, T value) {
-  auto cpy = static_cast<T>(htonl(value));
+  using unsigned_type = typename std::make_unsigned<T>::type;
+  auto cpy = static_cast<T>(htonl(static_cast<unsigned_type>(value)));
   self->write(hdl, sizeof(T), &cpy);
   self->flush(hdl);
 }
@@ -80,8 +81,9 @@ void write_int(broker* self, connection_handle hdl, uint64_t value) {
 // utility function for reading an ingeger from incoming data
 template <class T>
 void read_int(const void* data, T& storage) {
+  using unsigned_type = typename std::make_unsigned<T>::type;
   memcpy(&storage, data, sizeof(T));
-  storage = static_cast<T>(ntohl(storage));
+  storage = static_cast<T>(ntohl(static_cast<unsigned_type>(storage)));
 }
 
 void read_int(const void* data, uint64_t& storage) {
@@ -146,8 +148,8 @@ behavior broker_impl(broker* self, connection_handle hdl, const actor& buddy) {
       // send composed message to our buddy
       self->send(buddy, atm, ival);
     },
-    others() >> [=] {
-      cout << "unexpected: " << to_string(self->last_dequeued()) << endl;
+    others >> [=] {
+      cout << "unexpected: " << to_string(self->current_message()) << endl;
     }
   };
 }
@@ -164,8 +166,8 @@ behavior server(broker* self, const actor& buddy) {
       aout(self) << "quit server (only accept 1 connection)" << endl;
       self->quit();
     },
-    others() >> [=] {
-      cout << "unexpected: " << to_string(self->last_dequeued()) << endl;
+    others >> [=] {
+      cout << "unexpected: " << to_string(self->current_message()) << endl;
     }
   };
 }
@@ -190,7 +192,7 @@ int main(int argc, char** argv) {
       print_on_exit(ping_actor, "ping");
       send_as(io_actor, ping_actor, kickoff_atom::value, io_actor);
     },
-    others() >> [] {
+    others >> [] {
       cerr << "use with eihter '-s PORT' as server or '-c HOST PORT' as client"
            << endl;
     }

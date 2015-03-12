@@ -21,89 +21,58 @@
 #include <QApplication>
 
 #include "caf/all.hpp"
-#include "cppa/opt.hpp"
 
 #include "ui_chatwindow.h" // auto generated from chatwindow.ui
 
 using namespace std;
 using namespace caf;
 
-/*
-namespace {
-
-struct line { string str; };
-
-istream& operator>>(istream& is, line& l) {
-    getline(is, l.str);
-    return is;
-}
-
-any_tuple s_last_line;
-
-any_tuple split_line(const line& l) {
-    vector<string> result;
-    stringstream strs(l.str);
-    string tmp;
-    while (getline(strs, tmp, ' ')) {
-        if (!tmp.empty()) result.push_back(std::move(tmp));
-    }
-    s_last_line = any_tuple::view(std::move(result));
-    return s_last_line;
-}
-
-} // namespace <anonymous>
-*/
-
 int main(int argc, char** argv) {
-
-    string name;
-    string group_id;
-    options_description desc;
-    bool args_valid = match_stream<string>(argv + 1, argv + argc) (
-        on_opt1('n', "name", &desc, "set name") >> rd_arg(name),
-        on_opt1('g', "group", &desc, "join group <arg1>") >> rd_arg(group_id),
-        on_opt0('h', "help", &desc, "print help") >> print_desc_and_exit(&desc)
-    );
-
-    group gptr;
-    // evaluate group parameter
-    if (!group_id.empty()) {
-        auto p = group_id.find(':');
-        if (p == std::string::npos) {
-            cerr << "*** error parsing argument " << group_id
-                 << ", expected format: <module_name>:<group_id>";
-        }
-        else {
-            try {
-                gptr = group::get(group_id.substr(0, p),
-                                  group_id.substr(p + 1));
-            }
-            catch (exception& e) {
-                ostringstream err;
-                cerr << "*** exception: group::get(\"" << group_id.substr(0, p)
-                     << "\", \"" << group_id.substr(p + 1) << "\") failed; "
-                     << to_verbose_string(e) << endl;
-            }
-        }
+  string name;
+  string group_id;
+  auto res = message_builder(argv + 1, argv + argc).extract_opts({
+    {"name,n", "set chat name", name},
+    {"group,g", "join chat group", group_id}
+  });
+  if (!res.remainder.empty()) {
+    std::cerr << res.helptext << std::endl;
+    return 1;
+  }
+  if (res.opts.count("help") > 0) {
+    return 0;
+  }
+  group gptr;
+  // evaluate group parameter
+  if (!group_id.empty()) {
+    auto p = group_id.find(':');
+    if (p == std::string::npos) {
+      cerr << "*** error parsing argument " << group_id
+           << ", expected format: <module_name>:<group_id>";
+    } else {
+      try {
+        gptr = group::get(group_id.substr(0, p), group_id.substr(p + 1));
+      } catch (exception& e) {
+        cerr << "*** exception: group::get(\"" << group_id.substr(0, p)
+             << "\", \"" << group_id.substr(p + 1) << "\") failed; "
+             << to_verbose_string(e) << endl;
+      }
     }
-
-    if (!args_valid) print_desc_and_exit(&desc)();
-
-    QApplication app(argc, argv);
-    app.setQuitOnLastWindowClosed(true);
-    QMainWindow mw;
-    Ui::ChatWindow helper;
-    helper.setupUi(&mw);
-    auto client = helper.chatwidget->as_actor();
-    if (!name.empty()) {
-        send_as(client, client, atom("setName"), move(name));
-    }
-    if (gptr) {
-        send_as(client, client, atom("join"), gptr);
-    }
-    mw.show();
-    auto res = app.exec();
-    shutdown();
-    await_all_actors_done();
-    return res;
+  }
+  QApplication app(argc, argv);
+  app.setQuitOnLastWindowClosed(true);
+  QMainWindow mw;
+  Ui::ChatWindow helper;
+  helper.setupUi(&mw);
+  auto client = helper.chatwidget->as_actor();
+  if (!name.empty()) {
+    send_as(client, client, atom("setName"), move(name));
+  }
+  if (gptr) {
+    send_as(client, client, atom("join"), gptr);
+  }
+  mw.show();
+  auto app_res = app.exec();
+  await_all_actors_done();
+  shutdown();
+  return app_res;
 }

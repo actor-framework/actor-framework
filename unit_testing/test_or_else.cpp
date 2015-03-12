@@ -38,19 +38,14 @@ void test_or_else() {
   CAF_PRINT("run_testee: handle_a.or_else(handle_b), on(\"c\") ...");
   run_testee(
     spawn([=] {
-      return (
-        handle_a.or_else(handle_b),
-        on("c") >> [] { return 3; }
-      );
+      return handle_a.or_else(handle_b).or_else(on("c") >> [] { return 3; });
     })
   );
   CAF_PRINT("run_testee: on(\"a\") ..., handle_b.or_else(handle_c)");
   run_testee(
     spawn([=] {
-      return (
-        on("a") >> [] { return 1; },
-        handle_b.or_else(handle_c)
-      );
+      return message_handler{on("a") >> [] { return 1; }}.
+             or_else(handle_b).or_else(handle_c);
     })
   );
 }
@@ -58,5 +53,6 @@ void test_or_else() {
 int main() {
   CAF_TEST(test_or_else);
   test_or_else();
+  shutdown();
   return CAF_TEST_RESULT();
 }

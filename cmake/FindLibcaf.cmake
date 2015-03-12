@@ -31,8 +31,9 @@ foreach (comp ${Libcaf_FIND_COMPONENTS})
   # look for headers: give CMake hints where to find non-installed CAF versions
   # note that we look for the headers of each component individually: this is
   # necessary to support non-installed versions of CAF, i.e., accessing the
-  # checked out "actor-framework" or "caf" directory structure directly
-  unset(HDRHINT)
+  # checked out "actor-framework" or "caf" directory structure directly;
+  # also check whether LIBCAF_ROOT_DIR is a source directory
+  set(HDRHINT "${LIBCAF_ROOT_DIR}/libcaf_${comp}")
   foreach(dir ".." "../.." "../../..")
     foreach(subdir "actor-framework" "caf")
       set(HDRHINT ${HDRHINT} "${dir}/${subdir}/libcaf_${comp}")
@@ -78,6 +79,7 @@ foreach (comp ${Libcaf_FIND_COMPONENTS})
                      "caf_${comp}"
                    HINTS
                      ${LIBCAF_ROOT_DIR}/lib
+                     ${LIBCAF_ROOT_DIR}/build/lib
                      /usr/lib
                      /usr/local/lib
                      /opt/local/lib
@@ -100,6 +102,7 @@ find_package_handle_standard_args(Libcaf
                                   FOUND_VAR LIBCAF_FOUND
                                   REQUIRED_VARS LIBCAF_LIBRARIES LIBCAF_INCLUDE_DIRS
                                   HANDLE_COMPONENTS)
+
 # final step to tell CMake we're done
 mark_as_advanced(LIBCAF_ROOT_DIR
                  LIBCAF_LIBRARIES

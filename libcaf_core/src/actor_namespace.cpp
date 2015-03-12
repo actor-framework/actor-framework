@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -87,13 +87,26 @@ size_t actor_namespace::count_proxies(const key_type& node) {
   return (i != m_proxies.end()) ? i->second.size() : 0;
 }
 
+std::vector<actor_proxy_ptr> actor_namespace::get_all() {
+  std::vector<actor_proxy_ptr> result;
+  for (auto& outer : m_proxies) {
+    for (auto& inner : outer.second) {
+      auto ptr = inner.second->get();
+      if (ptr) {
+        result.push_back(std::move(ptr));
+      }
+    }
+  }
+  return result;
+}
+
 std::vector<actor_proxy_ptr> actor_namespace::get_all(const key_type& node) {
   std::vector<actor_proxy_ptr> result;
   auto& submap = m_proxies[node];
   for (auto& kvp : submap) {
     auto ptr = kvp.second->get();
     if (ptr) {
-      result.push_back(ptr);
+      result.push_back(std::move(ptr));
     }
   }
   return result;
@@ -147,6 +160,10 @@ void actor_namespace::erase(const key_type& inf, actor_id aid) {
       m_proxies.erase(i);
     }
   }
+}
+
+void actor_namespace::clear() {
+  m_proxies.clear();
 }
 
 } // namespace caf

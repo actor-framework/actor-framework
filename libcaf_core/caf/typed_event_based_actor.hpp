@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -23,10 +23,9 @@
 #include "caf/replies_to.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/typed_behavior.hpp"
+#include "caf/abstract_event_based_actor.hpp"
 
 #include "caf/mixin/sync_sender.hpp"
-#include "caf/mixin/mailbox_based.hpp"
-#include "caf/mixin/behavior_stack_based.hpp"
 
 namespace caf {
 
@@ -37,19 +36,29 @@ namespace caf {
  * `blocking_api` flag.
  * @extends local_actor
  */
-template <class... Rs>
-class typed_event_based_actor : public
-    extend<local_actor, typed_event_based_actor<Rs...>>::template
-    with<mixin::mailbox_based,
-         mixin::behavior_stack_based<typed_behavior<Rs...>>::template impl,
-         mixin::sync_sender<nonblocking_response_handle_tag>::template impl> {
+template <class... Sigs>
+class typed_event_based_actor
+    : public abstract_event_based_actor<typed_behavior<Sigs...>, true> {
  public:
-  using signatures = detail::type_list<Rs...>;
+  using signatures = detail::type_list<Sigs...>;
 
-  using behavior_type = typed_behavior<Rs...>;
+  using behavior_type = typed_behavior<Sigs...>;
 
   std::set<std::string> message_types() const override {
-    return {Rs::static_type_name()...};
+    return {Sigs::static_type_name()...};
+  }
+
+  void initialize() override {
+    this->is_initialized(true);
+    auto bhvr = make_behavior();
+    CAF_LOG_DEBUG_IF(!bhvr, "make_behavior() did not return a behavior, "
+                            << "has_behavior() = "
+                            << std::boolalpha << this->has_behavior());
+    if (bhvr) {
+      // make_behavior() did return a behavior instead of using become()
+      CAF_LOG_DEBUG("make_behavior() did return a valid behavior");
+      this->do_become(std::move(bhvr.unbox()), true);
+    }
   }
 
  protected:

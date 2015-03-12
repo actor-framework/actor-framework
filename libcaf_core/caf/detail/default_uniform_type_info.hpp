@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -30,7 +30,6 @@
 #include "caf/deserializer.hpp"
 
 #include "caf/detail/type_traits.hpp"
-#include "caf/detail/types_array.hpp"
 #include "caf/detail/abstract_uniform_type_info.hpp"
 
 
@@ -164,7 +163,7 @@ class default_serialize_policy {
 
   template <class T>
   void simpl(const T& val, serializer* s, recursive_impl) const {
-    static_types_array<T>::arr[0]->serialize(&val, s);
+    uniform_typeid<T>()->serialize(&val, s);
   }
 
   template <class T>
@@ -217,7 +216,7 @@ class default_serialize_policy {
 
   template <class T>
   void dimpl(T& storage, deserializer* d, recursive_impl) const {
-    static_types_array<T>::arr[0]->deserialize(&storage, d);
+    uniform_typeid<T>()->deserialize(&storage, d);
   }
 };
 
@@ -476,9 +475,9 @@ class default_uniform_type_info : public detail::abstract_uniform_type_info<T> {
   using super = detail::abstract_uniform_type_info<T>;
 
   template <class... Ts>
-  default_uniform_type_info(std::string tname, Ts&&... args)
+  default_uniform_type_info(std::string tname, Ts&&... xs)
       : super(std::move(tname)) {
-    push_back(std::forward<Ts>(args)...);
+    push_back(std::forward<Ts>(xs)...);
   }
 
   default_uniform_type_info(std::string tname) : super(std::move(tname)) {
@@ -526,57 +525,56 @@ class default_uniform_type_info : public detail::abstract_uniform_type_info<T> {
   }
 
   template <class R, class C, class... Ts>
-  void push_back(R C::*memptr, Ts&&... args) {
+  void push_back(R C::*memptr, Ts&&... xs) {
     m_members.push_back(new_member_tinfo(memptr));
-    push_back(std::forward<Ts>(args)...);
+    push_back(std::forward<Ts>(xs)...);
   }
 
   // pr.first = member pointer
   // pr.second = meta object to handle pr.first
   template <class R, class C, class... Ts>
-  void push_back(
-    const std::pair<R C::*, detail::abstract_uniform_type_info<R>*>& pr,
-    Ts&&... args) {
-    m_members.push_back(
-      new_member_tinfo(pr.first, uniform_type_info_ptr(pr.second)));
-    push_back(std::forward<Ts>(args)...);
+  void push_back(const std::pair<R C::*,
+                                 detail::abstract_uniform_type_info<R>*>& pr,
+                 Ts&&... xs) {
+    m_members.push_back(new_member_tinfo(pr.first,
+                                         uniform_type_info_ptr(pr.second)));
+    push_back(std::forward<Ts>(xs)...);
   }
 
-  // pr.first = getter / setter pair
-  // pr.second = meta object to handle pr.first
+  // pr.first = const-qualified getter
+  // pr.second = setter with one argument
   template <class GR, typename SR, typename ST, typename C, class... Ts>
-  void push_back(const std::pair<GR (C::*)() const, // const-qualified getter
-                   SR (C::*)(ST) // setter with one argument
-                   >& pr,
-           Ts&&... args) {
+  void push_back(const std::pair<GR (C::*)() const,
+                                 SR (C::*)(ST)>& pr,
+                 Ts&&... xs) {
     m_members.push_back(new_member_tinfo(pr.first, pr.second));
-    push_back(std::forward<Ts>(args)...);
+    push_back(std::forward<Ts>(xs)...);
   }
 
-  // pr.first = getter / setter pair
-  // pr.second = meta object to handle pr.first
+  // pr.first = pair of const-qualified getter and setter with one argument
+  // pr.second = uniform type info pointer
   template <class GR, typename SR, typename ST, typename C, class... Ts>
-  void push_back(
-    const std::pair<std::pair<GR (C::*)() const, // const-qualified getter
-                  SR (C::*)(ST)    // setter with one argument
-                  >,
-            detail::abstract_uniform_type_info<
-              typename std::decay<GR>::type>*>& pr,
-    Ts&&... args) {
+  void push_back(const std::pair<
+                         std::pair<GR (C::*)() const,
+                                   SR (C::*)(ST)>,
+                         detail::abstract_uniform_type_info<
+                           typename std::decay<GR>::type>*
+                       >& pr,
+                 Ts&&... xs) {
     m_members.push_back(new_member_tinfo(pr.first.first, pr.first.second,
                        uniform_type_info_ptr(pr.second)));
-    push_back(std::forward<Ts>(args)...);
+    push_back(std::forward<Ts>(xs)...);
   }
 
   std::vector<uniform_type_info_ptr> m_members;
 };
 
-template <class... Rs>
-class default_uniform_type_info<typed_actor<Rs...>> :
-    public detail::abstract_uniform_type_info<typed_actor<Rs...>> {
+template <class... Sigs>
+class default_uniform_type_info<typed_actor<Sigs...>> :
+    public detail::abstract_uniform_type_info<typed_actor<Sigs...>> {
  public:
-  using super = detail::abstract_uniform_type_info<typed_actor<Rs...>>;
-  using handle_type = typed_actor<Rs...>;
+  using super = detail::abstract_uniform_type_info<typed_actor<Sigs...>>;
+  using handle_type = typed_actor<Sigs...>;
 
   default_uniform_type_info(std::string tname) : super(std::move(tname)) {
     sub_uti = uniform_typeid<actor>();

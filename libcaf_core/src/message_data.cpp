@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -19,56 +19,58 @@
 
 #include "caf/detail/message_data.hpp"
 
+#include <cstring>
+
 namespace caf {
 namespace detail {
 
-message_data::message_data(bool is_dynamic) : m_is_dynamic(is_dynamic) {
+message_data::~message_data() {
   // nop
 }
 
 bool message_data::equals(const message_data& other) const {
-  auto full_eq = [](const message_iterator& lhs, const message_iterator& rhs) {
-    return lhs.type() == rhs.type()
-        && lhs.type()->equals(lhs.value(), rhs.value());
-  };
-  return this == &other
-         || (size() == other.size()
-             && std::equal(begin(), end(), other.begin(), full_eq));
+  if (this == &other) {
+    return true;
+  }
+  auto n = size();
+  if (n != other.size()) {
+    return false;
+  }
+  // step 1, get and compare type names
+  std::vector<const char*> type_names;
+  for (size_t i = 0; i < n; ++i) {
+    auto lhs = uniform_name_at(i);
+    auto rhs = other.uniform_name_at(i);
+    if (lhs != rhs && strcmp(lhs, rhs) != 0) {
+      return false; // type mismatch
+    }
+    type_names.push_back(lhs);
+  }
+  // step 2: compare each value individually
+  for (size_t i = 0; i < n; ++i) {
+    auto uti = uniform_type_info::from(type_names[i]);
+    if (!uti->equals(at(i), other.at(i))) {
+      return false;
+    }
+  }
+  return true;
 }
 
-message_data::message_data(const message_data& other)
-    : super(), m_is_dynamic(other.m_is_dynamic) {
-  // nop
-}
-
-const std::type_info* message_data::type_token() const {
-  return &typeid(void);
-}
-
-const void* message_data::native_data() const {
-  return nullptr;
-}
-
-void* message_data::mutable_native_data() {
-  return nullptr;
-}
-
-std::string get_tuple_type_names(const detail::message_data& tup) {
+std::string message_data::tuple_type_names() const {
   std::string result = "@<>";
-  for (size_t i = 0; i < tup.size(); ++i) {
-    auto uti = tup.type_at(i);
+  for (size_t i = 0; i < size(); ++i) {
     result += "+";
-    result += uti->name();
+    result += uniform_name_at(i);
   }
   return result;
 }
 
-message_data* message_data::ptr::get_detached() {
+message_data* message_data::cow_ptr::get_detached() {
   auto p = m_ptr.get();
   if (!p->unique()) {
-    auto np = p->copy();
-    m_ptr.reset(np);
-    return np;
+    auto cptr = p->copy();
+    m_ptr.swap(cptr.m_ptr);
+    return m_ptr.get();
   }
   return p;
 }

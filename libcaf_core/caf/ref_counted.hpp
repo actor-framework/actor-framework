@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -30,14 +30,16 @@ namespace caf {
 /**
  * Base class for reference counted objects with an atomic reference count.
  * Serves the requirements of {@link intrusive_ptr}.
+ * @note *All* instances of `ref_counted` start with a reference count of 1.
  * @relates intrusive_ptr
  */
 class ref_counted : public memory_managed {
  public:
   ~ref_counted();
+
+  ref_counted();
   ref_counted(const ref_counted&);
   ref_counted& operator=(const ref_counted&);
-  explicit ref_counted(size_t initial_count = 0);
 
   /**
    * Increases reference count by one.

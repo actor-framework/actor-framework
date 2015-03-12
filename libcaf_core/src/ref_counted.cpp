@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2014                                                  *
+ * Copyright (C) 2011 - 2015                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -25,17 +25,17 @@ ref_counted::~ref_counted() {
   // nop
 }
 
-ref_counted::ref_counted(const ref_counted&) {
+ref_counted::ref_counted() : m_rc(1) {
+  // nop
+}
+
+ref_counted::ref_counted(const ref_counted&) : m_rc(1) {
   // nop; don't copy reference count
 }
 
 ref_counted& ref_counted::operator=(const ref_counted&) {
   // nop; don't copy reference count
   return *this;
-}
-
-ref_counted::ref_counted(size_t initial_count) : m_rc(initial_count) {
-  // nop
 }
 
 } // namespace caf
