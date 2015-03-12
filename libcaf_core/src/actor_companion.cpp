@@ -50,4 +50,8 @@ void actor_companion::enqueue(const actor_addr& sender, message_id mid,
   enqueue(std::move(ptr), eu);
 }
 
+void actor_companion::initialize() {
+  // nop
+}
+
 } // namespace caf

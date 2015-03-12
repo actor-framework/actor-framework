@@ -63,6 +63,8 @@ class actor_companion : public abstract_event_based_actor<behavior, true> {
   void enqueue(const actor_addr& sender, message_id mid,
                message content, execution_unit* host) override;
 
+  void initialize();
+
  private:
   // set by parent to define custom enqueue action
   enqueue_handler m_on_enqueue;
