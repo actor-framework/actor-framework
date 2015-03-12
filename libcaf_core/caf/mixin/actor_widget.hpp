@@ -71,9 +71,9 @@ class actor_widget : public Base {
     if (event->type() == static_cast<QEvent::Type>(EventId)) {
       auto ptr = dynamic_cast<event_type*>(event);
       if (ptr) {
-        m_invoke.invoke_message(m_companion.get(), ptr->mptr,
-                                m_companion->bhvr_stack().back(),
-                                m_companion->bhvr_stack().back_id());
+        m_companion->invoke_message(ptr->mptr,
+                                    m_companion->get_behavior(),
+                                    m_companion->awaited_response_id());
         return true;
       }
     }
