@@ -401,11 +401,11 @@ struct pending_response_predicate {
   message_id m_mid;
 };
 
-message_id local_actor::new_request_id() {
+message_id local_actor::new_request_id(message_priority mp) {
   auto result = ++m_last_request_id;
   m_pending_responses.push_front(std::make_pair(result.response_id(),
                                                 behavior{}));
-  return result;
+  return mp == message_priority::normal ? result : result.with_high_priority();
 }
 
 void local_actor::mark_arrived(message_id mid) {
@@ -797,12 +797,12 @@ void local_actor::await_data() {
   mailbox().synchronized_await(m_mtx, m_cv);
 }
 
-void local_actor::send_impl(message_priority prio, abstract_channel* dest,
+void local_actor::send_impl(message_id mid, abstract_channel* dest,
                             message what) {
   if (!dest) {
     return;
   }
-  dest->enqueue(address(), message_id::make(prio), std::move(what), host());
+  dest->enqueue(address(), mid, std::move(what), host());
 }
 
 void local_actor::send_exit(const actor_addr& whom, uint32_t reason) {
@@ -847,37 +847,10 @@ void local_actor::quit(uint32_t reason) {
   }
 }
 
-message_id local_actor::timed_sync_send_impl(message_priority mp,
-                                             const actor& dest,
-                                             const duration& rtime,
-                                             message&& what) {
-  if (!dest) {
-    throw std::invalid_argument("cannot sync_send to invalid_actor");
-  }
-  auto nri = new_request_id();
-  if (mp == message_priority::high) {
-    nri = nri.with_high_priority();
-  }
-  dest->enqueue(address(), nri, std::move(what), host());
-  auto rri = nri.response_id();
+void local_actor::request_sync_timeout_msg(const duration& dr, message_id mid) {
   auto sched_cd = detail::singletons::get_scheduling_coordinator();
-  sched_cd->delayed_send(rtime, address(), this, rri,
+  sched_cd->delayed_send(dr, address(), this, mid,
                          make_message(sync_timeout_msg{}));
-  return rri;
-}
-
-message_id local_actor::sync_send_impl(message_priority mp,
-                                       const actor& dest,
-                                       message&& what) {
-  if (!dest) {
-    throw std::invalid_argument("cannot sync_send to invalid_actor");
-  }
-  auto nri = new_request_id();
-  if (mp == message_priority::high) {
-    nri = nri.with_high_priority();
-  }
-  dest->enqueue(address(), nri, std::move(what), host());
-  return nri.response_id();
 }
 
 // <backward_compatibility version="0.12">

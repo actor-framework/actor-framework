@@ -25,7 +25,6 @@
 #include "caf/actor.hpp"
 #include "caf/message.hpp"
 #include "caf/duration.hpp"
-#include "caf/actor_cast.hpp"
 #include "caf/response_handle.hpp"
 #include "caf/message_priority.hpp"
 #include "caf/check_typed_input.hpp"
@@ -53,8 +52,7 @@ class sync_sender_impl : public Base {
   response_handle_type sync_send(message_priority mp, const actor& dest,
                                  Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
-    return {dptr()->sync_send_impl(mp, dest,
-                                   make_message(std::forward<Ts>(xs)...)),
+    return {dptr()->sync_send_impl(mp, dest, std::forward<Ts>(xs)...),
             dptr()};
   }
 
@@ -96,8 +94,7 @@ class sync_sender_impl : public Base {
         >::type...>;
     token tk;
     check_typed_input(dest, tk);
-    return {dptr()->sync_send_impl(mp, actor_cast<actor>(dest),
-                                   make_message(std::forward<Ts>(xs)...)),
+    return {dptr()->sync_send_impl(mp, dest, std::forward<Ts>(xs)...),
             dptr()};
   }
 
@@ -128,8 +125,7 @@ class sync_sender_impl : public Base {
     token tk;
     check_typed_input(dest, tk);
     return {dptr()->sync_send_impl(message_priority::normal,
-                                   actor_cast<actor>(dest),
-                                   make_message(std::forward<Ts>(xs)...)),
+                                   dest, std::forward<Ts>(xs)...),
             dptr()};
   }
 
@@ -150,7 +146,7 @@ class sync_sender_impl : public Base {
                                        const duration& rtime, Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
     return {dptr()->timed_sync_send_impl(mp, dest, rtime,
-                                         make_message(std::forward<Ts>(xs)...)),
+                                         std::forward<Ts>(xs)...),
             dptr()};
   }
 
@@ -196,8 +192,8 @@ class sync_sender_impl : public Base {
         >::type...>;
     token tk;
     check_typed_input(dest, tk);
-    return {dptr()->timed_sync_send_impl(mp, actor_cast<actor>(dest), rtime,
-                                         make_message(std::forward<Ts>(xs)...)),
+    return {dptr()->timed_sync_send_impl(mp, dest, rtime,
+                                         std::forward<Ts>(xs)...),
             dptr()};
   }
 

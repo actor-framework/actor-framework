@@ -36,6 +36,7 @@
 #include "caf/behavior.hpp"
 #include "caf/spawn_fwd.hpp"
 #include "caf/resumable.hpp"
+#include "caf/actor_cast.hpp"
 #include "caf/message_id.hpp"
 #include "caf/exit_reason.hpp"
 #include "caf/typed_actor.hpp"
@@ -148,7 +149,8 @@ class local_actor : public abstract_actor, public resumable {
   template <class... Ts>
   void send(message_priority mp, const channel& dest, Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "sizeof...(Ts) == 0");
-    send_impl(mp, actor_cast<abstract_channel*>(dest), std::forward<Ts>(xs)...);
+    send_impl(message_id::make(mp), actor_cast<abstract_channel*>(dest),
+              std::forward<Ts>(xs)...);
   }
 
   /**
@@ -156,7 +158,8 @@ class local_actor : public abstract_actor, public resumable {
    */
   template <class... Ts>
   void send(const channel& dest, Ts&&... xs) {
-    send(message_priority::normal, dest, std::forward<Ts>(xs)...);
+    send_impl(message_id::make(), actor_cast<abstract_channel*>(dest),
+              std::forward<Ts>(xs)...);
   }
 
   /**
@@ -171,7 +174,8 @@ class local_actor : public abstract_actor, public resumable {
         >::type...>;
     token tk;
     check_typed_input(dest, tk);
-    send_impl(mp, actor_cast<abstract_channel*>(dest), std::forward<Ts>(xs)...);
+    send_impl(message_id::make(mp), actor_cast<abstract_channel*>(dest),
+              std::forward<Ts>(xs)...);
   }
 
   /**
@@ -179,7 +183,8 @@ class local_actor : public abstract_actor, public resumable {
    */
   template <class... Sigs, class... Ts>
   void send(const typed_actor<Sigs...>& dest, Ts&&... xs) {
-    send(message_priority::normal, dest, std::forward<Ts>(xs)...);
+    send_impl(message_id::make(), actor_cast<abstract_channel*>(dest),
+              std::forward<Ts>(xs)...);
   }
 
   /**
@@ -453,12 +458,27 @@ class local_actor : public abstract_actor, public resumable {
     }
   }
 
-  // returns the response ID
-  message_id timed_sync_send_impl(message_priority, const actor&,
-                                  const duration&, message&&);
+  template <class Handle, class... Ts>
+  message_id sync_send_impl(message_priority mp, const Handle& dh, Ts&&... xs) {
+    if (!dh) {
+      throw std::invalid_argument("cannot sync_send to invalid_actor");
+    }
+    auto req_id = new_request_id(mp);
+    send_impl(req_id, actor_cast<abstract_channel*>(dh),
+              std::forward<Ts>(xs)...);
+    return req_id.response_id();
+  }
+
+  void request_sync_timeout_msg(const duration& dr, message_id mid);
 
   // returns the response ID
-  message_id sync_send_impl(message_priority, const actor&, message&&);
+  template <class Handle, class... Ts>
+  message_id timed_sync_send_impl(message_priority mp, const Handle& dh,
+                                  const duration& dr, Ts&&... xs) {
+    auto result = sync_send_impl(mp, dh, std::forward<Ts>(xs)...);
+    request_sync_timeout_msg(dr, result);
+    return result;
+  }
 
   // returns 0 if last_dequeued() is an asynchronous or sync request message,
   // a response id generated from the request id otherwise
@@ -523,7 +543,7 @@ class local_actor : public abstract_actor, public resumable {
 
   using pending_response = std::pair<message_id, behavior>;
 
-  message_id new_request_id();
+  message_id new_request_id(message_priority mp);
 
   void mark_arrived(message_id response_id);
 
@@ -593,19 +613,20 @@ class local_actor : public abstract_actor, public resumable {
   typename std::enable_if<
     !std::is_same<typename std::decay<T>::type, message>::value
   >::type
-  send_impl(message_priority mp, abstract_channel* dest, T&& x, Ts&&... xs) {
+  send_impl(message_id mid, abstract_channel* dest, T&& x, Ts&&... xs) {
     if (!dest) {
       return;
     }
-    dest->enqueue(mailbox_element::make_joint(address(), message_id::make(mp),
+    dest->enqueue(mailbox_element::make_joint(address(),
+                                              mid,
                                               std::forward<T>(x),
                                               std::forward<Ts>(xs)...),
                   host());
   }
 
-  void send_impl(message_priority mp, abstract_channel* dest, message what);
+  void send_impl(message_id mp, abstract_channel* dest, message what);
 
-  void delayed_send_impl(message_priority mp, const channel& whom,
+  void delayed_send_impl(message_priority mid, const channel& whom,
                          const duration& rtime, message data);
 
   std::function<void()> m_sync_failure_handler;
@@ -621,11 +642,12 @@ using local_actor_ptr = intrusive_ptr<local_actor>;
 // <backward_compatibility version="0.9">
 inline void local_actor::send_tuple(message_priority mp, const channel& whom,
                                     message what) {
-  send_impl(mp, actor_cast<abstract_channel*>(whom), std::move(what));
+  send_impl(message_id::make(mp), actor_cast<abstract_channel*>(whom),
+            std::move(what));
 }
 
 inline void local_actor::send_tuple(const channel& whom, message what) {
-  send_impl(message_priority::normal, actor_cast<abstract_channel*>(whom),
+  send_impl(message_id::make(), actor_cast<abstract_channel*>(whom),
             std::move(what));
 }
 
@@ -633,8 +655,8 @@ inline void local_actor::delayed_send_tuple(message_priority mp,
                                             const channel& whom,
                                             const duration& rtime,
                                             message data) {
-  delayed_send_impl(mp, actor_cast<abstract_channel*>(whom), rtime,
-                    std::move(data));
+  delayed_send_impl(mp, actor_cast<abstract_channel*>(whom),
+                    rtime, std::move(data));
 }
 
 inline void local_actor::delayed_send_tuple(const channel& whom,
