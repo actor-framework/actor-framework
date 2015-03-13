@@ -21,13 +21,15 @@
 #define CAF_TEST_UNIT_TEST_HPP
 
 #include <map>
+#include <regex>
+#include <cmath>
+#include <mutex>
 #include <vector>
 #include <string>
+#include <memory>
 #include <fstream>
-#include <iostream>
-#include <mutex>
-#include <regex>
 #include <sstream>
+#include <iostream>
 
 namespace caf {
 namespace test {
@@ -41,35 +43,43 @@ class test {
 
   virtual ~test();
 
-  size_t __expected_failures() const;
+  size_t expected_failures() const;
 
-  void __pass(std::string msg);
+  void pass(std::string msg);
 
-  void __fail(std::string msg, bool expected);
+  void fail(std::string msg, bool expected);
 
-  const std::vector<std::pair<bool, std::string>>& __trace() const;
+  const std::string& name() const;
 
-  const std::string& __name() const;
+  inline size_t good() {
+    return m_good;
+  }
 
-  virtual void __run() = 0;
+  inline size_t bad() {
+    return m_bad;
+  }
+
+  virtual void run() = 0;
 
  private:
-  size_t m_expected_failures = 0;
-  std::vector<std::pair<bool, std::string>> m_trace;
+  size_t m_expected_failures;
   std::string m_name;
+  size_t m_good;
+  size_t m_bad;
 };
 
 namespace detail {
 
-// Thrown when a required check fails.
-struct require_error : std::logic_error {
-  require_error(const std::string& msg) : std::logic_error(msg) { }
+// thrown when a required check fails
+class require_error : std::logic_error {
+ public:
+  require_error(const std::string& msg);
   require_error(const require_error&) = default;
   require_error(require_error&&) = default;
   ~require_error() noexcept;
 };
 
-// Constructs spacing given a line number.
+// constructs spacing given a line number.
 const char* fill(size_t line);
 
 } // namespace detail
@@ -87,19 +97,37 @@ class logger {
     massive = 4
   };
 
-  class message {
+  /**
+   * Output stream for logging purposes.
+   */
+  class stream {
    public:
-    message(logger& l, level lvl);
+    stream(logger& l, level lvl);
+
+    stream(stream&&);
 
     template <class T>
-    message& operator<<(const T& x) {
-      m_logger.log(m_level, x);
+    typename std::enable_if<
+      !std::is_same<T, char*>::value,
+      stream&
+    >::type
+    operator<<(const T& x) {
+      m_buf << x;
       return *this;
     }
 
+    stream& operator<<(const char& c);
+
+    stream& operator<<(const char* cstr);
+
+    stream& operator<<(const std::string& str);
+
    private:
+    void flush();
+
     logger& m_logger;
     level m_level;
+    std::ostringstream m_buf;
   };
 
   static bool init(int lvl_cons, int lvl_file, const std::string& logfile);
@@ -118,10 +146,10 @@ class logger {
     }
   }
 
-  message error();
-  message info();
-  message verbose();
-  message massive();
+  stream error();
+  stream info();
+  stream verbose();
+  stream massive();
 
  private:
   logger();
@@ -155,8 +183,6 @@ enum color_value {
  * Drives unit test execution.
  */
 class engine {
-  engine() = default;
-
  public:
   /**
    * Adds a test to the engine.
@@ -182,10 +208,10 @@ class engine {
                   int verbosity_console,
                   int verbosity_file,
                   int max_runtime,
-                  const std::regex& suites,
-                  const std::regex& not_suites,
-                  const std::regex& tests,
-                  const std::regex& not_tests);
+                  const std::string& suites,
+                  const std::string& not_suites,
+                  const std::string& tests,
+                  const std::string& not_tests);
 
   /**
    * Retrieves a UNIX terminal color code or an empty string based on the
@@ -201,7 +227,11 @@ class engine {
 
   static test* current_test();
 
+  static std::vector<std::string> available_suites();
+
  private:
+  engine() = default;
+
   static engine& instance();
 
   static std::string render(std::chrono::microseconds t);
@@ -267,6 +297,36 @@ showable<T> show(T const &x) {
   return showable<T>{x};
 }
 
+template <class T,
+          bool IsFloat = std::is_floating_point<T>::value,
+          bool IsIntegral = std::is_integral<T>::value>
+class lhs_cmp {
+ public:
+  template <class U>
+  bool operator()(const T& x, const U& y) {
+    return x == y;
+  }
+};
+
+template <class T>
+class lhs_cmp<T, true, false> {
+ public:
+  template <class U>
+  bool operator()(const T& x, const U& y) {
+    using rt = decltype(x - y);
+    return std::fabs(x - y) <= std::numeric_limits<rt>::epsilon();
+  }
+};
+
+template <class T>
+class lhs_cmp<T, false, true> {
+ public:
+  template <class U>
+  bool operator()(const T& x, const U& y) {
+    return x == static_cast<T>(y);
+  }
+};
+
 template <class T>
 struct lhs {
  public:
@@ -293,53 +353,74 @@ struct lhs {
 
   template <class U>
   using elevated =
-    typename std::conditional<std::is_convertible<U, T>::value, T, U>::type;
+    typename std::conditional<
+      std::is_convertible<U, T>::value,
+      T,
+      U
+    >::type;
 
   explicit operator bool() {
     m_evaluated = true;
-    return !! m_value ? pass() : fail_unary();
+    return static_cast<bool>(m_value) ? pass() : fail_unary();
+  }
+
+  // pass-or-fail
+  template <class U>
+  bool pof(bool res, const U& x) {
+    m_evaluated = true;
+    return res ? pass() : fail(x);
   }
 
   template <class U>
-  bool operator==(const U& u) {
-    m_evaluated = true;
-    return m_value == static_cast<elevated<U>>(u) ? pass() : fail(u);
+  bool operator==(const U& x) {
+    lhs_cmp<T> cmp;
+    return pof(cmp(m_value, x), x);
   }
 
   template <class U>
-  bool operator!=(const U& u) {
-    m_evaluated = true;
-    return m_value != static_cast<elevated<U>>(u) ? pass() : fail(u);
+  bool operator!=(const U& x) {
+    lhs_cmp<T> cmp;
+    return pof(!cmp(m_value, x), x);
   }
 
   template <class U>
-  bool operator<(const U& u) {
-    m_evaluated = true;
-    return m_value < static_cast<elevated<U>>(u) ? pass() : fail(u);
+  bool operator<(const U& x) {
+    return pof(m_value < static_cast<elevated<U>>(x), x);
   }
 
   template <class U>
-  bool operator<=(const U& u) {
-    m_evaluated = true;
-    return m_value <= static_cast<elevated<U>>(u) ? pass() : fail(u);
+  bool operator<=(const U& x) {
+    return pof(m_value <= static_cast<elevated<U>>(x), x);
   }
 
   template <class U>
-  bool operator>(const U& u) {
-    m_evaluated = true;
-    return m_value > static_cast<elevated<U>>(u) ? pass() : fail(u);
+  bool operator>(const U& x) {
+    return pof(m_value > static_cast<elevated<U>>(x), x);
   }
 
   template <class U>
-  bool operator>=(const U& u) {
-    m_evaluated = true;
-    return m_value >= static_cast<elevated<U>>(u) ? pass() : fail(u);
+  bool operator>=(const U& x) {
+    return pof(m_value >= static_cast<elevated<U>>(x), x);
   }
 
  private:
   template<class V = T>
-  auto eval(int) -> decltype(! std::declval<V>()) {
-    return !! m_value;
+  typename std::enable_if<
+    std::is_convertible<V, bool>::value
+    && !std::is_floating_point<V>::value,
+    bool
+  >::type
+  eval(int) {
+    return static_cast<bool>(m_value);
+  }
+
+  template<class V = T>
+  typename std::enable_if<
+    std::is_floating_point<V>::value,
+    bool
+  >::type
+  eval(int) {
+    return std::fabs(m_value) <= std::numeric_limits<V>::epsilon();
   }
 
   bool eval(long) {
@@ -349,47 +430,44 @@ struct lhs {
   bool pass() {
     m_passed = true;
     std::stringstream ss;
-    ss
-      << engine::color(green) << "** "
-      << engine::color(blue) << m_filename << engine::color(yellow) << ":"
-      << engine::color(blue) << m_line << fill(m_line) << engine::color(reset)
-      << m_expr;
-    m_test->__pass(ss.str());
+    ss << engine::color(green) << "** "
+       << engine::color(blue) << m_filename << engine::color(yellow) << ":"
+       << engine::color(blue) << m_line << fill(m_line) << engine::color(reset)
+       << m_expr;
+    m_test->pass(ss.str());
     return true;
   }
 
   bool fail_unary() {
     std::stringstream ss;
-    ss
-      << engine::color(red) << "!! "
-      << engine::color(blue) << m_filename << engine::color(yellow) << ":"
-      << engine::color(blue) << m_line << fill(m_line) << engine::color(reset)
-      << m_expr;
-    m_test->__fail(ss.str(), m_should_fail);
+    ss << engine::color(red) << "!! "
+       << engine::color(blue) << m_filename << engine::color(yellow) << ":"
+       << engine::color(blue) << m_line << fill(m_line) << engine::color(reset)
+       << m_expr;
+    m_test->fail(ss.str(), m_should_fail);
     return false;
   }
 
   template <class U>
   bool fail(const U& u) {
     std::stringstream ss;
-    ss
-      << engine::color(red) << "!! "
-      << engine::color(blue) << m_filename << engine::color(yellow) << ":"
-      << engine::color(blue) << m_line << fill(m_line) << engine::color(reset)
-      << m_expr << engine::color(magenta) << " ("
-      << engine::color(red) << show(m_value) << engine::color(magenta) << " !! "
-      << engine::color(red) << show(u) << engine::color(magenta) << ')'
-      << engine::color(reset);
-    m_test->__fail(ss.str(), m_should_fail);
+    ss << engine::color(red) << "!! "
+       << engine::color(blue) << m_filename << engine::color(yellow) << ":"
+       << engine::color(blue) << m_line << fill(m_line) << engine::color(reset)
+       << m_expr << engine::color(magenta) << " ("
+       << engine::color(red) << show(m_value) << engine::color(magenta)
+       << " !! " << engine::color(red) << show(u) << engine::color(magenta)
+       << ')' << engine::color(reset);
+    m_test->fail(ss.str(), m_should_fail);
     return false;
   }
 
   bool m_evaluated = false;
   bool m_passed = false;
   test* m_test;
-  const char *m_filename;
+  const char* m_filename;
   size_t m_line;
-  const char *m_expr;
+  const char* m_expr;
   bool m_should_fail;
   const T& m_value;
 };
@@ -416,67 +494,78 @@ private:
 } // namespace test
 } // namespace caf
 
-#define CAF_TEST_ERROR(msg) \
-  ::caf::test::logger::instance().error() << msg << '\n'
-#define CAF_TEST_INFO(msg) \
-  ::caf::test::logger::instance().info() << msg << '\n'
-#define CAF_TEST_VERBOSE(msg) \
-  ::caf::test::logger::instance().verbose() << msg << '\n'
+#define CAF_TEST_PR(level, msg)                                                \
+  ::caf::test::logger::instance(). level ()                                    \
+    << ::caf::test::engine::color(::caf::test::yellow)                         \
+    << "  -> " << ::caf::test::engine::color(::caf::test::reset) << msg << '\n'
+
+
+#define CAF_TEST_ERROR(msg)                                                    \
+  CAF_TEST_PR(error, msg)
+
+#define CAF_TEST_INFO(msg)                                                     \
+  CAF_TEST_PR(info, msg)
+
+#define CAF_TEST_VERBOSE(msg)                                                  \
+  CAF_TEST_PR(verbose, msg)
 
 #define CAF_PASTE_CONCAT(lhs, rhs) lhs ## rhs
+
 #define CAF_PASTE(lhs, rhs) CAF_PASTE_CONCAT(lhs, rhs)
+
 #define CAF_UNIQUE(name) CAF_PASTE(name, __LINE__)
 
 #ifndef CAF_SUITE
-#define CAF_SUITE ""
+#define CAF_SUITE unnamed
 #endif
 
-#define CAF_CHECK(...)                                                      \
-  do {                                                                      \
-    (void)(::caf::test::detail::expr{                                       \
-             ::caf::test::engine::current_test(), __FILE__, __LINE__,       \
-             false, #__VA_ARGS__} ->* __VA_ARGS__);                         \
-    ::caf::test::engine::last_check_file(__FILE__);                         \
-    ::caf::test::engine::last_check_line(__LINE__);                         \
-  } while (false)
+#define CAF_STR(s) #s
 
-#define CAF_FAIL(...)                                                       \
-  do {                                                                      \
-    (void)(::caf::test::detail::expr{                                       \
-             ::caf::test::engine::current_test(), __FILE__, __LINE__,       \
-             true, #__VA_ARGS__} ->* __VA_ARGS__);                          \
-    ::caf::test::engine::last_check_file(__FILE__);                         \
-    ::caf::test::engine::last_check_line(__LINE__);                         \
-  } while (false)
+#define CAF_XSTR(s) CAF_STR(s)
 
-#define CAF_REQUIRE(...)                                                    \
-  do {                                                                      \
-    auto CAF_UNIQUE(__result) =                                             \
-      ::caf::test::detail::expr{::caf::test::engine::current_test(),        \
-      __FILE__, __LINE__, false, #__VA_ARGS__} ->* __VA_ARGS__;             \
-    if (! CAF_UNIQUE(__result)) {                                           \
-      throw ::caf::test::detail::require_error{#__VA_ARGS__};               \
-    }                                                                       \
-    ::caf::test::engine::last_check_file(__FILE__);                         \
-    ::caf::test::engine::last_check_line(__LINE__);                         \
-  } while (false)
+#define CAF_CHECK(...)                                                         \
+  {                                                                            \
+    static_cast<void>(::caf::test::detail::expr{                               \
+             ::caf::test::engine::current_test(), __FILE__, __LINE__,          \
+             false, #__VA_ARGS__} ->* __VA_ARGS__);                            \
+    ::caf::test::engine::last_check_file(__FILE__);                            \
+    ::caf::test::engine::last_check_line(__LINE__);                            \
+  } static_cast<void>(0)
 
-#define CAF_TEST(name)                                                      \
-  namespace {                                                               \
-  struct CAF_UNIQUE(test) : public ::caf::test::test {                      \
-    CAF_UNIQUE(test)() : test{name} { }                                     \
-    void __run() final;                                                     \
-  };                                                                        \
-  ::caf::test::detail::adder<CAF_UNIQUE(test)> CAF_UNIQUE(a){CAF_SUITE};    \
-  } /* namespace <anonymous> */                                             \
-  void CAF_UNIQUE(test)::__run()
+#define CAF_FAIL(...)                                                          \
+   {                                                                           \
+    (void)(::caf::test::detail::expr{                                          \
+             ::caf::test::engine::current_test(), __FILE__, __LINE__,          \
+             true, #__VA_ARGS__} ->* __VA_ARGS__);                             \
+    ::caf::test::engine::last_check_file(__FILE__);                            \
+    ::caf::test::engine::last_check_line(__LINE__);                            \
+  } static_cast<void>(0)
 
-// Boost Test compatibility macros
+#define CAF_REQUIRE(...)                                                       \
+  {                                                                            \
+    auto CAF_UNIQUE(__result) =                                                \
+      ::caf::test::detail::expr{::caf::test::engine::current_test(),           \
+      __FILE__, __LINE__, false, #__VA_ARGS__} ->* __VA_ARGS__;                \
+    if (!CAF_UNIQUE(__result)) {                                               \
+      throw ::caf::test::detail::require_error{#__VA_ARGS__};                  \
+    }                                                                          \
+    ::caf::test::engine::last_check_file(__FILE__);                            \
+    ::caf::test::engine::last_check_line(__LINE__);                            \
+  }  static_cast<void>(0)
+
+#define CAF_TEST(name)                                                         \
+  namespace {                                                                  \
+  struct CAF_UNIQUE(test) : public ::caf::test::test {                         \
+    CAF_UNIQUE(test)() : test{CAF_XSTR(name)} { }                              \
+    void run() final;                                                          \
+  };                                                                           \
+  ::caf::test::detail::adder<CAF_UNIQUE(test)> CAF_UNIQUE(a) {                 \
+    CAF_XSTR(CAF_SUITE)                                                        \
+  };                                                                           \
+  } /* namespace <anonymous> */                                                \
+  void CAF_UNIQUE(test)::run()
+
+// Boost Test compatibility macro
 #define CAF_CHECK_EQUAL(x, y) CAF_CHECK(x == y)
-#define CAF_CHECK_NE(x, y) CAF_CHECK(x != y)
-#define CAF_CHECK_LT(x, y) CAF_CHECK(x < y)
-#define CAF_CHECK_LE(x, y) CAF_CHECK(x <= y)
-#define CAF_CHECK_GT(x, y) CAF_CHECK(x > y)
-#define CAF_CHECK_GE(x, y) CAF_CHECK(x >= y)
 
 #endif // CAF_TEST_UNIT_TEST_HPP
