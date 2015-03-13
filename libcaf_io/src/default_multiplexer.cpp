@@ -314,7 +314,7 @@ namespace network {
     CAF_LOG_TRACE("e.fd = " << e.fd << ", mask = " << e.mask);
     // ptr is only allowed to nullptr if fd is our pipe
     // read handle which is only registered for input
-    CAF_REQUIRE(e.ptr != nullptr || e.fd == m_pipe.first);
+    CAF_ASSERT(e.ptr != nullptr || e.fd == m_pipe.first);
     if (e.ptr && e.ptr->eventbf() == e.mask) {
       // nop
       return;
@@ -472,8 +472,8 @@ namespace network {
   }
 
   void default_multiplexer::handle(const default_multiplexer::event& e) {
-    CAF_REQUIRE(e.fd != invalid_native_socket);
-    CAF_REQUIRE(m_pollset.size() == m_shadow.size());
+    CAF_ASSERT(e.fd != invalid_native_socket);
+    CAF_ASSERT(m_pollset.size() == m_shadow.size());
     CAF_LOGF_TRACE("fd = " << e.fd
             << ", old mask = " << (e.ptr ? e.ptr->eventbf() : -1)
             << ", new mask = " << e.mask);
@@ -513,7 +513,7 @@ namespace network {
         m_shadow.erase(j);
       } else {
         // update event mask of existing entry
-        CAF_REQUIRE(*j == e.ptr);
+        CAF_ASSERT(*j == e.ptr);
         i->events = static_cast<short>(e.mask);
       }
       if (e.ptr) {
@@ -563,10 +563,10 @@ int del_flag(operation op, int bf) {
 
 void default_multiplexer::add(operation op, native_socket fd,
                               event_handler* ptr) {
-  CAF_REQUIRE(fd != invalid_native_socket);
+  CAF_ASSERT(fd != invalid_native_socket);
   // ptr == nullptr is only allowed to store our pipe read handle
   // and the pipe read handle is added in the ctor (not allowed here)
-  CAF_REQUIRE(ptr != nullptr);
+  CAF_ASSERT(ptr != nullptr);
   CAF_LOG_TRACE(CAF_TARG(op, static_cast<int>)<< ", " << CAF_ARG(fd)
                                               << ", " CAF_ARG(ptr));
   new_event(add_flag, op, fd, ptr);
@@ -574,9 +574,9 @@ void default_multiplexer::add(operation op, native_socket fd,
 
 void default_multiplexer::del(operation op, native_socket fd,
                               event_handler* ptr) {
-  CAF_REQUIRE(fd != invalid_native_socket);
+  CAF_ASSERT(fd != invalid_native_socket);
   // ptr == nullptr is only allowed when removing our pipe read handle
-  CAF_REQUIRE(ptr != nullptr || fd == m_pipe.first);
+  CAF_ASSERT(ptr != nullptr || fd == m_pipe.first);
   CAF_LOG_TRACE(CAF_TARG(op, static_cast<int>)<< ", " << CAF_ARG(fd)
                                               << ", " CAF_ARG(ptr));
   new_event(del_flag, op, fd, ptr);
@@ -663,7 +663,7 @@ void default_multiplexer::handle_socket_event(native_socket fd, int mask,
     if (ptr) {
       ptr->handle_event(operation::read);
     } else {
-      CAF_REQUIRE(fd == m_pipe.first);
+      CAF_ASSERT(fd == m_pipe.first);
       CAF_LOG_DEBUG("read message from pipe");
       auto cb = rd_dispatch_request();
       cb->run();
@@ -672,7 +672,7 @@ void default_multiplexer::handle_socket_event(native_socket fd, int mask,
   }
   if (mask & output_mask) {
     // we do *never* register our pipe handle for writing
-    CAF_REQUIRE(ptr != nullptr);
+    CAF_ASSERT(ptr != nullptr);
     checkerror = false;
     ptr->handle_event(operation::write);
   }
@@ -760,7 +760,7 @@ connection_handle default_multiplexer::add_tcp_scribe(broker* self,
     }
     void launch() {
       CAF_LOG_TRACE("");
-      CAF_REQUIRE(!m_launched);
+      CAF_ASSERT(!m_launched);
       m_launched = true;
       m_stream.start(this);
     }
@@ -777,7 +777,7 @@ accept_handle
 default_multiplexer::add_tcp_doorman(broker* self,
                                      default_socket_acceptor&& sock) {
   CAF_LOG_TRACE("sock.fd = " << sock.fd());
-  CAF_REQUIRE(sock.fd() != network::invalid_native_socket);
+  CAF_ASSERT(sock.fd() != network::invalid_native_socket);
   class impl : public broker::doorman {
    public:
     impl(broker* ptr, default_socket_acceptor&& s)
@@ -1069,7 +1069,7 @@ native_socket new_tcp_connection_impl(const std::string& host, uint16_t port,
     throw network_error("no such host: " + host);
   }
   auto proto = res->second;
-  CAF_REQUIRE(proto == ipv4 || proto == ipv6);
+  CAF_ASSERT(proto == ipv4 || proto == ipv6);
   auto fd = ccall(cc_valid_socket, "socket creation failed", socket,
                   proto == ipv4 ? AF_INET : AF_INET6, SOCK_STREAM, 0);
   socket_guard sguard(fd);
@@ -1161,7 +1161,7 @@ new_tcp_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr) {
       throw network_error(errmsg);
     }
     proto = addrs->second;
-    CAF_REQUIRE(proto == ipv4 || proto == ipv6);
+    CAF_ASSERT(proto == ipv4 || proto == ipv6);
   }
   auto fd = ccall(cc_valid_socket, "could not create server socket", socket,
                   proto == ipv4 ? AF_INET : AF_INET6, SOCK_STREAM, 0);
@@ -1188,7 +1188,7 @@ new_tcp_acceptor(uint16_t port, const char* addr, bool reuse) {
   auto& backend = get_multiplexer_singleton();
   auto acceptor = new_tcp_acceptor_impl(port, addr, reuse);
   auto bound_port = acceptor.second;
-  CAF_REQUIRE(port == 0 || bound_port == port);
+  CAF_ASSERT(port == 0 || bound_port == port);
   return {default_socket_acceptor{backend, std::move(acceptor.first)},
                                   bound_port};
 }

@@ -53,12 +53,12 @@ class message_builder::dynamic_msg_data : public detail::message_data {
   ~dynamic_msg_data();
 
   const void* at(size_t pos) const override {
-    CAF_REQUIRE(pos < size());
+    CAF_ASSERT(pos < size());
     return m_elements[pos]->val;
   }
 
   void* mutable_at(size_t pos) override {
-    CAF_REQUIRE(pos < size());
+    CAF_ASSERT(pos < size());
     return m_elements[pos]->val;
   }
 
@@ -72,7 +72,7 @@ class message_builder::dynamic_msg_data : public detail::message_data {
 
   bool match_element(size_t pos, uint16_t typenr,
                      const std::type_info* rtti) const override {
-    CAF_REQUIRE(typenr != 0 || rtti != nullptr);
+    CAF_ASSERT(typenr != 0 || rtti != nullptr);
     auto uti = m_elements[pos]->ti;
     if (uti->type_nr() != typenr) {
       return false;

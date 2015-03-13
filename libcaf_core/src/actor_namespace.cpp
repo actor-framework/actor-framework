@@ -41,7 +41,7 @@ actor_namespace::actor_namespace(backend& be) : m_backend(be) {
 }
 
 void actor_namespace::write(serializer* sink, const actor_addr& addr) {
-  CAF_REQUIRE(sink != nullptr);
+  CAF_ASSERT(sink != nullptr);
   if (!addr) {
     node_id::host_id_type zero;
     std::fill(zero.begin(), zero.end(), 0);
@@ -62,7 +62,7 @@ void actor_namespace::write(serializer* sink, const actor_addr& addr) {
 }
 
 actor_addr actor_namespace::read(deserializer* source) {
-  CAF_REQUIRE(source != nullptr);
+  CAF_ASSERT(source != nullptr);
   node_id::host_id_type hid;
   auto aid = source->read<uint32_t>();                 // actor id
   source->read_raw(node_id::host_id_size, hid.data()); // host id

@@ -103,18 +103,18 @@ class tuple_vals : public message_data {
   }
 
   const void* at(size_t pos) const override {
-    CAF_REQUIRE(pos < size());
+    CAF_ASSERT(pos < size());
     return tup_ptr_access<0, sizeof...(Ts)>::get(pos, m_data);
   }
 
   void* mutable_at(size_t pos) override {
-    CAF_REQUIRE(pos < size());
+    CAF_ASSERT(pos < size());
     return const_cast<void*>(at(pos));
   }
 
   bool match_element(size_t pos, uint16_t typenr,
                      const std::type_info* rtti) const override {
-    CAF_REQUIRE(pos < size());
+    CAF_ASSERT(pos < size());
     auto& et = m_types[pos];
     if (et.first != typenr) {
       return false;

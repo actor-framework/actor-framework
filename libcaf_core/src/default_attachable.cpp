@@ -35,7 +35,7 @@ message make(abstract_actor* self, uint32_t reason) {
 } // namespace <anonymous>
 
 void default_attachable::actor_exited(abstract_actor* self, uint32_t reason) {
-  CAF_REQUIRE(self->address() != m_observer);
+  CAF_ASSERT(self->address() != m_observer);
   auto factory = m_type == monitor ? &make<down_msg> : &make<exit_msg>;
   auto ptr = actor_cast<abstract_actor_ptr>(m_observer);
   ptr->enqueue(self->address(), message_id{}.with_high_priority(),

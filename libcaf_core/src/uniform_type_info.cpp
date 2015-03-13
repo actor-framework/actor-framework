@@ -102,7 +102,7 @@ std::vector<const uniform_type_info*> uniform_type_info::instances() {
 }
 
 const uniform_type_info* uniform_typeid_by_nr(uint16_t nr) {
-  CAF_REQUIRE(nr > 0 && nr < detail::type_nrs);
+  CAF_ASSERT(nr > 0 && nr < detail::type_nrs);
   return uti_map().by_type_nr(nr);
 }
 

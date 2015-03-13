@@ -193,7 +193,7 @@ class profiled_coordinator : public coordinator<Policy> {
   void stop_measuring(size_t worker, actor_id job) {
     auto m = measurement::take();
     auto& w = m_worker_states[worker];
-    CAF_REQUIRE(job == w.current);
+    CAF_ASSERT(job == w.current);
     auto delta = m - w.job;
     // It's not possible that the wallclock timer is less than actual CPU time
     // spent. Due to resolution mismatches of the C++ high-resolution clock and

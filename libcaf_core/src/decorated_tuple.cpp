@@ -37,7 +37,7 @@ decorated_tuple::cow_ptr decorated_tuple::make(cow_ptr d, vector_type v) {
 }
 
 void* decorated_tuple::mutable_at(size_t pos) {
-  CAF_REQUIRE(pos < size());
+  CAF_ASSERT(pos < size());
   return m_decorated->mutable_at(m_mapping[pos]);
 }
 
@@ -50,7 +50,7 @@ message_data::cow_ptr decorated_tuple::copy() const {
 }
 
 const void* decorated_tuple::at(size_t pos) const {
-  CAF_REQUIRE(pos < size());
+  CAF_ASSERT(pos < size());
   return m_decorated->at(m_mapping[pos]);
 }
 
@@ -75,7 +75,7 @@ decorated_tuple::decorated_tuple(cow_ptr&& d, vector_type&& v)
     : m_decorated(std::move(d)),
       m_mapping(std::move(v)),
       m_type_token(0xFFFFFFFF) {
-  CAF_REQUIRE(m_mapping.empty()
+  CAF_ASSERT(m_mapping.empty()
               || *(std::max_element(m_mapping.begin(), m_mapping.end()))
                  < static_cast<const cow_ptr&>(m_decorated)->size());
   // calculate type token

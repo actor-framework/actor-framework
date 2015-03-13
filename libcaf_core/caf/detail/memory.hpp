@@ -68,7 +68,7 @@ struct rc_storage : public ref_counted {
   rc_storage(Ts&&... xs)
       : instance(intrusive_ptr<ref_counted>(this, false),
         std::forward<Ts>(xs)...) {
-    CAF_REQUIRE(get_reference_count() >= 1);
+    CAF_ASSERT(get_reference_count() >= 1);
   }
 };
 
@@ -162,7 +162,7 @@ class basic_memory_cache : public memory_cache {
     // allocate cache on-the-fly
     if (!m_cache) {
       m_cache.reset(new storage, false); // starts with ref count of 1
-      CAF_REQUIRE(m_cache->unique());
+      CAF_ASSERT(m_cache->unique());
     }
     auto res = m_cache->next();
     if (m_cache->has_next()) {

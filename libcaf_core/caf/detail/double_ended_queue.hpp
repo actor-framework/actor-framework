@@ -127,7 +127,7 @@ class double_ended_queue {
 
   // acquires only one lock
   void append(pointer value) {
-    CAF_REQUIRE(value != nullptr);
+    CAF_ASSERT(value != nullptr);
     node* tmp = new node(value);
     lock_guard guard(m_tail_lock);
     // publish & swing last forward
@@ -137,23 +137,23 @@ class double_ended_queue {
 
   // acquires both locks
   void prepend(pointer value) {
-    CAF_REQUIRE(value != nullptr);
+    CAF_ASSERT(value != nullptr);
     node* tmp = new node(value);
     node* first = nullptr;
     // acquire both locks since we might touch m_last too
     lock_guard guard1(m_head_lock);
     lock_guard guard2(m_tail_lock);
     first = m_head.load();
-    CAF_REQUIRE(first != nullptr);
+    CAF_ASSERT(first != nullptr);
     auto next = first->next.load();
     // m_first always points to a dummy with no value,
     // hence we put the new element second
     if (next == nullptr) {
       // queue is empty
-      CAF_REQUIRE(first == m_tail);
+      CAF_ASSERT(first == m_tail);
       m_tail = tmp;
     } else {
-      CAF_REQUIRE(first != m_tail);
+      CAF_ASSERT(first != m_tail);
       tmp->next = next;
     }
     first->next = tmp;
@@ -187,7 +187,7 @@ class double_ended_queue {
     { // lifetime scope of guards
       lock_guard guard1(m_head_lock);
       lock_guard guard2(m_tail_lock);
-      CAF_REQUIRE(m_head != nullptr);
+      CAF_ASSERT(m_head != nullptr);
       last.reset(m_tail.load());
       if (last.get() == m_head.load()) {
         last.release();
@@ -195,7 +195,7 @@ class double_ended_queue {
       }
       result = last->value;
       m_tail = find_predecessor(last.get());
-      CAF_REQUIRE(m_tail != nullptr);
+      CAF_ASSERT(m_tail != nullptr);
       m_tail.load()->next = nullptr;
     }
     return result;

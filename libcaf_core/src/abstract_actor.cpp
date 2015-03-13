@@ -132,7 +132,7 @@ bool abstract_actor::link_impl(linking_operation op, const actor_addr& other) {
     case remove_link_op:
       return remove_link_impl(other);
     default:
-      CAF_REQUIRE(op == remove_backlink_op);
+      CAF_ASSERT(op == remove_backlink_op);
       return remove_backlink_impl(other);
   }
 }
@@ -214,7 +214,7 @@ actor_addr abstract_actor::address() const {
 
 void abstract_actor::cleanup(uint32_t reason) {
   CAF_LOG_TRACE(CAF_ARG(reason));
-  CAF_REQUIRE(reason != exit_reason::not_exited);
+  CAF_ASSERT(reason != exit_reason::not_exited);
   // move everyhting out of the critical section before processing it
   attachable_ptr head;
   { // lifetime scope of guard

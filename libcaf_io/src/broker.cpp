@@ -268,9 +268,9 @@ void broker::cleanup(uint32_t reason) {
   planned_exit_reason(reason);
   on_exit();
   close_all();
-  CAF_REQUIRE(m_doormen.empty());
-  CAF_REQUIRE(m_scribes.empty());
-  CAF_REQUIRE(current_mailbox_element() == nullptr);
+  CAF_ASSERT(m_doormen.empty());
+  CAF_ASSERT(m_scribes.empty());
+  CAF_ASSERT(current_mailbox_element() == nullptr);
   m_cache.clear();
   super::cleanup(reason);
   deref(); // release implicit reference count from middleman

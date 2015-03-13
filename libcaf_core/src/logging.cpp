@@ -103,7 +103,7 @@ class logging_impl : public logging {
       m_queue.synchronized_await(m_queue_mtx, m_queue_cv);
       // read & process event
       event.reset(m_queue.try_pop());
-      CAF_REQUIRE(event != nullptr);
+      CAF_ASSERT(event != nullptr);
       if (event->msg.empty()) {
         out.close();
         return;

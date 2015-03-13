@@ -207,12 +207,12 @@ class middleman_actor_impl : public middleman_actor_base::base {
       },
       [=](ok_atom, int64_t request_id) {
         // not legal for get results
-        CAF_REQUIRE(m_pending_gets.count(request_id) == 0);
+        CAF_ASSERT(m_pending_gets.count(request_id) == 0);
         handle_ok<del_op_result>(m_pending_deletes, request_id);
       },
       [=](ok_atom, int64_t request_id, actor_addr& result) {
         // not legal for delete results
-        CAF_REQUIRE(m_pending_deletes.count(request_id) == 0);
+        CAF_ASSERT(m_pending_deletes.count(request_id) == 0);
         handle_ok<get_op_result>(m_pending_gets, request_id, std::move(result));
       },
       [=](error_atom, int64_t request_id, std::string& reason) {

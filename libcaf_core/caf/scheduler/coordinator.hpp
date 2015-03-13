@@ -86,7 +86,7 @@ class coordinator : public abstract_coordinator {
       }
       resumable::resume_result resume(execution_unit* ptr, size_t) override {
         CAF_LOG_DEBUG("shutdown_helper::resume => shutdown worker");
-        CAF_REQUIRE(ptr != nullptr);
+        CAF_ASSERT(ptr != nullptr);
         std::unique_lock<std::mutex> guard(mtx);
         last_worker = ptr;
         cv.notify_all();

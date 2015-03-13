@@ -52,12 +52,12 @@ void message::swap(message& other) {
 }
 
 void* message::mutable_at(size_t p) {
-  CAF_REQUIRE(m_vals);
+  CAF_ASSERT(m_vals);
   return m_vals->mutable_at(p);
 }
 
 const void* message::at(size_t p) const {
-  CAF_REQUIRE(m_vals);
+  CAF_ASSERT(m_vals);
   return m_vals->at(p);
 }
 
@@ -71,12 +71,12 @@ const char* message::uniform_name_at(size_t pos) const {
 }
 
 bool message::equals(const message& other) const {
-  CAF_REQUIRE(m_vals);
+  CAF_ASSERT(m_vals);
   return m_vals->equals(*other.vals());
 }
 
 message message::drop(size_t n) const {
-  CAF_REQUIRE(m_vals);
+  CAF_ASSERT(m_vals);
   if (n == 0) {
     return *this;
   }
@@ -90,7 +90,7 @@ message message::drop(size_t n) const {
 }
 
 message message::drop_right(size_t n) const {
-  CAF_REQUIRE(m_vals);
+  CAF_ASSERT(m_vals);
   if (n == 0) {
     return *this;
   }

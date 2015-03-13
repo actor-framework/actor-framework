@@ -148,7 +148,7 @@ class message {
    */
   template <class T>
   const T& get_as(size_t p) const {
-    CAF_REQUIRE(match_element(p, detail::type_nr<T>::value, &typeid(T)));
+    CAF_ASSERT(match_element(p, detail::type_nr<T>::value, &typeid(T)));
     return *reinterpret_cast<const T*>(at(p));
   }
 
@@ -157,7 +157,7 @@ class message {
    */
   template <class T>
   T& get_as_mutable(size_t p) {
-    CAF_REQUIRE(match_element(p, detail::type_nr<T>::value, &typeid(T)));
+    CAF_ASSERT(match_element(p, detail::type_nr<T>::value, &typeid(T)));
     return *reinterpret_cast<T*>(mutable_at(p));
   }
 

@@ -123,16 +123,16 @@
 
 // import backtrace and backtrace_symbols_fd into caf::detail
 #ifndef CAF_ENABLE_RUNTIME_CHECKS
-# define CAF_REQUIRE(unused) static_cast<void>(0)
+# define CAF_ASSERT(unused) static_cast<void>(0)
 #elif defined(CAF_WINDOWS) || defined(CAF_BSD)
-# define CAF_REQUIRE(stmt)                                                     \
+# define CAF_ASSERT(stmt)                                                      \
   if (static_cast<bool>(stmt) == false) {                                      \
     printf("%s:%u: requirement failed '%s'\n", __FILE__, __LINE__, #stmt);     \
     abort();                                                                   \
   } static_cast<void>(0)
 #else // defined(CAF_LINUX) || defined(CAF_MACOS)
 # include <execinfo.h>
-# define CAF_REQUIRE(stmt)                                                     \
+# define CAF_ASSERT(stmt)                                                      \
   if (static_cast<bool>(stmt) == false) {                                      \
     printf("%s:%u: requirement failed '%s'\n", __FILE__, __LINE__, #stmt);     \
     void* array[10];                                                           \

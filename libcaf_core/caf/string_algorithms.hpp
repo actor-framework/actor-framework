@@ -85,7 +85,7 @@ void replace_all(std::string& str,
   auto i = next(std::begin(str));
   while (i != std::end(str)) {
     auto before = std::distance(std::begin(str), i);
-    CAF_REQUIRE(before >= 0);
+    CAF_ASSERT(before >= 0);
     str.replace(i, i + WhatSize - 1, with);
     // i became invalidated -> use new iterator pointing
     // to the first character after the replaced text
