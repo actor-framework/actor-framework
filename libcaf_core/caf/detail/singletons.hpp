@@ -26,6 +26,8 @@
 
 #include "caf/fwd.hpp"
 
+#include "caf/detail/caf_weak.hpp"
+
 namespace caf {
 namespace detail {
 
@@ -117,7 +119,7 @@ class singletons {
       if (p == nullptr) {
         return;
       }
-      if (ptr.compare_exchange_weak(p, nullptr)) {
+      if (cas_weak<T*>(&ptr, &p, nullptr)) {
         p->dispose();
         return;
       }
