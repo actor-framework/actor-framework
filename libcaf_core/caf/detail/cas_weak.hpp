@@ -17,90 +17,27 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#ifndef CAF_DETAIL_CAS_WEAK_HPP
+#define CAF_DETAIL_CAS_WEAK_HPP
+
+#include <atomic>
+
 #include "caf/config.hpp"
-
-#include <limits>
-#include <thread>
-
-#include "caf/detail/shared_spinlock.hpp"
-
-#include "caf/detail/cas_weak.hpp"
-
-namespace {
-
-inline long min_long() {
-  return std::numeric_limits<long>::min();
-}
-
-} // namespace <anonymous>
 
 namespace caf {
 namespace detail {
 
-shared_spinlock::shared_spinlock() : m_flag(0) {
-  // nop
-}
-
-void shared_spinlock::lock() {
-  long v = m_flag.load();
-  for (;;) {
-    if (v != 0) {
-      v = m_flag.load();
-    } else if (cas_weak(&m_flag, &v, min_long())) {
-      return;
-    }
-    // else: next iteration
-  }
-}
-
-void shared_spinlock::lock_upgrade() {
-  lock_shared();
-}
-
-void shared_spinlock::unlock_upgrade() {
-  unlock_shared();
-}
-
-void shared_spinlock::unlock_upgrade_and_lock() {
-  unlock_shared();
-  lock();
-}
-
-void shared_spinlock::unlock_and_lock_upgrade() {
-  unlock();
-  lock_upgrade();
-}
-
-void shared_spinlock::unlock() {
-  m_flag.store(0);
-}
-
-bool shared_spinlock::try_lock() {
-  long v = m_flag.load();
-  return (v == 0) ? cas_weak(&m_flag, &v, min_long()) : false;
-}
-
-void shared_spinlock::lock_shared() {
-  long v = m_flag.load();
-  for (;;) {
-    if (v < 0) {
-      // std::this_thread::yield();
-      v = m_flag.load();
-    } else if (cas_weak(&m_flag, &v, v + 1)) {
-      return;
-    }
-    // else: next iteration
-  }
-}
-
-void shared_spinlock::unlock_shared() {
-  m_flag.fetch_sub(1);
-}
-
-bool shared_spinlock::try_lock_shared() {
-  long v = m_flag.load();
-  return (v >= 0) ? cas_weak(&m_flag, &v, v + 1) : false;
+template<class T>
+bool cas_weak(std::atomic<T>* obj, T* expected, T desired) {
+# if (defined(CAF_CLANG) && CAF_COMPILER_VERSION < 30401)                      \
+     || (defined(CAF_GCC) && CAF_COMPILER_VERSION < 40803)
+  return std::atomic_compare_exchange_strong(obj, expected, desired);
+# else
+  return std::atomic_compare_exchange_weak(obj, expected, desired);
+# endif
 }
 
 } // namespace detail
 } // namespace caf
+
+#endif // CAF_DETAIL_CAS_WEAK_HPP
