@@ -91,9 +91,6 @@ void ChatWidget::sendChatMessage() {
     msg += ": ";
     msg += line.toUtf8().constData();
     print("<you>: " + input()->text());
-    // NOTE: we have to use send_as(as_actor(), ...) outside of our
-    //       message handler, because `self` is *not* set properly
-    //       in this context
     send_as(as_actor(), m_chatroom, std::move(msg));
 }
 
