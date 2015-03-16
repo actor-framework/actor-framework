@@ -59,19 +59,19 @@ CAF_TEST(receive_atoms) {
   scoped_actor self;
   send_to_self f{self.get()};
   f(atom("foo"), static_cast<uint32_t>(42));
-  f(atom(":Attach"), atom(":Baz"), "cstring");
+  f(atom("abc"), atom("def"), "cstring");
   f(1.f);
   f(atom("a"), atom("b"), atom("c"), 23.f);
   bool matched_pattern[3] = {false, false, false};
   int i = 0;
-  CAF_TEST_VERBOSE("start receive loop");
+  CAF_MESSAGE("start receive loop");
   for (i = 0; i < 3; ++i) {
     self->receive(
       on(atom("foo"), arg_match) >> [&](uint32_t value) {
         matched_pattern[0] = true;
         CAF_CHECK_EQUAL(value, 42);
       },
-      on(atom(":Attach"), atom(":Baz"), arg_match) >> [&](const std::string& str) {
+      on(atom("abc"), atom("def"), arg_match) >> [&](const std::string& str) {
         matched_pattern[1] = true;
         CAF_CHECK_EQUAL(str, "cstring");
       },
@@ -84,7 +84,7 @@ CAF_TEST(receive_atoms) {
   self->receive(
     // "erase" message { atom("b"), atom("a"), atom("c"), 23.f }
     others >> [] {
-      CAF_TEST_VERBOSE("drain mailbox");
+      CAF_MESSAGE("drain mailbox");
     },
     after(std::chrono::seconds(0)) >> [] {
       CAF_TEST_ERROR("mailbox empty");
@@ -97,7 +97,7 @@ CAF_TEST(receive_atoms) {
   self->send(self, msg);
   self->receive(
     on(atom("abc")) >> [] {
-      CAF_TEST_VERBOSE("received 'abc'");
+      CAF_MESSAGE("received 'abc'");
     },
     others >> [] {
       CAF_TEST_ERROR("unexpected message");
@@ -110,7 +110,7 @@ using testee = typed_actor<replies_to<abc_atom>::with<int>>;
 testee::behavior_type testee_impl(testee::pointer self) {
   return {
     [=](abc_atom) {
-      CAF_TEST_VERBOSE("received abc_atom");
+      CAF_MESSAGE("received abc_atom");
       self->quit();
       return 42;
     }

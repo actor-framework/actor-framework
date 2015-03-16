@@ -567,5 +567,6 @@ private:
 
 // Boost Test compatibility macro
 #define CAF_CHECK_EQUAL(x, y) CAF_CHECK(x == y)
+#define CAF_MESSAGE(msg) CAF_TEST_VERBOSE(msg)
 
 #endif // CAF_TEST_UNIT_TEST_HPP
