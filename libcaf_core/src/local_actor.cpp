@@ -810,12 +810,8 @@ void local_actor::send_exit(const actor_addr& whom, uint32_t reason) {
        exit_msg{address(), reason});
 }
 
-void local_actor::delayed_send_impl(message_priority prio, const channel& dest,
+void local_actor::delayed_send_impl(message_id mid, const channel& dest,
                                     const duration& rel_time, message msg) {
-  message_id mid;
-  if (prio == message_priority::high) {
-    mid = mid.with_high_priority();
-  }
   auto sched_cd = detail::singletons::get_scheduling_coordinator();
   sched_cd->delayed_send(rel_time, address(), dest, mid, std::move(msg));
 }

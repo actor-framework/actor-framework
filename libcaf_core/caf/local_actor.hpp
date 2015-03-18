@@ -207,7 +207,8 @@ class local_actor : public abstract_actor, public resumable {
   template <class... Ts>
   void delayed_send(message_priority mp, const channel& dest,
                     const duration& rtime, Ts&&... xs) {
-    delayed_send_impl(mp, dest, rtime, make_message(std::forward<Ts>(xs)...));
+    delayed_send_impl(message_id::make(mp), dest, rtime,
+                      make_message(std::forward<Ts>(xs)...));
   }
 
   /**
@@ -215,8 +216,43 @@ class local_actor : public abstract_actor, public resumable {
    */
   template <class... Ts>
   void delayed_send(const channel& dest, const duration& rtime, Ts&&... xs) {
-    delayed_send_impl(message_priority::normal, dest, rtime,
+    delayed_send_impl(message_id::make(), dest, rtime,
                       make_message(std::forward<Ts>(xs)...));
+  }
+
+  /**
+   * Sends `{xs...}` delayed by `rtime` to `dest` using the priority `mp`.
+   */
+  template <class... Sigs, class... Ts>
+  void delayed_send(message_priority mp, const typed_actor<Sigs...>& dest,
+                    const duration& rtime, Ts&&... xs) {
+    using token =
+      detail::type_list<
+        typename detail::implicit_conversions<
+          typename std::decay<Ts>::type
+        >::type...>;
+    token tk;
+    check_typed_input(dest, tk);
+    delayed_send_impl(message_id::make(mp), actor_cast<abstract_channel*>(dest),
+                      rtime, make_message(std::forward<Ts>(xs)...));
+  }
+
+
+  /**
+   * Sends `{xs...}` delayed by `rtime` to `dest` using the priority `mp`.
+   */
+  template <class... Sigs, class... Ts>
+  void delayed_send(const typed_actor<Sigs...>& dest,
+                    const duration& rtime, Ts&&... xs) {
+    using token =
+      detail::type_list<
+        typename detail::implicit_conversions<
+          typename std::decay<Ts>::type
+        >::type...>;
+    token tk;
+    check_typed_input(dest, tk);
+    delayed_send_impl(message_id::make(), actor_cast<abstract_channel*>(dest),
+                      rtime, make_message(std::forward<Ts>(xs)...));
   }
 
   /****************************************************************************
@@ -626,7 +662,7 @@ class local_actor : public abstract_actor, public resumable {
 
   void send_impl(message_id mp, abstract_channel* dest, message what);
 
-  void delayed_send_impl(message_priority mid, const channel& whom,
+  void delayed_send_impl(message_id mid, const channel& whom,
                          const duration& rtime, message data);
 
   std::function<void()> m_sync_failure_handler;
@@ -655,14 +691,14 @@ inline void local_actor::delayed_send_tuple(message_priority mp,
                                             const channel& whom,
                                             const duration& rtime,
                                             message data) {
-  delayed_send_impl(mp, actor_cast<abstract_channel*>(whom),
+  delayed_send_impl(message_id::make(mp), actor_cast<abstract_channel*>(whom),
                     rtime, std::move(data));
 }
 
 inline void local_actor::delayed_send_tuple(const channel& whom,
                                             const duration& rtime,
                                             message data) {
-  delayed_send_impl(message_priority::normal,
+  delayed_send_impl(message_id::make(),
                     actor_cast<abstract_channel*>(whom), rtime,
                     std::move(data));
 }
