@@ -1,13 +1,15 @@
 #include <string>
 #include <utility>
 
-#include <QMessageBox>
-#include <QInputDialog>
-
-#include "chatwidget.hpp"
-
 #include "caf/all.hpp"
 #include "caf/detail/scope_guard.hpp"
+
+CAF_PUSH_WARNINGS
+#include <QMessageBox>
+#include <QInputDialog>
+CAF_POP_WARNINGS
+
+#include "chatwidget.hpp"
 
 using namespace std;
 using namespace caf;

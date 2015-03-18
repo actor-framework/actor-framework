@@ -93,8 +93,11 @@
     _Pragma("clang diagnostic ignored \"-Wshorten-64-to-32\"")                 \
     _Pragma("clang diagnostic ignored \"-Wsign-conversion\"")                  \
     _Pragma("clang diagnostic ignored \"-Wundef\"")                            \
-    _Pragma("clang diagnostic ignored \"-Wweak-vtables\"")
-#  define CAF_POP_WARNINGS                          \
+    _Pragma("clang diagnostic ignored \"-Wweak-vtables\"")                     \
+    _Pragma("clang diagnostic ignored \"-Wused-but-marked-unused\"")           \
+    _Pragma("clang diagnostic ignored \"-Wdisabled-macro-expansion\"")         \
+    _Pragma("clang diagnostic ignored \"-Wsign-conversion\"")
+#  define CAF_POP_WARNINGS                                                     \
     _Pragma("clang diagnostic pop")
 #  define CAF_ANNOTATE_FALLTHROUGH [[clang::fallthrough]]
 #  define CAF_COMPILER_VERSION                                                 \

@@ -31,12 +31,15 @@
 #ifndef CPPA_ACTOR_WIDGET_MIXIN_HPP
 #define CPPA_ACTOR_WIDGET_MIXIN_HPP
 
-#include <QEvent>
-#include <QApplication>
-
+#include "caf/config.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/actor_companion.hpp"
 #include "caf/message_handler.hpp"
+
+CAF_PUSH_WARNINGS
+#include <QEvent>
+#include <QApplication>
+CAF_POP_WARNINGS
 
 namespace caf {
 namespace mixin {
