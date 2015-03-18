@@ -29,6 +29,8 @@ using std::string;
 
 using namespace caf;
 
+namespace {
+
 using plus_atom = atom_constant<atom("plus")>;
 using minus_atom = atom_constant<atom("minus")>;
 using result_atom = atom_constant<atom("result")>;
@@ -227,6 +229,8 @@ void client_repl(string host, uint16_t port) {
     message_builder(words.begin(), words.end()).apply(eval);
   }
 }
+
+} // namespace <anonymous>
 
 int main(int argc, char** argv) {
   uint16_t port = 0;
