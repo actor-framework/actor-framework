@@ -477,7 +477,6 @@ namespace network {
     CAF_LOGF_TRACE("fd = " << e.fd
             << ", old mask = " << (e.ptr ? e.ptr->eventbf() : -1)
             << ", new mask = " << e.mask);
-    using namespace std;
     auto last = m_pollset.end();
     auto i = std::lower_bound(m_pollset.begin(), last, e.fd,
                               [](const pollfd& lhs, int rhs) {

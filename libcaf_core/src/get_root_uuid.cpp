@@ -153,8 +153,6 @@ std::string get_root_uuid() {
 #include <windows.h>
 #include <tchar.h>
 
-using namespace std;
-
 namespace caf {
 namespace detail {
 
@@ -163,7 +161,9 @@ constexpr size_t max_drive_name = MAX_PATH;
 }
 
 // if TCHAR is indeed a char, we can simply move rhs
-void mv(std::string& lhs, std::string&& rhs) { lhs = std::move(rhs); }
+void mv(std::string& lhs, std::string&& rhs) {
+  lhs = std::move(rhs);
+}
 
 // if TCHAR is defined as WCHAR, we have to do unicode conversion
 void mv(std::string& lhs, const std::basic_string<WCHAR>& rhs) {
@@ -194,12 +194,13 @@ std::string get_root_uuid() {
           mv(uuid, drive_name.substr(first, last - first));
           // UUIDs are formatted as 8-4-4-4-12 hex digits groups
           auto cpy = uuid;
-          replace_if(cpy.begin(), cpy.end(), ::isxdigit, 'F');
+          std::replace_if(cpy.begin(), cpy.end(), ::isxdigit, 'F');
           // discard invalid UUID
-          if (cpy != uuid_format)
+          if (cpy != uuid_format) {
             uuid.clear();
-          else
+          } else {
             return uuid; // return first valid UUID we get
+          }
         }
       }
     }

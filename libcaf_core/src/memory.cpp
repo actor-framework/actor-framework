@@ -24,8 +24,6 @@
 
 #include "caf/mailbox_element.hpp"
 
-using namespace std;
-
 #ifdef CAF_NO_MEM_MANAGEMENT
 
 int caf_memory_keep_compiler_happy() {
@@ -50,7 +48,7 @@ memory_cache::~memory_cache() {
   // nop
 }
 
-using cache_map = map<const type_info*, unique_ptr<memory_cache>>;
+using cache_map = std::map<const std::type_info*,std::unique_ptr<memory_cache>>;
 
 void cache_map_destructor(void* ptr) {
   delete reinterpret_cast<cache_map*>(ptr);
@@ -67,13 +65,13 @@ cache_map& get_cache_map() {
     cache = new cache_map;
     pthread_setspecific(s_key, cache);
     // insert default types
-    unique_ptr<memory_cache> tmp(new basic_memory_cache<mailbox_element>);
-    cache->insert(make_pair(&typeid(mailbox_element), move(tmp)));
+    std::unique_ptr<memory_cache> tmp(new basic_memory_cache<mailbox_element>);
+    cache->insert(std::make_pair(&typeid(mailbox_element), move(tmp)));
   }
   return *cache;
 }
 
-memory_cache* memory::get_cache_map_entry(const type_info* tinf) {
+memory_cache* memory::get_cache_map_entry(const std::type_info* tinf) {
   auto& cache = get_cache_map();
   auto i = cache.find(tinf);
   if (i != cache.end()) {
@@ -82,7 +80,7 @@ memory_cache* memory::get_cache_map_entry(const type_info* tinf) {
   return nullptr;
 }
 
-void memory::add_cache_map_entry(const type_info* tinf,
+void memory::add_cache_map_entry(const std::type_info* tinf,
                                  memory_cache* instance) {
   auto& cache = get_cache_map();
   cache[tinf].reset(instance);

@@ -51,7 +51,7 @@ std::vector<iface_info> get_mac_addresses() {
     auto ifm = reinterpret_cast<if_msghdr*>(buf.get());
     auto sdl = reinterpret_cast<sockaddr_dl*>(ifm + 1);
     auto ptr = reinterpret_cast<unsigned char*>(LLADDR(sdl));
-    auto uctoi = [](unsigned char c)->unsigned {
+    auto uctoi = [](unsigned char c) -> unsigned {
       return static_cast<unsigned char>(c);
     };
     std::ostringstream oss;
@@ -95,8 +95,6 @@ std::vector<iface_info> get_mac_addresses() {
 #include <unistd.h>
 #include <iostream>
 
-using namespace std;
-
 namespace caf {
 namespace detail {
 
@@ -116,8 +114,8 @@ std::vector<iface_info> get_mac_addresses() {
     perror("ioctl(SIOCGIFCONF)");
     return {};
   }
-  vector<iface_info> result;
-  auto ctoi = [](char c)->unsigned {
+  std::vector<iface_info> result;
+  auto ctoi = [](char c) -> unsigned {
     return static_cast<unsigned char>(c);
   };
   // iterate through interfaces
@@ -187,14 +185,12 @@ struct c_free {
 
 } // namespace <anonymous>
 
-using namespace std;
-
 namespace caf {
 namespace detail {
 
 std::vector<iface_info> get_mac_addresses() {
   // result vector
-  vector<iface_info> result;
+  std::vector<iface_info> result;
   // flags to pass to GetAdaptersAddresses
   ULONG flags = GAA_FLAG_INCLUDE_PREFIX;
   // default to unspecified address family (both)

@@ -29,8 +29,6 @@
 
 #include "caf/detail/singletons.hpp"
 
-using namespace std;
-
 namespace caf {
 
 actor_proxy::anchor::anchor(actor_proxy* instance) : m_ptr(instance) {

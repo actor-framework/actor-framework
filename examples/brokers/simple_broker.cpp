@@ -25,7 +25,10 @@
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 
-using namespace std;
+using std::cout;
+using std::cerr;
+using std::endl;
+
 using namespace caf;
 using namespace caf::io;
 
@@ -35,13 +38,13 @@ using kickoff_atom = atom_constant<atom("kickoff")>;
 
 // utility function to print an exit message with custom name
 void print_on_exit(const actor& ptr, const std::string& name) {
-  ptr->attach_functor([=](std::uint32_t reason) {
+  ptr->attach_functor([=](uint32_t reason) {
     aout(ptr) << name << " exited with reason " << reason << endl;
   });
 }
 
 behavior ping(event_based_actor* self, size_t num_pings) {
-  auto count = make_shared<size_t>(0);
+  auto count = std::make_shared<size_t>(0);
   return {
     [=](kickoff_atom, const actor& pong) {
       self->send(pong, ping_atom::value, int32_t(1));
@@ -149,7 +152,8 @@ behavior broker_impl(broker* self, connection_handle hdl, const actor& buddy) {
       self->send(buddy, atm, ival);
     },
     others >> [=] {
-      cout << "unexpected: " << to_string(self->current_message()) << endl;
+      aout(self) << "unexpected: "
+                 << to_string(self->current_message()) << endl;
     }
   };
 }
@@ -167,7 +171,8 @@ behavior server(broker* self, const actor& buddy) {
       self->quit();
     },
     others >> [=] {
-      cout << "unexpected: " << to_string(self->current_message()) << endl;
+      aout(self) << "unexpected: "
+                 << to_string(self->current_message()) << endl;
     }
   };
 }
@@ -177,6 +182,7 @@ optional<uint16_t> as_u16(const std::string& str) {
 }
 
 int main(int argc, char** argv) {
+  using std::string;
   message_builder{argv + 1, argv + argc}.apply({
     on("-s", as_u16) >> [&](uint16_t port) {
       cout << "run in server mode" << endl;

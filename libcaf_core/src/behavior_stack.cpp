@@ -23,8 +23,6 @@
 #include "caf/local_actor.hpp"
 #include "caf/detail/behavior_stack.hpp"
 
-using namespace std;
-
 namespace caf {
 namespace detail {
 

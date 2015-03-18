@@ -11,9 +11,11 @@
 
 #include "caf/all.hpp"
 
+using std::cout;
+using std::cerr;
+using std::endl;
 using std::chrono::seconds;
 
-using namespace std;
 using namespace caf;
 
 namespace {

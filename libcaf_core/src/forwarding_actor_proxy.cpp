@@ -25,8 +25,6 @@
 
 #include "caf/detail/logging.hpp"
 
-using namespace std;
-
 namespace caf {
 
 forwarding_actor_proxy::forwarding_actor_proxy(actor_id aid, node_id nid,
