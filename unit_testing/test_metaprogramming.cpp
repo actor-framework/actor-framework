@@ -35,11 +35,11 @@ int main() {
   using if3 = type_list<replies_to<int, double>::with<void>>;
   using if4 = type_list<replies_to<int>::with<skip_message_t>,
                         replies_to<int, double>::with<void>>;
-  CAF_CHECK((ctm<if1, if2>::value));
-  CAF_CHECK((! ctm<if1, if3>::value));
-  CAF_CHECK((! ctm<if2, if3>::value));
-  CAF_CHECK((ctm<if1, if4>::value));
-  CAF_CHECK((ctm<if2, if4>::value));
+  CAF_CHECK((ctm<if1, if2>::value) == -1);
+  CAF_CHECK((ctm<if1, if3>::value) != -1);
+  CAF_CHECK((ctm<if2, if3>::value) != -1);
+  CAF_CHECK((ctm<if1, if4>::value) == -1);
+  CAF_CHECK((ctm<if2, if4>::value) == -1);
 
   using l1 = type_list<int, float, std::string>;
   using r1 = typename tl_reverse<l1>::type;
