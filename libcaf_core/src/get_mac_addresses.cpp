@@ -129,7 +129,7 @@ std::vector<iface_info> get_mac_addresses() {
       return {};
     }
     std::ostringstream oss;
-    oss << hex;
+    oss << std::hex;
     oss.width(2);
     oss << ctoi(item->ifr_hwaddr.sa_data[0]);
     for (size_t j = 1; j < 6; ++j) {
@@ -217,7 +217,7 @@ std::vector<iface_info> get_mac_addresses() {
     for (auto addr = addresses.get(); addr != nullptr; addr = addr->Next) {
       if (addr->PhysicalAddressLength > 0) {
         std::ostringstream oss;
-        oss << hex;
+        oss << std::hex;
         oss.width(2);
         oss << static_cast<int>(addr->PhysicalAddress[0]);
         for (DWORD i = 1; i < addr->PhysicalAddressLength; ++i) {
