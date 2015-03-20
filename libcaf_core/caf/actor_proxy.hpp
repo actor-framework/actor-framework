@@ -71,7 +71,7 @@ class actor_proxy : public abstract_actor {
      * Tries to expire this anchor. Fails if reference
      *    count of the proxy is nonzero.
      */
-    bool try_expire();
+    bool try_expire(size_t) noexcept;
     std::atomic<actor_proxy*> m_ptr;
     detail::shared_spinlock m_lock;
   };
@@ -96,7 +96,7 @@ class actor_proxy : public abstract_actor {
    */
   virtual void kill_proxy(uint32_t reason) = 0;
 
-  void request_deletion() override;
+  void request_deletion(bool decremented_ref_count) noexcept override;
 
   inline anchor_ptr get_anchor() {
     return m_anchor;

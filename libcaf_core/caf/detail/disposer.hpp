@@ -28,7 +28,7 @@ namespace detail {
 class disposer {
  public:
   inline void operator()(memory_managed* ptr) const {
-    ptr->request_deletion();
+    ptr->request_deletion(false);
   }
 };
 

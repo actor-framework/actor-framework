@@ -592,7 +592,7 @@ void default_multiplexer::wr_dispatch_request(runnable* ptr) {
 # endif
   if (res <= 0) {
     // pipe closed, discard runnable
-    ptr->request_deletion();
+    ptr->request_deletion(false);
   } else if (static_cast<size_t>(res) < sizeof(ptrval)) {
     // must not happen: wrote invalid pointer to pipe
     std::cerr << "[CAF] Fatal error: wrote invalid data to pipe" << std::endl;
@@ -666,7 +666,7 @@ void default_multiplexer::handle_socket_event(native_socket fd, int mask,
       CAF_LOG_DEBUG("read message from pipe");
       auto cb = rd_dispatch_request();
       cb->run();
-      cb->request_deletion();
+      cb->request_deletion(false);
     }
   }
   if (mask & output_mask) {
@@ -713,7 +713,7 @@ default_multiplexer::~default_multiplexer() {
   nonblocking(m_pipe.first, true);
   auto ptr = rd_dispatch_request();
   while (ptr) {
-    ptr->request_deletion();
+    ptr->request_deletion(false);
     ptr = rd_dispatch_request();
   }
   closesocket(m_pipe.first);

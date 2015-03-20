@@ -55,10 +55,10 @@ actor_proxy_ptr actor_proxy::anchor::get() {
   return result;
 }
 
-bool actor_proxy::anchor::try_expire() {
+bool actor_proxy::anchor::try_expire(size_t expected_rc) noexcept {
   std::lock_guard<detail::shared_spinlock> guard{m_lock};
   // double-check reference count
-  if (m_ptr.load()->get_reference_count() == 0) {
+  if (m_ptr.load()->get_reference_count() == expected_rc) {
     m_ptr = nullptr;
     return true;
   }
@@ -75,8 +75,8 @@ actor_proxy::actor_proxy(actor_id aid, node_id nid)
   // nop
 }
 
-void actor_proxy::request_deletion() {
-  if (m_anchor->try_expire()) {
+void actor_proxy::request_deletion(bool decremented_rc) noexcept {
+  if (m_anchor->try_expire(decremented_rc ? 0 : 1)) {
     delete this;
   }
 }
