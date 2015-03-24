@@ -127,7 +127,7 @@ class profiled_coordinator : public coordinator<Policy> {
       out << setw(15) << m.time.count()
           << setw(15) << m.usr.count()
           << setw(15) << m.sys.count()
-          << setw(15) << m.mem;
+          << m.mem;
       return out;
     }
 
@@ -170,7 +170,7 @@ class profiled_coordinator : public coordinator<Policy> {
            << setw(15) << "time"      // duration of this sample (cumulative)
            << setw(15) << "usr"       // time spent in user mode (cumulative)
            << setw(15) << "sys"       // time spent in kernel model (cumulative)
-           << setw(15) << "mem"       // used memory (cumulative)
+           << "mem"                   // used memory (cumulative)
            << std::endl;
   }
 
@@ -210,6 +210,7 @@ class profiled_coordinator : public coordinator<Policy> {
       auto wallclock = m_system_start + (m.time - m_clock_start);
       std::lock_guard<std::mutex> file_guard{m_file_mtx};
       record(wallclock, "worker", worker, w.worker);
+      w.worker = {};
     }
   }
 
@@ -247,6 +248,7 @@ class profiled_coordinator : public coordinator<Policy> {
       std::lock_guard<std::mutex> file_guard{m_file_mtx};
       for (auto& j : m_jobs) {
         record(wallclock, "actor", j.first, j.second);
+        j.second = {};
       }
     }
   }

@@ -312,12 +312,10 @@ record <- function(name, fun, ...) {
 make_zero <- function(x) mapvalues(x, NaN, 0, warn_missing=FALSE)
 
 make_profile <- function(filename) {
-  d1 <- function(x) c(x[1], diff(x))
   read.table(filename, header=T) %>%
+    filter(time > 0) %>%
     group_by(id, type) %>%
     arrange(time) %>%
-    transmute(clock=clock, time=d1(time), usr=d1(usr), sys=d1(sys)) %>%
-    filter(time > 0) %>%
     mutate(cpu=usr+sys, util=cpu/time, dom=make_zero((usr-sys)/cpu))
 }
 
