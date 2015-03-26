@@ -20,6 +20,8 @@
 #ifndef CAF_ABSTRACT_CHANNEL_HPP
 #define CAF_ABSTRACT_CHANNEL_HPP
 
+#include <atomic>
+
 #include "caf/fwd.hpp"
 #include "caf/node_id.hpp"
 #include "caf/message_id.hpp"
@@ -66,32 +68,44 @@ class abstract_channel : public ref_counted {
    */
   bool is_remote() const;
 
-  enum channel_type_flag {
-    is_abstract_actor_flag = 0x100000,
-    is_abstract_group_flag = 0x200000
-  };
+  static constexpr int is_abstract_actor_flag = 0x100000;
+
+  static constexpr int is_abstract_group_flag = 0x200000;
 
   inline bool is_abstract_actor() const {
-    return m_flags & static_cast<int>(is_abstract_actor_flag);
+    return flags() & static_cast<int>(is_abstract_actor_flag);
   }
 
   inline bool is_abstract_group() const {
-    return m_flags & static_cast<int>(is_abstract_group_flag);
+    return flags() & static_cast<int>(is_abstract_group_flag);
   }
 
  protected:
-  /**
+  // note: *both* operations use relaxed memory order, this is because
+  // only the actor itself is granted write access while all access
+  // from other actors or threads is always read-only; further, only
+  // flags that are considered constant after an actor has launched are
+  // read by others, i.e., there is no acquire/release semantic between
+  // setting and reading flags
+  inline int flags() const {
+    return m_flags.load(std::memory_order_relaxed);
+  }
+
+  inline void flags(int new_value) {
+    m_flags.store(new_value, std::memory_order_relaxed);
+  }
+
+private:
+  // can only be called from abstract_actor and abstract_group
+  abstract_channel(int init_flags);
+  abstract_channel(int init_flags, node_id nid);
+
+  /*
    * Accumulates several state and type flags. Subtypes may use only the
    * first 20 bits, i.e., the bitmask 0xFFF00000 is reserved for
    * channel-related flags.
    */
-  int m_flags;
-
- private:
-  // can only be called from abstract_actor and abstract_group
-  abstract_channel(channel_type_flag subtype);
-  abstract_channel(channel_type_flag subtype, node_id nid);
-
+  std::atomic<int> m_flags;
   // identifies the node of this channel
   node_id m_node;
 };
