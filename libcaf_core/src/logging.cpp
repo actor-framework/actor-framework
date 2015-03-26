@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <pthread.h>
 #include <condition_variable>
+#include <stdint.h>
 
 #ifndef CAF_WINDOWS
 #include <unistd.h>
@@ -36,6 +37,14 @@
 # include <cxxabi.h>
 #endif
 
+#if defined(__APPLE__)
+# include <TargetConditionals.h>
+# if TARGET_OS_IPHONE == 1
+#  define CAF_USE_PTHREAD_KEY
+# endif
+#elif defined(__ANDROID__)
+# define CAF_USE_PTHREAD_KEY
+#endif
 
 #include "caf/string_algorithms.hpp"
 
@@ -50,7 +59,45 @@ namespace detail {
 
 namespace {
 
-__thread actor_id t_self_id;
+#ifdef CAF_USE_PTHREAD_KEY
+
+static pthread_key_t self_id_key;
+static pthread_once_t self_id_key_once = PTHREAD_ONCE_INIT;
+
+static void __make_self_id_key() {
+  pthread_key_create(&self_id_key, NULL);
+  pthread_setspecific(self_id_key, NULL);
+}
+
+static void self_id_init() {
+  pthread_once(&self_id_key_once, __make_self_id_key);
+}
+
+static inline actor_id get_self_id() {
+  return (actor_id)(intptr_t)pthread_getspecific(self_id_key);
+}
+
+static inline void set_self_id(actor_id aid) {
+  pthread_setspecific(self_id_key, (const void *)(intptr_t)aid);
+}
+
+#else
+
+static __thread actor_id t_self_id;
+
+static void self_id_init() {
+  // nop
+}
+
+static inline actor_id get_self_id() {
+  return t_self_id;
+}
+
+static inline void set_self_id(actor_id aid) {
+  t_self_id = aid;
+}
+
+#endif
 
 constexpr struct pop_aid_log_event_t {
   constexpr pop_aid_log_event_t() {
@@ -79,6 +126,7 @@ struct log_event {
 class logging_impl : public logging {
  public:
   void initialize() override {
+    self_id_init();
     const char* log_level_table[] = {"ERROR", "WARN", "INFO", "DEBUG", "TRACE"};
     m_thread = std::thread([this] { (*this)(); });
     std::string msg = "ENTRY log level = ";
@@ -156,7 +204,7 @@ class logging_impl : public logging {
     }
     std::ostringstream line;
     line << time(0) << " " << level << " "
-         << "actor" << t_self_id << " " << std::this_thread::get_id() << " "
+         << "actor" << get_self_id() << " " << std::this_thread::get_id() << " "
          << class_name << " " << function_name << " " << file_name << ":"
          << line_num << " " << msg << std::endl;
     m_queue.synchronized_enqueue(m_queue_mtx, m_queue_cv,
@@ -197,8 +245,8 @@ logging* logging::create_singleton() {
 }
 
 actor_id logging::set_aid(actor_id aid) {
-  actor_id prev = t_self_id;
-  t_self_id = aid;
+  actor_id prev = get_self_id();
+  set_self_id(aid);
   return prev;
 }
 
