@@ -1,3 +1,9 @@
+# check for BIICode build
+if (BIICODE)
+  include(bii.cmake)
+  return()
+endif ()
+
 cmake_minimum_required(VERSION 2.8)
 project(caf_io C CXX)
 

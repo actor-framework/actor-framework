@@ -1,3 +1,5 @@
+bii/
+bin/
 *.DS_Store
 Doxyfile
 cppa.creator.user*
