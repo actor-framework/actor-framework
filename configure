@@ -79,6 +79,12 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
   Influential Environment Variables (only on first invocation):
     CXX                         C++ compiler command
     CXXFLAGS                    C++ compiler flags
+
+  iOS Build Options (should be used with XCode generator):
+    --sysroot=DIR               set system root for Clang
+                                  - iphoneos: for iOS device
+                                  - iphonesimulator: for iOS simulator
+    --ios-min-ver=VERSION       set the ios deployment target version
 $benchmark_suite_options"
 
 
@@ -226,6 +232,13 @@ while [ $# -ne 0 ]; do
             ;;
         --warnings-as-errors)
             append_cache_entry CXX_WARNINGS_AS_ERROS BOOL yes
+            ;;
+        --sysroot=*)
+            append_cache_entry CAF_OSX_SYSROOT PATH "$optarg"
+            ;;
+        --ios-min-ver=*)
+            append_cache_entry CMAKE_OSX_ARCHITECTURES STRING "\$(ARCHS_STANDARD_32_64_BIT)"
+            append_cache_entry CAF_IOS_DEPLOYMENT_TARGET STRING "$optarg"
             ;;
         --with-log-level=*)
             level=`echo "$optarg" | tr '[:lower:]' '[:upper:]'`
