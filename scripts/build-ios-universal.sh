@@ -2,9 +2,17 @@
 
 set -e
 
+# minimum iOS version
 IOS_DEPLOYMENT_TARGET=${IOS_DEPLOYMENT_TARGET:-"6.0"}
 
+# location of the repository root. should contain configure file
 SRCROOT=$( cd "$( dirname "${BASH_SOURCE[0]}" )"/.. && pwd )
+
+if [ ! -f "$SRCROOT/configure" ]; then
+    echo "$SRCROOT is not repository root." \
+         "check the $(basename ${BASH_SOURCE[0]}$0) file location."
+    exit 100
+fi
 
 IPHONEOS_BUILD_DIR=build-iphoneos
 IPHONESIMULATOR_BUILD_DIR=build-iphonesimulator
