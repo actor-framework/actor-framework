@@ -221,6 +221,19 @@ logger::logger() : m_console(std::cerr) {
   // nop
 }
 
+void engine::args(int argc, char** argv) {
+  instance().m_argc = argc;
+  instance().m_argv = argv;
+}
+
+int engine::argc() {
+  return instance().m_argc;
+}
+
+char** engine::argv() {
+  return instance().m_argv;
+}
+
 void engine::add(const char* name, std::unique_ptr<test> t) {
   auto& suite = instance().m_suites[std::string{name ? name : ""}];
   for (auto& x : suite) {
@@ -542,8 +555,18 @@ int main(int argc, char** argv) {
   std::string not_suites;
   std::string tests = ".*";
   std::string not_tests;
+  // use all arguments after '--' for the test engine.
+  std::string delimiter = "--";
+  auto divider = argc;
+  auto cli_argv = argv + 1;
+  for (auto i = 1; i < argc; ++i) {
+    if (delimiter == argv[i]) {
+      divider = i;
+      break;
+    }
+  }
   // our simple command line parser.
-  auto res = message_builder(argv + 1, argv + argc).extract_opts({
+  auto res = message_builder(cli_argv, cli_argv + divider - 1).extract_opts({
     {"no-colors,n", "disable coloring"},
     {"log-file,l", "set output file", log_file},
     {"console-verbosity,v", "set verbosity level of console (1-5)",
@@ -574,6 +597,9 @@ int main(int argc, char** argv) {
     return 1;
   }
   auto colorize = res.opts.count("no-colors") == 0;
+  if (divider < argc) {
+    test::engine::args(argc - divider - 1, argv + divider + 1);
+  }
   auto result = test::engine::run(colorize, log_file, verbosity_console,
                                   verbosity_file, max_runtime, suites,
                                   not_suites, tests, not_tests);

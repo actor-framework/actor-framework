@@ -185,6 +185,25 @@ enum color_value {
 class engine {
  public:
   /**
+   * Sets external command line arguments.
+   * @param argc The argument counter.
+   * @param argv The argument vectors.
+   */
+  static void args(int argc, char** argv);
+
+  /**
+   * Retrieves the argument counter.
+   * @returns The number of arguments set via ::args or 0.
+   */
+  static int argc();
+
+  /**
+   * Retrieves the argument vector.
+   * @returns The argument vector set via ::args or `nullptr`.
+   */
+  static char** argv();
+
+  /**
    * Adds a test to the engine.
    * @param name The name of the suite.
    * @param t The test to register.
@@ -236,6 +255,8 @@ class engine {
 
   static std::string render(std::chrono::microseconds t);
 
+  int m_argc = 0;
+  char** m_argv = nullptr;
   const char* m_reset        = "\033[0m";
   const char* m_black        = "\033[30m";
   const char* m_red          = "\033[31m";
