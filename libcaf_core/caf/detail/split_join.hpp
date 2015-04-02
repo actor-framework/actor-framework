@@ -52,7 +52,9 @@ class split_join_collector : public event_based_actor {
         m_rp = this->make_response_promise();
         m_split(m_workset, this->current_message());
         // first message is the forwarded request
-        for (auto& x : m_workset) {
+        // GCC 4.7 workaround; `for (auto& x : m_workset)` doesn't compile
+        for (size_t i = 0; i < m_workset.size(); ++i) {
+          auto& x = m_workset[i];
           this->sync_send(x.first, std::move(x.second)).then(
             others >> [=] {
               m_join(m_value, this->current_message());
