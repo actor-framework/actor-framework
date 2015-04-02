@@ -13,7 +13,6 @@ set (LIBCAF_IO_SRCS
      src/middleman.cpp
      src/hook.cpp
      src/interfaces.cpp
-     src/default_multiplexer.cpp
      src/publish.cpp
      src/publish_local_groups.cpp
      src/remote_actor.cpp
@@ -25,6 +24,12 @@ set (LIBCAF_IO_SRCS
      src/multiplexer.cpp)
 
 add_custom_target(libcaf_io)
+
+if (CAF_USE_ASIO)
+  set(LIBCAF_IO_SRCS ${LIBCAF_IO_SRCS} src/asio_multiplexer.cpp)
+else()
+  set(LIBCAF_IO_SRCS ${LIBCAF_IO_SRCS} src/default_multiplexer.cpp)
+endif()
 
 # build shared library if not compiling static only
 if (NOT CAF_BUILD_STATIC_ONLY)

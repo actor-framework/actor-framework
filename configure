@@ -49,6 +49,7 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --no-compiler-check         disable compiler version check
     --no-auto-libc++            do not automatically enable libc++ for Clang
     --warnings-as-errors        enables -Werror
+    --with-asio                 enable ASIO multiplexer
 
   Installation Directories:
     --prefix=PREFIX             installation directory [/usr/local]
@@ -240,6 +241,9 @@ while [ $# -ne 0 ]; do
         --ios-min-ver=*)
             append_cache_entry CMAKE_OSX_ARCHITECTURES STRING "\$(ARCHS_STANDARD_32_64_BIT)"
             append_cache_entry CAF_IOS_DEPLOYMENT_TARGET STRING "$optarg"
+            ;;
+        --with-asio)
+            append_cache_entry CAF_USE_ASIO BOOL yes
             ;;
         --with-log-level=*)
             level=`echo "$optarg" | tr '[:lower:]' '[:upper:]'`

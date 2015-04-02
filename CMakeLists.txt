@@ -28,6 +28,10 @@ endif()
 if(NOT CAF_NO_SUMMARY)
   set(CAF_NO_SUMMARY no)
 endif()
+if(NOT CAF_USE_ASIO)
+  set(CAF_USE_ASIO no)
+endif()
+
 
 ################################################################################
 #                              get version of CAF                              #
@@ -243,6 +247,10 @@ if(CAF_NO_MEM_MANAGEMENT)
   add_definitions(-DCAF_NO_MEM_MANAGEMENT)
 endif()
 
+if (CAF_USE_ASIO)
+  add_definitions(-DCAF_USE_ASIO)
+endif()
+
 ################################################################################
 #                    check for biicode build pipeline                          #
 ################################################################################
@@ -319,6 +327,20 @@ else()
 endif()
 # all projects need the headers of the core components
 include_directories("${LIBCAF_INCLUDE_DIRS}")
+
+# Find boost asio if the asio multiplexer should be used
+if (CAF_USE_ASIO)
+  if (CAF_BUILD_STATIC_ONLY)
+    set(Boost_USE_STATIC_LIBS ON) # only find static libs
+  endif()
+  set(Boost_USE_MULTITHREADED ON)
+  find_package(Boost REQUIRED COMPONENTS system)
+  if (Boost_FOUND)
+    set(INCLUDE_DIRS "${INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}")
+    set(LD_DIRS ${LD_DIRS} ${Boost_LIBRARIES})
+    set(LD_FLAGS ${LD_FLAGS} ${Boost_SYSTEM_LIBRARY})
+  endif()
+endif()
 
 
 ################################################################################
@@ -563,6 +585,7 @@ if(NOT CAF_NO_SUMMARY)
         "\nRuntime checks:    ${CAF_ENABLE_RUNTIME_CHECKS}"
         "\nLog level:         ${LOG_LEVEL_STR}"
         "\nWith mem. mgmt.:   ${CAF_BUILD_MEM_MANAGEMENT}"
+        "\nUse Boost ASIO:    ${CAF_USE_ASIO}"
         "\n"
         "\nBuild examples:    ${CAF_BUILD_EXAMPLES}"
         "\nBuild unit tests:  ${CAF_BUILD_UNIT_TESTS}"
