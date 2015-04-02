@@ -73,11 +73,11 @@ class abstract_channel : public ref_counted {
   static constexpr int is_abstract_group_flag = 0x200000;
 
   inline bool is_abstract_actor() const {
-    return flags() & static_cast<int>(is_abstract_actor_flag);
+    return static_cast<bool>(flags() & is_abstract_actor_flag);
   }
 
   inline bool is_abstract_group() const {
-    return flags() & static_cast<int>(is_abstract_group_flag);
+    return static_cast<bool>(flags() & is_abstract_group_flag);
   }
 
  protected:
