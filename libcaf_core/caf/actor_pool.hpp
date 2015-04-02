@@ -30,6 +30,7 @@
 #include "caf/abstract_actor.hpp"
 #include "caf/mailbox_element.hpp"
 
+#include "caf/detail/split_join.hpp"
 #include "caf/detail/shared_spinlock.hpp"
 
 namespace caf {
@@ -100,6 +101,21 @@ class actor_pool : public abstract_actor {
    private:
     std::random_device m_rd;
   };
+
+  /**
+   * Default policy class implementing broadcast dispatching (split step)
+   * followed by a join operation `F` combining all individual results to
+   * a single result of type `T`.
+   * @tparam T Result type received by the original sender.
+   * @tparam Join Functor with signature `void (T&, message&)`.
+   * @tparam Split Functor with signature
+   *               `void (vector<pair<actor, message>>&, message&)`.
+   */
+  template <class T, class Join, class Split = detail::nop_split>
+  static policy split_join(Join jf, Split sf = Split(), T init = T()) {
+    using impl = detail::split_join<T, Split, Join>;
+    return impl{std::move(init), std::move(sf), std::move(jf)};
+  }
 
   ~actor_pool();
 

@@ -172,11 +172,50 @@ void test_random_actor_pool() {
   self->await_all_other_actors_done();
 }
 
+void test_split_join_actor_pool() {
+  CAF_CHECKPOINT();
+  auto spawn_split_worker = [] {
+    return spawn<lazy_init>([]() -> behavior {
+      return {
+        [](size_t pos, std::vector<int> xs) {
+          return xs[pos];
+        }
+      };
+    });
+  };
+  auto split_fun = [](std::vector<std::pair<actor, message>>& xs, message& y) {
+    for (size_t i = 0; i < xs.size(); ++i) {
+      xs[i].second = make_message(i) + y;
+    }
+  };
+  auto join_fun = [](int& res, message& msg) {
+    msg.apply([&](int x) {
+      res += x;
+    });
+  };
+  scoped_actor self;
+  auto w = actor_pool::make(5, spawn_split_worker,
+                            actor_pool::split_join<int>(join_fun, split_fun));
+  self->sync_send(w, std::vector<int>{1, 2, 3, 4, 5}).await(
+    [&](int res) {
+      CAF_CHECK_EQUAL(res, 15);
+    }
+  );
+  self->sync_send(w, std::vector<int>{6, 7, 8, 9, 10}).await(
+    [&](int res) {
+      CAF_CHECK_EQUAL(res, 40);
+    }
+  );
+  self->send_exit(w, exit_reason::user_shutdown);
+  self->await_all_other_actors_done();
+}
+
 int main() {
   CAF_TEST(test_actor_pool);
   test_actor_pool();
   test_broadcast_actor_pool();
   test_random_actor_pool();
+  test_split_join_actor_pool();
   await_all_actors_done();
   shutdown();
   CAF_CHECK_EQUAL(s_dtors.load(), s_ctors.load());
