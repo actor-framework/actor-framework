@@ -58,7 +58,7 @@ class split_join_collector : public event_based_actor {
           this->sync_send(x.first, std::move(x.second)).then(
             others >> [=] {
               m_join(m_value, this->current_message());
-              if (--m_awaited_results == 0) {
+              if (--this->m_awaited_results == 0) {
                 m_rp.deliver(make_message(m_value));
                 quit();
               }
@@ -66,7 +66,7 @@ class split_join_collector : public event_based_actor {
           );
         }
         // no longer needed
-        m_workset.clear();
+        this->m_workset.clear();
       }
     };
   }
