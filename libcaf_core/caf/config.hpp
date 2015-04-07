@@ -131,16 +131,23 @@
 // - CAF_WINDOWS
 // It also defines CAF_POSIX for POSIX-compatible systems
 #if defined(__APPLE__)
-#  define CAF_MACOS
-#  ifndef _GLIBCXX_HAS_GTHREADS
-#  define _GLIBCXX_HAS_GTHREADS
+#  include "TargetConditionals.h"
+#  if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
+#    define CAF_IOS
+#  else
+#    define CAF_MACOS
+#    ifndef _GLIBCXX_HAS_GTHREADS
+#      define _GLIBCXX_HAS_GTHREADS
+#    endif
 #  endif
+#elif defined(__ANDROID__)
+#  define CAF_ANDROID
 #elif defined(__linux__)
 #  define CAF_LINUX
-#   include <linux/version.h>
-#   if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,16)
-#   define CAF_POLL_IMPL
-#   endif
+#  include <linux/version.h>
+#  if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,16)
+#    define CAF_POLL_IMPL
+#  endif
 #elif defined(__FreeBSD__)
 #  define CAF_BSD
 #elif defined(WIN32) || defined(_WIN32)

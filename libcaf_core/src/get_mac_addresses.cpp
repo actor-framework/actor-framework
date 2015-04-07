@@ -1,7 +1,7 @@
 #include "caf/config.hpp"
 #include "caf/detail/get_mac_addresses.hpp"
 
-#if defined(CAF_MACOS) || defined(CAF_BSD)
+#if defined(CAF_MACOS) || defined(CAF_BSD) || defined(CAF_IOS)
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -76,7 +76,7 @@ std::vector<iface_info> get_mac_addresses() {
 } // namespace detail
 } // namespace caf
 
-#elif defined(CAF_LINUX)
+#elif defined(CAF_LINUX) || defined(CAF_ANDROID)
 
 #include <vector>
 #include <string>

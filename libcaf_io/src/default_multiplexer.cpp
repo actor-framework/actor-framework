@@ -50,11 +50,11 @@ using std::string;
 
 namespace {
 
-#ifdef CAF_MACOS
+#if defined(CAF_MACOS) || defined(CAF_IOS)
   constexpr int no_sigpipe_flag = SO_NOSIGPIPE;
 #elif defined(CAF_WINDOWS)
   constexpr int no_sigpipe_flag = 0; // does not exist on Windows
-#else // BSD or Linux
+#else // BSD, Linux or Android
   constexpr int no_sigpipe_flag = MSG_NOSIGNAL;
 #endif
 

@@ -22,7 +22,7 @@
 
 #include "caf/config.hpp"
 
-#ifdef CAF_MACOS
+#if defined(CAF_MACOS) || defined(CAF_IOS)
 #include <mach/mach.h>
 #else
 #include <sys/resource.h>
@@ -58,7 +58,7 @@ class profiled_coordinator : public coordinator<Policy> {
 
   class measurement {
    public:
-#   ifdef CAF_MACOS
+#   if defined(CAF_MACOS) || defined(CAF_IOS)
     static usec to_usec(const ::time_value_t& tv) {
       return std::chrono::seconds(tv.seconds) + usec(tv.microseconds);
     }
@@ -72,7 +72,7 @@ class profiled_coordinator : public coordinator<Policy> {
       auto now = clock_type::now().time_since_epoch();
       measurement m;
       m.time = std::chrono::duration_cast<usec>(now);
-#     ifdef CAF_MACOS
+#     if defined(CAF_MACOS) || defined(CAF_IOS)
       auto tself = ::mach_thread_self();
       ::thread_basic_info info;
       auto count = THREAD_BASIC_INFO_COUNT;
