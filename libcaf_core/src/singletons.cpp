@@ -126,6 +126,12 @@ node_id singletons::get_node_id() {
   return node_id{lazy_get(s_node_id, s_node_id_mtx)};
 }
 
+bool singletons::set_node_id(node_id::data* ptr) {
+  auto res = lazy_get(s_node_id, s_node_id_mtx,
+                      [ptr] { return ptr; });
+  return res == ptr;
+}
+
 logging* singletons::get_logger() {
   return lazy_get(s_logger, s_logger_mtx);
 }
