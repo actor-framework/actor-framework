@@ -211,6 +211,7 @@ void test_split_join_actor_pool() {
 }
 
 int main() {
+  announce<std::vector<int>>("vector<int>");
   CAF_TEST(test_actor_pool);
   test_actor_pool();
   test_broadcast_actor_pool();
