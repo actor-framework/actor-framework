@@ -49,6 +49,10 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --no-compiler-check         disable compiler version check
     --no-auto-libc++            do not automatically enable libc++ for Clang
     --warnings-as-errors        enables -Werror
+    --sysroot=DIR               set system root for clang
+                                  - iphoneos: for iOS device
+                                  - iphonesimulator: for iOS simulator
+    --ios-min-ver=VERSION       set the ios deployment target version
 
   Installation Directories:
     --prefix=PREFIX             installation directory [/usr/local]
@@ -226,6 +230,13 @@ while [ $# -ne 0 ]; do
             ;;
         --warnings-as-errors)
             append_cache_entry CXX_WARNINGS_AS_ERROS BOOL yes
+            ;;
+        --sysroot=*)
+            append_cache_entry CAF_OSX_SYSROOT PATH "$optarg"
+            ;;
+        --ios-min-ver=*)
+            append_cache_entry CMAKE_OSX_ARCHITECTURES STRING "\$(ARCHS_STANDARD_32_64_BIT)"
+            append_cache_entry CAF_IOS_DEPLOYMENT_TARGET STRING "$optarg"
             ;;
         --with-log-level=*)
             level=`echo "$optarg" | tr '[:lower:]' '[:upper:]'`
