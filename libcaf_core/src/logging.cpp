@@ -50,8 +50,6 @@ namespace detail {
 
 namespace {
 
-__thread actor_id t_self_id;
-
 constexpr struct pop_aid_log_event_t {
   constexpr pop_aid_log_event_t() {
     // nop
@@ -156,7 +154,7 @@ class logging_impl : public logging {
     }
     std::ostringstream line;
     line << time(0) << " " << level << " "
-         << "actor" << t_self_id << " " << std::this_thread::get_id() << " "
+         << "actor" << get_aid() << " " << std::this_thread::get_id() << " "
          << class_name << " " << function_name << " " << file_name << ":"
          << line_num << " " << msg << std::endl;
     m_queue.synchronized_enqueue(m_queue_mtx, m_queue_cv,
@@ -196,10 +194,31 @@ logging* logging::create_singleton() {
   return new logging_impl;
 }
 
+// returns the actor ID for the current thread
+actor_id logging::get_aid() {
+  shared_lock<detail::shared_spinlock> guard{m_aids_lock};
+  auto i = m_aids.find(std::this_thread::get_id());
+  if (i != m_aids.end()) {
+    return i->second;
+  }
+  return 0;
+}
+
 actor_id logging::set_aid(actor_id aid) {
-  actor_id prev = t_self_id;
-  t_self_id = aid;
-  return prev;
+  auto tid = std::this_thread::get_id();
+  upgrade_lock<detail::shared_spinlock> guard{m_aids_lock};
+  auto i = m_aids.find(tid);
+  if (i != m_aids.end()) {
+    // we modify it despite the shared lock because the elements themselves
+    // are considered thread-local
+    auto res = i->second;
+    i->second = aid;
+    return res;
+  }
+  // upgrade to unique lock and insert new element
+  upgrade_to_unique_lock<detail::shared_spinlock> uguard{guard};
+  m_aids.insert(std::make_pair(tid, aid));
+  return 0; // was empty before
 }
 
 } // namespace detail
