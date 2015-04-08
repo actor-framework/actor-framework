@@ -1,7 +1,7 @@
 CAF: C++ Actor Framework
 ========================
 
-![Jenkins][jenkins-badge]
+[![Jenkins][jenkins-badge]](http://mobi39.cpt.haw-hamburg.de/view/CAF%20Dashboard)
 [![Gitter][gitter-badge]](https://gitter.im/actor-framework/chat)
 [jenkins-badge]: http://mobi39.cpt.haw-hamburg.de/buildStatus/icon?job=CAF/master%20branch
 [gitter-badge]: https://badges.gitter.im/Join%20Chat.svg
