@@ -177,7 +177,7 @@ void mv(std::string& lhs, const std::basic_string<WCHAR>& rhs) {
 
 std::string get_root_uuid() {
   using tchar_str = std::basic_string<TCHAR>;
-  string uuid;
+  std::string uuid;
   TCHAR buf[max_drive_name];      // temporary buffer for volume name
   tchar_str drive = TEXT("c:\\"); // string "template" for drive specifier
   // walk through legal drive letters, skipping floppies

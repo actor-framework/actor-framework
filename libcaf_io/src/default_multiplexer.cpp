@@ -232,16 +232,16 @@ namespace network {
     ccall(cc_zero, "listen() failed", listen, listener, 1);
     // create read-only end of the pipe
     DWORD flags = 0;
-    auto read_fd = ccall(cc_valid_socket, WSASocket, AF_INET, SOCK_STREAM,
-                         0, NULL, 0, flags);
+    auto read_fd = ccall(cc_valid_socket, "WSASocket() failed", WSASocket,
+                         AF_INET, SOCK_STREAM, 0, nullptr, 0, flags);
     ccall(cc_zero, "connect() failed", connect, read_fd,
           &a.addr, int{sizeof(a.inaddr)});
     // get write-only end of the pipe
     auto write_fd = ccall(cc_valid_socket, "accept() failed",
-                          accept, listener, NULL, NULL);
+                          accept, listener, nullptr, nullptr);
     closesocket(listener);
     guard.disable();
-    return {read_fd, write_fd};
+    return std::make_pair(read_fd, write_fd);
   }
 
 #endif
@@ -997,6 +997,11 @@ class socket_guard {
  private:
   native_socket m_fd;
 };
+
+#ifdef CAF_WINDOWS
+using sa_family_t = short;
+using in_port_t = unsigned short;
+#endif
 
 in_addr& addr_of(sockaddr_in& what) {
   return what.sin_addr;
