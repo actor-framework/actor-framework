@@ -25,7 +25,7 @@
 #include "caf/config.hpp"
 #include "caf/detail/limited_vector.hpp"
 
-#ifdef CAF_MACOS
+#if defined(CAF_MACOS) || defined(CAF_IOS)
 # include <OpenCL/opencl.h>
 #else
 # include <CL/opencl.h>
