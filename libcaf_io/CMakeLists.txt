@@ -24,28 +24,32 @@ set (LIBCAF_IO_SRCS
      src/acceptor_manager.cpp
      src/multiplexer.cpp)
 
+add_custom_target(libcaf_io)
+
 # build shared library if not compiling static only
-if (NOT "${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes")
-  add_library(libcaf_io SHARED ${LIBCAF_IO_SRCS} ${LIBCAF_IO_HDRS})
-  target_link_libraries(libcaf_io ${LD_FLAGS} ${LIBCAF_CORE_LIBRARY})
+if (NOT CAF_BUILD_STATIC_ONLY)
+  add_library(libcaf_io_shared SHARED ${LIBCAF_IO_SRCS} ${LIBCAF_IO_HDRS})
+  target_link_libraries(libcaf_io_shared ${LD_FLAGS} ${LIBCAF_CORE_LIBRARY})
   set(LIBRARY_SOVERSION ${CAF_VERSION_MAJOR})
-  set_target_properties(libcaf_io
+  set_target_properties(libcaf_io_shared
                         PROPERTIES
                         SOVERSION ${LIBRARY_SOVERSION}
                         VERSION ${CAF_VERSION}
                         OUTPUT_NAME caf_io)
   if(NOT WIN32)
-    install(TARGETS libcaf_io LIBRARY DESTINATION lib)
+    install(TARGETS libcaf_io_shared LIBRARY DESTINATION lib)
   endif()
+  add_dependencies(libcaf_io_shared libcaf_io)
 endif ()
 
 # build static library only if --build-static or --build-static-only was set
-if ("${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes" OR "${CAF_BUILD_STATIC}" STREQUAL "yes")
-  add_library(libcaf_ioStatic STATIC ${LIBCAF_IO_HDRS} ${LIBCAF_IO_SRCS})
-  set_target_properties(libcaf_ioStatic PROPERTIES OUTPUT_NAME caf_io_static)
+if (CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
+  add_library(libcaf_io_static STATIC ${LIBCAF_IO_HDRS} ${LIBCAF_IO_SRCS})
+  set_target_properties(libcaf_io_static PROPERTIES OUTPUT_NAME caf_io_static)
   if(NOT WIN32)
-    install(TARGETS libcaf_ioStatic ARCHIVE DESTINATION lib)
+    install(TARGETS libcaf_io_static ARCHIVE DESTINATION lib)
   endif()
+  add_dependencies(libcaf_io_static libcaf_io)
 endif ()
 
 link_directories(${LD_DIRS})
