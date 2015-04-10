@@ -237,7 +237,7 @@ class broker : public abstract_event_based_actor<behavior, false> {
       throw std::invalid_argument("invalid handle");
     }
     auto sptr = i->second;
-    CAF_REQUIRE(sptr->hdl() == hdl);
+    CAF_ASSERT(sptr->hdl() == hdl);
     m_scribes.erase(i);
     return spawn_functor(nullptr, [sptr](broker* forked) {
                                     sptr->set_broker(forked);

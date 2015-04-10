@@ -17,12 +17,13 @@
 #include <time.h>
 #include <cstdlib>
 
-#include <QMainWindow>
-#include <QApplication>
-
 #include "caf/all.hpp"
 
+CAF_PUSH_WARNINGS
+#include <QMainWindow>
+#include <QApplication>
 #include "ui_chatwindow.h" // auto generated from chatwindow.ui
+CAF_POP_WARNINGS
 
 using namespace std;
 using namespace caf;

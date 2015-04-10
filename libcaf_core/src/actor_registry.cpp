@@ -112,7 +112,7 @@ void actor_registry::dec_running() {
 }
 
 void actor_registry::await_running_count_equal(size_t expected) {
-  CAF_REQUIRE(expected == 0 || expected == 1);
+  CAF_ASSERT(expected == 0 || expected == 1);
   CAF_LOG_TRACE(CAF_ARG(expected));
   std::unique_lock<std::mutex> guard{m_running_mtx};
   while (m_running != expected) {

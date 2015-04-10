@@ -37,7 +37,7 @@ sync_request_bouncer::sync_request_bouncer(uint32_t r)
 
 void sync_request_bouncer::operator()(const actor_addr& sender,
                                       const message_id& mid) const {
-  CAF_REQUIRE(rsn != exit_reason::not_exited);
+  CAF_ASSERT(rsn != exit_reason::not_exited);
   if (sender && mid.is_request()) {
     auto ptr = actor_cast<abstract_actor_ptr>(sender);
     ptr->enqueue(invalid_actor_addr, mid.response_id(),

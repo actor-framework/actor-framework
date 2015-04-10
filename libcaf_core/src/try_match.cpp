@@ -30,7 +30,7 @@ bool is_wildcard(const meta_element& me) {
 
 bool match_element(const meta_element& me, const message& msg,
                    size_t pos, void** storage) {
-  CAF_REQUIRE(me.typenr != 0 || me.type != nullptr);
+  CAF_ASSERT(me.typenr != 0 || me.type != nullptr);
   if (!msg.match_element(pos, me.typenr, me.type)) {
     return false;
   }
@@ -40,7 +40,7 @@ bool match_element(const meta_element& me, const message& msg,
 
 bool match_atom_constant(const meta_element& me, const message& msg,
                          size_t pos, void** storage) {
-  CAF_REQUIRE(me.typenr == detail::type_nr<atom_value>::value);
+  CAF_ASSERT(me.typenr == detail::type_nr<atom_value>::value);
   if (!msg.match_element(pos, detail::type_nr<atom_value>::value, nullptr)) {
     return false;
   }
@@ -126,8 +126,8 @@ bool try_match(const message& msg, size_t msg_pos, size_t msg_size,
 }
 
 bool try_match(const message& msg, pattern_iterator pb, size_t ps, void** out) {
-  CAF_REQUIRE(out != nullptr);
-  CAF_REQUIRE(msg.empty() || msg.vals()->get_reference_count() > 0);
+  CAF_ASSERT(out != nullptr);
+  CAF_ASSERT(msg.empty() || msg.vals()->get_reference_count() > 0);
   set_commit_rollback scr{out};
   return try_match(msg, 0, msg.size(), pb, pb + ps, scr);
 }

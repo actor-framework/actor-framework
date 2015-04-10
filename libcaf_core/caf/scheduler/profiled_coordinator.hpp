@@ -22,7 +22,7 @@
 
 #include "caf/config.hpp"
 
-#ifdef CAF_MACOS
+#if defined(CAF_MACOS) || defined(CAF_IOS)
 #include <mach/mach.h>
 #else
 #include <sys/resource.h>
@@ -58,7 +58,7 @@ class profiled_coordinator : public coordinator<Policy> {
 
   class measurement {
    public:
-#   ifdef CAF_MACOS
+#   if defined(CAF_MACOS) || defined(CAF_IOS)
     static usec to_usec(const ::time_value_t& tv) {
       return std::chrono::seconds(tv.seconds) + usec(tv.microseconds);
     }
@@ -72,7 +72,7 @@ class profiled_coordinator : public coordinator<Policy> {
       auto now = clock_type::now().time_since_epoch();
       measurement m;
       m.time = std::chrono::duration_cast<usec>(now);
-#     ifdef CAF_MACOS
+#     if defined(CAF_MACOS) || defined(CAF_IOS)
       auto tself = ::mach_thread_self();
       ::thread_basic_info info;
       auto count = THREAD_BASIC_INFO_COUNT;
@@ -127,7 +127,7 @@ class profiled_coordinator : public coordinator<Policy> {
       out << setw(15) << m.time.count()
           << setw(15) << m.usr.count()
           << setw(15) << m.sys.count()
-          << setw(15) << m.mem;
+          << m.mem;
       return out;
     }
 
@@ -170,7 +170,7 @@ class profiled_coordinator : public coordinator<Policy> {
            << setw(15) << "time"      // duration of this sample (cumulative)
            << setw(15) << "usr"       // time spent in user mode (cumulative)
            << setw(15) << "sys"       // time spent in kernel model (cumulative)
-           << setw(15) << "mem"       // used memory (cumulative)
+           << "mem"                   // used memory (cumulative)
            << std::endl;
   }
 
@@ -193,7 +193,7 @@ class profiled_coordinator : public coordinator<Policy> {
   void stop_measuring(size_t worker, actor_id job) {
     auto m = measurement::take();
     auto& w = m_worker_states[worker];
-    CAF_REQUIRE(job == w.current);
+    CAF_ASSERT(job == w.current);
     auto delta = m - w.job;
     // It's not possible that the wallclock timer is less than actual CPU time
     // spent. Due to resolution mismatches of the C++ high-resolution clock and
@@ -210,6 +210,7 @@ class profiled_coordinator : public coordinator<Policy> {
       auto wallclock = m_system_start + (m.time - m_clock_start);
       std::lock_guard<std::mutex> file_guard{m_file_mtx};
       record(wallclock, "worker", worker, w.worker);
+      w.worker = {};
     }
   }
 
@@ -247,6 +248,7 @@ class profiled_coordinator : public coordinator<Policy> {
       std::lock_guard<std::mutex> file_guard{m_file_mtx};
       for (auto& j : m_jobs) {
         record(wallclock, "actor", j.first, j.second);
+        j.second = {};
       }
     }
   }

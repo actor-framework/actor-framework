@@ -91,7 +91,7 @@ void behavior_impl::handle_timeout() {
 }
 
 behavior_impl::pointer behavior_impl::or_else(const pointer& other) {
-  CAF_REQUIRE(other != nullptr);
+  CAF_ASSERT(other != nullptr);
   return make_counted<combinator>(this, other);
 }
 

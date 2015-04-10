@@ -207,24 +207,22 @@ class abstract_actor : public abstract_channel {
     remove_backlink_op
   };
 
-  enum actor_state_flag {
-    //                                used by ...
-    trap_exit_flag         = 0x01, // local_actor
-    has_timeout_flag       = 0x02, // mixin::single_timeout
-    is_registered_flag     = 0x04, // no_resume, resumable, and scoped_actor
-    is_initialized_flag    = 0x08, // event-based actors
-    is_blocking_flag       = 0x10, // blocking_actor
-    is_detached_flag       = 0x20, // local_actor (set by spawn)
-    is_priority_aware_flag = 0x40  // local_actor (set by spawn)
-  };
+  //                                                     used by ...
+  static constexpr int trap_exit_flag         = 0x01; // local_actor
+  static constexpr int has_timeout_flag       = 0x02; // single_timeout
+  static constexpr int is_registered_flag     = 0x04; // (several actors)
+  static constexpr int is_initialized_flag    = 0x08; // event-based actors
+  static constexpr int is_blocking_flag       = 0x10; // blocking_actor
+  static constexpr int is_detached_flag       = 0x20; // local_actor
+  static constexpr int is_priority_aware_flag = 0x40; // local_actor
 
-  inline void set_flag(bool enable_flag, actor_state_flag mask) {
-    m_flags = enable_flag ? m_flags | static_cast<int>(mask)
-                          : m_flags & ~static_cast<int>(mask);
+  inline void set_flag(bool enable_flag, int mask) {
+    auto x = flags();
+    flags(enable_flag ? x | mask : x & ~mask);
   }
 
-  inline bool get_flag(actor_state_flag mask) const {
-    return static_cast<bool>(m_flags & static_cast<int>(mask));
+  inline bool get_flag(int mask) const {
+    return static_cast<bool>(flags() & mask);
   }
 
   inline bool has_timeout() const {

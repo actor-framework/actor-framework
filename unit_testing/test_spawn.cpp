@@ -21,7 +21,7 @@ void inc_actor_instances() {
   long v1 = ++s_actor_instances;
   long v2 = s_max_actor_instances.load();
   while (v1 > v2) {
-    s_max_actor_instances.compare_exchange_weak(v2, v1);
+    s_max_actor_instances.compare_exchange_strong(v2, v1);
   }
 }
 

@@ -33,8 +33,12 @@ class memory_managed {
    * Default implementations calls `delete this, but can
    * be overriden in case deletion depends on some condition or
    * the class doesn't use default new/delete.
+   * @param decremented_rc Indicates whether the caller did reduce the
+   *                       reference of this object before calling this member
+   *                       function. This information is important when
+   *                       implementing a type with support for weak pointers.
    */
-  virtual void request_deletion();
+  virtual void request_deletion(bool decremented_rc) noexcept;
 
  protected:
   virtual ~memory_managed();

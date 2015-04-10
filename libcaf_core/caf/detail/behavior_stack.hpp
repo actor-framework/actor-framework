@@ -56,7 +56,7 @@ class behavior_stack {
   }
 
   inline behavior& back() {
-    CAF_REQUIRE(!empty());
+    CAF_ASSERT(!empty());
     return m_elements.back();
   }
 

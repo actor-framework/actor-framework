@@ -37,7 +37,7 @@ actor_pool::round_robin::round_robin(const round_robin&) : m_pos(0) {
 void actor_pool::round_robin::operator()(uplock& guard, const actor_vec& vec,
                                          mailbox_element_ptr& ptr,
                                          execution_unit* host) {
-  CAF_REQUIRE(!vec.empty());
+  CAF_ASSERT(!vec.empty());
   actor selected = vec[m_pos++ % vec.size()];
   guard.unlock();
   selected->enqueue(std::move(ptr), host);
@@ -46,7 +46,7 @@ void actor_pool::round_robin::operator()(uplock& guard, const actor_vec& vec,
 void actor_pool::broadcast::operator()(uplock&, const actor_vec& vec,
                                        mailbox_element_ptr& ptr,
                                        execution_unit* host) {
-  CAF_REQUIRE(!vec.empty());
+  CAF_ASSERT(!vec.empty());
   for (size_t i = 1; i < vec.size(); ++i) {
     vec[i]->enqueue(ptr->sender, ptr->mid, ptr->msg, host);
   }

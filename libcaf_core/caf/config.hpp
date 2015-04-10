@@ -30,15 +30,36 @@
 //     to complete traces (4)
 
 /**
- * Denotes the libcaf version in the format {MAJOR}{MINOR}{PATCH},
+ * Denotes version of CAF in the format {MAJOR}{MINOR}{PATCH},
  * whereas each number is a two-digit decimal number without
  * leading zeros (e.g. 900 is version 0.9.0).
  */
-#define CAF_VERSION 1300
+#define CAF_VERSION 1301
 
+/**
+ * Defined to the major version number of CAF.
+ **/
 #define CAF_MAJOR_VERSION (CAF_VERSION / 10000)
+
+/**
+ * Defined to the minor version number of CAF.
+ **/
 #define CAF_MINOR_VERSION ((CAF_VERSION / 100) % 100)
+
+/**
+ * Defined to the patch version number of CAF.
+ **/
 #define CAF_PATCH_VERSION (CAF_VERSION % 100)
+
+// This compiler-specific block defines:
+// - CAF_DEPRECATED to annotate deprecated functions
+// - CAF_PUSH_WARNINGS/CAF_POP_WARNINGS to surround "noisy" header includes
+// - CAF_ANNOTATE_FALLTHROUGH to suppress warnings in switch/case statements
+// - CAF_COMPILER_VERSION to retrieve the compiler version in CAF_VERSION format
+// - One of the following:
+//   + CAF_CLANG
+//   + CAF_GCC
+//   + CAF_MSVC
 
 // sets CAF_DEPRECATED, CAF_ANNOTATE_FALLTHROUGH,
 // CAF_PUSH_WARNINGS and CAF_POP_WARNINGS
@@ -72,22 +93,30 @@
     _Pragma("clang diagnostic ignored \"-Wshorten-64-to-32\"")                 \
     _Pragma("clang diagnostic ignored \"-Wsign-conversion\"")                  \
     _Pragma("clang diagnostic ignored \"-Wundef\"")                            \
-    _Pragma("clang diagnostic ignored \"-Wweak-vtables\"")
-#  define CAF_POP_WARNINGS                          \
+    _Pragma("clang diagnostic ignored \"-Wweak-vtables\"")                     \
+    _Pragma("clang diagnostic ignored \"-Wused-but-marked-unused\"")           \
+    _Pragma("clang diagnostic ignored \"-Wdisabled-macro-expansion\"")         \
+    _Pragma("clang diagnostic ignored \"-Wsign-conversion\"")
+#  define CAF_POP_WARNINGS                                                     \
     _Pragma("clang diagnostic pop")
 #  define CAF_ANNOTATE_FALLTHROUGH [[clang::fallthrough]]
+#  define CAF_COMPILER_VERSION                                                 \
+    (__clang_major__ * 10000 + __clang_minor__ * 100 + __clang_patchlevel__)
 #elif defined(__GNUC__)
 #  define CAF_GCC
 #  define CAF_DEPRECATED __attribute__((__deprecated__))
 #  define CAF_PUSH_WARNINGS
 #  define CAF_POP_WARNINGS
 #  define CAF_ANNOTATE_FALLTHROUGH static_cast<void>(0)
+#  define CAF_COMPILER_VERSION                                                 \
+     (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
 #elif defined(_MSC_VER)
 #  define CAF_MSVC
 #  define CAF_DEPRECATED
 #  define CAF_PUSH_WARNINGS
 #  define CAF_POP_WARNINGS
 #  define CAF_ANNOTATE_FALLTHROUGH static_cast<void>(0)
+#  define CAF_COMPILER_VERSION _MSC_FULL_VER
 #else
 #  define CAF_DEPRECATED
 #  define CAF_PUSH_WARNINGS
@@ -95,18 +124,30 @@
 #  define CAF_ANNOTATE_FALLTHROUGH static_cast<void>(0)
 #endif
 
-// detect OS
+// This OS-specific block defines one of the following:
+// - CAF_MACOS
+// - CAF_LINUX
+// - CAF_BSD
+// - CAF_WINDOWS
+// It also defines CAF_POSIX for POSIX-compatible systems
 #if defined(__APPLE__)
-#  define CAF_MACOS
-#  ifndef _GLIBCXX_HAS_GTHREADS
-#  define _GLIBCXX_HAS_GTHREADS
+#  include "TargetConditionals.h"
+#  if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
+#    define CAF_IOS
+#  else
+#    define CAF_MACOS
+#    ifndef _GLIBCXX_HAS_GTHREADS
+#      define _GLIBCXX_HAS_GTHREADS
+#    endif
 #  endif
+#elif defined(__ANDROID__)
+#  define CAF_ANDROID
 #elif defined(__linux__)
 #  define CAF_LINUX
-#   include <linux/version.h>
-#   if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,16)
-#   define CAF_POLL_IMPL
-#   endif
+#  include <linux/version.h>
+#  if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,16)
+#    define CAF_POLL_IMPL
+#  endif
 #elif defined(__FreeBSD__)
 #  define CAF_BSD
 #elif defined(WIN32) || defined(_WIN32)
@@ -121,18 +162,18 @@
 #include <cstdio>
 #include <cstdlib>
 
-// import backtrace and backtrace_symbols_fd into caf::detail
+// Optionally enable CAF_ASSERT
 #ifndef CAF_ENABLE_RUNTIME_CHECKS
-# define CAF_REQUIRE(unused) static_cast<void>(0)
+# define CAF_ASSERT(unused) static_cast<void>(0)
 #elif defined(CAF_WINDOWS) || defined(CAF_BSD)
-# define CAF_REQUIRE(stmt)                                                     \
+# define CAF_ASSERT(stmt)                                                      \
   if (static_cast<bool>(stmt) == false) {                                      \
     printf("%s:%u: requirement failed '%s'\n", __FILE__, __LINE__, #stmt);     \
     abort();                                                                   \
   } static_cast<void>(0)
 #else // defined(CAF_LINUX) || defined(CAF_MACOS)
 # include <execinfo.h>
-# define CAF_REQUIRE(stmt)                                                     \
+# define CAF_ASSERT(stmt)                                                      \
   if (static_cast<bool>(stmt) == false) {                                      \
     printf("%s:%u: requirement failed '%s'\n", __FILE__, __LINE__, #stmt);     \
     void* array[10];                                                           \

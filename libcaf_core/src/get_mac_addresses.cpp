@@ -1,7 +1,7 @@
 #include "caf/config.hpp"
 #include "caf/detail/get_mac_addresses.hpp"
 
-#if defined(CAF_MACOS) || defined(CAF_BSD)
+#if defined(CAF_MACOS) || defined(CAF_BSD) || defined(CAF_IOS)
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -51,7 +51,7 @@ std::vector<iface_info> get_mac_addresses() {
     auto ifm = reinterpret_cast<if_msghdr*>(buf.get());
     auto sdl = reinterpret_cast<sockaddr_dl*>(ifm + 1);
     auto ptr = reinterpret_cast<unsigned char*>(LLADDR(sdl));
-    auto uctoi = [](unsigned char c)->unsigned {
+    auto uctoi = [](unsigned char c) -> unsigned {
       return static_cast<unsigned char>(c);
     };
     std::ostringstream oss;
@@ -76,7 +76,7 @@ std::vector<iface_info> get_mac_addresses() {
 } // namespace detail
 } // namespace caf
 
-#elif defined(CAF_LINUX)
+#elif defined(CAF_LINUX) || defined(CAF_ANDROID)
 
 #include <vector>
 #include <string>
@@ -94,8 +94,6 @@ std::vector<iface_info> get_mac_addresses() {
 #include <cstring>
 #include <unistd.h>
 #include <iostream>
-
-using namespace std;
 
 namespace caf {
 namespace detail {
@@ -116,8 +114,8 @@ std::vector<iface_info> get_mac_addresses() {
     perror("ioctl(SIOCGIFCONF)");
     return {};
   }
-  vector<iface_info> result;
-  auto ctoi = [](char c)->unsigned {
+  std::vector<iface_info> result;
+  auto ctoi = [](char c) -> unsigned {
     return static_cast<unsigned char>(c);
   };
   // iterate through interfaces
@@ -131,7 +129,7 @@ std::vector<iface_info> get_mac_addresses() {
       return {};
     }
     std::ostringstream oss;
-    oss << hex;
+    oss << std::hex;
     oss.width(2);
     oss << ctoi(item->ifr_hwaddr.sa_data[0]);
     for (size_t j = 1; j < 6; ++j) {
@@ -187,14 +185,12 @@ struct c_free {
 
 } // namespace <anonymous>
 
-using namespace std;
-
 namespace caf {
 namespace detail {
 
 std::vector<iface_info> get_mac_addresses() {
   // result vector
-  vector<iface_info> result;
+  std::vector<iface_info> result;
   // flags to pass to GetAdaptersAddresses
   ULONG flags = GAA_FLAG_INCLUDE_PREFIX;
   // default to unspecified address family (both)
@@ -221,7 +217,7 @@ std::vector<iface_info> get_mac_addresses() {
     for (auto addr = addresses.get(); addr != nullptr; addr = addr->Next) {
       if (addr->PhysicalAddressLength > 0) {
         std::ostringstream oss;
-        oss << hex;
+        oss << std::hex;
         oss.width(2);
         oss << static_cast<int>(addr->PhysicalAddress[0]);
         for (DWORD i = 1; i < addr->PhysicalAddressLength; ++i) {

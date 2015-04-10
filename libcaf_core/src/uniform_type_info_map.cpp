@@ -184,7 +184,7 @@ void serialize_impl(const channel& chref, serializer* sink) {
   } else {
     // raw pointer
     auto rptr = actor_cast<abstract_channel*>(chref);
-    CAF_REQUIRE(rptr->is_abstract_actor() || rptr->is_abstract_group());
+    CAF_ASSERT(rptr->is_abstract_actor() || rptr->is_abstract_group());
     if (rptr->is_abstract_actor()) {
       // raw actor pointer
       abstract_actor_ptr aptr = static_cast<abstract_actor*>(rptr);
@@ -495,7 +495,7 @@ class default_meta_message : public uniform_type_info {
     std::vector<std::string> elements;
     split(elements, tname, is_any_of("+"));
     auto uti_map = detail::singletons::get_uniform_type_info_map();
-    CAF_REQUIRE(elements.size() > 0 && elements.front() == "@<>");
+    CAF_ASSERT(elements.size() > 0 && elements.front() == "@<>");
     // ignore first element, because it's always "@<>"
     for (size_t i = 1; i != elements.size(); ++i) {
       try {
@@ -524,7 +524,7 @@ class default_meta_message : public uniform_type_info {
   }
   void serialize(const void* ptr, serializer* sink) const override {
     auto& msg = *cast(ptr);
-    CAF_REQUIRE(msg.size() == m_elements.size());
+    CAF_ASSERT(msg.size() == m_elements.size());
     for (size_t i = 0; i < m_elements.size(); ++i) {
       m_elements[i]->serialize(msg.at(i), sink);
     }
@@ -595,7 +595,7 @@ class utim_impl : public uniform_type_info_map {
     fill_uti_arr(std::integral_constant<size_t, 0>{},
                  m_builtin_types, m_storage);
     // make sure our builtin types are sorted
-    CAF_REQUIRE(std::is_sorted(m_builtin_types.begin(),
+    CAF_ASSERT(std::is_sorted(m_builtin_types.begin(),
                                m_builtin_types.end(),
                                [](pointer lhs, pointer rhs) {
                                  return strcmp(lhs->name(), rhs->name()) < 0;
@@ -603,7 +603,7 @@ class utim_impl : public uniform_type_info_map {
   }
 
   virtual pointer by_type_nr(uint16_t nr) const {
-    CAF_REQUIRE(nr > 0);
+    CAF_ASSERT(nr > 0);
     return m_builtin_types[nr - 1];
   }
 

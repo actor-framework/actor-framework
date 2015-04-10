@@ -1,11 +1,13 @@
 #include <exception>
 
+#include "caf/all.hpp"
+#include "caf/mixin/actor_widget.hpp"
+
+CAF_PUSH_WARNINGS
 #include <QWidget>
 #include <QLineEdit>
 #include <QTextEdit>
-
-#include "caf/all.hpp"
-#include "caf/mixin/actor_widget.hpp"
+CAF_POP_WARNINGS
 
 class ChatWidget : public caf::mixin::actor_widget<QWidget> {
 

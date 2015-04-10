@@ -351,8 +351,8 @@ class default_multiplexer : public multiplexer {
 
   template <class F>
   void new_event(F fun, operation op, native_socket fd, event_handler* ptr) {
-    CAF_REQUIRE(fd != invalid_native_socket);
-    CAF_REQUIRE(ptr != nullptr || fd == m_pipe.first);
+    CAF_ASSERT(fd != invalid_native_socket);
+    CAF_ASSERT(ptr != nullptr || fd == m_pipe.first);
     // the only valid input where ptr == nullptr is our pipe
     // read handle which is only registered for reading
     auto old_bf = ptr ? ptr->eventbf() : input_mask;
@@ -362,7 +362,7 @@ class default_multiplexer : public multiplexer {
     auto last = m_events.end();
     auto i = std::lower_bound(m_events.begin(), last, fd, event_less{});
     if (i != last && i->fd == fd) {
-      CAF_REQUIRE(ptr == i->ptr);
+      CAF_ASSERT(ptr == i->ptr);
       // squash events together
       CAF_LOG_DEBUG("squash events: " << i->mask << " -> "
                << fun(op, i->mask));
@@ -467,7 +467,7 @@ class stream : public event_handler {
    * Starts reading data from the socket, forwarding incoming data to `mgr`.
    */
   void start(const manager_ptr& mgr) {
-    CAF_REQUIRE(mgr != nullptr);
+    CAF_ASSERT(mgr != nullptr);
     m_reader = mgr;
     backend().add(operation::read, m_sock.fd(), this);
     read_loop();
@@ -522,7 +522,7 @@ class stream : public event_handler {
    *          once the stream has been started.
    */
   void flush(const manager_ptr& mgr) {
-    CAF_REQUIRE(mgr != nullptr);
+    CAF_ASSERT(mgr != nullptr);
     CAF_LOG_TRACE("offline buf size: " << m_wr_offline_buf.size()
              << ", mgr = " << mgr.get()
              << ", m_writer = " << m_writer.get());
@@ -707,7 +707,7 @@ class acceptor : public event_handler {
    */
   void start(const manager_ptr& mgr) {
     CAF_LOG_TRACE("m_accept_sock.fd = " << m_accept_sock.fd());
-    CAF_REQUIRE(mgr != nullptr);
+    CAF_ASSERT(mgr != nullptr);
     m_mgr = mgr;
     backend().add(operation::read, m_accept_sock.fd(), this);
   }

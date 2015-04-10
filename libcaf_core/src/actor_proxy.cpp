@@ -29,8 +29,6 @@
 
 #include "caf/detail/singletons.hpp"
 
-using namespace std;
-
 namespace caf {
 
 actor_proxy::anchor::anchor(actor_proxy* instance) : m_ptr(instance) {
@@ -57,7 +55,7 @@ actor_proxy_ptr actor_proxy::anchor::get() {
   return result;
 }
 
-bool actor_proxy::anchor::try_expire() {
+bool actor_proxy::anchor::try_expire() noexcept {
   std::lock_guard<detail::shared_spinlock> guard{m_lock};
   // double-check reference count
   if (m_ptr.load()->get_reference_count() == 0) {
@@ -77,7 +75,12 @@ actor_proxy::actor_proxy(actor_id aid, node_id nid)
   // nop
 }
 
-void actor_proxy::request_deletion() {
+void actor_proxy::request_deletion(bool decremented_rc) noexcept {
+  // make sure ref count is 0 because try_expire might leak otherwise
+  if (!decremented_rc && m_rc.fetch_sub(1, std::memory_order_acq_rel) != 1) {
+    // deletion request canceled due to a weak ptr access
+    return;
+  }
   if (m_anchor->try_expire()) {
     delete this;
   }

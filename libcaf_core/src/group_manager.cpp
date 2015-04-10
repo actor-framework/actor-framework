@@ -228,8 +228,8 @@ class local_group_proxy : public local_group {
   template <class... Ts>
   local_group_proxy(actor remote_broker, Ts&&... xs)
       : super(false, std::forward<Ts>(xs)...) {
-    CAF_REQUIRE(m_broker == invalid_actor);
-    CAF_REQUIRE(remote_broker != invalid_actor);
+    CAF_ASSERT(m_broker == invalid_actor);
+    CAF_ASSERT(remote_broker != invalid_actor);
     m_broker = std::move(remote_broker);
     m_proxy_broker = spawn<proxy_broker, hidden>(this);
   }
@@ -357,7 +357,7 @@ class local_group_module : public abstract_group::module {
   void serialize(local_group* ptr, serializer* sink) {
     // serialize identifier & broker
     sink->write_value(ptr->identifier());
-    CAF_REQUIRE(ptr->broker() != invalid_actor);
+    CAF_ASSERT(ptr->broker() != invalid_actor);
     m_actor_utype->serialize(&ptr->broker(), sink);
   }
 

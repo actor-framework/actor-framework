@@ -83,7 +83,7 @@ class single_reader_queue {
    * @warning Call only from the reader (owner).
    */
   enqueue_result enqueue(pointer new_element) {
-    CAF_REQUIRE(new_element != nullptr);
+    CAF_ASSERT(new_element != nullptr);
     pointer e = m_stack.load();
     for (;;) {
       if (!e) {
@@ -111,7 +111,7 @@ class single_reader_queue {
       return true;
     }
     auto ptr = m_stack.load();
-    CAF_REQUIRE(ptr != nullptr);
+    CAF_ASSERT(ptr != nullptr);
     return !is_dummy(ptr);
   }
 
@@ -120,7 +120,7 @@ class single_reader_queue {
    * @warning Call only from the reader (owner).
    */
   bool empty() {
-    CAF_REQUIRE(!closed());
+    CAF_ASSERT(!closed());
     return m_cache.empty() && m_head == nullptr && is_dummy(m_stack.load());
   }
 
@@ -145,7 +145,7 @@ class single_reader_queue {
   bool try_block() {
     auto e = stack_empty_dummy();
     bool res = m_stack.compare_exchange_strong(e, reader_blocked_dummy());
-    CAF_REQUIRE(e != nullptr);
+    CAF_ASSERT(e != nullptr);
     // return true in case queue was already blocked
     return res || e == reader_blocked_dummy();
   }
@@ -239,7 +239,7 @@ class single_reader_queue {
 
   template <class Mutex, class CondVar>
   void synchronized_await(Mutex& mtx, CondVar& cv) {
-    CAF_REQUIRE(!closed());
+    CAF_ASSERT(!closed());
     if (!can_fetch_more() && try_block()) {
       std::unique_lock<Mutex> guard(mtx);
       while (blocked()) {
@@ -250,7 +250,7 @@ class single_reader_queue {
 
   template <class Mutex, class CondVar, class TimePoint>
   bool synchronized_await(Mutex& mtx, CondVar& cv, const TimePoint& timeout) {
-    CAF_REQUIRE(!closed());
+    CAF_ASSERT(!closed());
     if (!can_fetch_more() && try_block()) {
       std::unique_lock<Mutex> guard(mtx);
       while (blocked()) {
@@ -275,26 +275,26 @@ class single_reader_queue {
 
   // atomically sets m_stack back and enqueues all elements to the cache
   bool fetch_new_data(pointer end_ptr) {
-    CAF_REQUIRE(end_ptr == nullptr || end_ptr == stack_empty_dummy());
+    CAF_ASSERT(end_ptr == nullptr || end_ptr == stack_empty_dummy());
     pointer e = m_stack.load();
     // must not be called on a closed queue
-    CAF_REQUIRE(e != nullptr);
+    CAF_ASSERT(e != nullptr);
     // fetching data while blocked is an error
-    CAF_REQUIRE(e != reader_blocked_dummy());
+    CAF_ASSERT(e != reader_blocked_dummy());
     // it's enough to check this once, since only the owner is allowed
     // to close the queue and only the owner is allowed to call this
     // member function
     while (e != end_ptr) {
       if (m_stack.compare_exchange_weak(e, end_ptr)) {
         // fetching data while blocked is an error
-        CAF_REQUIRE(e != reader_blocked_dummy());
+        CAF_ASSERT(e != reader_blocked_dummy());
         if (is_dummy(e)) {
           // only use-case for this is closing a queue
-          CAF_REQUIRE(end_ptr == nullptr);
+          CAF_ASSERT(end_ptr == nullptr);
           return false;
         }
         while (e) {
-          CAF_REQUIRE(!is_dummy(e));
+          CAF_ASSERT(!is_dummy(e));
           auto next = e->next;
           e->next = m_head;
           m_head = e;

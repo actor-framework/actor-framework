@@ -27,7 +27,7 @@ namespace caf {
 response_promise::response_promise(const actor_addr& from, const actor_addr& to,
                                    const message_id& id)
     : m_from(from), m_to(to), m_id(id) {
-  CAF_REQUIRE(id.is_response() || !id.valid());
+  CAF_ASSERT(id.is_response() || !id.valid());
 }
 
 void response_promise::deliver(message msg) const {

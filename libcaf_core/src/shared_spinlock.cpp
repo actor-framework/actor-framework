@@ -21,7 +21,10 @@
 
 #include <limits>
 #include <thread>
+
 #include "caf/detail/shared_spinlock.hpp"
+
+#include "caf/detail/cas_weak.hpp"
 
 namespace {
 
@@ -42,9 +45,8 @@ void shared_spinlock::lock() {
   long v = m_flag.load();
   for (;;) {
     if (v != 0) {
-      // std::this_thread::yield();
       v = m_flag.load();
-    } else if (m_flag.compare_exchange_weak(v, min_long())) {
+    } else if (cas_weak(&m_flag, &v, min_long())) {
       return;
     }
     // else: next iteration
@@ -75,7 +77,7 @@ void shared_spinlock::unlock() {
 
 bool shared_spinlock::try_lock() {
   long v = m_flag.load();
-  return (v == 0) ? m_flag.compare_exchange_weak(v, min_long()) : false;
+  return (v == 0) ? cas_weak(&m_flag, &v, min_long()) : false;
 }
 
 void shared_spinlock::lock_shared() {
@@ -84,7 +86,7 @@ void shared_spinlock::lock_shared() {
     if (v < 0) {
       // std::this_thread::yield();
       v = m_flag.load();
-    } else if (m_flag.compare_exchange_weak(v, v + 1)) {
+    } else if (cas_weak(&m_flag, &v, v + 1)) {
       return;
     }
     // else: next iteration
@@ -97,7 +99,7 @@ void shared_spinlock::unlock_shared() {
 
 bool shared_spinlock::try_lock_shared() {
   long v = m_flag.load();
-  return (v >= 0) ? m_flag.compare_exchange_weak(v, v + 1) : false;
+  return (v >= 0) ? cas_weak(&m_flag, &v, v + 1) : false;
 }
 
 } // namespace detail

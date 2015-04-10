@@ -68,7 +68,7 @@ class middleman : public detail::abstract_singleton {
       return static_cast<Impl*>(i->second.get());
     }
     auto result = make_counted<Impl>(*this);
-    CAF_REQUIRE(result->unique());
+    CAF_ASSERT(result->unique());
     result->launch(nullptr, false, true);
     m_named_brokers.insert(std::make_pair(name, result));
     return result;

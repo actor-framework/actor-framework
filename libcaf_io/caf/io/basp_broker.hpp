@@ -77,8 +77,8 @@ class basp_broker : public broker, public actor_namespace::backend {
                    payload_writer* writer = nullptr);
 
   // dispatches a message from a local actor to a remote node
-  void dispatch(const actor_addr& from, const actor_addr& to,
-                message_id mid, const message& msg);
+  node_id dispatch(const actor_addr& from, const actor_addr& to,
+                   message_id mid, const message& msg);
 
   struct client_handshake_data {
     int64_t request_id;
@@ -171,6 +171,21 @@ class basp_broker : public broker, public actor_namespace::backend {
 
   connection_info get_route(const node_id& dest);
 
+  // node_id of the target, sender of the request, and original request ID
+  using pending_request = std::tuple<node_id, actor_addr, message_id>;
+  using pending_requests = std::vector<pending_request>;
+  using pending_request_iter = pending_requests::iterator;
+
+  void fail_pending_requests(pending_request_iter first,
+                             pending_request_iter last,
+                             uint32_t reason);
+
+  // fails all pending requests (total network failure or shutdown)
+  void fail_pending_requests(uint32_t reason);
+
+  // fails all pending requests from `addr` (disconnect from node)
+  void fail_pending_requests(const node_id& addr, uint32_t reason);
+
   struct connection_info_less {
     inline bool operator()(const connection_info& lhs,
                            const connection_info& rhs) const {
@@ -201,9 +216,6 @@ class basp_broker : public broker, public actor_namespace::backend {
   // dest => hops
   using routing_table = std::map<node_id, routing_table_entry>;
 
-  // sender => request ID
-  using pending_request = std::pair<actor_addr, message_id>;
-
   actor_namespace m_namespace; // manages proxies
   std::map<connection_handle, connection_context> m_ctx;
   std::map<accept_handle, std::pair<abstract_actor_ptr, uint16_t>> m_acceptors;
@@ -211,7 +223,8 @@ class basp_broker : public broker, public actor_namespace::backend {
   routing_table m_routes; // stores non-direct routes
   std::set<blacklist_entry, blacklist_less> m_blacklist; // stores invalidated
                                                          // routes
-  std::set<pending_request> m_pending_requests;
+  // a simple "bag" for our pending requests
+  std::vector<pending_request> m_pending_requests;
 
   // needed to keep track to which node we are talking to at the moment
   connection_context* m_current_context;

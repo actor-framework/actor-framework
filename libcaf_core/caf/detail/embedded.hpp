@@ -40,7 +40,7 @@ class embedded final : public Base {
     // nop
   }
 
-  void request_deletion() override {
+  void request_deletion(bool) noexcept override {
     intrusive_ptr<ref_counted> guard;
     guard.swap(m_storage);
     // this code assumes that embedded is part of pair_storage<>,

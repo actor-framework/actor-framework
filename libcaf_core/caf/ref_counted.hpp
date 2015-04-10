@@ -44,32 +44,28 @@ class ref_counted : public memory_managed {
   /**
    * Increases reference count by one.
    */
-  inline void ref() {
-    ++m_rc;
+  inline void ref() noexcept {
+    m_rc.fetch_add(1, std::memory_order_relaxed);
   }
 
   /**
    * Decreases reference count by one and calls `request_deletion`
    * when it drops to zero.
    */
-  inline void deref() {
-    if (--m_rc == 0) {
-      request_deletion();
-    }
-  }
+  void deref() noexcept;
 
   /**
    * Queries whether there is exactly one reference.
    */
-  inline bool unique() const {
+  inline bool unique() const noexcept {
     return m_rc == 1;
   }
 
-  inline size_t get_reference_count() const {
+  inline size_t get_reference_count() const noexcept {
     return m_rc;
   }
 
- private:
+ protected:
   std::atomic<size_t> m_rc;
 };
 

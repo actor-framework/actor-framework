@@ -27,6 +27,7 @@
 
 #include "caf/detail/singletons.hpp"
 #include "caf/detail/actor_registry.hpp"
+#include "caf/detail/sync_request_bouncer.hpp"
 
 #include "caf/io/basp.hpp"
 #include "caf/io/middleman.hpp"
@@ -82,13 +83,13 @@ behavior basp_broker::make_behavior() {
     // received from underlying broker implementation
     [=](new_data_msg& msg) {
       CAF_LOG_TRACE("handle = " << msg.handle.id());
-      CAF_REQUIRE(m_ctx.count(msg.handle) > 0);
+      CAF_ASSERT(m_ctx.count(msg.handle) > 0);
       new_data(m_ctx[msg.handle], msg.buf);
     },
     // received from underlying broker implementation
     [=](const new_connection_msg& msg) {
       CAF_LOG_TRACE("handle = " << msg.handle.id());
-      CAF_REQUIRE(m_ctx.count(msg.handle) == 0);
+      CAF_ASSERT(m_ctx.count(msg.handle) == 0);
       auto& ctx = m_ctx[msg.handle];
       ctx.hdl = msg.handle;
       ctx.handshake_data = none;
@@ -128,6 +129,7 @@ behavior basp_broker::make_behavior() {
       // remove routes that no longer have any path and kill all proxies
       for (auto& lc : lost_connections) {
         CAF_LOG_DEBUG("no more route to " << to_string(lc));
+        fail_pending_requests(lc, exit_reason::remote_link_unreachable);
         m_routes.erase(lc);
         auto proxies = m_namespace.get_all(lc);
         m_namespace.erase(lc);
@@ -155,7 +157,11 @@ behavior basp_broker::make_behavior() {
                                             message_id mid,
                                             const message& msg) {
       CAF_LOG_TRACE("");
-      dispatch(sender, receiver, mid, msg);
+      if (dispatch(sender, receiver, mid, msg) == invalid_node_id
+          && mid.is_request()) {
+        detail::sync_request_bouncer srb{exit_reason::remote_link_unreachable};
+        srb(sender, mid);
+      }
     },
     on(atom("_DelProxy"), arg_match) >> [=](const node_id& nid, actor_id aid) {
       CAF_LOG_TRACE(CAF_TSARG(nid) << ", " << CAF_ARG(aid));
@@ -267,9 +273,10 @@ void basp_broker::new_data(connection_context& ctx, buffer_type& buf) {
 }
 
 void basp_broker::local_dispatch(const basp::header& hdr, message&& msg) {
-  CAF_LOG_TRACE("");
   // TODO: provide hook API to allow ActorShell to
   //       intercept/trace/log each message
+  CAF_LOG_TRACE("");
+  // look up the source of the messages
   actor_addr src;
   if (hdr.source_node != invalid_node_id
       && hdr.source_actor != invalid_actor_id) {
@@ -287,7 +294,7 @@ void basp_broker::local_dispatch(const basp::header& hdr, message&& msg) {
   }
   CAF_LOG_DEBUG_IF(src == invalid_actor_addr, "src == invalid_actor_addr");
   auto dest = singletons::get_actor_registry()->get(hdr.dest_actor);
-  CAF_REQUIRE(!dest || dest->node() == node());
+  CAF_ASSERT(!dest || dest->node() == node());
   // intercept message used for link signaling
   if (dest && src == dest) {
     if (msg.match_elements<atom_value, actor_addr>()) {
@@ -329,8 +336,23 @@ void basp_broker::local_dispatch(const basp::header& hdr, message&& msg) {
                                                     hdr.dest_actor, mid, msg);
     return;
   }
+  auto dest_addr = dest->address();
+  if (mid.is_response() && !m_pending_requests.empty()) {
+    // remove from pendings requests
+    auto req_id = mid.request_id();
+    auto last = m_pending_requests.end();
+    auto i = std::find(m_pending_requests.begin(), last,
+                       std::tie(hdr.source_node, dest_addr, req_id));
+    if (i != last) {
+      if (i != (last - 1)) {
+        using std::swap;
+        swap(*i, m_pending_requests.back());
+      }
+      m_pending_requests.pop_back();
+    }
+  }
   parent().notify<hook::message_received>(hdr.source_node, src,
-                                          dest->address(), mid, msg);
+                                          dest_addr, mid, msg);
   CAF_LOG_DEBUG("enqueue message from " << to_string(src) << " to "
                 << to_string(dest->address()));
   dest->enqueue(src, mid, std::move(msg), nullptr);
@@ -379,12 +401,12 @@ node_id basp_broker::dispatch(uint32_t operation, const node_id& src_node,
   return route.node;
 }
 
-void basp_broker::dispatch(const actor_addr& from, const actor_addr& to,
-                           message_id mid, const message& msg) {
+node_id basp_broker::dispatch(const actor_addr& from, const actor_addr& to,
+                              message_id mid, const message& msg) {
   CAF_LOG_TRACE(CAF_TSARG(from) << ", " << CAF_MARG(mid, integer_value)
                 << ", " << CAF_TSARG(to) << ", " << CAF_TSARG(msg));
   if (to == invalid_actor_addr) {
-    return;
+    return invalid_node_id;
   }
   if (from != invalid_actor_addr && from.node() == node()) {
     // register locally running actors to be able to deserialize them later
@@ -399,8 +421,13 @@ void basp_broker::dispatch(const actor_addr& from, const actor_addr& to,
   if (route_node == invalid_node_id) {
     parent().notify<hook::message_sending_failed>(from, to, mid, msg);
   } else {
+    if (mid.is_request()) {
+      // keep track of pendings sync requests for error handling
+      m_pending_requests.emplace_back(to.node(), from, mid);
+    }
     parent().notify<hook::message_sent>(from, route_node, to, mid, msg);
   }
+  return route_node;
 }
 
 void basp_broker::read(binary_deserializer& bd, basp::header& msg) {
@@ -473,7 +500,7 @@ basp_broker::handle_basp_header(connection_context& ctx,
       // must not happen
       throw std::logic_error("invalid operation");
     case basp::dispatch_message: {
-      CAF_REQUIRE(payload != nullptr);
+      CAF_ASSERT(payload != nullptr);
       binary_deserializer bd{payload->data(), payload->size(), &m_namespace};
       message content;
       bd.read(content, m_meta_msg);
@@ -481,7 +508,7 @@ basp_broker::handle_basp_header(connection_context& ctx,
       break;
     }
     case basp::announce_proxy_instance: {
-      CAF_REQUIRE(payload == nullptr);
+      CAF_ASSERT(payload == nullptr);
       // source node has created a proxy for one of our actors
       auto entry = singletons::get_actor_registry()->get_entry(hdr.dest_actor);
       auto nid = hdr.source_node;
@@ -501,7 +528,7 @@ basp_broker::handle_basp_header(connection_context& ctx,
       break;
     }
     case basp::kill_proxy_instance: {
-      CAF_REQUIRE(payload == nullptr);
+      CAF_ASSERT(payload == nullptr);
       // we have a proxy to an actor that has been terminated
       auto ptr = m_namespace.get(hdr.source_node, hdr.source_actor);
       if (ptr) {
@@ -513,7 +540,7 @@ basp_broker::handle_basp_header(connection_context& ctx,
       break;
     }
     case basp::client_handshake: {
-      CAF_REQUIRE(payload == nullptr);
+      CAF_ASSERT(payload == nullptr);
       if (ctx.remote_id != invalid_node_id) {
         CAF_LOG_INFO("received unexpected client handshake");
         return close_connection;
@@ -531,7 +558,7 @@ basp_broker::handle_basp_header(connection_context& ctx,
       break;
     }
     case basp::server_handshake: {
-      CAF_REQUIRE(payload != nullptr);
+      CAF_ASSERT(payload != nullptr);
       if (!ctx.handshake_data) {
         CAF_LOG_INFO("received unexpected server handshake");
         return close_connection;
@@ -653,9 +680,9 @@ basp_broker::connection_info basp_broker::get_route(const node_id& dest) {
 actor_proxy_ptr basp_broker::make_proxy(const node_id& nid, actor_id aid) {
   CAF_LOG_TRACE(CAF_TSARG(nid) << ", "
               << CAF_ARG(aid));
-  CAF_REQUIRE(m_current_context != nullptr);
-  CAF_REQUIRE(aid != invalid_actor_id);
-  CAF_REQUIRE(nid != node());
+  CAF_ASSERT(m_current_context != nullptr);
+  CAF_ASSERT(aid != invalid_actor_id);
+  CAF_ASSERT(nid != node());
   // this member function is being called whenever we deserialize a
   // payload received from a remote node; if a remote node N sends
   // us a handle to a third node T, we assume that N has a route to T
@@ -697,7 +724,7 @@ void basp_broker::on_exit() {
   // kill all remaining proxies
   auto proxies = m_namespace.get_all();
   for (auto& proxy : proxies) {
-    CAF_REQUIRE(proxy != nullptr);
+    CAF_ASSERT(proxy != nullptr);
     proxy->kill_proxy(exit_reason::remote_link_unreachable);
   }
   m_namespace.clear();
@@ -727,7 +754,7 @@ void basp_broker::add_route(const node_id& nid, connection_handle hdl) {
 
 bool basp_broker::try_set_default_route(const node_id& nid,
                                         connection_handle hdl) {
-  CAF_REQUIRE(!hdl.invalid());
+  CAF_ASSERT(!hdl.invalid());
   auto& entry = m_routes[nid];
   if (entry.first.invalid()) {
     CAF_LOG_DEBUG("new default route: " << to_string(nid) << " -> "
@@ -747,7 +774,7 @@ void basp_broker::init_handshake_as_client(connection_context& ctx) {
 void basp_broker::init_handshake_as_server(connection_context& ctx,
                                            actor_addr addr) {
   CAF_LOG_TRACE(CAF_ARG(this));
-  CAF_REQUIRE(node() != invalid_node_id);
+  CAF_ASSERT(node() != invalid_node_id);
   if (addr != invalid_actor_addr) {
     auto writer = make_payload_writer([&](binary_serializer& sink) {
       sink << addr.id();
@@ -787,14 +814,14 @@ void basp_broker::add_published_actor(accept_handle hdl,
 
 bool basp_broker::remove_published_actor(const abstract_actor_ptr& whom) {
   CAF_LOG_TRACE("");
-  CAF_REQUIRE(whom != nullptr);
+  CAF_ASSERT(whom != nullptr);
   size_t erased_elements = 0;
   auto last = m_acceptors.end();
   auto i = m_acceptors.begin();
   while (i != last) {
     auto& kvp = i->second;
     if (kvp.first == whom) {
-      CAF_REQUIRE(valid(i->first));
+      CAF_ASSERT(valid(i->first));
       close(i->first);
       if (m_open_ports.erase(kvp.second) == 0) {
         CAF_LOG_ERROR("inconsistent data: no open port for acceptor!");
@@ -812,13 +839,13 @@ bool basp_broker::remove_published_actor(const abstract_actor_ptr& whom) {
 bool basp_broker::remove_published_actor(const abstract_actor_ptr& whom,
                                          uint16_t port) {
   CAF_LOG_TRACE("");
-  CAF_REQUIRE(whom != nullptr);
-  CAF_REQUIRE(port != 0);
+  CAF_ASSERT(whom != nullptr);
+  CAF_ASSERT(port != 0);
   auto i = m_open_ports.find(port);
   if (i == m_open_ports.end()) {
     return false;
   }
-  CAF_REQUIRE(valid(i->second));
+  CAF_ASSERT(valid(i->second));
   auto j = m_acceptors.find(i->second);
   if (j->second.first != whom) {
     CAF_LOG_INFO("port has been bound to a different actor");
@@ -833,6 +860,37 @@ bool basp_broker::remove_published_actor(const abstract_actor_ptr& whom,
     m_acceptors.erase(j);
   }
   return true;
+}
+
+void basp_broker::fail_pending_requests(pending_request_iter first,
+                                        pending_request_iter last,
+                                        uint32_t reason) {
+  CAF_LOG_TRACE(std::distance(first, last) << " elements, " << CAF_ARG(reason));
+  if (first == last) {
+    return;
+  }
+  detail::sync_request_bouncer srb{reason};
+  auto bounce = [&](const pending_request& req) {
+    srb(get<1>(req), get<2>(req));
+  };
+  std::for_each(first, last, bounce);
+  m_pending_requests.erase(first, last);
+}
+
+void basp_broker::fail_pending_requests(uint32_t reason) {
+  CAF_LOG_TRACE(CAF_ARG(reason));
+  fail_pending_requests(m_pending_requests.begin(), m_pending_requests.end(),
+                        reason);
+}
+
+void basp_broker::fail_pending_requests(const node_id& addr, uint32_t reason) {
+  CAF_LOG_TRACE(CAF_TSARG(addr) << ", " << CAF_ARG(reason));
+  auto f = [&](const pending_request& req) {
+    return get<0>(req) == addr;
+  };
+  auto last = m_pending_requests.end();
+  fail_pending_requests(std::remove_if(m_pending_requests.begin(), last, f),
+                        last, reason);
 }
 
 } // namespace io

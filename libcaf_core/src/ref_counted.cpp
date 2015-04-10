@@ -38,4 +38,14 @@ ref_counted& ref_counted::operator=(const ref_counted&) {
   return *this;
 }
 
+void ref_counted::deref() noexcept {
+  if (unique()) {
+    request_deletion(false);
+    return;
+  }
+  if (m_rc.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+    request_deletion(true);
+  }
+}
+
 } // namespace caf

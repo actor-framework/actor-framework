@@ -1,13 +1,15 @@
 #include <string>
 #include <utility>
 
-#include <QMessageBox>
-#include <QInputDialog>
-
-#include "chatwidget.hpp"
-
 #include "caf/all.hpp"
 #include "caf/detail/scope_guard.hpp"
+
+CAF_PUSH_WARNINGS
+#include <QMessageBox>
+#include <QInputDialog>
+CAF_POP_WARNINGS
+
+#include "chatwidget.hpp"
 
 using namespace std;
 using namespace caf;
@@ -91,9 +93,6 @@ void ChatWidget::sendChatMessage() {
     msg += ": ";
     msg += line.toUtf8().constData();
     print("<you>: " + input()->text());
-    // NOTE: we have to use send_as(as_actor(), ...) outside of our
-    //       message handler, because `self` is *not* set properly
-    //       in this context
     send_as(as_actor(), m_chatroom, std::move(msg));
 }
 

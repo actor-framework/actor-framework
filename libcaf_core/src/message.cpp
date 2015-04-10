@@ -52,12 +52,12 @@ void message::swap(message& other) {
 }
 
 void* message::mutable_at(size_t p) {
-  CAF_REQUIRE(m_vals);
+  CAF_ASSERT(m_vals);
   return m_vals->mutable_at(p);
 }
 
 const void* message::at(size_t p) const {
-  CAF_REQUIRE(m_vals);
+  CAF_ASSERT(m_vals);
   return m_vals->at(p);
 }
 
@@ -71,12 +71,12 @@ const char* message::uniform_name_at(size_t pos) const {
 }
 
 bool message::equals(const message& other) const {
-  CAF_REQUIRE(m_vals);
+  CAF_ASSERT(m_vals);
   return m_vals->equals(*other.vals());
 }
 
 message message::drop(size_t n) const {
-  CAF_REQUIRE(m_vals);
+  CAF_ASSERT(m_vals);
   if (n == 0) {
     return *this;
   }
@@ -90,7 +90,7 @@ message message::drop(size_t n) const {
 }
 
 message message::drop_right(size_t n) const {
-  CAF_REQUIRE(m_vals);
+  CAF_ASSERT(m_vals);
   if (n == 0) {
     return *this;
   }
@@ -179,6 +179,7 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs) const {
       auto i = shorts.find(arg);
       if (i != shorts.end()) {
         if (i->second->fun) {
+          // this short opt expects two arguments
           return skip_message();
         }
         insert_opt_name(i->second);
@@ -212,7 +213,13 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs) const {
         return skip_message();
       }
       auto i = shorts.find(arg1);
-      if (i != shorts.end() && i->second->fun) {
+      if (i != shorts.end()) {
+        if (!i->second->fun) {
+          // this short opt does not expect an argument,
+          // tell extract to try this option again with one
+          // less argument
+          return skip_message();
+        }
         if (!i->second->fun(arg2)) {
           std::cerr << "invalid value for option "
                     << i->second->name << ": " << arg2 << std::endl;
@@ -226,14 +233,14 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs) const {
     }
   });
   size_t name_width = 0;
-  for (auto& ca : xs) {
+  for (auto& x : xs) {
     // name field contains either only "--<long_name>" or
     // "-<short name> [--<long name>]" depending on whether or not
     // a ',' appears in the name
-    auto nw = ca.name.find(',') == std::string::npos
-              ? ca.name.size() + 2  // "--<name>"
-              : ca.name.size() + 5; // "-X [--<name>]" (minus trailing ",X")
-    if (ca.fun) {
+    auto nw = x.name.find(',') == std::string::npos
+              ? x.name.size() + 2  // "--<name>"
+              : x.name.size() + 5; // "-X [--<name>]" (minus trailing ",X")
+    if (x.fun) {
       nw += 4; // trailing " arg"
     }
     name_width = std::max(name_width, nw);

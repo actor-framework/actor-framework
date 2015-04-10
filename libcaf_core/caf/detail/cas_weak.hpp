@@ -17,47 +17,27 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_WILDCARD_POSITION_HPP
-#define CAF_WILDCARD_POSITION_HPP
+#ifndef CAF_DETAIL_CAS_WEAK_HPP
+#define CAF_DETAIL_CAS_WEAK_HPP
 
-#include <type_traits>
+#include <atomic>
 
-#include "caf/anything.hpp"
-#include "caf/detail/type_list.hpp"
+#include "caf/config.hpp"
 
 namespace caf {
+namespace detail {
 
-/**
- * Denotes the position of `anything` in a template parameter pack.
- */
-enum class wildcard_position {
-  nil,
-  trailing,
-  leading,
-  in_between,
-  multiple
-};
-
-/**
- * Gets the position of `anything` from the type list `Types`.
- */
-template <class Types>
-constexpr wildcard_position get_wildcard_position() {
-  return detail::tl_count<Types, is_anything>::value > 1
-         ? wildcard_position::multiple
-         : (detail::tl_count<Types, is_anything>::value == 1
-            ? (std::is_same<
-                 typename detail::tl_head<Types>::type, anything
-               >::value
-               ? wildcard_position::leading
-               : (std::is_same<
-                    typename detail::tl_back<Types>::type, anything
-                  >::value
-                  ? wildcard_position::trailing
-                  : wildcard_position::in_between))
-            : wildcard_position::nil);
+template<class T>
+bool cas_weak(std::atomic<T>* obj, T* expected, T desired) {
+# if (defined(CAF_CLANG) && CAF_COMPILER_VERSION < 30401)                      \
+     || (defined(CAF_GCC) && CAF_COMPILER_VERSION < 40803)
+  return std::atomic_compare_exchange_strong(obj, expected, desired);
+# else
+  return std::atomic_compare_exchange_weak(obj, expected, desired);
+# endif
 }
 
+} // namespace detail
 } // namespace caf
 
-#endif // CAF_WILDCARD_POSITION_HPP
+#endif // CAF_DETAIL_CAS_WEAK_HPP

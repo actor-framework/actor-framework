@@ -263,7 +263,7 @@ class uniform_type_info {
   template <class T>
   uniform_value create_impl(const uniform_value& other) const {
     if (other) {
-      CAF_REQUIRE(other->ti == this);
+      CAF_ASSERT(other->ti == this);
       auto ptr = reinterpret_cast<const T*>(other->val);
       return make_uniform_value<T>(this, *ptr);
     }

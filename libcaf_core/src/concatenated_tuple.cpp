@@ -45,7 +45,7 @@ auto concatenated_tuple::make(std::initializer_list<cow_ptr> xs) -> cow_ptr {
 }
 
 void* concatenated_tuple::mutable_at(size_t pos) {
-  CAF_REQUIRE(pos < size());
+  CAF_ASSERT(pos < size());
   auto selected = select(pos);
   return selected.first->mutable_at(selected.second);
 }
@@ -59,7 +59,7 @@ message_data::cow_ptr concatenated_tuple::copy() const {
 }
 
 const void* concatenated_tuple::at(size_t pos) const {
-  CAF_REQUIRE(pos < size());
+  CAF_ASSERT(pos < size());
   auto selected = select(pos);
   return selected.first->at(selected.second);
 }
@@ -75,13 +75,13 @@ uint32_t concatenated_tuple::type_token() const {
 }
 
 const char* concatenated_tuple::uniform_name_at(size_t pos) const {
-  CAF_REQUIRE(pos < size());
+  CAF_ASSERT(pos < size());
   auto selected = select(pos);
   return selected.first->uniform_name_at(selected.second);
 }
 
 uint16_t concatenated_tuple::type_nr_at(size_t pos) const {
-  CAF_REQUIRE(pos < size());
+  CAF_ASSERT(pos < size());
   auto selected = select(pos);
   return selected.first->type_nr_at(selected.second);
 }

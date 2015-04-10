@@ -126,7 +126,7 @@ class optional {
    * Returns the value.
    */
   T& operator*() {
-    CAF_REQUIRE(valid());
+    CAF_ASSERT(valid());
     return m_value;
   }
 
@@ -134,7 +134,7 @@ class optional {
    * Returns the value.
    */
   const T& operator*() const {
-    CAF_REQUIRE(valid());
+    CAF_ASSERT(valid());
     return m_value;
   }
 
@@ -142,7 +142,7 @@ class optional {
    * Returns the value.
    */
   const T* operator->() const {
-    CAF_REQUIRE(valid());
+    CAF_ASSERT(valid());
     return &m_value;
   }
 
@@ -150,7 +150,7 @@ class optional {
    * Returns the value.
    */
   T* operator->() {
-    CAF_REQUIRE(valid());
+    CAF_ASSERT(valid());
     return &m_value;
   }
 
@@ -158,7 +158,7 @@ class optional {
    * Returns the value.
    */
   T& get() {
-    CAF_REQUIRE(valid());
+    CAF_ASSERT(valid());
     return m_value;
   }
 
@@ -166,7 +166,7 @@ class optional {
    * Returns the value.
    */
   const T& get() const {
-    CAF_REQUIRE(valid());
+    CAF_ASSERT(valid());
     return m_value;
   }
 
@@ -186,7 +186,7 @@ class optional {
   }
   template <class V>
   void cr(V&& value) {
-    CAF_REQUIRE(!valid());
+    CAF_ASSERT(!valid());
     m_valid = true;
     new (&m_value) T(std::forward<V>(value));
   }
@@ -232,32 +232,32 @@ class optional<T&> {
   }
 
   T& operator*() {
-    CAF_REQUIRE(valid());
+    CAF_ASSERT(valid());
     return *m_value;
   }
 
   const T& operator*() const {
-    CAF_REQUIRE(valid());
+    CAF_ASSERT(valid());
     return *m_value;
   }
 
   T* operator->() {
-    CAF_REQUIRE(valid());
+    CAF_ASSERT(valid());
     return m_value;
   }
 
   const T* operator->() const {
-    CAF_REQUIRE(valid());
+    CAF_ASSERT(valid());
     return m_value;
   }
 
   T& get() {
-    CAF_REQUIRE(valid());
+    CAF_ASSERT(valid());
     return *m_value;
   }
 
   const T& get() const {
-    CAF_REQUIRE(valid());
+    CAF_ASSERT(valid());
     return *m_value;
   }
 

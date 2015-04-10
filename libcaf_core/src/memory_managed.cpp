@@ -25,7 +25,7 @@ memory_managed::~memory_managed() {
   // nop
 }
 
-void memory_managed::request_deletion() {
+void memory_managed::request_deletion(bool) noexcept {
   delete this;
 }
 

@@ -72,12 +72,12 @@ class limited_vector {
   }
 
   void resize(size_type s) {
-    CAF_REQUIRE(s <= MaxSize);
+    CAF_ASSERT(s <= MaxSize);
     m_size = s;
   }
 
   limited_vector(std::initializer_list<T> init) : m_size(init.size()) {
-    CAF_REQUIRE(init.size() <= MaxSize);
+    CAF_ASSERT(init.size() <= MaxSize);
     std::copy(init.begin(), init.end(), begin());
   }
 
@@ -91,7 +91,7 @@ class limited_vector {
               // dummy SFINAE argument
               typename std::iterator_traits<InputIterator>::pointer = 0) {
     auto dist = std::distance(first, last);
-    CAF_REQUIRE(dist >= 0);
+    CAF_ASSERT(dist >= 0);
     resize(static_cast<size_t>(dist));
     std::copy(first, last, begin());
   }
@@ -121,22 +121,22 @@ class limited_vector {
   }
 
   void push_back(const_reference what) {
-    CAF_REQUIRE(!full());
+    CAF_ASSERT(!full());
     m_data[m_size++] = what;
   }
 
   void pop_back() {
-    CAF_REQUIRE(!empty());
+    CAF_ASSERT(!empty());
     --m_size;
   }
 
   reference at(size_type pos) {
-    CAF_REQUIRE(pos < m_size);
+    CAF_ASSERT(pos < m_size);
     return m_data[pos];
   }
 
   const_reference at(size_type pos) const {
-    CAF_REQUIRE(pos < m_size);
+    CAF_ASSERT(pos < m_size);
     return m_data[pos];
   }
 
@@ -197,22 +197,22 @@ class limited_vector {
   }
 
   reference front() {
-    CAF_REQUIRE(!empty());
+    CAF_ASSERT(!empty());
     return m_data[0];
   }
 
   const_reference front() const {
-    CAF_REQUIRE(!empty());
+    CAF_ASSERT(!empty());
     return m_data[0];
   }
 
   reference back() {
-    CAF_REQUIRE(!empty());
+    CAF_ASSERT(!empty());
     return m_data[m_size - 1];
   }
 
   const_reference back() const {
-    CAF_REQUIRE(!empty());
+    CAF_ASSERT(!empty());
     return m_data[m_size - 1];
   }
 
@@ -226,7 +226,7 @@ class limited_vector {
 
   template <class InputIterator>
   void insert(iterator pos, InputIterator first, InputIterator last) {
-    CAF_REQUIRE(first <= last);
+    CAF_ASSERT(first <= last);
     auto num_elements = static_cast<size_t>(std::distance(first, last));
     if ((size() + num_elements) > MaxSize) {
       throw std::length_error("limited_vector::insert: too much elements");

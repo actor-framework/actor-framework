@@ -26,6 +26,9 @@
 
 #include "caf/fwd.hpp"
 
+#include "caf/node_id.hpp"
+#include "caf/detail/cas_weak.hpp"
+
 namespace caf {
 namespace detail {
 
@@ -58,6 +61,9 @@ class singletons {
   static logging* get_logger();
 
   static node_id get_node_id();
+
+  // returns false if singleton is already defined
+  static bool set_node_id(node_id::data* ptr);
 
   static scheduler::abstract_coordinator* get_scheduling_coordinator();
 
@@ -117,7 +123,7 @@ class singletons {
       if (p == nullptr) {
         return;
       }
-      if (ptr.compare_exchange_weak(p, nullptr)) {
+      if (cas_weak<T*>(&ptr, &p, nullptr)) {
         p->dispose();
         return;
       }

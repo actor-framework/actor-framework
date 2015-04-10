@@ -51,7 +51,7 @@ set(CAF_VERSION
 ################################################################################
 
 # prohibit in-source builds
-if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
+if("${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_BINARY_DIR}")
     message(FATAL_ERROR "In-source builds are not allowed. Please use "
                         "./configure to choose a build directory and "
                         "initialize the build configuration.")
@@ -60,14 +60,14 @@ endif()
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 # set binary output path if not defined by user
 if("${EXECUTABLE_OUTPUT_PATH}" STREQUAL "")
-  set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin")
+  set(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/bin")
 endif()
 # set library output path if not defined by user, but always set
 # library output path to binary output path for Xcode projects
 if("${CMAKE_GENERATOR}" STREQUAL "Xcode")
   set(LIBRARY_OUTPUT_PATH "${EXECUTABLE_OUTPUT_PATH}")
 elseif("${LIBRARY_OUTPUT_PATH}" STREQUAL "")
-  set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/lib")
+  set(LIBRARY_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/lib")
 endif()
 
 
@@ -79,7 +79,7 @@ endif()
 if(NOT WIN32 AND NOT NO_COMPILER_CHECK)
   try_run(ProgramResult
           CompilationSucceeded
-          "${CMAKE_BINARY_DIR}"
+          "${CMAKE_CURRENT_BINARY_DIR}"
           "${CMAKE_CURRENT_SOURCE_DIR}/cmake/get_compiler_version.cpp"
           RUN_OUTPUT_VARIABLE CompilerVersion)
   if(NOT CompilationSucceeded OR NOT ProgramResult EQUAL 0)
@@ -147,7 +147,7 @@ if(NOT NO_AUTO_LIBCPP AND "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
   set(CMAKE_CXX_FLAGS "-std=c++11 -stdlib=libc++")
   try_run(ProgramResult
           CompilationSucceeded
-          "${CMAKE_BINARY_DIR}"
+          "${CMAKE_CURRENT_BINARY_DIR}"
           "${CMAKE_CURRENT_SOURCE_DIR}/cmake/get_compiler_version.cpp"
           RUN_OUTPUT_VARIABLE CompilerVersion)
   if(NOT CompilationSucceeded OR NOT ProgramResult EQUAL 0)
@@ -167,7 +167,7 @@ if(ENABLE_ADDRESS_SANITIZER)
   set(CMAKE_CXX_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
   try_run(ProgramResult
           CompilationSucceeded
-          "${CMAKE_BINARY_DIR}"
+          "${CMAKE_CURRENT_BINARY_DIR}"
           "${CMAKE_CURRENT_SOURCE_DIR}/cmake/get_compiler_version.cpp")
   if(NOT CompilationSucceeded)
     message(WARNING "Address Sanitizer is not available on selected compiler")
@@ -182,6 +182,28 @@ endif(ENABLE_ADDRESS_SANITIZER)
 if(NOT APPLE AND NOT WIN32)
   set(EXTRA_FLAGS "${EXTRA_FLAGS} -pthread")
 endif()
+# -fPIC generates warnings on MinGW plus extra setup steps needed on MinGW
+if(MINGW)
+  add_definitions(-D_WIN32_WINNT=0x0600)
+  add_definitions(-DWIN32)
+  include(GenerateExportHeader)
+  set(LD_FLAGS "ws2_32 -liphlpapi")
+  # build static to avoid runtime dependencies to GCC libraries
+  set(EXTRA_FLAGS "${EXTRA_FLAGS} -static")
+else()
+  set(EXTRA_FLAGS "${EXTRA_FLAGS} -fPIC")
+endif()
+# iOS support
+if(CAF_OSX_SYSROOT)
+  set(CMAKE_OSX_SYSROOT "${CAF_OSX_SYSROOT}")
+endif()
+if(CAF_IOS_DEPLOYMENT_TARGET)
+  if("${CAF_OSX_SYSROOT}" STREQUAL "iphonesimulator")
+    set(EXTRA_FLAGS "${EXTRA_FLAGS} -mios-simulator-version-min=${CAF_IOS_DEPLOYMENT_TARGET}")
+  else()
+    set(EXTRA_FLAGS "${EXTRA_FLAGS} -miphoneos-version-min=${CAF_IOS_DEPLOYMENT_TARGET}")
+  endif()
+endif()
 # check if the user provided CXXFLAGS, set defaults otherwise
 if(CMAKE_CXX_FLAGS)
   set(CMAKE_CXX_FLAGS_DEBUG          "")
@@ -189,7 +211,7 @@ if(CMAKE_CXX_FLAGS)
   set(CMAKE_CXX_FLAGS_RELEASE        "")
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "")
 else()
-  set(CMAKE_CXX_FLAGS "-std=c++11 -Wextra -Wall -pedantic -fPIC ${EXTRA_FLAGS}")
+  set(CMAKE_CXX_FLAGS "-std=c++11 -Wextra -Wall -pedantic ${EXTRA_FLAGS}")
   set(CMAKE_CXX_FLAGS_DEBUG          "-O0 -g")
   set(CMAKE_CXX_FLAGS_MINSIZEREL     "-Os")
   set(CMAKE_CXX_FLAGS_RELEASE        "-O3 -DNDEBUG")
@@ -198,13 +220,6 @@ endif()
 # set build default build type to RelWithDebInfo if not set
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
-endif()
-# extra setup steps needed on MinGW
-if(MINGW)
-  add_definitions(-D_WIN32_WINNT=0x0600)
-  add_definitions(-DWIN32)
-  include(GenerateExportHeader)
-  set(LD_FLAGS "ws2_32 -liphlpapi")
 endif()
 # needed by subprojects
 set(LD_FLAGS ${LD_FLAGS} ${CMAKE_LD_LIBS})
@@ -241,7 +256,7 @@ install(DIRECTORY libcaf_core/cppa/
 install(DIRECTORY libcaf_io/caf/ DESTINATION include/caf
         FILES_MATCHING PATTERN "*.hpp")
 # install includes from opencl
-if(EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
   install(DIRECTORY libcaf_opencl/caf/ DESTINATION include/caf
         FILES_MATCHING PATTERN "*.hpp")
 endif()
@@ -262,12 +277,12 @@ add_custom_target(uninstall
 
 # path to caf core & io headers
 set(LIBCAF_INCLUDE_DIRS
-    "${CMAKE_SOURCE_DIR}/libcaf_core"
-    "${CMAKE_SOURCE_DIR}/libcaf_io")
+    "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_core"
+    "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_io")
 # path to caf opencl headers
-if(EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
   set(LIBCAF_INCLUDE_DIRS
-      "${CMAKE_SOURCE_DIR}/libcaf_opencl/" "${LIBCAF_INCLUDE_DIRS}")
+      "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_opencl/" "${LIBCAF_INCLUDE_DIRS}")
 endif()
 # all projects need the headers of the core components
 include_directories("${LIBCAF_INCLUDE_DIRS}")
@@ -282,36 +297,32 @@ message(STATUS "Enter subdirectory libcaf_core")
 add_subdirectory(libcaf_core)
 # set core lib for sub directories
 if(NOT CAF_BUILD_STATIC_ONLY)
-  set(LIBCAF_CORE_LIBRARY libcaf_core)
+  set(LIBCAF_CORE_LIBRARY libcaf_core_shared)
 else()
-  set(LIBCAF_CORE_LIBRARY libcaf_coreStatic)
+  set(LIBCAF_CORE_LIBRARY libcaf_core_static)
 endif()
 message(STATUS "Enter subdirectory libcaf_io")
 add_subdirectory(libcaf_io)
 # set io lib for sub directories
 if(NOT CAF_BUILD_STATIC_ONLY)
-  set(LIBCAF_IO_LIBRARY libcaf_io)
+  set(LIBCAF_IO_LIBRARY libcaf_io_shared)
 else()
-  set(LIBCAF_IO_LIBRARY libcaf_ioStatic)
+  set(LIBCAF_IO_LIBRARY libcaf_io_static)
 endif()
 # set opencl lib for sub directories if not told otherwise
-if(NOT CAF_NO_OPENCL AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
+if(NOT CAF_NO_OPENCL
+   AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
   message(STATUS "Enter subdirectory libcaf_opencl")
   find_package(OPENCL REQUIRED)
   add_subdirectory(libcaf_opencl)
   if(NOT CAF_BUILD_STATIC_ONLY)
-    set(LIBCAF_OPENCL_LIBRARY libcaf_opencl)
+    set(LIBCAF_OPENCL_LIBRARY libcaf_opencl_shared)
   else()
-    set(LIBCAF_OPENCL_LIBRARY libcaf_openclStatic)
+    set(LIBCAF_OPENCL_LIBRARY libcaf_opencl_static)
   endif()
 endif()
 # tell CMake caf_io depends on caf_core
-if(CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
-  add_dependencies(libcaf_ioStatic libcaf_coreStatic)
-endif()
-if(NOT CAF_BUILD_STATIC_ONLY)
-  add_dependencies(libcaf_io libcaf_core)
-endif()
+add_dependencies(libcaf_io libcaf_core)
 # set LIBCAF_LIBRARIES for other subprojects
 set(LIBCAF_LIBRARIES "${LIBCAF_CORE_LIBRARY}"
                      "${LIBCAF_IO_LIBRARY}"
@@ -321,8 +332,9 @@ if(NOT CAF_NO_UNIT_TESTS)
   enable_testing()
   message(STATUS "Enter subdirectory unit_testing")
   add_subdirectory(unit_testing)
-  add_dependencies(all_unit_tests libcaf_io)
-  if(NOT CAF_NO_OPENCL AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
+  add_dependencies(all_unit_tests libcaf_core libcaf_io)
+  if(NOT CAF_NO_OPENCL
+     AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
     add_subdirectory(libcaf_opencl/unit_testing)
   endif()
 endif()
@@ -330,45 +342,42 @@ endif()
 if(NOT CAF_NO_EXAMPLES)
   message(STATUS "Enter subdirectory examples")
   add_subdirectory(examples)
-  add_dependencies(all_examples libcaf_io)
-  if(NOT CAF_NO_OPENCL AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
+  add_dependencies(all_examples libcaf_core libcaf_io)
+  if(NOT CAF_NO_OPENCL
+     AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
     add_subdirectory(libcaf_opencl/examples)
     add_dependencies(opencl_examples libcaf_opencl)
   endif()
 endif()
 # build RIAC if not being told otherwise
-if(NOT CAF_NO_RIAC AND EXISTS "${CMAKE_SOURCE_DIR}/libcaf_riac/CMakeLists.txt")
+if(NOT CAF_NO_RIAC
+   AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_riac/CMakeLists.txt")
   message(STATUS "Enter subdirectory probe")
   add_subdirectory(libcaf_riac)
-  if(CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
-    add_dependencies(libcaf_riacStatic libcaf_ioStatic)
-  endif()
-  if(CAF_BUILD_STATIC_ONLY)
-    set(LIBCAF_LIBRARIES "${LIBCAF_LIBRARIES}" libcaf_riacStatic)
+  add_dependencies(libcaf_riac libcaf_core libcaf_io)
+  if(NOT CAF_BUILD_STATIC_ONLY)
+    set(LIBCAF_LIBRARIES "${LIBCAF_LIBRARIES}" libcaf_riac_shared)
   else()
-    add_dependencies(libcaf_riac libcaf_io)
-    set(LIBCAF_LIBRARIES "${LIBCAF_LIBRARIES}" libcaf_riac)
+    set(LIBCAF_LIBRARIES "${LIBCAF_LIBRARIES}" libcaf_riac_static)
   endif()
   # add headers to include directories so other subprojects can use RIAC
-  include_directories("${LIBCAF_INCLUDE_DIRS}" "${CMAKE_SOURCE_DIR}/libcaf_riac")
+  include_directories("${LIBCAF_INCLUDE_DIRS}"
+                      "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_riac")
   # add libcaf_riac to the list of caf libraries
   set(CAF_HAS_RIAC yes)
 else()
   set(CAF_HAS_RIAC no)
 endif()
 # build nexus if not being told otherwise
-if(NOT CAF_NO_NEXUS AND EXISTS "${CMAKE_SOURCE_DIR}/nexus/CMakeLists.txt")
+if(NOT CAF_NO_NEXUS
+   AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/nexus/CMakeLists.txt")
   if(NOT CAF_HAS_RIAC)
     message(WARNING "cannot build nexus without RIAC submodule")
     set(CAF_NO_NEXUS yes)
   else()
     message(STATUS "Enter subdirectory nexus")
     add_subdirectory(nexus)
-    if(CAF_BUILD_STATIC_ONLY)
-      add_dependencies(nexus libcaf_riacStatic)
-    else()
-      add_dependencies(nexus libcaf_riac)
-    endif()
+    add_dependencies(nexus libcaf_riac)
     set(CAF_NO_NEXUS no)
   endif()
 else()
@@ -376,18 +385,15 @@ else()
   set(CAF_NO_NEXUS yes)
 endif()
 # build cash if not being told otherwise
-if(NOT CAF_NO_CASH AND EXISTS "${CMAKE_SOURCE_DIR}/cash/CMakeLists.txt")
+if(NOT CAF_NO_CASH
+   AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/cash/CMakeLists.txt")
   if(NOT CAF_HAS_RIAC)
     message(WARNING "cannot build cash without RIAC submodule")
     set(CAF_NO_CASH yes)
   else()
     message(STATUS "Enter subdirectory cash")
     add_subdirectory(cash)
-    if(CAF_BUILD_STATIC_ONLY)
-      add_dependencies(cash libcaf_riacStatic)
-    else()
-      add_dependencies(cash libcaf_riac)
-    endif()
+    add_dependencies(cash libcaf_riac)
     set(CAF_NO_CASH no)
   endif()
 else()
@@ -395,7 +401,8 @@ else()
   set(CAF_NO_CASH yes)
 endif()
 # build benchmarks if not being told otherwise
-if(NOT CAF_NO_BENCHMARKS AND EXISTS "${CMAKE_SOURCE_DIR}/benchmarks/CMakeLists.txt")
+if(NOT CAF_NO_BENCHMARKS
+   AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/benchmarks/CMakeLists.txt")
   message(STATUS "Enter subdirectory benchmarks")
   add_subdirectory(benchmarks)
   add_dependencies(all_benchmarks libcaf_io)
@@ -503,8 +510,8 @@ message(STATUS
         "\nCXXFLAGS:          ${ALL_CXX_FLAGS}"
         "\nLIBRARIES:         ${LD_FLAGS}"
         "\n"
-        "\nSource directory:  ${CMAKE_SOURCE_DIR}"
-        "\nBuild directory:   ${CMAKE_BINARY_DIR}"
+        "\nSource directory:  ${CMAKE_CURRENT_SOURCE_DIR}"
+        "\nBuild directory:   ${CMAKE_CURRENT_BINARY_DIR}"
         "\nExecutable path:   ${EXECUTABLE_OUTPUT_PATH}"
         "\nLibrary path:      ${LIBRARY_OUTPUT_PATH}"
         "\nInstall prefix:    ${CMAKE_INSTALL_PREFIX}"

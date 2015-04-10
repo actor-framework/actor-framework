@@ -153,8 +153,6 @@ std::string get_root_uuid() {
 #include <windows.h>
 #include <tchar.h>
 
-using namespace std;
-
 namespace caf {
 namespace detail {
 
@@ -163,7 +161,9 @@ constexpr size_t max_drive_name = MAX_PATH;
 }
 
 // if TCHAR is indeed a char, we can simply move rhs
-void mv(std::string& lhs, std::string&& rhs) { lhs = std::move(rhs); }
+void mv(std::string& lhs, std::string&& rhs) {
+  lhs = std::move(rhs);
+}
 
 // if TCHAR is defined as WCHAR, we have to do unicode conversion
 void mv(std::string& lhs, const std::basic_string<WCHAR>& rhs) {
@@ -177,7 +177,7 @@ void mv(std::string& lhs, const std::basic_string<WCHAR>& rhs) {
 
 std::string get_root_uuid() {
   using tchar_str = std::basic_string<TCHAR>;
-  string uuid;
+  std::string uuid;
   TCHAR buf[max_drive_name];      // temporary buffer for volume name
   tchar_str drive = TEXT("c:\\"); // string "template" for drive specifier
   // walk through legal drive letters, skipping floppies
@@ -194,14 +194,41 @@ std::string get_root_uuid() {
           mv(uuid, drive_name.substr(first, last - first));
           // UUIDs are formatted as 8-4-4-4-12 hex digits groups
           auto cpy = uuid;
-          replace_if(cpy.begin(), cpy.end(), ::isxdigit, 'F');
+          std::replace_if(cpy.begin(), cpy.end(), ::isxdigit, 'F');
           // discard invalid UUID
-          if (cpy != uuid_format)
+          if (cpy != uuid_format) {
             uuid.clear();
-          else
+          } else {
             return uuid; // return first valid UUID we get
+          }
         }
       }
+    }
+  }
+  return uuid;
+}
+
+} // namespace detail
+} // namespace caf
+
+
+#elif defined(CAF_IOS) || defined(CAF_ANDROID)
+
+// return a randomly-generated UUID on mobile devices
+
+#include <random>
+
+namespace caf {
+namespace detail {
+
+std::string get_root_uuid() {
+  std::random_device rd;
+  std::uniform_int_distribution<int> dist(0, 15);
+  std::string uuid = uuid_format;
+  for (auto& c : uuid) {
+    if (c != '-') {
+      auto n = dist(rd);
+      c = static_cast<char>((n < 10) ? n + '0' : (n - 10) + 'A');
     }
   }
   return uuid;

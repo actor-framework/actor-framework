@@ -20,10 +20,12 @@
 #ifndef CAF_LOGGING_HPP
 #define CAF_LOGGING_HPP
 
+#include <thread>
 #include <cstring>
 #include <sstream>
 #include <iostream>
 #include <type_traits>
+#include <unordered_map>
 
 #include "caf/config.hpp"
 #include "caf/to_string.hpp"
@@ -31,6 +33,7 @@
 
 #include "caf/detail/singletons.hpp"
 #include "caf/detail/scope_guard.hpp"
+#include "caf/detail/shared_spinlock.hpp"
 
 /*
  * To enable logging, you have to define CAF_DEBUG. This enables
@@ -51,40 +54,35 @@ namespace detail {
 class singletons;
 
 class logging {
-
+ public:
   friend class detail::singletons;
 
- public:
+  // returns the actor ID for the current thread or 0 if none is assigned
+  actor_id get_aid();
 
   // associates given actor id with this thread,
   // returns the previously set actor id
   actor_id set_aid(actor_id aid);
 
   virtual void log(const char* level, const char* class_name,
-           const char* function_name, const char* file_name,
-           int line_num, const std::string& msg) = 0;
+                   const char* function_name, const char* file_name,
+                   int line_num, const std::string& msg) = 0;
 
   class trace_helper {
-
    public:
-
     trace_helper(std::string class_name, const char* fun_name,
-           const char* file_name, int line_num,
-           const std::string& msg);
+                 const char* file_name, int line_num, const std::string& msg);
 
     ~trace_helper();
 
    private:
-
     std::string m_class;
     const char* m_fun_name;
     const char* m_file_name;
     int m_line_num;
-
   };
 
  protected:
-
   virtual ~logging();
 
   static logging* create_singleton();
@@ -93,20 +91,29 @@ class logging {
 
   virtual void stop() = 0;
 
-  inline void dispose() { delete this; }
+  inline void dispose() {
+    delete this;
+  }
 
+ private:
+  detail::shared_spinlock m_aids_lock;
+  std::unordered_map<std::thread::id, actor_id> m_aids;
 };
 
 struct oss_wr {
+  inline oss_wr() {
+    // nop
+  }
 
-  inline oss_wr() { }
-
-  inline oss_wr(oss_wr&& other) : m_str(std::move(other.m_str)) {}
+  inline oss_wr(oss_wr&& other) : m_str(std::move(other.m_str)) {
+    // nop
+  }
 
   std::string m_str;
 
-  inline std::string str() { return std::move(m_str); }
-
+  inline std::string str() {
+    return std::move(m_str);
+  }
 };
 
 inline oss_wr operator<<(oss_wr&& lhs, std::string str) {

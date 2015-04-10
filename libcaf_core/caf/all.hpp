@@ -83,7 +83,6 @@
 #include "caf/event_based_actor.hpp"
 #include "caf/primitive_variant.hpp"
 #include "caf/uniform_type_info.hpp"
-#include "caf/wildcard_position.hpp"
 #include "caf/timeout_definition.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/await_all_actors_done.hpp"

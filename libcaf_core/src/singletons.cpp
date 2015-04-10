@@ -126,12 +126,18 @@ node_id singletons::get_node_id() {
   return node_id{lazy_get(s_node_id, s_node_id_mtx)};
 }
 
+bool singletons::set_node_id(node_id::data* ptr) {
+  auto res = lazy_get(s_node_id, s_node_id_mtx,
+                      [ptr] { return ptr; });
+  return res == ptr;
+}
+
 logging* singletons::get_logger() {
   return lazy_get(s_logger, s_logger_mtx);
 }
 
 std::atomic<abstract_singleton*>& singletons::get_plugin_singleton(size_t id) {
-  CAF_REQUIRE(id < max_plugins);
+  CAF_ASSERT(id < max_plugins);
   return s_plugins[id];
 }
 

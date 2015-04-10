@@ -25,15 +25,13 @@
 
 #include "caf/detail/logging.hpp"
 
-using namespace std;
-
 namespace caf {
 
 forwarding_actor_proxy::forwarding_actor_proxy(actor_id aid, node_id nid,
                                                actor mgr)
     : actor_proxy(aid, nid),
       m_manager(mgr) {
-  CAF_REQUIRE(mgr != invalid_actor);
+  CAF_ASSERT(mgr != invalid_actor);
   CAF_LOG_INFO(CAF_ARG(aid) << ", " << CAF_TARG(nid, to_string));
 }
 

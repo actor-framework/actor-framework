@@ -3,6 +3,14 @@ project(caf_core C CXX)
 
 set (CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
+
+
+
+
+  set(CMAKE_CXX_FLAGS "-std=c++11 -Wextra -Wall -pedantic ${EXTRA_FLAGS}")
+
+
+
 include_directories(.)
 
 # get header files; only needed by CMake generators,
@@ -81,28 +89,34 @@ set (LIBCAF_CORE_SRCS
      src/uniform_type_info.cpp
      src/uniform_type_info_map.cpp)
 
+add_custom_target(libcaf_core)
+
 # build shared library if not compiling static only
-if (NOT "${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes")
-  add_library(libcaf_core SHARED ${LIBCAF_CORE_SRCS} ${LIBCAF_CORE_HDRS})
-  target_link_libraries(libcaf_core ${LD_FLAGS})
+if (NOT CAF_BUILD_STATIC_ONLY)
+  add_library(libcaf_core_shared SHARED ${LIBCAF_CORE_SRCS} ${LIBCAF_CORE_HDRS})
+  target_link_libraries(libcaf_core_shared ${LD_FLAGS})
   set(LIBRARY_SOVERSION ${CAF_VERSION_MAJOR})
-  set_target_properties(libcaf_core
+  set_target_properties(libcaf_core_shared
                         PROPERTIES
                         SOVERSION ${LIBRARY_SOVERSION}
                         VERSION ${CAF_VERSION}
                         OUTPUT_NAME caf_core)
   if(NOT WIN32)
-    install(TARGETS libcaf_core LIBRARY DESTINATION lib)
+    install(TARGETS libcaf_core_shared LIBRARY DESTINATION lib)
   endif()
+  add_dependencies(libcaf_core_shared libcaf_core)
 endif ()
 
 # build static library only if --build-static or --build-static-only was set
-if ("${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes" OR "${CAF_BUILD_STATIC}" STREQUAL "yes")
-  add_library(libcaf_coreStatic STATIC ${LIBCAF_CORE_HDRS} ${LIBCAF_CORE_SRCS})
-  set_target_properties(libcaf_coreStatic PROPERTIES OUTPUT_NAME caf_core_static)
+if (CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
+  add_library(libcaf_core_static STATIC ${LIBCAF_CORE_HDRS} ${LIBCAF_CORE_SRCS})
+  target_link_libraries(libcaf_core_static ${LD_FLAGS})
+  set_target_properties(libcaf_core_static PROPERTIES OUTPUT_NAME caf_core_static)
   if(NOT WIN32)
-    install(TARGETS libcaf_coreStatic ARCHIVE DESTINATION lib)
+    install(TARGETS libcaf_core_static ARCHIVE DESTINATION lib)
   endif()
+  add_dependencies(libcaf_core_static libcaf_core)
 endif ()
 
 link_directories(${LD_DIRS})
+include_directories(. ${INCLUDE_DIRS})

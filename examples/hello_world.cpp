@@ -3,7 +3,9 @@
 
 #include "caf/all.hpp"
 
-using namespace std;
+using std::endl;
+using std::string;
+
 using namespace caf;
 
 behavior mirror(event_based_actor* self) {
