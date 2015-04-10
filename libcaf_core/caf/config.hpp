@@ -34,7 +34,7 @@
  * whereas each number is a two-digit decimal number without
  * leading zeros (e.g. 900 is version 0.9.0).
  */
-#define CAF_VERSION 1300
+#define CAF_VERSION 1301
 
 /**
  * Defined to the major version number of CAF.
