@@ -30,10 +30,9 @@ add_custom_target(libcaf_io)
 if (NOT CAF_BUILD_STATIC_ONLY)
   add_library(libcaf_io_shared SHARED ${LIBCAF_IO_SRCS} ${LIBCAF_IO_HDRS})
   target_link_libraries(libcaf_io_shared ${LD_FLAGS} ${LIBCAF_CORE_LIBRARY})
-  set(LIBRARY_SOVERSION ${CAF_VERSION_MAJOR})
   set_target_properties(libcaf_io_shared
                         PROPERTIES
-                        SOVERSION ${LIBRARY_SOVERSION}
+                        SOVERSION ${CAF_VERSION}
                         VERSION ${CAF_VERSION}
                         OUTPUT_NAME caf_io)
   if(NOT WIN32)
