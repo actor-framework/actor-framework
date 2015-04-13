@@ -217,6 +217,11 @@ class message {
     std::string text;
 
     /**
+     * Auto-generated helptext for this item.
+     */
+    std::string helptext;
+
+    /**
      * Returns `true` on a match, `false` otherwise.
      */
     std::function<bool (const std::string&)> fun;
@@ -253,6 +258,8 @@ class message {
 
   struct cli_res;
 
+  using help_factory = std::function<std::string (const std::vector<cli_arg>&)>;
+
   /**
    * A simplistic interface for using `extract` to parse command line options.
    * Usage example:
@@ -280,8 +287,15 @@ class message {
    *   // ...
    * }
    * ~~~
+   * @param xs List of argument descriptors.
+   * @param f Optional factory function to generate help text
+   *          (overrides the default generator).
+   * @returns A struct containing remainder
+   *          (i.e. unmatched elements), a set containing the names of all
+   *          used arguments, and the generated help text.
+   * @throws std::invalid_argument if no name or more than one long name is set
    */
-  cli_res extract_opts(std::vector<cli_arg> xs) const;
+  cli_res extract_opts(std::vector<cli_arg> xs, help_factory f = nullptr) const;
 
   /**
    * Queries whether the element at position `p` is of type `T`.

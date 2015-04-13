@@ -143,26 +143,53 @@ message message::extract(message_handler handler) const {
   return extract_impl(0, handler);
 }
 
-message::cli_res message::extract_opts(std::vector<cli_arg> xs) const {
-  std::set<std::string> opts;
-  cli_arg dummy{"help,h", ""};
+message::cli_res message::extract_opts(std::vector<cli_arg> xs,
+                                       help_factory f) const {
+  // add default help item if not specified by user
+  auto pred = [](const cli_arg& arg) {
+    return arg.name == "help" || arg.name.compare(0, 5, "help,") == 0;
+  };
+  if (std::none_of(xs.begin(), xs.end(), pred)) {
+    xs.push_back(cli_arg{"help,h,?", "print this text"});
+  }
   std::map<std::string, cli_arg*> shorts;
   std::map<std::string, cli_arg*> longs;
-  shorts["-h"] = &dummy;
-  shorts["-?"] = &dummy;
-  longs["--help"] = &dummy;
   for (auto& cliarg : xs) {
     std::vector<std::string> s;
     split(s, cliarg.name, is_any_of(","), token_compress_on);
-    if (s.size() == 2 && s.back().size() == 1) {
-      longs["--" + s.front()] = &cliarg;
-      shorts["-" + s.back()] = &cliarg;
-    } else if (s.size() == 1) {
-      longs[s.front()] = &cliarg;
-    } else {
+    if (s.empty()) {
       throw std::invalid_argument("invalid option name: " + cliarg.name);
     }
+    longs["--" + s.front()] = &cliarg;
+    for (size_t i = 1; i < s.size(); ++i) {
+      if (s[i].size() != 1) {
+        throw std::invalid_argument("invalid short option name: " + s[i]);
+      }
+      shorts["-" + s[i]] = &cliarg;
+    }
+    // generate helptext for this item
+    auto& ht = cliarg.helptext;
+    if (s.size() == 1) {
+      ht += "--";
+      ht += s.front();
+    } else {
+      ht += "-";
+      ht += s[1];
+      ht += " [";
+      for (size_t i = 2; i < s.size(); ++i) {
+        ht += "-";
+        ht += s[i];
+        ht += ",";
+      }
+      ht += "--";
+      ht += s.front();
+      ht += "]";
+    }
+    if (cliarg.fun) {
+      ht += " arg";
+    }
   }
+  std::set<std::string> opts;
   auto insert_opt_name = [&](const cli_arg* ptr) {
     auto separator = ptr->name.find(',');
     if (separator == std::string::npos) {
@@ -232,43 +259,24 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs) const {
       return none;
     }
   });
-  size_t name_width = 0;
-  for (auto& x : xs) {
-    // name field contains either only "--<long_name>" or
-    // "-<short name> [--<long name>]" depending on whether or not
-    // a ',' appears in the name
-    auto nw = x.name.find(',') == std::string::npos
-              ? x.name.size() + 2  // "--<name>"
-              : x.name.size() + 5; // "-X [--<name>]" (minus trailing ",X")
-    if (x.fun) {
-      nw += 4; // trailing " arg"
+  std::string helptext;
+  if (f) {
+    helptext = f(xs);
+  } else {
+    auto op = [](size_t tmp, const cli_arg& arg) {
+      return std::max(tmp, arg.helptext.size());
+    };
+    auto name_width = std::accumulate(xs.begin(), xs.end(), size_t{0}, op);
+    std::ostringstream oss;
+    oss << std::left;
+    oss << "Allowed options:" << std::endl;
+    for (auto& ca : xs) {
+      oss << "  ";
+      oss.width(static_cast<std::streamsize>(name_width));
+      oss << ca.helptext << "  : " << ca.text << std::endl;
     }
-    name_width = std::max(name_width, nw);
+    helptext = oss.str();
   }
-  std::ostringstream oss;
-  oss << std::left;
-  oss << "Allowed options:" << std::endl;
-  for (auto& ca : xs) {
-    std::string lhs;
-    auto separator = ca.name.find(',');
-    if (separator == std::string::npos) {
-      lhs += "--";
-      lhs += ca.name;
-    } else {
-      lhs += "-";
-      lhs += ca.name.back();
-      lhs += " [--";
-      lhs += ca.name.substr(0, separator);
-      lhs += "]";
-    }
-    if (ca.fun) {
-      lhs += " arg";
-    }
-    oss << "  ";
-    oss.width(static_cast<std::streamsize>(name_width));
-    oss << lhs << "  : " << ca.text << std::endl;
-  }
-  auto helptext = oss.str();
   if (opts.count("help") == 1) {
     std::cout << helptext << std::endl;
   }
