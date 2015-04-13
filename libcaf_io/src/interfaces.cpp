@@ -36,14 +36,14 @@
 # pragma comment(lib, "ws2_32.lib")
 # pragma comment(lib, "iphlpapi.lib")
 #else
+# include <sys/socket.h>
+# include <netinet/in.h>
 # include <net/if.h>
 # include <unistd.h>
 # include <netdb.h>
 # include <ifaddrs.h>
 # include <sys/ioctl.h>
 # include <arpa/inet.h>
-# include <netinet/in.h>
-# include <sys/socket.h>
 #endif
 
 #include <memory>
