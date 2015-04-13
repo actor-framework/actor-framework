@@ -3,14 +3,6 @@ project(caf_core C CXX)
 
 set (CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
-
-
-
-
-  set(CMAKE_CXX_FLAGS "-std=c++11 -Wextra -Wall -pedantic ${EXTRA_FLAGS}")
-
-
-
 include_directories(.)
 
 # get header files; only needed by CMake generators,
