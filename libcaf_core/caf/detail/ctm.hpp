@@ -115,6 +115,9 @@ struct ctm_impl<type_list<X, Xs...>, type_list<Ys...>, Pos> {
     : ctm_impl<type_list<Xs...>, next_ys, Pos + 1>::value;
 };
 
+template <class X, class... Xs, class... Ys, int Pos>
+constexpr int ctm_impl<type_list<X, Xs...>, type_list<Ys...>, Pos>::value;
+
 template <class X, class Y>
 struct ctm {
   // -3 means too many handler, -2 means too few, -1 means OK, everything else
@@ -128,6 +131,9 @@ struct ctm {
   */
   static constexpr int value = ctm_impl<X, Y, 0>::value;
 };
+
+template <class X, class Y>
+constexpr int ctm<X,Y>::value;
 
 } // namespace detail
 } // namespace caf

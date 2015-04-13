@@ -279,14 +279,9 @@ add_custom_target(uninstall
 
 # path to caf core & io headers
 set(LIBCAF_INCLUDE_DIRS
-<<<<<<< HEAD
     "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_core"
-    "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_io")
-=======
-    "${CMAKE_SOURCE_DIR}/libcaf_test"
-    "${CMAKE_SOURCE_DIR}/libcaf_core"
-    "${CMAKE_SOURCE_DIR}/libcaf_io")
->>>>>>> Refactor unit testing framework, fix CMake setup
+    "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_io"
+    "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_test")
 # path to caf opencl headers
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
   set(LIBCAF_INCLUDE_DIRS
@@ -320,6 +315,11 @@ endif()
 # core library
 add_subdirectory(libcaf_core)
 add_unit_tests("libcaf_core/test/*.cpp")
+add_unit_tests("libcaf_io/test/*.cpp")
+if(NOT CAF_NO_OPENCL)
+  add_unit_tests("libcaf_opencl/test/*.cpp")
+endif()
+
 # set core lib for sub directories
 if(NOT CAF_BUILD_STATIC_ONLY)
   set(LIBCAF_CORE_LIBRARY libcaf_core_shared)

@@ -117,6 +117,30 @@ safe_equal(const T& lhs, const U& rhs) {
   return std::fabs(lhs - rhs) <= std::numeric_limits<res_type>::epsilon();
 }
 
+template <class T>
+typename std::enable_if<
+  std::is_arithmetic<T>::value,
+  std::string
+>::type
+convert_to_str(T value) {
+  return std::to_string(value);
+}
+
+inline std::string convert_to_str(std::string value) {
+  return std::move(value);
+}
+
+// string projection
+template <class T>
+caf::optional<T> spro(const std::string& str) {
+  T value;
+  std::istringstream iss(str);
+  if (iss >> value) {
+    return value;
+  }
+  return caf::none;
+}
+
 } // namespace caf
 
 #endif // CAF_UTIL_ALGORITHM_HPP

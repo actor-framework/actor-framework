@@ -234,6 +234,14 @@ char** engine::argv() {
   return instance().m_argv;
 }
 
+void engine::path(char* argv) {
+  instance().m_path = argv;
+}
+
+char* engine::path() {
+  return instance().m_path;
+}
+
 void engine::add(const char* name, std::unique_ptr<test> t) {
   auto& suite = instance().m_suites[std::string{name ? name : ""}];
   for (auto& x : suite) {
@@ -546,6 +554,8 @@ expr::expr(test* parent, const char* filename, size_t lineno,
 
 int main(int argc, char** argv) {
   using namespace caf;
+  // set path of executable
+  test::engine::path(argv[0]);
   // default values.
   int verbosity_console = 3;
   int verbosity_file = 3;

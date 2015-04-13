@@ -24,6 +24,7 @@
 #include <regex>
 #include <cmath>
 #include <mutex>
+#include <thread>
 #include <vector>
 #include <string>
 #include <memory>
@@ -31,7 +32,10 @@
 #include <sstream>
 #include <iostream>
 
+#include "caf/actor.hpp"
+
 namespace caf {
+class message;
 namespace test {
 
 /**
@@ -204,6 +208,18 @@ class engine {
   static char** argv();
 
   /**
+   * Sets path of current executable.
+   * @param argv The path of current executable.
+   */
+  static void path(char* argv);
+
+  /**
+   * Retrieves the path of current executable
+   * @returns The path to executable set via ::path(char*) or `nullptr`.
+   */
+  static char* path();
+
+  /**
    * Adds a test to the engine.
    * @param name The name of the suite.
    * @param t The test to register.
@@ -257,6 +273,7 @@ class engine {
 
   int m_argc = 0;
   char** m_argv = nullptr;
+  char*  m_path = nullptr;
   const char* m_reset        = "\033[0m";
   const char* m_black        = "\033[30m";
   const char* m_red          = "\033[31m";

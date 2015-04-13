@@ -102,6 +102,9 @@ struct tl_size<List<Ts...>> {
   static constexpr size_t value = sizeof...(Ts);
 };
 
+template <template <class...> class List, class... Ts>
+constexpr size_t tl_size<List<Ts...>>::value;
+
 // T back(type_list)
 
 /**
@@ -470,6 +473,9 @@ template <template <class> class Pred>
 struct tl_count<empty_type_list, Pred> {
   static constexpr size_t value = 0;
 };
+
+template <class List, template <class> class Pred>
+constexpr size_t tl_count<List, Pred>::value;
 
 // size_t count_not(predicate)
 
@@ -1010,6 +1016,9 @@ struct tl_is_strict_subset {
          >::type
        >::value;
 };
+
+template <class ListA, class ListB>
+constexpr bool tl_is_strict_subset<ListA, ListB>::value;
 
 /**
  * Tests whether ListA contains the same elements as ListB
