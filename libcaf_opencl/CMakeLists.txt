@@ -21,10 +21,9 @@ if (OpenCL_LIBRARIES)
     target_link_libraries(libcaf_opencl_shared ${LD_FLAGS}
                                                ${LIBCAF_CORE_LIBRARY}
                                                ${OpenCL_LIBRARIES})
-    set(LIBRARY_SOVERSION "${CAF_VERSION_MAJOR}")
     set_target_properties(libcaf_opencl_shared
                           PROPERTIES
-                          SOVERSION "${LIBRARY_SOVERSION}"
+                          SOVERSION "${CAF_VERSION}"
                           VERSION "${CAF_VERSION}"
                           OUTPUT_NAME caf_opencl)
     if(NOT WIN32)
