@@ -2,10 +2,10 @@
 set(BII_LIB_TYPE SHARED)
 
 # add the biicode targets
-add_biicode_targets()
+add_bii_targets()
 
 # borrow some useful functions from the biicode/cmake block
-include(biicode/cmake/tools) 
+include(biicode/cmake/tools)
 activate_cpp11(INTERFACE ${BII_BLOCK_TARGET})
 
 # build with extra warnings
