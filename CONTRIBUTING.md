@@ -1,10 +1,62 @@
-This document specifies the coding style for the C++ Actor Framework.
-The style is loosely based on the
-[Google C++ Style Guide](http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml)
-and the coding conventions used by the STL.
+This document specifies how to contribute code to this repository.
+
+
+Git Workflow
+============
+
+CAF's git workflow encompasses the following key aspects. (For general git
+style guidelines, see https://github.com/agis-/git-style-guide.)
+
+- The `master` branch always reflects a *production-ready* state, i.e.,
+  the latest release version.
+
+- The `develop` branch is the main development branch. A maintainer merges into
+  `master` for a new release when it reaches a stable point. The `develop`
+  branch reflects the latest state of development and should always compile.
+
+- Simple bugfixes consisting of a single commit can be pushed to `develop`.
+
+- Fixes for critical issues can be pushed to `master` (and `develop`)
+  after talking to a maintainer (and then cause a new release immediately).
+
+- For new features and non-trivial fixes, CAF uses *topic branches* which
+  branch off `develop` with a naming convention of `topic/short-description`.
+  After completing work in a topic branch, check the following steps to prepare
+  for a merge back into `develop`:
+
+  + Squash your commits into a single one if necessary
+  + Create a pull request to `develop` on github
+  + Wait for the results of Jenkins and fix any reported issues
+  + Ask a maintainer to review your work after Jenkins greelights your changes
+  + Address the feedback articulated during the review
+  + A maintainer will merge the topic branch into `develop` after it passes the
+    code review
+
+
+Commit Message Style
+--------------------
+
+- The first line succintly summarizes the changes in no more than 50
+  characters. It is capitalized and written in and imperative present tense:
+  e.g., "Fix bug" as opposed to "Fixes bug" or "Fixed bug".
+
+- The second line is empty.
+
+- Optional long descriptions as full sentences begin on the third line,
+  indented at 72 characters per line.
+
+
+Coding Style
+============
+
+When contributing source code, please adhere to the following coding style,
+whwich is loosely based on the [Google C++ Style
+Guide](http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml) and the
+coding conventions used by the STL.
+
 
 Example for the Impatient
-=========================
+-------------------------
 
 ```cpp
 // libcaf_example/caf/example/my_class.hpp
@@ -28,7 +80,7 @@ class my_class {
    * first dot is the brief description.
    */
   my_class();
-  
+
   /**
    * Destructs `my_class`. Please use Markdown in comments.
    */
@@ -41,14 +93,14 @@ class my_class {
   inline const std::string& name() const {
     return m_name;
   }
-  
+
   /**
    * Sets the name of this instance.
    */
   inline void name(std::string new_name) {
     m_name = std::move(new_name);
   }
-  
+
   /**
    * Prints the name to `STDIN`.
    */
@@ -58,12 +110,12 @@ class my_class {
    * Does something (maybe).
    */
   void do_something();
-  
+
   /**
    * Does something else.
    */
   void do_something_else();
-  
+
  private:
   std::string m_name;
 };
@@ -108,7 +160,7 @@ void my_class::do_something() {
               << "refuse to do something."
               << std::endl;
   } else {
-    std::cout << "You gave me the name " << name() 
+    std::cout << "You gave me the name " << name()
               << "... Do you really think I'm willing to do something "
                  "for you after insulting me like that?"
               << std::endl;
@@ -116,7 +168,7 @@ void my_class::do_something() {
 }
 
 void::my_class::do_something_else() {
-  switch (default_name[0]) { 
+  switch (default_name[0]) {
     case 'a':
       // handle a
       break;
@@ -135,7 +187,7 @@ void::my_class::do_something_else() {
 
 
 General rules
-=============
+-------------
 
 - Use 2 spaces per indentation level.
 
@@ -156,7 +208,7 @@ General rules
 
 - Access modifiers, e.g. `public`, are indented one space.
 
-- Use the order `public`, `protected`, and then `private`. 
+- Use the order `public`, `protected`, and then `private`.
 
 - Always use `auto` to declare a variable unless you cannot initialize it
   immediately or if you actually want a type conversion. In the latter case,
@@ -187,13 +239,13 @@ General rules
 - Use standard order for readability: C standard libraries, C++ standard
   libraries, other libraries, (your) CAF headers:
   ```cpp
-  
+
   #include <sys/types.h>
 
   #include <vector>
-  
+
   #include "some/other/library.hpp"
-  
+
   #include "caf/example/myclass.hpp"
   ```
 
@@ -204,7 +256,7 @@ General rules
 
 
 Naming
-======
+------
 
 - Class names, constants, and function names are all-lowercase with underscores.
 
@@ -216,14 +268,14 @@ Naming
 
 - Thread-local variables use the prefix `t_`.
 
-- Static, non-const variables are declared in the anonymous namespace 
+- Static, non-const variables are declared in the anonymous namespace
   and use the prefix `s_`.
 
 - Template parameter names use CamelCase.
 
 - Getter and setter use the name of the member without the `m_` prefix:
   ```cpp
-  
+
   class some_fun {
    public:
     // ...
@@ -242,7 +294,7 @@ Naming
   for generic function arguments. Suffix both with `s` for
   template parameter packs:
   ```cpp
-  
+
   template <class... Ts>
   void print(const Ts&... xs) {
     // ...
@@ -251,7 +303,7 @@ Naming
 
 
 Headers
-=======
+-------
 
 - Each `.cpp` file has an associated `.hpp` file.
   Exceptions to this rule are unit tests and `main.cpp` files.
@@ -262,7 +314,7 @@ Headers
   is located at `libcaf_example/caf/example/my_class.hpp` and the
   source file at `libcaf_example/src/my_class.cpp`.
 
-- All header files should use `#define` guards to prevent multiple inclusion. 
+- All header files should use `#define` guards to prevent multiple inclusion.
   The symbol name is `<RELATIVE>_<PATH>_<TO>_<FILE>_HPP`.
 
 - Do not `#include` when a forward declaration suffices.
@@ -277,7 +329,7 @@ Headers
 
 
 Breaking Statements
-===================
+-------------------
 
 - Break constructor initializers after the comma, use four spaces for
   indentation, and place each initializer on its own line (unless you don't
@@ -315,7 +367,7 @@ Breaking Statements
 
 
 Template Metaprogramming
-========================
+------------------------
 
 Despite its power, template metaprogramming came to the language pretty
 much by accident. Templates were never meant to be used for compile-time
@@ -334,15 +386,15 @@ extra rules for formatting metaprogramming code.
 - Use one level of indentation per "open" template and place the closing `>`,
   `>::type` or `>::value` on its own line. For example:
   ```cpp
-  
-  using optional_result_type = 
+
+  using optional_result_type =
     typename std::conditional<
       std::is_same<result_type, void>::value,
       bool,
       optional<result_type>
     >::type;
   // think of it as the following (not valid C++):
-  auto optional_result_type = 
+  auto optional_result_type =
     conditional {
       if   result_type == void
       then bool
@@ -361,7 +413,7 @@ extra rules for formatting metaprogramming code.
 
 
 Rvalue References
-=================
+-----------------
 
 - Use rvalue references whenever it makes sense.
 
@@ -369,51 +421,9 @@ Rvalue References
 
 
 Preprocessor Macros
-===================
+-------------------
 
 - Use macros if and only if you can't get the same result by using inline
   functions or proper constants.
 
 - Macro names use the form `CAF_<COMPONENT>_<NAME>`.
-
-
-General Git Rules
-=================
-
-- The first line is a capitalized summary and has at most 50 characters.
-
-- The second line is left empty.
-
-- Optional long descriptions begin on the third line with a at most 72
-  characters per line.
-
-- Write commit messages in the imperative: "Fix bug" and not "Fixes bug"
-  or "Fixed bug".
-
-
-Git Branches and Work Flow
-==========================
-
-- The `master` branch always reflects a *production-ready* state, i.e.,
-  the latest release version.
-
-- The `develop` branch is the main branch. Every time it reaches a stable
-  point it is merged back to `master` for a new release. The `develop` branch
-  reflects the latest state of development and should always compile.
-
-- Simple bugfixes consisting of a single commit can be pushed to `develop`.
-
-- Fixes for critical issues can be pushed to the `master` (and `develop`)
-  branch after talking to the maintainer
-  (and then cause a new release immediately).
-
-- New features or non-trivial fixes are developed in a *topic branch* using
-  the naming convention `topic/short-description`. Topic branches are merged
-  off from `develop`. Finishing topic branches includes these steps:
-  + Create a *pull request* to `develop` on GitHub
-  + Wait for the results of Jenkins and fix any issues that might come up
-  + Squash your commits if necessary once Jenkins succeeds
-  + Ask the maintainer to review your changes if you have green light from
-    Jenkins and a clean Git history for your work
-  + The maintainer will merge the topic branch back into `develop` after the
-    review phase is done (and you once again have a clean Git history)
