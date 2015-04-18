@@ -25,7 +25,9 @@ endif()
 if(NOT CAF_NO_OPENCL)
   set(CAF_NO_OPENCL no)
 endif()
-
+if(NOT CAF_NO_SUMMARY)
+  set(CAF_NO_SUMMARY no)
+endif()
 
 ################################################################################
 #                              get version of CAF                              #
@@ -76,7 +78,7 @@ endif()
 ################################################################################
 
 # check for g++ >= 4.7 or clang++ > = 3.2
-if(NOT WIN32 AND NOT NO_COMPILER_CHECK)
+if(NOT WIN32 AND NOT CAF_NO_COMPILER_CHECK)
   try_run(ProgramResult
           CompilationSucceeded
           "${CMAKE_CURRENT_BINARY_DIR}"
@@ -104,11 +106,11 @@ endif()
 # set optional build flags
 set(EXTRA_FLAGS "")
 # add "-Werror" flag if --pedantic-build is used
-if(CXX_WARNINGS_AS_ERROS)
+if(CAF_CXX_WARNINGS_AS_ERRORS)
   set(EXTRA_FLAGS "-Werror")
 endif()
 # enable a ton of warnings if --more-clang-warnings is used
-if(MORE_WARNINGS)
+if(CAF_MORE_WARNINGS)
   if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     set(WFLAGS "-Weverything -Wno-c++98-compat -Wno-padded "
                "-Wno-documentation-unknown-command -Wno-exit-time-destructors "
@@ -142,7 +144,7 @@ if(MORE_WARNINGS)
   set(EXTRA_FLAGS "${EXTRA_FLAGS} ${WFLAGS_STR}")
 endif()
 # add -stdlib=libc++ when using Clang if possible
-if(NOT NO_AUTO_LIBCPP AND "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+if(NOT CAF_NO_AUTO_LIBCPP AND "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
   set(CXXFLAGS_BACKUP "${CMAKE_CXX_FLAGS}")
   set(CMAKE_CXX_FLAGS "-std=c++11 -stdlib=libc++")
   try_run(ProgramResult
@@ -154,14 +156,14 @@ if(NOT NO_AUTO_LIBCPP AND "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     message(STATUS "Use clang with GCC' libstdc++")
   else()
     message(STATUS "Automatically added '-stdlib=libc++' flag "
-                   "(NO_AUTO_LIBCPP not defined)")
+                   "(CAF_NO_AUTO_LIBCPP not defined)")
     set(EXTRA_FLAGS "${EXTRA_FLAGS} -stdlib=libc++")
   endif()
   # restore CXX flags
   set(CMAKE_CXX_FLAGS "${CXXFLAGS_BACKUP}")
 endif()
 # enable address sanitizer if requested by the user
-if(ENABLE_ADDRESS_SANITIZER)
+if(CAF_ENABLE_ADDRESS_SANITIZER)
   # check whether address sanitizer is available
   set(CXXFLAGS_BACKUP "${CMAKE_CXX_FLAGS}")
   set(CMAKE_CXX_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
@@ -177,7 +179,7 @@ if(ENABLE_ADDRESS_SANITIZER)
   endif()
   # restore CXX flags
   set(CMAKE_CXX_FLAGS "${CXXFLAGS_BACKUP}")
-endif(ENABLE_ADDRESS_SANITIZER)
+endif(CAF_ENABLE_ADDRESS_SANITIZER)
 # -pthread is ignored on MacOSX but required on other platforms
 if(NOT APPLE AND NOT WIN32)
   set(EXTRA_FLAGS "${EXTRA_FLAGS} -pthread")
@@ -293,7 +295,6 @@ include_directories("${LIBCAF_INCLUDE_DIRS}")
 ################################################################################
 
 # core library
-message(STATUS "Enter subdirectory libcaf_core")
 add_subdirectory(libcaf_core)
 # set core lib for sub directories
 if(NOT CAF_BUILD_STATIC_ONLY)
@@ -301,7 +302,6 @@ if(NOT CAF_BUILD_STATIC_ONLY)
 else()
   set(LIBCAF_CORE_LIBRARY libcaf_core_static)
 endif()
-message(STATUS "Enter subdirectory libcaf_io")
 add_subdirectory(libcaf_io)
 # set io lib for sub directories
 if(NOT CAF_BUILD_STATIC_ONLY)
@@ -312,7 +312,6 @@ endif()
 # set opencl lib for sub directories if not told otherwise
 if(NOT CAF_NO_OPENCL
    AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
-  message(STATUS "Enter subdirectory libcaf_opencl")
   find_package(OPENCL REQUIRED)
   add_subdirectory(libcaf_opencl)
   if(NOT CAF_BUILD_STATIC_ONLY)
@@ -330,7 +329,6 @@ set(LIBCAF_LIBRARIES "${LIBCAF_CORE_LIBRARY}"
 # add unit tests if not being told otherwise
 if(NOT CAF_NO_UNIT_TESTS)
   enable_testing()
-  message(STATUS "Enter subdirectory unit_testing")
   add_subdirectory(unit_testing)
   add_dependencies(all_unit_tests libcaf_core libcaf_io)
   if(NOT CAF_NO_OPENCL
@@ -340,7 +338,6 @@ if(NOT CAF_NO_UNIT_TESTS)
 endif()
 # build examples if not being told otherwise
 if(NOT CAF_NO_EXAMPLES)
-  message(STATUS "Enter subdirectory examples")
   add_subdirectory(examples)
   add_dependencies(all_examples libcaf_core libcaf_io)
   if(NOT CAF_NO_OPENCL
@@ -352,7 +349,6 @@ endif()
 # build RIAC if not being told otherwise
 if(NOT CAF_NO_RIAC
    AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_riac/CMakeLists.txt")
-  message(STATUS "Enter subdirectory probe")
   add_subdirectory(libcaf_riac)
   add_dependencies(libcaf_riac libcaf_core libcaf_io)
   if(NOT CAF_BUILD_STATIC_ONLY)
@@ -375,7 +371,6 @@ if(NOT CAF_NO_NEXUS
     message(WARNING "cannot build nexus without RIAC submodule")
     set(CAF_NO_NEXUS yes)
   else()
-    message(STATUS "Enter subdirectory nexus")
     add_subdirectory(nexus)
     add_dependencies(nexus libcaf_riac)
     set(CAF_NO_NEXUS no)
@@ -391,7 +386,6 @@ if(NOT CAF_NO_CASH
     message(WARNING "cannot build cash without RIAC submodule")
     set(CAF_NO_CASH yes)
   else()
-    message(STATUS "Enter subdirectory cash")
     add_subdirectory(cash)
     add_dependencies(cash libcaf_riac)
     set(CAF_NO_CASH no)
@@ -403,7 +397,6 @@ endif()
 # build benchmarks if not being told otherwise
 if(NOT CAF_NO_BENCHMARKS
    AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/benchmarks/CMakeLists.txt")
-  message(STATUS "Enter subdirectory benchmarks")
   add_subdirectory(benchmarks)
   add_dependencies(all_benchmarks libcaf_io)
 else()
@@ -486,7 +479,8 @@ invertYesNo(CAF_NO_OPENCL CAF_BUILD_OPENCL)
 string(TOUPPER "${CMAKE_BUILD_TYPE}" UPPER_BUILD_TYPE)
 set(ALL_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${UPPER_BUILD_TYPE}}")
 # done
-message(STATUS
+if(NOT CAF_NO_SUMMARY)
+  message(STATUS
         "\n====================|  Build Summary  |===================="
         "\n"
         "\nLibcaf version:    ${CAF_VERSION}"
@@ -518,3 +512,4 @@ message(STATUS
         "\nGenerator:         ${CMAKE_GENERATOR}"
         "\n"
         "\n===========================================================\n")
+endif()

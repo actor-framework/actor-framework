@@ -65,6 +65,7 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --no-cash                   build without cash
     --no-benchmarks             build without benchmarks
     --no-riac                   build without riac
+    --no-summary                do not print configuration before building
 
   Debugging:
     --with-runtime-checks       build with requirement checks at runtime
@@ -216,22 +217,22 @@ while [ $# -ne 0 ]; do
             append_cache_entry CAF_ENABLE_RUNTIME_CHECKS BOOL yes
             ;;
         --with-address-sanitizer)
-            append_cache_entry ENABLE_ADDRESS_SANITIZER BOOL yes
+            append_cache_entry CAF_ENABLE_ADDRESS_SANITIZER BOOL yes
             ;;
         --no-memory-management)
             append_cache_entry CAF_NO_MEM_MANAGEMENT BOOL yes
             ;;
         --more-warnings)
-            append_cache_entry MORE_WARNINGS BOOL yes
+            append_cache_entry CAF_MORE_WARNINGS BOOL yes
             ;;
         --no-compiler-check)
-            append_cache_entry NO_COMPILER_CHECK BOOL yes
+            append_cache_entry CAF_NO_COMPILER_CHECK BOOL yes
             ;;
         --no-auto-libc++)
-            append_cache_entry NO_AUTO_LIBCPP BOOL yes
+            append_cache_entry CAF_NO_AUTO_LIBCPP BOOL yes
             ;;
         --warnings-as-errors)
-            append_cache_entry CXX_WARNINGS_AS_ERROS BOOL yes
+            append_cache_entry CAF_CXX_WARNINGS_AS_ERRORS BOOL yes
             ;;
         --sysroot=*)
             append_cache_entry CAF_OSX_SYSROOT PATH "$optarg"
@@ -338,6 +339,9 @@ while [ $# -ne 0 ]; do
             ;;
         --no-riac)
             append_cache_entry CAF_NO_RIAC BOOL yes
+            ;;
+        --no-summary)
+            append_cache_entry CAF_NO_SUMMARY BOOL yes
             ;;
         *)
             echo "Invalid option '$1'.  Try $0 --help to see available options."
