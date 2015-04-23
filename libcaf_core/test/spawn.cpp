@@ -243,32 +243,6 @@ behavior testee1::make_behavior() {
   };
 }
 
-string behavior_test(scoped_actor& self, actor et) {
-  string result;
-  self->send(et, 1);
-  self->send(et, 2);
-  self->send(et, 3);
-  self->send(et, .1f);
-  self->send(et, "hello");
-  self->send(et, .2f);
-  self->send(et, .3f);
-  self->send(et, "hello again");
-  self->send(et, "goodbye");
-  self->send(et, get_atom::value);
-  self->receive (
-    [&](const string& str) {
-      result = str;
-    },
-    after(chrono::minutes(1)) >> [&] {
-      CAF_TEST_ERROR("actor does not reply");
-      throw runtime_error("actor does not reply");
-    }
-  );
-  self->send_exit(et, exit_reason::user_shutdown);
-  self->await_all_other_actors_done();
-  return result;
-}
-
 class echo_actor : public event_based_actor {
  public:
   echo_actor();

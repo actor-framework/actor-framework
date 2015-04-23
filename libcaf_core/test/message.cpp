@@ -107,7 +107,7 @@ CAF_TEST(test_extract_opts) {
   f({"-f", "hello.txt"});
 }
 
-void test_type_token() {
+CAF_TEST(test_type_token) {
   auto m1 = make_message(get_atom::value);
   CAF_CHECK_EQUAL(m1.type_token(), detail::make_type_token<get_atom>());
 }
