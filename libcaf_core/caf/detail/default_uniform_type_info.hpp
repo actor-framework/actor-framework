@@ -52,6 +52,9 @@ struct is_stl_compliant_list {
     && sizeof(sfinae_has_push_back(static_cast<T*>(nullptr))) == sizeof(char);
 };
 
+template<class T>
+constexpr bool is_stl_compliant_list<T>::value;
+
 // check if there's an 'insert' that takes a C::value_type
 template <class T>
 char sfinae_has_insert(T* ptr, typename T::value_type* val = nullptr,
@@ -65,6 +68,9 @@ struct is_stl_compliant_map {
     detail::is_iterable<T>::value
     && sizeof(sfinae_has_insert(static_cast<T*>(nullptr))) == sizeof(char);
 };
+
+template <class T>
+constexpr bool is_stl_compliant_map<T>::value;
 
 template <class T>
 struct is_stl_pair : std::false_type {
