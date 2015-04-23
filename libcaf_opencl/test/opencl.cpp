@@ -1,10 +1,11 @@
+#define CAF_SUITE opencl
+#include "caf/test/unit_test.hpp"
+
 #include <vector>
 #include <iomanip>
 #include <cassert>
 #include <iostream>
 #include <algorithm>
-
-#include "../../unit_testing/test.hpp"
 
 #include "caf/all.hpp"
 #include "caf/opencl/spawn_cl.hpp"
@@ -241,8 +242,8 @@ void test_opencl() {
     auto create_error = program::create(kernel_source_error);
   }
   catch (const std::exception& exc) {
-    CAF_PRINT(exc.what());
-    CAF_CHECK_EQUAL("clBuildProgram: CL_BUILD_PROGRAM_FAILURE", exc.what());
+    CAF_MESSAGE(exc.what());
+    CAF_CHECK(strcmp("clBuildProgram: CL_BUILD_PROGRAM_FAILURE", exc.what()) == 0);
   }
   // test for opencl compiler flags
   auto prog5 = program::create(kernel_source_compiler_flag, compiler_flag);
@@ -294,12 +295,11 @@ void test_opencl() {
   );
 }
 
-int main() {
-  CAF_TEST(test_opencl);
+CAF_TEST(test_opencl) {
   announce<ivec>("ivec");
   matrix_type::announce();
   test_opencl();
   await_all_actors_done();
   shutdown();
-  return CAF_TEST_RESULT();
 }
+
