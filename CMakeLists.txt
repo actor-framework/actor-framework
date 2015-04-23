@@ -280,11 +280,24 @@ add_custom_target(uninstall
 # path to caf core & io headers
 set(LIBCAF_INCLUDE_DIRS
     "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_core"
-    "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_io")
+    "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_io"
+    "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_test")
 # path to caf opencl headers
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
   set(LIBCAF_INCLUDE_DIRS
       "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_opencl/" "${LIBCAF_INCLUDE_DIRS}")
+endif()
+# enable tests if not disabled
+if(NOT CAF_NO_UNIT_TESTS)
+  enable_testing()
+  macro(add_unit_tests globstr)
+    file(GLOB_RECURSE tests "${globstr}")
+    set(CAF_ALL_UNIT_TESTS ${CAF_ALL_UNIT_TESTS} ${tests})
+  endmacro()
+else()
+  macro(add_unit_tests globstr)
+    # do nothing (unit tests disabled)
+  endmacro()
 endif()
 # all projects need the headers of the core components
 include_directories("${LIBCAF_INCLUDE_DIRS}")
@@ -294,8 +307,19 @@ include_directories("${LIBCAF_INCLUDE_DIRS}")
 #                               add subprojects                                #
 ################################################################################
 
+# build libcaf_test if not being told otherwise
+if(NOT CAF_NO_UNIT_TESTS)
+  #message(STATUS "Enter subdirectory libcaf_test")
+  #add_subdirectory(libcaf_test)
+endif()
 # core library
 add_subdirectory(libcaf_core)
+add_unit_tests("libcaf_core/test/*.cpp")
+add_unit_tests("libcaf_io/test/*.cpp")
+if(NOT CAF_NO_OPENCL)
+  add_unit_tests("libcaf_opencl/test/*.cpp")
+endif()
+
 # set core lib for sub directories
 if(NOT CAF_BUILD_STATIC_ONLY)
   set(LIBCAF_CORE_LIBRARY libcaf_core_shared)
@@ -326,16 +350,6 @@ add_dependencies(libcaf_io libcaf_core)
 set(LIBCAF_LIBRARIES "${LIBCAF_CORE_LIBRARY}"
                      "${LIBCAF_IO_LIBRARY}"
                      "${LIBCAF_OPENCL_LIBRARY}")
-# add unit tests if not being told otherwise
-if(NOT CAF_NO_UNIT_TESTS)
-  enable_testing()
-  add_subdirectory(unit_testing)
-  add_dependencies(all_unit_tests libcaf_core libcaf_io)
-  if(NOT CAF_NO_OPENCL
-     AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
-    add_subdirectory(libcaf_opencl/unit_testing)
-  endif()
-endif()
 # build examples if not being told otherwise
 if(NOT CAF_NO_EXAMPLES)
   add_subdirectory(examples)
@@ -343,7 +357,6 @@ if(NOT CAF_NO_EXAMPLES)
   if(NOT CAF_NO_OPENCL
      AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
     add_subdirectory(libcaf_opencl/examples)
-    add_dependencies(opencl_examples libcaf_opencl)
   endif()
 endif()
 # build RIAC if not being told otherwise
@@ -402,6 +415,47 @@ if(NOT CAF_NO_BENCHMARKS
 else()
   # make sure variable is set for build log
   set(CAF_NO_BENCHMARKS yes)
+endif()
+
+
+################################################################################
+#                               unit tests setup                               #
+################################################################################
+
+if(NOT CAF_NO_UNIT_TESTS)
+  add_executable(caf-test
+                 libcaf_test/src/caf-test.cpp
+                 libcaf_test/caf/test/unit_test.hpp
+                 libcaf_test/caf/test/unit_test_impl.hpp
+                 ${CAF_ALL_UNIT_TESTS})
+  target_link_libraries(caf-test
+                        ${LD_FLAGS}
+                        ${LIBCAF_LIBRARIES}
+                        ${PTHREAD_LIBRARIES})
+  add_custom_target(all_unit_tests)
+  add_dependencies(caf-test all_unit_tests)
+  # enumerate all test suites.
+  foreach(test ${CAF_ALL_UNIT_TESTS})
+    file(STRINGS ${test} contents)
+    foreach(line ${contents})
+      if ("${line}" MATCHES "CAF_SUITE (.*)")
+        string(REGEX REPLACE ".* CAF_SUITE (.*)" "\\1" suite ${line})
+        list(APPEND suites ${suite})
+      endif()
+    endforeach()
+  endforeach()
+  list(REMOVE_DUPLICATES suites)
+  # creates one CMake test per test suite.
+  macro (make_test suite)
+    string(REPLACE " " "_" test_name ${suite})
+    set(caf_test ${EXECUTABLE_OUTPUT_PATH}/caf-test)
+    add_test(${test_name} ${caf_test} -n -v 5 -s "${suite}" ${ARGN})
+  endmacro ()
+  list(LENGTH suites num_suites)
+  message(STATUS "Found ${num_suites} test suites")
+  foreach(suite ${suites})
+    make_test("${suite}")
+  endforeach ()
 endif()
 
 

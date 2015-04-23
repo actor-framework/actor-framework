@@ -231,6 +231,9 @@ class is_iterable {
                   std::is_same<bool, result_type>::value;
 };
 
+template<class T>
+constexpr bool is_iterable<T>::value;
+
 /**
  * Checks wheter `T` is neither a reference nor a pointer nor an array.
  */
