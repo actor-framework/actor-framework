@@ -120,5 +120,6 @@ CAF_TEST(test_fixed_stack_actor) {
     self->send_exit(st, exit_reason::user_shutdown);
     self->await_all_other_actors_done();
   }
-   shutdown();
+  await_all_actors_done();
+  shutdown();
 }

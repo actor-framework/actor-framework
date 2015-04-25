@@ -23,7 +23,6 @@
 #include <string>
 
 #include "caf/optional.hpp"
-#include "caf/shutdown.hpp"
 
 using namespace std;
 using namespace caf;
@@ -70,5 +69,4 @@ CAF_TEST(test_optional) {
       CAF_CHECK(!j.empty());
     }
   }
-  shutdown();
 }

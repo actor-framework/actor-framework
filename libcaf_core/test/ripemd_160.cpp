@@ -23,8 +23,6 @@
 #include <iomanip>
 #include <iostream>
 
-#include "caf/shutdown.hpp"
-
 #include "caf/detail/ripemd_160.hpp"
 
 using caf::detail::ripemd_160;
@@ -63,5 +61,4 @@ CAF_TEST(test_ripemd_160) {
   CAF_CHECK_EQUAL("9b752e45573d4b39f4dbd3323cab82bf63326bfb",
                   str_hash("1234567890123456789012345678901234567890"
                            "1234567890123456789012345678901234567890"));
-  caf::shutdown();
 }

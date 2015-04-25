@@ -23,6 +23,7 @@
 #include <string>
 
 #include "caf/all.hpp"
+#include "caf/shutdown.hpp"
 
 using namespace caf;
 
@@ -118,11 +119,15 @@ testee::behavior_type testee_impl(testee::pointer self) {
 }
 
 CAF_TEST(sync_send_atom_constants) {
-  scoped_actor self;
-  auto tst = spawn_typed(testee_impl);
-  self->sync_send(tst, abc_atom::value).await(
-    [](int i) {
-      CAF_CHECK_EQUAL(i, 42);
-    }
-  );
+  {
+    scoped_actor self;
+    auto tst = spawn_typed(testee_impl);
+    self->sync_send(tst, abc_atom::value).await(
+      [](int i) {
+        CAF_CHECK_EQUAL(i, 42);
+      }
+    );
+    self->await_all_other_actors_done();
+  }
+  shutdown();
 }

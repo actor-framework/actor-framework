@@ -70,5 +70,6 @@ CAF_TEST(test_or_else) {
       })
     );
   }
+  await_all_actors_done();
   shutdown();
 }

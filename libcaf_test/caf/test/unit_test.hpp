@@ -32,8 +32,6 @@
 #include <sstream>
 #include <iostream>
 
-#include "caf/actor.hpp"
-
 namespace caf {
 class message;
 namespace test {

@@ -20,7 +20,8 @@
 #define CAF_SUITE message
 #include "caf/test/unit_test.hpp"
 
-#include "caf/all.hpp"
+#include "caf/message.hpp"
+#include "caf/message_builder.hpp"
 
 using std::cout;
 using std::endl;
@@ -123,5 +124,4 @@ CAF_TEST(test_concat) {
                          get_atom::value, uint32_t{1});
   CAF_CHECK_EQUAL(to_string(message::concat(m3, message{}, m1, m2)),
                   to_string(m4));
-  shutdown();
 }

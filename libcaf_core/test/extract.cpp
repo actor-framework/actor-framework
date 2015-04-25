@@ -23,7 +23,10 @@
 #include <string>
 #include <vector>
 
-#include "caf/all.hpp"
+#include "caf/on.hpp"
+#include "caf/message.hpp"
+#include "caf/message_builder.hpp"
+#include "caf/message_handler.hpp"
 
 using namespace caf;
 

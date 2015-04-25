@@ -26,11 +26,9 @@
 #include <algorithm>
 #include <condition_variable>
 
-#include "caf/shutdown.hpp"
 #include "caf/message_builder.hpp"
 #include "caf/message_handler.hpp"
 #include "caf/string_algorithms.hpp"
-#include "caf/await_all_actors_done.hpp"
 
 namespace caf {
 namespace test {
@@ -613,8 +611,6 @@ int main(int argc, char** argv) {
   auto result = test::engine::run(colorize, log_file, verbosity_console,
                                   verbosity_file, max_runtime, suites,
                                   not_suites, tests, not_tests);
-  await_all_actors_done();
-  shutdown();
   return result ? 0 : 1;
 }
 

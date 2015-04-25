@@ -26,7 +26,6 @@
 #include <list>
 #include <cstddef>
 
-#include "caf/shutdown.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/intrusive_ptr.hpp"
@@ -162,5 +161,4 @@ CAF_TEST(full_test) {
   }
   CAF_CHECK_EQUAL(class0_instances, 0);
   CAF_CHECK_EQUAL(class1_instances, 0);
-  shutdown();
 }

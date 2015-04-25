@@ -22,7 +22,11 @@
 
 #include <functional>
 
-#include "caf/all.hpp"
+#include "caf/on.hpp"
+#include "caf/announce.hpp"
+#include "caf/shutdown.hpp"
+#include "caf/message_builder.hpp"
+#include "caf/message_handler.hpp"
 
 using namespace caf;
 using namespace std;

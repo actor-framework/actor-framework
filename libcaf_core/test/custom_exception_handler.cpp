@@ -89,6 +89,7 @@ CAF_TEST(test_custom_exception_handler) {
         }
       }
     );
+    self->await_all_other_actors_done();
   }
   shutdown();
 }
