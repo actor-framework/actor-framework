@@ -23,6 +23,7 @@
 #include <thread>
 #include <cassert>
 #include <cstdlib>
+#include <cstring>
 #include <algorithm>
 #include <condition_variable>
 
@@ -161,7 +162,7 @@ logger::stream& logger::stream::operator<<(const char* cstr) {
     return *this;
   }
   m_buf << cstr;
-  if (cstr[strlen(cstr) - 1] == '\n') {
+  if (cstr[std::strlen(cstr) - 1] == '\n') {
     flush();
   }
   return *this;
