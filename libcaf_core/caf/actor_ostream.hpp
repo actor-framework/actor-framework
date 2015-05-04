@@ -60,8 +60,8 @@ class actor_ostream {
   inline typename std::enable_if<
     !std::is_convertible<T, std::string>::value, actor_ostream&
   >::type operator<<(T&& arg) {
-	using std::to_string;
-	return write(to_string(std::forward<T>(arg)));
+    using std::to_string;
+    return write(to_string(std::forward<T>(arg)));
   }
 
   inline actor_ostream& operator<<(actor_ostream::fun_type f) {
