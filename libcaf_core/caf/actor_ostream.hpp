@@ -51,10 +51,6 @@ class actor_ostream {
     return write(std::move(arg));
   }
 
-  inline actor_ostream& operator<<(const message& arg) {
-    return write(caf::to_string(arg));
-  }
-
   // disambiguate between conversion to string and to message
   inline actor_ostream& operator<<(const char* arg) {
     return *this << std::string{arg};
@@ -62,10 +58,10 @@ class actor_ostream {
 
   template <class T>
   inline typename std::enable_if<
-    !std::is_convertible<T, std::string>::value &&
-    !std::is_convertible<T, message>::value, actor_ostream&
+    !std::is_convertible<T, std::string>::value, actor_ostream&
   >::type operator<<(T&& arg) {
-    return write(std::to_string(std::forward<T>(arg)));
+    using std::to_string;
+    return write(to_string(std::forward<T>(arg)));
   }
 
   inline actor_ostream& operator<<(actor_ostream::fun_type f) {
