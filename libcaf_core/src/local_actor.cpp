@@ -586,7 +586,7 @@ resumable::resume_result local_actor::resume(execution_unit* eu,
     on_exit();
     if (has_behavior()) {
       CAF_LOG_DEBUG("on_exit did set a new behavior");
-	  // if the actor still has behaviors, we should record the current exit reason
+      // if the actor still has behaviors, we should record the current exit reason
       if (planned_exit_reason() != exit_reason::not_exited) {
         m_last_exit_reason = planned_exit_reason();
       }
