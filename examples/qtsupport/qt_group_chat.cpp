@@ -35,11 +35,16 @@ int main(int argc, char** argv) {
     {"name,n", "set chat name", name},
     {"group,g", "join chat group", group_id}
   });
+  if (!res.error.empty()) {
+    cerr << res.error << endl;
+    return 1;
+  }
   if (!res.remainder.empty()) {
     std::cerr << res.helptext << std::endl;
     return 1;
   }
   if (res.opts.count("help") > 0) {
+    cout << res.helptext << endl;
     return 0;
   }
   group gptr;

@@ -273,9 +273,13 @@ class message {
    *     {"host,H", "set host (default: localhost)", host},
    *     {"verbose,v", "enable verbose mode"}
    *   });
+   *   if (!res.error.empty()) {
+   *     cerr << res.error << endl;
+   *     return 1;
+   *   }
    *   if (res.opts.count("help") > 0) {
    *     // CLI arguments contained "-h", "--help", or "-?" (builtin);
-   *     // note: the help text has already been printed to stdout
+   *     cout << res.helptext << endl;
    *     return 0;
    *   }
    *   if (!res.remainder.empty()) {
@@ -418,6 +422,11 @@ struct message::cli_res {
    * Stores the automatically generated help text.
    */
   std::string helptext;
+
+  /**
+   * Stores errors during option parsing.
+   */
+  std::string error;
 };
 
 /**
