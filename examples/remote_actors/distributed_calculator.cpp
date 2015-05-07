@@ -241,8 +241,12 @@ int main(int argc, char** argv) {
     {"server,s", "run in server mode"},
     {"client,c", "run in client mode"}
   });
+  if (!res.error.empty()) {
+    cerr << res.error << endl;
+    return 1;
+  }
   if (res.opts.count("help") > 0) {
-    // help text has already been printed
+    cout << res.helptext << endl;
     return 0;
   }
   if (!res.remainder.empty()) {

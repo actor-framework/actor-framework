@@ -145,9 +145,18 @@ message message::extract(message_handler handler) const {
 
 message::cli_res message::extract_opts(std::vector<cli_arg> xs,
                                        help_factory f) const {
-  // add default help item if not specified by user
+  // add default help item if user did not specify any help option
   auto pred = [](const cli_arg& arg) {
-    return arg.name == "help" || arg.name.compare(0, 5, "help,") == 0;
+    std::vector<std::string> s;
+    split(s, arg.name, is_any_of(","), token_compress_on);
+    if (s.empty()) {
+      throw std::invalid_argument("invalid option name: " + arg.name);
+    }
+    auto has_short_help = [](const std::string& opt) {
+      return opt.find_first_of("h?") != std::string::npos;
+    };
+    return s[0] == "help"
+        || std::find_if(s.begin() + 1, s.end(), has_short_help) != s.end();
   };
   if (std::none_of(xs.begin(), xs.end(), pred)) {
     xs.push_back(cli_arg{"help,h,?", "print this text"});
@@ -198,15 +207,25 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
       opts.insert(ptr->name.substr(0, separator));
     }
   };
+  std::string error;
   auto res = extract({
     [&](const std::string& arg) -> optional<skip_message_t> {
       if (arg.empty() || arg.front() != '-') {
         return skip_message();
       }
-      auto i = shorts.find(arg);
+      auto i = shorts.find(arg.substr(0, 2));
       if (i != shorts.end()) {
         if (i->second->fun) {
           // this short opt expects two arguments
+          if (arg.size() > 2) {
+             // this short opt comes with a value (no space), e.g., -x2
+            if (!i->second->fun(arg.substr(2))) {
+              error = "invalid value for option " + i->second->name + ": " + arg;
+              return none;
+            }
+            insert_opt_name(i->second);
+            return none;
+          }
           return skip_message();
         }
         insert_opt_name(i->second);
@@ -217,12 +236,11 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
       if (j != longs.end()) {
         if (j->second->fun) {
           if (eq_pos == std::string::npos) {
-            std::cerr << "missing argument to " << arg << std::endl;
+            error =  "missing argument to " + arg;
             return none;
           }
           if (!j->second->fun(arg.substr(eq_pos + 1))) {
-            std::cerr << "invalid value for option "
-                      << j->second->name << ": " << arg << std::endl;
+            error = "invalid value for option " + j->second->name + ": " + arg;
             return none;
           }
           insert_opt_name(j->second);
@@ -231,7 +249,7 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
         insert_opt_name(j->second);
         return none;
       }
-      std::cerr << "unknown command line option: " << arg << std::endl;
+      error = "unknown command line option: " + arg;
       return none;
     },
     [&](const std::string& arg1,
@@ -248,14 +266,13 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
           return skip_message();
         }
         if (!i->second->fun(arg2)) {
-          std::cerr << "invalid value for option "
-                    << i->second->name << ": " << arg2 << std::endl;
+          error = "invalid value for option " + i->second->name + ": " + arg2;
           return none;
         }
         insert_opt_name(i->second);
         return none;
       }
-      std::cerr << "unknown command line option: " << arg1 << std::endl;
+      error = "unknown command line option: " + arg1;
       return none;
     }
   });
@@ -277,10 +294,7 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
     }
     helptext = oss.str();
   }
-  if (opts.count("help") == 1) {
-    std::cout << helptext << std::endl;
-  }
-  return {res, std::move(opts), std::move(helptext)};
+  return {res, std::move(opts), std::move(helptext), std::move(error)};
 }
 
 message::cli_arg::cli_arg(std::string nstr, std::string tstr)
