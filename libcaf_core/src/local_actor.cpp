@@ -35,6 +35,7 @@ namespace caf {
 // e.g., when calling address() in the ctor of a derived class
 local_actor::local_actor()
     : m_planned_exit_reason(exit_reason::not_exited),
+      m_last_exit_reason(exit_reason::normal),
       m_timeout_id(0) {
   // nop
 }
@@ -582,15 +583,28 @@ resumable::resume_result local_actor::resume(execution_unit* eu,
     CAF_LOG_TRACE("");
     bhvr_stack().clear();
     bhvr_stack().cleanup();
+    auto responses = std::move(m_pending_responses);
     on_exit();
     if (has_behavior()) {
       CAF_LOG_DEBUG("on_exit did set a new behavior");
+      m_last_exit_reason = exit_reason::normal;
       planned_exit_reason(exit_reason::not_exited);
       return false; // on_exit did set a new behavior
+    } else if (!responses.empty()) {
+      // the actor still has pending responses and on_exit didn't set a new
+      // behavior, we should record the current exit reason
+      auto rsn = planned_exit_reason();
+      if (rsn != exit_reason::not_exited) {
+        m_last_exit_reason = rsn;
+      }
+      m_pending_responses = std::move(responses);
+      planned_exit_reason(exit_reason::not_exited);
+      return false;
     }
     auto rsn = planned_exit_reason();
     if (rsn == exit_reason::not_exited) {
-      rsn = exit_reason::normal;
+      // the actor has no behavior, resume the last recorded exit reason
+      rsn = m_last_exit_reason;
       planned_exit_reason(rsn);
     }
     cleanup(rsn);

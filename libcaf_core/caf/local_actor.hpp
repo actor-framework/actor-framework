@@ -633,6 +633,9 @@ class local_actor : public abstract_actor, public resumable {
   // set by quit
   uint32_t m_planned_exit_reason;
 
+  // used to resume the last exit reason
+  uint32_t m_last_exit_reason;
+
   // identifies the timeout messages we are currently waiting for
   uint32_t m_timeout_id;
 
