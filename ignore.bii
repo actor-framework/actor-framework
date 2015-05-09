@@ -1,0 +1,6 @@
+build/**
+benchmarks/**
+cash/**
+examples/**
+nexus/**
+manual/**

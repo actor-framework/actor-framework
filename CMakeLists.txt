@@ -243,6 +243,24 @@ if(CAF_NO_MEM_MANAGEMENT)
   add_definitions(-DCAF_NO_MEM_MANAGEMENT)
 endif()
 
+################################################################################
+#                    check for biicode build pipeline                          #
+################################################################################
+IF(BIICODE)
+  # define the biicode target and let it do its thing
+  ADD_BII_TARGETS()
+
+  # but first specify the compiled/linker options calculated above
+  string(REPLACE " " ";" REPLACED_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+  target_compile_options(${BII_BLOCK_TARGET} INTERFACE ${REPLACED_CXX_FLAGS})
+
+  IF (LD_FLAGS STREQUAL "")
+    string(REPLACE " " ";" REPLACED_LD_FLAGS ${LD_FLAGS})
+    target_link_libraries(${BII_BLOCK_TARGET} INTERFACE ${REPLACED_LD_FLAGS})
+  ENDIF()
+
+  RETURN()
+ENDIF()
 
 ################################################################################
 #                           setup for install target                           #
