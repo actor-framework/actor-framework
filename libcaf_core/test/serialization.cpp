@@ -43,6 +43,7 @@
 #include <algorithm>
 #include <functional>
 #include <type_traits>
+#include <tuple>
 
 #include "caf/message.hpp"
 #include "caf/announce.hpp"
@@ -115,12 +116,102 @@ struct raw_struct_type_info : detail::abstract_uniform_type_info<raw_struct> {
   }
 };
 
-
-
 enum class test_enum {
   a,
   b,
   c
+};
+
+struct common_fixture {
+  common_fixture(int32_t i32 = -345, 
+                test_enum te = test_enum::b, 
+                string str = "Lorem ipsum dolor sit amet.") 
+      : i32(i32), te(te), str(str), rs{string(str.rbegin(), str.rend())} {
+    msg = make_message(i32, te, str, rs);
+  }
+
+  int32_t i32;
+  test_enum te;
+  string str;
+  raw_struct rs;
+  message msg;
+} fixture = {};
+
+template<typename F, typename T> 
+void apply_func(F&& f, T&& t) {
+  f(std::forward<T>(t));
+}
+
+template<typename F, typename T, typename... Ts> 
+void apply_func(F&& f, T&& t, Ts&&... ts) {
+  f(std::forward<T>(t));
+  apply_func(std::forward<F>(f), std::forward<Ts>(ts)...);
+}
+
+struct binary_util {
+  static actor_namespace*& serialization_namespace() {
+    static actor_namespace* ns = nullptr;
+    return ns;
+  }
+
+  template <typename T, typename... Ts>
+  static string serialize(T&& t, Ts&&... ts) {
+    std::stringstream ss;
+    binary_serializer bs {
+      std::ostreambuf_iterator<char>(ss), 
+      serialization_namespace()
+    };
+    apply_func(
+      serializer_lambda{&bs}, 
+      std::forward<T>(t), std::forward<Ts>(ts)...
+    );
+    return ss.str();
+  }
+
+  template <typename T, typename... Ts>
+  static void deserialize(string const& buff, T* t, Ts*... ts) {
+    binary_deserializer bd {
+      buff.data(), buff.size(), 
+      serialization_namespace()
+    };
+    apply_func(deserializer_lambda{&bd}, t, ts...);
+  }
+
+ private:
+  struct serializer_lambda {
+    serializer_lambda(binary_serializer* bs) : bs(bs) {}
+    binary_serializer* bs;
+    template <typename T>
+    void operator()(T&& x) const { 
+      *bs << x;
+    }
+  };
+
+  struct deserializer_lambda {
+    deserializer_lambda(binary_deserializer* bd) : bd(bd) {}
+    binary_deserializer* bd;
+    template <typename T>
+    void operator()(T* x) const { 
+      uniform_typeid<T>()->deserialize(x, bd);
+    }
+  };
+};
+
+struct is_message {
+  explicit is_message(message& msg) : msg(msg) {}
+  message msg;
+
+  template <typename T, typename... Ts>
+  bool equal(T&& t, Ts&&... ts) {
+    bool ok = false;
+    message_handler impl {
+      [&](T const& u, Ts const&... us) {
+        ok = tie(t, ts...) == tie(u, us...);
+      }
+    };
+    impl(msg);
+    return ok;
+  }
 };
 
 } // namespace <anonymous>
@@ -160,6 +251,54 @@ CAF_TEST(test_ieee_754) {
   CAF_CHECK_EQUAL(p2, 0x400921FB54442D18);
   auto u2 = caf::detail::unpack754(p2); // unpacked value
   CAF_CHECK_EQUAL(f2, u2);
+}
+
+CAF_TEST(test_int32_t) {
+  auto buff = binary_util::serialize(fixture.i32);
+  int32_t i32;
+  binary_util::deserialize(buff, &i32);
+  CAF_CHECK_EQUAL(fixture.i32, i32);
+}
+
+CAF_TEST(test_enum) {
+  auto buff = binary_util::serialize(fixture.te);
+  test_enum te;
+  binary_util::deserialize(buff, &te);
+  CAF_CHECK(fixture.te == te);
+}
+
+CAF_TEST(test_string) {
+  auto buff = binary_util::serialize(fixture.str);
+  string str;
+  binary_util::deserialize(buff, &str);
+  CAF_CHECK_EQUAL(fixture.str, str);
+}
+
+CAF_TEST(test_raw_struct) {
+  auto buff = binary_util::serialize(fixture.rs);
+  raw_struct rs;
+  binary_util::deserialize(buff, &rs);
+  CAF_CHECK(fixture.rs == rs);
+}
+
+CAF_TEST(test_single_message) {
+  auto buff = binary_util::serialize(fixture.msg);
+  message msg;
+  binary_util::deserialize(buff, &msg);
+  CAF_CHECK(fixture.msg == msg);
+  CAF_CHECK(is_message(msg).equal(fixture.i32, fixture.te, fixture.str, fixture.rs));
+}
+
+CAF_TEST(test_multiple_messages) {
+  auto m = make_message(fixture.rs, fixture.te);
+  auto buff = binary_util::serialize(fixture.te, m, fixture.msg);
+  test_enum t;
+  message m1;
+  message m2;
+  binary_util::deserialize(buff, &t, &m1, &m2);
+  CAF_CHECK(tie(t, m1, m2) == tie(fixture.te, m, fixture.msg));
+  CAF_CHECK(is_message(m1).equal(fixture.rs, fixture.te));
+  CAF_CHECK(is_message(m2).equal(fixture.i32, fixture.te, fixture.str, fixture.rs));
 }
 
 CAF_TEST(test_string_serialization) {
