@@ -219,6 +219,10 @@ msg_type filter_msg(local_actor* self, mailbox_element& node) {
     CAF_ASSERT(!mid.valid());
     // make sure to get rid of attachables if they're no longer needed
     self->unlink_from(em.source);
+    if (em.reason == exit_reason::kill) {
+      self->quit(em.reason);
+      return msg_type::non_normal_exit;
+    }
     if (self->trap_exit() == false) {
       if (em.reason != exit_reason::normal) {
         self->quit(em.reason);
@@ -583,15 +587,17 @@ resumable::resume_result local_actor::resume(execution_unit* eu,
     bhvr_stack().clear();
     bhvr_stack().cleanup();
     on_exit();
-    if (has_behavior()) {
-      CAF_LOG_DEBUG("on_exit did set a new behavior");
-      planned_exit_reason(exit_reason::not_exited);
-      return false; // on_exit did set a new behavior
-    }
     auto rsn = planned_exit_reason();
-    if (rsn == exit_reason::not_exited) {
-      rsn = exit_reason::normal;
-      planned_exit_reason(rsn);
+    if (rsn != exit_reason::kill) {
+      if (has_behavior()) {
+        CAF_LOG_DEBUG("on_exit did set a new behavior");
+        planned_exit_reason(exit_reason::not_exited);
+        return false; // on_exit did set a new behavior
+      }
+      if (rsn == exit_reason::not_exited) {
+        rsn = exit_reason::normal;
+        planned_exit_reason(rsn);
+      }
     }
     cleanup(rsn);
     return true;
