@@ -40,6 +40,7 @@ const char* as_string(uint32_t value) {
   }
   switch (value) {
     case user_shutdown: return "user_shutdown";
+    case kill: return "kill";
     case remote_link_unreachable: return "remote_link_unreachable";
     default:
       if (value < user_defined) {

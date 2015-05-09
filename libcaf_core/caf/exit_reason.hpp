@@ -67,6 +67,11 @@ static constexpr uint32_t out_of_workers = 0x00007;
 static constexpr uint32_t user_shutdown = 0x00010;
 
 /**
+ * Indicates that the actor was killed unconditionally.
+ */
+static constexpr uint32_t kill = 0x00011;
+
+/**
  * Indicates that an actor finishied execution because a connection
  * to a remote link was closed unexpectedly.
  */
