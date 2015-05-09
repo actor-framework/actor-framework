@@ -156,9 +156,14 @@ binary_deserializer::binary_deserializer(const void* bbegin, const void* bend,
 }
 
 const uniform_type_info* binary_deserializer::begin_object() {
+  auto uti_map = detail::singletons::get_uniform_type_info_map();
+  uint16_t type_nr;
+  m_pos = read_range(m_pos, m_end, type_nr);
+  if (type_nr) {
+    return uti_map->by_type_nr(type_nr);
+  } 
   std::string tname;
   m_pos = read_range(m_pos, m_end, tname);
-  auto uti_map = detail::singletons::get_uniform_type_info_map();
   auto uti = uti_map->by_uniform_name(tname);
   if (!uti) {
     std::string err = "received type name \"";
