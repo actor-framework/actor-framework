@@ -95,7 +95,11 @@ class binary_writer : public static_visitor<> {
 };
 
 void binary_serializer::begin_object(const uniform_type_info* uti) {
-  binary_writer::write_string(m_out, uti->name());
+  auto nr = uti->type_nr();
+  binary_writer::write_int(m_out, nr);
+  if (!nr) {
+    binary_writer::write_string(m_out, uti->name());
+  }
 }
 
 void binary_serializer::end_object() {
