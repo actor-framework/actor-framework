@@ -894,6 +894,26 @@ CAF_TEST(test_custom_exception_handler) {
   );
 }
 
+CAF_TEST(test_kill) {
+  auto wannabe_immortal = spawn([](event_based_actor* self) -> behavior {
+    self->trap_exit(true);
+    return {
+      others >> [] {
+        CAF_TEST_ERROR("Unexpected message");
+      }
+    };
+  });
+  scoped_actor self;
+  self->monitor(wannabe_immortal);
+  self->send_exit(wannabe_immortal, exit_reason::kill);
+  self->receive(
+    [&](const down_msg& dm) {
+      CAF_CHECK(dm.reason == exit_reason::kill);
+      CAF_CHECK(dm.source == wannabe_immortal);
+    }
+  );
+}
+
 CAF_TEST(test_exit_reason_scoped_actor) {
   // test setting exit reasons for scoped actors
   { // lifetime scope of self
