@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <functional>
 #include <type_traits>
+#include <tuple>
 
 #include "test.hpp"
 
@@ -69,6 +70,8 @@ struct struct_c {
 };
 
 struct raw_struct {
+  raw_struct() {}
+  explicit raw_struct(std::string const& str) : str(str) {}
   string str;
 };
 
@@ -85,6 +88,7 @@ struct raw_struct_type_info : detail::abstract_uniform_type_info<raw_struct> {
     auto rs = reinterpret_cast<const raw_struct*>(ptr);
     sink->write_value(static_cast<uint32_t>(rs->str.size()));
     sink->write_raw(rs->str.size(), rs->str.data());
+    std::cerr << rs->str.size() << rs->str << std::endl;
   }
   void deserialize(void* ptr, deserializer* source) const override {
     auto rs = reinterpret_cast<raw_struct*>(ptr);
@@ -95,7 +99,97 @@ struct raw_struct_type_info : detail::abstract_uniform_type_info<raw_struct> {
   }
 };
 
+enum class test_enum {
+  a,
+  b,
+  c
+};
+
+struct common_fixture {
+  common_fixture(int32_t i32 = -345, test_enum te = test_enum::b, string str = "Lorem ipsum dolor sit amet.") :
+      i32(i32), te(te), str(str), rs{string(str.rbegin(), str.rend())} {
+    msg = make_message(i32, te, str, rs);
+  }
+
+  int32_t i32;
+  test_enum te;
+  string str;
+  raw_struct rs;
+  message msg;
+};
+
+struct binary_util {
+  static actor_namespace*& serialization_namespace() {
+    static actor_namespace* ns = nullptr;
+    return ns;
+  }
+
+  template <typename T, typename... Ts>
+  static string serialize(T&& t, Ts&&... ts) {
+    std::stringstream ss;
+    binary_serializer bs {std::ostreambuf_iterator<char>(ss), serialization_namespace()};
+    apply_func(serializer_lambda{&bs}, std::forward<T>(t), std::forward<Ts>(ts)...);
+    return ss.str();
+  }
+
+  template <typename T, typename... Ts>
+  static void deserialize(string const& buff, T* t, Ts*... ts) {
+    binary_deserializer bd {buff.data(), buff.size(), serialization_namespace()};
+    apply_func(deserializer_lambda{&bd}, t, ts...);
+  }
+
+  struct serializer_lambda {
+    serializer_lambda(binary_serializer* bs) : bs(bs) {}
+    binary_serializer* bs;
+    template <typename T>
+    void operator()(T&& x) const { 
+      *bs << x;
+    }
+  };
+
+  struct deserializer_lambda {
+    deserializer_lambda(binary_deserializer* bd) : bd(bd) {}
+    binary_deserializer* bd;
+    template <typename T>
+    void operator()(T* x) const { 
+      uniform_typeid<T>()->deserialize(x, bd);
+    }
+  };
+};
+
+struct is_message {
+  explicit is_message(message& msg) : msg(msg) {}
+  message msg;
+
+  template <typename T, typename... Ts>
+  bool equal(T&& t, Ts&&... ts) {
+    bool ok = false;
+    message_handler impl {
+        [&](T const& u, Ts const&... us) {
+          ok = tie(t, ts...) == tie(u, us...);
+        }
+      };
+    impl(msg);
+    return ok;
+  }
+};
+  
+template<typename F, typename T> 
+void apply_func(F&& f, T&& t) {
+  f(std::forward<T>(t));
+}
+
+template<typename F, typename T, typename... Ts> 
+void apply_func(F&& f, T&& t, Ts&&... ts) {
+  f(std::forward<T>(t));
+  apply_func(std::forward<F>(f), std::forward<Ts>(ts)...);
+}
+
+} // namespace <anonymous>
+
 void test_ieee_754() {
+  CAF_PRINT(__func__);
+
   // check conversion of float
   float f1 = 3.1415925f;         // float value
   auto p1 = caf::detail::pack754(f1); // packet value
@@ -110,43 +204,39 @@ void test_ieee_754() {
   CAF_CHECK_EQUAL(f2, u2);
 }
 
-enum class test_enum {
-  a,
-  b,
-  c
-};
-
-} // namespace <anonymous>
-
-void test_string_serialization() {
-  auto input = make_message("hello \"actor world\"!", atom("foo"));
-  auto s = to_string(input);
-  CAF_CHECK_EQUAL(s, R"#(@<>+@str+@atom ( "hello \"actor world\"!", 'foo' ))#");
-  auto m = from_string<message>(s);
-  if (!m) {
-    CAF_PRINTERR("from_string failed");
-    return;
-  }
-  CAF_CHECK(*m == input);
-  CAF_CHECK_EQUAL(to_string(*m), to_string(input));
-}
-
-int main() {
-  CAF_TEST(test_serialization);
-
-  announce<test_enum>("test_enum");
-
-  test_ieee_754();
+void test_primitives() {
+  CAF_PRINT(__func__);
 
   using token = std::integral_constant<int, detail::impl_id<strmap>()>;
-  CAF_CHECK_EQUAL(detail::is_iterable<strmap>::value, true);
-  CAF_CHECK_EQUAL(detail::is_stl_compliant_list<vector<int>>::value, true);
-  CAF_CHECK_EQUAL(detail::is_stl_compliant_list<strmap>::value, false);
-  CAF_CHECK_EQUAL(detail::is_stl_compliant_map<strmap>::value, true);
-  CAF_CHECK_EQUAL(detail::impl_id<strmap>(), 2);
+  CAF_CHECK_EQUAL(caf::detail::is_iterable<strmap>::value, true);
+  CAF_CHECK_EQUAL(caf::detail::is_stl_compliant_list<vector<int>>::value, true);
+  CAF_CHECK_EQUAL(caf::detail::is_stl_compliant_list<strmap>::value, false);
+  CAF_CHECK_EQUAL(caf::detail::is_stl_compliant_map<strmap>::value, true);
+  CAF_CHECK_EQUAL(caf::detail::impl_id<strmap>(), 2);
   CAF_CHECK_EQUAL(token::value, 2);
 
-  announce(typeid(raw_struct), uniform_type_info_ptr{new raw_struct_type_info});
+  CAF_CHECK((caf::detail::is_iterable<int>::value) == false);
+
+  // string is primitive and thus not identified by is_iterable
+  CAF_CHECK((caf::detail::is_iterable<string>::value) == false);
+
+  CAF_CHECK((caf::detail::is_iterable<list<int>>::value) == true);
+  CAF_CHECK((caf::detail::is_iterable<map<int, int>>::value) == true);
+
+  // test meta_object implementation for primitive types
+  try {
+    auto meta_int = uniform_typeid<uint32_t>();
+    CAF_CHECK(meta_int != nullptr);
+    if (meta_int) {
+      auto str = to_string(make_message<uint32_t>(42));
+      CAF_CHECK_EQUAL( "@<>+@u32 ( 42 )", str);
+    }
+  }
+  catch (std::exception& e) { CAF_FAILURE(to_verbose_string(e)); }
+}
+
+void test_node_id_from_string() {
+  CAF_PRINT(__func__);
 
   auto nid = detail::singletons::get_node_id();
   auto nid_str = to_string(nid);
@@ -156,157 +246,132 @@ int main() {
   if (nid2) {
     CAF_CHECK_EQUAL(to_string(nid), to_string(*nid2));
   }
+}
+
+void test_binary_serialization() {  
+  announce<test_enum>("test_enum");
+  announce(typeid(raw_struct), uniform_type_info_ptr{new raw_struct_type_info});
+
+  int32_t i32;
+  test_enum te;
+  string str;
+  raw_struct rs;
+  message msg;
+  common_fixture fixture {};
+
+  try { // int32_t
+    CAF_PRINT("int32_t test");
+    auto buff = binary_util::serialize(fixture.i32);
+    binary_util::deserialize(buff, &i32);
+    CAF_CHECK_EQUAL(fixture.i32, i32);
+  } catch (std::exception& e) { 
+    CAF_FAILURE(to_verbose_string(e)); 
+  }
+
+  try { // test_enum
+    CAF_PRINT("int32_t test");
+    auto buff = binary_util::serialize(fixture.te);
+    binary_util::deserialize(buff, &te);
+    CAF_CHECK(fixture.te == te);
+  } catch (std::exception& e) { 
+    CAF_FAILURE(to_verbose_string(e)); 
+  }
+
+  try { // string
+    CAF_PRINT("string test");
+    auto buff = binary_util::serialize(fixture.str);
+    binary_util::deserialize(buff, &str);
+    CAF_CHECK_EQUAL(fixture.str, str);
+  } catch (std::exception& e) { 
+    CAF_FAILURE(to_verbose_string(e)); 
+  }
+
+  try { // raw_struct
+    CAF_PRINT("raw_struct test");
+    auto buff = binary_util::serialize(fixture.rs);
+    binary_util::deserialize(buff, &rs);
+    CAF_CHECK(fixture.rs == rs);
+  } catch (std::exception& e) { 
+    CAF_FAILURE(to_verbose_string(e)); 
+  }
+
+  try { // single message
+    CAF_PRINT("single message test");
+    auto buff = binary_util::serialize(fixture.msg);
+    binary_util::deserialize(buff, &msg);
+    CAF_CHECK(fixture.msg == msg);
+    CAF_CHECK(is_message(msg).equal(fixture.i32, fixture.te, fixture.str, fixture.rs));
+  } catch (std::exception& e) { 
+    CAF_FAILURE(to_verbose_string(e)); 
+  }
+
+  try { // multiple values
+    CAF_PRINT("multiple value test");
+    message custommsg = make_message(fixture.rs, fixture.te);
+    auto buff = binary_util::serialize(fixture.i32, fixture.str, fixture.msg, custommsg);
+    message msg2;
+    binary_util::deserialize(buff, &i32, &str, &msg, &msg2);
+    CAF_CHECK(tie(i32, str, msg, msg2) == tie(fixture.i32, fixture.str, fixture.msg, custommsg));
+    CAF_CHECK(is_message(msg).equal(fixture.i32, fixture.te, fixture.str, fixture.rs));
+    CAF_CHECK(is_message(msg2).equal(fixture.rs, fixture.te));
+  } catch (std::exception& e) { 
+    CAF_FAILURE(to_verbose_string(e)); 
+  }
+}
+
+void test_string_serialization() {
+  CAF_PRINT(__func__);
+  announce(typeid(raw_struct), uniform_type_info_ptr{new raw_struct_type_info});
+
+  common_fixture fixture {};
+
+  try { // message serialization
+    auto buff = caf::to_string(fixture.msg);
+    auto m = from_string<message>(buff);
+    if (!m) {
+      CAF_PRINTERR("from_string failed");
+      return;
+    }
+    CAF_CHECK(*m == fixture.msg);
+    CAF_CHECK(is_message(*m).equal(fixture.i32, fixture.te, fixture.str, fixture.rs));
+  } catch (std::exception& e) {
+   CAF_FAILURE(to_verbose_string(e)); 
+  }
+
+  try { // verify string format
+    auto input = make_message("hello \"actor world\"!", atom("foo"));
+    auto s = to_string(input);
+    CAF_CHECK_EQUAL(s, R"#(@<>+@str+@atom ( "hello \"actor world\"!", 'foo' ))#");
+    auto m = from_string<message>(s);
+    if (!m) {
+      CAF_PRINTERR("from_string failed");
+      return;
+    }
+    CAF_CHECK(*m == input);
+    CAF_CHECK_EQUAL(to_string(*m), to_string(input));
+  } catch (std::exception& e) {
+    CAF_FAILURE(to_verbose_string(e));
+  }
+}
+
+int main() {
+  CAF_TEST(test_serialization);
+
+  test_ieee_754();
+  CAF_CHECKPOINT();
+
+  test_primitives();
+  CAF_CHECKPOINT();
+
+  test_node_id_from_string();
+  CAF_CHECKPOINT();
+
+  test_binary_serialization();
+  CAF_CHECKPOINT();
 
   test_string_serialization();
+  CAF_CHECKPOINT();
 
-  /*
-    auto oarr = new detail::object_array;
-    oarr->push_back(object::from(static_cast<uint32_t>(42)));
-    oarr->push_back(object::from("foo"  ));
-
-    message atuple1{static_cast<message::raw_ptr>(oarr)};
-    try {
-      bool ok = false;
-      message_handler check {
-        [&](uint32_t val0, string val1) {
-          ok = (val0 == 42 && val1 == "foo");
-        }
-
-      };
-      check(atuple1);
-      CAF_CHECK(ok);
-    }
-    catch (std::exception& e) { CAF_FAILURE(to_verbose_string(e)); }
-
-    detail::meta_cow_tuple<int,int> mct;
-    try {
-      auto tup0 = make_cow_tuple(1, 2);
-      io::buffer wr_buf;
-      binary_serializer bs(&wr_buf, &addressing);
-      mct.serialize(&tup0, &bs);
-      binary_deserializer bd(wr_buf.data(), wr_buf.size(), &addressing);
-      auto ptr = mct.new_instance();
-      auto ptr_guard = make_scope_guard([&] {
-        mct.delete_instance(ptr);
-      });
-      mct.deserialize(ptr, &bd);
-      auto& tref = *reinterpret_cast<cow_tuple<int, int>*>(ptr);
-      CAF_CHECK_EQUAL(get<0>(tup0), get<0>(tref));
-      CAF_CHECK_EQUAL(get<1>(tup0), get<1>(tref));
-    }
-    catch (std::exception& e) { CAF_FAILURE(to_verbose_string(e)); }
-
-    try {
-      // test raw_type in both binary and string serialization
-      raw_struct rs;
-      rs.str = "Lorem ipsum dolor sit amet.";
-      io::buffer wr_buf;
-      binary_serializer bs(&wr_buf, &addressing);
-      bs << rs;
-      binary_deserializer bd(wr_buf.data(), wr_buf.size(), &addressing);
-      raw_struct rs2;
-      uniform_typeid<raw_struct>()->deserialize(&rs2, &bd);
-      CAF_CHECK_EQUAL(rs2.str, rs.str);
-      auto rsstr = caf::to_string(object::from(rs));
-      rs2.str = "foobar";
-      CAF_PRINT("rs as string: " << rsstr);
-      rs2 = from_string<raw_struct>(rsstr);
-      CAF_CHECK_EQUAL(rs2.str, rs.str);
-    }
-    catch (std::exception& e) { CAF_FAILURE(to_verbose_string(e)); }
-
-    try {
-      scoped_actor self;
-      auto ttup = make_message(1, 2, actor{self.get()});
-      io::buffer wr_buf;
-      binary_serializer bs(&wr_buf, &addressing);
-      bs << ttup;
-      binary_deserializer bd(wr_buf.data(), wr_buf.size(), &addressing);
-      message ttup2;
-      uniform_typeid<message>()->deserialize(&ttup2, &bd);
-      CAF_CHECK(ttup  == ttup2);
-    }
-    catch (std::exception& e) { CAF_FAILURE(to_verbose_string(e)); }
-
-    try {
-      scoped_actor self;
-      auto ttup = make_message(1, 2, actor{self.get()});
-      io::buffer wr_buf;
-      binary_serializer bs(&wr_buf, &addressing);
-      bs << ttup;
-      bs << ttup;
-      binary_deserializer bd(wr_buf.data(), wr_buf.size(), &addressing);
-      message ttup2;
-      message ttup3;
-      uniform_typeid<message>()->deserialize(&ttup2, &bd);
-      uniform_typeid<message>()->deserialize(&ttup3, &bd);
-      CAF_CHECK(ttup  == ttup2);
-      CAF_CHECK(ttup  == ttup3);
-      CAF_CHECK(ttup2 == ttup3);
-    }
-    catch (std::exception& e) { CAF_FAILURE(to_verbose_string(e)); }
-
-    try {
-      // serialize b1 to buf
-      io::buffer wr_buf;
-      binary_serializer bs(&wr_buf, &addressing);
-      bs << atuple1;
-      // deserialize b2 from buf
-      binary_deserializer bd(wr_buf.data(), wr_buf.size(), &addressing);
-      message atuple2;
-      uniform_typeid<message>()->deserialize(&atuple2, &bd);
-      bool ok = false;
-      message_handler check {
-        [&](uint32_t val0, string val1) {
-          ok = (val0 == 42 && val1 == "foo");
-        }
-
-      };
-      check(atuple2);
-      CAF_CHECK(ok);
-    }
-    catch (std::exception& e) { CAF_FAILURE(to_verbose_string(e)); }
-
-    CAF_CHECK((is_iterable<int>::value) == false);
-    // string is primitive and thus not identified by is_iterable
-    CAF_CHECK((is_iterable<string>::value) == false);
-    CAF_CHECK((is_iterable<list<int>>::value) == true);
-    CAF_CHECK((is_iterable<map<int, int>>::value) == true);
-    try {  // test meta_object implementation for primitive types
-      auto meta_int = uniform_typeid<uint32_t>();
-      CAF_CHECK(meta_int != nullptr);
-      if (meta_int) {
-        auto o = meta_int->create();
-        get_ref<uint32_t>(o) = 42;
-        auto str = to_string(object::from(get<uint32_t>(o)));
-        CAF_CHECK_EQUAL( "@u32 ( 42 )", str);
-      }
-    }
-    catch (std::exception& e) { CAF_FAILURE(to_verbose_string(e)); }
-
-    // test serialization of enums
-    try {
-      auto enum_tuple = make_message(test_enum::b);
-      // serialize b1 to buf
-      io::buffer wr_buf;
-      binary_serializer bs(&wr_buf, &addressing);
-      bs << enum_tuple;
-      // deserialize b2 from buf
-      binary_deserializer bd(wr_buf.data(), wr_buf.size(), &addressing);
-      message enum_tuple2;
-      uniform_typeid<message>()->deserialize(&enum_tuple2, &bd);
-      bool ok = false;
-      message_handler check {
-        [&](test_enum val) {
-          ok = (val == test_enum::b);
-        }
-
-      };
-      check(enum_tuple2);
-      CAF_CHECK(ok);
-    }
-    catch (std::exception& e) { CAF_FAILURE(to_verbose_string(e)); }
-  */
   shutdown();
   return CAF_TEST_RESULT();
 }

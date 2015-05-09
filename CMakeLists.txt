@@ -45,6 +45,14 @@ math(EXPR CAF_VERSION_PATCH "${VERSION_INT} % 100")
 set(CAF_VERSION
     "${CAF_VERSION_MAJOR}.${CAF_VERSION_MINOR}.${CAF_VERSION_PATCH}")
 
+################################################################################
+#                 check for BIICode build and short circuit                    #
+################################################################################
+
+if (BIICODE)
+  include(bii.cmake)
+  return()
+endif ()
 
 ################################################################################
 #   set output paths for binaries and libraries if not provided by the user    #
@@ -240,7 +248,6 @@ endif()
 if(CAF_NO_MEM_MANAGEMENT)
   add_definitions(-DCAF_NO_MEM_MANAGEMENT)
 endif()
-
 
 ################################################################################
 #                           setup for install target                           #

@@ -1,0 +1,9 @@
+build/**
+manual/**
+benchmarks/**
+examples/**
+libcaf_opencl/examples/**
+libcaf_opencl/unit_testing/**
+cash/**
+nexus/**
+unit_testing/**
