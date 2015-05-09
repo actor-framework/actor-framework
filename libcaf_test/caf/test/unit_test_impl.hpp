@@ -591,6 +591,7 @@ int main(int argc, char** argv) {
     {"available-suites,a", "print available suites"}
   });
   if (res.opts.count("help") > 0) {
+    std::cout << res.helptext << std::endl;
     return 0;
   }
   if (res.opts.count("available-suites") > 0) {
