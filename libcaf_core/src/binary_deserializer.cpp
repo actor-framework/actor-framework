@@ -156,15 +156,22 @@ binary_deserializer::binary_deserializer(const void* bbegin, const void* bend,
 }
 
 const uniform_type_info* binary_deserializer::begin_object() {
-  std::string tname;
-  m_pos = read_range(m_pos, m_end, tname);
   auto uti_map = detail::singletons::get_uniform_type_info_map();
-  auto uti = uti_map->by_uniform_name(tname);
-  if (!uti) {
-    std::string err = "received type name \"";
-    err += tname;
-    err += "\" but no such type is known";
-    throw std::runtime_error(err);
+  detail::uniform_type_info_map::pointer uti;
+  uint16_t nr;
+  m_pos = read_range(m_pos, m_end, nr);
+  if (nr) {
+    uti = uti_map->by_type_nr(nr);
+  } else {
+    std::string tname;
+    m_pos = read_range(m_pos, m_end, tname);
+    uti = uti_map->by_uniform_name(tname);
+    if (!uti) {
+      std::string err = "received type name \"";
+      err += tname;
+      err += "\" but no such type is known";
+      throw std::runtime_error(err);
+    }
   }
   return uti;
 }
