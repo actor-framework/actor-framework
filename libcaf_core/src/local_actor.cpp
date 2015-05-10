@@ -291,11 +291,9 @@ optional<message> post_process_invoke_res(local_actor* self,
     if (ptr) {
       mid = ptr->mid;
       if (mid.is_request() && !mid.is_answered()) {
-        CAF_LOGF_WARNING("actor with ID " << self->id()
-                         << " did not reply to a synchronous request message");
         auto fhdl = fetch_response_promise(self, hdl);
         if (fhdl) {
-          fhdl.deliver(make_message(unit));
+          fhdl.deliver(message{});
         }
       }
     }
