@@ -237,6 +237,21 @@ class server : public event_based_actor {
 
 } // namespace <anonymous>
 
+CAF_TEST(test_void_res) {
+  using testee_a = typed_actor<replies_to<int, int>::with<void>>;
+  auto buddy = spawn_typed([]() -> testee_a::behavior_type {
+    return [](int, int) {
+      // nop
+    };
+  });
+  scoped_actor self;
+  self->sync_send(buddy, 1, 2).await([] {
+    CAF_MESSAGE("received void res");
+  });
+  self->send_exit(buddy, exit_reason::kill);
+  self->await_all_other_actors_done();
+}
+
 CAF_TEST(sync_send) {
   {
     scoped_actor self;
