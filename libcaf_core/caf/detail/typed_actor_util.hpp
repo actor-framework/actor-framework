@@ -109,11 +109,9 @@ struct type_checker<OutputList, F1> {
         typename get_callable_trait<F1>::arg_types,
         std::decay
       >::type;
-    static constexpr size_t args = tl_size<arg_types>::value;
-    static_assert(args <= tl_size<OutputList>::value,
-                  "functor takes too much arguments");
-    using rtypes = typename tl_right<OutputList, args>::type;
-    static_assert(std::is_same<arg_types, rtypes>::value,
+    static_assert(std::is_same<OutputList, arg_types>::value
+                  || (std::is_same<OutputList, type_list<void>>::value
+                     && std::is_same<arg_types, type_list<>>::value),
                   "wrong functor signature");
   }
 };
