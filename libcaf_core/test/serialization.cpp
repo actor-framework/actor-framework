@@ -204,9 +204,11 @@ struct is_message {
   template <typename T, typename... Ts>
   bool equal(T&& t, Ts&&... ts) {
     bool ok = false;
+    // work around for gcc bug
+    auto tup = tie(t, ts...);
     message_handler impl {
       [&](T const& u, Ts const&... us) {
-        ok = tie(t, ts...) == tie(u, us...);
+        ok = tup == tie(u, us...);
       }
     };
     impl(msg);
