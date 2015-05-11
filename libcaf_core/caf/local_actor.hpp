@@ -183,6 +183,13 @@ class local_actor : public abstract_actor, public resumable {
    */
   template <class... Sigs, class... Ts>
   void send(const typed_actor<Sigs...>& dest, Ts&&... xs) {
+    using token =
+      detail::type_list<
+        typename detail::implicit_conversions<
+          typename std::decay<Ts>::type
+        >::type...>;
+    token tk;
+    check_typed_input(dest, tk);
     send_impl(message_id::make(), actor_cast<abstract_channel*>(dest),
               std::forward<Ts>(xs)...);
   }
