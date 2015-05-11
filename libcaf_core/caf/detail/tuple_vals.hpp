@@ -131,7 +131,8 @@ class tuple_vals : public message_data {
     if (et.first != 0) {
       return numbered_type_names[et.first - 1];
     }
-    return uniform_typeid(*et.second)->name();
+    auto uti = uniform_typeid(*et.second, true);
+    return uti ? uti->name() : "-invalid-";
   }
 
   uint16_t type_nr_at(size_t pos) const override {

@@ -513,9 +513,14 @@ namespace detail {
 string to_string_impl(const void* what, const uniform_type_info* utype) {
   std::ostringstream osstr;
   string_serializer strs(osstr);
-  strs.begin_object(utype);
-  utype->serialize(what, &strs);
-  strs.end_object();
+  try {
+    strs.begin_object(utype);
+    utype->serialize(what, &strs);
+    strs.end_object();
+  }
+  catch (std::runtime_error&) {
+    return "---not-serializable---";
+  }
   return osstr.str();
 }
 
