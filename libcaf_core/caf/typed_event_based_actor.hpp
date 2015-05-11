@@ -40,6 +40,9 @@ template <class... Sigs>
 class typed_event_based_actor
     : public abstract_event_based_actor<typed_behavior<Sigs...>, true> {
  public:
+  using base_type =
+    abstract_event_based_actor<typed_behavior<Sigs...>, true>;
+
   using signatures = detail::type_list<Sigs...>;
 
   using behavior_type = typed_behavior<Sigs...>;
@@ -59,6 +62,67 @@ class typed_event_based_actor
       CAF_LOG_DEBUG("make_behavior() did return a valid behavior");
       this->do_become(std::move(bhvr.unbox()), true);
     }
+  }
+
+  using base_type::send;
+  using base_type::delayed_send;
+
+  template <class... DestSigs, class... Ts>
+  void send(message_priority mp, const typed_actor<Sigs...>& dest, Ts&&... xs) {
+    detail::sender_signature_checker<
+      detail::type_list<Sigs...>,
+      detail::type_list<DestSigs...>,
+      detail::type_list<
+        typename detail::implicit_conversions<
+          typename std::decay<Ts>::type
+        >::type...
+      >
+    >::check();
+    base_type::send(mp, dest, std::forward<Ts>(xs)...);
+  }
+
+  template <class... DestSigs, class... Ts>
+  void send(const typed_actor<DestSigs...>& dest, Ts&&... xs) {
+    detail::sender_signature_checker<
+      detail::type_list<Sigs...>,
+      detail::type_list<DestSigs...>,
+      detail::type_list<
+        typename detail::implicit_conversions<
+          typename std::decay<Ts>::type
+        >::type...
+      >
+    >::check();
+    base_type::send(dest, std::forward<Ts>(xs)...);
+  }
+
+  template <class... DestSigs, class... Ts>
+  void delayed_send(message_priority mp, const typed_actor<Sigs...>& dest,
+                    const duration& rtime, Ts&&... xs) {
+    detail::sender_signature_checker<
+      detail::type_list<Sigs...>,
+      detail::type_list<DestSigs...>,
+      detail::type_list<
+        typename detail::implicit_conversions<
+          typename std::decay<Ts>::type
+        >::type...
+      >
+    >::check();
+    base_type::delayed_send(mp, dest, rtime, std::forward<Ts>(xs)...);
+  }
+
+  template <class... DestSigs, class... Ts>
+  void delayed_send(const typed_actor<Sigs...>& dest,
+                    const duration& rtime, Ts&&... xs) {
+    detail::sender_signature_checker<
+      detail::type_list<Sigs...>,
+      detail::type_list<DestSigs...>,
+      detail::type_list<
+        typename detail::implicit_conversions<
+          typename std::decay<Ts>::type
+        >::type...
+      >
+    >::check();
+    base_type::delayed_send(dest, rtime, std::forward<Ts>(xs)...);
   }
 
  protected:
