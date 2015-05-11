@@ -229,6 +229,25 @@ struct common_result_type<T1, T2, Us...> {
   using type = void;
 };
 
+template <class OrigSigs, class DestSigs, class ArgTypes>
+struct sender_signature_checker {
+  static void check() {
+    using dest_output_types =
+      typename deduce_output_type<
+        DestSigs, ArgTypes
+      >::type::first;
+    sender_signature_checker<
+      DestSigs, OrigSigs,
+      dest_output_types
+    >::check();
+  }
+};
+
+template <class OrigSigs, class DestSigs>
+struct sender_signature_checker<OrigSigs, DestSigs, detail::type_list<void>> {
+  static void check() {}
+};
+
 } // namespace detail
 } // namespace caf
 
