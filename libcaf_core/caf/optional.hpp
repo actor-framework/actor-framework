@@ -312,24 +312,24 @@ bool operator!=(const T& lhs, const optional<U>& rhs) {
 /** @relates optional */
 template <class T>
 bool operator==(const optional<T>& val, const none_t&) {
-  return val.valid();
+  return !val.valid();
 }
 
 /** @relates optional */
 template <class T>
 bool operator==(const none_t&, const optional<T>& val) {
-  return val.valid();
+  return !val.valid();
 }
 /** @relates optional */
 template <class T>
-bool operator!=(const optional<T>& val, const none_t&) {
-  return !val.valid();
+bool operator!=(const optional<T>& lhs, const none_t& rhs) {
+  return !(lhs == rhs);
 }
 
 /** @relates optional */
 template <class T>
-bool operator!=(const none_t&, const optional<T>& val) {
-  return !val.valid();
+bool operator!=(const none_t& lhs, const optional<T>& rhs) {
+  return !(lhs == rhs);
 }
 
 } // namespace caf
