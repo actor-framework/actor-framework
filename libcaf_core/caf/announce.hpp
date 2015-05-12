@@ -31,6 +31,7 @@
 #include "caf/detail/abstract_uniform_type_info.hpp"
 
 #include "caf/detail/safe_equal.hpp"
+#include "caf/detail/type_traits.hpp"
 #include "caf/detail/default_uniform_type_info.hpp"
 
 namespace caf {
@@ -135,6 +136,9 @@ compound_member(const std::pair<GRes (Parent::*)() const,
  */
 template <class T, class... Ts>
 inline const uniform_type_info* announce(std::string tname, const Ts&... xs) {
+  static_assert(std::is_pod<T>::value || std::is_empty<T>::value
+                || detail::is_comparable<T, T>::value,
+                "T is neither a POD, nor empty, nor comparable with '=='");
   auto ptr = new detail::default_uniform_type_info<T>(std::move(tname), xs...);
   return announce(typeid(T), uniform_type_info_ptr{ptr});
 }
