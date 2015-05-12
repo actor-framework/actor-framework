@@ -30,9 +30,19 @@ using namespace caf;
 namespace {
 
 constexpr auto s_foo = atom("FooBar");
+
 using abc_atom = atom_constant<atom("abc")>;
 
+struct fixture {
+  ~fixture() {
+    await_all_actors_done();
+    shutdown();
+  }
+};
+
 } // namespace <anonymous>
+
+CAF_TEST_FIXTURE_SCOPE(atom_tests, fixture)
 
 CAF_TEST(basics) {
   // check if there are leading bits that distinguish "zzz" and "000 "
@@ -40,8 +50,8 @@ CAF_TEST(basics) {
   // check if there are leading bits that distinguish "abc" and " abc"
   CAF_CHECK(atom("abc") != atom(" abc"));
   // 'illegal' characters are mapped to whitespaces
-  CAF_CHECK_EQUAL(atom("   "), atom("@!?"));
-  // check to_string impl.
+  CAF_CHECK(atom("   ") == atom("@!?"));
+  // check to_string impl
   CAF_CHECK_EQUAL(to_string(s_foo), "FooBar");
 }
 
@@ -111,7 +121,6 @@ using testee = typed_actor<replies_to<abc_atom>::with<int>>;
 testee::behavior_type testee_impl(testee::pointer self) {
   return {
     [=](abc_atom) {
-      CAF_MESSAGE("received abc_atom");
       self->quit();
       return 42;
     }
@@ -119,15 +128,13 @@ testee::behavior_type testee_impl(testee::pointer self) {
 }
 
 CAF_TEST(sync_send_atom_constants) {
-  {
-    scoped_actor self;
-    auto tst = spawn_typed(testee_impl);
-    self->sync_send(tst, abc_atom::value).await(
-      [](int i) {
-        CAF_CHECK_EQUAL(i, 42);
-      }
-    );
-    self->await_all_other_actors_done();
-  }
-  shutdown();
+  scoped_actor self;
+  auto tst = spawn_typed(testee_impl);
+  self->sync_send(tst, abc_atom::value).await(
+    [](int i) {
+      CAF_CHECK_EQUAL(i, 42);
+    }
+  );
 }
+
+CAF_TEST_FIXTURE_SCOPE_END()

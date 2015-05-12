@@ -925,6 +925,36 @@ CAF_TEST(test_exit_reason_scoped_actor) {
   shutdown();
 }
 
+CAF_TEST(test_spawn_fun) {
+  class my_actor : public event_based_actor {
+   public:
+    behavior make_behavior() override {
+      return {
+        [=](sys_atom, std::function<behavior (my_actor*)>& fun) {
+          become(fun(this));
+        }
+      };
+    }
+  };
+  auto ma = spawn<my_actor>();
+  std::function<behavior (my_actor*)> fun = [](my_actor*) -> behavior {
+    return {
+      [](int x, int y) {
+        return x + y;
+      }
+    };
+  };
+  scoped_actor self;
+  self->send(ma, sys_atom::value, fun);
+  self->sync_send(ma, 10, 20).await(
+    [](int res) {
+      CAF_CHECK_EQUAL(res, 10 + 20);
+    }
+  );
+  self->send_exit(ma, exit_reason::kill);
+  self->await_all_other_actors_done();
+}
+
 CAF_TEST(test_number_of_instances) {
   CAF_CHECK_EQUAL(s_actor_instances.load(), 0);
   CAF_MESSAGE("max. nr. of actor instances: " << s_max_actor_instances.load());

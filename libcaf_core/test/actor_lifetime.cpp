@@ -31,9 +31,9 @@ using namespace caf;
 using check_atom = caf::atom_constant<caf::atom("check")>;
 
 namespace {
+
 std::atomic<long> s_testees;
 std::atomic<long> s_pending_on_exits;
-} // namespace <anonymous>
 
 class testee : public event_based_actor {
  public:
@@ -67,16 +67,13 @@ behavior testee::make_behavior() {
 
 template <class ExitMsgType>
 behavior tester(event_based_actor* self, const actor& aut) {
-  CAF_MESSAGE("tester behaivor entered");
   if (std::is_same<ExitMsgType, exit_msg>::value) {
     self->trap_exit(true);
     self->link_to(aut);
   } else {
     self->monitor(aut);
   }
-  CAF_MESSAGE("tester before `anon_send_exit`");
   anon_send_exit(aut, exit_reason::user_shutdown);
-  CAF_MESSAGE("tester after `anon_send_exit`");
   return {
     [self](const ExitMsgType& msg) {
       // must be still alive at this point
@@ -100,32 +97,47 @@ behavior tester(event_based_actor* self, const actor& aut) {
   };
 }
 
-CAF_TEST(no_spawn_options) {
+struct fixture {
+  ~fixture() {
+    await_all_actors_done();
+    shutdown();
+  }
+};
+
+} // namespace <anonymous>
+
+CAF_TEST_FIXTURE_SCOPE(actor_lifetime_tests, fixture)
+
+CAF_TEST(no_spawn_options_and_exit_msg) {
   spawn<no_spawn_options>(tester<exit_msg>, spawn<testee, no_spawn_options>());
-  await_all_actors_done();
+}
+
+CAF_TEST(no_spawn_options_and_down_msg) {
   spawn<no_spawn_options>(tester<down_msg>, spawn<testee, no_spawn_options>());
-  await_all_actors_done();
 }
 
-CAF_TEST(mixed_spawn_options) {
+CAF_TEST(mixed_spawn_options_and_exit_msg) {
   spawn<detached>(tester<exit_msg>, spawn<testee, no_spawn_options>());
-  await_all_actors_done();
+}
+
+CAF_TEST(mixed_spawn_options_and_down_msg) {
   spawn<detached>(tester<down_msg>, spawn<testee, no_spawn_options>());
-  await_all_actors_done();
 }
 
-CAF_TEST(mixed_spawn_options2) {
+CAF_TEST(mixed_spawn_options2_and_exit_msg) {
   spawn<no_spawn_options>(tester<exit_msg>, spawn<testee, detached>());
-  await_all_actors_done();
+}
+
+CAF_TEST(mixed_spawn_options2_and_down_msg) {
   spawn<no_spawn_options>(tester<down_msg>, spawn<testee, detached>());
-  await_all_actors_done();
 }
 
-CAF_TEST(detached_spawn_options) {
+CAF_TEST(detached_and_exit_msg) {
   spawn<detached>(tester<exit_msg>, spawn<testee, detached>());
-  await_all_actors_done();
-  spawn<detached>(tester<down_msg>, spawn<testee, detached>());
-  await_all_actors_done();
-  shutdown();
 }
 
+CAF_TEST(detached_and_down_msg) {
+  spawn<detached>(tester<down_msg>, spawn<testee, detached>());
+}
+
+CAF_TEST_FIXTURE_SCOPE_END()

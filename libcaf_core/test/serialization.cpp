@@ -122,21 +122,21 @@ enum class test_enum {
   c
 };
 
-struct common_fixture {
+struct fixture {
   int32_t i32 = -345;
   test_enum te = test_enum::b;
   string str = "Lorem ipsum dolor sit amet.";
   raw_struct rs;
   message msg;
 
-  common_fixture() {
+  fixture() {
     announce<test_enum>("test_enum");
     announce(typeid(raw_struct), uniform_type_info_ptr{new raw_struct_type_info});
     rs.str.assign(string(str.rbegin(), str.rend()));
     msg = make_message(i32, te, str, rs);
   }
 
-  ~common_fixture() {
+  ~fixture() {
     await_all_actors_done();
     shutdown();
   }
@@ -211,7 +211,7 @@ struct is_message {
 
 } // namespace <anonymous>
 
-CAF_TEST_FIXTURE_SCOPE(serialization_tests, common_fixture)
+CAF_TEST_FIXTURE_SCOPE(serialization_tests, fixture)
 
 CAF_TEST(test_serialization) {
   using token = std::integral_constant<int, detail::impl_id<strmap>()>;

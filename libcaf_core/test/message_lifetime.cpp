@@ -31,6 +31,13 @@ using namespace caf;
 
 namespace {
 
+struct fixture {
+  ~fixture() {
+    await_all_actors_done();
+    shutdown();
+  }
+};
+
 class testee : public event_based_actor {
  public:
   testee();
@@ -81,13 +88,13 @@ behavior tester::make_behavior() {
   send(m_aut, m_msg);
   return {
     on(1, 2, 3) >> [=] {
-      CAF_CHECK_EQUAL(current_message().cvals()->get_reference_count(), 2);
-      CAF_CHECK(current_message().cvals().get() == m_msg.cvals().get());
+      CAF_CHECK(current_message().cvals()->get_reference_count() == 2
+                && current_message().cvals().get() == m_msg.cvals().get());
     },
     [=](const down_msg& dm) {
-      CAF_CHECK(dm.source == m_aut);
-      CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
-      CAF_CHECK_EQUAL(current_message().cvals()->get_reference_count(), 1);
+      CAF_CHECK(dm.source == m_aut
+                && dm.reason == exit_reason::normal
+                && current_message().cvals()->get_reference_count() == 1);
       quit();
     },
     others >> [&] {
@@ -96,7 +103,19 @@ behavior tester::make_behavior() {
   };
 }
 
-void message_lifetime_in_scoped_actor() {
+template <spawn_options Os>
+void test_message_lifetime() {
+  // put some preassure on the scheduler (check for thread safety)
+  for (size_t i = 0; i < 100; ++i) {
+    spawn<tester>(spawn<testee, Os>());
+  }
+}
+
+} // namespace <anonymous>
+
+CAF_TEST_FIXTURE_SCOPE(message_lifetime_tests, fixture)
+
+CAF_TEST(message_lifetime_in_scoped_actor) {
   auto msg = make_message(1, 2, 3);
   scoped_actor self;
   self->send(self, msg);
@@ -121,30 +140,12 @@ void message_lifetime_in_scoped_actor() {
   CAF_CHECK_EQUAL(msg.get_as<int>(0), 42);
 }
 
-template <spawn_options Os>
-void test_message_lifetime() {
-  message_lifetime_in_scoped_actor();
-  // put some preassure on the scheduler (check for thread safety)
-  for (size_t i = 0; i < 100; ++i) {
-    spawn<tester>(spawn<testee, Os>());
-  }
-}
-
-} // namespace <anonymous>
-
-CAF_TEST(test_message_lifetime_in_scoped_actor) {
-  message_lifetime_in_scoped_actor();
-}
-
-
-CAF_TEST(test_message_lifetime_no_spawn_options) {
-  CAF_MESSAGE("test_message_lifetime<no_spawn_options>");
+CAF_TEST(message_lifetime_no_spawn_options) {
   test_message_lifetime<no_spawn_options>();
 }
 
-CAF_TEST(test_message_lifetime_priority_aware) {
-  CAF_MESSAGE("test_message_lifetime<priority_aware>");
+CAF_TEST(message_lifetime_priority_aware) {
   test_message_lifetime<priority_aware>();
-  await_all_actors_done();
-  shutdown();
 }
+
+CAF_TEST_FIXTURE_SCOPE_END()

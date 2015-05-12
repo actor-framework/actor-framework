@@ -81,6 +81,10 @@ void watchdog::stop() {
   delete s_watchdog;
 }
 
+check_sequence::~check_sequence() {
+  // nop
+}
+
 test::test(std::string test_name)
     : m_expected_failures(0),
       m_name(std::move(test_name)),
@@ -112,6 +116,11 @@ void test::fail(std::string msg, bool expected) {
 
 const std::string& test::name() const {
   return m_name;
+}
+
+void test::run() {
+  auto runner = make_sequence();
+  runner->run();
 }
 
 namespace detail {
@@ -241,10 +250,16 @@ char* engine::path() {
   return instance().m_path;
 }
 
-void engine::add(const char* cstr_name, test_generator generator) {
+void engine::add(const char* cstr_name, std::unique_ptr<test> ptr) {
   std::string name = cstr_name ? cstr_name : "";
   auto& suite = instance().m_suites[name];
-  suite.emplace_back(std::move(generator));
+  for (auto& x : suite) {
+    if (x->name() == ptr->name()) {
+      std::cout << "duplicate test name: " << ptr->name() << '\n';
+      std::abort();
+    }
+  }
+  suite.emplace_back(std::move(ptr));
 }
 
 bool engine::run(bool colorize,

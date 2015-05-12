@@ -39,6 +39,14 @@ namespace test {
 /**
  * A sequence of *checks*.
  */
+class check_sequence {
+  virtual ~check_sequence();
+  virtual void run() = 0;
+};
+
+/**
+ * A sequence of *checks*.
+ */
 class test {
  public:
   test(std::string name);
@@ -61,7 +69,9 @@ class test {
     return m_bad;
   }
 
-  virtual void run() = 0;
+  void run();
+
+  virtual std::unique_ptr<check_sequence> make_sequence() = 0;
 
  private:
   size_t m_expected_failures;
@@ -219,14 +229,12 @@ class engine {
    */
   static char* path();
 
-  using test_generator = std::function<std::unique_ptr<test> ()>;
-
   /**
    * Adds a test to the engine.
    * @param name The name of the suite.
    * @param t The test to register.
    */
-  static void add(const char* name, test_generator generator);
+  static void add(const char* name, std::unique_ptr<test> ptr);
 
   /**
    * Invokes tests in all suites.
@@ -296,7 +304,7 @@ class engine {
   const char* m_check_file = "<none>";
   size_t m_check_line = 0;
   test* m_current_test = nullptr;
-  std::map<std::string, std::vector<test_generator>> m_suites;
+  std::map<std::string, std::vector<std::unique_ptr<test>>> m_suites;
 };
 
 namespace detail {
@@ -598,8 +606,7 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 
 #define CAF_TEST(name)                                                         \
   namespace {                                                                  \
-  struct CAF_UNIQUE(test) : public ::caf::test::test,                          \
-                            public caf_test_case_auto_fixture {                \
+  struct CAF_UNIQUE(test) : public ::caf::test::test {                         \
     CAF_UNIQUE(test)() : test{CAF_XSTR(name)} { }                              \
     void run() final;                                                          \
   };                                                                           \
