@@ -70,6 +70,8 @@ class test {
   size_t m_bad;
 };
 
+struct dummy_fixture { };
+
 namespace detail {
 
 // thrown when a required check fails
@@ -217,12 +219,14 @@ class engine {
    */
   static char* path();
 
+  using test_generator = std::function<std::unique_ptr<test> ()>;
+
   /**
    * Adds a test to the engine.
    * @param name The name of the suite.
    * @param t The test to register.
    */
-  static void add(const char* name, std::unique_ptr<test> t);
+  static void add(const char* name, test_generator generator);
 
   /**
    * Invokes tests in all suites.
@@ -292,7 +296,7 @@ class engine {
   const char* m_check_file = "<none>";
   size_t m_check_line = 0;
   test* m_current_test = nullptr;
-  std::map<std::string, std::vector<std::unique_ptr<test>>> m_suites;
+  std::map<std::string, std::vector<test_generator>> m_suites;
 };
 
 namespace detail {
@@ -300,7 +304,7 @@ namespace detail {
 template <class T>
 struct adder {
   adder(char const* name) {
-    engine::add(name, std::unique_ptr<T>{new T});
+    engine::add(name, [] { return std::unique_ptr<T>{new T}; });
   }
 };
 
@@ -530,6 +534,9 @@ private:
 } // namespace test
 } // namespace caf
 
+// on the global namespace so that it can hidden via namespace-scoping
+using caf_test_case_auto_fixture = caf::test::dummy_fixture;
+
 #define CAF_TEST_PR(level, msg)                                                \
   ::caf::test::logger::instance(). level ()                                    \
     << ::caf::test::engine::color(::caf::test::yellow)                         \
@@ -591,7 +598,8 @@ private:
 
 #define CAF_TEST(name)                                                         \
   namespace {                                                                  \
-  struct CAF_UNIQUE(test) : public ::caf::test::test {                         \
+  struct CAF_UNIQUE(test) : public ::caf::test::test,                          \
+                            public caf_test_case_auto_fixture {                \
     CAF_UNIQUE(test)() : test{CAF_XSTR(name)} { }                              \
     void run() final;                                                          \
   };                                                                           \
@@ -600,6 +608,12 @@ private:
   };                                                                           \
   } /* namespace <anonymous> */                                                \
   void CAF_UNIQUE(test)::run()
+
+#define CAF_TEST_FIXTURE_SCOPE(scope_name, fixture_name)                       \
+  namespace scope_name { using caf_test_case_auto_fixture = fixture_name ;
+
+#define CAF_TEST_FIXTURE_SCOPE_END()                                           \
+  } // close namespace
 
 // Boost Test compatibility macro
 #define CAF_CHECK_EQUAL(x, y) CAF_CHECK(x == y)

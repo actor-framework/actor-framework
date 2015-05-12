@@ -241,15 +241,10 @@ char* engine::path() {
   return instance().m_path;
 }
 
-void engine::add(const char* name, std::unique_ptr<test> t) {
-  auto& suite = instance().m_suites[std::string{name ? name : ""}];
-  for (auto& x : suite) {
-    if (x->name() == t->name()) {
-      std::cout << "duplicate test name: " << t->name() << '\n';
-      std::abort();
-    }
-  }
-  suite.emplace_back(std::move(t));
+void engine::add(const char* cstr_name, test_generator generator) {
+  std::string name = cstr_name ? cstr_name : "";
+  auto& suite = instance().m_suites[name];
+  suite.emplace_back(std::move(generator));
 }
 
 bool engine::run(bool colorize,
@@ -349,7 +344,8 @@ bool engine::run(bool colorize,
     auto pad = std::string((bar.size() - suite_name.size()) / 2, ' ');
     bool displayed_header = false;
     size_t tests_ran = 0;
-    for (auto& t : p.second) {
+    for (auto& generator : p.second) {
+      auto t = generator();
       if (!enabled(tests, not_tests, t->name())) {
         continue;
       }
