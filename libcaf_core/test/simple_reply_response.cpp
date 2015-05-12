@@ -24,7 +24,7 @@
 
 using namespace caf;
 
-CAF_TEST(test_simple_reply_response) {
+CAF_TEST(simple_reply_response) {
   auto s = spawn([](event_based_actor* self) -> behavior {
     return (
       others >> [=]() -> message {

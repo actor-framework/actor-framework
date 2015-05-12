@@ -55,25 +55,24 @@ void test_invalid_unpublish(const actor& published, uint16_t port) {
   anon_send_exit(d, exit_reason::user_shutdown);
 }
 
-CAF_TEST(test_unpublish) {
-  auto d = spawn<dummy>();
-  auto port = io::publish(d, 0);
-  CAF_MESSAGE("published actor on port " << port);
-  test_invalid_unpublish(d, port);
-  CAF_MESSAGE("finished `invalid_unpublish`");
-  io::unpublish(d, port);
-  // must fail now
-  try {
-    CAF_MESSAGE("expect exception...");
-    io::remote_actor("127.0.0.1", port);
-    CAF_TEST_ERROR("unexpected: remote actor succeeded!");
-  } catch (network_error&) {
-    CAF_MESSAGE("unpublish succeeded");
+CAF_TEST(unpublishing) {
+  { // scope for local variables
+    auto d = spawn<dummy>();
+    auto port = io::publish(d, 0);
+    CAF_MESSAGE("published actor on port " << port);
+    test_invalid_unpublish(d, port);
+    CAF_MESSAGE("finished `invalid_unpublish`");
+    io::unpublish(d, port);
+    // must fail now
+    try {
+      CAF_MESSAGE("expect exception...");
+      io::remote_actor("127.0.0.1", port);
+      CAF_TEST_ERROR("unexpected: remote actor succeeded!");
+    } catch (network_error&) {
+      CAF_MESSAGE("unpublish succeeded");
+    }
+    anon_send_exit(d, exit_reason::user_shutdown);
   }
-  anon_send_exit(d, exit_reason::user_shutdown);
-}
-
-CAF_TEST(test_dtor_called) {
   await_all_actors_done();
   shutdown();
   CAF_CHECK_EQUAL(s_dtor_called.load(), 2);

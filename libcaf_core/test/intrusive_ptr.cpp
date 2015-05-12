@@ -20,10 +20,10 @@
 #define CAF_SUITE intrusive_ptr
 #include "caf/test/unit_test.hpp"
 
-// this test dosn't test thread-safety of intrusive_ptr
+// this test dosn't verify thread-safety of intrusive_ptr
 // however, it is thread safe since it uses atomic operations only
 
-#include <list>
+#include <vector>
 #include <cstddef>
 
 #include "caf/ref_counted.hpp"
@@ -92,73 +92,64 @@ class0ptr get_test_ptr() {
   return get_test_rc();
 }
 
+struct fixture {
+  ~fixture() {
+    CAF_CHECK_EQUAL(class0_instances, 0);
+    CAF_CHECK_EQUAL(class1_instances, 0);
+  }
+};
+
 } // namespace <anonymous>
 
+CAF_TEST_FIXTURE_SCOPE(atom_tests, fixture)
+
 CAF_TEST(make_counted) {
-  {
-    auto p = make_counted<class0>();
-    CAF_CHECK_EQUAL(class0_instances, 1);
-    CAF_CHECK(p->unique());
-  }
-  CAF_CHECK_EQUAL(class0_instances, 0);
-  CAF_CHECK_EQUAL(class1_instances, 0);
+  auto p = make_counted<class0>();
+  CAF_CHECK_EQUAL(class0_instances, 1);
+  CAF_CHECK(p->unique());
 }
 
 CAF_TEST(reset) {
-  {
-    class0ptr p;
-    p.reset(new class0, false);
-    CAF_CHECK_EQUAL(class0_instances, 1);
-    CAF_CHECK(p->unique());
-  }
-  CAF_CHECK_EQUAL(class0_instances, 0);
-  CAF_CHECK_EQUAL(class1_instances, 0);
+  class0ptr p;
+  p.reset(new class0, false);
+  CAF_CHECK_EQUAL(class0_instances, 1);
+  CAF_CHECK(p->unique());
 }
 
 CAF_TEST(get_test_rc) {
-  {
-    class0ptr p1;
-    p1 = get_test_rc();
-    class0ptr p2 = p1;
-    CAF_CHECK_EQUAL(class0_instances, 1);
-    CAF_CHECK_EQUAL(p1->unique(), false);
-  }
-  CAF_CHECK_EQUAL(class0_instances, 0);
-  CAF_CHECK_EQUAL(class1_instances, 0);
+  class0ptr p1;
+  p1 = get_test_rc();
+  class0ptr p2 = p1;
+  CAF_CHECK_EQUAL(class0_instances, 1);
+  CAF_CHECK_EQUAL(p1->unique(), false);
 }
 
 CAF_TEST(list) {
-  {
-    std::list<class0ptr> pl;
-    pl.push_back(get_test_ptr());
-    pl.push_back(get_test_rc());
-    pl.push_back(pl.front()->create());
-    CAF_CHECK(pl.front()->unique());
-    CAF_CHECK_EQUAL(class0_instances, 3);
-  }
-  CAF_CHECK_EQUAL(class0_instances, 0);
-  CAF_CHECK_EQUAL(class1_instances, 0);
+  std::vector<class0ptr> pl;
+  pl.push_back(get_test_ptr());
+  pl.push_back(get_test_rc());
+  pl.push_back(pl.front()->create());
+  CAF_CHECK(pl.front()->unique());
+  CAF_CHECK_EQUAL(class0_instances, 3);
 }
 
 CAF_TEST(full_test) {
-  {
-    auto p1 = make_counted<class0>();
-    CAF_CHECK_EQUAL(p1->is_subtype(), false);
-    CAF_CHECK_EQUAL(p1->unique(), true);
-    CAF_CHECK_EQUAL(class0_instances, 1);
-    CAF_CHECK_EQUAL(class1_instances, 0);
-    p1.reset(new class1, false);
-    CAF_CHECK_EQUAL(p1->is_subtype(), true);
-    CAF_CHECK_EQUAL(p1->unique(), true);
-    CAF_CHECK_EQUAL(class0_instances, 0);
-    CAF_CHECK_EQUAL(class1_instances, 1);
-    auto p2 = make_counted<class1>();
-    p1 = p2;
-    CAF_CHECK_EQUAL(p1->unique(), false);
-    CAF_CHECK_EQUAL(class0_instances, 0);
-    CAF_CHECK_EQUAL(class1_instances, 1);
-    CAF_CHECK(p1 == p2);
-  }
-  CAF_CHECK_EQUAL(class0_instances, 0);
+  auto p1 = make_counted<class0>();
+  CAF_CHECK_EQUAL(p1->is_subtype(), false);
+  CAF_CHECK_EQUAL(p1->unique(), true);
+  CAF_CHECK_EQUAL(class0_instances, 1);
   CAF_CHECK_EQUAL(class1_instances, 0);
+  p1.reset(new class1, false);
+  CAF_CHECK_EQUAL(p1->is_subtype(), true);
+  CAF_CHECK_EQUAL(p1->unique(), true);
+  CAF_CHECK_EQUAL(class0_instances, 0);
+  CAF_CHECK_EQUAL(class1_instances, 1);
+  auto p2 = make_counted<class1>();
+  p1 = p2;
+  CAF_CHECK_EQUAL(p1->unique(), false);
+  CAF_CHECK_EQUAL(class0_instances, 0);
+  CAF_CHECK_EQUAL(class1_instances, 1);
+  CAF_CHECK(p1 == p2);
 }
+
+CAF_TEST_FIXTURE_SCOPE_END()

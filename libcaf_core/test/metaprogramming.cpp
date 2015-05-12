@@ -45,7 +45,7 @@ struct is_int : std::false_type {};
 template <>
 struct is_int<int> : std::true_type {};
 
-CAF_TEST(test_metaprogramming) {
+CAF_TEST(metaprogramming) {
   using if1 = type_list<replies_to<int, double>::with<void>,
                         replies_to<int>::with<int>>;
   using if2 = type_list<replies_to<int>::with<int>,
@@ -93,5 +93,4 @@ CAF_TEST(test_metaprogramming) {
     CAF_CHECK((tl_is_strict_subset<list_a, list_a>::value));
     CAF_CHECK((tl_is_strict_subset<list_b, list_b>::value));
   }
-  shutdown();
 }

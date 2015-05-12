@@ -44,7 +44,7 @@ std::string str_hash(const std::string& what) {
 
 // verify ripemd implementation with example hash results from
 // http://homes.esat.kuleuven.be/~bosselae/ripemd160.html
-CAF_TEST(test_ripemd_160) {
+CAF_TEST(hash_results) {
   CAF_CHECK_EQUAL("9c1185a5c5e9fc54612808977ee8f548b2258d31", str_hash(""));
   CAF_CHECK_EQUAL("0bdc9d2d256b3ee9daae347be6f4dc835a467ffe", str_hash("a"));
   CAF_CHECK_EQUAL("8eb208f7e05d987a9b044a8e98c6b087f15a0bfc", str_hash("abc"));

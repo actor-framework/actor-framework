@@ -386,33 +386,41 @@ behavior counting_actor::make_behavior() {
   return {};
 }
 
-CAF_TEST(test_counting_actor) {
-  { // lifetime scope of temporary counting_actor handle
-    spawn<counting_actor>();
+struct fixture {
+  ~fixture() {
     await_all_actors_done();
+    shutdown();
+    CAF_CHECK_EQUAL(s_actor_instances.load(), 0);
+    CAF_MESSAGE("max. # of actor instances: " << s_max_actor_instances.load());
   }
+};
+
+} // namespace <anonymous>
+
+CAF_TEST_FIXTURE_SCOPE(atom_tests, fixture)
+
+CAF_TEST(count_mailbox) {
+  spawn<counting_actor>();
 }
 
-CAF_TEST(test_send) {
+CAF_TEST(send_to_self) {
   scoped_actor self;
   self->send(self, 1, 2, 3, true);
   self->receive(on(1, 2, 3, true) >> [] { });
   self->send(self, message{});
   self->receive(on() >> [] { });
-  self->await_all_other_actors_done();
 }
 
-CAF_TEST(test_detached_actors_and_schedulued_actors) {
+CAF_TEST(detached_actors_and_schedulued_actors) {
   scoped_actor self;
   // check whether detached actors and scheduled actors interact w/o errors
   auto m = spawn<master, detached>();
   spawn<slave>(m);
   spawn<slave>(m);
   self->send(m, atom("done"));
-  self->await_all_other_actors_done();
 }
 
-CAF_TEST(test_self_receive_with_zero_timeout) {
+CAF_TEST(self_receive_with_zero_timeout) {
   scoped_actor self;
   self->receive(
     others >> [&] {
@@ -421,112 +429,102 @@ CAF_TEST(test_self_receive_with_zero_timeout) {
     },
     after(chrono::seconds(0)) >> [] { /* mailbox empty */ }
   );
-  self->await_all_other_actors_done();
 }
 
-CAF_TEST(test_mirror) {
-  {
-    scoped_actor self;
-    auto mirror = self->spawn<simple_mirror, monitored>();
-    self->send(mirror, "hello mirror");
-    self->receive (
-      on("hello mirror") >> [] {
-        CAF_MESSAGE("received \"hello mirror\"");
-      },
-      others >> [&] {
+CAF_TEST(mirror) {
+  scoped_actor self;
+  auto mirror = self->spawn<simple_mirror, monitored>();
+  self->send(mirror, "hello mirror");
+  self->receive (
+    on("hello mirror") >> [] {
+      CAF_MESSAGE("received \"hello mirror\"");
+    },
+    others >> [&] {
+      CAF_TEST_ERROR("Unexpected message: "
+                     << to_string(self->current_message()));
+    }
+  );
+  self->send_exit(mirror, exit_reason::user_shutdown);
+  self->receive (
+    [&](const down_msg& dm) {
+      if (dm.reason == exit_reason::user_shutdown) {
+        CAF_MESSAGE("received `down_msg`");
+      }
+      else {
         CAF_TEST_ERROR("Unexpected message: "
                        << to_string(self->current_message()));
       }
-    );
-    self->send_exit(mirror, exit_reason::user_shutdown);
-    self->receive (
-      [&](const down_msg& dm) {
-        if (dm.reason == exit_reason::user_shutdown) {
-          CAF_MESSAGE("received `down_msg`");
-        }
-        else {
-          CAF_TEST_ERROR("Unexpected message: "
-                         << to_string(self->current_message()));
-        }
-      },
-      others >> [&] {
-        CAF_TEST_ERROR("Unexpected message"
-                       << to_string(self->current_message()));
-      }
-    );
-    self->await_all_other_actors_done();
-  }
+    },
+    others >> [&] {
+      CAF_TEST_ERROR("Unexpected message"
+                     << to_string(self->current_message()));
+    }
+  );
 }
 
-CAF_TEST(test_detached_mirror) {
-  {
-    scoped_actor self;
-    auto mirror = self->spawn<simple_mirror, monitored+detached>();
-    self->send(mirror, "hello mirror");
-    self->receive (
-      on("hello mirror") >> [] {
-        CAF_MESSAGE("received \"hello mirror\"");
-      },
-      others >> [&] {
+CAF_TEST(detached_mirror) {
+  scoped_actor self;
+  auto mirror = self->spawn<simple_mirror, monitored+detached>();
+  self->send(mirror, "hello mirror");
+  self->receive (
+    on("hello mirror") >> [] {
+      CAF_MESSAGE("received \"hello mirror\"");
+    },
+    others >> [&] {
+      CAF_TEST_ERROR("Unexpected message: "
+                     << to_string(self->current_message()));
+    }
+  );
+  self->send_exit(mirror, exit_reason::user_shutdown);
+  self->receive (
+    [&](const down_msg& dm) {
+      if (dm.reason == exit_reason::user_shutdown) {
+        CAF_MESSAGE("received `down_msg`");
+      }
+      else {
         CAF_TEST_ERROR("Unexpected message: "
                        << to_string(self->current_message()));
       }
-    );
-    self->send_exit(mirror, exit_reason::user_shutdown);
-    self->receive (
-      [&](const down_msg& dm) {
-        if (dm.reason == exit_reason::user_shutdown) {
-          CAF_MESSAGE("received `down_msg`");
-        }
-        else {
-          CAF_TEST_ERROR("Unexpected message: "
-                         << to_string(self->current_message()));
-        }
-      },
-      others >> [&] {
+    },
+    others >> [&] {
+      CAF_TEST_ERROR("Unexpected message: "
+                     << to_string(self->current_message()));
+    }
+  );
+}
+
+CAF_TEST(priority_aware_mirror) {
+  scoped_actor self;
+  auto mirror = self->spawn<simple_mirror, monitored + priority_aware>();
+  CAF_MESSAGE("spawned mirror");
+  self->send(mirror, "hello mirror");
+  self->receive (
+    on("hello mirror") >> [] {
+      CAF_MESSAGE("received \"hello mirror\"");
+    },
+    others >> [&] {
+      CAF_TEST_ERROR("Unexpected message: " << to_string(self->current_message()));
+    }
+  );
+  self->send_exit(mirror, exit_reason::user_shutdown);
+  self->receive (
+    [&](const down_msg& dm) {
+      if (dm.reason == exit_reason::user_shutdown) {
+        CAF_MESSAGE("received `down_msg`");
+      }
+      else {
         CAF_TEST_ERROR("Unexpected message: "
                        << to_string(self->current_message()));
       }
-    );
-    self->await_all_other_actors_done();
-  }
+    },
+    others >> [&] {
+      CAF_TEST_ERROR("Unexpected message: "
+                     << to_string(self->current_message()));
+    }
+  );
 }
 
-CAF_TEST(test_priority_aware_mirror) {
-  {
-    scoped_actor self;
-    auto mirror = self->spawn<simple_mirror, monitored + priority_aware>();
-    CAF_MESSAGE("spawned mirror");
-    self->send(mirror, "hello mirror");
-    self->receive (
-      on("hello mirror") >> [] {
-        CAF_MESSAGE("received \"hello mirror\"");
-      },
-      others >> [&] {
-        CAF_TEST_ERROR("Unexpected message: " << to_string(self->current_message()));
-      }
-    );
-    self->send_exit(mirror, exit_reason::user_shutdown);
-    self->receive (
-      [&](const down_msg& dm) {
-        if (dm.reason == exit_reason::user_shutdown) {
-          CAF_MESSAGE("received `down_msg`");
-        }
-        else {
-          CAF_TEST_ERROR("Unexpected message: "
-                         << to_string(self->current_message()));
-        }
-      },
-      others >> [&] {
-        CAF_TEST_ERROR("Unexpected message: "
-                       << to_string(self->current_message()));
-      }
-    );
-    self->await_all_other_actors_done();
-  }
-}
-
-CAF_TEST(test_echo_actor) {
+CAF_TEST(echo_actor) {
   scoped_actor self;
   auto mecho = spawn<echo_actor>();
   self->send(mecho, "hello echo");
@@ -536,33 +534,31 @@ CAF_TEST(test_echo_actor) {
       CAF_TEST_ERROR("Unexpected message: " << to_string(self->current_message()));
     }
   );
-  self->await_all_other_actors_done();
 }
 
-CAF_TEST(test_delayed_send) {
+CAF_TEST(delayed_send) {
   scoped_actor self;
   self->delayed_send(self, chrono::milliseconds(1), 1, 2, 3);
   self->receive(on(1, 2, 3) >> [] { });
-  self->await_all_other_actors_done();
 }
 
-CAF_TEST(test_timeout) {
+CAF_TEST(delayed_spawn) {
   scoped_actor self;
   self->receive(after(chrono::milliseconds(1)) >> [] { });
   spawn<testee1>();
-  self->await_all_other_actors_done();
 }
 
-CAF_TEST(test_spawn_event_testee2) {
+CAF_TEST(spawn_event_testee2) {
   scoped_actor self;
   spawn_event_testee2(self);
-  self->receive(on(atom("t2done")) >> [] {
-    CAF_MESSAGE("Received \"t2done\"");
-  });
-  self->await_all_other_actors_done();
+  self->receive(
+    on(atom("t2done")) >> [] {
+      CAF_MESSAGE("Received \"t2done\"");
+    }
+  );
 }
 
-CAF_TEST(test_chopstick) {
+CAF_TEST(chopsticks) {
   scoped_actor self;
   auto cstk = spawn<chopstick>();
   self->send(cstk, atom("take"), self);
@@ -576,10 +572,9 @@ CAF_TEST(test_chopstick) {
                      to_string(self->current_message()));
     }
   );
-  self->await_all_other_actors_done();
 }
 
-CAF_TEST(test_sync_send) {
+CAF_TEST(sync_sends) {
   scoped_actor self;
   auto sync_testee = spawn<blocking_api>([](blocking_actor* s) {
     s->receive (
@@ -637,7 +632,7 @@ CAF_TEST(test_sync_send) {
   );
 }
 
-CAF_TEST(test_inflater) {
+CAF_TEST(inflater) {
   scoped_actor self;
   struct inflater : public event_based_actor {
    public:
@@ -679,10 +674,9 @@ CAF_TEST(test_inflater) {
   auto poison_pill = make_message(atom("done"));
   anon_send(joe, poison_pill);
   anon_send(bob, poison_pill);
-  self->await_all_other_actors_done();
 }
 
-CAF_TEST(test_kr34t0r) {
+CAF_TEST(kr34t0r) {
   class kr34t0r : public event_based_actor {
    public:
     kr34t0r(string name, actor pal)
@@ -716,10 +710,9 @@ CAF_TEST(test_kr34t0r) {
   scoped_actor self;
   auto joe_the_second = spawn<kr34t0r>("Joe", invalid_actor);
   self->send(joe_the_second, atom("done"));
-  self->await_all_other_actors_done();
 }
 
-CAF_TEST(test_function_spawn) {
+CAF_TEST(function_spawn) {
   scoped_actor self;
   auto f = [](const string& name) -> behavior {
     return (
@@ -744,7 +737,6 @@ CAF_TEST(test_function_spawn) {
   );
   self->send_exit(a1, exit_reason::user_shutdown);
   self->send_exit(a2, exit_reason::user_shutdown);
-  self->await_all_other_actors_done();
 }
 
 using abc_atom = atom_constant<atom("abc")>;
@@ -760,7 +752,7 @@ typed_testee::behavior_type testee() {
   };
 }
 
-CAF_TEST(test_typed_testee) {
+CAF_TEST(typed_await) {
   scoped_actor self;
   auto x = spawn_typed(testee);
   self->sync_send(x, abc_atom()).await(
@@ -769,11 +761,10 @@ CAF_TEST(test_typed_testee) {
     }
   );
   self->send_exit(x, exit_reason::user_shutdown);
-  self->await_all_other_actors_done();
 }
 
 // tests attach_functor() inside of an actor's constructor
-CAF_TEST(test_constructor_attach) {
+CAF_TEST(constructor_attach) {
   class testee : public event_based_actor {
    public:
     testee(actor buddy) : m_buddy(buddy) {
@@ -850,7 +841,7 @@ class exception_testee : public event_based_actor {
   }
 };
 
-CAF_TEST(test_custom_exception_handler) {
+CAF_TEST(custom_exception_handler) {
   auto handler = [](const std::exception_ptr& eptr) -> optional<uint32_t> {
     try {
       std::rethrow_exception(eptr);
@@ -894,7 +885,7 @@ CAF_TEST(test_custom_exception_handler) {
   );
 }
 
-CAF_TEST(test_kill) {
+CAF_TEST(kill_the_immortal) {
   auto wannabe_immortal = spawn([](event_based_actor* self) -> behavior {
     self->trap_exit(true);
     return {
@@ -914,50 +905,10 @@ CAF_TEST(test_kill) {
   );
 }
 
-CAF_TEST(test_exit_reason_scoped_actor) {
-  // test setting exit reasons for scoped actors
-  { // lifetime scope of self
-    scoped_actor self;
-    self->spawn<linked>([]() -> behavior { return others >> [] {}; });
-    self->planned_exit_reason(exit_reason::user_defined);
-  }
-  await_all_actors_done();
-  shutdown();
-}
-
-CAF_TEST(test_spawn_fun) {
-  class my_actor : public event_based_actor {
-   public:
-    behavior make_behavior() override {
-      return {
-        [=](sys_atom, std::function<behavior (my_actor*)>& fun) {
-          become(fun(this));
-        }
-      };
-    }
-  };
-  auto ma = spawn<my_actor>();
-  std::function<behavior (my_actor*)> fun = [](my_actor*) -> behavior {
-    return {
-      [](int x, int y) {
-        return x + y;
-      }
-    };
-  };
+CAF_TEST(exit_reason_in_scoped_actor) {
   scoped_actor self;
-  self->send(ma, sys_atom::value, fun);
-  self->sync_send(ma, 10, 20).await(
-    [](int res) {
-      CAF_CHECK_EQUAL(res, 10 + 20);
-    }
-  );
-  self->send_exit(ma, exit_reason::kill);
-  self->await_all_other_actors_done();
+  self->spawn<linked>([]() -> behavior { return others >> [] {}; });
+  self->planned_exit_reason(exit_reason::user_defined);
 }
 
-CAF_TEST(test_number_of_instances) {
-  CAF_CHECK_EQUAL(s_actor_instances.load(), 0);
-  CAF_MESSAGE("max. nr. of actor instances: " << s_max_actor_instances.load());
-}
-
-} // namespace <anonymous>
+CAF_TEST_FIXTURE_SCOPE_END()

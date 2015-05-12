@@ -81,10 +81,6 @@ void watchdog::stop() {
   delete s_watchdog;
 }
 
-check_sequence::~check_sequence() {
-  // nop
-}
-
 test::test(std::string test_name)
     : m_expected_failures(0),
       m_name(std::move(test_name)),
@@ -116,11 +112,6 @@ void test::fail(std::string msg, bool expected) {
 
 const std::string& test::name() const {
   return m_name;
-}
-
-void test::run() {
-  auto runner = make_sequence();
-  runner->run();
 }
 
 namespace detail {
@@ -359,8 +350,7 @@ bool engine::run(bool colorize,
     auto pad = std::string((bar.size() - suite_name.size()) / 2, ' ');
     bool displayed_header = false;
     size_t tests_ran = 0;
-    for (auto& generator : p.second) {
-      auto t = generator();
+    for (auto& t : p.second) {
       if (!enabled(tests, not_tests, t->name())) {
         continue;
       }

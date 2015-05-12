@@ -24,7 +24,7 @@
 
 using namespace caf;
 
-CAF_TEST(test_constructor_attach) {
+CAF_TEST(constructor_attach) {
   class testee : public event_based_actor {
    public:
     testee(actor buddy) : m_buddy(buddy) {

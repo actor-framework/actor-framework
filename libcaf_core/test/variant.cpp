@@ -34,12 +34,12 @@ struct tostring_visitor : static_visitor<string> {
   }
 };
 
-CAF_TEST(variant) {
+CAF_TEST(string_convertible) {
   tostring_visitor tv;
   // test never-empty guarantee, i.e., expect default-constucted first arg
-  variant<int,float> v1;
+  variant<int, float> v1;
   CAF_CHECK_EQUAL(apply_visitor(tv, v1), "0");
-  variant<int,float> v2 = 42;
+  variant<int, float> v2 = 42;
   CAF_CHECK_EQUAL(apply_visitor(tv, v2), "42");
   v2 = 0.2f;
   CAF_CHECK_EQUAL(apply_visitor(tv, v2), to_string(0.2f));

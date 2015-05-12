@@ -27,46 +27,57 @@
 using namespace std;
 using namespace caf;
 
+CAF_TEST(empties) {
+  optional<int> i;
+  optional<int> j;
+  CAF_CHECK(i == j);
+  CAF_CHECK(!(i != j));
+}
+
+CAF_TEST(unequal) {
+  optional<int> i = 5;
+  optional<int> j = 6;
+  CAF_CHECK(!(i == j));
+  CAF_CHECK(i != j);
+}
+
+CAF_TEST(distinct_types) {
+  optional<int> i;
+  optional<double> j;
+  CAF_CHECK(i == j);
+  CAF_CHECK(!(i != j));
+}
+
+struct qwertz {
+  qwertz(int i, int j) : m_i(i), m_j(j) {
+    // nop
+  }
+  int m_i;
+  int m_j;
+};
+
+inline bool operator==(const qwertz& lhs, const qwertz& rhs) {
+  return lhs.m_i == rhs.m_i && lhs.m_j == rhs.m_j;
+}
+
+CAF_TEST(custom_type_none) {
+  optional<qwertz> i;
+  CAF_CHECK(i == none);
+}
+
+CAF_TEST(custom_type_engaged) {
+  qwertz obj{1, 2};
+  optional<qwertz> j = obj;
+  CAF_CHECK(j != none);
+  CAF_CHECK(obj == j);
+  CAF_CHECK(j == obj );
+  CAF_CHECK(obj == *j);
+  CAF_CHECK(*j == obj);
+}
+
 CAF_TEST(test_optional) {
-  {
-    optional<int> i,j;
-    CAF_CHECK(i == j);
-    CAF_CHECK(!(i != j));
-  }
-  {
-    optional<int> i = 5;
-    optional<int> j = 6;
-    CAF_CHECK(!(i == j));
-    CAF_CHECK(i != j);
-  }
-  {
-    optional<int> i;
-    optional<double> j;
-    CAF_CHECK(i == j);
-    CAF_CHECK(!(i != j));
-  }
-  {
-    struct qwertz {
-      qwertz(int i, int j) : m_i(i), m_j(j) {
-        CAF_MESSAGE("called ctor of `qwertz`");
-      }
-      int m_i;
-      int m_j;
-    };
-    {
-      optional<qwertz> i;
-      CAF_CHECK(i.empty());
-    }
-    {
-      qwertz obj (1,2);
-      optional<qwertz> j(obj);
-      CAF_CHECK(!j.empty());
-    }
-    {
-      optional<qwertz> i = qwertz(1,2);
-      CAF_CHECK(!i.empty());
-      optional<qwertz> j = { { 1, 2 } };
-      CAF_CHECK(!j.empty());
-    }
-  }
+  optional<qwertz> i = qwertz(1,2);
+  CAF_CHECK(!i.empty());
+  optional<qwertz> j = { { 1, 2 } };
+  CAF_CHECK(!j.empty());
 }

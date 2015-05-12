@@ -36,7 +36,6 @@ using ho_atom = atom_constant<atom("ho")>;
 
 function<optional<string>(const string&)> starts_with(const string& s) {
   return [=](const string& str) -> optional<string> {
-    CAF_MESSAGE("starts with guard called");
     if (str.size() > s.size() && str.compare(0, s.size(), s) == 0) {
       auto res = str.substr(s.size());
       return res;
@@ -104,7 +103,7 @@ function<void()> f(int idx) {
   };
 }
 
-CAF_TEST(test_atoms) {
+CAF_TEST(atom_constants) {
   auto expr = on(hi_atom::value) >> f(0);
   CAF_CHECK_EQUAL(invoked(expr, hi_atom::value), 0);
   CAF_CHECK_EQUAL(invoked(expr, ho_atom::value), -1);
@@ -122,44 +121,41 @@ CAF_TEST(test_atoms) {
   CAF_CHECK_EQUAL(invoked(expr2, ho_atom::value), 1);
 }
 
-CAF_TEST(test_custom_projections) {
-  // check whether projection is called
-  {
-    bool guard_called = false;
-    auto guard = [&](int arg) -> optional<int> {
-      guard_called = true;
-      return arg;
-    };
-    auto expr = on(guard) >> f(0);
-    CAF_CHECK_EQUAL(invoked(expr, 42), 0);
-    CAF_CHECK_EQUAL(guard_called, true);
-  }
-  // check forwarding optional<const string&> from guard
-  {
-    auto expr = (
-      on(starts_with("--")) >> [](const string& str) {
-        CAF_CHECK_EQUAL(str, "help");
-        s_invoked[0] = true;
-      }
-    );
-    CAF_CHECK_EQUAL(invoked(expr, "--help"), 0);
-    CAF_CHECK_EQUAL(invoked(expr, "-help"), -1);
-    CAF_CHECK_EQUAL(invoked(expr, "--help", "--help"), -1);
-    CAF_CHECK_EQUAL(invoked(expr, 42), -1);
-  }
-  // check projection
-  {
-    auto expr = (
-      on(toint) >> [](int i) {
-        CAF_CHECK_EQUAL(i, 42);
-        s_invoked[0] = true;
-      }
-    );
-    CAF_CHECK_EQUAL(invoked(expr, "42"), 0);
-    CAF_CHECK_EQUAL(invoked(expr, "42f"), -1);
-    CAF_CHECK_EQUAL(invoked(expr, "42", "42"), -1);
-    CAF_CHECK_EQUAL(invoked(expr, 42), -1);
-  }
+CAF_TEST(guards_called) {
+  bool guard_called = false;
+  auto guard = [&](int arg) -> optional<int> {
+    guard_called = true;
+    return arg;
+  };
+  auto expr = on(guard) >> f(0);
+  CAF_CHECK_EQUAL(invoked(expr, 42), 0);
+  CAF_CHECK_EQUAL(guard_called, true);
+}
+
+CAF_TEST(forwarding_optionals) {
+  auto expr = (
+    on(starts_with("--")) >> [](const string& str) {
+      CAF_CHECK_EQUAL(str, "help");
+      s_invoked[0] = true;
+    }
+  );
+  CAF_CHECK_EQUAL(invoked(expr, "--help"), 0);
+  CAF_CHECK_EQUAL(invoked(expr, "-help"), -1);
+  CAF_CHECK_EQUAL(invoked(expr, "--help", "--help"), -1);
+  CAF_CHECK_EQUAL(invoked(expr, 42), -1);
+}
+
+CAF_TEST(projections) {
+  auto expr = (
+    on(toint) >> [](int i) {
+      CAF_CHECK_EQUAL(i, 42);
+      s_invoked[0] = true;
+    }
+  );
+  CAF_CHECK_EQUAL(invoked(expr, "42"), 0);
+  CAF_CHECK_EQUAL(invoked(expr, "42f"), -1);
+  CAF_CHECK_EQUAL(invoked(expr, "42", "42"), -1);
+  CAF_CHECK_EQUAL(invoked(expr, 42), -1);
 }
 
 struct wrapped_int {
@@ -170,7 +166,7 @@ inline bool operator==(const wrapped_int& lhs, const wrapped_int& rhs) {
   return lhs.value == rhs.value;
 }
 
-CAF_TEST(test_arg_match) {
+CAF_TEST(arg_match_pattern) {
   announce<wrapped_int>("wrapped_int", &wrapped_int::value);
   auto expr = on(42, arg_match) >> [](int i) {
     s_invoked[0] = true;
@@ -196,5 +192,4 @@ CAF_TEST(test_arg_match) {
   CAF_CHECK_EQUAL(invoked(expr3, wrapped_int{1}, wrapped_int{42}), -1);
   CAF_CHECK_EQUAL(invoked(expr3, 42, 1), -1);
   CAF_CHECK_EQUAL(invoked(expr3, wrapped_int{42}, wrapped_int{1}), 0);
-  shutdown();
 }

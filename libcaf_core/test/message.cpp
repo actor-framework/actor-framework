@@ -27,7 +27,7 @@ using std::cout;
 using std::endl;
 using namespace caf;
 
-CAF_TEST(test_drop) {
+CAF_TEST(drop) {
   auto m1 = make_message(1, 2, 3, 4, 5);
   std::vector<message> messages{
     m1,
@@ -42,13 +42,13 @@ CAF_TEST(test_drop) {
   }
 }
 
-CAF_TEST(test_slice) {
+CAF_TEST(slice) {
   auto m1 = make_message(1, 2, 3, 4, 5);
   auto m2 = m1.slice(2, 2);
   CAF_CHECK_EQUAL(to_string(m2), to_string(make_message(3, 4)));
 }
 
-CAF_TEST(test_extract1) {
+CAF_TEST(extract1) {
   auto f = [](int lhs1, int lhs2, int lhs3, int rhs1, int rhs2, int val) {
     auto m1 = make_message(lhs1, lhs2, lhs3);
     auto m2 = make_message(rhs1, rhs2);
@@ -60,7 +60,7 @@ CAF_TEST(test_extract1) {
   f(1, 2, 3, 1, 2, 3);
 }
 
-CAF_TEST(test_extract2) {
+CAF_TEST(extract2) {
   auto m1 = make_message(1.0, 2.0, 3.0);
   auto m2 = make_message(1, 2, 1.0, 2.0, 3.0);
   auto m3 = make_message(1.0, 1, 2, 2.0, 3.0);
@@ -80,7 +80,7 @@ CAF_TEST(test_extract2) {
   CAF_CHECK_EQUAL(to_string(m7.extract(f)), to_string(m1));
 }
 
-CAF_TEST(test_extract3) {
+CAF_TEST(extract3) {
   auto m1 = make_message(1);
   CAF_CHECK_EQUAL(to_string(m1.extract([](int) {})), to_string(message{}));
   auto m2 = make_message(1.0, 2, 3, 4.0);
@@ -92,7 +92,7 @@ CAF_TEST(test_extract3) {
   CAF_CHECK_EQUAL(to_string(m3), to_string(make_message(1.0, 4.0)));
 }
 
-CAF_TEST(test_extract_opts) {
+CAF_TEST(extract_opts) {
   auto f = [](std::vector<std::string> xs) {
     std::string filename;
     auto res = message_builder(xs.begin(), xs.end()).extract_opts({
@@ -108,12 +108,12 @@ CAF_TEST(test_extract_opts) {
   f({"-f", "hello.txt"});
 }
 
-CAF_TEST(test_type_token) {
+CAF_TEST(type_token) {
   auto m1 = make_message(get_atom::value);
   CAF_CHECK_EQUAL(m1.type_token(), detail::make_type_token<get_atom>());
 }
 
-CAF_TEST(test_concat) {
+CAF_TEST(concat) {
   auto m1 = make_message(get_atom::value);
   auto m2 = make_message(uint32_t{1});
   auto m3 = message::concat(m1, m2);

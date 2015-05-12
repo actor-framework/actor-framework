@@ -235,7 +235,16 @@ class server : public event_based_actor {
   }
 };
 
+struct fixture {
+  ~fixture() {
+    await_all_actors_done();
+    shutdown();
+  }
+};
+
 } // namespace <anonymous>
+
+CAF_TEST_FIXTURE_SCOPE(atom_tests, fixture)
 
 CAF_TEST(test_void_res) {
   using testee_a = typed_actor<replies_to<int, int>::with<void>>;
@@ -249,229 +258,226 @@ CAF_TEST(test_void_res) {
     CAF_MESSAGE("received void res");
   });
   self->send_exit(buddy, exit_reason::kill);
-  self->await_all_other_actors_done();
 }
 
 CAF_TEST(sync_send) {
-  {
-    scoped_actor self;
-    self->on_sync_failure([&] {
-      CAF_TEST_ERROR("received: " << to_string(self->current_message()));
+  scoped_actor self;
+  self->on_sync_failure([&] {
+    CAF_TEST_ERROR("received: " << to_string(self->current_message()));
+  });
+  self->spawn<monitored + blocking_api>([](blocking_actor* s) {
+    int invocations = 0;
+    auto foi = s->spawn<float_or_int, linked>();
+    s->send(foi, i_atom::value);
+    s->receive(
+      [](int i) {
+        CAF_CHECK_EQUAL(i, 0);
+      }
+    );
+    s->on_sync_failure([=] {
+      CAF_TEST_ERROR("received: " << to_string(s->current_message()));
     });
-    self->spawn<monitored + blocking_api>([](blocking_actor* s) {
-      int invocations = 0;
-      auto foi = s->spawn<float_or_int, linked>();
-      s->send(foi, i_atom::value);
-      s->receive(
-        [](int i) {
-          CAF_CHECK_EQUAL(i, 0);
-        }
-      );
-      s->on_sync_failure([=] {
-        CAF_TEST_ERROR("received: " << to_string(s->current_message()));
-      });
-      s->sync_send(foi, i_atom::value).await(
-        [&](int i) {
-          CAF_CHECK_EQUAL(i, 0);
-          ++invocations;
-        },
-        [&](float) {
-          CAF_TEST_ERROR("Unexpected message: "
-                         << to_string(s->current_message()));
-        }
-      );
-      s->sync_send(foi, f_atom::value).await(
-        [&](int) {
-          CAF_TEST_ERROR("Unexpected message: "
-                         << to_string(s->current_message()));
-        },
-        [&](float f) {
-          CAF_CHECK_EQUAL(f, 0.f);
-          ++invocations;
-        }
-      );
-      CAF_CHECK_EQUAL(invocations, 2);
-      CAF_MESSAGE("trigger sync failure");
-      // provoke invocation of s->handle_sync_failure()
-      bool sync_failure_called = false;
-      bool int_handler_called = false;
-      s->on_sync_failure([&] { sync_failure_called = true; });
-      s->sync_send(foi, f_atom::value).await(
-        [&](int) {
-          int_handler_called = true;
-        }
-      );
-      CAF_CHECK_EQUAL(sync_failure_called, true);
-      CAF_CHECK_EQUAL(int_handler_called, false);
-      s->quit(exit_reason::user_shutdown);
-    });
-    self->receive(
-      [&](const down_msg& dm) {
-        CAF_CHECK_EQUAL(dm.reason, exit_reason::user_shutdown);
+    s->sync_send(foi, i_atom::value).await(
+      [&](int i) {
+        CAF_CHECK_EQUAL(i, 0);
+        ++invocations;
       },
-      others >> [&] {
+      [&](float) {
         CAF_TEST_ERROR("Unexpected message: "
-                       << to_string(self->current_message()));
+                       << to_string(s->current_message()));
       }
     );
-    auto mirror = spawn<sync_mirror>();
-    bool continuation_called = false;
-    self->sync_send(mirror, 42).await([&](int value) {
-      continuation_called = true;
-      CAF_CHECK_EQUAL(value, 42);
-    });
-    CAF_CHECK_EQUAL(continuation_called, true);
-    self->send_exit(mirror, exit_reason::user_shutdown);
-    CAF_MESSAGE("block on `await_all_other_actors_done");
-    self->await_all_other_actors_done();
-    CAF_MESSAGE("`await_all_other_actors_done` finished");
-    auto non_normal_down_msg = [](down_msg dm) -> optional<down_msg> {
-      if (dm.reason != exit_reason::normal) {
-        return dm;
-      }
-      return none;
-    };
-    auto await_ok_message = [&] {
-      self->receive(
-        [](ok_atom) {
-          CAF_MESSAGE("received `ok_atom`");
-        },
-        [](error_atom) {
-          CAF_TEST_ERROR("A didn't receive sync response");
-        },
-        on(non_normal_down_msg) >> [&](const down_msg& dm) {
-          CAF_TEST_ERROR("A exited for reason " << dm.reason);
-        }
-      );
-    };
-    self->send(self->spawn<A, monitored>(self),
-               go_atom::value, spawn<B>(spawn<C>()));
-    CAF_MESSAGE("block on `await_ok_message`");
-    await_ok_message();
-    CAF_MESSAGE("`await_ok_message` finished");
-    self->await_all_other_actors_done();
-    self->send(self->spawn<A, monitored>(self),
-               go_atom::value, spawn<D>(spawn<C>()));
-    CAF_MESSAGE("block on `await_ok_message`");
-    await_ok_message();
-    CAF_MESSAGE("`await_ok_message` finished");
-    CAF_MESSAGE("block on `await_all_other_actors_done`");
-    self->await_all_other_actors_done();
-    CAF_MESSAGE("`await_all_other_actors_done` finished");
-    self->timed_sync_send(self, milliseconds(50), no_way_atom::value).await(
-      on<sync_timeout_msg>() >> [] {
-        CAF_MESSAGE("Got timeout");
-      },
-      others >> [&] {
+    s->sync_send(foi, f_atom::value).await(
+      [&](int) {
         CAF_TEST_ERROR("Unexpected message: "
-                       << to_string(self->current_message()));
+                       << to_string(s->current_message()));
+      },
+      [&](float f) {
+        CAF_CHECK_EQUAL(f, 0.f);
+        ++invocations;
       }
     );
-    // we should have received two DOWN messages with normal exit reason
-    // plus 'NoWay'
-    int i = 0;
-    self->receive_for(i, 3)(
-      [&](const down_msg& dm) {
-        CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
-      },
-      [](no_way_atom) {
-        CAF_MESSAGE("trigger \"actor did not reply to a "
-                  "synchronous request message\"");
-      },
-      others >> [&] {
-        CAF_TEST_ERROR("Unexpected message: "
-                       << to_string(self->current_message()));
-      },
-      after(milliseconds(0)) >> [] {
-        CAF_TEST_ERROR("Unexpected timeout");
+    CAF_CHECK_EQUAL(invocations, 2);
+    CAF_MESSAGE("trigger sync failure");
+    // provoke invocation of s->handle_sync_failure()
+    bool sync_failure_called = false;
+    bool int_handler_called = false;
+    s->on_sync_failure([&] { sync_failure_called = true; });
+    s->sync_send(foi, f_atom::value).await(
+      [&](int) {
+        int_handler_called = true;
       }
     );
-    // mailbox should be empty now
-    self->receive(
-      others >> [] {
-        CAF_TEST_ERROR("Unexpected message");
-      },
-      after(milliseconds(0)) >> [] {
-        CAF_MESSAGE("Mailbox is empty, all good");
-      }
-    );
-    // check wheter continuations are invoked correctly
-    auto c = spawn<C>(); // replies only to 'gogo' messages
-    // first test: sync error must occur, continuation must not be called
-    bool timeout_occured = false;
-    self->on_sync_timeout([&] {
-      CAF_MESSAGE("timeout occured");
-      timeout_occured = true;
-    });
-    self->on_sync_failure([&] {
+    CAF_CHECK_EQUAL(sync_failure_called, true);
+    CAF_CHECK_EQUAL(int_handler_called, false);
+    s->quit(exit_reason::user_shutdown);
+  });
+  self->receive(
+    [&](const down_msg& dm) {
+      CAF_CHECK_EQUAL(dm.reason, exit_reason::user_shutdown);
+    },
+    others >> [&] {
       CAF_TEST_ERROR("Unexpected message: "
                      << to_string(self->current_message()));
-    });
-    self->timed_sync_send(c, milliseconds(500), hi_there_atom::value).await(
-      on(val<atom_value>) >> [&] {
-        cout << "C did reply to 'HiThere'" << endl;
+    }
+  );
+  auto mirror = spawn<sync_mirror>();
+  bool continuation_called = false;
+  self->sync_send(mirror, 42).await([&](int value) {
+    continuation_called = true;
+    CAF_CHECK_EQUAL(value, 42);
+  });
+  CAF_CHECK_EQUAL(continuation_called, true);
+  self->send_exit(mirror, exit_reason::user_shutdown);
+  CAF_MESSAGE("block on `await_all_other_actors_done");
+  self->await_all_other_actors_done();
+  CAF_MESSAGE("`await_all_other_actors_done` finished");
+  auto non_normal_down_msg = [](down_msg dm) -> optional<down_msg> {
+    if (dm.reason != exit_reason::normal) {
+      return dm;
+    }
+    return none;
+  };
+  auto await_ok_message = [&] {
+    self->receive(
+      [](ok_atom) {
+        CAF_MESSAGE("received `ok_atom`");
+      },
+      [](error_atom) {
+        CAF_TEST_ERROR("A didn't receive sync response");
+      },
+      on(non_normal_down_msg) >> [&](const down_msg& dm) {
+        CAF_TEST_ERROR("A exited for reason " << dm.reason);
       }
     );
-    CAF_CHECK_EQUAL(timeout_occured, true);
-    self->on_sync_failure([&] {
+  };
+  self->send(self->spawn<A, monitored>(self),
+             go_atom::value, spawn<B>(spawn<C>()));
+  CAF_MESSAGE("block on `await_ok_message`");
+  await_ok_message();
+  CAF_MESSAGE("`await_ok_message` finished");
+  self->await_all_other_actors_done();
+  self->send(self->spawn<A, monitored>(self),
+             go_atom::value, spawn<D>(spawn<C>()));
+  CAF_MESSAGE("block on `await_ok_message`");
+  await_ok_message();
+  CAF_MESSAGE("`await_ok_message` finished");
+  CAF_MESSAGE("block on `await_all_other_actors_done`");
+  self->await_all_other_actors_done();
+  CAF_MESSAGE("`await_all_other_actors_done` finished");
+  self->timed_sync_send(self, milliseconds(50), no_way_atom::value).await(
+    on<sync_timeout_msg>() >> [] {
+      CAF_MESSAGE("Got timeout");
+    },
+    others >> [&] {
       CAF_TEST_ERROR("Unexpected message: "
                      << to_string(self->current_message()));
-    });
-    self->sync_send(c, gogo_atom::value).await(
-      [](gogogo_atom) {
-        CAF_MESSAGE("received `gogogo_atom`");
-      }
-    );
-    self->send_exit(c, exit_reason::user_shutdown);
-    CAF_MESSAGE("block on `await_all_other_actors_done`");
-    self->await_all_other_actors_done();
-    CAF_MESSAGE("`await_all_other_actors_done` finished");
-    // test use case 3
-    self->spawn<monitored + blocking_api>([](blocking_actor* s) { // client
-      auto serv = s->spawn<server, linked>();                     // server
-      auto work = s->spawn<linked>([]() -> behavior {             // worker
-        return {
-          [](request_atom) {
-            return response_atom::value;
-          }
-        };
-      });
-      // first 'idle', then 'request'
-      anon_send(serv, idle_atom::value, work);
-      s->sync_send(serv, request_atom::value).await(
-        [=](response_atom) {
-          CAF_MESSAGE("received `response_atom`");
-          CAF_CHECK_EQUAL(s->current_sender(), work);
-        },
-        others >> [&] {
-          CAF_TEST_ERROR("Unexpected message: "
-                         << to_string(s->current_message()));
+    }
+  );
+  // we should have received two DOWN messages with normal exit reason
+  // plus 'NoWay'
+  int i = 0;
+  self->receive_for(i, 3)(
+    [&](const down_msg& dm) {
+      CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
+    },
+    [](no_way_atom) {
+      CAF_MESSAGE("trigger \"actor did not reply to a "
+                "synchronous request message\"");
+    },
+    others >> [&] {
+      CAF_TEST_ERROR("Unexpected message: "
+                     << to_string(self->current_message()));
+    },
+    after(milliseconds(0)) >> [] {
+      CAF_TEST_ERROR("Unexpected timeout");
+    }
+  );
+  // mailbox should be empty now
+  self->receive(
+    others >> [] {
+      CAF_TEST_ERROR("Unexpected message");
+    },
+    after(milliseconds(0)) >> [] {
+      CAF_MESSAGE("Mailbox is empty, all good");
+    }
+  );
+  // check wheter continuations are invoked correctly
+  auto c = spawn<C>(); // replies only to 'gogo' messages
+  // first test: sync error must occur, continuation must not be called
+  bool timeout_occured = false;
+  self->on_sync_timeout([&] {
+    CAF_MESSAGE("timeout occured");
+    timeout_occured = true;
+  });
+  self->on_sync_failure([&] {
+    CAF_TEST_ERROR("Unexpected message: "
+                   << to_string(self->current_message()));
+  });
+  self->timed_sync_send(c, milliseconds(500), hi_there_atom::value).await(
+    on(val<atom_value>) >> [&] {
+      cout << "C did reply to 'HiThere'" << endl;
+    }
+  );
+  CAF_CHECK_EQUAL(timeout_occured, true);
+  self->on_sync_failure([&] {
+    CAF_TEST_ERROR("Unexpected message: "
+                   << to_string(self->current_message()));
+  });
+  self->sync_send(c, gogo_atom::value).await(
+    [](gogogo_atom) {
+      CAF_MESSAGE("received `gogogo_atom`");
+    }
+  );
+  self->send_exit(c, exit_reason::user_shutdown);
+  CAF_MESSAGE("block on `await_all_other_actors_done`");
+  self->await_all_other_actors_done();
+  CAF_MESSAGE("`await_all_other_actors_done` finished");
+  // test use case 3
+  self->spawn<monitored + blocking_api>([](blocking_actor* s) { // client
+    auto serv = s->spawn<server, linked>();                     // server
+    auto work = s->spawn<linked>([]() -> behavior {             // worker
+      return {
+        [](request_atom) {
+          return response_atom::value;
         }
-      );
-      // first 'request', then 'idle'
-      auto handle = s->sync_send(serv, request_atom::value);
-      send_as(work, serv, idle_atom::value, work);
-      handle.await(
-        [=](response_atom) {
-          CAF_CHECK_EQUAL(s->current_sender(), work);
-        },
-        others >> [&] {
-          CAF_TEST_ERROR("Unexpected message: "
-                         << to_string(s->current_message()));
-        }
-      );
-      s->quit(exit_reason::user_shutdown);
+      };
     });
-    self->receive(
-      [&](const down_msg& dm) {
-        CAF_CHECK_EQUAL(dm.reason, exit_reason::user_shutdown);
+    // first 'idle', then 'request'
+    anon_send(serv, idle_atom::value, work);
+    s->sync_send(serv, request_atom::value).await(
+      [=](response_atom) {
+        CAF_MESSAGE("received `response_atom`");
+        CAF_CHECK_EQUAL(s->current_sender(), work);
       },
       others >> [&] {
         CAF_TEST_ERROR("Unexpected message: "
-                       << to_string(self->current_message()));
+                       << to_string(s->current_message()));
       }
     );
-  }
-  await_all_actors_done();
-  shutdown();
+    // first 'request', then 'idle'
+    auto handle = s->sync_send(serv, request_atom::value);
+    send_as(work, serv, idle_atom::value, work);
+    handle.await(
+      [=](response_atom) {
+        CAF_CHECK_EQUAL(s->current_sender(), work);
+      },
+      others >> [&] {
+        CAF_TEST_ERROR("Unexpected message: "
+                       << to_string(s->current_message()));
+      }
+    );
+    s->quit(exit_reason::user_shutdown);
+  });
+  self->receive(
+    [&](const down_msg& dm) {
+      CAF_CHECK_EQUAL(dm.reason, exit_reason::user_shutdown);
+    },
+    others >> [&] {
+      CAF_TEST_ERROR("Unexpected message: "
+                     << to_string(self->current_message()));
+    }
+  );
 }
+
+CAF_TEST_FIXTURE_SCOPE_END()

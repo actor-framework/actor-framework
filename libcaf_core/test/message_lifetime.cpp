@@ -31,13 +31,6 @@ using namespace caf;
 
 namespace {
 
-struct fixture {
-  ~fixture() {
-    await_all_actors_done();
-    shutdown();
-  }
-};
-
 class testee : public event_based_actor {
  public:
   testee();
@@ -110,6 +103,13 @@ void test_message_lifetime() {
     spawn<tester>(spawn<testee, Os>());
   }
 }
+
+struct fixture {
+  ~fixture() {
+    await_all_actors_done();
+    shutdown();
+  }
+};
 
 } // namespace <anonymous>
 

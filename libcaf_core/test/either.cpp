@@ -24,6 +24,8 @@
 
 using namespace caf;
 
+namespace {
+
 using foo = typed_actor<replies_to<int>::with_either<int>::or_else<float>>;
 
 foo::behavior_type my_foo() {
@@ -37,7 +39,18 @@ foo::behavior_type my_foo() {
   };
 }
 
-CAF_TEST(either) {
+struct fixture {
+  ~fixture() {
+    await_all_actors_done();
+    shutdown();
+  }
+};
+
+} // namespace <anonymous>
+
+CAF_TEST_FIXTURE_SCOPE(atom_tests, fixture)
+
+CAF_TEST(basic_usage) {
   auto f1 = []() -> either<int>::or_else<float> {
     return 42;
   };
@@ -50,31 +63,36 @@ CAF_TEST(either) {
     }
     return {3.f, 4.f};
   };
-  f1();
-  f2();
-  f3(true);
-  f3(false);
+  CAF_CHECK(f1().value == make_message(42));
+  CAF_CHECK(f2().value == make_message(42.f));
+  CAF_CHECK(f3(true).value == make_message(1, 2));
+  CAF_CHECK(f3(false).value == make_message(3.f, 4.f));
   either<int>::or_else<float> x1{4};
+  CAF_CHECK(x1.value == make_message(4));
   either<int>::or_else<float> x2{4.f};
-  auto mf = spawn_typed(my_foo);
-  {
-    scoped_actor self;
-    self->sync_send(mf, 42).await(
-      [](int val) {
-        CAF_CHECK_EQUAL(val, 42);
-      },
-      [](float) {
-        CAF_TEST_ERROR("expected an integer");
-      }
-    );
-    self->sync_send(mf, 10).await(
-      [](int) {
-        CAF_TEST_ERROR("expected a float");
-      },
-      [](float val) {
-        CAF_CHECK_EQUAL(val, 10.f);
-      }
-    );
-  }
-  shutdown();
+  CAF_CHECK(x2.value == make_message(4.f));
 }
+
+CAF_TEST(either_in_typed_interfaces) {
+  auto mf = spawn_typed(my_foo);
+  scoped_actor self;
+  self->sync_send(mf, 42).await(
+    [](int val) {
+      CAF_CHECK_EQUAL(val, 42);
+    },
+    [](float) {
+      CAF_TEST_ERROR("expected an integer");
+    }
+  );
+  self->sync_send(mf, 10).await(
+    [](int) {
+      CAF_TEST_ERROR("expected a float");
+    },
+    [](float val) {
+      CAF_CHECK_EQUAL(val, 10.f);
+    }
+  );
+  self->send_exit(mf, exit_reason::kill);
+}
+
+CAF_TEST_FIXTURE_SCOPE_END()

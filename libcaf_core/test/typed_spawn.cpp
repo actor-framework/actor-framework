@@ -244,18 +244,28 @@ behavior foo2(event_based_actor* self) {
   };
 }
 
+struct fixture {
+  fixture() {
+    announce<get_state_msg>("get_state_msg");
+    announce<int_actor>("int_actor");
+    announce<my_request>("my_request", &my_request::a, &my_request::b);
+  }
+
+  ~fixture() {
+    await_all_actors_done();
+    shutdown();
+  }
+};
+
 } // namespace <anonymous>
+
+CAF_TEST_FIXTURE_SCOPE(typed_spawn_tests, fixture)
 
 /******************************************************************************
  *                             put it all together                            *
  ******************************************************************************/
 
-CAF_TEST(test_typed_spawns) {
-  // announce stuff
-  announce<get_state_msg>("get_state_msg");
-  announce<int_actor>("int_actor");
-  announce<my_request>("my_request", &my_request::a, &my_request::b);
-
+CAF_TEST(typed_spawns) {
   // run test series with typed_server(1|2)
   test_typed_spawn(spawn_typed(typed_server1));
   await_all_actors_done();
@@ -271,88 +281,75 @@ CAF_TEST(test_typed_spawns) {
       CAF_MESSAGE("received \"hi there\"");
     });
   }
-  await_all_actors_done();
-  CAF_MESSAGE("finished test series with `typed_server3`");
 }
 
 CAF_TEST(test_event_testee) {
   // run test series with event_testee
-  {
-    scoped_actor self;
-    auto et = self->spawn_typed<event_testee>();
-    string result;
-    self->send(et, 1);
-    self->send(et, 2);
-    self->send(et, 3);
-    self->send(et, .1f);
-    self->send(et, "hello event testee!");
-    self->send(et, .2f);
-    self->send(et, .3f);
-    self->send(et, "hello again event testee!");
-    self->send(et, "goodbye event testee!");
-    typed_actor<replies_to<get_state_msg>::with<string>> sub_et = et;
-    // $:: is the anonymous namespace
-    set<string> iface{"caf::replies_to<get_state_msg>::with<@str>",
-                      "caf::replies_to<@str>::with<void>",
-                      "caf::replies_to<float>::with<void>",
-                      "caf::replies_to<@i32>::with<@i32>"};
-    CAF_CHECK_EQUAL(join(sub_et->message_types(), ","), join(iface, ","));
-    self->send(sub_et, get_state_msg{});
-    // we expect three 42s
-    int i = 0;
-    self->receive_for(i, 3)([](int value) { CAF_CHECK_EQUAL(value, 42); });
-    self->receive(
-      [&](const string& str) {
-        result = str;
-      },
-      after(chrono::minutes(1)) >> [&] {
-        CAF_TEST_ERROR("event_testee does not reply");
-        throw runtime_error("event_testee does not reply");
-      }
-    );
-    self->send_exit(et, exit_reason::user_shutdown);
-    self->await_all_other_actors_done();
-    CAF_CHECK_EQUAL(result, "wait4int");
-    self->await_all_other_actors_done();
-  }
+  scoped_actor self;
+  auto et = self->spawn_typed<event_testee>();
+  string result;
+  self->send(et, 1);
+  self->send(et, 2);
+  self->send(et, 3);
+  self->send(et, .1f);
+  self->send(et, "hello event testee!");
+  self->send(et, .2f);
+  self->send(et, .3f);
+  self->send(et, "hello again event testee!");
+  self->send(et, "goodbye event testee!");
+  typed_actor<replies_to<get_state_msg>::with<string>> sub_et = et;
+  // $:: is the anonymous namespace
+  set<string> iface{"caf::replies_to<get_state_msg>::with<@str>",
+                    "caf::replies_to<@str>::with<void>",
+                    "caf::replies_to<float>::with<void>",
+                    "caf::replies_to<@i32>::with<@i32>"};
+  CAF_CHECK_EQUAL(join(sub_et->message_types(), ","), join(iface, ","));
+  self->send(sub_et, get_state_msg{});
+  // we expect three 42s
+  int i = 0;
+  self->receive_for(i, 3)([](int value) { CAF_CHECK_EQUAL(value, 42); });
+  self->receive(
+    [&](const string& str) {
+      result = str;
+    },
+    after(chrono::minutes(1)) >> [&] {
+      CAF_TEST_ERROR("event_testee does not reply");
+      throw runtime_error("event_testee does not reply");
+    }
+  );
+  self->send_exit(et, exit_reason::user_shutdown);
+  self->await_all_other_actors_done();
+  CAF_CHECK_EQUAL(result, "wait4int");
 }
 
 CAF_TEST(test_simple_string_reverter) {
   // run test series with string reverter
-  {
-    scoped_actor self;
-    // actor-under-test
-    auto aut = self->spawn_typed<monitored>(simple_relay,
-                                            spawn_typed(simple_string_reverter),
-                                            true);
-    set<string> iface{"caf::replies_to<@str>::with<@str>"};
-    CAF_CHECK(aut->message_types() == iface);
-    self->sync_send(aut, "Hello World!").await([](const string& answer) {
-      CAF_CHECK_EQUAL(answer, "!dlroW olleH");
-    });
-    anon_send_exit(aut, exit_reason::user_shutdown);
-    self->await_all_other_actors_done();
-  }
+  scoped_actor self;
+  // actor-under-test
+  auto aut = self->spawn_typed<monitored>(simple_relay,
+                                          spawn_typed(simple_string_reverter),
+                                          true);
+  set<string> iface{"caf::replies_to<@str>::with<@str>"};
+  CAF_CHECK(aut->message_types() == iface);
+  self->sync_send(aut, "Hello World!").await([](const string& answer) {
+    CAF_CHECK_EQUAL(answer, "!dlroW olleH");
+  });
+  anon_send_exit(aut, exit_reason::user_shutdown);
 }
 
 CAF_TEST(test_sending_typed_actors) {
-  {
-    scoped_actor self;
-    auto aut = spawn_typed(int_fun);
-    self->send(spawn(foo), 10, aut);
-    self->receive(on_arg_match >> [](int i) { CAF_CHECK_EQUAL(i, 100); });
-    self->send_exit(aut, exit_reason::user_shutdown);
-    self->await_all_other_actors_done();
-  }
+  scoped_actor self;
+  auto aut = spawn_typed(int_fun);
+  self->send(spawn(foo), 10, aut);
+  self->receive(on_arg_match >> [](int i) { CAF_CHECK_EQUAL(i, 100); });
+  self->send_exit(aut, exit_reason::user_shutdown);
 }
 
 CAF_TEST(test_sending_typed_actors_and_down_msg) {
-  {
-    scoped_actor self;
-    auto aut = spawn_typed(int_fun2);
-    self->send(spawn(foo2), 10, aut);
-    self->receive([](int i) { CAF_CHECK_EQUAL(i, 100); });
-    self->await_all_other_actors_done();
-  }
-  shutdown();
+  scoped_actor self;
+  auto aut = spawn_typed(int_fun2);
+  self->send(spawn(foo2), 10, aut);
+  self->receive([](int i) { CAF_CHECK_EQUAL(i, 100); });
 }
+
+CAF_TEST_FIXTURE_SCOPE_END()

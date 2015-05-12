@@ -39,14 +39,6 @@ namespace test {
 /**
  * A sequence of *checks*.
  */
-class check_sequence {
-  virtual ~check_sequence();
-  virtual void run() = 0;
-};
-
-/**
- * A sequence of *checks*.
- */
 class test {
  public:
   test(std::string name);
@@ -69,9 +61,7 @@ class test {
     return m_bad;
   }
 
-  void run();
-
-  virtual std::unique_ptr<check_sequence> make_sequence() = 0;
+  virtual void run() = 0;
 
  private:
   size_t m_expected_failures;
@@ -81,6 +71,19 @@ class test {
 };
 
 struct dummy_fixture { };
+
+template <class T>
+class test_impl : public test {
+ public:
+  test_impl(std::string name) : test(std::move(name)) {
+    // nop
+  }
+
+  virtual void run() override {
+    T impl;
+    impl.run();
+  }
+};
 
 namespace detail {
 
@@ -311,8 +314,8 @@ namespace detail {
 
 template <class T>
 struct adder {
-  adder(char const* name) {
-    engine::add(name, [] { return std::unique_ptr<T>{new T}; });
+  adder(const char* suite_name, const char* test_name) {
+    engine::add(suite_name, std::unique_ptr<T>{new T(test_name)});
   }
 };
 
@@ -606,13 +609,11 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 
 #define CAF_TEST(name)                                                         \
   namespace {                                                                  \
-  struct CAF_UNIQUE(test) : public ::caf::test::test {                         \
-    CAF_UNIQUE(test)() : test{CAF_XSTR(name)} { }                              \
-    void run() final;                                                          \
+  struct CAF_UNIQUE(test) : caf_test_case_auto_fixture {                       \
+    void run();                                                                \
   };                                                                           \
-  ::caf::test::detail::adder<CAF_UNIQUE(test)> CAF_UNIQUE(a) {                 \
-    CAF_XSTR(CAF_SUITE)                                                        \
-  };                                                                           \
+  ::caf::test::detail::adder<::caf::test::test_impl<CAF_UNIQUE(test)>>         \
+  CAF_UNIQUE(a) {CAF_XSTR(CAF_SUITE), CAF_XSTR(name)};                         \
   } /* namespace <anonymous> */                                                \
   void CAF_UNIQUE(test)::run()
 
@@ -620,7 +621,7 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
   namespace scope_name { using caf_test_case_auto_fixture = fixture_name ;
 
 #define CAF_TEST_FIXTURE_SCOPE_END()                                           \
-  } // close namespace
+  } // namespace <scope_name>
 
 // Boost Test compatibility macro
 #define CAF_CHECK_EQUAL(x, y) CAF_CHECK(x == y)
