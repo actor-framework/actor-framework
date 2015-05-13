@@ -825,6 +825,8 @@ CAF_TEST(constructor_attach) {
   anon_send(spawn<spawner>(), atom("die"));
 }
 
+namespace {
+
 class exception_testee : public event_based_actor {
  public:
   exception_testee() {
@@ -840,6 +842,8 @@ class exception_testee : public event_based_actor {
     };
   }
 };
+
+} // namespace <anonymous>
 
 CAF_TEST(custom_exception_handler) {
   auto handler = [](const std::exception_ptr& eptr) -> optional<uint32_t> {

@@ -56,7 +56,7 @@ constexpr size_t num_pings = 10;
 
 size_t s_pongs = 0;
 
-behavior ping_behavior(local_actor* self, size_t num_pings) {
+behavior ping_behavior(local_actor* self, size_t ping_msgs) {
   return {
     on(atom("pong"), arg_match) >> [=](int value)->message {
       if (!self->current_sender()) {
@@ -64,7 +64,7 @@ behavior ping_behavior(local_actor* self, size_t num_pings) {
       }
       CAF_TEST_INFO("received {'pong', " << value << "}");
       // cout << to_string(self->current_message()) << endl;
-      if (++s_pongs >= num_pings) {
+      if (++s_pongs >= ping_msgs) {
         CAF_TEST_INFO("reached maximum, send {'EXIT', user_defined} "
                       << "to last sender and quit with normal reason");
         self->send_exit(self->current_sender(),
@@ -94,9 +94,9 @@ size_t pongs() {
   return s_pongs;
 }
 
-void event_based_ping(event_based_actor* self, size_t num_pings) {
+void event_based_ping(event_based_actor* self, size_t ping_msgs) {
   s_pongs = 0;
-  self->become(ping_behavior(self, num_pings));
+  self->become(ping_behavior(self, ping_msgs));
 }
 
 void pong(blocking_actor* self, actor ping_actor) {

@@ -20,6 +20,7 @@
 #ifndef CAF_TEST_UNIT_TEST_IMPL_HPP
 #define CAF_TEST_UNIT_TEST_IMPL_HPP
 
+#include <regex>
 #include <thread>
 #include <cassert>
 #include <cstdlib>

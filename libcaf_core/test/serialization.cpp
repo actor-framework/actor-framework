@@ -188,7 +188,7 @@ class binary_util {
 };
 
 struct is_message {
-  explicit is_message(message& msg) : msg(msg) {
+  explicit is_message(message& msgref) : msg(msgref) {
     // nop
   }
 

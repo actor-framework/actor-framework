@@ -21,7 +21,6 @@
 #define CAF_TEST_UNIT_TEST_HPP
 
 #include <map>
-#include <regex>
 #include <cmath>
 #include <mutex>
 #include <thread>
@@ -235,7 +234,7 @@ class engine {
   /**
    * Adds a test to the engine.
    * @param name The name of the suite.
-   * @param t The test to register.
+   * @param ptr The test to register.
    */
   static void add(const char* name, std::unique_ptr<test> ptr);
 
