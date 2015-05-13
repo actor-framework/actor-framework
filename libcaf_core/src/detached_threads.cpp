@@ -17,13 +17,42 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_SCHEDULER_HPP
-#define CAF_SCHEDULER_HPP
-
-#include "caf/set_scheduler.hpp"
-#include "caf/scheduler/worker.hpp"
-#include "caf/scheduler/coordinator.hpp"
 #include "caf/scheduler/detached_threads.hpp"
-#include "caf/scheduler/abstract_coordinator.hpp"
 
-#endif // CAF_SCHEDULER_HPP
+#include <mutex>
+#include <atomic>
+#include <condition_variable>
+
+namespace caf {
+namespace scheduler {
+
+namespace {
+
+std::atomic<size_t> s_detached;
+std::mutex s_detached_mtx;
+std::condition_variable s_detached_cv;
+
+} // namespace <anonymous>
+
+
+void inc_detached_threads() {
+  ++s_detached;
+}
+
+void dec_detached_threads() {
+  size_t new_val = --s_detached;
+  if (new_val == 0) {
+    std::unique_lock<std::mutex> guard(s_detached_mtx);
+    s_detached_cv.notify_all();
+  }
+}
+
+void await_detached_threads() {
+  std::unique_lock<std::mutex> guard{s_detached_mtx};
+  while (s_detached != 0) {
+    s_detached_cv.wait(guard);
+  }
+}
+
+} // namespace scheduler
+} // namespace caf

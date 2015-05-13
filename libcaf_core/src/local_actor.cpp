@@ -25,8 +25,11 @@
 #include "caf/local_actor.hpp"
 #include "caf/default_attachable.hpp"
 
+#include "caf/scheduler/detached_threads.hpp"
+
 #include "caf/detail/logging.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
+
 
 namespace caf {
 
@@ -464,19 +467,25 @@ void local_actor::launch(execution_unit* eu, bool lazy, bool hide) {
     // actor lives in its own thread
     CAF_PUSH_AID(id());
     CAF_LOG_TRACE(CAF_ARG(lazy) << ", " << CAF_ARG(hide));
-    intrusive_ptr<local_actor> mself{this};
-    attach_to_scheduler();
-    std::thread([=] {
-      CAF_PUSH_AID(id());
+    if (!hide) {
+      // hiding the actor also hides the thread
+      scheduler::inc_detached_threads();
+    }
+    //intrusive_ptr<local_actor> mself{this};
+    std::thread([hide](intrusive_ptr<local_actor> mself) {
+      CAF_PUSH_AID(mself->id());
       CAF_LOG_TRACE("");
       auto max_throughput = std::numeric_limits<size_t>::max();
-      while (resume(nullptr, max_throughput) != resumable::done) {
+      while (mself->resume(nullptr, max_throughput) != resumable::done) {
         // await new data before resuming actor
-        await_data();
-        CAF_ASSERT(mailbox().blocked() == false);
+        mself->await_data();
+        CAF_ASSERT(mself->mailbox().blocked() == false);
       }
-      detach_from_scheduler();
-    }).detach();
+      mself.reset();
+      if (!hide) {
+        scheduler::dec_detached_threads();
+      }
+    }, intrusive_ptr<local_actor>{this}).detach();
     return;
   }
   // actor is cooperatively scheduled
@@ -503,9 +512,7 @@ void local_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
     auto mid = ptr->mid;
     auto sender = ptr->sender;
     // returns false if mailbox has been closed
-    if (!mailbox().synchronized_enqueue(m_mtx,
-                                              m_cv,
-                                              ptr.release())) {
+    if (!mailbox().synchronized_enqueue(m_mtx, m_cv, ptr.release())) {
       if (mid.is_request()) {
         detail::sync_request_bouncer srb{exit_reason()};
         srb(sender, mid);

@@ -41,6 +41,7 @@ set (LIBCAF_CORE_SRCS
      src/decorated_tuple.cpp
      src/default_attachable.cpp
      src/deserializer.cpp
+     src/detached_threads.cpp
      src/duration.cpp
      src/either.cpp
      src/event_based_actor.cpp

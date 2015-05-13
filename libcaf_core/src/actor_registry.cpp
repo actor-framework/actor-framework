@@ -17,15 +17,18 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/detail/actor_registry.hpp"
+
 #include <mutex>
 #include <limits>
 #include <stdexcept>
 
+#include "caf/locks.hpp"
 #include "caf/attachable.hpp"
 #include "caf/exit_reason.hpp"
-#include "caf/detail/actor_registry.hpp"
 
-#include "caf/locks.hpp"
+#include "caf/scheduler/detached_threads.hpp"
+
 #include "caf/detail/logging.hpp"
 #include "caf/detail/shared_spinlock.hpp"
 
@@ -119,6 +122,9 @@ void actor_registry::await_running_count_equal(size_t expected) {
     CAF_LOG_DEBUG("count = " << m_running.load());
     m_running_cv.wait(guard);
   }
+  // also wait for all detached threads to make sure
+  // destructore were called correctly
+  scheduler::await_detached_threads();
 }
 
 } // namespace detail
