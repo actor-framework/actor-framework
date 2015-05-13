@@ -474,7 +474,7 @@ void local_actor::launch(execution_unit* eu, bool lazy, bool hide) {
     //intrusive_ptr<local_actor> mself{this};
     std::thread([hide](intrusive_ptr<local_actor> mself) {
       CAF_PUSH_AID(mself->id());
-      CAF_LOG_TRACE("");
+      CAF_LOGF_TRACE("");
       auto max_throughput = std::numeric_limits<size_t>::max();
       while (mself->resume(nullptr, max_throughput) != resumable::done) {
         // await new data before resuming actor
