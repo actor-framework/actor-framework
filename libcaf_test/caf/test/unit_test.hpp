@@ -612,7 +612,7 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
   struct CAF_UNIQUE(test) : caf_test_case_auto_fixture {                       \
     void run();                                                                \
   };                                                                           \
-  ::caf::test::detail::adder<::caf::test::test_impl<CAF_UNIQUE(test)>>         \
+  ::caf::test::detail::adder< ::caf::test::test_impl<CAF_UNIQUE(test)>>        \
   CAF_UNIQUE(a) {CAF_XSTR(CAF_SUITE), CAF_XSTR(name)};                         \
   } /* namespace <anonymous> */                                                \
   void CAF_UNIQUE(test)::run()
