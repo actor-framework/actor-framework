@@ -226,6 +226,7 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
             insert_opt_name(i->second);
             return none;
           }
+          // no value given, try two-argument form below
           return skip_message();
         }
         insert_opt_name(i->second);
@@ -257,13 +258,15 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
       if (arg1.size() < 2 || arg1[0] != '-' || arg1[1] == '-') {
         return skip_message();
       }
-      auto i = shorts.find(arg1);
+      auto i = shorts.find(arg1.substr(0, 2));
       if (i != shorts.end()) {
-        if (!i->second->fun) {
-          // this short opt does not expect an argument,
-          // tell extract to try this option again with one
-          // less argument
-          return skip_message();
+        if (i->second->fun) {
+          if (arg1.size() > 2) {
+             // this short opt comes with a value (no space), e.g., -x2, so we
+             // have to parse it with the one-argument form above
+             return skip_message();
+          }
+          CAF_ASSERT(arg1.size() == 2);
         }
         if (!i->second->fun(arg2)) {
           error = "invalid value for option " + i->second->name + ": " + arg2;

@@ -95,17 +95,24 @@ CAF_TEST(extract3) {
 CAF_TEST(extract_opts) {
   auto f = [](std::vector<std::string> xs) {
     std::string filename;
+    size_t log_level;
     auto res = message_builder(xs.begin(), xs.end()).extract_opts({
       {"version,v", "print version"},
+      {"log-level,l", "set the log level", log_level},
       {"file,f", "set output file", filename},
       {"whatever", "do whatever"}
     });
     CAF_CHECK_EQUAL(res.opts.count("file"), 1);
     CAF_CHECK_EQUAL(to_string(res.remainder), to_string(message{}));
     CAF_CHECK_EQUAL(filename, "hello.txt");
+    CAF_CHECK_EQUAL(log_level, 5);
   };
-  f({"--file=hello.txt"});
-  f({"-f", "hello.txt"});
+  f({"--file=hello.txt", "-l", "5"});
+  f({"-f", "hello.txt", "--log-level=5"});
+  f({"-f", "hello.txt", "-l", "5"});
+  f({"-f", "hello.txt", "-l5"});
+  f({"-fhello.txt", "-l", "5"});
+  f({"-l5", "-fhello.txt"});
 }
 
 CAF_TEST(type_token) {
