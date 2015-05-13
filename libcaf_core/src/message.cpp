@@ -260,14 +260,13 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
       }
       auto i = shorts.find(arg1.substr(0, 2));
       if (i != shorts.end()) {
-        if (i->second->fun) {
-          if (arg1.size() > 2) {
-             // this short opt comes with a value (no space), e.g., -x2, so we
-             // have to parse it with the one-argument form above
-             return skip_message();
-          }
-          CAF_ASSERT(arg1.size() == 2);
+        if (!i->second->fun || arg1.size() > 2) {
+          // this short opt either expects no argument or comes with a value
+          // (no  space), e.g., -x2, so we have to parse it with the
+          // one-argument form above
+          return skip_message();
         }
+        CAF_ASSERT(arg1.size() == 2);
         if (!i->second->fun(arg2)) {
           error = "invalid value for option " + i->second->name + ": " + arg2;
           return none;
