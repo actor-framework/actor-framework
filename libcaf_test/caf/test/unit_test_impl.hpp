@@ -298,8 +298,9 @@ bool engine::run(bool colorize,
   size_t total_bad_expected = 0;
   auto bar = '+' + std::string(70, '-') + '+';
   auto failed_require = false;
-# if !defined(__clang__) && defined(__GNUC__)                                  \
-     && __GNUC__ == 4 && __GNUC_MINOR__ < 9
+# if (!defined(__clang__) && defined(__GNUC__)                                 \
+      && __GNUC__ == 4 && __GNUC_MINOR__ < 9)                                  \
+     || (defined(__clang__) && !defined(_LIBCPP_VERSION))
   // regex implementation is broken prior to 4.9
   using strvec = std::vector<std::string>;
   auto from_psv = [](const std::string& psv) -> strvec {
