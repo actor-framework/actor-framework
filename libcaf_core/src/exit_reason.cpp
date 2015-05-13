@@ -29,13 +29,14 @@ constexpr const char* s_names_table[] = {
   "unhandled_exception",
   "-invalid-",
   "unhandled_sync_failure",
-  "unhandled_sync_timeout",
-  "unknown"
+  "-invalid-",
+  "unknown",
+  "out_of_workers"
 };
 } // namespace <anonymous>
 
 const char* as_string(uint32_t value) {
-  if (value <= unhandled_sync_timeout) {
+  if (value <= out_of_workers) {
     return s_names_table[value];
   }
   switch (value) {
@@ -46,7 +47,7 @@ const char* as_string(uint32_t value) {
       if (value < user_defined) {
         return "-invalid-";
       }
-      return "-user defined-";
+      return "user_defined";
   }
 }
 

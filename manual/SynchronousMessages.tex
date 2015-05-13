@@ -1,37 +1,26 @@
 \section{Synchronous Communication}
 \label{Sec::Sync}
 
-\lib supports both asynchronous and synchronous communication.
-The member function \lstinline^sync_send^ sends synchronous request messages.
+\lib supports both asynchronous and synchronous communication. The latter is provided by the member function \lstinline^sync_send^.
 
 \begin{lstlisting}
 template<typename... Args>
 __unspecified__ sync_send(actor whom, Args&&... what);
-
-template<typename Duration, typename... Args>
-__unspecified__ timed_sync_send(actor whom,
-                                Duration timeout,
-                                Args&&... what);
 \end{lstlisting}
 
-A synchronous message is sent to the receiving actor's mailbox like any other (asynchronous) message.
-The response message, on the other hand, is treated separately.
+A synchronous message is sent to the receiving actor's mailbox like any other (asynchronous) message. Only the response message is treated separately.
 
-The difference between \lstinline^sync_send^ and \lstinline^timed_sync_send^ is how timeouts are handled.
-The behavior of \lstinline^sync_send^ is analogous to \lstinline^send^, i.e., timeouts are specified by using \lstinline^after(...)^ statements (see Section \ref{Sec::Receive::Timeouts}).
-When using \lstinline^timed_sync_send^ function, \lstinline^after(...)^ statements are ignored and the actor will receive a \lstinline^sync_timeout_msg^ after the given duration instead.
+\subsection{Additional Error Messages}
 
-\subsection{Error Messages}
+\begin{lstlisting}
+struct sync_exited_msg {
+  actor_addr source;
+  uint32_t reason;
+};
+\end{lstlisting}
 
-When using synchronous messaging, \lib's runtime environment will send ...
+When using synchronous messaging, \lib's runtime will send a \lstinline^sync_exited_msg^ message if the receiver is not alive. This is in addition to exit and down messages caused by linking or monitoring.
 
-\begin{itemize}
-\item if the receiver is not alive:\newline\lstinline^sync_exited_msg { actor_addr source; std::uint32_t reason; };^
-%\item \lstinline^{'VOID'}^ if the receiver handled the message but did not respond to it
-\item if a message send by \lstinline^timed_sync_send^ timed out: \lstinline^sync_timeout_msg^
-\end{itemize}
-
-\clearpage
 \subsection{Receive Response Messages}
 
 When sending a synchronous message, the response handler can be passed by either using \lstinline^then^ (event-based actors) or \lstinline^await^ (blocking actors).
@@ -53,29 +42,24 @@ void foo(event_based_actor* self, actor testee) {
 Similar to \lstinline^become^, the \lstinline^then^ function modifies an actor's behavior stack.
 However, it is used as ``one-shot handler'' and automatically returns to the previous behavior afterwards.
 
+\clearpage
 \subsection{Synchronous Failures and Error Handlers}
 
-An unexpected response message, i.e., a message that is not handled by given behavior, will invoke the actor's \lstinline^on_sync_failure^ handler.
-The default handler kills the actor by calling \lstinline^self->quit(exit_reason::unhandled_sync_failure)^.
-The handler can be overridden by calling \lstinline^self->on_sync_failure(/*...*/)^.
-
-Unhandled timeout messages trigger the \lstinline^on_sync_timeout^ handler.
-The default handler kills the actor for reason \lstinline^exit_reason::unhandled_sync_failure^.
-It is possible set both error handlers by calling \lstinline^self->on_sync_timeout_or_failure(/*...*)^.
+An unexpected response message, i.e., a message that is not handled by the ``one-shot-handler'', is considered as an error. The runtime will invoke the actor's \lstinline^on_sync_failure^, which kills the actor by calling \lstinline^self->quit(exit_reason::unhandled_sync_failure)^ per default. The error handler can be overridden by calling \lstinline^self->on_sync_failure(...)^ as shown below.
 
 \begin{lstlisting}
 void foo(event_based_actor* self, actor testee) {
-  // testee replies with a string to 'get'
   // set handler for unexpected messages
-  self->on_sync_failure = [] {
-    aout << "received: " << to_string(self->last_dequeued()) << endl;
-  };
-  // set handler for timeouts
-  self->on_sync_timeout = [] {
-    aout << "timeout occured" << endl;
-  };
+  self->on_sync_failure([=] {
+    aout(self) << "received unexpected synchronous response: "
+               << to_string(self->last_dequeued()) << endl;
+  });
   // set response handler by using "then"
-  timed_sync_send(testee, std::chrono::seconds(30), get_atom::value).then(
-    [=](const std::string& str) { /* handle str */ }
+  sync_send(testee, get_atom::value).then(
+    [=](const std::string& str) {
+      /* handle str */
+    }
+    // any other result will call the on_sync_failure handler
   );
+}
 \end{lstlisting}

@@ -205,4 +205,6 @@ Besides, these function names were not a good choice in the first place, since `
 As a result, both functions are now deprecated.
 Their replacements are named \lstinline^current_message^ and \lstinline^current_sender^ (cf. Section \ref{Sec::Actors::Interfaces}).
 
+\subsubsection{0.13 $\Rightarrow$ 0.14}
 
+The function \lstinline^timed_sync_send^ has been removed. It offered an alternative way of defining message handlers, which is inconsistent with the rest of the API.

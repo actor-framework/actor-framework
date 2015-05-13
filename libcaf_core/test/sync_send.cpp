@@ -21,7 +21,6 @@
 #include "caf/test/unit_test.hpp"
 
 #include "caf/all.hpp"
-#include "caf/none.hpp"
 
 using namespace std;
 using namespace caf;
@@ -365,13 +364,13 @@ CAF_TEST(sync_send) {
   CAF_MESSAGE("block on `await_all_other_actors_done`");
   self->await_all_other_actors_done();
   CAF_MESSAGE("`await_all_other_actors_done` finished");
-  self->timed_sync_send(self, milliseconds(50), no_way_atom::value).await(
-    on<sync_timeout_msg>() >> [] {
-      CAF_MESSAGE("Got timeout");
-    },
+  self->sync_send(self, no_way_atom::value).await(
     others >> [&] {
       CAF_TEST_ERROR("Unexpected message: "
                      << to_string(self->current_message()));
+    },
+    after(milliseconds(50)) >> [] {
+      CAF_MESSAGE("Got timeout");
     }
   );
   // we should have received two DOWN messages with normal exit reason
@@ -406,17 +405,17 @@ CAF_TEST(sync_send) {
   auto c = spawn<C>(); // replies only to 'gogo' messages
   // first test: sync error must occur, continuation must not be called
   bool timeout_occured = false;
-  self->on_sync_timeout([&] {
-    CAF_MESSAGE("timeout occured");
-    timeout_occured = true;
-  });
   self->on_sync_failure([&] {
     CAF_TEST_ERROR("Unexpected message: "
                    << to_string(self->current_message()));
   });
-  self->timed_sync_send(c, milliseconds(500), hi_there_atom::value).await(
+  self->sync_send(c, milliseconds(500), hi_there_atom::value).await(
     on(val<atom_value>) >> [&] {
-      cout << "C did reply to 'HiThere'" << endl;
+      CAF_TEST_ERROR("C did reply to 'HiThere'");
+    },
+    after(milliseconds(500)) >> [&] {
+      CAF_MESSAGE("timeout occured");
+      timeout_occured = true;
     }
   );
   CAF_CHECK_EQUAL(timeout_occured, true);

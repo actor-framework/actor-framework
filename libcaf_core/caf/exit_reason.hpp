@@ -46,11 +46,6 @@ static constexpr uint32_t unhandled_exception = 0x00002;
 static constexpr uint32_t unhandled_sync_failure = 0x00004;
 
 /**
- * Indicates that a synchronous message timed out.
- */
-static constexpr uint32_t unhandled_sync_timeout = 0x00005;
-
-/**
  * Indicates that the exit reason for this actor is unknown, i.e.,
  * the actor has been terminated and no longer exists.
  */

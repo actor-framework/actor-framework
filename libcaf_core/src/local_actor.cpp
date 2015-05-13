@@ -351,21 +351,21 @@ invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
         bool is_sync_tout = ptr->msg.match_elements<sync_timeout_msg>();
         ptr.swap(current_mailbox_element());
         auto mid = current_mailbox_element()->mid;
-        auto res = post_process_invoke_res(this, mid,
-                                           fun(current_mailbox_element()->msg));
-        ptr.swap(current_mailbox_element());
-        mark_arrived(awaited_id);
-        if (!res) {
-          if (is_sync_tout) {
-            CAF_LOG_WARNING("sync timeout occured in actor "
-                            << "with ID " << id());
-            handle_sync_timeout();
-          } else {
+        if (is_sync_tout) {
+          if (fun.timeout().valid()) {
+            fun.handle_timeout();
+          }
+        } else {
+          auto res = post_process_invoke_res(this, mid,
+                                             fun(current_mailbox_element()->msg));
+          ptr.swap(current_mailbox_element());
+          if (!res) {
             CAF_LOG_WARNING("sync failure occured in actor "
-                            << "with ID " << id());
+                              << "with ID " << id());
             handle_sync_failure();
           }
         }
+        mark_arrived(awaited_id);
         return im_success;
       }
       return im_skipped;
@@ -441,6 +441,9 @@ local_actor::find_pending_response(message_id mid) {
 void local_actor::set_response_handler(message_id response_id, behavior bhvr) {
   auto pr = find_pending_response(response_id);
   if (pr) {
+    if (bhvr.timeout().valid()) {
+      request_sync_timeout_msg(bhvr.timeout(), response_id);
+    }
     pr->second = std::move(bhvr);
   }
 }

@@ -384,13 +384,6 @@ class local_actor : public abstract_actor, public resumable {
   /**
    * Sets the handler for unexpected synchronous response messages.
    */
-  inline void on_sync_timeout(std::function<void()> fun) {
-    m_sync_timeout_handler = std::move(fun);
-  }
-
-  /**
-   * Sets the handler for `timed_sync_send` timeout messages.
-   */
   inline void on_sync_failure(std::function<void()> fun) {
     m_sync_failure_handler = std::move(fun);
   }
@@ -400,14 +393,6 @@ class local_actor : public abstract_actor, public resumable {
    */
   inline bool has_sync_failure_handler() {
     return static_cast<bool>(m_sync_failure_handler);
-  }
-
-  /**
-   * Calls `on_sync_timeout(fun); on_sync_failure(fun);.
-   */
-  inline void on_sync_timeout_or_failure(std::function<void()> fun) {
-    on_sync_timeout(fun);
-    on_sync_failure(fun);
   }
 
   /**
@@ -485,14 +470,6 @@ class local_actor : public abstract_actor, public resumable {
     return m_current_element;
   }
 
-  inline void handle_sync_timeout() {
-    if (m_sync_timeout_handler) {
-      m_sync_timeout_handler();
-    } else {
-      quit(exit_reason::unhandled_sync_timeout);
-    }
-  }
-
   inline void handle_sync_failure() {
     if (m_sync_failure_handler) {
       m_sync_failure_handler();
@@ -513,15 +490,6 @@ class local_actor : public abstract_actor, public resumable {
   }
 
   void request_sync_timeout_msg(const duration& dr, message_id mid);
-
-  // returns the response ID
-  template <class Handle, class... Ts>
-  message_id timed_sync_send_impl(message_priority mp, const Handle& dh,
-                                  const duration& dr, Ts&&... xs) {
-    auto result = sync_send_impl(mp, dh, std::forward<Ts>(xs)...);
-    request_sync_timeout_msg(dr, result);
-    return result;
-  }
 
   // returns 0 if last_dequeued() is an asynchronous or sync request message,
   // a response id generated from the request id otherwise
@@ -673,7 +641,6 @@ class local_actor : public abstract_actor, public resumable {
                          const duration& rtime, message data);
 
   std::function<void()> m_sync_failure_handler;
-  std::function<void()> m_sync_timeout_handler;
 };
 
 /**

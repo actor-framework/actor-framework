@@ -53,8 +53,6 @@ class local_actor;
   \hline
   \lstinline^void on_sync_failure(auto fun)^ & Sets a handler, i.e., a functor taking no arguments, for unexpected synchronous response messages (default action is to kill the actor for reason \lstinline^unhandled_sync_failure^) \\
   \hline
-  \lstinline^void on_sync_timeout(auto fun)^ & Sets a handler, i.e., a functor taking no arguments, for \lstinline^timed_sync_send^ timeout messages (default action is to kill the actor for reason \lstinline^unhandled_sync_timeout^) \\
-  \hline
   \lstinline^void monitor(actor whom)^ & Unidirectionally monitors \lstinline^whom^ (see Section \ref{Sec::Management::Monitors}) \\
   \hline
   \lstinline^void demonitor(actor whom)^ & Removes a monitor from \lstinline^whom^ \\
