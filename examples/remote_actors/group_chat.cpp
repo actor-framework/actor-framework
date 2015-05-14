@@ -32,8 +32,6 @@ istream& operator>>(istream& is, line& l) {
   return is;
 }
 
-namespace { string s_last_line; }
-
 void client(event_based_actor* self, const string& name) {
   self->become (
     [=](broadcast_atom, const string& message) {
@@ -44,7 +42,7 @@ void client(event_based_actor* self, const string& name) {
     [=](join_atom, const group& what) {
       for (auto g : self->joined_groups()) {
         cout << "*** leave " << to_string(g) << endl;
-        self->send(self, g, name + " has left the chatroom");
+        self->send(g, name + " has left the chatroom");
         self->leave(g);
       }
       cout << "*** join " << to_string(what) << endl;
@@ -53,7 +51,9 @@ void client(event_based_actor* self, const string& name) {
     },
     [=](const string& txt) {
       // don't print own messages
-      if (self->current_sender() != self) cout << txt << endl;
+      if (self->current_sender() != self) {
+        cout << txt << endl;
+      }
     },
     [=](const group_down_msg& g) {
       cout << "*** chatroom offline: " << to_string(g.source) << endl;
@@ -148,8 +148,8 @@ int main(int argc, char** argv) {
              "  /help          print this text\n" << flush;
       },
       others >> [&] {
-        if (!s_last_line.empty()) {
-          anon_send(client_actor, broadcast_atom::value, s_last_line);
+        if (!i->str.empty()) {
+          anon_send(client_actor, broadcast_atom::value, i->str);
         }
       }
     });
