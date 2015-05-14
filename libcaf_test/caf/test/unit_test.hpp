@@ -74,7 +74,7 @@ struct dummy_fixture { };
 template <class T>
 class test_impl : public test {
  public:
-  test_impl(std::string name) : test(std::move(name)) {
+  test_impl(std::string test_name) : test(std::move(test_name)) {
     // nop
   }
 
@@ -286,23 +286,17 @@ class engine {
   int m_argc = 0;
   char** m_argv = nullptr;
   char*  m_path = nullptr;
-  const char* m_reset        = "\033[0m";
-  const char* m_black        = "\033[30m";
-  const char* m_red          = "\033[31m";
-  const char* m_green        = "\033[32m";
-  const char* m_yellow       = "\033[33m";
-  const char* m_blue         = "\033[34m";
-  const char* m_magenta      = "\033[35m";
-  const char* m_cyan         = "\033[36m";
-  const char* m_white        = "\033[37m";
-  const char* m_bold_black   = "\033[1m\033[30m";
-  const char* m_bold_red     = "\033[1m\033[31m";
-  const char* m_bold_green   = "\033[1m\033[32m";
-  const char* m_bold_yellow  = "\033[1m\033[33m";
-  const char* m_bold_blue    = "\033[1m\033[34m";
-  const char* m_bold_magenta = "\033[1m\033[35m";
-  const char* m_bold_cyan    = "\033[1m\033[36m";
-  const char* m_bold_white   = "\033[1m\033[37m";
+  const char* m_colors[9][2] = {
+    {"\033[0m", "\033[0m"},          // reset
+    {"\033[30m", "\033[1m\033[30m"}, // black
+    {"\033[31m", "\033[1m\033[31m"}, // red
+    {"\033[32m", "\033[1m\033[32m"}, // green
+    {"\033[33m", "\033[1m\033[33m"}, // yellow
+    {"\033[34m", "\033[1m\033[34m"}, // blue
+    {"\033[35m", "\033[1m\033[35m"}, // magenta
+    {"\033[36m", "\033[1m\033[36m"}, // cyan
+    {"\033[37m", "\033[1m\033[37m"}  // white
+  };
   const char* m_check_file = "<none>";
   size_t m_check_line = 0;
   test* m_current_test = nullptr;

@@ -268,23 +268,11 @@ bool engine::run(bool colorize,
     return true;
   }
   if (!colorize) {
-    instance().m_reset = "";
-    instance().m_black = "";
-    instance().m_red = "";
-    instance().m_green = "";
-    instance().m_yellow = "";
-    instance().m_blue = "";
-    instance().m_magenta = "";
-    instance().m_cyan = "";
-    instance().m_white = "";
-    instance().m_bold_black = "";
-    instance().m_bold_red = "";
-    instance().m_bold_green = "";
-    instance().m_bold_yellow = "";
-    instance().m_bold_blue = "";
-    instance().m_bold_magenta = "";
-    instance().m_bold_cyan = "";
-    instance().m_bold_white = "";
+    for (size_t i = 0; i <= static_cast<size_t>(white); ++i) {
+      for (size_t j = 0; j <= static_cast<size_t>(bold); ++j) {
+        instance().m_colors[i][j] = "";
+      }
+    }
   }
   if (!logger::init(verbosity_console, verbosity_file, log_file)) {
     return false;
@@ -445,55 +433,7 @@ bool engine::run(bool colorize,
 }
 
 const char* engine::color(color_value v, color_face t) {
-  if (v == reset) {
-    return instance().m_reset;
-  }
-  switch (t) {
-    default:
-      return nullptr;
-    case normal:
-      switch (v) {
-        default:
-          return nullptr;
-        case black:
-          return instance().m_black;
-        case red:
-          return instance().m_red;
-        case green:
-          return instance().m_green;
-        case yellow:
-          return instance().m_yellow;
-        case blue:
-          return instance().m_blue;
-        case magenta:
-          return instance().m_magenta;
-        case cyan:
-          return instance().m_cyan;
-        case white:
-          return instance().m_white;
-      }
-    case bold:
-      switch (v) {
-        default:
-          return nullptr;
-        case black:
-          return instance().m_bold_black;
-        case red:
-          return instance().m_bold_red;
-        case green:
-          return instance().m_bold_green;
-        case yellow:
-          return instance().m_bold_yellow;
-        case blue:
-          return instance().m_bold_blue;
-        case magenta:
-          return instance().m_bold_magenta;
-        case cyan:
-          return instance().m_bold_cyan;
-        case white:
-          return instance().m_bold_white;
-      }
-  }
+  return instance().m_colors[static_cast<size_t>(v)][static_cast<size_t>(t)];
 }
 
 const char* engine::last_check_file() {
