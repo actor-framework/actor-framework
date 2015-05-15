@@ -232,6 +232,7 @@ class local_group_proxy : public local_group {
     CAF_ASSERT(remote_broker != invalid_actor);
     m_broker = std::move(remote_broker);
     m_proxy_broker = spawn<proxy_broker, hidden>(this);
+    m_monitor = spawn(broker_monitor_actor, this);
   }
 
   attachable_ptr subscribe(const actor_addr& who) override {
@@ -268,13 +269,28 @@ class local_group_proxy : public local_group {
 
   void stop() override {
     CAF_LOG_TRACE("");
-    await_all_locals_down({m_proxy_broker, m_broker});
+    await_all_locals_down({m_monitor, m_proxy_broker, m_broker});
+    m_monitor = invalid_actor;
     m_proxy_broker = invalid_actor;
     m_broker = invalid_actor;
   }
 
  private:
+  static behavior broker_monitor_actor(event_based_actor* self,
+                                       local_group_proxy* grp) {
+    self->monitor(grp->m_broker);
+    return {
+      [=](const down_msg& down) {
+        auto msg = make_message(group_down_msg{group(grp)});
+        grp->send_all_subscribers(self->address(), std::move(msg),
+                                  self->host());
+        self->quit(down.reason);
+      }
+    };
+  }
+
   actor m_proxy_broker;
+  actor m_monitor;
 };
 
 using local_group_proxy_ptr = intrusive_ptr<local_group_proxy>;
