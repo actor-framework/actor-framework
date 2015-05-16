@@ -501,7 +501,7 @@ CAF_TEST(test_remote_actor) {
           CAF_CHECK(serv2 == io::remote_actor("127.0.0.1", p2));
         }
         // connect to published groups
-        io::remote_group("whatever", "127.0.0.1", gport);
+        auto grp = io::remote_group("whatever", "127.0.0.1", gport);
         auto c = self->spawn<client, monitored>(serv);
         self->receive(
           [&](const down_msg& dm) {
@@ -509,6 +509,7 @@ CAF_TEST(test_remote_actor) {
             CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
           }
         );
+        grp->stop();
       },
       on("-s") >> [&] {
         CAF_MESSAGE("don't run remote actor (server mode)");
