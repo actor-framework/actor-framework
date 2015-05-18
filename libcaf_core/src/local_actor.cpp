@@ -602,30 +602,23 @@ resumable::resume_result local_actor::resume(execution_unit* eu,
   }
   // actor is cooperatively scheduled
   host(eu);
-  auto done_cb = [&]() -> bool {
+  auto done_cb = [&] {
     CAF_LOG_TRACE("");
     bhvr_stack().clear();
     bhvr_stack().cleanup();
     on_exit();
+    CAF_LOG_DEBUG("on_exit did set a new behavior: ignored");
     auto rsn = planned_exit_reason();
-    if (rsn != exit_reason::kill) {
-      if (has_behavior()) {
-        CAF_LOG_DEBUG("on_exit did set a new behavior");
-        planned_exit_reason(exit_reason::not_exited);
-        return false; // on_exit did set a new behavior
-      }
-      if (rsn == exit_reason::not_exited) {
-        rsn = exit_reason::normal;
-        planned_exit_reason(rsn);
-      }
+    if (rsn == exit_reason::not_exited) {
+      rsn = exit_reason::normal;
+      planned_exit_reason(rsn);
     }
     cleanup(rsn);
-    return true;
   };
   auto actor_done = [&]() -> bool {
-    if (!has_behavior()
-        || planned_exit_reason() != exit_reason::not_exited) {
-      return done_cb();
+    if (!has_behavior() || planned_exit_reason() != exit_reason::not_exited) {
+      done_cb();
+      return true;
     }
     return false;
   };

@@ -61,5 +61,7 @@ class local_actor;
   \hline
   \lstinline^template <class F>^ \lstinline^void set_exception_handler(F f)^ & Sets a custom handler for uncaught exceptions \\
   \hline
+  \lstinline^void on_exit()^ & Can be overridden to add cleanup code that runs after an actor finished execution, e.g., to break cycles \\
+  \hline
 \end{tabular*}
 }

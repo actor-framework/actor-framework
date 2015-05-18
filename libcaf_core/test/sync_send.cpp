@@ -259,6 +259,26 @@ CAF_TEST(test_void_res) {
   self->send_exit(buddy, exit_reason::kill);
 }
 
+CAF_TEST(pending_quit) {
+  auto mirror = spawn([](event_based_actor* self) -> behavior {
+    return {
+      others >> [=] {
+        self->quit();
+        return std::move(self->current_message());
+      }
+    };
+  });
+  spawn([mirror](event_based_actor* self) {
+    self->sync_send(mirror, 42).then(
+      others >> [] {
+        CAF_TEST_ERROR("received result, should've been terminated already");
+      }
+    );
+    self->quit();
+  });
+  await_all_actors_done();
+}
+
 CAF_TEST(sync_send) {
   scoped_actor self;
   self->on_sync_failure([&] {
