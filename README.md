@@ -68,7 +68,7 @@ A SNocs workspace is provided by GitHub user
 
 ## Supported Compilers
 
-* GCC >= 4.7.2
+* GCC >= 4.8
 * Clang >= 3.2
 
 ## Supported Operating Systems
