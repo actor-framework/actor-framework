@@ -21,7 +21,9 @@
 #ifndef CAF_IO_NETWORK_ASIO_MULTIPLEXER_HPP
 #define CAF_IO_NETWORK_ASIO_MULTIPLEXER_HPP
 
+CAF_PUSH_WARNINGS
 #include "boost/asio.hpp"
+CAF_POP_WARNINGS
 
 #include "caf/detail/logging.hpp"
 
@@ -54,22 +56,6 @@ using default_socket_acceptor = boost::asio::ip::tcp::acceptor;
  * Platform-specific native socket type.
  */
 using native_socket = typename default_socket::native_handle_type;
-
-/**
- * Platform-specific native acceptor socket type.
- */
-using native_socket_acceptor
-  = typename default_socket_acceptor::native_handle_type;
-
-/**
- * A wrapper for the supervisor backend provided by boost::asio.
- */
-struct asio_supervisor : public multiplexer::supervisor {
-  asio_supervisor(io_backend& iob) : work(iob) {}
-
- private:
-  boost::asio::io_service::work work;
-};
 
 /**
  * A wrapper for the boost::asio multiplexer

@@ -29,6 +29,22 @@ namespace caf {
 namespace io {
 namespace network {
 
+namespace {
+
+/**
+ * A wrapper for the supervisor backend provided by boost::asio.
+ */
+struct asio_supervisor : public multiplexer::supervisor {
+  asio_supervisor(io_backend& iob) : work(iob) {
+    // nop
+  }
+
+ private:
+  boost::asio::io_service::work work;
+};
+
+} // namespace anonymous
+
 default_socket new_tcp_connection(io_backend& backend, const std::string& host,
                                   uint16_t port) {
   default_socket fd{backend};
