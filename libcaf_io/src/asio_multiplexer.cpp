@@ -47,16 +47,22 @@ struct asio_supervisor : public multiplexer::supervisor {
 
 default_socket new_tcp_connection(io_backend& backend, const std::string& host,
                                   uint16_t port) {
+  std::cout << "new_tcp_connection start" << std::endl;
   default_socket fd{backend};
   using boost::asio::ip::tcp;
-  try {
-    tcp::resolver r(fd.get_io_service());
-    tcp::resolver::query q(host, std::to_string(port));
-    auto i = r.resolve(q);
-    boost::asio::connect(fd, i);
-  } catch (boost::system::system_error& se) {
-    throw network_error(se.code().message());
+  tcp::resolver r(fd.get_io_service());
+  tcp::resolver::query q(host, std::to_string(port));
+  boost::system::error_code ec;
+  auto i = r.resolve(q, ec);
+  if (ec) {
+    throw network_error("could not resolve host: " + host);
   }
+  boost::asio::connect(fd, i, ec);
+  if (ec) {
+    throw network_error("could not connect to host: " + host +
+                        ":" + std::to_string(port));
+  }
+  std::cout << "new_tcp_connection end (no exception)" << std::endl;
   return fd;
 }
 
