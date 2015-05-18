@@ -381,6 +381,10 @@ invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
       return im_skipped;
     case msg_type::ordinary:
       if (!awaited_id.valid()) {
+        auto had_timeout = has_timeout();
+        if (had_timeout) {
+          has_timeout(false);
+        }
         ptr.swap(current_mailbox_element());
         auto mid = current_mailbox_element()->mid;
         auto res = post_process_invoke_res(this, mid,
@@ -388,6 +392,10 @@ invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
         ptr.swap(current_mailbox_element());
         if (res) {
           return im_success;
+        }
+        // restore timeout if necessary
+        if (had_timeout) {
+          has_timeout(true);
         }
       }
       CAF_LOG_DEBUG_IF(awaited_id.valid(),
