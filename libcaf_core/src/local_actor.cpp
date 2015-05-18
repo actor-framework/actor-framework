@@ -343,9 +343,6 @@ invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
         CAF_LOG_DEBUG("handle timeout message");
         auto& tm = ptr->msg.get_as<timeout_msg>(0);
         handle_timeout(fun, tm.timeout_id);
-        if (awaited_id.valid()) {
-          mark_arrived(awaited_id);
-        }
         return im_success;
       }
       // ignore "async" timeout
