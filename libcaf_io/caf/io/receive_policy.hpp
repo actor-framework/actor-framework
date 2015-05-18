@@ -4,6 +4,8 @@
 #include <cstddef>
 #include <utility>
 
+#include "caf/config.hpp"
+
 namespace caf {
 namespace io {
 
