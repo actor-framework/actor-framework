@@ -62,14 +62,21 @@ void blocking_actor::dequeue(behavior& bhvr, message_id mid) {
     return;
   }
   // requesting an invalid timeout will reset our active timeout
-  auto timeout_id = request_timeout(bhvr.timeout());
+  uint32_t timeout_id = 0;
+  if (mid == invalid_message_id) {
+    timeout_id = request_timeout(bhvr.timeout());
+  } else {
+    request_sync_timeout_msg(bhvr.timeout(), mid);
+  }
   // read incoming messages
   for (;;) {
     await_data();
     auto msg = next_message();
     switch (invoke_message(msg, bhvr, mid)) {
       case im_success:
-        reset_timeout(timeout_id);
+        if (mid == invalid_message_id) {
+          reset_timeout(timeout_id);
+        }
         return;
       case im_skipped:
         if (msg) {

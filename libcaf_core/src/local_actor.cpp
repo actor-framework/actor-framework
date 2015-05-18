@@ -30,7 +30,6 @@
 #include "caf/detail/logging.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 
-
 namespace caf {
 
 // local actors are created with a reference count of one that is adjusted
@@ -152,6 +151,15 @@ uint32_t local_actor::request_timeout(const duration& d) {
   return result;
 }
 
+void local_actor::request_sync_timeout_msg(const duration& d, message_id mid) {
+  if (!d.valid()) {
+    return;
+  }
+  auto sched_cd = detail::singletons::get_scheduling_coordinator();
+  sched_cd->delayed_send(d, address(), this, mid,
+                         make_message(sync_timeout_msg{}));
+}
+
 void local_actor::handle_timeout(behavior& bhvr, uint32_t timeout_id) {
   if (!is_active_timeout(timeout_id)) {
     return;
@@ -165,12 +173,6 @@ void local_actor::handle_timeout(behavior& bhvr, uint32_t timeout_id) {
     CAF_ASSERT(m_bhvr_stack.back() == bhvr);
     m_bhvr_stack.pop_back();
     return;
-  }
-  // request next timeout for non-blocking (i.e. event-based) actors
-  // if behavior stack was not modified by calling become()/unbecome()
-  if (m_bhvr_stack.back() == bhvr) {
-    CAF_ASSERT(bhvr.timeout().valid());
-    request_timeout(bhvr.timeout());
   }
 }
 
@@ -337,13 +339,18 @@ invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
       // by calling quit(...)
       return im_success;
     case msg_type::timeout: {
-      CAF_LOG_DEBUG("handle timeout message");
-      auto& tm = ptr->msg.get_as<timeout_msg>(0);
-      handle_timeout(fun, tm.timeout_id);
-      if (awaited_id.valid()) {
-        mark_arrived(awaited_id);
+      if (awaited_id == invalid_message_id) {
+        CAF_LOG_DEBUG("handle timeout message");
+        auto& tm = ptr->msg.get_as<timeout_msg>(0);
+        handle_timeout(fun, tm.timeout_id);
+        if (awaited_id.valid()) {
+          mark_arrived(awaited_id);
+        }
+        return im_success;
       }
-      return im_success;
+      // ignore "async" timeout
+      CAF_LOG_DEBUG("async timeout ignored while in sync mode");
+      return im_dropped;
     }
     case msg_type::sync_response:
       CAF_LOG_DEBUG("handle as synchronous response: "
@@ -633,15 +640,12 @@ resumable::resume_result local_actor::resume(execution_unit* eu,
         return resumable::resume_result::done;
       }
     }
-    auto had_tout = has_timeout();
-    auto tout = active_timeout_id();
     int handled_msgs = 0;
     auto reset_timeout_if_needed = [&] {
-      if (had_tout && handled_msgs > 0 && tout == active_timeout_id()) {
+      if (handled_msgs > 0) {
         request_timeout(get_behavior().timeout());
       }
     };
-    // max_throughput = 0 means infinite
     for (size_t i = 0; i < max_throughput; ++i) {
       auto ptr = next_message();
       if (ptr) {
@@ -855,12 +859,6 @@ void local_actor::quit(uint32_t reason) {
   if (is_blocking()) {
     throw actor_exited(reason);
   }
-}
-
-void local_actor::request_sync_timeout_msg(const duration& dr, message_id mid) {
-  auto sched_cd = detail::singletons::get_scheduling_coordinator();
-  sched_cd->delayed_send(dr, address(), this, mid,
-                         make_message(sync_timeout_msg{}));
 }
 
 // <backward_compatibility version="0.12">
