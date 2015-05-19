@@ -36,6 +36,13 @@ namespace {
 std::atomic<long> s_max_actor_instances;
 std::atomic<long> s_actor_instances;
 
+using a_atom = atom_constant<atom("a")>;
+using b_atom = atom_constant<atom("b")>;
+using c_atom = atom_constant<atom("c")>;
+using abc_atom = atom_constant<atom("abc")>;
+using name_atom = atom_constant<atom("name")>;
+
+
 void inc_actor_instances() {
   long v1 = ++s_actor_instances;
   long v2 = s_max_actor_instances.load();
@@ -107,7 +114,7 @@ actor spawn_event_testee2(actor parent) {
         after(chrono::milliseconds(1)) >> [=] {
           CAF_MESSAGE(CAF_ARG(remaining));
           if (remaining == 1) {
-            send(parent, atom("t2done"));
+            send(parent, ok_atom::value);
             quit();
           }
           else become(wait4timeout(remaining - 1));
@@ -121,46 +128,40 @@ actor spawn_event_testee2(actor parent) {
   return spawn<impl>(parent);
 }
 
-struct chopstick : public sb_actor<chopstick> {
+class chopstick : public event_based_actor {
+ public:
+  behavior make_behavior() override {
+    return available;
+  }
 
   behavior taken_by(actor whom) {
     return {
-      on<atom("take")>() >> [=] {
-        return atom("busy");
+      [=](get_atom) {
+        return error_atom::value;
       },
-      on(atom("put"), whom) >> [=] {
+      on(put_atom::value, whom) >> [=]() {
         become(available);
-      },
-      on(atom("break")) >> [=] {
-        quit();
       }
     };
   }
 
+  chopstick() {
+    inc_actor_instances();
+    available.assign(
+      [=](get_atom, actor whom) -> atom_value {
+        become(taken_by(whom));
+        return ok_atom::value;
+      }
+    );
+  }
+
+  ~chopstick() {
+    dec_actor_instances();
+  }
+
+ private:
   behavior available;
-
-  behavior& init_state = available;
-
-  chopstick();
-  ~chopstick();
 };
-
-chopstick::chopstick() {
-  inc_actor_instances();
-  available.assign(
-    on(atom("take"), arg_match) >> [=](actor whom) -> atom_value {
-      become(taken_by(whom));
-      return atom("taken");
-    },
-    on(atom("break")) >> [=] {
-      quit();
-    }
-  );
-}
-
-chopstick::~chopstick() {
-  dec_actor_instances();
-}
 
 class testee_actor : public blocking_actor {
  public:
@@ -292,18 +293,18 @@ behavior simple_mirror::make_behavior() {
 }
 
 behavior high_priority_testee(event_based_actor* self) {
-  self->send(self, atom("b"));
-  self->send(message_priority::high, self, atom("a"));
+  self->send(self, b_atom::value);
+  self->send(message_priority::high, self, a_atom::value);
   // 'a' must be self->received before 'b'
   return {
-    on(atom("b")) >> [=] {
+    [=](b_atom) {
       CAF_TEST_ERROR("received 'b' before 'a'");
       self->quit();
     },
-    on(atom("a")) >> [=] {
+    [=](a_atom) {
       CAF_MESSAGE("received \"a\" atom");
       self->become (
-        on(atom("b")) >> [=] {
+        [=](b_atom) {
           CAF_MESSAGE("received \"b\" atom, about to quit");
           self->quit();
         },
@@ -329,7 +330,7 @@ struct high_priority_testee_class : event_based_actor {
 struct master : event_based_actor {
   behavior make_behavior() override {
     return (
-      on(atom("done")) >> [=] {
+      [=](ok_atom) {
         CAF_MESSAGE("master: received done");
         quit(exit_reason::user_shutdown);
       }
@@ -376,11 +377,11 @@ counting_actor::~counting_actor() {
 
 behavior counting_actor::make_behavior() {
   for (int i = 0; i < 100; ++i) {
-    send(this, atom("dummy"));
+    send(this, ok_atom::value);
   }
   CAF_CHECK_EQUAL(mailbox().count(), 100);
   for (int i = 0; i < 100; ++i) {
-    send(this, atom("dummy"));
+    send(this, ok_atom::value);
   }
   CAF_CHECK_EQUAL(mailbox().count(), 200);
   return {};
@@ -417,7 +418,7 @@ CAF_TEST(detached_actors_and_schedulued_actors) {
   auto m = spawn<master, detached>();
   spawn<slave>(m);
   spawn<slave>(m);
-  self->send(m, atom("done"));
+  self->send(m, ok_atom::value);
 }
 
 CAF_TEST(self_receive_with_zero_timeout) {
@@ -552,8 +553,8 @@ CAF_TEST(spawn_event_testee2) {
   scoped_actor self;
   spawn_event_testee2(self);
   self->receive(
-    on(atom("t2done")) >> [] {
-      CAF_MESSAGE("Received \"t2done\"");
+    [](ok_atom) {
+      CAF_MESSAGE("Received 'ok'");
     }
   );
 }
@@ -561,11 +562,11 @@ CAF_TEST(spawn_event_testee2) {
 CAF_TEST(chopsticks) {
   scoped_actor self;
   auto cstk = spawn<chopstick>();
-  self->send(cstk, atom("take"), self);
+  self->send(cstk, get_atom::value, self);
   self->receive(
-    on(atom("taken")) >> [&] {
-      self->send(cstk, atom("put"), self);
-      self->send(cstk, atom("break"));
+    [&](ok_atom) {
+      self->send(cstk, put_atom::value, self);
+      self->send_exit(cstk, exit_reason::kill);
     },
     others >> [&] {
       CAF_TEST_ERROR("Unexpected message: " <<
@@ -649,7 +650,7 @@ CAF_TEST(inflater) {
         [=](int n, const string& str) {
           send(m_buddy, n * 2, str + " from " + m_name);
         },
-        on(atom("done")) >> [=] {
+        [=](ok_atom) {
           quit();
         }
       };
@@ -671,9 +672,9 @@ CAF_TEST(inflater) {
     }
   );
   // kill joe and bob
-  auto poison_pill = make_message(atom("done"));
-  anon_send(joe, poison_pill);
-  anon_send(bob, poison_pill);
+  auto ok_message = make_message(ok_atom::value);
+  anon_send(joe, ok_message);
+  anon_send(bob, ok_message);
 }
 
 CAF_TEST(kr34t0r) {
@@ -709,29 +710,29 @@ CAF_TEST(kr34t0r) {
   };
   scoped_actor self;
   auto joe_the_second = spawn<kr34t0r>("Joe", invalid_actor);
-  self->send(joe_the_second, atom("done"));
+  self->send(joe_the_second, ok_atom::value);
 }
 
 CAF_TEST(function_spawn) {
   scoped_actor self;
   auto f = [](const string& name) -> behavior {
     return (
-      on(atom("get_name")) >> [name] {
-        return make_message(atom("name"), name);
+      [name](get_atom) {
+        return std::make_tuple(name_atom::value, name);
       }
     );
   };
   auto a1 = spawn(f, "alice");
   auto a2 = spawn(f, "bob");
-  self->send(a1, atom("get_name"));
+  self->send(a1, get_atom::value);
   self->receive (
-    on(atom("name"), arg_match) >> [&](const string& name) {
+    [&](name_atom, const string& name) {
       CAF_CHECK_EQUAL(name, "alice");
     }
   );
-  self->send(a2, atom("get_name"));
+  self->send(a2, get_atom::value);
   self->receive (
-    on(atom("name"), arg_match) >> [&](const string& name) {
+    [&](name_atom, const string& name) {
       CAF_CHECK_EQUAL(name, "bob");
     }
   );
@@ -739,14 +740,12 @@ CAF_TEST(function_spawn) {
   self->send_exit(a2, exit_reason::user_shutdown);
 }
 
-using abc_atom = atom_constant<atom("abc")>;
-
 using typed_testee = typed_actor<replies_to<abc_atom>::with<std::string>>;
 
 typed_testee::behavior_type testee() {
   return {
     [](abc_atom) {
-      CAF_MESSAGE("received abc_atom");
+      CAF_MESSAGE("received 'abc'");
       return "abc";
     }
   };
@@ -755,7 +754,7 @@ typed_testee::behavior_type testee() {
 CAF_TEST(typed_await) {
   scoped_actor self;
   auto x = spawn_typed(testee);
-  self->sync_send(x, abc_atom()).await(
+  self->sync_send(x, abc_atom::value).await(
     [](const std::string& str) {
       CAF_CHECK_EQUAL(str, "abc");
     }
@@ -769,14 +768,15 @@ CAF_TEST(constructor_attach) {
    public:
     testee(actor buddy) : m_buddy(buddy) {
       attach_functor([=](uint32_t reason) {
-        send(buddy, atom("done"), reason);
+        send(buddy, ok_atom::value, reason);
       });
     }
 
     behavior make_behavior() {
       return {
-        on(atom("die")) >> [=] {
-          quit(exit_reason::user_shutdown);
+        others >> [=] {
+          CAF_TEST_ERROR("Unexpected message: "
+                         << to_string(current_message()));
         }
       };
     }
@@ -794,6 +794,7 @@ CAF_TEST(constructor_attach) {
       // nop
     }
     behavior make_behavior() {
+      trap_exit(true);
       m_testee = spawn<testee, monitored>(this);
       return {
         [=](const down_msg& msg) {
@@ -802,7 +803,7 @@ CAF_TEST(constructor_attach) {
             quit(msg.reason);
           }
         },
-        on(atom("done"), arg_match) >> [=](uint32_t reason) {
+        [=](ok_atom, uint32_t reason) {
           CAF_CHECK_EQUAL(reason, exit_reason::user_shutdown);
           if (++m_downs == 2) {
             quit(reason);
@@ -822,7 +823,7 @@ CAF_TEST(constructor_attach) {
     int m_downs;
     actor m_testee;
   };
-  anon_send(spawn<spawner>(), atom("die"));
+  anon_send_exit(spawn<spawner>(), exit_reason::user_shutdown);
 }
 
 namespace {
@@ -893,8 +894,9 @@ CAF_TEST(kill_the_immortal) {
   auto wannabe_immortal = spawn([](event_based_actor* self) -> behavior {
     self->trap_exit(true);
     return {
-      others >> [] {
-        CAF_TEST_ERROR("Unexpected message");
+      others >> [=] {
+        CAF_TEST_ERROR("Unexpected message: "
+                       << to_string(self->current_message()));
       }
     };
   });

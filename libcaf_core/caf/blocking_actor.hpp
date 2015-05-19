@@ -132,8 +132,8 @@ class blocking_actor
    * ~~~
    * int i = 0;
    * receive_for(i, 10) (
-   *   on(atom("get")) >> [&]() -> message {
-   *     return {"result", i};
+   *   [&](get_atom) {
+   *     return i;
    *   }
    * );
    * ~~~

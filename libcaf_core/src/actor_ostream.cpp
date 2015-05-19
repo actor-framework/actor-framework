@@ -34,12 +34,12 @@ actor_ostream::actor_ostream(actor self) : m_self(std::move(self)) {
 }
 
 actor_ostream& actor_ostream::write(std::string arg) {
-  send_as(m_self, m_printer, atom("add"), std::move(arg));
+  send_as(m_self, m_printer, add_atom::value, std::move(arg));
   return *this;
 }
 
 actor_ostream& actor_ostream::flush() {
-  send_as(m_self, m_printer, atom("flush"));
+  send_as(m_self, m_printer, flush_atom::value);
   return *this;
 }
 

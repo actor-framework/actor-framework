@@ -21,6 +21,8 @@
 #ifndef CAF_IO_NETWORK_ASIO_MULTIPLEXER_HPP
 #define CAF_IO_NETWORK_ASIO_MULTIPLEXER_HPP
 
+#include "caf/config.hpp"
+
 CAF_PUSH_WARNINGS
 #include "boost/asio.hpp"
 CAF_POP_WARNINGS
@@ -100,7 +102,9 @@ class asio_multiplexer : public multiplexer {
   void run() override;
 
  private:
-  inline boost::asio::io_service& backend() { return m_backend; }
+  inline boost::asio::io_service& backend() {
+    return m_backend;
+  }
 
   io_backend m_backend;
   std::mutex m_mtx_sockets;

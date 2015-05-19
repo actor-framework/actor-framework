@@ -24,17 +24,24 @@
 
 using namespace caf;
 
+namespace {
+
+using die_atom = atom_constant<atom("die")>;
+using done_atom = atom_constant<atom("done")>;
+
+} // namespace <anonymous>
+
 CAF_TEST(constructor_attach) {
   class testee : public event_based_actor {
    public:
     testee(actor buddy) : m_buddy(buddy) {
       attach_functor([=](uint32_t reason) {
-        send(m_buddy, atom("done"), reason);
+        send(m_buddy, done_atom::value, reason);
       });
     }
     behavior make_behavior() {
       return {
-        on(atom("die")) >> [=] {
+        [=](die_atom) {
           quit(exit_reason::user_shutdown);
         }
       };
@@ -55,7 +62,7 @@ CAF_TEST(constructor_attach) {
             quit(msg.reason);
           }
         },
-        on(atom("done"), arg_match) >> [=](uint32_t reason) {
+        [=](done_atom, uint32_t reason) {
           CAF_CHECK_EQUAL(reason, exit_reason::user_shutdown);
           if (++m_downs == 2) {
             quit(reason);
@@ -70,7 +77,7 @@ CAF_TEST(constructor_attach) {
     int m_downs;
     actor m_testee;
   };
-  anon_send(spawn<spawner>(), atom("die"));
+  anon_send(spawn<spawner>(), die_atom::value);
   await_all_actors_done();
   shutdown();
 }

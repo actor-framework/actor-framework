@@ -31,7 +31,12 @@ namespace {
 
 constexpr auto s_foo = atom("FooBar");
 
+using a_atom = atom_constant<atom("a")>;
+using b_atom = atom_constant<atom("b")>;
+using c_atom = atom_constant<atom("c")>;
 using abc_atom = atom_constant<atom("abc")>;
+using def_atom = atom_constant<atom("def")>;
+using foo_atom = atom_constant<atom("foo")>;
 
 struct fixture {
   ~fixture() {
@@ -69,31 +74,31 @@ struct send_to_self {
 CAF_TEST(receive_atoms) {
   scoped_actor self;
   send_to_self f{self.get()};
-  f(atom("foo"), static_cast<uint32_t>(42));
-  f(atom("abc"), atom("def"), "cstring");
+  f(foo_atom::value, static_cast<uint32_t>(42));
+  f(abc_atom::value, def_atom::value, "cstring");
   f(1.f);
-  f(atom("a"), atom("b"), atom("c"), 23.f);
+  f(a_atom::value, b_atom::value, c_atom::value, 23.f);
   bool matched_pattern[3] = {false, false, false};
   int i = 0;
   CAF_MESSAGE("start receive loop");
   for (i = 0; i < 3; ++i) {
     self->receive(
-      on(atom("foo"), arg_match) >> [&](uint32_t value) {
+      [&](foo_atom, uint32_t value) {
         matched_pattern[0] = true;
         CAF_CHECK_EQUAL(value, 42);
       },
-      on(atom("abc"), atom("def"), arg_match) >> [&](const std::string& str) {
+      [&](abc_atom, def_atom, const std::string& str) {
         matched_pattern[1] = true;
         CAF_CHECK_EQUAL(str, "cstring");
       },
-      on(atom("a"), atom("b"), atom("c"), arg_match) >> [&](float value) {
+      [&](a_atom, b_atom, c_atom, float value) {
         matched_pattern[2] = true;
         CAF_CHECK_EQUAL(value, 23.f);
       });
   }
   CAF_CHECK(matched_pattern[0] && matched_pattern[1] && matched_pattern[2]);
   self->receive(
-    // "erase" message { atom("b"), atom("a"), atom("c"), 23.f }
+    // "erase" message { 'b', 'a, 'c', 23.f }
     others >> [] {
       CAF_MESSAGE("drain mailbox");
     },
@@ -104,10 +109,10 @@ CAF_TEST(receive_atoms) {
   atom_value x = atom("abc");
   atom_value y = abc_atom::value;
   CAF_CHECK_EQUAL(x, y);
-  auto msg = make_message(abc_atom());
+  auto msg = make_message(atom("abc"));
   self->send(self, msg);
   self->receive(
-    on(atom("abc")) >> [] {
+    [](abc_atom) {
       CAF_MESSAGE("received 'abc'");
     },
     others >> [] {

@@ -158,7 +158,7 @@ void printer_loop(blocking_actor* self) {
   };
   bool running = true;
   self->receive_while([&] { return running; })(
-    on(atom("add"), arg_match) >> [&](std::string& str) {
+    [&](add_atom, std::string& str) {
       auto s = self->current_sender();
       if (str.empty() || s == invalid_actor_addr) {
         return;
@@ -173,7 +173,7 @@ void printer_loop(blocking_actor* self) {
       }
       flush_if_needed(i->second);
     },
-    on(atom("flush")) >> [&] {
+    [&](flush_atom) {
       flush_output(self->current_sender());
     },
     [&](const down_msg& dm) {

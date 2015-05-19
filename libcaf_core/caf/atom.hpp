@@ -70,6 +70,11 @@ template <atom_value V>
 const atom_constant<V> atom_constant<V>::value = atom_constant<V>{};
 
 /**
+ * Generic 'ADD' atom for request operations.
+ */
+using add_atom = atom_constant<atom("ADD")>;
+
+/**
  * Generic 'GET' atom for request operations.
  */
 using get_atom = atom_constant<atom("GET")>;
@@ -116,6 +121,11 @@ using leave_atom = atom_constant<atom("LEAVE")>;
  * a list of predefined receivers.
  */
 using forward_atom = atom_constant<atom("FORWARD")>;
+
+/**
+ * Generic 'FLUSH' atom, e.g., used by `aout`.
+ */
+using flush_atom = atom_constant<atom("FLUSH")>;
 
 } // namespace caf
 

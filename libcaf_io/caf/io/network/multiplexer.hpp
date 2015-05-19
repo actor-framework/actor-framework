@@ -25,6 +25,7 @@
 #include <functional>
 
 #include "caf/extend.hpp"
+#include "caf/make_counted.hpp"
 #include "caf/memory_managed.hpp"
 
 #include "caf/io/fwd.hpp"
@@ -34,8 +35,6 @@
 #include "caf/io/network/protocol.hpp"
 #include "caf/io/network/native_socket.hpp"
 
-#include "caf/detail/memory.hpp"
-#include "caf/detail/disposer.hpp"
 #include "caf/detail/memory_cache_flag_type.hpp"
 
 namespace boost {
@@ -176,8 +175,7 @@ class multiplexer {
         f();
       }
     };
-    dispatch_runnable(runnable_ptr{detail::memory::create<impl>(std::move(fun)),
-                                   false});
+    dispatch_runnable(make_counted<impl>(std::move(fun)));
   }
 
   /**

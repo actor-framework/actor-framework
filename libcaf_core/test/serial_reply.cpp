@@ -26,6 +26,19 @@ using std::cout;
 using std::endl;
 using namespace caf;
 
+namespace {
+
+using hi_atom = atom_constant<atom("hi")>;
+using ho_atom = atom_constant<atom("ho")>;
+using sub0_atom = atom_constant<atom("sub0")>;
+using sub1_atom = atom_constant<atom("sub1")>;
+using sub2_atom = atom_constant<atom("sub2")>;
+using sub3_atom = atom_constant<atom("sub3")>;
+using sub4_atom = atom_constant<atom("sub4")>;
+
+} // namespace <anonymous>
+
+
 CAF_TEST(test_serial_reply) {
   auto mirror_behavior = [=](event_based_actor* self) {
     self->become(others >> [=]() -> message {
@@ -42,44 +55,43 @@ CAF_TEST(test_serial_reply) {
     auto c3 = self->spawn<linked>(mirror_behavior);
     auto c4 = self->spawn<linked>(mirror_behavior);
     self->become (
-      on(atom("hi there")) >> [=]() -> continue_helper {
-      CAF_MESSAGE("received 'hi there'");
-      return self->sync_send(c0, atom("sub0")).then(
-        on(atom("sub0")) >> [=]() -> continue_helper {
-        CAF_MESSAGE("received 'sub0'");
-        return self->sync_send(c1, atom("sub1")).then(
-          on(atom("sub1")) >> [=]() -> continue_helper {
-          CAF_MESSAGE("received 'sub1'");
-          return self->sync_send(c2, atom("sub2")).then(
-            on(atom("sub2")) >> [=]() -> continue_helper {
-            CAF_MESSAGE("received 'sub2'");
-            return self->sync_send(c3, atom("sub3")).then(
-              on(atom("sub3")) >> [=]() -> continue_helper {
-              CAF_MESSAGE("received 'sub3'");
-              return self->sync_send(c4, atom("sub4")).then(
-                on(atom("sub4")) >> [=]() -> atom_value {
-                CAF_MESSAGE("received 'sub4'");
-                return atom("hiho");
-                }
-              );
+      [=](hi_atom) -> continue_helper {
+        CAF_MESSAGE("received 'hi there'");
+        return self->sync_send(c0, sub0_atom::value).then(
+          [=](sub0_atom) -> continue_helper {
+            CAF_MESSAGE("received 'sub0'");
+            return self->sync_send(c1, sub1_atom::value).then(
+              [=](sub1_atom) -> continue_helper {
+                CAF_MESSAGE("received 'sub1'");
+                return self->sync_send(c2, sub2_atom::value).then(
+                  [=](sub2_atom) -> continue_helper {
+                    CAF_MESSAGE("received 'sub2'");
+                    return self->sync_send(c3, sub3_atom::value).then(
+                      [=](sub3_atom) -> continue_helper {
+                        CAF_MESSAGE("received 'sub3'");
+                        return self->sync_send(c4, sub4_atom::value).then(
+                          [=](sub4_atom) -> atom_value {
+                            CAF_MESSAGE("received 'sub4'");
+                            return ho_atom::value;
+                          }
+                        );
+                      }
+                    );
+                  }
+                );
               }
             );
-            }
-          );
           }
         );
-        }
-      );
       }
     );
-    }
-  );
+  });
   { // lifetime scope of self
     scoped_actor self;
     CAF_MESSAGE("ID of main: " << self->id());
-    self->sync_send(master, atom("hi there")).await(
-      on(atom("hiho")) >> [] {
-        CAF_MESSAGE("received `hiho` atom");
+    self->sync_send(master, hi_atom::value).await(
+      [](ho_atom) {
+        CAF_MESSAGE("received 'ho'");
       },
       others >> [&] {
         CAF_TEST_ERROR("Unexpected message: "
