@@ -21,9 +21,6 @@
 #include <cstring>
 #include <sstream>
 
-#include <unistd.h>
-#include <sys/types.h>
-
 #include "caf/config.hpp"
 #include "caf/node_id.hpp"
 #include "caf/serializer.hpp"
@@ -36,6 +33,7 @@
 #include "caf/detail/ripemd_160.hpp"
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/get_root_uuid.hpp"
+#include "caf/detail/get_process_id.hpp"
 #include "caf/detail/get_mac_addresses.hpp"
 
 namespace caf {
@@ -165,7 +163,7 @@ node_id::data::~data() {
 }
 
 void node_id::data::stop() {
-  // nop
+  CAF_LOG_TRACE("");
 }
 
 // initializes singleton
@@ -180,9 +178,8 @@ node_id::data* node_id::data::create_singleton() {
   auto hd_serial_and_mac_addr = join(macs, "") + detail::get_root_uuid();
   node_id::host_id_type nid;
   detail::ripemd_160(nid, hd_serial_and_mac_addr);
-  auto ptr = make_counted<node_id::data>(static_cast<uint32_t>(getpid()), nid);
-  // note: ptr has a ref count of 1 -> implicitly held by detail::singletons
-  return ptr.release();
+  // note: pointer has a ref count of 1 -> implicitly held by detail::singletons
+  return new node_id::data(detail::get_process_id(), nid);
 }
 
 uint32_t node_id::process_id() const {
