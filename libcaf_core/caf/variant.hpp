@@ -57,7 +57,8 @@ struct variant_move_helper {
 
 template <class T, class U,
           bool Enable = std::is_integral<T>::value
-                        && std::is_integral<U>::value>
+                        && std::is_integral<U>::value
+                        && !std::is_same<T, bool>::value>
 struct is_equal_int_type {
   static constexpr bool value = sizeof(T) == sizeof(U)
                                 && std::is_signed<T>::value

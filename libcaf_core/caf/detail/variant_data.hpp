@@ -28,14 +28,14 @@
 
 #define CAF_VARIANT_DATA_CONCAT(x, y) x ## y
 
-#define CAF_VARIANT_DATA_GETTER(pos)                      \
-  inline CAF_VARIANT_DATA_CONCAT(T, pos) &                  \
-  get(std::integral_constant<int, pos >) {                   \
-    return CAF_VARIANT_DATA_CONCAT(v, pos) ;                \
-  }                                      \
-  inline const CAF_VARIANT_DATA_CONCAT(T, pos) &              \
-  get(std::integral_constant<int, pos >) const {               \
-    return CAF_VARIANT_DATA_CONCAT(v, pos) ;                \
+#define CAF_VARIANT_DATA_GETTER(pos)                                           \
+  inline CAF_VARIANT_DATA_CONCAT(T, pos) &                                     \
+  get(std::integral_constant<int, pos>) {                                      \
+    return CAF_VARIANT_DATA_CONCAT(v, pos);                                    \
+  }                                                                            \
+  inline const CAF_VARIANT_DATA_CONCAT(T, pos) &                               \
+  get(std::integral_constant<int, pos>) const {                                \
+    return CAF_VARIANT_DATA_CONCAT(v, pos);                                    \
   }
 
 namespace caf {
@@ -56,8 +56,8 @@ struct variant_data {
     T6  v6;  T7  v7;  T8  v8;
     T9  v9;  T10 v10; T11 v11;
     T12 v12; T13 v13; T14 v14;
-    T11 v15; T12 v16; T13 v17;
-    T14 v18; T15 v19; T20 v20;
+    T15 v15; T16 v16; T17 v17;
+    T18 v18; T19 v19; T20 v20;
   };
 
   variant_data() { }
