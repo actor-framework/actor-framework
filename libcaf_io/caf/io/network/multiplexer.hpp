@@ -116,13 +116,13 @@ class multiplexer {
   /**
    * Simple wrapper for runnables
    */
-  struct runnable : memory_managed {
+  struct runnable : ref_counted {
     static constexpr auto memory_cache_flag = detail::needs_embedding;
     virtual void run() = 0;
     virtual ~runnable();
   };
 
-  using runnable_ptr = std::unique_ptr<runnable, detail::disposer>;
+  using runnable_ptr = intrusive_ptr<runnable>;
 
   /**
    * Makes sure the multipler does not exit its event loop until
@@ -176,7 +176,8 @@ class multiplexer {
         f();
       }
     };
-    dispatch_runnable(runnable_ptr{detail::memory::create<impl>(std::move(fun))});
+    dispatch_runnable(runnable_ptr{detail::memory::create<impl>(std::move(fun)),
+                                   false});
   }
 
   /**

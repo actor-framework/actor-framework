@@ -266,10 +266,8 @@ asio_multiplexer::add_tcp_doorman(broker* self, uint16_t port, const char* in,
 }
 
 void asio_multiplexer::dispatch_runnable(runnable_ptr ptr) {
-  auto r = ptr.release();
   backend().post([=]() {
-    r->run();
-    r->request_deletion(false);
+    ptr->run();
   });
 }
 
