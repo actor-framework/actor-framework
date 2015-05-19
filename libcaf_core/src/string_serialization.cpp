@@ -87,6 +87,10 @@ class string_serializer : public serializer, public dummy_backend {
     void operator()(const T& value) {
       out << value;
     }
+    void operator()(const bool& value) {
+      out << (value ? "true" : "false");
+    }
+
     // make sure char's are treated as int8_t number, not as character
     inline void operator()(const char& value) {
       out << static_cast<int>(value);
@@ -141,7 +145,7 @@ class string_serializer : public serializer, public dummy_backend {
         m_namespace(*this),
         m_after_value(false),
         m_obj_just_opened(false) {
-    // nop
+    out << std::boolalpha;
   }
 
   void begin_object(const uniform_type_info* uti) {

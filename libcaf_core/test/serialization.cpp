@@ -295,17 +295,14 @@ CAF_TEST(test_multiple_messages) {
   CAF_CHECK(is_message(m2).equal(i32, te, str, rs));
 }
 
-CAF_TEST(test_string_serialization) {
-  auto input = make_message("hello \"actor world\"!", atom("foo"));
-  auto s = to_string(input);
-  CAF_CHECK_EQUAL(s, R"#(@<>+@str+@atom ( "hello \"actor world\"!", 'foo' ))#");
-  auto m = from_string<message>(s);
-  if (!m) {
-    CAF_TEST_ERROR("from_string failed");
-    return;
-  }
-  CAF_CHECK(*m == input);
-  CAF_CHECK_EQUAL(to_string(*m), to_string(input));
+CAF_TEST(strings) {
+  auto m1 = make_message("hello \"actor world\"!", atom("foo"));
+  auto s1 = to_string(m1);
+  CAF_CHECK_EQUAL(s1, R"#(@<>+@str+@atom ( "hello \"actor world\"!", 'foo' ))#");
+  CAF_CHECK(from_string<message>(s1) == m1);
+  auto m2 = make_message(true);
+  auto s2 = to_string(m2);
+  CAF_CHECK_EQUAL(s2, "@<>+bool ( true )");
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

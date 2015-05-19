@@ -306,12 +306,12 @@ inline void deserialize_impl(duration& val, deserializer* source) {
   val.count = count_val;
 }
 
-inline void serialize_impl(bool val, serializer* sink) {
-  sink->write_value(static_cast<uint8_t>(val ? 1 : 0));
+inline void serialize_impl(const bool& val, serializer* sink) {
+  sink->write_value(val);
 }
 
 inline void deserialize_impl(bool& val, deserializer* source) {
-  val = source->read<uint8_t>() != 0;
+  val = source->read<bool>();
 }
 
 // exit_msg & down_msg have the same fields

@@ -43,6 +43,10 @@ class binary_writer : public static_visitor<> {
     f(first, last);
   }
 
+  void operator()(const bool& value) const {
+    write_int(m_out, static_cast<uint8_t>(value));
+  }
+
   template <class T>
   typename std::enable_if<std::is_integral<T>::value>::type
   operator()(const T& value) const {

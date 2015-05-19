@@ -135,6 +135,11 @@ struct pt_reader : static_visitor<> {
   inline void operator()(none_t&) {
     // nop
   }
+  inline void operator()(bool& value) {
+    uint8_t intval;
+    (*this)(intval);
+    value = static_cast<bool>(intval);
+  }
   template <class T>
   inline void operator()(T& value) {
     begin = read_range(begin, end, value);
