@@ -337,8 +337,8 @@ class acceptor {
    */
   using manager_ptr = intrusive_ptr<manager_type>;
 
-  acceptor(asio_multiplexer& backend, io_backend& io)
-      : m_backend(backend), m_accept_fd(io), m_fd(io) {}
+  acceptor(asio_multiplexer& am, io_backend& io)
+      : m_backend(am), m_accept_fd(io), m_fd(io) {}
 
   /**
    * Returns the `multiplexer` this acceptor belongs to.
