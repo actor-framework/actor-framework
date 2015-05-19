@@ -141,7 +141,7 @@ class work_stealing {
       size_t steal_interval;
       std::chrono::microseconds sleep_duration;
     };
-    constexpr poll_strategy strategies[3] = {
+    poll_strategy strategies[3] = {
       // aggressive polling  (100x) without sleep interval
       {100, 1, 10, std::chrono::microseconds{0}},
       // moderate polling (500x) with 50 us sleep interval

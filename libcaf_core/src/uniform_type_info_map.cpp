@@ -671,8 +671,8 @@ class utim_impl : public uniform_type_info_map {
   using strvec = std::vector<std::string>;
 
   using builtin_types =
-    typename tl_apply<
-      typename tl_map<
+    tl_apply<
+      tl_map<
         sorted_builtin_types,
         get_uti_impl
       >::type,

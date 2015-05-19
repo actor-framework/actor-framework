@@ -92,7 +92,7 @@ constexpr typename detail::boxed<T>::type val() {
  * of a given callback, must be the last argument to `on()`.
  */
 
-constexpr auto arg_match = typename detail::boxed<detail::arg_match_t>::type();
+constexpr auto arg_match = detail::boxed<detail::arg_match_t>::type();
 
 /**
  * Generates function objects from a binary predicate and a value.
