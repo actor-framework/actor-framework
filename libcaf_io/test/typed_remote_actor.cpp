@@ -115,8 +115,9 @@ CAF_TEST(test_typed_remote_actor) {
     // execute client_part() in a separate process,
     // connected via localhost socket
     scoped_actor self;
-    auto child = detail::run_program(self, caf::test::engine::path(),
-                                     "-s typed_remote_actor -- -c", port);
+    auto child = detail::run_program(self, caf::test::engine::path(), "-n",
+                                     "-s", "typed_remote_actor",
+                                     "--", "-c", port);
     CAF_MESSAGE("block till child process has finished");
     child.join();
     self->await_all_other_actors_done();

@@ -177,8 +177,8 @@ void run_server(bool spawn_client, const char* bin_path) {
     [&](uint16_t port) {
       CAF_MESSAGE("server is running on port " << port);
       if (spawn_client) {
-        auto child = detail::run_program(self, bin_path, "-s broker -- -c",
-                                         port);
+        auto child = detail::run_program(self, bin_path, "-n", "-s", "broker",
+                                         "--", "-c", port);
         CAF_MESSAGE("block till child process has finished");
         child.join();
       }

@@ -454,8 +454,8 @@ void test_remote_actor(const char* app_path, bool run_remote_actor) {
   CAF_CHECK(serv == serv2);
   thread child;
   if (run_remote_actor) {
-    child = detail::run_program(self, app_path, "-s remote_actor -- -c ", port2,
-                                port1, gport);
+    child = detail::run_program(self, app_path, "-n", "-s", "remote_actor",
+                                "--", "-c", port2, port1, gport);
   } else {
     CAF_MESSAGE("please run client with: "
               << "-c " << port2 << " " << port1 << " " << gport);
