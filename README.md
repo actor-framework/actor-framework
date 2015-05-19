@@ -25,6 +25,22 @@ network transparent messaging, and more.
 
 ## Get CAF
 
+### FreeBSD Ports
+
+We maintain a port for CAF, which you can install as follows:
+
+```
+pkg install caf
+```
+
+Alternatively, you can go to `/usr/ports/devel/caf` and tweak a few
+configuration options before installing the port:
+
+```
+make config
+make install clean
+```
+
 ### Homebrew
 
 You can install the latest stable release with:
