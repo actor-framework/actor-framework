@@ -22,10 +22,10 @@
 
 #include "caf/send.hpp"
 #include "caf/actor.hpp"
+#include "caf/thread.hpp"
 #include "caf/message.hpp"
 #include "caf/string_algorithms.hpp"
 
-#include <thread>
 #include <vector>
 #include <string>
 
@@ -33,10 +33,10 @@ namespace caf {
 
 namespace detail {
 
-std::thread run_program_impl(caf::actor, const char*, std::vector<std::string>);
+thread run_program_impl(caf::actor, const char*, std::vector<std::string>);
 
 template <class... Ts>
-std::thread run_program(caf::actor listener, const char* path, Ts&&... args) {
+thread run_program(caf::actor listener, const char* path, Ts&&... args) {
   std::vector<std::string> vec{convert_to_str(std::forward<Ts>(args))...};
   return run_program_impl(listener, path, std::move(vec));
 }

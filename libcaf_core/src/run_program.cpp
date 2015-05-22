@@ -25,8 +25,8 @@ using namespace std;
 using namespace caf;
 using namespace caf::detail;
 
-std::thread caf::detail::run_program_impl(actor rc, const char* cpath,
-                                          vector<string> args) {
+thread caf::detail::run_program_impl(actor rc, const char* cpath,
+                                     vector<string> args) {
   string path = cpath;
   replace_all(path, "'", "\\'");
   ostringstream oss;

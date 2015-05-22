@@ -20,8 +20,8 @@
 #define CAF_SUITE sync_timeout
 #include "caf/test/unit_test.hpp"
 
-#include <thread>
-#include <chrono>
+#include "caf/chrono.hpp"
+#include "caf/thread.hpp"
 
 #include "caf/all.hpp"
 
@@ -36,7 +36,7 @@ using send_ping_atom = atom_constant<atom("send_ping")>;
 behavior pong() {
   return {
     [=] (ping_atom) {
-      std::this_thread::sleep_for(std::chrono::seconds(1));
+      this_thread::sleep_for(chrono::seconds(1));
       return pong_atom::value;
     }
   };
@@ -52,7 +52,7 @@ behavior ping1(event_based_actor* self, const actor& pong_actor) {
           CAF_TEST_ERROR("received pong atom");
           self->quit(exit_reason::user_shutdown);
         },
-        after(std::chrono::milliseconds(100)) >> [=] {
+        after(chrono::milliseconds(100)) >> [=] {
           CAF_MESSAGE("sync timeout: check");
           self->quit(exit_reason::user_shutdown);
         }
@@ -72,13 +72,13 @@ behavior ping2(event_based_actor* self, const actor& pong_actor) {
           CAF_TEST_ERROR("received pong atom");
           self->quit(exit_reason::user_shutdown);
         },
-        after(std::chrono::milliseconds(100)) >> [=] {
+        after(chrono::milliseconds(100)) >> [=] {
           CAF_MESSAGE("inner timeout: check");
           *received_inner = true;
         }
       );
     },
-    after(std::chrono::milliseconds(100)) >> [=] {
+    after(chrono::milliseconds(100)) >> [=] {
       CAF_CHECK_EQUAL(*received_inner, true);
       self->quit(exit_reason::user_shutdown);
     }

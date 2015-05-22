@@ -84,15 +84,6 @@ set (LIBCAF_CORE_SRCS
      src/uniform_type_info.cpp
      src/uniform_type_info_map.cpp)
 
-if (CAF_FOR_RIOT)
-set (LIBCAF_CORE_SRCS
-     src/chrono.cpp
-     src/condition_variable.cpp
-     src/mutex.cpp
-     src/thread.cpp
-     ${LIBCAF_CORE_SRCS})
-endif()
-
 add_custom_target(libcaf_core)
 
 # build shared library if not compiling static only

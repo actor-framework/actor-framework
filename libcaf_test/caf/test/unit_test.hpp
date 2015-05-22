@@ -23,13 +23,14 @@
 #include <map>
 #include <cmath>
 #include <mutex>
-#include <thread>
 #include <vector>
 #include <string>
 #include <memory>
 #include <fstream>
 #include <sstream>
 #include <iostream>
+
+#include "caf/mutex.hpp"
 
 namespace caf {
 class message;
@@ -153,11 +154,11 @@ class logger {
   template <class T>
   void log(level lvl, const T& x) {
     if (lvl <= m_level_console) {
-      std::lock_guard<std::mutex> io_guard{m_console_mtx};
+      lock_guard<mutex> io_guard{m_console_mtx};
       m_console << x;
     }
     if (lvl <= m_level_file) {
-      std::lock_guard<std::mutex> io_guard{m_file_mtx};
+      lock_guard<mutex> io_guard{m_file_mtx};
       m_file << x;
     }
   }
@@ -174,8 +175,8 @@ class logger {
   level m_level_file;
   std::ostream& m_console;
   std::ofstream m_file;
-  std::mutex m_console_mtx;
-  std::mutex m_file_mtx;
+  mutex m_console_mtx;
+  mutex m_file_mtx;
 };
 
 enum color_face {

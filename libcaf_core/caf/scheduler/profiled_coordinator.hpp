@@ -29,12 +29,14 @@
 #endif // CAF_MACOS
 
 #include <cmath>
-#include <mutex>
-#include <chrono>
 #include <vector>
 #include <fstream>
 #include <iomanip>
 #include <unordered_map>
+
+#include "caf/mutex.hpp"
+#include "caf/chrono.hpp"
+#include "caf/scheduler/coordinator.hpp"
 
 #include "caf/policy/profiled.hpp"
 #include "caf/policy/work_stealing.hpp"
@@ -209,20 +211,20 @@ class profiled_coordinator : public coordinator<Policy> {
     if (m.time - w.last_flush >= m_resolution) {
       w.last_flush = m.time;
       auto wallclock = m_system_start + (m.time - m_clock_start);
-      std::lock_guard<std::mutex> file_guard{m_file_mtx};
+      lock_guard<mutex> file_guard{m_file_mtx};
       record(wallclock, "worker", worker, w.worker);
       w.worker = {};
     }
   }
 
   void remove_job(actor_id job) {
-    std::lock_guard<std::mutex> job_guard{m_job_mtx};
+    lock_guard<mutex> job_guard{m_job_mtx};
     auto j = m_jobs.find(job);
     if (j != m_jobs.end()) {
       if (job != 0) {
         auto now = clock_type::now().time_since_epoch();
         auto wallclock = m_system_start + (now - m_clock_start);
-        std::lock_guard<std::mutex> file_guard{m_file_mtx};
+        lock_guard<mutex> file_guard{m_file_mtx};
         record(wallclock, "actor", job, j->second);
       }
       m_jobs.erase(j);
@@ -240,13 +242,13 @@ class profiled_coordinator : public coordinator<Policy> {
   }
 
   void report(actor_id const& job, measurement const& m) {
-    std::lock_guard<std::mutex> job_guard{m_job_mtx};
+    lock_guard<mutex> job_guard{m_job_mtx};
     m_jobs[job] += m;
     if (m.time - m_last_flush >= m_resolution) {
       m_last_flush = m.time;
       auto now = clock_type::now().time_since_epoch();
       auto wallclock = m_system_start + (now - m_clock_start);
-      std::lock_guard<std::mutex> file_guard{m_file_mtx};
+      lock_guard<mutex> file_guard{m_file_mtx};
       for (auto& j : m_jobs) {
         record(wallclock, "actor", j.first, j.second);
         j.second = {};
@@ -254,8 +256,8 @@ class profiled_coordinator : public coordinator<Policy> {
     }
   }
 
-  std::mutex m_job_mtx;
-  std::mutex m_file_mtx;
+  mutex m_job_mtx;
+  mutex m_file_mtx;
   std::ofstream m_file;
   msec m_resolution;
   std::chrono::system_clock::time_point m_system_start;

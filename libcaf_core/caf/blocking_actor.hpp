@@ -20,9 +20,6 @@
 #ifndef CAF_BLOCKING_ACTOR_HPP
 #define CAF_BLOCKING_ACTOR_HPP
 
-#include <mutex>
-#include <condition_variable>
-
 #include "caf/none.hpp"
 
 #include "caf/on.hpp"

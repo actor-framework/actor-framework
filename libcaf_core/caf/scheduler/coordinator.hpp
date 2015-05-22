@@ -24,6 +24,7 @@
 #include <memory>
 
 #include "caf/thread.hpp"
+#include "caf/resumable.hpp"
 #include "caf/condition_variable.hpp"
 
 #include "caf/scheduler/worker.hpp"
@@ -88,7 +89,7 @@ class coordinator : public abstract_coordinator {
       resumable::resume_result resume(execution_unit* ptr, size_t) override {
         CAF_LOG_DEBUG("shutdown_helper::resume => shutdown worker");
         CAF_ASSERT(ptr != nullptr);
-        nique_lock<mutex> guard(mtx);
+        unique_lock<mutex> guard(mtx);
         last_worker = ptr;
         cv.notify_all();
         return resumable::shutdown_execution_unit;

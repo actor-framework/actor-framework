@@ -20,7 +20,6 @@
 #define CAF_SUITE remote_actor
 #include "caf/test/unit_test.hpp"
 
-#include <thread>
 #include <string>
 #include <cstring>
 #include <sstream>
@@ -28,6 +27,8 @@
 #include <functional>
 
 #include "caf/all.hpp"
+#include "caf/thread.hpp"
+
 #include "caf/io/all.hpp"
 
 #include "caf/detail/logging.hpp"

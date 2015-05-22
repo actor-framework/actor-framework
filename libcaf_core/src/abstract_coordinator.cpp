@@ -49,8 +49,6 @@ namespace scheduler {
 
 namespace {
 
-using hrc = std::chrono::high_resolution_clock;
-
 struct delayed_msg {
   actor_addr from;
   channel to;
@@ -64,7 +62,7 @@ inline void deliver(delayed_msg& dm) {
 
 template <class Map, class... Ts>
 inline void insert_dmsg(Map& storage, const duration& d, Ts&&... xs) {
-  auto tout = hrc::now();
+  auto tout = now();
   tout += d;
   delayed_msg dmsg{std::forward<Ts>(xs)...};
   storage.insert(std::make_pair(std::move(tout), std::move(dmsg)));
@@ -77,14 +75,14 @@ class timer_actor : public blocking_actor {
     return next_message();
   }
 
-  bool await_data(const hrc::time_point& tp) {
+  bool await_data(const time_point& tp) {
     if (has_next_message()) {
       return true;
     }
     return mailbox().synchronized_await(m_mtx, m_cv, tp);
   }
 
-  mailbox_element_ptr try_dequeue(const hrc::time_point& tp) {
+  mailbox_element_ptr try_dequeue(const time_point& tp) {
     if (await_data(tp)) {
       return next_message();
     }

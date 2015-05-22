@@ -19,9 +19,10 @@
 
 #include "caf/scheduler/detached_threads.hpp"
 
-#include <mutex>
 #include <atomic>
-#include <condition_variable>
+
+#include "caf/mutex.hpp"
+#include "caf/condition_variable.hpp"
 
 namespace caf {
 namespace scheduler {
@@ -29,8 +30,8 @@ namespace scheduler {
 namespace {
 
 std::atomic<size_t> s_detached;
-std::mutex s_detached_mtx;
-std::condition_variable s_detached_cv;
+mutex s_detached_mtx;
+condition_variable s_detached_cv;
 
 } // namespace <anonymous>
 
@@ -42,13 +43,13 @@ void inc_detached_threads() {
 void dec_detached_threads() {
   size_t new_val = --s_detached;
   if (new_val == 0) {
-    std::unique_lock<std::mutex> guard(s_detached_mtx);
+    unique_lock<mutex> guard(s_detached_mtx);
     s_detached_cv.notify_all();
   }
 }
 
 void await_detached_threads() {
-  std::unique_lock<std::mutex> guard{s_detached_mtx};
+  unique_lock<mutex> guard{s_detached_mtx};
   while (s_detached != 0) {
     s_detached_cv.wait(guard);
   }
