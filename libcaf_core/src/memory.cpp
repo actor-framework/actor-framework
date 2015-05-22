@@ -37,10 +37,11 @@ int caf_memory_keep_compiler_happy() {
 namespace caf {
 namespace detail {
 
+using cache_map = std::map<const std::type_info*,std::unique_ptr<memory_cache>>;
+
 namespace {
 
-pthread_key_t s_key;
-pthread_once_t s_key_once = PTHREAD_ONCE_INIT;
+thread_local std::unique_ptr<cache_map> s_cache;
 
 } // namespace <anonymous>
 
@@ -48,27 +49,14 @@ memory_cache::~memory_cache() {
   // nop
 }
 
-using cache_map = std::map<const std::type_info*,std::unique_ptr<memory_cache>>;
-
-void cache_map_destructor(void* ptr) {
-  delete reinterpret_cast<cache_map*>(ptr);
-}
-
-void make_cache_map() {
-  pthread_key_create(&s_key, cache_map_destructor);
-}
-
 cache_map& get_cache_map() {
-  pthread_once(&s_key_once, make_cache_map);
-  auto cache = reinterpret_cast<cache_map*>(pthread_getspecific(s_key));
-  if (!cache) {
-    cache = new cache_map;
-    pthread_setspecific(s_key, cache);
+  if (!s_cache) {
+    s_cache = std::unique_ptr<cache_map>(new cache_map);
     // insert default types
     std::unique_ptr<memory_cache> tmp(new basic_memory_cache<mailbox_element>);
-    cache->insert(std::make_pair(&typeid(mailbox_element), move(tmp)));
+    s_cache->insert(std::make_pair(&typeid(mailbox_element), move(tmp)));
   }
-  return *cache;
+  return *s_cache;
 }
 
 memory_cache* memory::get_cache_map_entry(const std::type_info* tinf) {
