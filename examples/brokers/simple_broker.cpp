@@ -183,26 +183,48 @@ optional<uint16_t> as_u16(const std::string& str) {
 
 int main(int argc, char** argv) {
   using std::string;
-  message_builder{argv + 1, argv + argc}.apply({
-    on("-s", as_u16) >> [&](uint16_t port) {
-      cout << "run in server mode" << endl;
-      auto pong_actor = spawn(pong);
-      auto server_actor = spawn_io_server(server, port, pong_actor);
-      print_on_exit(server_actor, "server");
-      print_on_exit(pong_actor, "pong");
-    },
-    on("-c", val<string>, as_u16) >> [&](const string& host, uint16_t port) {
-      auto ping_actor = spawn(ping, 20);
-      auto io_actor = spawn_io_client(broker_impl, host, port, ping_actor);
-      print_on_exit(io_actor, "protobuf_io");
-      print_on_exit(ping_actor, "ping");
-      send_as(io_actor, ping_actor, kickoff_atom::value, io_actor);
-    },
-    others >> [] {
-      cerr << "use with eihter '-s PORT' as server or '-c HOST PORT' as client"
-           << endl;
-    }
+  uint16_t port = 0;
+  string host = "localhost";
+  auto res = message_builder(argv + 1, argv + argc).extract_opts({
+    {"server,s", "run in server mode"},
+    {"client,c", "run in client mode"},
+    {"port,p", "set port", port},
+    {"host,H", "set host (client mode only"}
   });
+  if (!res.error.empty()) {
+    cerr << res.error << endl;
+    return 1;
+  }
+  if (res.opts.count("help") > 0) {
+    cout << res.helptext << endl;
+    return 0;
+  }
+  if (!res.remainder.empty()) {
+    // not all CLI arguments could be consumed
+    cerr << "*** too many arguments" << endl << res.helptext << endl;
+    return 1;
+  }
+  if (res.opts.count("port") == 0) {
+    cerr << "*** no port given" << endl << res.helptext << endl;
+    return 1;
+  }
+  if (res.opts.count("server") > 0) {
+    cout << "run in server mode" << endl;
+    auto pong_actor = spawn(pong);
+    auto server_actor = spawn_io_server(server, port, pong_actor);
+    print_on_exit(server_actor, "server");
+    print_on_exit(pong_actor, "pong");
+  } else if (res.opts.count("client") > 0) {
+    auto ping_actor = spawn(ping, 20);
+    auto io_actor = spawn_io_client(broker_impl, host, port, ping_actor);
+    print_on_exit(io_actor, "protobuf_io");
+    print_on_exit(ping_actor, "ping");
+    send_as(io_actor, ping_actor, kickoff_atom::value, io_actor);
+  } else {
+    cerr << "*** neither client nor server mode set" << endl
+         << res.helptext << endl;
+    return 1;
+  }
   await_all_actors_done();
   shutdown();
 }

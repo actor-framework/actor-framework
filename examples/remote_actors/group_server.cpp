@@ -36,15 +36,24 @@ optional<uint16_t> long_port(const string& arg) {
 
 int main(int argc, char** argv) {
   uint16_t port = 0;
-  message_builder{argv + 1, argv + argc}.apply({
-    (on("-p", to_port) || on(long_port)) >> [&](uint16_t arg) {
-      port = arg;
-    }
+  auto res = message_builder(argv + 1, argv + argc).extract_opts({
+    {"port,p", "set port", port}
   });
-  if (port <= 1024) {
-    cerr << "*** no port > 1024 given" << endl;
-    cout << "options:" << endl
-         << "  -p <arg1> | --port=<arg1>               set port" << endl;
+  if (!res.error.empty()) {
+    cerr << res.error << endl;
+    return 1;
+  }
+  if (res.opts.count("help") > 0) {
+    cout << res.helptext << endl;
+    return 0;
+  }
+  if (!res.remainder.empty()) {
+    // not all CLI arguments could be consumed
+    cerr << "*** too many arguments" << endl << res.helptext << endl;
+    return 1;
+  }
+  if (res.opts.count("port") == 0 || port <= 1024) {
+    cerr << "*** no valid port (>1024) given" << endl << res.helptext << endl;
     return 1;
   }
   try {
