@@ -381,7 +381,7 @@ bool engine::run(bool colorize,
       log.verbose() << color(yellow) << "  -> " << color(cyan) << good + bad
                     << color(reset) << " check" << (good + bad > 1 ? "s " : " ")
                     << "took " << color(cyan) << render(elapsed)
-                    << color(reset);
+                    << color(reset) << '\n';
       if (bad > 0) {
         log.verbose() << " (" << color(green) << good << color(reset) << '/'
                       << color(red) << bad << color(reset) << ")" << '\n';
