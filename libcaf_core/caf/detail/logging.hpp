@@ -20,7 +20,6 @@
 #ifndef CAF_LOGGING_HPP
 #define CAF_LOGGING_HPP
 
-#include <thread>
 #include <cstring>
 #include <sstream>
 #include <iostream>
@@ -28,6 +27,7 @@
 #include <unordered_map>
 
 #include "caf/config.hpp"
+#include "caf/thread.hpp"
 #include "caf/to_string.hpp"
 #include "caf/abstract_actor.hpp"
 
@@ -97,7 +97,7 @@ class logging {
 
  private:
   detail::shared_spinlock m_aids_lock;
-  std::unordered_map<std::thread::id, actor_id> m_aids;
+  std::unordered_map<thread::id, actor_id> m_aids;
 };
 
 struct oss_wr {

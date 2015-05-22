@@ -197,7 +197,7 @@ logging* logging::create_singleton() {
 // returns the actor ID for the current thread
 actor_id logging::get_aid() {
   shared_lock<detail::shared_spinlock> guard{m_aids_lock};
-  auto i = m_aids.find(std::this_thread::get_id());
+  auto i = m_aids.find(this_thread::get_id());
   if (i != m_aids.end()) {
     return i->second;
   }
@@ -205,7 +205,7 @@ actor_id logging::get_aid() {
 }
 
 actor_id logging::set_aid(actor_id aid) {
-  auto tid = std::this_thread::get_id();
+  auto tid = this_thread::get_id();
   upgrade_lock<detail::shared_spinlock> guard{m_aids_lock};
   auto i = m_aids.find(tid);
   if (i != m_aids.end()) {

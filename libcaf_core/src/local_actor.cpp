@@ -484,7 +484,7 @@ void local_actor::launch(execution_unit* eu, bool lazy, bool hide) {
       scheduler::inc_detached_threads();
     }
     //intrusive_ptr<local_actor> mself{this};
-    std::thread([hide](intrusive_ptr<local_actor> mself) {
+    thread([hide](intrusive_ptr<local_actor> mself) {
       CAF_PUSH_AID(mself->id());
       CAF_LOGF_TRACE("");
       auto max_throughput = std::numeric_limits<size_t>::max();

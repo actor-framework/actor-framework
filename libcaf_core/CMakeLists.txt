@@ -70,7 +70,6 @@ set (LIBCAF_CORE_SRCS
      src/replies_to.cpp
      src/resumable.cpp
      src/ripemd_160.cpp
-     src/run_program.cpp
      src/scoped_actor.cpp
      src/set_scheduler.cpp
      src/serializer.cpp
@@ -83,6 +82,12 @@ set (LIBCAF_CORE_SRCS
      src/try_match.cpp
      src/uniform_type_info.cpp
      src/uniform_type_info_map.cpp)
+
+if (NOT CAF_FOR_RIOT)
+  set(LIBCAF_CORE_SRCS
+      ${LIBCAF_CORE_SRCS}
+      src/run_program.cpp)
+endif()
 
 add_custom_target(libcaf_core)
 
