@@ -20,9 +20,9 @@
 #ifndef CAF_DETAIL_TYPE_LIST_HPP
 #define CAF_DETAIL_TYPE_LIST_HPP
 
+#include <cstddef>
 #include <typeinfo>
 #include <type_traits>
-#include <cstddef>
 
 #include "caf/unit.hpp"
 
@@ -61,13 +61,13 @@ struct is_type_list<type_list<Ts...>> {
 template <class List>
 struct tl_head;
 
-template <template <class...> class List>
-struct tl_head<List<>> {
+template <>
+struct tl_head<type_list<>> {
   using type = void;
 };
 
-template <template <class...> class List, typename T0, class... Ts>
-struct tl_head<List<T0, Ts...>> {
+template <typename T0, class... Ts>
+struct tl_head<type_list<T0, Ts...>> {
   using type = T0;
 };
 
@@ -79,14 +79,14 @@ struct tl_head<List<T0, Ts...>> {
 template <class List>
 struct tl_tail;
 
-template <template <class...> class List>
-struct tl_tail<List<>> {
-  using type = List<>;
+template <>
+struct tl_tail<type_list<>> {
+  using type = type_list<>;
 };
 
-template <template <class...> class List, typename T0, class... Ts>
-struct tl_tail<List<T0, Ts...>> {
-  using type = List<Ts...>;
+template <typename T0, class... Ts>
+struct tl_tail<type_list<T0, Ts...>> {
+  using type = type_list<Ts...>;
 };
 
 // size_t size(type_list)
@@ -97,13 +97,13 @@ struct tl_tail<List<T0, Ts...>> {
 template <class List>
 struct tl_size;
 
-template <template <class...> class List, class... Ts>
-struct tl_size<List<Ts...>> {
+template <class... Ts>
+struct tl_size<type_list<Ts...>> {
   static constexpr size_t value = sizeof...(Ts);
 };
 
-template <template <class...> class List, class... Ts>
-constexpr size_t tl_size<List<Ts...>>::value;
+template <class... Ts>
+constexpr size_t tl_size<type_list<Ts...>>::value;
 
 // T back(type_list)
 
@@ -113,18 +113,18 @@ constexpr size_t tl_size<List<Ts...>>::value;
 template <class List>
 struct tl_back;
 
-template <template <class...> class List>
-struct tl_back<List<>> {
+template <>
+struct tl_back<type_list<>> {
   using type = unit_t;
 };
 
-template <template <class...> class List, typename T0>
-struct tl_back<List<T0>> {
+template <typename T0>
+struct tl_back<type_list<T0>> {
   using type = T0;
 };
 
-template <template <class...> class List, typename T0, typename T1, class... Ts>
-struct tl_back<List<T0, T1, Ts...>> {
+template <typename T0, typename T1, class... Ts>
+struct tl_back<type_list<T0, T1, Ts...>> {
   // remaining arguments are forwarded as type_list to prevent
   // recursive instantiation of List class
   using type = typename tl_back<type_list<T1, Ts...>>::type;
@@ -363,14 +363,13 @@ struct tl_reverse {
 template <class List, template <class> class Pred, int Pos = 0>
 struct tl_find_impl;
 
-template <template <class...> class TL, template <class> class Pred, int Pos>
-struct tl_find_impl<TL<>, Pred, Pos> {
+template <template <class> class Pred, int Pos>
+struct tl_find_impl<type_list<>, Pred, Pos> {
   static constexpr int value = -1;
 };
 
-template <template <class...> class List, template <class> class Pred,
-          int Pos, class T0, class... Ts>
-struct tl_find_impl<List<T0, Ts...>, Pred, Pos> {
+template <template <class> class Pred, int Pos, class T0, class... Ts>
+struct tl_find_impl<type_list<T0, Ts...>, Pred, Pos> {
   // always use type_list for recursive calls to minimize instantiation costs
   static constexpr int value =
       Pred<T0>::value ? Pos
