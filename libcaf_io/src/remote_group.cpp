@@ -46,10 +46,10 @@ group remote_group(const std::string& group_identifier,
                    uint16_t port) {
   auto group_server = remote_actor(host, port);
   scoped_actor self;
-  self->send(group_server, atom("GetGroup"), group_identifier);
+  self->send(group_server, get_atom::value, group_identifier);
   group result;
   self->receive(
-    on(atom("Group"), arg_match) >> [&](group& grp) {
+    [&](group& grp) {
       result = std::move(grp);
     }
   );

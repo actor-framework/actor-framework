@@ -288,7 +288,7 @@ void broker::launch(execution_unit*, bool, bool is_hidden) {
   CAF_LOGF_TRACE("init and launch broker with ID " << id());
   // we want to make sure initialization is executed in MM context
   become(
-    on(atom("INITMSG")) >> [=] {
+    [=](sys_atom) {
       CAF_LOGF_TRACE("ID " << id());
       unbecome();
       // launch backends now, because user-defined initialization
@@ -305,7 +305,7 @@ void broker::launch(execution_unit*, bool, bool is_hidden) {
     }
   );
   enqueue(invalid_actor_addr, invalid_message_id,
-          make_message(atom("INITMSG")), nullptr);
+          make_message(sys_atom::value), nullptr);
 }
 
 void broker::configure_read(connection_handle hdl, receive_policy::config cfg) {

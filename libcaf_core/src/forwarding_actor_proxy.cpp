@@ -36,7 +36,7 @@ forwarding_actor_proxy::forwarding_actor_proxy(actor_id aid, node_id nid,
 }
 
 forwarding_actor_proxy::~forwarding_actor_proxy() {
-  anon_send(m_manager, make_message(atom("_DelProxy"), node(), id()));
+  anon_send(m_manager, make_message(delete_atom::value, node(), id()));
 }
 
 actor forwarding_actor_proxy::manager() const {
@@ -60,7 +60,7 @@ void forwarding_actor_proxy::forward_msg(const actor_addr& sender,
                               << CAF_TSARG(msg));
   shared_lock<detail::shared_spinlock> m_guard(m_manager_mtx);
   m_manager->enqueue(invalid_actor_addr, invalid_message_id,
-                     make_message(atom("_Dispatch"), sender,
+                     make_message(forward_atom::value, sender,
                                   address(), mid, std::move(msg)),
                      nullptr);
 }
@@ -78,7 +78,7 @@ bool forwarding_actor_proxy::link_impl(linking_operation op,
         // causes remote actor to link to (proxy of) other
         // receiving peer will call: this->local_link_to(other)
         forward_msg(address(), invalid_message_id,
-                    make_message(atom("_Link"), other));
+                    make_message(link_atom::value, other));
         return true;
       }
       break;
@@ -86,7 +86,7 @@ bool forwarding_actor_proxy::link_impl(linking_operation op,
       if (remove_link_impl(other)) {
         // causes remote actor to unlink from (proxy of) other
         forward_msg(address(), invalid_message_id,
-                    make_message(atom("_Unlink"), other));
+                    make_message(unlink_atom::value, other));
         return true;
       }
       break;
@@ -94,7 +94,7 @@ bool forwarding_actor_proxy::link_impl(linking_operation op,
       if (establish_backlink_impl(other)) {
         // causes remote actor to unlink from (proxy of) other
         forward_msg(address(), invalid_message_id,
-                    make_message(atom("_Link"), other));
+                    make_message(link_atom::value, other));
         return true;
       }
       break;
@@ -102,7 +102,7 @@ bool forwarding_actor_proxy::link_impl(linking_operation op,
       if (remove_backlink_impl(other)) {
         // causes remote actor to unlink from (proxy of) other
         forward_msg(address(), invalid_message_id,
-                    make_message(atom("_Unlink"), other));
+                    make_message(unlink_atom::value, other));
         return true;
       }
       break;

@@ -127,6 +127,16 @@ using forward_atom = atom_constant<atom("FORWARD")>;
  */
 using flush_atom = atom_constant<atom("FLUSH")>;
 
+/**
+ * Generic 'LINK' atom for link requests over network.
+ */
+using link_atom = atom_constant<atom("LINK")>;
+
+/**
+ * Generic 'UNLINK' atom for removing networked links.
+ */
+using unlink_atom = atom_constant<atom("UNLINK")>;
+
 } // namespace caf
 
 #endif // CAF_ATOM_HPP

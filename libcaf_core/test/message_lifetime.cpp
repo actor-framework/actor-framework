@@ -80,7 +80,10 @@ behavior tester::make_behavior() {
   monitor(m_aut);
   send(m_aut, m_msg);
   return {
-    on(1, 2, 3) >> [=] {
+    [=](int a, int b, int c) {
+      CAF_CHECK_EQUAL(a, 1);
+      CAF_CHECK_EQUAL(b, 2);
+      CAF_CHECK_EQUAL(c, 3);
       CAF_CHECK(current_message().cvals()->get_reference_count() == 2
                 && current_message().cvals().get() == m_msg.cvals().get());
     },
@@ -120,7 +123,10 @@ CAF_TEST(message_lifetime_in_scoped_actor) {
   scoped_actor self;
   self->send(self, msg);
   self->receive(
-    on(1, 2, 3) >> [&] {
+    [&](int a, int b, int c) {
+      CAF_CHECK_EQUAL(a, 1);
+      CAF_CHECK_EQUAL(b, 2);
+      CAF_CHECK_EQUAL(c, 3);
       CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 2);
       CAF_CHECK_EQUAL(self->current_message().cvals()->get_reference_count(), 2);
       CAF_CHECK(self->current_message().cvals().get() == msg.cvals().get());

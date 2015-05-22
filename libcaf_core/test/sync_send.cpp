@@ -217,7 +217,9 @@ class server : public event_based_actor {
             forward_to(worker);
             unbecome(); // await next idle message
           },
-          on(idle_atom::value) >> skip_message,
+          [](idle_atom) {
+            return skip_message();
+          },
           others >> [=] {
             CAF_TEST_ERROR("Unexpected message: "
                            << to_string(current_message()));
@@ -225,7 +227,9 @@ class server : public event_based_actor {
           }
         );
       },
-      on(request_atom::value) >> skip_message,
+      [](request_atom) {
+        return skip_message();
+      },
       others >> [=] {
         CAF_TEST_ERROR("Unexpected message: " << to_string(current_message()));
         die();
@@ -351,12 +355,6 @@ CAF_TEST(sync_send) {
   CAF_MESSAGE("block on `await_all_other_actors_done");
   self->await_all_other_actors_done();
   CAF_MESSAGE("`await_all_other_actors_done` finished");
-  auto non_normal_down_msg = [](down_msg dm) -> optional<down_msg> {
-    if (dm.reason != exit_reason::normal) {
-      return dm;
-    }
-    return none;
-  };
   auto await_ok_message = [&] {
     self->receive(
       [](ok_atom) {
@@ -365,8 +363,12 @@ CAF_TEST(sync_send) {
       [](error_atom) {
         CAF_TEST_ERROR("A didn't receive sync response");
       },
-      on(non_normal_down_msg) >> [&](const down_msg& dm) {
+      [&](const down_msg& dm) -> optional<skip_message_t> {
+        if (dm.reason == exit_reason::normal) {
+          return skip_message();
+        }
         CAF_TEST_ERROR("A exited for reason " << dm.reason);
+        return none;
       }
     );
   };

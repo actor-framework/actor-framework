@@ -30,8 +30,8 @@ namespace {
 struct group_nameserver : event_based_actor {
   behavior make_behavior() override {
     return {
-      on(atom("GetGroup"), arg_match) >> [](const std::string& name) {
-        return make_message(atom("Group"), group::get("local", name));
+      [](get_atom, const std::string& name) {
+        return group::get("local", name);
       }
     };
   }

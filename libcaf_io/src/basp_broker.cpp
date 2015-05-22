@@ -152,10 +152,8 @@ behavior basp_broker::make_behavior() {
       m_acceptors.erase(i);
     },
     // received from proxy instances
-    on(atom("_Dispatch"), arg_match) >> [=](const actor_addr& sender,
-                                            const actor_addr& receiver,
-                                            message_id mid,
-                                            const message& msg) {
+    [=](forward_atom, const actor_addr& sender, const actor_addr& receiver,
+        message_id mid, const message& msg) {
       CAF_LOG_TRACE("");
       if (dispatch(sender, receiver, mid, msg) == invalid_node_id
           && mid.is_request()) {
@@ -163,7 +161,7 @@ behavior basp_broker::make_behavior() {
         srb(sender, mid);
       }
     },
-    on(atom("_DelProxy"), arg_match) >> [=](const node_id& nid, actor_id aid) {
+    [=](delete_atom, const node_id& nid, actor_id aid) {
       CAF_LOG_TRACE(CAF_TSARG(nid) << ", " << CAF_ARG(aid));
       erase_proxy(nid, aid);
     },
@@ -302,11 +300,11 @@ void basp_broker::local_dispatch(const basp::header& hdr, message&& msg) {
       bool is_unlink = true;
       // extract arguments
       msg.apply({
-        on(atom("_Link"), arg_match) >> [&](const actor_addr& addr) {
+        [&](link_atom, const actor_addr& addr) {
           is_unlink = false;
           other = addr;
         },
-        on(atom("_Unlink"), arg_match) >> [&](const actor_addr& addr) {
+        [&](unlink_atom, const actor_addr& addr) {
           other = addr;
         }
       });
