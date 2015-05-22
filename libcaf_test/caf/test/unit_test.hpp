@@ -571,25 +571,25 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 #define CAF_XSTR(s) CAF_STR(s)
 
 #define CAF_CHECK(...)                                                         \
-  {                                                                            \
+  do {                                                                         \
     static_cast<void>(::caf::test::detail::expr{                               \
              ::caf::test::engine::current_test(), __FILE__, __LINE__,          \
              false, #__VA_ARGS__} ->* __VA_ARGS__);                            \
     ::caf::test::engine::last_check_file(__FILE__);                            \
     ::caf::test::engine::last_check_line(__LINE__);                            \
-  } static_cast<void>(0)
+  } while(false)
 
 #define CAF_FAIL(...)                                                          \
-   {                                                                           \
+   do {                                                                        \
     (void)(::caf::test::detail::expr{                                          \
              ::caf::test::engine::current_test(), __FILE__, __LINE__,          \
              true, #__VA_ARGS__} ->* __VA_ARGS__);                             \
     ::caf::test::engine::last_check_file(__FILE__);                            \
     ::caf::test::engine::last_check_line(__LINE__);                            \
-  } static_cast<void>(0)
+  } while(false)
 
 #define CAF_REQUIRE(...)                                                       \
-  {                                                                            \
+  do {                                                                         \
     auto CAF_UNIQUE(__result) =                                                \
       ::caf::test::detail::expr{::caf::test::engine::current_test(),           \
       __FILE__, __LINE__, false, #__VA_ARGS__} ->* __VA_ARGS__;                \
@@ -598,7 +598,7 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
     }                                                                          \
     ::caf::test::engine::last_check_file(__FILE__);                            \
     ::caf::test::engine::last_check_line(__LINE__);                            \
-  }  static_cast<void>(0)
+  } while(false)
 
 #define CAF_TEST(name)                                                         \
   namespace {                                                                  \
