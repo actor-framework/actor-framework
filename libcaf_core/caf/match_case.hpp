@@ -449,7 +449,7 @@ class advanced_match_case_impl : public
     match_case_zipper zip;
     using indices_type = typename detail::il_indices<intermediate_tuple>::type;
     //indices_type indices;
-    typename detail::il_take<indices_type, detail::tl_size<projections>::value - num_fun_args>::type lefts;
+    typename detail::il_take<indices_type, detail::tl_size<projections_list>::value - num_fun_args>::type lefts;
     typename detail::il_right<indices_type, num_fun_args>::type rights;
     has_none hn;
     // check if guards of discarded arguments are fulfilled
