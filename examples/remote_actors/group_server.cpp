@@ -18,22 +18,6 @@
 using namespace std;
 using namespace caf;
 
-optional<uint16_t> to_port(const string& arg) {
-  char* last = nullptr;
-  auto res = strtoul(arg.c_str(), &last, 10);
-  if (last == (arg.c_str() + arg.size()) && res <= 65536) {
-    return static_cast<uint16_t>(res);
-  }
-  return none;
-}
-
-optional<uint16_t> long_port(const string& arg) {
-  if (arg.compare(0, 7, "--port=") == 0) {
-    return to_port(arg.substr(7));
-  }
-  return none;
-}
-
 int main(int argc, char** argv) {
   uint16_t port = 0;
   auto res = message_builder(argv + 1, argv + argc).extract_opts({
