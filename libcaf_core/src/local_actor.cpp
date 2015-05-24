@@ -485,15 +485,19 @@ void local_actor::launch(execution_unit* eu, bool lazy, bool hide) {
     }
     //intrusive_ptr<local_actor> mself{this};
     std::thread([hide](intrusive_ptr<local_actor> mself) {
-      CAF_PUSH_AID(mself->id());
-      CAF_LOGF_TRACE("");
-      auto max_throughput = std::numeric_limits<size_t>::max();
-      while (mself->resume(nullptr, max_throughput) != resumable::done) {
-        // await new data before resuming actor
-        mself->await_data();
-        CAF_ASSERT(mself->mailbox().blocked() == false);
+      // this extra scope makes sure that the trace logger is
+      // destructed before dec_detached_threads() is called
+      {
+        CAF_PUSH_AID(mself->id());
+        CAF_LOGF_TRACE("");
+        auto max_throughput = std::numeric_limits<size_t>::max();
+        while (mself->resume(nullptr, max_throughput) != resumable::done) {
+          // await new data before resuming actor
+          mself->await_data();
+          CAF_ASSERT(mself->mailbox().blocked() == false);
+        }
+        mself.reset();
       }
-      mself.reset();
       if (!hide) {
         scheduler::dec_detached_threads();
       }
