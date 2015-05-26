@@ -36,6 +36,15 @@ class message;
 namespace test {
 
 /**
+ * Default test-running function.
+ * This function will be called automatically unless you define
+ * `CAF_TEST_NO_MAIN` before including `caf/test/unit_test.hpp`. In
+ * the latter case you will have to provide you own `main` function,
+ * where you may want to call `caf::test::main` from.
+ */
+int main(int argc, char** argv);
+
+/**
  * A sequence of *checks*.
  */
 class test {
