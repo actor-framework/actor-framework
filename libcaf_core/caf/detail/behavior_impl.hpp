@@ -209,7 +209,7 @@ intrusive_ptr<R> make_behavior_ra(timeout_definition<F>& td,
 }
 
 template <class R, class... Ts>
-intrusive_ptr<R> make_behavior_ra(tail_argument_token&, Ts... xs) {
+intrusive_ptr<R> make_behavior_ra(tail_argument_token&, Ts&... xs) {
   return make_behavior_eor<R>(std::tuple_cat(to_match_case_tuple(xs)...));
 }
 

@@ -39,9 +39,9 @@
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/arg_match_t.hpp"
 #include "caf/detail/type_traits.hpp"
+#include "caf/detail/match_case_builder.hpp"
 #include "caf/detail/tail_argument_token.hpp"
 #include "caf/detail/implicit_conversions.hpp"
-#include "caf/detail/message_case_builder.hpp"
 
 namespace caf {
 namespace detail {

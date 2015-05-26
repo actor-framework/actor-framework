@@ -317,28 +317,13 @@ struct projection_is_trivial {
     >::value == 0;
 };
 
-/*
- * A lifted functor consists of a set of projections, a plain-old
- * functor and its signature. Note that the signature of the lifted
- * functor might differ from the underlying functor, because
- * of the projections.
+/**
+ * @tparam F Function or function object denoting the callback.
+ * @tparam Tuple Type of the storage for intermediate results during matching.
+ * @tparam Pattern Input types for this match case.
  */
-template <class F, class Pattern, class Projections, class Signature>
-class advanced_match_case_impl : public
-    advanced_match_case<
-      F,
-      typename detail::tl_apply<
-        typename detail::tl_zip_right<
-          typename detail::tl_map<
-            Projections,
-            projection_result
-          >::type,
-          typename detail::get_callable_trait<F>::arg_types,
-          detail::left_or_right,
-          detail::get_callable_trait<F>::num_args
-        >::type,
-        std::tuple
-      >::type> {
+template <class F, class Tuple, class Pattern, class Projections>
+class advanced_match_case_impl : public advanced_match_case<F, Tuple> {
  public:
   using plain_result_type = typename detail::get_callable_trait<F>::result_type;
 
@@ -349,22 +334,8 @@ class advanced_match_case_impl : public
       typename std::remove_const<plain_result_type>::type
     >::type;
 
-  using pattern = Pattern;
-
-  using filtered_pattern =
-    typename detail::tl_filter_not_type<
-      Pattern,
-      anything
-    >::type;
-
-  using intermediate_tuple =
-    typename detail::tl_apply<
-      filtered_pattern,
-      detail::pseudo_tuple
-    >::type;
-
   static constexpr uint32_t static_type_token =
-    detail::make_type_token_from_list<pattern>();
+    detail::make_type_token_from_list<Pattern>();
 
   // Let F be "R (Ts...)" then match_case<F...> returns optional<R>
   // unless R is void in which case bool is returned
@@ -375,73 +346,42 @@ class advanced_match_case_impl : public
       optional<result_type>
     >::type;
 
-  using projections_list = Projections;
+  // Needed for static type checking when assigning to a typed behavior.
+  using arg_types = Pattern;
 
-  using projections =
-    typename detail::tl_apply<
-      projections_list,
-      std::tuple
-    >::type;
+  using fargs = typename detail::get_callable_trait<F>::arg_types;
 
-  /*
-   * Needed for static type checking when assigning to a typed behavior.
-   */
-  using arg_types = Signature;
+  static constexpr size_t fargs_size = detail::tl_size<fargs>::value;
 
-  using fun_args = typename detail::get_callable_trait<F>::arg_types;
+  using super = advanced_match_case<F, Tuple>;
 
-  static constexpr size_t num_fun_args = detail::tl_size<fun_args>::value;
-
-  static constexpr bool is_manipulator =
-    detail::tl_exists<
-      fun_args,
-      detail::is_mutable_ref
-    >::value;
-
-  using tuple_type =
-    typename detail::tl_apply<
-      typename detail::tl_zip_right<
-        typename detail::tl_map<
-          projections_list,
-          projection_result
-        >::type,
-        fun_args,
-        detail::left_or_right,
-        num_fun_args
-      >::type,
-      std::tuple
-    >::type;
-
-  using super = advanced_match_case<F, tuple_type>;
-
-  advanced_match_case_impl() = default;
+  advanced_match_case_impl(advanced_match_case_impl&&) = default;
 
   advanced_match_case_impl(const advanced_match_case_impl&) = default;
 
-  advanced_match_case_impl& operator=(advanced_match_case_impl&&) = default;
-
-  advanced_match_case_impl& operator=(const advanced_match_case_impl&) = default;
-
-  advanced_match_case_impl(F f)
-      : super(pattern_has_wildcard<Pattern>::value, static_type_token,
-              std::move(f)) {
-    // nop
-  }
-
-  advanced_match_case_impl(F f, projections ps)
-      : super(pattern_has_wildcard<Pattern>::value, static_type_token,
-              std::move(f)),
+  advanced_match_case_impl(bool has_wcard, uint32_t ttoken, F f, Projections ps)
+      : super(has_wcard, ttoken, std::move(f)),
         m_ps(std::move(ps)) {
     // nop
   }
 
-  bool prepare_invoke(message& msg, tuple_type* out) {
+  bool prepare_invoke(message& msg, Tuple* out) {
     // detach msg before invoking m_fun if needed
-    if (is_manipulator) {
+    if (detail::tl_exists<fargs, detail::is_mutable_ref>::value) {
       msg.force_detach();
     }
+    using filtered_pattern =
+      typename detail::tl_filter_not_type<
+        Pattern,
+        anything
+      >::type;
+    using intermediate_tuple =
+      typename detail::tl_apply<
+        filtered_pattern,
+        detail::pseudo_tuple
+      >::type;
     intermediate_tuple it;
-    detail::meta_elements<pattern> ms;
+    detail::meta_elements<Pattern> ms;
     // check if try_match() reports success
     if (!detail::try_match(msg, ms.arr.data(), ms.arr.size(), it.data)) {
       return false;
@@ -449,8 +389,8 @@ class advanced_match_case_impl : public
     match_case_zipper zip;
     using indices_type = typename detail::il_indices<intermediate_tuple>::type;
     //indices_type indices;
-    typename detail::il_take<indices_type, detail::tl_size<projections_list>::value - num_fun_args>::type lefts;
-    typename detail::il_right<indices_type, num_fun_args>::type rights;
+    typename detail::il_take<indices_type, std::tuple_size<Projections>::value - fargs_size>::type lefts;
+    typename detail::il_right<indices_type, fargs_size>::type rights;
     has_none hn;
     // check if guards of discarded arguments are fulfilled
     auto lhs_tup = tuple_zip(zip, lefts, m_ps, it);
@@ -458,18 +398,18 @@ class advanced_match_case_impl : public
       return false;
     }
     // zip remaining arguments into output tuple
-    new (out) tuple_type(tuple_zip(zip, rights, m_ps, it));
+    new (out) Tuple (tuple_zip(zip, rights, m_ps, it));
     //tuple_type rhs_tup = tuple_zip(zip, rights, m_ps, it);
     // check if remaining guards are fulfilled
     if (detail::apply_args(hn, detail::get_indices(*out), *out)) {
-      out->~tuple_type();
+      out->~Tuple();
       return false;
     }
     return true;
   }
 
  private:
-  projections m_ps;
+  Projections m_ps;
 };
 
 struct match_case_info {
