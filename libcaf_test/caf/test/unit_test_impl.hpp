@@ -478,26 +478,9 @@ std::string engine::render(std::chrono::microseconds t) {
       : (std::to_string(t.count()) + " us");
 }
 
-namespace detail {
-
-expr::expr(test* parent, const char* filename, size_t lineno,
-           bool should_fail, const char* expression)
-    : m_test{parent},
-      m_filename{filename},
-      m_line{lineno},
-      m_should_fail{should_fail},
-      m_expr{expression} {
-  assert(m_test != nullptr);
-}
-
-} // namespace detail
-} // namespace test
-} // namespace caf
-
 int main(int argc, char** argv) {
-  using namespace caf;
   // set path of executable
-  test::engine::path(argv[0]);
+  engine::path(argv[0]);
   // default values.
   int verbosity_console = 3;
   int verbosity_file = 3;
@@ -539,7 +522,7 @@ int main(int argc, char** argv) {
   }
   if (res.opts.count("available-suites") > 0) {
     std::cout << "available suites:" << std::endl;
-    for (auto& s : test::engine::available_suites()) {
+    for (auto& s : engine::available_suites()) {
       std::cout << "  - " << s << std::endl;
     }
     return 0;
@@ -551,12 +534,34 @@ int main(int argc, char** argv) {
   }
   auto colorize = res.opts.count("no-colors") == 0;
   if (divider < argc) {
-    test::engine::args(argc - divider - 1, argv + divider + 1);
+    engine::args(argc - divider - 1, argv + divider + 1);
   }
-  auto result = test::engine::run(colorize, log_file, verbosity_console,
+  auto result = engine::run(colorize, log_file, verbosity_console,
                                   verbosity_file, max_runtime, suites,
                                   not_suites, tests, not_tests);
   return result ? 0 : 1;
 }
+
+namespace detail {
+
+expr::expr(test* parent, const char* filename, size_t lineno,
+           bool should_fail, const char* expression)
+    : m_test{parent},
+      m_filename{filename},
+      m_line{lineno},
+      m_should_fail{should_fail},
+      m_expr{expression} {
+  assert(m_test != nullptr);
+}
+
+} // namespace detail
+} // namespace test
+} // namespace caf
+
+#ifndef CAF_TEST_NO_MAIN
+int main(int argc, char** argv) {
+  return caf::test::main(argc, argv);
+}
+#endif
 
 #endif // CAF_TEST_UNIT_TEST_IMPL_HPP
