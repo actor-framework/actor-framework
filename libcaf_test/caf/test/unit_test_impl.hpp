@@ -32,6 +32,8 @@
 #include "caf/message_handler.hpp"
 #include "caf/string_algorithms.hpp"
 
+#include "caf/test/unit_test.hpp"
+
 namespace caf {
 namespace test {
 

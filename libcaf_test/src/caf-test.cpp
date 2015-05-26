@@ -17,5 +17,4 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/test/unit_test.hpp"
 #include "caf/test/unit_test_impl.hpp"
