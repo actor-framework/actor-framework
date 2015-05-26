@@ -44,7 +44,7 @@ class watchdog {
   watchdog() {
     m_thread = std::thread([&] {
       auto tp =
-        std::chrono::high_resolution_clock::now() + std::chrono::seconds(10);
+        std::chrono::high_resolution_clock::now() + std::chrono::seconds(30);
         std::unique_lock<std::mutex> guard{m_mtx};
       while (!m_canceled
              && m_cv.wait_until(guard, tp) != std::cv_status::timeout) {
