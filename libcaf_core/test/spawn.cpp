@@ -128,41 +128,6 @@ actor spawn_event_testee2(actor parent) {
   return spawn<impl>(parent);
 }
 
-class chopstick : public event_based_actor {
- public:
-  behavior make_behavior() override {
-    return available;
-  }
-
-  behavior taken_by(actor whom) {
-    return {
-      [=](get_atom) {
-        return error_atom::value;
-      },
-      on(put_atom::value, whom) >> [=]() {
-        become(available);
-      }
-    };
-  }
-
-  chopstick() {
-    inc_actor_instances();
-    available.assign(
-      [=](get_atom, actor whom) -> atom_value {
-        become(taken_by(whom));
-        return ok_atom::value;
-      }
-    );
-  }
-
-  ~chopstick() {
-    dec_actor_instances();
-  }
-
- private:
-  behavior available;
-};
-
 class testee_actor : public blocking_actor {
  public:
   testee_actor();
@@ -560,6 +525,38 @@ CAF_TEST(spawn_event_testee2) {
 }
 
 CAF_TEST(chopsticks) {
+  struct chopstick : event_based_actor {
+    behavior make_behavior() override {
+      return available;
+    }
+
+    behavior taken_by(actor whom) {
+      return {
+        [=](get_atom) {
+          return error_atom::value;
+        },
+        on(put_atom::value, whom) >> [=]() {
+          become(available);
+        }
+      };
+    }
+
+    chopstick() {
+      inc_actor_instances();
+      available.assign(
+        [=](get_atom, actor whom) -> atom_value {
+          become(taken_by(whom));
+          return ok_atom::value;
+        }
+      );
+    }
+
+    ~chopstick() {
+      dec_actor_instances();
+    }
+
+    behavior available;
+  };
   scoped_actor self;
   auto cstk = spawn<chopstick>();
   self->send(cstk, get_atom::value, self);
