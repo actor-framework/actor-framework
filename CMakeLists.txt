@@ -379,7 +379,7 @@ endif()
 # set opencl lib for sub directories if not told otherwise
 if(NOT CAF_NO_OPENCL
    AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
-  find_package(OPENCL REQUIRED)
+  find_package(OpenCL REQUIRED)
   add_subdirectory(libcaf_opencl)
   if(NOT CAF_BUILD_STATIC_ONLY)
     set(LIBCAF_OPENCL_LIBRARY libcaf_opencl_shared)
