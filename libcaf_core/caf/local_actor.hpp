@@ -92,20 +92,51 @@ class local_actor : public abstract_actor, public resumable {
     return eval_opts(Os, std::move(res));
   }
 
-  template <class T, spawn_options Os, class... Ts>
-  actor spawn_in_group(const group& grp, Ts&&... xs) {
+  template <class T, spawn_options Os = no_spawn_options, class Groups,
+            class... Ts>
+  actor spawn_in_groups(const Groups& grps, Ts&&... xs) {
     constexpr auto os = make_unbound(Os);
-    auto res = spawn_class<T, os>(host(), group_subscriber{grp},
+    auto res = spawn_class<T, os>(host(),
+                                  groups_subscriber<
+                                    decltype(std::begin(grps))
+                                  >{std::begin(grps), std::end(grps)},
                                   std::forward<Ts>(xs)...);
     return eval_opts(Os, std::move(res));
   }
 
-  template <spawn_options Os = no_spawn_options, class... Ts>
+  template <class T, spawn_options Os = no_spawn_options, class... Ts>
+  actor spawn_in_groups(std::initializer_list<group> grps, Ts&&... xs) {
+    return spawn_in_groups<
+      T, Os, std::initializer_list<group>
+    >(grps, std::forward<Ts>(xs)...);
+  }
+
+  template <class T, spawn_options Os = no_spawn_options, class... Ts>
   actor spawn_in_group(const group& grp, Ts&&... xs) {
+    return spawn_in_groups<T, Os>({grp}, std::forward<Ts>(xs)...);
+  }
+
+  template <spawn_options Os = no_spawn_options, class Groups, class... Ts>
+  actor spawn_in_groups(const Groups& grps, Ts&&... xs) {
     constexpr auto os = make_unbound(Os);
-    auto res = spawn_functor<os>(host(), group_subscriber{grp},
+    auto res = spawn_functor<os>(host(),
+                                 groups_subscriber<
+                                   decltype(std::begin(grps))
+                                 >{std::begin(grps), std::end(grps)},
                                  std::forward<Ts>(xs)...);
     return eval_opts(Os, std::move(res));
+  }
+
+  template <spawn_options Os = no_spawn_options, class... Ts>
+  actor spawn_in_groups(std::initializer_list<group> grps, Ts&&... xs) {
+    return spawn_in_groups<
+      Os, std::initializer_list<group>
+    >(grps, std::forward<Ts>(xs)...);
+  }
+
+  template <spawn_options Os = no_spawn_options, class... Ts>
+  actor spawn_in_group(const group& grp, Ts&&... xs) {
+    return spawn_in_groups<Os>({grp}, std::forward<Ts>(xs)...);
   }
 
   /****************************************************************************
