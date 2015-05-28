@@ -88,10 +88,9 @@ class command : public ref_counted {
                             0, sizeof(typename R::value_type) * m_result_size,
                             m_result.data(), 1, &event_k, &event_r);
       if (err != CL_SUCCESS) {
+        this->deref(); // failed to enqueue command
         throw std::runtime_error("clEnqueueReadBuffer: " +
                                  get_opencl_error(err));
-        this->deref(); // failed to enqueue command
-        return;
       }
       err = clSetEventCallback(event_r, CL_COMPLETE,
                                [](cl_event, cl_int, void* data) {
