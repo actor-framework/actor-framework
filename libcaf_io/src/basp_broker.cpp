@@ -800,8 +800,8 @@ void basp_broker::add_published_actor(accept_handle hdl,
   if (!ptr) {
     return;
   }
-  m_acceptors.insert(std::make_pair(hdl, std::make_pair(ptr, port)));
-  m_open_ports.insert(std::make_pair(port, hdl));
+  m_acceptors.emplace(hdl, std::make_pair(ptr, port));
+  m_open_ports.emplace(port, hdl);
   ptr->attach_functor([port](abstract_actor* self, uint32_t) {
     unpublish_impl(self->address(), port, false);
   });

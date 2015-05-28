@@ -335,7 +335,7 @@ class local_group_module : public abstract_group::module {
     }
     auto tmp = make_counted<local_group>(true, this, identifier);
     upgrade_to_unique_guard uguard(guard);
-    auto p = m_instances.insert(make_pair(identifier, tmp));
+    auto p = m_instances.emplace(identifier, tmp);
     auto result = p.first->second;
     uguard.unlock();
     // someone might preempt us
@@ -365,7 +365,7 @@ class local_group_module : public abstract_group::module {
     local_group_ptr tmp = make_counted<local_group_proxy>(broker, this,
                                                           identifier);
     upgrade_to_unique_guard uguard(guard);
-    auto p = m_proxies.insert(std::make_pair(broker, tmp));
+    auto p = m_proxies.emplace(broker, tmp);
     // someone might preempt us
     return {p.first->second};
   }
@@ -443,7 +443,7 @@ group_manager::~group_manager() {
 
 group_manager::group_manager() {
   abstract_group::unique_module_ptr ptr{new local_group_module};
-  m_mmap.insert(std::make_pair(std::string("local"), std::move(ptr)));
+  m_mmap.emplace(std::string("local"), std::move(ptr));
 }
 
 group group_manager::anonymous() {
@@ -471,7 +471,7 @@ void group_manager::add_module(std::unique_ptr<abstract_group::module> mptr) {
   auto& mname = mptr->name();
   { // lifetime scope of guard
     std::lock_guard<std::mutex> guard(m_mmap_mtx);
-    if (m_mmap.insert(std::make_pair(mname, std::move(mptr))).second) {
+    if (m_mmap.emplace(mname, std::move(mptr)).second) {
       return; // success; don't throw
     }
   }

@@ -83,7 +83,7 @@ bool check_types(const std::map<std::string, uint16_t>& expected) {
   // fetch all available type names
   auto types = uniform_type_info::instances();
   for (auto tinfo : types) {
-    found.insert(std::make_pair(tinfo->name(), tinfo->type_nr()));
+    found.emplace(tinfo->name(), tinfo->type_nr());
   }
   // compare the two maps
   if (expected == found) {
@@ -127,7 +127,7 @@ T& append(T& storage) {
 
 template <class T, typename U, class... Us>
 T& append(T& storage, U&& u, Us&&... us) {
-  storage.insert(std::make_pair(std::forward<U>(u), uint16_t{0}));
+  storage.emplace(std::forward<U>(u), uint16_t{0});
   return append(storage, std::forward<Us>(us)...);
 }
 
@@ -144,11 +144,11 @@ CAF_TEST(test_uniform_type) {
   CAF_CHECK(announce1 == announce2);
   CAF_CHECK(announce1 == announce3);
   CAF_CHECK(announce1 == announce4);
-  //CAF_CHECK_EQUAL(announce1->name(), "foo"); // fails ...
+  CAF_CHECK(strcmp(announce1->name(), "foo") == 0);
   {
     auto uti = uniform_typeid<atom_value>();
     CAF_CHECK(uti != nullptr);
-    //CAF_CHECK_EQUAL(uti->name(), "@atom"); // fails...
+    CAF_CHECK(strcmp(uti->name(), "@atom") == 0);
   }
   using detail::type_nr;
   // these types (and only those) are present if

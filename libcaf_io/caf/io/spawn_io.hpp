@@ -59,6 +59,7 @@ actor spawn_io_client(F fun, const std::string& host,
   // works around an issue with older GCC releases that could not handle
   // variadic template parameter packs inside lambdas by storing into a
   // std::function first (using `auto init =` won't compile on Clang)
+  // This bug still exsist in GCC 4.8.4
   auto mfptr = &broker::functor_based::init<F, connection_handle, Ts...>;
   using bi = std::function<void (broker::functor_based*, F, connection_handle)>;
   using namespace std::placeholders;

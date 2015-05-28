@@ -49,16 +49,14 @@ class split_join_collector : public event_based_actor {
   behavior make_behavior() override {
     return {
       others >> [=] {
-        m_rp = this->make_response_promise();
-        m_split(m_workset, this->current_message());
+        m_rp = make_response_promise();
+        m_split(m_workset, current_message());
         // first message is the forwarded request
-        // GCC 4.7 workaround; `for (auto& x : m_workset)` doesn't compile
-        for (size_t i = 0; i < m_workset.size(); ++i) {
-          auto& x = m_workset[i];
-          this->sync_send(x.first, std::move(x.second)).then(
+        for (auto& x : m_workset) {
+          sync_send(x.first, std::move(x.second)).then(
             others >> [=] {
               m_join(m_value, this->current_message());
-              if (--this->m_awaited_results == 0) {
+              if (--m_awaited_results == 0) {
                 m_rp.deliver(make_message(m_value));
                 quit();
               }
@@ -66,7 +64,7 @@ class split_join_collector : public event_based_actor {
           );
         }
         // no longer needed
-        this->m_workset.clear();
+        m_workset.clear();
       }
     };
   }

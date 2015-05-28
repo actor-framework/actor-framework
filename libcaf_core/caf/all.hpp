@@ -111,7 +111,7 @@
  *
  * @section GettingStarted Getting Started
  *
- * To build `libcaf,` you need `GCC >= 4.7 or <tt>Clang >=
+ * To build `libcaf,` you need `GCC >= 4.8 or <tt>Clang >=
  *3.2</tt>,
  * and `CMake`.
  *

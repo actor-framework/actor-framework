@@ -44,7 +44,7 @@ class watchdog {
 
  private:
   watchdog() {
-    m_thread = std::thread([&] {
+    m_thread = std::thread{[&] {
       auto tp =
         std::chrono::high_resolution_clock::now() + std::chrono::seconds(30);
         std::unique_lock<std::mutex> guard{m_mtx};
@@ -57,7 +57,7 @@ class watchdog {
           << "WATCHDOG: unit test did finish within 10s, abort\n";
         abort();
       }
-    });
+    }};
   }
   ~watchdog() {
     { // lifetime scope of guard
@@ -148,7 +148,7 @@ logger::stream::stream(logger& l, level lvl) : m_logger(l), m_level(lvl) {
 logger::stream::stream(stream&& other)
     : m_logger(other.m_logger)
     , m_level(other.m_level) {
-  // ostringstream does have swap since C++11... but not in GCC 4.7
+  // ostringstream does have swap since C++11... but not in GCC 4.8.4
   m_buf.str(other.m_buf.str());
 }
 

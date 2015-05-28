@@ -66,7 +66,7 @@ cache_map& get_cache_map() {
     pthread_setspecific(s_key, cache);
     // insert default types
     std::unique_ptr<memory_cache> tmp(new basic_memory_cache<mailbox_element>);
-    cache->insert(std::make_pair(&typeid(mailbox_element), move(tmp)));
+    cache->emplace(&typeid(mailbox_element), move(tmp));
   }
   return *cache;
 }

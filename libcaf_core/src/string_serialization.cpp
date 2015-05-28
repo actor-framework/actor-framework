@@ -312,12 +312,12 @@ class string_deserializer : public deserializer, public dummy_backend {
     void operator()(atom_value& what) {
       what = static_cast<atom_value>(detail::atom_val(str.c_str(), 0xF));
     }
-    void operator()(u16string&) {
+    void operator() [[noreturn]] (u16string&) {
       throw std::runtime_error(
         "u16string currently not supported "
         "by string_deserializer");
     }
-    void operator()(u32string&) {
+    void operator() [[noreturn]] (u32string&) {
       throw std::runtime_error(
         "u32string currently not supported "
         "by string_deserializer");
@@ -452,7 +452,7 @@ class string_deserializer : public deserializer, public dummy_backend {
       ++m_pos;
   }
 
-  void throw_malformed(const string& error_msg) {
+  void throw_malformed [[noreturn]] (const string& error_msg) {
     throw std::runtime_error("malformed string: " + error_msg);
   }
 

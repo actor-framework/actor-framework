@@ -13,7 +13,7 @@ using namespace caf::io;
 
 using tick_atom = atom_constant<atom("tick")>;
 
-const char http_ok[] = R"__(HTTP/1.1 200 OK
+constexpr const char http_ok[] = R"__(HTTP/1.1 200 OK
 Content-Type: text/plain
 Connection: keep-alive
 Transfer-Encoding: chunked

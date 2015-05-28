@@ -64,10 +64,10 @@ void actor_registry::put(actor_id key, const abstract_actor_ptr& val) {
   if (val == nullptr) {
     return;
   }
-  auto entry = std::make_pair(key, value_type(val, exit_reason::not_exited));
   { // lifetime scope of guard
     exclusive_guard guard(m_instances_mtx);
-    if (!m_entries.insert(entry).second) {
+    if (!m_entries.emplace(key,
+                           value_type{val, exit_reason::not_exited}).second) {
       // already defined
       return;
     }

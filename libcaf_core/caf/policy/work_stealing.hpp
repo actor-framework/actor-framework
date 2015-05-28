@@ -193,7 +193,7 @@ class work_stealing {
 
   template <class Worker, class UnaryFunction>
   void foreach_resumable(Worker* self, UnaryFunction f) {
-    auto next = [&] { return this->d(self).queue.take_head(); };
+    auto next = [&] { return d(self).queue.take_head(); };
     for (auto job = next(); job != nullptr; job = next()) {
       f(job);
     }
