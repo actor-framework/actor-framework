@@ -172,12 +172,54 @@ actor spawn(Ts&&... xs) {
 
 /**
  * Returns a new actor that immediately, i.e., before this function
+ * returns, joins `grps` of type `C` using `xs` as constructor arguments
+ */
+template <class C, spawn_options Os = no_spawn_options, class Groups,
+          class... Ts>
+actor spawn_in_groups(const Groups& grps, Ts&&... xs) {
+  return spawn_class<C, Os>(nullptr,
+                            groups_subscriber<
+                              decltype(std::begin(grps))
+                            >{std::begin(grps), std::end(grps)},
+                            std::forward<Ts>(xs)...);
+}
+
+template <class C, spawn_options Os = no_spawn_options, class... Ts>
+actor spawn_in_groups(std::initializer_list<group> grps, Ts&&... xs) {
+  return spawn_in_groups<
+    C, Os, std::initializer_list<group>
+  >(grps, std::forward<Ts>(xs)...);
+}
+
+/**
+ * Returns a new actor that immediately, i.e., before this function
  * returns, joins `grp` of type `C` using `xs` as constructor arguments
  */
 template <class C, spawn_options Os = no_spawn_options, class... Ts>
 actor spawn_in_group(const group& grp, Ts&&... xs) {
-  return spawn_class<C, Os>(nullptr, group_subscriber{grp},
-                 std::forward<Ts>(xs)...);
+  return spawn_in_groups<C, Os>({grp}, std::forward<Ts>(xs)...);
+}
+
+/**
+ * Returns a new actor that immediately, i.e., before this function
+ * returns, joins `grps`. The first element of `xs` must
+ * be the functor, the remaining arguments its arguments.
+ */
+template <spawn_options Os = no_spawn_options, class Groups, class... Ts>
+actor spawn_in_groups(const Groups& grps, Ts&&... xs) {
+  static_assert(sizeof...(Ts) > 0, "too few arguments provided");
+  return spawn_functor<Os>(nullptr,
+                           groups_subscriber<
+                             decltype(std::begin(grps))
+                           >{std::begin(grps), std::end(grps)},
+                           std::forward<Ts>(xs)...);
+}
+
+template <spawn_options Os = no_spawn_options, class... Ts>
+actor spawn_in_groups(std::initializer_list<group> grps, Ts&&... xs) {
+  return spawn_in_groups<
+    Os, std::initializer_list<group>
+  >(grps, std::forward<Ts>(xs)...);
 }
 
 /**
@@ -187,9 +229,7 @@ actor spawn_in_group(const group& grp, Ts&&... xs) {
  */
 template <spawn_options Os = no_spawn_options, class... Ts>
 actor spawn_in_group(const group& grp, Ts&&... xs) {
-  static_assert(sizeof...(Ts) > 0, "too few arguments provided");
-  return spawn_functor<Os>(nullptr, group_subscriber{grp},
-               std::forward<Ts>(xs)...);
+  return spawn_in_groups<Os>({grp}, std::forward<Ts>(xs)...);
 }
 
 /**
