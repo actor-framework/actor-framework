@@ -257,7 +257,7 @@ class middleman_actor_impl : public middleman_actor_base::base {
       auto req_id = m_next_request_id++;
       send(m_broker, get_atom::value, hdl, req_id,
            actor{this}, std::move(expected_ifs));
-      m_pending_gets.insert(std::make_pair(req_id, result));
+      m_pending_gets.emplace(req_id, result);
     }
     catch (network_error& err) {
       // fullfil promise immediately
@@ -273,7 +273,7 @@ class middleman_actor_impl : public middleman_actor_base::base {
     auto result = make_response_promise();
     auto req_id = m_next_request_id++;
     send(m_broker, delete_atom::value, req_id, whom, port);
-    m_pending_deletes.insert(std::make_pair(req_id, result));
+    m_pending_deletes.emplace(req_id, result);
     return result;
   }
 
@@ -344,10 +344,10 @@ void middleman::initialize() {
   CAF_LOG_TRACE("");
   m_backend = network::multiplexer::make();
   m_backend_supervisor = m_backend->make_supervisor();
-  m_thread = std::thread([this] {
+  m_thread = std::thread{[this] {
     CAF_LOG_TRACE("");
     m_backend->run();
-  });
+  }};
   m_backend->thread_id(m_thread.get_id());
   // announce io-related types
   do_announce<new_data_msg>("caf::io::new_data_msg");

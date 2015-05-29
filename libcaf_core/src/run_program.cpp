@@ -36,7 +36,7 @@ std::thread caf::detail::run_program_impl(actor rc, const char* cpath,
   }
   oss << " 2>&1";
   string cmdstr = oss.str();
-  return thread([cmdstr, rc] {
+  return std::thread{ [cmdstr, rc] {
     string output;
     auto fp = popen(cmdstr.c_str(), "r");
     if (!fp) {
@@ -50,5 +50,5 @@ std::thread caf::detail::run_program_impl(actor rc, const char* cpath,
     }
     pclose(fp);
     anon_send(rc, output);
-  });
+  }};
 }

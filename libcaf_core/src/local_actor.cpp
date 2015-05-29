@@ -420,8 +420,7 @@ struct pending_response_predicate {
 
 message_id local_actor::new_request_id(message_priority mp) {
   auto result = ++m_last_request_id;
-  m_pending_responses.push_front(std::make_pair(result.response_id(),
-                                                behavior{}));
+  m_pending_responses.emplace_front(result.response_id(), behavior{});
   return mp == message_priority::normal ? result : result.with_high_priority();
 }
 
@@ -484,7 +483,7 @@ void local_actor::launch(execution_unit* eu, bool lazy, bool hide) {
       scheduler::inc_detached_threads();
     }
     //intrusive_ptr<local_actor> mself{this};
-    std::thread([hide](intrusive_ptr<local_actor> mself) {
+    std::thread{[hide](intrusive_ptr<local_actor> mself) {
       // this extra scope makes sure that the trace logger is
       // destructed before dec_detached_threads() is called
       {
@@ -501,7 +500,7 @@ void local_actor::launch(execution_unit* eu, bool lazy, bool hide) {
       if (!hide) {
         scheduler::dec_detached_threads();
       }
-    }, intrusive_ptr<local_actor>{this}).detach();
+    }, intrusive_ptr<local_actor>{this}}.detach();
     return;
   }
   // actor is cooperatively scheduled

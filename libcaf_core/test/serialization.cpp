@@ -197,7 +197,7 @@ struct is_message {
   template <class T, class... Ts>
   bool equal(T&& v, Ts&&... vs) {
     bool ok = false;
-    // work around for gcc bug
+    // work around for gcc 4.8.4 bug
     auto tup = tie(v, vs...);
     message_handler impl {
       [&](T const& u, Ts const&... us) {

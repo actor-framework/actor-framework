@@ -89,7 +89,7 @@ class singletons {
 
   static std::atomic<abstract_singleton*>& get_plugin_singleton(size_t id);
 
-  // Get instance from @p ptr or crate it on-the-fly using DCLP
+  // Get instance from @p ptr or create it on-the-fly using DCLP
   template <class T, class Factory>
   static T* lazy_get(std::atomic<T*>& ptr, std::mutex& mtx, Factory f) {
     auto result = ptr.load(std::memory_order_acquire);

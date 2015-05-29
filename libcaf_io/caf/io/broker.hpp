@@ -241,14 +241,14 @@ class broker : public abstract_event_based_actor<behavior, false> {
     m_scribes.erase(i);
     return spawn_functor(nullptr, [sptr](broker* forked) {
                                     sptr->set_broker(forked);
-                                    forked->m_scribes.insert(
-                                      std::make_pair(sptr->hdl(), sptr));
+                                    forked->m_scribes.emplace(sptr->hdl(),
+                                                              sptr);
                                   },
                          fun, hdl, std::forward<Ts>(xs)...);
   }
 
   inline void add_scribe(const scribe_pointer& ptr) {
-    m_scribes.insert(std::make_pair(ptr->hdl(), ptr));
+    m_scribes.emplace(ptr->hdl(), ptr);
   }
 
   connection_handle add_tcp_scribe(const std::string& host, uint16_t port);
@@ -258,7 +258,7 @@ class broker : public abstract_event_based_actor<behavior, false> {
   connection_handle add_tcp_scribe(network::native_socket fd);
 
   inline void add_doorman(const doorman_pointer& ptr) {
-    m_doormen.insert(std::make_pair(ptr->hdl(), ptr));
+    m_doormen.emplace(ptr->hdl(), ptr);
     if (is_initialized()) {
       ptr->launch();
     }

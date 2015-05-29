@@ -78,7 +78,7 @@ class logging_impl : public logging {
  public:
   void initialize() override {
     const char* log_level_table[] = {"ERROR", "WARN", "INFO", "DEBUG", "TRACE"};
-    m_thread = std::thread([this] { (*this)(); });
+    m_thread = std::thread{[this] { (*this)(); }};
     std::string msg = "ENTRY log level = ";
     msg += log_level_table[global_log_level];
     log("TRACE", "logging", "run", __FILE__, __LINE__, msg);
@@ -217,7 +217,7 @@ actor_id logging::set_aid(actor_id aid) {
   }
   // upgrade to unique lock and insert new element
   upgrade_to_unique_lock<detail::shared_spinlock> uguard{guard};
-  m_aids.insert(std::make_pair(tid, aid));
+  m_aids.emplace(tid, aid);
   return 0; // was empty before
 }
 
