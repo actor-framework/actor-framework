@@ -66,20 +66,20 @@ class multiplexer {
    * Assigns an unbound scribe identified by `hdl` to `ptr`.
    * @warning Do not call from outside the multiplexer's event loop.
    */
-  virtual void assign_tcp_scribe(broker* ptr, connection_handle hdl) = 0;
+  virtual void assign_tcp_scribe(abstract_broker* ptr, connection_handle hdl) = 0;
 
   /**
    * Creates a new TCP doorman from a native socket handle.
    * @warning Do not call from outside the multiplexer's event loop.
    */
-  virtual connection_handle add_tcp_scribe(broker* ptr, native_socket fd) = 0;
+  virtual connection_handle add_tcp_scribe(abstract_broker* ptr, native_socket fd) = 0;
 
   /**
    * Tries to connect to host `h` on given `port` and returns a
    * new scribe managing the connection on success.
    * @warning Do not call from outside the multiplexer's event loop.
    */
-  virtual connection_handle add_tcp_scribe(broker* ptr, const std::string& host,
+  virtual connection_handle add_tcp_scribe(abstract_broker* ptr, const std::string& host,
                                            uint16_t port) = 0;
 
   /**
@@ -95,13 +95,13 @@ class multiplexer {
    * Assigns an unbound doorman identified by `hdl` to `ptr`.
    * @warning Do not call from outside the multiplexer's event loop.
    */
-  virtual void assign_tcp_doorman(broker* ptr, accept_handle hdl) = 0;
+  virtual void assign_tcp_doorman(abstract_broker* ptr, accept_handle hdl) = 0;
 
   /**
    * Creates a new TCP doorman from a native socket handle.
    * @warning Do not call from outside the multiplexer's event loop.
    */
-  virtual accept_handle add_tcp_doorman(broker* ptr, native_socket fd) = 0;
+  virtual accept_handle add_tcp_doorman(abstract_broker* ptr, native_socket fd) = 0;
 
   /**
    * Tries to create a new TCP doorman running on port `p`, optionally
@@ -109,7 +109,7 @@ class multiplexer {
    * @warning Do not call from outside the multiplexer's event loop.
    */
   virtual std::pair<accept_handle, uint16_t>
-  add_tcp_doorman(broker* ptr, uint16_t port, const char* in = nullptr,
+  add_tcp_doorman(abstract_broker* ptr, uint16_t port, const char* in = nullptr,
                   bool reuse_addr = false) = 0;
 
   /**

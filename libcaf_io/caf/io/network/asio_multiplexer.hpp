@@ -69,27 +69,27 @@ class asio_multiplexer : public multiplexer {
 
   connection_handle new_tcp_scribe(const std::string&, uint16_t) override;
 
-  void assign_tcp_scribe(broker*, connection_handle hdl) override;
+  void assign_tcp_scribe(abstract_broker*, connection_handle hdl) override;
 
   template <class Socket>
-  connection_handle add_tcp_scribe(broker*, Socket&& sock);
+  connection_handle add_tcp_scribe(abstract_broker*, Socket&& sock);
 
-  connection_handle add_tcp_scribe(broker*, native_socket fd) override;
+  connection_handle add_tcp_scribe(abstract_broker*, native_socket fd) override;
 
-  connection_handle add_tcp_scribe(broker*, const std::string& host,
+  connection_handle add_tcp_scribe(abstract_broker*, const std::string& host,
                                    uint16_t port) override;
 
   std::pair<accept_handle, uint16_t> new_tcp_doorman(uint16_t p, const char* in,
                                                      bool rflag) override;
 
-  void assign_tcp_doorman(broker*, accept_handle hdl) override;
+  void assign_tcp_doorman(abstract_broker*, accept_handle hdl) override;
 
-  accept_handle add_tcp_doorman(broker*, default_socket_acceptor&& sock);
+  accept_handle add_tcp_doorman(abstract_broker*, default_socket_acceptor&& sock);
 
-  accept_handle add_tcp_doorman(broker*, native_socket fd) override;
+  accept_handle add_tcp_doorman(abstract_broker*, native_socket fd) override;
 
   std::pair<accept_handle, uint16_t>
-  add_tcp_doorman(broker*, uint16_t port, const char* in, bool rflag) override;
+  add_tcp_doorman(abstract_broker*, uint16_t port, const char* in, bool rflag) override;
 
   void dispatch_runnable(runnable_ptr ptr) override;
 

@@ -103,7 +103,7 @@ connection_handle asio_multiplexer::new_tcp_scribe(const std::string& host,
   return connection_handle::from_int(id);
 }
 
-void asio_multiplexer::assign_tcp_scribe(broker* self, connection_handle hdl) {
+void asio_multiplexer::assign_tcp_scribe(abstract_broker* self, connection_handle hdl) {
   std::lock_guard<std::mutex> lock(m_mtx_sockets);
   auto itr = m_unassigned_sockets.find(hdl.id());
   if (itr != m_unassigned_sockets.end()) {
@@ -113,12 +113,12 @@ void asio_multiplexer::assign_tcp_scribe(broker* self, connection_handle hdl) {
 }
 
 template <class Socket>
-connection_handle asio_multiplexer::add_tcp_scribe(broker* self,
+connection_handle asio_multiplexer::add_tcp_scribe(abstract_broker* self,
                                                    Socket&& sock) {
   CAF_LOG_TRACE("");
-  class impl : public broker::scribe {
+  class impl : public abstract_broker::scribe {
    public:
-    impl(broker* ptr, Socket&& s)
+    impl(abstract_broker* ptr, Socket&& s)
         : scribe(ptr, network::conn_hdl_from_socket(s)),
           m_launched(false),
           m_stream(s.get_io_service()) {
@@ -131,8 +131,8 @@ connection_handle asio_multiplexer::add_tcp_scribe(broker* self,
         launch();
       }
     }
-    broker::buffer_type& wr_buf() override { return m_stream.wr_buf(); }
-    broker::buffer_type& rd_buf() override { return m_stream.rd_buf(); }
+    abstract_broker::buffer_type& wr_buf() override { return m_stream.wr_buf(); }
+    abstract_broker::buffer_type& rd_buf() override { return m_stream.rd_buf(); }
     void stop_reading() override {
       CAF_LOG_TRACE("");
       m_stream.stop_reading();
@@ -153,12 +153,12 @@ connection_handle asio_multiplexer::add_tcp_scribe(broker* self,
     bool m_launched;
     stream<Socket> m_stream;
   };
-  broker::scribe_pointer ptr = make_counted<impl>(self, std::move(sock));
+  abstract_broker::scribe_pointer ptr = make_counted<impl>(self, std::move(sock));
   self->add_scribe(ptr);
   return ptr->hdl();
 }
 
-connection_handle asio_multiplexer::add_tcp_scribe(broker* self,
+connection_handle asio_multiplexer::add_tcp_scribe(abstract_broker* self,
                                                    native_socket fd) {
   CAF_LOG_TRACE(CAF_ARG(self) << ", " << CAF_ARG(fd));
   boost::system::error_code ec;
@@ -173,7 +173,7 @@ connection_handle asio_multiplexer::add_tcp_scribe(broker* self,
   return add_tcp_scribe(self, std::move(sock));
 }
 
-connection_handle asio_multiplexer::add_tcp_scribe(broker* self,
+connection_handle asio_multiplexer::add_tcp_scribe(abstract_broker* self,
                                                    const std::string& host,
                                                    uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(self) << ", " << CAF_ARG(host) << ":" << CAF_ARG(port));
@@ -192,7 +192,7 @@ asio_multiplexer::new_tcp_doorman(uint16_t port, const char* in, bool rflag) {
   return {accept_handle::from_int(id), assigned_port};
 }
 
-void asio_multiplexer::assign_tcp_doorman(broker* self, accept_handle hdl) {
+void asio_multiplexer::assign_tcp_doorman(abstract_broker* self, accept_handle hdl) {
   CAF_LOG_TRACE("");
   std::lock_guard<std::mutex> lock(m_mtx_acceptors);
   auto itr = m_unassigned_acceptors.find(hdl.id());
@@ -203,13 +203,13 @@ void asio_multiplexer::assign_tcp_doorman(broker* self, accept_handle hdl) {
 }
 
 accept_handle
-asio_multiplexer::add_tcp_doorman(broker* self,
+asio_multiplexer::add_tcp_doorman(abstract_broker* self,
                                   default_socket_acceptor&& sock) {
   CAF_LOG_TRACE("sock.fd = " << sock.native_handle());
   CAF_ASSERT(sock.native_handle() != network::invalid_native_socket);
-  class impl : public broker::doorman {
+  class impl : public abstract_broker::doorman {
    public:
-    impl(broker* ptr, default_socket_acceptor&& s,
+    impl(abstract_broker* ptr, default_socket_acceptor&& s,
          network::asio_multiplexer& am)
         : doorman(ptr, network::accept_hdl_from_socket(s)),
           m_acceptor(am, s.get_io_service()) {
@@ -236,13 +236,13 @@ asio_multiplexer::add_tcp_doorman(broker* self,
    private:
     network::acceptor<default_socket_acceptor> m_acceptor;
   };
-  broker::doorman_pointer ptr
+  abstract_broker::doorman_pointer ptr
     = make_counted<impl>(self, std::move(sock), *this);
   self->add_doorman(ptr);
   return ptr->hdl();
 }
 
-accept_handle asio_multiplexer::add_tcp_doorman(broker* self,
+accept_handle asio_multiplexer::add_tcp_doorman(abstract_broker* self,
                                                 native_socket fd) {
   default_socket_acceptor sock{backend()};
   boost::system::error_code ec;
@@ -257,7 +257,7 @@ accept_handle asio_multiplexer::add_tcp_doorman(broker* self,
 }
 
 std::pair<accept_handle, uint16_t>
-asio_multiplexer::add_tcp_doorman(broker* self, uint16_t port, const char* in,
+asio_multiplexer::add_tcp_doorman(abstract_broker* self, uint16_t port, const char* in,
                                   bool rflag) {
   default_socket_acceptor fd{backend()};
   ip_bind(fd, port, in, rflag);

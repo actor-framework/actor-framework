@@ -24,7 +24,7 @@
 
 #include "caf/spawn.hpp"
 
-#include "caf/io/broker.hpp"
+#include "caf/io/abstract_broker.hpp"
 #include "caf/io/middleman.hpp"
 #include "caf/io/connection_handle.hpp"
 
@@ -43,7 +43,7 @@ actor spawn_io(F fun, Ts&&... xs) {
 }
 
 /**
- * Spawns a new functor-based broker connecting to `host:port.
+ * Spawns a new functor-based broker connecting to `host:port`.
  */
 template <spawn_options Os = no_spawn_options,
       typename F = std::function<void(broker*)>, class... Ts>
@@ -69,7 +69,7 @@ actor spawn_io_client(F fun, const std::string& host,
         [&](broker::functor_based* ptr) {
           auto mm = middleman::instance();
           auto hdl = mm->backend().add_tcp_scribe(ptr, host, port);
-          init(ptr, fun, hdl);
+          init(ptr, std::move(fun), hdl);
         });
 }
 
@@ -91,6 +91,87 @@ actor spawn_io_server(F fun, uint16_t port, Ts&&... xs) {
           mm->backend().add_tcp_doorman(ptr, port);
           init(ptr, std::move(fun));
         });
+}
+
+/**
+ * Spawns a new functor-based typed-broker.
+ */
+template <spawn_options Os = no_spawn_options, class F, class... Ts>
+typename infer_typed_actor_handle<
+  typename detail::get_callable_trait<F>::result_type,
+  typename detail::tl_head<
+    typename detail::get_callable_trait<F>::arg_types
+  >::type
+>::type
+spawn_io_typed(F fun, Ts&&... xs) {
+  using trait = typename detail::get_callable_trait<F>::type;
+  using arg_types = typename trait::arg_types;
+  using first_arg = typename detail::tl_head<arg_types>::type;
+  using base_class = typename std::remove_pointer<first_arg>::type;
+  using impl_class = typename base_class::functor_based;
+  return spawn_class<impl_class>(nullptr,
+                                 empty_before_launch_callback{},
+                                 std::move(fun), std::forward<Ts>(xs)...);
+}
+
+/**
+ * Spawns a new functor-based typed-broker connecting to `host:port`.
+ */
+template <spawn_options Os = no_spawn_options, class F, class... Ts>
+typename infer_typed_actor_handle<
+  typename detail::get_callable_trait<F>::result_type,
+  typename detail::tl_head<
+    typename detail::get_callable_trait<F>::arg_types
+  >::type
+>::type
+spawn_io_client_typed(F fun, const std::string& host, uint16_t port,
+                      Ts&&... xs) {
+  using trait = typename detail::get_callable_trait<F>::type;
+  using arg_types = typename trait::arg_types;
+  using first_arg = typename detail::tl_head<arg_types>::type;
+  using base_class = typename std::remove_pointer<first_arg>::type;
+  using impl_class = typename base_class::functor_based;
+  auto mfptr = &impl_class::template init<F, connection_handle, Ts...>;
+  using bi = std::function<void (impl_class*, F, connection_handle)>;
+  using namespace std::placeholders;
+  bi init = std::bind(mfptr, _1, _2, _3, std::forward<Ts>(xs)...);
+  return spawn_class<impl_class>(nullptr,
+                                 [&](impl_class* ptr) {
+                                   auto mm = middleman::instance();
+                                   auto hdl =
+                                     mm->backend().add_tcp_scribe(ptr,
+                                                                  host,
+                                                                  port);
+                                   init(ptr, std::move(fun), hdl);
+                                 });
+}
+
+/**
+ * Spawns a new typed-broker as server running on given `port`.
+ */
+template <spawn_options Os = no_spawn_options, class F, class... Ts>
+typename infer_typed_actor_handle<
+  typename detail::get_callable_trait<F>::result_type,
+  typename detail::tl_head<
+    typename detail::get_callable_trait<F>::arg_types
+  >::type
+>::type
+spawn_io_server_typed(F fun, uint16_t port, Ts&&... xs) {
+  using trait = typename detail::get_callable_trait<F>::type;
+  using arg_types = typename trait::arg_types;
+  using first_arg = typename detail::tl_head<arg_types>::type;
+  using base_class = typename std::remove_pointer<first_arg>::type;
+  using impl_class = typename base_class::functor_based;
+  auto mfptr = &impl_class::template init<F, Ts...>;
+  using bi = std::function<void (impl_class*, F)>;
+  using namespace std::placeholders;
+  bi init = std::bind(mfptr, _1, _2, std::forward<Ts>(xs)...);
+  return spawn_class<impl_class>(nullptr,
+                                 [&](impl_class* ptr) {
+                                   auto mm = middleman::instance();
+                                   mm->backend().add_tcp_doorman(ptr, port);
+                                   init(ptr, std::move(fun));
+                                 });
 }
 
 } // namespace io

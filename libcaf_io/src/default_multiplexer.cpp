@@ -726,12 +726,12 @@ void default_multiplexer::dispatch_runnable(runnable_ptr ptr) {
   wr_dispatch_request(ptr.release());
 }
 
-connection_handle default_multiplexer::add_tcp_scribe(broker* self,
+connection_handle default_multiplexer::add_tcp_scribe(abstract_broker* self,
                                                       default_socket&& sock) {
   CAF_LOG_TRACE("");
-  class impl : public broker::scribe {
+  class impl : public abstract_broker::scribe {
    public:
-    impl(broker* ptr, default_socket&& s)
+    impl(abstract_broker* ptr, default_socket&& s)
         : scribe(ptr, network::conn_hdl_from_socket(s)),
           m_launched(false),
           m_stream(s.backend()) {
@@ -742,10 +742,10 @@ connection_handle default_multiplexer::add_tcp_scribe(broker* self,
       m_stream.configure_read(config);
       if (!m_launched) launch();
     }
-    broker::buffer_type& wr_buf() override {
+    abstract_broker::buffer_type& wr_buf() override {
       return m_stream.wr_buf();
     }
-    broker::buffer_type& rd_buf() override {
+    abstract_broker::buffer_type& rd_buf() override {
       return m_stream.rd_buf();
     }
     void stop_reading() override {
@@ -767,19 +767,19 @@ connection_handle default_multiplexer::add_tcp_scribe(broker* self,
     bool m_launched;
     stream<default_socket> m_stream;
   };
-  broker::scribe_pointer ptr = make_counted<impl>(self, std::move(sock));
+  abstract_broker::scribe_pointer ptr = make_counted<impl>(self, std::move(sock));
   self->add_scribe(ptr);
   return ptr->hdl();
 }
 
 accept_handle
-default_multiplexer::add_tcp_doorman(broker* self,
+default_multiplexer::add_tcp_doorman(abstract_broker* self,
                                      default_socket_acceptor&& sock) {
   CAF_LOG_TRACE("sock.fd = " << sock.fd());
   CAF_ASSERT(sock.fd() != network::invalid_native_socket);
-  class impl : public broker::doorman {
+  class impl : public abstract_broker::doorman {
    public:
-    impl(broker* ptr, default_socket_acceptor&& s)
+    impl(abstract_broker* ptr, default_socket_acceptor&& s)
         : doorman(ptr, network::accept_hdl_from_socket(s)),
           m_acceptor(s.backend()) {
       m_acceptor.init(std::move(s));
@@ -804,7 +804,7 @@ default_multiplexer::add_tcp_doorman(broker* self,
    private:
     network::acceptor<default_socket_acceptor> m_acceptor;
   };
-  broker::doorman_pointer ptr = make_counted<impl>(self, std::move(sock));
+  abstract_broker::doorman_pointer ptr = make_counted<impl>(self, std::move(sock));
   self->add_doorman(ptr);
   return ptr->hdl();
 }
@@ -815,19 +815,19 @@ connection_handle default_multiplexer::new_tcp_scribe(const std::string& host,
   return connection_handle::from_int(int64_from_native_socket(fd));
 }
 
-void default_multiplexer::assign_tcp_scribe(broker* self,
+void default_multiplexer::assign_tcp_scribe(abstract_broker* self,
                                             connection_handle hdl) {
   CAF_LOG_TRACE(CAF_ARG(self) << ", " << CAF_MARG(hdl, id));
   add_tcp_scribe(self, static_cast<native_socket>(hdl.id()));
 }
 
-connection_handle default_multiplexer::add_tcp_scribe(broker* self,
+connection_handle default_multiplexer::add_tcp_scribe(abstract_broker* self,
                                                       native_socket fd) {
   CAF_LOG_TRACE(CAF_ARG(self) << ", " << CAF_ARG(fd));
   return add_tcp_scribe(self, default_socket{*this, fd});
 }
 
-connection_handle default_multiplexer::add_tcp_scribe(broker* self,
+connection_handle default_multiplexer::add_tcp_scribe(abstract_broker* self,
                                                       const std::string& host,
                                                       uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(self) << ", " << CAF_ARG(host)
@@ -843,17 +843,17 @@ default_multiplexer::new_tcp_doorman(uint16_t port, const char* in,
           res.second};
 }
 
-void default_multiplexer::assign_tcp_doorman(broker* ptr, accept_handle hdl) {
+void default_multiplexer::assign_tcp_doorman(abstract_broker* ptr, accept_handle hdl) {
   add_tcp_doorman(ptr, static_cast<native_socket>(hdl.id()));
 }
 
-accept_handle default_multiplexer::add_tcp_doorman(broker* self,
+accept_handle default_multiplexer::add_tcp_doorman(abstract_broker* self,
                                                    native_socket fd) {
   return add_tcp_doorman(self, default_socket_acceptor{*this, fd});
 }
 
 std::pair<accept_handle, uint16_t>
-default_multiplexer::add_tcp_doorman(broker* self, uint16_t port,
+default_multiplexer::add_tcp_doorman(abstract_broker* self, uint16_t port,
                                      const char* host, bool reuse_addr) {
   auto acceptor = new_tcp_acceptor(port, host, reuse_addr);
   auto bound_port = acceptor.second;

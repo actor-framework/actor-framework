@@ -34,106 +34,6 @@
 namespace caf {
 namespace io {
 
-broker::servant::~servant() {
-  CAF_LOG_TRACE("");
-}
-
-broker::servant::servant(broker* ptr) : m_disconnected(false), m_broker(ptr) {
-  // nop
-}
-
-void broker::servant::set_broker(broker* new_broker) {
-  if (!m_disconnected) {
-    m_broker = new_broker;
-  }
-}
-
-void broker::servant::disconnect(bool invoke_disconnect_message) {
-  CAF_LOG_TRACE("");
-  if (!m_disconnected) {
-    CAF_LOG_DEBUG("disconnect servant from broker");
-    m_disconnected = true;
-    remove_from_broker();
-    if (invoke_disconnect_message) {
-      auto msg = disconnect_message();
-      m_broker->invoke_message(m_broker->address(),invalid_message_id, msg);
-    }
-  }
-}
-
-broker::scribe::scribe(broker* ptr, connection_handle conn_hdl)
-    : servant(ptr),
-      m_hdl(conn_hdl) {
-  std::vector<char> tmp;
-  m_read_msg = make_message(new_data_msg{m_hdl, std::move(tmp)});
-}
-
-void broker::scribe::remove_from_broker() {
-  CAF_LOG_TRACE("hdl = " << hdl().id());
-  m_broker->m_scribes.erase(hdl());
-}
-
-broker::scribe::~scribe() {
-  CAF_LOG_TRACE("");
-}
-
-message broker::scribe::disconnect_message() {
-  return make_message(connection_closed_msg{hdl()});
-}
-
-void broker::scribe::consume(const void*, size_t num_bytes) {
-  CAF_LOG_TRACE(CAF_ARG(num_bytes));
-  if (m_disconnected) {
-    // we are already disconnected from the broker while the multiplexer
-    // did not yet remove the socket, this can happen if an IO event causes
-    // the broker to call close_all() while the pollset contained
-    // further activities for the broker
-    return;
-  }
-  auto& buf = rd_buf();
-  buf.resize(num_bytes);                       // make sure size is correct
-  read_msg().buf.swap(buf);                    // swap into message
-  m_broker->invoke_message(invalid_actor_addr, // call client
-                           invalid_message_id, m_read_msg);
-  read_msg().buf.swap(buf); // swap buffer back to stream
-  flush();                  // implicit flush of wr_buf()
-}
-
-void broker::scribe::io_failure(network::operation op) {
-  CAF_LOG_TRACE("id = " << hdl().id()
-                << ", " << CAF_TARG(op, static_cast<int>));
-  // keep compiler happy when compiling w/o logging
-  static_cast<void>(op);
-  disconnect(true);
-}
-
-broker::doorman::doorman(broker* ptr, accept_handle acc_hdl)
-    : servant(ptr), m_hdl(acc_hdl) {
-  auto hdl2 = connection_handle::from_int(-1);
-  m_accept_msg = make_message(new_connection_msg{m_hdl, hdl2});
-}
-
-broker::doorman::~doorman() {
-  CAF_LOG_TRACE("");
-}
-
-void broker::doorman::remove_from_broker() {
-  CAF_LOG_TRACE("hdl = " << hdl().id());
-  m_broker->m_doormen.erase(hdl());
-}
-
-message broker::doorman::disconnect_message() {
-  return make_message(acceptor_closed_msg{hdl()});
-}
-
-void broker::doorman::io_failure(network::operation op) {
-  CAF_LOG_TRACE("id = " << hdl().id() << ", "
-                        << CAF_TARG(op, static_cast<int>));
-  // keep compiler happy when compiling w/o logging
-  static_cast<void>(op);
-  disconnect(true);
-}
-
 class broker::continuation {
  public:
   continuation(broker_ptr bptr, mailbox_element_ptr mptr)
@@ -218,15 +118,6 @@ void broker::invoke_message(mailbox_element_ptr& ptr) {
   }
 }
 
-void broker::invoke_message(const actor_addr& v0, message_id v1, message& v2) {
-  auto ptr = mailbox_element::make(v0, v1, message{});
-  ptr->msg.swap(v2);
-  invoke_message(ptr);
-  if (ptr) {
-    ptr->msg.swap(v2);
-  }
-}
-
 bool broker::invoke_message_from_cache() {
   CAF_LOG_TRACE("");
   auto& bhvr = this->awaits_response()
@@ -239,28 +130,13 @@ bool broker::invoke_message_from_cache() {
   return m_cache.invoke(static_cast<local_actor*>(this), i, e, bhvr, bid);
 }
 
-void broker::write(connection_handle hdl, size_t bs, const void* buf) {
-  auto& out = wr_buf(hdl);
-  auto first = reinterpret_cast<const char*>(buf);
-  auto last = first + bs;
-  out.insert(out.end(), first, last);
-}
-
 void broker::enqueue(mailbox_element_ptr ptr, execution_unit*) {
-  parent().backend().post(continuation{this, std::move(ptr)});
+  backend().post(continuation{this, std::move(ptr)});
 }
 
 void broker::enqueue(const actor_addr& sender, message_id mid, message msg,
                      execution_unit* eu) {
   enqueue(mailbox_element::make(sender, mid, std::move(msg)), eu);
-}
-
-broker::broker() : m_mm(*middleman::instance()) {
-  // nop
-}
-
-broker::broker(middleman& ptr) : m_mm(ptr) {
-  // nop
 }
 
 void broker::cleanup(uint32_t reason) {
@@ -296,7 +172,7 @@ void broker::launch(execution_unit*, bool, bool is_hidden) {
       for (auto& kvp : m_doormen) {
         kvp.second->launch();
       }
-      is_initialized(true);
+      super::is_initialized(true);
       // run user-defined initialization code
       auto bhvr = make_behavior();
       if (bhvr) {
@@ -306,60 +182,6 @@ void broker::launch(execution_unit*, bool, bool is_hidden) {
   );
   enqueue(invalid_actor_addr, invalid_message_id,
           make_message(sys_atom::value), nullptr);
-}
-
-void broker::configure_read(connection_handle hdl, receive_policy::config cfg) {
-  CAF_LOG_TRACE(CAF_MARG(hdl, id) << ", cfg = {" << static_cast<int>(cfg.first)
-                                  << ", " << cfg.second << "}");
-  by_id(hdl).configure_read(cfg);
-}
-
-void broker::flush(connection_handle hdl) {
-  by_id(hdl).flush();
-}
-
-broker::buffer_type& broker::wr_buf(connection_handle hdl) {
-  return by_id(hdl).wr_buf();
-}
-
-broker::~broker() {
-  CAF_LOG_TRACE("");
-}
-
-void broker::close(connection_handle hdl) {
-  by_id(hdl).stop_reading();
-}
-
-void broker::close(accept_handle hdl) {
-  by_id(hdl).stop_reading();
-}
-
-void broker::close_all() {
-  CAF_LOG_TRACE("");
-  while (!m_doormen.empty()) {
-    // stop_reading will remove the doorman from m_doormen
-    m_doormen.begin()->second->stop_reading();
-  }
-  while (!m_scribes.empty()) {
-    // stop_reading will remove the scribe from m_scribes
-    m_scribes.begin()->second->stop_reading();
-  }
-}
-
-bool broker::valid(connection_handle hdl) {
-  return m_scribes.count(hdl) > 0;
-}
-
-bool broker::valid(accept_handle hdl) {
-  return m_doormen.count(hdl) > 0;
-}
-
-std::vector<connection_handle> broker::connections() const {
-  std::vector<connection_handle> result;
-  for (auto& kvp : m_scribes) {
-    result.push_back(kvp.first);
-  }
-  return result;
 }
 
 void broker::initialize() {
@@ -372,42 +194,6 @@ broker::functor_based::~functor_based() {
 
 behavior broker::functor_based::make_behavior() {
   return m_make_behavior(this);
-}
-
-network::multiplexer& broker::backend() {
-  return m_mm.backend();
-}
-
-connection_handle broker::add_tcp_scribe(const std::string& hst, uint16_t prt) {
-  CAF_LOG_TRACE(CAF_ARG(hst) << ", " << CAF_ARG(prt));
-  return backend().add_tcp_scribe(this, hst, prt);
-}
-
-void broker::assign_tcp_scribe(connection_handle hdl) {
-  CAF_LOG_TRACE(CAF_MARG(hdl, id));
-  backend().assign_tcp_scribe(this, hdl);
-}
-
-connection_handle broker::add_tcp_scribe(network::native_socket fd) {
-  CAF_LOG_TRACE(CAF_ARG(fd));
-  return backend().add_tcp_scribe(this, fd);
-}
-
-void broker::assign_tcp_doorman(accept_handle hdl) {
-  CAF_LOG_TRACE(CAF_MARG(hdl, id));
-  backend().assign_tcp_doorman(this, hdl);
-}
-
-std::pair<accept_handle, uint16_t>
-broker::add_tcp_doorman(uint16_t port, const char* in, bool reuse_addr) {
-  CAF_LOG_TRACE(CAF_ARG(port) << ", in = " << (in ? in : "nullptr")
-                << ", " << CAF_ARG(reuse_addr));
-  return backend().add_tcp_doorman(this, port, in, reuse_addr);
-}
-
-accept_handle broker::add_tcp_doorman(network::native_socket fd) {
-  CAF_LOG_TRACE(CAF_ARG(fd));
-  return backend().add_tcp_doorman(this, fd);
 }
 
 } // namespace io
