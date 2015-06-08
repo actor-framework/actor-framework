@@ -765,7 +765,7 @@ CAF_TEST(typed_await) {
 CAF_TEST(constructor_attach) {
   class testee : public event_based_actor {
    public:
-    explicit testee(actor buddy) : m_buddy(std::move(buddy)) {
+    explicit testee(actor buddy) : m_buddy(buddy) {
       attach_functor([=](uint32_t reason) {
         send(buddy, ok_atom::value, reason);
       });
@@ -809,12 +809,15 @@ CAF_TEST(constructor_attach) {
           }
         },
         others >> [=] {
+          CAF_TEST_VERBOSE("forward to testee: "
+                           << to_string(current_message()));
           forward_to(m_testee);
         }
       };
     }
 
     void on_exit() {
+      CAF_TEST_VERBOSE("spawner::on_exit()");
       m_testee = invalid_actor;
     }
 
