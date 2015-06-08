@@ -227,8 +227,8 @@ General rules
   even for bodies consiting only of a single statement.
 
 - Opening braces belong to the same line:
-  ```cpp
 
+  ```cpp
   if (my_condition) {
     my_fun();
   } else {
@@ -238,8 +238,8 @@ General rules
 
 - Use standard order for readability: C standard libraries, C++ standard
   libraries, other libraries, (your) CAF headers:
-  ```cpp
 
+  ```cpp
   #include <sys/types.h>
 
   #include <vector>
@@ -254,6 +254,7 @@ General rules
 
 - Never use C-style casts.
 
+- Protect single-argument constructors with `explicit` to avoid implicit conversions.
 
 Naming
 ------
@@ -274,8 +275,8 @@ Naming
 - Template parameter names use CamelCase.
 
 - Getter and setter use the name of the member without the `m_` prefix:
-  ```cpp
 
+  ```cpp
   class some_fun {
    public:
     // ...
@@ -293,8 +294,8 @@ Naming
 - Use `T` for generic, unconstrained template parameters and `x`
   for generic function arguments. Suffix both with `s` for
   template parameter packs:
-  ```cpp
 
+  ```cpp
   template <class... Ts>
   void print(const Ts&... xs) {
     // ...
@@ -334,8 +335,8 @@ Breaking Statements
 - Break constructor initializers after the comma, use four spaces for
   indentation, and place each initializer on its own line (unless you don't
   need to break at all):
-  ```cpp
 
+  ```cpp
   my_class::my_class()
       : my_base_class(some_function()),
         m_greeting("Hello there! This is my_class!"),
@@ -348,8 +349,8 @@ Breaking Statements
   ```
 
 - Break function arguments after the comma for both declaration and invocation:
-  ```cpp
 
+  ```cpp
   intptr_t channel::compare(const abstract_channel* lhs,
                             const abstract_channel* rhs) {
     // ...
@@ -357,8 +358,8 @@ Breaking Statements
   ```
 
 - Break before tenary operators and before binary operators:
-  ```cpp
 
+  ```cpp
   if (today_is_a_sunny_day()
       && it_is_not_too_hot_to_go_swimming()) {
     // ...
@@ -385,8 +386,8 @@ extra rules for formatting metaprogramming code.
 
 - Use one level of indentation per "open" template and place the closing `>`,
   `>::type` or `>::value` on its own line. For example:
-  ```cpp
 
+  ```cpp
   using optional_result_type =
     typename std::conditional<
       std::is_same<result_type, void>::value,
@@ -405,8 +406,8 @@ extra rules for formatting metaprogramming code.
 - Note that this is not necessary when simply defining a type alias.
   When dealing with "ordinary" templates, indenting based on the position of
   the opening `<` is ok, e.g.:
-  ```cpp
 
+  ```cpp
   using response_handle_type = response_handle<Subtype, message,
                                                ResponseHandleTag>;
   ```
