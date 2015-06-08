@@ -232,7 +232,7 @@ void await_down(event_based_actor* self, actor ptr, F continuation) {
 
 class client : public event_based_actor {
  public:
-  client(actor server) : m_server(std::move(server)) {
+  explicit client(actor server) : m_server(std::move(server)) {
     // nop
   }
 
@@ -326,7 +326,7 @@ class server : public event_based_actor {
     return await_spawn_ping();
   }
 
-  server(bool run_in_loop = false) : m_run_in_loop(run_in_loop) {
+  explicit server(bool run_in_loop = false) : m_run_in_loop(run_in_loop) {
     // nop
   }
 

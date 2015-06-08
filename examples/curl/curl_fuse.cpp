@@ -133,7 +133,7 @@ base_actor::~base_actor() {
 // encapsulates an HTTP request
 class client_job : public base_actor {
  public:
-  client_job(actor parent)
+  explicit client_job(actor parent)
       : base_actor(std::move(parent), "client_job", color::blue) {
     // nop
   }
@@ -167,7 +167,7 @@ client_job::~client_job() {
 class client : public base_actor {
  public:
 
-  client(const actor& parent)
+  explicit client(const actor& parent)
       : base_actor(parent, "client", color::green),
         m_count(0),
         m_re(m_rd()),
@@ -214,7 +214,7 @@ client::~client() {
 // manages a CURL session
 class curl_worker : public base_actor {
  public:
-  curl_worker(const actor& parent)
+  explicit curl_worker(const actor& parent)
       : base_actor(parent, "curl_worker", color::yellow),
         m_curl(nullptr) {
     // nop

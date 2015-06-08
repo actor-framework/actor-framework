@@ -58,23 +58,17 @@ behavior testee::make_behavior() {
 
 class tester : public event_based_actor {
  public:
-  tester(actor aut);
-  ~tester();
+  explicit tester(actor aut)
+      : m_aut(std::move(aut)),
+        m_msg(make_message(1, 2, 3)) {
+    // nop
+  }
+
   behavior make_behavior() override;
  private:
   actor m_aut;
   message m_msg;
 };
-
-tester::tester(actor aut) :
-    m_aut(std::move(aut)),
-    m_msg(make_message(1, 2, 3)) {
-  // nop
-}
-
-tester::~tester() {
-  // nop
-}
 
 behavior tester::make_behavior() {
   monitor(m_aut);

@@ -47,7 +47,7 @@ basp_broker::payload_writer::~payload_writer() {
 template <class F>
 class functor_payload_writer : public basp_broker::payload_writer {
  public:
-  functor_payload_writer(F fun) : m_fun(fun) {
+  explicit functor_payload_writer(F fun) : m_fun(fun) {
     // nop
   }
 
@@ -65,7 +65,7 @@ class functor_payload_writer : public basp_broker::payload_writer {
 
 template <class F>
 functor_payload_writer<F> make_payload_writer(F fun) {
-  return {fun};
+  return functor_payload_writer<F>{fun};
 }
 
 basp_broker::basp_broker(middleman& pref) : broker(pref), m_namespace(*this) {

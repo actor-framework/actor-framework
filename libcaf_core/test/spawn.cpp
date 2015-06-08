@@ -103,7 +103,7 @@ event_testee::~event_testee() {
 actor spawn_event_testee2(actor parent) {
   struct impl : event_based_actor {
     actor parent;
-    impl(actor parent_actor) : parent(parent_actor) {
+    explicit impl(actor parent_actor) : parent(std::move(parent_actor)) {
       inc_actor_instances();
     }
     ~impl() {
@@ -305,7 +305,9 @@ struct master : event_based_actor {
 
 struct slave : event_based_actor {
 
-  slave(actor master_actor) : master{master_actor} { }
+  explicit slave(actor master_actor) : master{master_actor} {
+    // nop
+  }
 
   behavior make_behavior() override {
     link_to(master);
@@ -763,7 +765,7 @@ CAF_TEST(typed_await) {
 CAF_TEST(constructor_attach) {
   class testee : public event_based_actor {
    public:
-    testee(actor buddy) : m_buddy(buddy) {
+    explicit testee(actor buddy) : m_buddy(std::move(buddy)) {
       attach_functor([=](uint32_t reason) {
         send(buddy, ok_atom::value, reason);
       });

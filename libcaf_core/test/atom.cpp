@@ -61,7 +61,7 @@ CAF_TEST(basics) {
 }
 
 struct send_to_self {
-  send_to_self(blocking_actor* self) : m_self(self) {
+  explicit send_to_self(blocking_actor* self) : m_self(self) {
     // nop
   }
   template <class... Ts>

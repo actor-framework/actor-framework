@@ -622,7 +622,7 @@ default_multiplexer& get_multiplexer_singleton() {
 multiplexer::supervisor_ptr default_multiplexer::make_supervisor() {
   class impl : public multiplexer::supervisor {
    public:
-    impl(default_multiplexer* thisptr) : m_this(thisptr) {
+    explicit impl(default_multiplexer* thisptr) : m_this(thisptr) {
       // nop
     }
     ~impl() {
@@ -973,7 +973,7 @@ void default_socket::close_read() {
 
 class socket_guard {
  public:
-  socket_guard(native_socket fd) : m_fd(fd) {
+  explicit socket_guard(native_socket fd) : m_fd(fd) {
     // nop
   }
 

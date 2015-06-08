@@ -406,7 +406,7 @@ invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
 
 struct pending_response_predicate {
  public:
-  pending_response_predicate(message_id mid) : m_mid(mid) {
+  explicit pending_response_predicate(message_id mid) : m_mid(mid) {
     // nop
   }
 

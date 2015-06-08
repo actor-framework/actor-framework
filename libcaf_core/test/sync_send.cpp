@@ -66,7 +66,7 @@ struct float_or_int : event_based_actor {
 
 class popular_actor : public event_based_actor { // popular actors have a buddy
  public:
-  popular_actor(const actor& buddy_arg) : m_buddy(buddy_arg) {
+  explicit popular_actor(const actor& buddy_arg) : m_buddy(buddy_arg) {
     // nop
   }
 
@@ -99,7 +99,7 @@ class popular_actor : public event_based_actor { // popular actors have a buddy
 
 class A : public popular_actor {
  public:
-  A(const actor& buddy_arg) : popular_actor(buddy_arg) {
+  explicit A(const actor& buddy_arg) : popular_actor(buddy_arg) {
     // nop
   }
 
@@ -124,7 +124,7 @@ class A : public popular_actor {
 
 class B : public popular_actor {
  public:
-  B(const actor& buddy_arg) : popular_actor(buddy_arg) {
+  explicit B(const actor& buddy_arg) : popular_actor(buddy_arg) {
     // nop
   }
 
@@ -170,7 +170,7 @@ class C : public event_based_actor {
 
 class D : public popular_actor {
  public:
-  D(const actor& buddy_arg) : popular_actor(buddy_arg) {
+  explicit D(const actor& buddy_arg) : popular_actor(buddy_arg) {
     // nop
   }
 

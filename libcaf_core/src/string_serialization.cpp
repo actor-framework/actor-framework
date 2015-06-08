@@ -139,7 +139,7 @@ class string_serializer : public serializer, public dummy_backend {
     }
   }
 
-  string_serializer(ostream& mout)
+  explicit string_serializer(ostream& mout)
       : super(&m_namespace),
         out(mout),
         m_namespace(*this),
@@ -221,7 +221,7 @@ class string_deserializer : public deserializer, public dummy_backend {
 
   using difference_type = string::iterator::difference_type;
 
-  string_deserializer(string str)
+  explicit string_deserializer(string str)
       : super(&m_namespace), m_str(std::move(str)), m_namespace(*this) {
     m_pos = m_str.begin();
   }
@@ -290,7 +290,9 @@ class string_deserializer : public deserializer, public dummy_backend {
 
   struct from_string_reader : static_visitor<> {
     const string& str;
-    from_string_reader(const string& s) : str(s) {}
+    explicit from_string_reader(const string& s) : str(s) {
+      // nop
+    }
     template <class T>
     void operator()(T& what) {
       istringstream s(str);

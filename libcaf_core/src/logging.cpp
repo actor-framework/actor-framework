@@ -60,7 +60,7 @@ struct log_event {
   log_event* next;
   log_event* prev;
   std::string msg;
-  log_event(std::string logmsg = "")
+  explicit log_event(std::string logmsg = "")
       : next(nullptr),
         prev(nullptr),
         msg(std::move(logmsg)) {

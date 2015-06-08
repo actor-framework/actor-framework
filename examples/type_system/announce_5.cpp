@@ -27,11 +27,12 @@ struct tree_node {
   std::uint32_t value;
   std::vector<tree_node> children;
 
-  tree_node(std::uint32_t v = 0) : value(v) {
+  explicit tree_node(std::uint32_t v = 0) : value(v) {
+    // nop
   }
 
   tree_node& add_child(std::uint32_t v = 0) {
-    children.push_back({ v });
+    children.emplace_back(v);
     return *this;
   }
 

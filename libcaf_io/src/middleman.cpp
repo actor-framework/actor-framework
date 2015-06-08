@@ -121,7 +121,7 @@ class uti_impl : public detail::abstract_uniform_type_info<T> {
  public:
   using super = detail::abstract_uniform_type_info<T>;
 
-  uti_impl(const char* tname) : super(tname) {
+  explicit uti_impl(const char* tname) : super(tname) {
     // nop
   }
 

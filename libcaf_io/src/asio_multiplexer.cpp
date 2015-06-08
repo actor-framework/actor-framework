@@ -35,7 +35,7 @@ namespace {
  * A wrapper for the supervisor backend provided by boost::asio.
  */
 struct asio_supervisor : public multiplexer::supervisor {
-  asio_supervisor(io_backend& iob) : work(iob) {
+  explicit asio_supervisor(io_backend& iob) : work(iob) {
     // nop
   }
 

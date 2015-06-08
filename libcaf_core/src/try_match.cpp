@@ -63,7 +63,10 @@ class set_commit_rollback {
   using pointer = void**;
   set_commit_rollback(const set_commit_rollback&) = delete;
   set_commit_rollback& operator=(const set_commit_rollback&) = delete;
-  set_commit_rollback(pointer ptr) : m_data(ptr), m_pos(0), m_fallback_pos(0) {
+  explicit set_commit_rollback(pointer ptr)
+      : m_data(ptr),
+        m_pos(0),
+        m_fallback_pos(0) {
     // nop
   }
   inline void inc() {

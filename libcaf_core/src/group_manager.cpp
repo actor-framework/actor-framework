@@ -147,7 +147,7 @@ using local_group_ptr = intrusive_ptr<local_group>;
 
 class local_broker : public event_based_actor {
  public:
-  local_broker(local_group_ptr g) : m_group(std::move(g)) {
+  explicit local_broker(local_group_ptr g) : m_group(std::move(g)) {
     // nop
   }
 
@@ -297,7 +297,7 @@ using local_group_proxy_ptr = intrusive_ptr<local_group_proxy>;
 
 class proxy_broker : public event_based_actor {
  public:
-  proxy_broker(local_group_proxy_ptr grp) : m_group(std::move(grp)) {
+  explicit proxy_broker(local_group_proxy_ptr grp) : m_group(std::move(grp)) {
     // nop
   }
 

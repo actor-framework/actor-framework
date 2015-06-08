@@ -27,7 +27,9 @@ class binary_writer : public static_visitor<> {
  public:
   using write_fun = binary_serializer::write_fun;
 
-  binary_writer(write_fun& sink) : m_out(sink) {}
+  explicit binary_writer(write_fun& sink) : m_out(sink) {
+    // nop
+  }
 
   template <class T>
   static inline void write_int(write_fun& f, const T& value) {

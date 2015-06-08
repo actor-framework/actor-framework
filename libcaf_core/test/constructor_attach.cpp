@@ -34,7 +34,7 @@ using done_atom = atom_constant<atom("done")>;
 CAF_TEST(constructor_attach) {
   class testee : public event_based_actor {
    public:
-    testee(actor buddy) : m_buddy(buddy) {
+    explicit testee(actor buddy) : m_buddy(buddy) {
       attach_functor([=](uint32_t reason) {
         send(m_buddy, done_atom::value, reason);
       });

@@ -45,7 +45,7 @@ using class1ptr = intrusive_ptr<class1>;
 
 class class0 : public ref_counted {
  public:
-  class0(bool subtype = false) : m_subtype(subtype) {
+  explicit class0(bool subtype = false) : m_subtype(subtype) {
     if (!subtype) {
       ++class0_instances;
     }
