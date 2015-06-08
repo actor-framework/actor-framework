@@ -57,6 +57,13 @@ class functor_based : public Base {
     set(token1, token2, std::move(f), std::forward<Ts>(xs)...);
   }
 
+  struct initializer {
+    template <class F, class... Ts>
+    void operator()(functor_based* thisptr, F f, Ts&&... xs) const {
+      thisptr->init(std::move(f), std::forward<Ts>(xs)...);
+    }
+  };
+
  protected:
   make_behavior_fun m_make_behavior;
 
