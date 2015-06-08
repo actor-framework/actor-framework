@@ -122,9 +122,6 @@ void actor_registry::await_running_count_equal(size_t expected) {
     CAF_LOG_DEBUG("count = " << m_running.load());
     m_running_cv.wait(guard);
   }
-  // also wait for all detached threads to make sure
-  // destructore were called correctly
-  scheduler::await_detached_threads();
 }
 
 } // namespace detail

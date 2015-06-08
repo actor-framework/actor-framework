@@ -478,10 +478,7 @@ void local_actor::launch(execution_unit* eu, bool lazy, bool hide) {
     // actor lives in its own thread
     CAF_PUSH_AID(id());
     CAF_LOG_TRACE(CAF_ARG(lazy) << ", " << CAF_ARG(hide));
-    if (!hide) {
-      // hiding the actor also hides the thread
-      scheduler::inc_detached_threads();
-    }
+    scheduler::inc_detached_threads();
     //intrusive_ptr<local_actor> mself{this};
     std::thread{[hide](intrusive_ptr<local_actor> mself) {
       // this extra scope makes sure that the trace logger is
@@ -497,9 +494,7 @@ void local_actor::launch(execution_unit* eu, bool lazy, bool hide) {
         }
         mself.reset();
       }
-      if (!hide) {
-        scheduler::dec_detached_threads();
-      }
+      scheduler::dec_detached_threads();
     }, intrusive_ptr<local_actor>{this}}.detach();
     return;
   }

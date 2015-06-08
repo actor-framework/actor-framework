@@ -21,6 +21,7 @@
 
 #include "caf/message.hpp"
 #include "caf/exception.hpp"
+#include "caf/scheduler.hpp"
 #include "caf/local_actor.hpp"
 
 #include "caf/scheduler/abstract_coordinator.hpp"
@@ -77,6 +78,8 @@ void singletons::stop_singletons() {
   stop(s_group_manager);
   CAF_LOGF_DEBUG("stop scheduler");
   stop(s_scheduling_coordinator);
+  CAF_LOGF_DEBUG("wait for all detached threads");
+  scheduler::await_detached_threads();
   CAF_LOGF_DEBUG("stop actor registry");
   stop(s_actor_registry);
   // dispose singletons, i.e., release memory
@@ -91,13 +94,13 @@ void singletons::stop_singletons() {
   CAF_LOGF_DEBUG("dispose registry");
   dispose(s_actor_registry);
   // final steps
-  CAF_LOGF_DEBUG("stop and dispose logger, bye");
-  stop(s_logger);
-  dispose(s_logger);
   stop(s_uniform_type_info_map);
   dispose(s_uniform_type_info_map);
   stop(s_node_id);
   dispose(s_node_id);
+  CAF_LOGF_DEBUG("stop and dispose logger, bye");
+  stop(s_logger);
+  dispose(s_logger);
 }
 
 actor_registry* singletons::get_actor_registry() {
