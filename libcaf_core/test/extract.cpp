@@ -32,6 +32,8 @@ using namespace caf;
 
 using std::string;
 
+// exclude this test; advanced match cases are currently not supported on MSVC
+#ifndef CAF_WINDOWS
 CAF_TEST(simple_ints) {
   auto msg = make_message(1, 2, 3);
   auto one = on(1) >> [] { };
@@ -48,6 +50,7 @@ CAF_TEST(simple_ints) {
   CAF_CHECK_EQUAL(msg.extract(three), make_message(1, 2));
   CAF_CHECK_EQUAL(msg.extract(skip_two), make_message(2));
 }
+#endif // CAF_WINDOWS
 
 CAF_TEST(type_sequences) {
   auto _64 = uint64_t{64};

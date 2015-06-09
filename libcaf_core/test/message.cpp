@@ -17,6 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/config.hpp"
+
 #define CAF_SUITE message
 #include "caf/test/unit_test.hpp"
 
@@ -49,18 +51,6 @@ CAF_TEST(slice) {
 }
 
 CAF_TEST(extract1) {
-  auto f = [](int lhs1, int lhs2, int lhs3, int rhs1, int rhs2, int val) {
-    auto m1 = make_message(lhs1, lhs2, lhs3);
-    auto m2 = make_message(rhs1, rhs2);
-    auto m3 = m1.extract(on(val) >> [] {});
-    CAF_CHECK_EQUAL(to_string(m2), to_string(m3));
-  };
-  f(1, 2, 3, 2, 3, 1);
-  f(1, 2, 3, 1, 3, 2);
-  f(1, 2, 3, 1, 2, 3);
-}
-
-CAF_TEST(extract2) {
   auto m1 = make_message(1.0, 2.0, 3.0);
   auto m2 = make_message(1, 2, 1.0, 2.0, 3.0);
   auto m3 = make_message(1.0, 1, 2, 2.0, 3.0);
@@ -80,7 +70,7 @@ CAF_TEST(extract2) {
   CAF_CHECK_EQUAL(to_string(m7.extract(f)), to_string(m1));
 }
 
-CAF_TEST(extract3) {
+CAF_TEST(extract2) {
   auto m1 = make_message(1);
   CAF_CHECK_EQUAL(to_string(m1.extract([](int) {})), to_string(message{}));
   auto m2 = make_message(1.0, 2, 3, 4.0);

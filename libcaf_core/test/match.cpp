@@ -17,6 +17,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/config.hpp"
+
+// exclude this suite; advanced match cases are currently not supported on MSVC
+#ifndef CAF_WINDOWS
+
 #define CAF_SUITE match
 #include "caf/test/unit_test.hpp"
 
@@ -193,3 +198,5 @@ CAF_TEST(arg_match_pattern) {
   CAF_CHECK_EQUAL(invoked(expr3, 42, 1), -1);
   CAF_CHECK_EQUAL(invoked(expr3, wrapped_int{42}, wrapped_int{1}), 0);
 }
+
+#endif // CAF_WINDOWS

@@ -183,9 +183,9 @@ class typed_behavior {
 
   using signatures = detail::type_list<Sigs...>;
 
-  template <class... Ts>
-  typed_behavior(Ts... xs) {
-    set(detail::make_behavior(xs...));
+  template <class T, class... Ts>
+  typed_behavior(T x, Ts... xs) {
+    set(detail::make_behavior(x, xs...));
   }
 
   explicit operator bool() const {

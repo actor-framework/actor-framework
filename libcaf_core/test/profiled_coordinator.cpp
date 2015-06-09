@@ -17,9 +17,15 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/config.hpp"
+
+// exclude this suite; the profiled coordinator currently depends on POSIX
+#ifndef CAF_WINDOWS
+
 #define CAF_SUITE profiled_coordinator
 #include "caf/test/unit_test.hpp"
 
+#include "caf/config.hpp"
 #include "caf/shutdown.hpp"
 
 #include "caf/set_scheduler.hpp"
@@ -31,3 +37,5 @@ CAF_TEST(test_profiled_coordinator) {
   set_scheduler(new scheduler::profiled_coordinator<>{"/dev/null"});
   shutdown();
 }
+
+#endif // CAF_WINDOWS

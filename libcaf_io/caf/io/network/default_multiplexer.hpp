@@ -45,18 +45,23 @@
 #include "caf/detail/logging.hpp"
 
 #ifdef CAF_WINDOWS
-#   include <w32api.h>
+# define WIN32_LEAN_AND_MEAN
+# define NOMINMAX
+# ifdef CAF_MINGW
 #   undef _WIN32_WINNT
 #   undef WINVER
 #   define _WIN32_WINNT WindowsVista
 #   define WINVER WindowsVista
-#   include <ws2tcpip.h>
-#   include <winsock2.h>
-#   include <ws2ipdef.h>
+#   include <w32api.h>
+# endif
+# include <windows.h>
+# include <winsock2.h>
+# include <ws2tcpip.h>
+# include <ws2ipdef.h>
 #else
-#   include <unistd.h>
-#   include <errno.h>
-#   include <sys/socket.h>
+# include <unistd.h>
+# include <errno.h>
+# include <sys/socket.h>
 #endif
 
 // poll xs epoll backend
@@ -86,6 +91,7 @@ namespace network {
   using socket_send_ptr = const char*;
   using socket_recv_ptr = char*;
   using socklen_t = int;
+  using ssize_t = std::make_signed<size_t>::type;
   inline int last_socket_error() { return WSAGetLastError(); }
   inline bool would_block_or_temporarily_unavailable(int errcode) {
     return errcode == WSAEWOULDBLOCK || errcode == WSATRY_AGAIN;

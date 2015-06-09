@@ -371,14 +371,6 @@ CAF_TEST(count_mailbox) {
   spawn<counting_actor>();
 }
 
-CAF_TEST(send_to_self) {
-  scoped_actor self;
-  self->send(self, 1, 2, 3, true);
-  self->receive(on(1, 2, 3, true) >> [] { });
-  self->send(self, message{});
-  self->receive(on() >> [] { });
-}
-
 CAF_TEST(detached_actors_and_schedulued_actors) {
   scoped_actor self;
   // check whether detached actors and scheduled actors interact w/o errors
@@ -404,8 +396,8 @@ CAF_TEST(mirror) {
   auto mirror = self->spawn<simple_mirror, monitored>();
   self->send(mirror, "hello mirror");
   self->receive (
-    on("hello mirror") >> [] {
-      CAF_MESSAGE("received \"hello mirror\"");
+    [](const std::string& msg) {
+      CAF_CHECK_EQUAL(msg, "hello mirror");
     },
     others >> [&] {
       CAF_TEST_ERROR("Unexpected message: "
@@ -435,8 +427,8 @@ CAF_TEST(detached_mirror) {
   auto mirror = self->spawn<simple_mirror, monitored+detached>();
   self->send(mirror, "hello mirror");
   self->receive (
-    on("hello mirror") >> [] {
-      CAF_MESSAGE("received \"hello mirror\"");
+    [](const std::string& msg) {
+      CAF_CHECK_EQUAL(msg, "hello mirror");
     },
     others >> [&] {
       CAF_TEST_ERROR("Unexpected message: "
@@ -467,8 +459,8 @@ CAF_TEST(priority_aware_mirror) {
   CAF_MESSAGE("spawned mirror");
   self->send(mirror, "hello mirror");
   self->receive (
-    on("hello mirror") >> [] {
-      CAF_MESSAGE("received \"hello mirror\"");
+    [](const std::string& msg) {
+      CAF_CHECK_EQUAL(msg, "hello mirror");
     },
     others >> [&] {
       CAF_TEST_ERROR("Unexpected message: " << to_string(self->current_message()));
@@ -492,12 +484,29 @@ CAF_TEST(priority_aware_mirror) {
   );
 }
 
+CAF_TEST(send_to_self) {
+  scoped_actor self;
+  self->send(self, 1, 2, 3, true);
+  self->receive(
+    [](int a, int b, int c, bool d) {
+      CAF_CHECK_EQUAL(a, 1);
+      CAF_CHECK_EQUAL(b, 2);
+      CAF_CHECK_EQUAL(c, 3);
+      CAF_CHECK_EQUAL(d, true);
+    }
+  );
+  self->send(self, message{});
+  self->receive(on() >> [] {});
+}
+
 CAF_TEST(echo_actor) {
   scoped_actor self;
   auto mecho = spawn<echo_actor>();
   self->send(mecho, "hello echo");
   self->receive(
-    on("hello echo") >> [] { CAF_MESSAGE("received \"hello echo\""); },
+    [](const std::string& arg) {
+      CAF_CHECK_EQUAL(arg, "hello echo");
+    },
     others >> [&] {
       CAF_TEST_ERROR("Unexpected message: " << to_string(self->current_message()));
     }
@@ -507,7 +516,13 @@ CAF_TEST(echo_actor) {
 CAF_TEST(delayed_send) {
   scoped_actor self;
   self->delayed_send(self, chrono::milliseconds(1), 1, 2, 3);
-  self->receive(on(1, 2, 3) >> [] { });
+  self->receive(
+    [](int a, int b, int c) {
+      CAF_CHECK_EQUAL(a, 1);
+      CAF_CHECK_EQUAL(b, 2);
+      CAF_CHECK_EQUAL(c, 3);
+    }
+  );
 }
 
 CAF_TEST(delayed_spawn) {
@@ -526,6 +541,8 @@ CAF_TEST(spawn_event_testee2) {
   );
 }
 
+// exclude this tests; advanced match cases are currently not supported on MSVC
+#ifndef CAF_WINDOWS
 CAF_TEST(chopsticks) {
   struct chopstick : event_based_actor {
     behavior make_behavior() override {
@@ -631,6 +648,7 @@ CAF_TEST(sync_sends) {
     }
   );
 }
+#endif // CAF_WINDOWS
 
 CAF_TEST(inflater) {
   scoped_actor self;
@@ -662,8 +680,9 @@ CAF_TEST(inflater) {
   auto bob = spawn<inflater>("Bob", joe);
   self->send(bob, 1, "hello actor");
   self->receive (
-    on(4, "hello actor from Bob from Joe") >> [] {
-      CAF_MESSAGE("received message");
+    [](int x, const std::string& y) {
+      CAF_CHECK_EQUAL(x, 4);
+      CAF_CHECK_EQUAL(y, "hello actor from Bob from Joe");
     },
     others >> [&] {
       CAF_TEST_ERROR("Unexpected message: "

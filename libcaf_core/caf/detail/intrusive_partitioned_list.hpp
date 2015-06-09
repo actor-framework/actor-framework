@@ -20,8 +20,11 @@
 #ifndef CAF_DETAIL_INTRUSIVE_PARTITIONED_LIST_HPP
 #define CAF_DETAIL_INTRUSIVE_PARTITIONED_LIST_HPP
 
+#include "caf/config.hpp"
+
 #include <memory>
 #include <iterator>
+#include <algorithm>
 
 #include "caf/invoke_message_result.hpp"
 

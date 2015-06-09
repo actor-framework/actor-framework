@@ -298,7 +298,7 @@ CAF_TEST(test_multiple_messages) {
 CAF_TEST(strings) {
   auto m1 = make_message("hello \"actor world\"!", atom("foo"));
   auto s1 = to_string(m1);
-  CAF_CHECK_EQUAL(s1, R"#(@<>+@str+@atom ( "hello \"actor world\"!", 'foo' ))#");
+  CAF_CHECK_EQUAL(s1, "@<>+@str+@atom ( \"hello \\\"actor world\\\"!\", 'foo' )");
   CAF_CHECK(from_string<message>(s1) == m1);
   auto m2 = make_message(true);
   auto s2 = to_string(m2);

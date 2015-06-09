@@ -17,6 +17,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/config.hpp"
+
+// exclude this suite; seems to be too much to swallow for MSVC
+#ifndef CAF_WINDOWS
+
 #define CAF_SUITE typed_spawn
 #include "caf/test/unit_test.hpp"
 
@@ -201,12 +206,14 @@ string_actor::behavior_type simple_string_reverter() {
 using int_actor = typed_actor<replies_to<int>::with<int>>;
 
 int_actor::behavior_type int_fun() {
-  return {on_arg_match >> [](int i) { return i * i; }};
+  return {
+    [](int i) { return i * i; }
+  };
 }
 
 behavior foo(event_based_actor* self) {
   return {
-    on_arg_match >> [=](int i, int_actor server) {
+    [=](int i, int_actor server) {
       return self->sync_send(server, i).then([=](int result) -> int {
         self->quit(exit_reason::normal);
         return result;
@@ -341,7 +348,9 @@ CAF_TEST(test_sending_typed_actors) {
   scoped_actor self;
   auto aut = spawn_typed(int_fun);
   self->send(spawn(foo), 10, aut);
-  self->receive(on_arg_match >> [](int i) { CAF_CHECK_EQUAL(i, 100); });
+  self->receive(
+    [](int i) { CAF_CHECK_EQUAL(i, 100); }
+  );
   self->send_exit(aut, exit_reason::user_shutdown);
 }
 
@@ -353,3 +362,5 @@ CAF_TEST(test_sending_typed_actors_and_down_msg) {
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
+
+#endif // CAF_WINDOWS

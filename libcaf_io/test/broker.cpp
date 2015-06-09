@@ -36,6 +36,7 @@ using namespace caf::io;
 
 using ping_atom = caf::atom_constant<caf::atom("ping")>;
 using pong_atom = caf::atom_constant<caf::atom("pong")>;
+using publish_atom = caf::atom_constant<caf::atom("publish")>;
 using kickoff_atom = caf::atom_constant<caf::atom("kickoff")>;
 
 void ping(event_based_actor* self, size_t num_pings) {
@@ -160,7 +161,7 @@ behavior peer_acceptor_fun(broker* self, const actor& buddy) {
       self->fork(peer_fun, msg.handle, buddy);
       self->quit();
     },
-    on(atom("publish")) >> [=] {
+    [=](publish_atom) {
       return self->add_tcp_doorman(0, "127.0.0.1").second;
     },
     others >> [&] {
@@ -173,7 +174,7 @@ behavior peer_acceptor_fun(broker* self, const actor& buddy) {
 void run_server(bool spawn_client, const char* bin_path) {
   scoped_actor self;
   auto serv = io::spawn_io(peer_acceptor_fun, spawn(pong));
-  self->sync_send(serv, atom("publish")).await(
+  self->sync_send(serv, publish_atom::value).await(
     [&](uint16_t port) {
       CAF_MESSAGE("server is running on port " << port);
       if (spawn_client) {

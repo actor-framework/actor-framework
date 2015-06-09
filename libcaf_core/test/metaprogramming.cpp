@@ -60,7 +60,7 @@ CAF_TEST(metaprogramming) {
   CAF_CHECK((ctm<if2, if4>::value) == -1);
 
   using l1 = type_list<int, float, std::string>;
-  using r1 = typename tl_reverse<l1>::type;
+  using r1 = tl_reverse<l1>::type;
 
   CAF_CHECK((is_same<int, tl_at<l1, 0>::type>::value));
   CAF_CHECK((is_same<float, tl_at<l1, 1>::type>::value));
@@ -82,7 +82,7 @@ CAF_TEST(metaprogramming) {
 
   using il0 = int_list<0, 1, 2, 3, 4, 5>;
   using il1 = int_list<4, 5>;
-  using il2 = typename il_right<il0, 2>::type;
+  using il2 = il_right<il0, 2>::type;
   CAF_CHECK((is_same<il2, il1>::value));
 
   /* test tl_is_strict_subset */ {

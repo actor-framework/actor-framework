@@ -20,6 +20,8 @@
 #ifndef CAF_ALL_HPP
 #define CAF_ALL_HPP
 
+#include "caf/config.hpp"
+
 #include "caf/on.hpp"
 #include "caf/atom.hpp"
 #include "caf/send.hpp"
@@ -27,7 +29,6 @@
 #include "caf/actor.hpp"
 #include "caf/group.hpp"
 #include "caf/spawn.hpp"
-#include "caf/config.hpp"
 #include "caf/either.hpp"
 #include "caf/extend.hpp"
 #include "caf/channel.hpp"

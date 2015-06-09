@@ -40,7 +40,7 @@ actor_proxy::anchor::~anchor() {
 }
 
 bool actor_proxy::anchor::expired() const {
-  return !m_ptr;
+  return !m_ptr.load();
 }
 
 actor_proxy_ptr actor_proxy::anchor::get() {

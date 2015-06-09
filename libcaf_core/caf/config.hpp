@@ -117,6 +117,10 @@
 #  define CAF_POP_WARNINGS
 #  define CAF_ANNOTATE_FALLTHROUGH static_cast<void>(0)
 #  define CAF_COMPILER_VERSION _MSC_FULL_VER
+#  pragma warning( disable : 4624 )
+#  pragma warning( disable : 4800 )
+#  pragma warning( disable : 4503 )
+#  define NOMINMAX
 #else
 #  define CAF_DEPRECATED
 #  define CAF_PUSH_WARNINGS

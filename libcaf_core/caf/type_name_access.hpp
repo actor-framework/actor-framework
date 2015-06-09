@@ -29,20 +29,22 @@
 
 namespace caf {
 
-template <class T, bool HasTypeName = detail::has_static_type_name<T>::value>
-struct type_name_access {
-  static std::string get() {
-    auto uti = uniform_typeid<T>(true);
-    return uti ? uti->name() : "void";
-  }
-};
+template <class T>
+std::string type_name_access_impl(std::true_type) {
+  return T::static_type_name();
+}
 
 template <class T>
-struct type_name_access<T, true> {
-  static std::string get() {
-    return T::static_type_name();
-  }
-};
+std::string type_name_access_impl(std::false_type) {
+  auto uti = uniform_typeid<T>(true);
+  return uti ? uti->name() : "void";
+}
+
+template <class T>
+std::string type_name_access() {
+  std::integral_constant<bool, detail::has_static_type_name<T>::value> token;
+  return type_name_access_impl<T>(token);
+}
 
 } // namespace caf
 

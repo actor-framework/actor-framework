@@ -417,7 +417,8 @@ namespace network {
       int presult;
       CAF_LOG_DEBUG("poll() " << m_pollset.size() << " sockets");
 #     ifdef CAF_WINDOWS
-        presult = ::WSAPoll(m_pollset.data(), m_pollset.size(), -1);
+        presult = ::WSAPoll(m_pollset.data(), 
+                            static_cast<ULONG>(m_pollset.size()), -1);
 #     else
         presult = ::poll(m_pollset.data(),
                          static_cast<nfds_t>(m_pollset.size()), -1);
@@ -479,7 +480,7 @@ namespace network {
             << ", new mask = " << e.mask);
     auto last = m_pollset.end();
     auto i = std::lower_bound(m_pollset.begin(), last, e.fd,
-                              [](const pollfd& lhs, int rhs) {
+                              [](const pollfd& lhs, native_socket rhs) {
                                 return lhs.fd < rhs;
                               });
     pollfd new_element;
@@ -999,7 +1000,7 @@ class socket_guard {
 };
 
 #ifdef CAF_WINDOWS
-using sa_family_t = short;
+using sa_family_t = unsigned short;
 using in_port_t = unsigned short;
 #endif
 

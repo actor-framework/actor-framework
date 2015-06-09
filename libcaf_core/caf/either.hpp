@@ -56,8 +56,8 @@ struct either_or_t<detail::type_list<Ls...>,
   using opt2_type = std::tuple<Rs...>;
   message value;
   static std::string static_type_name() {
-    std::string lefts[] = {type_name_access<Ls>::get()...};
-    std::string rights[] = {type_name_access<Rs>::get()...};
+    std::string lefts[] = {type_name_access<Ls>()...};
+    std::string rights[] = {type_name_access<Rs>()...};
     return either_or_else_type_name(sizeof...(Ls), lefts,
                                     sizeof...(Rs), rights);
   }

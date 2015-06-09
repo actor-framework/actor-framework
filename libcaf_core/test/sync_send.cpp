@@ -432,7 +432,7 @@ CAF_TEST(sync_send) {
                    << to_string(self->current_message()));
   });
   self->sync_send(c, milliseconds(500), hi_there_atom::value).await(
-    on(val<atom_value>) >> [&] {
+    [&](hi_there_atom) {
       CAF_TEST_ERROR("C did reply to 'HiThere'");
     },
     after(milliseconds(500)) >> [&] {
