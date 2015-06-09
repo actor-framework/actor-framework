@@ -214,13 +214,13 @@ CAF_TEST(test_broker) {
       CAF_MESSAGE("spawn_io_client finished");
       anon_send(p, kickoff_atom::value, cl);
       CAF_MESSAGE("`kickoff_atom` has been send");
-      return;
+    } else {
+      // run in server mode
+      run_server(false, argv[0]);
     }
-    // else: run in server mode
-    run_server(false, argv[0]);
-    return;
+  } else {
+    run_server(true, caf::test::engine::path());
   }
-  run_server(true, caf::test::engine::path());
   CAF_MESSAGE("block on `await_all_actors_done`");
   await_all_actors_done();
   CAF_MESSAGE("`await_all_actors_done` has finished");
