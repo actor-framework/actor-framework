@@ -46,6 +46,8 @@ using sync_msg_atom = atom_constant<atom("SyncMsg")>;
 using ping_ptr_atom = atom_constant<atom("PingPtr")>;
 using gclient_atom = atom_constant<atom("GClient")>;
 using spawn5_atom = atom_constant<atom("Spawn5")>;
+using ping_atom = atom_constant<atom("ping")>;
+using pong_atom = atom_constant<atom("pong")>;
 using foo_atom = atom_constant<atom("foo")>;
 using bar_atom = atom_constant<atom("bar")>;
 
@@ -58,7 +60,7 @@ size_t s_pongs = 0;
 
 behavior ping_behavior(local_actor* self, size_t ping_msgs) {
   return {
-    on(atom("pong"), arg_match) >> [=](int value)->message {
+    [=](pong_atom, int value) -> message {
       if (!self->current_sender()) {
         CAF_TEST_ERROR("current_sender() invalid!");
       }
@@ -71,7 +73,7 @@ behavior ping_behavior(local_actor* self, size_t ping_msgs) {
                 exit_reason::user_shutdown);
         self->quit();
       }
-      return make_message(atom("ping"), value);
+      return make_message(ping_atom::value, value);
     },
     others() >> [=] {
       self->quit(exit_reason::user_shutdown);
@@ -81,8 +83,8 @@ behavior ping_behavior(local_actor* self, size_t ping_msgs) {
 
 behavior pong_behavior(local_actor* self) {
   return {
-    on(atom("ping"), arg_match) >> [](int value)->message {
-      return make_message(atom("pong"), value + 1);
+    [](ping_atom, int value)->message {
+      return make_message(pong_atom::value, value + 1);
     },
     others() >> [=] {
       self->quit(exit_reason::user_shutdown);
@@ -100,7 +102,7 @@ void event_based_ping(event_based_actor* self, size_t ping_msgs) {
 }
 
 void pong(blocking_actor* self, actor ping_actor) {
-  self->send(ping_actor, atom("pong"), 0); // kickoff
+  self->send(ping_actor, pong_atom::value, 0); // kickoff
   self->receive_loop(pong_behavior(self));
 }
 
@@ -136,7 +138,9 @@ void spawn5_server_impl(event_based_actor* self, actor client, group grp) {
       // receive seven reply messages (2 local, 5 remote)
       auto replies = std::make_shared<int>(0);
       self->become(
-        on("Hello reflectors!", 5.0) >> [=] {
+        [=](const std::string& x0, double x1) {
+          CAF_CHECK_EQUAL(x0, "Hello reflectors!");
+          CAF_CHECK_EQUAL(x1, 5.0);
           if (++*replies == 7) {
             CAF_MESSAGE("wait for DOWN messages");
             auto downs = std::make_shared<int>(0);
@@ -455,7 +459,7 @@ void test_remote_actor(const char* app_path, bool run_remote_actor) {
   thread child;
   if (run_remote_actor) {
     child = detail::run_program(self, app_path, "-n", "-s", "remote_actor",
-                                "--", "-c", port2, port1, gport);
+                                "--", "-c", port2, "-c", port1, "-g", gport);
   } else {
     CAF_MESSAGE("please run client with: "
               << "-c " << port2 << " " << port1 << " " << gport);
@@ -488,38 +492,46 @@ CAF_TEST(test_remote_actor) {
   cout << "this node is: " << to_string(caf::detail::singletons::get_node_id())
        << endl;
   if (argv) {
-    message_builder{argv, argv + argc}.apply({
-      on("-c", spro<uint16_t>, spro<uint16_t>, spro<uint16_t>)
-      >> [](uint16_t p1, uint16_t p2, uint16_t gport) {
-        scoped_actor self;
-        auto serv = io::remote_actor("localhost", p1);
-        auto serv2 = io::remote_actor("localhost", p2);
-        // remote_actor is supposed to return the same server
-        // when connecting to the same host again
-        {
-          CAF_CHECK(serv == io::remote_actor("localhost", p1));
-          CAF_CHECK(serv2 == io::remote_actor("127.0.0.1", p2));
-        }
-        // connect to published groups
-        auto grp = io::remote_group("whatever", "127.0.0.1", gport);
-        auto c = self->spawn<client, monitored>(serv);
-        self->receive(
-          [&](const down_msg& dm) {
-            CAF_CHECK_EQUAL(dm.source, c);
-            CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
-          }
-        );
-        grp->stop();
-      },
-      on("-s") >> [&] {
-        CAF_MESSAGE("don't run remote actor (server mode)");
-        test_remote_actor(argv[0], false);
-      },
-      others >> [&] {
-        CAF_TEST_ERROR("usage: " << argv[0]
-                                 << " [-s PORT|-c PORT1 PORT2 GROUP_PORT]");
-      }
+    std::vector<uint16_t> ports;
+    uint16_t gport = 0;
+    auto r = message_builder(argv, argv + argc).extract_opts({
+      {"server,s", "run in server mode"},
+      {"client-port,c", "add client port (two needed)", ports},
+      {"group-port,g", "set group port", gport}
     });
+    if (!r.error.empty() || r.opts.count("help") > 0 || !r.remainder.empty()) {
+      cout << r.error << endl << endl << r.helptext << endl;
+      return;
+    }
+    if (r.opts.count("server") > 0) {
+      CAF_MESSAGE("don't run remote actor (server mode)");
+      test_remote_actor(argv[0], false);
+    } else {
+      if (ports.size() != 2 || r.opts.count("group-port") == 0) {
+        cerr << "*** expected exactly two ports and one group port" << endl
+             << endl << r.helptext << endl;
+        return;
+      }
+      scoped_actor self;
+      auto serv = io::remote_actor("localhost", ports.front());
+      auto serv2 = io::remote_actor("localhost", ports.back());
+      // remote_actor is supposed to return the same server
+      // when connecting to the same host again
+      {
+        CAF_CHECK(serv == io::remote_actor("localhost", ports.front()));
+        CAF_CHECK(serv2 == io::remote_actor("127.0.0.1", ports.back()));
+      }
+      // connect to published groups
+      auto grp = io::remote_group("whatever", "127.0.0.1", gport);
+      auto c = self->spawn<client, monitored>(serv);
+      self->receive(
+        [&](const down_msg& dm) {
+          CAF_CHECK_EQUAL(dm.source, c);
+          CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
+        }
+      );
+      grp->stop();
+    }
   }
   else {
     test_remote_actor(caf::test::engine::path(), true);
