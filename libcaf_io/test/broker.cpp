@@ -197,27 +197,29 @@ CAF_TEST(test_broker) {
   auto argv = caf::test::engine::argv();
   auto argc = caf::test::engine::argc();
   if (argv) {
-    message_builder{argv, argv + argc}.apply({
-       on("-c", arg_match) >> [&](const std::string& portstr) {
-        auto port = static_cast<uint16_t>(std::stoi(portstr));
-        auto p = spawn(ping, 10);
-        CAF_MESSAGE("spawn_io_client...");
-        auto cl = spawn_io_client(peer_fun, "localhost", port, p);
-        CAF_MESSAGE("spawn_io_client finished");
-        anon_send(p, kickoff_atom::value, cl);
-        CAF_MESSAGE("`kickoff_atom` has been send");
-      },
-      on("-s")  >> [&] {
-        run_server(false, argv[0]);
-      },
-      others >> [&] {
-         cerr << "usage: " << argv[0] << " [-c PORT]" << endl;
-      }
+    uint16_t port = 0;
+    auto r = message_builder(argv, argv + argc).extract_opts({
+      {"client-port,c", "set port for IO client", port},
+      {"server,s", "run in server mode"}
     });
+    if (!r.error.empty() || r.opts.count("help") > 0 || !r.remainder.empty()) {
+      cout << r.error << endl << endl << r.helptext << endl;
+      return;
+    }
+    if (r.opts.count("client-port") > 0) {
+      auto p = spawn(ping, 10);
+      CAF_MESSAGE("spawn_io_client...");
+      auto cl = spawn_io_client(peer_fun, "localhost", port, p);
+      CAF_MESSAGE("spawn_io_client finished");
+      anon_send(p, kickoff_atom::value, cl);
+      CAF_MESSAGE("`kickoff_atom` has been send");
+      return;
+    }
+    // else: run in server mode
+    run_server(false, argv[0]);
+    return;
   }
-  else {
-    run_server(true, caf::test::engine::path());
-  }
+  run_server(true, caf::test::engine::path());
   CAF_MESSAGE("block on `await_all_actors_done`");
   await_all_actors_done();
   CAF_MESSAGE("`await_all_actors_done` has finished");
