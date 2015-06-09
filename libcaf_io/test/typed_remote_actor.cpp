@@ -100,15 +100,22 @@ CAF_TEST(test_typed_remote_actor) {
   announce<ping>("ping", &ping::value);
   announce<pong>("pong", &pong::value);
   if (argv) {
-    message_builder{argv, argv + argc}.apply({
-      on("-c", spro<uint16_t>)>> [](uint16_t port) {
-        CAF_MESSAGE("run in client mode");
-        run_client("localhost", port);
-      },
-      on("-s") >> [] {
-        run_server();
-      }
+    uint16_t port = 0;
+    auto r = message_builder(argv, argv + argc).extract_opts({
+      {"client-port,c", "set port for client", port},
+      {"server,s", "run in server mode"}
     });
+    if (!r.error.empty() || r.opts.count("help") > 0 || !r.remainder.empty()) {
+      cout << r.error << endl << endl << r.helptext << endl;
+      return;
+    }
+    if (r.opts.count("client-port") > 0) {
+      CAF_MESSAGE("run in client mode");
+      run_client("localhost", port);
+    } else {
+      CAF_MESSAGE("run in server mode");
+      run_server();
+    }
   }
   else {
     auto port = run_server();
