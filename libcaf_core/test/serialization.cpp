@@ -71,23 +71,7 @@ using namespace caf;
 
 namespace {
 
-struct struct_a {
-  int x;
-  int y;
-};
-
-struct struct_b {
-  struct_a a;
-  int z;
-  list<int> ints;
-};
-
 using strmap = map<string, u16string>;
-
-struct struct_c {
-  strmap strings;
-  set<int> ints;
-};
 
 struct raw_struct {
   string str;
