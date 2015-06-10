@@ -292,6 +292,10 @@ void asio_multiplexer::run() {
   }
 }
 
+boost::asio::io_service* asio_multiplexer::pimpl() {
+  return &m_backend;
+}
+
 asio_multiplexer& get_multiplexer_singleton() {
   return static_cast<asio_multiplexer&>(middleman::instance()->backend());
 }

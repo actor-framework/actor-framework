@@ -101,6 +101,8 @@ class asio_multiplexer : public multiplexer {
 
   void run() override;
 
+  boost::asio::io_service* pimpl() override;
+
  private:
   inline boost::asio::io_service& backend() {
     return m_backend;
