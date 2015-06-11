@@ -31,26 +31,26 @@ class device_info {
 
   friend class program;
 
- public:
+public:
   device_info(device_ptr device, command_queue_ptr queue,
               size_t work_group_size, cl_uint dimensons,
               const dim_vec& items_per_dimension)
-      : m_max_work_group_size(work_group_size),
-        m_max_dimensions(dimensons),
-        m_max_work_items_per_dim(items_per_dimension),
-        m_device(device),
-        m_cmd_queue(queue) {}
+      : max_work_group_size_(work_group_size),
+        max_dimensions_(dimensons),
+        max_work_items_per_dim_(items_per_dimension),
+        device_(device),
+        cmd_queue_(queue) {}
 
   inline size_t get_max_work_group_size();
   inline cl_uint get_max_dimensions();
   inline dim_vec get_max_work_items_per_dim();
 
- private:
-  size_t m_max_work_group_size;
-  cl_uint m_max_dimensions;
-  dim_vec m_max_work_items_per_dim;
-  device_ptr m_device;
-  command_queue_ptr m_cmd_queue;
+private:
+  size_t max_work_group_size_;
+  cl_uint max_dimensions_;
+  dim_vec max_work_items_per_dim_;
+  device_ptr device_;
+  command_queue_ptr cmd_queue_;
 };
 
 /******************************************************************************\
@@ -58,13 +58,13 @@ class device_info {
 \******************************************************************************/
 
 inline size_t device_info::get_max_work_group_size() {
-  return m_max_work_group_size;
+  return max_work_group_size_;
 }
 
-inline cl_uint device_info::get_max_dimensions() { return m_max_dimensions; }
+inline cl_uint device_info::get_max_dimensions() { return max_dimensions_; }
 
 inline dim_vec device_info::get_max_work_items_per_dim() {
-  return m_max_work_items_per_dim;
+  return max_work_items_per_dim_;
 }
 
 } // namespace opencl

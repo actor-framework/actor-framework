@@ -38,23 +38,23 @@ namespace opencl {
 
 template <typename T, typename R>
 class command : public ref_counted {
- public:
+public:
   command(response_promise handle, intrusive_ptr<T> actor_facade,
           std::vector<cl_event> events, std::vector<mem_ptr> arguments,
           size_t result_size, message msg)
-      : m_result_size(result_size),
-        m_handle(handle),
-        m_actor_facade(actor_facade),
-        m_queue(actor_facade->m_queue),
-        m_events(std::move(events)),
-        m_arguments(std::move(arguments)),
-        m_result(result_size),
-        m_msg(msg) {
+      : result_size_(result_size),
+        handle_(handle),
+        actor_facade_(actor_facade),
+        queue_(actor_facade->queue_),
+        events_(std::move(events)),
+        arguments_(std::move(arguments)),
+        result_(result_size),
+        msg_(msg) {
     // nop
   }
 
   ~command() {
-    for (auto& e : m_events) {
+    for (auto& e : events_) {
       v1callcl(CAF_CLF(clReleaseEvent),e);
     }
   }
@@ -70,13 +70,13 @@ class command : public ref_counted {
     };
     // OpenCL expects cl_uint (unsigned int), hence the cast
     cl_int err = clEnqueueNDRangeKernel(
-      m_queue.get(), m_actor_facade->m_kernel.get(),
-      static_cast<cl_uint>(m_actor_facade->m_global_dimensions.size()),
-      data_or_nullptr(m_actor_facade->m_global_offsets),
-      data_or_nullptr(m_actor_facade->m_global_dimensions),
-      data_or_nullptr(m_actor_facade->m_local_dimensions),
-      static_cast<cl_uint>(m_events.size()),
-      (m_events.empty() ? nullptr : m_events.data()), &event_k);
+      queue_.get(), actor_facade_->kernel_.get(),
+      static_cast<cl_uint>(actor_facade_->global_dimensions_.size()),
+      data_or_nullptr(actor_facade_->global_offsets_),
+      data_or_nullptr(actor_facade_->global_dimensions_),
+      data_or_nullptr(actor_facade_->local_dimensions_),
+      static_cast<cl_uint>(events_.size()),
+      (events_.empty() ? nullptr : events_.data()), &event_k);
     if (err != CL_SUCCESS) {
       CAF_LOGMF(CAF_ERROR, "clEnqueueNDRangeKernel: " << get_opencl_error(err));
       this->deref(); // or can anything actually happen?
@@ -84,9 +84,9 @@ class command : public ref_counted {
     } else {
       cl_event event_r;
       err =
-        clEnqueueReadBuffer(m_queue.get(), m_arguments.back().get(), CL_FALSE,
-                            0, sizeof(typename R::value_type) * m_result_size,
-                            m_result.data(), 1, &event_k, &event_r);
+        clEnqueueReadBuffer(queue_.get(), arguments_.back().get(), CL_FALSE,
+                            0, sizeof(typename R::value_type) * result_size_,
+                            result_.data(), 1, &event_k, &event_r);
       if (err != CL_SUCCESS) {
         this->deref(); // failed to enqueue command
         throw std::runtime_error("clEnqueueReadBuffer: " +
@@ -105,29 +105,29 @@ class command : public ref_counted {
         return;
       }
 
-      err = clFlush(m_queue.get());
+      err = clFlush(queue_.get());
       if (err != CL_SUCCESS) {
         CAF_LOGMF(CAF_ERROR, "clFlush: " << get_opencl_error(err));
       }
-      m_events.push_back(std::move(event_k));
-      m_events.push_back(std::move(event_r));
+      events_.push_back(std::move(event_k));
+      events_.push_back(std::move(event_r));
     }
   }
 
- private:
-  size_t m_result_size;
-  response_promise m_handle;
-  intrusive_ptr<T> m_actor_facade;
-  command_queue_ptr m_queue;
-  std::vector<cl_event> m_events;
-  std::vector<mem_ptr> m_arguments;
-  R m_result;
-  message m_msg; // required to keep the argument buffers alive (async copy)
+private:
+  size_t result_size_;
+  response_promise handle_;
+  intrusive_ptr<T> actor_facade_;
+  command_queue_ptr queue_;
+  std::vector<cl_event> events_;
+  std::vector<mem_ptr> arguments_;
+  R result_;
+  message msg_; // required to keep the argument buffers alive (async copy)
 
   void handle_results() {
-    auto& map_fun = m_actor_facade->m_map_result;
-    auto msg = map_fun ? map_fun(m_result) : make_message(std::move(m_result));
-    m_handle.deliver(std::move(msg));
+    auto& map_fun = actor_facade_->map_result_;
+    auto msg = map_fun ? map_fun(result_) : make_message(std::move(result_));
+    handle_.deliver(std::move(msg));
   }
 };
 

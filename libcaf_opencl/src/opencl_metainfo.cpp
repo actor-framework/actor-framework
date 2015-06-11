@@ -32,7 +32,7 @@ opencl_metainfo* opencl_metainfo::instance() {
 }
 
 const std::vector<device_info> opencl_metainfo::get_devices() const {
-  return m_devices;
+  return devices_;
 }
 
 void opencl_metainfo::initialize() {
@@ -65,7 +65,7 @@ void opencl_metainfo::initialize() {
   auto lift = [](cl_device_id ptr) { return device_ptr{ptr, false}; };
   std::transform(ds.begin(), ds.end(), devices.begin(), lift);
   // create a context
-  m_context.reset(v2get(CAF_CLF(clCreateContext), nullptr, num_devs, ds.data(),
+  context_.reset(v2get(CAF_CLF(clCreateContext), nullptr, num_devs, ds.data(),
                         pfn_notify, nullptr),
                   false);
   for (auto& device : devices) {
@@ -73,7 +73,7 @@ void opencl_metainfo::initialize() {
     command_queue_ptr cmd_queue;
     try {
       cmd_queue.reset(v2get(CAF_CLF(clCreateCommandQueue),
-                            m_context.get(), device.get(),
+                            context_.get(), device.get(),
                             unsigned{CL_QUEUE_PROFILING_ENABLE}),
                       false);
     }
@@ -90,11 +90,11 @@ void opencl_metainfo::initialize() {
              unsigned{CL_DEVICE_MAX_WORK_ITEM_SIZES},
              sizeof(size_t) * max_wid,
              max_wi_per_dim.data());
-      m_devices.push_back(device_info{std::move(device), std::move(cmd_queue),
+      devices_.push_back(device_info{std::move(device), std::move(cmd_queue),
                                       max_wgs, max_wid, max_wi_per_dim});
     }
   }
-  if (m_devices.empty()) {
+  if (devices_.empty()) {
     std::string errstr = "could not create a command queue for any device";
     CAF_LOG_ERROR(errstr);
     throw std::runtime_error(std::move(errstr));

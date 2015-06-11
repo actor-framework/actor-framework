@@ -65,12 +65,10 @@ struct cl_spawn_helper<R(Ts...)> {
 
 } // namespace detail
 
-/**
- * Creates a new actor facade for an OpenCL kernel that invokes
- * the function named `fname` from `prog`.
- * @throws std::runtime_error if more than three dimensions are set,
- *                            `dims.empty()`, or `clCreateKernel` failed.
- */
+/// Creates a new actor facade for an OpenCL kernel that invokes
+/// the function named `fname` from `prog`.
+/// @throws std::runtime_error if more than three dimensions are set,
+///                            `dims.empty()`, or `clCreateKernel` failed.
 template <class Signature>
 actor spawn_cl(const opencl::program& prog,
                const char* fname,
@@ -82,13 +80,11 @@ actor spawn_cl(const opencl::program& prog,
   return f(prog, fname, dims, offset, local_dims, result_size);
 }
 
-/**
- * Compiles `source` and creates a new actor facade for an OpenCL kernel
- * that invokes the function named `fname`.
- * @throws std::runtime_error if more than three dimensions are set,
- *                            <tt>dims.empty()</tt>, a compilation error
- *                            occured, or @p clCreateKernel failed.
- */
+/// Compiles `source` and creates a new actor facade for an OpenCL kernel
+/// that invokes the function named `fname`.
+/// @throws std::runtime_error if more than three dimensions are set,
+///                            <tt>dims.empty()</tt>, a compilation error
+///                            occured, or @p clCreateKernel failed.
 template <class Signature>
 actor spawn_cl(const char* source,
                const char* fname,
@@ -100,12 +96,10 @@ actor spawn_cl(const char* source,
                              dims, offset, local_dims, result_size);
 }
 
-/**
- * Creates a new actor facade for an OpenCL kernel that invokes
- * the function named `fname` from `prog`.
- * @throws std::runtime_error if more than three dimensions are set,
- *                            `dims.empty()`, or `clCreateKernel` failed.
- */
+/// Creates a new actor facade for an OpenCL kernel that invokes
+/// the function named `fname` from `prog`.
+/// @throws std::runtime_error if more than three dimensions are set,
+///                            `dims.empty()`, or `clCreateKernel` failed.
 template <class Signature, class Fun>
 actor spawn_cl(const opencl::program& prog,
                const char* fname,
@@ -120,13 +114,11 @@ actor spawn_cl(const opencl::program& prog,
            std::move(map_args), std::move(map_result));
 }
 
-/**
- * Compiles `source` and creates a new actor facade for an OpenCL kernel
- * that invokes the function named `fname`.
- * @throws std::runtime_error if more than three dimensions are set,
- *                            <tt>dims.empty()</tt>, a compilation error
- *                            occured, or @p clCreateKernel failed.
- */
+/// Compiles `source` and creates a new actor facade for an OpenCL kernel
+/// that invokes the function named `fname`.
+/// @throws std::runtime_error if more than three dimensions are set,
+///                            <tt>dims.empty()</tt>, a compilation error
+///                            occured, or @p clCreateKernel failed.
 template <class Signature, class Fun>
 actor spawn_cl(const char* source,
                const char* fname,

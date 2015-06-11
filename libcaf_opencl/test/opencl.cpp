@@ -96,11 +96,11 @@ constexpr const char* kernel_source_const = R"__(
 
 template<size_t Size>
 class square_matrix {
- public:
+public:
   static constexpr size_t num_elements = Size * Size;
 
   static void announce() {
-    caf::announce<square_matrix>("square_matrix", &square_matrix::m_data);
+    caf::announce<square_matrix>("square_matrix", &square_matrix::data_);
   }
 
   square_matrix(square_matrix&&) = default;
@@ -108,46 +108,46 @@ class square_matrix {
   square_matrix& operator=(square_matrix&&) = default;
   square_matrix& operator=(const square_matrix&) = default;
 
-  square_matrix() : m_data(num_elements) {
+  square_matrix() : data_(num_elements) {
     // nop
   }
 
-  explicit square_matrix(ivec d) : m_data(move(d)) {
-    assert(m_data.size() == num_elements);
+  explicit square_matrix(ivec d) : data_(move(d)) {
+    assert(data_.size() == num_elements);
   }
 
   float& operator()(size_t column, size_t row) {
-    return m_data[column + row * Size];
+    return data_[column + row * Size];
   }
 
   const float& operator()(size_t column, size_t row) const {
-    return m_data[column + row * Size];
+    return data_[column + row * Size];
   }
 
   typedef typename ivec::const_iterator const_iterator;
 
   const_iterator begin() const {
-    return m_data.begin();
+    return data_.begin();
   }
 
   const_iterator end() const {
-    return m_data.end();
+    return data_.end();
   }
 
   ivec& data() {
-    return m_data;
+    return data_;
   }
 
   const ivec& data() const {
-    return m_data;
+    return data_;
   }
 
   void data(ivec new_data) {
-    m_data = std::move(new_data);
+    data_ = std::move(new_data);
   }
 
- private:
-  ivec m_data;
+private:
+  ivec data_;
 };
 
 
@@ -175,7 +175,7 @@ bool operator==(const square_matrix<Size>& lhs,
 template<size_t Size>
 bool operator!=(const square_matrix<Size>& lhs,
                 const square_matrix<Size>& rhs) {
-  return !(lhs == rhs);
+  return ! (lhs == rhs);
 }
 
 using matrix_type = square_matrix<matrix_size>;

@@ -59,7 +59,7 @@ constexpr const char* kernel_source = R"__(
 template<size_t Size>
 class square_matrix {
 
- public:
+public:
 
   static constexpr size_t num_elements = Size * Size;
 
@@ -68,38 +68,38 @@ class square_matrix {
   square_matrix& operator=(square_matrix&&) = default;
   square_matrix& operator=(const square_matrix&) = default;
 
-  square_matrix() : m_data(num_elements) { }
+  square_matrix() : data_(num_elements) { }
 
-  explicit square_matrix(fvec d) : m_data(move(d)) {
-    assert(m_data.size() == num_elements);
+  explicit square_matrix(fvec d) : data_(move(d)) {
+    assert(data_.size() == num_elements);
 
   }
 
   inline float& operator()(size_t column, size_t row) {
-    return m_data[column + row * Size];
+    return data_[column + row * Size];
   }
 
   inline const float& operator()(size_t column, size_t row) const {
-    return m_data[column + row * Size];
+    return data_[column + row * Size];
   }
 
   inline void iota_fill() {
-    iota(m_data.begin(), m_data.end(), 0);
+    iota(data_.begin(), data_.end(), 0);
   }
 
   typedef typename fvec::const_iterator const_iterator;
 
-  const_iterator begin() const { return m_data.begin(); }
+  const_iterator begin() const { return data_.begin(); }
 
-  const_iterator end() const { return m_data.end(); }
+  const_iterator end() const { return data_.end(); }
 
-  fvec& data() { return m_data; }
+  fvec& data() { return data_; }
 
-  const fvec& data() const { return m_data; }
+  const fvec& data() const { return data_; }
 
- private:
+private:
 
-  fvec m_data;
+  fvec data_;
 
 };
 
@@ -126,7 +126,7 @@ inline bool operator==(const square_matrix<Size>& lhs,
 template<size_t Size>
 inline bool operator!=(const square_matrix<Size>& lhs,
              const square_matrix<Size>& rhs) {
-  return !(lhs == rhs);
+  return ! (lhs == rhs);
 }
 
 using matrix_type = square_matrix<matrix_size>;

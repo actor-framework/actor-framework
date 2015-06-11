@@ -54,7 +54,7 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
 
   friend class command<actor_facade, Ret>;
 
- public:
+public:
   using arg_types = detail::type_list<typename std::decay<Args>::type...>;
   using arg_mapping = std::function<optional<message> (message&)>;
   using result_mapping = std::function<message(Ret&)>;
@@ -74,7 +74,7 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
       throw std::runtime_error(str);
     }
     auto check_vec = [&](const dim_vec& vec, const char* name) {
-      if (!vec.empty() && vec.size() != global_dims.size()) {
+      if (! vec.empty() && vec.size() != global_dims.size()) {
         std::ostringstream oss;
         oss << name << " vector is not empty, but "
             << "its size differs from global dimensions vector's size";
@@ -85,7 +85,7 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
     check_vec(offsets, "offsets");
     check_vec(local_dims, "local dimensions");
     kernel_ptr kernel;
-    kernel.reset(v2get(CAF_CLF(clCreateKernel), prog.m_program.get(),
+    kernel.reset(v2get(CAF_CLF(clCreateKernel), prog.program_.get(),
                        kernel_name),
                  false);
     if (result_size == 0) {
@@ -100,45 +100,45 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
   void enqueue(const actor_addr &sender, message_id mid, message content,
                execution_unit*) override {
     CAF_LOG_TRACE("");
-    if (m_map_args) {
-      auto mapped = m_map_args(content);
-      if (!mapped) {
+    if (map_args_) {
+      auto mapped = map_args_(content);
+      if (! mapped) {
         return;
       }
       content = std::move(*mapped);
     }
     typename detail::il_indices<arg_types>::type indices;
-    if (!content.match_elements(arg_types{})) {
+    if (! content.match_elements(arg_types{})) {
       return;
     }
     response_promise handle{this->address(), sender, mid.response_id()};
     evnt_vec events;
     args_vec arguments;
-    add_arguments_to_kernel<Ret>(events, arguments, m_result_size,
+    add_arguments_to_kernel<Ret>(events, arguments, result_size_,
                                  content, indices);
     auto cmd = make_counted<command_type>(handle, this,
                                           std::move(events),
                                           std::move(arguments),
-                                          m_result_size,
+                                          result_size_,
                                           std::move(content));
     cmd->enqueue();
   }
 
- private:
+private:
   actor_facade(const program& prog, kernel_ptr kernel,
                const dim_vec& global_dimensions, const dim_vec& global_offsets,
                const dim_vec& local_dimensions, size_t result_size,
                arg_mapping map_args, result_mapping map_result)
-      : m_kernel(kernel),
-        m_program(prog.m_program),
-        m_context(prog.m_context),
-        m_queue(prog.m_queue),
-        m_global_dimensions(global_dimensions),
-        m_global_offsets(global_offsets),
-        m_local_dimensions(local_dimensions),
-        m_result_size(result_size),
-        m_map_args(std::move(map_args)),
-        m_map_result(std::move(map_result)) {
+      : kernel_(kernel),
+        program_(prog.program_),
+        context_(prog.context_),
+        queue_(prog.queue_),
+        global_dimensions_(global_dimensions),
+        global_offsets_(global_offsets),
+        local_dimensions_(local_dimensions),
+        result_size_(result_size),
+        map_args_(std::move(map_args)),
+        map_result_(std::move(map_result)) {
     CAF_LOG_TRACE("id: " << this->id());
   }
 
@@ -147,10 +147,10 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
     // rotate left (output buffer to the end)
     std::rotate(arguments.begin(), arguments.begin() + 1, arguments.end());
     for (cl_uint i = 0; i < arguments.size(); ++i) {
-      v1callcl(CAF_CLF(clSetKernelArg), m_kernel.get(), i,
+      v1callcl(CAF_CLF(clSetKernelArg), kernel_.get(), i,
                sizeof(cl_mem), static_cast<void*>(&arguments[i]));
     }
-    clFlush(m_queue.get());
+    clFlush(queue_.get());
   }
 
   template <long I, long... Is>
@@ -159,10 +159,10 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
     using value_type = typename detail::tl_at<arg_types, I>::type;
     auto& arg = msg.get_as<value_type>(I);
     size_t buffer_size = sizeof(value_type) * arg.size();
-    auto buffer = v2get(CAF_CLF(clCreateBuffer), m_context.get(),
+    auto buffer = v2get(CAF_CLF(clCreateBuffer), context_.get(),
                         cl_mem_flags{CL_MEM_READ_ONLY}, buffer_size, nullptr);
     cl_event event = v1get<cl_event>(CAF_CLF(clEnqueueWriteBuffer),
-                                     m_queue.get(), buffer, cl_bool{CL_FALSE},
+                                     queue_.get(), buffer, cl_bool{CL_FALSE},
                                      cl_uint{0}, buffer_size, arg.data());
     events.push_back(std::move(event));
     mem_ptr tmp;
@@ -176,7 +176,7 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
   void add_arguments_to_kernel(evnt_vec& events, args_vec& arguments,
                                size_t ret_size, message& msg, Token tk) {
     arguments.clear();
-    auto buf = v2get(CAF_CLF(clCreateBuffer), m_context.get(),
+    auto buf = v2get(CAF_CLF(clCreateBuffer), context_.get(),
                      cl_mem_flags{CL_MEM_WRITE_ONLY},
                      sizeof(typename R::value_type) * ret_size, nullptr);
     mem_ptr tmp;
@@ -185,16 +185,16 @@ class actor_facade<Ret(Args...)> : public abstract_actor {
     add_arguments_to_kernel_rec(events, arguments, msg, tk);
   }
 
-  kernel_ptr m_kernel;
-  program_ptr m_program;
-  context_ptr m_context;
-  command_queue_ptr m_queue;
-  dim_vec m_global_dimensions;
-  dim_vec m_global_offsets;
-  dim_vec m_local_dimensions;
-  size_t m_result_size;
-  arg_mapping m_map_args;
-  result_mapping m_map_result;
+  kernel_ptr kernel_;
+  program_ptr program_;
+  context_ptr context_;
+  command_queue_ptr queue_;
+  dim_vec global_dimensions_;
+  dim_vec global_offsets_;
+  dim_vec local_dimensions_;
+  size_t result_size_;
+  arg_mapping map_args_;
+  result_mapping map_result_;
 };
 
 } // namespace opencl

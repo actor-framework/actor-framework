@@ -46,23 +46,21 @@ class opencl_metainfo : public detail::abstract_singleton {
   friend class detail::singletons;
   friend command_queue_ptr get_command_queue(uint32_t id);
 
- public:
+public:
   const std::vector<device_info> get_devices() const;
 
-  /**
-   * Get opencl_metainfo instance.
-   */
+  /// Get opencl_metainfo instance.
   static opencl_metainfo* instance();
 
- private:
+private:
   opencl_metainfo() = default;
 
   void stop() override;
   void initialize() override;
   void dispose() override;
 
-  context_ptr m_context;
-  std::vector<device_info> m_devices;
+  context_ptr context_;
+  std::vector<device_info> devices_;
 };
 
 } // namespace opencl

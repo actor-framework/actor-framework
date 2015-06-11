@@ -40,9 +40,7 @@ cl_int clRetainDeviceDummy(cl_device_id);
 namespace caf {
 namespace opencl {
 
-/**
- * A vector of up to three elements used for OpenCL dimensions.
- */
+/// A vector of up to three elements used for OpenCL dimensions.
 using dim_vec = detail::limited_vector<size_t, 3>;
 
 std::string get_opencl_error(cl_int err);

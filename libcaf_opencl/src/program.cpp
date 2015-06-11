@@ -35,15 +35,15 @@ namespace opencl {
 
 program::program(context_ptr context, command_queue_ptr queue,
                  program_ptr program)
-    : m_context(move(context)),
-      m_program(move(program)),
-      m_queue(move(queue)) {}
+    : context_(move(context)),
+      program_(move(program)),
+      queue_(move(queue)) {}
 
 program program::create(const char* kernel_source, const char* options,
                         uint32_t device_id) {
   auto metainfo = opencl_metainfo::instance();
   auto devices  = metainfo->get_devices();
-  auto context  = metainfo->m_context;
+  auto context  = metainfo->context_;
   if (devices.size() <= device_id) {
     ostringstream oss;
     oss << "Device id " << device_id
@@ -59,7 +59,7 @@ program program::create(const char* kernel_source, const char* options,
                       cl_uint{1}, &kernel_source, &kernel_source_length);
   pptr.reset(rawptr, false);
   // build programm from program object
-  auto dev_tmp = devices[device_id].m_device.get();
+  auto dev_tmp = devices[device_id].device_.get();
   cl_int err = clBuildProgram(pptr.get(), 1, &dev_tmp,
                               options,nullptr, nullptr);
   if (err != CL_SUCCESS) {
@@ -91,7 +91,7 @@ program program::create(const char* kernel_source, const char* options,
 #endif
     throw runtime_error(oss.str());
   }
-  return {context, devices[device_id].m_cmd_queue, pptr};
+  return {context, devices[device_id].cmd_queue_, pptr};
 }
 
 } // namespace opencl
