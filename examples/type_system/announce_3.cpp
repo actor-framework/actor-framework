@@ -12,26 +12,26 @@ using namespace caf;
 // a simple class using overloaded getter and setter member functions
 class foo {
 
-  int m_a;
-  int m_b;
+  int a_;
+  int b_;
 
- public:
+public:
 
-  foo() : m_a(0), m_b(0) { }
+  foo() : a_(0), b_(0) { }
 
-  foo(int a0, int b0) : m_a(a0), m_b(b0) { }
+  foo(int a0, int b0) : a_(a0), b_(b0) { }
 
   foo(const foo&) = default;
 
   foo& operator=(const foo&) = default;
 
-  int a() const { return m_a; }
+  int a() const { return a_; }
 
-  void a(int val) { m_a = val; }
+  void a(int val) { a_ = val; }
 
-  int b() const { return m_b; }
+  int b() const { return b_; }
 
-  void b(int val) { m_b = val; }
+  void b(int val) { b_ = val; }
 
 };
 

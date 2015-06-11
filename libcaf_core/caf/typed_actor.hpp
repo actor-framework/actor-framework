@@ -39,11 +39,9 @@ struct invalid_actor_addr_t;
 template <class... Sigs>
 class typed_event_based_actor;
 
-/**
- * Identifies a strongly typed actor.
- * @tparam Sigs Signature of this actor as `replies_to<...>::with<...>`
- *              parameter pack.
- */
+/// Identifies a strongly typed actor.
+/// @tparam Sigs Signature of this actor as `replies_to<...>::with<...>`
+///              parameter pack.
 template <class... Sigs>
 class typed_actor
   : detail::comparable<typed_actor<Sigs...>>,
@@ -60,27 +58,21 @@ class typed_actor
   template <class T, typename U>
   friend T actor_cast(const U&);
 
- public:
+public:
 
   template <class... Es>
   struct extend {
     using type = typed_actor<Sigs..., Es...>;
   };
 
-  /**
-   * Identifies the behavior type actors of this kind use
-   * for their behavior stack.
-   */
+  /// Identifies the behavior type actors of this kind use
+  /// for their behavior stack.
   using behavior_type = typed_behavior<Sigs...>;
 
-  /**
-   * Identifies pointers to instances of this kind of actor.
-   */
+  /// Identifies pointers to instances of this kind of actor.
   using pointer = typed_event_based_actor<Sigs...>*;
 
-  /**
-   * Identifies the base class for this kind of actor.
-   */
+  /// Identifies the base class for this kind of actor.
   using base = typed_event_based_actor<Sigs...>;
 
   typed_actor() = default;
@@ -106,18 +98,16 @@ class typed_actor
   }
 
   abstract_actor* operator->() const {
-    return m_ptr.get();
+    return ptr_.get();
   }
 
   abstract_actor& operator*() const {
-    return *m_ptr.get();
+    return *ptr_.get();
   }
 
-  /**
-   * Queries the address of the stored actor.
-   */
+  /// Queries the address of the stored actor.
   actor_addr address() const {
-    return m_ptr ? m_ptr->address() : actor_addr{};
+    return ptr_ ? ptr_->address() : actor_addr{};
   }
 
   inline intptr_t compare(const actor_addr& rhs) const {
@@ -129,22 +119,22 @@ class typed_actor
   }
 
   inline intptr_t compare(const invalid_actor_addr_t&) const {
-    return m_ptr ? 1 : 0;
+    return ptr_ ? 1 : 0;
   }
 
   static std::set<std::string> message_types() {
     return {Sigs::static_type_name()...};
   }
 
-  explicit operator bool() const { return static_cast<bool>(m_ptr); }
+  explicit operator bool() const { return static_cast<bool>(ptr_); }
 
-  inline bool operator!() const { return !m_ptr; }
+  inline bool operator!() const { return ! ptr_; }
 
- private:
+private:
 
-  inline abstract_actor* get() const { return m_ptr.get(); }
+  inline abstract_actor* get() const { return ptr_.get(); }
 
-  typed_actor(abstract_actor* ptr) : m_ptr(ptr) {}
+  typed_actor(abstract_actor* ptr) : ptr_(ptr) {}
 
   template <class ListA, class ListB>
   inline void check_signatures() {
@@ -155,16 +145,16 @@ class typed_actor
   template <class... OtherSigs>
   inline void set(const typed_actor<OtherSigs...>& other) {
     check_signatures<detail::type_list<Sigs...>, detail::type_list<OtherSigs...>>();
-    m_ptr = other.m_ptr;
+    ptr_ = other.ptr_;
   }
 
   template <class Impl>
   inline void set(intrusive_ptr<Impl>& other) {
     check_signatures<detail::type_list<Sigs...>, typename Impl::signatures>();
-    m_ptr = std::move(other);
+    ptr_ = std::move(other);
   }
 
-  abstract_actor_ptr m_ptr;
+  abstract_actor_ptr ptr_;
 
 };
 

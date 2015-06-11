@@ -25,11 +25,9 @@
 
 namespace caf {
 
-/**
- * A scoped handle to a blocking actor.
- */
+/// A scoped handle to a blocking actor.
 class scoped_actor {
- public:
+public:
   scoped_actor();
 
   scoped_actor(const scoped_actor&) = delete;
@@ -39,15 +37,15 @@ class scoped_actor {
   ~scoped_actor();
 
   inline blocking_actor* operator->() const {
-    return m_self.get();
+    return self_.get();
   }
 
   inline blocking_actor& operator*() const {
-    return *m_self;
+    return *self_;
   }
 
   inline blocking_actor* get() const {
-    return m_self.get();
+    return self_.get();
   }
 
   inline operator channel() const {
@@ -66,10 +64,10 @@ class scoped_actor {
     return get()->address();
   }
 
- private:
+private:
   void init(bool hide_actor);
-  actor_id m_prev; // used for logging/debugging purposes only
-  intrusive_ptr<blocking_actor> m_self;
+  actor_id prev_; // used for logging/debugging purposes only
+  intrusive_ptr<blocking_actor> self_;
 };
 
 } // namespace caf

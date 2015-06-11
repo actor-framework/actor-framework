@@ -44,13 +44,11 @@
 namespace caf {
 namespace scheduler {
 
-/**
- * A coordinator which keeps fine-grained profiling state about its workers
- * and their jobs.
- */
+/// A coordinator which keeps fine-grained profiling state about its workers
+/// and their jobs.
 template <class Policy = policy::profiled<policy::work_stealing>>
 class profiled_coordinator : public coordinator<Policy> {
- public:
+public:
   using super = coordinator<Policy>;
   using clock_type = std::chrono::high_resolution_clock;
 
@@ -58,7 +56,7 @@ class profiled_coordinator : public coordinator<Policy> {
   using msec = std::chrono::milliseconds;
 
   class measurement {
-   public:
+  public:
 #   if defined(CAF_MACOS) || defined(CAF_IOS)
     static usec to_usec(const ::time_value_t& tv) {
       return std::chrono::seconds(tv.seconds) + usec(tv.microseconds);
@@ -151,21 +149,21 @@ class profiled_coordinator : public coordinator<Policy> {
                                             4u),
                        size_t mt = std::numeric_limits<size_t>::max())
       : super{nw, mt},
-        m_file{filename},
-        m_resolution{res},
-        m_system_start{std::chrono::system_clock::now()},
-        m_clock_start{clock_type::now().time_since_epoch()} {
-    if (!m_file) {
+        file_{filename},
+        resolution_{res},
+        system_start_{std::chrono::system_clock::now()},
+        clock_start_{clock_type::now().time_since_epoch()} {
+    if (! file_) {
       throw std::runtime_error{"failed to open CAF profiler file"};
     }
   }
 
   void initialize() override {
     super::initialize();
-    m_worker_states.resize(this->num_workers());
+    worker_states_.resize(this->num_workers());
     using std::setw;
-    m_file.flags(std::ios::left);
-    m_file << setw(21) << "clock"     // UNIX timestamp in microseconds
+    file_.flags(std::ios::left);
+    file_ << setw(21) << "clock"     // UNIX timestamp in microseconds
            << setw(10) << "type"      // "actor" or "worker"
            << setw(10) << "id"        // ID of the above
            << setw(15) << "time"      // duration of this sample (cumulative)
@@ -179,21 +177,21 @@ class profiled_coordinator : public coordinator<Policy> {
     CAF_LOG_TRACE("");
     super::stop();
     auto now = clock_type::now().time_since_epoch();
-    auto wallclock = m_system_start + (now - m_clock_start);
-    for (size_t i = 0; i < m_worker_states.size(); ++i) {
-      record(wallclock, "worker", i, m_worker_states[i].worker);
+    auto wallclock = system_start_ + (now - clock_start_);
+    for (size_t i = 0; i < worker_states_.size(); ++i) {
+      record(wallclock, "worker", i, worker_states_[i].worker);
     }
   }
 
   void start_measuring(size_t worker, actor_id job) {
-    auto& w = m_worker_states[worker];
+    auto& w = worker_states_[worker];
     w.current = job;
     w.job = measurement::take();
   }
 
   void stop_measuring(size_t worker, actor_id job) {
     auto m = measurement::take();
-    auto& w = m_worker_states[worker];
+    auto& w = worker_states_[worker];
     CAF_ASSERT(job == w.current);
     auto delta = m - w.job;
     // It's not possible that the wallclock timer is less than actual CPU time
@@ -206,33 +204,33 @@ class profiled_coordinator : public coordinator<Policy> {
     }
     w.worker += delta;
     report(job, delta);
-    if (m.time - w.last_flush >= m_resolution) {
+    if (m.time - w.last_flush >= resolution_) {
       w.last_flush = m.time;
-      auto wallclock = m_system_start + (m.time - m_clock_start);
-      std::lock_guard<std::mutex> file_guard{m_file_mtx};
+      auto wallclock = system_start_ + (m.time - clock_start_);
+      std::lock_guard<std::mutex> file_guard{file_mtx_};
       record(wallclock, "worker", worker, w.worker);
       w.worker = {};
     }
   }
 
   void remove_job(actor_id job) {
-    std::lock_guard<std::mutex> job_guard{m_job_mtx};
-    auto j = m_jobs.find(job);
-    if (j != m_jobs.end()) {
+    std::lock_guard<std::mutex> job_guard{job_mtx_};
+    auto j = jobs_.find(job);
+    if (j != jobs_.end()) {
       if (job != 0) {
         auto now = clock_type::now().time_since_epoch();
-        auto wallclock = m_system_start + (now - m_clock_start);
-        std::lock_guard<std::mutex> file_guard{m_file_mtx};
+        auto wallclock = system_start_ + (now - clock_start_);
+        std::lock_guard<std::mutex> file_guard{file_mtx_};
         record(wallclock, "actor", job, j->second);
       }
-      m_jobs.erase(j);
+      jobs_.erase(j);
     }
   }
 
   template <class Time, class Label>
   void record(Time t, Label label, size_t id, measurement const& m) {
     using std::setw;
-    m_file << setw(21) << t.time_since_epoch().count()
+    file_ << setw(21) << t.time_since_epoch().count()
            << setw(10) << label
            << setw(10) << id
            << m
@@ -240,29 +238,29 @@ class profiled_coordinator : public coordinator<Policy> {
   }
 
   void report(actor_id const& job, measurement const& m) {
-    std::lock_guard<std::mutex> job_guard{m_job_mtx};
-    m_jobs[job] += m;
-    if (m.time - m_last_flush >= m_resolution) {
-      m_last_flush = m.time;
+    std::lock_guard<std::mutex> job_guard{job_mtx_};
+    jobs_[job] += m;
+    if (m.time - last_flush_ >= resolution_) {
+      last_flush_ = m.time;
       auto now = clock_type::now().time_since_epoch();
-      auto wallclock = m_system_start + (now - m_clock_start);
-      std::lock_guard<std::mutex> file_guard{m_file_mtx};
-      for (auto& j : m_jobs) {
+      auto wallclock = system_start_ + (now - clock_start_);
+      std::lock_guard<std::mutex> file_guard{file_mtx_};
+      for (auto& j : jobs_) {
         record(wallclock, "actor", j.first, j.second);
         j.second = {};
       }
     }
   }
 
-  std::mutex m_job_mtx;
-  std::mutex m_file_mtx;
-  std::ofstream m_file;
-  msec m_resolution;
-  std::chrono::system_clock::time_point m_system_start;
-  clock_type::duration m_clock_start;
-  std::vector<worker_state> m_worker_states;
-  std::unordered_map<actor_id, measurement> m_jobs;
-  clock_type::duration m_last_flush;
+  std::mutex job_mtx_;
+  std::mutex file_mtx_;
+  std::ofstream file_;
+  msec resolution_;
+  std::chrono::system_clock::time_point system_start_;
+  clock_type::duration clock_start_;
+  std::vector<worker_state> worker_states_;
+  std::unordered_map<actor_id, measurement> jobs_;
+  clock_type::duration last_flush_;
 };
 
 } // namespace scheduler

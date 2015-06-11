@@ -105,7 +105,7 @@ CAF_TEST(test_typed_remote_actor) {
       {"client-port,c", "set port for client", port},
       {"server,s", "run in server mode"}
     });
-    if (!r.error.empty() || r.opts.count("help") > 0 || !r.remainder.empty()) {
+    if (! r.error.empty() || r.opts.count("help") > 0 || ! r.remainder.empty()) {
       cout << r.error << endl << endl << r.helptext << endl;
       return;
     }

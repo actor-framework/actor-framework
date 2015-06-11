@@ -71,11 +71,11 @@ int main(int argc, char** argv) {
     {"name,n", "set name", name},
     {"group,g", "join group", group_id}
   });
-  if (!res.error.empty()) {
+  if (! res.error.empty()) {
     cerr << res.error << endl;
     return 1;
   }
-  if (!res.remainder.empty()) {
+  if (! res.remainder.empty()) {
     std::cout << res.helptext << std::endl;
     return 1;
   }
@@ -85,14 +85,14 @@ int main(int argc, char** argv) {
   }
   while (name.empty()) {
     cout << "please enter your name: " << flush;
-    if (!getline(cin, name)) {
+    if (! getline(cin, name)) {
       cerr << "*** no name given... terminating" << endl;
       return 1;
     }
   }
   auto client_actor = spawn(client, name);
   // evaluate group parameters
-  if (!group_id.empty()) {
+  if (! group_id.empty()) {
     auto p = group_id.find(':');
     if (p == std::string::npos) {
       cerr << "*** error parsing argument " << group_id
@@ -148,7 +148,7 @@ int main(int argc, char** argv) {
              "  /help          print this text\n" << flush;
       },
       others >> [&] {
-        if (!i->str.empty()) {
+        if (! i->str.empty()) {
           anon_send(client_actor, broadcast_atom::value, i->str);
         }
       }

@@ -26,47 +26,41 @@
 
 namespace caf {
 
-/**
- * Base class for IO handles such as `accept_handle` or `connection_handle`.
- */
+/// Base class for IO handles such as `accept_handle` or `connection_handle`.
 template <class Subtype, int64_t InvalidId = -1>
 class handle : detail::comparable<Subtype> {
- public:
-  constexpr handle() : m_id{InvalidId} {
+public:
+  constexpr handle() : id_{InvalidId} {
     // nop
   }
 
   handle(const Subtype& other) {
-    m_id = other.id(); 
+    id_ = other.id(); 
   }
 
   handle(const handle& other) = default;
 
   Subtype& operator=(const handle& other) {
-    m_id = other.id();
+    id_ = other.id();
     return *static_cast<Subtype*>(this);
   }
 
-  /**
-   * Returns the unique identifier of this handle.
-   */
+  /// Returns the unique identifier of this handle.
   int64_t id() const {
-    return m_id; 
+    return id_; 
   }
 
-  /**
-   * Sets the unique identifier of this handle.
-   */
+  /// Sets the unique identifier of this handle.
   void set_id(int64_t value) {
-    m_id = value;
+    id_ = value;
   }
 
   int64_t compare(const Subtype& other) const {
-    return m_id - other.id();
+    return id_ - other.id();
   }
 
   bool invalid() const { 
-    return m_id == InvalidId;
+    return id_ == InvalidId;
   }
 
   void set_invalid() {
@@ -77,13 +71,13 @@ class handle : detail::comparable<Subtype> {
     return {id};
   }
 
- protected:
-  handle(int64_t handle_id) : m_id{handle_id} {
+protected:
+  handle(int64_t handle_id) : id_{handle_id} {
     // nop
   }
 
- private:
-  int64_t m_id;
+private:
+  int64_t id_;
 };
 
 } // namespace caf

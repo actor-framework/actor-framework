@@ -31,7 +31,7 @@ class scoped_actor;
 
 class actor_ostream {
 
- public:
+public:
 
   using fun_type = actor_ostream& (*)(actor_ostream&);
 
@@ -58,7 +58,7 @@ class actor_ostream {
 
   template <class T>
   inline typename std::enable_if<
-    !std::is_convertible<T, std::string>::value, actor_ostream&
+    ! std::is_convertible<T, std::string>::value, actor_ostream&
   >::type operator<<(T&& arg) {
     using std::to_string;
     return write(to_string(std::forward<T>(arg)));
@@ -68,10 +68,10 @@ class actor_ostream {
     return f(*this);
   }
 
- private:
+private:
 
-  actor m_self;
-  actor m_printer;
+  actor self_;
+  actor printer_;
 
 };
 

@@ -46,7 +46,7 @@ std::thread run_program_impl(actor rc, const char* cpath,
   return std::thread{ [cmdstr, rc] {
     string output;
     auto fp = popen(cmdstr.c_str(), "r");
-    if (!fp) {
+    if (! fp) {
       cerr << "FATAL: command line failed: " << cmdstr
            << endl;
       abort();

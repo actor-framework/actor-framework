@@ -25,22 +25,22 @@ namespace detail {
 
 class disablable_delete {
 
- public:
+public:
 
-  constexpr disablable_delete() : m_enabled(true) {}
+  constexpr disablable_delete() : enabled_(true) {}
 
-  inline void disable() { m_enabled = false; }
+  inline void disable() { enabled_ = false; }
 
-  inline void enable() { m_enabled = true; }
+  inline void enable() { enabled_ = true; }
 
   template <class T>
   inline void operator()(T* ptr) {
-    if (m_enabled) delete ptr;
+    if (enabled_) delete ptr;
   }
 
- private:
+private:
 
-  bool m_enabled;
+  bool enabled_;
 
 };
 

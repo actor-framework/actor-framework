@@ -44,11 +44,9 @@ class serializer;
 class local_actor;
 class deserializer;
 
-/**
- * A multicast group.
- */
+/// A multicast group.
 class abstract_group : public abstract_channel {
- public:
+public:
   friend class detail::group_manager;
   friend class detail::peer_connection;
   friend class local_actor;
@@ -63,16 +61,16 @@ class abstract_group : public abstract_channel {
   };
 
   class subscription_predicate {
-   public:
+  public:
     inline subscription_predicate(intrusive_ptr<abstract_group> group)
-        : m_group(std::move(group)) {
+        : group_(std::move(group)) {
       // nop
     }
     inline bool operator()(const attachable_ptr& ptr) {
-      return ptr->matches(subscription_token{m_group});
+      return ptr->matches(subscription_token{group_});
     }
-   private:
-    intrusive_ptr<abstract_group> m_group;
+  private:
+    intrusive_ptr<abstract_group> group_;
   };
 
   // needs access to unsubscribe()
@@ -80,7 +78,7 @@ class abstract_group : public abstract_channel {
 
   // unsubscribes its channel from the group on destruction
   class subscription : public attachable {
-   public:
+  public:
     subscription(const intrusive_ptr<abstract_group>& g);
 
     void actor_exited(abstract_actor* self, uint32_t reason) override;
@@ -92,43 +90,35 @@ class abstract_group : public abstract_channel {
     }
 
     const intrusive_ptr<abstract_group>& group() const {
-      return m_group;
+      return group_;
     }
 
-   private:
-    intrusive_ptr<abstract_group> m_group;
+  private:
+    intrusive_ptr<abstract_group> group_;
   };
 
-  /**
-   * Interface for user-defined multicast implementations.
-   */
+  /// Interface for user-defined multicast implementations.
   class module {
-   public:
+  public:
     module(std::string module_name);
 
     virtual ~module();
 
-    /**
-     * Stops all groups from this module.
-     */
+    /// Stops all groups from this module.
     virtual void stop() = 0;
 
-    /**
-     * Returns the name of this module implementation.
-     * @threadsafe
-     */
+    /// Returns the name of this module implementation.
+    /// @threadsafe
     const std::string& name();
 
-    /**
-     * Returns a pointer to the group associated with the name `group_name`.
-     * @threadsafe
-     */
+    /// Returns a pointer to the group associated with the name `group_name`.
+    /// @threadsafe
     virtual group get(const std::string& group_name) = 0;
 
     virtual group deserialize(deserializer* source) = 0;
 
-   private:
-    std::string m_name;
+  private:
+    std::string name_;
   };
 
   using module_ptr = module*;
@@ -136,41 +126,31 @@ class abstract_group : public abstract_channel {
 
   virtual void serialize(serializer* sink) = 0;
 
-  /**
-   * Returns a string representation of the group identifier, e.g.,
-   * "224.0.0.1" for IPv4 multicast or a user-defined string for local groups.
-   */
+  /// Returns a string representation of the group identifier, e.g.,
+  /// "224.0.0.1" for IPv4 multicast or a user-defined string for local groups.
   const std::string& identifier() const;
 
   module_ptr get_module() const;
 
-  /**
-   * Returns the name of the module.
-   */
+  /// Returns the name of the module.
   const std::string& module_name() const;
 
-  /**
-   * Subscribes `who` to this group and returns a subscription object.
-   */
+  /// Subscribes `who` to this group and returns a subscription object.
   virtual attachable_ptr subscribe(const actor_addr& who) = 0;
 
-  /**
-   * Stops any background actors or threads and IO handles.
-   */
+  /// Stops any background actors or threads and IO handles.
   virtual void stop() = 0;
 
- protected:
+protected:
   abstract_group(module_ptr module, std::string group_id);
   // called by subscription objects
   virtual void unsubscribe(const actor_addr& who) = 0;
-  module_ptr m_module;
-  std::string m_identifier;
+  module_ptr module_;
+  std::string identifier_;
 };
 
-/**
- * A smart pointer type that manages instances of {@link group}.
- * @relates group
- */
+/// A smart pointer type that manages instances of {@link group}.
+/// @relates group
 using abstract_group_ptr = intrusive_ptr<abstract_group>;
 
 } // namespace caf

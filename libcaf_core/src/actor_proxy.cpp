@@ -31,7 +31,7 @@
 
 namespace caf {
 
-actor_proxy::anchor::anchor(actor_proxy* instance) : m_ptr(instance) {
+actor_proxy::anchor::anchor(actor_proxy* instance) : ptr_(instance) {
   // nop
 }
 
@@ -40,14 +40,14 @@ actor_proxy::anchor::~anchor() {
 }
 
 bool actor_proxy::anchor::expired() const {
-  return !m_ptr.load();
+  return ! ptr_.load();
 }
 
 actor_proxy_ptr actor_proxy::anchor::get() {
   actor_proxy_ptr result;
   { // lifetime scope of guard
-    shared_lock<detail::shared_spinlock> guard{m_lock};
-    auto ptr = m_ptr.load();
+    shared_lock<detail::shared_spinlock> guard{lock_};
+    auto ptr = ptr_.load();
     if (ptr) {
       result.reset(ptr);
     }
@@ -56,10 +56,10 @@ actor_proxy_ptr actor_proxy::anchor::get() {
 }
 
 bool actor_proxy::anchor::try_expire() noexcept {
-  std::lock_guard<detail::shared_spinlock> guard{m_lock};
+  std::lock_guard<detail::shared_spinlock> guard{lock_};
   // double-check reference count
-  if (m_ptr.load()->get_reference_count() == 0) {
-    m_ptr = nullptr;
+  if (ptr_.load()->get_reference_count() == 0) {
+    ptr_ = nullptr;
     return true;
   }
   return false;
@@ -71,17 +71,17 @@ actor_proxy::~actor_proxy() {
 
 actor_proxy::actor_proxy(actor_id aid, node_id nid)
     : abstract_actor(aid, nid),
-      m_anchor(make_counted<anchor>(this)) {
+      anchor_(make_counted<anchor>(this)) {
   // nop
 }
 
 void actor_proxy::request_deletion(bool decremented_rc) noexcept {
   // make sure ref count is 0 because try_expire might leak otherwise
-  if (!decremented_rc && m_rc.fetch_sub(1, std::memory_order_acq_rel) != 1) {
+  if (! decremented_rc && rc_.fetch_sub(1, std::memory_order_acq_rel) != 1) {
     // deletion request canceled due to a weak ptr access
     return;
   }
-  if (m_anchor->try_expire()) {
+  if (anchor_->try_expire()) {
     delete this;
   }
 }

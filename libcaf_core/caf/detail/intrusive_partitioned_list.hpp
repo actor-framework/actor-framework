@@ -33,7 +33,7 @@ namespace detail {
 
 template <class T, class Delete = std::default_delete<T>>
 class intrusive_partitioned_list {
- public:
+public:
   using value_type = T;
   using pointer = value_type*;
   using deleter_type = Delete;
@@ -88,10 +88,10 @@ class intrusive_partitioned_list {
   };
 
   intrusive_partitioned_list() {
-    m_head.next = &m_separator;
-    m_separator.prev = &m_head;
-    m_separator.next = &m_tail;
-    m_tail.prev = &m_separator;
+    head_.next = &separator_;
+    separator_.prev = &head_;
+    separator_.next = &tail_;
+    tail_.prev = &separator_;
   }
 
   ~intrusive_partitioned_list() {
@@ -99,40 +99,40 @@ class intrusive_partitioned_list {
   }
 
   void clear() {
-    while (!first_empty()) {
+    while (! first_empty()) {
       erase(first_begin());
     }
-    while (!second_empty()) {
+    while (! second_empty()) {
       erase(second_begin());
     }
   }
 
   template <class F>
   void clear(F f) {
-    while (!first_empty()) {
+    while (! first_empty()) {
       f(first_front());
       erase(first_begin());
     }
-    while (!second_empty()) {
+    while (! second_empty()) {
       f(second_front());
       erase(second_begin());
     }
   }
 
   iterator first_begin() {
-    return m_head.next;
+    return head_.next;
   }
 
   iterator first_end() {
-    return &m_separator;
+    return &separator_;
   }
 
   iterator second_begin() {
-    return m_separator.next;
+    return separator_.next;
   }
 
   iterator second_end() {
-    return &m_tail;
+    return &tail_;
   }
 
   iterator insert(iterator next, pointer val) {
@@ -167,7 +167,7 @@ class intrusive_partitioned_list {
 
   iterator erase(iterator pos) {
     auto next = pos->next;
-    m_delete(take(pos));
+    delete_(take(pos));
     return next;
   }
 
@@ -261,11 +261,11 @@ class intrusive_partitioned_list {
     return r1 + count(second_begin(), second_end(), max_count - r1);
   }
 
- private:
-  value_type m_head;
-  value_type m_separator;
-  value_type m_tail;
-  deleter_type m_delete;
+private:
+  value_type head_;
+  value_type separator_;
+  value_type tail_;
+  deleter_type delete_;
 };
 
 } // namespace detail

@@ -36,12 +36,10 @@ namespace caf {
 
 class message_handler;
 
-/**
- * Describes the behavior of an actor, i.e., provides a message
- * handler and an optional timeout.
- */
+/// Describes the behavior of an actor, i.e., provides a message
+/// handler and an optional timeout.
 class behavior {
- public:
+public:
   friend class message_handler;
 
   behavior() = default;
@@ -50,96 +48,76 @@ class behavior {
   behavior& operator=(behavior&&) = default;
   behavior& operator=(const behavior&) = default;
 
-  /**
-   * Creates a behavior from `fun` without timeout.
-   */
+  /// Creates a behavior from `fun` without timeout.
   behavior(const message_handler& fun);
 
-  /**
-   * The list of arguments can contain match expressions, message handlers,
-   * and up to one timeout (if set, the timeout has to be the last argument).
-   */
+  /// The list of arguments can contain match expressions, message handlers,
+  /// and up to one timeout (if set, the timeout has to be the last argument).
   template <class T, class... Ts>
   behavior(T x, Ts... xs) {
     assign(std::move(x), std::move(xs)...);
   }
 
-  /**
-   * Creates a behavior from `tdef` without message handler.
-   */
+  /// Creates a behavior from `tdef` without message handler.
   template <class F>
-  behavior(timeout_definition<F> tdef) : m_impl(detail::make_behavior(tdef)) {
+  behavior(timeout_definition<F> tdef) : impl_(detail::make_behavior(tdef)) {
     // nop
   }
 
-  /**
-   * Assigns new handlers.
-   */
+  /// Assigns new handlers.
   template <class... Ts>
   void assign(Ts... xs) {
     static_assert(sizeof...(Ts) > 0, "assign() called without arguments");
-    m_impl = detail::make_behavior(xs...);
+    impl_ = detail::make_behavior(xs...);
   }
 
   void assign(intrusive_ptr<detail::behavior_impl> ptr) {
-    m_impl.swap(ptr);
+    impl_.swap(ptr);
   }
 
-  /**
-   * Equal to `*this = other`.
-   */
+  /// Equal to `*this = other`.
   void assign(message_handler other);
 
-  /**
-   * Equal to `*this = other`.
-   */
+  /// Equal to `*this = other`.
   void assign(behavior other);
 
-  /**
-   * Invokes the timeout callback if set.
-   */
+  /// Invokes the timeout callback if set.
   inline void handle_timeout() {
-    m_impl->handle_timeout();
+    impl_->handle_timeout();
   }
 
-  /**
-   * Returns the duration after which receive operations
-   * using this behavior should time out.
-   */
+  /// Returns the duration after which receive operations
+  /// using this behavior should time out.
   inline const duration& timeout() const {
-    return m_impl->timeout();
+    return impl_->timeout();
   }
 
-  /**
-   * Runs this handler and returns its (optional) result.
-   */
+  /// Runs this handler and returns its (optional) result.
   inline optional<message> operator()(message& arg) {
-    return (m_impl) ? m_impl->invoke(arg) : none;
+    return (impl_) ? impl_->invoke(arg) : none;
   }
 
-  /**
-   * Checks whether this behavior is not empty.
-   */
+  /// Checks whether this behavior is not empty.
   inline operator bool() const {
-    return static_cast<bool>(m_impl);
+    return static_cast<bool>(impl_);
   }
 
-  /** @cond PRIVATE */
+  /// @cond PRIVATE
 
   using impl_ptr = intrusive_ptr<detail::behavior_impl>;
 
   inline const impl_ptr& as_behavior_impl() const {
-    return m_impl;
+    return impl_;
   }
 
-  inline behavior(impl_ptr ptr) : m_impl(std::move(ptr)) {
+  inline behavior(impl_ptr ptr) : impl_(std::move(ptr)) {
     // nop
   }
 
-  /** @endcond */
+  /// @endcond
 
- private:
-  impl_ptr m_impl;
+private:
+  impl_ptr impl_;
 };
 
 } // namespace caf

@@ -31,56 +31,40 @@ namespace caf {
 class actor_namespace;
 class uniform_type_info;
 
-/**
- * @ingroup TypeSystem
- * Technology-independent serialization interface.
- */
+/// @ingroup TypeSystem
+/// Technology-independent serialization interface.
 class serializer {
- public:
+public:
   serializer(const serializer&) = delete;
   serializer& operator=(const serializer&) = delete;
 
-  /**
-   * @note `addressing` must be guaranteed to outlive the serializer
-   */
+  /// @note `addressing` must be guaranteed to outlive the serializer
   serializer(actor_namespace* addressing = nullptr);
 
   virtual ~serializer();
 
-  /**
-   * Begins serialization of an object of type `uti`.
-   */
+  /// Begins serialization of an object of type `uti`.
   virtual void begin_object(const uniform_type_info* uti) = 0;
 
-  /**
-   * Ends serialization of an object.
-   */
+  /// Ends serialization of an object.
   virtual void end_object() = 0;
 
-  /**
-   * Begins serialization of a sequence of size `num`.
-   */
+  /// Begins serialization of a sequence of size `num`.
   virtual void begin_sequence(size_t num) = 0;
 
-  /**
-   * Ends serialization of a sequence.
-   */
+  /// Ends serialization of a sequence.
   virtual void end_sequence() = 0;
 
-  /**
-   * Writes a single value to the data sink.
-   * @param value A primitive data value.
-   */
+  /// Writes a single value to the data sink.
+  /// @param value A primitive data value.
   virtual void write_value(const primitive_variant& value) = 0;
 
-  /**
-   * Writes a raw block of data.
-   * @param num_bytes The size of `data` in bytes.
-   * @param data Raw data.
-   */
+  /// Writes a raw block of data.
+  /// @param num_bytes The size of `data` in bytes.
+  /// @param data Raw data.
   virtual void write_raw(size_t num_bytes, const void* data) = 0;
 
-  inline actor_namespace* get_namespace() { return m_namespace; }
+  inline actor_namespace* get_namespace() { return namespace_; }
 
   template <class T>
   inline serializer& write(const T& val) {
@@ -94,17 +78,15 @@ class serializer {
     return *this;
   }
 
- private:
-  actor_namespace* m_namespace;
+private:
+  actor_namespace* namespace_;
 };
 
-/**
- * Serializes a value to `s`.
- * @param s A valid serializer.
- * @param what A value of an announced or primitive type.
- * @returns `s`
- * @relates serializer
- */
+/// Serializes a value to `s`.
+/// @param s A valid serializer.
+/// @param what A value of an announced or primitive type.
+/// @returns `s`
+/// @relates serializer
 template <class T>
 serializer& operator<<(serializer& s, const T& what) {
   auto mtype = uniform_typeid<T>();

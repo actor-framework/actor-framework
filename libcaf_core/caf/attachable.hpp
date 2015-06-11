@@ -31,32 +31,22 @@ namespace caf {
 
 class abstract_actor;
 
-/**
- * Callback utility class.
- */
+/// Callback utility class.
 class attachable {
- public:
+public:
   attachable() = default;
   attachable(const attachable&) = delete;
   attachable& operator=(const attachable&) = delete;
 
-  /**
-   * Represents a pointer to a value with its subtype as type ID number.
-   */
+  /// Represents a pointer to a value with its subtype as type ID number.
   struct token {
-    /**
-     * Identifies a non-matchable subtype.
-     */
+    /// Identifies a non-matchable subtype.
     static constexpr size_t anonymous = 0;
 
-    /**
-     * Identifies `abstract_group::subscription`.
-     */
+    /// Identifies `abstract_group::subscription`.
     static constexpr size_t subscription = 1;
 
-    /**
-     * Identifies `default_attachable::observe_token`.
-     */
+    /// Identifies `default_attachable::observe_token`.
     static constexpr size_t observer = 2;
 
     template <class T>
@@ -64,14 +54,10 @@ class attachable {
       // nop
     }
 
-    /**
-     * Denotes the type of ptr.
-     */
+    /// Denotes the type of ptr.
     size_t subtype;
 
-    /**
-     * Any value, used to identify attachable instances.
-     */
+    /// Any value, used to identify attachable instances.
     const void* ptr;
 
     token(size_t subtype, const void* ptr);
@@ -79,29 +65,21 @@ class attachable {
 
   virtual ~attachable();
 
-  /**
-   * Executed if the actor did not handle an exception and must
-   * not return `none` if this attachable did handle `eptr`.
-   * Note that the first handler to handle `eptr` "wins" and no other
-   * handler will be invoked.
-   * @returns The exit reason the actor should use.
-   */
+  /// Executed if the actor did not handle an exception and must
+  /// not return `none` if this attachable did handle `eptr`.
+  /// Note that the first handler to handle `eptr` "wins" and no other
+  /// handler will be invoked.
+  /// @returns The exit reason the actor should use.
   virtual optional<uint32_t> handle_exception(const std::exception_ptr& eptr);
 
-  /**
-   * Executed if the actor finished execution with given `reason`.
-   * The default implementation does nothing.
-   */
+  /// Executed if the actor finished execution with given `reason`.
+  /// The default implementation does nothing.
   virtual void actor_exited(abstract_actor* self, uint32_t reason);
 
-  /**
-   * Returns `true` if `what` selects this instance, otherwise `false`.
-   */
+  /// Returns `true` if `what` selects this instance, otherwise `false`.
   virtual bool matches(const token& what);
 
-  /**
-   * Returns `true` if `what` selects this instance, otherwise `false`.
-   */
+  /// Returns `true` if `what` selects this instance, otherwise `false`.
   template <class T>
   bool matches(const T& what) {
     return matches(token{T::token_type, &what});
@@ -110,9 +88,7 @@ class attachable {
   std::unique_ptr<attachable> next;
 };
 
-/**
- * @relates attachable
- */
+/// @relates attachable
 using attachable_ptr = std::unique_ptr<attachable>;
 
 } // namespace caf

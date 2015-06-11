@@ -31,7 +31,7 @@ constexpr char uuid_format[] = "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF";
 namespace {
 
 inline void erase_trailing_newline(std::string& str) {
-  while (!str.empty() && (*str.rbegin()) == '\n') {
+  while (! str.empty() && (*str.rbegin()) == '\n') {
     str.resize(str.size() - 1);
   }
 }
@@ -93,7 +93,7 @@ struct columns_iterator : std::iterator<std::forward_iterator_tag,
   }
   columns_iterator& operator++() {
     string line;
-    if (!std::getline(*fs, line)) {
+    if (! std::getline(*fs, line)) {
       fs = nullptr;
     } else {
       split(cols, line, is_any_of(" "), token_compress_on);

@@ -29,23 +29,17 @@ namespace caf {
 namespace io {
 namespace network {
 
-/**
- * A manager configures an IO device and provides callbacks
- * for various IO operations.
- */
+/// A manager configures an IO device and provides callbacks
+/// for various IO operations.
 class manager : public ref_counted {
- public:
+public:
   ~manager();
 
-  /**
-   * Causes the manager to stop read operations on its IO device.
-   * Unwritten bytes are still send before the socket will be closed.
-   */
+  /// Causes the manager to stop read operations on its IO device.
+  /// Unwritten bytes are still send before the socket will be closed.
   virtual void stop_reading() = 0;
 
-  /**
-   * Called by the underlying IO device to report failures.
-   */
+  /// Called by the underlying IO device to report failures.
   virtual void io_failure(operation op) = 0;
 };
 

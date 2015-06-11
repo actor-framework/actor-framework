@@ -15,7 +15,7 @@ class ChatWidget : public caf::mixin::actor_widget<QWidget> {
 
     typedef caf::mixin::actor_widget<QWidget> super;
 
- public:
+public:
 
     ChatWidget(QWidget* parent = nullptr, Qt::WindowFlags f = 0);
 
@@ -25,7 +25,7 @@ class ChatWidget : public caf::mixin::actor_widget<QWidget> {
     void joinGroup();
     void changeName();
 
- private:
+private:
 
     template<typename T>
     T* get(T*& member, const char* name) {
@@ -39,20 +39,20 @@ class ChatWidget : public caf::mixin::actor_widget<QWidget> {
     }
 
     inline QLineEdit* input() {
-        return get(m_input, "input");
+        return get(input_, "input");
     }
 
     inline QTextEdit* output() {
-        return get(m_output, "output");
+        return get(output_, "output");
     }
 
     inline void print(const QString& what) {
         output()->append(what);
     }
 
-    QLineEdit* m_input;
-    QTextEdit* m_output;
-    std::string m_name;
-    caf::group m_chatroom;
+    QLineEdit* input_;
+    QTextEdit* output_;
+    std::string name_;
+    caf::group chatroom_;
 
 };

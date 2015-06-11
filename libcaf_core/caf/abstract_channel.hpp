@@ -29,43 +29,33 @@
 
 namespace caf {
 
-/**
- * Interface for all message receivers. * This interface describes an
- * entity that can receive messages and is implemented by {@link actor}
- * and {@link group}.
- */
+/// Interface for all message receivers. * This interface describes an
+/// entity that can receive messages and is implemented by {@link actor}
+/// and {@link group}.
 class abstract_channel : public ref_counted {
- public:
+public:
   friend class abstract_actor;
   friend class abstract_group;
 
   virtual ~abstract_channel();
 
-  /**
-   * Enqueues a new message to the channel.
-   */
+  /// Enqueues a new message to the channel.
   virtual void enqueue(const actor_addr& sender, message_id mid,
                        message content, execution_unit* host) = 0;
 
-  /**
-   * Enqueues a new message wrapped in a `mailbox_element` to the channel.
-   * This variant is used by actors whenever it is possible to allocate
-   * mailbox element and message on the same memory block and is thus
-   * more efficient. Non-actors use the default implementation which simply
-   * calls the pure virtual version.
-   */
+  /// Enqueues a new message wrapped in a `mailbox_element` to the channel.
+  /// This variant is used by actors whenever it is possible to allocate
+  /// mailbox element and message on the same memory block and is thus
+  /// more efficient. Non-actors use the default implementation which simply
+  /// calls the pure virtual version.
   virtual void enqueue(mailbox_element_ptr what, execution_unit* host);
 
-  /**
-   * Returns the ID of the node this actor is running on.
-   */
+  /// Returns the ID of the node this actor is running on.
   inline node_id node() const {
-    return m_node;
+    return node_;
   }
 
-  /**
-   * Returns true if {@link node_ptr} returns
-   */
+  /// Returns true if {@link node_ptr} returns
   bool is_remote() const;
 
   static constexpr int is_abstract_actor_flag = 0x100000;
@@ -80,7 +70,7 @@ class abstract_channel : public ref_counted {
     return static_cast<bool>(flags() & is_abstract_group_flag);
   }
 
- protected:
+protected:
   // note: *both* operations use relaxed memory order, this is because
   // only the actor itself is granted write access while all access
   // from other actors or threads is always read-only; further, only
@@ -88,11 +78,11 @@ class abstract_channel : public ref_counted {
   // read by others, i.e., there is no acquire/release semantic between
   // setting and reading flags
   inline int flags() const {
-    return m_flags.load(std::memory_order_relaxed);
+    return flags_.load(std::memory_order_relaxed);
   }
 
   inline void flags(int new_value) {
-    m_flags.store(new_value, std::memory_order_relaxed);
+    flags_.store(new_value, std::memory_order_relaxed);
   }
 
 private:
@@ -105,15 +95,13 @@ private:
    * first 20 bits, i.e., the bitmask 0xFFF00000 is reserved for
    * channel-related flags.
    */
-  std::atomic<int> m_flags;
+  std::atomic<int> flags_;
   // identifies the node of this channel
-  node_id m_node;
+  node_id node_;
 };
 
-/**
- * A smart pointer to an abstract channel.
- * @relates abstract_channel_ptr
- */
+/// A smart pointer to an abstract channel.
+/// @relates abstract_channel_ptr
 using abstract_channel_ptr = intrusive_ptr<abstract_channel>;
 
 } // namespace caf

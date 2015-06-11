@@ -27,10 +27,8 @@
 
 namespace caf {
 
-/**
- * Checks whether `R` does support an input of type `{Ts...}` via a
- * static assertion (always returns 0).
- */
+/// Checks whether `R` does support an input of type `{Ts...}` via a
+/// static assertion (always returns 0).
 template <class... Sigs, class... Ts>
 void check_typed_input(const typed_actor<Sigs...>&,
                        const detail::type_list<Ts...>&) {

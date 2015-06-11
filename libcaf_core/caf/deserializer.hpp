@@ -31,51 +31,37 @@ namespace caf {
 class actor_namespace;
 class uniform_type_info;
 
-/**
- * @ingroup TypeSystem
- * Technology-independent deserialization interface.
- */
+/// @ingroup TypeSystem
+/// Technology-independent deserialization interface.
 class deserializer {
 
   deserializer(const deserializer&) = delete;
   deserializer& operator=(const deserializer&) = delete;
 
- public:
+public:
 
   deserializer(actor_namespace* ns = nullptr);
 
   virtual ~deserializer();
 
-  /**
-   * Begins deserialization of a new object.
-   */
+  /// Begins deserialization of a new object.
   virtual const uniform_type_info* begin_object() = 0;
 
-  /**
-   * Ends deserialization of an object.
-   */
+  /// Ends deserialization of an object.
   virtual void end_object() = 0;
 
-  /**
-   * Begins deserialization of a sequence.
-   * @returns The size of the sequence.
-   */
+  /// Begins deserialization of a sequence.
+  /// @returns The size of the sequence.
   virtual size_t begin_sequence() = 0;
 
-  /**
-   * Ends deserialization of a sequence.
-   */
+  /// Ends deserialization of a sequence.
   virtual void end_sequence() = 0;
 
-  /**
-   * Reads a primitive value from the data source.
-   */
+  /// Reads a primitive value from the data source.
   virtual void read_value(primitive_variant& storage) = 0;
 
-  /**
-   * Reads a value of type `T` from the data source.
-   * @note `T` must be a primitive type.
-   */
+  /// Reads a value of type `T` from the data source.
+  /// @note `T` must be a primitive type.
   template <class T>
   inline T read() {
     primitive_variant val{T()};
@@ -104,13 +90,11 @@ class deserializer {
     return *this;
   }
 
-  /**
-   * Reads a raw memory block.
-   */
+  /// Reads a raw memory block.
   virtual void read_raw(size_t num_bytes, void* storage) = 0;
 
   inline actor_namespace* get_namespace() {
-    return m_namespace;
+    return namespace_;
   }
 
   template <class Buffer>
@@ -119,8 +103,8 @@ class deserializer {
     read_raw(num_bytes, storage.data());
   }
 
- private:
-  actor_namespace* m_namespace;
+private:
+  actor_namespace* namespace_;
 };
 
 } // namespace caf

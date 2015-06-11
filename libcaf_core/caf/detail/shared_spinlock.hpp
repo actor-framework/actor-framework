@@ -26,14 +26,12 @@
 namespace caf {
 namespace detail {
 
-/**
- * A spinlock implementation providing shared and exclusive locking.
- */
+/// A spinlock implementation providing shared and exclusive locking.
 class shared_spinlock {
 
-  std::atomic<long> m_flag;
+  std::atomic<long> flag_;
 
- public:
+public:
 
   shared_spinlock();
 

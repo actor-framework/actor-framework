@@ -39,7 +39,7 @@ namespace detail {
  */
 template <class T, size_t MaxSize>
 class limited_vector {
- public:
+public:
   using value_type              = T;
   using size_type               = size_t;
   using difference_type         = ptrdiff_t;
@@ -52,16 +52,16 @@ class limited_vector {
   using reverse_iterator        = std::reverse_iterator<iterator>;
   using const_reverse_iterator  = std::reverse_iterator<const_iterator>;
 
-  limited_vector() : m_size(0) {
+  limited_vector() : size_(0) {
     // nop
   }
 
-  limited_vector(size_t initial_size) : m_size(initial_size) {
+  limited_vector(size_t initial_size) : size_(initial_size) {
     T tmp;
     std::fill_n(begin(), initial_size, tmp);
   }
 
-  limited_vector(const limited_vector& other) : m_size(other.m_size) {
+  limited_vector(const limited_vector& other) : size_(other.size_) {
     std::copy(other.begin(), other.end(), begin());
   }
 
@@ -73,10 +73,10 @@ class limited_vector {
 
   void resize(size_type s) {
     CAF_ASSERT(s <= MaxSize);
-    m_size = s;
+    size_ = s;
   }
 
-  limited_vector(std::initializer_list<T> init) : m_size(init.size()) {
+  limited_vector(std::initializer_list<T> init) : size_(init.size()) {
     CAF_ASSERT(init.size() <= MaxSize);
     std::copy(init.begin(), init.end(), begin());
   }
@@ -97,7 +97,7 @@ class limited_vector {
   }
 
   size_type size() const {
-    return m_size;
+    return size_;
   }
 
   size_type max_size() const {
@@ -109,35 +109,35 @@ class limited_vector {
   }
 
   void clear() {
-    m_size = 0;
+    size_ = 0;
   }
 
   bool empty() const {
-    return m_size == 0;
+    return size_ == 0;
   }
 
   bool full() const {
-    return m_size == MaxSize;
+    return size_ == MaxSize;
   }
 
   void push_back(const_reference what) {
-    CAF_ASSERT(!full());
-    m_data[m_size++] = what;
+    CAF_ASSERT(! full());
+    data_[size_++] = what;
   }
 
   void pop_back() {
-    CAF_ASSERT(!empty());
-    --m_size;
+    CAF_ASSERT(! empty());
+    --size_;
   }
 
   reference at(size_type pos) {
-    CAF_ASSERT(pos < m_size);
-    return m_data[pos];
+    CAF_ASSERT(pos < size_);
+    return data_[pos];
   }
 
   const_reference at(size_type pos) const {
-    CAF_ASSERT(pos < m_size);
-    return m_data[pos];
+    CAF_ASSERT(pos < size_);
+    return data_[pos];
   }
 
   reference operator[](size_type pos) {
@@ -149,11 +149,11 @@ class limited_vector {
   }
 
   iterator begin() {
-    return m_data;
+    return data_;
   }
 
   const_iterator begin() const {
-    return m_data;
+    return data_;
   }
 
   const_iterator cbegin() const {
@@ -161,11 +161,11 @@ class limited_vector {
   }
 
   iterator end() {
-    return begin() + m_size;
+    return begin() + size_;
   }
 
   const_iterator end() const {
-    return begin() + m_size;
+    return begin() + size_;
   }
 
   const_iterator cend() const {
@@ -197,31 +197,31 @@ class limited_vector {
   }
 
   reference front() {
-    CAF_ASSERT(!empty());
-    return m_data[0];
+    CAF_ASSERT(! empty());
+    return data_[0];
   }
 
   const_reference front() const {
-    CAF_ASSERT(!empty());
-    return m_data[0];
+    CAF_ASSERT(! empty());
+    return data_[0];
   }
 
   reference back() {
-    CAF_ASSERT(!empty());
-    return m_data[m_size - 1];
+    CAF_ASSERT(! empty());
+    return data_[size_ - 1];
   }
 
   const_reference back() const {
-    CAF_ASSERT(!empty());
-    return m_data[m_size - 1];
+    CAF_ASSERT(! empty());
+    return data_[size_ - 1];
   }
 
   T* data() {
-    return m_data;
+    return data_;
   }
 
   const T* data() const {
-    return m_data;
+    return data_;
   }
 
   template <class InputIterator>
@@ -245,9 +245,9 @@ class limited_vector {
     }
   }
 
- private:
-  size_t m_size;
-  T m_data[(MaxSize > 0) ? MaxSize : 1];
+private:
+  size_t size_;
+  T data_[(MaxSize > 0) ? MaxSize : 1];
 };
 
 } // namespace detail

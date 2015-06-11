@@ -31,7 +31,7 @@ bool is_wildcard(const meta_element& me) {
 bool match_element(const meta_element& me, const message& msg,
                    size_t pos, void** storage) {
   CAF_ASSERT(me.typenr != 0 || me.type != nullptr);
-  if (!msg.match_element(pos, me.typenr, me.type)) {
+  if (! msg.match_element(pos, me.typenr, me.type)) {
     return false;
   }
   *storage = const_cast<void*>(msg.at(pos));
@@ -41,7 +41,7 @@ bool match_element(const meta_element& me, const message& msg,
 bool match_atom_constant(const meta_element& me, const message& msg,
                          size_t pos, void** storage) {
   CAF_ASSERT(me.typenr == detail::type_nr<atom_value>::value);
-  if (!msg.match_element(pos, detail::type_nr<atom_value>::value, nullptr)) {
+  if (! msg.match_element(pos, detail::type_nr<atom_value>::value, nullptr)) {
     return false;
   }
   auto ptr = msg.at(pos);
@@ -59,32 +59,32 @@ bool match_atom_constant(const meta_element& me, const message& msg,
 }
 
 class set_commit_rollback {
- public:
+public:
   using pointer = void**;
   set_commit_rollback(const set_commit_rollback&) = delete;
   set_commit_rollback& operator=(const set_commit_rollback&) = delete;
   explicit set_commit_rollback(pointer ptr)
-      : m_data(ptr),
-        m_pos(0),
-        m_fallback_pos(0) {
+      : data_(ptr),
+        pos_(0),
+        fallback_pos_(0) {
     // nop
   }
   inline void inc() {
-    ++m_pos;
+    ++pos_;
   }
   inline pointer current() const {
-    return &m_data[m_pos];
+    return &data_[pos_];
   }
   inline void commit() {
-    m_fallback_pos = m_pos;
+    fallback_pos_ = pos_;
   }
   inline void rollback() {
-    m_pos = m_fallback_pos;
+    pos_ = fallback_pos_;
   }
- private:
-  pointer m_data;
-  size_t m_pos;
-  size_t m_fallback_pos;
+private:
+  pointer data_;
+  size_t pos_;
+  size_t fallback_pos_;
 };
 
 bool try_match(const message& msg, size_t msg_pos, size_t msg_size,
@@ -114,7 +114,7 @@ bool try_match(const message& msg, size_t msg_pos, size_t msg_size,
       return false; // no submatch found
     }
     // inspect current element
-    if (!pbegin->fun(*pbegin, msg, msg_pos, storage.current())) {
+    if (! pbegin->fun(*pbegin, msg, msg_pos, storage.current())) {
       // type mismatch
       return false;
     }

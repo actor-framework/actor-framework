@@ -30,27 +30,27 @@ namespace caf {
 forwarding_actor_proxy::forwarding_actor_proxy(actor_id aid, node_id nid,
                                                actor mgr)
     : actor_proxy(aid, nid),
-      m_manager(mgr) {
+      manager_(mgr) {
   CAF_ASSERT(mgr != invalid_actor);
   CAF_LOG_INFO(CAF_ARG(aid) << ", " << CAF_TARG(nid, to_string));
 }
 
 forwarding_actor_proxy::~forwarding_actor_proxy() {
-  anon_send(m_manager, make_message(delete_atom::value, node(), id()));
+  anon_send(manager_, make_message(delete_atom::value, node(), id()));
 }
 
 actor forwarding_actor_proxy::manager() const {
   actor result;
   {
-    shared_lock<detail::shared_spinlock> m_guard(m_manager_mtx);
-    result = m_manager;
+    shared_lock<detail::shared_spinlock> guard_(manager_mtx_);
+    result = manager_;
   }
   return result;
 }
 
 void forwarding_actor_proxy::manager(actor new_manager) {
-  std::unique_lock<detail::shared_spinlock> m_guard(m_manager_mtx);
-  m_manager.swap(new_manager);
+  std::unique_lock<detail::shared_spinlock> guard_(manager_mtx_);
+  manager_.swap(new_manager);
 }
 
 void forwarding_actor_proxy::forward_msg(const actor_addr& sender,
@@ -58,8 +58,8 @@ void forwarding_actor_proxy::forward_msg(const actor_addr& sender,
   CAF_LOG_TRACE(CAF_ARG(id()) << ", " << CAF_TSARG(sender) << ", "
                               << CAF_MARG(mid, integer_value) << ", "
                               << CAF_TSARG(msg));
-  shared_lock<detail::shared_spinlock> m_guard(m_manager_mtx);
-  m_manager->enqueue(invalid_actor_addr, invalid_message_id,
+  shared_lock<detail::shared_spinlock> guard_(manager_mtx_);
+  manager_->enqueue(invalid_actor_addr, invalid_message_id,
                      make_message(forward_atom::value, sender,
                                   address(), mid, std::move(msg)),
                      nullptr);

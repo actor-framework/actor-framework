@@ -30,23 +30,23 @@ namespace caf {
 
 template <class OutputList>
 class typed_continue_helper {
- public:
+public:
   using message_id_wrapper_tag = int;
 
-  typed_continue_helper(message_id mid) : m_ch(mid) {
+  typed_continue_helper(message_id mid) : ch_(mid) {
     // nop
   }
 
-  typed_continue_helper(continue_helper ch) : m_ch(std::move(ch)) {
+  typed_continue_helper(continue_helper ch) : ch_(std::move(ch)) {
     // nop
   }
 
   message_id get_message_id() const {
-    return m_ch.get_message_id();
+    return ch_.get_message_id();
   }
 
- private:
-  continue_helper m_ch;
+private:
+  continue_helper ch_;
 };
 
 } // namespace caf

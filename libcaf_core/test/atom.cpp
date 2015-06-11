@@ -61,14 +61,14 @@ CAF_TEST(basics) {
 }
 
 struct send_to_self {
-  explicit send_to_self(blocking_actor* self) : m_self(self) {
+  explicit send_to_self(blocking_actor* self) : self_(self) {
     // nop
   }
   template <class... Ts>
   void operator()(Ts&&... xs) {
-    m_self->send(m_self, std::forward<Ts>(xs)...);
+    self_->send(self_, std::forward<Ts>(xs)...);
   }
-  blocking_actor* m_self;
+  blocking_actor* self_;
 };
 
 CAF_TEST(receive_atoms) {

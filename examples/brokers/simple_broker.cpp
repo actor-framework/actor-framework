@@ -191,7 +191,7 @@ int main(int argc, char** argv) {
     {"port,p", "set port", port},
     {"host,H", "set host (client mode only"}
   });
-  if (!res.error.empty()) {
+  if (! res.error.empty()) {
     cerr << res.error << endl;
     return 1;
   }
@@ -199,7 +199,7 @@ int main(int argc, char** argv) {
     cout << res.helptext << endl;
     return 0;
   }
-  if (!res.remainder.empty()) {
+  if (! res.remainder.empty()) {
     // not all CLI arguments could be consumed
     cerr << "*** too many arguments" << endl << res.helptext << endl;
     return 1;

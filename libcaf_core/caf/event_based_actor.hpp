@@ -34,17 +34,13 @@
 
 namespace caf {
 
-/**
- * A cooperatively scheduled, event-based actor implementation. This is the
- * recommended base class for user-defined actors and is used implicitly when
- * spawning functor-based actors without the `blocking_api` flag.
- * @extends local_actor
- */
+/// A cooperatively scheduled, event-based actor implementation. This is the
+/// recommended base class for user-defined actors and is used implicitly when
+/// spawning functor-based actors without the `blocking_api` flag.
+/// @extends local_actor
 class event_based_actor : public abstract_event_based_actor<behavior, true> {
- public:
-  /**
-   * Forwards the last received message to `whom`.
-   */
+public:
+  /// Forwards the last received message to `whom`.
   void forward_to(const actor& whom,
                   message_priority = message_priority::normal);
 
@@ -56,21 +52,17 @@ class event_based_actor : public abstract_event_based_actor<behavior, true> {
 
   void initialize() override;
 
- protected:
-  /**
-   * Returns the initial actor behavior.
-   */
+protected:
+  /// Returns the initial actor behavior.
   virtual behavior make_behavior() = 0;
 };
 
-/**
- * Implicitly used whenever spawning a cooperatively scheduled actor
- * using a function of function object.
- * @extends event_based_actor
- */
+/// Implicitly used whenever spawning a cooperatively scheduled actor
+/// using a function of function object.
+/// @extends event_based_actor
 class event_based_actor::functor_based : public extend<event_based_actor>::
                                                 with<mixin::functor_based> {
- public:
+public:
   template <class... Ts>
   functor_based(Ts&&... xs) : combined_type(std::forward<Ts>(xs)...) {
     // nop

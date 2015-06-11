@@ -25,11 +25,11 @@ ref_counted::~ref_counted() {
   // nop
 }
 
-ref_counted::ref_counted() : m_rc(1) {
+ref_counted::ref_counted() : rc_(1) {
   // nop
 }
 
-ref_counted::ref_counted(const ref_counted&) : m_rc(1) {
+ref_counted::ref_counted(const ref_counted&) : rc_(1) {
   // nop; don't copy reference count
 }
 
@@ -43,7 +43,7 @@ void ref_counted::deref() noexcept {
     request_deletion(false);
     return;
   }
-  if (m_rc.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+  if (rc_.fetch_sub(1, std::memory_order_acq_rel) == 1) {
     request_deletion(true);
   }
 }

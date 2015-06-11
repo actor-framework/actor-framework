@@ -35,65 +35,51 @@
 namespace caf {
 namespace detail {
 
-/**
- * Denotes in which state queue and reader are after an enqueue.
- */
+/// Denotes in which state queue and reader are after an enqueue.
 enum class enqueue_result {
-  /**
-   * Indicates that the enqueue operation succeeded and
-   * the reader is ready to receive the data.
-   */
+  /// Indicates that the enqueue operation succeeded and
+  /// the reader is ready to receive the data.
   success,
 
-  /**
-   * Indicates that the enqueue operation succeeded and
-   * the reader is currently blocked, i.e., needs to be re-scheduled.
-   */
+  /// Indicates that the enqueue operation succeeded and
+  /// the reader is currently blocked, i.e., needs to be re-scheduled.
   unblocked_reader,
 
-  /**
-   * Indicates that the enqueue operation failed because the
-   * queue has been closed by the reader.
-   */
+  /// Indicates that the enqueue operation failed because the
+  /// queue has been closed by the reader.
   queue_closed
 };
 
-/**
- * An intrusive, thread-safe queue implementation.
- */
+/// An intrusive, thread-safe queue implementation.
 template <class T, class Delete = std::default_delete<T>>
 class single_reader_queue {
- public:
+public:
   using value_type = T;
   using pointer = value_type*;
   using deleter_type = Delete;
   using unique_pointer = std::unique_ptr<value_type, deleter_type>;
   using cache_type = intrusive_partitioned_list<value_type, deleter_type>;
 
-  /**
-   * Tries to dequeue a new element from the mailbox.
-   * @warning Call only from the reader (owner).
-   */
+  /// Tries to dequeue a new element from the mailbox.
+  /// @warning Call only from the reader (owner).
   pointer try_pop() {
     return take_head();
   }
 
-  /**
-   * Tries to enqueue a new element to the mailbox.
-   * @warning Call only from the reader (owner).
-   */
+  /// Tries to enqueue a new element to the mailbox.
+  /// @warning Call only from the reader (owner).
   enqueue_result enqueue(pointer new_element) {
     CAF_ASSERT(new_element != nullptr);
-    pointer e = m_stack.load();
+    pointer e = stack_.load();
     for (;;) {
-      if (!e) {
+      if (! e) {
         // if tail is nullptr, the queue has been closed
-        m_delete(new_element);
+        delete_(new_element);
         return enqueue_result::queue_closed;
       }
       // a dummy is never part of a non-empty list
       new_element->next = is_dummy(e) ? nullptr : e;
-      if (m_stack.compare_exchange_strong(e, new_element)) {
+      if (stack_.compare_exchange_strong(e, new_element)) {
         return  (e == reader_blocked_dummy()) ? enqueue_result::unblocked_reader
                                               : enqueue_result::success;
       }
@@ -101,103 +87,87 @@ class single_reader_queue {
     }
   }
 
-  /**
-   * Queries whether there is new data to read, i.e., whether the next
-   * call to {@link try_pop} would succeeed.
-   * @pre !closed()
-   */
+  /// Queries whether there is new data to read, i.e., whether the next
+  /// call to {@link try_pop} would succeeed.
+  /// @pre !closed()
   bool can_fetch_more() {
-    if (m_head != nullptr) {
+    if (head_ != nullptr) {
       return true;
     }
-    auto ptr = m_stack.load();
+    auto ptr = stack_.load();
     CAF_ASSERT(ptr != nullptr);
-    return !is_dummy(ptr);
+    return ! is_dummy(ptr);
   }
 
-  /**
-   * Queries whether this queue is empty.
-   * @warning Call only from the reader (owner).
-   */
+  /// Queries whether this queue is empty.
+  /// @warning Call only from the reader (owner).
   bool empty() {
-    CAF_ASSERT(!closed());
-    return m_cache.empty() && m_head == nullptr && is_dummy(m_stack.load());
+    CAF_ASSERT(! closed());
+    return cache_.empty() && head_ == nullptr && is_dummy(stack_.load());
   }
 
-  /**
-   * Queries whether this has been closed.
-   */
+  /// Queries whether this has been closed.
   bool closed() {
-    return m_stack.load() == nullptr;
+    return stack_.load() == nullptr;
   }
 
-  /**
-   * Queries whether this has been marked as blocked, i.e.,
-   * the owner of the list is waiting for new data.
-   */
+  /// Queries whether this has been marked as blocked, i.e.,
+  /// the owner of the list is waiting for new data.
   bool blocked() {
-    return m_stack.load() == reader_blocked_dummy();
+    return stack_.load() == reader_blocked_dummy();
   }
 
-  /**
-   * Tries to set this queue from state `empty` to state `blocked`.
-   */
+  /// Tries to set this queue from state `empty` to state `blocked`.
   bool try_block() {
     auto e = stack_empty_dummy();
-    bool res = m_stack.compare_exchange_strong(e, reader_blocked_dummy());
+    bool res = stack_.compare_exchange_strong(e, reader_blocked_dummy());
     CAF_ASSERT(e != nullptr);
     // return true in case queue was already blocked
     return res || e == reader_blocked_dummy();
   }
 
-  /**
-   * Tries to set this queue from state `blocked` to state `empty`.
-   */
+  /// Tries to set this queue from state `blocked` to state `empty`.
   bool try_unblock() {
     auto e = reader_blocked_dummy();
-    return m_stack.compare_exchange_strong(e, stack_empty_dummy());
+    return stack_.compare_exchange_strong(e, stack_empty_dummy());
   }
 
-  /**
-   * Closes this queue and deletes all remaining elements.
-   * @warning Call only from the reader (owner).
-   */
+  /// Closes this queue and deletes all remaining elements.
+  /// @warning Call only from the reader (owner).
   void close() {
     auto nop = [](const T&) { };
     close(nop);
   }
 
-  /**
-   * Closes this queue and applies f to all remaining
-   *        elements before deleting them.
-   * @warning Call only from the reader (owner).
-   */
+  /// Closes this queue and applies f to all remaining
+  ///        elements before deleting them.
+  /// @warning Call only from the reader (owner).
   template <class F>
   void close(const F& f) {
     clear_cached_elements(f);
     if (fetch_new_data(nullptr)) {
       clear_cached_elements(f);
     }
-    m_cache.clear(std::move(f));
+    cache_.clear(std::move(f));
   }
 
-  single_reader_queue() : m_head(nullptr) {
-    m_stack = stack_empty_dummy();
+  single_reader_queue() : head_(nullptr) {
+    stack_ = stack_empty_dummy();
   }
 
   ~single_reader_queue() {
-    if (!closed()) {
+    if (! closed()) {
       close();
     }
   }
 
   size_t count(size_t max_count = std::numeric_limits<size_t>::max()) {
-    size_t res = m_cache.count(max_count);
+    size_t res = cache_.count(max_count);
     if (res >= max_count) {
       return res;
     }
     fetch_new_data();
-    auto ptr = m_head;
+    auto ptr = head_;
     while (ptr && res < max_count) {
       ptr = ptr->next;
       ++res;
@@ -211,7 +181,7 @@ class single_reader_queue {
   //       sort messages that were not processed yet, while the second
   //       partition is meant to store skipped messages
   cache_type& cache() {
-    return m_cache;
+    return cache_;
   }
 
   /**************************************************************************
@@ -239,8 +209,8 @@ class single_reader_queue {
 
   template <class Mutex, class CondVar>
   void synchronized_await(Mutex& mtx, CondVar& cv) {
-    CAF_ASSERT(!closed());
-    if (!can_fetch_more() && try_block()) {
+    CAF_ASSERT(! closed());
+    if (! can_fetch_more() && try_block()) {
       std::unique_lock<Mutex> guard(mtx);
       while (blocked()) {
         cv.wait(guard);
@@ -250,33 +220,33 @@ class single_reader_queue {
 
   template <class Mutex, class CondVar, class TimePoint>
   bool synchronized_await(Mutex& mtx, CondVar& cv, const TimePoint& timeout) {
-    CAF_ASSERT(!closed());
-    if (!can_fetch_more() && try_block()) {
+    CAF_ASSERT(! closed());
+    if (! can_fetch_more() && try_block()) {
       std::unique_lock<Mutex> guard(mtx);
       while (blocked()) {
         if (cv.wait_until(guard, timeout) == std::cv_status::timeout) {
           // if we're unable to set the queue from blocked to empty,
           // than there's a new element in the list
-          return !try_unblock();
+          return ! try_unblock();
         }
       }
     }
     return true;
   }
 
- private:
+private:
   // exposed to "outside" access
-  std::atomic<pointer> m_stack;
+  std::atomic<pointer> stack_;
 
   // accessed only by the owner
-  pointer m_head;
-  deleter_type m_delete;
-  intrusive_partitioned_list<value_type, deleter_type> m_cache;
+  pointer head_;
+  deleter_type delete_;
+  intrusive_partitioned_list<value_type, deleter_type> cache_;
 
-  // atomically sets m_stack back and enqueues all elements to the cache
+  // atomically sets stack_ back and enqueues all elements to the cache
   bool fetch_new_data(pointer end_ptr) {
     CAF_ASSERT(end_ptr == nullptr || end_ptr == stack_empty_dummy());
-    pointer e = m_stack.load();
+    pointer e = stack_.load();
     // must not be called on a closed queue
     CAF_ASSERT(e != nullptr);
     // fetching data while blocked is an error
@@ -285,7 +255,7 @@ class single_reader_queue {
     // to close the queue and only the owner is allowed to call this
     // member function
     while (e != end_ptr) {
-      if (m_stack.compare_exchange_weak(e, end_ptr)) {
+      if (stack_.compare_exchange_weak(e, end_ptr)) {
         // fetching data while blocked is an error
         CAF_ASSERT(e != reader_blocked_dummy());
         if (is_dummy(e)) {
@@ -294,10 +264,10 @@ class single_reader_queue {
           return false;
         }
         while (e) {
-          CAF_ASSERT(!is_dummy(e));
+          CAF_ASSERT(! is_dummy(e));
           auto next = e->next;
-          e->next = m_head;
-          m_head = e;
+          e->next = head_;
+          head_ = e;
           e = next;
         }
         return true;
@@ -312,9 +282,9 @@ class single_reader_queue {
   }
 
   pointer take_head() {
-    if (m_head != nullptr || fetch_new_data()) {
-      auto result = m_head;
-      m_head = m_head->next;
+    if (head_ != nullptr || fetch_new_data()) {
+      auto result = head_;
+      head_ = head_->next;
       return result;
     }
     return nullptr;
@@ -322,11 +292,11 @@ class single_reader_queue {
 
   template <class F>
   void clear_cached_elements(const F& f) {
-    while (m_head) {
-      auto next = m_head->next;
-      f(*m_head);
-      m_delete(m_head);
-      m_head = next;
+    while (head_) {
+      auto next = head_->next;
+      f(*head_);
+      delete_(head_);
+      head_ = next;
     }
   }
 

@@ -39,15 +39,11 @@ struct invalid_actor_addr_t {
 
 };
 
-/**
- * Identifies an invalid {@link actor_addr}.
- * @relates actor_addr
- */
+/// Identifies an invalid {@link actor_addr}.
+/// @relates actor_addr
 constexpr invalid_actor_addr_t invalid_actor_addr = invalid_actor_addr_t{};
 
-/**
- * Stores the address of typed as well as untyped actors.
- */
+/// Stores the address of typed as well as untyped actors.
 class actor_addr : detail::comparable<actor_addr>,
            detail::comparable<actor_addr, abstract_actor*>,
            detail::comparable<actor_addr, abstract_actor_ptr> {
@@ -58,7 +54,7 @@ class actor_addr : detail::comparable<actor_addr>,
   template <class T, typename U>
   friend T actor_cast(const U&);
 
- public:
+public:
 
   actor_addr() = default;
 
@@ -74,9 +70,9 @@ class actor_addr : detail::comparable<actor_addr>,
 
   actor_addr operator=(const invalid_actor_addr_t&);
 
-  inline explicit operator bool() const { return static_cast<bool>(m_ptr); }
+  inline explicit operator bool() const { return static_cast<bool>(ptr_); }
 
-  inline bool operator!() const { return !m_ptr; }
+  inline bool operator!() const { return ! ptr_; }
 
   intptr_t compare(const actor_addr& other) const;
 
@@ -90,24 +86,20 @@ class actor_addr : detail::comparable<actor_addr>,
 
   node_id node() const;
 
-  /**
-   * Returns whether this is an address of a remote actor.
-   */
+  /// Returns whether this is an address of a remote actor.
   bool is_remote() const;
 
-  /**
-   * Returns the set of accepted messages types as strings or
-   * an empty set if this actor is untyped.
-   */
+  /// Returns the set of accepted messages types as strings or
+  /// an empty set if this actor is untyped.
   std::set<std::string> message_types() const;
 
- private:
+private:
 
-  inline abstract_actor* get() const { return m_ptr.get(); }
+  inline abstract_actor* get() const { return ptr_.get(); }
 
   explicit actor_addr(abstract_actor*);
 
-  abstract_actor_ptr m_ptr;
+  abstract_actor_ptr ptr_;
 
 };
 

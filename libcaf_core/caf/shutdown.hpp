@@ -24,11 +24,9 @@ namespace caf {
 
 // note: implemented in singletons.cpp
 
-/**
- * Destroys all singletons and stops the scheduler.
- * It is recommended to use this function as very last
- * function call before leaving main().
- */
+/// Destroys all singletons and stops the scheduler.
+/// It is recommended to use this function as very last
+/// function call before leaving main().
 void shutdown();
 
 } // namespace caf

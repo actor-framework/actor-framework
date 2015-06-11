@@ -58,7 +58,7 @@ struct variant_move_helper {
 template <class T, class U,
           bool Enable = std::is_integral<T>::value
                         && std::is_integral<U>::value
-                        && !std::is_same<T, bool>::value>
+                        && ! std::is_same<T, bool>::value>
 struct is_equal_int_type {
   static constexpr bool value = sizeof(T) == sizeof(U)
                                 && std::is_signed<T>::value
@@ -68,12 +68,10 @@ struct is_equal_int_type {
 template <class T, typename U>
 struct is_equal_int_type<T, U, false> : std::false_type { };
 
-/**
- * Compares `T` to `U` und evaluates to `true_type` if either
- * `T == U or if T and U are both integral types of the
- * same size and signedness. This works around the issue that
- * `uint8_t != unsigned char on some compilers.
- */
+/// Compares `T` to `U` und evaluates to `true_type` if either
+/// `T == U or if T and U are both integral types of the
+/// same size and signedness. This works around the issue that
+/// `uint8_t != unsigned char on some compilers.
 template <class T, typename U>
 struct is_same_ish
     : std::conditional<
@@ -82,17 +80,15 @@ struct is_same_ish
         is_equal_int_type<T, U>
       >::type { };
 
-/**
- * A variant represents always a valid value of one of the types `Ts...`.
- */
+/// A variant represents always a valid value of one of the types `Ts...`.
 template <class... Ts>
 class variant {
- public:
+public:
   using types = detail::type_list<Ts...>;
 
   static constexpr int max_type_id = sizeof...(Ts) - 1;
 
-  static_assert(!detail::tl_exists<types, std::is_reference>::value,
+  static_assert(! detail::tl_exists<types, std::is_reference>::value,
                 "Cannot create a variant of references");
 
   variant& operator=(const variant& other) {
@@ -107,13 +103,13 @@ class variant {
     return *this;
   }
 
-  variant() : m_type(0) {
+  variant() : type_(0) {
     // never empty
     set(typename detail::tl_head<types>::type());
   }
 
   template <class U>
-  variant(U&& arg) : m_type(-1) {
+  variant(U&& arg) : type_(-1) {
     set(std::forward<U>(arg));
   }
 
@@ -123,12 +119,12 @@ class variant {
     return *this;
   }
 
-  variant(const variant& other) : m_type(-1) {
+  variant(const variant& other) : type_(-1) {
     variant_assign_helper<variant> helper{*this};
     other.apply(helper);
   }
 
-  variant(variant&& other) : m_type(-1) {
+  variant(variant&& other) : type_(-1) {
     variant_move_helper<variant> helper{*this};
     other.apply(helper);
   }
@@ -137,22 +133,22 @@ class variant {
     destroy_data();
   }
 
-  /** @cond PRIVATE */
+  /// @cond PRIVATE
   template <int Pos>
   bool is(std::integral_constant<int, Pos>) const {
-    return m_type == Pos;
+    return type_ == Pos;
   }
 
   template <int Pos>
   const typename detail::tl_at<types, Pos>::type&
   get(std::integral_constant<int, Pos> token) const {
-    return m_data.get(token);
+    return data_.get(token);
   }
 
   template <int Pos>
   typename detail::tl_at<types, Pos>::type&
   get(std::integral_constant<int, Pos> token) {
-    return m_data.get(token);
+    return data_.get(token);
   }
 
   template <class Visitor>
@@ -164,12 +160,12 @@ class variant {
   typename Visitor::result_type apply(Visitor& visitor) {
     return apply_impl(*this, visitor);
   }
-  /** @endcond */
+  /// @endcond
 
- private:
+private:
   template <class Self, typename Visitor>
   static typename Visitor::result_type  apply_impl(Self& from, Visitor& visitor) {
-    switch (from.m_type) {
+    switch (from.type_) {
       default: throw std::runtime_error("invalid type found");
       CAF_VARIANT_CASE(0);
       CAF_VARIANT_CASE(1);
@@ -196,7 +192,7 @@ class variant {
   }
 
   inline void destroy_data() {
-    if (m_type == -1) return; // nothing to do
+    if (type_ == -1) return; // nothing to do
     detail::variant_data_destructor f;
     apply(f);
   }
@@ -212,13 +208,13 @@ class variant {
                      >::value;
     static_assert(type_id >= 0, "invalid type for variant");
     std::integral_constant<int, type_id> token;
-    if (m_type != type_id) {
+    if (type_ != type_id) {
       destroy_data();
-      m_type = type_id;
-      auto& ref = m_data.get(token);
+      type_ = type_id;
+      auto& ref = data_.get(token);
       new (&ref) type (std::forward<U>(arg));
     } else {
-       m_data.get(token) = std::forward<U>(arg);
+       data_.get(token) = std::forward<U>(arg);
     }
   }
 
@@ -244,13 +240,11 @@ class variant {
     other.apply(helper);
   }
 
-  int m_type;
-  detail::variant_data<typename lift_void<Ts>::type...> m_data;
+  int type_;
+  detail::variant_data<typename lift_void<Ts>::type...> data_;
 };
 
-/**
- * @relates variant
- */
+/// @relates variant
 template <class T, class... Us>
 T& get(variant<Us...>& value) {
   using namespace detail;
@@ -264,18 +258,14 @@ T& get(variant<Us...>& value) {
   return reinterpret_cast<T&>(value.get(token));
 }
 
-/**
- * @relates variant
- */
+/// @relates variant
 template <class T, class... Us>
 const T& get(const variant<Us...>& value) {
   // compiler implicitly restores const because of the return type
   return get<T>(const_cast<variant<Us...>&>(value));
 }
 
-/**
- * @relates variant
- */
+/// @relates variant
 template <class T, class... Us>
 T* get(variant<Us...>* value) {
   using namespace detail;
@@ -290,27 +280,21 @@ T* get(variant<Us...>* value) {
   return nullptr;
 }
 
-/**
- * @relates variant
- */
+/// @relates variant
 template <class T, class... Us>
 const T* get(const variant<Us...>* value) {
   // compiler implicitly restores const because of the return type
   return get<T>(const_cast<variant<Us...>*>(value));
 }
 
-/**
- * @relates variant
- */
+/// @relates variant
 template <class Visitor, class... Ts>
 typename Visitor::result_type apply_visitor(Visitor& visitor,
                       const variant<Ts...>& data) {
   return data.apply(visitor);
 }
 
-/**
- * @relates variant
- */
+/// @relates variant
 template <class Visitor, class... Ts>
 typename Visitor::result_type apply_visitor(Visitor& visitor,
                       variant<Ts...>& data) {

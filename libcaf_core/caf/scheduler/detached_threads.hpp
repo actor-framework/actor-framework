@@ -26,19 +26,13 @@
 namespace caf {
 namespace scheduler {
 
-/**
- * Increases count for detached threads by one.
- */
+/// Increases count for detached threads by one.
 void inc_detached_threads();
 
-/**
- * Decreases count for detached threads by one.
- */
+/// Decreases count for detached threads by one.
 void dec_detached_threads();
 
-/**
- * Blocks the caller until all detached threads are done.
- */
+/// Blocks the caller until all detached threads are done.
 void await_detached_threads();
 
 } // namespace scheduler

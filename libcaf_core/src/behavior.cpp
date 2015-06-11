@@ -24,16 +24,16 @@
 
 namespace caf {
 
-behavior::behavior(const message_handler& mh) : m_impl(mh.as_behavior_impl()) {
+behavior::behavior(const message_handler& mh) : impl_(mh.as_behavior_impl()) {
   // nop
 }
 
 void behavior::assign(message_handler other) {
-  m_impl.swap(other.m_impl);
+  impl_.swap(other.impl_);
 }
 
 void behavior::assign(behavior other) {
-  m_impl.swap(other.m_impl);
+  impl_.swap(other.impl_);
 }
 
 } // namespace caf

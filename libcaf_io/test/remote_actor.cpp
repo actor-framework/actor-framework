@@ -61,7 +61,7 @@ size_t s_pongs = 0;
 behavior ping_behavior(local_actor* self, size_t ping_msgs) {
   return {
     [=](pong_atom, int value) -> message {
-      if (!self->current_sender()) {
+      if (! self->current_sender()) {
         CAF_TEST_ERROR("current_sender() invalid!");
       }
       CAF_TEST_INFO("received {'pong', " << value << "}");
@@ -187,7 +187,7 @@ void spawn5_server_impl(event_based_actor* self, actor client, group grp) {
 
 // receive seven reply messages (2 local, 5 remote)
 void spawn5_server(event_based_actor* self, actor client, bool inverted) {
-  if (!inverted) {
+  if (! inverted) {
     spawn5_server_impl(self, client, group::get("local", "foobar"));
   } else {
     CAF_MESSAGE("request group");
@@ -235,8 +235,8 @@ void await_down(event_based_actor* self, actor ptr, F continuation) {
 }
 
 class client : public event_based_actor {
- public:
-  explicit client(actor server) : m_server(std::move(server)) {
+public:
+  explicit client(actor server) : server_(std::move(server)) {
     // nop
   }
 
@@ -252,10 +252,10 @@ class client : public event_based_actor {
     ++s_destructors_called;
   }
 
- private:
+private:
   behavior spawn_ping() {
     CAF_MESSAGE("send {'SpawnPing'}");
-    send(m_server, spawn_ping_atom::value);
+    send(server_, spawn_ping_atom::value);
     return {
       [=](ping_ptr_atom, const actor& ping) {
         CAF_MESSAGE("received ping pointer, spawn pong");
@@ -267,7 +267,7 @@ class client : public event_based_actor {
 
   void send_sync_msg() {
     CAF_MESSAGE("sync send {'SyncMsg', 4.2fSyncMsg}");
-    sync_send(m_server, sync_msg_atom::value, 4.2f).then(
+    sync_send(server_, sync_msg_atom::value, 4.2f).then(
       [=](ok_atom) {
         send_foobars();
       }
@@ -281,7 +281,7 @@ class client : public event_based_actor {
     if (i == 100)
       test_group_comm();
     else {
-      sync_send(m_server, foo_atom::value, bar_atom::value, i).then(
+      sync_send(server_, foo_atom::value, bar_atom::value, i).then(
         [=](foo_atom, bar_atom, int res) {
           CAF_CHECK_EQUAL(res, i);
           send_foobars(i + 1);
@@ -292,7 +292,7 @@ class client : public event_based_actor {
 
   void test_group_comm() {
     CAF_MESSAGE("test group communication via network");
-    sync_send(m_server, gclient_atom::value).then(
+    sync_send(server_, gclient_atom::value).then(
       [=](gclient_atom, actor gclient) {
         CAF_MESSAGE("received " << to_string(current_message()));
         auto s5a = spawn<monitored>(spawn5_server, gclient, false);
@@ -318,19 +318,19 @@ class client : public event_based_actor {
     );
   }
 
-  actor m_server;
+  actor server_;
 };
 
 class server : public event_based_actor {
- public:
+public:
   behavior make_behavior() override {
-    if (m_run_in_loop) {
+    if (run_in_loop_) {
       trap_exit(true);
     }
     return await_spawn_ping();
   }
 
-  explicit server(bool run_in_loop = false) : m_run_in_loop(run_in_loop) {
+  explicit server(bool run_in_loop = false) : run_in_loop_(run_in_loop) {
     // nop
   }
 
@@ -342,14 +342,14 @@ class server : public event_based_actor {
     ++s_destructors_called;
   }
 
- private:
+private:
   behavior await_spawn_ping() {
     CAF_MESSAGE("await {'SpawnPing'}");
     return {
       [=](spawn_ping_atom) -> message {
         CAF_MESSAGE("received {'SpawnPing'}");
         auto client = current_sender();
-        if (!client) {
+        if (! client) {
           CAF_MESSAGE("last_sender() invalid!");
         }
         CAF_MESSAGE("spawn event-based ping actor");
@@ -425,7 +425,7 @@ class server : public event_based_actor {
       [=](gclient_atom, actor gclient) {
         await_down(this, spawn<monitored>(spawn5_server, gclient, true), [=] {
           CAF_MESSAGE("`await_down` finished");
-          if (!m_run_in_loop) {
+          if (! run_in_loop_) {
             quit();
           } else {
             become(await_spawn_ping());
@@ -435,12 +435,12 @@ class server : public event_based_actor {
     );
   }
 
-  bool m_run_in_loop;
+  bool run_in_loop_;
 };
 
 void test_remote_actor(const char* app_path, bool run_remote_actor) {
   scoped_actor self;
-  auto serv = self->spawn<server, monitored>(!run_remote_actor);
+  auto serv = self->spawn<server, monitored>(! run_remote_actor);
   // publish on two distinct ports and use the latter one afterwards
   auto port1 = io::publish(serv, 0, "127.0.0.1");
   CAF_CHECK(port1 > 0);
@@ -454,7 +454,7 @@ void test_remote_actor(const char* app_path, bool run_remote_actor) {
   // check whether accessing local actors via io::remote_actors works correctly,
   // i.e., does not return a proxy instance
   auto serv2 = io::remote_actor("127.0.0.1", port2);
-  CAF_CHECK(serv2 != invalid_actor && !serv2->is_remote());
+  CAF_CHECK(serv2 != invalid_actor && ! serv2->is_remote());
   CAF_CHECK(serv == serv2);
   thread child;
   if (run_remote_actor) {
@@ -499,7 +499,7 @@ CAF_TEST(test_remote_actor) {
       {"client-port,c", "add client port (two needed)", ports},
       {"group-port,g", "set group port", gport}
     });
-    if (!r.error.empty() || r.opts.count("help") > 0 || !r.remainder.empty()) {
+    if (! r.error.empty() || r.opts.count("help") > 0 || ! r.remainder.empty()) {
       cout << r.error << endl << endl << r.helptext << endl;
       return;
     }

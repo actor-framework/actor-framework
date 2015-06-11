@@ -34,18 +34,14 @@
 namespace caf {
 namespace io {
 
-/**
- * Spawns a new functor-based broker.
- */
+/// Spawns a new functor-based broker.
 template <spawn_options Os = no_spawn_options,
      typename F = std::function<void(broker*)>, class... Ts>
 actor spawn_io(F fun, Ts&&... xs) {
   return spawn<broker::functor_based>(std::move(fun), std::forward<Ts>(xs)...);
 }
 
-/**
- * Spawns a new functor-based broker connecting to `host:port.
- */
+/// Spawns a new functor-based broker connecting to `host:port.
 template <spawn_options Os = no_spawn_options,
       typename F = std::function<void(broker*)>, class... Ts>
 actor spawn_io_client(F fun, const std::string& host,
@@ -71,9 +67,7 @@ actor spawn_io_client(F fun, const std::string& host,
         });
 }
 
-/**
- * Spawns a new broker as server running on given `port`.
- */
+/// Spawns a new broker as server running on given `port`.
 template <spawn_options Os = no_spawn_options,
           class F = std::function<void(broker*)>, class... Ts>
 actor spawn_io_server(F fun, uint16_t port, Ts&&... xs) {

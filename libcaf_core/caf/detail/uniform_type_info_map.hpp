@@ -61,7 +61,7 @@ class uniform_type_info_map {
   friend class uniform_type_info_map_helper;
   friend class singleton_mixin<uniform_type_info_map>;
 
- public:
+public:
 
   using pointer = const uniform_type_info*;
 

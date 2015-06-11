@@ -12,24 +12,24 @@ using namespace caf;
 // a simple class using getter and setter member functions
 class foo {
 
-  int m_a;
-  int m_b;
+  int a_;
+  int b_;
 
- public:
+public:
 
-  foo(int a0 = 0, int b0 = 0) : m_a(a0), m_b(b0) { }
+  foo(int a0 = 0, int b0 = 0) : a_(a0), b_(b0) { }
 
   foo(const foo&) = default;
 
   foo& operator=(const foo&) = default;
 
-  int a() const { return m_a; }
+  int a() const { return a_; }
 
-  void set_a(int val) { m_a = val; }
+  void set_a(int val) { a_ = val; }
 
-  int b() const { return m_b; }
+  int b() const { return b_; }
 
-  void set_b(int val) { m_b = val; }
+  void set_b(int val) { b_ = val; }
 
 };
 

@@ -44,151 +44,107 @@
 
 namespace caf {
 
-/**
- * A unique actor ID.
- * @relates abstract_actor
- */
+/// A unique actor ID.
+/// @relates abstract_actor
 using actor_id = uint32_t;
 
-/**
- * Denotes an ID that is never used by an actor.
- */
+/// Denotes an ID that is never used by an actor.
 constexpr actor_id invalid_actor_id = 0;
 
 using abstract_actor_ptr = intrusive_ptr<abstract_actor>;
 
-/**
- * Base class for all actor implementations.
- */
+/// Base class for all actor implementations.
 class abstract_actor : public abstract_channel {
- public:
-  /**
-   * Attaches `ptr` to this actor. The actor will call `ptr->detach(...)` on
-   * exit, or immediately if it already finished execution.
-   */
+public:
+  /// Attaches `ptr` to this actor. The actor will call `ptr->detach(...)` on
+  /// exit, or immediately if it already finished execution.
   void attach(attachable_ptr ptr);
 
-  /**
-   * Convenience function that attaches the functor `f` to this actor. The
-   * actor executes `f()` on exit or immediatley if it is not running.
-   */
+  /// Convenience function that attaches the functor `f` to this actor. The
+  /// actor executes `f()` on exit or immediatley if it is not running.
   template <class F>
   void attach_functor(F f) {
     attach(attachable_ptr{new detail::functor_attachable<F>(std::move(f))});
   }
 
-  /**
-   * Returns the logical actor address.
-   */
+  /// Returns the logical actor address.
   actor_addr address() const;
 
-  /**
-   * Detaches the first attached object that matches `what`.
-   */
+  /// Detaches the first attached object that matches `what`.
   size_t detach(const attachable::token& what);
 
-  /**
-   * Links this actor to `whom`.
-   */
+  /// Links this actor to `whom`.
   inline void link_to(const actor_addr& whom) {
     link_impl(establish_link_op, whom);
   }
 
-  /**
-   * Links this actor to `whom`.
-   */
+  /// Links this actor to `whom`.
   template <class ActorHandle>
   void link_to(const ActorHandle& whom) {
     link_to(whom.address());
   }
 
-  /**
-   * Unlinks this actor from `whom`.
-   */
+  /// Unlinks this actor from `whom`.
   inline void unlink_from(const actor_addr& other) {
     link_impl(remove_link_op, other);
   }
 
-  /**
-   * Unlinks this actor from `whom`.
-   */
+  /// Unlinks this actor from `whom`.
   template <class ActorHandle>
   void unlink_from(const ActorHandle& other) {
     unlink_from(other.address());
   }
 
-  /**
-   * Establishes a link relation between this actor and `other`
-   * and returns whether the operation succeeded.
-   */
+  /// Establishes a link relation between this actor and `other`
+  /// and returns whether the operation succeeded.
   inline bool establish_backlink(const actor_addr& other) {
     return link_impl(establish_backlink_op, other);
   }
 
-  /**
-   * Removes the link relation between this actor and `other`
-   * and returns whether the operation succeeded.
-   */
+  /// Removes the link relation between this actor and `other`
+  /// and returns whether the operation succeeded.
   inline bool remove_backlink(const actor_addr& other) {
     return link_impl(remove_backlink_op, other);
   }
 
-  /**
-   * Returns the unique ID of this actor.
-   */
+  /// Returns the unique ID of this actor.
   inline uint32_t id() const {
-    return m_id;
+    return id_;
   }
 
-  /**
-   * Returns the actor's exit reason or
-   * `exit_reason::not_exited` if it's still alive.
-   */
+  /// Returns the actor's exit reason or
+  /// `exit_reason::not_exited` if it's still alive.
   inline uint32_t exit_reason() const {
-    return m_exit_reason;
+    return exit_reason_;
   }
 
-  /**
-   * Returns the set of accepted messages types as strings or
-   * an empty set if this actor is untyped.
-   */
+  /// Returns the set of accepted messages types as strings or
+  /// an empty set if this actor is untyped.
   virtual std::set<std::string> message_types() const;
 
-  /**
-   * Returns the execution unit currently used by this actor.
-   * @warning not thread safe
-   */
+  /// Returns the execution unit currently used by this actor.
+  /// @warning not thread safe
   inline execution_unit* host() const {
-    return m_host;
+    return host_;
   }
 
-  /**
-   * Sets the execution unit for this actor.
-   */
+  /// Sets the execution unit for this actor.
   inline void host(execution_unit* new_host) {
-    m_host = new_host;
+    host_ = new_host;
   }
 
- protected:
-  /**
-   * Creates a non-proxy instance.
-   */
+protected:
+  /// Creates a non-proxy instance.
   abstract_actor();
 
-  /**
-   * Creates a proxy instance for a proxy running on `nid`.
-   */
+  /// Creates a proxy instance for a proxy running on `nid`.
   abstract_actor(actor_id aid, node_id nid);
 
-  /**
-   * Called by the runtime system to perform cleanup actions for this actor.
-   * Subtypes should always call this member function when overriding it.
-   */
+  /// Called by the runtime system to perform cleanup actions for this actor.
+  /// Subtypes should always call this member function when overriding it.
   void cleanup(uint32_t reason);
 
-  /**
-   * Returns `exit_reason() != exit_reason::not_exited`.
-   */
+  /// Returns `exit_reason() != exit_reason::not_exited`.
   inline bool exited() const {
     return exit_reason() != exit_reason::not_exited;
   }
@@ -197,8 +153,8 @@ class abstract_actor : public abstract_channel {
    *                 here be dragons: end of public interface                 *
    ****************************************************************************/
 
- public:
-  /** @cond PRIVATE */
+public:
+  /// @cond PRIVATE
 
   enum linking_operation {
     establish_link_op,
@@ -274,7 +230,7 @@ class abstract_actor : public abstract_channel {
   // Tries to run a custom exception handler for `eptr`.
   optional<uint32_t> handle(const std::exception_ptr& eptr);
 
- protected:
+protected:
   virtual bool link_impl(linking_operation op, const actor_addr& other);
 
   bool establish_link_impl(const actor_addr& other);
@@ -286,8 +242,8 @@ class abstract_actor : public abstract_channel {
   bool remove_backlink_impl(const actor_addr& other);
 
   inline void attach_impl(attachable_ptr& ptr) {
-    ptr->next.swap(m_attachables_head);
-    m_attachables_head.swap(ptr);
+    ptr->next.swap(attachables_head_);
+    attachables_head_.swap(ptr);
   }
 
   static size_t detach_impl(const attachable::token& what,
@@ -296,25 +252,25 @@ class abstract_actor : public abstract_channel {
                             bool dry_run = false);
 
   // cannot be changed after construction
-  const actor_id m_id;
+  const actor_id id_;
 
   // initially set to exit_reason::not_exited
-  std::atomic<uint32_t> m_exit_reason;
+  std::atomic<uint32_t> exit_reason_;
 
-  // guards access to m_exit_reason, m_attachables, m_links,
+  // guards access to exit_reason_, attachables_, links_,
   // and enqueue operations if actor is thread-mapped
-  mutable std::mutex m_mtx;
+  mutable std::mutex mtx_;
 
   // only used in blocking and thread-mapped actors
-  mutable std::condition_variable m_cv;
+  mutable std::condition_variable cv_;
 
   // attached functors that are executed on cleanup (monitors, links, etc)
-  attachable_ptr m_attachables_head;
+  attachable_ptr attachables_head_;
 
   // identifies the execution unit this actor is currently executed by
-  execution_unit* m_host;
+  execution_unit* host_;
 
-  /** @endcond */
+  /// @endcond
 };
 
 } // namespace caf

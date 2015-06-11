@@ -71,7 +71,7 @@ inline void insert_dmsg(Map& storage, const duration& d, Ts&&... xs) {
 }
 
 class timer_actor : public blocking_actor {
- public:
+public:
   inline mailbox_element_ptr dequeue() {
     blocking_actor::await_data();
     return next_message();
@@ -81,7 +81,7 @@ class timer_actor : public blocking_actor {
     if (has_next_message()) {
       return true;
     }
-    return mailbox().synchronized_await(m_mtx, m_cv, tp);
+    return mailbox().synchronized_await(mtx_, cv_, tp);
   }
 
   mailbox_element_ptr try_dequeue(const hrc::time_point& tp) {
@@ -112,8 +112,8 @@ class timer_actor : public blocking_actor {
       }
     };
     // loop
-    while (!received_exit) {
-      while (!msg_ptr) {
+    while (! received_exit) {
+      while (! msg_ptr) {
         if (messages.empty())
           msg_ptr = dequeue();
         else {
@@ -144,7 +144,7 @@ void printer_loop(blocking_actor* self) {
     auto i = out.find(s);
     if (i != out.end()) {
       auto& line = i->second;
-      if (!line.empty()) {
+      if (! line.empty()) {
         std::cout << line << std::flush;
         line.clear();
       }
@@ -208,17 +208,17 @@ abstract_coordinator* abstract_coordinator::create_singleton() {
 void abstract_coordinator::initialize() {
   CAF_LOG_TRACE("");
   // launch utility actors
-  m_timer = spawn<timer_actor, hidden + detached + blocking_api>();
-  m_printer = spawn<hidden + detached + blocking_api>(printer_loop);
+  timer_ = spawn<timer_actor, hidden + detached + blocking_api>();
+  printer_ = spawn<hidden + detached + blocking_api>(printer_loop);
 }
 
 void abstract_coordinator::stop_actors() {
   CAF_LOG_TRACE("");
   scoped_actor self{true};
-  self->monitor(m_timer);
-  self->monitor(m_printer);
-  anon_send_exit(m_timer, exit_reason::user_shutdown);
-  anon_send_exit(m_printer, exit_reason::user_shutdown);
+  self->monitor(timer_);
+  self->monitor(printer_);
+  anon_send_exit(timer_, exit_reason::user_shutdown);
+  anon_send_exit(printer_, exit_reason::user_shutdown);
   int i = 0;
   self->receive_for(i, 2)(
     [](const down_msg&) {
@@ -228,8 +228,8 @@ void abstract_coordinator::stop_actors() {
 }
 
 abstract_coordinator::abstract_coordinator(size_t nw)
-    : m_next_worker(0),
-      m_num_workers(nw) {
+    : next_worker_(0),
+      num_workers_(nw) {
   // nop
 }
 

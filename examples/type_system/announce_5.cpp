@@ -87,12 +87,12 @@ bool operator==(const tree& lhs, const tree& rhs) {
 // - does have a copy constructor
 // - does provide operator==
 class tree_type_info : public detail::abstract_uniform_type_info<tree> {
- public:
+public:
   tree_type_info() : detail::abstract_uniform_type_info<tree>("tree") {
     // nop
   }
 
- protected:
+protected:
   void serialize(const void* ptr, serializer* sink) const {
     // ptr is guaranteed to be a pointer of type tree
     auto tree_ptr = reinterpret_cast<const tree*>(ptr);
@@ -108,7 +108,7 @@ class tree_type_info : public detail::abstract_uniform_type_info<tree> {
     deserialize_node(tree_ptr->root, source);
   }
 
- private:
+private:
   void serialize_node(const tree_node& node, serializer* sink) const {
     // value, ... children ...
     sink->write_value(node.value);

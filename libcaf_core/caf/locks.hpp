@@ -29,11 +29,11 @@ using unique_lock = std::unique_lock<Lockable>;
 
 template <class SharedLockable>
 class shared_lock {
- public:
+public:
   using lockable = SharedLockable;
 
-  explicit shared_lock(lockable& arg) : m_lockable(&arg) {
-    m_lockable->lock_shared();
+  explicit shared_lock(lockable& arg) : lockable_(&arg) {
+    lockable_->lock_shared();
   }
 
   ~shared_lock() {
@@ -41,24 +41,24 @@ class shared_lock {
   }
 
   bool owns_lock() const {
-    return m_lockable != nullptr;
+    return lockable_ != nullptr;
   }
 
   void unlock() {
-    if (m_lockable) {
-      m_lockable->unlock_shared();
-      m_lockable = nullptr;
+    if (lockable_) {
+      lockable_->unlock_shared();
+      lockable_ = nullptr;
     }
   }
 
   lockable* release() {
-    auto result = m_lockable;
-    m_lockable = nullptr;
+    auto result = lockable_;
+    lockable_ = nullptr;
     return result;
   }
 
- private:
-  lockable* m_lockable;
+private:
+  lockable* lockable_;
 };
 
 template <class SharedLockable>
@@ -66,13 +66,13 @@ using upgrade_lock = shared_lock<SharedLockable>;
 
 template <class UpgradeLockable>
 class upgrade_to_unique_lock {
- public:
+public:
   using lockable = UpgradeLockable;
 
   template <class LockType>
   upgrade_to_unique_lock(LockType& other) {
-    m_lockable = other.release();
-    if (m_lockable) m_lockable->unlock_upgrade_and_lock();
+    lockable_ = other.release();
+    if (lockable_) lockable_->unlock_upgrade_and_lock();
   }
 
   ~upgrade_to_unique_lock() {
@@ -80,18 +80,18 @@ class upgrade_to_unique_lock {
   }
 
   bool owns_lock() const {
-    return m_lockable != nullptr;
+    return lockable_ != nullptr;
   }
 
   void unlock() {
-    if (m_lockable) {
-      m_lockable->unlock();
-      m_lockable = nullptr;
+    if (lockable_) {
+      lockable_->unlock();
+      lockable_ = nullptr;
     }
   }
 
- private:
-  lockable* m_lockable;
+private:
+  lockable* lockable_;
 };
 
 } // namespace caf

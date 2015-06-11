@@ -49,7 +49,7 @@ bool message_data::equals(const message_data& other) const {
   // step 2: compare each value individually
   for (size_t i = 0; i < n; ++i) {
     auto uti = uniform_type_info::from(type_names[i]);
-    if (!uti->equals(at(i), other.at(i))) {
+    if (! uti->equals(at(i), other.at(i))) {
       return false;
     }
   }
@@ -66,11 +66,11 @@ std::string message_data::tuple_type_names() const {
 }
 
 message_data* message_data::cow_ptr::get_detached() {
-  auto p = m_ptr.get();
-  if (!p->unique()) {
+  auto p = ptr_.get();
+  if (! p->unique()) {
     auto cptr = p->copy();
-    m_ptr.swap(cptr.m_ptr);
-    return m_ptr.get();
+    ptr_.swap(cptr.ptr_);
+    return ptr_.get();
   }
   return p;
 }

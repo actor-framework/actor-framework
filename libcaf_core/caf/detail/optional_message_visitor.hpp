@@ -55,19 +55,19 @@ struct is_response_promise<typed_response_promise<T>> : std::true_type { };
 template <class T>
 struct optional_message_visitor_enable_tpl {
   static constexpr bool value =
-      !is_one_of<
+      ! is_one_of<
         typename std::remove_const<T>::type,
         none_t,
         unit_t,
         skip_message_t,
         optional<skip_message_t>
       >::value
-      && !is_message_id_wrapper<T>::value
-      && !is_response_promise<T>::value;
+      && ! is_message_id_wrapper<T>::value
+      && ! is_response_promise<T>::value;
 };
 
 class optional_message_visitor : public static_visitor<optional<message>> {
- public:
+public:
   optional_message_visitor() = default;
 
   using opt_msg = optional<message>;

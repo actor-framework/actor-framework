@@ -47,74 +47,54 @@ namespace caf {
 namespace io {
 namespace network {
 
-/**
- * Low-level backend for IO multiplexing.
- */
+/// Low-level backend for IO multiplexing.
 class multiplexer {
- public:
+public:
   virtual ~multiplexer();
 
-  /**
-   * Tries to connect to `host` on given `port` and returns an unbound
-   * connection handle on success.
-   * @threadsafe
-   */
+  /// Tries to connect to `host` on given `port` and returns an unbound
+  /// connection handle on success.
+  /// @threadsafe
   virtual connection_handle new_tcp_scribe(const std::string& host,
                                            uint16_t port) = 0;
 
-  /**
-   * Assigns an unbound scribe identified by `hdl` to `ptr`.
-   * @warning Do not call from outside the multiplexer's event loop.
-   */
+  /// Assigns an unbound scribe identified by `hdl` to `ptr`.
+  /// @warning Do not call from outside the multiplexer's event loop.
   virtual void assign_tcp_scribe(broker* ptr, connection_handle hdl) = 0;
 
-  /**
-   * Creates a new TCP doorman from a native socket handle.
-   * @warning Do not call from outside the multiplexer's event loop.
-   */
+  /// Creates a new TCP doorman from a native socket handle.
+  /// @warning Do not call from outside the multiplexer's event loop.
   virtual connection_handle add_tcp_scribe(broker* ptr, native_socket fd) = 0;
 
-  /**
-   * Tries to connect to host `h` on given `port` and returns a
-   * new scribe managing the connection on success.
-   * @warning Do not call from outside the multiplexer's event loop.
-   */
+  /// Tries to connect to host `h` on given `port` and returns a
+  /// new scribe managing the connection on success.
+  /// @warning Do not call from outside the multiplexer's event loop.
   virtual connection_handle add_tcp_scribe(broker* ptr, const std::string& host,
                                            uint16_t port) = 0;
 
-  /**
-   * Tries to create an unbound TCP doorman running `port`, optionally
-   * accepting only connections from IP address `in`.
-   * @warning Do not call from outside the multiplexer's event loop.
-   */
+  /// Tries to create an unbound TCP doorman running `port`, optionally
+  /// accepting only connections from IP address `in`.
+  /// @warning Do not call from outside the multiplexer's event loop.
   virtual std::pair<accept_handle, uint16_t>
   new_tcp_doorman(uint16_t port, const char* in = nullptr,
                   bool reuse_addr = false) = 0;
 
-  /**
-   * Assigns an unbound doorman identified by `hdl` to `ptr`.
-   * @warning Do not call from outside the multiplexer's event loop.
-   */
+  /// Assigns an unbound doorman identified by `hdl` to `ptr`.
+  /// @warning Do not call from outside the multiplexer's event loop.
   virtual void assign_tcp_doorman(broker* ptr, accept_handle hdl) = 0;
 
-  /**
-   * Creates a new TCP doorman from a native socket handle.
-   * @warning Do not call from outside the multiplexer's event loop.
-   */
+  /// Creates a new TCP doorman from a native socket handle.
+  /// @warning Do not call from outside the multiplexer's event loop.
   virtual accept_handle add_tcp_doorman(broker* ptr, native_socket fd) = 0;
 
-  /**
-   * Tries to create a new TCP doorman running on port `p`, optionally
-   * accepting only connections from IP address `in`.
-   * @warning Do not call from outside the multiplexer's event loop.
-   */
+  /// Tries to create a new TCP doorman running on port `p`, optionally
+  /// accepting only connections from IP address `in`.
+  /// @warning Do not call from outside the multiplexer's event loop.
   virtual std::pair<accept_handle, uint16_t>
   add_tcp_doorman(broker* ptr, uint16_t port, const char* in = nullptr,
                   bool reuse_addr = false) = 0;
 
-  /**
-   * Simple wrapper for runnables
-   */
+  /// Simple wrapper for runnables
   struct runnable : ref_counted {
     static constexpr auto memory_cache_flag = detail::needs_embedding;
     virtual void run() = 0;
@@ -123,36 +103,26 @@ class multiplexer {
 
   using runnable_ptr = intrusive_ptr<runnable>;
 
-  /**
-   * Makes sure the multipler does not exit its event loop until
-   * the destructor of `supervisor` has been called.
-   */
+  /// Makes sure the multipler does not exit its event loop until
+  /// the destructor of `supervisor` has been called.
   class supervisor {
-   public:
+  public:
     virtual ~supervisor();
   };
 
   using supervisor_ptr = std::unique_ptr<supervisor>;
 
-  /**
-   * Creates a supervisor to keep the event loop running.
-   */
+  /// Creates a supervisor to keep the event loop running.
   virtual supervisor_ptr make_supervisor() = 0;
 
-  /**
-   * Creates an instance using the networking backend compiled with CAF.
-   */
+  /// Creates an instance using the networking backend compiled with CAF.
   static std::unique_ptr<multiplexer> make();
 
-  /**
-   * Runs the multiplexers event loop.
-   */
+  /// Runs the multiplexers event loop.
   virtual void run() = 0;
 
-  /**
-   * Invokes @p fun in the multiplexer's event loop.
-   * @threadsafe
-   */
+  /// Invokes @p fun in the multiplexer's event loop.
+  /// @threadsafe
   template <class F>
   void dispatch(F fun) {
     if (std::this_thread::get_id() == thread_id()) {
@@ -162,10 +132,8 @@ class multiplexer {
     post(std::move(fun));
   }
 
-  /**
-   * Invokes @p fun in the multiplexer's event loop.
-   * @threadsafe
-   */
+  /// Invokes @p fun in the multiplexer's event loop.
+  /// @threadsafe
   template <class F>
   void post(F fun) {
     struct impl : runnable {
@@ -178,30 +146,24 @@ class multiplexer {
     dispatch_runnable(make_counted<impl>(std::move(fun)));
   }
 
-  /**
-   * Retrieves a pointer to the implementation or `nullptr` if CAF was
-   * compiled using the default backend.
-   */
+  /// Retrieves a pointer to the implementation or `nullptr` if CAF was
+  /// compiled using the default backend.
   virtual boost::asio::io_service* pimpl();
 
   inline const std::thread::id& thread_id() const {
-    return m_tid;
+    return tid_;
   }
 
   inline void thread_id(std::thread::id tid) {
-    m_tid = std::move(tid);
+    tid_ = std::move(tid);
   }
 
- protected:
-  /**
-   * Implementation-specific dispatching to the multiplexer's thread.
-   */
+protected:
+  /// Implementation-specific dispatching to the multiplexer's thread.
   virtual void dispatch_runnable(runnable_ptr ptr) = 0;
 
-  /**
-   * Must be set by the subclass.
-   */
-  std::thread::id m_tid;
+  /// Must be set by the subclass.
+  std::thread::id tid_;
 };
 
 using multiplexer_ptr = std::unique_ptr<multiplexer>;

@@ -38,16 +38,14 @@ namespace detail {
 class singletons;
 
 class actor_registry : public singleton_mixin<actor_registry> {
- public:
+public:
   friend class singleton_mixin<actor_registry>;
 
   ~actor_registry();
 
-  /**
-   * A registry entry consists of a pointer to the actor and an
-   * exit reason. An entry with a nullptr means the actor has finished
-   * execution for given reason.
-   */
+  /// A registry entry consists of a pointer to the actor and an
+  /// exit reason. An entry with a nullptr means the actor has finished
+  /// execution for given reason.
   using value_type = std::pair<abstract_actor_ptr, uint32_t>;
 
   value_type get_entry(actor_id key) const;
@@ -75,19 +73,19 @@ class actor_registry : public singleton_mixin<actor_registry> {
   // blocks the caller until running-actors-count becomes `expected`
   void await_running_count_equal(size_t expected);
 
- private:
+private:
   using entries = std::map<actor_id, value_type>;
 
   actor_registry();
 
-  std::atomic<size_t> m_running;
-  std::atomic<actor_id> m_ids;
+  std::atomic<size_t> running_;
+  std::atomic<actor_id> ids_;
 
-  std::mutex m_running_mtx;
-  std::condition_variable m_running_cv;
+  std::mutex running_mtx_;
+  std::condition_variable running_cv_;
 
-  mutable detail::shared_spinlock m_instances_mtx;
-  entries m_entries;
+  mutable detail::shared_spinlock instances_mtx_;
+  entries entries_;
 };
 
 } // namespace detail

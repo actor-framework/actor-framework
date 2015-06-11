@@ -205,7 +205,7 @@ std::vector<iface_info> get_mac_addresses() {
   size_t iterations = 0;
   do {
     addresses.reset((IP_ADAPTER_ADDRESSES*)malloc(addresses_len));
-    if (!addresses) {
+    if (! addresses) {
       perror("Memory allocation failed for IP_ADAPTER_ADDRESSES struct");
       exit(1);
     }

@@ -34,28 +34,22 @@
 
 namespace caf {
 
-/**
- * An co-existing forwarding all messages through a user-defined
- * callback to another object, thus serving as gateway to
- * allow any object to interact with other actors.
- * @extends local_actor
- */
+/// An co-existing forwarding all messages through a user-defined
+/// callback to another object, thus serving as gateway to
+/// allow any object to interact with other actors.
+/// @extends local_actor
 class actor_companion : public abstract_event_based_actor<behavior, true> {
- public:
+public:
   using lock_type = detail::shared_spinlock;
   using message_pointer = std::unique_ptr<mailbox_element, detail::disposer>;
   using enqueue_handler = std::function<void (message_pointer)>;
 
-  /**
-   * Removes the handler for incoming messages and terminates
-   * the companion for exit reason @ rsn.
-   */
+  /// Removes the handler for incoming messages and terminates
+  /// the companion for exit reason @ rsn.
   void disconnect(std::uint32_t rsn = exit_reason::normal);
 
-  /**
-   * Sets the handler for incoming messages.
-   * @warning `handler` needs to be thread-safe
-   */
+  /// Sets the handler for incoming messages.
+  /// @warning `handler` needs to be thread-safe
   void on_enqueue(enqueue_handler handler);
 
   void enqueue(mailbox_element_ptr what, execution_unit* host) override;
@@ -65,18 +59,16 @@ class actor_companion : public abstract_event_based_actor<behavior, true> {
 
   void initialize();
 
- private:
+private:
   // set by parent to define custom enqueue action
-  enqueue_handler m_on_enqueue;
+  enqueue_handler on_enqueue_;
 
-  // guards access to m_handler
-  lock_type m_lock;
+  // guards access to handler_
+  lock_type lock_;
 };
 
-/**
- * A pointer to a co-existing (actor) object.
- * @relates actor_companion
- */
+/// A pointer to a co-existing (actor) object.
+/// @relates actor_companion
 using actor_companion_ptr = intrusive_ptr<actor_companion>;
 
 } // namespace caf

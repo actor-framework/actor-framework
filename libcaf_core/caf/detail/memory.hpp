@@ -51,7 +51,7 @@ constexpr size_t s_max_elements = 20;       // don't create > 20 elements
 using embedded_storage = std::pair<intrusive_ptr<ref_counted>, void*>;
 
 class memory_cache {
- public:
+public:
   virtual ~memory_cache();
   virtual embedded_storage new_embedded_storage() = 0;
 };
@@ -83,7 +83,7 @@ T* unbox_rc_storage(rc_storage<T>* ptr) {
 }
 
 class memory {
- public:
+public:
   memory() = delete;
 
   // Allocates storage, initializes a new object, and returns the new instance.
@@ -107,7 +107,7 @@ class memory {
 
 template <class T>
 class basic_memory_cache : public memory_cache {
- public:
+public:
   static constexpr size_t ne = s_alloc_size / sizeof(T);
   static constexpr size_t ms = ne < s_min_elements ? s_min_elements : ne;
   static constexpr size_t dsize = ms > s_max_elements ? s_max_elements : ms;
@@ -136,8 +136,8 @@ class basic_memory_cache : public memory_cache {
   };
 
   class storage : public ref_counted {
-   public:
-    storage() : m_pos(0) {
+  public:
+    storage() : pos_(0) {
       // nop
     }
 
@@ -146,38 +146,38 @@ class basic_memory_cache : public memory_cache {
     }
 
     bool has_next() {
-      return m_pos < dsize;
+      return pos_ < dsize;
     }
 
     embedded_t* next() {
-      return &(m_data[m_pos++].instance);
+      return &(data_[pos_++].instance);
     }
 
-   private:
-    size_t m_pos;
-    wrapper m_data[dsize];
+  private:
+    size_t pos_;
+    wrapper data_[dsize];
   };
 
   embedded_storage new_embedded_storage() override {
     // allocate cache on-the-fly
-    if (!m_cache) {
-      m_cache.reset(new storage, false); // starts with ref count of 1
-      CAF_ASSERT(m_cache->unique());
+    if (! cache_) {
+      cache_.reset(new storage, false); // starts with ref count of 1
+      CAF_ASSERT(cache_->unique());
     }
-    auto res = m_cache->next();
-    if (m_cache->has_next()) {
-      return {m_cache, res};
+    auto res = cache_->next();
+    if (cache_->has_next()) {
+      return {cache_, res};
     }
     // we got the last element out of the cache; pass the reference to the
     // client to avoid pointless increase/decrease ops on the reference count
     embedded_storage result;
-    result.first.reset(m_cache.release(), false);
+    result.first.reset(cache_.release(), false);
     result.second = res;
     return result;
   }
 
- private:
-  intrusive_ptr<storage> m_cache;
+private:
+  intrusive_ptr<storage> cache_;
 };
 
 class memory {
@@ -187,7 +187,7 @@ class memory {
   template <class>
   friend class basic_memory_cache;
 
- public:
+public:
 
   // Allocates storage, initializes a new object, and returns the new instance.
   template <class T, class... Ts>
@@ -207,7 +207,7 @@ class memory {
 
   static memory_cache* get_cache_map_entry(const std::type_info* tinf);
 
- private:
+private:
 
   static void add_cache_map_entry(const std::type_info* tinf,
                                   memory_cache* instance);
@@ -215,7 +215,7 @@ class memory {
   template <class T>
   static inline memory_cache* get_or_set_cache_map_entry() {
     auto mc = get_cache_map_entry(&typeid(T));
-    if (!mc) {
+    if (! mc) {
       mc = new basic_memory_cache<T>;
       add_cache_map_entry(&typeid(T), mc);
     }

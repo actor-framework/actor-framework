@@ -150,13 +150,13 @@ struct pt_reader : static_visitor<> {
 
 binary_deserializer::binary_deserializer(const void* buf, size_t buf_size,
                                          actor_namespace* ns)
-    : super(ns), m_pos(buf), m_end(advanced(buf, buf_size)) {
+    : super(ns), pos_(buf), end_(advanced(buf, buf_size)) {
   // nop
 }
 
 binary_deserializer::binary_deserializer(const void* bbegin, const void* bend,
                                          actor_namespace* ns)
-    : super(ns), m_pos(bbegin), m_end(bend) {
+    : super(ns), pos_(bbegin), end_(bend) {
   // nop
 }
 
@@ -164,14 +164,14 @@ const uniform_type_info* binary_deserializer::begin_object() {
   auto uti_map = detail::singletons::get_uniform_type_info_map();
   detail::uniform_type_info_map::pointer uti;
   uint16_t nr;
-  m_pos = read_range(m_pos, m_end, nr);
+  pos_ = read_range(pos_, end_, nr);
   if (nr) {
     uti = uti_map->by_type_nr(nr);
   } else {
     std::string tname;
-    m_pos = read_range(m_pos, m_end, tname);
+    pos_ = read_range(pos_, end_, tname);
     uti = uti_map->by_uniform_name(tname);
-    if (!uti) {
+    if (! uti) {
       std::string err = "received type name \"";
       err += tname;
       err += "\" but no such type is known";
@@ -190,7 +190,7 @@ size_t binary_deserializer::begin_sequence() {
   static_assert(sizeof(size_t) >= sizeof(uint32_t),
                 "sizeof(size_t) < sizeof(uint32_t)");
   uint32_t result;
-  m_pos = read_range(m_pos, m_end, result);
+  pos_ = read_range(pos_, end_, result);
   return static_cast<size_t>(result);
 }
 
@@ -199,15 +199,15 @@ void binary_deserializer::end_sequence() {
 }
 
 void binary_deserializer::read_value(primitive_variant& storage) {
-  pt_reader ptr(m_pos, m_end);
+  pt_reader ptr(pos_, end_);
   apply_visitor(ptr, storage);
-  m_pos = ptr.begin;
+  pos_ = ptr.begin;
 }
 
 void binary_deserializer::read_raw(size_t num_bytes, void* storage) {
-  range_check(m_pos, m_end, num_bytes);
-  memcpy(storage, m_pos, num_bytes);
-  m_pos = advanced(m_pos, num_bytes);
+  range_check(pos_, end_, num_bytes);
+  memcpy(storage, pos_, num_bytes);
+  pos_ = advanced(pos_, num_bytes);
 }
 
 } // namespace caf

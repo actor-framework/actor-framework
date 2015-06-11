@@ -41,12 +41,12 @@ struct impl : blocking_actor {
 } // namespace <anonymous>
 
 void scoped_actor::init(bool hide_actor) {
-  m_self.reset(new impl, false);
-  if (!hide_actor) {
-    m_prev = CAF_SET_AID(m_self->id());
+  self_.reset(new impl, false);
+  if (! hide_actor) {
+    prev_ = CAF_SET_AID(self_->id());
   }
   CAF_LOG_TRACE(CAF_ARG(hide_actor));
-  m_self->is_registered(!hide_actor);
+  self_->is_registered(! hide_actor);
 }
 
 scoped_actor::scoped_actor() {
@@ -59,11 +59,11 @@ scoped_actor::scoped_actor(bool hide_actor) {
 
 scoped_actor::~scoped_actor() {
   CAF_LOG_TRACE("");
-  if (m_self->is_registered()) {
-    CAF_SET_AID(m_prev);
+  if (self_->is_registered()) {
+    CAF_SET_AID(prev_);
   }
-  auto r = m_self->planned_exit_reason();
-  m_self->cleanup(r == exit_reason::not_exited ? exit_reason::normal : r);
+  auto r = self_->planned_exit_reason();
+  self_->cleanup(r == exit_reason::not_exited ? exit_reason::normal : r);
 }
 
 } // namespace caf

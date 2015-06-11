@@ -36,13 +36,13 @@ actor_namespace::backend::~backend() {
   // nop
 }
 
-actor_namespace::actor_namespace(backend& be) : m_backend(be) {
+actor_namespace::actor_namespace(backend& be) : backend_(be) {
   // nop
 }
 
 void actor_namespace::write(serializer* sink, const actor_addr& addr) {
   CAF_ASSERT(sink != nullptr);
-  if (!addr) {
+  if (! addr) {
     node_id::host_id_type zero;
     std::fill(zero.begin(), zero.end(), 0);
     sink->write_value(static_cast<actor_id>(0));         // actor id
@@ -50,7 +50,7 @@ void actor_namespace::write(serializer* sink, const actor_addr& addr) {
     sink->write_value(static_cast<uint32_t>(0));         // process id
   } else {
     // register locally running actors to be able to deserialize them later
-    if (!addr.is_remote()) {
+    if (! addr.is_remote()) {
       auto reg = detail::singletons::get_actor_registry();
       reg->put(addr.id(), actor_cast<abstract_actor_ptr>(addr));
     }
@@ -83,13 +83,13 @@ actor_addr actor_namespace::read(deserializer* source) {
 }
 
 size_t actor_namespace::count_proxies(const key_type& node) {
-  auto i = m_proxies.find(node);
-  return (i != m_proxies.end()) ? i->second.size() : 0;
+  auto i = proxies_.find(node);
+  return (i != proxies_.end()) ? i->second.size() : 0;
 }
 
 std::vector<actor_proxy_ptr> actor_namespace::get_all() {
   std::vector<actor_proxy_ptr> result;
-  for (auto& outer : m_proxies) {
+  for (auto& outer : proxies_) {
     for (auto& inner : outer.second) {
       auto ptr = inner.second->get();
       if (ptr) {
@@ -102,7 +102,7 @@ std::vector<actor_proxy_ptr> actor_namespace::get_all() {
 
 std::vector<actor_proxy_ptr> actor_namespace::get_all(const key_type& node) {
   std::vector<actor_proxy_ptr> result;
-  auto& submap = m_proxies[node];
+  auto& submap = proxies_[node];
   for (auto& kvp : submap) {
     auto ptr = kvp.second->get();
     if (ptr) {
@@ -113,11 +113,11 @@ std::vector<actor_proxy_ptr> actor_namespace::get_all(const key_type& node) {
 }
 
 actor_proxy_ptr actor_namespace::get(const key_type& node, actor_id aid) {
-  auto& submap = m_proxies[node];
+  auto& submap = proxies_[node];
   auto i = submap.find(aid);
   if (i != submap.end()) {
     auto res = i->second->get();
-    if (!res) {
+    if (! res) {
       submap.erase(i); // instance is expired
     }
     return res;
@@ -127,7 +127,7 @@ actor_proxy_ptr actor_namespace::get(const key_type& node, actor_id aid) {
 
 actor_proxy_ptr actor_namespace::get_or_put(const key_type& node,
                                             actor_id aid) {
-  auto& submap = m_proxies[node];
+  auto& submap = proxies_[node];
   auto& anchor = submap[aid];
   actor_proxy_ptr result;
   if (anchor) {
@@ -135,35 +135,35 @@ actor_proxy_ptr actor_namespace::get_or_put(const key_type& node,
   }
   // replace anchor if we've created one using the default ctor
   // or if we've found an expired one in the map
-  if (!anchor || !result) {
-    result = m_backend.make_proxy(node, aid);
+  if (! anchor || ! result) {
+    result = backend_.make_proxy(node, aid);
     anchor = result->get_anchor();
   }
   return result;
 }
 
 bool actor_namespace::empty() const {
-  return m_proxies.empty();
+  return proxies_.empty();
 }
 
 void actor_namespace::erase(const key_type& inf) {
   CAF_LOG_TRACE(CAF_TARG(inf, to_string));
-  m_proxies.erase(inf);
+  proxies_.erase(inf);
 }
 
 void actor_namespace::erase(const key_type& inf, actor_id aid) {
   CAF_LOG_TRACE(CAF_TARG(inf, to_string) << ", " << CAF_ARG(aid));
-  auto i = m_proxies.find(inf);
-  if (i != m_proxies.end()) {
+  auto i = proxies_.find(inf);
+  if (i != proxies_.end()) {
     i->second.erase(aid);
     if (i->second.empty()) {
-      m_proxies.erase(i);
+      proxies_.erase(i);
     }
   }
 }
 
 void actor_namespace::clear() {
-  m_proxies.clear();
+  proxies_.clear();
 }
 
 } // namespace caf

@@ -33,14 +33,14 @@
 
 namespace caf {
 
-/** @cond PRIVATE */
+/// @cond PRIVATE
 std::string replies_to_type_name(size_t input_size,
                                  const std::string* input,
                                  size_t output_opt1_size,
                                  const std::string* output_opt1,
                                  size_t output_opt2_size,
                                  const std::string* output_opt2);
-/** @endcond */
+/// @endcond
 
 template <class InputTypes, class LeftOutputTypes, class RightOutputTypes>
 struct typed_mpi;
@@ -54,17 +54,17 @@ struct typed_mpi<detail::type_list<Is...>,
   using input_types = detail::type_list<Is...>;
   using output_opt1_types = detail::type_list<Ls...>;
   using output_opt2_types = detail::type_list<Rs...>;
-  static_assert(!std::is_same<output_opt1_types, output_opt2_types>::value,
+  static_assert(! std::is_same<output_opt1_types, output_opt2_types>::value,
                 "result types must differ when using with_either<>::or_else<>");
-  static_assert(!detail::tl_exists<
+  static_assert(! detail::tl_exists<
                   input_types,
                   is_illegal_message_element
                 >::value
-                && !detail::tl_exists<
+                && ! detail::tl_exists<
                   output_opt1_types,
                   is_illegal_message_element
                 >::value
-                && !detail::tl_exists<
+                && ! detail::tl_exists<
                   output_opt2_types,
                   is_illegal_message_element
                 >::value,

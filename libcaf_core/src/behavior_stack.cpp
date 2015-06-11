@@ -27,18 +27,18 @@ namespace caf {
 namespace detail {
 
 void behavior_stack::pop_back() {
-  if (m_elements.empty()) {
+  if (elements_.empty()) {
     return;
   }
-  m_erased_elements.push_back(std::move(m_elements.back()));
-  m_elements.pop_back();
+  erased_elements_.push_back(std::move(elements_.back()));
+  elements_.pop_back();
 }
 
 void behavior_stack::clear() {
-  if (!m_elements.empty()) {
-    std::move(m_elements.begin(), m_elements.end(),
-              std::back_inserter(m_erased_elements));
-    m_elements.clear();
+  if (! elements_.empty()) {
+    std::move(elements_.begin(), elements_.end(),
+              std::back_inserter(erased_elements_));
+    elements_.clear();
   }
 }
 

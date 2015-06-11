@@ -39,15 +39,13 @@
 
 namespace caf {
 
-/**
- * A thread-mapped or context-switching actor using a blocking
- * receive rather than a behavior-stack based message processing.
- * @extends local_actor
- */
+/// A thread-mapped or context-switching actor using a blocking
+/// receive rather than a behavior-stack based message processing.
+/// @extends local_actor
 class blocking_actor
     : public extend<local_actor, blocking_actor>::
              with<mixin::sync_sender<blocking_response_handle_tag>::impl> {
- public:
+public:
   class functor_based;
 
   blocking_actor();
@@ -61,39 +59,39 @@ class blocking_actor
   using timeout_type = std::chrono::high_resolution_clock::time_point;
 
   struct receive_while_helper {
-    std::function<void(behavior&)> m_dq;
-    std::function<bool()> m_stmt;
+    std::function<void(behavior&)> dq_;
+    std::function<bool()> stmt_;
 
     template <class... Ts>
     void operator()(Ts&&... xs) {
       static_assert(sizeof...(Ts) > 0,
               "operator() requires at least one argument");
       behavior bhvr{std::forward<Ts>(xs)...};
-      while (m_stmt()) m_dq(bhvr);
+      while (stmt_()) dq_(bhvr);
     }
   };
 
   template <class T>
   struct receive_for_helper {
-    std::function<void(behavior&)> m_dq;
+    std::function<void(behavior&)> dq_;
     T& begin;
     T end;
 
     template <class... Ts>
     void operator()(Ts&&... xs) {
       behavior bhvr{std::forward<Ts>(xs)...};
-      for (; begin != end; ++begin) m_dq(bhvr);
+      for (; begin != end; ++begin) dq_(bhvr);
     }
   };
 
   struct do_receive_helper {
-    std::function<void(behavior&)> m_dq;
-    behavior m_bhvr;
+    std::function<void(behavior&)> dq_;
+    behavior bhvr_;
 
     template <class Statement>
     void until(Statement stmt) {
       do {
-        m_dq(m_bhvr);
+        dq_(bhvr_);
       } while (stmt() == false);
     }
 
@@ -102,10 +100,8 @@ class blocking_actor
     }
   };
 
-  /**
-   * Dequeues the next message from the mailbox that is
-   * matched by given behavior.
-   */
+  /// Dequeues the next message from the mailbox that is
+  /// matched by given behavior.
   template <class... Ts>
   void receive(Ts&&... xs) {
     static_assert(sizeof...(Ts), "at least one argument required");
@@ -113,50 +109,44 @@ class blocking_actor
     dequeue(bhvr);
   }
 
-  /**
-   * Semantically equal to: `for (;;) { receive(...); }`, but does
-   * not cause a temporary behavior object per iteration.
-   */
+  /// Semantically equal to: `for (;;) { receive(...); }`, but does
+  /// not cause a temporary behavior object per iteration.
   template <class... Ts>
   void receive_loop(Ts&&... xs) {
     behavior bhvr{std::forward<Ts>(xs)...};
     for (;;) dequeue(bhvr);
   }
 
-  /**
-   * Receives messages for range `[begin, first)`.
-   * Semantically equal to:
-   * `for ( ; begin != end; ++begin) { receive(...); }`.
-   *
-   * **Usage example:**
-   * ~~~
-   * int i = 0;
-   * receive_for(i, 10) (
-   *   [&](get_atom) {
-   *     return i;
-   *   }
-   * );
-   * ~~~
-   */
+  /// Receives messages for range `[begin, first)`.
+  /// Semantically equal to:
+  /// `for ( ; begin != end; ++begin) { receive(...); }`.
+  ///
+  /// **Usage example:**
+  /// ~~~
+  /// int i = 0;
+  /// receive_for(i, 10) (
+  ///   [&](get_atom) {
+  ///     return i;
+  ///   }
+  /// );
+  /// ~~~
   template <class T>
   receive_for_helper<T> receive_for(T& begin, const T& end) {
     return {make_dequeue_callback(), begin, end};
   }
 
-  /**
-   * Receives messages as long as `stmt` returns true.
-   * Semantically equal to: `while (stmt()) { receive(...); }`.
-   *
-   * **Usage example:**
-   * ~~~
-   * int i = 0;
-   * receive_while([&]() { return (++i <= 10); })
-   * (
-   *   on<int>() >> int_fun,
-   *   on<float>() >> float_fun
-   * );
-   * ~~~
-   */
+  /// Receives messages as long as `stmt` returns true.
+  /// Semantically equal to: `while (stmt()) { receive(...); }`.
+  ///
+  /// **Usage example:**
+  /// ~~~
+  /// int i = 0;
+  /// receive_while([&]() { return (++i <= 10); })
+  /// (
+  ///   on<int>() >> int_fun,
+  ///   on<float>() >> float_fun
+  /// );
+  /// ~~~
   template <class Statement>
   receive_while_helper receive_while(Statement stmt) {
     static_assert(std::is_same<bool, decltype(stmt())>::value,
@@ -164,47 +154,41 @@ class blocking_actor
     return {make_dequeue_callback(), stmt};
   }
 
-  /**
-   * Receives messages until `stmt` returns true.
-   *
-   * Semantically equal to:
-   * `do { receive(...); } while (stmt() == false);`
-   *
-   * **Usage example:**
-   * ~~~
-   * int i = 0;
-   * do_receive
-   * (
-   *   on<int>() >> int_fun,
-   *   on<float>() >> float_fun
-   * )
-   * .until([&]() { return (++i >= 10); };
-   * ~~~
-   */
+  /// Receives messages until `stmt` returns true.
+  ///
+  /// Semantically equal to:
+  /// `do { receive(...); } while (stmt() == false);`
+  ///
+  /// **Usage example:**
+  /// ~~~
+  /// int i = 0;
+  /// do_receive
+  /// (
+  ///   on<int>() >> int_fun,
+  ///   on<float>() >> float_fun
+  /// )
+  /// .until([&]() { return (++i >= 10); };
+  /// ~~~
   template <class... Ts>
   do_receive_helper do_receive(Ts&&... xs) {
     return {make_dequeue_callback(), behavior{std::forward<Ts>(xs)...}};
   }
 
-  /**
-   * Blocks this actor until all other actors are done.
-   */
+  /// Blocks this actor until all other actors are done.
   void await_all_other_actors_done();
 
-  /**
-   * Implements the actor's behavior.
-   */
+  /// Implements the actor's behavior.
   virtual void act() = 0;
 
-  /** @cond PRIVATE */
+  /// @cond PRIVATE
 
   void initialize() override;
 
   void dequeue(behavior& bhvr, message_id mid = invalid_message_id);
 
-  /** @endcond */
+  /// @endcond
 
- protected:
+protected:
   // helper function to implement receive_(for|while) and do_receive
   std::function<void(behavior&)> make_dequeue_callback() {
     return [=](behavior& bhvr) { dequeue(bhvr); };
@@ -212,7 +196,7 @@ class blocking_actor
 };
 
 class blocking_actor::functor_based : public blocking_actor {
- public:
+public:
   using act_fun = std::function<void(blocking_actor*)>;
 
   template <class F, class... Ts>
@@ -226,10 +210,10 @@ class blocking_actor::functor_based : public blocking_actor {
 
   void cleanup(uint32_t reason);
 
- protected:
+protected:
   void act() override;
 
- private:
+private:
   void create(blocking_actor*, act_fun);
 
   template <class Actor, typename F, class... Ts>
@@ -243,7 +227,7 @@ class blocking_actor::functor_based : public blocking_actor {
     create(dummy, [fun](Actor*) { fun(); });
   }
 
-  act_fun m_act;
+  act_fun act_;
 };
 
 } // namespace caf

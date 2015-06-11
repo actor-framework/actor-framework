@@ -33,7 +33,7 @@ namespace {
 std::atomic<long> s_dtor_called;
 
 class dummy : public event_based_actor {
- public:
+public:
   ~dummy() {
     ++s_dtor_called;
   }

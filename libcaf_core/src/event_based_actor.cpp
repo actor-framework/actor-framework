@@ -36,7 +36,7 @@ void event_based_actor::forward_to(const actor& whom,
 void event_based_actor::initialize() {
   is_initialized(true);
   auto bhvr = make_behavior();
-  CAF_LOG_DEBUG_IF(!bhvr, "make_behavior() did not return a behavior, "
+  CAF_LOG_DEBUG_IF(! bhvr, "make_behavior() did not return a behavior, "
                           << "has_behavior() = "
                           << std::boolalpha << this->has_behavior());
   if (bhvr) {
@@ -47,11 +47,11 @@ void event_based_actor::initialize() {
 }
 
 behavior event_based_actor::functor_based::make_behavior() {
-  auto res = m_make_behavior(this);
+  auto res = make_behavior_(this);
   // reset make_behavior_fun to get rid of any
   // references held by the function object
   make_behavior_fun tmp;
-  m_make_behavior.swap(tmp);
+  make_behavior_.swap(tmp);
   return res;
 }
 

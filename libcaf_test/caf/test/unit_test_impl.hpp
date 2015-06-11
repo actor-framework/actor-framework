@@ -38,21 +38,21 @@ namespace caf {
 namespace test {
 
 class watchdog {
- public:
+public:
    static void start();
    static void stop();
 
- private:
+private:
   watchdog() {
-    m_thread = std::thread{[&] {
+    thread_ = std::thread{[&] {
       auto tp =
         std::chrono::high_resolution_clock::now() + std::chrono::seconds(30);
-        std::unique_lock<std::mutex> guard{m_mtx};
-      while (!m_canceled
-             && m_cv.wait_until(guard, tp) != std::cv_status::timeout) {
+        std::unique_lock<std::mutex> guard{mtx_};
+      while (! canceled_
+             && cv_.wait_until(guard, tp) != std::cv_status::timeout) {
         // spin
       }
-      if (!m_canceled) {
+      if (! canceled_) {
         logger::instance().error()
           << "WATCHDOG: unit test did finish within 10s, abort\n";
         abort();
@@ -61,17 +61,17 @@ class watchdog {
   }
   ~watchdog() {
     { // lifetime scope of guard
-      std::lock_guard<std::mutex> guard{m_mtx};
-      m_canceled = true;
-      m_cv.notify_all();
+      std::lock_guard<std::mutex> guard{mtx_};
+      canceled_ = true;
+      cv_.notify_all();
     }
-    m_thread.join();
+    thread_.join();
   }
 
-  volatile bool m_canceled = false;
-  std::mutex m_mtx;
-  std::condition_variable m_cv;
-  std::thread m_thread;
+  volatile bool canceled_ = false;
+  std::mutex mtx_;
+  std::condition_variable cv_;
+  std::thread thread_;
 };
 
 namespace { watchdog* s_watchdog; }
@@ -85,10 +85,10 @@ void watchdog::stop() {
 }
 
 test::test(std::string test_name)
-    : m_expected_failures(0),
-      m_name(std::move(test_name)),
-      m_good(0),
-      m_bad(0) {
+    : expected_failures_(0),
+      name_(std::move(test_name)),
+      good_(0),
+      bad_(0) {
   // nop
 }
 
@@ -97,24 +97,24 @@ test::~test() {
 }
 
 size_t test::expected_failures() const {
-  return m_expected_failures;
+  return expected_failures_;
 }
 
 void test::pass(std::string msg) {
-  ++m_good;
+  ++good_;
   ::caf::test::logger::instance().massive() << "  " << msg << '\n';
 }
 
 void test::fail(std::string msg, bool expected) {
-  ++m_bad;
+  ++bad_;
   ::caf::test::logger::instance().massive() << "  " << msg << '\n';
   if (expected) {
-    ++m_expected_failures;
+    ++expected_failures_;
   }
 }
 
 const std::string& test::name() const {
-  return m_name;
+  return name_;
 }
 
 namespace detail {
@@ -141,19 +141,19 @@ const char* fill(size_t line) {
 
 } // namespace detail
 
-logger::stream::stream(logger& l, level lvl) : m_logger(l), m_level(lvl) {
+logger::stream::stream(logger& l, level lvl) : logger_(l), level_(lvl) {
   // nop
 }
 
 logger::stream::stream(stream&& other)
-    : m_logger(other.m_logger)
-    , m_level(other.m_level) {
+    : logger_(other.logger_)
+    , level_(other.level_) {
   // ostringstream does have swap since C++11... but not in GCC 4.8.4
-  m_buf.str(other.m_buf.str());
+  buf_.str(other.buf_.str());
 }
 
 logger::stream& logger::stream::operator<<(const char& c) {
-  m_buf << c;
+  buf_ << c;
   if (c == '\n') {
     flush();
   }
@@ -164,7 +164,7 @@ logger::stream& logger::stream::operator<<(const char* cstr) {
   if (*cstr == '\0') {
     return *this;
   }
-  m_buf << cstr;
+  buf_ << cstr;
   if (cstr[std::strlen(cstr) - 1] == '\n') {
     flush();
   }
@@ -175,7 +175,7 @@ logger::stream& logger::stream::operator<<(const std::string& str) {
   if (str.empty()) {
     return *this;
   }
-  m_buf << str;
+  buf_ << str;
   if (str.back() == '\n') {
     flush();
   }
@@ -183,17 +183,17 @@ logger::stream& logger::stream::operator<<(const std::string& str) {
 }
 
 void logger::stream::flush() {
-  m_logger.log(m_level, m_buf.str());
-  m_buf.str("");
+  logger_.log(level_, buf_.str());
+  buf_.str("");
 }
 
 
 bool logger::init(int lvl_cons, int lvl_file, const std::string& logfile) {
-  instance().m_level_console = static_cast<level>(lvl_cons);
-  instance().m_level_file = static_cast<level>(lvl_file);
-  if (!logfile.empty()) {
-    instance().m_file.open(logfile, std::ofstream::out | std::ofstream::app);
-    return !!instance().m_file;
+  instance().level_console_ = static_cast<level>(lvl_cons);
+  instance().level_file_ = static_cast<level>(lvl_file);
+  if (! logfile.empty()) {
+    instance().file_.open(logfile, std::ofstream::out | std::ofstream::app);
+    return !! instance().file_;
   }
   return true;
 }
@@ -219,34 +219,34 @@ logger::stream logger::massive() {
   return stream{*this, level::massive};
 }
 
-logger::logger() : m_console(std::cerr) {
+logger::logger() : console_(std::cerr) {
   // nop
 }
 
 void engine::args(int argc, char** argv) {
-  instance().m_argc = argc;
-  instance().m_argv = argv;
+  instance().argc_ = argc;
+  instance().argv_ = argv;
 }
 
 int engine::argc() {
-  return instance().m_argc;
+  return instance().argc_;
 }
 
 char** engine::argv() {
-  return instance().m_argv;
+  return instance().argv_;
 }
 
 void engine::path(char* argv) {
-  instance().m_path = argv;
+  instance().path_ = argv;
 }
 
 char* engine::path() {
-  return instance().m_path;
+  return instance().path_;
 }
 
 void engine::add(const char* cstr_name, std::unique_ptr<test> ptr) {
   std::string name = cstr_name ? cstr_name : "";
-  auto& suite = instance().m_suites[name];
+  auto& suite = instance().suites_[name];
   for (auto& x : suite) {
     if (x->name() == ptr->name()) {
       std::cout << "duplicate test name: " << ptr->name() << '\n';
@@ -269,14 +269,14 @@ bool engine::run(bool colorize,
     // nothing to do
     return true;
   }
-  if (!colorize) {
+  if (! colorize) {
     for (size_t i = 0; i <= static_cast<size_t>(white); ++i) {
       for (size_t j = 0; j <= static_cast<size_t>(bold); ++j) {
-        instance().m_colors[i][j] = "";
+        instance().colors_[i][j] = "";
       }
     }
   }
-  if (!logger::init(verbosity_console, verbosity_file, log_file)) {
+  if (! logger::init(verbosity_console, verbosity_file, log_file)) {
     return false;
   }
   auto& log = logger::instance();
@@ -288,9 +288,9 @@ bool engine::run(bool colorize,
   size_t total_bad_expected = 0;
   auto bar = '+' + std::string(70, '-') + '+';
   auto failed_require = false;
-# if (!defined(__clang__) && defined(__GNUC__)                                 \
+# if (! defined(__clang__) && defined(__GNUC__)                                 \
       && __GNUC__ == 4 && __GNUC_MINOR__ < 9)                                  \
-     || (defined(__clang__) && !defined(_LIBCPP_VERSION))
+     || (defined(__clang__) && ! defined(_LIBCPP_VERSION))
   // regex implementation is broken prior to 4.9
   using strvec = std::vector<std::string>;
   auto from_psv = [](const std::string& psv) -> strvec {
@@ -310,7 +310,7 @@ bool engine::run(bool colorize,
                     const strvec& blacklist,
                     const std::string& x) {
     // an empty whitelist means original input was ".*", i.e., enable all
-    return !std::binary_search(blacklist.begin(), blacklist.end(), x)
+    return ! std::binary_search(blacklist.begin(), blacklist.end(), x)
            && (whitelist.empty()
                || std::binary_search(whitelist.begin(), whitelist.end(), x));
   };
@@ -320,10 +320,10 @@ bool engine::run(bool colorize,
   std::regex not_suites;
   std::regex not_tests;
   // a default constructored regex matches is not equal to an "empty" regex
-  if (!not_suites_str.empty()) {
+  if (! not_suites_str.empty()) {
     not_suites.assign(not_suites_str);
   }
-  if (!not_tests_str.empty()) {
+  if (! not_tests_str.empty()) {
     not_tests.assign(not_tests_str);
   }
   auto enabled = [](const std::regex& whitelist,
@@ -331,11 +331,11 @@ bool engine::run(bool colorize,
                     const std::string& x) {
     // an empty whitelist means original input was "*", i.e., enable all
     return std::regex_search(x, whitelist)
-           && !std::regex_search(x, blacklist);
+           && ! std::regex_search(x, blacklist);
   };
 # endif
-  for (auto& p : instance().m_suites) {
-    if (!enabled(suites, not_suites, p.first)) {
+  for (auto& p : instance().suites_) {
+    if (! enabled(suites, not_suites, p.first)) {
       continue;
     }
     auto suite_name = p.first.empty() ? "<unnamed>" : p.first;
@@ -343,12 +343,12 @@ bool engine::run(bool colorize,
     bool displayed_header = false;
     size_t tests_ran = 0;
     for (auto& t : p.second) {
-      if (!enabled(tests, not_tests, t->name())) {
+      if (! enabled(tests, not_tests, t->name())) {
         continue;
       }
-      instance().m_current_test = t.get();
+      instance().current_test_ = t.get();
       ++tests_ran;
-      if (!displayed_header) {
+      if (! displayed_header) {
         log.verbose() << color(yellow) << bar << '\n' << pad << suite_name
                       << '\n' << bar << color(reset) << "\n\n";
         displayed_header = true;
@@ -435,32 +435,32 @@ bool engine::run(bool colorize,
 }
 
 const char* engine::color(color_value v, color_face t) {
-  return instance().m_colors[static_cast<size_t>(v)][static_cast<size_t>(t)];
+  return instance().colors_[static_cast<size_t>(v)][static_cast<size_t>(t)];
 }
 
 const char* engine::last_check_file() {
-  return instance().m_check_file;
+  return instance().check_file_;
 }
 
 void engine::last_check_file(const char* file) {
-  instance().m_check_file = file;
+  instance().check_file_ = file;
 }
 
 size_t engine::last_check_line() {
-  return instance().m_check_line;
+  return instance().check_line_;
 }
 
 void engine::last_check_line(size_t line) {
-  instance().m_check_line = line;
+  instance().check_line_ = line;
 }
 
 test* engine::current_test() {
-  return instance().m_current_test;
+  return instance().current_test_;
 }
 
 std::vector<std::string> engine::available_suites() {
   std::vector<std::string> result;
-  for (auto& kvp : instance().m_suites) {
+  for (auto& kvp : instance().suites_) {
     result.push_back(kvp.first);
   }
   return result;
@@ -529,7 +529,7 @@ int main(int argc, char** argv) {
     }
     return 0;
   }
-  if (!res.remainder.empty()) {
+  if (! res.remainder.empty()) {
     std::cerr << "*** invalid command line options" << std::endl
               << res.helptext << std::endl;
     return 1;
@@ -548,12 +548,12 @@ namespace detail {
 
 expr::expr(test* parent, const char* filename, size_t lineno,
            bool should_fail, const char* expression)
-    : m_test{parent},
-      m_filename{filename},
-      m_line{lineno},
-      m_should_fail{should_fail},
-      m_expr{expression} {
-  assert(m_test != nullptr);
+    : test_{parent},
+      filename_{filename},
+      line_{lineno},
+      should_fail_{should_fail},
+      expr_{expression} {
+  assert(test_ != nullptr);
 }
 
 } // namespace detail

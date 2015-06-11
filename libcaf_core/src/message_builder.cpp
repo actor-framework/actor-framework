@@ -28,24 +28,24 @@
 namespace caf {
 
 class message_builder::dynamic_msg_data : public detail::message_data {
- public:
-  dynamic_msg_data() : m_type_token(0xFFFFFFFF) {
+public:
+  dynamic_msg_data() : type_token_(0xFFFFFFFF) {
     // nop
   }
 
   dynamic_msg_data(const dynamic_msg_data& other)
       : detail::message_data(other),
-        m_type_token(0xFFFFFFFF) {
-    for (auto& e : other.m_elements) {
+        type_token_(0xFFFFFFFF) {
+    for (auto& e : other.elements_) {
       add_to_type_token(e->ti->type_nr());
-      m_elements.push_back(e->copy());
+      elements_.push_back(e->copy());
     }
   }
 
   dynamic_msg_data(std::vector<uniform_value>&& data)
-      : m_elements(std::move(data)),
-        m_type_token(0xFFFFFFFF) {
-    for (auto& e : m_elements) {
+      : elements_(std::move(data)),
+        type_token_(0xFFFFFFFF) {
+    for (auto& e : elements_) {
       add_to_type_token(e->ti->type_nr());
     }
   }
@@ -54,16 +54,16 @@ class message_builder::dynamic_msg_data : public detail::message_data {
 
   const void* at(size_t pos) const override {
     CAF_ASSERT(pos < size());
-    return m_elements[pos]->val;
+    return elements_[pos]->val;
   }
 
   void* mutable_at(size_t pos) override {
     CAF_ASSERT(pos < size());
-    return m_elements[pos]->val;
+    return elements_[pos]->val;
   }
 
   size_t size() const override {
-    return m_elements.size();
+    return elements_.size();
   }
 
   cow_ptr copy() const override {
@@ -73,7 +73,7 @@ class message_builder::dynamic_msg_data : public detail::message_data {
   bool match_element(size_t pos, uint16_t typenr,
                      const std::type_info* rtti) const override {
     CAF_ASSERT(typenr != 0 || rtti != nullptr);
-    auto uti = m_elements[pos]->ti;
+    auto uti = elements_[pos]->ti;
     if (uti->type_nr() != typenr) {
       return false;
     }
@@ -81,33 +81,33 @@ class message_builder::dynamic_msg_data : public detail::message_data {
   }
 
   const char* uniform_name_at(size_t pos) const override {
-    return m_elements[pos]->ti->name();
+    return elements_[pos]->ti->name();
   }
 
   uint16_t type_nr_at(size_t pos) const override {
-    return m_elements[pos]->ti->type_nr();
+    return elements_[pos]->ti->type_nr();
   }
 
   uint32_t type_token() const override {
-    return m_type_token;
+    return type_token_;
   }
 
   void append(uniform_value&& what) {
     add_to_type_token(what->ti->type_nr());
-    m_elements.push_back(std::move(what));
+    elements_.push_back(std::move(what));
   }
 
   void add_to_type_token(uint16_t typenr) {
-    m_type_token = (m_type_token << 6) | typenr;
+    type_token_ = (type_token_ << 6) | typenr;
   }
 
   void clear() {
-    m_elements.clear();
-    m_type_token = 0xFFFFFFFF;
+    elements_.clear();
+    type_token_ = 0xFFFFFFFF;
   }
 
-  std::vector<uniform_value> m_elements;
-  uint32_t m_type_token;
+  std::vector<uniform_value> elements_;
+  uint32_t type_token_;
 };
 
 message_builder::dynamic_msg_data::~dynamic_msg_data() {
@@ -126,7 +126,7 @@ void message_builder::init() {
   // this should really be done by delegating
   // constructors, but we want to support
   // some compilers without that feature...
-  m_data = make_counted<dynamic_msg_data>();
+  data_ = make_counted<dynamic_msg_data>();
 }
 
 void message_builder::clear() {
@@ -134,7 +134,7 @@ void message_builder::clear() {
 }
 
 size_t message_builder::size() const {
-  return data()->m_elements.size();
+  return data()->elements_.size();
 }
 
 bool message_builder::empty() const {
@@ -156,34 +156,34 @@ message message_builder::to_message() const {
 
 message message_builder::move_to_message() {
   message result;
-  result.vals().reset(static_cast<dynamic_msg_data*>(m_data.release()), false);
+  result.vals().reset(static_cast<dynamic_msg_data*>(data_.release()), false);
   return result;
 }
 
 optional<message> message_builder::apply(message_handler handler) {
-  // avoid detaching of m_data by moving the data to a message object,
+  // avoid detaching of data_ by moving the data to a message object,
   // calling message::apply and moving the data back
   message::data_ptr ptr;
-  ptr.reset(static_cast<dynamic_msg_data*>(m_data.release()), false);
+  ptr.reset(static_cast<dynamic_msg_data*>(data_.release()), false);
   message msg{std::move(ptr)};
   auto res = msg.apply(std::move(handler));
-  m_data.reset(msg.vals().release(), false);
+  data_.reset(msg.vals().release(), false);
   return res;
 }
 
 message_builder::dynamic_msg_data* message_builder::data() {
   // detach if needed, i.e., assume further non-const
-  // operations on m_data can cause race conditions if
-  // someone else holds a reference to m_data
-  if (!m_data->unique()) {
-    auto tmp = static_cast<dynamic_msg_data*>(m_data.get())->copy();
-    m_data.reset(tmp.release(), false);
+  // operations on data_ can cause race conditions if
+  // someone else holds a reference to data_
+  if (! data_->unique()) {
+    auto tmp = static_cast<dynamic_msg_data*>(data_.get())->copy();
+    data_.reset(tmp.release(), false);
   }
-  return static_cast<dynamic_msg_data*>(m_data.get());
+  return static_cast<dynamic_msg_data*>(data_.get());
 }
 
 const message_builder::dynamic_msg_data* message_builder::data() const {
-  return static_cast<const dynamic_msg_data*>(m_data.get());
+  return static_cast<const dynamic_msg_data*>(data_.get());
 }
 
 } // namespace caf

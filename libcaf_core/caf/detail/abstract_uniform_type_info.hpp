@@ -31,15 +31,13 @@
 namespace caf {
 namespace detail {
 
-/**
- * Implements all pure virtual functions of `uniform_type_info`
- * except serialize() and deserialize().
- */
+/// Implements all pure virtual functions of `uniform_type_info`
+/// except serialize() and deserialize().
 template <class T>
 class abstract_uniform_type_info : public uniform_type_info {
- public:
+public:
   const char* name() const override {
-    return m_name.c_str();
+    return name_.c_str();
   }
 
   message as_message(void* instance) const override {
@@ -47,7 +45,7 @@ class abstract_uniform_type_info : public uniform_type_info {
   }
 
   bool equal_to(const std::type_info& tinfo) const override {
-    return m_native == &tinfo || *m_native == tinfo;
+    return native_ == &tinfo || *native_ == tinfo;
   }
 
   bool equals(const void* lhs, const void* rhs) const override {
@@ -58,10 +56,10 @@ class abstract_uniform_type_info : public uniform_type_info {
     return create_impl<T>(other);
   }
 
- protected:
+protected:
   abstract_uniform_type_info(std::string tname)
-      : m_name(std::move(tname)),
-        m_native(&typeid(T)) {
+      : name_(std::move(tname)),
+        native_(&typeid(T)) {
     // nop
   }
 
@@ -79,10 +77,10 @@ class abstract_uniform_type_info : public uniform_type_info {
     return false;
   }
 
-  std::string m_name;
-  const std::type_info* m_native;
+  std::string name_;
+  const std::type_info* native_;
 
- private:
+private:
   template <class C>
   typename std::enable_if<std::is_empty<C>::value, bool>::type
   eq(const C&, const C&) const {
@@ -90,7 +88,7 @@ class abstract_uniform_type_info : public uniform_type_info {
   }
 
   template <class C>
-  typename std::enable_if<!std::is_empty<C>::value &&
+  typename std::enable_if<! std::is_empty<C>::value &&
                 detail::is_comparable<C, C>::value,
               bool>::type
   eq(const C& lhs, const C& rhs) const {
@@ -98,8 +96,8 @@ class abstract_uniform_type_info : public uniform_type_info {
   }
 
   template <class C>
-  typename std::enable_if<!std::is_empty<C>::value && std::is_pod<C>::value &&
-                !detail::is_comparable<C, C>::value,
+  typename std::enable_if<! std::is_empty<C>::value && std::is_pod<C>::value &&
+                ! detail::is_comparable<C, C>::value,
               bool>::type
   eq(const C& lhs, const C& rhs) const {
     return pod_mems_equals(lhs, rhs);

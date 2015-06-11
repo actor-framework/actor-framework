@@ -32,81 +32,55 @@ class exception;
 
 namespace caf {
 
-/**
- * @relates message
- */
+/// @relates message
 std::string to_string(const message& what);
 
-/**
- * @relates group
- */
+/// @relates group
 std::string to_string(const group& what);
 
-/**
- * @relates channel
- */
+/// @relates channel
 std::string to_string(const channel& what);
 
-/**
- * @relates message_id
- */
+/// @relates message_id
 std::string to_string(const message_id& what);
 
-/**
- * @relates actor_addr
- */
+/// @relates actor_addr
 std::string to_string(const actor_addr& what);
 
-/**
- * @relates actor
- */
+/// @relates actor
 std::string to_string(const actor& what);
 
-/**
- * @relates node_id
- */
+/// @relates node_id
 std::string to_string(const node_id& what);
 
-/**
- * @relates atom_value
- */
+/// @relates atom_value
 std::string to_string(const atom_value& what);
 
-/**
- * @relates mailbox_element
- */
+/// @relates mailbox_element
 std::string to_string(const mailbox_element& what);
 
-/**
- * @relates optional
- */
+/// @relates optional
 template <class T>
 std::string to_string(const optional<T>& what) {
-  if (!what) {
+  if (! what) {
     return "none";
   }
   return to_string(*what);
 }
 
-/**
- * Converts `e` to a string including `e.what()`.
- */
+/// Converts `e` to a string including `e.what()`.
 std::string to_verbose_string(const std::exception& e);
 
-/**
- * Converts a string created by `to_string` to its original value.
- */
+/// Converts a string created by `to_string` to its original value.
 uniform_value from_string_impl(const std::string& what);
 
-/**
- * Convenience function that tries to deserializes a value from
- * `what` and converts the result to `T`.
- */
+/// Convenience function that tries to deserializes a value from
+/// `what` and converts the result to `T`.
 template <class T>
 optional<T> from_string(const std::string& what) {
   auto uti = uniform_typeid<T>();
   auto uv = from_string_impl(what);
-  if (!uv || uv->ti != uti) {
+  if (! uv || uv->ti != uti) {
     // try again using the type name
     std::string tmp = uti->name();
     tmp += " ( ";

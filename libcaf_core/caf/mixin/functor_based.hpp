@@ -25,7 +25,7 @@ namespace mixin {
 
 template <class Base, class Subtype>
 class functor_based : public Base {
- public:
+public:
   using combined_type = functor_based;
 
   using pointer = Base*;
@@ -64,20 +64,20 @@ class functor_based : public Base {
     }
   };
 
- protected:
-  make_behavior_fun m_make_behavior;
+protected:
+  make_behavior_fun make_behavior_;
 
- private:
+private:
   template <class F>
   void set(std::true_type, std::true_type, F&& fun) {
     // behavior (pointer)
-    m_make_behavior = std::forward<F>(fun);
+    make_behavior_ = std::forward<F>(fun);
   }
 
   template <class F>
   void set(std::false_type, std::true_type, F fun) {
     // void (pointer)
-    m_make_behavior = [fun](pointer ptr) {
+    make_behavior_ = [fun](pointer ptr) {
       fun(ptr);
       return behavior{};
 
@@ -87,13 +87,13 @@ class functor_based : public Base {
   template <class F>
   void set(std::true_type, std::false_type, F fun) {
     // behavior (void)
-    m_make_behavior = [fun](pointer) { return fun(); };
+    make_behavior_ = [fun](pointer) { return fun(); };
   }
 
   template <class F>
   void set(std::false_type, std::false_type, F fun) {
     // void (void)
-    m_make_behavior = [fun](pointer) {
+    make_behavior_ = [fun](pointer) {
       fun();
       return behavior{};
 

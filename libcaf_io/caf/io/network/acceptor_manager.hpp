@@ -26,18 +26,14 @@ namespace caf {
 namespace io {
 namespace network {
 
-/**
- * An acceptor manager configures an acceptor and provides
- * callbacks for incoming connections as well as for error handling.
- */
+/// An acceptor manager configures an acceptor and provides
+/// callbacks for incoming connections as well as for error handling.
 class acceptor_manager : public manager {
- public:
+public:
   ~acceptor_manager();
 
-  /**
-   * Called by the underlying IO device to indicate that
-   * a new connection is awaiting acceptance.
-   */
+  /// Called by the underlying IO device to indicate that
+  /// a new connection is awaiting acceptance.
   virtual void new_connection() = 0;
 };
 

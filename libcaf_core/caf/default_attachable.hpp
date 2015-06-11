@@ -26,7 +26,7 @@
 namespace caf {
 
 class default_attachable : public attachable {
- public:
+public:
   enum observe_type {
     monitor,
     link
@@ -51,26 +51,26 @@ class default_attachable : public attachable {
   }
 
   class predicate {
-   public:
+  public:
     inline predicate(actor_addr observer, observe_type type)
-        : m_observer(std::move(observer)),
-          m_type(type) {
+        : observer_(std::move(observer)),
+          type_(type) {
       // nop
     }
 
     inline bool operator()(const attachable_ptr& ptr) const {
-      return ptr->matches(observe_token{m_observer, m_type});
+      return ptr->matches(observe_token{observer_, type_});
     }
 
-   private:
-    actor_addr m_observer;
-    observe_type m_type;
+  private:
+    actor_addr observer_;
+    observe_type type_;
   };
 
- private:
+private:
   default_attachable(actor_addr observer, observe_type type);
-  actor_addr m_observer;
-  observe_type m_type;
+  actor_addr observer_;
+  observe_type type_;
 };
 
 } // namespace caf

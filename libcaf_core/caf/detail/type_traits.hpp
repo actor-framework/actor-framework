@@ -33,9 +33,7 @@
 namespace caf {
 namespace detail {
 
-/**
- * Joins all bool constants using operator &&.
- */
+/// Joins all bool constants using operator &&.
 template <bool... BoolConstants>
 struct conjunction;
 
@@ -49,9 +47,7 @@ struct conjunction<X, Xs...> {
   static constexpr bool value = X && conjunction<Xs...>::value;
 };
 
-/**
- * Joins all bool constants using operator ||.
- */
+/// Joins all bool constants using operator ||.
 template <bool... BoolConstants>
 struct disjunction;
 
@@ -65,15 +61,11 @@ struct disjunction<X, Xs...> {
   static constexpr bool value = X || disjunction<Xs...>::value;
 };
 
-/**
- * Equal to std::is_same<T, anything>.
- */
+/// Equal to std::is_same<T, anything>.
 template <class T>
 struct is_anything : std::is_same<T, anything> {};
 
-/**
- * Checks whether `T` is an array of type `U`.
- */
+/// Checks whether `T` is an array of type `U`.
 template <class T, typename U>
 struct is_array_of {
   using step1_type = typename std::remove_all_extents<T>::type;
@@ -82,9 +74,7 @@ struct is_array_of {
                                 && std::is_same<step2_type, U>::value;
 };
 
-/**
- * Deduces the reference type of T0 and applies it to T1.
- */
+/// Deduces the reference type of T0 and applies it to T1.
 template <class T0, typename T1>
 struct deduce_ref_type {
   using type = typename std::decay<T1>::type;
@@ -100,9 +90,7 @@ struct deduce_ref_type<const T0&, T1> {
   using type = const typename std::decay<T1>::type&;
 };
 
-/**
- * Checks wheter `X` is in the template parameter pack Ts.
- */
+/// Checks wheter `X` is in the template parameter pack Ts.
 template <class X, class... Ts>
 struct is_one_of;
 
@@ -115,12 +103,10 @@ struct is_one_of<X, X, Ts...> : std::true_type {};
 template <class X, typename T0, class... Ts>
 struct is_one_of<X, T0, Ts...> : is_one_of<X, Ts...> {};
 
-/**
- * Checks wheter `T` is considered a builtin type.
- *
- * Builtin types are: (1) all arithmetic types, (2) string types from the STL,
- * and (3) built-in types such as `actor_ptr`.
- */
+/// Checks wheter `T` is considered a builtin type.
+///
+/// Builtin types are: (1) all arithmetic types, (2) string types from the STL,
+/// and (3) built-in types such as `actor_ptr`.
 template <class T>
 struct is_builtin {
   // all arithmetic types are considered builtin
@@ -131,10 +117,8 @@ struct is_builtin {
                                              channel, node_id>::value;
 };
 
-/**
- * Chekcs wheter `T` is primitive, i.e., either an arithmetic
- *    type or convertible to one of STL's string types.
- */
+/// Chekcs wheter `T` is primitive, i.e., either an arithmetic
+///    type or convertible to one of STL's string types.
 template <class T>
 struct is_primitive {
   static constexpr bool value = std::is_arithmetic<T>::value
@@ -144,9 +128,7 @@ struct is_primitive {
                                 || std::is_convertible<T, atom_value>::value;
 };
 
-/**
- * Chekcs wheter `T1` is comparable with `T2`.
- */
+/// Chekcs wheter `T1` is comparable with `T2`.
 template <class T1, typename T2>
 class is_comparable {
   // SFINAE: If you pass a "bool*" as third argument, then
@@ -167,13 +149,11 @@ class is_comparable {
   using result_type = decltype(cmp_help_fun(static_cast<T1*>(nullptr),
                                             static_cast<T2*>(nullptr),
                                             static_cast<bool*>(nullptr)));
- public:
+public:
   static constexpr bool value = std::is_same<bool, result_type>::value;
 };
 
-/**
- * Checks wheter `T` behaves like a forward iterator.
- */
+/// Checks wheter `T` behaves like a forward iterator.
 template <class T>
 class is_forward_iterator {
   template <class C>
@@ -197,14 +177,12 @@ class is_forward_iterator {
 
   using result_type = decltype(sfinae_fun(static_cast<T*>(nullptr)));
 
- public:
+public:
   static constexpr bool value = std::is_same<bool, result_type>::value;
 };
 
-/**
- * Checks wheter `T` has `begin()` and `end()` member
- * functions returning forward iterators.
- */
+/// Checks wheter `T` has `begin()` and `end()` member
+/// functions returning forward iterators.
 template <class T>
 class is_iterable {
   // this horrible code would just disappear if we had concepts
@@ -226,7 +204,7 @@ class is_iterable {
 
   using result_type = decltype(sfinae_fun(static_cast<const T*>(nullptr)));
 
- public:
+public:
   static constexpr bool value = is_primitive<T>::value == false &&
                   std::is_same<bool, result_type>::value;
 };
@@ -234,9 +212,7 @@ class is_iterable {
 template<class T>
 constexpr bool is_iterable<T>::value;
 
-/**
- * Checks wheter `T` is neither a reference nor a pointer nor an array.
- */
+/// Checks wheter `T` is neither a reference nor a pointer nor an array.
 template <class T>
 struct is_legal_tuple_type {
   static constexpr bool value = std::is_reference<T>::value == false
@@ -245,9 +221,7 @@ struct is_legal_tuple_type {
 
 };
 
-/**
- * Checks wheter `T` is a non-const reference.
- */
+/// Checks wheter `T` is a non-const reference.
 template <class T>
 struct is_mutable_ref : std::false_type { };
 
@@ -257,42 +231,36 @@ struct is_mutable_ref<const T&> : std::false_type { };
 template <class T>
 struct is_mutable_ref<T&> : std::true_type { };
 
-/**
- * Checks whether `T::static_type_name()` exists.
- */
+/// Checks whether `T::static_type_name()` exists.
 template <class T>
 class has_static_type_name {
- private:
+private:
   template <class U,
             class = typename std::enable_if<
-                      !std::is_member_pointer<decltype(&U::static_type_name)>::value
+                      ! std::is_member_pointer<decltype(&U::static_type_name)>::value
                     >::type>
   static std::true_type sfinae_fun(int);
   template <class>
   static std::false_type sfinae_fun(...);
- public:
+public:
   static constexpr bool value = decltype(sfinae_fun<T>(0))::value;
 };
 
-/**
- * Checks whether `T::memory_cache_flag` exists.
- */
+/// Checks whether `T::memory_cache_flag` exists.
 template <class T>
 class is_memory_cached {
- private:
+private:
   template <class U, bool = U::memory_cache_flag>
   static std::true_type check(int);
 
   template <class>
   static std::false_type check(...);
 
- public:
+public:
   static constexpr bool value = decltype(check<T>(0))::value;
 };
 
-/**
- * Returns either `T` or `T::type` if `T` is an option.
- */
+/// Returns either `T` or `T::type` if `T` is an option.
 template <class T>
 struct rm_optional {
   using type = T;
@@ -303,15 +271,13 @@ struct rm_optional<optional<T>> {
   using type = T;
 };
 
-/**
- * Defines `result_type,` `arg_types,` and `fun_type`. Functor is
- *    (a) a member function pointer, (b) a function,
- *    (c) a function pointer, (d) an std::function.
- *
- * `result_type` is the result type found in the signature.
- * `arg_types` are the argument types as {@link type_list}.
- * `fun_type` is an std::function with an equivalent signature.
- */
+/// Defines `result_type,` `arg_types,` and `fun_type`. Functor is
+///    (a) a member function pointer, (b) a function,
+///    (c) a function pointer, (d) an std::function.
+///
+/// `result_type` is the result type found in the signature.
+/// `arg_types` are the argument types as {@link type_list}.
+/// `fun_type` is an std::function with an equivalent signature.
 template <class Functor>
 struct callable_trait;
 
@@ -359,11 +325,9 @@ struct get_callable_trait_helper<false, false, C> {
   using type = callable_trait<decltype(&C::operator())>;
 };
 
-/**
- * Gets a callable trait for `T,` where `T` is a functor type,
- *    i.e., a function, member function, or a class providing
- *    the call operator.
- */
+/// Gets a callable trait for `T,` where `T` is a functor type,
+///    i.e., a function, member function, or a class providing
+///    the call operator.
 template <class T>
 struct get_callable_trait {
   // type without cv qualifiers
@@ -383,9 +347,7 @@ struct get_callable_trait {
   static constexpr size_t num_args = tl_size<arg_types>::value;
 };
 
-/**
- * Checks wheter `T` is a function or member function.
- */
+/// Checks wheter `T` is a function or member function.
 template <class T>
 struct is_callable {
   template <class C>
@@ -406,24 +368,20 @@ struct is_callable {
 
   using result_type = decltype(_fun(static_cast<pointer>(nullptr)));
 
- public:
+public:
   static constexpr bool value = std::is_same<bool, result_type>::value;
 };
 
-/**
- * Checks wheter each `T` in `Ts` is a function or member function.
- */
+/// Checks wheter each `T` in `Ts` is a function or member function.
 template <class... Ts>
 struct all_callable {
   static constexpr bool value = conjunction<is_callable<Ts>::value...>::value;
 };
 
-/**
- * Checks wheter `F` takes mutable references.
- *
- * A manipulator is a functor that manipulates its arguments via
- * mutable references.
- */
+/// Checks wheter `F` takes mutable references.
+///
+/// A manipulator is a functor that manipulates its arguments via
+/// mutable references.
 template <class F>
 struct is_manipulator {
   static constexpr bool value =
@@ -441,10 +399,8 @@ struct map_to_result_type_impl<false, C> {
   using type = unit_t;
 };
 
-/**
- * Maps `T` to its result type if it's callable,
- *    {@link unit_t} otherwise.
- */
+/// Maps `T` to its result type if it's callable,
+///    {@link unit_t} otherwise.
 template <class T>
 struct map_to_result_type {
   using type =
@@ -469,18 +425,14 @@ constexpr bool value_of() {
   return T::value;
 }
 
-/**
- * Replaces `What` with `With` if any IfStmt::value evaluates to true.
- */
+/// Replaces `What` with `With` if any IfStmt::value evaluates to true.
 template <class What, typename With, class... IfStmt>
 struct replace_type {
   static constexpr bool do_replace = disjunction<value_of<IfStmt>()...>::value;
   using type = typename replace_type_impl<do_replace, What, With>::type;
 };
 
-/**
- * Gets the Nth element of the template parameter pack `Ts`.
- */
+/// Gets the Nth element of the template parameter pack `Ts`.
 template <size_t N, class... Ts>
 struct type_at;
 

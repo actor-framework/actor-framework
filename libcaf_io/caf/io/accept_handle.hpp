@@ -25,20 +25,18 @@
 namespace caf {
 namespace io {
 
-/**
- * Generic handle type for managing incoming connections.
- */
+/// Generic handle type for managing incoming connections.
 class accept_handle : public handle<accept_handle> {
 
   friend class handle<accept_handle>;
 
   using super = handle<accept_handle>;
 
- public:
+public:
 
   accept_handle() = default;
 
- private:
+private:
 
   inline accept_handle(int64_t handle_id) : super{handle_id} {}
 

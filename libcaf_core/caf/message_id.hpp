@@ -36,22 +36,20 @@ struct invalid_message_id_t {
 
 constexpr invalid_message_id_t invalid_message_id = invalid_message_id_t{};
 
-/**
- * Denotes whether a message is asynchronous or synchronous
- * @note Asynchronous messages always have an invalid message id.
- */
+/// Denotes whether a message is asynchronous or synchronous
+/// @note Asynchronous messages always have an invalid message id.
 class message_id : detail::comparable<message_id> {
- public:
+public:
   static constexpr uint64_t response_flag_mask = 0x8000000000000000;
   static constexpr uint64_t answered_flag_mask = 0x4000000000000000;
   static constexpr uint64_t high_prioity_flag_mask = 0x2000000000000000;
   static constexpr uint64_t request_id_mask = 0x1FFFFFFFFFFFFFFF;
 
-  constexpr message_id() : m_value(0) {
+  constexpr message_id() : value_(0) {
     // nop
   }
 
-  constexpr message_id(invalid_message_id_t) : m_value(0) {
+  constexpr message_id(invalid_message_id_t) : value_(0) {
     // nop
   }
 
@@ -61,57 +59,57 @@ class message_id : detail::comparable<message_id> {
   message_id& operator=(const message_id&) = default;
 
   inline message_id& operator++() {
-    ++m_value;
+    ++value_;
     return *this;
   }
 
   inline bool is_response() const {
-    return (m_value & response_flag_mask) != 0;
+    return (value_ & response_flag_mask) != 0;
   }
 
   inline bool is_answered() const {
-    return (m_value & answered_flag_mask) != 0;
+    return (value_ & answered_flag_mask) != 0;
   }
 
   inline bool is_high_priority() const {
-    return (m_value & high_prioity_flag_mask) != 0;
+    return (value_ & high_prioity_flag_mask) != 0;
   }
 
   inline bool valid() const {
-    return (m_value & request_id_mask) != 0;
+    return (value_ & request_id_mask) != 0;
   }
 
   inline bool is_request() const {
-    return valid() && !is_response();
+    return valid() && ! is_response();
   }
 
   inline message_id response_id() const {
-    return message_id{is_request() ? m_value | response_flag_mask : 0};
+    return message_id{is_request() ? value_ | response_flag_mask : 0};
   }
 
   inline message_id request_id() const {
-    return message_id(m_value & request_id_mask);
+    return message_id(value_ & request_id_mask);
   }
 
   inline message_id with_high_priority() const {
-    return message_id(m_value | high_prioity_flag_mask);
+    return message_id(value_ | high_prioity_flag_mask);
   }
 
   inline message_id with_normal_priority() const {
-    return message_id(m_value & ~high_prioity_flag_mask);
+    return message_id(value_ & ~high_prioity_flag_mask);
   }
 
   inline void mark_as_answered() {
-    m_value |= answered_flag_mask;
+    value_ |= answered_flag_mask;
   }
 
   inline uint64_t integer_value() const {
-    return m_value;
+    return value_;
   }
 
   static inline message_id from_integer_value(uint64_t value) {
     message_id result;
-    result.m_value = value;
+    result.value_ = value;
     return result;
   }
 
@@ -122,15 +120,15 @@ class message_id : detail::comparable<message_id> {
   }
 
   long compare(const message_id& other) const {
-    return (m_value == other.m_value) ? 0
-                                      : (m_value < other.m_value ? -1 : 1);
+    return (value_ == other.value_) ? 0
+                                      : (value_ < other.value_ ? -1 : 1);
   }
 
- private:
-  explicit inline message_id(uint64_t value) : m_value(value) {
+private:
+  explicit inline message_id(uint64_t value) : value_(value) {
     // nop
   }
-  uint64_t m_value;
+  uint64_t value_;
 };
 
 } // namespace caf

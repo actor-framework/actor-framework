@@ -30,7 +30,7 @@ std::atomic<size_t> s_ctors;
 std::atomic<size_t> s_dtors;
 
 class worker : public event_based_actor {
- public:
+public:
   worker();
   ~worker();
   behavior make_behavior() override;

@@ -88,7 +88,7 @@ auto ccall(Predicate p, const char* errmsg, F f, Ts&&... xs)
 -> decltype(f(std::forward<Ts>(xs)...)) {
   using namespace caf::io::network;
   auto result = f(std::forward<Ts>(xs)...);
-  if (!p(result)) {
+  if (! p(result)) {
     std::ostringstream oss;
     oss << errmsg << ": " << last_socket_error_as_string()
         << " [errno: " << last_socket_error() << "]";
@@ -252,25 +252,25 @@ namespace network {
 
 #ifdef CAF_EPOLL_MULTIPLEXER
 
-  // In this implementation, m_shadow is the number of sockets we have
+  // In this implementation, shadow_ is the number of sockets we have
   // registered to epoll.
 
   default_multiplexer::default_multiplexer()
-      : m_epollfd(invalid_native_socket),
-        m_shadow(1) {
+      : epollfd_(invalid_native_socket),
+        shadow_(1) {
     init();
-    m_epollfd = epoll_create1(EPOLL_CLOEXEC);
-    if (m_epollfd == -1) {
+    epollfd_ = epoll_create1(EPOLL_CLOEXEC);
+    if (epollfd_ == -1) {
       CAF_LOG_ERROR("epoll_create1: " << strerror(errno));
       exit(errno);
     }
     // handle at most 64 events at a time
-    m_pollset.resize(64);
-    m_pipe = create_pipe();
+    pollset_.resize(64);
+    pipe_ = create_pipe();
     epoll_event ee;
     ee.events = input_mask;
     ee.data.ptr = nullptr;
-    if (epoll_ctl(m_epollfd, EPOLL_CTL_ADD, m_pipe.first, &ee) < 0) {
+    if (epoll_ctl(epollfd_, EPOLL_CTL_ADD, pipe_.first, &ee) < 0) {
       CAF_LOG_ERROR("epoll_ctl: " << strerror(errno));
       exit(errno);
     }
@@ -278,10 +278,10 @@ namespace network {
 
   void default_multiplexer::run() {
     CAF_LOG_TRACE("epoll()-based multiplexer");
-    while (m_shadow > 0) {
-      int presult = epoll_wait(m_epollfd, m_pollset.data(),
-                               static_cast<int>(m_pollset.size()), -1);
-      CAF_LOG_DEBUG("epoll_wait() on " << m_shadow << " sockets reported "
+    while (shadow_ > 0) {
+      int presult = epoll_wait(epollfd_, pollset_.data(),
+                               static_cast<int>(pollset_.size()), -1);
+      CAF_LOG_DEBUG("epoll_wait() on " << shadow_ << " sockets reported "
                     << presult << " event(s)");
       if (presult < 0) {
         switch (errno) {
@@ -296,17 +296,17 @@ namespace network {
           }
         }
       }
-      auto iter = m_pollset.begin();
+      auto iter = pollset_.begin();
       auto last = iter + presult;
       for (; iter != last; ++iter) {
         auto ptr = reinterpret_cast<event_handler*>(iter->data.ptr);
-        auto fd = ptr ? ptr->fd() : m_pipe.first;
+        auto fd = ptr ? ptr->fd() : pipe_.first;
         handle_socket_event(fd, static_cast<int>(iter->events), ptr);
       }
-      for (auto& me : m_events) {
+      for (auto& me : events_) {
         handle(me);
       }
-      m_events.clear();
+      events_.clear();
     }
   }
 
@@ -314,7 +314,7 @@ namespace network {
     CAF_LOG_TRACE("e.fd = " << e.fd << ", mask = " << e.mask);
     // ptr is only allowed to nullptr if fd is our pipe
     // read handle which is only registered for input
-    CAF_ASSERT(e.ptr != nullptr || e.fd == m_pipe.first);
+    CAF_ASSERT(e.ptr != nullptr || e.fd == pipe_.first);
     if (e.ptr && e.ptr->eventbf() == e.mask) {
       // nop
       return;
@@ -330,22 +330,22 @@ namespace network {
     if (e.mask == 0) {
       CAF_LOG_DEBUG("attempt to remove socket " << e.fd << " from epoll");
       op = EPOLL_CTL_DEL;
-      --m_shadow;
+      --shadow_;
     } else if (old == 0) {
       CAF_LOG_DEBUG("attempt to add socket " << e.fd << " to epoll");
       op = EPOLL_CTL_ADD;
-      ++m_shadow;
+      ++shadow_;
     } else {
       CAF_LOG_DEBUG("modify epoll event mask for socket " << e.fd
                     << ": " << old << " -> " << e.mask);
       op = EPOLL_CTL_MOD;
     }
-    if (epoll_ctl(m_epollfd, op, e.fd, &ee) < 0) {
+    if (epoll_ctl(epollfd_, op, e.fd, &ee) < 0) {
       switch (last_socket_error()) {
         // supplied file descriptor is already registered
         case EEXIST:
           CAF_LOG_ERROR("file descriptor registered twice");
-          --m_shadow;
+          --shadow_;
           break;
         // op was EPOLL_CTL_MOD or EPOLL_CTL_DEL,
         // and fd is not registered with this epoll instance.
@@ -354,7 +354,7 @@ namespace network {
             "cannot delete file descriptor "
             "because it isn't registered");
           if (e.mask == 0) {
-            ++m_shadow;
+            ++shadow_;
           }
           break;
         default:
@@ -383,21 +383,21 @@ namespace network {
   // Hence, you need to find a pointer to the actual object managing the
   // socket. When using a map, your already dreadful O(n) turns into
   // a worst case of O(n * log n). To deal with this nonsense, we have two
-  // vectors in this implementation: m_pollset and m_shadow. The former
+  // vectors in this implementation: pollset_ and shadow_. The former
   // stores our pollset, the latter stores our pointers. Both vectors
   // are sorted by the file descriptor. This allows us to quickly,
   // i.e., O(1), access the actual object when handling socket events.
 
-  default_multiplexer::default_multiplexer() : m_epollfd(-1) {
+  default_multiplexer::default_multiplexer() : epollfd_(-1) {
     init();
     // initial setup
-    m_pipe = create_pipe();
+    pipe_ = create_pipe();
     pollfd pipefd;
-    pipefd.fd = m_pipe.first;
+    pipefd.fd = pipe_.first;
     pipefd.events = input_mask;
     pipefd.revents = 0;
-    m_pollset.push_back(pipefd);
-    m_shadow.push_back(nullptr);
+    pollset_.push_back(pipefd);
+    shadow_.push_back(nullptr);
   }
 
   void default_multiplexer::run() {
@@ -413,15 +413,15 @@ namespace network {
       event_handler* ptr;     // nullptr in case of a pipe event
     };
     std::vector<fd_event> poll_res;
-    while (!m_pollset.empty()) {
+    while (! pollset_.empty()) {
       int presult;
-      CAF_LOG_DEBUG("poll() " << m_pollset.size() << " sockets");
+      CAF_LOG_DEBUG("poll() " << pollset_.size() << " sockets");
 #     ifdef CAF_WINDOWS
-        presult = ::WSAPoll(m_pollset.data(), 
-                            static_cast<ULONG>(m_pollset.size()), -1);
+        presult = ::WSAPoll(pollset_.data(), 
+                            static_cast<ULONG>(pollset_.size()), -1);
 #     else
-        presult = ::poll(m_pollset.data(),
-                         static_cast<nfds_t>(m_pollset.size()), -1);
+        presult = ::poll(pollset_.data(),
+                         static_cast<nfds_t>(pollset_.size()), -1);
 #     endif
       if (presult < 0) {
         switch (last_socket_error()) {
@@ -443,15 +443,15 @@ namespace network {
         }
         continue; // rince and repeat
       }
-      // scan pollset for events first, because we might alter m_pollset
+      // scan pollset for events first, because we might alter pollset_
       // while running callbacks (not a good idea while traversing it)
       CAF_LOG_DEBUG("scan pollset for socket events");
-      for (size_t i = 0; i < m_pollset.size() && presult > 0; ++i) {
-        auto& pfd = m_pollset[i];
+      for (size_t i = 0; i < pollset_.size() && presult > 0; ++i) {
+        auto& pfd = pollset_[i];
         if (pfd.revents != 0) {
           CAF_LOG_DEBUG("event on socket " << pfd.fd
                         << ", revents = " << pfd.revents);
-          poll_res.push_back({pfd.fd, pfd.revents, m_shadow[i]});
+          poll_res.push_back({pfd.fd, pfd.revents, shadow_[i]});
           pfd.revents = 0;
           --presult; // stop as early as possible
         }
@@ -463,23 +463,23 @@ namespace network {
         // operations possible on the socket
         handle_socket_event(e.fd, e.mask, e.ptr);
       }
-      CAF_LOG_DEBUG("handle " << m_events.size() << " generated events");
+      CAF_LOG_DEBUG("handle " << events_.size() << " generated events");
       poll_res.clear();
-      for (auto& me : m_events) {
+      for (auto& me : events_) {
         handle(me);
       }
-      m_events.clear();
+      events_.clear();
     }
   }
 
   void default_multiplexer::handle(const default_multiplexer::event& e) {
     CAF_ASSERT(e.fd != invalid_native_socket);
-    CAF_ASSERT(m_pollset.size() == m_shadow.size());
+    CAF_ASSERT(pollset_.size() == shadow_.size());
     CAF_LOGF_TRACE("fd = " << e.fd
             << ", old mask = " << (e.ptr ? e.ptr->eventbf() : -1)
             << ", new mask = " << e.mask);
-    auto last = m_pollset.end();
-    auto i = std::lower_bound(m_pollset.begin(), last, e.fd,
+    auto last = pollset_.end();
+    auto i = std::lower_bound(pollset_.begin(), last, e.fd,
                               [](const pollfd& lhs, native_socket rhs) {
                                 return lhs.fd < rhs;
                               });
@@ -495,22 +495,22 @@ namespace network {
     // calculate shadow of i
     multiplexer_poll_shadow_data::iterator j;
     if (i == last) {
-      j = m_shadow.end();
+      j = shadow_.end();
     } else {
-      j = m_shadow.begin();
-      std::advance(j, distance(m_pollset.begin(), i));
+      j = shadow_.begin();
+      std::advance(j, distance(pollset_.begin(), i));
     }
     // modify vectors
     if (i == last) { // append
       if (e.mask != 0) {
-        m_pollset.push_back(new_element);
-        m_shadow.push_back(e.ptr);
+        pollset_.push_back(new_element);
+        shadow_.push_back(e.ptr);
       }
     } else if (i->fd == e.fd) { // modify
       if (e.mask == 0) {
         // delete item
-        m_pollset.erase(i);
-        m_shadow.erase(j);
+        pollset_.erase(i);
+        shadow_.erase(j);
       } else {
         // update event mask of existing entry
         CAF_ASSERT(*j == e.ptr);
@@ -526,8 +526,8 @@ namespace network {
         remove_from_loop_if_needed(output_mask, operation::write);
       }
     } else { // insert at iterator pos
-      m_pollset.insert(i, new_element);
-      m_shadow.insert(j, e.ptr);
+      pollset_.insert(i, new_element);
+      shadow_.insert(j, e.ptr);
     }
   }
 
@@ -576,7 +576,7 @@ void default_multiplexer::del(operation op, native_socket fd,
                               event_handler* ptr) {
   CAF_ASSERT(fd != invalid_native_socket);
   // ptr == nullptr is only allowed when removing our pipe read handle
-  CAF_ASSERT(ptr != nullptr || fd == m_pipe.first);
+  CAF_ASSERT(ptr != nullptr || fd == pipe_.first);
   CAF_LOG_TRACE(CAF_TARG(op, static_cast<int>)<< ", " << CAF_ARG(fd)
                                               << ", " CAF_ARG(ptr));
   new_event(del_flag, op, fd, ptr);
@@ -586,10 +586,10 @@ void default_multiplexer::wr_dispatch_request(runnable* ptr) {
   intptr_t ptrval = reinterpret_cast<intptr_t>(ptr);
   // on windows, we actually have sockets, otherwise we have file handles
 # ifdef CAF_WINDOWS
-    auto res = ::send(m_pipe.second, reinterpret_cast<socket_send_ptr>(&ptrval),
+    auto res = ::send(pipe_.second, reinterpret_cast<socket_send_ptr>(&ptrval),
                       sizeof(ptrval), no_sigpipe_flag);
 # else
-    auto res = ::write(m_pipe.second, &ptrval, sizeof(ptrval));
+    auto res = ::write(pipe_.second, &ptrval, sizeof(ptrval));
 # endif
   if (res <= 0) {
     // pipe closed, discard runnable
@@ -605,10 +605,10 @@ default_multiplexer::runnable* default_multiplexer::rd_dispatch_request() {
   intptr_t ptrval;
   // on windows, we actually have sockets, otherwise we have file handles
 # ifdef CAF_WINDOWS
-    auto res = recv(m_pipe.first, reinterpret_cast<socket_recv_ptr>(&ptrval),
+    auto res = recv(pipe_.first, reinterpret_cast<socket_recv_ptr>(&ptrval),
                     sizeof(ptrval), 0);
 # else
-    auto res = read(m_pipe.first, &ptrval, sizeof(ptrval));
+    auto res = read(pipe_.first, &ptrval, sizeof(ptrval));
 # endif
   if (res != sizeof(ptrval)) {
     return nullptr;
@@ -622,28 +622,28 @@ default_multiplexer& get_multiplexer_singleton() {
 
 multiplexer::supervisor_ptr default_multiplexer::make_supervisor() {
   class impl : public multiplexer::supervisor {
-   public:
-    explicit impl(default_multiplexer* thisptr) : m_this(thisptr) {
+  public:
+    explicit impl(default_multiplexer* thisptr) : this_(thisptr) {
       // nop
     }
     ~impl() {
-      auto ptr = m_this;
+      auto ptr = this_;
       ptr->dispatch([=] { ptr->close_pipe(); });
     }
-   private:
-    default_multiplexer* m_this;
+  private:
+    default_multiplexer* this_;
   };
   return supervisor_ptr{new impl(this)};
 }
 
 void default_multiplexer::close_pipe() {
   CAF_LOG_TRACE("");
-  del(operation::read, m_pipe.first, nullptr);
+  del(operation::read, pipe_.first, nullptr);
 }
 
 bool default_multiplexer::socket_had_rd_shutdown_event(native_socket fd) {
-  auto last = m_events.end();
-  auto i = std::lower_bound(m_events.begin(), last, fd, event_less{});
+  auto last = events_.end();
+  auto i = std::lower_bound(events_.begin(), last, fd, event_less{});
   if (i != last && i->fd == fd) {
     // socket is about to be shut down for read if
     // its new bitmask does not have the input_mask flag
@@ -658,12 +658,12 @@ void default_multiplexer::handle_socket_event(native_socket fd, int mask,
   bool checkerror = true;
   // ignore read events if a previous event caused
   // this socket to be shut down for reading
-  if ((mask & input_mask) && !socket_had_rd_shutdown_event(fd)) {
+  if ((mask & input_mask) && ! socket_had_rd_shutdown_event(fd)) {
     checkerror = false;
     if (ptr) {
       ptr->handle_event(operation::read);
     } else {
-      CAF_ASSERT(fd == m_pipe.first);
+      CAF_ASSERT(fd == pipe_.first);
       CAF_LOG_DEBUG("read message from pipe");
       auto cb = rd_dispatch_request();
       cb->run();
@@ -705,19 +705,19 @@ void default_multiplexer::init() {
 }
 
 default_multiplexer::~default_multiplexer() {
-  if (m_epollfd != invalid_native_socket) {
-    closesocket(m_epollfd);
+  if (epollfd_ != invalid_native_socket) {
+    closesocket(epollfd_);
   }
   // close write handle first
-  closesocket(m_pipe.second);
+  closesocket(pipe_.second);
   // flush pipe before closing it
-  nonblocking(m_pipe.first, true);
+  nonblocking(pipe_.first, true);
   auto ptr = rd_dispatch_request();
   while (ptr) {
     ptr->deref();
     ptr = rd_dispatch_request();
   }
-  closesocket(m_pipe.first);
+  closesocket(pipe_.first);
 # ifdef CAF_WINDOWS
     WSACleanup();
 # endif
@@ -731,42 +731,42 @@ connection_handle default_multiplexer::add_tcp_scribe(broker* self,
                                                       default_socket&& sock) {
   CAF_LOG_TRACE("");
   class impl : public broker::scribe {
-   public:
+  public:
     impl(broker* ptr, default_socket&& s)
         : scribe(ptr, network::conn_hdl_from_socket(s)),
-          m_launched(false),
-          m_stream(s.backend()) {
-      m_stream.init(std::move(s));
+          launched_(false),
+          stream_(s.backend()) {
+      stream_.init(std::move(s));
     }
     void configure_read(receive_policy::config config) override {
       CAF_LOG_TRACE("");
-      m_stream.configure_read(config);
-      if (!m_launched) launch();
+      stream_.configure_read(config);
+      if (! launched_) launch();
     }
     broker::buffer_type& wr_buf() override {
-      return m_stream.wr_buf();
+      return stream_.wr_buf();
     }
     broker::buffer_type& rd_buf() override {
-      return m_stream.rd_buf();
+      return stream_.rd_buf();
     }
     void stop_reading() override {
       CAF_LOG_TRACE("");
-      m_stream.stop_reading();
+      stream_.stop_reading();
       disconnect(false);
     }
     void flush() override {
       CAF_LOG_TRACE("");
-      m_stream.flush(this);
+      stream_.flush(this);
     }
     void launch() {
       CAF_LOG_TRACE("");
-      CAF_ASSERT(!m_launched);
-      m_launched = true;
-      m_stream.start(this);
+      CAF_ASSERT(! launched_);
+      launched_ = true;
+      stream_.start(this);
     }
-   private:
-    bool m_launched;
-    stream<default_socket> m_stream;
+  private:
+    bool launched_;
+    stream<default_socket> stream_;
   };
   broker::scribe_pointer ptr = make_counted<impl>(self, std::move(sock));
   self->add_scribe(ptr);
@@ -779,31 +779,31 @@ default_multiplexer::add_tcp_doorman(broker* self,
   CAF_LOG_TRACE("sock.fd = " << sock.fd());
   CAF_ASSERT(sock.fd() != network::invalid_native_socket);
   class impl : public broker::doorman {
-   public:
+  public:
     impl(broker* ptr, default_socket_acceptor&& s)
         : doorman(ptr, network::accept_hdl_from_socket(s)),
-          m_acceptor(s.backend()) {
-      m_acceptor.init(std::move(s));
+          acceptor_(s.backend()) {
+      acceptor_.init(std::move(s));
     }
     void new_connection() override {
       CAF_LOG_TRACE("");
-      auto& dm = m_acceptor.backend();
+      auto& dm = acceptor_.backend();
       accept_msg().handle
-        = dm.add_tcp_scribe(parent(), std::move(m_acceptor.accepted_socket()));
+        = dm.add_tcp_scribe(parent(), std::move(acceptor_.accepted_socket()));
       parent()->invoke_message(invalid_actor_addr, invalid_message_id,
-                               m_accept_msg);
+                               accept_msg_);
     }
     void stop_reading() override {
       CAF_LOG_TRACE("");
-      m_acceptor.stop_reading();
+      acceptor_.stop_reading();
       disconnect(false);
     }
     void launch() override {
       CAF_LOG_TRACE("");
-      m_acceptor.start(this);
+      acceptor_.start(this);
     }
-   private:
-    network::acceptor<default_socket_acceptor> m_acceptor;
+  private:
+    network::acceptor<default_socket_acceptor> acceptor_;
   };
   broker::doorman_pointer ptr = make_counted<impl>(self, std::move(sock));
   self->add_doorman(ptr);
@@ -876,7 +876,7 @@ void tcp_nodelay(native_socket fd, bool new_value) {
 bool is_error(ssize_t res, bool is_nonblock) {
   if (res < 0) {
     auto err = last_socket_error();
-    if (!is_nonblock || !would_block_or_temporarily_unavailable(err)) {
+    if (! is_nonblock || ! would_block_or_temporarily_unavailable(err)) {
       return true;
     }
     // don't report an error in case of
@@ -920,7 +920,7 @@ bool try_accept(native_socket& result, native_socket fd) {
                  << fd << ", accept returned " << result);
   if (result == invalid_native_socket) {
     auto err = last_socket_error();
-    if (!would_block_or_temporarily_unavailable(err)) {
+    if (! would_block_or_temporarily_unavailable(err)) {
       return false;
     }
   }
@@ -928,8 +928,8 @@ bool try_accept(native_socket& result, native_socket fd) {
 }
 
 event_handler::event_handler(default_multiplexer& dm)
-    : m_backend(dm),
-      m_eventbf(0) {
+    : backend_(dm),
+      eventbf_(0) {
   // nop
 }
 
@@ -938,43 +938,43 @@ event_handler::~event_handler() {
 }
 
 default_socket::default_socket(default_multiplexer& ref, native_socket sockfd)
-    : m_parent(ref),
-      m_fd(sockfd) {
+    : parent_(ref),
+      fd_(sockfd) {
   CAF_LOG_TRACE(CAF_ARG(sockfd));
   if (sockfd != invalid_native_socket) {
     // enable nonblocking IO & disable Nagle's algorithm
-    nonblocking(m_fd, true);
-    tcp_nodelay(m_fd, true);
+    nonblocking(fd_, true);
+    tcp_nodelay(fd_, true);
   }
 }
 
 default_socket::default_socket(default_socket&& other)
-    : m_parent(other.m_parent),
-      m_fd(other.m_fd) {
-  other.m_fd = invalid_native_socket;
+    : parent_(other.parent_),
+      fd_(other.fd_) {
+  other.fd_ = invalid_native_socket;
 }
 
 default_socket& default_socket::operator=(default_socket&& other) {
-  std::swap(m_fd, other.m_fd);
+  std::swap(fd_, other.fd_);
   return *this;
 }
 
 default_socket::~default_socket() {
-  if (m_fd != invalid_native_socket) {
-    CAF_LOG_DEBUG("close socket " << m_fd);
-    closesocket(m_fd);
+  if (fd_ != invalid_native_socket) {
+    CAF_LOG_DEBUG("close socket " << fd_);
+    closesocket(fd_);
   }
 }
 
 void default_socket::close_read() {
-  if (m_fd != invalid_native_socket) {
-    ::shutdown(m_fd, 0); // 0 identifies the read channel on Win & UNIX
+  if (fd_ != invalid_native_socket) {
+    ::shutdown(fd_, 0); // 0 identifies the read channel on Win & UNIX
   }
 }
 
 class socket_guard {
- public:
-  explicit socket_guard(native_socket fd) : m_fd(fd) {
+public:
+  explicit socket_guard(native_socket fd) : fd_(fd) {
     // nop
   }
 
@@ -983,20 +983,20 @@ class socket_guard {
   }
 
   native_socket release() {
-    auto fd = m_fd;
-    m_fd = invalid_native_socket;
+    auto fd = fd_;
+    fd_ = invalid_native_socket;
     return fd;
   }
 
   void close() {
-    if (m_fd != invalid_native_socket) {
-      closesocket(m_fd);
-      m_fd = invalid_native_socket;
+    if (fd_ != invalid_native_socket) {
+      closesocket(fd_);
+      fd_ = invalid_native_socket;
     }
   }
 
- private:
-  native_socket m_fd;
+private:
+  native_socket fd_;
 };
 
 #ifdef CAF_WINDOWS
@@ -1069,7 +1069,7 @@ native_socket new_tcp_connection_impl(const std::string& host, uint16_t port,
     get_multiplexer_singleton();
 # endif
   auto res = interfaces::native_address(host, preferred);
-  if (!res) {
+  if (! res) {
     CAF_LOGF_INFO("no such host");
     throw network_error("no such host: " + host);
   }
@@ -1087,7 +1087,7 @@ native_socket new_tcp_connection_impl(const std::string& host, uint16_t port,
     // IPv4 fallback
     return new_tcp_connection_impl(host, port, ipv4);
   }
-  if (!ip_connect<AF_INET>(fd, res->first, port)) {
+  if (! ip_connect<AF_INET>(fd, res->first, port)) {
     CAF_LOGF_ERROR("could not connect to to " << host << " on port " << port);
     throw network_error("could not connect to " + host);
   }
@@ -1138,7 +1138,7 @@ uint16_t new_ip_acceptor_impl(native_socket fd, uint16_t port,
   sockaddr_type sa;
   memset(&sa, 0, sizeof(sockaddr_type));
   family_of(sa) = Family;
-  if (!addr) {
+  if (! addr) {
     set_inaddr_any(fd, sa);
   } else {
     ccall(cc_one, "invalid IP address", inet_pton, Family, addr, &addr_of(sa));
@@ -1160,7 +1160,7 @@ new_tcp_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr) {
   protocol proto = ipv6;
   if (addr) {
     auto addrs = interfaces::native_address(addr);
-    if (!addrs) {
+    if (! addrs) {
       std::string errmsg = "invalid IP address: ";
       errmsg += addr;
       throw network_error(errmsg);

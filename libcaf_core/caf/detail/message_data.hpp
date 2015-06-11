@@ -36,7 +36,7 @@ namespace caf {
 namespace detail {
 
 class message_data : public ref_counted {
- public:
+public:
   message_data() = default;
   message_data(const message_data&) = default;
   ~message_data();
@@ -76,7 +76,7 @@ class message_data : public ref_counted {
    ****************************************************************************/
 
   class cow_ptr {
-   public:
+  public:
     cow_ptr() = default;
     cow_ptr(cow_ptr&&) = default;
     cow_ptr(const cow_ptr&) = default;
@@ -84,11 +84,11 @@ class message_data : public ref_counted {
     cow_ptr& operator=(const cow_ptr&) = default;
 
     template <class T>
-    cow_ptr(intrusive_ptr<T> p) : m_ptr(std::move(p)) {
+    cow_ptr(intrusive_ptr<T> p) : ptr_(std::move(p)) {
       // nop
     }
 
-    inline cow_ptr(message_data* ptr, bool add_ref) : m_ptr(ptr, add_ref) {
+    inline cow_ptr(message_data* ptr, bool add_ref) : ptr_(ptr, add_ref) {
       // nop
     }
 
@@ -97,15 +97,15 @@ class message_data : public ref_counted {
      **************************************************************************/
 
     inline void swap(cow_ptr& other) {
-      m_ptr.swap(other.m_ptr);
+      ptr_.swap(other.ptr_);
     }
 
     inline void reset(message_data* p = nullptr, bool add_ref = true) {
-      m_ptr.reset(p, add_ref);
+      ptr_.reset(p, add_ref);
     }
 
     inline message_data* release() {
-      return m_ptr.release();
+      return ptr_.release();
     }
 
     inline void detach() {
@@ -124,24 +124,24 @@ class message_data : public ref_counted {
      **************************************************************************/
 
     inline const message_data* operator->() const {
-      return m_ptr.get();
+      return ptr_.get();
     }
 
     inline const message_data& operator*() const {
-      return *m_ptr.get();
+      return *ptr_.get();
     }
 
     inline explicit operator bool() const {
-      return static_cast<bool>(m_ptr);
+      return static_cast<bool>(ptr_);
     }
 
     inline message_data* get() const {
-      return m_ptr.get();
+      return ptr_.get();
     }
 
-   private:
+  private:
     message_data* get_detached();
-    intrusive_ptr<message_data> m_ptr;
+    intrusive_ptr<message_data> ptr_;
   };
 
   virtual cow_ptr copy() const = 0;

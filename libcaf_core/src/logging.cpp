@@ -73,10 +73,10 @@ struct log_event {
 #endif
 
 class logging_impl : public logging {
- public:
+public:
   void initialize() override {
     const char* log_level_table[] = {"ERROR", "WARN", "INFO", "DEBUG", "TRACE"};
-    m_thread = std::thread{[this] { (*this)(); }};
+    thread_ = std::thread{[this] { (*this)(); }};
     std::string msg = "ENTRY log level = ";
     msg += log_level_table[global_log_level];
     log("TRACE", "logging", "run", __FILE__, __LINE__, msg);
@@ -85,8 +85,8 @@ class logging_impl : public logging {
   void stop() override {
     log("TRACE", "logging", "run", __FILE__, __LINE__, "EXIT");
     // an empty string means: shut down
-    m_queue.synchronized_enqueue(m_queue_mtx, m_queue_cv, new log_event{""});
-    m_thread.join();
+    queue_.synchronized_enqueue(queue_mtx_, queue_cv_, new log_event{""});
+    thread_.join();
   }
 
   void operator()() {
@@ -96,9 +96,9 @@ class logging_impl : public logging {
     std::unique_ptr<log_event> event;
     for (;;) {
       // make sure we have data to read
-      m_queue.synchronized_await(m_queue_mtx, m_queue_cv);
+      queue_.synchronized_await(queue_mtx_, queue_cv_);
       // read & process event
-      event.reset(m_queue.try_pop());
+      event.reset(queue_.try_pop());
       CAF_ASSERT(event != nullptr);
       if (event->msg.empty()) {
         out.close();
@@ -155,15 +155,15 @@ class logging_impl : public logging {
          << "actor" << get_aid() << " " << std::this_thread::get_id() << " "
          << class_name << " " << function_name << " " << file_name << ":"
          << line_num << " " << msg << std::endl;
-    m_queue.synchronized_enqueue(m_queue_mtx, m_queue_cv,
+    queue_.synchronized_enqueue(queue_mtx_, queue_cv_,
                                  new log_event{line.str()});
   }
 
- private:
-  std::thread m_thread;
-  std::mutex m_queue_mtx;
-  std::condition_variable m_queue_cv;
-  detail::single_reader_queue<log_event> m_queue;
+private:
+  std::thread thread_;
+  std::mutex queue_mtx_;
+  std::condition_variable queue_cv_;
+  detail::single_reader_queue<log_event> queue_;
 };
 
 } // namespace <anonymous>
@@ -171,17 +171,17 @@ class logging_impl : public logging {
 logging::trace_helper::trace_helper(std::string class_name,
                                     const char* fun_name, const char* file_name,
                                     int line_num, const std::string& msg)
-    : m_class(std::move(class_name)),
-      m_fun_name(fun_name),
-      m_file_name(file_name),
-      m_line_num(line_num) {
-  singletons::get_logger()->log("TRACE", m_class.c_str(), fun_name, file_name,
+    : class_(std::move(class_name)),
+      fun_name_(fun_name),
+      file_name_(file_name),
+      line_num_(line_num) {
+  singletons::get_logger()->log("TRACE", class_.c_str(), fun_name, file_name,
                                 line_num, "ENTRY " + msg);
 }
 
 logging::trace_helper::~trace_helper() {
-  singletons::get_logger()->log("TRACE", m_class.c_str(), m_fun_name,
-                                m_file_name, m_line_num, "EXIT");
+  singletons::get_logger()->log("TRACE", class_.c_str(), fun_name_,
+                                file_name_, line_num_, "EXIT");
 }
 
 logging::~logging() {
@@ -194,9 +194,9 @@ logging* logging::create_singleton() {
 
 // returns the actor ID for the current thread
 actor_id logging::get_aid() {
-  shared_lock<detail::shared_spinlock> guard{m_aids_lock};
-  auto i = m_aids.find(std::this_thread::get_id());
-  if (i != m_aids.end()) {
+  shared_lock<detail::shared_spinlock> guard{aids_lock_};
+  auto i = aids_.find(std::this_thread::get_id());
+  if (i != aids_.end()) {
     return i->second;
   }
   return 0;
@@ -204,9 +204,9 @@ actor_id logging::get_aid() {
 
 actor_id logging::set_aid(actor_id aid) {
   auto tid = std::this_thread::get_id();
-  upgrade_lock<detail::shared_spinlock> guard{m_aids_lock};
-  auto i = m_aids.find(tid);
-  if (i != m_aids.end()) {
+  upgrade_lock<detail::shared_spinlock> guard{aids_lock_};
+  auto i = aids_.find(tid);
+  if (i != aids_.end()) {
     // we modify it despite the shared lock because the elements themselves
     // are considered thread-local
     auto res = i->second;
@@ -215,7 +215,7 @@ actor_id logging::set_aid(actor_id aid) {
   }
   // upgrade to unique lock and insert new element
   upgrade_to_unique_lock<detail::shared_spinlock> uguard{guard};
-  m_aids.emplace(tid, aid);
+  aids_.emplace(tid, aid);
   return 0; // was empty before
 }
 

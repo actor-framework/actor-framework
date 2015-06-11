@@ -36,46 +36,46 @@ using actor_msg_vec = std::vector<std::pair<actor, message>>;
 
 template <class T, class Split, class Join>
 class split_join_collector : public event_based_actor {
- public:
+public:
   split_join_collector(T init_value, Split s, Join j, actor_msg_vec xs)
-      : m_workset(std::move(xs)),
-        m_awaited_results(m_workset.size()),
-        m_join(std::move(j)),
-        m_split(std::move(s)),
-        m_value(std::move(init_value)) {
+      : workset_(std::move(xs)),
+        awaited_results_(workset_.size()),
+        join_(std::move(j)),
+        split_(std::move(s)),
+        value_(std::move(init_value)) {
     // nop
   }
 
   behavior make_behavior() override {
     return {
       others >> [=] {
-        m_rp = make_response_promise();
-        m_split(m_workset, current_message());
+        rp_ = make_response_promise();
+        split_(workset_, current_message());
         // first message is the forwarded request
-        for (auto& x : m_workset) {
+        for (auto& x : workset_) {
           sync_send(x.first, std::move(x.second)).then(
             others >> [=] {
-              m_join(m_value, this->current_message());
-              if (--m_awaited_results == 0) {
-                m_rp.deliver(make_message(m_value));
+              join_(value_, this->current_message());
+              if (--awaited_results_ == 0) {
+                rp_.deliver(make_message(value_));
                 quit();
               }
             }
           );
         }
         // no longer needed
-        m_workset.clear();
+        workset_.clear();
       }
     };
   }
 
- private:
-  actor_msg_vec m_workset;
-  size_t m_awaited_results;
-  Join m_join;
-  Split m_split;
-  T m_value;
-  response_promise m_rp;
+private:
+  actor_msg_vec workset_;
+  size_t awaited_results_;
+  Join join_;
+  Split split_;
+  T value_;
+  response_promise rp_;
 };
 
 struct nop_split {
@@ -88,11 +88,11 @@ struct nop_split {
 
 template <class T, class Split, class Join>
 class split_join {
- public:
+public:
   split_join(T init_value, Split s, Join j)
-      : m_init(std::move(init_value)),
-        m_sf(std::move(s)),
-        m_jf(std::move(j)) {
+      : init_(std::move(init_value)),
+        sf_(std::move(s)),
+        jf_(std::move(j)) {
     // nop
   }
 
@@ -109,14 +109,14 @@ class split_join {
     }
     ulock.unlock();
     using collector_t = split_join_collector<T, Split, Join>;
-    auto hdl = spawn<collector_t, lazy_init>(m_init, m_sf, m_jf, std::move(xs));
+    auto hdl = spawn<collector_t, lazy_init>(init_, sf_, jf_, std::move(xs));
     hdl->enqueue(std::move(ptr), host);
   }
 
- private:
-  T m_init;
-  Split m_sf; // split function
-  Join m_jf;  // join function
+private:
+  T init_;
+  Split sf_; // split function
+  Join jf_;  // join function
 };
 
 } // namespace detail

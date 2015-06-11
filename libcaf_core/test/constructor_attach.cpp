@@ -33,10 +33,10 @@ using done_atom = atom_constant<atom("done")>;
 
 CAF_TEST(constructor_attach) {
   class testee : public event_based_actor {
-   public:
-    explicit testee(actor buddy) : m_buddy(buddy) {
+  public:
+    explicit testee(actor buddy) : buddy_(buddy) {
       attach_functor([=](uint32_t reason) {
-        send(m_buddy, done_atom::value, reason);
+        send(buddy_, done_atom::value, reason);
       });
     }
     behavior make_behavior() {
@@ -46,36 +46,36 @@ CAF_TEST(constructor_attach) {
         }
       };
     }
-   private:
-    actor m_buddy;
+  private:
+    actor buddy_;
   };
   class spawner : public event_based_actor {
-   public:
-    spawner() : m_downs(0) {
+  public:
+    spawner() : downs_(0) {
     }
     behavior make_behavior() {
-      m_testee = spawn<testee, monitored>(this);
+      testee_ = spawn<testee, monitored>(this);
       return {
         [=](const down_msg& msg) {
           CAF_CHECK_EQUAL(msg.reason, exit_reason::user_shutdown);
-          if (++m_downs == 2) {
+          if (++downs_ == 2) {
             quit(msg.reason);
           }
         },
         [=](done_atom, uint32_t reason) {
           CAF_CHECK_EQUAL(reason, exit_reason::user_shutdown);
-          if (++m_downs == 2) {
+          if (++downs_ == 2) {
             quit(reason);
           }
         },
         others >> [=] {
-          forward_to(m_testee);
+          forward_to(testee_);
         }
       };
     }
-   private:
-    int m_downs;
-    actor m_testee;
+  private:
+    int downs_;
+    actor testee_;
   };
   anon_send(spawn<spawner>(), die_atom::value);
   await_all_actors_done();

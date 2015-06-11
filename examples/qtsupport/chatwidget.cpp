@@ -15,24 +15,24 @@ using namespace std;
 using namespace caf;
 
 ChatWidget::ChatWidget(QWidget* parent, Qt::WindowFlags f)
-: super(parent, f), m_input(nullptr), m_output(nullptr) {
+: super(parent, f), input_(nullptr), output_(nullptr) {
         set_message_handler ([=](local_actor* self) -> message_handler {
         return {
             on(atom("join"), arg_match) >> [=](const group& what) {
-                if (m_chatroom) {
-                    self->send(m_chatroom, m_name + " has left the chatroom");
-                    self->leave(m_chatroom);
+                if (chatroom_) {
+                    self->send(chatroom_, name_ + " has left the chatroom");
+                    self->leave(chatroom_);
                 }
                 self->join(what);
                 print(("*** joined " + to_string(what)).c_str());
-                m_chatroom = what;
-                self->send(what, m_name + " has entered the chatroom");
+                chatroom_ = what;
+                self->send(what, name_ + " has entered the chatroom");
             },
             on(atom("setName"), arg_match) >> [=](string& name) {
-                self->send(m_chatroom, m_name + " is now known as " + name);
-                m_name = std::move(name);
+                self->send(chatroom_, name_ + " is now known as " + name);
+                name_ = std::move(name);
                 print("*** changed name to "
-                                  + QString::fromUtf8(m_name.c_str()));
+                                  + QString::fromUtf8(name_.c_str()));
             },
             on(atom("quit")) >> [=] {
                 close(); // close widget
@@ -81,23 +81,23 @@ void ChatWidget::sendChatMessage() {
         });
         return;
     }
-    if (m_name.empty()) {
+    if (name_.empty()) {
         print("*** please set a name before sending messages");
         return;
     }
-    if (!m_chatroom) {
+    if (! chatroom_) {
         print("*** no one is listening... please join a group");
         return;
     }
-    string msg = m_name;
+    string msg = name_;
     msg += ": ";
     msg += line.toUtf8().constData();
     print("<you>: " + input()->text());
-    send_as(as_actor(), m_chatroom, std::move(msg));
+    send_as(as_actor(), chatroom_, std::move(msg));
 }
 
 void ChatWidget::joinGroup() {
-    if (m_name.empty()) {
+    if (name_.empty()) {
         QMessageBox::information(this,
                                  "No Name, No Chat",
                                  "Please set a name first.");
@@ -126,7 +126,7 @@ void ChatWidget::joinGroup() {
 
 void ChatWidget::changeName() {
     auto name = QInputDialog::getText(this, "Change Name", "Please enter a new name");
-    if (!name.isEmpty()) {
+    if (! name.isEmpty()) {
         send_as(as_actor(), as_actor(), atom("setName"), name.toUtf8().constData());
     }
 }

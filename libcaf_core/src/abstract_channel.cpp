@@ -27,14 +27,14 @@ namespace caf {
 using detail::singletons;
 
 abstract_channel::abstract_channel(int init_flags)
-    : m_flags(init_flags),
-      m_node(singletons::get_node_id()) {
+    : flags_(init_flags),
+      node_(singletons::get_node_id()) {
   // nop
 }
 
 abstract_channel::abstract_channel(int init_flags, node_id nid)
-    : m_flags(init_flags),
-      m_node(std::move(nid)) {
+    : flags_(init_flags),
+      node_(std::move(nid)) {
   // nop
 }
 
@@ -47,7 +47,7 @@ void abstract_channel::enqueue(mailbox_element_ptr what, execution_unit* host) {
 }
 
 bool abstract_channel::is_remote() const {
-  return m_node != singletons::get_node_id();
+  return node_ != singletons::get_node_id();
 }
 
 } // namespace caf

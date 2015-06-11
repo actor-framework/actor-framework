@@ -63,7 +63,7 @@ const uniform_type_info* announce(const std::type_info& ti,
   return uti_map().insert(&ti, std::move(utype));
 }
 
-uniform_type_info::uniform_type_info(uint16_t typenr) : m_type_nr(typenr) {
+uniform_type_info::uniform_type_info(uint16_t typenr) : type_nr_(typenr) {
   // nop
 }
 
@@ -109,7 +109,7 @@ const uniform_type_info* uniform_typeid_by_nr(uint16_t nr) {
 const uniform_type_info* uniform_typeid(const std::type_info& tinf,
                                         bool allow_nullptr) {
   auto result = uti_map().by_rtti(tinf);
-  if (result == nullptr && !allow_nullptr) {
+  if (result == nullptr && ! allow_nullptr) {
     std::string error = "uniform_typeid(): ";
     error += tinf.name();
     error += " has not been announced";

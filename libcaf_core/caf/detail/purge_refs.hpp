@@ -42,9 +42,7 @@ struct purge_refs_impl<std::reference_wrapper<const T>> {
   using type = T;
 };
 
-/**
- * Removes references and reference wrappers.
- */
+/// Removes references and reference wrappers.
 template <class T>
 struct purge_refs {
   using type =

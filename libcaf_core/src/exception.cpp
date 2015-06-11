@@ -47,17 +47,17 @@ caf_exception::~caf_exception() noexcept {
   // nop
 }
 
-caf_exception::caf_exception(const std::string& what_str) : m_what(what_str) {
+caf_exception::caf_exception(const std::string& what_str) : what_(what_str) {
   // nop
 }
 
 caf_exception::caf_exception(std::string&& what_str)
-    : m_what(std::move(what_str)) {
+    : what_(std::move(what_str)) {
   // nop
 }
 
 const char* caf_exception::what() const noexcept {
-  return m_what.c_str();
+  return what_.c_str();
 }
 
 actor_exited::~actor_exited() noexcept {
@@ -65,7 +65,7 @@ actor_exited::~actor_exited() noexcept {
 }
 
 actor_exited::actor_exited(uint32_t rsn) : caf_exception(ae_what(rsn)) {
-  m_reason = rsn;
+  reason_ = rsn;
 }
 
 network_error::network_error(const std::string& str) : super(str) {

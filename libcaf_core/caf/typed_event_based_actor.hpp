@@ -29,17 +29,15 @@
 
 namespace caf {
 
-/**
- * A cooperatively scheduled, event-based actor implementation with strong type
- * checking. This is the recommended base class for user-defined actors and is
- * used implicitly when spawning typed, functor-based actors without the
- * `blocking_api` flag.
- * @extends local_actor
- */
+/// A cooperatively scheduled, event-based actor implementation with strong type
+/// checking. This is the recommended base class for user-defined actors and is
+/// used implicitly when spawning typed, functor-based actors without the
+/// `blocking_api` flag.
+/// @extends local_actor
 template <class... Sigs>
 class typed_event_based_actor
     : public abstract_event_based_actor<typed_behavior<Sigs...>, true> {
- public:
+public:
   using base_type =
     abstract_event_based_actor<typed_behavior<Sigs...>, true>;
 
@@ -54,7 +52,7 @@ class typed_event_based_actor
   void initialize() override {
     this->is_initialized(true);
     auto bhvr = make_behavior();
-    CAF_LOG_DEBUG_IF(!bhvr, "make_behavior() did not return a behavior, "
+    CAF_LOG_DEBUG_IF(! bhvr, "make_behavior() did not return a behavior, "
                             << "has_behavior() = "
                             << std::boolalpha << this->has_behavior());
     if (bhvr) {
@@ -125,7 +123,7 @@ class typed_event_based_actor
     base_type::delayed_send(dest, rtime, std::forward<Ts>(xs)...);
   }
 
- protected:
+protected:
   virtual behavior_type make_behavior() = 0;
 };
 

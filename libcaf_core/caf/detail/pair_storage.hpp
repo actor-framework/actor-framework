@@ -53,7 +53,7 @@ namespace detail {
 
 template <class FirstType, class SecondType>
 class pair_storage {
- public:
+public:
   union { embedded<FirstType> first; };
   union { embedded<SecondType> second; };
 

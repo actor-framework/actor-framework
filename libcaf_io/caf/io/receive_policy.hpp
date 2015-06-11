@@ -19,7 +19,7 @@ class receive_policy {
 
   receive_policy() = delete;
 
- public:
+public:
 
   using config = std::pair<receive_policy_flag, size_t>;
 

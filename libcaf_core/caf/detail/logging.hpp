@@ -54,7 +54,7 @@ namespace detail {
 class singletons;
 
 class logging {
- public:
+public:
   friend class detail::singletons;
 
   // returns the actor ID for the current thread or 0 if none is assigned
@@ -69,20 +69,20 @@ class logging {
                    int line_num, const std::string& msg) = 0;
 
   class trace_helper {
-   public:
+  public:
     trace_helper(std::string class_name, const char* fun_name,
                  const char* file_name, int line_num, const std::string& msg);
 
     ~trace_helper();
 
-   private:
-    std::string m_class;
-    const char* m_fun_name;
-    const char* m_file_name;
-    int m_line_num;
+  private:
+    std::string class_;
+    const char* fun_name_;
+    const char* file_name_;
+    int line_num_;
   };
 
- protected:
+protected:
   virtual ~logging();
 
   static logging* create_singleton();
@@ -95,9 +95,9 @@ class logging {
     delete this;
   }
 
- private:
-  detail::shared_spinlock m_aids_lock;
-  std::unordered_map<std::thread::id, actor_id> m_aids;
+private:
+  detail::shared_spinlock aids_lock_;
+  std::unordered_map<std::thread::id, actor_id> aids_;
 };
 
 struct oss_wr {
@@ -105,24 +105,24 @@ struct oss_wr {
     // nop
   }
 
-  inline oss_wr(oss_wr&& other) : m_str(std::move(other.m_str)) {
+  inline oss_wr(oss_wr&& other) : str_(std::move(other.str_)) {
     // nop
   }
 
-  std::string m_str;
+  std::string str_;
 
   inline std::string str() {
-    return std::move(m_str);
+    return std::move(str_);
   }
 };
 
 inline oss_wr operator<<(oss_wr&& lhs, std::string str) {
-  lhs.m_str += std::move(str);
+  lhs.str_ += std::move(str);
   return std::move(lhs);
 }
 
 inline oss_wr operator<<(oss_wr&& lhs, const char* str) {
-  lhs.m_str += str;
+  lhs.str_ += str;
   return std::move(lhs);
 }
 
@@ -130,7 +130,7 @@ template <class T>
 oss_wr operator<<(oss_wr&& lhs, T rhs) {
   std::ostringstream oss;
   oss << rhs;
-  lhs.m_str += oss.str();
+  lhs.str_ += oss.str();
   return std::move(lhs);
 }
 
@@ -209,7 +209,7 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 #define CAF_PRINT_IF1(stmt, lvlname, classname, funname, msg)                  \
   CAF_PRINT_IF0(stmt, lvlname, classname, funname, msg)
 
-#if !defined(CAF_LOG_LEVEL) || CAF_LOG_LEVEL < CAF_TRACE
+#if ! defined(CAF_LOG_LEVEL) || CAF_LOG_LEVEL < CAF_TRACE
 #define CAF_PRINT4(arg0, arg1, arg2, arg3)
 #else
 #define CAF_PRINT4(lvlname, classname, funname, msg)                           \
@@ -219,7 +219,7 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
   }
 #endif
 
-#if !defined(CAF_LOG_LEVEL) || CAF_LOG_LEVEL < CAF_DEBUG
+#if ! defined(CAF_LOG_LEVEL) || CAF_LOG_LEVEL < CAF_DEBUG
 #define CAF_PRINT3(arg0, arg1, arg2, arg3)
 #define CAF_PRINT_IF3(arg0, arg1, arg2, arg3, arg4)
 #else
@@ -229,7 +229,7 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
   CAF_PRINT_IF0(stmt, lvlname, classname, funname, msg)
 #endif
 
-#if !defined(CAF_LOG_LEVEL) || CAF_LOG_LEVEL < CAF_INFO
+#if ! defined(CAF_LOG_LEVEL) || CAF_LOG_LEVEL < CAF_INFO
 #define CAF_PRINT2(arg0, arg1, arg2, arg3)
 #define CAF_PRINT_IF2(arg0, arg1, arg2, arg3, arg4)
 #else
@@ -241,46 +241,34 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 
 #define CAF_EVAL(what) what
 
-/**
- * @def CAF_LOGC
- * Logs a message with custom class and function names.
- */
+/// @def CAF_LOGC
+/// Logs a message with custom class and function names.
 #define CAF_LOGC(level, classname, funname, msg)                               \
   CAF_CAT(CAF_PRINT, level)(CAF_CAT(CAF_LVL_NAME, level)(), classname,         \
                             funname, msg)
 
-/**
- * @def CAF_LOGF
- * Logs a message inside a free function.
- */
+/// @def CAF_LOGF
+/// Logs a message inside a free function.
 #define CAF_LOGF(level, msg) CAF_LOGC(level, "NONE", __func__, msg)
 
-/**
- * @def CAF_LOGMF
- * Logs a message inside a member function.
- */
+/// @def CAF_LOGMF
+/// Logs a message inside a member function.
 #define CAF_LOGMF(level, msg)                                                  \
   CAF_LOGC(level, typeid(*this).name(), __func__, msg)
 
-/**
- * @def CAF_LOGC
- * Logs a message with custom class and function names.
- */
+/// @def CAF_LOGC
+/// Logs a message with custom class and function names.
 #define CAF_LOGC_IF(stmt, level, classname, funname, msg)                      \
   CAF_CAT(CAF_PRINT_IF, level)(stmt, CAF_CAT(CAF_LVL_NAME, level)(),           \
                                classname, funname, msg)
 
-/**
- * @def CAF_LOGF
- * Logs a message inside a free function.
- */
+/// @def CAF_LOGF
+/// Logs a message inside a free function.
 #define CAF_LOGF_IF(stmt, level, msg)                                          \
   CAF_LOGC_IF(stmt, level, "NONE", __func__, msg)
 
-/**
- * @def CAF_LOGMF
- * Logs a message inside a member function.
- */
+/// @def CAF_LOGMF
+/// Logs a message inside a member function.
 #define CAF_LOGMF_IF(stmt, level, msg)                                         \
   CAF_LOGC_IF(stmt, level, typeid(*this).name(), __func__, msg)
 

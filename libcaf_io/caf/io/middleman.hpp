@@ -38,87 +38,69 @@
 namespace caf {
 namespace io {
 
-/**
- * Manages brokers and network backends.
- */
+/// Manages brokers and network backends.
 class middleman : public detail::abstract_singleton {
- public:
+public:
   friend class detail::singletons;
 
   ~middleman();
 
-  /**
-   * Get middleman instance.
-   */
+  /// Get middleman instance.
   static middleman* instance();
 
-  /**
-   * Returns a handle to the actor managing the middleman singleton.
-   */
+  /// Returns a handle to the actor managing the middleman singleton.
   middleman_actor actor_handle();
 
-  /**
-   * Returns the broker associated with `name` or creates a
-   * new instance of type `Impl`.
-   */
+  /// Returns the broker associated with `name` or creates a
+  /// new instance of type `Impl`.
   template <class Impl>
   intrusive_ptr<Impl> get_named_broker(atom_value name) {
-    auto i = m_named_brokers.find(name);
-    if (i != m_named_brokers.end()) {
+    auto i = named_brokers_.find(name);
+    if (i != named_brokers_.end()) {
       return static_cast<Impl*>(i->second.get());
     }
     auto result = make_counted<Impl>(*this);
     CAF_ASSERT(result->unique());
     result->launch(nullptr, false, true);
-    m_named_brokers.emplace(name, result);
+    named_brokers_.emplace(name, result);
     return result;
   }
 
-  /**
-   * Adds `bptr` to the list of known brokers.
-   */
+  /// Adds `bptr` to the list of known brokers.
   void add_broker(broker_ptr bptr);
 
-  /**
-   * Runs `fun` in the event loop of the middleman.
-   * @note This member function is thread-safe.
-   */
+  /// Runs `fun` in the event loop of the middleman.
+  /// @note This member function is thread-safe.
   template <class F>
   void run_later(F fun) {
-    m_backend->post(fun);
+    backend_->post(fun);
   }
 
-  /**
-   * Returns the IO backend used by this middleman.
-   */
+  /// Returns the IO backend used by this middleman.
   inline network::multiplexer& backend() {
-    return *m_backend;
+    return *backend_;
   }
 
-  /**
-   * Invokes the callback(s) associated with given event.
-   */
+  /// Invokes the callback(s) associated with given event.
   template <hook::event_type Event, typename... Ts>
   void notify(Ts&&... ts) {
-    if (m_hooks) {
-      m_hooks->handle<Event>(std::forward<Ts>(ts)...);
+    if (hooks_) {
+      hooks_->handle<Event>(std::forward<Ts>(ts)...);
     }
   }
 
-  /**
-   * Adds a new hook to the middleman.
-   */
+  /// Adds a new hook to the middleman.
   template<class C, typename... Ts>
   void add_hook(Ts&&... xs) {
     // if only we could move a unique_ptr into a lambda in C++11
     auto ptr = new C(std::forward<Ts>(xs)...);
     backend().dispatch([=] {
-      ptr->next.swap(m_hooks);
-      m_hooks.reset(ptr);
+      ptr->next.swap(hooks_);
+      hooks_.reset(ptr);
     });
   }
 
-  /** @cond PRIVATE */
+  /// @cond PRIVATE
 
   // stops the singleton
   void stop() override;
@@ -129,25 +111,25 @@ class middleman : public detail::abstract_singleton {
   // initializes the singleton
   void initialize() override;
 
-  /** @endcond */
+  /// @endcond
 
- private:
+private:
   // guarded by singleton-getter `instance`
   middleman();
   // networking backend
-  std::unique_ptr<network::multiplexer> m_backend;
+  std::unique_ptr<network::multiplexer> backend_;
   // prevents backend from shutting down unless explicitly requested
-  network::multiplexer::supervisor_ptr m_backend_supervisor;
+  network::multiplexer::supervisor_ptr backend_supervisor_;
   // runs the backend
-  std::thread m_thread;
+  std::thread thread_;
   // keeps track of "singleton-like" brokers
-  std::map<atom_value, broker_ptr> m_named_brokers;
+  std::map<atom_value, broker_ptr> named_brokers_;
   // keeps track of anonymous brokers
-  std::set<broker_ptr> m_brokers;
+  std::set<broker_ptr> brokers_;
   // user-defined hooks
-  hook_uptr m_hooks;
+  hook_uptr hooks_;
   // actor offering asyncronous IO by managing this singleton instance
-  middleman_actor m_manager;
+  middleman_actor manager_;
 };
 
 } // namespace io

@@ -26,17 +26,17 @@ namespace caf {
 
 response_promise::response_promise(const actor_addr& from, const actor_addr& to,
                                    const message_id& id)
-    : m_from(from), m_to(to), m_id(id) {
-  CAF_ASSERT(id.is_response() || !id.valid());
+    : from_(from), to_(to), id_(id) {
+  CAF_ASSERT(id.is_response() || ! id.valid());
 }
 
 void response_promise::deliver(message msg) const {
-  if (!m_to) {
+  if (! to_) {
     return;
   }
-  auto to = actor_cast<abstract_actor_ptr>(m_to);
-  auto from = actor_cast<abstract_actor_ptr>(m_from);
-  to->enqueue(m_from, m_id, std::move(msg), from->host());
+  auto to = actor_cast<abstract_actor_ptr>(to_);
+  auto from = actor_cast<abstract_actor_ptr>(from_);
+  to->enqueue(from_, id_, std::move(msg), from->host());
 }
 
 } // namespace caf

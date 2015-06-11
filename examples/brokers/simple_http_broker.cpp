@@ -76,7 +76,7 @@ int main(int argc, const char** argv) {
   auto res = message_builder(argv + 1, argv + argc).extract_opts({
     {"port,p", "set port", port},
   });
-  if (!res.error.empty()) {
+  if (! res.error.empty()) {
     cerr << res.error << endl;
     return 1;
   }
@@ -84,7 +84,7 @@ int main(int argc, const char** argv) {
     cout << res.helptext << endl;
     return 0;
   }
-  if (!res.remainder.empty()) {
+  if (! res.remainder.empty()) {
     // not all CLI arguments could be consumed
     cerr << "*** too many arguments" << endl << res.helptext << endl;
     return 1;

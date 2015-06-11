@@ -27,7 +27,7 @@ namespace detail {
 namespace {
 
 class combinator final : public behavior_impl {
- public:
+public:
   bhvr_invoke_result invoke(message& arg) {
     auto res = first->invoke(arg);
     return res ? res : second->invoke(arg);
@@ -50,13 +50,13 @@ class combinator final : public behavior_impl {
     // nop
   }
 
- protected:
+protected:
   match_case** get_cases(size_t&) {
     // never called
     return nullptr;
   }
 
- private:
+private:
   pointer first;
   pointer second;
 };
@@ -68,16 +68,16 @@ behavior_impl::~behavior_impl() {
 }
 
 behavior_impl::behavior_impl(duration tout)
-    : m_timeout(tout),
-      m_begin(nullptr),
-      m_end(nullptr) {
+    : timeout_(tout),
+      begin_(nullptr),
+      end_(nullptr) {
   // nop
 }
 
 bhvr_invoke_result behavior_impl::invoke(message& msg) {
   auto msg_token = msg.type_token();
   bhvr_invoke_result res;
-  for (auto i = m_begin; i != m_end; ++i) {
+  for (auto i = begin_; i != end_; ++i) {
     if ((i->has_wildcard || i->type_token == msg_token)
         && i->ptr->invoke(res, msg) != match_case::no_match) {
       return res;

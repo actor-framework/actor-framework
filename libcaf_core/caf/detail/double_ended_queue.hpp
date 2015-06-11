@@ -30,7 +30,7 @@
 #include <cassert>
 
 // GCC hack
-#if defined(CAF_GCC) && !defined(_GLIBCXX_USE_SCHED_YIELD)
+#if defined(CAF_GCC) && ! defined(_GLIBCXX_USE_SCHED_YIELD)
 #include <time.h>
 namespace std {
 namespace this_thread {
@@ -47,7 +47,7 @@ inline void yield() noexcept {
 #endif
 
 // another GCC hack
-#if defined(CAF_GCC) && !defined(_GLIBCXX_USE_NANOSLEEP)
+#if defined(CAF_GCC) && ! defined(_GLIBCXX_USE_NANOSLEEP)
 #include <time.h>
 namespace std {
 namespace this_thread {
@@ -77,7 +77,7 @@ namespace detail {
  */
 template <class T>
 class double_ended_queue {
- public:
+public:
   using value_type = T;
   using size_type = size_t;
   using difference_type = ptrdiff_t;
@@ -87,13 +87,13 @@ class double_ended_queue {
   using const_pointer = const value_type*;
 
   class node {
-   public:
+  public:
     pointer value;
     std::atomic<node*> next;
     node(pointer val) : value(val), next(nullptr) {
       // nop
     }
-   private:
+  private:
     static constexpr size_type payload_size =
       sizeof(pointer) + sizeof(std::atomic<node*>);
     static constexpr size_type cline_size = CAF_CACHE_LINE_SIZE;
@@ -110,15 +110,15 @@ class double_ended_queue {
                 "sizeof(node*) >= CAF_CACHE_LINE_SIZE");
 
   double_ended_queue() {
-    m_head_lock.clear();
-    m_tail_lock.clear();
+    head_lock_.clear();
+    tail_lock_.clear();
     auto ptr = new node(nullptr);
-    m_head = ptr;
-    m_tail = ptr;
+    head_ = ptr;
+    tail_ = ptr;
   }
 
   ~double_ended_queue() {
-    auto ptr = m_head.load();
+    auto ptr = head_.load();
     while (ptr) {
       unique_node_ptr tmp{ptr};
       ptr = tmp->next.load();
@@ -129,10 +129,10 @@ class double_ended_queue {
   void append(pointer value) {
     CAF_ASSERT(value != nullptr);
     node* tmp = new node(value);
-    lock_guard guard(m_tail_lock);
+    lock_guard guard(tail_lock_);
     // publish & swing last forward
-    m_tail.load()->next = tmp;
-    m_tail = tmp;
+    tail_.load()->next = tmp;
+    tail_ = tmp;
   }
 
   // acquires both locks
@@ -140,20 +140,20 @@ class double_ended_queue {
     CAF_ASSERT(value != nullptr);
     node* tmp = new node(value);
     node* first = nullptr;
-    // acquire both locks since we might touch m_last too
-    lock_guard guard1(m_head_lock);
-    lock_guard guard2(m_tail_lock);
-    first = m_head.load();
+    // acquire both locks since we might touch last_ too
+    lock_guard guard1(head_lock_);
+    lock_guard guard2(tail_lock_);
+    first = head_.load();
     CAF_ASSERT(first != nullptr);
     auto next = first->next.load();
-    // m_first always points to a dummy with no value,
+    // first_ always points to a dummy with no value,
     // hence we put the new element second
     if (next == nullptr) {
       // queue is empty
-      CAF_ASSERT(first == m_tail);
-      m_tail = tmp;
+      CAF_ASSERT(first == tail_);
+      tail_ = tmp;
     } else {
-      CAF_ASSERT(first != m_tail);
+      CAF_ASSERT(first != tail_);
       tmp->next = next;
     }
     first->next = tmp;
@@ -164,8 +164,8 @@ class double_ended_queue {
     unique_node_ptr first;
     pointer result = nullptr;
     { // lifetime scope of guard
-      lock_guard guard(m_head_lock);
-      first.reset(m_head.load());
+      lock_guard guard(head_lock_);
+      first.reset(head_.load());
       node* next = first->next;
       if (next == nullptr) {
         // queue is empty
@@ -175,7 +175,7 @@ class double_ended_queue {
       // take it out of the node & swing first forward
       result = next->value;
       next->value = nullptr;
-      m_head = next;
+      head_ = next;
     }
     return result;
   }
@@ -185,18 +185,18 @@ class double_ended_queue {
     pointer result = nullptr;
     unique_node_ptr last;
     { // lifetime scope of guards
-      lock_guard guard1(m_head_lock);
-      lock_guard guard2(m_tail_lock);
-      CAF_ASSERT(m_head != nullptr);
-      last.reset(m_tail.load());
-      if (last.get() == m_head.load()) {
+      lock_guard guard1(head_lock_);
+      lock_guard guard2(tail_lock_);
+      CAF_ASSERT(head_ != nullptr);
+      last.reset(tail_.load());
+      if (last.get() == head_.load()) {
         last.release();
         return nullptr;
       }
       result = last->value;
-      m_tail = find_predecessor(last.get());
-      CAF_ASSERT(m_tail != nullptr);
-      m_tail.load()->next = nullptr;
+      tail_ = find_predecessor(last.get());
+      CAF_ASSERT(tail_ != nullptr);
+      tail_.load()->next = nullptr;
     }
     return result;
   }
@@ -204,13 +204,13 @@ class double_ended_queue {
   // does not lock
   bool empty() const {
     // atomically compares first and last pointer without locks
-    return m_head == m_tail;
+    return head_ == tail_;
   }
 
- private:
+private:
   // precondition: *both* locks acquired
   node* find_predecessor(node* what) {
-    for (auto i = m_head.load(); i != nullptr; i = i->next) {
+    for (auto i = head_.load(); i != nullptr; i = i->next) {
       if (i->next == what) {
         return i;
       }
@@ -218,28 +218,28 @@ class double_ended_queue {
     return nullptr;
   }
 
-  // guarded by m_head_lock
-  std::atomic<node*> m_head;
-  char m_pad1[CAF_CACHE_LINE_SIZE - sizeof(node*)];
-  // guarded by m_tail_lock
-  std::atomic<node*> m_tail;
-  char m_pad2[CAF_CACHE_LINE_SIZE - sizeof(node*)];
+  // guarded by head_lock_
+  std::atomic<node*> head_;
+  char pad1_[CAF_CACHE_LINE_SIZE - sizeof(node*)];
+  // guarded by tail_lock_
+  std::atomic<node*> tail_;
+  char pad2_[CAF_CACHE_LINE_SIZE - sizeof(node*)];
   // enforce exclusive access
-  std::atomic_flag m_head_lock;
-  std::atomic_flag m_tail_lock;
+  std::atomic_flag head_lock_;
+  std::atomic_flag tail_lock_;
 
   class lock_guard {
-   public:
-    lock_guard(std::atomic_flag& lock) : m_lock(lock) {
+  public:
+    lock_guard(std::atomic_flag& lock) : lock_(lock) {
       while (lock.test_and_set(std::memory_order_acquire)) {
         std::this_thread::yield();
       }
     }
     ~lock_guard() {
-      m_lock.clear(std::memory_order_release);
+      lock_.clear(std::memory_order_release);
     }
-   private:
-    std::atomic_flag& m_lock;
+  private:
+    std::atomic_flag& lock_;
   };
 };
 

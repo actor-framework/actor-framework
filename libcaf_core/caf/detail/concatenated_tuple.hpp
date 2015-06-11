@@ -29,7 +29,7 @@ namespace caf {
 namespace detail {
 
 class concatenated_tuple : public message_data {
- public:
+public:
   concatenated_tuple& operator=(const concatenated_tuple&) = delete;
 
   using message_data::cow_ptr;
@@ -56,16 +56,16 @@ class concatenated_tuple : public message_data {
 
   concatenated_tuple() = default;
 
- private:
+private:
   concatenated_tuple(const concatenated_tuple&) = default;
 
   std::pair<message_data*, size_t> select(size_t pos) const;
 
   void init();
 
-  vector_type m_data;
-  uint32_t m_type_token;
-  size_t m_size;
+  vector_type data_;
+  uint32_t type_token_;
+  size_t size_;
 };
 
 } // namespace detail

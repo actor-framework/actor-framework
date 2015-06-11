@@ -118,7 +118,7 @@ deserialize_impl(T& dm, deserializer* source) {
 
 template <class T>
 class uti_impl : public detail::abstract_uniform_type_info<T> {
- public:
+public:
   using super = detail::abstract_uniform_type_info<T>;
 
   explicit uti_impl(const char* tname) : super(tname) {
@@ -148,11 +148,11 @@ using middleman_actor_base = middleman_actor::extend<
                              >::type;
 
 class middleman_actor_impl : public middleman_actor_base::base {
- public:
+public:
   middleman_actor_impl(middleman& mref, actor default_broker)
-      : m_broker(default_broker),
-        m_parent(mref),
-        m_next_request_id(0) {
+      : broker_(default_broker),
+        parent_(mref),
+        next_request_id_(0) {
     // nop
   }
 
@@ -160,9 +160,9 @@ class middleman_actor_impl : public middleman_actor_base::base {
 
   void on_exit() {
     CAF_LOG_TRACE("");
-    m_pending_gets.clear();
-    m_pending_deletes.clear();
-    m_broker = invalid_actor;
+    pending_gets_.clear();
+    pending_deletes_.clear();
+    broker_ = invalid_actor;
   }
 
   using get_op_result = either<ok_atom, actor_addr>
@@ -207,13 +207,13 @@ class middleman_actor_impl : public middleman_actor_base::base {
       },
       [=](ok_atom, int64_t request_id) {
         // not legal for get results
-        CAF_ASSERT(m_pending_gets.count(request_id) == 0);
-        handle_ok<del_op_result>(m_pending_deletes, request_id);
+        CAF_ASSERT(pending_gets_.count(request_id) == 0);
+        handle_ok<del_op_result>(pending_deletes_, request_id);
       },
       [=](ok_atom, int64_t request_id, actor_addr& result) {
         // not legal for delete results
-        CAF_ASSERT(m_pending_deletes.count(request_id) == 0);
-        handle_ok<get_op_result>(m_pending_gets, request_id, std::move(result));
+        CAF_ASSERT(pending_deletes_.count(request_id) == 0);
+        handle_ok<get_op_result>(pending_gets_, request_id, std::move(result));
       },
       [=](error_atom, int64_t request_id, std::string& reason) {
         handle_error(request_id, reason);
@@ -221,7 +221,7 @@ class middleman_actor_impl : public middleman_actor_base::base {
     };
   }
 
- private:
+private:
   either<ok_atom, uint16_t>::or_else<error_atom, std::string>
   put(const actor_addr& whom, uint16_t port,
       const char* in = nullptr, bool reuse_addr = false) {
@@ -234,7 +234,7 @@ class middleman_actor_impl : public middleman_actor_base::base {
       if (in != nullptr && in[0] == '\0') {
         in = nullptr;
       }
-      auto res = m_parent.backend().new_tcp_doorman(port, in, reuse_addr);
+      auto res = parent_.backend().new_tcp_doorman(port, in, reuse_addr);
       hdl = res.first;
       actual_port = res.second;
     }
@@ -244,7 +244,7 @@ class middleman_actor_impl : public middleman_actor_base::base {
     catch (network_error& err) {
       return {error_atom::value, std::string("network_error: ") + err.what()};
     }
-    send(m_broker, put_atom::value, hdl, whom, actual_port);
+    send(broker_, put_atom::value, hdl, whom, actual_port);
     return {ok_atom::value, actual_port};
   }
 
@@ -253,11 +253,11 @@ class middleman_actor_impl : public middleman_actor_base::base {
     CAF_LOG_TRACE(CAF_ARG(hostname) << ", " << CAF_ARG(port));
     auto result = make_response_promise();
     try {
-      auto hdl = m_parent.backend().new_tcp_scribe(hostname, port);
-      auto req_id = m_next_request_id++;
-      send(m_broker, get_atom::value, hdl, req_id,
+      auto hdl = parent_.backend().new_tcp_scribe(hostname, port);
+      auto req_id = next_request_id_++;
+      send(broker_, get_atom::value, hdl, req_id,
            actor{this}, std::move(expected_ifs));
-      m_pending_gets.emplace(req_id, result);
+      pending_gets_.emplace(req_id, result);
     }
     catch (network_error& err) {
       // fullfil promise immediately
@@ -271,9 +271,9 @@ class middleman_actor_impl : public middleman_actor_base::base {
   del_op_promise del(const actor_addr& whom, uint16_t port = 0) {
     CAF_LOG_TRACE(CAF_TSARG(whom) << ", " << CAF_ARG(port));
     auto result = make_response_promise();
-    auto req_id = m_next_request_id++;
-    send(m_broker, delete_atom::value, req_id, whom, port);
-    m_pending_deletes.emplace(req_id, result);
+    auto req_id = next_request_id_++;
+    send(broker_, delete_atom::value, req_id, whom, port);
+    pending_deletes_.emplace(req_id, result);
     return result;
   }
 
@@ -310,17 +310,17 @@ class middleman_actor_impl : public middleman_actor_base::base {
     auto fdel = [&](response_promise& rp) {
       rp.deliver(del_op_result{error_atom::value, std::move(reason)}.value);
     };
-    if (!finalize_request(m_pending_gets, request_id, fget)
-        && !finalize_request(m_pending_deletes, request_id, fdel)) {
+    if (! finalize_request(pending_gets_, request_id, fget)
+        && ! finalize_request(pending_deletes_, request_id, fdel)) {
       CAF_LOG_ERROR("invalid request id: " << request_id);
     }
   }
 
-  actor m_broker;
-  middleman& m_parent;
-  int64_t m_next_request_id;
-  map_type m_pending_gets;
-  map_type m_pending_deletes;
+  actor broker_;
+  middleman& parent_;
+  int64_t next_request_id_;
+  map_type pending_gets_;
+  map_type pending_deletes_;
 };
 
 middleman_actor_impl::~middleman_actor_impl() {
@@ -336,19 +336,19 @@ middleman* middleman::instance() {
 }
 
 void middleman::add_broker(broker_ptr bptr) {
-  m_brokers.insert(bptr);
-  bptr->attach_functor([=](uint32_t) { m_brokers.erase(bptr); });
+  brokers_.insert(bptr);
+  bptr->attach_functor([=](uint32_t) { brokers_.erase(bptr); });
 }
 
 void middleman::initialize() {
   CAF_LOG_TRACE("");
-  m_backend = network::multiplexer::make();
-  m_backend_supervisor = m_backend->make_supervisor();
-  m_thread = std::thread{[this] {
+  backend_ = network::multiplexer::make();
+  backend_supervisor_ = backend_->make_supervisor();
+  thread_ = std::thread{[this] {
     CAF_LOG_TRACE("");
-    m_backend->run();
+    backend_->run();
   }};
-  m_backend->thread_id(m_thread.get_id());
+  backend_->thread_id(thread_.get_id());
   // announce io-related types
   do_announce<new_data_msg>("caf::io::new_data_msg");
   do_announce<new_connection_msg>("caf::io::new_connection_msg");
@@ -361,27 +361,27 @@ void middleman::initialize() {
   do_announce<new_connection_msg>("caf::io::new_connection_msg");
   do_announce<new_data_msg>("caf::io::new_data_msg");
   actor mgr = get_named_broker<basp_broker>(atom("_BASP"));
-  m_manager = spawn_typed<middleman_actor_impl, detached + hidden>(*this, mgr);
+  manager_ = spawn_typed<middleman_actor_impl, detached + hidden>(*this, mgr);
 }
 
 void middleman::stop() {
   CAF_LOG_TRACE("");
-  m_backend->dispatch([=] {
+  backend_->dispatch([=] {
     CAF_LOG_TRACE("");
-    // m_managers will be modified while we are stopping each manager,
+    // managers_ will be modified while we are stopping each manager,
     // because each manager will call remove(...)
-    for (auto& kvp : m_named_brokers) {
+    for (auto& kvp : named_brokers_) {
       if (kvp.second->exit_reason() == exit_reason::not_exited) {
         kvp.second->cleanup(exit_reason::normal);
       }
     }
   });
-  m_backend_supervisor.reset();
-  m_thread.join();
-  m_named_brokers.clear();
+  backend_supervisor_.reset();
+  thread_.join();
+  named_brokers_.clear();
   scoped_actor self(true);
-  self->monitor(m_manager);
-  self->send_exit(m_manager, exit_reason::user_shutdown);
+  self->monitor(manager_);
+  self->send_exit(manager_, exit_reason::user_shutdown);
   self->receive(
     [](const down_msg&) {
       // nop
@@ -402,7 +402,7 @@ middleman::~middleman() {
 }
 
 middleman_actor middleman::actor_handle() {
-  return m_manager;
+  return manager_;
 }
 
 middleman_actor get_middleman_actor() {

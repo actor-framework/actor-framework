@@ -34,11 +34,9 @@ class profiled_coordinator;
 
 namespace policy {
 
-/**
- * An enhancement of CAF's scheduling policy which records fine-grained
- * resource utiliziation for worker threads and actors in the parent
- * coordinator of the workers.
-*/
+/// An enhancement of CAF's scheduling policy which records fine-grained
+/// resource utiliziation for worker threads and actors in the parent
+/// coordinator of the workers.
 template <class Policy>
 struct profiled : Policy {
   using coordinator_type = scheduler::profiled_coordinator<profiled<Policy>>;

@@ -49,15 +49,15 @@ CAF_TEST(distinct_types) {
 }
 
 struct qwertz {
-  qwertz(int i, int j) : m_i(i), m_j(j) {
+  qwertz(int i, int j) : i_(i), j_(j) {
     // nop
   }
-  int m_i;
-  int m_j;
+  int i_;
+  int j_;
 };
 
 inline bool operator==(const qwertz& lhs, const qwertz& rhs) {
-  return lhs.m_i == rhs.m_i && lhs.m_j == rhs.m_j;
+  return lhs.i_ == rhs.i_ && lhs.j_ == rhs.j_;
 }
 
 CAF_TEST(custom_type_none) {
@@ -77,7 +77,7 @@ CAF_TEST(custom_type_engaged) {
 
 CAF_TEST(test_optional) {
   optional<qwertz> i = qwertz(1,2);
-  CAF_CHECK(!i.empty());
+  CAF_CHECK(! i.empty());
   optional<qwertz> j = { { 1, 2 } };
-  CAF_CHECK(!j.empty());
+  CAF_CHECK(! j.empty());
 }

@@ -95,7 +95,7 @@ chopstick::behavior_type taken_chopstick(chopstick::pointer self,
  */
 
 class philosopher : public event_based_actor {
- public:
+public:
   philosopher(const std::string& n, const chopstick& l, const chopstick& r)
       : name(n),
         left(l),
@@ -158,7 +158,7 @@ class philosopher : public event_based_actor {
     );
   }
 
- protected:
+protected:
   behavior make_behavior() override {
     // start thinking
     send(this, think_atom::value);
@@ -172,7 +172,7 @@ class philosopher : public event_based_actor {
     );
   }
 
- private:
+private:
   std::string name;     // the name of this philosopher
   chopstick   left;     // left chopstick
   chopstick   right;    // right chopstick

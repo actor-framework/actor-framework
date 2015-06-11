@@ -25,9 +25,7 @@
 namespace caf {
 namespace detail {
 
-/**
- * Evaluates to `Right` if `Left` == unit_t, `Left` otherwise.
- */
+/// Evaluates to `Right` if `Left` == unit_t, `Left` otherwise.
 template <class Left, typename Right>
 struct left_or_right {
   using type = Left;
@@ -48,9 +46,7 @@ struct left_or_right<const unit_t&, Right> {
   using type = Right;
 };
 
-/**
- * Evaluates to `Right` if `Left` != unit_t, `unit_t` otherwise.
- */
+/// Evaluates to `Right` if `Left` != unit_t, `unit_t` otherwise.
 template <class Left, typename Right>
 struct if_not_left {
   using type = unit_t;

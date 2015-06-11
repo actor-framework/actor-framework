@@ -22,7 +22,7 @@
 
 namespace caf {
 
-continue_helper::continue_helper(message_id mid) : m_mid(mid) {
+continue_helper::continue_helper(message_id mid) : mid_(mid) {
   // nop
 }
 

@@ -33,19 +33,19 @@ namespace detail {
 
 class raw_access {
 
- public:
+public:
 
   template <class ActorHandle>
   static abstract_actor* get(const ActorHandle& hdl) {
-    return hdl.m_ptr.get();
+    return hdl.ptr_.get();
   }
 
   static abstract_channel* get(const channel& hdl) {
-    return hdl.m_ptr.get();
+    return hdl.ptr_.get();
   }
 
   static abstract_group* get(const group& hdl) {
-    return hdl.m_ptr.get();
+    return hdl.ptr_.get();
   }
 
   static actor unsafe_cast(abstract_actor* ptr) {

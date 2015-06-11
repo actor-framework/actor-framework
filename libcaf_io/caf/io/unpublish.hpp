@@ -31,14 +31,12 @@ namespace io {
 
 void unpublish_impl(const actor_addr& whom, uint16_t port, bool block_caller);
 
-/**
- * Unpublishes `whom` by closing `port` or all assigned ports if `port == 0`.
- * @param whom Actor that should be unpublished at `port`.
- * @param port TCP port.
- */
+/// Unpublishes `whom` by closing `port` or all assigned ports if `port == 0`.
+/// @param whom Actor that should be unpublished at `port`.
+/// @param port TCP port.
 template <class Handle>
 void unpublish(const Handle& whom, uint16_t port = 0) {
-  if (!whom) {
+  if (! whom) {
     return;
   }
   unpublish_impl(whom.address(), port, true);

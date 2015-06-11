@@ -30,22 +30,20 @@
 
 namespace caf {
 
-/**
- * An intrusive, reference counting smart pointer impelementation.
- * @relates ref_counted
- */
+/// An intrusive, reference counting smart pointer impelementation.
+/// @relates ref_counted
 template <class T>
 class intrusive_ptr : detail::comparable<intrusive_ptr<T>>,
                       detail::comparable<intrusive_ptr<T>, const T*>,
                       detail::comparable<intrusive_ptr<T>, std::nullptr_t> {
- public:
+public:
   using pointer = T*;
   using const_pointer = const T*;
   using element_type = T;
   using reference = T&;
   using const_reference = const T&;
 
-  constexpr intrusive_ptr() : m_ptr(nullptr) {
+  constexpr intrusive_ptr() : ptr_(nullptr) {
     // nop
   }
 
@@ -53,7 +51,7 @@ class intrusive_ptr : detail::comparable<intrusive_ptr<T>>,
     set_ptr(raw_ptr, add_ref);
   }
 
-  intrusive_ptr(intrusive_ptr&& other) : m_ptr(other.release()) {
+  intrusive_ptr(intrusive_ptr&& other) : ptr_(other.release()) {
     // nop
   }
 
@@ -62,33 +60,31 @@ class intrusive_ptr : detail::comparable<intrusive_ptr<T>>,
   }
 
   template <class Y>
-  intrusive_ptr(intrusive_ptr<Y> other) : m_ptr(other.release()) {
+  intrusive_ptr(intrusive_ptr<Y> other) : ptr_(other.release()) {
     static_assert(std::is_convertible<Y*, T*>::value,
                   "Y* is not assignable to T*");
   }
 
   ~intrusive_ptr() {
-    if (m_ptr) {
-      intrusive_ptr_release(m_ptr);
+    if (ptr_) {
+      intrusive_ptr_release(ptr_);
     }
   }
 
   void swap(intrusive_ptr& other) {
-    std::swap(m_ptr, other.m_ptr);
+    std::swap(ptr_, other.ptr_);
   }
 
-  /**
-   * Returns the raw pointer without modifying reference
-   * count and sets this to `nullptr`.
-   */
+  /// Returns the raw pointer without modifying reference
+  /// count and sets this to `nullptr`.
   pointer release() {
-    auto result = m_ptr;
-    m_ptr = nullptr;
+    auto result = ptr_;
+    ptr_ = nullptr;
     return result;
   }
 
   void reset(pointer new_value = nullptr, bool add_ref = true) {
-    auto old = m_ptr;
+    auto old = ptr_;
     set_ptr(new_value, add_ref);
     if (old) {
       intrusive_ptr_release(old);
@@ -124,23 +120,23 @@ class intrusive_ptr : detail::comparable<intrusive_ptr<T>>,
   }
 
   pointer get() const {
-    return m_ptr;
+    return ptr_;
   }
 
   pointer operator->() const {
-    return m_ptr;
+    return ptr_;
   }
 
   reference operator*() const {
-    return *m_ptr;
+    return *ptr_;
   }
 
   bool operator!() const {
-    return m_ptr == nullptr;
+    return ptr_ == nullptr;
   }
 
   explicit operator bool() const {
-    return m_ptr != nullptr;
+    return ptr_ != nullptr;
   }
 
   ptrdiff_t compare(const_pointer ptr) const {
@@ -157,36 +153,32 @@ class intrusive_ptr : detail::comparable<intrusive_ptr<T>>,
 
   template <class C>
   intrusive_ptr<C> downcast() const {
-    return (m_ptr) ? dynamic_cast<C*>(get()) : nullptr;
+    return (ptr_) ? dynamic_cast<C*>(get()) : nullptr;
   }
 
   template <class C>
   intrusive_ptr<C> upcast() const {
-    return (m_ptr) ? static_cast<C*>(get()) : nullptr;
+    return (ptr_) ? static_cast<C*>(get()) : nullptr;
   }
 
- private:
+private:
   void set_ptr(pointer raw_ptr, bool add_ref) {
-    m_ptr = raw_ptr;
+    ptr_ = raw_ptr;
     if (raw_ptr && add_ref) {
       intrusive_ptr_add_ref(raw_ptr);
     }
   }
 
-  pointer m_ptr;
+  pointer ptr_;
 };
 
-/**
- * @relates intrusive_ptr
- */
+/// @relates intrusive_ptr
 template <class X, typename Y>
 bool operator==(const intrusive_ptr<X>& lhs, const intrusive_ptr<Y>& rhs) {
   return lhs.get() == rhs.get();
 }
 
-/**
- * @relates intrusive_ptr
- */
+/// @relates intrusive_ptr
 template <class X, typename Y>
 bool operator!=(const intrusive_ptr<X>& lhs, const intrusive_ptr<Y>& rhs) {
   return !(lhs == rhs);

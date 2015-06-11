@@ -39,16 +39,16 @@ void blocking_actor::await_all_other_actors_done() {
 }
 
 void blocking_actor::functor_based::create(blocking_actor*, act_fun fun) {
-  m_act = fun;
+  act_ = fun;
 }
 
 void blocking_actor::functor_based::act() {
   CAF_LOG_TRACE("");
-  m_act(this);
+  act_(this);
 }
 
 void blocking_actor::functor_based::cleanup(uint32_t reason) {
-  m_act = nullptr;
+  act_ = nullptr;
   blocking_actor::cleanup(reason);
 }
 

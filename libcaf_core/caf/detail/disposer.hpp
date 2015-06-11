@@ -26,7 +26,7 @@ namespace caf {
 namespace detail {
 
 class disposer {
- public:
+public:
   inline void operator()(memory_managed* ptr) const {
     ptr->request_deletion(false);
   }

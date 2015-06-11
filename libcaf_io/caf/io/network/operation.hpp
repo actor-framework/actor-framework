@@ -24,9 +24,7 @@ namespace caf {
 namespace io {
 namespace network {
 
-/**
- * Identifies network IO operations, i.e., read or write.
- */
+/// Identifies network IO operations, i.e., read or write.
 enum class operation {
   read,
   write,

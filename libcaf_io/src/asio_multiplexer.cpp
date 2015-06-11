@@ -31,15 +31,13 @@ namespace network {
 
 namespace {
 
-/**
- * A wrapper for the supervisor backend provided by boost::asio.
- */
+/// A wrapper for the supervisor backend provided by boost::asio.
 struct asio_supervisor : public multiplexer::supervisor {
   explicit asio_supervisor(io_backend& iob) : work(iob) {
     // nop
   }
 
- private:
+private:
   boost::asio::io_service::work work;
 };
 
@@ -98,17 +96,17 @@ connection_handle asio_multiplexer::new_tcp_scribe(const std::string& host,
                                                    uint16_t port) {
   default_socket fd{new_tcp_connection(backend(), host, port)};
   auto id = int64_from_native_socket(fd.native_handle());
-  std::lock_guard<std::mutex> lock(m_mtx_sockets);
-  m_unassigned_sockets.insert(std::make_pair(id, std::move(fd)));
+  std::lock_guard<std::mutex> lock(mtx_sockets_);
+  unassigned_sockets_.insert(std::make_pair(id, std::move(fd)));
   return connection_handle::from_int(id);
 }
 
 void asio_multiplexer::assign_tcp_scribe(broker* self, connection_handle hdl) {
-  std::lock_guard<std::mutex> lock(m_mtx_sockets);
-  auto itr = m_unassigned_sockets.find(hdl.id());
-  if (itr != m_unassigned_sockets.end()) {
+  std::lock_guard<std::mutex> lock(mtx_sockets_);
+  auto itr = unassigned_sockets_.find(hdl.id());
+  if (itr != unassigned_sockets_.end()) {
     add_tcp_scribe(self, std::move(itr->second));
-    m_unassigned_sockets.erase(itr);
+    unassigned_sockets_.erase(itr);
   }
 }
 
@@ -117,41 +115,41 @@ connection_handle asio_multiplexer::add_tcp_scribe(broker* self,
                                                    Socket&& sock) {
   CAF_LOG_TRACE("");
   class impl : public broker::scribe {
-   public:
+  public:
     impl(broker* ptr, Socket&& s)
         : scribe(ptr, network::conn_hdl_from_socket(s)),
-          m_launched(false),
-          m_stream(s.get_io_service()) {
-      m_stream.init(std::move(s));
+          launched_(false),
+          stream_(s.get_io_service()) {
+      stream_.init(std::move(s));
     }
     void configure_read(receive_policy::config config) override {
       CAF_LOG_TRACE("");
-      m_stream.configure_read(config);
-      if (!m_launched) {
+      stream_.configure_read(config);
+      if (! launched_) {
         launch();
       }
     }
-    broker::buffer_type& wr_buf() override { return m_stream.wr_buf(); }
-    broker::buffer_type& rd_buf() override { return m_stream.rd_buf(); }
+    broker::buffer_type& wr_buf() override { return stream_.wr_buf(); }
+    broker::buffer_type& rd_buf() override { return stream_.rd_buf(); }
     void stop_reading() override {
       CAF_LOG_TRACE("");
-      m_stream.stop_reading();
+      stream_.stop_reading();
       disconnect(false);
     }
     void flush() override {
       CAF_LOG_TRACE("");
-      m_stream.flush(this);
+      stream_.flush(this);
     }
     void launch() {
       CAF_LOG_TRACE("");
-      CAF_ASSERT(!m_launched);
-      m_launched = true;
-      m_stream.start(this);
+      CAF_ASSERT(! launched_);
+      launched_ = true;
+      stream_.start(this);
     }
 
-   private:
-    bool m_launched;
-    stream<Socket> m_stream;
+  private:
+    bool launched_;
+    stream<Socket> stream_;
   };
   broker::scribe_pointer ptr = make_counted<impl>(self, std::move(sock));
   self->add_scribe(ptr);
@@ -187,18 +185,18 @@ asio_multiplexer::new_tcp_doorman(uint16_t port, const char* in, bool rflag) {
   ip_bind(fd, port, in, rflag);
   auto id = int64_from_native_socket(fd.native_handle());
   auto assigned_port = fd.local_endpoint().port();
-  std::lock_guard<std::mutex> lock(m_mtx_acceptors);
-  m_unassigned_acceptors.insert(std::make_pair(id, std::move(fd)));
+  std::lock_guard<std::mutex> lock(mtx_acceptors_);
+  unassigned_acceptors_.insert(std::make_pair(id, std::move(fd)));
   return {accept_handle::from_int(id), assigned_port};
 }
 
 void asio_multiplexer::assign_tcp_doorman(broker* self, accept_handle hdl) {
   CAF_LOG_TRACE("");
-  std::lock_guard<std::mutex> lock(m_mtx_acceptors);
-  auto itr = m_unassigned_acceptors.find(hdl.id());
-  if (itr != m_unassigned_acceptors.end()) {
+  std::lock_guard<std::mutex> lock(mtx_acceptors_);
+  auto itr = unassigned_acceptors_.find(hdl.id());
+  if (itr != unassigned_acceptors_.end()) {
     add_tcp_doorman(self, std::move(itr->second));
-    m_unassigned_acceptors.erase(itr);
+    unassigned_acceptors_.erase(itr);
   }
 }
 
@@ -208,33 +206,33 @@ asio_multiplexer::add_tcp_doorman(broker* self,
   CAF_LOG_TRACE("sock.fd = " << sock.native_handle());
   CAF_ASSERT(sock.native_handle() != network::invalid_native_socket);
   class impl : public broker::doorman {
-   public:
+  public:
     impl(broker* ptr, default_socket_acceptor&& s,
          network::asio_multiplexer& am)
         : doorman(ptr, network::accept_hdl_from_socket(s)),
-          m_acceptor(am, s.get_io_service()) {
-      m_acceptor.init(std::move(s));
+          acceptor_(am, s.get_io_service()) {
+      acceptor_.init(std::move(s));
     }
     void new_connection() override {
       CAF_LOG_TRACE("");
-      auto& am = m_acceptor.backend();
+      auto& am = acceptor_.backend();
       accept_msg().handle
-        = am.add_tcp_scribe(parent(), std::move(m_acceptor.accepted_socket()));
+        = am.add_tcp_scribe(parent(), std::move(acceptor_.accepted_socket()));
       parent()->invoke_message(invalid_actor_addr, invalid_message_id,
-                               m_accept_msg);
+                               accept_msg_);
     }
     void stop_reading() override {
       CAF_LOG_TRACE("");
-      m_acceptor.stop();
+      acceptor_.stop();
       disconnect(false);
     }
     void launch() override {
       CAF_LOG_TRACE("");
-      m_acceptor.start(this);
+      acceptor_.start(this);
     }
 
-   private:
-    network::acceptor<default_socket_acceptor> m_acceptor;
+  private:
+    network::acceptor<default_socket_acceptor> acceptor_;
   };
   broker::doorman_pointer ptr
     = make_counted<impl>(self, std::move(sock), *this);
@@ -293,7 +291,7 @@ void asio_multiplexer::run() {
 }
 
 boost::asio::io_service* asio_multiplexer::pimpl() {
-  return &m_backend;
+  return &backend_;
 }
 
 asio_multiplexer& get_multiplexer_singleton() {

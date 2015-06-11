@@ -63,7 +63,7 @@ struct has_skip_message {
 };
 
 class behavior_impl : public ref_counted {
- public:
+public:
   using pointer = intrusive_ptr<behavior_impl>;
 
   ~behavior_impl();
@@ -80,17 +80,17 @@ class behavior_impl : public ref_counted {
   virtual void handle_timeout();
 
   inline const duration& timeout() const {
-    return m_timeout;
+    return timeout_;
   }
 
   virtual pointer copy(const generic_timeout_definition& tdef) const = 0;
 
   pointer or_else(const pointer& other);
 
- protected:
-  duration m_timeout;
-  match_case_info* m_begin;
-  match_case_info* m_end;
+protected:
+  duration timeout_;
+  match_case_info* begin_;
+  match_case_info* end_;
 };
 
 template <size_t Pos, size_t Size>
@@ -116,40 +116,40 @@ struct defaut_bhvr_impl_init<Size, Size> {
 
 template <class Tuple>
 class default_behavior_impl : public behavior_impl {
- public:
+public:
   static constexpr size_t num_cases = std::tuple_size<Tuple>::value;
 
-  default_behavior_impl(Tuple tup) : m_cases(std::move(tup)) {
+  default_behavior_impl(Tuple tup) : cases_(std::move(tup)) {
     init();
   }
 
   template <class F>
   default_behavior_impl(Tuple tup, timeout_definition<F> d)
       : behavior_impl(d.timeout),
-        m_cases(std::move(tup)),
-        m_fun(d.handler) {
+        cases_(std::move(tup)),
+        fun_(d.handler) {
     init();
   }
 
   typename behavior_impl::pointer
   copy(const generic_timeout_definition& tdef) const override {
-    return make_counted<default_behavior_impl<Tuple>>(m_cases, tdef);
+    return make_counted<default_behavior_impl<Tuple>>(cases_, tdef);
   }
 
   void handle_timeout() override {
-    m_fun();
+    fun_();
   }
 
- private:
+private:
   void init() {
-    defaut_bhvr_impl_init<0, num_cases>::init(m_arr, m_cases);
-    m_begin = m_arr.data();
-    m_end = m_begin + m_arr.size();
+    defaut_bhvr_impl_init<0, num_cases>::init(arr_, cases_);
+    begin_ = arr_.data();
+    end_ = begin_ + arr_.size();
   }
 
-  Tuple m_cases;
-  std::array<match_case_info, num_cases> m_arr;
-  std::function<void()> m_fun;
+  Tuple cases_;
+  std::array<match_case_info, num_cases> arr_;
+  std::function<void()> fun_;
 };
 
 // eor = end of recursion
@@ -216,7 +216,7 @@ intrusive_ptr<R> make_behavior_ra(tail_argument_token&, Ts&... xs) {
 // for some reason, this call is ambigious on GCC without enable_if
 template <class R, class V, class... Ts>
 typename std::enable_if<
-  !std::is_same<V, tail_argument_token>::value,
+  ! std::is_same<V, tail_argument_token>::value,
   intrusive_ptr<R>
 >::type
 make_behavior_ra(V& v, Ts&... xs) {

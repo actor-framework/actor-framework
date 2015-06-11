@@ -35,82 +35,72 @@
 
 namespace caf {
 
-/**
- * An actor poool is a lightweight abstraction for a set of workers.
- * The pool itself is an actor, meaning that it can be passed
- * around in an actor system to hide the actual set of workers.
- *
- * After construction, new workers can be added via `{'SYS', 'PUT', actor}`
- * messages, e.g., `send(my_pool, sys_atom::value, put_atom::value, worker)`.
- * `{'SYS', 'DELETE', actor}` messages remove a worker from the set,
- * whereas `{'SYS', 'GET'}` returns a `vector<actor>` containing all workers.
- *
- * Note that the pool *always*  sends exit messages to all of its workers
- * when forced to quit. The pool monitors all of its workers. Messages queued
- * up in a worker's mailbox are lost, i.e., the pool itself does not buffer
- * and resend messages. Advanced caching or resend strategies can be
- * implemented in a policy.
- *
- * It is wort mentioning that the pool is *not* an event-based actor.
- * Neither does it live in its own thread. Messages are dispatched immediately
- * during the enqueue operation. Any user-defined policy thus has to dispatch
- * messages with as little overhead as possible, because the dispatching
- * runs in the context of the sender.
- */
+/// An actor poool is a lightweight abstraction for a set of workers.
+/// The pool itself is an actor, meaning that it can be passed
+/// around in an actor system to hide the actual set of workers.
+///
+/// After construction, new workers can be added via `{'SYS', 'PUT', actor}`
+/// messages, e.g., `send(my_pool, sys_atom::value, put_atom::value, worker)`.
+/// `{'SYS', 'DELETE', actor}` messages remove a worker from the set,
+/// whereas `{'SYS', 'GET'}` returns a `vector<actor>` containing all workers.
+///
+/// Note that the pool *always*  sends exit messages to all of its workers
+/// when forced to quit. The pool monitors all of its workers. Messages queued
+/// up in a worker's mailbox are lost, i.e., the pool itself does not buffer
+/// and resend messages. Advanced caching or resend strategies can be
+/// implemented in a policy.
+///
+/// It is wort mentioning that the pool is *not* an event-based actor.
+/// Neither does it live in its own thread. Messages are dispatched immediately
+/// during the enqueue operation. Any user-defined policy thus has to dispatch
+/// messages with as little overhead as possible, because the dispatching
+/// runs in the context of the sender.
 class actor_pool : public abstract_actor {
- public:
+public:
   using uplock = upgrade_lock<detail::shared_spinlock>;
   using actor_vec = std::vector<actor>;
   using factory = std::function<actor ()>;
   using policy = std::function<void (uplock&, const actor_vec&,
                                      mailbox_element_ptr&, execution_unit*)>;
 
-  /**
-   * Default policy class implementing simple round robin dispatching.
-   */
+  /// Default policy class implementing simple round robin dispatching.
   class round_robin {
-   public:
+  public:
     round_robin();
     round_robin(const round_robin&);
     void operator()(uplock&, const actor_vec&,
                     mailbox_element_ptr&, execution_unit*);
 
-   private:
-    std::atomic<size_t> m_pos;
+  private:
+    std::atomic<size_t> pos_;
   };
 
-  /**
-   * Default policy class implementing broadcast dispatching.
-   */
+  /// Default policy class implementing broadcast dispatching.
   class broadcast {
-   public:
+  public:
     void operator()(uplock&, const actor_vec&,
                     mailbox_element_ptr&, execution_unit*);
   };
 
-  /**
-   * Default policy class implementing random dispatching.
-   */
+  /// Default policy class implementing random dispatching.
   class random {
-   public:
+  public:
     random();
     random(const random&);
     void operator()(uplock&, const actor_vec&,
                     mailbox_element_ptr&, execution_unit*);
 
-   private:
-    std::random_device m_rd;
+  private:
+    std::random_device rd_;
   };
 
-  /**
-   * Default policy class implementing broadcast dispatching (split step)
-   * followed by a join operation `F` combining all individual results to
-   * a single result of type `T`.
-   * @tparam T Result type received by the original sender.
-   * @tparam Join Functor with signature `void (T&, message&)`.
-   * @tparam Split Functor with signature
-   *               `void (vector<pair<actor, message>>&, message&)`.
-   */
+  /// Default policy class implementing broadcast dispatching (split step)
+  /// followed by a join operation `F` combining all individual results to
+  /// a single result of type `T`.
+  /// @tparam T Result type received by the original sender.
+  /// @tparam Join Functor with signature `void (T&, message&)`.
+  /// @tparam Split Functor with signature
+  ///               `void (vector<pair<actor, message>>&, message&)`.
   template <class T, class Join, class Split = detail::nop_split>
   static policy split_join(Join jf, Split sf = Split(), T init = T()) {
     using impl = detail::split_join<T, Split, Join>;
@@ -119,15 +109,11 @@ class actor_pool : public abstract_actor {
 
   ~actor_pool();
 
-  /**
-   * Returns an actor pool without workers using the dispatch policy `pol`.
-   */
+  /// Returns an actor pool without workers using the dispatch policy `pol`.
   static actor make(policy pol);
 
-  /**
-   * Returns an actor pool with `n` workers created by the factory
-   * function `fac` using the dispatch policy `pol`.
-   */
+  /// Returns an actor pool with `n` workers created by the factory
+  /// function `fac` using the dispatch policy `pol`.
   static actor make(size_t n, factory fac, policy pol);
 
   void enqueue(const actor_addr& sender, message_id mid,
@@ -137,17 +123,17 @@ class actor_pool : public abstract_actor {
 
   actor_pool();
 
- private:
+private:
   bool filter(upgrade_lock<detail::shared_spinlock>&, const actor_addr& sender,
               message_id mid, const message& content, execution_unit* host);
 
-  // call without m_mtx held
+  // call without mtx_ held
   void quit();
 
-  detail::shared_spinlock m_mtx;
-  std::vector<actor> m_workers;
-  policy m_policy;
-  uint32_t m_planned_reason;
+  detail::shared_spinlock mtx_;
+  std::vector<actor> workers_;
+  policy policy_;
+  uint32_t planned_reason_;
 };
 
 } // namespace caf

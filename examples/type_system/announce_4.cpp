@@ -11,26 +11,26 @@ using namespace caf;
 // the foo class from example 3
 class foo {
 
-  int m_a;
-  int m_b;
+  int a_;
+  int b_;
 
- public:
+public:
 
-  foo() : m_a(0), m_b(0) { }
+  foo() : a_(0), b_(0) { }
 
-  foo(int a0, int b0) : m_a(a0), m_b(b0) { }
+  foo(int a0, int b0) : a_(a0), b_(b0) { }
 
   foo(const foo&) = default;
 
   foo& operator=(const foo&) = default;
 
-  int a() const { return m_a; }
+  int a() const { return a_; }
 
-  void set_a(int val) { m_a = val; }
+  void set_a(int val) { a_ = val; }
 
-  int b() const { return m_b; }
+  int b() const { return b_; }
 
-  void set_b(int val) { m_b = val; }
+  void set_b(int val) { b_ = val; }
 
 };
 
@@ -55,20 +55,20 @@ bool operator==(const bar& lhs, const bar& rhs) {
 // "worst case" class ... not a good software design at all ;)
 class baz {
 
-  foo m_f;
+  foo f_;
 
- public:
+public:
 
   bar b;
 
   // announce requires a default constructor
   baz() = default;
 
-  inline baz(const foo& mf, const bar& mb) : m_f(mf), b(mb) { }
+  inline baz(const foo& mf, const bar& mb) : f_(mf), b(mb) { }
 
-  const foo& f() const { return m_f; }
+  const foo& f() const { return f_; }
 
-  void set_f(const foo& val) { m_f = val; }
+  void set_f(const foo& val) { f_ = val; }
 
 };
 

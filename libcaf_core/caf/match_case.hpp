@@ -39,7 +39,7 @@
 namespace caf {
 
 class match_case {
- public:
+public:
   enum result {
     fall_through,
     no_match,
@@ -56,16 +56,16 @@ class match_case {
   virtual result invoke(optional<message>&, message&) = 0;
 
   inline uint32_t type_token() const {
-    return m_token;
+    return token_;
   }
 
   inline bool has_wildcard() const {
-    return m_has_wildcard;
+    return has_wildcard_;
   }
 
- private:
-  bool m_has_wildcard;
-  uint32_t m_token;
+private:
+  bool has_wildcard_;
+  uint32_t token_;
 };
 
 struct match_case_zipper {
@@ -102,41 +102,41 @@ struct has_none {
 
   template <class T, class... Ts>
   bool operator()(const optional<T>& x, const Ts&... xs) const {
-    return !x || (*this)(xs...);
+    return ! x || (*this)(xs...);
   }
 };
 
 template <bool IsVoid, class F>
 class lfinvoker {
- public:
-  lfinvoker(F& fun) : m_fun(fun) {
+public:
+  lfinvoker(F& fun) : fun_(fun) {
     // nop
   }
 
   template <class... Ts>
   typename detail::get_callable_trait<F>::result_type operator()(Ts&&... xs) {
-    return m_fun(unopt(std::forward<Ts>(xs))...);
+    return fun_(unopt(std::forward<Ts>(xs))...);
   }
 
- private:
-  F& m_fun;
+private:
+  F& fun_;
 };
 
 template <class F>
 class lfinvoker<true, F> {
- public:
-  lfinvoker(F& fun) : m_fun(fun) {
+public:
+  lfinvoker(F& fun) : fun_(fun) {
     // nop
   }
 
   template <class... Ts>
   unit_t operator()(Ts&&... xs) {
-    m_fun(unopt(std::forward<Ts>(xs))...);
+    fun_(unopt(std::forward<Ts>(xs))...);
     return unit;
   }
 
- private:
-  F& m_fun;
+private:
+  F& fun_;
 };
 
 template <class T>
@@ -151,7 +151,7 @@ struct projection_result<unit_t> {
 
 template <class F>
 class trivial_match_case : public match_case {
- public:
+public:
   using fun_trait = typename detail::get_callable_trait<F>::type;
 
   using plain_result_type = typename fun_trait::result_type;
@@ -185,7 +185,7 @@ class trivial_match_case : public match_case {
 
   trivial_match_case(F f)
       : match_case(false, detail::make_type_token_from_list<pattern>()),
-        m_fun(std::move(f)) {
+        fun_(std::move(f)) {
     // nop
   }
 
@@ -193,10 +193,10 @@ class trivial_match_case : public match_case {
     intermediate_tuple it;
     detail::meta_elements<pattern> ms;
     // check if try_match() reports success
-    if (!detail::try_match(msg, ms.arr.data(), ms.arr.size(), it.data)) {
+    if (! detail::try_match(msg, ms.arr.data(), ms.arr.size(), it.data)) {
       return match_case::no_match;
     }
-    // detach msg before invoking m_fun if needed
+    // detach msg before invoking fun_ if needed
     if (is_manipulator) {
       msg.force_detach();
       // update pointers in our intermediate tuple
@@ -206,20 +206,20 @@ class trivial_match_case : public match_case {
         it[i] = const_cast<void*>(msg.at(i));
       }
     }
-    lfinvoker<std::is_same<result_type, void>::value, F> fun{m_fun};
+    lfinvoker<std::is_same<result_type, void>::value, F> fun{fun_};
     detail::optional_message_visitor omv;
     auto funres = apply_args(fun, detail::get_indices(it), it);
     res = omv(funres);
     return match_case::match;
   }
 
- protected:
-  F m_fun;
+protected:
+  F fun_;
 };
 
 template <class F>
 class catch_all_match_case : public match_case {
- public:
+public:
   using plain_result_type = typename detail::get_callable_trait<F>::result_type;
 
   using result_type =
@@ -233,25 +233,25 @@ class catch_all_match_case : public match_case {
 
   catch_all_match_case(F f)
       : match_case(true, detail::make_type_token<>()),
-        m_fun(std::move(f)) {
+        fun_(std::move(f)) {
     // nop
   }
 
   match_case::result invoke(optional<message>& res, message&) override {
-    lfinvoker<std::is_same<result_type, void>::value, F> fun{m_fun};
+    lfinvoker<std::is_same<result_type, void>::value, F> fun{fun_};
     auto fun_res = fun();
     detail::optional_message_visitor omv;
     res = omv(fun_res);
     return match_case::match;
   }
 
- protected:
-  F m_fun;
+protected:
+  F fun_;
 };
 
 template <class F, class Tuple>
 class advanced_match_case : public match_case {
- public:
+public:
   using tuple_type = Tuple;
 
   using base_type = advanced_match_case;
@@ -260,7 +260,7 @@ class advanced_match_case : public match_case {
 
   advanced_match_case(bool hw, uint32_t tt, F f)
       : match_case(hw, tt),
-        m_fun(std::move(f)) {
+        fun_(std::move(f)) {
     // nop
   }
 
@@ -286,7 +286,7 @@ class advanced_match_case : public match_case {
     storage st;
     if (prepare_invoke(msg, &st.data)) {
       st.valid = true;
-      lfinvoker<std::is_same<result_type, void>::value, F> fun{m_fun};
+      lfinvoker<std::is_same<result_type, void>::value, F> fun{fun_};
       detail::optional_message_visitor omv;
       auto funres = apply_args(fun, detail::get_indices(st.data), st.data);
       res = omv(funres);
@@ -295,8 +295,8 @@ class advanced_match_case : public match_case {
     return match_case::no_match;
   }
 
- protected:
-  F m_fun;
+protected:
+  F fun_;
 };
 
 template <class Pattern>
@@ -317,14 +317,12 @@ struct projection_is_trivial {
     >::value == 0;
 };
 
-/**
- * @tparam F Function or function object denoting the callback.
- * @tparam Tuple Type of the storage for intermediate results during matching.
- * @tparam Pattern Input types for this match case.
- */
+/// @tparam F Function or function object denoting the callback.
+/// @tparam Tuple Type of the storage for intermediate results during matching.
+/// @tparam Pattern Input types for this match case.
 template <class F, class Tuple, class Pattern, class Projections>
 class advanced_match_case_impl : public advanced_match_case<F, Tuple> {
- public:
+public:
   using plain_result_type = typename detail::get_callable_trait<F>::result_type;
 
   using result_type =
@@ -361,12 +359,12 @@ class advanced_match_case_impl : public advanced_match_case<F, Tuple> {
 
   advanced_match_case_impl(bool has_wcard, uint32_t ttoken, F f, Projections ps)
       : super(has_wcard, ttoken, std::move(f)),
-        m_ps(std::move(ps)) {
+        ps_(std::move(ps)) {
     // nop
   }
 
   bool prepare_invoke(message& msg, Tuple* out) {
-    // detach msg before invoking m_fun if needed
+    // detach msg before invoking fun_ if needed
     if (detail::tl_exists<fargs, detail::is_mutable_ref>::value) {
       msg.force_detach();
     }
@@ -383,7 +381,7 @@ class advanced_match_case_impl : public advanced_match_case<F, Tuple> {
     intermediate_tuple it;
     detail::meta_elements<Pattern> ms;
     // check if try_match() reports success
-    if (!detail::try_match(msg, ms.arr.data(), ms.arr.size(), it.data)) {
+    if (! detail::try_match(msg, ms.arr.data(), ms.arr.size(), it.data)) {
       return false;
     }
     match_case_zipper zip;
@@ -393,13 +391,13 @@ class advanced_match_case_impl : public advanced_match_case<F, Tuple> {
     typename detail::il_right<indices_type, fargs_size>::type rights;
     has_none hn;
     // check if guards of discarded arguments are fulfilled
-    auto lhs_tup = tuple_zip(zip, lefts, m_ps, it);
+    auto lhs_tup = tuple_zip(zip, lefts, ps_, it);
     if (detail::apply_args(hn, detail::get_indices(lhs_tup), lhs_tup)) {
       return false;
     }
     // zip remaining arguments into output tuple
-    new (out) Tuple (tuple_zip(zip, rights, m_ps, it));
-    //tuple_type rhs_tup = tuple_zip(zip, rights, m_ps, it);
+    new (out) Tuple (tuple_zip(zip, rights, ps_, it));
+    //tuple_type rhs_tup = tuple_zip(zip, rights, ps_, it);
     // check if remaining guards are fulfilled
     if (detail::apply_args(hn, detail::get_indices(*out), *out)) {
       out->~Tuple();
@@ -408,8 +406,8 @@ class advanced_match_case_impl : public advanced_match_case<F, Tuple> {
     return true;
   }
 
- private:
-  Projections m_ps;
+private:
+  Projections ps_;
 };
 
 struct match_case_info {
@@ -424,7 +422,7 @@ inline bool operator<(const match_case_info& x, const match_case_info& y) {
 
 template <class F>
 typename std::enable_if<
-  !std::is_base_of<match_case, F>::value,
+  ! std::is_base_of<match_case, F>::value,
   std::tuple<trivial_match_case<F>>
 >::type
 to_match_case_tuple(F fun) {
@@ -457,7 +455,7 @@ typename std::enable_if<
   std::is_base_of<match_case, T>::value || std::is_base_of<match_case, U>::value
 >::type
 operator,(T, U) {
-  static_assert(!std::is_same<T, T>::value,
+  static_assert(! std::is_same<T, T>::value,
                 "this syntax is not supported -> you probably did "
                 "something like 'return (...)' instead of 'return {...}'");
 }

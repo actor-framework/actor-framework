@@ -46,7 +46,7 @@ class abstract_event_based_actor : public
     ::with<mixin::sync_sender<nonblocking_response_handle_tag>::template impl>,
     local_actor
   >::type {
- public:
+public:
   using behavior_type = BehaviorType;
 
   /****************************************************************************
@@ -63,7 +63,7 @@ class abstract_event_based_actor : public
 
   template <class T, class... Ts>
   typename std::enable_if<
-    !std::is_same<keep_behavior_t, typename std::decay<T>::type>::value,
+    ! std::is_same<keep_behavior_t, typename std::decay<T>::type>::value,
     void
   >::type
   become(T&& x, Ts&&... xs) {
@@ -78,10 +78,10 @@ class abstract_event_based_actor : public
   }
 
   void unbecome() {
-    this->m_bhvr_stack.pop_back();
+    this->bhvr_stack_.pop_back();
   }
 
- private:
+private:
   template <class... Ts>
   static behavior& unbox(typed_behavior<Ts...>& x) {
     return x.unbox();

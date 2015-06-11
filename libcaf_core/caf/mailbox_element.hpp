@@ -39,7 +39,7 @@
 namespace caf {
 
 class mailbox_element : public memory_managed {
- public:
+public:
   static constexpr auto memory_cache_flag = detail::needs_embedding;
 
   mailbox_element* next; // intrusive next pointer

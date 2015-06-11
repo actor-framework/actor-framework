@@ -36,7 +36,7 @@ namespace caf {
 namespace detail {
 
 class decorated_tuple : public message_data {
- public:
+public:
   decorated_tuple& operator=(const decorated_tuple&) = delete;
 
   using vector_type = std::vector<size_t>;
@@ -66,19 +66,19 @@ class decorated_tuple : public message_data {
   uint16_t type_nr_at(size_t pos) const override;
 
   inline const cow_ptr& decorated() const {
-    return m_decorated;
+    return decorated_;
   }
 
   inline const vector_type& mapping() const {
-    return m_mapping;
+    return mapping_;
   }
 
- private:
+private:
   decorated_tuple(const decorated_tuple&) = default;
 
-  cow_ptr m_decorated;
-  vector_type m_mapping;
-  uint32_t m_type_token;
+  cow_ptr decorated_;
+  vector_type mapping_;
+  uint32_t type_token_;
 };
 
 } // namespace detail

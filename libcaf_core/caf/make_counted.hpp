@@ -28,11 +28,9 @@
 
 namespace caf {
 
-/**
- * Constructs an object of type `T` in an `intrusive_ptr`.
- * @relates ref_counted
- * @relates intrusive_ptr
- */
+/// Constructs an object of type `T` in an `intrusive_ptr`.
+/// @relates ref_counted
+/// @relates intrusive_ptr
 template <class T, class... Ts>
 typename std::enable_if<
   detail::is_memory_cached<T>::value,
@@ -43,14 +41,12 @@ make_counted(Ts&&... xs) {
                           false);
 }
 
-/**
- * Constructs an object of type `T` in an `intrusive_ptr`.
- * @relates ref_counted
- * @relates intrusive_ptr
- */
+/// Constructs an object of type `T` in an `intrusive_ptr`.
+/// @relates ref_counted
+/// @relates intrusive_ptr
 template <class T, class... Ts>
 typename std::enable_if<
-  !detail::is_memory_cached<T>::value,
+  ! detail::is_memory_cached<T>::value,
   intrusive_ptr<T>
 >::type
 make_counted(Ts&&... xs) {

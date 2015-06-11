@@ -32,7 +32,7 @@ calculator_type::behavior_type typed_calculator(calculator_type::pointer) {
 }
 
 class typed_calculator_class : public calculator_type::base {
- protected:
+protected:
   behavior_type make_behavior() override {
     return {
       [](plus_atom, int x, int y) {

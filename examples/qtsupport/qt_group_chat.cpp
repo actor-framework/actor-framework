@@ -35,11 +35,11 @@ int main(int argc, char** argv) {
     {"name,n", "set chat name", name},
     {"group,g", "join chat group", group_id}
   });
-  if (!res.error.empty()) {
+  if (! res.error.empty()) {
     cerr << res.error << endl;
     return 1;
   }
-  if (!res.remainder.empty()) {
+  if (! res.remainder.empty()) {
     std::cerr << res.helptext << std::endl;
     return 1;
   }
@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
   }
   group gptr;
   // evaluate group parameter
-  if (!group_id.empty()) {
+  if (! group_id.empty()) {
     auto p = group_id.find(':');
     if (p == std::string::npos) {
       cerr << "*** error parsing argument " << group_id
@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
   Ui::ChatWindow helper;
   helper.setupUi(&mw);
   auto client = helper.chatwidget->as_actor();
-  if (!name.empty()) {
+  if (! name.empty()) {
     send_as(client, client, atom("setName"), move(name));
   }
   if (gptr) {

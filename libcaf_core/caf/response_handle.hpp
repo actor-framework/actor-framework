@@ -33,24 +33,18 @@
 
 namespace caf {
 
-/**
- * This tag identifies response handles featuring a
- * nonblocking API by providing a `then` member function.
- * @relates response_handle
- */
+/// This tag identifies response handles featuring a
+/// nonblocking API by providing a `then` member function.
+/// @relates response_handle
 struct nonblocking_response_handle_tag {};
 
-/**
- * This tag identifies response handles featuring a
- * blocking API by providing an `await` member function.
- * @relates response_handle
- */
+/// This tag identifies response handles featuring a
+/// blocking API by providing an `await` member function.
+/// @relates response_handle
 struct blocking_response_handle_tag {};
 
-/**
- * This helper class identifies an expected response message
- * and enables `sync_send(...).then(...)`.
- */
+/// This helper class identifies an expected response message
+/// and enables `sync_send(...).then(...)`.
 template <class Self, class ResultOptPairOrMessage, class Tag>
 class response_handle;
 
@@ -59,24 +53,24 @@ class response_handle;
  ******************************************************************************/
 template <class Self>
 class response_handle<Self, message, nonblocking_response_handle_tag> {
- public:
+public:
   response_handle() = delete;
   response_handle(const response_handle&) = default;
   response_handle& operator=(const response_handle&) = default;
 
-  response_handle(message_id mid, Self* self) : m_mid(mid), m_self(self) {
+  response_handle(message_id mid, Self* self) : mid_(mid), self_(self) {
     // nop
   }
 
   template <class... Ts>
   continue_helper then(Ts&&... xs) const {
-    m_self->set_response_handler(m_mid, behavior{std::forward<Ts>(xs)...});
-    return {m_mid};
+    self_->set_response_handler(mid_, behavior{std::forward<Ts>(xs)...});
+    return {mid_};
   }
 
- private:
-  message_id m_mid;
-  Self* m_self;
+private:
+  message_id mid_;
+  Self* self_;
 };
 
 /******************************************************************************
@@ -84,12 +78,12 @@ class response_handle<Self, message, nonblocking_response_handle_tag> {
  ******************************************************************************/
 template <class Self, class TypedOutputPair>
 class response_handle<Self, TypedOutputPair, nonblocking_response_handle_tag> {
- public:
+public:
   response_handle() = delete;
   response_handle(const response_handle&) = default;
   response_handle& operator=(const response_handle&) = default;
 
-  response_handle(message_id mid, Self* self) : m_mid(mid), m_self(self) {
+  response_handle(message_id mid, Self* self) : mid_(mid), self_(self) {
     // nop
   }
 
@@ -105,17 +99,17 @@ class response_handle<Self, TypedOutputPair, nonblocking_response_handle_tag> {
     static_assert(detail::conjunction<detail::is_callable<Fs>::value...>::value,
                   "all arguments must be callable");
     static_assert(detail::conjunction<
-                    !std::is_base_of<match_case, Fs>::value...
+                    ! std::is_base_of<match_case, Fs>::value...
                   >::value,
                   "match cases are not allowed in this context");
     detail::type_checker<TypedOutputPair, Fs...>::check();
-    m_self->set_response_handler(m_mid, behavior{std::move(fs)...});
-    return {m_mid};
+    self_->set_response_handler(mid_, behavior{std::move(fs)...});
+    return {mid_};
   }
 
- private:
-  message_id m_mid;
-  Self* m_self;
+private:
+  message_id mid_;
+  Self* self_;
 };
 
 /******************************************************************************
@@ -123,28 +117,28 @@ class response_handle<Self, TypedOutputPair, nonblocking_response_handle_tag> {
  ******************************************************************************/
 template <class Self>
 class response_handle<Self, message, blocking_response_handle_tag> {
- public:
+public:
   response_handle() = delete;
   response_handle(const response_handle&) = default;
   response_handle& operator=(const response_handle&) = default;
 
-  response_handle(message_id mid, Self* self) : m_mid(mid), m_self(self) {
+  response_handle(message_id mid, Self* self) : mid_(mid), self_(self) {
     // nop
   }
 
   void await(behavior& bhvr) {
-    m_self->dequeue(bhvr, m_mid);
+    self_->dequeue(bhvr, mid_);
   }
 
   template <class... Ts>
   void await(Ts&&... xs) const {
     behavior bhvr{std::forward<Ts>(xs)...};
-    m_self->dequeue(bhvr, m_mid);
+    self_->dequeue(bhvr, mid_);
   }
 
- private:
-  message_id m_mid;
-  Self* m_self;
+private:
+  message_id mid_;
+  Self* self_;
 };
 
 /******************************************************************************
@@ -152,17 +146,17 @@ class response_handle<Self, message, blocking_response_handle_tag> {
  ******************************************************************************/
 template <class Self, class OutputPair>
 class response_handle<Self, OutputPair, blocking_response_handle_tag> {
- public:
+public:
   response_handle() = delete;
   response_handle(const response_handle&) = default;
   response_handle& operator=(const response_handle&) = default;
 
-  response_handle(message_id mid, Self* self) : m_mid(mid), m_self(self) {
+  response_handle(message_id mid, Self* self) : mid_(mid), self_(self) {
     // nop
   }
 
   static constexpr bool is_either_or_handle =
-    !std::is_same<
+    ! std::is_same<
       none_t,
       typename OutputPair::second
     >::value;
@@ -177,17 +171,17 @@ class response_handle<Self, OutputPair, blocking_response_handle_tag> {
     static_assert(detail::conjunction<detail::is_callable<Fs>::value...>::value,
                   "all arguments must be callable");
     static_assert(detail::conjunction<
-                    !std::is_base_of<match_case, Fs>::value...
+                    ! std::is_base_of<match_case, Fs>::value...
                   >::value,
                   "match cases are not allowed in this context");
     detail::type_checker<OutputPair, Fs...>::check();
     behavior tmp{std::move(fs)...};
-    m_self->dequeue(tmp, m_mid);
+    self_->dequeue(tmp, mid_);
   }
 
- private:
-  message_id m_mid;
-  Self* m_self;
+private:
+  message_id mid_;
+  Self* self_;
 };
 
 } // namespace caf

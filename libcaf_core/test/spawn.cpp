@@ -56,7 +56,7 @@ void dec_actor_instances() {
 }
 
 class event_testee : public sb_actor<event_testee> {
- public:
+public:
   event_testee();
   ~event_testee();
 
@@ -129,12 +129,12 @@ actor spawn_event_testee2(actor parent) {
 }
 
 class testee_actor : public blocking_actor {
- public:
+public:
   testee_actor();
   ~testee_actor();
   void act() override;
 
- private:
+private:
   void wait4string();
   void wait4float();
 };
@@ -187,7 +187,7 @@ void testee_actor::wait4float() {
 
 // self->receives one timeout and quits
 class testee1 : public event_based_actor {
- public:
+public:
   testee1();
   ~testee1();
   behavior make_behavior() override;
@@ -210,7 +210,7 @@ behavior testee1::make_behavior() {
 }
 
 class echo_actor : public event_based_actor {
- public:
+public:
   echo_actor();
   ~echo_actor();
   behavior make_behavior() override;
@@ -234,7 +234,7 @@ behavior echo_actor::make_behavior() {
 }
 
 class simple_mirror : public event_based_actor {
- public:
+public:
   simple_mirror();
   ~simple_mirror();
   behavior make_behavior() override;
@@ -328,7 +328,7 @@ struct slave : event_based_actor {
 };
 
 class counting_actor : public event_based_actor {
- public:
+public:
   counting_actor();
   ~counting_actor();
   behavior make_behavior() override;
@@ -653,10 +653,10 @@ CAF_TEST(sync_sends) {
 CAF_TEST(inflater) {
   scoped_actor self;
   struct inflater : public event_based_actor {
-   public:
+  public:
     inflater(string name, actor buddy)
-        : m_name(std::move(name)),
-          m_buddy(std::move(buddy)) {
+        : name_(std::move(name)),
+          buddy_(std::move(buddy)) {
       inc_actor_instances();
     }
     ~inflater() {
@@ -665,16 +665,16 @@ CAF_TEST(inflater) {
     behavior make_behavior() override {
       return {
         [=](int n, const string& str) {
-          send(m_buddy, n * 2, str + " from " + m_name);
+          send(buddy_, n * 2, str + " from " + name_);
         },
         [=](ok_atom) {
           quit();
         }
       };
     }
-   private:
-    string m_name;
-    actor m_buddy;
+  private:
+    string name_;
+    actor buddy_;
   };
   auto joe = spawn<inflater>("Joe", self);
   auto bob = spawn<inflater>("Bob", joe);
@@ -697,34 +697,34 @@ CAF_TEST(inflater) {
 
 CAF_TEST(kr34t0r) {
   class kr34t0r : public event_based_actor {
-   public:
+  public:
     kr34t0r(string name, actor pal)
-        : m_name(std::move(name)),
-          m_pal(std::move(pal)) {
+        : name_(std::move(name)),
+          pal_(std::move(pal)) {
       inc_actor_instances();
     }
     ~kr34t0r() {
       dec_actor_instances();
     }
     behavior make_behavior() override {
-      if (m_name == "Joe" && m_pal == invalid_actor) {
-        m_pal = spawn<kr34t0r>("Bob", this);
+      if (name_ == "Joe" && pal_ == invalid_actor) {
+        pal_ = spawn<kr34t0r>("Bob", this);
       }
       return {
         others >> [=] {
           // forward message and die
-          send(m_pal, current_message());
+          send(pal_, current_message());
           quit();
         }
       };
     }
     void on_exit() {
-      m_pal = invalid_actor; // break cycle
+      pal_ = invalid_actor; // break cycle
     }
 
-   private:
-    string m_name;
-    actor m_pal;
+  private:
+    string name_;
+    actor pal_;
   };
   scoped_actor self;
   auto joe_the_second = spawn<kr34t0r>("Joe", invalid_actor);
@@ -783,8 +783,8 @@ CAF_TEST(typed_await) {
 // tests attach_functor() inside of an actor's constructor
 CAF_TEST(constructor_attach) {
   class testee : public event_based_actor {
-   public:
-    explicit testee(actor buddy) : m_buddy(buddy) {
+  public:
+    explicit testee(actor buddy) : buddy_(buddy) {
       attach_functor([=](uint32_t reason) {
         send(buddy, ok_atom::value, reason);
       });
@@ -800,49 +800,49 @@ CAF_TEST(constructor_attach) {
     }
 
     void on_exit() {
-      m_buddy = invalid_actor;
+      buddy_ = invalid_actor;
     }
 
-   private:
-    actor m_buddy;
+  private:
+    actor buddy_;
   };
   class spawner : public event_based_actor {
-   public:
-    spawner() : m_downs(0) {
+  public:
+    spawner() : downs_(0) {
       // nop
     }
     behavior make_behavior() {
       trap_exit(true);
-      m_testee = spawn<testee, monitored>(this);
+      testee_ = spawn<testee, monitored>(this);
       return {
         [=](const down_msg& msg) {
           CAF_CHECK_EQUAL(msg.reason, exit_reason::user_shutdown);
-          if (++m_downs == 2) {
+          if (++downs_ == 2) {
             quit(msg.reason);
           }
         },
         [=](ok_atom, uint32_t reason) {
           CAF_CHECK_EQUAL(reason, exit_reason::user_shutdown);
-          if (++m_downs == 2) {
+          if (++downs_ == 2) {
             quit(reason);
           }
         },
         others >> [=] {
           CAF_TEST_VERBOSE("forward to testee: "
                            << to_string(current_message()));
-          forward_to(m_testee);
+          forward_to(testee_);
         }
       };
     }
 
     void on_exit() {
       CAF_TEST_VERBOSE("spawner::on_exit()");
-      m_testee = invalid_actor;
+      testee_ = invalid_actor;
     }
 
-   private:
-    int m_downs;
-    actor m_testee;
+  private:
+    int downs_;
+    actor testee_;
   };
   anon_send_exit(spawn<spawner>(), exit_reason::user_shutdown);
 }
@@ -850,7 +850,7 @@ CAF_TEST(constructor_attach) {
 namespace {
 
 class exception_testee : public event_based_actor {
- public:
+public:
   exception_testee() {
     set_exception_handler([](const std::exception_ptr&) -> optional<uint32_t> {
       return exit_reason::user_defined + 2;

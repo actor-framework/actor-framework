@@ -25,9 +25,7 @@
 namespace caf {
 namespace detail {
 
-/**
- * A list of integers (wraps a long... template parameter pack).
- */
+/// A list of integers (wraps a long... template parameter pack).
 template <long... Is>
 struct int_list {};
 
@@ -78,9 +76,7 @@ struct il_take<int_list<Is...>, N> {
 };
 
 
-/**
- * Creates indices for `List` beginning at `Pos`.
- */
+/// Creates indices for `List` beginning at `Pos`.
 template <class List, long Pos = 0, typename Indices = int_list<>>
 struct il_indices;
 

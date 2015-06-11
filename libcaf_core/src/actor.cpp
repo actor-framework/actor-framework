@@ -29,41 +29,41 @@
 
 namespace caf {
 
-actor::actor(const invalid_actor_t&) : m_ptr(nullptr) {
+actor::actor(const invalid_actor_t&) : ptr_(nullptr) {
   // nop
 }
 
-actor::actor(abstract_actor* ptr) : m_ptr(ptr) {
+actor::actor(abstract_actor* ptr) : ptr_(ptr) {
   // nop
 }
 
 actor& actor::operator=(const invalid_actor_t&) {
-  m_ptr.reset();
+  ptr_.reset();
   return *this;
 }
 
 intptr_t actor::compare(const actor& other) const {
-  return channel::compare(m_ptr.get(), other.m_ptr.get());
+  return channel::compare(ptr_.get(), other.ptr_.get());
 }
 
 intptr_t actor::compare(const actor_addr& other) const {
-  return static_cast<ptrdiff_t>(m_ptr.get() - other.m_ptr.get());
+  return static_cast<ptrdiff_t>(ptr_.get() - other.ptr_.get());
 }
 
 void actor::swap(actor& other) {
-  m_ptr.swap(other.m_ptr);
+  ptr_.swap(other.ptr_);
 }
 
 actor_addr actor::address() const {
-  return m_ptr ? m_ptr->address() : actor_addr{};
+  return ptr_ ? ptr_->address() : actor_addr{};
 }
 
 bool actor::is_remote() const {
-  return m_ptr ? m_ptr->is_remote() : false;
+  return ptr_ ? ptr_->is_remote() : false;
 }
 
 actor_id actor::id() const {
-  return (m_ptr) ? m_ptr->id() : 0;
+  return (ptr_) ? ptr_->id() : 0;
 }
 
 } // namespace caf

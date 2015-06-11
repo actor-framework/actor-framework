@@ -28,12 +28,12 @@
 namespace caf {
 
 abstract_group::subscription::subscription(const abstract_group_ptr& g)
-    : m_group(g) {
+    : group_(g) {
   // nop
 }
 
 void abstract_group::subscription::actor_exited(abstract_actor* ptr, uint32_t) {
-  m_group->unsubscribe(ptr->address());
+  group_->unsubscribe(ptr->address());
 }
 
 bool abstract_group::subscription::matches(const token& what) {
@@ -42,12 +42,12 @@ bool abstract_group::subscription::matches(const token& what) {
   }
   if (what.ptr) {
     auto& ot = *reinterpret_cast<const subscription_token*>(what.ptr);
-    return ot.group == m_group;
+    return ot.group == group_;
   }
   return true;
 }
 
-abstract_group::module::module(std::string mname) : m_name(std::move(mname)) {
+abstract_group::module::module(std::string mname) : name_(std::move(mname)) {
   // nop
 }
 
@@ -56,22 +56,22 @@ void abstract_group::module::stop() {
 }
 
 const std::string& abstract_group::module::name() {
-  return m_name;
+  return name_;
 }
 
 abstract_group::abstract_group(abstract_group::module_ptr mod, std::string id)
     : abstract_channel(abstract_channel::is_abstract_group_flag),
-      m_module(mod),
-      m_identifier(std::move(id)) {
+      module_(mod),
+      identifier_(std::move(id)) {
   // nop
 }
 
 const std::string& abstract_group::identifier() const {
-  return m_identifier;
+  return identifier_;
 }
 
 abstract_group::module_ptr abstract_group::get_module() const {
-  return m_module;
+  return module_;
 }
 
 const std::string& abstract_group::module_name() const {

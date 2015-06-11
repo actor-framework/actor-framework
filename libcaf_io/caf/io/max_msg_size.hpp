@@ -25,16 +25,12 @@
 namespace caf {
 namespace io {
 
-/**
- * Sets the maximum size of a message over network.
- * @param size The maximum number of bytes a message may occupy.
- */
+/// Sets the maximum size of a message over network.
+/// @param size The maximum number of bytes a message may occupy.
 void max_msg_size(size_t size);
 
-/**
- * Queries the maximum size of messages over network.
- * @returns The number maximum number of bytes a message may occupy.
- */
+/// Queries the maximum size of messages over network.
+/// @returns The number maximum number of bytes a message may occupy.
 size_t max_msg_size();
 
 } // namespace io

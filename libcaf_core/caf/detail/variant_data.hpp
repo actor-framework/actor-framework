@@ -86,7 +86,7 @@ struct variant_data {
   CAF_VARIANT_DATA_GETTER(19)
   CAF_VARIANT_DATA_GETTER(20)
 
- private:
+private:
 
   template <class M, typename U>
   inline void cr(M& member, U&& arg) {

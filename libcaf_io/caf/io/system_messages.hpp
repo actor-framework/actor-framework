@@ -27,111 +27,75 @@
 namespace caf {
 namespace io {
 
-/**
- * Signalizes a newly accepted connection from a {@link broker}.
- */
+/// Signalizes a newly accepted connection from a {@link broker}.
 struct new_connection_msg {
-  /**
-   * The handle that accepted the new connection.
-   */
+  /// The handle that accepted the new connection.
   accept_handle source;
-  /**
-   * The handle for the new connection.
-   */
+  /// The handle for the new connection.
   connection_handle handle;
 };
 
-/**
- * @relates new_connection_msg
- */
+/// @relates new_connection_msg
 inline bool operator==(const new_connection_msg& lhs,
                        const new_connection_msg& rhs) {
   return lhs.source == rhs.source && lhs.handle == rhs.handle;
 }
 
-/**
- * @relates new_connection_msg
- */
+/// @relates new_connection_msg
 inline bool operator!=(const new_connection_msg& lhs,
                        const new_connection_msg& rhs) {
   return !(lhs == rhs);
 }
 
-/**
- * Signalizes newly arrived data for a {@link broker}.
- */
+/// Signalizes newly arrived data for a {@link broker}.
 struct new_data_msg {
-  /**
-   * Handle to the related connection.
-   */
+  /// Handle to the related connection.
   connection_handle handle;
-  /**
-   * Buffer containing the received data.
-   */
+  /// Buffer containing the received data.
   std::vector<char> buf;
 };
 
-/**
- * @relates new_data_msg
- */
+/// @relates new_data_msg
 inline bool operator==(const new_data_msg& lhs, const new_data_msg& rhs) {
   return lhs.handle == rhs.handle && lhs.buf == rhs.buf;
 }
 
-/**
- * @relates new_data_msg
- */
+/// @relates new_data_msg
 inline bool operator!=(const new_data_msg& lhs, const new_data_msg& rhs) {
   return !(lhs == rhs);
 }
 
-/**
- * Signalizes that a {@link broker} connection has been closed.
- */
+/// Signalizes that a {@link broker} connection has been closed.
 struct connection_closed_msg {
-  /**
-   * Handle to the closed connection.
-   */
+  /// Handle to the closed connection.
   connection_handle handle;
 };
 
-/**
- * @relates connection_closed_msg
- */
+/// @relates connection_closed_msg
 inline bool operator==(const connection_closed_msg& lhs,
                        const connection_closed_msg& rhs) {
   return lhs.handle == rhs.handle;
 }
 
-/**
- * @relates connection_closed_msg
- */
+/// @relates connection_closed_msg
 inline bool operator!=(const connection_closed_msg& lhs,
                        const connection_closed_msg& rhs) {
   return !(lhs == rhs);
 }
 
-/**
- * Signalizes that a {@link broker} acceptor has been closed.
- */
+/// Signalizes that a {@link broker} acceptor has been closed.
 struct acceptor_closed_msg {
-  /**
-   * Handle to the closed connection.
-   */
+  /// Handle to the closed connection.
   accept_handle handle;
 };
 
-/**
- * @relates acceptor_closed_msg
- */
+/// @relates acceptor_closed_msg
 inline bool operator==(const acceptor_closed_msg& lhs,
                        const acceptor_closed_msg& rhs) {
   return lhs.handle == rhs.handle;
 }
 
-/**
- * @relates acceptor_closed_msg
- */
+/// @relates acceptor_closed_msg
 inline bool operator!=(const acceptor_closed_msg& lhs,
                        const acceptor_closed_msg& rhs) {
   return !(lhs == rhs);

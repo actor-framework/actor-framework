@@ -26,12 +26,10 @@ namespace caf {
 
 class execution_unit;
 
-/**
- * A cooperatively executed task managed by one or more
- * instances of `execution_unit`.
- */
+/// A cooperatively executed task managed by one or more
+/// instances of `execution_unit`.
 class resumable {
- public:
+public:
   enum resume_result {
     resume_later,
     awaiting_message,
@@ -43,20 +41,14 @@ class resumable {
 
   virtual ~resumable();
 
-  /**
-   * Initializes this object, e.g., by increasing the the reference count.
-   */
+  /// Initializes this object, e.g., by increasing the the reference count.
   virtual void attach_to_scheduler() = 0;
 
-  /**
-   * Uninitializes this object, e.g., by decrementing the the reference count.
-   */
+  /// Uninitializes this object, e.g., by decrementing the the reference count.
   virtual void detach_from_scheduler() = 0;
 
-  /**
-   * Resume any pending computation until it is either finished
-   * or needs to be re-scheduled later.
-   */
+  /// Resume any pending computation until it is either finished
+  /// or needs to be re-scheduled later.
   virtual resume_result resume(execution_unit*, size_t max_throughput) = 0;
 };
 

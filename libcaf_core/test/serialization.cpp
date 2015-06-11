@@ -138,22 +138,22 @@ void apply(binary_deserializer& bd, T* x) {
 
 template <class T>
 struct binary_util_fun {
-  binary_util_fun(T& ref) : m_ref(ref) {
+  binary_util_fun(T& ref) : ref_(ref) {
     // nop
   }
-  T& m_ref;
+  T& ref_;
   void operator()() const {
     // end of recursion
   }
   template <class U, class... Us>
   void operator()(U&& x, Us&&... xs) const {
-    apply(m_ref, x);
+    apply(ref_, x);
     (*this)(std::forward<Us>(xs)...);
   }
 };
 
 class binary_util {
- public:
+public:
   template <class T, class... Ts>
   static vector<char> serialize(const T& x, const Ts&... xs) {
     vector<char> buf;

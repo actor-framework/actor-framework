@@ -47,7 +47,7 @@ namespace caf {
 namespace detail {
 
 template <class T, bool IsFun = detail::is_callable<T>::value
-                                && !detail::is_boxed<T>::value>
+                                && ! detail::is_boxed<T>::value>
 struct pattern_type {
   using type =
     typename implicit_conversions<
@@ -74,29 +74,21 @@ struct pattern_type<T, true> {
 
 namespace caf {
 
-/**
- * A wildcard that matches any number of any values.
- */
+/// A wildcard that matches any number of any values.
 constexpr auto any_vals = anything();
 
-/**
- * A wildcard that matches any value of type `T`.
- */
+/// A wildcard that matches any value of type `T`.
 template <class T>
 constexpr typename detail::boxed<T>::type val() {
   return typename detail::boxed<T>::type();
 }
 
-/**
- * A wildcard that matches the argument types
- * of a given callback, must be the last argument to `on()`.
- */
+/// A wildcard that matches the argument types
+/// of a given callback, must be the last argument to `on()`.
 
 constexpr auto arg_match = detail::boxed<detail::arg_match_t>::type();
 
-/**
- * Generates function objects from a binary predicate and a value.
- */
+/// Generates function objects from a binary predicate and a value.
 template <class T, typename BinaryPredicate>
 std::function<optional<T>(const T&)> guarded(BinaryPredicate p, T value) {
   return [=](const T& other) -> optional<T> {
@@ -131,7 +123,7 @@ template <class T>
 std::function<optional<typename detail::strip_and_convert<T>::type>(
   const typename detail::strip_and_convert<T>::type&)>
 to_guard(const T& value,
-         typename std::enable_if<!detail::is_callable<T>::value>::type* = 0) {
+         typename std::enable_if<! detail::is_callable<T>::value>::type* = 0) {
   using type = typename detail::strip_and_convert<T>::type;
   return guarded<type>(std::equal_to<type>{}, value);
 }
@@ -147,9 +139,7 @@ auto to_guard(const atom_constant<V>&) -> decltype(to_guard(V)) {
   return to_guard(V);
 }
 
-/**
- * Returns a generator for `match_case` objects.
- */
+/// Returns a generator for `match_case` objects.
 template <class... Ts>
 auto on(const Ts&... xs)
 -> detail::advanced_match_case_builder<
@@ -162,65 +152,49 @@ auto on(const Ts&... xs)
   return {detail::variadic_ctor{}, to_guard(xs)...};
 }
 
-/**
- * Returns a generator for `match_case` objects.
- */
+/// Returns a generator for `match_case` objects.
 template <class T, class... Ts>
 decltype(on(val<T>(), val<Ts>()...)) on() {
   return on(val<T>(), val<Ts>()...);
 }
 
-/**
- * Returns a generator for `match_case` objects.
- */
+/// Returns a generator for `match_case` objects.
 template <atom_value A0, class... Ts>
 decltype(on(A0, val<Ts>()...)) on() {
   return on(A0, val<Ts>()...);
 }
 
-/**
- * Returns a generator for `match_case` objects.
- */
+/// Returns a generator for `match_case` objects.
 template <atom_value A0, atom_value A1, class... Ts>
 decltype(on(A0, A1, val<Ts>()...)) on() {
   return on(A0, A1, val<Ts>()...);
 }
 
-/**
- * Returns a generator for `match_case` objects.
- */
+/// Returns a generator for `match_case` objects.
 template <atom_value A0, atom_value A1, atom_value A2, class... Ts>
 decltype(on(A0, A1, A2, val<Ts>()...)) on() {
   return on(A0, A1, A2, val<Ts>()...);
 }
 
-/**
- * Returns a generator for `match_case` objects.
- */
+/// Returns a generator for `match_case` objects.
 template <atom_value A0, atom_value A1, atom_value A2, atom_value A3,
           class... Ts>
 decltype(on(A0, A1, A2, A3, val<Ts>()...)) on() {
   return on(A0, A1, A2, A3, val<Ts>()...);
 }
 
-/**
- * Returns a generator for timeouts.
- */
+/// Returns a generator for timeouts.
 template <class Rep, class Period>
 constexpr detail::timeout_definition_builder
 after(const std::chrono::duration<Rep, Period>& d) {
   return {duration(d)};
 }
 
-/**
- * Generates catch-all `match_case` objects.
- */
+/// Generates catch-all `match_case` objects.
 constexpr auto others = detail::catch_all_match_case_builder();
 
-/**
- * Semantically equal to `on(arg_match)`, but uses a (faster)
- * special-purpose `match_case` implementation.
- */
+/// Semantically equal to `on(arg_match)`, but uses a (faster)
+/// special-purpose `match_case` implementation.
 constexpr auto on_arg_match = detail::trivial_match_case_builder();
 
 } // namespace caf

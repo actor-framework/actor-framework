@@ -46,14 +46,14 @@ actor_registry::~actor_registry() {
   // nop
 }
 
-actor_registry::actor_registry() : m_running(0), m_ids(1) {
+actor_registry::actor_registry() : running_(0), ids_(1) {
   // nop
 }
 
 actor_registry::value_type actor_registry::get_entry(actor_id key) const {
-  shared_guard guard(m_instances_mtx);
-  auto i = m_entries.find(key);
-  if (i != m_entries.end()) {
+  shared_guard guard(instances_mtx_);
+  auto i = entries_.find(key);
+  if (i != entries_.end()) {
     return i->second;
   }
   CAF_LOG_DEBUG("key not found, assume the actor no longer exists: " << key);
@@ -65,8 +65,8 @@ void actor_registry::put(actor_id key, const abstract_actor_ptr& val) {
     return;
   }
   { // lifetime scope of guard
-    exclusive_guard guard(m_instances_mtx);
-    if (!m_entries.emplace(key,
+    exclusive_guard guard(instances_mtx_);
+    if (! entries_.emplace(key,
                            value_type{val, exit_reason::not_exited}).second) {
       // already defined
       return;
@@ -79,9 +79,9 @@ void actor_registry::put(actor_id key, const abstract_actor_ptr& val) {
 }
 
 void actor_registry::erase(actor_id key, uint32_t reason) {
-  exclusive_guard guard(m_instances_mtx);
-  auto i = m_entries.find(key);
-  if (i != m_entries.end()) {
+  exclusive_guard guard(instances_mtx_);
+  auto i = entries_.find(key);
+  if (i != entries_.end()) {
     auto& entry = i->second;
     CAF_LOG_INFO("erased actor with ID " << key << ", reason " << reason);
     entry.first = nullptr;
@@ -90,26 +90,26 @@ void actor_registry::erase(actor_id key, uint32_t reason) {
 }
 
 uint32_t actor_registry::next_id() {
-  return ++m_ids;
+  return ++ids_;
 }
 
 void actor_registry::inc_running() {
 # if defined(CAF_LOG_LEVEL) && CAF_LOG_LEVEL >= CAF_DEBUG
-    CAF_LOG_DEBUG("new value = " << ++m_running);
+    CAF_LOG_DEBUG("new value = " << ++running_);
 # else
-    ++m_running;
+    ++running_;
 # endif
 }
 
 size_t actor_registry::running() const {
-  return m_running.load();
+  return running_.load();
 }
 
 void actor_registry::dec_running() {
-  size_t new_val = --m_running;
+  size_t new_val = --running_;
   if (new_val <= 1) {
-    std::unique_lock<std::mutex> guard(m_running_mtx);
-    m_running_cv.notify_all();
+    std::unique_lock<std::mutex> guard(running_mtx_);
+    running_cv_.notify_all();
   }
   CAF_LOG_DEBUG(CAF_ARG(new_val));
 }
@@ -117,10 +117,10 @@ void actor_registry::dec_running() {
 void actor_registry::await_running_count_equal(size_t expected) {
   CAF_ASSERT(expected == 0 || expected == 1);
   CAF_LOG_TRACE(CAF_ARG(expected));
-  std::unique_lock<std::mutex> guard{m_running_mtx};
-  while (m_running != expected) {
-    CAF_LOG_DEBUG("count = " << m_running.load());
-    m_running_cv.wait(guard);
+  std::unique_lock<std::mutex> guard{running_mtx_};
+  while (running_ != expected) {
+    CAF_LOG_DEBUG("count = " << running_.load());
+    running_cv_.wait(guard);
   }
 }
 

@@ -38,7 +38,7 @@ namespace detail {
 struct behavior_stack_mover;
 
 class behavior_stack {
- public:
+public:
   friend struct behavior_stack_mover;
 
   behavior_stack(const behavior_stack&) = delete;
@@ -52,25 +52,25 @@ class behavior_stack {
   void clear();
 
   inline bool empty() const {
-    return m_elements.empty();
+    return elements_.empty();
   }
 
   inline behavior& back() {
-    CAF_ASSERT(!empty());
-    return m_elements.back();
+    CAF_ASSERT(! empty());
+    return elements_.back();
   }
 
   inline void push_back(behavior&& what) {
-    m_elements.emplace_back(std::move(what));
+    elements_.emplace_back(std::move(what));
   }
 
   inline void cleanup() {
-    m_erased_elements.clear();
+    erased_elements_.clear();
   }
 
- private:
-  std::vector<behavior> m_elements;
-  std::vector<behavior> m_erased_elements;
+private:
+  std::vector<behavior> elements_;
+  std::vector<behavior> erased_elements_;
 };
 
 } // namespace detail

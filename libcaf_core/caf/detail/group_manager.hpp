@@ -33,7 +33,7 @@ namespace caf {
 namespace detail {
 
 class group_manager {
- public:
+public:
 
   inline void dispose() {
     delete this;
@@ -60,13 +60,13 @@ class group_manager {
 
   abstract_group::module_ptr get_module(const std::string& module_name);
 
- private:
+private:
   using modules_map = std::map<std::string, abstract_group::unique_module_ptr>;
 
   group_manager();
 
-  modules_map m_mmap;
-  std::mutex m_mmap_mtx;
+  modules_map mmap_;
+  std::mutex mmap_mtx_;
 };
 
 } // namespace detail

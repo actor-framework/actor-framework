@@ -25,11 +25,9 @@
 namespace caf {
 namespace io {
 
-/**
- * Generic handle type for identifying connections.
- */
+/// Generic handle type for identifying connections.
 class connection_handle : public handle<connection_handle> {
- public:
+public:
   friend class handle<connection_handle>;
   using super = handle<connection_handle>;
 
@@ -37,7 +35,7 @@ class connection_handle : public handle<connection_handle> {
     // nop
   }
 
- private:
+private:
   inline connection_handle(int64_t handle_id) : super{handle_id} {
     // nop
   }

@@ -65,7 +65,7 @@ server_type::behavior_type typed_server2(server_type::pointer) {
 
 class typed_server3 : public server_type::base {
 
- public:
+public:
 
   typed_server3(const string& line, actor buddy) { send(buddy, line); }
 
@@ -138,7 +138,7 @@ using event_testee_type = typed_actor<replies_to<get_state_msg>::with<string>,
 
 class event_testee : public event_testee_type::base {
 
- public:
+public:
 
   behavior_type wait4string() {
     return {on<get_state_msg>() >> [] { return "wait4string"; },

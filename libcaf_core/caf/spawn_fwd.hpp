@@ -50,23 +50,23 @@ actor spawn_functor(execution_unit* host,
 
 template <class InputIt>
 class groups_subscriber {
- public:
+public:
   inline groups_subscriber(InputIt first, InputIt last)
-      : m_first(first),
-        m_last(last) {
+      : first_(first),
+        last_(last) {
     // nop
   }
 
   template <class T>
   inline void operator()(T* ptr) const {
-    for (auto i = m_first; i != m_last; ++i) {
+    for (auto i = first_; i != last_; ++i) {
       ptr->join(*i);
     }
   }
 
- private:
-  InputIt m_first;
-  InputIt m_last;
+private:
+  InputIt first_;
+  InputIt last_;
 };
 
 struct empty_before_launch_callback {

@@ -24,10 +24,10 @@
 namespace caf {
 
 class binary_writer : public static_visitor<> {
- public:
+public:
   using write_fun = binary_serializer::write_fun;
 
-  explicit binary_writer(write_fun& sink) : m_out(sink) {
+  explicit binary_writer(write_fun& sink) : out_(sink) {
     // nop
   }
 
@@ -46,20 +46,20 @@ class binary_writer : public static_visitor<> {
   }
 
   void operator()(const bool& value) const {
-    write_int(m_out, static_cast<uint8_t>(value));
+    write_int(out_, static_cast<uint8_t>(value));
   }
 
   template <class T>
   typename std::enable_if<std::is_integral<T>::value>::type
   operator()(const T& value) const {
-    write_int(m_out, value);
+    write_int(out_, value);
   }
 
   template <class T>
   typename std::enable_if<std::is_floating_point<T>::value>::type
   operator()(const T& value) const {
     auto tmp = detail::pack754(value);
-    write_int(m_out, tmp);
+    write_int(out_, tmp);
   }
 
   // the IEEE-754 conversion does not work for long double
@@ -67,7 +67,7 @@ class binary_writer : public static_visitor<> {
   void operator()(const long double& v) const {
     std::ostringstream oss;
     oss << std::setprecision(std::numeric_limits<long double>::digits) << v;
-    write_string(m_out, oss.str());
+    write_string(out_, oss.str());
   }
 
   void operator()(const atom_value& val) const {
@@ -75,36 +75,36 @@ class binary_writer : public static_visitor<> {
   }
 
   void operator()(const std::string& str) const {
-    write_string(m_out, str);
+    write_string(out_, str);
   }
 
   void operator()(const std::u16string& str) const {
     // write size as 32 bit unsigned
-    write_int(m_out, static_cast<uint32_t>(str.size()));
+    write_int(out_, static_cast<uint32_t>(str.size()));
     for (char16_t c : str) {
       // force writer to use exactly 16 bit
-      write_int(m_out, static_cast<uint16_t>(c));
+      write_int(out_, static_cast<uint16_t>(c));
     }
   }
 
   void operator()(const std::u32string& str) const {
     // write size as 32 bit unsigned
-    write_int(m_out, static_cast<uint32_t>(str.size()));
+    write_int(out_, static_cast<uint32_t>(str.size()));
     for (char32_t c : str) {
       // force writer to use exactly 32 bit
-      write_int(m_out, static_cast<uint32_t>(c));
+      write_int(out_, static_cast<uint32_t>(c));
     }
   }
 
- private:
-  write_fun& m_out;
+private:
+  write_fun& out_;
 };
 
 void binary_serializer::begin_object(const uniform_type_info* uti) {
   auto nr = uti->type_nr();
-  binary_writer::write_int(m_out, nr);
-  if (!nr) {
-    binary_writer::write_string(m_out, uti->name());
+  binary_writer::write_int(out_, nr);
+  if (! nr) {
+    binary_writer::write_string(out_, uti->name());
   }
 }
 
@@ -113,7 +113,7 @@ void binary_serializer::end_object() {
 }
 
 void binary_serializer::begin_sequence(size_t list_size) {
-  binary_writer::write_int(m_out, static_cast<uint32_t>(list_size));
+  binary_writer::write_int(out_, static_cast<uint32_t>(list_size));
 }
 
 void binary_serializer::end_sequence() {
@@ -121,14 +121,14 @@ void binary_serializer::end_sequence() {
 }
 
 void binary_serializer::write_value(const primitive_variant& value) {
-  binary_writer bw{m_out};
+  binary_writer bw{out_};
   apply_visitor(bw, value);
 }
 
 void binary_serializer::write_raw(size_t num_bytes, const void* data) {
   auto first = reinterpret_cast<const char*>(data);
   auto last = first + num_bytes;
-  m_out(first, last);
+  out_(first, last);
 }
 
 } // namespace caf

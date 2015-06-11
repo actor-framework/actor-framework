@@ -32,31 +32,27 @@ namespace io {
 uint16_t publish_impl(abstract_actor_ptr whom, uint16_t port,
                       const char* in, bool reuse_addr);
 
-/**
- * Publishes `whom` at `port`. The connection is managed by the middleman.
- * @param whom Actor that should be published at `port`.
- * @param port Unused TCP port.
- * @param in The IP address to listen to or `INADDR_ANY` if `in == nullptr`.
- * @returns The actual port the OS uses after `bind()`. If `port == 0` the OS
- *          chooses a random high-level port.
- * @throws bind_failure
- */
+/// Publishes `whom` at `port`. The connection is managed by the middleman.
+/// @param whom Actor that should be published at `port`.
+/// @param port Unused TCP port.
+/// @param in The IP address to listen to or `INADDR_ANY` if `in == nullptr`.
+/// @returns The actual port the OS uses after `bind()`. If `port == 0` the OS
+///          chooses a random high-level port.
+/// @throws bind_failure
 inline uint16_t publish(caf::actor whom, uint16_t port,
                         const char* in = nullptr, bool reuse_addr = false) {
-  if (!whom) {
+  if (! whom) {
     return 0;
   }
   return publish_impl(actor_cast<abstract_actor_ptr>(whom), port, in,
                       reuse_addr);
 }
 
-/**
- * @copydoc publish(actor,uint16_t,const char*)
- */
+/// @copydoc publish(actor,uint16_t,const char*)
 template <class... Sigs>
 uint16_t typed_publish(typed_actor<Sigs...> whom, uint16_t port,
                        const char* in = nullptr, bool reuse_addr = false) {
-  if (!whom) {
+  if (! whom) {
     return 0;
   }
   return publish_impl(actor_cast<abstract_actor_ptr>(whom), port, in,

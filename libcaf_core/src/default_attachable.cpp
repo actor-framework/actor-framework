@@ -35,9 +35,9 @@ message make(abstract_actor* self, uint32_t reason) {
 } // namespace <anonymous>
 
 void default_attachable::actor_exited(abstract_actor* self, uint32_t reason) {
-  CAF_ASSERT(self->address() != m_observer);
-  auto factory = m_type == monitor ? &make<down_msg> : &make<exit_msg>;
-  auto ptr = actor_cast<abstract_actor_ptr>(m_observer);
+  CAF_ASSERT(self->address() != observer_);
+  auto factory = type_ == monitor ? &make<down_msg> : &make<exit_msg>;
+  auto ptr = actor_cast<abstract_actor_ptr>(observer_);
   ptr->enqueue(self->address(), message_id{}.with_high_priority(),
                factory(self, reason), self->host());
 }
@@ -47,12 +47,12 @@ bool default_attachable::matches(const token& what) {
     return false;
   }
   auto& ot = *reinterpret_cast<const observe_token*>(what.ptr);
-  return ot.observer == m_observer && ot.type == m_type;
+  return ot.observer == observer_ && ot.type == type_;
 }
 
 default_attachable::default_attachable(actor_addr observer, observe_type type)
-    : m_observer(std::move(observer)),
-      m_type(type) {
+    : observer_(std::move(observer)),
+      type_(type) {
   // nop
 }
 

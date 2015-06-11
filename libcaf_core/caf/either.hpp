@@ -33,7 +33,7 @@
 
 namespace caf {
 
-/** @cond PRIVATE */
+/// @cond PRIVATE
 std::string either_or_else_type_name(size_t lefts_size,
                                      const std::string* lefts,
                                      size_t rights_size,
@@ -43,7 +43,7 @@ struct either_or_t;
 template <class... Ls, class... Rs>
 struct either_or_t<detail::type_list<Ls...>,
                    detail::type_list<Rs...>> : illegal_message_element {
-  static_assert(!std::is_same<detail::type_list<Ls...>,
+  static_assert(! std::is_same<detail::type_list<Ls...>,
                               detail::type_list<Rs...>>::value,
                 "template parameter packs must differ");
   either_or_t(Ls... ls) : value(make_message(std::move(ls)...)) {
@@ -62,7 +62,7 @@ struct either_or_t<detail::type_list<Ls...>,
                                     sizeof...(Rs), rights);
   }
 };
-/** @endcond */
+/// @endcond
 
 template <class... Ts>
 struct either {

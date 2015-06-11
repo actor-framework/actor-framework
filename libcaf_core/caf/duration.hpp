@@ -27,10 +27,8 @@
 
 namespace caf {
 
-/**
- * SI time units to specify timeouts.
- * @relates duration
- */
+/// SI time units to specify timeouts.
+/// @relates duration
 enum class time_unit : uint32_t {
   invalid = 0,
   seconds = 1,
@@ -38,12 +36,10 @@ enum class time_unit : uint32_t {
   microseconds = 1000000
 };
 
-/**
- * Converts the ratio Num/Denom to a `time_unit` if the ratio describes
- * seconds, milliseconds, microseconds, or minutes. Minutes are mapped
- * to `time_unit::seconds`, any unrecognized ratio to `time_unit::invalid`.
- * @relates duration
- */
+/// Converts the ratio Num/Denom to a `time_unit` if the ratio describes
+/// seconds, milliseconds, microseconds, or minutes. Minutes are mapped
+/// to `time_unit::seconds`, any unrecognized ratio to `time_unit::invalid`.
+/// @relates duration
 template <intmax_t Num, intmax_t Denom>
 struct ratio_to_time_unit_helper {
   static constexpr time_unit value = time_unit::invalid;
@@ -69,20 +65,16 @@ struct ratio_to_time_unit_helper<60, 1> {
   static constexpr time_unit value = time_unit::seconds;
 };
 
-/**
- * Converts an STL time period to a `time_unit`.
- * @relates duration
- */
+/// Converts an STL time period to a `time_unit`.
+/// @relates duration
 template <class Period>
 constexpr time_unit get_time_unit_from_period() {
   return ratio_to_time_unit_helper<Period::num, Period::den>::value;
 }
 
-/**
- * Time duration consisting of a `time_unit` and a 64 bit unsigned integer.
- */
+/// Time duration consisting of a `time_unit` and a 64 bit unsigned integer.
 class duration {
- public:
+public:
   constexpr duration() : unit(time_unit::invalid), count(0) {
     // nop
   }
@@ -91,10 +83,8 @@ class duration {
     // nop
   }
 
-  /**
-   * Creates a new instance from an STL duration.
-   * @throws std::invalid_argument Thrown if `d.count() is negative.
-   */
+  /// Creates a new instance from an STL duration.
+  /// @throws std::invalid_argument Thrown if `d.count() is negative.
   template <class Rep, class Period>
   duration(std::chrono::duration<Rep, Period> d)
       : unit(get_time_unit_from_period<Period>()),
@@ -106,16 +96,12 @@ class duration {
                   "only integral durations are supported");
   }
 
-  /**
-   * Returns `unit != time_unit::invalid`.
-   */
+  /// Returns `unit != time_unit::invalid`.
   inline bool valid() const {
     return unit != time_unit::invalid;
   }
 
-  /**
-   * Returns `count == 0`.
-   */
+  /// Returns `count == 0`.
   inline bool is_zero() const {
     return count == 0;
   }
@@ -124,7 +110,7 @@ class duration {
 
   uint64_t count;
 
- private:
+private:
   // reads d.count and throws invalid_argument if d.count < 0
   template <class Rep, intmax_t Num, intmax_t D>
   static uint64_t rd(const std::chrono::duration<Rep, std::ratio<Num, D>>& d) {
@@ -136,21 +122,15 @@ class duration {
   }
 };
 
-/**
- * @relates duration
- */
+/// @relates duration
 bool operator==(const duration& lhs, const duration& rhs);
 
-/**
- * @relates duration
- */
+/// @relates duration
 inline bool operator!=(const duration& lhs, const duration& rhs) {
   return !(lhs == rhs);
 }
 
-/**
- * @relates duration
- */
+/// @relates duration
 template <class Clock, class Duration>
 std::chrono::time_point<Clock, Duration>&
 operator+=(std::chrono::time_point<Clock, Duration>& lhs, const duration& rhs) {

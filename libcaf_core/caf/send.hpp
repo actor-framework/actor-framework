@@ -33,13 +33,11 @@
 
 namespace caf {
 
-/**
- * Sends `to` a message under the identity of `from` with priority `prio`.
- */
+/// Sends `to` a message under the identity of `from` with priority `prio`.
 template <class... Ts>
 void send_as(const actor& from, message_priority prio,
              const channel& to, Ts&&... xs) {
-  if (!to) {
+  if (! to) {
     return;
   }
   message_id mid;
@@ -48,17 +46,13 @@ void send_as(const actor& from, message_priority prio,
               make_message(std::forward<Ts>(xs)...), nullptr);
 }
 
-/**
- * Sends `to` a message under the identity of `from`.
- */
+/// Sends `to` a message under the identity of `from`.
 template <class... Ts>
 void send_as(const actor& from, const channel& to, Ts&&... xs) {
   send_as(from, message_priority::normal, to, std::forward<Ts>(xs)...);
 }
 
-/**
- * Sends `to` a message under the identity of `from` with priority `prio`.
- */
+/// Sends `to` a message under the identity of `from` with priority `prio`.
 template <class... Sigs, class... Ts>
 void send_as(const actor& from, message_priority prio,
              const typed_actor<Sigs...>& to, Ts&&... xs) {
@@ -72,9 +66,7 @@ void send_as(const actor& from, message_priority prio,
   send_as(from, prio, actor_cast<channel>(to), std::forward<Ts>(xs)...);
 }
 
-/**
- * Sends `to` a message under the identity of `from`.
- */
+/// Sends `to` a message under the identity of `from`.
 template <class... Sigs, class... Ts>
 void send_as(const actor& from, const typed_actor<Sigs...>& to, Ts&&... xs) {
   using token =
@@ -88,25 +80,19 @@ void send_as(const actor& from, const typed_actor<Sigs...>& to, Ts&&... xs) {
           actor_cast<channel>(to), std::forward<Ts>(xs)...);
 }
 
-/**
- * Anonymously sends `to` a message with priority `prio`.
- */
+/// Anonymously sends `to` a message with priority `prio`.
 template <class... Ts>
 void anon_send(message_priority prio, const channel& to, Ts&&... xs) {
   send_as(invalid_actor, prio, to, std::forward<Ts>(xs)...);
 }
 
-/**
- * Anonymously sends `to` a message.
- */
+/// Anonymously sends `to` a message.
 template <class... Ts>
 void anon_send(const channel& to, Ts&&... xs) {
   send_as(invalid_actor, message_priority::normal, to, std::forward<Ts>(xs)...);
 }
 
-/**
- * Anonymously sends `to` a message with priority `prio`.
- */
+/// Anonymously sends `to` a message with priority `prio`.
 template <class... Sigs, class... Ts>
 void anon_send(message_priority prio, const typed_actor<Sigs...>& to,
                Ts&&... xs) {
@@ -120,9 +106,7 @@ void anon_send(message_priority prio, const typed_actor<Sigs...>& to,
   anon_send(prio, actor_cast<channel>(to), std::forward<Ts>(xs)...);
 }
 
-/**
- * Anonymously sends `to` a message.
- */
+/// Anonymously sends `to` a message.
 template <class... Sigs, class... Ts>
 void anon_send(const typed_actor<Sigs...>& to, Ts&&... xs) {
   using token =
@@ -136,11 +120,9 @@ void anon_send(const typed_actor<Sigs...>& to, Ts&&... xs) {
             std::forward<Ts>(xs)...);
 }
 
-/**
- * Anonymously sends `to` an exit message.
- */
+/// Anonymously sends `to` an exit message.
 inline void anon_send_exit(const actor_addr& to, uint32_t reason) {
-  if (!to){
+  if (! to){
     return;
   }
   auto ptr = actor_cast<actor>(to);
@@ -148,9 +130,7 @@ inline void anon_send_exit(const actor_addr& to, uint32_t reason) {
                make_message(exit_msg{invalid_actor_addr, reason}), nullptr);
 }
 
-/**
- * Anonymously sends `to` an exit message.
- */
+/// Anonymously sends `to` an exit message.
 template <class ActorHandle>
 void anon_send_exit(const ActorHandle& to, uint32_t reason) {
   anon_send_exit(to.address(), reason);

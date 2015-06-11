@@ -29,17 +29,17 @@
 
 namespace caf {
 
-actor_ostream::actor_ostream(actor self) : m_self(std::move(self)) {
-  m_printer = detail::singletons::get_scheduling_coordinator()->printer();
+actor_ostream::actor_ostream(actor self) : self_(std::move(self)) {
+  printer_ = detail::singletons::get_scheduling_coordinator()->printer();
 }
 
 actor_ostream& actor_ostream::write(std::string arg) {
-  send_as(m_self, m_printer, add_atom::value, std::move(arg));
+  send_as(self_, printer_, add_atom::value, std::move(arg));
   return *this;
 }
 
 actor_ostream& actor_ostream::flush() {
-  send_as(m_self, m_printer, flush_atom::value);
+  send_as(self_, printer_, flush_atom::value);
   return *this;
 }
 

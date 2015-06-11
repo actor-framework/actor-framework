@@ -33,26 +33,24 @@
 namespace caf {
 namespace policy {
 
-/**
- * Implements scheduling of actors via work stealing. This implementation uses
- * two queues: a synchronized queue accessible by other threads and an internal
- * queue. Access to the synchronized queue is minimized.
- * The reasoning behind this design decision is that it
- * has been shown that stealing actually is very rare for most workloads [1].
- * Hence, implementations should focus on the performance in
- * the non-stealing case. For this reason, each worker has an exposed
- * job queue that can be accessed by the central scheduler instance as
- * well as other workers, but it also has a private job list it is
- * currently working on. To account for the load balancing aspect, each
- * worker makes sure that at least one job is left in its exposed queue
- * to allow other workers to steal it.
- *
- * [1] http://dl.acm.org/citation.cfm?doid=2398857.2384639
- *
- * @extends scheduler_policy
- */
+/// Implements scheduling of actors via work stealing. This implementation uses
+/// two queues: a synchronized queue accessible by other threads and an internal
+/// queue. Access to the synchronized queue is minimized.
+/// The reasoning behind this design decision is that it
+/// has been shown that stealing actually is very rare for most workloads [1].
+/// Hence, implementations should focus on the performance in
+/// the non-stealing case. For this reason, each worker has an exposed
+/// job queue that can be accessed by the central scheduler instance as
+/// well as other workers, but it also has a private job list it is
+/// currently working on. To account for the load balancing aspect, each
+/// worker makes sure that at least one job is left in its exposed queue
+/// to allow other workers to steal it.
+///
+/// [1] http://dl.acm.org/citation.cfm?doid=2398857.2384639
+///
+/// @extends scheduler_policy
 class work_stealing {
- public:
+public:
   // A thead-safe queue implementation.
   using queue_type = detail::double_ended_queue<resumable>;
 

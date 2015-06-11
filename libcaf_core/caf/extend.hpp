@@ -40,21 +40,17 @@ struct extend_helper<D, B, M, Ms...> : extend_helper<D, M<B, D>, Ms...> {
 
 } // namespace detail
 
-/**
- * Allows convenient definition of types using mixins.
- * For example, `extend<ar, T>::with<ob, fo>` is an alias for
- * `fo<ob<ar, T>, T>`.
- *
- * Mixins always have two template parameters: base type and
- * derived type. This allows mixins to make use of the curiously recurring
- * template pattern (CRTP). However, if none of the used mixins use CRTP,
- * the second template argument can be ignored (it is then set to Base).
- */
+/// Allows convenient definition of types using mixins.
+/// For example, `extend<ar, T>::with<ob, fo>` is an alias for
+/// `fo<ob<ar, T>, T>`.
+///
+/// Mixins always have two template parameters: base type and
+/// derived type. This allows mixins to make use of the curiously recurring
+/// template pattern (CRTP). However, if none of the used mixins use CRTP,
+/// the second template argument can be ignored (it is then set to Base).
 template <class Base, class Derived = Base>
 struct extend {
-  /**
-   * Identifies the combined type.
-   */
+  /// Identifies the combined type.
   template <template <class, class> class... Mixins>
   using with = typename detail::extend_helper<Derived, Base, Mixins...>::type;
 };

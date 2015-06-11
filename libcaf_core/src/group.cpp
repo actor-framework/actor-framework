@@ -26,21 +26,21 @@
 
 namespace caf {
 
-group::group(const invalid_group_t&) : m_ptr(nullptr) {
+group::group(const invalid_group_t&) : ptr_(nullptr) {
   // nop
 }
 
-group::group(abstract_group_ptr gptr) : m_ptr(std::move(gptr)) {
+group::group(abstract_group_ptr gptr) : ptr_(std::move(gptr)) {
   // nop
 }
 
 group& group::operator=(const invalid_group_t&) {
-  m_ptr.reset();
+  ptr_.reset();
   return *this;
 }
 
 intptr_t group::compare(const group& other) const {
-  return channel::compare(m_ptr.get(), other.m_ptr.get());
+  return channel::compare(ptr_.get(), other.ptr_.get());
 }
 
 group group::get(const std::string& arg0, const std::string& arg1) {

@@ -28,11 +28,11 @@ namespace detail {
 
 template <class Base>
 class embedded final : public Base {
- public:
+public:
   template <class... Ts>
   embedded(intrusive_ptr<ref_counted> storage, Ts&&... xs)
       : Base(std::forward<Ts>(xs)...),
-        m_storage(std::move(storage)) {
+        storage_(std::move(storage)) {
     // nop
   }
 
@@ -42,14 +42,14 @@ class embedded final : public Base {
 
   void request_deletion(bool) noexcept override {
     intrusive_ptr<ref_counted> guard;
-    guard.swap(m_storage);
+    guard.swap(storage_);
     // this code assumes that embedded is part of pair_storage<>,
     // i.e., this object lives inside a union!
     this->~embedded();
   }
 
- protected:
-  intrusive_ptr<ref_counted> m_storage;
+protected:
+  intrusive_ptr<ref_counted> storage_;
 };
 
 } // namespace detail

@@ -25,21 +25,21 @@ namespace caf {
 void actor_companion::disconnect(std::uint32_t rsn) {
   enqueue_handler tmp;
   { // lifetime scope of guard
-    std::lock_guard<lock_type> guard(m_lock);
-    m_on_enqueue.swap(tmp);
+    std::lock_guard<lock_type> guard(lock_);
+    on_enqueue_.swap(tmp);
   }
   cleanup(rsn);
 }
 
 void actor_companion::on_enqueue(enqueue_handler handler) {
-  std::lock_guard<lock_type> guard(m_lock);
-  m_on_enqueue = std::move(handler);
+  std::lock_guard<lock_type> guard(lock_);
+  on_enqueue_ = std::move(handler);
 }
 
 void actor_companion::enqueue(mailbox_element_ptr ptr, execution_unit*) {
-  shared_lock<lock_type> guard(m_lock);
-  if (m_on_enqueue) {
-    m_on_enqueue(std::move(ptr));
+  shared_lock<lock_type> guard(lock_);
+  if (on_enqueue_) {
+    on_enqueue_(std::move(ptr));
   }
 }
 

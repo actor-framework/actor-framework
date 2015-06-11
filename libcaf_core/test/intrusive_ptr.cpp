@@ -44,33 +44,33 @@ using class0ptr = intrusive_ptr<class0>;
 using class1ptr = intrusive_ptr<class1>;
 
 class class0 : public ref_counted {
- public:
-  explicit class0(bool subtype = false) : m_subtype(subtype) {
-    if (!subtype) {
+public:
+  explicit class0(bool subtype = false) : subtype_(subtype) {
+    if (! subtype) {
       ++class0_instances;
     }
   }
 
   ~class0() {
-    if (!m_subtype) {
+    if (! subtype_) {
       --class0_instances;
     }
   }
 
   bool is_subtype() const {
-    return m_subtype;
+    return subtype_;
   }
 
   virtual class0ptr create() const {
     return make_counted<class0>();
   }
 
- private:
-  bool m_subtype;
+private:
+  bool subtype_;
 };
 
 class class1 : public class0 {
- public:
+public:
   class1() : class0(true) {
     ++class1_instances;
   }

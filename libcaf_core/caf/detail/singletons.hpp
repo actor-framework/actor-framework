@@ -34,7 +34,7 @@ namespace detail {
 
 class abstract_singleton {
 
- public:
+public:
 
   virtual ~abstract_singleton();
 
@@ -47,7 +47,7 @@ class abstract_singleton {
 };
 
 class singletons {
- public:
+public:
   singletons() = delete;
 
   static constexpr size_t max_plugins = 3;
@@ -84,7 +84,7 @@ class singletons {
 
   static void stop_singletons();
 
- private:
+private:
   static std::mutex& get_plugin_mutex();
 
   static std::atomic<abstract_singleton*>& get_plugin_singleton(size_t id);

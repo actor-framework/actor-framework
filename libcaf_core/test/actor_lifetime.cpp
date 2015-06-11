@@ -36,7 +36,7 @@ std::atomic<long> s_testees;
 std::atomic<long> s_pending_on_exits;
 
 class testee : public event_based_actor {
- public:
+public:
   testee();
   ~testee();
   void on_exit();

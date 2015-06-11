@@ -51,10 +51,10 @@ behavior calculator() {
 }
 
 class client_impl : public event_based_actor {
- public:
+public:
   client_impl(string hostaddr, uint16_t port)
-      : m_host(std::move(hostaddr)),
-        m_port(port) {
+      : host_(std::move(hostaddr)),
+        port_(port) {
     // nop
   }
 
@@ -64,12 +64,12 @@ class client_impl : public event_based_actor {
     return {};
   }
 
- private:
+private:
   void sync_send_task(atom_value op, int lhs, int rhs) {
     on_sync_failure([=] {
       aout(this) << "*** sync_failure!" << endl;
     });
-    sync_send(m_server, op, lhs, rhs).then(
+    sync_send(server_, op, lhs, rhs).then(
       [=](result_atom, int result) {
         aout(this) << lhs << (op == plus_atom::value ? " + " : " - ")
                    << rhs << " = " << result << endl;
@@ -95,8 +95,8 @@ class client_impl : public event_based_actor {
       [=](rebind_atom, string& nhost, uint16_t nport) {
         aout(this) << "*** rebind to " << nhost << ":" << nport << endl;
         using std::swap;
-        swap(m_host, nhost);
-        swap(m_port, nport);
+        swap(host_, nhost);
+        swap(port_, nport);
         become(keep_behavior, reconnecting());
       }
     };
@@ -105,11 +105,11 @@ class client_impl : public event_based_actor {
   behavior reconnecting(std::function<void()> continuation = nullptr) {
     using std::chrono::seconds;
     auto mm = io::get_middleman_actor();
-    send(mm, get_atom::value, m_host, m_port);
+    send(mm, get_atom::value, host_, port_);
     return {
       [=](ok_atom, const actor_addr& new_server) {
         aout(this) << "*** connection succeeded, awaiting tasks" << endl;
-        m_server = actor_cast<actor>(new_server);
+        server_ = actor_cast<actor>(new_server);
         // return to previous behavior
         if (continuation) {
           continuation();
@@ -117,24 +117,24 @@ class client_impl : public event_based_actor {
         unbecome();
       },
       [=](error_atom, const string& errstr) {
-        aout(this) << "*** could not connect to " << m_host
-                   << " at port " << m_port
+        aout(this) << "*** could not connect to " << host_
+                   << " at port " << port_
                    << ": " << errstr
                    << " [try again in 3s]"
                    << endl;
-        delayed_send(mm, seconds(3), get_atom::value, m_host, m_port);
+        delayed_send(mm, seconds(3), get_atom::value, host_, port_);
       },
       [=](rebind_atom, string& nhost, uint16_t nport) {
         aout(this) << "*** rebind to " << nhost << ":" << nport << endl;
         using std::swap;
-        swap(m_host, nhost);
-        swap(m_port, nport);
+        swap(host_, nhost);
+        swap(port_, nport);
         // await pending ok/error message first, then send new request to MM
         become(
           keep_behavior,
           (on<ok_atom, actor_addr>() || on<error_atom, string>()) >> [=] {
             unbecome();
-            send(mm, get_atom::value, m_host, m_port);
+            send(mm, get_atom::value, host_, port_);
           }
         );
       },
@@ -143,14 +143,14 @@ class client_impl : public event_based_actor {
     };
   }
 
-  actor m_server;
-  string m_host;
-  uint16_t m_port;
+  actor server_;
+  string host_;
+  uint16_t port_;
 };
 
 // removes leading and trailing whitespaces
 string trim(std::string s) {
-  auto not_space = [](char c) { return !isspace(c); };
+  auto not_space = [](char c) { return ! isspace(c); };
   // trim left
   s.erase(s.begin(), find_if(s.begin(), s.end(), not_space));
   // trim right
@@ -222,7 +222,7 @@ void client_repl(string host, uint16_t port) {
   };
   // read next line, split it, and feed to the eval handler
   string line;
-  while (!done && std::getline(std::cin, line)) {
+  while (! done && std::getline(std::cin, line)) {
     line = trim(std::move(line)); // ignore leading and trailing whitespaces
     std::vector<string> words;
     split(words, line, is_any_of(" "), token_compress_on);
@@ -241,7 +241,7 @@ int main(int argc, char** argv) {
     {"server,s", "run in server mode"},
     {"client,c", "run in client mode"}
   });
-  if (!res.error.empty()) {
+  if (! res.error.empty()) {
     cerr << res.error << endl;
     return 1;
   }
@@ -249,7 +249,7 @@ int main(int argc, char** argv) {
     cout << res.helptext << endl;
     return 0;
   }
-  if (!res.remainder.empty()) {
+  if (! res.remainder.empty()) {
     // not all CLI arguments could be consumed
     cerr << "*** invalid command line options" << endl << res.helptext << endl;
     return 1;
@@ -263,7 +263,7 @@ int main(int argc, char** argv) {
     }
     return 1;
   }
-  if (!is_server && port == 0) {
+  if (! is_server && port == 0) {
     cerr << "*** no port to server specified" << endl;
     return 1;
   }

@@ -36,63 +36,47 @@
 
 namespace caf {
 
-/**
- * @addtogroup TypeSystem
- * @{
- */
+/// @addtogroup TypeSystem
+/// @{
 
-/**
- * A simple example for announce with public accessible members.
- * The output of this example program is:
- * > foo(1, 2)<br>
- * > foo_pair(3, 4)
- * @example announce_1.cpp
- */
+/// A simple example for announce with public accessible members.
+/// The output of this example program is:
+/// > foo(1, 2)<br>
+/// > foo_pair(3, 4)
+/// @example announce_1.cpp
 
-/**
- * An example for announce with getter and setter member functions.
- * The output of this example program is:
- *
- * > foo(1, 2)
- * @example announce_2.cpp
- */
+/// An example for announce with getter and setter member functions.
+/// The output of this example program is:
+///
+/// > foo(1, 2)
+/// @example announce_2.cpp
 
-/**
- * An example for announce with overloaded getter and setter member functions.
- * The output of this example program is:
- *
- * > foo(1, 2)
- * @example announce_3.cpp
- */
+/// An example for announce with overloaded getter and setter member functions.
+/// The output of this example program is:
+///
+/// > foo(1, 2)
+/// @example announce_3.cpp
 
-/**
- * An example for announce with non-primitive members.
- * The output of this example program is:
- *
- * > bar(foo(1, 2), 3)
- * @example announce_4.cpp
- */
+/// An example for announce with non-primitive members.
+/// The output of this example program is:
+///
+/// > bar(foo(1, 2), 3)
+/// @example announce_4.cpp
 
-/**
- * An advanced example for announce implementing serialization
- * for a user-defined tree data type.
- * @example announce_5.cpp
- */
+/// An advanced example for announce implementing serialization
+/// for a user-defined tree data type.
+/// @example announce_5.cpp
 
-/**
- * Adds a new mapping to the type system. Returns `utype.get()` on
- * success, otherwise a pointer to the previously installed singleton.
- * @warning `announce` is **not** thead-safe!
- */
+/// Adds a new mapping to the type system. Returns `utype.get()` on
+/// success, otherwise a pointer to the previously installed singleton.
+/// @warning `announce` is **not** thead-safe!
 const uniform_type_info* announce(const std::type_info& tinfo,
                                   uniform_type_info_ptr utype);
 
 // deals with member pointer
-/**
- * Creates meta information for a non-trivial `Member`,
- * whereas `xs` are the "sub-members" of `Member`.
- * @see {@link announce_4.cpp announce example 4}
- */
+/// Creates meta information for a non-trivial `Member`,
+/// whereas `xs` are the "sub-members" of `Member`.
+/// @see {@link announce_4.cpp announce example 4}
 template <class Member, class Parent, class... Ts>
 std::pair<Member Parent::*, detail::abstract_uniform_type_info<Member>*>
 compound_member(Member Parent::*memptr, const Ts&... xs) {
@@ -100,12 +84,10 @@ compound_member(Member Parent::*memptr, const Ts&... xs) {
 }
 
 // deals with getter returning a mutable reference
-/**
- * Creates meta information for a non-trivial `Member` accessed
- * via the getter member function `getter` returning a mutable reference,
- * whereas `xs` are the "sub-members" of `Member`.
- * @see {@link announce_4.cpp announce example 4}
- */
+/// Creates meta information for a non-trivial `Member` accessed
+/// via the getter member function `getter` returning a mutable reference,
+/// whereas `xs` are the "sub-members" of `Member`.
+/// @see {@link announce_4.cpp announce example 4}
 template <class Member, class Parent, class... Ts>
 std::pair<Member& (Parent::*)(), detail::abstract_uniform_type_info<Member>*>
 compound_member(Member& (Parent::*getter)(), const Ts&... xs) {
@@ -113,12 +95,10 @@ compound_member(Member& (Parent::*getter)(), const Ts&... xs) {
 }
 
 // deals with getter/setter pair
-/**
- * Creates meta information for a non-trivial `Member` accessed
- * via the pair of getter and setter member function pointers `gspair`,
- * whereas `xs` are the "sub-members" of `Member`.
- * @see {@link announce_4.cpp announce example 4}
- */
+/// Creates meta information for a non-trivial `Member` accessed
+/// via the pair of getter and setter member function pointers `gspair`,
+/// whereas `xs` are the "sub-members" of `Member`.
+/// @see {@link announce_4.cpp announce example 4}
 template <class Parent, class GRes, class SRes, class SArg, class... Ts>
 std::pair<std::pair<GRes (Parent::*)() const, SRes (Parent::*)(SArg)>,
           detail::abstract_uniform_type_info<typename std::decay<GRes>::type>*>
@@ -129,11 +109,9 @@ compound_member(const std::pair<GRes (Parent::*)() const,
   return {gspair, new detail::default_uniform_type_info<mtype>("???", xs...)};
 }
 
-/**
- * Adds a new type mapping for `T` to the type system using `tname`
- * as its uniform name and the list of member pointers `xs`.
- * @warning `announce` is **not** thead-safe!
- */
+/// Adds a new type mapping for `T` to the type system using `tname`
+/// as its uniform name and the list of member pointers `xs`.
+/// @warning `announce` is **not** thead-safe!
 template <class T, class... Ts>
 inline const uniform_type_info* announce(std::string tname, const Ts&... xs) {
   static_assert(std::is_pod<T>::value || std::is_empty<T>::value
@@ -143,9 +121,7 @@ inline const uniform_type_info* announce(std::string tname, const Ts&... xs) {
   return announce(typeid(T), uniform_type_info_ptr{ptr});
 }
 
-/**
- * @}
- */
+/// @}
 
 } // namespace caf
 

@@ -34,30 +34,26 @@
 
 namespace caf {
 
-/**
- * Implements the serializer interface with a binary serialization protocol.
- */
+/// Implements the serializer interface with a binary serialization protocol.
 class binary_serializer : public serializer {
 
   using super = serializer;
 
- public:
+public:
 
   using write_fun = std::function<void(const char*, const char*)>;
 
-  /**
-   * Creates a binary serializer writing to given iterator position.
-   */
+  /// Creates a binary serializer writing to given iterator position.
   template <class OutIter>
   binary_serializer(OutIter iter, actor_namespace* ns = nullptr) : super(ns) {
     struct fun {
-      fun(OutIter pos) : m_pos(pos) {}
+      fun(OutIter pos) : pos_(pos) {}
       void operator()(const char* first, const char* last) {
-        m_pos = std::copy(first, last, m_pos);
+        pos_ = std::copy(first, last, pos_);
       }
-      OutIter m_pos;
+      OutIter pos_;
     };
-    m_out = fun{iter};
+    out_ = fun{iter};
   }
 
   void begin_object(const uniform_type_info* uti) override;
@@ -72,9 +68,9 @@ class binary_serializer : public serializer {
 
   void write_raw(size_t num_bytes, const void* data) override;
 
- private:
+private:
 
-  write_fun m_out;
+  write_fun out_;
 
 };
 

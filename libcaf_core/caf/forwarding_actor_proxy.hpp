@@ -27,11 +27,9 @@
 
 namespace caf {
 
-/**
- * Implements a simple proxy forwarding all operations to a manager.
- */
+/// Implements a simple proxy forwarding all operations to a manager.
 class forwarding_actor_proxy : public actor_proxy {
- public:
+public:
   forwarding_actor_proxy(actor_id mid, node_id pinfo, actor parent);
 
   ~forwarding_actor_proxy();
@@ -51,11 +49,11 @@ class forwarding_actor_proxy : public actor_proxy {
 
   void manager(actor new_manager);
 
- private:
+private:
   void forward_msg(const actor_addr& sender, message_id mid, message msg);
 
-  mutable detail::shared_spinlock m_manager_mtx;
-  actor m_manager;
+  mutable detail::shared_spinlock manager_mtx_;
+  actor manager_;
 };
 
 } // namespace caf

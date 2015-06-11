@@ -21,7 +21,7 @@
 
 namespace caf {
 
-serializer::serializer(actor_namespace* ns) : m_namespace{ns} {
+serializer::serializer(actor_namespace* ns) : namespace_{ns} {
   // nop
 }
 

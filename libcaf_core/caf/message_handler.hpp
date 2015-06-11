@@ -42,11 +42,9 @@
 
 namespace caf {
 
-/**
- * A partial function implementation used to process a `message`.
- */
+/// A partial function implementation used to process a `message`.
 class message_handler {
- public:
+public:
   friend class behavior;
 
   message_handler() = default;
@@ -55,64 +53,46 @@ class message_handler {
   message_handler& operator=(message_handler&&) = default;
   message_handler& operator=(const message_handler&) = default;
 
-  /**
-   * A pointer to the underlying implementation.
-   */
+  /// A pointer to the underlying implementation.
   using impl_ptr = intrusive_ptr<detail::behavior_impl>;
 
-  /**
-   * Returns a pointer to the implementation.
-   */
+  /// Returns a pointer to the implementation.
   inline const impl_ptr& as_behavior_impl() const {
-    return m_impl;
+    return impl_;
   }
 
-  /**
-   * Creates a message handler from @p ptr.
-   */
+  /// Creates a message handler from @p ptr.
   message_handler(impl_ptr ptr);
 
-  /**
-   * Checks whether the message handler is not empty.
-   */
+  /// Checks whether the message handler is not empty.
   inline operator bool() const {
-    return static_cast<bool>(m_impl);
+    return static_cast<bool>(impl_);
   }
 
-  /**
-   * Create a message handler a list of match expressions,
-   * functors, or other message handlers.
-   */
+  /// Create a message handler a list of match expressions,
+  /// functors, or other message handlers.
   template <class T, class... Ts>
   message_handler(const T& v, Ts&&... xs) {
     assign(v, std::forward<Ts>(xs)...);
   }
 
-  /**
-   * Assigns new message handlers.
-   */
+  /// Assigns new message handlers.
   template <class... Ts>
   void assign(Ts... xs) {
     static_assert(sizeof...(Ts) > 0, "assign without arguments called");
-    m_impl = detail::make_behavior(xs...);
+    impl_ = detail::make_behavior(xs...);
   }
 
-  /**
-   * Equal to `*this = other`.
-   */
+  /// Equal to `*this = other`.
   void assign(message_handler other);
 
-  /**
-   * Runs this handler and returns its (optional) result.
-   */
+  /// Runs this handler and returns its (optional) result.
   inline optional<message> operator()(message& arg) {
-    return (m_impl) ? m_impl->invoke(arg) : none;
+    return (impl_) ? impl_->invoke(arg) : none;
   }
 
-  /**
-   * Returns a new handler that concatenates this handler
-   * with a new handler from `xs...`.
-   */
+  /// Returns a new handler that concatenates this handler
+  /// with a new handler from `xs...`.
   template <class... Ts>
   typename std::conditional<
     detail::disjunction<may_have_timeout<
@@ -128,14 +108,14 @@ class message_handler {
     if (! tmp) {
       return *this;
     }
-    if (m_impl) {
-      return m_impl->or_else(tmp.as_behavior_impl());
+    if (impl_) {
+      return impl_->or_else(tmp.as_behavior_impl());
     }
     return tmp.as_behavior_impl();
   }
 
- private:
-  impl_ptr m_impl;
+private:
+  impl_ptr impl_;
 };
 
 } // namespace caf

@@ -28,17 +28,13 @@ namespace caf {
 namespace io {
 namespace network {
 
-/**
- * A stream manager configures an IO stream and provides callbacks
- * for incoming data as well as for error handling.
- */
+/// A stream manager configures an IO stream and provides callbacks
+/// for incoming data as well as for error handling.
 class stream_manager : public manager {
- public:
+public:
   ~stream_manager();
 
-  /**
-   * Called by the underlying IO device whenever it received data.
-   */
+  /// Called by the underlying IO device whenever it received data.
   virtual void consume(const void* data, size_t num_bytes) = 0;
 };
 

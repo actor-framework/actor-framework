@@ -27,44 +27,44 @@ namespace caf {
 
 template <class T>
 class typed_response_promise {
- public:
-  typed_response_promise(response_promise promise) : m_promise(promise) {
+public:
+  typed_response_promise(response_promise promise) : promise_(promise) {
     // nop
   }
 
   explicit operator bool() const {
     // handle is valid if it has a receiver
-    return static_cast<bool>(m_promise);
+    return static_cast<bool>(promise_);
   }
 
   void deliver(T what) const {
-    m_promise.deliver(make_message(std::move(what)));
+    promise_.deliver(make_message(std::move(what)));
   }
 
 
- private:
-  response_promise m_promise;
+private:
+  response_promise promise_;
 };
 
 template <class L, class R>
 class typed_response_promise<either_or_t<L, R>> {
- public:
-  typed_response_promise(response_promise promise) : m_promise(promise) {
+public:
+  typed_response_promise(response_promise promise) : promise_(promise) {
     // nop
   }
 
   explicit operator bool() const {
     // handle is valid if it has a receiver
-    return static_cast<bool>(m_promise);
+    return static_cast<bool>(promise_);
   }
 
   void deliver(either_or_t<L, R> what) const {
-    m_promise.deliver(what.value);
+    promise_.deliver(what.value);
   }
 
 
- private:
-  response_promise m_promise;
+private:
+  response_promise promise_;
 };
 
 } // namespace caf

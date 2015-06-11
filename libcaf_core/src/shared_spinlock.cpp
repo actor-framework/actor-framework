@@ -37,16 +37,16 @@ inline long min_long() {
 namespace caf {
 namespace detail {
 
-shared_spinlock::shared_spinlock() : m_flag(0) {
+shared_spinlock::shared_spinlock() : flag_(0) {
   // nop
 }
 
 void shared_spinlock::lock() {
-  long v = m_flag.load();
+  long v = flag_.load();
   for (;;) {
     if (v != 0) {
-      v = m_flag.load();
-    } else if (cas_weak(&m_flag, &v, min_long())) {
+      v = flag_.load();
+    } else if (cas_weak(&flag_, &v, min_long())) {
       return;
     }
     // else: next iteration
@@ -72,21 +72,21 @@ void shared_spinlock::unlock_and_lock_upgrade() {
 }
 
 void shared_spinlock::unlock() {
-  m_flag.store(0);
+  flag_.store(0);
 }
 
 bool shared_spinlock::try_lock() {
-  long v = m_flag.load();
-  return (v == 0) ? cas_weak(&m_flag, &v, min_long()) : false;
+  long v = flag_.load();
+  return (v == 0) ? cas_weak(&flag_, &v, min_long()) : false;
 }
 
 void shared_spinlock::lock_shared() {
-  long v = m_flag.load();
+  long v = flag_.load();
   for (;;) {
     if (v < 0) {
       // std::this_thread::yield();
-      v = m_flag.load();
-    } else if (cas_weak(&m_flag, &v, v + 1)) {
+      v = flag_.load();
+    } else if (cas_weak(&flag_, &v, v + 1)) {
       return;
     }
     // else: next iteration
@@ -94,12 +94,12 @@ void shared_spinlock::lock_shared() {
 }
 
 void shared_spinlock::unlock_shared() {
-  m_flag.fetch_sub(1);
+  flag_.fetch_sub(1);
 }
 
 bool shared_spinlock::try_lock_shared() {
-  long v = m_flag.load();
-  return (v >= 0) ? cas_weak(&m_flag, &v, v + 1) : false;
+  long v = flag_.load();
+  return (v >= 0) ? cas_weak(&flag_, &v, v + 1) : false;
 }
 
 } // namespace detail

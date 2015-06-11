@@ -24,12 +24,12 @@
 
 namespace caf {
 
-message_handler::message_handler(impl_ptr ptr) : m_impl(std::move(ptr)) {
+message_handler::message_handler(impl_ptr ptr) : impl_(std::move(ptr)) {
   // nop
 }
 
 void message_handler::assign(message_handler what) {
-  m_impl.swap(what.m_impl);
+  impl_.swap(what.impl_);
 }
 
 } // namespace caf

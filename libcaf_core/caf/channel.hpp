@@ -39,13 +39,11 @@ class execution_unit;
 struct invalid_actor_t;
 struct invalid_group_t;
 
-/**
- * A handle to instances of `abstract_channel`.
- */
+/// A handle to instances of `abstract_channel`.
 class channel : detail::comparable<channel>,
                 detail::comparable<channel, actor>,
                 detail::comparable<channel, abstract_channel*> {
- public:
+public:
   template <class T, typename U>
   friend T actor_cast(const U&);
 
@@ -64,26 +62,26 @@ class channel : detail::comparable<channel>,
           typename std::enable_if<
             std::is_base_of<abstract_channel, T>::value
           >::type* = 0)
-      : m_ptr(ptr) {
+      : ptr_(ptr) {
     // nop
   }
 
   channel(abstract_channel* ptr);
 
   inline explicit operator bool() const {
-    return static_cast<bool>(m_ptr);
+    return static_cast<bool>(ptr_);
   }
 
   inline bool operator!() const {
-    return !m_ptr;
+    return ! ptr_;
   }
 
   inline abstract_channel* operator->() const {
-    return m_ptr.get();
+    return ptr_.get();
   }
 
   inline abstract_channel& operator*() const {
-    return *m_ptr;
+    return *ptr_;
   }
 
   intptr_t compare(const channel& other) const;
@@ -95,12 +93,12 @@ class channel : detail::comparable<channel>,
   static intptr_t compare(const abstract_channel* lhs,
                           const abstract_channel* rhs);
 
- private:
+private:
   inline abstract_channel* get() const {
-    return m_ptr.get();
+    return ptr_.get();
   }
 
-  abstract_channel_ptr m_ptr;
+  abstract_channel_ptr ptr_;
 };
 
 } // namespace caf

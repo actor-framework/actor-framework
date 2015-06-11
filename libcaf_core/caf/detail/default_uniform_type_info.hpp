@@ -117,7 +117,7 @@ struct deconst_pair<std::pair<K, V>> {
 };
 
 class default_serialize_policy {
- public:
+public:
   template <class T>
   void operator()(const T& val, serializer* s) const {
     std::integral_constant<int, impl_id<T>()> token;
@@ -130,7 +130,7 @@ class default_serialize_policy {
     dimpl(val, d, token);
   }
 
- private:
+private:
   template <class T>
   void simpl(const T& val, serializer* s, primitive_impl) const {
     s->write_value(val);
@@ -227,24 +227,24 @@ class default_serialize_policy {
 };
 
 class forwarding_serialize_policy {
- public:
+public:
   inline forwarding_serialize_policy(uniform_type_info_ptr uti)
-      : m_uti(std::move(uti)) {
+      : uti_(std::move(uti)) {
     // nop
   }
 
   template <class T>
   void operator()(const T& val, serializer* s) const {
-    m_uti->serialize(&val, s);
+    uti_->serialize(&val, s);
   }
 
   template <class T>
   void operator()(T& val, deserializer* d) const {
-    m_uti->deserialize(&val, d);
+    uti_->deserialize(&val, d);
   }
 
- private:
-  uniform_type_info_ptr m_uti;
+private:
+  uniform_type_info_ptr uti_;
 };
 
 template <class T, class AccessPolicy,
@@ -252,17 +252,17 @@ template <class T, class AccessPolicy,
           bool IsEnum = std::is_enum<T>::value,
           bool IsEmptyType = std::is_class<T>::value&& std::is_empty<T>::value>
 class member_tinfo : public detail::abstract_uniform_type_info<T> {
- public:
+public:
   using super = detail::abstract_uniform_type_info<T>;
   member_tinfo(AccessPolicy apol, SerializePolicy spol)
       : super("--member--"),
-        m_apol(std::move(apol)), m_spol(std::move(spol)) {
+        apol_(std::move(apol)), spol_(std::move(spol)) {
     // nop
   }
 
   member_tinfo(AccessPolicy apol)
       : super("--member--"),
-        m_apol(std::move(apol)) {
+        apol_(std::move(apol)) {
     // nop
   }
 
@@ -271,7 +271,7 @@ class member_tinfo : public detail::abstract_uniform_type_info<T> {
   }
 
   void serialize(const void* vptr, serializer* s) const override {
-    m_spol(m_apol(vptr), s);
+    spol_(apol_(vptr), s);
   }
 
   void deserialize(void* vptr, deserializer* d) const override {
@@ -279,27 +279,27 @@ class member_tinfo : public detail::abstract_uniform_type_info<T> {
     ds(vptr, d, token);
   }
 
- private:
+private:
 
   void ds(void* p, deserializer* d, std::true_type) const {
-    m_spol(m_apol(p), d);
+    spol_(apol_(p), d);
   }
 
   void ds(void* p, deserializer* d, std::false_type) const {
     T tmp;
-    m_spol(tmp, d);
-    m_apol(p, std::move(tmp));
+    spol_(tmp, d);
+    apol_(p, std::move(tmp));
   }
 
-  AccessPolicy m_apol;
-  SerializePolicy m_spol;
+  AccessPolicy apol_;
+  SerializePolicy spol_;
 
 };
 
 template <class T, class A, class S>
 class member_tinfo<T, A, S, false, true>
     : public detail::abstract_uniform_type_info<T> {
- public:
+public:
   using super = detail::abstract_uniform_type_info<T>;
 
   member_tinfo(const A&, const S&) : super("--member--") {
@@ -326,19 +326,19 @@ class member_tinfo<T, A, S, false, true>
 template <class T, class AccessPolicy, class SerializePolicy>
 class member_tinfo<T, AccessPolicy, SerializePolicy, true, false>
     : public detail::abstract_uniform_type_info<T> {
- public:
+public:
   using super = detail::abstract_uniform_type_info<T>;
   using value_type = typename std::underlying_type<T>::type;
 
   member_tinfo(AccessPolicy apol, SerializePolicy spol)
       : super("--member--"),
-        m_apol(std::move(apol)), m_spol(std::move(spol)) {
+        apol_(std::move(apol)), spol_(std::move(spol)) {
     // nop
   }
 
   member_tinfo(AccessPolicy apol)
       : super("--member--"),
-        m_apol(std::move(apol)) {
+        apol_(std::move(apol)) {
     // nop
   }
 
@@ -347,25 +347,25 @@ class member_tinfo<T, AccessPolicy, SerializePolicy, true, false>
   }
 
   void serialize(const void* p, serializer* s) const override {
-    auto val = m_apol(p);
-    m_spol(static_cast<value_type>(val), s);
+    auto val = apol_(p);
+    spol_(static_cast<value_type>(val), s);
   }
 
   void deserialize(void* p, deserializer* d) const override {
     value_type tmp;
-    m_spol(tmp, d);
-    m_apol(p, static_cast<T>(tmp));
+    spol_(tmp, d);
+    apol_(p, static_cast<T>(tmp));
   }
 
- private:
-  AccessPolicy m_apol;
-  SerializePolicy m_spol;
+private:
+  AccessPolicy apol_;
+  SerializePolicy spol_;
 };
 
 template <class T, class C>
 class memptr_access_policy {
- public:
-  inline memptr_access_policy(T C::*memptr) : m_memptr(memptr) {
+public:
+  inline memptr_access_policy(T C::*memptr) : memptr_(memptr) {
     // nop
   }
   memptr_access_policy(const memptr_access_policy&) = default;
@@ -373,51 +373,51 @@ class memptr_access_policy {
 
   inline T& operator()(void* vptr) const {
     auto ptr = reinterpret_cast<C*>(vptr);
-    return *ptr.*m_memptr;
+    return *ptr.*memptr_;
   }
 
   inline const T& operator()(const void* vptr) const {
     auto ptr = reinterpret_cast<const C*>(vptr);
-    return *ptr.*m_memptr;
+    return *ptr.*memptr_;
   }
 
   template <class Arg>
   inline void operator()(void* vptr, Arg&& value) const {
     auto ptr = reinterpret_cast<C*>(vptr);
-    (*ptr.*m_memptr) = std::forward<Arg>(value);
+    (*ptr.*memptr_) = std::forward<Arg>(value);
   }
 
   static constexpr bool grants_mutable_access = true;
 
- private:
-  T C::*m_memptr;
+private:
+  T C::*memptr_;
 };
 
 template <class C, typename GRes, typename SRes, typename SArg>
 class getter_setter_access_policy {
- public:
+public:
 
   using getter = GRes (C::*)() const;
   using setter = SRes (C::*)(SArg);
 
-  getter_setter_access_policy(getter g, setter s) : m_get(g), m_set(s) {}
+  getter_setter_access_policy(getter g, setter s) : get_(g), set_(s) {}
 
   inline GRes operator()(const void* vptr) const {
     auto ptr = reinterpret_cast<const C*>(vptr);
-    return (*ptr.*m_get)();
+    return (*ptr.*get_)();
   }
 
   template <class Arg>
   inline void operator()(void* vptr, Arg&& value) const {
     auto ptr = reinterpret_cast<C*>(vptr);
-    (*ptr.*m_set)(std::forward<Arg>(value));
+    (*ptr.*set_)(std::forward<Arg>(value));
   }
 
   static constexpr bool grants_mutable_access = false;
 
- private:
-  getter m_get;
-  setter m_set;
+private:
+  getter get_;
+  setter set_;
 };
 
 template <class T>
@@ -477,7 +477,7 @@ uniform_type_info_ptr new_member_tinfo(GRes (C::*getter)() const,
 
 template <class T>
 class default_uniform_type_info : public detail::abstract_uniform_type_info<T> {
- public:
+public:
   using super = detail::abstract_uniform_type_info<T>;
 
   template <class... Ts>
@@ -488,40 +488,40 @@ class default_uniform_type_info : public detail::abstract_uniform_type_info<T> {
 
   default_uniform_type_info(std::string tname) : super(std::move(tname)) {
     using result_type = member_tinfo<T, fake_access_policy<T>>;
-    m_members.push_back(uniform_type_info_ptr(new result_type));
+    members_.push_back(uniform_type_info_ptr(new result_type));
   }
 
   void serialize(const void* obj, serializer* s) const override {
     // serialize each member
-    for (auto& m : m_members) {
+    for (auto& m : members_) {
       m->serialize(obj, s);
     }
   }
 
   void deserialize(void* obj, deserializer* d) const override {
     // deserialize each member
-    for (auto& m : m_members) {
+    for (auto& m : members_) {
       m->deserialize(obj, d);
     }
   }
 
- protected:
+protected:
   bool pod_mems_equals(const T& lhs, const T& rhs) const override {
     return pod_eq(lhs, rhs);
   }
 
- private:
+private:
   template <class C>
   typename std::enable_if<std::is_pod<C>::value, bool>::type
   pod_eq(const C& lhs, const C& rhs) const {
-    for (auto& member : m_members) {
-      if (!member->equals(&lhs, &rhs)) return false;
+    for (auto& member : members_) {
+      if (! member->equals(&lhs, &rhs)) return false;
     }
     return true;
   }
 
   template <class C>
-  typename std::enable_if<!std::is_pod<C>::value, bool>::type
+  typename std::enable_if<! std::is_pod<C>::value, bool>::type
   pod_eq(const C&, const C&) const {
     return false;
   }
@@ -532,7 +532,7 @@ class default_uniform_type_info : public detail::abstract_uniform_type_info<T> {
 
   template <class R, class C, class... Ts>
   void push_back(R C::*memptr, Ts&&... xs) {
-    m_members.push_back(new_member_tinfo(memptr));
+    members_.push_back(new_member_tinfo(memptr));
     push_back(std::forward<Ts>(xs)...);
   }
 
@@ -542,7 +542,7 @@ class default_uniform_type_info : public detail::abstract_uniform_type_info<T> {
   void push_back(const std::pair<R C::*,
                                  detail::abstract_uniform_type_info<R>*>& pr,
                  Ts&&... xs) {
-    m_members.push_back(new_member_tinfo(pr.first,
+    members_.push_back(new_member_tinfo(pr.first,
                                          uniform_type_info_ptr(pr.second)));
     push_back(std::forward<Ts>(xs)...);
   }
@@ -553,7 +553,7 @@ class default_uniform_type_info : public detail::abstract_uniform_type_info<T> {
   void push_back(const std::pair<GR (C::*)() const,
                                  SR (C::*)(ST)>& pr,
                  Ts&&... xs) {
-    m_members.push_back(new_member_tinfo(pr.first, pr.second));
+    members_.push_back(new_member_tinfo(pr.first, pr.second));
     push_back(std::forward<Ts>(xs)...);
   }
 
@@ -567,18 +567,18 @@ class default_uniform_type_info : public detail::abstract_uniform_type_info<T> {
                            typename std::decay<GR>::type>*
                        >& pr,
                  Ts&&... xs) {
-    m_members.push_back(new_member_tinfo(pr.first.first, pr.first.second,
+    members_.push_back(new_member_tinfo(pr.first.first, pr.first.second,
                        uniform_type_info_ptr(pr.second)));
     push_back(std::forward<Ts>(xs)...);
   }
 
-  std::vector<uniform_type_info_ptr> m_members;
+  std::vector<uniform_type_info_ptr> members_;
 };
 
 template <class... Sigs>
 class default_uniform_type_info<typed_actor<Sigs...>> :
     public detail::abstract_uniform_type_info<typed_actor<Sigs...>> {
- public:
+public:
   using super = detail::abstract_uniform_type_info<typed_actor<Sigs...>>;
   using handle_type = typed_actor<Sigs...>;
 
@@ -597,7 +597,7 @@ class default_uniform_type_info<typed_actor<Sigs...>> :
     deref(obj) = actor_cast<handle_type>(tmp);
   }
 
- private:
+private:
   static handle_type& deref(void* ptr) {
     return *reinterpret_cast<handle_type*>(ptr);
   }

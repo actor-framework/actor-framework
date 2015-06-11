@@ -38,31 +38,22 @@ using interfaces_map = std::map<std::string,
                                 std::map<protocol,
                                          std::vector<std::string>>>;
 
-/**
- * Utility class bundling access to network interface names and addresses.
- */
+/// Utility class bundling access to network interface names and addresses.
 class interfaces {
- public:
-  /**
-   * Returns a map listing each interface by its name.
-   */
+public:
+  /// Returns a map listing each interface by its name.
   static interfaces_map list_all(bool include_localhost = true);
 
-  /**
-   * Returns all addresses for all devices for all protocols.
-   */
+  /// Returns all addresses for all devices for all protocols.
   static std::map<protocol, std::vector<std::string>>
   list_addresses(bool include_localhost = true);
 
-  /**
-   * Returns all addresses for all devices for given protocol.
-   */
+  /// Returns all addresses for all devices for given protocol.
   static std::vector<std::string> list_addresses(protocol proc,
                                                  bool include_localhost = true);
 
-  /**
-   * Returns a native IPv4 or IPv6 translation of `host`.
-   **/
+  /// Returns a native IPv4 or IPv6 translation of `host`.
+  ///*/
   static optional<std::pair<std::string, protocol>>
   native_address(const std::string& host, optional<protocol> preferred = none);
 };

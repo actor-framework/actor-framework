@@ -48,32 +48,28 @@ class middleman;
 
 using broker_ptr = intrusive_ptr<broker>;
 
-/**
- * A broker mediates between actor systems and other components in the network.
- * @extends local_actor
- */
+/// A broker mediates between actor systems and other components in the network.
+/// @extends local_actor
 class broker : public abstract_event_based_actor<behavior, false> {
- public:
+public:
   using super = abstract_event_based_actor<behavior, false>;
 
   using buffer_type = std::vector<char>;
 
-  /**
-   * Manages a low-level IO device for the `broker`.
-   */
+  /// Manages a low-level IO device for the `broker`.
   class servant {
-   public:
+  public:
     friend class broker;
 
     virtual ~servant();
 
-   protected:
+  protected:
     virtual void remove_from_broker() = 0;
 
     virtual message disconnect_message() = 0;
 
     inline broker* parent() {
-      return m_broker.get();
+      return broker_.get();
     }
 
     servant(broker* ptr);
@@ -82,51 +78,43 @@ class broker : public abstract_event_based_actor<behavior, false> {
 
     void disconnect(bool invoke_disconnect_message);
 
-    bool m_disconnected;
+    bool disconnected_;
 
-    intrusive_ptr<broker> m_broker;
+    intrusive_ptr<broker> broker_;
   };
 
-  /**
-   * Manages a stream.
-   */
+  /// Manages a stream.
   class scribe : public network::stream_manager, public servant {
-   public:
+  public:
     scribe(broker* parent, connection_handle hdl);
 
     ~scribe();
 
-    /**
-     * Implicitly starts the read loop on first call.
-     */
+    /// Implicitly starts the read loop on first call.
     virtual void configure_read(receive_policy::config config) = 0;
 
-    /**
-     * Grants access to the output buffer.
-     */
+    /// Grants access to the output buffer.
     virtual buffer_type& wr_buf() = 0;
 
-    /**
-     * Flushes the output buffer, i.e., sends the content of
-     *    the buffer via the network.
-     */
+    /// Flushes the output buffer, i.e., sends the content of
+    ///    the buffer via the network.
     virtual void flush() = 0;
 
     inline connection_handle hdl() const {
-      return m_hdl;
+      return hdl_;
     }
 
     void io_failure(network::operation op) override;
 
-   protected:
+  protected:
     virtual buffer_type& rd_buf() = 0;
 
     inline new_data_msg& read_msg() {
-      return m_read_msg.get_as_mutable<new_data_msg>(0);
+      return read_msg_.get_as_mutable<new_data_msg>(0);
     }
 
     inline const new_data_msg& read_msg() const {
-      return m_read_msg.get_as<new_data_msg>(0);
+      return read_msg_.get_as<new_data_msg>(0);
     }
 
     void remove_from_broker() override;
@@ -135,24 +123,22 @@ class broker : public abstract_event_based_actor<behavior, false> {
 
     void consume(const void* data, size_t num_bytes) override;
 
-    connection_handle m_hdl;
+    connection_handle hdl_;
 
-    message m_read_msg;
+    message read_msg_;
   };
 
   using scribe_pointer = intrusive_ptr<scribe>;
 
-  /**
-   * Manages incoming connections.
-   */
+  /// Manages incoming connections.
   class doorman : public network::acceptor_manager, public servant {
-   public:
+  public:
     doorman(broker* parent, accept_handle hdl);
 
     ~doorman();
 
     inline accept_handle hdl() const {
-      return m_hdl;
+      return hdl_;
     }
 
     void io_failure(network::operation op) override;
@@ -160,22 +146,22 @@ class broker : public abstract_event_based_actor<behavior, false> {
     // needs to be launched explicitly
     virtual void launch() = 0;
 
-   protected:
+  protected:
     void remove_from_broker() override;
 
     message disconnect_message() override;
 
     inline new_connection_msg& accept_msg() {
-      return m_accept_msg.get_as_mutable<new_connection_msg>(0);
+      return accept_msg_.get_as_mutable<new_connection_msg>(0);
     }
 
     inline const new_connection_msg& accept_msg() const {
-      return m_accept_msg.get_as<new_connection_msg>(0);
+      return accept_msg_.get_as<new_connection_msg>(0);
     }
 
-    accept_handle m_hdl;
+    accept_handle hdl_;
 
-    message m_accept_msg;
+    message accept_msg_;
   };
 
   using doorman_pointer = intrusive_ptr<doorman>;
@@ -189,38 +175,28 @@ class broker : public abstract_event_based_actor<behavior, false> {
 
   ~broker();
 
-  /**
-   * Modifies the receive policy for given connection.
-   * @param hdl Identifies the affected connection.
-   * @param config Contains the new receive policy.
-   */
+  /// Modifies the receive policy for given connection.
+  /// @param hdl Identifies the affected connection.
+  /// @param config Contains the new receive policy.
   void configure_read(connection_handle hdl, receive_policy::config config);
 
-  /**
-   * Returns the write buffer for given connection.
-   */
+  /// Returns the write buffer for given connection.
   buffer_type& wr_buf(connection_handle hdl);
 
-  /**
-   * Writes `data` into the buffer for given connection.
-   */
+  /// Writes `data` into the buffer for given connection.
   void write(connection_handle hdl, size_t data_size, const void* data);
 
-  /**
-   * Sends the content of the buffer for given connection.
-   */
+  /// Sends the content of the buffer for given connection.
   void flush(connection_handle hdl);
 
-  /**
-   * Returns the number of open connections.
-   */
+  /// Returns the number of open connections.
   inline size_t num_connections() const {
-    return m_scribes.size();
+    return scribes_.size();
   }
 
   std::vector<connection_handle> connections() const;
 
-  /** @cond PRIVATE */
+  /// @cond PRIVATE
 
   void initialize() override;
 
@@ -231,24 +207,24 @@ class broker : public abstract_event_based_actor<behavior, false> {
     // prevent warning about unused local type
     static_assert(std::is_same<fun_res, fun_res>::value,
                   "your compiler is lying to you");
-    auto i = m_scribes.find(hdl);
-    if (i == m_scribes.end()) {
+    auto i = scribes_.find(hdl);
+    if (i == scribes_.end()) {
       CAF_LOG_ERROR("invalid handle");
       throw std::invalid_argument("invalid handle");
     }
     auto sptr = i->second;
     CAF_ASSERT(sptr->hdl() == hdl);
-    m_scribes.erase(i);
+    scribes_.erase(i);
     return spawn_functor(nullptr, [sptr](broker* forked) {
                                     sptr->set_broker(forked);
-                                    forked->m_scribes.emplace(sptr->hdl(),
+                                    forked->scribes_.emplace(sptr->hdl(),
                                                               sptr);
                                   },
                          fun, hdl, std::forward<Ts>(xs)...);
   }
 
   inline void add_scribe(const scribe_pointer& ptr) {
-    m_scribes.emplace(ptr->hdl(), ptr);
+    scribes_.emplace(ptr->hdl(), ptr);
   }
 
   connection_handle add_tcp_scribe(const std::string& host, uint16_t port);
@@ -258,7 +234,7 @@ class broker : public abstract_event_based_actor<behavior, false> {
   connection_handle add_tcp_scribe(network::native_socket fd);
 
   inline void add_doorman(const doorman_pointer& ptr) {
-    m_doormen.emplace(ptr->hdl(), ptr);
+    doormen_.emplace(ptr->hdl(), ptr);
     if (is_initialized()) {
       ptr->launch();
     }
@@ -281,30 +257,20 @@ class broker : public abstract_event_based_actor<behavior, false> {
 
   void enqueue(mailbox_element_ptr, execution_unit*) override;
 
-  /**
-   * Closes all connections and acceptors.
-   */
+  /// Closes all connections and acceptors.
   void close_all();
 
-  /**
-   * Closes the connection identified by `handle`.
-   * Unwritten data will still be send.
-   */
+  /// Closes the connection identified by `handle`.
+  /// Unwritten data will still be send.
   void close(connection_handle handle);
 
-  /**
-   * Closes the acceptor identified by `handle`.
-   */
+  /// Closes the acceptor identified by `handle`.
   void close(accept_handle handle);
 
-  /**
-   * Checks whether a connection for `handle` exists.
-   */
+  /// Checks whether a connection for `handle` exists.
   bool valid(connection_handle handle);
 
-  /**
-   * Checks whether an acceptor for `handle` exists.
-   */
+  /// Checks whether an acceptor for `handle` exists.
   bool valid(accept_handle handle);
 
   class functor_based;
@@ -328,28 +294,26 @@ class broker : public abstract_event_based_actor<behavior, false> {
 
   // </backward_compatibility>
 
- protected:
+protected:
   broker();
 
   broker(middleman& parent_ref);
 
   virtual behavior make_behavior() = 0;
 
-  /**
-   * Can be overridden to perform cleanup code before the
-   * broker closes all its connections.
-   */
+  /// Can be overridden to perform cleanup code before the
+  /// broker closes all its connections.
   virtual void on_exit();
 
-  /** @endcond */
+  /// @endcond
 
   inline middleman& parent() {
-    return m_mm;
+    return mm_;
   }
 
   network::multiplexer& backend();
 
- private:
+private:
   template <class Handle, class T>
   static T& by_id(Handle hdl, std::map<Handle, intrusive_ptr<T>>& elements) {
     auto i = elements.find(hdl);
@@ -361,11 +325,11 @@ class broker : public abstract_event_based_actor<behavior, false> {
 
   // throws on error
   inline scribe& by_id(connection_handle hdl) {
-    return by_id(hdl, m_scribes);
+    return by_id(hdl, scribes_);
   }
 
   // throws on error
-  inline doorman& by_id(accept_handle hdl) { return by_id(hdl, m_doormen); }
+  inline doorman& by_id(accept_handle hdl) { return by_id(hdl, doormen_); }
 
   bool invoke_message_from_cache();
 
@@ -373,16 +337,16 @@ class broker : public abstract_event_based_actor<behavior, false> {
 
   void erase_acceptor(int id);
 
-  std::map<accept_handle, doorman_pointer> m_doormen;
-  std::map<connection_handle, scribe_pointer> m_scribes;
+  std::map<accept_handle, doorman_pointer> doormen_;
+  std::map<connection_handle, scribe_pointer> scribes_;
 
-  middleman& m_mm;
-  detail::intrusive_partitioned_list<mailbox_element, detail::disposer> m_cache;
+  middleman& mm_;
+  detail::intrusive_partitioned_list<mailbox_element, detail::disposer> cache_;
 };
 
 class broker::functor_based : public extend<broker>::
                                      with<mixin::functor_based> {
- public:
+public:
   using super = combined_type;
 
   template <class... Ts>

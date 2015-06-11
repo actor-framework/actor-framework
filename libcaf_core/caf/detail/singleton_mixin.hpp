@@ -32,7 +32,7 @@ class singletons;
 // a mixin for simple singleton classes
 template <class Derived, class Base = void>
 class singleton_mixin : public Base {
- private:
+private:
   friend class singletons;
 
   static Derived* create_singleton() {
@@ -51,7 +51,7 @@ class singleton_mixin : public Base {
     CAF_LOG_TRACE("");
   }
 
- protected:
+protected:
   template <class... Ts>
   singleton_mixin(Ts&&... xs) : Base(std::forward<Ts>(xs)...) {
     // nop
@@ -64,7 +64,7 @@ class singleton_mixin : public Base {
 
 template <class Derived>
 class singleton_mixin<Derived, void> {
- private:
+private:
   friend class singletons;
 
   static Derived* create_singleton() {
@@ -83,7 +83,7 @@ class singleton_mixin<Derived, void> {
     CAF_LOG_TRACE("");
   }
 
- protected:
+protected:
   virtual ~singleton_mixin() {
     CAF_LOG_TRACE("");
   }

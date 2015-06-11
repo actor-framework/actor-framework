@@ -366,7 +366,7 @@ void MDfinish(dword* MDbuf, const byte* strptr, dword lswlen, dword mswlen) {
     // byte i goes into word X[i div 4] at pos.  8*(i mod 4)
     X[i >> 2] ^= static_cast<dword>(*strptr++) << (8 * (i & 3));
   }
-  // append the bit m_n == 1
+  // append the bit n_ == 1
   X[(lswlen >> 2) & 15] ^= static_cast<dword>(1) << (8 * (lswlen & 3) + 7);
   if ((lswlen & 63) > 55) {
     // length goes to next block

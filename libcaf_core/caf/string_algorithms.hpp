@@ -93,14 +93,12 @@ void replace_all(std::string& str,
   }
 }
 
-/**
- * Compares two values by using `operator==` unless two floating
- * point numbers are compared. In the latter case, the function
- * performs an epsilon comparison.
- */
+/// Compares two values by using `operator==` unless two floating
+/// point numbers are compared. In the latter case, the function
+/// performs an epsilon comparison.
 template <class T, typename U>
 typename std::enable_if<
-  !std::is_floating_point<T>::value && !std::is_floating_point<U>::value,
+  ! std::is_floating_point<T>::value && ! std::is_floating_point<U>::value,
   bool
 >::type
 safe_equal(const T& lhs, const U& rhs) {

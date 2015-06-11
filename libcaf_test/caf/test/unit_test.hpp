@@ -35,20 +35,16 @@ namespace caf {
 class message;
 namespace test {
 
-/**
- * Default test-running function.
- * This function will be called automatically unless you define
- * `CAF_TEST_NO_MAIN` before including `caf/test/unit_test.hpp`. In
- * the latter case you will have to provide you own `main` function,
- * where you may want to call `caf::test::main` from.
- */
+/// Default test-running function.
+/// This function will be called automatically unless you define
+/// `CAF_TEST_NO_MAIN` before including `caf/test/unit_test.hpp`. In
+/// the latter case you will have to provide you own `main` function,
+/// where you may want to call `caf::test::main` from.
 int main(int argc, char** argv);
 
-/**
- * A sequence of *checks*.
- */
+/// A sequence of *checks*.
 class test {
- public:
+public:
   test(std::string name);
 
   virtual ~test();
@@ -62,27 +58,27 @@ class test {
   const std::string& name() const;
 
   inline size_t good() {
-    return m_good;
+    return good_;
   }
 
   inline size_t bad() {
-    return m_bad;
+    return bad_;
   }
 
   virtual void run() = 0;
 
- private:
-  size_t m_expected_failures;
-  std::string m_name;
-  size_t m_good;
-  size_t m_bad;
+private:
+  size_t expected_failures_;
+  std::string name_;
+  size_t good_;
+  size_t bad_;
 };
 
 struct dummy_fixture { };
 
 template <class T>
 class test_impl : public test {
- public:
+public:
   test_impl(std::string test_name) : test(std::move(test_name)) {
     // nop
   }
@@ -97,7 +93,7 @@ namespace detail {
 
 // thrown when a required check fails
 class require_error : std::logic_error {
- public:
+public:
   require_error(const std::string& msg);
   require_error(const require_error&) = default;
   require_error(require_error&&) = default;
@@ -109,11 +105,9 @@ const char* fill(size_t line);
 
 } // namespace detail
 
-/**
- * Logs messages for the test framework.
- */
+/// Logs messages for the test framework.
 class logger {
- public:
+public:
   enum class level : int {
     quiet   = 0,
     error   = 1,
@@ -122,22 +116,20 @@ class logger {
     massive = 4
   };
 
-  /**
-   * Output stream for logging purposes.
-   */
+  /// Output stream for logging purposes.
   class stream {
-   public:
+  public:
     stream(logger& l, level lvl);
 
     stream(stream&&);
 
     template <class T>
     typename std::enable_if<
-      !std::is_same<T, char*>::value,
+      ! std::is_same<T, char*>::value,
       stream&
     >::type
     operator<<(const T& x) {
-      m_buf << x;
+      buf_ << x;
       return *this;
     }
 
@@ -147,12 +139,12 @@ class logger {
 
     stream& operator<<(const std::string& str);
 
-   private:
+  private:
     void flush();
 
-    logger& m_logger;
-    level m_level;
-    std::ostringstream m_buf;
+    logger& logger_;
+    level level_;
+    std::ostringstream buf_;
   };
 
   static bool init(int lvl_cons, int lvl_file, const std::string& logfile);
@@ -161,13 +153,13 @@ class logger {
 
   template <class T>
   void log(level lvl, const T& x) {
-    if (lvl <= m_level_console) {
-      std::lock_guard<std::mutex> io_guard{m_console_mtx};
-      m_console << x;
+    if (lvl <= level_console_) {
+      std::lock_guard<std::mutex> io_guard{console_mtx_};
+      console_ << x;
     }
-    if (lvl <= m_level_file) {
-      std::lock_guard<std::mutex> io_guard{m_file_mtx};
-      m_file << x;
+    if (lvl <= level_file_) {
+      std::lock_guard<std::mutex> io_guard{file_mtx_};
+      file_ << x;
     }
   }
 
@@ -176,15 +168,15 @@ class logger {
   stream verbose();
   stream massive();
 
- private:
+private:
   logger();
 
-  level m_level_console;
-  level m_level_file;
-  std::ostream& m_console;
-  std::ofstream m_file;
-  std::mutex m_console_mtx;
-  std::mutex m_file_mtx;
+  level level_console_;
+  level level_file_;
+  std::ostream& console_;
+  std::ofstream file_;
+  std::mutex console_mtx_;
+  std::mutex file_mtx_;
 };
 
 enum color_face {
@@ -204,61 +196,45 @@ enum color_value {
   white
 };
 
-/**
- * Drives unit test execution.
- */
+/// Drives unit test execution.
 class engine {
- public:
-  /**
-   * Sets external command line arguments.
-   * @param argc The argument counter.
-   * @param argv The argument vectors.
-   */
+public:
+  /// Sets external command line arguments.
+  /// @param argc The argument counter.
+  /// @param argv The argument vectors.
   static void args(int argc, char** argv);
 
-  /**
-   * Retrieves the argument counter.
-   * @returns The number of arguments set via ::args or 0.
-   */
+  /// Retrieves the argument counter.
+  /// @returns The number of arguments set via ::args or 0.
   static int argc();
 
-  /**
-   * Retrieves the argument vector.
-   * @returns The argument vector set via ::args or `nullptr`.
-   */
+  /// Retrieves the argument vector.
+  /// @returns The argument vector set via ::args or `nullptr`.
   static char** argv();
 
-  /**
-   * Sets path of current executable.
-   * @param argv The path of current executable.
-   */
+  /// Sets path of current executable.
+  /// @param argv The path of current executable.
   static void path(char* argv);
 
-  /**
-   * Retrieves the path of current executable
-   * @returns The path to executable set via ::path(char*) or `nullptr`.
-   */
+  /// Retrieves the path of current executable
+  /// @returns The path to executable set via ::path(char*) or `nullptr`.
   static char* path();
 
-  /**
-   * Adds a test to the engine.
-   * @param name The name of the suite.
-   * @param ptr The test to register.
-   */
+  /// Adds a test to the engine.
+  /// @param name The name of the suite.
+  /// @param ptr The test to register.
   static void add(const char* name, std::unique_ptr<test> ptr);
 
-  /**
-   * Invokes tests in all suites.
-   * @param colorize Whether to colorize the output.
-   * @param log_file The filename of the log output. The empty string means
-   *                 that no log file will be written.
-   * @param verbosity_console The log verbosity on the console.
-   * @param verbosity_file The log verbosity in the log file.
-   * @param max_runtime The maximum number of seconds a test shall run.
-   * @param suites The regular expression of the tests to run.
-   * @param not_suites Whether to colorize the output.
-   * @returns `true` iff all tests succeeded.
-   */
+  /// Invokes tests in all suites.
+  /// @param colorize Whether to colorize the output.
+  /// @param log_file The filename of the log output. The empty string means
+  ///                 that no log file will be written.
+  /// @param verbosity_console The log verbosity on the console.
+  /// @param verbosity_file The log verbosity in the log file.
+  /// @param max_runtime The maximum number of seconds a test shall run.
+  /// @param suites The regular expression of the tests to run.
+  /// @param not_suites Whether to colorize the output.
+  /// @returns `true` iff all tests succeeded.
   static bool run(bool colorize,
                   const std::string& log_file,
                   int verbosity_console,
@@ -269,10 +245,8 @@ class engine {
                   const std::string& tests,
                   const std::string& not_tests);
 
-  /**
-   * Retrieves a UNIX terminal color code or an empty string based on the
-   * color configuration of the engine.
-   */
+  /// Retrieves a UNIX terminal color code or an empty string based on the
+  /// color configuration of the engine.
   static const char* color(color_value v, color_face t = normal);
 
   static const char* last_check_file();
@@ -285,17 +259,17 @@ class engine {
 
   static std::vector<std::string> available_suites();
 
- private:
+private:
   engine() = default;
 
   static engine& instance();
 
   static std::string render(std::chrono::microseconds t);
 
-  int m_argc = 0;
-  char** m_argv = nullptr;
-  char*  m_path = nullptr;
-  const char* m_colors[9][2] = {
+  int argc_ = 0;
+  char** argv_ = nullptr;
+  char*  path_ = nullptr;
+  const char* colors_[9][2] = {
     {"\033[0m", "\033[0m"},          // reset
     {"\033[30m", "\033[1m\033[30m"}, // black
     {"\033[31m", "\033[1m\033[31m"}, // red
@@ -306,10 +280,10 @@ class engine {
     {"\033[36m", "\033[1m\033[36m"}, // cyan
     {"\033[37m", "\033[1m\033[37m"}  // white
   };
-  const char* m_check_file = "<none>";
-  size_t m_check_line = 0;
-  test* m_current_test = nullptr;
-  std::map<std::string, std::vector<std::unique_ptr<test>>> m_suites;
+  const char* check_file_ = "<none>";
+  size_t check_line_ = 0;
+  test* current_test_ = nullptr;
+  std::map<std::string, std::vector<std::unique_ptr<test>>> suites_;
 };
 
 namespace detail {
@@ -332,17 +306,17 @@ std::ostream& operator<<(std::ostream& out, const showable_base<T>&) {
 
 template <class T>
 class showable : public showable_base<T> {
- public:
-  explicit showable(const T& x) : m_value(x) { }
+public:
+  explicit showable(const T& x) : value_(x) { }
 
   template <class U = T>
   friend auto operator<<(std::ostream& out, const showable& p)
     -> decltype(out << std::declval<const U&>()) {
-    return out << p.m_value;
+    return out << p.value_;
   }
 
- private:
-  const T& m_value;
+private:
+  const T& value_;
 };
 
 template <class T>
@@ -354,7 +328,7 @@ template <class T,
           bool IsFloat = std::is_floating_point<T>::value,
           bool IsIntegral = std::is_integral<T>::value>
 class lhs_cmp {
- public:
+public:
   template <class U>
   bool operator()(const T& x, const U& y) {
     return x == y;
@@ -363,7 +337,7 @@ class lhs_cmp {
 
 template <class T>
 class lhs_cmp<T, true, false> {
- public:
+public:
   template <class U>
   bool operator()(const T& x, const U& y) {
     using rt = decltype(x - y);
@@ -373,7 +347,7 @@ class lhs_cmp<T, true, false> {
 
 template <class T>
 class lhs_cmp<T, false, true> {
- public:
+public:
   template <class U>
   bool operator()(const T& x, const U& y) {
     return x == static_cast<T>(y);
@@ -382,19 +356,19 @@ class lhs_cmp<T, false, true> {
 
 template <class T>
 struct lhs {
- public:
+public:
   lhs(test* parent, const char *file, size_t line, const char *expr,
       bool should_fail, const T& x)
-    : m_test(parent),
-      m_filename(file),
-      m_line(line),
-      m_expr(expr),
-      m_should_fail(should_fail),
-      m_value(x) {
+    : test_(parent),
+      filename_(file),
+      line_(line),
+      expr_(expr),
+      should_fail_(should_fail),
+      value_(x) {
   }
 
   ~lhs() {
-    if (m_evaluated) {
+    if (evaluated_) {
       return;
     }
     if (eval(0)) {
@@ -413,58 +387,58 @@ struct lhs {
     >::type;
 
   explicit operator bool() {
-    m_evaluated = true;
-    return static_cast<bool>(m_value) ? pass() : fail_unary();
+    evaluated_ = true;
+    return static_cast<bool>(value_) ? pass() : fail_unary();
   }
 
   // pass-or-fail
   template <class U>
   bool pof(bool res, const U& x) {
-    m_evaluated = true;
+    evaluated_ = true;
     return res ? pass() : fail(x);
   }
 
   template <class U>
   bool operator==(const U& x) {
     lhs_cmp<T> cmp;
-    return pof(cmp(m_value, x), x);
+    return pof(cmp(value_, x), x);
   }
 
   template <class U>
   bool operator!=(const U& x) {
     lhs_cmp<T> cmp;
-    return pof(!cmp(m_value, x), x);
+    return pof(! cmp(value_, x), x);
   }
 
   template <class U>
   bool operator<(const U& x) {
-    return pof(m_value < static_cast<elevated<U>>(x), x);
+    return pof(value_ < static_cast<elevated<U>>(x), x);
   }
 
   template <class U>
   bool operator<=(const U& x) {
-    return pof(m_value <= static_cast<elevated<U>>(x), x);
+    return pof(value_ <= static_cast<elevated<U>>(x), x);
   }
 
   template <class U>
   bool operator>(const U& x) {
-    return pof(m_value > static_cast<elevated<U>>(x), x);
+    return pof(value_ > static_cast<elevated<U>>(x), x);
   }
 
   template <class U>
   bool operator>=(const U& x) {
-    return pof(m_value >= static_cast<elevated<U>>(x), x);
+    return pof(value_ >= static_cast<elevated<U>>(x), x);
   }
 
- private:
+private:
   template<class V = T>
   typename std::enable_if<
     std::is_convertible<V, bool>::value
-    && !std::is_floating_point<V>::value,
+    && ! std::is_floating_point<V>::value,
     bool
   >::type
   eval(int) {
-    return static_cast<bool>(m_value);
+    return static_cast<bool>(value_);
   }
 
   template<class V = T>
@@ -473,7 +447,7 @@ struct lhs {
     bool
   >::type
   eval(int) {
-    return std::fabs(m_value) <= std::numeric_limits<V>::epsilon();
+    return std::fabs(value_) <= std::numeric_limits<V>::epsilon();
   }
 
   bool eval(long) {
@@ -481,23 +455,23 @@ struct lhs {
   }
 
   bool pass() {
-    m_passed = true;
+    passed_ = true;
     std::stringstream ss;
     ss << engine::color(green) << "** "
-       << engine::color(blue) << m_filename << engine::color(yellow) << ":"
-       << engine::color(blue) << m_line << fill(m_line) << engine::color(reset)
-       << m_expr;
-    m_test->pass(ss.str());
+       << engine::color(blue) << filename_ << engine::color(yellow) << ":"
+       << engine::color(blue) << line_ << fill(line_) << engine::color(reset)
+       << expr_;
+    test_->pass(ss.str());
     return true;
   }
 
   bool fail_unary() {
     std::stringstream ss;
     ss << engine::color(red) << "!! "
-       << engine::color(blue) << m_filename << engine::color(yellow) << ":"
-       << engine::color(blue) << m_line << fill(m_line) << engine::color(reset)
-       << m_expr;
-    m_test->fail(ss.str(), m_should_fail);
+       << engine::color(blue) << filename_ << engine::color(yellow) << ":"
+       << engine::color(blue) << line_ << fill(line_) << engine::color(reset)
+       << expr_;
+    test_->fail(ss.str(), should_fail_);
     return false;
   }
 
@@ -505,42 +479,42 @@ struct lhs {
   bool fail(const U& u) {
     std::stringstream ss;
     ss << engine::color(red) << "!! "
-       << engine::color(blue) << m_filename << engine::color(yellow) << ":"
-       << engine::color(blue) << m_line << fill(m_line) << engine::color(reset)
-       << m_expr << engine::color(magenta) << " ("
-       << engine::color(red) << show(m_value) << engine::color(magenta)
+       << engine::color(blue) << filename_ << engine::color(yellow) << ":"
+       << engine::color(blue) << line_ << fill(line_) << engine::color(reset)
+       << expr_ << engine::color(magenta) << " ("
+       << engine::color(red) << show(value_) << engine::color(magenta)
        << " !! " << engine::color(red) << show(u) << engine::color(magenta)
        << ')' << engine::color(reset);
-    m_test->fail(ss.str(), m_should_fail);
+    test_->fail(ss.str(), should_fail_);
     return false;
   }
 
-  bool m_evaluated = false;
-  bool m_passed = false;
-  test* m_test;
-  const char* m_filename;
-  size_t m_line;
-  const char* m_expr;
-  bool m_should_fail;
-  const T& m_value;
+  bool evaluated_ = false;
+  bool passed_ = false;
+  test* test_;
+  const char* filename_;
+  size_t line_;
+  const char* expr_;
+  bool should_fail_;
+  const T& value_;
 };
 
 struct expr {
- public:
+public:
   expr(test* parent, const char* filename, size_t lineno, bool should_fail,
        const char* expression);
 
   template <class T>
   lhs<T> operator->*(const T& x) {
-    return {m_test, m_filename, m_line, m_expr, m_should_fail, x};
+    return {test_, filename_, line_, expr_, should_fail_, x};
   }
 
 private:
-  test* m_test;
-  const char* m_filename;
-  size_t m_line;
-  bool m_should_fail;
-  const char* m_expr;
+  test* test_;
+  const char* filename_;
+  size_t line_;
+  bool should_fail_;
+  const char* expr_;
 };
 
 } // namespace detail
@@ -602,7 +576,7 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
     auto CAF_UNIQUE(__result) =                                                \
       ::caf::test::detail::expr{::caf::test::engine::current_test(),           \
       __FILE__, __LINE__, false, #__VA_ARGS__} ->* __VA_ARGS__;                \
-    if (!CAF_UNIQUE(__result)) {                                               \
+    if (! CAF_UNIQUE(__result)) {                                               \
       throw ::caf::test::detail::require_error{#__VA_ARGS__};                  \
     }                                                                          \
     ::caf::test::engine::last_check_file(__FILE__);                            \

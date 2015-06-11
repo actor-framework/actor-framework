@@ -41,10 +41,8 @@ struct invalid_actor_t {
   constexpr invalid_actor_t() {}
 };
 
-/**
- * Identifies an invalid {@link actor}.
- * @relates actor
- */
+/// Identifies an invalid {@link actor}.
+/// @relates actor
 constexpr invalid_actor_t invalid_actor = invalid_actor_t{};
 
 template <class T>
@@ -55,10 +53,8 @@ struct is_convertible_to_actor {
                                 || std::is_same<scoped_actor, type>::value;
 };
 
-/**
- * Identifies an untyped actor. Can be used with derived types
- * of `event_based_actor`, `blocking_actor`, and `actor_proxy`.
- */
+/// Identifies an untyped actor. Can be used with derived types
+/// of `event_based_actor`, `blocking_actor`, and `actor_proxy`.
 class actor : detail::comparable<actor>,
               detail::comparable<actor, actor_addr>,
               detail::comparable<actor, invalid_actor_t>,
@@ -69,7 +65,7 @@ class actor : detail::comparable<actor>,
   template <class T, typename U>
   friend T actor_cast(const U&);
 
- public:
+public:
 
   actor() = default;
 
@@ -80,12 +76,12 @@ class actor : detail::comparable<actor>,
   template <class T>
   actor(intrusive_ptr<T> ptr,
       typename std::enable_if<is_convertible_to_actor<T>::value>::type* = 0)
-      : m_ptr(std::move(ptr)) {}
+      : ptr_(std::move(ptr)) {}
 
   template <class T>
   actor(T* ptr,
       typename std::enable_if<is_convertible_to_actor<T>::value>::type* = 0)
-      : m_ptr(ptr) {}
+      : ptr_(ptr) {}
 
   actor(const invalid_actor_t&);
 
@@ -112,22 +108,20 @@ class actor : detail::comparable<actor>,
   actor& operator=(const invalid_actor_t&);
 
   inline operator bool() const {
-    return static_cast<bool>(m_ptr);
+    return static_cast<bool>(ptr_);
   }
 
   inline bool operator!() const {
-    return !m_ptr;
+    return ! ptr_;
   }
 
-  /**
-   * Returns a handle that grants access to actor operations such as enqueue.
-   */
+  /// Returns a handle that grants access to actor operations such as enqueue.
   inline abstract_actor* operator->() const {
-    return m_ptr.get();
+    return ptr_.get();
   }
 
   inline abstract_actor& operator*() const {
-    return *m_ptr;
+    return *ptr_;
   }
 
   intptr_t compare(const actor& other) const;
@@ -135,36 +129,32 @@ class actor : detail::comparable<actor>,
   intptr_t compare(const actor_addr&) const;
 
   inline intptr_t compare(const invalid_actor_t&) const {
-    return m_ptr ? 1 : 0;
+    return ptr_ ? 1 : 0;
   }
 
   inline intptr_t compare(const invalid_actor_addr_t&) const {
     return compare(invalid_actor);
   }
 
-  /**
-   * Returns the address of the stored actor.
-   */
+  /// Returns the address of the stored actor.
   actor_addr address() const;
 
-  /**
-   * Returns whether this is an handle to a remote actor.
-   */
+  /// Returns whether this is an handle to a remote actor.
   bool is_remote() const;
 
   actor_id id() const;
 
   void swap(actor& other);
 
- private:
+private:
 
   inline abstract_actor* get() const {
-    return m_ptr.get();
+    return ptr_.get();
   }
 
   actor(abstract_actor*);
 
-  abstract_actor_ptr m_ptr;
+  abstract_actor_ptr ptr_;
 
 };
 

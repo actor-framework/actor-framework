@@ -31,12 +31,10 @@ namespace caf {
 namespace io {
 namespace basp {
 
-/**
- * The header of a Binary Actor System Protocol (BASP) message.
- * A BASP header consists of a routing part, i.e., source and
- * destination, as well as an operation and operation data. Several
- * message types consist of only a header.
- */
+/// The header of a Binary Actor System Protocol (BASP) message.
+/// A BASP header consists of a routing part, i.e., source and
+/// destination, as well as an operation and operation data. Several
+/// message types consist of only a header.
 struct header {
   node_id source_node;
   node_id dest_node;
@@ -47,15 +45,11 @@ struct header {
   uint64_t operation_data;
 };
 
-/**
- * The current BASP version. Different BASP versions will not
- * be able to exchange messages.
- */
+/// The current BASP version. Different BASP versions will not
+/// be able to exchange messages.
 constexpr uint64_t version = 1;
 
-/**
- * Size of a BASP header in serialized form
- */
+/// Size of a BASP header in serialized form
 constexpr size_t header_size =
   node_id::host_id_size * 2 + sizeof(uint32_t) * 2 +
   sizeof(actor_id) * 2 + sizeof(uint32_t) * 2 + sizeof(uint64_t);
@@ -65,7 +59,7 @@ inline bool valid(const node_id& val) {
 }
 
 inline bool invalid(const node_id& val) {
-  return !valid(val);
+  return ! valid(val);
 }
 
 template <class T>
@@ -75,22 +69,20 @@ inline bool zero(T val) {
 
 template <class T>
 inline bool nonzero(T aid) {
-  return !zero(aid);
+  return ! zero(aid);
 }
 
-/**
- * Send from server, i.e., the node with a published actor, to client,
- * i.e., node that initiates a new connection using remote_actor().
- *
- * Field          | Assignment
- * ---------------|----------------------------------------------------------
- * source_node    | ID of server
- * dest_node      | invalid
- * source_actor   | Optional: ID of published actor
- * dest_actor     | 0
- * payload_len    | Optional: size of actor id + interface definition
- * operation_data | BASP version of the server
- */
+/// Send from server, i.e., the node with a published actor, to client,
+/// i.e., node that initiates a new connection using remote_actor().
+///
+/// Field          | Assignment
+/// ---------------|----------------------------------------------------------
+/// source_node    | ID of server
+/// dest_node      | invalid
+/// source_actor   | Optional: ID of published actor
+/// dest_actor     | 0
+/// payload_len    | Optional: size of actor id + interface definition
+/// operation_data | BASP version of the server
 constexpr uint32_t server_handshake = 0x00;
 
 inline bool server_handshake_valid(const header& hdr) {
@@ -102,19 +94,17 @@ inline bool server_handshake_valid(const header& hdr) {
            || (zero(hdr.source_actor) && zero(hdr.payload_len)));
 }
 
-/**
- * Send from client to server after it has successfully received the
- * server_handshake to establish the connection.
- *
- * Field          | Assignment
- * ---------------|----------------------------------------------------------
- * source_node    | ID of client
- * dest_node      | ID of server
- * source_actor   | 0
- * dest_actor     | 0
- * payload_len    | 0
- * operation_data | 0
- */
+/// Send from client to server after it has successfully received the
+/// server_handshake to establish the connection.
+///
+/// Field          | Assignment
+/// ---------------|----------------------------------------------------------
+/// source_node    | ID of client
+/// dest_node      | ID of server
+/// source_actor   | 0
+/// dest_actor     | 0
+/// payload_len    | 0
+/// operation_data | 0
 constexpr uint32_t client_handshake = 0x01;
 
 inline bool client_handshake_valid(const header& hdr) {
@@ -127,19 +117,17 @@ inline bool client_handshake_valid(const header& hdr) {
        && zero(hdr.operation_data);
 }
 
-/**
- * Transmits a message from source_node:source_actor to
- * dest_node:dest_actor.
- *
- * Field          | Assignment
- * ---------------|----------------------------------------------------------
- * source_node    | ID of sending node (invalid in case of anon_send)
- * dest_node      | ID of receiving node
- * source_actor   | ID of sending actor (invalid in case of anon_send)
- * dest_actor     | ID of receiving actor, must not be invalid
- * payload_len    | size of serialized message object, must not be 0
- * operation_data | message ID (0 for asynchronous messages)
- */
+/// Transmits a message from source_node:source_actor to
+/// dest_node:dest_actor.
+///
+/// Field          | Assignment
+/// ---------------|----------------------------------------------------------
+/// source_node    | ID of sending node (invalid in case of anon_send)
+/// dest_node      | ID of receiving node
+/// source_actor   | ID of sending actor (invalid in case of anon_send)
+/// dest_actor     | ID of receiving actor, must not be invalid
+/// payload_len    | size of serialized message object, must not be 0
+/// operation_data | message ID (0 for asynchronous messages)
 constexpr uint32_t dispatch_message = 0x02;
 
 inline bool dispatch_message_valid(const header& hdr) {
@@ -148,21 +136,19 @@ inline bool dispatch_message_valid(const header& hdr) {
        && nonzero(hdr.payload_len);
 }
 
-/**
- * Informs the receiving node that the sending node has created a proxy
- * instance for one of its actors. Causes the receiving node to attach
- * a functor to the actor that triggers a kill_proxy_instance
- * message on termination.
- *
- * Field          | Assignment
- * ---------------|----------------------------------------------------------
- * source_node    | ID of sending node
- * dest_node      | ID of receiving node
- * source_actor   | 0
- * dest_actor     | ID of monitored actor
- * payload_len    | 0
- * operation_data | 0
- */
+/// Informs the receiving node that the sending node has created a proxy
+/// instance for one of its actors. Causes the receiving node to attach
+/// a functor to the actor that triggers a kill_proxy_instance
+/// message on termination.
+///
+/// Field          | Assignment
+/// ---------------|----------------------------------------------------------
+/// source_node    | ID of sending node
+/// dest_node      | ID of receiving node
+/// source_actor   | 0
+/// dest_actor     | ID of monitored actor
+/// payload_len    | 0
+/// operation_data | 0
 constexpr uint32_t announce_proxy_instance = 0x03;
 
 inline bool announce_proxy_instance_valid(const header& hdr) {
@@ -175,19 +161,17 @@ inline bool announce_proxy_instance_valid(const header& hdr) {
        && zero(hdr.operation_data);
 }
 
-/**
- * Informs the receiving node that it has a proxy for an actor
- * that has been terminated.
- *
- * Field          | Assignment
- * ---------------|----------------------------------------------------------
- * source_node    | ID of sending node
- * dest_node      | ID of receiving node
- * source_actor   | ID of monitored actor
- * dest_actor     | 0
- * payload_len    | 0
- * operation_data | exit reason (uint32)
- */
+/// Informs the receiving node that it has a proxy for an actor
+/// that has been terminated.
+///
+/// Field          | Assignment
+/// ---------------|----------------------------------------------------------
+/// source_node    | ID of sending node
+/// dest_node      | ID of receiving node
+/// source_actor   | ID of monitored actor
+/// dest_actor     | 0
+/// payload_len    | 0
+/// operation_data | exit reason (uint32)
 constexpr uint32_t kill_proxy_instance = 0x04;
 
 inline bool kill_proxy_instance_valid(const header& hdr) {
@@ -200,9 +184,7 @@ inline bool kill_proxy_instance_valid(const header& hdr) {
        && nonzero(hdr.operation_data);
 }
 
-/**
- * Checks whether given header is valid.
- */
+/// Checks whether given header is valid.
 inline bool valid(header& hdr) {
   switch (hdr.operation) {
     default:

@@ -37,11 +37,9 @@
 namespace caf {
 namespace io {
 
-/**
- * A broker implementation for the Binary Actor System Protocol (BASP).
- */
+/// A broker implementation for the Binary Actor System Protocol (BASP).
 class basp_broker : public broker, public actor_namespace::backend {
- public:
+public:
   basp_broker(middleman& parent_ref);
 
   ~basp_broker();
@@ -58,7 +56,7 @@ class basp_broker : public broker, public actor_namespace::backend {
   actor_proxy_ptr make_proxy(const node_id&, actor_id) override;
 
   class payload_writer {
-   public:
+  public:
     payload_writer() = default;
     payload_writer(const payload_writer&) = default;
     payload_writer& operator=(const payload_writer&) = default;
@@ -87,13 +85,13 @@ class basp_broker : public broker, public actor_namespace::backend {
   };
 
   inline actor_namespace& get_namespace() {
-    return m_namespace;
+    return namespace_;
   }
 
- protected:
+protected:
   void on_exit() override;
 
- private:
+private:
   void erase_proxy(const node_id& nid, actor_id aid);
 
   // dispatches a message from a remote node to a local actor
@@ -216,23 +214,23 @@ class basp_broker : public broker, public actor_namespace::backend {
   // dest => hops
   using routing_table = std::map<node_id, routing_table_entry>;
 
-  actor_namespace m_namespace; // manages proxies
-  std::map<connection_handle, connection_context> m_ctx;
-  std::map<accept_handle, std::pair<abstract_actor_ptr, uint16_t>> m_acceptors;
-  std::map<uint16_t, accept_handle> m_open_ports;
-  routing_table m_routes; // stores non-direct routes
-  std::set<blacklist_entry, blacklist_less> m_blacklist; // stores invalidated
+  actor_namespace namespace_; // manages proxies
+  std::map<connection_handle, connection_context> ctx_;
+  std::map<accept_handle, std::pair<abstract_actor_ptr, uint16_t>> acceptors_;
+  std::map<uint16_t, accept_handle> open_ports_;
+  routing_table routes_; // stores non-direct routes
+  std::set<blacklist_entry, blacklist_less> blacklist_; // stores invalidated
                                                          // routes
   // a simple "bag" for our pending requests
-  std::vector<pending_request> m_pending_requests;
+  std::vector<pending_request> pending_requests_;
 
   // needed to keep track to which node we are talking to at the moment
-  connection_context* m_current_context;
+  connection_context* current_context_;
 
   // cache some UTIs to make serialization a bit faster
-  const uniform_type_info* m_meta_hdr;
-  const uniform_type_info* m_meta_msg;
-  const uniform_type_info* m_meta_id_type;
+  const uniform_type_info* meta_hdr_;
+  const uniform_type_info* meta_msg_;
+  const uniform_type_info* meta_id_type_;
 };
 
 } // namespace io

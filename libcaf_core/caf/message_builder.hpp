@@ -28,35 +28,27 @@
 
 namespace caf {
 
-/**
- * Provides a convenient interface for createing `message` objects
- * from a series of values using the member function `append`.
- */
+/// Provides a convenient interface for createing `message` objects
+/// from a series of values using the member function `append`.
 class message_builder {
- public:
+public:
   message_builder(const message_builder&) = delete;
   message_builder& operator=(const message_builder&) = delete;
 
   message_builder();
   ~message_builder();
 
-  /**
-   * Creates a new instance and immediately calls `append(first, last)`.
-   */
+  /// Creates a new instance and immediately calls `append(first, last)`.
   template <class Iter>
   message_builder(Iter first, Iter last) {
     init();
     append(first, last);
   }
 
-  /**
-   * Adds `what` to the elements of the buffer.
-   */
+  /// Adds `what` to the elements of the buffer.
   message_builder& append(uniform_value what);
 
-  /**
-   * Appends all values in range [first, last).
-   */
+  /// Appends all values in range [first, last).
   template <class Iter>
   message_builder& append(Iter first, Iter last) {
     using vtype = typename std::decay<decltype(*first)>::type;
@@ -70,65 +62,47 @@ class message_builder {
     return *this;
   }
 
-  /**
-   * Adds `x` to the elements of the buffer.
-   */
+  /// Adds `x` to the elements of the buffer.
   template <class T>
   message_builder& append(T x) {
     return append_impl<T>(std::move(x));
   }
 
-  /**
-   * Converts the buffer to an actual message object without
-   * invalidating this message builder (nor clearing it).
-   */
+  /// Converts the buffer to an actual message object without
+  /// invalidating this message builder (nor clearing it).
   message to_message() const;
 
-  /**
-   * Converts the buffer to an actual message object and transfers
-   * ownership of the data to it, leaving this object in an invalid state.
-   * @warning Calling *any*  member function on this object afterwards
-   *          is undefined behavior (dereferencing a `nullptr`)
-   */
+  /// Converts the buffer to an actual message object and transfers
+  /// ownership of the data to it, leaving this object in an invalid state.
+  /// @warning Calling *any*  member function on this object afterwards
+  ///          is undefined behavior (dereferencing a `nullptr`)
   message move_to_message();
 
-  /**
-   * @copydoc message::extract
-   */
+  /// @copydoc message::extract
   inline message extract(message_handler f) const {
     return to_message().extract(f);
   }
 
-  /**
-   * @copydoc message::extract_opts
-   */
+  /// @copydoc message::extract_opts
   inline message::cli_res extract_opts(std::vector<message::cli_arg> xs,
                                        message::help_factory f
                                        = nullptr) const {
     return to_message().extract_opts(std::move(xs), std::move(f));
   }
 
-  /**
-   * @copydoc message::apply
-   */
+  /// @copydoc message::apply
   optional<message> apply(message_handler handler);
 
-  /**
-   * Removes all elements from the buffer.
-   */
+  /// Removes all elements from the buffer.
   void clear();
 
-  /**
-   * Returns whether the buffer is empty.
-   */
+  /// Returns whether the buffer is empty.
   bool empty() const;
 
-  /**
-   * Returns the number of elements in the buffer.
-   */
+  /// Returns the number of elements in the buffer.
   size_t size() const;
 
- private:
+private:
   void init();
 
   template <class T>
@@ -149,7 +123,7 @@ class message_builder {
 
   const dynamic_msg_data* data() const;
 
-  intrusive_ptr<ref_counted> m_data; // hide dynamic_msg_data implementation
+  intrusive_ptr<ref_counted> data_; // hide dynamic_msg_data implementation
 };
 
 } // namespace caf

@@ -38,11 +38,11 @@ decorated_tuple::cow_ptr decorated_tuple::make(cow_ptr d, vector_type v) {
 
 void* decorated_tuple::mutable_at(size_t pos) {
   CAF_ASSERT(pos < size());
-  return m_decorated->mutable_at(m_mapping[pos]);
+  return decorated_->mutable_at(mapping_[pos]);
 }
 
 size_t decorated_tuple::size() const {
-  return m_mapping.size();
+  return mapping_.size();
 }
 
 message_data::cow_ptr decorated_tuple::copy() const {
@@ -51,37 +51,37 @@ message_data::cow_ptr decorated_tuple::copy() const {
 
 const void* decorated_tuple::at(size_t pos) const {
   CAF_ASSERT(pos < size());
-  return m_decorated->at(m_mapping[pos]);
+  return decorated_->at(mapping_[pos]);
 }
 
 bool decorated_tuple::match_element(size_t pos, uint16_t typenr,
                                     const std::type_info* rtti) const {
-  return m_decorated->match_element(m_mapping[pos], typenr, rtti);
+  return decorated_->match_element(mapping_[pos], typenr, rtti);
 }
 
 uint32_t decorated_tuple::type_token() const {
-  return m_type_token;
+  return type_token_;
 }
 
 const char* decorated_tuple::uniform_name_at(size_t pos) const {
-  return m_decorated->uniform_name_at(m_mapping[pos]);
+  return decorated_->uniform_name_at(mapping_[pos]);
 }
 
 uint16_t decorated_tuple::type_nr_at(size_t pos) const {
-  return m_decorated->type_nr_at(m_mapping[pos]);
+  return decorated_->type_nr_at(mapping_[pos]);
 }
 
 decorated_tuple::decorated_tuple(cow_ptr&& d, vector_type&& v)
-    : m_decorated(std::move(d)),
-      m_mapping(std::move(v)),
-      m_type_token(0xFFFFFFFF) {
-  CAF_ASSERT(m_mapping.empty()
-              || *(std::max_element(m_mapping.begin(), m_mapping.end()))
-                 < static_cast<const cow_ptr&>(m_decorated)->size());
+    : decorated_(std::move(d)),
+      mapping_(std::move(v)),
+      type_token_(0xFFFFFFFF) {
+  CAF_ASSERT(mapping_.empty()
+              || *(std::max_element(mapping_.begin(), mapping_.end()))
+                 < static_cast<const cow_ptr&>(decorated_)->size());
   // calculate type token
-  for (size_t i = 0; i < m_mapping.size(); ++i) {
-    m_type_token <<= 6;
-    m_type_token |= m_decorated->type_nr_at(m_mapping[i]);
+  for (size_t i = 0; i < mapping_.size(); ++i) {
+    type_token_ <<= 6;
+    type_token_ |= decorated_->type_nr_at(mapping_[i]);
   }
 }
 

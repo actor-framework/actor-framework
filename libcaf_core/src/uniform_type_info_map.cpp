@@ -121,7 +121,7 @@ inline void deserialize_impl(unit_t&, deserializer*) {
 
 void serialize_impl(const actor_addr& addr, serializer* sink) {
   auto ns = sink->get_namespace();
-  if (!ns) {
+  if (! ns) {
     throw std::runtime_error(
       "unable to serialize actor_addr: "
       "no actor addressing defined");
@@ -131,7 +131,7 @@ void serialize_impl(const actor_addr& addr, serializer* sink) {
 
 void deserialize_impl(actor_addr& addr, deserializer* source) {
   auto ns = source->get_namespace();
-  if (!ns) {
+  if (! ns) {
     throw std::runtime_error(
       "unable to deserialize actor_ptr: "
       "no actor addressing defined");
@@ -150,7 +150,7 @@ void deserialize_impl(actor& ptr, deserializer* source) {
 }
 
 void serialize_impl(const group& gref, serializer* sink) {
-  if (!gref) {
+  if (! gref) {
     CAF_LOGF_DEBUG("serialized an invalid group");
     // write an empty string as module name
     std::string empty_string;
@@ -178,7 +178,7 @@ void serialize_impl(const channel& chref, serializer* sink) {
   //   2 if ptr points to a group
   uint8_t flag = 0;
   auto wr_nullptr = [&] { sink->write_value(flag); };
-  if (!chref) {
+  if (! chref) {
     // invalid channel
     wr_nullptr();
   } else {
@@ -386,7 +386,7 @@ deserialize_impl(T& iterable, deserializer* sink) {
 
 template <class T>
 class uti_impl : public uniform_type_info {
- public:
+public:
   static_assert(detail::type_nr<T>::value > 0, "type_nr<T>::value == 0");
 
   uti_impl() : uniform_type_info(detail::type_nr<T>::value) {
@@ -432,7 +432,7 @@ class uti_impl : public uniform_type_info {
     deserialize_impl(deref(instance), source);
   }
 
- private:
+private:
   template <class U>
   typename std::enable_if<std::is_floating_point<U>::value, bool>::type
   eq(const U& lhs, const U& rhs) const {
@@ -440,7 +440,7 @@ class uti_impl : public uniform_type_info {
   }
 
   template <class U>
-  typename std::enable_if<!std::is_floating_point<U>::value, bool>::type
+  typename std::enable_if<! std::is_floating_point<U>::value, bool>::type
   eq(const U& lhs, const U& rhs) const {
     return lhs == rhs;
   }
@@ -453,7 +453,7 @@ struct get_uti_impl {
 
 template <class T>
 class int_tinfo : public uniform_type_info {
- public:
+public:
   int_tinfo() : uniform_type_info(detail::type_nr<T>::value) {
     // nop
   }
@@ -477,7 +477,7 @@ protected:
   uniform_value create(const uniform_value& other) const override {
     return create_impl<T>(other);
   }
- private:
+private:
   inline static const T& deref(const void* ptr) {
     return *reinterpret_cast<const T*>(ptr);
   }
@@ -490,8 +490,8 @@ protected:
 };
 
 class default_meta_message : public uniform_type_info {
- public:
-  explicit default_meta_message(const std::string& tname) : m_name(tname) {
+public:
+  explicit default_meta_message(const std::string& tname) : name_(tname) {
     std::vector<std::string> elements;
     split(elements, tname, is_any_of("+"));
     auto uti_map = detail::singletons::get_uniform_type_info_map();
@@ -499,7 +499,7 @@ class default_meta_message : public uniform_type_info {
     // ignore first element, because it's always "@<>"
     for (size_t i = 1; i != elements.size(); ++i) {
       try {
-        m_elements.push_back(uti_map->by_uniform_name(elements[i]));
+        elements_.push_back(uti_map->by_uniform_name(elements[i]));
       }
       catch (std::exception&) {
         CAF_LOG_ERROR("type name " << elements[i] << " not found");
@@ -508,10 +508,10 @@ class default_meta_message : public uniform_type_info {
   }
   uniform_value create(const uniform_value& other) const override {
     auto res = create_impl<message>(other);
-    if (!other) {
+    if (! other) {
       // res is not a copy => fill with values
       message_builder mb;
-      for (auto& e : m_elements) mb.append(e->create());
+      for (auto& e : elements_) mb.append(e->create());
       *cast(res->val) = mb.to_message();
     }
     return res;
@@ -520,19 +520,19 @@ class default_meta_message : public uniform_type_info {
     return *cast(ptr);
   }
   const char* name() const override {
-    return m_name.c_str();
+    return name_.c_str();
   }
   void serialize(const void* ptr, serializer* sink) const override {
     auto& msg = *cast(ptr);
-    CAF_ASSERT(msg.size() == m_elements.size());
-    for (size_t i = 0; i < m_elements.size(); ++i) {
-      m_elements[i]->serialize(msg.at(i), sink);
+    CAF_ASSERT(msg.size() == elements_.size());
+    for (size_t i = 0; i < elements_.size(); ++i) {
+      elements_[i]->serialize(msg.at(i), sink);
     }
   }
   void deserialize(void* ptr, deserializer* source) const override {
     message_builder mb;
-    for (size_t i = 0; i < m_elements.size(); ++i) {
-      mb.append(m_elements[i]->deserialize(source));
+    for (size_t i = 0; i < elements_.size(); ++i) {
+      mb.append(elements_[i]->deserialize(source));
     }
     *cast(ptr) = mb.to_message();
   }
@@ -545,15 +545,15 @@ class default_meta_message : public uniform_type_info {
     return *cast(instance1) == *cast(instance2);
   }
 
- private:
+private:
   inline message* cast(void* ptr) const {
     return reinterpret_cast<message*>(ptr);
   }
   inline const message* cast(const void* ptr) const {
     return reinterpret_cast<const message*>(ptr);
   }
-  std::string m_name;
-  std::vector<const uniform_type_info*> m_elements;
+  std::string name_;
+  std::vector<const uniform_type_info*> elements_;
 };
 
 template <class Iterator>
@@ -590,13 +590,13 @@ void fill_uti_arr(std::integral_constant<size_t, N>, type_array& arr, const T& t
 }
 
 class utim_impl : public uniform_type_info_map {
- public:
+public:
   void initialize() {
     fill_uti_arr(std::integral_constant<size_t, 0>{},
-                 m_builtin_types, m_storage);
+                 builtin_types_, storage_);
     // make sure our builtin types are sorted
-    CAF_ASSERT(std::is_sorted(m_builtin_types.begin(),
-                               m_builtin_types.end(),
+    CAF_ASSERT(std::is_sorted(builtin_types_.begin(),
+                               builtin_types_.end(),
                                [](pointer lhs, pointer rhs) {
                                  return strcmp(lhs->name(), rhs->name()) < 0;
                                }));
@@ -604,21 +604,21 @@ class utim_impl : public uniform_type_info_map {
 
   virtual pointer by_type_nr(uint16_t nr) const {
     CAF_ASSERT(nr > 0);
-    return m_builtin_types[nr - 1];
+    return builtin_types_[nr - 1];
   }
 
   pointer by_rtti(const std::type_info& ti) const {
-    shared_lock<detail::shared_spinlock> guard(m_lock);
+    shared_lock<detail::shared_spinlock> guard(lock_);
     return find_rtti(ti);
   }
 
   pointer by_uniform_name(const std::string& name) {
-    pointer result = find_name(m_builtin_types, name);
-    if (!result) {
-      shared_lock<detail::shared_spinlock> guard(m_lock);
-      result = find_name(m_user_types, name);
+    pointer result = find_name(builtin_types_, name);
+    if (! result) {
+      shared_lock<detail::shared_spinlock> guard(lock_);
+      result = find_name(user_types_, name);
     }
-    if (!result && name.compare(0, 3, "@<>") == 0) {
+    if (! result && name.compare(0, 3, "@<>") == 0) {
       // create tuple UTI on-the-fly
       result = insert(nullptr, uniform_type_info_ptr{new default_meta_message(name)});
     }
@@ -626,44 +626,44 @@ class utim_impl : public uniform_type_info_map {
   }
 
   std::vector<pointer> get_all() const {
-    shared_lock<detail::shared_spinlock> guard(m_lock);
+    shared_lock<detail::shared_spinlock> guard(lock_);
     std::vector<pointer> res;
-    res.reserve(m_builtin_types.size() + m_user_types.size());
-    res.insert(res.end(), m_builtin_types.begin(), m_builtin_types.end());
-    res.insert(res.end(), m_user_types.begin(), m_user_types.end());
+    res.reserve(builtin_types_.size() + user_types_.size());
+    res.insert(res.end(), builtin_types_.begin(), builtin_types_.end());
+    res.insert(res.end(), user_types_.begin(), user_types_.end());
     return res;
   }
 
   pointer insert(const std::type_info* ti, uniform_type_info_ptr uti) {
-    unique_lock<detail::shared_spinlock> guard(m_lock);
-    auto e = m_user_types.end();
-    auto i = std::lower_bound(m_user_types.begin(), e, uti.get(),
+    unique_lock<detail::shared_spinlock> guard(lock_);
+    auto e = user_types_.end();
+    auto i = std::lower_bound(user_types_.begin(), e, uti.get(),
                               [](pointer lhs, pointer rhs) {
       return strcmp(lhs->name(), rhs->name()) < 0;
     });
     if (i == e) {
-      m_user_types.push_back(enriched_pointer{uti.release(), ti});
-      return m_user_types.back();
+      user_types_.push_back(enriched_pointer{uti.release(), ti});
+      return user_types_.back();
     } else {
       if (strcmp(uti->name(), (*i)->name()) == 0) {
         // type already known
         return *i;
       }
       // insert after lower bound (vector is always sorted)
-      auto new_pos = std::distance(m_user_types.begin(), i);
-      m_user_types.insert(i, enriched_pointer{uti.release(), ti});
-      return m_user_types[static_cast<size_t>(new_pos)];
+      auto new_pos = std::distance(user_types_.begin(), i);
+      user_types_.insert(i, enriched_pointer{uti.release(), ti});
+      return user_types_[static_cast<size_t>(new_pos)];
     }
   }
 
   ~utim_impl() {
-    for (auto ptr : m_user_types) {
+    for (auto ptr : user_types_) {
       delete ptr;
     }
-    m_user_types.clear();
+    user_types_.clear();
   }
 
- private:
+private:
   using strmap = std::map<std::string, std::string>;
 
   using charbuf = std::vector<char>;
@@ -679,7 +679,7 @@ class utim_impl : public uniform_type_info_map {
       std::tuple
     >::type;
 
-  builtin_types m_storage;
+  builtin_types storage_;
 
   struct enriched_pointer {
     pointer first;
@@ -694,13 +694,13 @@ class utim_impl : public uniform_type_info_map {
 
   using pointer_pair = std::pair<uniform_type_info*, std::type_info*>;
 
-  // bot containers are sorted by uniform name (m_user_types: second->name())
-  std::array<pointer, type_nrs - 1> m_builtin_types;
-  std::vector<enriched_pointer> m_user_types;
-  mutable detail::shared_spinlock m_lock;
+  // bot containers are sorted by uniform name (user_types_: second->name())
+  std::array<pointer, type_nrs - 1> builtin_types_;
+  std::vector<enriched_pointer> user_types_;
+  mutable detail::shared_spinlock lock_;
 
   pointer find_rtti(const std::type_info& ti) const {
-    for (auto& utype : m_user_types) {
+    for (auto& utype : user_types_) {
       if (utype.second && (utype.second == &ti || *utype.second == ti)) {
         return utype.first;
       }

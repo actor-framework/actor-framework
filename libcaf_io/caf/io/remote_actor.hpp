@@ -34,29 +34,25 @@ namespace io {
 abstract_actor_ptr remote_actor_impl(std::set<std::string> ifs,
                                      const std::string& host, uint16_t port);
 
-/**
- * Establish a new connection to the actor at `host` on given `port`.
- * @param host Valid hostname or IP address.
- * @param port TCP port.
- * @returns An {@link actor_ptr} to the proxy instance
- *          representing a remote actor.
- * @throws network_error Thrown on connection error or
- *                       when connecting to a typed actor.
- */
+/// Establish a new connection to the actor at `host` on given `port`.
+/// @param host Valid hostname or IP address.
+/// @param port TCP port.
+/// @returns An {@link actor_ptr} to the proxy instance
+///          representing a remote actor.
+/// @throws network_error Thrown on connection error or
+///                       when connecting to a typed actor.
 inline actor remote_actor(const std::string& host, uint16_t port) {
   auto res = remote_actor_impl(std::set<std::string>{}, host, port);
   return actor_cast<actor>(res);
 }
 
-/**
- * Establish a new connection to the typed actor at `host` on given `port`.
- * @param host Valid hostname or IP address.
- * @param port TCP port.
- * @returns An {@link actor_ptr} to the proxy instance
- *          representing a typed remote actor.
- * @throws network_error Thrown on connection error or when connecting
- *                       to an untyped otherwise unexpected actor.
- */
+/// Establish a new connection to the typed actor at `host` on given `port`.
+/// @param host Valid hostname or IP address.
+/// @param port TCP port.
+/// @returns An {@link actor_ptr} to the proxy instance
+///          representing a typed remote actor.
+/// @throws network_error Thrown on connection error or when connecting
+///                       to an untyped otherwise unexpected actor.
 template <class ActorHandle>
 ActorHandle typed_remote_actor(const std::string& host, uint16_t port) {
   auto iface = ActorHandle::message_types();

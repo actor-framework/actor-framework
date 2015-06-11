@@ -38,10 +38,8 @@ struct invalid_group_t {
 
 };
 
-/**
- * Identifies an invalid {@link group}.
- * @relates group
- */
+/// Identifies an invalid {@link group}.
+/// @relates group
 constexpr invalid_group_t invalid_group = invalid_group_t{};
 
 class group : detail::comparable<group>,
@@ -50,7 +48,7 @@ class group : detail::comparable<group>,
   template <class T, typename U>
   friend T actor_cast(const U&);
 
- public:
+public:
 
   group() = default;
 
@@ -68,57 +66,47 @@ class group : detail::comparable<group>,
 
   group(intrusive_ptr<abstract_group> ptr);
 
-  inline explicit operator bool() const { return static_cast<bool>(m_ptr); }
+  inline explicit operator bool() const { return static_cast<bool>(ptr_); }
 
-  inline bool operator!() const { return !static_cast<bool>(m_ptr); }
+  inline bool operator!() const { return ! static_cast<bool>(ptr_); }
 
-  /**
-   * Returns a handle that grants access to actor operations such as enqueue.
-   */
-  inline abstract_group* operator->() const { return m_ptr.get(); }
+  /// Returns a handle that grants access to actor operations such as enqueue.
+  inline abstract_group* operator->() const { return ptr_.get(); }
 
-  inline abstract_group& operator*() const { return *m_ptr; }
+  inline abstract_group& operator*() const { return *ptr_; }
 
   intptr_t compare(const group& other) const;
 
   inline intptr_t compare(const invalid_actor_t&) const {
-    return m_ptr ? 1 : 0;
+    return ptr_ ? 1 : 0;
   }
 
-  /**
-   * Get a pointer to the group associated with
-   * `identifier` from the module `mod_name`.
-   * @threadsafe
-   */
+  /// Get a pointer to the group associated with
+  /// `identifier` from the module `mod_name`.
+  /// @threadsafe
   static group get(const std::string& mod_name, const std::string& identifier);
 
-  /**
-   * Returns an anonymous group.
-   * Each calls to this member function returns a new instance
-   * of an anonymous group. Anonymous groups can be used whenever
-   * a set of actors wants to communicate using an exclusive channel.
-   */
+  /// Returns an anonymous group.
+  /// Each calls to this member function returns a new instance
+  /// of an anonymous group. Anonymous groups can be used whenever
+  /// a set of actors wants to communicate using an exclusive channel.
   static group anonymous();
 
-  /**
-   * Add a new group module to the group management.
-   * @threadsafe
-   */
+  /// Add a new group module to the group management.
+  /// @threadsafe
   static void add_module(abstract_group::unique_module_ptr);
 
-  /**
-   * Returns the module associated with `module_name`.
-   * @threadsafe
-   */
+  /// Returns the module associated with `module_name`.
+  /// @threadsafe
   static abstract_group::module_ptr
   get_module(const std::string& module_name);
 
   inline const abstract_group_ptr& ptr() const {
-    return m_ptr;
+    return ptr_;
   }
 
- private:
-  abstract_group_ptr m_ptr;
+private:
+  abstract_group_ptr ptr_;
 };
 
 } // namespace caf

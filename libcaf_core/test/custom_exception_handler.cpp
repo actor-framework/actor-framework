@@ -25,7 +25,7 @@
 using namespace caf;
 
 class exception_testee : public event_based_actor {
- public:
+public:
   ~exception_testee();
   exception_testee() {
     set_exception_handler([](const std::exception_ptr&) -> optional<uint32_t> {

@@ -26,19 +26,19 @@
 namespace caf {
 
 channel::channel(const actor& other)
-    : m_ptr(actor_cast<abstract_channel_ptr>(other)) {
+    : ptr_(actor_cast<abstract_channel_ptr>(other)) {
   // nop
 }
 
-channel::channel(const group& other) : m_ptr(other.ptr()) {
+channel::channel(const group& other) : ptr_(other.ptr()) {
   // nop
 }
 
-channel::channel(const invalid_actor_t&) : m_ptr(nullptr) {
+channel::channel(const invalid_actor_t&) : ptr_(nullptr) {
   // nop
 }
 
-channel::channel(const invalid_group_t&) : m_ptr(nullptr) {
+channel::channel(const invalid_group_t&) : ptr_(nullptr) {
   // nop
 }
 
@@ -47,18 +47,18 @@ intptr_t channel::compare(const abstract_channel* lhs,
   return reinterpret_cast<intptr_t>(lhs) - reinterpret_cast<intptr_t>(rhs);
 }
 
-channel::channel(abstract_channel* ptr) : m_ptr(ptr) {}
+channel::channel(abstract_channel* ptr) : ptr_(ptr) {}
 
 intptr_t channel::compare(const channel& other) const {
-  return compare(m_ptr.get(), other.m_ptr.get());
+  return compare(ptr_.get(), other.ptr_.get());
 }
 
 intptr_t channel::compare(const actor& other) const {
-  return compare(m_ptr.get(), actor_cast<abstract_actor_ptr>(other).get());
+  return compare(ptr_.get(), actor_cast<abstract_actor_ptr>(other).get());
 }
 
 intptr_t channel::compare(const abstract_channel* other) const {
-  return compare(m_ptr.get(), other);
+  return compare(ptr_.get(), other);
 }
 
 } // namespace caf

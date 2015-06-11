@@ -40,20 +40,16 @@ struct invalid_node_id_t {
 
 };
 
-/**
- * Identifies an invalid {@link node_id}.
- * @relates node_id
- */
+/// Identifies an invalid {@link node_id}.
+/// @relates node_id
 constexpr invalid_node_id_t invalid_node_id = invalid_node_id_t{};
 
-/**
- * A node ID consists of a host ID and process ID. The host ID identifies
- * the physical machine in the network, whereas the process ID identifies
- * the running system-level process on that machine.
- */
+/// A node ID consists of a host ID and process ID. The host ID identifies
+/// the physical machine in the network, whereas the process ID identifies
+/// the running system-level process on that machine.
 class node_id : detail::comparable<node_id>,
                 detail::comparable<node_id, invalid_node_id_t> {
- public:
+public:
   node_id() = default;
 
   node_id(const invalid_node_id_t&);
@@ -62,21 +58,15 @@ class node_id : detail::comparable<node_id>,
 
   node_id& operator=(const invalid_node_id_t&);
 
-  /**
-   * A 160 bit hash (20 bytes).
-   */
+  /// A 160 bit hash (20 bytes).
   static constexpr size_t host_id_size = 20;
 
-  /**
-   * Represents a 160 bit hash.
-   */
+  /// Represents a 160 bit hash.
   using host_id_type = std::array<uint8_t, host_id_size>;
 
-  /**
-   * A reference counted container for host ID and process ID.
-   */
+  /// A reference counted container for host ID and process ID.
   class data : public ref_counted {
-   public:
+  public:
     // for singleton API
     void stop();
 
@@ -109,34 +99,26 @@ class node_id : detail::comparable<node_id>,
 
   node_id(const node_id&);
 
-  /**
-   * Creates this from `process_id` and `hash`.
-   * @param process_id System-wide unique process identifier.
-   * @param hash Unique node id as hexadecimal string representation.
-   */
+  /// Creates this from `process_id` and `hash`.
+  /// @param process_id System-wide unique process identifier.
+  /// @param hash Unique node id as hexadecimal string representation.
   node_id(uint32_t process_id, const std::string& hash);
 
-  /**
-   * Creates this from `process_id` and `hash`.
-   * @param process_id System-wide unique process identifier.
-   * @param node_id Unique node id.
-   */
+  /// Creates this from `process_id` and `hash`.
+  /// @param process_id System-wide unique process identifier.
+  /// @param node_id Unique node id.
   node_id(uint32_t process_id, const host_id_type& node_id);
 
-  /**
-   * Identifies the running process.
-   * @returns A system-wide unique process identifier.
-   */
+  /// Identifies the running process.
+  /// @returns A system-wide unique process identifier.
   uint32_t process_id() const;
 
-  /**
-   * Identifies the host system.
-   * @returns A hash build from the MAC address of the first network device
-   *      and the UUID of the root partition (mounted in "/" or "C:").
-   */
+  /// Identifies the host system.
+  /// @returns A hash build from the MAC address of the first network device
+  ///      and the UUID of the root partition (mounted in "/" or "C:").
   const host_id_type& host_id() const;
 
-  /** @cond PRIVATE */
+  /// @cond PRIVATE
 
   // "inherited" from comparable<node_id>
   int compare(const node_id& other) const;
@@ -146,10 +128,10 @@ class node_id : detail::comparable<node_id>,
 
   node_id(intrusive_ptr<data> dataptr);
 
-  /** @endcond */
+  /// @endcond
 
- private:
-  intrusive_ptr<data> m_data;
+private:
+  intrusive_ptr<data> data_;
 };
 
 } // namespace caf

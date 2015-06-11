@@ -33,7 +33,7 @@ void split(vector<string>& result, const string& str, const string& delims,
   while ((pos = str.find_first_of(delims, prev)) != string::npos) {
     if (pos > prev) {
       auto substr = str.substr(prev, pos - prev);
-      if (!substr.empty() || keep_all) {
+      if (! substr.empty() || keep_all) {
         result.push_back(std::move(substr));
       }
     }

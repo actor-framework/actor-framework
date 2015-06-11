@@ -27,12 +27,10 @@
 
 namespace caf {
 
-/**
- * Base class for exceptions.
- */
+/// Base class for exceptions.
 class caf_exception : public std::exception {
 
- public:
+public:
 
   ~caf_exception() noexcept;
 
@@ -40,35 +38,27 @@ class caf_exception : public std::exception {
   caf_exception(const caf_exception&) = default;
   caf_exception& operator=(const caf_exception&) = default;
 
-  /**
-   * Returns the error message.
-   */
+  /// Returns the error message.
   const char* what() const noexcept;
 
- protected:
+protected:
 
-  /**
-   * Creates an exception with the error string `what_str`.
-   */
+  /// Creates an exception with the error string `what_str`.
   caf_exception(std::string&& what_str);
 
-  /**
-   * Creates an exception with the error string `what_str`.
-   */
+  /// Creates an exception with the error string `what_str`.
   caf_exception(const std::string& what_str);
 
- private:
+private:
 
-  std::string m_what;
+  std::string what_;
 
 };
 
-/**
- * Thrown if an actor finished execution.
- */
+/// Thrown if an actor finished execution.
 class actor_exited : public caf_exception {
 
- public:
+public:
 
   ~actor_exited() noexcept;
 
@@ -77,26 +67,22 @@ class actor_exited : public caf_exception {
   actor_exited(const actor_exited&) = default;
   actor_exited& operator=(const actor_exited&) = default;
 
-  /**
-   * Returns the exit reason.
-   */
+  /// Returns the exit reason.
   inline uint32_t reason() const noexcept;
 
- private:
+private:
 
-  uint32_t m_reason;
+  uint32_t reason_;
 
 };
 
-/**
- * Thrown to indicate that either an actor publishing failed or
- * the middleman was unable to connect to a remote host.
- */
+/// Thrown to indicate that either an actor publishing failed or
+/// the middleman was unable to connect to a remote host.
 class network_error : public caf_exception {
 
   using super = caf_exception;
 
- public:
+public:
 
   ~network_error() noexcept;
   network_error(std::string&& what_str);
@@ -106,15 +92,13 @@ class network_error : public caf_exception {
 
 };
 
-/**
- * Thrown to indicate that an actor publishing failed because
- * the requested port could not be used.
- */
+/// Thrown to indicate that an actor publishing failed because
+/// the requested port could not be used.
 class bind_failure : public network_error {
 
   using super = network_error;
 
- public:
+public:
 
   ~bind_failure() noexcept;
 
@@ -126,7 +110,7 @@ class bind_failure : public network_error {
 };
 
 inline uint32_t actor_exited::reason() const noexcept {
-  return m_reason;
+  return reason_;
 }
 
 } // namespace caf

@@ -32,24 +32,24 @@ namespace caf {
 namespace detail {
 
 class timeout_definition_builder {
- public:
-  constexpr timeout_definition_builder(const duration& d) : m_tout(d) {
+public:
+  constexpr timeout_definition_builder(const duration& d) : tout_(d) {
     // nop
   }
 
   template <class F>
   timeout_definition<F> operator>>(F f) const {
-    return {m_tout, std::move(f)};
+    return {tout_, std::move(f)};
   }
 
- private:
-  duration m_tout;
+private:
+  duration tout_;
 };
 
 class message_case_builder { };
 
 class trivial_match_case_builder : public message_case_builder {
- public:
+public:
   constexpr trivial_match_case_builder() {
     // nop
   }
@@ -61,7 +61,7 @@ class trivial_match_case_builder : public message_case_builder {
 };
 
 class catch_all_match_case_builder : public message_case_builder {
- public:
+public:
   constexpr catch_all_match_case_builder() {
     // nop
   }
@@ -78,10 +78,10 @@ class catch_all_match_case_builder : public message_case_builder {
 
 template <class Left, class Right>
 class message_case_pair_builder : public message_case_builder {
- public:
+public:
   message_case_pair_builder(Left l, Right r)
-      : m_left(std::move(l)),
-        m_right(std::move(r)) {
+      : left_(std::move(l)),
+        right_(std::move(r)) {
     // nop
   }
 
@@ -89,12 +89,12 @@ class message_case_pair_builder : public message_case_builder {
   auto operator>>(F f) const
   -> std::tuple<decltype(*static_cast<Left*>(nullptr) >> f),
                 decltype(*static_cast<Right*>(nullptr) >> f)> {
-    return std::make_tuple(m_left >> f, m_right >> f);
+    return std::make_tuple(left_ >> f, right_ >> f);
   }
 
- private:
-  Left m_left;
-  Right m_right;
+private:
+  Left left_;
+  Right right_;
 };
 
 struct tuple_maker {
@@ -212,7 +212,7 @@ struct pattern_projection_zipper<anything, Y> {
 
 template <class Projections, class Pattern>
 class advanced_match_case_builder : public message_case_builder {
- public:
+public:
   using filtered_projections =
     typename tl_filter_not_type<
       typename tl_zip<
@@ -238,17 +238,17 @@ class advanced_match_case_builder : public message_case_builder {
 
   template <class... Fs>
   advanced_match_case_builder(variadic_ctor, Fs... fs)
-      : m_g(make_guards(Pattern{}, fs...)) {
+      : g_(make_guards(Pattern{}, fs...)) {
     // nop
   }
 
   template <class F>
   typename advanced_match_case_factory<F, Projections, Pattern>::case_type
   operator>>(F f) const {
-    return advanced_match_case_factory<F, Projections, Pattern>::create(f, m_g);
+    return advanced_match_case_factory<F, Projections, Pattern>::create(f, g_);
   }
 
- private:
+private:
   template <class... Fs>
   static guards_tuple make_guards(tail_argument_token&, Fs&... fs) {
     return std::make_tuple(std::move(fs)...);
@@ -280,7 +280,7 @@ class advanced_match_case_builder : public message_case_builder {
     return make_guards(std::make_pair(wrapped<Ts>(), std::ref(fs))..., eoa);
   }
 
-  guards_tuple m_g;
+  guards_tuple g_;
 };
 
 template <class Left, class Right>

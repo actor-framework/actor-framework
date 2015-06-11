@@ -24,10 +24,8 @@
 
 namespace caf {
 
-/**
- * Marker class identifying classes in CAF that are not allowed
- * to be used as message element.
- */
+/// Marker class identifying classes in CAF that are not allowed
+/// to be used as message element.
 struct illegal_message_element {
   // no members (marker class)
 };

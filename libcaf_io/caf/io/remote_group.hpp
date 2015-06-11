@@ -25,9 +25,7 @@
 namespace caf {
 namespace io {
 
-/**
- * <group-name>@<host>:<port>
- */
+/// <group-name>@<host>:<port>
 group remote_group(const std::string& group_uri);
 
 group remote_group(const std::string& group_identifier,

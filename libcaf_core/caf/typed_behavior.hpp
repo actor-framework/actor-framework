@@ -166,7 +166,7 @@ class behavior_stack_based_impl;
 
 template <class... Sigs>
 class typed_behavior {
- public:
+public:
   template <class... OtherSigs>
   friend class typed_actor;
 
@@ -189,33 +189,29 @@ class typed_behavior {
   }
 
   explicit operator bool() const {
-    return static_cast<bool>(m_bhvr);
+    return static_cast<bool>(bhvr_);
   }
 
-  /**
-    * Invokes the timeout callback.
-    */
+   /// Invokes the timeout callback.
   void handle_timeout() {
-    m_bhvr.handle_timeout();
+    bhvr_.handle_timeout();
   }
 
-  /**
-   * Returns the duration after which receives using
-   * this behavior should time out.
-   */
+  /// Returns the duration after which receives using
+  /// this behavior should time out.
   const duration& timeout() const {
-    return m_bhvr.timeout();
+    return bhvr_.timeout();
   }
 
-  /** @cond PRIVATE */
+  /// @cond PRIVATE
 
   behavior& unbox() {
-    return m_bhvr;
+    return bhvr_;
   }
 
-  /** @endcond */
+  /// @endcond
 
- private:
+private:
   typed_behavior() = default;
 
   template <class... Ts>
@@ -228,10 +224,10 @@ class typed_behavior {
     detail::static_asserter<signatures, mpi, detail::ctm>::verify_match();
     // final (type-erasure) step
     intrusive_ptr<detail::behavior_impl> ptr = std::move(bp);
-    m_bhvr.assign(std::move(ptr));
+    bhvr_.assign(std::move(ptr));
   }
 
-  behavior m_bhvr;
+  behavior bhvr_;
 };
 
 } // namespace caf

@@ -65,7 +65,7 @@
 #endif
 
 // poll xs epoll backend
-#if !defined(CAF_LINUX) || defined(CAF_POLL_IMPL) // poll() multiplexer
+#if ! defined(CAF_LINUX) || defined(CAF_POLL_IMPL) // poll() multiplexer
 # define CAF_POLL_MULTIPLEXER
 # ifndef CAF_WINDOWS
 #   include <poll.h>
@@ -112,7 +112,7 @@ namespace network {
 #endif
 
 // poll xs epoll backend
-#if !defined(CAF_LINUX) || defined(CAF_POLL_IMPL) // poll() multiplexer
+#if ! defined(CAF_LINUX) || defined(CAF_POLL_IMPL) // poll() multiplexer
 # ifdef CAF_WINDOWS
     // From the MSDN: If the POLLPRI flag is set on a socket for the Microsoft
     //                Winsock provider, the WSAPoll function will fail.
@@ -134,128 +134,92 @@ namespace network {
   using multiplexer_poll_shadow_data = native_socket;
 #endif
 
-/**
- * Platform-specific native acceptor socket type.
- */
+/// Platform-specific native acceptor socket type.
 using native_socket_acceptor = native_socket;
 
-/**
- * Returns the last socket error as human-readable string.
- */
+/// Returns the last socket error as human-readable string.
 std::string last_socket_error_as_string();
 
-/**
- * Sets fd to nonblocking if `set_nonblocking == true`
- * or to blocking if `set_nonblocking == false`
- * throws `network_error` on error
- */
+/// Sets fd to nonblocking if `set_nonblocking == true`
+/// or to blocking if `set_nonblocking == false`
+/// throws `network_error` on error
 void nonblocking(native_socket fd, bool new_value);
 
-/**
- * Creates two connected sockets. The former is the read handle
- * and the latter is the write handle.
- */
+/// Creates two connected sockets. The former is the read handle
+/// and the latter is the write handle.
 std::pair<native_socket, native_socket> create_pipe();
 
-/**
- * Returns true if `fd` is configured as nodelay socket.
- * @throws network_error
- */
+/// Returns true if `fd` is configured as nodelay socket.
+/// @throws network_error
 void tcp_nodelay(native_socket fd, bool new_value);
 
-/**
- * Throws `network_error` if `result` is invalid.
- */
+/// Throws `network_error` if `result` is invalid.
 void handle_write_result(ssize_t result);
 
-/**
- * Throws `network_error` if `result` is invalid.
- */
+/// Throws `network_error` if `result` is invalid.
 void handle_read_result(ssize_t result);
 
-/**
- * Reads up to `len` bytes from `fd,` writing the received data
- * to `buf`. Returns `true` as long as `fd` is readable and `false`
- * if the socket has been closed or an IO error occured. The number
- * of read bytes is stored in `result` (can be 0).
- */
+/// Reads up to `len` bytes from `fd,` writing the received data
+/// to `buf`. Returns `true` as long as `fd` is readable and `false`
+/// if the socket has been closed or an IO error occured. The number
+/// of read bytes is stored in `result` (can be 0).
 bool read_some(size_t& result, native_socket fd, void* buf, size_t len);
 
-/**
- * Writes up to `len` bytes from `buf` to `fd`.
- * Returns `true` as long as `fd` is readable and `false`
- * if the socket has been closed or an IO error occured. The number
- * of written bytes is stored in `result` (can be 0).
- */
+/// Writes up to `len` bytes from `buf` to `fd`.
+/// Returns `true` as long as `fd` is readable and `false`
+/// if the socket has been closed or an IO error occured. The number
+/// of written bytes is stored in `result` (can be 0).
 bool write_some(size_t& result, native_socket fd, const void* buf, size_t len);
 
-/**
- * Tries to accept a new connection from `fd`. On success,
- * the new connection is stored in `result`. Returns true
- * as long as
- */
+/// Tries to accept a new connection from `fd`. On success,
+/// the new connection is stored in `result`. Returns true
+/// as long as
 bool try_accept(native_socket& result, native_socket fd);
 
 class default_multiplexer;
 
-/**
- * A socket IO event handler.
- */
+/// A socket IO event handler.
 class event_handler {
- public:
+public:
   event_handler(default_multiplexer& dm);
 
   virtual ~event_handler();
 
-  /**
-   * Returns true once the requested operation is done, i.e.,
-   * to signalize the multiplexer to remove this handler.
-   * The handler remains in the event loop as long as it returns false.
-   */
+  /// Returns true once the requested operation is done, i.e.,
+  /// to signalize the multiplexer to remove this handler.
+  /// The handler remains in the event loop as long as it returns false.
   virtual void handle_event(operation op) = 0;
 
-  /**
-   * Callback to signalize that this handler has been removed
-   * from the event loop for operations of type `op`.
-   */
+  /// Callback to signalize that this handler has been removed
+  /// from the event loop for operations of type `op`.
   virtual void removed_from_loop(operation op) = 0;
 
-  /**
-   * Returns the native socket handle for this handler.
-   */
+  /// Returns the native socket handle for this handler.
   virtual native_socket fd() const = 0;
 
-  /**
-   * Returns the `multiplexer` this acceptor belongs to.
-   */
+  /// Returns the `multiplexer` this acceptor belongs to.
   inline default_multiplexer& backend() {
-    return m_backend;
+    return backend_;
   }
 
-  /**
-   * Returns the bit field storing the subscribed events.
-   */
+  /// Returns the bit field storing the subscribed events.
   inline int eventbf() const {
-    return m_eventbf;
+    return eventbf_;
   }
 
-  /**
-   * Sets the bit field storing the subscribed events.
-   */
+  /// Sets the bit field storing the subscribed events.
   inline void eventbf(int value) {
-    m_eventbf = value;
+    eventbf_ = value;
   }
 
- protected:
-  default_multiplexer& m_backend;
-  int m_eventbf;
+protected:
+  default_multiplexer& backend_;
+  int eventbf_;
 };
 
-/**
- * Low-level socket type used as default.
- */
+/// Low-level socket type used as default.
 class default_socket {
- public:
+public:
   using socket_type = default_socket;
 
   default_socket(default_multiplexer& parent,
@@ -270,29 +234,27 @@ class default_socket {
   void close_read();
 
   inline native_socket fd() const {
-    return m_fd;
+    return fd_;
   }
 
   inline native_socket native_handle() const {
-    return m_fd;
+    return fd_;
   }
 
   inline default_multiplexer& backend() {
-    return m_parent;
+    return parent_;
   }
 
- private:
-  default_multiplexer& m_parent;
-  native_socket m_fd;
+private:
+  default_multiplexer& parent_;
+  native_socket fd_;
 };
 
-/**
- * Low-level socket type used as default.
- */
+/// Low-level socket type used as default.
 using default_socket_acceptor = default_socket;
 
 class default_multiplexer : public multiplexer {
- public:
+public:
   friend class io::middleman; // disambiguate reference
   friend class supervisor;
 
@@ -351,22 +313,22 @@ class default_multiplexer : public multiplexer {
 
   void del(operation op, native_socket fd, event_handler* ptr);
 
- private:
+private:
   // platform-dependent additional initialization code
   void init();
 
   template <class F>
   void new_event(F fun, operation op, native_socket fd, event_handler* ptr) {
     CAF_ASSERT(fd != invalid_native_socket);
-    CAF_ASSERT(ptr != nullptr || fd == m_pipe.first);
+    CAF_ASSERT(ptr != nullptr || fd == pipe_.first);
     // the only valid input where ptr == nullptr is our pipe
     // read handle which is only registered for reading
     auto old_bf = ptr ? ptr->eventbf() : input_mask;
     //auto bf = fun(op, old_bf);
     CAF_LOG_TRACE(CAF_TSARG(op) << ", " << CAF_ARG(fd) << ", " CAF_ARG(ptr)
                   << ", " << CAF_ARG(old_bf));
-    auto last = m_events.end();
-    auto i = std::lower_bound(m_events.begin(), last, fd, event_less{});
+    auto last = events_.end();
+    auto i = std::lower_bound(events_.begin(), last, fd, event_less{});
     if (i != last && i->fd == fd) {
       CAF_ASSERT(ptr == i->ptr);
       // squash events together
@@ -380,7 +342,7 @@ class default_multiplexer : public multiplexer {
       } else if (i->mask == old_bf) {
         // just turned into a nop
         CAF_LOG_DEBUG("squashing events resulted in a NOP");
-        m_events.erase(i);
+        events_.erase(i);
       }
     } else {
       // insert new element
@@ -391,7 +353,7 @@ class default_multiplexer : public multiplexer {
       } else {
         CAF_LOG_DEBUG("added handler " << ptr << " on fd " << fd << " for "
                       << to_string(op) << " operations");
-        m_events.insert(i, event{fd, bf, ptr});
+        events_.insert(i, event{fd, bf, ptr});
       }
     }
   }
@@ -408,11 +370,11 @@ class default_multiplexer : public multiplexer {
 
   runnable* rd_dispatch_request();
 
-  native_socket m_epollfd; // unused in poll() implementation
-  std::vector<multiplexer_data> m_pollset;
-  std::vector<event> m_events; // always sorted by .fd
-  multiplexer_poll_shadow_data m_shadow;
-  std::pair<native_socket, native_socket> m_pipe;
+  native_socket epollfd_; // unused in poll() implementation
+  std::vector<multiplexer_data> pollset_;
+  std::vector<event> events_; // always sorted by .fd
+  multiplexer_poll_shadow_data shadow_;
+  std::pair<native_socket, native_socket> pipe_;
 };
 
 default_multiplexer& get_multiplexer_singleton();
@@ -430,120 +392,100 @@ accept_handle accept_hdl_from_socket(const T& sock) {
 }
 
 
-/**
- * A stream capable of both reading and writing. The stream's input
- * data is forwarded to its {@link stream_manager manager}.
- */
+/// A stream capable of both reading and writing. The stream's input
+/// data is forwarded to its {@link stream_manager manager}.
 template <class Socket>
 class stream : public event_handler {
- public:
-  /**
-   * A smart pointer to a stream manager.
-   */
+public:
+  /// A smart pointer to a stream manager.
   using manager_ptr = intrusive_ptr<stream_manager>;
 
-  /**
-   * A buffer class providing a compatible
-   * interface to `std::vector`.
-   */
+  /// A buffer class providing a compatible
+  /// interface to `std::vector`.
   using buffer_type = std::vector<char>;
 
   stream(default_multiplexer& backend_ref)
       : event_handler(backend_ref),
-        m_sock(backend_ref),
-        m_writing(false) {
+        sock_(backend_ref),
+        writing_(false) {
     configure_read(receive_policy::at_most(1024));
   }
 
-  /**
-   * Returns the IO socket.
-   */
+  /// Returns the IO socket.
   Socket& socket_handle() {
-    return m_sock;
+    return sock_;
   }
 
-  /**
-   * Initializes this stream, setting the socket handle to `fd`.
-   */
+  /// Initializes this stream, setting the socket handle to `fd`.
   void init(Socket sockfd) {
-    m_sock = std::move(sockfd);
+    sock_ = std::move(sockfd);
   }
 
-  /**
-   * Starts reading data from the socket, forwarding incoming data to `mgr`.
-   */
+  /// Starts reading data from the socket, forwarding incoming data to `mgr`.
   void start(const manager_ptr& mgr) {
     CAF_ASSERT(mgr != nullptr);
-    m_reader = mgr;
-    backend().add(operation::read, m_sock.fd(), this);
+    reader_ = mgr;
+    backend().add(operation::read, sock_.fd(), this);
     read_loop();
   }
 
   void removed_from_loop(operation op) override {
     switch (op) {
-      case operation::read:  m_reader.reset(); break;
-      case operation::write: m_writer.reset(); break;
+      case operation::read:  reader_.reset(); break;
+      case operation::write: writer_.reset(); break;
       case operation::propagate_error: break;
     }
   }
 
-  /**
-   * Configures how much data will be provided for the next `consume` callback.
-   * @warning Must not be called outside the IO multiplexers event loop
-   *          once the stream has been started.
-   */
+  /// Configures how much data will be provided for the next `consume` callback.
+  /// @warning Must not be called outside the IO multiplexers event loop
+  ///          once the stream has been started.
   void configure_read(receive_policy::config config) {
-    m_rd_flag = config.first;
-    m_max = config.second;
+    rd_flag_ = config.first;
+    max_ = config.second;
   }
 
-  /**
-   * Copies data to the write buffer.
-   * @warning Not thread safe.
-   */
+  /// Copies data to the write buffer.
+  /// @warning Not thread safe.
   void write(const void* buf, size_t num_bytes) {
     CAF_LOG_TRACE("num_bytes: " << num_bytes);
     auto first = reinterpret_cast<const char*>(buf);
     auto last  = first + num_bytes;
-    m_wr_offline_buf.insert(m_wr_offline_buf.end(), first, last);
+    wr_offline_buf_.insert(wr_offline_buf_.end(), first, last);
   }
 
-  /**
-   * Returns the write buffer of this stream.
-   * @warning Must not be modified outside the IO multiplexers event loop
-   *          once the stream has been started.
-   */
+  /// Returns the write buffer of this stream.
+  /// @warning Must not be modified outside the IO multiplexers event loop
+  ///          once the stream has been started.
   buffer_type& wr_buf() {
-    return m_wr_offline_buf;
+    return wr_offline_buf_;
   }
 
   buffer_type& rd_buf() {
-    return m_rd_buf;
+    return rd_buf_;
   }
 
-  /**
-   * Sends the content of the write buffer, calling the `io_failure`
-   * member function of `mgr` in case of an error.
-   * @warning Must not be called outside the IO multiplexers event loop
-   *          once the stream has been started.
-   */
+  /// Sends the content of the write buffer, calling the `io_failure`
+  /// member function of `mgr` in case of an error.
+  /// @warning Must not be called outside the IO multiplexers event loop
+  ///          once the stream has been started.
   void flush(const manager_ptr& mgr) {
     CAF_ASSERT(mgr != nullptr);
-    CAF_LOG_TRACE("offline buf size: " << m_wr_offline_buf.size()
+    CAF_LOG_TRACE("offline buf size: " << wr_offline_buf_.size()
              << ", mgr = " << mgr.get()
-             << ", m_writer = " << m_writer.get());
-    if (!m_wr_offline_buf.empty() && !m_writing) {
-      backend().add(operation::write, m_sock.fd(), this);
-      m_writer = mgr;
-      m_writing = true;
+             << ", writer_ = " << writer_.get());
+    if (! wr_offline_buf_.empty() && ! writing_) {
+      backend().add(operation::write, sock_.fd(), this);
+      writer_ = mgr;
+      writing_ = true;
       write_loop();
     }
   }
 
   void stop_reading() {
     CAF_LOG_TRACE("");
-    m_sock.close_read();
-    backend().del(operation::read, m_sock.fd(), this);
+    sock_.close_read();
+    backend().del(operation::read, sock_.fd(), this);
   }
 
   void handle_event(operation op) override {
@@ -551,15 +493,15 @@ class stream : public event_handler {
     switch (op) {
       case operation::read: {
         size_t rb; // read bytes
-        if (!read_some(rb, m_sock.fd(),
-                 m_rd_buf.data() + m_collected,
-                 m_rd_buf.size() - m_collected)) {
-          m_reader->io_failure(operation::read);
-          backend().del(operation::read, m_sock.fd(), this);
+        if (! read_some(rb, sock_.fd(),
+                 rd_buf_.data() + collected_,
+                 rd_buf_.size() - collected_)) {
+          reader_->io_failure(operation::read);
+          backend().del(operation::read, sock_.fd(), this);
         } else if (rb > 0) {
-          m_collected += rb;
-          if (m_collected >= m_threshold) {
-            m_reader->consume(m_rd_buf.data(), m_collected);
+          collected_ += rb;
+          if (collected_ >= threshold_) {
+            reader_->consume(rd_buf_.data(), collected_);
             read_loop();
           }
         }
@@ -567,15 +509,15 @@ class stream : public event_handler {
       }
       case operation::write: {
         size_t wb; // written bytes
-        if (!write_some(wb, m_sock.fd(),
-                m_wr_buf.data() + m_written,
-                m_wr_buf.size() - m_written)) {
-          m_writer->io_failure(operation::write);
-          backend().del(operation::write, m_sock.fd(), this);
+        if (! write_some(wb, sock_.fd(),
+                wr_buf_.data() + written_,
+                wr_buf_.size() - written_)) {
+          writer_->io_failure(operation::write);
+          backend().del(operation::write, sock_.fd(), this);
         }
         else if (wb > 0) {
-          m_written += wb;
-          if (m_written >= m_wr_buf.size()) {
+          written_ += wb;
+          if (written_ >= wr_buf_.size()) {
             // prepare next send (or stop sending)
             write_loop();
           }
@@ -583,11 +525,11 @@ class stream : public event_handler {
         break;
       }
       case operation::propagate_error:
-        if (m_reader) {
-          m_reader->io_failure(operation::read);
+        if (reader_) {
+          reader_->io_failure(operation::read);
         }
-        if (m_writer) {
-          m_writer->io_failure(operation::write);
+        if (writer_) {
+          writer_->io_failure(operation::write);
         }
         // backend will delete this handler anyway,
         // no need to call backend().del() here
@@ -596,168 +538,152 @@ class stream : public event_handler {
   }
 
   native_socket fd() const override {
-    return m_sock.fd();
+    return sock_.fd();
   }
 
- private:
+private:
   void read_loop() {
-    m_collected = 0;
-    switch (m_rd_flag) {
+    collected_ = 0;
+    switch (rd_flag_) {
       case receive_policy_flag::exactly:
-        if (m_rd_buf.size() != m_max) {
-          m_rd_buf.resize(m_max);
+        if (rd_buf_.size() != max_) {
+          rd_buf_.resize(max_);
         }
-        m_threshold = m_max;
+        threshold_ = max_;
         break;
       case receive_policy_flag::at_most:
-        if (m_rd_buf.size() != m_max) {
-          m_rd_buf.resize(m_max);
+        if (rd_buf_.size() != max_) {
+          rd_buf_.resize(max_);
         }
-        m_threshold = 1;
+        threshold_ = 1;
         break;
       case receive_policy_flag::at_least: {
         // read up to 10% more, but at least allow 100 bytes more
-        auto max_size =   m_max
-                + std::max<size_t>(100, m_max / 10);
-        if (m_rd_buf.size() != max_size) {
-          m_rd_buf.resize(max_size);
+        auto max_size =   max_
+                + std::max<size_t>(100, max_ / 10);
+        if (rd_buf_.size() != max_size) {
+          rd_buf_.resize(max_size);
         }
-        m_threshold = m_max;
+        threshold_ = max_;
         break;
       }
     }
   }
 
   void write_loop() {
-    CAF_LOG_TRACE("wr_buf size: " << m_wr_buf.size()
-             << ", offline buf size: " << m_wr_offline_buf.size());
-    m_written = 0;
-    m_wr_buf.clear();
-    if (m_wr_offline_buf.empty()) {
-      m_writing = false;
-      backend().del(operation::write, m_sock.fd(), this);
+    CAF_LOG_TRACE("wr_buf size: " << wr_buf_.size()
+             << ", offline buf size: " << wr_offline_buf_.size());
+    written_ = 0;
+    wr_buf_.clear();
+    if (wr_offline_buf_.empty()) {
+      writing_ = false;
+      backend().del(operation::write, sock_.fd(), this);
     } else {
-      m_wr_buf.swap(m_wr_offline_buf);
+      wr_buf_.swap(wr_offline_buf_);
     }
   }
 
   // reading & writing
-  Socket m_sock;
+  Socket sock_;
   // reading
-  manager_ptr m_reader;
-  size_t m_threshold;
-  size_t m_collected;
-  size_t m_max;
-  receive_policy_flag m_rd_flag;
-  buffer_type m_rd_buf;
+  manager_ptr reader_;
+  size_t threshold_;
+  size_t collected_;
+  size_t max_;
+  receive_policy_flag rd_flag_;
+  buffer_type rd_buf_;
   // writing
-  manager_ptr m_writer;
-  bool m_writing;
-  size_t m_written;
-  buffer_type m_wr_buf;
-  buffer_type m_wr_offline_buf;
+  manager_ptr writer_;
+  bool writing_;
+  size_t written_;
+  buffer_type wr_buf_;
+  buffer_type wr_offline_buf_;
 };
 
-/**
- * An acceptor is responsible for accepting incoming connections.
- */
+/// An acceptor is responsible for accepting incoming connections.
 template <class SocketAcceptor>
 class acceptor : public event_handler {
- public:
+public:
   using socket_type = typename SocketAcceptor::socket_type;
 
-  /**
-   * A manager providing the `accept` member function.
-   */
+  /// A manager providing the `accept` member function.
   using manager_type = acceptor_manager;
 
-  /**
-   * A smart pointer to an acceptor manager.
-   */
+  /// A smart pointer to an acceptor manager.
   using manager_ptr = intrusive_ptr<manager_type>;
 
   acceptor(default_multiplexer& backend_ref)
       : event_handler(backend_ref),
-        m_accept_sock(backend_ref),
-        m_sock(backend_ref) {
+        accept_sock_(backend_ref),
+        sock_(backend_ref) {
     // nop
   }
 
-  /**
-   * Returns the IO socket.
-   */
+  /// Returns the IO socket.
   SocketAcceptor& socket_handle() {
-    return m_accept_sock;
+    return accept_sock_;
   }
 
-  /**
-   * Returns the accepted socket. This member function should
-   * be called only from the `new_connection` callback.
-   */
+  /// Returns the accepted socket. This member function should
+  /// be called only from the `new_connection` callback.
   socket_type& accepted_socket() {
-    return m_sock;
+    return sock_;
   }
 
-  /**
-   * Initializes this acceptor, setting the socket handle to `fd`.
-   */
+  /// Initializes this acceptor, setting the socket handle to `fd`.
   void init(SocketAcceptor sock) {
     CAF_LOG_TRACE("sock.fd = " << sock.fd());
-    m_accept_sock = std::move(sock);
+    accept_sock_ = std::move(sock);
   }
 
-  /**
-   * Starts this acceptor, forwarding all incoming connections to
-   * `manager`. The intrusive pointer will be released after the
-   * acceptor has been closed or an IO error occured.
-   */
+  /// Starts this acceptor, forwarding all incoming connections to
+  /// `manager`. The intrusive pointer will be released after the
+  /// acceptor has been closed or an IO error occured.
   void start(const manager_ptr& mgr) {
-    CAF_LOG_TRACE("m_accept_sock.fd = " << m_accept_sock.fd());
+    CAF_LOG_TRACE("accept_sock_.fd = " << accept_sock_.fd());
     CAF_ASSERT(mgr != nullptr);
-    m_mgr = mgr;
-    backend().add(operation::read, m_accept_sock.fd(), this);
+    mgr_ = mgr;
+    backend().add(operation::read, accept_sock_.fd(), this);
   }
 
-  /**
-   * Closes the network connection, thus stopping this acceptor.
-   */
+  /// Closes the network connection, thus stopping this acceptor.
   void stop_reading() {
-    CAF_LOG_TRACE("m_accept_sock.fd = " << m_accept_sock.fd()
-             << ", m_mgr = " << m_mgr.get());
-    backend().del(operation::read, m_accept_sock.fd(), this);
-    m_accept_sock.close_read();
+    CAF_LOG_TRACE("accept_sock_.fd = " << accept_sock_.fd()
+             << ", mgr_ = " << mgr_.get());
+    backend().del(operation::read, accept_sock_.fd(), this);
+    accept_sock_.close_read();
   }
 
   void handle_event(operation op) override {
-    CAF_LOG_TRACE("m_accept_sock.fd = " << m_accept_sock.fd()
+    CAF_LOG_TRACE("accept_sock_.fd = " << accept_sock_.fd()
              << ", op = " << static_cast<int>(op));
-    if (m_mgr && op == operation::read) {
+    if (mgr_ && op == operation::read) {
       native_socket sockfd = invalid_native_socket;
-      if (try_accept(sockfd, m_accept_sock.fd())) {
+      if (try_accept(sockfd, accept_sock_.fd())) {
         if (sockfd != invalid_native_socket) {
-          m_sock = socket_type{backend(), sockfd};
-          m_mgr->new_connection();
+          sock_ = socket_type{backend(), sockfd};
+          mgr_->new_connection();
         }
       }
     }
   }
 
   void removed_from_loop(operation op) override {
-    CAF_LOG_TRACE("m_accept_sock.fd = " << m_accept_sock.fd()
+    CAF_LOG_TRACE("accept_sock_.fd = " << accept_sock_.fd()
              << "op = " << static_cast<int>(op));
     if (op == operation::read) {
-      m_mgr.reset();
+      mgr_.reset();
     }
   }
 
   native_socket fd() const override {
-    return m_accept_sock.fd();
+    return accept_sock_.fd();
   }
 
- private:
-  manager_ptr m_mgr;
-  SocketAcceptor m_accept_sock;
-  socket_type m_sock;
+private:
+  manager_ptr mgr_;
+  SocketAcceptor accept_sock_;
+  socket_type sock_;
 };
 
 native_socket new_tcp_connection_impl(const std::string&, uint16_t,

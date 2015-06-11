@@ -31,24 +31,20 @@ namespace caf {
 
 class local_actor;
 
-/**
- * Helper class to enable users to add continuations
- *  when dealing with synchronous sends.
- */
+/// Helper class to enable users to add continuations
+///  when dealing with synchronous sends.
 class continue_helper {
- public:
+public:
   using message_id_wrapper_tag = int;
   continue_helper(message_id mid);
 
-  /**
-   * Returns the ID of the expected response message.
-   */
+  /// Returns the ID of the expected response message.
   message_id get_message_id() const {
-    return m_mid;
+    return mid_;
   }
 
- private:
-  message_id m_mid;
+private:
+  message_id mid_;
 };
 
 } // namespace caf

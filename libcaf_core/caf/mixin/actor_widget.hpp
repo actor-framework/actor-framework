@@ -46,7 +46,7 @@ namespace mixin {
 
 template<typename Base, int EventId = static_cast<int>(QEvent::User + 31337)>
 class actor_widget : public Base {
- public:
+public:
   typedef typename actor_companion::message_pointer message_pointer;
 
   struct event_type : public QEvent {
@@ -59,24 +59,24 @@ class actor_widget : public Base {
 
   template <typename... Ts>
   actor_widget(Ts&&... xs) : Base(std::forward<Ts>(xs)...) {
-    m_companion = make_counted<actor_companion>();
-    m_companion->on_enqueue([=](message_pointer ptr) {
+    companion_ = make_counted<actor_companion>();
+    companion_->on_enqueue([=](message_pointer ptr) {
       qApp->postEvent(this, new event_type(std::move(ptr)));
     });
   }
 
   template <typename T>
   void set_message_handler(T pfun) {
-    m_companion->become(pfun(m_companion.get()));
+    companion_->become(pfun(companion_.get()));
   }
 
   bool event(QEvent* event) override {
     if (event->type() == static_cast<QEvent::Type>(EventId)) {
       auto ptr = dynamic_cast<event_type*>(event);
       if (ptr) {
-        m_companion->invoke_message(ptr->mptr,
-                                    m_companion->get_behavior(),
-                                    m_companion->awaited_response_id());
+        companion_->invoke_message(ptr->mptr,
+                                    companion_->get_behavior(),
+                                    companion_->awaited_response_id());
         return true;
       }
     }
@@ -84,11 +84,11 @@ class actor_widget : public Base {
   }
 
   actor as_actor() const {
-    return m_companion;
+    return companion_;
   }
 
- private:
-    actor_companion_ptr m_companion;
+private:
+    actor_companion_ptr companion_;
 };
 
 } // namespace mixin

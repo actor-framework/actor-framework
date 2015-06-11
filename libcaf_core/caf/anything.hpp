@@ -24,32 +24,24 @@
 
 namespace caf {
 
-/**
- * Acts as wildcard expression in patterns.
- */
+/// Acts as wildcard expression in patterns.
 struct anything {
   constexpr anything() {
     // nop
   }
 };
 
-/**
- * @relates anything
- */
+/// @relates anything
 inline bool operator==(const anything&, const anything&) {
   return true;
 }
 
-/**
- * @relates anything
- */
+/// @relates anything
 inline bool operator!=(const anything&, const anything&) {
   return false;
 }
 
-/**
- * @relates anything
- */
+/// @relates anything
 template <class T>
 struct is_anything : std::is_same<T, anything> {
   // no content

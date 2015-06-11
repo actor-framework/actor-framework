@@ -40,6 +40,9 @@ Commit Message Style
   characters. It is capitalized and written in and imperative present tense:
   e.g., "Fix bug" as opposed to "Fixes bug" or "Fixed bug".
 
+- The first line does not contain a dot at the end. (Think of it as the header
+  of the following description).
+
 - The second line is empty.
 
 - Optional long descriptions as full sentences begin on the third line,
@@ -52,7 +55,7 @@ Coding Style
 When contributing source code, please adhere to the following coding style,
 whwich is loosely based on the [Google C++ Style
 Guide](http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml) and the
-coding conventions used by the STL.
+coding conventions used by the C++ Standard Library.
 
 
 Example for the Impatient
@@ -66,58 +69,44 @@ Example for the Impatient
 
 #include <string>
 
+// use "//" for regular comments and "///" for doxygen
+
 namespace caf {
 namespace example {
 
-/**
- * This class is only being used as style guide example.
- */
+/// This class is only being used as style guide example.
 class my_class {
- public:
-  /**
-   * Brief description. More description. Note that CAF uses the
-   * "JavaDoc-style" autobrief option, i.e., everything up until the
-   * first dot is the brief description.
-   */
+public:
+  /// Brief description. More description. Note that CAF uses the
+  /// "JavaDoc-style" autobrief option, i.e., everything up until the
+  /// first dot is the brief description.
   my_class();
 
-  /**
-   * Destructs `my_class`. Please use Markdown in comments.
-   */
+  /// Destructs `my_class`. Please use Markdown in comments.
   ~my_class();
 
-  // do not use the @return if you start the brief description with "Returns"
-  /**
-   * Returns the name of this instance.
-   */
+  // suppress redundant @return if you start the brief description with "Returns"
+  /// Returns the name of this instance.
   inline const std::string& name() const {
-    return m_name;
+    return name_;
   }
 
-  /**
-   * Sets the name of this instance.
-   */
-  inline void name(std::string new_name) {
-    m_name = std::move(new_name);
+  /// Sets the name of this instance.
+  inline void name(const std::string& new_name) {
+    name_ = new_name;
   }
 
-  /**
-   * Prints the name to `STDIN`.
-   */
+  /// Prints the name to `STDIN`.
   void print_name() const;
 
-  /**
-   * Does something (maybe).
-   */
+  /// Does something (maybe).
   void do_something();
 
-  /**
-   * Does something else.
-   */
+  /// Does something else.
   void do_something_else();
 
- private:
-  std::string m_name;
+private:
+  std::string name_;
 };
 
 } // namespace example
@@ -142,7 +131,7 @@ constexpr const char default_name[] = "my object";
 
 } // namespace <anonymous>
 
-my_class::my_class() : m_name(default_name) {
+my_class::my_class() : name_(default_name) {
   // nop
 }
 
@@ -167,7 +156,7 @@ void my_class::do_something() {
   }
 }
 
-void::my_class::do_something_else() {
+void my_class::do_something_else() {
   switch (default_name[0]) {
     case 'a':
       // handle a
@@ -186,14 +175,16 @@ void::my_class::do_something_else() {
 ```
 
 
-General rules
--------------
+General
+-------
 
 - Use 2 spaces per indentation level.
 
 - The maximum number of characters per line is 80.
 
-- Never use tabs.
+- No tabs, ever.
+
+- Never use C-style casts.
 
 - Vertical whitespaces separate functions and are not used inside functions:
   use comments to document logical blocks.
@@ -204,11 +195,10 @@ General rules
 
 - `*` and `&` bind to the *type*, e.g., `const std::string& arg`.
 
-- Namespaces do not increase the indentation level.
+- Namespaces and access modifiers (e.g., `public`) do not increase the
+  indentation level.
 
-- Access modifiers, e.g. `public`, are indented one space.
-
-- Use the order `public`, `protected`, and then `private`.
+- In a class, use the order `public`, `protected`, and then `private`.
 
 - Always use `auto` to declare a variable unless you cannot initialize it
   immediately or if you actually want a type conversion. In the latter case,
@@ -216,23 +206,25 @@ General rules
 
 - Never use unwrapped, manual resource management such as `new` and `delete`.
 
-- Do not use `typedef`. The syntax provided by `using` is much cleaner.
-
-- Use `typename` only when referring to dependent names.
+- Never use `typedef`; always write `using T = X` in favor of `typedef X T`.
 
 - Keywords are always followed by a whitespace: `if (...)`, `template <...>`,
   `while (...)`, etc.
 
-- Always use `{}` for bodies of control structures such as `if` or `while`,
-  even for bodies consiting only of a single statement.
+- Leave a whitespace after `!` to make negations easily recognizable:
+
+  ```cpp
+  if (! sunny())
+    stay_home();
+  else 
+    go_outside();
+  ```
 
 - Opening braces belong to the same line:
 
   ```cpp
-  if (my_condition) {
-    my_fun();
-  } else {
-    my_other_fun();
+  void foo() {
+    // ...
   }
   ```
 
@@ -240,54 +232,75 @@ General rules
   libraries, other libraries, (your) CAF headers:
 
   ```cpp
+  // some .hpp file
+  
   #include <sys/types.h>
 
   #include <vector>
 
-  #include "some/other/library.hpp"
+  #include "3rd/party.h"
 
-  #include "caf/example/myclass.hpp"
+  #include "caf/fwd.hpp"
+  ```
+
+  CAF includes should always be in doublequotes, whereas system-wide includes
+  in angle brackets. In a `.cpp` file, the implemented header always comes first
+  and the header `caf/config.hpp` can be included second if you need
+  platform-dependent headers:
+
+  ```cpp
+  // example.cpp
+  
+  #include "caf/example.hpp" // header related to this .cpp file
+  
+  #include "caf/config.hpp"
+  
+  #ifdef CAF_WINDOWS
+  #include <windows.h>
+  #else
+  #include <sys/socket.h>
+  #endif
+
+  #include <algorithm>
+
+  #include "some/other/library.h"
+
+  #include "caf/actor.hpp"
   ```
 
 - When declaring a function, the order of parameters is: outputs, then inputs.
   This follows the parameter order from the STL.
-
-- Never use C-style casts.
 
 - Protect single-argument constructors with `explicit` to avoid implicit conversions.
 
 Naming
 ------
 
-- Class names, constants, and function names are all-lowercase with underscores.
+- All names except macros and template parameters should be
+  lower case and delimited by underscores.
+
+- Template parameter names should be written in CamelCase.
 
 - Types and variables should be nouns, while functions performing an action
   should be "command" verbs. Classes used to implement metaprogramming
   functions also should use verbs, e.g., `remove_const`.
 
-- Member variables use the prefix `m_`.
-
-- Thread-local variables use the prefix `t_`.
-
-- Static, non-const variables are declared in the anonymous namespace
-  and use the prefix `s_`.
-
-- Template parameter names use CamelCase.
-
-- Getter and setter use the name of the member without the `m_` prefix:
+- Private and protected member variables use the suffix `_` while getter *and* setter
+  functions use the name without suffix:
 
   ```cpp
-  class some_fun {
-   public:
-    // ...
-    int value() const {
-      return m_value;
+  class person {
+  public:
+    const std::string& name() const {
+      return name_
     }
-    void value(int new_value) {
-      m_value = new_value;
+
+    void name(const std::string& new_name) {
+      name_ = new_name;
     }
-   private:
-    int m_value;
+
+  private:
+    std::string name_;
   };
   ```
 
@@ -339,11 +352,11 @@ Breaking Statements
   ```cpp
   my_class::my_class()
       : my_base_class(some_function()),
-        m_greeting("Hello there! This is my_class!"),
-        m_some_bool_flag(false) {
+        greeting_("Hello there! This is my_class!"),
+        some_bool_flag_(false) {
     // ok
   }
-  other_class::other_class() : m_name("tommy"), m_buddy("michael") {
+  other_class::other_class() : name_("tommy"), buddy_("michael") {
     // ok
   }
   ```
@@ -413,14 +426,6 @@ extra rules for formatting metaprogramming code.
   ```
 
 
-Rvalue References
------------------
-
-- Use rvalue references whenever it makes sense.
-
-- Write move constructors and assignment operators if possible.
-
-
 Preprocessor Macros
 -------------------
 
@@ -428,3 +433,17 @@ Preprocessor Macros
   functions or proper constants.
 
 - Macro names use the form `CAF_<COMPONENT>_<NAME>`.
+
+
+Comments
+--------
+
+- Doxygen comments start with `///`.
+
+- Use Markdown instead of Doxygen formatters.
+
+- Use `@cmd` rather than `\cmd`.
+
+- Use `//` to define basic comments that should not be
+  swallowed by Doxygen.
+

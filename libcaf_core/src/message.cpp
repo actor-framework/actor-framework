@@ -30,53 +30,53 @@
 
 namespace caf {
 
-message::message(message&& other) : m_vals(std::move(other.m_vals)) {
+message::message(message&& other) : vals_(std::move(other.vals_)) {
   // nop
 }
 
-message::message(const data_ptr& ptr) : m_vals(ptr) {
+message::message(const data_ptr& ptr) : vals_(ptr) {
   // nop
 }
 
 message& message::operator=(message&& other) {
-  m_vals.swap(other.m_vals);
+  vals_.swap(other.vals_);
   return *this;
 }
 
 void message::reset(raw_ptr new_ptr, bool add_ref) {
-  m_vals.reset(new_ptr, add_ref);
+  vals_.reset(new_ptr, add_ref);
 }
 
 void message::swap(message& other) {
-  m_vals.swap(other.m_vals);
+  vals_.swap(other.vals_);
 }
 
 void* message::mutable_at(size_t p) {
-  CAF_ASSERT(m_vals);
-  return m_vals->mutable_at(p);
+  CAF_ASSERT(vals_);
+  return vals_->mutable_at(p);
 }
 
 const void* message::at(size_t p) const {
-  CAF_ASSERT(m_vals);
-  return m_vals->at(p);
+  CAF_ASSERT(vals_);
+  return vals_->at(p);
 }
 
 bool message::match_element(size_t pos, uint16_t typenr,
                             const std::type_info* rtti) const {
-  return m_vals->match_element(pos, typenr, rtti);
+  return vals_->match_element(pos, typenr, rtti);
 }
 
 const char* message::uniform_name_at(size_t pos) const {
-  return m_vals->uniform_name_at(pos);
+  return vals_->uniform_name_at(pos);
 }
 
 bool message::equals(const message& other) const {
-  CAF_ASSERT(m_vals);
-  return m_vals->equals(*other.vals());
+  CAF_ASSERT(vals_);
+  return vals_->equals(*other.vals());
 }
 
 message message::drop(size_t n) const {
-  CAF_ASSERT(m_vals);
+  CAF_ASSERT(vals_);
   if (n == 0) {
     return *this;
   }
@@ -86,11 +86,11 @@ message message::drop(size_t n) const {
   std::vector<size_t> mapping (size() - n);
   size_t i = n;
   std::generate(mapping.begin(), mapping.end(), [&] { return i++; });
-  return message {detail::decorated_tuple::make(m_vals, mapping)};
+  return message {detail::decorated_tuple::make(vals_, mapping)};
 }
 
 message message::drop_right(size_t n) const {
-  CAF_ASSERT(m_vals);
+  CAF_ASSERT(vals_);
   if (n == 0) {
     return *this;
   }
@@ -99,7 +99,7 @@ message message::drop_right(size_t n) const {
   }
   std::vector<size_t> mapping(size() - n);
   std::iota(mapping.begin(), mapping.end(), size_t{0});
-  return message{detail::decorated_tuple::make(m_vals, std::move(mapping))};
+  return message{detail::decorated_tuple::make(vals_, std::move(mapping))};
 }
 
 message message::slice(size_t pos, size_t n) const {
@@ -109,7 +109,7 @@ message message::slice(size_t pos, size_t n) const {
   }
   std::vector<size_t> mapping(std::min(s - pos, n));
   std::iota(mapping.begin(), mapping.end(), pos);
-  return message{detail::decorated_tuple::make(m_vals, std::move(mapping))};
+  return message{detail::decorated_tuple::make(vals_, std::move(mapping))};
 }
 
 optional<message> message::apply(message_handler handler) {
@@ -131,7 +131,7 @@ message message::extract_impl(size_t start, message_handler handler) const {
         if (mapping.empty()) {
           return message{};
         }
-        message next{detail::decorated_tuple::make(m_vals, std::move(mapping))};
+        message next{detail::decorated_tuple::make(vals_, std::move(mapping))};
         return next.extract_impl(i, handler);
       }
     }
@@ -219,7 +219,7 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
           // this short opt expects two arguments
           if (arg.size() > 2) {
              // this short opt comes with a value (no space), e.g., -x2
-            if (!i->second->fun(arg.substr(2))) {
+            if (! i->second->fun(arg.substr(2))) {
               error = "invalid value for option " + i->second->name + ": " + arg;
               return none;
             }
@@ -240,7 +240,7 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
             error =  "missing argument to " + arg;
             return none;
           }
-          if (!j->second->fun(arg.substr(eq_pos + 1))) {
+          if (! j->second->fun(arg.substr(eq_pos + 1))) {
             error = "invalid value for option " + j->second->name + ": " + arg;
             return none;
           }
@@ -260,14 +260,14 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
       }
       auto i = shorts.find(arg1.substr(0, 2));
       if (i != shorts.end()) {
-        if (!i->second->fun || arg1.size() > 2) {
+        if (! i->second->fun || arg1.size() > 2) {
           // this short opt either expects no argument or comes with a value
           // (no  space), e.g., -x2, so we have to parse it with the
           // one-argument form above
           return skip_message();
         }
         CAF_ASSERT(arg1.size() == 2);
-        if (!i->second->fun(arg2)) {
+        if (! i->second->fun(arg2)) {
           error = "invalid value for option " + i->second->name + ": " + arg2;
           return none;
         }

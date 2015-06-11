@@ -65,13 +65,13 @@ struct float_or_int : event_based_actor {
 };
 
 class popular_actor : public event_based_actor { // popular actors have a buddy
- public:
-  explicit popular_actor(const actor& buddy_arg) : m_buddy(buddy_arg) {
+public:
+  explicit popular_actor(const actor& buddy_arg) : buddy_(buddy_arg) {
     // nop
   }
 
   inline const actor& buddy() const {
-    return m_buddy;
+    return buddy_;
   }
 
   void report_failure() {
@@ -79,8 +79,8 @@ class popular_actor : public event_based_actor { // popular actors have a buddy
     quit();
   }
 
- private:
-  actor m_buddy;
+private:
+  actor buddy_;
 };
 
 /******************************************************************************\
@@ -98,7 +98,7 @@ class popular_actor : public event_based_actor { // popular actors have a buddy
 \******************************************************************************/
 
 class A : public popular_actor {
- public:
+public:
   explicit A(const actor& buddy_arg) : popular_actor(buddy_arg) {
     // nop
   }
@@ -123,7 +123,7 @@ class A : public popular_actor {
 };
 
 class B : public popular_actor {
- public:
+public:
   explicit B(const actor& buddy_arg) : popular_actor(buddy_arg) {
     // nop
   }
@@ -141,7 +141,7 @@ class B : public popular_actor {
 };
 
 class C : public event_based_actor {
- public:
+public:
   behavior make_behavior() override {
     return {
       [=](gogo_atom) -> atom_value {
@@ -169,7 +169,7 @@ class C : public event_based_actor {
 \******************************************************************************/
 
 class D : public popular_actor {
- public:
+public:
   explicit D(const actor& buddy_arg) : popular_actor(buddy_arg) {
     // nop
   }
@@ -204,7 +204,7 @@ class D : public popular_actor {
 \******************************************************************************/
 
 class server : public event_based_actor {
- public:
+public:
   behavior make_behavior() override {
     auto die = [=] {
       quit(exit_reason::user_shutdown);

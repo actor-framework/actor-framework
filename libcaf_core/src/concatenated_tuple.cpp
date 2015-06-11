@@ -33,10 +33,10 @@ auto concatenated_tuple::make(std::initializer_list<cow_ptr> xs) -> cow_ptr {
     if (x) {
       auto dptr = dynamic_cast<const concatenated_tuple*>(x.get());
       if (dptr) {
-        auto& vec = dptr->m_data;
-        result->m_data.insert(result->m_data.end(), vec.begin(), vec.end());
+        auto& vec = dptr->data_;
+        result->data_.insert(result->data_.end(), vec.begin(), vec.end());
       } else {
-        result->m_data.push_back(std::move(x));
+        result->data_.push_back(std::move(x));
       }
     }
   }
@@ -51,7 +51,7 @@ void* concatenated_tuple::mutable_at(size_t pos) {
 }
 
 size_t concatenated_tuple::size() const {
-  return m_size;
+  return size_;
 }
 
 message_data::cow_ptr concatenated_tuple::copy() const {
@@ -71,7 +71,7 @@ bool concatenated_tuple::match_element(size_t pos, uint16_t typenr,
 }
 
 uint32_t concatenated_tuple::type_token() const {
-  return m_type_token;
+  return type_token_;
 }
 
 const char* concatenated_tuple::uniform_name_at(size_t pos) const {
@@ -88,7 +88,7 @@ uint16_t concatenated_tuple::type_nr_at(size_t pos) const {
 
 std::pair<message_data*, size_t> concatenated_tuple::select(size_t pos) const {
   auto idx = pos;
-  for (auto& m : m_data) {
+  for (auto& m : data_) {
     auto s = m->size();
     if (idx >= s) {
       idx -= s;
@@ -100,16 +100,16 @@ std::pair<message_data*, size_t> concatenated_tuple::select(size_t pos) const {
 }
 
 void concatenated_tuple::init() {
-  m_type_token = make_type_token();
-  for (auto& m : m_data) {
+  type_token_ = make_type_token();
+  for (auto& m : data_) {
     for (size_t i = 0; i < m->size(); ++i) {
-      m_type_token = add_to_type_token(m_type_token, m->type_nr_at(i));
+      type_token_ = add_to_type_token(type_token_, m->type_nr_at(i));
     }
   }
   auto acc_size = [](size_t tmp, const cow_ptr& val) {
     return tmp + val->size();
   };
-  m_size = std::accumulate(m_data.begin(), m_data.end(), size_t{0}, acc_size);
+  size_ = std::accumulate(data_.begin(), data_.end(), size_t{0}, acc_size);
 }
 
 } // namespace detail

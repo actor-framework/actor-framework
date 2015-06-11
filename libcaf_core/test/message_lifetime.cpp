@@ -32,7 +32,7 @@ using namespace caf;
 namespace {
 
 class testee : public event_based_actor {
- public:
+public:
   testee();
   ~testee();
   behavior make_behavior() override;
@@ -57,32 +57,32 @@ behavior testee::make_behavior() {
 }
 
 class tester : public event_based_actor {
- public:
+public:
   explicit tester(actor aut)
-      : m_aut(std::move(aut)),
-        m_msg(make_message(1, 2, 3)) {
+      : aut_(std::move(aut)),
+        msg_(make_message(1, 2, 3)) {
     // nop
   }
 
   behavior make_behavior() override;
- private:
-  actor m_aut;
-  message m_msg;
+private:
+  actor aut_;
+  message msg_;
 };
 
 behavior tester::make_behavior() {
-  monitor(m_aut);
-  send(m_aut, m_msg);
+  monitor(aut_);
+  send(aut_, msg_);
   return {
     [=](int a, int b, int c) {
       CAF_CHECK_EQUAL(a, 1);
       CAF_CHECK_EQUAL(b, 2);
       CAF_CHECK_EQUAL(c, 3);
       CAF_CHECK(current_message().cvals()->get_reference_count() == 2
-                && current_message().cvals().get() == m_msg.cvals().get());
+                && current_message().cvals().get() == msg_.cvals().get());
     },
     [=](const down_msg& dm) {
-      CAF_CHECK(dm.source == m_aut
+      CAF_CHECK(dm.source == aut_
                 && dm.reason == exit_reason::normal
                 && current_message().cvals()->get_reference_count() == 1);
       quit();

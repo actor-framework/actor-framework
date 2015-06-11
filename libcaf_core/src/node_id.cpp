@@ -106,38 +106,38 @@ node_id::node_id(const invalid_node_id_t&) {
   // nop
 }
 
-node_id::node_id(const node_id& other) : m_data(other.m_data) {
+node_id::node_id(const node_id& other) : data_(other.data_) {
   // nop
 }
 
-node_id::node_id(intrusive_ptr<data> dataptr) : m_data(std::move(dataptr)) {
+node_id::node_id(intrusive_ptr<data> dataptr) : data_(std::move(dataptr)) {
   // nop
 }
 
 node_id::node_id(uint32_t procid, const std::string& b) {
-  m_data = make_counted<data>();
-  m_data->process_id = procid;
-  host_id_from_string(b, m_data->host_id);
+  data_ = make_counted<data>();
+  data_->process_id = procid;
+  host_id_from_string(b, data_->host_id);
 }
 
 node_id::node_id(uint32_t a, const host_id_type& b)
-    : m_data(make_counted<data>(a, b)) {
+    : data_(make_counted<data>(a, b)) {
   // nop
 }
 
 int node_id::compare(const invalid_node_id_t&) const {
-  return m_data ? 1 : 0; // invalid instances are always smaller
+  return data_ ? 1 : 0; // invalid instances are always smaller
 }
 
 int node_id::compare(const node_id& other) const {
   if (this == &other) {
     return 0; // shortcut for comparing to self
   }
-  if (m_data == other.m_data) {
+  if (data_ == other.data_) {
     return 0; // shortcut for identical instances
   }
-  if ((m_data != nullptr) != (other.m_data != nullptr)) {
-    return m_data ? 1 : -1; // invalid instances are always smaller
+  if ((data_ != nullptr) != (other.data_ != nullptr)) {
+    return data_ ? 1 : -1; // invalid instances are always smaller
   }
   int tmp = strncmp(reinterpret_cast<const char*>(host_id().data()),
                     reinterpret_cast<const char*>(other.host_id().data()),
@@ -183,15 +183,15 @@ node_id::data* node_id::data::create_singleton() {
 }
 
 uint32_t node_id::process_id() const {
-  return m_data ? m_data->process_id : s_invalid_process_id;
+  return data_ ? data_->process_id : s_invalid_process_id;
 }
 
 const node_id::host_id_type& node_id::host_id() const {
-  return m_data ? m_data->host_id : s_invalid_host_id;
+  return data_ ? data_->host_id : s_invalid_host_id;
 }
 
 node_id& node_id::operator=(const invalid_node_id_t&) {
-  m_data.reset();
+  data_.reset();
   return *this;
 }
 

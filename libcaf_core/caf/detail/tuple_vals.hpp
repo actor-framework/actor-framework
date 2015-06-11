@@ -70,7 +70,7 @@ struct tuple_vals_type_helper<T, 0> {
 
 template <class... Ts>
 class tuple_vals : public message_data {
- public:
+public:
   static_assert(sizeof...(Ts) > 0, "tuple_vals is not allowed to be empty");
 
   using super = message_data;
@@ -81,17 +81,17 @@ class tuple_vals : public message_data {
 
   template <class... Us>
   tuple_vals(Us&&... xs)
-      : m_data(std::forward<Us>(xs)...),
-        m_types{{tuple_vals_type_helper<Ts>::get()...}} {
+      : data_(std::forward<Us>(xs)...),
+        types_{{tuple_vals_type_helper<Ts>::get()...}} {
     // nop
   }
 
   data_type& data() {
-    return m_data;
+    return data_;
   }
 
   const data_type& data() const {
-    return m_data;
+    return data_;
   }
 
   size_t size() const override {
@@ -104,7 +104,7 @@ class tuple_vals : public message_data {
 
   const void* at(size_t pos) const override {
     CAF_ASSERT(pos < size());
-    return tup_ptr_access<0, sizeof...(Ts)>::get(pos, m_data);
+    return tup_ptr_access<0, sizeof...(Ts)>::get(pos, data_);
   }
 
   void* mutable_at(size_t pos) override {
@@ -115,7 +115,7 @@ class tuple_vals : public message_data {
   bool match_element(size_t pos, uint16_t typenr,
                      const std::type_info* rtti) const override {
     CAF_ASSERT(pos < size());
-    auto& et = m_types[pos];
+    auto& et = types_[pos];
     if (et.first != typenr) {
       return false;
     }
@@ -127,7 +127,7 @@ class tuple_vals : public message_data {
   }
 
   const char* uniform_name_at(size_t pos) const override {
-    auto& et = m_types[pos];
+    auto& et = types_[pos];
     if (et.first != 0) {
       return numbered_type_names[et.first - 1];
     }
@@ -136,12 +136,12 @@ class tuple_vals : public message_data {
   }
 
   uint16_t type_nr_at(size_t pos) const override {
-    return m_types[pos].first;
+    return types_[pos].first;
   }
 
- private:
-  data_type m_data;
-  std::array<tuple_vals_rtti, sizeof...(Ts)> m_types;
+private:
+  data_type data_;
+  std::array<tuple_vals_rtti, sizeof...(Ts)> types_;
 };
 
 } // namespace detail

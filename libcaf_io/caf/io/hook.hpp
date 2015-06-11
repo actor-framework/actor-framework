@@ -37,98 +37,72 @@ class hook;
     eventname##_cb(std::forward<Ts>(ts)...);                                   \
   }
 
-/**
- * @relates hook
- */
+/// @relates hook
 using hook_uptr = std::unique_ptr<hook>;
 
-/**
- * Interface to define hooks into the IO layer.
- */
+/// Interface to define hooks into the IO layer.
 class hook {
- public:
+public:
   virtual ~hook();
 
-  /**
-   * Called whenever a message has arrived via the network.
-   */
+  /// Called whenever a message has arrived via the network.
   virtual void message_received_cb(const node_id& source,
                                    const actor_addr& from,
                                    const actor_addr& dest,
                                    message_id mid,
                                    const message& msg);
 
-  /**
-   * Called whenever a message has been sent to the network.
-   * @param from The address of the sending actor.
-   * @param hop The node in the network we've sent the message to.
-   * @param dest The address of the receiving actor. Note that the node ID
-   *             of `dest` can differ from `hop` in case we don't
-   *             have a direct connection to `dest_node`.
-   * @param mid The ID of the message.
-   * @param payload The message we've sent.
-   */
+  /// Called whenever a message has been sent to the network.
+  /// @param from The address of the sending actor.
+  /// @param hop The node in the network we've sent the message to.
+  /// @param dest The address of the receiving actor. Note that the node ID
+  ///             of `dest` can differ from `hop` in case we don't
+  ///             have a direct connection to `dest_node`.
+  /// @param mid The ID of the message.
+  /// @param payload The message we've sent.
   virtual void message_sent_cb(const actor_addr& from, const node_id& hop,
                                const actor_addr& dest, message_id mid,
                                const message& payload);
 
-  /**
-   * Called whenever no route for sending a message exists.
-   */
+  /// Called whenever no route for sending a message exists.
   virtual void message_sending_failed_cb(const actor_addr& from,
                                          const actor_addr& dest,
                                          message_id mid,
                                          const message& payload);
 
-  /**
-   * Called whenever a message is forwarded to a different node.
-   */
+  /// Called whenever a message is forwarded to a different node.
   virtual void message_forwarded_cb(const node_id& from, const node_id& dest,
                                     const std::vector<char>* payload);
 
-  /**
-   * Called whenever no route for a forwarding request exists.
-   */
+  /// Called whenever no route for a forwarding request exists.
   virtual void message_forwarding_failed_cb(const node_id& from,
                                             const node_id& to,
                                             const std::vector<char>* payload);
 
-  /**
-   * Called whenever an actor has been published.
-   */
+  /// Called whenever an actor has been published.
   virtual void actor_published_cb(const actor_addr& addr, uint16_t port);
 
-  /**
-   * Called whenever a new remote actor appeared.
-   */
+  /// Called whenever a new remote actor appeared.
   virtual void new_remote_actor_cb(const actor_addr& addr);
 
-  /**
-   * Called whenever a handshake via a direct TCP connection succeeded.
-   */
+  /// Called whenever a handshake via a direct TCP connection succeeded.
   virtual void new_connection_established_cb(const node_id& node);
 
-  /**
-   * Called whenever a message from or to a yet unknown node was received.
-   * @param via The node that has sent us the message.
-   * @param node The newly added entry to the routing table.
-   */
+  /// Called whenever a message from or to a yet unknown node was received.
+  /// @param via The node that has sent us the message.
+  /// @param node The newly added entry to the routing table.
   virtual void new_route_added_cb(const node_id& via, const node_id& node);
 
-  /**
-   * Called whenever a message was discarded because a remote node
-   * tried to send a message to an actor ID that could not be found
-   * in the registry.
-   */
+  /// Called whenever a message was discarded because a remote node
+  /// tried to send a message to an actor ID that could not be found
+  /// in the registry.
   virtual void invalid_message_received_cb(const node_id& source,
                                            const actor_addr& sender,
                                            actor_id invalid_dest,
                                            message_id mid,
                                            const message& msg);
 
-  /**
-   * All possible events for IO hooks.
-   */
+  /// All possible events for IO hooks.
   enum event_type {
     message_received,
     message_sent,
@@ -142,17 +116,13 @@ class hook {
     invalid_message_received
   };
 
-  /**
-   * Handles an event by invoking the associated callback.
-   */
+  /// Handles an event by invoking the associated callback.
   template <event_type Event, typename... Ts>
   void handle(Ts&&... ts) {
     dispatch(event<Event>{}, std::forward<Ts>(ts)...);
   }
 
-  /**
-   * Forwards an event to the next hook.
-   */
+  /// Forwards an event to the next hook.
   template <event_type Event, typename... Ts>
   void call_next(Ts&&... ts) {
     if (next) {
@@ -160,13 +130,11 @@ class hook {
     }
   }
 
-  /**
-   * Intrusive pointer to the next hook. Hooks are stored as a simple,
-   * singly linked list.
-   */
+  /// Intrusive pointer to the next hook. Hooks are stored as a simple,
+  /// singly linked list.
   hook_uptr next;
 
- private:
+private:
   // ------------ convenience interface based on static dispatching ------------
   template <event_type Id>
   using event = std::integral_constant<event_type, Id>;

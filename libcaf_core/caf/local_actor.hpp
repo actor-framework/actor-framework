@@ -59,12 +59,10 @@
 
 namespace caf {
 
-/**
- * Base class for actors running on this node, either
- * living in an own thread or cooperatively scheduled.
- */
+/// Base class for actors running on this node, either
+/// living in an own thread or cooperatively scheduled.
 class local_actor : public abstract_actor, public resumable {
- public:
+public:
   using mailbox_type = detail::single_reader_queue<mailbox_element,
                                                    detail::disposer>;
 
@@ -174,9 +172,7 @@ class local_actor : public abstract_actor, public resumable {
    *                        send asynchronous messages                        *
    ****************************************************************************/
 
-  /**
-   * Sends `{xs...}` to `dest` using the priority `mp`.
-   */
+  /// Sends `{xs...}` to `dest` using the priority `mp`.
   template <class... Ts>
   void send(message_priority mp, const channel& dest, Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "sizeof...(Ts) == 0");
@@ -184,18 +180,14 @@ class local_actor : public abstract_actor, public resumable {
               std::forward<Ts>(xs)...);
   }
 
-  /**
-   * Sends `{xs...}` to `dest` using normal priority.
-   */
+  /// Sends `{xs...}` to `dest` using normal priority.
   template <class... Ts>
   void send(const channel& dest, Ts&&... xs) {
     send_impl(message_id::make(), actor_cast<abstract_channel*>(dest),
               std::forward<Ts>(xs)...);
   }
 
-  /**
-   * Sends `{xs...}` to `dest` using the priority `mp`.
-   */
+  /// Sends `{xs...}` to `dest` using the priority `mp`.
   template <class... Sigs, class... Ts>
   void send(message_priority mp, const typed_actor<Sigs...>& dest, Ts&&... xs) {
     using token =
@@ -209,9 +201,7 @@ class local_actor : public abstract_actor, public resumable {
               std::forward<Ts>(xs)...);
   }
 
-  /**
-   * Sends `{xs...}` to `dest` using normal priority.
-   */
+  /// Sends `{xs...}` to `dest` using normal priority.
   template <class... Sigs, class... Ts>
   void send(const typed_actor<Sigs...>& dest, Ts&&... xs) {
     using token =
@@ -225,23 +215,17 @@ class local_actor : public abstract_actor, public resumable {
               std::forward<Ts>(xs)...);
   }
 
-  /**
-   * Sends an exit message to `dest`.
-   */
+  /// Sends an exit message to `dest`.
   void send_exit(const actor_addr& dest, uint32_t reason);
 
-  /**
-   * Sends an exit message to `dest`.
-   */
+  /// Sends an exit message to `dest`.
   template <class ActorHandle>
   void send_exit(const ActorHandle& dest, uint32_t reason) {
     send_exit(dest.address(), reason);
   }
 
-  /**
-   * Sends a message to `dest` that is delayed by `rel_time`
-   * using the priority `mp`.
-   */
+  /// Sends a message to `dest` that is delayed by `rel_time`
+  /// using the priority `mp`.
   template <class... Ts>
   void delayed_send(message_priority mp, const channel& dest,
                     const duration& rtime, Ts&&... xs) {
@@ -249,18 +233,14 @@ class local_actor : public abstract_actor, public resumable {
                       make_message(std::forward<Ts>(xs)...));
   }
 
-  /**
-   * Sends a message to `dest` that is delayed by `rel_time`.
-   */
+  /// Sends a message to `dest` that is delayed by `rel_time`.
   template <class... Ts>
   void delayed_send(const channel& dest, const duration& rtime, Ts&&... xs) {
     delayed_send_impl(message_id::make(), dest, rtime,
                       make_message(std::forward<Ts>(xs)...));
   }
 
-  /**
-   * Sends `{xs...}` delayed by `rtime` to `dest` using the priority `mp`.
-   */
+  /// Sends `{xs...}` delayed by `rtime` to `dest` using the priority `mp`.
   template <class... Sigs, class... Ts>
   void delayed_send(message_priority mp, const typed_actor<Sigs...>& dest,
                     const duration& rtime, Ts&&... xs) {
@@ -276,9 +256,7 @@ class local_actor : public abstract_actor, public resumable {
   }
 
 
-  /**
-   * Sends `{xs...}` delayed by `rtime` to `dest` using the priority `mp`.
-   */
+  /// Sends `{xs...}` delayed by `rtime` to `dest` using the priority `mp`.
   template <class... Sigs, class... Ts>
   void delayed_send(const typed_actor<Sigs...>& dest,
                     const duration& rtime, Ts&&... xs) {
@@ -297,148 +275,112 @@ class local_actor : public abstract_actor, public resumable {
    *                      miscellaneous actor operations                      *
    ****************************************************************************/
 
-  /**
-   * Causes this actor to subscribe to the group `what`.
-   * The group will be unsubscribed if the actor finishes execution.
-   */
+  /// Causes this actor to subscribe to the group `what`.
+  /// The group will be unsubscribed if the actor finishes execution.
   void join(const group& what);
 
-  /**
-   * Causes this actor to leave the group `what`.
-   */
+  /// Causes this actor to leave the group `what`.
   void leave(const group& what);
 
-  /**
-   * Finishes execution of this actor after any currently running
-   * message handler is done.
-   * This member function clears the behavior stack of the running actor
-   * and invokes `on_exit()`. The actors does not finish execution
-   * if the implementation of `on_exit()` sets a new behavior.
-   * When setting a new behavior in `on_exit()`, one has to make sure
-   * to not produce an infinite recursion.
-   *
-   * If `on_exit()` did not set a new behavior, the actor sends an
-   * exit message to all of its linked actors, sets its state to exited
-   * and finishes execution.
-   *
-   * In case this actor uses the blocking API, this member function unwinds
-   * the stack by throwing an `actor_exited` exception.
-   * @warning This member function throws immediately in thread-based actors
-   *          that do not use the behavior stack, i.e., actors that use
-   *          blocking API calls such as {@link receive()}.
-   */
+  /// Finishes execution of this actor after any currently running
+  /// message handler is done.
+  /// This member function clears the behavior stack of the running actor
+  /// and invokes `on_exit()`. The actors does not finish execution
+  /// if the implementation of `on_exit()` sets a new behavior.
+  /// When setting a new behavior in `on_exit()`, one has to make sure
+  /// to not produce an infinite recursion.
+  ///
+  /// If `on_exit()` did not set a new behavior, the actor sends an
+  /// exit message to all of its linked actors, sets its state to exited
+  /// and finishes execution.
+  ///
+  /// In case this actor uses the blocking API, this member function unwinds
+  /// the stack by throwing an `actor_exited` exception.
+  /// @warning This member function throws immediately in thread-based actors
+  ///          that do not use the behavior stack, i.e., actors that use
+  ///          blocking API calls such as {@link receive()}.
   void quit(uint32_t reason = exit_reason::normal);
 
-  /**
-   * Checks whether this actor traps exit messages.
-   */
+  /// Checks whether this actor traps exit messages.
   inline bool trap_exit() const {
     return get_flag(trap_exit_flag);
   }
 
-  /**
-   * Enables or disables trapping of exit messages.
-   */
+  /// Enables or disables trapping of exit messages.
   inline void trap_exit(bool value) {
     set_flag(value, trap_exit_flag);
   }
 
-  /**
-   * Returns the currently processed message.
-   * @warning Only set during callback invocation. Calling this member function
-   *          is undefined behavior (dereferencing a `nullptr`) when not in a
-   *          callback or `forward_to` has been called previously.
-   */
+  /// Returns the currently processed message.
+  /// @warning Only set during callback invocation. Calling this member function
+  ///          is undefined behavior (dereferencing a `nullptr`) when not in a
+  ///          callback or `forward_to` has been called previously.
   inline message& current_message() {
-    return m_current_element->msg;
+    return current_element_->msg;
   }
 
-  /**
-   * Returns the address of the sender of the current message.
-   * @warning Only set during callback invocation. Calling this member function
-   *          is undefined behavior (dereferencing a `nullptr`) when not in a
-   *          callback or `forward_to` has been called previously.
-   */
+  /// Returns the address of the sender of the current message.
+  /// @warning Only set during callback invocation. Calling this member function
+  ///          is undefined behavior (dereferencing a `nullptr`) when not in a
+  ///          callback or `forward_to` has been called previously.
   inline actor_addr& current_sender() {
-    return m_current_element->sender;
+    return current_element_->sender;
   }
 
-  /**
-   * Adds a unidirectional `monitor` to `whom`.
-   * @note Each call to `monitor` creates a new, independent monitor.
-   */
+  /// Adds a unidirectional `monitor` to `whom`.
+  /// @note Each call to `monitor` creates a new, independent monitor.
   void monitor(const actor_addr& whom);
 
-  /**
-   * @copydoc monitor(const actor_addr&)
-   */
+  /// @copydoc monitor(const actor_addr&)
   inline void monitor(const actor& whom) {
     monitor(whom.address());
   }
 
-  /**
-   * @copydoc monitor(const actor_addr&)
-   */
+  /// @copydoc monitor(const actor_addr&)
   template <class... Ts>
   inline void monitor(const typed_actor<Ts...>& whom) {
     monitor(whom.address());
   }
 
-  /**
-   * Removes a monitor from `whom`.
-   */
+  /// Removes a monitor from `whom`.
   void demonitor(const actor_addr& whom);
 
-  /**
-   * Removes a monitor from `whom`.
-   */
+  /// Removes a monitor from `whom`.
   inline void demonitor(const actor& whom) {
     demonitor(whom.address());
   }
 
-  /**
-   * Can be overridden to perform cleanup code after an actor
-   * finished execution.
-   */
+  /// Can be overridden to perform cleanup code after an actor
+  /// finished execution.
   virtual void on_exit();
 
-  /**
-   * Returns all joined groups.
-   */
+  /// Returns all joined groups.
   std::vector<group> joined_groups() const;
 
-  /**
-   * Creates a `response_promise` to response to a request later on.
-   */
+  /// Creates a `response_promise` to response to a request later on.
   response_promise make_response_promise();
 
-  /**
-   * Sets the handler for unexpected synchronous response messages.
-   */
+  /// Sets the handler for unexpected synchronous response messages.
   inline void on_sync_failure(std::function<void()> fun) {
-    m_sync_failure_handler = std::move(fun);
+    sync_failure_handler_ = std::move(fun);
   }
 
-  /**
-   * Checks wheter this actor has a user-defined sync failure handler.
-   */
+  /// Checks wheter this actor has a user-defined sync failure handler.
   inline bool has_sync_failure_handler() {
-    return static_cast<bool>(m_sync_failure_handler);
+    return static_cast<bool>(sync_failure_handler_);
   }
 
-  /**
-   * Sets a custom exception handler for this actor. If multiple handlers are
-   * defined, only the functor that was added *last* is being executed.
-   */
+  /// Sets a custom exception handler for this actor. If multiple handlers are
+  /// defined, only the functor that was added *last* is being executed.
   template <class F>
   void set_exception_handler(F f) {
     struct functor_attachable : attachable {
-      F m_functor;
-      functor_attachable(F arg) : m_functor(std::move(arg)) {
+      F functor_;
+      functor_attachable(F arg) : functor_(std::move(arg)) {
         // nop
       }
       optional<uint32_t> handle_exception(const std::exception_ptr& eptr) {
-        return m_functor(eptr);
+        return functor_(eptr);
       }
     };
     attach(attachable_ptr{new functor_attachable(std::move(f))});
@@ -482,7 +424,7 @@ class local_actor : public abstract_actor, public resumable {
    *                 here be dragons: end of public interface                 *
    ****************************************************************************/
 
-  /** @cond PRIVATE */
+  /// @cond PRIVATE
 
   local_actor();
 
@@ -498,12 +440,12 @@ class local_actor : public abstract_actor, public resumable {
   }
 
   inline mailbox_element_ptr& current_mailbox_element() {
-    return m_current_element;
+    return current_element_;
   }
 
   inline void handle_sync_failure() {
-    if (m_sync_failure_handler) {
-      m_sync_failure_handler();
+    if (sync_failure_handler_) {
+      sync_failure_handler_();
     } else {
       quit(exit_reason::unhandled_sync_failure);
     }
@@ -511,7 +453,7 @@ class local_actor : public abstract_actor, public resumable {
 
   template <class Handle, class... Ts>
   message_id sync_send_impl(message_priority mp, const Handle& dh, Ts&&... xs) {
-    if (!dh) {
+    if (! dh) {
       throw std::invalid_argument("cannot sync_send to invalid_actor");
     }
     auto req_id = new_request_id(mp);
@@ -525,7 +467,7 @@ class local_actor : public abstract_actor, public resumable {
   // returns 0 if last_dequeued() is an asynchronous or sync request message,
   // a response id generated from the request id otherwise
   inline message_id get_response_id() {
-    auto mid = m_current_element->mid;
+    auto mid = current_element_->mid;
     return (mid.is_request()) ? mid.response_id() : message_id();
   }
 
@@ -534,30 +476,30 @@ class local_actor : public abstract_actor, public resumable {
   void forward_message(const actor& dest, message_priority mp);
 
   inline uint32_t planned_exit_reason() const {
-    return m_planned_exit_reason;
+    return planned_exit_reason_;
   }
 
   inline void planned_exit_reason(uint32_t value) {
-    m_planned_exit_reason = value;
+    planned_exit_reason_ = value;
   }
 
   inline detail::behavior_stack& bhvr_stack() {
-    return m_bhvr_stack;
+    return bhvr_stack_;
   }
 
   inline mailbox_type& mailbox() {
-    return m_mailbox;
+    return mailbox_;
   }
 
   inline bool has_behavior() {
-    return !m_bhvr_stack.empty() || !m_pending_responses.empty();
+    return ! bhvr_stack_.empty() || ! pending_responses_.empty();
   }
 
   behavior& get_behavior() {
-    if (!m_pending_responses.empty()) {
-      return m_pending_responses.front().second;
+    if (! pending_responses_.empty()) {
+      return pending_responses_.front().second;
     }
-    return m_bhvr_stack.back();
+    return bhvr_stack_.back();
   }
 
   virtual void initialize() = 0;
@@ -565,7 +507,7 @@ class local_actor : public abstract_actor, public resumable {
   void cleanup(uint32_t reason);
 
   // an actor can have multiple pending timeouts, but only
-  // the latest one is active (i.e. the m_pending_timeouts.back())
+  // the latest one is active (i.e. the pending_timeouts_.back())
 
   uint32_t request_timeout(const duration& d);
 
@@ -620,43 +562,43 @@ class local_actor : public abstract_actor, public resumable {
 
   bool invoke_from_cache(behavior&, message_id);
 
- protected:
+protected:
   void do_become(behavior bhvr, bool discard_old);
 
   // used only in thread-mapped actors
   void await_data();
 
   // identifies the ID of the last sent synchronous request
-  message_id m_last_request_id;
+  message_id last_request_id_;
 
   // identifies all IDs of sync messages waiting for a response
-  std::forward_list<pending_response> m_pending_responses;
+  std::forward_list<pending_response> pending_responses_;
 
-  // points to m_dummy_node if no callback is currently invoked,
+  // points to dummy_node_ if no callback is currently invoked,
   // points to the node under processing otherwise
-  mailbox_element_ptr m_current_element;
+  mailbox_element_ptr current_element_;
 
   // set by quit
-  uint32_t m_planned_exit_reason;
+  uint32_t planned_exit_reason_;
 
   // identifies the timeout messages we are currently waiting for
-  uint32_t m_timeout_id;
+  uint32_t timeout_id_;
 
   // used by both event-based and blocking actors
-  detail::behavior_stack m_bhvr_stack;
+  detail::behavior_stack bhvr_stack_;
 
   // used by both event-based and blocking actors
-  mailbox_type m_mailbox;
+  mailbox_type mailbox_;
 
-  /** @endcond */
+  /// @endcond
 
- private:
+private:
   template <class T, class... Ts>
   typename std::enable_if<
-    !std::is_same<typename std::decay<T>::type, message>::value
+    ! std::is_same<typename std::decay<T>::type, message>::value
   >::type
   send_impl(message_id mid, abstract_channel* dest, T&& x, Ts&&... xs) {
-    if (!dest) {
+    if (! dest) {
       return;
     }
     dest->enqueue(mailbox_element::make_joint(address(),
@@ -671,13 +613,11 @@ class local_actor : public abstract_actor, public resumable {
   void delayed_send_impl(message_id mid, const channel& whom,
                          const duration& rtime, message data);
 
-  std::function<void()> m_sync_failure_handler;
+  std::function<void()> sync_failure_handler_;
 };
 
-/**
- * A smart pointer to a {@link local_actor} instance.
- * @relates local_actor
- */
+/// A smart pointer to a {@link local_actor} instance.
+/// @relates local_actor
 using local_actor_ptr = intrusive_ptr<local_actor>;
 
 // <backward_compatibility version="0.9">
