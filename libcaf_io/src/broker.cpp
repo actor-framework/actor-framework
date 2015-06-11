@@ -276,6 +276,15 @@ void broker::cleanup(uint32_t reason) {
   deref(); // release implicit reference count from middleman
 }
 
+behavior broker::make_behavior() {
+  behavior res;
+  if (initial_behavior_fac_) {
+    res = initial_behavior_fac_(this);
+    initial_behavior_fac_ = nullptr;
+  }
+  return res;
+}
+
 void broker::on_exit() {
   // nop
 }
@@ -364,14 +373,6 @@ std::vector<connection_handle> broker::connections() const {
 
 void broker::initialize() {
   // nop
-}
-
-broker::functor_based::~functor_based() {
-  // nop
-}
-
-behavior broker::functor_based::make_behavior() {
-  return make_behavior_(this);
 }
 
 network::multiplexer& broker::backend() {

@@ -30,9 +30,6 @@
 
 namespace caf {
 
-template <class... Sigs>
-class functor_based_typed_actor;
-
 namespace detail {
 
 // converts a list of replies_to<...>::with<...> elements to a list of
@@ -173,9 +170,6 @@ public:
   template <class, class, class>
   friend class mixin::behavior_stack_based_impl;
 
-  template <class...>
-  friend class functor_based_typed_actor;
-
   typed_behavior(typed_behavior&&) = default;
   typed_behavior(const typed_behavior&) = default;
   typed_behavior& operator=(typed_behavior&&) = default;
@@ -207,6 +201,10 @@ public:
 
   behavior& unbox() {
     return bhvr_;
+  }
+
+  static typed_behavior make_empty_behavior() {
+    return {};
   }
 
   /// @endcond

@@ -59,7 +59,7 @@ using client_type = typed_actor<>;
 server_type::behavior_type server() {
   return {
     [](const ping & p) -> pong {
-      CAF_MESSAGE("received `ping`");
+      CAF_CHECK_EQUAL(p.value, 42);
       return pong{p.value};
     }
   };

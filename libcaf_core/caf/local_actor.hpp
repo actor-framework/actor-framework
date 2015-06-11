@@ -562,6 +562,10 @@ public:
 
   bool invoke_from_cache(behavior&, message_id);
 
+  inline void initial_behavior_fac(std::function<behavior (local_actor*)> fun) {
+    initial_behavior_fac_ = std::move(fun);
+  }
+
 protected:
   void do_become(behavior bhvr, bool discard_old);
 
@@ -589,6 +593,9 @@ protected:
 
   // used by both event-based and blocking actors
   mailbox_type mailbox_;
+
+  // used by functor-based actors to implemented make_behavior() or act()
+  std::function<behavior (local_actor*)> initial_behavior_fac_;
 
   /// @endcond
 

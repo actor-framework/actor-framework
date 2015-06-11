@@ -97,11 +97,13 @@ size_t pongs() {
 }
 
 void event_based_ping(event_based_actor* self, size_t ping_msgs) {
+printf("event_based_ping\n");
   s_pongs = 0;
   self->become(ping_behavior(self, ping_msgs));
 }
 
 void pong(blocking_actor* self, actor ping_actor) {
+printf("event_based_pong\n");
   self->send(ping_actor, pong_atom::value, 0); // kickoff
   self->receive_loop(pong_behavior(self));
 }
@@ -462,7 +464,7 @@ void test_remote_actor(const char* app_path, bool run_remote_actor) {
                                 "--", "-c", port2, "-c", port1, "-g", gport);
   } else {
     CAF_MESSAGE("please run client with: "
-              << "-c " << port2 << " " << port1 << " " << gport);
+              << "-c " << port2 << " -c " << port1 << " -g " << gport);
   }
   self->receive(
     [&](const down_msg& dm) {

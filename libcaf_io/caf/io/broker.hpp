@@ -27,8 +27,6 @@
 #include "caf/extend.hpp"
 #include "caf/local_actor.hpp"
 
-#include "caf/mixin/functor_based.hpp"
-
 #include "caf/detail/intrusive_partitioned_list.hpp"
 
 #include "caf/io/fwd.hpp"
@@ -273,8 +271,6 @@ public:
   /// Checks whether an acceptor for `handle` exists.
   bool valid(accept_handle handle);
 
-  class functor_based;
-
   void launch(execution_unit* eu, bool lazy, bool hide);
 
   void cleanup(uint32_t reason);
@@ -299,7 +295,7 @@ protected:
 
   broker(middleman& parent_ref);
 
-  virtual behavior make_behavior() = 0;
+  virtual behavior make_behavior();
 
   /// Can be overridden to perform cleanup code before the
   /// broker closes all its connections.
@@ -342,21 +338,6 @@ private:
 
   middleman& mm_;
   detail::intrusive_partitioned_list<mailbox_element, detail::disposer> cache_;
-};
-
-class broker::functor_based : public extend<broker>::
-                                     with<mixin::functor_based> {
-public:
-  using super = combined_type;
-
-  template <class... Ts>
-  functor_based(Ts&&... xs) : super(std::forward<Ts>(xs)...) {
-    // nop
-  }
-
-  ~functor_based();
-
-  behavior make_behavior() override;
 };
 
 } // namespace io

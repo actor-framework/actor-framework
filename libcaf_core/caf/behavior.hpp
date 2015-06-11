@@ -114,6 +114,10 @@ public:
     // nop
   }
 
+  inline behavior& unbox() {
+    return *this;
+  }
+
   /// @endcond
 
 private:

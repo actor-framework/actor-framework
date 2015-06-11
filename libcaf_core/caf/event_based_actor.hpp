@@ -28,8 +28,6 @@
 #include "caf/response_handle.hpp"
 #include "caf/abstract_event_based_actor.hpp"
 
-#include "caf/mixin/functor_based.hpp"
-
 #include "caf/detail/logging.hpp"
 
 namespace caf {
@@ -48,26 +46,11 @@ public:
 
   ~event_based_actor();
 
-  class functor_based;
-
   void initialize() override;
 
 protected:
   /// Returns the initial actor behavior.
-  virtual behavior make_behavior() = 0;
-};
-
-/// Implicitly used whenever spawning a cooperatively scheduled actor
-/// using a function of function object.
-/// @extends event_based_actor
-class event_based_actor::functor_based : public extend<event_based_actor>::
-                                                with<mixin::functor_based> {
-public:
-  template <class... Ts>
-  functor_based(Ts&&... xs) : combined_type(std::forward<Ts>(xs)...) {
-    // nop
-  }
-  behavior make_behavior() override;
+  virtual behavior make_behavior();
 };
 
 } // namespace caf

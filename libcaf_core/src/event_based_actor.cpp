@@ -46,12 +46,12 @@ void event_based_actor::initialize() {
   }
 }
 
-behavior event_based_actor::functor_based::make_behavior() {
-  auto res = make_behavior_(this);
-  // reset make_behavior_fun to get rid of any
-  // references held by the function object
-  make_behavior_fun tmp;
-  make_behavior_.swap(tmp);
+behavior event_based_actor::make_behavior() {
+  behavior res;
+  if (initial_behavior_fac_) {
+    res = initial_behavior_fac_(this);
+    initial_behavior_fac_ = nullptr;
+  }
   return res;
 }
 

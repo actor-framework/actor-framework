@@ -46,8 +46,6 @@ class blocking_actor
     : public extend<local_actor, blocking_actor>::
              with<mixin::sync_sender<blocking_response_handle_tag>::impl> {
 public:
-  class functor_based;
-
   blocking_actor();
 
   ~blocking_actor();
@@ -178,7 +176,7 @@ public:
   void await_all_other_actors_done();
 
   /// Implements the actor's behavior.
-  virtual void act() = 0;
+  virtual void act();
 
   /// @cond PRIVATE
 
@@ -193,41 +191,6 @@ protected:
   std::function<void(behavior&)> make_dequeue_callback() {
     return [=](behavior& bhvr) { dequeue(bhvr); };
   }
-};
-
-class blocking_actor::functor_based : public blocking_actor {
-public:
-  using act_fun = std::function<void(blocking_actor*)>;
-
-  template <class F, class... Ts>
-  functor_based(F f, Ts&&... xs) {
-    using trait = typename detail::get_callable_trait<F>::type;
-    using arg0 = typename detail::tl_head<typename trait::arg_types>::type;
-    blocking_actor* dummy = nullptr;
-    std::integral_constant<bool, std::is_same<arg0, blocking_actor*>::value> tk;
-    create(dummy, tk, f, std::forward<Ts>(xs)...);
-  }
-
-  void cleanup(uint32_t reason);
-
-protected:
-  void act() override;
-
-private:
-  void create(blocking_actor*, act_fun);
-
-  template <class Actor, typename F, class... Ts>
-  void create(Actor* dummy, std::true_type, F f, Ts&&... xs) {
-    create(dummy, std::bind(f, std::placeholders::_1, std::forward<Ts>(xs)...));
-  }
-
-  template <class Actor, typename F, class... Ts>
-  void create(Actor* dummy, std::false_type, F f, Ts&&... xs) {
-    std::function<void()> fun = std::bind(f, std::forward<Ts>(xs)...);
-    create(dummy, [fun](Actor*) { fun(); });
-  }
-
-  act_fun act_;
 };
 
 } // namespace caf

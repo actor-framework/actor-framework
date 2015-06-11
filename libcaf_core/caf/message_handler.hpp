@@ -114,6 +114,14 @@ public:
     return tmp.as_behavior_impl();
   }
 
+  /// @cond PRIVATE
+
+  inline message_handler& unbox() {
+    return *this;
+  }
+
+  /// @endcond
+
 private:
   impl_ptr impl_;
 };

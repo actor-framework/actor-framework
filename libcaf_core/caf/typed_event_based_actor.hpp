@@ -124,7 +124,15 @@ public:
   }
 
 protected:
-  virtual behavior_type make_behavior() = 0;
+  virtual behavior_type make_behavior() {
+    if (this->initial_behavior_fac_) {
+      auto bhvr = this->initial_behavior_fac_(this);
+      this->initial_behavior_fac_ = nullptr;
+      if (bhvr)
+        this->do_become(std::move(bhvr), true);
+    }
+    return behavior_type::make_empty_behavior();
+  }
 };
 
 } // namespace caf

@@ -17,69 +17,45 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/exception.hpp"
-#include "caf/blocking_actor.hpp"
+#ifndef CAF_DETAIL_SPAWN_FWD_HPP
+#define CAF_DETAIL_SPAWN_FWD_HPP
 
-#include "caf/detail/logging.hpp"
-#include "caf/detail/singletons.hpp"
-#include "caf/detail/actor_registry.hpp"
+#include <functional>
+
+#include "caf/fwd.hpp"
+
+#include "caf/detail/type_traits.hpp"
 
 namespace caf {
+namespace detail {
 
-blocking_actor::blocking_actor() {
-  is_blocking(true);
+/// Converts `scoped_actor` and pointers to actors to handles of type `actor`
+/// but simply forwards any other argument in the same way `std::forward` does.
+template <class T>
+typename std::conditional<
+  is_convertible_to_actor<typename std::decay<T>::type>::value,
+  actor,
+  T&&
+>::type
+spawn_fwd(typename std::remove_reference<T>::type& arg) noexcept {
+  return static_cast<T&&>(arg);
 }
 
-blocking_actor::~blocking_actor() {
-  // avoid weak-vtables warning
+/// Converts `scoped_actor` and pointers to actors to handles of type `actor`
+/// but simply forwards any other argument in the same way `std::forward` does.
+template <class T>
+typename std::conditional<
+  is_convertible_to_actor<typename std::decay<T>::type>::value,
+  actor,
+  T&&
+>::type
+spawn_fwd(typename std::remove_reference<T>::type&& arg) noexcept {
+  static_assert(! std::is_lvalue_reference<T>::value,
+                "silently converting an lvalue to an rvalue");
+  return static_cast<T&&>(arg);
 }
 
-void blocking_actor::await_all_other_actors_done() {
-  detail::singletons::get_actor_registry()->await_running_count_equal(1);
-}
-
-void blocking_actor::act() {
-  CAF_LOG_TRACE("");
-  if (initial_behavior_fac_)
-    initial_behavior_fac_(this);
-}
-
-void blocking_actor::initialize() {
-  // nop
-}
-
-void blocking_actor::dequeue(behavior& bhvr, message_id mid) {
-  // try to dequeue from cache first
-  if (invoke_from_cache(bhvr, mid)) {
-    return;
-  }
-  // requesting an invalid timeout will reset our active timeout
-  uint32_t timeout_id = 0;
-  if (mid == invalid_message_id) {
-    timeout_id = request_timeout(bhvr.timeout());
-  } else {
-    request_sync_timeout_msg(bhvr.timeout(), mid);
-  }
-  // read incoming messages
-  for (;;) {
-    await_data();
-    auto msg = next_message();
-    switch (invoke_message(msg, bhvr, mid)) {
-      case im_success:
-        if (mid == invalid_message_id) {
-          reset_timeout(timeout_id);
-        }
-        return;
-      case im_skipped:
-        if (msg) {
-          push_to_cache(std::move(msg));
-        }
-        break;
-      default:
-        // delete msg
-        break;
-    }
-  }
-}
-
+} // namespace detail
 } // namespace caf
+
+#endif // CAF_DETAIL_SPAWN_FWD_HPP
