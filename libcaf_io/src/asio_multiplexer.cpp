@@ -101,17 +101,11 @@ connection_handle asio_multiplexer::new_tcp_scribe(const std::string& host,
   return connection_handle::from_int(id);
 }
 
-<<<<<<< HEAD
-void asio_multiplexer::assign_tcp_scribe(broker* self, connection_handle hdl) {
+void asio_multiplexer::assign_tcp_scribe(abstract_broker* self,
+                                         connection_handle hdl) {
   std::lock_guard<std::mutex> lock(mtx_sockets_);
   auto itr = unassigned_sockets_.find(hdl.id());
   if (itr != unassigned_sockets_.end()) {
-=======
-void asio_multiplexer::assign_tcp_scribe(abstract_broker* self, connection_handle hdl) {
-  std::lock_guard<std::mutex> lock(mtx_sockets_);
-  auto itr = unassigned_sockets_.find(hdl.id());
-  if (itr != unassigned_sockets_.end()) {
->>>>>>> 84f43f6f825114da12757fe0e7018b9464b97614
     add_tcp_scribe(self, std::move(itr->second));
     unassigned_sockets_.erase(itr);
   }
@@ -121,15 +115,9 @@ template <class Socket>
 connection_handle asio_multiplexer::add_tcp_scribe(abstract_broker* self,
                                                    Socket&& sock) {
   CAF_LOG_TRACE("");
-<<<<<<< HEAD
-  class impl : public broker::scribe {
- public:
-    impl(broker* ptr, Socket&& s)
-=======
   class impl : public abstract_broker::scribe {
   public:
     impl(abstract_broker* ptr, Socket&& s)
->>>>>>> 84f43f6f825114da12757fe0e7018b9464b97614
         : scribe(ptr, network::conn_hdl_from_socket(s)),
           launched_(false),
           stream_(s.get_io_service()) {
@@ -142,13 +130,12 @@ connection_handle asio_multiplexer::add_tcp_scribe(abstract_broker* self,
         launch();
       }
     }
-<<<<<<< HEAD
-    broker::buffer_type& wr_buf() override { return stream_.wr_buf(); }
-    broker::buffer_type& rd_buf() override { return stream_.rd_buf(); }
-=======
-    abstract_broker::buffer_type& wr_buf() override { return stream_.wr_buf(); }
-    abstract_broker::buffer_type& rd_buf() override { return stream_.rd_buf(); }
->>>>>>> 84f43f6f825114da12757fe0e7018b9464b97614
+    abstract_broker::buffer_type& wr_buf() override {
+      return stream_.wr_buf();
+    }
+    abstract_broker::buffer_type& rd_buf() override {
+      return stream_.rd_buf();
+    }
     void stop_reading() override {
       CAF_LOG_TRACE("");
       stream_.stop_reading();
@@ -223,15 +210,9 @@ asio_multiplexer::add_tcp_doorman(abstract_broker* self,
                                   default_socket_acceptor&& sock) {
   CAF_LOG_TRACE("sock.fd = " << sock.native_handle());
   CAF_ASSERT(sock.native_handle() != network::invalid_native_socket);
-<<<<<<< HEAD
-  class impl : public broker::doorman {
- public:
-    impl(broker* ptr, default_socket_acceptor&& s,
-=======
   class impl : public abstract_broker::doorman {
   public:
     impl(abstract_broker* ptr, default_socket_acceptor&& s,
->>>>>>> 84f43f6f825114da12757fe0e7018b9464b97614
          network::asio_multiplexer& am)
         : doorman(ptr, network::accept_hdl_from_socket(s)),
           acceptor_(am, s.get_io_service()) {
