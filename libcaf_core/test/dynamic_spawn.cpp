@@ -17,7 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#define CAF_SUITE spawn
+#define CAF_SUITE dynamic_spawn
 #include "caf/test/unit_test.hpp"
 
 #include <stack>
