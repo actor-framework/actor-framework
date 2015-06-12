@@ -187,7 +187,6 @@ public:
       std::move(fun), hdl, std::forward<Ts>(xs)...);
   }
 
-protected:
   typed_broker() {
     // nop
   }
@@ -196,6 +195,7 @@ protected:
     // nop
   }
 
+protected:
   virtual behavior_type make_behavior() {
     if (this->initial_behavior_fac_) {
       auto bhvr = this->initial_behavior_fac_(this);

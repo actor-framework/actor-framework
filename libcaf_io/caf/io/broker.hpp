@@ -64,11 +64,11 @@ public:
 
   void initialize() override;
 
-protected:
   broker();
 
   broker(middleman& parent_ref);
 
+protected:
   virtual behavior make_behavior();
 };
 
