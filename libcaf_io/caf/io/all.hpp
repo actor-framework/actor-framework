@@ -21,6 +21,7 @@
 #define CAF_IO_ALL_HPP
 
 #include "caf/io/broker.hpp"
+#include "caf/io/typed_broker.hpp"
 #include "caf/io/publish.hpp"
 #include "caf/io/spawn_io.hpp"
 #include "caf/io/middleman.hpp"

@@ -34,6 +34,8 @@ using namespace std;
 using namespace caf;
 using namespace caf::io;
 
+namespace {
+
 using ping_atom = caf::atom_constant<caf::atom("ping")>;
 using pong_atom = caf::atom_constant<caf::atom("pong")>;
 using publish_atom = caf::atom_constant<caf::atom("publish")>;
@@ -55,12 +57,12 @@ void ping(event_based_actor* self, size_t num_pings) {
         }
         return std::make_tuple(ping_atom::value, value + 1);
       },
-      others >> [&] {
+      others >> [=] {
         CAF_TEST_ERROR("Unexpected message: "
                        << to_string(self->current_message()));
       });
     },
-    others >> [&] {
+    others >> [=] {
       CAF_TEST_ERROR("Unexpected message: "
                      << to_string(self->current_message()));
     }
@@ -82,7 +84,7 @@ void pong(event_based_actor* self) {
           CAF_MESSAGE("received down_msg{" << dm.reason << "}");
           self->quit(dm.reason);
         },
-        others >> [&] {
+        others >> [=] {
           CAF_TEST_ERROR("Unexpected message: "
                          << to_string(self->current_message()));
         }
@@ -90,7 +92,7 @@ void pong(event_based_actor* self) {
       // reply to 'ping'
       return std::make_tuple(pong_atom::value, value);
     },
-    others >> [&] {
+    others >> [=] {
       CAF_TEST_ERROR("Unexpected message: "
                      << to_string(self->current_message()));
     }
@@ -146,7 +148,7 @@ void peer_fun(broker* self, connection_handle hdl, const actor& buddy) {
         self->quit(dm.reason);
       }
     },
-    others >> [&] {
+    others >> [=] {
       CAF_TEST_ERROR("Unexpected message: "
                      << to_string(self->current_message()));
     }
@@ -193,6 +195,8 @@ void run_server(bool spawn_client, const char* bin_path) {
     }
   );
 }
+
+} // namespace <anonymous>
 
 CAF_TEST(test_broker) {
   auto argv = caf::test::engine::argv();

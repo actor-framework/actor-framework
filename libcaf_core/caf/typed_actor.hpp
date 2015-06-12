@@ -39,6 +39,13 @@ struct invalid_actor_addr_t;
 template <class... Sigs>
 class typed_event_based_actor;
 
+namespace io {
+
+template <class... Sigs>
+class typed_broker;
+
+} // namespace io
+
 /// Identifies a strongly typed actor.
 /// @tparam Sigs Signature of this actor as `replies_to<...>::with<...>`
 ///              parameter pack.
@@ -74,6 +81,12 @@ public:
 
   /// Identifies the base class for this kind of actor.
   using base = typed_event_based_actor<Sigs...>;
+
+  /// Identifies pointers to brokers implementing this interface.
+  using broker_pointer = io::typed_broker<Sigs...>*;
+
+  /// Identifies the base class of brokers implementing this interface.
+  using broker_base = io::typed_broker<Sigs...>;
 
   typed_actor() = default;
   typed_actor(typed_actor&&) = default;

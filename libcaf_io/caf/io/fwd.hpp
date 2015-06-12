@@ -24,6 +24,7 @@ namespace caf {
 namespace io {
 
 class basp_broker;
+class abstract_broker;
 class broker;
 class middleman;
 class receive_policy;

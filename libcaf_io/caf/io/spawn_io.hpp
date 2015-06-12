@@ -24,10 +24,11 @@
 #include <functional>
 
 #include "caf/spawn.hpp"
-
-#include "caf/io/broker.hpp"
-#include "caf/io/middleman.hpp"
 #include "caf/mailbox_element.hpp"
+
+#include "caf/io/middleman.hpp"
+#include "caf/io/typed_broker.hpp"
+#include "caf/io/abstract_broker.hpp"
 #include "caf/io/connection_handle.hpp"
 
 #include "caf/io/network/native_socket.hpp"
@@ -35,49 +36,118 @@
 namespace caf {
 namespace io {
 
-/// Spawns a new functor-based broker.
-template <spawn_options Os = no_spawn_options,
-     typename F = std::function<void(broker*)>, class... Ts>
-actor spawn_io(F fun, Ts&&... xs) {
-  detail::init_fun_factory<broker, F> fac;
-  auto init = fac(std::move(fun), std::forward<Ts>(xs)...);
-  auto bl = [&](broker* ptr) {
-    ptr->initial_behavior_fac(std::move(init));
-  };
-  return spawn_class<broker>(nullptr, bl);
-}
+/// @cond PRIVATE
 
-/// Spawns a new functor-based broker connecting to `host:port.
-template <spawn_options Os = no_spawn_options,
-      typename F = std::function<void(broker*)>, class... Ts>
-actor spawn_io_client(F fun, const std::string& host,
-                      uint16_t port, Ts&&... xs) {
+template <spawn_options Os, class Impl, class F, class... Ts>
+intrusive_ptr<Impl> spawn_io_client_impl(F fun, const std::string& host,
+                                         uint16_t port, Ts&&... xs) {
   // works around an issue with GCC 4.8 that could not handle
   // variadic template parameter packs inside lambdas
   auto args = std::forward_as_tuple(std::forward<Ts>(xs)...);
-  auto bl = [&](broker* ptr) {
+  auto bl = [&](Impl* ptr) {
     auto mm = middleman::instance();
     auto hdl = mm->backend().add_tcp_scribe(ptr, host, port);
-    detail::init_fun_factory<broker, F> fac;
+    detail::init_fun_factory<Impl, F> fac;
     auto init = detail::apply_args_prefixed(fac, detail::get_indices(args),
                                             args, std::move(fun), hdl);
     ptr->initial_behavior_fac(std::move(init));
   };
-  return spawn_class<broker>(nullptr, bl);
+  return spawn_class<Impl>(nullptr, bl);
 }
 
-/// Spawns a new broker as server running on given `port`.
-template <spawn_options Os = no_spawn_options,
-          class F = std::function<void(broker*)>, class... Ts>
-actor spawn_io_server(F fun, uint16_t port, Ts&&... xs) {
-  detail::init_fun_factory<broker, F> fac;
+template <spawn_options Os, class Impl, class F, class... Ts>
+intrusive_ptr<Impl> spawn_io_server_impl(F fun, uint16_t port, Ts&&... xs) {
+  detail::init_fun_factory<Impl, F> fac;
   auto init = fac(std::move(fun), std::forward<Ts>(xs)...);
   auto bl = [&](broker* ptr) {
     auto mm = middleman::instance();
     mm->backend().add_tcp_doorman(ptr, port);
     ptr->initial_behavior_fac(std::move(init));
   };
-  return spawn_class<broker>(nullptr, bl);
+  return spawn_class<Impl>(nullptr, bl);
+}
+
+/// @endcond
+
+/// Spawns a new functor-based broker.
+template <spawn_options Os = no_spawn_options,
+          class F = std::function<void(broker*)>, class... Ts>
+actor spawn_io(F fun, Ts&&... xs) {
+  return spawn_functor<Os>(nullptr, empty_before_launch_callback{},
+                           std::move(fun), std::forward<Ts>(xs)...);
+}
+
+/// Spawns a new functor-based broker connecting to `host:port`.
+template <spawn_options Os = no_spawn_options,
+          class F = std::function<void(broker*)>, class... Ts>
+actor spawn_io_client(F fun, const std::string& host,
+                      uint16_t port, Ts&&... xs) {
+  return spawn_io_client_impl<Os, broker>(std::move(fun), host, port,
+                                          std::forward<Ts>(xs)...);
+}
+
+/// Spawns a new broker as server running on given `port`.
+template <spawn_options Os = no_spawn_options,
+          class F = std::function<void(broker*)>, class... Ts>
+actor spawn_io_server(F fun, uint16_t port, Ts&&... xs) {
+  return spawn_io_server_impl<Os, broker>(std::move(fun), port,
+                                          std::forward<Ts>(xs)...);
+}
+
+/// Spawns a new functor-based typed-broker.
+template <spawn_options Os = no_spawn_options, class F, class... Ts>
+typename infer_typed_actor_handle<
+  typename detail::get_callable_trait<F>::result_type,
+  typename detail::tl_head<
+    typename detail::get_callable_trait<F>::arg_types
+  >::type
+>::type
+spawn_io_typed(F fun, Ts&&... xs) {
+  using impl =
+    typename infer_typed_broker_base<
+      typename detail::get_callable_trait<F>::result_type,
+      typename detail::tl_head<
+        typename detail::get_callable_trait<F>::arg_types
+      >::type
+    >::type;
+  return spawn_functor_impl<Os, impl>(nullptr,
+                                      empty_before_launch_callback{},
+                                      std::move(fun), std::forward<Ts>(xs)...);
+}
+
+/// Spawns a new functor-based typed-broker connecting to `host:port`.
+template <spawn_options Os = no_spawn_options, class F, class... Ts>
+typename infer_typed_actor_handle<
+  typename detail::get_callable_trait<F>::result_type,
+  typename detail::tl_head<
+    typename detail::get_callable_trait<F>::arg_types
+  >::type
+>::type
+spawn_io_client_typed(F fun, const std::string& host, uint16_t port,
+                      Ts&&... xs) {
+  using trait = typename detail::get_callable_trait<F>::type;
+  using arg_types = typename trait::arg_types;
+  using first_arg = typename detail::tl_head<arg_types>::type;
+  using impl_class = typename std::remove_pointer<first_arg>::type;
+  return spawn_io_client_impl<Os, impl_class>(std::move(fun), host, port,
+                                              std::forward<Ts>(xs)...);
+}
+
+/// Spawns a new typed-broker as server running on given `port`.
+template <spawn_options Os = no_spawn_options, class F, class... Ts>
+typename infer_typed_actor_handle<
+  typename detail::get_callable_trait<F>::result_type,
+  typename detail::tl_head<
+    typename detail::get_callable_trait<F>::arg_types
+  >::type
+>::type
+spawn_io_server_typed(F fun, uint16_t port, Ts&&... xs) {
+  using trait = typename detail::get_callable_trait<F>::type;
+  using arg_types = typename trait::arg_types;
+  using first_arg = typename detail::tl_head<arg_types>::type;
+  using impl_class = typename std::remove_pointer<first_arg>::type;
+  return spawn_io_server_impl<Os, impl_class>(std::move(fun), port,
+                                              std::forward<Ts>(xs)...);
 }
 
 } // namespace io
