@@ -38,27 +38,26 @@ namespace caf {
  * @tparam HasSyncSend Configures whether this base class extends `sync_sender`.
  * @extends local_actor
  */
-template <class BehaviorType, bool HasSyncSend>
-class abstract_event_based_actor : public
-  std::conditional<
-    HasSyncSend,
-    extend<local_actor>
-    ::with<mixin::sync_sender<nonblocking_response_handle_tag>::template impl>,
-    local_actor
-  >::type {
+template <class BehaviorType, bool HasSyncSend, class Base = local_actor>
+class abstract_event_based_actor : public Base {
 public:
   using behavior_type = BehaviorType;
+
+  template <class... Ts>
+  abstract_event_based_actor(Ts&&... xs) : Base(std::forward<Ts>(xs)...) {
+    // nop
+  }
 
   /****************************************************************************
    *                     become() member function family                      *
    ****************************************************************************/
 
   void become(behavior_type bhvr) {
-    this->do_become(std::move(unbox(bhvr)), true);
+    this->do_become(std::move(bhvr.unbox()), true);
   }
 
   void become(const keep_behavior_t&, behavior_type bhvr) {
-    this->do_become(std::move(unbox(bhvr)), false);
+    this->do_become(std::move(bhvr.unbox()), false);
   }
 
   template <class T, class... Ts>
@@ -68,27 +67,33 @@ public:
   >::type
   become(T&& x, Ts&&... xs) {
     behavior_type bhvr{std::forward<T>(x), std::forward<Ts>(xs)...};
-    this->do_become(std::move(unbox(bhvr)), true);
+    this->do_become(std::move(bhvr.unbox()), true);
   }
 
   template <class... Ts>
   void become(const keep_behavior_t&, Ts&&... xs) {
     behavior_type bhvr{std::forward<Ts>(xs)...};
-    this->do_become(std::move(unbox(bhvr)), false);
+    this->do_become(std::move(bhvr.unbox()), false);
   }
 
   void unbecome() {
     this->bhvr_stack_.pop_back();
   }
+};
 
-private:
+template <class BehaviorType, class Base>
+class abstract_event_based_actor<BehaviorType, true, Base>
+  : public extend<abstract_event_based_actor<BehaviorType, false, Base>>
+           ::template with<mixin::sync_sender<nonblocking_response_handle_tag>::template impl> {
+public:
+  using super
+    = typename extend<abstract_event_based_actor<BehaviorType, false, Base>>::
+      template with<mixin::sync_sender<nonblocking_response_handle_tag>::
+                      template impl>;
   template <class... Ts>
-  static behavior& unbox(typed_behavior<Ts...>& x) {
-    return x.unbox();
-  }
-
-  static inline behavior& unbox(behavior& x) {
-    return x;
+  abstract_event_based_actor(Ts&&... xs)
+      : super(std::forward<Ts>(xs)...) {
+    // nop
   }
 };
 

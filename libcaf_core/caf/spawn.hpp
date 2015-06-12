@@ -78,6 +78,26 @@ intrusive_ptr<C> spawn_class(execution_unit* host,
                            detail::spawn_fwd<Ts>(xs)...);
 }
 
+template <spawn_options Os, class C, class BeforeLaunch, class F, class... Ts>
+intrusive_ptr<C> spawn_functor_impl(execution_unit* eu, BeforeLaunch cb,
+                                    F fun, Ts&&... xs) {
+  constexpr bool has_blocking_base =
+    std::is_base_of<blocking_actor, C>::value;
+  static_assert(has_blocking_base || ! has_blocking_api_flag(Os),
+                "blocking functor-based actors "
+                "need to be spawned using the blocking_api flag");
+  static_assert(! has_blocking_base || has_blocking_api_flag(Os),
+                "non-blocking functor-based actors "
+                "cannot be spawned using the blocking_api flag");
+  detail::init_fun_factory<C, F> fac;
+  auto init = fac(std::move(fun), std::forward<Ts>(xs)...);
+  auto bl = [&](C* ptr) {
+    cb(ptr);
+    ptr->initial_behavior_fac(std::move(init));
+  };
+  return spawn_class<C, Os>(eu, bl);
+}
+
 /// Called by `spawn` when used to create a functor-based actor (usually
 /// should not be called by users of the library). This function
 /// selects a proper implementation class and then delegates to `spawn_class`.
@@ -86,7 +106,7 @@ actor spawn_functor(execution_unit* eu, BeforeLaunch cb, F fun, Ts&&... xs) {
   using trait = typename detail::get_callable_trait<F>::type;
   using arg_types = typename trait::arg_types;
   using first_arg = typename detail::tl_head<arg_types>::type;
-  using base_class =
+  using impl =
     typename std::conditional<
       std::is_pointer<first_arg>::value,
       typename std::remove_pointer<first_arg>::type,
@@ -96,21 +116,8 @@ actor spawn_functor(execution_unit* eu, BeforeLaunch cb, F fun, Ts&&... xs) {
         event_based_actor
       >::type
     >::type;
-  constexpr bool has_blocking_base =
-    std::is_base_of<blocking_actor, base_class>::value;
-  static_assert(has_blocking_base || ! has_blocking_api_flag(Os),
-                "blocking functor-based actors "
-                "need to be spawned using the blocking_api flag");
-  static_assert(! has_blocking_base || has_blocking_api_flag(Os),
-                "non-blocking functor-based actors "
-                "cannot be spawned using the blocking_api flag");
-  detail::init_fun_factory<base_class, F> fac;
-  auto init = fac(std::move(fun), std::forward<Ts>(xs)...);
-  auto bl = [&](base_class* ptr) {
-    cb(ptr);
-    ptr->initial_behavior_fac(std::move(init));
-  };
-  return spawn_class<base_class, Os>(eu, bl);
+  return spawn_functor_impl<Os, impl>(eu, cb, std::move(fun),
+                                      std::forward<Ts>(xs)...);
 }
 
 /// @ingroup ActorCreation
@@ -230,13 +237,8 @@ spawn_typed_functor(execution_unit* eu, BeforeLaunch cb, F fun, Ts&&... xs) {
         typename detail::get_callable_trait<F>::arg_types
       >::type
     >::type;
-  detail::init_fun_factory<impl, F> fac;
-  auto init = fac(std::move(fun), std::forward<Ts>(xs)...);
-  auto bl = [&](impl* ptr) {
-    cb(ptr);
-    ptr->initial_behavior_fac(std::move(init));
-  };
-  return spawn_class<impl, Os>(eu, bl);
+  return spawn_functor_impl<Os, impl>(eu, cb, std::move(fun),
+                                      std::forward<Ts>(xs)...);
 }
 
 /// Returns a new typed actor from a functor. The first element

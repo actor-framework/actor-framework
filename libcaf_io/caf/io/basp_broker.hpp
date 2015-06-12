@@ -56,7 +56,7 @@ public:
   actor_proxy_ptr make_proxy(const node_id&, actor_id) override;
 
   class payload_writer {
-  public:
+ public:
     payload_writer() = default;
     payload_writer(const payload_writer&) = default;
     payload_writer& operator=(const payload_writer&) = default;

@@ -8,6 +8,7 @@ file(GLOB LIBCAF_IO_HDRS "caf/io/*.hpp" "caf/io/network/*.hpp")
 # list cpp files excluding platform-dependent files
 set (LIBCAF_IO_SRCS
      src/basp_broker.cpp
+     src/abstract_broker.cpp
      src/broker.cpp
      src/max_msg_size.cpp
      src/middleman.cpp

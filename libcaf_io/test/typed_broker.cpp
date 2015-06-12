@@ -17,7 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#define CAF_SUITE broker
+#define CAF_SUITE typed_broker
 #include "caf/test/unit_test.hpp"
 
 #include <memory>
@@ -36,7 +36,6 @@ using namespace caf::io;
 
 using ping_atom = caf::atom_constant<caf::atom("ping")>;
 using pong_atom = caf::atom_constant<caf::atom("pong")>;
-using publish_atom = caf::atom_constant<caf::atom("publish")>;
 using kickoff_atom = caf::atom_constant<caf::atom("kickoff")>;
 
 namespace {
@@ -101,7 +100,15 @@ void pong(event_based_actor* self) {
 
 }
 
-void peer_fun(broker* self, connection_handle hdl, const actor& buddy) {
+using peer_broker = typed_broker<
+  replies_to<connection_closed_msg>::with<void>,
+  replies_to<new_data_msg>::with<void>,
+  replies_to<ping_atom, int>::with<void>,
+  replies_to<pong_atom, int>::with<void>
+>;
+
+peer_broker::behavior_type
+peer_fun(peer_broker* self, connection_handle hdl, const actor& buddy) {
   CAF_MESSAGE("peer_fun called");
   CAF_CHECK(self != nullptr);
   CAF_CHECK(buddy != invalid_actor);
@@ -121,9 +128,8 @@ void peer_fun(broker* self, connection_handle hdl, const actor& buddy) {
     first = reinterpret_cast<char*>(&value);
     buf.insert(buf.end(), first, first + sizeof(int));
     self->flush(hdl);
-
   };
-  self->become(
+  return {
     [=](const connection_closed_msg&) {
       CAF_MESSAGE("received connection_closed_msg");
       self->quit();
@@ -149,15 +155,19 @@ void peer_fun(broker* self, connection_handle hdl, const actor& buddy) {
       if (dm.source == buddy) {
         self->quit(dm.reason);
       }
-    },
-    others >> [&] {
-      CAF_TEST_ERROR("Unexpected message: "
-                     << to_string(self->current_message()));
     }
-  );
+  };
 }
 
-behavior peer_acceptor_fun(broker* self, const actor& buddy) {
+using publish_atom = atom_constant<atom("publish")>;
+
+using acceptor_broker = typed_broker<
+  replies_to<new_connection_msg>::with<void>,
+  replies_to<publish_atom>::with<uint16_t>
+>;
+
+acceptor_broker::behavior_type
+peer_acceptor_fun(acceptor_broker* self, const actor& buddy) {
   CAF_MESSAGE("peer_acceptor_fun");
   return {
     [=](const new_connection_msg& msg) {
@@ -167,10 +177,6 @@ behavior peer_acceptor_fun(broker* self, const actor& buddy) {
     },
     [=](publish_atom) {
       return self->add_tcp_doorman(0, "127.0.0.1").second;
-    },
-    others >> [&] {
-      CAF_TEST_ERROR("Unexpected message: "
-                     << to_string(self->current_message()));
     }
   };
 }
@@ -179,7 +185,7 @@ namespace {
 
 void run_server(bool spawn_client, const char* bin_path) {
   scoped_actor self;
-  auto serv = io::spawn_io(peer_acceptor_fun, spawn(pong));
+  auto serv = io::spawn_io_typed(peer_acceptor_fun, spawn(pong));
   self->sync_send(serv, publish_atom::value).await(
     [&](uint16_t port) {
       CAF_MESSAGE("server is running on port " << port);
@@ -202,31 +208,29 @@ void run_server(bool spawn_client, const char* bin_path) {
 
 }
 
-CAF_TEST(test_broker) {
+CAF_TEST(test_typed_broker) {
   auto argv = caf::test::engine::argv();
   auto argc = caf::test::engine::argc();
   if (argv) {
-    uint16_t port = 0;
-    auto r = message_builder(argv, argv + argc).extract_opts({
-      {"client-port,c", "set port for IO client", port},
-      {"server,s", "run in server mode"}
+    message_builder{argv, argv + argc}.apply({
+       on("-c", arg_match) >> [&](const std::string& portstr) {
+        auto port = static_cast<uint16_t>(std::stoi(portstr));
+        auto p = spawn(ping, 10);
+        CAF_MESSAGE("spawn_io_client_typed...");
+        auto cl = spawn_io_client_typed(peer_fun, "localhost", port, p);
+        CAF_MESSAGE("spawn_io_client_typed finished");
+        anon_send(p, kickoff_atom::value, cl);
+        CAF_MESSAGE("`kickoff_atom` has been send");
+      },
+      on("-s")  >> [&] {
+        run_server(false, argv[0]);
+      },
+      others >> [&] {
+         cerr << "usage: " << argv[0] << " [-c PORT]" << endl;
+      }
     });
-    if (! r.error.empty() || r.opts.count("help") > 0 || ! r.remainder.empty()) {
-      cout << r.error << endl << endl << r.helptext << endl;
-      return;
-    }
-    if (r.opts.count("client-port") > 0) {
-      auto p = spawn(ping, 10);
-      CAF_MESSAGE("spawn_io_client...");
-      auto cl = spawn_io_client(peer_fun, "localhost", port, p);
-      CAF_MESSAGE("spawn_io_client finished");
-      anon_send(p, kickoff_atom::value, cl);
-      CAF_MESSAGE("`kickoff_atom` has been send");
-    } else {
-      // run in server mode
-      run_server(false, argv[0]);
-    }
-  } else {
+  }
+  else {
     run_server(true, caf::test::engine::path());
   }
   CAF_MESSAGE("block on `await_all_actors_done`");
