@@ -34,21 +34,30 @@ using namespace std;
 using namespace caf;
 using namespace caf::io;
 
-using ping_atom = caf::atom_constant<caf::atom("ping")>;
-using pong_atom = caf::atom_constant<caf::atom("pong")>;
-using kickoff_atom = caf::atom_constant<caf::atom("kickoff")>;
-
 namespace {
 
-void ping(event_based_actor* self, size_t num_pings) {
+using publish_atom = atom_constant<atom("publish")>;
+using ping_atom = caf::atom_constant<atom("ping")>;
+using pong_atom = caf::atom_constant<atom("pong")>;
+using kickoff_atom = caf::atom_constant<atom("kickoff")>;
+
+using peer = typed_actor<replies_to<connection_closed_msg>::with<void>,
+                         replies_to<new_data_msg>::with<void>,
+                         replies_to<ping_atom, int>::with<void>,
+                         replies_to<pong_atom, int>::with<void>>;
+
+using acceptor = typed_actor<replies_to<new_connection_msg>::with<void>,
+                             replies_to<publish_atom>::with<uint16_t>>;
+
+behavior ping(event_based_actor* self, size_t num_pings) {
   CAF_MESSAGE("num_pings: " << num_pings);
   auto count = std::make_shared<size_t>(0);
-  self->become(
-    [=](kickoff_atom, const actor& pong) {
+  return {
+    [=](kickoff_atom, const peer& pong) {
       CAF_MESSAGE("received `kickoff_atom`");
       self->send(pong, ping_atom::value, 1);
       self->become(
-      [=](pong_atom, int value)->std::tuple<atom_value, int> {
+      [=](pong_atom, int value) -> std::tuple<ping_atom, int> {
         if (++*count >= num_pings) {
           CAF_MESSAGE("received " << num_pings
                       << " pings, call self->quit");
@@ -56,21 +65,21 @@ void ping(event_based_actor* self, size_t num_pings) {
         }
         return std::make_tuple(ping_atom::value, value + 1);
       },
-      others >> [&] {
+      others >> [=] {
         CAF_TEST_ERROR("Unexpected message: "
                        << to_string(self->current_message()));
       });
     },
-    others >> [&] {
+    others >> [=] {
       CAF_TEST_ERROR("Unexpected message: "
                      << to_string(self->current_message()));
     }
-  );
+  };
 }
 
-void pong(event_based_actor* self) {
+behavior pong(event_based_actor* self) {
   CAF_MESSAGE("pong actor started");
-  self->become(
+  return {
     [=](ping_atom, int value) -> std::tuple<atom_value, int> {
       CAF_MESSAGE("received `ping_atom`");
       self->monitor(self->current_sender());
@@ -83,7 +92,7 @@ void pong(event_based_actor* self) {
           CAF_MESSAGE("received down_msg{" << dm.reason << "}");
           self->quit(dm.reason);
         },
-        others >> [&] {
+        others >> [=] {
           CAF_TEST_ERROR("Unexpected message: "
                          << to_string(self->current_message()));
         }
@@ -91,24 +100,15 @@ void pong(event_based_actor* self) {
       // reply to 'ping'
       return std::make_tuple(pong_atom::value, value);
     },
-    others >> [&] {
+    others >> [=] {
       CAF_TEST_ERROR("Unexpected message: "
                      << to_string(self->current_message()));
     }
-  );
+  };
 }
 
-}
-
-using peer_broker = typed_broker<
-  replies_to<connection_closed_msg>::with<void>,
-  replies_to<new_data_msg>::with<void>,
-  replies_to<ping_atom, int>::with<void>,
-  replies_to<pong_atom, int>::with<void>
->;
-
-peer_broker::behavior_type
-peer_fun(peer_broker* self, connection_handle hdl, const actor& buddy) {
+peer::behavior_type peer_fun(peer::broker_pointer self, connection_handle hdl,
+                             const actor& buddy) {
   CAF_MESSAGE("peer_fun called");
   CAF_CHECK(self != nullptr);
   CAF_CHECK(buddy != invalid_actor);
@@ -159,15 +159,8 @@ peer_fun(peer_broker* self, connection_handle hdl, const actor& buddy) {
   };
 }
 
-using publish_atom = atom_constant<atom("publish")>;
-
-using acceptor_broker = typed_broker<
-  replies_to<new_connection_msg>::with<void>,
-  replies_to<publish_atom>::with<uint16_t>
->;
-
-acceptor_broker::behavior_type
-peer_acceptor_fun(acceptor_broker* self, const actor& buddy) {
+acceptor::behavior_type acceptor_fun(acceptor::broker_pointer self,
+                                     const actor& buddy) {
   CAF_MESSAGE("peer_acceptor_fun");
   return {
     [=](const new_connection_msg& msg) {
@@ -181,17 +174,15 @@ peer_acceptor_fun(acceptor_broker* self, const actor& buddy) {
   };
 }
 
-namespace {
-
 void run_server(bool spawn_client, const char* bin_path) {
   scoped_actor self;
-  auto serv = io::spawn_io_typed(peer_acceptor_fun, spawn(pong));
+  auto serv = io::spawn_io_typed(acceptor_fun, spawn(pong));
   self->sync_send(serv, publish_atom::value).await(
     [&](uint16_t port) {
       CAF_MESSAGE("server is running on port " << port);
       if (spawn_client) {
-        auto child = detail::run_program(self, bin_path, "-n", "-s", "broker",
-                                         "--", "-c", port);
+        auto child = detail::run_program(self, bin_path, "-n", "-s",
+                                         "typed_broker", "--", "-c", port);
         CAF_MESSAGE("block till child process has finished");
         child.join();
       }
@@ -206,29 +197,32 @@ void run_server(bool spawn_client, const char* bin_path) {
   );
 }
 
-}
+} // namespace <anonymous>
 
 CAF_TEST(test_typed_broker) {
   auto argv = caf::test::engine::argv();
   auto argc = caf::test::engine::argc();
   if (argv) {
-    message_builder{argv, argv + argc}.apply({
-       on("-c", arg_match) >> [&](const std::string& portstr) {
-        auto port = static_cast<uint16_t>(std::stoi(portstr));
-        auto p = spawn(ping, 10);
-        CAF_MESSAGE("spawn_io_client_typed...");
-        auto cl = spawn_io_client_typed(peer_fun, "localhost", port, p);
-        CAF_MESSAGE("spawn_io_client_typed finished");
-        anon_send(p, kickoff_atom::value, cl);
-        CAF_MESSAGE("`kickoff_atom` has been send");
-      },
-      on("-s")  >> [&] {
-        run_server(false, argv[0]);
-      },
-      others >> [&] {
-         cerr << "usage: " << argv[0] << " [-c PORT]" << endl;
-      }
+    uint16_t port = 0;
+    auto r = message_builder(argv, argv + argc).extract_opts({
+      {"client-port,c", "set port for IO client", port},
+      {"server,s", "run in server mode"}
     });
+    if (! r.error.empty() || r.opts.count("help") > 0 || ! r.remainder.empty()) {
+      cout << r.error << endl << endl << r.helptext << endl;
+      return;
+    }
+    if (r.opts.count("client-port") > 0) {
+      auto p = spawn(ping, 10);
+      CAF_MESSAGE("spawn_io_client_typed...");
+      auto cl = spawn_io_client_typed(peer_fun, "localhost", port, p);
+      CAF_MESSAGE("spawn_io_client_typed finished");
+      anon_send(p, kickoff_atom::value, cl);
+      CAF_MESSAGE("`kickoff_atom` has been send");
+    } else {
+      // run in server mode
+      run_server(false, argv[0]);
+    }
   }
   else {
     run_server(true, caf::test::engine::path());
