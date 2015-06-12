@@ -77,12 +77,6 @@ public:
   using super = abstract_event_based_actor<behavior_type, false,
                                            abstract_broker>;
 
-  using pointer = intrusive_ptr<typed_broker>;
-
-  // friend with all possible instantiations
-  template <class...>
-  friend class typed_broker;
-
   using super::send;
   using super::delayed_send;
 
