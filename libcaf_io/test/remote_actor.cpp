@@ -97,13 +97,11 @@ size_t pongs() {
 }
 
 void event_based_ping(event_based_actor* self, size_t ping_msgs) {
-printf("event_based_ping\n");
   s_pongs = 0;
   self->become(ping_behavior(self, ping_msgs));
 }
 
 void pong(blocking_actor* self, actor ping_actor) {
-printf("event_based_pong\n");
   self->send(ping_actor, pong_atom::value, 0); // kickoff
   self->receive_loop(pong_behavior(self));
 }
