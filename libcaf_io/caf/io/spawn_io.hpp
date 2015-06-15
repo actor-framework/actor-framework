@@ -59,7 +59,7 @@ template <spawn_options Os, class Impl, class F, class... Ts>
 intrusive_ptr<Impl> spawn_io_server_impl(F fun, uint16_t port, Ts&&... xs) {
   detail::init_fun_factory<Impl, F> fac;
   auto init = fac(std::move(fun), std::forward<Ts>(xs)...);
-  auto bl = [&](broker* ptr) {
+  auto bl = [&](Impl* ptr) {
     auto mm = middleman::instance();
     mm->backend().add_tcp_doorman(ptr, port);
     ptr->initial_behavior_fac(std::move(init));
