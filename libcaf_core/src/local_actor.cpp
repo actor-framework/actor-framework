@@ -600,22 +600,18 @@ resumable::resume_result local_actor::resume(execution_unit* eu,
   }
   // actor is cooperatively scheduled
   host(eu);
-  auto done_cb = [&] {
-    CAF_LOG_TRACE("");
-    bhvr_stack().clear();
-    bhvr_stack().cleanup();
-    on_exit();
-    CAF_LOG_DEBUG("on_exit did set a new behavior: ignored");
-    auto rsn = planned_exit_reason();
-    if (rsn == exit_reason::not_exited) {
-      rsn = exit_reason::normal;
-      planned_exit_reason(rsn);
-    }
-    cleanup(rsn);
-  };
   auto actor_done = [&]() -> bool {
     if (! has_behavior() || planned_exit_reason() != exit_reason::not_exited) {
-      done_cb();
+      CAF_LOG_DEBUG("actor either has no behavior or has set an exit reason");
+      on_exit();
+      bhvr_stack().clear();
+      bhvr_stack().cleanup();
+      auto rsn = planned_exit_reason();
+      if (rsn == exit_reason::not_exited) {
+        rsn = exit_reason::normal;
+        planned_exit_reason(rsn);
+      }
+      cleanup(rsn);
       return true;
     }
     return false;
@@ -623,8 +619,8 @@ resumable::resume_result local_actor::resume(execution_unit* eu,
   // actors without behavior or that have already defined
   // an exit reason must not be resumed
   CAF_ASSERT(! is_initialized()
-              || (has_behavior()
-                  && planned_exit_reason() == exit_reason::not_exited));
+             || (has_behavior()
+                 && planned_exit_reason() == exit_reason::not_exited));
   std::exception_ptr eptr = nullptr;
   try {
     if (! is_initialized()) {
@@ -638,7 +634,7 @@ resumable::resume_result local_actor::resume(execution_unit* eu,
     }
     int handled_msgs = 0;
     auto reset_timeout_if_needed = [&] {
-      if (handled_msgs > 0 && has_behavior()) {
+      if (handled_msgs > 0) {
         request_timeout(get_behavior().timeout());
       }
     };
@@ -677,17 +673,16 @@ resumable::resume_result local_actor::resume(execution_unit* eu,
         }
       } else {
         CAF_LOG_DEBUG("no more element in mailbox; going to block");
+        reset_timeout_if_needed();
         if (mailbox().try_block()) {
-          reset_timeout_if_needed();
           return resumable::awaiting_message;
         }
         CAF_LOG_DEBUG("try_block() interrupted by new message");
       }
     }
-    if (! has_next_message() && mailbox().try_block()) {
-      reset_timeout_if_needed();
+    reset_timeout_if_needed();
+    if (! has_next_message() && mailbox().try_block())
       return resumable::awaiting_message;
-    }
     // time's up
     return resumable::resume_later;
   }
@@ -838,6 +833,11 @@ response_promise local_actor::make_response_promise() {
   response_promise result{address(), ptr->sender, ptr->mid.response_id()};
   ptr->mid.mark_as_answered();
   return result;
+}
+
+behavior& local_actor::get_behavior() {
+  return pending_responses_.empty() ? bhvr_stack_.back()
+                                    : pending_responses_.front().second;
 }
 
 void local_actor::cleanup(uint32_t reason) {

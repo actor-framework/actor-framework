@@ -495,12 +495,7 @@ public:
     return ! bhvr_stack_.empty() || ! pending_responses_.empty();
   }
 
-  behavior& get_behavior() {
-    if (! pending_responses_.empty()) {
-      return pending_responses_.front().second;
-    }
-    return bhvr_stack_.back();
-  }
+  behavior& get_behavior();
 
   virtual void initialize() = 0;
 
