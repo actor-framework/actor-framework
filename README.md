@@ -1,27 +1,27 @@
 # CAF: C++ Actor Framework
 
-[![Jenkins][jenkins-badge]]
-(http://mobi39.cpt.haw-hamburg.de/view/CAF%20Dashboard)
-[![Gitter][gitter-badge]]
-(https://gitter.im/actor-framework/chat)
-[jenkins-badge]:
-http://mobi39.cpt.haw-hamburg.de/buildStatus/icon?job=CAF/master%20branch
-[gitter-badge]:
-https://badges.gitter.im/Join%20Chat.svg
-
 CAF is an open source C++11 actor model implementation featuring
 lightweight & fast actor implementations, pattern matching for messages,
 network transparent messaging, and more.
 
+[![Jenkins][jenkins-badge]]
+(http://mobi39.cpt.haw-hamburg.de/view/CAF%20Dashboard)
+[![Gitter][gitter-badge]]
+(https://gitter.im/actor-framework/chat)
+[![In Progress][in-progress-badge]]
+(https://waffle.io/actor-framework/actor-framework)
+[![Fixed in Develop][fixed-in-develop-badge]]
+(https://waffle.io/actor-framework/actor-framework)
+
 ## On the Web
 
+* __Chat__: https://gitter.im/actor-framework/chat
 * __Homepage__: http://www.actor-framework.org
 * __Developer Blog__: http://blog.actor-framework.org
 * __Doxygen (HTML)__: http://www.actor-framework.org/doc
 * __Manual (HTML)__: http://www.actor-framework.org/manual
 * __Manual (PDF)__: http://www.actor-framework.org/pdf/manual.pdf
 * __Mailing List__: https://groups.google.com/d/forum/actor-framework
-* __Chat__: https://gitter.im/actor-framework/chat
 
 ## Get CAF
 
@@ -29,14 +29,14 @@ network transparent messaging, and more.
 
 We maintain a port for CAF, which you can install as follows:
 
-```
+```sh
 pkg install caf
 ```
 
 Alternatively, you can go to `/usr/ports/devel/caf` and tweak a few
 configuration options before installing the port:
 
-```
+```sh
 make config
 make install clean
 ```
@@ -45,13 +45,13 @@ make install clean
 
 You can install the latest stable release with:
 
-```
+```sh
 brew install caf
 ```
 
 Alternatively, you can use the development branch by using:
 
-```
+```sh
 brew install caf --HEAD
 ```
 
@@ -80,7 +80,7 @@ To avoid specifying the block name in your includes add the following to your
 `bii.conf` file to allow Biicode to associate all `#include "caf/*.hpp"`
 with the actor-framework block:
 
-```
+```ini
 [includes]
   caf/riac/*.hpp : caf_bot/actor-framework/libcaf_riac
   caf/opencl/*.hpp : caf_bot/actor-framework/libcaf_opencl
@@ -106,7 +106,7 @@ for a list of available options or read the
 [online documentation]
 (https://github.com/actor-framework/actor-framework/wiki/Configure-Options).
 
-```
+```sh
 ./configure
 make
 make test
@@ -150,7 +150,7 @@ A SNocs workspace is provided by GitHub user
 
 If you use CAF in a scientific context, please use the following citation:
 
-```
+```latex
 @inproceedings{chs-ccafs-14,
   author = {Dominik Charousset and Raphael Hiesgen and Thomas C. Schmidt},
   title = {{CAF - The C++ Actor Framework for Scalable and Resource-efficient Applications}},
@@ -164,3 +164,16 @@ If you use CAF in a scientific context, please use the following citation:
 ```
 
 You will find the paper online at http://dx.doi.org/10.1145/2687357.2687363
+
+
+[jenkins-badge]:
+http://mobi39.cpt.haw-hamburg.de/buildStatus/icon?job=CAF/master%20branch
+
+[gitter-badge]:
+https://badges.gitter.im/Join%20Chat.svg
+
+[in-progress-badge]:
+https://badge.waffle.io/actor-framework/actor-framework.png?label=In%20Progress&title=Issues%20in%20progress
+
+[fixed-in-develop-badge]:
+https://badge.waffle.io/actor-framework/actor-framework.png?label=Fixed%20in%20develop&title=Issues%20fixed%20in%20develop
