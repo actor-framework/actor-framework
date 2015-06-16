@@ -36,9 +36,13 @@ void behavior_stack::pop_back() {
 
 void behavior_stack::clear() {
   if (! elements_.empty()) {
-    std::move(elements_.begin(), elements_.end(),
-              std::back_inserter(erased_elements_));
-    elements_.clear();
+    if (erased_elements_.empty()) {
+      elements_.swap(erased_elements_);
+    } else {
+      std::move(elements_.begin(), elements_.end(),
+                std::back_inserter(erased_elements_));
+      elements_.clear();
+    }
   }
 }
 
