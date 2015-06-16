@@ -359,9 +359,6 @@ endif()
 add_subdirectory(libcaf_core)
 add_unit_tests("libcaf_core/test/*.cpp")
 add_unit_tests("libcaf_io/test/*.cpp")
-if(NOT CAF_NO_OPENCL)
-  add_unit_tests("libcaf_opencl/test/*.cpp")
-endif()
 
 # set core lib for sub directories
 if(NOT CAF_BUILD_STATIC_ONLY)
@@ -386,6 +383,7 @@ if(NOT CAF_NO_OPENCL
   else()
     set(LIBCAF_OPENCL_LIBRARY libcaf_opencl_static)
   endif()
+  add_unit_tests("libcaf_opencl/test/*.cpp")
 endif()
 # tell CMake caf_io depends on caf_core
 add_dependencies(libcaf_io libcaf_core)
@@ -417,6 +415,8 @@ if(NOT CAF_NO_RIAC
                       "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_riac")
   # add libcaf_riac to the list of caf libraries
   set(CAF_HAS_RIAC yes)
+  # add unit tests
+  add_unit_tests("libcaf_riac/test/*.cpp")
 else()
   set(CAF_HAS_RIAC no)
 endif()
