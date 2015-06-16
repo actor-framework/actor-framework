@@ -537,6 +537,8 @@ int main(int argc, char** argv) {
   auto colorize = res.opts.count("no-colors") == 0;
   if (divider < argc) {
     engine::args(argc - divider - 1, argv + divider + 1);
+  } else {
+    engine::args(0, argv);
   }
   auto result = engine::run(colorize, log_file, verbosity_console,
                                   verbosity_file, max_runtime, suites,
