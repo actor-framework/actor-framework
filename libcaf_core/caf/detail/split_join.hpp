@@ -48,21 +48,22 @@ public:
 
   behavior make_behavior() override {
     return {
+      // first message is the forwarded request
       others >> [=] {
-        rp_ = make_response_promise();
-        split_(workset_, current_message());
-        // first message is the forwarded request
-        for (auto& x : workset_) {
-          sync_send(x.first, std::move(x.second)).then(
-            others >> [=] {
-              join_(value_, this->current_message());
-              if (--awaited_results_ == 0) {
-                rp_.deliver(make_message(value_));
-                quit();
-              }
+        auto rp = this->make_response_promise();
+        split_(workset_, this->current_message());
+        for (auto& x : workset_)
+          this->send(x.first, std::move(x.second));
+        this->become(
+          // collect results
+          others >> [=] {
+            join_(value_, this->current_message());
+            if (--awaited_results_ == 0) {
+              rp.deliver(make_message(value_));
+              quit();
             }
-          );
-        }
+          }
+        );
         // no longer needed
         workset_.clear();
       }
@@ -75,7 +76,6 @@ private:
   Join join_;
   Split split_;
   T value_;
-  response_promise rp_;
 };
 
 struct nop_split {
