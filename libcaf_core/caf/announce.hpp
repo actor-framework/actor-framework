@@ -27,8 +27,7 @@
 
 #include "caf/config.hpp"
 #include "caf/uniform_type_info.hpp"
-
-#include "caf/detail/abstract_uniform_type_info.hpp"
+#include "caf/abstract_uniform_type_info.hpp"
 
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/type_traits.hpp"
@@ -78,7 +77,7 @@ const uniform_type_info* announce(const std::type_info& tinfo,
 /// whereas `xs` are the "sub-members" of `Member`.
 /// @see {@link announce_4.cpp announce example 4}
 template <class Member, class Parent, class... Ts>
-std::pair<Member Parent::*, detail::abstract_uniform_type_info<Member>*>
+std::pair<Member Parent::*, abstract_uniform_type_info<Member>*>
 compound_member(Member Parent::*memptr, const Ts&... xs) {
   return {memptr, new detail::default_uniform_type_info<Member>("???", xs...)};
 }
@@ -89,7 +88,7 @@ compound_member(Member Parent::*memptr, const Ts&... xs) {
 /// whereas `xs` are the "sub-members" of `Member`.
 /// @see {@link announce_4.cpp announce example 4}
 template <class Member, class Parent, class... Ts>
-std::pair<Member& (Parent::*)(), detail::abstract_uniform_type_info<Member>*>
+std::pair<Member& (Parent::*)(), abstract_uniform_type_info<Member>*>
 compound_member(Member& (Parent::*getter)(), const Ts&... xs) {
   return {getter, new detail::default_uniform_type_info<Member>("???", xs...)};
 }
@@ -101,7 +100,7 @@ compound_member(Member& (Parent::*getter)(), const Ts&... xs) {
 /// @see {@link announce_4.cpp announce example 4}
 template <class Parent, class GRes, class SRes, class SArg, class... Ts>
 std::pair<std::pair<GRes (Parent::*)() const, SRes (Parent::*)(SArg)>,
-          detail::abstract_uniform_type_info<typename std::decay<GRes>::type>*>
+          abstract_uniform_type_info<typename std::decay<GRes>::type>*>
 compound_member(const std::pair<GRes (Parent::*)() const,
                                 SRes (Parent::*)(SArg)>& gspair,
                 const Ts&... xs) {

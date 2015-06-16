@@ -39,6 +39,7 @@
 #include "caf/io/all.hpp"
 
 #include "caf/detail/type_nr.hpp"
+#include "caf/detail/uniform_type_info_map.hpp"
 
 using std::cout;
 using std::endl;

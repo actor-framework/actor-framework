@@ -117,9 +117,9 @@ deserialize_impl(T& dm, deserializer* source) {
 }
 
 template <class T>
-class uti_impl : public detail::abstract_uniform_type_info<T> {
+class uti_impl : public abstract_uniform_type_info<T> {
 public:
-  using super = detail::abstract_uniform_type_info<T>;
+  using super = abstract_uniform_type_info<T>;
 
   explicit uti_impl(const char* tname) : super(tname) {
     // nop

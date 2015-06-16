@@ -28,10 +28,9 @@
 #include "caf/serializer.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/deserializer.hpp"
+#include "caf/abstract_uniform_type_info.hpp"
 
 #include "caf/detail/type_traits.hpp"
-#include "caf/detail/abstract_uniform_type_info.hpp"
-
 
 namespace caf {
 namespace detail {
@@ -251,9 +250,9 @@ template <class T, class AccessPolicy,
           class SerializePolicy = default_serialize_policy,
           bool IsEnum = std::is_enum<T>::value,
           bool IsEmptyType = std::is_class<T>::value&& std::is_empty<T>::value>
-class member_tinfo : public detail::abstract_uniform_type_info<T> {
+class member_tinfo : public abstract_uniform_type_info<T> {
 public:
-  using super = detail::abstract_uniform_type_info<T>;
+  using super = abstract_uniform_type_info<T>;
   member_tinfo(AccessPolicy apol, SerializePolicy spol)
       : super("--member--"),
         apol_(std::move(apol)), spol_(std::move(spol)) {
@@ -298,9 +297,9 @@ private:
 
 template <class T, class A, class S>
 class member_tinfo<T, A, S, false, true>
-    : public detail::abstract_uniform_type_info<T> {
+    : public abstract_uniform_type_info<T> {
 public:
-  using super = detail::abstract_uniform_type_info<T>;
+  using super = abstract_uniform_type_info<T>;
 
   member_tinfo(const A&, const S&) : super("--member--") {
     // nop
@@ -325,9 +324,9 @@ public:
 
 template <class T, class AccessPolicy, class SerializePolicy>
 class member_tinfo<T, AccessPolicy, SerializePolicy, true, false>
-    : public detail::abstract_uniform_type_info<T> {
+    : public abstract_uniform_type_info<T> {
 public:
-  using super = detail::abstract_uniform_type_info<T>;
+  using super = abstract_uniform_type_info<T>;
   using value_type = typename std::underlying_type<T>::type;
 
   member_tinfo(AccessPolicy apol, SerializePolicy spol)
@@ -476,9 +475,9 @@ uniform_type_info_ptr new_member_tinfo(GRes (C::*getter)() const,
 }
 
 template <class T>
-class default_uniform_type_info : public detail::abstract_uniform_type_info<T> {
+class default_uniform_type_info : public abstract_uniform_type_info<T> {
 public:
-  using super = detail::abstract_uniform_type_info<T>;
+  using super = abstract_uniform_type_info<T>;
 
   template <class... Ts>
   default_uniform_type_info(std::string tname, Ts&&... xs)
@@ -540,7 +539,7 @@ private:
   // pr.second = meta object to handle pr.first
   template <class R, class C, class... Ts>
   void push_back(const std::pair<R C::*,
-                                 detail::abstract_uniform_type_info<R>*>& pr,
+                                 abstract_uniform_type_info<R>*>& pr,
                  Ts&&... xs) {
     members_.push_back(new_member_tinfo(pr.first,
                                          uniform_type_info_ptr(pr.second)));
@@ -563,7 +562,7 @@ private:
   void push_back(const std::pair<
                          std::pair<GR (C::*)() const,
                                    SR (C::*)(ST)>,
-                         detail::abstract_uniform_type_info<
+                         abstract_uniform_type_info<
                            typename std::decay<GR>::type>*
                        >& pr,
                  Ts&&... xs) {
@@ -577,9 +576,9 @@ private:
 
 template <class... Sigs>
 class default_uniform_type_info<typed_actor<Sigs...>> :
-    public detail::abstract_uniform_type_info<typed_actor<Sigs...>> {
+    public abstract_uniform_type_info<typed_actor<Sigs...>> {
 public:
-  using super = detail::abstract_uniform_type_info<typed_actor<Sigs...>>;
+  using super = abstract_uniform_type_info<typed_actor<Sigs...>>;
   using handle_type = typed_actor<Sigs...>;
 
   default_uniform_type_info(std::string tname) : super(std::move(tname)) {

@@ -58,13 +58,13 @@
 #include "caf/binary_serializer.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/await_all_actors_done.hpp"
+#include "caf/abstract_uniform_type_info.hpp"
 
 #include "caf/detail/ieee_754.hpp"
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/detail/get_mac_addresses.hpp"
-#include "caf/detail/abstract_uniform_type_info.hpp"
 
 using namespace std;
 using namespace caf;
@@ -81,8 +81,8 @@ bool operator==(const raw_struct& lhs, const raw_struct& rhs) {
   return lhs.str == rhs.str;
 }
 
-struct raw_struct_type_info : detail::abstract_uniform_type_info<raw_struct> {
-  using super = detail::abstract_uniform_type_info<raw_struct>;
+struct raw_struct_type_info : abstract_uniform_type_info<raw_struct> {
+  using super = abstract_uniform_type_info<raw_struct>;
   raw_struct_type_info() : super("raw_struct") {
     // nop
   }

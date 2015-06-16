@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_ABSTRACT_UNIFORM_TYPE_INFO_HPP
-#define CAF_DETAIL_ABSTRACT_UNIFORM_TYPE_INFO_HPP
+#ifndef CAF_ABSTRACT_UNIFORM_TYPE_INFO_HPP
+#define CAF_ABSTRACT_UNIFORM_TYPE_INFO_HPP
 
 #include "caf/message.hpp"
 #include "caf/deserializer.hpp"
@@ -26,10 +26,7 @@
 
 #include "caf/detail/type_traits.hpp"
 
-#include "caf/detail/uniform_type_info_map.hpp"
-
 namespace caf {
-namespace detail {
 
 /// Implements all pure virtual functions of `uniform_type_info`
 /// except serialize() and deserialize().
@@ -104,7 +101,6 @@ private:
   }
 };
 
-} // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_ABSTRACT_UNIFORM_TYPE_INFO_HPP
+#endif // CAF_ABSTRACT_UNIFORM_TYPE_INFO_HPP
