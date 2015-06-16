@@ -155,9 +155,7 @@ void local_actor::request_sync_timeout_msg(const duration& d, message_id mid) {
   if (! d.valid()) {
     return;
   }
-  auto sched_cd = detail::singletons::get_scheduling_coordinator();
-  sched_cd->delayed_send(d, address(), this, mid,
-                         make_message(sync_timeout_msg{}));
+  delayed_send_impl(mid, this, d, make_message(sync_timeout_msg{}));
 }
 
 void local_actor::handle_timeout(behavior& bhvr, uint32_t timeout_id) {
@@ -844,6 +842,7 @@ void local_actor::cleanup(uint32_t reason) {
   CAF_LOG_TRACE(CAF_ARG(reason));
   detail::sync_request_bouncer f{reason};
   mailbox_.close(f);
+  pending_responses_.clear();
   abstract_actor::cleanup(reason);
   // tell registry we're done
   is_registered(false);
