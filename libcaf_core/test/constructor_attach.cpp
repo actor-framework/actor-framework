@@ -34,11 +34,12 @@ using done_atom = atom_constant<atom("done")>;
 CAF_TEST(constructor_attach) {
   class testee : public event_based_actor {
   public:
-    explicit testee(actor buddy) : buddy_(buddy) {
+    explicit testee(actor buddy) {
       attach_functor([=](uint32_t reason) {
-        send(buddy_, done_atom::value, reason);
+        send(buddy, done_atom::value, reason);
       });
     }
+
     behavior make_behavior() {
       return {
         [=](die_atom) {
@@ -46,18 +47,19 @@ CAF_TEST(constructor_attach) {
         }
       };
     }
-  private:
-    actor buddy_;
   };
   class spawner : public event_based_actor {
   public:
     spawner() : downs_(0) {
+      // nop
     }
+
     behavior make_behavior() {
       testee_ = spawn<testee, monitored>(this);
       return {
         [=](const down_msg& msg) {
           CAF_CHECK_EQUAL(msg.reason, exit_reason::user_shutdown);
+          CAF_CHECK(msg.source == testee_);
           if (++downs_ == 2) {
             quit(msg.reason);
           }
@@ -73,6 +75,11 @@ CAF_TEST(constructor_attach) {
         }
       };
     }
+
+    void on_exit() {
+      testee_ = invalid_actor;
+    }
+
   private:
     int downs_;
     actor testee_;
