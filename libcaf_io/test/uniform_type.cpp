@@ -217,6 +217,7 @@ CAF_TEST(test_uniform_type) {
                        "caf::io::acceptor_closed_msg",
                        "caf::io::connection_handle",
                        "caf::io::connection_closed_msg",
+                       "caf::io::network::protocol",
                        "caf::io::new_connection_msg",
                        "caf::io::new_data_msg"));
     CAF_MESSAGE("io types checked");
