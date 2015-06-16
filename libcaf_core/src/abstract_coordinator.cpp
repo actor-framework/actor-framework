@@ -122,8 +122,7 @@ public:
           auto it = messages.begin();
           while (it != messages.end() && (it->first) <= tout) {
             deliver(it->second);
-            messages.erase(it);
-            it = messages.begin();
+            it = messages.erase(it);
           }
           // wait for next message or next timeout
           if (it != messages.end()) {
