@@ -148,7 +148,7 @@ public:
     if (fetch_new_data(nullptr)) {
       clear_cached_elements(f);
     }
-    cache_.clear(std::move(f));
+    cache_.clear(f);
   }
 
   single_reader_queue() : head_(nullptr) {
