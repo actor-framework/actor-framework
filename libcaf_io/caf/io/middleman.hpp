@@ -100,6 +100,23 @@ public:
     });
   }
 
+  template <class F>
+  void add_shutdown_cb(F fun) {
+    struct impl : hook {
+      impl(F&& f) : fun_(std::move(f)) {
+        // nop
+      }
+
+      void before_shutdown_cb() override {
+        fun_();
+        call_next<hook::before_shutdown>();
+      }
+
+      F fun_;
+    };
+    add_hook<impl>(std::move(fun));
+  }
+
   /// @cond PRIVATE
 
   // stops the singleton

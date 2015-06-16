@@ -369,6 +369,7 @@ void middleman::stop() {
   CAF_LOG_TRACE("");
   backend_->dispatch([=] {
     CAF_LOG_TRACE("");
+    notify<hook::before_shutdown>();
     // managers_ will be modified while we are stopping each manager,
     // because each manager will call remove(...)
     for (auto& kvp : named_brokers_) {
@@ -379,6 +380,7 @@ void middleman::stop() {
   });
   backend_supervisor_.reset();
   thread_.join();
+  hooks_.reset();
   named_brokers_.clear();
   scoped_actor self(true);
   self->monitor(manager_);

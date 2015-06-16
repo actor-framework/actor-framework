@@ -81,5 +81,9 @@ void hook::invalid_message_received_cb(const node_id& source,
   call_next<invalid_message_received>(source, sender, invalid_dest, mid, msg);
 }
 
+void hook::before_shutdown_cb() {
+  call_next<before_shutdown>();
+}
+
 } // namespace io
 } // namespace caf

@@ -99,8 +99,10 @@ public:
   virtual void invalid_message_received_cb(const node_id& source,
                                            const actor_addr& sender,
                                            actor_id invalid_dest,
-                                           message_id mid,
-                                           const message& msg);
+                                           message_id mid, const message& msg);
+
+  /// Called before middleman shuts down.
+  virtual void before_shutdown_cb();
 
   /// All possible events for IO hooks.
   enum event_type {
@@ -113,7 +115,8 @@ public:
     new_remote_actor,
     new_connection_established,
     new_route_added,
-    invalid_message_received
+    invalid_message_received,
+    before_shutdown
   };
 
   /// Handles an event by invoking the associated callback.
@@ -148,6 +151,7 @@ private:
   CAF_IO_HOOK_DISPATCH(new_connection_established)
   CAF_IO_HOOK_DISPATCH(new_route_added)
   CAF_IO_HOOK_DISPATCH(invalid_message_received)
+  CAF_IO_HOOK_DISPATCH(before_shutdown)
 };
 
 } // namespace io
