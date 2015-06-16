@@ -491,7 +491,7 @@ CAF_TEST(test_remote_actor) {
   announce<actor_vector>("actor_vector");
   cout << "this node is: " << to_string(caf::detail::singletons::get_node_id())
        << endl;
-  if (argv) {
+  if (argc > 0) {
     std::vector<uint16_t> ports;
     uint16_t gport = 0;
     auto r = message_builder(argv, argv + argc).extract_opts({

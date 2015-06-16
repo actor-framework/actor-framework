@@ -99,7 +99,7 @@ CAF_TEST(test_typed_remote_actor) {
   auto argc = caf::test::engine::argc();
   announce<ping>("ping", &ping::value);
   announce<pong>("pong", &pong::value);
-  if (argv) {
+  if (argc > 0) {
     uint16_t port = 0;
     auto r = message_builder(argv, argv + argc).extract_opts({
       {"client-port,c", "set port for client", port},

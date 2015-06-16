@@ -201,7 +201,7 @@ void run_server(bool spawn_client, const char* bin_path) {
 CAF_TEST(test_broker) {
   auto argv = caf::test::engine::argv();
   auto argc = caf::test::engine::argc();
-  if (argv) {
+  if (argc > 0) {
     uint16_t port = 0;
     auto r = message_builder(argv, argv + argc).extract_opts({
       {"client-port,c", "set port for IO client", port},
