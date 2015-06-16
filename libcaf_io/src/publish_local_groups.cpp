@@ -20,6 +20,7 @@
 #include "caf/all.hpp"
 
 #include "caf/io/publish.hpp"
+#include "caf/io/middleman.hpp"
 #include "caf/io/publish_local_groups.hpp"
 
 namespace caf {
@@ -41,13 +42,18 @@ struct group_nameserver : event_based_actor {
 
 uint16_t publish_local_groups(uint16_t port, const char* addr) {
   auto gn = spawn<group_nameserver, hidden>();
+  uint16_t result;
   try {
-    return publish(gn, port, addr);
+    result = publish(gn, port, addr);
   }
   catch (std::exception&) {
     anon_send_exit(gn, exit_reason::user_shutdown);
     throw;
   }
+  middleman::instance()->add_shutdown_cb([gn] {
+    anon_send_exit(gn, exit_reason::user_shutdown);
+  });
+  return result;
 }
 
 } // namespace io
