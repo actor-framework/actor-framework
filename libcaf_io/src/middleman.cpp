@@ -350,6 +350,7 @@ void middleman::initialize() {
   }};
   backend_->thread_id(thread_.get_id());
   // announce io-related types
+  announce<network::protocol>("caf::io::network::protocol");
   do_announce<new_data_msg>("caf::io::new_data_msg");
   do_announce<new_connection_msg>("caf::io::new_connection_msg");
   do_announce<acceptor_closed_msg>("caf::io::acceptor_closed_msg");
