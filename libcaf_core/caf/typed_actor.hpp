@@ -40,10 +40,12 @@ template <class... Sigs>
 class typed_event_based_actor;
 
 namespace io {
+namespace experimental {
 
 template <class... Sigs>
 class typed_broker;
 
+} // namespace experimental
 } // namespace io
 
 /// Identifies a strongly typed actor.
@@ -83,10 +85,10 @@ public:
   using base = typed_event_based_actor<Sigs...>;
 
   /// Identifies pointers to brokers implementing this interface.
-  using broker_pointer = io::typed_broker<Sigs...>*;
+  using broker_pointer = io::experimental::typed_broker<Sigs...>*;
 
   /// Identifies the base class of brokers implementing this interface.
-  using broker_base = io::typed_broker<Sigs...>;
+  using broker_base = io::experimental::typed_broker<Sigs...>;
 
   typed_actor() = default;
   typed_actor(typed_actor&&) = default;

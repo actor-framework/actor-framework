@@ -44,6 +44,7 @@
 
 namespace caf {
 namespace io {
+namespace experimental {
 
 template <class... Sigs>
 class typed_broker;
@@ -207,6 +208,7 @@ protected:
   }
 };
 
+} // namespace experimental
 } // namespace io
 } // namespace caf
 

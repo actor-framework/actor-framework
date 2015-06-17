@@ -27,9 +27,9 @@
 #include "caf/mailbox_element.hpp"
 
 #include "caf/io/middleman.hpp"
-#include "caf/io/typed_broker.hpp"
 #include "caf/io/abstract_broker.hpp"
 #include "caf/io/connection_handle.hpp"
+#include "caf/io/experimental/typed_broker.hpp"
 
 #include "caf/io/network/native_socket.hpp"
 
@@ -94,6 +94,8 @@ actor spawn_io_server(F fun, uint16_t port, Ts&&... xs) {
                                           std::forward<Ts>(xs)...);
 }
 
+namespace experimental {
+
 /// Spawns a new functor-based typed-broker.
 template <spawn_options Os = no_spawn_options, class F, class... Ts>
 typename infer_typed_actor_handle<
@@ -149,6 +151,9 @@ spawn_io_server_typed(F fun, uint16_t port, Ts&&... xs) {
   return spawn_io_server_impl<Os, impl_class>(std::move(fun), port,
                                               std::forward<Ts>(xs)...);
 }
+
+} // namespace experimental
+
 
 } // namespace io
 } // namespace caf

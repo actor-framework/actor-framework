@@ -26,6 +26,8 @@
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 
+#include "caf/io/experimental/typed_broker.hpp"
+
 #include "caf/string_algorithms.hpp"
 
 #include "caf/detail/run_program.hpp"
@@ -33,6 +35,7 @@
 using namespace std;
 using namespace caf;
 using namespace caf::io;
+using namespace caf::io::experimental;
 
 namespace {
 
@@ -176,7 +179,7 @@ acceptor::behavior_type acceptor_fun(acceptor::broker_pointer self,
 
 void run_server(bool spawn_client, const char* bin_path) {
   scoped_actor self;
-  auto serv = io::spawn_io_typed(acceptor_fun, spawn(pong));
+  auto serv = spawn_io_typed(acceptor_fun, spawn(pong));
   self->sync_send(serv, publish_atom::value).await(
     [&](uint16_t port) {
       CAF_MESSAGE("server is running on port " << port);
