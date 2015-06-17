@@ -59,10 +59,10 @@ void forwarding_actor_proxy::forward_msg(const actor_addr& sender,
                               << CAF_MARG(mid, integer_value) << ", "
                               << CAF_TSARG(msg));
   shared_lock<detail::shared_spinlock> guard_(manager_mtx_);
-  manager_->enqueue(invalid_actor_addr, invalid_message_id,
-                     make_message(forward_atom::value, sender,
-                                  address(), mid, std::move(msg)),
-                     nullptr);
+  if (manager_) manager_->enqueue(invalid_actor_addr, invalid_message_id,
+                                  make_message(forward_atom::value, sender,
+                                               address(), mid, std::move(msg)),
+                                  nullptr);
 }
 
 void forwarding_actor_proxy::enqueue(const actor_addr& sender, message_id mid,
