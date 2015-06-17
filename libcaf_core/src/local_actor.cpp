@@ -370,6 +370,7 @@ invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
             handle_sync_failure();
           }
         }
+        ptr.swap(current_mailbox_element());
         mark_arrived(awaited_id);
         return im_success;
       }
@@ -840,6 +841,7 @@ behavior& local_actor::get_behavior() {
 
 void local_actor::cleanup(uint32_t reason) {
   CAF_LOG_TRACE(CAF_ARG(reason));
+  current_mailbox_element().reset();
   detail::sync_request_bouncer f{reason};
   mailbox_.close(f);
   pending_responses_.clear();
