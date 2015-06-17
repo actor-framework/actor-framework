@@ -82,7 +82,7 @@ public:
   using super::delayed_send;
 
   template <class... DestSigs, class... Ts>
-  void send(message_priority mp, const typed_actor<Sigs...>& dest, Ts&&... xs) {
+  void send(message_priority mp, const typed_actor<DestSigs...>& dest, Ts&&... xs) {
     detail::sender_signature_checker<
       detail::type_list<Sigs...>,
       detail::type_list<DestSigs...>,
@@ -110,7 +110,7 @@ public:
   }
 
   template <class... DestSigs, class... Ts>
-  void delayed_send(message_priority mp, const typed_actor<Sigs...>& dest,
+  void delayed_send(message_priority mp, const typed_actor<DestSigs...>& dest,
                     const duration& rtime, Ts&&... xs) {
     detail::sender_signature_checker<
       detail::type_list<Sigs...>,
@@ -125,7 +125,7 @@ public:
   }
 
   template <class... DestSigs, class... Ts>
-  void delayed_send(const typed_actor<Sigs...>& dest,
+  void delayed_send(const typed_actor<DestSigs...>& dest,
                     const duration& rtime, Ts&&... xs) {
     detail::sender_signature_checker<
       detail::type_list<Sigs...>,
