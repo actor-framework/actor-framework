@@ -232,10 +232,10 @@ std::vector<connection_handle> abstract_broker::connections() const {
   return result;
 }
 
-connection_handle abstract_broker::add_tcp_scribe(const std::string& host,
+connection_handle abstract_broker::add_tcp_scribe(const std::string& hostname,
                                                   uint16_t port) {
-  CAF_LOG_TRACE(CAF_ARG(host) << ", " << CAF_ARG(port));
-  return backend().add_tcp_scribe(this, host, port);
+  CAF_LOG_TRACE(CAF_ARG(hostname) << ", " << CAF_ARG(port));
+  return backend().add_tcp_scribe(this, hostname, port);
 }
 
 void abstract_broker::assign_tcp_scribe(connection_handle hdl) {
