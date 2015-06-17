@@ -26,15 +26,14 @@ set (LIBCAF_IO_SRCS
 
 add_custom_target(libcaf_io)
 
-if (CAF_USE_ASIO)
-  set(LIBCAF_IO_SRCS ${LIBCAF_IO_SRCS} src/asio_multiplexer.cpp)
-else()
-  set(LIBCAF_IO_SRCS ${LIBCAF_IO_SRCS} src/default_multiplexer.cpp)
-endif()
+set(LIBCAF_IO_MULTIPLEXER src/default_multiplexer.cpp)
 
 # build shared library if not compiling static only
 if (NOT CAF_BUILD_STATIC_ONLY)
-  add_library(libcaf_io_shared SHARED ${LIBCAF_IO_SRCS} ${LIBCAF_IO_HDRS})
+  add_library(libcaf_io_shared SHARED
+    ${LIBCAF_IO_MULTIPLEXER}
+    ${LIBCAF_IO_SRCS}
+    ${LIBCAF_IO_HDRS})
   target_link_libraries(libcaf_io_shared ${LD_FLAGS} ${LIBCAF_CORE_LIBRARY})
   set_target_properties(libcaf_io_shared
                         PROPERTIES
@@ -49,13 +48,54 @@ endif ()
 
 # build static library only if --build-static or --build-static-only was set
 if (CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
-  add_library(libcaf_io_static STATIC ${LIBCAF_IO_HDRS} ${LIBCAF_IO_SRCS})
+  add_library(libcaf_io_static STATIC
+              ${LIBCAF_IO_MULTIPLEXER}
+              ${LIBCAF_IO_HDRS}
+              ${LIBCAF_IO_SRCS})
   set_target_properties(libcaf_io_static PROPERTIES OUTPUT_NAME caf_io_static)
   if(NOT WIN32)
     install(TARGETS libcaf_io_static ARCHIVE DESTINATION lib)
   endif()
   add_dependencies(libcaf_io_static libcaf_io)
 endif ()
+
+if (CAF_USE_ASIO)
+  set(LIBCAF_IO_MULTIPLEXER src/asio_multiplexer.cpp)
+
+  # build shared library if not compiling static only
+  if (NOT CAF_BUILD_STATIC_ONLY)
+    add_library(libcaf_io_asio_shared SHARED
+                ${LIBCAF_IO_MULTIPLEXER}
+                ${LIBCAF_IO_SRCS}
+                ${LIBCAF_IO_HDRS})
+    target_link_libraries(libcaf_io_asio_shared
+                          ${LD_FLAGS}
+                          ${LIBCAF_CORE_LIBRARY})
+    set_target_properties(libcaf_io_asio_shared
+                          PROPERTIES
+                          SOVERSION ${CAF_VERSION}
+                          VERSION ${CAF_VERSION}
+                          OUTPUT_NAME caf_io_asio)
+    if(NOT WIN32)
+      install(TARGETS libcaf_io_asio_shared LIBRARY DESTINATION lib)
+    endif()
+    add_dependencies(libcaf_io_asio_shared libcaf_io)
+  endif ()
+
+  # build static library only if --build-static or --build-static-only was set
+  if (CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
+    add_library(libcaf_io_asio_static STATIC
+                ${LIBCAF_IO_MULTIPLEXER}
+                ${LIBCAF_IO_SRCS}
+                ${LIBCAF_IO_HDRS})
+    set_target_properties(libcaf_io_asio_static PROPERTIES
+                          OUTPUT_NAME caf_io_asio_static)
+    if(NOT WIN32)
+      install(TARGETS libcaf_io_asio_static ARCHIVE DESTINATION lib)
+    endif()
+    add_dependencies(libcaf_io_asio_static libcaf_io)
+  endif ()
+endif()
 
 link_directories(${LD_DIRS})
 include_directories(. ${INCLUDE_DIRS})
