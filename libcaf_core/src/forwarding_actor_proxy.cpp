@@ -119,6 +119,7 @@ void forwarding_actor_proxy::local_unlink_from(const actor_addr& other) {
 }
 
 void forwarding_actor_proxy::kill_proxy(uint32_t reason) {
+  manager(invalid_actor);
   cleanup(reason);
 }
 
