@@ -42,7 +42,6 @@ using c_atom = atom_constant<atom("c")>;
 using abc_atom = atom_constant<atom("abc")>;
 using name_atom = atom_constant<atom("name")>;
 
-
 void inc_actor_instances() {
   long v1 = ++s_actor_instances;
   long v2 = s_max_actor_instances.load();
@@ -55,49 +54,48 @@ void dec_actor_instances() {
   --s_actor_instances;
 }
 
-class event_testee : public sb_actor<event_testee> {
+class event_testee : public event_based_actor {
 public:
-  event_testee();
-  ~event_testee();
+  event_testee() {
+    inc_actor_instances();
+    wait4string.assign(
+      [=](const std::string&) {
+        become(wait4int);
+      },
+      [=](get_atom) {
+        return "wait4string";
+      }
+    );
+    wait4float.assign(
+      [=](float) {
+        become(wait4string);
+      },
+      [=](get_atom) {
+        return "wait4float";
+      }
+    );
+    wait4int.assign(
+      [=](int) {
+        become(wait4float);
+      },
+      [=](get_atom) {
+        return "wait4int";
+      }
+    );
+  }
+
+  ~event_testee() {
+    dec_actor_instances();
+  }
+
+  behavior make_behavior() override {
+    return wait4int;
+  }
 
   behavior wait4string;
   behavior wait4float;
   behavior wait4int;
-
-  behavior& init_state = wait4int;
 };
-
-event_testee::event_testee() {
-  inc_actor_instances();
-  wait4string.assign(
-    [=](const std::string&) {
-      become(wait4int);
-    },
-    [=](get_atom) {
-      return "wait4string";
-    }
-  );
-  wait4float.assign(
-    [=](float) {
-      become(wait4string);
-    },
-    [=](get_atom) {
-      return "wait4float";
-    }
-  );
-  wait4int.assign(
-    [=](int) {
-      become(wait4float);
-    },
-    [=](get_atom) {
-      return "wait4int";
-    }
-  );
-}
-
-event_testee::~event_testee() {
-  dec_actor_instances();
-}
 
 // quits after 5 timeouts
 actor spawn_event_testee2(actor parent) {

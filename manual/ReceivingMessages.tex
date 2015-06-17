@@ -22,62 +22,41 @@ class printer : public event_based_actor {
 };
 \end{lstlisting}
 
-Another way to implement class-based actors is provided by the class \lstinline^sb_actor^ (``State-Based Actor'').
-This base class simply returns \lstinline^init_state^ (defined in the subclass) from its implementation for \lstinline^make_behavior^.
-
-\begin{lstlisting}
-struct printer : sb_actor<printer> {
-  behavior init_state {
-    others >> [] {
-      cout << to_string(last_dequeued()) << endl;
-    }
-  };
-};
-\end{lstlisting}
-
-Note that \lstinline^sb_actor^ uses the Curiously Recurring Template Pattern. Thus, the derived class must be given as template parameter.
-This technique allows \lstinline^sb_actor^ to access the \lstinline^init_state^ member of a derived class.
-The following example illustrates a more advanced state-based actor that implements a stack with a fixed maximum number of elements.
-
 \clearpage
 \begin{lstlisting}
 using pop_atom = atom_constant<atom("pop")>;
 using push_atom = atom_constant<atom("push")>;
 
-class fixed_stack : public sb_actor<fixed_stack> {
- public:
+class fixed_stack : public event_based_actor {
+public:
   fixed_stack(size_t max) : max_size(max)  {
-    full.assign(
+    full_.assign(
       [=](push_atom, int) {
-        /* discard */
+        // discard
       },
       [=](pop_atom) -> message {
         auto result = data.back();
         data.pop_back();
-        become(filled);
+        become(filled_);
         return make_message(ok_atom::value, result);
       }
     );
-    filled.assign(
+    filled_.assign(
       [=](push_atom, int what) {
         data.push_back(what);
-        if (data.size() == max_size) {
-          become(full);
-        }
+        if (data.size() == max_size) become(full_);
       },
       [=](pop_atom) -> message {
         auto result = data.back();
         data.pop_back();
-        if (data.empty()) {
-          become(empty);
-        }
+        if (data.empty()) become(empty_);
         return make_message(ok_atom::value, result);
       }
     );
-    empty.assign(
+    empty_.assign(
       [=](push_atom, int what) {
         data.push_back(what);
-        become(filled);
+        become(filled_);
       },
       [=](pop_atom) {
         return error_atom::value;
@@ -85,12 +64,15 @@ class fixed_stack : public sb_actor<fixed_stack> {
     );
   }
 
+  behavior make_behavior() override {
+    return empty_;
+  }
+
   size_t max_size;
   std::vector<int> data;
-  behavior full;
-  behavior filled;
-  behavior empty;
-  behavior& init_state = empty;
+  behavior full_;
+  behavior filled_;
+  behavior empty_;
 };
 \end{lstlisting}
 

@@ -23,21 +23,18 @@
 #include <utility>
 #include <type_traits>
 
+#include "caf/config.hpp"
 #include "caf/event_based_actor.hpp"
 
 namespace caf {
 
-/// A base class for state-based actors using the
-/// Curiously Recurring Template Pattern
-/// to initialize the derived actor with its `init_state` member.
+// <backward_compatibility version="0.13">
 template <class Derived, class Base = event_based_actor>
 class sb_actor : public Base {
 public:
   static_assert(std::is_base_of<event_based_actor, Base>::value,
                 "Base must be event_based_actor or a derived type");
 
-  /// Overrides {@link event_based_actor::make_behavior()} and sets
-  /// the initial actor behavior to `Derived::init_state.
   behavior make_behavior() override {
     return static_cast<Derived*>(this)->init_state;
   }
@@ -49,7 +46,8 @@ protected:
   sb_actor(Ts&&... xs) : Base(std::forward<Ts>(xs)...) {
     // nop
   }
-};
+} CAF_DEPRECATED ;
+// </backward_compatibility>
 
 } // namespace caf
 
