@@ -119,6 +119,10 @@ public:
 
   /// @cond PRIVATE
 
+  using backend_pointer = std::unique_ptr<network::multiplexer>;
+
+  using backend_factory = std::function<backend_pointer()>;
+
   // stops the singleton
   void stop() override;
 
@@ -128,13 +132,13 @@ public:
   // initializes the singleton
   void initialize() override;
 
+  middleman(const backend_factory&);
+
   /// @endcond
 
 private:
-  // guarded by singleton-getter `instance`
-  middleman();
   // networking backend
-  std::unique_ptr<network::multiplexer> backend_;
+  backend_pointer backend_;
   // prevents backend from shutting down unless explicitly requested
   network::multiplexer::supervisor_ptr backend_supervisor_;
   // runs the backend

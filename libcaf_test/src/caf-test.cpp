@@ -18,3 +18,7 @@
  ******************************************************************************/
 
 #include "caf/test/unit_test_impl.hpp"
+
+#ifdef CAF_USE_ASIO
+#include "caf/io/network/asio_multiplexer_impl.hpp"
+#endif // CAF_USE_ASIO

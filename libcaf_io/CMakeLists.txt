@@ -10,6 +10,7 @@ set (LIBCAF_IO_SRCS
      src/basp_broker.cpp
      src/abstract_broker.cpp
      src/broker.cpp
+     src/default_multiplexer.cpp
      src/max_msg_size.cpp
      src/middleman.cpp
      src/hook.cpp
@@ -19,18 +20,13 @@ set (LIBCAF_IO_SRCS
      src/remote_actor.cpp
      src/remote_group.cpp
      src/manager.cpp
+     src/set_middleman.cpp
      src/stream_manager.cpp
      src/unpublish.cpp
      src/acceptor_manager.cpp
      src/multiplexer.cpp)
 
 add_custom_target(libcaf_io)
-
-if (CAF_USE_ASIO)
-  set(LIBCAF_IO_SRCS ${LIBCAF_IO_SRCS} src/asio_multiplexer.cpp)
-else()
-  set(LIBCAF_IO_SRCS ${LIBCAF_IO_SRCS} src/default_multiplexer.cpp)
-endif()
 
 # build shared library if not compiling static only
 if (NOT CAF_BUILD_STATIC_ONLY)
@@ -65,3 +61,4 @@ if(NOT WIN32)
   install(DIRECTORY caf/ DESTINATION include/caf FILES_MATCHING PATTERN "*.hpp")
   install(DIRECTORY cppa/ DESTINATION include/cppa FILES_MATCHING PATTERN "*.hpp")
 endif()
+

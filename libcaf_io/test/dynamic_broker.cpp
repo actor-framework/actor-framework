@@ -17,7 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#define CAF_SUITE dynamic_broker
+#define CAF_SUITE io_dynamic_broker
 #include "caf/test/unit_test.hpp"
 
 #include <memory>
@@ -29,6 +29,10 @@
 #include "caf/string_algorithms.hpp"
 
 #include "caf/detail/run_program.hpp"
+
+#ifdef CAF_USE_ASIO
+#include "caf/io/network/asio_multiplexer.hpp"
+#endif // CAF_USE_ASIO
 
 using namespace std;
 using namespace caf;
@@ -173,7 +177,7 @@ behavior peer_acceptor_fun(broker* self, const actor& buddy) {
   };
 }
 
-void run_server(bool spawn_client, const char* bin_path) {
+void run_server(bool spawn_client, const char* bin_path, bool use_asio) {
   scoped_actor self;
   auto serv = io::spawn_io(peer_acceptor_fun, spawn(pong));
   self->sync_send(serv, publish_atom::value).await(
@@ -181,7 +185,8 @@ void run_server(bool spawn_client, const char* bin_path) {
       CAF_MESSAGE("server is running on port " << port);
       if (spawn_client) {
         auto child = detail::run_program(self, bin_path, "-n", "-s",
-                                         "dynamic_broker", "--", "-c", port);
+                                         CAF_XSTR(CAF_SUITE), "--", "-c", port,
+                                         (use_asio ? "--use-asio" : ""));
         CAF_MESSAGE("block till child process has finished");
         child.join();
       }
@@ -201,29 +206,35 @@ void run_server(bool spawn_client, const char* bin_path) {
 CAF_TEST(test_broker) {
   auto argv = caf::test::engine::argv();
   auto argc = caf::test::engine::argc();
-  if (argc > 0) {
-    uint16_t port = 0;
-    auto r = message_builder(argv, argv + argc).extract_opts({
-      {"client-port,c", "set port for IO client", port},
-      {"server,s", "run in server mode"}
-    });
-    if (! r.error.empty() || r.opts.count("help") > 0 || ! r.remainder.empty()) {
-      cout << r.error << endl << endl << r.helptext << endl;
-      return;
-    }
-    if (r.opts.count("client-port") > 0) {
-      auto p = spawn(ping, 10);
-      CAF_MESSAGE("spawn_io_client...");
-      auto cl = spawn_io_client(peer_fun, "localhost", port, p);
-      CAF_MESSAGE("spawn_io_client finished");
-      anon_send(p, kickoff_atom::value, cl);
-      CAF_MESSAGE("`kickoff_atom` has been send");
-    } else {
-      // run in server mode
-      run_server(false, argv[0]);
-    }
+  uint16_t port = 0;
+  auto r = message_builder(argv, argv + argc).extract_opts({
+    {"client-port,c", "set port for IO client", port},
+    {"server,s", "run in server mode"},
+    {"use-asio", "use ASIO network backend (if available)"}
+  });
+  if (! r.error.empty() || r.opts.count("help") > 0 || ! r.remainder.empty()) {
+    cout << r.error << endl << endl << r.helptext << endl;
+    return;
+  }
+  auto use_asio = r.opts.count("use-asio") > 0;
+  if (use_asio) {
+#   ifdef CAF_USE_ASIO
+    CAF_MESSAGE("enable ASIO backend");
+    io::set_middleman<io::network::asio_multiplexer>();
+#   endif // CAF_USE_ASIO
+  }
+  if (r.opts.count("client-port") > 0) {
+    auto p = spawn(ping, 10);
+    CAF_MESSAGE("spawn_io_client...");
+    auto cl = spawn_io_client(peer_fun, "localhost", port, p);
+    CAF_MESSAGE("spawn_io_client finished");
+    anon_send(p, kickoff_atom::value, cl);
+    CAF_MESSAGE("`kickoff_atom` has been send");
+  } else if (r.opts.count("server") > 0) {
+    // run in server mode
+    run_server(false, argv[0], use_asio);
   } else {
-    run_server(true, caf::test::engine::path());
+    run_server(true, caf::test::engine::path(), use_asio);
   }
   CAF_MESSAGE("block on `await_all_actors_done`");
   await_all_actors_done();

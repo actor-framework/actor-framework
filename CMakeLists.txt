@@ -28,9 +28,6 @@ endif()
 if(NOT CAF_NO_SUMMARY)
   set(CAF_NO_SUMMARY no)
 endif()
-if(NOT CAF_USE_ASIO)
-  set(CAF_USE_ASIO no)
-endif()
 
 
 ################################################################################
@@ -247,10 +244,6 @@ if(CAF_NO_MEM_MANAGEMENT)
   add_definitions(-DCAF_NO_MEM_MANAGEMENT)
 endif()
 
-if (CAF_USE_ASIO)
-  add_definitions(-DCAF_USE_ASIO)
-endif()
-
 ################################################################################
 #                    check for biicode build pipeline                          #
 ################################################################################
@@ -330,20 +323,6 @@ else()
 endif()
 # all projects need the headers of the core components
 include_directories("${LIBCAF_INCLUDE_DIRS}")
-
-# Find boost asio if the asio multiplexer should be used
-if (CAF_USE_ASIO)
-  if (CAF_BUILD_STATIC_ONLY)
-    set(Boost_USE_STATIC_LIBS ON) # only find static libs
-  endif()
-  set(Boost_USE_MULTITHREADED ON)
-  find_package(Boost REQUIRED COMPONENTS system)
-  if (Boost_FOUND)
-    set(INCLUDE_DIRS "${INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}")
-    set(LD_DIRS ${LD_DIRS} ${Boost_LIBRARIES})
-    set(LD_FLAGS ${LD_FLAGS} ${Boost_SYSTEM_LIBRARY})
-  endif()
-endif()
 
 
 ################################################################################
@@ -466,6 +445,20 @@ endif()
 ################################################################################
 
 if(NOT CAF_NO_UNIT_TESTS)
+  # find boost asio if the asio multiplexer should be used for testing
+  if(CAF_USE_ASIO)
+    set(Boost_USE_MULTITHREADED ON)
+    find_package(Boost COMPONENTS system)
+    if (Boost_FOUND)
+      add_definitions(-DCAF_USE_ASIO)
+      include_directories(${Boost_INCLUDE_DIRS})
+      set(LD_DIRS ${LD_DIRS} ${Boost_LIBRARIES})
+      set(LD_FLAGS ${LD_FLAGS} ${Boost_SYSTEM_LIBRARY})
+    else()
+      set(CAF_USE_ASIO no)
+    endif()
+  endif()
+  # setup unit test binary
   add_executable(caf-test
                  libcaf_test/src/caf-test.cpp
                  libcaf_test/caf/test/unit_test.hpp
@@ -493,6 +486,11 @@ if(NOT CAF_NO_UNIT_TESTS)
     string(REPLACE " " "_" test_name ${suite})
     set(caf_test ${EXECUTABLE_OUTPUT_PATH}/caf-test)
     add_test(${test_name} ${caf_test} -n -v 5 -s "${suite}" ${ARGN})
+    # add some extra unit testing options when testing ASIO as well
+    if(CAF_USE_ASIO AND "${suite}" MATCHES "^io_.+$")
+      add_test(${test_name}_asio ${caf_test} -n -v 5 -s
+               "${suite}" ${ARGN} -- --use-asio)
+    endif()
   endmacro ()
   list(LENGTH suites num_suites)
   message(STATUS "Found ${num_suites} test suites")
@@ -588,7 +586,6 @@ if(NOT CAF_NO_SUMMARY)
         "\nRuntime checks:    ${CAF_ENABLE_RUNTIME_CHECKS}"
         "\nLog level:         ${LOG_LEVEL_STR}"
         "\nWith mem. mgmt.:   ${CAF_BUILD_MEM_MANAGEMENT}"
-        "\nUse Boost ASIO:    ${CAF_USE_ASIO}"
         "\n"
         "\nBuild examples:    ${CAF_BUILD_EXAMPLES}"
         "\nBuild unit tests:  ${CAF_BUILD_UNIT_TESTS}"

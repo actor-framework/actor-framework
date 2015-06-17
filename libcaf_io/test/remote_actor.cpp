@@ -17,7 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#define CAF_SUITE remote_actor
+#define CAF_SUITE io_dynamic_remote_actor
 #include "caf/test/unit_test.hpp"
 
 #include <thread>
@@ -33,6 +33,10 @@
 #include "caf/detail/logging.hpp"
 #include "caf/detail/singletons.hpp"
 #include "caf/detail/run_program.hpp"
+
+#ifdef CAF_USE_ASIO
+#include "caf/io/network/asio_multiplexer.hpp"
+#endif // CAF_USE_ASIO
 
 using namespace std;
 using namespace caf;
@@ -438,9 +442,9 @@ private:
   bool run_in_loop_;
 };
 
-void test_remote_actor(const char* app_path, bool run_remote_actor) {
+void test_remote_actor(const char* path, bool run_remote, bool use_asio) {
   scoped_actor self;
-  auto serv = self->spawn<server, monitored>(! run_remote_actor);
+  auto serv = self->spawn<server, monitored>(! run_remote);
   // publish on two distinct ports and use the latter one afterwards
   auto port1 = io::publish(serv, 0, "127.0.0.1");
   CAF_CHECK(port1 > 0);
@@ -457,9 +461,10 @@ void test_remote_actor(const char* app_path, bool run_remote_actor) {
   CAF_CHECK(serv2 != invalid_actor && ! serv2->is_remote());
   CAF_CHECK(serv == serv2);
   thread child;
-  if (run_remote_actor) {
-    child = detail::run_program(self, app_path, "-n", "-s", "remote_actor",
-                                "--", "-c", port2, "-c", port1, "-g", gport);
+  if (run_remote) {
+    child = detail::run_program(self, path, "-n", "-s", CAF_XSTR(CAF_SUITE),
+                                "--", "-c", port2, "-c", port1, "-g", gport,
+                                (use_asio ? "--use-asio" : ""));
   } else {
     CAF_MESSAGE("please run client with: "
               << "-c " << port2 << " -c " << port1 << " -g " << gport);
@@ -472,7 +477,7 @@ void test_remote_actor(const char* app_path, bool run_remote_actor) {
   );
   // wait until separate process (in sep. thread) finished execution
   self->await_all_other_actors_done();
-  if (run_remote_actor) {
+  if (run_remote) {
     child.join();
     self->receive(
       [](const std::string& output) {
@@ -491,50 +496,55 @@ CAF_TEST(test_remote_actor) {
   announce<actor_vector>("actor_vector");
   cout << "this node is: " << to_string(caf::detail::singletons::get_node_id())
        << endl;
-  if (argc > 0) {
-    std::vector<uint16_t> ports;
-    uint16_t gport = 0;
-    auto r = message_builder(argv, argv + argc).extract_opts({
-      {"server,s", "run in server mode"},
-      {"client-port,c", "add client port (two needed)", ports},
-      {"group-port,g", "set group port", gport}
-    });
-    if (! r.error.empty() || r.opts.count("help") > 0 || ! r.remainder.empty()) {
-      cout << r.error << endl << endl << r.helptext << endl;
+  std::vector<uint16_t> ports;
+  uint16_t gport = 0;
+  auto r = message_builder(argv, argv + argc).extract_opts({
+    {"server,s", "run in server mode"},
+    {"client-port,c", "add client port (two needed)", ports},
+    {"group-port,g", "set group port", gport},
+    {"use-asio", "use ASIO network backend (if available)"}
+  });
+  if (! r.error.empty() || r.opts.count("help") > 0 || ! r.remainder.empty()) {
+    cout << r.error << endl << endl << r.helptext << endl;
+    return;
+  }
+  auto use_asio = r.opts.count("use-asio") > 0;
+  if (use_asio) {
+#   ifdef CAF_USE_ASIO
+    CAF_MESSAGE("enable ASIO backend");
+    io::set_middleman<io::network::asio_multiplexer>();
+#   endif // CAF_USE_ASIO
+  }
+  if (r.opts.count("server") > 0) {
+    CAF_MESSAGE("don't run remote actor (server mode)");
+    test_remote_actor(argv[0], false, use_asio);
+  } else if (r.opts.count("client-port") > 0) {
+    if (ports.size() != 2 || r.opts.count("group-port") == 0) {
+      cerr << "*** expected exactly two ports and one group port" << endl
+           << endl << r.helptext << endl;
       return;
     }
-    if (r.opts.count("server") > 0) {
-      CAF_MESSAGE("don't run remote actor (server mode)");
-      test_remote_actor(argv[0], false);
-    } else {
-      if (ports.size() != 2 || r.opts.count("group-port") == 0) {
-        cerr << "*** expected exactly two ports and one group port" << endl
-             << endl << r.helptext << endl;
-        return;
-      }
-      scoped_actor self;
-      auto serv = io::remote_actor("localhost", ports.front());
-      auto serv2 = io::remote_actor("localhost", ports.back());
-      // remote_actor is supposed to return the same server
-      // when connecting to the same host again
-      {
-        CAF_CHECK(serv == io::remote_actor("localhost", ports.front()));
-        CAF_CHECK(serv2 == io::remote_actor("127.0.0.1", ports.back()));
-      }
-      // connect to published groups
-      auto grp = io::remote_group("whatever", "127.0.0.1", gport);
-      auto c = self->spawn<client, monitored>(serv);
-      self->receive(
-        [&](const down_msg& dm) {
-          CAF_CHECK_EQUAL(dm.source, c);
-          CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
-        }
-      );
-      grp->stop();
+    scoped_actor self;
+    auto serv = io::remote_actor("localhost", ports.front());
+    auto serv2 = io::remote_actor("localhost", ports.back());
+    // remote_actor is supposed to return the same server
+    // when connecting to the same host again
+    {
+      CAF_CHECK(serv == io::remote_actor("localhost", ports.front()));
+      CAF_CHECK(serv2 == io::remote_actor("127.0.0.1", ports.back()));
     }
-  }
-  else {
-    test_remote_actor(caf::test::engine::path(), true);
+    // connect to published groups
+    auto grp = io::remote_group("whatever", "127.0.0.1", gport);
+    auto c = self->spawn<client, monitored>(serv);
+    self->receive(
+      [&](const down_msg& dm) {
+        CAF_CHECK_EQUAL(dm.source, c);
+        CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
+      }
+    );
+    grp->stop();
+  } else {
+    test_remote_actor(caf::test::engine::path(), true, use_asio);
   }
   await_all_actors_done();
   shutdown();

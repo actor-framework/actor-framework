@@ -17,7 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#define CAF_SUITE unpublish
+#define CAF_SUITE io_unpublish
 #include "caf/test/unit_test.hpp"
 
 #include <thread>
@@ -25,6 +25,10 @@
 
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
+
+#ifdef CAF_USE_ASIO
+#include "caf/io/network/asio_multiplexer.hpp"
+#endif // CAF_USE_ASIO
 
 using namespace caf;
 
@@ -56,6 +60,14 @@ void test_invalid_unpublish(const actor& published, uint16_t port) {
 }
 
 CAF_TEST(unpublishing) {
+  auto argv = caf::test::engine::argv();
+  auto argc = caf::test::engine::argc();
+  if (argc == 1 && strcmp(argv[0], "--use-asio") == 0) {
+#   ifdef CAF_USE_ASIO
+    CAF_MESSAGE("enable ASIO backend");
+    io::set_middleman<io::network::asio_multiplexer>();
+#   endif // CAF_USE_ASIO
+  }
   { // scope for local variables
     auto d = spawn<dummy>();
     auto port = io::publish(d, 0);

@@ -49,7 +49,6 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --no-compiler-check         disable compiler version check
     --no-auto-libc++            do not automatically enable libc++ for Clang
     --warnings-as-errors        enables -Werror
-    --with-asio                 enable ASIO multiplexer
 
   Installation Directories:
     --prefix=PREFIX             installation directory [/usr/local]
@@ -67,6 +66,9 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --no-benchmarks             build without benchmarks
     --no-riac                   build without riac
     --no-summary                do not print configuration before building
+
+  Testing:
+    --with-asio                 use ASIO multiplexer in unit tests
 
   Debugging:
     --with-runtime-checks       build with requirement checks at runtime

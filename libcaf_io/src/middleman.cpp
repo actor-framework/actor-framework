@@ -329,8 +329,12 @@ middleman_actor_impl::~middleman_actor_impl() {
 
 middleman* middleman::instance() {
   CAF_LOGF_TRACE("");
+  // store lambda in a plain old function pointer to make sure
+  // std::function has minimal overhead
+  using funptr = backend_pointer (*)();
+  funptr backend_fac = [] { return network::multiplexer::make(); };
+  auto fac = [&] { return new middleman(backend_fac); };
   auto sid = detail::singletons::middleman_plugin_id;
-  auto fac = [] { return new middleman; };
   auto res = detail::singletons::get_plugin_singleton(sid, fac);
   return static_cast<middleman*>(res);
 }
@@ -342,7 +346,6 @@ void middleman::add_broker(broker_ptr bptr) {
 
 void middleman::initialize() {
   CAF_LOG_TRACE("");
-  backend_ = network::multiplexer::make();
   backend_supervisor_ = backend_->make_supervisor();
   thread_ = std::thread{[this] {
     CAF_LOG_TRACE("");
@@ -396,7 +399,7 @@ void middleman::dispose() {
   delete this;
 }
 
-middleman::middleman() {
+middleman::middleman(const backend_factory& factory) : backend_(factory()) {
   // nop
 }
 

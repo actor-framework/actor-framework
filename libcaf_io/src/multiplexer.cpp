@@ -18,14 +18,7 @@
  ******************************************************************************/
 
 #include "caf/io/network/multiplexer.hpp"
-
-#ifdef CAF_USE_ASIO
-# include "caf/io/network/asio_multiplexer.hpp"
-  using caf_multiplexer_impl = caf::io::network::asio_multiplexer;
-#else
-# include "caf/io/network/default_multiplexer.hpp"
-  using caf_multiplexer_impl = caf::io::network::default_multiplexer;
-#endif
+#include "caf/io/network/default_multiplexer.hpp"
 
 namespace caf {
 namespace io {
@@ -41,7 +34,7 @@ boost::asio::io_service* pimpl() {
 
 multiplexer_ptr multiplexer::make() {
   CAF_LOGF_TRACE("");
-  return multiplexer_ptr{new caf_multiplexer_impl};
+  return multiplexer_ptr{new default_multiplexer};
 }
 
 boost::asio::io_service* multiplexer::pimpl() {

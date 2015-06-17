@@ -17,21 +17,30 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_ALL_HPP
-#define CAF_IO_ALL_HPP
+#ifndef CAF_IO_SET_MIDDLEMAN_HPP
+#define CAF_IO_SET_MIDDLEMAN_HPP
 
-#include "caf/io/broker.hpp"
-#include "caf/io/publish.hpp"
-#include "caf/io/spawn_io.hpp"
 #include "caf/io/middleman.hpp"
-#include "caf/io/unpublish.hpp"
-#include "caf/io/basp_broker.hpp"
-#include "caf/io/max_msg_size.hpp"
-#include "caf/io/remote_actor.hpp"
-#include "caf/io/remote_group.hpp"
-#include "caf/io/set_middleman.hpp"
-#include "caf/io/receive_policy.hpp"
-#include "caf/io/system_messages.hpp"
-#include "caf/io/publish_local_groups.hpp"
 
-#endif // CAF_IO_ALL_HPP
+namespace caf {
+namespace io {
+
+/// Sets a user-defined middleman using given network backend.
+/// @note This function must be used before actor is spawned. Dynamically
+///       changing the middleman at runtime is not supported.
+/// @throws std::logic_error if a scheduler is already defined
+void set_middleman(network::multiplexer* ptr);
+
+/// Sets a user-defined middleman using given network backend.
+/// @note This function must be used before actor is spawned. Dynamically
+///       changing the middleman at runtime is not supported.
+/// @throws std::logic_error if a scheduler is already defined
+template <class Multiplexer>
+void set_middleman() {
+  set_middleman(new Multiplexer);
+}
+
+} // namespace io
+} // namespace caf
+
+#endif // CAF_IO_SET_MIDDLEMAN_HPP
