@@ -177,8 +177,10 @@ plot_utilization_time <- function(.data, color.sys="red", color.usr="blue") {
 # and system CPU utilization. The point radius is scaled logarithmically to the
 # runtime.
 plot_utilization_scatter <- function(.data) {
+  max.xy <- with(.data, max(usr/time, sys/time))
   p <- ggplot(.data, aes(x=usr/time, y=sys/time, size=time)) +
     scale_size(name="ID", range=c(2, 10), guide='none') +
+    xlim(0, max.xy) + ylim(0, max.xy) +
     labs(x="User CPU utilization", y="System CPU utilization")
   add_points(p, .data)
 }
