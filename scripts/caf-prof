@@ -178,9 +178,7 @@ plot_utilization_time <- function(.data, color.sys="red", color.usr="blue") {
 # runtime.
 plot_utilization_scatter <- function(.data) {
   p <- ggplot(.data, aes(x=usr/time, y=sys/time, size=time)) +
-    scale_size(name="Runtime (secs)", range=c(2, 10),
-               breaks=pretty_breaks(5),
-               labels=round(pretty_breaks(5)(.data$time/1e6), 2)) +
+    scale_size(name="ID", range=c(2, 10), guide='none') +
     labs(x="User CPU utilization", y="System CPU utilization")
   add_points(p, .data)
 }
@@ -214,7 +212,8 @@ plot_time_boxplot <- function(.data) {
     geom_boxplot(outlier.color="grey") +
     labs(x="ID", y="CPU time") +
     scale_y_time(xs$cpu) +
-    scale_fill_gradient(name="Utilization", low="red", high="green") +
+    scale_fill_gradient(name="Utilization", low="red", high="green",
+                        limits=c(0, 1)) +
     theme(axis.text.x=element_text(angle=90, vjust=.5, hjust=1))
 }
 
@@ -230,7 +229,8 @@ plot_utilization_boxplot <- function(.data) {
     labs(x="ID", y="CPU utilization") +
     scale_fill_gradient2(name="Domination",
                          low="red", mid="white", high="green",
-                         breaks=c(-.5, .5), labels=c("System", "User")) +
+                         breaks=c(-.5, .5), labels=c("System", "User"),
+                         limits=c(-1, 1)) +
     theme(axis.text.x=element_text(angle=90, vjust=.5, hjust=1))
 }
 
