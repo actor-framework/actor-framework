@@ -428,7 +428,7 @@ bool engine::run(bool colorize,
   }
   log.info() << '\n' << indent << "time:    " << color(yellow)
              << render(runtime) << '\n' << color(reset) << indent
-             << "success: " << (total_bad > 0 ? color(green) : color(yellow))
+             << "success: " << (total_bad > 0 ? color(red) : color(green))
              << percent_good << "%" << color(reset) << "\n\n" << color(cyan)
              << bar << color(reset) << '\n';
   return total_bad == total_bad_expected;
