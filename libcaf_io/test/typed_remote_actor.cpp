@@ -127,7 +127,7 @@ CAF_TEST(test_typed_remote_actor) {
     CAF_MESSAGE("run in server mode");
     run_server();
   } else {
-    auto port = run_server();
+    port = run_server();
     // execute client_part() in a separate process,
     // connected via localhost socket
     scoped_actor self;
