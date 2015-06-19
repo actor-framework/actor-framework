@@ -85,12 +85,12 @@ CAF_TEST(metaprogramming) {
   using il2 = il_right<il0, 2>::type;
   CAF_CHECK((is_same<il2, il1>::value));
 
-  /* test tl_is_strict_subset */ {
+  /* test tlf_is_subset */ {
     using list_a = type_list<int, float, double>;
     using list_b = type_list<float, int, double, std::string>;
-    CAF_CHECK((tl_is_strict_subset<list_a, list_b>::value));
-    CAF_CHECK(!(tl_is_strict_subset<list_b, list_a>::value));
-    CAF_CHECK((tl_is_strict_subset<list_a, list_a>::value));
-    CAF_CHECK((tl_is_strict_subset<list_b, list_b>::value));
+    CAF_CHECK((tlf_is_subset<list_a, list_b>()));
+    CAF_CHECK(! (tlf_is_subset<list_b, list_a>()));
+    CAF_CHECK((tlf_is_subset<list_a, list_a>()));
+    CAF_CHECK((tlf_is_subset<list_b, list_b>()));
   }
 }

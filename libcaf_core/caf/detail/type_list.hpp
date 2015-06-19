@@ -910,9 +910,15 @@ struct tl_apply<type_list<Ts...>, VarArgTemplate> {
 
 // bool is_strict_subset(list,list)
 
-template <class List, class T>
-constexpr int tlf_find() {
-  return tl_find<List, T>::value;
+template <class T>
+constexpr int tlf_find(type_list<>, int = 0) {
+  return -1;
+}
+
+template <class T, class U, class... Us>
+constexpr int tlf_find(type_list<U, Us...>, int pos = 0) {
+  return std::is_same<T, U>::value ? pos
+                                   : tlf_find<T>(type_list<Us...>{}, pos + 1);
 }
 
 constexpr bool tlf_no_negative() {
@@ -924,26 +930,22 @@ constexpr bool tlf_no_negative(T x, Ts... xs) {
   return x < 0 ? false : tlf_no_negative(xs...);
 }
 
-/// Tests whether ListA ist a strict subset of ListB (or equal).
+template <class... Ts, class List>
+constexpr bool tlf_is_subset(type_list<Ts...>, List) {
+  return tlf_no_negative(tlf_find<Ts>(List{})...);
+}
+
 template <class ListA, class ListB>
-struct tl_is_strict_subset;
-
-
-template <class... Ts, class List>
-struct tl_is_strict_subset<type_list<Ts...>, List> {
-  static constexpr bool value = tlf_no_negative(tlf_find<List, Ts>()...);
-};
-
-template <class... Ts, class List>
-constexpr bool tl_is_strict_subset<type_list<Ts...>, List>::value;
+constexpr bool tlf_is_subset() {
+  return tlf_is_subset(ListA{}, ListB{});
+}
 
 /// Tests whether ListA contains the same elements as ListB
 /// and vice versa. This comparison ignores element positions.
 template <class ListA, class ListB>
 struct tl_equal {
-  static constexpr bool value =
-    tl_is_strict_subset<ListA, ListB>::value
-    && tl_is_strict_subset<ListB, ListA>::value;
+  static constexpr bool value = tlf_is_subset<ListA, ListB>()
+                                && tlf_is_subset<ListB, ListA>();
 };
 
 template <size_t N, class T>
