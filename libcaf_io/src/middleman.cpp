@@ -145,7 +145,7 @@ using middleman_actor_base = middleman_actor::extend<
                                reacts_to<ok_atom, int64_t>,
                                reacts_to<ok_atom, int64_t, actor_addr>,
                                reacts_to<error_atom, int64_t, std::string>
-                             >::type;
+                             >;
 
 class middleman_actor_impl : public middleman_actor_base::base {
 public:

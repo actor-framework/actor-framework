@@ -69,10 +69,9 @@ class typed_actor
 
 public:
 
+  /// Creates a new `typed_actor` type by extending this one with `Es...`.
   template <class... Es>
-  struct extend {
-    using type = typed_actor<Sigs..., Es...>;
-  };
+  using extend = typed_actor<Sigs..., Es...>;
 
   /// Identifies the behavior type actors of this kind use
   /// for their behavior stack.

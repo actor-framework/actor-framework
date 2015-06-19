@@ -36,6 +36,15 @@ using passed_atom = caf::atom_constant<caf::atom("passed")>;
 
 namespace {
 
+// check invariants of type system
+using dummy1 = typed_actor<reacts_to<int, int>,
+                           replies_to<double>::with<double>>;
+
+using dummy2 = dummy1::extend<reacts_to<ok_atom>>;
+
+static_assert(std::is_convertible<dummy2, dummy1>::value,
+              "handle not assignable to narrower definition");
+
 /******************************************************************************
  *            simple request/response test            *
  ******************************************************************************/
