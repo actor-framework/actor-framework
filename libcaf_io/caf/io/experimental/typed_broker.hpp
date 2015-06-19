@@ -17,18 +17,19 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_TYPED_BROKER_HPP
-#define CAF_IO_TYPED_BROKER_HPP
+#ifndef CAF_IO_EXPERIMENTAL_TYPED_BROKER_HPP
+#define CAF_IO_EXPERIMENTAL_TYPED_BROKER_HPP
 
 #include <map>
 #include <vector>
+#include <type_traits>
 
 #include "caf/none.hpp"
 #include "caf/config.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/spawn.hpp"
 #include "caf/extend.hpp"
-#include "caf/typed_behavior.hpp"
+#include "caf/typed_actor.hpp"
 #include "caf/local_actor.hpp"
 
 #include "caf/detail/logging.hpp"
@@ -45,6 +46,13 @@
 namespace caf {
 namespace io {
 namespace experimental {
+
+using minimal_client = typed_actor<reacts_to<new_data_msg>,
+                                   reacts_to<connection_closed_msg>>;
+
+using minimal_server =
+  minimal_client::extend<reacts_to<new_connection_msg>,
+                         reacts_to<acceptor_closed_msg>>;
 
 template <class... Sigs>
 class typed_broker;
@@ -72,6 +80,8 @@ class typed_broker : public abstract_event_based_actor<typed_behavior<Sigs...>,
                                                        false, abstract_broker> {
 public:
   using signatures = detail::type_list<Sigs...>;
+
+  using actor_hdl = typed_actor<Sigs...>;
 
   using behavior_type = typed_behavior<Sigs...>;
 
@@ -180,12 +190,42 @@ public:
           typename detail::get_callable_trait<F>::arg_types
         >::type
       >::type;
+    static_assert(std::is_convertible<typename impl::actor_hdl,
+                                      minimal_client>::value,
+                  "Cannot fork: new broker misses required handlers");
     return spawn_functor_impl<no_spawn_options, impl>(
       nullptr, [&sptr](abstract_broker* forked) {
                  sptr->set_broker(forked);
                  forked->add_scribe(sptr);
                },
       std::move(fun), hdl, std::forward<Ts>(xs)...);
+  }
+
+  connection_handle add_tcp_scribe(const std::string& host, uint16_t port) {
+    static_assert(std::is_convertible<actor_hdl, minimal_client>::value,
+                  "Cannot add scribe: broker misses required handlers");
+    return super::add_tcp_scribe(host, port);
+  }
+
+  connection_handle add_tcp_scribe(network::native_socket fd) {
+    static_assert(std::is_convertible<actor_hdl, minimal_client>::value,
+                  "Cannot add scribe: broker misses required handlers");
+    return super::add_tcp_scribe(fd);
+  }
+
+  std::pair<accept_handle, uint16_t>
+  add_tcp_doorman(uint16_t port = 0,
+                  const char* in = nullptr,
+                  bool reuse_addr = false) {
+    static_assert(std::is_convertible<actor_hdl, minimal_server>::value,
+                  "Cannot add doorman: broker misses required handlers");
+    return super::add_tcp_doorman(port, in, reuse_addr);
+  }
+
+  accept_handle add_tcp_doorman(network::native_socket fd) {
+    static_assert(std::is_convertible<actor_hdl, minimal_server>::value,
+                  "Cannot add doorman: broker misses required handlers");
+    return super::add_tcp_doorman(fd);
   }
 
   typed_broker() {
@@ -212,4 +252,4 @@ protected:
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_TYPED_BROKER_HPP
+#endif // CAF_IO_EXPERIMENTAL_TYPED_BROKER_HPP

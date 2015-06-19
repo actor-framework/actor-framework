@@ -48,13 +48,11 @@ using ping_atom = caf::atom_constant<atom("ping")>;
 using pong_atom = caf::atom_constant<atom("pong")>;
 using kickoff_atom = caf::atom_constant<atom("kickoff")>;
 
-using peer = typed_actor<replies_to<connection_closed_msg>::with<void>,
-                         replies_to<new_data_msg>::with<void>,
-                         replies_to<ping_atom, int>::with<void>,
-                         replies_to<pong_atom, int>::with<void>>;
+using peer = minimal_client::extend<reacts_to<ping_atom, int>,
+                                    reacts_to<pong_atom, int>>;
 
-using acceptor = typed_actor<replies_to<new_connection_msg>::with<void>,
-                             replies_to<publish_atom>::with<uint16_t>>;
+using acceptor =
+  minimal_server::extend<replies_to<publish_atom>::with<uint16_t>>;
 
 behavior ping(event_based_actor* self, size_t num_pings) {
   CAF_MESSAGE("num_pings: " << num_pings);
@@ -175,6 +173,9 @@ acceptor::behavior_type acceptor_fun(acceptor::broker_pointer self,
       self->fork(peer_fun, msg.handle, buddy);
       self->quit();
     },
+    [](const new_data_msg&) {},
+    [](const connection_closed_msg&) {},
+    [](const acceptor_closed_msg&) {},
     [=](publish_atom) {
       return self->add_tcp_doorman(0, "127.0.0.1").second;
     }
