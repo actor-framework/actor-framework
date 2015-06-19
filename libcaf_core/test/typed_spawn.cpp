@@ -45,6 +45,9 @@ using dummy2 = dummy1::extend<reacts_to<ok_atom>>;
 static_assert(std::is_convertible<dummy2, dummy1>::value,
               "handle not assignable to narrower definition");
 
+static_assert(! std::is_convertible<dummy1, dummy2>::value,
+              "handle is assignable to broader definition");
+
 /******************************************************************************
  *            simple request/response test            *
  ******************************************************************************/

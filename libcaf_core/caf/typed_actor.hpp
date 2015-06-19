@@ -48,15 +48,15 @@ class typed_broker;
 } // namespace experimental
 } // namespace io
 
-/// Identifies a strongly typed actor.
+/// Identifies a statically typed actor.
 /// @tparam Sigs Signature of this actor as `replies_to<...>::with<...>`
 ///              parameter pack.
 template <class... Sigs>
-class typed_actor
-  : detail::comparable<typed_actor<Sigs...>>,
-    detail::comparable<typed_actor<Sigs...>, actor_addr>,
-    detail::comparable<typed_actor<Sigs...>, invalid_actor_addr_t> {
-
+class typed_actor : detail::comparable<typed_actor<Sigs...>>,
+                    detail::comparable<typed_actor<Sigs...>, actor_addr>,
+                    detail::comparable<typed_actor<Sigs...>,
+                                       invalid_actor_addr_t> {
+ public:
   friend class local_actor;
 
   // friend with all possible instantiations
@@ -66,8 +66,6 @@ class typed_actor
   // allow conversion via actor_cast
   template <class T, typename U>
   friend T actor_cast(const U&);
-
-public:
 
   /// Creates a new `typed_actor` type by extending this one with `Es...`.
   template <class... Es>
@@ -95,20 +93,38 @@ public:
   typed_actor& operator=(typed_actor&&) = default;
   typed_actor& operator=(const typed_actor&) = default;
 
-  template <class... OtherSigs>
-  typed_actor(const typed_actor<OtherSigs...>& other) {
-    set(std::move(other));
+  template <class... OtherSigs,
+            class Enable = typename std::enable_if<
+                             detail::tl_is_strict_subset<
+                               detail::type_list<Sigs...>,
+                               detail::type_list<OtherSigs...>
+                             >::value
+                           >::type>
+  typed_actor(const typed_actor<OtherSigs...>& other) : ptr_(other.ptr_) {
+    // nop
   }
 
-  template <class... OtherSigs>
+  template <class... OtherSigs,
+            class Enable = typename std::enable_if<
+                             detail::tl_is_strict_subset<
+                               detail::type_list<Sigs...>,
+                               detail::type_list<OtherSigs...>
+                             >::value
+                           >::type>
   typed_actor& operator=(const typed_actor<OtherSigs...>& other) {
-    set(std::move(other));
+    ptr_ = other.ptr_;
     return *this;
   }
 
-  template <class Impl>
-  typed_actor(intrusive_ptr<Impl> other) {
-    set(other);
+  template <class Impl,
+            class Enable = typename std::enable_if<
+                             detail::tl_is_strict_subset<
+                               detail::type_list<Sigs...>,
+                               typename Impl::signatures
+                             >::value
+                           >::type>
+  typed_actor(intrusive_ptr<Impl> other) : ptr_(std::move(other)) {
+    // nop
   }
 
   abstract_actor* operator->() const {
@@ -124,15 +140,15 @@ public:
     return ptr_ ? ptr_->address() : actor_addr{};
   }
 
-  inline intptr_t compare(const actor_addr& rhs) const {
+  intptr_t compare(const actor_addr& rhs) const {
     return address().compare(rhs);
   }
 
-  inline intptr_t compare(const typed_actor& other) const {
+  intptr_t compare(const typed_actor& other) const {
     return compare(other.address());
   }
 
-  inline intptr_t compare(const invalid_actor_addr_t&) const {
+  intptr_t compare(const invalid_actor_addr_t&) const {
     return ptr_ ? 1 : 0;
   }
 
@@ -140,36 +156,24 @@ public:
     return {Sigs::static_type_name()...};
   }
 
-  explicit operator bool() const { return static_cast<bool>(ptr_); }
+  explicit operator bool() const {
+    return static_cast<bool>(ptr_);
+  }
 
-  inline bool operator!() const { return ! ptr_; }
+  bool operator!() const {
+    return !ptr_;
+  }
 
 private:
-
-  inline abstract_actor* get() const { return ptr_.get(); }
-
-  typed_actor(abstract_actor* ptr) : ptr_(ptr) {}
-
-  template <class ListA, class ListB>
-  inline void check_signatures() {
-    static_assert(detail::tl_is_strict_subset<ListA, ListB>::value,
-            "'this' must be a strict subset of 'other'");
+  abstract_actor* get() const {
+    return ptr_.get();
   }
 
-  template <class... OtherSigs>
-  inline void set(const typed_actor<OtherSigs...>& other) {
-    check_signatures<detail::type_list<Sigs...>, detail::type_list<OtherSigs...>>();
-    ptr_ = other.ptr_;
-  }
-
-  template <class Impl>
-  inline void set(intrusive_ptr<Impl>& other) {
-    check_signatures<detail::type_list<Sigs...>, typename Impl::signatures>();
-    ptr_ = std::move(other);
+  typed_actor(abstract_actor* ptr) : ptr_(ptr) {
+    // nop
   }
 
   abstract_actor_ptr ptr_;
-
 };
 
 } // namespace caf
