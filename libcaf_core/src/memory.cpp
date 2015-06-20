@@ -41,6 +41,9 @@ namespace {
   using cache_map = std::map<const std::type_info*, std::unique_ptr<memory_cache>>;
 }
 
+memory_cache::~memory_cache() {
+    // nop
+}
 #ifdef CAF_CLANG
 
 namespace {
@@ -49,10 +52,6 @@ pthread_key_t s_key;
 pthread_once_t s_key_once = PTHREAD_ONCE_INIT;
 
 } // namespace <anonymous>
-
-memory_cache::~memory_cache() {
-  // nop
-}
 
 void cache_map_destructor(void* ptr) {
   delete reinterpret_cast<cache_map*>(ptr);
