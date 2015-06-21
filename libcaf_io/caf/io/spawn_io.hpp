@@ -131,6 +131,9 @@ spawn_io_client_typed(F fun, const std::string& host, uint16_t port,
   using arg_types = typename trait::arg_types;
   using first_arg = typename detail::tl_head<arg_types>::type;
   using impl_class = typename std::remove_pointer<first_arg>::type;
+  static_assert(std::is_convertible<typename impl_class::actor_hdl,
+                                    minimal_client>::value,
+                "Cannot spawn io client: broker misses required handlers");
   return spawn_io_client_impl<Os, impl_class>(std::move(fun), host, port,
                                               std::forward<Ts>(xs)...);
 }
@@ -148,6 +151,9 @@ spawn_io_server_typed(F fun, uint16_t port, Ts&&... xs) {
   using arg_types = typename trait::arg_types;
   using first_arg = typename detail::tl_head<arg_types>::type;
   using impl_class = typename std::remove_pointer<first_arg>::type;
+  static_assert(std::is_convertible<typename impl_class::actor_hdl,
+                                    minimal_server>::value,
+                "Cannot spawn io server: broker misses required handlers");
   return spawn_io_server_impl<Os, impl_class>(std::move(fun), port,
                                               std::forward<Ts>(xs)...);
 }
