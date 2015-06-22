@@ -228,7 +228,7 @@ public:
   }
 
   template <class Time, class Label>
-  void record(Time t, Label label, size_t id, measurement const& m) {
+  void record(Time t, Label label, size_t id, const measurement& m) {
     using std::setw;
     file_ << setw(21) << t.time_since_epoch().count()
            << setw(10) << label
@@ -237,7 +237,7 @@ public:
            << std::endl;
   }
 
-  void report(actor_id const& job, measurement const& m) {
+  void report(const actor_id& job, const measurement& m) {
     std::lock_guard<std::mutex> job_guard{job_mtx_};
     jobs_[job] += m;
     if (m.time - last_flush_ >= resolution_) {
