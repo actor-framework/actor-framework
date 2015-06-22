@@ -33,6 +33,7 @@ public:
   concatenated_tuple& operator=(const concatenated_tuple&) = delete;
 
   using message_data::cow_ptr;
+
   using vector_type = std::vector<cow_ptr>;
 
   static cow_ptr make(std::initializer_list<cow_ptr> xs);
@@ -54,15 +55,13 @@ public:
 
   uint16_t type_nr_at(size_t pos) const override;
 
-  concatenated_tuple() = default;
+  concatenated_tuple(std::initializer_list<cow_ptr> xs);
 
-private:
   concatenated_tuple(const concatenated_tuple&) = default;
 
   std::pair<message_data*, size_t> select(size_t pos) const;
 
-  void init();
-
+private:
   vector_type data_;
   uint32_t type_token_;
   size_t size_;

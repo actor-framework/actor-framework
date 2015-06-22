@@ -28,20 +28,7 @@ namespace caf {
 namespace detail {
 
 auto concatenated_tuple::make(std::initializer_list<cow_ptr> xs) -> cow_ptr {
-  auto result = make_counted<concatenated_tuple>();
-  for (auto& x : xs) {
-    if (x) {
-      auto dptr = dynamic_cast<const concatenated_tuple*>(x.get());
-      if (dptr) {
-        auto& vec = dptr->data_;
-        result->data_.insert(result->data_.end(), vec.begin(), vec.end());
-      } else {
-        result->data_.push_back(std::move(x));
-      }
-    }
-  }
-  result->init();
-  return cow_ptr{std::move(result)};
+  return cow_ptr{make_counted<concatenated_tuple>(xs)};
 }
 
 void* concatenated_tuple::mutable_at(size_t pos) {
@@ -99,7 +86,18 @@ std::pair<message_data*, size_t> concatenated_tuple::select(size_t pos) const {
   throw std::out_of_range("out of range: concatenated_tuple::select");
 }
 
-void concatenated_tuple::init() {
+concatenated_tuple::concatenated_tuple(std::initializer_list<cow_ptr> xs) {
+  for (auto& x : xs) {
+    if (x) {
+      auto dptr = dynamic_cast<const concatenated_tuple*>(x.get());
+      if (dptr) {
+        auto& vec = dptr->data_;
+        data_.insert(data_.end(), vec.begin(), vec.end());
+      } else {
+        data_.push_back(std::move(x));
+      }
+    }
+  }
   type_token_ = make_type_token();
   for (auto& m : data_) {
     for (size_t i = 0; i < m->size(); ++i) {
