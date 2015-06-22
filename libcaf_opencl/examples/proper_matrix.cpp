@@ -28,6 +28,7 @@
 
 using namespace std;
 using namespace caf;
+using namespace caf::opencl;
 
 using detail::limited_vector;
 
@@ -152,27 +153,28 @@ void multiplier(event_based_actor* self) {
     );
   };
 
-  auto box_res = [] (fvec& result) -> message {
+  auto box_res = [] (fvec result) -> message {
     return make_message(matrix_type{move(result)});
   };
 
   // spawn an opencl actor
   // 1st arg: source code of one or more opencl kernels
   // 2nd arg: name of the kernel to use
-  auto worker = spawn_cl<fvec (fvec&, fvec&)>(kernel_source, kernel_name,
-    // 3rd arg: the opencl function operates on vectors,
-    //      this function converts a tuple of two matrices
-    //      to a tuple of vectors; note that this function returns
-    //      an option (an empty results causes the actor to ignore
-    //      the message)
-    unbox_args,
-    // 4th arg: converts the ouptut vector back to a matrix that is then
-    //      used as response message
-    box_res,
-    // 5th arg: global dimension arguments for opencl's enqueue,
-    //      creates matrix_size * matrix_size global work items
-    limited_vector<size_t, 3>{matrix_size, matrix_size}
-  );
+  // 3rd arg: the config specifies how many dimensions the kernel uses and how
+  //          many work items are created, creates matrix_size * matrix_size
+  //          global work items in this case
+  // 4th arg: the opencl function operates on vectors, this function converts
+  //          a tuple of two matrices to a tuple of vectors; note that this
+  //          function returns an option (an empty results causes the actor to
+  //          ignore the message)
+  // 5th arg: converts the ouptut vector back to a matrix that is then
+  //          used as response message
+  // from 6 : a description of the kernel signature using in/out/in_out classes
+  //          with the argument type packed in vectors
+  auto worker = spawn_cl(kernel_source, kernel_name,
+                         spawn_config{dim_vec{matrix_size, matrix_size}},
+                         unbox_args, box_res,
+                         in<fvec>{}, in<fvec>{}, out<fvec>{});
 
   // send both matrices to the actor and
   // wait for results in form of a matrix_type

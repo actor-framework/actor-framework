@@ -27,10 +27,13 @@
 
 using namespace std;
 using namespace caf;
+using namespace caf::opencl;
 
 using detail::limited_vector;
 
 namespace {
+
+using fvec = std::vector<float>;
 
 constexpr size_t matrix_size = 8;
 constexpr const char* kernel_name = "matrix_mult";
@@ -55,7 +58,7 @@ constexpr const char* kernel_source = R"__(
 
 } // namespace <anonymous>
 
-void print_as_matrix(const vector<float>& matrix) {
+void print_as_matrix(const fvec& matrix) {
   for (size_t column = 0; column < matrix_size; ++column) {
     for (size_t row = 0; row < matrix_size; ++row) {
       cout << fixed << setprecision(2) << setw(9)
@@ -68,8 +71,8 @@ void print_as_matrix(const vector<float>& matrix) {
 void multiplier(event_based_actor* self) {
   // the opencl actor only understands vectors
   // so these vectors represent the matrices
-  vector<float> m1(matrix_size * matrix_size);
-  vector<float> m2(matrix_size * matrix_size);
+  fvec m1(matrix_size * matrix_size);
+  fvec m2(matrix_size * matrix_size);
 
   // fill each with ascending values
   iota(m1.begin(), m1.end(), 0);
@@ -81,25 +84,21 @@ void multiplier(event_based_actor* self) {
   cout << endl;
 
   // spawn an opencl actor
-  // template parameter: signature of opencl kernel using proper return type
-  //           instead of output parameter (implicitly
-  //           mapped to the last kernel argument)
   // 1st arg: source code of one or more kernels
   // 2nd arg: name of the kernel to use
-  // 3rd arg: global dimension arguments for opencl's enqueue;
-  //      creates matrix_size * matrix_size global work items
-  // 4th arg: offsets for global dimensions (optional)
-  // 5th arg: local dimensions (optional)
-  // 6th arg: number of elements in the result buffer
-  auto worker = spawn_cl<float*(float*,float*)>(kernel_source,
-                          kernel_name,
-                          limited_vector<size_t, 3>{matrix_size, matrix_size},
-                          {},
-                          {},
-                          matrix_size * matrix_size);
+  // 3rd arg: a spawn configuration that includes:
+  //          - the global dimension arguments for opencl's enqueue
+  //            creates matrix_size * matrix_size global work items
+  //          - offsets for global dimensions (optional)
+  //          - local dimensions (optional)
+  // 4th to Nth arg: the kernel signature described by in/out/in_out classes
+  //          that contain the argument type in their template, requires vectors
+  auto worker = spawn_cl(kernel_source, kernel_name,
+                         spawn_config{dim_vec{matrix_size, matrix_size}},
+                         in<fvec>{}, in<fvec>{}, out<fvec>{});
   // send both matrices to the actor and wait for a result
   self->sync_send(worker, move(m1), move(m2)).then(
-    [](const vector<float>& result) {
+    [](const fvec& result) {
       cout << "result: " << endl;
       print_as_matrix(result);
     }
@@ -107,7 +106,7 @@ void multiplier(event_based_actor* self) {
 }
 
 int main() {
-  announce<vector<float>>("float_vector");
+  announce<fvec>("float_vector");
   spawn(multiplier);
   await_all_actors_done();
   shutdown();

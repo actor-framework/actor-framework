@@ -17,44 +17,54 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OPENCL_PROGRAM_HPP
-#define CAF_OPENCL_PROGRAM_HPP
-
-#include <memory>
+#ifndef CAF_OPENCL_SPAWN_CONFIG_HPP
+#define CAF_OPENCL_SPAWN_CONFIG_HPP
 
 #include "caf/opencl/global.hpp"
-#include "caf/opencl/smart_ptr.hpp"
 
 namespace caf {
 namespace opencl {
 
-template <class... Ts>
-class actor_facade;
-
-/// @brief A wrapper for OpenCL's cl_program.
-class program {
-
-  template <class... Ts>
-  friend class actor_facade;
-
+class spawn_config {
 public:
-  /// @brief Factory method, that creates a caf::opencl::program
-  ///        from a given @p kernel_source.
-  /// @returns A program object.
-  static program create(const char* kernel_source,
-                        const char* options = nullptr, uint32_t device_id = 0);
+  spawn_config(const opencl::dim_vec& dims,
+               const opencl::dim_vec& offset = {},
+               const opencl::dim_vec& local_dims = {})
+    : dims_{dims},
+      offset_{offset},
+      local_dims_{local_dims} {
+    // nop
+  }
+
+  spawn_config(opencl::dim_vec&& dims,
+               opencl::dim_vec&& offset = {},
+               opencl::dim_vec&& local_dims = {})
+    : dims_{std::move(dims)},
+      offset_{std::move(offset)},
+      local_dims_{std::move(local_dims)} {
+    // nop
+  }
+
+  const opencl::dim_vec& dimensions() const {
+    return dims_;
+  }
+
+  const opencl::dim_vec& offsets() const {
+    return offset_;
+  }
+
+  const opencl::dim_vec& local_dimensions() const {
+    return local_dims_;
+  }
 
 private:
-  program(context_ptr context, command_queue_ptr queue, program_ptr program,
-          std::map<std::string,kernel_ptr> available_kernels);
+  const opencl::dim_vec dims_;
+  const opencl::dim_vec offset_;
+  const opencl::dim_vec local_dims_;
 
-  context_ptr context_;
-  program_ptr program_;
-  command_queue_ptr queue_;
-  std::map<std::string,kernel_ptr> available_kernels_;
 };
 
 } // namespace opencl
 } // namespace caf
 
-#endif // CAF_OPENCL_PROGRAM_HPP
+#endif // CAF_OPENCL_SPAWN_CONFIG_HPP

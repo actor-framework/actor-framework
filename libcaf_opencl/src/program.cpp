@@ -17,6 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include <map>
 #include <vector>
 #include <string>
 #include <cstring>
@@ -34,10 +35,12 @@ namespace caf {
 namespace opencl {
 
 program::program(context_ptr context, command_queue_ptr queue,
-                 program_ptr program)
+                 program_ptr program,
+                 map<string, kernel_ptr> available_kernels)
     : context_(move(context)),
       program_(move(program)),
-      queue_(move(queue)) {}
+      queue_(move(queue)),
+      available_kernels_(move(available_kernels)) {}
 
 program program::create(const char* kernel_source, const char* options,
                         uint32_t device_id) {
@@ -91,7 +94,35 @@ program program::create(const char* kernel_source, const char* options,
 #endif
     throw runtime_error(oss.str());
   }
-  return {context, devices[device_id].cmd_queue_, pptr};
+  cl_uint number_of_kernels = 0;
+  clCreateKernelsInProgram(pptr.get(), 0, nullptr, &number_of_kernels);
+  vector<cl_kernel> kernels(number_of_kernels);
+  err = clCreateKernelsInProgram(pptr.get(), number_of_kernels, kernels.data(),
+                                 nullptr);
+  if (err != CL_SUCCESS) {
+    ostringstream oss;
+    oss << "clCreateKernelsInProgram: " << get_opencl_error(err);
+    throw runtime_error(oss.str());
+  }
+  map<string, kernel_ptr> available_kernels;
+  for (cl_uint i = 0; i < number_of_kernels; ++i) {
+    size_t ret_size;
+    clGetKernelInfo(kernels[i], CL_KERNEL_FUNCTION_NAME, 0, nullptr, &ret_size);
+    vector<char> name(ret_size);
+    err = clGetKernelInfo(kernels[i], CL_KERNEL_FUNCTION_NAME, ret_size,
+                          (void*) name.data(), nullptr);
+    if (err != CL_SUCCESS) {
+      ostringstream oss;
+      oss << "clGetKernelInfo (CL_KERNEL_FUNCTION_NAME): "
+          << get_opencl_error(err);
+      throw runtime_error(oss.str());
+    }
+    kernel_ptr kernel;
+    kernel.reset(move(kernels[i]));
+    available_kernels.emplace(string(name.data()), move(kernel));
+  }
+  return {context, devices[device_id].cmd_queue_, pptr,
+          move(available_kernels)};
 }
 
 } // namespace opencl
