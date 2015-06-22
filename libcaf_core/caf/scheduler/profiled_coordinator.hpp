@@ -70,7 +70,7 @@ public:
     static measurement take() {
       auto now = clock_type::now().time_since_epoch();
       measurement m;
-      m.time = std::chrono::duration_cast<usec>(now);
+      m.runtime = std::chrono::duration_cast<usec>(now);
 #     if defined(CAF_MACOS) || defined(CAF_IOS)
       auto tself = ::mach_thread_self();
       ::thread_basic_info info;
@@ -94,7 +94,7 @@ public:
     }
 
     measurement& operator+=(const measurement& other) {
-      time += other.time;
+      runtime += other.runtime;
       usr += other.usr;
       sys += other.sys;
       mem += other.mem;
@@ -102,7 +102,7 @@ public:
     }
 
     measurement& operator-=(const measurement& other) {
-      time -= other.time;
+      runtime -= other.runtime;
       usr -= other.usr;
       sys -= other.sys;
       mem -= other.mem;
@@ -123,14 +123,14 @@ public:
 
     friend std::ostream& operator<<(std::ostream& out, const measurement& m) {
       using std::setw;
-      out << setw(15) << m.time.count()
+      out << setw(15) << m.runtime.count()
           << setw(15) << m.usr.count()
           << setw(15) << m.sys.count()
           << m.mem;
       return out;
     }
 
-    usec time = usec::zero();
+    usec runtime = usec::zero();
     usec usr = usec::zero();
     usec sys = usec::zero();
     long mem = 0;
@@ -140,7 +140,7 @@ public:
     actor_id current;
     measurement job;
     measurement worker;
-    clock_type::duration last_flush;
+    clock_type::duration last_flush = clock_type::duration::zero();
   };
 
   profiled_coordinator(const std::string& filename,
@@ -199,14 +199,14 @@ public:
     // the system timers, this may appear to be the case sometimes. We "fix"
     // this by adjusting the wallclock to the sum of user and system time, so
     // that utilization never exceeds 100%.
-    if (delta.time < delta.usr + delta.sys) {
-      delta.time = delta.usr + delta.sys;
+    if (delta.runtime < delta.usr + delta.sys) {
+      delta.runtime = delta.usr + delta.sys;
     }
     w.worker += delta;
     report(job, delta);
-    if (m.time - w.last_flush >= resolution_) {
-      w.last_flush = m.time;
-      auto wallclock = system_start_ + (m.time - clock_start_);
+    if (m.runtime - w.last_flush >= resolution_) {
+      w.last_flush = m.runtime;
+      auto wallclock = system_start_ + (m.runtime - clock_start_);
       std::lock_guard<std::mutex> file_guard{file_mtx_};
       record(wallclock, "worker", worker, w.worker);
       w.worker = {};
@@ -240,8 +240,8 @@ public:
   void report(const actor_id& job, const measurement& m) {
     std::lock_guard<std::mutex> job_guard{job_mtx_};
     jobs_[job] += m;
-    if (m.time - last_flush_ >= resolution_) {
-      last_flush_ = m.time;
+    if (m.runtime - last_flush_ >= resolution_) {
+      last_flush_ = m.runtime;
       auto now = clock_type::now().time_since_epoch();
       auto wallclock = system_start_ + (now - clock_start_);
       std::lock_guard<std::mutex> file_guard{file_mtx_};
@@ -260,7 +260,7 @@ public:
   clock_type::duration clock_start_;
   std::vector<worker_state> worker_states_;
   std::unordered_map<actor_id, measurement> jobs_;
-  clock_type::duration last_flush_;
+  clock_type::duration last_flush_ = clock_type::duration::zero();
 };
 
 } // namespace scheduler
