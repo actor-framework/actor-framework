@@ -219,7 +219,10 @@ logger::stream logger::massive() {
   return stream{*this, level::massive};
 }
 
-logger::logger() : console_(std::cerr) {
+logger::logger()
+    : level_console_(level::error),
+      level_file_(level::error),
+      console_(std::cerr) {
   // nop
 }
 
@@ -567,7 +570,12 @@ expr::expr(test* parent, const char* filename, size_t lineno,
 
 #ifndef CAF_TEST_NO_MAIN
 int main(int argc, char** argv) {
-  return caf::test::main(argc, argv);
+  try {
+    return caf::test::main(argc, argv);
+  } catch (std::exception& e) {
+    std::cerr << "exception: " << e.what() << std::endl;
+  }
+  return 1;
 }
 #endif
 
