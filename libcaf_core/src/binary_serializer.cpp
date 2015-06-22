@@ -46,7 +46,8 @@ public:
   }
 
   void operator()(const bool& value) const {
-    write_int(out_, static_cast<uint8_t>(value));
+    uint8_t tmp = value ? 1 : 0;
+    write_int(out_, tmp);
   }
 
   template <class T>
