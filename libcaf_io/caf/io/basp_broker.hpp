@@ -228,7 +228,6 @@ private:
   connection_context* current_context_;
 
   // cache some UTIs to make serialization a bit faster
-  const uniform_type_info* meta_hdr_;
   const uniform_type_info* meta_msg_;
   const uniform_type_info* meta_id_type_;
 };
