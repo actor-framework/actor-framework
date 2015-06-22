@@ -38,14 +38,27 @@ const uniform_type_info* uniform_typeid_by_nr(uint16_t nr);
 const uniform_type_info* uniform_typeid(const std::type_info& tinf,
                                         bool allow_nullptr = false);
 
+template <class T, uint16_t N = detail::type_nr<T>::value>
+struct uniform_typeid_getter {
+  const uniform_type_info* operator()(bool) const {
+    return uniform_typeid_by_nr(N);
+  }
+};
+
+template <class T>
+struct uniform_typeid_getter<T, 0> {
+  const uniform_type_info* operator()(bool allow_nullptr) const {
+    return uniform_typeid(typeid(T), allow_nullptr);
+  }
+};
+
 /// Returns the uniform type info for type `T`.
 /// @param allow_nullptr if set to true, this function returns `nullptr` instead
 ///                      of throwing an exception on error
 template <class T>
 const uniform_type_info* uniform_typeid(bool allow_nullptr = false) {
-  auto nr = detail::type_nr<T>::value;
-  return (nr != 0) ? uniform_typeid_by_nr(nr)
-                   : uniform_typeid(typeid(T), allow_nullptr);
+  uniform_typeid_getter<T> f;
+  return f(allow_nullptr);
 }
 
 } // namespace caf
