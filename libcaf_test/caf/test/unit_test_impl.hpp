@@ -405,9 +405,12 @@ bool engine::run(bool colorize,
       break;
     }
   }
-  auto percent_good =
-    static_cast<unsigned>(double(100000 * total_good)
-                          / double(total_good + total_bad)) / 1000.0;
+  unsigned percent_good = 100;
+  if (total_bad > 0) {
+    auto tmp = (100000.0 * total_good)
+               / static_cast<double>(total_good + total_bad);
+    percent_good = static_cast<unsigned>(tmp / 1000.0);
+  }
   auto title = std::string{"summary"};
   auto pad = std::string((bar.size() - title.size()) / 2, ' ');
   auto indent = std::string(24, ' ');
