@@ -338,13 +338,10 @@ private:
 struct message::cli_res {
   /// Stores the remaining (unmatched) arguments.
   message remainder;
-
   /// Stores the names of all active options.
   std::set<std::string> opts;
-
   /// Stores the automatically generated help text.
   std::string helptext;
-
   /// Stores errors during option parsing.
   std::string error;
 };
