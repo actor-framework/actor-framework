@@ -36,13 +36,13 @@ namespace caf {
 namespace io {
 
 uint16_t publish_impl(abstract_actor_ptr whom, uint16_t port,
-                      const char* in, bool reuse) {
+                      const char* in, bool ru) {
   if (whom == nullptr) {
-    throw std::invalid_argument("cannot publish an invalid actor");
+    throw network_error("cannot publish an invalid actor");
   }
   CAF_LOGF_TRACE("whom = " << to_string(whom->address())
                  << ", " << CAF_ARG(port) << ", in = " << (in ? in : "")
-                 << ", " << CAF_ARG(reuse));
+                 << ", " << CAF_ARG(ru));
   std::string str;
   if (in != nullptr) {
     str = in;
@@ -50,14 +50,27 @@ uint16_t publish_impl(abstract_actor_ptr whom, uint16_t port,
   auto mm = get_middleman_actor();
   scoped_actor self;
   uint16_t result;
-  self->sync_send(mm, put_atom::value, whom->address(), port, str, reuse).await(
-    [&](ok_atom, uint16_t res) {
-      result = res;
-    },
-    [&](error_atom, std::string& msg) {
-      throw network_error(std::move(msg));
-    }
-  );
+  std::string error_msg;
+  try {
+    self->sync_send(mm, put_atom::value, whom->address(), port, str, ru).await(
+      [&](ok_atom, uint16_t res) {
+        result = res;
+      },
+      [&](error_atom, std::string& msg) {
+        if (! msg.empty())
+          error_msg.swap(msg);
+        else
+          error_msg = "an unknown error occurred in the middleman";
+      }
+    );
+  }
+  catch (actor_exited& e) {
+    error_msg = "scoped actor in caf::publish quit unexpectedly: ";
+    error_msg += e.what();
+  }
+  if (! error_msg.empty()) {
+    throw network_error(std::move(error_msg));
+  }
   return result;
 }
 
