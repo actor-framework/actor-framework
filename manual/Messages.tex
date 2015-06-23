@@ -36,9 +36,9 @@ However, the classes \lstinline^message^ and \lstinline^message_builder^ allow m
   \hline
   \lstinline^message slice(size_t p, size_t n)^ & Creates a new message from \lstinline^[p, p + n)^ \\
   \hline
-  \lstinline^message extract(message_handler)^ & See \ref{Sec::Messages::Extract} \\
+  \lstinline^message extract(message_handler)^ & See \S\,\ref{Sec::Messages::Extract} \\
   \hline
-  \lstinline^message extract_opts(...)^ & See \ref{Sec::Messages::ExtractOpts} \\
+  \lstinline^message extract_opts(...)^ & See \S\,\ref{Sec::Messages::ExtractOpts} \\
   \hline
   \\
   \multicolumn{2}{l}{\textbf{Modifiers}\vspace{3pt}} \\
@@ -78,9 +78,9 @@ However, the classes \lstinline^message^ and \lstinline^message_builder^ allow m
   \hline
   \lstinline^template <class Iter>^ \lstinline^append(Iter first, Iter last)^ & Adds all elements from range \lstinline^[first, last)^ \\
   \hline
-  \lstinline^message extract(message_handler)^ & See \ref{Sec::Messages::Extract} \\
+  \lstinline^message extract(message_handler)^ & See \S\,\ref{Sec::Messages::Extract} \\
   \hline
-  \lstinline^message extract_opts(...)^ & See \ref{Sec::Messages::ExtractOpts} \\
+  \lstinline^message extract_opts(...)^ & See \S\,\ref{Sec::Messages::ExtractOpts} \\
   \hline
   \\
   \multicolumn{2}{l}{\textbf{Modifiers}\vspace{3pt}} \\
@@ -142,16 +142,21 @@ int main(int argc, char** argv) {
     {"host,H", "set host (default: localhost)", host},
     {"verbose,v", "enable verbose mode"}
   });
+  if (! res.error.empty()) {
+    // read invalid CLI arguments
+    cerr << res.error << endl;
+    return 1;
+  }
   if (res.opts.count("help") > 0) {
     // CLI arguments contained "-h", "--help", or "-?" (builtin);
-    // note: the help text has already been printed to stdout
+    cout << res.helptext << endl;
     return 0;
   }
-  if (!res.remainder.empty()) {
-    // ... extract did not consume all CLI options ...
+  if (! res.remainder.empty()) {
+    // res.remainder stors all extra arguments that weren't consumed
   }
   if (res.opts.count("verbose") > 0) {
-    // ... enable verbose mode ...
+    // enable verbose mode
   }
   // ...
 }
