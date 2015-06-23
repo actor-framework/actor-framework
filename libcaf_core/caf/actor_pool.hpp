@@ -20,8 +20,6 @@
 #ifndef CAF_ACTOR_POOL_HPP
 #define CAF_ACTOR_POOL_HPP
 
-#include <atomic>
-#include <random>
 #include <vector>
 #include <functional>
 
@@ -63,44 +61,27 @@ public:
   using policy = std::function<void (uplock&, const actor_vec&,
                                      mailbox_element_ptr&, execution_unit*)>;
 
-  /// Default policy class implementing simple round robin dispatching.
-  class round_robin {
-  public:
-    round_robin();
-    round_robin(const round_robin&);
-    void operator()(uplock&, const actor_vec&,
-                    mailbox_element_ptr&, execution_unit*);
+  /// Returns a simple round robin dispatching policy.
+  static policy round_robin();
 
-  private:
-    std::atomic<size_t> pos_;
-  };
+  /// Returns a broadcast dispatching policy.
+  static policy broadcast();
 
-  /// Default policy class implementing broadcast dispatching.
-  class broadcast {
-  public:
-    void operator()(uplock&, const actor_vec&,
-                    mailbox_element_ptr&, execution_unit*);
-  };
+  /// Returns a random dispatching policy.
+  static policy random();
 
-  /// Default policy class implementing random dispatching.
-  class random {
-  public:
-    random();
-    random(const random&);
-    void operator()(uplock&, const actor_vec&,
-                    mailbox_element_ptr&, execution_unit*);
-
-  private:
-    std::random_device rd_;
-  };
-
-  /// Default policy class implementing broadcast dispatching (split step)
-  /// followed by a join operation `F` combining all individual results to
-  /// a single result of type `T`.
-  /// @tparam T Result type received by the original sender.
-  /// @tparam Join Functor with signature `void (T&, message&)`.
-  /// @tparam Split Functor with signature
-  ///               `void (vector<pair<actor, message>>&, message&)`.
+  /// Returns a split/join dispatching policy. The function object `sf`
+  /// distributes a work item to all workers (split step) and the function
+  /// object `jf` joins individual results into a single one with `init`
+  /// as initial value of the operation.
+  /// @tparam T Result type of the join step.
+  /// @tparam Join Function object with signature `void (T&, message&)`.
+  /// @tparam Split Function object with signature
+  ///               `void (vector<pair<actor, message>>&, message&)`. The first
+  ///               argument is a mapping from actors (workers) to tasks
+  ///               (messages). The second argument is the input message.
+  ///               The default split policy broadcasts the work item to all
+  ///               workers.
   template <class T, class Join, class Split = detail::nop_split>
   static policy split_join(Join jf, Split sf = Split(), T init = T()) {
     using impl = detail::split_join<T, Split, Join>;

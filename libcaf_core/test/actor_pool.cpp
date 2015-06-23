@@ -73,7 +73,7 @@ CAF_TEST_FIXTURE_SCOPE(actor_pool_tests, fixture)
 
 CAF_TEST(round_robin_actor_pool) {
   scoped_actor self;
-  auto w = actor_pool::make(5, spawn_worker, actor_pool::round_robin{});
+  auto w = actor_pool::make(5, spawn_worker, actor_pool::round_robin());
   self->monitor(w);
   self->send(w, sys_atom::value, put_atom::value, spawn_worker());
   std::vector<actor_addr> workers;
@@ -148,9 +148,9 @@ CAF_TEST(round_robin_actor_pool) {
 CAF_TEST(broadcast_actor_pool) {
   scoped_actor self;
   auto spawn5 = []() {
-    return actor_pool::make(5, spawn_worker, actor_pool::broadcast{});
+    return actor_pool::make(5, spawn_worker, actor_pool::broadcast());
   };
-  auto w = actor_pool::make(5, spawn5, actor_pool::broadcast{});
+  auto w = actor_pool::make(5, spawn5, actor_pool::broadcast());
   self->send(w, 1, 2);
   std::vector<int> results;
   int i = 0;
@@ -170,7 +170,7 @@ CAF_TEST(broadcast_actor_pool) {
 
 CAF_TEST(random_actor_pool) {
   scoped_actor self;
-  auto w = actor_pool::make(5, spawn_worker, actor_pool::random{});
+  auto w = actor_pool::make(5, spawn_worker, actor_pool::random());
   for (int i = 0; i < 5; ++i) {
     self->sync_send(w, 1, 2).await(
       [&](int res) {
