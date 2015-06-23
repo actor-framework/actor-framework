@@ -41,28 +41,40 @@ class uniform_type_info;
 
 struct uniform_value_t;
 
+/// A unique pointer holding a `uniform_value_t`.
 using uniform_value = std::unique_ptr<uniform_value_t>;
 
+/// Generic container for storing a value with associated type information.
 struct uniform_value_t {
   const uniform_type_info* ti;
   void* val;
+  uniform_value_t(const uniform_type_info*, void*);
   virtual uniform_value copy() = 0;
   virtual ~uniform_value_t();
 };
 
+template <class T>
+class uniform_value_impl : public uniform_value_t {
+public:
+  template <class... Ts>
+  uniform_value_impl(const uniform_type_info* ptr, Ts&&... xs)
+      : uniform_value_t(ptr, &value_),
+        value_(std::forward<Ts>(xs)...) {
+    // nop
+  }
+
+  uniform_value copy() override {
+    return uniform_value{new uniform_value_impl(ti, value_)};
+  }
+
+private:
+  T value_;
+};
+
+/// Creates a uniform value of type `T`.
 template <class T, class... Ts>
 uniform_value make_uniform_value(const uniform_type_info* uti, Ts&&... xs) {
-  struct container : uniform_value_t {
-    T value;
-    container(const uniform_type_info* ptr, T arg) : value(std::move(arg)) {
-      ti = ptr;
-      val = &value;
-    }
-    uniform_value copy() override {
-      return uniform_value{new container(ti, value)};
-    }
-  };
-  return uniform_value{new container(uti, T(std::forward<Ts>(xs)...))};
+  return uniform_value{new uniform_value_impl<T>(uti, std::forward<Ts>(xs)...)};
 }
 
 /// @defgroup TypeSystem Platform-independent type system.
