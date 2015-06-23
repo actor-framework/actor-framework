@@ -499,8 +499,9 @@ void local_actor::launch(execution_unit* eu, bool lazy, bool hide) {
   }
   // actor is cooperatively scheduled
   attach_to_scheduler();
-  if (lazy) {
-    mailbox().try_block();
+  // do not schedule immediately when spawned with `lazy_init`
+  // mailbox could be set to blocked
+  if (lazy && mailbox().try_block()) {
     return;
   }
   if (eu) {
