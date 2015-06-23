@@ -324,7 +324,11 @@ protected:
     }
     auto worker_finished = [=] {
       auto sender = current_sender();
-      auto i = std::find(busy_worker_.begin(), busy_worker_.end(), sender);
+      auto last = busy_worker_.end();
+      auto i = std::find(busy_worker_.begin(), last, sender);
+      if (i == last) {
+        return;
+      }
       idle_worker_.push_back(*i);
       busy_worker_.erase(i);
       print() << "worker is done" << color::reset_endl;
