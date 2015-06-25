@@ -82,23 +82,22 @@ CAF_TEST(global_and_local_redirect) {
   actor_ostream::redirect_all(global_redirect);
   spawn(chatty_actor);
   spawn(chattier_actor, local_redirect);
+  std::vector<std::pair<std::string, std::string>> expected {
+    {":test", chatty_line},
+    {":test", chatty_line},
+    {":test2", chattier_line}
+  };
+  std::vector<std::pair<std::string, std::string>> lines;
   int i = 0;
-  self->receive_for(i, 2)(
-    on(global_redirect, arg_match) >> [](std::string& line) {
+  self->receive_for(i, 3)(
+    [&](std::string& virtual_file, std::string& line) {
       // drop trailing '\n'
       if (! line.empty())
         line.pop_back();
-      CAF_CHECK_EQUAL(line, chatty_line);
+      lines.emplace_back(std::move(virtual_file), std::move(line));
     }
   );
-  self->receive(
-    on(local_redirect, arg_match) >> [](std::string& line) {
-      // drop trailing '\n'
-      if (! line.empty())
-        line.pop_back();
-      CAF_CHECK_EQUAL(line, chattier_line);
-    }
-  );
+  CAF_CHECK(std::is_permutation(lines.begin(), lines.end(), expected.begin()));
   self->await_all_other_actors_done();
   CAF_CHECK_EQUAL(self->mailbox().count(), 0);
 }
