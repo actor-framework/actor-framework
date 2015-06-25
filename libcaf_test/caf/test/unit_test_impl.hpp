@@ -410,7 +410,7 @@ bool engine::run(bool colorize,
   }
   unsigned percent_good = 100;
   if (total_bad > 0) {
-    auto tmp = (100000.0 * total_good)
+    auto tmp = (100000.0 * static_cast<double>(total_good))
                / static_cast<double>(total_good + total_bad);
     percent_good = static_cast<unsigned>(tmp / 1000.0);
   }

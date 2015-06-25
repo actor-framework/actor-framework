@@ -67,8 +67,8 @@ node_id::node_id(uint32_t procid, const std::string& hash)
   // nop
 }
 
-node_id::node_id(uint32_t procid, const host_id_type& host_id)
-    : data_(make_counted<data>(procid, host_id)) {
+node_id::node_id(uint32_t procid, const host_id_type& hid)
+    : data_(make_counted<data>(procid, hid)) {
   // nop
 }
 

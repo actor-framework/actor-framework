@@ -93,6 +93,7 @@
     _Pragma("clang diagnostic ignored \"-Wweak-vtables\"")                     \
     _Pragma("clang diagnostic ignored \"-Wused-but-marked-unused\"")           \
     _Pragma("clang diagnostic ignored \"-Wdisabled-macro-expansion\"")         \
+    _Pragma("clang diagnostic ignored \"-Wunreachable-code\"")                 \
     _Pragma("clang diagnostic ignored \"-Wsign-conversion\"")
 #  define CAF_POP_WARNINGS                                                     \
     _Pragma("clang diagnostic pop")

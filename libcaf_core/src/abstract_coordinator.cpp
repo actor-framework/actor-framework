@@ -235,6 +235,9 @@ void printer_loop(blocking_actor* self) {
   struct actor_data {
     std::string current_line;
     sink_handle redirect;
+    actor_data() {
+      // nop
+    }
   };
   using data_map = std::map<actor_addr, actor_data>;
   sink_cache fcache;
