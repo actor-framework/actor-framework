@@ -90,9 +90,9 @@ CAF_TEST(metaprogramming) {
   /* test tlf_is_subset */ {
     using list_a = type_list<int, float, double>;
     using list_b = type_list<float, int, double, std::string>;
-    CAF_CHECK((tlf_is_subset<list_a, list_b>()));
-    CAF_CHECK(! (tlf_is_subset<list_b, list_a>()));
-    CAF_CHECK((tlf_is_subset<list_a, list_a>()));
-    CAF_CHECK((tlf_is_subset<list_b, list_b>()));
+    CAF_CHECK((tlf_is_subset(list_a{}, list_b{})));
+    CAF_CHECK(! (tlf_is_subset(list_b{}, list_a{})));
+    CAF_CHECK((tlf_is_subset(list_a{}, list_a{})));
+    CAF_CHECK((tlf_is_subset(list_b{}, list_b{})));
   }
 }

@@ -34,7 +34,11 @@ namespace detail {
 
 /// A list of types.
 template <class... Ts>
-struct type_list { };
+struct type_list {
+  constexpr type_list() {
+    // nop
+  }
+};
 
 /// Denotes the empty list.
 using empty_type_list = type_list<>;
@@ -925,8 +929,8 @@ constexpr bool tlf_no_negative() {
   return true;
 }
 
-template <class T, class... Ts>
-constexpr bool tlf_no_negative(T x, Ts... xs) {
+template <class... Ts>
+constexpr bool tlf_no_negative(int x, Ts... xs) {
   return x < 0 ? false : tlf_no_negative(xs...);
 }
 
@@ -935,17 +939,12 @@ constexpr bool tlf_is_subset(type_list<Ts...>, List) {
   return tlf_no_negative(tlf_find<Ts>(List{})...);
 }
 
-template <class ListA, class ListB>
-constexpr bool tlf_is_subset() {
-  return tlf_is_subset(ListA{}, ListB{});
-}
-
 /// Tests whether ListA contains the same elements as ListB
 /// and vice versa. This comparison ignores element positions.
 template <class ListA, class ListB>
 struct tl_equal {
-  static constexpr bool value = tlf_is_subset<ListA, ListB>()
-                                && tlf_is_subset<ListB, ListA>();
+  static constexpr bool value = tlf_is_subset(ListA{}, ListB{})
+                                && tlf_is_subset(ListB{}, ListA{});
 };
 
 template <size_t N, class T>

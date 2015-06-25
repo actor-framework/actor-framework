@@ -87,39 +87,39 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
   /// Identifies the base class of brokers implementing this interface.
   using broker_base = io::experimental::typed_broker<Sigs...>;
 
+  /// Stores the template parameter pack.
+  using signatures = detail::type_list<Sigs...>;
+
   typed_actor() = default;
   typed_actor(typed_actor&&) = default;
   typed_actor(const typed_actor&) = default;
   typed_actor& operator=(typed_actor&&) = default;
   typed_actor& operator=(const typed_actor&) = default;
 
-  template <class... OtherSigs,
-            class Enable =
-              typename std::enable_if<
-                detail::tlf_is_subset<detail::type_list<Sigs...>,
-                                      detail::type_list<OtherSigs...>>()
-              >::type>
-  typed_actor(const typed_actor<OtherSigs...>& other) : ptr_(other.ptr_) {
+  template <class TypedActor,
+            class Enable = typename std::enable_if<
+                             detail::tlf_is_subset(signatures{},
+                                                   typename TypedActor::signatures{})
+                           >::type>
+  typed_actor(const TypedActor& other) : ptr_(other.ptr_) {
     // nop
   }
 
-  template <class... OtherSigs,
-            class Enable =
-              typename std::enable_if<
-                detail::tlf_is_subset<detail::type_list<Sigs...>,
-                                      detail::type_list<OtherSigs...>>()
-              >::type>
-  typed_actor& operator=(const typed_actor<OtherSigs...>& other) {
+  template <class TypedActor,
+            class Enable = typename std::enable_if<
+                             detail::tlf_is_subset(signatures{},
+                                                   typename TypedActor::signatures{})
+                           >::type>
+  typed_actor& operator=(const TypedActor& other) {
     ptr_ = other.ptr_;
     return *this;
   }
 
   template <class Impl,
-            class Enable =
-              typename std::enable_if<
-                detail::tlf_is_subset<detail::type_list<Sigs...>,
-                                      typename Impl::signatures>()
-              >::type>
+            class Enable = typename std::enable_if<
+                             detail::tlf_is_subset(signatures{},
+                                                   typename Impl::signatures{})
+                           >::type>
   typed_actor(intrusive_ptr<Impl> other) : ptr_(std::move(other)) {
     // nop
   }
