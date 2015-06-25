@@ -180,7 +180,7 @@ public:
     clear();
   }
 
-  explicit operator bool() {
+  explicit operator bool() const {
     return cache_ != nullptr;
   }
 
@@ -235,9 +235,6 @@ void printer_loop(blocking_actor* self) {
   struct actor_data {
     std::string current_line;
     sink_handle redirect;
-    actor_data(std::string&& line) : current_line(std::move(line)) {
-      // nop
-    }
   };
   using data_map = std::map<actor_addr, actor_data>;
   sink_cache fcache;
@@ -249,7 +246,7 @@ void printer_loop(blocking_actor* self) {
       return none;
     auto i = data.find(addr);
     if (i == data.end() && insert_missing) {
-      i = data.emplace(addr, std::string{}).first;
+      i = data.emplace(addr, actor_data{}).first;
       self->monitor(addr);
     }
     if (i != data.end())

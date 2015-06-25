@@ -69,10 +69,10 @@ actor_pool::policy actor_pool::broadcast() {
 
 actor_pool::policy actor_pool::random() {
   struct impl {
-    impl() {
+    impl() : rd_() {
       // nop
     }
-    impl(const impl&) {
+    impl(const impl&) : rd_() {
       // nop
     }
     void operator()(uplock& guard, const actor_vec& vec,
