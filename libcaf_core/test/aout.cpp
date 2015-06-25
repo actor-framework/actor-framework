@@ -63,7 +63,10 @@ CAF_TEST(global_redirect) {
   actor_ostream::redirect_all(global_redirect);
   spawn(chatty_actor);
   self->receive(
-    [](const std::string& virtual_file, const std::string& line) {
+    [](const std::string& virtual_file, std::string& line) {
+      // drop trailing '\n'
+      if (! line.empty())
+        line.pop_back();
       CAF_CHECK_EQUAL(virtual_file, ":test");
       CAF_CHECK_EQUAL(line, chatty_line);
     }
@@ -82,13 +85,17 @@ CAF_TEST(global_and_local_redirect) {
   int i = 0;
   self->receive_for(i, 2)(
     on(global_redirect, arg_match) >> [](std::string& line) {
-      line.pop_back(); // drop '\n'
+      // drop trailing '\n'
+      if (! line.empty())
+        line.pop_back();
       CAF_CHECK_EQUAL(line, chatty_line);
     }
   );
   self->receive(
     on(local_redirect, arg_match) >> [](std::string& line) {
-      line.pop_back(); // drop '\n'
+      // drop trailing '\n'
+      if (! line.empty())
+        line.pop_back();
       CAF_CHECK_EQUAL(line, chattier_line);
     }
   );
