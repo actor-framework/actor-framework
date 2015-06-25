@@ -43,6 +43,16 @@ actor_ostream& actor_ostream::flush() {
   return *this;
 }
 
+void actor_ostream::redirect(const actor& src, std::string f, int flags) {
+  send_as(src, detail::singletons::get_scheduling_coordinator()->printer(),
+          redirect_atom::value, src.address(), std::move(f), flags);
+}
+
+void actor_ostream::redirect_all(std::string f, int flags) {
+  anon_send(detail::singletons::get_scheduling_coordinator()->printer(),
+            redirect_atom::value, std::move(f), flags);
+}
+
 } // namespace caf
 
 namespace std {
