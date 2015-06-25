@@ -17,6 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/config.hpp"
+
 #define CAF_SUITE constructor_attach
 #include "caf/test/unit_test.hpp"
 

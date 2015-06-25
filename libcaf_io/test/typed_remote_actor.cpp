@@ -17,6 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/config.hpp"
+
 #define CAF_SUITE io_typed_remote_actor
 #include "caf/test/unit_test.hpp"
 
