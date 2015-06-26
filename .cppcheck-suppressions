@@ -45,3 +45,7 @@ unusedFunction:libcaf_core/src/exit_reason.cpp
 unusedFunction:libcaf_core/src/shared_spinlock.cpp
 unusedFunction:libcaf_io/src/interfaces.cpp
 unusedFunction:libcaf_io/src/max_msg_size.cpp
+
+// making only some overloads of `abstract_uniform_type_info::eq`
+// static fails on MSVC
+functionStatic:bcaf_core/caf/abstract_uniform_type_info.hpp

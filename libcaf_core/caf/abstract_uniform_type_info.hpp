@@ -79,17 +79,17 @@ protected:
 
 private:
   template <class C>
-  static typename std::enable_if<std::is_empty<C>::value, bool>::type
-  eq(const C&, const C&) {
+  typename std::enable_if<std::is_empty<C>::value, bool>::type
+  eq(const C&, const C&) const {
     return true;
   }
 
   template <class C>
-  static typename std::enable_if<
+  typename std::enable_if<
     ! std::is_empty<C>::value && detail::is_comparable<C, C>::value,
     bool
   >::type
-  eq(const C& lhs, const C& rhs) {
+  eq(const C& lhs, const C& rhs) const {
     return lhs == rhs;
   }
 
