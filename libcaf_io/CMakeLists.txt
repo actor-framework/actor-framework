@@ -59,6 +59,5 @@ include_directories(. ${INCLUDE_DIRS})
 # install includes
 if(NOT WIN32)
   install(DIRECTORY caf/ DESTINATION include/caf FILES_MATCHING PATTERN "*.hpp")
-  install(DIRECTORY cppa/ DESTINATION include/cppa FILES_MATCHING PATTERN "*.hpp")
 endif()
 

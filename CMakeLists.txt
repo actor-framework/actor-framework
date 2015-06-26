@@ -270,9 +270,6 @@ ENDIF()
 # install includes from core
 install(DIRECTORY libcaf_core/caf/
         DESTINATION include/caf FILES_MATCHING PATTERN "*.hpp")
-# install CPPA compatibility headers
-install(DIRECTORY libcaf_core/cppa/
-        DESTINATION include/cppa FILES_MATCHING PATTERN "*.hpp")
 # install includes from io
 install(DIRECTORY libcaf_io/caf/ DESTINATION include/caf
         FILES_MATCHING PATTERN "*.hpp")
