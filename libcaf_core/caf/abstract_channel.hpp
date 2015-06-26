@@ -87,7 +87,7 @@ protected:
 
 private:
   // can only be called from abstract_actor and abstract_group
-  abstract_channel(int init_flags);
+  explicit abstract_channel(int init_flags);
   abstract_channel(int init_flags, node_id nid);
 
   /*

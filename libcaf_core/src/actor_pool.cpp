@@ -113,7 +113,7 @@ actor actor_pool::make(size_t num_workers, factory fac, policy pol) {
 
 void actor_pool::enqueue(const actor_addr& sender, message_id mid,
                          message content, execution_unit* eu) {
-  upgrade_lock<detail::shared_spinlock> guard{mtx_};
+  upgrade_lock<detail::shared_spinlock> guard{workers_mtx_};
   if (filter(guard, sender, mid, content, eu)) {
     return;
   }
@@ -122,7 +122,7 @@ void actor_pool::enqueue(const actor_addr& sender, message_id mid,
 }
 
 void actor_pool::enqueue(mailbox_element_ptr what, execution_unit* eu) {
-  upgrade_lock<detail::shared_spinlock> guard{mtx_};
+  upgrade_lock<detail::shared_spinlock> guard{workers_mtx_};
   if (filter(guard, what->sender, what->mid, what->msg, eu)) {
     return;
   }
@@ -219,7 +219,7 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
 
 void actor_pool::quit() {
   // we can safely run our cleanup code here without holding
-  // mtx_ because abstract_actor has its own lock
+  // workers_mtx_ because abstract_actor has its own lock
   cleanup(planned_reason_);
   is_registered(false);
 }

@@ -70,7 +70,7 @@ public:
   using lockable = UpgradeLockable;
 
   template <class LockType>
-  upgrade_to_unique_lock(LockType& other) {
+  explicit upgrade_to_unique_lock(LockType& other) {
     lockable_ = other.release();
     if (lockable_) lockable_->unlock_upgrade_and_lock();
   }

@@ -82,7 +82,7 @@ public:
 
   void request_deletion(bool decremented_ref_count) noexcept override;
 
-  inline anchor_ptr get_anchor() {
+  inline anchor_ptr get_anchor() const {
     return anchor_;
   }
 

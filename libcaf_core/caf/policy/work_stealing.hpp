@@ -79,7 +79,7 @@ public:
 
   // Convenience function to access the data field.
   template <class WorkerOrCoordinator>
-  auto d(WorkerOrCoordinator* self) -> decltype(self->data()) {
+  static auto d(WorkerOrCoordinator* self) -> decltype(self->data()) {
     return self->data();
   }
 

@@ -108,10 +108,10 @@ private:
   bool filter(upgrade_lock<detail::shared_spinlock>&, const actor_addr& sender,
               message_id mid, const message& content, execution_unit* host);
 
-  // call without mtx_ held
+  // call without workers_mtx_ held
   void quit();
 
-  detail::shared_spinlock mtx_;
+  detail::shared_spinlock workers_mtx_;
   std::vector<actor> workers_;
   policy policy_;
   uint32_t planned_reason_;

@@ -248,11 +248,8 @@ private:
 template <class T, class... Us>
 T& get(variant<Us...>& value) {
   using namespace detail;
-  constexpr int type_id = tl_find_if<
-                            type_list<Us...>,
-                            tbind<is_same_ish, T>::template type
-                          >::value;
-  std::integral_constant<int, type_id> token;
+  int_token<tl_find_if<type_list<Us...>,
+                       tbind<is_same_ish, T>::template type>::value> token;
   // silence compiler error about "binding to unrelated types" such as
   // 'signed char' to 'char' (which is obvious bullshit)
   return reinterpret_cast<T&>(value.get(token));
@@ -269,14 +266,10 @@ const T& get(const variant<Us...>& value) {
 template <class T, class... Us>
 T* get(variant<Us...>* value) {
   using namespace detail;
-  constexpr int type_id = tl_find_if<
-                            type_list<Us...>,
-                            tbind<is_same_ish, T>::template type
-                          >::value;
-  std::integral_constant<int, type_id> token;
-  if (value->is(token)) {
+  int_token<tl_find_if<type_list<Us...>,
+                       tbind<is_same_ish, T>::template type>::value> token;
+  if (value->is(token))
     return &get<T>(*value);
-  }
   return nullptr;
 }
 

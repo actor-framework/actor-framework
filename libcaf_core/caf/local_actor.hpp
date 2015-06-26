@@ -366,7 +366,7 @@ public:
   }
 
   /// Checks wheter this actor has a user-defined sync failure handler.
-  inline bool has_sync_failure_handler() {
+  inline bool has_sync_failure_handler() const {
     return static_cast<bool>(sync_failure_handler_);
   }
 
@@ -466,12 +466,10 @@ public:
 
   // returns 0 if last_dequeued() is an asynchronous or sync request message,
   // a response id generated from the request id otherwise
-  inline message_id get_response_id() {
+  inline message_id get_response_id() const {
     auto mid = current_element_->mid;
     return (mid.is_request()) ? mid.response_id() : message_id();
   }
-
-  void reply_message(message&& what);
 
   void forward_message(const actor& dest, message_priority mp);
 
@@ -491,7 +489,7 @@ public:
     return mailbox_;
   }
 
-  inline bool has_behavior() {
+  inline bool has_behavior() const {
     return ! bhvr_stack_.empty() || ! pending_responses_.empty();
   }
 
@@ -599,7 +597,7 @@ private:
   typename std::enable_if<
     ! std::is_same<typename std::decay<T>::type, message>::value
   >::type
-  send_impl(message_id mid, abstract_channel* dest, T&& x, Ts&&... xs) {
+  send_impl(message_id mid, abstract_channel* dest, T&& x, Ts&&... xs) const {
     if (! dest) {
       return;
     }
@@ -610,7 +608,7 @@ private:
                   host());
   }
 
-  void send_impl(message_id mp, abstract_channel* dest, message what);
+  void send_impl(message_id mp, abstract_channel* dest, message what) const;
 
   void delayed_send_impl(message_id mid, const channel& whom,
                          const duration& rtime, message data);

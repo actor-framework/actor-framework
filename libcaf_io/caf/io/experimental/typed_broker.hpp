@@ -38,8 +38,6 @@
 #include "caf/detail/actor_registry.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 
-#include "caf/mixin/typed_functor_based.hpp"
-
 #include "caf/io/middleman.hpp"
 #include "caf/io/abstract_broker.hpp"
 

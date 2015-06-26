@@ -35,19 +35,19 @@ public:
   }
 
   handle(const Subtype& other) {
-    id_ = other.id(); 
+    id_ = other.id();
   }
 
   handle(const handle& other) = default;
 
-  Subtype& operator=(const handle& other) {
+  handle& operator=(const handle& other) {
     id_ = other.id();
-    return *static_cast<Subtype*>(this);
+    return *this;
   }
 
   /// Returns the unique identifier of this handle.
   int64_t id() const {
-    return id_; 
+    return id_;
   }
 
   /// Sets the unique identifier of this handle.
@@ -59,7 +59,7 @@ public:
     return id_ - other.id();
   }
 
-  bool invalid() const { 
+  bool invalid() const {
     return id_ == InvalidId;
   }
 

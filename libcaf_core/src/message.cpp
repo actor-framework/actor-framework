@@ -311,20 +311,23 @@ message::cli_arg::cli_arg(std::string nstr, std::string tstr)
 
 message::cli_arg::cli_arg(std::string nstr, std::string tstr, std::string& arg)
     : name(std::move(nstr)),
-      text(std::move(tstr)) {
-  fun = [&arg](const std::string& str) -> bool {
-    arg = str;
-    return true;
-  };
+      text(std::move(tstr)),
+      fun([&arg](const std::string& str) -> bool {
+            arg = str;
+            return true;
+          }) {
+  // nop
 }
 
 message::cli_arg::cli_arg(std::string nstr, std::string tstr,
                           std::vector<std::string>& arg)
-    : name(std::move(nstr)), text(std::move(tstr)) {
-  fun = [&arg](const std::string& str) -> bool {
-    arg.push_back(str);
-    return true;
-  };
+    : name(std::move(nstr)),
+      text(std::move(tstr)),
+      fun([&arg](const std::string& str) -> bool {
+        arg.push_back(str);
+        return true;
+      }) {
+  // nop
 }
 
 message message::concat_impl(std::initializer_list<data_ptr> xs) {

@@ -49,7 +49,6 @@ template <class T0,       typename T1  = unit_t, typename T2  = unit_t,
      typename T15 = unit_t, typename T16 = unit_t, typename T17 = unit_t,
      typename T18 = unit_t, typename T19 = unit_t, typename T20 = unit_t>
 struct variant_data {
-
   union {
     T0  v0;  T1  v1;  T2  v2;
     T3  v3;  T4  v4;  T5  v5;
@@ -60,9 +59,13 @@ struct variant_data {
     T18 v18; T19 v19; T20 v20;
   };
 
-  variant_data() { }
+  variant_data() {
+    // nop
+  }
 
-  ~variant_data() { }
+  ~variant_data() {
+    // nop
+  }
 
   CAF_VARIANT_DATA_GETTER(0)
   CAF_VARIANT_DATA_GETTER(1)
@@ -85,20 +88,15 @@ struct variant_data {
   CAF_VARIANT_DATA_GETTER(18)
   CAF_VARIANT_DATA_GETTER(19)
   CAF_VARIANT_DATA_GETTER(20)
-
-private:
-
-  template <class M, typename U>
-  inline void cr(M& member, U&& arg) {
-    new (&member) M (std::forward<U>(arg));
-  }
-
 };
 
 struct variant_data_destructor {
   using result_type = void;
+
   template <class T>
-  inline void operator()(T& storage) const { storage.~T(); }
+  void operator()(T& storage) const {
+    storage.~T();
+  }
 };
 
 } // namespace detail

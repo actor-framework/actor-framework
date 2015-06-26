@@ -29,9 +29,7 @@ namespace caf {
 
 /// Base class for exceptions.
 class caf_exception : public std::exception {
-
 public:
-
   ~caf_exception() noexcept;
 
   caf_exception() = delete;
@@ -42,28 +40,18 @@ public:
   const char* what() const noexcept;
 
 protected:
-
   /// Creates an exception with the error string `what_str`.
-  caf_exception(std::string&& what_str);
-
-  /// Creates an exception with the error string `what_str`.
-  caf_exception(const std::string& what_str);
+  explicit caf_exception(std::string what_str);
 
 private:
-
   std::string what_;
-
 };
 
 /// Thrown if an actor finished execution.
 class actor_exited : public caf_exception {
-
 public:
-
   ~actor_exited() noexcept;
-
-  actor_exited(uint32_t exit_reason);
-
+  explicit actor_exited(uint32_t exit_reason);
   actor_exited(const actor_exited&) = default;
   actor_exited& operator=(const actor_exited&) = default;
 
@@ -71,42 +59,29 @@ public:
   inline uint32_t reason() const noexcept;
 
 private:
-
   uint32_t reason_;
-
 };
 
 /// Thrown to indicate that either an actor publishing failed or
 /// the middleman was unable to connect to a remote host.
 class network_error : public caf_exception {
-
-  using super = caf_exception;
-
 public:
-
   ~network_error() noexcept;
-  network_error(std::string&& what_str);
-  network_error(const std::string& what_str);
+  explicit network_error(std::string&& what_str);
+  explicit network_error(const std::string& what_str);
   network_error(const network_error&) = default;
   network_error& operator=(const network_error&) = default;
-
 };
 
 /// Thrown to indicate that an actor publishing failed because
 /// the requested port could not be used.
 class bind_failure : public network_error {
-
-  using super = network_error;
-
 public:
-
   ~bind_failure() noexcept;
-
-  bind_failure(std::string&& what_str);
-  bind_failure(const std::string& what_str);
+  explicit bind_failure(std::string&& what_str);
+  explicit bind_failure(const std::string& what_str);
   bind_failure(const bind_failure&) = default;
   bind_failure& operator=(const bind_failure&) = default;
-
 };
 
 inline uint32_t actor_exited::reason() const noexcept {

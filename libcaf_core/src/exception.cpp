@@ -47,12 +47,7 @@ caf_exception::~caf_exception() noexcept {
   // nop
 }
 
-caf_exception::caf_exception(const std::string& what_str) : what_(what_str) {
-  // nop
-}
-
-caf_exception::caf_exception(std::string&& what_str)
-    : what_(std::move(what_str)) {
+caf_exception::caf_exception(std::string x) : what_(std::move(x)) {
   // nop
 }
 
@@ -64,15 +59,15 @@ actor_exited::~actor_exited() noexcept {
   // nop
 }
 
-actor_exited::actor_exited(uint32_t rsn) : caf_exception(ae_what(rsn)) {
-  reason_ = rsn;
+actor_exited::actor_exited(uint32_t x) : caf_exception(ae_what(x)) {
+  reason_ = x;
 }
 
-network_error::network_error(const std::string& str) : super(str) {
+network_error::network_error(const std::string& x) : caf_exception(x) {
   // nop
 }
 
-network_error::network_error(std::string&& str) : super(std::move(str)) {
+network_error::network_error(std::string&& x) : caf_exception(std::move(x)) {
   // nop
 }
 
@@ -80,11 +75,11 @@ network_error::~network_error() noexcept {
   // nop
 }
 
-bind_failure::bind_failure(const std::string& str) : super(str) {
+bind_failure::bind_failure(const std::string& x) : network_error(x) {
   // nop
 }
 
-bind_failure::bind_failure(std::string&& str) : super(std::move(str)) {
+bind_failure::bind_failure(std::string&& x) : network_error(std::move(x)) {
   // nop
 }
 

@@ -29,8 +29,10 @@
 
 namespace caf {
 
-actor_ostream::actor_ostream(actor self) : self_(std::move(self)) {
-  printer_ = detail::singletons::get_scheduling_coordinator()->printer();
+actor_ostream::actor_ostream(actor self)
+    : self_(std::move(self)),
+      printer_(detail::singletons::get_scheduling_coordinator()->printer()) {
+  // nop
 }
 
 actor_ostream& actor_ostream::write(std::string arg) {
