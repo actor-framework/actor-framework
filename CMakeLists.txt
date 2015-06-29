@@ -229,22 +229,6 @@ set(LD_FLAGS ${LD_FLAGS} ${CMAKE_LD_LIBS})
 
 
 ################################################################################
-#            add custom definitions requested via configure script             #
-################################################################################
-
-if(CAF_LOG_LEVEL)
-  add_definitions(-DCAF_LOG_LEVEL=${CAF_LOG_LEVEL})
-endif()
-
-if(CAF_ENABLE_RUNTIME_CHECKS)
-  add_definitions(-DCAF_ENABLE_RUNTIME_CHECKS)
-endif()
-
-if(CAF_NO_MEM_MANAGEMENT)
-  add_definitions(-DCAF_NO_MEM_MANAGEMENT)
-endif()
-
-################################################################################
 #                    check for biicode build pipeline                          #
 ################################################################################
 IF(BIICODE)
@@ -262,6 +246,32 @@ IF(BIICODE)
 
   RETURN()
 ENDIF()
+
+################################################################################
+#                       configure build_config.hpp header                      #
+################################################################################
+
+if(CAF_LOG_LEVEL)
+  set(CAF_LOG_LEVEL_INT ${CAF_LOG_LEVEL})
+else()
+  set(CAF_LOG_LEVEL_INT -1)
+endif()
+macro(to_int_value name)
+  if(${name})
+    set(${name}_INT 1)
+  else()
+    set(${name}_INT -1)
+  endif()
+endmacro()
+to_int_value(CAF_LOG_LEVEL)
+to_int_value(CAF_NO_MEM_MANAGEMENT)
+to_int_value(CAF_ENABLE_RUNTIME_CHECKS)
+to_int_value(CAF_USE_ASIO)
+
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/build_config.hpp.in"
+               "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_core/caf/detail/build_config.hpp"
+               IMMEDIATE @ONLY)
+
 
 ################################################################################
 #                           setup for install target                           #
@@ -445,15 +455,10 @@ if(NOT CAF_NO_UNIT_TESTS)
   # find boost asio if the asio multiplexer should be used for testing
   if(CAF_USE_ASIO)
     set(Boost_USE_MULTITHREADED ON)
-    find_package(Boost COMPONENTS system)
-    if (Boost_FOUND)
-      add_definitions(-DCAF_USE_ASIO)
-      include_directories(${Boost_INCLUDE_DIRS})
-      set(LD_DIRS ${LD_DIRS} ${Boost_LIBRARIES})
-      set(LD_FLAGS ${LD_FLAGS} ${Boost_SYSTEM_LIBRARY})
-    else()
-      set(CAF_USE_ASIO no)
-    endif()
+    find_package(Boost COMPONENTS system REQUIRED)
+    include_directories(${Boost_INCLUDE_DIRS})
+    set(LD_DIRS ${LD_DIRS} ${Boost_LIBRARIES})
+    set(LD_FLAGS ${LD_FLAGS} ${Boost_SYSTEM_LIBRARY})
   endif()
   # setup unit test binary
   add_executable(caf-test

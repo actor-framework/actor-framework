@@ -20,6 +20,8 @@
 #ifndef CAF_CONFIG_HPP
 #define CAF_CONFIG_HPP
 
+#include "caf/detail/build_config.hpp"
+
 // Config pararameters defined by the build system (usually CMake):
 //
 // CAF_ENABLE_RUNTIME_CHECKS:
