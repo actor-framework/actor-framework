@@ -528,7 +528,8 @@ endif(DOXYGEN_FOUND)
 #                     Add additional project files to GUI                      #
 ################################################################################
 
-add_custom_target(gui_dummy SOURCES configure)
+file(GLOB_RECURSE script_files "scripts/*")
+add_custom_target(gui_dummy SOURCES configure ${script_files})
 
 ################################################################################
 #                                print summary                                 #
