@@ -281,6 +281,8 @@ if(CAF_USE_ASIO)
     set(CAF_USE_ASIO no)
     set(CAF_USE_ASIO_INT -1)
   endif()
+else()
+  set(CAF_USE_ASIO_INT -1)
 endif()
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/build_config.hpp.in"
