@@ -19,9 +19,11 @@
 
 #include "caf/scheduler/abstract_coordinator.hpp"
 
+#include <ios>
 #include <thread>
 #include <atomic>
 #include <chrono>
+#include <fstream>
 #include <iostream>
 #include <condition_variable>
 
@@ -32,6 +34,7 @@
 #include "caf/to_string.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/scoped_actor.hpp"
+#include "caf/actor_ostream.hpp"
 #include "caf/system_messages.hpp"
 
 #include "caf/scheduler/coordinator.hpp"
@@ -136,55 +139,171 @@ public:
   }
 };
 
-void printer_loop(blocking_actor* self) {
-  self->trap_exit(true);
-  std::map<actor_addr, std::string> out;
-  auto flush_output = [&out](const actor_addr& s) {
-    auto i = out.find(s);
-    if (i != out.end()) {
-      auto& line = i->second;
-      if (! line.empty()) {
-        std::cout << line << std::flush;
-        line.clear();
+using string_sink = std::function<void (std::string&&)>;
+
+// the first value is the use count, the last ostream_handle that
+// decrements it to 0 removes the ostream pointer from the map
+using counted_sink = std::pair<size_t, string_sink>;
+
+using sink_cache = std::map<std::string, counted_sink>;
+
+class sink_handle {
+public:
+  using iterator = sink_cache::iterator;
+
+  sink_handle() : cache_(nullptr) {
+    // nop
+  }
+
+  sink_handle(sink_cache* fc, iterator iter) : cache_(fc), iter_(iter) {
+    if (cache_)
+      ++iter_->second.first;
+  }
+
+  sink_handle(const sink_handle& other) : cache_(nullptr) {
+    *this = other;
+  }
+
+  sink_handle& operator=(const sink_handle& other) {
+    if (cache_ != other.cache_ || iter_ != other.iter_) {
+      clear();
+      cache_ = other.cache_;
+      if (cache_) {
+        iter_ = other.iter_;
+        ++iter_->second.first;
       }
     }
-  };
-  auto flush_if_needed = [](std::string& str) {
-    if (str.back() == '\n') {
-      std::cout << str << std::flush;
-      str.clear();
+    return *this;
+  }
+
+  ~sink_handle() {
+    clear();
+  }
+
+  explicit operator bool() const {
+    return cache_ != nullptr;
+  }
+
+  string_sink& operator*() {
+    CAF_ASSERT(iter_->second.second != nullptr);
+    return iter_->second.second;
+  }
+
+private:
+  void clear() {
+    if (cache_ && --iter_->second.first == 0) {
+      cache_->erase(iter_);
+      cache_ = nullptr;
+    }
+  }
+
+  sink_cache* cache_;
+  sink_cache::iterator iter_;
+};
+
+string_sink make_sink(const std::string& fn, int flags) {
+  if (fn.empty())
+    return nullptr;
+  if (fn.front() == ':') {
+    // "virtual file" name given, translate this to group communication
+    auto grp = group::get("local", fn);
+    return [grp, fn](std::string&& out) { anon_send(grp, fn, std::move(out)); };
+  }
+  auto append = static_cast<bool>(flags & actor_ostream::append);
+  auto fs = std::make_shared<std::ofstream>();
+  fs->open(fn, append ? std::ios_base::out | std::ios_base::app
+                      : std::ios_base::out);
+  if (fs->is_open())
+    return [fs](std::string&& out) { *fs << out; };
+std::cerr << "cannot open file: " << fn << std::endl;
+  return nullptr;
+}
+
+sink_handle get_sink_handle(sink_cache& fc, const std::string& fn, int flags) {
+  auto i = fc.find(fn);
+  if (i != fc.end())
+    return {&fc, i};
+  auto fs = make_sink(fn, flags);
+  if (fs) {
+    i = fc.emplace(fn, sink_cache::mapped_type{0, std::move(fs)}).first;
+    return {&fc, i};
+  }
+  return {};
+}
+
+void printer_loop(blocking_actor* self) {
+  struct actor_data {
+    std::string current_line;
+    sink_handle redirect;
+    actor_data() {
+      // nop
     }
   };
+  using data_map = std::map<actor_addr, actor_data>;
+  sink_cache fcache;
+  sink_handle global_redirect;
+  data_map data;
+  auto get_data = [&](const actor_addr& addr, bool insert_missing)
+                  -> optional<actor_data&> {
+    if (addr == invalid_actor_addr)
+      return none;
+    auto i = data.find(addr);
+    if (i == data.end() && insert_missing) {
+      i = data.emplace(addr, actor_data{}).first;
+      self->monitor(addr);
+    }
+    if (i != data.end())
+      return i->second;
+    return none;
+  };
+  auto flush = [&](optional<actor_data&> what, bool forced) {
+    if (! what)
+      return;
+    auto& line = what->current_line;
+    if (line.empty() || (line.back() != '\n' && !forced))
+      return;
+    if (what->redirect)
+      (*what->redirect)(std::move(line));
+    else if (global_redirect)
+      (*global_redirect)(std::move(line));
+    else
+      std::cout << line << std::flush;
+    line.clear();
+  };
+  self->trap_exit(true);
   bool running = true;
   self->receive_while([&] { return running; })(
     [&](add_atom, std::string& str) {
       auto s = self->current_sender();
-      if (str.empty() || s == invalid_actor_addr) {
+      if (str.empty() || s == invalid_actor_addr)
         return;
+      auto d = get_data(s, true);
+      if (d) {
+        d->current_line += str;
+        flush(d, false);
       }
-      auto i = out.find(s);
-      if (i == out.end()) {
-        i = out.emplace(s, move(str)).first;
-        // monitor actor to flush its output on exit
-        self->monitor(s);
-      } else {
-        i->second += std::move(str);
-      }
-      flush_if_needed(i->second);
     },
     [&](flush_atom) {
-      flush_output(self->current_sender());
+      flush(get_data(self->current_sender(), false), true);
     },
     [&](const down_msg& dm) {
-      flush_output(dm.source);
-      out.erase(dm.source);
+      flush(get_data(dm.source, false), true);
+      data.erase(dm.source);
     },
     [&](const exit_msg&) {
       running = false;
     },
+    [&](redirect_atom, const std::string& fn, int flag) {
+      global_redirect = get_sink_handle(fcache, fn, flag);
+    },
+    [&](redirect_atom, const actor_addr& src, const std::string& fn, int flag) {
+      auto d = get_data(src, true);
+      if (d)
+        d->redirect = get_sink_handle(fcache, fn, flag);
+    },
     others >> [&] {
-      std::cerr << "*** unexpected: " << to_string(self->current_message())
-                << std::endl;
+      std::cerr << "*** unexpected: "
+                << to_string(self->current_message()) << std::endl;
     }
   );
 }

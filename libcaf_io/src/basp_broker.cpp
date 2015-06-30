@@ -68,7 +68,10 @@ functor_payload_writer<F> make_payload_writer(F fun) {
   return functor_payload_writer<F>{fun};
 }
 
-basp_broker::basp_broker(middleman& pref) : broker(pref), namespace_(*this) {
+basp_broker::basp_broker(middleman& pref)
+    : broker(pref),
+      namespace_(*this),
+      current_context_(nullptr) {
   meta_msg_ = uniform_typeid<message>();
   meta_id_type_ = uniform_typeid<node_id>();
   CAF_LOG_DEBUG("BASP broker started: " << to_string(node()));

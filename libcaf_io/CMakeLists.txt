@@ -3,7 +3,7 @@ project(caf_io C CXX)
 
 # get header files; only needed by CMake generators,
 # e.g., for creating proper Xcode projects
-file(GLOB LIBCAF_IO_HDRS "caf/io/*.hpp" "caf/io/network/*.hpp")
+file(GLOB_RECURSE LIBCAF_IO_HDRS "caf/*.hpp")
 
 # list cpp files excluding platform-dependent files
 set (LIBCAF_IO_SRCS
@@ -59,6 +59,5 @@ include_directories(. ${INCLUDE_DIRS})
 # install includes
 if(NOT WIN32)
   install(DIRECTORY caf/ DESTINATION include/caf FILES_MATCHING PATTERN "*.hpp")
-  install(DIRECTORY cppa/ DESTINATION include/cppa FILES_MATCHING PATTERN "*.hpp")
 endif()
 

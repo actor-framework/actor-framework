@@ -54,6 +54,12 @@ inline detail::uniform_type_info_map& uti_map() {
 
 } // namespace <anonymous>
 
+uniform_value_t::uniform_value_t(const uniform_type_info* uti, void* vptr)
+    : ti(uti),
+      val(vptr) {
+  // nop
+}
+
 uniform_value_t::~uniform_value_t() {
   // nop
 }

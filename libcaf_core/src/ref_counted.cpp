@@ -34,7 +34,7 @@ ref_counted::ref_counted(const ref_counted&) : rc_(1) {
 }
 
 ref_counted& ref_counted::operator=(const ref_counted&) {
-  // nop; don't copy reference count
+  // nop; intentionally don't copy reference count
   return *this;
 }
 

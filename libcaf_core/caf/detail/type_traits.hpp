@@ -33,6 +33,12 @@
 namespace caf {
 namespace detail {
 
+template <bool X>
+using bool_token = std::integral_constant<bool, X>;
+
+template <int X>
+using int_token = std::integral_constant<int, X>;
+
 /// Joins all bool constants using operator &&.
 template <bool... BoolConstants>
 struct conjunction;

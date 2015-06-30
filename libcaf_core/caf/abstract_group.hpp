@@ -109,7 +109,7 @@ public:
 
     /// Returns the name of this module implementation.
     /// @threadsafe
-    const std::string& name();
+    const std::string& name() const;
 
     /// Returns a pointer to the group associated with the name `group_name`.
     /// @threadsafe

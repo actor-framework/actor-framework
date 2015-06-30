@@ -289,19 +289,6 @@ public:
     return vals_->tuple_type_names();
   }
 
-  struct move_from_tuple_helper {
-    template <class... Ts>
-    inline message operator()(Ts&... xs) {
-      return make_message(std::move(xs)...);
-    }
-  };
-
-  template <class... Ts>
-  inline message move_from_tuple(std::tuple<Ts...>&& tup) {
-    move_from_tuple_helper f;
-    return detail::apply_args(f, detail::get_indices(tup), tup);
-  }
-
   bool match_element(size_t p, uint16_t tnr, const std::type_info* rtti) const;
 
   template <class T, class... Ts>
@@ -314,8 +301,8 @@ public:
 
 private:
   template <size_t P>
-  bool match_elements_impl(std::integral_constant<size_t, P>,
-                           detail::type_list<>) const {
+  static bool match_elements_impl(std::integral_constant<size_t, P>,
+                                  detail::type_list<>) {
     return true; // end of recursion
   }
 
@@ -338,13 +325,10 @@ private:
 struct message::cli_res {
   /// Stores the remaining (unmatched) arguments.
   message remainder;
-
   /// Stores the names of all active options.
   std::set<std::string> opts;
-
   /// Stores the automatically generated help text.
   std::string helptext;
-
   /// Stores errors during option parsing.
   std::string error;
 };
@@ -409,29 +393,29 @@ inline message make_message(message other) {
 template <class T>
 message::cli_arg::cli_arg(std::string nstr, std::string tstr, T& arg)
     : name(std::move(nstr)),
-      text(std::move(tstr)) {
-  fun = [&arg](const std::string& str) -> bool {
-    auto res = from_string<T>(str);
-    if (! res) {
-      return false;
-    }
-    arg = *res;
-    return true;
-  };
+      text(std::move(tstr)),
+      fun([&arg](const std::string& str) -> bool {
+            auto res = from_string<T>(str);
+            if (! res)
+              return false;
+            arg = *res;
+            return true;
+          }) {
+  // nop
 }
 
 template <class T>
 message::cli_arg::cli_arg(std::string nstr, std::string tstr, std::vector<T>& arg)
     : name(std::move(nstr)),
-      text(std::move(tstr)) {
-  fun = [&arg](const std::string& str) -> bool {
-    auto res = from_string<T>(str);
-    if (! res) {
-      return false;
-    }
-    arg.push_back(*res);
-    return true;
-  };
+      text(std::move(tstr)),
+      fun([&arg](const std::string& str) -> bool {
+            auto res = from_string<T>(str);
+            if (! res)
+              return false;
+            arg.push_back(*res);
+            return true;
+          }) {
+  // nop
 }
 
 } // namespace caf

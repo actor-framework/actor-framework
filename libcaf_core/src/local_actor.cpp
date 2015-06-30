@@ -108,21 +108,6 @@ std::vector<group> local_actor::joined_groups() const {
   return result;
 }
 
-void local_actor::reply_message(message&& what) {
-  auto& whom = current_element_->sender;
-  if (! whom) {
-    return;
-  }
-  auto& mid = current_element_->mid;
-  if (mid.valid() == false || mid.is_response()) {
-    send(actor_cast<channel>(whom), std::move(what));
-  } else if (! mid.is_answered()) {
-    auto ptr = actor_cast<actor>(whom);
-    ptr->enqueue(address(), mid.response_id(), std::move(what), host());
-    mid.mark_as_answered();
-  }
-}
-
 void local_actor::forward_message(const actor& dest, message_priority prio) {
   if (! dest) {
     return;
@@ -499,8 +484,9 @@ void local_actor::launch(execution_unit* eu, bool lazy, bool hide) {
   }
   // actor is cooperatively scheduled
   attach_to_scheduler();
-  if (lazy) {
-    mailbox().try_block();
+  // do not schedule immediately when spawned with `lazy_init`
+  // mailbox could be set to blocked
+  if (lazy && mailbox().try_block()) {
     return;
   }
   if (eu) {
@@ -806,7 +792,7 @@ void local_actor::await_data() {
 }
 
 void local_actor::send_impl(message_id mid, abstract_channel* dest,
-                            message what) {
+                            message what) const {
   if (! dest) {
     return;
   }

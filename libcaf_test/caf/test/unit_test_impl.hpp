@@ -219,7 +219,10 @@ logger::stream logger::massive() {
   return stream{*this, level::massive};
 }
 
-logger::logger() : console_(std::cerr) {
+logger::logger()
+    : level_console_(level::error),
+      level_file_(level::error),
+      console_(std::cerr) {
   // nop
 }
 
@@ -405,9 +408,12 @@ bool engine::run(bool colorize,
       break;
     }
   }
-  auto percent_good =
-    static_cast<unsigned>(double(100000 * total_good)
-                          / double(total_good + total_bad)) / 1000.0;
+  unsigned percent_good = 100;
+  if (total_bad > 0) {
+    auto tmp = (100000.0 * static_cast<double>(total_good))
+               / static_cast<double>(total_good + total_bad);
+    percent_good = static_cast<unsigned>(tmp / 1000.0);
+  }
   auto title = std::string{"summary"};
   auto pad = std::string((bar.size() - title.size()) / 2, ' ');
   auto indent = std::string(24, ' ');
@@ -564,7 +570,12 @@ expr::expr(test* parent, const char* filename, size_t lineno,
 
 #ifndef CAF_TEST_NO_MAIN
 int main(int argc, char** argv) {
-  return caf::test::main(argc, argv);
+  try {
+    return caf::test::main(argc, argv);
+  } catch (std::exception& e) {
+    std::cerr << "exception: " << e.what() << std::endl;
+  }
+  return 1;
 }
 #endif
 

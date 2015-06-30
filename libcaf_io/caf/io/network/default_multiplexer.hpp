@@ -407,7 +407,10 @@ public:
   stream(default_multiplexer& backend_ref)
       : event_handler(backend_ref),
         sock_(backend_ref),
-        writing_(false) {
+        threshold_(1),
+        collected_(0),
+        writing_(false),
+        written_(0) {
     configure_read(receive_policy::at_most(1024));
   }
 

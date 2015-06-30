@@ -85,17 +85,21 @@ private:
   }
 
   template <class C>
-  typename std::enable_if<! std::is_empty<C>::value &&
-                detail::is_comparable<C, C>::value,
-              bool>::type
+  typename std::enable_if<
+    ! std::is_empty<C>::value && detail::is_comparable<C, C>::value,
+    bool
+  >::type
   eq(const C& lhs, const C& rhs) const {
     return lhs == rhs;
   }
 
   template <class C>
-  typename std::enable_if<! std::is_empty<C>::value && std::is_pod<C>::value &&
-                ! detail::is_comparable<C, C>::value,
-              bool>::type
+  typename std::enable_if<
+    ! std::is_empty<C>::value
+    && ! detail::is_comparable<C, C>::value
+    && std::is_pod<C>::value,
+    bool
+  >::type
   eq(const C& lhs, const C& rhs) const {
     return pod_mems_equals(lhs, rhs);
   }

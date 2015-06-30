@@ -221,7 +221,7 @@ private:
   template <class... Us>
   void set(const variant<Us...>& other) {
     using namespace detail;
-    static_assert(tl_is_strict_subset<type_list<Us...>, types>::value,
+    static_assert(tlf_is_subset<type_list<Us...>, types>(),
                   "cannot set variant of type A to variant of type B "
                   "unless the element types of A are a strict subset of "
                   "the element types of B");
@@ -232,7 +232,7 @@ private:
   template <class... Us>
   void set(variant<Us...>&& other) {
     using namespace detail;
-    static_assert(tl_is_strict_subset<type_list<Us...>, types>::value,
+    static_assert(tlf_is_subset<type_list<Us...>, types>(),
                   "cannot set variant of type A to variant of type B "
                   "unless the element types of A are a strict subset of "
                   "the element types of B");
@@ -248,11 +248,8 @@ private:
 template <class T, class... Us>
 T& get(variant<Us...>& value) {
   using namespace detail;
-  constexpr int type_id = tl_find_if<
-                            type_list<Us...>,
-                            tbind<is_same_ish, T>::template type
-                          >::value;
-  std::integral_constant<int, type_id> token;
+  int_token<tl_find_if<type_list<Us...>,
+                       tbind<is_same_ish, T>::template type>::value> token;
   // silence compiler error about "binding to unrelated types" such as
   // 'signed char' to 'char' (which is obvious bullshit)
   return reinterpret_cast<T&>(value.get(token));
@@ -269,14 +266,10 @@ const T& get(const variant<Us...>& value) {
 template <class T, class... Us>
 T* get(variant<Us...>* value) {
   using namespace detail;
-  constexpr int type_id = tl_find_if<
-                            type_list<Us...>,
-                            tbind<is_same_ish, T>::template type
-                          >::value;
-  std::integral_constant<int, type_id> token;
-  if (value->is(token)) {
+  int_token<tl_find_if<type_list<Us...>,
+                       tbind<is_same_ish, T>::template type>::value> token;
+  if (value->is(token))
     return &get<T>(*value);
-  }
   return nullptr;
 }
 

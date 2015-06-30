@@ -90,7 +90,7 @@ public:
   public:
     pointer value;
     std::atomic<node*> next;
-    node(pointer val) : value(val), next(nullptr) {
+    explicit node(pointer val) : value(val), next(nullptr) {
       // nop
     }
   private:
@@ -230,7 +230,7 @@ private:
 
   class lock_guard {
   public:
-    lock_guard(std::atomic_flag& lock) : lock_(lock) {
+    explicit lock_guard(std::atomic_flag& lock) : lock_(lock) {
       while (lock.test_and_set(std::memory_order_acquire)) {
         std::this_thread::yield();
       }

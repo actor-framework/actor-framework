@@ -55,7 +55,7 @@ void abstract_group::module::stop() {
   CAF_LOG_TRACE("");
 }
 
-const std::string& abstract_group::module::name() {
+const std::string& abstract_group::module::name() const {
   return name_;
 }
 

@@ -208,3 +208,5 @@ Their replacements are named \lstinline^current_message^ and \lstinline^current_
 \subsubsection{0.13 $\Rightarrow$ 0.14}
 
 The function \lstinline^timed_sync_send^ has been removed. It offered an alternative way of defining message handlers, which is inconsistent with the rest of the API.
+
+The policy classes \lstinline^broadcast^, \lstinline^random^, and \lstinline^round_robin^ in \lstinline^actor_pool^ were removed and replaced by factory functions using the same name.

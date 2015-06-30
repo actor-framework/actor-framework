@@ -41,15 +41,16 @@ class binary_serializer : public serializer {
 
 public:
 
-  using write_fun = std::function<void(const char*, const char*)>;
+  using write_fun = std::function<void(const char*, size_t)>;
 
   /// Creates a binary serializer writing to given iterator position.
   template <class OutIter>
-  binary_serializer(OutIter iter, actor_namespace* ns = nullptr) : super(ns) {
+  explicit binary_serializer(OutIter iter, actor_namespace* ns = nullptr)
+      : super(ns) {
     struct fun {
       fun(OutIter pos) : pos_(pos) {}
-      void operator()(const char* first, const char* last) {
-        pos_ = std::copy(first, last, pos_);
+      void operator()(const char* first, size_t num_bytes) {
+        pos_ = std::copy(first, first + num_bytes, pos_);
       }
       OutIter pos_;
     };
@@ -69,9 +70,7 @@ public:
   void write_raw(size_t num_bytes, const void* data) override;
 
 private:
-
   write_fun out_;
-
 };
 
 template <class T,

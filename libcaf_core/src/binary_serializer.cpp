@@ -33,20 +33,16 @@ public:
 
   template <class T>
   static inline void write_int(write_fun& f, const T& value) {
-    auto first = reinterpret_cast<const char*>(&value);
-    auto last = first + sizeof(T);
-    f(first, last);
+    f(reinterpret_cast<const char*>(&value), sizeof(T));
   }
 
   static inline void write_string(write_fun& f, const std::string& str) {
     write_int(f, static_cast<uint32_t>(str.size()));
-    auto first = str.data();
-    auto last = first + str.size();
-    f(first, last);
+    f(str.data(), str.size());
   }
 
   void operator()(const bool& value) const {
-    write_int(out_, static_cast<uint8_t>(value));
+    write_int(out_, static_cast<uint8_t>(value ? 1 : 0));
   }
 
   template <class T>
@@ -126,9 +122,7 @@ void binary_serializer::write_value(const primitive_variant& value) {
 }
 
 void binary_serializer::write_raw(size_t num_bytes, const void* data) {
-  auto first = reinterpret_cast<const char*>(data);
-  auto last = first + num_bytes;
-  out_(first, last);
+  out_(reinterpret_cast<const char*>(data), num_bytes);
 }
 
 } // namespace caf

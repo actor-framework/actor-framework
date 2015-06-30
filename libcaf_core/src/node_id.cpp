@@ -31,7 +31,6 @@
 #include "caf/detail/logging.hpp"
 #include "caf/detail/singletons.hpp"
 #include "caf/detail/ripemd_160.hpp"
-#include "caf/detail/safe_equal.hpp"
 #include "caf/detail/get_root_uuid.hpp"
 #include "caf/detail/get_process_id.hpp"
 #include "caf/detail/get_mac_addresses.hpp"
@@ -40,63 +39,11 @@ namespace caf {
 
 namespace {
 
-uint32_t s_invalid_process_id = 0;
+uint32_t invalid_process_id = 0;
 
-node_id::host_id_type s_invalid_host_id;
-
-uint8_t hex_char_value(char c) {
-  if (isdigit(c)) {
-    return static_cast<uint8_t>(c - '0');
-  }
-  if (isalpha(c)) {
-    if (c >= 'a' && c <= 'f') {
-      return static_cast<uint8_t>((c - 'a') + 10);
-    } else if (c >= 'A' && c <= 'F') {
-      return static_cast<uint8_t>((c - 'A') + 10);
-    }
-  }
-  throw std::invalid_argument(std::string("illegal character: ") + c);
-}
-
-void host_id_from_string(const std::string& hash,
-                         node_id::host_id_type& node_id) {
-  if (hash.size() != (node_id.size() * 2)) {
-    throw std::invalid_argument("string argument is not a node id hash");
-  }
-  auto j = hash.c_str();
-  for (size_t i = 0; i < node_id.size(); ++i) {
-    // read two characters, each representing 4 bytes
-    auto& val = node_id[i];
-    val = static_cast<uint8_t>(hex_char_value(j[0]) << 4)
-          | hex_char_value(j[1]);
-    j += 2;
-  }
-}
+node_id::host_id_type invalid_host_id;
 
 } // namespace <anonymous>
-
-bool equal(const std::string& hash, const node_id::host_id_type& node_id) {
-  if (hash.size() != (node_id.size() * 2)) {
-    return false;
-  }
-  auto j = hash.c_str();
-  try {
-    for (size_t i = 0; i < node_id.size(); ++i) {
-      // read two characters, each representing 4 bytes
-      uint8_t val;
-      val = static_cast<uint8_t>(hex_char_value(j[0]) << 4)
-            | hex_char_value(j[1]);
-      j += 2;
-      if (val != node_id[i]) {
-        return false;
-      }
-    }
-  }
-  catch (std::invalid_argument&) {
-    return false;
-  }
-  return true;
-}
 
 node_id::~node_id() {
   // nop
@@ -106,22 +53,22 @@ node_id::node_id(const invalid_node_id_t&) {
   // nop
 }
 
-node_id::node_id(const node_id& other) : data_(other.data_) {
-  // nop
+node_id& node_id::operator=(const invalid_node_id_t&) {
+  data_.reset();
+  return *this;
 }
 
 node_id::node_id(intrusive_ptr<data> dataptr) : data_(std::move(dataptr)) {
   // nop
 }
 
-node_id::node_id(uint32_t procid, const std::string& b) {
-  data_ = make_counted<data>();
-  data_->process_id = procid;
-  host_id_from_string(b, data_->host_id);
+node_id::node_id(uint32_t procid, const std::string& hash)
+    : data_(make_counted<data>(procid, hash)) {
+  // nop
 }
 
-node_id::node_id(uint32_t a, const host_id_type& b)
-    : data_(make_counted<data>(a, b)) {
+node_id::node_id(uint32_t procid, const host_id_type& hid)
+    : data_(make_counted<data>(procid, hid)) {
   // nop
 }
 
@@ -130,32 +77,46 @@ int node_id::compare(const invalid_node_id_t&) const {
 }
 
 int node_id::compare(const node_id& other) const {
-  if (this == &other) {
-    return 0; // shortcut for comparing to self
-  }
-  if (data_ == other.data_) {
-    return 0; // shortcut for identical instances
-  }
-  if ((data_ != nullptr) != (other.data_ != nullptr)) {
+  if (this == &other || data_ == other.data_)
+    return 0; // shortcut for comparing to self or identical instances
+  if (! data_ != ! other.data_)
     return data_ ? 1 : -1; // invalid instances are always smaller
-  }
   int tmp = strncmp(reinterpret_cast<const char*>(host_id().data()),
                     reinterpret_cast<const char*>(other.host_id().data()),
                     host_id_size);
-  if (tmp == 0) {
-    if (process_id() < other.process_id()) {
-      return -1;
-    } else if (process_id() == other.process_id()) {
-      return 0;
-    }
-    return 1;
-  }
-  return tmp;
+  return tmp != 0
+         ? tmp
+         : (process_id() < other.process_id()
+            ? -1
+            : (process_id() == other.process_id() ? 0 : 1));
 }
 
 node_id::data::data(uint32_t procid, host_id_type hid)
-    : process_id(procid), host_id(hid) {
+    : pid_(procid),
+      host_(hid) {
   // nop
+}
+
+node_id::data::data(uint32_t procid, const std::string& hash) : pid_(procid) {
+  if (hash.size() != (host_id_size * 2)) {
+    host_ = invalid_host_id;
+    return;
+  }
+  auto hex_value = [](char c) -> uint8_t {
+    if (isalpha(c)) {
+      if (c >= 'a' && c <= 'f')
+        return static_cast<uint8_t>((c - 'a') + 10);
+      if (c >= 'A' && c <= 'F')
+        return static_cast<uint8_t>((c - 'A') + 10);
+    }
+    return isdigit(c) ? static_cast<uint8_t>(c - '0') : 0;
+  };
+  auto j = hash.c_str();
+  for (size_t i = 0; i < host_id_size; ++i) {
+    // read two characters, each representing 4 bytes
+    host_[i] = static_cast<uint8_t>(hex_value(j[0]) << 4) | hex_value(j[1]);
+    j += 2;
+  }
 }
 
 node_id::data::~data() {
@@ -183,16 +144,11 @@ node_id::data* node_id::data::create_singleton() {
 }
 
 uint32_t node_id::process_id() const {
-  return data_ ? data_->process_id : s_invalid_process_id;
+  return data_ ? data_->pid_ : invalid_process_id;
 }
 
 const node_id::host_id_type& node_id::host_id() const {
-  return data_ ? data_->host_id : s_invalid_host_id;
-}
-
-node_id& node_id::operator=(const invalid_node_id_t&) {
-  data_.reset();
-  return *this;
+  return data_ ? data_->host_ : invalid_host_id;
 }
 
 } // namespace caf

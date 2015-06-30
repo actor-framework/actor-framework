@@ -16,3 +16,4 @@ manual/manual.html
 manual/variables.tex
 *.swp
 bii/*
+libcaf_core/caf/detail/build_config.hpp

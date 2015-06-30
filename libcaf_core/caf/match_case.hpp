@@ -183,6 +183,9 @@ public:
       detail::pseudo_tuple
     >::type;
 
+  trivial_match_case(const trivial_match_case&) = default;
+  trivial_match_case& operator=(const trivial_match_case&) = default;
+
   trivial_match_case(F f)
       : match_case(false, detail::make_type_token_from_list<pattern>()),
         fun_(std::move(f)) {
@@ -432,14 +435,14 @@ to_match_case_tuple(F fun) {
 template <class MatchCase>
 typename std::enable_if<
   std::is_base_of<match_case, MatchCase>::value,
-  std::tuple<MatchCase&>
+  std::tuple<const MatchCase&>
 >::type
-to_match_case_tuple(MatchCase& x) {
+to_match_case_tuple(const MatchCase& x) {
   return std::tie(x);
 }
 
 template <class... Ts>
-std::tuple<Ts...>& to_match_case_tuple(std::tuple<Ts...>& x) {
+const std::tuple<Ts...>& to_match_case_tuple(const std::tuple<Ts...>& x) {
   static_assert(detail::conjunction<
                   std::is_base_of<
                     match_case,

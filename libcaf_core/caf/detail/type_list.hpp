@@ -34,7 +34,11 @@ namespace detail {
 
 /// A list of types.
 template <class... Ts>
-struct type_list { };
+struct type_list {
+  constexpr type_list() {
+    // nop
+  }
+};
 
 /// Denotes the empty list.
 using empty_type_list = type_list<>;
@@ -910,40 +914,37 @@ struct tl_apply<type_list<Ts...>, VarArgTemplate> {
 
 // bool is_strict_subset(list,list)
 
-template <class ListB>
-struct tl_is_strict_subset_step {
-  template <class T>
-  struct inner {
-    using type = std::integral_constant<bool, tl_find<ListB, T>::value != -1>;
-  };
-};
+template <class T>
+constexpr int tlf_find(type_list<>, int = 0) {
+  return -1;
+}
 
-/// Tests whether ListA ist a strict subset of ListB (or equal).
-template <class ListA, class ListB>
-struct tl_is_strict_subset {
-  static constexpr bool value =
-    std::is_same<ListA, ListB>::value
-    || std::is_same<
-         type_list<std::integral_constant<bool, true>>,
-         typename tl_distinct<
-           typename tl_map<
-             ListA,
-             tl_is_strict_subset_step<ListB>::template inner
-           >::type
-         >::type
-       >::value;
-};
+template <class T, class U, class... Us>
+constexpr int tlf_find(type_list<U, Us...>, int pos = 0) {
+  return std::is_same<T, U>::value ? pos
+                                   : tlf_find<T>(type_list<Us...>{}, pos + 1);
+}
 
-template <class ListA, class ListB>
-constexpr bool tl_is_strict_subset<ListA, ListB>::value;
+constexpr bool tlf_no_negative() {
+  return true;
+}
+
+template <class... Ts>
+constexpr bool tlf_no_negative(int x, Ts... xs) {
+  return x < 0 ? false : tlf_no_negative(xs...);
+}
+
+template <class... Ts, class List>
+constexpr bool tlf_is_subset(type_list<Ts...>, List) {
+  return tlf_no_negative(tlf_find<Ts>(List{})...);
+}
 
 /// Tests whether ListA contains the same elements as ListB
-///    and vice versa. This comparison ignores element positions.
+/// and vice versa. This comparison ignores element positions.
 template <class ListA, class ListB>
 struct tl_equal {
-  static constexpr bool value =
-    tl_is_strict_subset<ListA, ListB>::value
-    && tl_is_strict_subset<ListB, ListA>::value;
+  static constexpr bool value = tlf_is_subset(ListA{}, ListB{})
+                                && tlf_is_subset(ListB{}, ListA{});
 };
 
 template <size_t N, class T>

@@ -41,19 +41,16 @@ public:
     using trait = typename detail::get_callable_trait<F>::type;
     using arg_types = typename trait::arg_types;
     using result_type = typename trait::result_type;
-    constexpr bool returns_behavior =
-      std::is_convertible<result_type, behavior>::value;
-    constexpr bool uses_first_arg = std::is_pointer<
-      typename detail::tl_head<arg_types>::type>::value;
-    std::integral_constant<bool, returns_behavior> token1;
-    std::integral_constant<bool, uses_first_arg> token2;
+    using first_arg = typename detail::tl_head<arg_types>::type;
+    bool_token<std::is_convertible<result_type, behavior>::value> token1;
+    bool_token<std::is_pointer<first_arg>::value> token2;
     return make(token1, token2, std::move(f), std::forward<Ts>(xs)...);
   }
 
 private:
   // behavior (pointer)
   template <class Fun>
-  fun make(std::true_type, std::true_type, Fun fun) {
+  static fun make(std::true_type, std::true_type, Fun fun) {
     return [fun](local_actor* ptr) -> behavior {
       auto res = fun(static_cast<Base*>(ptr));
       return std::move(res.unbox());
@@ -62,7 +59,7 @@ private:
 
   // void (pointer)
   template <class Fun>
-  fun make(std::false_type, std::true_type, Fun fun) {
+  static fun make(std::false_type, std::true_type, Fun fun) {
     return [fun](local_actor* ptr) -> behavior {
       fun(static_cast<Base*>(ptr));
       return behavior{};
@@ -71,7 +68,7 @@ private:
 
   // behavior ()
   template <class Fun>
-  fun make(std::true_type, std::false_type, Fun fun) {
+  static fun make(std::true_type, std::false_type, Fun fun) {
     return [fun](local_actor*) -> behavior {
       auto res = fun();
       return std::move(res.unbox());
@@ -80,7 +77,7 @@ private:
 
   // void ()
   template <class Fun>
-  fun make(std::false_type, std::false_type, Fun fun) {
+  static fun make(std::false_type, std::false_type, Fun fun) {
     return [fun](local_actor*) -> behavior {
       fun();
       return behavior{};
@@ -88,14 +85,14 @@ private:
   }
 
   template <class Token, typename T0, class... Ts>
-  fun make(Token t1, std::true_type t2, F fun, T0&& x, Ts&&... xs) {
+  static fun make(Token t1, std::true_type t2, F fun, T0&& x, Ts&&... xs) {
     return make(t1, t2,
                 std::bind(fun, std::placeholders::_1, detail::spawn_fwd<T0>(x),
                           detail::spawn_fwd<Ts>(xs)...));
   }
 
   template <class Token, typename T0, class... Ts>
-  fun make(Token t1, std::false_type t2, F fun, T0&& x, Ts&&... xs) {
+  static fun make(Token t1, std::false_type t2, F fun, T0&& x, Ts&&... xs) {
     return make(t1, t2, std::bind(fun, detail::spawn_fwd<T0>(x),
                                   detail::spawn_fwd<Ts>(xs)...));
   }

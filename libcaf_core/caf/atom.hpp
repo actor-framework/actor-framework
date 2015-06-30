@@ -95,6 +95,9 @@ using forward_atom = atom_constant<atom("FORWARD")>;
 /// Generic 'FLUSH' atom, e.g., used by `aout`.
 using flush_atom = atom_constant<atom("FLUSH")>;
 
+/// Generic 'REDIRECT' atom, e.g., used by `aout`.
+using redirect_atom = atom_constant<atom("REDIRECT")>;
+
 /// Generic 'LINK' atom for link requests over network.
 using link_atom = atom_constant<atom("LINK")>;
 

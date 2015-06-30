@@ -115,10 +115,10 @@ This is unlike other event-based implementations of the actor model such as Akka
 \subsection{Timeouts}
 \label{Sec::Receive::Timeouts}
 
-A behavior set by \lstinline^become^ is invoked whenever a new messages arrives.
+A behavior set by \lstinline^become^ is invoked whenever a new message arrives.
 If no message ever arrives, the actor would wait forever.
 This might be desirable if the actor only provides a service and should not do anything else.
-But often, we need to be able to recover if an expected messages does not arrive within a certain time period. The following examples illustrates the usage of \lstinline^after^ to define a timeout.
+But often, we need to be able to recover if an expected message does not arrive within a certain time period. The following examples illustrates the usage of \lstinline^after^ to define a timeout.
 
 \begin{lstlisting}
 behavior eager_actor(event_based_actor* self) {

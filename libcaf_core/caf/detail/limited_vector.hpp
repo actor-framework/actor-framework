@@ -32,11 +32,8 @@
 namespace caf {
 namespace detail {
 
-/*
- * A vector with a fixed maximum size (uses an array internally).
- * @warning This implementation is highly optimized for arithmetic types and
- *          does <b>not</b> call constructors or destructors.
- */
+// A vector with a fixed maximum size (uses an array internally).
+// @warning This implementation is highly optimized for arithmetic types and
 template <class T, size_t MaxSize>
 class limited_vector {
 public:
@@ -56,7 +53,7 @@ public:
     // nop
   }
 
-  limited_vector(size_t initial_size) : size_(initial_size) {
+  explicit limited_vector(size_t initial_size) : size_(initial_size) {
     T tmp;
     std::fill_n(begin(), initial_size, tmp);
   }
@@ -76,7 +73,7 @@ public:
     size_ = s;
   }
 
-  limited_vector(std::initializer_list<T> init) : size_(init.size()) {
+  explicit limited_vector(std::initializer_list<T> init) : size_(init.size()) {
     CAF_ASSERT(init.size() <= MaxSize);
     std::copy(init.begin(), init.end(), begin());
   }

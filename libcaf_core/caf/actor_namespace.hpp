@@ -65,10 +65,10 @@ public:
   size_t count_proxies(const key_type& node);
 
   /// Returns all proxies for `node`.
-  std::vector<actor_proxy_ptr> get_all();
+  std::vector<actor_proxy_ptr> get_all() const;
 
   /// Returns all proxies for `node`.
-  std::vector<actor_proxy_ptr> get_all(const key_type& node);
+  std::vector<actor_proxy_ptr> get_all(const key_type& node) const;
 
   /// Returns the proxy instance identified by `node` and `aid`
   /// or `nullptr` if the actor either unknown or expired.

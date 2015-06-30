@@ -19,6 +19,9 @@
 
 #include "caf/actor_pool.hpp"
 
+#include <atomic>
+#include <random>
+
 #include "caf/send.hpp"
 #include "caf/default_attachable.hpp"
 
@@ -26,49 +29,63 @@
 
 namespace caf {
 
-actor_pool::round_robin::round_robin() : pos_(0) {
-  // nop
+actor_pool::policy actor_pool::round_robin() {
+  struct impl {
+    impl() : pos_(0) {
+      // nop
+    }
+    impl(const impl&) : pos_(0) {
+      // nop
+    }
+    void operator()(uplock& guard, const actor_vec& vec,
+                    mailbox_element_ptr& ptr, execution_unit* host) {
+      CAF_ASSERT(!vec.empty());
+      actor selected = vec[pos_++ % vec.size()];
+      guard.unlock();
+      selected->enqueue(std::move(ptr), host);
+    }
+    std::atomic<size_t> pos_;
+  };
+  return impl{};
 }
 
-actor_pool::round_robin::round_robin(const round_robin&) : pos_(0) {
-  // nop
-}
+namespace {
 
-void actor_pool::round_robin::operator()(uplock& guard, const actor_vec& vec,
-                                         mailbox_element_ptr& ptr,
-                                         execution_unit* host) {
-  CAF_ASSERT(! vec.empty());
-  actor selected = vec[pos_++ % vec.size()];
-  guard.unlock();
-  selected->enqueue(std::move(ptr), host);
-}
-
-void actor_pool::broadcast::operator()(uplock&, const actor_vec& vec,
-                                       mailbox_element_ptr& ptr,
-                                       execution_unit* host) {
-  CAF_ASSERT(! vec.empty());
+void broadcast_dispatch(actor_pool::uplock&, const actor_pool::actor_vec& vec,
+                        mailbox_element_ptr& ptr, execution_unit* host) {
+  CAF_ASSERT(!vec.empty());
   for (size_t i = 1; i < vec.size(); ++i) {
     vec[i]->enqueue(ptr->sender, ptr->mid, ptr->msg, host);
   }
   vec.front()->enqueue(std::move(ptr), host);
 }
 
-actor_pool::random::random() {
-  // nop
+} // namespace <anonymous>
+
+actor_pool::policy actor_pool::broadcast() {
+  return broadcast_dispatch;
 }
 
-actor_pool::random::random(const random&) {
-  // nop
-}
 
-void actor_pool::random::operator()(uplock& guard, const actor_vec& vec,
-                                    mailbox_element_ptr& ptr,
-                                    execution_unit* host) {
-  std::uniform_int_distribution<size_t> dis(0, vec.size() - 1);
-  upgrade_to_unique_lock<detail::shared_spinlock> unique_guard{guard};
-  actor selected = vec[dis(rd_)];
-  unique_guard.unlock();
-  selected->enqueue(std::move(ptr), host);
+actor_pool::policy actor_pool::random() {
+  struct impl {
+    impl() : rd_() {
+      // nop
+    }
+    impl(const impl&) : rd_() {
+      // nop
+    }
+    void operator()(uplock& guard, const actor_vec& vec,
+                    mailbox_element_ptr& ptr, execution_unit* host) {
+      std::uniform_int_distribution<size_t> dis(0, vec.size() - 1);
+      upgrade_to_unique_lock<detail::shared_spinlock> unique_guard{guard};
+      actor selected = vec[dis(rd_)];
+      unique_guard.unlock();
+      selected->enqueue(std::move(ptr), host);
+    }
+    std::random_device rd_;
+  };
+  return impl{};
 }
 
 actor_pool::~actor_pool() {
@@ -96,7 +113,7 @@ actor actor_pool::make(size_t num_workers, factory fac, policy pol) {
 
 void actor_pool::enqueue(const actor_addr& sender, message_id mid,
                          message content, execution_unit* eu) {
-  upgrade_lock<detail::shared_spinlock> guard{mtx_};
+  upgrade_lock<detail::shared_spinlock> guard{workers_mtx_};
   if (filter(guard, sender, mid, content, eu)) {
     return;
   }
@@ -105,7 +122,7 @@ void actor_pool::enqueue(const actor_addr& sender, message_id mid,
 }
 
 void actor_pool::enqueue(mailbox_element_ptr what, execution_unit* eu) {
-  upgrade_lock<detail::shared_spinlock> guard{mtx_};
+  upgrade_lock<detail::shared_spinlock> guard{workers_mtx_};
   if (filter(guard, what->sender, what->mid, what->msg, eu)) {
     return;
   }
@@ -202,7 +219,7 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
 
 void actor_pool::quit() {
   // we can safely run our cleanup code here without holding
-  // mtx_ because abstract_actor has its own lock
+  // workers_mtx_ because abstract_actor has its own lock
   cleanup(planned_reason_);
   is_registered(false);
 }

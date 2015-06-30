@@ -7,12 +7,7 @@ include_directories(.)
 
 # get header files; only needed by CMake generators,
 # e.g., for creating proper Xcode projects
-file(GLOB LIBCAF_CORE_HDRS "caf/*.hpp"
-                           "caf/detail/*.hpp"
-                           "caf/policy/*.hpp"
-                           "caf/mixin/*.hpp"
-                           "caf/scheduler/*.hpp"
-                           "cppa/*.hpp")
+file(GLOB_RECURSE LIBCAF_CORE_HDRS "caf/*.hpp")
 
 # list cpp files excluding platform-dependent files
 set (LIBCAF_CORE_SRCS
