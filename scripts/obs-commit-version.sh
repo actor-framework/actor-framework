@@ -34,7 +34,6 @@
 # http://opensource.org/licenses/BSD-3-Clause and
 # http://www.boost.org/LICENSE_1_0.txt.
 
-set -v
 set -o nounset
 set -o errexit
 
@@ -73,7 +72,7 @@ versionAsStr="$versionMajor.$versionMinor.$versionPatch"
 # 2.
 version=$versionAsStr
 if [ "$operatingMode" = "--nightly" ] ; then
-  version="${versionAsStr}-$(date +%Y%m%d)"
+  version="${versionAsStr}_$(date +%Y%m%d)"
 fi
 
 # 3, 4
