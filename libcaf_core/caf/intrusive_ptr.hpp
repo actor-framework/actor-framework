@@ -71,13 +71,13 @@ public:
     }
   }
 
-  void swap(intrusive_ptr& other) {
+  void swap(intrusive_ptr& other) noexcept {
     std::swap(ptr_, other.ptr_);
   }
 
   /// Returns the raw pointer without modifying reference
   /// count and sets this to `nullptr`.
-  pointer release() {
+  pointer release() noexcept {
     auto result = ptr_;
     ptr_ = nullptr;
     return result;

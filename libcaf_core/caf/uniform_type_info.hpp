@@ -84,85 +84,62 @@ uniform_value make_uniform_value(const uniform_type_info* uti, Ts&&... xs) {
 /// Unfortunately, this is not possible using the C++ RTTI system.
 ///
 /// Since it is not possible to extend `std::type_info, `libcaf`
-/// uses its own type abstraction:
-/// {@link caf::uniform_type_info uniform_type_info}.
+/// uses its own type abstraction: `uniform_type_info`.
 ///
-/// Unlike `std::type_info::name(),
-/// {@link caf::uniform_type_info::name() uniform_type_info::name()}
+/// Unlike `std::type_info::name()`, `uniform_type_info::name()`
 /// is guaranteed to return the same name on all supported platforms.
 /// Furthermore, it allows to create an instance of a type by name:
 ///
 /// @code
 /// // creates a signed, 32 bit integer
-/// caf::object i = caf::uniform_type_info::by_name("@i32")->create();
+/// uniform_value i = caf::uniform_type_info::by_name("@i32")->create();
 /// @endcode
 ///
-/// However, you should rarely if ever need to use {@link caf::object object}
-/// or {@link caf::uniform_type_info uniform_type_info}.
+/// However, you should rarely if ever need to use `uniform_value`
+/// or `uniform_type_info`.
 ///
 /// There is one exception, though, where you need to care about
 /// the type system: using custom data types in messages.
 /// The source code below compiles fine, but crashes with an exception during
 /// runtime.
 ///
-/// @code
+/// ~~~
 /// #include "caf/all.hpp"
 /// using namespace caf;
 ///
 /// struct foo { int a; int b; };
 ///
-/// int main()
-/// {
+/// int main() {
 ///   send(self, foo{1, 2});
 ///   return 0;
 /// }
-/// @endcode
-///
-/// Depending on your platform, the error message looks somewhat like this:
-///
-/// <tt>
-/// terminate called after throwing an instance of std::runtime_error
-/// <br>
-/// what():  uniform_type_info::by_type_info(): foo is an unknown typeid name
-/// </tt>
+/// ~~~
 ///
 /// The user-defined struct `foo` is not known by the type system.
-/// Thus, `foo` cannot be serialized and is rejected.
+/// Thus, `foo` cannot be serialized and the code above code above will
+/// throw a `std::runtime_error`.
 ///
-/// Fortunately, there is an easy way to add `foo` the type system,
-/// without needing to implement serialize/deserialize by yourself:
+/// Fortunately, there is an easy way to add simple data structures like
+/// `foo` the type system without implementing serialize/deserialize yourself:
+/// `caf::announce<foo>("foo", &foo::a, &foo::b)`.
 ///
-/// @code
-/// caf::announce<foo>(&foo::a, &foo::b);
-/// @endcode
-///
-/// {@link caf::announce announce()} takes the class as template
-/// parameter and pointers to all members (or getter/setter pairs)
-/// as arguments. This works for all primitive data types and STL compliant
-/// containers. See the announce {@link announce_example_1.cpp example 1},
-/// {@link announce_example_2.cpp example 2},
-/// {@link announce_example_3.cpp example 3} and
-/// {@link announce_example_4.cpp example 4} for more details.
-///
-/// Obviously, there are limitations. If your class does implement
-/// an unsupported data structure, you have to implement serialize/deserialize
-/// by yourself. {@link announce_example_5.cpp Example 5} shows, how to
-/// announce a tree data structure to the type system.
+/// The function `announce()` takes the class as template
+/// parameter. The name of the announced type is the first argument, followed
+/// by pointers to all members (or getter/setter pairs). This works for all
+/// primitive data types and STL compliant containers. See the announce example
+/// for more details. Complex data structures usually require a custom
+/// serializer class.
 
 /// @ingroup TypeSystem
 /// Provides a platform independent type name and a (very primitive)
-/// kind of reflection in combination with {@link caf::object object}.
-/// The platform independent name is equal to the "in-sourcecode-name"
-/// with a few exceptions:
+/// kind of reflection in combination with `uniform_value`.
+/// CAF uses abbvreviate type names for brevity:
 /// - std::string is named \@str
 /// - std::u16string is named \@u16str
 /// - std::u32string is named \@u32str
 /// - integers are named `\@(i|u)$size\n
 ///   e.g.: \@i32 is a 32 bit signed integer; \@u16
 ///   is a 16 bit unsigned integer
-/// - the <em>anonymous namespace</em> is named \@_ \n
-///   e.g.: `namespace { class foo { }; } is mapped to
-///   \@_::foo
 class uniform_type_info {
 public:
   friend bool operator==(const uniform_type_info& lhs,
@@ -190,8 +167,7 @@ public:
   /// @throws std::runtime_error if `tinfo` is not an announced type.
   static const uniform_type_info* from(const std::type_info& tinfo);
 
-  /// Get all instances.
-  /// @returns A vector with all known (announced) instances.
+  /// Returns a vector with all known (announced) types.
   static std::vector<const uniform_type_info*> instances();
 
   /// Creates a copy of `other`.

@@ -54,9 +54,11 @@ class typed_broker;
 template <class... Sigs>
 class typed_actor : detail::comparable<typed_actor<Sigs...>>,
                     detail::comparable<typed_actor<Sigs...>, actor_addr>,
+                    detail::comparable<typed_actor<Sigs...>, invalid_actor_t>,
                     detail::comparable<typed_actor<Sigs...>,
                                        invalid_actor_addr_t> {
  public:
+  // grant access to private ctor
   friend class local_actor;
 
   // friend with all possible instantiations
@@ -97,55 +99,85 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
   typed_actor& operator=(const typed_actor&) = default;
 
   template <class TypedActor,
-            class Enable = typename std::enable_if<
-                             detail::tlf_is_subset(signatures{},
-                                                   typename TypedActor::signatures{})
-                           >::type>
+            class Enable =
+              typename std::enable_if<
+                detail::tlf_is_subset(signatures(),
+                                      typename TypedActor::signatures())
+              >::type>
   typed_actor(const TypedActor& other) : ptr_(other.ptr_) {
     // nop
   }
 
   template <class TypedActor,
-            class Enable = typename std::enable_if<
-                             detail::tlf_is_subset(signatures{},
-                                                   typename TypedActor::signatures{})
-                           >::type>
+            class Enable =
+              typename std::enable_if<
+                detail::tlf_is_subset(signatures(),
+                                      typename TypedActor::signatures())
+              >::type>
   typed_actor& operator=(const TypedActor& other) {
     ptr_ = other.ptr_;
     return *this;
   }
 
   template <class Impl,
-            class Enable = typename std::enable_if<
-                             detail::tlf_is_subset(signatures{},
-                                                   typename Impl::signatures{})
-                           >::type>
+            class Enable =
+              typename std::enable_if<
+                detail::tlf_is_subset(signatures(),
+                                      typename Impl::signatures())
+              >::type>
   typed_actor(intrusive_ptr<Impl> other) : ptr_(std::move(other)) {
     // nop
   }
 
-  abstract_actor* operator->() const {
+  /// Queries the address of the stored actor.
+  actor_addr address() const noexcept {
+    return ptr_ ? ptr_->address() : actor_addr();
+  }
+
+  /// Returns `*this != invalid_actor`.
+  explicit operator bool() const noexcept {
+    return static_cast<bool>(ptr_);
+  }
+
+  /// Returns `*this == invalid_actor`.
+  bool operator!() const noexcept {
+    return !ptr_;
+  }
+
+  /// Returns whether this is an handle to a remote actor.
+  bool is_remote() const noexcept {
+    return ptr_ ? ptr_->is_remote() : false;
+  }
+
+  /// Returns the ID of this actor.
+  actor_id id() const noexcept {
+    return ptr_ ? ptr_->id() : invalid_actor_id;
+  }
+
+  /// Exchange content of `*this` and `other`.
+  void swap(actor& other) noexcept {
+    ptr_.swap(other.ptr_);
+  }
+
+  /// @cond PRIVATE
+
+  abstract_actor* operator->() const noexcept {
     return ptr_.get();
   }
 
-  abstract_actor& operator*() const {
+  abstract_actor& operator*() const noexcept {
     return *ptr_.get();
   }
 
-  /// Queries the address of the stored actor.
-  actor_addr address() const {
-    return ptr_ ? ptr_->address() : actor_addr{};
-  }
-
-  intptr_t compare(const actor_addr& rhs) const {
+  intptr_t compare(const actor_addr& rhs) const noexcept {
     return address().compare(rhs);
   }
 
-  intptr_t compare(const typed_actor& other) const {
+  intptr_t compare(const typed_actor& other) const noexcept {
     return compare(other.address());
   }
 
-  intptr_t compare(const invalid_actor_addr_t&) const {
+  intptr_t compare(const invalid_actor_addr_t&) const noexcept {
     return ptr_ ? 1 : 0;
   }
 
@@ -153,13 +185,7 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
     return {Sigs::static_type_name()...};
   }
 
-  explicit operator bool() const {
-    return static_cast<bool>(ptr_);
-  }
-
-  bool operator!() const {
-    return !ptr_;
-  }
+  /// @endcond
 
 private:
   abstract_actor* get() const {

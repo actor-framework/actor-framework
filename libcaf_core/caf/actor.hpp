@@ -38,7 +38,9 @@ namespace caf {
 class scoped_actor;
 
 struct invalid_actor_t {
-  constexpr invalid_actor_t() {}
+  constexpr invalid_actor_t() {
+    // nop
+  }
 };
 
 /// Identifies an invalid {@link actor}.
@@ -59,35 +61,39 @@ class actor : detail::comparable<actor>,
               detail::comparable<actor, actor_addr>,
               detail::comparable<actor, invalid_actor_t>,
               detail::comparable<actor, invalid_actor_addr_t> {
-
+public:
+  // grant access to private ctor
   friend class local_actor;
 
+  // allow conversion via actor_cast
   template <class T, typename U>
   friend T actor_cast(const U&);
 
-public:
-
   actor() = default;
-
   actor(actor&&) = default;
-
   actor(const actor&) = default;
+  actor& operator=(actor&&) = default;
+  actor& operator=(const actor&) = default;
 
-  template <class T>
-  actor(intrusive_ptr<T> ptr,
-      typename std::enable_if<is_convertible_to_actor<T>::value>::type* = 0)
-      : ptr_(std::move(ptr)) {}
+  template <class T,
+            class Enable =
+              typename std::enable_if<
+                is_convertible_to_actor<T>::value
+              >::type>
+  actor(intrusive_ptr<T> ptr) : ptr_(std::move(ptr)) {
+    // nop
+  }
 
-  template <class T>
-  actor(T* ptr,
-      typename std::enable_if<is_convertible_to_actor<T>::value>::type* = 0)
-      : ptr_(ptr) {}
+  template <class T,
+            class Enable =
+              typename std::enable_if<
+                is_convertible_to_actor<T>::value
+              >::type>
+  actor(T* ptr) : ptr_(ptr) {
+    // nop
+  }
 
   actor(const invalid_actor_t&);
-
-  actor& operator=(actor&&) = default;
-
-  actor& operator=(const actor&) = default;
 
   template <class T>
   typename std::enable_if<is_convertible_to_actor<T>::value, actor&>::type
@@ -107,55 +113,56 @@ public:
 
   actor& operator=(const invalid_actor_t&);
 
-  inline operator bool() const {
+  /// Returns the address of the stored actor.
+  actor_addr address() const noexcept;
+
+  /// Returns `*this != invalid_actor`.
+  inline operator bool() const noexcept {
     return static_cast<bool>(ptr_);
   }
 
-  inline bool operator!() const {
+  /// Returns `*this == invalid_actor`.
+  inline bool operator!() const noexcept {
     return ! ptr_;
   }
 
-  /// Returns a handle that grants access to actor operations such as enqueue.
-  inline abstract_actor* operator->() const {
+  /// Returns whether this is an handle to a remote actor.
+  bool is_remote() const noexcept;
+
+  /// Returns the ID of this actor.
+  actor_id id() const noexcept;
+
+  /// Exchange content of `*this` and `other`.
+  void swap(actor& other) noexcept;
+
+  /// @cond PRIVATE
+
+  inline abstract_actor* operator->() const noexcept {
     return ptr_.get();
   }
 
-  inline abstract_actor& operator*() const {
-    return *ptr_;
-  }
+  intptr_t compare(const actor&) const noexcept;
 
-  intptr_t compare(const actor& other) const;
+  intptr_t compare(const actor_addr&) const noexcept;
 
-  intptr_t compare(const actor_addr&) const;
-
-  inline intptr_t compare(const invalid_actor_t&) const {
+  inline intptr_t compare(const invalid_actor_t&) const noexcept {
     return ptr_ ? 1 : 0;
   }
 
-  inline intptr_t compare(const invalid_actor_addr_t&) const {
+  inline intptr_t compare(const invalid_actor_addr_t&) const noexcept {
     return compare(invalid_actor);
   }
 
-  /// Returns the address of the stored actor.
-  actor_addr address() const;
-
-  /// Returns whether this is an handle to a remote actor.
-  bool is_remote() const;
-
-  actor_id id() const;
-
-  void swap(actor& other);
+  /// @endcond
 
 private:
-
-  inline abstract_actor* get() const {
+  inline abstract_actor* get() const noexcept {
     return ptr_.get();
   }
 
   actor(abstract_actor*);
 
   abstract_actor_ptr ptr_;
-
 };
 
 } // namespace caf
