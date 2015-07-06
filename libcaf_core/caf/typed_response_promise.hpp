@@ -28,6 +28,10 @@ namespace caf {
 template <class... Ts>
 class typed_response_promise {
 public:
+  typed_response_promise() = default;
+  typed_response_promise(const typed_response_promise&) = default;
+  typed_response_promise& operator=(const typed_response_promise&) = default;
+
   typed_response_promise(response_promise promise) : promise_(promise) {
     // nop
   }
@@ -49,6 +53,10 @@ private:
 template <class L, class R>
 class typed_response_promise<either_or_t<L, R>> {
 public:
+  typed_response_promise() = default;
+  typed_response_promise(const typed_response_promise&) = default;
+  typed_response_promise& operator=(const typed_response_promise&) = default;
+
   typed_response_promise(response_promise promise) : promise_(promise) {
     // nop
   }
