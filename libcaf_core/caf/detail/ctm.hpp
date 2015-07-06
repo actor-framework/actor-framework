@@ -60,9 +60,9 @@ struct ctm_cmp<typed_mpi<In, Out, empty_type_list>,
                typed_mpi<In, type_list<typed_continue_helper<Out>>, empty_type_list>>
     : std::true_type { };
 
-template <class In, class Out>
-struct ctm_cmp<typed_mpi<In, Out, empty_type_list>,
-               typed_mpi<In, type_list<typed_response_promise<Out>>, empty_type_list>>
+template <class In, class... Ts>
+struct ctm_cmp<typed_mpi<In, type_list<Ts...>, empty_type_list>,
+               typed_mpi<In, type_list<typed_response_promise<Ts...>>, empty_type_list>>
     : std::true_type { };
 
 template <class In, class L, class R>

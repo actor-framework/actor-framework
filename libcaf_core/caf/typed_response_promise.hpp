@@ -25,7 +25,7 @@
 
 namespace caf {
 
-template <class T>
+template <class... Ts>
 class typed_response_promise {
 public:
   typed_response_promise(response_promise promise) : promise_(promise) {
@@ -37,8 +37,8 @@ public:
     return static_cast<bool>(promise_);
   }
 
-  void deliver(T what) const {
-    promise_.deliver(make_message(std::move(what)));
+  void deliver(Ts... what) const {
+    promise_.deliver(make_message(std::move(what)...));
   }
 
 
