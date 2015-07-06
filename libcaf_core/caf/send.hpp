@@ -136,37 +136,6 @@ void anon_send_exit(const ActorHandle& to, uint32_t reason) {
   anon_send_exit(to.address(), reason);
 }
 
-// <backward_compatibility version="0.9">
-inline void send_tuple_as(const actor& from, const channel& to,
-                          message msg) CAF_DEPRECATED;
-
-inline void send_tuple_as(const actor& from, const channel& to,
-                          message_priority prio, message msg) CAF_DEPRECATED;
-
-inline void anon_send_tuple(const channel& to, message msg) CAF_DEPRECATED;
-
-inline void anon_send_tuple(const channel& to, message_priority prio,
-                            message msg) CAF_DEPRECATED;
-
-inline void send_tuple_as(const actor& from, const channel& to, message msg) {
-  send_as(from, to, std::move(msg));
-}
-
-inline void send_tuple_as(const actor& from, const channel& to,
-                          message_priority prio, message msg) {
-  send_as(from, prio, to, std::move(msg));
-}
-
-inline void anon_send_tuple(const channel& to, message msg) {
-  send_as(invalid_actor, to, std::move(msg));
-}
-
-inline void anon_send_tuple(const channel& to, message_priority prio,
-                            message msg) {
-  send_as(invalid_actor, prio, to, std::move(msg));
-}
-// </backward_compatibility>
-
 } // namespace caf
 
 #endif // CAF_SEND_HPP

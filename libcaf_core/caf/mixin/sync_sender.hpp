@@ -208,23 +208,6 @@ public:
    *                       deprecated member functions                        *
    ****************************************************************************/
 
-  // <backward_compatibility version="0.9">
-  response_handle_type sync_send_tuple(message_priority mp, const actor& dest,
-                                       message what) CAF_DEPRECATED;
-
-  response_handle_type sync_send_tuple(const actor& dest,
-                                       message what) CAF_DEPRECATED;
-
-  response_handle_type timed_sync_send_tuple(message_priority mp,
-                                             const actor& dest,
-                                             const duration& rtime,
-                                             message what) CAF_DEPRECATED;
-
-  response_handle_type timed_sync_send_tuple(const actor& dest,
-                                             const duration& rtime,
-                                             message what) CAF_DEPRECATED;
-  // </backward_compatibility>
-
 private:
   Subtype* dptr() {
     return static_cast<Subtype*>(this);
@@ -237,38 +220,6 @@ public:
   template <class Base, class Subtype>
   using impl = sync_sender_impl<Base, Subtype, ResponseHandleTag>;
 };
-
-// <backward_compatibility version="0.9">
-template <class B, class S, class H>
-typename sync_sender_impl<B, S, H>::response_handle_type
-sync_sender_impl<B, S, H>::sync_send_tuple(message_priority mp,
-                                           const actor& dest, message what) {
-  return sync_send(mp, dest, std::move(what));
-}
-
-template <class B, class S, class H>
-typename sync_sender_impl<B, S, H>::response_handle_type
-sync_sender_impl<B, S, H>::sync_send_tuple(const actor& dest, message what) {
-  return sync_send(message_priority::normal, dest, std::move(what));
-}
-
-template <class B, class S, class H>
-typename sync_sender_impl<B, S, H>::response_handle_type
-sync_sender_impl<B, S, H>::timed_sync_send_tuple(message_priority mp,
-                                                 const actor& dest,
-                                                 const duration& rtime,
-                                                 message msg) {
-  return timed_sync_send(mp, dest, rtime, std::move(msg));
-}
-
-template <class B, class S, class H>
-typename sync_sender_impl<B, S, H>::response_handle_type
-sync_sender_impl<B, S, H>::timed_sync_send_tuple(const actor& dest,
-                                                 const duration& rtime,
-                                                 message msg) {
-  return timed_sync_send(message_priority::normal, dest, rtime, std::move(msg));
-}
-// </backward_compatibility>
 
 } // namespace mixin
 } // namespace caf

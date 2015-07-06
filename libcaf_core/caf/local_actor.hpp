@@ -396,20 +396,6 @@ public:
   actor_addr& last_sender() CAF_DEPRECATED;
   // </backward_compatibility>
 
-  // <backward_compatibility version="0.9">
-  inline void send_tuple(message_priority mp, const channel& whom,
-                         message what) CAF_DEPRECATED;
-
-  inline void send_tuple(const channel& whom, message what) CAF_DEPRECATED;
-
-  inline void delayed_send_tuple(message_priority mp, const channel& whom,
-                                 const duration& rtime,
-                                 message data) CAF_DEPRECATED;
-
-  inline void delayed_send_tuple(const channel& whom, const duration& rtime,
-                                 message data) CAF_DEPRECATED;
-  // </backward_compatibility>
-
   /****************************************************************************
    *           override pure virtual member functions of resumable            *
    ****************************************************************************/
@@ -619,35 +605,6 @@ private:
 /// A smart pointer to a {@link local_actor} instance.
 /// @relates local_actor
 using local_actor_ptr = intrusive_ptr<local_actor>;
-
-// <backward_compatibility version="0.9">
-inline void local_actor::send_tuple(message_priority mp, const channel& whom,
-                                    message what) {
-  send_impl(message_id::make(mp), actor_cast<abstract_channel*>(whom),
-            std::move(what));
-}
-
-inline void local_actor::send_tuple(const channel& whom, message what) {
-  send_impl(message_id::make(), actor_cast<abstract_channel*>(whom),
-            std::move(what));
-}
-
-inline void local_actor::delayed_send_tuple(message_priority mp,
-                                            const channel& whom,
-                                            const duration& rtime,
-                                            message data) {
-  delayed_send_impl(message_id::make(mp), actor_cast<abstract_channel*>(whom),
-                    rtime, std::move(data));
-}
-
-inline void local_actor::delayed_send_tuple(const channel& whom,
-                                            const duration& rtime,
-                                            message data) {
-  delayed_send_impl(message_id::make(),
-                    actor_cast<abstract_channel*>(whom), rtime,
-                    std::move(data));
-}
-// </backward_compatibility>
 
 } // namespace caf
 
