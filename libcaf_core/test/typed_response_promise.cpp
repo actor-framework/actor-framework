@@ -40,10 +40,11 @@ public:
   behavior_type make_behavior() override {
     return {
       [=](get_atom, int x) -> foo_promise {
-        auto calculator = spawn([]() -> behavior {
+        auto calculator = spawn([](event_based_actor* self) -> behavior {
           return {
-            [](int promise_id, int value) -> message {
-              return make_message(put_atom::value, promise_id, value * value);
+            [self](int promise_id, int value) -> message {
+              self->quit();
+              return make_message(put_atom::value, promise_id, value * 2);
             }
           };
         });
