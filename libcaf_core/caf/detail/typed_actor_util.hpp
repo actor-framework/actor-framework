@@ -198,7 +198,7 @@ struct deduce_lifted_output_type<type_list<typed_continue_helper<R>>> {
   using type = typename lifted_result_type<R>::type;
 };
 
-template <class Signatures, typename InputTypes>
+template <class Signatures, class InputTypes>
 struct deduce_output_type {
   static constexpr int input_pos =
     tl_find_if<
