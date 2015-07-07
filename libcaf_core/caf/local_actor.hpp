@@ -53,6 +53,7 @@
 #include "caf/detail/logging.hpp"
 #include "caf/detail/disposer.hpp"
 #include "caf/detail/behavior_stack.hpp"
+#include "caf/detail/delegate_helper.hpp"
 #include "caf/detail/typed_actor_util.hpp"
 #include "caf/detail/single_reader_queue.hpp"
 #include "caf/detail/memory_cache_flag_type.hpp"
@@ -459,6 +460,80 @@ public:
 
   void forward_message(const actor& dest, message_priority mp);
 
+  template <class... Ts>
+  detail::delegate_helper<>
+  delegate(message_priority mp, const actor& dest, Ts&&... xs) {
+    static_assert(sizeof...(Ts) > 0, "no message to send");
+    if (! dest) {
+      return {};
+    }
+    auto mid = current_element_->mid;
+    current_element_->mid = mp == message_priority::high
+                             ? mid.with_high_priority()
+                             : mid.with_normal_priority();
+    current_element_->msg = make_message(std::forward<Ts>(xs)...);
+    dest->enqueue(std::move(current_element_), host());
+    return {};
+  }
+
+  template <class... Ts>
+  detail::delegate_helper<> delegate(const actor& dest, Ts&&... xs) {
+    return delegate(message_priority::normal,
+                    dest, std::forward<Ts>(xs)...);
+  }
+
+  template <class... DestSigs, class... Ts>
+  detail::delegate_helper<
+    either_or_t<
+      typename detail::deduce_output_type<
+        detail::type_list<DestSigs...>,
+        detail::type_list<
+          typename detail::implicit_conversions<
+            typename std::decay<Ts>::type
+          >::type...
+        >
+      >::type::first,
+      typename detail::deduce_output_type<
+        detail::type_list<DestSigs...>,
+        detail::type_list<
+          typename detail::implicit_conversions<
+            typename std::decay<Ts>::type
+          >::type...
+        >
+      >::type::second
+    >
+  > delegate(message_priority mp,
+             const typed_actor<DestSigs...>& dest,
+             Ts&&... xs) {
+    static_assert(sizeof...(Ts) > 0, "no message to send");
+    using token =
+      detail::type_list<
+        typename detail::implicit_conversions<
+          typename std::decay<Ts>::type
+        >::type...>;
+    token tk;
+    check_typed_input(dest, tk);
+    if (! dest) {
+      return {};
+    }
+    auto mid = current_element_->mid;
+    current_element_->mid = mp == message_priority::high
+                             ? mid.with_high_priority()
+                             : mid.with_normal_priority();
+    current_element_->msg = make_message(std::forward<Ts>(xs)...);
+    dest->enqueue(std::move(current_element_), host());
+    return {};
+  }
+
+  template <class... DestSigs, class... Ts>
+  auto delegate(const typed_actor<DestSigs...>& dest,
+                Ts&&... xs) -> decltype(delegate(message_priority::normal,
+                                                 dest,
+                                                 std::forward<Ts>(xs)...)) {
+    return delegate(message_priority::normal,
+                    dest, std::forward<Ts>(xs)...);
+  }
+  
   inline uint32_t planned_exit_reason() const {
     return planned_exit_reason_;
   }
@@ -594,7 +669,7 @@ private:
                   host());
   }
 
-  void send_impl(message_id mp, abstract_channel* dest, message what) const;
+  void send_impl(message_id mid, abstract_channel* dest, message what) const;
 
   void delayed_send_impl(message_id mid, const channel& whom,
                          const duration& rtime, message data);

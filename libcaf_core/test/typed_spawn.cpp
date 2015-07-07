@@ -203,7 +203,42 @@ void simple_relay(string_actor::pointer self, string_actor master, bool leaf) {
   });
 }
 
+void simple_relay_delegate(string_actor::pointer self, string_actor master, bool leaf) {
+  string_actor next =
+    leaf ? spawn_typed(simple_relay_delegate, master, false) : master;
+  self->link_to(next);
+  self->become(
+    [=](const string& str) {
+      return self->delegate(next, str);
+  });
+}
+
+void dynamic_relay_delegate(string_actor::pointer self, actor master, bool leaf) {
+  if (leaf) {
+    auto next = spawn_typed(dynamic_relay_delegate, master, false);
+    self->link_to(next);
+    self->become(
+      [=](const string& str) {
+        return self->delegate(next, str);
+    });
+  } else {
+    self->link_to(master);
+    self->become(
+      [=](const string& str) {
+        return self->delegate(master, str);
+    });
+  }
+}
+
 string_actor::behavior_type simple_string_reverter() {
+  return {
+    [](const string& str) {
+      return string{str.rbegin(), str.rend()};
+    }
+  };
+}
+
+behavior dynamic_string_reverter() {
   return {
     [](const string& str) {
       return string{str.rbegin(), str.rend()};
@@ -347,6 +382,36 @@ CAF_TEST(test_simple_string_reverter) {
   // actor-under-test
   auto aut = self->spawn_typed<monitored>(simple_relay,
                                           spawn_typed(simple_string_reverter),
+                                          true);
+  set<string> iface{"caf::replies_to<@str>::with<@str>"};
+  CAF_CHECK(aut->message_types() == iface);
+  self->sync_send(aut, "Hello World!").await([](const string& answer) {
+    CAF_CHECK_EQUAL(answer, "!dlroW olleH");
+  });
+  anon_send_exit(aut, exit_reason::user_shutdown);
+}
+
+CAF_TEST(test_simple_string_reverter_delegate) {
+  // run test series with string reverter
+  scoped_actor self;
+  // actor-under-test
+  auto aut = self->spawn_typed<monitored>(simple_relay_delegate,
+                                          spawn_typed(simple_string_reverter),
+                                          true);
+  set<string> iface{"caf::replies_to<@str>::with<@str>"};
+  CAF_CHECK(aut->message_types() == iface);
+  self->sync_send(aut, "Hello World!").await([](const string& answer) {
+    CAF_CHECK_EQUAL(answer, "!dlroW olleH");
+  });
+  anon_send_exit(aut, exit_reason::user_shutdown);
+}
+
+CAF_TEST(test_dynamic_string_reverter_delegate) {
+  // run test series with string reverter
+  scoped_actor self;
+  // actor-under-test
+  auto aut = self->spawn_typed<monitored>(dynamic_relay_delegate,
+                                          spawn(dynamic_string_reverter),
                                           true);
   set<string> iface{"caf::replies_to<@str>::with<@str>"};
   CAF_CHECK(aut->message_types() == iface);
