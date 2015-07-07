@@ -235,16 +235,25 @@ struct sender_signature_checker {
     using dest_output_types =
       typename deduce_output_type<
         DestSigs, ArgTypes
-      >::type::first;
+      >::type;
     sender_signature_checker<
       DestSigs, OrigSigs,
-      dest_output_types
+      typename dest_output_types::first
+    >::check();
+    sender_signature_checker<
+      DestSigs, OrigSigs,
+      typename dest_output_types::second
     >::check();
   }
 };
 
 template <class OrigSigs, class DestSigs>
 struct sender_signature_checker<OrigSigs, DestSigs, detail::type_list<void>> {
+  static void check() {}
+};
+
+template <class OrigSigs, class DestSigs>
+struct sender_signature_checker<OrigSigs, DestSigs, detail::type_list<>> {
   static void check() {}
 };
 
