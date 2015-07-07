@@ -426,7 +426,6 @@ std::atomic<size_t> s_ad_hoc_id;
 } // namespace <anonymous>
 
 void group_manager::stop() {
-  CAF_LOG_TRACE("");
   modules_map mm;
   { // critical section
     std::lock_guard<std::mutex> guard(mmap_mtx_);
