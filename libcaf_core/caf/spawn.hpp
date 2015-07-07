@@ -199,17 +199,23 @@ actor spawn_in_group(const group& grp, Ts&&... xs) {
 
 /// Infers the appropriate base class for a functor-based typed actor
 /// from the result and the first argument of the functor.
-template <class Result, class FirstArg>
+template <class Result,
+          class FirstArg,
+          bool FirstArgPtr = std::is_pointer<FirstArg>::value
+                             && std::is_base_of<
+                                  local_actor,
+                                  typename std::remove_pointer<FirstArg>::type
+                                >::value>
 struct infer_typed_actor_base;
 
 template <class... Sigs, class FirstArg>
-struct infer_typed_actor_base<typed_behavior<Sigs...>, FirstArg> {
+struct infer_typed_actor_base<typed_behavior<Sigs...>, FirstArg, false> {
   using type = typed_event_based_actor<Sigs...>;
 };
 
-template <class... Sigs>
-struct infer_typed_actor_base<void, typed_event_based_actor<Sigs...>*> {
-  using type = typed_event_based_actor<Sigs...>;
+template <class Result, class T>
+struct infer_typed_actor_base<Result, T*, true> {
+  using type = T;
 };
 
 /// Returns a new typed actor of type `C` using `xs...` as

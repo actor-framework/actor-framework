@@ -29,6 +29,8 @@
 #include "caf/typed_behavior.hpp"
 #include "caf/typed_response_promise.hpp"
 
+#include "caf/experimental/stateful_actor.hpp"
+
 namespace caf {
 
 class actor_addr;
@@ -91,6 +93,14 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
 
   /// Stores the template parameter pack.
   using signatures = detail::type_list<Sigs...>;
+
+  /// Identifies the base class for this kind of actor with actor.
+  template <class State>
+  using stateful_base = experimental::stateful_actor<State, base>;
+
+  /// Identifies the base class for this kind of actor with actor.
+  template <class State>
+  using stateful_pointer = experimental::stateful_actor<State, base>*;
 
   typed_actor() = default;
   typed_actor(typed_actor&&) = default;
