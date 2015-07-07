@@ -373,6 +373,40 @@ CAF_TEST(test_sending_typed_actors_and_down_msg) {
   self->receive([](int i) { CAF_CHECK_EQUAL(i, 100); });
 }
 
+CAF_TEST(check_signature) {
+  using foo_type = typed_actor<replies_to<put_atom>::
+                               with_either<ok_atom>::or_else<error_atom>>;
+  using foo_result_type = either<ok_atom>::or_else<error_atom>;
+  using bar_type = typed_actor<reacts_to<ok_atom>, reacts_to<error_atom>>;
+  auto foo_action = [](foo_type::pointer self) -> foo_type::behavior_type {
+    return {
+      [=] (put_atom) -> foo_result_type {
+        self->quit();
+        return {ok_atom::value};
+      }
+    };
+  };
+  auto bar_action = [=](bar_type::pointer self) -> bar_type::behavior_type {
+    auto foo = self->spawn_typed<linked>(foo_action);
+    self->send(foo, put_atom::value);
+    return {
+      [=](ok_atom) {
+        self->quit();
+      },
+      [=](error_atom) {
+        self->quit(exit_reason::user_defined);
+      }
+    };
+  };
+  scoped_actor self;
+  self->spawn_typed<monitored>(bar_action);
+  self->receive(
+    [](const down_msg& dm) {
+      CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
+    }
+  );
+}
+
 CAF_TEST_FIXTURE_SCOPE_END()
 
 #endif // CAF_WINDOWS
