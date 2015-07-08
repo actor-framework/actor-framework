@@ -36,7 +36,8 @@ namespace experimental {
 template <class State, class Base = event_based_actor>
 class stateful_actor : public Base {
 public:
-  stateful_actor() : state(state_) {
+  template <class... Ts>
+  stateful_actor(Ts&&... xs) : Base(std::forward<Ts>(xs)...), state(state_) {
     // nop
   }
 

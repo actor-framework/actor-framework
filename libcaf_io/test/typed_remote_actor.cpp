@@ -147,5 +147,6 @@ CAF_TEST(test_typed_remote_actor) {
       }
     );
   }
+  await_all_actors_done();
   shutdown();
 }

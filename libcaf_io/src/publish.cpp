@@ -35,13 +35,14 @@
 namespace caf {
 namespace io {
 
-uint16_t publish_impl(abstract_actor_ptr whom, uint16_t port,
-                      const char* in, bool ru) {
-  if (whom == nullptr) {
+uint16_t publish_impl(uint16_t port, actor_addr whom,
+                      std::set<std::string> sigs, const char* in, bool ru) {
+  if (whom == invalid_actor_addr) {
     throw network_error("cannot publish an invalid actor");
   }
   CAF_LOGF_TRACE("whom = " << to_string(whom->address())
-                 << ", " << CAF_ARG(port) << ", in = " << (in ? in : "")
+                 << ", " << CAF_ARG(port)
+                 << ", in = " << (in ? in : "")
                  << ", " << CAF_ARG(ru));
   std::string str;
   if (in != nullptr) {
@@ -52,7 +53,8 @@ uint16_t publish_impl(abstract_actor_ptr whom, uint16_t port,
   uint16_t result;
   std::string error_msg;
   try {
-    self->sync_send(mm, put_atom::value, whom->address(), port, str, ru).await(
+    self->sync_send(mm, put_atom::value, port,
+                    std::move(whom), std::move(sigs), str, ru).await(
       [&](ok_atom, uint16_t res) {
         result = res;
       },

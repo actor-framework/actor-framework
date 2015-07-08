@@ -156,7 +156,7 @@ connection_handle asio_multiplexer::add_tcp_scribe(abstract_broker* self,
     bool launched_;
     stream<Socket> stream_;
   };
-  abstract_broker::scribe_pointer ptr = make_counted<impl>(self, std::move(sock));
+  abstract_broker::scribe_ptr ptr = make_counted<impl>(self, std::move(sock));
   self->add_scribe(ptr);
   return ptr->hdl();
 }
@@ -214,7 +214,8 @@ asio_multiplexer::add_tcp_doorman(abstract_broker* self,
   public:
     impl(abstract_broker* ptr, default_socket_acceptor&& s,
          network::asio_multiplexer& am)
-        : doorman(ptr, network::accept_hdl_from_socket(s)),
+        : doorman(ptr, network::accept_hdl_from_socket(s),
+                  s.local_endpoint().port()),
           acceptor_(am, s.get_io_service()) {
       acceptor_.init(std::move(s));
     }
@@ -236,10 +237,10 @@ asio_multiplexer::add_tcp_doorman(abstract_broker* self,
       acceptor_.start(this);
     }
 
- private:
+  private:
     network::acceptor<default_socket_acceptor> acceptor_;
   };
-  abstract_broker::doorman_pointer ptr
+  abstract_broker::doorman_ptr ptr
     = make_counted<impl>(self, std::move(sock), *this);
   self->add_doorman(ptr);
   return ptr->hdl();

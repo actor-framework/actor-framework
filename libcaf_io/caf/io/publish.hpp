@@ -20,6 +20,8 @@
 #ifndef CAF_IO_PUBLISH_HPP
 #define CAF_IO_PUBLISH_HPP
 
+#include <set>
+#include <string>
 #include <cstdint>
 
 #include "caf/actor.hpp"
@@ -29,8 +31,9 @@
 namespace caf {
 namespace io {
 
-uint16_t publish_impl(abstract_actor_ptr whom, uint16_t port,
-                      const char* in, bool reuse_addr);
+uint16_t publish_impl(uint16_t port, actor_addr whom,
+                      std::set<std::string> sigs, const char* in,
+                      bool reuse_addr);
 
 /// Publishes `whom` at `port`. The connection is managed by the middleman.
 /// @param whom Actor that should be published at `port`.
@@ -44,8 +47,7 @@ inline uint16_t publish(caf::actor whom, uint16_t port,
   if (! whom) {
     return 0;
   }
-  return publish_impl(actor_cast<abstract_actor_ptr>(whom), port, in,
-                      reuse_addr);
+  return publish_impl(port, whom->address(), {}, in, reuse_addr);
 }
 
 /// @copydoc publish(actor,uint16_t,const char*)
@@ -55,8 +57,8 @@ uint16_t typed_publish(typed_actor<Sigs...> whom, uint16_t port,
   if (! whom) {
     return 0;
   }
-  return publish_impl(actor_cast<abstract_actor_ptr>(whom), port, in,
-                      reuse_addr);
+  return publish_impl(port, whom->address(), whom.message_types(),
+                      in, reuse_addr);
 }
 
 } // namespace io

@@ -103,6 +103,9 @@ namespace caf {
 namespace io {
 namespace network {
 
+// helper function
+uint16_t port_of_fd(native_socket fd);
+
 /******************************************************************************
  *           platform-dependent implementations           *
  ******************************************************************************/
@@ -768,7 +771,7 @@ connection_handle default_multiplexer::add_tcp_scribe(abstract_broker* self,
     bool launched_;
     stream<default_socket> stream_;
   };
-  abstract_broker::scribe_pointer ptr = make_counted<impl>(self, std::move(sock));
+  abstract_broker::scribe_ptr ptr = make_counted<impl>(self, std::move(sock));
   self->add_scribe(ptr);
   return ptr->hdl();
 }
@@ -781,7 +784,7 @@ default_multiplexer::add_tcp_doorman(abstract_broker* self,
   class impl : public abstract_broker::doorman {
   public:
     impl(abstract_broker* ptr, default_socket_acceptor&& s)
-        : doorman(ptr, network::accept_hdl_from_socket(s)),
+        : doorman(ptr, network::accept_hdl_from_socket(s), port_of_fd(s.fd())),
           acceptor_(s.backend()) {
       acceptor_.init(std::move(s));
     }
@@ -805,7 +808,7 @@ default_multiplexer::add_tcp_doorman(abstract_broker* self,
  private:
     network::acceptor<default_socket_acceptor> acceptor_;
   };
-  abstract_broker::doorman_pointer ptr = make_counted<impl>(self, std::move(sock));
+  abstract_broker::doorman_ptr ptr = make_counted<impl>(self, std::move(sock));
   self->add_doorman(ptr);
   return ptr->hdl();
 }
@@ -1196,6 +1199,14 @@ new_tcp_acceptor(uint16_t port, const char* addr, bool reuse) {
   CAF_ASSERT(port == 0 || bound_port == port);
   return {default_socket_acceptor{backend, std::move(acceptor.first)},
                                   bound_port};
+}
+
+uint16_t port_of_fd(native_socket fd) {
+  sockaddr_storage st;
+  socklen_t st_len = sizeof(st);
+  ccall(cc_zero, "getsocketname() failed", getsockname,
+        fd, reinterpret_cast<sockaddr*>(&st), &st_len);
+  return ntohs(port_of(reinterpret_cast<sockaddr&>(st)));
 }
 
 } // namespace network

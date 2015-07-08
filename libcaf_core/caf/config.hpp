@@ -93,6 +93,9 @@
     _Pragma("clang diagnostic ignored \"-Wdisabled-macro-expansion\"")         \
     _Pragma("clang diagnostic ignored \"-Wunreachable-code\"")                 \
     _Pragma("clang diagnostic ignored \"-Wsign-conversion\"")
+#  define CAF_PUSH_NON_VIRTUAL_DTOR_WARNING                                    \
+    _Pragma("clang diagnostic push")                                           \
+    _Pragma("clang diagnostic ignored \"-Wnon-virtual-dtor\"")
 #  define CAF_POP_WARNINGS                                                     \
     _Pragma("clang diagnostic pop")
 #  define CAF_ANNOTATE_FALLTHROUGH [[clang::fallthrough]]
@@ -102,6 +105,7 @@
 #  define CAF_GCC
 #  define CAF_DEPRECATED __attribute__((__deprecated__))
 #  define CAF_PUSH_WARNINGS
+#  define CAF_PUSH_NON_VIRTUAL_DTOR_WARNING
 #  define CAF_POP_WARNINGS
 #  define CAF_ANNOTATE_FALLTHROUGH static_cast<void>(0)
 #  define CAF_COMPILER_VERSION                                                 \
@@ -110,6 +114,7 @@
 #  define CAF_MSVC
 #  define CAF_DEPRECATED
 #  define CAF_PUSH_WARNINGS
+#  define CAF_PUSH_NON_VIRTUAL_DTOR_WARNING
 #  define CAF_POP_WARNINGS
 #  define CAF_ANNOTATE_FALLTHROUGH static_cast<void>(0)
 #  define CAF_COMPILER_VERSION _MSC_FULL_VER

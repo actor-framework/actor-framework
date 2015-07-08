@@ -23,6 +23,7 @@
 #include <string>
 #include <cstddef> // size_t
 
+#include "caf/uniform_typeid.hpp"
 #include "caf/uniform_type_info.hpp"
 #include "caf/primitive_variant.hpp"
 
@@ -64,16 +65,18 @@ public:
   /// @param data Raw data.
   virtual void write_raw(size_t num_bytes, const void* data) = 0;
 
-  inline actor_namespace* get_namespace() { return namespace_; }
+  inline actor_namespace* get_namespace() {
+    return namespace_;
+  }
 
   template <class T>
-  inline serializer& write(const T& val) {
+  serializer& write(const T& val) {
     write_value(val);
     return *this;
   }
 
   template <class T>
-  inline serializer& write(const T& val, const uniform_type_info* uti) {
+  serializer& write(const T& val, const uniform_type_info* uti) {
     uti->serialize(&val, this);
     return *this;
   }
@@ -83,18 +86,25 @@ private:
 };
 
 /// Serializes a value to `s`.
-/// @param s A valid serializer.
-/// @param what A value of an announced or primitive type.
-/// @returns `s`
 /// @relates serializer
 template <class T>
-serializer& operator<<(serializer& s, const T& what) {
-  auto mtype = uniform_typeid<T>();
-  if (mtype == nullptr) {
-    throw std::logic_error("no uniform type info found for T");
-  }
-  mtype->serialize(&what, &s);
-  return s;
+typename std::enable_if<
+  detail::is_primitive<T>::value,
+  serializer&
+>::type
+operator<<(serializer& sink, const T& value) {
+  return sink.write(value);
+}
+
+/// Serializes a value to `s`.
+/// @relates serializer
+template <class T>
+typename std::enable_if<
+  ! detail::is_primitive<T>::value,
+  serializer&
+>::type
+operator<<(serializer& sink, const T& value) {
+  return sink.write(value, uniform_typeid<T>());
 }
 
 } // namespace caf

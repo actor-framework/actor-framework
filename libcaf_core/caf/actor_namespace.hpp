@@ -50,6 +50,9 @@ public:
 
   actor_namespace(backend& mgm);
 
+  actor_namespace(const actor_namespace&) = delete;
+  actor_namespace& operator=(const actor_namespace&) = delete;
+
   /// Writes an actor address to `sink` and adds the actor
   /// to the list of known actors for a later deserialization.
   void write(serializer* sink, const actor_addr& ptr);

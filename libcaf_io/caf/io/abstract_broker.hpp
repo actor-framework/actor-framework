@@ -20,8 +20,8 @@
 #ifndef CAF_IO_ABSTRACT_BROKER_HPP
 #define CAF_IO_ABSTRACT_BROKER_HPP
 
-#include <map>
 #include <vector>
+#include <unordered_map>
 
 #include "caf/detail/intrusive_partitioned_list.hpp"
 
@@ -105,6 +105,8 @@ public:
 
     void io_failure(network::operation op) override;
 
+    void consume(const void* data, size_t num_bytes) override;
+
   protected:
     virtual buffer_type& rd_buf() = 0;
 
@@ -120,19 +122,17 @@ public:
 
     message disconnect_message() override;
 
-    void consume(const void* data, size_t num_bytes) override;
-
     connection_handle hdl_;
 
     message read_msg_;
   };
 
-  using scribe_pointer = intrusive_ptr<scribe>;
+  using scribe_ptr = intrusive_ptr<scribe>;
 
   /// Manages incoming connections.
   class doorman : public network::acceptor_manager, public servant {
   public:
-    doorman(abstract_broker* parent, accept_handle hdl);
+    doorman(abstract_broker* parent, accept_handle hdl, uint16_t local_port);
 
     ~doorman();
 
@@ -144,6 +144,10 @@ public:
 
     // needs to be launched explicitly
     virtual void launch() = 0;
+
+    uint16_t port() const {
+      return port_;
+    }
 
   protected:
     void remove_from_broker() override;
@@ -159,11 +163,11 @@ public:
     }
 
     accept_handle hdl_;
-
     message accept_msg_;
+    uint16_t port_;
   };
 
-  using doorman_pointer = intrusive_ptr<doorman>;
+  using doorman_ptr = intrusive_ptr<doorman>;
 
   // a broker needs friends
   friend class scribe;
@@ -195,7 +199,11 @@ public:
 
   /// @cond PRIVATE
 
-  inline void add_scribe(const scribe_pointer& ptr) {
+  inline middleman& parent() {
+    return mm_;
+  }
+
+  inline void add_scribe(const scribe_ptr& ptr) {
     scribes_.emplace(ptr->hdl(), ptr);
   }
 
@@ -205,7 +213,7 @@ public:
 
   connection_handle add_tcp_scribe(network::native_socket fd);
 
-  inline void add_doorman(const doorman_pointer& ptr) {
+  inline void add_doorman(const doorman_ptr& ptr) {
     doormen_.emplace(ptr->hdl(), ptr);
     if (is_initialized()) {
       ptr->launch();
@@ -220,6 +228,12 @@ public:
 
   accept_handle add_tcp_doorman(network::native_socket fd);
 
+  /// Returns the local port associated to `hdl` or `0` if `hdl` is invalid.
+  uint16_t local_port(accept_handle hdl);
+
+  /// Returns the handle associated to given local `port` or `none`.
+  optional<accept_handle> hdl_by_port(uint16_t port);
+
   void invoke_message(mailbox_element_ptr& msg);
 
   void invoke_message(const actor_addr& sender,
@@ -228,54 +242,78 @@ public:
   /// Closes all connections and acceptors.
   void close_all();
 
-  /// Closes the connection identified by `handle`.
+  /// Closes the connection or acceptor identified by `handle`.
   /// Unwritten data will still be send.
-  void close(connection_handle handle);
+  template <class Handle>
+  void close(Handle hdl) {
+    by_id(hdl).stop_reading();
+  }
 
-  /// Closes the acceptor identified by `handle`.
-  void close(accept_handle handle);
-
-  /// Checks whether a connection for `handle` exists.
-  bool valid(connection_handle handle);
-
-  /// Checks whether an acceptor for `handle` exists.
-  bool valid(accept_handle handle);
+  /// Checks whether `hdl` is assigned to broker.
+  template <class Handle>
+  bool valid(Handle hdl) {
+    return get_map(hdl).count(hdl) > 0;
+  }
 
 protected:
   abstract_broker();
 
   abstract_broker(middleman& parent_ref);
 
-  /// @endcond
+  using doorman_map = std::unordered_map<accept_handle, doorman_ptr>;
 
-  inline middleman& parent() {
-    return mm_;
+  using scribe_map = std::unordered_map<connection_handle, scribe_ptr>;
+
+  // meta programming utility
+  inline doorman_map& get_map(accept_handle) {
+    return doormen_;
   }
+
+  // meta programming utility
+  inline scribe_map& get_map(connection_handle) {
+    return scribes_;
+  }
+
+  // meta programming utility (not implemented)
+  static doorman_ptr ptr_of(accept_handle);
+
+  // meta programming utility (not implemented)
+  static scribe_ptr ptr_of(connection_handle);
+
+  /// @endcond
 
   network::multiplexer& backend();
 
-  template <class Handle, class T>
-  static T& by_id(Handle hdl, std::map<Handle, intrusive_ptr<T>>& elements) {
+  /// Returns a `scribe` or `doorman` identified by `hdl`.
+  template <class Handle>
+  auto by_id(Handle hdl) -> decltype(*ptr_of(hdl)) {
+    auto& elements = get_map(hdl);
     auto i = elements.find(hdl);
-    if (i == elements.end()) {
+    if (i == elements.end())
       throw std::invalid_argument("invalid handle");
-    }
     return *(i->second);
   }
 
-  // throws on error
-  inline scribe& by_id(connection_handle hdl) {
-    return by_id(hdl, scribes_);
+  /// Returns an intrusive pointer to a `scribe` or `doorman`
+  /// identified by `hdl` and remove it from this broker.
+  template <class Handle>
+  auto take(Handle hdl) -> decltype(ptr_of(hdl)) {
+    using std::swap;
+    auto& elements = get_map(hdl);
+    decltype(ptr_of(hdl)) result;
+    auto i = elements.find(hdl);
+    if (i == elements.end())
+      throw std::invalid_argument("invalid handle");
+    swap(result, i->second);
+    elements.erase(i);
+    return result;
   }
-
-  // throws on error
-  inline doorman& by_id(accept_handle hdl) { return by_id(hdl, doormen_); }
 
   bool invoke_message_from_cache();
 
-  std::map<accept_handle, doorman_pointer> doormen_;
-  std::map<connection_handle, scribe_pointer> scribes_;
-
+private:
+  doorman_map doormen_;
+  scribe_map scribes_;
   middleman& mm_;
   detail::intrusive_partitioned_list<mailbox_element, detail::disposer> cache_;
 };

@@ -23,11 +23,12 @@
 #include <array>
 #include <string>
 #include <cstdint>
+#include <functional>
 
-#include "caf/intrusive_ptr.hpp"
-
+#include "caf/fwd.hpp"
 #include "caf/config.hpp"
 #include "caf/ref_counted.hpp"
+#include "caf/intrusive_ptr.hpp"
 
 #include "caf/detail/comparable.hpp"
 
@@ -66,6 +67,9 @@ public:
   /// A 160 bit hash (20 bytes).
   static constexpr size_t host_id_size = 20;
 
+  /// The size of a `node_id` in serialized form.
+  static constexpr size_t serialized_size = host_id_size + sizeof(uint32_t);
+
   /// Represents a 160 bit hash.
   using host_id_type = std::array<uint8_t, host_id_size>;
 
@@ -90,6 +94,10 @@ public:
 
   /// @cond PRIVATE
 
+  void serialize(serializer& sink) const;
+
+  void deserialize(deserializer& source);
+
   // A reference counted container for host ID and process ID.
   class data : public ref_counted {
   public:
@@ -111,6 +119,8 @@ public:
     int compare(const node_id& other) const;
 
     ~data();
+
+    data();
 
     data(uint32_t procid, host_id_type hid);
 
@@ -136,5 +146,21 @@ private:
 };
 
 } // namespace caf
+
+namespace std{
+
+template<>
+struct hash<caf::node_id> {
+  size_t operator()(const caf::node_id& nid) const {
+    if (nid == caf::invalid_node_id)
+      return 0;
+    // xor the first few bytes from the node ID and the process ID
+    auto x = static_cast<size_t>(nid.process_id());
+    auto y = *(reinterpret_cast<const size_t*>(&nid.host_id()));
+    return x ^ y;
+  }
+};
+
+} // namespace std
 
 #endif // CAF_NODE_ID_HPP

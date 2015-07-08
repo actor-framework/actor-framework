@@ -150,8 +150,11 @@ public:
     } else {
       file_name = std::move(full_file_name);
     }
+    auto t0 = std::chrono::high_resolution_clock::now().time_since_epoch();
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t0).count();
+    //auto tstamp = std::chrono::duration_cast<std::chrono::microseconds>(t0).count();
     std::ostringstream line;
-    line << time(0) << " " << level << " "
+    line << ms << " " << level << " "
          << "actor" << get_aid() << " " << std::this_thread::get_id() << " "
          << class_name << " " << function_name << " " << file_name << ":"
          << line_num << " " << msg << std::endl;

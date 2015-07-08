@@ -26,6 +26,7 @@
 #include <functional>
 #include <type_traits>
 
+#include "caf/fwd.hpp"
 #include "caf/serializer.hpp"
 #include "caf/primitive_variant.hpp"
 
@@ -36,26 +37,15 @@ namespace caf {
 
 /// Implements the serializer interface with a binary serialization protocol.
 class binary_serializer : public serializer {
-
-  using super = serializer;
-
 public:
-
-  using write_fun = std::function<void(const char*, size_t)>;
-
   /// Creates a binary serializer writing to given iterator position.
   template <class OutIter>
   explicit binary_serializer(OutIter iter, actor_namespace* ns = nullptr)
-      : super(ns) {
-    struct fun {
-      fun(OutIter pos) : pos_(pos) {}
-      void operator()(const char* first, size_t num_bytes) {
-        pos_ = std::copy(first, first + num_bytes, pos_);
-      }
-      OutIter pos_;
-    };
-    out_ = fun{iter};
+      : serializer(ns) {
+    reset(iter);
   }
+
+  using write_fun = std::function<void(const char*, size_t)>;
 
   void begin_object(const uniform_type_info* uti) override;
 
@@ -69,16 +59,23 @@ public:
 
   void write_raw(size_t num_bytes, const void* data) override;
 
+  template <class OutIter>
+  void reset(OutIter iter) {
+    struct fun {
+      fun(OutIter pos) : pos_(pos) {
+        // nop
+      }
+      void operator()(const char* first, size_t num_bytes) {
+        pos_ = std::copy(first, first + num_bytes, pos_);
+      }
+      OutIter pos_;
+    };
+    out_ = fun{iter};
+  }
+
 private:
   write_fun out_;
 };
-
-template <class T,
-          class = typename std::enable_if<detail::is_primitive<T>::value>::type>
-binary_serializer& operator<<(binary_serializer& bs, const T& value) {
-  bs.write_value(value);
-  return bs;
-}
 
 } // namespace caf
 

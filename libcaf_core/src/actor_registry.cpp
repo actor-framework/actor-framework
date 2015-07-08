@@ -78,6 +78,11 @@ void actor_registry::put(actor_id key, const abstract_actor_ptr& val) {
   val->attach_functor([key, reg](uint32_t reason) { reg->erase(key, reason); });
 }
 
+void actor_registry::put(actor_id key, const actor_addr& value) {
+  auto ptr = actor_cast<abstract_actor_ptr>(value);
+  put(key, ptr);
+}
+
 void actor_registry::erase(actor_id key, uint32_t reason) {
   exclusive_guard guard(instances_mtx_);
   auto i = entries_.find(key);

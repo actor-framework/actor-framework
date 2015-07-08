@@ -21,12 +21,15 @@
 
 #include <iostream>
 
+#include "caf/serializer.hpp"
+#include "caf/deserializer.hpp"
 #include "caf/message_handler.hpp"
 #include "caf/string_algorithms.hpp"
 
 #include "caf/detail/singletons.hpp"
 #include "caf/detail/decorated_tuple.hpp"
 #include "caf/detail/concatenated_tuple.hpp"
+#include "caf/detail/uniform_type_info_map.hpp"
 
 namespace caf {
 
@@ -41,6 +44,33 @@ message::message(const data_ptr& ptr) : vals_(ptr) {
 message& message::operator=(message&& other) {
   vals_.swap(other.vals_);
   return *this;
+}
+
+void message::serialize(serializer& sink) const {
+  // ttn can be nullptr even if tuple is not empty (in case of object_array)
+  std::string tname = empty() ? "@<>" : tuple_type_names();
+  auto uti_map = detail::singletons::get_uniform_type_info_map();
+  auto uti = uti_map->by_uniform_name(tname);
+  if (uti == nullptr) {
+    std::string err = "could not get uniform type info for \"";
+    err += tname;
+    err += "\"";
+    CAF_LOGF_ERROR(err);
+    throw std::runtime_error(err);
+  }
+  sink.begin_object(uti);
+  for (size_t i = 0; i < size(); ++i) {
+    uniform_type_info::from(uniform_name_at(i))->serialize(at(i), &sink);
+  }
+  sink.end_object();
+}
+
+void message::deserialize(deserializer& source) {
+  auto uti = source.begin_object();
+  auto uval = uti->create();
+  uti->deserialize(uval->val, &source);
+  source.end_object();
+  *this = uti->as_message(uval->val);
 }
 
 void message::reset(raw_ptr new_ptr, bool add_ref) {

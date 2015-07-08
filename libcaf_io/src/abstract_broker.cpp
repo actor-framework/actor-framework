@@ -92,7 +92,6 @@ void abstract_broker::cleanup(uint32_t reason) {
   close_all();
   CAF_ASSERT(doormen_.empty());
   CAF_ASSERT(scribes_.empty());
-  CAF_ASSERT(current_mailbox_element() == nullptr);
   cache_.clear();
   local_actor::cleanup(reason);
   deref(); // release implicit reference count from middleman
@@ -155,12 +154,16 @@ void abstract_broker::scribe::consume(const void*, size_t num_bytes) {
     return;
   }
   auto& buf = rd_buf();
-  buf.resize(num_bytes);                       // make sure size is correct
-  read_msg().buf.swap(buf);                    // swap into message
-  broker_->invoke_message(invalid_actor_addr, // call client
-                           invalid_message_id, read_msg_);
-  read_msg().buf.swap(buf); // swap buffer back to stream
-  flush();                  // implicit flush of wr_buf()
+  CAF_ASSERT(buf.size() >= num_bytes);
+  // make sure size is correct, swap into message, and then call client
+  buf.resize(num_bytes);
+  read_msg().buf.swap(buf);
+  broker_->invoke_message(invalid_actor_addr, invalid_message_id, read_msg_);
+  // swap buffer back to stream and implicitly flush wr_buf()
+  if (broker_->exit_reason() == exit_reason::not_exited) {
+    read_msg().buf.swap(buf);
+    flush();
+  }
 }
 
 void abstract_broker::scribe::io_failure(network::operation op) {
@@ -171,8 +174,12 @@ void abstract_broker::scribe::io_failure(network::operation op) {
   disconnect(true);
 }
 
-abstract_broker::doorman::doorman(abstract_broker* ptr, accept_handle acc_hdl)
-    : servant(ptr), hdl_(acc_hdl) {
+abstract_broker::doorman::doorman(abstract_broker* ptr,
+                                  accept_handle acc_hdl,
+                                  uint16_t p)
+    : servant(ptr),
+      hdl_(acc_hdl),
+      port_(p) {
   auto hdl2 = connection_handle::from_int(-1);
   accept_msg_ = make_message(new_connection_msg{hdl_, hdl2});
 }
@@ -202,7 +209,8 @@ abstract_broker::~abstract_broker() {
   CAF_LOG_TRACE("");
 }
 
-void abstract_broker::configure_read(connection_handle hdl, receive_policy::config cfg) {
+void abstract_broker::configure_read(connection_handle hdl,
+                                     receive_policy::config cfg) {
   CAF_LOG_TRACE(CAF_MARG(hdl, id) << ", cfg = {" << static_cast<int>(cfg.first)
                                   << ", " << cfg.second << "}");
   by_id(hdl).configure_read(cfg);
@@ -265,6 +273,18 @@ void abstract_broker::assign_tcp_doorman(accept_handle hdl) {
 accept_handle abstract_broker::add_tcp_doorman(network::native_socket fd) {
   CAF_LOG_TRACE(CAF_ARG(fd));
   return backend().add_tcp_doorman(this, fd);
+}
+
+uint16_t abstract_broker::local_port(accept_handle hdl) {
+  auto i = doormen_.find(hdl);
+  return i != doormen_.end() ? i->second->port() : 0;
+}
+
+optional<accept_handle> abstract_broker::hdl_by_port(uint16_t port) {
+  for (auto& kvp : doormen_)
+    if (kvp.second->port() == port)
+      return kvp.first;
+  return none;
 }
 
 void abstract_broker::invoke_message(mailbox_element_ptr& ptr) {
@@ -350,22 +370,6 @@ void abstract_broker::close_all() {
     // stop_reading will remove the scribe from scribes_
     scribes_.begin()->second->stop_reading();
   }
-}
-
-void abstract_broker::close(connection_handle hdl) {
-  by_id(hdl).stop_reading();
-}
-
-void abstract_broker::close(accept_handle hdl) {
-  by_id(hdl).stop_reading();
-}
-
-bool abstract_broker::valid(connection_handle hdl) {
-  return scribes_.count(hdl) > 0;
-}
-
-bool abstract_broker::valid(accept_handle hdl) {
-  return doormen_.count(hdl) > 0;
 }
 
 abstract_broker::abstract_broker() : mm_(*middleman::instance()) {

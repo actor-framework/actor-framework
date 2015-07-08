@@ -26,8 +26,6 @@
 
 #include "caf/all.hpp"
 
-using std::cout;
-using std::endl;
 using namespace caf;
 
 using check_atom = caf::atom_constant<caf::atom("check")>;

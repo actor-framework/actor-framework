@@ -18,6 +18,7 @@
  ******************************************************************************/
 
 #include "caf/serializer.hpp"
+#include "caf/uniform_type_info.hpp"
 
 namespace caf {
 

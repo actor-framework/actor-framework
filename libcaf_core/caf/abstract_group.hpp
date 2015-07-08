@@ -142,7 +142,7 @@ public:
   virtual void stop() = 0;
 
 protected:
-  abstract_group(module_ptr module, std::string group_id);
+  abstract_group(module_ptr module, std::string group_id, const node_id& nid);
   // called by subscription objects
   virtual void unsubscribe(const actor_addr& who) = 0;
   module_ptr module_;

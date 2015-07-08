@@ -20,22 +20,40 @@
 #ifndef CAF_BINARY_DESERIALIZER_HPP
 #define CAF_BINARY_DESERIALIZER_HPP
 
+#include <cstddef>
+
 #include "caf/deserializer.hpp"
 
 namespace caf {
 
 /// Implements the deserializer interface with a binary serialization protocol.
 class binary_deserializer : public deserializer {
-
-  using super = deserializer;
-
 public:
-
   binary_deserializer(const void* buf, size_t buf_size,
-            actor_namespace* ns = nullptr);
+                      actor_namespace* ns = nullptr);
 
   binary_deserializer(const void* begin, const void* end_,
-            actor_namespace* ns = nullptr);
+                      actor_namespace* ns = nullptr);
+
+  binary_deserializer(const binary_deserializer& other);
+
+  binary_deserializer& operator=(const binary_deserializer& other);
+
+  /// Replaces the current read buffer.
+  void set_rdbuf(const void* buf, size_t buf_size);
+
+  /// Replaces the current read buffer.
+  void set_rdbuf(const void* begin, const void* end_);
+
+  /// Returns whether this deserializer has reached the end of its buffer.
+  bool at_end() const;
+
+  /// Compares the next `num_bytes` from the underlying buffer to `buf`
+  /// with same semantics as `strncmp(this->pos_, buf, num_bytes) == 0`.
+  bool buf_equals(const void* buf, size_t num_bytes);
+
+  /// Moves the current read position in the buffer by `num_bytes`.
+  binary_deserializer& advance(ptrdiff_t num_bytes);
 
   const uniform_type_info* begin_object() override;
   void end_object() override;
@@ -44,24 +62,10 @@ public:
   void read_value(primitive_variant& storage) override;
   void read_raw(size_t num_bytes, void* storage) override;
 
-  /// Replaces the current read buffer.
-  void set_rdbuf(const void* buf, size_t buf_size);
-
-  /// Replaces the current read buffer.
-  void set_rdbuf(const void* begin, const void* end_);
-
 private:
-
   const void* pos_;
   const void* end_;
-
 };
-
-template <class T>
-inline binary_deserializer& operator>>(binary_deserializer& lhs, T& rhs) {
-  rhs = lhs.read<T>();
-  return lhs;
-}
 
 } // namespace caf
 

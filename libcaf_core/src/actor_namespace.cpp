@@ -91,9 +91,10 @@ std::vector<actor_proxy_ptr> actor_namespace::get_all() const {
   std::vector<actor_proxy_ptr> result;
   for (auto& outer : proxies_) {
     for (auto& inner : outer.second) {
-      auto ptr = inner.second->get();
-      if (ptr) {
-        result.push_back(std::move(ptr));
+      if (inner.second) {
+        auto ptr = inner.second->get();
+        if (ptr)
+          result.push_back(std::move(ptr));
       }
     }
   }
@@ -108,9 +109,11 @@ actor_namespace::get_all(const key_type& node) const {
     return result;
   auto& submap = i->second;
   for (auto& kvp : submap) {
-    auto ptr = kvp.second->get();
-    if (ptr)
-      result.push_back(std::move(ptr));
+    if (kvp.second) {
+      auto ptr = kvp.second->get();
+      if (ptr)
+        result.push_back(std::move(ptr));
+    }
   }
   return result;
 }
@@ -140,7 +143,9 @@ actor_proxy_ptr actor_namespace::get_or_put(const key_type& node,
   // or if we've found an expired one in the map
   if (! anchor || ! result) {
     result = backend_.make_proxy(node, aid);
-    anchor = result->get_anchor();
+    if (result) {
+      anchor = result->get_anchor();
+    }
   }
   return result;
 }

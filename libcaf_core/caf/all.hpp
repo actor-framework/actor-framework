@@ -166,6 +166,9 @@
 /// @namespace caf::io
 /// Contains all network-related classes and functions.
 ///
+/// @namespace caf::io::basp
+/// Contains all classes and functions for the Binary Actor Sytem Protocol.
+///
 /// @defgroup MessageHandling Message handling.
 ///
 /// This is the beating heart of `libcaf`. Actor programming is

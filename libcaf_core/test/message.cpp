@@ -25,8 +25,6 @@
 #include "caf/message.hpp"
 #include "caf/message_builder.hpp"
 
-using std::cout;
-using std::endl;
 using namespace caf;
 
 CAF_TEST(drop) {

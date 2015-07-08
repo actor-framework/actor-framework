@@ -24,6 +24,7 @@
 #include "caf/config.hpp"
 #include "caf/node_id.hpp"
 #include "caf/serializer.hpp"
+#include "caf/deserializer.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/string_algorithms.hpp"
 #include "caf/primitive_variant.hpp"
@@ -91,6 +92,10 @@ int node_id::compare(const node_id& other) const {
             : (process_id() == other.process_id() ? 0 : 1));
 }
 
+node_id::data::data() : pid_(0) {
+  // nop
+}
+
 node_id::data::data(uint32_t procid, host_id_type hid)
     : pid_(procid),
       host_(hid) {
@@ -149,6 +154,23 @@ uint32_t node_id::process_id() const {
 
 const node_id::host_id_type& node_id::host_id() const {
   return data_ ? data_->host_ : invalid_host_id;
+}
+
+void node_id::serialize(serializer& sink) const {
+  sink.write_raw(host_id().size(), host_id().data());
+  sink.write_value(process_id());
+}
+
+void node_id::deserialize(deserializer& source) {
+  if (! data_ || ! data_->unique())
+    data_.reset(new data);
+  source.read_raw(node_id::host_id_size, data_->host_.data());
+  data_->pid_ = source.read<uint32_t>();
+  auto is_zero = [](uint8_t value) { return value == 0; };
+  // no need to keep the data if this is invalid
+  if (data_->pid_ == 0
+      && std::all_of(data_->host_.begin(), data_->host_.end(), is_zero))
+    data_.reset();
 }
 
 } // namespace caf

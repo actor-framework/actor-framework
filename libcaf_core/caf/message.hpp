@@ -23,6 +23,7 @@
 #include <tuple>
 #include <type_traits>
 
+#include "caf/fwd.hpp"
 #include "caf/atom.hpp"
 #include "caf/config.hpp"
 #include "caf/from_string.hpp"
@@ -30,11 +31,10 @@
 #include "caf/skip_message.hpp"
 
 #include "caf/detail/int_list.hpp"
-#include "caf/detail/comparable.hpp"
 #include "caf/detail/apply_args.hpp"
-#include "caf/detail/type_traits.hpp"
-
+#include "caf/detail/comparable.hpp"
 #include "caf/detail/tuple_vals.hpp"
+#include "caf/detail/type_traits.hpp"
 #include "caf/detail/message_data.hpp"
 #include "caf/detail/implicit_conversions.hpp"
 
@@ -254,6 +254,10 @@ public:
   }
 
   /// @cond PRIVATE
+
+  void serialize(serializer& sink) const;
+
+  void deserialize(deserializer& source);
 
   using raw_ptr = detail::message_data*;
 

@@ -27,10 +27,11 @@
 namespace caf {
 
 /// Base class for IO handles such as `accept_handle` or `connection_handle`.
-template <class Subtype, int64_t InvalidId = -1>
-class handle : detail::comparable<Subtype> {
+template <class Subtype, class InvalidType, int64_t InvalidId = -1>
+class handle : detail::comparable<Subtype>,
+               detail::comparable<Subtype, InvalidType> {
 public:
-  constexpr handle() : id_{InvalidId} {
+  constexpr handle() : id_(InvalidId) {
     // nop
   }
 
@@ -42,6 +43,11 @@ public:
 
   handle& operator=(const handle& other) {
     id_ = other.id();
+    return *this;
+  }
+
+  handle& operator=(const InvalidType&) {
+    id_ = InvalidId;
     return *this;
   }
 
@@ -57,6 +63,10 @@ public:
 
   int64_t compare(const Subtype& other) const {
     return id_ - other.id();
+  }
+
+  int64_t compare(const InvalidType&) const {
+    return invalid() ? 0 : 1;
   }
 
   bool invalid() const {

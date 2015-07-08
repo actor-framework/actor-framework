@@ -227,50 +227,20 @@ void deserialize_impl(channel& ptrref, deserializer* source) {
   }
 }
 
-void serialize_impl(const message& tup, serializer* sink) {
-  // ttn can be nullptr even if tuple is not empty (in case of object_array)
-  std::string tname = tup.empty() ? "@<>" : tup.tuple_type_names();
-  auto uti_map = detail::singletons::get_uniform_type_info_map();
-  auto uti = uti_map->by_uniform_name(tname);
-  if (uti == nullptr) {
-    std::string err = "could not get uniform type info for \"";
-    err += tname;
-    err += "\"";
-    CAF_LOGF_ERROR(err);
-    throw std::runtime_error(err);
-  }
-  sink->begin_object(uti);
-  for (size_t i = 0; i < tup.size(); ++i) {
-    uniform_type_info::from(tup.uniform_name_at(i))->serialize(tup.at(i), sink);
-  }
-  sink->end_object();
+void serialize_impl(const message& msg, serializer* sink) {
+  msg.serialize(*sink);
 }
 
-void deserialize_impl(message& atref, deserializer* source) {
-  auto uti = source->begin_object();
-  auto uval = uti->create();
-  // auto ptr = uti->new_instance();
-  uti->deserialize(uval->val, source);
-  source->end_object();
-  atref = uti->as_message(uval->val);
+void deserialize_impl(message& msg, deserializer* source) {
+  msg.deserialize(*source);
 }
 
 void serialize_impl(const node_id& nid, serializer* sink) {
-  sink->write_raw(nid.host_id().size(), nid.host_id().data());
-  sink->write_value(nid.process_id());
+  nid.serialize(*sink);
 }
 
 void deserialize_impl(node_id& nid, deserializer* source) {
-  node_id::host_id_type hid;
-  source->read_raw(node_id::host_id_size, hid.data());
-  auto pid = source->read<uint32_t>();
-  auto is_zero = [](uint8_t value) { return value == 0; };
-  if (pid == 0 && std::all_of(hid.begin(), hid.end(), is_zero)) {
-    // invalid process information
-    nid = invalid_node_id;
-  } else {
-    nid = node_id{pid, hid};
-  }
+  nid.deserialize(*source);
 }
 
 inline void serialize_impl(const atom_value& val, serializer* sink) {

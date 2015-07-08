@@ -43,7 +43,8 @@ const char* as_char_pointer(pointer ptr) {
   return reinterpret_cast<const char*>(ptr);
 }
 
-pointer advanced(pointer ptr, size_t num_bytes) {
+template <class Distance>
+pointer advanced(pointer ptr, Distance num_bytes) {
   return reinterpret_cast<const char*>(ptr) + num_bytes;
 }
 
@@ -150,14 +151,51 @@ struct pt_reader : static_visitor<> {
 
 binary_deserializer::binary_deserializer(const void* buf, size_t buf_size,
                                          actor_namespace* ns)
-    : super(ns), pos_(buf), end_(advanced(buf, buf_size)) {
+    : deserializer(ns),
+      pos_(buf),
+      end_(advanced(buf, buf_size)) {
   // nop
 }
 
 binary_deserializer::binary_deserializer(const void* bbegin, const void* bend,
                                          actor_namespace* ns)
-    : super(ns), pos_(bbegin), end_(bend) {
+    : deserializer(ns),
+      pos_(bbegin),
+      end_(bend) {
   // nop
+}
+
+binary_deserializer::binary_deserializer(const binary_deserializer& other)
+    : deserializer(other.namespace_),
+      pos_(other.pos_),
+      end_(other.end_) {
+  // nop
+}
+
+binary_deserializer&
+binary_deserializer::operator=(const binary_deserializer& other) {
+  namespace_ = other.namespace_;
+  pos_ = other.pos_;
+  end_ = other.end_;
+  return *this;
+}
+
+bool binary_deserializer::at_end() const {
+  return pos_ == end_;
+}
+
+/// with same semantics as `strncmp(this->pos_, buf, num_bytes)`.
+bool binary_deserializer::buf_equals(const void* buf, size_t num_bytes) {
+  auto bytes_left = static_cast<size_t>(std::distance(as_char_pointer(pos_),
+                                                      as_char_pointer(end_)));
+  if (bytes_left < num_bytes)
+    return false;
+  return strncmp(as_char_pointer(pos_), as_char_pointer(buf), num_bytes) == 0;
+}
+
+binary_deserializer& binary_deserializer::advance(ptrdiff_t num_bytes) {
+  pos_ = advanced(pos_, num_bytes);
+  return *this;
 }
 
 const uniform_type_info* binary_deserializer::begin_object() {

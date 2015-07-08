@@ -59,8 +59,9 @@ const std::string& abstract_group::module::name() const {
   return name_;
 }
 
-abstract_group::abstract_group(abstract_group::module_ptr mod, std::string id)
-    : abstract_channel(abstract_channel::is_abstract_group_flag),
+abstract_group::abstract_group(abstract_group::module_ptr mod,
+                               std::string id, const node_id& nid)
+    : abstract_channel(abstract_channel::is_abstract_group_flag, nid),
       module_(mod),
       identifier_(std::move(id)) {
   // nop

@@ -56,9 +56,8 @@ public:
   template <class Impl>
   intrusive_ptr<Impl> get_named_broker(atom_value name) {
     auto i = named_brokers_.find(name);
-    if (i != named_brokers_.end()) {
+    if (i != named_brokers_.end())
       return static_cast<Impl*>(i->second.get());
-    }
     auto result = make_counted<Impl>(*this);
     CAF_ASSERT(result->unique());
     result->launch(nullptr, false, true);

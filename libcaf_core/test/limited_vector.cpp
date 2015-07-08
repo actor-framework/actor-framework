@@ -26,12 +26,10 @@
 
 #include "caf/detail/limited_vector.hpp"
 
-using std::cout;
-using std::endl;
-using std::equal;
 using caf::detail::limited_vector;
 
 CAF_TEST(basics) {
+  using std::equal;
   int arr1[] {1, 2, 3, 4};
   limited_vector<int, 4> vec1 {1, 2, 3, 4};
   limited_vector<int, 5> vec2 {4, 3, 2, 1};

@@ -173,14 +173,8 @@ public:
     >::type
   >::type
   fork(F fun, connection_handle hdl, Ts&&... xs) {
-    auto i = this->scribes_.find(hdl);
-    if (i == this->scribes_.end()) {
-      CAF_LOG_ERROR("invalid handle");
-      throw std::invalid_argument("invalid handle");
-    }
-    auto sptr = i->second;
+    auto sptr = this->take(hdl);
     CAF_ASSERT(sptr->hdl() == hdl);
-    this->scribes_.erase(i);
     using impl =
       typename infer_typed_broker_base<
         typename detail::get_callable_trait<F>::result_type,

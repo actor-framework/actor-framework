@@ -20,28 +20,57 @@
 #ifndef CAF_IO_CONNECTION_HANDLE_HPP
 #define CAF_IO_CONNECTION_HANDLE_HPP
 
+#include <functional>
+
 #include "caf/io/handle.hpp"
 
 namespace caf {
 namespace io {
 
+struct invalid_connection_handle_t {
+  constexpr invalid_connection_handle_t() {
+    // nop
+  }
+};
+
+constexpr invalid_connection_handle_t invalid_connection_handle
+  = invalid_connection_handle_t{};
+
 /// Generic handle type for identifying connections.
-class connection_handle : public handle<connection_handle> {
+class connection_handle : public handle<connection_handle,
+                                        invalid_connection_handle_t> {
 public:
-  friend class handle<connection_handle>;
-  using super = handle<connection_handle>;
+  friend class handle<connection_handle, invalid_connection_handle_t>;
+
+  using super = handle<connection_handle, invalid_connection_handle_t>;
 
   constexpr connection_handle() {
     // nop
   }
 
-private:
-  inline connection_handle(int64_t handle_id) : super{handle_id} {
+  constexpr connection_handle(const invalid_connection_handle_t&) {
+    // nop
+  }
+
+ private:
+  inline connection_handle(int64_t handle_id) : super(handle_id) {
     // nop
   }
 };
 
 } // namespace io
 } // namespace caf
+
+namespace std{
+
+template<>
+struct hash<caf::io::connection_handle> {
+  size_t operator()(const caf::io::connection_handle& hdl) const {
+    hash<int64_t> f;
+    return f(hdl.id());
+  }
+};
+
+} // namespace std
 
 #endif // CAF_IO_CONNECTION_HANDLE_HPP

@@ -58,13 +58,13 @@ namespace io {
 
 namespace {
 
-template <class Subtype>
-inline void serialize_impl(const handle<Subtype>& hdl, serializer* sink) {
+template <class Subtype, class I>
+inline void serialize_impl(const handle<Subtype, I>& hdl, serializer* sink) {
   sink->write_value(hdl.id());
 }
 
-template <class Subtype>
-inline void deserialize_impl(handle<Subtype>& hdl, deserializer* source) {
+template <class Subtype, class I>
+inline void deserialize_impl(handle<Subtype, I>& hdl, deserializer* source) {
   hdl.set_id(source->read<int64_t>());
 }
 
@@ -141,18 +141,11 @@ void do_announce(const char* tname) {
 
 } // namespace <anonymous>
 
-using middleman_actor_base = middleman_actor::extend<
-                               reacts_to<ok_atom, int64_t>,
-                               reacts_to<ok_atom, int64_t, actor_addr>,
-                               reacts_to<error_atom, int64_t, std::string>
-                             >;
-
-class middleman_actor_impl : public middleman_actor_base::base {
+class middleman_actor_impl : public middleman_actor::base {
 public:
   middleman_actor_impl(middleman& mref, actor default_broker)
       : broker_(default_broker),
-        parent_(mref),
-        next_request_id_(0) {
+        parent_(mref) {
     // nop
   }
 
@@ -160,8 +153,6 @@ public:
 
   void on_exit() {
     CAF_LOG_TRACE("");
-    pending_gets_.clear();
-    pending_deletes_.clear();
     broker_ = invalid_actor;
   }
 
@@ -172,25 +163,28 @@ public:
 
   using del_op_result = either<ok_atom>::or_else<error_atom, std::string>;
 
-  using del_op_promise = typed_response_promise<del_op_result>;
+  using del_op_promise = delegated<del_op_result>;
 
   using map_type = std::map<int64_t, response_promise>;
 
-  middleman_actor_base::behavior_type make_behavior() {
+  behavior_type make_behavior() override {
     return {
-      [=](put_atom, const actor_addr& whom, uint16_t port,
-          const std::string& addr, bool reuse_addr) {
-        return put(whom, port, addr.c_str(), reuse_addr);
+      [=](put_atom, uint16_t port, const actor_addr& whom,
+          std::set<std::string>& sigs, const std::string& addr,
+          bool reuse_addr) {
+        return put(port, whom, sigs, addr.c_str(), reuse_addr);
       },
-      [=](put_atom, const actor_addr& whom, uint16_t port,
-          const std::string& addr) {
-        return put(whom, port, addr.c_str());
+      [=](put_atom, uint16_t port, const actor_addr& whom,
+          std::set<std::string>& sigs, const std::string& addr) {
+        return put(port, whom, sigs, addr.c_str());
       },
-      [=](put_atom, const actor_addr& whom, uint16_t port, bool reuse_addr) {
-        return put(whom, port, nullptr, reuse_addr);
+      [=](put_atom, uint16_t port, const actor_addr& whom,
+          std::set<std::string>& sigs, bool reuse_addr) {
+        return put(port, whom, sigs, nullptr, reuse_addr);
       },
-      [=](put_atom, const actor_addr& whom, uint16_t port) {
-        return put(whom, port);
+      [=](put_atom, uint16_t port, const actor_addr& whom,
+          std::set<std::string>& sigs) {
+        return put(port, whom, sigs);
       },
       [=](get_atom, const std::string& hostname, uint16_t port,
           std::set<std::string>& expected_ifs) {
@@ -204,26 +198,13 @@ public:
       },
       [=](delete_atom, const actor_addr& whom, uint16_t port) {
         return del(whom, port);
-      },
-      [=](ok_atom, int64_t request_id) {
-        // not legal for get results
-        CAF_ASSERT(pending_gets_.count(request_id) == 0);
-        handle_ok<del_op_result>(pending_deletes_, request_id);
-      },
-      [=](ok_atom, int64_t request_id, actor_addr& result) {
-        // not legal for delete results
-        CAF_ASSERT(pending_deletes_.count(request_id) == 0);
-        handle_ok<get_op_result>(pending_gets_, request_id, std::move(result));
-      },
-      [=](error_atom, int64_t request_id, std::string& reason) {
-        handle_error(request_id, reason);
       }
     };
   }
 
 private:
   either<ok_atom, uint16_t>::or_else<error_atom, std::string>
-  put(const actor_addr& whom, uint16_t port,
+  put(uint16_t port, const actor_addr& whom, std::set<std::string>& sigs,
       const char* in = nullptr, bool reuse_addr = false) {
     CAF_LOG_TRACE(CAF_TSARG(whom) << ", " << CAF_ARG(port)
                   << ", " << CAF_ARG(reuse_addr));
@@ -244,37 +225,32 @@ private:
     catch (network_error& err) {
       return {error_atom::value, std::string("network_error: ") + err.what()};
     }
-    send(broker_, put_atom::value, hdl, whom, actual_port);
+    send(broker_, put_atom::value, hdl, actual_port, whom, std::move(sigs));
     return {ok_atom::value, actual_port};
   }
 
   get_op_promise get(const std::string& hostname, uint16_t port,
                      std::set<std::string> expected_ifs) {
     CAF_LOG_TRACE(CAF_ARG(hostname) << ", " << CAF_ARG(port));
-    auto result = make_response_promise();
+    get_op_promise result;
     try {
       auto hdl = parent_.backend().new_tcp_scribe(hostname, port);
-      auto req_id = next_request_id_++;
-      send(broker_, get_atom::value, hdl, req_id,
-           actor{this}, std::move(expected_ifs));
-      pending_gets_.emplace(req_id, result);
+      delegate(broker_, get_atom::value, hdl, port, std::move(expected_ifs));
     }
     catch (network_error& err) {
       // fullfil promise immediately
       std::string msg = "network_error: ";
       msg += err.what();
-      result.deliver(get_op_result{error_atom::value, std::move(msg)}.value);
+      result = make_response_promise();
+      result.deliver(get_op_result{error_atom::value, std::move(msg)});
     }
     return result;
   }
 
   del_op_promise del(const actor_addr& whom, uint16_t port = 0) {
     CAF_LOG_TRACE(CAF_TSARG(whom) << ", " << CAF_ARG(port));
-    auto result = make_response_promise();
-    auto req_id = next_request_id_++;
-    send(broker_, delete_atom::value, req_id, whom, port);
-    pending_deletes_.emplace(req_id, result);
-    return result;
+    delegate(broker_, delete_atom::value, whom, port);
+    return {};
   }
 
   template <class T, class... Ts>
@@ -302,25 +278,8 @@ private:
     return true;
   }
 
-  void handle_error(int64_t request_id, std::string& reason) {
-    CAF_LOG_TRACE(CAF_ARG(request_id) << ", " << CAF_ARG(reason));
-    auto fget = [&](response_promise& rp) {
-      rp.deliver(get_op_result{error_atom::value, std::move(reason)}.value);
-    };
-    auto fdel = [&](response_promise& rp) {
-      rp.deliver(del_op_result{error_atom::value, std::move(reason)}.value);
-    };
-    if (! finalize_request(pending_gets_, request_id, fget)
-        && ! finalize_request(pending_deletes_, request_id, fdel)) {
-      CAF_LOG_ERROR("invalid request id: " << request_id);
-    }
-  }
-
   actor broker_;
   middleman& parent_;
-  int64_t next_request_id_;
-  map_type pending_gets_;
-  map_type pending_deletes_;
 };
 
 middleman_actor_impl::~middleman_actor_impl() {
@@ -347,11 +306,17 @@ void middleman::add_broker(broker_ptr bptr) {
 void middleman::initialize() {
   CAF_LOG_TRACE("");
   backend_supervisor_ = backend_->make_supervisor();
-  thread_ = std::thread{[this] {
-    CAF_LOG_TRACE("");
-    backend_->run();
-  }};
-  backend_->thread_id(thread_.get_id());
+  if (backend_supervisor_ == nullptr) {
+    // the only backend that returns a `nullptr` is the `test_multiplexer`
+    // which does not have its own thread but uses the main thread instead
+    backend_->thread_id(std::this_thread::get_id());
+  } else {
+    thread_ = std::thread{[this] {
+      CAF_LOG_TRACE("");
+      backend_->run();
+    }};
+    backend_->thread_id(thread_.get_id());
+  }
   // announce io-related types
   announce<network::protocol>("caf::io::network::protocol");
   do_announce<new_data_msg>("caf::io::new_data_msg");
@@ -382,7 +347,8 @@ void middleman::stop() {
     }
   });
   backend_supervisor_.reset();
-  thread_.join();
+  if (thread_.joinable())
+    thread_.join();
   hooks_.reset();
   named_brokers_.clear();
   scoped_actor self(true);

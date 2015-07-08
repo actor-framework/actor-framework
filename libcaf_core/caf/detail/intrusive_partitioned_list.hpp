@@ -26,6 +26,7 @@
 #include <iterator>
 #include <algorithm>
 
+#include "caf/behavior.hpp"
 #include "caf/invoke_message_result.hpp"
 
 namespace caf {

@@ -49,6 +49,7 @@ void blocking_actor::initialize() {
 }
 
 void blocking_actor::dequeue(behavior& bhvr, message_id mid) {
+  CAF_LOG_TRACE(CAF_MARG(mid, integer_value));
   // try to dequeue from cache first
   if (invoke_from_cache(bhvr, mid)) {
     return;

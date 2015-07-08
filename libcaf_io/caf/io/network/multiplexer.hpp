@@ -110,7 +110,7 @@ public:
   /// Makes sure the multipler does not exit its event loop until
   /// the destructor of `supervisor` has been called.
   class supervisor {
- public:
+  public:
     virtual ~supervisor();
   };
 

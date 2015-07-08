@@ -27,9 +27,10 @@
 #include <cstdint>
 #include <condition_variable>
 
+#include "caf/actor_addr.hpp"
 #include "caf/abstract_actor.hpp"
-#include "caf/detail/shared_spinlock.hpp"
 
+#include "caf/detail/shared_spinlock.hpp"
 #include "caf/detail/singleton_mixin.hpp"
 
 namespace caf {
@@ -55,7 +56,15 @@ public:
     return get_entry(key).first;
   }
 
+  // return nullptr if the actor wasn't put *or* finished execution
+  inline actor_addr get_addr(actor_id key) const {
+    auto ptr = get_entry(key).first;
+    return ptr ? ptr->address() : invalid_actor_addr;
+  }
+
   void put(actor_id key, const abstract_actor_ptr& value);
+
+  void put(actor_id key, const actor_addr& value);
 
   void erase(actor_id key, uint32_t reason);
 

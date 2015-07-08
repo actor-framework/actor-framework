@@ -34,10 +34,6 @@
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/type_list.hpp"
 
-using std::cout;
-using std::endl;
-using std::is_same;
-
 using namespace caf;
 using namespace caf::detail;
 
@@ -48,6 +44,7 @@ template <>
 struct is_int<int> : std::true_type {};
 
 CAF_TEST(metaprogramming) {
+  using std::is_same;
   using if1 = type_list<replies_to<int, double>::with<void>,
                         replies_to<int>::with<int>>;
   using if2 = type_list<replies_to<int>::with<int>,

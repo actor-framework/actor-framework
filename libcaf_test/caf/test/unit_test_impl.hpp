@@ -53,9 +53,9 @@ private:
         // spin
       }
       if (! canceled_) {
-        logger::instance().error()
-          << "WATCHDOG: unit test did finish within 10s, abort\n";
-        abort();
+        //logger::instance().error()
+        //  << "WATCHDOG: unit test did finish within 10s, abort\n";
+        //abort();
       }
     }};
   }
@@ -252,7 +252,7 @@ void engine::add(const char* cstr_name, std::unique_ptr<test> ptr) {
   auto& suite = instance().suites_[name];
   for (auto& x : suite) {
     if (x->name() == ptr->name()) {
-      std::cout << "duplicate test name: " << ptr->name() << '\n';
+      std::cerr << "duplicate test name: " << ptr->name() << std::endl;
       std::abort();
     }
   }
@@ -573,7 +573,8 @@ int main(int argc, char** argv) {
   try {
     return caf::test::main(argc, argv);
   } catch (std::exception& e) {
-    std::cerr << "exception: " << e.what() << std::endl;
+    std::cerr << "exception " << typeid(e).name() << ": "
+              << e.what() << std::endl;
   }
   return 1;
 }

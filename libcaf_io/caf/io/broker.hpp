@@ -46,19 +46,13 @@ public:
     // prevent warning about unused local type
     static_assert(std::is_same<fun_res, fun_res>::value,
                   "your compiler is lying to you");
-    auto i = scribes_.find(hdl);
-    if (i == scribes_.end()) {
-      CAF_LOG_ERROR("invalid handle");
-      throw std::invalid_argument("invalid handle");
-    }
-    auto sptr = i->second;
+    auto sptr = take(hdl);
     CAF_ASSERT(sptr->hdl() == hdl);
-    scribes_.erase(i);
-    return spawn_functor(nullptr, [sptr](broker* forked) {
-                                    sptr->set_broker(forked);
-                                    forked->scribes_.emplace(sptr->hdl(),
-                                                              sptr);
-                                  },
+    return spawn_functor(nullptr,
+                         [sptr](broker* forked) {
+                           sptr->set_broker(forked);
+                           forked->scribes_.emplace(sptr->hdl(), sptr);
+                         },
                          fun, hdl, std::forward<Ts>(xs)...);
   }
 

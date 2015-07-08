@@ -101,16 +101,16 @@ namespace io {
 ///   uint16_t    | port        | Optional; remove only a single mapping.
 using middleman_actor =
   typed_actor<
-    replies_to<put_atom, actor_addr, uint16_t, std::string, bool>
+    replies_to<put_atom, uint16_t, actor_addr, std::set<std::string>, std::string, bool>
     ::with_either<ok_atom, uint16_t>
     ::or_else<error_atom, std::string>,
-    replies_to<put_atom, actor_addr, uint16_t, std::string>
+    replies_to<put_atom, uint16_t, actor_addr, std::set<std::string>, std::string>
     ::with_either<ok_atom, uint16_t>
     ::or_else<error_atom, std::string>,
-    replies_to<put_atom, actor_addr, uint16_t, bool>
+    replies_to<put_atom, uint16_t, actor_addr, std::set<std::string>, bool>
     ::with_either<ok_atom, uint16_t>
     ::or_else<error_atom, std::string>,
-    replies_to<put_atom, actor_addr, uint16_t>
+    replies_to<put_atom, uint16_t, actor_addr, std::set<std::string>>
     ::with_either<ok_atom, uint16_t>
     ::or_else<error_atom, std::string>,
     replies_to<get_atom, std::string, uint16_t>

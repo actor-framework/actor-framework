@@ -367,6 +367,8 @@ public:
       value_(x) {
   }
 
+  lhs(const lhs&) = default;
+
   ~lhs() {
     if (evaluated_) {
       return;
@@ -524,20 +526,19 @@ private:
 // on the global namespace so that it can hidden via namespace-scoping
 using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 
-#define CAF_TEST_PR(level, msg)                                                \
+#define CAF_TEST_PR(level, msg, colorcode)                                     \
   ::caf::test::logger::instance(). level ()                                    \
-    << ::caf::test::engine::color(::caf::test::yellow)                         \
+    << ::caf::test::engine::color(::caf::test:: colorcode )                    \
     << "  -> " << ::caf::test::engine::color(::caf::test::reset) << msg << '\n'
 
-
 #define CAF_TEST_ERROR(msg)                                                    \
-  CAF_TEST_PR(error, msg)
+  CAF_TEST_PR(info, msg, red)
 
 #define CAF_TEST_INFO(msg)                                                     \
-  CAF_TEST_PR(info, msg)
+  CAF_TEST_PR(info, msg, yellow)
 
 #define CAF_TEST_VERBOSE(msg)                                                  \
-  CAF_TEST_PR(verbose, msg)
+  CAF_TEST_PR(verbose, msg, yellow)
 
 #define CAF_PASTE_CONCAT(lhs, rhs) lhs ## rhs
 
