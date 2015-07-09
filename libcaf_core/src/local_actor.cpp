@@ -619,7 +619,7 @@ resumable::resume_result local_actor::resume(execution_unit* eu,
     }
     int handled_msgs = 0;
     auto reset_timeout_if_needed = [&] {
-      if (handled_msgs > 0) {
+      if (handled_msgs > 0 && has_behavior()) {
         request_timeout(get_behavior().timeout());
       }
     };
