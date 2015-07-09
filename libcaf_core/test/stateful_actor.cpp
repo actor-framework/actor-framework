@@ -43,10 +43,10 @@ struct counter {
 behavior adder(stateful_actor<counter>* self) {
   return {
     [=](add_atom, int x) {
-      self->state().value += x;
+      self->state.value += x;
     },
     [=](get_atom) {
-      return self->state().value;
+      return self->state.value;
     }
   };
 }
@@ -62,10 +62,10 @@ typed_adder_actor::behavior_type
 typed_adder(typed_adder_actor::stateful_pointer<counter> self) {
   return {
     [=](add_atom, int x) {
-      self->state().value += x;
+      self->state.value += x;
     },
     [=](get_atom) {
-      return self->state().value;
+      return self->state.value;
     }
   };
 }

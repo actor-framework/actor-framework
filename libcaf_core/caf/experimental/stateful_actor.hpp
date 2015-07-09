@@ -28,10 +28,15 @@
 namespace caf {
 namespace experimental {
 
+/// An event-based actor with managed state. The state is constructed
+/// before `make_behavior` will get called and destroyed after the
+/// actor called `quit`. This state management brakes cycles and
+/// allows actors to automatically release ressources as soon
+/// as possible.
 template <class State, class Base = event_based_actor>
 class stateful_actor : public Base {
 public:
-  stateful_actor() {
+  stateful_actor() : state(state_) {
     // nop
   }
 
@@ -39,18 +44,22 @@ public:
     // nop
   }
 
+  /// Destroys the state of this actor (no further overriding allowed).
+  void on_exit() override final {
+    state_.~State();
+  }
+
+  /// A reference to the actor's state.
+  State& state;
+
+  /// @cond PRIVATE
+
   void initialize() override {
     cr_state(this);
     Base::initialize();
   }
 
-  void on_exit() override final {
-    state_.~State();
-  }
-
-  State& state() {
-    return state_;
-  }
+  /// @endcond
 
 private:
   template <class T>
