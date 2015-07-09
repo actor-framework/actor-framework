@@ -49,7 +49,7 @@ static_assert(! std::is_convertible<dummy1, dummy2>::value,
               "handle is assignable to broader definition");
 
 /******************************************************************************
- *            simple request/response test            *
+ *                        simple request/response test                        *
  ******************************************************************************/
 
 struct my_request {
@@ -138,7 +138,7 @@ void test_typed_spawn(server_type ts) {
 }
 
 /******************************************************************************
- *      test skipping of messages intentionally + using become()      *
+ *          test skipping of messages intentionally + using become()          *
  ******************************************************************************/
 
 struct get_state_msg {};
@@ -184,70 +184,75 @@ public:
 };
 
 /******************************************************************************
- *             simple 'forwarding' chain              *
+ *                         simple 'forwarding' chain                          *
  ******************************************************************************/
 
 using string_actor = typed_actor<replies_to<string>::with<string>>;
 
-void simple_relay(string_actor::pointer self, string_actor master, bool leaf) {
-  string_actor next =
-    leaf ? spawn_typed(simple_relay, master, false) : master;
-  self->link_to(next);
-  self->become(
-    [=](const string& str) {
-      return self->sync_send(next, str).then(
-        [](const string & answer)->string {
-          return answer;
-        }
-      );
-  });
-}
-
-void simple_relay_delegate(string_actor::pointer self, string_actor master, bool leaf) {
-  string_actor next =
-    leaf ? spawn_typed(simple_relay_delegate, master, false) : master;
-  self->link_to(next);
-  self->become(
-    [=](const string& str) {
-      return self->delegate(next, str);
-  });
-}
-
-void dynamic_relay_delegate(string_actor::pointer self, actor master, bool leaf) {
-  if (leaf) {
-    auto next = spawn_typed(dynamic_relay_delegate, master, false);
-    self->link_to(next);
-    self->become(
-      [=](const string& str) {
-        return self->delegate(next, str);
-    });
-  } else {
-    self->link_to(master);
-    self->become(
-      [=](const string& str) {
-        return self->delegate(master, str);
-    });
-  }
-}
-
-string_actor::behavior_type simple_string_reverter() {
+string_actor::behavior_type string_reverter() {
   return {
-    [](const string& str) {
-      return string{str.rbegin(), str.rend()};
+    [](string& str) {
+      std::reverse(str.begin(), str.end());
+      return std::move(str);
     }
   };
 }
 
-behavior dynamic_string_reverter() {
+// uses `return sync_send(...).then(...)`
+string_actor::behavior_type string_relay(string_actor::pointer self,
+                                         string_actor master, bool leaf) {
+  auto next = leaf ? spawn_typed(string_relay, master, false) : master;
+  self->link_to(next);
   return {
-    [](const string& str) {
-      return string{str.rbegin(), str.rend()};
+    [=](const string& str) {
+      return self->sync_send(next, str).then(
+        [](string& answer) -> string {
+          return std::move(answer);
+        }
+      );
+    }
+  };
+}
+
+// uses `return delegate(...)`
+string_actor::behavior_type string_delegator(string_actor::pointer self,
+                                             string_actor master, bool leaf) {
+  auto next = leaf ? spawn_typed(string_delegator, master, false) : master;
+  self->link_to(next);
+  return {
+    [=](string& str) -> delegated<string> {
+      return self->delegate(next, std::move(str));
+    }
+  };
+}
+
+using maybe_string_actor = typed_actor<replies_to<string>
+                                       ::with_either<ok_atom, string>
+                                       ::or_else<error_atom>>;
+
+maybe_string_actor::behavior_type maybe_string_reverter() {
+  return {
+    [](string& str) -> either<ok_atom, string>::or_else<error_atom> {
+      if (str.empty())
+        return {error_atom::value};
+      std::reverse(str.begin(), str.end());
+      return {ok_atom::value, std::move(str)};
+    }
+  };
+}
+
+maybe_string_actor::behavior_type
+maybe_string_delegator(maybe_string_actor::pointer self, maybe_string_actor x) {
+  self->link_to(x);
+  return {
+    [=](string& s) -> delegated<either<ok_atom, string>::or_else<error_atom>> {
+      return self->delegate(x, std::move(s));
     }
   };
 }
 
 /******************************************************************************
- *            sending typed actor handles             *
+ *                        sending typed actor handles                         *
  ******************************************************************************/
 
 using int_actor = typed_actor<replies_to<int>::with<int>>;
@@ -376,48 +381,60 @@ CAF_TEST(test_event_testee) {
   CAF_CHECK_EQUAL(result, "wait4int");
 }
 
-CAF_TEST(test_simple_string_reverter) {
+CAF_TEST(reverter_relay_chain) {
   // run test series with string reverter
   scoped_actor self;
   // actor-under-test
-  auto aut = self->spawn_typed<monitored>(simple_relay,
-                                          spawn_typed(simple_string_reverter),
+  auto aut = self->spawn_typed<monitored>(string_relay,
+                                          spawn_typed(string_reverter),
                                           true);
   set<string> iface{"caf::replies_to<@str>::with<@str>"};
   CAF_CHECK(aut->message_types() == iface);
-  self->sync_send(aut, "Hello World!").await([](const string& answer) {
-    CAF_CHECK_EQUAL(answer, "!dlroW olleH");
-  });
+  self->sync_send(aut, "Hello World!").await(
+    [](const string& answer) {
+      CAF_CHECK_EQUAL(answer, "!dlroW olleH");
+    }
+  );
   anon_send_exit(aut, exit_reason::user_shutdown);
 }
 
-CAF_TEST(test_simple_string_reverter_delegate) {
+CAF_TEST(string_delegator_chain) {
   // run test series with string reverter
   scoped_actor self;
   // actor-under-test
-  auto aut = self->spawn_typed<monitored>(simple_relay_delegate,
-                                          spawn_typed(simple_string_reverter),
+  auto aut = self->spawn_typed<monitored>(string_delegator,
+                                          spawn_typed(string_reverter),
                                           true);
   set<string> iface{"caf::replies_to<@str>::with<@str>"};
   CAF_CHECK(aut->message_types() == iface);
-  self->sync_send(aut, "Hello World!").await([](const string& answer) {
-    CAF_CHECK_EQUAL(answer, "!dlroW olleH");
-  });
+  self->sync_send(aut, "Hello World!").await(
+    [](const string& answer) {
+      CAF_CHECK_EQUAL(answer, "!dlroW olleH");
+    }
+  );
   anon_send_exit(aut, exit_reason::user_shutdown);
 }
 
-CAF_TEST(test_dynamic_string_reverter_delegate) {
-  // run test series with string reverter
+CAF_TEST(maybe_string_delegator_chain) {
   scoped_actor self;
-  // actor-under-test
-  auto aut = self->spawn_typed<monitored>(dynamic_relay_delegate,
-                                          spawn(dynamic_string_reverter),
-                                          true);
-  set<string> iface{"caf::replies_to<@str>::with<@str>"};
-  CAF_CHECK(aut->message_types() == iface);
-  self->sync_send(aut, "Hello World!").await([](const string& answer) {
-    CAF_CHECK_EQUAL(answer, "!dlroW olleH");
-  });
+  auto aut = spawn_typed(maybe_string_delegator,
+                         spawn_typed(maybe_string_reverter));
+  self->sync_send(aut, "").await(
+    [](ok_atom, const string&) {
+      throw std::logic_error("unexpected result!");
+    },
+    [](error_atom) {
+      // nop
+    }
+  );
+  self->sync_send(aut, "abcd").await(
+    [](ok_atom, const string& str) {
+      CAF_CHECK_EQUAL(str, "dcba");
+    },
+    [](error_atom) {
+      throw std::logic_error("unexpected error_atom!");
+    }
+  );
   anon_send_exit(aut, exit_reason::user_shutdown);
 }
 

@@ -17,20 +17,17 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_DELEGATE_HELPER_HPP
-#define CAF_DETAIL_DELEGATE_HELPER_HPP
+#ifndef CAF_DELEGATED_HPP
+#define CAF_DELEGATED_HPP
 
 namespace caf {
-namespace detail {
 
-/// Helper class to indicate that this has been
-///  properly forwarded in typed actors.
+/// Helper class to indicate that a request has been forwarded.
 template <class... Ts>
-struct delegate_helper {
+struct delegated {
   // nop
 };
 
-} // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_DELEGATE_HELPER_HPP
+#endif // CAF_DELEGATED_HPP
