@@ -29,6 +29,8 @@
 using namespace std;
 using namespace caf;
 
+using detail::limited_vector;
+
 namespace {
 
 using fvec = vector<float>;
@@ -169,7 +171,7 @@ void multiplier(event_based_actor* self) {
     box_res,
     // 5th arg: global dimension arguments for opencl's enqueue,
     //      creates matrix_size * matrix_size global work items
-    {matrix_size, matrix_size}
+    limited_vector<size_t, 3>{matrix_size, matrix_size}
   );
 
   // send both matrices to the actor and

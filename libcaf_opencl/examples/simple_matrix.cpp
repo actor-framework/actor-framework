@@ -28,6 +28,8 @@
 using namespace std;
 using namespace caf;
 
+using detail::limited_vector;
+
 namespace {
 
 constexpr size_t matrix_size = 8;
@@ -91,7 +93,7 @@ void multiplier(event_based_actor* self) {
   // 6th arg: number of elements in the result buffer
   auto worker = spawn_cl<float*(float*,float*)>(kernel_source,
                           kernel_name,
-                          {matrix_size, matrix_size},
+                          limited_vector<size_t, 3>{matrix_size, matrix_size},
                           {},
                           {},
                           matrix_size * matrix_size);

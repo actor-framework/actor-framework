@@ -13,6 +13,8 @@
 using namespace caf;
 using namespace caf::opencl;
 
+using detail::limited_vector;
+
 namespace {
 
 using ivec = std::vector<int>;
@@ -195,7 +197,8 @@ void test_opencl() {
                        344, 398, 452, 506};
   auto w1 = spawn_cl<ivec (ivec&)>(program::create(kernel_source),
                                    kernel_name,
-                                   {matrix_size, matrix_size});
+                                   limited_vector<size_t, 3>{matrix_size,
+                                                             matrix_size});
   self->send(w1, make_iota_vector<int>(matrix_size * matrix_size));
   self->receive (
     [&](const ivec& result) {
@@ -203,7 +206,8 @@ void test_opencl() {
     }
   );
   auto w2 = spawn_cl<ivec (ivec&)>(kernel_source, kernel_name,
-                                   {matrix_size, matrix_size});
+                                   limited_vector<size_t, 3>{matrix_size,
+                                                             matrix_size});
   self->send(w2, make_iota_vector<int>(matrix_size * matrix_size));
   self->receive (
     [&](const ivec& result) {
@@ -221,8 +225,10 @@ void test_opencl() {
   auto map_res = [](ivec& result) -> message {
     return make_message(matrix_type{std::move(result)});
   };
-  auto w3 = spawn_cl<ivec (ivec&)>(program::create(kernel_source), kernel_name,
-                                   map_arg, map_res, {matrix_size, matrix_size});
+  auto w3 = spawn_cl<ivec (ivec&)>(program::create(kernel_source),
+                                   kernel_name, map_arg, map_res,
+                                   limited_vector<size_t, 3>{matrix_size,
+                                                             matrix_size});
   self->send(w3, make_iota_matrix<matrix_size>());
   self->receive (
     [&](const matrix_type& result) {
@@ -231,7 +237,8 @@ void test_opencl() {
   );
   auto w4 = spawn_cl<ivec (ivec&)>(kernel_source, kernel_name,
                                    map_arg, map_res,
-                                   {matrix_size, matrix_size});
+                                   limited_vector<size_t, 3>{matrix_size,
+                                                             matrix_size});
   self->send(w4, make_iota_matrix<matrix_size>());
   self->receive (
     [&](const matrix_type& result) {
@@ -247,7 +254,8 @@ void test_opencl() {
   }
   // test for opencl compiler flags
   auto prog5 = program::create(kernel_source_compiler_flag, compiler_flag);
-  auto w5 = spawn_cl<ivec (ivec&)>(prog5, kernel_name_compiler_flag, {array_size});
+  auto w5 = spawn_cl<ivec (ivec&)>(prog5, kernel_name_compiler_flag,
+                                   limited_vector<size_t, 3>{array_size});
   self->send(w5, make_iota_vector<int>(array_size));
   auto expected3 = make_iota_vector<int>(array_size);
   self->receive (
@@ -267,9 +275,9 @@ void test_opencl() {
   int n = static_cast<int>(arr6.capacity());
   std::generate(arr6.begin(), arr6.end(), [&]{ return --n; });
   auto w6 = spawn_cl<ivec (ivec&)>(kernel_source_reduce, kernel_name_reduce,
-                                   {static_cast<size_t>(reduce_global_size)},
+                                   limited_vector<size_t, 3>{static_cast<size_t>(reduce_global_size)},
                                    {},
-                                   {static_cast<size_t>(reduce_local_size)},
+                                   limited_vector<size_t, 3>{static_cast<size_t>(reduce_local_size)},
                                    static_cast<size_t>(reduce_result_size));
   self->send(w6, move(arr6));
   ivec expected4{max_workgroup_size * 7, max_workgroup_size * 6,
@@ -284,7 +292,7 @@ void test_opencl() {
   // constant memory arguments
   const ivec arr7{magic_number};
   auto w7 = spawn_cl<ivec (ivec&)>(kernel_source_const, kernel_name_const,
-                                   {magic_number});
+                                   limited_vector<size_t, 3>{magic_number});
   self->send(w7, move(arr7));
   ivec expected5(magic_number);
   fill(begin(expected5), end(expected5), magic_number);
