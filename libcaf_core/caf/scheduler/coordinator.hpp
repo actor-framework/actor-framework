@@ -132,7 +132,7 @@ protected:
     policy_.foreach_central_resumable(this, f);
   }
 
-  void enqueue(resumable* ptr) {
+  void enqueue(resumable* ptr) override {
     policy_.central_enqueue(this, ptr);
   }
 

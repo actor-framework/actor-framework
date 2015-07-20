@@ -121,7 +121,7 @@ public:
     erase_subscriber(who);
   }
 
-  void serialize(serializer* sink);
+  void serialize(serializer* sink) override;
 
   void stop() override {
     CAF_LOG_TRACE("");
@@ -151,7 +151,7 @@ public:
     // nop
   }
 
-  void on_exit() {
+  void on_exit() override {
     acquaintances_.clear();
     group_.reset();
   }
