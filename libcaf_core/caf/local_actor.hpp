@@ -34,6 +34,7 @@
 #include "caf/channel.hpp"
 #include "caf/duration.hpp"
 #include "caf/behavior.hpp"
+#include "caf/delegated.hpp"
 #include "caf/spawn_fwd.hpp"
 #include "caf/resumable.hpp"
 #include "caf/actor_cast.hpp"
@@ -396,20 +397,6 @@ public:
   actor_addr& last_sender() CAF_DEPRECATED;
   // </backward_compatibility>
 
-  // <backward_compatibility version="0.9">
-  inline void send_tuple(message_priority mp, const channel& whom,
-                         message what) CAF_DEPRECATED;
-
-  inline void send_tuple(const channel& whom, message what) CAF_DEPRECATED;
-
-  inline void delayed_send_tuple(message_priority mp, const channel& whom,
-                                 const duration& rtime,
-                                 message data) CAF_DEPRECATED;
-
-  inline void delayed_send_tuple(const channel& whom, const duration& rtime,
-                                 message data) CAF_DEPRECATED;
-  // </backward_compatibility>
-
   /****************************************************************************
    *           override pure virtual member functions of resumable            *
    ****************************************************************************/
@@ -472,6 +459,66 @@ public:
   }
 
   void forward_message(const actor& dest, message_priority mp);
+
+  template <class... Ts>
+  void delegate(message_priority mp, const actor& dest, Ts&&... xs) {
+    static_assert(sizeof...(Ts) > 0, "no message to send");
+    if (! dest)
+      return;
+    auto mid = current_element_->mid;
+    current_element_->mid = mp == message_priority::high
+                             ? mid.with_high_priority()
+                             : mid.with_normal_priority();
+    current_element_->msg = make_message(std::forward<Ts>(xs)...);
+    dest->enqueue(std::move(current_element_), host());
+  }
+
+  template <class... Ts>
+  void delegate(const actor& dest, Ts&&... xs) {
+    delegate(message_priority::normal, dest, std::forward<Ts>(xs)...);
+  }
+
+  template <class... Sigs, class... Ts>
+  typename detail::deduce_output_type<
+    detail::type_list<Sigs...>,
+    detail::type_list<
+      typename detail::implicit_conversions<
+        typename std::decay<Ts>::type
+      >::type...
+    >
+  >::delegated_type
+  delegate(message_priority mp, const typed_actor<Sigs...>& dest, Ts&&... xs) {
+    static_assert(sizeof...(Ts) > 0, "no message to send");
+    using token =
+      detail::type_list<
+        typename detail::implicit_conversions<
+          typename std::decay<Ts>::type
+        >::type...>;
+    token tk;
+    check_typed_input(dest, tk);
+    if (! dest)
+      return {};
+    auto mid = current_element_->mid;
+    current_element_->mid = mp == message_priority::high
+                             ? mid.with_high_priority()
+                             : mid.with_normal_priority();
+    current_element_->msg = make_message(std::forward<Ts>(xs)...);
+    dest->enqueue(std::move(current_element_), host());
+    return {};
+  }
+
+  template <class... Sigs, class... Ts>
+  typename detail::deduce_output_type<
+    detail::type_list<Sigs...>,
+    detail::type_list<
+      typename detail::implicit_conversions<
+        typename std::decay<Ts>::type
+      >::type...
+    >
+  >::delegated_type
+  delegate(const typed_actor<Sigs...>& dest, Ts&&... xs) {
+    return delegate(message_priority::normal, dest, std::forward<Ts>(xs)...);
+  }
 
   inline uint32_t planned_exit_reason() const {
     return planned_exit_reason_;
@@ -608,7 +655,7 @@ private:
                   host());
   }
 
-  void send_impl(message_id mp, abstract_channel* dest, message what) const;
+  void send_impl(message_id mid, abstract_channel* dest, message what) const;
 
   void delayed_send_impl(message_id mid, const channel& whom,
                          const duration& rtime, message data);
@@ -619,35 +666,6 @@ private:
 /// A smart pointer to a {@link local_actor} instance.
 /// @relates local_actor
 using local_actor_ptr = intrusive_ptr<local_actor>;
-
-// <backward_compatibility version="0.9">
-inline void local_actor::send_tuple(message_priority mp, const channel& whom,
-                                    message what) {
-  send_impl(message_id::make(mp), actor_cast<abstract_channel*>(whom),
-            std::move(what));
-}
-
-inline void local_actor::send_tuple(const channel& whom, message what) {
-  send_impl(message_id::make(), actor_cast<abstract_channel*>(whom),
-            std::move(what));
-}
-
-inline void local_actor::delayed_send_tuple(message_priority mp,
-                                            const channel& whom,
-                                            const duration& rtime,
-                                            message data) {
-  delayed_send_impl(message_id::make(mp), actor_cast<abstract_channel*>(whom),
-                    rtime, std::move(data));
-}
-
-inline void local_actor::delayed_send_tuple(const channel& whom,
-                                            const duration& rtime,
-                                            message data) {
-  delayed_send_impl(message_id::make(),
-                    actor_cast<abstract_channel*>(whom), rtime,
-                    std::move(data));
-}
-// </backward_compatibility>
 
 } // namespace caf
 

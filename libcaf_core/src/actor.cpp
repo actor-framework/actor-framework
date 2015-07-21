@@ -42,28 +42,28 @@ actor& actor::operator=(const invalid_actor_t&) {
   return *this;
 }
 
-intptr_t actor::compare(const actor& other) const {
+intptr_t actor::compare(const actor& other) const noexcept {
   return channel::compare(ptr_.get(), other.ptr_.get());
 }
 
-intptr_t actor::compare(const actor_addr& other) const {
+intptr_t actor::compare(const actor_addr& other) const noexcept {
   return static_cast<ptrdiff_t>(ptr_.get() - other.ptr_.get());
 }
 
-void actor::swap(actor& other) {
+void actor::swap(actor& other) noexcept {
   ptr_.swap(other.ptr_);
 }
 
-actor_addr actor::address() const {
+actor_addr actor::address() const noexcept {
   return ptr_ ? ptr_->address() : actor_addr{};
 }
 
-bool actor::is_remote() const {
+bool actor::is_remote() const noexcept {
   return ptr_ ? ptr_->is_remote() : false;
 }
 
-actor_id actor::id() const {
-  return (ptr_) ? ptr_->id() : 0;
+actor_id actor::id() const noexcept {
+  return ptr_ ? ptr_->id() : invalid_actor_id;
 }
 
 } // namespace caf

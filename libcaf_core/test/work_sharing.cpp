@@ -17,64 +17,21 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_TYPED_RESPONSE_PROMISE_HPP
-#define CAF_TYPED_RESPONSE_PROMISE_HPP
+#include "caf/config.hpp"
 
-#include "caf/either.hpp"
-#include "caf/response_promise.hpp"
+#define CAF_SUITE work_sharing
+#include "caf/test/unit_test.hpp"
 
-namespace caf {
+#include "caf/config.hpp"
+#include "caf/shutdown.hpp"
 
-template <class... Ts>
-class typed_response_promise {
-public:
-  typed_response_promise() = default;
-  typed_response_promise(const typed_response_promise&) = default;
-  typed_response_promise& operator=(const typed_response_promise&) = default;
+#include "caf/set_scheduler.hpp"
 
-  typed_response_promise(response_promise promise) : promise_(promise) {
-    // nop
-  }
+#include "caf/policy/work_sharing.hpp"
 
-  explicit operator bool() const {
-    // handle is valid if it has a receiver
-    return static_cast<bool>(promise_);
-  }
+using namespace caf;
 
-  void deliver(Ts... what) const {
-    promise_.deliver(make_message(std::move(what)...));
-  }
-
-
-private:
-  response_promise promise_;
-};
-
-template <class L, class R>
-class typed_response_promise<either_or_t<L, R>> {
-public:
-  typed_response_promise() = default;
-  typed_response_promise(const typed_response_promise&) = default;
-  typed_response_promise& operator=(const typed_response_promise&) = default;
-
-  typed_response_promise(response_promise promise) : promise_(promise) {
-    // nop
-  }
-
-  explicit operator bool() const {
-    // handle is valid if it has a receiver
-    return static_cast<bool>(promise_);
-  }
-
-  void deliver(either_or_t<L, R> what) const {
-    promise_.deliver(what.value);
-  }
-
-
-private:
-  response_promise promise_;
-};
-
-} // namespace caf
-
-#endif // CAF_TYPED_RESPONSE_PROMISE_HPP
+CAF_TEST(test_work_sharing) {
+  set_scheduler<policy::work_sharing>();
+  shutdown();
+}

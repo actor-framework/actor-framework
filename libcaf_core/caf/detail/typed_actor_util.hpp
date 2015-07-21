@@ -22,6 +22,7 @@
 
 #include <tuple>
 
+#include "caf/delegated.hpp"
 #include "caf/replies_to.hpp"
 #include "caf/system_messages.hpp"
 
@@ -198,7 +199,7 @@ struct deduce_lifted_output_type<type_list<typed_continue_helper<R>>> {
   using type = typename lifted_result_type<R>::type;
 };
 
-template <class Signatures, typename InputTypes>
+template <class Signatures, class InputTypes>
 struct deduce_output_type {
   static constexpr int input_pos =
     tl_find_if<
@@ -207,8 +208,16 @@ struct deduce_output_type {
     >::value;
   static_assert(input_pos != -1, "typed actor does not support given input");
   using signature = typename tl_at<Signatures, input_pos>::type;
-  using type = detail::type_pair<typename signature::output_opt1_types,
-                                 typename signature::output_opt2_types>;
+  using opt1 = typename signature::output_opt1_types;
+  using opt2 = typename signature::output_opt2_types;
+  using type = detail::type_pair<opt1, opt2>;
+  // generates the appropriate `delegated<...>` type from given signatures
+  using delegated_type =
+    typename std::conditional<
+      std::is_same<opt2, detail::empty_type_list>::value,
+      typename detail::tl_apply<opt1, delegated>::type,
+      delegated<either_or_t<opt1, opt2>>
+    >::type;
 };
 
 template <class... Ts>
@@ -235,16 +244,25 @@ struct sender_signature_checker {
     using dest_output_types =
       typename deduce_output_type<
         DestSigs, ArgTypes
-      >::type::first;
+      >::type;
     sender_signature_checker<
       DestSigs, OrigSigs,
-      dest_output_types
+      typename dest_output_types::first
+    >::check();
+    sender_signature_checker<
+      DestSigs, OrigSigs,
+      typename dest_output_types::second
     >::check();
   }
 };
 
 template <class OrigSigs, class DestSigs>
 struct sender_signature_checker<OrigSigs, DestSigs, detail::type_list<void>> {
+  static void check() {}
+};
+
+template <class OrigSigs, class DestSigs>
+struct sender_signature_checker<OrigSigs, DestSigs, detail::type_list<>> {
   static void check() {}
 };
 

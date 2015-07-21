@@ -503,4 +503,24 @@ CAF_TEST(sync_send) {
   );
 }
 
+behavior snyc_send_no_then_A(event_based_actor * self) {
+  return [=](int number) {
+    CAF_MESSAGE("got " << number);
+    self->quit();
+  };
+}
+
+behavior snyc_send_no_then_B(event_based_actor * self) {
+  return {
+    [=](int number) {
+      self->sync_send(self->spawn(snyc_send_no_then_A), number);
+      self->quit();
+    }
+  };
+}
+
+CAF_TEST(sync_send_no_then) {
+  anon_send(spawn(snyc_send_no_then_B), 8);
+}
+
 CAF_TEST_FIXTURE_SCOPE_END()

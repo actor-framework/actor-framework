@@ -241,21 +241,6 @@ public:
   /// Checks whether an acceptor for `handle` exists.
   bool valid(accept_handle handle);
 
-  // <backward_compatibility version="0.9">
-
-  static constexpr auto at_least = receive_policy_flag::at_least;
-
-  static constexpr auto at_most = receive_policy_flag::at_most;
-
-  static constexpr auto exactly = receive_policy_flag::exactly;
-
-  void receive_policy(connection_handle hdl, receive_policy_flag flag,
-                      size_t num_bytes) CAF_DEPRECATED {
-    configure_read(hdl, receive_policy::config{flag, num_bytes});
-  }
-
-  // </backward_compatibility>
-
 protected:
   abstract_broker();
 

@@ -51,7 +51,7 @@ public:
   ~blocking_actor();
 
   /**************************************************************************
-   *       utility stuff and receive() member function family       *
+   *           utility stuff and receive() member function family           *
    **************************************************************************/
 
   using timeout_type = std::chrono::high_resolution_clock::time_point;

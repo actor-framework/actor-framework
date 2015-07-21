@@ -20,15 +20,64 @@
 #ifndef CAF_EXPERIMENTAL_STATEFUL_ACTOR_HPP
 #define CAF_EXPERIMENTAL_STATEFUL_ACTOR_HPP
 
-#include "caf/event_based_actor.hpp"
+#include <new>
+#include <type_traits>
+
+#include "caf/fwd.hpp"
 
 namespace caf {
 namespace experimental {
 
-template <class State>
-class stateful_actor : public event_based_actor {
+/// An event-based actor with managed state. The state is constructed
+/// before `make_behavior` will get called and destroyed after the
+/// actor called `quit`. This state management brakes cycles and
+/// allows actors to automatically release ressources as soon
+/// as possible.
+template <class State, class Base = event_based_actor>
+class stateful_actor : public Base {
+public:
+  stateful_actor() : state(state_) {
+    // nop
+  }
 
+  ~stateful_actor() {
+    // nop
+  }
+
+  /// Destroys the state of this actor (no further overriding allowed).
+  void on_exit() override final {
+    state_.~State();
+  }
+
+  /// A reference to the actor's state.
+  State& state;
+
+  /// @cond PRIVATE
+
+  void initialize() override {
+    cr_state(this);
+    Base::initialize();
+  }
+
+  /// @endcond
+
+private:
+  template <class T>
+  typename std::enable_if<std::is_constructible<State, T>::value>::type
+  cr_state(T arg) {
+    new (&state_) State(arg);
+  }
+
+  template <class T>
+  typename std::enable_if<! std::is_constructible<State, T>::value>::type
+  cr_state(T) {
+    new (&state_) State();
+  }
+
+  union { State state_; };
 };
 
 } // namespace experimental
 } // namespace caf
+
+#endif // CAF_EXPERIMENTAL_STATEFUL_ACTOR_HPP

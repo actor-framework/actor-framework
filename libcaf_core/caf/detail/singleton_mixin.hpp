@@ -44,7 +44,7 @@ private:
   }
 
   void stop() {
-    CAF_LOG_TRACE("");
+    // nop
   }
 
   void initialize() {
@@ -76,7 +76,7 @@ private:
   }
 
   void stop() {
-    CAF_LOG_TRACE("");
+    // nop
   }
 
   void initialize() {

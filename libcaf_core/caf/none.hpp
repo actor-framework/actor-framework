@@ -20,14 +20,20 @@
 #ifndef CAF_NONE_HPP
 #define CAF_NONE_HPP
 
+#include "caf/detail/comparable.hpp"
+
 namespace caf {
 
-struct none_t {
+struct none_t : detail::comparable<none_t> {
   constexpr none_t() {
     // nop
   }
   constexpr explicit operator bool() const {
     return false;
+  }
+
+  constexpr int compare(none_t) const {
+    return 0;
   }
 };
 

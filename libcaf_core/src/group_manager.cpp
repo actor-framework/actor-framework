@@ -121,7 +121,7 @@ public:
     erase_subscriber(who);
   }
 
-  void serialize(serializer* sink);
+  void serialize(serializer* sink) override;
 
   void stop() override {
     CAF_LOG_TRACE("");
@@ -151,7 +151,7 @@ public:
     // nop
   }
 
-  void on_exit() {
+  void on_exit() override {
     acquaintances_.clear();
     group_.reset();
   }
@@ -426,7 +426,6 @@ std::atomic<size_t> s_ad_hoc_id;
 } // namespace <anonymous>
 
 void group_manager::stop() {
-  CAF_LOG_TRACE("");
   modules_map mm;
   { // critical section
     std::lock_guard<std::mutex> guard(mmap_mtx_);

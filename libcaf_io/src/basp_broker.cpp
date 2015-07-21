@@ -779,7 +779,9 @@ void basp_broker::init_handshake_as_server(connection_context& ctx,
   if (addr != invalid_actor_addr) {
     auto writer = make_payload_writer([&](binary_serializer& sink) {
       sink << addr.id();
-      auto sigs = addr.message_types();
+      // TODO: this always exposes the "real" type of an actor,
+      //       which prohibits users from announcing sub-types
+      auto sigs = addr->message_types();
       sink << static_cast<uint32_t>(sigs.size());
       for (auto& sig : sigs) {
         sink << sig;

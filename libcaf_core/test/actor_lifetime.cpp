@@ -41,7 +41,7 @@ class testee : public event_based_actor {
 public:
   testee();
   ~testee();
-  void on_exit();
+  void on_exit() override;
   behavior make_behavior() override;
 };
 

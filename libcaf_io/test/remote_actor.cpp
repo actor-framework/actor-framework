@@ -250,7 +250,7 @@ public:
     return spawn_ping();
   }
 
-  void on_exit() {
+  void on_exit() override {
     ++s_on_exit_called;
   }
 
@@ -340,7 +340,7 @@ public:
     // nop
   }
 
-  void on_exit() {
+  void on_exit() override {
     ++s_on_exit_called;
   }
 

@@ -718,7 +718,7 @@ CAF_TEST(kr34t0r) {
         }
       };
     }
-    void on_exit() {
+    void on_exit() override {
       pal_ = invalid_actor; // break cycle
     }
 

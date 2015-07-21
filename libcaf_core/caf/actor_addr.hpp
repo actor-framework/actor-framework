@@ -45,62 +45,73 @@ constexpr invalid_actor_addr_t invalid_actor_addr = invalid_actor_addr_t{};
 
 /// Stores the address of typed as well as untyped actors.
 class actor_addr : detail::comparable<actor_addr>,
-           detail::comparable<actor_addr, abstract_actor*>,
-           detail::comparable<actor_addr, abstract_actor_ptr> {
-
+                   detail::comparable<actor_addr, abstract_actor*>,
+                   detail::comparable<actor_addr, abstract_actor_ptr> {
+public:
+  // grant access to private ctor
   friend class actor;
   friend class abstract_actor;
 
   template <class T, typename U>
   friend T actor_cast(const U&);
 
-public:
 
   actor_addr() = default;
-
   actor_addr(actor_addr&&) = default;
-
   actor_addr(const actor_addr&) = default;
-
   actor_addr& operator=(actor_addr&&) = default;
-
   actor_addr& operator=(const actor_addr&) = default;
 
   actor_addr(const invalid_actor_addr_t&);
 
   actor_addr operator=(const invalid_actor_addr_t&);
 
-  inline explicit operator bool() const { return static_cast<bool>(ptr_); }
+  /// Returns `*this != invalid_actor_addr`.
+  inline explicit operator bool() const noexcept {
+    return static_cast<bool>(ptr_);
+  }
 
-  inline bool operator!() const { return ! ptr_; }
+  /// Returns `*this == invalid_actor_addr`.
+  inline bool operator!() const noexcept {
+    return !ptr_;
+  }
 
-  intptr_t compare(const actor_addr& other) const;
+  /// Returns whether this is an handle to a remote actor.
+  bool is_remote() const noexcept;
 
-  intptr_t compare(const abstract_actor* other) const;
+  /// Returns the ID of this actor.
+  actor_id id() const noexcept;
 
-  inline intptr_t compare(const abstract_actor_ptr& other) const {
+  /// Returns the origin node of this actor.
+  node_id node() const noexcept;
+
+  /// Exchange content of `*this` and `other`.
+  void swap(actor_addr& other) noexcept;
+
+  /// @cond PRIVATE
+
+  inline abstract_actor* operator->() const noexcept {
+    return ptr_.get();
+  }
+
+  intptr_t compare(const actor_addr& other) const noexcept;
+
+  intptr_t compare(const abstract_actor* other) const noexcept;
+
+  inline intptr_t compare(const abstract_actor_ptr& other) const noexcept {
     return compare(other.get());
   }
 
-  actor_id id() const;
-
-  node_id node() const;
-
-  /// Returns whether this is an address of a remote actor.
-  bool is_remote() const;
-
-  /// Returns the set of accepted messages types as strings or
-  /// an empty set if this actor is untyped.
-  std::set<std::string> message_types() const;
+  /// @endcond
 
 private:
-
-  inline abstract_actor* get() const { return ptr_.get(); }
+  inline abstract_actor* get() const noexcept {
+    return ptr_.get();
+  }
 
   explicit actor_addr(abstract_actor*);
 
   abstract_actor_ptr ptr_;
-
 };
 
 } // namespace caf

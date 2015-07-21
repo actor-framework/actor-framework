@@ -57,7 +57,7 @@ public:
   void enqueue(const actor_addr& sender, message_id mid,
                message content, execution_unit* host) override;
 
-  void initialize();
+  void initialize() override;
 
 private:
   // set by parent to define custom enqueue action

@@ -124,7 +124,7 @@ node_id::data::~data() {
 }
 
 void node_id::data::stop() {
-  CAF_LOG_TRACE("");
+  // nop
 }
 
 // initializes singleton

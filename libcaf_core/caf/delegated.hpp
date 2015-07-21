@@ -17,64 +17,17 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_TYPED_RESPONSE_PROMISE_HPP
-#define CAF_TYPED_RESPONSE_PROMISE_HPP
-
-#include "caf/either.hpp"
-#include "caf/response_promise.hpp"
+#ifndef CAF_DELEGATED_HPP
+#define CAF_DELEGATED_HPP
 
 namespace caf {
 
+/// Helper class to indicate that a request has been forwarded.
 template <class... Ts>
-class typed_response_promise {
-public:
-  typed_response_promise() = default;
-  typed_response_promise(const typed_response_promise&) = default;
-  typed_response_promise& operator=(const typed_response_promise&) = default;
-
-  typed_response_promise(response_promise promise) : promise_(promise) {
-    // nop
-  }
-
-  explicit operator bool() const {
-    // handle is valid if it has a receiver
-    return static_cast<bool>(promise_);
-  }
-
-  void deliver(Ts... what) const {
-    promise_.deliver(make_message(std::move(what)...));
-  }
-
-
-private:
-  response_promise promise_;
-};
-
-template <class L, class R>
-class typed_response_promise<either_or_t<L, R>> {
-public:
-  typed_response_promise() = default;
-  typed_response_promise(const typed_response_promise&) = default;
-  typed_response_promise& operator=(const typed_response_promise&) = default;
-
-  typed_response_promise(response_promise promise) : promise_(promise) {
-    // nop
-  }
-
-  explicit operator bool() const {
-    // handle is valid if it has a receiver
-    return static_cast<bool>(promise_);
-  }
-
-  void deliver(either_or_t<L, R> what) const {
-    promise_.deliver(what.value);
-  }
-
-
-private:
-  response_promise promise_;
+struct delegated {
+  // nop
 };
 
 } // namespace caf
 
-#endif // CAF_TYPED_RESPONSE_PROMISE_HPP
+#endif // CAF_DELEGATED_HPP
