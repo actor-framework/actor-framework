@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_LEFT_OR_RIGHT_HPP
-#define CAF_LEFT_OR_RIGHT_HPP
+#ifndef CAF_DETAIL_LEFT_OR_RIGHT_HPP
+#define CAF_DETAIL_LEFT_OR_RIGHT_HPP
 
 #include "caf/unit.hpp"
 
@@ -60,4 +60,4 @@ struct if_not_left<unit_t, Right> {
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_LEFT_OR_RIGHT_HPP
+#endif // CAF_DETAIL_LEFT_OR_RIGHT_HPP

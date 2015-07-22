@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_PURGE_REFS_HPP
-#define CAF_PURGE_REFS_HPP
+#ifndef CAF_DETAIL_PURGE_REFS_HPP
+#define CAF_DETAIL_PURGE_REFS_HPP
 
 #include <functional>
 
@@ -54,4 +54,4 @@ struct purge_refs {
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_PURGE_REFS_HPP
+#endif // CAF_DETAIL_PURGE_REFS_HPP

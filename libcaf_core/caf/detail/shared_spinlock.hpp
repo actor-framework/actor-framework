@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_SHARED_SPINLOCK_HPP
-#define CAF_SHARED_SPINLOCK_HPP
+#ifndef CAF_DETAIL_SHARED_SPINLOCK_HPP
+#define CAF_DETAIL_SHARED_SPINLOCK_HPP
 
 #include <atomic>
 #include <cstddef>
@@ -53,4 +53,4 @@ public:
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_SHARED_SPINLOCK_HPP
+#endif // CAF_DETAIL_SHARED_SPINLOCK_HPP

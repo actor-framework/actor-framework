@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_CONNECTION_HANDLE_HPP
-#define CAF_CONNECTION_HANDLE_HPP
+#ifndef CAF_IO_CONNECTION_HANDLE_HPP
+#define CAF_IO_CONNECTION_HANDLE_HPP
 
 #include "caf/io/handle.hpp"
 
@@ -44,4 +44,4 @@ private:
 } // namespace io
 } // namespace caf
 
-#endif // CAF_CONNECTION_HANDLE_HPP
+#endif // CAF_IO_CONNECTION_HANDLE_HPP

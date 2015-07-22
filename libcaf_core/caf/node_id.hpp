@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_PROCESS_INFORMATION_HPP
-#define CAF_PROCESS_INFORMATION_HPP
+#ifndef CAF_NODE_ID_HPP
+#define CAF_NODE_ID_HPP
 
 #include <array>
 #include <string>
@@ -137,4 +137,4 @@ private:
 
 } // namespace caf
 
-#endif // CAF_PROCESS_INFORMATION_HPP
+#endif // CAF_NODE_ID_HPP

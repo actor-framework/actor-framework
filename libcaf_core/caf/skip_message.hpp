@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_MATCH_HINT_HPP
-#define CAF_MATCH_HINT_HPP
+#ifndef CAF_SKIP_MESSAGE_HPP
+#define CAF_SKIP_MESSAGE_HPP
 
 #include <ostream>
 
@@ -44,4 +44,4 @@ std::ostream& operator<<(std::ostream&, skip_message_t);
 
 } // namespace caf
 
-#endif // CAF_MATCH_HINT_HPP
+#endif // CAF_SKIP_MESSAGE_HPP

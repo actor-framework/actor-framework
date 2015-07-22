@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CONTINUE_HELPER_HPP
-#define CONTINUE_HELPER_HPP
+#ifndef CAF_CONTINUE_HELPER_HPP
+#define CAF_CONTINUE_HELPER_HPP
 
 #include <functional>
 
@@ -49,4 +49,4 @@ private:
 
 } // namespace caf
 
-#endif // CONTINUE_HELPER_HPP
+#endif // CAF_CONTINUE_HELPER_HPP

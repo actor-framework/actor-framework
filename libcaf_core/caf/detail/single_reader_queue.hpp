@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_SINGLE_READER_QUEUE_HPP
-#define CAF_SINGLE_READER_QUEUE_HPP
+#ifndef CAF_DETAIL_SINGLE_READER_QUEUE_HPP
+#define CAF_DETAIL_SINGLE_READER_QUEUE_HPP
 
 #include <list>
 #include <deque>
@@ -320,4 +320,4 @@ private:
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_SINGLE_READER_QUEUE_HPP
+#endif // CAF_DETAIL_SINGLE_READER_QUEUE_HPP

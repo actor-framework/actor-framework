@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_FSM_ACTOR_HPP
-#define CAF_FSM_ACTOR_HPP
+#ifndef CAF_SB_ACTOR_HPP
+#define CAF_SB_ACTOR_HPP
 
 #include <utility>
 #include <type_traits>
@@ -51,4 +51,4 @@ protected:
 
 } // namespace caf
 
-#endif // CAF_FSM_ACTOR_HPP
+#endif // CAF_SB_ACTOR_HPP

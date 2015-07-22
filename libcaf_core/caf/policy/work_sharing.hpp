@@ -36,7 +36,6 @@ public:
   // A thead-safe queue implementation.
   using queue_type = std::list<resumable*>;
 
-  // The coordinator has only a counter for round-robin enqueue to its workers.
   struct coordinator_data {
     queue_type queue;
     std::mutex lock;

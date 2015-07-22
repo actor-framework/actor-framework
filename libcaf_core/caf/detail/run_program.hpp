@@ -30,7 +30,6 @@
 #include <string>
 
 namespace caf {
-
 namespace detail {
 
 std::thread run_program_impl(caf::actor, const char*, std::vector<std::string>);
@@ -42,7 +41,6 @@ std::thread run_program(caf::actor listener, const char* path, Ts&&... args) {
 }
 
 } // namespace detail
-
 } // namespace caf
 
 #endif // CAF_DETAIL_RUN_PROGRAM_HPP

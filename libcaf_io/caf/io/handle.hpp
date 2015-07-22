@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_HANDLE_HPP
-#define CAF_DETAIL_HANDLE_HPP
+#ifndef CAF_IO_HANDLE_HPP
+#define CAF_IO_HANDLE_HPP
 
 #include <cstdint>
 
@@ -82,4 +82,4 @@ private:
 
 } // namespace caf
 
-#endif // CAF_DETAIL_HANDLE_HPP
+#endif // CAF_IO_HANDLE_HPP

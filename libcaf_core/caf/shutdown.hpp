@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_SHUTDOWN_HPP
-#define CAF_IO_SHUTDOWN_HPP
+#ifndef CAF_SHUTDOWN_HPP
+#define CAF_SHUTDOWN_HPP
 
 namespace caf {
 
@@ -31,4 +31,4 @@ void shutdown();
 
 } // namespace caf
 
-#endif // CAF_IO_SHUTDOWN_HPP
+#endif // CAF_SHUTDOWN_HPP

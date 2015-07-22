@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_PSEUDO_TUPLE_HPP
-#define CAF_PSEUDO_TUPLE_HPP
+#ifndef CAF_DETAIL_PSEUDO_TUPLE_HPP
+#define CAF_DETAIL_PSEUDO_TUPLE_HPP
 
 #include <cstddef>
 
@@ -63,4 +63,4 @@ typename detail::type_at<N, Ts...>::type& get(detail::pseudo_tuple<Ts...>& tv) {
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_PSEUDO_TUPLE_HPP
+#endif // CAF_DETAIL_PSEUDO_TUPLE_HPP

@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_UNIFORM_TYPE_INFO_MAP_HPP
-#define CAF_UNIFORM_TYPE_INFO_MAP_HPP
+#ifndef CAF_DETAIL_UNIFORM_TYPE_INFO_MAP_HPP
+#define CAF_DETAIL_UNIFORM_TYPE_INFO_MAP_HPP
 
 #include <set>
 #include <map>
@@ -90,4 +90,4 @@ public:
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_UNIFORM_TYPE_INFO_MAP_HPP
+#endif // CAF_DETAIL_UNIFORM_TYPE_INFO_MAP_HPP

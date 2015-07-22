@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_MESSAGE_CASE_BUILDER_HPP
-#define CAF_DETAIL_MESSAGE_CASE_BUILDER_HPP
+#ifndef CAF_DETAIL_MATCH_CASE_BUILDER_HPP
+#define CAF_DETAIL_MATCH_CASE_BUILDER_HPP
 
 #include <type_traits>
 
@@ -296,4 +296,4 @@ operator||(Left l, Right r) {
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_MESSAGE_CASE_BUILDER_HPP
+#endif // CAF_DETAIL_MATCH_CASE_BUILDER_HPP

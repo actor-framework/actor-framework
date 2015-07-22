@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_SINGLETON_MIXIN_HPP
-#define CAF_SINGLETON_MIXIN_HPP
+#ifndef CAF_DETAIL_SINGLETON_MIXIN_HPP
+#define CAF_DETAIL_SINGLETON_MIXIN_HPP
 
 #include <utility>
 
@@ -92,4 +92,4 @@ protected:
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_SINGLETON_MIXIN_HPP
+#endif // CAF_DETAIL_SINGLETON_MIXIN_HPP

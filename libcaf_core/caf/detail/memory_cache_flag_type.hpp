@@ -18,8 +18,8 @@
  ******************************************************************************/
 
 
-#ifndef CAF_DETAIL_MEMORY_CACHE_FLAG_TYPE
-#define CAF_DETAIL_MEMORY_CACHE_FLAG_TYPE
+#ifndef CAF_DETAIL_MEMORY_CACHE_FLAG_TYPE_HPP
+#define CAF_DETAIL_MEMORY_CACHE_FLAG_TYPE_HPP
 
 namespace caf {
 namespace detail {
@@ -32,4 +32,4 @@ enum memory_cache_flag_type {
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_MEMORY_CACHE_FLAG_TYPE
+#endif // CAF_DETAIL_MEMORY_CACHE_FLAG_TYPE_HPP

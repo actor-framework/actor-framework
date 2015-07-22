@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_MIXED_HPP
-#define CAF_MIXED_HPP
+#ifndef CAF_EXTEND_HPP
+#define CAF_EXTEND_HPP
 
 namespace caf {
 
@@ -57,4 +57,4 @@ struct extend {
 
 } // namespace caf
 
-#endif // CAF_MIXED_HPP
+#endif // CAF_EXTEND_HPP

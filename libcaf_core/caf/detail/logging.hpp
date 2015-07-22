@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_LOGGING_HPP
-#define CAF_LOGGING_HPP
+#ifndef CAF_DETAIL_LOGGING_HPP
+#define CAF_DETAIL_LOGGING_HPP
 
 #include <thread>
 #include <cstring>
@@ -306,4 +306,4 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 #define CAF_LOGF_INFO_IF(stmt, msg) CAF_LOGF_IF(stmt, CAF_INFO, msg)
 #define CAF_LOGF_TRACE_IF(stmt, msg) CAF_LOGF_IF(stmt, CAF_TRACE, msg)
 
-#endif // CAF_LOGGING_HPP
+#endif // CAF_DETAIL_LOGGING_HPP

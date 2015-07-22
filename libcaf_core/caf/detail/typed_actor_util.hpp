@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_TYPED_ACTOR_DETAIL_HPP
-#define CAF_TYPED_ACTOR_DETAIL_HPP
+#ifndef CAF_DETAIL_TYPED_ACTOR_DETAIL_HPP
+#define CAF_DETAIL_TYPED_ACTOR_DETAIL_HPP
 
 #include <tuple>
 
@@ -269,4 +269,4 @@ struct sender_signature_checker<OrigSigs, DestSigs, detail::type_list<>> {
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_TYPED_ACTOR_DETAIL_HPP
+#endif // CAF_DETAIL_TYPED_ACTOR_DETAIL_HPP

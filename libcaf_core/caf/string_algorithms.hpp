@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_UTIL_ALGORITHM_HPP
-#define CAF_UTIL_ALGORITHM_HPP
+#ifndef CAF_STRING_ALGORITHMS_HPP
+#define CAF_STRING_ALGORITHMS_HPP
 
 #include <cmath>     // fabs
 #include <string>
@@ -141,4 +141,4 @@ caf::optional<T> spro(const std::string& str) {
 
 } // namespace caf
 
-#endif // CAF_UTIL_ALGORITHM_HPP
+#endif // CAF_STRING_ALGORITHMS_HPP
