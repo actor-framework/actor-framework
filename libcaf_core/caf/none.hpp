@@ -32,7 +32,7 @@ struct none_t : detail::comparable<none_t> {
     return false;
   }
 
-  constexpr int compare(none_t) const {
+  static constexpr int compare(none_t) {
     return 0;
   }
 };
