@@ -241,7 +241,12 @@ void basp_broker_state::set_context(connection_handle hdl) {
   auto i = ctx.find(hdl);
   if (i == ctx.end()) {
     CAF_LOG_INFO("create new BASP context for handle " << hdl.id());
-    i = ctx.emplace(hdl, connection_context{basp::await_header, basp::header{},
+    i = ctx.emplace(hdl, connection_context{basp::await_header,
+                                            basp::header{invalid_node_id,
+                                                         invalid_node_id,
+                                                         invalid_actor_id,
+                                                         invalid_actor_id,
+                                                         0, 0, 0},
                                             hdl, invalid_node_id, 0, none, {}})
         .first;
   }

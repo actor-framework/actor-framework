@@ -184,7 +184,6 @@ connection_state instance::handle(const new_data_msg& dm, header& hdr,
   CAF_LOG_TRACE("");
   // function object providing cleanup code on errors
   auto err = [&]() -> connection_state {
-    using erase_cb = routing_table::erase_callback;
     auto cb = make_callback([&](const node_id& nid){
       callee_.purge_state(nid);
     });
@@ -388,7 +387,6 @@ connection_state instance::handle(const new_data_msg& dm, header& hdr,
 }
 
 void instance::handle(const connection_closed_msg& msg) {
-  using erase_cb = routing_table::erase_callback;
   auto cb = make_callback([&](const node_id& nid){
     callee_.purge_state(nid);
   });
@@ -400,7 +398,6 @@ void instance::handle_node_shutdown(const node_id& affected_node) {
   if (affected_node == invalid_node_id)
     return;
   CAF_LOG_INFO("lost direct connection to " << to_string(affected_node));
-  using erase_cb = routing_table::erase_callback;
   auto cb = make_callback([&](const node_id& nid){
     callee_.purge_state(nid);
   });

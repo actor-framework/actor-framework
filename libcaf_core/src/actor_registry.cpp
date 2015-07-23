@@ -24,6 +24,7 @@
 #include <stdexcept>
 
 #include "caf/locks.hpp"
+#include "caf/actor_cast.hpp"
 #include "caf/attachable.hpp"
 #include "caf/exit_reason.hpp"
 

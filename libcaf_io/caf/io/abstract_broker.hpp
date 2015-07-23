@@ -313,9 +313,10 @@ protected:
 
 private:
   doorman_map doormen_;
-  scribe_map scribes_;
   middleman& mm_;
   detail::intrusive_partitioned_list<mailbox_element, detail::disposer> cache_;
+protected:
+  scribe_map scribes_;
 };
 
 } // namespace io
