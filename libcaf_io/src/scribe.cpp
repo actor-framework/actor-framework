@@ -17,7 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/io/network/manager.hpp"
+#include "caf/io/scribe.hpp"
 
 #include "caf/detail/logging.hpp"
 
@@ -25,34 +25,54 @@
 
 namespace caf {
 namespace io {
-namespace network {
 
-manager::manager(abstract_broker* ptr) : parent_(ptr) {
-  // nop
+scribe::scribe(abstract_broker* ptr, connection_handle conn_hdl)
+    : network::stream_manager(ptr),
+      hdl_(conn_hdl) {
+  std::vector<char> tmp;
+  read_msg_ = make_message(new_data_msg{hdl_, std::move(tmp)});
 }
 
-manager::~manager() {
-  // nop
+void scribe::detach_from_parent() {
+  CAF_LOG_TRACE("hdl = " << hdl().id());
+  parent()->scribes_.erase(hdl());
 }
 
-void manager::set_parent(abstract_broker* ptr) {
-  if (! detached())
-    parent_ = ptr;
-}
-
-void manager::detach(bool invoke_disconnect_message) {
+scribe::~scribe() {
   CAF_LOG_TRACE("");
-  if (! detached()) {
-    CAF_LOG_DEBUG("disconnect servant from broker");
-    detach_from_parent();
-    if (invoke_disconnect_message) {
-      auto msg = detach_message();
-      parent_->invoke_message(parent_->address(),invalid_message_id, msg);
-    }
-    parent_ = nullptr;
-  }
 }
 
-} // namespace network
+message scribe::detach_message() {
+  return make_message(connection_closed_msg{hdl()});
+}
+
+void scribe::consume(const void*, size_t num_bytes) {
+  CAF_LOG_TRACE(CAF_ARG(num_bytes));
+  if (detached()) {
+    // we are already disconnected from the broker while the multiplexer
+    // did not yet remove the socket, this can happen if an IO event causes
+    // the broker to call close_all() while the pollset contained
+    // further activities for the broker
+    return;
+  }
+  auto& buf = rd_buf();
+  CAF_ASSERT(buf.size() >= num_bytes);
+  // make sure size is correct, swap into message, and then call client
+  buf.resize(num_bytes);
+  read_msg().buf.swap(buf);
+  parent()->invoke_message(invalid_actor_addr, invalid_message_id, read_msg_);
+  // swap buffer back to stream and implicitly flush wr_buf()
+  read_msg().buf.swap(buf);
+  flush();
+}
+
+void scribe::io_failure(network::operation op) {
+  CAF_LOG_TRACE("id = " << hdl().id()
+                << ", " << CAF_TARG(op, static_cast<int>));
+  // keep compiler happy when compiling w/o logging
+  static_cast<void>(op);
+  detach(true);
+}
+
 } // namespace io
 } // namespace caf

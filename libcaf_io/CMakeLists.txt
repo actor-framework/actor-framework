@@ -12,6 +12,7 @@ set (LIBCAF_IO_SRCS
      src/abstract_broker.cpp
      src/broker.cpp
      src/default_multiplexer.cpp
+     src/doorman.cpp
      src/max_msg_size.cpp
      src/middleman.cpp
      src/hook.cpp
@@ -22,6 +23,7 @@ set (LIBCAF_IO_SRCS
      src/remote_group.cpp
      src/manager.cpp
      src/set_middleman.cpp
+     src/scribe.cpp
      src/stream_manager.cpp
      src/test_multiplexer.cpp
      src/unpublish.cpp

@@ -23,10 +23,12 @@
 #include <vector>
 #include <unordered_map>
 
+#include "caf/local_actor.hpp"
 #include "caf/detail/intrusive_partitioned_list.hpp"
 
 #include "caf/io/fwd.hpp"
-#include "caf/local_actor.hpp"
+#include "caf/io/scribe.hpp"
+#include "caf/io/doorman.hpp"
 #include "caf/io/accept_handle.hpp"
 #include "caf/io/receive_policy.hpp"
 #include "caf/io/system_messages.hpp"
@@ -40,141 +42,60 @@ namespace io {
 
 class middleman;
 
+/// @defgroup Broker Actor-based Network Abstraction
+///
+/// Brokers provide an actor-based abstraction for low-level network IO.
+/// The central component in the network abstraction of CAF is the
+/// `middleman`. It connects any number of brokers to a `multiplexer`,
+/// which implements a low-level IO event loop.
+///
+/// ![Relation between middleman, multiplexer, and broker](broker.png)
+///
+/// Brokers do *not* operate on sockets or other platform-dependent
+/// communication primitives. Instead, brokers use a `connection_handle`
+/// to identify a reliable, end-to-end byte stream (e.g. a TCP connection)
+/// and `accept_handle` to identify a communication endpoint others can
+/// connect to via its port.
+///
+/// Each `connection_handle` is associated with a `scribe` that provides
+/// access to an output buffer as well as a `flush` operation to request
+/// sending its content via the network. Instead of actively receiving data,
+/// brokers configure a scribe to asynchronously receive data, e.g.,
+/// `self->configure_read(hdl, receive_policy::exactly(1024))` would
+/// configure the scribe associated to `hdl` to receive *exactly* 1024 bytes
+/// and generate a `new_data_msg` message for the broker once the
+/// data is available. The buffer in this message will be re-used by the
+/// scribe to minimize memory usage and heap allocations.
+///
+/// Each `accept_handle` is associated with a `doorman` that will create
+/// a `new_connection_msg` whenever a new connection was established.
+///
+/// All `scribe` and `doorman` instances are managed by the `multiplexer`
+///
+
+/// A broker mediates between actor systems and other components in the network.
+/// @ingroup Broker
 class abstract_broker : public local_actor {
 public:
-  using buffer_type = std::vector<char>;
-
   class continuation;
+
+  virtual ~abstract_broker();
+
+  // even brokers need friends
+  friend class scribe;
+  friend class doorman;
+  friend class continuation;
 
   void enqueue(const actor_addr&, message_id,
                message, execution_unit*) override;
 
   void enqueue(mailbox_element_ptr, execution_unit*) override;
 
-  void launch(execution_unit* eu, bool lazy, bool hide);
-
+  /// Called after this broker has finished execution.
   void cleanup(uint32_t reason);
 
-  /// Manages a low-level IO device for the `broker`.
-  class servant {
-  public:
-    friend class abstract_broker;
-
-    void set_broker(abstract_broker* ptr);
-
-    virtual ~servant();
-
-  protected:
-    virtual void remove_from_broker() = 0;
-
-    virtual message disconnect_message() = 0;
-
-    inline abstract_broker* parent() {
-      return broker_;
-    }
-
-    servant(abstract_broker* ptr);
-
-    void disconnect(bool invoke_disconnect_message);
-
-    bool disconnected_;
-
-    abstract_broker* broker_;
-  };
-
-  /// Manages a stream.
-  class scribe : public network::stream_manager, public servant {
-  public:
-    scribe(abstract_broker* parent, connection_handle hdl);
-
-    ~scribe();
-
-    /// Implicitly starts the read loop on first call.
-    virtual void configure_read(receive_policy::config config) = 0;
-
-    /// Grants access to the output buffer.
-    virtual buffer_type& wr_buf() = 0;
-
-    /// Flushes the output buffer, i.e., sends the content of
-    ///    the buffer via the network.
-    virtual void flush() = 0;
-
-    inline connection_handle hdl() const {
-      return hdl_;
-    }
-
-    void io_failure(network::operation op) override;
-
-    void consume(const void* data, size_t num_bytes) override;
-
-  protected:
-    virtual buffer_type& rd_buf() = 0;
-
-    inline new_data_msg& read_msg() {
-      return read_msg_.get_as_mutable<new_data_msg>(0);
-    }
-
-    inline const new_data_msg& read_msg() const {
-      return read_msg_.get_as<new_data_msg>(0);
-    }
-
-    void remove_from_broker() override;
-
-    message disconnect_message() override;
-
-    connection_handle hdl_;
-
-    message read_msg_;
-  };
-
-  using scribe_ptr = intrusive_ptr<scribe>;
-
-  /// Manages incoming connections.
-  class doorman : public network::acceptor_manager, public servant {
-  public:
-    doorman(abstract_broker* parent, accept_handle hdl, uint16_t local_port);
-
-    ~doorman();
-
-    inline accept_handle hdl() const {
-      return hdl_;
-    }
-
-    void io_failure(network::operation op) override;
-
-    // needs to be launched explicitly
-    virtual void launch() = 0;
-
-    uint16_t port() const {
-      return port_;
-    }
-
-  protected:
-    void remove_from_broker() override;
-
-    message disconnect_message() override;
-
-    inline new_connection_msg& accept_msg() {
-      return accept_msg_.get_as_mutable<new_connection_msg>(0);
-    }
-
-    inline const new_connection_msg& accept_msg() const {
-      return accept_msg_.get_as<new_connection_msg>(0);
-    }
-
-    accept_handle hdl_;
-    message accept_msg_;
-    uint16_t port_;
-  };
-
-  using doorman_ptr = intrusive_ptr<doorman>;
-
-  // a broker needs friends
-  friend class scribe;
-  friend class doorman;
-  friend class continuation;
-
-  virtual ~abstract_broker();
+  /// Starts running this broker in the `middleman`.
+  void launch(execution_unit* eu, bool lazy, bool hide);
 
   /// Modifies the receive policy for given connection.
   /// @param hdl Identifies the affected connection.
@@ -182,7 +103,7 @@ public:
   void configure_read(connection_handle hdl, receive_policy::config config);
 
   /// Returns the write buffer for given connection.
-  buffer_type& wr_buf(connection_handle hdl);
+  std::vector<char>& wr_buf(connection_handle hdl);
 
   /// Writes `data` into the buffer for given connection.
   void write(connection_handle hdl, size_t data_size, const void* data);
@@ -195,37 +116,47 @@ public:
     return scribes_.size();
   }
 
+  /// Returns all handles of all `scribe` instances attached to this broker.
   std::vector<connection_handle> connections() const;
 
-  /// @cond PRIVATE
-
+  /// Returns the middleman instance this broker belongs to.
   inline middleman& parent() {
     return mm_;
   }
 
-  inline void add_scribe(const scribe_ptr& ptr) {
-    scribes_.emplace(ptr->hdl(), ptr);
-  }
+  /// Adds a `scribe` instance to this broker.
+  void add_scribe(const intrusive_ptr<scribe>& ptr);
 
+  /// Tries to connect to `host` on given `port` and creates
+  /// a new scribe describing the connection afterwards.
+  /// @returns The handle of the new `scribe` on success.
+  /// @throws network_error Thrown if given `host` was unreachable or invalid.
   connection_handle add_tcp_scribe(const std::string& host, uint16_t port);
 
+  /// Assigns a detached `scribe` instance identified by `hdl`
+  /// from the `multiplexer` to this broker.
   void assign_tcp_scribe(connection_handle hdl);
 
+  /// Creates and assigns a new `scribe` from given native socked `fd`.
   connection_handle add_tcp_scribe(network::native_socket fd);
 
-  inline void add_doorman(const doorman_ptr& ptr) {
-    doormen_.emplace(ptr->hdl(), ptr);
-    if (is_initialized()) {
-      ptr->launch();
-    }
-  }
+  /// Adds a `doorman` instance to this broker.
+  void add_doorman(const intrusive_ptr<doorman>& ptr);
 
+  /// Tries to open a local port and creates a `doorman` managing
+  /// it on success. If `port == 0`, then the broker will ask
+  /// the operating system to pick a random port.
+  /// @returns The handle of the new `doorman` and the assigned port.
+  /// @throws network_error Thrown if `port` was unavailable.
   std::pair<accept_handle, uint16_t> add_tcp_doorman(uint16_t port = 0,
                                                      const char* in = nullptr,
                                                      bool reuse_addr = false);
 
+  /// Assigns a detached `doorman` instance identified by `hdl`
+  /// from the `multiplexer` to this broker.
   void assign_tcp_doorman(accept_handle hdl);
 
+  /// Creates and assigns a new `doorman` from given native socked `fd`.
   accept_handle add_tcp_doorman(network::native_socket fd);
 
   /// Returns the local port associated to `hdl` or `0` if `hdl` is invalid.
@@ -234,10 +165,11 @@ public:
   /// Returns the handle associated to given local `port` or `none`.
   optional<accept_handle> hdl_by_port(uint16_t port);
 
+  /// Invokes `msg` on this broker.
   void invoke_message(mailbox_element_ptr& msg);
 
-  void invoke_message(const actor_addr& sender,
-                      message_id mid, message& msg);
+  /// Creates a mailbox element from given data and invoke it.
+  void invoke_message(const actor_addr& sender, message_id mid, message& msg);
 
   /// Closes all connections and acceptors.
   void close_all();
@@ -260,9 +192,12 @@ protected:
 
   abstract_broker(middleman& parent_ref);
 
-  using doorman_map = std::unordered_map<accept_handle, doorman_ptr>;
+  using doorman_map = std::unordered_map<accept_handle, intrusive_ptr<doorman>>;
 
-  using scribe_map = std::unordered_map<connection_handle, scribe_ptr>;
+  using scribe_map = std::unordered_map<connection_handle,
+                                        intrusive_ptr<scribe>>;
+
+  /// @cond PRIVATE
 
   // meta programming utility
   inline doorman_map& get_map(accept_handle) {
@@ -275,13 +210,14 @@ protected:
   }
 
   // meta programming utility (not implemented)
-  static doorman_ptr ptr_of(accept_handle);
+  static intrusive_ptr<doorman> ptr_of(accept_handle);
 
   // meta programming utility (not implemented)
-  static scribe_ptr ptr_of(connection_handle);
+  static intrusive_ptr<scribe> ptr_of(connection_handle);
 
   /// @endcond
 
+  /// Returns the `multiplexer` running this broker.
   network::multiplexer& backend();
 
   /// Returns a `scribe` or `doorman` identified by `hdl`.
@@ -309,6 +245,7 @@ protected:
     return result;
   }
 
+  /// Tries to invoke a message from the cache.
   bool invoke_message_from_cache();
 
 private:

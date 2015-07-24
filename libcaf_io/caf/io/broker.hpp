@@ -32,8 +32,9 @@
 namespace caf {
 namespace io {
 
-/// A broker mediates between actor systems and other components in the network.
-/// @extends local_actor
+/// Describes a dynamically typed broker.
+/// @extends abstract_broker
+/// @ingroup Broker
 class broker : public abstract_event_based_actor<behavior, false,
                                                  abstract_broker> {
 public:
@@ -50,7 +51,7 @@ public:
     CAF_ASSERT(sptr->hdl() == hdl);
     return spawn_functor(nullptr,
                          [sptr](broker* forked) {
-                           sptr->set_broker(forked);
+                           sptr->set_parent(forked);
                            forked->scribes_.emplace(sptr->hdl(), sptr);
                          },
                          fun, hdl, std::forward<Ts>(xs)...);

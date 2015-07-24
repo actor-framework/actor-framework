@@ -23,6 +23,10 @@ namespace caf {
 namespace io {
 namespace network {
 
+acceptor_manager::acceptor_manager(abstract_broker* ptr) : manager(ptr) {
+  // nop
+}
+
 acceptor_manager::~acceptor_manager() {
   // nop
 }

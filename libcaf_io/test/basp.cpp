@@ -63,25 +63,6 @@ string hexstr(const buffer& buf) {
   return oss.str();
 }
 
-string get_operation(uint64_t operation) {
-  switch (operation) {
-    case basp::server_handshake:
-      return "server_handshake";
-    case basp::client_handshake:
-      return "client_handshake";
-    case basp::dispatch_message:
-      return "dispatch_message";
-    case basp::announce_proxy_instance:
-      return "announce_proxy_instance";
-    case basp::kill_proxy_instance:
-      return "kill_proxy_instance";
-    case basp::dispatch_error:
-      return "dispatch_error";
-    default:
-      return "???";
-  }
-}
-
 class fixture {
 public:
   fixture() {
@@ -199,7 +180,7 @@ public:
   using payload_writer = basp::instance::payload_writer;
 
   void to_buf(buffer& buf, basp::header& hdr, payload_writer* writer) {
-    instance().write(buf, hdr, writer, true);
+    instance().write(buf, hdr, writer);
   }
 
   template <class T, class... Ts>
@@ -243,15 +224,21 @@ public:
     // technically, the server handshake arrives
     // before we send the client handshake
     mock(hdl,
-         {remote_node(i), this_node(),
-          invalid_actor_id, invalid_actor_id,
-          0, basp::client_handshake, 0})
+         {basp::message_type::client_handshake, 0, 0,
+          remote_node(i), this_node(),
+          invalid_actor_id, invalid_actor_id})
     .expect(hdl,
-            {this_node(), invalid_node_id,
-             invalid_actor_id, invalid_actor_id,
-             0, basp::server_handshake, basp::version},
+            {basp::message_type::server_handshake, 0, basp::version,
+             this_node(), invalid_node_id,
+             invalid_actor_id, invalid_actor_id},
             published_actor_id,
             published_actor_ifs);
+    // test whether basp instance correctly updates the
+    // routing table upon receiving client handshakes
+    auto path = tbl().lookup(remote_node(i));
+    CAF_REQUIRE(path != none);
+    CAF_CHECK(path->hdl == remote_hdl(i));
+    CAF_CHECK(path->next_hop == remote_node(i));
   }
 
   std::pair<basp::header, buffer> read_from_out_buf(connection_handle hdl) {
@@ -264,26 +251,15 @@ public:
     return result;
   }
 
-  void dispatch_out_buf(connection_handle hdl, vector<node_id> hops = {}) {
+  void dispatch_out_buf(connection_handle hdl) {
     basp::header hdr;
     buffer buf;
     std::tie(hdr, buf) = read_from_out_buf(hdl);
     CAF_MESSAGE("dispatch output buffer for connection " << hdl.id());
-    CAF_REQUIRE(hdr.operation == basp::dispatch_message);
+    CAF_REQUIRE(hdr.operation == basp::message_type::dispatch_message);
     message msg;
     auto source = make_deserializer(buf);
-    auto msg_size = source.read<uint32_t>();
-    auto expected_payload_len = static_cast<uint32_t>(
-      msg_size + sizeof(uint32_t) + (node_id::serialized_size * hops.size()));
-    CAF_CHECK(expected_payload_len == hdr.payload_len);
     msg.deserialize(source);
-    vector<node_id> forwarder_nodes;
-    for (size_t i = 0; i < hops.size(); ++i) {
-      node_id nid;
-      nid.deserialize(source);
-      forwarder_nodes.emplace_back(std::move(nid));
-    }
-    CAF_CHECK(hops == forwarder_nodes);
     auto registry = detail::singletons::get_actor_registry();
     auto src = registry->get(hdr.source_actor);
     auto dest = registry->get(hdr.dest_actor);
@@ -309,7 +285,7 @@ public:
     template <class... Ts>
     mock_t& expect(connection_handle hdl, basp::header hdr, const Ts&... xs) {
       CAF_MESSAGE("expect " << num++ << ". sent message to be a "
-                  << get_operation(hdr.operation));
+                  << to_string(hdr.operation));
       buffer buf;
       this_->to_buf(buf, hdr, nullptr, xs...);
       buffer& ob = this_->mpx()->output_buffer(hdl);
@@ -340,7 +316,7 @@ public:
 
   template <class... Ts>
   mock_t mock(connection_handle hdl, basp::header hdr, const Ts&... xs) {
-    CAF_MESSAGE("virtually send " << get_operation(hdr.operation));
+    CAF_MESSAGE("virtually send " << to_string(hdr.operation));
     buffer buf;
     to_buf(buf, hdr, nullptr, xs...);
     mpx()->virtual_send(hdl, buf);
@@ -378,10 +354,11 @@ CAF_TEST(empty_server_handshake) {
   auto is_zero = [](char c) {
     return c == 0;
   };
-  basp::header expected{this_node(), invalid_node_id,
-                        invalid_actor_id, invalid_actor_id,
+  basp::header expected{basp::message_type::server_handshake,
                         sizeof(actor_id) + sizeof(uint32_t),
-                        basp::server_handshake, basp::version};
+                        basp::version,
+                        this_node(), invalid_node_id,
+                        invalid_actor_id, invalid_actor_id};
   CAF_CHECK(basp::valid(hdr));
   CAF_CHECK(basp::is_handshake(hdr));
   CAF_CHECK(hdr == expected);
@@ -396,9 +373,9 @@ CAF_TEST(non_empty_server_handshake) {
                                  {"caf::replies_to<@u16>::with<@u16>"});
   instance().write_server_handshake(buf, 4242);
   buffer expected_buf;
-  basp::header expected{this_node(), invalid_node_id,
-                        invalid_actor_id, invalid_actor_id,
-                        0, basp::server_handshake, basp::version};
+  basp::header expected{basp::message_type::server_handshake, 0, basp::version,
+                        this_node(), invalid_node_id,
+                        invalid_actor_id, invalid_actor_id};
   to_buf(expected_buf, expected, nullptr,
          self()->id(), set<string>{"caf::replies_to<@u16>::with<@u16>"});
   CAF_CHECK(hexstr(buf) == hexstr(expected_buf));
@@ -406,24 +383,15 @@ CAF_TEST(non_empty_server_handshake) {
 
 CAF_TEST(client_handshake_and_dispatch) {
   connect_node(0, none, invalid_actor_id, {});
-  // test whether basp instance correctly updates the
-  // routing table upon receiving client handshakes
-  auto path = tbl().lookup(remote_node(0));
-  CAF_CHECK(path
-            && path->hdl == remote_hdl(0)
-            && path->next_hop == remote_node(0));
   // send a message via `dispatch` from node 0
-  auto msg = make_message(1, 2, 3);
-  auto msg_size = serialized_size(msg);
   mock(remote_hdl(0),
-       {remote_node(0), this_node(), pseudo_remote(0)->id(), self()->id(),
-        0, basp::dispatch_message, 0},
-       msg_size,
-       msg)
+       {basp::message_type::dispatch_message, 0, 0,
+        remote_node(0), this_node(), pseudo_remote(0)->id(), self()->id()},
+       make_message(1, 2, 3))
   .expect(remote_hdl(0),
-          {this_node(), remote_node(0),
-           invalid_actor_id, pseudo_remote(0)->id(),
-           0, basp::announce_proxy_instance, 0});
+          {basp::message_type::announce_proxy_instance, 0, 0,
+           this_node(), remote_node(0),
+           invalid_actor_id, pseudo_remote(0)->id()});
   // must've created a proxy for our remote actor
   CAF_REQUIRE(get_namespace().count_proxies(remote_node(0)) == 1);
   // must've send remote node a message that this proxy is monitored now
@@ -453,21 +421,17 @@ CAF_TEST(message_forwarding) {
   connect_node(0, none, invalid_actor_id, {});
   connect_node(1, none, invalid_actor_id, {});
   auto msg = make_message(1, 2, 3);
-  auto msg_size = serialized_size(msg);
   // send a message from node 0 to node 1, forwarded by this node
   mock(remote_hdl(0),
-       {remote_node(0), remote_node(1),
-        invalid_actor_id, pseudo_remote(1)->id(),
-        0, basp::dispatch_message, 0},
-       msg_size,
+       {basp::message_type::dispatch_message, 0, 0,
+        remote_node(0), remote_node(1),
+        invalid_actor_id, pseudo_remote(1)->id()},
        msg)
   .expect(remote_hdl(1),
-          {remote_node(0), remote_node(1),
-           invalid_actor_id, pseudo_remote(1)->id(),
-           0, basp::dispatch_message, 0},
-          msg_size,
-          msg,
-          this_node());
+          {basp::message_type::dispatch_message, 0, 0,
+           remote_node(0), remote_node(1),
+           invalid_actor_id, pseudo_remote(1)->id()},
+          msg);
 }
 
 CAF_TEST(publish_and_connect) {
@@ -490,19 +454,19 @@ CAF_TEST(remote_actor_and_send) {
   // build a fake server handshake containing the id of our first pseudo actor
   CAF_TEST_VERBOSE("server handshake => client handshake + proxy announcement");
   mock(remote_hdl(0),
-       {remote_node(0), invalid_node_id,
-        invalid_actor_id, invalid_actor_id,
-        0, basp::server_handshake, basp::version},
+       {basp::message_type::server_handshake, 0, basp::version,
+        remote_node(0), invalid_node_id,
+        invalid_actor_id, invalid_actor_id},
        pseudo_remote(0)->id(),
        uint32_t{0})
   .expect(remote_hdl(0),
-          {this_node(), remote_node(0),
-           invalid_actor_id, invalid_actor_id,
-           0, basp::client_handshake, 0})
+          {basp::message_type::client_handshake, 0, 0,
+           this_node(), remote_node(0),
+           invalid_actor_id, invalid_actor_id})
   .expect(remote_hdl(0),
-          {this_node(), remote_node(0),
-           invalid_actor_id, pseudo_remote(0)->id(), 0,
-           basp::announce_proxy_instance, 0});
+          {basp::message_type::announce_proxy_instance, 0, 0,
+           this_node(), remote_node(0),
+           invalid_actor_id, pseudo_remote(0)->id()});
   // basp broker should've send the proxy
   f.await(
     [&](ok_atom, actor_addr res) {
@@ -526,19 +490,16 @@ CAF_TEST(remote_actor_and_send) {
   mpx()->exec_runnable(); // process forwarded message in basp_broker
   mock()
   .expect(remote_hdl(0),
-          {this_node(), remote_node(0),
-           invalid_actor_id, pseudo_remote(0)->id(),
-           0, basp::dispatch_message, 0},
-          serialized_size(make_message(42)),
+          {basp::message_type::dispatch_message, 0, 0,
+           this_node(), remote_node(0),
+           invalid_actor_id, pseudo_remote(0)->id()},
           make_message(42));
   auto msg = make_message("hi there!");
-  auto msg_size = serialized_size(msg);
   CAF_MESSAGE("send message via BASP (from proxy)");
   mock(remote_hdl(0),
-       {remote_node(0), this_node(),
-        pseudo_remote(0)->id(), self()->id(),
-        0, basp::dispatch_message, 0},
-       msg_size,
+       {basp::message_type::dispatch_message, 0, 0,
+        remote_node(0), this_node(),
+        pseudo_remote(0)->id(), self()->id()},
        make_message("hi there!"));
   self()->receive(
     [&](const string& str) {
@@ -563,21 +524,19 @@ CAF_TEST(actor_serialize_and_deserialize) {
   auto prx = get_namespace().get_or_put(remote_node(0), pseudo_remote(0)->id());
   mock()
   .expect(remote_hdl(0),
-          {this_node(), prx->node(),
-           invalid_actor_id, prx->id(),
-           0, basp::announce_proxy_instance, 0});
+          {basp::message_type::announce_proxy_instance, 0, 0,
+           this_node(), prx->node(),
+           invalid_actor_id, prx->id()});
   CAF_CHECK(prx->node() == remote_node(0));
   CAF_CHECK(prx->id() == pseudo_remote(0)->id());
   auto testee = spawn(testee_impl);
   registry()->put(testee->id(), testee->address());
   CAF_MESSAGE("send message via BASP (from proxy)");
   auto msg = make_message(prx->address());
-  auto msg_size = serialized_size(msg);
   mock(remote_hdl(0),
-       {prx->node(), this_node(),
-        prx->id(), testee->id(),
-        0, basp::dispatch_message, 0},
-       msg_size,
+       {basp::message_type::dispatch_message, 0, 0,
+        prx->node(), this_node(),
+        prx->id(), testee->id()},
        msg);
   // testee must've responded (process forwarded message in BASP broker)
   CAF_MESSAGE("exec runnable, i.e., handle response from testee");
@@ -585,10 +544,9 @@ CAF_TEST(actor_serialize_and_deserialize) {
   // output buffer must contain the reflected message
   mock()
   .expect(remote_hdl(0),
-          {this_node(), prx->node(),
-           testee->id(), prx->id(),
-           0, basp::dispatch_message, 0},
-          msg_size,
+          {basp::message_type::dispatch_message, 0, 0,
+           this_node(), prx->node(),
+           testee->id(), prx->id()},
           msg);
 }
 

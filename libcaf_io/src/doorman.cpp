@@ -17,30 +17,43 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_NETWORK_ACCEPTOR_MANAGER_HPP
-#define CAF_IO_NETWORK_ACCEPTOR_MANAGER_HPP
+#include "caf/io/doorman.hpp"
 
-#include "caf/io/network/manager.hpp"
+#include "caf/detail/logging.hpp"
+
+#include "caf/io/abstract_broker.hpp"
 
 namespace caf {
 namespace io {
-namespace network {
 
-/// An acceptor manager configures an acceptor and provides
-/// callbacks for incoming connections as well as for error handling.
-class acceptor_manager : public manager {
-public:
-  acceptor_manager(abstract_broker* ptr);
+doorman::doorman(abstract_broker* ptr, accept_handle acc_hdl, uint16_t p)
+    : network::acceptor_manager(ptr),
+      hdl_(acc_hdl),
+      accept_msg_(make_message(new_connection_msg{hdl_, connection_handle{}})),
+      port_(p) {
+  // nop
+}
 
-  ~acceptor_manager();
+doorman::~doorman() {
+  // nop
+}
 
-  /// Called by the underlying IO device to indicate that
-  /// a new connection is awaiting acceptance.
-  virtual void new_connection() = 0;
-};
+void doorman::detach_from_parent() {
+  CAF_LOG_TRACE("hdl = " << hdl().id());
+  parent()->doormen_.erase(hdl());
+}
 
-} // namespace network
+message doorman::detach_message() {
+  return make_message(acceptor_closed_msg{hdl()});
+}
+
+void doorman::io_failure(network::operation op) {
+  CAF_LOG_TRACE("id = " << hdl().id() << ", "
+                        << CAF_TARG(op, static_cast<int>));
+  // keep compiler happy when compiling w/o logging
+  static_cast<void>(op);
+  detach(true);
+}
+
 } // namespace io
 } // namespace caf
-
-#endif // CAF_IO_NETWORK_ACCEPTOR_MANAGER_HPP

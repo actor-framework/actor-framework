@@ -17,30 +17,60 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_NETWORK_ACCEPTOR_MANAGER_HPP
-#define CAF_IO_NETWORK_ACCEPTOR_MANAGER_HPP
+#ifndef CAF_IO_DOORMAN_HPP
+#define CAF_IO_DOORMAN_HPP
 
-#include "caf/io/network/manager.hpp"
+#include <cstddef>
+
+#include "caf/message.hpp"
+
+#include "caf/io/accept_handle.hpp"
+#include "caf/io/system_messages.hpp"
+#include "caf/io/network/acceptor_manager.hpp"
 
 namespace caf {
 namespace io {
-namespace network {
 
-/// An acceptor manager configures an acceptor and provides
-/// callbacks for incoming connections as well as for error handling.
-class acceptor_manager : public manager {
+/// Manages incoming connections.
+/// @ingroup Broker
+class doorman : public network::acceptor_manager {
 public:
-  acceptor_manager(abstract_broker* ptr);
+  doorman(abstract_broker* parent, accept_handle hdl, uint16_t local_port);
 
-  ~acceptor_manager();
+  ~doorman();
 
-  /// Called by the underlying IO device to indicate that
-  /// a new connection is awaiting acceptance.
-  virtual void new_connection() = 0;
+  inline accept_handle hdl() const {
+    return hdl_;
+  }
+
+  void io_failure(network::operation op) override;
+
+  // needs to be launched explicitly
+  virtual void launch() = 0;
+
+  uint16_t port() const {
+    return port_;
+  }
+
+protected:
+  void detach_from_parent() override;
+
+  message detach_message() override;
+
+  inline new_connection_msg& accept_msg() {
+    return accept_msg_.get_as_mutable<new_connection_msg>(0);
+  }
+
+  inline const new_connection_msg& accept_msg() const {
+    return accept_msg_.get_as<new_connection_msg>(0);
+  }
+
+  accept_handle hdl_;
+  message accept_msg_;
+  uint16_t port_;
 };
 
-} // namespace network
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_NETWORK_ACCEPTOR_MANAGER_HPP
+#endif // CAF_IO_DOORMAN_HPP

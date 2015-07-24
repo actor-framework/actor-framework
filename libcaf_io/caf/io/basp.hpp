@@ -44,6 +44,45 @@ namespace caf {
 namespace io {
 namespace basp {
 
+/// @defgroup BASP Binary Actor Sytem Protocol
+///
+/// This protocol is used to orchestrate CAF peers in the network.
+/// BASP is independent of any underlying network technology, since it
+/// operates only on the granularity of `node_id` addresses. Its
+/// implementation only assumes end-to-end byte stream connections.
+/// BASP forms an overlay consisting of all participating nodes
+/// (or peers) and enables global communiation between all actors
+/// on all nodes.
+///
+/// ![](basp_header.png)
+///
+/// BASP has two primary objectives:
+///
+/// - Establish routing paths for all participating nodes, i.e.,
+///   allow BASP nodes to exchange messages even if no direct
+///   connection exists.
+///
+/// - Propagate actor terminations. Whenever a node learns the
+///   address of a remotely running actor, it creates a local
+///   proxy instance representing this actor and sends an
+///   `announce_proxy_instance` to the node hosting the actor.
+///   Whenever an actor terminates, the hosting node sends
+///   `kill_proxy_instance` messages to all nodes that have
+///   a proxy for this actor. This enables network-transparent
+///   actor monitoring.
+///
+/// The following diagram models a distributed application
+/// with three nodes. The pseudo code for the application can be found
+/// in the three grey boxes, while the resulting BASP messaging
+/// is shown in UML sequence diagram notation. More details about
+/// individual BASP message types can be found in the documentation
+/// of {@link message_type} below.
+///
+/// ![](basp_sequence.png)
+
+/// @addtogroup BASP
+/// @{
+
 /// The current BASP version. Different BASP versions will not
 /// be able to exchange messages.
 constexpr uint64_t version = 2;
@@ -51,52 +90,110 @@ constexpr uint64_t version = 2;
 /// Storage type for raw bytes.
 using buffer_type = std::vector<char>;
 
+/// Describes the first header field of a BASP message and determines the
+/// interpretation of the other header fields.
+enum class message_type : uint32_t {
+  /// Send from server, i.e., the node with a published actor, to client,
+  /// i.e., node that initiates a new connection using remote_actor().
+  ///
+  /// ![](server_handshake.png)
+  server_handshake = 0x00,
+
+  /// Send from client to server after it has successfully received the
+  /// server_handshake to establish the connection.
+  ///
+  /// ![](client_handshake.png)
+  client_handshake = 0x01,
+
+  /// Transmits a message from `source_node:source_actor` to
+  /// `dest_node:dest_actor`.
+  ///
+  /// ![](dispatch_message.png)
+  dispatch_message = 0x02,
+
+  /// Informs the receiving node that the sending node has created a proxy
+  /// instance for one of its actors. Causes the receiving node to attach
+  /// a functor to the actor that triggers a kill_proxy_instance
+  /// message on termination.
+  ///
+  /// ![](announce_proxy_instance.png)
+  announce_proxy_instance = 0x03,
+
+  /// Informs the receiving node that it has a proxy for an actor
+  /// that has been terminated.
+  ///
+  /// ![](kill_proxy_instance.png)
+  kill_proxy_instance = 0x04,
+
+  /// Informs the receiving node that a message it sent
+  /// did not reach its destination.
+  ///
+  /// ![](dispatch_error.png)
+  dispatch_error = 0x05
+};
+
+/// @relates message_type
+std::string to_string(message_type);
+
 /// The header of a Binary Actor System Protocol (BASP) message.
 /// A BASP header consists of a routing part, i.e., source and
 /// destination, as well as an operation and operation data. Several
 /// message types consist of only a header.
 struct header {
+  message_type operation;
+  uint32_t payload_len;
+  uint64_t operation_data;
   node_id source_node;
   node_id dest_node;
   actor_id source_actor;
   actor_id dest_actor;
-  uint32_t payload_len;
-  uint32_t operation;
-  uint64_t operation_data;
 };
 
 /// @relates header
 std::string to_string(const header& hdr);
 
 /// @relates header
-inline bool operator==(const header& lhs, const header& rhs) {
-  return lhs.source_node == rhs.source_node
-         && lhs.dest_node == rhs.dest_node
-         && lhs.source_actor == rhs.source_actor
-         && lhs.dest_actor == rhs.dest_actor
-         && lhs.payload_len == rhs.payload_len
-         && lhs.operation == rhs.operation
-         && lhs.operation_data == rhs.operation_data;
-}
+void read_hdr(deserializer& source, header& hdr);
+
+/// @relates header
+void write_hdr(serializer& sink, const header& hdr);
+
+/// @relates header
+bool operator==(const header& lhs, const header& rhs);
 
 /// @relates header
 inline bool operator!=(const header& lhs, const header& rhs) {
   return !(lhs == rhs);
 }
 
+/// Checks whether given BASP header is valid.
 /// @relates header
-void read_hdr(deserializer&, header& hdr);
+bool valid(const header& hdr);
 
-/// @relates header
-void write_hdr(serializer&, const header& hdr);
+/// Deserialize a BASP message header from `source`.
+void read_hdr(serializer& sink, header& hdr);
+
+/// Serialize a BASP message header to `sink`.
+void write_hdr(deserializer& source, const header& hdr);
+
+/// Size of a BASP header in serialized form
+constexpr size_t header_size =
+  node_id::host_id_size * 2 + sizeof(uint32_t) * 2 +
+  sizeof(actor_id) * 2 + sizeof(uint32_t) * 2 + sizeof(uint64_t);
+
+/// Describes an error during forwarding of BASP messages.
+enum class error : uint64_t {
+  /// Indicates that a forwarding node had no route
+  /// to the destination.
+  no_route_to_destination = 0x01,
+
+  /// Indicates that a forwarding node detected
+  /// a loop in the forwarding path.
+  loop_detected = 0x02
+};
 
 /// Denotes the state of a connection between to BASP nodes.
 enum connection_state {
-  /// Indicates that this node just started and is waiting for server handshake.
-  await_server_handshake,
-  /// Indicates that this node just accepted a connection, sent its
-  /// handshake to the client, and is now waiting for the client's response.
-  await_client_handshake,
   /// Indicates that a connection is established and this node is
   /// waiting for the next BASP header.
   await_header,
@@ -301,20 +398,18 @@ public:
   /// Writes a header (build from the arguments)
   /// followed by its payload to `storage`.
   void write(buffer_type& storage,
+             message_type operation,
+             uint32_t* payload_len,
+             uint64_t operation_data,
              const node_id& source_node,
              const node_id& dest_node,
              actor_id source_actor,
              actor_id dest_actor,
-             uint32_t* payload_len,
-             uint32_t operation,
-             uint64_t operation_data,
-             payload_writer* writer = nullptr,
-             bool suppress_auto_size_prefixing = false);
+             payload_writer* writer = nullptr);
 
   /// Writes a header followed by its payload to `storage`.
   void write(buffer_type& storage, header& hdr,
-             payload_writer* writer = nullptr,
-             bool suppress_auto_size_prefixing = false);
+             payload_writer* writer = nullptr);
 
   /// Writes the server handshake containing the information of the
   /// actor published at `port` to `buf`. If `port == none` or
@@ -326,7 +421,7 @@ public:
   void write_dispatch_error(buffer_type& buf,
                             const node_id& source_node,
                             const node_id& dest_node,
-                            uint64_t error_code,
+                            error error_code,
                             const header& original_hdr,
                             const buffer_type& payload);
 
@@ -347,212 +442,13 @@ private:
   callee& callee_;
 };
 
-/// Deserialize a BASP message header from `source`.
-void read_hdr(serializer& sink, header& hdr);
-
-/// Serialize a BASP message header to `sink`.
-void write_hdr(deserializer& source, const header& hdr);
-
-/// Size of a BASP header in serialized form
-constexpr size_t header_size =
-  node_id::host_id_size * 2 + sizeof(uint32_t) * 2 +
-  sizeof(actor_id) * 2 + sizeof(uint32_t) * 2 + sizeof(uint64_t);
-
-
-inline bool valid(const node_id& val) {
-  return val != invalid_node_id;
-}
-
-inline bool invalid(const node_id& val) {
-  return ! valid(val);
-}
-
-template <class T>
-inline bool zero(T val) {
-  return val == 0;
-}
-
-template <class T>
-inline bool nonzero(T aid) {
-  return ! zero(aid);
-}
-
-/// Send from server, i.e., the node with a published actor, to client,
-/// i.e., node that initiates a new connection using remote_actor().
-///
-/// Field          | Assignment
-/// ---------------|----------------------------------------------------------
-/// source_node    | ID of server
-/// dest_node      | invalid
-/// source_actor   | 0
-/// dest_actor     | 0
-/// payload_len    | size of actor id + interface definition
-/// operation_data | BASP version of the server
-constexpr uint32_t server_handshake = 0x00;
-
-inline bool server_handshake_valid(const header& hdr) {
-  return  valid(hdr.source_node)
-       && invalid(hdr.dest_node)
-       && zero(hdr.source_actor)
-       && zero(hdr.dest_actor)
-       && nonzero(hdr.payload_len)
-       && nonzero(hdr.operation_data);
-}
-
-/// Send from client to server after it has successfully received the
-/// server_handshake to establish the connection.
-///
-/// Field          | Assignment
-/// ---------------|----------------------------------------------------------
-/// source_node    | ID of client
-/// dest_node      | ID of server
-/// source_actor   | 0
-/// dest_actor     | 0
-/// payload_len    | 0
-/// operation_data | 0
-constexpr uint32_t client_handshake = 0x01;
-
-inline bool client_handshake_valid(const header& hdr) {
-  return  valid(hdr.source_node)
-       && valid(hdr.dest_node)
-       && hdr.source_node != hdr.dest_node
-       && zero(hdr.source_actor)
-       && zero(hdr.dest_actor)
-       && zero(hdr.payload_len)
-       && zero(hdr.operation_data);
-}
-
-/// Transmits a message from source_node:source_actor to
-/// dest_node:dest_actor.
-///
-/// Field          | Assignment
-/// ---------------|----------------------------------------------------------
-/// source_node    | ID of sending node (invalid in case of anon_send)
-/// dest_node      | ID of receiving node
-/// source_actor   | ID of sending actor (invalid in case of anon_send)
-/// dest_actor     | ID of receiving actor, must not be invalid
-/// payload_len    | > 0
-/// operation_data | message ID (0 for asynchronous messages)
-///
-/// Payload:
-/// - the first 4 bytes are the size of the serialized message
-/// - serialized message
-/// - any number of node IDs: each forwarding node adds its
-///   node ID to the payload, allowing the receiving node to backtrace
-///   the full path of this message (also enables loop detection)
-constexpr uint32_t dispatch_message = 0x02;
-
-inline bool dispatch_message_valid(const header& hdr) {
-  return  valid(hdr.dest_node)
-       && nonzero(hdr.dest_actor)
-       && nonzero(hdr.payload_len);
-}
-
-/// Informs the receiving node that the sending node has created a proxy
-/// instance for one of its actors. Causes the receiving node to attach
-/// a functor to the actor that triggers a kill_proxy_instance
-/// message on termination.
-///
-/// Field          | Assignment
-/// ---------------|----------------------------------------------------------
-/// source_node    | ID of sending node
-/// dest_node      | ID of receiving node
-/// source_actor   | 0
-/// dest_actor     | ID of monitored actor
-/// payload_len    | 0
-/// operation_data | 0
-constexpr uint32_t announce_proxy_instance = 0x03;
-
-inline bool announce_proxy_instance_valid(const header& hdr) {
-  return  valid(hdr.source_node)
-       && valid(hdr.dest_node)
-       && hdr.source_node != hdr.dest_node
-       && zero(hdr.source_actor)
-       && nonzero(hdr.dest_actor)
-       && zero(hdr.payload_len)
-       && zero(hdr.operation_data);
-}
-
-/// Informs the receiving node that it has a proxy for an actor
-/// that has been terminated.
-///
-/// Field          | Assignment
-/// ---------------|----------------------------------------------------------
-/// source_node    | ID of sending node
-/// dest_node      | ID of receiving node
-/// source_actor   | ID of monitored actor
-/// dest_actor     | 0
-/// payload_len    | 0
-/// operation_data | exit reason (uint32)
-constexpr uint32_t kill_proxy_instance = 0x04;
-
-inline bool kill_proxy_instance_valid(const header& hdr) {
-  return  valid(hdr.source_node)
-       && valid(hdr.dest_node)
-       && hdr.source_node != hdr.dest_node
-       && nonzero(hdr.source_actor)
-       && zero(hdr.dest_actor)
-       && zero(hdr.payload_len)
-       && nonzero(hdr.operation_data);
-}
-
-namespace error {
-
-/// Indicates that a forwarding node had no route
-/// to the destination.
-static constexpr uint64_t no_route_to_destination = 0x01;
-
-/// Indicates that a forwarding node detected
-/// a loop in the forwarding path.
-static constexpr uint64_t loop_detected = 0x02;
-
-} // namespace error
-
-/// Informs the receiving node that a message it sent
-/// did not reach its destination.
-///
-/// Field          | Assignment
-/// ---------------|----------------------------------------------------------
-/// source_node    | ID of sending node
-/// dest_node      | ID of receiving node
-/// source_actor   | 0
-/// dest_actor     | 0
-/// payload_len    | > 0 (size of message object and forwarding nodes)
-/// operation_data | error code (see `basp::error`)
-constexpr uint32_t dispatch_error = 0x05;
-
-inline bool dispatch_error_valid(const header& hdr) {
-  return  valid(hdr.source_node)
-       && valid(hdr.dest_node)
-       && hdr.source_node != hdr.dest_node
-       && zero(hdr.source_actor)
-       && zero(hdr.dest_actor)
-       && nonzero(hdr.payload_len)
-       && nonzero(hdr.operation_data);
-}
-
 /// Checks whether given header contains a handshake.
 inline bool is_handshake(const header& hdr) {
-  return hdr.operation == server_handshake || hdr.operation == client_handshake;
+  return hdr.operation == message_type::server_handshake
+      || hdr.operation == message_type::client_handshake;
 }
 
-/// Checks whether given header is valid.
-inline bool valid(const header& hdr) {
-  switch (hdr.operation) {
-    default:
-      return false; // invalid operation field
-    case server_handshake:
-      return server_handshake_valid(hdr);
-    case client_handshake:
-      return client_handshake_valid(hdr);
-    case dispatch_message:
-      return dispatch_message_valid(hdr);
-    case announce_proxy_instance:
-      return announce_proxy_instance_valid(hdr);
-    case kill_proxy_instance:
-      return kill_proxy_instance_valid(hdr);
-  }
-}
+/// @}
 
 } // namespace basp
 } // namespace io

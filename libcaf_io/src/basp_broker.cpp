@@ -83,9 +83,9 @@ actor_proxy_ptr basp_broker_state::make_proxy(const node_id& nid,
   });
   // tell remote side we are monitoring this actor now
   instance.write(self->wr_buf(this_context->hdl),
+                 basp::message_type::announce_proxy_instance, nullptr, 0,
                  this_node(), nid,
-                 invalid_actor_id, aid,
-                 nullptr, basp::announce_proxy_instance, 0);
+                 invalid_actor_id, aid);
   instance.tbl().flush(*path);
   self->parent().notify<hook::new_remote_actor>(res->address());
   return res;

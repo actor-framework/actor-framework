@@ -97,114 +97,6 @@ void abstract_broker::cleanup(uint32_t reason) {
   deref(); // release implicit reference count from middleman
 }
 
-void abstract_broker::servant::set_broker(abstract_broker* new_broker) {
-  if (! disconnected_) {
-    broker_ = new_broker;
-  }
-}
-
-abstract_broker::servant::~servant() {
-  CAF_LOG_TRACE("");
-}
-
-abstract_broker::servant::servant(abstract_broker* ptr) : disconnected_(false), broker_(ptr) {
-  // nop
-}
-
-void abstract_broker::servant::disconnect(bool invoke_disconnect_message) {
-  CAF_LOG_TRACE("");
-  if (! disconnected_) {
-    CAF_LOG_DEBUG("disconnect servant from broker");
-    disconnected_ = true;
-    remove_from_broker();
-    if (invoke_disconnect_message) {
-      auto msg = disconnect_message();
-      broker_->invoke_message(broker_->address(),invalid_message_id, msg);
-    }
-  }
-}
-
-abstract_broker::scribe::scribe(abstract_broker* ptr, connection_handle conn_hdl)
-    : servant(ptr),
-      hdl_(conn_hdl) {
-  std::vector<char> tmp;
-  read_msg_ = make_message(new_data_msg{hdl_, std::move(tmp)});
-}
-
-void abstract_broker::scribe::remove_from_broker() {
-  CAF_LOG_TRACE("hdl = " << hdl().id());
-  broker_->scribes_.erase(hdl());
-}
-
-abstract_broker::scribe::~scribe() {
-  CAF_LOG_TRACE("");
-}
-
-message abstract_broker::scribe::disconnect_message() {
-  return make_message(connection_closed_msg{hdl()});
-}
-
-void abstract_broker::scribe::consume(const void*, size_t num_bytes) {
-  CAF_LOG_TRACE(CAF_ARG(num_bytes));
-  if (disconnected_) {
-    // we are already disconnected from the broker while the multiplexer
-    // did not yet remove the socket, this can happen if an IO event causes
-    // the broker to call close_all() while the pollset contained
-    // further activities for the broker
-    return;
-  }
-  auto& buf = rd_buf();
-  CAF_ASSERT(buf.size() >= num_bytes);
-  // make sure size is correct, swap into message, and then call client
-  buf.resize(num_bytes);
-  read_msg().buf.swap(buf);
-  broker_->invoke_message(invalid_actor_addr, invalid_message_id, read_msg_);
-  // swap buffer back to stream and implicitly flush wr_buf()
-  if (broker_->exit_reason() == exit_reason::not_exited) {
-    read_msg().buf.swap(buf);
-    flush();
-  }
-}
-
-void abstract_broker::scribe::io_failure(network::operation op) {
-  CAF_LOG_TRACE("id = " << hdl().id()
-                << ", " << CAF_TARG(op, static_cast<int>));
-  // keep compiler happy when compiling w/o logging
-  static_cast<void>(op);
-  disconnect(true);
-}
-
-abstract_broker::doorman::doorman(abstract_broker* ptr,
-                                  accept_handle acc_hdl,
-                                  uint16_t p)
-    : servant(ptr),
-      hdl_(acc_hdl),
-      port_(p) {
-  auto hdl2 = connection_handle::from_int(-1);
-  accept_msg_ = make_message(new_connection_msg{hdl_, hdl2});
-}
-
-abstract_broker::doorman::~doorman() {
-  CAF_LOG_TRACE("");
-}
-
-void abstract_broker::doorman::remove_from_broker() {
-  CAF_LOG_TRACE("hdl = " << hdl().id());
-  broker_->doormen_.erase(hdl());
-}
-
-message abstract_broker::doorman::disconnect_message() {
-  return make_message(acceptor_closed_msg{hdl()});
-}
-
-void abstract_broker::doorman::io_failure(network::operation op) {
-  CAF_LOG_TRACE("id = " << hdl().id() << ", "
-                        << CAF_TARG(op, static_cast<int>));
-  // keep compiler happy when compiling w/o logging
-  static_cast<void>(op);
-  disconnect(true);
-}
-
 abstract_broker::~abstract_broker() {
   CAF_LOG_TRACE("");
 }
@@ -216,7 +108,7 @@ void abstract_broker::configure_read(connection_handle hdl,
   by_id(hdl).configure_read(cfg);
 }
 
-abstract_broker::buffer_type& abstract_broker::wr_buf(connection_handle hdl) {
+std::vector<char>& abstract_broker::wr_buf(connection_handle hdl) {
   return by_id(hdl).wr_buf();
 }
 
@@ -240,6 +132,9 @@ std::vector<connection_handle> abstract_broker::connections() const {
   return result;
 }
 
+void abstract_broker::add_scribe(const intrusive_ptr<scribe>& ptr) {
+  scribes_.emplace(ptr->hdl(), ptr);
+}
 connection_handle abstract_broker::add_tcp_scribe(const std::string& hostname,
                                                   uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(hostname) << ", " << CAF_ARG(port));
@@ -255,6 +150,12 @@ connection_handle
 abstract_broker::add_tcp_scribe(network::native_socket fd) {
   CAF_LOG_TRACE(CAF_ARG(fd));
   return backend().add_tcp_scribe(this, fd);
+}
+
+void abstract_broker::add_doorman(const intrusive_ptr<doorman>& ptr) {
+  doormen_.emplace(ptr->hdl(), ptr);
+  if (is_initialized())
+    ptr->launch();
 }
 
 std::pair<accept_handle, uint16_t>
@@ -351,13 +252,13 @@ void abstract_broker::invoke_message(mailbox_element_ptr& ptr) {
 }
 
 void abstract_broker::invoke_message(const actor_addr& sender,
-                            message_id mid, message& msg) {
+                                     message_id mid,
+                                     message& msg) {
   auto ptr = mailbox_element::make(sender, mid, message{});
   ptr->msg.swap(msg);
   invoke_message(ptr);
-  if (ptr) {
+  if (ptr)
     ptr->msg.swap(msg);
-  }
 }
 
 void abstract_broker::close_all() {

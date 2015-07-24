@@ -148,8 +148,7 @@
 /// The {@link math_actor.cpp Math Actor Example} shows the usage
 /// of {@link receive_loop} and {@link caf::arg_match arg_match}.
 /// The {@link dining_philosophers.cpp Dining Philosophers Example}
-/// introduces event-based actors and includes a lot of `libcaf
-/// features.
+/// introduces event-based actors covers various features of CAF.
 ///
 /// @namespace caf
 /// Root namespace of libcaf.
@@ -164,35 +163,38 @@
 /// Contains policies encapsulating characteristics or algorithms.
 ///
 /// @namespace caf::io
-/// Contains all network-related classes and functions.
+/// Contains all IO-related classes and functions.
+///
+/// @namespace caf::io::network
+/// Contains classes and functions used for network abstraction.
 ///
 /// @namespace caf::io::basp
 /// Contains all classes and functions for the Binary Actor Sytem Protocol.
 ///
-/// @defgroup MessageHandling Message handling.
+/// @defgroup MessageHandling Message Handling
 ///
-/// This is the beating heart of `libcaf`. Actor programming is
-/// all about message handling.
+/// This is the beating heart of CAF, since actor programming is
+/// a message oriented programming paradigm.
 ///
-/// A message in `libcaf` is a n-tuple of values (with size >= 1)
-/// You can use almost every type in a messages - as long as it is announced,
-/// i.e., known by the type system of `libcaf`.
+/// A message in CAF is a n-tuple of values (with size >= 1).
+/// You can use almost every type in a messages as long as it is announced,
+/// i.e., known by the type system of CAF.
 ///
-/// @defgroup BlockingAPI Blocking API.
+/// @defgroup BlockingAPI Blocking API
 ///
 /// Blocking functions to receive messages.
 ///
-/// The blocking API of libcaf is intended to be used for migrating
-/// previously threaded applications. When writing new code, you should use
-/// ibcafs nonblocking become/unbecome API.
+/// The blocking API of CAF is intended to be used for migrating
+/// previously threaded applications. When writing new code, you should
+/// consider the nonblocking API based on `become` and `unbecome` first.
 ///
-/// @section Send Send messages
+/// @section Send Sending Messages
 ///
 /// The function `send` can be used to send a message to an actor.
 /// The first argument is the receiver of the message followed by any number
 /// of values:
 ///
-/// @code
+/// ~~
 /// // spawn some actors
 /// auto a1 = spawn(...);
 /// auto a2 = spawn(...);
@@ -206,14 +208,14 @@
 /// send(a1, msg);
 /// send(a2, msg);
 /// send(a3, msg);
-/// @endcode
+/// ~~
 ///
 /// @section Receive Receive messages
 ///
 /// The function `receive` takes a `behavior` as argument. The behavior
 /// is a list of { pattern >> callback } rules.
 ///
-/// @code
+/// ~~
 /// receive
 /// (
 ///   on(atom("hello"), arg_match) >> [](const std::string& msg)
@@ -226,7 +228,7 @@
 ///     return make_message(atom("result"), i0 + i1 + i2);
 ///   }
 /// );
-/// @endcode
+/// ~~
 ///
 /// Please read the manual for further details about pattern matching.
 ///
@@ -239,7 +241,7 @@
 /// what operation the sender of a message wanted by receiving just two integers.
 ///
 /// Example actor:
-/// @code
+/// ~~
 /// void math_actor() {
 ///   receive_loop (
 ///     on(atom("plus"), arg_match) >> [](int a, int b) {
@@ -250,9 +252,9 @@
 ///     }
 ///   );
 /// }
-/// @endcode
+/// ~~
 ///
-/// @section ReceiveLoops Receive loops
+/// @section ReceiveLoops Receive Loops
 ///
 /// Previous examples using `receive` create behaviors on-the-fly.
 /// This is inefficient in a loop since the argument passed to receive
@@ -270,7 +272,7 @@
 /// `receive_while` creates a functor evaluating a lambda expression.
 /// The loop continues until the given lambda returns `false`. A simple example:
 ///
-/// @code
+/// ~~
 /// // receive two integers
 /// vector<int> received_values;
 /// receive_while([&]() { return received_values.size() < 2; }) (
@@ -279,23 +281,23 @@
 ///   }
 /// );
 /// // ...
-/// @endcode
+/// ~~
 ///
 /// `receive_for` is a simple ranged-based loop:
 ///
-/// @code
+/// ~~
 /// std::vector<int> vec {1, 2, 3, 4};
 /// auto i = vec.begin();
 /// receive_for(i, vec.end()) (
 ///   on(atom("get")) >> [&]() -> message { return {atom("result"), *i}; }
 /// );
-/// @endcode
+/// ~~
 ///
 /// `do_receive` returns a functor providing the function `until` that
 /// takes a lambda expression. The loop continues until the given lambda
 /// returns true. Example:
 ///
-/// @code
+/// ~~
 /// // receive ints until zero was received
 /// vector<int> received_values;
 /// do_receive (
@@ -305,29 +307,29 @@
 /// )
 /// .until([&]() { return received_values.back() == 0 });
 /// // ...
-/// @endcode
+/// ~~
 ///
-/// @section FutureSend Send delayed messages
+/// @section FutureSend Sending Delayed Messages
 ///
 /// The function `delayed_send` provides a simple way to delay a message.
 /// This is particularly useful for recurring events, e.g., periodical polling.
 /// Usage example:
 ///
-/// @code
-/// delayed_send(self, std::chrono::seconds(1), atom("poll"));
+/// ~~
+/// delayed_send(self, std::chrono::seconds(1), poll_atom::value);
 /// receive_loop (
 ///   // ...
-///   on(atom("poll")) >> [] {
+///   [](poll_atom) {
 ///     // ... poll something ...
 ///     // and do it again after 1sec
-///     delayed_send(self, std::chrono::seconds(1), atom("poll"));
+///     delayed_send(self, std::chrono::seconds(1), poll_atom::value);
 ///   }
 /// );
-/// @endcode
+/// ~~
 ///
 /// See also the {@link dancing_kirby.cpp dancing kirby example}.
 ///
-/// @defgroup ImplicitConversion Implicit type conversions.
+/// @defgroup ImplicitConversion Implicit Type Conversions
 ///
 /// The message passing of `libcaf` prohibits pointers in messages because
 /// it enforces network transparent messaging.
@@ -337,7 +339,7 @@
 /// It also converts unicode literals to the corresponding STL container.
 ///
 /// A few examples:
-/// @code
+/// ~~
 /// // sends an std::string containing "hello actor!" to itself
 /// send(self, "hello actor!");
 ///
@@ -355,9 +357,9 @@
 ///   // equal to: on(std::string("hello actor!"))
 ///   on("hello actor!") >> [] { }
 /// );
-/// @endcode
+/// ~~
 ///
-/// @defgroup ActorCreation Actor creation.
+/// @defgroup ActorCreation Creating Actors
 
 // examples
 

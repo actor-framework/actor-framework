@@ -20,9 +20,11 @@
 #ifndef CAF_IO_NETWORK_MANAGER_HPP
 #define CAF_IO_NETWORK_MANAGER_HPP
 
+#include "caf/message.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/intrusive_ptr.hpp"
 
+#include "caf/io/fwd.hpp"
 #include "caf/io/network/operation.hpp"
 
 namespace caf {
@@ -33,7 +35,27 @@ namespace network {
 /// for various IO operations.
 class manager : public ref_counted {
 public:
+  manager(abstract_broker* parent_ptr);
+
   ~manager();
+
+  /// Sets the parent for this manager.
+  /// @pre `parent() == nullptr`
+  void set_parent(abstract_broker* ptr);
+
+  /// Returns the parent broker of this manager.
+  inline abstract_broker* parent() {
+    return parent_;
+  }
+
+  /// Returns `true` if this manager has a parent, `false` otherwise.
+  inline bool detached() const {
+    return parent_ == nullptr;
+  }
+
+  /// Detach this manager from its parent and invoke `detach_message()``
+  /// if `invoke_detach_message == true`.
+  void detach(bool invoke_detach_message);
 
   /// Causes the manager to stop read operations on its IO device.
   /// Unwritten bytes are still send before the socket will be closed.
@@ -41,6 +63,16 @@ public:
 
   /// Called by the underlying IO device to report failures.
   virtual void io_failure(operation op) = 0;
+
+protected:
+  /// Creates a message signalizing a disconnect to the parent.
+  virtual message detach_message() = 0;
+
+  /// Detaches this manager from its parent.
+  virtual void detach_from_parent() = 0;
+
+private:
+  abstract_broker* parent_;
 };
 
 } // namespace network

@@ -187,7 +187,7 @@ public:
                   "Cannot fork: new broker misses required handlers");
     return spawn_functor_impl<no_spawn_options, impl>(
       nullptr, [&sptr](abstract_broker* forked) {
-                 sptr->set_broker(forked);
+                 sptr->set_parent(forked);
                  forked->add_scribe(sptr);
                },
       std::move(fun), hdl, std::forward<Ts>(xs)...);

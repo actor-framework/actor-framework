@@ -23,11 +23,11 @@
 namespace caf {
 namespace io {
 
-class basp_broker;
-class abstract_broker;
 class broker;
 class middleman;
+class basp_broker;
 class receive_policy;
+class abstract_broker;
 
 namespace network {
 

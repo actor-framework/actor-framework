@@ -37,33 +37,155 @@ namespace basp {
  *                               free functions                               *
  ******************************************************************************/
 
+std::string to_string(message_type x) {
+  switch (x) {
+    case basp::message_type::server_handshake:
+      return "server_handshake";
+    case basp::message_type::client_handshake:
+      return "client_handshake";
+    case basp::message_type::dispatch_message:
+      return "dispatch_message";
+    case basp::message_type::announce_proxy_instance:
+      return "announce_proxy_instance";
+    case basp::message_type::kill_proxy_instance:
+      return "kill_proxy_instance";
+    case basp::message_type::dispatch_error:
+      return "dispatch_error";
+    default:
+      return "???";
+  }
+}
+
 std::string to_string(const header &hdr) {
   std::ostringstream oss;
-  oss << "{" << to_string(hdr.source_node) << ", " << to_string(hdr.dest_node)
-      << ", " << hdr.source_actor << ", " << hdr.dest_actor << ", "
-      << hdr.payload_len << ", " << hdr.operation << ", " << hdr.operation_data
+  oss << "{"
+      << to_string(hdr.operation) << ", "
+      << hdr.payload_len << ", "
+      << hdr.operation_data << ", "
+      << to_string(hdr.source_node) << ", "
+      << to_string(hdr.dest_node) << ", "
+      << hdr.source_actor << ", "
+      << hdr.dest_actor
       << "}";
   return oss.str();
 }
 
 void read_hdr(deserializer& source, header& hdr) {
+  source.read(reinterpret_cast<uint32_t&>(hdr.operation))
+        .read(hdr.payload_len)
+        .read(hdr.operation_data);
   hdr.source_node.deserialize(source);
   hdr.dest_node.deserialize(source);
   source.read(hdr.source_actor)
-        .read(hdr.dest_actor)
-        .read(hdr.payload_len)
-        .read(hdr.operation)
-        .read(hdr.operation_data);
+        .read(hdr.dest_actor);
 }
 
 void write_hdr(serializer& sink, const header& hdr) {
+  sink.write(static_cast<uint32_t>(hdr.operation))
+      .write(hdr.payload_len)
+      .write(hdr.operation_data);
   hdr.source_node.serialize(sink);
   hdr.dest_node.serialize(sink);
   sink.write(hdr.source_actor)
-      .write(hdr.dest_actor)
-      .write(hdr.payload_len)
-      .write(hdr.operation)
-      .write(hdr.operation_data);
+      .write(hdr.dest_actor);
+}
+
+bool operator==(const header& lhs, const header& rhs) {
+  return lhs.operation == rhs.operation
+      && lhs.payload_len == rhs.payload_len
+      && lhs.operation_data == rhs.operation_data
+      && lhs.source_node == rhs.source_node
+      && lhs.dest_node == rhs.dest_node
+      && lhs.source_actor == rhs.source_actor
+      && lhs.dest_actor == rhs.dest_actor;
+}
+
+namespace {
+
+bool valid(const node_id& val) {
+  return val != invalid_node_id;
+}
+
+template <class T>
+bool zero(T val) {
+  return val == 0;
+}
+
+bool server_handshake_valid(const header& hdr) {
+  return  valid(hdr.source_node)
+       && ! valid(hdr.dest_node)
+       && zero(hdr.source_actor)
+       && zero(hdr.dest_actor)
+       && ! zero(hdr.payload_len)
+       && ! zero(hdr.operation_data);
+}
+
+bool client_handshake_valid(const header& hdr) {
+  return  valid(hdr.source_node)
+       && valid(hdr.dest_node)
+       && hdr.source_node != hdr.dest_node
+       && zero(hdr.source_actor)
+       && zero(hdr.dest_actor)
+       && zero(hdr.payload_len)
+       && zero(hdr.operation_data);
+}
+
+bool dispatch_message_valid(const header& hdr) {
+  return  valid(hdr.dest_node)
+       && ! zero(hdr.dest_actor)
+       && ! zero(hdr.payload_len);
+}
+
+bool announce_proxy_instance_valid(const header& hdr) {
+  return  valid(hdr.source_node)
+       && valid(hdr.dest_node)
+       && hdr.source_node != hdr.dest_node
+       && zero(hdr.source_actor)
+       && ! zero(hdr.dest_actor)
+       && zero(hdr.payload_len)
+       && zero(hdr.operation_data);
+}
+
+
+bool kill_proxy_instance_valid(const header& hdr) {
+  return  valid(hdr.source_node)
+       && valid(hdr.dest_node)
+       && hdr.source_node != hdr.dest_node
+       && ! zero(hdr.source_actor)
+       && zero(hdr.dest_actor)
+       && zero(hdr.payload_len)
+       && ! zero(hdr.operation_data);
+}
+
+bool dispatch_error_valid(const header& hdr) {
+  return  valid(hdr.source_node)
+       && valid(hdr.dest_node)
+       && hdr.source_node != hdr.dest_node
+       && zero(hdr.source_actor)
+       && zero(hdr.dest_actor)
+       && ! zero(hdr.payload_len)
+       && ! zero(hdr.operation_data);
+}
+
+} // namespace <anonymous>
+
+bool valid(const header& hdr) {
+  switch (hdr.operation) {
+    default:
+      return false; // invalid operation field
+    case message_type::server_handshake:
+      return server_handshake_valid(hdr);
+    case message_type::client_handshake:
+      return client_handshake_valid(hdr);
+    case message_type::dispatch_message:
+      return dispatch_message_valid(hdr);
+    case message_type::announce_proxy_instance:
+      return announce_proxy_instance_valid(hdr);
+    case message_type::kill_proxy_instance:
+      return kill_proxy_instance_valid(hdr);
+    case message_type::dispatch_error:
+      return dispatch_error_valid(hdr);
+  }
 }
 
 /******************************************************************************
@@ -208,8 +330,37 @@ connection_state instance::handle(const new_data_msg& dm, header& hdr,
     CAF_LOG_WARNING("received invalid header");
     return err();
   }
+  // needs forwarding?
+  if (! is_handshake(hdr) && hdr.dest_node != this_node_) {
+    auto path = lookup(hdr.dest_node);
+    if (path) {
+      auto& wr_buf = path->wr_buf;
+      binary_serializer bs{std::back_inserter(wr_buf), &get_namespace()};
+      write_hdr(bs, hdr);
+      wr_buf.insert(wr_buf.end(), payload->begin(), payload->end());
+      tbl_.flush(*path);
+    } else {
+      CAF_LOG_INFO("cannot forward message, no route to destination");
+      if (hdr.source_node != this_node_) {
+        auto reverse_path = lookup(hdr.source_node);
+        if (! reverse_path) {
+          CAF_LOG_WARNING("cannot send error message: no route to source");
+        } else {
+          write_dispatch_error(reverse_path->wr_buf,
+                               this_node_,
+                               hdr.source_node,
+                               error::no_route_to_destination,
+                               hdr,
+                               *payload);
+        }
+      } else {
+        CAF_LOG_WARNING("lost packet with probably spoofed source");
+      }
+    }
+    return await_header;
+  }
   switch (hdr.operation) {
-    case server_handshake: {
+    case message_type::server_handshake: {
       binary_deserializer bd{payload->data(), payload->size(),
                              &get_namespace()};
       actor_id aid;
@@ -238,15 +389,15 @@ connection_state instance::handle(const new_data_msg& dm, header& hdr,
         return err();
       }
       write(path->wr_buf,
+            message_type::client_handshake, nullptr, 0,
             this_node_, hdr.source_node,
-            invalid_actor_id, invalid_actor_id,
-            nullptr, client_handshake, 0);
+            invalid_actor_id, invalid_actor_id);
       // tell client to create proxy etc.
       callee_.finalize_handshake(hdr.source_node, aid, sigs);
       flush(*path);
       break;
     }
-    case client_handshake:
+    case message_type::client_handshake:
       if (tbl_.lookup_direct(hdr.source_node) != invalid_connection_handle) {
         CAF_LOG_INFO("received second client handshake for "
                      << to_string(hdr.source_node) << ", close connection");
@@ -255,77 +406,18 @@ connection_state instance::handle(const new_data_msg& dm, header& hdr,
       // add direct route to this node
       tbl_.add_direct(dm.handle, hdr.source_node);
       break;
-    case dispatch_message: {
-      if (hdr.dest_node == this_node_) {
-        // message is addressed to us
-        binary_deserializer bd{payload->data(), payload->size(),
-                               &get_namespace()};
-        // skip size of serialized message
-        bd.advance(sizeof(uint32_t));
-        message msg;
-        msg.deserialize(bd);
-        callee_.deliver(hdr.source_node, hdr.source_actor,
-                        hdr.dest_node, hdr.dest_actor, msg,
-                        message_id::from_integer_value(hdr.operation_data));
-      } else {
-        // message needs forwarding
-        auto path = lookup(hdr.dest_node);
-        if (path) {
-          // detect loop (skip message, then iterate forwarding nodes)
-          binary_deserializer bd{payload->data(), payload->size(),
-                                 &get_namespace()};
-          auto msg_size = bd.read<uint32_t>();
-          bd.advance(msg_size);
-          while (! bd.at_end()) {
-            bool loop_detected = false;
-            if (! bd.buf_equals(this_node_.host_id().data(),
-                                node_id::host_id_size))
-              loop_detected = true;
-             else
-              loop_detected = bd.advance(node_id::host_id_size)
-                                .read<uint32_t>();
-            if (loop_detected) {
-              CAF_LOG_WARNING("cannot send error message: no route to source");
-              auto reverse_path = lookup(hdr.source_node);
-              if (! reverse_path) {
-                CAF_LOG_WARNING("cannot send error message: no route to source");
-              } else {
-                write_dispatch_error(reverse_path->wr_buf,
-                                     this_node_,
-                                     hdr.source_node,
-                                     error::no_route_to_destination,
-                                     hdr,
-                                     *payload);
-              }
-              return await_header;
-            }
-          }
-          // append this node to the forwaring path
-          hdr.payload_len += node_id::serialized_size;
-          auto& wr_buf = path->wr_buf;
-          binary_serializer bs{std::back_inserter(wr_buf), &get_namespace()};
-          write_hdr(bs, hdr);
-          wr_buf.insert(wr_buf.end(), payload->begin(), payload->end());
-          this_node_.serialize(bs);
-          tbl_.flush(*path);
-        } else {
-          CAF_LOG_INFO("cannot forward message, no route to destination");
-          auto reverse_path = lookup(hdr.source_node);
-          if (! reverse_path) {
-            CAF_LOG_WARNING("cannot send error message: no route to source");
-          } else {
-            write_dispatch_error(reverse_path->wr_buf,
-                                 this_node_,
-                                 hdr.source_node,
-                                 error::no_route_to_destination,
-                                 hdr,
-                                 *payload);
-          }
-        }
-      }
+    case message_type::dispatch_message: {
+      // message is addressed to us
+      binary_deserializer bd{payload->data(), payload->size(),
+                             &get_namespace()};
+      message msg;
+      msg.deserialize(bd);
+      callee_.deliver(hdr.source_node, hdr.source_actor,
+                      hdr.dest_node, hdr.dest_actor, msg,
+                      message_id::from_integer_value(hdr.operation_data));
       break;
     }
-    case dispatch_error:
+    case message_type::dispatch_error:
       // needs forwarding?
       if (hdr.dest_node != this_node_) {
         auto path = lookup(hdr.dest_node);
@@ -343,7 +435,7 @@ connection_state instance::handle(const new_data_msg& dm, header& hdr,
         }
         return await_header;
       }
-      switch (hdr.operation_data) {
+      switch (static_cast<error>(hdr.operation_data)) {
         case error::loop_detected:
         case error::no_route_to_destination:
           // TODO: do some better error handling for detected loops
@@ -372,10 +464,10 @@ connection_state instance::handle(const new_data_msg& dm, header& hdr,
           break;
       }
       break;
-    case announce_proxy_instance:
+    case message_type::announce_proxy_instance:
       callee_.proxy_announced(hdr.source_node, hdr.dest_actor);
       break;
-    case kill_proxy_instance:
+    case message_type::kill_proxy_instance:
       callee_.kill_proxy(hdr.source_node, hdr.source_actor,
                          static_cast<uint32_t>(hdr.operation_data));
       break;
@@ -478,29 +570,32 @@ bool instance::dispatch(const actor_addr& sender, const actor_addr& receiver,
   auto writer = make_callback([&](serializer& sink) {
     msg.serialize(sink);
   });
-  header hdr{sender ? sender->node() : this_node(), receiver->node(),
-             sender ? sender->id() : invalid_actor_id, receiver->id(),
-             0, dispatch_message, mid.integer_value()};
+  header hdr{message_type::dispatch_message, 0, mid.integer_value(),
+             sender ? sender->node() : this_node(), receiver->node(),
+             sender ? sender->id() : invalid_actor_id, receiver->id()};
   write(path->wr_buf, hdr, &writer);
   flush(*path);
   return true;
 }
 
-void instance::write(buffer_type& buf, const node_id& source_node,
-                     const node_id& dest_node, actor_id source_actor,
-                     actor_id dest_actor, uint32_t* payload_len,
-                     uint32_t operation, uint64_t operation_data,
-                     payload_writer* pw,
-                     bool suppress_auto_size_prefixing) {
+void instance::write(buffer_type& buf,
+                     message_type operation,
+                     uint32_t* payload_len,
+                     uint64_t operation_data,
+                     const node_id& source_node,
+                     const node_id& dest_node,
+                     actor_id source_actor,
+                     actor_id dest_actor,
+                     payload_writer* pw) {
   if (! pw) {
     binary_serializer bs{std::back_inserter(buf), &get_namespace()};
+    bs.write(static_cast<uint32_t>(operation))
+      .write(uint32_t{0})
+      .write(operation_data);
     source_node.serialize(bs);
     dest_node.serialize(bs);
     bs.write(source_actor)
-      .write(dest_actor)
-      .write(uint32_t{0})
-      .write(operation)
-      .write(operation_data);
+      .write(dest_actor);
   } else {
     // reserve space in the buffer to write the payload later on
     auto wr_pos = static_cast<ptrdiff_t>(buf.size());
@@ -509,37 +604,26 @@ void instance::write(buffer_type& buf, const node_id& source_node,
     auto pl_pos = buf.size();
     { // lifetime scope of first serializer (write payload)
       binary_serializer bs1{std::back_inserter(buf), &get_namespace()};
-      if (operation == dispatch_message && ! suppress_auto_size_prefixing) {
-        // prefix buffer with its size for dispatch_message
-        bs1.write(uint32_t{0});
-        (*pw)(bs1);
-        bs1.reset(buf.begin() + static_cast<ptrdiff_t>(pl_pos));
-        bs1.write(static_cast<uint32_t>(buf.size() - pl_pos
-                                        - sizeof(uint32_t)));
-      } else {
-        (*pw)(bs1);
-      }
+      (*pw)(bs1);
     }
     // write broker message to the reserved space
     binary_serializer bs2{buf.begin() + wr_pos, &get_namespace()};
     auto plen = static_cast<uint32_t>(buf.size() - pl_pos);
+    bs2.write(static_cast<uint32_t>(operation))
+       .write(plen)
+       .write(operation_data);
     source_node.serialize(bs2);
     dest_node.serialize(bs2);
     bs2.write(source_actor)
-       .write(dest_actor)
-       .write(plen)
-       .write(operation)
-       .write(operation_data);
+       .write(dest_actor);
     if (payload_len)
       *payload_len = plen;
   }
 }
 
-void instance::write(buffer_type& buf, header& hdr, payload_writer* pw,
-                     bool suppress_auto_size_prefixing) {
-  write(buf, hdr.source_node, hdr.dest_node, hdr.source_actor, hdr.dest_actor,
-        &hdr.payload_len, hdr.operation, hdr.operation_data, pw,
-        suppress_auto_size_prefixing);
+void instance::write(buffer_type& buf, header& hdr, payload_writer* pw) {
+  write(buf, hdr.operation, &hdr.payload_len, hdr.operation_data,
+        hdr.source_node, hdr.dest_node, hdr.source_actor, hdr.dest_actor, pw);
 }
 
 void instance::write_server_handshake(buffer_type& out_buf,
@@ -559,24 +643,26 @@ void instance::write_server_handshake(buffer_type& out_buf,
     for (auto& sig : pa->second)
       sink << sig;
   });
-  header hdr{this_node_, invalid_node_id,
-             invalid_actor_id, invalid_actor_id,
-             0, server_handshake, version};
+  header hdr{message_type::server_handshake, 0, version,
+             this_node_, invalid_node_id,
+             invalid_actor_id, invalid_actor_id};
   write(out_buf, hdr, &writer);
 }
 
 void instance::write_dispatch_error(buffer_type& buf,
                                     const node_id& source_node,
                                     const node_id& dest_node,
-                                    uint64_t error_code,
+                                    error error_code,
                                     const header& original_hdr,
                                     const buffer_type& payload) {
   auto writer = make_callback([&](serializer& sink) {
     write_hdr(sink, original_hdr);
     sink.write_raw(payload.size(), payload.data());
   });
-  header hdr{source_node, dest_node, invalid_actor_id, invalid_actor_id,
-             0, kill_proxy_instance, error_code};
+  header hdr{message_type::kill_proxy_instance, 0,
+             static_cast<uint64_t>(error_code),
+             source_node, dest_node,
+             invalid_actor_id, invalid_actor_id};
   write(buf, hdr, &writer);
 }
 
@@ -584,8 +670,9 @@ void instance::write_kill_proxy_instance(buffer_type& buf,
                                          const node_id& dest_node,
                                          actor_id aid,
                                          uint32_t rsn) {
-  header hdr{this_node_, dest_node, aid, invalid_actor_id,
-        0, kill_proxy_instance, rsn};
+  header hdr{message_type::kill_proxy_instance, 0, rsn,
+             this_node_, dest_node,
+             aid, invalid_actor_id};
   write(buf, hdr);
 }
 

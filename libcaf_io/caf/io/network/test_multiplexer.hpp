@@ -77,7 +77,7 @@ public:
 
   bool& stopped_reading(connection_handle hdl);
 
-  abstract_broker::scribe_ptr& impl_ptr(connection_handle hdl);
+  intrusive_ptr<scribe>& impl_ptr(connection_handle hdl);
 
   uint16_t& port(accept_handle hdl);
 
@@ -85,7 +85,7 @@ public:
   /// `false` otherwise.
   bool& stopped_reading(accept_handle hdl);
 
-  abstract_broker::doorman_ptr& impl_ptr(accept_handle hdl);
+  intrusive_ptr<doorman>& impl_ptr(accept_handle hdl);
 
   void add_pending_connect(accept_handle src, connection_handle hdl);
 
@@ -128,13 +128,13 @@ private:
     buffer_type wr_buf;
     receive_policy::config recv_conf;
     bool stopped_reading = false;
-    abstract_broker::scribe_ptr ptr;
+    intrusive_ptr<scribe> ptr;
   };
 
   struct doorman_data {
     uint16_t port;
     bool stopped_reading = false;
-    abstract_broker::doorman_ptr ptr;
+    intrusive_ptr<doorman> ptr;
   };
 
   std::mutex mx_;

@@ -40,32 +40,32 @@ connection_handle test_multiplexer::new_tcp_scribe(const std::string& host,
 
 void test_multiplexer::assign_tcp_scribe(abstract_broker* ptr,
                                          connection_handle hdl) {
-  class impl : public abstract_broker::scribe {
+  class impl : public scribe {
   public:
     impl(abstract_broker* self, connection_handle ch, test_multiplexer* mpx)
-        : abstract_broker::scribe(self, ch),
+        : scribe(self, ch),
           mpx_(mpx) {
       // nop
     }
 
-    void configure_read(receive_policy::config config) {
+    void configure_read(receive_policy::config config) override {
       mpx_->read_config(hdl()) = config;
     }
 
-    abstract_broker::buffer_type& wr_buf() {
+    std::vector<char>& wr_buf() override {
       return mpx_->output_buffer(hdl());
     }
 
-    abstract_broker::buffer_type& rd_buf() {
+    std::vector<char>& rd_buf() override {
       return mpx_->input_buffer(hdl());
     }
 
-    void stop_reading() {
+    void stop_reading() override {
       mpx_->stopped_reading(hdl()) = true;
-      disconnect(false);
+      detach(false);
     }
 
-    void flush() {
+    void flush() override {
       // nop
     }
 
@@ -106,7 +106,7 @@ test_multiplexer::new_tcp_doorman(uint16_t port, const char*, bool) {
 
 void test_multiplexer::assign_tcp_doorman(abstract_broker* ptr,
                                           accept_handle hdl) {
-  class impl : public abstract_broker::doorman {
+  class impl : public doorman {
   public:
     impl(abstract_broker* self, accept_handle ah, test_multiplexer* mpx)
         : doorman(self, ah, mpx->port(ah)),
@@ -127,7 +127,7 @@ void test_multiplexer::assign_tcp_doorman(abstract_broker* ptr,
 
     void stop_reading() {
       mpx_->stopped_reading(hdl()) = true;
-      disconnect(false);
+      detach(false);
     }
 
     void launch() {
@@ -204,7 +204,7 @@ bool& test_multiplexer::stopped_reading(connection_handle hdl) {
   return scribe_data_[hdl].stopped_reading;
 }
 
-abstract_broker::scribe_ptr& test_multiplexer::impl_ptr(connection_handle hdl) {
+intrusive_ptr<scribe>& test_multiplexer::impl_ptr(connection_handle hdl) {
   return scribe_data_[hdl].ptr;
 }
 
@@ -216,7 +216,7 @@ bool& test_multiplexer::stopped_reading(accept_handle hdl) {
   return doorman_data_[hdl].stopped_reading;
 }
 
-abstract_broker::doorman_ptr& test_multiplexer::impl_ptr(accept_handle hdl) {
+intrusive_ptr<doorman>& test_multiplexer::impl_ptr(accept_handle hdl) {
   return doorman_data_[hdl].ptr;
 }
 

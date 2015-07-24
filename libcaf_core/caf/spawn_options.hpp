@@ -22,7 +22,7 @@
 
 namespace caf {
 
-/// @ingroup ActorCreation
+/// @addtogroup ActorCreation
 /// @{
 
 /// Stores options passed to the `spawn` function family.
