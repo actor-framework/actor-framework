@@ -249,11 +249,10 @@ protected:
   bool invoke_message_from_cache();
 
 private:
+  scribe_map scribes_;
   doorman_map doormen_;
   middleman& mm_;
   detail::intrusive_partitioned_list<mailbox_element, detail::disposer> cache_;
-protected:
-  scribe_map scribes_;
 };
 
 } // namespace io

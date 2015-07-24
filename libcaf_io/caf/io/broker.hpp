@@ -52,7 +52,7 @@ public:
     return spawn_functor(nullptr,
                          [sptr](broker* forked) {
                            sptr->set_parent(forked);
-                           forked->scribes_.emplace(sptr->hdl(), sptr);
+                           forked->add_scribe(sptr);
                          },
                          fun, hdl, std::forward<Ts>(xs)...);
   }
