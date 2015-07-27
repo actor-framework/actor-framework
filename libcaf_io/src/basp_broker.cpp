@@ -73,12 +73,13 @@ actor_proxy_ptr basp_broker_state::make_proxy(const node_id& nid,
   intrusive_ptr<basp_broker> ptr = static_cast<basp_broker*>(self);
   auto mm = middleman::instance();
   auto res = make_counted<forwarding_actor_proxy>(aid, nid, ptr);
-  res->attach_functor([=](uint32_t) {
-    mm->backend().dispatch([=] {
+  res->attach_functor([=](uint32_t rsn) {
+    mm->backend().post([=] {
       // using res->id() instead of aid keeps this actor instance alive
       // until the original instance terminates, thus preventing subtle
       // bugs with attachables
-      ptr->state.erase_proxy(nid, res->id());
+      if (ptr->exit_reason() == exit_reason::not_exited)
+        ptr->state.get_namespace().erase(nid, aid, rsn);
     });
   });
   // tell remote side we are monitoring this actor now
@@ -89,11 +90,6 @@ actor_proxy_ptr basp_broker_state::make_proxy(const node_id& nid,
   instance.tbl().flush(*path);
   self->parent().notify<hook::new_remote_actor>(res->address());
   return res;
-}
-
-void basp_broker_state::erase_proxy(const node_id& nid, actor_id aid) {
-  CAF_LOG_TRACE(CAF_TSARG(nid) << ", " << CAF_ARG(aid));
-  get_namespace().erase(nid, aid);
 }
 
 void basp_broker_state::finalize_handshake(const node_id& nid, actor_id aid,
@@ -146,10 +142,6 @@ void basp_broker_state::purge_state(const node_id& nid) {
   auto hdl = instance.tbl().lookup_direct(nid);
   if (hdl == invalid_connection_handle)
     return;
-  // kill all proxies we have from this node
-  auto proxies = get_namespace().get_all(nid);
-  for (auto& p : proxies)
-    p->kill_proxy(exit_reason::remote_link_unreachable);
   get_namespace().erase(nid);
   ctx.erase(hdl);
   known_remotes.erase(nid);
@@ -191,15 +183,8 @@ void basp_broker_state::proxy_announced(const node_id& nid, actor_id aid) {
 void basp_broker_state::kill_proxy(const node_id& nid, actor_id aid,
                                    uint32_t rsn) {
   CAF_LOG_TRACE(CAF_TSARG(nid) << ", " << CAF_ARG(aid) << ", " << CAF_ARG(rsn));
-  auto ptr = get_namespace().get(nid, aid);
-  if (! ptr) {
-    CAF_LOG_DEBUG("received kill proxy twice");
-    return;
-  }
-  get_namespace().erase(ptr->node(), ptr->id());
-  ptr->kill_proxy(static_cast<uint32_t>(rsn));
+  get_namespace().erase(nid, aid, rsn);
 }
-
 
 void basp_broker_state::deliver(const node_id& source_node,
                                 actor_id source_actor,

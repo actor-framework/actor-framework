@@ -47,8 +47,6 @@ struct basp_broker_state : actor_namespace::backend, basp::instance::callee {
   // inherited from actor_namespace::backend
   actor_proxy_ptr make_proxy(const node_id& nid, actor_id aid) override;
 
-  void erase_proxy(const node_id& nid, actor_id aid);
-
   // inherited from basp::instance::listener
   void finalize_handshake(const node_id& nid, actor_id aid,
                           const std::set<std::string>& sigs) override;

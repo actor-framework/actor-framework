@@ -27,6 +27,7 @@
 #include "caf/node_id.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/actor_proxy.hpp"
+#include "caf/exit_reason.hpp"
 
 namespace caf {
 
@@ -61,8 +62,31 @@ public:
   /// addresses for remote actors on the fly if needed.
   actor_addr read(deserializer* source);
 
+  /// Ensures that `kill_proxy` is called for each proxy instance.
+  class proxy_entry {
+  public:
+    proxy_entry();
+    proxy_entry(actor_proxy::anchor_ptr ptr);
+    proxy_entry(proxy_entry&&) = default;
+    proxy_entry& operator=(proxy_entry&&) = default;
+    ~proxy_entry();
+
+    void reset(uint32_t rsn);
+
+    inline explicit operator bool() const {
+      return static_cast<bool>(ptr_);
+    }
+
+    inline actor_proxy::anchor* operator->() const {
+      return ptr_.get();
+    }
+
+  private:
+    actor_proxy::anchor_ptr ptr_;
+  };
+
   /// A map that stores all proxies for known remote actors.
-  using proxy_map = std::map<actor_id, actor_proxy::anchor_ptr>;
+  using proxy_map = std::map<actor_id, proxy_entry>;
 
   /// Returns the number of proxies for `node`.
   size_t count_proxies(const key_type& node);
@@ -85,7 +109,8 @@ public:
   void erase(const key_type& node);
 
   /// Deletes the proxy with id `aid` for `node`.
-  void erase(const key_type& node, actor_id aid);
+  void erase(const key_type& node, actor_id aid,
+             uint32_t rsn = exit_reason::remote_link_unreachable);
 
   /// Queries whether there are any proxies left.
   bool empty() const;
