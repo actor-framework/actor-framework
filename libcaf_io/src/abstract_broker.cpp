@@ -98,7 +98,7 @@ void abstract_broker::cleanup(uint32_t reason) {
 }
 
 abstract_broker::~abstract_broker() {
-  CAF_LOG_TRACE("");
+  // nop
 }
 
 void abstract_broker::configure_read(connection_handle hdl,
