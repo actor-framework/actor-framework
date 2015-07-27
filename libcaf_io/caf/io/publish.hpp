@@ -44,21 +44,16 @@ uint16_t publish_impl(uint16_t port, actor_addr whom,
 /// @throws bind_failure
 inline uint16_t publish(caf::actor whom, uint16_t port,
                         const char* in = nullptr, bool reuse_addr = false) {
-  if (! whom) {
-    return 0;
-  }
-  return publish_impl(port, whom->address(), {}, in, reuse_addr);
+  return ! whom ? 0 : publish_impl(port, whom->address(),
+                                   std::set<std::string>{}, in, reuse_addr);
 }
 
 /// @copydoc publish(actor,uint16_t,const char*)
 template <class... Sigs>
 uint16_t typed_publish(typed_actor<Sigs...> whom, uint16_t port,
                        const char* in = nullptr, bool reuse_addr = false) {
-  if (! whom) {
-    return 0;
-  }
-  return publish_impl(port, whom->address(), whom.message_types(),
-                      in, reuse_addr);
+  return ! whom ? 0 : publish_impl(port, whom->address(), whom.message_types(),
+                                   in, reuse_addr);
 }
 
 } // namespace io
