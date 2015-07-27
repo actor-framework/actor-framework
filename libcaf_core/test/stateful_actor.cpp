@@ -98,6 +98,22 @@ void test_adder(ActorUnderTest aut) {
   anon_send_exit(aut, exit_reason::kill);
 }
 
+template <class State>
+void test_name(const char* expected) {
+  auto aut = spawn([](stateful_actor<State>* self) -> behavior {
+    return [=](get_atom) {
+      self->quit();
+      return self->name();
+    };
+  });
+  scoped_actor self;
+  self->sync_send(aut, get_atom::value).await(
+    [&](const string& str) {
+      CAF_CHECK_EQUAL(str, expected);
+    }
+  );
+}
+
 } // namespace <anonymous>
 
 CAF_TEST_FIXTURE_SCOPE(dynamic_stateful_actor_tests, fixture)
@@ -116,6 +132,27 @@ CAF_TEST(dynamic_stateful_actor_class) {
 
 CAF_TEST(typed_stateful_actor_class) {
   test_adder(spawn_typed<typed_adder_class>());
+}
+
+CAF_TEST(no_name) {
+  struct state {
+    // empty
+  };
+  test_name<state>("actor");
+}
+
+CAF_TEST(char_name) {
+  struct state {
+    const char* name = "testee";
+  };
+  test_name<state>("testee");
+}
+
+CAF_TEST(string_name) {
+  struct state {
+    string name = "testee2";
+  };
+  test_name<state>("testee2");
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

@@ -462,6 +462,31 @@ struct is_optional<optional<T>> : std::true_type {
   // no members
 };
 
+// Checks whether T has a member variable named `name`.
+template <class T>
+class has_name {
+private:
+  // a simple struct with a member called `name`
+  struct fallback {
+    int name;
+  };
+
+  // creates an ambiguity for any `T` with the requested member
+  struct derived : T, fallback {
+    // no members
+  };
+
+  // picked for any U without requested member since `U::name` is not ambigious
+  template <class U>
+  static char fun(U*, decltype(U::name)* = nullptr);
+
+  // picked for any U with requested member since `U::name` is ambigious
+  static int fun(void*);
+
+public:
+  static constexpr bool value = sizeof(fun(static_cast<derived*>(nullptr))) > 1;
+};
+
 } // namespace detail
 } // namespace caf
 

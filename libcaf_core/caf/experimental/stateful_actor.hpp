@@ -24,6 +24,7 @@
 #include <type_traits>
 
 #include "caf/fwd.hpp"
+#include "caf/detail/type_traits.hpp"
 
 namespace caf {
 namespace experimental {
@@ -50,6 +51,10 @@ public:
     state_.~State();
   }
 
+  const char* name() const override final {
+    return get_name(state_);
+  }
+
   /// A reference to the actor's state.
   State& state;
 
@@ -73,6 +78,27 @@ private:
   typename std::enable_if<! std::is_constructible<State, T>::value>::type
   cr_state(T) {
     new (&state_) State();
+  }
+
+  static const char* unbox_str(const char* str) {
+    return str;
+  }
+
+  template <class U>
+  static const char* unbox_str(const U& str) {
+    return str.c_str();
+  }
+
+  template <class U>
+  typename std::enable_if<detail::has_name<U>::value, const char*>::type
+  get_name(const U& st) const {
+    return unbox_str(st.name);
+  }
+
+  template <class U>
+  typename std::enable_if<! detail::has_name<U>::value, const char*>::type
+  get_name(const U&) const {
+    return Base::name();
   }
 
   union { State state_; };

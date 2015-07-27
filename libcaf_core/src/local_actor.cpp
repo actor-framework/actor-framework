@@ -820,6 +820,10 @@ response_promise local_actor::make_response_promise() {
   return result;
 }
 
+const char* local_actor::name() const {
+  return "actor";
+}
+
 behavior& local_actor::get_behavior() {
   return pending_responses_.empty() ? bhvr_stack_.back()
                                     : pending_responses_.front().second;
