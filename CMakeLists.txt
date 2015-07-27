@@ -594,7 +594,7 @@ if(NOT CAF_NO_SUMMARY)
         "\n"
         "\nBuild type:        ${CMAKE_BUILD_TYPE}"
         "\nBuild static:      ${CAF_BUILD_STATIC}"
-        "\nBulid static only: ${CAF_BUILD_STATIC_ONLY}"
+        "\nBuild static only: ${CAF_BUILD_STATIC_ONLY}"
         "\nRuntime checks:    ${CAF_ENABLE_RUNTIME_CHECKS}"
         "\nLog level:         ${LOG_LEVEL_STR}"
         "\nWith mem. mgmt.:   ${CAF_BUILD_MEM_MANAGEMENT}"
