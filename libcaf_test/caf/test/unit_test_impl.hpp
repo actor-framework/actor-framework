@@ -53,9 +53,9 @@ private:
         // spin
       }
       if (! canceled_) {
-        //logger::instance().error()
-        //  << "WATCHDOG: unit test did finish within 10s, abort\n";
-        //abort();
+        logger::instance().error()
+          << "WATCHDOG: unit test did finish within 10s, abort\n";
+        abort();
       }
     }};
   }
