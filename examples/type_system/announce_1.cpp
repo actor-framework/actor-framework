@@ -50,14 +50,14 @@ void testee(event_based_actor* self, size_t remaining) {
   self->become (
     // note: we sent a foo_pair2, but match on foo_pair
     // that's safe because both are aliases for std::pair<int, int>
-    on<foo_pair>() >> [=](const foo_pair& val) {
+    [=](const foo_pair& val) {
       cout << "foo_pair("
          << val.first << ", "
          << val.second << ")"
          << endl;
       set_next_behavior();
     },
-    on<foo>() >> [=](const foo& val) {
+    [=](const foo& val) {
       cout << "foo({";
       auto i = val.a.begin();
       auto end = val.a.end();

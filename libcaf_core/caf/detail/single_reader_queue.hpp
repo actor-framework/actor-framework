@@ -20,6 +20,8 @@
 #ifndef CAF_DETAIL_SINGLE_READER_QUEUE_HPP
 #define CAF_DETAIL_SINGLE_READER_QUEUE_HPP
 
+#include "caf/config.hpp"
+
 #include <list>
 #include <deque>
 #include <mutex>
@@ -27,8 +29,6 @@
 #include <memory>
 #include <limits>
 #include <condition_variable> // std::cv_status
-
-#include "caf/config.hpp"
 
 #include "caf/detail/intrusive_partitioned_list.hpp"
 

@@ -85,7 +85,7 @@ void testee(event_based_actor* self, size_t remaining) {
     else self->quit();
   };
   self->become (
-     on<bar>() >> [=](const bar& val) {
+    [=](const bar& val) {
       aout(self) << "bar(foo("
              << val.f.a() << ", "
              << val.f.b() << "), "
@@ -93,7 +93,7 @@ void testee(event_based_actor* self, size_t remaining) {
              << endl;
       set_next_behavior();
     },
-    on<baz>() >> [=](const baz& val) {
+    [=](const baz& val) {
       // prints: baz ( foo ( 1, 2 ), bar ( foo ( 3, 4 ), 5 ) )
       aout(self) << to_string(make_message(val)) << endl;
       set_next_behavior();
