@@ -211,9 +211,9 @@ public:
   }
 
   void connect_node(size_t i,
-                    optional<accept_handle> ax,
-                    actor_id published_actor_id,
-                    set<string> published_actor_ifs = {}) {
+                    optional<accept_handle> ax = none,
+                    actor_id published_actor_id = invalid_actor_id,
+                    set<string> published_actor_ifs = std::set<std::string>{}) {
     auto src = ax ? *ax : ahdl_;
     CAF_MESSAGE("connect remote node " << i << ", connection ID = " << (i + 1)
                 << ", acceptor ID = " << src.id());
@@ -382,7 +382,7 @@ CAF_TEST(non_empty_server_handshake) {
 }
 
 CAF_TEST(client_handshake_and_dispatch) {
-  connect_node(0, none, invalid_actor_id, {});
+  connect_node(0);
   // send a message via `dispatch` from node 0
   mock(remote_hdl(0),
        {basp::message_type::dispatch_message, 0, 0,
@@ -418,8 +418,8 @@ CAF_TEST(client_handshake_and_dispatch) {
 
 CAF_TEST(message_forwarding) {
   // connect two remote nodes
-  connect_node(0, none, invalid_actor_id, {});
-  connect_node(1, none, invalid_actor_id, {});
+  connect_node(0);
+  connect_node(1);
   auto msg = make_message(1, 2, 3);
   // send a message from node 0 to node 1, forwarded by this node
   mock(remote_hdl(0),
@@ -439,7 +439,7 @@ CAF_TEST(publish_and_connect) {
   mpx()->provide_acceptor(4242, ax);
   publish(self(), 4242);
   mpx()->exec_runnable(); // process publish message in basp_broker
-  connect_node(0, ax, self()->id(), {});
+  connect_node(0, ax, self()->id());
 }
 
 CAF_TEST(remote_actor_and_send) {
@@ -520,7 +520,7 @@ CAF_TEST(actor_serialize_and_deserialize) {
       }
     };
   };
-  connect_node(0, none, invalid_actor_id, {});
+  connect_node(0);
   auto prx = get_namespace().get_or_put(remote_node(0), pseudo_remote(0)->id());
   mock()
   .expect(remote_hdl(0),
