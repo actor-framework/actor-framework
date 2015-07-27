@@ -163,7 +163,7 @@ void node_id::serialize(serializer& sink) const {
 
 void node_id::deserialize(deserializer& source) {
   if (! data_ || ! data_->unique())
-    data_.reset(new data);
+    data_ = make_counted<data>();
   source.read_raw(node_id::host_id_size, data_->host_.data());
   data_->pid_ = source.read<uint32_t>();
   auto is_zero = [](uint8_t value) { return value == 0; };
