@@ -251,7 +251,7 @@ void basp_broker_state::set_context(connection_handle hdl) {
                       invalid_node_id,
                       0,
                       none,
-                      {}}).first;
+                      std::set<std::string>{}}).first;
   }
   this_context = &i->second;
 }
