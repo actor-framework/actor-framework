@@ -180,7 +180,8 @@ void basp_broker_state::proxy_announced(const node_id& nid, actor_id aid) {
       mm->backend().dispatch([=] {
         CAF_LOG_TRACE(CAF_ARG(reason));
         // ... to make sure this is safe
-        if (bptr == mm->get_named_broker<basp_broker>(atom("_BASP")))
+        if (bptr == mm->get_named_broker<basp_broker>(atom("_BASP"))
+            && bptr->exit_reason() == exit_reason::not_exited)
           send_kill_proxy_instance(reason);
       });
     });
