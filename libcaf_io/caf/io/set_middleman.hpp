@@ -28,13 +28,13 @@ namespace io {
 /// Sets a user-defined middleman using given network backend.
 /// @note This function must be used before actor is spawned. Dynamically
 ///       changing the middleman at runtime is not supported.
-/// @throws std::logic_error if a scheduler is already defined
+/// @throws std::logic_error if a middleman is already defined
 void set_middleman(network::multiplexer* ptr);
 
 /// Sets a user-defined middleman using given network backend.
 /// @note This function must be used before actor is spawned. Dynamically
 ///       changing the middleman at runtime is not supported.
-/// @throws std::logic_error if a scheduler is already defined
+/// @throws std::logic_error if a middleman is already defined
 template <class Multiplexer>
 void set_middleman() {
   set_middleman(new Multiplexer);
