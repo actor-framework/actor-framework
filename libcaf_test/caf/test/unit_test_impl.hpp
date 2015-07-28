@@ -39,14 +39,14 @@ namespace test {
 
 class watchdog {
 public:
-   static void start();
+   static void start(int secs);
    static void stop();
 
 private:
-  watchdog() {
-    thread_ = std::thread{[&] {
+  watchdog(int secs) {
+    thread_ = std::thread{[=] {
       auto tp =
-        std::chrono::high_resolution_clock::now() + std::chrono::seconds(30);
+        std::chrono::high_resolution_clock::now() + std::chrono::seconds(secs);
         std::unique_lock<std::mutex> guard{mtx_};
       while (! canceled_
              && cv_.wait_until(guard, tp) != std::cv_status::timeout) {
@@ -54,7 +54,8 @@ private:
       }
       if (! canceled_) {
         logger::instance().error()
-          << "WATCHDOG: unit test did finish within 10s, abort\n";
+          << "WATCHDOG: unit test did not finish within "
+          << secs << "s, abort\n";
         abort();
       }
     }};
@@ -76,8 +77,8 @@ private:
 
 namespace { watchdog* s_watchdog; }
 
-void watchdog::start() {
-  s_watchdog = new watchdog();
+void watchdog::start(int secs) {
+  s_watchdog = new watchdog(secs);
 }
 
 void watchdog::stop() {
@@ -263,7 +264,7 @@ bool engine::run(bool colorize,
                  const std::string& log_file,
                  int verbosity_console,
                  int verbosity_file,
-                 int, // TODO: max runtime
+                 int max_runtime,
                  const std::string& suites_str,
                  const std::string& not_suites_str,
                  const std::string& tests_str,
@@ -359,7 +360,7 @@ bool engine::run(bool colorize,
       log.verbose() << color(yellow) << "- " << color(reset) << t->name()
                     << '\n';
       auto start = std::chrono::high_resolution_clock::now();
-      watchdog::start();
+      watchdog::start(max_runtime);
       try {
         t->run();
       } catch (const detail::require_error&) {
