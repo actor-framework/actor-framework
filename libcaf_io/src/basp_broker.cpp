@@ -79,7 +79,7 @@ actor_proxy_ptr basp_broker_state::make_proxy(const node_id& nid,
       // until the original instance terminates, thus preventing subtle
       // bugs with attachables
       if (ptr->exit_reason() == exit_reason::not_exited)
-        ptr->state.get_namespace().erase(nid, aid, rsn);
+        ptr->state.get_namespace().erase(nid, res->id(), rsn);
     });
   });
   // tell remote side we are monitoring this actor now
