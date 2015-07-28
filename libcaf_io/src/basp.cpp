@@ -336,10 +336,10 @@ connection_state instance::handle(const new_data_msg& dm, header& hdr,
   if (! is_handshake(hdr) && hdr.dest_node != this_node_) {
     auto path = lookup(hdr.dest_node);
     if (path) {
-      auto& wr_buf = path->wr_buf;
-      binary_serializer bs{std::back_inserter(wr_buf), &get_namespace()};
+      binary_serializer bs{std::back_inserter(path->wr_buf), &get_namespace()};
       write_hdr(bs, hdr);
-      wr_buf.insert(wr_buf.end(), payload->begin(), payload->end());
+      if (payload)
+        bs.write_raw(payload->size(), payload->data());
       tbl_.flush(*path);
     } else {
       CAF_LOG_INFO("cannot forward message, no route to destination");
@@ -353,7 +353,7 @@ connection_state instance::handle(const new_data_msg& dm, header& hdr,
                                hdr.source_node,
                                error::no_route_to_destination,
                                hdr,
-                               *payload);
+                               payload);
         }
       } else {
         CAF_LOG_WARNING("lost packet with probably spoofed source");
@@ -361,8 +361,15 @@ connection_state instance::handle(const new_data_msg& dm, header& hdr,
     }
     return await_header;
   }
+  // function object for checking payload validity
+  auto payload_valid = [&]() -> bool {
+    return payload != nullptr && payload->size() == hdr.payload_len;
+  };
+  // handle message to ourselves
   switch (hdr.operation) {
     case message_type::server_handshake: {
+      if (! payload_valid())
+        return err();
       binary_deserializer bd{payload->data(), payload->size(),
                              &get_namespace()};
       actor_id aid;
@@ -409,7 +416,8 @@ connection_state instance::handle(const new_data_msg& dm, header& hdr,
       tbl_.add_direct(dm.handle, hdr.source_node);
       break;
     case message_type::dispatch_message: {
-      // message is addressed to us
+      if (! payload_valid())
+        return err();
       binary_deserializer bd{payload->data(), payload->size(),
                              &get_namespace()};
       message msg;
@@ -420,49 +428,11 @@ connection_state instance::handle(const new_data_msg& dm, header& hdr,
       break;
     }
     case message_type::dispatch_error:
-      // needs forwarding?
-      if (hdr.dest_node != this_node_) {
-        auto path = lookup(hdr.dest_node);
-        if (! path) {
-          CAF_LOG_ERROR("cannot forward dispatch error message: "
-                        "no route to destination!");
-        } else {
-          CAF_LOG_DEBUG("forwarded error message");
-          auto& wr_buf = path->wr_buf;
-          binary_serializer bs{std::back_inserter(path->wr_buf),
-                               &get_namespace()};
-          write_hdr(bs, hdr);
-          wr_buf.insert(wr_buf.end(), payload->begin(), payload->end());
-          tbl_.flush(*path);
-        }
-        return await_header;
-      }
       switch (static_cast<error>(hdr.operation_data)) {
         case error::loop_detected:
         case error::no_route_to_destination:
-          // TODO: do some better error handling for detected loops
-          binary_deserializer bd{payload->data(), payload->size(),
-                                 &get_namespace()};
-          header original_hdr;
-          read_hdr(bd, original_hdr);
-          message original_msg;
-          auto msg_size = bd.read<uint32_t>();
-          original_msg.deserialize(bd);
-          node_id first_hop;
-          first_hop.deserialize(bd);
-          tbl_.blacklist(first_hop, original_hdr.dest_node);
-          // try re-sending message (without forwarding hops)
-          auto path = tbl_.lookup(original_hdr.dest_node);
-          if (path) {
-            binary_serializer bs{std::back_inserter(path->wr_buf),
-                                 &get_namespace()};
-            write_hdr(bs, original_hdr);
-            bs.write_raw(header_size + sizeof(uint32_t) + msg_size,
-                         payload->data());
-            tbl_.flush(*path);
-          } else {
-            CAF_LOG_WARNING("message was lost");
-          }
+          // TODO: do some actual error handling
+          CAF_LOG_ERROR("a message got lost");
           break;
       }
       break;
@@ -656,10 +626,11 @@ void instance::write_dispatch_error(buffer_type& buf,
                                     const node_id& dest_node,
                                     error error_code,
                                     const header& original_hdr,
-                                    const buffer_type& payload) {
+                                    const buffer_type* payload) {
   auto writer = make_callback([&](serializer& sink) {
     write_hdr(sink, original_hdr);
-    sink.write_raw(payload.size(), payload.data());
+    if (payload)
+      sink.write_raw(payload->size(), payload->data());
   });
   header hdr{message_type::kill_proxy_instance, 0,
              static_cast<uint64_t>(error_code),

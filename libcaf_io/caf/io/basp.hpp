@@ -423,7 +423,7 @@ public:
                             const node_id& dest_node,
                             error error_code,
                             const header& original_hdr,
-                            const buffer_type& payload);
+                            const buffer_type* payload);
 
   /// Writes a `kill_proxy_instance` to `buf`.
   void write_kill_proxy_instance(buffer_type& buf,
