@@ -51,10 +51,6 @@ public:
   /// Sends `response_message` and invalidates this handle afterwards.
   void deliver(message response_message) const;
 
-  actor_addr& to() {
-    return to_;
-  }
-
 private:
   actor_addr from_;
   actor_addr to_;

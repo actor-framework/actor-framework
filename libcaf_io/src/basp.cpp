@@ -71,8 +71,10 @@ std::string to_string(const header &hdr) {
 }
 
 void read_hdr(deserializer& source, header& hdr) {
-  source.read(reinterpret_cast<uint32_t&>(hdr.operation))
-        .read(hdr.payload_len)
+  uint32_t operation;
+  source.read(operation);
+  hdr.operation = static_cast<basp::message_type>(operation);
+  source.read(hdr.payload_len)
         .read(hdr.operation_data);
   hdr.source_node.deserialize(source);
   hdr.dest_node.deserialize(source);

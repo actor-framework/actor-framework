@@ -105,8 +105,11 @@
 #  define CAF_GCC
 #  define CAF_DEPRECATED __attribute__((__deprecated__))
 #  define CAF_PUSH_WARNINGS
-#  define CAF_PUSH_NON_VIRTUAL_DTOR_WARNING
-#  define CAF_POP_WARNINGS
+#  define CAF_PUSH_NON_VIRTUAL_DTOR_WARNING                                    \
+    _Pragma("GCC diagnostic push")                                             \
+    _Pragma("GCC diagnostic ignored \"-Wnon-virtual-dtor\"")
+#  define CAF_POP_WARNINGS                                                     \
+    _Pragma("GCC diagnostic pop")
 #  define CAF_ANNOTATE_FALLTHROUGH static_cast<void>(0)
 #  define CAF_COMPILER_VERSION                                                 \
      (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
