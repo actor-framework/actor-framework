@@ -60,6 +60,8 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
                     detail::comparable<typed_actor<Sigs...>,
                                        invalid_actor_addr_t> {
  public:
+  static_assert(sizeof...(Sigs) > 0, "Empty typed actor handle");
+
   // grant access to private ctor
   friend class local_actor;
 
@@ -169,6 +171,11 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
     ptr_.swap(other.ptr_);
   }
 
+  /// Returns the interface definition for this actor handle.
+  static std::set<std::string> message_types() {
+    return std::set<std::string>{Sigs::static_type_name()...};
+  }
+
   /// @cond PRIVATE
 
   abstract_actor* operator->() const noexcept {
@@ -191,10 +198,6 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
     return ptr_ ? 1 : 0;
   }
 
-  static std::set<std::string> message_types() {
-    return {Sigs::static_type_name()...};
-  }
-
   /// @endcond
 
 private:
@@ -210,5 +213,15 @@ private:
 };
 
 } // namespace caf
+
+// allow typed_actor to be used in hash maps
+namespace std {
+template <class... Sigs>
+struct hash<caf::typed_actor<Sigs...>> {
+  size_t operator()(const caf::typed_actor<Sigs...>& ref) const {
+    return ref ? static_cast<size_t>(ref->id()) : 0;
+  }
+};
+} // namespace std
 
 #endif // CAF_TYPED_ACTOR_HPP
