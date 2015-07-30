@@ -85,7 +85,7 @@ namespace basp {
 
 /// The current BASP version. Different BASP versions will not
 /// be able to exchange messages.
-constexpr uint64_t version = 2;
+constexpr uint64_t version = 1;
 
 /// Storage type for raw bytes.
 using buffer_type = std::vector<char>;
@@ -123,13 +123,7 @@ enum class message_type : uint32_t {
   /// that has been terminated.
   ///
   /// ![](kill_proxy_instance.png)
-  kill_proxy_instance = 0x04,
-
-  /// Informs the receiving node that a message it sent
-  /// did not reach its destination.
-  ///
-  /// ![](dispatch_error.png)
-  dispatch_error = 0x05
+  kill_proxy_instance = 0x04
 };
 
 /// @relates message_type

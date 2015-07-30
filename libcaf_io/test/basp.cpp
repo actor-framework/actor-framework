@@ -223,16 +223,22 @@ public:
     mpx_->accept_connection(src);
     // technically, the server handshake arrives
     // before we send the client handshake
-    mock(hdl,
-         {basp::message_type::client_handshake, 0, 0,
-          remote_node(i), this_node(),
-          invalid_actor_id, invalid_actor_id})
-    .expect(hdl,
-            {basp::message_type::server_handshake, 0, basp::version,
-             this_node(), invalid_node_id,
-             invalid_actor_id, invalid_actor_id},
-            published_actor_id,
-            published_actor_ifs);
+    auto m = mock(hdl,
+                  {basp::message_type::client_handshake, 0, 0,
+                   remote_node(i), this_node(),
+                   invalid_actor_id, invalid_actor_id});
+    if (published_actor_id != invalid_actor_id)
+      m.expect(hdl,
+               {basp::message_type::server_handshake, 0, basp::version,
+                this_node(), invalid_node_id,
+                published_actor_id, invalid_actor_id},
+               published_actor_id,
+               published_actor_ifs);
+    else
+      m.expect(hdl,
+               {basp::message_type::server_handshake, 0, basp::version,
+                this_node(), invalid_node_id,
+                invalid_actor_id, invalid_actor_id});
     // test whether basp instance correctly updates the
     // routing table upon receiving client handshakes
     auto path = tbl().lookup(remote_node(i));
@@ -351,18 +357,15 @@ CAF_TEST(empty_server_handshake) {
   basp::header hdr;
   buffer payload;
   std::tie(hdr, payload) = from_buf(buf);
-  auto is_zero = [](char c) {
-    return c == 0;
-  };
   basp::header expected{basp::message_type::server_handshake,
-                        sizeof(actor_id) + sizeof(uint32_t),
+                        0,
                         basp::version,
                         this_node(), invalid_node_id,
                         invalid_actor_id, invalid_actor_id};
   CAF_CHECK(basp::valid(hdr));
   CAF_CHECK(basp::is_handshake(hdr));
   CAF_CHECK(hdr == expected);
-  CAF_CHECK(all_of(payload.begin(), payload.end(), is_zero));
+  CAF_CHECK(payload.empty());
 }
 
 CAF_TEST(non_empty_server_handshake) {
@@ -375,7 +378,7 @@ CAF_TEST(non_empty_server_handshake) {
   buffer expected_buf;
   basp::header expected{basp::message_type::server_handshake, 0, basp::version,
                         this_node(), invalid_node_id,
-                        invalid_actor_id, invalid_actor_id};
+                        self()->id(), invalid_actor_id};
   to_buf(expected_buf, expected, nullptr,
          self()->id(), set<string>{"caf::replies_to<@u16>::with<@u16>"});
   CAF_CHECK(hexstr(buf) == hexstr(expected_buf));
@@ -456,7 +459,7 @@ CAF_TEST(remote_actor_and_send) {
   mock(remote_hdl(0),
        {basp::message_type::server_handshake, 0, basp::version,
         remote_node(0), invalid_node_id,
-        invalid_actor_id, invalid_actor_id},
+        pseudo_remote(0)->id(), invalid_actor_id},
        pseudo_remote(0)->id(),
        uint32_t{0})
   .expect(remote_hdl(0),
