@@ -49,7 +49,7 @@ struct basp_broker_state : actor_namespace::backend, basp::instance::callee {
 
   // inherited from basp::instance::listener
   void finalize_handshake(const node_id& nid, actor_id aid,
-                          const std::set<std::string>& sigs) override;
+                          std::set<std::string>& sigs) override;
 
   // inherited from basp::instance::listener
   void purge_state(const node_id& id) override;
@@ -71,7 +71,6 @@ struct basp_broker_state : actor_namespace::backend, basp::instance::callee {
     node_id id;
     uint16_t remote_port;
     optional<response_promise> callback;
-    std::set<std::string> expected_sigs;
   };
 
   void set_context(connection_handle hdl);

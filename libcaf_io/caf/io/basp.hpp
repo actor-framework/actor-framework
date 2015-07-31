@@ -369,7 +369,7 @@ public:
     /// Called if a server handshake was received and
     /// the connection to `nid` is established.
     virtual void finalize_handshake(const node_id& nid, actor_id aid,
-                                    const std::set<std::string>& sigs) = 0;
+                                    std::set<std::string>& sigs) = 0;
 
     /// Called whenever a direct connection was closed or a
     /// node became unrechable for other reasons *before*

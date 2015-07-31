@@ -17,35 +17,59 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/io/unpublish.hpp"
+#include "caf/experimental/announce_actor_type.hpp"
 
+#include "caf/atom.hpp"
 #include "caf/send.hpp"
-#include "caf/scoped_actor.hpp"
+#include "caf/spawn.hpp"
+#include "caf/to_string.hpp"
+#include "caf/event_based_actor.hpp"
 
-#include "caf/io/unpublish.hpp"
-#include "caf/io/basp_broker.hpp"
-#include "caf/io/middleman_actor.hpp"
+#include "caf/experimental/stateful_actor.hpp"
+
+#include "caf/detail/logging.hpp"
+#include "caf/detail/singletons.hpp"
+#include "caf/detail/actor_registry.hpp"
 
 namespace caf {
-namespace io {
+namespace experimental {
 
-void unpublish_impl(const actor_addr& whom, uint16_t port, bool blocking) {
-  CAF_LOGF_TRACE(CAF_TSARG(whom) << ", " << CAF_ARG(port) << CAF_ARG(blocking));
-  auto mm = get_middleman_actor();
-  if (blocking) {
-    scoped_actor self;
-    self->sync_send(mm, unpublish_atom::value, whom, port).await(
-      [](ok_atom) {
-        // ok, basp_broker is done
-      },
-      [](error_atom, const std::string&) {
-        // ok, basp_broker is done
-      }
-    );
-  } else {
-    anon_send(mm, unpublish_atom::value, whom, port);
-  }
+namespace {
+
+struct spawner_state {
+  std::unordered_map<std::string, spawn_fun> funs_;
+};
+
+behavior announce_actor_type_server(stateful_actor<spawner_state>* self) {
+  return {
+    [=](add_atom, std::string& name, spawn_fun& f) {
+      self->state.funs_.emplace(std::move(name), std::move(f));
+    },
+    [=](get_atom, const std::string& name, message& args) -> spawn_result {
+      auto i = self->state.funs_.find(name);
+      if (i == self->state.funs_.end())
+        return std::make_pair(invalid_actor_addr, std::set<std::string>{});
+      auto f = i->second;
+      return f(args);
+    },
+    others >> [=] {
+      CAF_LOGF_WARNING("Unexpected message: "
+                       << to_string(self->current_message()));
+    }
+  };
 }
 
-} // namespace io
+} // namespace <anonymous>
+
+actor spawn_announce_actor_type_server() {
+  return spawn<hidden + lazy_init>(announce_actor_type_server);
+}
+
+void announce_actor_type_impl(std::string&& name, spawn_fun f) {
+  auto registry = detail::singletons::get_actor_registry();
+  auto server = registry->get_named(atom("spawner"));
+  anon_send(server, add_atom::value, std::move(name), std::move(f));
+}
+
+} // namespace experimental
 } // namespace caf

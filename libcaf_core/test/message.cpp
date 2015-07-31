@@ -27,6 +27,18 @@
 
 using namespace caf;
 
+CAF_TEST(apply) {
+  auto f1 = [] {
+    CAF_TEST_ERROR("f1 invoked!");
+  };
+  auto f2 = [](int i) {
+    CAF_CHECK_EQUAL(i, 42);
+  };
+  auto m = make_message(42);
+  m.apply(f1);
+  m.apply(f2);
+}
+
 CAF_TEST(drop) {
   auto m1 = make_message(1, 2, 3, 4, 5);
   std::vector<message> messages{

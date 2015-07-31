@@ -451,7 +451,8 @@ CAF_TEST(remote_actor_and_send) {
   CAF_CHECK(mpx()->pending_scribes().count(make_pair("localhost", 4242)) == 1);
   auto mm = get_middleman_actor();
   actor result;
-  auto f = self()->sync_send(mm, get_atom::value, "localhost", uint16_t{4242});
+  auto f = self()->sync_send(mm, connect_atom::value,
+                             "localhost", uint16_t{4242});
   mpx()->exec_runnable(); // process message in basp_broker
   CAF_CHECK(mpx()->pending_scribes().count(make_pair("localhost", 4242)) == 0);
   // build a fake server handshake containing the id of our first pseudo actor
@@ -472,13 +473,15 @@ CAF_TEST(remote_actor_and_send) {
            invalid_actor_id, pseudo_remote(0)->id()});
   // basp broker should've send the proxy
   f.await(
-    [&](ok_atom, actor_addr res) {
+    [&](ok_atom, node_id nid, actor_addr res, std::set<std::string> ifs) {
       auto aptr = actor_cast<abstract_actor_ptr>(res);
       CAF_REQUIRE(aptr.downcast<forwarding_actor_proxy>() != nullptr);
       CAF_CHECK(get_namespace().get_all().size() == 1);
       CAF_CHECK(get_namespace().count_proxies(remote_node(0)) == 1);
+      CAF_CHECK(nid == remote_node(0));
       CAF_CHECK(res.node() == remote_node(0));
       CAF_CHECK(res.id() == pseudo_remote(0)->id());
+      CAF_CHECK(ifs.empty());
       auto proxy = get_namespace().get(remote_node(0), pseudo_remote(0)->id());
       CAF_REQUIRE(proxy != nullptr);
       CAF_REQUIRE(proxy->address() == res);
