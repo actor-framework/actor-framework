@@ -35,7 +35,6 @@ using plus_atom = atom_constant<atom("plus")>;
 using minus_atom = atom_constant<atom("minus")>;
 using result_atom = atom_constant<atom("result")>;
 using rebind_atom = atom_constant<atom("rebind")>;
-using connect_atom = atom_constant<atom("connect")>;
 using reconnect_atom = atom_constant<atom("reconnect")>;
 
 // our "service"
@@ -105,9 +104,13 @@ private:
   behavior reconnecting(std::function<void()> continuation = nullptr) {
     using std::chrono::seconds;
     auto mm = io::get_middleman_actor();
-    send(mm, get_atom::value, host_, port_);
+    send(mm, connect_atom::value, host_, port_);
     return {
-      [=](ok_atom, const actor_addr& new_server) {
+      [=](ok_atom, node_id&, actor_addr& new_server, std::set<std::string>&) {
+        if (new_server == invalid_actor_addr) {
+          aout(this) << "*** received invalid remote actor" << endl;
+          return;
+        }
         aout(this) << "*** connection succeeded, awaiting tasks" << endl;
         server_ = actor_cast<actor>(new_server);
         // return to previous behavior
@@ -122,7 +125,7 @@ private:
                    << ": " << errstr
                    << " [try again in 3s]"
                    << endl;
-        delayed_send(mm, seconds(3), get_atom::value, host_, port_);
+        delayed_send(mm, seconds(3), connect_atom::value, host_, port_);
       },
       [=](rebind_atom, string& nhost, uint16_t nport) {
         aout(this) << "*** rebind to " << nhost << ":" << nport << endl;
@@ -131,13 +134,17 @@ private:
         swap(port_, nport);
         auto send_mm = [=] {
           unbecome();
-          send(mm, get_atom::value, host_, port_);
+          send(mm, connect_atom::value, host_, port_);
         };
         // await pending ok/error message first, then send new request to MM
         become(
           keep_behavior,
-          [=](ok_atom&, actor_addr&) { send_mm(); },
-          [=](error_atom&, string&)  { send_mm(); }
+          [=](ok_atom&, actor_addr&) {
+            send_mm();
+          },
+          [=](error_atom&, string&)  {
+            send_mm();
+          }
         );
       },
       // simply ignore all requests until we have a connection

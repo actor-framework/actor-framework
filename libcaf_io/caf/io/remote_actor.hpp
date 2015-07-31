@@ -31,8 +31,8 @@
 namespace caf {
 namespace io {
 
-abstract_actor_ptr remote_actor_impl(std::set<std::string> ifs,
-                                     const std::string& host, uint16_t port);
+actor_addr remote_actor_impl(std::set<std::string> ifs,
+                             std::string host, uint16_t port);
 
 /// Establish a new connection to the actor at `host` on given `port`.
 /// @param host Valid hostname or IP address.
@@ -41,8 +41,8 @@ abstract_actor_ptr remote_actor_impl(std::set<std::string> ifs,
 ///          representing a remote actor.
 /// @throws network_error Thrown on connection error or
 ///                       when connecting to a typed actor.
-inline actor remote_actor(const std::string& host, uint16_t port) {
-  auto res = remote_actor_impl(std::set<std::string>{}, host, port);
+inline actor remote_actor(std::string host, uint16_t port) {
+  auto res = remote_actor_impl(std::set<std::string>{}, std::move(host), port);
   return actor_cast<actor>(res);
 }
 
@@ -54,10 +54,10 @@ inline actor remote_actor(const std::string& host, uint16_t port) {
 /// @throws network_error Thrown on connection error or when connecting
 ///                       to an untyped otherwise unexpected actor.
 template <class ActorHandle>
-ActorHandle typed_remote_actor(const std::string& host, uint16_t port) {
-  auto iface = ActorHandle::message_types();
-  return actor_cast<ActorHandle>(remote_actor_impl(std::move(iface),
-                                                   host, port));
+ActorHandle typed_remote_actor(std::string host, uint16_t port) {
+  auto res = remote_actor_impl(ActorHandle::message_types(),
+                               std::move(host), port);
+  return actor_cast<ActorHandle>(res);
 }
 
 } // namespace io

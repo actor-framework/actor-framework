@@ -21,6 +21,7 @@
 #define CAF_ATOM_HPP
 
 #include <string>
+#include <functional>
 #include <type_traits>
 
 #include "caf/detail/atom_val.hpp"
@@ -104,6 +105,33 @@ using link_atom = atom_constant<atom("LINK")>;
 /// Generic 'UNLINK' atom for removing networked links.
 using unlink_atom = atom_constant<atom("UNLINK")>;
 
+/// Generic 'PUBLISH' atom, e.g., for publishing actors at a given port.
+using publish_atom = atom_constant<atom("PUBLISH")>;
+
+/// Generic 'UNPUBLISH' atom, e.g., for removing an actor/port mapping.
+using unpublish_atom = atom_constant<atom("UNPUBLISH")>;
+
+/// Generic 'CONNECT' atom, e.g., for connecting to remote CAF instances.
+using connect_atom = atom_constant<atom("CONNECT")>;
+
+/// Generic 'OPEN' atom, e.g., for opening a port or file.
+using open_atom = atom_constant<atom("OPEN")>;
+
+/// Generic 'CLOSE' atom, e.g., for closing a port or file.
+using close_atom = atom_constant<atom("CLOSE")>;
+
 } // namespace caf
+
+namespace std {
+
+template <>
+struct hash<caf::atom_value> {
+  size_t operator()(caf::atom_value x) const {
+    hash<uint64_t> f;
+    return f(static_cast<uint64_t>(x));
+  }
+};
+
+} // namespace std
 
 #endif // CAF_ATOM_HPP

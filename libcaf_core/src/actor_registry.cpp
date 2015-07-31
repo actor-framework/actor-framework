@@ -23,10 +23,14 @@
 #include <limits>
 #include <stdexcept>
 
+#include "caf/spawn.hpp"
 #include "caf/locks.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/attachable.hpp"
 #include "caf/exit_reason.hpp"
+#include "caf/scoped_actor.hpp"
+
+#include "caf/experimental/announce_actor_type.hpp"
 
 #include "caf/scheduler/detached_threads.hpp"
 
@@ -47,7 +51,7 @@ actor_registry::~actor_registry() {
   // nop
 }
 
-actor_registry::actor_registry() : running_(0), ids_(1) {
+actor_registry::actor_registry() : running_(0) {
   // nop
 }
 
@@ -95,10 +99,6 @@ void actor_registry::erase(actor_id key, uint32_t reason) {
   }
 }
 
-uint32_t actor_registry::next_id() {
-  return ++ids_;
-}
-
 void actor_registry::inc_running() {
 # if defined(CAF_LOG_LEVEL) && CAF_LOG_LEVEL >= CAF_DEBUG
     CAF_LOG_DEBUG("new value = " << ++running_);
@@ -128,6 +128,47 @@ void actor_registry::await_running_count_equal(size_t expected) {
     CAF_LOG_DEBUG("count = " << running_.load());
     running_cv_.wait(guard);
   }
+}
+
+actor actor_registry::get_named(atom_value key) const {
+  auto i = named_entries_.find(key);
+  if (i == named_entries_.end())
+    return invalid_actor;
+  return i->second;
+}
+
+std::vector<std::pair<atom_value, actor>> actor_registry::named_actors() const {
+  std::vector<std::pair<atom_value, actor>> result;
+  for (auto& kvp : named_entries_)
+    result.emplace_back(kvp);
+  return result;
+}
+
+actor_registry* actor_registry::create_singleton() {
+  return new actor_registry;
+}
+
+void actor_registry::dispose() {
+  delete this;
+}
+
+void actor_registry::stop() {
+  scoped_actor self{true};
+  for (auto& kvp : named_entries_) {
+    self->monitor(kvp.second);
+    self->send_exit(kvp.second, exit_reason::kill);
+    self->receive(
+      [](const down_msg&) {
+        // nop
+      }
+    );
+  }
+  named_entries_.clear();
+}
+
+void actor_registry::initialize() {
+  named_entries_.emplace(atom("spawner"),
+                         experimental::spawn_announce_actor_type_server());
 }
 
 } // namespace detail

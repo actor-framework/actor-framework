@@ -139,8 +139,6 @@ void do_announce(const char* tname) {
   announce(typeid(T), uniform_type_info_ptr{new uti_impl<T>(tname)});
 }
 
-} // namespace <anonymous>
-
 class middleman_actor_impl : public middleman_actor::base {
 public:
   middleman_actor_impl(middleman& mref, actor default_broker)
@@ -149,65 +147,62 @@ public:
     // nop
   }
 
-  ~middleman_actor_impl();
-
   void on_exit() {
     CAF_LOG_TRACE("");
     broker_ = invalid_actor;
   }
 
-  using get_op_result = either<ok_atom, actor_addr>
-                        ::or_else<error_atom, std::string>;
+  using put_res = either<ok_atom, uint16_t>::or_else<error_atom, std::string>;
 
-  using get_op_promise = typed_response_promise<get_op_result>;
+  using get_res = delegated<either<ok_atom, node_id, actor_addr,
+                                   std::set<std::string>>
+                            ::or_else<error_atom, std::string>>;
 
-  using del_op_result = either<ok_atom>::or_else<error_atom, std::string>;
-
-  using del_op_promise = delegated<del_op_result>;
-
-  using map_type = std::map<int64_t, response_promise>;
+  using del_res = delegated<either<ok_atom>::or_else<error_atom, std::string>>;
 
   behavior_type make_behavior() override {
     return {
-      [=](put_atom, uint16_t port, const actor_addr& whom,
-          std::set<std::string>& sigs, const std::string& addr,
-          bool reuse_addr) {
-        return put(port, whom, sigs, addr.c_str(), reuse_addr);
+      [=](publish_atom, uint16_t port, actor_addr& whom,
+          std::set<std::string>& sigs, std::string& addr, bool reuse) {
+        return put(port, whom, sigs, addr.c_str(), reuse);
       },
-      [=](put_atom, uint16_t port, const actor_addr& whom,
-          std::set<std::string>& sigs, const std::string& addr) {
-        return put(port, whom, sigs, addr.c_str());
+      [=](open_atom, uint16_t port, std::string& addr, bool reuse) -> put_res {
+        actor_addr whom = invalid_actor_addr;
+        std::set<std::string> sigs;
+        return put(port, whom, sigs, addr.c_str(), reuse);
       },
-      [=](put_atom, uint16_t port, const actor_addr& whom,
-          std::set<std::string>& sigs, bool reuse_addr) {
-        return put(port, whom, sigs, nullptr, reuse_addr);
+      [=](connect_atom, const std::string& hostname, uint16_t port) -> get_res {
+        CAF_LOG_TRACE(CAF_ARG(hostname) << ", " << CAF_ARG(port));
+        try {
+          auto hdl = parent_.backend().new_tcp_scribe(hostname, port);
+          delegate(broker_, connect_atom::value, hdl, port);
+        }
+        catch (network_error& err) {
+          // fullfil promise immediately
+          std::string msg = "network_error: ";
+          msg += err.what();
+          auto rp = make_response_promise();
+          rp.deliver(make_message(error_atom::value, std::move(msg)));
+        }
+        return {};
       },
-      [=](put_atom, uint16_t port, const actor_addr& whom,
-          std::set<std::string>& sigs) {
-        return put(port, whom, sigs);
+      [=](unpublish_atom, actor_addr& whom, uint16_t port) -> del_res {
+        delegate(broker_, unpublish_atom::value, std::move(whom), port);
+        return {};
       },
-      [=](get_atom, const std::string& hostname, uint16_t port,
-          std::set<std::string>& expected_ifs) {
-        return get(hostname, port, std::move(expected_ifs));
-      },
-      [=](get_atom, const std::string& hostname, uint16_t port) {
-        return get(hostname, port, std::set<std::string>());
-      },
-      [=](delete_atom, const actor_addr& whom) {
-        return del(whom);
-      },
-      [=](delete_atom, const actor_addr& whom, uint16_t port) {
-        return del(whom, port);
+      [=](close_atom, uint16_t port) -> del_res {
+        delegate(broker_, close_atom::value, port);
+        return {};
       }
     };
   }
 
 private:
-  either<ok_atom, uint16_t>::or_else<error_atom, std::string>
-  put(uint16_t port, const actor_addr& whom, std::set<std::string>& sigs,
-      const char* in = nullptr, bool reuse_addr = false) {
-    CAF_LOG_TRACE(CAF_TSARG(whom) << ", " << CAF_ARG(port)
-                  << ", " << CAF_ARG(reuse_addr));
+  put_res put(uint16_t port, actor_addr& whom,
+              std::set<std::string>& sigs, const char* in = nullptr,
+              bool reuse_addr = false) {
+    CAF_LOG_TRACE(CAF_TSARG(whom) << ", " << CAF_ARG(port) << ", "
+                                  << CAF_ARG(reuse_addr));
     accept_handle hdl;
     uint16_t actual_port;
     try {
@@ -225,66 +220,16 @@ private:
     catch (network_error& err) {
       return {error_atom::value, std::string("network_error: ") + err.what()};
     }
-    send(broker_, put_atom::value, hdl, actual_port, whom, std::move(sigs));
+    send(broker_, publish_atom::value, hdl, actual_port,
+         std::move(whom), std::move(sigs));
     return {ok_atom::value, actual_port};
-  }
-
-  get_op_promise get(const std::string& hostname, uint16_t port,
-                     std::set<std::string> expected_ifs) {
-    CAF_LOG_TRACE(CAF_ARG(hostname) << ", " << CAF_ARG(port));
-    get_op_promise result;
-    try {
-      auto hdl = parent_.backend().new_tcp_scribe(hostname, port);
-      delegate(broker_, get_atom::value, hdl, port, std::move(expected_ifs));
-    }
-    catch (network_error& err) {
-      // fullfil promise immediately
-      std::string msg = "network_error: ";
-      msg += err.what();
-      result = make_response_promise();
-      result.deliver(get_op_result{error_atom::value, std::move(msg)});
-    }
-    return result;
-  }
-
-  del_op_promise del(const actor_addr& whom, uint16_t port = 0) {
-    CAF_LOG_TRACE(CAF_TSARG(whom) << ", " << CAF_ARG(port));
-    delegate(broker_, delete_atom::value, whom, port);
-    return {};
-  }
-
-  template <class T, class... Ts>
-  void handle_ok(map_type& storage, int64_t request_id, Ts&&... xs) {
-    CAF_LOG_TRACE(CAF_ARG(request_id));
-    auto i = storage.find(request_id);
-    if (i == storage.end()) {
-      CAF_LOG_ERROR("request id not found: " << request_id);
-      return;
-    }
-    i->second.deliver(T{ok_atom::value, std::forward<Ts>(xs)...}.value);
-    storage.erase(i);
-  }
-
-  template <class F>
-  bool finalize_request(map_type& storage, int64_t req_id, F fun) {
-    CAF_LOG_TRACE(CAF_ARG(req_id));
-    auto i = storage.find(req_id);
-    if (i == storage.end()) {
-      CAF_LOG_INFO("request ID not found in storage");
-      return false;
-    }
-    fun(i->second);
-    storage.erase(i);
-    return true;
   }
 
   actor broker_;
   middleman& parent_;
 };
 
-middleman_actor_impl::~middleman_actor_impl() {
-  CAF_LOG_TRACE("");
-}
+} // namespace <anonymous>
 
 middleman* middleman::instance() {
   CAF_LOGF_TRACE("");

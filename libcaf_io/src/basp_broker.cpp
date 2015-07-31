@@ -93,7 +93,7 @@ actor_proxy_ptr basp_broker_state::make_proxy(const node_id& nid,
 }
 
 void basp_broker_state::finalize_handshake(const node_id& nid, actor_id aid,
-                                           const std::set<std::string>& sigs) {
+                                           std::set<std::string>& sigs) {
   CAF_LOG_TRACE(CAF_TSARG(nid)
                 << ", " << CAF_ARG(aid)
                 << ", " << CAF_TSARG(make_message(sigs)));
@@ -102,20 +102,15 @@ void basp_broker_state::finalize_handshake(const node_id& nid, actor_id aid,
   auto& cb = this_context->callback;
   if (! cb)
     return;
-  auto& exp = this_context->expected_sigs;
   auto cleanup = detail::make_scope_guard([&] {
     cb = none;
-    exp.clear();
   });
-  if (! std::includes(sigs.begin(), sigs.end(), exp.begin(), exp.end())) {
-    cb->deliver(make_message(error_atom::value,
-                             "expected signature does not "
-                             "comply to found signature"));
-    return;
-  }
   if (aid == invalid_actor_id) {
     // can occur when connecting to the default port of a node
-    cb->deliver(make_message(ok_atom::value, actor_addr{invalid_actor_addr}));
+    cb->deliver(make_message(ok_atom::value,
+                             nid,
+                             actor_addr{invalid_actor_addr},
+                             std::move(sigs)));
     return;
   }
   abstract_actor_ptr ptr;
@@ -132,9 +127,8 @@ void basp_broker_state::finalize_handshake(const node_id& nid, actor_id aid,
   actor_addr addr = ptr ? ptr->address() : invalid_actor_addr;
   if (addr.is_remote())
     known_remotes.emplace(nid, std::make_pair(this_context->remote_port, addr));
-  cb->deliver(make_message(ok_atom::value, addr));
+  cb->deliver(make_message(ok_atom::value, nid, addr, std::move(sigs)));
   this_context->callback = none;
-  this_context->expected_sigs.clear();
 }
 
 void basp_broker_state::purge_state(const node_id& nid) {
@@ -236,8 +230,7 @@ void basp_broker_state::set_context(connection_handle hdl) {
                       hdl,
                       invalid_node_id,
                       0,
-                      none,
-                      std::set<std::string>{}}).first;
+                      none}).first;
   }
   this_context = &i->second;
 }
@@ -339,7 +332,7 @@ behavior basp_broker::make_behavior() {
       state.instance.remove_published_actor(port);
     },
     // received from middleman actor
-    [=](put_atom, accept_handle hdl, uint16_t port, const actor_addr& whom,
+    [=](publish_atom, accept_handle hdl, uint16_t port, const actor_addr& whom,
         std::set<std::string>& sigs) {
       CAF_LOG_TRACE(CAF_ARG(hdl.id()) << ", "<< CAF_TSARG(whom)
                     << ", " << CAF_ARG(port));
@@ -357,8 +350,7 @@ behavior basp_broker::make_behavior() {
       parent().notify<hook::actor_published>(whom, port);
     },
     // received from middleman actor (delegated)
-    [=](get_atom, connection_handle hdl, uint16_t port,
-        std::set<std::string>& expected_ifs) {
+    [=](connect_atom, connection_handle hdl, uint16_t port) {
       CAF_LOG_TRACE(CAF_ARG(hdl.id()));
       auto rp = make_response_promise();
       try {
@@ -376,7 +368,6 @@ behavior basp_broker::make_behavior() {
       ctx.remote_port = port;
       ctx.cstate = basp::await_header;
       ctx.callback = rp;
-      ctx.expected_sigs = std::move(expected_ifs);
       // await server handshake
       configure_read(hdl, receive_policy::exactly(basp::header_size));
     },
@@ -384,7 +375,7 @@ behavior basp_broker::make_behavior() {
       CAF_LOG_TRACE(CAF_TSARG(nid) << ", " << CAF_ARG(aid));
       state.get_namespace().erase(nid, aid);
     },
-    [=](delete_atom, const actor_addr& whom, uint16_t port) -> message {
+    [=](unpublish_atom, const actor_addr& whom, uint16_t port) -> message {
       CAF_LOG_TRACE(CAF_TSARG(whom) << ", " << CAF_ARG(port));
       if (whom == invalid_actor_addr)
         return make_message(error_atom::value, "whom == invalid_actor_addr");
@@ -396,6 +387,19 @@ behavior basp_broker::make_behavior() {
       return state.instance.remove_published_actor(whom, port, &cb) == 0
                ? make_message(error_atom::value, "no mapping found")
                : make_message(ok_atom::value);
+    },
+    [=](close_atom, uint16_t port) -> message {
+      if (port == 0)
+        return make_message(error_atom::value, "port == 0");
+      // it is well-defined behavior to not have an actor published here,
+      // hence the result can be ignored safely
+      state.instance.remove_published_actor(port, nullptr);
+      auto acceptor = hdl_by_port(port);
+      if (acceptor) {
+        close(*acceptor);
+        return make_message(ok_atom::value);
+      }
+      return make_message(error_atom::value, "no doorman for given port found");
     },
     // catch-all error handler
     others >>
