@@ -20,20 +20,27 @@
 #ifndef CAF_UNIT_HPP
 #define CAF_UNIT_HPP
 
+#include "caf/detail/comparable.hpp"
+
 namespace caf {
 
-struct unit_t {
+struct unit_t : detail::comparable<unit_t> {
   constexpr unit_t() {
     // nop
   }
+
   constexpr unit_t(const unit_t&) {
     // nop
   }
+
   template <class T>
   explicit constexpr unit_t(T&&) {
     // nop
   }
-  unit_t& operator=(const unit_t&) = default;
+
+  static constexpr int compare(const unit_t&) {
+    return 0;
+  }
 };
 
 static constexpr unit_t unit = unit_t{};
