@@ -38,17 +38,20 @@ namespace caf {
 namespace detail {
 
 namespace {
+  using cache_map = std::map<const std::type_info*, std::unique_ptr<memory_cache>>;
+}
+
+memory_cache::~memory_cache() {
+    // nop
+}
+#ifdef CAF_CLANG
+
+namespace {
 
 pthread_key_t s_key;
 pthread_once_t s_key_once = PTHREAD_ONCE_INIT;
 
 } // namespace <anonymous>
-
-memory_cache::~memory_cache() {
-  // nop
-}
-
-using cache_map = std::map<const std::type_info*,std::unique_ptr<memory_cache>>;
 
 void cache_map_destructor(void* ptr) {
   delete reinterpret_cast<cache_map*>(ptr);
@@ -70,6 +73,26 @@ cache_map& get_cache_map() {
   }
   return *cache;
 }
+
+#else // !CAF_CLANG
+
+namespace {
+thread_local std::shared_ptr<cache_map> s_key;
+}
+
+cache_map& get_cache_map() {
+    
+    if (!s_key) 
+    {
+        s_key = std::make_shared<cache_map>();
+
+        // insert default types
+        std::unique_ptr<memory_cache> tmp(new basic_memory_cache<mailbox_element>);
+        s_key->emplace(&typeid(mailbox_element), move(tmp));
+    }
+    return *s_key;
+}
+#endif
 
 memory_cache* memory::get_cache_map_entry(const std::type_info* tinf) {
   auto& cache = get_cache_map();
