@@ -382,10 +382,6 @@ public:
     return create_impl<T>(other);
   }
 
-  message as_message(void* instance) const override {
-    return make_message(deref(instance));
-  }
-
   static inline const T& deref(const void* ptr) {
     return *reinterpret_cast<const T*>(ptr);
   }
@@ -436,17 +432,14 @@ public:
   const char* name() const override {
     return static_name();
   }
-  message as_message(void* instance) const override {
-    return make_message(deref(instance));
-  }
 
-protected:
   bool equals(const void* lhs, const void* rhs) const override {
     return deref(lhs) == deref(rhs);
   }
   uniform_value create(const uniform_value& other) const override {
     return create_impl<T>(other);
   }
+
 private:
   inline static const T& deref(const void* ptr) {
     return *reinterpret_cast<const T*>(ptr);
@@ -476,6 +469,7 @@ public:
       }
     }
   }
+
   uniform_value create(const uniform_value& other) const override {
     auto res = create_impl<message>(other);
     if (! other) {
@@ -486,12 +480,11 @@ public:
     }
     return res;
   }
-  message as_message(void* ptr) const override {
-    return *cast(ptr);
-  }
+
   const char* name() const override {
     return name_.c_str();
   }
+
   void serialize(const void* ptr, serializer* sink) const override {
     auto& msg = *cast(ptr);
     CAF_ASSERT(msg.size() == elements_.size());
@@ -499,6 +492,7 @@ public:
       elements_[i]->serialize(msg.at(i), sink);
     }
   }
+
   void deserialize(void* ptr, deserializer* source) const override {
     message_builder mb;
     for (size_t i = 0; i < elements_.size(); ++i) {

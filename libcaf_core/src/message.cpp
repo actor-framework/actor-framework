@@ -70,7 +70,7 @@ void message::deserialize(deserializer& source) {
   auto uval = uti->create();
   uti->deserialize(uval->val, &source);
   source.end_object();
-  *this = uti->as_message(uval->val);
+  *this = *reinterpret_cast<message*>(uval->val);
 }
 
 void message::reset(raw_ptr new_ptr, bool add_ref) {

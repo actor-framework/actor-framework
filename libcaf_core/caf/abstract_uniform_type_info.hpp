@@ -37,10 +37,6 @@ public:
     return name_.c_str();
   }
 
-  message as_message(void* instance) const override {
-    return make_message(deref(instance));
-  }
-
   bool equal_to(const std::type_info& tinfo) const override {
     return native_ == &tinfo || *native_ == tinfo;
   }

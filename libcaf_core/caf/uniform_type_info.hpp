@@ -170,7 +170,7 @@ public:
   /// Returns a vector with all known (announced) types.
   static std::vector<const uniform_type_info*> instances();
 
-  /// Creates a copy of `other`.
+  /// Creates a copy of `other` or a new instance if `other == nullptr`.
   virtual uniform_value create(const uniform_value& other
                                = uniform_value{}) const = 0;
 
@@ -208,9 +208,6 @@ public:
   /// @param source Data source.
   /// @pre `instance` has the type of `this`.
   virtual void deserialize(void* instance, deserializer* source) const = 0;
-
-  /// Returns `instance` encapsulated as an `message`.
-  virtual message as_message(void* instance) const = 0;
 
   /// Returns a unique number for builtin types or 0.
   uint16_t type_nr() const {
