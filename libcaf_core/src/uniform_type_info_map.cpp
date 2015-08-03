@@ -95,89 +95,101 @@ const char* numbered_type_names[] = {
 
 namespace {
 
-inline bool operator==(const unit_t&, const unit_t&) {
-  return true;
+// might become part of serializer's public API at some point
+template <class T>
+void operator&(serializer& sink, const T& value) {
+  sink << value;
+}
+
+// might become part of deserializer's public API at some point
+template <class T>
+void operator&(deserializer& source, T& value) {
+  source >> value;
+}
+
+// primitive types are handled by serializer/deserializer directly
+template <class T, class U>
+typename std::enable_if<
+  detail::is_primitive<U>::value || std::is_same<U, atom_value>::value
+>::type
+process(T& io, U& x) {
+  io & x;
+}
+
+template <class U>
+auto process(serializer& sink, const U& x) -> decltype(x.serialize(sink)) {
+  x.serialize(sink);
+}
+
+template <class U>
+auto process(deserializer& source, U& x) -> decltype(x.deserialize(source)) {
+  x.deserialize(source);
 }
 
 template <class T>
-inline typename std::enable_if<detail::is_primitive<T>::value>::type
-serialize_impl(const T& val, serializer* sink) {
-  sink->write_value(val);
-}
-
-template <class T>
-inline typename std::enable_if<detail::is_primitive<T>::value>::type
-deserialize_impl(T& val, deserializer* source) {
-  val = source->read<T>();
-}
-
-inline void serialize_impl(const unit_t&, serializer*) {
+void process(T&, const unit_t&) {
   // nop
 }
 
-inline void deserialize_impl(unit_t&, deserializer*) {
-  // nop
+void process(serializer& sink, const actor_addr& addr, actor_namespace* ns) {
+  ns->write(&sink, addr);
 }
 
-void serialize_impl(const actor_addr& addr, serializer* sink) {
-  auto ns = sink->get_namespace();
-  if (! ns) {
-    throw std::runtime_error(
-      "unable to serialize actor_addr: "
-      "no actor addressing defined");
-  }
-  ns->write(sink, addr);
+void process(deserializer& source, actor_addr& addr, actor_namespace* ns) {
+  addr = ns->read(&source);
 }
 
-void deserialize_impl(actor_addr& addr, deserializer* source) {
-  auto ns = source->get_namespace();
-  if (! ns) {
-    throw std::runtime_error(
-      "unable to deserialize actor_ptr: "
-      "no actor addressing defined");
-  }
-  addr = ns->read(source);
+template <class T, class U>
+typename std::enable_if<
+  std::is_same<typename std::remove_const<U>::type, actor_addr>::value
+>::type
+process(T& io, U& addr) {
+  auto ns = io.get_namespace();
+  if (! ns)
+    throw std::runtime_error("no actor namespace found");
+  process(io, addr, ns);
 }
 
-void serialize_impl(const actor& ptr, serializer* sink) {
-  serialize_impl(ptr.address(), sink);
+void process(serializer& sink, const actor& hdl) {
+  auto addr = hdl.address();
+  process(sink, addr);
 }
 
-void deserialize_impl(actor& ptr, deserializer* source) {
+void process(deserializer& source, actor& hdl) {
   actor_addr addr;
-  deserialize_impl(addr, source);
-  ptr = actor_cast<actor>(addr);
+  process(source, addr);
+  hdl = actor_cast<actor>(addr);
 }
 
-void serialize_impl(const group& gref, serializer* sink) {
+void process(serializer& sink, const group& gref) {
   if (! gref) {
     CAF_LOGF_DEBUG("serialized an invalid group");
     // write an empty string as module name
     std::string empty_string;
-    sink->write_value(empty_string);
+    sink.write_value(empty_string);
   } else {
-    sink->write_value(gref->module_name());
-    gref->serialize(sink);
+    sink.write_value(gref->module_name());
+    gref->serialize(&sink);
   }
 }
 
-void deserialize_impl(group& gref, deserializer* source) {
-  auto modname = source->read<std::string>();
+void process(deserializer& source, group& gref) {
+  auto modname = source.read<std::string>();
   if (modname.empty()) {
     gref = invalid_group;
   } else {
-    gref = group::get_module(modname)->deserialize(source);
+    gref = group::get_module(modname)->deserialize(&source);
   }
 }
 
-void serialize_impl(const channel& chref, serializer* sink) {
+void process(serializer& sink, const channel& chref) {
   // abstract_channel is an abstract base class that's either an actor
   // or a group; we prefix the serialized data using a flag:
   //   0 if ptr == nullptr
   //   1 if ptr points to an actor
   //   2 if ptr points to a group
   uint8_t flag = 0;
-  auto wr_nullptr = [&] { sink->write_value(flag); };
+  auto wr_nullptr = [&] { sink.write_value(flag); };
   if (! chref) {
     // invalid channel
     wr_nullptr();
@@ -189,20 +201,20 @@ void serialize_impl(const channel& chref, serializer* sink) {
       // raw actor pointer
       abstract_actor_ptr aptr = static_cast<abstract_actor*>(rptr);
       flag = 1;
-      sink->write_value(flag);
-      serialize_impl(actor_cast<actor>(aptr), sink);
+      sink.write_value(flag);
+      process(sink, actor_cast<actor>(aptr));
     } else {
       // get raw group pointer and store it inside a group handle
       group tmp{static_cast<abstract_group*>(rptr)};
       flag = 2;
-      sink->write_value(flag);
-      serialize_impl(tmp, sink);
+      sink.write_value(flag);
+      process(sink, tmp);
     }
   }
 }
 
-void deserialize_impl(channel& ptrref, deserializer* source) {
-  auto flag = source->read<uint8_t>();
+void process(deserializer& source, channel& ptrref) {
+  auto flag = source.read<uint8_t>();
   switch (flag) {
     case 0: {
       ptrref = channel{}; // ptrref.reset();
@@ -210,13 +222,13 @@ void deserialize_impl(channel& ptrref, deserializer* source) {
     }
     case 1: {
       actor tmp;
-      deserialize_impl(tmp, source);
+      process(source, tmp);
       ptrref = actor_cast<channel>(tmp);
       break;
     }
     case 2: {
       group tmp;
-      deserialize_impl(tmp, source);
+      process(source, tmp);
       ptrref = tmp;
       break;
     }
@@ -227,38 +239,15 @@ void deserialize_impl(channel& ptrref, deserializer* source) {
   }
 }
 
-void serialize_impl(const message& msg, serializer* sink) {
-  msg.serialize(*sink);
+inline void process(serializer& sink, const duration& val) {
+  sink & static_cast<uint32_t>(val.unit);
+  sink & val.count;
 }
 
-void deserialize_impl(message& msg, deserializer* source) {
-  msg.deserialize(*source);
-}
-
-void serialize_impl(const node_id& nid, serializer* sink) {
-  nid.serialize(*sink);
-}
-
-void deserialize_impl(node_id& nid, deserializer* source) {
-  nid.deserialize(*source);
-}
-
-inline void serialize_impl(const atom_value& val, serializer* sink) {
-  sink->write_value(val);
-}
-
-inline void deserialize_impl(atom_value& val, deserializer* source) {
-  val = source->read<atom_value>();
-}
-
-inline void serialize_impl(const duration& val, serializer* sink) {
-  sink->write_value(static_cast<uint32_t>(val.unit));
-  sink->write_value(val.count);
-}
-
-inline void deserialize_impl(duration& val, deserializer* source) {
-  auto unit_val = source->read<uint32_t>();
-  auto count_val = source->read<uint32_t>();
+inline void process(deserializer& source, duration& val) {
+  uint32_t unit_val;
+  source & unit_val;
+  source & val.count;
   switch (unit_val) {
     case 1:
       val.unit = time_unit::seconds;
@@ -273,85 +262,56 @@ inline void deserialize_impl(duration& val, deserializer* source) {
       val.unit = time_unit::invalid;
       break;
   }
-  val.count = count_val;
-}
-
-inline void serialize_impl(const bool& val, serializer* sink) {
-  sink->write_value(val);
-}
-
-inline void deserialize_impl(bool& val, deserializer* source) {
-  val = source->read<bool>();
 }
 
 // exit_msg & down_msg have the same fields
-template <class T>
+template <class T, class U>
 typename std::enable_if<
-  std::is_same<T, down_msg>::value
-  || std::is_same<T, exit_msg>::value
-  || std::is_same<T, sync_exited_msg>::value
+  std::is_same<typename std::remove_const<U>::type, down_msg>::value
+  || std::is_same<typename std::remove_const<U>::type, exit_msg>::value
+  || std::is_same<typename std::remove_const<U>::type, sync_exited_msg>::value
 >::type
-serialize_impl(const T& dm, serializer* sink) {
-  serialize_impl(dm.source, sink);
-  sink->write_value(dm.reason);
+process(T& io, U& x) {
+  process(io, x.source);
+  io & x.reason;
 }
 
-// exit_msg & down_msg have the same fields
-template <class T>
+template <class T, class U>
 typename std::enable_if<
-  std::is_same<T, down_msg>::value
-  || std::is_same<T, exit_msg>::value
-  || std::is_same<T, sync_exited_msg>::value
+  std::is_same<typename std::remove_const<U>::type, group_down_msg>::value
 >::type
-deserialize_impl(T& dm, deserializer* source) {
-  deserialize_impl(dm.source, source);
-  dm.reason = source->read<uint32_t>();
+process(T& io, U& x) {
+  process(io, x.source);
 }
 
-inline void serialize_impl(const group_down_msg& dm, serializer* sink) {
-  serialize_impl(dm.source, sink);
+void process(serializer& sink, const message_id& x) {
+  sink.write_value(x.integer_value());
 }
 
-inline void deserialize_impl(group_down_msg& dm, deserializer* source) {
-  deserialize_impl(dm.source, source);
+void process(deserializer& source, message_id& x) {
+  x = message_id::from_integer_value(source.read<uint64_t>());
 }
 
-inline void serialize_impl(const message_id& dm, serializer* sink) {
-  sink->write_value(dm.integer_value());
+template <class T, class U>
+typename std::enable_if<
+  std::is_same<typename std::remove_const<U>::type, timeout_msg>::value
+>::type
+process(T& sink, U& x) {
+  sink & x.timeout_id;
 }
 
-inline void deserialize_impl(message_id& dm, deserializer* source) {
-  dm = message_id::from_integer_value(source->read<uint64_t>());
-}
-
-inline void serialize_impl(const timeout_msg& tm, serializer* sink) {
-  sink->write_value(tm.timeout_id);
-}
-
-inline void deserialize_impl(timeout_msg& tm, deserializer* source) {
-  tm.timeout_id = source->read<uint32_t>();
-}
-
-inline void serialize_impl(const sync_timeout_msg&, serializer*) {
+template <class T>
+void process(T&, const sync_timeout_msg&) {
   // nop
 }
 
-inline void deserialize_impl(const sync_timeout_msg&, deserializer*) {
-  // nop
-}
-
-template <class T>
-typename std::enable_if<is_iterable<T>::value>::type
-serialize_impl(const T& iterable, serializer* sink) {
+template <class T, class U>
+typename std::enable_if<
+  is_iterable<typename std::remove_const<U>::type>::value
+>::type
+process(T& io, U& iterable) {
   default_serialize_policy sp;
-  sp(iterable, sink);
-}
-
-template <class T>
-typename std::enable_if<is_iterable<T>::value>::type
-deserialize_impl(T& iterable, deserializer* sink) {
-  default_serialize_policy sp;
-  sp(iterable, sink);
+  sp(iterable, &io);
 }
 
 template <class T>
@@ -382,6 +342,15 @@ public:
     return create_impl<T>(other);
   }
 
+  void serialize(const void* instance, serializer* sink) const override {
+    process(*sink, deref(instance));
+  }
+
+  void deserialize(void* instance, deserializer* source) const override {
+    process(*source, deref(instance));
+  }
+
+private:
   static inline const T& deref(const void* ptr) {
     return *reinterpret_cast<const T*>(ptr);
   }
@@ -390,15 +359,6 @@ public:
     return *reinterpret_cast<T*>(ptr);
   }
 
-  void serialize(const void* instance, serializer* sink) const override {
-    serialize_impl(deref(instance), sink);
-  }
-
-  void deserialize(void* instance, deserializer* source) const override {
-    deserialize_impl(deref(instance), source);
-  }
-
-private:
   template <class U>
   typename std::enable_if<std::is_floating_point<U>::value, bool>::type
   eq(const U& lhs, const U& rhs) const {
@@ -415,41 +375,6 @@ private:
 template <class T>
 struct get_uti_impl {
   using type = uti_impl<T>;
-};
-
-template <class T>
-class int_tinfo : public uniform_type_info {
-public:
-  int_tinfo() : uniform_type_info(detail::type_nr<T>::value) {
-    // nop
-  }
-  void serialize(const void* instance, serializer* sink) const override {
-    sink->write_value(deref(instance));
-  }
-  void deserialize(void* instance, deserializer* source) const override {
-    deref(instance) = source->read<T>();
-  }
-  const char* name() const override {
-    return static_name();
-  }
-
-  bool equals(const void* lhs, const void* rhs) const override {
-    return deref(lhs) == deref(rhs);
-  }
-  uniform_value create(const uniform_value& other) const override {
-    return create_impl<T>(other);
-  }
-
-private:
-  inline static const T& deref(const void* ptr) {
-    return *reinterpret_cast<const T*>(ptr);
-  }
-  inline static T& deref(void* ptr) {
-    return *reinterpret_cast<T*>(ptr);
-  }
-  static inline const char* static_name() {
-    return mapped_int_name<T>();
-  }
 };
 
 class default_meta_message : public uniform_type_info {
@@ -691,6 +616,10 @@ private:
 
 uniform_type_info_map* uniform_type_info_map::create_singleton() {
   return new utim_impl;
+}
+
+void uniform_type_info_map::dispose() {
+  delete this;
 }
 
 void uniform_type_info_map::stop() {

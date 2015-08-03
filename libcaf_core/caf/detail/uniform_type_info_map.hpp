@@ -45,24 +45,8 @@ class uniform_type_info;
 namespace caf {
 namespace detail {
 
-// lookup table for integer types
-extern const char* mapped_int_names[][2];
-
-template <class T>
-constexpr const char* mapped_int_name() {
-  return mapped_int_names[sizeof(T)][std::is_signed<T>::value ? 1 : 0];
-}
-
-class uniform_type_info_map_helper;
-
-// note: this class is implemented in uniform_type_info.cpp
 class uniform_type_info_map {
-
-  friend class uniform_type_info_map_helper;
-  friend class singleton_mixin<uniform_type_info_map>;
-
 public:
-
   using pointer = const uniform_type_info*;
 
   virtual ~uniform_type_info_map();
@@ -79,12 +63,11 @@ public:
 
   static uniform_type_info_map* create_singleton();
 
-  inline void dispose() { delete this; }
+  void dispose();
 
   void stop();
 
   virtual void initialize() = 0;
-
 };
 
 } // namespace detail
