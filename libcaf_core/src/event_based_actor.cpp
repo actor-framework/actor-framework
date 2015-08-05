@@ -30,7 +30,7 @@ event_based_actor::~event_based_actor() {
 
 void event_based_actor::forward_to(const actor& whom,
                                    message_priority prio) {
-  forward_message(whom, prio);
+  forward_current_message(whom, prio);
 }
 
 void event_based_actor::initialize() {

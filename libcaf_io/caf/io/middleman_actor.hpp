@@ -80,6 +80,17 @@ namespace io {
 ///   -> either (ok_atom)
 ///      or     (error_atom, string error_string)
 ///
+///   // Spawns an actor on a remote node, initializing it
+///   // using the arguments stored in `msg`.
+///   // @param nid ID of the remote node that should spawn the actor.
+///   // @param name Announced type name of the actor.
+///   // @param args Initialization arguments for the actor.
+///   // @returns The address of the spawned actor and its interface
+///   //          description on success; an error string otherwise.
+///   (spawn_atom, node_id nid, string name, message args)
+///   -> either (ok_atom, actor_addr, set<string>
+///      or     (error_atom, string error_string)
+///
 /// }
 /// ~~~
 using middleman_actor =
@@ -103,6 +114,10 @@ using middleman_actor =
 
     replies_to<close_atom, uint16_t>
     ::with_either<ok_atom>
+    ::or_else<error_atom, std::string>,
+
+    replies_to<spawn_atom, node_id, std::string, message>
+    ::with_either<ok_atom, actor_addr, std::set<std::string>>
     ::or_else<error_atom, std::string>>;
 
 /// Returns a handle for asynchronous networking operations.

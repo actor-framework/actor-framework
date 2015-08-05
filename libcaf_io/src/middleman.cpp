@@ -186,12 +186,18 @@ public:
         }
         return {};
       },
-      [=](unpublish_atom, actor_addr& whom, uint16_t port) -> del_res {
-        delegate(broker_, unpublish_atom::value, std::move(whom), port);
+      [=](unpublish_atom, const actor_addr&, uint16_t) -> del_res {
+        forward_current_message(broker_);
         return {};
       },
-      [=](close_atom, uint16_t port) -> del_res {
-        delegate(broker_, close_atom::value, port);
+      [=](close_atom, uint16_t) -> del_res {
+        forward_current_message(broker_);
+        return {};
+      },
+      [=](spawn_atom, const node_id&, const std::string&, const message&)
+      -> delegated<either<ok_atom, actor_addr, std::set<std::string>>
+                   ::or_else<error_atom, std::string>> {
+        forward_current_message(broker_);
         return {};
       }
     };

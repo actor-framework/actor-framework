@@ -45,12 +45,18 @@ behavior announce_actor_type_server(stateful_actor<spawner_state>* self) {
     [=](add_atom, std::string& name, spawn_fun& f) {
       self->state.funs_.emplace(std::move(name), std::move(f));
     },
-    [=](get_atom, const std::string& name, message& args) -> spawn_result {
+    [=](get_atom, const std::string& name, message& args)
+    -> either<ok_atom, actor_addr, std::set<std::string>>
+       ::or_else<error_atom, std::string> {
       auto i = self->state.funs_.find(name);
       if (i == self->state.funs_.end())
-        return std::make_pair(invalid_actor_addr, std::set<std::string>{});
+        return {error_atom::value, "no actor type found named " + name};
       auto f = i->second;
-      return f(args);
+      auto res = f(args);
+      if (res.first == invalid_actor_addr)
+        return {error_atom::value, "cannot initialize an actor type " + name
+                                   + " using the provided arguments"};
+      return {ok_atom::value, res.first, res.second};
     },
     others >> [=] {
       CAF_LOGF_WARNING("Unexpected message: "

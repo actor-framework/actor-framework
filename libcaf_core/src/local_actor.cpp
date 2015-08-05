@@ -108,10 +108,16 @@ std::vector<group> local_actor::joined_groups() const {
   return result;
 }
 
-void local_actor::forward_message(const actor& dest, message_priority prio) {
-  if (! dest) {
+void local_actor::forward_current_message(const actor& dest) {
+  if (! dest)
     return;
-  }
+  dest->enqueue(std::move(current_element_), host());
+}
+
+void local_actor::forward_current_message(const actor& dest,
+                                          message_priority prio) {
+  if (! dest)
+    return;
   auto mid = current_element_->mid;
   current_element_->mid = prio == message_priority::high
                            ? mid.with_high_priority()
@@ -348,10 +354,9 @@ invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
         } else {
           auto res = post_process_invoke_res(this, mid,
                                              fun(current_mailbox_element()->msg));
-          ptr.swap(current_mailbox_element());
           if (! res) {
             CAF_LOG_WARNING("sync failure occured in actor "
-                              << "with ID " << id());
+                            << "with ID " << id());
             handle_sync_failure();
           }
         }

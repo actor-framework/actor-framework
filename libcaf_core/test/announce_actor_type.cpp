@@ -47,21 +47,25 @@ struct fixture {
   void set_aut(message args, bool expect_fail = false) {
     CAF_MESSAGE("set aut");
     scoped_actor self;
-    self->sync_send(spawner, get_atom::value, "test_actor", std::move(args)).await(
-      [&](spawn_result& res) {
-        if (expect_fail) {
-          CAF_REQUIRE(res.first == invalid_actor_addr);
-          return;
+    self->on_sync_failure([&] {
+      CAF_TEST_ERROR("received unexpeced sync. response: "
+                     << to_string(self->current_message()));
+    });
+    if (expect_fail) {
+      self->sync_send(spawner, get_atom::value, "test_actor", std::move(args)).await(
+        [&](error_atom, const std::string&) {
+          CAF_TEST_VERBOSE("received error_atom (expected)");
         }
-        CAF_REQUIRE(res.first != invalid_actor_addr);
-        CAF_CHECK(res.second.empty());
-        aut = actor_cast<actor>(res.first);
-      },
-      others >> [&] {
-        CAF_TEST_ERROR("unexpected message: "
-                       << to_string(self->current_message()));
-      }
-    );
+      );
+    } else {
+      self->sync_send(spawner, get_atom::value, "test_actor", std::move(args)).await(
+        [&](ok_atom, actor_addr res, const std::set<std::string>& ifs) {
+          CAF_REQUIRE(res != invalid_actor_addr);
+          aut = actor_cast<actor>(res);
+          CAF_CHECK(ifs.empty());
+        }
+      );
+    }
   }
 
   ~fixture() {
