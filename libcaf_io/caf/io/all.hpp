@@ -32,6 +32,7 @@
 #include "caf/io/remote_group.hpp"
 #include "caf/io/set_middleman.hpp"
 #include "caf/io/receive_policy.hpp"
+#include "caf/io/middleman_actor.hpp"
 #include "caf/io/system_messages.hpp"
 #include "caf/io/publish_local_groups.hpp"
 

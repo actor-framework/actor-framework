@@ -463,7 +463,9 @@ public:
     return (mid.is_request()) ? mid.response_id() : message_id();
   }
 
-  void forward_message(const actor& dest, message_priority mp);
+  void forward_current_message(const actor& dest);
+
+  void forward_current_message(const actor& dest, message_priority mp);
 
   template <class... Ts>
   void delegate(message_priority mp, const actor& dest, Ts&&... xs) {

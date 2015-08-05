@@ -49,9 +49,13 @@ public:
   }
 
   /// Sends `response_message` and invalidates this handle afterwards.
-  void deliver(message response_message) const;
+  template <class... Ts>
+  void deliver(Ts&&... xs) const {
+    deliver_impl(make_message(std::forward<Ts>(xs)...));
+  }
 
 private:
+  void deliver_impl(message response_message) const;
   actor_addr from_;
   actor_addr to_;
   message_id id_;

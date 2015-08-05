@@ -401,6 +401,26 @@ behavior basp_broker::make_behavior() {
       }
       return make_message(error_atom::value, "no doorman for given port found");
     },
+    [=](spawn_atom, const node_id& nid, std::string& type, message& args)
+    -> delegated<either<ok_atom, actor_addr, std::set<std::string>>
+                 ::or_else<error_atom, std::string>> {
+      auto err = [=](std::string errmsg) {
+        auto rp = make_response_promise();
+        rp.deliver(error_atom::value, std::move(errmsg));
+      };
+      auto na = state.instance.named_actors(nid);
+      if (! na) {
+        err("no connection to requested node");
+        return {};
+      }
+      auto i = na->find(atom("spawner"));
+      if (i == na->end()) {
+        err("no spawn server on requested node");
+        return {};
+      }
+      delegate(i->second, get_atom::value, std::move(type), std::move(args));
+      return {};
+    },
     // catch-all error handler
     others >>
     [=] {

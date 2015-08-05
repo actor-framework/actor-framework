@@ -120,6 +120,9 @@ using open_atom = atom_constant<atom("OPEN")>;
 /// Generic 'CLOSE' atom, e.g., for closing a port or file.
 using close_atom = atom_constant<atom("CLOSE")>;
 
+/// Generic 'SPAWN' atom, e.g., for spawning remote actors.
+using spawn_atom = atom_constant<atom("SPAWN")>;
+
 } // namespace caf
 
 namespace std {

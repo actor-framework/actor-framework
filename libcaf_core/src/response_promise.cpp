@@ -30,10 +30,9 @@ response_promise::response_promise(const actor_addr& from, const actor_addr& to,
   CAF_ASSERT(id.is_response() || ! id.valid());
 }
 
-void response_promise::deliver(message msg) const {
-  if (! to_) {
+void response_promise::deliver_impl(message msg) const {
+  if (! to_)
     return;
-  }
   auto to = actor_cast<abstract_actor_ptr>(to_);
   auto from = actor_cast<abstract_actor_ptr>(from_);
   to->enqueue(from_, id_, std::move(msg), from->host());
