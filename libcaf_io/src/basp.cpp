@@ -116,17 +116,13 @@ bool server_handshake_valid(const header& hdr) {
        && ! valid(hdr.dest_node)
        && zero(hdr.dest_actor)
        && ! zero(hdr.operation_data)
-       && (   (! zero(hdr.source_actor) && ! zero(hdr.payload_len))
-           || (zero(hdr.source_actor) && zero(hdr.payload_len)));
+       && ! zero(hdr.payload_len);
 }
 
 bool client_handshake_valid(const header& hdr) {
   return  valid(hdr.source_node)
-       && valid(hdr.dest_node)
-       && hdr.source_node != hdr.dest_node
        && zero(hdr.source_actor)
        && zero(hdr.dest_actor)
-       && zero(hdr.payload_len)
        && zero(hdr.operation_data);
 }
 
@@ -145,7 +141,6 @@ bool announce_proxy_instance_valid(const header& hdr) {
        && zero(hdr.payload_len)
        && zero(hdr.operation_data);
 }
-
 
 bool kill_proxy_instance_valid(const header& hdr) {
   return  valid(hdr.source_node)
@@ -355,13 +350,16 @@ connection_state instance::handle(const new_data_msg& dm, header& hdr,
   // handle message to ourselves
   switch (hdr.operation) {
     case message_type::server_handshake: {
+      if (! payload_valid()) {
+        CAF_LOG_WARNING("received server handshake without payload");
+        return err();
+      }
       actor_id aid = invalid_actor_id;
       std::set<std::string> sigs;
-      if (payload_valid()) {
-        binary_deserializer bd{payload->data(), payload->size(),
-                               &get_namespace()};
-        bd >> aid >> sigs;
-      }
+      binary_deserializer bd{payload->data(), payload->size(),
+                             &get_namespace()};
+      // read first half of payload (ID and interface of published actor)
+      bd >> aid >> sigs;
       // close self connection after handshake is done
       if (hdr.source_node == this_node_) {
         CAF_LOG_INFO("close connection to self immediately");
@@ -384,10 +382,9 @@ connection_state instance::handle(const new_data_msg& dm, header& hdr,
         CAF_LOG_ERROR("no route to host after server handshake");
         return err();
       }
-      write(path->wr_buf,
-            message_type::client_handshake, nullptr, 0,
-            this_node_, hdr.source_node,
-            invalid_actor_id, invalid_actor_id);
+      // read remainig payload
+      read_named_actors(bd, hdr.source_node);
+      write_client_handshake(path->wr_buf);
       // tell client to create proxy etc.
       callee_.finalize_handshake(hdr.source_node, aid, sigs);
       flush(*path);
@@ -401,6 +398,11 @@ connection_state instance::handle(const new_data_msg& dm, header& hdr,
       }
       // add direct route to this node
       tbl_.add_direct(dm.handle, hdr.source_node);
+      if (payload_valid()) {
+        binary_deserializer bd{payload->data(), payload->size(),
+                               &get_namespace()};
+        read_named_actors(bd, hdr.source_node);
+      }
       break;
     case message_type::dispatch_message: {
       if (! payload_valid())
@@ -563,7 +565,7 @@ void instance::write(buffer_type& buf,
     bs2.write(source_actor)
        .write(dest_actor)
        .write(plen)
-        .write(static_cast<uint32_t>(operation))
+       .write(static_cast<uint32_t>(operation))
        .write(operation_data);
     if (payload_len)
       *payload_len = plen;
@@ -584,17 +586,31 @@ void instance::write_server_handshake(buffer_type& out_buf,
       pa = &i->second;
   }
   auto writer = make_callback([&](serializer& sink) {
-    if (! pa) {
-      return;
-    }
-    sink << pa->first.id() << static_cast<uint32_t>(pa->second.size());
-    for (auto& sig : pa->second)
-      sink << sig;
+    if (pa)
+      sink << pa->first.id() << pa->second;
+    else
+      sink << invalid_actor_id << std::set<std::string>{};
+    auto na = named_actors();
+    for (auto& kvp : na)
+      sink << kvp.first << kvp.second;
   });
   header hdr{message_type::server_handshake, 0, version,
              this_node_, invalid_node_id,
              pa ? pa->first.id() : invalid_actor_id, invalid_actor_id};
   write(out_buf, hdr, &writer);
+}
+
+void instance::write_client_handshake(buffer_type& buf) {
+  auto writer = make_callback([&](serializer& sink) {
+    auto na = named_actors();
+    for (auto& kvp : na)
+      sink << kvp.first << kvp.second;
+  });
+  write(buf,
+        message_type::client_handshake, nullptr, 0,
+        this_node_, invalid_node_id,
+        invalid_actor_id, invalid_actor_id,
+        &writer);
 }
 
 void instance::write_dispatch_error(buffer_type& buf,
@@ -624,6 +640,30 @@ void instance::write_kill_proxy_instance(buffer_type& buf,
              aid, invalid_actor_id};
   write(buf, hdr);
 }
+
+auto instance::named_actors() -> named_actors_map {
+  return detail::singletons::get_actor_registry()->named_actors();
+}
+
+auto instance::named_actors(const node_id& nid)
+-> optional<const named_actors_map&> {
+  auto i = named_actors_.find(nid);
+  if (i == named_actors_.end())
+    return none;
+  return i->second;
+}
+
+void instance::read_named_actors(binary_deserializer& bd, const node_id& nid) {
+  auto& storage = named_actors_[nid];
+  CAF_ASSERT(storage.empty());
+  while (! bd.at_end()) {
+    atom_value key;
+    actor value;
+    bd >> key >> value;
+    storage.emplace(key, std::move(value));
+  }
+}
+
 
 } // namespace basp
 } // namespace io

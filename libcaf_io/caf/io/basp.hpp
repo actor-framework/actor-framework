@@ -27,6 +27,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "caf/fwd.hpp"
 #include "caf/node_id.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/serializer.hpp"
@@ -164,7 +165,7 @@ namespace basp {
 
 /// The current BASP version. Different BASP versions will not
 /// be able to exchange messages.
-constexpr uint64_t version = 1;
+constexpr uint64_t version = 2;
 
 /// Storage type for raw bytes.
 using buffer_type = std::vector<char>;
@@ -490,6 +491,9 @@ public:
   /// written (e.g. used when establishing direct connections on-the-fly).
   void write_server_handshake(buffer_type& buf, optional<uint16_t> port);
 
+  /// Writes the client handshake to `buf`.
+  void write_client_handshake(buffer_type& buf);
+
   /// Writes a `dispatch_error` to `buf`.
   void write_dispatch_error(buffer_type& buf,
                             const node_id& source_node,
@@ -508,11 +512,22 @@ public:
     return this_node_;
   }
 
+  using named_actors_map = std::unordered_map<atom_value, actor>;
+
+  /// Returns the named actors for this node.
+  named_actors_map named_actors();
+
+  /// Returns the named actors for `nid`.
+  optional<const named_actors_map&> named_actors(const node_id& nid);
+
 private:
+  void read_named_actors(binary_deserializer& source, const node_id& nid);
+
   routing_table tbl_;
   published_actor_map published_actors_;
   node_id this_node_;
   callee& callee_;
+  std::unordered_map<node_id, named_actors_map> named_actors_;
 };
 
 /// Checks whether given header contains a handshake.
