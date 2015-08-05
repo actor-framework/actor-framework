@@ -227,18 +227,15 @@ public:
                   {basp::message_type::client_handshake, 0, 0,
                    remote_node(i), this_node(),
                    invalid_actor_id, invalid_actor_id});
-    if (published_actor_id != invalid_actor_id)
-      m.expect(hdl,
-               {basp::message_type::server_handshake, 0, basp::version,
-                this_node(), invalid_node_id,
-                published_actor_id, invalid_actor_id},
-               published_actor_id,
-               published_actor_ifs);
-    else
-      m.expect(hdl,
-               {basp::message_type::server_handshake, 0, basp::version,
-                this_node(), invalid_node_id,
-                invalid_actor_id, invalid_actor_id});
+    auto na = registry()->named_actors();
+    m.expect(hdl,
+             {basp::message_type::server_handshake, 0, basp::version,
+              this_node(), invalid_node_id,
+              published_actor_id, invalid_actor_id},
+             published_actor_id,
+             published_actor_ifs,
+             atom("spawner"),
+             na[atom("spawner")]);
     // test whether basp instance correctly updates the
     // routing table upon receiving client handshakes
     auto path = tbl().lookup(remote_node(i));
@@ -358,14 +355,14 @@ CAF_TEST(empty_server_handshake) {
   buffer payload;
   std::tie(hdr, payload) = from_buf(buf);
   basp::header expected{basp::message_type::server_handshake,
-                        0,
+                        static_cast<uint32_t>(payload.size()),
                         basp::version,
                         this_node(), invalid_node_id,
                         invalid_actor_id, invalid_actor_id};
   CAF_CHECK(basp::valid(hdr));
   CAF_CHECK(basp::is_handshake(hdr));
   CAF_CHECK(hdr == expected);
-  CAF_CHECK(payload.empty());
+  CAF_CHECK(! payload.empty());
 }
 
 CAF_TEST(non_empty_server_handshake) {
@@ -376,11 +373,13 @@ CAF_TEST(non_empty_server_handshake) {
                                  {"caf::replies_to<@u16>::with<@u16>"});
   instance().write_server_handshake(buf, 4242);
   buffer expected_buf;
+  auto na = registry()->named_actors();
   basp::header expected{basp::message_type::server_handshake, 0, basp::version,
                         this_node(), invalid_node_id,
                         self()->id(), invalid_actor_id};
   to_buf(expected_buf, expected, nullptr,
-         self()->id(), set<string>{"caf::replies_to<@u16>::with<@u16>"});
+         self()->id(), set<string>{"caf::replies_to<@u16>::with<@u16>"},
+         atom("spawner"), na[atom("spawner")]);
   CAF_CHECK(hexstr(buf) == hexstr(expected_buf));
 }
 
@@ -457,6 +456,7 @@ CAF_TEST(remote_actor_and_send) {
   CAF_CHECK(mpx()->pending_scribes().count(make_pair("localhost", 4242)) == 0);
   // build a fake server handshake containing the id of our first pseudo actor
   CAF_TEST_VERBOSE("server handshake => client handshake + proxy announcement");
+  auto na = registry()->named_actors();
   mock(remote_hdl(0),
        {basp::message_type::server_handshake, 0, basp::version,
         remote_node(0), invalid_node_id,
@@ -465,8 +465,9 @@ CAF_TEST(remote_actor_and_send) {
        uint32_t{0})
   .expect(remote_hdl(0),
           {basp::message_type::client_handshake, 0, 0,
-           this_node(), remote_node(0),
-           invalid_actor_id, invalid_actor_id})
+           this_node(), invalid_node_id,
+           invalid_actor_id, invalid_actor_id},
+          atom("spawner"), na[atom("spawner")])
   .expect(remote_hdl(0),
           {basp::message_type::announce_proxy_instance, 0, 0,
            this_node(), remote_node(0),

@@ -83,7 +83,9 @@ public:
 
   actor get_named(atom_value key) const;
 
-  std::vector<std::pair<atom_value, actor>> named_actors() const;
+  using named_entries = std::unordered_map<atom_value, actor>;
+
+  named_entries named_actors() const;
 
   static actor_registry* create_singleton();
 
@@ -94,8 +96,6 @@ public:
   void initialize();
 
 private:
-  using named_entries = std::unordered_map<atom_value, actor>;
-
   using entries = std::unordered_map<actor_id, value_type>;
 
   actor_registry();

@@ -137,11 +137,8 @@ actor actor_registry::get_named(atom_value key) const {
   return i->second;
 }
 
-std::vector<std::pair<atom_value, actor>> actor_registry::named_actors() const {
-  std::vector<std::pair<atom_value, actor>> result;
-  for (auto& kvp : named_entries_)
-    result.emplace_back(kvp);
-  return result;
+auto actor_registry::named_actors() const -> named_entries {
+  return named_entries_;
 }
 
 actor_registry* actor_registry::create_singleton() {
