@@ -43,7 +43,7 @@ using cache_map = std::map<const std::type_info*, std::unique_ptr<memory_cache>>
 
 } // namespace <anonymous>
 
-#ifdef CAF_CLANG
+#if defined(CAF_CLANG) || defined(CAF_MACOS)
 namespace {
 
 pthread_key_t s_key;
@@ -72,13 +72,13 @@ cache_map& get_cache_map() {
   return *cache;
 }
 
-#else // !CAF_CLANG
+#else // !CAF_CLANG && !CAF_MACOS
 
 namespace {
 
 thread_local std::unique_ptr<cache_map> s_key;
 
-}
+} // namespace <anonymous>
 
 cache_map& get_cache_map() {
   if (! s_key) {
