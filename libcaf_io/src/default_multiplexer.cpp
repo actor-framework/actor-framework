@@ -235,7 +235,7 @@ uint16_t port_of_fd(native_socket fd);
     ccall(cc_zero, "listen() failed", listen, listener, 1);
     // create read-only end of the pipe
     DWORD flags = 0;
-    auto read_fd = ccall(cc_valid_socket, "WSASocket() failed", WSASocket,
+    auto read_fd = ccall(cc_valid_socket, "WSASocketW() failed", WSASocketW,
                          AF_INET, SOCK_STREAM, 0, nullptr, 0, flags);
     ccall(cc_zero, "connect() failed", connect, read_fd,
           &a.addr, int{sizeof(a.inaddr)});
@@ -915,10 +915,10 @@ bool write_some(size_t& result, native_socket fd, const void* buf, size_t len) {
 
 bool try_accept(native_socket& result, native_socket fd) {
   CAF_LOGF_TRACE(CAF_ARG(fd));
-  sockaddr addr;
+  sockaddr_storage addr;
   memset(&addr, 0, sizeof(addr));
   socklen_t addrlen = sizeof(addr);
-  result = ::accept(fd, &addr, &addrlen);
+  result = ::accept(fd, reinterpret_cast<sockaddr*>(&addr), &addrlen);
   CAF_LOGF_DEBUG("tried to accept a new connection from from socket "
                  << fd << ", accept returned " << result);
   if (result == invalid_native_socket) {

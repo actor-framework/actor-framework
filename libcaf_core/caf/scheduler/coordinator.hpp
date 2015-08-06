@@ -20,6 +20,8 @@
 #ifndef CAF_SCHEDULER_COORDINATOR_HPP
 #define CAF_SCHEDULER_COORDINATOR_HPP
 
+#include "caf/config.hpp"
+
 #include <thread>
 #include <limits>
 #include <memory>

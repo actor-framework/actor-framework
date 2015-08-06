@@ -20,6 +20,8 @@
 #ifndef CAF_SET_SCHEDULER_HPP
 #define CAF_SET_SCHEDULER_HPP
 
+#include "caf/config.hpp"
+
 #include <thread>
 #include <limits>
 

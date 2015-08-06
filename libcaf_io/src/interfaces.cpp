@@ -33,8 +33,6 @@
 # include <winsock2.h>
 # include <ws2tcpip.h>
 # include <iphlpapi.h>
-# pragma comment(lib, "ws2_32.lib")
-# pragma comment(lib, "iphlpapi.lib")
 #else
 # include <sys/socket.h>
 # include <netinet/in.h>
@@ -134,7 +132,7 @@ void for_each_device(bool include_localhost, F fun) {
                         nullptr, retval,
                         MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
                         (LPTSTR) &msgbuf, 0, nullptr)) {
-        printf("Error: %s", msgbuf);
+        printf("Error: %s", static_cast<char*>(msgbuf));
         LocalFree(msgbuf);
       }
     }

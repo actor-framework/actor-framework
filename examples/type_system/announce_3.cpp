@@ -48,7 +48,7 @@ using foo_setter = void (foo::*)(int);
 
 void testee(event_based_actor* self) {
   self->become (
-    on<foo>() >> [=](const foo& val) {
+    [=](const foo& val) {
       aout(self) << "foo("
              << val.a() << ", "
              << val.b() << ")"

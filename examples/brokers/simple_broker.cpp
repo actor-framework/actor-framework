@@ -7,6 +7,8 @@
  * - ./build/bin/broker -c localhost 4242                                     *
 \ ******************************************************************************/
 
+#include "caf/config.hpp"
+
 #ifdef WIN32
 # define _WIN32_WINNT 0x0600
 # include <Winsock2.h>

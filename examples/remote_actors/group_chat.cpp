@@ -113,45 +113,47 @@ int main(int argc, char** argv) {
     }
   }
   cout << "*** starting client, type '/help' for a list of commands" << endl;
-  auto starts_with = [](const string& str) -> function<optional<string> (const string&)> {
-    return [=](const string& arg) -> optional<string> {
-      if (arg.compare(0, str.size(), str) == 0) {
-        return arg;
-      }
-      return none;
-    };
-  };
   istream_iterator<line> eof;
   vector<string> words;
   for (istream_iterator<line> i(cin); i != eof; ++i) {
+    auto send_input = [&] {
+      if (!i->str.empty()) {
+        anon_send(client_actor, broadcast_atom::value, i->str);
+      }
+    };
     words.clear();
     split(words, i->str, is_any_of(" "));
     message_builder(words.begin(), words.end()).apply({
-      on("/join", arg_match) >> [&](const string& mod, const string& id) {
-        try {
-          group grp = (mod == "remote") ? io::remote_group(id)
-                                        : group::get(mod, id);
-          anon_send(client_actor, join_atom::value, grp);
+      [&](const string& cmd, const string& mod, const string& id) {
+        if (cmd == "/join") {
+          try {
+            group grp = (mod == "remote") ? io::remote_group(id)
+              : group::get(mod, id);
+            anon_send(client_actor, join_atom::value, grp);
+          }
+          catch (exception& e) {
+            cerr << "*** exception: " << to_verbose_string(e) << endl;
+          }
         }
-        catch (exception& e) {
-          cerr << "*** exception: " << to_verbose_string(e) << endl;
+        else {
+          send_input();
         }
       },
-      on("/quit") >> [&] {
-        // close STDIN; causes this match loop to quit
-        cin.setstate(ios_base::eofbit);
-      },
-      on(starts_with("/"), any_vals) >> [&] {
-        cout <<  "*** available commands:\n"
-             "  /join <module> <group> join a new chat channel\n"
-             "  /quit          quit the program\n"
-             "  /help          print this text\n" << flush;
-      },
-      others >> [&] {
-        if (! i->str.empty()) {
-          anon_send(client_actor, broadcast_atom::value, i->str);
+      [&](const string& cmd) {
+        if (cmd == "/quit") {
+          cin.setstate(ios_base::eofbit);
         }
-      }
+        else if (cmd[0] == '/') {
+          cout << "*** available commands:\n"
+            "  /join <module> <group> join a new chat channel\n"
+            "  /quit          quit the program\n"
+            "  /help          print this text\n" << flush;
+        }
+        else {
+          send_input();
+        }
+      },
+      others >> send_input
     });
   }
   // force actor to quit

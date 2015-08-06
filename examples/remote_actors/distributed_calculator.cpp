@@ -129,13 +129,15 @@ private:
         using std::swap;
         swap(host_, nhost);
         swap(port_, nport);
+        auto send_mm = [=] {
+          unbecome();
+          send(mm, get_atom::value, host_, port_);
+        };
         // await pending ok/error message first, then send new request to MM
         become(
           keep_behavior,
-          (on<ok_atom, actor_addr>() || on<error_atom, string>()) >> [=] {
-            unbecome();
-            send(mm, get_atom::value, host_, port_);
-          }
+          [=](ok_atom&, actor_addr&) { send_mm(); },
+          [=](error_atom&, string&)  { send_mm(); }
         );
       },
       // simply ignore all requests until we have a connection
@@ -171,10 +173,10 @@ optional<int> toint(const string& str) {
 // converts "+" to the atom '+' and "-" to the atom '-'
 optional<atom_value> plus_or_minus(const string& str) {
   if (str == "+") {
-    return {plus_atom::value};
+    return optional<atom_value>{plus_atom::value};
   }
   if (str == "-") {
-    return {minus_atom::value};
+    return optional<atom_value>{minus_atom::value};
   }
   return none;
 }
@@ -195,28 +197,36 @@ void client_repl(string host, uint16_t port) {
   // defining the handler outside the loop is more efficient as it avoids
   // re-creating the same object over and over again
   message_handler eval{
-    on("quit") >> [&] {
+    [&](const string& cmd) {
+      if (cmd != "quit")
+        return;
       anon_send_exit(client, exit_reason::user_shutdown);
       done = true;
     },
-    on("connect", arg_match) >> [&](string& nhost, string& sport) {
-      try {
-        auto lport = std::stoul(sport);
-        if (lport < std::numeric_limits<uint16_t>::max()) {
-          anon_send(client, rebind_atom::value, move(nhost),
-                    static_cast<uint16_t>(lport));
+    [&](string& arg0, string& arg1, string& arg2) {
+      if (arg0 == "connect") {
+        try {
+          auto lport = std::stoul(arg2);
+          if (lport < std::numeric_limits<uint16_t>::max()) {
+            anon_send(client, rebind_atom::value, move(arg1),
+              static_cast<uint16_t>(lport));
+          }
+          else {
+            cout << lport << " is not a valid port" << endl;
+          }
         }
-        else {
-          cout << lport << " is not a valid port" << endl;
+        catch (std::exception&) {
+          cout << "\"" << arg2 << "\" is not an unsigned integer"
+            << endl;
         }
       }
-      catch (std::exception&) {
-        cout << "\"" << sport << "\" is not an unsigned integer"
-           << endl;
+      else {
+        auto x = toint(arg0);
+        auto op = plus_or_minus(arg1);
+        auto y = toint(arg2);
+        if (x && y && op)
+          anon_send(client, *op, *x, *y);
       }
-    },
-    on(toint, plus_or_minus, toint) >> [&](int x, atom_value op, int y) {
-      anon_send(client, op, x, y);
     },
     others >> usage
   };
