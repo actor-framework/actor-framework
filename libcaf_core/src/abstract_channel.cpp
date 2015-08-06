@@ -43,7 +43,7 @@ abstract_channel::~abstract_channel() {
 }
 
 void abstract_channel::enqueue(mailbox_element_ptr what, execution_unit* host) {
-  enqueue(what->sender, what->mid, what->msg, host);
+  enqueue(what->sender, what->mid, std::move(what->msg), host);
 }
 
 bool abstract_channel::is_remote() const {
