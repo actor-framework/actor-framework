@@ -113,17 +113,12 @@ bool zero(T val) {
 
 bool server_handshake_valid(const header& hdr) {
   return  valid(hdr.source_node)
-       && ! valid(hdr.dest_node)
-       && zero(hdr.dest_actor)
        && ! zero(hdr.operation_data)
        && ! zero(hdr.payload_len);
 }
 
 bool client_handshake_valid(const header& hdr) {
-  return  valid(hdr.source_node)
-       && zero(hdr.source_actor)
-       && zero(hdr.dest_actor)
-       && zero(hdr.operation_data);
+  return  valid(hdr.source_node);
 }
 
 bool dispatch_message_valid(const header& hdr) {
@@ -136,10 +131,7 @@ bool announce_proxy_instance_valid(const header& hdr) {
   return  valid(hdr.source_node)
        && valid(hdr.dest_node)
        && hdr.source_node != hdr.dest_node
-       && zero(hdr.source_actor)
-       && ! zero(hdr.dest_actor)
-       && zero(hdr.payload_len)
-       && zero(hdr.operation_data);
+       && ! zero(hdr.dest_actor);
 }
 
 bool kill_proxy_instance_valid(const header& hdr) {
@@ -147,8 +139,6 @@ bool kill_proxy_instance_valid(const header& hdr) {
        && valid(hdr.dest_node)
        && hdr.source_node != hdr.dest_node
        && ! zero(hdr.source_actor)
-       && zero(hdr.dest_actor)
-       && zero(hdr.payload_len)
        && ! zero(hdr.operation_data);
 }
 
