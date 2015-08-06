@@ -487,6 +487,26 @@ public:
   static constexpr bool value = sizeof(fun(static_cast<derived*>(nullptr))) > 1;
 };
 
+// checks whether T is serializable using a free function `serialize` taking
+// either a `caf::serializer` or `caf::deserializer` as first argument
+template <class T>
+struct is_serializable {
+private:
+  template <class U>
+  static int8_t fun(U*, decltype(serialize(std::declval<serializer&>(),
+                                         std::declval<U&>(), 0))* = nullptr,
+                  decltype(serialize(std::declval<deserializer&>(),
+                                     std::declval<U&>(), 0))* = nullptr);
+
+  static int16_t fun(...);
+
+public:
+  static constexpr bool value = sizeof(fun(static_cast<T*>(nullptr))) == 1;
+};
+
+template <class T>
+constexpr bool is_serializable<T>::value;
+
 } // namespace detail
 } // namespace caf
 

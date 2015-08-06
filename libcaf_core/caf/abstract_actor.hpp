@@ -171,6 +171,8 @@ public:
   static constexpr int is_blocking_flag       = 0x10; // blocking_actor
   static constexpr int is_detached_flag       = 0x20; // local_actor
   static constexpr int is_priority_aware_flag = 0x40; // local_actor
+  static constexpr int is_serializable_flag   = 0x40; // local_actor
+  static constexpr int is_migrated_from_flag  = 0x80; // local_actor
 
   inline void set_flag(bool enable_flag, int mask) {
     auto x = flags();
@@ -225,6 +227,22 @@ public:
 
   inline void is_priority_aware(bool value) {
     set_flag(value, is_priority_aware_flag);
+  }
+
+  inline bool is_serializable() const {
+    return get_flag(is_serializable_flag);
+  }
+
+  inline void is_serializable(bool value) {
+    set_flag(value, is_serializable_flag);
+  }
+
+  inline bool is_migrated_from() const {
+    return get_flag(is_migrated_from_flag);
+  }
+
+  inline void is_migrated_from(bool value) {
+    set_flag(value, is_migrated_from_flag);
   }
 
   // Tries to run a custom exception handler for `eptr`.
