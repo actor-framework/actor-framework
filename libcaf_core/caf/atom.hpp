@@ -123,6 +123,9 @@ using close_atom = atom_constant<atom("CLOSE")>;
 /// Generic 'SPAWN' atom, e.g., for spawning remote actors.
 using spawn_atom = atom_constant<atom("SPAWN")>;
 
+/// Atom to signalize an actor to migrate its state to another actor.
+using migrate_atom = atom_constant<atom("MIGRATE")>;
+
 } // namespace caf
 
 namespace std {

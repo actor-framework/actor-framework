@@ -392,6 +392,16 @@ public:
   /// implementation simply returns "actor".
   virtual const char* name() const;
 
+  /// Serializes the state of this actor to `sink`. This function is
+  /// only called if this actor has set the `is_serializable` flag.
+  /// The default implementation throws a `std::logic_error`.
+  virtual void save(serializer& sink, const unsigned int version);
+
+  /// Deserializes the state of this actor from `source`. This function is
+  /// only called if this actor has set the `is_serializable` flag.
+  /// The default implementation throws a `std::logic_error`.
+  virtual void load(deserializer& source, const unsigned int version);
+
   /****************************************************************************
    *                       deprecated member functions                        *
    ****************************************************************************/
@@ -613,9 +623,9 @@ public:
     initial_behavior_fac_ = std::move(fun);
   }
 
-protected:
   void do_become(behavior bhvr, bool discard_old);
 
+protected:
   // used only in thread-mapped actors
   void await_data();
 

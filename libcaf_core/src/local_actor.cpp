@@ -186,27 +186,100 @@ enum class msg_type {
   expired_sync_response, // a sync response that already timed out
   timeout,               // triggers currently active timeout
   ordinary,              // an asynchronous message or sync. request
-  sync_response          // a synchronous response
+  sync_response,         // a synchronous response
+  sys_message            // a system message, e.g., signalizing migration
 };
 
 msg_type filter_msg(local_actor* self, mailbox_element& node) {
-  const message& msg = node.msg;
+  message& msg = node.msg;
   auto mid = node.mid;
-  if (mid.is_response()) {
+  if (mid.is_response())
     return self->awaits(mid) ? msg_type::sync_response
                              : msg_type::expired_sync_response;
+  // intercept system messages, e.g., signalizing migration
+  if (msg.size() > 1 && msg.match_element<sys_atom>(0) && node.sender) {
+    bool mismatch = false;
+    msg.apply({
+      [&](sys_atom, migrate_atom, const actor& mm) {
+        // migrate this actor to `target`
+        if (! self->is_serializable()) {
+          node.sender->enqueue(
+            mailbox_element::make_joint(self->address(), node.mid.response_id(),
+                                        error_atom::value, "not serializable"),
+            self->host());
+          return;
+        }
+        std::vector<char> buf;
+        binary_serializer bs{std::back_inserter(buf)};
+        self->save(bs, 0);
+        auto sender = node.sender;
+        auto mid = node.mid;
+        // sync_send(...)
+        auto req = self->sync_send_impl(message_priority::normal, mm,
+                                        migrate_atom::value, self->name(),
+                                        std::move(buf));
+        self->set_response_handler(req, behavior{
+          [=](ok_atom, const actor_addr& dest) {
+            // respond to original message with {'OK', dest}
+            sender->enqueue(mailbox_element::make_joint(self->address(),
+                                                        mid.response_id(),
+                                                        ok_atom::value, dest),
+                            self->host());
+            // "decay" into a proxy for `dest`
+            auto dest_hdl = actor_cast<actor>(dest);
+            self->do_become(behavior{
+              others >> [=] {
+                self->forward_current_message(dest_hdl);
+              }
+            }, false);
+            self->is_migrated_from(true);
+          },
+          [=](error_atom, std::string& errmsg) {
+            // respond to original message with {'ERROR', errmsg}
+            sender->enqueue(mailbox_element::make_joint(self->address(),
+                                                        mid.response_id(),
+                                                        error_atom::value,
+                                                        std::move(errmsg)),
+                            self->host());
+          }
+        });
+      },
+      [&](sys_atom, migrate_atom, std::vector<char>& buf) {
+        // "replace" this actor with the content of `buf`
+        if (! self->is_serializable()) {
+          node.sender->enqueue(
+            mailbox_element::make_joint(self->address(), node.mid.response_id(),
+                                        error_atom::value, "not serializable"),
+            self->host());
+          return;
+        }
+        if (self->is_migrated_from()) {
+          // undo the `do_become` we did when migrating away from this object
+          self->bhvr_stack().pop_back();
+          self->is_migrated_from(false);
+        }
+        binary_deserializer bd{buf.data(), buf.size()};
+        self->load(bd, 0);
+        node.sender->enqueue(
+          mailbox_element::make_joint(self->address(), node.mid.response_id(),
+                                      ok_atom::value, self->address()),
+          self->host());
+      },
+      others >> [&] {
+        mismatch = true;
+      }
+    });
+    return mismatch ? msg_type::ordinary : msg_type::sys_message;
   }
-  if (msg.size() != 1) {
+  // all other system messages always consist of one element
+  if (msg.size() != 1)
     return msg_type::ordinary;
-  }
   if (msg.match_element<timeout_msg>(0)) {
     auto& tm = msg.get_as<timeout_msg>(0);
     auto tid = tm.timeout_id;
     CAF_ASSERT(! mid.valid());
-    if (self->is_active_timeout(tid)) {
-      return msg_type::timeout;
-    }
-    return msg_type::expired_timeout;
+    return self->is_active_timeout(tid) ? msg_type::timeout
+                                        : msg_type::expired_timeout;
   }
   if (msg.match_element<exit_msg>(0)) {
     auto& em = msg.get_as<exit_msg>(0);
@@ -321,6 +394,9 @@ invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
       return im_dropped;
     case msg_type::expired_timeout:
       CAF_LOG_DEBUG("dropped expired timeout message");
+      return im_dropped;
+    case msg_type::sys_message:
+      CAF_LOG_DEBUG("handled system message");
       return im_dropped;
     case msg_type::non_normal_exit:
       CAF_LOG_DEBUG("handled non-normal exit signal");
@@ -827,6 +903,14 @@ response_promise local_actor::make_response_promise() {
 
 const char* local_actor::name() const {
   return "actor";
+}
+
+void local_actor::save(serializer&, const unsigned int) {
+  throw std::logic_error("local_actor::serialize called");
+}
+
+void local_actor::load(deserializer&, const unsigned int) {
+  throw std::logic_error("local_actor::deserialize called");
 }
 
 behavior& local_actor::get_behavior() {
