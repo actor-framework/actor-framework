@@ -186,7 +186,7 @@ acceptor::behavior_type acceptor_fun(acceptor::broker_pointer self,
 
 void run_server(bool spawn_client, const char* bin_path, bool use_asio) {
   scoped_actor self;
-  auto serv = spawn_io_typed(acceptor_fun, spawn(pong));
+  auto serv = spawn_io(acceptor_fun, spawn(pong));
   self->sync_send(serv, publish_atom::value).await(
     [&](uint16_t port) {
       CAF_MESSAGE("server is running on port " << port);
@@ -233,7 +233,7 @@ CAF_TEST(test_typed_broker) {
   if (r.opts.count("client-port") > 0) {
     auto p = spawn(ping, 10);
     CAF_MESSAGE("spawn_io_client_typed...");
-    auto cl = spawn_io_client_typed(peer_fun, "localhost", port, p);
+    auto cl = spawn_io_client(peer_fun, "localhost", port, p);
     CAF_MESSAGE("spawn_io_client_typed finished");
     anon_send(p, kickoff_atom::value, cl);
     CAF_MESSAGE("`kickoff_atom` has been send");

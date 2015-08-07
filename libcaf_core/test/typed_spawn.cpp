@@ -201,7 +201,7 @@ string_actor::behavior_type string_reverter() {
 // uses `return sync_send(...).then(...)`
 string_actor::behavior_type string_relay(string_actor::pointer self,
                                          string_actor master, bool leaf) {
-  auto next = leaf ? spawn_typed(string_relay, master, false) : master;
+  auto next = leaf ? spawn(string_relay, master, false) : master;
   self->link_to(next);
   return {
     [=](const string& str) {
@@ -217,7 +217,7 @@ string_actor::behavior_type string_relay(string_actor::pointer self,
 // uses `return delegate(...)`
 string_actor::behavior_type string_delegator(string_actor::pointer self,
                                              string_actor master, bool leaf) {
-  auto next = leaf ? spawn_typed(string_delegator, master, false) : master;
+  auto next = leaf ? spawn(string_delegator, master, false) : master;
   self->link_to(next);
   return {
     [=](string& str) -> delegated<string> {
@@ -326,16 +326,16 @@ CAF_TEST_FIXTURE_SCOPE(typed_spawn_tests, fixture)
 
 CAF_TEST(typed_spawns) {
   // run test series with typed_server(1|2)
-  test_typed_spawn(spawn_typed(typed_server1));
+  test_typed_spawn(spawn(typed_server1));
   await_all_actors_done();
   CAF_MESSAGE("finished test series with `typed_server1`");
 
-  test_typed_spawn(spawn_typed(typed_server2));
+  test_typed_spawn(spawn(typed_server2));
   await_all_actors_done();
   CAF_MESSAGE("finished test series with `typed_server2`");
   {
     scoped_actor self;
-    test_typed_spawn(spawn_typed<typed_server3>("hi there", self));
+    test_typed_spawn(spawn<typed_server3>("hi there", self));
     self->receive(on("hi there") >> [] {
       CAF_MESSAGE("received \"hi there\"");
     });
@@ -345,7 +345,7 @@ CAF_TEST(typed_spawns) {
 CAF_TEST(test_event_testee) {
   // run test series with event_testee
   scoped_actor self;
-  auto et = self->spawn_typed<event_testee>();
+  auto et = self->spawn<event_testee>();
   string result;
   self->send(et, 1);
   self->send(et, 2);
@@ -385,8 +385,8 @@ CAF_TEST(reverter_relay_chain) {
   // run test series with string reverter
   scoped_actor self;
   // actor-under-test
-  auto aut = self->spawn_typed<monitored>(string_relay,
-                                          spawn_typed(string_reverter),
+  auto aut = self->spawn<monitored>(string_relay,
+                                          spawn(string_reverter),
                                           true);
   set<string> iface{"caf::replies_to<@str>::with<@str>"};
   CAF_CHECK(aut->message_types() == iface);
@@ -402,8 +402,8 @@ CAF_TEST(string_delegator_chain) {
   // run test series with string reverter
   scoped_actor self;
   // actor-under-test
-  auto aut = self->spawn_typed<monitored>(string_delegator,
-                                          spawn_typed(string_reverter),
+  auto aut = self->spawn<monitored>(string_delegator,
+                                          spawn(string_reverter),
                                           true);
   set<string> iface{"caf::replies_to<@str>::with<@str>"};
   CAF_CHECK(aut->message_types() == iface);
@@ -417,8 +417,8 @@ CAF_TEST(string_delegator_chain) {
 
 CAF_TEST(maybe_string_delegator_chain) {
   scoped_actor self;
-  auto aut = spawn_typed(maybe_string_delegator,
-                         spawn_typed(maybe_string_reverter));
+  auto aut = spawn(maybe_string_delegator,
+                   spawn(maybe_string_reverter));
   self->sync_send(aut, "").await(
     [](ok_atom, const string&) {
       throw std::logic_error("unexpected result!");
@@ -440,7 +440,7 @@ CAF_TEST(maybe_string_delegator_chain) {
 
 CAF_TEST(test_sending_typed_actors) {
   scoped_actor self;
-  auto aut = spawn_typed(int_fun);
+  auto aut = spawn(int_fun);
   self->send(spawn(foo), 10, aut);
   self->receive(
     [](int i) { CAF_CHECK_EQUAL(i, 100); }
@@ -450,7 +450,7 @@ CAF_TEST(test_sending_typed_actors) {
 
 CAF_TEST(test_sending_typed_actors_and_down_msg) {
   scoped_actor self;
-  auto aut = spawn_typed(int_fun2);
+  auto aut = spawn(int_fun2);
   self->send(spawn(foo2), 10, aut);
   self->receive([](int i) { CAF_CHECK_EQUAL(i, 100); });
 }
@@ -469,7 +469,7 @@ CAF_TEST(check_signature) {
     };
   };
   auto bar_action = [=](bar_type::pointer self) -> bar_type::behavior_type {
-    auto foo = self->spawn_typed<linked>(foo_action);
+    auto foo = self->spawn<linked>(foo_action);
     self->send(foo, put_atom::value);
     return {
       [=](ok_atom) {
@@ -481,7 +481,7 @@ CAF_TEST(check_signature) {
     };
   };
   scoped_actor self;
-  self->spawn_typed<monitored>(bar_action);
+  self->spawn<monitored>(bar_action);
   self->receive(
     [](const down_msg& dm) {
       CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);

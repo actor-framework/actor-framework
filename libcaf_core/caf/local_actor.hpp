@@ -72,22 +72,24 @@ public:
   ~local_actor();
 
   /****************************************************************************
-   *                           spawn untyped actors                           *
+   *                           spawn actors                                   *
    ****************************************************************************/
 
   template <class T, spawn_options Os = no_spawn_options, class... Ts>
-  actor spawn(Ts&&... xs) {
+  typename infer_handle_from_class<T>::type
+  spawn(Ts&&... xs) {
     constexpr auto os = make_unbound(Os);
     auto res = spawn_class<T, os>(host(), empty_before_launch_callback{},
                                   std::forward<Ts>(xs)...);
     return eval_opts(Os, std::move(res));
   }
 
-  template <spawn_options Os = no_spawn_options, class... Ts>
-  actor spawn(Ts&&... xs) {
+  template <spawn_options Os = no_spawn_options, class F, class... Ts>
+  typename infer_handle_from_fun<F>::type
+  spawn(F fun, Ts&&... xs) {
     constexpr auto os = make_unbound(Os);
     auto res = spawn_functor<os>(host(), empty_before_launch_callback{},
-                                 std::forward<Ts>(xs)...);
+                                 std::move(fun), std::forward<Ts>(xs)...);
     return eval_opts(Os, std::move(res));
   }
 
@@ -139,11 +141,11 @@ public:
   }
 
   /****************************************************************************
-   *                            spawn typed actors                            *
+   *                      spawn typed actors (deprecated)                     *
    ****************************************************************************/
 
   template <class T, spawn_options Os = no_spawn_options, class... Ts>
-  typename actor_handle_from_signature_list<
+  CAF_DEPRECATED typename actor_handle_from_signature_list<
     typename T::signatures
   >::type
   spawn_typed(Ts&&... xs) {
@@ -154,7 +156,7 @@ public:
   }
 
   template <spawn_options Os = no_spawn_options, typename F, class... Ts>
-  typename infer_typed_actor_handle<
+  CAF_DEPRECATED typename infer_typed_actor_handle<
     typename detail::get_callable_trait<F>::result_type,
     typename detail::tl_head<
       typename detail::get_callable_trait<F>::arg_types

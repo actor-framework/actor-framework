@@ -74,10 +74,10 @@ void tester(event_based_actor* self, const calculator_type& testee) {
 
 int main() {
   // test function-based impl
-  spawn(tester, spawn_typed(typed_calculator));
+  spawn(tester, spawn(typed_calculator));
   await_all_actors_done();
   // test class-based impl
-  spawn(tester, spawn_typed<typed_calculator_class>());
+  spawn(tester, spawn<typed_calculator_class>());
   await_all_actors_done();
   // done
   shutdown();

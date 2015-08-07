@@ -95,7 +95,7 @@ void run_client(const char* host, uint16_t port) {
 }
 
 uint16_t run_server() {
-  auto port = io::typed_publish(spawn_typed(server), 0, "127.0.0.1");
+  auto port = io::typed_publish(spawn(server), 0, "127.0.0.1");
   CAF_MESSAGE("running on port " << port);
   return port;
 }

@@ -72,7 +72,8 @@ intrusive_ptr<Impl> spawn_io_server_impl(F fun, uint16_t port, Ts&&... xs) {
 /// Spawns a new functor-based broker.
 template <spawn_options Os = no_spawn_options,
           class F = std::function<void(broker*)>, class... Ts>
-actor spawn_io(F fun, Ts&&... xs) {
+typename infer_handle_from_fun<F>::type
+spawn_io(F fun, Ts&&... xs) {
   return spawn_functor<Os>(nullptr, empty_before_launch_callback{},
                            std::move(fun), std::forward<Ts>(xs)...);
 }
@@ -80,25 +81,29 @@ actor spawn_io(F fun, Ts&&... xs) {
 /// Spawns a new functor-based broker connecting to `host:port`.
 template <spawn_options Os = no_spawn_options,
           class F = std::function<void(broker*)>, class... Ts>
-actor spawn_io_client(F fun, const std::string& host,
+typename infer_handle_from_fun<F>::type
+spawn_io_client(F fun, const std::string& host,
                       uint16_t port, Ts&&... xs) {
-  return spawn_io_client_impl<Os, broker>(std::move(fun), host, port,
-                                          std::forward<Ts>(xs)...);
+  using impl = typename infer_handle_from_fun<F>::impl;
+  return spawn_io_client_impl<Os, impl>(std::move(fun), host, port,
+                                        std::forward<Ts>(xs)...);
 }
 
 /// Spawns a new broker as server running on given `port`.
 template <spawn_options Os = no_spawn_options,
           class F = std::function<void(broker*)>, class... Ts>
-actor spawn_io_server(F fun, uint16_t port, Ts&&... xs) {
-  return spawn_io_server_impl<Os, broker>(std::move(fun), port,
-                                          std::forward<Ts>(xs)...);
+typename infer_handle_from_fun<F>::type
+spawn_io_server(F fun, uint16_t port, Ts&&... xs) {
+  using impl = typename infer_handle_from_fun<F>::impl;
+  return spawn_io_server_impl<Os, impl>(std::move(fun), port,
+                                        std::forward<Ts>(xs)...);
 }
 
 namespace experimental {
 
 /// Spawns a new functor-based typed-broker.
 template <spawn_options Os = no_spawn_options, class F, class... Ts>
-typename infer_typed_actor_handle<
+CAF_DEPRECATED typename infer_typed_actor_handle<
   typename detail::get_callable_trait<F>::result_type,
   typename detail::tl_head<
     typename detail::get_callable_trait<F>::arg_types
@@ -119,7 +124,7 @@ spawn_io_typed(F fun, Ts&&... xs) {
 
 /// Spawns a new functor-based typed-broker connecting to `host:port`.
 template <spawn_options Os = no_spawn_options, class F, class... Ts>
-typename infer_typed_actor_handle<
+CAF_DEPRECATED typename infer_typed_actor_handle<
   typename detail::get_callable_trait<F>::result_type,
   typename detail::tl_head<
     typename detail::get_callable_trait<F>::arg_types
@@ -140,7 +145,7 @@ spawn_io_client_typed(F fun, const std::string& host, uint16_t port,
 
 /// Spawns a new typed-broker as server running on given `port`.
 template <spawn_options Os = no_spawn_options, class F, class... Ts>
-typename infer_typed_actor_handle<
+CAF_DEPRECATED typename infer_typed_actor_handle<
   typename detail::get_callable_trait<F>::result_type,
   typename detail::tl_head<
     typename detail::get_callable_trait<F>::arg_types
@@ -159,7 +164,6 @@ spawn_io_server_typed(F fun, uint16_t port, Ts&&... xs) {
 }
 
 } // namespace experimental
-
 
 } // namespace io
 } // namespace caf

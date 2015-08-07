@@ -771,7 +771,7 @@ typed_testee::behavior_type testee() {
 
 CAF_TEST(typed_await) {
   scoped_actor self;
-  auto x = spawn_typed(testee);
+  auto x = spawn(testee);
   self->sync_send(x, abc_atom::value).await(
     [](const std::string& str) {
       CAF_CHECK_EQUAL(str, "abc");

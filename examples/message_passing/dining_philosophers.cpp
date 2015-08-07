@@ -189,7 +189,7 @@ void dining_philosophers() {
   aout(self) << "chopstick ids are:";
   std::vector<chopstick> chopsticks;
   for (size_t i = 0; i < 5; ++i) {
-    chopsticks.push_back(spawn_typed(available_chopstick));
+    chopsticks.push_back(spawn(available_chopstick));
     aout(self) << " " << chopsticks.back()->id();
   }
   aout(self) << endl;
