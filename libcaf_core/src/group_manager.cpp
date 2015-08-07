@@ -220,7 +220,25 @@ private:
 // has local subscriptions and a "LEAVE" message to the original group
 // if there's no subscription left.
 
-class proxy_broker;
+class local_group_proxy;
+
+using local_group_proxy_ptr = intrusive_ptr<local_group_proxy>;
+
+class proxy_broker : public event_based_actor {
+public:
+  explicit proxy_broker(local_group_proxy_ptr grp) : group_(std::move(grp)) {
+    // nop
+  }
+
+  behavior make_behavior();
+
+  void on_exit() {
+    group_.reset();
+  }
+
+private:
+  local_group_proxy_ptr group_;
+};
 
 class local_group_proxy : public local_group {
 public:
@@ -294,30 +312,14 @@ private:
   actor monitor_;
 };
 
-using local_group_proxy_ptr = intrusive_ptr<local_group_proxy>;
-
-class proxy_broker : public event_based_actor {
-public:
-  explicit proxy_broker(local_group_proxy_ptr grp) : group_(std::move(grp)) {
-    // nop
-  }
-
-  behavior make_behavior() {
-    return {
-      others >> [=] {
-        group_->send_all_subscribers(current_sender(), current_message(),
-                                     host());
-      }
-    };
-  }
-
-  void on_exit() {
-    group_.reset();
-  }
-
-private:
-  local_group_proxy_ptr group_;
-};
+behavior proxy_broker::make_behavior() {
+  return {
+    others >> [=] {
+      group_->send_all_subscribers(current_sender(), current_message(),
+                                   host());
+    }
+  };
+}
 
 class local_group_module : public abstract_group::module {
 public:

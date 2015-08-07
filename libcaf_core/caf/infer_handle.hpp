@@ -23,9 +23,22 @@
 #include "caf/actor.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/typed_behavior.hpp"
-#include "caf/typed_event_based_actor.hpp"
+
+#include "caf/experimental/stateful_actor.hpp"
 
 namespace caf {
+
+template <class... Sigs>
+class typed_event_based_actor;
+
+namespace io {
+namespace experimental {
+
+template <class... Sigs>
+class typed_broker;
+
+} // namespace experimental
+} // namespace io
 
 enum class spawn_mode {
   function,
@@ -84,6 +97,31 @@ struct infer_handle_from_fun_impl<Result, typed_event_based_actor<Sigs...>*,
                                   true> {
   using type = typed_actor<Sigs...>;
   using impl = typed_event_based_actor<Sigs...>;
+  using behavior_type = typed_behavior<Sigs...>;
+  static constexpr spawn_mode mode = spawn_mode::function_with_selfptr;
+};
+
+// statically typed stateful actor with self pointer
+template <class Result, class State, class... Sigs>
+struct infer_handle_from_fun_impl<Result,
+                                  experimental::stateful_actor<
+                                    State, typed_event_based_actor<Sigs...>
+                                  >*,
+                                  true> {
+  using type = typed_actor<Sigs...>;
+  using impl =
+    experimental::stateful_actor<State, typed_event_based_actor<Sigs...>>;
+  using behavior_type = typed_behavior<Sigs...>;
+  static constexpr spawn_mode mode = spawn_mode::function_with_selfptr;
+};
+
+// statically typed broker with self pointer
+template <class Result, class... Sigs>
+struct infer_handle_from_fun_impl<Result,
+                                  io::experimental::typed_broker<Sigs...>*,
+                                  true> {
+  using type = typed_actor<Sigs...>;
+  using impl = io::experimental::typed_broker<Sigs...>;
   using behavior_type = typed_behavior<Sigs...>;
   static constexpr spawn_mode mode = spawn_mode::function_with_selfptr;
 };

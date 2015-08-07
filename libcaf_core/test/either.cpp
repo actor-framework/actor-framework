@@ -76,7 +76,7 @@ CAF_TEST(basic_usage) {
 }
 
 CAF_TEST(either_in_typed_interfaces) {
-  auto mf = spawn_typed(my_foo);
+  auto mf = spawn(my_foo);
   scoped_actor self;
   self->sync_send(mf, 42).await(
     [](int val) {

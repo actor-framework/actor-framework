@@ -253,7 +253,7 @@ CAF_TEST_FIXTURE_SCOPE(atom_tests, fixture)
 
 CAF_TEST(test_void_res) {
   using testee_a = typed_actor<replies_to<int, int>::with<void>>;
-  auto buddy = spawn_typed([]() -> testee_a::behavior_type {
+  auto buddy = spawn([]() -> testee_a::behavior_type {
     return [](int, int) {
       // nop
     };

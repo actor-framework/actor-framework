@@ -270,7 +270,7 @@ void middleman::initialize() {
   do_announce<new_connection_msg>("caf::io::new_connection_msg");
   do_announce<new_data_msg>("caf::io::new_data_msg");
   actor mgr = get_named_broker<basp_broker>(atom("_BASP"));
-  manager_ = spawn_typed<middleman_actor_impl, detached + hidden>(*this, mgr);
+  manager_ = spawn<middleman_actor_impl, detached + hidden>(*this, mgr);
 }
 
 void middleman::stop() {
