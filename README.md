@@ -199,7 +199,7 @@ http://mobi39.cpt.haw-hamburg.de/buildStatus/icon?job=CAF/master%20branch
 https://scan.coverity.com/projects/5555/badge.svg?flat=1
 
 [gitter-badge]:
-https://badges.gitter.im/Join%20Chat.svg
+https://img.shields.io/badge/gitter-join%20chat%20%E2%86%92-brightgreen.svg
 
 [in-progress-badge]:
 https://badge.waffle.io/actor-framework/actor-framework.png?label=In%20Progress&title=Issues%20in%20progress
