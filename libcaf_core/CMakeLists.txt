@@ -78,7 +78,8 @@ set (LIBCAF_CORE_SRCS
      src/sync_request_bouncer.cpp
      src/try_match.cpp
      src/uniform_type_info.cpp
-     src/uniform_type_info_map.cpp)
+     src/uniform_type_info_map.cpp
+     src/whereis.cpp)
 
 add_custom_target(libcaf_core)
 

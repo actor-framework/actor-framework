@@ -41,7 +41,7 @@ struct fixture {
 
   fixture() {
     auto registry = detail::singletons::get_actor_registry();
-    spawner = registry->get_named(atom("spawner"));
+    spawner = registry->get_named(atom("SpawnServ"));
   }
 
   void set_aut(message args, bool expect_fail = false) {

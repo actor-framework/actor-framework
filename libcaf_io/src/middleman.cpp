@@ -40,6 +40,8 @@
 #include "caf/io/basp_broker.hpp"
 #include "caf/io/system_messages.hpp"
 
+#include "caf/io/network/interfaces.hpp"
+
 #include "caf/detail/logging.hpp"
 #include "caf/detail/ripemd_160.hpp"
 #include "caf/detail/safe_equal.hpp"
@@ -58,62 +60,48 @@ namespace io {
 
 namespace {
 
-template <class Subtype, class I>
-inline void serialize_impl(const handle<Subtype, I>& hdl, serializer* sink) {
-  sink->write_value(hdl.id());
+void serialize(serializer& sink, std::vector<char>& buf) {
+  sink << static_cast<uint32_t>(buf.size());
+  sink.write_raw(buf.size(), buf.data());
+}
+
+void serialize(deserializer& source, std::vector<char>& buf) {
+  auto bs = source.read<uint32_t>();
+  buf.resize(bs);
+  source.read_raw(buf.size(), buf.data());
 }
 
 template <class Subtype, class I>
-inline void deserialize_impl(handle<Subtype, I>& hdl, deserializer* source) {
-  hdl.set_id(source->read<int64_t>());
+void serialize(serializer& sink, handle<Subtype, I>& hdl) {
+  sink.write_value(hdl.id());
 }
 
-inline void serialize_impl(const new_connection_msg& msg, serializer* sink) {
-  serialize_impl(msg.source, sink);
-  serialize_impl(msg.handle, sink);
+template <class Subtype, class I>
+void serialize(deserializer& source, handle<Subtype, I>& hdl) {
+  hdl.set_id(source.read<int64_t>());
 }
 
-inline void deserialize_impl(new_connection_msg& msg, deserializer* source) {
-  deserialize_impl(msg.source, source);
-  deserialize_impl(msg.handle, source);
+template <class Archive>
+void serialize(Archive& ar, new_connection_msg& msg) {
+  serialize(ar, msg.source);
+  serialize(ar, msg.handle);
 }
 
-inline void serialize_impl(const new_data_msg& msg, serializer* sink) {
-  serialize_impl(msg.handle, sink);
-  auto buf_size = static_cast<uint32_t>(msg.buf.size());
-  if (buf_size != msg.buf.size()) { // narrowing error
-    std::ostringstream oss;
-    oss << "attempted to send more than "
-        << std::numeric_limits<uint32_t>::max() << " bytes";
-    auto errstr = oss.str();
-    CAF_LOGF_INFO(errstr);
-    throw std::ios_base::failure(std::move(errstr));
-  }
-  sink->write_value(buf_size);
-  sink->write_raw(msg.buf.size(), msg.buf.data());
+template <class Archive>
+void serialize(Archive& ar, new_data_msg& msg) {
+  serialize(ar, msg.handle);
+  serialize(ar, msg.buf);
 }
 
-inline void deserialize_impl(new_data_msg& msg, deserializer* source) {
-  deserialize_impl(msg.handle, source);
-  auto buf_size = source->read<uint32_t>();
-  msg.buf.resize(buf_size);
-  source->read_raw(msg.buf.size(), msg.buf.data());
-}
 
 // connection_closed_msg & acceptor_closed_msg have the same fields
-template <class T>
-typename std::enable_if<std::is_same<T, connection_closed_msg>::value
-                        || std::is_same<T, acceptor_closed_msg>::value>::type
-serialize_impl(const T& dm, serializer* sink) {
-  serialize_impl(dm.handle, sink);
-}
-
-// connection_closed_msg & acceptor_closed_msg have the same fields
-template <class T>
-typename std::enable_if<std::is_same<T, connection_closed_msg>::value
-                        || std::is_same<T, acceptor_closed_msg>::value>::type
-deserialize_impl(T& dm, deserializer* source) {
-  deserialize_impl(dm.handle, source);
+template <class Archive, class T>
+typename std::enable_if<
+  std::is_same<T, connection_closed_msg>::value
+  || std::is_same<T, acceptor_closed_msg>::value
+>::type
+serialize(Archive& ar, T& dm) {
+  serialize(ar, dm.handle);
 }
 
 template <class T>
@@ -126,11 +114,11 @@ public:
   }
 
   void serialize(const void* instance, serializer* sink) const {
-    serialize_impl(super::deref(instance), sink);
+    io::serialize(*sink, super::deref(const_cast<void*>(instance)));
   }
 
   void deserialize(void* instance, deserializer* source) const {
-    deserialize_impl(super::deref(instance), source);
+    io::serialize(*source, super::deref(instance));
   }
 };
 
@@ -270,6 +258,7 @@ void middleman::initialize() {
   }
   // announce io-related types
   announce<network::protocol>("caf::io::network::protocol");
+  announce<network::address_listing>("caf::network::address_listing");
   do_announce<new_data_msg>("caf::io::new_data_msg");
   do_announce<new_connection_msg>("caf::io::new_connection_msg");
   do_announce<acceptor_closed_msg>("caf::io::acceptor_closed_msg");

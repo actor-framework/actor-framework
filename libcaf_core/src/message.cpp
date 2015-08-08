@@ -101,8 +101,9 @@ const char* message::uniform_name_at(size_t pos) const {
 }
 
 bool message::equals(const message& other) const {
-  CAF_ASSERT(vals_);
-  return vals_->equals(*other.vals());
+  if (empty())
+    return other.empty();
+  return other.empty() ? false : vals_->equals(*other.vals());
 }
 
 message message::drop(size_t n) const {

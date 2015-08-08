@@ -17,49 +17,19 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_NETWORK_INTERFACES_HPP
-#define CAF_IO_NETWORK_INTERFACES_HPP
+#include "caf/experimental/whereis.hpp"
 
-#include <map>
-#include <vector>
-#include <string>
-#include <utility>
+#include "caf/actor.hpp"
 
-#include "caf/optional.hpp"
-
-#include "caf/io/network/protocol.hpp"
+#include "caf/detail/singletons.hpp"
+#include "caf/detail/actor_registry.hpp"
 
 namespace caf {
-namespace io {
-namespace network {
+namespace experimental {
 
-// {protocol => address}
-using address_listing = std::map<protocol, std::vector<std::string>>;
+actor whereis(atom_value registered_name) {
+  return detail::singletons::get_actor_registry()->get_named(registered_name);
+}
 
-// {interface_name => {protocol => address}}
-using interfaces_map = std::map<std::string, address_listing>;
-
-/// Utility class bundling access to network interface names and addresses.
-class interfaces {
-public:
-  /// Returns a map listing each interface by its name.
-  static interfaces_map list_all(bool include_localhost = true);
-
-  /// Returns all addresses for all devices for all protocols.
-  static address_listing list_addresses(bool include_localhost = true);
-
-  /// Returns all addresses for all devices for given protocol.
-  static std::vector<std::string> list_addresses(protocol proc,
-                                                 bool include_localhost = true);
-
-  /// Returns a native IPv4 or IPv6 translation of `host`.
-  ///*/
-  static optional<std::pair<std::string, protocol>>
-  native_address(const std::string& host, optional<protocol> preferred = none);
-};
-
-} // namespace network
-} // namespace io
+} // namespace experimental
 } // namespace caf
-
-#endif // CAF_IO_NETWORK_INTERFACES_HPP

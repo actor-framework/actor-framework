@@ -64,6 +64,8 @@ struct basp_broker_state : actor_namespace::backend, basp::instance::callee {
                const node_id& dest_node, actor_id dest_actor,
                message& msg, message_id mid) override;
 
+  void learned_new_node_indirectly(const node_id& nid) override;
+
   struct connection_context {
     basp::connection_state cstate;
     basp::header hdr;
@@ -92,6 +94,11 @@ struct basp_broker_state : actor_namespace::backend, basp::instance::callee {
   // stores all published actors we know from other nodes, this primarily
   // keeps the associated proxies alive to work around subtle bugs
   std::unordered_map<node_id, std::pair<uint16_t, actor_addr>> known_remotes;
+
+  // can be enabled by the user to let CAF automatically try
+  // to establish new connections at runtime to optimize
+  // routing paths by forming a mesh between all nodes
+  bool enable_automatic_connections = false;
 
   const node_id& this_node() const {
     return instance.this_node();
