@@ -21,7 +21,10 @@
 
 #include "caf/exception.hpp"
 #include "caf/make_counted.hpp"
+#include "caf/event_based_actor.hpp"
 #include "caf/forwarding_actor_proxy.hpp"
+
+#include "caf/experimental/whereis.hpp"
 
 #include "caf/detail/singletons.hpp"
 #include "caf/detail/actor_registry.hpp"
@@ -31,7 +34,9 @@
 #include "caf/io/middleman.hpp"
 #include "caf/io/unpublish.hpp"
 
-using std::string;
+#include "caf/io/network/interfaces.hpp"
+
+using namespace caf::experimental;
 
 namespace caf {
 namespace io {
@@ -56,8 +61,10 @@ actor_proxy_ptr basp_broker_state::make_proxy(const node_id& nid,
   // this member function is being called whenever we deserialize a
   // payload received from a remote node; if a remote node A sends
   // us a handle to a third node B, then we assume that A offers a route to B
-  if (nid != this_context->id)
-    instance.tbl().add_indirect(this_context->id, nid);
+  if (nid != this_context->id
+      && instance.tbl().lookup_direct(nid) == invalid_connection_handle
+      && instance.tbl().add_indirect(this_context->id, nid))
+    learned_new_node_indirectly(nid);
   // we need to tell remote side we are watching this actor now;
   // use a direct route if possible, i.e., when talking to a third node
   auto path = instance.tbl().lookup(nid);
@@ -216,6 +223,79 @@ void basp_broker_state::deliver(const node_id& source_node,
   dest->enqueue(src, mid, std::move(msg), nullptr);
 }
 
+void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
+  CAF_ASSERT(this_context != nullptr);
+  CAF_LOG_TRACE(CAF_TSARG(nid));
+  if (! enable_automatic_connections)
+    return;
+  actor bb = self; // a handle for our helper back to this BASP broker
+  // this member function gets only called once, after adding a new
+  // indirect connection to the routing table; hence, spawning
+  // our helper here exactly once and there is no need to track
+  // in-flight connection requests
+  auto connection_helper = [=](event_based_actor* helper, actor s) -> behavior {
+    helper->monitor(s);
+    return {
+      // this is the result of the name lookup we initiate via BASP
+      [=](ok_atom, actor remote_config_server) {
+        CAF_LOGF_DEBUG("received remote config server: "
+                       << to_string(remote_config_server));
+        helper->send(remote_config_server,
+                     get_atom::value, "basp.default-connectivity");
+      },
+      // this is the message we are actually waiting for
+      [=](ok_atom, const std::string&, message& msg) {
+        CAF_LOGF_DEBUG("received requested config: " << to_string(msg));
+        // whatever happens, we are done afterwards
+        helper->quit();
+        msg.apply({
+          [&](uint16_t port, network::address_listing& addresses) {
+            auto& mx = middleman::instance()->backend();
+            for (auto& kvp : addresses)
+              for (auto& addr : kvp.second) {
+                try {
+                  auto hdl = mx.new_tcp_scribe(addr, port);
+                  // gotcha! send scribe to our BASP broker
+                  // to initiate handshake etc.
+                  helper->send(bb, connect_atom::value, hdl, port);
+                  return;
+                }
+                catch (...) {
+                  // simply try next address
+                }
+              }
+            CAF_LOGF_INFO("could not connect to node directly, nid = "
+                          << to_string(nid));
+          }
+        });
+      },
+      [=](const down_msg& dm) {
+        helper->quit(dm.reason);
+      },
+      after(std::chrono::minutes(10)) >> [=] {
+        // nothing heard in about 10 minutes... just a call it a day, then
+        CAF_LOGF_INFO("aborted direct connection attempt after 10min, nid = "
+                      << to_string(nid));
+        helper->quit(exit_reason::user_shutdown);
+      }
+    };
+  };
+  auto path = instance.tbl().lookup(nid);
+  if (! path) {
+    CAF_LOG_ERROR("learned_new_node_indirectly called, but no route to nid");
+    return;
+  }
+  if (path->next_hop == nid) {
+    CAF_LOG_ERROR("learned_new_node_indirectly called with direct connection");
+    return;
+  }
+  using namespace detail;
+  auto tmp = spawn<detached + hidden + lazy_init>(connection_helper, self);
+  singletons::get_actor_registry()->put(tmp.id(),
+                                        actor_cast<abstract_actor_ptr>(tmp));
+  instance.write_name_lookup(path->wr_buf, atom("ConfigServ"), nid, tmp.id());
+}
+
 void basp_broker_state::set_context(connection_handle hdl) {
   CAF_LOG_TRACE(CAF_MARG(hdl, id));
   auto i = ctx.find(hdl);
@@ -255,11 +335,14 @@ bool basp_broker_state::erase_context(connection_handle hdl) {
  ******************************************************************************/
 
 basp_broker::basp_broker(middleman& mm)
-    : caf::experimental::stateful_actor<basp_broker_state, broker>(mm) {
+    : stateful_actor<basp_broker_state, broker>(mm) {
   // nop
 }
 
 behavior basp_broker::make_behavior() {
+  // ask the configuration server whether we should open a default port
+  auto config_server = whereis(atom("ConfigServ"));
+  send(config_server, get_atom::value, "global.enable-automatic-connections");
   return {
     // received from underlying broker implementation
     [=](new_data_msg& msg) {
@@ -413,13 +496,28 @@ behavior basp_broker::make_behavior() {
         err("no connection to requested node");
         return {};
       }
-      auto i = na->find(atom("spawner"));
+      auto i = na->find(atom("SpawnServ"));
       if (i == na->end()) {
         err("no spawn server on requested node");
         return {};
       }
       delegate(i->second, get_atom::value, std::move(type), std::move(args));
       return {};
+    },
+    [=](ok_atom, const std::string& key, message& value) {
+      if (key == "global.enable-automatic-connections") {
+        value.apply([&](bool enabled) {
+          if (! enabled)
+            return;
+          // open a random port and store a record for others
+          // how to connect to this port in the configuration server
+          auto port = add_tcp_doorman(uint16_t{0}).second;
+          auto addrs = network::interfaces::list_addresses(false);
+          send(config_server, put_atom::value, "basp.default-connectivity",
+               make_message(port, std::move(addrs)));
+          state.enable_automatic_connections = true;
+        });
+      }
     },
     // catch-all error handler
     others >>

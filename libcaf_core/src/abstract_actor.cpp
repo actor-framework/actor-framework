@@ -47,6 +47,10 @@ std::atomic<actor_id> ids_;
 
 } // namespace <anonymous>
 
+actor_id abstract_actor::latest_actor_id() {
+  return ids_.load();
+}
+
 // exit_reason_ is guaranteed to be set to 0, i.e., exit_reason::not_exited,
 // by std::atomic<> constructor
 

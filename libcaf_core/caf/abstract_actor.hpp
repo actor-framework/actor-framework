@@ -156,6 +156,8 @@ protected:
 public:
   /// @cond PRIVATE
 
+  static actor_id latest_actor_id();
+
   enum linking_operation {
     establish_link_op,
     establish_backlink_op,

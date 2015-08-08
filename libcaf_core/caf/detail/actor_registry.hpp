@@ -83,6 +83,8 @@ public:
 
   actor get_named(atom_value key) const;
 
+  void put_named(atom_value key, actor value);
+
   using named_entries = std::unordered_map<atom_value, actor>;
 
   named_entries named_actors() const;
@@ -109,6 +111,7 @@ private:
   entries entries_;
 
   named_entries named_entries_;
+  mutable detail::shared_spinlock named_entries_mtx_;
 };
 
 } // namespace detail

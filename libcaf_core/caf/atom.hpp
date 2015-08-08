@@ -69,6 +69,9 @@ using get_atom = atom_constant<atom("GET")>;
 /// Generic 'PUT' atom for request operations.
 using put_atom = atom_constant<atom("PUT")>;
 
+/// Generic 'UPDATE' atom, e.g., or signalizing updates in a key-value store.
+using update_atom = atom_constant<atom("UPDATE")>;
+
 /// Generic 'DELETE' atom for request operations.
 using delete_atom = atom_constant<atom("DELETE")>;
 
@@ -110,6 +113,12 @@ using publish_atom = atom_constant<atom("PUBLISH")>;
 
 /// Generic 'UNPUBLISH' atom, e.g., for removing an actor/port mapping.
 using unpublish_atom = atom_constant<atom("UNPUBLISH")>;
+
+/// Generic 'PUBLISH' atom, e.g., for publishing actors at a given port.
+using subscribe_atom = atom_constant<atom("SUBSCRIBE")>;
+
+/// Generic 'UNPUBLISH' atom, e.g., for removing an actor/port mapping.
+using unsubscribe_atom = atom_constant<atom("UNSUBSCRIB")>;
 
 /// Generic 'CONNECT' atom, e.g., for connecting to remote CAF instances.
 using connect_atom = atom_constant<atom("CONNECT")>;
