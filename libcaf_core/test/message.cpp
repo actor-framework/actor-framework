@@ -101,6 +101,24 @@ CAF_TEST(extract_opts) {
   f({"-f", "hello.txt", "-l5"});
   f({"-fhello.txt", "-l", "5"});
   f({"-l5", "-fhello.txt"});
+  CAF_MESSAGE("ensure that failed parsing doesn't consume input");
+  auto msg = make_message("-f", "42", "-b", "1337");
+  auto foo = 0;
+  auto bar = 0;
+  auto r = msg.extract_opts({
+    {"foo,f", "foo desc", foo}
+  });
+  CAF_CHECK(r.opts.count("foo") > 0);
+  CAF_CHECK(foo == 42);
+  CAF_CHECK(bar == 0);
+  CAF_CHECK(! r.error.empty()); // -b is an unknown option
+  CAF_CHECK(! r.remainder.empty() && r.remainder == make_message("-b", "1337"));
+  r = r.remainder.extract_opts({
+    {"bar,b", "bar desc", bar}
+  });
+  CAF_CHECK(r.opts.count("bar") > 0);
+  CAF_CHECK(bar == 1337);
+  CAF_CHECK(r.error.empty());
 }
 
 CAF_TEST(type_token) {

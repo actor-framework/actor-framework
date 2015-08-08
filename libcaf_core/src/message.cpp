@@ -273,7 +273,7 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
              // this short opt comes with a value (no space), e.g., -x2
             if (! i->second->fun(arg.substr(2))) {
               error = "invalid value for " + i->second->name + ": " + arg;
-              return none;
+              return skip_message();
             }
             insert_opt_name(i->second);
             return none;
@@ -290,11 +290,11 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
         if (j->second->fun) {
           if (eq_pos == std::string::npos) {
             error =  "missing argument to " + arg;
-            return none;
+            return skip_message();
           }
           if (! j->second->fun(arg.substr(eq_pos + 1))) {
             error = "invalid value for " + j->second->name + ": " + arg;
-            return none;
+            return skip_message();
           }
           insert_opt_name(j->second);
           return none;
@@ -303,7 +303,7 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
         return none;
       }
       error = "unknown command line option: " + arg;
-      return none;
+      return skip_message();
     },
     [&](const std::string& arg1,
         const std::string& arg2) -> optional<skip_message_t> {
@@ -321,13 +321,13 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
         CAF_ASSERT(arg1.size() == 2);
         if (! i->second->fun(arg2)) {
           error = "invalid value for option " + i->second->name + ": " + arg2;
-          return none;
+          return skip_message();
         }
         insert_opt_name(i->second);
         return none;
       }
       error = "unknown command line option: " + arg1;
-      return none;
+      return skip_message();
     }
   });
   return {res, std::move(opts), std::move(helpstr), std::move(error)};
