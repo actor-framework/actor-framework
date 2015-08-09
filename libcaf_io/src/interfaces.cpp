@@ -170,7 +170,6 @@ void add_addr(if_device_ptr ptr, std::vector<std::string>& res) {
 
 template <class F>
 void for_each_device(bool include_localhost, F fun) {
-  char host[NI_MAXHOST];
   if_device_ptr tmp = nullptr;
   if (getifaddrs(&tmp) != 0) {
     perror("getifaddrs");
@@ -182,11 +181,8 @@ void for_each_device(bool include_localhost, F fun) {
     if (include_localhost) {
       fun(i);
     } else if (family == AF_INET || family == AF_INET6) {
-      auto len = static_cast<socklen_t>(family == AF_INET
-                                        ? sizeof(sockaddr_in)
-                                        : sizeof(sockaddr_in6));
-      auto ok = getnameinfo(i->ifa_addr, len, host, NI_MAXHOST, nullptr, 0, 0);
-      if (ok == 0 && strcmp("localhost", host) != 0) {
+      // filter loopback devices
+      if ((i->ifa_flags & IFF_LOOPBACK) == 0) {
         fun(i);
       }
     }
