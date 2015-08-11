@@ -165,7 +165,7 @@ namespace basp {
 
 /// The current BASP version. Different BASP versions will not
 /// be able to exchange messages.
-constexpr uint64_t version = 2;
+constexpr uint64_t version = 1;
 
 /// Storage type for raw bytes.
 using buffer_type = std::vector<char>;
@@ -203,13 +203,7 @@ enum class message_type : uint32_t {
   /// that has been terminated.
   ///
   /// ![](kill_proxy_instance.png)
-  kill_proxy_instance = 0x04,
-
-  /// Looks up a particular named actor in the registry
-  /// of the receiving node, which replies with a `dispatch_message`.
-  ///
-  /// ![](name_lookup.png)
-  name_lookup = 0x05
+  kill_proxy_instance = 0x04
 };
 
 /// @relates message_type
@@ -337,8 +331,9 @@ public:
   /// including the node that is assigned as direct path for `hdl`.
   void erase_direct(const connection_handle& hdl, erase_callback& cb);
 
-  /// Removes any entry for indirect connection to `dest`.
-  void erase_indirect(const node_id& dest);
+  /// Removes any entry for indirect connection to `dest` and returns
+  /// `true` if `dest` had an indirect route, otherwise `false`.
+  bool erase_indirect(const node_id& dest);
 
   /// Queries whether `dest` is reachable.
   bool reachable(const node_id& dest);
@@ -405,6 +400,11 @@ public:
     virtual void deliver(const node_id& source_node, actor_id source_actor,
                          const node_id& dest_node, actor_id dest_actor,
                          message& msg, message_id mid) = 0;
+
+    /// Called whenever BASP learns the ID of a remote node
+    /// to which it does not have a direct connection.
+    virtual void learned_new_node_directly(const node_id& nid,
+                                           bool was_known_indirectly) = 0;
 
     /// Called whenever BASP learns the ID of a remote node
     /// to which it does not have a direct connection.
@@ -514,7 +514,7 @@ public:
   void write_server_handshake(buffer_type& buf, optional<uint16_t> port);
 
   /// Writes the client handshake to `buf`.
-  void write_client_handshake(buffer_type& buf);
+  void write_client_handshake(buffer_type& buf, const node_id& remote_side);
 
   /// Writes a `dispatch_error` to `buf`.
   void write_dispatch_error(buffer_type& buf,
@@ -530,32 +530,15 @@ public:
                                  actor_id aid,
                                  uint32_t rsn);
 
-  /// Writes a name lookup request to `buf`.
-  void write_name_lookup(buffer_type& buf,
-                         atom_value requested_name,
-                         const node_id& dest_node,
-                         actor_id source_actor);
-
   const node_id& this_node() const {
     return this_node_;
   }
 
-  using named_actors_map = std::unordered_map<atom_value, actor>;
-
-  /// Returns the named actors for this node.
-  named_actors_map named_actors();
-
-  /// Returns the named actors for `nid`.
-  optional<const named_actors_map&> named_actors(const node_id& nid);
-
 private:
-  void read_named_actors(binary_deserializer& source, const node_id& nid);
-
   routing_table tbl_;
   published_actor_map published_actors_;
   node_id this_node_;
   callee& callee_;
-  std::unordered_map<node_id, named_actors_map> named_actors_;
 };
 
 /// Checks whether given header contains a handshake.

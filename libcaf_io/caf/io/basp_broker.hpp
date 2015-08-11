@@ -60,10 +60,19 @@ struct basp_broker_state : actor_namespace::backend, basp::instance::callee {
   // inherited from basp::instance::listener
   void kill_proxy(const node_id& nid, actor_id aid, uint32_t rsn) override;
 
+  // inherited from basp::instance::listener
   void deliver(const node_id& source_node, actor_id source_actor,
                const node_id& dest_node, actor_id dest_actor,
                message& msg, message_id mid) override;
 
+  // performs bookkeeping such as managing `spawn_servers`
+  void learned_new_node(const node_id& nid);
+
+  // inherited from basp::instance::listener
+  void learned_new_node_directly(const node_id& nid,
+                                 bool was_known_indirectly_before) override;
+
+  // inherited from basp::instance::listener
   void learned_new_node_indirectly(const node_id& nid) override;
 
   struct connection_context {
@@ -94,6 +103,11 @@ struct basp_broker_state : actor_namespace::backend, basp::instance::callee {
   // stores all published actors we know from other nodes, this primarily
   // keeps the associated proxies alive to work around subtle bugs
   std::unordered_map<node_id, std::pair<uint16_t, actor_addr>> known_remotes;
+
+  // stores handles to spawn servers for other nodes; these servers
+  // are spawned whenever the broker learns a new node ID and try to
+  // get a 'SpawnServ' instance on the remote side
+  std::unordered_map<node_id, actor> spawn_servers;
 
   // can be enabled by the user to let CAF automatically try
   // to establish new connections at runtime to optimize

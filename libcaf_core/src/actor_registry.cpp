@@ -187,6 +187,7 @@ void actor_registry::initialize() {
     using topic_set = std::unordered_set<std::string>;
     std::unordered_map<key_type, std::pair<mapped_type, subscriber_set>> data;
     std::unordered_map<actor,topic_set> subscribers;
+    const char* name = "caf.config_server";
   };
   auto kvstore = [](stateful_actor<kvstate>* self) -> behavior {
     return {

@@ -19,6 +19,8 @@
 
 #include "caf/io/basp_broker.hpp"
 
+#include <limits>
+
 #include "caf/exception.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/event_based_actor.hpp"
@@ -208,10 +210,20 @@ void basp_broker_state::deliver(const node_id& source_node,
   }
   abstract_actor_ptr dest;
   uint32_t rsn = exit_reason::remote_link_unreachable;
-  if (dest_node == this_node())
-    std::tie(dest, rsn) = registry->get_entry(dest_actor);
-  else
+  if (dest_node != this_node())
     dest = get_namespace().get_or_put(dest_node, dest_actor);
+  else
+    if (dest_actor == std::numeric_limits<actor_id>::max()) {
+      // this hack allows CAF to talk to older CAF versions; CAF <= 0.14 will
+      // discard this message silently as the receiver is not found, while
+      // CAF >= 0.14.1 will use the operation data to identify named actors
+      auto dest_name = static_cast<atom_value>(mid.integer_value());
+      CAF_LOG_DEBUG("dest_name = " << to_string(dest_name));
+      mid = message_id::make(); // override this since the message is async
+      dest = actor_cast<abstract_actor_ptr>(registry->get_named(dest_name));
+    } else {
+      std::tie(dest, rsn) = registry->get_entry(dest_actor);
+    }
   if (! dest) {
     CAF_LOG_INFO("cannot deliver message, destination not found");
     if (mid.valid() && src != invalid_actor_addr) {
@@ -223,9 +235,73 @@ void basp_broker_state::deliver(const node_id& source_node,
   dest->enqueue(src, mid, std::move(msg), nullptr);
 }
 
+void basp_broker_state::learned_new_node(const node_id& nid) {
+  CAF_LOG_TRACE(CAF_TSARG(nid));
+  auto& tmp = spawn_servers[nid];
+  tmp = spawn<hidden>([=](event_based_actor* this_actor) -> behavior {
+    return {
+      [=](ok_atom, const std::string& /* key == "info" */,
+          const actor_addr& config_serv_addr, const std::string& /* name */) {
+        auto config_serv = actor_cast<actor>(config_serv_addr);
+        this_actor->monitor(config_serv);
+        this_actor->become(
+          [=](spawn_atom, std::string& type, message& args)
+          -> delegated<either<ok_atom, actor_addr, std::set<std::string>>
+                       ::or_else<error_atom, std::string>> {
+            this_actor->delegate(config_serv, get_atom::value,
+                                 std::move(type), std::move(args));
+            return {};
+          },
+          [=](const down_msg& dm) {
+            this_actor->quit(dm.reason);
+          },
+          others >> [=] {
+            CAF_LOGF_ERROR("spawn server has received unexpected message: "
+                           << to_string(this_actor->current_message()));
+          }
+        );
+      },
+      after(std::chrono::minutes(5)) >> [=] {
+        CAF_LOGF_INFO("no spawn server on node " << to_string(nid));
+        this_actor->quit();
+      }
+    };
+  });
+  using namespace detail;
+  singletons::get_actor_registry()->put(tmp.id(),
+                                        actor_cast<abstract_actor_ptr>(tmp));
+  auto writer = make_callback([](serializer& sink) {
+    auto msg = make_message(sys_atom::value, get_atom::value, "info");
+    msg.serialize(sink);
+  });
+  auto path = instance.tbl().lookup(nid);
+  if (! path) {
+    CAF_LOG_ERROR("learned_new_node called, but no route to nid");
+    return;
+  }
+  // writing std::numeric_limits<actor_id>::max() is a hack to get
+  // this send-to-named-actor feature working with older CAF releases
+  instance.write(path->wr_buf,
+                 basp::message_type::dispatch_message,
+                 nullptr, static_cast<uint64_t>(atom("SpawnServ")),
+                 this_node(), nid,
+                 tmp.id(), std::numeric_limits<actor_id>::max(),
+                 &writer);
+  instance.flush(*path);
+}
+
+void basp_broker_state::learned_new_node_directly(const node_id& nid,
+                                                  bool was_indirectly_before) {
+  CAF_ASSERT(this_context != nullptr);
+  CAF_LOG_TRACE(CAF_TSARG(nid));
+  if (! was_indirectly_before)
+    learned_new_node(nid);
+}
+
 void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
   CAF_ASSERT(this_context != nullptr);
   CAF_LOG_TRACE(CAF_TSARG(nid));
+  learned_new_node(nid);
   if (! enable_automatic_connections)
     return;
   actor bb = self; // a handle for our helper back to this BASP broker
@@ -236,14 +312,7 @@ void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
   auto connection_helper = [=](event_based_actor* helper, actor s) -> behavior {
     helper->monitor(s);
     return {
-      // this is the result of the name lookup we initiate via BASP
-      [=](ok_atom, actor remote_config_server) {
-        CAF_LOGF_DEBUG("received remote config server: "
-                       << to_string(remote_config_server));
-        helper->send(remote_config_server,
-                     get_atom::value, "basp.default-connectivity");
-      },
-      // this is the message we are actually waiting for
+      // this config is send from the remote `ConfigServ`
       [=](ok_atom, const std::string&, message& msg) {
         CAF_LOGF_DEBUG("received requested config: " << to_string(msg));
         // whatever happens, we are done afterwards
@@ -290,10 +359,22 @@ void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
     return;
   }
   using namespace detail;
-  auto tmp = spawn<detached + hidden + lazy_init>(connection_helper, self);
+  auto tmp = spawn<detached + hidden>(connection_helper, self);
   singletons::get_actor_registry()->put(tmp.id(),
                                         actor_cast<abstract_actor_ptr>(tmp));
-  instance.write_name_lookup(path->wr_buf, atom("ConfigServ"), nid, tmp.id());
+  auto writer = make_callback([](serializer& sink) {
+    auto msg = make_message(get_atom::value, "basp.default-connectivity");
+    msg.serialize(sink);
+  });
+  // writing std::numeric_limits<actor_id>::max() is a hack to get
+  // this send-to-named-actor feature working with older CAF releases
+  instance.write(path->wr_buf,
+                 basp::message_type::dispatch_message,
+                 nullptr, static_cast<uint64_t>(atom("ConfigServ")),
+                 this_node(), nid,
+                 tmp.id(), std::numeric_limits<actor_id>::max(),
+                 &writer);
+  instance.flush(*path);
 }
 
 void basp_broker_state::set_context(connection_handle hdl) {
@@ -491,17 +572,12 @@ behavior basp_broker::make_behavior() {
         auto rp = make_response_promise();
         rp.deliver(error_atom::value, std::move(errmsg));
       };
-      auto na = state.instance.named_actors(nid);
-      if (! na) {
-        err("no connection to requested node");
-        return {};
+      auto i = state.spawn_servers.find(nid);
+      if (i == state.spawn_servers.end()) {
+          err("no connection to requested node");
+          return {};
       }
-      auto i = na->find(atom("SpawnServ"));
-      if (i == na->end()) {
-        err("no spawn server on requested node");
-        return {};
-      }
-      delegate(i->second, get_atom::value, std::move(type), std::move(args));
+      delegate(i->second, spawn_atom::value, std::move(type), std::move(args));
       return {};
     },
     [=](ok_atom, const std::string& key, message& value) {

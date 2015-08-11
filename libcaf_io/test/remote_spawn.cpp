@@ -111,10 +111,11 @@ CAF_TEST(remote_spawn) {
   announce_actor_type("mirror", mirror);
   auto argv = caf::test::engine::argv();
   auto argc = caf::test::engine::argc();
-  uint16_t port;
+  uint16_t port = 0;
   auto r = message_builder(argv, argv + argc).extract_opts({
     {"server,s", "run as server (don't run client"},
     {"client,c", "add client port (two needed)", port},
+    {"port,p", "force a port in server mode", port},
     {"use-asio", "use ASIO network backend (if available)"}
   });
   if (! r.error.empty() || r.opts.count("help") > 0 || ! r.remainder.empty()) {
@@ -135,7 +136,7 @@ CAF_TEST(remote_spawn) {
     return;
   }
   auto serv = spawn(server);
-  port = io::publish(serv, 0);
+  port = io::publish(serv, port);
   CAF_TEST_INFO("published server at port " << port);
   if (r.opts.count("server") == 0) {
     auto child = detail::run_program(invalid_actor, argv[0], "-n", "-s",

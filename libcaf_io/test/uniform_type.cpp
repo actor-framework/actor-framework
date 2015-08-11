@@ -219,7 +219,8 @@ CAF_TEST(test_uniform_type) {
                        "caf::io::connection_closed_msg",
                        "caf::io::network::protocol",
                        "caf::io::new_connection_msg",
-                       "caf::io::new_data_msg"));
+                       "caf::io::new_data_msg",
+                       "caf::io::network::address_listing"));
     CAF_MESSAGE("io types checked");
   }
   // check whether enums can be announced as members
