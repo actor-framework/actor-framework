@@ -258,7 +258,7 @@ void middleman::initialize() {
   }
   // announce io-related types
   announce<network::protocol>("caf::io::network::protocol");
-  announce<network::address_listing>("caf::network::address_listing");
+  announce<network::address_listing>("caf::io::network::address_listing");
   do_announce<new_data_msg>("caf::io::new_data_msg");
   do_announce<new_connection_msg>("caf::io::new_connection_msg");
   do_announce<acceptor_closed_msg>("caf::io::acceptor_closed_msg");

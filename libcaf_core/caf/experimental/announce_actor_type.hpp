@@ -51,7 +51,7 @@ template <class Result,
               local_actor,
               typename std::remove_pointer<FirstArg>::type
             >::value>
-struct infer_handle_from_fun_ {
+struct infer_handle_from_fun_impl {
   using type = actor;
   using impl = event_based_actor;
   using behavior_type = behavior;
@@ -60,7 +60,7 @@ struct infer_handle_from_fun_ {
 
 // dynamically typed actor returning a behavior
 template <class Impl>
-struct infer_handle_from_fun_<void, Impl*, true> {
+struct infer_handle_from_fun_impl<void, Impl*, true> {
   using type = actor;
   using impl = Impl;
   using behavior_type = behavior;
@@ -69,7 +69,7 @@ struct infer_handle_from_fun_<void, Impl*, true> {
 
 // dynamically typed actor with self pointer
 template <class Impl>
-struct infer_handle_from_fun_<behavior, Impl*, true> {
+struct infer_handle_from_fun_impl<behavior, Impl*, true> {
   using type = actor;
   using impl = Impl;
   using behavior_type = behavior;
@@ -78,7 +78,7 @@ struct infer_handle_from_fun_<behavior, Impl*, true> {
 
 // statically typed actor returning a behavior
 template <class... Sigs, class FirstArg>
-struct infer_handle_from_fun_<typed_behavior<Sigs...>, FirstArg, false> {
+struct infer_handle_from_fun_impl<typed_behavior<Sigs...>, FirstArg, false> {
   using type = typed_actor<Sigs...>;
   using impl = typed_event_based_actor<Sigs...>;
   using behavior_type = typed_behavior<Sigs...>;
@@ -87,7 +87,7 @@ struct infer_handle_from_fun_<typed_behavior<Sigs...>, FirstArg, false> {
 
 // statically typed actor with self pointer
 template <class Result, class... Sigs>
-struct infer_handle_from_fun_<Result, typed_event_based_actor<Sigs...>*, true> {
+struct infer_handle_from_fun_impl<Result, typed_event_based_actor<Sigs...>*, true> {
   using type = typed_actor<Sigs...>;
   using impl = typed_event_based_actor<Sigs...>;
   using behavior_type = typed_behavior<Sigs...>;
@@ -99,7 +99,7 @@ struct infer_handle_from_fun {
   using result_type = typename Trait::result_type;
   using arg_types = typename Trait::arg_types;
   using first_arg = typename detail::tl_head<arg_types>::type;
-  using delegate = infer_handle_from_fun_<result_type, first_arg>;
+  using delegate = infer_handle_from_fun_impl<result_type, first_arg>;
   using type = typename delegate::type;
   using impl = typename delegate::impl;
   using behavior_type = typename delegate::behavior_type;

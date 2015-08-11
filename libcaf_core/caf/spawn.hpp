@@ -222,7 +222,7 @@ struct infer_typed_actor_base<Result, T*, true> {
 /// constructor arguments.
 template <class C, spawn_options Os = no_spawn_options, class... Ts>
 typename actor_handle_from_signature_list<typename C::signatures>::type
-spawn_typed(Ts&&... xs) {
+CAF_DEPRECATED spawn_typed(Ts&&... xs) {
   return spawn_class<C, Os>(nullptr, empty_before_launch_callback{},
                             std::forward<Ts>(xs)...);
 }

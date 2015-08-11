@@ -265,6 +265,23 @@ msg_type filter_msg(local_actor* self, mailbox_element& node) {
                                       ok_atom::value, self->address()),
           self->host());
       },
+      [&](sys_atom, get_atom, std::string& what) {
+        CAF_LOGF_TRACE(CAF_ARG(what));
+        if (what == "info") {
+          CAF_LOGF_DEBUG("reply to 'info' message");
+          node.sender->enqueue(
+            mailbox_element::make_joint(self->address(), node.mid.response_id(),
+                                        ok_atom::value, std::move(what),
+                                        self->address(), self->name()),
+            self->host());
+          return;
+        }
+        node.sender->enqueue(
+          mailbox_element::make_joint(self->address(), node.mid.response_id(),
+                                      error_atom::value,
+                                      "unknown key: " + std::move(what)),
+          self->host());
+      },
       others >> [&] {
         mismatch = true;
       }
