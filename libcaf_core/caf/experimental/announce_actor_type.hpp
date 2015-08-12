@@ -24,8 +24,7 @@
 
 #include "caf/actor.hpp"
 #include "caf/actor_addr.hpp"
-#include "caf/typed_behavior.hpp"
-#include "caf/typed_event_based_actor.hpp"
+#include "caf/infer_handle.hpp"
 
 #include "caf/detail/singletons.hpp"
 #include "caf/detail/type_traits.hpp"
@@ -33,89 +32,6 @@
 
 namespace caf {
 namespace experimental {
-
-enum class spawn_mode {
-  function,
-  function_with_selfptr,
-  clazz
-};
-
-template <spawn_mode X>
-using spawn_mode_token = std::integral_constant<spawn_mode, X>;
-
-// default: dynamically typed actor without self pointer
-template <class Result,
-          class FirstArg,
-          bool FirstArgValid =
-            std::is_base_of<
-              local_actor,
-              typename std::remove_pointer<FirstArg>::type
-            >::value>
-struct infer_handle_from_fun_impl {
-  using type = actor;
-  using impl = event_based_actor;
-  using behavior_type = behavior;
-  static constexpr spawn_mode mode = spawn_mode::function;
-};
-
-// dynamically typed actor returning a behavior
-template <class Impl>
-struct infer_handle_from_fun_impl<void, Impl*, true> {
-  using type = actor;
-  using impl = Impl;
-  using behavior_type = behavior;
-  static constexpr spawn_mode mode = spawn_mode::function_with_selfptr;
-};
-
-// dynamically typed actor with self pointer
-template <class Impl>
-struct infer_handle_from_fun_impl<behavior, Impl*, true> {
-  using type = actor;
-  using impl = Impl;
-  using behavior_type = behavior;
-  static constexpr spawn_mode mode = spawn_mode::function_with_selfptr;
-};
-
-// statically typed actor returning a behavior
-template <class... Sigs, class FirstArg>
-struct infer_handle_from_fun_impl<typed_behavior<Sigs...>, FirstArg, false> {
-  using type = typed_actor<Sigs...>;
-  using impl = typed_event_based_actor<Sigs...>;
-  using behavior_type = typed_behavior<Sigs...>;
-  static constexpr spawn_mode mode = spawn_mode::function;
-};
-
-// statically typed actor with self pointer
-template <class Result, class... Sigs>
-struct infer_handle_from_fun_impl<Result, typed_event_based_actor<Sigs...>*, true> {
-  using type = typed_actor<Sigs...>;
-  using impl = typed_event_based_actor<Sigs...>;
-  using behavior_type = typed_behavior<Sigs...>;
-  static constexpr spawn_mode mode = spawn_mode::function_with_selfptr;
-};
-
-template <class F, class Trait = typename detail::get_callable_trait<F>::type>
-struct infer_handle_from_fun {
-  using result_type = typename Trait::result_type;
-  using arg_types = typename Trait::arg_types;
-  using first_arg = typename detail::tl_head<arg_types>::type;
-  using delegate = infer_handle_from_fun_impl<result_type, first_arg>;
-  using type = typename delegate::type;
-  using impl = typename delegate::impl;
-  using behavior_type = typename delegate::behavior_type;
-  using fun_type = typename Trait::fun_type;
-  static constexpr spawn_mode mode = delegate::mode;
-};
-
-template <class T>
-struct infer_handle_from_behavior {
-  using type = actor;
-};
-
-template <class... Sigs>
-struct infer_handle_from_behavior<typed_behavior<Sigs...>> {
-  using type = typed_actor<Sigs...>;
-};
 
 using spawn_result = std::pair<actor_addr, std::set<std::string>>;
 
@@ -176,10 +92,7 @@ spawn_fun make_spawn_fun() {
                 "all Ts must be lvalue references");
   static_assert(std::is_base_of<local_actor, T>::value,
                 "T is not derived from local_actor");
-  using handle =
-    typename infer_handle_from_behavior<
-      typename T::behavior_type
-    >::type;
+  using handle = typename infer_handle_from_class<T>::type;
   using pointer = intrusive_ptr<T>;
   auto factory = &make_counted<T, Ts...>;
   return [=](message msg) -> spawn_result {
