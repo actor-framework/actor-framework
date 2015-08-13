@@ -34,7 +34,7 @@ void unpublish_impl(const actor_addr& whom, uint16_t port, bool blocking) {
   auto mm = get_middleman_actor();
   if (blocking) {
     scoped_actor self;
-    self->sync_send(mm, delete_atom::value, whom, port).await(
+    self->sync_send(mm, unpublish_atom::value, whom, port).await(
       [](ok_atom) {
         // ok, basp_broker is done
       },
@@ -43,7 +43,7 @@ void unpublish_impl(const actor_addr& whom, uint16_t port, bool blocking) {
       }
     );
   } else {
-    anon_send(mm, delete_atom::value, whom, port);
+    anon_send(mm, unpublish_atom::value, whom, port);
   }
 }
 

@@ -107,6 +107,11 @@ operator<<(serializer& sink, const T& value) {
   return sink.write(value, uniform_typeid<T>());
 }
 
+template <class T>
+void operator&(serializer& sink, const T& value) {
+  sink << value;
+}
+
 } // namespace caf
 
 #endif // CAF_SERIALIZER_HPP

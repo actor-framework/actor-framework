@@ -27,6 +27,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "caf/fwd.hpp"
 #include "caf/node_id.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/serializer.hpp"
@@ -307,6 +308,11 @@ public:
   /// `invalid_connection_handle` if no direct connection to `nid` exists.
   connection_handle lookup_direct(const node_id& nid) const;
 
+  /// Returns the next hop that would be chosen for `nid`
+  /// or `invalid_node_id` if there's no indirect route to `nid`.
+  node_id lookup_indirect(const node_id& nid) const;
+
+
   /// Flush output buffer for `r`.
   void flush(const route& r);
 
@@ -315,7 +321,7 @@ public:
   void add_direct(const connection_handle& hdl, const node_id& dest);
 
   /// Adds a new indirect route to the table.
-  void add_indirect(const node_id& hop, const node_id& dest);
+  bool add_indirect(const node_id& hop, const node_id& dest);
 
   /// Blacklist the route to `dest` via `hop`.
   void blacklist(const node_id& hop, const node_id& dest);
@@ -324,6 +330,10 @@ public:
   /// that became unreachable as a result of this operation,
   /// including the node that is assigned as direct path for `hdl`.
   void erase_direct(const connection_handle& hdl, erase_callback& cb);
+
+  /// Removes any entry for indirect connection to `dest` and returns
+  /// `true` if `dest` had an indirect route, otherwise `false`.
+  bool erase_indirect(const node_id& dest);
 
   /// Queries whether `dest` is reachable.
   bool reachable(const node_id& dest);
@@ -369,7 +379,7 @@ public:
     /// Called if a server handshake was received and
     /// the connection to `nid` is established.
     virtual void finalize_handshake(const node_id& nid, actor_id aid,
-                                    const std::set<std::string>& sigs) = 0;
+                                    std::set<std::string>& sigs) = 0;
 
     /// Called whenever a direct connection was closed or a
     /// node became unrechable for other reasons *before*
@@ -378,14 +388,27 @@ public:
     ///          routing table from this callback.
     virtual void purge_state(const node_id& nid) = 0;
 
+    /// Called whenever a remote node created a proxy
+    /// for one of our local actors.
     virtual void proxy_announced(const node_id& nid, actor_id aid) = 0;
 
+    /// Called whenever a remote actor died to destroy
+    /// the proxy instance on our end.
     virtual void kill_proxy(const node_id& nid, actor_id aid, uint32_t rsn) = 0;
 
     /// Called whenever a `dispatch_message` arrived for a local actor.
     virtual void deliver(const node_id& source_node, actor_id source_actor,
                          const node_id& dest_node, actor_id dest_actor,
                          message& msg, message_id mid) = 0;
+
+    /// Called whenever BASP learns the ID of a remote node
+    /// to which it does not have a direct connection.
+    virtual void learned_new_node_directly(const node_id& nid,
+                                           bool was_known_indirectly) = 0;
+
+    /// Called whenever BASP learns the ID of a remote node
+    /// to which it does not have a direct connection.
+    virtual void learned_new_node_indirectly(const node_id& nid) = 0;
 
     /// Returns the actor namespace associated to this BASP protocol instance.
     actor_namespace& get_namespace() {
@@ -489,6 +512,9 @@ public:
   /// if no actor is published at this port then a standard handshake is
   /// written (e.g. used when establishing direct connections on-the-fly).
   void write_server_handshake(buffer_type& buf, optional<uint16_t> port);
+
+  /// Writes the client handshake to `buf`.
+  void write_client_handshake(buffer_type& buf, const node_id& remote_side);
 
   /// Writes a `dispatch_error` to `buf`.
   void write_dispatch_error(buffer_type& buf,

@@ -97,7 +97,7 @@ void test_calculators() {
   self->spawn(tester<actor>, spawn(calculator), 3, 4);
   self->await_all_other_actors_done();
   aout(self) << "typed actor:" << endl;
-  self->spawn(tester<calculator_actor>, spawn_typed(typed_calculator), 5, 6);
+  self->spawn(tester<calculator_actor>, spawn(typed_calculator), 5, 6);
   self->await_all_other_actors_done();
 }
 

@@ -72,22 +72,24 @@ public:
   ~local_actor();
 
   /****************************************************************************
-   *                           spawn untyped actors                           *
+   *                           spawn actors                                   *
    ****************************************************************************/
 
   template <class T, spawn_options Os = no_spawn_options, class... Ts>
-  actor spawn(Ts&&... xs) {
+  typename infer_handle_from_class<T>::type
+  spawn(Ts&&... xs) {
     constexpr auto os = make_unbound(Os);
     auto res = spawn_class<T, os>(host(), empty_before_launch_callback{},
                                   std::forward<Ts>(xs)...);
     return eval_opts(Os, std::move(res));
   }
 
-  template <spawn_options Os = no_spawn_options, class... Ts>
-  actor spawn(Ts&&... xs) {
+  template <spawn_options Os = no_spawn_options, class F, class... Ts>
+  typename infer_handle_from_fun<F>::type
+  spawn(F fun, Ts&&... xs) {
     constexpr auto os = make_unbound(Os);
     auto res = spawn_functor<os>(host(), empty_before_launch_callback{},
-                                 std::forward<Ts>(xs)...);
+                                 std::move(fun), std::forward<Ts>(xs)...);
     return eval_opts(Os, std::move(res));
   }
 
@@ -139,11 +141,11 @@ public:
   }
 
   /****************************************************************************
-   *                            spawn typed actors                            *
+   *                      spawn typed actors (deprecated)                     *
    ****************************************************************************/
 
   template <class T, spawn_options Os = no_spawn_options, class... Ts>
-  typename actor_handle_from_signature_list<
+  CAF_DEPRECATED typename actor_handle_from_signature_list<
     typename T::signatures
   >::type
   spawn_typed(Ts&&... xs) {
@@ -154,7 +156,7 @@ public:
   }
 
   template <spawn_options Os = no_spawn_options, typename F, class... Ts>
-  typename infer_typed_actor_handle<
+  CAF_DEPRECATED typename infer_typed_actor_handle<
     typename detail::get_callable_trait<F>::result_type,
     typename detail::tl_head<
       typename detail::get_callable_trait<F>::arg_types
@@ -392,6 +394,16 @@ public:
   /// implementation simply returns "actor".
   virtual const char* name() const;
 
+  /// Serializes the state of this actor to `sink`. This function is
+  /// only called if this actor has set the `is_serializable` flag.
+  /// The default implementation throws a `std::logic_error`.
+  virtual void save(serializer& sink, const unsigned int version);
+
+  /// Deserializes the state of this actor from `source`. This function is
+  /// only called if this actor has set the `is_serializable` flag.
+  /// The default implementation throws a `std::logic_error`.
+  virtual void load(deserializer& source, const unsigned int version);
+
   /****************************************************************************
    *                       deprecated member functions                        *
    ****************************************************************************/
@@ -463,7 +475,9 @@ public:
     return (mid.is_request()) ? mid.response_id() : message_id();
   }
 
-  void forward_message(const actor& dest, message_priority mp);
+  void forward_current_message(const actor& dest);
+
+  void forward_current_message(const actor& dest, message_priority mp);
 
   template <class... Ts>
   void delegate(message_priority mp, const actor& dest, Ts&&... xs) {
@@ -611,9 +625,9 @@ public:
     initial_behavior_fac_ = std::move(fun);
   }
 
-protected:
   void do_become(behavior bhvr, bool discard_old);
 
+protected:
   // used only in thread-mapped actors
   void await_data();
 

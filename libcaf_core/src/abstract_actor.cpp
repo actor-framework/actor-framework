@@ -41,8 +41,15 @@
 namespace caf {
 
 namespace {
+
 using guard_type = std::unique_lock<std::mutex>;
+std::atomic<actor_id> ids_;
+
 } // namespace <anonymous>
+
+actor_id abstract_actor::latest_actor_id() {
+  return ids_.load();
+}
 
 // exit_reason_ is guaranteed to be set to 0, i.e., exit_reason::not_exited,
 // by std::atomic<> constructor
@@ -59,7 +66,7 @@ abstract_actor::abstract_actor(actor_id aid, node_id nid)
 abstract_actor::abstract_actor()
     : abstract_channel(abstract_channel::is_abstract_actor_flag,
                        detail::singletons::get_node_id()),
-      id_(detail::singletons::get_actor_registry()->next_id()),
+      id_(++ids_),
       exit_reason_(exit_reason::not_exited),
       host_(nullptr) {
   // nop

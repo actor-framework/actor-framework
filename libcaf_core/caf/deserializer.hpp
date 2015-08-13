@@ -127,6 +127,11 @@ operator>>(deserializer& source, T& value) {
   return source.read(value, uniform_typeid<T>());
 }
 
+template <class T>
+void operator&(deserializer& source, T& value) {
+  source >> value;
+}
+
 } // namespace caf
 
 #endif // CAF_DESERIALIZER_HPP

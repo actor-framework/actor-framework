@@ -42,14 +42,20 @@
 namespace caf {
 namespace io {
 
-abstract_actor_ptr remote_actor_impl(std::set<std::string> ifs,
-                                     const std::string& host, uint16_t port) {
+actor_addr remote_actor_impl(std::set<std::string> ifs,
+                             std::string host, uint16_t port) {
   auto mm = get_middleman_actor();
+  actor_addr result;
   scoped_actor self;
-  abstract_actor_ptr result;
-  self->sync_send(mm, get_atom{}, std::move(host), port, std::move(ifs)).await(
-    [&](ok_atom, actor_addr res) {
-      result = actor_cast<abstract_actor_ptr>(res);
+  self->sync_send(mm, connect_atom::value, std::move(host), port).await(
+    [&](ok_atom, const node_id&, actor_addr res, std::set<std::string>& xs) {
+      if (!res)
+        throw network_error("no actor published at given port");
+      if (! (xs.empty() && ifs.empty())
+          && ! std::includes(xs.begin(), xs.end(), ifs.begin(), ifs.end()))
+        throw network_error("expected signature does not "
+                            "comply to found signature");
+      result = std::move(res);
     },
     [&](error_atom, std::string& msg) {
       throw network_error(std::move(msg));
@@ -60,4 +66,3 @@ abstract_actor_ptr remote_actor_impl(std::set<std::string> ifs,
 
 } // namespace io
 } // namespace caf
-

@@ -17,25 +17,19 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include <utility>
+#include "caf/experimental/whereis.hpp"
 
-#include "caf/local_actor.hpp"
-#include "caf/response_promise.hpp"
+#include "caf/actor.hpp"
+
+#include "caf/detail/singletons.hpp"
+#include "caf/detail/actor_registry.hpp"
 
 namespace caf {
+namespace experimental {
 
-response_promise::response_promise(const actor_addr& from, const actor_addr& to,
-                                   const message_id& id)
-    : from_(from), to_(to), id_(id) {
-  CAF_ASSERT(id.is_response() || ! id.valid());
+actor whereis(atom_value registered_name) {
+  return detail::singletons::get_actor_registry()->get_named(registered_name);
 }
 
-void response_promise::deliver_impl(message msg) const {
-  if (! to_)
-    return;
-  auto to = actor_cast<abstract_actor_ptr>(to_);
-  auto from = actor_cast<abstract_actor_ptr>(from_);
-  to->enqueue(from_, id_, std::move(msg), from->host());
-}
-
+} // namespace experimental
 } // namespace caf

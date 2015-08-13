@@ -102,20 +102,9 @@ intrusive_ptr<C> spawn_functor_impl(execution_unit* eu, BeforeLaunch cb,
 /// should not be called by users of the library). This function
 /// selects a proper implementation class and then delegates to `spawn_class`.
 template <spawn_options Os, typename BeforeLaunch, typename F, class... Ts>
-actor spawn_functor(execution_unit* eu, BeforeLaunch cb, F fun, Ts&&... xs) {
-  using trait = typename detail::get_callable_trait<F>::type;
-  using arg_types = typename trait::arg_types;
-  using first_arg = typename detail::tl_head<arg_types>::type;
-  using impl =
-    typename std::conditional<
-      std::is_pointer<first_arg>::value,
-      typename std::remove_pointer<first_arg>::type,
-      typename std::conditional<
-        has_blocking_api_flag(Os),
-        blocking_actor,
-        event_based_actor
-      >::type
-    >::type;
+typename infer_handle_from_fun<F>::type
+spawn_functor(execution_unit* eu, BeforeLaunch cb, F fun, Ts&&... xs) {
+  using impl = typename infer_handle_from_fun<F>::impl;
   return spawn_functor_impl<Os, impl>(eu, cb, std::move(fun),
                                       std::forward<Ts>(xs)...);
 }
@@ -127,7 +116,8 @@ actor spawn_functor(execution_unit* eu, BeforeLaunch cb, F fun, Ts&&... xs) {
 /// arguments. The behavior of `spawn` can be modified by setting `Os`, e.g.,
 /// to opt-out of the cooperative scheduling.
 template <class C, spawn_options Os = no_spawn_options, class... Ts>
-actor spawn(Ts&&... xs) {
+typename infer_handle_from_class<C>::type
+spawn(Ts&&... xs) {
   return spawn_class<C, Os>(nullptr, empty_before_launch_callback{},
                             std::forward<Ts>(xs)...);
 }
@@ -136,11 +126,11 @@ actor spawn(Ts&&... xs) {
 /// the remainder of `xs...` is used to invoke the functor.
 /// The behavior of `spawn` can be modified by setting `Os`, e.g.,
 /// to opt-out of the cooperative scheduling.
-template <spawn_options Os = no_spawn_options, class... Ts>
-actor spawn(Ts&&... xs) {
-  static_assert(sizeof...(Ts) > 0, "too few arguments provided");
+template <spawn_options Os = no_spawn_options, class F, class... Ts>
+typename infer_handle_from_fun<F>::type
+spawn(F fun, Ts&&... xs) {
   return spawn_functor<Os>(nullptr, empty_before_launch_callback{},
-                           std::forward<Ts>(xs)...);
+                           std::move(fun), std::forward<Ts>(xs)...);
 }
 
 /// Returns a new actor that immediately, i.e., before this function
@@ -206,22 +196,22 @@ template <class Result,
                                   local_actor,
                                   typename std::remove_pointer<FirstArg>::type
                                 >::value>
-struct infer_typed_actor_base;
+struct CAF_DEPRECATED infer_typed_actor_base;
 
 template <class... Sigs, class FirstArg>
 struct infer_typed_actor_base<typed_behavior<Sigs...>, FirstArg, false> {
   using type = typed_event_based_actor<Sigs...>;
-};
+} CAF_DEPRECATED;
 
 template <class Result, class T>
 struct infer_typed_actor_base<Result, T*, true> {
   using type = T;
-};
+} CAF_DEPRECATED;
 
 /// Returns a new typed actor of type `C` using `xs...` as
 /// constructor arguments.
 template <class C, spawn_options Os = no_spawn_options, class... Ts>
-typename actor_handle_from_signature_list<typename C::signatures>::type
+CAF_DEPRECATED typename actor_handle_from_signature_list<typename C::signatures>::type
 spawn_typed(Ts&&... xs) {
   return spawn_class<C, Os>(nullptr, empty_before_launch_callback{},
                             std::forward<Ts>(xs)...);
@@ -229,7 +219,7 @@ spawn_typed(Ts&&... xs) {
 
 /// Spawns a typed actor from a functor .
 template <spawn_options Os, typename BeforeLaunch, typename F, class... Ts>
-typename infer_typed_actor_handle<
+CAF_DEPRECATED typename infer_typed_actor_handle<
   typename detail::get_callable_trait<F>::result_type,
   typename detail::tl_head<
     typename detail::get_callable_trait<F>::arg_types
@@ -252,7 +242,7 @@ spawn_typed_functor(execution_unit* eu, BeforeLaunch cb, F fun, Ts&&... xs) {
 /// invoke the functor. This function delegates its arguments to
 /// `spawn_typed_functor`.
 template <spawn_options Os = no_spawn_options, typename F, class... Ts>
-typename infer_typed_actor_handle<
+CAF_DEPRECATED typename infer_typed_actor_handle<
   typename detail::get_callable_trait<F>::result_type,
   typename detail::tl_head<
     typename detail::get_callable_trait<F>::arg_types

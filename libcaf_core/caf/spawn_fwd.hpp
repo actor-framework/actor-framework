@@ -25,6 +25,7 @@
 
 #include "caf/group.hpp"
 #include "caf/typed_actor.hpp"
+#include "caf/infer_handle.hpp"
 #include "caf/spawn_options.hpp"
 
 #include "caf/detail/type_list.hpp"
@@ -43,10 +44,11 @@ template <spawn_options Os = no_spawn_options,
           class BeforeLaunch = void (*)(abstract_actor*),
           class F = behavior (*)(),
           class... Ts>
-actor spawn_functor(execution_unit* host,
-                    BeforeLaunch before_launch_fun,
-                    F fun,
-                    Ts&&... xs);
+typename infer_handle_from_fun<F>::type
+spawn_functor(execution_unit* host,
+              BeforeLaunch before_launch_fun,
+              F fun,
+              Ts&&... xs);
 
 template <class InputIt>
 class groups_subscriber {
@@ -77,23 +79,23 @@ struct empty_before_launch_callback {
 };
 
 /******************************************************************************
- *                                typed actors                                *
+ *                      typed actors (deprecated)                             *
  ******************************************************************************/
 
 template <class TypedBehavior, class FirstArg>
-struct infer_typed_actor_handle;
+struct CAF_DEPRECATED infer_typed_actor_handle;
 
 // infer actor type from result type if possible
 template <class... Sigs, class FirstArg>
 struct infer_typed_actor_handle<typed_behavior<Sigs...>, FirstArg> {
   using type = typed_actor<Sigs...>;
-};
+} CAF_DEPRECATED;
 
 // infer actor type from first argument if result type is void
 template <class... Sigs>
 struct infer_typed_actor_handle<void, typed_event_based_actor<Sigs...>*> {
   using type = typed_actor<Sigs...>;
-};
+} CAF_DEPRECATED;
 
 template <class SignatureList>
 struct actor_handle_from_signature_list;
@@ -101,7 +103,7 @@ struct actor_handle_from_signature_list;
 template <class... Sigs>
 struct actor_handle_from_signature_list<detail::type_list<Sigs...>> {
   using type = typed_actor<Sigs...>;
-};
+} CAF_DEPRECATED;
 
 template <spawn_options Os, typename BeforeLaunch, typename F, class... Ts>
 typename infer_typed_actor_handle<
@@ -110,7 +112,7 @@ typename infer_typed_actor_handle<
     typename detail::get_callable_trait<F>::arg_types
   >::type
 >::type
-spawn_typed_functor(execution_unit*, BeforeLaunch bl, F fun, Ts&&... xs);
+spawn_typed_functor(execution_unit*, BeforeLaunch bl, F fun, Ts&&... xs) CAF_DEPRECATED;
 
 } // namespace caf
 

@@ -123,7 +123,7 @@ CAF_TEST(dynamic_stateful_actor) {
 }
 
 CAF_TEST(typed_stateful_actor) {
-  test_adder(spawn_typed(typed_adder));
+  test_adder(spawn(typed_adder));
 }
 
 CAF_TEST(dynamic_stateful_actor_class) {
@@ -131,7 +131,7 @@ CAF_TEST(dynamic_stateful_actor_class) {
 }
 
 CAF_TEST(typed_stateful_actor_class) {
-  test_adder(spawn_typed<typed_adder_class>());
+  test_adder(spawn<typed_adder_class>());
 }
 
 CAF_TEST(no_name) {
