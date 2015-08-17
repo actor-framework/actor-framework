@@ -36,6 +36,10 @@
 
 #include "caf/detail/run_program.hpp"
 
+#ifdef CAF_USE_ASIO
+#include "caf/io/network/asio_multiplexer.hpp"
+#endif // CAF_USE_ASIO
+
 using namespace caf;
 using namespace caf::io;
 using namespace caf::experimental;

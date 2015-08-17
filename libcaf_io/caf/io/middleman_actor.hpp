@@ -35,11 +35,11 @@ namespace io {
 ///   // Establishes a new `port <-> actor` mapping and  returns the actual
 ///   // port in use on success. Passing 0 as port instructs the OS to choose
 ///   // the next high-level port available for binding.
-///   // @param port: Unused TCP port or 0 for any.
-///   // @param whom: Actor that should be published at given port.
-///   // @param ifs: Interface of given actor.
-///   // @param addr: IP address to listen to or empty for any.
-///   // @param reuse_addr: Enables or disables SO_REUSEPORT option.
+///   // port: Unused TCP port or 0 for any.
+///   // whom: Actor that should be published at given port.
+///   // ifs: Interface of given actor.
+///   // addr: IP address to listen to or empty for any.
+///   // reuse:_addr: Enables or disables SO_REUSEPORT option.
 ///   (publish_atom, uint16_t port, actor_addr whom,
 ///    set<string> ifs, string addr, bool reuse_addr)
 ///   -> either (ok_atom, uint16_t port)
@@ -49,9 +49,9 @@ namespace io {
 ///   // difference between `PUBLISH` and `OPEN` is that no actor is mapped to
 ///   // this port, meaning that connecting nodes only get a valid `node_id`
 ///   // handle when connecting.
-///   // @param port: Unused TCP port or 0 for any.
-///   // @param addr: IP address to listen to or empty for any.
-///   // @param reuse_addr: Enables or disables SO_REUSEPORT option.
+///   // port: Unused TCP port or 0 for any.
+///   // addr: IP address to listen to or empty for any.
+///   // reuse:_addr: Enables or disables SO_REUSEPORT option.
 ///   (open_atom, uint16_t port, string addr, bool reuse_addr)
 ///   -> either (ok_atom, uint16_t port)
 ///      or     (error_atom, string error_string)
@@ -60,33 +60,32 @@ namespace io {
 ///   // an `actor_addr` to a remote actor if an actor was published at this
 ///   // port. The actor address must be cast to either `actor` or
 ///   // `typed_actor` using `actor_cast` after validating `ifs`.
-///   // @param hostname IP address or DNS hostname.
-///   // @param port TCP port.
+///   // hostname: IP address or DNS hostname.
+///   // port: TCP port.
 ///   (connect_atom, string hostname, uint16_t port)
 ///   -> either (ok_atom, node_id nid, actor_addr remote_actor, set<string> ifs)
 ///      or     (error_atom, string error_string)
 ///
 ///   // Closes `port` if it is mapped to `whom`.
-///   // @param whom A published actor.
-///   // @param port Used TCP port.
+///   // whom: A published actor.
+///   // port: Used TCP port.
 ///   (unpublish_atom, actor_addr whom, uint16_t port)
 ///   -> either (ok_atom)
 ///      or     (error_atom, string error_string)
 ///
 ///   // Unconditionally closes `port`, removing any actor
 ///   // published at this port.
-///   // @param port Used TCP port.
+///   // port: Used TCP port.
 ///   (close_atom, uint16_t port)
 ///   -> either (ok_atom)
 ///      or     (error_atom, string error_string)
 ///
-///   // Spawns an actor on a remote node, initializing it
-///   // using the arguments stored in `msg`.
-///   // @param nid ID of the remote node that should spawn the actor.
-///   // @param name Announced type name of the actor.
-///   // @param args Initialization arguments for the actor.
-///   // @returns The address of the spawned actor and its interface
-///   //          description on success; an error string otherwise.
+///   // Spawns an actor on a remote node, initializing it using the arguments
+///   // stored in `msg` and returns the address of the spawned actor and its
+///   // interface description on success; an error string otherwise.
+///   // nid: ID of the remote node that should spawn the actor.
+///   // name: Announced type name of the actor.
+///   // args: Initialization arguments for the actor.
 ///   (spawn_atom, node_id nid, string name, message args)
 ///   -> either (ok_atom, actor_addr, set<string>
 ///      or     (error_atom, string error_string)
