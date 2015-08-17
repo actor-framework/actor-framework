@@ -33,10 +33,11 @@ namespace caf {
 namespace io {
 namespace network {
 
+// {protocol => address}
+using address_listing = std::map<protocol, std::vector<std::string>>;
+
 // {interface_name => {protocol => address}}
-using interfaces_map = std::map<std::string,
-                                std::map<protocol,
-                                         std::vector<std::string>>>;
+using interfaces_map = std::map<std::string, address_listing>;
 
 /// Utility class bundling access to network interface names and addresses.
 class interfaces {
@@ -45,8 +46,7 @@ public:
   static interfaces_map list_all(bool include_localhost = true);
 
   /// Returns all addresses for all devices for all protocols.
-  static std::map<protocol, std::vector<std::string>>
-  list_addresses(bool include_localhost = true);
+  static address_listing list_addresses(bool include_localhost = true);
 
   /// Returns all addresses for all devices for given protocol.
   static std::vector<std::string> list_addresses(protocol proc,

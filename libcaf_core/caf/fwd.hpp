@@ -56,6 +56,8 @@ class mailbox_element;
 class message_handler;
 class uniform_type_info;
 class event_based_actor;
+class binary_serializer;
+class binary_deserializer;
 class forwarding_actor_proxy;
 
 // structs
@@ -87,8 +89,16 @@ template <class T, typename U>
 T actor_cast(const U&);
 
 namespace io {
-  class broker;
-  class middleman;
+
+class broker;
+class middleman;
+
+namespace basp {
+
+struct header;
+
+} // namespace basp
+
 } // namespace io
 
 namespace scheduler {

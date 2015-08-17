@@ -99,6 +99,10 @@ public:
     });
   }
 
+  inline bool has_hook() const {
+    return hooks_ != nullptr;
+  }
+
   template <class F>
   void add_shutdown_cb(F fun) {
     struct impl : hook {

@@ -20,9 +20,9 @@
 #ifndef CAF_ACTOR_NAMESPACE_HPP
 #define CAF_ACTOR_NAMESPACE_HPP
 
-#include <map>
 #include <utility>
 #include <functional>
+#include <unordered_map>
 
 #include "caf/node_id.hpp"
 #include "caf/actor_cast.hpp"
@@ -56,7 +56,7 @@ public:
 
   /// Writes an actor address to `sink` and adds the actor
   /// to the list of known actors for a later deserialization.
-  void write(serializer* sink, const actor_addr& ptr);
+  void write(serializer* sink, const actor_addr& ptr) const;
 
   /// Reads an actor address from `source,` creating
   /// addresses for remote actors on the fly if needed.
@@ -120,7 +120,7 @@ public:
 
 private:
   backend& backend_;
-  std::map<key_type, proxy_map> proxies_;
+  std::unordered_map<key_type, proxy_map> proxies_;
 };
 
 } // namespace caf

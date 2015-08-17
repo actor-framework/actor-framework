@@ -20,13 +20,14 @@
 #ifndef CAF_DETAIL_ACTOR_REGISTRY_HPP
 #define CAF_DETAIL_ACTOR_REGISTRY_HPP
 
-#include <map>
 #include <mutex>
 #include <thread>
 #include <atomic>
 #include <cstdint>
+#include <unordered_map>
 #include <condition_variable>
 
+#include "caf/actor.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/abstract_actor.hpp"
 
@@ -38,10 +39,8 @@ namespace detail {
 
 class singletons;
 
-class actor_registry : public singleton_mixin<actor_registry> {
+class actor_registry {
 public:
-  friend class singleton_mixin<actor_registry>;
-
   ~actor_registry();
 
   /// A registry entry consists of a pointer to the actor and an
@@ -82,19 +81,37 @@ public:
   // blocks the caller until running-actors-count becomes `expected`
   void await_running_count_equal(size_t expected);
 
+  actor get_named(atom_value key) const;
+
+  void put_named(atom_value key, actor value);
+
+  using named_entries = std::unordered_map<atom_value, actor>;
+
+  named_entries named_actors() const;
+
+  static actor_registry* create_singleton();
+
+  void dispose();
+
+  void stop();
+
+  void initialize();
+
 private:
-  using entries = std::map<actor_id, value_type>;
+  using entries = std::unordered_map<actor_id, value_type>;
 
   actor_registry();
 
   std::atomic<size_t> running_;
-  std::atomic<actor_id> ids_;
 
   std::mutex running_mtx_;
   std::condition_variable running_cv_;
 
   mutable detail::shared_spinlock instances_mtx_;
   entries entries_;
+
+  named_entries named_entries_;
+  mutable detail::shared_spinlock named_entries_mtx_;
 };
 
 } // namespace detail

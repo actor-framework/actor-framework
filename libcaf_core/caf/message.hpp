@@ -390,6 +390,12 @@ inline message make_message(message other) {
   return std::move(other);
 }
 
+/// Returns an empty `message`.
+/// @relates message
+inline message make_message() {
+  return message{};
+}
+
 /******************************************************************************
  *                  template member function implementations                  *
  ******************************************************************************/

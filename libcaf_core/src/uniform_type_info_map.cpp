@@ -95,18 +95,6 @@ const char* numbered_type_names[] = {
 
 namespace {
 
-// might become part of serializer's public API at some point
-template <class T>
-void operator&(serializer& sink, const T& value) {
-  sink << value;
-}
-
-// might become part of deserializer's public API at some point
-template <class T>
-void operator&(deserializer& source, T& value) {
-  source >> value;
-}
-
 // primitive types are handled by serializer/deserializer directly
 template <class T, class U>
 typename std::enable_if<

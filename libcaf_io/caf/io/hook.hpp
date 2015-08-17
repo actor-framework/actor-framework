@@ -20,6 +20,7 @@
 #ifndef CAF_IO_HOOK_HPP
 #define CAF_IO_HOOK_HPP
 
+#include <set>
 #include <memory>
 #include <vector>
 
@@ -71,16 +72,17 @@ public:
                                          const message& payload);
 
   /// Called whenever a message is forwarded to a different node.
-  virtual void message_forwarded_cb(const node_id& from, const node_id& dest,
+  virtual void message_forwarded_cb(const basp::header& hdr,
                                     const std::vector<char>* payload);
 
   /// Called whenever no route for a forwarding request exists.
-  virtual void message_forwarding_failed_cb(const node_id& from,
-                                            const node_id& to,
+  virtual void message_forwarding_failed_cb(const basp::header& hdr,
                                             const std::vector<char>* payload);
 
   /// Called whenever an actor has been published.
-  virtual void actor_published_cb(const actor_addr& addr, uint16_t port);
+  virtual void actor_published_cb(const actor_addr& addr,
+                                  const std::set<std::string>& ifs,
+                                  uint16_t port);
 
   /// Called whenever a new remote actor appeared.
   virtual void new_remote_actor_cb(const actor_addr& addr);
@@ -92,6 +94,15 @@ public:
   /// @param via The node that has sent us the message.
   /// @param node The newly added entry to the routing table.
   virtual void new_route_added_cb(const node_id& via, const node_id& node);
+
+  /// Called whenever a direct connection was lost.
+  virtual void connection_lost_cb(const node_id& dest);
+
+  /// Called whenever a route became unavailable.
+  /// @param hop The node that was either disconnected
+  ///            or lost a connection itself.
+  /// @param dest The node that is no longer reachable via `hop`.
+  virtual void route_lost_cb(const node_id& hop, const node_id& dest);
 
   /// Called whenever a message was discarded because a remote node
   /// tried to send a message to an actor ID that could not be found
@@ -115,6 +126,8 @@ public:
     new_remote_actor,
     new_connection_established,
     new_route_added,
+    connection_lost,
+    route_lost,
     invalid_message_received,
     before_shutdown
   };
@@ -150,6 +163,8 @@ private:
   CAF_IO_HOOK_DISPATCH(new_remote_actor)
   CAF_IO_HOOK_DISPATCH(new_connection_established)
   CAF_IO_HOOK_DISPATCH(new_route_added)
+  CAF_IO_HOOK_DISPATCH(connection_lost)
+  CAF_IO_HOOK_DISPATCH(route_lost)
   CAF_IO_HOOK_DISPATCH(invalid_message_received)
   CAF_IO_HOOK_DISPATCH(before_shutdown)
 };

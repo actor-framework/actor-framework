@@ -392,6 +392,16 @@ public:
   /// implementation simply returns "actor".
   virtual const char* name() const;
 
+  /// Serializes the state of this actor to `sink`. This function is
+  /// only called if this actor has set the `is_serializable` flag.
+  /// The default implementation throws a `std::logic_error`.
+  virtual void save(serializer& sink, const unsigned int version);
+
+  /// Deserializes the state of this actor from `source`. This function is
+  /// only called if this actor has set the `is_serializable` flag.
+  /// The default implementation throws a `std::logic_error`.
+  virtual void load(deserializer& source, const unsigned int version);
+
   /****************************************************************************
    *                       deprecated member functions                        *
    ****************************************************************************/
@@ -463,7 +473,9 @@ public:
     return (mid.is_request()) ? mid.response_id() : message_id();
   }
 
-  void forward_message(const actor& dest, message_priority mp);
+  void forward_current_message(const actor& dest);
+
+  void forward_current_message(const actor& dest, message_priority mp);
 
   template <class... Ts>
   void delegate(message_priority mp, const actor& dest, Ts&&... xs) {
@@ -611,9 +623,9 @@ public:
     initial_behavior_fac_ = std::move(fun);
   }
 
-protected:
   void do_become(behavior bhvr, bool discard_old);
 
+protected:
   // used only in thread-mapped actors
   void await_data();
 

@@ -228,6 +228,12 @@ private:
   behavior bhvr_;
 };
 
+template <class T>
+struct is_typed_behavior : std::false_type { };
+
+template <class... Sigs>
+struct is_typed_behavior<typed_behavior<Sigs...>> : std::true_type { };
+
 } // namespace caf
 
 #endif // CAF_TYPED_BEHAVIOR_HPP
