@@ -246,12 +246,20 @@ void routing_table::erase_direct(const connection_handle& hdl,
   if (i == direct_by_hdl_.end())
     return;
   cb(i->second);
+  parent_->parent().notify<hook::connection_lost>(i->second);
   direct_by_nid_.erase(i->second);
   direct_by_hdl_.erase(i);
 }
 
 bool routing_table::erase_indirect(const node_id& dest) {
-  return indirect_.erase(dest) > 0;
+  auto i = indirect_.find(dest);
+  if (i == indirect_.end())
+    return false;
+  if (parent_->parent().has_hook())
+    for (auto& nid : i->second)
+      parent_->parent().notify<hook::route_lost>(nid, dest);
+  indirect_.erase(i);
+  return true;
 }
 
 void routing_table::add_direct(const connection_handle& hdl,
@@ -260,6 +268,7 @@ void routing_table::add_direct(const connection_handle& hdl,
   CAF_ASSERT(direct_by_nid_.count(nid) == 0);
   direct_by_hdl_.emplace(hdl, nid);
   direct_by_nid_.emplace(nid, hdl);
+  parent_->parent().notify<hook::new_connection_established>(nid);
 }
 
 bool routing_table::add_indirect(const node_id& hop, const node_id& dest) {
@@ -268,6 +277,7 @@ bool routing_table::add_indirect(const node_id& hop, const node_id& dest) {
     auto& hops = indirect_[dest];
     auto added_first = hops.empty();
     hops.emplace(hop);
+    parent_->parent().notify<hook::new_route_added>(hop, dest);
     return added_first;
   }
   return false; // blacklisted
@@ -283,14 +293,17 @@ size_t routing_table::erase(const node_id& dest, erase_callback& cb) {
   auto i = indirect_.find(dest);
   if (i != indirect_.end()) {
     res = i->second.size();
-    for (auto& nid : i->second)
+    for (auto& nid : i->second) {
       cb(nid);
+      parent_->parent().notify<hook::route_lost>(nid, dest);
+    }
     indirect_.erase(i);
   }
   auto hdl = lookup_direct(dest);
   if (hdl != invalid_connection_handle) {
     direct_by_hdl_.erase(hdl);
     direct_by_nid_.erase(dest);
+    parent_->parent().notify<hook::connection_lost>(dest);
     ++res;
   }
   return res;
@@ -300,7 +313,9 @@ size_t routing_table::erase(const node_id& dest, erase_callback& cb) {
  *                                   callee                                   *
  ******************************************************************************/
 
-instance::callee::callee(actor_namespace::backend& mgm) : namespace_(mgm) {
+instance::callee::callee(actor_namespace::backend& mgm, middleman& mm)
+    : namespace_(mgm),
+      middleman_(mm) {
   // nop
 }
 
@@ -358,6 +373,7 @@ connection_state instance::handle(const new_data_msg& dm, header& hdr,
       if (payload)
         bs.write_raw(payload->size(), payload->data());
       tbl_.flush(*path);
+      notify<hook::message_forwarded>(hdr, payload);
     } else {
       CAF_LOG_INFO("cannot forward message, no route to destination");
       if (hdr.source_node != this_node_) {
@@ -375,6 +391,7 @@ connection_state instance::handle(const new_data_msg& dm, header& hdr,
       } else {
         CAF_LOG_WARNING("lost packet with probably spoofed source");
       }
+      notify<hook::message_forwarding_failed>(hdr, payload);
     }
     return await_header;
   }
@@ -385,16 +402,13 @@ connection_state instance::handle(const new_data_msg& dm, header& hdr,
   // handle message to ourselves
   switch (hdr.operation) {
     case message_type::server_handshake: {
-      if (! payload_valid()) {
-        CAF_LOG_WARNING("received server handshake without payload");
-        return err();
-      }
       actor_id aid = invalid_actor_id;
       std::set<std::string> sigs;
-      binary_deserializer bd{payload->data(), payload->size(),
-                             &get_namespace()};
-      // read payload (ID and interface of published actor)
-      bd >> aid >> sigs;
+      if (payload_valid()) {
+        binary_deserializer bd{payload->data(), payload->size(),
+                               &get_namespace()};
+        bd >> aid >> sigs;
+      }
       // close self connection after handshake is done
       if (hdr.source_node == this_node_) {
         CAF_LOG_INFO("close connection to self immediately");
@@ -512,6 +526,7 @@ void instance::add_published_actor(uint16_t port,
   auto& entry = published_actors_[port];
   swap(entry.first, published_actor);
   swap(entry.second, published_interface);
+  notify<hook::actor_published>(entry.first, entry.second, port);
 }
 
 size_t instance::remove_published_actor(uint16_t port,
@@ -555,11 +570,12 @@ size_t instance::remove_published_actor(const actor_addr& whom, uint16_t port,
 bool instance::dispatch(const actor_addr& sender, const actor_addr& receiver,
                         message_id mid, const message& msg) {
   CAF_LOG_TRACE("");
-  if (! receiver.is_remote())
-    return false;
+  CAF_ASSERT(receiver.is_remote());
   auto path = lookup(receiver->node());
-  if (! path)
+  if (! path) {
+    notify<hook::message_sending_failed>(sender, receiver, mid, msg);
     return false;
+  }
   auto writer = make_callback([&](serializer& sink) {
     msg.serialize(sink);
   });
@@ -568,6 +584,7 @@ bool instance::dispatch(const actor_addr& sender, const actor_addr& receiver,
              sender ? sender->id() : invalid_actor_id, receiver->id()};
   write(path->wr_buf, hdr, &writer);
   flush(*path);
+  notify<hook::message_sent>(sender, path->next_hop, receiver, mid, msg);
   return true;
 }
 

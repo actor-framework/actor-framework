@@ -29,13 +29,14 @@
 
 #include "caf/fwd.hpp"
 #include "caf/node_id.hpp"
+#include "caf/callback.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/serializer.hpp"
 #include "caf/deserializer.hpp"
 #include "caf/abstract_actor.hpp"
-#include "caf/callback.hpp"
 #include "caf/actor_namespace.hpp"
 
+#include "caf/io/middleman.hpp"
 #include "caf/io/receive_policy.hpp"
 #include "caf/io/abstract_broker.hpp"
 #include "caf/io/system_messages.hpp"
@@ -372,7 +373,7 @@ public:
   /// Provides a callback-based interface for certain BASP events.
   class callee {
   public:
-    explicit callee(actor_namespace::backend& mgm);
+    explicit callee(actor_namespace::backend& mgm, middleman& mm);
 
     virtual ~callee();
 
@@ -411,12 +412,17 @@ public:
     virtual void learned_new_node_indirectly(const node_id& nid) = 0;
 
     /// Returns the actor namespace associated to this BASP protocol instance.
-    actor_namespace& get_namespace() {
+    inline actor_namespace& get_namespace() {
       return namespace_;
     }
 
-  public:
+    inline middleman& get_middleman() {
+      return middleman_;
+    }
+
+  protected:
     actor_namespace namespace_;
+    middleman& middleman_;
   };
 
   /// Describes a function object responsible for writing
@@ -530,8 +536,14 @@ public:
                                  actor_id aid,
                                  uint32_t rsn);
 
-  const node_id& this_node() const {
+  inline const node_id& this_node() const {
     return this_node_;
+  }
+
+  /// Invokes the callback(s) associated with given event.
+  template <hook::event_type Event, typename... Ts>
+  void notify(Ts&&... xs) {
+    callee_.get_middleman().template notify<Event>(std::forward<Ts>(xs)...);
   }
 
 private:
