@@ -48,7 +48,8 @@ namespace io {
  ******************************************************************************/
 
 basp_broker_state::basp_broker_state(broker* selfptr)
-    : basp::instance::callee(static_cast<actor_namespace::backend&>(*this)),
+    : basp::instance::callee(static_cast<actor_namespace::backend&>(*this),
+                             selfptr->parent()),
       self(selfptr),
       instance(selfptr, *this) {
   CAF_ASSERT(this_node() != invalid_node_id);
@@ -97,7 +98,7 @@ actor_proxy_ptr basp_broker_state::make_proxy(const node_id& nid,
                  this_node(), nid,
                  invalid_actor_id, aid);
   instance.tbl().flush(*path);
-  self->parent().notify<hook::new_remote_actor>(res->address());
+  middleman_.notify<hook::new_remote_actor>(res->address());
   return res;
 }
 
@@ -226,12 +227,16 @@ void basp_broker_state::deliver(const node_id& source_node,
     }
   if (! dest) {
     CAF_LOG_INFO("cannot deliver message, destination not found");
+    self->parent().notify<hook::invalid_message_received>(source_node, src,
+                                                          dest_actor, mid, msg);
     if (mid.valid() && src != invalid_actor_addr) {
       detail::sync_request_bouncer srb{rsn};
       srb(src, mid);
     }
     return;
   }
+  self->parent().notify<hook::message_received>(source_node, src,
+                                                dest->address(), mid, msg);
   dest->enqueue(src, mid, std::move(msg), nullptr);
 }
 
@@ -321,18 +326,20 @@ void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
           [&](uint16_t port, network::address_listing& addresses) {
             auto& mx = middleman::instance()->backend();
             for (auto& kvp : addresses)
-              for (auto& addr : kvp.second) {
-                try {
-                  auto hdl = mx.new_tcp_scribe(addr, port);
-                  // gotcha! send scribe to our BASP broker
-                  // to initiate handshake etc.
-                  helper->send(bb, connect_atom::value, hdl, port);
-                  return;
+              if (kvp.first != network::protocol::ethernet)
+                for (auto& addr : kvp.second) {
+                  try {
+                    auto hdl = mx.new_tcp_scribe(addr, port);
+                    // gotcha! send scribe to our BASP broker
+                    // to initiate handshake etc.
+                    CAF_LOGF_INFO("connected directly via " << addr);
+                    helper->send(bb, connect_atom::value, hdl, port);
+                    return;
+                  }
+                  catch (...) {
+                    // simply try next address
+                  }
                 }
-                catch (...) {
-                  // simply try next address
-                }
-              }
             CAF_LOGF_INFO("could not connect to node directly, nid = "
                           << to_string(nid));
           }
@@ -511,7 +518,6 @@ behavior basp_broker::make_behavior() {
       }
       detail::singletons::get_actor_registry()->put(whom->id(), whom);
       state.instance.add_published_actor(port, whom, std::move(sigs));
-      parent().notify<hook::actor_published>(whom, port);
     },
     // received from middleman actor (delegated)
     [=](connect_atom, connection_handle hdl, uint16_t port) {
@@ -585,6 +591,7 @@ behavior basp_broker::make_behavior() {
         value.apply([&](bool enabled) {
           if (! enabled)
             return;
+          CAF_LOG_INFO("enable automatic connection");
           // open a random port and store a record for others
           // how to connect to this port in the configuration server
           auto port = add_tcp_doorman(uint16_t{0}).second;

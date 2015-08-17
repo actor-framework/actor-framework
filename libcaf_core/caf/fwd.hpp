@@ -89,8 +89,16 @@ template <class T, typename U>
 T actor_cast(const U&);
 
 namespace io {
-  class broker;
-  class middleman;
+
+class broker;
+class middleman;
+
+namespace basp {
+
+struct header;
+
+} // namespace basp
+
 } // namespace io
 
 namespace scheduler {

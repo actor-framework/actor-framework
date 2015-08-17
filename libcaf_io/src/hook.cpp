@@ -40,9 +40,14 @@ void hook::message_sent_cb(const actor_addr& from, const node_id& dest_node,
   call_next<message_sent>(from, dest_node, dest, mid, payload);
 }
 
-void hook::message_forwarded_cb(const node_id& from, const node_id& dest,
+void hook::message_forwarded_cb(const basp::header& hdr,
                                 const std::vector<char>* payload) {
-  call_next<message_forwarded>(from, dest, payload);
+  call_next<message_forwarded>(hdr, payload);
+}
+
+void hook::message_forwarding_failed_cb(const basp::header& hdr,
+                                        const std::vector<char>* payload) {
+  call_next<message_forwarding_failed>(hdr, payload);
 }
 
 void hook::message_sending_failed_cb(const actor_addr& from,
@@ -52,13 +57,10 @@ void hook::message_sending_failed_cb(const actor_addr& from,
   call_next<message_sending_failed>(from, dest, mid, payload);
 }
 
-void hook::message_forwarding_failed_cb(const node_id& from, const node_id& to,
-                                        const std::vector<char>* payload) {
-  call_next<message_forwarding_failed>(from, to, payload);
-}
-
-void hook::actor_published_cb(const actor_addr& addr, uint16_t port) {
-  call_next<actor_published>(addr, port);
+void hook::actor_published_cb(const actor_addr& addr,
+                              const std::set<std::string>& ifs,
+                              uint16_t port) {
+  call_next<actor_published>(addr, ifs, port);
 }
 
 void hook::new_remote_actor_cb(const actor_addr& addr) {
@@ -71,6 +73,14 @@ void hook::new_connection_established_cb(const node_id& node) {
 
 void hook::new_route_added_cb(const node_id& via, const node_id& node) {
   call_next<new_route_added>(via, node);
+}
+
+void hook::connection_lost_cb(const node_id& dest) {
+  call_next<connection_lost>(dest);
+}
+
+void hook::route_lost_cb(const node_id& hop, const node_id& dest) {
+  call_next<route_lost>(hop, dest);
 }
 
 void hook::invalid_message_received_cb(const node_id& source,
