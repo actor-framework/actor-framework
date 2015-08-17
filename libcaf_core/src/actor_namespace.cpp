@@ -62,7 +62,7 @@ actor_namespace::actor_namespace(backend& be) : backend_(be) {
   // nop
 }
 
-void actor_namespace::write(serializer* sink, const actor_addr& addr) {
+void actor_namespace::write(serializer* sink, const actor_addr& addr) const {
   CAF_ASSERT(sink != nullptr);
   if (! addr) {
     node_id::host_id_type zero;

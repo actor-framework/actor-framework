@@ -76,12 +76,12 @@ void singletons::stop_singletons() {
   }
   CAF_LOGF_DEBUG("stop group manager");
   stop(s_group_manager);
+  CAF_LOGF_DEBUG("stop actor registry");
+  stop(s_actor_registry);
   CAF_LOGF_DEBUG("stop scheduler");
   stop(s_scheduling_coordinator);
   CAF_LOGF_DEBUG("wait for all detached threads");
   scheduler::await_detached_threads();
-  CAF_LOGF_DEBUG("stop actor registry");
-  stop(s_actor_registry);
   // dispose singletons, i.e., release memory
   CAF_LOGF_DEBUG("dispose plugins");
   for (auto& plugin : s_plugins) {

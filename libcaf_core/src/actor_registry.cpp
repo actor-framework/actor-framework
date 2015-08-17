@@ -22,11 +22,19 @@
 #include <mutex>
 #include <limits>
 #include <stdexcept>
+#include <unordered_map>
+#include <unordered_set>
 
+#include "caf/spawn.hpp"
 #include "caf/locks.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/attachable.hpp"
 #include "caf/exit_reason.hpp"
+#include "caf/scoped_actor.hpp"
+#include "caf/event_based_actor.hpp"
+
+#include "caf/experimental/stateful_actor.hpp"
+#include "caf/experimental/announce_actor_type.hpp"
 
 #include "caf/scheduler/detached_threads.hpp"
 
@@ -47,7 +55,7 @@ actor_registry::~actor_registry() {
   // nop
 }
 
-actor_registry::actor_registry() : running_(0), ids_(1) {
+actor_registry::actor_registry() : running_(0) {
   // nop
 }
 
@@ -95,10 +103,6 @@ void actor_registry::erase(actor_id key, uint32_t reason) {
   }
 }
 
-uint32_t actor_registry::next_id() {
-  return ++ids_;
-}
-
 void actor_registry::inc_running() {
 # if defined(CAF_LOG_LEVEL) && CAF_LOG_LEVEL >= CAF_DEBUG
     CAF_LOG_DEBUG("new value = " << ++running_);
@@ -128,6 +132,120 @@ void actor_registry::await_running_count_equal(size_t expected) {
     CAF_LOG_DEBUG("count = " << running_.load());
     running_cv_.wait(guard);
   }
+}
+
+actor actor_registry::get_named(atom_value key) const {
+  shared_guard guard{named_entries_mtx_};
+  auto i = named_entries_.find(key);
+  if (i == named_entries_.end())
+    return invalid_actor;
+  return i->second;
+}
+
+void actor_registry::put_named(atom_value key, actor value) {
+  if (value)
+    value->attach_functor([=](uint32_t) {
+      detail::singletons::get_actor_registry()->put_named(key, invalid_actor);
+    });
+  exclusive_guard guard{named_entries_mtx_};
+  named_entries_.emplace(key, std::move(value));
+}
+
+auto actor_registry::named_actors() const -> named_entries {
+  shared_guard guard{named_entries_mtx_};
+  return named_entries_;
+}
+
+actor_registry* actor_registry::create_singleton() {
+  return new actor_registry;
+}
+
+void actor_registry::dispose() {
+  delete this;
+}
+
+void actor_registry::stop() {
+  scoped_actor self{true};
+  for (auto& kvp : named_entries_) {
+    self->monitor(kvp.second);
+    self->send_exit(kvp.second, exit_reason::kill);
+    self->receive(
+      [](const down_msg&) {
+        // nop
+      }
+    );
+  }
+  named_entries_.clear();
+}
+
+void actor_registry::initialize() {
+  using namespace experimental;
+  struct kvstate {
+    using key_type = std::string;
+    using mapped_type = message;
+    using subscriber_set = std::unordered_set<actor>;
+    using topic_set = std::unordered_set<std::string>;
+    std::unordered_map<key_type, std::pair<mapped_type, subscriber_set>> data;
+    std::unordered_map<actor,topic_set> subscribers;
+    const char* name = "caf.config_server";
+  };
+  auto kvstore = [](stateful_actor<kvstate>* self) -> behavior {
+    return {
+      [=](put_atom, const std::string& key, message& msg) {
+        auto& vp = self->state.data[key];
+        if (vp.first == msg)
+          return;
+        vp.first = std::move(msg);
+        for (auto& subscriber : vp.second)
+          if (subscriber != self->current_sender())
+            self->send(subscriber, update_atom::value, key, vp.second);
+      },
+      [=](get_atom, std::string& key) -> message {
+        auto i = self->state.data.find(key);
+        return make_message(ok_atom::value, std::move(key),
+                            i != self->state.data.end() ? i->second.first
+                                                        : make_message());
+      },
+      [=](subscribe_atom, const std::string& key) {
+        auto subscriber = actor_cast<actor>(self->current_sender());
+        if (! subscriber)
+          return;
+        self->state.data[key].second.insert(subscriber);
+        auto& subscribers = self->state.subscribers;
+        auto i = subscribers.find(subscriber);
+        if (i != subscribers.end()) {
+          i->second.insert(key);
+        } else {
+          self->monitor(subscriber);
+          subscribers.emplace(subscriber, kvstate::topic_set{key});
+        }
+      },
+      [=](unsubscribe_atom, const std::string& key) {
+        auto subscriber = actor_cast<actor>(self->current_sender());
+        if (! subscriber)
+          return;
+        self->state.subscribers[subscriber].erase(key);
+        self->state.data[key].second.erase(subscriber);
+      },
+      [=](const down_msg& dm) {
+        auto subscriber = actor_cast<actor>(dm.source);
+        if (! subscriber)
+          return;
+        auto& subscribers = self->state.subscribers;
+        auto i = subscribers.find(subscriber);
+        if (i == subscribers.end())
+          return;
+        for (auto& key : i->second)
+          self->state.data[key].second.erase(subscriber);
+        subscribers.erase(i);
+      },
+      others >> [] {
+        return make_message(error_atom::value, "unsupported operation");
+      }
+    };
+  };
+  named_entries_.emplace(atom("SpawnServ"), spawn_announce_actor_type_server());
+  named_entries_.emplace(atom("ConfigServ"), spawn<hidden>(kvstore));
 }
 
 } // namespace detail

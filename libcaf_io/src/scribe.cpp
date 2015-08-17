@@ -61,9 +61,11 @@ void scribe::consume(const void*, size_t num_bytes) {
   buf.resize(num_bytes);
   read_msg().buf.swap(buf);
   parent()->invoke_message(invalid_actor_addr, invalid_message_id, read_msg_);
-  // swap buffer back to stream and implicitly flush wr_buf()
-  read_msg().buf.swap(buf);
-  flush();
+  if (! read_msg_.empty()) {
+    // swap buffer back to stream and implicitly flush wr_buf()
+    read_msg().buf.swap(buf);
+    flush();
+  }
 }
 
 void scribe::io_failure(network::operation op) {

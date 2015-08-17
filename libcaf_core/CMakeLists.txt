@@ -24,6 +24,7 @@ set (LIBCAF_CORE_SRCS
      src/actor_proxy.cpp
      src/actor_registry.cpp
      src/attachable.cpp
+     src/announce_actor_type.cpp
      src/behavior.cpp
      src/behavior_stack.cpp
      src/behavior_impl.cpp
@@ -77,7 +78,8 @@ set (LIBCAF_CORE_SRCS
      src/sync_request_bouncer.cpp
      src/try_match.cpp
      src/uniform_type_info.cpp
-     src/uniform_type_info_map.cpp)
+     src/uniform_type_info_map.cpp
+     src/whereis.cpp)
 
 add_custom_target(libcaf_core)
 

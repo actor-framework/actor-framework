@@ -39,15 +39,15 @@ namespace basp {
 
 std::string to_string(message_type x) {
   switch (x) {
-    case basp::message_type::server_handshake:
+    case message_type::server_handshake:
       return "server_handshake";
-    case basp::message_type::client_handshake:
+    case message_type::client_handshake:
       return "client_handshake";
-    case basp::message_type::dispatch_message:
+    case message_type::dispatch_message:
       return "dispatch_message";
-    case basp::message_type::announce_proxy_instance:
+    case message_type::announce_proxy_instance:
       return "announce_proxy_instance";
-    case basp::message_type::kill_proxy_instance:
+    case message_type::kill_proxy_instance:
       return "kill_proxy_instance";
     default:
       return "???";
@@ -146,7 +146,6 @@ bool announce_proxy_instance_valid(const header& hdr) {
        && zero(hdr.operation_data);
 }
 
-
 bool kill_proxy_instance_valid(const header& hdr) {
   return  valid(hdr.source_node)
        && valid(hdr.dest_node)
@@ -192,6 +191,19 @@ optional<routing_table::route> routing_table::lookup(const node_id& target) {
   auto hdl = lookup_direct(target);
   if (hdl != invalid_connection_handle)
     return route{parent_->wr_buf(hdl), target, hdl};
+  // pick first available indirect route
+  auto i = indirect_.find(target);
+  if (i != indirect_.end()) {
+    auto& hops = i->second;
+    while (! hops.empty()) {
+      auto& hop = *hops.begin();
+      auto hdl = lookup_direct(hop);
+      if (hdl != invalid_connection_handle)
+        return route{parent_->wr_buf(hdl), hop, hdl};
+      else
+        hops.erase(hops.begin());
+    }
+  }
   return none;
 }
 
@@ -207,6 +219,15 @@ routing_table::lookup_direct(const connection_handle& hdl) const {
 connection_handle
 routing_table::lookup_direct(const node_id& nid) const {
   return get_opt(direct_by_nid_, nid, invalid_connection_handle);
+}
+
+node_id routing_table::lookup_indirect(const node_id& nid) const {
+  auto i = indirect_.find(nid);
+  if (i == indirect_.end())
+    return invalid_node_id;
+  if (i->second.empty())
+    return invalid_node_id;
+  return *i->second.begin();
 }
 
 void routing_table::blacklist(const node_id& hop, const node_id& dest) {
@@ -225,8 +246,20 @@ void routing_table::erase_direct(const connection_handle& hdl,
   if (i == direct_by_hdl_.end())
     return;
   cb(i->second);
+  parent_->parent().notify<hook::connection_lost>(i->second);
   direct_by_nid_.erase(i->second);
   direct_by_hdl_.erase(i);
+}
+
+bool routing_table::erase_indirect(const node_id& dest) {
+  auto i = indirect_.find(dest);
+  if (i == indirect_.end())
+    return false;
+  if (parent_->parent().has_hook())
+    for (auto& nid : i->second)
+      parent_->parent().notify<hook::route_lost>(nid, dest);
+  indirect_.erase(i);
+  return true;
 }
 
 void routing_table::add_direct(const connection_handle& hdl,
@@ -235,12 +268,19 @@ void routing_table::add_direct(const connection_handle& hdl,
   CAF_ASSERT(direct_by_nid_.count(nid) == 0);
   direct_by_hdl_.emplace(hdl, nid);
   direct_by_nid_.emplace(nid, hdl);
+  parent_->parent().notify<hook::new_connection_established>(nid);
 }
 
-void routing_table::add_indirect(const node_id& hop, const node_id& dest) {
+bool routing_table::add_indirect(const node_id& hop, const node_id& dest) {
   auto i = blacklist_.find(dest);
-  if (i == blacklist_.end() || i->second.count(hop) == 0)
-    indirect_[dest].emplace(hop);
+  if (i == blacklist_.end() || i->second.count(hop) == 0) {
+    auto& hops = indirect_[dest];
+    auto added_first = hops.empty();
+    hops.emplace(hop);
+    parent_->parent().notify<hook::new_route_added>(hop, dest);
+    return added_first;
+  }
+  return false; // blacklisted
 }
 
 bool routing_table::reachable(const node_id& dest) {
@@ -253,14 +293,17 @@ size_t routing_table::erase(const node_id& dest, erase_callback& cb) {
   auto i = indirect_.find(dest);
   if (i != indirect_.end()) {
     res = i->second.size();
-    for (auto& nid : i->second)
+    for (auto& nid : i->second) {
       cb(nid);
+      parent_->parent().notify<hook::route_lost>(nid, dest);
+    }
     indirect_.erase(i);
   }
   auto hdl = lookup_direct(dest);
   if (hdl != invalid_connection_handle) {
     direct_by_hdl_.erase(hdl);
     direct_by_nid_.erase(dest);
+    parent_->parent().notify<hook::connection_lost>(dest);
     ++res;
   }
   return res;
@@ -270,7 +313,9 @@ size_t routing_table::erase(const node_id& dest, erase_callback& cb) {
  *                                   callee                                   *
  ******************************************************************************/
 
-instance::callee::callee(actor_namespace::backend& mgm) : namespace_(mgm) {
+instance::callee::callee(actor_namespace::backend& mgm, middleman& mm)
+    : namespace_(mgm),
+      middleman_(mm) {
   // nop
 }
 
@@ -328,6 +373,7 @@ connection_state instance::handle(const new_data_msg& dm, header& hdr,
       if (payload)
         bs.write_raw(payload->size(), payload->data());
       tbl_.flush(*path);
+      notify<hook::message_forwarded>(hdr, payload);
     } else {
       CAF_LOG_INFO("cannot forward message, no route to destination");
       if (hdr.source_node != this_node_) {
@@ -345,6 +391,7 @@ connection_state instance::handle(const new_data_msg& dm, header& hdr,
       } else {
         CAF_LOG_WARNING("lost packet with probably spoofed source");
       }
+      notify<hook::message_forwarding_failed>(hdr, payload);
     }
     return await_header;
   }
@@ -375,36 +422,47 @@ connection_state instance::handle(const new_data_msg& dm, header& hdr,
         callee_.finalize_handshake(hdr.source_node, aid, sigs);
         return err();
       }
-      // add entry to routing table and call client
+      // add direct route to this node and remove any indirect entry
       CAF_LOG_INFO("new direct connection: " << to_string(hdr.source_node));
       tbl_.add_direct(dm.handle, hdr.source_node);
+      auto was_indirect = tbl_.erase_indirect(hdr.source_node);
       // write handshake as client in response
       auto path = tbl_.lookup(hdr.source_node);
       if (!path) {
         CAF_LOG_ERROR("no route to host after server handshake");
         return err();
       }
-      write(path->wr_buf,
-            message_type::client_handshake, nullptr, 0,
-            this_node_, hdr.source_node,
-            invalid_actor_id, invalid_actor_id);
-      // tell client to create proxy etc.
+      write_client_handshake(path->wr_buf, hdr.source_node);
+      callee_.learned_new_node_directly(hdr.source_node, was_indirect);
       callee_.finalize_handshake(hdr.source_node, aid, sigs);
       flush(*path);
       break;
     }
-    case message_type::client_handshake:
+    case message_type::client_handshake: {
       if (tbl_.lookup_direct(hdr.source_node) != invalid_connection_handle) {
         CAF_LOG_INFO("received second client handshake for "
-                     << to_string(hdr.source_node) << ", close connection");
-        return err();
+                     << to_string(hdr.source_node) << " (ignored)");
+        break;
       }
-      // add direct route to this node
+      // add direct route to this node and remove any indirect entry
+      CAF_LOG_INFO("new direct connection: " << to_string(hdr.source_node));
       tbl_.add_direct(dm.handle, hdr.source_node);
+      auto was_indirect = tbl_.erase_indirect(hdr.source_node);
+      callee_.learned_new_node_directly(hdr.source_node, was_indirect);
       break;
+    }
     case message_type::dispatch_message: {
       if (! payload_valid())
         return err();
+      // in case the sender of this message was received via a third node,
+      // we assume that that node to offers a route to the original source
+      auto last_hop = tbl_.lookup_direct(dm.handle);
+      if (hdr.source_node != invalid_node_id
+          && hdr.source_node != this_node_
+          && last_hop != hdr.source_node
+          && tbl_.lookup_direct(hdr.source_node) == invalid_connection_handle
+          && tbl_.add_indirect(last_hop, hdr.source_node))
+        callee_.learned_new_node_indirectly(hdr.source_node);
       binary_deserializer bd{payload->data(), payload->size(),
                              &get_namespace()};
       message msg;
@@ -468,6 +526,7 @@ void instance::add_published_actor(uint16_t port,
   auto& entry = published_actors_[port];
   swap(entry.first, published_actor);
   swap(entry.second, published_interface);
+  notify<hook::actor_published>(entry.first, entry.second, port);
 }
 
 size_t instance::remove_published_actor(uint16_t port,
@@ -511,11 +570,12 @@ size_t instance::remove_published_actor(const actor_addr& whom, uint16_t port,
 bool instance::dispatch(const actor_addr& sender, const actor_addr& receiver,
                         message_id mid, const message& msg) {
   CAF_LOG_TRACE("");
-  if (! receiver.is_remote())
-    return false;
+  CAF_ASSERT(receiver.is_remote());
   auto path = lookup(receiver->node());
-  if (! path)
+  if (! path) {
+    notify<hook::message_sending_failed>(sender, receiver, mid, msg);
     return false;
+  }
   auto writer = make_callback([&](serializer& sink) {
     msg.serialize(sink);
   });
@@ -524,6 +584,7 @@ bool instance::dispatch(const actor_addr& sender, const actor_addr& receiver,
              sender ? sender->id() : invalid_actor_id, receiver->id()};
   write(path->wr_buf, hdr, &writer);
   flush(*path);
+  notify<hook::message_sent>(sender, path->next_hop, receiver, mid, msg);
   return true;
 }
 
@@ -563,7 +624,7 @@ void instance::write(buffer_type& buf,
     bs2.write(source_actor)
        .write(dest_actor)
        .write(plen)
-        .write(static_cast<uint32_t>(operation))
+       .write(static_cast<uint32_t>(operation))
        .write(operation_data);
     if (payload_len)
       *payload_len = plen;
@@ -577,6 +638,7 @@ void instance::write(buffer_type& buf, header& hdr, payload_writer* pw) {
 
 void instance::write_server_handshake(buffer_type& out_buf,
                                       optional<uint16_t> port) {
+  using namespace detail;
   published_actor* pa = nullptr;
   if (port) {
     auto i = published_actors_.find(*port);
@@ -584,17 +646,21 @@ void instance::write_server_handshake(buffer_type& out_buf,
       pa = &i->second;
   }
   auto writer = make_callback([&](serializer& sink) {
-    if (! pa) {
-      return;
-    }
-    sink << pa->first.id() << static_cast<uint32_t>(pa->second.size());
-    for (auto& sig : pa->second)
-      sink << sig;
+    if (pa)
+      sink << pa->first.id() << pa->second;
   });
   header hdr{message_type::server_handshake, 0, version,
              this_node_, invalid_node_id,
              pa ? pa->first.id() : invalid_actor_id, invalid_actor_id};
   write(out_buf, hdr, &writer);
+}
+
+void instance::write_client_handshake(buffer_type& buf,
+                                      const node_id& remote_side) {
+  write(buf,
+        message_type::client_handshake, nullptr, 0,
+        this_node_, remote_side,
+        invalid_actor_id, invalid_actor_id);
 }
 
 void instance::write_dispatch_error(buffer_type& buf,

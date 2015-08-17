@@ -29,6 +29,18 @@
 namespace caf {
 namespace experimental {
 
+template <class Archive, class U>
+typename std::enable_if<detail::is_serializable<U>::value>::type
+serialize_state(Archive& ar, U& st, const unsigned int version) {
+  serialize(ar, st, version);
+}
+
+template <class Archive, class U>
+typename std::enable_if<! detail::is_serializable<U>::value>::type
+serialize_state(Archive&, U&, const unsigned int) {
+  throw std::logic_error("serialize_state with unserializable type called");
+}
+
 /// An event-based actor with managed state. The state is constructed
 /// before `make_behavior` will get called and destroyed after the
 /// actor called `quit`. This state management brakes cycles and
@@ -39,7 +51,8 @@ class stateful_actor : public Base {
 public:
   template <class... Ts>
   stateful_actor(Ts&&... xs) : Base(std::forward<Ts>(xs)...), state(state_) {
-    // nop
+    if (detail::is_serializable<State>::value)
+      this->is_serializable(true);
   }
 
   ~stateful_actor() {
@@ -53,6 +66,14 @@ public:
 
   const char* name() const override final {
     return get_name(state_);
+  }
+
+  void save(serializer& sink, const unsigned int version) override {
+    serialize_state(sink, state, version);
+  }
+
+  void load(deserializer& source, const unsigned int version) override {
+    serialize_state(source, state, version);
   }
 
   /// A reference to the actor's state.

@@ -135,6 +135,11 @@ public:
   /// Exchange content of `*this` and `other`.
   void swap(actor& other) noexcept;
 
+  /// Returns the interface definition for this actor handle.
+  static std::set<std::string> message_types() {
+    return std::set<std::string>{};
+  }
+
   /// @cond PRIVATE
 
   inline abstract_actor* operator->() const noexcept {

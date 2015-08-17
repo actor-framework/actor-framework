@@ -53,7 +53,7 @@ uint16_t publish_impl(uint16_t port, actor_addr whom,
   uint16_t result;
   std::string error_msg;
   try {
-    self->sync_send(mm, put_atom::value, port,
+    self->sync_send(mm, publish_atom::value, port,
                     std::move(whom), std::move(sigs), str, ru).await(
       [&](ok_atom, uint16_t res) {
         result = res;

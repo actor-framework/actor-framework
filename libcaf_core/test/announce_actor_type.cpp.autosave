@@ -1,0 +1,255 @@
+/******************************************************************************
+ *                       ____    _    _____                                   *
+ *                      / ___|  / \  |  ___|    C++                           *
+ *                     | |     / _ \ | |_       Actor                         *
+ *                     | |___ / ___ \|  _|      Framework                     *
+ *                      \____/_/   \_|_|                                      *
+ *                                                                            *
+ * Copyright (C) 2011 - 2015                                                  *
+ * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
+ *                                                                            *
+ * Distributed under the terms and conditions of the BSD 3-Clause License or  *
+ * (at your option) under the terms and conditions of the Boost Software      *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
+ *                                                                            *
+ * If you did not receive a copy of the license files, see                    *
+ * http://opensource.org/licenses/BSD-3-Clause and                            *
+ * http://www.boost.org/LICENSE_1_0.txt.                                      *
+ ******************************************************************************/
+
+#include "caf/config.hpp"
+
+#define CAF_SUITE announce_actor_type
+#include "caf/test/unit_test.hpp"
+
+#include "caf/all.hpp"
+
+#include "caf/experimental/announce_actor_type.hpp"
+
+#include "caf/detail/actor_registry.hpp"
+
+using namespace caf;
+using namespace caf::experimental;
+
+using std::endl;
+
+namespace {
+
+struct fixture {
+  actor aut;
+  actor spawner;
+
+  fixture() {
+    auto registry = detail::singletons::get_actor_registry();
+    spawner = registry->get_named(atom("spawner"));
+  }
+
+  void set_aut(message args, bool expect_fail = false) {
+    CAF_MESSAGE("set aut");
+    scoped_actor self;
+    self->on_sync_failure([&] {
+      CAF_TEST_ERROR("received unexpeced sync. response: "
+                     << to_string(self->current_message()));
+    });
+    if (expect_fail) {
+      self->sync_send(spawner, get_atom::value, "test_actor", std::move(args)).await(
+        [&](error_atom, const std::string&) {
+          CAF_TEST_VERBOSE("received error_atom (expected)");
+        }
+      );
+    } else {
+      self->sync_send(spawner, get_atom::value, "test_actor", std::move(args)).await(
+        [&](ok_atom, actor_addr res, const std::set<std::string>& ifs) {
+          CAF_REQUIRE(res != invalid_actor_addr);
+          aut = actor_cast<actor>(res);
+          CAF_CHECK(ifs.empty());
+        }
+      );
+    }
+  }
+
+  ~fixture() {
+    if (aut != invalid_actor) {
+      scoped_actor self;
+      self->monitor(aut);
+      self->receive(
+        [](const down_msg& dm) {
+          CAF_CHECK(dm.reason == exit_reason::normal);
+        }
+      );
+    }
+    await_all_actors_done();
+    shutdown();
+  }
+};
+
+using detail::is_serializable;
+
+// not serializable
+class testee1 {
+
+};
+
+// serializable via member function
+class testee2 {
+public:
+  template <class Archive>
+  void serialize(Archive&, const unsigned int) {
+    // nop
+  }
+};
+
+// serializable via free function
+class testee3 {
+  // nop
+};
+
+template<class Archive>
+void serialize(Archive&, testee3&, const unsigned int) {
+  // nop
+}
+
+template <class Archive, class T>
+void serialize(Archive& ar, T& x, const unsigned int version,
+               decltype(x.serialize(ar, version))* = nullptr) {
+  x.serialize(ar, version);
+}
+
+struct migratable_state {
+  int value = 0;
+};
+
+
+template <class Archive>
+void serialize(Archive& ar, migratable_state& x, const unsigned int) {
+  ar & x.value;
+}
+
+struct migratable_actor : stateful_actor<migratable_state> {
+  behavior make_behavior() override {
+    return {
+      [=](get_atom) {
+        return state.value;
+      },
+      [=](put_atom, int value) {
+        state.value = value;
+      },
+      [=](sys_atom, migrate_atom, actor_addr destination) {
+        std::vector<char> buf;
+        binary_serializer bs{std::back_inserter(buf)};
+        save(bs, 0);
+        actor dest = actor_cast<actor>(destination);
+        link_to(dest);
+        sync_send(dest, sys_atom::value, migrate_atom::value, std::move(buf)).then(
+          [=](ok_atom) {
+            // "decay" into a proxy for `dest`
+            become(
+              [=](sys_atom, migrate_atom, std::vector<char> buf) {
+                unlink_from(dest);
+                become(make_behavior());
+                binary_deserializer bd{buf.data(), buf.size()};
+                deserialize(bd, 0);
+                return make_message(ok_atom::value);
+              },
+              others >> [=] {
+                forward_to(dest);
+              }
+            );
+          },
+          others >> [=] {
+            // do nothing, i.e., process further messages as usual
+          }
+        );
+      },
+      [=](sys_atom, migrate_atom, std::vector<char> buf) {
+        binary_deserializer bd{buf.data(), buf.size()};
+        deserialize(bd, 0);
+        return make_message(ok_atom::value);
+      }
+    };
+  }
+};
+
+} // namespace <anonymous>
+
+CAF_TEST(serializable_stuff) {
+  CAF_CHECK(is_serializable<testee1>::value == false);
+  CAF_CHECK(is_serializable<testee2>::value == true);
+  CAF_CHECK(is_serializable<testee3>::value == true);
+}
+
+CAF_TEST(migratable_stuff) {
+  auto a = spawn<migratable_actor>();
+  auto b = spawn<migratable_actor>();
+  scoped_actor self;
+  self->send(a, put_atom::value, 42);
+  self->send(a, sys_atom::value, migrate_atom::value, b.address());
+  self->sync_send(a, get_atom::value).await(
+    [&](int result) {
+      CAF_CHECK(result == 42);
+      CAF_CHECK(self->current_sender() == b.address());
+    }
+  );
+  self->send_exit(b, exit_reason::kill);
+  self->await_all_other_actors_done();
+}
+
+CAF_TEST_FIXTURE_SCOPE(announce_actor_type_tests, fixture)
+
+CAF_TEST(fun_no_args) {
+  auto test_actor = [] {
+    CAF_MESSAGE("inside test_actor");
+  };
+  announce_actor_type("test_actor", test_actor);
+  set_aut(make_message());
+}
+
+CAF_TEST(fun_no_args_selfptr) {
+  auto test_actor = [](event_based_actor*) {
+    CAF_MESSAGE("inside test_actor");
+  };
+  announce_actor_type("test_actor", test_actor);
+  set_aut(make_message());
+}
+CAF_TEST(fun_one_arg) {
+  auto test_actor = [](int i) {
+    CAF_CHECK_EQUAL(i, 42);
+  };
+  announce_actor_type("test_actor", test_actor);
+  set_aut(make_message(42));
+}
+
+CAF_TEST(fun_one_arg_selfptr) {
+  auto test_actor = [](event_based_actor*, int i) {
+    CAF_CHECK_EQUAL(i, 42);
+  };
+  announce_actor_type("test_actor", test_actor);
+  set_aut(make_message(42));
+}
+
+CAF_TEST(class_no_arg) {
+  struct test_actor : event_based_actor {
+    behavior make_behavior() override {
+      return {};
+    }
+  };
+  announce_actor_type<test_actor>("test_actor");
+  set_aut(make_message(42), true);
+  set_aut(make_message());
+}
+
+CAF_TEST(class_one_arg) {
+  struct test_actor : event_based_actor {
+    test_actor(int value) {
+      CAF_CHECK_EQUAL(value, 42);
+    }
+    behavior make_behavior() override {
+      return {};
+    }
+  };
+  announce_actor_type<test_actor, const int&>("test_actor");
+  set_aut(make_message(), true);
+  set_aut(make_message(42));
+}
+
+CAF_TEST_FIXTURE_SCOPE_END()
