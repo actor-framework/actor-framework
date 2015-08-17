@@ -263,6 +263,9 @@ CAF_TEST(triangle_setup) {
                    "both at the same time");
     return;
   }
+  // enable automatic connections
+  anon_send(whereis(atom("ConfigServ")), put_atom::value,
+            "global.enable-automatic-connections", make_message(true));
   auto use_asio = r.opts.count("use-asio") > 0;
 # ifdef CAF_USE_ASIO
   if (use_asio) {
@@ -270,9 +273,6 @@ CAF_TEST(triangle_setup) {
     set_middleman<network::asio_multiplexer>();
   }
 # endif // CAF_USE_ASIO
-  // enable automatic connections
-  anon_send(whereis(atom("ConfigServ")), put_atom::value,
-            "global.enable-automatic-connections", make_message(true));
   auto as_server = r.opts.count("server") > 0;
   if (is_mars)
     run_mars(port, publish_port);

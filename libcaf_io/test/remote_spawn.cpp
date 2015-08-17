@@ -123,12 +123,12 @@ CAF_TEST(remote_spawn) {
     return;
   }
   auto use_asio = r.opts.count("use-asio") > 0;
+# ifdef CAF_USE_ASIO
   if (use_asio) {
-#   ifdef CAF_USE_ASIO
     CAF_MESSAGE("enable ASIO backend");
     io::set_middleman<io::network::asio_multiplexer>();
-#   endif // CAF_USE_ASIO
   }
+# endif // CAF_USE_ASIO
   if (r.opts.count("client") > 0) {
     auto serv = io::remote_actor("localhost", port);
     spawn(client, serv);
@@ -139,10 +139,13 @@ CAF_TEST(remote_spawn) {
   port = io::publish(serv, port);
   CAF_TEST_INFO("published server at port " << port);
   if (r.opts.count("server") == 0) {
-    auto child = detail::run_program(invalid_actor, argv[0], "-n", "-s",
-                                     CAF_XSTR(CAF_SUITE), "--", "-c",
-                                     port, (use_asio ? "--use-asio" : ""));
+    CAF_TEST_VERBOSE("run client program");
+    auto child = detail::run_program(invalid_actor, caf::test::engine::path(),
+                                     "-n", "-s", CAF_XSTR(CAF_SUITE), "--",
+                                     "-c", port,
+                                     (use_asio ? "--use-asio" : ""));
     child.join();
   }
   await_all_actors_done();
+  shutdown();
 }
