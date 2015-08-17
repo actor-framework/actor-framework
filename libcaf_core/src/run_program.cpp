@@ -44,6 +44,11 @@ std::thread run_program_impl(actor rc, const char* cpath,
   oss << " 2>&1";
   string cmdstr = oss.str();
   return std::thread{ [cmdstr, rc] {
+    // on FreeBSD, popen() hangs indefinitely in some cases
+#   ifdef CAF_BSD
+    system(cmdstr.c_str());
+    anon_send(rc, "");
+#   else
     string output;
     auto fp = popen(cmdstr.c_str(), "r");
     if (! fp) {
@@ -57,6 +62,7 @@ std::thread run_program_impl(actor rc, const char* cpath,
     }
     pclose(fp);
     anon_send(rc, output);
+#   endif
   }};
 }
 #else
