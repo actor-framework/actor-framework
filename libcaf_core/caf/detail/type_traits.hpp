@@ -463,7 +463,7 @@ struct is_optional<optional<T>> : std::true_type {
 };
 
 // Checks whether T has a member variable named `name`.
-template <class T>
+template <class T, bool IsScalar = std::is_scalar<T>::value>
 class has_name {
 private:
   // a simple struct with a member called `name`
@@ -485,6 +485,12 @@ private:
 
 public:
   static constexpr bool value = sizeof(fun(static_cast<derived*>(nullptr))) > 1;
+};
+
+template <class T>
+class has_name<T, true> {
+public:
+  static constexpr bool value = false;
 };
 
 } // namespace detail
