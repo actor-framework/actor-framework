@@ -244,8 +244,12 @@ void actor_registry::initialize() {
       }
     };
   };
+  // NOTE: all actors that we spawn here *must not* access the scheduler,
+  //       because the scheduler will make sure that the registry is running
+  //       as part of its initialization; hence, all actors have to
+  //       use the lazy_init flag
   named_entries_.emplace(atom("SpawnServ"), spawn_announce_actor_type_server());
-  named_entries_.emplace(atom("ConfigServ"), spawn<hidden>(kvstore));
+  named_entries_.emplace(atom("ConfigServ"), spawn<hidden+lazy_init>(kvstore));
 }
 
 } // namespace detail

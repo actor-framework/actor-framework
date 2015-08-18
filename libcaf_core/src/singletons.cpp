@@ -116,13 +116,23 @@ group_manager* singletons::get_group_manager() {
 }
 
 scheduler::abstract_coordinator* singletons::get_scheduling_coordinator() {
-  return lazy_get(s_scheduling_coordinator, s_scheduling_coordinator_mtx);
+  // when creating the scheduler, make sure the registry
+  // is in place as well, because our shutdown sequence assumes
+  // a certain order for stopping singletons
+  auto f = []() -> scheduler::abstract_coordinator* {
+    get_actor_registry();
+    return scheduler::abstract_coordinator::create_singleton();
+  };
+  return lazy_get(s_scheduling_coordinator, s_scheduling_coordinator_mtx, f);
 }
 
 bool singletons::set_scheduling_coordinator(scheduler::abstract_coordinator*p) {
-  auto res = lazy_get(s_scheduling_coordinator, s_scheduling_coordinator_mtx,
-                      [p] { return p; });
-  return res == p;
+  auto f = [p]() -> scheduler::abstract_coordinator* {
+    get_actor_registry(); // see comment above
+    return p;
+  };
+  auto x = lazy_get(s_scheduling_coordinator, s_scheduling_coordinator_mtx, f);
+  return x == p;
 }
 
 node_id singletons::get_node_id() {
