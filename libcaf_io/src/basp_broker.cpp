@@ -21,6 +21,7 @@
 
 #include <limits>
 
+#include "caf/send.hpp"
 #include "caf/exception.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/event_based_actor.hpp"
@@ -53,6 +54,12 @@ basp_broker_state::basp_broker_state(broker* selfptr)
       self(selfptr),
       instance(selfptr, *this) {
   CAF_ASSERT(this_node() != invalid_node_id);
+}
+
+basp_broker_state::~basp_broker_state() {
+  // make sure all spawn servers are down
+  for (auto& kvp : spawn_servers)
+    anon_send_exit(kvp.second, exit_reason::kill);
 }
 
 actor_proxy_ptr basp_broker_state::make_proxy(const node_id& nid,

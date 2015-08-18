@@ -44,6 +44,8 @@ namespace io {
 struct basp_broker_state : actor_namespace::backend, basp::instance::callee {
   basp_broker_state(broker* self);
 
+  ~basp_broker_state();
+
   // inherited from actor_namespace::backend
   actor_proxy_ptr make_proxy(const node_id& nid, actor_id aid) override;
 
