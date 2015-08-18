@@ -37,49 +37,58 @@ using spawn_result = std::pair<actor_addr, std::set<std::string>>;
 
 using spawn_fun = std::function<spawn_result (message)>;
 
-template <class Trait, class F>
-spawn_result dyn_spawn_impl(F ibf) {
-  using impl = typename Trait::impl;
-  using behavior_t = typename Trait::behavior_type;
-  auto ptr = make_counted<impl>();
-  ptr->initial_behavior_fac([=](local_actor* self) -> behavior {
-    auto res = ibf(self);
-    if (res && res->size() > 0 && res->template match_element<behavior_t>(0)) {
-      return std::move(res->template get_as_mutable<behavior_t>(0).unbox());
-    }
-    return {};
-  });
-  ptr->launch(nullptr, false, false);
-  return {ptr->address(), Trait::type::message_types()};
+using selfptr_mode_token = spawn_mode_token<spawn_mode::function_with_selfptr>;
+
+using void_mode_token = spawn_mode_token<spawn_mode::function>;
+
+template <class T>
+void dyn_spawn_prepare_message(message&, T*, void_mode_token) {
+  // nop
 }
 
-template <class Trait, class F>
-spawn_result dyn_spawn(F fun, message& msg,
-                       spawn_mode_token<spawn_mode::function>) {
-  return dyn_spawn_impl<Trait>([=](local_actor*) -> optional<message> {
-    return const_cast<message&>(msg).apply(fun);
-  });
-}
-
-template <class Trait, class F>
-spawn_result dyn_spawn(F fun, message& msg,
-                       spawn_mode_token<spawn_mode::function_with_selfptr>) {
-  return dyn_spawn_impl<Trait>([=](local_actor* self) -> optional<message> {
-    // we can't use make_message here because of the implicit conversions
-    using storage = detail::tuple_vals<typename Trait::impl*>;
-    auto ptr = make_counted<storage>(static_cast<typename Trait::impl*>(self));
-    auto m = message{detail::message_data::cow_ptr{std::move(ptr)}} + msg;
-    return m.apply(fun);
-  });
+template <class T>
+void dyn_spawn_prepare_message(message& msg, T* self, selfptr_mode_token) {
+  using std::swap;
+  message tmp;
+  swap(msg, tmp);
+  // we can't use make_message here because of the implicit conversions
+  using storage = detail::tuple_vals<T*>;
+  auto ptr = make_counted<storage>(self);
+  msg = message{detail::message_data::cow_ptr{std::move(ptr)}} + tmp;
 }
 
 template <class F>
 spawn_fun make_spawn_fun(F fun) {
   return [fun](message msg) -> spawn_result {
     using trait = infer_handle_from_fun<F>;
+    using impl = typename trait::impl;
+    using behavior_t = typename trait::behavior_type;
     spawn_mode_token<trait::mode> tk;
-    return dyn_spawn<trait>(fun, msg, tk);
+    auto ptr = make_counted<impl>();
+    dyn_spawn_prepare_message<impl>(msg, ptr.get(), tk);
+    ptr->initial_behavior_fac([=](local_actor*) -> behavior {
+      auto res = const_cast<message&>(msg).apply(fun);
+      if (res && res->size() > 0 && res->template match_element<behavior_t>(0)) 
+        return std::move(res->template get_as_mutable<behavior_t>(0).unbox());
+      return {};
+    });
+    ptr->launch(nullptr, false, false);
+    return {ptr->address(), trait::type::message_types()};
   };
+}
+
+template <class T, class... Ts>
+spawn_result dyn_spawn_class(message msg) {
+  using handle = typename infer_handle_from_class<T>::type;
+  using pointer = intrusive_ptr<T>;
+  pointer ptr;
+  auto factory = &make_counted<T, Ts...>;
+  auto res = msg.apply(factory);
+  if (!res || res->empty() || !res->template match_element<pointer>(0))
+    return {};
+  ptr = std::move(res->template get_as_mutable<pointer>(0));
+  ptr->launch(nullptr, false, false);
+  return {ptr->address(), handle::message_types()};
 }
 
 template <class T, class... Ts>
@@ -92,18 +101,7 @@ spawn_fun make_spawn_fun() {
                 "all Ts must be lvalue references");
   static_assert(std::is_base_of<local_actor, T>::value,
                 "T is not derived from local_actor");
-  using handle = typename infer_handle_from_class<T>::type;
-  using pointer = intrusive_ptr<T>;
-  auto factory = &make_counted<T, Ts...>;
-  return [=](message msg) -> spawn_result {
-    pointer ptr;
-    auto res = msg.apply(factory);
-    if (! res || res->empty() || ! res->template match_element<pointer>(0))
-      return {};
-    ptr = std::move(res->template get_as_mutable<pointer>(0));
-    ptr->launch(nullptr, false, false);
-    return {ptr->address(), handle::message_types()};
-  };
+  return &dyn_spawn_class<T, Ts...>;
 }
 
 actor spawn_announce_actor_type_server();
