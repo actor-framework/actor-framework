@@ -213,7 +213,6 @@ msg_type filter_msg(local_actor* self, mailbox_element& node) {
         binary_serializer bs{std::back_inserter(buf)};
         self->save(bs, 0);
         auto sender = node.sender;
-        auto mid = node.mid;
         // sync_send(...)
         auto req = self->sync_send_impl(message_priority::normal, mm,
                                         migrate_atom::value, self->name(),

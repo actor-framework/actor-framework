@@ -197,7 +197,7 @@ optional<routing_table::route> routing_table::lookup(const node_id& target) {
     auto& hops = i->second;
     while (! hops.empty()) {
       auto& hop = *hops.begin();
-      auto hdl = lookup_direct(hop);
+      hdl = lookup_direct(hop);
       if (hdl != invalid_connection_handle)
         return route{parent_->wr_buf(hdl), hop, hdl};
       else
