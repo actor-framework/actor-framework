@@ -220,6 +220,13 @@ public:
   /// @returns The path to executable set via ::path(char*) or `nullptr`.
   static char* path();
 
+  /// Returns the maximum number of seconds a test case is allowed to run.
+  static int max_runtime();
+
+  /// Sets the maximum number of seconds a test case is
+  /// allowed to run to `value`.
+  static void max_runtime(int value);
+
   /// Adds a test to the engine.
   /// @param name The name of the suite.
   /// @param ptr The test to register.
@@ -231,7 +238,6 @@ public:
   ///                 that no log file will be written.
   /// @param verbosity_console The log verbosity on the console.
   /// @param verbosity_file The log verbosity in the log file.
-  /// @param max_runtime The maximum number of seconds a test shall run.
   /// @param suites The regular expression of the tests to run.
   /// @param not_suites Whether to colorize the output.
   /// @returns `true` iff all tests succeeded.
@@ -239,7 +245,6 @@ public:
                   const std::string& log_file,
                   int verbosity_console,
                   int verbosity_file,
-                  int max_runtime,
                   const std::string& suites,
                   const std::string& not_suites,
                   const std::string& tests,
@@ -284,6 +289,7 @@ private:
   size_t check_line_ = 0;
   test* current_test_ = nullptr;
   std::map<std::string, std::vector<std::unique_ptr<test>>> suites_;
+  int max_runtime_ = 30; // 30s per default
 };
 
 namespace detail {

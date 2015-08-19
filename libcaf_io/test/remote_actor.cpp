@@ -481,7 +481,8 @@ void test_remote_actor(const char* path, bool run_remote, bool use_asio) {
   thread child;
   if (run_remote) {
     child = detail::run_program(self, path, "-n", "-s", CAF_XSTR(CAF_SUITE),
-                                "--", "-c", port2, "-c", port1, "-g", gport,
+                                "-r", test::engine::max_runtime(), "--",
+                                "-c", port2, "-c", port1, "-g", gport,
                                 (use_asio ? "--use-asio" : ""));
   } else {
     CAF_MESSAGE("please run client with: "

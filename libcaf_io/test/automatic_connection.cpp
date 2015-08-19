@@ -76,8 +76,10 @@ using pong_atom = atom_constant<atom("pong")>;
 */
 
 std::thread run_prog(const char* arg, uint16_t port, bool use_asio) {
-  return detail::run_program(invalid_actor, caf::test::engine::path(), "-n",
-                             "-s", CAF_XSTR(CAF_SUITE), "--", arg, "-p", port,
+  return detail::run_program(invalid_actor, test::engine::path(), "-n",
+                             "-s", CAF_XSTR(CAF_SUITE),
+                             "-r", test::engine::max_runtime(), "--",
+                             arg, "-p", port,
                              (use_asio ? "--use-asio" : ""));
 }
 

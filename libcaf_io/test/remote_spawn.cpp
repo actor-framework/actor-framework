@@ -141,7 +141,8 @@ CAF_TEST(remote_spawn) {
   if (r.opts.count("server") == 0) {
     CAF_TEST_VERBOSE("run client program");
     auto child = detail::run_program(invalid_actor, caf::test::engine::path(),
-                                     "-n", "-s", CAF_XSTR(CAF_SUITE), "--",
+                                     "-n", "-s", CAF_XSTR(CAF_SUITE),
+                                     "-r", test::engine::max_runtime(), "--",
                                      "-c", port,
                                      (use_asio ? "--use-asio" : ""));
     child.join();

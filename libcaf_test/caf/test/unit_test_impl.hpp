@@ -248,6 +248,14 @@ char* engine::path() {
   return instance().path_;
 }
 
+int engine::max_runtime() {
+  return instance().max_runtime_;
+}
+
+void engine::max_runtime(int value) {
+  instance().max_runtime_ = value;
+}
+
 void engine::add(const char* cstr_name, std::unique_ptr<test> ptr) {
   std::string name = cstr_name ? cstr_name : "";
   auto& suite = instance().suites_[name];
@@ -264,7 +272,6 @@ bool engine::run(bool colorize,
                  const std::string& log_file,
                  int verbosity_console,
                  int verbosity_file,
-                 int max_runtime,
                  const std::string& suites_str,
                  const std::string& not_suites_str,
                  const std::string& tests_str,
@@ -360,7 +367,7 @@ bool engine::run(bool colorize,
       log.verbose() << color(yellow) << "- " << color(reset) << t->name()
                     << '\n';
       auto start = std::chrono::high_resolution_clock::now();
-      watchdog::start(max_runtime);
+      watchdog::start(max_runtime());
       try {
         t->run();
       } catch (const detail::require_error&) {
@@ -493,7 +500,7 @@ int main(int argc, char** argv) {
   // default values.
   int verbosity_console = 3;
   int verbosity_file = 3;
-  int max_runtime = 10;
+  int max_runtime = 0;
   std::string log_file;
   std::string suites = ".*";
   std::string not_suites;
@@ -542,14 +549,15 @@ int main(int argc, char** argv) {
     return 1;
   }
   auto colorize = res.opts.count("no-colors") == 0;
-  if (divider < argc) {
+  if (divider < argc)
     engine::args(argc - divider - 1, argv + divider + 1);
-  } else {
+  else
     engine::args(0, argv);
-  }
+  if (res.opts.count("max-runtime") > 0)
+    engine::max_runtime(max_runtime);
   auto result = engine::run(colorize, log_file, verbosity_console,
-                                  verbosity_file, max_runtime, suites,
-                                  not_suites, tests, not_tests);
+                            verbosity_file, suites,
+                            not_suites, tests, not_tests);
   return result ? 0 : 1;
 }
 

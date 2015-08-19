@@ -191,8 +191,10 @@ void run_server(bool spawn_client, const char* bin_path, bool use_asio) {
     [&](uint16_t port) {
       CAF_MESSAGE("server is running on port " << port);
       if (spawn_client) {
-        auto child = detail::run_program(self, bin_path, "-n", "-s",
-                                         CAF_XSTR(CAF_SUITE), "--", "-c", port,
+        auto child = detail::run_program(self, bin_path, "-n",
+                                         "-s", CAF_XSTR(CAF_SUITE),
+                                         "-r", test::engine::max_runtime(),
+                                         "--", "-c", port,
                                          (use_asio ? "--use-asio" : ""));
         CAF_MESSAGE("block till child process has finished");
         child.join();

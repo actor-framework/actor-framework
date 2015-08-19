@@ -133,9 +133,10 @@ CAF_TEST(test_typed_remote_actor) {
     // execute client_part() in a separate process,
     // connected via localhost socket
     scoped_actor self;
-    auto child = detail::run_program(self, caf::test::engine::path(), "-n",
+    auto child = detail::run_program(self, test::engine::path(), "-n",
                                      "-s", CAF_XSTR(CAF_SUITE),
-                                     "--", "-c", port,
+                                     "-r", test::engine::max_runtime(), "--",
+                                     "-c", port,
                                      (use_asio ? "--use-asio" : ""));
     CAF_MESSAGE("block till child process has finished");
     child.join();
