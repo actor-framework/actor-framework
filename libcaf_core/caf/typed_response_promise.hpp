@@ -41,10 +41,10 @@ public:
     return static_cast<bool>(promise_);
   }
 
-  void deliver(Ts... what) const {
-    promise_.deliver(make_message(std::move(what)...));
+  template <class... Us>
+  void deliver(Us&&... xs) const {
+    promise_.deliver(make_message(std::forward<Us>(xs)...));
   }
-
 
 private:
   response_promise promise_;
@@ -66,10 +66,11 @@ public:
     return static_cast<bool>(promise_);
   }
 
-  void deliver(either_or_t<L, R> what) const {
-    promise_.deliver(what.value);
+  template <class... Ts>
+  void deliver(Ts&&... xs) const {
+    either_or_t<L, R> tmp{std::forward<Ts>(xs)...};
+    promise_.deliver(std::move(tmp.value));
   }
-
 
 private:
   response_promise promise_;
