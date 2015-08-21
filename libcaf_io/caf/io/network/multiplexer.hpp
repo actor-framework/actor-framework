@@ -125,7 +125,8 @@ public:
   /// Runs the multiplexers event loop.
   virtual void run() = 0;
 
-  /// Invokes @p fun in the multiplexer's event loop.
+  /// Invokes @p fun in the multiplexer's event loop, calling `fun()`
+  /// immediately when called from inside the event loop.
   /// @threadsafe
   template <class F>
   void dispatch(F fun) {
@@ -136,7 +137,8 @@ public:
     post(std::move(fun));
   }
 
-  /// Invokes @p fun in the multiplexer's event loop.
+  /// Invokes @p fun in the multiplexer's event loop, forcing
+  /// execution to be delayed when called from inside the event loop.
   /// @threadsafe
   template <class F>
   void post(F fun) {

@@ -63,30 +63,36 @@ public:
 
   void provide_acceptor(uint16_t port, accept_handle hdl);
 
+  /// A buffer storing bytes.
   using buffer_type = std::vector<char>;
 
-  /// The external input buffer should be filled by
-  /// the test program.
+  /// Models pending data on the network, i.e., the network
+  /// input buffer usually managed by the operating system.
   buffer_type& virtual_network_buffer(connection_handle hdl);
 
+  /// Returns the output buffer of the scribe identified by `hdl`.
   buffer_type& output_buffer(connection_handle hdl);
 
+  /// Returns the input buffer of the scribe identified by `hdl`.
   buffer_type& input_buffer(connection_handle hdl);
 
   receive_policy::config& read_config(connection_handle hdl);
 
+  /// Returns `true` if this handle has been closed
+  /// for reading, `false` otherwise.
   bool& stopped_reading(connection_handle hdl);
 
   intrusive_ptr<scribe>& impl_ptr(connection_handle hdl);
 
   uint16_t& port(accept_handle hdl);
 
-  /// Returns `true` if this handle has been closed for reading,
-  /// `false` otherwise.
+  /// Returns `true` if this handle has been closed
+  /// for reading, `false` otherwise.
   bool& stopped_reading(accept_handle hdl);
 
   intrusive_ptr<doorman>& impl_ptr(accept_handle hdl);
 
+  /// Stores `hdl` as a pending connection for `src`.
   void add_pending_connect(accept_handle src, connection_handle hdl);
 
   using pending_connects_map = std::unordered_multimap<accept_handle,
