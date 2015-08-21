@@ -42,11 +42,6 @@ public:
 
   template <class F, class... Ts>
   actor fork(F fun, connection_handle hdl, Ts&&... xs) {
-    // provoke compile-time errors early
-    using fun_res = decltype(fun(this, hdl, std::forward<Ts>(xs)...));
-    // prevent warning about unused local type
-    static_assert(std::is_same<fun_res, fun_res>::value,
-                  "your compiler is lying to you");
     auto sptr = take(hdl);
     CAF_ASSERT(sptr->hdl() == hdl);
     return spawn_functor(nullptr,
