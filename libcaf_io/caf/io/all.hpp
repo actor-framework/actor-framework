@@ -36,4 +36,9 @@
 #include "caf/io/system_messages.hpp"
 #include "caf/io/publish_local_groups.hpp"
 
+#include "caf/io/network/protocol.hpp"
+#include "caf/io/network/interfaces.hpp"
+#include "caf/io/network/multiplexer.hpp"
+#include "caf/io/network/test_multiplexer.hpp"
+
 #endif // CAF_IO_ALL_HPP
