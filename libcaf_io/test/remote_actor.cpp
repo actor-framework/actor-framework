@@ -175,14 +175,14 @@ CAF_MESSAGE("self: " << to_string(self->address()));
                                << to_string(self->current_message()));
                 self->quit(exit_reason::user_defined);
               },
-              after(chrono::seconds(2)) >> [=] {
+              after(chrono::seconds(3)) >> [=] {
                 CAF_TEST_ERROR("did only receive " << *downs << " down messages");
                 self->quit(exit_reason::user_defined);
               }
             );
           }
         },
-        after(std::chrono::seconds(2)) >> [=] {
+        after(std::chrono::seconds(6)) >> [=] {
           CAF_TEST_ERROR("Unexpected timeout");
           self->quit(exit_reason::user_defined);
         }
