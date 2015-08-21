@@ -243,14 +243,40 @@ void test_multiplexer::accept_connection(accept_handle hdl) {
 }
 
 void test_multiplexer::read_data(connection_handle hdl) {
+  // flush any pending runnables
+  while (try_exec_runnable()) {
+    // nop
+  }
   scribe_data& sd = scribe_data_[hdl];
-  while (sd.xbuf.size() >= sd.recv_conf.second) {
-    sd.rd_buf.clear();
-    auto first = sd.xbuf.begin();
-    auto last = first + static_cast<ptrdiff_t>(sd.recv_conf.second);
-    sd.rd_buf.insert(sd.rd_buf.end(), first, last);
-    sd.xbuf.erase(first, last);
-    sd.ptr->consume(sd.rd_buf.data(), sd.rd_buf.size());
+  switch (sd.recv_conf.first) {
+    case receive_policy_flag::exactly:
+      while (sd.xbuf.size() >= sd.recv_conf.second) {
+        sd.rd_buf.clear();
+        auto first = sd.xbuf.begin();
+        auto last = first + static_cast<ptrdiff_t>(sd.recv_conf.second);
+        sd.rd_buf.insert(sd.rd_buf.end(), first, last);
+        sd.xbuf.erase(first, last);
+        sd.ptr->consume(sd.rd_buf.data(), sd.rd_buf.size());
+      }
+      break;
+    case receive_policy_flag::at_least:
+      if (sd.xbuf.size() >= sd.recv_conf.second) {
+        sd.rd_buf.clear();
+        sd.rd_buf.swap(sd.xbuf);
+        sd.ptr->consume(sd.rd_buf.data(), sd.rd_buf.size());
+      }
+      break;
+    case receive_policy_flag::at_most:
+      auto max_bytes = static_cast<ptrdiff_t>(sd.recv_conf.second);
+      while (sd.xbuf.size() > 0) {
+        sd.rd_buf.clear();
+        auto first = sd.xbuf.begin();
+        auto last = (max_bytes < sd.xbuf.size()) ? first + max_bytes
+                                                 : sd.xbuf.end();
+        sd.rd_buf.insert(sd.rd_buf.end(), first, last);
+        sd.xbuf.erase(first, last);
+        sd.ptr->consume(sd.rd_buf.data(), sd.rd_buf.size());
+      }
   }
 }
 
