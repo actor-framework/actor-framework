@@ -11,9 +11,11 @@ if (OpenCL_LIBRARIES)
   # list cpp files excluding platform-dependent files
   set (LIBCAF_OPENCL_SRCS
        src/global.cpp
-       src/opencl_metainfo.cpp
+       src/metainfo.cpp
        src/program.cpp
-       src/opencl_err.cpp)
+       src/opencl_err.cpp
+       src/platform.cpp
+       src/device.cpp)
   # build shared library if not compiling static only
   if(NOT CAF_BUILD_STATIC_ONLY)
     add_library(libcaf_opencl_shared SHARED ${LIBCAF_OPENCL_SRCS}

@@ -10,6 +10,7 @@
 #include "caf/all.hpp"
 #include "caf/opencl/spawn_cl.hpp"
 
+using namespace std;
 using namespace caf;
 using namespace caf::opencl;
 
@@ -17,7 +18,7 @@ using detail::limited_vector;
 
 namespace {
 
-using ivec = std::vector<int>;
+using ivec = vector<int>;
 using dims = opencl::dim_vec;
 
 constexpr size_t matrix_size = 4;
@@ -153,7 +154,7 @@ public:
   }
 
   void data(ivec new_data) {
-    data_ = std::move(new_data);
+    data_ = move(new_data);
   }
 
 private:
@@ -162,17 +163,17 @@ private:
 
 
 template <class T>
-std::vector<T> make_iota_vector(size_t num_elements) {
-  std::vector<T> result;
+vector<T> make_iota_vector(size_t num_elements) {
+  vector<T> result;
   result.resize(num_elements);
-  std::iota(result.begin(), result.end(), T{0});
+  iota(result.begin(), result.end(), T{0});
   return result;
 }
 
 template <size_t Size>
 square_matrix<Size> make_iota_matrix() {
   square_matrix<Size> result;
-  std::iota(result.data().begin(), result.data().end(), 0);
+  iota(result.data().begin(), result.data().end(), 0);
   return result;
 }
 
@@ -191,32 +192,37 @@ bool operator!=(const square_matrix<Size>& lhs,
 using matrix_type = square_matrix<matrix_size>;
 
 template <class T>
-void check_vector_results(const std::string& description,
-                          const std::vector<T>& expected,
-                          const std::vector<T>& result) {
+void check_vector_results(const string& description,
+                          const vector<T>& expected,
+                          const vector<T>& result) {
   auto cond = (expected == result);
   CAF_CHECK(cond);
-  if (!cond) {
+  if (! cond) {
     CAF_TEST_INFO(description << " failed.");
-    std::cout << "Expected: " << std::endl;
+    cout << "Expected: " << endl;
     for (size_t i = 0; i < expected.size(); ++i) {
-      std::cout << " " << expected[i];
+      cout << " " << expected[i];
     }
-    std::cout << std::endl << "Received: " << std::endl;
+    cout << endl << "Received: " << endl;
     for (size_t i = 0; i < result.size(); ++i) {
-      std::cout << " " << result[i];
+      cout << " " << result[i];
     }
-    std::cout << std::endl;
+    cout << endl;
   }
 }
 
 void test_opencl() {
+  auto info = metainfo::instance();
+  auto opt = info->get_device_if([](const device&){ return true; });
+  if (! opt)
+    CAF_TEST_ERROR("No OpenCL device found.");
+  auto dev = *opt;
   scoped_actor self;
   const ivec expected1{ 56,  62,  68,  74,
                        152, 174, 196, 218,
                        248, 286, 324, 362,
                        344, 398, 452, 506};
-  auto w1 = spawn_cl(program::create(kernel_source), kernel_name,
+  auto w1 = spawn_cl(program::create(kernel_source, "", dev), kernel_name,
                      opencl::spawn_config{dims{matrix_size, matrix_size}},
                      opencl::in<ivec>{}, opencl::out<ivec>{});
   self->send(w1, make_iota_vector<int>(matrix_size * matrix_size));
@@ -245,16 +251,16 @@ void test_opencl() {
                      << to_string(self->current_message()));
     }
   );
-  const matrix_type expected2(std::move(expected1));
+  const matrix_type expected2(move(expected1));
   auto map_arg = [](message& msg) -> optional<message> {
     return msg.apply(
       [](matrix_type& mx) {
-        return make_message(std::move(mx.data()));
+        return make_message(move(mx.data()));
       }
     );
   };
   auto map_res = [=](ivec result) -> message {
-    return make_message(matrix_type{std::move(result)});
+    return make_message(matrix_type{move(result)});
   };
   opencl::spawn_config cfg3{dims{matrix_size, matrix_size}};
   auto w3 = spawn_cl(program::create(kernel_source), kernel_name, cfg3,
@@ -292,11 +298,11 @@ void test_opencl() {
   try {
     auto create_error = program::create(kernel_source_error);
   }
-  catch (const std::exception& exc) {
+  catch (const exception& exc) {
     auto cond = (strcmp("clBuildProgram: CL_BUILD_PROGRAM_FAILURE",
                         exc.what()) == 0);
       CAF_CHECK(cond);
-      if (!cond) {
+      if (! cond) {
         CAF_TEST_INFO("Wrong exception cought for program build failure.");
       }
   }
@@ -317,45 +323,44 @@ void test_opencl() {
     }
   );
 
-  auto get_max_workgroup_size = [](size_t dev_id, size_t dims) -> size_t  {
-    size_t max_size = 512;
-    auto devices = opencl_metainfo::instance()->get_devices()[dev_id];
-    size_t dimsize = devices.get_max_work_items_per_dim()[dims];
-    return max_size < dimsize ? max_size : dimsize;
-  };
-
-  // test for manuel return size selection (max workgroup size 1d)
-  const int max_workgroup_size = static_cast<int>(get_max_workgroup_size(0,1));
-  const size_t reduce_buffer_size = static_cast<size_t>(max_workgroup_size) * 8;
-  const size_t reduce_local_size  = static_cast<size_t>(max_workgroup_size);
-  const size_t reduce_work_groups = reduce_buffer_size / reduce_local_size;
-  const size_t reduce_global_size = reduce_buffer_size;
-  const size_t reduce_result_size = reduce_work_groups;
-  ivec arr6(reduce_buffer_size);
-  int n = static_cast<int>(arr6.capacity());
-  std::generate(arr6.begin(), arr6.end(), [&]{ return --n; });
-  opencl::spawn_config cfg6{dims{reduce_global_size},
-                            dims{ /* no offsets */ },
-                            dims{reduce_local_size}};
-  auto get_result_size_6 = [=](const ivec&) {
-    return reduce_result_size;
-  };
-  auto w6 = spawn_cl(kernel_source_reduce, kernel_name_reduce, cfg6,
-                     opencl::in<ivec>{}, opencl::out<ivec>{get_result_size_6});
-  self->send(w6, move(arr6));
-  ivec expected4{max_workgroup_size * 7, max_workgroup_size * 6,
-                 max_workgroup_size * 5, max_workgroup_size * 4,
-                 max_workgroup_size * 3, max_workgroup_size * 2,
-                 max_workgroup_size,     0};
-  self->receive(
-    [&](const ivec& result) {
-      check_vector_results("Passing size for the output", expected4, result);
-    },
-    others >> [&] {
-      CAF_TEST_ERROR("Unexpected message "
-                     << to_string(self->current_message()));
-    }
-  );
+  auto dev6 = info->get_device_if([](const device& d) {
+    return d.get_device_type() != cpu;
+  });
+  if (dev6) {
+    // test for manuel return size selection (max workgroup size 1d)
+    const size_t max_wg_size = min(dev6->get_max_work_item_sizes()[0], 512UL);
+    const size_t reduce_buffer_size = static_cast<size_t>(max_wg_size) * 8;
+    const size_t reduce_local_size  = static_cast<size_t>(max_wg_size);
+    const size_t reduce_work_groups = reduce_buffer_size / reduce_local_size;
+    const size_t reduce_global_size = reduce_buffer_size;
+    const size_t reduce_result_size = reduce_work_groups;
+    ivec arr6(reduce_buffer_size);
+    int n = static_cast<int>(arr6.capacity());
+    generate(arr6.begin(), arr6.end(), [&]{ return --n; });
+    opencl::spawn_config cfg6{dims{reduce_global_size},
+                              dims{ /* no offsets */ },
+                              dims{reduce_local_size}};
+    auto get_result_size_6 = [reduce_result_size](const ivec&) {
+      return reduce_result_size;
+    };
+    auto w6 = spawn_cl(program::create(kernel_source_reduce, "", *dev6),
+                       kernel_name_reduce, cfg6,
+                       opencl::in<ivec>{}, opencl::out<ivec>{get_result_size_6});
+    self->send(w6, move(arr6));
+    auto wg_size_as_int = static_cast<int>(max_wg_size);
+    ivec expected4{wg_size_as_int * 7, wg_size_as_int * 6, wg_size_as_int * 5,
+                   wg_size_as_int * 4, wg_size_as_int * 3, wg_size_as_int * 2,
+                   wg_size_as_int    ,               0};
+    self->receive(
+      [&](const ivec& result) {
+        check_vector_results("Passing size for the output", expected4, result);
+      },
+      others >> [&] {
+        CAF_TEST_ERROR("Unexpected message "
+                       << to_string(self->current_message()));
+      }
+    );
+  }
   // calculator function for getting the size of the output
   auto get_result_size_7 = [=](const ivec&) {
     return problem_size;
@@ -381,12 +386,12 @@ void test_opencl() {
   // test in_out argument type
   ivec input9 = make_iota_vector<int>(problem_size);
   ivec expected9{input9};
-  std::transform(begin(expected9), end(expected9), begin(expected9),
+  transform(begin(expected9), end(expected9), begin(expected9),
                  [](const int& val){ return val * 2; });
   auto w9 = spawn_cl(kernel_source_inout, kernel_name_inout,
                      spawn_config{dims{problem_size}},
                      opencl::in_out<ivec>{});
-  self->send(w9, std::move(input9));
+  self->send(w9, move(input9));
   self->receive(
     [&](const ivec& result) {
       check_vector_results("Testing in_out arugment", expected9, result);

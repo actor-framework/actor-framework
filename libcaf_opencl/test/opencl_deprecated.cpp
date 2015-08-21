@@ -28,7 +28,6 @@ constexpr int magic_number = 23;
 
 constexpr const char* kernel_name = "matrix_square";
 constexpr const char* kernel_name_compiler_flag = "compiler_flag";
-constexpr const char* kernel_name_reduce = "reduce";
 constexpr const char* kernel_name_const = "const_mod";
 
 constexpr const char* compiler_flag = "-D CAF_OPENCL_TEST_FLAG";
@@ -62,29 +61,6 @@ constexpr const char* kernel_source_compiler_flag = R"__(
 #   else
     output[x] = 0;
 #   endif
-  }
-)__";
-
-// http://developer.amd.com/resources/documentation-articles/articles-whitepapers/
-// opencl-optimization-case-study-simple-reductions
-constexpr const char* kernel_source_reduce = R"__(
-  __kernel void reduce(__global int* buffer,
-                       __global int* result) {
-    __local int scratch[512];
-    int local_index = get_local_id(0);
-    scratch[local_index] = buffer[get_global_id(0)];
-    barrier(CLK_LOCAL_MEM_FENCE);
-    for(int offset = get_local_size(0) / 2; offset > 0; offset = offset / 2) {
-      if (local_index < offset) {
-        int other = scratch[local_index + offset];
-        int mine = scratch[local_index];
-        scratch[local_index] = (mine < other) ? mine : other;
-      }
-      barrier(CLK_LOCAL_MEM_FENCE);
-    }
-    if (local_index == 0) {
-      result[get_group_id(0)] = scratch[0];
-    }
   }
 )__";
 
@@ -190,7 +166,7 @@ void check_vector_results(const std::string& description,
                           const std::vector<T>& result) {
   auto cond = (expected == result);
   CAF_CHECK(cond);
-  if (!cond) {
+  if (! cond) {
     CAF_TEST_INFO(description << " failed.");
     std::cout << "Expected: " << std::endl;
     for (size_t i = 0; i < expected.size(); ++i) {
@@ -239,7 +215,7 @@ void test_opencl_deprecated() {
       }
     );
   };
-  auto map_res = [](ivec result) -> message {
+  auto map_res = [](ivec& result) -> message {
     return make_message(matrix_type{std::move(result)});
   };
   auto w3 = spawn_cl<ivec (ivec)>(program::create(kernel_source),
@@ -274,7 +250,7 @@ void test_opencl_deprecated() {
     auto cond = (strcmp("clBuildProgram: CL_BUILD_PROGRAM_FAILURE",
                         exc.what()) == 0);
       CAF_CHECK(cond);
-      if (!cond) {
+      if (! cond) {
         CAF_TEST_INFO("Wrong exception cought for program build failure.");
       }
   }
@@ -287,39 +263,6 @@ void test_opencl_deprecated() {
   self->receive (
     [&](const ivec& result) {
       check_vector_results("Passing compiler flags", expected3, result);
-    }
-  );
-
-  auto get_max_workgroup_size = [](size_t dev_id, size_t dims) -> size_t {
-    size_t max_size = 512;
-    auto devices = opencl_metainfo::instance()->get_devices()[dev_id];
-    size_t dimsize = devices.get_max_work_items_per_dim()[dims];
-    return max_size < dimsize ? max_size : dimsize;
-  };
-
-  // test for manuel return size selection (max workgroup size 1d)
-  const int max_workgroup_size = static_cast<int>(get_max_workgroup_size(0,1));
-  const int reduce_buffer_size = max_workgroup_size * 8;
-  const int reduce_local_size  = max_workgroup_size;
-  const int reduce_work_groups = reduce_buffer_size / reduce_local_size;
-  const int reduce_global_size = reduce_buffer_size;
-  const int reduce_result_size = reduce_work_groups;
-  ivec arr6(static_cast<size_t>(reduce_buffer_size));
-  int n = static_cast<int>(arr6.capacity());
-  std::generate(arr6.begin(), arr6.end(), [&]{ return --n; });
-  auto w6 = spawn_cl<ivec (ivec)>(kernel_source_reduce, kernel_name_reduce,
-                                  limited_vector<size_t, 3>{static_cast<size_t>(reduce_global_size)},
-                                  {},
-                                  limited_vector<size_t, 3>{static_cast<size_t>(reduce_local_size)},
-                                  static_cast<size_t>(reduce_result_size));
-  self->send(w6, move(arr6));
-  ivec expected4{max_workgroup_size * 7, max_workgroup_size * 6,
-                 max_workgroup_size * 5, max_workgroup_size * 4,
-                 max_workgroup_size * 3, max_workgroup_size * 2,
-                 max_workgroup_size,     0};
-  self->receive(
-    [&](const ivec& result) {
-      check_vector_results("Passing size for the output", expected4, result);
     }
   );
   // constant memory arguments

@@ -46,14 +46,14 @@
 namespace caf {
 namespace opencl {
 
-class opencl_metainfo;
+class metainfo;
 
 template <class List>
 struct function_sig_from_outputs;
 
 template <class... Ts>
 struct function_sig_from_outputs<detail::type_list<Ts...>> {
-  using type = std::function<message (Ts...)>;
+  using type = std::function<message (Ts&...)>;
 };
 
 template <class T, class List>
@@ -113,14 +113,14 @@ public:
     };
     check_vec(config.offsets(), "offsets");
     check_vec(config.local_dimensions(), "local dimensions");
-    auto itr = prog.available_kernels_.find(kernel_name);
-    if (itr == prog.available_kernels_.end()) {
+    cl_int err = 0;
+    kernel_ptr kernel;
+    kernel.reset(clCreateKernel(prog.program_.get(), kernel_name, &err), false);
+    if (err != CL_SUCCESS)
       return nullptr;
-    } else {
-      return new actor_facade(prog, itr->second, config,
-                              std::move(map_args), std::move(map_result),
-                              std::forward_as_tuple(xs...));
-    }
+    return new actor_facade(prog, kernel, config,
+                            std::move(map_args), std::move(map_result),
+                            std::forward_as_tuple(xs...));
   }
 
   void enqueue(const actor_addr &sender, message_id mid, message content,
@@ -136,14 +136,14 @@ public:
     if (! content.match_elements(input_types{})) {
       return;
     }
-    response_promise handle{this->address(), sender, mid.response_id()};
+    response_promise hdl{this->address(), sender, mid.response_id()};
     evnt_vec events;
     args_vec input_buffers;
     args_vec output_buffers;
     size_vec result_sizes;
     add_kernel_arguments(events, input_buffers, output_buffers,
                          result_sizes, content, indices);
-    auto cmd = make_counted<command_type>(handle, this,
+    auto cmd = make_counted<command_type>(hdl, this,
                                           std::move(events),
                                           std::move(input_buffers),
                                           std::move(output_buffers),
@@ -206,7 +206,7 @@ public:
     mem_ptr tmp;
     tmp.reset(buffer, false);
     input_buffers.push_back(tmp);
-    v1callcl(CAF_CLF(clSetKernelArg), kernel_.get(), I,
+    v1callcl(CAF_CLF(clSetKernelArg), kernel_.get(), static_cast<unsigned>(I),
              sizeof(cl_mem), static_cast<void*>(&input_buffers.back()));
   }
 
@@ -227,11 +227,11 @@ public:
     mem_ptr tmp;
     tmp.reset(buffer, false);
     output_buffers.push_back(tmp);
-    v1callcl(CAF_CLF(clSetKernelArg), kernel_.get(), I,
+    v1callcl(CAF_CLF(clSetKernelArg), kernel_.get(), static_cast<unsigned>(I),
              sizeof(cl_mem), static_cast<void*>(&output_buffers.back()));
     sizes.push_back(size);
   }
-  
+
   template <long I, class T>
   void create_buffer(const out<T>& wrapper, evnt_vec&, size_vec& sizes,
                      args_vec&, args_vec& output_buffers, message& msg) {
@@ -244,7 +244,7 @@ public:
     mem_ptr tmp;
     tmp.reset(buffer, false);
     output_buffers.push_back(tmp);
-    v1callcl(CAF_CLF(clSetKernelArg), kernel_.get(), I,
+    v1callcl(CAF_CLF(clSetKernelArg), kernel_.get(), static_cast<unsigned>(I),
              sizeof(cl_mem), static_cast<void*>(&output_buffers.back()));
     sizes.push_back(size);
   }

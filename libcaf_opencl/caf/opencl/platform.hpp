@@ -17,53 +17,61 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OPENCL_METAINFO_HPP
-#define CAF_OPENCL_METAINFO_HPP
+#ifndef CAF_OPENCL_PLATFORM_HPP
+#define CAF_OPENCL_PLATFORM_HPP
 
-#include <atomic>
-#include <vector>
-#include <algorithm>
-#include <functional>
-
-#include "caf/all.hpp"
-
-#include "caf/opencl/global.hpp"
-#include "caf/opencl/program.hpp"
-#include "caf/opencl/smart_ptr.hpp"
-#include "caf/opencl/device_info.hpp"
-#include "caf/opencl/actor_facade.hpp"
-
-//#include "caf/detail/singleton_mixin.hpp"
-//#include "caf/detail/singleton_manager.hpp"
-#include "caf/detail/singletons.hpp"
+#include <caf/opencl/device.hpp>
 
 namespace caf {
 namespace opencl {
 
-class opencl_metainfo : public detail::abstract_singleton {
+class platform {
 
   friend class program;
-  friend class detail::singletons;
-  friend command_queue_ptr get_command_queue(uint32_t id);
 
 public:
-  const std::vector<device_info> get_devices() const;
-
-  /// Get opencl_metainfo instance.
-  static opencl_metainfo* instance();
+  inline const std::vector<device>& get_devices() const;
+  inline const std::string& get_name() const;
+  inline const std::string& get_vendor() const;
+  inline const std::string& get_version() const;
+  static platform create(cl_platform_id platform_id, unsigned start_id);
 
 private:
-  opencl_metainfo() = default;
-
-  void stop() override;
-  void initialize() override;
-  void dispose() override;
-
+  platform(cl_platform_id platform_id, context_ptr context,
+           std::string name, std::string vendor, std::string version,
+           std::vector<device> devices);
+  static std::string platform_info(cl_platform_id platform_id,
+                                   unsigned info_flag);
+  cl_platform_id platform_id_;
   context_ptr context_;
-  std::vector<device_info> devices_;
+  std::string name_;
+  std::string vendor_;
+  std::string version_;
+  std::vector<device> devices_;
 };
+
+/******************************************************************************\
+ *                 implementation of inline member functions                  *
+\******************************************************************************/
+
+inline const std::vector<device>& platform::get_devices() const {
+  return devices_;
+}
+
+inline const std::string& platform::get_name() const {
+  return name_;
+}
+
+inline const std::string& platform::get_vendor() const {
+  return vendor_;
+}
+
+inline const std::string& platform::get_version() const {
+  return version_;
+}
+
 
 } // namespace opencl
 } // namespace caf
 
-#endif // CAF_OPENCL_METAINFO_HPP
+#endif // CAF_OPENCL_PLTFORM_HPP

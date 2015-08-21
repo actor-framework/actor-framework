@@ -21,6 +21,7 @@
 #define CAF_OPENCL_GLOBAL_HPP
 
 #include <string>
+#include <iostream>
 
 #include "caf/config.hpp"
 #include "caf/detail/limited_vector.hpp"
@@ -39,6 +40,18 @@ cl_int clRetainDeviceDummy(cl_device_id);
 
 namespace caf {
 namespace opencl {
+
+enum device_type {
+  def         = CL_DEVICE_TYPE_DEFAULT,
+  cpu         = CL_DEVICE_TYPE_CPU,
+  gpu         = CL_DEVICE_TYPE_GPU,
+  accelerator = CL_DEVICE_TYPE_ACCELERATOR,
+  custom      = CL_DEVICE_TYPE_CUSTOM,
+  all         = CL_DEVICE_TYPE_ALL
+};
+
+std::ostream& operator<<(std::ostream& os, device_type dev);
+device_type device_type_from_ulong(cl_ulong dev);
 
 /// A vector of up to three elements used for OpenCL dimensions.
 using dim_vec = detail::limited_vector<size_t, 3>;

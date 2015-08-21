@@ -32,6 +32,30 @@ cl_int clRetainDeviceDummy(cl_device_id) {
 namespace caf {
 namespace opencl {
 
+std::ostream& operator<<(std::ostream& os, device_type dev) {
+  switch(dev) {
+    case def         : os << "default";     break;
+    case cpu         : os << "CPU";         break;
+    case gpu         : os << "GPU";         break;
+    case accelerator : os << "accelerator"; break;
+    case custom      : os << "custom";      break;
+    case all         : os << "all";         break;
+    default : os.setstate(std::ios_base::failbit);
+  }
+  return os;
+}
+
+device_type device_type_from_ulong(cl_ulong dev) {
+  switch(dev) {
+    case CL_DEVICE_TYPE_CPU         : return cpu;
+    case CL_DEVICE_TYPE_GPU         : return gpu;
+    case CL_DEVICE_TYPE_ACCELERATOR : return accelerator;
+    case CL_DEVICE_TYPE_CUSTOM      : return custom;
+    case CL_DEVICE_TYPE_ALL         : return all;
+    default : return def;
+  }
+}
+
 std::string get_opencl_error(cl_int err) {
   switch (err) {
     case CL_SUCCESS:

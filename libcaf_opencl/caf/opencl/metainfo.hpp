@@ -17,57 +17,70 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OPENCL_DEVICE_INFO_HPP
-#define CAF_OPENCL_DEVICE_INFO_HPP
+#ifndef CAF_METAINFO_HPP
+#define CAF_METAINFO_HPP
 
+#include <atomic>
+#include <vector>
+#include <algorithm>
+#include <functional>
+
+#include "caf/all.hpp"
+#include "caf/config.hpp"
+#include "caf/optional.hpp"
+
+#include "caf/opencl/device.hpp"
 #include "caf/opencl/global.hpp"
 #include "caf/opencl/program.hpp"
+#include "caf/opencl/platform.hpp"
 #include "caf/opencl/smart_ptr.hpp"
+#include "caf/opencl/actor_facade.hpp"
+
+#include "caf/detail/singletons.hpp"
 
 namespace caf {
 namespace opencl {
 
-class device_info {
+class metainfo : public detail::abstract_singleton {
 
   friend class program;
+  friend class detail::singletons;
+  friend command_queue_ptr get_command_queue(uint32_t id);
 
 public:
-  device_info(device_ptr device, command_queue_ptr queue,
-              size_t work_group_size, cl_uint dimensons,
-              const dim_vec& items_per_dimension)
-      : max_work_group_size_(work_group_size),
-        max_dimensions_(dimensons),
-        max_work_items_per_dim_(items_per_dimension),
-        device_(device),
-        cmd_queue_(queue) {}
+  /// Get a list of all available devices. This is depricated, use the more specific
+  /// get_deivce and get_deivce_if functions.
+  /// (Returns only devices of the first discovered platform).
+  const std::vector<device>& get_devices() const CAF_DEPRECATED;
+  /// Get the device with id. These ids are assigned sequientally to all available devices.
+  const optional<const device&> get_device(size_t id = 0) const;
+  /// Get the first device that satisfies the predicate.
+  /// The predicate should accept a `const device&` and return a bool;
+  template <class UnaryPredicate>
+  const optional<const device&> get_device_if(UnaryPredicate p) const {
+    for (auto& pl : platforms_) {
+      for (auto& dev : pl.get_devices()) {
+        if (p(dev))
+          return dev;
+      }
+    }
+    return none;
+  }
 
-  inline size_t get_max_work_group_size();
-  inline cl_uint get_max_dimensions();
-  inline dim_vec get_max_work_items_per_dim();
+  /// Get metainfo instance.
+  static metainfo* instance();
 
 private:
-  size_t max_work_group_size_;
-  cl_uint max_dimensions_;
-  dim_vec max_work_items_per_dim_;
-  device_ptr device_;
-  command_queue_ptr cmd_queue_;
+  metainfo() = default;
+
+  void stop() override;
+  void initialize() override;
+  void dispose() override;
+
+  std::vector<platform> platforms_;
 };
-
-/******************************************************************************\
- *                 implementation of inline member functions                  *
-\******************************************************************************/
-
-inline size_t device_info::get_max_work_group_size() {
-  return max_work_group_size_;
-}
-
-inline cl_uint device_info::get_max_dimensions() { return max_dimensions_; }
-
-inline dim_vec device_info::get_max_work_items_per_dim() {
-  return max_work_items_per_dim_;
-}
 
 } // namespace opencl
 } // namespace caf
 
-#endif // CAF_OPENCL_DEVICE_INFO_HPP
+#endif // CAF_METAINFO_HPP

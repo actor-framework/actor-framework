@@ -153,7 +153,7 @@ void multiplier(event_based_actor* self) {
     );
   };
 
-  auto box_res = [] (fvec result) -> message {
+  auto box_res = [] (fvec& result) -> message {
     return make_message(matrix_type{move(result)});
   };
 

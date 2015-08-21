@@ -20,8 +20,10 @@
 #ifndef CAF_OPENCL_PROGRAM_HPP
 #define CAF_OPENCL_PROGRAM_HPP
 
+#include <map>
 #include <memory>
 
+#include "caf/opencl/device.hpp"
 #include "caf/opencl/global.hpp"
 #include "caf/opencl/smart_ptr.hpp"
 
@@ -44,14 +46,18 @@ public:
   static program create(const char* kernel_source,
                         const char* options = nullptr, uint32_t device_id = 0);
 
+  /// @brief Factory method, that creates a caf::opencl::program
+  ///        from a given @p kernel_source.
+  /// @returns A program object.
+  static program create(const char* kernel_source,
+                        const char* options, const device& dev);
 private:
-  program(context_ptr context, command_queue_ptr queue, program_ptr program,
-          std::map<std::string,kernel_ptr> available_kernels);
+  program(context_ptr context, command_queue_ptr queue, program_ptr prog);
 
   context_ptr context_;
   program_ptr program_;
   command_queue_ptr queue_;
-  std::map<std::string,kernel_ptr> available_kernels_;
+  // save CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE
 };
 
 } // namespace opencl

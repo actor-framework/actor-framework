@@ -95,8 +95,11 @@ public:
       enqueue_read_buffers(event_k, detail::get_indices(result_buffers_));
       cl_event marker;
 #if defined(__APPLE__)
-      err = clEnqueueMarkerWithWaitList(queue_.get(), mem_out_events_.size(),
-                                        mem_out_events_.data(), &marker);
+      err = clEnqueueMarkerWithWaitList(
+        queue_.get(),
+        static_cast<cl_uint>(mem_out_events_.size()),
+        mem_out_events_.data(), &marker
+      );
 #else
       err = clEnqueueMarker(queue_.get(), &marker);
 #endif
