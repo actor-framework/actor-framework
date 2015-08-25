@@ -243,10 +243,7 @@ void test_multiplexer::accept_connection(accept_handle hdl) {
 }
 
 void test_multiplexer::read_data(connection_handle hdl) {
-  // flush any pending runnables
-  while (try_exec_runnable()) {
-    // nop
-  }
+  flush_runnables();
   scribe_data& sd = scribe_data_[hdl];
   switch (sd.recv_conf.first) {
     case receive_policy_flag::exactly:
@@ -313,15 +310,25 @@ bool test_multiplexer::try_exec_runnable() {
 }
 
 void test_multiplexer::flush_runnables() {
+  // execute runnables in bursts, pick a small size to
+  // minimize time in the critical section
+  constexpr size_t max_runnable_count = 8;
   std::vector<runnable_ptr> runnables;
-  runnables.reserve(256);
-  { // critical section
-    guard_type guard{mx_};
-    while (! runnables_.empty())
-      runnables.emplace_back(std::move(runnables_.front()));
-  }
-  for (auto& ptr : runnables)
-    ptr->run();
+  runnables.reserve(max_runnable_count);
+  // runnables can create new runnables, so we need to double-check
+  // that `runnables_` is empty after each burst
+  do {
+    runnables.clear();
+    { // critical section
+      guard_type guard{mx_};
+      while (! runnables_.empty() && runnables.size() < max_runnable_count) {
+        runnables.emplace_back(std::move(runnables_.front()));
+        runnables_.pop_front();
+      }
+    }
+    for (auto& ptr : runnables)
+      ptr->run();
+  } while (! runnables.empty());
 }
 
 void test_multiplexer::dispatch_runnable(runnable_ptr ptr) {
