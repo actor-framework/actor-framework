@@ -27,6 +27,7 @@
 
 #include "caf/spawn.hpp"
 #include "caf/locks.hpp"
+#include "caf/exception.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/attachable.hpp"
 #include "caf/exit_reason.hpp"
@@ -166,14 +167,19 @@ void actor_registry::dispose() {
 
 void actor_registry::stop() {
   scoped_actor self{true};
-  for (auto& kvp : named_entries_) {
-    self->monitor(kvp.second);
-    self->send_exit(kvp.second, exit_reason::kill);
-    self->receive(
-      [](const down_msg&) {
-        // nop
-      }
-    );
+  try {
+    for (auto& kvp : named_entries_) {
+      self->monitor(kvp.second);
+      self->send_exit(kvp.second, exit_reason::kill);
+      self->receive(
+        [](const down_msg&) {
+          // nop
+        }
+      );
+    }
+  }
+  catch (actor_exited&) {
+    CAF_LOG_ERROR("actor_exited thrown in actor_registry::stop");
   }
   named_entries_.clear();
 }
