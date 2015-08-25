@@ -268,11 +268,11 @@ void test_multiplexer::read_data(connection_handle hdl) {
       break;
     case receive_policy_flag::at_most:
       auto max_bytes = static_cast<ptrdiff_t>(sd.recv_conf.second);
-      while (sd.xbuf.size() > 0) {
+      while (! sd.xbuf.empty()) {
         sd.rd_buf.clear();
+        auto xbuf_size = static_cast<ptrdiff_t>(sd.xbuf.size());
         auto first = sd.xbuf.begin();
-        auto last = (max_bytes < sd.xbuf.size()) ? first + max_bytes
-                                                 : sd.xbuf.end();
+        auto last = (max_bytes < xbuf_size) ? first + max_bytes : sd.xbuf.end();
         sd.rd_buf.insert(sd.rd_buf.end(), first, last);
         sd.xbuf.erase(first, last);
         sd.ptr->consume(sd.rd_buf.data(), sd.rd_buf.size());
@@ -310,6 +310,18 @@ bool test_multiplexer::try_exec_runnable() {
   }
   ptr->run();
   return true;
+}
+
+void test_multiplexer::flush_runnables() {
+  std::vector<runnable_ptr> runnables;
+  runnables.reserve(256);
+  { // critical section
+    guard_type guard{mx_};
+    while (! runnables_.empty())
+      runnables.emplace_back(std::move(runnables_.front()));
+  }
+  for (auto& ptr : runnables)
+    ptr->run();
 }
 
 void test_multiplexer::dispatch_runnable(runnable_ptr ptr) {

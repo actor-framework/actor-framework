@@ -200,9 +200,10 @@ public:
 
   ~fixture() {
     anon_send_exit(aut_, exit_reason::kill);
-    // run the exit message explicitly, since we do not invoke any "IO"
-    // from this point on that would trigger the exit message implicitly
-    mpx_->exec_runnable();
+    // run the exit message and other pending messages explicitly,
+    // since we do not invoke any "IO" from this point on that would
+    // trigger the exit message implicitly
+    mpx_->flush_runnables();
     await_all_actors_done();
     shutdown();
   }
@@ -216,12 +217,13 @@ public:
 
     mock_t(const mock_t&) = default;
 
-    mock_t& expect(const std::string& what) {
+    mock_t& expect(const std::string& x) {
       auto& buf = this_->mpx_->output_buffer(this_->connection_);
-      CAF_REQUIRE((buf.size() >= what.size()));
-      CAF_REQUIRE((std::equal(buf.begin(), buf.begin() + what.size(),
-                              what.begin()));
-      buf.erase(buf.begin(), buf.begin() + what.size()));
+      CAF_REQUIRE((buf.size() >= x.size()));
+      CAF_REQUIRE((std::equal(buf.begin(),
+                              buf.begin() + static_cast<ptrdiff_t>(x.size()),
+                              x.begin()));
+      buf.erase(buf.begin(), buf.begin() + static_cast<ptrdiff_t>(x.size())));
       return *this;
     }
 

@@ -122,6 +122,9 @@ public:
   /// Returns `true` if a `runnable` was available, `false` otherwise.
   bool try_exec_runnable();
 
+  /// Executes all pending `runnable` objects.
+  void flush_runnables();
+
 protected:
   void dispatch_runnable(runnable_ptr ptr) override;
 
