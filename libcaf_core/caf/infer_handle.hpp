@@ -126,6 +126,24 @@ struct infer_handle_from_fun_impl<Result,
   static constexpr spawn_mode mode = spawn_mode::function_with_selfptr;
 };
 
+// statically typed stateful broker with self pointer
+template <class Result, class State, class... Sigs>
+struct infer_handle_from_fun_impl<Result,
+                                  experimental::stateful_actor<
+                                    State,
+                                    io::experimental::typed_broker<Sigs...>
+                                  >*,
+                                  true> {
+  using type = typed_actor<Sigs...>;
+  using impl =
+    experimental::stateful_actor<
+      State,
+      io::experimental::typed_broker<Sigs...>
+    >;
+  using behavior_type = typed_behavior<Sigs...>;
+  static constexpr spawn_mode mode = spawn_mode::function_with_selfptr;
+};
+
 template <class F, class Trait = typename detail::get_callable_trait<F>::type>
 struct infer_handle_from_fun {
   using result_type = typename Trait::result_type;

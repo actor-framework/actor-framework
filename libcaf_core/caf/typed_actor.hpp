@@ -104,6 +104,16 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
   template <class State>
   using stateful_pointer = experimental::stateful_actor<State, base>*;
 
+  /// Identifies the broker_base class for this kind of actor with actor.
+  template <class State>
+  using stateful_broker_base =
+    experimental::stateful_actor<State, broker_base>;
+
+  /// Identifies the broker_base class for this kind of actor with actor.
+  template <class State>
+  using stateful_broker_pointer =
+    experimental::stateful_actor<State, broker_base>*;
+
   typed_actor() = default;
   typed_actor(typed_actor&&) = default;
   typed_actor(const typed_actor&) = default;
