@@ -97,282 +97,238 @@ constexpr int min_req_interval = 10;
 // maximum delay between HTTP requests
 constexpr int max_req_interval = 300;
 
-// provides print utility and each base_actor has a parent
-class base_actor : public event_based_actor {
-protected:
-  base_actor(actor parent, std::string name, std::string color_code)
-      : parent_(std::move(parent)),
-        name_(std::move(name)),
-        color_(std::move(color_code)),
-        out_(this) {
+// put everything into anonymous namespace (except main)
+namespace {
+
+// provides print utility, a name, and a parent
+struct base_state {
+  base_state(local_actor* thisptr) : self(thisptr) {
     // nop
   }
 
-  ~base_actor();
-
-  inline actor_ostream& print() {
-    return out_ << color_ << name_ << " (id = " << id() << "): ";
+  actor_ostream print() {
+    return aout(self) << color << name << " (id = " << self->id() << "): ";
   }
 
-  void on_exit() {
-    print() << "on_exit" << color::reset_endl;
+  virtual void init(actor m_parent, std::string m_name, std::string m_color) {
+    parent = std::move(m_parent);
+    name = std::move(m_name);
+    color = std::move(m_color);
+    print() << "started" << color::reset_endl;
   }
 
-  actor parent_;
+  virtual ~base_state() {
+    print() << "done" << color::reset_endl;
+  }
 
-private:
-  std::string   name_;
-  std::string   color_;
-  actor_ostream out_;
+  local_actor* self;
+  actor parent;
+  std::string name;
+  std::string color;
 };
-
-base_actor::~base_actor() {
-  // avoid weak-vtables warning
-}
 
 // encapsulates an HTTP request
-class client_job : public base_actor {
-public:
-  explicit client_job(actor parent)
-      : base_actor(std::move(parent), "client_job", color::blue) {
+behavior client_job(stateful_actor<base_state>* self, actor parent) {
+  self->state.init(std::move(parent), "client-job", color::blue);
+  self->send(self->state.parent, read_atom::value,
+             "http://www.example.com/index.html",
+             uint64_t{0}, uint64_t{4095});
+  return {
+    [=](reply_atom, const buffer_type& buf) {
+      self->state.print() << "successfully received " << buf.size() << " bytes"
+                          << color::reset_endl;
+      self->quit();
+    },
+    [=](fail_atom) {
+      self->state.print() << "failure" << color::reset_endl;
+      self->quit();
+    }
+  };
+}
+
+struct client_state : base_state {
+  client_state(local_actor* self)
+      : base_state(self),
+        count(0),
+        re(rd()),
+        dist(min_req_interval, max_req_interval) {
     // nop
   }
 
-  ~client_job();
-
-protected:
-  behavior make_behavior() override {
-    print() << "init" << color::reset_endl;
-    send(parent_, read_atom::value, "http://www.example.com/index.html",
-         uint64_t{0}, uint64_t{4095});
-    return {
-      [=](reply_atom, const buffer_type& buf) {
-        print() << "successfully received " << buf.size() << " bytes"
-                << color::reset_endl;
-        quit();
-      },
-      [=](fail_atom) {
-        print() << "failure" << color::reset_endl;
-        quit();
-      }
-    };
-  }
+  size_t count;
+  std::random_device rd;
+  std::default_random_engine re;
+  std::uniform_int_distribution<int> dist;
 };
-
-client_job::~client_job() {
-  // avoid weak-vtables warning
-}
 
 // spawns HTTP requests
-class client : public base_actor {
-public:
-
-  explicit client(const actor& parent)
-      : base_actor(parent, "client", color::green),
-        count_(0),
-        re_(rd_()),
-        dist_(min_req_interval, max_req_interval) {
-    // nop
-  }
-
-  ~client();
-
-protected:
-  behavior make_behavior() override {
-    using std::chrono::milliseconds;
-    link_to(parent_);
-    print() << "init" << color::reset_endl;
-    // start 'loop'
-    send(this, next_atom::value);
-    return (
-      [=](next_atom) {
-        print() << "spawn new client_job (nr. "
-            << ++count_
-            << ")"
-            << color::reset_endl;
-        // client_job will use IO
-        // and should thus be spawned in a separate thread
-        spawn<client_job, detached+linked>(parent_);
-        // compute random delay until next job is launched
-        auto delay = dist_(re_);
-        delayed_send(this, milliseconds(delay), next_atom::value);
-      }
-    );
-  }
-
-private:
-  size_t count_;
-  std::random_device rd_;
-  std::default_random_engine re_;
-  std::uniform_int_distribution<int> dist_;
-};
-
-client::~client() {
-  // avoid weak-vtables warning
+behavior client(stateful_actor<client_state>* self, actor parent) {
+  using std::chrono::milliseconds;
+  self->link_to(parent);
+  self->state.init(std::move(parent), "client", color::green);
+  self->send(self, next_atom::value);
+  return {
+    [=](next_atom) {
+      auto& st = self->state;
+      st.print() << "spawn new client_job (nr. " << ++st.count << ")"
+                 << color::reset_endl;
+      // client_job will use IO
+      // and should thus be spawned in a separate thread
+      self->spawn<detached+linked>(client_job, st.parent);
+      // compute random delay until next job is launched
+      auto delay = st.dist(st.re);
+      self->delayed_send(self, milliseconds(delay), next_atom::value);
+    }
+  };
 }
 
-// manages a CURL session
-class curl_worker : public base_actor {
-public:
-  explicit curl_worker(const actor& parent)
-      : base_actor(parent, "curl_worker", color::yellow),
-        curl_(nullptr) {
+struct curl_state : base_state {
+  curl_state(local_actor* self) : base_state(self) {
     // nop
   }
 
-  ~curl_worker();
-
-protected:
-  behavior make_behavior() override {
-    print() << "init" << color::reset_endl;
-    curl_ = curl_easy_init();
-    curl_easy_setopt(curl_, CURLOPT_WRITEFUNCTION, &curl_worker::cb);
-    curl_easy_setopt(curl_, CURLOPT_NOSIGNAL, 1);
-    return (
-      [=](read_atom, const std::string& fname, uint64_t offset, uint64_t range)
-      -> message {
-        print() << "read" << color::reset_endl;
-        for (;;) {
-          buf_.clear();
-          // set URL
-          curl_easy_setopt(curl_, CURLOPT_URL, fname.c_str());
-          // set range
-          std::ostringstream oss;
-          oss << offset << "-" << range;
-          curl_easy_setopt(curl_, CURLOPT_RANGE, oss.str().c_str());
-          // set curl callback
-          curl_easy_setopt(curl_, CURLOPT_WRITEDATA,
-                           reinterpret_cast<void*>(this));
-          // launch file transfer
-          auto res = curl_easy_perform(curl_);
-          if (res != CURLE_OK) {
-            print() << "curl_easy_perform() failed: "
-                    << curl_easy_strerror(res)
-                    << color::reset_endl;
-          } else {
-            long hc = 0; // http return code
-            curl_easy_getinfo(curl_, CURLINFO_RESPONSE_CODE, &hc);
-            switch (hc) {
-              default:
-                print() << "http error: download failed with "
-                        << "'HTTP RETURN CODE': "
-                        << hc
-                        << color::reset_endl;
-                break;
-              case 200: // ok
-              case 206: // partial content
-                print() << "received "
-                        << buf_.size()
-                        << " bytes with 'HTTP RETURN CODE': "
-                        << hc
-                        << color::reset_endl;
-                // tell parent that this worker is done
-                send(parent_, finished_atom::value);
-                return make_message(reply_atom::value, buf_);
-              case 404: // file does not exist
-                print() << "http error: download failed with "
-                        << "'HTTP RETURN CODE': 404 (file does "
-                        << "not exist!)"
-                        << color::reset_endl;
-            }
-          }
-          // avoid 100% cpu utilization if remote side is not accessible
-          std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        }
-      }
-    );
+  ~curl_state() {
+    if (curl)
+      curl_easy_cleanup(curl);
   }
 
-  void on_exit() {
-    curl_easy_cleanup(curl_);
-    print() << "on_exit" << color::reset_endl;
-  }
-
-private:
-  static size_t cb(void* data, size_t bsize, size_t nmemb, void* userp) {
+  static size_t callback(void* data, size_t bsize, size_t nmemb, void* userp) {
     size_t size = bsize * nmemb;
-    auto& buf = reinterpret_cast<curl_worker*>(userp)->buf_;
+    auto& buf = reinterpret_cast<curl_state*>(userp)->buf;
     auto first = reinterpret_cast<char*>(data);
     auto last = first + bsize;
     buf.insert(buf.end(), first, last);
     return size;
   }
 
-  CURL*       curl_;
-  buffer_type buf_;
+  void init(actor m_parent, std::string m_name, std::string m_color) override {
+    curl = curl_easy_init();
+    if (! curl)
+      throw std::runtime_error("Unable initialize CURL.");
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &curl_state::callback);
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
+    base_state::init(std::move(m_parent), std::move(m_name),
+                     std::move(m_color));
+  }
+
+  CURL*       curl = nullptr;
+  buffer_type buf;
 };
 
-curl_worker::~curl_worker() {
-  // avoid weak-vtables warning
+// manages a CURL session
+behavior curl_worker(stateful_actor<curl_state>* self, actor parent) {
+  self->state.init(std::move(parent), "curl-worker", color::yellow);
+  return {
+    [=](read_atom, const std::string& fname, uint64_t offset, uint64_t range)
+    -> message {
+      auto& st = self->state;
+      st.print() << "read" << color::reset_endl;
+      for (;;) {
+        st.buf.clear();
+        // set URL
+        curl_easy_setopt(st.curl, CURLOPT_URL, fname.c_str());
+        // set range
+        std::ostringstream oss;
+        oss << offset << "-" << range;
+        curl_easy_setopt(st.curl, CURLOPT_RANGE, oss.str().c_str());
+        // set curl callback
+        curl_easy_setopt(st.curl, CURLOPT_WRITEDATA,
+                         reinterpret_cast<void*>(&st));
+        // launch file transfer
+        auto res = curl_easy_perform(st.curl);
+        if (res != CURLE_OK) {
+          st.print() << "curl_easy_perform() failed: "
+                     << curl_easy_strerror(res)
+                     << color::reset_endl;
+        } else {
+          long hc = 0; // http return code
+          curl_easy_getinfo(st.curl, CURLINFO_RESPONSE_CODE, &hc);
+          switch (hc) {
+            default:
+              st.print() << "http error: download failed with "
+                         << "'HTTP RETURN CODE': "
+                         << hc
+                         << color::reset_endl;
+              break;
+            case 200: // ok
+            case 206: // partial content
+              st.print() << "received "
+                         << st.buf.size()
+                         << " bytes with 'HTTP RETURN CODE': "
+                         << hc
+                         << color::reset_endl;
+              // tell parent that this worker is done
+              self->send(st.parent, finished_atom::value);
+              return make_message(reply_atom::value, std::move(st.buf));
+            case 404: // file does not exist
+              st.print() << "http error: download failed with "
+                         << "'HTTP RETURN CODE': 404 (file does "
+                         << "not exist!)"
+                         << color::reset_endl;
+          }
+        }
+        // avoid 100% cpu utilization if remote side is not accessible
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      }
+    }
+  };
 }
 
-// manages {num_curl_workers} workers with a round-robin protocol
-class curl_master : public base_actor {
-public:
-  curl_master() : base_actor(invalid_actor, "curl_master", color::magenta) {
+struct master_state : base_state {
+  master_state(local_actor* self) : base_state(self) {
     // nop
   }
-
-  ~curl_master();
-
-protected:
-  behavior make_behavior() override {
-    print() << "init" << color::reset_endl;
-    // spawn workers
-    for(size_t i = 0; i < num_curl_workers; ++i) {
-      idle_worker_.push_back(spawn<curl_worker, detached+linked>(this));
-    }
-    auto worker_finished = [=] {
-      auto sender = current_sender();
-      auto last = busy_worker_.end();
-      auto i = std::find(busy_worker_.begin(), last, sender);
-      if (i == last) {
-        return;
-      }
-      idle_worker_.push_back(*i);
-      busy_worker_.erase(i);
-      print() << "worker is done" << color::reset_endl;
-    };
-    print() << "spawned " << idle_worker_.size()
-            << " worker(s)" << color::reset_endl;
-    return {
-      [=](read_atom, const std::string&, uint64_t, uint64_t) {
-        print() << "received {'read'}" << color::reset_endl;
-        // forward job to an idle worker
-        actor worker = idle_worker_.back();
-        idle_worker_.pop_back();
-        busy_worker_.push_back(worker);
-        forward_to(worker);
-        print() << busy_worker_.size() << " active jobs" << color::reset_endl;
-        if (idle_worker_.empty()) {
-          // wait until at least one worker finished its job
-          become (
-            keep_behavior,
-            [=](finished_atom) {
-              worker_finished();
-              unbecome();
-            }
-          );
-        }
-      },
-      [=](finished_atom) {
-        worker_finished();
-      }
-    };
-  }
-
-private:
-  std::vector<actor> idle_worker_;
-  std::vector<actor> busy_worker_;
+  std::vector<actor> idle;
+  std::vector<actor> busy;
 };
 
-curl_master::~curl_master() {
-  // avoid weak-vtables warning
+behavior curl_master(stateful_actor<master_state>* self) {
+  self->state.init(invalid_actor, "curl-master", color::magenta);
+  // spawn workers
+  for(size_t i = 0; i < num_curl_workers; ++i)
+    self->state.idle.push_back(self->spawn<detached+linked>(curl_worker, self));
+  auto worker_finished = [=] {
+    auto sender = self->current_sender();
+    auto last = self->state.busy.end();
+    auto i = std::find(self->state.busy.begin(), last, sender);
+    if (i == last)
+      return;
+    self->state.idle.push_back(*i);
+    self->state.busy.erase(i);
+    self->state.print() << "worker is done" << color::reset_endl;
+  };
+  self->state.print() << "spawned " << self->state.idle.size()
+                      << " worker(s)" << color::reset_endl;
+  return {
+    [=](read_atom, const std::string&, uint64_t, uint64_t) {
+      auto& st = self->state;
+      st.print() << "received {'read'}" << color::reset_endl;
+      // forward job to an idle worker
+      actor worker = st.idle.back();
+      st.idle.pop_back();
+      st.busy.push_back(worker);
+      self->forward_to(worker);
+      st.print() << st.busy.size() << " active jobs" << color::reset_endl;
+      if (st.idle.empty()) {
+        // wait until at least one worker finished its job
+        self->become (
+          keep_behavior,
+          [=](finished_atom) {
+            worker_finished();
+            self->unbecome();
+          }
+        );
+      }
+    },
+    [=](finished_atom) {
+      worker_finished();
+    }
+  };
 }
 
 // signal handling for ctrl+c
-namespace {
 std::atomic<bool> shutdown_flag{false};
+
 } // namespace <anonymous>
 
 int main() {
@@ -392,12 +348,11 @@ int main() {
   { // lifetime scope of self
     scoped_actor self;
     // spawn client and curl_master
-    auto master = self->spawn<curl_master, detached>();
-    self->spawn<client, detached>(master);
+    auto master = self->spawn<detached>(curl_master);
+    self->spawn<detached>(client, master);
     // poll CTRL+C flag every second
-    while (! shutdown_flag) {
+    while (! shutdown_flag)
       std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
     aout(self) << color::cyan << "received CTRL+C" << color::reset_endl;
     // shutdown actors
     anon_send_exit(master, exit_reason::user_shutdown);
