@@ -46,20 +46,42 @@ void split(std::vector<std::string>& result,
        bool keep_empties = true);
 
 template <class Iterator>
-std::string join(Iterator begin, Iterator end, const std::string& glue) {
-  bool first = true;
-  std::ostringstream oss;
-  for ( ; begin != end; ++begin) {
-    if (first) first = false;
-    else oss << glue;
-    oss << *begin;
+class iterator_range {
+public:
+  using iterator = Iterator;
+
+  iterator_range(iterator first, iterator last) : begin_(first), end_(last) {
+    // nop
   }
-  return oss.str();
-}
+
+  iterator begin() const {
+    return begin_;
+  }
+
+  iterator end() const {
+    return end_;
+  }
+
+private:
+  iterator begin_;
+  iterator end_;
+};
+
 
 template <class Container>
 std::string join(const Container& c, const std::string& glue) {
-  return join(c.begin(), c.end(), glue);
+  auto begin = c.begin();
+  auto end = c.end();
+  bool first = true;
+  std::ostringstream oss;
+  for ( ; begin != end; ++begin) {
+    if (first)
+      first = false;
+    else
+      oss << glue;
+    oss << *begin;
+  }
+  return oss.str();
 }
 
 // end of recursion

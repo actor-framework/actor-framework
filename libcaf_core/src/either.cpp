@@ -28,12 +28,13 @@ std::string either_or_else_type_name(size_t lefts_size,
                                      const std::string* lefts,
                                      size_t rights_size,
                                      const std::string* rights) {
+  using irange = iterator_range<const std::string*>;
   std::string glue = ",";
   std::string result;
   result = "caf::either<";
-  result += join(lefts, lefts + lefts_size, glue);
+  result += join(irange{lefts, lefts + lefts_size}, glue);
   result += ">::or_else<";
-  result += join(rights, rights + rights_size, glue);
+  result += join(irange{rights, rights + rights_size}, glue);
   result += ">";
   return result;
 }
