@@ -79,11 +79,6 @@ enum class atom_value : uint64_t;
 // aliases
 using actor_id = uint32_t;
 
-// intrusive pointer types
-using abstract_actor_ptr = intrusive_ptr<abstract_actor>;
-using abstract_group_ptr = intrusive_ptr<abstract_group>;
-using actor_proxy_ptr = intrusive_ptr<actor_proxy>;
-
 // functions
 template <class T, typename U>
 T actor_cast(const U&);
