@@ -22,9 +22,9 @@
 
 #include "caf/actor.hpp"
 #include "caf/actor_addr.hpp"
+#include "caf/stateful_actor.hpp"
 #include "caf/typed_behavior.hpp"
 
-#include "caf/experimental/stateful_actor.hpp"
 
 namespace caf {
 
@@ -104,13 +104,12 @@ struct infer_handle_from_fun_impl<Result, typed_event_based_actor<Sigs...>*,
 // statically typed stateful actor with self pointer
 template <class Result, class State, class... Sigs>
 struct infer_handle_from_fun_impl<Result,
-                                  experimental::stateful_actor<
+                                  stateful_actor<
                                     State, typed_event_based_actor<Sigs...>
                                   >*,
                                   true> {
   using type = typed_actor<Sigs...>;
-  using impl =
-    experimental::stateful_actor<State, typed_event_based_actor<Sigs...>>;
+  using impl = stateful_actor<State, typed_event_based_actor<Sigs...>>;
   using behavior_type = typed_behavior<Sigs...>;
   static constexpr spawn_mode mode = spawn_mode::function_with_selfptr;
 };
@@ -129,14 +128,14 @@ struct infer_handle_from_fun_impl<Result,
 // statically typed stateful broker with self pointer
 template <class Result, class State, class... Sigs>
 struct infer_handle_from_fun_impl<Result,
-                                  experimental::stateful_actor<
+                                  stateful_actor<
                                     State,
                                     io::experimental::typed_broker<Sigs...>
                                   >*,
                                   true> {
   using type = typed_actor<Sigs...>;
   using impl =
-    experimental::stateful_actor<
+    stateful_actor<
       State,
       io::experimental::typed_broker<Sigs...>
     >;

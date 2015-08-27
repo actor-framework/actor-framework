@@ -27,8 +27,6 @@
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 
-#include "caf/experimental/stateful_actor.hpp"
-
 using std::cout;
 using std::cerr;
 using std::endl;
@@ -58,7 +56,7 @@ constexpr char http_ok[] = "HTTP/1.1 200 OK\r\n"
                            "\r\n"
                            "0\r\n"
                            "\r\n"
-                               "\r\n";
+                           "\r\n";
 
 constexpr char http_error[] = "HTTP/1.1 404 Not Found\r\n"
                               "Connection: close\r\n"
@@ -88,7 +86,7 @@ struct http_state {
   abstract_broker* self_;
 };
 
-using http_broker = caf::experimental::stateful_actor<http_state, broker>;
+using http_broker = caf::stateful_actor<http_state, broker>;
 
 behavior http_worker(http_broker* self, connection_handle hdl) {
   // tell network backend to receive any number of bytes between 1 and 1024
@@ -201,7 +199,7 @@ public:
   ~fixture() {
     anon_send_exit(aut_, exit_reason::kill);
     // run the exit message and other pending messages explicitly,
-    // since we do not invoke any "IO" from this point on that would
+    // since we do not invoke any "I/O" from this point on that would
     // trigger the exit message implicitly
     mpx_->flush_runnables();
     await_all_actors_done();

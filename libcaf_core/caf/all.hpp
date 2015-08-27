@@ -67,6 +67,7 @@
 #include "caf/blocking_actor.hpp"
 #include "caf/execution_unit.hpp"
 #include "caf/memory_managed.hpp"
+#include "caf/stateful_actor.hpp"
 #include "caf/typed_behavior.hpp"
 #include "caf/actor_namespace.hpp"
 #include "caf/behavior_policy.hpp"

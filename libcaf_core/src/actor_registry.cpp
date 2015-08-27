@@ -32,9 +32,9 @@
 #include "caf/attachable.hpp"
 #include "caf/exit_reason.hpp"
 #include "caf/scoped_actor.hpp"
+#include "caf/stateful_actor.hpp"
 #include "caf/event_based_actor.hpp"
 
-#include "caf/experimental/stateful_actor.hpp"
 #include "caf/experimental/announce_actor_type.hpp"
 
 #include "caf/scheduler/detached_threads.hpp"

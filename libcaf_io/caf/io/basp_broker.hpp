@@ -28,12 +28,11 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "caf/stateful_actor.hpp"
 #include "caf/actor_namespace.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/forwarding_actor_proxy.hpp"
-
-#include "caf/experimental/stateful_actor.hpp"
 
 #include "caf/io/basp.hpp"
 #include "caf/io/broker.hpp"
@@ -122,7 +121,7 @@ struct basp_broker_state : actor_namespace::backend, basp::instance::callee {
 };
 
 /// A broker implementation for the Binary Actor System Protocol (BASP).
-class basp_broker : public caf::experimental::stateful_actor<basp_broker_state,
+class basp_broker : public caf::stateful_actor<basp_broker_state,
                                                              broker> {
 public:
   basp_broker(middleman& mm);

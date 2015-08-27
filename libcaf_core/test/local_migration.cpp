@@ -27,7 +27,6 @@
 #include "caf/detail/actor_registry.hpp"
 
 using namespace caf;
-using namespace caf::experimental;
 
 using std::endl;
 

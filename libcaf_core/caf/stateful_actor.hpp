@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_EXPERIMENTAL_STATEFUL_ACTOR_HPP
-#define CAF_EXPERIMENTAL_STATEFUL_ACTOR_HPP
+#ifndef CAF_STATEFUL_ACTOR_HPP
+#define CAF_STATEFUL_ACTOR_HPP
 
 #include <new>
 #include <type_traits>
@@ -27,7 +27,6 @@
 #include "caf/detail/type_traits.hpp"
 
 namespace caf {
-namespace experimental {
 
 template <class Archive, class U>
 typename std::enable_if<detail::is_serializable<U>::value>::type
@@ -125,7 +124,6 @@ private:
   union { State state_; };
 };
 
-} // namespace experimental
 } // namespace caf
 
-#endif // CAF_EXPERIMENTAL_STATEFUL_ACTOR_HPP
+#endif // CAF_STATEFUL_ACTOR_HPP

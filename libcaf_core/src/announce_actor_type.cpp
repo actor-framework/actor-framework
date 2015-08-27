@@ -23,9 +23,8 @@
 #include "caf/send.hpp"
 #include "caf/spawn.hpp"
 #include "caf/to_string.hpp"
+#include "caf/stateful_actor.hpp"
 #include "caf/event_based_actor.hpp"
-
-#include "caf/experimental/stateful_actor.hpp"
 
 #include "caf/detail/logging.hpp"
 #include "caf/detail/singletons.hpp"

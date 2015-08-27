@@ -24,11 +24,8 @@
 
 #include "caf/all.hpp"
 
-#include "caf/experimental/stateful_actor.hpp"
-
 using namespace std;
 using namespace caf;
-using namespace caf::experimental;
 
 namespace {
 
