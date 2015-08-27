@@ -40,10 +40,24 @@ inline std::string is_any_of(std::string arg) {
 
 constexpr bool token_compress_on = false;
 
-void split(std::vector<std::string>& result,
-       const std::string& str,
-       const std::string& delimiters = " ",
-       bool keep_empties = true);
+template <class Container, class Delim>
+void split(Container& result, const std::string& str, const Delim& delims,
+           bool keep_all = true) {
+  size_t pos = 0;
+  size_t prev = 0;
+  while ((pos = str.find_first_of(delims, prev)) != std::string::npos) {
+    if (pos > prev) {
+      auto substr = str.substr(prev, pos - prev);
+      if (! substr.empty() || keep_all) {
+        result.push_back(std::move(substr));
+      }
+    }
+    prev = pos + 1;
+  }
+  if (prev < str.size()) {
+    result.push_back(str.substr(prev, std::string::npos));
+  }
+}
 
 template <class Iterator>
 class iterator_range {

@@ -73,7 +73,6 @@ set (LIBCAF_CORE_SRCS
      src/shared_spinlock.cpp
      src/shutdown.cpp
      src/singletons.cpp
-     src/string_algorithms.cpp
      src/string_serialization.cpp
      src/sync_request_bouncer.cpp
      src/try_match.cpp
