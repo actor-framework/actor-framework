@@ -113,7 +113,7 @@ public:
     auto mm = middleman::instance();
     aut_ = mm->get_named_broker<basp_broker>(atom("_BASP"));
     this_node_ = detail::singletons::get_node_id();
-    CAF_TEST_VERBOSE("this node: " << to_string(this_node_));
+    CAF_MESSAGE("this node: " << to_string(this_node_));
     self_.reset(new scoped_actor);
     // run the initialization message of the BASP broker
     mpx_->exec_runnable();
@@ -371,7 +371,7 @@ public:
       buffer buf;
       this_->to_payload(buf, xs...);
       buffer& ob = this_->mpx()->output_buffer(hdl);
-      CAF_TEST_VERBOSE("output buffer has " << ob.size() << " bytes");
+      CAF_MESSAGE("output buffer has " << ob.size() << " bytes");
       CAF_REQUIRE(ob.size() >= basp::header_size);
       basp::header hdr;
       { // lifetime scope of source
@@ -384,7 +384,7 @@ public:
         auto first = ob.begin() + basp::header_size;
         auto end = first + hdr.payload_len;
         payload.assign(first, end);
-        CAF_TEST_VERBOSE("erase " << std::distance(ob.begin(), end)
+        CAF_MESSAGE("erase " << std::distance(ob.begin(), end)
                          << " bytes from output buffer");
         ob.erase(ob.begin(), end);
       } else {
@@ -495,7 +495,7 @@ CAF_TEST(client_handshake_and_dispatch) {
     },
     THROW_ON_UNEXPECTED(self())
   );
-  CAF_TEST_VERBOSE("exec message of forwarding proxy");
+  CAF_MESSAGE("exec message of forwarding proxy");
   mpx()->exec_runnable();
   dispatch_out_buf(remote_hdl(0)); // deserialize and send message from out buf
   pseudo_remote(0)->receive(
@@ -543,7 +543,7 @@ CAF_TEST(remote_actor_and_send) {
   mpx()->exec_runnable(); // process message in basp_broker
   CAF_CHECK(mpx()->pending_scribes().count(make_pair("localhost", 4242)) == 0);
   // build a fake server handshake containing the id of our first pseudo actor
-  CAF_TEST_VERBOSE("server handshake => client handshake + proxy announcement");
+  CAF_MESSAGE("server handshake => client handshake + proxy announcement");
   auto na = registry()->named_actors();
   mock(remote_hdl(0),
        {basp::message_type::server_handshake, 0, basp::version,

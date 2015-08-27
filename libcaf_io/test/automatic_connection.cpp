@@ -140,20 +140,20 @@ void run_earth(bool use_asio, bool as_server, uint16_t pub_port) {
   middleman::instance()->add_hook<captain>(self);
   auto aut = spawn(testee);
   auto port = publish(aut, pub_port);
-  CAF_TEST_VERBOSE("published testee at port " << port);
+  CAF_MESSAGE("published testee at port " << port);
   std::thread mars_process;
   std::thread jupiter_process;
   // launch process for Mars
   if (! as_server) {
-    CAF_TEST_VERBOSE("launch process for Mars");
+    CAF_MESSAGE("launch process for Mars");
     mars_process = run_prog("--mars", port, use_asio);
   }
-  CAF_TEST_VERBOSE("wait for Mars to connect");
+  CAF_MESSAGE("wait for Mars to connect");
   node_id mars;
   self->receive(
     [&](put_atom, const node_id& nid) {
       mars = nid;
-      CAF_TEST_VERBOSE(CAF_TSARG(mars));
+      CAF_MESSAGE(CAF_TSARG(mars));
     }
   );
   actor_addr mars_addr;
@@ -166,10 +166,10 @@ void run_earth(bool use_asio, bool as_server, uint16_t pub_port) {
           if (name != "testee")
             return;
           mars_addr = addr;
-          CAF_TEST_VERBOSE(CAF_TSARG(mars_addr));
+          CAF_MESSAGE(CAF_TSARG(mars_addr));
           self->sync_send(actor_cast<actor>(mars_addr), get_atom::value).await(
             [&](uint16_t mp) {
-              CAF_TEST_VERBOSE("mars published its actor at port " << mp);
+              CAF_MESSAGE("mars published its actor at port " << mp);
               mars_port = mp;
             }
           );
@@ -179,13 +179,13 @@ void run_earth(bool use_asio, bool as_server, uint16_t pub_port) {
   );
   // launch process for Jupiter
   if (! as_server) {
-    CAF_TEST_VERBOSE("launch process for Jupiter");
+    CAF_MESSAGE("launch process for Jupiter");
     jupiter_process = run_prog("--jupiter", mars_port, use_asio);
   }
-  CAF_TEST_VERBOSE("wait for Jupiter to connect");
+  CAF_MESSAGE("wait for Jupiter to connect");
   self->receive(
     [](put_atom, const node_id& jupiter) {
-      CAF_TEST_VERBOSE(CAF_TSARG(jupiter));
+      CAF_MESSAGE(CAF_TSARG(jupiter));
     }
   );
   actor_addr jupiter_addr;
@@ -197,12 +197,12 @@ void run_earth(bool use_asio, bool as_server, uint16_t pub_port) {
           if (name != "testee")
             return;
           jupiter_addr = addr;
-          CAF_TEST_VERBOSE(CAF_TSARG(jupiter_addr));
+          CAF_MESSAGE(CAF_TSARG(jupiter_addr));
         }
       );
     }
   );
-  CAF_TEST_VERBOSE("shutdown Mars");
+  CAF_MESSAGE("shutdown Mars");
   anon_send_exit(mars_addr, exit_reason::kill);
   if (mars_process.joinable())
     mars_process.join();
@@ -211,7 +211,7 @@ void run_earth(bool use_asio, bool as_server, uint16_t pub_port) {
       CAF_CHECK_EQUAL(nid, mars);
     }
   );
-  CAF_TEST_VERBOSE("check whether we still can talk to Jupiter");
+  CAF_MESSAGE("check whether we still can talk to Jupiter");
   self->send(aut, ping_atom::value, self, true);
   std::set<actor_addr> found;
   int i = 0;
@@ -222,7 +222,7 @@ void run_earth(bool use_asio, bool as_server, uint16_t pub_port) {
   );
   std::set<actor_addr> expected{aut.address(), jupiter_addr};
   CAF_CHECK_EQUAL(found, expected);
-  CAF_TEST_VERBOSE("shutdown Jupiter");
+  CAF_MESSAGE("shutdown Jupiter");
   anon_send_exit(jupiter_addr, exit_reason::kill);
   if (jupiter_process.joinable())
     jupiter_process.join();
@@ -233,7 +233,7 @@ void run_mars(uint16_t port_to_earth, uint16_t pub_port) {
   auto aut = spawn(testee);
   auto port = publish(aut, pub_port);
   anon_send(aut, put_atom::value, port);
-  CAF_TEST_VERBOSE("published testee at port " << port);
+  CAF_MESSAGE("published testee at port " << port);
   auto earth = remote_actor("localhost", port_to_earth);
   send_as(aut, earth, ping_atom::value, aut, false);
 }

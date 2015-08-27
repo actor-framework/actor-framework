@@ -747,7 +747,7 @@ CAF_TEST(constructor_attach) {
           }
         },
         others >> [=] {
-          CAF_TEST_VERBOSE("forward to testee: "
+          CAF_MESSAGE("forward to testee: "
                            << to_string(current_message()));
           forward_to(testee_);
         }
@@ -755,7 +755,7 @@ CAF_TEST(constructor_attach) {
     }
 
     void on_exit() {
-      CAF_TEST_VERBOSE("spawner::on_exit()");
+      CAF_MESSAGE("spawner::on_exit()");
       testee_ = invalid_actor;
     }
 
