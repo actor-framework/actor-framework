@@ -211,7 +211,7 @@ msg_type filter_msg(local_actor* self, mailbox_element& node) {
         }
         std::vector<char> buf;
         binary_serializer bs{std::back_inserter(buf)};
-        self->save(bs, 0);
+        self->save_state(bs, 0);
         auto sender = node.sender;
         // sync_send(...)
         auto req = self->sync_send_impl(message_priority::normal, mm,
@@ -258,7 +258,7 @@ msg_type filter_msg(local_actor* self, mailbox_element& node) {
           self->is_migrated_from(false);
         }
         binary_deserializer bd{buf.data(), buf.size()};
-        self->load(bd, 0);
+        self->load_state(bd, 0);
         node.sender->enqueue(
           mailbox_element::make_joint(self->address(), node.mid.response_id(),
                                       ok_atom::value, self->address()),
@@ -921,11 +921,11 @@ const char* local_actor::name() const {
   return "actor";
 }
 
-void local_actor::save(serializer&, const unsigned int) {
+void local_actor::save_state(serializer&, const unsigned int) {
   throw std::logic_error("local_actor::serialize called");
 }
 
-void local_actor::load(deserializer&, const unsigned int) {
+void local_actor::load_state(deserializer&, const unsigned int) {
   throw std::logic_error("local_actor::deserialize called");
 }
 

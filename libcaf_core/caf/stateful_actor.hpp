@@ -67,11 +67,11 @@ public:
     return get_name(state_);
   }
 
-  void save(serializer& sink, const unsigned int version) override {
+  void save_state(serializer& sink, const unsigned int version) override {
     serialize_state(sink, state, version);
   }
 
-  void load(deserializer& source, const unsigned int version) override {
+  void load_state(deserializer& source, const unsigned int version) override {
     serialize_state(source, state, version);
   }
 

@@ -397,12 +397,12 @@ public:
   /// Serializes the state of this actor to `sink`. This function is
   /// only called if this actor has set the `is_serializable` flag.
   /// The default implementation throws a `std::logic_error`.
-  virtual void save(serializer& sink, const unsigned int version);
+  virtual void save_state(serializer& sink, const unsigned int version);
 
   /// Deserializes the state of this actor from `source`. This function is
   /// only called if this actor has set the `is_serializable` flag.
   /// The default implementation throws a `std::logic_error`.
-  virtual void load(deserializer& source, const unsigned int version);
+  virtual void load_state(deserializer& source, const unsigned int version);
 
   /****************************************************************************
    *                       deprecated member functions                        *
