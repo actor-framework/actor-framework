@@ -281,8 +281,8 @@ public:
     return vals_ ? vals_->type_token() : 0xFFFFFFFF;
   }
 
-  inline void force_detach() {
-    vals_.detach();
+  inline void force_unshare() {
+    vals_.unshare();
   }
 
   void reset(raw_ptr new_ptr = nullptr, bool add_ref = true);

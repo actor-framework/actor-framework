@@ -727,7 +727,7 @@ default_multiplexer::~default_multiplexer() {
 }
 
 void default_multiplexer::dispatch_runnable(runnable_ptr ptr) {
-  wr_dispatch_request(ptr.release());
+  wr_dispatch_request(ptr.detach());
 }
 
 connection_handle default_multiplexer::add_tcp_scribe(abstract_broker* self,

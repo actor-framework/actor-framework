@@ -156,7 +156,7 @@ message message_builder::to_message() const {
 
 message message_builder::move_to_message() {
   message result;
-  result.vals().reset(static_cast<dynamic_msg_data*>(data_.release()), false);
+  result.vals().reset(static_cast<dynamic_msg_data*>(data_.detach()), false);
   return result;
 }
 
@@ -164,7 +164,7 @@ optional<message> message_builder::apply(message_handler handler) {
   // avoid detaching of data_ by moving the data to a message object,
   // calling message::apply and moving the data back
   message::data_ptr ptr;
-  ptr.reset(static_cast<dynamic_msg_data*>(data_.release()), false);
+  ptr.reset(static_cast<dynamic_msg_data*>(data_.detach()), false);
   message msg{std::move(ptr)};
   auto res = msg.apply(std::move(handler));
   data_.reset(msg.vals().release(), false);

@@ -65,7 +65,7 @@ std::string message_data::tuple_type_names() const {
   return result;
 }
 
-message_data* message_data::cow_ptr::get_detached() {
+message_data* message_data::cow_ptr::get_unshared() {
   auto p = ptr_.get();
   if (! p->unique()) {
     auto cptr = p->copy();

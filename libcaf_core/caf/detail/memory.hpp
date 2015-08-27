@@ -171,7 +171,7 @@ public:
     // we got the last element out of the cache; pass the reference to the
     // client to avoid pointless increase/decrease ops on the reference count
     embedded_storage result;
-    result.first.reset(cache_.release(), false);
+    result.first.reset(cache_.detach(), false);
     result.second = res;
     return result;
   }

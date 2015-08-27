@@ -51,7 +51,7 @@ public:
     set_ptr(raw_ptr, add_ref);
   }
 
-  intrusive_ptr(intrusive_ptr&& other) : ptr_(other.release()) {
+  intrusive_ptr(intrusive_ptr&& other) : ptr_(other.detach()) {
     // nop
   }
 
@@ -60,7 +60,7 @@ public:
   }
 
   template <class Y>
-  intrusive_ptr(intrusive_ptr<Y> other) : ptr_(other.release()) {
+  intrusive_ptr(intrusive_ptr<Y> other) : ptr_(other.detach()) {
     static_assert(std::is_convertible<Y*, T*>::value,
                   "Y* is not assignable to T*");
   }
@@ -77,10 +77,16 @@ public:
 
   /// Returns the raw pointer without modifying reference
   /// count and sets this to `nullptr`.
-  pointer release() noexcept {
+  pointer detach() noexcept {
     auto result = ptr_;
     ptr_ = nullptr;
     return result;
+  }
+
+  /// Returns the raw pointer without modifying reference
+  /// count and sets this to `nullptr`.
+  pointer release() noexcept {
+    return detach();
   }
 
   void reset(pointer new_value = nullptr, bool add_ref = true) {

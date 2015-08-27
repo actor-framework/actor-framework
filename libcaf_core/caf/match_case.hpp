@@ -201,7 +201,7 @@ public:
     }
     // detach msg before invoking fun_ if needed
     if (is_manipulator) {
-      msg.force_detach();
+      msg.force_unshare();
       // update pointers in our intermediate tuple
       for (size_t i = 0; i < msg.size(); ++i) {
         // msg is guaranteed to be detached, hence we don't need to
@@ -369,7 +369,7 @@ public:
   bool prepare_invoke(message& msg, Tuple* out) {
     // detach msg before invoking fun_ if needed
     if (detail::tl_exists<fargs, detail::is_mutable_ref>::value) {
-      msg.force_detach();
+      msg.force_unshare();
     }
     using filtered_pattern =
       typename detail::tl_filter_not_type<

@@ -105,19 +105,19 @@ public:
     }
 
     inline message_data* release() {
-      return ptr_.release();
+      return ptr_.detach();
     }
 
-    inline void detach() {
-      static_cast<void>(get_detached());
+    inline void unshare() {
+      static_cast<void>(get_unshared());
     }
 
     inline message_data* operator->() {
-      return get_detached();
+      return get_unshared();
     }
 
     inline message_data& operator*() {
-      return *get_detached();
+      return *get_unshared();
     }
     /**************************************************************************
      *                               observers                                *
@@ -140,7 +140,7 @@ public:
     }
 
   private:
-    message_data* get_detached();
+    message_data* get_unshared();
     intrusive_ptr<message_data> ptr_;
   };
 
