@@ -64,7 +64,14 @@ public:
   inline T read() {
     primitive_variant val{T()};
     read_value(val);
-    return std::move(get<T>(val));
+    // works around the all-to-strict boost::strict_get of boost::variant
+    using result =
+      typename std::conditional<
+        std::is_same<T, char>::value,
+        uint8_t,
+        T
+      >::type;
+    return std::move(get<result>(val));
   }
 
   template <class T>
