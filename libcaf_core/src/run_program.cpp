@@ -19,6 +19,7 @@
 
 #include "caf/detail/run_program.hpp"
 
+#include <sstream>
 #include <iostream>
 
 #include "caf/config.hpp"
