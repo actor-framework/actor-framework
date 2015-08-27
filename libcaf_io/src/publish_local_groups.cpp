@@ -26,22 +26,15 @@
 namespace caf {
 namespace io {
 
-namespace {
-
-struct group_nameserver : event_based_actor {
-  behavior make_behavior() override {
+uint16_t publish_local_groups(uint16_t port, const char* addr) {
+  auto group_nameserver = []() -> behavior {
     return {
       [](get_atom, const std::string& name) {
         return group::get("local", name);
       }
     };
-  }
-};
-
-} // namespace <anonymous>
-
-uint16_t publish_local_groups(uint16_t port, const char* addr) {
-  auto gn = spawn<group_nameserver, hidden>();
+  };
+  auto gn = spawn<hidden>(group_nameserver);
   uint16_t result;
   try {
     result = publish(gn, port, addr);

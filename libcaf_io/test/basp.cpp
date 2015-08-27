@@ -90,7 +90,7 @@ namespace {
     throw std::logic_error("unexpected timeout");                              \
   }
 
-static constexpr size_t num_remote_nodes = 2;
+static constexpr uint32_t num_remote_nodes = 2;
 
 using buffer = std::vector<char>;
 
@@ -128,7 +128,7 @@ public:
     for (uint32_t i = 0; i < num_remote_nodes; ++i) {
       node_id::host_id_type tmp = this_node_.host_id();
       for (auto& c : tmp)
-        c += static_cast<uint8_t>(i + 1);
+        c = static_cast<uint8_t>(c + i + 1);
       remote_node_[i] = node_id{this_node_.process_id() + i + 1, tmp};
       remote_hdl_[i] = connection_handle::from_int(i + 1);
       auto& ptr = pseudo_remote_[i];
@@ -335,9 +335,8 @@ public:
     message msg;
     auto source = make_deserializer(buf);
     msg.deserialize(source);
-    auto registry = detail::singletons::get_actor_registry();
-    auto src = registry->get(hdr.source_actor);
-    auto dest = registry->get(hdr.dest_actor);
+    auto src = registry_->get(hdr.source_actor);
+    auto dest = registry_->get(hdr.dest_actor);
     CAF_REQUIRE(dest != nullptr);
     dest->enqueue(src ? src->address() : invalid_actor_addr,
                   message_id::make(), std::move(msg), nullptr);
@@ -613,11 +612,11 @@ CAF_TEST(remote_actor_and_send) {
 }
 
 CAF_TEST(actor_serialize_and_deserialize) {
-  auto testee_impl = [](event_based_actor* self) -> behavior {
+  auto testee_impl = [](event_based_actor* testee_self) -> behavior {
     return {
       others >> [=] {
-        self->quit();
-        return self->current_message();
+        testee_self->quit();
+        return testee_self->current_message();
       }
     };
   };

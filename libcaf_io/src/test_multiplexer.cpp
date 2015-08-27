@@ -28,9 +28,9 @@ test_multiplexer::~test_multiplexer() {
 }
 
 connection_handle test_multiplexer::new_tcp_scribe(const std::string& host,
-                                                   uint16_t port) {
+                                                   uint16_t desired_port) {
   connection_handle result;
-  auto i = scribes_.find(std::make_pair(host, port));
+  auto i = scribes_.find(std::make_pair(host, desired_port));
   if (i != scribes_.end()) {
     result = i->second;
     scribes_.erase(i);
@@ -86,22 +86,22 @@ connection_handle test_multiplexer::add_tcp_scribe(abstract_broker*,
 
 connection_handle test_multiplexer::add_tcp_scribe(abstract_broker* ptr,
                                                    const std::string& host,
-                                                   uint16_t port) {
-  auto hdl = new_tcp_scribe(host, port);
+                                                   uint16_t desired_port) {
+  auto hdl = new_tcp_scribe(host, desired_port);
   if (hdl != invalid_connection_handle)
     assign_tcp_scribe(ptr, hdl);
   return hdl;
 }
 
 std::pair<accept_handle, uint16_t>
-test_multiplexer::new_tcp_doorman(uint16_t port, const char*, bool) {
+test_multiplexer::new_tcp_doorman(uint16_t desired_port, const char*, bool) {
   accept_handle result;
-  auto i = doormen_.find(port);
+  auto i = doormen_.find(desired_port);
   if (i != doormen_.end()) {
     result = i->second;
     doormen_.erase(i);
   }
-  return {result, port};
+  return {result, desired_port};
 }
 
 void test_multiplexer::assign_tcp_doorman(abstract_broker* ptr,
@@ -169,14 +169,15 @@ void test_multiplexer::run() {
   // nop
 }
 
-void test_multiplexer::provide_scribe(std::string host, uint16_t port,
+void test_multiplexer::provide_scribe(std::string host, uint16_t desired_port,
                                       connection_handle hdl) {
-  scribes_.emplace(std::make_pair(std::move(host), port), hdl);
+  scribes_.emplace(std::make_pair(std::move(host), desired_port), hdl);
 }
 
-void test_multiplexer::provide_acceptor(uint16_t port, accept_handle hdl) {
-  doormen_.emplace(port, hdl);
-  doorman_data_[hdl].port = port;
+void test_multiplexer::provide_acceptor(uint16_t desired_port,
+                                        accept_handle hdl) {
+  doormen_.emplace(desired_port, hdl);
+  doorman_data_[hdl].port = desired_port;
 }
 
 /// The external input buffer should be filled by
