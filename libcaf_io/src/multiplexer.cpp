@@ -18,7 +18,7 @@
  ******************************************************************************/
 
 #include "caf/io/network/multiplexer.hpp"
-#include "caf/io/network/default_multiplexer.hpp"
+#include "caf/io/network/default_multiplexer.hpp" // default singleton
 
 namespace caf {
 namespace io {
