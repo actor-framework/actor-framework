@@ -76,8 +76,12 @@ std::thread run_sub_unit_test(actor rc,
   }};
 }
 #else
-std::thread run_sub_unit_test(actor rc, const char* cpath,
-                              std::vector<std::string> args) {
+std::thread run_sub_unit_test(actor rc,
+                              const char* cpath,
+                              int max_runtime,
+                              const char* suite_name,
+                              bool set_asio_option,
+                              std::initializer_list<std::string> args) {
   std::string path = cpath;
   replace_all(path, "'", "\\'");
   std::ostringstream oss;
