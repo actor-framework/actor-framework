@@ -66,7 +66,7 @@ set (LIBCAF_CORE_SRCS
      src/replies_to.cpp
      src/resumable.cpp
      src/ripemd_160.cpp
-     src/run_program.cpp
+     src/run_sub_unit_test.cpp
      src/scoped_actor.cpp
      src/set_scheduler.cpp
      src/serializer.cpp

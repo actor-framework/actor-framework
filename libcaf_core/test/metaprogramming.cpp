@@ -27,8 +27,7 @@
 #include <typeinfo>
 #include <type_traits>
 
-#include "caf/shutdown.hpp"
-#include "caf/uniform_type_info.hpp"
+#include "caf/all.hpp"
 
 #include "caf/detail/ctm.hpp"
 #include "caf/detail/int_list.hpp"

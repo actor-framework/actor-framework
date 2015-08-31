@@ -104,9 +104,6 @@ uniform_value make_uniform_value(const uniform_type_info* uti, Ts&&... xs) {
 /// runtime.
 ///
 /// ~~~
-/// #include "caf/all.hpp"
-/// using namespace caf;
-///
 /// struct foo { int a; int b; };
 ///
 /// int main() {

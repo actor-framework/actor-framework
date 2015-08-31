@@ -110,7 +110,7 @@ CAF_TEST(receive_atoms) {
   );
   atom_value x = atom("abc");
   atom_value y = abc_atom::value;
-  CAF_CHECK_EQUAL(x, y);
+  CAF_CHECK(x == y);
   auto msg = make_message(atom("abc"));
   self->send(self, msg);
   self->receive(

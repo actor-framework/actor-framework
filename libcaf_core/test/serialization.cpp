@@ -238,7 +238,7 @@ CAF_TEST(test_int32_t) {
   CAF_CHECK_EQUAL(i32, x);
 }
 
-CAF_TEST(test_enum) {
+CAF_TEST(test_enum_serialization) {
   auto buf = binary_util::serialize(te);
   test_enum x;
   binary_util::deserialize(buf, &x);

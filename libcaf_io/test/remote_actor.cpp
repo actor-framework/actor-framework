@@ -34,7 +34,7 @@
 
 #include "caf/detail/logging.hpp"
 #include "caf/detail/singletons.hpp"
-#include "caf/detail/run_program.hpp"
+#include "caf/detail/run_sub_unit_test.hpp"
 
 #ifdef CAF_USE_ASIO
 #include "caf/io/network/asio_multiplexer.hpp"
@@ -70,10 +70,10 @@ behavior ping_behavior(local_actor* self, size_t ping_msgs) {
       if (! self->current_sender()) {
         CAF_TEST_ERROR("current_sender() invalid!");
       }
-      CAF_TEST_INFO("received {'pong', " << value << "}");
+      CAF_MESSAGE("received {'pong', " << value << "}");
       // cout << to_string(self->current_message()) << endl;
       if (++s_pongs >= ping_msgs) {
-        CAF_TEST_INFO("reached maximum, send {'EXIT', user_defined} "
+        CAF_MESSAGE("reached maximum, send {'EXIT', user_defined} "
                       << "to last sender and quit with normal reason");
         self->send_exit(self->current_sender(),
                 exit_reason::user_shutdown);
@@ -480,17 +480,21 @@ void test_remote_actor(const char* path, bool run_remote, bool use_asio) {
   CAF_CHECK(serv == serv2);
   thread child;
   if (run_remote) {
-    child = detail::run_program(self, path, "-n", "-s", CAF_XSTR(CAF_SUITE),
-                                "-r", test::engine::max_runtime(), "--",
-                                "-c", port2, "-c", port1, "-g", gport,
-                                (use_asio ? "--use-asio" : ""));
+    child = detail::run_sub_unit_test(self,
+                                      path,
+                                      test::engine::max_runtime(),
+                                      CAF_XSTR(CAF_SUITE),
+                                      use_asio,
+                                      {"--client-port=" + std::to_string(port2),
+                                       "--client-port=" + std::to_string(port1),
+                                       "--group-port=" + std::to_string(gport)});
   } else {
     CAF_MESSAGE("please run client with: "
               << "-c " << port2 << " -c " << port1 << " -g " << gport);
   }
   self->receive(
     [&](const down_msg& dm) {
-      CAF_CHECK_EQUAL(dm.source, serv);
+      CAF_CHECK(dm.source == serv);
       CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
     }
   );
@@ -509,9 +513,9 @@ void test_remote_actor(const char* path, bool run_remote, bool use_asio) {
 
 } // namespace <anonymous>
 
-CAF_TEST(test_remote_actor) {
-  auto argv = caf::test::engine::argv();
-  auto argc = caf::test::engine::argc();
+CAF_TEST(remote_actors) {
+  auto argv = test::engine::argv();
+  auto argc = test::engine::argc();
   announce<actor_vector>("actor_vector");
   cout << "this node is: " << to_string(caf::detail::singletons::get_node_id())
        << endl;
@@ -557,7 +561,7 @@ CAF_TEST(test_remote_actor) {
     auto c = self->spawn<client, monitored>(serv);
     self->receive(
       [&](const down_msg& dm) {
-        CAF_CHECK_EQUAL(dm.source, c);
+        CAF_CHECK(dm.source == c);
         CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
       }
     );
@@ -565,7 +569,7 @@ CAF_TEST(test_remote_actor) {
   } else {
     for (int i = 0; i < 100; ++i) spawn([]{});
     await_all_actors_done();
-    test_remote_actor(caf::test::engine::path(), true, use_asio);
+    test_remote_actor(test::engine::path(), true, use_asio);
   }
   await_all_actors_done();
   shutdown();

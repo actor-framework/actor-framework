@@ -220,8 +220,8 @@ public:
       CAF_REQUIRE((buf.size() >= x.size()));
       CAF_REQUIRE((std::equal(buf.begin(),
                               buf.begin() + static_cast<ptrdiff_t>(x.size()),
-                              x.begin()));
-      buf.erase(buf.begin(), buf.begin() + static_cast<ptrdiff_t>(x.size())));
+                              x.begin())));
+      buf.erase(buf.begin(), buf.begin() + static_cast<ptrdiff_t>(x.size()));
       return *this;
     }
 

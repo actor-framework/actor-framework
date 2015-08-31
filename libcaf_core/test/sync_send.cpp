@@ -471,7 +471,7 @@ CAF_TEST(sync_send) {
     s->sync_send(serv, request_atom::value).await(
       [=](response_atom) {
         CAF_MESSAGE("received `response_atom`");
-        CAF_CHECK_EQUAL(s->current_sender(), work);
+        CAF_CHECK(s->current_sender() == work);
       },
       others >> [&] {
         CAF_TEST_ERROR("Unexpected message: "
@@ -483,7 +483,7 @@ CAF_TEST(sync_send) {
     send_as(work, serv, idle_atom::value, work);
     handle.await(
       [=](response_atom) {
-        CAF_CHECK_EQUAL(s->current_sender(), work);
+        CAF_CHECK(s->current_sender() == work);
       },
       others >> [&] {
         CAF_TEST_ERROR("Unexpected message: "

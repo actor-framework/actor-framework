@@ -34,7 +34,7 @@
 #include "caf/io/network/interfaces.hpp"
 #include "caf/io/network/test_multiplexer.hpp"
 
-#include "caf/detail/run_program.hpp"
+#include "caf/detail/run_sub_unit_test.hpp"
 
 #ifdef CAF_USE_ASIO
 #include "caf/io/network/asio_multiplexer.hpp"
@@ -76,11 +76,12 @@ using pong_atom = atom_constant<atom("pong")>;
 */
 
 std::thread run_prog(const char* arg, uint16_t port, bool use_asio) {
-  return detail::run_program(invalid_actor, test::engine::path(), "-n",
-                             "-s", CAF_XSTR(CAF_SUITE),
-                             "-r", test::engine::max_runtime(), "--",
-                             arg, "-p", port,
-                             (use_asio ? "--use-asio" : ""));
+  return detail::run_sub_unit_test(invalid_actor,
+                                   test::engine::path(),
+                                   test::engine::max_runtime(),
+                                   CAF_XSTR(CAF_SUITE),
+                                   use_asio,
+                                   {"--port=" + std::to_string(port), arg});
 }
 
 // we run the same code on all three nodes, a simple ping-pong client
@@ -208,7 +209,7 @@ void run_earth(bool use_asio, bool as_server, uint16_t pub_port) {
     mars_process.join();
   self->receive(
     [&](delete_atom, const node_id& nid) {
-      CAF_CHECK_EQUAL(nid, mars);
+      CAF_CHECK(nid == mars);
     }
   );
   CAF_MESSAGE("check whether we still can talk to Jupiter");
@@ -221,7 +222,7 @@ void run_earth(bool use_asio, bool as_server, uint16_t pub_port) {
     }
   );
   std::set<actor_addr> expected{aut.address(), jupiter_addr};
-  CAF_CHECK_EQUAL(found, expected);
+  CAF_CHECK(found == expected);
   CAF_MESSAGE("shutdown Jupiter");
   anon_send_exit(jupiter_addr, exit_reason::kill);
   if (jupiter_process.joinable())
@@ -247,8 +248,8 @@ void run_jupiter(uint16_t port_to_mars) {
 CAF_TEST(triangle_setup) {
   uint16_t port = 0;
   uint16_t publish_port = 0;
-  auto argv = caf::test::engine::argv();
-  auto argc = caf::test::engine::argc();
+  auto argv = test::engine::argv();
+  auto argc = test::engine::argc();
   auto r = message_builder(argv, argv + argc).extract_opts({
     {"port,p", "port of remote side (when running mars or jupiter)", port},
     {"mars", "run mars"},

@@ -20,25 +20,24 @@
 #ifndef CAF_DETAIL_RUN_PROGRAM_HPP
 #define CAF_DETAIL_RUN_PROGRAM_HPP
 
-#include "caf/send.hpp"
-#include "caf/actor.hpp"
-#include "caf/message.hpp"
-#include "caf/string_algorithms.hpp"
-
 #include <thread>
 #include <vector>
 #include <string>
+#include <initializer_list>
+
+#include "caf/send.hpp"
+#include "caf/actor.hpp"
+#include "caf/message.hpp"
 
 namespace caf {
 namespace detail {
 
-std::thread run_program_impl(caf::actor, const char*, std::vector<std::string>);
-
-template <class... Ts>
-std::thread run_program(caf::actor listener, const char* path, Ts&&... args) {
-  std::vector<std::string> vec{convert_to_str(std::forward<Ts>(args))...};
-  return run_program_impl(listener, path, std::move(vec));
-}
+std::thread run_sub_unit_test(caf::actor listener,
+                              const char* path,
+                              int max_runtime,
+                              const char* suite_name,
+                              bool set_asio_option,
+                              std::initializer_list<std::string> args);
 
 } // namespace detail
 } // namespace caf

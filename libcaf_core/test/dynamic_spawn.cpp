@@ -499,7 +499,7 @@ CAF_TEST(send_to_self) {
   self->receive(on() >> [] {});
 }
 
-CAF_TEST(echo_actor) {
+CAF_TEST(echo_actor_messaging) {
   scoped_actor self;
   auto mecho = spawn<echo_actor>();
   self->send(mecho, "hello echo");
@@ -531,7 +531,7 @@ CAF_TEST(delayed_spawn) {
   spawn<testee1>();
 }
 
-CAF_TEST(spawn_event_testee2) {
+CAF_TEST(spawn_event_testee2_test) {
   scoped_actor self;
   spawn_event_testee2(self);
   self->receive(
@@ -631,7 +631,7 @@ CAF_TEST(sync_sends) {
   self->receive (
     [&](const down_msg& dm) {
       CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
-      CAF_CHECK_EQUAL(dm.source, sync_testee);
+      CAF_CHECK(dm.source == sync_testee);
     }
   );
   self->await_all_other_actors_done();

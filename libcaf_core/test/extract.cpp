@@ -25,10 +25,15 @@
 #include <string>
 #include <vector>
 
-#include "caf/on.hpp"
-#include "caf/message.hpp"
-#include "caf/message_builder.hpp"
-#include "caf/message_handler.hpp"
+#include "caf/all.hpp"
+
+namespace caf {
+
+std::ostream& operator<<(std::ostream& out, const message& msg) {
+  return out << to_string(msg);
+}
+
+} // namespace caf
 
 using namespace caf;
 

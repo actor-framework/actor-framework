@@ -22,10 +22,7 @@
 #define CAF_SUITE work_sharing
 #include "caf/test/unit_test.hpp"
 
-#include "caf/config.hpp"
-#include "caf/shutdown.hpp"
-
-#include "caf/set_scheduler.hpp"
+#include "caf/all.hpp"
 
 #include "caf/policy/work_sharing.hpp"
 

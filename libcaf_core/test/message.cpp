@@ -22,8 +22,7 @@
 #define CAF_SUITE message
 #include "caf/test/unit_test.hpp"
 
-#include "caf/message.hpp"
-#include "caf/message_builder.hpp"
+#include "caf/all.hpp"
 
 using namespace caf;
 

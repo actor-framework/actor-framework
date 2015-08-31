@@ -57,7 +57,7 @@ void chattier_actor(event_based_actor* self, const std::string& fn) {
 
 CAF_TEST_FIXTURE_SCOPE(aout_tests, fixture)
 
-CAF_TEST(global_redirect) {
+CAF_TEST(redirect_aout_globally) {
   scoped_actor self;
   self->join(group::get("local", global_redirect));
   actor_ostream::redirect_all(global_redirect);

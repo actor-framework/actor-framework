@@ -62,8 +62,8 @@ void test_invalid_unpublish(const actor& published, uint16_t port) {
 }
 
 CAF_TEST(unpublishing) {
-  auto argv = caf::test::engine::argv();
-  auto argc = caf::test::engine::argc();
+  auto argv = test::engine::argv();
+  auto argc = test::engine::argc();
   if (argc == 1 && strcmp(argv[0], "--use-asio") == 0) {
 #   ifdef CAF_USE_ASIO
     CAF_MESSAGE("enable ASIO backend");

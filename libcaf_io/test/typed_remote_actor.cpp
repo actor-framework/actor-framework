@@ -32,7 +32,7 @@
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 
-#include "caf/detail/run_program.hpp"
+#include "caf/detail/run_sub_unit_test.hpp"
 
 #ifdef CAF_USE_ASIO
 #include "caf/io/network/asio_multiplexer.hpp"
@@ -101,8 +101,8 @@ uint16_t run_server() {
 }
 
 CAF_TEST(test_typed_remote_actor) {
-  auto argv = caf::test::engine::argv();
-  auto argc = caf::test::engine::argc();
+  auto argv = test::engine::argv();
+  auto argc = test::engine::argc();
   announce<ping>("ping", &ping::value);
   announce<pong>("pong", &pong::value);
   uint16_t port = 0;
@@ -133,11 +133,13 @@ CAF_TEST(test_typed_remote_actor) {
     // execute client_part() in a separate process,
     // connected via localhost socket
     scoped_actor self;
-    auto child = detail::run_program(self, test::engine::path(), "-n",
-                                     "-s", CAF_XSTR(CAF_SUITE),
-                                     "-r", test::engine::max_runtime(), "--",
-                                     "-c", port,
-                                     (use_asio ? "--use-asio" : ""));
+    auto child = detail::run_sub_unit_test(self,
+                                           test::engine::path(),
+                                           test::engine::max_runtime(),
+                                           CAF_XSTR(CAF_SUITE),
+                                           use_asio,
+                                           {"--client-port="
+                                            + std::to_string(port)});
     CAF_MESSAGE("block till child process has finished");
     child.join();
     self->await_all_other_actors_done();

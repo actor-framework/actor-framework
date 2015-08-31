@@ -54,7 +54,7 @@ struct fixture {
     if (expect_fail) {
       self->sync_send(spawner, get_atom::value, "test_actor", std::move(args)).await(
         [&](error_atom, const std::string&) {
-          CAF_TEST_VERBOSE("received error_atom (expected)");
+          CAF_MESSAGE("received error_atom (expected)");
         }
       );
     } else {

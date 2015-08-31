@@ -25,10 +25,8 @@
 #define CAF_SUITE profiled_coordinator
 #include "caf/test/unit_test.hpp"
 
-#include "caf/config.hpp"
-#include "caf/shutdown.hpp"
+#include "caf/all.hpp"
 
-#include "caf/set_scheduler.hpp"
 #include "caf/scheduler/profiled_coordinator.hpp"
 
 using namespace caf;

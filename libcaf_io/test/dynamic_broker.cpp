@@ -30,7 +30,7 @@
 
 #include "caf/string_algorithms.hpp"
 
-#include "caf/detail/run_program.hpp"
+#include "caf/detail/run_sub_unit_test.hpp"
 
 #ifdef CAF_USE_ASIO
 #include "caf/io/network/asio_multiplexer.hpp"
@@ -186,11 +186,13 @@ void run_server(bool spawn_client, const char* bin_path, bool use_asio) {
     [&](uint16_t port) {
       CAF_MESSAGE("server is running on port " << port);
       if (spawn_client) {
-        auto child = detail::run_program(self, bin_path, "-n",
-                                         "-s", CAF_XSTR(CAF_SUITE),
-                                         "-r", test::engine::max_runtime(),
-                                         "--", "-c", port,
-                                         (use_asio ? "--use-asio" : ""));
+        auto child = detail::run_sub_unit_test(self,
+                                               bin_path,
+                                               test::engine::max_runtime(),
+                                               CAF_XSTR(CAF_SUITE),
+                                               use_asio,
+                                               {"--client-port="
+                                                + std::to_string(port)});
         CAF_MESSAGE("block till child process has finished");
         child.join();
       }
@@ -208,8 +210,8 @@ void run_server(bool spawn_client, const char* bin_path, bool use_asio) {
 } // namespace <anonymous>
 
 CAF_TEST(test_broker) {
-  auto argv = caf::test::engine::argv();
-  auto argc = caf::test::engine::argc();
+  auto argv = test::engine::argv();
+  auto argc = test::engine::argc();
   uint16_t port = 0;
   auto r = message_builder(argv, argv + argc).extract_opts({
     {"client-port,c", "set port for IO client", port},
@@ -238,7 +240,7 @@ CAF_TEST(test_broker) {
     // run in server mode
     run_server(false, argv[0], use_asio);
   } else {
-    run_server(true, caf::test::engine::path(), use_asio);
+    run_server(true, test::engine::path(), use_asio);
   }
   CAF_MESSAGE("block on `await_all_actors_done`");
   await_all_actors_done();

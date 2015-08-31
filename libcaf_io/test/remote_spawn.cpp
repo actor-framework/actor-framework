@@ -32,7 +32,7 @@
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 
-#include "caf/detail/run_program.hpp"
+#include "caf/detail/run_sub_unit_test.hpp"
 
 #include "caf/experimental/announce_actor_type.hpp"
 
@@ -109,8 +109,8 @@ behavior server(stateful_actor<server_state>* self) {
 
 CAF_TEST(remote_spawn) {
   announce_actor_type("mirror", mirror);
-  auto argv = caf::test::engine::argv();
-  auto argc = caf::test::engine::argc();
+  auto argv = test::engine::argv();
+  auto argc = test::engine::argc();
   uint16_t port = 0;
   auto r = message_builder(argv, argv + argc).extract_opts({
     {"server,s", "run as server (don't run client"},
@@ -137,14 +137,16 @@ CAF_TEST(remote_spawn) {
   }
   auto serv = spawn(server);
   port = io::publish(serv, port);
-  CAF_TEST_INFO("published server at port " << port);
+  CAF_MESSAGE("published server at port " << port);
   if (r.opts.count("server") == 0) {
     CAF_MESSAGE("run client program");
-    auto child = detail::run_program(invalid_actor, caf::test::engine::path(),
-                                     "-n", "-s", CAF_XSTR(CAF_SUITE),
-                                     "-r", test::engine::max_runtime(), "--",
-                                     "-c", port,
-                                     (use_asio ? "--use-asio" : ""));
+    auto child = detail::run_sub_unit_test(invalid_actor,
+                                           test::engine::path(),
+                                           test::engine::max_runtime(),
+                                           CAF_XSTR(CAF_SUITE),
+                                           use_asio,
+                                           {"--client="
+                                            + std::to_string(port)});
     child.join();
   }
   await_all_actors_done();
