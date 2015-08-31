@@ -150,6 +150,10 @@ CAF_TEST(test_uniform_type) {
     CAF_CHECK(uti != nullptr);
     CAF_CHECK(strcmp(uti->name(), "@atom") == 0);
   }
+  auto sptr = detail::singletons::get_uniform_type_info_map();
+  // this kind of message is used during the initialization process of BASP;
+  // when compiling with logging enabled, this type ends up in the type info map
+  sptr->by_uniform_name("@<>+@atom+@str");
   using detail::type_nr;
   // these types (and only those) are present if
   // the uniform_type_info implementation is correct
@@ -179,6 +183,7 @@ CAF_TEST(test_uniform_type) {
     // default announced types
     {"@<>", 0},
     {"@<>+@atom", 0},
+    {"@<>+@atom+@str", 0},
     {"@unit", tnr<unit_t>()},
     {"@actor", tnr<actor>()},
     {"@actorvec", tnr<std::vector<actor>>()},
@@ -202,7 +207,6 @@ CAF_TEST(test_uniform_type) {
     {"@strvec", tnr<std::vector<std::string>>()},
     {"@strset", tnr<std::set<std::string>>()}
   };
-  auto sptr = detail::singletons::get_uniform_type_info_map();
   sptr->by_uniform_name("@<>");
   sptr->by_uniform_name("@<>+@atom");
   CAF_MESSAGE("Added debug types");
