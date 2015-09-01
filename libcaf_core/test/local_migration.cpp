@@ -107,4 +107,5 @@ CAF_TEST(migrate_locally) {
   self->send_exit(mm1, exit_reason::kill);
   self->send_exit(mm2, exit_reason::kill);
   self->await_all_other_actors_done();
+  shutdown();
 }
