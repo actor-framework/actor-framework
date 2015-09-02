@@ -151,9 +151,10 @@ CAF_TEST(test_uniform_type) {
     CAF_CHECK(strcmp(uti->name(), "@atom") == 0);
   }
   auto sptr = detail::singletons::get_uniform_type_info_map();
-  // this kind of message is used during the initialization process of BASP;
+  // these message types are used during the initialization process of BASP;
   // when compiling with logging enabled, this type ends up in the type info map
   sptr->by_uniform_name("@<>+@atom+@str");
+  sptr->by_uniform_name("@<>+@atom+@str+@message");
   using detail::type_nr;
   // these types (and only those) are present if
   // the uniform_type_info implementation is correct
