@@ -185,6 +185,7 @@ CAF_TEST(test_uniform_type) {
     {"@<>", 0},
     {"@<>+@atom", 0},
     {"@<>+@atom+@str", 0},
+    {"@<>+@atom+@str+@message", 0},
     {"@unit", tnr<unit_t>()},
     {"@actor", tnr<actor>()},
     {"@actorvec", tnr<std::vector<actor>>()},
