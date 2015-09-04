@@ -85,10 +85,9 @@ std::thread run_sub_unit_test(actor rc,
   std::string path = cpath;
   replace_all(path, "'", "\\'");
   std::ostringstream oss;
-  oss << path;
   // set path and default options for sub unit tests
-  oss << "'" << path << "' "
-      << "-n -s " << suite_name << " -r " << max_runtime << " --";
+  oss << path
+      << " -n -s " << suite_name << " -r " << max_runtime << " --";
   for (auto& arg : args)
     oss << " " << arg;
   if (set_asio_option)
