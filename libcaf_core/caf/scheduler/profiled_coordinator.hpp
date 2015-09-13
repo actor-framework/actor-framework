@@ -170,7 +170,7 @@ public:
            << setw(15) << "usr"       // time spent in user mode (cumulative)
            << setw(15) << "sys"       // time spent in kernel model (cumulative)
            << "mem"                   // used memory (cumulative)
-           << std::endl;
+           << '\n';
   }
 
   void stop() override {
@@ -234,7 +234,7 @@ public:
            << setw(10) << label
            << setw(10) << id
            << m
-           << std::endl;
+           << '\n';
   }
 
   void report(const actor_id& job, const measurement& m) {
