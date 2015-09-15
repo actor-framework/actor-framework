@@ -480,6 +480,7 @@ void test_remote_actor(const char* path, bool run_remote, bool use_asio) {
   CAF_CHECK(serv == serv2);
   thread child;
   if (run_remote) {
+    CAF_MESSAGE("start child process");
     child = detail::run_sub_unit_test(self,
                                       path,
                                       test::engine::max_runtime(),
@@ -567,8 +568,6 @@ CAF_TEST(remote_actors) {
     );
     grp->stop();
   } else {
-    for (int i = 0; i < 100; ++i) spawn([]{});
-    await_all_actors_done();
     test_remote_actor(test::engine::path(), true, use_asio);
   }
   await_all_actors_done();

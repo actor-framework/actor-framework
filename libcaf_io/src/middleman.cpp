@@ -140,6 +140,10 @@ public:
     broker_ = invalid_actor;
   }
 
+  const char* name() const override {
+    return "middleman_actor";
+  }
+
   using put_res = either<ok_atom, uint16_t>::or_else<error_atom, std::string>;
 
   using get_res = delegated<either<ok_atom, node_id, actor_addr,
@@ -281,8 +285,10 @@ void middleman::stop() {
     // managers_ will be modified while we are stopping each manager,
     // because each manager will call remove(...)
     for (auto& kvp : named_brokers_) {
-      if (kvp.second->exit_reason() == exit_reason::not_exited) {
-        kvp.second->cleanup(exit_reason::normal);
+      auto& ptr = kvp.second;
+      if (ptr->exit_reason() == exit_reason::not_exited) {
+        ptr->planned_exit_reason(exit_reason::normal);
+        ptr->finalize();
       }
     }
   });

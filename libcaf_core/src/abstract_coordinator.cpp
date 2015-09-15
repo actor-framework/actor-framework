@@ -345,8 +345,9 @@ void abstract_coordinator::stop_actors() {
   );
 }
 
-abstract_coordinator::abstract_coordinator(size_t nw)
+abstract_coordinator::abstract_coordinator(size_t nw, size_t mt)
     : next_worker_(0),
+      max_throughput_(mt),
       num_workers_(nw) {
   // nop
 }

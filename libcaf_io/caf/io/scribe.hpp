@@ -24,6 +24,7 @@
 
 #include "caf/message.hpp"
 
+#include "caf/io/broker_servant.hpp"
 #include "caf/io/receive_policy.hpp"
 #include "caf/io/system_messages.hpp"
 #include "caf/io/network/stream_manager.hpp"
@@ -31,9 +32,12 @@
 namespace caf {
 namespace io {
 
+using scribe_base = broker_servant<network::stream_manager, connection_handle,
+                                   new_data_msg>;
+
 /// Manages a stream.
 /// @ingroup Broker
-class scribe : public network::stream_manager {
+class scribe : public scribe_base {
 public:
   scribe(abstract_broker* parent, connection_handle hdl);
 
@@ -42,39 +46,22 @@ public:
   /// Implicitly starts the read loop on first call.
   virtual void configure_read(receive_policy::config config) = 0;
 
-  /// Grants access to the output buffer.
+  /// Returns the current output buffer.
   virtual std::vector<char>& wr_buf() = 0;
 
-  /// Flushes the output buffer, i.e., sends the content of
-  ///    the buffer via the network.
-  virtual void flush() = 0;
+  /// Returns the current input buffer.
+  virtual std::vector<char>& rd_buf() = 0;
 
-  inline connection_handle hdl() const {
-    return hdl_;
-  }
+  /// Flushes the output buffer, i.e., sends the
+  /// content of the buffer via the network.
+  virtual void flush() = 0;
 
   void io_failure(network::operation op) override;
 
   void consume(const void* data, size_t num_bytes) override;
 
 protected:
-  virtual std::vector<char>& rd_buf() = 0;
-
-  inline new_data_msg& read_msg() {
-    return read_msg_.get_as_mutable<new_data_msg>(0);
-  }
-
-  inline const new_data_msg& read_msg() const {
-    return read_msg_.get_as<new_data_msg>(0);
-  }
-
-  void detach_from_parent() override;
-
   message detach_message() override;
-
-private:
-  connection_handle hdl_;
-  message read_msg_;
 };
 
 } // namespace io

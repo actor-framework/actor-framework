@@ -19,6 +19,9 @@
 
 #include "caf/io/network/test_multiplexer.hpp"
 
+#include "caf/io/scribe.hpp"
+#include "caf/io/doorman.hpp"
+
 namespace caf {
 namespace io {
 namespace network {
@@ -126,9 +129,8 @@ void test_multiplexer::assign_tcp_doorman(abstract_broker* ptr,
       auto& mm = mpx_->pending_connects();
       auto i = mm.find(hdl());
       if (i != mm.end()) {
-        accept_msg().handle = i->second;
-        parent()->invoke_message(invalid_actor_addr, invalid_message_id,
-                                 accept_msg_);
+        msg().handle = i->second;
+        invoke_mailbox_element();
         mm.erase(i);
       }
     }

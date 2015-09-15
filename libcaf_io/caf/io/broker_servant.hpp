@@ -17,35 +17,66 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/io/doorman.hpp"
+#ifndef CAF_IO_BROKER_SERVANT_HPP
+#define CAF_IO_BROKER_SERVANT_HPP
 
-#include "caf/detail/logging.hpp"
+#include "caf/mailbox_element.hpp"
 
 #include "caf/io/abstract_broker.hpp"
+#include "caf/io/system_messages.hpp"
 
 namespace caf {
 namespace io {
 
-doorman::doorman(abstract_broker* ptr, accept_handle acc_hdl)
-    : doorman_base(ptr, acc_hdl) {
-  // nop
-}
+/// Base class for `scribe` and `doorman`.
+/// @ingroup Broker
+template <class Base, class Handle, class SysMsgType>
+class broker_servant : public Base {
+public:
+  broker_servant(abstract_broker* ptr, Handle hdl) : Base(ptr), hdl_(hdl) {
+    // nop
+  }
 
-doorman::~doorman() {
-  // nop
-}
+  Handle hdl() const {
+    return hdl_;
+  }
 
-message doorman::detach_message() {
-  return make_message(acceptor_closed_msg{hdl()});
-}
+protected:
+  void detach_from_parent() override {
+    this->parent()->erase(hdl_);
+  }
 
-void doorman::io_failure(network::operation op) {
-  CAF_LOG_TRACE("id = " << hdl().id() << ", "
-                        << CAF_TARG(op, static_cast<int>));
-  // keep compiler happy when compiling w/o logging
-  static_cast<void>(op);
-  detach(true);
-}
+  void invoke_mailbox_element() {
+    this->parent()->exec_single_event(mailbox_elem_ptr_);
+  }
 
-} // namespace io
-} // namespace caf
+  SysMsgType& msg() {
+    if (! mailbox_elem_ptr_)
+      reset_mailbox_element();
+    return mailbox_elem_ptr_->msg.get_as_mutable<SysMsgType>(0);
+  }
+
+  static void set_hdl(new_connection_msg& lhs, Handle& hdl) {
+    lhs.source = hdl;
+  }
+
+  static void set_hdl(new_data_msg& lhs, Handle& hdl) {
+    lhs.handle = hdl;
+  }
+
+  void reset_mailbox_element() {
+    SysMsgType tmp;
+    set_hdl(tmp, hdl_);
+    mailbox_elem_ptr_ = mailbox_element::make_joint(invalid_actor_addr,
+                                                    invalid_message_id, tmp);
+  }
+
+  Handle hdl_;
+  mailbox_element_ptr mailbox_elem_ptr_;
+};
+
+} // namespace io {
+} // namespace caf {
+
+#endif // CAF_IO_BROKER_SERVANT_HPP
+

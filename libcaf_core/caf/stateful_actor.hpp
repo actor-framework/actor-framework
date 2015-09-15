@@ -24,6 +24,8 @@
 #include <type_traits>
 
 #include "caf/fwd.hpp"
+
+#include "caf/detail/logging.hpp"
 #include "caf/detail/type_traits.hpp"
 
 namespace caf {
@@ -60,6 +62,7 @@ public:
 
   /// Destroys the state of this actor (no further overriding allowed).
   void on_exit() override final {
+    CAF_LOG_TRACE("");
     state_.~State();
   }
 
