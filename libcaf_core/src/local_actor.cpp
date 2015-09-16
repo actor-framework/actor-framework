@@ -485,17 +485,6 @@ invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
   CAF_CRITICAL("invalid message type");
 }
 
-/*
-invoke_message_result local_actor::invoke_message(mailbox_element_ptr& node) {
-  if (! awaits_response() && bhvr_stack().empty())
-    return im_dropped;
-  auto& bhvr = awaits_response() ? awaited_response_handler()
-                                 : bhvr_stack().back();
-  auto mid = awaited_response_id();
-  return invoke_message(node, bhvr, mid);
-}
-*/
-
 struct pending_response_predicate {
 public:
   explicit pending_response_predicate(message_id mid) : mid_(mid) {

@@ -21,8 +21,6 @@
 #include "caf/config.hpp"
 #include "caf/make_counted.hpp"
 
-#include "caf/scheduler/abstract_coordinator.hpp"
-
 #include "caf/io/broker.hpp"
 #include "caf/io/middleman.hpp"
 
@@ -47,11 +45,10 @@ public:
   inline void operator()() {
     CAF_PUSH_AID(self_->id());
     CAF_LOG_TRACE("");
-    auto sc = detail::singletons::get_scheduling_coordinator();
-    if (self_->resume(nullptr, sc->max_throughput()) == resume_later) {
-      // re-schedule broker
+    auto mt = self_->parent().max_throughput();
+    // re-schedule broker if it reached its maximum message throughput
+    if (self_->resume(nullptr, mt) == resumable::resume_later)
       self_->backend().post(std::move(*this));
-    }
   }
 
 private:

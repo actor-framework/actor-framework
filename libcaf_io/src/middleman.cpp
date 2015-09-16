@@ -39,8 +39,9 @@
 #include "caf/io/middleman.hpp"
 #include "caf/io/basp_broker.hpp"
 #include "caf/io/system_messages.hpp"
-
 #include "caf/io/network/interfaces.hpp"
+
+#include "caf/scheduler/abstract_coordinator.hpp"
 
 #include "caf/detail/logging.hpp"
 #include "caf/detail/ripemd_160.hpp"
@@ -248,6 +249,8 @@ void middleman::add_broker(broker_ptr bptr) {
 
 void middleman::initialize() {
   CAF_LOG_TRACE("");
+  auto sc = detail::singletons::get_scheduling_coordinator();
+  max_throughput_ = sc->max_throughput();
   backend_supervisor_ = backend_->make_supervisor();
   if (backend_supervisor_ == nullptr) {
     // the only backend that returns a `nullptr` is the `test_multiplexer`

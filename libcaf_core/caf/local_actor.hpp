@@ -594,8 +594,6 @@ public:
                                        behavior& fun,
                                        message_id awaited_response);
 
-  //invoke_message_result invoke_message(mailbox_element_ptr& node);
-
   using pending_response = std::pair<message_id, behavior>;
 
   message_id new_request_id(message_priority mp);
