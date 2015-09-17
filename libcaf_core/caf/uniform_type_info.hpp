@@ -71,6 +71,48 @@ private:
   T value_;
 };
 
+template <class T, size_t N>
+class uniform_value_impl<T[N]> : public uniform_value_t {
+public:
+  uniform_value_impl(const uniform_type_info* ptr)
+      : uniform_value_t(ptr, &value_) {
+    // nop
+  }
+
+  uniform_value_impl(const uniform_type_info* ptr, const T (&val)[N])
+      : uniform_value_t(ptr, &value_) {
+    array_copy(value_, val);
+  }
+
+  uniform_value copy() override {
+    return uniform_value{new uniform_value_impl(ti, value_)};
+  }
+
+private:
+  template <class U, size_t Len>
+  static void array_copy_impl(U (&lhs)[Len], const U (&rhs)[Len],
+                              std::true_type) {
+    for (size_t i = 0; i < Len; ++i) {
+      array_copy(lhs[i], rhs[i]);
+    }
+  }
+  
+  template <class U, size_t Len>
+  static void array_copy_impl(U (&lhs)[Len], const U (&rhs)[Len],
+                              std::false_type) {
+    std::copy(rhs, rhs + Len, lhs);
+  }
+  
+  template <class U, size_t Len>
+  static void array_copy(U (&lhs)[Len], const U (&rhs)[Len]) {
+    array_copy_impl(lhs, rhs,
+                    std::integral_constant<bool,
+                                           std::is_array<U>::value>{});
+  }
+
+  T value_[N];
+};
+
 /// Creates a uniform value of type `T`.
 template <class T, class... Ts>
 uniform_value make_uniform_value(const uniform_type_info* uti, Ts&&... xs) {
