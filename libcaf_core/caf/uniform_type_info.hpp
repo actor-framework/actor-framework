@@ -71,6 +71,30 @@ private:
   T value_;
 };
 
+// A specialization for c style arrays.
+template <class T, size_t N>
+class uniform_value_impl<T[N]> : public uniform_value_t {
+public:
+  uniform_value_impl(const uniform_type_info* ptr)
+      : uniform_value_t(ptr, &value_) {
+    //nop, equivalent of calling the default constructor
+  }
+
+  uniform_value_impl(const uniform_type_info* ptr, T const arg[N])
+      : uniform_value_t(ptr, &value_) {
+    //copying a c style array to initialize it
+    std::copy(&arg[0], &arg[N], &value_[0]);
+  }
+
+  uniform_value copy() override {
+    return uniform_value{new uniform_value_impl(ti, value_)};
+  }
+
+private:
+  T value_[N];
+};
+
+
 /// Creates a uniform value of type `T`.
 template <class T, class... Ts>
 uniform_value make_uniform_value(const uniform_type_info* uti, Ts&&... xs) {

@@ -32,6 +32,7 @@
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/detail/default_uniform_type_info.hpp"
+#include "caf/detail/array_uniform_type_info.hpp"
 
 namespace caf {
 
@@ -110,7 +111,7 @@ compound_member(const std::pair<GRes (Parent::*)() const,
 
 /// Adds a new type mapping for `T` to the type system using `tname`
 /// as its uniform name and the list of member pointers `xs`.
-/// @warning `announce` is **not** thead-safe!
+/// @warning `announce` is **not** thread-safe!
 template <class T, class... Ts>
 inline const uniform_type_info* announce(std::string tname, const Ts&... xs) {
   static_assert(std::is_pod<T>::value || std::is_empty<T>::value
@@ -118,6 +119,18 @@ inline const uniform_type_info* announce(std::string tname, const Ts&... xs) {
                 "T is neither a POD, nor empty, nor comparable with '=='");
   auto ptr = new detail::default_uniform_type_info<T>(std::move(tname), xs...);
   return announce(typeid(T), uniform_type_info_ptr{ptr});
+}
+
+/// Adds a new type mapping for a C-style array `T[N]` to the type system
+/// using `tname` as its uniform name.
+/// @warning `announce_array_type` is **not** thread-safe!
+template <typename T, size_t N>
+inline const uniform_type_info* announce(std::string tname) {
+  static_assert(std::is_pod<T>::value || std::is_empty<T>::value
+                || detail::is_comparable<T, T>::value,
+                "T is neither a POD, nor empty, nor comparable with '=='");
+  auto ptr = new detail::array_uniform_type_info<T,N>(std::move(tname));
+  return announce(typeid(T[N]), uniform_type_info_ptr{ptr});
 }
 
 /// @}

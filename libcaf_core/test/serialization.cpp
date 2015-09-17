@@ -106,16 +106,23 @@ enum class test_enum {
   c
 };
 
+struct test_array_wrapper {
+    int value[4];
+};
+
 struct fixture {
   int32_t i32 = -345;
   test_enum te = test_enum::b;
   string str = "Lorem ipsum dolor sit amet.";
   raw_struct rs;
+  test_array_wrapper aw{{0, 1, 2, 3}};
   message msg;
 
   fixture() {
     announce<test_enum>("test_enum");
     announce(typeid(raw_struct), uniform_type_info_ptr{new raw_struct_type_info});
+    announce<int,4>("int_array_4");
+    announce<test_array_wrapper>("test_array_wrapper", &test_array_wrapper::value);
     rs.str.assign(string(str.rbegin(), str.rend()));
     msg = make_message(i32, te, str, rs);
   }
@@ -243,6 +250,15 @@ CAF_TEST(test_enum_serialization) {
   test_enum x;
   binary_util::deserialize(buf, &x);
   CAF_CHECK(te == x);
+}
+
+CAF_TEST(test_array_wrapper) {
+  auto buf = binary_util::serialize(aw);
+  test_array_wrapper x;
+  binary_util::deserialize(buf, &x);
+  for (size_t i = 0; i < 4; i++) {
+      CAF_CHECK(aw.value[i] == x.value[i]);
+  }
 }
 
 CAF_TEST(test_string) {
