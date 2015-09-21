@@ -135,7 +135,7 @@ public:
     // nop
   }
 
-  void on_exit() {
+  void on_exit() override {
     CAF_LOG_TRACE("");
     broker_ = invalid_actor;
   }
