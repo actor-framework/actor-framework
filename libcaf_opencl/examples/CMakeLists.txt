@@ -13,7 +13,7 @@ if(OpenCL_LIBRARIES)
     add_executable(${name} ${folder}/${name}.cpp ${ARGN})
     target_link_libraries(${name}
                           ${LD_FLAGS}
-                          ${LIBCAF_LIBRARIES}
+                          ${CAF_LIBRARIES}
                           ${PTHREAD_LIBRARIES}
                           ${WSLIB}
                           ${OpenCL_LIBRARIES})
