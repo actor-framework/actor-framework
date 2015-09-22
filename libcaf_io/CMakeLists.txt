@@ -35,7 +35,7 @@ add_custom_target(libcaf_io)
 # build shared library if not compiling static only
 if (NOT CAF_BUILD_STATIC_ONLY)
   add_library(libcaf_io_shared SHARED ${LIBCAF_IO_SRCS} ${LIBCAF_IO_HDRS})
-  target_link_libraries(libcaf_io_shared ${LD_FLAGS} ${LIBCAF_CORE_LIBRARY})
+  target_link_libraries(libcaf_io_shared ${LD_FLAGS} ${CAF_LIBRARY_CORE})
   set_target_properties(libcaf_io_shared
                         PROPERTIES
                         SOVERSION ${CAF_VERSION}
@@ -50,7 +50,7 @@ endif ()
 # build static library only if --build-static or --build-static-only was set
 if (CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
   add_library(libcaf_io_static STATIC ${LIBCAF_IO_HDRS} ${LIBCAF_IO_SRCS})
-  target_link_libraries(libcaf_io_static ${LD_FLAGS} ${LIBCAF_CORE_LIBRARY})
+  target_link_libraries(libcaf_io_static ${LD_FLAGS} ${CAF_LIBRARY_CORE_STATIC})
   set_target_properties(libcaf_io_static PROPERTIES OUTPUT_NAME caf_io_static)
   if(NOT WIN32)
     install(TARGETS libcaf_io_static ARCHIVE DESTINATION lib)

@@ -15,7 +15,7 @@ macro(add name folder)
   add_executable(${name} ${folder}/${name}.cpp ${ARGN})
   target_link_libraries(${name}
                         ${LD_FLAGS}
-                        ${LIBCAF_LIBRARIES}
+                        ${CAF_LIBRARIES}
                         ${PTHREAD_LIBRARIES}
                         ${WSLIB})
   install(FILES ${folder}/${name}.cpp DESTINATION share/caf/examples/${folder})
@@ -47,7 +47,7 @@ if(NOT CAF_NO_PROTOBUF_EXAMPLES)
     # add binary dir as include path as generated headers will be located there
     include_directories(${CMAKE_CURRENT_BINARY_DIR})
     add_executable(protobuf_broker brokers/protobuf_broker.cpp ${ProtoSources})
-    target_link_libraries(protobuf_broker ${CMAKE_DL_LIBS} ${LIBCAF_LIBRARIES} ${PTHREAD_LIBRARIES} ${PROTOBUF_LIBRARIES})
+    target_link_libraries(protobuf_broker ${CMAKE_DL_LIBS} ${CAF_LIBRARIES} ${PTHREAD_LIBRARIES} ${PROTOBUF_LIBRARIES})
     add_dependencies(protobuf_broker all_examples)
   endif(PROTOBUF_FOUND AND PROTOBUF_PROTOC_EXECUTABLE)
 endif()
@@ -74,7 +74,7 @@ if(NOT CAF_NO_QT_EXAMPLES)
                    ${GROUP_CHAT_UI_HDR})
     target_link_libraries(qt_group_chat
                           ${CMAKE_DL_LIBS}
-                          ${LIBCAF_LIBRARIES}
+                          ${CAF_LIBRARIES}
                           Qt5::Core
                           Qt5::Gui
                           Qt5::Widgets)
@@ -97,7 +97,7 @@ if(NOT CAF_NO_QT_EXAMPLES)
                      ${GROUP_CHAT_UI_HDR})
       target_link_libraries(qt_group_chat
                             ${CMAKE_DL_LIBS}
-                            ${LIBCAF_LIBRARIES}
+                            ${CAF_LIBRARIES}
                             ${QT_LIBRARIES})
       add_dependencies(qt_group_chat all_examples)
     endif()
@@ -109,7 +109,7 @@ if(NOT CAF_NO_CURL_EXAMPLES)
   if(CURL_FOUND)
     add_executable(curl_fuse curl/curl_fuse.cpp)
     include_directories(${CURL_INCLUDE_DIRS})
-    target_link_libraries(curl_fuse ${CMAKE_DL_LIBS} ${LIBCAF_LIBRARIES} ${PTHREAD_LIBRARIES} ${CURL_LIBRARY})
+    target_link_libraries(curl_fuse ${CMAKE_DL_LIBS} ${CAF_LIBRARIES} ${PTHREAD_LIBRARIES} ${CURL_LIBRARY})
     add_dependencies(curl_fuse all_examples)
   endif(CURL_FOUND)
 endif()
