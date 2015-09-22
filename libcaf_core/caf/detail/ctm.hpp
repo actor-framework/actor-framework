@@ -78,53 +78,27 @@ struct ctm_cmp<typed_mpi<In, L, R>,
                typed_mpi<In, R, empty_type_list>>
     : std::true_type { };
 
-template <class A, class B, int Pos = 0>
-struct ctm_impl { // : std::integral_constant<int, -2> {
-  // -2 means: to few message handlers defined
-  static constexpr int value = (tl_size<A>::value < tl_size<B>::value)
-                               ? -2
-                               : -3;
-};
+template <class Xs, class Ys>
+constexpr int ctm_impl(int pos) {
+  return tl_empty<Xs>::value
+      ? -1 // consumed each X
+      : (tl_exists<Ys, tbind<ctm_cmp, typename tl_head<Xs>::type>::template type>::value
+         ? ctm_impl<typename tl_tail<Xs>::type, Ys>(pos + 1)
+         : pos);
+}
 
-template <int Pos>
-struct ctm_impl<empty_type_list, empty_type_list, Pos>
-    : std::integral_constant<int, -1> {
-  // everything's fine, -1 means: no mismatch found (both sets are empty)
-};
-
-template <class X, class... Xs, class... Ys, int Pos>
-struct ctm_impl<type_list<X, Xs...>, type_list<Ys...>, Pos> {
-  using next_ys =
-    typename tl_filter_not<
-      type_list<Ys...>,
-      tbind<ctm_cmp, X>::template type
-    >::type;
-  static constexpr int value =
-    // check if filter_not did remove something
-    sizeof...(Ys) == tl_size<next_ys>::value
-    ? Pos // error at this position
-    : ctm_impl<type_list<Xs...>, next_ys, Pos + 1>::value;
-};
-
-template <class X, class... Xs, class... Ys, int Pos>
-constexpr int ctm_impl<type_list<X, Xs...>, type_list<Ys...>, Pos>::value;
-
-template <class X, class Y>
+template <class Xs, class Ys>
 struct ctm {
   // -3 means too many handler, -2 means too few, -1 means OK, everything else
   // mismatch at that position
-  static constexpr size_t num_xs = tl_size<X>::value;
-  static constexpr size_t num_ys = tl_size<Y>::value;
-  /*
-  static constexpr int value = num_xs != num_ys
-                               ? num_xs > num_ys ? -3 : -2
-                               : ctm_impl<X, Y, 0>::value;
-  */
-  static constexpr int value = ctm_impl<X, Y, 0>::value;
+  static constexpr size_t num_xs = tl_size<Xs>::value;
+  static constexpr size_t num_ys = tl_size<Ys>::value;
+  static constexpr int value = num_xs == num_ys ? ctm_impl<Xs, Ys>(0)
+                                                : (num_xs < num_ys ? -2 : -3);
 };
 
-template <class X, class Y>
-constexpr int ctm<X,Y>::value;
+template <class Xs, class Ys>
+constexpr int ctm<Xs, Ys>::value;
 
 } // namespace detail
 } // namespace caf

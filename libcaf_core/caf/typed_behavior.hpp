@@ -219,6 +219,8 @@ private:
         detail::type_list<typename detail::deduce_mpi<Ts>::type...>,
         detail::is_hidden_msg_handler
       >::type;
+    static_assert(detail::tl_is_distinct<mpi>::value,
+                  "multiple handler defintions found");
     detail::static_asserter<signatures, mpi, detail::ctm>::verify_match();
     // final (type-erasure) step
     intrusive_ptr<detail::behavior_impl> ptr = std::move(bp);

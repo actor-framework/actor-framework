@@ -135,30 +135,30 @@ struct type_checker<type_pair<Opt1, Opt2>, F1, F2> {
   }
 };
 
-template <int X, int Pos>
+template <int X, int Pos, class A>
 struct static_error_printer {
   static_assert(X != Pos, "unexpected handler some position > 20");
 
 };
 
-template <int X>
-struct static_error_printer<X, -3> {
+template <int X, class A>
+struct static_error_printer<X, -3, A> {
   static_assert(X == -1, "too few message handlers defined");
 };
 
-template <int X>
-struct static_error_printer<X, -2> {
+template <int X, class A>
+struct static_error_printer<X, -2, A> {
   static_assert(X == -1, "too many message handlers defined");
 };
 
-template <int X>
-struct static_error_printer<X, -1> {
+template <int X, class A>
+struct static_error_printer<X, -1, A> {
   // everything' fine
 };
 
 #define CAF_STATICERR(Pos)                                                     \
-  template <int X>                                                             \
-  struct static_error_printer< X, Pos > {                                      \
+  template <int X, class A>                                                    \
+  struct static_error_printer< X, Pos, A > {                                   \
     static_assert(X == -1, "unexpected handler at position " #Pos );           \
   }
 
@@ -174,7 +174,8 @@ template <class A, class B, template <class, class> class Predicate>
 struct static_asserter {
   static void verify_match() {
     static constexpr int x = Predicate<A, B>::value;
-    static_error_printer<x, x> dummy;
+    using type_at_x = typename tl_at<B, (x < 0 ? 0 : x)>::type;
+    static_error_printer<x, x, type_at_x> dummy;
     static_cast<void>(dummy);
   }
 };
