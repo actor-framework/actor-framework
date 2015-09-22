@@ -106,9 +106,14 @@ if(NOT WIN32 AND NOT CAF_NO_COMPILER_CHECK)
 endif()
 # set optional build flags
 set(EXTRA_FLAGS "")
+# increase max. template depth on GCC and Clang
+if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang"
+   OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+  set(EXTRA_FLAGS "-ftemplate-depth=512")
+endif()
 # add "-Werror" flag if --pedantic-build is used
 if(CAF_CXX_WARNINGS_AS_ERRORS)
-  set(EXTRA_FLAGS "-Werror")
+  set(EXTRA_FLAGS "${EXTRA_FLAGS} -Werror")
 endif()
 # enable a ton of warnings if --more-clang-warnings is used
 if(CAF_MORE_WARNINGS)
