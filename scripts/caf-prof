@@ -277,8 +277,6 @@ option_list <- list(
               help="the image format of the output [%default]"),
   make_option(c("-r", "--read"), default="stdin",
               help="read CAF profile from file [-]"),
-  make_option(c("-e", "--extension"), default="png",
-              help="file extension of output file [%default]"),
   make_option(c("-h", "--help"), action="store_true", default=F,
               help="display this help and exit")
   )
@@ -306,7 +304,7 @@ if (opt$squeeze)
 
 record <- function(name, fun, ...) {
   filename <- paste("plot", name, sep="-")
-  filename <- paste(filename, opt$extension, sep=".")
+  filename <- paste(filename, opt$output, sep=".")
   write(paste("-- generating", filename), stderr())
   ggsave(filename, fun(...), height=10, width=10)
 }
