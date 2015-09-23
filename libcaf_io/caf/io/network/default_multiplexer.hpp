@@ -140,18 +140,21 @@ using native_socket_acceptor = native_socket;
 /// Returns the last socket error as human-readable string.
 std::string last_socket_error_as_string();
 
+/// Creates two connected sockets. The former is the read handle
+/// and the latter is the write handle.
+std::pair<native_socket, native_socket> create_pipe();
+
 /// Sets fd to nonblocking if `set_nonblocking == true`
 /// or to blocking if `set_nonblocking == false`
 /// throws `network_error` on error
 void nonblocking(native_socket fd, bool new_value);
 
-/// Creates two connected sockets. The former is the read handle
-/// and the latter is the write handle.
-std::pair<native_socket, native_socket> create_pipe();
-
-/// Returns true if `fd` is configured as nodelay socket.
+/// Enables or disables Nagle's algorithm on `fd`.
 /// @throws network_error
 void tcp_nodelay(native_socket fd, bool new_value);
+
+/// Enables or disables `SIGPIPE` events from `fd`.
+void allow_sigpipe(native_socket fs, bool new_value);
 
 /// Throws `network_error` if `result` is invalid.
 void handle_write_result(ssize_t result);
