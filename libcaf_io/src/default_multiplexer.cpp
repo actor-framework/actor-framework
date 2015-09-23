@@ -50,6 +50,14 @@ using std::string;
 
 namespace {
 
+#if defined(CAF_MACOS) || defined(CAF_IOS)
+  constexpr int no_sigpipe_flag = SO_NOSIGPIPE;
+#elif defined(CAF_WINDOWS)
+  constexpr int no_sigpipe_flag = 0; // does not exist on Windows
+#else // BSD, Linux or Android
+  constexpr int no_sigpipe_flag = MSG_NOSIGNAL;
+#endif
+
 // safe ourselves some typing
 constexpr auto ipv4 = caf::io::network::protocol::ipv4;
 constexpr auto ipv6 = caf::io::network::protocol::ipv6;
@@ -118,8 +126,14 @@ uint16_t port_of_fd(native_socket fd);
   }
 
   void allow_sigpipe(native_socket fd, bool new_value) {
+#   ifndef CAF_LINUX
     int value = new_value ? 0 : 1;
     setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &value, sizeof(value));
+#   else
+    // SO_NOSIGPIPE does not exist on Linux, suppress unused warnings
+    static_cast<void>(fd);
+    static_cast<void>(new_value);
+#   endif
   }
 
   std::pair<native_socket, native_socket> create_pipe() {
@@ -591,7 +605,7 @@ void default_multiplexer::wr_dispatch_request(runnable* ptr) {
   // on windows, we actually have sockets, otherwise we have file handles
 # ifdef CAF_WINDOWS
     auto res = ::send(pipe_.second, reinterpret_cast<socket_send_ptr>(&ptrval),
-                      sizeof(ptrval), 0);
+                      sizeof(ptrval), no_sigpipe_flag);
 # else
     auto res = ::write(pipe_.second, &ptrval, sizeof(ptrval));
 # endif
@@ -848,8 +862,7 @@ default_multiplexer::new_tcp_doorman(uint16_t port, const char* in,
           res.second};
 }
 
-void default_multiplexer::assign_tcp_doorman(abstract_broker* ptr,
-                                             accept_handle hdl) {
+void default_multiplexer::assign_tcp_doorman(abstract_broker* ptr, accept_handle hdl) {
   add_tcp_doorman(ptr, static_cast<native_socket>(hdl.id()));
 }
 
@@ -905,7 +918,8 @@ bool read_some(size_t& result, native_socket fd, void* buf, size_t len) {
 
 bool write_some(size_t& result, native_socket fd, const void* buf, size_t len) {
   CAF_LOGF_TRACE(CAF_ARG(fd) << ", " << CAF_ARG(len));
-  auto sres = ::send(fd, reinterpret_cast<socket_send_ptr>(buf), len, 0);
+  auto sres = ::send(fd, reinterpret_cast<socket_send_ptr>(buf),
+                     len, no_sigpipe_flag);
   CAF_LOGF_DEBUG("tried to write " << len << " bytes to socket " << fd
                                    << ", send returned " << sres);
   if (is_error(sres, true))
