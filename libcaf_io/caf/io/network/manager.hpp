@@ -64,6 +64,12 @@ public:
   /// Called by the underlying IO device to report failures.
   virtual void io_failure(operation op) = 0;
 
+  /// Get the address of the underlying IO device.
+  virtual std::string addr() const = 0;
+
+  /// Get the port of the underlying IO device.
+  virtual uint16_t port() const = 0;
+
 protected:
   /// Creates a message signalizing a disconnect to the parent.
   virtual message detach_message() = 0;

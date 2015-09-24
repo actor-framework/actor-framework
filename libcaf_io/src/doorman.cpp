@@ -26,11 +26,10 @@
 namespace caf {
 namespace io {
 
-doorman::doorman(abstract_broker* ptr, accept_handle acc_hdl, uint16_t p)
+doorman::doorman(abstract_broker* ptr, accept_handle acc_hdl)
     : network::acceptor_manager(ptr),
       hdl_(acc_hdl),
-      accept_msg_(make_message(new_connection_msg{hdl_, connection_handle{}})),
-      port_(p) {
+      accept_msg_(make_message(new_connection_msg{hdl_, connection_handle{}})) {
   // nop
 }
 

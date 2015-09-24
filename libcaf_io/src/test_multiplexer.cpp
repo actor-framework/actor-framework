@@ -69,6 +69,14 @@ void test_multiplexer::assign_tcp_scribe(abstract_broker* ptr,
       // nop
     }
 
+    std::string addr() const override {
+      return std::string{};
+    }
+
+    uint16_t port() const override {
+      return 0;
+    }
+
   private:
     test_multiplexer* mpx_;
   };
@@ -109,12 +117,12 @@ void test_multiplexer::assign_tcp_doorman(abstract_broker* ptr,
   class impl : public doorman {
   public:
     impl(abstract_broker* self, accept_handle ah, test_multiplexer* mpx)
-        : doorman(self, ah, mpx->port(ah)),
+        : doorman(self, ah),
           mpx_(mpx) {
       // nop
     }
 
-    void new_connection() {
+    void new_connection() override {
       auto& mm = mpx_->pending_connects();
       auto i = mm.find(hdl());
       if (i != mm.end()) {
@@ -125,13 +133,21 @@ void test_multiplexer::assign_tcp_doorman(abstract_broker* ptr,
       }
     }
 
-    void stop_reading() {
+    void stop_reading() override {
       mpx_->stopped_reading(hdl()) = true;
       detach(false);
     }
 
-    void launch() {
+    void launch() override {
       // nop
+    }
+
+    std::string addr() const override {
+      return std::string{};
+    }
+
+    uint16_t port() const override {
+      return mpx_->port(hdl());
     }
 
   private:

@@ -176,6 +176,21 @@ accept_handle abstract_broker::add_tcp_doorman(network::native_socket fd) {
   return backend().add_tcp_doorman(this, fd);
 }
 
+std::string abstract_broker::remote_addr(connection_handle hdl) {
+  auto i = scribes_.find(hdl);
+  return i != scribes_.end() ? i->second->addr() : std::string{};
+}
+
+uint16_t abstract_broker::remote_port(connection_handle hdl) {
+  auto i = scribes_.find(hdl);
+  return i != scribes_.end() ? i->second->port() : 0;
+}
+
+std::string abstract_broker::local_addr(accept_handle hdl) {
+  auto i = doormen_.find(hdl);
+  return i != doormen_.end() ? i->second->addr() : std::string{};
+}
+
 uint16_t abstract_broker::local_port(accept_handle hdl) {
   auto i = doormen_.find(hdl);
   return i != doormen_.end() ? i->second->port() : 0;
