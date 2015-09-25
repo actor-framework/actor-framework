@@ -35,7 +35,7 @@ namespace io {
 /// @ingroup Broker
 class doorman : public network::acceptor_manager {
 public:
-  doorman(abstract_broker* parent, accept_handle hdl, uint16_t local_port);
+  doorman(abstract_broker* parent, accept_handle hdl);
 
   ~doorman();
 
@@ -47,10 +47,6 @@ public:
 
   // needs to be launched explicitly
   virtual void launch() = 0;
-
-  uint16_t port() const {
-    return port_;
-  }
 
 protected:
   void detach_from_parent() override;
@@ -67,7 +63,6 @@ protected:
 
   accept_handle hdl_;
   message accept_msg_;
-  uint16_t port_;
 };
 
 } // namespace io

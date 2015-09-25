@@ -145,13 +145,19 @@ connection_handle asio_multiplexer::add_tcp_scribe(abstract_broker* self,
       CAF_LOG_TRACE("");
       stream_.flush(this);
     }
+    std::string addr() const override {
+      return
+        stream_.socket_handle().remote_endpoint().address().to_string();
+    }
+    uint16_t port() const override {
+      return stream_.socket_handle().remote_endpoint().port();
+    }
     void launch() {
       CAF_LOG_TRACE("");
       CAF_ASSERT(! launched_);
       launched_ = true;
       stream_.start(this);
     }
-
  private:
     bool launched_;
     stream<Socket> stream_;
@@ -214,8 +220,7 @@ asio_multiplexer::add_tcp_doorman(abstract_broker* self,
   public:
     impl(abstract_broker* ptr, default_socket_acceptor&& s,
          network::asio_multiplexer& am)
-        : doorman(ptr, network::accept_hdl_from_socket(s),
-                  s.local_endpoint().port()),
+        : doorman(ptr, network::accept_hdl_from_socket(s)),
           acceptor_(am, s.get_io_service()) {
       acceptor_.init(std::move(s));
     }
@@ -236,7 +241,13 @@ asio_multiplexer::add_tcp_doorman(abstract_broker* self,
       CAF_LOG_TRACE("");
       acceptor_.start(this);
     }
-
+    std::string addr() const override {
+      return
+        acceptor_.socket_handle().local_endpoint().address().to_string();
+    }
+    uint16_t port() const override {
+      return acceptor_.socket_handle().local_endpoint().port();
+    }
   private:
     network::acceptor<default_socket_acceptor> acceptor_;
   };

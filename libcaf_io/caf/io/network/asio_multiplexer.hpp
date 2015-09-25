@@ -139,6 +139,7 @@ public:
 
   /// Returns the IO socket.
   Socket& socket_handle() { return fd_; }
+  const Socket& socket_handle() const { return fd_; }
 
   /// Initializes this stream, setting the socket handle to `fd`.
   void init(Socket fd) { fd_ = std::move(fd); }
@@ -311,6 +312,7 @@ public:
 
   /// Returns the IO socket.
   inline SocketAcceptor& socket_handle() { return accept_fd_; }
+  inline const SocketAcceptor& socket_handle() const { return accept_fd_; }
 
   /// Returns the accepted socket. This member function should
   ///        be called only from the `new_connection` callback.

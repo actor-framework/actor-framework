@@ -159,6 +159,18 @@ public:
   /// Creates and assigns a new `doorman` from given native socked `fd`.
   accept_handle add_tcp_doorman(network::native_socket fd);
 
+  /// Returns the remote address associated to `hdl`
+  /// or empty string if `hdl` is invalid.
+  std::string remote_addr(connection_handle hdl);
+
+  /// Returns the remote port associated to `hdl`
+  /// or `0` if `hdl` is invalid.
+  uint16_t remote_port(connection_handle hdl);
+
+  /// Returns the local address associated to `hdl`
+  /// or empty string if `hdl` is invalid.
+  std::string local_addr(accept_handle hdl);
+
   /// Returns the local port associated to `hdl` or `0` if `hdl` is invalid.
   uint16_t local_port(accept_handle hdl);
 

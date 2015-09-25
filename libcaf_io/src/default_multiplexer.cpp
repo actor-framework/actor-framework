@@ -104,7 +104,10 @@ namespace io {
 namespace network {
 
 // helper function
-uint16_t port_of_fd(native_socket fd);
+std::string local_addr_of_fd(native_socket fd);
+uint16_t local_port_of_fd(native_socket fd);
+std::string remote_addr_of_fd(native_socket fd);
+uint16_t remote_port_of_fd(native_socket fd);
 
 /******************************************************************************
  *           platform-dependent implementations           *
@@ -776,6 +779,12 @@ connection_handle default_multiplexer::add_tcp_scribe(abstract_broker* self,
       CAF_LOG_TRACE("");
       stream_.flush(this);
     }
+    std::string addr() const override {
+      return remote_addr_of_fd(stream_.fd());
+    }
+    uint16_t port() const override {
+      return remote_port_of_fd(stream_.fd());
+    }
     void launch() {
       CAF_LOG_TRACE("");
       CAF_ASSERT(! launched_);
@@ -799,7 +808,7 @@ default_multiplexer::add_tcp_doorman(abstract_broker* self,
   class impl : public doorman {
   public:
     impl(abstract_broker* ptr, default_socket_acceptor&& s)
-        : doorman(ptr, network::accept_hdl_from_socket(s), port_of_fd(s.fd())),
+        : doorman(ptr, network::accept_hdl_from_socket(s)),
           acceptor_(s.backend()) {
       acceptor_.init(std::move(s));
     }
@@ -819,6 +828,12 @@ default_multiplexer::add_tcp_doorman(abstract_broker* self,
     void launch() override {
       CAF_LOG_TRACE("");
       acceptor_.start(this);
+    }
+    std::string addr() const override {
+      return local_addr_of_fd(acceptor_.fd());
+    }
+    uint16_t port() const override {
+      return local_port_of_fd(acceptor_.fd());
     }
  private:
     network::acceptor<default_socket_acceptor> acceptor_;
@@ -1217,10 +1232,58 @@ new_tcp_acceptor(uint16_t port, const char* addr, bool reuse) {
                                   bound_port};
 }
 
-uint16_t port_of_fd(native_socket fd) {
+std::string local_addr_of_fd(native_socket fd) {
   sockaddr_storage st;
   socklen_t st_len = sizeof(st);
-  ccall(cc_zero, "getsocketname() failed", getsockname,
+  sockaddr* sa = reinterpret_cast<sockaddr*>(&st);
+  ccall(cc_zero, "getsockname() failed",
+        getsockname, fd, sa, &st_len);
+  char addr[INET6_ADDRSTRLEN] {0};
+  switch (sa->sa_family) {
+    case AF_INET:
+      return inet_ntop(AF_INET, &reinterpret_cast<sockaddr_in*>(sa)->sin_addr,
+                       addr, sizeof(addr));
+    case AF_INET6:
+      return inet_ntop(AF_INET6, &reinterpret_cast<sockaddr_in6*>(sa)->sin6_addr,
+                       addr, sizeof(addr));
+    default:
+      break;
+  }
+  throw std::invalid_argument("invalid protocol family");
+}
+
+uint16_t local_port_of_fd(native_socket fd) {
+  sockaddr_storage st;
+  socklen_t st_len = sizeof(st);
+  ccall(cc_zero, "getsockname() failed", getsockname,
+        fd, reinterpret_cast<sockaddr*>(&st), &st_len);
+  return ntohs(port_of(reinterpret_cast<sockaddr&>(st)));
+}
+
+std::string remote_addr_of_fd(native_socket fd) {
+  sockaddr_storage st;
+  socklen_t st_len = sizeof(st);
+  sockaddr* sa = reinterpret_cast<sockaddr*>(&st);
+  ccall(cc_zero, "getpeername() failed",
+        getpeername, fd, sa, &st_len);
+  char addr[INET6_ADDRSTRLEN] {0};
+  switch (sa->sa_family) {
+    case AF_INET:
+      return inet_ntop(AF_INET, &reinterpret_cast<sockaddr_in*>(sa)->sin_addr,
+                       addr, sizeof(addr));
+    case AF_INET6:
+      return inet_ntop(AF_INET6, &reinterpret_cast<sockaddr_in6*>(sa)->sin6_addr,
+                       addr, sizeof(addr));
+    default:
+      break;
+  }
+  throw std::invalid_argument("invalid protocol family");
+}
+
+uint16_t remote_port_of_fd(native_socket fd) {
+  sockaddr_storage st;
+  socklen_t st_len = sizeof(st);
+  ccall(cc_zero, "getpeername() failed", getpeername,
         fd, reinterpret_cast<sockaddr*>(&st), &st_len);
   return ntohs(port_of(reinterpret_cast<sockaddr&>(st)));
 }
