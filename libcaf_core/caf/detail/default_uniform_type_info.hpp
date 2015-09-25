@@ -86,6 +86,7 @@ using list_impl = std::integral_constant<int, 1>;
 using map_impl = std::integral_constant<int, 2>;
 using pair_impl = std::integral_constant<int, 3>;
 using opt_impl = std::integral_constant<int, 4>;
+using array_impl = std::integral_constant<int, 5>;
 using recursive_impl = std::integral_constant<int, 9>;
 
 template <class T>
@@ -100,7 +101,9 @@ constexpr int impl_id() {
                           ? 3
                           : (detail::is_optional<T>::value
                               ? 4
-                              : 9))));
+                              : (std::is_array<T>::value
+                                  ? 5
+                                  : 9)))));
 }
 
 template <class T>
@@ -166,6 +169,13 @@ private:
     }
   }
 
+  template <class T, size_t N>
+  void simpl(const T (&val)[N], serializer* s, array_impl) const {
+    for (size_t i = 0; i < N; ++i) {
+      (*this)(val[i], s);
+    }
+  }
+
   template <class T>
   void simpl(const T& val, serializer* s, recursive_impl) const {
     uniform_typeid<T>()->serialize(&val, s);
@@ -216,6 +226,13 @@ private:
       val = std::move(tmp);
     } else {
       val = none;
+    }
+  }
+
+  template <class T, size_t N>
+  void dimpl(T (&val)[N], deserializer* d, array_impl) const {
+    for (size_t i = 0; i < N; ++i) {
+      (*this)(val[i], d);
     }
   }
 
