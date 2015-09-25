@@ -55,6 +55,14 @@ void actor_ostream::redirect_all(std::string f, int flags) {
             redirect_atom::value, std::move(f), flags);
 }
 
+actor_ostream aout(const scoped_actor& self) {
+  return actor_ostream{self};
+}
+
+actor_ostream aout(abstract_actor* self) {
+  return actor_ostream{actor_cast<actor>(intrusive_ptr<abstract_actor>{self})};
+}
+
 } // namespace caf
 
 namespace std {

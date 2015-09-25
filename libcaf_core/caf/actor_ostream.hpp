@@ -94,9 +94,10 @@ private:
 };
 
 /// Convenience factory function for creating an actor output stream.
-inline actor_ostream aout(actor self) {
-  return actor_ostream{self};
-}
+actor_ostream aout(const scoped_actor& self);
+
+/// Convenience factory function for creating an actor output stream.
+actor_ostream aout(abstract_actor* self);
 
 } // namespace caf
 
