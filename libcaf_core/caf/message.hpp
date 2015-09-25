@@ -380,6 +380,7 @@ make_message(V&& x, Ts&&... xs) {
                          typename unbox_message_element<
                            typename detail::strip_and_convert<Ts>::type
                          >::type...>;
+
   auto ptr = make_counted<storage>(std::forward<V>(x), std::forward<Ts>(xs)...);
   return message{detail::message_data::cow_ptr{std::move(ptr)}};
 }

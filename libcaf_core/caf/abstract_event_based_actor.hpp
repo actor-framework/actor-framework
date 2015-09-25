@@ -24,6 +24,7 @@
 
 #include "caf/message_id.hpp"
 #include "caf/local_actor.hpp"
+#include "caf/actor_marker.hpp"
 #include "caf/typed_behavior.hpp"
 #include "caf/behavior_policy.hpp"
 #include "caf/response_handle.hpp"
@@ -37,7 +38,8 @@ namespace caf {
 /// @tparam HasSyncSend Configures whether this base extends `sync_sender`.
 /// @tparam Base Either `local_actor` (default) or a subtype thereof.
 template <class BehaviorType, bool HasSyncSend, class Base = local_actor>
-class abstract_event_based_actor : public Base {
+class abstract_event_based_actor : public Base,
+                                   public actor_marker<BehaviorType>::type {
 public:
   using behavior_type = BehaviorType;
 

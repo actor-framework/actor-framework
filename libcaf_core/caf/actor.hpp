@@ -28,6 +28,7 @@
 #include "caf/intrusive_ptr.hpp"
 
 #include "caf/fwd.hpp"
+#include "caf/actor_marker.hpp"
 #include "caf/abstract_actor.hpp"
 
 #include "caf/detail/comparable.hpp"
@@ -50,9 +51,11 @@ constexpr invalid_actor_t invalid_actor = invalid_actor_t{};
 template <class T>
 struct is_convertible_to_actor {
   using type = typename std::remove_pointer<T>::type;
-  static constexpr bool value = std::is_base_of<actor_proxy, type>::value
-                                || std::is_base_of<local_actor, type>::value
-                                || std::is_same<scoped_actor, type>::value;
+  static constexpr bool value =
+      ! std::is_base_of<statically_typed_actor_base, type>::value
+      && (std::is_base_of<actor_proxy, type>::value
+          || std::is_base_of<local_actor, type>::value
+          || std::is_same<scoped_actor, type>::value);
 };
 
 /// Identifies an untyped actor. Can be used with derived types

@@ -129,6 +129,17 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
     // nop
   }
 
+  // allow `handle_type{this}` for typed actors
+  template <class TypedActor,
+            class Enable =
+              typename std::enable_if<
+                detail::tlf_is_subset(signatures(),
+                                      typename TypedActor::signatures())
+              >::type>
+  typed_actor(TypedActor* ptr) : ptr_(ptr) {
+    // nop
+  }
+
   template <class TypedActor,
             class Enable =
               typename std::enable_if<
