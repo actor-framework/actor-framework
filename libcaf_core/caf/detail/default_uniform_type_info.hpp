@@ -266,7 +266,8 @@ private:
 template <class T, class AccessPolicy,
           class SerializePolicy = default_serialize_policy,
           bool IsEnum = std::is_enum<T>::value,
-          bool IsEmptyType = std::is_class<T>::value&& std::is_empty<T>::value>
+          bool IsEmptyType = std::is_class<T>::value
+                             && std::is_empty<T>::value>
 class member_tinfo : public abstract_uniform_type_info<T> {
 public:
   using super = abstract_uniform_type_info<T>;
@@ -296,7 +297,6 @@ public:
   }
 
 private:
-
   void ds(void* p, deserializer* d, std::true_type) const {
     spol_(apol_(p), d);
   }
@@ -309,11 +309,42 @@ private:
 
   AccessPolicy apol_;
   SerializePolicy spol_;
-
 };
 
 template <class T, class A, class S>
 class member_tinfo<T, A, S, false, true>
+    : public abstract_uniform_type_info<T> {
+public:
+  using super = abstract_uniform_type_info<T>;
+
+  member_tinfo(const A&, const S&) : super("--member--") {
+    // nop
+  }
+
+  member_tinfo(const A&) : super("--member--") {
+    // nop
+  }
+
+  member_tinfo() : super("--member--") {
+    // nop
+  }
+
+  void serialize(const void*, serializer*) const override {
+    // nop
+  }
+
+  void deserialize(void*, deserializer*) const override {
+    // nop
+  }
+};
+
+template <class T>
+struct empty_non_pod_type_wrapper {
+  // nop
+};
+
+template <class T, class A, class S>
+class member_tinfo<empty_non_pod_type_wrapper<T>, A, S, false, true>
     : public abstract_uniform_type_info<T> {
 public:
   using super = abstract_uniform_type_info<T>;
@@ -503,7 +534,14 @@ public:
   }
 
   default_uniform_type_info(std::string tname) : super(std::move(tname)) {
-    using result_type = member_tinfo<T, fake_access_policy<T>>;
+    using result_type =
+      member_tinfo<
+        typename std::conditional<
+          std::is_polymorphic<T>::value,
+          empty_non_pod_type_wrapper<T>, T
+        >::type,
+        fake_access_policy<T>
+      >;
     members_.push_back(uniform_type_info_ptr(new result_type));
   }
 

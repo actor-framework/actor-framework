@@ -111,6 +111,15 @@ struct test_array {
   int value2[2][4];
 };
 
+struct test_empty_non_pod {
+  virtual void foo() {
+    // nop
+  }
+  bool operator==(const test_empty_non_pod&) const {
+    return false;
+  }
+};
+
 struct fixture {
   int32_t i32 = -345;
   test_enum te = test_enum::b;
@@ -129,6 +138,7 @@ struct fixture {
     announce<test_enum>("test_enum");
     announce(typeid(raw_struct), uniform_type_info_ptr{new raw_struct_type_info});
     announce<test_array>("test_array", &test_array::value, &test_array::value2);
+    announce<test_empty_non_pod>("test_empty_non_pod");
     rs.str.assign(string(str.rbegin(), str.rend()));
     msg = make_message(i32, te, str, rs);
   }
@@ -284,6 +294,13 @@ CAF_TEST(test_array_serialization) {
       CAF_CHECK(ta.value2[i][j] == x.value2[i][j]);
     }
   }
+}
+
+CAF_TEST(test_empty_non_pod_serialization) {
+  test_empty_non_pod x;
+  auto buf = binary_util::serialize(x);
+  binary_util::deserialize(buf, &x);
+  CAF_CHECK(true);
 }
 
 CAF_TEST(test_single_message) {
