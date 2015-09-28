@@ -40,10 +40,9 @@ const std::vector<device>& metainfo::get_devices() const {
 const optional<const device&> metainfo::get_device(size_t id) const{
   if (platforms_.empty())
     return none;
-  size_t from = 0;
   size_t to = 0;
   for (auto& pl : platforms_) {
-    from = to;
+    auto from = to;
     to += pl.get_devices().size();
     if (id >= from && id < to)
       return pl.get_devices()[id - from];
