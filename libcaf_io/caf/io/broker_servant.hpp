@@ -43,7 +43,9 @@ public:
 
 protected:
   void detach_from_parent() override {
-    this->parent()->erase(hdl_);
+    auto ptr = this->parent();
+    this->set_parent(nullptr);
+    ptr->erase(hdl_);
   }
 
   void invoke_mailbox_element() {
