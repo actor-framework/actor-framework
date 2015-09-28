@@ -74,8 +74,8 @@ protected:
   /// Creates a message signalizing a disconnect to the parent.
   virtual message detach_message() = 0;
 
-  /// Detaches this manager from its parent.
-  virtual void detach_from_parent() = 0;
+  /// Detaches this manager from `ptr`.
+  virtual void detach_from(abstract_broker* ptr) = 0;
 
 private:
   abstract_broker* parent_;

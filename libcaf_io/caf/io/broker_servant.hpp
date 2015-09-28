@@ -42,9 +42,7 @@ public:
   }
 
 protected:
-  void detach_from_parent() override {
-    auto ptr = this->parent();
-    this->set_parent(nullptr);
+  void detach_from(abstract_broker* ptr) override {
     ptr->erase(hdl_);
   }
 
