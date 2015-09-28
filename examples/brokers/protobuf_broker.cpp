@@ -17,8 +17,8 @@ using namespace std;
 using namespace caf;
 using namespace caf::io;
 
-void print_on_exit(const actor& ptr, const std::string& name) {
-  ptr->attach_functor([=](std::uint32_t reason) {
+void print_on_exit(const actor& hdl, const std::string& name) {
+  hdl->attach_functor([=](abstract_actor* ptr, uint32_t reason) {
     aout(ptr) << name << " exited with reason " << reason << endl;
   });
 }
