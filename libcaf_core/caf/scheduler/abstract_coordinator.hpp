@@ -43,7 +43,8 @@ class abstract_coordinator {
 public:
   friend class detail::singletons;
 
-  explicit abstract_coordinator(size_t num_worker_threads);
+  explicit abstract_coordinator(size_t num_worker_threads,
+                                size_t max_throughput_param);
 
   virtual ~abstract_coordinator();
 
@@ -62,6 +63,10 @@ public:
                      make_message(duration{rel_time}, std::move(from),
                                   std::move(to), mid, std::move(data)),
                      nullptr);
+  }
+
+  inline size_t max_throughput() const {
+    return max_throughput_;
   }
 
   inline size_t num_workers() const {
@@ -84,13 +89,16 @@ protected:
     delete this;
   }
 
-  actor timer_;
-  actor printer_;
-
   // ID of the worker receiving the next enqueue
   std::atomic<size_t> next_worker_;
 
+  // number of messages each actor is allowed to consume per resume
+  size_t max_throughput_;
+
   size_t num_workers_;
+
+  actor timer_;
+  actor printer_;
 };
 
 } // namespace scheduler

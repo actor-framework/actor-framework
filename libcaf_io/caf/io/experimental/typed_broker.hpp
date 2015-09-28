@@ -153,7 +153,8 @@ public:
   }
 
   void initialize() override {
-    this->is_initialized(true);
+    CAF_LOG_TRACE("");
+    this->init_broker();
     auto bhvr = make_behavior();
     CAF_LOG_DEBUG_IF(! bhvr, "make_behavior() did not return a behavior, "
                             << "has_behavior() = "

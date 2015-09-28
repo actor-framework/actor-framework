@@ -227,10 +227,9 @@ asio_multiplexer::add_tcp_doorman(abstract_broker* self,
     void new_connection() override {
       CAF_LOG_TRACE("");
       auto& am = acceptor_.backend();
-      accept_msg().handle
+      msg().handle
         = am.add_tcp_scribe(parent(), std::move(acceptor_.accepted_socket()));
-      parent()->invoke_message(invalid_actor_addr, invalid_message_id,
-                               accept_msg_);
+      invoke_mailbox_element();
     }
     void stop_reading() override {
       CAF_LOG_TRACE("");

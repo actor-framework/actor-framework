@@ -145,7 +145,7 @@ public:
   template <class F>
   void close(const F& f) {
     clear_cached_elements(f);
-    if (fetch_new_data(nullptr)) {
+    if (! blocked() && fetch_new_data(nullptr)) {
       clear_cached_elements(f);
     }
     cache_.clear(f);

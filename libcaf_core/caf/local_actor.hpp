@@ -430,6 +430,12 @@ public:
 
   /// @cond PRIVATE
 
+  // handle `ptr` in an event-based actor
+  resumable::resume_result exec_event(mailbox_element_ptr& ptr);
+
+  // handle `ptr` in an event-based actor, not suitable to be called in a loop
+  void exec_single_event(mailbox_element_ptr& ptr);
+
   local_actor();
 
   template <class ActorHandle>
@@ -563,7 +569,11 @@ public:
 
   virtual void initialize() = 0;
 
-  void cleanup(uint32_t reason);
+  // clear behavior stack and call cleanup if actor either has no
+  // valid behavior left or has set a planned exit reason
+  bool finalize();
+
+  void cleanup(uint32_t reason) override;
 
   // an actor can have multiple pending timeouts, but only
   // the latest one is active (i.e. the pending_timeouts_.back())

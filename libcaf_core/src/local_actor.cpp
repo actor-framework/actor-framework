@@ -682,33 +682,21 @@ resumable::resume_result local_actor::resume(execution_unit* eu,
   }
   // actor is cooperatively scheduled
   host(eu);
-  auto actor_done = [&]() -> bool {
-    if (! has_behavior() || planned_exit_reason() != exit_reason::not_exited) {
-      CAF_LOG_DEBUG("actor either has no behavior or has set an exit reason");
-      on_exit();
-      bhvr_stack().clear();
-      bhvr_stack().cleanup();
-      auto rsn = planned_exit_reason();
-      if (rsn == exit_reason::not_exited) {
-        rsn = exit_reason::normal;
-        planned_exit_reason(rsn);
-      }
-      cleanup(rsn);
-      return true;
-    }
-    return false;
-  };
-  // actors without behavior or that have already defined
-  // an exit reason must not be resumed
-  CAF_ASSERT(! is_initialized()
-             || (has_behavior()
-                 && planned_exit_reason() == exit_reason::not_exited));
+  if (is_initialized()
+      && (! has_behavior()
+          || planned_exit_reason() != exit_reason::not_exited)) {
+    CAF_LOG_DEBUG_IF(! has_behavior(),
+                     "resume called on an actor without behavior");
+    CAF_LOG_DEBUG_IF(planned_exit_reason() != exit_reason::not_exited,
+                     "resume called on an actor with exit reason");
+    return resumable::done;
+  }
   std::exception_ptr eptr = nullptr;
   try {
     if (! is_initialized()) {
       CAF_LOG_DEBUG("initialize actor");
       initialize();
-      if (actor_done()) {
+      if (finalize()) {
         CAF_LOG_DEBUG("actor_done() returned true right "
                       << "after make_behavior()");
         return resumable::resume_result::done;
@@ -723,36 +711,9 @@ resumable::resume_result local_actor::resume(execution_unit* eu,
     for (size_t i = 0; i < max_throughput; ++i) {
       auto ptr = next_message();
       if (ptr) {
-        auto& bhvr = awaits_response()
-                     ? awaited_response_handler()
-                     : bhvr_stack().back();
-        auto mid = awaited_response_id();
-        switch (invoke_message(ptr, bhvr, mid)) {
-          case im_success:
-            bhvr_stack().cleanup();
-            ++handled_msgs;
-            if (actor_done()) {
-              CAF_LOG_DEBUG("actor exited");
-              return resumable::resume_result::done;
-            }
-            // continue from cache if current message was
-            // handled, because the actor might have changed
-            // its behavior to match 'old' messages now
-            while (invoke_from_cache()) {
-              if (actor_done()) {
-                CAF_LOG_DEBUG("actor exited");
-                return resumable::resume_result::done;
-              }
-            }
-            break;
-          case im_skipped:
-            CAF_ASSERT(ptr != nullptr);
-            push_to_cache(std::move(ptr));
-            break;
-          case im_dropped:
-            // destroy msg
-            break;
-        }
+        if (exec_event(ptr) == resumable::resume_result::done)
+          return resumable::resume_result::done;
+        ++handled_msgs;
       } else {
         CAF_LOG_DEBUG("no more element in mailbox; going to block");
         reset_timeout_if_needed();
@@ -797,11 +758,73 @@ resumable::resume_result local_actor::resume(execution_unit* eu,
       planned_exit_reason(*opt_reason);
     }
   }
-  if (! actor_done()) {
+  if (! finalize()) {
     // actor has been "revived", try running it again later
     return resumable::resume_later;
   }
   return resumable::done;
+}
+
+resumable::resume_result local_actor::exec_event(mailbox_element_ptr& ptr) {
+  auto& bhvr = awaits_response() ? awaited_response_handler()
+                                 : bhvr_stack().back();
+  auto mid = awaited_response_id();
+  switch (invoke_message(ptr, bhvr, mid)) {
+    case im_success:
+      bhvr_stack().cleanup();
+      if (finalize()) {
+        CAF_LOG_DEBUG("actor exited");
+        return resumable::resume_result::done;
+      }
+      // continue from cache if current message was
+      // handled, because the actor might have changed
+      // its behavior to match 'old' messages now
+      while (invoke_from_cache()) {
+        if (finalize()) {
+          CAF_LOG_DEBUG("actor exited");
+          return resumable::resume_result::done;
+        }
+      }
+      break;
+    case im_skipped:
+      CAF_ASSERT(ptr != nullptr);
+      push_to_cache(std::move(ptr));
+      break;
+    case im_dropped:
+      // destroy msg
+      break;
+  }
+  return resumable::resume_result::resume_later;
+}
+
+void local_actor::exec_single_event(mailbox_element_ptr& ptr) {
+  if (! is_initialized()) {
+    CAF_LOG_DEBUG("initialize actor");
+    initialize();
+    if (finalize()) {
+      CAF_LOG_DEBUG("actor_done() returned true right "
+                    << "after make_behavior()");
+      return;
+    }
+  }
+  if (! has_behavior() || planned_exit_reason() != exit_reason::not_exited) {
+    CAF_LOG_DEBUG_IF(! has_behavior(),
+                     "resume called on an actor without behavior");
+    CAF_LOG_DEBUG_IF(planned_exit_reason() != exit_reason::not_exited,
+                     "resume called on an actor with exit reason");
+    return;
+  }
+  try {
+    exec_event(ptr);
+  }
+  catch (...) {
+    CAF_LOG_INFO("broker died because of an exception");
+    auto eptr = std::current_exception();
+    auto opt_reason = this->handle(eptr);
+    if (opt_reason)
+      planned_exit_reason(*opt_reason);
+    finalize();
+  }
 }
 
 mailbox_element_ptr local_actor::next_message() {
@@ -932,6 +955,22 @@ void local_actor::load_state(deserializer&, const unsigned int) {
 behavior& local_actor::get_behavior() {
   return pending_responses_.empty() ? bhvr_stack_.back()
                                     : pending_responses_.front().second;
+}
+
+bool local_actor::finalize() {
+  if (has_behavior() && planned_exit_reason() == exit_reason::not_exited)
+    return false;
+  CAF_LOG_DEBUG("actor either has no behavior or has set an exit reason");
+  on_exit();
+  bhvr_stack().clear();
+  bhvr_stack().cleanup();
+  auto rsn = planned_exit_reason();
+  if (rsn == exit_reason::not_exited) {
+    rsn = exit_reason::normal;
+    planned_exit_reason(rsn);
+  }
+  cleanup(rsn);
+  return true;
 }
 
 void local_actor::cleanup(uint32_t reason) {

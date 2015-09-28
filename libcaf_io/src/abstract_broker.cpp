@@ -29,14 +29,14 @@
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 
+#include "caf/event_based_actor.hpp"
+
 namespace caf {
 namespace io {
 
 class abstract_broker::continuation {
 public:
-  continuation(intrusive_ptr<abstract_broker> bptr, mailbox_element_ptr mptr)
-      : self_(std::move(bptr)),
-        ptr_(std::move(mptr)) {
+  continuation(intrusive_ptr<abstract_broker> bptr) : self_(std::move(bptr)) {
     // nop
   }
 
@@ -45,16 +45,41 @@ public:
   inline void operator()() {
     CAF_PUSH_AID(self_->id());
     CAF_LOG_TRACE("");
-    self_->invoke_message(ptr_);
+    auto mt = self_->parent().max_throughput();
+    // re-schedule broker if it reached its maximum message throughput
+    if (self_->resume(nullptr, mt) == resumable::resume_later)
+      self_->backend().post(std::move(*this));
   }
 
 private:
   intrusive_ptr<abstract_broker> self_;
-  mailbox_element_ptr ptr_;
 };
 
 void abstract_broker::enqueue(mailbox_element_ptr ptr, execution_unit*) {
-  backend().post(continuation{this, std::move(ptr)});
+  CAF_PUSH_AID(id());
+  CAF_LOG_TRACE("enqueue " << CAF_TSARG(ptr->msg));
+  auto mid = ptr->mid;
+  auto sender = ptr->sender;
+  switch (mailbox().enqueue(ptr.release())) {
+    case detail::enqueue_result::unblocked_reader: {
+      // re-schedule broker
+      CAF_LOG_DEBUG("unblocked_reader");
+      backend().post(continuation{this});
+      break;
+    }
+    case detail::enqueue_result::queue_closed: {
+      CAF_LOG_DEBUG("queue_closed");
+      if (mid.is_request()) {
+        detail::sync_request_bouncer f{exit_reason()};
+        f(sender, mid);
+      }
+      break;
+    }
+    case detail::enqueue_result::success:
+      // enqueued to a running actors' mailbox; nothing to do
+      CAF_LOG_DEBUG("success");
+      break;
+  }
 }
 
 void abstract_broker::enqueue(const actor_addr& sender, message_id mid,
@@ -62,33 +87,19 @@ void abstract_broker::enqueue(const actor_addr& sender, message_id mid,
   enqueue(mailbox_element::make(sender, mid, std::move(msg)), eu);
 }
 
-void abstract_broker::launch(execution_unit*, bool, bool is_hidden) {
+void abstract_broker::launch(execution_unit*, bool is_lazy, bool is_hidden) {
   // add implicit reference count held by the middleman
   ref();
   is_registered(! is_hidden);
   CAF_PUSH_AID(id());
   CAF_LOGF_TRACE("init and launch broker with ID " << id());
-  // we want to make sure initialization is executed in MM context
-  do_become(
-    [=](sys_atom) {
-      CAF_LOGF_TRACE("ID " << id());
-      bhvr_stack_.pop_back();
-      // launch backends now, because user-defined initialization
-      // might call functions like add_connection
-      for (auto& kvp : doormen_) {
-        kvp.second->launch();
-      }
-      initialize();
-    },
-    true);
-  enqueue(invalid_actor_addr, invalid_message_id,
-          make_message(sys_atom::value), nullptr);
+  if (is_lazy && mailbox().try_block())
+    return;
+  backend().post(continuation{this});
 }
 
 void abstract_broker::cleanup(uint32_t reason) {
   CAF_LOG_TRACE(CAF_ARG(reason));
-  planned_exit_reason(reason);
-  on_exit();
   close_all();
   CAF_ASSERT(doormen_.empty());
   CAF_ASSERT(scribes_.empty());
@@ -203,79 +214,6 @@ optional<accept_handle> abstract_broker::hdl_by_port(uint16_t port) {
   return none;
 }
 
-void abstract_broker::invoke_message(mailbox_element_ptr& ptr) {
-  CAF_LOG_TRACE(CAF_TARG(ptr->msg, to_string));
-  if (exit_reason() != exit_reason::not_exited || ! has_behavior()) {
-    CAF_LOG_DEBUG("actor already finished execution"
-                  << ", planned_exit_reason = " << planned_exit_reason()
-                  << ", has_behavior() = " << has_behavior());
-    if (ptr->mid.valid()) {
-      detail::sync_request_bouncer srb{exit_reason()};
-      srb(ptr->sender, ptr->mid);
-    }
-    return;
-  }
-  // prepare actor for invocation of message handler
-  try {
-    auto& bhvr = this->awaits_response()
-                 ? this->awaited_response_handler()
-                 : this->bhvr_stack().back();
-    auto bid = this->awaited_response_id();
-    switch (local_actor::invoke_message(ptr, bhvr, bid)) {
-      case im_success: {
-        CAF_LOG_DEBUG("handle_message returned hm_msg_handled");
-        while (has_behavior()
-               && planned_exit_reason() == exit_reason::not_exited
-               && invoke_message_from_cache()) {
-          // rinse and repeat
-        }
-        break;
-      }
-      case im_dropped:
-        CAF_LOG_DEBUG("handle_message returned hm_drop_msg");
-        break;
-      case im_skipped: {
-        CAF_LOG_DEBUG("handle_message returned hm_skip_msg or hm_cache_msg");
-        if (ptr) {
-          cache_.push_second_back(ptr.release());
-        }
-        break;
-      }
-    }
-  }
-  catch (std::exception& e) {
-    CAF_LOG_INFO("broker killed due to an unhandled exception: "
-                 << to_verbose_string(e));
-    // keep compiler happy in non-debug mode
-    static_cast<void>(e);
-    quit(exit_reason::unhandled_exception);
-  }
-  catch (...) {
-    CAF_LOG_ERROR("broker killed due to an unknown exception");
-    quit(exit_reason::unhandled_exception);
-  }
-  // safe to actually release behaviors now
-  bhvr_stack().cleanup();
-  // cleanup actor if needed
-  if (planned_exit_reason() != exit_reason::not_exited) {
-    cleanup(planned_exit_reason());
-  } else if (! has_behavior()) {
-    CAF_LOG_DEBUG("no behavior set, quit for normal exit reason");
-    quit(exit_reason::normal);
-    cleanup(planned_exit_reason());
-  }
-}
-
-void abstract_broker::invoke_message(const actor_addr& sender,
-                                     message_id mid,
-                                     message& msg) {
-  auto ptr = mailbox_element::make(sender, mid, message{});
-  ptr->msg.swap(msg);
-  invoke_message(ptr);
-  if (ptr)
-    ptr->msg.swap(msg);
-}
-
 void abstract_broker::close_all() {
   CAF_LOG_TRACE("");
   while (! doormen_.empty()) {
@@ -288,6 +226,20 @@ void abstract_broker::close_all() {
   }
 }
 
+const char* abstract_broker::name() const {
+  return "broker";
+}
+
+void abstract_broker::init_broker() {
+  CAF_LOG_TRACE("");
+  is_initialized(true);
+  // launch backends now, because user-defined initialization
+  // might call functions like add_connection
+  for (auto& kvp : doormen_)
+    kvp.second->launch();
+
+}
+
 abstract_broker::abstract_broker() : mm_(*middleman::instance()) {
   // nop
 }
@@ -298,18 +250,6 @@ abstract_broker::abstract_broker(middleman& ptr) : mm_(ptr) {
 
 network::multiplexer& abstract_broker::backend() {
   return mm_.backend();
-}
-
-bool abstract_broker::invoke_message_from_cache() {
-  CAF_LOG_TRACE("");
-  auto& bhvr = this->awaits_response()
-               ? this->awaited_response_handler()
-               : this->bhvr_stack().back();
-  auto bid = this->awaited_response_id();
-  auto i = cache_.second_begin();
-  auto e = cache_.second_end();
-  CAF_LOG_DEBUG(std::distance(i, e) << " elements in cache");
-  return cache_.invoke(static_cast<local_actor*>(this), i, e, bhvr, bid);
 }
 
 } // namespace io

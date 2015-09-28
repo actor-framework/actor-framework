@@ -44,12 +44,12 @@ void manager::detach(bool invoke_disconnect_message) {
   CAF_LOG_TRACE("");
   if (! detached()) {
     CAF_LOG_DEBUG("disconnect servant from broker");
-    detach_from_parent();
     if (invoke_disconnect_message) {
-      auto msg = detach_message();
-      parent_->invoke_message(parent_->address(),invalid_message_id, msg);
+      auto ptr = mailbox_element::make(invalid_actor_addr, invalid_message_id,
+                                       detach_message());
+      parent_->exec_single_event(ptr);
     }
-    parent_ = nullptr;
+    detach_from_parent();
   }
 }
 

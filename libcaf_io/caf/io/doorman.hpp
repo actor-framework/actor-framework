@@ -23,25 +23,26 @@
 #include <cstddef>
 
 #include "caf/message.hpp"
+#include "caf/mailbox_element.hpp"
 
 #include "caf/io/accept_handle.hpp"
+#include "caf/io/broker_servant.hpp"
 #include "caf/io/system_messages.hpp"
 #include "caf/io/network/acceptor_manager.hpp"
 
 namespace caf {
 namespace io {
 
+using doorman_base = broker_servant<network::acceptor_manager, accept_handle,
+                                    new_connection_msg>;
+
 /// Manages incoming connections.
 /// @ingroup Broker
-class doorman : public network::acceptor_manager {
+class doorman : public doorman_base {
 public:
   doorman(abstract_broker* parent, accept_handle hdl);
 
   ~doorman();
-
-  inline accept_handle hdl() const {
-    return hdl_;
-  }
 
   void io_failure(network::operation op) override;
 
@@ -49,20 +50,7 @@ public:
   virtual void launch() = 0;
 
 protected:
-  void detach_from_parent() override;
-
   message detach_message() override;
-
-  inline new_connection_msg& accept_msg() {
-    return accept_msg_.get_as_mutable<new_connection_msg>(0);
-  }
-
-  inline const new_connection_msg& accept_msg() const {
-    return accept_msg_.get_as<new_connection_msg>(0);
-  }
-
-  accept_handle hdl_;
-  message accept_msg_;
 };
 
 } // namespace io

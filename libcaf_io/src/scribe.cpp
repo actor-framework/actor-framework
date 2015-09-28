@@ -21,21 +21,12 @@
 
 #include "caf/detail/logging.hpp"
 
-#include "caf/io/abstract_broker.hpp"
-
 namespace caf {
 namespace io {
 
 scribe::scribe(abstract_broker* ptr, connection_handle conn_hdl)
-    : network::stream_manager(ptr),
-      hdl_(conn_hdl) {
-  std::vector<char> tmp;
-  read_msg_ = make_message(new_data_msg{hdl_, std::move(tmp)});
-}
-
-void scribe::detach_from_parent() {
-  CAF_LOG_TRACE("hdl = " << hdl().id());
-  parent()->scribes_.erase(hdl());
+    : scribe_base(ptr, conn_hdl) {
+  // nop
 }
 
 scribe::~scribe() {
@@ -59,11 +50,13 @@ void scribe::consume(const void*, size_t num_bytes) {
   CAF_ASSERT(buf.size() >= num_bytes);
   // make sure size is correct, swap into message, and then call client
   buf.resize(num_bytes);
-  read_msg().buf.swap(buf);
-  parent()->invoke_message(invalid_actor_addr, invalid_message_id, read_msg_);
-  if (! read_msg_.empty()) {
+  auto& msg_buf = msg().buf;
+  msg_buf.swap(buf);
+  invoke_mailbox_element();
+  // `mailbox_elem_ptr_ == nullptr` if the broker moved it to the cache
+  if (mailbox_elem_ptr_) {
     // swap buffer back to stream and implicitly flush wr_buf()
-    read_msg().buf.swap(buf);
+    msg_buf.swap(buf);
     flush();
   }
 }

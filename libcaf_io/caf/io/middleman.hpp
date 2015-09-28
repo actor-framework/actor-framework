@@ -137,6 +137,10 @@ public:
 
   middleman(const backend_factory&);
 
+  inline size_t max_throughput() const {
+    return max_throughput_;
+  }
+
   /// @endcond
 
 private:
@@ -154,6 +158,8 @@ private:
   hook_uptr hooks_;
   // actor offering asyncronous IO by managing this singleton instance
   middleman_actor manager_;
+  // stores the max_throughput parameter from the scheduler coordinator
+  size_t max_throughput_;
 };
 
 } // namespace io

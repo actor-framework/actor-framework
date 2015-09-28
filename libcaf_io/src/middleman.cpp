@@ -39,8 +39,9 @@
 #include "caf/io/middleman.hpp"
 #include "caf/io/basp_broker.hpp"
 #include "caf/io/system_messages.hpp"
-
 #include "caf/io/network/interfaces.hpp"
+
+#include "caf/scheduler/abstract_coordinator.hpp"
 
 #include "caf/detail/logging.hpp"
 #include "caf/detail/ripemd_160.hpp"
@@ -138,6 +139,10 @@ public:
   void on_exit() override {
     CAF_LOG_TRACE("");
     broker_ = invalid_actor;
+  }
+
+  const char* name() const override {
+    return "middleman_actor";
   }
 
   using put_res = either<ok_atom, uint16_t>::or_else<error_atom, std::string>;
@@ -244,6 +249,8 @@ void middleman::add_broker(broker_ptr bptr) {
 
 void middleman::initialize() {
   CAF_LOG_TRACE("");
+  auto sc = detail::singletons::get_scheduling_coordinator();
+  max_throughput_ = sc->max_throughput();
   backend_supervisor_ = backend_->make_supervisor();
   if (backend_supervisor_ == nullptr) {
     // the only backend that returns a `nullptr` is the `test_multiplexer`
@@ -281,8 +288,10 @@ void middleman::stop() {
     // managers_ will be modified while we are stopping each manager,
     // because each manager will call remove(...)
     for (auto& kvp : named_brokers_) {
-      if (kvp.second->exit_reason() == exit_reason::not_exited) {
-        kvp.second->cleanup(exit_reason::normal);
+      auto& ptr = kvp.second;
+      if (ptr->exit_reason() == exit_reason::not_exited) {
+        ptr->planned_exit_reason(exit_reason::normal);
+        ptr->finalize();
       }
     }
   });

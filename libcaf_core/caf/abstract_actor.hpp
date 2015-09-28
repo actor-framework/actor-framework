@@ -142,7 +142,7 @@ protected:
 
   /// Called by the runtime system to perform cleanup actions for this actor.
   /// Subtypes should always call this member function when overriding it.
-  void cleanup(uint32_t reason);
+  virtual void cleanup(uint32_t reason);
 
   /// Returns `exit_reason() != exit_reason::not_exited`.
   inline bool exited() const {

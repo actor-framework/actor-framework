@@ -27,8 +27,6 @@
 #include "caf/detail/intrusive_partitioned_list.hpp"
 
 #include "caf/io/fwd.hpp"
-#include "caf/io/scribe.hpp"
-#include "caf/io/doorman.hpp"
 #include "caf/io/accept_handle.hpp"
 #include "caf/io/receive_policy.hpp"
 #include "caf/io/system_messages.hpp"
@@ -92,7 +90,7 @@ public:
   void enqueue(mailbox_element_ptr, execution_unit*) override;
 
   /// Called after this broker has finished execution.
-  void cleanup(uint32_t reason);
+  void cleanup(uint32_t reason) override;
 
   /// Starts running this broker in the `middleman`.
   void launch(execution_unit* eu, bool lazy, bool hide);
@@ -177,12 +175,6 @@ public:
   /// Returns the handle associated to given local `port` or `none`.
   optional<accept_handle> hdl_by_port(uint16_t port);
 
-  /// Invokes `msg` on this broker.
-  void invoke_message(mailbox_element_ptr& msg);
-
-  /// Creates a mailbox element from given data and invoke it.
-  void invoke_message(const actor_addr& sender, message_id mid, message& msg);
-
   /// Closes all connections and acceptors.
   void close_all();
 
@@ -199,7 +191,22 @@ public:
     return get_map(hdl).count(hdl) > 0;
   }
 
+
+  /// @cond PRIVATE
+  template <class Handle>
+  void erase(Handle hdl) {
+    auto& elements = get_map(hdl);
+    auto i = elements.find(hdl);
+    if (i != elements.end())
+      elements.erase(i);
+  }
+  /// @endcond
+
+  const char* name() const override;
+
 protected:
+  void init_broker();
+
   abstract_broker();
 
   abstract_broker(middleman& parent_ref);
@@ -256,9 +263,6 @@ protected:
     elements.erase(i);
     return result;
   }
-
-  /// Tries to invoke a message from the cache.
-  bool invoke_message_from_cache();
 
 private:
   scribe_map scribes_;

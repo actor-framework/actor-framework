@@ -27,6 +27,8 @@
 #include "caf/extend.hpp"
 #include "caf/local_actor.hpp"
 
+#include "caf/io/scribe.hpp"
+#include "caf/io/doorman.hpp"
 #include "caf/io/abstract_broker.hpp"
 
 namespace caf {
