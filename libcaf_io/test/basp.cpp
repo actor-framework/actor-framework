@@ -115,10 +115,6 @@ public:
     this_node_ = detail::singletons::get_node_id();
     CAF_MESSAGE("this node: " << to_string(this_node_));
     self_.reset(new scoped_actor);
-    // run the initialization message of the BASP broker
-    mpx_->exec_runnable();
-    // handle the message from the configuration server
-    mpx()->exec_runnable();
     ahdl_ = accept_handle::from_int(1);
     mpx_->assign_tcp_doorman(aut_.get(), ahdl_);
     registry_ = detail::singletons::get_actor_registry();
@@ -137,6 +133,8 @@ public:
       registry_->put((*ptr)->id(),
                     actor_cast<abstract_actor_ptr>((*ptr)->address()));
     }
+    // make sure all init messages are handled properly
+    mpx_->flush_runnables();
   }
 
   uint32_t serialized_size(const message& msg) {
