@@ -531,15 +531,18 @@ CAF_TEST(publish_and_connect) {
 }
 
 CAF_TEST(remote_actor_and_send) {
+  constexpr const char* lo = "localhost";
   CAF_MESSAGE("self: " << to_string(self()->address()));
-  mpx()->provide_scribe("localhost", 4242, remote_hdl(0));
-  CAF_CHECK(mpx()->pending_scribes().count(make_pair("localhost", 4242)) == 1);
+  mpx()->provide_scribe(lo, 4242, remote_hdl(0));
+  CAF_REQUIRE(mpx()->pending_scribes().count(make_pair(lo, 4242)) == 1);
   auto mm1 = get_middleman_actor();
   actor result;
   auto f = self()->sync_send(mm1, connect_atom::value,
-                             "localhost", uint16_t{4242});
-  mpx()->exec_runnable(); // process message in basp_broker
-  CAF_CHECK(mpx()->pending_scribes().count(make_pair("localhost", 4242)) == 0);
+                             lo, uint16_t{4242});
+  // wait until BASP broker has received and processed the connect message
+  while (! aut()->valid(remote_hdl(0)))
+    mpx()->exec_runnable();
+  CAF_REQUIRE(mpx()->pending_scribes().count(make_pair(lo, 4242)) == 0);
   // build a fake server handshake containing the id of our first pseudo actor
   CAF_MESSAGE("server handshake => client handshake + proxy announcement");
   auto na = registry()->named_actors();
@@ -637,8 +640,9 @@ CAF_TEST(actor_serialize_and_deserialize) {
         prx->id(), testee->id()},
        msg);
   // testee must've responded (process forwarded message in BASP broker)
-  CAF_MESSAGE("exec runnable, i.e., handle response from testee");
-  mpx()->exec_runnable(); // process forwarded message in basp_broker
+  CAF_MESSAGE("wait until BASP broker writes to its output buffer");
+  while (mpx()->output_buffer(remote_hdl(0)).empty())
+    mpx()->exec_runnable(); // process forwarded message in basp_broker
   // output buffer must contain the reflected message
   mock()
   .expect(remote_hdl(0),
