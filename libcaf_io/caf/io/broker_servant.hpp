@@ -75,8 +75,8 @@ protected:
   mailbox_element_ptr mailbox_elem_ptr_;
 };
 
-} // namespace io {
-} // namespace caf {
+} // namespace io
+} // namespace caf
 
 #endif // CAF_IO_BROKER_SERVANT_HPP
 
