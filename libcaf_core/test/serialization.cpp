@@ -115,6 +115,9 @@ struct test_empty_non_pod {
   virtual void foo() {
     // nop
   }
+  virtual ~test_empty_non_pod() {
+    // nop
+  }
   bool operator==(const test_empty_non_pod&) const {
     return false;
   }
