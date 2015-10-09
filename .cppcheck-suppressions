@@ -49,3 +49,7 @@ unusedFunction:libcaf_io/src/max_msg_size.cpp
 // making only some overloads of `abstract_uniform_type_info::eq`
 // static fails on MSVC
 functionStatic:bcaf_core/caf/abstract_uniform_type_info.hpp
+
+// functions are used in a macro in opencl/smart_ptr.hpp
+unusedFunction:libcaf_opencl/src/global.cpp
+
