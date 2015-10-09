@@ -112,6 +112,8 @@ struct test_array {
 };
 
 struct test_empty_non_pod {
+  test_empty_non_pod() = default;
+  test_empty_non_pod(const test_empty_non_pod&) = default;
   virtual void foo() {
     // nop
   }
