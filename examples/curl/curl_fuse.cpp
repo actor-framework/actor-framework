@@ -41,13 +41,14 @@
 #include <random>
 #include <iostream>
 
-// libcurl
-#include <curl/curl.h>
-
-// libcaf
+// CAF
 #include "caf/all.hpp"
 
-// disable some clang warnings here caused by CURL
+CAF_PUSH_WARNINGS
+#include <curl/curl.h>
+CAF_POP_WARNINGS
+
+// disable some clang warnings here caused by CURL macros
 #ifdef __clang__
 # pragma clang diagnostic ignored "-Wshorten-64-to-32"
 # pragma clang diagnostic ignored "-Wdisabled-macro-expansion"
