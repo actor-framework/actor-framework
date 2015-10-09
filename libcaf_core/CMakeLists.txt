@@ -61,6 +61,8 @@ set (LIBCAF_CORE_SRCS
      src/message_data.cpp
      src/message_handler.cpp
      src/node_id.cpp
+     src/parse_config.cpp
+     src/parse_ini.cpp
      src/ref_counted.cpp
      src/response_promise.cpp
      src/replies_to.cpp
