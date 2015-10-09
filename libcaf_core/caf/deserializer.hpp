@@ -68,7 +68,7 @@ public:
     using result =
       typename std::conditional<
         std::is_same<T, char>::value,
-        uint8_t,
+        int8_t,
         T
       >::type;
     return std::move(get<result>(val));
