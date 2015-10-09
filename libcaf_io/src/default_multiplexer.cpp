@@ -131,7 +131,8 @@ uint16_t remote_port_of_fd(native_socket fd);
   void allow_sigpipe(native_socket fd, bool new_value) {
 #   ifndef CAF_LINUX
     int value = new_value ? 0 : 1;
-    setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &value, sizeof(value));
+    ccall(cc_zero, "cannot set SO_NOSIGPIPE", setsockopt,
+          fd, SOL_SOCKET, SO_NOSIGPIPE, &value, sizeof(value));
 #   else
     // SO_NOSIGPIPE does not exist on Linux, suppress unused warnings
     static_cast<void>(fd);
