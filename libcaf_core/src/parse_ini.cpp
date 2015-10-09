@@ -19,10 +19,10 @@
 
 #include "caf/detail/parse_ini.hpp"
 
-#include <algorithm>
-#include <iostream>
 #include <string>
 #include <vector>
+#include <iostream>
+#include <algorithm>
 
 #include "caf/string_algorithms.hpp"
 
@@ -43,12 +43,11 @@ void detail::parse_ini(std::istream& raw_data, std::ostream& errors,
       continue;
     // do we read a group name?
     if (*bol == '[') {
-      if (*(eol - 1) != ']') {
+      if (*(eol - 1) != ']')
         errors << "error in line " << ln << ": missing ] at end of line"
                << std::endl;
-      } else {
+      else
         group.assign(bol + 1, eol - 1);
-      }
       // skip further processing of this line
       continue;
     }
@@ -78,27 +77,42 @@ void detail::parse_ini(std::istream& raw_data, std::ostream& errors,
     key += '.';
     // ignore any whitespace between config-name and equal sign
     key.insert(key.end(), bol, find_if(bol, eqs, ::isspace));
-    // begin-of-value, ignoreing whitespaces after '='
+    // begin-of-value, ignoring whitespaces after '='
     auto bov = find_if_not(eqs + 1, eol, ::isspace);
     // auto-detect what we are dealing with
-    const char* true_str = "true";
-    const char* false_str = "false";
-    if (std::equal(bov, eol, true_str)) {
+    constexpr const char* true_str = "true";
+    constexpr const char* false_str = "false";
+    auto icase_eq = [](char x, char y) { return tolower(x) == tolower(y); };
+    if (std::equal(bov, eol, true_str, icase_eq)) {
       consumer(std::move(key), true);
-    } else if (std::equal(bov, eol, false_str)) {
+    } else if (std::equal(bov, eol, false_str, icase_eq)) {
       consumer(std::move(key), false);
     } else if (*bov == '"') {
-      // found a string, remove first and last char from string, start escaping
-      // string sequence
+      // end-of-string iterator
+      auto eos = eol - 1;
+      if (bov == eos) {
+        errors << "error in line " << ln << ": stray '\"'" << std::endl;
+        continue;
+      }
+      if (*eos != '"') {
+        errors << "error in line " << ln
+               << ": string not terminated by '\"'" << std::endl;
+        continue;
+      }
+      // found a string, remove first and last char from string,
+      // start escaping string sequence
       auto last_char_backslash = false;
-      std::string result = "";
+      std::string result;
       // skip leading " and iterate up to the trailing "
       ++bov;
-      for (; bov+1 != eol; ++bov) {
+      for (; bov != eos; ++bov) {
         if (last_char_backslash) {
           switch (*bov) {
             case 'n':
               result += '\n';
+              break;
+            case 't':
+              result += '\t';
               break;
             default:
               result += *bov;
@@ -111,8 +125,8 @@ void detail::parse_ini(std::istream& raw_data, std::ostream& errors,
         }
       }
       if (last_char_backslash) {
-        errors << "error in line " << ln
-               << ": trailing quotation mark was escaped" << std::endl;
+        errors << "warning in line " << ln
+               << ": trailing quotation mark escaped" << std::endl;
       }
       consumer(std::move(key), std::move(result));
     } else {
@@ -158,8 +172,7 @@ void detail::parse_ini(std::istream& raw_data, std::ostream& errors,
         if (e == &*eol) {
           consumer(std::move(key), is_neg ? -res : res);
         } else {
-            errors << "error in line " << ln << ": can't parse value to double"
-                   << std::endl;
+            errors << "error in line " << ln << ": invalid value" << std::endl;
         }
       }
     }

@@ -25,14 +25,13 @@
 #include "caf/parse_config.hpp"
 
 namespace caf {
-
 namespace detail {
 
 /// Parse the given input stream as INI formatted data and calls the consumer
 /// with every key-value pair.
-/// @param raw_data the INI formatted input stream
-/// @param errors a stream of all errors which occure while parsing
-/// @param consumer a function that consums the key-value pairs
+/// @param raw_data Input stream of INI formatted text.
+/// @param errors Output stream for parser errors.
+/// @param consumer Callback consuming generated key-value pairs.
 void parse_ini(std::istream& raw_data, std::ostream& errors,
                config_consumer consumer);
 

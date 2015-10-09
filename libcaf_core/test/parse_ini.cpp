@@ -19,24 +19,20 @@
 
 #include "caf/config.hpp"
 
-#define CAF_SUITE ini_parser
+#define CAF_SUITE parse_ini
 #include "caf/test/unit_test.hpp"
+
 #include <iostream>
 #include <sstream>
 
 #include "caf/all.hpp"
 
 #include "caf/detail/parse_ini.hpp"
+#include "caf/detail/safe_equal.hpp"
 
 using namespace caf;
 
 namespace {
-
-template <class T>
-bool value_is(const config_value& cv, const T& what) {
-  const T* ptr = get<T>(&cv);
-  return ptr != nullptr && *ptr == what;
-}
 
 constexpr const char* case1 = R"__(
 [scheduler]
@@ -63,40 +59,106 @@ buzz=1E-34
 
 )__";
 
+constexpr const char* case3 = R"__("
+[whoops
+foo="bar"
+[test]
+; provoke some more errors
+foo bar
+=42
+baz=
+foo="
+bar="foo
+some-int=42
+some-string="hi there!\"
+neg=-
+wtf=0x3733T
+hu=0779
+hop=--"hiho"
+)__";
+
+struct fixture {
+  void load(const char* str) {
+    auto f = [&](std::string key, config_value value) {
+      values.emplace(std::move(key), std::move(value));
+    };
+    std::stringstream ss;
+    std::stringstream err;
+    ss << str;
+    detail::parse_ini(ss, err, f);
+    split(errors, err.str(), is_any_of("\n"), token_compress_on);
+  }
+
+  bool has_error(const char* err) {
+    return std::any_of(errors.begin(), errors.end(),
+                       [=](const std::string& str) { return str == err; });
+  }
+
+  template <class T>
+  bool value_is(const char* key, const T& what) {
+    auto& cv = values[key];
+    using type =
+      typename std::conditional<
+        std::is_convertible<T, std::string>::value,
+        std::string,
+        typename std::conditional<
+          std::is_integral<T>::value && ! std::is_same<T, bool>::value,
+          int64_t,
+          T
+        >::type
+      >::type;
+    auto ptr = get<type>(&cv);
+    return ptr != nullptr && detail::safe_equal(*ptr, what);
+  }
+
+  std::map<std::string, config_value> values;
+  std::vector<std::string> errors;
+};
+
 } // namespace <anonymous>
 
+CAF_TEST_FIXTURE_SCOPE(parse_ini_tests, fixture)
+
 CAF_TEST(simple_ini) {
-  std::map<std::string, config_value> values;
-  auto f = [&](std::string key, config_value value) {
-    values.emplace(std::move(key), std::move(value));
-  };
-  std::stringstream ss;
-  std::stringstream err;
-  ss << case1;
-  detail::parse_ini(ss, err, f);
+  load(case1);
+  CAF_CHECK(errors.empty());
   CAF_CHECK(values.count("nexus.port") > 0);
-  CAF_CHECK(value_is(values["nexus.port"], int64_t{4242}));
-  CAF_CHECK(value_is(values["nexus.host"], std::string{"127.0.0.1"}));
-  CAF_CHECK(value_is(values["scheduler.policy"], std::string{"work-sharing"}));
-  CAF_CHECK(value_is(values["scheduler.max-threads"], int64_t{2}));
-  CAF_CHECK(value_is(values["middleman.automatic-connections"], bool{true}));
+  CAF_CHECK(value_is("nexus.port", 4242));
+  CAF_CHECK(value_is("nexus.host", "127.0.0.1"));
+  CAF_CHECK(value_is("scheduler.policy", "work-sharing"));
+  CAF_CHECK(value_is("scheduler.max-threads", 2));
+  CAF_CHECK(value_is("middleman.automatic-connections", true));
   CAF_CHECK(values.count("cash.greeting") > 0);
-  CAF_CHECK(value_is(values["cash.greeting"],std::string{
-              "Hi there, this is \"CASH!\"\n ~\\~ use at your own risk ~\\~"
-            }));
+  CAF_CHECK(value_is("cash.greeting",
+            "Hi there, this is \"CASH!\"\n ~\\~ use at your own risk ~\\~"));
 }
 
 CAF_TEST(numbers) {
-  std::map<std::string, config_value> values;
-  auto f = [&](std::string key, config_value value) {
-    values.emplace(std::move(key), std::move(value));
-  };
-  std::stringstream ss;
-  std::stringstream err;
-  ss << case2;
-  detail::parse_ini(ss, err, f);
-  CAF_CHECK(value_is(values["test.foo"], int64_t{-0xff}));
-  CAF_CHECK(value_is(values["test.bar"], int64_t{034}));
-  CAF_CHECK(value_is(values["test.baz"], double{-0.23}));
-  CAF_CHECK(value_is(values["test.buzz"], double{1E-34}));
+  load(case2);
+  CAF_CHECK(errors.empty());
+  CAF_CHECK(value_is("test.foo", -0xff));
+  CAF_CHECK(value_is("test.bar", 034));
+  CAF_CHECK(value_is("test.baz", -0.23));
+  CAF_CHECK(value_is("test.buzz", 1E-34));
 }
+
+CAF_TEST(errors) {
+  load(case3);
+  CAF_CHECK(has_error("error in line 2: missing ] at end of line"));
+  CAF_CHECK(has_error("error in line 3: value outside of a group"));
+  CAF_CHECK(has_error("error in line 6: no '=' found"));
+  CAF_CHECK(has_error("error in line 7: line starting with '='"));
+  CAF_CHECK(has_error("error in line 8: line ends with '='"));
+  CAF_CHECK(has_error("error in line 9: stray '\"'"));
+  CAF_CHECK(has_error("error in line 10: string not terminated by '\"'"));
+  CAF_CHECK(has_error("warning in line 12: trailing quotation mark escaped"));
+  CAF_CHECK(has_error("error in line 13: '-' is not a number"));
+  CAF_CHECK(has_error("error in line 14: invalid hex value"));
+  CAF_CHECK(has_error("error in line 15: invalid oct value"));
+  CAF_CHECK(has_error("error in line 16: invalid value"));
+  CAF_CHECK(values.size() == 2);
+  CAF_CHECK(value_is("test.some-int", 42));
+  CAF_CHECK(value_is("test.some-string", "hi there!"));
+}
+
+CAF_TEST_FIXTURE_SCOPE_END()

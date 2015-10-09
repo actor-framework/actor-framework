@@ -58,7 +58,7 @@ void parse_config(const std::string& file_name,
 
     consumer(const consumer&) = default;
     consumer& operator=(const consumer&) = default;
-    void operator()(std::string key, config_value value) const {
+    void operator()(const std::string&, config_value) const {
       // send message to config server
     }
   };

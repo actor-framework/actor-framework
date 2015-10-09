@@ -20,25 +20,26 @@
 #ifndef CAF_PARSER_CONFIG_HPP
 #define CAF_PARSER_CONFIG_HPP
 
-#include <algorithm>
 #include <string>
+#include <algorithm>
 
 #include "caf/variant.hpp"
 
 namespace caf {
 
+/// Denotes the format of a configuration file.
 enum class config_format {
   auto_detect,
   ini
 };
 
+/// Denotes a configuration value.
 using config_value = variant<std::string, double, int64_t, bool>;
 
+/// Denotes a callback for config parser implementations.
 using config_consumer = std::function<void (std::string, config_value)>;
 
-/// parse_config
-/// @param file_name
-/// @param cf
+/// Parse `file_name` using given file format `cf`.
 void parse_config(const std::string& file_name,
                   config_format cf = config_format::auto_detect);
 
