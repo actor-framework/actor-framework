@@ -314,7 +314,9 @@ void middleman::dispose() {
   delete this;
 }
 
-middleman::middleman(const backend_factory& factory) : backend_(factory()) {
+middleman::middleman(const backend_factory& factory)
+    : backend_(factory()),
+      max_throughput_(std::numeric_limits<size_t>::max()) {
   // nop
 }
 
