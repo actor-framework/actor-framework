@@ -24,16 +24,23 @@
 #include <iostream>
 #include <algorithm>
 
-#include "caf/string_algorithms.hpp"
-
 namespace caf {
 
-void detail::parse_ini(std::istream& raw_data, std::ostream& errors,
+void detail::parse_ini(std::istream& input, std::ostream& errors,
                        config_consumer consumer) {
   std::string group;
   std::string line;
   size_t ln = 0; // line number
-  while (getline(raw_data, line)) {
+  auto print = [&](const char* category, const char* str) {
+    errors << category << " in line " << ln << ": " << str << std::endl;
+  };
+  auto print_error = [&](const char* str) {
+    print("error", str);
+  };
+  auto print_warning = [&](const char* str) {
+    print("warning", str);
+  };
+  while (std::getline(input, line)) {
     ++ln;
     // get begin-of-line (bol) and end-of-line (eol), ignoring whitespaces
     auto eol = find_if_not(line.rbegin(), line.rend(), ::isspace).base();
@@ -44,8 +51,7 @@ void detail::parse_ini(std::istream& raw_data, std::ostream& errors,
     // do we read a group name?
     if (*bol == '[') {
       if (*(eol - 1) != ']')
-        errors << "error in line " << ln << ": missing ] at end of line"
-               << std::endl;
+        print_error("missing ] at end of line");
       else
         group.assign(bol + 1, eol - 1);
       // skip further processing of this line
@@ -53,23 +59,21 @@ void detail::parse_ini(std::istream& raw_data, std::ostream& errors,
     }
     // do we have a group name yet? (prohibit ungrouped values)
     if (group.empty()) {
-      errors << "error in line " << ln << ": value outside of a group"
-             << std::endl;
+      print_error("value outside of a group");
       continue;
     }
     // position of the equal sign
     auto eqs = find(bol, eol, '=');
     if (eqs == eol) {
-      errors << "error in line " << ln << ": no '=' found" << std::endl;
+      print_error("no '=' found");
       continue;
     }
     if (bol == eqs) {
-      errors << "error in line " << ln << ": line starting with '='"
-             << std::endl;
+      print_error("line starting with '='");
       continue;
     }
     if ((eqs + 1) == eol) {
-      errors << "error in line " << ln << ": line ends with '='" << std::endl;
+      print_error("line ends with '='");
       continue;
     }
     // our keys have the format "<group>.<config-name>"
@@ -82,7 +86,9 @@ void detail::parse_ini(std::istream& raw_data, std::ostream& errors,
     // auto-detect what we are dealing with
     constexpr const char* true_str = "true";
     constexpr const char* false_str = "false";
-    auto icase_eq = [](char x, char y) { return tolower(x) == tolower(y); };
+    auto icase_eq = [](char x, char y) {
+      return tolower(x) == tolower(y);
+    };
     if (std::equal(bov, eol, true_str, icase_eq)) {
       consumer(std::move(key), true);
     } else if (std::equal(bov, eol, false_str, icase_eq)) {
@@ -91,18 +97,18 @@ void detail::parse_ini(std::istream& raw_data, std::ostream& errors,
       // end-of-string iterator
       auto eos = eol - 1;
       if (bov == eos) {
-        errors << "error in line " << ln << ": stray '\"'" << std::endl;
+        print_error("stray '\"'");
         continue;
       }
       if (*eos != '"') {
-        errors << "error in line " << ln
-               << ": string not terminated by '\"'" << std::endl;
+        print_error("string not terminated by '\"'");
         continue;
       }
       // found a string, remove first and last char from string,
       // start escaping string sequence
       auto last_char_backslash = false;
       std::string result;
+      result.reserve(static_cast<size_t>(std::distance(bov, eos)));
       // skip leading " and iterate up to the trailing "
       ++bov;
       for (; bov != eos; ++bov) {
@@ -124,57 +130,51 @@ void detail::parse_ini(std::istream& raw_data, std::ostream& errors,
           result += *bov;
         }
       }
-      if (last_char_backslash) {
-        errors << "warning in line " << ln
-               << ": trailing quotation mark escaped" << std::endl;
-      }
+      if (last_char_backslash)
+        print_warning("trailing quotation mark escaped");
       consumer(std::move(key), std::move(result));
     } else {
       bool is_neg = *bov == '-';
       if (is_neg && ++bov == eol) {
-        errors << "error in line " << ln << ": '-' is not a number"
-               << std::endl;
+        print_error("'-' is not a number");
         continue;
       }
-      auto set_ival = [&](int base) -> bool {
+      auto set_ival = [&](int base, int prefix_len, const char* err) {
         char* e;
-        int64_t res = std::strtoll(&*bov, &e, base);
-        if (e == &*eol) {
+        int64_t res = std::strtoll(&*(bov + prefix_len), &e, base);
+        if (e != &*eol)
+          print_error(err);
+        else
           consumer(std::move(key), is_neg ? -res : res);
-          return true;
-        }
-        return false;
       };
-      // are we dealing with a hex?
-      const char* hex_prefix = "0x";
-      if (std::equal(hex_prefix, hex_prefix + 2, bov)) {
-        if (! set_ival(16)) {
-          errors << "error in line " << ln << ": invalid hex value"
-                 << std::endl;
-        }
-      } else if (all_of(bov, eol, ::isdigit)) {
-        // check for base 8 and 10
-        if (*bov == '0') {
-          if (! set_ival(8)) {
-            errors << "error in line " << ln << ": invalid oct value"
-                   << std::endl;
-          }
-        } else {
-          if (! set_ival(10)) {
-            errors << "error in line " << ln << ": invalid decimal value"
-                   << std::endl;
-          }
-        }
-      } else {
-        // try to parse a double value
+      auto set_dval = [&] {
         char* e;
         double res = std::strtod(&*bov, &e);
-        if (e == &*eol) {
+        if (e != &*eol)
+          print_error("invalid value");
+        else
           consumer(std::move(key), is_neg ? -res : res);
-        } else {
-            errors << "error in line " << ln << ": invalid value" << std::endl;
+      };
+      if (*bov == '0' && std::distance(bov, eol) > 1)
+        switch (*(bov + 1)) {
+          case 'x':
+          case 'X':
+            set_ival(16, 2, "invalid hex value");
+            break;
+          case 'b':
+          case 'B':
+            set_ival(2, 2, "invalid binary value");
+            break;
+          default:
+            if (all_of(bov, eol, ::isdigit))
+              set_ival(8, 1, "invalid oct value");
+            else
+              set_dval();
         }
-      }
+      else if (all_of(bov, eol, ::isdigit))
+        set_ival(10, 0, "invalid decimal value");
+      else
+        set_dval();
     }
   }
 }

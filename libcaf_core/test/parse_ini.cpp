@@ -56,7 +56,7 @@ foo=-0xff
 bar=034
 baz=-0.23
 buzz=1E-34
-
+bazz=0b10101010110011
 )__";
 
 constexpr const char* case3 = R"__("
@@ -73,6 +73,7 @@ some-int=42
 some-string="hi there!\"
 neg=-
 wtf=0x3733T
+not-a-bin=0b101002
 hu=0779
 hop=--"hiho"
 )__";
@@ -135,11 +136,12 @@ CAF_TEST(simple_ini) {
 
 CAF_TEST(numbers) {
   load(case2);
-  CAF_CHECK(errors.empty());
+  CAF_CHECK(join(errors, "\n") == "");
   CAF_CHECK(value_is("test.foo", -0xff));
   CAF_CHECK(value_is("test.bar", 034));
   CAF_CHECK(value_is("test.baz", -0.23));
   CAF_CHECK(value_is("test.buzz", 1E-34));
+  CAF_CHECK(value_is("test.bazz", 10931));
 }
 
 CAF_TEST(errors) {
@@ -154,8 +156,9 @@ CAF_TEST(errors) {
   CAF_CHECK(has_error("warning in line 12: trailing quotation mark escaped"));
   CAF_CHECK(has_error("error in line 13: '-' is not a number"));
   CAF_CHECK(has_error("error in line 14: invalid hex value"));
-  CAF_CHECK(has_error("error in line 15: invalid oct value"));
-  CAF_CHECK(has_error("error in line 16: invalid value"));
+  CAF_CHECK(has_error("error in line 15: invalid binary value"));
+  CAF_CHECK(has_error("error in line 16: invalid oct value"));
+  CAF_CHECK(has_error("error in line 17: invalid value"));
   CAF_CHECK(values.size() == 2);
   CAF_CHECK(value_is("test.some-int", 42));
   CAF_CHECK(value_is("test.some-string", "hi there!"));
