@@ -196,8 +196,22 @@ void actor_registry::initialize() {
     const char* name = "caf.config_server";
   };
   auto kvstore = [](stateful_actor<kvstate>* self) -> behavior {
+    std::string wildcard = "*";
+    auto unsubscribe_all = [=](actor subscriber) {
+      if (! subscriber)
+        return;
+      auto& subscribers = self->state.subscribers;
+      auto i = subscribers.find(subscriber);
+      if (i == subscribers.end())
+        return;
+      for (auto& key : i->second)
+        self->state.data[key].second.erase(subscriber);
+      subscribers.erase(i);
+    };
     return {
       [=](put_atom, const std::string& key, message& msg) {
+        if (key == "*")
+          return;
         auto& vp = self->state.data[key];
         if (vp.first == msg)
           return;
@@ -205,8 +219,19 @@ void actor_registry::initialize() {
         for (auto& subscriber : vp.second)
           if (subscriber != self->current_sender())
             self->send(subscriber, update_atom::value, key, vp.second);
+        // also iterate all subscribers for '*'
+        for (auto& subscriber : self->state.data[wildcard].second)
+          if (subscriber != self->current_sender())
+            self->send(subscriber, update_atom::value, key, vp.second);
       },
       [=](get_atom, std::string& key) -> message {
+        if (key == wildcard) {
+          std::vector<std::pair<std::string, message>> msgs;
+          for (auto& kvp : self->state.data)
+            if (kvp.first != "*")
+              msgs.emplace_back(kvp.first, kvp.second.first);
+          return make_message(ok_atom::value, std::move(msgs));
+        }
         auto i = self->state.data.find(key);
         return make_message(ok_atom::value, std::move(key),
                             i != self->state.data.end() ? i->second.first
@@ -230,20 +255,15 @@ void actor_registry::initialize() {
         auto subscriber = actor_cast<actor>(self->current_sender());
         if (! subscriber)
           return;
+        if (key == wildcard) {
+          unsubscribe_all(actor_cast<actor>(subscriber));
+          return;
+        }
         self->state.subscribers[subscriber].erase(key);
         self->state.data[key].second.erase(subscriber);
       },
       [=](const down_msg& dm) {
-        auto subscriber = actor_cast<actor>(dm.source);
-        if (! subscriber)
-          return;
-        auto& subscribers = self->state.subscribers;
-        auto i = subscribers.find(subscriber);
-        if (i == subscribers.end())
-          return;
-        for (auto& key : i->second)
-          self->state.data[key].second.erase(subscriber);
-        subscribers.erase(i);
+        unsubscribe_all(actor_cast<actor>(dm.source));
       },
       others >> [] {
         return make_message(error_atom::value, "unsupported operation");
