@@ -26,13 +26,15 @@
 
 namespace caf {
 
-void detail::parse_ini(std::istream& input, std::ostream& errors,
-                       config_consumer consumer) {
+void detail::parse_ini(std::istream& input,
+                       config_consumer consumer,
+                       optional<std::ostream&> errors) {
   std::string group;
   std::string line;
   size_t ln = 0; // line number
   auto print = [&](const char* category, const char* str) {
-    errors << category << " in line " << ln << ": " << str << std::endl;
+    if (errors)
+      *errors << category << " in line " << ln << ": " << str << std::endl;
   };
   auto print_error = [&](const char* str) {
     print("error", str);

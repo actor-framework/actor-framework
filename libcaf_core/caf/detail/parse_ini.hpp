@@ -22,6 +22,7 @@
 
 #include <istream>
 
+#include "caf/optional.hpp"
 #include "caf/parse_config.hpp"
 
 namespace caf {
@@ -32,8 +33,9 @@ namespace detail {
 /// @param raw_data Input stream of INI formatted text.
 /// @param errors Output stream for parser errors.
 /// @param consumer Callback consuming generated key-value pairs.
-void parse_ini(std::istream& raw_data, std::ostream& errors,
-               config_consumer consumer);
+void parse_ini(std::istream& raw_data,
+               config_consumer consumer,
+               optional<std::ostream&> errors = none);
 
 } // namespace detail
 } // namespace caf
