@@ -857,4 +857,25 @@ CAF_TEST(exit_reason_in_scoped_actor) {
   self->planned_exit_reason(exit_reason::user_defined);
 }
 
+CAF_TEST(move_only_argument) {
+  using unique_int = std::unique_ptr<int>;
+  unique_int ptr{new int(42)};
+  auto f = [](event_based_actor* self, unique_int ptr) -> behavior {
+    auto i = *ptr;
+    return {
+      others >> [=] {
+        self->quit();
+        return i;
+      }
+    };
+  };
+  auto testee = spawn(f, std::move(ptr));
+  scoped_actor self;
+  self->sync_send(testee, 1.f).await(
+    [](int i) {
+      CAF_CHECK(i == 42);
+    }
+  );
+}
+
 CAF_TEST_FIXTURE_SCOPE_END()

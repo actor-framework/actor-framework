@@ -52,6 +52,18 @@ auto apply_args_prefixed(F& f, detail::int_list<Is...>, Tuple& tup, Ts&&... xs)
   return f(std::forward<Ts>(xs)..., get<Is>(tup)...);
 }
 
+template <class F, class Tuple, class... Ts>
+auto apply_moved_args_prefixed(F& f, detail::int_list<>, Tuple&, Ts&&... xs)
+-> decltype(f(std::forward<Ts>(xs)...)) {
+  return f(std::forward<Ts>(xs)...);
+}
+
+template <class F, long... Is, class Tuple, class... Ts>
+auto apply_moved_args_prefixed(F& f, detail::int_list<Is...>, Tuple& tup, Ts&&... xs)
+-> decltype(f(std::forward<Ts>(xs)..., std::move(get<Is>(tup))...)) {
+  return f(std::forward<Ts>(xs)..., std::move(get<Is>(tup))...);
+}
+
 template <class F, long... Is, class Tuple, class... Ts>
 auto apply_args_suffxied(F& f, detail::int_list<Is...>, Tuple& tup, Ts&&... xs)
 -> decltype(f(get<Is>(tup)..., std::forward<Ts>(xs)...)) {
