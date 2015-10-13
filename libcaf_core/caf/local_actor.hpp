@@ -431,7 +431,8 @@ public:
   /// @cond PRIVATE
 
   // handle `ptr` in an event-based actor
-  resumable::resume_result exec_event(mailbox_element_ptr& ptr);
+  std::pair<resumable::resume_result, invoke_message_result>
+  exec_event(mailbox_element_ptr& ptr);
 
   // handle `ptr` in an event-based actor, not suitable to be called in a loop
   void exec_single_event(mailbox_element_ptr& ptr);
