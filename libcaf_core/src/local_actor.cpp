@@ -133,6 +133,7 @@ uint32_t local_actor::request_timeout(const duration& d) {
   has_timeout(true);
   auto result = ++timeout_id_;
   auto msg = make_message(timeout_msg{++timeout_id_});
+  CAF_LOG_TRACE("send new timeout_msg, " << CAF_ARG(timeout_id_));
   if (d.is_zero()) {
     // immediately enqueue timeout message if duration == 0s
     enqueue(address(), invalid_message_id, std::move(msg), host());
@@ -711,9 +712,11 @@ resumable::resume_result local_actor::resume(execution_unit* eu,
     for (size_t i = 0; i < max_throughput; ++i) {
       auto ptr = next_message();
       if (ptr) {
-        if (exec_event(ptr) == resumable::resume_result::done)
+        auto res = exec_event(ptr);
+        if (res.first == resumable::resume_result::done)
           return resumable::resume_result::done;
-        ++handled_msgs;
+        if (res.second == im_success)
+          ++handled_msgs;
       } else {
         CAF_LOG_DEBUG("no more element in mailbox; going to block");
         reset_timeout_if_needed();
@@ -765,16 +768,18 @@ resumable::resume_result local_actor::resume(execution_unit* eu,
   return resumable::done;
 }
 
-resumable::resume_result local_actor::exec_event(mailbox_element_ptr& ptr) {
+std::pair<resumable::resume_result, invoke_message_result>
+local_actor::exec_event(mailbox_element_ptr& ptr) {
   auto& bhvr = awaits_response() ? awaited_response_handler()
                                  : bhvr_stack().back();
   auto mid = awaited_response_id();
-  switch (invoke_message(ptr, bhvr, mid)) {
+  auto res = invoke_message(ptr, bhvr, mid);
+  switch (res) {
     case im_success:
       bhvr_stack().cleanup();
       if (finalize()) {
         CAF_LOG_DEBUG("actor exited");
-        return resumable::resume_result::done;
+        return {resumable::resume_result::done, res};
       }
       // continue from cache if current message was
       // handled, because the actor might have changed
@@ -782,7 +787,7 @@ resumable::resume_result local_actor::exec_event(mailbox_element_ptr& ptr) {
       while (invoke_from_cache()) {
         if (finalize()) {
           CAF_LOG_DEBUG("actor exited");
-          return resumable::resume_result::done;
+          return {resumable::resume_result::done, res};
         }
       }
       break;
@@ -794,7 +799,7 @@ resumable::resume_result local_actor::exec_event(mailbox_element_ptr& ptr) {
       // destroy msg
       break;
   }
-  return resumable::resume_result::resume_later;
+  return {resumable::resume_result::resume_later, res};
 }
 
 void local_actor::exec_single_event(mailbox_element_ptr& ptr) {
