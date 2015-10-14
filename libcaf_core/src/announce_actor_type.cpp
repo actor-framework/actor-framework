@@ -70,7 +70,7 @@ actor spawn_announce_actor_type_server() {
   return spawn<hidden + lazy_init>(announce_actor_type_server);
 }
 
-void announce_actor_type_impl(std::string&& name, spawn_fun f) {
+void announce_actor_factory(std::string name, spawn_fun f) {
   auto registry = detail::singletons::get_actor_registry();
   auto server = registry->get_named(atom("SpawnServ"));
   anon_send(server, add_atom::value, std::move(name), std::move(f));

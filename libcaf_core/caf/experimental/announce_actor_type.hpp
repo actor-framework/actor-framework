@@ -68,7 +68,7 @@ spawn_fun make_spawn_fun(F fun) {
     dyn_spawn_prepare_message<impl>(msg, ptr.get(), tk);
     ptr->initial_behavior_fac([=](local_actor*) -> behavior {
       auto res = const_cast<message&>(msg).apply(fun);
-      if (res && res->size() > 0 && res->template match_element<behavior_t>(0)) 
+      if (res && res->size() > 0 && res->template match_element<behavior_t>(0))
         return std::move(res->template get_as_mutable<behavior_t>(0).unbox());
       return {};
     });
@@ -106,16 +106,16 @@ spawn_fun make_spawn_fun() {
 
 actor spawn_announce_actor_type_server();
 
-void announce_actor_type_impl(std::string&& name, spawn_fun f);
+void announce_actor_factory(std::string name, spawn_fun f);
 
 template <class F>
 void announce_actor_type(std::string name, F fun) {
-  announce_actor_type_impl(std::move(name), make_spawn_fun(fun));
+  announce_actor_factory(std::move(name), make_spawn_fun(fun));
 }
 
 template <class T, class... Ts>
 void announce_actor_type(std::string name) {
-  announce_actor_type_impl(std::move(name), make_spawn_fun<T, Ts...>());
+  announce_actor_factory(std::move(name), make_spawn_fun<T, Ts...>());
 }
 
 } // namespace experimental
