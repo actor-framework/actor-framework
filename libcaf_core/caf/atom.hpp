@@ -53,6 +53,9 @@ struct atom_constant {
   constexpr operator atom_value() const {
     return V;
   }
+  static constexpr uint64_t uint_value() {
+    return static_cast<uint64_t>(V);
+  }
   /// Returns an instance *of this constant* (*not* an `atom_value`).
   static const atom_constant value;
 };
