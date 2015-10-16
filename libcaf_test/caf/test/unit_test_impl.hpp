@@ -419,7 +419,8 @@ bool engine::run(bool colorize,
   unsigned percent_good = 100;
   if (total_bad > 0) {
     auto tmp = (100000.0 * static_cast<double>(total_good))
-               / static_cast<double>(total_good + total_bad);
+               / static_cast<double>(total_good + total_bad
+                                     - total_bad_expected);
     percent_good = static_cast<unsigned>(tmp / 1000.0);
   }
   auto title = std::string{"summary"};
@@ -434,7 +435,7 @@ bool engine::run(bool colorize,
   if (total_bad > 0) {
     log.info() << " (" << color(green) << total_good << color(reset) << '/'
                << color(red) << total_bad << color(reset) << ")";
-    if (total_bad_expected) {
+    if (total_bad_expected > 0) {
       log.info()
         << ' ' << color(cyan) << total_bad_expected << color(reset)
         << " failures expected";
@@ -442,7 +443,8 @@ bool engine::run(bool colorize,
   }
   log.info() << '\n' << indent << "time:    " << color(yellow)
              << render(runtime) << '\n' << color(reset) << indent
-             << "success: " << (total_bad > 0 ? color(red) : color(green))
+             << "success: "
+             << (total_bad == total_bad_expected ? color(green) : color(red))
              << percent_good << "%" << color(reset) << "\n\n" << color(cyan)
              << bar << color(reset) << '\n';
   return total_bad == total_bad_expected;
