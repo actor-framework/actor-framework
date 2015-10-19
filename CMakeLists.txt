@@ -429,6 +429,7 @@ if(NOT CAF_NO_OPENCL)
   find_package(OpenCL)
   if(OpenCL_FOUND)
     add_optional_caf_lib(opencl)
+    add_optional_caf_binaries(libcaf_opencl/examples)
   endif()
 endif()
 
