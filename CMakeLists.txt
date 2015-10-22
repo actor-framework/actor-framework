@@ -78,7 +78,7 @@ endif()
 #                                compiler setup                                #
 ################################################################################
 
-# check for g++ >= 4.7 or clang++ > = 3.2
+# check for g++ >= 4.8 or clang++ > = 3.2
 if(NOT WIN32 AND NOT CAF_NO_COMPILER_CHECK)
   try_run(ProgramResult
           CompilationSucceeded
@@ -88,10 +88,10 @@ if(NOT WIN32 AND NOT CAF_NO_COMPILER_CHECK)
   if(NOT CompilationSucceeded OR NOT ProgramResult EQUAL 0)
     message(FATAL_ERROR "Cannot determine compiler version")
   elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
-    if(CompilerVersion VERSION_GREATER 4.6)
+    if(CompilerVersion VERSION_GREATER 4.7)
       message(STATUS "Found g++ version ${CompilerVersion}")
     else()
-      message(FATAL_ERROR "g++ >= 4.7 required (found: ${CompilerVersion})")
+      message(FATAL_ERROR "g++ >= 4.8 required (found: ${CompilerVersion})")
     endif()
   elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     if(CompilerVersion VERSION_GREATER 3.1)
