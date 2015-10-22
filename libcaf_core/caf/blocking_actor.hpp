@@ -44,7 +44,7 @@ namespace caf {
 /// @extends local_actor
 class blocking_actor
     : public extend<local_actor, blocking_actor>::
-             with<mixin::sync_sender<blocking_response_handle_tag>::impl> {
+             with<mixin::request_sender<blocking_response_handle_tag>::impl> {
 public:
   using behavior_type = behavior;
 

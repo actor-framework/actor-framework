@@ -364,14 +364,28 @@ public:
   response_promise make_response_promise();
 
   /// Sets the handler for unexpected synchronous response messages.
-  inline void on_sync_failure(std::function<void()> fun) {
-    sync_failure_handler_ = std::move(fun);
+  inline void on_request_failure(std::function<void()> fun) {
+    request_failure_handler_ = std::move(fun);
+  }
+
+  /// Checks wheter this actor has a user-defined request failure handler.
+  inline bool has_request_failure_handler() const {
+    return static_cast<bool>(request_failure_handler_);
+  }
+
+  // <backward_compatibility version="0.14.2">
+  /// Sets the handler for unexpected synchronous response messages.
+  /// @deprecated
+  inline CAF_DEPRECATED void on_sync_failure(std::function<void()> fun) {
+    on_request_failure(std::move(fun));
   }
 
   /// Checks wheter this actor has a user-defined sync failure handler.
-  inline bool has_sync_failure_handler() const {
-    return static_cast<bool>(sync_failure_handler_);
+  /// @deprecated
+  inline CAF_DEPRECATED bool has_sync_failure_handler() const {
+    return has_request_failure_handler();
   }
+  // </backward_compatibility>
 
   /// Sets a custom exception handler for this actor. If multiple handlers are
   /// defined, only the functor that was added *last* is being executed.
@@ -455,15 +469,15 @@ public:
   }
 
   inline void handle_sync_failure() {
-    if (sync_failure_handler_) {
-      sync_failure_handler_();
+    if (request_failure_handler_) {
+      request_failure_handler_();
     } else {
       quit(exit_reason::unhandled_sync_failure);
     }
   }
 
   template <class Handle, class... Ts>
-  message_id sync_send_impl(message_priority mp, const Handle& dh, Ts&&... xs) {
+  message_id request_impl(message_priority mp, const Handle& dh, Ts&&... xs) {
     if (! dh) {
       throw std::invalid_argument("cannot sync_send to invalid_actor");
     }
@@ -690,7 +704,7 @@ private:
   void delayed_send_impl(message_id mid, const channel& whom,
                          const duration& rtime, message data);
 
-  std::function<void()> sync_failure_handler_;
+  std::function<void()> request_failure_handler_;
 };
 
 /// A smart pointer to a {@link local_actor} instance.

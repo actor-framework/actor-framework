@@ -47,18 +47,18 @@ struct fixture {
   void set_aut(message args, bool expect_fail = false) {
     CAF_MESSAGE("set aut");
     scoped_actor self;
-    self->on_sync_failure([&] {
-      CAF_TEST_ERROR("received unexpeced sync. response: "
+    self->on_request_failure([&] {
+      CAF_TEST_ERROR("received unexpeced request response: "
                      << to_string(self->current_message()));
     });
     if (expect_fail) {
-      self->sync_send(spawner, get_atom::value, "test_actor", std::move(args)).await(
+      self->request(spawner, get_atom::value, "test_actor", std::move(args)).await(
         [&](error_atom, const std::string&) {
           CAF_MESSAGE("received error_atom (expected)");
         }
       );
     } else {
-      self->sync_send(spawner, get_atom::value, "test_actor", std::move(args)).await(
+      self->request(spawner, get_atom::value, "test_actor", std::move(args)).await(
         [&](ok_atom, actor_addr res, const std::set<std::string>& ifs) {
           CAF_REQUIRE(res != invalid_actor_addr);
           aut = actor_cast<actor>(res);

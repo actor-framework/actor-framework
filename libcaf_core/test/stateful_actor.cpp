@@ -87,7 +87,7 @@ void test_adder(ActorUnderTest aut) {
   self->send(aut, add_atom::value, 7);
   self->send(aut, add_atom::value, 4);
   self->send(aut, add_atom::value, 9);
-  self->sync_send(aut, get_atom::value).await(
+  self->request(aut, get_atom::value).await(
     [](int x) {
       CAF_CHECK_EQUAL(x, 20);
     }
@@ -104,7 +104,7 @@ void test_name(const char* expected) {
     };
   });
   scoped_actor self;
-  self->sync_send(aut, get_atom::value).await(
+  self->request(aut, get_atom::value).await(
     [&](const string& str) {
       CAF_CHECK_EQUAL(str, expected);
     }

@@ -131,7 +131,7 @@ struct fixture {
       >::type;
     bool result = false;
     scoped_actor self;
-    self->sync_send(config_server, get_atom::value, key).await(
+    self->request(config_server, get_atom::value, key).await(
       [&](ok_atom, std::string&, message& msg) {
         msg.apply(
           [&](type& val) {
@@ -166,7 +166,7 @@ struct fixture {
     if (config_server != invalid_actor) {
       size_t result = 0;
       scoped_actor self;
-      self->sync_send(config_server, get_atom::value, "*").await(
+      self->request(config_server, get_atom::value, "*").await(
         [&](ok_atom, std::vector<std::pair<std::string, message>>& msgs) {
           result = msgs.size();
         }

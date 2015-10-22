@@ -537,7 +537,7 @@ CAF_TEST(remote_actor_and_send) {
   CAF_REQUIRE(mpx()->pending_scribes().count(make_pair(lo, 4242)) == 1);
   auto mm1 = get_middleman_actor();
   actor result;
-  auto f = self()->sync_send(mm1, connect_atom::value,
+  auto f = self()->request(mm1, connect_atom::value,
                              lo, uint16_t{4242});
   // wait until BASP broker has received and processed the connect message
   while (! aut()->valid(remote_hdl(0)))

@@ -182,7 +182,7 @@ behavior peer_acceptor_fun(broker* self, const actor& buddy) {
 void run_server(bool spawn_client, const char* bin_path, bool use_asio) {
   scoped_actor self;
   auto serv = io::spawn_io(peer_acceptor_fun, spawn(pong));
-  self->sync_send(serv, publish_atom::value).await(
+  self->request(serv, publish_atom::value).await(
     [&](uint16_t port) {
       CAF_MESSAGE("server is running on port " << port);
       if (spawn_client) {

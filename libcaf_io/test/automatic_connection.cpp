@@ -162,13 +162,13 @@ void run_earth(bool use_asio, bool as_server, uint16_t pub_port) {
   self->receive_while([&] { return mars_addr == invalid_actor_addr; })(
     [&](put_atom, const actor_addr& addr) {
       auto hdl = actor_cast<actor>(addr);
-      self->sync_send(hdl, sys_atom::value, get_atom::value, "info").await(
+      self->request(hdl, sys_atom::value, get_atom::value, "info").await(
         [&](ok_atom, const string&, const actor_addr&, const string& name) {
           if (name != "testee")
             return;
           mars_addr = addr;
           CAF_MESSAGE(CAF_TSARG(mars_addr));
-          self->sync_send(actor_cast<actor>(mars_addr), get_atom::value).await(
+          self->request(actor_cast<actor>(mars_addr), get_atom::value).await(
             [&](uint16_t mp) {
               CAF_MESSAGE("mars published its actor at port " << mp);
               mars_port = mp;
@@ -193,7 +193,7 @@ void run_earth(bool use_asio, bool as_server, uint16_t pub_port) {
   self->receive_while([&] { return jupiter_addr == invalid_actor_addr; })(
     [&](put_atom, const actor_addr& addr) {
       auto hdl = actor_cast<actor>(addr);
-      self->sync_send(hdl, sys_atom::value, get_atom::value, "info").await(
+      self->request(hdl, sys_atom::value, get_atom::value, "info").await(
         [&](ok_atom, const string&, const actor_addr&, const string& name) {
           if (name != "testee")
             return;

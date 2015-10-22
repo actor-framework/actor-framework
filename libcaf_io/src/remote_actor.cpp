@@ -47,7 +47,7 @@ actor_addr remote_actor_impl(std::set<std::string> ifs,
   auto mm = get_middleman_actor();
   actor_addr result;
   scoped_actor self;
-  self->sync_send(mm, connect_atom::value, std::move(host), port).await(
+  self->request(mm, connect_atom::value, std::move(host), port).await(
     [&](ok_atom, const node_id&, actor_addr res, std::set<std::string>& xs) {
       if (!res)
         throw network_error("no actor published at given port");

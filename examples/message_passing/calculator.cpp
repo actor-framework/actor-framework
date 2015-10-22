@@ -69,15 +69,15 @@ template <class Handle>
 void tester(event_based_actor* self, const Handle& testee, int x, int y) {
   self->link_to(testee);
   // will be invoked if we receive an unexpected response message
-  self->on_sync_failure([=] {
+  self->on_request_failure([=] {
     aout(self) << "AUT (actor under test) failed" << endl;
     self->quit(exit_reason::user_shutdown);
   });
   // first test: 2 + 1 = 3
-  self->sync_send(testee, plus_atom::value, x, y).then(
+  self->request(testee, plus_atom::value, x, y).then(
     [=](result_atom, int res1) {
       aout(self) << x << " + " << y << " = " << res1 << endl;
-      self->sync_send(testee, minus_atom::value, x, y).then(
+      self->request(testee, minus_atom::value, x, y).then(
         [=](result_atom, int res2) {
           // both tests succeeded
         aout(self) << x << " - " << y << " = " << res2 << endl;

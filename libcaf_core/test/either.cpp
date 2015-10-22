@@ -78,7 +78,7 @@ CAF_TEST(basic_usage) {
 CAF_TEST(either_in_typed_interfaces) {
   auto mf = spawn(my_foo);
   scoped_actor self;
-  self->sync_send(mf, 42).await(
+  self->request(mf, 42).await(
     [](int val) {
       CAF_CHECK_EQUAL(val, 42);
     },
@@ -86,7 +86,7 @@ CAF_TEST(either_in_typed_interfaces) {
       CAF_TEST_ERROR("expected an integer");
     }
   );
-  self->sync_send(mf, 10).await(
+  self->request(mf, 10).await(
     [](int) {
       CAF_TEST_ERROR("expected a float");
     },
