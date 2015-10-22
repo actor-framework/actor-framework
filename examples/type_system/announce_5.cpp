@@ -199,7 +199,7 @@ int main() {
     scoped_actor self;
 
     // spawn a testee that receives two messages
-    auto t = spawn(testee, 2);
+    auto t = spawn(testee, size_t{2});
 
     // send a tree
     self->send(t, t0);

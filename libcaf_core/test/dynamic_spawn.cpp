@@ -859,7 +859,7 @@ CAF_TEST(exit_reason_in_scoped_actor) {
 
 CAF_TEST(move_only_argument) {
   using unique_int = std::unique_ptr<int>;
-  unique_int ptr{new int(42)};
+  unique_int uptr{new int(42)};
   auto f = [](event_based_actor* self, unique_int ptr) -> behavior {
     auto i = *ptr;
     return {
@@ -869,7 +869,7 @@ CAF_TEST(move_only_argument) {
       }
     };
   };
-  auto testee = spawn(f, std::move(ptr));
+  auto testee = spawn(f, std::move(uptr));
   scoped_actor self;
   self->sync_send(testee, 1.f).await(
     [](int i) {

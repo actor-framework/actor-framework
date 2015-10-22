@@ -123,7 +123,7 @@ int main(int, char**) {
                 // compound member that has a compound member
                 compound_member(&baz::b, meta_bar_f(), &bar::i));
   // spawn a testee that receives two messages
-  auto t = spawn(testee, 2);
+  auto t = spawn(testee, size_t{2});
   {
     scoped_actor self;
     self->send(t, bar{foo{1, 2}, 3});

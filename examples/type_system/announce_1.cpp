@@ -108,7 +108,7 @@ int main(int, char**) {
     return -1;
   }
   // spawn a testee that receives two messages of user-defined type
-  auto t = spawn(testee, 2);
+  auto t = spawn(testee, size_t{2});
   { // lifetime scope of self
     scoped_actor self;
     // send t a foo

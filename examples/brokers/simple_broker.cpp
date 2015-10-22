@@ -217,7 +217,7 @@ int main(int argc, char** argv) {
     print_on_exit(server_actor, "server");
     print_on_exit(pong_actor, "pong");
   } else if (res.opts.count("client") > 0) {
-    auto ping_actor = spawn(ping, 20);
+    auto ping_actor = spawn(ping, size_t{20});
     auto io_actor = spawn_io_client(broker_impl, host, port, ping_actor);
     print_on_exit(io_actor, "protobuf_io");
     print_on_exit(ping_actor, "ping");

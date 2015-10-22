@@ -235,7 +235,7 @@ CAF_TEST(test_typed_broker) {
 #   endif // CAF_USE_ASIO
   }
   if (r.opts.count("client-port") > 0) {
-    auto p = spawn(ping, 10);
+    auto p = spawn(ping, size_t{10});
     CAF_MESSAGE("spawn_io_client_typed...");
     auto cl = spawn_io_client(peer_fun, "localhost", port, p);
     CAF_MESSAGE("spawn_io_client_typed finished");
