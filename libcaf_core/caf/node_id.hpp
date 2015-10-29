@@ -36,13 +36,15 @@ namespace caf {
 
 class serializer;
 
+/// Objects of this type identify an invalid `node_id`.
+/// @relates node_id
 struct invalid_node_id_t {
   constexpr invalid_node_id_t() {
     // nop
   }
 };
 
-/// Identifies an invalid {@link node_id}.
+/// Identifies an invalid `node_id`.
 /// @relates node_id
 constexpr invalid_node_id_t invalid_node_id = invalid_node_id_t{};
 
