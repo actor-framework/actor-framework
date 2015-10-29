@@ -480,9 +480,9 @@ behavior basp_broker::make_behavior() {
     [=](forward_atom, const actor_addr& sender,
         const node_id& receiving_node, atom_value receiver_name,
         const message& msg) -> optional<message> {
-      CAF_LOG_TRACE(CAF_TSARG(sender) << ", " << CAF_TSARG(receiving_node)
+      CAF_LOG_TRACE(CAF_TSARG(sender)
+                    << ", " << CAF_TSARG(receiving_node)
                     << ", " << CAF_TSARG(receiver_name)
-                    << ", " << CAF_MARG(mid, integer_value)
                     << ", " << CAF_TSARG(msg));
       if (sender == invalid_actor_addr)
         return make_message(error_atom::value, "sender == invalid_actor");
