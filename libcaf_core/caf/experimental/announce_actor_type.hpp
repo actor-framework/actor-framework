@@ -57,6 +57,26 @@ void dyn_spawn_prepare_message(message& msg, T* self, selfptr_mode_token) {
   msg = message{detail::message_data::cow_ptr{std::move(ptr)}} + tmp;
 }
 
+template <class Args>
+struct message_verifier;
+
+template <>
+struct message_verifier<detail::type_list<>> {
+  bool operator()(message& msg, void_mode_token) {
+    return msg.empty();
+  }
+};
+
+template <class T, class... Ts>
+struct message_verifier<detail::type_list<T, Ts...>> {
+  bool operator()(message& msg, void_mode_token) {
+    return msg.match_elements<T, Ts...>();
+  }
+  bool operator()(message& msg, selfptr_mode_token) {
+    return msg.match_elements<Ts...>();
+  }
+};
+
 template <class F>
 spawn_fun make_spawn_fun(F fun) {
   return [fun](message msg) -> spawn_result {
@@ -64,6 +84,9 @@ spawn_fun make_spawn_fun(F fun) {
     using impl = typename trait::impl;
     using behavior_t = typename trait::behavior_type;
     spawn_mode_token<trait::mode> tk;
+    message_verifier<typename trait::arg_types> mv;
+    if (! mv(msg, tk))
+      return {};
     auto ptr = make_counted<impl>();
     dyn_spawn_prepare_message<impl>(msg, ptr.get(), tk);
     ptr->initial_behavior_fac([=](local_actor*) -> behavior {
