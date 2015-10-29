@@ -26,7 +26,14 @@
 namespace caf {
 namespace experimental {
 
+/// Returns the actor with the (locally) registered name.
 actor whereis(atom_value registered_name);
+
+/// Returns the actor with the registered name located at `nid` or
+/// `invalid_actor` if `nid` is not connected or does not
+/// respond to name lookups.
+/// @warning Blocks the caller until `nid` responded to the lookup.
+actor whereis(atom_value registered_name, node_id nid);
 
 } // namespace experimental
 } // namespace caf

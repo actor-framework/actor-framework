@@ -183,7 +183,7 @@ void basp_broker_state::proxy_announced(const node_id& nid, actor_id aid) {
       mm->backend().dispatch([=] {
         CAF_LOG_TRACE(CAF_ARG(reason));
         // ... to make sure this is safe
-        if (bptr == mm->get_named_broker<basp_broker>(atom("_BASP"))
+        if (bptr == mm->get_named_broker<basp_broker>(atom("BASP"))
             && bptr->exit_reason() == exit_reason::not_exited)
           send_kill_proxy_instance(reason);
       });
@@ -476,6 +476,38 @@ behavior basp_broker::make_behavior() {
         srb(sender, mid);
       }
     },
+    // received from some system calls like whereis
+    [=](forward_atom, const actor_addr& sender,
+        const node_id& receiving_node, atom_value receiver_name,
+        const message& msg) -> optional<message> {
+      CAF_LOG_TRACE(CAF_TSARG(sender) << ", " << CAF_TSARG(receiving_node)
+                    << ", " << CAF_TSARG(receiver_name)
+                    << ", " << CAF_MARG(mid, integer_value)
+                    << ", " << CAF_TSARG(msg));
+      if (sender == invalid_actor_addr)
+        return make_message(error_atom::value, "sender == invalid_actor");
+      if (! sender.is_remote())
+        detail::singletons::get_actor_registry()->put(sender->id(), sender);
+      auto writer = make_callback([&](serializer& sink) {
+        msg.serialize(sink);
+      });
+      auto path = this->state.instance.tbl().lookup(receiving_node);
+      if (! path) {
+        CAF_LOG_ERROR("no route to receiving node");
+        return make_message(error_atom::value, "no route to receiving node");
+      }
+      // writing std::numeric_limits<actor_id>::max() is a hack to get
+      // this send-to-named-actor feature working with older CAF releases
+      this->state.instance.write(path->wr_buf,
+                                 basp::message_type::dispatch_message,
+                                 nullptr, static_cast<uint64_t>(receiver_name),
+                                 state.this_node(), receiving_node,
+                                 sender.id(),
+                                 std::numeric_limits<actor_id>::max(),
+                                 &writer);
+      state.instance.flush(*path);
+      return none;
+    },
     // received from underlying broker implementation
     [=](const new_connection_msg& msg) {
       CAF_LOG_TRACE("handle = " << msg.handle.id());
@@ -514,7 +546,7 @@ behavior basp_broker::make_behavior() {
         std::set<std::string>& sigs) {
       CAF_LOG_TRACE(CAF_ARG(hdl.id()) << ", "<< CAF_TSARG(whom)
                     << ", " << CAF_ARG(port));
-      if (hdl.invalid() || whom == invalid_actor_addr)
+      if (hdl.invalid())
         return;
       try {
         assign_tcp_doorman(hdl);
@@ -523,7 +555,8 @@ behavior basp_broker::make_behavior() {
         CAF_LOG_DEBUG("failed to assign doorman from handle");
         return;
       }
-      detail::singletons::get_actor_registry()->put(whom->id(), whom);
+      if (whom != invalid_actor_addr)
+        detail::singletons::get_actor_registry()->put(whom->id(), whom);
       state.instance.add_published_actor(port, whom, std::move(sigs));
     },
     // received from middleman actor (delegated)
@@ -610,8 +643,7 @@ behavior basp_broker::make_behavior() {
       }
     },
     // catch-all error handler
-    others >>
-    [=] {
+    others >> [=] {
       CAF_LOGF_ERROR("received unexpected message: "
                      << to_string(current_message()));
     }};

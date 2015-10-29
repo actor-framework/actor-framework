@@ -111,7 +111,7 @@ public:
     mpx_ = new network::test_multiplexer;
     set_middleman(mpx_);
     auto mm = middleman::instance();
-    aut_ = mm->get_named_broker<basp_broker>(atom("_BASP"));
+    aut_ = mm->get_named_broker<basp_broker>(atom("BASP"));
     this_node_ = detail::singletons::get_node_id();
     CAF_MESSAGE("this node: " << to_string(this_node_));
     self_.reset(new scoped_actor);

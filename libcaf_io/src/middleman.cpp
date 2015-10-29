@@ -276,7 +276,8 @@ void middleman::initialize() {
   do_announce<connection_handle>("caf::io::connection_handle");
   do_announce<new_connection_msg>("caf::io::new_connection_msg");
   do_announce<new_data_msg>("caf::io::new_data_msg");
-  actor mgr = get_named_broker<basp_broker>(atom("_BASP"));
+  actor mgr = get_named_broker<basp_broker>(atom("BASP"));
+  detail::singletons::get_actor_registry()->put_named(atom("BASP"), mgr);
   manager_ = spawn<middleman_actor_impl, detached + hidden>(*this, mgr);
 }
 
