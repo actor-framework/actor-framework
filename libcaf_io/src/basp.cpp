@@ -115,9 +115,7 @@ bool server_handshake_valid(const header& hdr) {
   return  valid(hdr.source_node)
        && ! valid(hdr.dest_node)
        && zero(hdr.dest_actor)
-       && ! zero(hdr.operation_data)
-       && (   (! zero(hdr.source_actor) && ! zero(hdr.payload_len))
-           || (zero(hdr.source_actor) && zero(hdr.payload_len)));
+       && ! zero(hdr.operation_data);
 }
 
 bool client_handshake_valid(const header& hdr) {
