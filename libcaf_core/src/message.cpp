@@ -175,7 +175,7 @@ message message::extract(message_handler handler) const {
 }
 
 message::cli_res message::extract_opts(std::vector<cli_arg> xs,
-                                       help_factory f) const {
+                                       help_factory f, bool no_help) const {
   std::string helpstr;
   auto make_error = [&](std::string err) -> cli_res {
     return {*this, std::set<std::string>{}, std::move(helpstr), std::move(err)};
@@ -192,7 +192,7 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
     return s[0] == "help"
            || std::find_if(s.begin() + 1, s.end(), has_short_help) != s.end();
   };
-  if (std::none_of(xs.begin(), xs.end(), pred)) {
+  if (! no_help && std::none_of(xs.begin(), xs.end(), pred)) {
     xs.push_back(cli_arg{"help,h,?", "print this text"});
   }
   std::map<std::string, cli_arg*> shorts;

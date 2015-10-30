@@ -227,13 +227,16 @@ public:
   /// }
   /// ~~~
   /// @param xs List of argument descriptors.
-  /// @param f Optional factory function to generate help text
-  ///          (overrides the default generator).
+  /// @param help_generator Optional factory function to generate help text
+  ///                       (overrides the default generator).
+  /// @param suppress_help Suppress generation of default-generated help option.
   /// @returns A struct containing remainder
   ///          (i.e. unmatched elements), a set containing the names of all
   ///          used arguments, and the generated help text.
   /// @throws std::invalid_argument if no name or more than one long name is set
-  cli_res extract_opts(std::vector<cli_arg> xs, help_factory f = nullptr) const;
+  cli_res extract_opts(std::vector<cli_arg> xs,
+                       help_factory help_generator = nullptr,
+                       bool suppress_help = false) const;
 
   /// Queries whether the element at position `p` is of type `T`.
   template <class T>

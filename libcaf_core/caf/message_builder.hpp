@@ -85,9 +85,9 @@ public:
 
   /// @copydoc message::extract_opts
   inline message::cli_res extract_opts(std::vector<message::cli_arg> xs,
-                                       message::help_factory f
-                                       = nullptr) const {
-    return to_message().extract_opts(std::move(xs), std::move(f));
+                                       message::help_factory f = nullptr,
+                                       bool no_help = false) const {
+    return to_message().extract_opts(std::move(xs), std::move(f), no_help);
   }
 
   /// @copydoc message::apply
