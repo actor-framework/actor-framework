@@ -48,6 +48,20 @@ public:
     cr(std::move(value));
   }
 
+  template <class U>
+  optional(const optional<U>& other) : valid_(false) {
+    if (other.valid()) {
+      cr(other.get());
+    }
+  }
+
+  template <class U>
+  optional(optional<U>&& other) : valid_(false) {
+    if (other.valid()) {
+      cr(std::move(other.get()));
+    }
+  }
+
   optional(const optional& other) : valid_(false) {
     if (other.valid_) {
       cr(other.value_);
@@ -177,6 +191,14 @@ public:
 
   optional(T& value) : value_(&value) {
     // nop
+  }
+
+  template <class U>
+  optional(const optional<U>& value) {
+    if (value)
+      value_ = &value.get();
+    else
+      value_ = nullptr;
   }
 
   optional(const optional& other) = default;
