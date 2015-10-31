@@ -86,10 +86,10 @@ public:
 };
 
 void client(event_based_actor* self, actor parent, server_type serv) {
-  self->sync_send(serv, my_request{0, 0}).then(
+  self->request(serv, my_request{0, 0}).then(
     [=](bool val1) {
       CAF_CHECK_EQUAL(val1, true);
-      self->sync_send(serv, my_request{10, 20}).then(
+      self->request(serv, my_request{10, 20}).then(
         [=](bool val2) {
           CAF_CHECK_EQUAL(val2, false);
           self->send(parent, passed_atom::value);
@@ -113,12 +113,12 @@ void test_typed_spawn(server_type ts) {
       CAF_CHECK_EQUAL(value, true);
     }
   );
-  self->sync_send(ts, my_request{10, 20}).await(
+  self->request(ts, my_request{10, 20}).await(
     [](bool value) {
       CAF_CHECK_EQUAL(value, false);
     }
   );
-  self->sync_send(ts, my_request{0, 0}).await(
+  self->request(ts, my_request{0, 0}).await(
     [](bool value) {
       CAF_CHECK_EQUAL(value, true);
     }
@@ -205,7 +205,7 @@ string_actor::behavior_type string_relay(string_actor::pointer self,
   self->link_to(next);
   return {
     [=](const string& str) {
-      return self->sync_send(next, str).then(
+      return self->request(next, str).then(
         [](string& answer) -> string {
           return std::move(answer);
         }
@@ -266,7 +266,7 @@ int_actor::behavior_type int_fun() {
 behavior foo(event_based_actor* self) {
   return {
     [=](int i, int_actor server) {
-      return self->sync_send(server, i).then([=](int result) -> int {
+      return self->request(server, i).then([=](int result) -> int {
         self->quit(exit_reason::normal);
         return result;
       });
@@ -295,7 +295,7 @@ int_actor::behavior_type int_fun2(int_actor::pointer self) {
 behavior foo2(event_based_actor* self) {
   return {
     [=](int i, int_actor server) {
-      return self->sync_send(server, i).then([=](int result) -> int {
+      return self->request(server, i).then([=](int result) -> int {
         self->quit(exit_reason::normal);
         return result;
       });
@@ -390,7 +390,7 @@ CAF_TEST(reverter_relay_chain) {
                                           true);
   set<string> iface{"caf::replies_to<@str>::with<@str>"};
   CAF_CHECK(aut->message_types() == iface);
-  self->sync_send(aut, "Hello World!").await(
+  self->request(aut, "Hello World!").await(
     [](const string& answer) {
       CAF_CHECK_EQUAL(answer, "!dlroW olleH");
     }
@@ -407,7 +407,7 @@ CAF_TEST(string_delegator_chain) {
                                           true);
   set<string> iface{"caf::replies_to<@str>::with<@str>"};
   CAF_CHECK(aut->message_types() == iface);
-  self->sync_send(aut, "Hello World!").await(
+  self->request(aut, "Hello World!").await(
     [](const string& answer) {
       CAF_CHECK_EQUAL(answer, "!dlroW olleH");
     }
@@ -419,7 +419,7 @@ CAF_TEST(maybe_string_delegator_chain) {
   scoped_actor self;
   auto aut = spawn(maybe_string_delegator,
                    spawn(maybe_string_reverter));
-  self->sync_send(aut, "").await(
+  self->request(aut, "").await(
     [](ok_atom, const string&) {
       throw std::logic_error("unexpected result!");
     },
@@ -427,7 +427,7 @@ CAF_TEST(maybe_string_delegator_chain) {
       // nop
     }
   );
-  self->sync_send(aut, "abcd").await(
+  self->request(aut, "abcd").await(
     [](ok_atom, const string& str) {
       CAF_CHECK_EQUAL(str, "dcba");
     },

@@ -78,12 +78,12 @@ CAF_TEST(migrate_locally) {
     scoped_actor self;
     self->send(a, put_atom::value, 42);
     // migrate from a to b
-    self->sync_send(a, sys_atom::value, migrate_atom::value, mm1).await(
+    self->request(a, sys_atom::value, migrate_atom::value, mm1).await(
       [&](ok_atom, const actor_addr& dest) {
         CAF_CHECK(dest == b);
       }
     );
-    self->sync_send(a, get_atom::value).await(
+    self->request(a, get_atom::value).await(
       [&](int result) {
         CAF_CHECK(result == 42);
         CAF_CHECK(self->current_sender() == b.address());
@@ -92,12 +92,12 @@ CAF_TEST(migrate_locally) {
     auto mm2 = spawn(pseudo_mm, a);
     self->send(b, put_atom::value, 23);
     // migrate back from b to a
-    self->sync_send(b, sys_atom::value, migrate_atom::value, mm2).await(
+    self->request(b, sys_atom::value, migrate_atom::value, mm2).await(
       [&](ok_atom, const actor_addr& dest) {
         CAF_CHECK(dest == a);
       }
     );
-    self->sync_send(b, get_atom::value).await(
+    self->request(b, get_atom::value).await(
       [&](int result) {
         CAF_CHECK(result == 23);
         CAF_CHECK(self->current_sender() == a.address());

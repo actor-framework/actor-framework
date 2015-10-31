@@ -84,7 +84,7 @@ void run_client(const char* host, uint16_t port) {
   CAF_MESSAGE("connect to typed_remote_actor");
   auto serv = io::typed_remote_actor<server_type>(host, port);
   scoped_actor self;
-  self->sync_send(serv, ping{42})
+  self->request(serv, ping{42})
     .await([](const pong& p) { CAF_CHECK_EQUAL(p.value, 42); });
   anon_send_exit(serv, exit_reason::user_shutdown);
   self->monitor(serv);

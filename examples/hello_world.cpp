@@ -26,7 +26,7 @@ behavior mirror(event_based_actor* self) {
 
 void hello_world(event_based_actor* self, const actor& buddy) {
   // send "Hello World!" to our buddy ...
-  self->sync_send(buddy, "Hello World!").then(
+  self->request(buddy, "Hello World!").then(
     // ... wait for a response ...
     [=](const string& what) {
       // ... and print it

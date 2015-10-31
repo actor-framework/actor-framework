@@ -19,7 +19,7 @@
 
 #include "caf/config.hpp"
 
-#define CAF_SUITE sync_send
+#define CAF_SUITE request
 #include "caf/test/unit_test.hpp"
 
 #include "caf/all.hpp"
@@ -42,7 +42,7 @@ using gogogo_atom = atom_constant<atom("gogogo")>;
 using no_way_atom = atom_constant<atom("NoWay")>;
 using hi_there_atom = atom_constant<atom("HiThere")>;
 
-struct sync_mirror : event_based_actor {
+struct request_mirror : event_based_actor {
   behavior make_behavior() override {
     return {
       others >> [=] {
@@ -90,7 +90,7 @@ private:
  *                                                                            *
  *                  A                  B                  C                   *
  *                  |                  |                  |                   *
- *                  | --(sync_send)--> |                  |                   *
+ *                  | ---(request)---> |                  |                   *
  *                  |                  | --(forward)----> |                   *
  *                  |                  X                  |---\               *
  *                  |                                     |   |               *
@@ -109,7 +109,7 @@ public:
     return {
       [=](go_atom, const actor& next) {
         CAF_MESSAGE("received " + to_string(current_message()));
-        sync_send(next, gogo_atom::value).then(
+        request(next, gogo_atom::value).then(
           [=](atom_value) {
             CAF_MESSAGE("send `ok_atom` to buddy");
             send(buddy(), ok_atom::value);
@@ -160,8 +160,8 @@ public:
  *                                                                            *
  *                  A                  D                  C                   *
  *                  |                  |                  |                   *
- *                  | --(sync_send)--> |                  |                   *
- *                  |                  | --(sync_send)--> |                   *
+ *                  | ---(request)---> |                  |                   *
+ *                  |                  | ---(request)---> |                   *
  *                  |                  |                  |---\               *
  *                  |                  |                  |   |               *
  *                  |                  |                  |<--/               *
@@ -179,7 +179,7 @@ public:
   behavior make_behavior() override {
     return {
       others >> [=] {
-        return sync_send(buddy(), std::move(current_message())).then(
+        return request(buddy(), std::move(current_message())).then(
           others >> [=]() -> message {
             quit();
             return std::move(current_message());
@@ -259,7 +259,7 @@ CAF_TEST(test_void_res) {
     };
   });
   scoped_actor self;
-  self->sync_send(buddy, 1, 2).await([] {
+  self->request(buddy, 1, 2).await([] {
     CAF_MESSAGE("received void res");
   });
   self->send_exit(buddy, exit_reason::kill);
@@ -275,7 +275,7 @@ CAF_TEST(pending_quit) {
     };
   });
   spawn([mirror](event_based_actor* self) {
-    self->sync_send(mirror, 42).then(
+    self->request(mirror, 42).then(
       others >> [] {
         CAF_TEST_ERROR("received result, should've been terminated already");
       }
@@ -285,9 +285,9 @@ CAF_TEST(pending_quit) {
   await_all_actors_done();
 }
 
-CAF_TEST(sync_send) {
+CAF_TEST(request) {
   scoped_actor self;
-  self->on_sync_failure([&] {
+  self->on_request_failure([&] {
     CAF_TEST_ERROR("received: " << to_string(self->current_message()));
   });
   self->spawn<monitored + blocking_api>([](blocking_actor* s) {
@@ -299,10 +299,10 @@ CAF_TEST(sync_send) {
         CAF_CHECK_EQUAL(i, 0);
       }
     );
-    s->on_sync_failure([=] {
+    s->on_request_failure([=] {
       CAF_TEST_ERROR("received: " << to_string(s->current_message()));
     });
-    s->sync_send(foi, i_atom::value).await(
+    s->request(foi, i_atom::value).await(
       [&](int i) {
         CAF_CHECK_EQUAL(i, 0);
         ++invocations;
@@ -312,7 +312,7 @@ CAF_TEST(sync_send) {
                        << to_string(s->current_message()));
       }
     );
-    s->sync_send(foi, f_atom::value).await(
+    s->request(foi, f_atom::value).await(
       [&](int) {
         CAF_TEST_ERROR("Unexpected message: "
                        << to_string(s->current_message()));
@@ -323,17 +323,17 @@ CAF_TEST(sync_send) {
       }
     );
     CAF_CHECK_EQUAL(invocations, 2);
-    CAF_MESSAGE("trigger sync failure");
-    // provoke invocation of s->handle_sync_failure()
-    bool sync_failure_called = false;
+    CAF_MESSAGE("trigger request failure");
+    // provoke invocation of s->handle_request_failure()
+    bool request_failure_called = false;
     bool int_handler_called = false;
-    s->on_sync_failure([&] { sync_failure_called = true; });
-    s->sync_send(foi, f_atom::value).await(
+    s->on_request_failure([&] { request_failure_called = true; });
+    s->request(foi, f_atom::value).await(
       [&](int) {
         int_handler_called = true;
       }
     );
-    CAF_CHECK_EQUAL(sync_failure_called, true);
+    CAF_CHECK_EQUAL(request_failure_called, true);
     CAF_CHECK_EQUAL(int_handler_called, false);
     s->quit(exit_reason::user_shutdown);
   });
@@ -346,9 +346,9 @@ CAF_TEST(sync_send) {
                      << to_string(self->current_message()));
     }
   );
-  auto mirror = spawn<sync_mirror>();
+  auto mirror = spawn<request_mirror>();
   bool continuation_called = false;
-  self->sync_send(mirror, 42).await([&](int value) {
+  self->request(mirror, 42).await([&](int value) {
     continuation_called = true;
     CAF_CHECK_EQUAL(value, 42);
   });
@@ -363,7 +363,7 @@ CAF_TEST(sync_send) {
         CAF_MESSAGE("received `ok_atom`");
       },
       [](error_atom) {
-        CAF_TEST_ERROR("A didn't receive sync response");
+        CAF_TEST_ERROR("A didn't receive request response");
       },
       [&](const down_msg& dm) -> optional<skip_message_t> {
         if (dm.reason == exit_reason::normal) {
@@ -388,7 +388,7 @@ CAF_TEST(sync_send) {
   CAF_MESSAGE("block on `await_all_other_actors_done`");
   self->await_all_other_actors_done();
   CAF_MESSAGE("`await_all_other_actors_done` finished");
-  self->sync_send(self, no_way_atom::value).await(
+  self->request(self, no_way_atom::value).await(
     others >> [&] {
       CAF_TEST_ERROR("Unexpected message: "
                      << to_string(self->current_message()));
@@ -406,7 +406,7 @@ CAF_TEST(sync_send) {
     },
     [](no_way_atom) {
       CAF_MESSAGE("trigger \"actor did not reply to a "
-                "synchronous request message\"");
+                  "synchronous request message\"");
     },
     others >> [&] {
       CAF_TEST_ERROR("Unexpected message: "
@@ -429,11 +429,11 @@ CAF_TEST(sync_send) {
   auto c = spawn<C>(); // replies only to 'gogo' messages
   // first test: sync error must occur, continuation must not be called
   bool timeout_occured = false;
-  self->on_sync_failure([&] {
+  self->on_request_failure([&] {
     CAF_TEST_ERROR("Unexpected message: "
                    << to_string(self->current_message()));
   });
-  self->sync_send(c, milliseconds(500), hi_there_atom::value).await(
+  self->request(c, milliseconds(500), hi_there_atom::value).await(
     [&](hi_there_atom) {
       CAF_TEST_ERROR("C did reply to 'HiThere'");
     },
@@ -443,11 +443,11 @@ CAF_TEST(sync_send) {
     }
   );
   CAF_CHECK_EQUAL(timeout_occured, true);
-  self->on_sync_failure([&] {
+  self->on_request_failure([&] {
     CAF_TEST_ERROR("Unexpected message: "
                    << to_string(self->current_message()));
   });
-  self->sync_send(c, gogo_atom::value).await(
+  self->request(c, gogo_atom::value).await(
     [](gogogo_atom) {
       CAF_MESSAGE("received `gogogo_atom`");
     }
@@ -468,7 +468,7 @@ CAF_TEST(sync_send) {
     });
     // first 'idle', then 'request'
     anon_send(serv, idle_atom::value, work);
-    s->sync_send(serv, request_atom::value).await(
+    s->request(serv, request_atom::value).await(
       [=](response_atom) {
         CAF_MESSAGE("received `response_atom`");
         CAF_CHECK(s->current_sender() == work);
@@ -479,7 +479,7 @@ CAF_TEST(sync_send) {
       }
     );
     // first 'request', then 'idle'
-    auto handle = s->sync_send(serv, request_atom::value);
+    auto handle = s->request(serv, request_atom::value);
     send_as(work, serv, idle_atom::value, work);
     handle.await(
       [=](response_atom) {
@@ -503,24 +503,24 @@ CAF_TEST(sync_send) {
   );
 }
 
-behavior snyc_send_no_then_A(event_based_actor * self) {
+behavior request_no_then_A(event_based_actor * self) {
   return [=](int number) {
     CAF_MESSAGE("got " << number);
     self->quit();
   };
 }
 
-behavior snyc_send_no_then_B(event_based_actor * self) {
+behavior request_no_then_B(event_based_actor * self) {
   return {
     [=](int number) {
-      self->sync_send(self->spawn(snyc_send_no_then_A), number);
+      self->request(self->spawn(request_no_then_A), number);
       self->quit();
     }
   };
 }
 
-CAF_TEST(sync_send_no_then) {
-  anon_send(spawn(snyc_send_no_then_B), 8);
+CAF_TEST(request_no_then) {
+  anon_send(spawn(request_no_then_B), 8);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

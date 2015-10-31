@@ -64,11 +64,11 @@ public:
   }
 
 private:
-  void sync_send_task(atom_value op, int lhs, int rhs) {
-    on_sync_failure([=] {
+  void request_task(atom_value op, int lhs, int rhs) {
+    on_request_failure([=] {
       aout(this) << "*** sync_failure!" << endl;
     });
-    sync_send(server_, op, lhs, rhs).then(
+    request(server_, op, lhs, rhs).then(
       [=](result_atom, int result) {
         aout(this) << lhs << (op == plus_atom::value ? " + " : " - ")
                    << rhs << " = " << result << endl;
@@ -76,9 +76,9 @@ private:
       [=](const sync_exited_msg& msg) {
         aout(this) << "*** server down [" << msg.reason << "], "
                    << "try to reconnect ..." << endl;
-        // try sync_sending this again after successful reconnect
+        // try requesting this again after successful reconnect
         become(keep_behavior,
-               reconnecting([=] { sync_send_task(op, lhs, rhs); }));
+               reconnecting([=] { request_task(op, lhs, rhs); }));
       }
     );
   }
@@ -89,7 +89,7 @@ private:
         if (op != plus_atom::value && op != minus_atom::value) {
           return;
         }
-        sync_send_task(op, lhs, rhs);
+        request_task(op, lhs, rhs);
       },
       [=](rebind_atom, string& nhost, uint16_t nport) {
         aout(this) << "*** rebind to " << nhost << ":" << nport << endl;

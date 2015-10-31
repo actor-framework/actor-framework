@@ -87,12 +87,13 @@ public:
 template <class BehaviorType, class Base>
 class abstract_event_based_actor<BehaviorType, true, Base>
   : public extend<abstract_event_based_actor<BehaviorType, false, Base>>
-           ::template with<mixin::sync_sender<nonblocking_response_handle_tag>
-                           ::template impl> {
+           ::template with<mixin::request_sender<
+             nonblocking_response_handle_tag
+           >::template impl> {
 public:
   using super
     = typename extend<abstract_event_based_actor<BehaviorType, false, Base>>
-      ::template with<mixin::sync_sender<nonblocking_response_handle_tag>
+      ::template with<mixin::request_sender<nonblocking_response_handle_tag>
                       ::template impl>;
 
   template <class... Ts>

@@ -69,8 +69,8 @@ struct server_state {
 };
 
 behavior server(stateful_actor<server_state>* self) {
-  self->on_sync_failure([=] {
-    CAF_TEST_ERROR("unexpected sync response: "
+  self->on_request_failure([=] {
+    CAF_TEST_ERROR("unexpected request response: "
                    << to_string(self->current_message()));
   });
   return {
@@ -80,7 +80,7 @@ behavior server(stateful_actor<server_state>* self) {
       CAF_REQUIRE(s.is_remote());
       self->state.client = actor_cast<actor>(s);
       auto mm = io::get_middleman_actor();
-      self->sync_send(mm, spawn_atom::value,
+      self->request(mm, spawn_atom::value,
                       s.node(), "mirror", make_message()).then(
         [=](ok_atom, const actor_addr& addr, const std::set<std::string>& ifs) {
           CAF_REQUIRE(addr != invalid_actor_addr);

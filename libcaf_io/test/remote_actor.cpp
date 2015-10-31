@@ -133,7 +133,7 @@ CAF_MESSAGE("self: " << to_string(self->address()));
     CAF_MESSAGE("spawned local subscriber: "
                 << self->spawn_in_group(grp, reflector)->id());
   CAF_MESSAGE("send {'Spawn5'} and await {'ok', actor_vector}");
-  self->sync_send(client, spawn5_atom::value, grp).then(
+  self->request(client, spawn5_atom::value, grp).then(
     [=](ok_atom, const actor_vector& vec) {
       CAF_MESSAGE("received vector with " << vec.size() << " elements");
       auto is_remote = [](const actor& x) -> bool {
@@ -208,7 +208,7 @@ void spawn5_server(event_based_actor* self, actor client, bool inverted) {
     spawn5_server_impl(self, client, group::get("local", "foobar"));
   } else {
     CAF_MESSAGE("request group");
-    self->sync_send(client, get_group_atom::value).then(
+    self->request(client, get_group_atom::value).then(
       [=](const group& remote_group) {
         CAF_REQUIRE(self->current_sender() != invalid_actor_addr);
         CAF_CHECK(self->current_sender()->is_remote());
@@ -282,14 +282,14 @@ private:
       [=](ping_ptr_atom, const actor& ping) {
         CAF_MESSAGE("received ping pointer, spawn pong");
         auto pptr = spawn<monitored + detached + blocking_api>(pong, ping);
-        await_down(this, pptr, [=] { send_sync_msg(); });
+        await_down(this, pptr, [=] { send_request_msg(); });
       }
     };
   }
 
-  void send_sync_msg() {
+  void send_request_msg() {
     CAF_MESSAGE("sync send {'SyncMsg', 4.2fSyncMsg}");
-    sync_send(server_, sync_msg_atom::value, 4.2f).then(
+    request(server_, sync_msg_atom::value, 4.2f).then(
       [=](ok_atom) {
         send_foobars();
       }
@@ -303,7 +303,7 @@ private:
     if (i == 100)
       test_group_comm();
     else {
-      sync_send(server_, foo_atom::value, bar_atom::value, i).then(
+      request(server_, foo_atom::value, bar_atom::value, i).then(
         [=](foo_atom, bar_atom, int res) {
           CAF_CHECK_EQUAL(res, i);
           send_foobars(i + 1);
@@ -314,7 +314,7 @@ private:
 
   void test_group_comm() {
     CAF_MESSAGE("test group communication via network");
-    sync_send(server_, gclient_atom::value).then(
+    request(server_, gclient_atom::value).then(
       [=](gclient_atom, actor gclient) {
         CAF_MESSAGE("received " << to_string(current_message()));
         auto s5a = spawn<monitored>(spawn5_server, gclient, false);
@@ -379,7 +379,7 @@ private:
         CAF_MESSAGE("wait until spawned ping actor is done");
         await_down(this, pptr, [=] {
           CAF_CHECK_EQUAL(pongs(), num_pings);
-          become(await_sync_msg());
+          become(await_request_msg());
         });
         return make_message(ping_ptr_atom::value, pptr);
       },
@@ -389,7 +389,7 @@ private:
     };
   }
 
-  behavior await_sync_msg() {
+  behavior await_request_msg() {
     CAF_MESSAGE("await {'SyncMsg'}");
     return {
       [=](sync_msg_atom, float f) -> atom_value {
@@ -443,7 +443,7 @@ private:
 
   void test_group_comm_inverted(actor cptr) {
     CAF_MESSAGE("test group communication via network (inverted setup)");
-    sync_send(cptr, gclient_atom::value).then(
+    request(cptr, gclient_atom::value).then(
       [=](gclient_atom, actor gclient) {
         await_down(this, spawn<monitored>(spawn5_server, gclient, true), [=] {
           CAF_MESSAGE("`await_down` finished");

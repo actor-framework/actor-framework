@@ -187,7 +187,7 @@ acceptor::behavior_type acceptor_fun(acceptor::broker_pointer self,
 void run_server(bool spawn_client, const char* bin_path, bool use_asio) {
   scoped_actor self;
   auto serv = spawn_io(acceptor_fun, spawn(pong));
-  self->sync_send(serv, publish_atom::value).await(
+  self->request(serv, publish_atom::value).await(
     [&](uint16_t port) {
       CAF_MESSAGE("server is running on port " << port);
       if (spawn_client) {

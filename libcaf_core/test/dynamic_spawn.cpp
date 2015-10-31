@@ -596,7 +596,7 @@ CAF_TEST(sync_sends) {
   auto sync_testee = spawn<blocking_api>([](blocking_actor* s) {
     s->receive (
       on("hi", arg_match) >> [&](actor from) {
-        s->sync_send(from, "whassup?", s).await(
+        s->request(from, "whassup?", s).await(
           on_arg_match >> [&](const string& str) -> string {
             CAF_CHECK(s->current_sender() != nullptr);
             CAF_CHECK_EQUAL(str, "nothing");
@@ -635,7 +635,7 @@ CAF_TEST(sync_sends) {
     }
   );
   self->await_all_other_actors_done();
-  self->sync_send(sync_testee, "!?").await(
+  self->request(sync_testee, "!?").await(
     on<sync_exited_msg>() >> [] {
       CAF_MESSAGE("received `sync_exited_msg`");
     },
@@ -691,7 +691,7 @@ typed_testee::behavior_type testee() {
 CAF_TEST(typed_await) {
   scoped_actor self;
   auto x = spawn(testee);
-  self->sync_send(x, abc_atom::value).await(
+  self->request(x, abc_atom::value).await(
     [](const std::string& str) {
       CAF_CHECK_EQUAL(str, "abc");
     }
@@ -871,7 +871,7 @@ CAF_TEST(move_only_argument) {
   };
   auto testee = spawn(f, std::move(uptr));
   scoped_actor self;
-  self->sync_send(testee, 1.f).await(
+  self->request(testee, 1.f).await(
     [](int i) {
       CAF_CHECK(i == 42);
     }
