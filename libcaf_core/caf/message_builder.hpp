@@ -45,6 +45,14 @@ public:
     append(first, last);
   }
 
+  /// Creates a new instance and immediately
+  /// calls `append(xs.begin(), xs.end())`.
+  template <class T>
+  message_builder(const std::vector<T>& xs) {
+    init();
+    append(xs.begin(), xs.end());
+  }
+
   /// Adds `what` to the elements of the buffer.
   message_builder& append(uniform_value what);
 
