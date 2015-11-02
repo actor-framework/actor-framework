@@ -159,6 +159,8 @@ public:
   /// Stores the name of a command line option ("<long name>[,<short name>]")
   /// along with a description and a callback.
   struct cli_arg {
+    /// Returns `true` on a match, `false` otherwise.
+    using consumer = std::function<bool (const std::string&)>;
 
     /// Full name of this CLI argument using format "<long name>[,<short name>]"
     std::string name;
@@ -169,8 +171,8 @@ public:
     /// Auto-generated helptext for this item.
     std::string helptext;
 
-    /// Returns `true` on a match, `false` otherwise.
-    std::function<bool (const std::string&)> fun;
+    /// Evaluates option arguments.
+    consumer fun;
 
     /// Creates a CLI argument without data.
     cli_arg(std::string name, std::string text);
@@ -181,10 +183,17 @@ public:
     /// Creates a CLI argument appending matched arguments to `dest`.
     cli_arg(std::string name, std::string text, std::vector<std::string>& dest);
 
+    /// Creates a CLI argument using the function object `f`.
+    cli_arg(std::string name, std::string text, consumer f);
+
     /// Creates a CLI argument for converting from strings,
     /// storing its matched argument in `dest`.
     template <class T>
-    cli_arg(std::string name, std::string text, T& dest);
+    cli_arg(typename std::enable_if<
+              detail::type_nr<T>::value != 0,
+              std::string
+            >::type name,
+            std::string text, T& dest);
 
     /// Creates a CLI argument for converting from strings,
     /// appending matched arguments to `dest`.
@@ -405,7 +414,11 @@ inline message make_message() {
  ******************************************************************************/
 
 template <class T>
-message::cli_arg::cli_arg(std::string nstr, std::string tstr, T& arg)
+message::cli_arg::cli_arg(typename std::enable_if<
+                            detail::type_nr<T>::value != 0,
+                            std::string
+                          >::type
+                          nstr, std::string tstr, T& arg)
     : name(std::move(nstr)),
       text(std::move(tstr)),
       fun([&arg](const std::string& str) -> bool {

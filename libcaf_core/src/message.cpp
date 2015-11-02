@@ -340,6 +340,13 @@ message::cli_arg::cli_arg(std::string nstr, std::string tstr)
   // nop
 }
 
+message::cli_arg::cli_arg(std::string name, std::string text, consumer f)
+    : name(std::move(name)),
+      text(std::move(text)),
+      fun(std::move(f)) {
+  // nop
+}
+
 message::cli_arg::cli_arg(std::string nstr, std::string tstr, std::string& arg)
     : name(std::move(nstr)),
       text(std::move(tstr)),
