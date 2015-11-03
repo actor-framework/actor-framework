@@ -24,6 +24,7 @@
 #include <cerrno>
 #include <cstdlib>
 #include <cstring>
+#include <algorithm>
 
 #ifdef CAF_WINDOWS
 # ifndef _WIN32_WINNT
