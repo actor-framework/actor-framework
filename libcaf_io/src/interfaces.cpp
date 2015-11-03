@@ -57,63 +57,46 @@ using interfaces_map = std::map<std::string,
                                 std::map<protocol,
                                          std::vector<std::string>>>;
 
-in6_addr* fetch_in_addr(sockaddr_in6* addr) {
-  return &(addr->sin6_addr);
+template <class T>
+void* vptr(T* ptr) {
+  return static_cast<void*>(ptr);
 }
 
-in_addr* fetch_in_addr(sockaddr_in* addr) {
-  return &(addr->sin_addr);
+void* fetch_in_addr(int family, sockaddr* addr) {
+  if (family == AF_INET)
+    return vptr(&reinterpret_cast<sockaddr_in*>(addr)->sin_addr);
+  return vptr(&reinterpret_cast<sockaddr_in6*>(addr)->sin6_addr);
 }
 
-template <int Family, class SockAddr>
-void add_addr_as_string(std::vector<std::string>& res, SockAddr* addr) {
-  auto in_addr = fetch_in_addr(addr);
-  char address_buffer[INET6_ADDRSTRLEN + 1];
-  inet_ntop(Family, in_addr, address_buffer, INET6_ADDRSTRLEN);
-  res.push_back(address_buffer);
+int fetch_addr_str(bool get_ipv4, bool get_ipv6,
+                   char (&buf)[INET6_ADDRSTRLEN],
+                   sockaddr* addr) {
+  if (! addr)
+    return AF_UNSPEC;
+  auto family = addr->sa_family;
+  auto in_addr = fetch_in_addr(family, addr);
+  return ((family == AF_INET && get_ipv4) || (family == AF_INET6 && get_ipv6))
+         && inet_ntop(family, in_addr, buf, INET6_ADDRSTRLEN) == buf
+         ? family
+         : AF_UNSPEC;
 }
 
 #ifdef CAF_WINDOWS
 
-using if_device_ptr = IP_ADAPTER_ADDRESSES*;
-
-const char* if_device_name(if_device_ptr ptr) {
-  return ptr->AdapterName;
-}
-
-template <int Family>
-void add_addr(if_device_ptr ptr, std::vector<std::string>& res) {
-  static_assert(Family == AF_INET || Family == AF_INET6,
-                "invalid address family");
-  using addr_type =
-    typename std::conditional<
-      Family == AF_INET,
-      sockaddr_in*,
-      sockaddr_in6*
-    >::type;
-  for (auto i = ptr->FirstUnicastAddress; i != nullptr; i = i->Next) {
-    if (i->Address.lpSockaddr->sa_family == Family) {
-      auto addr = reinterpret_cast<addr_type>(i->Address.lpSockaddr);
-      add_addr_as_string<Family>(res, addr);
-    }
-  }
-}
-
+// F consumes `{interface_name, protocol, is_localhost, address}` entries.
 template <class F>
-void for_each_device(bool include_localhost, F fun) {
+void for_each_address(bool get_ipv4, bool get_ipv6, F fun) {
   ULONG tmp_size = 16 * 1024; // try 16kb buffer first
   IP_ADAPTER_ADDRESSES* tmp = nullptr;
   constexpr size_t max_tries = 3;
   size_t try_nr = 0;
   int retval = 0;
   do {
-    if (tmp != nullptr) {
+    if (tmp != nullptr)
       free(tmp);
-    }
     tmp = reinterpret_cast<IP_ADAPTER_ADDRESSES*>(malloc(tmp_size));
-    if (tmp == nullptr) {
+    if (tmp == nullptr)
       throw std::bad_alloc();
-    }
     retval = GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_PREFIX,
                                   nullptr, tmp, &tmp_size);
   } while (retval == ERROR_BUFFER_OVERFLOW && ++try_nr < max_tries);
@@ -138,67 +121,69 @@ void for_each_device(bool include_localhost, F fun) {
     }
     return;
   }
+  char buffer[INET6_ADDRSTRLEN];
   for (auto i = ifs.get(); i != nullptr; i = i->Next) {
-    fun(i);
+    for (auto j = i->FirstUnicastAddress; j != nullptr; j = j->Next) {
+      auto addr = j->Address.lpSockaddr;
+      auto family = fetch_addr_str(get_ipv4, get_ipv6, buffer, addr);
+      if (family != AF_UNSPEC)
+        fun(i->AdapterName, family == AF_INET ? protocol::ipv4 : protocol::ipv6,
+            false, buffer);
+    }
   }
 }
 
 #else // ifdef CAF_WINDOWS
 
-// interface address pointer
-using if_device_ptr = ifaddrs*;
-
-const char* if_device_name(if_device_ptr ptr) {
-  return ptr->ifa_name;
-}
-
-template <int Family>
-void add_addr(if_device_ptr ptr, std::vector<std::string>& res) {
-  static_assert(Family == AF_INET || Family == AF_INET6,
-                "invalid address family");
-  using addr_type =
-    typename std::conditional<
-      Family == AF_INET,
-      sockaddr_in*,
-      sockaddr_in6*
-    >::type;
-  if (ptr->ifa_addr->sa_family != Family) {
-    return;
-  }
-  add_addr_as_string<Family>(res, reinterpret_cast<addr_type>(ptr->ifa_addr));
-}
-
+// F consumes `{interface_name, protocol, is_localhost, address}` entries.
 template <class F>
-void for_each_device(bool include_localhost, F fun) {
-  if_device_ptr tmp = nullptr;
+void for_each_address(bool get_ipv4, bool get_ipv6, F fun) {
+  ifaddrs* tmp = nullptr;
   if (getifaddrs(&tmp) != 0) {
     perror("getifaddrs");
     return;
   }
+  char buffer[INET6_ADDRSTRLEN];
   std::unique_ptr<ifaddrs, decltype(freeifaddrs)*> ifs{tmp, freeifaddrs};
   for (auto i = ifs.get(); i != nullptr; i = i->ifa_next) {
-    auto family = i->ifa_addr->sa_family;
-    if (include_localhost) {
-      fun(i);
-    } else if (family == AF_INET || family == AF_INET6) {
-      // filter loopback devices
-      if ((i->ifa_flags & IFF_LOOPBACK) == 0) {
-        fun(i);
-      }
-    }
+    auto family = fetch_addr_str(get_ipv4, get_ipv6, buffer, i->ifa_addr);
+    if (family != AF_UNSPEC)
+      fun(i->ifa_name, family == AF_INET ? protocol::ipv4 : protocol::ipv6,
+          (i->ifa_flags & IFF_LOOPBACK) != 0,
+          buffer);
   }
 }
 
 #endif // ifdef CAF_WINDOWS
 
+namespace {
+
+template <class F>
+void traverse_impl(std::initializer_list<protocol> ps, F f) {
+  if (std::find(ps.begin(), ps.end(), protocol::ethernet) != ps.end())
+    for (auto& pair : detail::get_mac_addresses())
+      f(pair.first.c_str(), protocol::ethernet, false, pair.second.c_str());
+  auto get_ipv4 = std::find(ps.begin(), ps.end(), protocol::ipv4) != ps.end();
+  auto get_ipv6 = std::find(ps.begin(), ps.end(), protocol::ipv6) != ps.end();
+  for_each_address(get_ipv4, get_ipv6, f);
+}
+
+} // namespace <anonymous>
+
+void interfaces::traverse(std::initializer_list<protocol> ps, consumer f) {
+  traverse_impl(ps, f);
+}
+
+void interfaces::traverse(consumer f) {
+  traverse_impl({protocol::ethernet, protocol::ipv4, protocol::ipv6}, f);
+}
+
 interfaces_map interfaces::list_all(bool include_localhost) {
   interfaces_map result;
-  for (auto& pair : detail::get_mac_addresses()) {
-    result[pair.first][protocol::ethernet].push_back(std::move(pair.second));
-  }
-  for_each_device(include_localhost, [&](if_device_ptr i) {
-    add_addr<AF_INET>(i, result[if_device_name(i)][protocol::ipv4]);
-    add_addr<AF_INET6>(i, result[if_device_name(i)][protocol::ipv6]);
+  traverse_impl({protocol::ethernet, protocol::ipv4, protocol::ipv6},
+                [&](const char* name, protocol p, bool lo, const char* addr) {
+    if (include_localhost || ! lo)
+      result[name][p].push_back(addr);
   });
   return result;
 }
@@ -206,37 +191,28 @@ interfaces_map interfaces::list_all(bool include_localhost) {
 std::map<protocol, std::vector<std::string>>
 interfaces::list_addresses(bool include_localhost) {
   std::map<protocol, std::vector<std::string>> result;
-  for (auto& pair : detail::get_mac_addresses()) {
-    result[protocol::ethernet].push_back(std::move(pair.second));
-  }
-  for_each_device(include_localhost, [&](if_device_ptr i) {
-    add_addr<AF_INET>(i, result[protocol::ipv4]);
-    add_addr<AF_INET6>(i, result[protocol::ipv6]);
+  traverse_impl({protocol::ethernet, protocol::ipv4, protocol::ipv6},
+                [&](const char*, protocol p, bool lo, const char* addr) {
+    if (include_localhost || ! lo)
+      result[p].push_back(addr);
+  });
+  return result;
+}
+
+std::vector<std::string>
+interfaces::list_addresses(std::initializer_list<protocol> procs,
+                           bool include_localhost) {
+  std::vector<std::string> result;
+  traverse_impl(procs, [&](const char*, protocol, bool lo, const char* addr) {
+    if (include_localhost || ! lo)
+      result.push_back(addr);
   });
   return result;
 }
 
 std::vector<std::string> interfaces::list_addresses(protocol proc,
                                                     bool include_localhost) {
-  std::vector<std::string> result;
-  switch (proc) {
-    case protocol::ethernet:
-      for (auto& pair : detail::get_mac_addresses()) {
-        result.push_back(std::move(pair.second));
-      }
-      break;
-    case protocol::ipv4:
-      for_each_device(include_localhost, [&](if_device_ptr i) {
-        add_addr<AF_INET>(i, result);
-      });
-      break;
-    case protocol::ipv6:
-      for_each_device(include_localhost, [&](if_device_ptr i) {
-        add_addr<AF_INET6>(i, result);
-      });
-      break;
-  }
-  return result;
+  return list_addresses({proc}, include_localhost);
 }
 
 optional<std::pair<std::string, protocol>>
@@ -245,29 +221,17 @@ interfaces::native_address(const std::string& host,
   addrinfo hint;
   memset(&hint, 0, sizeof(hint));
   hint.ai_socktype = SOCK_STREAM;
-  if (preferred) {
+  if (preferred)
     hint.ai_family = *preferred == protocol::ipv4 ? AF_INET : AF_INET6;
-  }
   addrinfo* tmp = nullptr;
-  if (getaddrinfo(host.c_str(), nullptr, &hint, &tmp)) {
+  if (getaddrinfo(host.c_str(), nullptr, &hint, &tmp))
     return none;
-  }
   std::unique_ptr<addrinfo, decltype(freeaddrinfo)*> addrs{tmp, freeaddrinfo};
+  char buffer[INET6_ADDRSTRLEN];
   for (auto i = addrs.get(); i != nullptr; i = i->ai_next) {
-    auto family = i->ai_family;
-    if (family == AF_INET || family == AF_INET6) {
-      char buffer[INET6_ADDRSTRLEN];
-      auto res = family == AF_INET
-           ? inet_ntop(family,
-                       &reinterpret_cast<sockaddr_in*>(i->ai_addr)->sin_addr,
-                       buffer, sizeof(buffer))
-           : inet_ntop(family,
-                       &reinterpret_cast<sockaddr_in6*>(i->ai_addr)->sin6_addr,
-                       buffer, sizeof(buffer));
-      if (res != nullptr) {
-        return {{res, family == AF_INET ? protocol::ipv4 : protocol::ipv6}};
-      }
-    }
+    auto family = fetch_addr_str(true, true, buffer, i->ai_addr);
+    if (family != AF_UNSPEC)
+      return {{buffer, family == AF_INET ? protocol::ipv4 : protocol::ipv6}};
   }
   return none;
 }
