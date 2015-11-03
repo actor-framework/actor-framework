@@ -24,6 +24,7 @@
 #include <vector>
 #include <string>
 #include <utility>
+#include <functional>
 #include <initializer_list>
 
 #include "caf/optional.hpp"
