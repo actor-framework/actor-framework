@@ -148,8 +148,8 @@ behavior client_job(stateful_actor<base_state>* self, actor parent) {
 }
 
 struct client_state : base_state {
-  client_state(local_actor* self)
-      : base_state(self),
+  client_state(local_actor* selfptr)
+      : base_state(selfptr),
         count(0),
         re(rd()),
         dist(min_req_interval, max_req_interval) {
@@ -184,7 +184,7 @@ behavior client(stateful_actor<client_state>* self, actor parent) {
 }
 
 struct curl_state : base_state {
-  curl_state(local_actor* self) : base_state(self) {
+  curl_state(local_actor* selfptr) : base_state(selfptr) {
     // nop
   }
 
@@ -276,7 +276,7 @@ behavior curl_worker(stateful_actor<curl_state>* self, actor parent) {
 }
 
 struct master_state : base_state {
-  master_state(local_actor* self) : base_state(self) {
+  master_state(local_actor* selfptr) : base_state(selfptr) {
     // nop
   }
   std::vector<actor> idle;

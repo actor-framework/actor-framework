@@ -79,9 +79,9 @@ public:
     // nop
   }
 
-  uniform_value_impl(const uniform_type_info* ptr, const T (&val)[N])
+  uniform_value_impl(const uniform_type_info* ptr, const T (&vals)[N])
       : uniform_value_t(ptr, &value_) {
-    array_copy(value_, val);
+    array_copy(value_, vals);
   }
 
   uniform_value copy() override {
@@ -96,13 +96,13 @@ private:
       array_copy(lhs[i], rhs[i]);
     }
   }
-  
+
   template <class U, size_t Len>
   static void array_copy_impl(U (&lhs)[Len], const U (&rhs)[Len],
                               std::false_type) {
     std::copy(rhs, rhs + Len, lhs);
   }
-  
+
   template <class U, size_t Len>
   static void array_copy(U (&lhs)[Len], const U (&rhs)[Len]) {
     array_copy_impl(lhs, rhs,

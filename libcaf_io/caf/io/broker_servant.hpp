@@ -33,7 +33,7 @@ namespace io {
 template <class Base, class Handle, class SysMsgType>
 class broker_servant : public Base {
 public:
-  broker_servant(abstract_broker* ptr, Handle hdl) : Base(ptr), hdl_(hdl) {
+  broker_servant(abstract_broker* ptr, Handle x) : Base(ptr), hdl_(x) {
     // nop
   }
 
