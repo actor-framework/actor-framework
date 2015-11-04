@@ -2,10 +2,11 @@
 // make it harder to use and its a library internal anyways
 noExplicitConstructor:libcaf_core/caf/attachable.hpp
 
-// cppcheck has all kinds of false positives in the optional header,
-// mostly const and static suggestions that are flat out wrong and
-// would cause compiler error (const optional::destroy?, wtf?)
-*:libcaf_core/caf/optional.hpp
+// cppcheck has all kinds of false positives in the maybe<T> header, mostly
+// const and static suggestions that are flat out wrong and would cause
+// compiler errors ("Technically the member function 'caf::maybe::destroy' can
+// be const.", wtf?)
+*:libcaf_core/caf/maybe.hpp
 
 // cppcheck fails to recognize the pattern of converting
 // `intrusive_ptr<T>` from `intrusive_ptr<U>`
