@@ -22,7 +22,7 @@
 
 #include <istream>
 
-#include "caf/optional.hpp"
+#include "caf/maybe.hpp"
 #include "caf/parse_config.hpp"
 
 namespace caf {
@@ -35,7 +35,7 @@ namespace detail {
 /// @param consumer Callback consuming generated key-value pairs.
 void parse_ini(std::istream& raw_data,
                config_consumer consumer,
-               optional<std::ostream&> errors = none);
+               maybe<std::ostream&> errors = none);
 
 } // namespace detail
 } // namespace caf

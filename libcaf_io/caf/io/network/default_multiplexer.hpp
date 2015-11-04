@@ -693,7 +693,7 @@ private:
 };
 
 native_socket new_tcp_connection_impl(const std::string&, uint16_t,
-                                      optional<protocol> preferred = none);
+                                      maybe<protocol> preferred = none);
 
 default_socket new_tcp_connection(const std::string& host, uint16_t port);
 

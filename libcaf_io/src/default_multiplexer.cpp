@@ -20,7 +20,7 @@
 #include "caf/io/network/default_multiplexer.hpp"
 
 #include "caf/config.hpp"
-#include "caf/optional.hpp"
+#include "caf/maybe.hpp"
 #include "caf/exception.hpp"
 #include "caf/make_counted.hpp"
 
@@ -1094,7 +1094,7 @@ bool ip_connect(native_socket fd, const std::string& host, uint16_t port) {
 }
 
 native_socket new_tcp_connection_impl(const std::string& host, uint16_t port,
-                                      optional<protocol> preferred) {
+                                      maybe<protocol> preferred) {
   CAF_LOGF_TRACE(CAF_ARG(host) << ", " << CAF_ARG(port)
                  << ", " << CAF_TSARG(preferred));
   CAF_LOGF_INFO("try to connect to " << host << " on port " << port);

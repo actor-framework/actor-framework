@@ -99,7 +99,7 @@ public:
   }
 
   /// @copydoc message::apply
-  optional<message> apply(message_handler handler);
+  maybe<message> apply(message_handler handler);
 
   /// Removes all elements from the buffer.
   void clear();

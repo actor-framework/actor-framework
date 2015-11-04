@@ -90,8 +90,8 @@ constexpr auto arg_match = detail::boxed<detail::arg_match_t>::type();
 
 /// Generates function objects from a binary predicate and a value.
 template <class T, typename BinaryPredicate>
-std::function<optional<T>(const T&)> guarded(BinaryPredicate p, T value) {
-  return [=](const T& other) -> optional<T> {
+std::function<maybe<T>(const T&)> guarded(BinaryPredicate p, T value) {
+  return [=](const T& other) -> maybe<T> {
     if (p(other, value)) {
       return value;
     }
@@ -120,7 +120,7 @@ unit_t to_guard(const detail::wrapped<T>&) {
 }
 
 template <class T>
-std::function<optional<typename detail::strip_and_convert<T>::type>(
+std::function<maybe<typename detail::strip_and_convert<T>::type>(
   const typename detail::strip_and_convert<T>::type&)>
 to_guard(const T& value,
          typename std::enable_if<! detail::is_callable<T>::value>::type* = 0) {

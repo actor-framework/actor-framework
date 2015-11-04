@@ -99,7 +99,7 @@ constexpr int impl_id() {
                      ? 2
                      : (is_stl_pair<T>::value
                           ? 3
-                          : (detail::is_optional<T>::value
+                          : (detail::is_maybe<T>::value
                               ? 4
                               : (std::is_array<T>::value
                                   ? 5
@@ -161,7 +161,7 @@ private:
   }
 
   template <class T>
-  void simpl(const optional<T>& val, serializer* s, opt_impl) const {
+  void simpl(const maybe<T>& val, serializer* s, opt_impl) const {
     uint8_t flag = val ? 1 : 0;
     s->write_value(flag);
     if (val) {
@@ -218,7 +218,7 @@ private:
   }
 
   template <class T>
-  void dimpl(optional<T>& val, deserializer* d, opt_impl) const {
+  void dimpl(maybe<T>& val, deserializer* d, opt_impl) const {
     auto flag = d->read<uint8_t>();
     if (flag != 0) {
       T tmp;

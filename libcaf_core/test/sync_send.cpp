@@ -365,7 +365,7 @@ CAF_TEST(sync_send) {
       [](error_atom) {
         CAF_TEST_ERROR("A didn't receive sync response");
       },
-      [&](const down_msg& dm) -> optional<skip_message_t> {
+      [&](const down_msg& dm) -> maybe<skip_message_t> {
         if (dm.reason == exit_reason::normal) {
           return skip_message();
         }

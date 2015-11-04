@@ -207,7 +207,7 @@ uint16_t abstract_broker::local_port(accept_handle hdl) {
   return i != doormen_.end() ? i->second->port() : 0;
 }
 
-optional<accept_handle> abstract_broker::hdl_by_port(uint16_t port) {
+maybe<accept_handle> abstract_broker::hdl_by_port(uint16_t port) {
   for (auto& kvp : doormen_)
     if (kvp.second->port() == port)
       return kvp.first;

@@ -299,7 +299,7 @@ public:
   using erase_callback = callback<const node_id&>;
 
   /// Returns a route to `target` or `none` on error.
-  optional<route> lookup(const node_id& target);
+  maybe<route> lookup(const node_id& target);
 
   /// Returns the ID of the peer connected via `hdl` or
   /// `invalid_node_id` if `hdl` is unknown.
@@ -446,7 +446,7 @@ public:
   void handle_node_shutdown(const node_id& affected_node);
 
   /// Returns a route to `target` or `none` on error.
-  optional<routing_table::route> lookup(const node_id& target);
+  maybe<routing_table::route> lookup(const node_id& target);
 
   /// Flushes the underlying buffer of `path`.
   void flush(const routing_table::route& path);
@@ -517,7 +517,7 @@ public:
   /// actor published at `port` to `buf`. If `port == none` or
   /// if no actor is published at this port then a standard handshake is
   /// written (e.g. used when establishing direct connections on-the-fly).
-  void write_server_handshake(buffer_type& buf, optional<uint16_t> port);
+  void write_server_handshake(buffer_type& buf, maybe<uint16_t> port);
 
   /// Writes the client handshake to `buf`.
   void write_client_handshake(buffer_type& buf, const node_id& remote_side);

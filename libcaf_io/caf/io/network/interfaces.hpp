@@ -27,7 +27,7 @@
 #include <functional>
 #include <initializer_list>
 
-#include "caf/optional.hpp"
+#include "caf/maybe.hpp"
 
 #include "caf/io/network/protocol.hpp"
 
@@ -70,8 +70,8 @@ public:
                                                  bool include_localhost = true);
 
   /// Returns a native IPv4 or IPv6 translation of `host`.
-  static optional<std::pair<std::string, protocol>>
-  native_address(const std::string& host, optional<protocol> preferred = none);
+  static maybe<std::pair<std::string, protocol>>
+  native_address(const std::string& host, maybe<protocol> preferred = none);
 };
 
 } // namespace network

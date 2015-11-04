@@ -24,7 +24,7 @@
 #include <functional>
 #include <type_traits>
 
-#include "caf/optional.hpp"
+#include "caf/maybe.hpp"
 
 #include "caf/fwd.hpp"
 
@@ -266,14 +266,14 @@ public:
   static constexpr bool value = decltype(check<T>(0))::value;
 };
 
-/// Returns either `T` or `T::type` if `T` is an option.
+/// Returns either `T` or `T::type` if `T` is a `maybe`.
 template <class T>
-struct rm_optional {
+struct rm_maybe {
   using type = T;
 };
 
 template <class T>
-struct rm_optional<optional<T>> {
+struct rm_maybe<maybe<T>> {
   using type = T;
 };
 
@@ -453,12 +453,12 @@ struct type_at<0, T0, Ts...> {
 };
 
 template <class T>
-struct is_optional : std::false_type {
+struct is_maybe : std::false_type {
   // no members
 };
 
 template <class T>
-struct is_optional<optional<T>> : std::true_type {
+struct is_maybe<maybe<T>> : std::true_type {
   // no members
 };
 

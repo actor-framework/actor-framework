@@ -246,7 +246,7 @@ std::set<std::string> abstract_actor::message_types() const {
   return std::set<std::string>{};
 }
 
-optional<uint32_t> abstract_actor::handle(const std::exception_ptr& eptr) {
+maybe<uint32_t> abstract_actor::handle(const std::exception_ptr& eptr) {
   { // lifetime scope of guard
     guard_type guard{mtx_};
     for (auto i = attachables_head_.get(); i != nullptr; i = i->next.get()) {

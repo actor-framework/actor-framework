@@ -30,7 +30,7 @@ attachable::token::token(size_t typenr, const void* vptr)
   // nop
 }
 
-optional<uint32_t> attachable::handle_exception(const std::exception_ptr&) {
+maybe<uint32_t> attachable::handle_exception(const std::exception_ptr&) {
   return none;
 }
 

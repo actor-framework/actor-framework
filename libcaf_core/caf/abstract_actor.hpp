@@ -248,7 +248,7 @@ public:
   }
 
   // Tries to run a custom exception handler for `eptr`.
-  optional<uint32_t> handle(const std::exception_ptr& eptr);
+  maybe<uint32_t> handle(const std::exception_ptr& eptr);
 
 protected:
   virtual bool link_impl(linking_operation op, const actor_addr& other);

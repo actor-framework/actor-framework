@@ -23,7 +23,7 @@
 #include <string>
 
 #include "caf/fwd.hpp"
-#include "caf/optional.hpp"
+#include "caf/maybe.hpp"
 #include "caf/uniform_type_info.hpp"
 
 namespace std {
@@ -61,7 +61,7 @@ std::string to_string(const mailbox_element& what);
 
 /// @relates optional
 template <class T>
-std::string to_string(const optional<T>& what) {
+std::string to_string(const maybe<T>& what) {
   if (! what) {
     return "none";
   }
@@ -77,7 +77,7 @@ uniform_value from_string_impl(const std::string& what);
 /// Convenience function that tries to deserializes a value from
 /// `what` and converts the result to `T`.
 template <class T>
-optional<T> from_string(const std::string& what) {
+maybe<T> from_string(const std::string& what) {
   auto uti = uniform_typeid<T>();
   auto uv = from_string_impl(what);
   if (! uv || uv->ti != uti) {

@@ -25,7 +25,7 @@
 #include <algorithm>
 
 #include "caf/variant.hpp"
-#include "caf/optional.hpp"
+#include "caf/maybe.hpp"
 
 namespace caf {
 
@@ -45,7 +45,7 @@ using config_consumer = std::function<void (std::string, config_value)>;
 /// @param format Configuration format such as INI.
 /// @param errors Output streams for error messages.
 void parse_config(std::istream& input_stream, config_format format,
-                  optional<std::ostream&> errors = none);
+                  maybe<std::ostream&> errors = none);
 
 /// Read configuration from `file_name` using given `format` or try to
 /// deduce file format automatically if `cf == none`.
@@ -53,8 +53,8 @@ void parse_config(std::istream& input_stream, config_format format,
 /// @param cf Forces the parser to use a specific file format unless `none`.
 /// @param errors Output streams for error messages.
 void parse_config(const std::string& file_name,
-                  optional<config_format> cf = none,
-                  optional<std::ostream&> errors = none);
+                  maybe<config_format> cf = none,
+                  maybe<std::ostream&> errors = none);
 
 } // namespace caf
 

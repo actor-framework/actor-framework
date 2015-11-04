@@ -246,7 +246,7 @@ void spawn5_client(event_based_actor* self) {
 template <class F>
 void await_down(event_based_actor* self, actor ptr, F continuation) {
   self->become(
-    [=](const down_msg& dm) -> optional<skip_message_t> {
+    [=](const down_msg& dm) -> maybe<skip_message_t> {
       if (dm.source == ptr) {
         continuation();
         return none;

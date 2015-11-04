@@ -122,7 +122,7 @@ public:
   }
 
   /// Returns `handler(*this)`.
-  optional<message> apply(message_handler handler);
+  maybe<message> apply(message_handler handler);
 
   /// Filters this message by applying slices of it to `handler` and  returns
   /// the remaining elements of this operation. Slices are generated in the

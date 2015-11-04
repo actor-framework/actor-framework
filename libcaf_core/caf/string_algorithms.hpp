@@ -166,7 +166,7 @@ inline std::string convert_to_str(std::string value) {
 
 // string projection
 template <class T>
-caf::optional<T> spro(const std::string& str) {
+caf::maybe<T> spro(const std::string& str) {
   T value;
   std::istringstream iss(str);
   if (iss >> value) {

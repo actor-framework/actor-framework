@@ -771,7 +771,7 @@ namespace {
 class exception_testee : public event_based_actor {
 public:
   exception_testee() {
-    set_exception_handler([](const std::exception_ptr&) -> optional<uint32_t> {
+    set_exception_handler([](const std::exception_ptr&) -> maybe<uint32_t> {
       return exit_reason::user_defined + 2;
     });
   }
@@ -787,7 +787,7 @@ public:
 } // namespace <anonymous>
 
 CAF_TEST(custom_exception_handler) {
-  auto handler = [](const std::exception_ptr& eptr) -> optional<uint32_t> {
+  auto handler = [](const std::exception_ptr& eptr) -> maybe<uint32_t> {
     try {
       std::rethrow_exception(eptr);
     }

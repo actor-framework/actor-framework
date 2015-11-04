@@ -46,7 +46,7 @@ CAF_TEST(simple_ints) {
   auto one = on(1) >> [] { };
   auto two = on(2) >> [] { };
   auto three = on(3) >> [] { };
-  auto skip_two = [](int i) -> optional<skip_message_t> {
+  auto skip_two = [](int i) -> maybe<skip_message_t> {
     if (i == 2) {
       return skip_message();
     }

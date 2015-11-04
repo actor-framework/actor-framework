@@ -21,7 +21,7 @@
 #define CAF_MATCH_CASE_HPP
 
 #include "caf/none.hpp"
-#include "caf/optional.hpp"
+#include "caf/maybe.hpp"
 
 #include "caf/skip_message.hpp"
 #include "caf/match_case.hpp"
@@ -53,7 +53,7 @@ public:
 
   virtual ~match_case();
 
-  virtual result invoke(optional<message>&, message&) = 0;
+  virtual result invoke(maybe<message>&, message&) = 0;
 
   inline uint32_t type_token() const {
     return token_;
@@ -86,7 +86,7 @@ T& unopt(T& v) {
 }
 
 template <class T>
-T& unopt(optional<T>& v) {
+T& unopt(maybe<T>& v) {
   return *v;
 }
 
@@ -101,7 +101,7 @@ struct has_none {
   }
 
   template <class T, class... Ts>
-  bool operator()(const optional<T>& x, const Ts&... xs) const {
+  bool operator()(const maybe<T>& x, const Ts&... xs) const {
     return ! x || (*this)(xs...);
   }
 };
@@ -192,7 +192,7 @@ public:
     // nop
   }
 
-  match_case::result invoke(optional<message>& res, message& msg) override {
+  match_case::result invoke(maybe<message>& res, message& msg) override {
     intermediate_tuple it;
     detail::meta_elements<pattern> ms;
     // check if try_match() reports success
@@ -240,7 +240,7 @@ public:
     // nop
   }
 
-  match_case::result invoke(optional<message>& res, message&) override {
+  match_case::result invoke(maybe<message>& res, message&) override {
     lfinvoker<std::is_same<result_type, void>::value, F> fun{fun_};
     auto fun_res = fun();
     detail::optional_message_visitor omv;
@@ -273,7 +273,7 @@ public:
   // however, dealing with all the template parameters in a debugger
   // is just dreadful; this "hack" essentially hides all the ugly
   // template boilterplate types when debugging CAF applications
-  match_case::result invoke(optional<message>& res, message& msg) override {
+  match_case::result invoke(maybe<message>& res, message& msg) override {
     struct storage {
       storage() : valid(false) {
         // nop
@@ -338,13 +338,13 @@ public:
   static constexpr uint32_t static_type_token =
     detail::make_type_token_from_list<Pattern>();
 
-  // Let F be "R (Ts...)" then match_case<F...> returns optional<R>
+  // Let F be "R (Ts...)" then match_case<F...> returns maybe<R>
   // unless R is void in which case bool is returned
   using optional_result_type =
     typename std::conditional<
       std::is_same<result_type, void>::value,
-      optional<unit_t>,
-      optional<result_type>
+      maybe<unit_t>,
+      maybe<result_type>
     >::type;
 
   // Needed for static type checking when assigning to a typed behavior.

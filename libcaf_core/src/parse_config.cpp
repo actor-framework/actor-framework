@@ -44,7 +44,7 @@ public:
 };
 
 void parse_config(std::istream& input, config_format format,
-                  optional<std::ostream&> errors) {
+                  maybe<std::ostream&> errors) {
   if (! input)
     return;
   auto cs = experimental::whereis(atom("ConfigServ"));
@@ -59,8 +59,8 @@ void parse_config(std::istream& input, config_format format,
 }
 
 void parse_config(const std::string& file_name,
-                  optional<config_format> format,
-                  optional<std::ostream&> errors) {
+                  maybe<config_format> format,
+                  maybe<std::ostream&> errors) {
   if (! format) {
     // try to detect file format according to file extension
     if (file_name.size() < 5)

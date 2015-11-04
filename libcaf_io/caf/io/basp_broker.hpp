@@ -82,7 +82,7 @@ struct basp_broker_state : actor_namespace::backend, basp::instance::callee {
     connection_handle hdl;
     node_id id;
     uint16_t remote_port;
-    optional<response_promise> callback;
+    maybe<response_promise> callback;
   };
 
   void set_context(connection_handle hdl);

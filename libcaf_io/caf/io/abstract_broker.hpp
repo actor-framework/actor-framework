@@ -173,7 +173,7 @@ public:
   uint16_t local_port(accept_handle hdl);
 
   /// Returns the handle associated to given local `port` or `none`.
-  optional<accept_handle> hdl_by_port(uint16_t port);
+  maybe<accept_handle> hdl_by_port(uint16_t port);
 
   /// Closes all connections and acceptors.
   void close_all();

@@ -61,6 +61,7 @@
 #if defined(__clang__)
 #  define CAF_CLANG
 #  define CAF_DEPRECATED __attribute__((__deprecated__))
+#  define CAF_DEPRECATED_MSG(msg) __attribute__((__deprecated__(msg)))
 #  define CAF_PUSH_WARNINGS                                                    \
     _Pragma("clang diagnostic push")                                           \
     _Pragma("clang diagnostic ignored \"-Wall\"")                              \
@@ -108,6 +109,7 @@
 #elif defined(__GNUC__)
 #  define CAF_GCC
 #  define CAF_DEPRECATED __attribute__((__deprecated__))
+#  define CAF_DEPRECATED_MSG(msg) __attribute__((__deprecated__(msg)))
 #  define CAF_PUSH_WARNINGS
 #  define CAF_PUSH_NON_VIRTUAL_DTOR_WARNING                                    \
     _Pragma("GCC diagnostic push")                                             \
@@ -123,6 +125,7 @@
 #elif defined(_MSC_VER)
 #  define CAF_MSVC
 #  define CAF_DEPRECATED
+#  define CAF_DEPRECATED_MSG(msg)
 #  define CAF_PUSH_WARNINGS
 #  define CAF_PUSH_NON_VIRTUAL_DTOR_WARNING
 #  define CAF_POP_WARNINGS

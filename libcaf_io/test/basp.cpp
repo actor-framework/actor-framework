@@ -270,7 +270,7 @@ public:
   }
 
   void connect_node(size_t i,
-                    optional<accept_handle> ax = none,
+                    maybe<accept_handle> ax = none,
                     actor_id published_actor_id = invalid_actor_id,
                     set<string> published_actor_ifs = std::set<std::string>{}) {
     auto src = ax ? *ax : ahdl_;

@@ -39,8 +39,8 @@ using namespace std;
 using hi_atom = atom_constant<atom("hi")>;
 using ho_atom = atom_constant<atom("ho")>;
 
-function<optional<string>(const string&)> starts_with(const string& s) {
-  return [=](const string& str) -> optional<string> {
+function<maybe<string>(const string&)> starts_with(const string& s) {
+  return [=](const string& str) -> maybe<string> {
     if (str.size() > s.size() && str.compare(0, s.size(), s) == 0) {
       auto res = str.substr(s.size());
       return res;
@@ -49,7 +49,7 @@ function<optional<string>(const string&)> starts_with(const string& s) {
   };
 }
 
-optional<int> toint(const string& str) {
+maybe<int> toint(const string& str) {
   char* endptr = nullptr;
   int result = static_cast<int>(strtol(str.c_str(), &endptr, 10));
   if (endptr != nullptr && *endptr == '\0') {
@@ -128,7 +128,7 @@ CAF_TEST(atom_constants) {
 
 CAF_TEST(guards_called) {
   bool guard_called = false;
-  auto guard = [&](int arg) -> optional<int> {
+  auto guard = [&](int arg) -> maybe<int> {
     guard_called = true;
     return arg;
   };

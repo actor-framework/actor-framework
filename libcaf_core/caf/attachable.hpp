@@ -25,7 +25,7 @@
 #include <typeinfo>
 #include <exception>
 
-#include "caf/optional.hpp"
+#include "caf/maybe.hpp"
 
 namespace caf {
 
@@ -70,7 +70,7 @@ public:
   /// Note that the first handler to handle `eptr` "wins" and no other
   /// handler will be invoked.
   /// @returns The exit reason the actor should use.
-  virtual optional<uint32_t> handle_exception(const std::exception_ptr& eptr);
+  virtual maybe<uint32_t> handle_exception(const std::exception_ptr& eptr);
 
   /// Executed if the actor finished execution with given `reason`.
   /// The default implementation does nothing.

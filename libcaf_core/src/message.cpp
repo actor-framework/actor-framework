@@ -143,7 +143,7 @@ message message::slice(size_t pos, size_t n) const {
   return message{detail::decorated_tuple::make(vals_, std::move(mapping))};
 }
 
-optional<message> message::apply(message_handler handler) {
+maybe<message> message::apply(message_handler handler) {
   return handler(*this);
 }
 
@@ -262,7 +262,7 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
   // store any occurred error in a temporary variable returned at the end
   std::string error;
   auto res = extract({
-    [&](const std::string& arg) -> optional<skip_message_t> {
+    [&](const std::string& arg) -> maybe<skip_message_t> {
       if (arg.empty() || arg.front() != '-') {
         return skip_message();
       }
@@ -307,7 +307,7 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
       return skip_message();
     },
     [&](const std::string& arg1,
-        const std::string& arg2) -> optional<skip_message_t> {
+        const std::string& arg2) -> maybe<skip_message_t> {
       if (arg1.size() < 2 || arg1[0] != '-' || arg1[1] == '-') {
         return skip_message();
       }
@@ -341,8 +341,8 @@ message::cli_arg::cli_arg(std::string nstr, std::string tstr)
 }
 
 message::cli_arg::cli_arg(std::string nstr, std::string tstr, consumer f)
-    : name(std::move(name)),
-      text(std::move(text)),
+    : name(std::move(nstr)),
+      text(std::move(tstr)),
       fun(std::move(f)) {
   // nop
 }

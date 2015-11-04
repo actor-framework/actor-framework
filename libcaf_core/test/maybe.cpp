@@ -19,36 +19,17 @@
 
 #include "caf/config.hpp"
 
-#define CAF_SUITE optional
+#define CAF_SUITE maybe
 #include "caf/test/unit_test.hpp"
 
 #include <string>
 
-#include "caf/optional.hpp"
+#include "caf/maybe.hpp"
 
 using namespace std;
 using namespace caf;
 
-CAF_TEST(empties) {
-  optional<int> i;
-  optional<int> j;
-  CAF_CHECK(i == j);
-  CAF_CHECK(!(i != j));
-}
-
-CAF_TEST(unequal) {
-  optional<int> i = 5;
-  optional<int> j = 6;
-  CAF_CHECK(!(i == j));
-  CAF_CHECK(i != j);
-}
-
-CAF_TEST(distinct_types) {
-  optional<int> i;
-  optional<double> j;
-  CAF_CHECK(i == j);
-  CAF_CHECK(!(i != j));
-}
+namespace {
 
 struct qwertz {
   qwertz(int i, int j) : i_(i), j_(j) {
@@ -58,28 +39,44 @@ struct qwertz {
   int j_;
 };
 
-inline bool operator==(const qwertz& lhs, const qwertz& rhs) {
+bool operator==(const qwertz& lhs, const qwertz& rhs) {
   return lhs.i_ == rhs.i_ && lhs.j_ == rhs.j_;
 }
 
+} // namespace <anonymous>
+
+CAF_TEST(empties) {
+  maybe<int> i;
+  maybe<int> j;
+  CAF_CHECK(i == j);
+  CAF_CHECK(!(i != j));
+}
+
+CAF_TEST(unequal) {
+  maybe<int> i = 5;
+  maybe<int> j = 6;
+  CAF_CHECK(!(i == j));
+  CAF_CHECK(i != j);
+}
+
+CAF_TEST(distinct_types) {
+  maybe<int> i;
+  maybe<double> j;
+  CAF_CHECK(i == j);
+  CAF_CHECK(!(i != j));
+}
+
 CAF_TEST(custom_type_none) {
-  optional<qwertz> i;
+  maybe<qwertz> i;
   CAF_CHECK(i == none);
 }
 
 CAF_TEST(custom_type_engaged) {
   qwertz obj{1, 2};
-  optional<qwertz> j = obj;
+  maybe<qwertz> j = obj;
   CAF_CHECK(j != none);
   CAF_CHECK(obj == j);
   CAF_CHECK(j == obj );
   CAF_CHECK(obj == *j);
   CAF_CHECK(*j == obj);
-}
-
-CAF_TEST(test_optional) {
-  optional<qwertz> i = qwertz(1,2);
-  CAF_CHECK(! i.empty());
-  optional<qwertz> j = { { 1, 2 } };
-  CAF_CHECK(! j.empty());
 }

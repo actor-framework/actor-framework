@@ -479,7 +479,7 @@ behavior basp_broker::make_behavior() {
     // received from some system calls like whereis
     [=](forward_atom, const actor_addr& sender,
         const node_id& receiving_node, atom_value receiver_name,
-        const message& msg) -> optional<message> {
+        const message& msg) -> maybe<message> {
       CAF_LOG_TRACE(CAF_TSARG(sender)
                     << ", " << CAF_TSARG(receiving_node)
                     << ", " << CAF_TSARG(receiver_name)

@@ -168,7 +168,7 @@ string trim(std::string s) {
 }
 
 // tries to convert `str` to an int
-optional<int> toint(const string& str) {
+maybe<int> toint(const string& str) {
   char* end;
   auto result = static_cast<int>(strtol(str.c_str(), &end, 10));
   if (end == str.c_str() + str.size()) {
@@ -178,12 +178,12 @@ optional<int> toint(const string& str) {
 }
 
 // converts "+" to the atom '+' and "-" to the atom '-'
-optional<atom_value> plus_or_minus(const string& str) {
+maybe<atom_value> plus_or_minus(const string& str) {
   if (str == "+") {
-    return optional<atom_value>{plus_atom::value};
+    return maybe<atom_value>{plus_atom::value};
   }
   if (str == "-") {
-    return optional<atom_value>{minus_atom::value};
+    return maybe<atom_value>{minus_atom::value};
   }
   return none;
 }

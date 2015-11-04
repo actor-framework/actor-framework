@@ -25,7 +25,7 @@
 
 #include "caf/none.hpp"
 #include "caf/variant.hpp"
-#include "caf/optional.hpp"
+#include "caf/maybe.hpp"
 #include "caf/match_case.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/intrusive_ptr.hpp"
@@ -49,7 +49,7 @@
 namespace caf {
 
 class message_handler;
-using bhvr_invoke_result = optional<message>;
+using bhvr_invoke_result = maybe<message>;
 
 } // namespace caf
 

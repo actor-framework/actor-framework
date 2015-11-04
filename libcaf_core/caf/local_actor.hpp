@@ -382,7 +382,7 @@ public:
       functor_attachable(F arg) : functor_(std::move(arg)) {
         // nop
       }
-      optional<uint32_t> handle_exception(const std::exception_ptr& eptr) {
+      maybe<uint32_t> handle_exception(const std::exception_ptr& eptr) {
         return functor_(eptr);
       }
     };
@@ -605,7 +605,7 @@ public:
 
   bool awaits(message_id response_id) const;
 
-  optional<pending_response&> find_pending_response(message_id mid);
+  maybe<pending_response&> find_pending_response(message_id mid);
 
   void set_response_handler(message_id response_id, behavior bhvr);
 

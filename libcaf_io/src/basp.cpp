@@ -185,7 +185,7 @@ routing_table::~routing_table() {
   // nop
 }
 
-optional<routing_table::route> routing_table::lookup(const node_id& target) {
+maybe<routing_table::route> routing_table::lookup(const node_id& target) {
   auto hdl = lookup_direct(target);
   if (hdl != invalid_connection_handle)
     return route{parent_->wr_buf(hdl), target, hdl};
@@ -502,7 +502,7 @@ void instance::handle_node_shutdown(const node_id& affected_node) {
   tbl_.erase(affected_node, cb);
 }
 
-optional<routing_table::route> instance::lookup(const node_id& target) {
+maybe<routing_table::route> instance::lookup(const node_id& target) {
   return tbl_.lookup(target);
 }
 
@@ -635,7 +635,7 @@ void instance::write(buffer_type& buf, header& hdr, payload_writer* pw) {
 }
 
 void instance::write_server_handshake(buffer_type& out_buf,
-                                      optional<uint16_t> port) {
+                                      maybe<uint16_t> port) {
   using namespace detail;
   published_actor* pa = nullptr;
   if (port) {

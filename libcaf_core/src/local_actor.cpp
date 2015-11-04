@@ -328,7 +328,7 @@ response_promise fetch_response_promise(local_actor*, response_promise& hdl) {
 
 // enables `return sync_send(...).then(...)`
 bool handle_message_id_res(local_actor* self, message& res,
-                           optional<response_promise> hdl) {
+                           maybe<response_promise> hdl) {
   if (res.match_elements<atom_value, uint64_t>()
       && res.get_as<atom_value>(0) == atom("MESSAGE_ID")) {
     CAF_LOGF_DEBUG("message handler returned a message id wrapper");
@@ -360,9 +360,9 @@ bool handle_message_id_res(local_actor* self, message& res,
 // - extracts response message from handler
 // - returns true if fun was successfully invoked
 template <class Handle = int>
-optional<message> post_process_invoke_res(local_actor* self,
+maybe<message> post_process_invoke_res(local_actor* self,
                                           message_id mid,
-                                          optional<message>&& res,
+                                          maybe<message>&& res,
                                           Handle hdl = Handle{}) {
   CAF_LOGF_TRACE(CAF_MARG(mid, integer_value) << ", " << CAF_TSARG(res));
   if (! res) {
@@ -523,7 +523,7 @@ bool local_actor::awaits(message_id mid) const {
                      predicate);
 }
 
-optional<local_actor::pending_response&>
+maybe<local_actor::pending_response&>
 local_actor::find_pending_response(message_id mid) {
   pending_response_predicate predicate{mid};
   auto last = pending_responses_.end();
