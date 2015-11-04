@@ -74,7 +74,7 @@ public:
     typename detail::tl_filter<arg_types, is_input_arg>::type;
   using input_types =
     typename detail::tl_map<input_wrapped_types, extract_type>::type;
-  using input_mapping = std::function<optional<message> (message&)>;
+  using input_mapping = std::function<maybe<message> (message&)>;
 
   using output_wrapped_types =
     typename detail::tl_filter<arg_types, is_output_arg>::type;

@@ -27,7 +27,7 @@
 
 #include "caf/all.hpp"
 #include "caf/config.hpp"
-#include "caf/optional.hpp"
+#include "caf/maybe.hpp"
 
 #include "caf/opencl/device.hpp"
 #include "caf/opencl/global.hpp"
@@ -53,11 +53,11 @@ public:
   /// (Returns only devices of the first discovered platform).
   const std::vector<device>& get_devices() const CAF_DEPRECATED;
   /// Get the device with id. These ids are assigned sequientally to all available devices.
-  const optional<const device&> get_device(size_t id = 0) const;
+  const maybe<const device&> get_device(size_t id = 0) const;
   /// Get the first device that satisfies the predicate.
   /// The predicate should accept a `const device&` and return a bool;
   template <class UnaryPredicate>
-  const optional<const device&> get_device_if(UnaryPredicate p) const {
+  const maybe<const device&> get_device_if(UnaryPredicate p) const {
     for (auto& pl : platforms_) {
       for (auto& dev : pl.get_devices()) {
         if (p(dev))

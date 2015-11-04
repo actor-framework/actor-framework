@@ -25,7 +25,7 @@
 #include <type_traits>
 
 #include "caf/message.hpp"
-#include "caf/optional.hpp"
+#include "caf/maybe.hpp"
 
 namespace caf {
 namespace opencl {
@@ -56,7 +56,7 @@ struct out {
   out() { }
   template <class F>
   out(F fun) {
-    fun_ = [fun](message& msg) -> optional<size_t> {
+    fun_ = [fun](message& msg) -> maybe<size_t> {
       auto res = msg.apply(fun);
       size_t result;
       if (res) {
@@ -66,10 +66,10 @@ struct out {
       return none;
     };
   }
-  optional<size_t> operator()(message& msg) const {
+  maybe<size_t> operator()(message& msg) const {
     return fun_ ? fun_(msg) : 0;
   }
-  std::function<optional<size_t> (message&)> fun_;
+  std::function<maybe<size_t> (message&)> fun_;
 };
 
 

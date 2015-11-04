@@ -23,7 +23,7 @@
 #include <algorithm>
 #include <functional>
 
-#include "caf/optional.hpp"
+#include "caf/maybe.hpp"
 #include "caf/actor_cast.hpp"
 
 #include "caf/detail/limited_vector.hpp"
@@ -43,7 +43,7 @@ struct tuple_construct { };
 template <class... Ts>
 struct cl_spawn_helper {
   using impl = opencl::actor_facade<Ts...>;
-  using map_in_fun = std::function<optional<message> (message&)>;
+  using map_in_fun = std::function<maybe<message> (message&)>;
   using map_out_fun = typename impl::output_mapping;
 
   actor operator()(const opencl::program& p, const char* fn,
@@ -177,7 +177,7 @@ template <class Fun, class... Ts>
 actor spawn_cl(const opencl::program& prog,
                const char* fname,
                const opencl::spawn_config& config,
-               std::function<optional<message> (message&)> map_args,
+               std::function<maybe<message> (message&)> map_args,
                Fun map_result,
                Ts... xs) {
   detail::cl_spawn_helper<Ts...> f;
@@ -194,7 +194,7 @@ template <class Fun, class... Ts>
 actor spawn_cl(const char* source,
                const char* fname,
                const opencl::spawn_config& config,
-               std::function<optional<message> (message&)> map_args,
+               std::function<maybe<message> (message&)> map_args,
                Fun map_result,
                Ts... xs) {
   detail::cl_spawn_helper<Ts...> f;
@@ -227,7 +227,7 @@ actor spawn_cl(const char* source,
 template <class Signature, class Fun>
 actor spawn_cl(const opencl::program& prog,
                const char* fname,
-               std::function<optional<message> (message&)> map_args,
+               std::function<maybe<message> (message&)> map_args,
                Fun map_result,
                const opencl::dim_vec& dims,
                const opencl::dim_vec& offset = {},
@@ -237,7 +237,7 @@ actor spawn_cl(const opencl::program& prog,
 template <class Signature, class Fun>
 actor spawn_cl(const char* source,
                const char* fname,
-               std::function<optional<message> (message&)> map_args,
+               std::function<maybe<message> (message&)> map_args,
                Fun map_result,
                const opencl::dim_vec& dims,
                const opencl::dim_vec& offset = {},
@@ -286,7 +286,7 @@ actor spawn_cl(const char* source,
 template <class Signature, class Fun>
 actor spawn_cl(const opencl::program& prog,
                const char* fname,
-               std::function<optional<message> (message&)> map_args,
+               std::function<maybe<message> (message&)> map_args,
                Fun map_result,
                const opencl::dim_vec& dims,
                const opencl::dim_vec& offset,
@@ -305,7 +305,7 @@ actor spawn_cl(const opencl::program& prog,
 template <class Signature, class Fun>
 actor spawn_cl(const char* source,
                const char* fname,
-               std::function<optional<message> (message&)> map_args,
+               std::function<maybe<message> (message&)> map_args,
                Fun map_result,
                const opencl::dim_vec& dims,
                const opencl::dim_vec& offset,

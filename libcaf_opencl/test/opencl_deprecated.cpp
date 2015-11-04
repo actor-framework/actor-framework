@@ -208,7 +208,7 @@ void test_opencl_deprecated() {
     }
   );
   const matrix_type expected2(std::move(expected1));
-  auto map_arg = [](message& msg) -> optional<message> {
+  auto map_arg = [](message& msg) -> maybe<message> {
     return msg.apply(
       [](matrix_type& mx) {
         return make_message(std::move(mx.data()));

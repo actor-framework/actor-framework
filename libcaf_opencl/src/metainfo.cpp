@@ -37,7 +37,7 @@ const std::vector<device>& metainfo::get_devices() const {
   return platforms_.front().get_devices();
 }
 
-const optional<const device&> metainfo::get_device(size_t id) const{
+const maybe<const device&> metainfo::get_device(size_t id) const{
   if (platforms_.empty())
     return none;
   size_t to = 0;

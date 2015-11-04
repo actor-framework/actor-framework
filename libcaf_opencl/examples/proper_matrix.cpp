@@ -145,7 +145,7 @@ void multiplier(event_based_actor* self) {
   cout << "calculating square of matrix:" << endl
      << to_string(m1) << endl;
 
-  auto unbox_args = [](message& msg) -> optional<message> {
+  auto unbox_args = [](message& msg) -> maybe<message> {
     return msg.apply(
       [](matrix_type& lhs, matrix_type& rhs) {
         return make_message(std::move(lhs.data()), std::move(rhs.data()));
