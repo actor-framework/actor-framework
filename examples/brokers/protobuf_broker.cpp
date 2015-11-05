@@ -139,7 +139,7 @@ behavior server(broker* self, actor buddy) {
   };
 }
 
-optional<uint16_t> as_u16(const std::string& str) {
+maybe<uint16_t> as_u16(const std::string& str) {
   return static_cast<uint16_t>(stoul(str));
 }
 
