@@ -93,11 +93,27 @@ public:
       cr_error(other.error_);
   }
 
-  maybe(maybe&& other) : valid_(other.valid_) {
+  maybe(maybe&& other) {
     if (other.valid_)
       cr_moved_value(other.value_);
     else
       cr_error(std::move(other.error_));
+  }
+
+  template <class U>
+  maybe(maybe<U>&& other) {
+    if (other)
+      cr_moved_value(*other);
+    else
+      cr_error(std::move(other.error()));
+  }
+
+  template <class U>
+  maybe(const maybe<U>& other) {
+    if (other)
+      cr_value(*other);
+    else
+      cr_error(other.error());
   }
 
   ~maybe() {
