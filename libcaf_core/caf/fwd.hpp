@@ -29,7 +29,7 @@ template <class>
 class intrusive_ptr;
 
 template <class>
-class optional;
+class maybe;
 
 // classes
 class actor;
