@@ -25,7 +25,6 @@
 #include <string>
 
 #include "caf/all.hpp"
-#include "caf/shutdown.hpp"
 
 using namespace caf;
 
@@ -41,9 +40,10 @@ using def_atom = atom_constant<atom("def")>;
 using foo_atom = atom_constant<atom("foo")>;
 
 struct fixture {
+  actor_system system;
+
   ~fixture() {
-    await_all_actors_done();
-    shutdown();
+    system.await_all_actors_done();
   }
 };
 
@@ -74,7 +74,7 @@ struct send_to_self {
 };
 
 CAF_TEST(receive_atoms) {
-  scoped_actor self;
+  scoped_actor self{system};
   send_to_self f{self.get()};
   f(foo_atom::value, static_cast<uint32_t>(42));
   f(abc_atom::value, def_atom::value, "cstring");
@@ -135,8 +135,8 @@ testee::behavior_type testee_impl(testee::pointer self) {
 }
 
 CAF_TEST(sync_send_atom_constants) {
-  scoped_actor self;
-  auto tst = spawn(testee_impl);
+  scoped_actor self{system};
+  auto tst = system.spawn(testee_impl);
   self->sync_send(tst, abc_atom::value).await(
     [](int i) {
       CAF_CHECK_EQUAL(i, 42);

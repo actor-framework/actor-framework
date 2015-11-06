@@ -24,7 +24,7 @@
 
 #include "caf/actor.hpp"
 #include "caf/locks.hpp"
-#include "caf/spawn.hpp"
+#include "caf/actor_system.hpp"
 #include "caf/event_based_actor.hpp"
 
 #include "caf/detail/shared_spinlock.hpp"
@@ -37,8 +37,10 @@ using actor_msg_vec = std::vector<std::pair<actor, message>>;
 template <class T, class Split, class Join>
 class split_join_collector : public event_based_actor {
 public:
-  split_join_collector(T init_value, Split s, Join j, actor_msg_vec xs)
-      : workset_(std::move(xs)),
+  split_join_collector(actor_config& cfg, T init_value,
+                       Split s, Join j, actor_msg_vec xs)
+      : event_based_actor(cfg),
+        workset_(std::move(xs)),
         awaited_results_(workset_.size()),
         join_(std::move(j)),
         split_(std::move(s)),
@@ -96,20 +98,19 @@ public:
     // nop
   }
 
-  void operator()(upgrade_lock<detail::shared_spinlock>& ulock,
+  void operator()(actor_system& sys,
+                  upgrade_lock<detail::shared_spinlock>& ulock,
                   const std::vector<actor>& workers,
                   mailbox_element_ptr& ptr,
                   execution_unit* host) {
-    if (ptr->sender == invalid_actor_addr) {
+    if (ptr->sender == invalid_actor_addr)
       return;
-    }
     actor_msg_vec xs(workers.size());
-    for (size_t i = 0; i < workers.size(); ++i) {
+    for (size_t i = 0; i < workers.size(); ++i)
       xs[i].first = workers[i];
-    }
     ulock.unlock();
     using collector_t = split_join_collector<T, Split, Join>;
-    auto hdl = spawn<collector_t, lazy_init>(init_, sf_, jf_, std::move(xs));
+    auto hdl = sys.spawn<collector_t, lazy_init>(init_, sf_, jf_, std::move(xs));
     hdl->enqueue(std::move(ptr), host);
   }
 

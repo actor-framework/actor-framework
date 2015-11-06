@@ -24,11 +24,11 @@
 #include <iterator>
 #include <typeinfo>
 
-#include "caf/intrusive_ptr.hpp"
 
+#include "caf/fwd.hpp"
 #include "caf/config.hpp"
 #include "caf/ref_counted.hpp"
-#include "caf/uniform_type_info.hpp"
+#include "caf/intrusive_ptr.hpp"
 
 #include "caf/detail/type_list.hpp"
 
@@ -39,7 +39,10 @@ class message_data : public ref_counted {
 public:
   message_data() = default;
   message_data(const message_data&) = default;
+
   ~message_data();
+
+  using element_rtti = std::pair<uint16_t, const std::type_info*>;
 
   /****************************************************************************
    *                                modifiers                                 *
@@ -47,19 +50,26 @@ public:
 
   virtual void* mutable_at(size_t pos) = 0;
 
+  virtual void serialize_at(deserializer& source, size_t pos) = 0;
+
   /****************************************************************************
    *                                observers                                 *
    ****************************************************************************/
 
-  // computes "@<>+..." formatted type name
-  std::string tuple_type_names() const;
-
   // compares each element using uniform_type_info objects
   bool equals(const message_data& other) const;
+
+  uint16_t type_nr_at(size_t pos) const;
 
   virtual size_t size() const = 0;
 
   virtual const void* at(size_t pos) const = 0;
+
+  // Selects type `T` from `pos`, compares this type to `rtti` and returns
+  // `*reinterpret_cast<const T*>(x) == *reinterpret_cast<const T*>(at(pos))`
+  // if the types match, `false` otherwise.
+  virtual bool compare_at(size_t pos, const element_rtti& rtti,
+                          const void* x) const = 0;
 
   // Tries to match element at position `pos` to given RTTI.
   virtual bool match_element(size_t pos, uint16_t typenr,
@@ -67,9 +77,11 @@ public:
 
   virtual uint32_t type_token() const = 0;
 
-  virtual const char* uniform_name_at(size_t pos) const = 0;
+  virtual element_rtti type_at(size_t pos) const = 0;
 
-  virtual uint16_t type_nr_at(size_t pos) const = 0;
+  virtual std::string stringify_at(size_t pos) const = 0;
+
+  virtual void serialize_at(serializer& sink, size_t pos) const = 0;
 
   /****************************************************************************
    *                               nested types                               *

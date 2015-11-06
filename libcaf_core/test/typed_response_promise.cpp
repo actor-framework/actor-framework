@@ -37,6 +37,10 @@ using foo_promise = typed_response_promise<int>;
 
 class foo_actor_impl : public foo_actor::base {
 public:
+  foo_actor_impl(actor_config& cfg) : foo_actor::base(cfg) {
+    // nop
+  }
+
   behavior_type make_behavior() override {
     return {
       [=](get_atom, int x) -> foo_promise {
@@ -69,9 +73,10 @@ private:
 };
 
 struct fixture {
+  actor_system system;
+
   ~fixture() {
-    await_all_actors_done();
-    shutdown();
+    system.await_all_actors_done();
   }
 };
 
@@ -80,8 +85,8 @@ struct fixture {
 CAF_TEST_FIXTURE_SCOPE(typed_spawn_tests, fixture)
 
 CAF_TEST(typed_response_promise) {
-  scoped_actor self;
-  auto foo = spawn<foo_actor_impl>();
+  scoped_actor self{system};
+  auto foo = self->spawn<foo_actor_impl>();
   self->sync_send(foo, get_atom::value, 42).await(
     [](int x) {
       CAF_CHECK_EQUAL(x, 84);

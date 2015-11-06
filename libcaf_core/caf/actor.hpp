@@ -20,6 +20,7 @@
 #ifndef CAF_ACTOR_HPP
 #define CAF_ACTOR_HPP
 
+#include <string>
 #include <cstddef>
 #include <cstdint>
 #include <utility>
@@ -35,8 +36,6 @@
 #include "caf/detail/type_traits.hpp"
 
 namespace caf {
-
-class scoped_actor;
 
 struct invalid_actor_t {
   constexpr invalid_actor_t() {
@@ -129,19 +128,14 @@ public:
     return ! ptr_;
   }
 
-  /// Returns whether this is an handle to a remote actor.
-  bool is_remote() const noexcept;
+  /// Returns the origin node of this actor.
+  node_id node() const noexcept;
 
   /// Returns the ID of this actor.
   actor_id id() const noexcept;
 
   /// Exchange content of `*this` and `other`.
   void swap(actor& other) noexcept;
-
-  /// Returns the interface definition for this actor handle.
-  static std::set<std::string> message_types() {
-    return std::set<std::string>{};
-  }
 
   /// @cond PRIVATE
 
@@ -172,6 +166,15 @@ private:
 
   abstract_actor_ptr ptr_;
 };
+
+/// @relates actor
+void serialize(serializer&, actor&, const unsigned int);
+
+/// @relates actor
+void serialize(deserializer&, actor&, const unsigned int);
+
+/// @relates actor
+std::string to_string(const actor& x);
 
 } // namespace caf
 

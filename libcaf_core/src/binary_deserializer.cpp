@@ -17,21 +17,23 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include <limits>
 #include <string>
 #include <cstdint>
 #include <cstring>
 #include <sstream>
+#include <iomanip>
 #include <iterator>
 #include <exception>
 #include <stdexcept>
 #include <type_traits>
 
+#include "caf/logger.hpp"
+#include "caf/actor_system.hpp"
 #include "caf/binary_deserializer.hpp"
 
-#include "caf/detail/logging.hpp"
 #include "caf/detail/ieee_754.hpp"
-#include "caf/detail/singletons.hpp"
-#include "caf/detail/uniform_type_info_map.hpp"
+#include "caf/detail/network_order.hpp"
 
 namespace caf {
 
@@ -50,134 +52,41 @@ pointer advanced(pointer ptr, Distance num_bytes) {
 
 inline void range_check(pointer begin, pointer end, size_t read_size) {
   if (advanced(begin, read_size) > end) {
-    CAF_LOGF(CAF_ERROR, "range_check failed");
+    CAF_LOG_ERROR("range_check failed");
     throw std::out_of_range("binary_deserializer::read_range()");
   }
 }
 
-pointer read_range(pointer begin, pointer end, std::string& storage);
-
 template <class T>
-typename std::enable_if<std::is_integral<T>::value, pointer>::type
-read_range(pointer begin, pointer end, T& storage) {
-  range_check(begin, end, sizeof(T));
-  memcpy(&storage, begin, sizeof(T));
-  return advanced(begin, sizeof(T));
+void apply_int(binary_deserializer& bd, T& x) {
+  T tmp;
+  bd.apply_raw(sizeof(T), &tmp);
+  x = detail::from_network_order(tmp);
 }
 
 template <class T>
-typename std::enable_if<std::is_floating_point<T>::value, pointer>::type
-read_range(pointer begin, pointer end, T& storage) {
+void apply_float(binary_deserializer& bd, T& x) {
   typename detail::ieee_754_trait<T>::packed_type tmp;
-  auto result = read_range(begin, end, tmp);
-  storage = detail::unpack754(tmp);
-  return result;
+  apply_int(bd, tmp);
+  x = detail::unpack754(tmp);
 }
-
-// the IEEE-754 conversion does not work for long double
-// => fall back to string serialization (event though it sucks)
-pointer read_range(pointer begin, pointer end, long double& storage) {
-  std::string tmp;
-  auto result = read_range(begin, end, tmp);
-  std::istringstream iss{std::move(tmp)};
-  iss >> storage;
-  return result;
-}
-
-pointer read_range(pointer begin, pointer end, std::string& storage) {
-  uint32_t str_size;
-  begin = read_range(begin, end, str_size);
-  range_check(begin, end, str_size);
-  storage.clear();
-  storage.reserve(str_size);
-  pointer last = advanced(begin, str_size);
-  copy(as_char_pointer(begin), as_char_pointer(last), back_inserter(storage));
-  return advanced(begin, str_size);
-}
-
-template <class CharType, typename StringType>
-pointer read_unicode_string(pointer begin, pointer end, StringType& str) {
-  uint32_t str_size;
-  begin = read_range(begin, end, str_size);
-  str.reserve(str_size);
-  for (size_t i = 0; i < str_size; ++i) {
-    CharType c;
-    begin = read_range(begin, end, c);
-    str += static_cast<typename StringType::value_type>(c);
-  }
-  return begin;
-}
-
-pointer read_range(pointer begin, pointer end, atom_value& storage) {
-  uint64_t tmp;
-  auto result = read_range(begin, end, tmp);
-  storage = static_cast<atom_value>(tmp);
-  return result;
-}
-
-pointer read_range(pointer begin, pointer end, std::u16string& storage) {
-  // char16_t is guaranteed to has *at least* 16 bytes,
-  // but not to have *exactly* 16 bytes; thus use uint16_t
-  return read_unicode_string<uint16_t>(begin, end, storage);
-}
-
-pointer read_range(pointer begin, pointer end, std::u32string& storage) {
-  // char32_t is guaranteed to has *at least* 32 bytes,
-  // but not to have *exactly* 32 bytes; thus use uint32_t
-  return read_unicode_string<uint32_t>(begin, end, storage);
-}
-
-struct pt_reader : static_visitor<> {
-  pointer begin;
-  pointer end;
-  pt_reader(pointer first, pointer last) : begin(first), end(last) {
-    // nop
-  }
-  inline void operator()(none_t&) {
-    // nop
-  }
-  inline void operator()(bool& value) {
-    uint8_t intval;
-    (*this)(intval);
-    value = static_cast<bool>(intval);
-  }
-  template <class T>
-  inline void operator()(T& value) {
-    begin = read_range(begin, end, value);
-  }
-};
 
 } // namespace <anonmyous>
 
-binary_deserializer::binary_deserializer(const void* buf, size_t buf_size,
-                                         actor_namespace* ns)
-    : deserializer(ns),
+binary_deserializer::binary_deserializer(execution_unit* ctx,
+                                         const void* buf, size_t buf_size)
+    : deserializer(ctx),
       pos_(buf),
       end_(advanced(buf, buf_size)) {
   // nop
 }
 
-binary_deserializer::binary_deserializer(const void* bbegin, const void* bend,
-                                         actor_namespace* ns)
-    : deserializer(ns),
-      pos_(bbegin),
-      end_(bend) {
+binary_deserializer::binary_deserializer(execution_unit* ctx,
+                                         const void* first, const void* last)
+    : deserializer(ctx),
+      pos_(first),
+      end_(last) {
   // nop
-}
-
-binary_deserializer::binary_deserializer(const binary_deserializer& other)
-    : deserializer(other.namespace_),
-      pos_(other.pos_),
-      end_(other.end_) {
-  // nop
-}
-
-binary_deserializer&
-binary_deserializer::operator=(const binary_deserializer& other) {
-  namespace_ = other.namespace_;
-  pos_ = other.pos_;
-  end_ = other.end_;
-  return *this;
 }
 
 bool binary_deserializer::at_end() const {
@@ -198,54 +107,112 @@ binary_deserializer& binary_deserializer::advance(ptrdiff_t num_bytes) {
   return *this;
 }
 
-const uniform_type_info* binary_deserializer::begin_object() {
-  auto uti_map = detail::singletons::get_uniform_type_info_map();
-  detail::uniform_type_info_map::pointer uti;
-  uint16_t nr;
-  pos_ = read_range(pos_, end_, nr);
-  if (nr) {
-    uti = uti_map->by_type_nr(nr);
-  } else {
-    std::string tname;
-    pos_ = read_range(pos_, end_, tname);
-    uti = uti_map->by_uniform_name(tname);
-    if (! uti) {
-      std::string err = "received type name \"";
-      err += tname;
-      err += "\" but no such type is known";
-      throw std::runtime_error(err);
-    }
-  }
-  return uti;
+void binary_deserializer::begin_object(uint16_t& nr, std::string& name) {
+  apply_int(*this, nr);
+  if (nr == 0)
+    apply(name);
 }
 
 void binary_deserializer::end_object() {
   // nop
 }
 
-size_t binary_deserializer::begin_sequence() {
+void binary_deserializer::begin_sequence(size_t& result) {
   CAF_LOG_TRACE("");
   static_assert(sizeof(size_t) >= sizeof(uint32_t),
                 "sizeof(size_t) < sizeof(uint32_t)");
-  uint32_t result;
-  pos_ = read_range(pos_, end_, result);
-  return static_cast<size_t>(result);
+  uint32_t tmp;
+  apply_int(*this, tmp);
+  result = static_cast<size_t>(tmp);
 }
 
 void binary_deserializer::end_sequence() {
   // nop
 }
 
-void binary_deserializer::read_value(primitive_variant& storage) {
-  pt_reader ptr(pos_, end_);
-  apply_visitor(ptr, storage);
-  pos_ = ptr.begin;
-}
-
-void binary_deserializer::read_raw(size_t num_bytes, void* storage) {
+void binary_deserializer::apply_raw(size_t num_bytes, void* storage) {
   range_check(pos_, end_, num_bytes);
   memcpy(storage, pos_, num_bytes);
   pos_ = advanced(pos_, num_bytes);
+}
+
+void binary_deserializer::apply_builtin(builtin type, void* val) {
+  CAF_ASSERT(val != nullptr);
+  switch (type) {
+    case i8_v:
+    case u8_v:
+      apply_raw(sizeof(uint8_t), val);
+      break;
+    case i16_v:
+    case u16_v:
+      apply_int(*this, *reinterpret_cast<uint16_t*>(val));
+      break;
+    case i32_v:
+    case u32_v:
+      apply_int(*this, *reinterpret_cast<uint32_t*>(val));
+      break;
+    case i64_v:
+    case u64_v:
+      apply_int(*this, *reinterpret_cast<uint64_t*>(val));
+      break;
+    case float_v:
+      apply_float(*this, *reinterpret_cast<float*>(val));
+      break;
+    case double_v:
+      apply_float(*this, *reinterpret_cast<double*>(val));
+      break;
+    case ldouble_v: {
+      // the IEEE-754 conversion does not work for long double
+      // => fall back to string serialization (event though it sucks)
+      std::string tmp;
+      apply(tmp);
+      std::istringstream iss{std::move(tmp)};
+      iss >> *reinterpret_cast<long double*>(val);
+      break;
+    }
+    case string8_v: {
+      auto& str = *reinterpret_cast<std::string*>(val);
+      uint32_t str_size;
+      apply_int(*this, str_size);
+      range_check(pos_, end_, str_size);
+      str.clear();
+      str.reserve(str_size);
+      auto last = advanced(pos_, str_size);
+      std::copy(reinterpret_cast<const char*>(pos_),
+                reinterpret_cast<const char*>(last),
+                std::back_inserter(str));
+      pos_ = last;
+      break;
+    }
+    case string16_v: {
+      auto& str = *reinterpret_cast<std::string*>(val);
+      uint32_t str_size;
+      apply_int(*this, str_size);
+      range_check(pos_, end_, str_size * sizeof(uint16_t));
+      str.clear();
+      str.reserve(str_size);
+      auto last = advanced(pos_, str_size);
+      std::copy(reinterpret_cast<const uint16_t*>(pos_),
+                reinterpret_cast<const uint16_t*>(last),
+                std::back_inserter(str));
+      pos_ = last;
+      break;
+    }
+    case string32_v: {
+      auto& str = *reinterpret_cast<std::string*>(val);
+      uint32_t str_size;
+      apply_int(*this, str_size);
+      range_check(pos_, end_, str_size * sizeof(uint32_t));
+      str.clear();
+      str.reserve(str_size);
+      auto last = advanced(pos_, str_size);
+      std::copy(reinterpret_cast<const uint32_t*>(pos_),
+                reinterpret_cast<const uint32_t*>(last),
+                std::back_inserter(str));
+      pos_ = last;
+      break;
+    }
+  }
 }
 
 } // namespace caf

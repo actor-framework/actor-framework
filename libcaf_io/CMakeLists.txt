@@ -17,16 +17,10 @@ set (LIBCAF_IO_SRCS
      src/middleman.cpp
      src/hook.cpp
      src/interfaces.cpp
-     src/publish.cpp
-     src/publish_local_groups.cpp
-     src/remote_actor.cpp
-     src/remote_group.cpp
      src/manager.cpp
-     src/set_middleman.cpp
      src/scribe.cpp
      src/stream_manager.cpp
      src/test_multiplexer.cpp
-     src/unpublish.cpp
      src/acceptor_manager.cpp
      src/multiplexer.cpp)
 

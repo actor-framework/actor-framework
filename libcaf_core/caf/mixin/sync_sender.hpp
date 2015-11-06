@@ -37,6 +37,11 @@ class sync_sender_impl : public Base {
 public:
   using response_handle_type = response_handle<Subtype, message, HandleTag>;
 
+  template <class... Ts>
+  sync_sender_impl(Ts&&... xs) : Base(std::forward<Ts>(xs)...) {
+    // nop
+  }
+
   /****************************************************************************
    *                              sync_send(...)                              *
    ****************************************************************************/

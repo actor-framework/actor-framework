@@ -34,14 +34,11 @@
 
 #include "caf/detail/run_sub_unit_test.hpp"
 
-#include "caf/experimental/announce_actor_type.hpp"
-
 #ifdef CAF_USE_ASIO
 #include "caf/io/network/asio_multiplexer.hpp"
 #endif // CAF_USE_ASIO
 
 using namespace caf;
-using namespace caf::experimental;
 
 namespace {
 
@@ -57,8 +54,7 @@ behavior client(event_based_actor* self, actor serv) {
   self->send(serv, ok_atom::value);
   return {
     others >> [=] {
-      CAF_TEST_ERROR("unexpected message: "
-                     << to_string(self->current_message()));
+      CAF_TEST_ERROR("Unexpected message");
     }
   };
 }
@@ -70,16 +66,15 @@ struct server_state {
 
 behavior server(stateful_actor<server_state>* self) {
   self->on_sync_failure([=] {
-    CAF_TEST_ERROR("unexpected sync response: "
-                   << to_string(self->current_message()));
+    CAF_TEST_ERROR("Unexpected sync response");
   });
   return {
     [=](ok_atom) {
       auto s = self->current_sender();
       CAF_REQUIRE(s != invalid_actor_addr);
-      CAF_REQUIRE(s.is_remote());
+      CAF_REQUIRE(self->node() != s.node());
       self->state.client = actor_cast<actor>(s);
-      auto mm = io::get_middleman_actor();
+      auto mm = self->system().middleman().actor_handle();
       self->sync_send(mm, spawn_atom::value,
                       s.node(), "mirror", make_message()).then(
         [=](ok_atom, const actor_addr& addr, const std::set<std::string>& ifs) {
@@ -108,7 +103,6 @@ behavior server(stateful_actor<server_state>* self) {
 } // namespace <anonymous>
 
 CAF_TEST(remote_spawn) {
-  announce_actor_type("mirror", mirror);
   auto argv = test::engine::argv();
   auto argc = test::engine::argc();
   uint16_t port = 0;
@@ -122,21 +116,27 @@ CAF_TEST(remote_spawn) {
     std::cout << r.error << std::endl << std::endl << r.helptext << std::endl;
     return;
   }
+  actor_system_config cfg;
+  cfg.add_actor_type("mirror", mirror);
   auto use_asio = r.opts.count("use-asio") > 0;
 # ifdef CAF_USE_ASIO
-  if (use_asio) {
-    CAF_MESSAGE("enable ASIO backend");
-    io::set_middleman<io::network::asio_multiplexer>();
-  }
+  if (use_asio)
+    cfg.load<io::middleman, io::network::asio_multiplexer>());
+  else
 # endif // CAF_USE_ASIO
+    cfg.load<io::middleman>();
+  actor_system system{cfg};
   if (r.opts.count("client") > 0) {
-    auto serv = io::remote_actor("localhost", port);
-    spawn(client, serv);
-    await_all_actors_done();
+    auto serv = system.middleman().remote_actor("localhost", port);
+    CAF_REQUIRE(serv);
+    system.spawn(client, serv);
+    system.await_all_actors_done();
     return;
   }
-  auto serv = spawn(server);
-  port = io::publish(serv, port);
+  auto serv = system.spawn(server);
+  auto mport = system.middleman().publish(serv, port);
+  CAF_REQUIRE(mport);
+  port = *mport;
   CAF_MESSAGE("published server at port " << port);
   if (r.opts.count("server") == 0) {
     CAF_MESSAGE("run client program");
@@ -149,6 +149,5 @@ CAF_TEST(remote_spawn) {
                                             + std::to_string(port)});
     child.join();
   }
-  await_all_actors_done();
-  shutdown();
+  system.await_all_actors_done();
 }

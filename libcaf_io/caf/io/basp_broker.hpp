@@ -29,7 +29,7 @@
 #include <unordered_set>
 
 #include "caf/stateful_actor.hpp"
-#include "caf/actor_namespace.hpp"
+#include "caf/proxy_registry.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/forwarding_actor_proxy.hpp"
@@ -40,13 +40,16 @@
 namespace caf {
 namespace io {
 
-struct basp_broker_state : actor_namespace::backend, basp::instance::callee {
+struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   basp_broker_state(broker* self);
 
   ~basp_broker_state();
 
-  // inherited from actor_namespace::backend
-  actor_proxy_ptr make_proxy(const node_id& nid, actor_id aid) override;
+  // inherited from proxy_registry::backend
+  actor_proxy_ptr make_proxy(node_id nid, actor_id aid) override;
+
+  // inherited from proxy_registry::backend
+  execution_unit* registry_context() override;
 
   // inherited from basp::instance::listener
   void finalize_handshake(const node_id& nid, actor_id aid,
@@ -121,11 +124,14 @@ struct basp_broker_state : actor_namespace::backend, basp::instance::callee {
 };
 
 /// A broker implementation for the Binary Actor System Protocol (BASP).
-class basp_broker : public caf::stateful_actor<basp_broker_state,
-                                                             broker> {
+class basp_broker : public stateful_actor<basp_broker_state, broker> {
 public:
-  basp_broker(middleman& mm);
+  using super = stateful_actor<basp_broker_state, broker>;
+
+  basp_broker(actor_config& cfg);
   behavior make_behavior() override;
+  resume_result resume(execution_unit*, size_t) override;
+  void exec_single_event(execution_unit*, mailbox_element_ptr&) override;
 };
 
 } // namespace io

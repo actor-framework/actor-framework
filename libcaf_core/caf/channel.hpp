@@ -23,21 +23,25 @@
 #include <cstddef>
 #include <type_traits>
 
-#include "caf/intrusive_ptr.hpp"
 
 #include "caf/fwd.hpp"
+#include "caf/intrusive_ptr.hpp"
 #include "caf/abstract_channel.hpp"
 
 #include "caf/detail/comparable.hpp"
 
 namespace caf {
 
-class actor;
-class group;
-class execution_unit;
+struct invalid_channel_t {
+  constexpr invalid_channel_t() {
+    // nop
+  }
+};
 
-struct invalid_actor_t;
-struct invalid_group_t;
+/// Identifies an invalid {@link channel}.
+/// @relates channel
+constexpr invalid_channel_t invalid_channel = invalid_channel_t{};
+
 
 /// A handle to instances of `abstract_channel`.
 class channel : detail::comparable<channel>,
@@ -48,14 +52,14 @@ public:
   friend T actor_cast(const U&);
 
   channel() = default;
+  channel(channel&&) = default;
+  channel(const channel&) = default;
+  channel& operator=(channel&&) = default;
+  channel& operator=(const channel&) = default;
 
   channel(const actor&);
-
   channel(const group&);
-
-  channel(const invalid_actor_t&);
-
-  channel(const invalid_group_t&);
+  channel(const invalid_channel_t&);
 
   template <class T>
   channel(intrusive_ptr<T> ptr,
@@ -66,40 +70,56 @@ public:
     // nop
   }
 
-  channel(abstract_channel* ptr);
+  /// Allows actors to create a `channel` handle from `this`.
+  channel(local_actor*);
 
-  inline explicit operator bool() const {
+  channel& operator=(const actor&);
+  channel& operator=(const group&);
+  channel& operator=(const invalid_channel_t&);
+
+  inline explicit operator bool() const noexcept {
     return static_cast<bool>(ptr_);
   }
 
-  inline bool operator!() const {
+  inline bool operator!() const noexcept {
     return ! ptr_;
   }
 
-  inline abstract_channel* operator->() const {
-    return ptr_.get();
+  inline abstract_channel* operator->() const noexcept {
+    return get();
   }
 
-  inline abstract_channel& operator*() const {
+  inline abstract_channel& operator*() const noexcept {
     return *ptr_;
   }
 
-  intptr_t compare(const channel& other) const;
+  intptr_t compare(const channel& other) const noexcept;
 
-  intptr_t compare(const actor& other) const;
+  intptr_t compare(const actor& other) const noexcept;
 
-  intptr_t compare(const abstract_channel* other) const;
+  intptr_t compare(const abstract_channel* other) const noexcept;
 
   static intptr_t compare(const abstract_channel* lhs,
-                          const abstract_channel* rhs);
+                          const abstract_channel* rhs) noexcept;
+
+  /// @relates channel
+  friend void serialize(serializer& sink, channel& x, const unsigned int);
+
+  /// @relates channel
+  friend void serialize(deserializer& source, channel& x, const unsigned int);
 
 private:
-  inline abstract_channel* get() const {
+  channel(abstract_channel* ptr);
+
+  inline abstract_channel* get() const noexcept {
     return ptr_.get();
   }
 
   abstract_channel_ptr ptr_;
 };
+
+/// @relates channel
+std::string to_string(const channel& x);
 
 } // namespace caf
 

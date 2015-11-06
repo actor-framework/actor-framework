@@ -31,6 +31,7 @@
 #include "caf/message.hpp"
 #include "caf/duration.hpp"
 #include "caf/actor_addr.hpp"
+#include "caf/actor_system.hpp"
 
 namespace caf {
 namespace scheduler {
@@ -39,14 +40,9 @@ namespace scheduler {
 /// the central printer instance for {@link aout}. It also forwards
 /// sends from detached workers or non-actor threads to randomly
 /// chosen workers.
-class abstract_coordinator {
+class abstract_coordinator : public actor_system::module {
 public:
-  friend class detail::singletons;
-
-  explicit abstract_coordinator(size_t num_worker_threads,
-                                size_t max_throughput_param);
-
-  virtual ~abstract_coordinator();
+  explicit abstract_coordinator(actor_system& sys);
 
   /// Returns a handle to the central printing actor.
   inline actor printer() const {
@@ -65,6 +61,10 @@ public:
                      nullptr);
   }
 
+  inline actor_system& system() {
+    return system_;
+  }
+
   inline size_t max_throughput() const {
     return max_throughput_;
   }
@@ -73,21 +73,18 @@ public:
     return num_workers_;
   }
 
+  void start() override;
+
+  void init(actor_system_config& cfg) override;
+
+  id_t id() const override;
+
+  void* subtype_ptr() override;
+
 protected:
   abstract_coordinator();
 
-  virtual void initialize();
-
-  virtual void stop() = 0;
-
   void stop_actors();
-
-  // Creates a default instance.
-  static abstract_coordinator* create_singleton();
-
-  inline void dispose() {
-    delete this;
-  }
 
   // ID of the worker receiving the next enqueue
   std::atomic<size_t> next_worker_;
@@ -95,10 +92,13 @@ protected:
   // number of messages each actor is allowed to consume per resume
   size_t max_throughput_;
 
+  // configured number of workers
   size_t num_workers_;
 
   actor timer_;
   actor printer_;
+
+  actor_system& system_;
 };
 
 } // namespace scheduler

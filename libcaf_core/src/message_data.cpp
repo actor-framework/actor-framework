@@ -29,40 +29,19 @@ message_data::~message_data() {
 }
 
 bool message_data::equals(const message_data& other) const {
-  if (this == &other) {
+  if (this == &other)
     return true;
-  }
   auto n = size();
-  if (n != other.size()) {
+  if (n != other.size())
     return false;
-  }
-  // step 1, get and compare type names
-  std::vector<const char*> type_names;
-  for (size_t i = 0; i < n; ++i) {
-    auto lhs = uniform_name_at(i);
-    auto rhs = other.uniform_name_at(i);
-    if (lhs != rhs && strcmp(lhs, rhs) != 0) {
-      return false; // type mismatch
-    }
-    type_names.push_back(lhs);
-  }
-  // step 2: compare each value individually
-  for (size_t i = 0; i < n; ++i) {
-    auto uti = uniform_type_info::from(type_names[i]);
-    if (! uti->equals(at(i), other.at(i))) {
+  for (size_t i = 0; i < n; ++i)
+    if (! compare_at(i, other.type_at(i), other.at(i)))
       return false;
-    }
-  }
   return true;
 }
 
-std::string message_data::tuple_type_names() const {
-  std::string result = "@<>";
-  for (size_t i = 0; i < size(); ++i) {
-    result += "+";
-    result += uniform_name_at(i);
-  }
-  return result;
+uint16_t message_data::type_nr_at(size_t pos) const {
+  return type_at(pos).first;
 }
 
 message_data* message_data::cow_ptr::get_unshared() {

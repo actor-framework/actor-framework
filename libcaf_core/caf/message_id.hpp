@@ -20,6 +20,7 @@
 #ifndef CAF_MESSAGE_ID_HPP
 #define CAF_MESSAGE_ID_HPP
 
+#include <string>
 #include <cstdint>
 
 #include "caf/config.hpp"
@@ -124,12 +125,22 @@ public:
                                       : (value_ < other.value_ ? -1 : 1);
   }
 
+  template <class T>
+  friend void serialize(T& in_or_out, message_id& mid, const unsigned int) {
+    in_or_out & mid.value_;
+  }
+
 private:
   explicit inline message_id(uint64_t value) : value_(value) {
     // nop
   }
   uint64_t value_;
 };
+
+/// @relates message_id
+inline std::string to_string(const message_id& x) {
+  return std::to_string(x.integer_value());
+}
 
 } // namespace caf
 

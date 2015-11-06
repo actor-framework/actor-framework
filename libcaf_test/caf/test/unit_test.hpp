@@ -31,8 +31,12 @@
 #include <sstream>
 #include <iostream>
 
+#include "caf/fwd.hpp"
+#include "caf/maybe.hpp"
+
+#include "caf/deep_to_string.hpp"
+
 namespace caf {
-class message;
 namespace test {
 
 /// Default test-running function.
@@ -131,6 +135,13 @@ public:
     operator<<(const T& x) {
       buf_ << x;
       return *this;
+    }
+
+    template <class T>
+    stream& operator<<(const maybe<T>& x) {
+      if (! x)
+        return *this << "-none-";
+      return *this << *x;
     }
 
     stream& operator<<(const char& c);
@@ -302,31 +313,42 @@ struct adder {
 };
 
 template <class T>
-struct showable_base {};
+struct showable_base {
+  explicit showable_base(const T& x) : value(x) {
+    // nop
+  }
 
+  const T& value;
+};
+
+// showable_base<T> picks up to_string() via ADL
 template <class T>
-std::ostream& operator<<(std::ostream& out, const showable_base<T>&) {
-  out << engine::color(blue) << "<unprintable>" << engine::color(reset);
+std::ostream& operator<<(std::ostream& out, const showable_base<T>& x) {
+  auto str = caf::deep_to_string(x.value);
+  if (str == "<unprintable>")
+    out << engine::color(blue) << "<unprintable>" << engine::color(reset);
+  else
+    out << str;
   return out;
 }
 
 template <class T>
 class showable : public showable_base<T> {
 public:
-  explicit showable(const T& x) : value_(x) { }
-
-  template <class U = T>
-  friend auto operator<<(std::ostream& out, const showable& p)
-    -> decltype(out << std::declval<const U&>()) {
-    return out << p.value_;
+  explicit showable(const T& x) : showable_base<T>(x) {
+    // nop
   }
-
-private:
-  const T& value_;
 };
 
+// showable<T> picks up custom operator<< overloads for std::ostream
 template <class T>
-showable<T> show(T const &x) {
+auto operator<<(std::ostream& out, const showable<T>& p)
+-> decltype(out << std::declval<const T&>()) {
+  return out << p.value;
+}
+
+template <class T>
+showable<T> show(const T &x) {
   return showable<T>{x};
 }
 

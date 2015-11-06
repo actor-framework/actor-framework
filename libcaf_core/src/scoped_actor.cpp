@@ -20,16 +20,15 @@
 #include "caf/scoped_actor.hpp"
 
 #include "caf/spawn_options.hpp"
-
-#include "caf/detail/singletons.hpp"
-#include "caf/detail/actor_registry.hpp"
+#include "caf/actor_registry.hpp"
+#include "caf/scoped_execution_unit.hpp"
 
 namespace caf {
 
 namespace {
 
 struct impl : blocking_actor {
-  impl() {
+  impl(actor_config& cfg) : blocking_actor(cfg) {
     is_detached(true);
   }
 
@@ -40,21 +39,14 @@ struct impl : blocking_actor {
 
 } // namespace <anonymous>
 
-void scoped_actor::init(bool hide_actor) {
-  self_.reset(new impl, false);
+scoped_actor::scoped_actor(actor_system& as, bool hide_actor) : context_{&as} {
+  actor_config cfg{&context_};
+  self_.reset(new impl(cfg), false);
   if (! hide_actor) {
     prev_ = CAF_SET_AID(self_->id());
   }
   CAF_LOG_TRACE(CAF_ARG(hide_actor));
   self_->is_registered(! hide_actor);
-}
-
-scoped_actor::scoped_actor() {
-  init(false);
-}
-
-scoped_actor::scoped_actor(bool hide_actor) {
-  init(hide_actor);
 }
 
 scoped_actor::~scoped_actor() {

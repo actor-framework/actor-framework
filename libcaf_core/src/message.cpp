@@ -22,14 +22,14 @@
 #include <iostream>
 
 #include "caf/serializer.hpp"
+#include "caf/actor_system.hpp"
 #include "caf/deserializer.hpp"
 #include "caf/message_handler.hpp"
 #include "caf/string_algorithms.hpp"
 
-#include "caf/detail/singletons.hpp"
 #include "caf/detail/decorated_tuple.hpp"
 #include "caf/detail/concatenated_tuple.hpp"
-#include "caf/detail/uniform_type_info_map.hpp"
+#include "caf/detail/dynamic_message_data.hpp"
 
 namespace caf {
 
@@ -44,33 +44,6 @@ message::message(const data_ptr& ptr) : vals_(ptr) {
 message& message::operator=(message&& other) {
   vals_.swap(other.vals_);
   return *this;
-}
-
-void message::serialize(serializer& sink) const {
-  // ttn can be nullptr even if tuple is not empty (in case of object_array)
-  std::string tname = empty() ? "@<>" : tuple_type_names();
-  auto uti_map = detail::singletons::get_uniform_type_info_map();
-  auto uti = uti_map->by_uniform_name(tname);
-  if (uti == nullptr) {
-    std::string err = "could not get uniform type info for \"";
-    err += tname;
-    err += "\"";
-    CAF_LOGF_ERROR(err);
-    throw std::runtime_error(err);
-  }
-  sink.begin_object(uti);
-  for (size_t i = 0; i < size(); ++i) {
-    uniform_type_info::from(uniform_name_at(i))->serialize(at(i), &sink);
-  }
-  sink.end_object();
-}
-
-void message::deserialize(deserializer& source) {
-  auto uti = source.begin_object();
-  auto uval = uti->create();
-  uti->deserialize(uval->val, &source);
-  source.end_object();
-  *this = *reinterpret_cast<message*>(uval->val);
 }
 
 void message::reset(raw_ptr new_ptr, bool add_ref) {
@@ -94,10 +67,6 @@ const void* message::at(size_t p) const {
 bool message::match_element(size_t pos, uint16_t typenr,
                             const std::type_info* rtti) const {
   return vals_->match_element(pos, typenr, rtti);
-}
-
-const char* message::uniform_name_at(size_t pos) const {
-  return vals_->uniform_name_at(pos);
 }
 
 bool message::equals(const message& other) const {
@@ -378,6 +347,93 @@ message message::concat_impl(std::initializer_list<data_ptr> xs) {
     default:
       return message{detail::concatenated_tuple::make(xs)};
   }
+}
+
+void serialize(serializer& sink, const message& msg, const unsigned int) {
+  if (sink.context() == nullptr)
+    throw std::logic_error("Cannot serialize message without context.");
+  // build type name
+  uint16_t zero = 0;
+  std::string tname = "@<>";
+  if (msg.empty()) {
+    sink.begin_object(zero, tname);
+    sink.end_object();
+    return;
+  }
+  auto& types = sink.context()->system().types();
+  auto n = msg.size();
+  for (size_t i = 0; i < n; ++i) {
+    auto rtti = msg.cvals()->type_at(i);
+    auto ptr = types.portable_name(rtti);
+    if (! ptr) {
+      std::cerr << "[ERROR]: cannot serialize message because a type was "
+                   "not added to the types list, typeid name: "
+                << (rtti.second ? rtti.second->name() : "-not-available-")
+                << std::endl;
+      throw std::logic_error("unknown type while serializing");
+    }
+    tname += '+';
+    tname += *ptr;
+  }
+  sink.begin_object(zero, tname);
+  for (size_t i = 0; i < n; ++i)
+    msg.cvals()->serialize_at(sink, i);
+  sink.end_object();
+}
+
+void serialize(deserializer& source, message& msg, const unsigned int) {
+  if (source.context() == nullptr)
+    throw std::logic_error("Cannot deserialize message without context.");
+  uint16_t zero;
+  std::string tname;
+  source.begin_object(zero, tname);
+  if (zero != 0)
+    throw std::logic_error("unexpected builtin type found in message");
+  if (tname == "@<>") {
+    msg = message{};
+    return;
+  }
+  if (tname.compare(0, 4, "@<>+") != 0)
+    throw std::logic_error("type name does not start with @<>+: " + tname);
+  // iterate over concatenated type names
+  auto eos = tname.end();
+  auto next = [&](std::string::iterator iter) {
+    return std::find(iter, eos, '+');
+  };
+  auto& types = source.context()->system().types();
+  auto dmd = make_counted<detail::dynamic_message_data>();
+  std::string tmp;
+  std::string::iterator i = next(tname.begin());
+  ++i; // skip first '+' sign
+  do {
+    auto n = next(i);
+    tmp.assign(i, n);
+    auto ptr = types.make_value(tmp);
+    if (! ptr)
+      throw std::logic_error("cannot serialize a value of type " + tmp);
+    ptr->load(source);
+    dmd->append(std::move(ptr));
+    if (n != eos)
+      i = n + 1;
+    else
+      i = eos;
+  } while (i != eos);
+  source.end_object();
+  message result{std::move(dmd)};
+  msg.swap(result);
+}
+
+std::string to_string(const message& msg) {
+  if (msg.empty())
+    return "<empty-message>";
+  std::string str = "(";
+  str += msg.cvals()->stringify_at(0);
+  for (size_t i = 1; i < msg.size(); ++i) {
+    str += ", ";
+    str += msg.cvals()->stringify_at(i);
+  }
+  str += ")";
+  return str;
 }
 
 } // namespace caf

@@ -30,20 +30,23 @@
 
 #include "caf/actor.hpp"
 #include "caf/extend.hpp"
+#include "caf/logger.hpp"
 #include "caf/message.hpp"
 #include "caf/channel.hpp"
 #include "caf/duration.hpp"
 #include "caf/behavior.hpp"
 #include "caf/delegated.hpp"
-#include "caf/spawn_fwd.hpp"
 #include "caf/resumable.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/message_id.hpp"
 #include "caf/exit_reason.hpp"
 #include "caf/typed_actor.hpp"
+#include "caf/actor_config.hpp"
+#include "caf/actor_system.hpp"
 #include "caf/spawn_options.hpp"
 #include "caf/abstract_actor.hpp"
 #include "caf/abstract_group.hpp"
+#include "caf/execution_unit.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/message_handler.hpp"
 #include "caf/response_promise.hpp"
@@ -51,7 +54,6 @@
 #include "caf/check_typed_input.hpp"
 #include "caf/invoke_message_result.hpp"
 
-#include "caf/detail/logging.hpp"
 #include "caf/detail/disposer.hpp"
 #include "caf/detail/behavior_stack.hpp"
 #include "caf/detail/typed_actor_util.hpp"
@@ -78,97 +80,54 @@ public:
   template <class T, spawn_options Os = no_spawn_options, class... Ts>
   typename infer_handle_from_class<T>::type
   spawn(Ts&&... xs) {
-    constexpr auto os = make_unbound(Os);
-    auto res = spawn_class<T, os>(host(), empty_before_launch_callback{},
-                                  std::forward<Ts>(xs)...);
-    return eval_opts(Os, std::move(res));
+    actor_config cfg{context()};
+    return eval_opts(Os, system().spawn_class<T, make_unbound(Os)>(cfg, std::forward<Ts>(xs)...));
   }
 
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
   typename infer_handle_from_fun<F>::type
   spawn(F fun, Ts&&... xs) {
-    constexpr auto os = make_unbound(Os);
-    auto res = spawn_functor<os>(host(), empty_before_launch_callback{},
-                                 std::move(fun), std::forward<Ts>(xs)...);
-    return eval_opts(Os, std::move(res));
+    actor_config cfg{context()};
+    return eval_opts(Os, system().spawn_functor<make_unbound(Os)>(cfg, fun, std::forward<Ts>(xs)...));
   }
 
   template <class T, spawn_options Os = no_spawn_options, class Groups,
             class... Ts>
-  actor spawn_in_groups(const Groups& grps, Ts&&... xs) {
-    constexpr auto os = make_unbound(Os);
-    auto res = spawn_class<T, os>(host(),
-                                  groups_subscriber<
-                                    decltype(std::begin(grps))
-                                  >{std::begin(grps), std::end(grps)},
-                                  std::forward<Ts>(xs)...);
-    return eval_opts(Os, std::move(res));
+  actor spawn_in_groups(const Groups& gs, Ts&&... xs) {
+    actor_config cfg{context()};
+    return eval_opts(Os, system().spawn_in_groups_impl<T, make_unbound(Os)>(cfg, gs.begin(), gs.end(), std::forward<Ts>(xs)...));
   }
 
   template <class T, spawn_options Os = no_spawn_options, class... Ts>
-  actor spawn_in_groups(std::initializer_list<group> grps, Ts&&... xs) {
-    return spawn_in_groups<
-      T, Os, std::initializer_list<group>
-    >(grps, std::forward<Ts>(xs)...);
+  actor spawn_in_groups(std::initializer_list<group> gs, Ts&&... xs) {
+    actor_config cfg{context()};
+    return eval_opts(Os, system().spawn_in_groups_impl<T, make_unbound(Os)>(cfg, gs.begin(), gs.end(), std::forward<Ts>(xs)...));
   }
 
   template <class T, spawn_options Os = no_spawn_options, class... Ts>
   actor spawn_in_group(const group& grp, Ts&&... xs) {
-    return spawn_in_groups<T, Os>({grp}, std::forward<Ts>(xs)...);
+    actor_config cfg{context()};
+    auto first = &grp;
+    return eval_opts(Os, system().spawn_in_groups_impl<T, make_unbound(Os)>(cfg, first, first + 1, std::forward<Ts>(xs)...));
   }
 
-  template <spawn_options Os = no_spawn_options, class Groups, class... Ts>
-  actor spawn_in_groups(const Groups& grps, Ts&&... xs) {
-    constexpr auto os = make_unbound(Os);
-    auto res = spawn_functor<os>(host(),
-                                 groups_subscriber<
-                                   decltype(std::begin(grps))
-                                 >{std::begin(grps), std::end(grps)},
-                                 std::forward<Ts>(xs)...);
-    return eval_opts(Os, std::move(res));
+  template <spawn_options Os = no_spawn_options, class Groups, class F, class... Ts>
+  actor spawn_in_groups(const Groups& gs, F fun, Ts&&... xs) {
+    actor_config cfg{context()};
+    return eval_opts(Os, system().spawn_in_groups_impl<make_unbound(Os)>(cfg, gs.begin(), gs.end(), fun, std::forward<Ts>(xs)...));
   }
 
-  template <spawn_options Os = no_spawn_options, class... Ts>
-  actor spawn_in_groups(std::initializer_list<group> grps, Ts&&... xs) {
-    return spawn_in_groups<
-      Os, std::initializer_list<group>
-    >(grps, std::forward<Ts>(xs)...);
+  template <spawn_options Os = no_spawn_options, class F, class... Ts>
+  actor spawn_in_groups(std::initializer_list<group> gs, F fun, Ts&&... xs) {
+    actor_config cfg{context()};
+    return eval_opts(Os, system().spawn_in_groups_impl<make_unbound(Os)>(cfg, gs.begin(), gs.end(), fun, std::forward<Ts>(xs)...));
   }
 
-  template <spawn_options Os = no_spawn_options, class... Ts>
-  actor spawn_in_group(const group& grp, Ts&&... xs) {
-    return spawn_in_groups<Os>({grp}, std::forward<Ts>(xs)...);
-  }
-
-  /****************************************************************************
-   *                      spawn typed actors (deprecated)                     *
-   ****************************************************************************/
-
-  template <class T, spawn_options Os = no_spawn_options, class... Ts>
-  CAF_DEPRECATED typename actor_handle_from_signature_list<
-    typename T::signatures
-  >::type
-  spawn_typed(Ts&&... xs) {
-    constexpr auto os = make_unbound(Os);
-    auto res = spawn_class<T, os>(host(), empty_before_launch_callback{},
-                    std::forward<Ts>(xs)...);
-    return eval_opts(Os, std::move(res));
-  }
-
-  template <spawn_options Os = no_spawn_options, typename F, class... Ts>
-  CAF_DEPRECATED typename infer_typed_actor_handle<
-    typename detail::get_callable_trait<F>::result_type,
-    typename detail::tl_head<
-      typename detail::get_callable_trait<F>::arg_types
-    >::type
-  >::type
-  spawn_typed(F fun, Ts&&... xs) {
-    constexpr auto os = make_unbound(Os);
-    auto res = caf::spawn_typed_functor<os>(host(),
-                                            empty_before_launch_callback{},
-                                            std::move(fun),
-                                            std::forward<Ts>(xs)...);
-    return eval_opts(Os, std::move(res));
+  template <spawn_options Os = no_spawn_options, class F, class... Ts>
+  actor spawn_in_group(const group& grp, F fun, Ts&&... xs) {
+    actor_config cfg{context()};
+    auto first = &grp;
+    return eval_opts(Os, system().spawn_in_groups_impl<make_unbound(Os)>(cfg, first, first + 1, fun, std::forward<Ts>(xs)...));
   }
 
   /****************************************************************************
@@ -405,24 +364,14 @@ public:
   virtual void load_state(deserializer& source, const unsigned int version);
 
   /****************************************************************************
-   *                       deprecated member functions                        *
-   ****************************************************************************/
-
-  // <backward_compatibility version="0.12">
-  message& last_dequeued() CAF_DEPRECATED;
-
-  actor_addr& last_sender() CAF_DEPRECATED;
-  // </backward_compatibility>
-
-  /****************************************************************************
    *           override pure virtual member functions of resumable            *
    ****************************************************************************/
 
-  void attach_to_scheduler() override;
+  subtype_t subtype() const override;
 
-  void detach_from_scheduler() override;
+  ref_counted* as_ref_counted_ptr() override;
 
-  resumable::resume_result resume(execution_unit*, size_t) override;
+  resume_result resume(execution_unit*, size_t) override;
 
   /****************************************************************************
    *                 here be dragons: end of public interface                 *
@@ -435,9 +384,9 @@ public:
   exec_event(mailbox_element_ptr& ptr);
 
   // handle `ptr` in an event-based actor, not suitable to be called in a loop
-  void exec_single_event(mailbox_element_ptr& ptr);
+  virtual void exec_single_event(execution_unit* ctx, mailbox_element_ptr& ptr);
 
-  local_actor();
+  local_actor(actor_config& sys);
 
   template <class ActorHandle>
   inline ActorHandle eval_opts(spawn_options opts, ActorHandle res) {
@@ -496,7 +445,7 @@ public:
                              ? mid.with_high_priority()
                              : mid.with_normal_priority();
     current_element_->msg = make_message(std::forward<Ts>(xs)...);
-    dest->enqueue(std::move(current_element_), host());
+    dest->enqueue(std::move(current_element_), context());
   }
 
   template <class... Ts>
@@ -529,7 +478,7 @@ public:
                              ? mid.with_high_priority()
                              : mid.with_normal_priority();
     current_element_->msg = make_message(std::forward<Ts>(xs)...);
-    dest->enqueue(std::move(current_element_), host());
+    dest->enqueue(std::move(current_element_), context());
     return {};
   }
 
@@ -572,7 +521,7 @@ public:
 
   // clear behavior stack and call cleanup if actor either has no
   // valid behavior left or has set a planned exit reason
-  bool finalize();
+  bool finished();
 
   void cleanup(uint32_t reason) override;
 
@@ -632,10 +581,6 @@ public:
 
   bool invoke_from_cache(behavior&, message_id);
 
-  inline void initial_behavior_fac(std::function<behavior (local_actor*)> fun) {
-    initial_behavior_fac_ = std::move(fun);
-  }
-
   void do_become(behavior bhvr, bool discard_old);
 
 protected:
@@ -685,7 +630,7 @@ private:
                                               mid,
                                               std::forward<T>(x),
                                               std::forward<Ts>(xs)...),
-                  host());
+                  context());
   }
 
   void send_impl(message_id mid, abstract_channel* dest, message what) const;

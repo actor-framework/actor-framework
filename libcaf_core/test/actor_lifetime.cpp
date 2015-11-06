@@ -37,33 +37,27 @@ std::atomic<long> s_pending_on_exits;
 
 class testee : public event_based_actor {
 public:
-  testee();
-  ~testee();
-  void on_exit() override;
-  behavior make_behavior() override;
+  testee(actor_config& cfg) : event_based_actor(cfg) {
+    ++s_testees;
+    ++s_pending_on_exits;
+  }
+
+  ~testee() {
+    --s_testees;
+  }
+
+  void on_exit() override {
+    --s_pending_on_exits;
+  }
+
+  behavior make_behavior() override {
+    return {
+      others >> [=] {
+        return current_message();
+      }
+    };
+  }
 };
-
-testee::testee() {
-  ++s_testees;
-  ++s_pending_on_exits;
-}
-
-testee::~testee() {
-  // avoid weak-vtables warning
-  --s_testees;
-}
-
-void testee::on_exit() {
-  --s_pending_on_exits;
-}
-
-behavior testee::make_behavior() {
-  return {
-    others >> [=] {
-      return current_message();
-    }
-  };
-}
 
 template <class ExitMsgType>
 behavior tester(event_based_actor* self, const actor& aut) {
@@ -98,9 +92,20 @@ behavior tester(event_based_actor* self, const actor& aut) {
 }
 
 struct fixture {
+  actor_system system;
+
+  template <spawn_options Os, class... Ts>
+  actor spawn(Ts&&... xs) {
+    return system.spawn<Os>(xs...);
+  }
+
+  template <class T, spawn_options Os, class... Ts>
+  actor spawn(Ts&&... xs) {
+    return system.spawn<T, Os>(xs...);
+  }
+
   ~fixture() {
-    await_all_actors_done();
-    shutdown();
+    system.await_all_actors_done();
   }
 };
 

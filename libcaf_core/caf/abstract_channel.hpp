@@ -55,9 +55,6 @@ public:
     return node_;
   }
 
-  /// Returns true if {@link node_ptr} returns
-  bool is_remote() const;
-
   static constexpr int is_abstract_actor_flag = 0x100000;
 
   static constexpr int is_abstract_group_flag = 0x200000;
@@ -87,15 +84,13 @@ protected:
 
 private:
   // can only be called from abstract_actor and abstract_group
-  explicit abstract_channel(int init_flags);
   abstract_channel(int init_flags, node_id nid);
 
-  /*
-   * Accumulates several state and type flags. Subtypes may use only the
-   * first 20 bits, i.e., the bitmask 0xFFF00000 is reserved for
-   * channel-related flags.
-   */
+  // Accumulates several state and type flags. Subtypes may use only the
+  // first 20 bits, i.e., the bitmask 0xFFF00000 is reserved for
+  // channel-related flags.
   std::atomic<int> flags_;
+
   // identifies the node of this channel
   node_id node_;
 };

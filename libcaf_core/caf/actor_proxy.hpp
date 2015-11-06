@@ -78,7 +78,7 @@ public:
   virtual void local_unlink_from(const actor_addr& other) = 0;
 
   /// Invokes cleanup code.
-  virtual void kill_proxy(uint32_t reason) = 0;
+  virtual void kill_proxy(execution_unit* ctx, uint32_t reason) = 0;
 
   void request_deletion(bool decremented_ref_count) noexcept override;
 
@@ -88,6 +88,7 @@ public:
 
 protected:
   actor_proxy(actor_id aid, node_id nid);
+
   anchor_ptr anchor_;
 };
 

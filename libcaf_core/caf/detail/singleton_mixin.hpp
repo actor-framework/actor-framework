@@ -22,12 +22,10 @@
 
 #include <utility>
 
-#include "caf/detail/logging.hpp"
+#include "caf/logger.hpp"
 
 namespace caf {
 namespace detail {
-
-class singletons;
 
 // a mixin for simple singleton classes
 template <class Derived, class Base = void>

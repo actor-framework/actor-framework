@@ -56,9 +56,9 @@ public:
   /// content of the buffer via the network.
   virtual void flush() = 0;
 
-  void io_failure(network::operation op) override;
+  void io_failure(execution_unit* ctx, network::operation op) override;
 
-  void consume(const void* data, size_t num_bytes) override;
+  void consume(execution_unit* ctx, const void* buf, size_t buf_size) override;
 
 protected:
   message detach_message() override;

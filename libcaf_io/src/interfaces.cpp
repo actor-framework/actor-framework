@@ -232,7 +232,8 @@ interfaces::native_address(const std::string& host,
   for (auto i = addrs.get(); i != nullptr; i = i->ai_next) {
     auto family = fetch_addr_str(true, true, buffer, i->ai_addr);
     if (family != AF_UNSPEC)
-      return {{buffer, family == AF_INET ? protocol::ipv4 : protocol::ipv6}};
+      return std::make_pair(buffer, family == AF_INET ? protocol::ipv4
+                                                      : protocol::ipv6);
   }
   return none;
 }

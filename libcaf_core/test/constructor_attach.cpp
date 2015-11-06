@@ -36,7 +36,7 @@ using done_atom = atom_constant<atom("done")>;
 CAF_TEST(constructor_attach) {
   class testee : public event_based_actor {
   public:
-    explicit testee(actor buddy) {
+    testee(actor_config& cfg, actor buddy) : event_based_actor(cfg) {
       attach_functor([=](uint32_t reason) {
         send(buddy, done_atom::value, reason);
       });
@@ -52,7 +52,7 @@ CAF_TEST(constructor_attach) {
   };
   class spawner : public event_based_actor {
   public:
-    spawner() : downs_(0) {
+    spawner(actor_config& cfg) : event_based_actor(cfg), downs_(0) {
       // nop
     }
 
@@ -86,7 +86,7 @@ CAF_TEST(constructor_attach) {
     int downs_;
     actor testee_;
   };
-  anon_send(spawn<spawner>(), die_atom::value);
-  await_all_actors_done();
-  shutdown();
+  actor_system system;
+  anon_send(system.spawn<spawner>(), die_atom::value);
+  system.await_all_actors_done();
 }

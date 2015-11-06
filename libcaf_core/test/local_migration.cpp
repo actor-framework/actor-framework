@@ -24,7 +24,7 @@
 
 #include "caf/all.hpp"
 
-#include "caf/detail/actor_registry.hpp"
+#include "caf/actor_registry.hpp"
 
 using namespace caf;
 
@@ -45,6 +45,10 @@ void serialize(Archive& ar, migratable_state& x, const unsigned int) {
 }
 
 struct migratable_actor : stateful_actor<migratable_state> {
+  migratable_actor(actor_config& cfg) : stateful_actor<migratable_state>(cfg) {
+    // nop
+  }
+
   behavior make_behavior() override {
     return {
       [=](get_atom) {
@@ -71,11 +75,12 @@ behavior pseudo_mm(event_based_actor* self, const actor& dest) {
 } // namespace <anonymous>
 
 CAF_TEST(migrate_locally) {
-  auto a = spawn<migratable_actor>();
-  auto b = spawn<migratable_actor>();
-  auto mm1 = spawn(pseudo_mm, b);
+  actor_system system;
+  auto a = system.spawn<migratable_actor>();
+  auto b = system.spawn<migratable_actor>();
+  auto mm1 = system.spawn(pseudo_mm, b);
   { // Lifetime scope of scoped_actor
-    scoped_actor self;
+    scoped_actor self{system};
     self->send(a, put_atom::value, 42);
     // migrate from a to b
     self->sync_send(a, sys_atom::value, migrate_atom::value, mm1).await(
@@ -89,7 +94,7 @@ CAF_TEST(migrate_locally) {
         CAF_CHECK(self->current_sender() == b.address());
       }
     );
-    auto mm2 = spawn(pseudo_mm, a);
+    auto mm2 = system.spawn(pseudo_mm, a);
     self->send(b, put_atom::value, 23);
     // migrate back from b to a
     self->sync_send(b, sys_atom::value, migrate_atom::value, mm2).await(
@@ -109,5 +114,4 @@ CAF_TEST(migrate_locally) {
     self->send_exit(mm2, exit_reason::kill);
     self->await_all_other_actors_done();
   }
-  shutdown();
 }

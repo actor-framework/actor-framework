@@ -73,13 +73,11 @@ behavior ping(event_based_actor* self, size_t num_pings) {
         return std::make_tuple(ping_atom::value, value + 1);
       },
       others >> [=] {
-        CAF_TEST_ERROR("Unexpected message: "
-                       << to_string(self->current_message()));
+        CAF_TEST_ERROR("Unexpected message");
       });
     },
     others >> [=] {
-      CAF_TEST_ERROR("Unexpected message: "
-                     << to_string(self->current_message()));
+      CAF_TEST_ERROR("Unexpected message");
     }
   };
 }
@@ -100,16 +98,14 @@ behavior pong(event_based_actor* self) {
           self->quit(dm.reason);
         },
         others >> [=] {
-          CAF_TEST_ERROR("Unexpected message: "
-                         << to_string(self->current_message()));
+          CAF_TEST_ERROR("Unexpected message");
         }
       );
       // reply to 'ping'
       return std::make_tuple(pong_atom::value, value);
     },
     others >> [=] {
-      CAF_TEST_ERROR("Unexpected message: "
-                     << to_string(self->current_message()));
+      CAF_TEST_ERROR("Unexpected message");
     }
   };
 }
@@ -175,18 +171,26 @@ acceptor::behavior_type acceptor_fun(acceptor::broker_pointer self,
       self->fork(peer_fun, msg.handle, buddy);
       self->quit();
     },
-    [](const new_data_msg&) {},
-    [](const connection_closed_msg&) {},
-    [](const acceptor_closed_msg&) {},
+    [](const new_data_msg&) {
+      // nop
+    },
+    [](const connection_closed_msg&) {
+      // nop
+    },
+    [](const acceptor_closed_msg&) {
+      // nop
+    },
     [=](publish_atom) {
-      return self->add_tcp_doorman(0, "127.0.0.1").second;
+      // TODO: return the maybe<> (implement on lower level)
+      return *get<1>(self->add_tcp_doorman(0, "127.0.0.1"));
     }
   };
 }
 
-void run_server(bool spawn_client, const char* bin_path, bool use_asio) {
-  scoped_actor self;
-  auto serv = spawn_io(acceptor_fun, spawn(pong));
+void run_server(actor_system& system, bool spawn_client,
+                const char* bin_path, bool use_asio) {
+  scoped_actor self{system};
+  auto serv = system.middleman().spawn_broker(acceptor_fun, system.spawn(pong));
   self->sync_send(serv, publish_atom::value).await(
     [&](uint16_t port) {
       CAF_MESSAGE("server is running on port " << port);
@@ -227,28 +231,29 @@ CAF_TEST(test_typed_broker) {
     cout << r.error << endl << endl << r.helptext << endl;
     return;
   }
+  actor_system_config cfg;
   auto use_asio = r.opts.count("use-asio") > 0;
+# ifdef CAF_USE_ASIO
   if (use_asio) {
-#   ifdef CAF_USE_ASIO
-    CAF_MESSAGE("enable ASIO backend");
-    io::set_middleman<io::network::asio_multiplexer>();
-#   endif // CAF_USE_ASIO
-  }
+    cfg.load<io::middleman, io::network::asio_multiplexer>());
+  else
+# endif // CAF_USE_ASIO
+    cfg.load<io::middleman>();
+  actor_system system{cfg};
   if (r.opts.count("client-port") > 0) {
-    auto p = spawn(ping, size_t{10});
-    CAF_MESSAGE("spawn_io_client_typed...");
-    auto cl = spawn_io_client(peer_fun, "localhost", port, p);
-    CAF_MESSAGE("spawn_io_client_typed finished");
-    anon_send(p, kickoff_atom::value, cl);
+    auto p = system.spawn(ping, size_t{10});
+    CAF_MESSAGE("spawn_client_typed...");
+    auto cl = system.middleman().spawn_client(peer_fun, "localhost", port, p);
+    CAF_REQUIRE(cl);
+    CAF_MESSAGE("spawn_client_typed finished");
+    anon_send(p, kickoff_atom::value, *cl);
     CAF_MESSAGE("`kickoff_atom` has been send");
   } else if (r.opts.count("server") > 0) {
     // run in server mode
-    run_server(false, argv[0], use_asio);
+    run_server(system, false, argv[0], use_asio);
   } else {
-    run_server(true, test::engine::path(), use_asio);
+    run_server(system, true, test::engine::path(), use_asio);
   }
   CAF_MESSAGE("block on `await_all_actors_done`");
-  await_all_actors_done();
-  CAF_MESSAGE("`await_all_actors_done` has finished");
-  shutdown();
+  system.await_all_actors_done();
 }

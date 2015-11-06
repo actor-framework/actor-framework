@@ -21,14 +21,13 @@
 #include "caf/config.hpp"
 #include "caf/make_counted.hpp"
 
-#include "caf/detail/logging.hpp"
-#include "caf/detail/singletons.hpp"
+#include "caf/logger.hpp"
 #include "caf/detail/scope_guard.hpp"
 
 #include "caf/io/broker.hpp"
 #include "caf/io/middleman.hpp"
 
-#include "caf/detail/actor_registry.hpp"
+#include "caf/actor_registry.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 
 namespace caf {
@@ -38,9 +37,8 @@ void broker::initialize() {
   CAF_LOG_TRACE("");
   init_broker();
   auto bhvr = make_behavior();
-  CAF_LOG_DEBUG_IF(! bhvr, "make_behavior() did not return a behavior, "
-                          << "has_behavior() = "
-                          << std::boolalpha << this->has_behavior());
+  CAF_LOG_DEBUG_IF(! bhvr, "make_behavior() did not return a behavior:"
+                           << CAF_ARG(has_behavior()));
   if (bhvr) {
     // make_behavior() did return a behavior instead of using become()
     CAF_LOG_DEBUG("make_behavior() did return a valid behavior");
@@ -48,11 +46,7 @@ void broker::initialize() {
   }
 }
 
-broker::broker() {
-  // nop
-}
-
-broker::broker(middleman& parent_ref) : super(parent_ref) {
+broker::broker(actor_config& cfg) : super(cfg) {
   // nop
 }
 

@@ -27,7 +27,8 @@
 using namespace caf;
 
 CAF_TEST(simple_reply_response) {
-  auto s = spawn([](event_based_actor* self) -> behavior {
+  actor_system system;
+  auto s = system.spawn([](event_based_actor* self) -> behavior {
     return (
       others >> [=]() -> message {
         CAF_CHECK(self->current_message() == make_message(ok_atom::value));
@@ -37,7 +38,7 @@ CAF_TEST(simple_reply_response) {
     );
   });
   {
-    scoped_actor self;
+    scoped_actor self{system};
     self->send(s, ok_atom::value);
     self->receive(
       others >> [&] {
@@ -45,6 +46,5 @@ CAF_TEST(simple_reply_response) {
       }
     );
   }
-  await_all_actors_done();
-  shutdown();
+  system.await_all_actors_done();
 }

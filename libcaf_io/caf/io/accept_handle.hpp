@@ -49,6 +49,11 @@ public:
     // nop
   }
 
+  template <class T>
+  friend void serialize(T& in_out, accept_handle& x, const unsigned int) {
+    in_out & x.id_;
+  }
+
 private:
   inline accept_handle(int64_t handle_id) : super(handle_id) {
     // nop

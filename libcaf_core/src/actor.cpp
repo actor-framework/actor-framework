@@ -17,13 +17,16 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/channel.hpp"
+
 #include <utility>
 
 #include "caf/actor.hpp"
-#include "caf/channel.hpp"
 #include "caf/actor_addr.hpp"
+#include "caf/serializer.hpp"
 #include "caf/actor_proxy.hpp"
 #include "caf/local_actor.hpp"
+#include "caf/deserializer.hpp"
 #include "caf/blocking_actor.hpp"
 #include "caf/event_based_actor.hpp"
 
@@ -58,12 +61,26 @@ actor_addr actor::address() const noexcept {
   return ptr_ ? ptr_->address() : actor_addr{};
 }
 
-bool actor::is_remote() const noexcept {
-  return ptr_ ? ptr_->is_remote() : false;
+node_id actor::node() const noexcept {
+  return ptr_ ? ptr_->node() : invalid_node_id;
 }
 
 actor_id actor::id() const noexcept {
   return ptr_ ? ptr_->id() : invalid_actor_id;
+}
+
+void serialize(serializer& sink, actor& x, const unsigned int) {
+  sink << x.address();
+}
+
+void serialize(deserializer& source, actor& x, const unsigned int) {
+  actor_addr addr;
+  source >> addr;
+  x = actor_cast<actor>(addr);
+}
+
+std::string to_string(const actor& x) {
+  return to_string(x.address());
 }
 
 } // namespace caf

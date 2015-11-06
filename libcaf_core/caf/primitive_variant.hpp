@@ -26,10 +26,10 @@
 #include <stdexcept>
 #include <type_traits>
 
+#include "caf/atom.hpp"
 #include "caf/none.hpp"
 #include "caf/variant.hpp"
 
-#include "caf/atom.hpp"
 
 namespace caf {
 

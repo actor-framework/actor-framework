@@ -43,12 +43,16 @@ public:
   /// Interface for user-defined multicast implementations.
   class module {
   public:
-    module(std::string module_name);
+    module(actor_system& sys, std::string module_name);
 
     virtual ~module();
 
     /// Stops all groups from this module.
     virtual void stop() = 0;
+
+    inline actor_system& system() const {
+      return system_;
+    }
 
     /// Returns the name of this module implementation.
     /// @threadsafe
@@ -58,16 +62,17 @@ public:
     /// @threadsafe
     virtual group get(const std::string& group_name) = 0;
 
-    virtual group deserialize(deserializer* source) = 0;
+    virtual group load(deserializer& source) = 0;
 
   private:
+    actor_system& system_;
     std::string name_;
   };
 
   using module_ptr = module*;
   using unique_module_ptr = std::unique_ptr<module>;
 
-  virtual void serialize(serializer* sink) = 0;
+  virtual void save(serializer& sink) const = 0;
 
   /// Returns a string representation of the group identifier, e.g.,
   /// "224.0.0.1" for IPv4 multicast or a user-defined string for local groups.
@@ -85,12 +90,18 @@ public:
   /// Stops any background actors or threads and IO handles.
   virtual void stop() = 0;
 
+  inline actor_system& system() {
+    return system_;
+  }
+
 protected:
-  abstract_group(module_ptr module, std::string group_id, const node_id& nid);
+  abstract_group(actor_system& sys, module_ptr module,
+                 std::string group_id, const node_id& nid);
 
   // called by local_actor
   virtual void unsubscribe(const actor_addr& who) = 0;
 
+  actor_system& system_;
   module_ptr module_;
   std::string identifier_;
 };

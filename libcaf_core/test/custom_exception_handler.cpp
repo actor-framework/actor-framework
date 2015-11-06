@@ -29,7 +29,7 @@ using namespace caf;
 class exception_testee : public event_based_actor {
 public:
   ~exception_testee();
-  exception_testee() {
+  exception_testee(actor_config& cfg) : event_based_actor(cfg) {
     set_exception_handler([](const std::exception_ptr&) -> maybe<uint32_t> {
       return exit_reason::user_defined + 2;
     });
@@ -47,8 +47,8 @@ exception_testee::~exception_testee() {
   // avoid weak-vtables warning
 }
 
-
 CAF_TEST(test_custom_exception_handler) {
+  actor_system system;
   auto handler = [](const std::exception_ptr& eptr) -> maybe<uint32_t> {
     try {
       std::rethrow_exception(eptr);
@@ -62,7 +62,7 @@ CAF_TEST(test_custom_exception_handler) {
     return exit_reason::user_defined + 1;
   };
   {
-    scoped_actor self;
+    scoped_actor self{system};
     auto testee1 = self->spawn<monitored>([=](event_based_actor* eb_self) {
       eb_self->set_exception_handler(handler);
       throw std::runtime_error("ping");
@@ -93,5 +93,4 @@ CAF_TEST(test_custom_exception_handler) {
     );
     self->await_all_other_actors_done();
   }
-  shutdown();
 }

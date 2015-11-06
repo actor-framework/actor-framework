@@ -28,7 +28,7 @@
 #include "caf/response_handle.hpp"
 #include "caf/abstract_event_based_actor.hpp"
 
-#include "caf/detail/logging.hpp"
+#include "caf/logger.hpp"
 
 namespace caf {
 
@@ -38,13 +38,15 @@ namespace caf {
 /// @extends local_actor
 class event_based_actor : public abstract_event_based_actor<behavior, true> {
 public:
+  using super = abstract_event_based_actor<behavior, true>;
+
+  event_based_actor(actor_config& cfg);
+
+  ~event_based_actor();
+
   /// Forwards the last received message to `whom`.
   void forward_to(const actor& whom,
                   message_priority = message_priority::normal);
-
-  event_based_actor() = default;
-
-  ~event_based_actor();
 
   void initialize() override;
 

@@ -35,7 +35,7 @@ void response_promise::deliver_impl(message msg) const {
     return;
   auto to = actor_cast<abstract_actor_ptr>(to_);
   auto from = actor_cast<abstract_actor_ptr>(from_);
-  to->enqueue(from_, id_, std::move(msg), from->host());
+  to->enqueue(from_, id_, std::move(msg), from->context());
 }
 
 } // namespace caf

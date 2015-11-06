@@ -87,6 +87,8 @@ public:
 
 using mailbox_element_ptr = std::unique_ptr<mailbox_element, detail::disposer>;
 
+std::string to_string(const mailbox_element&);
+
 } // namespace caf
 
 #endif // CAF_MAILBOX_ELEMENT_HPP

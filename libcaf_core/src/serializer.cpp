@@ -18,11 +18,10 @@
  ******************************************************************************/
 
 #include "caf/serializer.hpp"
-#include "caf/uniform_type_info.hpp"
 
 namespace caf {
 
-serializer::serializer(actor_namespace* ns) : namespace_{ns} {
+serializer::serializer(execution_unit* ctx) : super(ctx) {
   // nop
 }
 

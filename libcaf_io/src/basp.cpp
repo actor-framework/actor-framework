@@ -20,14 +20,11 @@
 #include "caf/io/basp.hpp"
 
 #include "caf/message.hpp"
-#include "caf/to_string.hpp"
-#include "caf/uniform_typeid.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/binary_deserializer.hpp"
 
-#include "caf/detail/logging.hpp"
-#include "caf/detail/singletons.hpp"
-#include "caf/detail/actor_registry.hpp"
+#include "caf/logger.hpp"
+#include "caf/actor_registry.hpp"
 
 namespace caf {
 namespace io {
@@ -66,28 +63,6 @@ std::string to_string(const header &hdr) {
       << hdr.dest_actor
       << "}";
   return oss.str();
-}
-
-void read_hdr(deserializer& source, header& hdr) {
-  uint32_t operation;
-  hdr.source_node.deserialize(source);
-  hdr.dest_node.deserialize(source);
-  source.read(hdr.source_actor)
-        .read(hdr.dest_actor)
-        .read(hdr.payload_len)
-        .read(operation)
-        .read(hdr.operation_data);
-  hdr.operation = static_cast<basp::message_type>(operation);
-}
-
-void write_hdr(serializer& sink, const header& hdr) {
-  hdr.source_node.serialize(sink);
-  hdr.dest_node.serialize(sink);
-  sink.write(hdr.source_actor)
-      .write(hdr.dest_actor)
-      .write(hdr.payload_len)
-      .write(static_cast<uint32_t>(hdr.operation))
-      .write(hdr.operation_data);
 }
 
 bool operator==(const header& lhs, const header& rhs) {
@@ -311,9 +286,8 @@ size_t routing_table::erase(const node_id& dest, erase_callback& cb) {
  *                                   callee                                   *
  ******************************************************************************/
 
-instance::callee::callee(actor_namespace::backend& mgm, middleman& mm)
-    : namespace_(mgm),
-      middleman_(mm) {
+instance::callee::callee(actor_system& sys, proxy_registry::backend& backend)
+    : namespace_(sys, backend) {
   // nop
 }
 
@@ -327,12 +301,13 @@ instance::callee::~callee() {
 
 instance::instance(abstract_broker* parent, callee& lstnr)
     : tbl_(parent),
-      this_node_(caf::detail::singletons::get_node_id()),
+      this_node_(parent->system().node()),
       callee_(lstnr) {
   CAF_ASSERT(this_node_ != invalid_node_id);
 }
 
-connection_state instance::handle(const new_data_msg& dm, header& hdr,
+connection_state instance::handle(execution_unit* ctx,
+                                  new_data_msg& dm, header& hdr,
                                   bool is_payload) {
   CAF_LOG_TRACE("");
   // function object providing cleanup code on errors
@@ -343,7 +318,7 @@ connection_state instance::handle(const new_data_msg& dm, header& hdr,
     tbl_.erase_direct(dm.handle, cb);
     return close_connection;
   };
-  const std::vector<char>* payload = nullptr;
+  std::vector<char>* payload = nullptr;
   if (is_payload) {
     payload = &dm.buf;
     if (payload->size() != hdr.payload_len) {
@@ -351,25 +326,24 @@ connection_state instance::handle(const new_data_msg& dm, header& hdr,
       return err();
     }
   } else {
-    binary_deserializer bd{dm.buf.data(), dm.buf.size(), &get_namespace()};
-    read_hdr(bd, hdr);
+    binary_deserializer bd{ctx, dm.buf.data(), dm.buf.size()};
+    bd >> hdr;
     if (hdr.payload_len > 0)
       return await_payload;
   }
-  CAF_LOG_DEBUG("hdr = " << to_string(hdr));
+  CAF_LOG_DEBUG(CAF_ARG(hdr));
   if (! valid(hdr)) {
-    CAF_LOG_WARNING("received invalid header of type "
-                    << to_string(hdr.operation));
+    CAF_LOG_WARNING("received invalid header:" << CAF_ARG(hdr.operation));
     return err();
   }
   // needs forwarding?
   if (! is_handshake(hdr) && hdr.dest_node != this_node_) {
     auto path = lookup(hdr.dest_node);
     if (path) {
-      binary_serializer bs{std::back_inserter(path->wr_buf), &get_namespace()};
-      write_hdr(bs, hdr);
+      binary_serializer bs{ctx, std::back_inserter(path->wr_buf)};
+      bs << hdr;
       if (payload)
-        bs.write_raw(payload->size(), payload->data());
+        bs.apply_raw(payload->size(), payload->data());
       tbl_.flush(*path);
       notify<hook::message_forwarded>(hdr, payload);
     } else {
@@ -379,7 +353,8 @@ connection_state instance::handle(const new_data_msg& dm, header& hdr,
         if (! reverse_path) {
           CAF_LOG_WARNING("cannot send error message: no route to source");
         } else {
-          write_dispatch_error(reverse_path->wr_buf,
+          write_dispatch_error(ctx,
+                               reverse_path->wr_buf,
                                this_node_,
                                hdr.source_node,
                                error::no_route_to_destination,
@@ -403,8 +378,7 @@ connection_state instance::handle(const new_data_msg& dm, header& hdr,
       actor_id aid = invalid_actor_id;
       std::set<std::string> sigs;
       if (payload_valid()) {
-        binary_deserializer bd{payload->data(), payload->size(),
-                               &get_namespace()};
+        binary_deserializer bd{ctx, payload->data(), payload->size()};
         bd >> aid >> sigs;
       }
       // close self connection after handshake is done
@@ -416,12 +390,12 @@ connection_state instance::handle(const new_data_msg& dm, header& hdr,
       // close this connection if we already have a direct connection
       if (tbl_.lookup_direct(hdr.source_node) != invalid_connection_handle) {
         CAF_LOG_INFO("close connection since we already have a "
-                     "direct connection to " << to_string(hdr.source_node));
+                     "direct connection: " << CAF_ARG(hdr.source_node));
         callee_.finalize_handshake(hdr.source_node, aid, sigs);
         return err();
       }
       // add direct route to this node and remove any indirect entry
-      CAF_LOG_INFO("new direct connection: " << to_string(hdr.source_node));
+      CAF_LOG_INFO("new direct connection:" << CAF_ARG(hdr.source_node));
       tbl_.add_direct(dm.handle, hdr.source_node);
       auto was_indirect = tbl_.erase_indirect(hdr.source_node);
       // write handshake as client in response
@@ -430,7 +404,7 @@ connection_state instance::handle(const new_data_msg& dm, header& hdr,
         CAF_LOG_ERROR("no route to host after server handshake");
         return err();
       }
-      write_client_handshake(path->wr_buf, hdr.source_node);
+      write_client_handshake(ctx, path->wr_buf, hdr.source_node);
       callee_.learned_new_node_directly(hdr.source_node, was_indirect);
       callee_.finalize_handshake(hdr.source_node, aid, sigs);
       flush(*path);
@@ -438,12 +412,12 @@ connection_state instance::handle(const new_data_msg& dm, header& hdr,
     }
     case message_type::client_handshake: {
       if (tbl_.lookup_direct(hdr.source_node) != invalid_connection_handle) {
-        CAF_LOG_INFO("received second client handshake for "
-                     << to_string(hdr.source_node) << " (ignored)");
+        CAF_LOG_INFO("received second client handshake:"
+                     << CAF_ARG(hdr.source_node));
         break;
       }
       // add direct route to this node and remove any indirect entry
-      CAF_LOG_INFO("new direct connection: " << to_string(hdr.source_node));
+      CAF_LOG_INFO("new direct connection:" << CAF_ARG(hdr.source_node));
       tbl_.add_direct(dm.handle, hdr.source_node);
       auto was_indirect = tbl_.erase_indirect(hdr.source_node);
       callee_.learned_new_node_directly(hdr.source_node, was_indirect);
@@ -461,10 +435,9 @@ connection_state instance::handle(const new_data_msg& dm, header& hdr,
           && tbl_.lookup_direct(hdr.source_node) == invalid_connection_handle
           && tbl_.add_indirect(last_hop, hdr.source_node))
         callee_.learned_new_node_indirectly(hdr.source_node);
-      binary_deserializer bd{payload->data(), payload->size(),
-                             &get_namespace()};
+      binary_deserializer bd{ctx, payload->data(), payload->size()};
       message msg;
-      msg.deserialize(bd);
+      bd & msg;
       callee_.deliver(hdr.source_node, hdr.source_actor,
                       hdr.dest_node, hdr.dest_actor, msg,
                       message_id::from_integer_value(hdr.operation_data));
@@ -492,10 +465,10 @@ void instance::handle(const connection_closed_msg& msg) {
 }
 
 void instance::handle_node_shutdown(const node_id& affected_node) {
-  CAF_LOG_TRACE(CAF_TSARG(affected_node));
+  CAF_LOG_TRACE(CAF_ARG(affected_node));
   if (affected_node == invalid_node_id)
     return;
-  CAF_LOG_INFO("lost direct connection to " << to_string(affected_node));
+  CAF_LOG_INFO("lost direct connection:" << CAF_ARG(affected_node));
   auto cb = make_callback([&](const node_id& nid){
     callee_.purge_state(nid);
   });
@@ -510,10 +483,10 @@ void instance::flush(const routing_table::route& path) {
   tbl_.flush(path);
 }
 
-void instance::write(const routing_table::route& r, header& hdr,
-                     payload_writer* writer) {
+void instance::write(execution_unit* ctx, const routing_table::route& r,
+                     header& hdr, payload_writer* writer) {
   CAF_ASSERT(hdr.payload_len == 0 || writer != nullptr);
-  write(r.wr_buf, hdr, writer);
+  write(ctx, r.wr_buf, hdr, writer);
   tbl_.flush(r);
 }
 
@@ -565,28 +538,30 @@ size_t instance::remove_published_actor(const actor_addr& whom, uint16_t port,
   return result;
 }
 
-bool instance::dispatch(const actor_addr& sender, const actor_addr& receiver,
-                        message_id mid, const message& msg) {
+bool instance::dispatch(execution_unit* ctx, const actor_addr& sender,
+                        const actor_addr& receiver, message_id mid,
+                        const message& msg) {
   CAF_LOG_TRACE("");
-  CAF_ASSERT(receiver.is_remote());
+  CAF_ASSERT(system().node() != receiver.node());
   auto path = lookup(receiver->node());
   if (! path) {
     notify<hook::message_sending_failed>(sender, receiver, mid, msg);
     return false;
   }
   auto writer = make_callback([&](serializer& sink) {
-    msg.serialize(sink);
+    sink & msg;
   });
   header hdr{message_type::dispatch_message, 0, mid.integer_value(),
              sender ? sender->node() : this_node(), receiver->node(),
              sender ? sender->id() : invalid_actor_id, receiver->id()};
-  write(path->wr_buf, hdr, &writer);
+  write(ctx, path->wr_buf, hdr, &writer);
   flush(*path);
   notify<hook::message_sent>(sender, path->next_hop, receiver, mid, msg);
   return true;
 }
 
-void instance::write(buffer_type& buf,
+void instance::write(execution_unit* ctx,
+                     buffer_type& buf,
                      message_type operation,
                      uint32_t* payload_len,
                      uint64_t operation_data,
@@ -596,14 +571,15 @@ void instance::write(buffer_type& buf,
                      actor_id dest_actor,
                      payload_writer* pw) {
   if (! pw) {
-    binary_serializer bs{std::back_inserter(buf), &get_namespace()};
-    source_node.serialize(bs);
-    dest_node.serialize(bs);
-    bs.write(source_actor)
-      .write(dest_actor)
-      .write(uint32_t{0})
-      .write(static_cast<uint32_t>(operation))
-      .write(operation_data);
+    uint32_t zero = 0;
+    binary_serializer bs{ctx, std::back_inserter(buf)};
+    bs << source_node
+       << dest_node
+       << source_actor
+       << dest_actor
+       << zero
+       << operation
+       << operation_data;
   } else {
     // reserve space in the buffer to write the payload later on
     auto wr_pos = static_cast<ptrdiff_t>(buf.size());
@@ -611,30 +587,32 @@ void instance::write(buffer_type& buf,
     buf.insert(buf.end(), std::begin(placeholder), std::end(placeholder));
     auto pl_pos = buf.size();
     { // lifetime scope of first serializer (write payload)
-      binary_serializer bs1{std::back_inserter(buf), &get_namespace()};
-      (*pw)(bs1);
+      binary_serializer bs{ctx, std::back_inserter(buf)};
+      (*pw)(bs);
     }
     // write broker message to the reserved space
-    binary_serializer bs2{buf.begin() + wr_pos, &get_namespace()};
+    binary_serializer bs2{ctx, buf.begin() + wr_pos};
     auto plen = static_cast<uint32_t>(buf.size() - pl_pos);
-    source_node.serialize(bs2);
-    dest_node.serialize(bs2);
-    bs2.write(source_actor)
-       .write(dest_actor)
-       .write(plen)
-       .write(static_cast<uint32_t>(operation))
-       .write(operation_data);
+    bs2 << source_node
+        << dest_node
+        << source_actor
+        << dest_actor
+        << plen
+        << operation
+        << operation_data;
     if (payload_len)
       *payload_len = plen;
   }
 }
 
-void instance::write(buffer_type& buf, header& hdr, payload_writer* pw) {
-  write(buf, hdr.operation, &hdr.payload_len, hdr.operation_data,
+void instance::write(execution_unit* ctx, buffer_type& buf,
+                     header& hdr, payload_writer* pw) {
+  write(ctx, buf, hdr.operation, &hdr.payload_len, hdr.operation_data,
         hdr.source_node, hdr.dest_node, hdr.source_actor, hdr.dest_actor, pw);
 }
 
-void instance::write_server_handshake(buffer_type& out_buf,
+void instance::write_server_handshake(execution_unit* ctx,
+                                      buffer_type& out_buf,
                                       maybe<uint16_t> port) {
   using namespace detail;
   published_actor* pa = nullptr;
@@ -644,49 +622,51 @@ void instance::write_server_handshake(buffer_type& out_buf,
       pa = &i->second;
   }
   auto writer = make_callback([&](serializer& sink) {
-    if (pa)
-      sink << pa->first.id() << pa->second;
+    if (pa) {
+      auto i = pa->first.id();
+      sink << i << pa->second;
+    }
   });
   header hdr{message_type::server_handshake, 0, version,
              this_node_, invalid_node_id,
              pa ? pa->first.id() : invalid_actor_id, invalid_actor_id};
-  write(out_buf, hdr, &writer);
+  write(ctx, out_buf, hdr, &writer);
 }
 
-void instance::write_client_handshake(buffer_type& buf,
+void instance::write_client_handshake(execution_unit* ctx,
+                                      buffer_type& buf,
                                       const node_id& remote_side) {
-  write(buf,
-        message_type::client_handshake, nullptr, 0,
-        this_node_, remote_side,
-        invalid_actor_id, invalid_actor_id);
+  write(ctx, buf, message_type::client_handshake, nullptr, 0,
+        this_node_, remote_side, invalid_actor_id, invalid_actor_id);
 }
 
-void instance::write_dispatch_error(buffer_type& buf,
+void instance::write_dispatch_error(execution_unit* ctx,
+                                    buffer_type& buf,
                                     const node_id& source_node,
                                     const node_id& dest_node,
                                     error error_code,
                                     const header& original_hdr,
-                                    const buffer_type* payload) {
+                                    buffer_type* payload) {
   auto writer = make_callback([&](serializer& sink) {
-    write_hdr(sink, original_hdr);
+    sink << original_hdr;
     if (payload)
-      sink.write_raw(payload->size(), payload->data());
+      sink.apply_raw(payload->size(), payload->data());
   });
   header hdr{message_type::kill_proxy_instance, 0,
              static_cast<uint64_t>(error_code),
              source_node, dest_node,
              invalid_actor_id, invalid_actor_id};
-  write(buf, hdr, &writer);
+  write(ctx, buf, hdr, &writer);
 }
 
-void instance::write_kill_proxy_instance(buffer_type& buf,
+void instance::write_kill_proxy_instance(execution_unit* ctx,
+                                         buffer_type& buf,
                                          const node_id& dest_node,
                                          actor_id aid,
                                          uint32_t rsn) {
   header hdr{message_type::kill_proxy_instance, 0, rsn,
-             this_node_, dest_node,
-             aid, invalid_actor_id};
-  write(buf, hdr);
+             this_node_, dest_node, aid, invalid_actor_id};
+  write(ctx, buf, hdr);
 }
 
 } // namespace basp

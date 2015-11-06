@@ -25,9 +25,9 @@
 #include <iostream>
 #include <sstream>
 
-#include "caf/all.hpp"
+#include "caf/string_algorithms.hpp"
 
-#include "caf/experimental/whereis.hpp"
+#include "caf/all.hpp"
 
 #include "caf/detail/parse_ini.hpp"
 #include "caf/detail/safe_equal.hpp"
@@ -80,36 +80,51 @@ hu=0779
 hop=--"hiho"
 )__";
 
-struct fixture {
-  ~fixture() {
-    shutdown();
+class message_visitor : public static_visitor<message> {
+public:
+  template <class T>
+  message operator()(T& value) const {
+    return make_message(std::move(value));
   }
+};
+
+
+struct fixture {
+  actor_system system;
 
   template <class F>
-  void load_impl(F loader, const char* str) {
+  void load_impl(F consumer, const char* str) {
     std::stringstream ss;
     std::stringstream err;
     ss << str;
-    loader(ss, err);
+    detail::parse_ini(ss, consumer, err);
     split(errors, err.str(), is_any_of("\n"), token_compress_on);
   }
 
   void load_to_config_server(const char* str) {
-    config_server = experimental::whereis(atom("ConfigServ"));;
-    auto f = [&](std::istream& in, std::ostream& out) {
-      parse_config(in, config_format::ini, out);
+    config_server = system.registry().get(atom("ConfigServ"));
+    CAF_REQUIRE(config_server != invalid_actor);
+    // clear config
+    scoped_actor self{system};
+    self->sync_send(config_server, get_atom::value, "*").await(
+      [&](ok_atom, std::vector<std::pair<std::string, message>>& msgs) {
+        for (auto& kvp : msgs)
+          self->send(config_server, put_atom::value, kvp.first, message{});
+      }
+    );
+    auto consume = [&](std::string key, config_value value) {
+      message_visitor mv;
+      anon_send(config_server, put_atom::value,
+                std::move(key), apply_visitor(mv, value));
     };
-    load_impl(f, str);
+    load_impl(consume, str);
   }
 
   void load(const char* str) {
     auto consume = [&](std::string key, config_value value) {
       values.emplace(std::move(key), std::move(value));
     };
-    auto f = [&](std::istream& in, std::ostream& out) {
-      detail::parse_ini(in, consume, out);
-    };
-    load_impl(f, str);
+    load_impl(consume, str);
   }
 
   bool has_error(const char* err) {
@@ -130,7 +145,7 @@ struct fixture {
         >::type
       >::type;
     bool result = false;
-    scoped_actor self;
+    scoped_actor self{system};
     self->sync_send(config_server, get_atom::value, key).await(
       [&](ok_atom, std::string&, message& msg) {
         msg.apply(
@@ -165,10 +180,12 @@ struct fixture {
   size_t num_values() {
     if (config_server != invalid_actor) {
       size_t result = 0;
-      scoped_actor self;
+      scoped_actor self{system};
       self->sync_send(config_server, get_atom::value, "*").await(
         [&](ok_atom, std::vector<std::pair<std::string, message>>& msgs) {
-          result = msgs.size();
+          for (auto& kvp : msgs)
+            if (! kvp.second.empty())
+              ++result;
         }
       );
       return result;
@@ -226,12 +243,9 @@ struct fixture {
 
 CAF_TEST_FIXTURE_SCOPE(parse_ini_tests, fixture)
 
-
-
 CAF_TEST(simple_ini) {
   load(case1);
   check_case1();
-
 }
 
 CAF_TEST(numbers) {
@@ -240,7 +254,7 @@ CAF_TEST(numbers) {
 }
 
 CAF_TEST(errors) {
-  load_to_config_server(case3);
+  load(case3);
   check_case3();
 }
 

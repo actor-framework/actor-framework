@@ -40,20 +40,26 @@ public:
 
   void* mutable_at(size_t pos) override;
 
+  void serialize_at(deserializer& source, size_t pos) override;
+
   size_t size() const override;
 
   cow_ptr copy() const override;
 
   const void* at(size_t pos) const override;
 
+  bool compare_at(size_t, const element_rtti&, const void*) const override;
+
   bool match_element(size_t pos, uint16_t typenr,
                      const std::type_info* rtti) const override;
 
   uint32_t type_token() const override;
 
-  const char* uniform_name_at(size_t pos) const override;
+  element_rtti type_at(size_t pos) const override;
 
-  uint16_t type_nr_at(size_t pos) const override;
+  void serialize_at(serializer& sink, size_t pos) const override;
+
+  std::string stringify_at(size_t pos) const override;
 
   concatenated_tuple(std::initializer_list<cow_ptr> xs);
 

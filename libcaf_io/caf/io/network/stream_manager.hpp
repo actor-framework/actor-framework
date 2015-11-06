@@ -37,7 +37,7 @@ public:
   ~stream_manager();
 
   /// Called by the underlying IO device whenever it received data.
-  virtual void consume(const void* data, size_t num_bytes) = 0;
+  virtual void consume(execution_unit* ctx, const void* buf, size_t bsize) = 0;
 };
 
 } // namespace network

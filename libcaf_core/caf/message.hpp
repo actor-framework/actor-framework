@@ -21,12 +21,12 @@
 #define CAF_MESSAGE_HPP
 
 #include <tuple>
+#include <sstream>
 #include <type_traits>
 
 #include "caf/fwd.hpp"
 #include "caf/atom.hpp"
 #include "caf/config.hpp"
-#include "caf/from_string.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/skip_message.hpp"
 
@@ -95,9 +95,6 @@ public:
 
   /// Returns a const pointer to the element at position `p`.
   const void* at(size_t p) const;
-
-  /// Returns the uniform type name for the element at position `p`.
-  const char* uniform_name_at(size_t p) const;
 
   /// Returns @c true if `*this == other, otherwise false.
   bool equals(const message& other) const;
@@ -267,10 +264,6 @@ public:
 
   /// @cond PRIVATE
 
-  void serialize(serializer& sink) const;
-
-  void deserialize(deserializer& source);
-
   using raw_ptr = detail::message_data*;
 
   using data_ptr = detail::message_data::cow_ptr;
@@ -300,10 +293,6 @@ public:
   void reset(raw_ptr new_ptr = nullptr, bool add_ref = true);
 
   void swap(message& other);
-
-  inline std::string tuple_type_names() const {
-    return vals_->tuple_type_names();
-  }
 
   bool match_element(size_t p, uint16_t tnr, const std::type_info* rtti) const;
 
@@ -336,6 +325,15 @@ private:
 
   data_ptr vals_;
 };
+
+/// @relates message
+void serialize(serializer& sink, const message& msg, const unsigned int);
+
+/// @relates message
+void serialize(deserializer& sink, message& msg, const unsigned int);
+
+/// @relates message
+std::string to_string(const message& msg);
 
 /// Stores the result of `message::extract_opts`.
 struct message::cli_res {
@@ -385,14 +383,22 @@ typename std::enable_if<
   message
 >::type
 make_message(V&& x, Ts&&... xs) {
-  using storage
-    = detail::tuple_vals<typename unbox_message_element<
-                           typename detail::strip_and_convert<V>::type
-                         >::type,
-                         typename unbox_message_element<
-                           typename detail::strip_and_convert<Ts>::type
-                         >::type...>;
-
+  using namespace caf::detail;
+  using stored_types =
+    type_list<
+      typename unbox_message_element<
+        typename strip_and_convert<V>::type
+      >::type,
+      typename unbox_message_element<
+        typename strip_and_convert<Ts>::type
+      >::type...
+    >;
+  static_assert(tl_forall<stored_types, is_serializable>::value,
+                "at least one type is not serializable via free "
+                "'serialize(InOrOut&, T&, const unsigned int)' or"
+                "`T::sereialize(InOrOut&, const unsigned int)` "
+                "member function");
+  using storage = typename tl_apply<stored_types, tuple_vals>::type;
   auto ptr = make_counted<storage>(std::forward<V>(x), std::forward<Ts>(xs)...);
   return message{detail::message_data::cow_ptr{std::move(ptr)}};
 }
@@ -422,12 +428,17 @@ message::cli_arg::cli_arg(typename std::enable_if<
     : name(std::move(nstr)),
       text(std::move(tstr)),
       fun([&arg](const std::string& str) -> bool {
-            auto res = from_string<T>(str);
-            if (! res)
-              return false;
-            arg = *res;
-            return true;
-          }) {
+        T x;
+        // TODO: using this stream is a workaround for the missing
+        //       from_string<T>() interface and has downsides such as
+        //       not performing overflow/underflow checks etc.
+        std::istringstream iss{str};
+        if (iss >> x) {
+          arg = x;
+          return true;
+        }
+        return false;
+      }) {
   // nop
 }
 
@@ -436,11 +447,13 @@ message::cli_arg::cli_arg(std::string nstr, std::string tstr, std::vector<T>& ar
     : name(std::move(nstr)),
       text(std::move(tstr)),
       fun([&arg](const std::string& str) -> bool {
-            auto res = from_string<T>(str);
-            if (! res)
-              return false;
-            arg.push_back(*res);
-            return true;
+        T x;
+        std::istringstream iss{str};
+        if (iss >> x) {
+          arg.emplace_back(std::move(x));
+          return true;
+        }
+        return false;
           }) {
   // nop
 }

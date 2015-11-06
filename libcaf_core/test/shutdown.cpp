@@ -26,24 +26,27 @@
 
 using namespace caf;
 
+namespace {
+
 behavior testee() {
   return {
     others >> [] {
-      // ignore message
+      // ignore
     }
   };
 }
 
+} // namespace <anonymous>
+
 CAF_TEST(repeated_shutdown) {
+  actor_system system;
   for (auto i = 0; i < 10; ++i) {
     CAF_MESSAGE("run #" << i);
-    auto g = group::anonymous();
-    for (auto j = 0; j < 10; ++j) {
-      spawn_in_group(g, testee);
-    }
+    auto g = system.groups().anonymous();
+    for (auto j = 0; j < 10; ++j)
+      system.spawn_in_group(g, testee);
     anon_send(g, "hello actors");
-    anon_send(g, exit_msg{invalid_actor_addr, exit_reason::kill});
-    await_all_actors_done();
-    shutdown();
+    anon_send(g, exit_msg{invalid_actor_addr, exit_reason::user_shutdown});
+    system.await_all_actors_done();
   }
 }

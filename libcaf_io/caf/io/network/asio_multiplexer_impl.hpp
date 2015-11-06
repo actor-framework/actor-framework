@@ -64,7 +64,7 @@ default_socket new_tcp_connection(io_backend& backend, const std::string& host,
 
 void ip_bind(default_socket_acceptor& fd, uint16_t port,
              const char* addr = nullptr, bool reuse_addr = true) {
-  CAF_LOGF_TRACE(CAF_ARG(port));
+  CAF_LOG_TRACE(CAF_ARG(port));
   using boost::asio::ip::tcp;
   try {
     auto bind_and_listen = [&](tcp::endpoint& ep) {
@@ -76,12 +76,12 @@ void ip_bind(default_socket_acceptor& fd, uint16_t port,
     if (addr) {
       tcp::endpoint ep(boost::asio::ip::address::from_string(addr), port);
       bind_and_listen(ep);
-      CAF_LOGF_DEBUG("created IPv6 endpoint: " << ep.address() << ":"
+      CAF_LOG_DEBUG("created IPv6 endpoint: " << ep.address() << ":"
                                                << fd.local_endpoint().port());
     } else {
       tcp::endpoint ep(tcp::v6(), port);
       bind_and_listen(ep);
-      CAF_LOGF_DEBUG("created IPv6 endpoint: " << ep.address() << ":"
+      CAF_LOG_DEBUG("created IPv6 endpoint: " << ep.address() << ":"
                                                << fd.local_endpoint().port());
     }
   } catch (boost::system::system_error& se) {
@@ -284,7 +284,7 @@ void asio_multiplexer::dispatch_runnable(runnable_ptr ptr) {
   });
 }
 
-asio_multiplexer::asio_multiplexer() {
+asio_multiplexer::asio_multiplexer(actor_system* sys) : multiplexer(sys) {
   // nop
 }
 
@@ -307,10 +307,6 @@ void asio_multiplexer::run() {
 
 boost::asio::io_service* asio_multiplexer::pimpl() {
   return &backend_;
-}
-
-asio_multiplexer& get_multiplexer_singleton() {
-  return static_cast<asio_multiplexer&>(middleman::instance()->backend());
 }
 
 } // namesapce network

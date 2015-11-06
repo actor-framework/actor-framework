@@ -44,20 +44,26 @@ class actor_addr;
 class actor_pool;
 class message_id;
 class serializer;
-class local_actor;
 class actor_proxy;
+class ref_counted;
+class local_actor;
+class actor_config;
+class actor_system;
 class deserializer;
 class scoped_actor;
-class execution_unit;
 class abstract_actor;
 class abstract_group;
+class actor_registry;
 class blocking_actor;
+class execution_unit;
+class proxy_registry;
 class mailbox_element;
 class message_handler;
-class uniform_type_info;
 class event_based_actor;
 class binary_serializer;
 class binary_deserializer;
+class actor_system_config;
+class uniform_type_info_map;
 class forwarding_actor_proxy;
 
 // structs
@@ -72,6 +78,7 @@ struct sync_exited_msg;
 struct sync_timeout_msg;
 struct invalid_actor_addr_t;
 struct illegal_message_element;
+struct prohibit_top_level_spawn_marker;
 
 // enums
 enum class atom_value : uint64_t;
@@ -102,13 +109,10 @@ namespace scheduler {
 } // namespace scheduler
 
 namespace detail {
-  class logging;
   class disposer;
-  class singletons;
   class message_data;
   class group_manager;
-  class actor_registry;
-  class uniform_type_info_map;
+  class dynamic_message_data;
 } // namespace detail
 
 using mailbox_element_ptr = std::unique_ptr<mailbox_element, detail::disposer>;

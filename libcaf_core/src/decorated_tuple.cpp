@@ -41,6 +41,11 @@ void* decorated_tuple::mutable_at(size_t pos) {
   return decorated_->mutable_at(mapping_[pos]);
 }
 
+void decorated_tuple::serialize_at(deserializer& source, size_t pos) {
+  CAF_ASSERT(pos < size());
+  return decorated_->serialize_at(source, mapping_[pos]);
+}
+
 size_t decorated_tuple::size() const {
   return mapping_.size();
 }
@@ -54,6 +59,11 @@ const void* decorated_tuple::at(size_t pos) const {
   return decorated_->at(mapping_[pos]);
 }
 
+bool decorated_tuple::compare_at(size_t pos, const element_rtti& rtti,
+                                 const void* x) const {
+  return decorated_->compare_at(mapping_[pos], rtti, x);
+}
+
 bool decorated_tuple::match_element(size_t pos, uint16_t typenr,
                                     const std::type_info* rtti) const {
   return decorated_->match_element(mapping_[pos], typenr, rtti);
@@ -63,12 +73,18 @@ uint32_t decorated_tuple::type_token() const {
   return type_token_;
 }
 
-const char* decorated_tuple::uniform_name_at(size_t pos) const {
-  return decorated_->uniform_name_at(mapping_[pos]);
+message_data::element_rtti decorated_tuple::type_at(size_t pos) const {
+  return decorated_->type_at(mapping_[pos]);
 }
 
-uint16_t decorated_tuple::type_nr_at(size_t pos) const {
-  return decorated_->type_nr_at(mapping_[pos]);
+void decorated_tuple::serialize_at(serializer& sink, size_t pos) const {
+  CAF_ASSERT(pos < size());
+  return decorated_->serialize_at(sink, mapping_[pos]);
+}
+
+std::string decorated_tuple::stringify_at(size_t pos) const {
+  CAF_ASSERT(pos < size());
+  return decorated_->stringify_at(pos);
 }
 
 decorated_tuple::decorated_tuple(cow_ptr&& d, vector_type&& v)

@@ -109,7 +109,7 @@ set(EXTRA_FLAGS "")
 # increase max. template depth on GCC and Clang
 if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang"
    OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
-  set(EXTRA_FLAGS "-ftemplate-depth=512")
+  set(EXTRA_FLAGS "-ftemplate-depth=512 -ftemplate-backtrace-limit=0")
 endif()
 # add "-Werror" flag if --pedantic-build is used
 if(CAF_CXX_WARNINGS_AS_ERRORS)

@@ -28,8 +28,6 @@
 #include "caf/send.hpp"
 #include "caf/actor.hpp"
 
-#include "caf/experimental/whereis.hpp"
-
 #include "caf/detail/parse_ini.hpp"
 #include "caf/detail/optional_message_visitor.hpp"
 
@@ -47,7 +45,9 @@ void parse_config(std::istream& input, config_format format,
                   maybe<std::ostream&> errors) {
   if (! input)
     return;
-  auto cs = experimental::whereis(atom("ConfigServ"));
+  // TODO: fixme
+  //auto cs = experimental::whereis(atom("ConfigServ"));
+  actor cs;
   auto consume = [&](std::string key, config_value value) {
     message_visitor mv;
     anon_send(cs, put_atom::value, std::move(key), apply_visitor(mv, value));

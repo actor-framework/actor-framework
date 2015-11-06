@@ -36,6 +36,9 @@ enum class time_unit : uint32_t {
   microseconds = 1000000
 };
 
+/// Relates time_unit
+std::string to_string(const time_unit& x);
+
 /// Converts the ratio Num/Denom to a `time_unit` if the ratio describes
 /// seconds, milliseconds, microseconds, or minutes. Minutes are mapped
 /// to `time_unit::seconds`, any unrecognized ratio to `time_unit::invalid`.
@@ -121,6 +124,13 @@ private:
     return static_cast<uint64_t>(d.count()) * static_cast<uint64_t>(Num);
   }
 };
+
+/// @relates duration
+template <class T>
+void serialize(T& in_out, duration& x, const unsigned int) {
+  in_out & x.unit;
+  in_out & x.count;
+}
 
 /// @relates duration
 bool operator==(const duration& lhs, const duration& rhs);

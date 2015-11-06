@@ -37,9 +37,8 @@ namespace caf {
 template <class... Ts>
 void send_as(const actor& from, message_priority prio,
              const channel& to, Ts&&... xs) {
-  if (! to) {
+  if (! to)
     return;
-  }
   message_id mid;
   to->enqueue(from.address(),
               prio == message_priority::high ? mid.with_high_priority() : mid,

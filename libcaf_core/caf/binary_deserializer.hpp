@@ -20,7 +20,9 @@
 #ifndef CAF_BINARY_DESERIALIZER_HPP
 #define CAF_BINARY_DESERIALIZER_HPP
 
+#include <string>
 #include <cstddef>
+#include <utility>
 
 #include "caf/deserializer.hpp"
 
@@ -29,21 +31,15 @@ namespace caf {
 /// Implements the deserializer interface with a binary serialization protocol.
 class binary_deserializer : public deserializer {
 public:
-  binary_deserializer(const void* buf, size_t buf_size,
-                      actor_namespace* ns = nullptr);
+  binary_deserializer(execution_unit* ctx, const void* buf, size_t buf_size);
 
-  binary_deserializer(const void* begin, const void* end_,
-                      actor_namespace* ns = nullptr);
-
-  binary_deserializer(const binary_deserializer& other);
-
-  binary_deserializer& operator=(const binary_deserializer& other);
+  binary_deserializer(execution_unit* ctx, const void* first, const void* last);
 
   /// Replaces the current read buffer.
   void set_rdbuf(const void* buf, size_t buf_size);
 
   /// Replaces the current read buffer.
-  void set_rdbuf(const void* begin, const void* end_);
+  void set_rdbuf(const void* first, const void* last);
 
   /// Returns whether this deserializer has reached the end of its buffer.
   bool at_end() const;
@@ -55,12 +51,14 @@ public:
   /// Moves the current read position in the buffer by `num_bytes`.
   binary_deserializer& advance(ptrdiff_t num_bytes);
 
-  const uniform_type_info* begin_object() override;
+  void begin_object(uint16_t& nr, std::string& name) override;
   void end_object() override;
-  size_t begin_sequence() override;
+  void begin_sequence(size_t& num_elements) override;
   void end_sequence() override;
-  void read_value(primitive_variant& storage) override;
-  void read_raw(size_t num_bytes, void* storage) override;
+  void apply_raw(size_t num_bytes, void* data) override;
+
+protected:
+  void apply_builtin(builtin in_out_type, void* in_out) override;
 
 private:
   const void* pos_;

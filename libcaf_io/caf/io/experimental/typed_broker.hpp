@@ -27,15 +27,13 @@
 #include "caf/none.hpp"
 #include "caf/config.hpp"
 #include "caf/make_counted.hpp"
-#include "caf/spawn.hpp"
 #include "caf/extend.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/local_actor.hpp"
 
-#include "caf/detail/logging.hpp"
-#include "caf/detail/singletons.hpp"
+#include "caf/logger.hpp"
 #include "caf/detail/scope_guard.hpp"
-#include "caf/detail/actor_registry.hpp"
+#include "caf/actor_registry.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 
 #include "caf/io/middleman.hpp"
@@ -54,21 +52,6 @@ using minimal_server =
 
 template <class... Sigs>
 class typed_broker;
-
-/// Infers the appropriate base class for a functor-based typed actor
-/// from the result and the first argument of the functor.
-template <class Result, class FirstArg>
-struct CAF_DEPRECATED infer_typed_broker_base;
-
-template <class... Sigs, class FirstArg>
-struct infer_typed_broker_base<typed_behavior<Sigs...>, FirstArg> {
-  using type = typed_broker<Sigs...>;
-} CAF_DEPRECATED;
-
-template <class... Sigs>
-struct infer_typed_broker_base<void, typed_broker<Sigs...>*> {
-  using type = typed_broker<Sigs...>;
-} CAF_DEPRECATED;
 
 /// A typed broker mediates between actor systems and other components in
 /// the network.
@@ -149,16 +132,16 @@ public:
 
   /// @cond PRIVATE
   std::set<std::string> message_types() const override {
-    return {Sigs::static_type_name()...};
+    typed_actor<Sigs...> hdl;
+    return this->system().message_types(hdl);
   }
 
   void initialize() override {
     CAF_LOG_TRACE("");
     this->init_broker();
     auto bhvr = make_behavior();
-    CAF_LOG_DEBUG_IF(! bhvr, "make_behavior() did not return a behavior, "
-                            << "has_behavior() = "
-                            << std::boolalpha << this->has_behavior());
+    CAF_LOG_DEBUG_IF(! bhvr, "make_behavior() did not return a behavior:"
+                             << CAF_ARG(this->has_behavior()));
     if (bhvr) {
       // make_behavior() did return a behavior instead of using become()
       CAF_LOG_DEBUG("make_behavior() did return a valid behavior");
@@ -169,18 +152,24 @@ public:
   template <class F, class... Ts>
   typename infer_handle_from_fun<F>::type
   fork(F fun, connection_handle hdl, Ts&&... xs) {
+    CAF_ASSERT(this->context() != nullptr);
     auto sptr = this->take(hdl);
     CAF_ASSERT(sptr->hdl() == hdl);
     using impl = typename infer_handle_from_fun<F>::impl;
-    static_assert(std::is_convertible<typename impl::actor_hdl,
-                                      minimal_client>::value,
+    static_assert(std::is_convertible<
+                    typename impl::actor_hdl,
+                    minimal_client
+                  >::value,
                   "Cannot fork: new broker misses required handlers");
-    return spawn_functor_impl<no_spawn_options, impl>(
-      nullptr, [&sptr](abstract_broker* forked) {
-                 sptr->set_parent(forked);
-                 forked->add_scribe(sptr);
-               },
-      std::move(fun), hdl, std::forward<Ts>(xs)...);
+    actor_config cfg{this->context()};
+    detail::init_fun_factory<impl, F> fac;
+    cfg.init_fun = fac(std::move(fun), hdl, std::forward<Ts>(xs)...);
+    auto res = this->system().spawn_functor(cfg, fun, hdl, std::forward<Ts>(xs)...);
+    auto forked = static_cast<impl*>(actor_cast<abstract_actor*>(res));
+    sptr->set_parent(forked);
+    CAF_ASSERT(sptr->parent() == forked);
+    forked->add_scribe(sptr);
+    return res;
   }
 
   connection_handle add_tcp_scribe(const std::string& host, uint16_t port) {
@@ -195,7 +184,7 @@ public:
     return super::add_tcp_scribe(fd);
   }
 
-  std::pair<accept_handle, uint16_t>
+  maybe<std::pair<accept_handle, uint16_t>>
   add_tcp_doorman(uint16_t port = 0,
                   const char* in = nullptr,
                   bool reuse_addr = false) {
@@ -210,11 +199,7 @@ public:
     return super::add_tcp_doorman(fd);
   }
 
-  typed_broker() {
-    // nop
-  }
-
-  typed_broker(middleman& parent_ref) : abstract_broker(parent_ref) {
+  typed_broker(actor_config& cfg) : super(cfg) {
     // nop
   }
 

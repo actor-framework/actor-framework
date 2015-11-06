@@ -44,25 +44,26 @@ message_handler handle_c() {
   return [](c_atom) { return 3; };
 }
 
-void run_testee(actor testee) {
-  scoped_actor self;
-  self->sync_send(testee, a_atom::value).await([](int i) {
-    CAF_CHECK_EQUAL(i, 1);
-  });
-  self->sync_send(testee, b_atom::value).await([](int i) {
-    CAF_CHECK_EQUAL(i, 2);
-  });
-  self->sync_send(testee, c_atom::value).await([](int i) {
-    CAF_CHECK_EQUAL(i, 3);
-  });
-  self->send_exit(testee, exit_reason::user_shutdown);
-  self->await_all_other_actors_done();
-}
-
 struct fixture {
+  actor_system system;
+
+  void run_testee(actor testee) {
+    scoped_actor self{system};
+    self->sync_send(testee, a_atom::value).await([](int i) {
+      CAF_CHECK_EQUAL(i, 1);
+    });
+    self->sync_send(testee, b_atom::value).await([](int i) {
+      CAF_CHECK_EQUAL(i, 2);
+    });
+    self->sync_send(testee, c_atom::value).await([](int i) {
+      CAF_CHECK_EQUAL(i, 3);
+    });
+    self->send_exit(testee, exit_reason::user_shutdown);
+    self->await_all_other_actors_done();
+  }
+
   ~fixture() {
-    await_all_actors_done();
-    shutdown();
+    system.await_all_actors_done();
   }
 };
 
@@ -72,7 +73,7 @@ CAF_TEST_FIXTURE_SCOPE(atom_tests, fixture)
 
 CAF_TEST(composition1) {
   run_testee(
-    spawn([=] {
+    system.spawn([=] {
       return handle_a().or_else(handle_b()).or_else(handle_c());
     })
   );
@@ -80,7 +81,7 @@ CAF_TEST(composition1) {
 
 CAF_TEST(composition2) {
   run_testee(
-    spawn([=] {
+    system.spawn([=] {
       return handle_a().or_else(handle_b()).or_else([](c_atom) { return 3; });
     })
   );
@@ -88,7 +89,7 @@ CAF_TEST(composition2) {
 
 CAF_TEST(composition3) {
   run_testee(
-    spawn([=] {
+    system.spawn([=] {
       return message_handler{[](a_atom) { return 1; }}.
              or_else(handle_b()).or_else(handle_c());
     })

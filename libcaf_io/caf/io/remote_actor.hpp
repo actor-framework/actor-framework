@@ -31,8 +31,8 @@
 namespace caf {
 namespace io {
 
-actor_addr remote_actor_impl(std::set<std::string> ifs,
-                             std::string host, uint16_t port);
+maybe<actor_addr> remote_actor_impl(std::set<std::string> ifs,
+                                    std::string host, uint16_t port);
 
 /// Establish a new connection to the actor at `host` on given `port`.
 /// @param host Valid hostname or IP address.

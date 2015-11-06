@@ -33,33 +33,30 @@ namespace {
 
 class testee : public event_based_actor {
 public:
-  testee();
-  ~testee();
-  behavior make_behavior() override;
+  testee(actor_config& cfg) : event_based_actor(cfg) {
+    // nop
+  }
+
+  ~testee() {
+    // nop
+  }
+
+  behavior make_behavior() override {
+    return {
+      others >> [=] {
+        CAF_CHECK_EQUAL(current_message().cvals()->get_reference_count(), 2);
+        quit();
+        return std::move(current_message());
+      }
+    };
+  }
 };
-
-testee::testee() {
-  // nop
-}
-
-testee::~testee() {
-  // nop
-}
-
-behavior testee::make_behavior() {
-  return {
-    others >> [=] {
-      CAF_CHECK_EQUAL(current_message().cvals()->get_reference_count(), 2);
-      quit();
-      return std::move(current_message());
-    }
-  };
-}
 
 class tester : public event_based_actor {
 public:
-  explicit tester(actor aut)
-      : aut_(std::move(aut)),
+  tester(actor_config& cfg, actor aut)
+      : event_based_actor(cfg),
+        aut_(std::move(aut)),
         msg_(make_message(1, 2, 3)) {
     // nop
   }
@@ -88,23 +85,23 @@ behavior tester::make_behavior() {
       quit();
     },
     others >> [&] {
-      CAF_TEST_ERROR("Unexpected message: " << to_string(current_message()));
+      CAF_TEST_ERROR("Unexpected message");
     }
   };
 }
 
-template <spawn_options Os>
-void test_message_lifetime() {
-  // put some preassure on the scheduler (check for thread safety)
-  for (size_t i = 0; i < 100; ++i) {
-    spawn<tester>(spawn<testee, Os>());
-  }
-}
-
 struct fixture {
+  actor_system system;
+
+  template <spawn_options Os>
+  void test_message_lifetime() {
+    // put some preassure on the scheduler (check for thread safety)
+    for (size_t i = 0; i < 100; ++i)
+      system.spawn<tester>(system.spawn<testee, Os>());
+  }
+
   ~fixture() {
-    await_all_actors_done();
-    shutdown();
+    system.await_all_actors_done();
   }
 };
 
@@ -114,7 +111,7 @@ CAF_TEST_FIXTURE_SCOPE(message_lifetime_tests, fixture)
 
 CAF_TEST(message_lifetime_in_scoped_actor) {
   auto msg = make_message(1, 2, 3);
-  scoped_actor self;
+  scoped_actor self{system};
   self->send(self, msg);
   self->receive(
     [&](int a, int b, int c) {

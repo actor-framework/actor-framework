@@ -35,6 +35,8 @@ enum class atom_value : uint64_t {
   /// @endcond
 };
 
+std::string to_string(const atom_value& x);
+
 /// Creates an atom from given string literal.
 template <size_t Size>
 constexpr atom_value atom(char const (&str)[Size]) {
@@ -59,6 +61,11 @@ struct atom_constant {
   /// Returns an instance *of this constant* (*not* an `atom_value`).
   static const atom_constant value;
 };
+
+template <atom_value V>
+std::string to_string(const atom_constant<V>& x) {
+  return to_string(x.value);
+}
 
 template <atom_value V>
 const atom_constant<V> atom_constant<V>::value = atom_constant<V>{};

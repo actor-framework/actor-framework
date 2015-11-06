@@ -20,7 +20,6 @@
 #ifndef CAF_SCHEDULER_HPP
 #define CAF_SCHEDULER_HPP
 
-#include "caf/set_scheduler.hpp"
 #include "caf/scheduler/worker.hpp"
 #include "caf/scheduler/coordinator.hpp"
 #include "caf/scheduler/detached_threads.hpp"

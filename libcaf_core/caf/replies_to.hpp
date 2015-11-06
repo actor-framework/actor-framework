@@ -23,8 +23,6 @@
 #include <string>
 
 #include "caf/either.hpp"
-#include "caf/type_name_access.hpp"
-#include "caf/uniform_type_info.hpp"
 #include "caf/illegal_message_element.hpp"
 
 #include "caf/detail/type_list.hpp"
@@ -70,16 +68,6 @@ struct typed_mpi<detail::type_list<Is...>,
                 >::value,
                 "interface definition contains an illegal message type, "
                 "did you use with<either...> instead of with_either<...>?");
-  static std::string static_type_name() {
-    std::string input[] = {type_name_access<Is>()...};
-    std::string output_opt1[] = {type_name_access<Ls>()...};
-    // Rs... is allowed to be empty, hence we need to add a dummy element
-    // to make sure this array is not of size 0 (to prevent compiler errors)
-    std::string output_opt2[] = {std::string(), type_name_access<Rs>()...};
-    return replies_to_type_name(sizeof...(Is), input,
-                                sizeof...(Ls), output_opt1,
-                                sizeof...(Rs), output_opt2 + 1);
-  }
 };
 
 template <class... Is>

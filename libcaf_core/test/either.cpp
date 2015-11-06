@@ -42,9 +42,10 @@ foo::behavior_type my_foo() {
 }
 
 struct fixture {
+  actor_system system;
+
   ~fixture() {
-    await_all_actors_done();
-    shutdown();
+    system.await_all_actors_done();
   }
 };
 
@@ -60,9 +61,8 @@ CAF_TEST(basic_usage) {
     return 42.f;
   };
   auto f3 = [](bool flag) -> either<int, int>::or_else<float, float> {
-    if (flag) {
+    if (flag)
       return {1, 2};
-    }
     return {3.f, 4.f};
   };
   CAF_CHECK(f1().value == make_message(42));
@@ -76,8 +76,8 @@ CAF_TEST(basic_usage) {
 }
 
 CAF_TEST(either_in_typed_interfaces) {
-  auto mf = spawn(my_foo);
-  scoped_actor self;
+  auto mf = system.spawn(my_foo);
+  scoped_actor self{system};
   self->sync_send(mf, 42).await(
     [](int val) {
       CAF_CHECK_EQUAL(val, 42);

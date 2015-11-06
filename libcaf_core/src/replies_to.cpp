@@ -18,8 +18,6 @@
  ******************************************************************************/
 
 #include "caf/replies_to.hpp"
-
-#include "caf/to_string.hpp"
 #include "caf/string_algorithms.hpp"
 
 namespace caf {

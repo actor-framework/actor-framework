@@ -19,13 +19,14 @@
 
 #include "caf/none.hpp"
 #include "caf/config.hpp"
+#include "caf/logger.hpp"
+#include "caf/actor_system.hpp"
 #include "caf/make_counted.hpp"
+#include "caf/scheduler/abstract_coordinator.hpp"
 
 #include "caf/io/broker.hpp"
 #include "caf/io/middleman.hpp"
 
-#include "caf/detail/logging.hpp"
-#include "caf/detail/singletons.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 
@@ -34,37 +35,16 @@
 namespace caf {
 namespace io {
 
-class abstract_broker::continuation {
-public:
-  continuation(intrusive_ptr<abstract_broker> bptr) : self_(std::move(bptr)) {
-    // nop
-  }
-
-  continuation(continuation&&) = default;
-
-  inline void operator()() {
-    CAF_PUSH_AID(self_->id());
-    CAF_LOG_TRACE("");
-    auto mt = self_->parent().max_throughput();
-    // re-schedule broker if it reached its maximum message throughput
-    if (self_->resume(nullptr, mt) == resumable::resume_later)
-      self_->backend().post(std::move(*this));
-  }
-
-private:
-  intrusive_ptr<abstract_broker> self_;
-};
-
 void abstract_broker::enqueue(mailbox_element_ptr ptr, execution_unit*) {
   CAF_PUSH_AID(id());
-  CAF_LOG_TRACE("enqueue " << CAF_TSARG(ptr->msg));
+  CAF_LOG_TRACE("enqueue " << CAF_ARG(ptr->msg));
   auto mid = ptr->mid;
   auto sender = ptr->sender;
   switch (mailbox().enqueue(ptr.release())) {
     case detail::enqueue_result::unblocked_reader: {
       // re-schedule broker
       CAF_LOG_DEBUG("unblocked_reader");
-      backend().post(continuation{this});
+      backend().exec_later(this);
       break;
     }
     case detail::enqueue_result::queue_closed: {
@@ -87,15 +67,17 @@ void abstract_broker::enqueue(const actor_addr& sender, message_id mid,
   enqueue(mailbox_element::make(sender, mid, std::move(msg)), eu);
 }
 
-void abstract_broker::launch(execution_unit*, bool is_lazy, bool is_hidden) {
-  // add implicit reference count held by the middleman
+void abstract_broker::launch(execution_unit* eu, bool is_lazy, bool is_hidden) {
+  CAF_ASSERT(eu != nullptr);
+  CAF_ASSERT(eu == &backend());
+  // add implicit reference count held by middleman/multiplexer
   ref();
   is_registered(! is_hidden);
   CAF_PUSH_AID(id());
-  CAF_LOGF_TRACE("init and launch broker with ID " << id());
+  CAF_LOG_TRACE("init and launch broker:" << CAF_ARG(id()));
   if (is_lazy && mailbox().try_block())
     return;
-  backend().post(continuation{this});
+  eu->exec_later(this);
 }
 
 void abstract_broker::cleanup(uint32_t reason) {
@@ -105,7 +87,6 @@ void abstract_broker::cleanup(uint32_t reason) {
   CAF_ASSERT(scribes_.empty());
   cache_.clear();
   local_actor::cleanup(reason);
-  deref(); // release implicit reference count from middleman
 }
 
 abstract_broker::~abstract_broker() {
@@ -114,8 +95,7 @@ abstract_broker::~abstract_broker() {
 
 void abstract_broker::configure_read(connection_handle hdl,
                                      receive_policy::config cfg) {
-  CAF_LOG_TRACE(CAF_MARG(hdl, id) << ", cfg = {" << static_cast<int>(cfg.first)
-                                  << ", " << cfg.second << "}");
+  CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(cfg));
   by_id(hdl).configure_read(cfg);
 }
 
@@ -146,6 +126,7 @@ std::vector<connection_handle> abstract_broker::connections() const {
 void abstract_broker::add_scribe(const intrusive_ptr<scribe>& ptr) {
   scribes_.emplace(ptr->hdl(), ptr);
 }
+
 connection_handle abstract_broker::add_tcp_scribe(const std::string& hostname,
                                                   uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(hostname) << ", " << CAF_ARG(port));
@@ -153,7 +134,7 @@ connection_handle abstract_broker::add_tcp_scribe(const std::string& hostname,
 }
 
 void abstract_broker::assign_tcp_scribe(connection_handle hdl) {
-  CAF_LOG_TRACE(CAF_MARG(hdl, id));
+  CAF_LOG_TRACE(CAF_ARG(hdl));
   backend().assign_tcp_scribe(this, hdl);
 }
 
@@ -172,13 +153,12 @@ void abstract_broker::add_doorman(const intrusive_ptr<doorman>& ptr) {
 std::pair<accept_handle, uint16_t>
 abstract_broker::add_tcp_doorman(uint16_t port, const char* in,
                                  bool reuse_addr) {
-  CAF_LOG_TRACE(CAF_ARG(port) << ", in = " << (in ? in : "nullptr")
-                << ", " << CAF_ARG(reuse_addr));
+  CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(in) << CAF_ARG(reuse_addr));
   return backend().add_tcp_doorman(this, port, in, reuse_addr);
 }
 
 void abstract_broker::assign_tcp_doorman(accept_handle hdl) {
-  CAF_LOG_TRACE(CAF_MARG(hdl, id));
+  CAF_LOG_TRACE(CAF_ARG(hdl));
   backend().assign_tcp_doorman(this, hdl);
 }
 
@@ -207,11 +187,11 @@ uint16_t abstract_broker::local_port(accept_handle hdl) {
   return i != doormen_.end() ? i->second->port() : 0;
 }
 
-maybe<accept_handle> abstract_broker::hdl_by_port(uint16_t port) {
+accept_handle abstract_broker::hdl_by_port(uint16_t port) {
   for (auto& kvp : doormen_)
     if (kvp.second->port() == port)
       return kvp.first;
-  return none;
+  throw std::logic_error("no such port");
 }
 
 void abstract_broker::close_all() {
@@ -224,6 +204,17 @@ void abstract_broker::close_all() {
     // stop_reading will remove the scribe from scribes_
     scribes_.begin()->second->stop_reading();
   }
+}
+
+resumable::subtype_t abstract_broker::subtype() const {
+  return io_actor;
+}
+
+resumable::resume_result
+abstract_broker::resume(execution_unit* context, size_t mt) {
+  CAF_ASSERT(context != nullptr);
+  CAF_ASSERT(context == &backend());
+  return local_actor::resume(context, mt);
 }
 
 const char* abstract_broker::name() const {
@@ -240,16 +231,12 @@ void abstract_broker::init_broker() {
 
 }
 
-abstract_broker::abstract_broker() : mm_(*middleman::instance()) {
-  // nop
-}
-
-abstract_broker::abstract_broker(middleman& ptr) : mm_(ptr) {
+abstract_broker::abstract_broker(actor_config& cfg) : local_actor(cfg) {
   // nop
 }
 
 network::multiplexer& abstract_broker::backend() {
-  return mm_.backend();
+  return system().middleman().backend();
 }
 
 } // namespace io

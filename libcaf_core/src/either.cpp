@@ -19,7 +19,6 @@
 
 #include "caf/either.hpp"
 
-#include "caf/to_string.hpp"
 #include "caf/string_algorithms.hpp"
 
 namespace caf {
