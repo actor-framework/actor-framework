@@ -19,10 +19,24 @@
 
 #include "caf/resumable.hpp"
 
+#include "caf/ref_counted.hpp"
+
 namespace caf {
 
 resumable::~resumable() {
   // nop
+}
+
+resumable::subtype_t resumable::subtype() const {
+  return unspecified;
+}
+
+void resumable::intrusive_ptr_add_ref_impl() {
+  intrusive_ptr_add_ref(as_ref_counted_ptr());
+}
+
+void resumable::intrusive_ptr_release_impl() {
+  intrusive_ptr_release(as_ref_counted_ptr());
 }
 
 } // namespace caf

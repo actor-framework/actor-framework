@@ -26,7 +26,6 @@
 
 #include "caf/atom.hpp"
 #include "caf/message.hpp"
-#include "caf/uniform_typeid.hpp"
 
 #include "caf/detail/type_nr.hpp"
 #include "caf/detail/type_list.hpp"

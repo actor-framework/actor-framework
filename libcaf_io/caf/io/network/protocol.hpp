@@ -26,12 +26,14 @@ namespace caf {
 namespace io {
 namespace network {
 
+/// Denotes a network protocol, e.g., Ethernet or IP4/6.
 enum class protocol : uint32_t {
   ethernet,
   ipv4,
   ipv6
 };
 
+/// @relates protocol
 constexpr const char* to_string(protocol value) {
   return value == protocol::ethernet ? "ethernet"
                                      : (value == protocol::ipv4 ? "ipv4"

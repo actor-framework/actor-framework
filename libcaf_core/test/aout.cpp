@@ -30,13 +30,6 @@ using std::endl;
 
 namespace {
 
-struct fixture {
-  ~fixture() {
-    await_all_actors_done();
-    shutdown();
-  }
-};
-
 constexpr const char* global_redirect = ":test";
 constexpr const char* local_redirect = ":test2";
 
@@ -55,13 +48,12 @@ void chattier_actor(event_based_actor* self, const std::string& fn) {
 
 } // namespace <anonymous>
 
-CAF_TEST_FIXTURE_SCOPE(aout_tests, fixture)
-
 CAF_TEST(redirect_aout_globally) {
-  scoped_actor self;
-  self->join(group::get("local", global_redirect));
-  actor_ostream::redirect_all(global_redirect);
-  spawn(chatty_actor);
+  actor_system system;
+  scoped_actor self{system};
+  self->join(system.groups().get("local", global_redirect));
+  actor_ostream::redirect_all(system, global_redirect);
+  system.spawn(chatty_actor);
   self->receive(
     [](const std::string& virtual_file, std::string& line) {
       // drop trailing '\n'
@@ -76,12 +68,13 @@ CAF_TEST(redirect_aout_globally) {
 }
 
 CAF_TEST(global_and_local_redirect) {
-  scoped_actor self;
-  self->join(group::get("local", global_redirect));
-  self->join(group::get("local", local_redirect));
-  actor_ostream::redirect_all(global_redirect);
-  spawn(chatty_actor);
-  spawn(chattier_actor, local_redirect);
+  actor_system system;
+  scoped_actor self{system};
+  self->join(system.groups().get("local", global_redirect));
+  self->join(system.groups().get("local", local_redirect));
+  actor_ostream::redirect_all(system, global_redirect);
+  system.spawn(chatty_actor);
+  system.spawn(chattier_actor, local_redirect);
   std::vector<std::pair<std::string, std::string>> expected {
     {":test", chatty_line},
     {":test", chatty_line},
@@ -101,5 +94,3 @@ CAF_TEST(global_and_local_redirect) {
   self->await_all_other_actors_done();
   CAF_CHECK_EQUAL(self->mailbox().count(), 0);
 }
-
-CAF_TEST_FIXTURE_SCOPE_END()

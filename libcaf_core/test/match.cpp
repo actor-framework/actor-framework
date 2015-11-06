@@ -28,8 +28,6 @@
 #include <functional>
 
 #include "caf/on.hpp"
-#include "caf/announce.hpp"
-#include "caf/shutdown.hpp"
 #include "caf/message_builder.hpp"
 #include "caf/message_handler.hpp"
 
@@ -41,10 +39,8 @@ using ho_atom = atom_constant<atom("ho")>;
 
 function<maybe<string>(const string&)> starts_with(const string& s) {
   return [=](const string& str) -> maybe<string> {
-    if (str.size() > s.size() && str.compare(0, s.size(), s) == 0) {
-      auto res = str.substr(s.size());
-      return res;
-    }
+    if (str.size() > s.size() && str.compare(0, s.size(), s) == 0)
+      return str.substr(s.size());
     return none;
   };
 }
@@ -167,12 +163,16 @@ struct wrapped_int {
   int value;
 };
 
+template <class T>
+void serialize(T& in_out, wrapped_int& x, const unsigned int) {
+  in_out & x.value;
+}
+
 inline bool operator==(const wrapped_int& lhs, const wrapped_int& rhs) {
   return lhs.value == rhs.value;
 }
 
 CAF_TEST(arg_match_pattern) {
-  announce<wrapped_int>("wrapped_int", &wrapped_int::value);
   auto expr = on(42, arg_match) >> [](int i) {
     s_invoked[0] = true;
     CAF_CHECK_EQUAL(i, 1);

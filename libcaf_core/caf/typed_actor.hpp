@@ -182,9 +182,9 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
     return !ptr_;
   }
 
-  /// Returns whether this is an handle to a remote actor.
-  bool is_remote() const noexcept {
-    return ptr_ ? ptr_->is_remote() : false;
+  /// Returns the origin node of this actor.
+  node_id node() const noexcept {
+    return ptr_ ? ptr_->node() : invalid_node_id;
   }
 
   /// Returns the ID of this actor.
@@ -195,11 +195,6 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
   /// Exchange content of `*this` and `other`.
   void swap(actor& other) noexcept {
     ptr_.swap(other.ptr_);
-  }
-
-  /// Returns the interface definition for this actor handle.
-  static std::set<std::string> message_types() {
-    return std::set<std::string>{Sigs::static_type_name()...};
   }
 
   /// @cond PRIVATE
@@ -237,6 +232,25 @@ private:
 
   abstract_actor_ptr ptr_;
 };
+
+template <class T, class... Ts>
+typename std::enable_if<
+  T::is_saving::value
+>::type
+serialize(T& sink, typed_actor<Ts...>& hdl, const unsigned int) {
+  auto addr = hdl.address();
+  sink << addr;
+}
+
+template <class T, class... Ts>
+typename std::enable_if<
+  T::is_loading::value
+>::type
+serialize(T& sink, typed_actor<Ts...>& hdl, const unsigned int) {
+  actor_addr addr;
+  sink >> addr;
+  hdl = actor_cast<typed_actor<Ts...>>(addr);
+}
 
 } // namespace caf
 

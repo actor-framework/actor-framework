@@ -46,19 +46,14 @@
 #include <type_traits>
 
 #include "caf/message.hpp"
-#include "caf/announce.hpp"
-#include "caf/shutdown.hpp"
-#include "caf/to_string.hpp"
 #include "caf/serializer.hpp"
-#include "caf/from_string.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/deserializer.hpp"
-#include "caf/actor_namespace.hpp"
+#include "caf/proxy_registry.hpp"
 #include "caf/primitive_variant.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/binary_deserializer.hpp"
-#include "caf/await_all_actors_done.hpp"
-#include "caf/abstract_uniform_type_info.hpp"
+#include "caf/actor_system_config.hpp"
 
 #include "caf/detail/ieee_754.hpp"
 #include "caf/detail/int_list.hpp"
@@ -77,39 +72,46 @@ struct raw_struct {
   string str;
 };
 
+template <class T>
+void serialize(T& in_out, raw_struct& x, const unsigned int) {
+  in_out & x.str;
+}
+
 bool operator==(const raw_struct& lhs, const raw_struct& rhs) {
   return lhs.str == rhs.str;
 }
 
-struct raw_struct_type_info : abstract_uniform_type_info<raw_struct> {
-  using super = abstract_uniform_type_info<raw_struct>;
-  raw_struct_type_info() : super("raw_struct") {
-    // nop
-  }
-  void serialize(const void* ptr, serializer* sink) const override {
-    auto rs = reinterpret_cast<const raw_struct*>(ptr);
-    sink->write_value(static_cast<uint32_t>(rs->str.size()));
-    sink->write_raw(rs->str.size(), rs->str.data());
-  }
-  void deserialize(void* ptr, deserializer* source) const override {
-    auto rs = reinterpret_cast<raw_struct*>(ptr);
-    rs->str.clear();
-    auto size = source->read<uint32_t>();
-    rs->str.resize(size);
-    source->read_raw(size, &(rs->str[0]));
-  }
-};
-
-enum class test_enum {
+enum class test_enum : uint32_t {
   a,
   b,
   c
 };
 
+std::string to_string(test_enum x) {
+  switch (x) {
+    case test_enum::a: return "a";
+    case test_enum::b: return "b";
+    case test_enum::c: return "c";
+  }
+  return "???";
+}
+
 struct test_array {
   int value[4];
   int value2[2][4];
 };
+
+template <class T>
+void serialize(T& in_out, test_array& x, const unsigned int) {
+  in_out & x.value;
+  in_out & x.value2;
+}
+
+bool operator==(const test_array& lhs, const test_array& rhs) {
+  return std::equal(lhs.value, lhs.value + 4, rhs.value)
+         && std::equal(lhs.value2[0], lhs.value2[0] + 4, rhs.value2[0])
+         && std::equal(lhs.value2[1], lhs.value2[1] + 4, rhs.value2[1]);
+}
 
 struct test_empty_non_pod {
   test_empty_non_pod() = default;
@@ -125,8 +127,15 @@ struct test_empty_non_pod {
   }
 };
 
+template <class T>
+void serialize(T&, test_empty_non_pod&, const unsigned int) {
+  // nop
+}
+
 struct fixture {
   int32_t i32 = -345;
+  float f32 = 3.45f;
+  double f64 = 54.3;
   test_enum te = test_enum::b;
   string str = "Lorem ipsum dolor sit amet.";
   raw_struct rs;
@@ -137,65 +146,49 @@ struct fixture {
       {4, 5, 6, 7}
     },
   };
+
+  actor_system system;
+  scoped_execution_unit context;
   message msg;
 
-  fixture() {
-    announce<test_enum>("test_enum");
-    announce(typeid(raw_struct), uniform_type_info_ptr{new raw_struct_type_info});
-    announce<test_array>("test_array", &test_array::value, &test_array::value2);
-    announce<test_empty_non_pod>("test_empty_non_pod");
+  template <class IO>
+  void apply(IO&) {
+    // end of recursion
+  }
+
+  template <class IO, class T, class... Ts>
+  void apply(IO& in_out, T& x, Ts&... xs) {
+    in_out & x;
+    apply(in_out, xs...);
+  }
+
+  template <class T, class... Ts>
+  vector<char> serialize(T& x, Ts&... xs) {
+    vector<char> buf;
+    binary_serializer bs{&context, std::back_inserter(buf)};
+    apply(bs, x, xs...);
+    return buf;
+  }
+
+  template <class T, class... Ts>
+  void deserialize(const vector<char>& buf, T& x, Ts&... xs) {
+    binary_deserializer bd{&context, buf.data(), buf.size()};
+    apply(bd, x, xs...);
+  }
+
+  fixture()
+      : system(actor_system_config{}
+               .add_message_type<test_enum>("test_enum")
+               .add_message_type<raw_struct>("raw_struct")
+               .add_message_type<test_array>("test_array")
+               .add_message_type<test_empty_non_pod>("test_empty_non_pod")),
+        context(&system) {
     rs.str.assign(string(str.rbegin(), str.rend()));
     msg = make_message(i32, te, str, rs);
   }
 
   ~fixture() {
-    await_all_actors_done();
-    shutdown();
-  }
-};
-
-template <class T>
-void apply(binary_serializer& bs, const T& x) {
-  bs << x;
-}
-
-template <class T>
-void apply(binary_deserializer& bd, T* x) {
-  uniform_typeid<T>()->deserialize(x, &bd);
-}
-
-template <class T>
-struct binary_util_fun {
-  binary_util_fun(T& ref) : ref_(ref) {
-    // nop
-  }
-  T& ref_;
-  void operator()() const {
-    // end of recursion
-  }
-  template <class U, class... Us>
-  void operator()(U&& x, Us&&... xs) const {
-    apply(ref_, x);
-    (*this)(std::forward<Us>(xs)...);
-  }
-};
-
-class binary_util {
-public:
-  template <class T, class... Ts>
-  static vector<char> serialize(const T& x, const Ts&... xs) {
-    vector<char> buf;
-    binary_serializer bs{std::back_inserter(buf)};
-    binary_util_fun<binary_serializer> f{bs};
-    f(x, xs...);
-    return buf;
-  }
-
-  template <class T, class... Ts>
-  static void deserialize(const vector<char>& buf, T* x, Ts*... xs) {
-    binary_deserializer bd{buf.data(), buf.size()};
-    binary_util_fun<binary_deserializer> f{bd};
-    f(x, xs...);
+    system.await_all_actors_done();
   }
 };
 
@@ -225,26 +218,7 @@ struct is_message {
 
 CAF_TEST_FIXTURE_SCOPE(serialization_tests, fixture)
 
-CAF_TEST(test_serialization) {
-  using token = std::integral_constant<int, detail::impl_id<strmap>()>;
-  CAF_CHECK_EQUAL(detail::is_iterable<strmap>::value, true);
-  CAF_CHECK_EQUAL(detail::is_stl_compliant_list<vector<int>>::value, true);
-  CAF_CHECK_EQUAL(detail::is_stl_compliant_list<strmap>::value, false);
-  CAF_CHECK_EQUAL(detail::is_stl_compliant_map<strmap>::value, true);
-  CAF_CHECK_EQUAL(detail::impl_id<strmap>(), 2);
-  CAF_CHECK_EQUAL(token::value, 2);
-
-  auto nid = detail::singletons::get_node_id();
-  auto nid_str = to_string(nid);
-  CAF_MESSAGE("nid_str = " << nid_str);
-  auto nid2 = from_string<node_id>(nid_str);
-  CAF_CHECK(nid2);
-  if (nid2) {
-    CAF_CHECK_EQUAL(to_string(nid), to_string(*nid2));
-  }
-}
-
-CAF_TEST(test_ieee_754) {
+CAF_TEST(ieee_754_conversion) {
   // check conversion of float
   float f1 = 3.1415925f;         // float value
   auto p1 = caf::detail::pack754(f1); // packet value
@@ -259,83 +233,96 @@ CAF_TEST(test_ieee_754) {
   CAF_CHECK_EQUAL(f2, u2);
 }
 
-CAF_TEST(test_int32_t) {
-  auto buf = binary_util::serialize(i32);
+CAF_TEST(i32_values) {
+  auto buf = serialize(i32);
   int32_t x;
-  binary_util::deserialize(buf, &x);
+  deserialize(buf, x);
   CAF_CHECK_EQUAL(i32, x);
 }
 
-CAF_TEST(test_enum_serialization) {
-  auto buf = binary_util::serialize(te);
+CAF_TEST(float_values) {
+  auto buf = serialize(f32);
+  float x;
+  deserialize(buf, x);
+  CAF_CHECK_EQUAL(f32, x);
+}
+
+CAF_TEST(double_values) {
+  auto buf = serialize(f64);
+  double x;
+  deserialize(buf, x);
+  CAF_CHECK_EQUAL(f64, x);
+}
+
+CAF_TEST(enum_classes) {
+  auto buf = serialize(te);
   test_enum x;
-  binary_util::deserialize(buf, &x);
+  deserialize(buf, x);
   CAF_CHECK(te == x);
 }
 
-CAF_TEST(test_string) {
-  auto buf = binary_util::serialize(str);
+CAF_TEST(strings) {
+  auto buf = serialize(str);
   string x;
-  binary_util::deserialize(buf, &x);
+  deserialize(buf, x);
   CAF_CHECK_EQUAL(str, x);
 }
 
-CAF_TEST(test_raw_struct) {
-  auto buf = binary_util::serialize(rs);
+CAF_TEST(custom_struct) {
+  auto buf = serialize(rs);
   raw_struct x;
-  binary_util::deserialize(buf, &x);
+  deserialize(buf, x);
   CAF_CHECK(rs == x);
 }
 
-CAF_TEST(test_array_serialization) {
-  auto buf = binary_util::serialize(ta);
-  test_array x;
-  binary_util::deserialize(buf, &x);
-  for (auto i = 0; i < 4; ++i) {
-    CAF_CHECK(ta.value[i] == x.value[i]);
-  }
-  for (auto i = 0; i < 2; ++i) {
-    for (auto j = 0; j < 4; ++j) {
-      CAF_CHECK(ta.value2[i][j] == x.value2[i][j]);
-    }
-  }
+CAF_TEST(atoms) {
+  atom_value x;
+  auto foo = atom("foo");
+  using bar_atom = atom_constant<atom("bar")>;
+  auto buf = serialize(foo);
+  deserialize(buf, x);
+  CAF_CHECK(x == foo);
+  buf = serialize(bar_atom::value);
+  deserialize(buf, x);
+  CAF_CHECK(x == bar_atom::value);
 }
 
-CAF_TEST(test_empty_non_pod_serialization) {
+CAF_TEST(arrays) {
+  auto buf = serialize(ta);
+  test_array x;
+  deserialize(buf, x);
+  for (auto i = 0; i < 4; ++i)
+    CAF_CHECK(ta.value[i] == x.value[i]);
+  for (auto i = 0; i < 2; ++i)
+    for (auto j = 0; j < 4; ++j)
+      CAF_CHECK(ta.value2[i][j] == x.value2[i][j]);
+}
+
+CAF_TEST(empty_non_pods) {
   test_empty_non_pod x;
-  auto buf = binary_util::serialize(x);
-  binary_util::deserialize(buf, &x);
+  auto buf = serialize(x);
+  deserialize(buf, x);
   CAF_CHECK(true);
 }
 
-CAF_TEST(test_single_message) {
-  auto buf = binary_util::serialize(msg);
+CAF_TEST(messages) {
+  auto buf = serialize(msg);
   message x;
-  binary_util::deserialize(buf, &x);
+  deserialize(buf, x);
   CAF_CHECK(msg == x);
   CAF_CHECK(is_message(x).equal(i32, te, str, rs));
 }
 
-CAF_TEST(test_multiple_messages) {
+CAF_TEST(multiple_messages) {
   auto m = make_message(rs, te);
-  auto buf = binary_util::serialize(te, m, msg);
+  auto buf = serialize(te, m, msg);
   test_enum t;
   message m1;
   message m2;
-  binary_util::deserialize(buf, &t, &m1, &m2);
+  deserialize(buf, t, m1, m2);
   CAF_CHECK(tie(t, m1, m2) == tie(te, m, msg));
   CAF_CHECK(is_message(m1).equal(rs, te));
   CAF_CHECK(is_message(m2).equal(i32, te, str, rs));
-}
-
-CAF_TEST(strings) {
-  auto m1 = make_message("hello \"actor world\"!", atom("foo"));
-  auto s1 = to_string(m1);
-  CAF_CHECK_EQUAL(s1, "@<>+@str+@atom ( \"hello \\\"actor world\\\"!\", 'foo' )");
-  CAF_CHECK(from_string<message>(s1) == m1);
-  auto m2 = make_message(true);
-  auto s2 = to_string(m2);
-  CAF_CHECK_EQUAL(s2, "@<>+bool ( true )");
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

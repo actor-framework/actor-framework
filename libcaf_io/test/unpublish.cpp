@@ -40,55 +40,65 @@ std::atomic<long> s_dtor_called;
 
 class dummy : public event_based_actor {
 public:
+  dummy(actor_config& cfg) : event_based_actor(cfg) {
+    // nop
+  }
+
   ~dummy() {
     ++s_dtor_called;
   }
+
   behavior make_behavior() override {
     return {
       others >> [&] {
-        CAF_TEST_ERROR("Unexpected message: " << to_string(current_message()));
+        CAF_TEST_ERROR("Unexpected message");
       }
     };
   }
 };
 
-void test_invalid_unpublish(const actor& published, uint16_t port) {
-  auto d = spawn<dummy>();
-  io::unpublish(d, port);
-  auto ra = io::remote_actor("127.0.0.1", port);
+void test_invalid_unpublish(actor_system& system, const actor& published,
+                            uint16_t port) {
+  auto d = system.spawn<dummy>();
+  system.middleman().unpublish(d, port);
+  auto ra = system.middleman().remote_actor("127.0.0.1", port);
+  CAF_REQUIRE(ra);
   CAF_CHECK(ra != d);
   CAF_CHECK(ra == published);
   anon_send_exit(d, exit_reason::user_shutdown);
 }
 
 CAF_TEST(unpublishing) {
-  auto argv = test::engine::argv();
+  actor_system_config cfg;
+# ifdef CAF_USE_ASIO
   auto argc = test::engine::argc();
-  if (argc == 1 && strcmp(argv[0], "--use-asio") == 0) {
-#   ifdef CAF_USE_ASIO
-    CAF_MESSAGE("enable ASIO backend");
-    io::set_middleman<io::network::asio_multiplexer>();
-#   endif // CAF_USE_ASIO
-  }
+  auto argv = test::engine::argv();
+  if (argc == 1 && strcmp(argv[0], "--use-asio") == 0)
+    cfg.load<io::middleman, io::network::asio_multiplexer>());
+  else
+# endif // CAF_USE_ASIO
+    cfg.load<io::middleman>();
   { // scope for local variables
-    auto d = spawn<dummy>();
-    auto port = io::publish(d, 0);
-    CAF_MESSAGE("published actor on port " << port);
-    test_invalid_unpublish(d, port);
+    actor_system system{cfg};
+    auto d = system.spawn<dummy>();
+    auto port = system.middleman().publish(d, 0);
+    CAF_REQUIRE(port);
+    CAF_MESSAGE("published actor on port " << *port);
+    test_invalid_unpublish(system, d, *port);
     CAF_MESSAGE("finished `invalid_unpublish`");
-    io::unpublish(d, port);
+    system.middleman().unpublish(d, *port);
     // must fail now
+    CAF_MESSAGE("expect error...");
     try {
-      CAF_MESSAGE("expect exception...");
-      io::remote_actor("127.0.0.1", port);
+      auto res = system.middleman().remote_actor("127.0.0.1", *port);
       CAF_TEST_ERROR("unexpected: remote actor succeeded!");
-    } catch (network_error&) {
+    } catch(std::exception&) {
       CAF_MESSAGE("unpublish succeeded");
     }
     anon_send_exit(d, exit_reason::user_shutdown);
+    system.await_all_actors_done();
   }
-  await_all_actors_done();
-  shutdown();
+  // check after dtor of system was called
   CAF_CHECK_EQUAL(s_dtor_called.load(), 2);
 }
 

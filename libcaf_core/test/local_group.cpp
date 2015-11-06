@@ -33,7 +33,7 @@ using timeout_atom = atom_constant<atom("timeout")>;
 
 void testee(event_based_actor* self) {
   auto counter = std::make_shared<int>(0);
-  auto grp = group::get("local", "test");
+  auto grp = self->system().groups().get("local", "test");
   self->join(grp);
   CAF_MESSAGE("self joined group");
   self->become(
@@ -54,7 +54,7 @@ void testee(event_based_actor* self) {
 }
 
 CAF_TEST(test_local_group) {
-  spawn(testee);
-  await_all_actors_done();
-  shutdown();
+  actor_system system;
+  system.spawn(testee);
+  system.await_all_actors_done();
 }

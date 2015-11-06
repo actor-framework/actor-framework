@@ -23,9 +23,9 @@
 #include <map>
 #include <vector>
 
-#include "caf/spawn.hpp"
 #include "caf/extend.hpp"
 #include "caf/local_actor.hpp"
+#include "caf/abstract_event_based_actor.hpp"
 
 #include "caf/io/scribe.hpp"
 #include "caf/io/doorman.hpp"
@@ -43,22 +43,26 @@ public:
   using super = abstract_event_based_actor<behavior, false, abstract_broker>;
 
   template <class F, class... Ts>
-  actor fork(F fun, connection_handle hdl, Ts&&... xs) {
-    auto sptr = take(hdl);
+  typename infer_handle_from_fun<F>::type
+  fork(F fun, connection_handle hdl, Ts&&... xs) {
+    CAF_ASSERT(context() != nullptr);
+    auto sptr = this->take(hdl);
     CAF_ASSERT(sptr->hdl() == hdl);
-    return spawn_functor(nullptr,
-                         [sptr](broker* forked) {
-                           sptr->set_parent(forked);
-                           forked->add_scribe(sptr);
-                         },
-                         fun, hdl, std::forward<Ts>(xs)...);
+    using impl = typename infer_handle_from_fun<F>::impl;
+    actor_config cfg{context()};
+    detail::init_fun_factory<impl, F> fac;
+    cfg.init_fun = fac(std::move(fun), hdl, std::forward<Ts>(xs)...);
+    auto res = this->system().spawn_class<impl, no_spawn_options>(cfg);
+    auto forked = static_cast<impl*>(actor_cast<abstract_actor*>(res));
+    sptr->set_parent(forked);
+    CAF_ASSERT(sptr->parent() == forked);
+    forked->add_scribe(sptr);
+    return res;
   }
 
   void initialize() override;
 
-  broker();
-
-  broker(middleman& parent_ref);
+  broker(actor_config& cfg);
 
 protected:
   virtual behavior make_behavior();

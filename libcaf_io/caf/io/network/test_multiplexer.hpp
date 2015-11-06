@@ -31,6 +31,8 @@ namespace network {
 
 class test_multiplexer : public multiplexer {
 public:
+  explicit test_multiplexer(actor_system* sys);
+
   ~test_multiplexer();
 
   connection_handle new_tcp_scribe(const std::string& host,
@@ -126,9 +128,13 @@ public:
   void flush_runnables();
 
 protected:
-  void dispatch_runnable(runnable_ptr ptr) override;
+  void exec_later(resumable* ptr) override;
 
 private:
+  using resumable_ptr = intrusive_ptr<resumable>;
+
+  void exec(resumable_ptr& ptr);
+
   using guard_type = std::unique_lock<std::mutex>;
 
   struct scribe_data {
@@ -148,7 +154,7 @@ private:
 
   std::mutex mx_;
   std::condition_variable cv_;
-  std::list<runnable_ptr> runnables_;
+  std::list<resumable_ptr> resumables_;
   pending_scribes_map scribes_;
   std::unordered_map<uint16_t, accept_handle> doormen_;
   std::unordered_map<connection_handle, scribe_data> scribe_data_;

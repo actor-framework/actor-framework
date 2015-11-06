@@ -119,9 +119,6 @@ using middleman_actor =
     ::with_either<ok_atom, actor_addr, std::set<std::string>>
     ::or_else<error_atom, std::string>>;
 
-/// Returns a handle for asynchronous networking operations.
-middleman_actor get_middleman_actor(); // implemented in middleman.cpp
-
 } // namespace io
 } // namespace caf
 

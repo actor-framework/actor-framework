@@ -45,14 +45,23 @@ struct ping {
   int32_t value;
 };
 
+template <class T>
+void serialize(T& in_or_out, ping& x, const unsigned int) {
+  in_or_out & x.value;
+}
+
 bool operator==(const ping& lhs, const ping& rhs) {
   return lhs.value == rhs.value;
 }
 
 struct pong {
   int32_t value;
-
 };
+
+template <class T>
+void serialize(T& in_or_out, pong& x, const unsigned int) {
+  in_or_out & x.value;
+}
 
 bool operator==(const pong& lhs, const pong& rhs) {
   return lhs.value == rhs.value;
@@ -71,19 +80,20 @@ server_type::behavior_type server() {
   };
 }
 
-void run_client(const char* host, uint16_t port) {
+void run_client(actor_system& system, const char* host, uint16_t port) {
   // check whether invalid_argument is thrown
   // when trying to connect to get an untyped
   // handle to the server
   try {
-    io::remote_actor(host, port);
+    system.middleman().remote_actor(host, port);
   }
   catch (network_error& e) {
     CAF_MESSAGE(e.what());
   }
   CAF_MESSAGE("connect to typed_remote_actor");
-  auto serv = io::typed_remote_actor<server_type>(host, port);
-  scoped_actor self;
+  auto serv = system.middleman().typed_remote_actor<server_type>(host, port);
+  CAF_REQUIRE(serv);
+  scoped_actor self{system};
   self->sync_send(serv, ping{42})
     .await([](const pong& p) { CAF_CHECK_EQUAL(p.value, 42); });
   anon_send_exit(serv, exit_reason::user_shutdown);
@@ -94,17 +104,16 @@ void run_client(const char* host, uint16_t port) {
   });
 }
 
-uint16_t run_server() {
-  auto port = io::typed_publish(spawn(server), 0, "127.0.0.1");
-  CAF_MESSAGE("running on port " << port);
-  return port;
+uint16_t run_server(actor_system& system) {
+  auto port = system.middleman().publish(system.spawn(server), 0, "127.0.0.1");
+  CAF_REQUIRE(port);
+  CAF_MESSAGE("running on port " << *port);
+  return *port;
 }
 
 CAF_TEST(test_typed_remote_actor) {
   auto argv = test::engine::argv();
   auto argc = test::engine::argc();
-  announce<ping>("ping", &ping::value);
-  announce<pong>("pong", &pong::value);
   uint16_t port = 0;
   auto r = message_builder(argv, argv + argc).extract_opts({
     {"client-port,c", "set port for client", port},
@@ -115,24 +124,28 @@ CAF_TEST(test_typed_remote_actor) {
     cout << r.error << endl << endl << r.helptext << endl;
     return;
   }
+  actor_system_config cfg;
+  cfg.add_message_type<ping>("ping")
+     .add_message_type<pong>("pong");
   auto use_asio = r.opts.count("use-asio") > 0;
+# ifdef CAF_USE_ASIO
   if (use_asio) {
-#   ifdef CAF_USE_ASIO
-    CAF_MESSAGE("enable ASIO backend");
-    io::set_middleman<io::network::asio_multiplexer>();
-#   endif // CAF_USE_ASIO
-  }
+    cfg.load<io::middleman, io::network::asio_multiplexer>());
+  else
+# endif // CAF_USE_ASIO
+    cfg.load<io::middleman>();
+  actor_system system{cfg};
   if (r.opts.count("client-port") > 0) {
     CAF_MESSAGE("run in client mode");
-    run_client("localhost", port);
+    run_client(system, "localhost", port);
   } else if (r.opts.count("server") > 0) {
     CAF_MESSAGE("run in server mode");
-    run_server();
+    run_server(system);
   } else {
-    port = run_server();
+    port = run_server(system);
     // execute client_part() in a separate process,
     // connected via localhost socket
-    scoped_actor self;
+    scoped_actor self{system};
     auto child = detail::run_sub_unit_test(self,
                                            test::engine::path(),
                                            test::engine::max_runtime(),
@@ -150,6 +163,5 @@ CAF_TEST(test_typed_remote_actor) {
       }
     );
   }
-  await_all_actors_done();
-  shutdown();
+  system.await_all_actors_done();
 }

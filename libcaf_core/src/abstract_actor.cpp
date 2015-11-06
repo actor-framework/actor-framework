@@ -29,13 +29,14 @@
 #include "caf/message.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/actor_cast.hpp"
+#include "caf/actor_system.hpp"
 #include "caf/abstract_actor.hpp"
+#include "caf/execution_unit.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/default_attachable.hpp"
 
-#include "caf/detail/logging.hpp"
-#include "caf/detail/singletons.hpp"
-#include "caf/detail/actor_registry.hpp"
+#include "caf/logger.hpp"
+#include "caf/actor_registry.hpp"
 #include "caf/detail/shared_spinlock.hpp"
 
 namespace caf {
@@ -43,32 +44,33 @@ namespace caf {
 namespace {
 
 using guard_type = std::unique_lock<std::mutex>;
-std::atomic<actor_id> ids_;
 
 } // namespace <anonymous>
-
-actor_id abstract_actor::latest_actor_id() {
-  return ids_.load();
-}
 
 // exit_reason_ is guaranteed to be set to 0, i.e., exit_reason::not_exited,
 // by std::atomic<> constructor
 
-abstract_actor::abstract_actor(actor_id aid, node_id nid)
-    : abstract_channel(abstract_channel::is_abstract_actor_flag,
-                       std::move(nid)),
-      id_(aid),
-      exit_reason_(exit_reason::not_exited),
-      host_(nullptr) {
+abstract_actor::abstract_actor(execution_unit* ptr, int flags)
+  : abstract_channel(flags | abstract_channel::is_abstract_actor_flag,
+                     ptr->system().node()),
+    context_(ptr),
+    id_(ptr->system().next_actor_id()),
+    exit_reason_(exit_reason::not_exited),
+    home_system_(&ptr->system()) {
   // nop
 }
 
-abstract_actor::abstract_actor()
+abstract_actor::abstract_actor(actor_config& cfg)
+    : abstract_actor(cfg.host, cfg.flags) {
+  // nop
+}
+
+abstract_actor::abstract_actor(actor_id aid, node_id nid)
     : abstract_channel(abstract_channel::is_abstract_actor_flag,
-                       detail::singletons::get_node_id()),
-      id_(++ids_),
-      exit_reason_(exit_reason::not_exited),
-      host_(nullptr) {
+                       std::move(nid)),
+      context_(nullptr),
+      id_(aid),
+      exit_reason_(exit_reason::not_exited) {
   // nop
 }
 
@@ -94,14 +96,14 @@ size_t abstract_actor::detach_impl(const attachable::token& what,
                                    attachable_ptr& ptr,
                                    bool stop_on_hit,
                                    bool dry_run) {
-  CAF_LOGF_TRACE("");
+  CAF_LOG_TRACE("");
   if (! ptr) {
-    CAF_LOGF_DEBUG("invalid ptr");
+    CAF_LOG_DEBUG("invalid ptr");
     return 0;
   }
   if (ptr->matches(what)) {
     if (! dry_run) {
-      CAF_LOGF_DEBUG("removed element");
+      CAF_LOG_DEBUG("removed element");
       attachable_ptr next;
       next.swap(ptr->next);
       ptr.swap(next);
@@ -117,20 +119,8 @@ size_t abstract_actor::detach(const attachable::token& what) {
   return detach_impl(what, attachables_head_);
 }
 
-void abstract_actor::is_registered(bool value) {
-  if (is_registered() == value) {
-    return;
-  }
-  if (value) {
-    detail::singletons::get_actor_registry()->inc_running();
-  } else {
-    detail::singletons::get_actor_registry()->dec_running();
-  }
-  set_flag(value, is_registered_flag);
-}
-
 bool abstract_actor::link_impl(linking_operation op, const actor_addr& other) {
-  CAF_LOG_TRACE(CAF_ARG(op) << ", " << CAF_TSARG(other));
+  CAF_LOG_TRACE(CAF_ARG(op) << CAF_ARG(other));
   switch (op) {
     case establish_link_op:
       return establish_link_impl(other);
@@ -145,14 +135,14 @@ bool abstract_actor::link_impl(linking_operation op, const actor_addr& other) {
 }
 
 bool abstract_actor::establish_link_impl(const actor_addr& other) {
-  CAF_LOG_TRACE(CAF_TSARG(other));
+  CAF_LOG_TRACE(CAF_ARG(other));
   if (other && other != this) {
     guard_type guard{mtx_};
     auto ptr = actor_cast<abstract_actor_ptr>(other);
     // send exit message if already exited
     if (exited()) {
       ptr->enqueue(address(), invalid_message_id,
-                   make_message(exit_msg{address(), exit_reason()}), host_);
+                   make_message(exit_msg{address(), exit_reason()}), context_);
     } else if (ptr->establish_backlink(address())) {
       // add link if not already linked to other
       // (checked by establish_backlink)
@@ -165,7 +155,7 @@ bool abstract_actor::establish_link_impl(const actor_addr& other) {
 }
 
 bool abstract_actor::establish_backlink_impl(const actor_addr& other) {
-  CAF_LOG_TRACE(CAF_TSARG(other));
+  CAF_LOG_TRACE(CAF_ARG(other));
   uint32_t reason = exit_reason::not_exited;
   default_attachable::observe_token tk{other, default_attachable::link};
   if (other && other != this) {
@@ -183,13 +173,13 @@ bool abstract_actor::establish_backlink_impl(const actor_addr& other) {
   if (reason != exit_reason::not_exited) {
     auto ptr = actor_cast<abstract_actor_ptr>(other);
     ptr->enqueue(address(), invalid_message_id,
-                 make_message(exit_msg{address(), exit_reason()}), host_);
+                 make_message(exit_msg{address(), exit_reason()}), context_);
   }
   return false;
 }
 
 bool abstract_actor::remove_link_impl(const actor_addr& other) {
-  CAF_LOG_TRACE(CAF_TSARG(other));
+  CAF_LOG_TRACE(CAF_ARG(other));
   if (other == invalid_actor_addr || other == this) {
     return false;
   }
@@ -206,7 +196,7 @@ bool abstract_actor::remove_link_impl(const actor_addr& other) {
 }
 
 bool abstract_actor::remove_backlink_impl(const actor_addr& other) {
-  CAF_LOG_TRACE(CAF_TSARG(other));
+  CAF_LOG_TRACE(CAF_ARG(other));
   default_attachable::observe_token tk{other, default_attachable::link};
   if (other && other != this) {
     guard_type guard{mtx_};
@@ -233,8 +223,8 @@ void abstract_actor::cleanup(uint32_t reason) {
     exit_reason_ = reason;
     attachables_head_.swap(head);
   }
-  CAF_LOG_INFO_IF(! is_remote(), "cleanup actor with ID " << id_
-                                << "; exit reason = " << reason);
+  CAF_LOG_INFO_IF(node() == system().node(),
+                  "cleanup" << CAF_ARG(id()) << CAF_ARG(reason));
   // send exit messages
   for (attachable* i = head.get(); i != nullptr; i = i->next.get()) {
     i->actor_exited(this, reason);
@@ -246,22 +236,42 @@ std::set<std::string> abstract_actor::message_types() const {
   return std::set<std::string>{};
 }
 
+void abstract_actor::is_registered(bool value) {
+  if (is_registered() == value)
+    return;
+  if (value)
+    home_system_->registry().inc_running();
+  else
+    home_system_->registry().dec_running();
+  set_flag(value, is_registered_flag);
+}
+
 maybe<uint32_t> abstract_actor::handle(const std::exception_ptr& eptr) {
-  { // lifetime scope of guard
-    guard_type guard{mtx_};
-    for (auto i = attachables_head_.get(); i != nullptr; i = i->next.get()) {
-      try {
-        auto result = i->handle_exception(eptr);
-        if (result) {
-          return *result;
-        }
-      }
-      catch (...) {
-        // ignore exceptions
-      }
+  guard_type guard{mtx_};
+  for (auto i = attachables_head_.get(); i != nullptr; i = i->next.get()) {
+    try {
+      auto result = i->handle_exception(eptr);
+      if (result)
+        return *result;
+    }
+    catch (...) {
+      // ignore exceptions
     }
   }
   return none;
+}
+
+std::string to_string(abstract_actor::linking_operation op) {
+  switch (op) {
+    case abstract_actor::establish_link_op:
+      return "establish_link";
+    case abstract_actor::establish_backlink_op:
+      return "establish_backlink";
+    case abstract_actor::remove_link_op:
+      return "remove_link";
+    default:
+      return "remove_backlink";
+  }
 }
 
 } // namespace caf

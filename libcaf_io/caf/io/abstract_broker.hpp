@@ -24,6 +24,7 @@
 #include <unordered_map>
 
 #include "caf/local_actor.hpp"
+#include "caf/prohibit_top_level_spawn_marker.hpp"
 #include "caf/detail/intrusive_partitioned_list.hpp"
 
 #include "caf/io/fwd.hpp"
@@ -31,6 +32,7 @@
 #include "caf/io/receive_policy.hpp"
 #include "caf/io/system_messages.hpp"
 #include "caf/io/connection_handle.hpp"
+
 #include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/stream_manager.hpp"
 #include "caf/io/network/acceptor_manager.hpp"
@@ -69,20 +71,17 @@ class middleman;
 /// a `new_connection_msg` whenever a new connection was established.
 ///
 /// All `scribe` and `doorman` instances are managed by the `multiplexer`
-///
 
 /// A broker mediates between actor systems and other components in the network.
 /// @ingroup Broker
-class abstract_broker : public local_actor {
+class abstract_broker : public local_actor,
+                        public prohibit_top_level_spawn_marker {
 public:
-  class continuation;
-
   virtual ~abstract_broker();
 
   // even brokers need friends
   friend class scribe;
   friend class doorman;
-  friend class continuation;
 
   void enqueue(const actor_addr&, message_id,
                message, execution_unit*) override;
@@ -119,7 +118,7 @@ public:
 
   /// Returns the middleman instance this broker belongs to.
   inline middleman& parent() {
-    return mm_;
+    return system().middleman();
   }
 
   /// Adds a `scribe` instance to this broker.
@@ -128,7 +127,6 @@ public:
   /// Tries to connect to `host` on given `port` and creates
   /// a new scribe describing the connection afterwards.
   /// @returns The handle of the new `scribe` on success.
-  /// @throws network_error Thrown if given `host` was unreachable or invalid.
   connection_handle add_tcp_scribe(const std::string& host, uint16_t port);
 
   /// Assigns a detached `scribe` instance identified by `hdl`
@@ -145,10 +143,9 @@ public:
   /// it on success. If `port == 0`, then the broker will ask
   /// the operating system to pick a random port.
   /// @returns The handle of the new `doorman` and the assigned port.
-  /// @throws network_error Thrown if `port` was unavailable.
-  std::pair<accept_handle, uint16_t> add_tcp_doorman(uint16_t port = 0,
-                                                     const char* in = nullptr,
-                                                     bool reuse_addr = false);
+  std::pair<accept_handle, uint16_t>
+  add_tcp_doorman(uint16_t port = 0, const char* in = nullptr,
+                  bool reuse_addr = false);
 
   /// Assigns a detached `doorman` instance identified by `hdl`
   /// from the `multiplexer` to this broker.
@@ -173,7 +170,7 @@ public:
   uint16_t local_port(accept_handle hdl);
 
   /// Returns the handle associated to given local `port` or `none`.
-  maybe<accept_handle> hdl_by_port(uint16_t port);
+  accept_handle hdl_by_port(uint16_t port);
 
   /// Closes all connections and acceptors.
   void close_all();
@@ -191,6 +188,9 @@ public:
     return get_map(hdl).count(hdl) > 0;
   }
 
+  subtype_t subtype() const override;
+
+  resume_result resume(execution_unit*, size_t) override;
 
   /// @cond PRIVATE
   template <class Handle>
@@ -207,9 +207,7 @@ public:
 protected:
   void init_broker();
 
-  abstract_broker();
-
-  abstract_broker(middleman& parent_ref);
+  abstract_broker(actor_config& cfg);
 
   using doorman_map = std::unordered_map<accept_handle, intrusive_ptr<doorman>>;
 
@@ -267,7 +265,6 @@ protected:
 private:
   scribe_map scribes_;
   doorman_map doormen_;
-  middleman& mm_;
   detail::intrusive_partitioned_list<mailbox_element, detail::disposer> cache_;
 };
 

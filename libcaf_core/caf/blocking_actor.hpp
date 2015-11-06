@@ -30,6 +30,7 @@
 #include "caf/behavior.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/typed_actor.hpp"
+#include "caf/actor_config.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/response_handle.hpp"
 
@@ -48,7 +49,10 @@ class blocking_actor
 public:
   using behavior_type = behavior;
 
-  blocking_actor();
+  using super = extend<local_actor, blocking_actor>::
+                with<mixin::sync_sender<blocking_response_handle_tag>::impl>;
+
+  blocking_actor(actor_config& sys);
 
   ~blocking_actor();
 

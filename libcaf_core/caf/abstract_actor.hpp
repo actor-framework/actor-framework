@@ -37,6 +37,7 @@
 #include "caf/message_id.hpp"
 #include "caf/exit_reason.hpp"
 #include "caf/intrusive_ptr.hpp"
+#include "caf/execution_unit.hpp"
 #include "caf/abstract_channel.hpp"
 
 #include "caf/detail/type_traits.hpp"
@@ -124,20 +125,29 @@ public:
 
   /// Returns the execution unit currently used by this actor.
   /// @warning not thread safe
-  inline execution_unit* host() const {
-    return host_;
+  inline execution_unit* context() const {
+    return context_;
   }
 
   /// Sets the execution unit for this actor.
-  inline void host(execution_unit* new_host) {
-    host_ = new_host;
+  inline void context(execution_unit* x) {
+    context_ = x;
+  }
+
+  /// Returns the hosting actor system.
+  inline actor_system& system() const {
+    CAF_ASSERT(context_);
+    return context_->system();
   }
 
 protected:
-  /// Creates a non-proxy instance.
-  abstract_actor();
+  /// Creates a new actor instance.
+  abstract_actor(execution_unit* ptr, int flags);
 
-  /// Creates a proxy instance for a proxy running on `nid`.
+  /// Creates a new actor instance.
+  explicit abstract_actor(actor_config& cfg);
+
+  /// Creates a new actor instance.
   abstract_actor(actor_id aid, node_id nid);
 
   /// Called by the runtime system to perform cleanup actions for this actor.
@@ -155,8 +165,6 @@ protected:
 
 public:
   /// @cond PRIVATE
-
-  static actor_id latest_actor_id();
 
   enum linking_operation {
     establish_link_op,
@@ -192,12 +200,6 @@ public:
   inline void has_timeout(bool value) {
     set_flag(value, has_timeout_flag);
   }
-
-  inline bool is_registered() const {
-    return get_flag(is_registered_flag);
-  }
-
-  void is_registered(bool value);
 
   inline bool is_initialized() const {
     return get_flag(is_initialized_flag);
@@ -247,6 +249,12 @@ public:
     set_flag(value, is_migrated_from_flag);
   }
 
+  inline bool is_registered() const {
+    return get_flag(is_registered_flag);
+  }
+
+  void is_registered(bool value);
+
   // Tries to run a custom exception handler for `eptr`.
   maybe<uint32_t> handle(const std::exception_ptr& eptr);
 
@@ -271,6 +279,9 @@ protected:
                             bool stop_on_first_hit = false,
                             bool dry_run = false);
 
+  // identifies the execution unit this actor is currently executed by
+  execution_unit* context_;
+
   // cannot be changed after construction
   const actor_id id_;
 
@@ -287,11 +298,12 @@ protected:
   // attached functors that are executed on cleanup (monitors, links, etc)
   attachable_ptr attachables_head_;
 
-  // identifies the execution unit this actor is currently executed by
-  execution_unit* host_;
+  actor_system* home_system_;
 
   /// @endcond
 };
+
+std::string to_string(abstract_actor::linking_operation op);
 
 } // namespace caf
 

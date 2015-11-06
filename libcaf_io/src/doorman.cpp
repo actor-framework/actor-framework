@@ -19,7 +19,7 @@
 
 #include "caf/io/doorman.hpp"
 
-#include "caf/detail/logging.hpp"
+#include "caf/logger.hpp"
 
 #include "caf/io/abstract_broker.hpp"
 
@@ -39,12 +39,11 @@ message doorman::detach_message() {
   return make_message(acceptor_closed_msg{hdl()});
 }
 
-void doorman::io_failure(network::operation op) {
-  CAF_LOG_TRACE("id = " << hdl().id() << ", "
-                        << CAF_TARG(op, static_cast<int>));
+void doorman::io_failure(execution_unit* ctx, network::operation op) {
+  CAF_LOG_TRACE(CAF_ARG(hdl().id()) << CAF_ARG(op));
   // keep compiler happy when compiling w/o logging
   static_cast<void>(op);
-  detach(true);
+  detach(ctx, true);
 }
 
 } // namespace io

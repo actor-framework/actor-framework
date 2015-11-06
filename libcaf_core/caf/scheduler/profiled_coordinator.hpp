@@ -36,10 +36,14 @@
 #include <iomanip>
 #include <unordered_map>
 
+#include "caf/actor_system_config.hpp"
+
+#include "caf/scheduler/coordinator.hpp"
+
 #include "caf/policy/profiled.hpp"
 #include "caf/policy/work_stealing.hpp"
 
-#include "caf/detail/logging.hpp"
+#include "caf/logger.hpp"
 
 namespace caf {
 namespace scheduler {
@@ -143,34 +147,35 @@ public:
     clock_type::duration last_flush = clock_type::duration::zero();
   };
 
-  profiled_coordinator(const std::string& filename,
-                       msec res = msec{1000},
-                       size_t nw = std::max(std::thread::hardware_concurrency(),
-                                            4u),
-                       size_t mt = std::numeric_limits<size_t>::max())
-      : super{nw, mt},
-        file_{filename},
-        resolution_{res},
-        system_start_{std::chrono::system_clock::now()},
-        clock_start_{clock_type::now().time_since_epoch()} {
-    if (! file_) {
-      throw std::runtime_error{"failed to open CAF profiler file"};
-    }
+  profiled_coordinator(actor_system& sys) : super{sys} {
+    // nop
   }
 
-  void initialize() override {
-    super::initialize();
+  void init(actor_system_config& cfg) override {
+    super::init(cfg);
+    file_.open(cfg.scheduler_profiling_output_file);
+    if (! file_)
+      std::cerr << "[WARNING] could not open file \""
+                << cfg.scheduler_profiling_output_file
+                << "\" (no profiler output will be generated)"
+                << std::endl;
+    resolution_ = msec{cfg.scheduler_profiling_ms_resolution};
+  }
+
+  void start() override {
+    clock_start_ = clock_type::now().time_since_epoch();
+    super::start();
     worker_states_.resize(this->num_workers());
     using std::setw;
     file_.flags(std::ios::left);
     file_ << setw(21) << "clock"     // UNIX timestamp in microseconds
-           << setw(10) << "type"      // "actor" or "worker"
-           << setw(10) << "id"        // ID of the above
-           << setw(15) << "time"      // duration of this sample (cumulative)
-           << setw(15) << "usr"       // time spent in user mode (cumulative)
-           << setw(15) << "sys"       // time spent in kernel model (cumulative)
-           << "mem"                   // used memory (cumulative)
-           << '\n';
+          << setw(10) << "type"      // "actor" or "worker"
+          << setw(10) << "id"        // ID of the above
+          << setw(15) << "time"      // duration of this sample (cumulative)
+          << setw(15) << "usr"       // time spent in user mode (cumulative)
+          << setw(15) << "sys"       // time spent in kernel model (cumulative)
+          << "mem"                   // used memory (cumulative)
+          << '\n';
   }
 
   void stop() override {

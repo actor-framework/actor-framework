@@ -22,6 +22,7 @@
 #define CAF_SUITE io_http_broker
 #include "caf/test/unit_test.hpp"
 
+#include <cassert>
 #include <algorithm>
 
 #include "caf/all.hpp"
@@ -157,8 +158,7 @@ behavior http_worker(http_broker* self, connection_handle hdl) {
       self->quit();
     },
     others >> [=] {
-      aout(self) << "unexpected: "
-                 << to_string(self->current_message()) << endl;
+      aout(self) << "unexpected: " << self->current_message() << endl;
     }
   };
 }
@@ -171,8 +171,7 @@ behavior server(broker* self) {
       auto worker = self->fork(http_worker, ncm.handle);
     },
     others >> [=] {
-      aout(self) << "unexpected: "
-                 << to_string(self->current_message()) << endl;
+      aout(self) << "Unexpected: " << self->current_message() << endl;
     }
   };
 }
@@ -180,13 +179,11 @@ behavior server(broker* self) {
 
 class fixture {
 public:
-  fixture() {
-    // note: the middleman will take ownership of mpx_, but using
-    //       this pointer is safe at any point before calling `shutdown`
-    mpx_ = new network::test_multiplexer;
-    set_middleman(mpx_);
+  fixture() : system(actor_system_config{}
+                     .load<io::middleman, network::test_multiplexer>()) {
+    mpx_ = static_cast<network::test_multiplexer*>(&system.middleman().backend());
     // spawn the actor-under-test
-    aut_ = spawn_io(server);
+    aut_ = system.middleman().spawn_broker(server);
     // assign the acceptor handle to the AUT
     aut_ptr_ = static_cast<abstract_broker*>(actor_cast<abstract_actor*>(aut_));
     mpx_->assign_tcp_doorman(aut_ptr_, acceptor_);
@@ -202,8 +199,7 @@ public:
     // since we do not invoke any "I/O" from this point on that would
     // trigger the exit message implicitly
     mpx_->flush_runnables();
-    await_all_actors_done();
-    shutdown();
+    system.await_all_actors_done();
   }
 
   // helper class for a nice-and-easy "mock(...).expect(...)" syntax
@@ -238,6 +234,7 @@ public:
     return {this};
   }
 
+  actor_system system;
   actor aut_;
   abstract_broker* aut_ptr_;
   network::test_multiplexer* mpx_;

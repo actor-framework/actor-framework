@@ -18,15 +18,15 @@
  ******************************************************************************/
 
 #include "caf/exception.hpp"
+#include "caf/actor_system.hpp"
 #include "caf/blocking_actor.hpp"
 
-#include "caf/detail/logging.hpp"
-#include "caf/detail/singletons.hpp"
-#include "caf/detail/actor_registry.hpp"
+#include "caf/logger.hpp"
+#include "caf/actor_registry.hpp"
 
 namespace caf {
 
-blocking_actor::blocking_actor() {
+blocking_actor::blocking_actor(actor_config& sys) : super(sys) {
   is_blocking(true);
 }
 
@@ -35,7 +35,7 @@ blocking_actor::~blocking_actor() {
 }
 
 void blocking_actor::await_all_other_actors_done() {
-  detail::singletons::get_actor_registry()->await_running_count_equal(1);
+  system().registry().await_running_count_equal(is_registered() ? 1 : 0);
 }
 
 void blocking_actor::act() {
@@ -49,7 +49,7 @@ void blocking_actor::initialize() {
 }
 
 void blocking_actor::dequeue(behavior& bhvr, message_id mid) {
-  CAF_LOG_TRACE(CAF_MARG(mid, integer_value));
+  CAF_LOG_TRACE(CAF_ARG(mid));
   // try to dequeue from cache first
   if (invoke_from_cache(bhvr, mid)) {
     return;

@@ -20,11 +20,11 @@
 #ifndef CAF_DETAIL_TYPE_TRAITS_HPP
 #define CAF_DETAIL_TYPE_TRAITS_HPP
 
+#include <tuple>
 #include <string>
+#include <utility>
 #include <functional>
 #include <type_traits>
-
-#include "caf/maybe.hpp"
 
 #include "caf/fwd.hpp"
 
@@ -206,9 +206,13 @@ class is_iterable {
   }
 
   // SFNINAE default
-  static void sfinae_fun(const void*) {}
+  static void sfinae_fun(const void*) {
+    // nop
+  }
 
-  using result_type = decltype(sfinae_fun(static_cast<const T*>(nullptr)));
+  using decayed = typename std::decay<T>::type;
+
+  using result_type = decltype(sfinae_fun(static_cast<const decayed*>(nullptr)));
 
 public:
   static constexpr bool value = is_primitive<T>::value == false &&
@@ -218,13 +222,151 @@ public:
 template<class T>
 constexpr bool is_iterable<T>::value;
 
-/// Checks wheter `T` is neither a reference nor a pointer nor an array.
+/// Checks whether `T` is an `std::tuple` or `std::pair`.
 template <class T>
-struct is_legal_tuple_type {
-  static constexpr bool value = std::is_reference<T>::value == false
-                                && std::is_pointer<T>::value == false
-                                && std::is_array<T>::value == false;
+struct is_tuple : std::false_type { };
 
+template <class... Ts>
+struct is_tuple<std::tuple<Ts...>> : std::true_type { };
+
+template <class F, class S>
+struct is_tuple<std::pair<F, S>> : std::true_type { };
+
+/// Checks whether `T` provides a free
+/// `serialize(InOut&, T&, const unsigned int)` function.
+template <class T>
+struct has_free_serialize {
+private:
+  // check for free function
+  template <class C,
+            class E = decltype(serialize(std::declval<serializer&>(),
+                                         std::declval<C&>(), 0))>
+  static bool sfinae_fun(C*) {
+    return true;
+  }
+
+  static void sfinae_fun(void*) {
+    // nop
+  }
+
+  using type = typename std::remove_const<T>::type;
+
+  using result_type = decltype(sfinae_fun(static_cast<type*>(nullptr)));
+
+public:
+  static constexpr bool value = std::is_same<bool, result_type>::value;
+};
+
+/// Checks whether `T` provides a member
+/// `T::serialize(InOut&, const unsigned int)` function.
+template <class T>
+struct has_member_serialize {
+private:
+  // check for free function
+  template <class C,
+            class E = decltype(std::declval<C&>()
+                               .serialize(std::declval<serializer&>(), 0))>
+  static bool sfinae_fun(C*) {
+    return true;
+  }
+
+  static void sfinae_fun(void*) {
+    // nop
+  }
+
+  using type = typename std::remove_const<T>::type;
+
+  using result_type = decltype(sfinae_fun(static_cast<type*>(nullptr)));
+
+public:
+  static constexpr bool value = std::is_same<bool, result_type>::value;
+};
+
+/// Checks whether `T` provides either a free function
+/// `serialize(InOut&, T&, const unsigned int)` or a member function
+/// `T::serialize(InOut&, const unsigned int)`. If `T` is iterable,
+/// then the template checks whether `T::value_type` is serializable.
+template <class T,
+          bool Ignore = std::is_pointer<T>::value
+                        || std::is_function<T>::value>
+struct has_serialize {
+  static constexpr bool value = has_free_serialize<T>::value
+                                || has_member_serialize<T>::value;
+};
+
+template <class T>
+struct has_serialize<T, true> {
+  static constexpr bool value = false;
+};
+
+template <class T>
+struct is_serializable;
+
+template <class T,
+          bool IsIterable = is_iterable<T>::value,
+          bool Ignore = std::is_pointer<T>::value
+                        || std::is_function<T>::value>
+struct is_serializable_impl;
+
+/// Checks whether `T` is builtin or provides a `serialize`
+/// (free or member) function.
+template <class T>
+struct is_serializable_impl<T, false, false> {
+  static constexpr bool value = has_serialize<T>::value
+                                || is_builtin<T>::value;
+};
+
+template <class F, class S>
+struct is_serializable_impl<std::pair<F, S>, false, false> {
+  static constexpr bool value = is_serializable<F>::value
+                                && is_serializable<S>::value;
+};
+
+template <class... Ts>
+struct is_serializable_impl<std::tuple<Ts...>, false, false> {
+  static constexpr bool value = conjunction<
+                                  is_serializable<Ts>::value...
+                                >::value;
+};
+
+template <class T>
+struct is_serializable_impl<T, true, false> {
+  using value_type = typename T::value_type;
+  static constexpr bool value = is_serializable<value_type>::value;
+};
+
+template <class T, size_t S>
+struct is_serializable_impl<T[S], false, false> {
+  static constexpr bool value = is_serializable<T>::value;
+};
+
+template <class T, bool IsIterable>
+struct is_serializable_impl<T, IsIterable, true> {
+  static constexpr bool value = false;
+};
+
+/// Checks whether `T` is builtin or provides a `serialize`
+/// (free or member) function.
+template <class T>
+struct is_serializable {
+  static constexpr bool value = is_serializable_impl<T>::value
+                                || std::is_empty<T>::value
+                                || std::is_enum<T>::value;
+};
+
+template <>
+struct is_serializable<bool> : std::true_type  {
+  // nop
+};
+
+template <class T>
+struct is_serializable<T&> : is_serializable<T> {
+  // nop
+};
+
+template <class T>
+struct is_serializable<const T&> : is_serializable<T> {
+  // nop
 };
 
 /// Checks wheter `T` is a non-const reference.
@@ -264,17 +406,6 @@ private:
 
 public:
   static constexpr bool value = decltype(check<T>(0))::value;
-};
-
-/// Returns either `T` or `T::type` if `T` is a `maybe`.
-template <class T>
-struct rm_maybe {
-  using type = T;
-};
-
-template <class T>
-struct rm_maybe<maybe<T>> {
-  using type = T;
 };
 
 /// Defines `result_type,` `arg_types,` and `fun_type`. Functor is
@@ -452,16 +583,6 @@ struct type_at<0, T0, Ts...> {
   using type = T0;
 };
 
-template <class T>
-struct is_maybe : std::false_type {
-  // no members
-};
-
-template <class T>
-struct is_maybe<maybe<T>> : std::true_type {
-  // no members
-};
-
 // Checks whether T has a member variable named `name`.
 template <class T, bool IsScalar = std::is_scalar<T>::value>
 class has_name {
@@ -493,25 +614,30 @@ public:
   static constexpr bool value = false;
 };
 
-// checks whether T is serializable using a free function `serialize` taking
-// either a `caf::serializer` or `caf::deserializer` as first argument
 template <class T>
-struct is_serializable {
-private:
-  template <class U>
-  static int8_t fun(U*, decltype(serialize(std::declval<serializer&>(),
-                                         std::declval<U&>(), 0))* = nullptr,
-                  decltype(serialize(std::declval<deserializer&>(),
-                                     std::declval<U&>(), 0))* = nullptr);
-
-  static int16_t fun(...);
-
-public:
-  static constexpr bool value = sizeof(fun(static_cast<T*>(nullptr))) == 1;
+struct value_type_of {
+  using type = typename T::value_type;
 };
 
 template <class T>
-constexpr bool is_serializable<T>::value;
+struct value_type_of<T*> {
+  using type = T;
+};
+
+template <class T>
+using value_type_of_t = typename value_type_of<T>::type;
+
+// drops the `const` qualifier in key-value pairs from the STL
+template <class T>
+struct deconst_kvp {
+  using type = T;
+};
+
+template <class K, class V>
+struct deconst_kvp<std::pair<K, V>> {
+  using type = std::pair<typename std::remove_const<K>::type,
+                         typename std::remove_const<V>::type>;
+};
 
 } // namespace detail
 } // namespace caf

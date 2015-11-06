@@ -20,19 +20,21 @@
 #ifndef CAF_SCOPED_ACTOR_HPP
 #define CAF_SCOPED_ACTOR_HPP
 
+#include "caf/actor.hpp"
+#include "caf/channel.hpp"
 #include "caf/behavior.hpp"
+#include "caf/actor_cast.hpp"
 #include "caf/blocking_actor.hpp"
+#include "caf/scoped_execution_unit.hpp"
 
 namespace caf {
 
 /// A scoped handle to a blocking actor.
 class scoped_actor {
 public:
-  scoped_actor();
-
   scoped_actor(const scoped_actor&) = delete;
 
-  explicit scoped_actor(bool hide_actor);
+  scoped_actor(actor_system& sys, bool hide_actor = false);
 
   ~scoped_actor();
 
@@ -49,24 +51,24 @@ public:
   }
 
   inline operator channel() const {
-    return get();
+    return actor_cast<channel>(self_);
   }
 
   inline operator actor() const {
-    return get();
+    return actor_cast<actor>(self_);
   }
 
   inline operator actor_addr() const {
-    return get()->address();
+    return self_->address();
   }
 
   inline actor_addr address() const {
-    return get()->address();
+    return self_->address();
   }
 
 private:
-  void init(bool hide_actor);
   actor_id prev_; // used for logging/debugging purposes only
+  scoped_execution_unit context_;
   intrusive_ptr<blocking_actor> self_;
 };
 

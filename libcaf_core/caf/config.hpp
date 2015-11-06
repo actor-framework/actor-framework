@@ -194,8 +194,8 @@
 # define CAF_ASSERT(stmt)                                                      \
   if (static_cast<bool>(stmt) == false) {                                      \
     printf("%s:%u: requirement failed '%s'\n", __FILE__, __LINE__, #stmt);     \
-    void* array[10];                                                           \
-    auto caf_bt_size = ::backtrace(array, 10);                                 \
+    void* array[20];                                                           \
+    auto caf_bt_size = ::backtrace(array, 20);                                 \
     ::backtrace_symbols_fd(array, caf_bt_size, 2);                             \
     abort();                                                                   \
   } static_cast<void>(0)

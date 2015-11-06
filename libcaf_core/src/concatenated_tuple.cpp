@@ -37,6 +37,13 @@ void* concatenated_tuple::mutable_at(size_t pos) {
   return selected.first->mutable_at(selected.second);
 }
 
+void concatenated_tuple::serialize_at(deserializer& source, size_t pos) {
+  CAF_ASSERT(pos < size());
+  auto selected = select(pos);
+  selected.first->serialize_at(source, selected.second);
+}
+
+
 size_t concatenated_tuple::size() const {
   return size_;
 }
@@ -51,6 +58,13 @@ const void* concatenated_tuple::at(size_t pos) const {
   return selected.first->at(selected.second);
 }
 
+bool concatenated_tuple::compare_at(size_t pos, const element_rtti& rtti,
+                                    const void* x) const {
+  CAF_ASSERT(pos < size());
+  auto selected = select(pos);
+  return selected.first->compare_at(selected.second, rtti, x);
+}
+
 bool concatenated_tuple::match_element(size_t pos, uint16_t typenr,
                                        const std::type_info* rtti) const {
   auto selected = select(pos);
@@ -61,27 +75,32 @@ uint32_t concatenated_tuple::type_token() const {
   return type_token_;
 }
 
-const char* concatenated_tuple::uniform_name_at(size_t pos) const {
+message_data::element_rtti concatenated_tuple::type_at(size_t pos) const {
   CAF_ASSERT(pos < size());
   auto selected = select(pos);
-  return selected.first->uniform_name_at(selected.second);
+  return selected.first->type_at(selected.second);
 }
 
-uint16_t concatenated_tuple::type_nr_at(size_t pos) const {
+void concatenated_tuple::serialize_at(serializer& sink, size_t pos) const {
   CAF_ASSERT(pos < size());
   auto selected = select(pos);
-  return selected.first->type_nr_at(selected.second);
+  selected.first->serialize_at(sink, selected.second);
+}
+
+std::string concatenated_tuple::stringify_at(size_t pos) const {
+  CAF_ASSERT(pos < size());
+  auto selected = select(pos);
+  return selected.first->stringify_at(selected.second);
 }
 
 std::pair<message_data*, size_t> concatenated_tuple::select(size_t pos) const {
   auto idx = pos;
-  for (auto& m : data_) {
+  for (const auto& m : data_) {
     auto s = m->size();
-    if (idx >= s) {
+    if (idx >= s)
       idx -= s;
-    } else {
+    else
       return {m.get(), idx};
-    }
   }
   throw std::out_of_range("out of range: concatenated_tuple::select");
 }
@@ -99,11 +118,9 @@ concatenated_tuple::concatenated_tuple(std::initializer_list<cow_ptr> xs) {
     }
   }
   type_token_ = make_type_token();
-  for (auto& m : data_) {
-    for (size_t i = 0; i < m->size(); ++i) {
+  for (const auto& m : data_)
+    for (size_t i = 0; i < m->size(); ++i)
       type_token_ = add_to_type_token(type_token_, m->type_nr_at(i));
-    }
-  }
   auto acc_size = [](size_t tmp, const cow_ptr& val) {
     return tmp + val->size();
   };

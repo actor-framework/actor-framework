@@ -34,7 +34,7 @@
 #include "caf/serializer.hpp"
 #include "caf/deserializer.hpp"
 #include "caf/abstract_actor.hpp"
-#include "caf/actor_namespace.hpp"
+#include "caf/proxy_registry.hpp"
 
 #include "caf/io/middleman.hpp"
 #include "caf/io/receive_policy.hpp"
@@ -225,13 +225,19 @@ struct header {
 };
 
 /// @relates header
+template <class T>
+void serialize(T& in_or_out, header& hdr, const unsigned int) {
+  in_or_out & hdr.source_node;
+  in_or_out & hdr.dest_node;
+  in_or_out & hdr.source_actor;
+  in_or_out & hdr.dest_actor;
+  in_or_out & hdr.payload_len;
+  in_or_out & hdr.operation;
+  in_or_out & hdr.operation_data;
+}
+
+/// @relates header
 std::string to_string(const header& hdr);
-
-/// @relates header
-void read_hdr(deserializer& source, header& hdr);
-
-/// @relates header
-void write_hdr(serializer& sink, const header& hdr);
 
 /// @relates header
 bool operator==(const header& lhs, const header& rhs);
@@ -244,12 +250,6 @@ inline bool operator!=(const header& lhs, const header& rhs) {
 /// Checks whether given BASP header is valid.
 /// @relates header
 bool valid(const header& hdr);
-
-/// Deserialize a BASP message header from `source`.
-void read_hdr(serializer& sink, header& hdr);
-
-/// Serialize a BASP message header to `sink`.
-void write_hdr(deserializer& source, const header& hdr);
 
 /// Size of a BASP header in serialized form
 constexpr size_t header_size =
@@ -373,7 +373,7 @@ public:
   /// Provides a callback-based interface for certain BASP events.
   class callee {
   public:
-    explicit callee(actor_namespace::backend& mgm, middleman& mm);
+    explicit callee(actor_system& sys, proxy_registry::backend& mgm);
 
     virtual ~callee();
 
@@ -412,17 +412,16 @@ public:
     virtual void learned_new_node_indirectly(const node_id& nid) = 0;
 
     /// Returns the actor namespace associated to this BASP protocol instance.
-    inline actor_namespace& get_namespace() {
+    inline proxy_registry& proxies() {
       return namespace_;
     }
 
-    inline middleman& get_middleman() {
-      return middleman_;
+    inline actor_system& system() {
+      return namespace_.system();
     }
 
   protected:
-    actor_namespace namespace_;
-    middleman& middleman_;
+    proxy_registry namespace_;
   };
 
   /// Describes a function object responsible for writing
@@ -436,7 +435,8 @@ public:
 
   /// Handles received data and returns a config for receiving the
   /// next data or `none` if an error occured.
-  connection_state handle(const new_data_msg& dm, header& hdr, bool is_payload);
+  connection_state handle(execution_unit* ctx,
+                          new_data_msg& dm, header& hdr, bool is_payload);
 
   /// Handles connection shutdowns.
   void handle(const connection_closed_msg& msg);
@@ -453,8 +453,8 @@ public:
 
   /// Sends a BASP message and implicitly flushes the output buffer of `r`.
   /// This function will update `hdr.payload_len` if a payload was written.
-  void write(const routing_table::route& r, header& hdr,
-             payload_writer* writer = nullptr);
+  void write(execution_unit* ctx, const routing_table::route& r,
+             header& hdr, payload_writer* writer = nullptr);
 
   /// Adds a new actor to the map of published actors.
   void add_published_actor(uint16_t port,
@@ -471,12 +471,12 @@ public:
                                 removed_published_actor* cb = nullptr);
 
   /// Returns `true` if a path to destination existed, `false` otherwise.
-  bool dispatch(const actor_addr& sender, const actor_addr& receiver,
-                message_id mid, const message& msg);
+  bool dispatch(execution_unit* ctx, const actor_addr& sender,
+                const actor_addr& receiver, message_id mid, const message& msg);
 
   /// Returns the actor namespace associated to this BASP protocol instance.
-  actor_namespace& get_namespace() {
-    return callee_.get_namespace();
+  proxy_registry& proxies() {
+    return callee_.proxies();
   }
 
   /// Returns the routing table of this BASP instance.
@@ -499,7 +499,8 @@ public:
 
   /// Writes a header (build from the arguments)
   /// followed by its payload to `storage`.
-  void write(buffer_type& storage,
+  void write(execution_unit* ctx,
+             buffer_type& storage,
              message_type operation,
              uint32_t* payload_len,
              uint64_t operation_data,
@@ -510,28 +511,32 @@ public:
              payload_writer* writer = nullptr);
 
   /// Writes a header followed by its payload to `storage`.
-  void write(buffer_type& storage, header& hdr,
+  void write(execution_unit* ctx, buffer_type& storage, header& hdr,
              payload_writer* writer = nullptr);
 
   /// Writes the server handshake containing the information of the
   /// actor published at `port` to `buf`. If `port == none` or
   /// if no actor is published at this port then a standard handshake is
   /// written (e.g. used when establishing direct connections on-the-fly).
-  void write_server_handshake(buffer_type& buf, maybe<uint16_t> port);
+  void write_server_handshake(execution_unit* ctx,
+                              buffer_type& buf, maybe<uint16_t> port);
 
   /// Writes the client handshake to `buf`.
-  void write_client_handshake(buffer_type& buf, const node_id& remote_side);
+  void write_client_handshake(execution_unit* ctx,
+                              buffer_type& buf, const node_id& remote_side);
 
   /// Writes a `dispatch_error` to `buf`.
-  void write_dispatch_error(buffer_type& buf,
+  void write_dispatch_error(execution_unit* ctx,
+                            buffer_type& buf,
                             const node_id& source_node,
                             const node_id& dest_node,
                             error error_code,
                             const header& original_hdr,
-                            const buffer_type* payload);
+                            buffer_type* payload);
 
   /// Writes a `kill_proxy_instance` to `buf`.
-  void write_kill_proxy_instance(buffer_type& buf,
+  void write_kill_proxy_instance(execution_unit* ctx,
+                                 buffer_type& buf,
                                  const node_id& dest_node,
                                  actor_id aid,
                                  uint32_t rsn);
@@ -543,7 +548,11 @@ public:
   /// Invokes the callback(s) associated with given event.
   template <hook::event_type Event, typename... Ts>
   void notify(Ts&&... xs) {
-    callee_.get_middleman().template notify<Event>(std::forward<Ts>(xs)...);
+    system().middleman().template notify<Event>(std::forward<Ts>(xs)...);
+  }
+
+  inline actor_system& system() {
+    return callee_.system();
   }
 
 private:

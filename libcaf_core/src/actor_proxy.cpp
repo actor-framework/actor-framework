@@ -22,12 +22,9 @@
 #include "caf/locks.hpp"
 
 #include "caf/atom.hpp"
-#include "caf/to_string.hpp"
 #include "caf/message.hpp"
 #include "caf/actor_proxy.hpp"
 #include "caf/exit_reason.hpp"
-
-#include "caf/detail/singletons.hpp"
 
 namespace caf {
 

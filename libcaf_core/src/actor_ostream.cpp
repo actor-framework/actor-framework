@@ -25,13 +25,11 @@
 
 #include "caf/scheduler/abstract_coordinator.hpp"
 
-#include "caf/detail/singletons.hpp"
-
 namespace caf {
 
-actor_ostream::actor_ostream(actor self)
-    : self_(std::move(self)),
-      printer_(detail::singletons::get_scheduling_coordinator()->printer()) {
+actor_ostream::actor_ostream(local_actor* self)
+    : self_(self),
+      printer_(self->system().scheduler().printer()) {
   // nop
 }
 
@@ -45,22 +43,28 @@ actor_ostream& actor_ostream::flush() {
   return *this;
 }
 
-void actor_ostream::redirect(const actor& src, std::string f, int flags) {
-  send_as(src, detail::singletons::get_scheduling_coordinator()->printer(),
-          redirect_atom::value, src.address(), std::move(f), flags);
+void actor_ostream::redirect(local_actor* self, std::string fn, int flags) {
+  if (! self)
+    return;
+  send_as(self, self->system().scheduler().printer(),
+          redirect_atom::value, self->address(), std::move(fn), flags);
 }
 
-void actor_ostream::redirect_all(std::string f, int flags) {
-  anon_send(detail::singletons::get_scheduling_coordinator()->printer(),
-            redirect_atom::value, std::move(f), flags);
+void actor_ostream::redirect_all(actor_system& sys, std::string fn, int flags) {
+  anon_send(sys.scheduler().printer(),
+            redirect_atom::value, std::move(fn), flags);
 }
 
-actor_ostream aout(const scoped_actor& self) {
+actor_ostream& actor_ostream::operator<<(const message&) {
+  return *this << "-message-to-string-not-implemented-yet-";
+}
+
+actor_ostream aout(local_actor* self) {
   return actor_ostream{self};
 }
 
-actor_ostream aout(abstract_actor* self) {
-  return actor_ostream{actor_cast<actor>(intrusive_ptr<abstract_actor>{self})};
+actor_ostream aout(scoped_actor& self) {
+  return actor_ostream{self.get()};
 }
 
 } // namespace caf

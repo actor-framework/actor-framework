@@ -26,6 +26,7 @@
 #include "caf/locks.hpp"
 #include "caf/actor.hpp"
 #include "caf/abstract_actor.hpp"
+#include "caf/execution_unit.hpp"
 #include "caf/mailbox_element.hpp"
 
 #include "caf/detail/split_join.hpp"
@@ -58,7 +59,7 @@ public:
   using uplock = upgrade_lock<detail::shared_spinlock>;
   using actor_vec = std::vector<actor>;
   using factory = std::function<actor ()>;
-  using policy = std::function<void (uplock&, const actor_vec&,
+  using policy = std::function<void (actor_system&, uplock&, const actor_vec&,
                                      mailbox_element_ptr&, execution_unit*)>;
 
   /// Returns a simple round robin dispatching policy.
@@ -91,18 +92,18 @@ public:
   ~actor_pool();
 
   /// Returns an actor pool without workers using the dispatch policy `pol`.
-  static actor make(policy pol);
+  static actor make(execution_unit* ptr, policy pol);
 
   /// Returns an actor pool with `n` workers created by the factory
   /// function `fac` using the dispatch policy `pol`.
-  static actor make(size_t n, factory fac, policy pol);
+  static actor make(execution_unit* ptr, size_t n, factory fac, policy pol);
 
   void enqueue(const actor_addr& sender, message_id mid,
                message content, execution_unit* host) override;
 
   void enqueue(mailbox_element_ptr what, execution_unit* host) override;
 
-  actor_pool();
+  actor_pool(execution_unit* host);
 
 private:
   bool filter(upgrade_lock<detail::shared_spinlock>&, const actor_addr& sender,
@@ -115,6 +116,7 @@ private:
   std::vector<actor> workers_;
   policy policy_;
   uint32_t planned_reason_;
+  actor_system& system_;
 };
 
 } // namespace caf

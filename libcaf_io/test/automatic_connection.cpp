@@ -29,8 +29,6 @@
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 
-#include "caf/experimental/whereis.hpp"
-
 #include "caf/io/network/interfaces.hpp"
 #include "caf/io/network/test_multiplexer.hpp"
 
@@ -42,7 +40,6 @@
 
 using namespace caf;
 using namespace caf::io;
-using namespace caf::experimental;
 
 using std::string;
 
@@ -75,6 +72,7 @@ using pong_atom = atom_constant<atom("pong")>;
 
 */
 
+/*
 std::thread run_prog(const char* arg, uint16_t port, bool use_asio) {
   return detail::run_sub_unit_test(invalid_actor,
                                    test::engine::path(),
@@ -114,7 +112,7 @@ behavior testee(stateful_actor<testee_state>* self) {
 }
 
 void run_earth(bool use_asio, bool as_server, uint16_t pub_port) {
-  scoped_actor self;
+  scoped_actor self{system};
   struct captain : hook {
   public:
     captain(actor parent) : parent_(std::move(parent)) {
@@ -139,7 +137,7 @@ void run_earth(bool use_asio, bool as_server, uint16_t pub_port) {
     actor parent_;
   };
   middleman::instance()->add_hook<captain>(self);
-  auto aut = spawn(testee);
+  auto aut = system.spawn(testee);
   auto port = publish(aut, pub_port);
   CAF_MESSAGE("published testee at port " << port);
   std::thread mars_process;
@@ -154,7 +152,7 @@ void run_earth(bool use_asio, bool as_server, uint16_t pub_port) {
   self->receive(
     [&](put_atom, const node_id& nid) {
       mars = nid;
-      CAF_MESSAGE(CAF_TSARG(mars));
+      CAF_MESSAGE(CAF_ARG(mars));
     }
   );
   actor_addr mars_addr;
@@ -167,7 +165,7 @@ void run_earth(bool use_asio, bool as_server, uint16_t pub_port) {
           if (name != "testee")
             return;
           mars_addr = addr;
-          CAF_MESSAGE(CAF_TSARG(mars_addr));
+          CAF_MESSAGE(CAF_ARG(mars_addr));
           self->sync_send(actor_cast<actor>(mars_addr), get_atom::value).await(
             [&](uint16_t mp) {
               CAF_MESSAGE("mars published its actor at port " << mp);
@@ -186,7 +184,7 @@ void run_earth(bool use_asio, bool as_server, uint16_t pub_port) {
   CAF_MESSAGE("wait for Jupiter to connect");
   self->receive(
     [](put_atom, const node_id& jupiter) {
-      CAF_MESSAGE(CAF_TSARG(jupiter));
+      CAF_MESSAGE(CAF_ARG(jupiter));
     }
   );
   actor_addr jupiter_addr;
@@ -198,7 +196,7 @@ void run_earth(bool use_asio, bool as_server, uint16_t pub_port) {
           if (name != "testee")
             return;
           jupiter_addr = addr;
-          CAF_MESSAGE(CAF_TSARG(jupiter_addr));
+          CAF_MESSAGE(CAF_ARG(jupiter_addr));
         }
       );
     }
@@ -231,7 +229,7 @@ void run_earth(bool use_asio, bool as_server, uint16_t pub_port) {
 }
 
 void run_mars(uint16_t port_to_earth, uint16_t pub_port) {
-  auto aut = spawn(testee);
+  auto aut = system.spawn(testee);
   auto port = publish(aut, pub_port);
   anon_send(aut, put_atom::value, port);
   CAF_MESSAGE("published testee at port " << port);
@@ -240,10 +238,11 @@ void run_mars(uint16_t port_to_earth, uint16_t pub_port) {
 }
 
 void run_jupiter(uint16_t port_to_mars) {
-  auto aut = spawn(testee);
+  auto aut = system.spawn(testee);
   auto mars = remote_actor("localhost", port_to_mars);
   send_as(aut, mars, ping_atom::value, aut, true);
 }
+*/
 
 CAF_TEST(triangle_setup) {
   // this unit test is temporarily disabled until problems
@@ -274,7 +273,7 @@ CAF_TEST(triangle_setup) {
   }
   // enable automatic connections
   anon_send(whereis(atom("ConfigServ")), put_atom::value,
-            "global.enable-automatic-connections", make_message(true));
+            "middleman.enable-automatic-connections", make_message(true));
   auto use_asio = r.opts.count("use-asio") > 0;
 # ifdef CAF_USE_ASIO
   if (use_asio) {

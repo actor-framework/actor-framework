@@ -64,13 +64,11 @@ void ping(event_based_actor* self, size_t num_pings) {
         return std::make_tuple(ping_atom::value, value + 1);
       },
       others >> [=] {
-        CAF_TEST_ERROR("Unexpected message: "
-                       << to_string(self->current_message()));
+        CAF_TEST_ERROR("Unexpected message");
       });
     },
     others >> [=] {
-      CAF_TEST_ERROR("Unexpected message: "
-                     << to_string(self->current_message()));
+      CAF_TEST_ERROR("Unexpected message");
     }
   );
 }
@@ -91,31 +89,26 @@ void pong(event_based_actor* self) {
           self->quit(dm.reason);
         },
         others >> [=] {
-          CAF_TEST_ERROR("Unexpected message: "
-                         << to_string(self->current_message()));
+          CAF_TEST_ERROR("Unexpected message");
         }
       );
       // reply to 'ping'
       return std::make_tuple(pong_atom::value, value);
     },
     others >> [=] {
-      CAF_TEST_ERROR("Unexpected message: "
-                     << to_string(self->current_message()));
+      CAF_TEST_ERROR("Unexpected message");
     }
   );
 }
 
 void peer_fun(broker* self, connection_handle hdl, const actor& buddy) {
   CAF_MESSAGE("peer_fun called");
+  CAF_REQUIRE(self->subtype() == resumable::io_actor);
   CAF_CHECK(self != nullptr);
   CAF_CHECK(buddy != invalid_actor);
   self->monitor(buddy);
   // assume exactly one connection
-  auto cons = self->connections();
-  if (cons.size() != 1) {
-    cerr << "expected 1 connection, found " << cons.size() << endl;
-    throw std::logic_error("num_connections() != 1");
-  }
+  CAF_REQUIRE(self->connections().size() == 1);
   self->configure_read(
     hdl, receive_policy::exactly(sizeof(atom_value) + sizeof(int)));
   auto write = [=](atom_value type, int value) {
@@ -125,7 +118,6 @@ void peer_fun(broker* self, connection_handle hdl, const actor& buddy) {
     first = reinterpret_cast<char*>(&value);
     buf.insert(buf.end(), first, first + sizeof(int));
     self->flush(hdl);
-
   };
   self->become(
     [=](const connection_closed_msg&) {
@@ -141,22 +133,20 @@ void peer_fun(broker* self, connection_handle hdl, const actor& buddy) {
       self->send(buddy, type, value);
     },
     [=](ping_atom, int value) {
-      CAF_MESSAGE("received ping{" << value << "}");
+      CAF_MESSAGE("received: " << to_string(self->current_message()));
       write(ping_atom::value, value);
     },
     [=](pong_atom, int value) {
-      CAF_MESSAGE("received pong{" << value << "}");
+      CAF_MESSAGE("received: " << to_string(self->current_message()));
       write(pong_atom::value, value);
     },
     [=](const down_msg& dm) {
-      CAF_MESSAGE("received down_msg");
-      if (dm.source == buddy) {
+      CAF_MESSAGE("received: " << to_string(self->current_message()));
+      if (dm.source == buddy)
         self->quit(dm.reason);
-      }
     },
     others >> [=] {
-      CAF_TEST_ERROR("Unexpected message: "
-                     << to_string(self->current_message()));
+      CAF_MESSAGE("unexpected: " << to_string(self->current_message()));
     }
   );
 }
@@ -169,19 +159,21 @@ behavior peer_acceptor_fun(broker* self, const actor& buddy) {
       self->fork(peer_fun, msg.handle, buddy);
       self->quit();
     },
-    [=](publish_atom) {
+    [=](publish_atom) -> uint16_t {
       return self->add_tcp_doorman(0, "127.0.0.1").second;
     },
     others >> [&] {
-      CAF_TEST_ERROR("Unexpected message: "
-                     << to_string(self->current_message()));
+      CAF_TEST_ERROR("Unexpected message");
     }
   };
 }
 
-void run_server(bool spawn_client, const char* bin_path, bool use_asio) {
-  scoped_actor self;
-  auto serv = io::spawn_io(peer_acceptor_fun, spawn(pong));
+void run_server(actor_system& system, bool spawn_client,
+                const char* bin_path, bool use_asio) {
+  scoped_actor self{system};
+  CAF_MESSAGE("spawn peer acceptor");
+  auto serv = system.middleman().spawn_broker(peer_acceptor_fun,
+                                              system.spawn(pong));
   self->sync_send(serv, publish_atom::value).await(
     [&](uint16_t port) {
       CAF_MESSAGE("server is running on port " << port);
@@ -193,16 +185,18 @@ void run_server(bool spawn_client, const char* bin_path, bool use_asio) {
                                                use_asio,
                                                {"--client-port="
                                                 + std::to_string(port)});
-        CAF_MESSAGE("block till child process has finished");
         child.join();
+        self->receive(
+          [](const std::string& output) {
+            cout << endl << endl << "*** output of client program ***"
+                 << endl << output << endl;
+          }
+        );
       }
-    }
-  );
-  self->await_all_other_actors_done();
-  self->receive(
-    [](const std::string& output) {
-      cout << endl << endl << "*** output of client program ***"
-           << endl << output << endl;
+    },
+    others >> [&] {
+      CAF_TEST_ERROR("unexpected message: "
+                     << to_string(self->current_message()));
     }
   );
 }
@@ -210,8 +204,8 @@ void run_server(bool spawn_client, const char* bin_path, bool use_asio) {
 } // namespace <anonymous>
 
 CAF_TEST(test_broker) {
-  auto argv = test::engine::argv();
   auto argc = test::engine::argc();
+  auto argv = test::engine::argv();
   uint16_t port = 0;
   auto r = message_builder(argv, argv + argc).extract_opts({
     {"client-port,c", "set port for IO client", port},
@@ -223,27 +217,27 @@ CAF_TEST(test_broker) {
     return;
   }
   auto use_asio = r.opts.count("use-asio") > 0;
+  actor_system_config cfg;
+# ifdef CAF_USE_ASIO
   if (use_asio) {
-#   ifdef CAF_USE_ASIO
-    CAF_MESSAGE("enable ASIO backend");
-    io::set_middleman<io::network::asio_multiplexer>();
-#   endif // CAF_USE_ASIO
-  }
+    cfg.load<io::middleman, io::network::asio_multiplexer>());
+  else
+# endif // CAF_USE_ASIO
+    cfg.load<io::middleman>();
+  actor_system system{cfg};
   if (r.opts.count("client-port") > 0) {
-    auto p = spawn(ping, size_t{10});
-    CAF_MESSAGE("spawn_io_client...");
-    auto cl = spawn_io_client(peer_fun, "localhost", port, p);
-    CAF_MESSAGE("spawn_io_client finished");
-    anon_send(p, kickoff_atom::value, cl);
+    auto p = system.spawn(ping, size_t{10});
+    CAF_MESSAGE("spawn_client...");
+    auto cl = system.middleman().spawn_client(peer_fun, "localhost", port, p);
+    CAF_REQUIRE(cl);
+    CAF_MESSAGE("spawn_client finished");
+    anon_send(p, kickoff_atom::value, *cl);
     CAF_MESSAGE("`kickoff_atom` has been send");
   } else if (r.opts.count("server") > 0) {
     // run in server mode
-    run_server(false, argv[0], use_asio);
+    run_server(system, false, "", use_asio);
   } else {
-    run_server(true, test::engine::path(), use_asio);
+    run_server(system, true, test::engine::path(), use_asio);
   }
-  CAF_MESSAGE("block on `await_all_actors_done`");
-  await_all_actors_done();
-  CAF_MESSAGE("`await_all_actors_done` has finished");
-  shutdown();
+  system.await_all_actors_done();
 }

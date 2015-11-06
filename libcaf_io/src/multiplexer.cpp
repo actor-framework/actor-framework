@@ -24,17 +24,17 @@ namespace caf {
 namespace io {
 namespace network {
 
-multiplexer::~multiplexer() {
-  CAF_LOG_TRACE("");
+multiplexer::multiplexer(actor_system* sys) : execution_unit(sys) {
+  // nop
 }
 
 boost::asio::io_service* pimpl() {
   return nullptr;
 }
 
-multiplexer_ptr multiplexer::make() {
-  CAF_LOGF_TRACE("");
-  return multiplexer_ptr{new default_multiplexer};
+multiplexer_ptr multiplexer::make(actor_system& sys) {
+  CAF_LOG_TRACE("");
+  return multiplexer_ptr{new default_multiplexer(&sys)};
 }
 
 boost::asio::io_service* multiplexer::pimpl() {
@@ -45,8 +45,12 @@ multiplexer::supervisor::~supervisor() {
   // nop
 }
 
-multiplexer::runnable::~runnable() {
-  // nop
+resumable::subtype_t multiplexer::runnable::subtype() const {
+  return resumable::function_object;
+}
+
+ref_counted* multiplexer::runnable::as_ref_counted_ptr() {
+  return this;
 }
 
 } // namespace network

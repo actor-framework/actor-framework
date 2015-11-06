@@ -29,8 +29,7 @@
 #include "caf/string_algorithms.hpp"
 #include "caf/primitive_variant.hpp"
 
-#include "caf/detail/logging.hpp"
-#include "caf/detail/singletons.hpp"
+#include "caf/logger.hpp"
 #include "caf/detail/ripemd_160.hpp"
 #include "caf/detail/get_root_uuid.hpp"
 #include "caf/detail/get_process_id.hpp"
@@ -134,7 +133,7 @@ void node_id::data::stop() {
 
 // initializes singleton
 node_id::data* node_id::data::create_singleton() {
-  CAF_LOGF_TRACE("");
+  CAF_LOG_TRACE("");
   auto ifs = detail::get_mac_addresses();
   std::vector<std::string> macs;
   macs.reserve(ifs.size());
@@ -156,21 +155,59 @@ const node_id::host_id_type& node_id::host_id() const {
   return data_ ? data_->host_ : invalid_host_id;
 }
 
-void node_id::serialize(serializer& sink) const {
-  sink.write_raw(host_id().size(), host_id().data());
-  sink.write_value(process_id());
+node_id::operator bool() const {
+  return data_ != nullptr;
 }
 
-void node_id::deserialize(deserializer& source) {
-  if (! data_ || ! data_->unique())
-    data_ = make_counted<data>();
-  source.read_raw(node_id::host_id_size, data_->host_.data());
-  data_->pid_ = source.read<uint32_t>();
+void node_id::swap(node_id& x) {
+  data_.swap(x.data_);
+}
+
+void serialize(serializer& sink, node_id& x, const unsigned int) {
+  if (! x.data_) {
+    node_id::host_id_type zero_id;
+    std::fill(zero_id.begin(), zero_id.end(), 0);
+    uint32_t zero_pid = 0;
+    sink.apply_raw(zero_id.size(), zero_id.data());
+    sink << zero_pid;
+  } else {
+    sink.apply_raw(x.data_->host_.size(), x.data_->host_.data());
+    sink.apply(x.data_->pid_);
+  }
+}
+
+void serialize(deserializer& source, node_id& x, const unsigned int) {
+  node_id::host_id_type tmp_hid;
+  uint32_t tmp_pid;
+  source.apply_raw(tmp_hid.size(), tmp_hid.data());
+  source >> tmp_pid;
   auto is_zero = [](uint8_t value) { return value == 0; };
-  // no need to keep the data if this is invalid
-  if (data_->pid_ == 0
-      && std::all_of(data_->host_.begin(), data_->host_.end(), is_zero))
-    data_.reset();
+  // no need to keep the data if it is invalid
+  if (tmp_pid == 0 && std::all_of(tmp_hid.begin(), tmp_hid.end(), is_zero)) {
+    x = invalid_node_id;
+    return;
+  }
+  if (! x.data_ || ! x.data_->unique()) {
+    x.data_ = make_counted<node_id::data>(tmp_pid, tmp_hid);
+  } else {
+    x.data_->pid_ = tmp_pid;
+    x.data_->host_ = tmp_hid;
+  }
+}
+
+std::string to_string(const node_id& x) {
+  if (! x)
+    return "<invalid-node>";
+  std::ostringstream oss;
+  oss << std::hex;
+  oss.fill('0');
+  auto& hid = x.host_id();
+  for (auto val : hid) {
+    oss.width(2);
+    oss << static_cast<uint32_t>(val);
+  }
+  oss << ":" << std::dec << x.process_id();
+  return oss.str();
 }
 
 } // namespace caf

@@ -26,6 +26,7 @@
 
 #include "caf/group.hpp"
 #include "caf/actor_addr.hpp"
+#include "caf/deep_to_string.hpp"
 
 #include "caf/detail/tbind.hpp"
 #include "caf/detail/type_list.hpp"
@@ -43,6 +44,10 @@ struct exit_msg {
   uint32_t reason;
 };
 
+inline std::string to_string(const exit_msg& x) {
+  return "exit" + deep_to_string(std::tie(x.source, x.reason));
+}
+
 /// Sent to all actors monitoring an actor when it is terminated.
 struct down_msg {
   /// The source of this message, i.e., the terminated actor.
@@ -50,6 +55,10 @@ struct down_msg {
   /// The exit reason of the terminated actor.
   uint32_t reason;
 };
+
+inline std::string to_string(const down_msg& x) {
+  return "down" + deep_to_string(std::tie(x.source, x.reason));
+}
 
 /// Sent whenever a terminated actor receives a synchronous request.
 struct sync_exited_msg {
@@ -59,22 +68,47 @@ struct sync_exited_msg {
   uint32_t reason;
 };
 
+inline std::string to_string(const sync_exited_msg& x) {
+  return "sync_exited" + deep_to_string(std::tie(x.source, x.reason));
+}
+
 template <class T>
 typename std::enable_if<
-  detail::tl_exists<detail::type_list<exit_msg, down_msg, sync_exited_msg>,
-            detail::tbind<std::is_same, T>::template type>::value,
-  bool>::type
+  detail::tl_exists<
+    detail::type_list<exit_msg, down_msg, sync_exited_msg>,
+    detail::tbind<std::is_same, T>::template type
+  >::value,
+  bool
+>::type
 operator==(const T& lhs, const T& rhs) {
   return lhs.source == rhs.source && lhs.reason == rhs.reason;
 }
 
 template <class T>
 typename std::enable_if<
-  detail::tl_exists<detail::type_list<exit_msg, down_msg, sync_exited_msg>,
-            detail::tbind<std::is_same, T>::template type>::value,
-  bool>::type
+  detail::tl_exists<
+    detail::type_list<exit_msg, down_msg, sync_exited_msg>,
+    detail::tbind<std::is_same, T>::template type
+  >::value,
+  bool
+>::type
 operator!=(const T& lhs, const T& rhs) {
   return !(lhs == rhs);
+}
+
+template <class IO, class T>
+typename std::enable_if<
+  detail::tl_exists<
+    detail::type_list<exit_msg, down_msg, sync_exited_msg>,
+    detail::tbind<
+      std::is_same,
+      typename std::remove_const<T>::type
+    >::template type
+  >::value
+>::type
+serialize(IO& in_or_out, T& x, const unsigned int) {
+  in_or_out & x.source;
+  in_or_out & x.reason;
 }
 
 /// Sent to all members of a group when it goes offline.
@@ -83,12 +117,24 @@ struct group_down_msg {
   group source;
 };
 
+inline std::string to_string(const group_down_msg& x) {
+  return "group_down" + deep_to_string(std::tie(x.source));
+}
+
+/// @relates group_down_msg
 inline bool operator==(const group_down_msg& lhs, const group_down_msg& rhs) {
   return lhs.source == rhs.source;
 }
 
+/// @relates group_down_msg
 inline bool operator!=(const group_down_msg& lhs, const group_down_msg& rhs) {
   return !(lhs == rhs);
+}
+
+/// @relates group_down_msg
+template <class IO>
+void serialize(IO& in_or_out, group_down_msg& x, const unsigned int) {
+  in_or_out & x.source;
 }
 
 /// Sent whenever a timeout occurs during a synchronous send.
@@ -96,12 +142,16 @@ inline bool operator!=(const group_down_msg& lhs, const group_down_msg& rhs) {
 /// sent alongside this message identifies the matching request that timed out.
 struct sync_timeout_msg { };
 
-/// @relates exit_msg
+inline std::string to_string(const sync_timeout_msg&) {
+  return "sync_timeout";
+}
+
+/// @relates sync_timeout_msg
 inline bool operator==(const sync_timeout_msg&, const sync_timeout_msg&) {
   return true;
 }
 
-/// @relates exit_msg
+/// @relates sync_timeout_msg
 inline bool operator!=(const sync_timeout_msg&, const sync_timeout_msg&) {
   return false;
 }
@@ -113,12 +163,24 @@ struct timeout_msg {
   uint32_t timeout_id;
 };
 
+inline std::string to_string(const timeout_msg& x) {
+  return "timeout" + deep_to_string(std::tie(x.timeout_id));
+}
+
+/// @relates timeout_msg
 inline bool operator==(const timeout_msg& lhs, const timeout_msg& rhs) {
   return lhs.timeout_id == rhs.timeout_id;
 }
 
+/// @relates timeout_msg
 inline bool operator!=(const timeout_msg& lhs, const timeout_msg& rhs) {
   return !(lhs == rhs);
+}
+
+/// @relates timeout_msg
+template <class IO>
+void serialize(IO& in_or_out, timeout_msg& x, const unsigned int) {
+  in_or_out & x.timeout_id;
 }
 
 } // namespace caf

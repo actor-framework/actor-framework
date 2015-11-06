@@ -29,19 +29,19 @@
 
 #include "caf/on.hpp"
 #include "caf/send.hpp"
-#include "caf/spawn.hpp"
 #include "caf/anything.hpp"
-#include "caf/to_string.hpp"
 #include "caf/local_actor.hpp"
+#include "caf/actor_system.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/actor_ostream.hpp"
 #include "caf/system_messages.hpp"
+#include "caf/actor_system_config.hpp"
 
 #include "caf/scheduler/coordinator.hpp"
 
 #include "caf/policy/work_stealing.hpp"
 
-#include "caf/detail/logging.hpp"
+#include "caf/logger.hpp"
 
 namespace caf {
 namespace scheduler {
@@ -75,6 +75,10 @@ inline void insert_dmsg(Map& storage, const duration& d, Ts&&... xs) {
 
 class timer_actor : public blocking_actor {
 public:
+  timer_actor(actor_config& cfg) : blocking_actor(cfg) {
+    // nop
+  }
+
   inline mailbox_element_ptr dequeue() {
     blocking_actor::await_data();
     return next_message();
@@ -111,7 +115,7 @@ public:
         received_exit = true;
       },
       others >> [&] {
-        CAF_LOG_ERROR("unexpected: " << to_string(msg_ptr->msg));
+        CAF_LOG_ERROR("unexpected:" << CAF_ARG(msg_ptr->msg));
       }
     };
     // loop
@@ -201,12 +205,12 @@ private:
   sink_cache::iterator iter_;
 };
 
-string_sink make_sink(const std::string& fn, int flags) {
+string_sink make_sink(actor_system& sys, const std::string& fn, int flags) {
   if (fn.empty())
     return nullptr;
   if (fn.front() == ':') {
     // "virtual file" name given, translate this to group communication
-    auto grp = group::get("local", fn);
+    auto grp = sys.groups().get("local", fn);
     return [grp, fn](std::string&& out) { anon_send(grp, fn, std::move(out)); };
   }
   auto append = static_cast<bool>(flags & actor_ostream::append);
@@ -219,11 +223,12 @@ std::cerr << "cannot open file: " << fn << std::endl;
   return nullptr;
 }
 
-sink_handle get_sink_handle(sink_cache& fc, const std::string& fn, int flags) {
+sink_handle get_sink_handle(actor_system& sys, sink_cache& fc,
+                            const std::string& fn, int flags) {
   auto i = fc.find(fn);
   if (i != fc.end())
     return {&fc, i};
-  auto fs = make_sink(fn, flags);
+  auto fs = make_sink(sys, fn, flags);
   if (fs) {
     i = fc.emplace(fn, sink_cache::mapped_type{0, std::move(fs)}).first;
     return {&fc, i};
@@ -294,16 +299,15 @@ void printer_loop(blocking_actor* self) {
       running = false;
     },
     [&](redirect_atom, const std::string& fn, int flag) {
-      global_redirect = get_sink_handle(fcache, fn, flag);
+      global_redirect = get_sink_handle(self->system(), fcache, fn, flag);
     },
     [&](redirect_atom, const actor_addr& src, const std::string& fn, int flag) {
       auto d = get_data(src, true);
       if (d)
-        d->redirect = get_sink_handle(fcache, fn, flag);
+        d->redirect = get_sink_handle(self->system(), fcache, fn, flag);
     },
     others >> [&] {
-      std::cerr << "*** unexpected: "
-                << to_string(self->current_message()) << std::endl;
+      std::cerr << "*** unexpected message in printer loop" << std::endl;
     }
   );
 }
@@ -311,28 +315,32 @@ void printer_loop(blocking_actor* self) {
 } // namespace <anonymous>
 
 /******************************************************************************
- *            implementation of coordinator             *
+ *                       implementation of coordinator                        *
  ******************************************************************************/
 
-abstract_coordinator::~abstract_coordinator() {
-  // nop
-}
-
-// creates a default instance
-abstract_coordinator* abstract_coordinator::create_singleton() {
-  return new coordinator<policy::work_stealing>;
-}
-
-void abstract_coordinator::initialize() {
+void abstract_coordinator::start() {
   CAF_LOG_TRACE("");
   // launch utility actors
-  timer_ = spawn<timer_actor, hidden + detached + blocking_api>();
-  printer_ = spawn<hidden + detached + blocking_api>(printer_loop);
+  timer_ = system_.spawn<timer_actor, hidden + detached + blocking_api>();
+  printer_ = system_.spawn<hidden + detached + blocking_api>(printer_loop);
+}
+
+void abstract_coordinator::init(actor_system_config& cfg) {
+  max_throughput_ = cfg.scheduler_max_throughput;
+  num_workers_ = cfg.scheduler_max_threads;
+}
+
+actor_system::module::id_t abstract_coordinator::id() const {
+  return module::scheduler;
+}
+
+void* abstract_coordinator::subtype_ptr() {
+  return this;
 }
 
 void abstract_coordinator::stop_actors() {
   CAF_LOG_TRACE("");
-  scoped_actor self{true};
+  scoped_actor self{system_, true};
   self->monitor(timer_);
   self->monitor(printer_);
   anon_send_exit(timer_, exit_reason::user_shutdown);
@@ -345,10 +353,11 @@ void abstract_coordinator::stop_actors() {
   );
 }
 
-abstract_coordinator::abstract_coordinator(size_t nw, size_t mt)
+abstract_coordinator::abstract_coordinator(actor_system& sys)
     : next_worker_(0),
-      max_throughput_(mt),
-      num_workers_(nw) {
+      max_throughput_(0),
+      num_workers_(0),
+      system_(sys) {
   // nop
 }
 

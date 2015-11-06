@@ -22,6 +22,8 @@
 
 #include "caf/replies_to.hpp"
 #include "caf/local_actor.hpp"
+#include "caf/typed_actor.hpp"
+#include "caf/actor_system.hpp"
 #include "caf/typed_behavior.hpp"
 #include "caf/abstract_event_based_actor.hpp"
 
@@ -41,20 +43,24 @@ public:
   using base_type =
     abstract_event_based_actor<typed_behavior<Sigs...>, true>;
 
+  typed_event_based_actor(actor_config& cfg) : base_type(cfg) {
+    // nop
+  }
+
   using signatures = detail::type_list<Sigs...>;
 
   using behavior_type = typed_behavior<Sigs...>;
 
   std::set<std::string> message_types() const override {
-    return {Sigs::static_type_name()...};
+    typed_actor<Sigs...> hdl;
+    return this->system().message_types(hdl);
   }
 
   void initialize() override {
     this->is_initialized(true);
     auto bhvr = make_behavior();
-    CAF_LOG_DEBUG_IF(! bhvr, "make_behavior() did not return a behavior, "
-                            << "has_behavior() = "
-                            << std::boolalpha << this->has_behavior());
+    CAF_LOG_DEBUG_IF(! bhvr, "make_behavior() did not return a behavior:"
+                             << CAF_ARG(this->has_behavior()));
     if (bhvr) {
       // make_behavior() did return a behavior instead of using become()
       CAF_LOG_DEBUG("make_behavior() did return a valid behavior");

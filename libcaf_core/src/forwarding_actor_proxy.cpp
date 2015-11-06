@@ -21,18 +21,17 @@
 
 #include "caf/send.hpp"
 #include "caf/locks.hpp"
-#include "caf/to_string.hpp"
 
-#include "caf/detail/logging.hpp"
+#include "caf/logger.hpp"
 
 namespace caf {
 
-forwarding_actor_proxy::forwarding_actor_proxy(actor_id aid, node_id nid,
-                                               actor mgr)
+forwarding_actor_proxy::forwarding_actor_proxy(actor_id aid,
+                                               node_id nid, actor mgr)
     : actor_proxy(aid, nid),
       manager_(mgr) {
   CAF_ASSERT(mgr != invalid_actor);
-  CAF_LOG_INFO(CAF_ARG(aid) << ", " << CAF_TARG(nid, to_string));
+  CAF_LOG_INFO(CAF_ARG(aid) << CAF_ARG(nid));
 }
 
 forwarding_actor_proxy::~forwarding_actor_proxy() {
@@ -55,9 +54,8 @@ void forwarding_actor_proxy::manager(actor new_manager) {
 
 void forwarding_actor_proxy::forward_msg(const actor_addr& sender,
                                          message_id mid, message msg) {
-  CAF_LOG_TRACE(CAF_ARG(id()) << ", " << CAF_TSARG(sender) << ", "
-                              << CAF_MARG(mid, integer_value) << ", "
-                              << CAF_TSARG(msg));
+  CAF_LOG_TRACE(CAF_ARG(id()) << CAF_ARG(sender)
+                << CAF_ARG(mid) << CAF_ARG(msg));
   shared_lock<detail::shared_spinlock> guard_(manager_mtx_);
   if (manager_) manager_->enqueue(invalid_actor_addr, invalid_message_id,
                                   make_message(forward_atom::value, sender,
@@ -118,7 +116,9 @@ void forwarding_actor_proxy::local_unlink_from(const actor_addr& other) {
   remove_link_impl(other);
 }
 
-void forwarding_actor_proxy::kill_proxy(uint32_t reason) {
+void forwarding_actor_proxy::kill_proxy(execution_unit* ctx, uint32_t reason) {
+  CAF_ASSERT(ctx != nullptr);
+  context(ctx);
   manager(invalid_actor);
   cleanup(reason);
 }

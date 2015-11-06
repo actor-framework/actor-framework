@@ -40,13 +40,14 @@ using sub4_atom = atom_constant<atom("sub4")>;
 
 
 CAF_TEST(test_serial_reply) {
+  actor_system system;
   auto mirror_behavior = [=](event_based_actor* self) {
     self->become(others >> [=]() -> message {
       CAF_MESSAGE("return self->current_message()");
       return self->current_message();
     });
   };
-  auto master = spawn([=](event_based_actor* self) {
+  auto master = system.spawn([=](event_based_actor* self) {
     CAF_MESSAGE("ID of master: " << self->id());
     // spawn 5 mirror actors
     auto c0 = self->spawn<linked>(mirror_behavior);
@@ -87,19 +88,17 @@ CAF_TEST(test_serial_reply) {
     );
   });
   { // lifetime scope of self
-    scoped_actor self;
+    scoped_actor self{system};
     CAF_MESSAGE("ID of main: " << self->id());
     self->sync_send(master, hi_atom::value).await(
       [](ho_atom) {
         CAF_MESSAGE("received 'ho'");
       },
       others >> [&] {
-        CAF_TEST_ERROR("Unexpected message: "
-                       << to_string(self->current_message()));
+        CAF_TEST_ERROR("Unexpected message");
       }
     );
     self->send_exit(master, exit_reason::user_shutdown);
   }
-  await_all_actors_done();
-  shutdown();
+  system.await_all_actors_done();
 }

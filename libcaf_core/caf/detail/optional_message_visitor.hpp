@@ -23,6 +23,7 @@
 #include "caf/none.hpp"
 #include "caf/unit.hpp"
 #include "caf/maybe.hpp"
+#include "caf/delegated.hpp"
 #include "caf/skip_message.hpp"
 #include "caf/static_visitor.hpp"
 #include "caf/response_promise.hpp"
@@ -32,7 +33,6 @@
 
 namespace caf {
 namespace detail {
-
 
 template <class T>
 struct is_message_id_wrapper {
@@ -51,6 +51,10 @@ struct is_response_promise<response_promise> : std::true_type { };
 
 template <class T>
 struct is_response_promise<typed_response_promise<T>> : std::true_type { };
+
+template <class... Ts>
+struct is_response_promise<delegated<Ts...>> : std::true_type { };
+
 
 template <class T>
 struct optional_message_visitor_enable_tpl {
@@ -85,18 +89,18 @@ public:
   }
 
   inline opt_msg operator()(const maybe<skip_message_t>& val) const {
-    if (val) {
+    if (val)
       return none;
-    }
     return message{};
   }
 
-  inline opt_msg operator()(const response_promise&) const {
-    return message{};
+  inline opt_msg operator()(opt_msg& msg) {
+    return msg;
   }
 
   template <class T>
-  inline opt_msg operator()(const typed_response_promise<T>&) const {
+  typename std::enable_if<is_response_promise<T>::value, opt_msg>::type
+  operator()(const T&) const {
     return message{};
   }
 
@@ -110,13 +114,10 @@ public:
   }
 
   template <class T>
-  typename std::enable_if<
-    is_message_id_wrapper<T>::value,
-    opt_msg
-  >::type
+  typename std::enable_if<is_message_id_wrapper<T>::value, opt_msg>::type
   operator()(T& value) const {
     return make_message(atom("MESSAGE_ID"),
-              value.get_message_id().integer_value());
+                        value.get_message_id().integer_value());
   }
 
   template <class L, class R>

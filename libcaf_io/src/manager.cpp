@@ -19,7 +19,7 @@
 
 #include "caf/io/network/manager.hpp"
 
-#include "caf/detail/logging.hpp"
+#include "caf/logger.hpp"
 
 #include "caf/io/abstract_broker.hpp"
 
@@ -40,7 +40,7 @@ void manager::set_parent(abstract_broker* ptr) {
     parent_ = ptr;
 }
 
-void manager::detach(bool invoke_disconnect_message) {
+void manager::detach(execution_unit* ctx, bool invoke_disconnect_message) {
   CAF_LOG_TRACE("");
   if (! detached()) {
     CAF_LOG_DEBUG("disconnect servant from broker");
@@ -50,7 +50,7 @@ void manager::detach(bool invoke_disconnect_message) {
     if (invoke_disconnect_message) {
       auto mptr = mailbox_element::make(invalid_actor_addr, invalid_message_id,
                                         detach_message());
-      ptr->exec_single_event(mptr);
+      ptr->exec_single_event(ctx, mptr);
     }
   }
 }

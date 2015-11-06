@@ -22,7 +22,6 @@
 
 #include "caf/actor.hpp"
 #include "caf/message.hpp"
-#include "caf/to_string.hpp"
 
 namespace caf {
 
@@ -46,8 +45,7 @@ public:
   /// Open redirection file in append mode.
   static constexpr int append = 0x01;
 
-  /// Creates a stream for `self`.
-  explicit actor_ostream(actor self);
+  explicit actor_ostream(local_actor* self);
 
   /// Writes `arg` to the buffer allocated for the calling actor.
   actor_ostream& write(std::string arg);
@@ -55,12 +53,12 @@ public:
   /// Flushes the buffer allocated for the calling actor.
   actor_ostream& flush();
 
-  /// Redirects all further output from `src` to `file_name`.
-  static void redirect(const actor& src, std::string file_name, int flags = 0);
+  /// Redirects all further output from `self` to `file_name`.
+  static void redirect(local_actor* self, std::string file_name, int flags = 0);
 
   /// Redirects all further output from any actor that did not
-  /// redirect its output to `file_name`.
-  static void redirect_all(std::string file_name, int flags = 0);
+  /// redirect its output to `fname`.
+  static void redirect_all(actor_system& sys, std::string fname, int flags = 0);
 
   /// Writes `arg` to the buffer allocated for the calling actor.
   inline actor_ostream& operator<<(std::string arg) {
@@ -78,9 +76,9 @@ public:
   template <class T>
   inline typename std::enable_if<
     ! std::is_convertible<T, std::string>::value, actor_ostream&
-  >::type operator<<(T&& arg) {
+  >::type operator<<(const T& arg) {
     using std::to_string;
-    return write(to_string(std::forward<T>(arg)));
+    return write(to_string(arg));
   }
 
   /// Apply `f` to `*this`.
@@ -88,16 +86,18 @@ public:
     return f(*this);
   }
 
+  actor_ostream& operator<<(const message& msg);
+
 private:
-  actor self_;
+  local_actor* self_;
   actor printer_;
 };
 
 /// Convenience factory function for creating an actor output stream.
-actor_ostream aout(const scoped_actor& self);
+actor_ostream aout(local_actor* self);
 
 /// Convenience factory function for creating an actor output stream.
-actor_ostream aout(abstract_actor* self);
+actor_ostream aout(scoped_actor& self);
 
 } // namespace caf
 

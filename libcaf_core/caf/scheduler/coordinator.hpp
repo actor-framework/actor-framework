@@ -41,9 +41,7 @@ public:
 
   using policy_data = typename Policy::coordinator_data;
 
-  coordinator(size_t nw = std::max(std::thread::hardware_concurrency(), 4u),
-              size_t mt = std::numeric_limits<size_t>::max())
-    : super(nw, mt) {
+  coordinator(actor_system& sys) : super(sys) {
     // nop
   }
 
@@ -58,31 +56,24 @@ public:
   }
 
 protected:
-  void initialize() override {
-    super::initialize();
-    // create workers
-    workers_.resize(num_workers());
-    for (size_t i = 0; i < num_workers(); ++i) {
-      auto& ref = workers_[i];
-      ref.reset(new worker_type(i, this, max_throughput_));
-    }
+  void start() override {
+    // initialize workers vector
+    auto num = num_workers();
+    //workers_.resize(num);
+    for (size_t i = 0; i < num; ++i)
+      workers_.emplace_back(new worker_type(i, this, max_throughput_));
     // start all workers now that all workers have been initialized
-    for (auto& w : workers_) {
+    for (auto& w : workers_)
       w->start();
-    }
+    // run remaining startup code
+    super::start();
   }
 
   void stop() override {
     CAF_LOG_TRACE("");
     // shutdown workers
-    class shutdown_helper : public resumable {
+    class shutdown_helper : public resumable, public ref_counted {
     public:
-      void attach_to_scheduler() override {
-        // nop
-      }
-      void detach_from_scheduler() override {
-        // nop
-      }
       resumable::resume_result resume(execution_unit* ptr, size_t) override {
         CAF_LOG_DEBUG("shutdown_helper::resume => shutdown worker");
         CAF_ASSERT(ptr != nullptr);
@@ -90,6 +81,9 @@ protected:
         last_worker = ptr;
         cv.notify_all();
         return resumable::shutdown_execution_unit;
+      }
+      ref_counted* as_ref_counted_ptr() override {
+        return this;
       }
       shutdown_helper() : last_worker(nullptr) {
         // nop
@@ -104,6 +98,7 @@ protected:
     auto num = num_workers();
     for (size_t i = 0; i < num; ++i) {
       alive_workers.insert(worker_by_id(i));
+      sh.ref(); // make sure reference count is high enough
     }
     CAF_LOG_DEBUG("enqueue shutdown_helper into each worker");
     while (! alive_workers.empty()) {
@@ -125,11 +120,10 @@ protected:
     }
     // run cleanup code for each resumable
     auto f = [](resumable* job) {
-      job->detach_from_scheduler();
+      intrusive_ptr_release(job);
     };
-    for (auto& w : workers_) {
+    for (auto& w : workers_)
       policy_.foreach_resumable(w.get(), f);
-    }
     policy_.foreach_central_resumable(this, f);
   }
 

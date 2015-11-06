@@ -34,8 +34,6 @@
 
 namespace caf {
 
-class serializer;
-
 /// Objects of this type identify an invalid `node_id`.
 /// @relates node_id
 struct invalid_node_id_t {
@@ -94,11 +92,12 @@ public:
   ///      and the UUID of the root partition (mounted in "/" or "C:").
   const host_id_type& host_id() const;
 
+  /// Queries whether this node is not default-constructed.
+  explicit operator bool() const;
+
+  void swap(node_id&);
+
   /// @cond PRIVATE
-
-  void serialize(serializer& sink) const;
-
-  void deserialize(deserializer& source);
 
   // A reference counted container for host ID and process ID.
   class data : public ref_counted {
@@ -141,11 +140,18 @@ public:
 
   explicit node_id(intrusive_ptr<data> dataptr);
 
+  friend void serialize(serializer& sink, node_id& x, const unsigned int);
+
+  friend void serialize(deserializer& source, node_id& x, const unsigned int);
+
   /// @endcond
 
 private:
   intrusive_ptr<data> data_;
 };
+
+/// @relates node_id
+std::string to_string(const node_id& x);
 
 } // namespace caf
 

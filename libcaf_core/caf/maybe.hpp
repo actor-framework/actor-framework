@@ -27,6 +27,7 @@
 #include "caf/none.hpp"
 #include "caf/unit.hpp"
 #include "caf/config.hpp"
+#include "caf/deep_to_string.hpp"
 
 #include "caf/detail/safe_equal.hpp"
 
@@ -71,9 +72,13 @@ public:
     cr_error(std::move(err));
   }
 
-  /// Creates an instance representing `value`.
-  maybe(T value) {
-    cr_moved_value(value);
+  /// Creates an instance representing a value from `x`.
+  template <class U,
+            class = typename std::enable_if<
+                      std::is_convertible<U, T>::value
+                    >::type>
+  maybe(U&& x) {
+    cr_value(std::forward<U>(x));
   }
 
   /// Creates an instance representing an error
@@ -105,7 +110,7 @@ public:
 
   maybe(maybe&& other) {
     if (other.available_)
-      cr_moved_value(other.value_);
+      cr_value(std::move(other.value_));
     else
       cr_error(std::move(other.error_));
   }
@@ -142,12 +147,16 @@ public:
     return *this;
   }
 
-  maybe& operator=(T value) {
+  template <class U,
+            class = typename std::enable_if<
+                      std::is_convertible<U, T>::value
+                    >::type>
+  maybe& operator=(U&& x) {
     if (! available_) {
       destroy();
-      cr_moved_value(value);
+      cr_value(std::forward<U>(x));
     } else {
-      assign_moved_value(value);
+      assign_value(std::forward<U>(x));
     }
     return *this;
   }
@@ -256,32 +265,31 @@ private:
       error_.~error_type();
   }
 
-  void cr_moved_value(reference x) {
-    // convert to rvalue if possible
+  template <class V>
+  void assign_value(V&& x) {
+    using x_type = typename std::decay<V>::type;
     using fwd_type =
       typename std::conditional<
-        ! std::is_reference<T>::value,
-        type&&,
-        type&
-      >::type;
-    available_ = true;
-    new (&value_) storage(static_cast<fwd_type>(x));
-  }
-
-  void assign_moved_value(reference x) {
-    using fwd_type =
-      typename std::conditional<
-        ! std::is_reference<T>::value,
-        type&&,
-        type&
+        std::is_rvalue_reference<decltype(x)>::value
+        && ! std::is_reference<T>::value,
+        x_type&&,
+        x_type&
       >::type;
     value_ = static_cast<fwd_type>(x);
   }
 
   template <class V>
   void cr_value(V&& x) {
+    using x_type = typename std::remove_reference<V>::type;
+    using fwd_type =
+      typename std::conditional<
+        std::is_rvalue_reference<decltype(x)>::value
+        && ! std::is_reference<T>::value,
+        x_type&&,
+        x_type&
+      >::type;
     available_ = true;
-    new (&value_) storage(std::forward<V>(x));
+    new (&value_) storage(static_cast<fwd_type>(x));
   }
 
   void cr_error(std::error_condition ec) {
@@ -295,6 +303,24 @@ private:
     error_type error_;
   };
 };
+
+/// Allows element-wise access of STL-compatible tuples.
+/// @relates maybe
+template <size_t X, class T>
+maybe<typename std::tuple_element<X, T>::type&> get(maybe<T>& xs) {
+  if (xs)
+    return std::get<X>(*xs);
+  return xs.error();
+}
+
+/// Allows element-wise access of STL-compatible tuples.
+/// @relates maybe
+template <size_t X, class T>
+maybe<const typename std::tuple_element<X, T>::type&> get(const maybe<T>& xs) {
+  if (xs)
+    return std::get<X>(*xs);
+  return xs.error();
+}
 
 /// Returns `true` if both objects represent either the same
 /// value or the same error, `false` otherwise.
@@ -425,7 +451,7 @@ public:
             class = typename std::enable_if<
                       std::is_error_condition_enum<E>::value
                     >::type>
-  maybe(E error_code_enum) : error_{error_code_enum} {
+  maybe(E error_code) : error_(std::make_error_condition(error_code)) {
     // nop
   }
 
@@ -441,11 +467,10 @@ public:
 
   template <class E,
             class = typename std::enable_if<
-                      std::is_error_condition_enum<E>::value
-                    >::type>
-  maybe& operator=(E error_code_enum) {
-    error_ = error_code_enum;
-    return *this;
+              std::is_error_condition_enum<E>::value
+            >::type>
+  maybe& operator=(E error_code) {
+    return *this = std::make_error_condition(error_code);
   }
 
   bool available() const {
@@ -497,6 +522,13 @@ public:
 private:
   error_type error_;
 };
+
+template <class T>
+std::string to_string(const maybe<T>& x) {
+  if (x)
+    return deep_to_string(*x);
+  return "<none>";
+}
 
 } // namespace caf
 

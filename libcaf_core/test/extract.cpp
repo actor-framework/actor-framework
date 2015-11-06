@@ -27,14 +27,6 @@
 
 #include "caf/all.hpp"
 
-namespace caf {
-
-std::ostream& operator<<(std::ostream& out, const message& msg) {
-  return out << to_string(msg);
-}
-
-} // namespace caf
-
 using namespace caf;
 
 using std::string;
@@ -82,7 +74,7 @@ CAF_TEST(cli_args) {
     {"verbosity,v", "1-5", verbosity}
   });
   CAF_CHECK_EQUAL(res.remainder.size(), 0);
-  CAF_CHECK_EQUAL(to_string(res.remainder), to_string(message{}));
+  CAF_CHECK(res.remainder == message{});
   CAF_CHECK_EQUAL(res.opts.count("no-colors"), 1);
   CAF_CHECK_EQUAL(res.opts.count("verbosity"), 1);
   CAF_CHECK_EQUAL(res.opts.count("out-file"), 1);

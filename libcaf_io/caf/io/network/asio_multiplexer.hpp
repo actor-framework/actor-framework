@@ -27,7 +27,7 @@ CAF_PUSH_WARNINGS
 #include "boost/asio.hpp"
 CAF_POP_WARNINGS
 
-#include "caf/detail/logging.hpp"
+#include "caf/logger.hpp"
 
 #include "caf/io/receive_policy.hpp"
 
@@ -83,7 +83,7 @@ public:
 
   void dispatch_runnable(runnable_ptr ptr) override;
 
-  asio_multiplexer();
+  asio_multiplexer(actor_system* sys);
 
   ~asio_multiplexer();
 
@@ -104,8 +104,6 @@ private:
   std::map<int64_t, default_socket> unassigned_sockets_;
   std::map<int64_t, default_socket_acceptor> unassigned_acceptors_;
 };
-
-asio_multiplexer& get_multiplexer_singleton();
 
 template <class T>
 connection_handle conn_hdl_from_socket(T& sock) {

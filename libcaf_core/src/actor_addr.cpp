@@ -17,11 +17,14 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/actor.hpp"
 #include "caf/actor_addr.hpp"
-#include "caf/local_actor.hpp"
 
-#include "caf/detail/singletons.hpp"
+#include "caf/actor.hpp"
+#include "caf/node_id.hpp"
+#include "caf/serializer.hpp"
+#include "caf/local_actor.hpp"
+#include "caf/deserializer.hpp"
+#include "caf/proxy_registry.hpp"
 
 namespace caf {
 
@@ -59,15 +62,36 @@ actor_id actor_addr::id() const noexcept {
 }
 
 node_id actor_addr::node() const noexcept {
-  return ptr_ ? ptr_->node() : detail::singletons::get_node_id();
-}
-
-bool actor_addr::is_remote() const noexcept {
-  return ptr_ ? ptr_->is_remote() : false;
+  return ptr_ ? ptr_->node() : node_id{};
 }
 
 void actor_addr::swap(actor_addr& other) noexcept {
   ptr_.swap(other.ptr_);
+}
+
+void serialize(serializer& sink, actor_addr& x, const unsigned int) {
+  sink << actor_cast<channel>(x);
+}
+
+void serialize(deserializer& source, actor_addr& x, const unsigned int) {
+  channel y;
+  source >> y;
+  if (! y) {
+    x = invalid_actor_addr;
+    return;
+  }
+  if (! y->is_abstract_actor())
+    throw std::logic_error("Expected an actor address, found a group address.");
+  x.ptr_.reset(static_cast<abstract_actor*>(actor_cast<abstract_channel*>(y)));
+}
+
+std::string to_string(const actor_addr& x) {
+  if (! x)
+    return "<invalid-actor>";
+  std::string result = std::to_string(x->id());
+  result += "@";
+  result += to_string(x->node());
+  return result;
 }
 
 } // namespace caf

@@ -39,25 +39,24 @@ namespace caf {
 class binary_serializer : public serializer {
 public:
   /// Creates a binary serializer writing to given iterator position.
-  template <class OutIter>
-  explicit binary_serializer(OutIter iter, actor_namespace* ns = nullptr)
-      : serializer(ns) {
+  template <class Out>
+  binary_serializer(execution_unit* ctx, Out iter) : serializer(ctx) {
     reset(iter);
   }
 
   using write_fun = std::function<void(const char*, size_t)>;
 
-  void begin_object(const uniform_type_info* uti) override;
+  void begin_object(uint16_t& typenr, std::string& name) override;
 
   void end_object() override;
 
-  void begin_sequence(size_t list_size) override;
+  void begin_sequence(size_t& list_size) override;
 
   void end_sequence() override;
 
-  void write_value(const primitive_variant& value) override;
+  void apply_raw(size_t num_bytes, void* data) override;
 
-  void write_raw(size_t num_bytes, const void* data) override;
+  void apply_builtin(builtin in_out_type, void* in_out) override;
 
   template <class OutIter>
   void reset(OutIter iter) {

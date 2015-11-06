@@ -170,9 +170,8 @@ public:
 private:
   void set_ptr(pointer raw_ptr, bool add_ref) {
     ptr_ = raw_ptr;
-    if (raw_ptr && add_ref) {
+    if (raw_ptr && add_ref)
       intrusive_ptr_add_ref(raw_ptr);
-    }
   }
 
   pointer ptr_;

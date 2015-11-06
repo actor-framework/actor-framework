@@ -21,11 +21,7 @@
 
 namespace caf {
 
-deserializer::deserializer(actor_namespace* ns) : namespace_{ns} {
-  // nop
-}
-
-deserializer::~deserializer() {
+deserializer::deserializer(execution_unit* ctx) : super(ctx) {
   // nop
 }
 

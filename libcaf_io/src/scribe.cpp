@@ -19,7 +19,7 @@
 
 #include "caf/io/scribe.hpp"
 
-#include "caf/detail/logging.hpp"
+#include "caf/logger.hpp"
 
 namespace caf {
 namespace io {
@@ -37,7 +37,8 @@ message scribe::detach_message() {
   return make_message(connection_closed_msg{hdl()});
 }
 
-void scribe::consume(const void*, size_t num_bytes) {
+void scribe::consume(execution_unit* ctx, const void*, size_t num_bytes) {
+  CAF_ASSERT(ctx != nullptr);
   CAF_LOG_TRACE(CAF_ARG(num_bytes));
   if (detached()) {
     // we are already disconnected from the broker while the multiplexer
@@ -52,7 +53,7 @@ void scribe::consume(const void*, size_t num_bytes) {
   buf.resize(num_bytes);
   auto& msg_buf = msg().buf;
   msg_buf.swap(buf);
-  invoke_mailbox_element();
+  invoke_mailbox_element(ctx);
   // `mailbox_elem_ptr_ == nullptr` if the broker moved it to the cache
   if (mailbox_elem_ptr_) {
     // swap buffer back to stream and implicitly flush wr_buf()
@@ -61,12 +62,11 @@ void scribe::consume(const void*, size_t num_bytes) {
   }
 }
 
-void scribe::io_failure(network::operation op) {
-  CAF_LOG_TRACE("id = " << hdl().id()
-                << ", " << CAF_TARG(op, static_cast<int>));
+void scribe::io_failure(execution_unit* ctx, network::operation op) {
+  CAF_LOG_TRACE(CAF_ARG(hdl()) << CAF_ARG(op));
   // keep compiler happy when compiling w/o logging
   static_cast<void>(op);
-  detach(true);
+  detach(ctx, true);
 }
 
 } // namespace io

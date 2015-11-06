@@ -76,9 +76,6 @@ public:
     return !ptr_;
   }
 
-  /// Returns whether this is an handle to a remote actor.
-  bool is_remote() const noexcept;
-
   /// Returns the ID of this actor.
   actor_id id() const noexcept;
 
@@ -102,6 +99,10 @@ public:
     return compare(other.get());
   }
 
+  friend void serialize(serializer&, actor_addr&, const unsigned int);
+
+  friend void serialize(deserializer&, actor_addr&, const unsigned int);
+
   /// @endcond
 
 private:
@@ -109,10 +110,13 @@ private:
     return ptr_.get();
   }
 
-  explicit actor_addr(abstract_actor*);
+  actor_addr(abstract_actor*);
 
   abstract_actor_ptr ptr_;
 };
+
+/// @relates actor_addr
+std::string to_string(const actor_addr& x);
 
 } // namespace caf
 

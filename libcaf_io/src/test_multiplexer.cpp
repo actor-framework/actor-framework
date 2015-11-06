@@ -19,6 +19,8 @@
 
 #include "caf/io/network/test_multiplexer.hpp"
 
+#include "caf/scheduler/abstract_coordinator.hpp"
+
 #include "caf/io/scribe.hpp"
 #include "caf/io/doorman.hpp"
 
@@ -26,14 +28,18 @@ namespace caf {
 namespace io {
 namespace network {
 
+test_multiplexer::test_multiplexer(actor_system* sys) : multiplexer(sys) {
+  CAF_ASSERT(sys != nullptr);
+}
+
 test_multiplexer::~test_multiplexer() {
   // nop
 }
 
-connection_handle test_multiplexer::new_tcp_scribe(const std::string& host,
-                                                   uint16_t desired_port) {
+connection_handle
+test_multiplexer::new_tcp_scribe(const std::string& host, uint16_t port) {
   connection_handle result;
-  auto i = scribes_.find(std::make_pair(host, desired_port));
+  auto i = scribes_.find(std::make_pair(host, port));
   if (i != scribes_.end()) {
     result = i->second;
     scribes_.erase(i);
@@ -65,7 +71,7 @@ void test_multiplexer::assign_tcp_scribe(abstract_broker* ptr,
 
     void stop_reading() override {
       mpx_->stopped_reading(hdl()) = true;
-      detach(false);
+      detach(mpx_, false);
     }
 
     void flush() override {
@@ -95,12 +101,11 @@ connection_handle test_multiplexer::add_tcp_scribe(abstract_broker*,
   abort();
 }
 
-connection_handle test_multiplexer::add_tcp_scribe(abstract_broker* ptr,
-                                                   const std::string& host,
-                                                   uint16_t desired_port) {
+connection_handle
+test_multiplexer::add_tcp_scribe(abstract_broker* ptr, const std::string& host,
+                                 uint16_t desired_port) {
   auto hdl = new_tcp_scribe(host, desired_port);
-  if (hdl != invalid_connection_handle)
-    assign_tcp_scribe(ptr, hdl);
+  assign_tcp_scribe(ptr, hdl);
   return hdl;
 }
 
@@ -112,7 +117,7 @@ test_multiplexer::new_tcp_doorman(uint16_t desired_port, const char*, bool) {
     result = i->second;
     doormen_.erase(i);
   }
-  return {result, desired_port};
+  return std::make_pair(result, desired_port);
 }
 
 void test_multiplexer::assign_tcp_doorman(abstract_broker* ptr,
@@ -130,14 +135,14 @@ void test_multiplexer::assign_tcp_doorman(abstract_broker* ptr,
       auto i = mm.find(hdl());
       if (i != mm.end()) {
         msg().handle = i->second;
-        invoke_mailbox_element();
+        invoke_mailbox_element(mpx_);
         mm.erase(i);
       }
     }
 
     void stop_reading() override {
       mpx_->stopped_reading(hdl()) = true;
-      detach(false);
+      detach(mpx_, false);
     }
 
     void launch() override {
@@ -171,10 +176,8 @@ std::pair<accept_handle, uint16_t>
 test_multiplexer::add_tcp_doorman(abstract_broker* ptr, uint16_t prt,
                                   const char* in, bool reuse_addr) {
   auto result = new_tcp_doorman(prt, in, reuse_addr);
-  if (result.first != invalid_accept_handle) {
-    port(result.first) = prt;
-    assign_tcp_doorman(ptr, result.first);
-  }
+  port(result.first) = prt;
+  assign_tcp_doorman(ptr, result.first);
   return result;
 }
 
@@ -252,7 +255,6 @@ test_multiplexer::pending_scribes_map& test_multiplexer::pending_scribes() {
   return scribes_;
 }
 
-
 void test_multiplexer::accept_connection(accept_handle hdl) {
   auto& dd = doorman_data_[hdl];
   if (dd.ptr == nullptr)
@@ -264,6 +266,8 @@ void test_multiplexer::accept_connection(accept_handle hdl) {
 void test_multiplexer::read_data(connection_handle hdl) {
   flush_runnables();
   scribe_data& sd = scribe_data_[hdl];
+  if (sd.ptr == nullptr)
+    throw std::logic_error("scribe data contains a nullptr");
   switch (sd.recv_conf.first) {
     case receive_policy_flag::exactly:
       while (sd.xbuf.size() >= sd.recv_conf.second) {
@@ -272,14 +276,14 @@ void test_multiplexer::read_data(connection_handle hdl) {
         auto last = first + static_cast<ptrdiff_t>(sd.recv_conf.second);
         sd.rd_buf.insert(sd.rd_buf.end(), first, last);
         sd.xbuf.erase(first, last);
-        sd.ptr->consume(sd.rd_buf.data(), sd.rd_buf.size());
+        sd.ptr->consume(this, sd.rd_buf.data(), sd.rd_buf.size());
       }
       break;
     case receive_policy_flag::at_least:
       if (sd.xbuf.size() >= sd.recv_conf.second) {
         sd.rd_buf.clear();
         sd.rd_buf.swap(sd.xbuf);
-        sd.ptr->consume(sd.rd_buf.data(), sd.rd_buf.size());
+        sd.ptr->consume(this, sd.rd_buf.data(), sd.rd_buf.size());
       }
       break;
     case receive_policy_flag::at_most:
@@ -291,7 +295,7 @@ void test_multiplexer::read_data(connection_handle hdl) {
         auto last = (max_bytes < xbuf_size) ? first + max_bytes : sd.xbuf.end();
         sd.rd_buf.insert(sd.rd_buf.end(), first, last);
         sd.xbuf.erase(first, last);
-        sd.ptr->consume(sd.rd_buf.data(), sd.rd_buf.size());
+        sd.ptr->consume(this, sd.rd_buf.data(), sd.rd_buf.size());
       }
   }
 }
@@ -304,27 +308,27 @@ void test_multiplexer::virtual_send(connection_handle hdl,
 }
 
 void test_multiplexer::exec_runnable() {
-  runnable_ptr ptr;
+  resumable_ptr ptr;
   { // critical section
     guard_type guard{mx_};
-    while (runnables_.empty())
+    while (resumables_.empty())
       cv_.wait(guard);
-    runnables_.front().swap(ptr);
-    runnables_.pop_front();
+    resumables_.front().swap(ptr);
+    resumables_.pop_front();
   }
-  ptr->run();
+  exec(ptr);
 }
 
 bool test_multiplexer::try_exec_runnable() {
-  runnable_ptr ptr;
+  resumable_ptr ptr;
   { // critical section
     guard_type guard{mx_};
-    if (runnables_.empty())
+    if (resumables_.empty())
       return false;
-    runnables_.front().swap(ptr);
-    runnables_.pop_front();
+    resumables_.front().swap(ptr);
+    resumables_.pop_front();
   }
-  ptr->run();
+  exec(ptr);
   return true;
 }
 
@@ -332,7 +336,7 @@ void test_multiplexer::flush_runnables() {
   // execute runnables in bursts, pick a small size to
   // minimize time in the critical section
   constexpr size_t max_runnable_count = 8;
-  std::vector<runnable_ptr> runnables;
+  std::vector<resumable_ptr> runnables;
   runnables.reserve(max_runnable_count);
   // runnables can create new runnables, so we need to double-check
   // that `runnables_` is empty after each burst
@@ -340,22 +344,47 @@ void test_multiplexer::flush_runnables() {
     runnables.clear();
     { // critical section
       guard_type guard{mx_};
-      while (! runnables_.empty() && runnables.size() < max_runnable_count) {
-        runnables.emplace_back(std::move(runnables_.front()));
-        runnables_.pop_front();
+      while (! resumables_.empty() && runnables.size() < max_runnable_count) {
+        runnables.emplace_back(std::move(resumables_.front()));
+        resumables_.pop_front();
       }
     }
     for (auto& ptr : runnables)
-      ptr->run();
+      exec(ptr);
   } while (! runnables.empty());
 }
 
-void test_multiplexer::dispatch_runnable(runnable_ptr ptr) {
-  std::list<runnable_ptr> tmp;
-  tmp.emplace_back(std::move(ptr));
-  guard_type guard{mx_};
-  runnables_.splice(runnables_.end(), std::move(tmp));
-  cv_.notify_all();
+void test_multiplexer::exec_later(resumable* ptr) {
+  CAF_ASSERT(ptr != nullptr);
+  CAF_ASSERT(ptr->as_ref_counted_ptr()->get_reference_count() > 0);
+  switch (ptr->subtype()) {
+    case resumable::io_actor:
+    case resumable::function_object: {
+      std::list<resumable_ptr> tmp;
+      tmp.emplace_back(ptr);
+      guard_type guard{mx_};
+      resumables_.splice(resumables_.end(), std::move(tmp));
+      cv_.notify_all();
+      break;
+    }
+    default:
+      system().scheduler().enqueue(ptr);
+  }
+}
+
+void test_multiplexer::exec(resumable_ptr& ptr) {
+  CAF_ASSERT(ptr != nullptr);
+  CAF_ASSERT(ptr->as_ref_counted_ptr()->get_reference_count() > 0);
+  switch (ptr->resume(this, 1)) {
+    case resumable::resume_later:
+      exec_later(ptr.get());
+      break;
+    case resumable::done:
+      intrusive_ptr_release(ptr.get());
+      break;
+    default:
+      ; // ignored
+  }
 }
 
 } // namespace network

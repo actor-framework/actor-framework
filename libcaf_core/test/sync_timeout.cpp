@@ -88,9 +88,10 @@ behavior ping2(event_based_actor* self, const actor& pong_actor) {
 }
 
 struct fixture {
+  actor_system system;
+
   ~fixture() {
-    await_all_actors_done();
-    shutdown();
+    system.await_all_actors_done();
   }
 };
 
@@ -99,11 +100,11 @@ struct fixture {
 CAF_TEST_FIXTURE_SCOPE(atom_tests, fixture)
 
 CAF_TEST(single_timeout) {
-  spawn(ping1, spawn(pong));
+  system.spawn(ping1, system.spawn(pong));
 }
 
 CAF_TEST(scoped_timeout) {
-  spawn(ping2, spawn(pong));
+  system.spawn(ping2, system.spawn(pong));
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
