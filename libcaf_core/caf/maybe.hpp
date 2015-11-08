@@ -381,6 +381,88 @@ bool operator!=(const none_t&, const maybe<T>& val) {
   return ! val.empty();
 }
 
+template <>
+class maybe<void> {
+public:
+  using type = unit_t;
+  using reference = const type&;
+  using const_reference = const type&;
+  using pointer = const type*;
+  using const_pointer = const type*;
+  using error_type = std::error_condition;
+
+  maybe(const none_t& = none) { }
+
+  maybe(error_type err) : error_{std::move(err)} { }
+
+  maybe& operator=(const none_t&) {
+    error_ = {};
+    return *this;
+  }
+
+  maybe& operator=(const error_type& err) {
+    error_ = err;
+    return *this;
+  }
+
+  maybe& operator=(error_type&& err) {
+    error_ = std::move(err);
+    return *this;
+  }
+
+  bool available() const {
+    return false;
+  }
+
+  explicit operator bool() const {
+    return available();
+  }
+
+  bool operator!() const {
+    return ! available();
+  }
+
+  reference get() {
+    CAF_ASSERT(! "should never be called");
+    return unit;
+  }
+
+  const_reference get() const {
+    CAF_ASSERT(! "should never be called");
+    return unit;
+  }
+
+  reference operator*() {
+    return get();
+  }
+
+  const_reference operator*() const {
+    return get();
+  }
+
+  pointer operator->() {
+    return &get();
+  }
+
+  const_pointer operator->() const {
+    return &get();
+  }
+
+  /// Returns whether this objects holds neither a value nor an actual error.
+  bool empty() const {
+    return ! error();
+  }
+
+  /// Returns the error.
+  const error_type& error() const {
+    CAF_ASSERT(! available());
+    return error_;
+  }
+
+private:
+  error_type error_;
+};
+
 } // namespace caf
 
 #endif // CAF_MAYBE_HPP

@@ -80,3 +80,16 @@ CAF_TEST(custom_type_engaged) {
   CAF_CHECK(obj == *j);
   CAF_CHECK(*j == obj);
 }
+
+CAF_TEST(maybe_void) {
+  maybe<void> m;
+  CAF_CHECK(! m);
+  CAF_CHECK(m.empty());
+  CAF_CHECK(! m.error());
+  // Assign erroneous state.
+  m = std::errc::invalid_argument;
+  CAF_CHECK(! m);
+  CAF_CHECK(! m.empty());
+  CAF_CHECK(m.error());
+  CAF_CHECK(m.error() == std::errc::invalid_argument);
+}
