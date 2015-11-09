@@ -81,6 +81,18 @@ CAF_TEST(custom_type_engaged) {
   CAF_CHECK(*j == obj);
 }
 
+CAF_TEST(error_construct_and_assign) {
+  auto f = []() -> maybe<int> {
+    return std::errc::invalid_argument;
+  };
+  auto val = f();
+  CAF_CHECK(! val && val.error() == std::errc::invalid_argument);
+  val = 42;
+  CAF_CHECK(val && *val == 42);
+  val = std::errc::state_not_recoverable;
+  CAF_CHECK(! val && val.error() == std::errc::state_not_recoverable);
+}
+
 CAF_TEST(maybe_void) {
   maybe<void> m;
   CAF_CHECK(! m);

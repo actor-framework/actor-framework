@@ -76,6 +76,16 @@ public:
     cr_moved_value(value);
   }
 
+  /// Creates an instance representing an error
+  /// from an error condition enum.
+  template <class E,
+            class = typename std::enable_if<
+                      std::is_error_condition_enum<E>::value
+                    >::type>
+  maybe(E error_code_enum) {
+    cr_error(std::make_error_condition(error_code_enum));
+  }
+
   /// Creates an empty instance.
   maybe() {
     cr_error(error_type{});
@@ -150,6 +160,14 @@ public:
       error_ = std::move(err);
     }
     return *this;
+  }
+
+  template <class E,
+            class = typename std::enable_if<
+              std::is_error_condition_enum<E>::value
+            >::type>
+  maybe& operator=(E error_code_enum) {
+    return *this = std::make_error_condition(error_code_enum);
   }
 
   maybe& operator=(maybe&& other) {
@@ -381,6 +399,8 @@ bool operator!=(const none_t&, const maybe<T>& val) {
   return ! val.empty();
 }
 
+// Represents a computation performing side effects only and
+// optionally return a `std::error_condition`.
 template <>
 class maybe<void> {
 public:
@@ -391,21 +411,22 @@ public:
   using const_pointer = const type*;
   using error_type = std::error_condition;
 
-  maybe(const none_t& = none) { }
+  maybe() = default;
 
-  maybe(error_type err) : error_{std::move(err)} { }
+  maybe(const none_t&) {
+    // nop
+  }
+
+  maybe(error_type err) : error_(std::move(err)) {
+    // nop
+  }
 
   maybe& operator=(const none_t&) {
-    error_ = {};
+    error_.clear();
     return *this;
   }
 
-  maybe& operator=(const error_type& err) {
-    error_ = err;
-    return *this;
-  }
-
-  maybe& operator=(error_type&& err) {
+  maybe& operator=(error_type err) {
     error_ = std::move(err);
     return *this;
   }
@@ -448,14 +469,11 @@ public:
     return &get();
   }
 
-  /// Returns whether this objects holds neither a value nor an actual error.
   bool empty() const {
     return ! error();
   }
 
-  /// Returns the error.
   const error_type& error() const {
-    CAF_ASSERT(! available());
     return error_;
   }
 
