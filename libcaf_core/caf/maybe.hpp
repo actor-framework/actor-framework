@@ -83,7 +83,7 @@ public:
                       std::is_error_condition_enum<E>::value
                     >::type>
   maybe(E error_code_enum) {
-    cr_error(std::make_error_condition(error_code_enum));
+    cr_error(make_error_condition(error_code_enum));
   }
 
   /// Creates an empty instance.
@@ -167,7 +167,7 @@ public:
               std::is_error_condition_enum<E>::value
             >::type>
   maybe& operator=(E error_code_enum) {
-    return *this = std::make_error_condition(error_code_enum);
+    return *this = make_error_condition(error_code_enum);
   }
 
   maybe& operator=(maybe&& other) {
