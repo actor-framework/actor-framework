@@ -104,4 +104,10 @@ CAF_TEST(maybe_void) {
   CAF_CHECK(! m.empty());
   CAF_CHECK(m.error());
   CAF_CHECK(m.error() == std::errc::invalid_argument);
+  // Implicit construction.
+  auto f = []() -> maybe<void> {
+    return std::errc::invalid_argument;
+  };
+  auto val = f();
+  CAF_CHECK(! val && val.error() == std::errc::invalid_argument);
 }

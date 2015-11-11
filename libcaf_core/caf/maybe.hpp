@@ -421,6 +421,14 @@ public:
     // nop
   }
 
+  template <class E,
+            class = typename std::enable_if<
+                      std::is_error_condition_enum<E>::value
+                    >::type>
+  maybe(E error_code_enum) : error_{error_code_enum} {
+    // nop
+  }
+
   maybe& operator=(const none_t&) {
     error_.clear();
     return *this;
@@ -428,6 +436,15 @@ public:
 
   maybe& operator=(error_type err) {
     error_ = std::move(err);
+    return *this;
+  }
+
+  template <class E,
+            class = typename std::enable_if<
+                      std::is_error_condition_enum<E>::value
+                    >::type>
+  maybe& operator=(E error_code_enum) {
+    error_ = error_code_enum;
     return *this;
   }
 
