@@ -667,6 +667,9 @@ protected:
   // used by functor-based actors to implemented make_behavior() or act()
   std::function<behavior (local_actor*)> initial_behavior_fac_;
 
+  // used for group management
+  std::set<group> subscriptions_;
+
   /// @endcond
 
 private:

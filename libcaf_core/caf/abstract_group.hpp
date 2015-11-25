@@ -23,79 +23,22 @@
 #include <string>
 #include <memory>
 
+#include "caf/fwd.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/attachable.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/abstract_channel.hpp"
 
 namespace caf {
-namespace detail {
-
-class group_manager;
-class peer_connection;
-
-} // namespace detail
-} // namespace caf
-
-namespace caf {
-
-class group;
-class serializer;
-class local_actor;
-class deserializer;
 
 /// A multicast group.
 class abstract_group : public abstract_channel {
 public:
-  friend class detail::group_manager;
-  friend class detail::peer_connection;
   friend class local_actor;
+  friend class subscription;
+  friend class detail::group_manager;
 
   ~abstract_group();
-
-  class subscription;
-
-  struct subscription_token {
-    intrusive_ptr<abstract_group> group;
-    static constexpr size_t token_type = attachable::token::subscription;
-  };
-
-  class subscription_predicate {
-  public:
-    inline subscription_predicate(intrusive_ptr<abstract_group> group)
-        : group_(std::move(group)) {
-      // nop
-    }
-    inline bool operator()(const attachable_ptr& ptr) {
-      return ptr->matches(subscription_token{group_});
-    }
-  private:
-    intrusive_ptr<abstract_group> group_;
-  };
-
-  // needs access to unsubscribe()
-  friend class subscription;
-
-  // unsubscribes its channel from the group on destruction
-  class subscription : public attachable {
-  public:
-    subscription(const intrusive_ptr<abstract_group>& g);
-
-    void actor_exited(abstract_actor* self, uint32_t reason) override;
-
-    bool matches(const token& what) override;
-
-    static inline attachable_ptr make(intrusive_ptr<abstract_group> ptr) {
-      return attachable_ptr{new subscription(std::move(ptr))};
-    }
-
-    const intrusive_ptr<abstract_group>& group() const {
-      return group_;
-    }
-
-  private:
-    intrusive_ptr<abstract_group> group_;
-  };
 
   /// Interface for user-defined multicast implementations.
   class module {
@@ -135,16 +78,19 @@ public:
   /// Returns the name of the module.
   const std::string& module_name() const;
 
-  /// Subscribes `who` to this group and returns a subscription object.
-  virtual attachable_ptr subscribe(const actor_addr& who) = 0;
+  /// Subscribes `who` to this group and returns `true` on success
+  /// or `false` if `who` is already subscribed.
+  virtual bool subscribe(const actor_addr& who) = 0;
 
   /// Stops any background actors or threads and IO handles.
   virtual void stop() = 0;
 
 protected:
   abstract_group(module_ptr module, std::string group_id, const node_id& nid);
-  // called by subscription objects
+
+  // called by local_actor
   virtual void unsubscribe(const actor_addr& who) = 0;
+
   module_ptr module_;
   std::string identifier_;
 };

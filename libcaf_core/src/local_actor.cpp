@@ -67,27 +67,16 @@ void local_actor::demonitor(const actor_addr& whom) {
 
 void local_actor::join(const group& what) {
   CAF_LOG_TRACE(CAF_TSARG(what));
-  if (what == invalid_group) {
+  if (what == invalid_group)
     return;
-  }
-  abstract_group::subscription_token tk{what.ptr()};
-  std::unique_lock<std::mutex> guard{mtx_};
-  if (detach_impl(tk, attachables_head_, true, true) == 0) {
-    auto ptr = what->subscribe(address());
-    if (ptr) {
-      attach_impl(ptr);
-    }
-  }
+  if (what->subscribe(address()))
+    subscriptions_.emplace(what);
 }
 
 void local_actor::leave(const group& what) {
   CAF_LOG_TRACE(CAF_TSARG(what));
-  if (what == invalid_group) {
-    return;
-  }
-  if (detach(abstract_group::subscription_token{what.ptr()}) > 0) {
+  if (subscriptions_.erase(what) > 0)
     what->unsubscribe(address());
-  }
 }
 
 void local_actor::on_exit() {
@@ -96,15 +85,8 @@ void local_actor::on_exit() {
 
 std::vector<group> local_actor::joined_groups() const {
   std::vector<group> result;
-  result.reserve(20);
-  attachable::token stk{attachable::token::subscription, nullptr};
-  std::unique_lock<std::mutex> guard{mtx_};
-  for (attachable* i = attachables_head_.get(); i != 0; i = i->next.get()) {
-    if (i->matches(stk)) {
-      auto ptr = static_cast<abstract_group::subscription*>(i);
-      result.emplace_back(ptr->group());
-    }
-  }
+  for (auto& x : subscriptions_)
+    result.emplace_back(x);
   return result;
 }
 
@@ -984,6 +966,12 @@ void local_actor::cleanup(uint32_t reason) {
   detail::sync_request_bouncer f{reason};
   mailbox_.close(f);
   pending_responses_.clear();
+  { // lifetime scope of temporary
+    actor_addr me = address();
+    for (auto& subscription : subscriptions_)
+      subscription->unsubscribe(me);
+    subscriptions_.clear();
+  }
   abstract_actor::cleanup(reason);
   // tell registry we're done
   is_registered(false);
