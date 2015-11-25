@@ -27,26 +27,6 @@
 
 namespace caf {
 
-abstract_group::subscription::subscription(const abstract_group_ptr& g)
-    : group_(g) {
-  // nop
-}
-
-void abstract_group::subscription::actor_exited(abstract_actor* ptr, uint32_t) {
-  group_->unsubscribe(ptr->address());
-}
-
-bool abstract_group::subscription::matches(const token& what) {
-  if (what.subtype != attachable::token::subscription) {
-    return false;
-  }
-  if (what.ptr) {
-    auto& ot = *reinterpret_cast<const subscription_token*>(what.ptr);
-    return ot.group == group_;
-  }
-  return true;
-}
-
 abstract_group::module::module(std::string mname) : name_(std::move(mname)) {
   // nop
 }

@@ -108,12 +108,11 @@ public:
     return {success, subscribers_.size()};
   }
 
-  attachable_ptr subscribe(const actor_addr& who) override {
+  bool subscribe(const actor_addr& who) override {
     CAF_LOG_TRACE(""); // serializing who would cause a deadlock
-    if (add_subscriber(who).first) {
-      return subscription::make(this);
-    }
-    return {};
+    if (add_subscriber(who).first)
+      return true;
+    return false;
   }
 
   void unsubscribe(const actor_addr& who) override {
@@ -254,18 +253,17 @@ public:
     monitor_ = spawn(broker_monitor_actor, this);
   }
 
-  attachable_ptr subscribe(const actor_addr& who) override {
+  bool subscribe(const actor_addr& who) override {
     CAF_LOG_TRACE(CAF_TSARG(who));
     auto res = add_subscriber(who);
     if (res.first) {
-      if (res.second == 1) {
-        // join the remote source
+      // join remote source
+      if (res.second == 1)
         anon_send(broker_, join_atom::value, proxy_broker_);
-      }
-      return subscription::make(this);
+      return true;
     }
     CAF_LOG_WARNING("actor already joined group");
-    return {};
+    return false;
   }
 
   void unsubscribe(const actor_addr& who) override {
