@@ -193,40 +193,39 @@ int main(int argc, char** argv) {
     {"port,p", "set port", port},
     {"host,H", "set host (client mode only"}
   });
-  if (! res.error.empty()) {
-    cerr << res.error << endl;
-    return 1;
-  }
-  if (res.opts.count("help") > 0) {
-    cout << res.helptext << endl;
-    return 0;
-  }
-  if (! res.remainder.empty()) {
+  if (! res.error.empty())
+    return cerr << res.error << endl, 1;
+  if (res.opts.count("help") > 0)
+    return cout << res.helptext << endl, 0;
+  if (! res.remainder.empty())
     // not all CLI arguments could be consumed
-    cerr << "*** too many arguments" << endl << res.helptext << endl;
-    return 1;
-  }
-  if (res.opts.count("port") == 0) {
-    cerr << "*** no port given" << endl << res.helptext << endl;
-    return 1;
-  }
+    return cerr << "*** too many arguments" << endl << res.helptext << endl, 1;
+  if (res.opts.count("port") == 0)
+    return cerr << "*** no port given" << endl << res.helptext << endl, 1;
+  actor_system_config cfg;
+  cfg.load<io::middleman>();
+  actor_system system{cfg};
   if (res.opts.count("server") > 0) {
     cout << "run in server mode" << endl;
-    auto pong_actor = spawn(pong);
-    auto server_actor = spawn_io_server(server, port, pong_actor);
-    print_on_exit(server_actor, "server");
-    print_on_exit(pong_actor, "pong");
+    auto pong_actor = system.spawn(pong);
+    auto server_actor = system.middleman().spawn_server(server, port, pong_actor);
+    if (server_actor) {
+      print_on_exit(*server_actor, "server");
+      print_on_exit(pong_actor, "pong");
+    }
   } else if (res.opts.count("client") > 0) {
-    auto ping_actor = spawn(ping, size_t{20});
-    auto io_actor = spawn_io_client(broker_impl, host, port, ping_actor);
-    print_on_exit(io_actor, "protobuf_io");
-    print_on_exit(ping_actor, "ping");
-    send_as(io_actor, ping_actor, kickoff_atom::value, io_actor);
+    auto ping_actor = system.spawn(ping, size_t{20});
+    auto io_actor = system.middleman().spawn_client(broker_impl, host,
+                                                    port, ping_actor);
+    if (io_actor) {
+      print_on_exit(ping_actor, "ping");
+      print_on_exit(*io_actor, "protobuf_io");
+      send_as(*io_actor, ping_actor, kickoff_atom::value, *io_actor);
+    }
   } else {
     cerr << "*** neither client nor server mode set" << endl
          << res.helptext << endl;
     return 1;
   }
-  await_all_actors_done();
-  shutdown();
+  system.await_all_actors_done();
 }

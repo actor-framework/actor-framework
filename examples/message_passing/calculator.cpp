@@ -88,20 +88,17 @@ void tester(event_based_actor* self, const Handle& testee, int x, int y) {
   );
 }
 
-void test_calculators() {
-  scoped_actor self;
+int main() {
+  actor_system system;
+  scoped_actor self{system};
   aout(self) << "blocking actor:" << endl;
-  self->spawn(tester<actor>, spawn<blocking_api>(blocking_calculator), 1, 2);
+  self->spawn(tester<actor>,
+              self->spawn<blocking_api>(blocking_calculator), 1, 2);
   self->await_all_other_actors_done();
   aout(self) << "event-based actor:" << endl;
-  self->spawn(tester<actor>, spawn(calculator), 3, 4);
+  self->spawn(tester<actor>, self->spawn(calculator), 3, 4);
   self->await_all_other_actors_done();
   aout(self) << "typed actor:" << endl;
-  self->spawn(tester<calculator_actor>, spawn(typed_calculator), 5, 6);
+  self->spawn(tester<calculator_actor>, self->spawn(typed_calculator), 5, 6);
   self->await_all_other_actors_done();
-}
-
-int main() {
-  test_calculators();
-  shutdown();
 }

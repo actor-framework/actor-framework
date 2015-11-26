@@ -23,50 +23,23 @@ int main(int argc, char** argv) {
   auto res = message_builder(argv + 1, argv + argc).extract_opts({
     {"port,p", "set port", port}
   });
-  if (! res.error.empty()) {
-    cerr << res.error << endl;
-    return 1;
-  }
-  if (res.opts.count("help") > 0) {
-    cout << res.helptext << endl;
-    return 0;
-  }
-  if (! res.remainder.empty()) {
-    // not all CLI arguments could be consumed
-    cerr << "*** too many arguments" << endl << res.helptext << endl;
-    return 1;
-  }
-  if (res.opts.count("port") == 0 || port <= 1024) {
-    cerr << "*** no valid port (>1024) given" << endl << res.helptext << endl;
-    return 1;
-  }
-  try {
-    // try to bind the group server to the given port,
-    // this allows other nodes to access groups of this server via
-    // group::get("remote", "<group>@<host>:<port>");
-    // note: it is not needed to explicitly create a <group> on the server,
-    //     as groups are created on-the-fly on first usage
-    io::publish_local_groups(port);
-  }
-  catch (bind_failure& e) {
-    // thrown if <port> is already in use
-    cerr << "*** bind_failure: " << e.what() << endl;
-    return 2;
-  }
-  catch (network_error& e) {
-    // thrown on errors in the socket API
-    cerr << "*** network error: " << e.what() << endl;
-    return 2;
-  }
+  if (! res.error.empty())
+    return cerr << res.error << endl, 1;
+  if (res.opts.count("help") > 0)
+    return cout << res.helptext << endl, 0;
+  if (! res.remainder.empty())
+    return cerr << "*** too many arguments" << endl << res.helptext << endl, 1;
+  if (res.opts.count("port") == 0 || port <= 1024)
+    return cerr << "*** no valid port given" << endl << res.helptext << endl, 1;
+  actor_system system{actor_system_config{}.load<io::middleman>()};
+  auto pres = system.middleman().publish_local_groups(port);
+  if (! pres)
+    return cerr << "*** error: " << pres.error().message() << endl, 1;
   cout << "type 'quit' to shutdown the server" << endl;
   string line;
-  while (getline(cin, line)) {
-    if (line == "quit") {
+  while (getline(cin, line))
+    if (line == "quit")
       return 0;
-    }
-    else {
+    else
       cerr << "illegal command" << endl;
-    }
-  }
-  shutdown();
 }

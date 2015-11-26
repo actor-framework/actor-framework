@@ -346,28 +346,25 @@ int main() {
   set_sighandler();
   // initialize CURL
   curl_global_init(CURL_GLOBAL_DEFAULT);
-  { // lifetime scope of self
-    scoped_actor self;
-    // spawn client and curl_master
-    auto master = self->spawn<detached>(curl_master);
-    self->spawn<detached>(client, master);
-    // poll CTRL+C flag every second
-    while (! shutdown_flag)
-      std::this_thread::sleep_for(std::chrono::seconds(1));
-    aout(self) << color::cyan << "received CTRL+C" << color::reset_endl;
-    // shutdown actors
-    anon_send_exit(master, exit_reason::user_shutdown);
-    // await actors
-    act.sa_handler = [](int) { abort(); };
-    set_sighandler();
-    aout(self) << color::cyan
-               << "await CURL; this may take a while "
-                  "(press CTRL+C again to abort)"
-               << color::reset_endl;
-    self->await_all_other_actors_done();
-  }
-  // shutdown libcaf
-  shutdown();
+  actor_system system;
+  scoped_actor self{system};
+  // spawn client and curl_master
+  auto master = self->spawn<detached>(curl_master);
+  self->spawn<detached>(client, master);
+  // poll CTRL+C flag every second
+  while (! shutdown_flag)
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+  aout(self) << color::cyan << "received CTRL+C" << color::reset_endl;
+  // shutdown actors
+  anon_send_exit(master, exit_reason::user_shutdown);
+  // await actors
+  act.sa_handler = [](int) { abort(); };
+  set_sighandler();
+  aout(self) << color::cyan
+             << "await CURL; this may take a while "
+                "(press CTRL+C again to abort)"
+             << color::reset_endl;
+  self->await_all_other_actors_done();
   // shutdown CURL
   curl_global_cleanup();
 }

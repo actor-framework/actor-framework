@@ -144,20 +144,29 @@ maybe<uint16_t> as_u16(const std::string& str) {
 }
 
 int main(int argc, char** argv) {
+  actor_system_config cfg;
+  cfg.load<io::middleman>();
+  actor_system system{cfg};
   message_builder{argv + 1, argv + argc}.apply({
     on("-s", as_u16) >> [&](uint16_t port) {
       cout << "run in server mode" << endl;
-      auto pong_actor = spawn(pong);
-      auto sever_actor = spawn_io_server(server, port, pong_actor);
-      print_on_exit(sever_actor, "server");
-      print_on_exit(pong_actor, "pong");
+      auto pong_actor = system.spawn(pong);
+      auto server_actor = system.middleman().spawn_server(server, port,
+                                                          pong_actor);
+      if (server_actor) {
+        print_on_exit(*server_actor, "server");
+        print_on_exit(pong_actor, "pong");
+      }
     },
     on("-c", val<string>, as_u16) >> [&](const string& host, uint16_t port) {
-      auto ping_actor = spawn(ping, 20);
-      auto io_actor = spawn_io_client(protobuf_io, host, port, ping_actor);
-      print_on_exit(io_actor, "protobuf_io");
-      print_on_exit(ping_actor, "ping");
-      send_as(io_actor, ping_actor, atom("kickoff"), io_actor);
+      auto ping_actor = system.spawn(ping, 20);
+      auto io_actor = system.middleman().spawn_client(protobuf_io, host,
+                                                      port, ping_actor);
+      if (io_actor) {
+        print_on_exit(ping_actor, "ping");
+        print_on_exit(*io_actor, "protobuf_io");
+        send_as(*io_actor, ping_actor, atom("kickoff"), *io_actor);
+      }
     },
     others >> [] {
       cerr << "use with eihter '-s PORT' as server or "
@@ -165,6 +174,5 @@ int main(int argc, char** argv) {
            << endl;
     }
   });
-  await_all_actors_done();
-  shutdown();
+  system.await_all_actors_done();
 }

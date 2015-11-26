@@ -4,10 +4,21 @@
 \ ******************************************************************************/
 
 #include <map>
+#include <thread>
 #include <vector>
 #include <chrono>
 #include <sstream>
 #include <iostream>
+
+namespace std {
+string to_string(const thread::id& x) {
+  ostringstream os;
+  os << x;
+  return os.str();
+}
+}
+
+
 
 #include "caf/all.hpp"
 
@@ -58,9 +69,8 @@ chopstick::behavior_type taken_chopstick(chopstick::pointer self,
       return busy_atom::value;
     },
     [=](put_atom) {
-      if (self->current_sender() == user) {
+      if (self->current_sender() == user)
         self->become(available_chopstick(self));
-      }
     }
   };
 }
@@ -96,8 +106,12 @@ chopstick::behavior_type taken_chopstick(chopstick::pointer self,
 
 class philosopher : public event_based_actor {
 public:
-  philosopher(const std::string& n, const chopstick& l, const chopstick& r)
-      : name(n),
+  philosopher(actor_config& cfg,
+              const std::string& n,
+              const chopstick& l,
+              const chopstick& r)
+      : event_based_actor(cfg),
+        name(n),
         left(l),
         right(r) {
     // a philosopher that receives {eat} stops thinking and becomes hungry
@@ -180,32 +194,26 @@ private:
   behavior    hungry;   // tries to take chopsticks
   behavior    granted;  // has one chopstick and waits for the second one
   behavior    denied;   // could not get first chopsticks
-  behavior    eating;   // waits for some time, then go thinking again
+  behavior    eating;   // wait for some time, then go thinking again
 };
 
-void dining_philosophers() {
-  scoped_actor self;
+} // namespace <anonymous>
+
+int main(int, char**) {
+  actor_system system;
+  scoped_actor self{system};
   // create five chopsticks
   aout(self) << "chopstick ids are:";
   std::vector<chopstick> chopsticks;
   for (size_t i = 0; i < 5; ++i) {
-    chopsticks.push_back(spawn(available_chopstick));
+    chopsticks.push_back(self->spawn(available_chopstick));
     aout(self) << " " << chopsticks.back()->id();
   }
   aout(self) << endl;
   // spawn five philosophers
   std::vector<std::string> names {"Plato", "Hume", "Kant",
-                                   "Nietzsche", "Descartes"};
-  for (size_t i = 0; i < 5; ++i) {
-    spawn<philosopher>(names[i], chopsticks[i], chopsticks[(i + 1) % 5]);
-  }
-}
-
-} // namespace <anonymous>
-
-int main(int, char**) {
-  dining_philosophers();
-  // real philosophers are never done
-  await_all_actors_done();
-  shutdown();
+                                  "Nietzsche", "Descartes"};
+  for (size_t i = 0; i < 5; ++i)
+    self->spawn<philosopher>(names[i], chopsticks[i], chopsticks[(i + 1) % 5]);
+  system.await_all_actors_done();
 }

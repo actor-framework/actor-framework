@@ -13,8 +13,9 @@ using namespace caf;
 using std::endl;
 
 int main() {
+  actor_system system;
   for (int i = 1; i <= 50; ++i) {
-    spawn<blocking_api>([i](blocking_actor* self) {
+    system.spawn<blocking_api>([i](blocking_actor* self) {
       aout(self) << "Hi there! This is actor nr. "
                  << i << "!" << endl;
       std::random_device rd;
@@ -30,7 +31,5 @@ int main() {
     });
   }
   // wait until all other actors we've spawned are done
-  await_all_actors_done();
-  // done
-  shutdown();
+  system.await_all_actors_done();
 }
