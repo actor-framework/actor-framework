@@ -21,12 +21,9 @@
 #define CAF_ACTOR_OSTREAM_HPP
 
 #include "caf/actor.hpp"
-#include "caf/message.hpp"
+#include "caf/deep_to_string.hpp"
 
 namespace caf {
-
-class local_actor;
-class scoped_actor;
 
 /// Provides support for thread-safe output operations on character streams. The
 /// stream operates on a per-actor basis and will print only complete lines or
@@ -45,7 +42,7 @@ public:
   /// Open redirection file in append mode.
   static constexpr int append = 0x01;
 
-  explicit actor_ostream(local_actor* self);
+  explicit actor_ostream(abstract_actor* self);
 
   /// Writes `arg` to the buffer allocated for the calling actor.
   actor_ostream& write(std::string arg);
@@ -54,31 +51,23 @@ public:
   actor_ostream& flush();
 
   /// Redirects all further output from `self` to `file_name`.
-  static void redirect(local_actor* self, std::string file_name, int flags = 0);
+  static void redirect(abstract_actor* self, std::string file_name, int flags = 0);
 
   /// Redirects all further output from any actor that did not
   /// redirect its output to `fname`.
   static void redirect_all(actor_system& sys, std::string fname, int flags = 0);
 
   /// Writes `arg` to the buffer allocated for the calling actor.
-  inline actor_ostream& operator<<(std::string arg) {
-    return write(std::move(arg));
-  }
-
-  /// Writes `arg` to the buffer allocated for the calling actor.
   inline actor_ostream& operator<<(const char* arg) {
-    return *this << std::string{arg};
+    return write(arg);
   }
 
   /// Writes `to_string(arg)` to the buffer allocated for the calling actor,
   /// calling either `std::to_string` or `caf::to_string` depending on
   /// the argument.
   template <class T>
-  inline typename std::enable_if<
-    ! std::is_convertible<T, std::string>::value, actor_ostream&
-  >::type operator<<(const T& arg) {
-    using std::to_string;
-    return write(to_string(arg));
+  inline actor_ostream& operator<<(const T& arg) {
+    return write(deep_to_string(arg));
   }
 
   /// Apply `f` to `*this`.
@@ -86,15 +75,13 @@ public:
     return f(*this);
   }
 
-  actor_ostream& operator<<(const message& msg);
-
 private:
-  local_actor* self_;
+  intrusive_ptr<abstract_actor> self_;
   actor printer_;
 };
 
 /// Convenience factory function for creating an actor output stream.
-actor_ostream aout(local_actor* self);
+actor_ostream aout(abstract_actor* self);
 
 /// Convenience factory function for creating an actor output stream.
 actor_ostream aout(scoped_actor& self);

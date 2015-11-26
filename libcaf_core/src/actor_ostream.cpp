@@ -19,34 +19,35 @@
 
 #include "caf/actor_ostream.hpp"
 
-#include "caf/all.hpp"
-#include "caf/local_actor.hpp"
+#include "caf/send.hpp"
 #include "caf/scoped_actor.hpp"
+#include "caf/abstract_actor.hpp"
 
 #include "caf/scheduler/abstract_coordinator.hpp"
 
 namespace caf {
 
-actor_ostream::actor_ostream(local_actor* self)
+actor_ostream::actor_ostream(abstract_actor* self)
     : self_(self),
       printer_(self->system().scheduler().printer()) {
   // nop
 }
 
 actor_ostream& actor_ostream::write(std::string arg) {
-  send_as(self_, printer_, add_atom::value, std::move(arg));
+  send_as(actor_cast<actor>(self_), printer_, add_atom::value, std::move(arg));
   return *this;
 }
 
 actor_ostream& actor_ostream::flush() {
-  send_as(self_, printer_, flush_atom::value);
+  send_as(actor_cast<actor>(self_), printer_, flush_atom::value);
   return *this;
 }
 
-void actor_ostream::redirect(local_actor* self, std::string fn, int flags) {
+void actor_ostream::redirect(abstract_actor* self, std::string fn, int flags) {
   if (! self)
     return;
-  send_as(self, self->system().scheduler().printer(),
+  intrusive_ptr<abstract_actor> ptr{self};
+  send_as(actor_cast<actor>(ptr), self->system().scheduler().printer(),
           redirect_atom::value, self->address(), std::move(fn), flags);
 }
 
@@ -55,11 +56,7 @@ void actor_ostream::redirect_all(actor_system& sys, std::string fn, int flags) {
             redirect_atom::value, std::move(fn), flags);
 }
 
-actor_ostream& actor_ostream::operator<<(const message&) {
-  return *this << "-message-to-string-not-implemented-yet-";
-}
-
-actor_ostream aout(local_actor* self) {
+actor_ostream aout(abstract_actor* self) {
   return actor_ostream{self};
 }
 
