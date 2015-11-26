@@ -209,8 +209,6 @@ private:
 
 // placeholder macros when compiling without logging
 inline caf::actor_id caf_set_aid_dummy() { return 0; }
-#define CAF_LOG_IMPL(lvlname, classname, funname, message)                     \
-  CAF_PRINT_ERROR_IMPL(lvlname, classname, funname, message)
 
 #define CAF_PUSH_AID(unused) CAF_VOID_STMT
 
