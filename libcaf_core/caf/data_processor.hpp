@@ -213,6 +213,7 @@ public:
   template <class T>
   typename std::enable_if<
     detail::is_iterable<T>::value
+    && ! detail::has_serialize<T>::value
   >::type
   apply(T& xs) {
     apply_sequence(dref(), xs);
@@ -278,8 +279,7 @@ public:
 
   template <class T>
   typename std::enable_if<
-    ! detail::is_iterable<T>::value
-    && ! std::is_empty<T>::value
+    ! std::is_empty<T>::value
     && detail::has_serialize<T>::value
   >::type
   apply(T& x) {
