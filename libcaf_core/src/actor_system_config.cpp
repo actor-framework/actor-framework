@@ -27,7 +27,8 @@ namespace caf {
 actor_system_config::actor_system_config() {
   // hard coded defaults
   scheduler_policy = "work-stealing";
-  scheduler_max_threads = 1;//std::thread::hardware_concurrency();
+  scheduler_max_threads = std::max(std::thread::hardware_concurrency(),
+                                   unsigned{4});
   scheduler_max_throughput = std::numeric_limits<size_t>::max();
   scheduler_enable_profiling = false;
   scheduler_profiling_ms_resolution = 100;
