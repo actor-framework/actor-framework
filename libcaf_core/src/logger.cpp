@@ -56,7 +56,10 @@ constexpr const char* log_level_name[] = {
 };
 
 #ifdef CAF_LOG_LEVEL
-constexpr int global_log_level = 0;
+static_assert(CAF_LOG_LEVEL >= 0 && CAF_LOG_LEVEL <= 4,
+              "assertion: 0 <= CAF_LOG_LEVEL <= 4");
+
+constexpr int global_log_level = CAF_LOG_LEVEL;
 
 #ifdef CAF_MSVC
 thread_local
@@ -78,15 +81,6 @@ inline logger* get_current_logger() {
   return sys ? &sys->logger() : nullptr;
 }
 #else
-static_assert(CAF_LOG_LEVEL >= 0 && CAF_LOG_LEVEL <= 4,
-              "assertion: 0 <= CAF_LOG_LEVEL <= 4");
-
-constexpr int global_log_level = CAF_LOG_LEVEL;
-
-inline actor_system* current_logger_system() {
-  return nullptr;
-}
-
 inline void current_logger_system(actor_system*) {
   // nop
 }
@@ -305,18 +299,22 @@ void logger::run() {
 }
 
 void logger::start() {
+# ifdef CAF_LOG_LEVEL
   const char* log_level_table[] = {"ERROR", "WARN", "INFO", "DEBUG", "TRACE"};
   thread_ = std::thread{[this] { this->run(); }};
   std::string msg = "ENTRY log level = ";
   msg += log_level_table[global_log_level];
   log(4, "caf::logger", "run", __FILE__, __LINE__, msg);
+# endif
 }
 
 void logger::stop() {
+# ifdef CAF_LOG_LEVEL
   log(4, "caf::logger", "run", __FILE__, __LINE__, "EXIT");
   // an empty string means: shut down
   queue_.synchronized_enqueue(queue_mtx_, queue_cv_, new event{""});
   thread_.join();
+# endif
 }
 
 } // namespace caf
