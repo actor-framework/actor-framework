@@ -23,6 +23,7 @@
 #include <utility>
 #include <sstream>
 #include <iomanip>
+#include <iterator>
 #include <functional>
 #include <type_traits>
 
@@ -30,7 +31,6 @@
 #include "caf/serializer.hpp"
 #include "caf/primitive_variant.hpp"
 
-#include "caf/detail/ieee_754.hpp"
 #include "caf/detail/type_traits.hpp"
 
 namespace caf {
@@ -39,9 +39,31 @@ namespace caf {
 class binary_serializer : public serializer {
 public:
   /// Creates a binary serializer writing to given iterator position.
-  template <class Out>
-  binary_serializer(execution_unit* ctx, Out iter) : serializer(ctx) {
-    reset(iter);
+  template <class C,
+            class Out,
+            class E =
+              typename std::enable_if<
+                std::is_same<
+                  typename std::iterator_traits<Out>::iterator_category,
+                  std::output_iterator_tag
+                >::value
+                || std::is_same<
+                    typename std::iterator_traits<Out>::iterator_category,
+                    std::random_access_iterator_tag
+                  >::value
+              >::type>
+  binary_serializer(C&& ctx, Out it) : serializer(std::forward<C>(ctx)) {
+    reset_iter(it);
+  }
+
+  template <class C,
+            class T,
+            class E =
+              typename std::enable_if<
+                detail::has_char_insert<T>::value
+              >::type>
+  binary_serializer(C&& ctx, T& out) : serializer(std::forward<C>(ctx)) {
+    reset_container(out);
   }
 
   using write_fun = std::function<void(const char*, size_t)>;
@@ -59,7 +81,7 @@ public:
   void apply_builtin(builtin in_out_type, void* in_out) override;
 
   template <class OutIter>
-  void reset(OutIter iter) {
+  void reset_iter(OutIter iter) {
     struct fun {
       fun(OutIter pos) : pos_(pos) {
         // nop
@@ -70,6 +92,21 @@ public:
       OutIter pos_;
     };
     out_ = fun{iter};
+  }
+
+  template <class T>
+  void reset_container(T& x) {
+    struct fun {
+      fun(T& container) : x_(container) {
+        // nop
+      }
+      void operator()(const char* first, size_t num_bytes) {
+        auto last = first + num_bytes;
+        x_.insert(x_.end(), first, last);
+      }
+      T& x_;
+    };
+    out_ = fun{x};
   }
 
 private:

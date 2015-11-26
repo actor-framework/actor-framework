@@ -39,6 +39,8 @@ public:
 
   using is_loading = std::false_type;
 
+  explicit serializer(actor_system& sys);
+
   explicit serializer(execution_unit* ctx);
 
   virtual ~serializer();
