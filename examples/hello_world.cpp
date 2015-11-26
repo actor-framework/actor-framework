@@ -36,12 +36,11 @@ void hello_world(event_based_actor* self, const actor& buddy) {
 }
 
 int main() {
+  actor_system system;
   // create a new actor that calls 'mirror()'
-  auto mirror_actor = spawn(mirror);
+  auto mirror_actor = system.spawn(mirror);
   // create another actor that calls 'hello_world(mirror_actor)';
-  spawn(hello_world, mirror_actor);
+  system.spawn(hello_world, mirror_actor);
   // wait until all other actors we have spawned are done
-  await_all_actors_done();
-  // run cleanup code before exiting main
-  shutdown();
+  system.await_all_actors_done();
 }

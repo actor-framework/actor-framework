@@ -71,18 +71,12 @@ int main(int argc, char** argv) {
     {"name,n", "set name", name},
     {"group,g", "join group", group_id}
   });
-  if (! res.error.empty()) {
-    cerr << res.error << endl;
-    return 1;
-  }
-  if (! res.remainder.empty()) {
-    std::cout << res.helptext << std::endl;
-    return 1;
-  }
-  if (res.opts.count("help") > 0) {
-    cout << res.helptext << endl;
-    return 0;
-  }
+  if (! res.error.empty())
+    return cerr << res.error << endl, 1;
+  if (! res.remainder.empty())
+    return std::cout << res.helptext << std::endl, 1;
+  if (res.opts.count("help") > 0)
+    return cout << res.helptext << endl, 0;
   while (name.empty()) {
     cout << "please enter your name: " << flush;
     if (! getline(cin, name)) {
@@ -90,7 +84,10 @@ int main(int argc, char** argv) {
       return 1;
     }
   }
-  auto client_actor = spawn(client, name);
+  actor_system_config cfg;
+  cfg.load<io::middleman>();
+  actor_system system{cfg};
+  auto client_actor = system.spawn(client, name);
   // evaluate group parameters
   if (! group_id.empty()) {
     auto p = group_id.find(':');
@@ -101,14 +98,15 @@ int main(int argc, char** argv) {
       try {
         auto module = group_id.substr(0, p);
         auto group_uri = group_id.substr(p + 1);
-        auto g = (module == "remote") ? io::remote_group(group_uri)
-                                      : group::get(module, group_uri);
+        auto g = (module == "remote")
+                 ? system.middleman().remote_group(group_uri)
+                 : system.groups().get(module, group_uri);
         anon_send(client_actor, join_atom::value, g);
       }
       catch (exception& e) {
         cerr << "*** exception: group::get(\"" << group_id.substr(0, p)
-           << "\", \"" << group_id.substr(p + 1) << "\") failed; "
-           << to_verbose_string(e) << endl;
+           << "\", \"" << group_id.substr(p + 1) << "\") failed: "
+           << e.what() << endl;
       }
     }
   }
@@ -127,12 +125,12 @@ int main(int argc, char** argv) {
       [&](const string& cmd, const string& mod, const string& id) {
         if (cmd == "/join") {
           try {
-            group grp = (mod == "remote") ? io::remote_group(id)
-              : group::get(mod, id);
+            group grp = (mod == "remote") ? system.middleman().remote_group(id)
+                                          : system.groups().get(mod, id);
             anon_send(client_actor, join_atom::value, grp);
           }
           catch (exception& e) {
-            cerr << "*** exception: " << to_verbose_string(e) << endl;
+            cerr << "*** exception: " << e.what() << endl;
           }
         }
         else {
@@ -158,6 +156,5 @@ int main(int argc, char** argv) {
   }
   // force actor to quit
   anon_send_exit(client_actor, exit_reason::user_shutdown);
-  await_all_actors_done();
-  shutdown();
+  system.await_all_actors_done();
 }

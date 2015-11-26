@@ -51,8 +51,9 @@ behavior calculator() {
 
 class client_impl : public event_based_actor {
 public:
-  client_impl(string hostaddr, uint16_t port)
-      : host_(std::move(hostaddr)),
+  client_impl(actor_config& cfg, string hostaddr, uint16_t port)
+      : event_based_actor(cfg),
+        host_(std::move(hostaddr)),
         port_(port) {
     // nop
   }
@@ -103,7 +104,7 @@ private:
 
   behavior reconnecting(std::function<void()> continuation = nullptr) {
     using std::chrono::seconds;
-    auto mm = io::get_middleman_actor();
+    auto mm = system().middleman().actor_handle();
     send(mm, connect_atom::value, host_, port_);
     return {
       [=](ok_atom, node_id&, actor_addr& new_server, std::set<std::string>&) {
@@ -179,16 +180,14 @@ maybe<int> toint(const string& str) {
 
 // converts "+" to the atom '+' and "-" to the atom '-'
 maybe<atom_value> plus_or_minus(const string& str) {
-  if (str == "+") {
-    return maybe<atom_value>{plus_atom::value};
-  }
-  if (str == "-") {
-    return maybe<atom_value>{minus_atom::value};
-  }
+  if (str == "+")
+    return plus_atom::value;
+  if (str == "-")
+    return minus_atom::value;
   return none;
 }
 
-void client_repl(string host, uint16_t port) {
+void client_repl(actor_system& system, string host, uint16_t port) {
   // keeps track of requests and tries to reconnect on server failures
   auto usage = [] {
   cout << "Usage:" << endl
@@ -200,7 +199,7 @@ void client_repl(string host, uint16_t port) {
   };
   usage();
   bool done = false;
-  auto client = spawn<client_impl>(std::move(host), port);
+  auto client = system.spawn<client_impl>(std::move(host), port);
   // defining the handler outside the loop is more efficient as it avoids
   // re-creating the same object over and over again
   message_handler eval{
@@ -258,54 +257,42 @@ int main(int argc, char** argv) {
     {"server,s", "run in server mode"},
     {"client,c", "run in client mode"}
   });
-  if (! res.error.empty()) {
-    cerr << res.error << endl;
-    return 1;
-  }
-  if (res.opts.count("help") > 0) {
-    cout << res.helptext << endl;
-    return 0;
-  }
-  if (! res.remainder.empty()) {
-    // not all CLI arguments could be consumed
-    cerr << "*** invalid command line options" << endl << res.helptext << endl;
-    return 1;
-  }
+  if (! res.error.empty())
+    return cerr << res.error << endl, 1;
+  if (res.opts.count("help") > 0)
+    return cout << res.helptext << endl, 0;
+  // not all CLI arguments could be consumed
+  if (! res.remainder.empty())
+    return cerr << "*** invalid CLI options" << endl << res.helptext << endl, 1;
   bool is_server = res.opts.count("server") > 0;
   if (is_server == (res.opts.count("client") > 0)) {
-    if (is_server) {
+    if (is_server)
       cerr << "*** cannot be server and client at the same time" << endl;
-    } else {
+    else
       cerr << "*** either --server or --client option must be set" << endl;
-    }
     return 1;
   }
-  if (! is_server && port == 0) {
-    cerr << "*** no port to server specified" << endl;
-    return 1;
-  }
+  if (! is_server && port == 0)
+    return cerr << "*** no port to server specified" << endl, 1;
+  actor_system_config cfg;
+  cfg.load<io::middleman>();
+  actor_system system{cfg};
   if (is_server) {
-    auto calc = spawn(calculator);
-    try {
-      // try to publish math actor at given port
-      cout << "*** try publish at port " << port << endl;
-      auto p = io::publish(calc, port);
-      cout << "*** server successfully published at port " << p << endl;
-      cout << "*** press [enter] to quit" << endl;
-      string dummy;
-      std::getline(std::cin, dummy);
-      cout << "... cya" << endl;
-    }
-    catch (std::exception& e) {
-      cerr << "*** unable to publish math actor at port " << port << "\n"
-         << to_verbose_string(e) // prints exception type and e.what()
-         << endl;
-    }
+    auto calc = system.spawn(calculator);
+    // try to publish math actor at given port
+    cout << "*** try publish at port " << port << endl;
+    auto p = system.middleman().publish(calc, port);
+    if (! p)
+      return cerr << "*** error: " << p.error().message() << endl, 1;
+    cout << "*** server successfully published at port " << *p << endl;
+    cout << "*** press [enter] to quit" << endl;
+    string dummy;
+    std::getline(std::cin, dummy);
+    cout << "... cya" << endl;
     anon_send_exit(calc, exit_reason::user_shutdown);
   }
   else {
-    client_repl(host, port);
+    client_repl(system, host, port);
   }
-  await_all_actors_done();
-  shutdown();
+  system.await_all_actors_done();
 }

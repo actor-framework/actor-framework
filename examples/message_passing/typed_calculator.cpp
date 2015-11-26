@@ -33,6 +33,10 @@ calculator_type::behavior_type typed_calculator(calculator_type::pointer) {
 
 class typed_calculator_class : public calculator_type::base {
 protected:
+  typed_calculator_class(actor_config& cfg) : calculator_type::base(cfg) {
+    // nop
+  }
+
   behavior_type make_behavior() override {
     return {
       [](plus_atom, int x, int y) {
@@ -73,12 +77,11 @@ void tester(event_based_actor* self, const calculator_type& testee) {
 } // namespace <anonymous>
 
 int main() {
+  actor_system system;
   // test function-based impl
-  spawn(tester, spawn(typed_calculator));
-  await_all_actors_done();
+  system.spawn(tester, system.spawn(typed_calculator));
+  system.await_all_actors_done();
   // test class-based impl
-  spawn(tester, spawn<typed_calculator_class>());
-  await_all_actors_done();
-  // done
-  shutdown();
+  system.spawn(tester, system.spawn<typed_calculator_class>());
+  system.await_all_actors_done();
 }

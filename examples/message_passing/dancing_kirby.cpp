@@ -71,7 +71,7 @@ void dancing_kirby(event_based_actor* self) {
 }
 
 int main() {
-  spawn(dancing_kirby);
-  await_all_actors_done();
-  shutdown();
+  actor_system system;
+  system.spawn(dancing_kirby);
+  system.await_all_actors_done();
 }

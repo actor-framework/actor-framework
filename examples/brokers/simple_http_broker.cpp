@@ -95,12 +95,15 @@ int main(int argc, const char** argv) {
   }
   cout << "*** run in server mode listen on: " << port << endl;
   cout << "*** to quit the program, simply press <enter>" << endl;
-  auto server_actor = spawn_io_server(server, port);
+  actor_system system;
+  auto server_actor = system.middleman().spawn_server(server, port);
+  if (! server_actor)
+    return cerr << "*** spawn_server failed: "
+                << server_actor.error().message() << endl, 1;
   // wait for any input
   std::string dummy;
   std::getline(std::cin, dummy);
   // kill server
-  anon_send_exit(server_actor, exit_reason::user_shutdown);
-  await_all_actors_done();
-  shutdown();
+  anon_send_exit(*server_actor, exit_reason::user_shutdown);
+  system.await_all_actors_done();
 }
