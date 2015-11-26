@@ -25,12 +25,13 @@
 
 #include "caf/serializer.hpp"
 #include "caf/deserializer.hpp"
+#include "caf/deep_to_string.hpp"
 
 #include "caf/detail/type_nr.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/message_data.hpp"
-#include "caf/deep_to_string.hpp"
+#include "caf/detail/try_serialize.hpp"
 
 namespace caf {
 namespace detail {
@@ -59,7 +60,7 @@ struct tup_ptr_access {
   template <class T, class U>
   static void serialize(size_t pos, T& tup, U& in_or_out) {
     if (pos == Pos)
-      in_or_out & std::get<Pos>(tup);
+      try_serialize(in_or_out, &std::get<Pos>(tup));
     else
       tup_ptr_access<Pos + 1, Max>::serialize(pos, tup, in_or_out);
   }

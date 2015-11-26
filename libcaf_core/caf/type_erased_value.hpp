@@ -22,9 +22,11 @@
 
 #include <typeinfo>
 
+#include "caf/deep_to_string.hpp"
+
 #include "caf/detail/type_nr.hpp"
 #include "caf/detail/safe_equal.hpp"
-#include "caf/deep_to_string.hpp"
+#include "caf/detail/try_serialize.hpp"
 
 namespace caf {
 
@@ -75,11 +77,11 @@ struct type_erased_value_impl : public type_erased_value {
   }
 
   void save(serializer& sink) const override {
-    sink & const_cast<T&>(x);
+    detail::try_serialize(sink, const_cast<T*>(&x));
   }
 
   void load(deserializer& source) override {
-    source & x;
+    detail::try_serialize(source, &x);
   }
 
   std::string stringify() const override {

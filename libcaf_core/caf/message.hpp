@@ -393,11 +393,6 @@ make_message(V&& x, Ts&&... xs) {
         typename strip_and_convert<Ts>::type
       >::type...
     >;
-  static_assert(tl_forall<stored_types, is_serializable>::value,
-                "at least one type is not serializable via free "
-                "'serialize(InOrOut&, T&, const unsigned int)' or"
-                "`T::sereialize(InOrOut&, const unsigned int)` "
-                "member function");
   using storage = typename tl_apply<stored_types, tuple_vals>::type;
   auto ptr = make_counted<storage>(std::forward<V>(x), std::forward<Ts>(xs)...);
   return message{detail::message_data::cow_ptr{std::move(ptr)}};
