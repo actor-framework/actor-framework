@@ -287,11 +287,11 @@ private:
     auto init = fac(std::move(fun), std::forward<Ts>(xs)...);
     auto hdl = backend().new_tcp_doorman(port).first;
     actor_config cfg{&backend()};
-    cfg.init_fun = [hdl](local_actor* ptr) -> behavior {
+    cfg.init_fun = [hdl, init](local_actor* ptr) -> behavior {
       static_cast<abstract_broker*>(ptr)->assign_tcp_doorman(hdl);
       return init(ptr);
     };
-    return system().spawn_class<Os, Impl>(cfg);
+    return system().spawn_class<Impl, Os>(cfg);
   }
 
   uint16_t publish(const actor_addr& whom, std::set<std::string> sigs,
