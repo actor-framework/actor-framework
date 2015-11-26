@@ -125,6 +125,9 @@ public:
   friend class abstract_actor;
   friend class io::middleman;
 
+  actor_system(const actor_system&) = delete;
+  actor_system& operator=(const actor_system&) = delete;
+
   /// An (optional) component of the actor system.
   class module {
   public:
@@ -207,6 +210,10 @@ public:
   /// Returns the middleman instance from the I/O module.
   /// @throws `std::logic_error` if the I/O module has not been loaded.
   io::middleman& middleman();
+
+  /// Returns a dummy execution unit that forwards
+  /// everything to the scheduler.
+  scoped_execution_unit* dummy_execution_unit();
 
   /// Returns a new actor ID.
   actor_id next_actor_id();
@@ -376,9 +383,8 @@ private:
                 : 0;
     if (has_detach_flag(Os) || has_blocking_api_flag(Os))
       cfg.flags |= abstract_actor::is_detached_flag;
-    scoped_execution_unit context{this};
     if (! cfg.host)
-      cfg.host = &context;
+      cfg.host = dummy_execution_unit();
     auto ptr = make_counted<C>(cfg, std::forward<Ts>(xs)...);
     CAF_SET_LOGGER_SYS(this);
     CAF_LOG_DEBUG("spawned actor:" << CAF_ARG(ptr->id()));
@@ -395,6 +401,7 @@ private:
   group_manager groups_;
   module_array modules_;
   io::middleman* middleman_;
+  scoped_execution_unit dummy_execution_unit_;
 };
 
 } // namespace caf

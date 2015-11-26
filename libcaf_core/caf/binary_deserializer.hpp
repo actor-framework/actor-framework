@@ -31,9 +31,16 @@ namespace caf {
 /// Implements the deserializer interface with a binary serialization protocol.
 class binary_deserializer : public deserializer {
 public:
+  binary_deserializer(actor_system& sys, const void* buf, size_t buf_size);
   binary_deserializer(execution_unit* ctx, const void* buf, size_t buf_size);
-
+  binary_deserializer(actor_system& ctx, const void* first, const void* last);
   binary_deserializer(execution_unit* ctx, const void* first, const void* last);
+
+  template <class C, class T>
+  binary_deserializer(C&& ctx, const T& xs)
+      : binary_deserializer(std::forward<C>(ctx), xs.data(), xs.size()) {
+    // nop
+  }
 
   /// Replaces the current read buffer.
   void set_rdbuf(const void* buf, size_t buf_size);

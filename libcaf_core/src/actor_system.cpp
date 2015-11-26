@@ -55,7 +55,8 @@ actor_system::actor_system(actor_system_config&& cfg)
       logger_(*this),
       registry_(*this),
       groups_(*this),
-      middleman_(nullptr) {
+      middleman_(nullptr),
+      dummy_execution_unit_(this) {
   CAF_SET_LOGGER_SYS(this);
   for (auto& f : cfg.module_factories_) {
     auto ptr = f(*this);
@@ -172,6 +173,10 @@ io::middleman& actor_system::middleman() {
   if (! middleman_)
     throw std::logic_error("cannot access middleman: I/O module not loaded");
   return *middleman_;
+}
+
+scoped_execution_unit* actor_system::dummy_execution_unit() {
+  return &dummy_execution_unit_;
 }
 
 actor_id actor_system::next_actor_id() {

@@ -73,11 +73,22 @@ void apply_float(binary_deserializer& bd, T& x) {
 
 } // namespace <anonmyous>
 
-binary_deserializer::binary_deserializer(execution_unit* ctx,
+binary_deserializer::binary_deserializer(actor_system& sys,
                                          const void* buf, size_t buf_size)
-    : deserializer(ctx),
-      pos_(buf),
-      end_(advanced(buf, buf_size)) {
+  : binary_deserializer(sys, buf, advanced(buf, buf_size)) {
+  // nop
+}
+
+binary_deserializer::binary_deserializer(execution_unit* ctx,
+                                         const void* buf,
+                                         size_t buf_size)
+    : binary_deserializer(ctx, buf, advanced(buf, buf_size)) {
+  // nop
+}
+
+binary_deserializer::binary_deserializer(actor_system& sys,
+                                         const void* first, const void* last)
+    : binary_deserializer(sys.dummy_execution_unit(), first, last) {
   // nop
 }
 

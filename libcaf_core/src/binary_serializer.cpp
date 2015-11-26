@@ -17,9 +17,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/binary_serializer.hpp"
+
 #include <limits>
 
-#include "caf/binary_serializer.hpp"
+#include "caf/detail/ieee_754.hpp"
 #include "caf/detail/network_order.hpp"
 
 namespace caf {

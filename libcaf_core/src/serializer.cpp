@@ -19,7 +19,13 @@
 
 #include "caf/serializer.hpp"
 
+#include "caf/actor_system.hpp"
+
 namespace caf {
+
+serializer::serializer(actor_system& sys) : super(sys.dummy_execution_unit()) {
+  // nop
+}
 
 serializer::serializer(execution_unit* ctx) : super(ctx) {
   // nop

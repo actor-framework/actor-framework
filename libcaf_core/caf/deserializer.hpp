@@ -40,6 +40,8 @@ public:
 
   using is_loading = std::true_type;
 
+  explicit deserializer(actor_system& sys);
+
   explicit deserializer(execution_unit* ctx);
 };
 

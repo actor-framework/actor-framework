@@ -229,7 +229,7 @@ public:
         >::type...>;
     token tk;
     check_typed_input(dest, tk);
-    delayed_send_impl(message_id::make(), actor_cast<abstract_channel*>(dest),
+    delayed_send_impl(message_id::make(), actor_cast<channel>(dest),
                       rtime, make_message(std::forward<Ts>(xs)...));
   }
 

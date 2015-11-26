@@ -187,6 +187,32 @@ public:
   static constexpr bool value = std::is_same<bool, result_type>::value;
 };
 
+/// Checks wheter `T x` allows `x.insert(x.end(), first, last)` where
+/// both `first` and `last` have type `const char*`.
+template <class T>
+class has_char_insert {
+  template <class C>
+  static bool sfinae_fun(C* cc,
+                         const char* first = nullptr,
+                         const char* last = nullptr,
+                         decltype(cc->insert(cc->end(), first, last))* = 0) {
+    return true;
+  }
+
+  // SFNINAE default
+  static void sfinae_fun(const void*) {
+    // nop
+  }
+
+  using decayed = typename std::decay<T>::type;
+
+  using result_type = decltype(sfinae_fun(static_cast<decayed*>(nullptr)));
+
+public:
+  static constexpr bool value = is_primitive<T>::value == false &&
+                  std::is_same<bool, result_type>::value;
+};
+
 /// Checks wheter `T` has `begin()` and `end()` member
 /// functions returning forward iterators.
 template <class T>
