@@ -23,6 +23,8 @@
 #include "caf/io/broker.hpp"
 #include "caf/io/middleman.hpp"
 
+#include "caf/scheduler/abstract_coordinator.hpp"
+
 #include "caf/io/network/asio_multiplexer.hpp"
 
 namespace caf {
@@ -33,7 +35,7 @@ namespace {
 
 /// A wrapper for the supervisor backend provided by boost::asio.
 struct asio_supervisor : public multiplexer::supervisor {
-  explicit asio_supervisor(io_backend& iob) : work(iob) {
+  explicit asio_supervisor(io_service& iob) : work(iob) {
     // nop
   }
 
@@ -43,7 +45,7 @@ private:
 
 } // namespace anonymous
 
-default_socket new_tcp_connection(io_backend& backend, const std::string& host,
+default_socket new_tcp_connection(io_service& backend, const std::string& host,
                                   uint16_t port) {
   default_socket fd{backend};
   using boost::asio::ip::tcp;
@@ -94,7 +96,7 @@ void ip_bind(default_socket_acceptor& fd, uint16_t port,
 
 connection_handle asio_multiplexer::new_tcp_scribe(const std::string& host,
                                                    uint16_t port) {
-  default_socket fd{new_tcp_connection(backend(), host, port)};
+  default_socket fd{new_tcp_connection(service(), host, port)};
   auto id = int64_from_native_socket(fd.native_handle());
   std::lock_guard<std::mutex> lock(mtx_sockets_);
   unassigned_sockets_.insert(std::make_pair(id, std::move(fd)));
@@ -117,10 +119,10 @@ connection_handle asio_multiplexer::add_tcp_scribe(abstract_broker* self,
   CAF_LOG_TRACE("");
   class impl : public scribe {
   public:
-    impl(abstract_broker* ptr, Socket&& s)
+    impl(abstract_broker* ptr, asio_multiplexer& ref, Socket&& s)
         : scribe(ptr, network::conn_hdl_from_socket(s)),
           launched_(false),
-          stream_(s.get_io_service()) {
+          stream_(ref) {
       stream_.init(std::move(s));
     }
     void configure_read(receive_policy::config config) override {
@@ -139,7 +141,7 @@ connection_handle asio_multiplexer::add_tcp_scribe(abstract_broker* self,
     void stop_reading() override {
       CAF_LOG_TRACE("");
       stream_.stop_reading();
-      detach(false);
+      detach(&stream_.backend(), false);
     }
     void flush() override {
       CAF_LOG_TRACE("");
@@ -162,7 +164,7 @@ connection_handle asio_multiplexer::add_tcp_scribe(abstract_broker* self,
     bool launched_;
     stream<Socket> stream_;
   };
-  auto ptr = make_counted<impl>(self, std::move(sock));
+  auto ptr = make_counted<impl>(self, *this, std::move(sock));
   self->add_scribe(ptr);
   return ptr->hdl();
 }
@@ -171,7 +173,7 @@ connection_handle asio_multiplexer::add_tcp_scribe(abstract_broker* self,
                                                    native_socket fd) {
   CAF_LOG_TRACE(CAF_ARG(self) << ", " << CAF_ARG(fd));
   boost::system::error_code ec;
-  default_socket sock{backend()};
+  default_socket sock{service()};
   sock.assign(boost::asio::ip::tcp::v6(), fd, ec);
   if (ec) {
     sock.assign(boost::asio::ip::tcp::v4(), fd, ec);
@@ -186,13 +188,13 @@ connection_handle asio_multiplexer::add_tcp_scribe(abstract_broker* self,
                                                    const std::string& host,
                                                    uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(self) << ", " << CAF_ARG(host) << ":" << CAF_ARG(port));
-  return add_tcp_scribe(self, new_tcp_connection(backend(), host, port));
+  return add_tcp_scribe(self, new_tcp_connection(service(), host, port));
 }
 
 std::pair<accept_handle, uint16_t>
 asio_multiplexer::new_tcp_doorman(uint16_t port, const char* in, bool rflag) {
   CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (in ? in : "nullptr"));
-  default_socket_acceptor fd{backend()};
+  default_socket_acceptor fd{service()};
   ip_bind(fd, port, in, rflag);
   auto id = int64_from_native_socket(fd.native_handle());
   auto assigned_port = fd.local_endpoint().port();
@@ -229,12 +231,12 @@ asio_multiplexer::add_tcp_doorman(abstract_broker* self,
       auto& am = acceptor_.backend();
       msg().handle
         = am.add_tcp_scribe(parent(), std::move(acceptor_.accepted_socket()));
-      invoke_mailbox_element();
+      invoke_mailbox_element(&am);
     }
     void stop_reading() override {
       CAF_LOG_TRACE("");
       acceptor_.stop();
-      detach(false);
+      detach(&acceptor_.backend(), false);
     }
     void launch() override {
       CAF_LOG_TRACE("");
@@ -257,7 +259,7 @@ asio_multiplexer::add_tcp_doorman(abstract_broker* self,
 
 accept_handle asio_multiplexer::add_tcp_doorman(abstract_broker* self,
                                                 native_socket fd) {
-  default_socket_acceptor sock{backend()};
+  default_socket_acceptor sock{service()};
   boost::system::error_code ec;
   sock.assign(boost::asio::ip::tcp::v6(), fd, ec);
   if (ec) {
@@ -272,16 +274,34 @@ accept_handle asio_multiplexer::add_tcp_doorman(abstract_broker* self,
 std::pair<accept_handle, uint16_t>
 asio_multiplexer::add_tcp_doorman(abstract_broker* self, uint16_t port, const char* in,
                                   bool rflag) {
-  default_socket_acceptor fd{backend()};
+  default_socket_acceptor fd{service()};
   ip_bind(fd, port, in, rflag);
   auto p = fd.local_endpoint().port();
   return {add_tcp_doorman(self, std::move(fd)), p};
 }
 
-void asio_multiplexer::dispatch_runnable(runnable_ptr ptr) {
-  backend().post([=]() {
-    ptr->run();
-  });
+void asio_multiplexer::exec_later(resumable* rptr) {
+  switch (rptr->subtype()) {
+    case resumable::io_actor:
+    case resumable::function_object: {
+      intrusive_ptr<resumable> ptr{rptr};
+      service().post([=]() {
+        switch (ptr->resume(this, max_throughput())) {
+          case resumable::resume_later:
+            exec_later(ptr.get());
+            break;
+          case resumable::done:
+            intrusive_ptr_release(ptr.get());
+            break;
+          default:
+            ; // ignored
+        }
+      });
+      break;
+    }
+    default:
+     system().scheduler().enqueue(rptr);
+  }
 }
 
 asio_multiplexer::asio_multiplexer(actor_system* sys) : multiplexer(sys) {
@@ -293,20 +313,19 @@ asio_multiplexer::~asio_multiplexer() {
 }
 
 multiplexer::supervisor_ptr asio_multiplexer::make_supervisor() {
-  return std::unique_ptr<asio_supervisor>(new asio_supervisor(backend()));
+  return std::unique_ptr<asio_supervisor>(new asio_supervisor(service()));
 }
 
 void asio_multiplexer::run() {
   CAF_LOG_TRACE("asio-based multiplexer");
   boost::system::error_code ec;
-  backend().run(ec);
-  if (ec) {
+  service().run(ec);
+  if (ec)
     throw std::runtime_error(ec.message());
-  }
 }
 
 boost::asio::io_service* asio_multiplexer::pimpl() {
-  return &backend_;
+  return &service_;
 }
 
 } // namesapce network

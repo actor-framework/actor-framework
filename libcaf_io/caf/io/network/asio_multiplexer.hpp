@@ -40,7 +40,7 @@ namespace io {
 namespace network {
 
 /// Low-level backend for IO multiplexing.
-using io_backend = boost::asio::io_service;
+using io_service = boost::asio::io_service;
 
 /// Low-level socket type used as default.
 using default_socket = boost::asio::ip::tcp::socket;
@@ -81,7 +81,7 @@ public:
   std::pair<accept_handle, uint16_t>
   add_tcp_doorman(abstract_broker*, uint16_t port, const char* in, bool rflag) override;
 
-  void dispatch_runnable(runnable_ptr ptr) override;
+  void exec_later(resumable* ptr) override;
 
   asio_multiplexer(actor_system* sys);
 
@@ -93,12 +93,12 @@ public:
 
   boost::asio::io_service* pimpl() override;
 
-private:
-  inline boost::asio::io_service& backend() {
-    return backend_;
+  inline boost::asio::io_service& service() {
+    return service_;
   }
 
-  io_backend backend_;
+private:
+  io_service service_;
   std::mutex mtx_sockets_;
   std::mutex mtx_acceptors_;
   std::map<int64_t, default_socket> unassigned_sockets_;
@@ -131,16 +131,27 @@ public:
   /// A buffer class providing a compatible interface to `std::vector`.
   using buffer_type = std::vector<char>;
 
-  stream(io_backend& backend) : writing_(false), fd_(backend) {
+  stream(asio_multiplexer& ref)
+      : writing_(false),
+        fd_(ref.service()),
+        backend_(ref) {
     configure_read(receive_policy::at_most(1024));
   }
 
   /// Returns the IO socket.
-  Socket& socket_handle() { return fd_; }
-  const Socket& socket_handle() const { return fd_; }
+  Socket& socket_handle() {
+    return fd_;
+  }
+
+  /// Returns the IO socket.
+  const Socket& socket_handle() const {
+    return fd_;
+  }
 
   /// Initializes this stream, setting the socket handle to `fd`.
-  void init(Socket fd) { fd_ = std::move(fd); }
+  void init(Socket fd) {
+    fd_ = std::move(fd);
+  }
 
   /// Starts reading data from the socket, forwarding incoming data to `mgr`.
   void start(const manager_ptr& mgr) {
@@ -168,9 +179,13 @@ public:
   /// Returns the write buffer of this stream.
   /// @warning Must not be modified outside the IO multiplexers event loop
   ///          once the stream has been started.
-  buffer_type& wr_buf() { return wr_offline_buf_; }
+  buffer_type& wr_buf() {
+    return wr_offline_buf_;
+  }
 
-  buffer_type& rd_buf() { return rd_buf_; }
+  buffer_type& rd_buf() {
+    return rd_buf_;
+  }
 
   /// Sends the content of the write buffer, calling the `io_failure`
   /// member function of `mgr` in case of an error.
@@ -186,26 +201,29 @@ public:
 
   /// Closes the network connection, thus stopping this stream.
   void stop() {
-    CAF_LOGMF(CAF_TRACE, "");
+    CAF_LOG_TRACE("");
     fd_.close();
   }
 
   void stop_reading() {
-    CAF_LOGMF(CAF_TRACE, "");
+    CAF_LOG_TRACE("");
     boost::system::error_code ec; // ignored
     fd_.shutdown(boost::asio::ip::tcp::socket::shutdown_receive, ec);
+  }
+
+  asio_multiplexer& backend() {
+    return backend_;
   }
 
 private:
   void read_loop(const manager_ptr& mgr) {
     auto cb = [=](const boost::system::error_code& ec, size_t read_bytes) {
-      CAF_LOGC(CAF_TRACE, "caf::io::network::stream", "read_loop$cb",
-               CAF_ARG(this));
+      CAF_LOG_TRACE("");
       if (! ec) {
-        mgr->consume(rd_buf_.data(), read_bytes);
+        mgr->consume(&backend(), rd_buf_.data(), read_bytes);
         read_loop(mgr);
       } else {
-        mgr->io_failure(operation::read);
+        mgr->io_failure(&backend(), operation::read);
       }
     };
     switch (rd_flag_) {
@@ -244,17 +262,14 @@ private:
     boost::asio::async_write(
       fd_, boost::asio::buffer(wr_buf_),
       [=](const boost::system::error_code& ec, size_t nb) {
-        CAF_LOGC(CAF_TRACE, "caf::io::network::stream", "write_loop$lambda",
-                 CAF_ARG(this));
+        CAF_LOG_TRACE("");
         static_cast<void>(nb); // silence compiler warning
         if (! ec) {
-          CAF_LOGC(CAF_DEBUG, "caf::io::network::stream", "write_loop$lambda",
-                   nb << " bytes sent");
+          CAF_LOG_DEBUG(CAF_ARG(nb));
           write_loop(mgr);
         } else {
-          CAF_LOGC(CAF_DEBUG, "caf::io::network::stream", "write_loop$lambda",
-                   "error during send: " << ec.message());
-          mgr->io_failure(operation::read);
+          CAF_LOG_DEBUG(CAF_ARG(ec.message()));
+          mgr->io_failure(&backend(), operation::read);
           writing_ = false;
         }
       });
@@ -264,18 +279,17 @@ private:
     fd_.async_read_some(boost::asio::buffer(rd_buf_.data() + collected_bytes,
                                              rd_buf_.size() - collected_bytes),
                          [=](const boost::system::error_code& ec, size_t nb) {
-      CAF_LOGC(CAF_TRACE, "caf::io::network::stream", "collect_data$lambda",
-               CAF_ARG(this));
+      CAF_LOG_TRACE(CAF_ARG(nb));
       if (! ec) {
         auto sum = collected_bytes + nb;
         if (sum >= rd_size_) {
-          mgr->consume(rd_buf_.data(), sum);
+          mgr->consume(&backend(), rd_buf_.data(), sum);
           read_loop(mgr);
         } else {
           collect_data(mgr, sum);
         }
       } else {
-        mgr->io_failure(operation::write);
+        mgr->io_failure(&backend(), operation::write);
       }
     });
   }
@@ -287,6 +301,7 @@ private:
   buffer_type rd_buf_;
   buffer_type wr_buf_;
   buffer_type wr_offline_buf_;
+  asio_multiplexer& backend_;
 };
 
 /// An acceptor is responsible for accepting incoming connections.
@@ -302,42 +317,60 @@ public:
   /// A smart pointer to an acceptor manager.
   using manager_ptr = intrusive_ptr<manager_type>;
 
-  acceptor(asio_multiplexer& am, io_backend& io)
-      : backend_(am), accept_fd_(io), fd_(io) {}
+  acceptor(asio_multiplexer& am, io_service& io)
+      : backend_(am),
+        accept_fd_(io),
+        fd_(io) {
+    // nop
+  }
 
   /// Returns the `multiplexer` this acceptor belongs to.
-  inline asio_multiplexer& backend() { return backend_; }
+  asio_multiplexer& backend() { return backend_; }
 
   /// Returns the IO socket.
-  inline SocketAcceptor& socket_handle() { return accept_fd_; }
-  inline const SocketAcceptor& socket_handle() const { return accept_fd_; }
+  SocketAcceptor& socket_handle() {
+    return accept_fd_;
+  }
+
+  /// Returns the IO socket.
+  const SocketAcceptor& socket_handle() const {
+    return accept_fd_;
+  }
 
   /// Returns the accepted socket. This member function should
   ///        be called only from the `new_connection` callback.
-  inline socket_type& accepted_socket() { return fd_; }
+  inline socket_type& accepted_socket() {
+    return fd_;
+  }
 
   /// Initializes this acceptor, setting the socket handle to `fd`.
-  void init(SocketAcceptor fd) { accept_fd_ = std::move(fd); }
+  void init(SocketAcceptor fd) {
+    accept_fd_ = std::move(fd);
+  }
 
   /// Starts this acceptor, forwarding all incoming connections to
   /// `manager`. The intrusive pointer will be released after the
   /// acceptor has been closed or an IO error occured.
-  void start(const manager_ptr& mgr) { accept_loop(mgr); }
+  void start(const manager_ptr& mgr) {
+    accept_loop(mgr);
+  }
 
   /// Closes the network connection, thus stopping this acceptor.
-  void stop() { accept_fd_.close(); }
+  void stop() {
+    accept_fd_.close();
+  }
 
 private:
   void accept_loop(const manager_ptr& mgr) {
     accept_fd_.async_accept(fd_, [=](const boost::system::error_code& ec) {
-      CAF_LOGMF(CAF_TRACE, "");
+      CAF_LOG_TRACE("");
       if (! ec) {
         mgr->new_connection(); // probably moves fd_
         // reset fd_ for next accept operation
         fd_ = socket_type{accept_fd_.get_io_service()};
         accept_loop(mgr);
       } else {
-        mgr->io_failure(operation::read);
+        mgr->io_failure(&backend(), operation::read);
       }
     });
   }

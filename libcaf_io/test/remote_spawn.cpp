@@ -121,7 +121,7 @@ CAF_TEST(remote_spawn) {
   auto use_asio = r.opts.count("use-asio") > 0;
 # ifdef CAF_USE_ASIO
   if (use_asio)
-    cfg.load<io::middleman, io::network::asio_multiplexer>());
+    cfg.load<io::middleman, io::network::asio_multiplexer>();
   else
 # endif // CAF_USE_ASIO
     cfg.load<io::middleman>();

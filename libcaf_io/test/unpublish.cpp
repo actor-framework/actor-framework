@@ -74,7 +74,7 @@ CAF_TEST(unpublishing) {
   auto argc = test::engine::argc();
   auto argv = test::engine::argv();
   if (argc == 1 && strcmp(argv[0], "--use-asio") == 0)
-    cfg.load<io::middleman, io::network::asio_multiplexer>());
+    cfg.load<io::middleman, io::network::asio_multiplexer>();
   else
 # endif // CAF_USE_ASIO
     cfg.load<io::middleman>();

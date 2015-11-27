@@ -13,7 +13,6 @@ set (LIBCAF_IO_SRCS
      src/broker.cpp
      src/default_multiplexer.cpp
      src/doorman.cpp
-     src/max_msg_size.cpp
      src/middleman.cpp
      src/hook.cpp
      src/interfaces.cpp

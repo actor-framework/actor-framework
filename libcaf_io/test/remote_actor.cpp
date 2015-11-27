@@ -586,8 +586,8 @@ CAF_TEST(remote_actors) {
   cfg.add_message_type<actor_vector>("actor_vector");
   auto use_asio = r.opts.count("use-asio") > 0;
 # ifdef CAF_USE_ASIO
-  if (use_asio) {
-    cfg.load<io::middleman, io::network::asio_multiplexer>());
+  if (use_asio)
+    cfg.load<io::middleman, io::network::asio_multiplexer>();
   else
 # endif // CAF_USE_ASIO
     cfg.load<io::middleman>();
