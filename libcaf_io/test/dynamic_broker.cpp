@@ -219,8 +219,8 @@ CAF_TEST(test_broker) {
   auto use_asio = r.opts.count("use-asio") > 0;
   actor_system_config cfg;
 # ifdef CAF_USE_ASIO
-  if (use_asio) {
-    cfg.load<io::middleman, io::network::asio_multiplexer>());
+  if (use_asio)
+    cfg.load<io::middleman, io::network::asio_multiplexer>();
   else
 # endif // CAF_USE_ASIO
     cfg.load<io::middleman>();

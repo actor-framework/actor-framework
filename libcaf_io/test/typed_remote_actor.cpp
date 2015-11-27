@@ -129,8 +129,8 @@ CAF_TEST(test_typed_remote_actor) {
      .add_message_type<pong>("pong");
   auto use_asio = r.opts.count("use-asio") > 0;
 # ifdef CAF_USE_ASIO
-  if (use_asio) {
-    cfg.load<io::middleman, io::network::asio_multiplexer>());
+  if (use_asio)
+    cfg.load<io::middleman, io::network::asio_multiplexer>();
   else
 # endif // CAF_USE_ASIO
     cfg.load<io::middleman>();
