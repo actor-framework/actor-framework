@@ -181,7 +181,8 @@ class fixture {
 public:
   fixture() : system(actor_system_config{}
                      .load<io::middleman, network::test_multiplexer>()) {
-    mpx_ = static_cast<network::test_multiplexer*>(&system.middleman().backend());
+    mpx_ = dynamic_cast<network::test_multiplexer*>(&system.middleman().backend());
+    CAF_REQUIRE(mpx_ != nullptr);
     // spawn the actor-under-test
     aut_ = system.middleman().spawn_broker(server);
     // assign the acceptor handle to the AUT

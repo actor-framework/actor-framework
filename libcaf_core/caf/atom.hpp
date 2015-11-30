@@ -42,7 +42,7 @@ template <size_t Size>
 constexpr atom_value atom(char const (&str)[Size]) {
   // last character is the NULL terminator
   static_assert(Size <= 11, "only 10 characters are allowed");
-  return static_cast<atom_value>(detail::atom_val(str, 0xF));
+  return static_cast<atom_value>(detail::atom_val(str));
 }
 
 /// Lifts an `atom_value` to a compile-time constant.

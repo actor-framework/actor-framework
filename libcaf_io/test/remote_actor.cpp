@@ -32,13 +32,6 @@
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 
-#include "caf/logger.hpp"
-#include "caf/detail/run_sub_unit_test.hpp"
-
-#ifdef CAF_USE_ASIO
-#include "caf/io/network/asio_multiplexer.hpp"
-#endif // CAF_USE_ASIO
-
 using namespace std;
 using namespace caf;
 
@@ -509,41 +502,60 @@ private:
   bool run_in_loop_;
 };
 
-void test_remote_actor(actor_system& system, const char* path,
-                       bool run_remote, bool use_asio) {
-  CAF_LOG_TRACE(CAF_ARG(path) << CAF_ARG(run_remote) << CAF_ARG(use_asio));
+void launch_remote_side(int argc, char** argv, uint16_t group_port,
+                        uint16_t client_port1, uint16_t client_port2) {
+  actor_system_config cfg{argc, argv};
+  cfg.load<io::middleman>()
+     .add_message_type<actor_vector>("actor_vector");
+  CAF_LOG_TRACE(CAF_ARG(group_port) << CAF_ARG(client_port1)
+                << CAF_ARG(client_port2));
+  CAF_MESSAGE("launch_remote_side(" << group_port
+              << ", " << client_port1 << ", " << client_port2 << ")");
+  actor_system system{cfg};
   scoped_actor self{system, true};
-  auto serv = self->spawn<server, monitored>(! run_remote);
+  auto serv = system.middleman().remote_actor("127.0.0.1", client_port1);
+  auto serv2 = system.middleman().remote_actor("127.0.0.1", client_port2);
+  CAF_REQUIRE(serv);
+  // remote_actor is supposed to return the same server
+  // when connecting to the same host again
+  CAF_CHECK(serv == system.middleman().remote_actor("127.0.0.1", client_port1));
+  CAF_CHECK(serv2 == system.middleman().remote_actor("127.0.0.1", client_port2));
+  // connect to published groups
+  auto grp = system.middleman().remote_group("whatever", "127.0.0.1", group_port);
+  auto c = self->spawn<client, monitored>(serv);
+  self->receive(
+    [&](const down_msg& dm) {
+      CAF_CHECK(dm.source == c);
+      CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
+    }
+  );
+  system.await_all_actors_done();
+}
+
+void test_remote_actor(int argc, char** argv) {
+  actor_system_config cfg{argc, argv};
+  cfg.load<io::middleman>()
+     .add_message_type<actor_vector>("actor_vector");
+  actor_system system{cfg};
+  scoped_actor self{system, true};
+  auto serv = self->spawn<server, monitored>();
   // publish on two distinct ports and use the latter one afterwards
   auto port1 = system.middleman().publish(serv, 0, "127.0.0.1");
-  CAF_CHECK(port1 && *port1 > 0);
+  CAF_REQUIRE(port1 && *port1 > 0);
   CAF_MESSAGE("first publish succeeded on port " << *port1);
   auto port2 = system.middleman().publish(serv, 0, "127.0.0.1");
-  CAF_CHECK(port2 && *port2 > 0);
+  CAF_REQUIRE(port2 && *port2 > 0);
   CAF_MESSAGE("second publish succeeded on port " << *port2);
   // publish local groups as well
   auto gport = system.middleman().publish_local_groups(0);
-  CAF_CHECK(gport && *gport > 0);
+  CAF_REQUIRE(gport && *gport > 0);
+  CAF_MESSAGE("local groups published on port " << *gport);
   // check whether accessing local actors via system.middleman().remote_actors
   // works correctly, i.e., does not return a proxy instance
   auto serv2 = system.middleman().remote_actor("127.0.0.1", *port2);
   CAF_CHECK(serv2 && system.node() != serv2->node());
   CAF_CHECK(serv == serv2);
-  thread child;
-  if (run_remote) {
-    CAF_MESSAGE("start child process");
-    child = detail::run_sub_unit_test(self,
-                                      path,
-                                      test::engine::max_runtime(),
-                                      CAF_XSTR(CAF_SUITE),
-                                      use_asio,
-                                      {"--client-port=" + std::to_string(*port2),
-                                       "--client-port=" + std::to_string(*port1),
-                                       "--group-port=" + std::to_string(*gport)});
-  } else {
-    CAF_MESSAGE("please run client with: "
-                << "-c " << port2 << " -c " << port1 << " -g " << gport);
-  }
+  launch_remote_side(argc, argv, *gport, *port1, *port2);
   self->receive(
     [&](const down_msg& dm) {
       CAF_LOG_TRACE(CAF_ARG(dm));
@@ -553,16 +565,6 @@ void test_remote_actor(actor_system& system, const char* path,
   );
   CAF_MESSAGE("wait for other actors");
   self->await_all_other_actors_done();
-  if (run_remote) {
-    CAF_MESSAGE("wait for child process");
-    child.join();
-    self->receive(
-      [](const std::string& output) {
-        cout << endl << endl << "*** output of client program ***"
-             << endl << output << endl;
-      }
-    );
-  }
 }
 
 } // namespace <anonymous>
@@ -570,65 +572,10 @@ void test_remote_actor(actor_system& system, const char* path,
 CAF_TEST(remote_actors) {
   auto argv = test::engine::argv();
   auto argc = test::engine::argc();
-  std::vector<uint16_t> ports;
-  uint16_t gport = 0;
-  auto r = message_builder(argv, argv + argc).extract_opts({
-    {"server,s", "run in server mode"},
-    {"client-port,c", "add client port (two needed)", ports},
-    {"group-port,g", "set group port", gport},
-    {"use-asio", "use ASIO network backend (if available)"}
-  });
-  if (! r.error.empty() || r.opts.count("help") > 0 || ! r.remainder.empty()) {
-    cout << r.error << endl << endl << r.helptext << endl;
-    return;
-  }
-  actor_system_config cfg;
-  cfg.add_message_type<actor_vector>("actor_vector");
-  auto use_asio = r.opts.count("use-asio") > 0;
-# ifdef CAF_USE_ASIO
-  if (use_asio)
-    cfg.load<io::middleman, io::network::asio_multiplexer>();
-  else
-# endif // CAF_USE_ASIO
-    cfg.load<io::middleman>();
-  {
-    actor_system system{cfg};
-    if (r.opts.count("server") > 0) {
-      CAF_MESSAGE("don't run remote actor (server mode)");
-      test_remote_actor(system, argv[0], false, use_asio);
-    } else if (r.opts.count("client-port") > 0) {
-      if (ports.size() != 2 || r.opts.count("group-port") == 0) {
-        cerr << "*** expected exactly two ports and one group port" << endl
-             << endl << r.helptext << endl;
-        return;
-      }
-      scoped_actor self{system, true};
-      auto serv = system.middleman().remote_actor("localhost", ports.front());
-      auto serv2 = system.middleman().remote_actor("localhost", ports.back());
-      CAF_REQUIRE(serv);
-      // remote_actor is supposed to return the same server
-      // when connecting to the same host again
-      {
-        CAF_CHECK(serv == system.middleman().remote_actor("localhost", ports.front()));
-        CAF_CHECK(serv2 == system.middleman().remote_actor("127.0.0.1", ports.back()));
-      }
-      // connect to published groups
-      auto grp = system.middleman().remote_group("whatever", "127.0.0.1", gport);
-      auto c = self->spawn<client, monitored>(serv);
-      self->receive(
-        [&](const down_msg& dm) {
-          CAF_CHECK(dm.source == c);
-          CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
-        }
-      );
-    } else {
-      test_remote_actor(system, test::engine::path(), true, use_asio);
-    }
-    system.await_all_actors_done();
-  }
+  test_remote_actor(argc, argv);
   // check after dtor of actor system ran
-  // we either spawn a server or a client, in both cases
-  // there must have been exactly one dtor called
-  CAF_CHECK_EQUAL(s_destructors_called.load(), 1);
-  CAF_CHECK_EQUAL(s_on_exit_called.load(), 1);
+  // we spawn a server and a client, in both cases
+  // there must have been exactly one dtor called (two in total)
+  CAF_CHECK_EQUAL(s_destructors_called.load(), 2);
+  CAF_CHECK_EQUAL(s_on_exit_called.load(), 2);
 }

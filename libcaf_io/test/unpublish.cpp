@@ -28,10 +28,6 @@
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 
-#ifdef CAF_USE_ASIO
-#include "caf/io/network/asio_multiplexer.hpp"
-#endif // CAF_USE_ASIO
-
 using namespace caf;
 
 namespace {
@@ -69,17 +65,10 @@ void test_invalid_unpublish(actor_system& system, const actor& published,
 }
 
 CAF_TEST(unpublishing) {
-  actor_system_config cfg;
-# ifdef CAF_USE_ASIO
   auto argc = test::engine::argc();
   auto argv = test::engine::argv();
-  if (argc == 1 && strcmp(argv[0], "--use-asio") == 0)
-    cfg.load<io::middleman, io::network::asio_multiplexer>();
-  else
-# endif // CAF_USE_ASIO
-    cfg.load<io::middleman>();
   { // scope for local variables
-    actor_system system{cfg};
+    actor_system system{actor_system_config{argc, argv}.load<io::middleman>()};
     auto d = system.spawn<dummy>();
     auto port = system.middleman().publish(d, 0);
     CAF_REQUIRE(port);

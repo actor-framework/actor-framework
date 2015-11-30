@@ -30,6 +30,7 @@
 #include "caf/group.hpp"
 #include "caf/either.hpp"
 #include "caf/extend.hpp"
+#include "caf/logger.hpp"
 #include "caf/channel.hpp"
 #include "caf/message.hpp"
 #include "caf/node_id.hpp"

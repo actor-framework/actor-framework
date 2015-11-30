@@ -253,8 +253,8 @@ bool valid(const header& hdr);
 
 /// Size of a BASP header in serialized form
 constexpr size_t header_size =
-  node_id::host_id_size * 2 + sizeof(uint32_t) * 2 +
-  sizeof(actor_id) * 2 + sizeof(uint32_t) * 2 + sizeof(uint64_t);
+  node_id::serialized_size * 2 + sizeof(actor_id) * 2
+  + sizeof(uint32_t) * 2 + sizeof(uint64_t);
 
 /// Describes an error during forwarding of BASP messages.
 enum class error : uint64_t {

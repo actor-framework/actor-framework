@@ -25,22 +25,27 @@
 #include <algorithm>
 
 namespace caf {
+namespace detail {
 
-void detail::parse_ini(std::istream& input,
-                       config_consumer consumer,
-                       maybe<std::ostream&> errors) {
+void parse_ini_t::operator()(std::istream& input, config_consumer consumer_fun,
+                             maybe<std::ostream&> errors) const {
   std::string group;
   std::string line;
   size_t ln = 0; // line number
+  // wraps a temporary into an (lvalue) config_value and calls `consumer_fun`
+  auto consumer = [&](size_t ln, std::string name, value x) {
+    consumer_fun(ln, std::move(name), x);
+  };
   auto print = [&](const char* category, const char* str) {
     if (errors)
-      *errors << category << " in line " << ln << ": " << str << std::endl;
+      *errors << category << " INI file line "
+              << ln << ": " << str << std::endl;
   };
   auto print_error = [&](const char* str) {
-    print("error", str);
+    print("[ERROR]", str);
   };
   auto print_warning = [&](const char* str) {
-    print("warning", str);
+    print("[WARNING]", str);
   };
   while (std::getline(input, line)) {
     ++ln;
@@ -92,9 +97,31 @@ void detail::parse_ini(std::istream& input,
       return tolower(x) == tolower(y);
     };
     if (std::equal(bov, eol, true_str, icase_eq)) {
-      consumer(std::move(key), true);
+      consumer(ln, std::move(key), true);
     } else if (std::equal(bov, eol, false_str, icase_eq)) {
-      consumer(std::move(key), false);
+      consumer(ln, std::move(key), false);
+    } else if (*bov == '\'') {
+      // end-of-atom iterator
+      auto eoa = eol - 1;
+      if (bov == eoa) {
+        print_error("stray '");
+        continue;
+      }
+      if (*eoa != '\'') {
+        print_error("atom not terminated by '");
+        continue;
+      }
+      ++bov; // skip leading '
+      if (std::distance(bov, eoa) > 10) {
+        print_error("atoms are not allowed to have more than 10 characters");
+        continue;
+      }
+      // found an atom value, copy it into a null-terminated buffer
+      char buf[11];
+      std::copy(bov, eoa, buf);
+      buf[std::distance(bov, eoa)] = '\0';
+      atom_value result = atom(buf);
+      consumer(ln, std::move(key), result);
     } else if (*bov == '"') {
       // end-of-string iterator
       auto eos = eol - 1;
@@ -134,7 +161,7 @@ void detail::parse_ini(std::istream& input,
       }
       if (last_char_backslash)
         print_warning("trailing quotation mark escaped");
-      consumer(std::move(key), std::move(result));
+      consumer(ln, std::move(key), std::move(result));
     } else {
       bool is_neg = *bov == '-';
       if (is_neg && ++bov == eol) {
@@ -147,7 +174,7 @@ void detail::parse_ini(std::istream& input,
         if (e != &*eol)
           print_error(err);
         else
-          consumer(std::move(key), is_neg ? -res : res);
+          consumer(ln, std::move(key), is_neg ? -res : res);
       };
       auto set_dval = [&] {
         char* e;
@@ -155,7 +182,7 @@ void detail::parse_ini(std::istream& input,
         if (e != &*eol)
           print_error("invalid value");
         else
-          consumer(std::move(key), is_neg ? -res : res);
+          consumer(ln, std::move(key), is_neg ? -res : res);
       };
       if (*bov == '0' && std::distance(bov, eol) > 1)
         switch (*(bov + 1)) {
@@ -181,4 +208,5 @@ void detail::parse_ini(std::istream& input,
   }
 }
 
+} // namespace detail
 } // namespace caf

@@ -58,6 +58,7 @@ actor_system::actor_system(actor_system_config&& cfg)
       middleman_(nullptr),
       dummy_execution_unit_(this) {
   CAF_SET_LOGGER_SYS(this);
+  backend_name_ = cfg.middleman_network_backend;
   for (auto& f : cfg.module_factories_) {
     auto ptr = f(*this);
     modules_[ptr->id()].reset(ptr);
@@ -80,12 +81,12 @@ actor_system::actor_system(actor_system_config&& cfg)
       profiled_sharing  = 0x0102
     };
     sched_conf sc = stealing;
-    if (cfg.scheduler_policy == "work-sharing")
+    if (cfg.scheduler_policy == atom("sharing"))
       sc = sharing;
-    else if (cfg.scheduler_policy != "work-stealing")
-      std::cerr << "[WARNING] \"" << cfg.scheduler_policy
-                << "\" is an unrecognized scheduler pollicy, the "
-                   "actor system will use work-stealing as fallback"
+    else if (cfg.scheduler_policy != atom("stealing"))
+      std::cerr << "[WARNING] " << deep_to_string(cfg.scheduler_policy)
+                << " is an unrecognized scheduler pollicy, "
+                   "falling back to 'stealing' (i.e. work-stealing)"
                 << std::endl;
     if (cfg.scheduler_enable_profiling)
       sc = static_cast<sched_conf>(sc | profiled);

@@ -32,12 +32,6 @@
 #include "caf/io/network/interfaces.hpp"
 #include "caf/io/network/test_multiplexer.hpp"
 
-#include "caf/detail/run_sub_unit_test.hpp"
-
-#ifdef CAF_USE_ASIO
-#include "caf/io/network/asio_multiplexer.hpp"
-#endif // CAF_USE_ASIO
-
 using namespace caf;
 using namespace caf::io;
 

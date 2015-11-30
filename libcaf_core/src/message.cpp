@@ -316,6 +316,19 @@ message::cli_arg::cli_arg(std::string nstr, std::string tstr, consumer f)
   // nop
 }
 
+message::cli_arg::cli_arg(std::string nstr, std::string tstr, atom_value& arg)
+    : name(std::move(nstr)),
+      text(std::move(tstr)),
+      fun([&arg](const std::string& str) -> bool {
+        if (str.size() <= 10) {
+          arg = static_cast<atom_value>(detail::atom_val(str.c_str()));
+          return true;
+        }
+        return false;
+      }) {
+  // nop
+}
+
 message::cli_arg::cli_arg(std::string nstr, std::string tstr, std::string& arg)
     : name(std::move(nstr)),
       text(std::move(tstr)),

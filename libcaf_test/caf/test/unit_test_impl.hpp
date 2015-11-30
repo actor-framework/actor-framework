@@ -551,10 +551,16 @@ int main(int argc, char** argv) {
     return 1;
   }
   auto colorize = res.opts.count("no-colors") == 0;
-  if (divider < argc)
-    engine::args(argc - divider - 1, argv + divider + 1);
-  else
-    engine::args(0, argv);
+  std::vector<char*> args;
+  if (divider < argc) {
+    // make a new args vector that contains argv[0] and all remaining args
+    args.push_back(argv[0]);
+    for (int i = divider + 1; i < argc; ++i)
+      args.push_back(argv[i]);
+    engine::args(static_cast<int>(args.size()), args.data());
+  } else {
+    engine::args(1, argv);
+  }
   if (res.opts.count("max-runtime") > 0)
     engine::max_runtime(max_runtime);
   auto result = engine::run(colorize, log_file, verbosity_console,

@@ -485,7 +485,7 @@ if(NOT CAF_NO_UNIT_TESTS)
     # add some extra unit testing options when testing ASIO as well
     if(CAF_USE_ASIO AND "${suite}" MATCHES "^io_.+$")
       add_test(${test_name}_asio ${caf_test} -n -v 5 -s
-               "${suite}" ${ARGN} -- --use-asio)
+               "${suite}" ${ARGN} -- "--caf#middleman.network-backend=asio")
     endif()
   endmacro ()
   list(LENGTH suites num_suites)

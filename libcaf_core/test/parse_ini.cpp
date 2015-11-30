@@ -22,8 +22,8 @@
 #define CAF_SUITE parse_ini
 #include "caf/test/unit_test.hpp"
 
-#include <iostream>
 #include <sstream>
+#include <iostream>
 
 #include "caf/string_algorithms.hpp"
 
@@ -88,9 +88,14 @@ public:
   }
 };
 
+using config_value = detail::parse_ini_t::value;
 
 struct fixture {
   actor_system system;
+
+  fixture() : system(test::engine::argc(), test::engine::argv()) {
+    // nop
+  }
 
   template <class F>
   void load_impl(F consumer, const char* str) {
@@ -112,7 +117,7 @@ struct fixture {
           self->send(config_server, put_atom::value, kvp.first, message{});
       }
     );
-    auto consume = [&](std::string key, config_value value) {
+    auto consume = [&](size_t, std::string key, config_value& value) {
       message_visitor mv;
       anon_send(config_server, put_atom::value,
                 std::move(key), apply_visitor(mv, value));
@@ -121,7 +126,7 @@ struct fixture {
   }
 
   void load(const char* str) {
-    auto consume = [&](std::string key, config_value value) {
+    auto consume = [&](size_t, std::string key, config_value& value) {
       values.emplace(std::move(key), std::move(value));
     };
     load_impl(consume, str);
@@ -216,19 +221,19 @@ struct fixture {
   }
 
   void check_case3() {
-    CAF_CHECK(has_error("error in line 2: missing ] at end of line"));
-    CAF_CHECK(has_error("error in line 3: value outside of a group"));
-    CAF_CHECK(has_error("error in line 6: no '=' found"));
-    CAF_CHECK(has_error("error in line 7: line starting with '='"));
-    CAF_CHECK(has_error("error in line 8: line ends with '='"));
-    CAF_CHECK(has_error("error in line 9: stray '\"'"));
-    CAF_CHECK(has_error("error in line 10: string not terminated by '\"'"));
-    CAF_CHECK(has_error("warning in line 12: trailing quotation mark escaped"));
-    CAF_CHECK(has_error("error in line 13: '-' is not a number"));
-    CAF_CHECK(has_error("error in line 14: invalid hex value"));
-    CAF_CHECK(has_error("error in line 15: invalid binary value"));
-    CAF_CHECK(has_error("error in line 16: invalid oct value"));
-    CAF_CHECK(has_error("error in line 17: invalid value"));
+    CAF_CHECK(has_error("[ERROR] INI file line 2: missing ] at end of line"));
+    CAF_CHECK(has_error("[ERROR] INI file line 3: value outside of a group"));
+    CAF_CHECK(has_error("[ERROR] INI file line 6: no '=' found"));
+    CAF_CHECK(has_error("[ERROR] INI file line 7: line starting with '='"));
+    CAF_CHECK(has_error("[ERROR] INI file line 8: line ends with '='"));
+    CAF_CHECK(has_error("[ERROR] INI file line 9: stray '\"'"));
+    CAF_CHECK(has_error("[ERROR] INI file line 10: string not terminated by '\"'"));
+    CAF_CHECK(has_error("[WARNING] INI file line 12: trailing quotation mark escaped"));
+    CAF_CHECK(has_error("[ERROR] INI file line 13: '-' is not a number"));
+    CAF_CHECK(has_error("[ERROR] INI file line 14: invalid hex value"));
+    CAF_CHECK(has_error("[ERROR] INI file line 15: invalid binary value"));
+    CAF_CHECK(has_error("[ERROR] INI file line 16: invalid oct value"));
+    CAF_CHECK(has_error("[ERROR] INI file line 17: invalid value"));
     CAF_CHECK(num_values() == 2);
     CAF_CHECK(value_is("test.some-int", 42));
     CAF_CHECK(value_is("test.some-string", "hi there!"));
