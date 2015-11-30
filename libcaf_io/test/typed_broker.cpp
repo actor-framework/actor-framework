@@ -32,12 +32,6 @@
 
 #include "caf/string_algorithms.hpp"
 
-#include "caf/detail/run_sub_unit_test.hpp"
-
-#ifdef CAF_USE_ASIO
-#include "caf/io/network/asio_multiplexer.hpp"
-#endif // CAF_USE_ASIO
-
 using namespace std;
 using namespace caf;
 using namespace caf::io;
@@ -187,73 +181,40 @@ acceptor::behavior_type acceptor_fun(acceptor::broker_pointer self,
   };
 }
 
-void run_server(actor_system& system, bool spawn_client,
-                const char* bin_path, bool use_asio) {
+void run_client(int argc, char** argv, uint16_t port) {
+  actor_system system{actor_system_config{argc, argv}.load<io::middleman>()};
+  auto p = system.spawn(ping, size_t{10});
+  CAF_MESSAGE("spawn_client_typed...");
+  auto cl = system.middleman().spawn_client(peer_fun, "localhost", port, p);
+  CAF_REQUIRE(cl);
+  CAF_MESSAGE("spawn_client_typed finished");
+  anon_send(p, kickoff_atom::value, *cl);
+  CAF_MESSAGE("`kickoff_atom` has been send");
+  system.await_all_actors_done();
+}
+
+void run_server(int argc, char** argv) {
+  actor_system system{actor_system_config{argc, argv}.load<io::middleman>()};
   scoped_actor self{system};
   auto serv = system.middleman().spawn_broker(acceptor_fun, system.spawn(pong));
+  std::thread child;
   self->sync_send(serv, publish_atom::value).await(
     [&](uint16_t port) {
       CAF_MESSAGE("server is running on port " << port);
-      if (spawn_client) {
-        auto child = detail::run_sub_unit_test(self,
-                                               bin_path,
-                                               test::engine::max_runtime(),
-                                               CAF_XSTR(CAF_SUITE),
-                                               use_asio,
-                                               {"--client-port="
-                                                + std::to_string(port)});
-        CAF_MESSAGE("block till child process has finished");
-        child.join();
-      }
+      child = std::thread([=] {
+        run_client(argc, argv, port);
+      });
     }
   );
   self->await_all_other_actors_done();
-  self->receive(
-    [](const std::string& output) {
-      cout << endl << endl << "*** output of client program ***"
-           << endl << output << endl;
-    }
-  );
+  CAF_MESSAGE("wait for client system");
+  child.join();
 }
 
 } // namespace <anonymous>
 
 CAF_TEST(test_typed_broker) {
-  auto argv = test::engine::argv();
   auto argc = test::engine::argc();
-  uint16_t port = 0;
-  auto r = message_builder(argv, argv + argc).extract_opts({
-    {"client-port,c", "set port for IO client", port},
-    {"server,s", "run in server mode"},
-    {"use-asio", "use ASIO network backend (if available)"}
-  });
-  if (! r.error.empty() || r.opts.count("help") > 0 || ! r.remainder.empty()) {
-    cout << r.error << endl << endl << r.helptext << endl;
-    return;
-  }
-  actor_system_config cfg;
-  auto use_asio = r.opts.count("use-asio") > 0;
-# ifdef CAF_USE_ASIO
-  if (use_asio)
-    cfg.load<io::middleman, io::network::asio_multiplexer>();
-  else
-# endif // CAF_USE_ASIO
-    cfg.load<io::middleman>();
-  actor_system system{cfg};
-  if (r.opts.count("client-port") > 0) {
-    auto p = system.spawn(ping, size_t{10});
-    CAF_MESSAGE("spawn_client_typed...");
-    auto cl = system.middleman().spawn_client(peer_fun, "localhost", port, p);
-    CAF_REQUIRE(cl);
-    CAF_MESSAGE("spawn_client_typed finished");
-    anon_send(p, kickoff_atom::value, *cl);
-    CAF_MESSAGE("`kickoff_atom` has been send");
-  } else if (r.opts.count("server") > 0) {
-    // run in server mode
-    run_server(system, false, argv[0], use_asio);
-  } else {
-    run_server(system, true, test::engine::path(), use_asio);
-  }
-  CAF_MESSAGE("block on `await_all_actors_done`");
-  system.await_all_actors_done();
+  auto argv = test::engine::argv();
+  run_server(argc, argv);
 }

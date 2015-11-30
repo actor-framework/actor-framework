@@ -361,6 +361,12 @@ public:
     return spawn_in_groups<T>({grp}, std::forward<Ts>(xs)...);
   }
 
+  /// @cond PRIVATE
+  inline atom_value backend_name() const {
+    return backend_name_;
+  }
+  /// @endcond
+
 private:
   template <class T>
   void check_invariants() {
@@ -402,6 +408,7 @@ private:
   module_array modules_;
   io::middleman* middleman_;
   scoped_execution_unit dummy_execution_unit_;
+  atom_value backend_name_;
 };
 
 } // namespace caf

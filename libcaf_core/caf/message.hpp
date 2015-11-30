@@ -175,6 +175,9 @@ public:
     cli_arg(std::string name, std::string text);
 
     /// Creates a CLI argument storing its matched argument in `dest`.
+    cli_arg(std::string name, std::string text, atom_value& dest);
+
+    /// Creates a CLI argument storing its matched argument in `dest`.
     cli_arg(std::string name, std::string text, std::string& dest);
 
     /// Creates a CLI argument appending matched arguments to `dest`.

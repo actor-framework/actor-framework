@@ -39,8 +39,8 @@ constexpr unsigned char encoding_table[] = {
 
 // decodes 6bit characters to ASCII
 constexpr char decoding_table[] = " 0123456789"
-                  "ABCDEFGHIJKLMNOPQRSTUVWXYZ_"
-                  "abcdefghijklmnopqrstuvwxyz";
+                                  "ABCDEFGHIJKLMNOPQRSTUVWXYZ_"
+                                  "abcdefghijklmnopqrstuvwxyz";
 
 } // namespace <anonymous>
 
@@ -48,7 +48,7 @@ constexpr uint64_t next_interim(uint64_t current, size_t char_code) {
   return (current << 6) | encoding_table[(char_code <= 0x7F) ? char_code : 0];
 }
 
-constexpr uint64_t atom_val(const char* cstr, uint64_t interim = 0) {
+constexpr uint64_t atom_val(const char* cstr, uint64_t interim = 0xF) {
   return (*cstr == '\0') ?
          interim :
          atom_val(cstr + 1,

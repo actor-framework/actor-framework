@@ -32,12 +32,6 @@
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 
-#include "caf/detail/run_sub_unit_test.hpp"
-
-#ifdef CAF_USE_ASIO
-#include "caf/io/network/asio_multiplexer.hpp"
-#endif // CAF_USE_ASIO
-
 using namespace caf;
 
 namespace {
@@ -100,54 +94,33 @@ behavior server(stateful_actor<server_state>* self) {
   };
 }
 
+void run_client(int argc, char** argv, uint16_t port) {
+  actor_system_config cfg{argc, argv};
+  cfg.load<io::middleman>()
+     .add_actor_type("mirror", mirror);
+  actor_system system{cfg};
+  auto serv = system.middleman().remote_actor("localhost", port);
+  CAF_REQUIRE(serv);
+  system.spawn(client, serv);
+  system.await_all_actors_done();
+}
+
+void run_server(int argc, char** argv) {
+  actor_system system{actor_system_config{argc, argv}.load<io::middleman>()};
+  auto serv = system.spawn(server);
+  auto mport = system.middleman().publish(serv, 0);
+  CAF_REQUIRE(mport);
+  auto port = *mport;
+  CAF_MESSAGE("published server at port " << port);
+  std::thread child([=] { run_client(argc, argv, port); });
+  system.await_all_actors_done();
+  child.join();
+}
+
 } // namespace <anonymous>
 
 CAF_TEST(remote_spawn) {
-  auto argv = test::engine::argv();
   auto argc = test::engine::argc();
-  uint16_t port = 0;
-  auto r = message_builder(argv, argv + argc).extract_opts({
-    {"server,s", "run as server (don't run client"},
-    {"client,c", "add client port (two needed)", port},
-    {"port,p", "force a port in server mode", port},
-    {"use-asio", "use ASIO network backend (if available)"}
-  });
-  if (! r.error.empty() || r.opts.count("help") > 0 || ! r.remainder.empty()) {
-    std::cout << r.error << std::endl << std::endl << r.helptext << std::endl;
-    return;
-  }
-  actor_system_config cfg;
-  cfg.add_actor_type("mirror", mirror);
-  auto use_asio = r.opts.count("use-asio") > 0;
-# ifdef CAF_USE_ASIO
-  if (use_asio)
-    cfg.load<io::middleman, io::network::asio_multiplexer>();
-  else
-# endif // CAF_USE_ASIO
-    cfg.load<io::middleman>();
-  actor_system system{cfg};
-  if (r.opts.count("client") > 0) {
-    auto serv = system.middleman().remote_actor("localhost", port);
-    CAF_REQUIRE(serv);
-    system.spawn(client, serv);
-    system.await_all_actors_done();
-    return;
-  }
-  auto serv = system.spawn(server);
-  auto mport = system.middleman().publish(serv, port);
-  CAF_REQUIRE(mport);
-  port = *mport;
-  CAF_MESSAGE("published server at port " << port);
-  if (r.opts.count("server") == 0) {
-    CAF_MESSAGE("run client program");
-    auto child = detail::run_sub_unit_test(invalid_actor,
-                                           test::engine::path(),
-                                           test::engine::max_runtime(),
-                                           CAF_XSTR(CAF_SUITE),
-                                           use_asio,
-                                           {"--client="
-                                            + std::to_string(port)});
-    child.join();
-  }
-  system.await_all_actors_done();
+  auto argv = test::engine::argv();
+  run_server(argc, argv);
 }

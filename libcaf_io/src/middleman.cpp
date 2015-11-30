@@ -52,10 +52,15 @@
 #include "caf/actor_registry.hpp"
 #include "caf/detail/get_mac_addresses.hpp"
 
+#ifdef CAF_USE_ASIO
+#include "caf/io/network/asio_multiplexer.hpp"
+#include "caf/io/network/asio_multiplexer_impl.hpp"
+#endif // CAF_USE_ASIO
+
 #ifdef CAF_WINDOWS
-# include <io.h>
-# include <fcntl.h>
-#endif
+#include <io.h>
+#include <fcntl.h>
+#endif // CAF_WINDOWS
 
 namespace caf {
 namespace io {
@@ -176,6 +181,23 @@ actor_system::module* middleman::make(actor_system& sys, detail::type_list<>) {
   private:
     network::default_multiplexer backend_;
   };
+# ifdef CAF_USE_ASIO
+  class asio_impl : public middleman {
+  public:
+    asio_impl(actor_system& ref) : middleman(ref), backend_(&ref) {
+      // nop
+    }
+
+    network::multiplexer& backend() override {
+      return backend_;
+    }
+
+  private:
+    network::asio_multiplexer backend_;
+  };
+  if (sys.backend_name() == atom("asio"))
+    return new asio_impl(sys);
+# endif // CAF_USE_ASIO
   return new impl(sys);
 }
 
@@ -267,11 +289,16 @@ actor_addr middleman::remote_actor(std::set<std::string> ifs,
     [&](ok_atom, const node_id&, actor_addr res, std::set<std::string>& xs) {
       CAF_LOG_TRACE(CAF_ARG(res) << CAF_ARG(xs));
       if (!res)
-        throw network_error("no actor published at given port");
+        throw network_error("no actor published at port "
+                            + std::to_string(port));
       if (! (xs.empty() && ifs.empty())
-          && ! std::includes(xs.begin(), xs.end(), ifs.begin(), ifs.end()))
-        throw network_error("expected signature does not "
-                            "comply to found signature");
+          && ! std::includes(xs.begin(), xs.end(), ifs.begin(), ifs.end())) {
+        std::string what = "expected signature: ";
+        what += deep_to_string(xs);
+        what += ", found: ";
+        what += deep_to_string(ifs);
+        throw network_error(std::move(what));
+      }
       result = std::move(res);
     },
     [&](error_atom, std::string& msg) {

@@ -32,6 +32,7 @@ CAF_POP_WARNINGS
 #include "caf/io/receive_policy.hpp"
 
 #include "caf/io/network/multiplexer.hpp"
+#include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/stream_manager.hpp"
 #include "caf/io/network/acceptor_manager.hpp"
 
@@ -43,13 +44,10 @@ namespace network {
 using io_service = boost::asio::io_service;
 
 /// Low-level socket type used as default.
-using default_socket = boost::asio::ip::tcp::socket;
+using asio_tcp_socket = boost::asio::ip::tcp::socket;
 
 /// Low-level socket type used as default.
-using default_socket_acceptor = boost::asio::ip::tcp::acceptor;
-
-/// Platform-specific native socket type.
-using native_socket = typename default_socket::native_handle_type;
+using asio_tcp_socket_acceptor = boost::asio::ip::tcp::acceptor;
 
 /// A wrapper for the boost::asio multiplexer
 class asio_multiplexer : public multiplexer {
@@ -74,12 +72,14 @@ public:
 
   void assign_tcp_doorman(abstract_broker*, accept_handle hdl) override;
 
-  accept_handle add_tcp_doorman(abstract_broker*, default_socket_acceptor&& sock);
+  accept_handle add_tcp_doorman(abstract_broker*,
+                                asio_tcp_socket_acceptor&& sock);
 
   accept_handle add_tcp_doorman(abstract_broker*, native_socket fd) override;
 
   std::pair<accept_handle, uint16_t>
-  add_tcp_doorman(abstract_broker*, uint16_t port, const char* in, bool rflag) override;
+  add_tcp_doorman(abstract_broker*, uint16_t port,
+                  const char* in, bool rflag) override;
 
   void exec_later(resumable* ptr) override;
 
@@ -101,8 +101,8 @@ private:
   io_service service_;
   std::mutex mtx_sockets_;
   std::mutex mtx_acceptors_;
-  std::map<int64_t, default_socket> unassigned_sockets_;
-  std::map<int64_t, default_socket_acceptor> unassigned_acceptors_;
+  std::map<int64_t, asio_tcp_socket> unassigned_sockets_;
+  std::map<int64_t, asio_tcp_socket_acceptor> unassigned_acceptors_;
 };
 
 template <class T>
@@ -123,7 +123,7 @@ using manager_ptr = intrusive_ptr<manager>;
 /// A stream capable of both reading and writing. The stream's input
 /// data is forwarded to its {@link stream_manager manager}.
 template <class Socket>
-class stream {
+class asio_stream {
 public:
   /// A smart pointer to a stream manager.
   using manager_ptr = intrusive_ptr<stream_manager>;
@@ -131,7 +131,7 @@ public:
   /// A buffer class providing a compatible interface to `std::vector`.
   using buffer_type = std::vector<char>;
 
-  stream(asio_multiplexer& ref)
+  asio_stream(asio_multiplexer& ref)
       : writing_(false),
         fd_(ref.service()),
         backend_(ref) {
@@ -170,7 +170,7 @@ public:
   /// Copies data to the write buffer.
   /// @note Not thread safe.
   void write(const void* buf, size_t num_bytes) {
-    CAF_LOG_TRACE("num_bytes: " << num_bytes);
+    CAF_LOG_TRACE(CAF_ARG(num_bytes));
     auto first = reinterpret_cast<const char*>(buf);
     auto last = first + num_bytes;
     wr_offline_buf_.insert(wr_offline_buf_.end(), first, last);
@@ -306,7 +306,7 @@ private:
 
 /// An acceptor is responsible for accepting incoming connections.
 template <class SocketAcceptor>
-class acceptor {
+class asio_acceptor {
   using protocol_type = typename SocketAcceptor::protocol_type;
   using socket_type = boost::asio::basic_stream_socket<protocol_type>;
 
@@ -317,7 +317,7 @@ public:
   /// A smart pointer to an acceptor manager.
   using manager_ptr = intrusive_ptr<manager_type>;
 
-  acceptor(asio_multiplexer& am, io_service& io)
+  asio_acceptor(asio_multiplexer& am, io_service& io)
       : backend_(am),
         accept_fd_(io),
         fd_(io) {

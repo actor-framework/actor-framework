@@ -64,7 +64,6 @@ set (LIBCAF_CORE_SRCS
      src/message_data.cpp
      src/message_handler.cpp
      src/node_id.cpp
-     src/parse_config.cpp
      src/parse_ini.cpp
      src/ref_counted.cpp
      src/proxy_registry.cpp
@@ -72,7 +71,6 @@ set (LIBCAF_CORE_SRCS
      src/replies_to.cpp
      src/resumable.cpp
      src/ripemd_160.cpp
-     src/run_sub_unit_test.cpp
      src/scoped_actor.cpp
      src/scoped_execution_unit.cpp
      src/serializer.cpp

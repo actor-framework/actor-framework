@@ -59,6 +59,10 @@ public:
     return result;
   }
 
+  inline std::string operator()(char* cstr) const {
+    return (*this)(const_cast<const char*>(cstr));
+  }
+
   inline std::string operator()(const std::string& str) const {
     return (*this)(str.c_str());
   }

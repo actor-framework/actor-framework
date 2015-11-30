@@ -131,6 +131,12 @@ void node_id::data::stop() {
   // nop
 }
 
+namespace {
+
+std::atomic<uint8_t> system_id;
+
+} // <anonymous>
+
 // initializes singleton
 node_id::data* node_id::data::create_singleton() {
   CAF_LOG_TRACE("");
@@ -143,6 +149,10 @@ node_id::data* node_id::data::create_singleton() {
   auto hd_serial_and_mac_addr = join(macs, "") + detail::get_root_uuid();
   node_id::host_id_type nid;
   detail::ripemd_160(nid, hd_serial_and_mac_addr);
+  // TODO: redesign network layer, make node_id an opaque type, etc.
+  // this hack enables multiple actor systems in a single process
+  // by overriding the last byte in the node ID with the actor system "ID"
+  nid.back() = system_id.fetch_add(1);
   // note: pointer has a ref count of 1 -> implicitly held by detail::singletons
   return new node_id::data(detail::get_process_id(), nid);
 }

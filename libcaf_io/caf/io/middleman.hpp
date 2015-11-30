@@ -242,7 +242,6 @@ public:
   /// Returns a middleman using the default network backend.
   static actor_system::module* make(actor_system&, detail::type_list<>);
 
-  /// Returns a middleman using `bg` as network backend.
   template <class Backend>
   static actor_system::module* make(actor_system& sys,
                                     detail::type_list<Backend>) {

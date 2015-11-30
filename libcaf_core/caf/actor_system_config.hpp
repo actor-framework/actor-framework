@@ -94,12 +94,10 @@ public:
   }
 
   /// Sets the parameter `name` to `val`.
-  using config_value = variant<std::string, double, int64_t, bool>;
-
-  actor_system_config& set(const std::string& name, config_value val);
+  using config_value = variant<std::string, double, int64_t, bool, atom_value>;
 
   // Config parameters of scheduler.
-  std::string scheduler_policy;
+  atom_value scheduler_policy;
   size_t scheduler_max_threads;
   size_t scheduler_max_throughput;
   bool scheduler_enable_profiling;
@@ -107,6 +105,7 @@ public:
   std::string scheduler_profiling_output_file;
 
   // Config parameters of middleman.
+  atom_value middleman_network_backend;
   bool middleman_enable_automatic_connections;
 
   // System parameters that are set while initializing modules.
