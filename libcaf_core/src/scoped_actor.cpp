@@ -58,4 +58,8 @@ scoped_actor::~scoped_actor() {
   self_->cleanup(r == exit_reason::not_exited ? exit_reason::normal : r);
 }
 
+std::string to_string(const scoped_actor& x) {
+  return to_string(x.address());
+}
+
 } // namespace caf

@@ -395,7 +395,8 @@ public:
 
     /// Called whenever a remote actor died to destroy
     /// the proxy instance on our end.
-    virtual void kill_proxy(const node_id& nid, actor_id aid, uint32_t rsn) = 0;
+    virtual void kill_proxy(const node_id& nid, actor_id aid,
+                            exit_reason rsn) = 0;
 
     /// Called whenever a `dispatch_message` arrived for a local actor.
     virtual void deliver(const node_id& source_node, actor_id source_actor,
@@ -539,7 +540,7 @@ public:
                                  buffer_type& buf,
                                  const node_id& dest_node,
                                  actor_id aid,
-                                 uint32_t rsn);
+                                 exit_reason rsn);
 
   inline const node_id& this_node() const {
     return this_node_;

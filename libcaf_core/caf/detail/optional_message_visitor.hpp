@@ -88,7 +88,7 @@ public:
     return message{};
   }
 
-  inline opt_msg operator()(const maybe<skip_message_t>& val) const {
+  inline opt_msg operator()(maybe<skip_message_t>& val) const {
     if (val)
       return none;
     return message{};
@@ -120,14 +120,18 @@ public:
                         value.get_message_id().integer_value());
   }
 
-  template <class L, class R>
-  opt_msg operator()(either_or_t<L, R>& value) const {
-    return std::move(value.value);
-  }
-
   template <class... Ts>
   opt_msg operator()(std::tuple<Ts...>& value) const {
     return apply_args(*this, get_indices(value), value);
+  }
+
+  template <class T>
+  opt_msg operator()(maybe<T>& value) const {
+    if (value)
+      return (*this)(*value);
+    if (value.empty())
+      return message{};
+    return value.error();
   }
 };
 

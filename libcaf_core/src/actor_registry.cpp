@@ -25,6 +25,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "caf/sec.hpp"
 #include "caf/locks.hpp"
 #include "caf/logger.hpp"
 #include "caf/exception.hpp"
@@ -81,12 +82,12 @@ void actor_registry::put(actor_id key, const actor_addr& val) {
   // attach functor without lock
   CAF_LOG_INFO("added actor:" << CAF_ARG(key));
   actor_registry* reg = this;
-  val->attach_functor([key, reg](uint32_t reason) {
+  val->attach_functor([key, reg](exit_reason reason) {
     reg->erase(key, reason);
   });
 }
 
-void actor_registry::erase(actor_id key, uint32_t reason) {
+void actor_registry::erase(actor_id key, exit_reason reason) {
   exclusive_guard guard(instances_mtx_);
   auto i = entries_.find(key);
   if (i != entries_.end()) {
@@ -139,7 +140,7 @@ actor actor_registry::get(atom_value key) const {
 
 void actor_registry::put(atom_value key, actor value) {
   if (value)
-    value->attach_functor([=](uint32_t) {
+    value->attach_functor([=] {
       system_.registry().put(key, invalid_actor);
     });
   exclusive_guard guard{named_entries_mtx_};
@@ -245,9 +246,9 @@ void actor_registry::start() {
         CAF_LOG_TRACE(CAF_ARG(dm));
         unsubscribe_all(actor_cast<actor>(dm.source));
       },
-      others >> [=] {
+      others >> [=]() -> error {
         CAF_LOG_WARNING("unexpected:" << CAF_ARG(self->current_message()));
-        return make_message(error_atom::value, "unsupported operation");
+        return sec::unexpected_message;
       }
     };
   };
@@ -255,14 +256,12 @@ void actor_registry::start() {
     CAF_LOG_TRACE("");
     return {
       [=](get_atom, const std::string& name, message& args)
-      -> either<ok_atom, actor_addr, std::set<std::string>>
-         ::or_else<error_atom, std::string> {
+      -> maybe<std::tuple<ok_atom, actor_addr, std::set<std::string>>> {
         CAF_LOG_TRACE(CAF_ARG(name) << CAF_ARG(args));
         actor_config cfg{self->context()};
         auto res = self->system().types().make_actor(name, cfg, args);
         if (res.first == invalid_actor_addr)
-          return {error_atom::value, "cannot initialize an actor type " + name
-                                     + " using the provided arguments"};
+          return sec::cannot_spawn_actor_from_arguments;
         return {ok_atom::value, res.first, res.second};
       },
       others >> [=] {

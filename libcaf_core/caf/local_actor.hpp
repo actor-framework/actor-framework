@@ -178,11 +178,11 @@ public:
   }
 
   /// Sends an exit message to `dest`.
-  void send_exit(const actor_addr& dest, uint32_t reason);
+  void send_exit(const actor_addr& dest, exit_reason reason);
 
   /// Sends an exit message to `dest`.
   template <class ActorHandle>
-  void send_exit(const ActorHandle& dest, uint32_t reason) {
+  void send_exit(const ActorHandle& dest, exit_reason reason) {
     send_exit(dest.address(), reason);
   }
 
@@ -261,7 +261,7 @@ public:
   /// @warning This member function throws immediately in thread-based actors
   ///          that do not use the behavior stack, i.e., actors that use
   ///          blocking API calls such as {@link receive()}.
-  void quit(uint32_t reason = exit_reason::normal);
+  void quit(exit_reason reason = exit_reason::normal);
 
   /// Checks whether this actor traps exit messages.
   inline bool trap_exit() const {
@@ -341,7 +341,7 @@ public:
       functor_attachable(F arg) : functor_(std::move(arg)) {
         // nop
       }
-      maybe<uint32_t> handle_exception(const std::exception_ptr& eptr) {
+      maybe<exit_reason> handle_exception(const std::exception_ptr& eptr) {
         return functor_(eptr);
       }
     };
@@ -403,13 +403,7 @@ public:
     return current_element_;
   }
 
-  inline void handle_sync_failure() {
-    if (sync_failure_handler_) {
-      sync_failure_handler_();
-    } else {
-      quit(exit_reason::unhandled_sync_failure);
-    }
-  }
+  void handle_sync_failure();
 
   template <class Handle, class... Ts>
   message_id sync_send_impl(message_priority mp, const Handle& dh, Ts&&... xs) {
@@ -495,11 +489,11 @@ public:
     return delegate(message_priority::normal, dest, std::forward<Ts>(xs)...);
   }
 
-  inline uint32_t planned_exit_reason() const {
+  inline exit_reason planned_exit_reason() const {
     return planned_exit_reason_;
   }
 
-  inline void planned_exit_reason(uint32_t value) {
+  inline void planned_exit_reason(exit_reason value) {
     planned_exit_reason_ = value;
   }
 
@@ -523,7 +517,7 @@ public:
   // valid behavior left or has set a planned exit reason
   bool finished();
 
-  void cleanup(uint32_t reason) override;
+  void cleanup(exit_reason reason) override;
 
   // an actor can have multiple pending timeouts, but only
   // the latest one is active (i.e. the pending_timeouts_.back())
@@ -598,7 +592,7 @@ protected:
   mailbox_element_ptr current_element_;
 
   // set by quit
-  uint32_t planned_exit_reason_;
+  exit_reason planned_exit_reason_;
 
   // identifies the timeout messages we are currently waiting for
   uint32_t timeout_id_;

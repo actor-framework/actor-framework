@@ -22,7 +22,7 @@
 
 namespace caf {
 
-void actor_companion::disconnect(std::uint32_t rsn) {
+void actor_companion::disconnect(exit_reason rsn) {
   enqueue_handler tmp;
   { // lifetime scope of guard
     std::lock_guard<lock_type> guard(lock_);

@@ -21,6 +21,7 @@
 
 #include <limits>
 
+#include "caf/sec.hpp"
 #include "caf/send.hpp"
 #include "caf/exception.hpp"
 #include "caf/make_counted.hpp"
@@ -83,12 +84,12 @@ actor_proxy_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
   intrusive_ptr<basp_broker> ptr = static_cast<basp_broker*>(self);
   auto mm = &system().middleman();
   auto res = make_counted<forwarding_actor_proxy>(aid, nid, ptr);
-  res->attach_functor([=](uint32_t rsn) {
+  res->attach_functor([=](exit_reason rsn) {
     mm->backend().post([=] {
       // using res->id() instead of aid keeps this actor instance alive
       // until the original instance terminates, thus preventing subtle
       // bugs with attachables
-      if (ptr->exit_reason() == exit_reason::not_exited)
+      if (! ptr->exited())
         ptr->state.proxies().erase(nid, res->id(), rsn);
     });
   });
@@ -160,7 +161,7 @@ void basp_broker_state::proxy_announced(const node_id& nid, actor_id aid) {
   CAF_LOG_TRACE(CAF_ARG(nid) << CAF_ARG(aid));
   // source node has created a proxy for one of our actors
   auto entry = system().registry().get(aid);
-  auto send_kill_proxy_instance = [=](uint32_t rsn) {
+  auto send_kill_proxy_instance = [=](exit_reason rsn) {
     auto path = instance.tbl().lookup(nid);
     if (! path) {
       CAF_LOG_INFO("cannot send exit message for proxy, no route to host:"
@@ -178,12 +179,12 @@ void basp_broker_state::proxy_announced(const node_id& nid, actor_id aid) {
   } else {
     intrusive_ptr<broker> bptr = self; // keep broker alive ...
     auto mm = &system().middleman();
-    entry.first->attach_functor([=](uint32_t reason) {
+    entry.first->attach_functor([=](exit_reason reason) {
       mm->backend().dispatch([=] {
         CAF_LOG_TRACE(CAF_ARG(reason));
         // ... to make sure this is safe
         if (bptr == mm->named_broker<basp_broker>(atom("BASP"))
-            && bptr->exit_reason() == exit_reason::not_exited)
+            && ! bptr->exited())
           send_kill_proxy_instance(reason);
       });
     });
@@ -191,7 +192,7 @@ void basp_broker_state::proxy_announced(const node_id& nid, actor_id aid) {
 }
 
 void basp_broker_state::kill_proxy(const node_id& nid, actor_id aid,
-                                   uint32_t rsn) {
+                                   exit_reason rsn) {
   CAF_LOG_TRACE(CAF_ARG(nid) << CAF_ARG(aid) << CAF_ARG(rsn));
   proxies().erase(nid, aid, rsn);
 }
@@ -216,7 +217,7 @@ void basp_broker_state::deliver(const node_id& source_node,
       src = ptr->address();
   }
   actor_addr dest;
-  uint32_t rsn = exit_reason::remote_link_unreachable;
+  auto rsn = exit_reason::remote_link_unreachable;
   if (dest_node != this_node()) {
     auto ptr = proxies().get_or_put(dest_node, dest_actor);
     if (ptr)
@@ -262,8 +263,7 @@ void basp_broker_state::learned_new_node(const node_id& nid) {
         this_actor->monitor(config_serv);
         this_actor->become(
           [=](spawn_atom, std::string& type, message& args)
-          -> delegated<either<ok_atom, actor_addr, std::set<std::string>>
-                       ::or_else<error_atom, std::string>> {
+          -> delegated<ok_atom, actor_addr, std::set<std::string>> {
             CAF_LOG_TRACE(CAF_ARG(type) << CAF_ARG(args));
             this_actor->delegate(config_serv, get_atom::value,
                                  std::move(type), std::move(args));
@@ -427,8 +427,7 @@ bool basp_broker_state::erase_context(connection_handle hdl) {
   auto& ref = i->second;
   if (ref.callback) {
     CAF_LOG_DEBUG("connection closed during handshake");
-    ref.callback->deliver(make_message(error_atom::value,
-                                       "disconnect during handshake"));
+    ref.callback->deliver(sec::disconnect_during_handshake);
   }
   ctx.erase(i);
   return true;
@@ -444,6 +443,7 @@ basp_broker::basp_broker(actor_config& cfg)
 }
 
 behavior basp_broker::make_behavior() {
+  CAF_LOG_TRACE("");
   // TODO: query this config from middleman directly
   // ask the configuration server whether we should open a default port
   auto config_server = system().registry().get(atom("ConfigServ"));
@@ -494,7 +494,7 @@ behavior basp_broker::make_behavior() {
                     << ", " << CAF_ARG(receiver_name)
                     << ", " << CAF_ARG(msg));
       if (sender == invalid_actor_addr)
-        return make_message(error_atom::value, "sender == invalid_actor");
+        return sec::cannot_forward_to_invalid_actor;
       if (system().node() == sender.node())
         system().registry().put(sender->id(), sender);
       auto writer = make_callback([&](serializer& sink) {
@@ -503,7 +503,7 @@ behavior basp_broker::make_behavior() {
       auto path = this->state.instance.tbl().lookup(receiving_node);
       if (! path) {
         CAF_LOG_ERROR("no route to receiving node");
-        return make_message(error_atom::value, "no route to receiving node");
+        return sec::no_route_to_receiving_node;
       }
       // writing std::numeric_limits<actor_id>::max() is a hack to get
       // this send-to-named-actor feature working with older CAF releases
@@ -581,9 +581,7 @@ behavior basp_broker::make_behavior() {
       }
       catch (std::exception& e) {
         CAF_LOG_DEBUG("failed to assign scribe from handle: " << e.what());
-        std::string err = "failed to assign scribe from handle: ";
-        err += e.what();
-        rp.deliver(make_message(error_atom::value, std::move(err)));
+        rp.deliver(sec::failed_to_assign_scribe_from_handle);
         return;
       }
       auto& ctx = state.ctx[hdl];
@@ -598,46 +596,42 @@ behavior basp_broker::make_behavior() {
       CAF_LOG_TRACE(CAF_ARG(nid) << ", " << CAF_ARG(aid));
       state.proxies().erase(nid, aid);
     },
-    [=](unpublish_atom, const actor_addr& whom, uint16_t port) -> message {
-      CAF_LOG_TRACE(CAF_ARG(whom) << ", " << CAF_ARG(port));
+    [=](unpublish_atom, const actor_addr& whom, uint16_t port) -> maybe<void> {
+      CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(port));
       if (whom == invalid_actor_addr)
-        return make_message(error_atom::value, "whom == invalid_actor_addr");
+        return sec::no_actor_to_unpublish;
       auto cb = make_callback([&](const actor_addr&, uint16_t x) {
         try { close(hdl_by_port(x)); }
         catch (std::exception&) { }
       });
-      return state.instance.remove_published_actor(whom, port, &cb) == 0
-               ? make_message(error_atom::value, "no mapping found")
-               : make_message(ok_atom::value);
+      if (state.instance.remove_published_actor(whom, port, &cb) == 0)
+        return sec::no_actor_published_at_port;
+      return {};
     },
-    [=](close_atom, uint16_t port) -> message {
+    [=](close_atom, uint16_t port) -> maybe<void> {
       if (port == 0)
-        return make_message(error_atom::value, "port == 0");
+        return sec::cannot_close_invalid_port;
       // it is well-defined behavior to not have an actor published here,
       // hence the result can be ignored safely
       state.instance.remove_published_actor(port, nullptr);
       try {
         close(hdl_by_port(port));
-        return make_message(ok_atom::value);
       }
       catch (std::exception&) {
-        return make_message(error_atom::value,
-          "no doorman for given port found");
+        return sec::cannot_close_invalid_port;
       }
+      return {};
     },
-    [=](spawn_atom, const node_id& nid, std::string& type, message& args)
-    -> delegated<either<ok_atom, actor_addr, std::set<std::string>>
-                 ::or_else<error_atom, std::string>> {
-      auto err = [=](std::string errmsg) {
-        auto rp = make_response_promise();
-        rp.deliver(error_atom::value, std::move(errmsg));
-      };
+    [=](spawn_atom, const node_id& nid, std::string& type, message& xs)
+    -> delegated<ok_atom, actor_addr, std::set<std::string>> {
+      CAF_LOG_TRACE(CAF_ARG(nid) << CAF_ARG(type) << CAF_ARG(xs));
       auto i = state.spawn_servers.find(nid);
       if (i == state.spawn_servers.end()) {
-          err("no connection to requested node");
-          return {};
+        auto rp = make_response_promise();
+        rp.deliver(sec::no_route_to_receiving_node);
+      } else {
+        delegate(i->second, spawn_atom::value, std::move(type), std::move(xs));
       }
-      delegate(i->second, spawn_atom::value, std::move(type), std::move(args));
       return {};
     },
     [=](ok_atom, const std::string& key, message& value) {

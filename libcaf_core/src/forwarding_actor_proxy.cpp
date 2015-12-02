@@ -31,6 +31,7 @@ forwarding_actor_proxy::forwarding_actor_proxy(actor_id aid,
     : actor_proxy(aid, nid),
       manager_(mgr) {
   CAF_ASSERT(mgr != invalid_actor);
+  CAF_PUSH_AID(0);
   CAF_LOG_INFO(CAF_ARG(aid) << CAF_ARG(nid));
 }
 
@@ -65,6 +66,7 @@ void forwarding_actor_proxy::forward_msg(const actor_addr& sender,
 
 void forwarding_actor_proxy::enqueue(const actor_addr& sender, message_id mid,
                                      message m, execution_unit*) {
+  CAF_PUSH_AID(0);
   forward_msg(sender, mid, std::move(m));
 }
 
@@ -116,11 +118,11 @@ void forwarding_actor_proxy::local_unlink_from(const actor_addr& other) {
   remove_link_impl(other);
 }
 
-void forwarding_actor_proxy::kill_proxy(execution_unit* ctx, uint32_t reason) {
+void forwarding_actor_proxy::kill_proxy(execution_unit* ctx, exit_reason rsn) {
   CAF_ASSERT(ctx != nullptr);
   context(ctx);
   manager(invalid_actor);
-  cleanup(reason);
+  cleanup(rsn);
 }
 
 } // namespace caf

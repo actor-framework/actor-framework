@@ -52,12 +52,18 @@ struct implicit_conversions {
       std::u32string,
       step2
     >::type;
+  using step4 =
+    typename std::conditional<
+      std::is_convertible<step3, abstract_actor*>::value
+      || std::is_same<scoped_actor, step3>::value,
+      actor,
+      step3
+    >::type;
   using type =
     typename std::conditional<
-      std::is_convertible<step2, abstract_actor*>::value
-      || std::is_same<scoped_actor, step2>::value,
-      actor,
-      step2
+      std::is_convertible<step4, error>::value,
+      error,
+      step4
     >::type;
 };
 

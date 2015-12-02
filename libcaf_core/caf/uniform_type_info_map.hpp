@@ -65,6 +65,10 @@ public:
 
   using portable_names = std::unordered_map<std::type_index, std::string>;
 
+  using error_renderer = std::function<std::string (uint8_t, const std::string&)>;
+
+  using error_renderers = std::unordered_map<atom_value, error_renderer>;
+
   type_erased_value_ptr make_value(uint16_t nr) const;
 
   type_erased_value_ptr make_value(const std::string& uniform_name) const;
@@ -81,13 +85,15 @@ public:
 
   /// Returns the portable name for given type information or `nullptr`
   /// if no mapping was found.
-  const std::string*
+  inline const std::string*
   portable_name(const std::pair<uint16_t, const std::type_info*>& x) const {
     return portable_name(x.first, x.second);
   }
 
+  error_renderer renderer(atom_value x) const;
+
   /// Returns the enclosing actor system.
-  inline actor_system& system() {
+  inline actor_system& system() const {
     return system_;
   }
 
@@ -109,6 +115,9 @@ private:
 
   // actor types
   actor_factories factories_;
+
+  // error types
+  error_renderers error_renderers_;
 };
 
 } // namespace caf

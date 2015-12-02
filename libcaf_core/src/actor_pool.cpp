@@ -134,7 +134,7 @@ void actor_pool::enqueue(mailbox_element_ptr what, execution_unit* eu) {
 
 actor_pool::actor_pool(execution_unit* host)
     : abstract_actor(host, 0),
-      planned_reason_(caf::exit_reason::not_exited),
+      planned_reason_(exit_reason::not_exited),
       system_(host->system()) {
   is_registered(true);
 }

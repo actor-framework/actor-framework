@@ -24,6 +24,7 @@
 #include <sstream>
 #include <stdexcept>
 
+#include "caf/sec.hpp"
 #include "caf/send.hpp"
 #include "caf/actor.hpp"
 #include "caf/config.hpp"
@@ -84,21 +85,22 @@ public:
     return "middleman_actor";
   }
 
-  using put_res = either<ok_atom, uint16_t>::or_else<error_atom, std::string>;
+  using put_res = maybe<std::tuple<ok_atom, uint16_t>>;
 
-  using get_res = delegated<either<ok_atom, node_id, actor_addr,
-                                   std::set<std::string>>
-                            ::or_else<error_atom, std::string>>;
+  using get_res = delegated<ok_atom, node_id, actor_addr, std::set<std::string>>;
 
-  using del_res = delegated<either<ok_atom>::or_else<error_atom, std::string>>;
+  using del_res = delegated<void>;
 
   behavior_type make_behavior() override {
+    CAF_LOG_TRACE("");
     return {
       [=](publish_atom, uint16_t port, actor_addr& whom,
           std::set<std::string>& sigs, std::string& addr, bool reuse) {
+        CAF_LOG_TRACE("");
         return put(port, whom, sigs, addr.c_str(), reuse);
       },
       [=](open_atom, uint16_t port, std::string& addr, bool reuse) -> put_res {
+        CAF_LOG_TRACE("");
         actor_addr whom = invalid_actor_addr;
         std::set<std::string> sigs;
         return put(port, whom, sigs, addr.c_str(), reuse);
@@ -115,22 +117,23 @@ public:
           delegate(broker_, connect_atom::value, hdl, port);
         } else {
           auto rp = make_response_promise();
-          rp.deliver(make_message(error_atom::value,
-                                  "could not connect to node"));
+          rp.deliver(sec::cannot_connect_to_node);
         }
         return {};
       },
       [=](unpublish_atom, const actor_addr&, uint16_t) -> del_res {
+        CAF_LOG_TRACE("");
         forward_current_message(broker_);
         return {};
       },
       [=](close_atom, uint16_t) -> del_res {
+        CAF_LOG_TRACE("");
         forward_current_message(broker_);
         return {};
       },
       [=](spawn_atom, const node_id&, const std::string&, const message&)
-      -> delegated<either<ok_atom, actor_addr, std::set<std::string>>
-                   ::or_else<error_atom, std::string>> {
+      -> delegated<ok_atom, actor_addr, std::set<std::string>> {
+        CAF_LOG_TRACE("");
         forward_current_message(broker_);
         return {};
       }
@@ -158,7 +161,7 @@ private:
       return {ok_atom::value, actual_port};
     }
     catch (std::exception& e) {
-      return {error_atom::value, e.what()};
+      return sec::cannot_open_port;
     }
   }
 
@@ -224,11 +227,8 @@ uint16_t middleman::publish(const actor_addr& whom, std::set<std::string> sigs,
       [&](ok_atom, uint16_t res) {
         result = res;
       },
-      [&](error_atom, std::string& msg) {
-        if (! msg.empty())
-          error_msg.swap(msg);
-        else
-          error_msg = "an unknown error occurred in the middleman";
+      [&](const error& err) {
+        error_msg = system().render(err);
       }
     );
   }
@@ -270,11 +270,11 @@ void middleman::unpublish(const actor_addr& whom, uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(port));
   scoped_actor self{system(), true};
   self->sync_send(actor_handle(), unpublish_atom::value, whom, port).await(
-    [](ok_atom) {
+    [] {
       // ok, basp_broker is done
     },
-    [](error_atom, const std::string&) {
-      // ok, basp_broker is done
+    [](const error&) {
+      // ok, ignore errors
     }
   );
 }
@@ -301,9 +301,9 @@ actor_addr middleman::remote_actor(std::set<std::string> ifs,
       }
       result = std::move(res);
     },
-    [&](error_atom, std::string& msg) {
+    [&](const error& msg) {
       CAF_LOG_TRACE(CAF_ARG(msg));
-      throw network_error(std::move(msg));
+      throw network_error(system().render(msg));
     }
   );
   return result;
@@ -345,7 +345,7 @@ void middleman::add_broker(broker_ptr bptr) {
   CAF_ASSERT(bptr != nullptr);
   CAF_LOG_TRACE(CAF_ARG(bptr->id()));
   brokers_.insert(bptr);
-  bptr->attach_functor([=](uint32_t) { brokers_.erase(bptr); });
+  bptr->attach_functor([=] { brokers_.erase(bptr); });
 }
 
 actor middleman::remote_lookup(atom_value name, const node_id& nid) {
@@ -402,7 +402,7 @@ void middleman::stop() {
     for (auto& kvp : named_brokers_) {
       auto& hdl = kvp.second;
       auto ptr = static_cast<broker*>(actor_cast<abstract_actor*>(hdl));
-      if (ptr->exit_reason() == exit_reason::not_exited) {
+      if (! ptr->exited()) {
         ptr->context(&backend());
         ptr->planned_exit_reason(exit_reason::normal);
         ptr->finished();

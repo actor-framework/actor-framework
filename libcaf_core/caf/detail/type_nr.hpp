@@ -48,6 +48,7 @@ using sorted_builtin_types =
     std::vector<char>,        // @charbuf
     down_msg,                 // @down
     duration,                 // @duration
+    error,                    // @error
     exit_msg,                 // @exit
     group,                    // @group
     group_down_msg,           // @group_down

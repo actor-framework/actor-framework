@@ -42,7 +42,7 @@ set (LIBCAF_CORE_SRCS
      src/detached_threads.cpp
      src/duration.cpp
      src/dynamic_message_data.cpp
-     src/either.cpp
+     src/error.cpp
      src/event_based_actor.cpp
      src/exception.cpp
      src/execution_unit.cpp
@@ -73,6 +73,7 @@ set (LIBCAF_CORE_SRCS
      src/ripemd_160.cpp
      src/scoped_actor.cpp
      src/scoped_execution_unit.cpp
+     src/sec.cpp
      src/serializer.cpp
      src/shared_spinlock.cpp
      src/sync_request_bouncer.cpp

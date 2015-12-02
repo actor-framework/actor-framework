@@ -48,11 +48,17 @@ public:
     return static_cast<bool>(to_);
   }
 
-  /// Sends `response_message` and invalidates this handle afterwards.
-  template <class... Ts>
-  void deliver(Ts&&... xs) const {
-    deliver_impl(make_message(std::forward<Ts>(xs)...));
+  /// Sends the response_message.
+  template <class T, class... Ts>
+  typename std::enable_if<
+    ! std::is_convertible<T, error>::value
+  >::type
+  deliver(T&&x, Ts&&... xs) const {
+    deliver_impl(make_message(std::forward<T>(x), std::forward<Ts>(xs)...));
   }
+
+  /// Sends an error as response unless the sender used asynchronous messaging.
+  void deliver(error x) const;
 
 private:
   void deliver_impl(message response_message) const;

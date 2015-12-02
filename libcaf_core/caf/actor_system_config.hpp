@@ -53,6 +53,10 @@ public:
 
   using portable_names = std::unordered_map<std::type_index, std::string>;
 
+  using error_renderer = std::function<std::string (uint8_t, const std::string&)>;
+
+  using error_renderers = std::unordered_map<atom_value, error_renderer>;
+
   actor_system_config();
 
   actor_system_config(int argc, char** argv);
@@ -84,6 +88,13 @@ public:
                                      &make_type_erased<T>);
     return *this;
   }
+
+  /**
+   * Enables the actor system to convert errors of this error category
+   * to human-readable strings via `renderer`.
+   */
+  actor_system_config& add_error_category(atom_value category,
+                                          error_renderer renderer);
 
   template <class T, class... Ts>
   actor_system_config& load() {
@@ -118,6 +129,7 @@ private:
   portable_names type_names_by_rtti_;
   actor_factories actor_factories_;
   module_factories module_factories_;
+  error_renderers error_renderers_;
 };
 
 } // namespace caf

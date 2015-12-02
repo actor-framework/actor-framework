@@ -525,7 +525,7 @@ CAF_TEST(publish_and_connect) {
   auto ax = accept_handle::from_int(4242);
   mpx()->provide_acceptor(4242, ax);
   auto res = system.middleman().publish(self(), 4242);
-  CAF_REQUIRE(res.available());
+  CAF_REQUIRE(res.valid());
   CAF_CHECK(*res == 4242);
   mpx()->flush_runnables(); // process publish message in basp_broker
   connect_node(0, ax, self()->id());
@@ -582,10 +582,11 @@ CAF_TEST(remote_actor_and_send) {
       CAF_REQUIRE(proxy != nullptr);
       CAF_REQUIRE(proxy->address() == res);
       result = actor_cast<actor>(res);
-    },
+    }
+    /* TODO: update error handling ,
     [&](error_atom, std::string& msg) {
       throw logic_error(std::move(msg));
-    }
+    } */
   );
   CAF_MESSAGE("send message to proxy");
   anon_send(actor_cast<actor>(result), 42);

@@ -89,7 +89,7 @@ public:
   void enqueue(mailbox_element_ptr, execution_unit*) override;
 
   /// Called after this broker has finished execution.
-  void cleanup(uint32_t reason) override;
+  void cleanup(exit_reason reason) override;
 
   /// Starts running this broker in the `middleman`.
   void launch(execution_unit* eu, bool lazy, bool hide);

@@ -20,7 +20,6 @@
 #ifndef CAF_TYPED_RESPONSE_PROMISE_HPP
 #define CAF_TYPED_RESPONSE_PROMISE_HPP
 
-#include "caf/either.hpp"
 #include "caf/response_promise.hpp"
 
 namespace caf {
@@ -44,32 +43,6 @@ public:
   template <class... Us>
   void deliver(Us&&... xs) const {
     promise_.deliver(make_message(std::forward<Us>(xs)...));
-  }
-
-private:
-  response_promise promise_;
-};
-
-template <class L, class R>
-class typed_response_promise<either_or_t<L, R>> {
-public:
-  typed_response_promise() = default;
-  typed_response_promise(const typed_response_promise&) = default;
-  typed_response_promise& operator=(const typed_response_promise&) = default;
-
-  typed_response_promise(response_promise promise) : promise_(promise) {
-    // nop
-  }
-
-  explicit operator bool() const {
-    // handle is valid if it has a receiver
-    return static_cast<bool>(promise_);
-  }
-
-  template <class... Ts>
-  void deliver(Ts&&... xs) const {
-    either_or_t<L, R> tmp{std::forward<Ts>(xs)...};
-    promise_.deliver(std::move(tmp.value));
   }
 
 private:

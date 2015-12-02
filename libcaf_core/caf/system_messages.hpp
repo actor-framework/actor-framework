@@ -41,7 +41,7 @@ struct exit_msg {
   /// The source of this message, i.e., the terminated actor.
   actor_addr source;
   /// The exit reason of the terminated actor.
-  uint32_t reason;
+  exit_reason reason;
 };
 
 inline std::string to_string(const exit_msg& x) {
@@ -53,7 +53,7 @@ struct down_msg {
   /// The source of this message, i.e., the terminated actor.
   actor_addr source;
   /// The exit reason of the terminated actor.
-  uint32_t reason;
+  exit_reason reason;
 };
 
 inline std::string to_string(const down_msg& x) {
@@ -65,7 +65,7 @@ struct sync_exited_msg {
   /// The source of this message, i.e., the terminated actor.
   actor_addr source;
   /// The exit reason of the terminated actor.
-  uint32_t reason;
+  exit_reason reason;
 };
 
 inline std::string to_string(const sync_exited_msg& x) {

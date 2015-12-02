@@ -51,7 +51,7 @@ proxy_registry::proxy_entry::~proxy_entry() {
   reset(exit_reason::remote_link_unreachable);
 }
 
-void proxy_registry::proxy_entry::reset(uint32_t rsn) {
+void proxy_registry::proxy_entry::reset(exit_reason rsn) {
   if (! ptr_ || ! backend_)
     return;
   auto ptr = ptr_->get();
@@ -157,7 +157,7 @@ void proxy_registry::erase(const key_type& inf) {
   proxies_.erase(inf);
 }
 
-void proxy_registry::erase(const key_type& inf, actor_id aid, uint32_t rsn) {
+void proxy_registry::erase(const key_type& inf, actor_id aid, exit_reason rsn) {
   CAF_LOG_TRACE(CAF_ARG(inf) << CAF_ARG(aid));
   auto i = proxies_.find(inf);
   if (i != proxies_.end()) {

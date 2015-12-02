@@ -25,6 +25,8 @@
 #include <exception>
 #include <stdexcept>
 
+#include "caf/exit_reason.hpp"
+
 namespace caf {
 
 /// Base class for exceptions.
@@ -51,15 +53,17 @@ private:
 class actor_exited : public caf_exception {
 public:
   ~actor_exited() noexcept;
-  explicit actor_exited(uint32_t exit_reason);
+  explicit actor_exited(exit_reason exit_reason);
   actor_exited(const actor_exited&) = default;
   actor_exited& operator=(const actor_exited&) = default;
 
   /// Returns the exit reason.
-  inline uint32_t reason() const noexcept;
+  inline exit_reason reason() const noexcept {
+    return reason_;
+  }
 
 private:
-  uint32_t reason_;
+  exit_reason reason_;
 };
 
 /// Thrown to indicate that either an actor publishing failed or
@@ -83,10 +87,6 @@ public:
   bind_failure(const bind_failure&) = default;
   bind_failure& operator=(const bind_failure&) = default;
 };
-
-inline uint32_t actor_exited::reason() const noexcept {
-  return reason_;
-}
 
 } // namespace caf
 

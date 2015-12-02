@@ -30,7 +30,7 @@
 namespace caf {
 namespace detail {
 
-sync_request_bouncer::sync_request_bouncer(uint32_t r)
+sync_request_bouncer::sync_request_bouncer(exit_reason r)
     : rsn(r == exit_reason::not_exited ? exit_reason::normal : r) {
   // nop
 }

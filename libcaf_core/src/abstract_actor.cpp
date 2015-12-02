@@ -79,7 +79,7 @@ void abstract_actor::attach(attachable_ptr ptr) {
   if (ptr == nullptr) {
     return;
   }
-  uint32_t reason;
+  caf::exit_reason reason;
   { // lifetime scope of guard
     guard_type guard{mtx_};
     reason = exit_reason_;
@@ -142,7 +142,7 @@ bool abstract_actor::establish_link_impl(const actor_addr& other) {
     // send exit message if already exited
     if (exited()) {
       ptr->enqueue(address(), invalid_message_id,
-                   make_message(exit_msg{address(), exit_reason()}), context_);
+                   make_message(exit_msg{address(), exit_reason_}), context_);
     } else if (ptr->establish_backlink(address())) {
       // add link if not already linked to other
       // (checked by establish_backlink)
@@ -156,7 +156,7 @@ bool abstract_actor::establish_link_impl(const actor_addr& other) {
 
 bool abstract_actor::establish_backlink_impl(const actor_addr& other) {
   CAF_LOG_TRACE(CAF_ARG(other));
-  uint32_t reason = exit_reason::not_exited;
+  auto reason = exit_reason::not_exited;
   default_attachable::observe_token tk{other, default_attachable::link};
   if (other && other != this) {
     guard_type guard{mtx_};
@@ -173,16 +173,15 @@ bool abstract_actor::establish_backlink_impl(const actor_addr& other) {
   if (reason != exit_reason::not_exited) {
     auto ptr = actor_cast<abstract_actor_ptr>(other);
     ptr->enqueue(address(), invalid_message_id,
-                 make_message(exit_msg{address(), exit_reason()}), context_);
+                 make_message(exit_msg{address(), exit_reason_}), context_);
   }
   return false;
 }
 
 bool abstract_actor::remove_link_impl(const actor_addr& other) {
   CAF_LOG_TRACE(CAF_ARG(other));
-  if (other == invalid_actor_addr || other == this) {
+  if (other == invalid_actor_addr || other == this)
     return false;
-  }
   default_attachable::observe_token tk{other, default_attachable::link};
   guard_type guard{mtx_};
   // remove_backlink returns true if this actor is linked to other
@@ -209,7 +208,7 @@ actor_addr abstract_actor::address() const {
   return actor_addr{const_cast<abstract_actor*>(this)};
 }
 
-void abstract_actor::cleanup(uint32_t reason) {
+void abstract_actor::cleanup(exit_reason reason) {
   CAF_LOG_TRACE(CAF_ARG(reason));
   CAF_ASSERT(reason != exit_reason::not_exited);
   // move everyhting out of the critical section before processing it
@@ -226,9 +225,8 @@ void abstract_actor::cleanup(uint32_t reason) {
   CAF_LOG_INFO_IF(node() == system().node(),
                   "cleanup" << CAF_ARG(id()) << CAF_ARG(reason));
   // send exit messages
-  for (attachable* i = head.get(); i != nullptr; i = i->next.get()) {
+  for (attachable* i = head.get(); i != nullptr; i = i->next.get())
     i->actor_exited(this, reason);
-  }
 }
 
 std::set<std::string> abstract_actor::message_types() const {
@@ -246,7 +244,7 @@ void abstract_actor::is_registered(bool value) {
   set_flag(value, is_registered_flag);
 }
 
-maybe<uint32_t> abstract_actor::handle(const std::exception_ptr& eptr) {
+maybe<exit_reason> abstract_actor::handle(const std::exception_ptr& eptr) {
   guard_type guard{mtx_};
   for (auto i = attachables_head_.get(); i != nullptr; i = i->next.get()) {
     try {

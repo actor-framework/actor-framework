@@ -17,53 +17,45 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_EITHER_HPP
-#define CAF_EITHER_HPP
-
-#include <tuple>
-#include <string>
-#include <type_traits>
-
-#include "caf/message.hpp"
-#include "caf/replies_to.hpp"
-#include "caf/illegal_message_element.hpp"
-
-#include "caf/detail/type_list.hpp"
+#include "caf/sec.hpp"
 
 namespace caf {
 
-/// @cond PRIVATE
-std::string either_or_else_type_name(size_t lefts_size,
-                                     const std::string* lefts,
-                                     size_t rights_size,
-                                     const std::string* rights);
-template <class L, class R>
-struct either_or_t;
-template <class... Ls, class... Rs>
-struct either_or_t<detail::type_list<Ls...>,
-                   detail::type_list<Rs...>> : illegal_message_element {
-  static_assert(! std::is_same<detail::type_list<Ls...>,
-                              detail::type_list<Rs...>>::value,
-                "template parameter packs must differ");
-  either_or_t(Ls... ls) : value(make_message(std::move(ls)...)) {
-    // nop
+const char* to_string(sec x) {
+  switch (x) {
+    case sec::unexpected_message:
+      return "unexpected_message";
+    case sec::no_actor_to_unpublish:
+      return "no_actor_to_unpublish";
+    case sec::no_actor_published_at_port:
+      return "no_actor_published_at_port";
+    case sec::state_not_serializable:
+      return "state_not_serializable";
+    case sec::invalid_sys_key:
+      return "invalid_sys_key";
+    case sec::disconnect_during_handshake:
+      return "disconnect_during_handshake";
+    case sec::cannot_forward_to_invalid_actor:
+      return "cannot_forward_to_invalid_actor";
+    case sec::no_route_to_receiving_node:
+      return "no_route_to_receiving_node";
+    case sec::failed_to_assign_scribe_from_handle:
+      return "failed_to_assign_scribe_from_handle";
+    case sec::cannot_close_invalid_port:
+      return "cannot_close_invalid_port";
+    case sec::cannot_connect_to_node:
+      return "cannot_connect_to_node";
+    case sec::cannot_open_port:
+      return "cannot_open_port";
+    case sec::cannot_spawn_actor_from_arguments:
+      return "cannot_spawn_actor_from_arguments";
+    default:
+      return "<unknown>";
   }
-  either_or_t(Rs... rs) : value(make_message(std::move(rs)...)) {
-    // nop
-  }
-  using opt1_type = std::tuple<Ls...>;
-  using opt2_type = std::tuple<Rs...>;
-  message value;
-};
-/// @endcond
+}
 
-template <class... Ts>
-struct either {
-  template <class... Us>
-  using or_else = either_or_t<detail::type_list<Ts...>,
-                              detail::type_list<Us...>>;
-};
+error make_error(sec x) {
+  return {static_cast<uint8_t>(x), atom("system")};
+}
 
 } // namespace caf
-
-#endif // CAF_EITHER_HPP

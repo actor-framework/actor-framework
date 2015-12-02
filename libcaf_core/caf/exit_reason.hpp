@@ -23,45 +23,41 @@
 #include <cstdint>
 
 namespace caf {
-namespace exit_reason {
 
-/// Indicates that the actor is still alive.
-static constexpr uint32_t not_exited = 0x00000;
+enum class exit_reason : uint8_t {
+  /// Indicates that the actor is still alive.
+  not_exited = 0x00,
 
-/// Indicates that an actor finished execution.
-static constexpr uint32_t normal = 0x00001;
+  /// Indicates that an actor finished execution.
+  normal = 0x01,
 
-/// Indicates that an actor finished execution because of an unhandled exception.
-static constexpr uint32_t unhandled_exception = 0x00002;
+  /// Indicates that an actor finished execution because of an unhandled exception.
+  unhandled_exception = 0x02,
 
-/// Indicates that the actor received an unexpected synchronous reply message.
-static constexpr uint32_t unhandled_sync_failure = 0x00004;
+  /// Indicates that the actor received an unexpected synchronous reply message.
+  unhandled_sync_failure = 0x04,
 
-/// Indicates that the exit reason for this actor is unknown, i.e.,
-/// the actor has been terminated and no longer exists.
-static constexpr uint32_t unknown = 0x00006;
+  /// Indicates that the exit reason for this actor is unknown, i.e.,
+  /// the actor has been terminated and no longer exists.
+  unknown = 0x06,
 
-/// Indicates that an actor pool unexpectedly ran out of workers.
-static constexpr uint32_t out_of_workers = 0x00007;
+  /// Indicates that an actor pool unexpectedly ran out of workers.
+  out_of_workers = 0x07,
 
-/// Indicates that the actor was forced to shutdown by a user-generated event.
-static constexpr uint32_t user_shutdown = 0x00010;
+  /// Indicates that the actor was forced to shutdown by a user-generated event.
+  user_shutdown = 0x10,
 
-/// Indicates that the actor was killed unconditionally.
-static constexpr uint32_t kill = 0x00011;
+  /// Indicates that the actor was killed unconditionally.
+  kill = 0x11,
 
-/// Indicates that an actor finishied execution because a connection
-/// to a remote link was closed unexpectedly.
-static constexpr uint32_t remote_link_unreachable = 0x00101;
-
-/// Any user defined exit reason should have a value greater or
-/// equal to prevent collisions with default defined exit reasons.
-static constexpr uint32_t user_defined = 0x10000;
+  /// Indicates that an actor finishied execution because a connection
+  /// to a remote link was closed unexpectedly.
+  remote_link_unreachable = 0x21
+};
 
 /// Returns a string representation of given exit reason.
-const char* as_string(uint32_t value);
+const char* to_string(exit_reason x);
 
-} // namespace exit_reason
 } // namespace caf
 
 #endif // CAF_EXIT_REASON_HPP

@@ -75,7 +75,7 @@ public:
     proxy_entry& operator=(proxy_entry&&) = default;
     ~proxy_entry();
 
-    void reset(uint32_t rsn);
+    void reset(exit_reason rsn);
 
     void assign(actor_proxy::anchor_ptr ptr, backend& ctx);
 
@@ -117,7 +117,7 @@ public:
 
   /// Deletes the proxy with id `aid` for `node`.
   void erase(const key_type& node, actor_id aid,
-             uint32_t rsn = exit_reason::remote_link_unreachable);
+             exit_reason rsn = exit_reason::remote_link_unreachable);
 
   /// Queries whether there are any proxies left.
   bool empty() const;

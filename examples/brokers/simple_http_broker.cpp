@@ -99,7 +99,7 @@ int main(int argc, const char** argv) {
   auto server_actor = system.middleman().spawn_server(server, port);
   if (! server_actor)
     return cerr << "*** spawn_server failed: "
-                << server_actor.error().message() << endl, 1;
+                << system.render(server_actor.error()) << endl, 1;
   // wait for any input
   std::string dummy;
   std::getline(std::cin, dummy);

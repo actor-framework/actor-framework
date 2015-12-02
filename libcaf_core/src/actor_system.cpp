@@ -115,6 +115,7 @@ actor_system::actor_system(actor_system_config&& cfg)
   types_.custom_by_name_ = std::move(cfg.value_factories_by_name_);
   types_.custom_by_rtti_ = std::move(cfg.value_factories_by_rtti_);
   types_.factories_ = std::move(cfg.actor_factories_);
+  types_.error_renderers_ = std::move(cfg.error_renderers_);
   // move remaining config
   node_.swap(cfg.network_id);
   // fire up remaining modules
@@ -158,8 +159,21 @@ actor_registry& actor_system::registry() {
   return registry_;
 }
 
-uniform_type_info_map& actor_system::types() {
+const uniform_type_info_map& actor_system::types() const {
   return types_;
+}
+
+std::string actor_system::render(const error& x) const {
+  auto f = types().renderer(x.category());
+  if (f)
+    return f(x.code(), x.context());
+  std::string result = "unregistered error category ";
+  result += deep_to_string(x.category());
+  result += ", error code ";
+  result += std::to_string(static_cast<int>(x.code()));
+  result += ", context: ";
+  result += x.context();
+  return result;
 }
 
 group_manager& actor_system::groups() {

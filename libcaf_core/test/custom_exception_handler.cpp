@@ -19,7 +19,7 @@
 
 #include "caf/config.hpp"
 
-#define CAF_SUITE custome_exception_handler
+#define CAF_SUITE custom_exception_handler
 #include "caf/test/unit_test.hpp"
 
 #include "caf/all.hpp"
@@ -30,8 +30,8 @@ class exception_testee : public event_based_actor {
 public:
   ~exception_testee();
   exception_testee(actor_config& cfg) : event_based_actor(cfg) {
-    set_exception_handler([](const std::exception_ptr&) -> maybe<uint32_t> {
-      return exit_reason::user_defined + 2;
+    set_exception_handler([](const std::exception_ptr&) -> maybe<exit_reason> {
+      return exit_reason::remote_link_unreachable;
     });
   }
   behavior make_behavior() override {
@@ -49,17 +49,17 @@ exception_testee::~exception_testee() {
 
 CAF_TEST(test_custom_exception_handler) {
   actor_system system;
-  auto handler = [](const std::exception_ptr& eptr) -> maybe<uint32_t> {
+  auto handler = [](const std::exception_ptr& eptr) -> maybe<exit_reason> {
     try {
       std::rethrow_exception(eptr);
     }
     catch (std::runtime_error&) {
-      return exit_reason::user_defined;
+      return exit_reason::normal;
     }
     catch (...) {
       // "fall through"
     }
-    return exit_reason::user_defined + 1;
+    return exit_reason::unhandled_exception;
   };
   {
     scoped_actor self{system};
@@ -78,13 +78,13 @@ CAF_TEST(test_custom_exception_handler) {
     self->receive_for(i, 3)(
       [&](const down_msg& dm) {
         if (dm.source == testee1) {
-          CAF_CHECK_EQUAL(dm.reason, exit_reason::user_defined);
+          CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
         }
         else if (dm.source == testee2) {
-          CAF_CHECK_EQUAL(dm.reason, exit_reason::user_defined + 1);
+          CAF_CHECK_EQUAL(dm.reason, exit_reason::unhandled_exception);
         }
         else if (dm.source == testee3) {
-          CAF_CHECK_EQUAL(dm.reason, exit_reason::user_defined + 2);
+          CAF_CHECK_EQUAL(dm.reason, exit_reason::remote_link_unreachable);
         }
         else {
           CAF_CHECK(false); // report error

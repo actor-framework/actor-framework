@@ -510,53 +510,6 @@ CAF_TEST(spawn_event_testee2_test) {
 
 // exclude this tests; advanced match cases are currently not supported on MSVC
 #ifndef CAF_WINDOWS
-CAF_TEST(chopsticks) {
-  struct chopstick : event_based_actor {
-    behavior make_behavior() override {
-      return available;
-    }
-
-    behavior taken_by(actor whom) {
-      return {
-        [=](get_atom) {
-          return error_atom::value;
-        },
-        on(put_atom::value, whom) >> [=]() {
-          become(available);
-        }
-      };
-    }
-
-    chopstick(actor_config& cfg) : event_based_actor(cfg) {
-      inc_actor_instances();
-      available.assign(
-        [=](get_atom, actor whom) -> atom_value {
-          become(taken_by(whom));
-          return ok_atom::value;
-        }
-      );
-    }
-
-    ~chopstick() {
-      dec_actor_instances();
-    }
-
-    behavior available;
-  };
-  scoped_actor self{system};
-  auto cstk = system.spawn<chopstick>();
-  self->send(cstk, get_atom::value, self);
-  self->receive(
-    [&](ok_atom) {
-      self->send(cstk, put_atom::value, self);
-      self->send_exit(cstk, exit_reason::kill);
-    },
-    others >> [&] {
-      CAF_TEST_ERROR("Unexpected message");
-    }
-  );
-}
-
 CAF_TEST(sync_sends) {
   scoped_actor self{system};
   auto sync_testee = system.spawn<blocking_api>([](blocking_actor* s) {
@@ -670,7 +623,7 @@ CAF_TEST(constructor_attach) {
     testee(actor_config& cfg, actor buddy)
         : event_based_actor(cfg),
           buddy_(buddy) {
-      attach_functor([=](uint32_t reason) {
+      attach_functor([=](exit_reason reason) {
         send(buddy, ok_atom::value, reason);
       });
     }
@@ -705,7 +658,7 @@ CAF_TEST(constructor_attach) {
             quit(msg.reason);
           }
         },
-        [=](ok_atom, uint32_t reason) {
+        [=](ok_atom, exit_reason reason) {
           CAF_CHECK_EQUAL(reason, exit_reason::user_shutdown);
           if (++downs_ == 2) {
             quit(reason);
@@ -735,8 +688,8 @@ namespace {
 class exception_testee : public event_based_actor {
 public:
   exception_testee(actor_config& cfg) : event_based_actor(cfg) {
-    set_exception_handler([](const std::exception_ptr&) -> maybe<uint32_t> {
-      return exit_reason::user_defined + 2;
+    set_exception_handler([](const std::exception_ptr&) -> maybe<exit_reason> {
+      return exit_reason::unhandled_exception;
     });
   }
   behavior make_behavior() override {
@@ -751,17 +704,17 @@ public:
 } // namespace <anonymous>
 
 CAF_TEST(custom_exception_handler) {
-  auto handler = [](const std::exception_ptr& eptr) -> maybe<uint32_t> {
+  auto handler = [](const std::exception_ptr& eptr) -> maybe<exit_reason> {
     try {
       std::rethrow_exception(eptr);
     }
     catch (std::runtime_error&) {
-      return exit_reason::user_defined;
+      return exit_reason::unhandled_exception;
     }
     catch (...) {
       // "fall through"
     }
-    return exit_reason::user_defined + 1;
+    return exit_reason::unknown;
   };
   scoped_actor self{system};
   auto testee1 = self->spawn<monitored>([=](event_based_actor* eb_self) {
@@ -779,13 +732,13 @@ CAF_TEST(custom_exception_handler) {
   self->receive_for(i, 3)(
     [&](const down_msg& dm) {
       if (dm.source == testee1) {
-        CAF_CHECK_EQUAL(dm.reason, exit_reason::user_defined);
+        CAF_CHECK_EQUAL(dm.reason, exit_reason::unhandled_exception);
       }
       else if (dm.source == testee2) {
-        CAF_CHECK_EQUAL(dm.reason, exit_reason::user_defined + 1);
+        CAF_CHECK_EQUAL(dm.reason, exit_reason::unknown);
       }
       else if (dm.source == testee3) {
-        CAF_CHECK_EQUAL(dm.reason, exit_reason::user_defined + 2);
+        CAF_CHECK_EQUAL(dm.reason, exit_reason::unhandled_exception);
       }
       else {
         CAF_CHECK(false); // report error
@@ -817,7 +770,7 @@ CAF_TEST(kill_the_immortal) {
 CAF_TEST(exit_reason_in_scoped_actor) {
   scoped_actor self{system};
   self->spawn<linked>([]() -> behavior { return others >> [] {}; });
-  self->planned_exit_reason(exit_reason::user_defined);
+  self->planned_exit_reason(exit_reason::unhandled_exception);
 }
 
 CAF_TEST(move_only_argument) {

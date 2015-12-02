@@ -34,6 +34,7 @@ class maybe;
 // classes
 class actor;
 class group;
+class error;
 class message;
 class channel;
 class node_id;

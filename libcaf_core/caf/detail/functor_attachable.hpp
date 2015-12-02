@@ -31,12 +31,12 @@ namespace detail {
 template <class F,
           int Args = tl_size<typename get_callable_trait<F>::arg_types>::value>
 struct functor_attachable : attachable {
-  static_assert(Args == 2, "Only 1 and 2 arguments for F are supported");
+  static_assert(Args == 2, "Only 0, 1 and 2 arguments for F are supported");
   F functor_;
   functor_attachable(F arg) : functor_(std::move(arg)) {
     // nop
   }
-  void actor_exited(abstract_actor* self, uint32_t reason) override {
+  void actor_exited(abstract_actor* self, exit_reason reason) override {
     functor_(self, reason);
   }
   static constexpr size_t token_type = attachable::token::anonymous;
@@ -48,8 +48,19 @@ struct functor_attachable<F, 1> : attachable {
   functor_attachable(F arg) : functor_(std::move(arg)) {
     // nop
   }
-  void actor_exited(abstract_actor*, uint32_t reason) override {
+  void actor_exited(abstract_actor*, exit_reason reason) override {
     functor_(reason);
+  }
+};
+
+template <class F>
+struct functor_attachable<F, 0> : attachable {
+  F functor_;
+  functor_attachable(F arg) : functor_(std::move(arg)) {
+    // nop
+  }
+  void actor_exited(abstract_actor*, exit_reason) override {
+    functor_();
   }
 };
 

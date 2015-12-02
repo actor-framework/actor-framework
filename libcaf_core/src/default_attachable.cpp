@@ -28,18 +28,18 @@ namespace caf {
 namespace {
 
 template <class MsgType>
-message make(abstract_actor* self, uint32_t reason) {
+message make(abstract_actor* self, exit_reason reason) {
   return make_message(MsgType{self->address(), reason});
 }
 
 } // namespace <anonymous>
 
-void default_attachable::actor_exited(abstract_actor* self, uint32_t reason) {
+void default_attachable::actor_exited(abstract_actor* self, exit_reason rsn) {
   CAF_ASSERT(self->address() != observer_);
   auto factory = type_ == monitor ? &make<down_msg> : &make<exit_msg>;
   auto ptr = actor_cast<abstract_actor_ptr>(observer_);
   ptr->enqueue(self->address(), message_id{}.with_high_priority(),
-               factory(self, reason), self->context());
+               factory(self, rsn), self->context());
 }
 
 bool default_attachable::matches(const token& what) {

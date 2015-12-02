@@ -79,7 +79,7 @@ void pong(event_based_actor* self) {
           return std::make_tuple(pong_atom::value, val);
         },
         [=](const down_msg& dm) {
-          CAF_MESSAGE("received down_msg{" << dm.reason << "}");
+          CAF_MESSAGE("received down_msg{" << to_string(dm.reason) << "}");
           self->quit(dm.reason);
         },
         others >> [=] {
