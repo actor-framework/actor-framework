@@ -115,7 +115,7 @@ private:
   detail::shared_spinlock workers_mtx_;
   std::vector<actor> workers_;
   policy policy_;
-  uint32_t planned_reason_;
+  exit_reason planned_reason_;
   actor_system& system_;
 };
 

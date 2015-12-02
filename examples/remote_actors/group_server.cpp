@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
   actor_system system{actor_system_config{}.load<io::middleman>()};
   auto pres = system.middleman().publish_local_groups(port);
   if (! pres)
-    return cerr << "*** error: " << pres.error().message() << endl, 1;
+    return cerr << "*** error: " << system.render(pres.error()) << endl, 1;
   cout << "type 'quit' to shutdown the server" << endl;
   string line;
   while (getline(cin, line))

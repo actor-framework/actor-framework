@@ -20,36 +20,30 @@
 #include "caf/exit_reason.hpp"
 
 namespace caf {
-namespace exit_reason {
 
-namespace {
-constexpr const char* s_names_table[] = {
-  "not_exited",
-  "normal",
-  "unhandled_exception",
-  "-invalid-",
-  "unhandled_sync_failure",
-  "-invalid-",
-  "unknown",
-  "out_of_workers"
-};
-} // namespace <anonymous>
-
-const char* as_string(uint32_t value) {
-  if (value <= out_of_workers) {
-    return s_names_table[value];
-  }
-  switch (value) {
-    case user_shutdown: return "user_shutdown";
-    case kill: return "kill";
-    case remote_link_unreachable: return "remote_link_unreachable";
+const char* to_string(exit_reason x) {
+  switch (x) {
+    case exit_reason::not_exited:
+      return "not_exited";
+    case exit_reason::normal:
+      return "normal";
+    case exit_reason::unhandled_exception:
+      return "unhandled_exception";
+    case exit_reason::unhandled_sync_failure:
+      return "unhandled_sync_failure";
+    case exit_reason::unknown:
+      return "unknown";
+    case exit_reason::out_of_workers:
+      return "out_of_workers";
+    case exit_reason::user_shutdown:
+      return "user_shutdown";
+    case exit_reason::kill:
+      return "kill";
+    case exit_reason::remote_link_unreachable:
+      return "remote_link_unreachable";
     default:
-      if (value < user_defined) {
-        return "-invalid-";
-      }
-      return "user_defined";
+      return "-invalid-";
   }
 }
 
-} // namespace exit_reason
 } // namespace caf

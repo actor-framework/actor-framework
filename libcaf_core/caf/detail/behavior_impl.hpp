@@ -31,7 +31,6 @@
 #include "caf/intrusive_ptr.hpp"
 
 #include "caf/atom.hpp"
-#include "caf/either.hpp"
 #include "caf/message.hpp"
 #include "caf/duration.hpp"
 #include "caf/ref_counted.hpp"
@@ -44,7 +43,6 @@
 #include "caf/detail/apply_args.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/detail/tail_argument_token.hpp"
-#include "caf/detail/optional_message_visitor.hpp"
 
 namespace caf {
 

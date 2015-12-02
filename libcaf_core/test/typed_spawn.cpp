@@ -36,6 +36,14 @@ using passed_atom = caf::atom_constant<caf::atom("passed")>;
 
 namespace {
 
+enum class mock_errc : uint8_t {
+  cannot_revert_empty = 1
+};
+
+error make_error(mock_errc x) {
+  return {static_cast<uint8_t>(x), atom("mock")};
+}
+
 // check invariants of type system
 using dummy1 = typed_actor<reacts_to<int, int>,
                            replies_to<double>::with<double>>;
@@ -237,14 +245,15 @@ string_actor::behavior_type string_delegator(string_actor::pointer self,
 }
 
 using maybe_string_actor = typed_actor<replies_to<string>
-                                       ::with_either<ok_atom, string>
-                                       ::or_else<error_atom>>;
+                                       ::with<ok_atom, string>>;
 
 maybe_string_actor::behavior_type maybe_string_reverter() {
   return {
-    [](string& str) -> either<ok_atom, string>::or_else<error_atom> {
+    [](string& str) -> maybe<std::tuple<ok_atom, string>> {
       if (str.empty())
-        return {error_atom::value};
+        return mock_errc::cannot_revert_empty;
+      if (str.empty())
+        return none;
       std::reverse(str.begin(), str.end());
       return {ok_atom::value, std::move(str)};
     }
@@ -255,7 +264,7 @@ maybe_string_actor::behavior_type
 maybe_string_delegator(maybe_string_actor::pointer self, maybe_string_actor x) {
   self->link_to(x);
   return {
-    [=](string& s) -> delegated<either<ok_atom, string>::or_else<error_atom>> {
+    [=](string& s) -> delegated<ok_atom, string> {
       return self->delegate(x, std::move(s));
     }
   };
@@ -426,22 +435,27 @@ CAF_TEST(string_delegator_chain) {
 
 CAF_TEST(maybe_string_delegator_chain) {
   scoped_actor self{system};
+  CAF_LOG_TRACE(CAF_ARG(self));
   auto aut = system.spawn(maybe_string_delegator,
-                   system.spawn(maybe_string_reverter));
+                          system.spawn(maybe_string_reverter));
+  CAF_MESSAGE("send empty string, expect error");
   self->sync_send(aut, "").await(
     [](ok_atom, const string&) {
       throw std::logic_error("unexpected result!");
     },
-    [](error_atom) {
-      // nop
+    [](const error& err) {
+      CAF_CHECK(err.category() == atom("mock"));
+      CAF_CHECK_EQUAL(err.code(),
+                      static_cast<uint8_t>(mock_errc::cannot_revert_empty));
     }
   );
+  CAF_MESSAGE("send abcd string, expect dcba");
   self->sync_send(aut, "abcd").await(
     [](ok_atom, const string& str) {
       CAF_CHECK_EQUAL(str, "dcba");
     },
-    [](error_atom) {
-      throw std::logic_error("unexpected error_atom!");
+    [](const error&) {
+      throw std::logic_error("unexpected error!");
     }
   );
   anon_send_exit(aut, exit_reason::user_shutdown);
@@ -469,10 +483,9 @@ CAF_TEST(test_sending_typed_actors_and_down_msg) {
 }
 
 CAF_TEST(check_signature) {
-  using foo_type = typed_actor<replies_to<put_atom>::
-                               with_either<ok_atom>::or_else<error_atom>>;
-  using foo_result_type = either<ok_atom>::or_else<error_atom>;
-  using bar_type = typed_actor<reacts_to<ok_atom>, reacts_to<error_atom>>;
+  using foo_type = typed_actor<replies_to<put_atom>::with<ok_atom>>;
+  using foo_result_type = maybe<ok_atom>;
+  using bar_type = typed_actor<reacts_to<ok_atom>>;
   auto foo_action = [](foo_type::pointer self) -> foo_type::behavior_type {
     return {
       [=] (put_atom) -> foo_result_type {
@@ -487,9 +500,6 @@ CAF_TEST(check_signature) {
     return {
       [=](ok_atom) {
         self->quit();
-      },
-      [=](error_atom) {
-        self->quit(exit_reason::user_defined);
       }
     };
   };

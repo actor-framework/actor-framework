@@ -59,11 +59,14 @@ struct server_state {
 };
 
 behavior server(stateful_actor<server_state>* self) {
+  CAF_LOG_TRACE("");
   self->on_sync_failure([=] {
-    CAF_TEST_ERROR("Unexpected sync response");
+    CAF_TEST_ERROR("Unexpected sync response: "
+                   << to_string(self->current_message()));
   });
   return {
     [=](ok_atom) {
+      CAF_LOG_TRACE("");
       auto s = self->current_sender();
       CAF_REQUIRE(s != invalid_actor_addr);
       CAF_REQUIRE(self->node() != s.node());
@@ -72,6 +75,7 @@ behavior server(stateful_actor<server_state>* self) {
       self->sync_send(mm, spawn_atom::value,
                       s.node(), "mirror", make_message()).then(
         [=](ok_atom, const actor_addr& addr, const std::set<std::string>& ifs) {
+          CAF_LOG_TRACE(CAF_ARG(addr) << CAF_ARG(ifs));
           CAF_REQUIRE(addr != invalid_actor_addr);
           CAF_CHECK(ifs.empty());
           self->state.aut = actor_cast<actor>(addr);
@@ -85,9 +89,6 @@ behavior server(stateful_actor<server_state>* self) {
               self->quit();
             }
           );
-        },
-        [=](error_atom, const std::string& errmsg) {
-          CAF_TEST_ERROR("could not spawn mirror: " << errmsg);
         }
       );
     }

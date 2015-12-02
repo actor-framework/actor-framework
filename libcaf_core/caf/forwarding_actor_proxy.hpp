@@ -43,7 +43,7 @@ public:
 
   void local_unlink_from(const actor_addr& other) override;
 
-  void kill_proxy(execution_unit* ctx, uint32_t reason) override;
+  void kill_proxy(execution_unit* ctx, exit_reason reason) override;
 
   actor manager() const;
 

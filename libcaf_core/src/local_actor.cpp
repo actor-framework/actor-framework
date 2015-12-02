@@ -19,6 +19,7 @@
 
 #include <string>
 
+#include "caf/sec.hpp"
 #include "caf/atom.hpp"
 #include "caf/logger.hpp"
 #include "caf/exception.hpp"
@@ -52,7 +53,7 @@ local_actor::local_actor(actor_config& cfg)
 
 local_actor::~local_actor() {
   if (! mailbox_.closed()) {
-    detail::sync_request_bouncer f{this->exit_reason()};
+    detail::sync_request_bouncer f{exit_reason_};
     mailbox_.close(f);
   }
 }
@@ -197,7 +198,7 @@ msg_type filter_msg(local_actor* self, mailbox_element& node) {
         if (! self->is_serializable()) {
           node.sender->enqueue(
             mailbox_element::make_joint(self->address(), node.mid.response_id(),
-                                        error_atom::value, "not serializable"),
+                                        sec::state_not_serializable),
             self->context());
           return;
         }
@@ -225,12 +226,11 @@ msg_type filter_msg(local_actor* self, mailbox_element& node) {
             }, false);
             self->is_migrated_from(true);
           },
-          [=](error_atom, std::string& errmsg) {
+          [=](error& err) {
             // respond to original message with {'ERROR', errmsg}
             sender->enqueue(mailbox_element::make_joint(self->address(),
                                                         mid.response_id(),
-                                                        error_atom::value,
-                                                        std::move(errmsg)),
+                                                        std::move(err)),
                             self->context());
           }
         });
@@ -238,10 +238,10 @@ msg_type filter_msg(local_actor* self, mailbox_element& node) {
       [&](sys_atom, migrate_atom, std::vector<char>& buf) {
         // "replace" this actor with the content of `buf`
         if (! self->is_serializable()) {
-          node.sender->enqueue(
-            mailbox_element::make_joint(self->address(), node.mid.response_id(),
-                                        error_atom::value, "not serializable"),
-            self->context());
+          node.sender->enqueue(mailbox_element::make_joint(
+                                 self->address(), node.mid.response_id(),
+                                 sec::state_not_serializable),
+                               self->context());
           return;
         }
         if (self->is_migrated_from()) {
@@ -269,8 +269,7 @@ msg_type filter_msg(local_actor* self, mailbox_element& node) {
         }
         node.sender->enqueue(
           mailbox_element::make_joint(self->address(), node.mid.response_id(),
-                                      error_atom::value,
-                                      "unknown key: " + std::move(what)),
+                                      sec::invalid_sys_key),
           self->context());
       },
       others >> [&] {
@@ -335,11 +334,9 @@ bool handle_message_id_res(local_actor* self, message& res,
       ref.assign(
         others >> [=] {
           // inner is const inside this lambda and mutable a C++14 feature
-          behavior cpy = inner;
-          auto inner_res = cpy(self->current_message());
-          if (inner_res && ! handle_message_id_res(self, *inner_res, fhdl)) {
-            fhdl.deliver(*inner_res);
-          }
+          auto ires = const_cast<behavior&>(inner)(self->current_message());
+          if (ires && ! handle_message_id_res(self, *ires, fhdl))
+            fhdl.deliver(*ires);
         }
       );
       return true;
@@ -351,41 +348,41 @@ bool handle_message_id_res(local_actor* self, message& res,
 // - extracts response message from handler
 // - returns true if fun was successfully invoked
 template <class Handle = int>
-maybe<message> post_process_invoke_res(local_actor* self,
-                                          message_id mid,
-                                          maybe<message>&& res,
-                                          Handle hdl = Handle{}) {
-  CAF_LOG_TRACE(CAF_ARG(mid) << CAF_ARG(res));
-  if (! res) {
-    return none;
+bool post_process_invoke_res(local_actor* self, bool is_sync_request,
+                             maybe<message>&& res, Handle hdl = Handle{}) {
+  CAF_LOG_TRACE(CAF_ARG(is_sync_request) << CAF_ARG(res));
+  // an empty response means self has skipped the message
+  if (res.empty())
+    return false;
+  // get a response promise for the original request
+  auto rp = fetch_response_promise(self, hdl);
+  // return true if self has answered to the original request,
+  // e.g., by forwarding or delegating it
+  if (! rp)
+    return res.valid();
+  // fulfill the promise
+  if (res) {
+    CAF_LOG_DEBUG("respond via response_promise");
+    // deliver empty messages only for sync responses
+    if (! handle_message_id_res(self, *res, none)
+        && (! res->empty() || is_sync_request))
+      rp.deliver(std::move(*res));
+    return true;
+  } else if (is_sync_request) {
+    CAF_LOG_DEBUG("report error back to sync caller");
+    if (res.empty())
+      res = sec::broken_response_promise;
+    rp.deliver(make_message(res.error()));
   }
-  if (res->empty()) {
-    // make sure synchronous requests always receive a response;
-    // note: ! current_mailbox_element() means client has forwarded the request
-    auto& ptr = self->current_mailbox_element();
-    if (ptr) {
-      mid = ptr->mid;
-      if (mid.is_request() && ! mid.is_answered()) {
-        auto fhdl = fetch_response_promise(self, hdl);
-        if (fhdl) {
-          fhdl.deliver(message{});
-        }
-      }
-    }
-    return res;
-  }
-  if (handle_message_id_res(self, *res, none)) {
-    return message{};
-  }
-  // respond by using the result of 'fun'
-  CAF_LOG_DEBUG("respond via response_promise");
-  auto fhdl = fetch_response_promise(self, hdl);
-  if (fhdl) {
-    fhdl.deliver(std::move(*res));
-    // inform caller about success by returning not none
-    return message{};
-  }
-  return res;
+  return false;
+}
+
+void local_actor::handle_sync_failure() {
+  CAF_LOG_TRACE("");
+  if (sync_failure_handler_)
+    sync_failure_handler_();
+  else
+    quit(exit_reason::unhandled_sync_failure);
 }
 
 invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
@@ -427,21 +424,19 @@ invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
                     << CAF_ARG(ptr->mid) << CAF_ARG(awaited_id));
       if (awaited_id.valid() && ptr->mid == awaited_id) {
         bool is_sync_tout = ptr->msg.match_elements<sync_timeout_msg>();
-        ptr.swap(current_mailbox_element());
-        auto mid = current_mailbox_element()->mid;
+        ptr.swap(current_element_);
         if (is_sync_tout) {
           if (fun.timeout().valid()) {
             fun.handle_timeout();
           }
         } else {
-          auto res = post_process_invoke_res(this, mid,
-                                             fun(current_mailbox_element()->msg));
-          if (! res) {
+          if (! post_process_invoke_res(this, false,
+                                        fun(current_element_->msg))) {
             CAF_LOG_WARNING("sync failure occured:" << CAF_ARG(id()));
             handle_sync_failure();
           }
         }
-        ptr.swap(current_mailbox_element());
+        ptr.swap(current_element_);
         mark_arrived(awaited_id);
         return im_success;
       }
@@ -452,22 +447,19 @@ invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
         if (had_timeout) {
           has_timeout(false);
         }
-        ptr.swap(current_mailbox_element());
-        auto mid = current_mailbox_element()->mid;
-        auto res = post_process_invoke_res(this, mid,
-                                           fun(current_mailbox_element()->msg));
-        ptr.swap(current_mailbox_element());
-        if (res) {
+        ptr.swap(current_element_);
+        auto res = post_process_invoke_res(this,
+                                           current_element_->mid.is_request(),
+                                           fun(current_element_->msg));
+        ptr.swap(current_element_);
+        if (res)
           return im_success;
-        }
         // restore timeout if necessary
-        if (had_timeout) {
+        if (had_timeout)
           has_timeout(true);
-        }
+      } else {
+        CAF_LOG_DEBUG("skipped asynchronous message:" << CAF_ARG(awaited_id));
       }
-      CAF_LOG_DEBUG_IF(awaited_id.valid(),
-                       "ignored not-awaited message:"
-                       << CAF_ARG(awaited_id.integer_value()));
       return im_skipped;
   }
   // should be unreachable
@@ -641,6 +633,7 @@ ref_counted* local_actor::as_ref_counted_ptr() {
 
 resumable::resume_result local_actor::resume(execution_unit* eu,
                                              size_t max_throughput) {
+  CAF_PUSH_AID(id());
   CAF_LOG_TRACE("");
   CAF_ASSERT(eu);
   context(eu);
@@ -648,7 +641,7 @@ resumable::resume_result local_actor::resume(execution_unit* eu,
     // actor lives in its own thread
     CAF_ASSERT(dynamic_cast<blocking_actor*>(this) != 0);
     auto self = static_cast<blocking_actor*>(this);
-    uint32_t rsn = exit_reason::normal;
+    auto rsn = exit_reason::normal;
     std::exception_ptr eptr = nullptr;
     try {
       self->act();
@@ -919,7 +912,7 @@ void local_actor::send_impl(message_id mid, abstract_channel* dest,
   dest->enqueue(address(), mid, std::move(what), context());
 }
 
-void local_actor::send_exit(const actor_addr& whom, uint32_t reason) {
+void local_actor::send_exit(const actor_addr& whom, exit_reason reason) {
   send(message_priority::high, actor_cast<actor>(whom),
        exit_msg{address(), reason});
 }
@@ -932,11 +925,13 @@ void local_actor::delayed_send_impl(message_id mid, const channel& dest,
 
 response_promise local_actor::make_response_promise() {
   auto& ptr = current_element_;
-  if (! ptr) {
+  if (! ptr)
     return response_promise{};
-  }
-  response_promise result{address(), ptr->sender, ptr->mid.response_id()};
-  ptr->mid.mark_as_answered();
+  auto& mid = ptr->mid;
+  if (mid.is_answered())
+    return response_promise{};
+  response_promise result{address(), ptr->sender, mid.response_id()};
+  mid.mark_as_answered();
   return result;
 }
 
@@ -973,7 +968,7 @@ bool local_actor::finished() {
   return true;
 }
 
-void local_actor::cleanup(uint32_t reason) {
+void local_actor::cleanup(exit_reason reason) {
   CAF_LOG_TRACE(CAF_ARG(reason));
   current_mailbox_element().reset();
   detail::sync_request_bouncer f{reason};
@@ -990,7 +985,7 @@ void local_actor::cleanup(uint32_t reason) {
   is_registered(false);
 }
 
-void local_actor::quit(uint32_t reason) {
+void local_actor::quit(exit_reason reason) {
   CAF_LOG_TRACE(CAF_ARG(reason));
   planned_exit_reason(reason);
   if (is_blocking()) {

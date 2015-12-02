@@ -38,4 +38,9 @@ void response_promise::deliver_impl(message msg) const {
   to->enqueue(from_, id_, std::move(msg), from->context());
 }
 
+void response_promise::deliver(error x) const {
+  if (id_.valid())
+    deliver_impl(make_message(std::move(x)));
+}
+
 } // namespace caf

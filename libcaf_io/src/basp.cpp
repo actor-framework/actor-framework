@@ -448,7 +448,7 @@ connection_state instance::handle(execution_unit* ctx,
       break;
     case message_type::kill_proxy_instance:
       callee_.kill_proxy(hdr.source_node, hdr.source_actor,
-                         static_cast<uint32_t>(hdr.operation_data));
+                         static_cast<exit_reason>(hdr.operation_data));
       break;
     default:
       CAF_LOG_ERROR("invalid operation");
@@ -663,8 +663,8 @@ void instance::write_kill_proxy_instance(execution_unit* ctx,
                                          buffer_type& buf,
                                          const node_id& dest_node,
                                          actor_id aid,
-                                         uint32_t rsn) {
-  header hdr{message_type::kill_proxy_instance, 0, rsn,
+                                         exit_reason rsn) {
+  header hdr{message_type::kill_proxy_instance, 0, static_cast<uint32_t>(rsn),
              this_node_, dest_node, aid, invalid_actor_id};
   write(ctx, buf, hdr);
 }

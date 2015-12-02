@@ -20,7 +20,6 @@
 #ifndef CAF_TYPED_BEHAVIOR_HPP
 #define CAF_TYPED_BEHAVIOR_HPP
 
-#include "caf/either.hpp"
 #include "caf/behavior.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/typed_continue_helper.hpp"
@@ -44,16 +43,6 @@ struct input_only<detail::type_list<Ts...>> {
 
 using skip_list = detail::type_list<skip_message_t>;
 
-template <class Opt1, class Opt2>
-struct collapse_replies_to_statement {
-  using type = typename either<Opt1>::template or_else<Opt2>;
-};
-
-template <class List>
-struct collapse_replies_to_statement<List, none_t> {
-  using type = List;
-};
-
 template <class Input, class RepliesToWith>
 struct same_input : std::is_same<Input, typename RepliesToWith::input_types> {};
 
@@ -70,11 +59,7 @@ struct valid_input_predicate {
   template <class Expr>
   struct inner {
     using input_types = typename Expr::input_types;
-    using output_types =
-      typename collapse_replies_to_statement<
-        typename Expr::output_opt1_types,
-        typename Expr::output_opt2_types
-      >::type;
+    using output_types = typename Expr::output_types;
     // get matching elements for input type
     using filtered_slist =
       typename tl_filter<

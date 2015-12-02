@@ -46,7 +46,7 @@ public:
 
   /// Removes the handler for incoming messages and terminates
   /// the companion for exit reason @ rsn.
-  void disconnect(std::uint32_t rsn = exit_reason::normal);
+  void disconnect(exit_reason rsn = exit_reason::normal);
 
   /// Sets the handler for incoming messages.
   /// @warning `handler` needs to be thread-safe

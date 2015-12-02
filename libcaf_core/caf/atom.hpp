@@ -63,8 +63,8 @@ struct atom_constant {
 };
 
 template <atom_value V>
-std::string to_string(const atom_constant<V>& x) {
-  return to_string(x.value);
+std::string to_string(const atom_constant<V>&) {
+  return to_string(V);
 }
 
 template <atom_value V>
@@ -87,9 +87,6 @@ using delete_atom = atom_constant<atom("DELETE")>;
 
 /// Generic 'OK' atom for response messages.
 using ok_atom = atom_constant<atom("OK")>;
-
-/// Generic 'ERROR' atom for response messages.
-using error_atom = atom_constant<atom("ERROR")>;
 
 /// Marker 'SYS' atom for prefixing messages to a forwarding chain
 /// to address an otherwise transparent actor.

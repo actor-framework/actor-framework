@@ -88,7 +88,7 @@ behavior pong(event_based_actor* self) {
           return std::make_tuple(pong_atom::value, val);
         },
         [=](const down_msg& dm) {
-          CAF_MESSAGE("received down_msg{" << dm.reason << "}");
+          CAF_MESSAGE("received down_msg{" << to_string(dm.reason) << "}");
           self->quit(dm.reason);
         },
         others >> [=] {
@@ -174,9 +174,8 @@ acceptor::behavior_type acceptor_fun(acceptor::broker_pointer self,
     [](const acceptor_closed_msg&) {
       // nop
     },
-    [=](publish_atom) {
-      // TODO: return the maybe<> (implement on lower level)
-      return *get<1>(self->add_tcp_doorman(0, "127.0.0.1"));
+    [=](publish_atom) -> maybe<uint16_t> {
+      return get<1>(self->add_tcp_doorman(0, "127.0.0.1"));
     }
   };
 }

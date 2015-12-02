@@ -120,10 +120,9 @@ void anon_send(const typed_actor<Sigs...>& to, Ts&&... xs) {
 }
 
 /// Anonymously sends `to` an exit message.
-inline void anon_send_exit(const actor_addr& to, uint32_t reason) {
-  if (! to){
+inline void anon_send_exit(const actor_addr& to, exit_reason reason) {
+  if (! to)
     return;
-  }
   auto ptr = actor_cast<actor>(to);
   ptr->enqueue(invalid_actor_addr, message_id{}.with_high_priority(),
                make_message(exit_msg{invalid_actor_addr, reason}), nullptr);
@@ -131,7 +130,7 @@ inline void anon_send_exit(const actor_addr& to, uint32_t reason) {
 
 /// Anonymously sends `to` an exit message.
 template <class ActorHandle>
-void anon_send_exit(const ActorHandle& to, uint32_t reason) {
+void anon_send_exit(const ActorHandle& to, exit_reason reason) {
   anon_send_exit(to.address(), reason);
 }
 

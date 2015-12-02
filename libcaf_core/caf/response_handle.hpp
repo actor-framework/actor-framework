@@ -87,23 +87,17 @@ public:
     // nop
   }
 
-  template <class... Fs>
+  template <class F>
   typed_continue_helper<
     typename detail::lifted_result_type<
-      typename detail::common_result_type<
-        typename detail::get_callable_trait<Fs>::result_type...
-      >::type
+      typename detail::get_callable_trait<F>::result_type
     >::type>
-  then(Fs... fs) {
-    static_assert(sizeof...(Fs) > 0, "at least one functor is requried");
-    static_assert(detail::conjunction<detail::is_callable<Fs>::value...>::value,
-                  "all arguments must be callable");
-    static_assert(detail::conjunction<
-                    ! std::is_base_of<match_case, Fs>::value...
-                  >::value,
+  then(F fun) {
+    static_assert(detail::is_callable<F>::value, "argument is not callable");
+    static_assert(! std::is_base_of<match_case, F>::value,
                   "match cases are not allowed in this context");
-    detail::type_checker<TypedOutputPair, Fs...>::check();
-    self_->set_response_handler(mid_, behavior{std::move(fs)...});
+    detail::type_checker<TypedOutputPair, F>::check();
+    self_->set_response_handler(mid_, behavior{std::move(fun)});
     return {mid_};
   }
 
@@ -144,8 +138,8 @@ private:
 /******************************************************************************
  *                              blocking + typed                              *
  ******************************************************************************/
-template <class Self, class OutputPair>
-class response_handle<Self, OutputPair, blocking_response_handle_tag> {
+template <class Self, class Output>
+class response_handle<Self, Output, blocking_response_handle_tag> {
 public:
   response_handle() = delete;
   response_handle(const response_handle&) = default;
@@ -155,27 +149,28 @@ public:
     // nop
   }
 
-  static constexpr bool is_either_or_handle =
-    ! std::is_same<
-      none_t,
-      typename OutputPair::second
-    >::value;
-
-  template <class... Fs>
-  void await(Fs... fs) {
-    static_assert(sizeof...(Fs) > 0,
-                  "at least one argument is required");
-    static_assert((is_either_or_handle && sizeof...(Fs) == 2)
-                  || sizeof...(Fs) == 1,
-                  "wrong number of functors");
-    static_assert(detail::conjunction<detail::is_callable<Fs>::value...>::value,
-                  "all arguments must be callable");
-    static_assert(detail::conjunction<
-                    ! std::is_base_of<match_case, Fs>::value...
-                  >::value,
+  template <class F>
+  void await(F fun) {
+    static_assert(detail::is_callable<F>::value, "argument is not callable");
+    static_assert(! std::is_base_of<match_case, F>::value,
                   "match cases are not allowed in this context");
-    detail::type_checker<OutputPair, Fs...>::check();
-    behavior tmp{std::move(fs)...};
+    detail::type_checker<Output, F>::check();
+    behavior tmp{std::move(fun)};
+    self_->dequeue(tmp, mid_);
+  }
+
+  template <class F, class E>
+  void await(F fun, E error_handler) {
+    static_assert(detail::is_callable<F>::value, "argument is not callable");
+    static_assert(! std::is_base_of<match_case, F>::value,
+                  "match cases are not allowed in this context");
+    static_assert(std::is_same<
+                    decltype(error_handler(std::declval<error&>())),
+                    void
+                  >::value,
+                  "error handler accepts no caf::error or returns not void");
+    detail::type_checker<Output, F>::check();
+    behavior tmp{std::move(fun), std::move(error_handler)};
     self_->dequeue(tmp, mid_);
   }
 

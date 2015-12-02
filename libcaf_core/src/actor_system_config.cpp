@@ -237,4 +237,10 @@ actor_system_config::add_actor_factory(std::string name, actor_factory fun) {
   return *this;
 }
 
+actor_system_config&
+actor_system_config::add_error_category(atom_value x, error_renderer y) {
+  error_renderers_.emplace(x, y);
+  return *this;
+}
+
 } // namespace caf

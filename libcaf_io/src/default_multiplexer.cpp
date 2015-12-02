@@ -451,6 +451,7 @@ uint16_t remote_port_of_fd(native_socket fd);
       if (presult < 0) {
         switch (last_socket_error()) {
           case EINTR: {
+            CAF_LOG_DEBUG("received EINTR, try again");
             // a signal was caught
             // just try again
             break;

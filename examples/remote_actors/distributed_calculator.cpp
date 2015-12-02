@@ -120,10 +120,10 @@ private:
         }
         unbecome();
       },
-      [=](error_atom, const string& errstr) {
+      [=](const error& err) {
         aout(this) << "*** could not connect to " << host_
                    << " at port " << port_
-                   << ": " << errstr
+                   << ": " << system().render(err)
                    << " [try again in 3s]"
                    << endl;
         delayed_send(mm, seconds(3), connect_atom::value, host_, port_);
@@ -143,7 +143,7 @@ private:
           [=](ok_atom&, actor_addr&) {
             send_mm();
           },
-          [=](error_atom&, string&)  {
+          [=](const error&) {
             send_mm();
           }
         );
@@ -283,7 +283,7 @@ int main(int argc, char** argv) {
     cout << "*** try publish at port " << port << endl;
     auto p = system.middleman().publish(calc, port);
     if (! p)
-      return cerr << "*** error: " << p.error().message() << endl, 1;
+      return cerr << "*** error: " << system.render(p.error()) << endl, 1;
     cout << "*** server successfully published at port " << *p << endl;
     cout << "*** press [enter] to quit" << endl;
     string dummy;

@@ -22,6 +22,8 @@
 
 #include <cstdint>
 
+#include "caf/exit_reason.hpp"
+
 namespace caf {
 
 class actor_addr;
@@ -35,8 +37,8 @@ namespace caf {
 namespace detail {
 
 struct sync_request_bouncer {
-  uint32_t rsn;
-  explicit sync_request_bouncer(uint32_t r);
+  exit_reason rsn;
+  explicit sync_request_bouncer(exit_reason r);
   void operator()(const actor_addr& sender, const message_id& mid) const;
   void operator()(const mailbox_element& e) const;
 

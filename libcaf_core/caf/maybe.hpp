@@ -22,10 +22,10 @@
 
 #include <new>
 #include <utility>
-#include <system_error>
 
 #include "caf/none.hpp"
 #include "caf/unit.hpp"
+#include "caf/error.hpp"
 #include "caf/config.hpp"
 #include "caf/deep_to_string.hpp"
 
@@ -38,17 +38,17 @@ namespace caf {
 /// a `maybe` represents simply `none`. Hence, this type has three possible
 /// states:
 /// - A value of `T` is available
-///   + `available()` returns `true`
+///   + `valid()` returns `true`
 ///   + `empty()` returns `false`
-///   + `error()` evaluates to `false`
+///   + `invalid()` returns `false`
 /// -  No value is available but no error occurred
-///   + `available()` returns `false`
+///   + `valid()` returns `false`
 ///   + `empty()` returns `true`
-///   + `error()` evaluates to `false`
+///   + `invalid()` returns `false`
 /// - An error occurred (no value available)
-///   + `available()` returns `false`
+///   + `valid()` returns `false`
 ///   + `empty()` returns `false`
-///   + `error()` evaluates to `true`
+///   + `invalid()` returns `true`
 template <class T>
 class maybe {
 public:
@@ -57,7 +57,7 @@ public:
   using const_reference = const type&;
   using pointer = type*;
   using const_pointer = const type*;
-  using error_type = std::error_condition;
+  using error_type = caf::error;
 
   /// Type for storing values.
   using storage =
@@ -68,8 +68,13 @@ public:
     >::type;
 
   /// Creates an instance representing an error.
-  maybe(error_type err) {
-    cr_error(std::move(err));
+  maybe(const error_type& x) {
+    cr_error(x);
+  }
+
+  /// Creates an instance representing an error.
+  maybe(error_type&& x) {
+    cr_error(std::move(x));
   }
 
   /// Creates an instance representing a value from `x`.
@@ -81,45 +86,55 @@ public:
     cr_value(std::forward<U>(x));
   }
 
+  template <class U0, class U1, class... Us>
+  maybe(U0&& x0, U1&& x1, Us&&... xs) {
+    flag_ = available_flag;
+    new (&value_) storage(std::forward<U0>(x0), std::forward<U1>(x1),
+                          std::forward<Us>(xs)...);
+  }
+
   /// Creates an instance representing an error
-  /// from an error condition enum.
+  /// from a type offering the free function `make_error`.
   template <class E,
             class = typename std::enable_if<
-                      std::is_error_condition_enum<E>::value
+                      std::is_same<
+                        decltype(make_error(std::declval<const E&>())),
+                        error
+                      >::value
                     >::type>
-  maybe(E error_code_enum) {
-    cr_error(make_error_condition(error_code_enum));
+  maybe(E error_enum) : maybe(make_error(error_enum)) {
+    // nop
   }
 
   /// Creates an empty instance.
-  maybe() {
-    cr_error(error_type{});
+  maybe() : flag_(empty_flag) {
+    // nop
   }
 
   /// Creates an empty instance.
-  maybe(const none_t&) {
-    cr_error(error_type{});
+  maybe(const none_t&) : flag_(empty_flag) {
+    // nop
   }
 
   maybe(const maybe& other) {
-    if (other.available_)
+    if (other.valid())
       cr_value(other.value_);
     else
-      cr_error(other.error_);
+      cr_error(other);
   }
 
   maybe(maybe&& other) {
-    if (other.available_)
+    if (other.valid())
       cr_value(std::move(other.value_));
     else
-      cr_error(std::move(other.error_));
+      cr_error(std::move(other));
   }
 
   template <class U>
   maybe(maybe<U>&& other) {
     static_assert(std::is_convertible<U, T>::value, "U not convertible to T");
     if (other)
-      cr_moved_value(*other);
+      cr_value(std::move(*other));
     else
       cr_error(std::move(other.error()));
   }
@@ -138,11 +153,9 @@ public:
   }
 
   maybe& operator=(const none_t&) {
-    if (available_) {
+    if (! empty()) {
       destroy();
-      cr_error(error_type{});
-    } else if (error_) {
-      error_ = error_type{};
+      flag_ = empty_flag;
     }
     return *this;
   }
@@ -152,7 +165,7 @@ public:
                       std::is_convertible<U, T>::value
                     >::type>
   maybe& operator=(U&& x) {
-    if (! available_) {
+    if (! valid()) {
       destroy();
       cr_value(std::forward<U>(x));
     } else {
@@ -161,68 +174,87 @@ public:
     return *this;
   }
 
-  maybe& operator=(error_type err) {
-    if (available_) {
-      destroy();
-      cr_error(std::move(err));
-    } else {
-      error_ = std::move(err);
-    }
+  maybe& operator=(const error_type& err) {
+    destroy();
+    cr_error(err);
+    return *this;
+  }
+
+  maybe& operator=(error_type&& err) {
+    destroy();
+    cr_error(std::move(err));
     return *this;
   }
 
   template <class E,
             class = typename std::enable_if<
-              std::is_error_condition_enum<E>::value
-            >::type>
-  maybe& operator=(E error_code_enum) {
-    return *this = make_error_condition(error_code_enum);
+                      std::is_same<
+                        decltype(make_error(std::declval<const E&>())),
+                        error_type
+                      >::value
+                    >::type>
+  maybe& operator=(E error_enum) {
+    return *this = make_error(error_enum);
   }
 
   maybe& operator=(maybe&& other) {
-    return other ? *this = std::move(*other) : *this = std::move(other.error());
+    if (other.valid())
+      *this = std::move(*other);
+    else
+      cr_error(std::move(other));
+    return *this;
   }
 
   maybe& operator=(const maybe& other) {
-    return other ? *this = *other : *this = other.error();
+    if (other.valid())
+      *this = *other;
+    else
+      cr_error(other);
   }
 
   template <class U>
   maybe& operator=(maybe<U>&& other) {
     static_assert(std::is_convertible<U, T>::value, "U not convertible to T");
-    return other ? *this = std::move(*other) : *this = std::move(other.error());
+    if (other.valid())
+      *this = std::move(*other);
+    else
+      cr_error(std::move(other));
+    return *this;
   }
 
   template <class U>
   maybe& operator=(const maybe<U>& other) {
     static_assert(std::is_convertible<U, T>::value, "U not convertible to T");
-    return other ? *this = *other : *this = other.error();
+    if (other.valid())
+      *this = *other;
+    else
+      cr_error(other);
   }
 
   /// Queries whether this instance holds a value.
-  bool available() const {
-    return available_;
+  bool valid() const {
+    return flag_ == available_flag;
   }
 
   /// Returns `available()`.
   explicit operator bool() const {
-    return available();
+    return valid();
   }
 
   /// Returns `! available()`.
   bool operator!() const {
-    return ! available();
+    return ! valid();
   }
 
   /// Returns the value.
   reference get() {
-    CAF_ASSERT(available());
+    CAF_ASSERT(valid());
     return value_;
   }
 
   /// Returns the value.
   const_reference get() const {
-    CAF_ASSERT(available());
+    CAF_ASSERT(valid());
     return value_;
   }
 
@@ -248,21 +280,44 @@ public:
 
   /// Returns whether this objects holds neither a value nor an actual error.
   bool empty() const {
-    return ! available() && ! error();
+    return flag_ == empty_flag;
   }
 
-  /// Returns the error.
-  const error_type& error() const {
-    CAF_ASSERT(! available());
-    return error_;
+  bool invalid() const {
+    return (flag_ & error_code_mask) != 0;
+  }
+
+  /// Creates an error object.
+  error_type error() const {
+    if (valid())
+      return {};
+    if (has_error_context())
+      return {error_code(), extended_error_->first, extended_error_->second};
+    return {error_code(), error_category_};
+  }
+
+  uint8_t error_code() const {
+    return static_cast<uint8_t>(flag_ & error_code_mask);
+  }
+
+  atom_value error_category() const {
+    if (valid())
+      return atom("");
+    if (has_error_context())
+      return extended_error_->first;
+    return error_category_;
   }
 
 private:
+  bool has_error_context() const {
+    return (flag_ & error_context_mask) != 0;
+  }
+
   void destroy() {
-    if (available_)
+    if (valid())
       value_.~storage();
-    else
-      error_.~error_type();
+    else if (has_error_context())
+      delete extended_error_;
   }
 
   template <class V>
@@ -288,19 +343,63 @@ private:
         x_type&&,
         x_type&
       >::type;
-    available_ = true;
+    flag_ = available_flag;
     new (&value_) storage(static_cast<fwd_type>(x));
   }
 
-  void cr_error(std::error_condition ec) {
-    available_ = false;
-    new (&error_) error_type(std::move(ec));
+  template <class U>
+  void cr_error(const maybe<U>& other) {
+    flag_ = other.flag_;
+    if (has_error_context())
+      extended_error_ = new extended_error(*other.extended_error_);
+    else
+      error_category_ = other.error_category_;
   }
 
-  bool available_;
+  template <class U>
+  void cr_error(maybe<U>&& other) {
+    flag_ = other.flag_;
+    if (has_error_context())
+      extended_error_ = other.extended_error_;
+    else
+      error_category_ = other.error_category_;
+    other.flag_ = empty_flag; // take ownership of extended_error_
+  }
+
+  void cr_error(const error_type& x) {
+    flag_ = x.compress_code_and_size();
+    if (has_error_context())
+      extended_error_ = new extended_error(x.category(), x.context());
+    else
+      error_category_ = x.category();
+  }
+
+  void cr_error(error_type&& x) {
+    flag_ = x.compress_code_and_size();
+    if (has_error_context())
+      extended_error_ = new extended_error(x.category(),
+                                           std::move(x.context()));
+    else
+      error_category_ = x.category();
+  }
+
+  static constexpr uint32_t available_flag = 0x80000000;
+  static constexpr uint32_t empty_flag = 0x00000000;
+  static constexpr uint32_t error_code_mask = 0x000000FF;
+  static constexpr uint32_t error_context_mask = 0x7FFFFF00;
+
+  using extended_error = std::pair<atom_value, std::string>;
+
+  // stores the availability flag (1bit), context string size (23 bit),
+  // and error code (8 bit).
+  uint32_t flag_;
   union {
+    // if flag == available_flag
     storage value_;
-    error_type error_;
+    // if (flag & error_context_mask) == 0
+    atom_value error_category_;
+    // if (flag & error_context_mask) != 0
+    extended_error* extended_error_;
   };
 };
 
@@ -326,103 +425,106 @@ maybe<const typename std::tuple_element<X, T>::type&> get(const maybe<T>& xs) {
 /// value or the same error, `false` otherwise.
 /// @relates maybe
 template <class T, typename U>
-bool operator==(const maybe<T>& lhs, const maybe<U>& rhs) {
-  if (lhs)
-    return (rhs) ? detail::safe_equal(*lhs, *rhs) : false;
-  if (! rhs)
-    return lhs.error() == rhs.error();
+bool operator==(const maybe<T>& x, const maybe<U>& y) {
+  if (x)
+    return (y) ? detail::safe_equal(*x, *y) : false;
+  if (x.empty() && y.empty())
+    return true;
+  if (! y)
+    return x.error_code() == y.error_code()
+           && x.error_category() == y.error_category();
   return false;
 }
 
 /// Returns `true` if `lhs` is available and its value is equal to `rhs`.
 template <class T, typename U>
-bool operator==(const maybe<T>& lhs, const U& rhs) {
-  return (lhs) ? *lhs == rhs : false;
+bool operator==(const maybe<T>& x, const U& y) {
+  return (x) ? *x == y : false;
 }
 
 /// Returns `true` if `rhs` is available and its value is equal to `lhs`.
 /// @relates maybe
 template <class T, typename U>
-bool operator==(const T& lhs, const maybe<U>& rhs) {
-  return rhs == lhs;
+bool operator==(const T& x, const maybe<U>& y) {
+  return y == x;
 }
 
 /// Returns `true` if the objects represent different
 /// values or errors, `false` otherwise.
 /// @relates maybe
 template <class T, typename U>
-bool operator!=(const maybe<T>& lhs, const maybe<U>& rhs) {
-  return !(lhs == rhs);
+bool operator!=(const maybe<T>& x, const maybe<U>& y) {
+  return !(x == y);
 }
 
 /// Returns `true` if `lhs` is not available or its value is not equal to `rhs`.
 /// @relates maybe
 template <class T, typename U>
-bool operator!=(const maybe<T>& lhs, const U& rhs) {
-  return !(lhs == rhs);
+bool operator!=(const maybe<T>& x, const U& y) {
+  return !(x == y);
 }
 
 /// Returns `true` if `rhs` is not available or its value is not equal to `lhs`.
 /// @relates maybe
 template <class T, typename U>
-bool operator!=(const T& lhs, const maybe<U>& rhs) {
-  return !(lhs == rhs);
+bool operator!=(const T& x, const maybe<U>& y) {
+  return !(x == y);
 }
 
 /// Returns `! val.available() && val.error() == err`.
 /// @relates maybe
 template <class T>
-bool operator==(const maybe<T>& val, const std::error_condition& err) {
-  return ! val.available() && val.error() == err;
+bool operator==(const maybe<T>& x, const error& y) {
+  return x.invalid() && y.compare(x.error_code(), x.error_category()) == 0;
 }
 
 /// Returns `! val.available() && val.error() == err`.
 /// @relates maybe
 template <class T>
-bool operator==(const std::error_condition& err, const maybe<T>& val) {
-  return val == err;
+bool operator==(const error& x, const maybe<T>& y) {
+  return y == x;
 }
 
 /// Returns `val.available() || val.error() != err`.
 /// @relates maybe
 template <class T>
-bool operator!=(const maybe<T>& val, const std::error_condition& err) {
-  return ! (val == err);
+bool operator!=(const maybe<T>& x, const error& y) {
+  return ! (x == y);
 }
 
 /// Returns `val.available() || val.error() != err`.
 /// @relates maybe
 template <class T>
-bool operator!=(const std::error_condition& err, const maybe<T>& val) {
-  return ! (val == err);
+bool operator!=(const error& x, const maybe<T>& y) {
+  return ! (y == x);
 }
 
 /// Returns `val.empty()`.
 /// @relates maybe
 template <class T>
-bool operator==(const maybe<T>& val, const none_t&) {
-  return val.empty();
+bool operator==(const maybe<T>& x, const none_t&) {
+  return x.empty();
 }
 
 /// Returns `val.empty()`.
 /// @relates maybe
 template <class T>
-bool operator==(const none_t&, const maybe<T>& val) {
-  return val.empty();
+bool operator==(const none_t&, const maybe<T>& x) {
+  return x.empty();
 }
 
 /// Returns `! val.empty()`.
 /// @relates maybe
 template <class T>
-bool operator!=(const maybe<T>& val, const none_t&) {
-  return ! val.empty();
+bool operator!=(const maybe<T>& x, const none_t&) {
+  return ! x.empty();
 }
 
 /// Returns `! val.empty()`.
 /// @relates maybe
 template <class T>
-bool operator!=(const none_t&, const maybe<T>& val) {
-  return ! val.empty();
+bool operator!=(const none_t&, const maybe<T>& x) {
+  return ! x.empty();
 }
 
 // Represents a computation performing side effects only and
@@ -435,7 +537,7 @@ public:
   using const_reference = const type&;
   using pointer = const type*;
   using const_pointer = const type*;
-  using error_type = std::error_condition;
+  using error_type = caf::error;
 
   maybe() = default;
 
@@ -449,9 +551,12 @@ public:
 
   template <class E,
             class = typename std::enable_if<
-                      std::is_error_condition_enum<E>::value
+                      std::is_same<
+                        decltype(make_error(std::declval<const E&>())),
+                        error_type
+                      >::value
                     >::type>
-  maybe(E error_code) : error_(std::make_error_condition(error_code)) {
+  maybe(E error_code) : error_(make_error(error_code)) {
     // nop
   }
 
@@ -467,22 +572,25 @@ public:
 
   template <class E,
             class = typename std::enable_if<
-              std::is_error_condition_enum<E>::value
-            >::type>
+                      std::is_same<
+                        decltype(make_error(std::declval<const E&>())),
+                        error_type
+                      >::value
+                    >::type>
   maybe& operator=(E error_code) {
-    return *this = std::make_error_condition(error_code);
+    return *this = make_error(error_code);
   }
 
-  bool available() const {
+  bool valid() const {
     return false;
   }
 
   explicit operator bool() const {
-    return available();
+    return valid();
   }
 
   bool operator!() const {
-    return ! available();
+    return ! valid();
   }
 
   reference get() {
@@ -527,7 +635,9 @@ template <class T>
 std::string to_string(const maybe<T>& x) {
   if (x)
     return deep_to_string(*x);
-  return "<none>";
+  if (x.empty())
+    return "<none>";
+  return to_string(x.error());
 }
 
 } // namespace caf

@@ -63,6 +63,7 @@ const char* numbered_type_names[] = {
   "@charbuf",
   "@down",
   "@duration",
+  "@error",
   "@exit",
   "@group",
   "@group_down",
@@ -152,6 +153,14 @@ uniform_type_info_map::portable_name(uint16_t nr,
   auto i = custom_names_.find(std::type_index(*ti));
   if (i != custom_names_.end())
     return &(i->second);
+  return nullptr;
+}
+
+uniform_type_info_map::error_renderer
+uniform_type_info_map::renderer(atom_value x) const {
+  auto i = error_renderers_.find(x);
+  if (i != error_renderers_.end())
+    return i->second;
   return nullptr;
 }
 

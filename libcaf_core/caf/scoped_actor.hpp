@@ -72,6 +72,8 @@ private:
   intrusive_ptr<blocking_actor> self_;
 };
 
+std::string to_string(const scoped_actor& x);
+
 } // namespace caf
 
 #endif // CAF_SCOPED_ACTOR_HPP

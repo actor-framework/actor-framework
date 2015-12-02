@@ -66,7 +66,7 @@ behavior ping_behavior(local_actor* self, size_t ping_msgs) {
       }
       CAF_MESSAGE("received {'pong', " << value << "}");
       if (++s_pongs >= ping_msgs) {
-        CAF_MESSAGE("reached maximum, send {'EXIT', user_defined} "
+        CAF_MESSAGE("reached maximum, send {'EXIT', user_shutdown} "
                       << "to last sender and quit with normal reason");
         self->send_exit(self->current_sender(),
                 exit_reason::user_shutdown);
@@ -176,11 +176,11 @@ void spawn5_server_impl(event_based_actor* self, actor client, group grp) {
               },
               others >> [=] {
                 CAF_TEST_ERROR("Unexpected message");
-                self->quit(exit_reason::user_defined);
+                self->quit(exit_reason::user_shutdown);
               },
               after(chrono::seconds(3)) >> [=] {
                 CAF_TEST_ERROR("did only receive " << *downs << " down messages");
-                self->quit(exit_reason::user_defined);
+                self->quit(exit_reason::user_shutdown);
               }
             );
           }
@@ -188,19 +188,19 @@ void spawn5_server_impl(event_based_actor* self, actor client, group grp) {
         after(std::chrono::seconds(6)) >> [=] {
           CAF_LOG_TRACE("");
           CAF_TEST_ERROR("Unexpected timeout");
-          self->quit(exit_reason::user_defined);
+          self->quit(exit_reason::user_shutdown);
         }
       );
     },
     others >> [=] {
       CAF_LOG_TRACE("");
       CAF_TEST_ERROR("Unexpected message");
-      self->quit(exit_reason::user_defined);
+      self->quit(exit_reason::user_shutdown);
     },
     after(chrono::seconds(10)) >> [=] {
       CAF_LOG_TRACE("");
       CAF_TEST_ERROR("Unexpected timeout");
-      self->quit(exit_reason::user_defined);
+      self->quit(exit_reason::user_shutdown);
     }
   );
 }

@@ -80,7 +80,7 @@ void abstract_broker::launch(execution_unit* eu, bool is_lazy, bool is_hidden) {
   eu->exec_later(this);
 }
 
-void abstract_broker::cleanup(uint32_t reason) {
+void abstract_broker::cleanup(exit_reason reason) {
   CAF_LOG_TRACE(CAF_ARG(reason));
   close_all();
   CAF_ASSERT(doormen_.empty());

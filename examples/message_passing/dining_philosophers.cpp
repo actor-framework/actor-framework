@@ -34,7 +34,6 @@ namespace {
 // atoms for chopstick interface
 using put_atom = atom_constant<atom("put")>;
 using take_atom = atom_constant<atom("take")>;
-using busy_atom = atom_constant<atom("busy")>;
 using taken_atom = atom_constant<atom("taken")>;
 
 // atoms for philosopher interface
@@ -42,9 +41,7 @@ using eat_atom = atom_constant<atom("eat")>;
 using think_atom = atom_constant<atom("think")>;
 
 // a chopstick
-using chopstick = typed_actor<replies_to<take_atom>
-                              ::with_either<taken_atom>
-                              ::or_else<busy_atom>,
+using chopstick = typed_actor<replies_to<take_atom>::with<taken_atom, bool>,
                               reacts_to<put_atom>>;
 
 chopstick::behavior_type taken_chopstick(chopstick::pointer self, actor_addr);
@@ -52,9 +49,9 @@ chopstick::behavior_type taken_chopstick(chopstick::pointer self, actor_addr);
 // either taken by a philosopher or available
 chopstick::behavior_type available_chopstick(chopstick::pointer self) {
   return {
-    [=](take_atom) {
+    [=](take_atom) -> std::tuple<taken_atom, bool> {
       self->become(taken_chopstick(self, self->current_sender()));
-      return taken_atom::value;
+      return {taken_atom::value, true};
     },
     [](put_atom) {
       cerr << "chopstick received unexpected 'put'" << endl;
@@ -65,8 +62,8 @@ chopstick::behavior_type available_chopstick(chopstick::pointer self) {
 chopstick::behavior_type taken_chopstick(chopstick::pointer self,
                                          actor_addr user) {
   return {
-    [](take_atom) {
-      return busy_atom::value;
+    [](take_atom) -> std::tuple<taken_atom, bool> {
+      return {taken_atom::value, false};
     },
     [=](put_atom) {
       if (self->current_sender() == user)
@@ -124,38 +121,36 @@ public:
     );
     // wait for the first answer of a chopstick
     hungry.assign(
-      [=](taken_atom) {
-        become(granted);
-      },
-      [=](busy_atom) {
-        become(denied);
+      [=](taken_atom, bool result) {
+        if (result)
+          become(granted);
+        else
+          become(denied);
       }
     );
     // philosopher was able to obtain the first chopstick
     granted.assign(
-      [=](taken_atom) {
-        aout(this) << name
-                   << " has picked up chopsticks with IDs "
-                   << left->id() << " and " << right->id()
-                   << " and starts to eat\n";
-        // eat some time
-        delayed_send(this, seconds(5), think_atom::value);
-        become(eating);
-      },
-      [=](busy_atom) {
-        send(current_sender() == left ? right : left, put_atom::value);
-        send(this, eat_atom::value);
-        become(thinking);
+      [=](taken_atom, bool result) {
+        if (result) {
+          aout(this) << name
+                     << " has picked up chopsticks with IDs "
+                     << left->id() << " and " << right->id()
+                     << " and starts to eat\n";
+          // eat some time
+          delayed_send(this, seconds(5), think_atom::value);
+          become(eating);
+        } else {
+          send(current_sender() == left ? right : left, put_atom::value);
+          send(this, eat_atom::value);
+          become(thinking);
+        }
       }
     );
     // philosopher was *not* able to obtain the first chopstick
     denied.assign(
-      [=](taken_atom) {
-        send(current_sender() == left ? left : right, put_atom::value);
-        send(this, eat_atom::value);
-        become(thinking);
-      },
-      [=](busy_atom) {
+      [=](taken_atom, bool result) {
+        if (result)
+          send(current_sender() == left ? left : right, put_atom::value);
         send(this, eat_atom::value);
         become(thinking);
       }

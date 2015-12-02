@@ -96,28 +96,20 @@ using middleman_actor =
   typed_actor<
     replies_to<publish_atom, uint16_t, actor_addr,
                std::set<std::string>, std::string, bool>
-    ::with_either<ok_atom, uint16_t>
-    ::or_else<error_atom, std::string>,
+    ::with<ok_atom, uint16_t>,
 
     replies_to<open_atom, uint16_t, std::string, bool>
-    ::with_either<ok_atom, uint16_t>
-    ::or_else<error_atom, std::string>,
+    ::with<ok_atom, uint16_t>,
 
     replies_to<connect_atom, std::string, uint16_t>
-    ::with_either<ok_atom, node_id, actor_addr, std::set<std::string>>
-    ::or_else<error_atom, std::string>,
+    ::with<ok_atom, node_id, actor_addr, std::set<std::string>>,
 
-    replies_to<unpublish_atom, actor_addr, uint16_t>
-    ::with_either<ok_atom>
-    ::or_else<error_atom, std::string>,
+    reacts_to<unpublish_atom, actor_addr, uint16_t>,
 
-    replies_to<close_atom, uint16_t>
-    ::with_either<ok_atom>
-    ::or_else<error_atom, std::string>,
+    reacts_to<close_atom, uint16_t>,
 
     replies_to<spawn_atom, node_id, std::string, message>
-    ::with_either<ok_atom, actor_addr, std::set<std::string>>
-    ::or_else<error_atom, std::string>>;
+    ::with<ok_atom, actor_addr, std::set<std::string>>>;
 
 } // namespace io
 } // namespace caf

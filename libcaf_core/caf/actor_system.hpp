@@ -87,27 +87,18 @@ std::string get_mpi_field(const uniform_type_info_map& types) {
 template <class T>
 struct typed_mpi_access;
 
-template <class... Is, class... Ls, class... Rs>
+template <class... Is, class... Ls>
 struct typed_mpi_access<typed_mpi<detail::type_list<Is...>,
-                                  detail::type_list<Ls...>,
-                                  detail::type_list<Rs...>>> {
+                                  detail::type_list<Ls...>>> {
   std::string operator()(const uniform_type_info_map& types) const {
     static_assert(sizeof...(Is) > 0, "typed MPI without inputs");
     static_assert(sizeof...(Ls) > 0, "typed MPI without outputs");
     std::vector<std::string> inputs{get_mpi_field<Is>(types)...};
     std::vector<std::string> outputs1{get_mpi_field<Ls>(types)...};
-    std::vector<std::string> outputs2{get_mpi_field<Rs>(types)...};
     std::string result = "caf::replies_to<";
     result += join(inputs, ",");
-    if (outputs2.empty()) {
-      result += ">::with<";
-      result += join(outputs1, ",");
-    } else {
-      result += ">::with_either<";
-      result += join(outputs1, ",");
-      result += ">::or_else<";
-      result += join(outputs2, ",");
-    }
+    result += ">::with<";
+    result += join(outputs1, ",");
     result += ">";
     return result;
   }
@@ -199,7 +190,10 @@ public:
   actor_registry& registry();
 
   /// Returns the system-wide factory for custom types and actors.
-  uniform_type_info_map& types();
+  const uniform_type_info_map& types() const;
+
+  /// Returns a string representation for `err`.
+  std::string render(const error& x) const;
 
   /// Returns the system-wide group manager.
   group_manager& groups();

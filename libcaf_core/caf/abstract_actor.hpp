@@ -113,12 +113,6 @@ public:
     return id_;
   }
 
-  /// Returns the actor's exit reason or
-  /// `exit_reason::not_exited` if it's still alive.
-  inline uint32_t exit_reason() const {
-    return exit_reason_;
-  }
-
   /// Returns the set of accepted messages types as strings or
   /// an empty set if this actor is untyped.
   virtual std::set<std::string> message_types() const;
@@ -140,6 +134,13 @@ public:
     return context_->system();
   }
 
+  /// @cond PRIVATE
+  // Returns `exit_reason_ != exit_reason::not_exited`.
+  inline bool exited() const {
+    return exit_reason_ != exit_reason::not_exited;
+  }
+  /// @endcond
+
 protected:
   /// Creates a new actor instance.
   abstract_actor(execution_unit* ptr, int flags);
@@ -152,12 +153,7 @@ protected:
 
   /// Called by the runtime system to perform cleanup actions for this actor.
   /// Subtypes should always call this member function when overriding it.
-  virtual void cleanup(uint32_t reason);
-
-  /// Returns `exit_reason() != exit_reason::not_exited`.
-  inline bool exited() const {
-    return exit_reason() != exit_reason::not_exited;
-  }
+  virtual void cleanup(exit_reason reason);
 
   /****************************************************************************
    *                 here be dragons: end of public interface                 *
@@ -256,7 +252,7 @@ public:
   void is_registered(bool value);
 
   // Tries to run a custom exception handler for `eptr`.
-  maybe<uint32_t> handle(const std::exception_ptr& eptr);
+  maybe<exit_reason> handle(const std::exception_ptr& eptr);
 
 protected:
   virtual bool link_impl(linking_operation op, const actor_addr& other);
@@ -286,7 +282,7 @@ protected:
   const actor_id id_;
 
   // initially set to exit_reason::not_exited
-  std::atomic<uint32_t> exit_reason_;
+  std::atomic<exit_reason> exit_reason_;
 
   // guards access to exit_reason_, attachables_, links_,
   // and enqueue operations if actor is thread-mapped

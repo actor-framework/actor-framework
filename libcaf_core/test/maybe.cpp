@@ -43,6 +43,15 @@ bool operator==(const qwertz& lhs, const qwertz& rhs) {
   return lhs.i_ == rhs.i_ && lhs.j_ == rhs.j_;
 }
 
+enum class test_errc : uint8_t {
+  first_error = 1,
+  second_error
+};
+
+error make_error(test_errc x) {
+  return {static_cast<uint8_t>(x), atom("test_errc")};
+}
+
 } // namespace <anonymous>
 
 CAF_TEST(empties) {
@@ -83,14 +92,14 @@ CAF_TEST(custom_type_engaged) {
 
 CAF_TEST(error_construct_and_assign) {
   auto f = []() -> maybe<int> {
-    return std::errc::invalid_argument;
+    return test_errc::second_error;
   };
   auto val = f();
-  CAF_CHECK(! val && val.error() == std::errc::invalid_argument);
+  CAF_CHECK(! val && val.error() == test_errc::second_error);
   val = 42;
   CAF_CHECK(val && *val == 42);
-  val = std::errc::state_not_recoverable;
-  CAF_CHECK(! val && val.error() == std::errc::state_not_recoverable);
+  val = test_errc::first_error;
+  CAF_CHECK(! val && val.error() == test_errc::first_error);
 }
 
 CAF_TEST(maybe_void) {
@@ -99,15 +108,15 @@ CAF_TEST(maybe_void) {
   CAF_CHECK(m.empty());
   CAF_CHECK(! m.error());
   // Assign erroneous state.
-  m = std::errc::invalid_argument;
+  m = test_errc::second_error;
   CAF_CHECK(! m);
   CAF_CHECK(! m.empty());
   CAF_CHECK(m.error());
-  CAF_CHECK(m.error() == std::errc::invalid_argument);
+  CAF_CHECK(m.error() == test_errc::second_error);
   // Implicit construction.
   auto f = []() -> maybe<void> {
-    return std::errc::invalid_argument;
+    return test_errc::second_error;
   };
   auto val = f();
-  CAF_CHECK(! val && val.error() == std::errc::invalid_argument);
+  CAF_CHECK(! val && val.error() == test_errc::second_error);
 }
