@@ -275,10 +275,10 @@ void actor_registry::start() {
   //       use the lazy_init flag
   //named_entries_.emplace(atom("SpawnServ"), system_.spawn_announce_actor_type_server());
   auto cs = system_.spawn<hidden+lazy_init>(kvstore);
-  system_.registry().put(atom("ConfigServ"), cs);
+  put(atom("ConfigServ"), cs);
   named_entries_.emplace(atom("ConfigServ"), std::move(cs));
   auto ss = system_.spawn<hidden+lazy_init>(spawn_serv);
-  system_.registry().put(atom("SpawnServ"), ss);
+  put(atom("SpawnServ"), ss);
   named_entries_.emplace(atom("SpawnServ"), std::move(ss));
 }
 
