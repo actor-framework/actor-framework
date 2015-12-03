@@ -154,7 +154,7 @@ public:
   template<class C, typename... Ts>
   void add_hook(Ts&&... xs) {
     // if only we could move a unique_ptr into a lambda in C++11
-    auto ptr = new C(std::forward<Ts>(xs)...);
+    auto ptr = new C(system_, std::forward<Ts>(xs)...);
     backend().dispatch([=] {
       ptr->next.swap(hooks_);
       hooks_.reset(ptr);
@@ -171,7 +171,7 @@ public:
   template <class F>
   void add_shutdown_cb(F fun) {
     struct impl : hook {
-      impl(F&& f) : fun_(std::move(f)) {
+      impl(actor_system&, F&& f) : fun_(std::move(f)) {
         // nop
       }
 
