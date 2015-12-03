@@ -213,6 +213,10 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
     return ptr_ ? 1 : 0;
   }
 
+  intptr_t compare(const invalid_actor_t&) const noexcept {
+    return ptr_ ? 1 : 0;
+  }
+
   /// @endcond
 
 private:
