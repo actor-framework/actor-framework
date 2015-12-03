@@ -191,19 +191,24 @@ private:
 #define CAF_UNIFYN(NAME) CAF_CONCAT(NAME, __LINE__)
 
 #define CAF_PRINT_ERROR_IMPL(nclass, nfun, message)                            \
-  {                                                                            \
-    caf::logger::line_builder lb;                                            \
+  do {                                                                         \
+    caf::logger::line_builder lb;                                              \
     lb << message;                                                             \
     if (nclass.empty())                                                        \
       printf("[ERROR] %s::%s: %s\n", nclass.c_str(), nfun, lb.get().c_str());  \
     else                                                                       \
       printf("[ERROR] %s: %s\n", nfun, lb.get().c_str());                      \
-  }                                                                            \
-  CAF_VOID_STMT
+  } while (false)
+
+#define CAF_ARG(argument) caf::logger::make_arg_wrapper(#argument, argument)
+
+#ifdef CAF_MSVC
+#define CAF_GET_CLASS_NAME caf::logger::extract_class_name(__FUNCSIG__)
+#else // CAF_MSVC
+#define CAF_GET_CLASS_NAME caf::logger::extract_class_name(__PRETTY_FUNCTION__)
+#endif // CAF_MSVC
 
 #ifndef CAF_LOG_LEVEL
-
-#define CAF_ARG(unused)
 
 #define CAF_LOG_IMPL(unused1, unused2)
 
@@ -222,18 +227,7 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 
 #else // CAF_LOG_LEVEL
 
-#define CAF_ARG(argument) caf::logger::make_arg_wrapper(#argument, argument)
-
-#ifdef CAF_MSVC
-#define CAF_GET_CLASS_NAME caf::logger::extract_class_name(__FUNCSIG__)
-#else // CAF_MSVC
-#define CAF_GET_CLASS_NAME caf::logger::extract_class_name(__PRETTY_FUNCTION__)
-#endif // CAF_MSVC
-
 #define CAF_LOG_IMPL(loglvl, message)                                          \
-  if (loglvl == 0) {                                                           \
-    CAF_PRINT_ERROR_IMPL(CAF_GET_CLASS_NAME, __func__, message);               \
-  }                                                                            \
   caf::logger::log_static(loglvl, CAF_GET_CLASS_NAME, __func__,                \
                           __FILE__, __LINE__,                                  \
                           (caf::logger::line_builder{} << message).get())
@@ -282,7 +276,11 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 #define CAF_LOG_DEBUG(output) CAF_LOG_IMPL(CAF_LOG_LEVEL_DEBUG, output)
 #define CAF_LOG_INFO(output) CAF_LOG_IMPL(CAF_LOG_LEVEL_INFO, output)
 #define CAF_LOG_WARNING(output) CAF_LOG_IMPL(CAF_LOG_LEVEL_WARNING, output)
-#define CAF_LOG_ERROR(output) CAF_LOG_IMPL(CAF_LOG_LEVEL_ERROR, output)
+#define CAF_LOG_ERROR(output)                                                  \
+  do {                                                                         \
+    CAF_PRINT_ERROR_IMPL(CAF_GET_CLASS_NAME, __func__, output);                \
+    CAF_LOG_IMPL(CAF_LOG_LEVEL_ERROR, output);                                 \
+  } while (false)
 
 #ifdef CAF_LOG_LEVEL
 
