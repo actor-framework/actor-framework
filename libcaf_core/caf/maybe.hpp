@@ -322,7 +322,7 @@ private:
 
   template <class V>
   void assign_value(V&& x) {
-    using x_type = typename std::decay<V>::type;
+    using x_type = typename std::remove_reference<V>::type;
     using fwd_type =
       typename std::conditional<
         std::is_rvalue_reference<decltype(x)>::value
@@ -401,6 +401,111 @@ private:
     // if (flag & error_context_mask) != 0
     extended_error* extended_error_;
   };
+};
+
+
+// Represents a computation performing side effects only and
+// optionally return a `std::error_condition`.
+template <>
+class maybe<void> {
+public:
+  using type = unit_t;
+  using reference = const type&;
+  using const_reference = const type&;
+  using pointer = const type*;
+  using const_pointer = const type*;
+  using error_type = caf::error;
+
+  maybe() = default;
+
+  maybe(const none_t&) {
+    // nop
+  }
+
+  maybe(error_type err) : error_(std::move(err)) {
+    // nop
+  }
+
+  template <class E,
+            class = typename std::enable_if<
+                      std::is_same<
+                        decltype(make_error(std::declval<const E&>())),
+                        error_type
+                      >::value
+                    >::type>
+  maybe(E error_code) : error_(make_error(error_code)) {
+    // nop
+  }
+
+  maybe& operator=(const none_t&) {
+    error_.clear();
+    return *this;
+  }
+
+  maybe& operator=(error_type err) {
+    error_ = std::move(err);
+    return *this;
+  }
+
+  template <class E,
+            class = typename std::enable_if<
+                      std::is_same<
+                        decltype(make_error(std::declval<const E&>())),
+                        error_type
+                      >::value
+                    >::type>
+  maybe& operator=(E error_code) {
+    return *this = make_error(error_code);
+  }
+
+  bool valid() const {
+    return false;
+  }
+
+  explicit operator bool() const {
+    return valid();
+  }
+
+  bool operator!() const {
+    return ! valid();
+  }
+
+  reference get() {
+    CAF_ASSERT(! "should never be called");
+    return unit;
+  }
+
+  const_reference get() const {
+    CAF_ASSERT(! "should never be called");
+    return unit;
+  }
+
+  reference operator*() {
+    return get();
+  }
+
+  const_reference operator*() const {
+    return get();
+  }
+
+  pointer operator->() {
+    return &get();
+  }
+
+  const_pointer operator->() const {
+    return &get();
+  }
+
+  bool empty() const {
+    return ! error();
+  }
+
+  const error_type& error() const {
+    return error_;
+  }
+
+private:
+  error_type error_;
 };
 
 /// Allows element-wise access of STL-compatible tuples.
@@ -527,110 +632,45 @@ bool operator!=(const none_t&, const maybe<T>& x) {
   return ! x.empty();
 }
 
-// Represents a computation performing side effects only and
-// optionally return a `std::error_condition`.
-template <>
-class maybe<void> {
-public:
-  using type = unit_t;
-  using reference = const type&;
-  using const_reference = const type&;
-  using pointer = const type*;
-  using const_pointer = const type*;
-  using error_type = caf::error;
-
-  maybe() = default;
-
-  maybe(const none_t&) {
-    // nop
+/// @relates maybe
+template <class InOrOut, class T>
+typename std::enable_if<InOrOut::is_saving::value>::type
+serialize(InOrOut& sink, maybe<T>& x, const unsigned int) {
+  uint8_t flag = x.empty() ? 0 : (x.valid() ? 1 : 2);
+  sink & flag;
+  if (x.valid())
+    sink & *x;
+  if (x.invalid()) {
+    auto err = x.error();
+    sink & err;
   }
+}
 
-  maybe(error_type err) : error_(std::move(err)) {
-    // nop
+/// @relates maybe
+template <class InOrOut, class T>
+typename std::enable_if<InOrOut::is_loading::value>::type
+serialize(InOrOut& source, maybe<T>& x, const unsigned int) {
+  uint8_t flag;
+  source & flag;
+  switch (flag) {
+    case 1: {
+      T value;
+      source & value;
+      x = std::move(value);
+      break;
+    }
+    case 2: {
+      error err;
+      source & err;
+      x = std::move(err);
+      break;
+    }
+    default:
+      x = none;
   }
+}
 
-  template <class E,
-            class = typename std::enable_if<
-                      std::is_same<
-                        decltype(make_error(std::declval<const E&>())),
-                        error_type
-                      >::value
-                    >::type>
-  maybe(E error_code) : error_(make_error(error_code)) {
-    // nop
-  }
-
-  maybe& operator=(const none_t&) {
-    error_.clear();
-    return *this;
-  }
-
-  maybe& operator=(error_type err) {
-    error_ = std::move(err);
-    return *this;
-  }
-
-  template <class E,
-            class = typename std::enable_if<
-                      std::is_same<
-                        decltype(make_error(std::declval<const E&>())),
-                        error_type
-                      >::value
-                    >::type>
-  maybe& operator=(E error_code) {
-    return *this = make_error(error_code);
-  }
-
-  bool valid() const {
-    return false;
-  }
-
-  explicit operator bool() const {
-    return valid();
-  }
-
-  bool operator!() const {
-    return ! valid();
-  }
-
-  reference get() {
-    CAF_ASSERT(! "should never be called");
-    return unit;
-  }
-
-  const_reference get() const {
-    CAF_ASSERT(! "should never be called");
-    return unit;
-  }
-
-  reference operator*() {
-    return get();
-  }
-
-  const_reference operator*() const {
-    return get();
-  }
-
-  pointer operator->() {
-    return &get();
-  }
-
-  const_pointer operator->() const {
-    return &get();
-  }
-
-  bool empty() const {
-    return ! error();
-  }
-
-  const error_type& error() const {
-    return error_;
-  }
-
-private:
-  error_type error_;
-};
-
+/// @relates maybe
 template <class T>
 std::string to_string(const maybe<T>& x) {
   if (x)
