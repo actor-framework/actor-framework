@@ -66,6 +66,9 @@ actor_system::actor_system(actor_system_config&& cfg)
   auto& mmptr = modules_[module::middleman];
   if (mmptr)
     middleman_ = reinterpret_cast<io::middleman*>(mmptr->subtype_ptr());
+  auto& pptr = modules_[module::riac_probe];
+  if (pptr)
+    probe_ = reinterpret_cast<riac::probe*>(pptr->subtype_ptr());
   auto& sched = modules_[module::scheduler];
   using share = scheduler::coordinator<policy::work_sharing>;
   using steal = scheduler::coordinator<policy::work_stealing>;
@@ -186,9 +189,20 @@ bool actor_system::has_middleman() const {
 
 io::middleman& actor_system::middleman() {
   if (! middleman_)
-    throw std::logic_error("cannot access middleman: I/O module not loaded");
+    throw std::logic_error("cannot access middleman: module not loaded");
   return *middleman_;
 }
+
+bool actor_system::has_probe() const {
+  return probe_ != nullptr;
+}
+
+riac::probe& actor_system::probe() {
+  if (! probe_)
+    throw std::logic_error("cannot access RIAC probe: module not loaded");
+  return *probe_;
+}
+
 
 scoped_execution_unit* actor_system::dummy_execution_unit() {
   return &dummy_execution_unit_;
