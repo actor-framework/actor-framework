@@ -294,9 +294,10 @@ actor_addr middleman::remote_actor(std::set<std::string> ifs,
       if (! (xs.empty() && ifs.empty())
           && ! std::includes(xs.begin(), xs.end(), ifs.begin(), ifs.end())) {
         std::string what = "expected signature: ";
-        what += deep_to_string(xs);
-        what += ", found: ";
         what += deep_to_string(ifs);
+        what += ", found: ";
+        what += deep_to_string(xs);
+
         throw network_error(std::move(what));
       }
       result = std::move(res);
