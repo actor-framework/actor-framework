@@ -37,6 +37,7 @@ set (LIBCAF_CORE_SRCS
      src/concatenated_tuple.cpp
      src/continue_helper.cpp
      src/decorated_tuple.cpp
+     src/deep_to_string.cpp
      src/default_attachable.cpp
      src/deserializer.cpp
      src/detached_threads.cpp

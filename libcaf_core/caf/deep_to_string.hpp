@@ -38,26 +38,7 @@ public:
     // nop
   }
 
-  inline std::string operator()(const char* cstr) const {
-    if (cstr == nullptr || *cstr == '\0')
-      return "\"\"";
-    std::string result = "\"";
-    char c;
-    while ((c = *cstr++) != '\0') {
-      switch (c) {
-        case '\\':
-          result += "\\\\";
-          break;
-        case '"':
-          result += "\\\"";
-          break;
-        default:
-          result += c;
-      }
-    }
-    result += "\"";
-    return result;
-  }
+  std::string operator()(const char* cstr) const;
 
   inline std::string operator()(char* cstr) const {
     return (*this)(const_cast<const char*>(cstr));
@@ -67,12 +48,7 @@ public:
     return (*this)(str.c_str());
   }
 
-  inline std::string operator()(const atom_value& x) const {
-    std::string result = "'";
-    result += to_string(x);
-    result += "'";
-    return result;
-  }
+  std::string operator()(const atom_value& x) const;
 
   constexpr const char* operator()(const bool& x) const {
     return x ? "true" : "false";
