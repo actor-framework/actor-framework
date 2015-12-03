@@ -71,6 +71,10 @@ public:
     impl_ = detail::make_behavior(xs...);
   }
 
+  inline void swap(behavior& other) {
+    impl_.swap(other.impl_);
+  }
+
   void assign(intrusive_ptr<detail::behavior_impl> ptr) {
     impl_.swap(ptr);
   }

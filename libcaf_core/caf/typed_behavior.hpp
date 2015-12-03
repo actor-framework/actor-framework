@@ -167,6 +167,10 @@ public:
     set(detail::make_behavior(x, xs...));
   }
 
+  inline void swap(typed_behavior& other) {
+    bhvr_.swap(other.bhvr_);
+  }
+
   explicit operator bool() const {
     return static_cast<bool>(bhvr_);
   }

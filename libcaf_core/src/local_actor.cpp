@@ -318,25 +318,24 @@ response_promise fetch_response_promise(local_actor*, response_promise& hdl) {
 
 // enables `return sync_send(...).then(...)`
 bool handle_message_id_res(local_actor* self, message& res,
-                           maybe<response_promise> hdl) {
+                           response_promise hdl) {
+  CAF_ASSERT(hdl);
+  CAF_LOG_TRACE(CAF_ARG(res));
   if (res.match_elements<atom_value, uint64_t>()
       && res.get_as<atom_value>(0) == atom("MESSAGE_ID")) {
     CAF_LOG_DEBUG("message handler returned a message id wrapper");
-    auto id = res.get_as<uint64_t>(1);
-    auto msg_id = message_id::from_integer_value(id);
+    auto msg_id = message_id::from_integer_value(res.get_as<uint64_t>(1));
     auto ref_opt = self->find_pending_response(msg_id);
     // install a behavior that calls the user-defined behavior
     // and using the result of its inner behavior as response
     if (ref_opt) {
-      response_promise fhdl = hdl ? *hdl : self->make_response_promise();
-      behavior& ref = std::get<1>(*ref_opt);
-      behavior inner = ref;
-      ref.assign(
+      behavior inner{std::move(*ref_opt)};
+      ref_opt->assign(
         others >> [=] {
           // inner is const inside this lambda and mutable a C++14 feature
           auto ires = const_cast<behavior&>(inner)(self->current_message());
-          if (ires && ! handle_message_id_res(self, *ires, fhdl))
-            fhdl.deliver(*ires);
+          if (ires && ! handle_message_id_res(self, *ires, hdl))
+            hdl.deliver(*ires);
         }
       );
       return true;
@@ -364,7 +363,7 @@ bool post_process_invoke_res(local_actor* self, bool is_sync_request,
   if (res) {
     CAF_LOG_DEBUG("respond via response_promise");
     // deliver empty messages only for sync responses
-    if (! handle_message_id_res(self, *res, none)
+    if (! handle_message_id_res(self, *res, rp)
         && (! res->empty() || is_sync_request))
       rp.deliver(std::move(*res));
     return true;
@@ -503,24 +502,21 @@ bool local_actor::awaits(message_id mid) const {
                      predicate);
 }
 
-maybe<local_actor::pending_response&>
-local_actor::find_pending_response(message_id mid) {
+maybe<behavior&> local_actor::find_pending_response(message_id mid) {
   pending_response_predicate predicate{mid};
   auto last = pending_responses_.end();
   auto i = std::find_if(pending_responses_.begin(), last, predicate);
-  if (i == last) {
-    return none;
-  }
-  return *i;
+  if (i != last)
+    return i->second;
+  return none;
 }
 
 void local_actor::set_response_handler(message_id response_id, behavior bhvr) {
-  auto pr = find_pending_response(response_id);
-  if (pr) {
-    if (bhvr.timeout().valid()) {
+  auto opt_ref = find_pending_response(response_id);
+  if (opt_ref) {
+    if (bhvr.timeout().valid())
       request_sync_timeout_msg(bhvr.timeout(), response_id);
-    }
-    pr->second = std::move(bhvr);
+    *opt_ref = std::move(bhvr);
   }
 }
 
