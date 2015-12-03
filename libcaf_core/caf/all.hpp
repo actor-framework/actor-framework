@@ -23,10 +23,12 @@
 #include "caf/config.hpp"
 
 #include "caf/on.hpp"
+#include "caf/sec.hpp"
 #include "caf/atom.hpp"
 #include "caf/send.hpp"
 #include "caf/unit.hpp"
 #include "caf/actor.hpp"
+#include "caf/error.hpp"
 #include "caf/group.hpp"
 #include "caf/extend.hpp"
 #include "caf/logger.hpp"
