@@ -548,7 +548,7 @@ public:
 
   bool awaits(message_id response_id) const;
 
-  maybe<pending_response&> find_pending_response(message_id mid);
+  maybe<behavior&> find_pending_response(message_id mid);
 
   void set_response_handler(message_id response_id, behavior bhvr);
 
