@@ -123,6 +123,10 @@ public:
   node_id network_id;
   proxy_registry* network_proxies;
 
+  // Config parameters of RIAC probes.
+  std::string nexus_host;
+  uint16_t nexus_port;
+
 private:
   value_factories_by_name value_factories_by_name_;
   value_factories_by_rtti value_factories_by_rtti_;

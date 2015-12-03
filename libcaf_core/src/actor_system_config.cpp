@@ -44,6 +44,9 @@ struct type_name_visitor : static_visitor<const char*> {
   const char* operator()(const size_t) const {
     return "an unsigned integer";
   }
+  const char* operator()(const uint16_t) const {
+    return "an unsigned short integer";
+  }
   const char* operator()(const bool) const {
     return "a boolean";
   }
@@ -79,6 +82,13 @@ bool assign_config_value(size_t& x, int64_t& y) {
   return true;
 }
 
+bool assign_config_value(uint16_t& x, int64_t& y) {
+  if (y < 0 || y > std::numeric_limits<uint16_t>::max())
+    return false;
+  x = std::move(y);
+  return true;
+}
+
 class actor_system_config_reader {
 public:
   using config_value = actor_system_config::config_value;
@@ -91,7 +101,7 @@ public:
       // the INI parser accepts all integers as int64_t
       using cfg_type =
         typename std::conditional<
-          std::is_same<T, size_t>::value,
+          std::is_integral<T>::value,
           int64_t,
           T
         >::type;
@@ -131,6 +141,7 @@ actor_system_config::actor_system_config() {
   scheduler_profiling_ms_resolution = 100;
   middleman_network_backend = atom("default");
   middleman_enable_automatic_connections = false;
+  nexus_port = 0;
 }
 
 actor_system_config::actor_system_config(int argc, char** argv)
@@ -157,7 +168,9 @@ actor_system_config::actor_system_config(int argc, char** argv)
                     scheduler_profiling_output_file)
               .bind("middleman.network-backend", middleman_network_backend)
               .bind("middleman.enable-automatic-connections",
-                    middleman_enable_automatic_connections);
+                    middleman_enable_automatic_connections)
+              .bind("probe.nexus-host", nexus_host)
+              .bind("probe.nexus-port", nexus_port);
       detail::parse_ini(ini, consumer, std::cerr);
     }
   }
@@ -187,6 +200,12 @@ actor_system_config::actor_system_config(int argc, char** argv)
     {"caf#middleman.enable-automatic-connections",
      "enables or disables automatic connection management (off per default)",
      middleman_enable_automatic_connections},
+    {"caf#probe.nexus-host",
+     "sets the hostname or IP address for connecting to the Nexus",
+     nexus_host},
+    {"caf#probe.nexus-port",
+     "sets the port for connecting to the Nexus",
+     nexus_port},
     {"caf-dump-config", "print config in INI format to stdout"},
     {"caf-help", "print this text"}
   }, nullptr, true);

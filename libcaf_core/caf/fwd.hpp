@@ -104,16 +104,26 @@ struct header;
 
 } // namespace io
 
+namespace riac {
+
+class probe;
+
+} // namespace riac
+
 namespace scheduler {
-  class abstract_worker;
-  class abstract_coordinator;
+
+class abstract_worker;
+class abstract_coordinator;
+
 } // namespace scheduler
 
 namespace detail {
-  class disposer;
-  class message_data;
-  class group_manager;
-  class dynamic_message_data;
+
+class disposer;
+class message_data;
+class group_manager;
+class dynamic_message_data;
+
 } // namespace detail
 
 using mailbox_element_ptr = std::unique_ptr<mailbox_element, detail::disposer>;

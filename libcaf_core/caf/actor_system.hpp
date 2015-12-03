@@ -61,7 +61,10 @@ struct mpi_field_access {
     auto ptr = types.portable_name(0, &typeid(T));
     if (ptr)
       return *ptr;
-    return "INVALID-TYPE";
+    std::string result = "<invalid-type[typeid ";
+    result += typeid(T).name();
+    result += "]>";
+    return result;
   }
 };
 
@@ -126,6 +129,7 @@ public:
       scheduler,
       middleman,
       opencl_manager,
+      riac_probe,
       num_ids
     };
 
@@ -202,8 +206,15 @@ public:
   bool has_middleman() const;
 
   /// Returns the middleman instance from the I/O module.
-  /// @throws `std::logic_error` if the I/O module has not been loaded.
+  /// @throws `std::logic_error` if module is not loaded.
   io::middleman& middleman();
+
+  /// Returns `true` if the RIAC probe module is available, `false` otherwise.
+  bool has_probe() const;
+
+  /// Returns the RIAC probe instance.
+  /// @throws `std::logic_error` if module is not loaded.
+  riac::probe& probe();
 
   /// Returns a dummy execution unit that forwards
   /// everything to the scheduler.
@@ -403,6 +414,7 @@ private:
   io::middleman* middleman_;
   scoped_execution_unit dummy_execution_unit_;
   atom_value backend_name_;
+  riac::probe* probe_;
 };
 
 } // namespace caf
