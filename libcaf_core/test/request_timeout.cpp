@@ -49,7 +49,7 @@ behavior ping1(event_based_actor* self, const actor& pong_actor) {
   self->send(self, send_ping_atom::value);
   return {
     [=](send_ping_atom) {
-      self->sync_send(pong_actor, ping_atom::value).then(
+      self->request(pong_actor, ping_atom::value).then(
         [=](pong_atom) {
           CAF_TEST_ERROR("received pong atom");
           self->quit(exit_reason::user_shutdown);
@@ -69,7 +69,7 @@ behavior ping2(event_based_actor* self, const actor& pong_actor) {
   auto received_inner = std::make_shared<bool>(false);
   return {
     [=](send_ping_atom) {
-      self->sync_send(pong_actor, ping_atom::value).then(
+      self->request(pong_actor, ping_atom::value).then(
         [=](pong_atom) {
           CAF_TEST_ERROR("received pong atom");
           self->quit(exit_reason::user_shutdown);

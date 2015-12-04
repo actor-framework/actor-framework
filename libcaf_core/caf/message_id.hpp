@@ -22,6 +22,7 @@
 
 #include <string>
 #include <cstdint>
+#include <functional>
 
 #include "caf/config.hpp"
 #include "caf/message_priority.hpp"
@@ -143,5 +144,17 @@ inline std::string to_string(const message_id& x) {
 }
 
 } // namespace caf
+
+namespace std {
+
+template <>
+struct hash<caf::message_id> {
+  inline size_t operator()(caf::message_id x) const {
+    hash<uint64_t> f;
+    return f(x.integer_value());
+  }
+};
+
+} // namespace std
 
 #endif // CAF_MESSAGE_ID_HPP

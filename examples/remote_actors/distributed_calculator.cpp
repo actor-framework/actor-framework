@@ -65,22 +65,24 @@ public:
   }
 
 private:
-  void sync_send_task(atom_value op, int lhs, int rhs) {
-    on_sync_failure([=] {
-      aout(this) << "*** sync_failure!" << endl;
-    });
-    sync_send(server_, op, lhs, rhs).then(
+  void request_task(atom_value op, int lhs, int rhs) {
+    request(server_, op, lhs, rhs).then(
       [=](result_atom, int result) {
         aout(this) << lhs << (op == plus_atom::value ? " + " : " - ")
                    << rhs << " = " << result << endl;
       },
-      [=](const sync_exited_msg& msg) {
-        aout(this) << "*** server down [" << msg.reason << "], "
-                   << "try to reconnect ..." << endl;
-        // try sync_sending this again after successful reconnect
-        become(keep_behavior,
-               reconnecting([=] { sync_send_task(op, lhs, rhs); }));
+      [=](const error& err) {
+        if (err == sec::request_receiver_down) {
+          aout(this) << "*** server down, try to reconnect ..." << endl;
+          // try requesting this again after successful reconnect
+          become(keep_behavior,
+                 reconnecting([=] { request_task(op, lhs, rhs); }));
+          return;
+        }
+        aout(this) << "*** request resulted in error: "
+                   << system().render(err) << endl;
       }
+
     );
   }
 
@@ -90,7 +92,7 @@ private:
         if (op != plus_atom::value && op != minus_atom::value) {
           return;
         }
-        sync_send_task(op, lhs, rhs);
+        request_task(op, lhs, rhs);
       },
       [=](rebind_atom, string& nhost, uint16_t nport) {
         aout(this) << "*** rebind to " << nhost << ":" << nport << endl;

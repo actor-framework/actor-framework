@@ -36,7 +36,7 @@
 
 #include "caf/detail/type_traits.hpp"
 
-#include "caf/mixin/sync_sender.hpp"
+#include "caf/mixin/requester.hpp"
 
 namespace caf {
 
@@ -45,12 +45,12 @@ namespace caf {
 /// @extends local_actor
 class blocking_actor
     : public extend<local_actor, blocking_actor>::
-             with<mixin::sync_sender<blocking_response_handle_tag>::impl> {
+             with<mixin::requester<blocking_response_handle_tag>::impl> {
 public:
   using behavior_type = behavior;
 
   using super = extend<local_actor, blocking_actor>::
-                with<mixin::sync_sender<blocking_response_handle_tag>::impl>;
+                with<mixin::requester<blocking_response_handle_tag>::impl>;
 
   blocking_actor(actor_config& sys);
 

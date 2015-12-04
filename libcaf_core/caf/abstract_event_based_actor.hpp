@@ -29,13 +29,13 @@
 #include "caf/behavior_policy.hpp"
 #include "caf/response_handle.hpp"
 
-#include "caf/mixin/sync_sender.hpp"
+#include "caf/mixin/requester.hpp"
 
 namespace caf {
 
 /// Base type for statically and dynamically typed event-based actors.
 /// @tparam BehaviorType Denotes the expected type for become().
-/// @tparam HasSyncSend Configures whether this base extends `sync_sender`.
+/// @tparam HasSyncSend Configures whether this base extends `requester`.
 /// @tparam Base Either `local_actor` (default) or a subtype thereof.
 template <class BehaviorType, bool HasSyncSend, class Base = local_actor>
 class abstract_event_based_actor : public Base,
@@ -87,12 +87,12 @@ public:
 template <class BehaviorType, class Base>
 class abstract_event_based_actor<BehaviorType, true, Base>
   : public extend<abstract_event_based_actor<BehaviorType, false, Base>>
-           ::template with<mixin::sync_sender<nonblocking_response_handle_tag>
+           ::template with<mixin::requester<nonblocking_response_handle_tag>
                            ::template impl> {
 public:
   using super
     = typename extend<abstract_event_based_actor<BehaviorType, false, Base>>
-      ::template with<mixin::sync_sender<nonblocking_response_handle_tag>
+      ::template with<mixin::requester<nonblocking_response_handle_tag>
                       ::template impl>;
 
   template <class... Ts>

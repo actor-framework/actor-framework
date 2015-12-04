@@ -104,6 +104,14 @@ struct type_checker {
   }
 };
 
+
+template <class F>
+struct type_checker<message, F> {
+  static void check() {
+    // nop
+  }
+};
+
 template <int X, int Pos, class A>
 struct static_error_printer {
   static_assert(X != Pos, "unexpected handler some position > 20");

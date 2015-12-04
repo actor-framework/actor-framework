@@ -64,7 +64,6 @@ using sorted_builtin_types =
     strmap,                   // @strmap
     std::set<std::string>,    // @strset
     std::vector<std::string>, // @strvec
-    sync_exited_msg,          // @sync_exited
     sync_timeout_msg,         // @sync_timeout
     timeout_msg,              // @timeout
     uint16_t,                 // @u16

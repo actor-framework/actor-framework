@@ -134,7 +134,7 @@ void spawn5_server_impl(event_based_actor* self, actor client, group grp) {
     CAF_MESSAGE("spawned local subscriber: "
                 << self->spawn_in_group(grp, reflector)->id());
   CAF_MESSAGE("send {'Spawn5'} and await {'ok', actor_vector}");
-  self->sync_send(client, spawn5_atom::value, grp).then(
+  self->request(client, spawn5_atom::value, grp).then(
     [=](ok_atom, const actor_vector& vec) {
       CAF_LOG_TRACE(CAF_ARG(vec));
       CAF_MESSAGE("received vector with " << vec.size() << " elements");
@@ -192,9 +192,8 @@ void spawn5_server_impl(event_based_actor* self, actor client, group grp) {
         }
       );
     },
-    others >> [=] {
-      CAF_LOG_TRACE("");
-      CAF_TEST_ERROR("Unexpected message");
+    [=](const error& err) {
+      CAF_TEST_ERROR("Error: " << self->system().render(err));
       self->quit(exit_reason::user_shutdown);
     },
     after(chrono::seconds(10)) >> [=] {
@@ -215,7 +214,7 @@ void spawn5_server(event_based_actor* self, actor client, bool inverted) {
                                                                  "foobar"));
   } else {
     CAF_MESSAGE("request group");
-    self->sync_send(client, get_group_atom::value).then(
+    self->request(client, get_group_atom::value).then(
       [=](const group& remote_group) {
         CAF_LOG_TRACE(CAF_ARG(remote_group));
         CAF_REQUIRE(remote_group != invalid_group);
@@ -309,7 +308,7 @@ private:
   void send_sync_msg() {
     CAF_LOG_TRACE("");
     CAF_MESSAGE("sync send {'SyncMsg', 4.2f}");
-    sync_send(server_, sync_msg_atom::value, 4.2f).then(
+    request(server_, sync_msg_atom::value, 4.2f).then(
       [=](ok_atom) {
         CAF_LOG_TRACE("");
         send_foobars();
@@ -325,7 +324,7 @@ private:
     if (i == 100)
       test_group_comm();
     else {
-      sync_send(server_, foo_atom::value, bar_atom::value, i).then(
+      request(server_, foo_atom::value, bar_atom::value, i).then(
         [=](foo_atom, bar_atom, int res) {
           CAF_LOG_TRACE(CAF_ARG(res));
           CAF_CHECK_EQUAL(res, i);
@@ -338,7 +337,7 @@ private:
   void test_group_comm() {
     CAF_LOG_TRACE("");
     CAF_MESSAGE("test group communication via network");
-    sync_send(server_, gclient_atom::value).then(
+    request(server_, gclient_atom::value).then(
       [=](gclient_atom, actor gclient) {
         CAF_LOG_TRACE(CAF_ARG(gclient));
         auto s5a = spawn<monitored>(spawn5_server, gclient, false);
@@ -484,7 +483,7 @@ private:
   void test_group_comm_inverted(actor cptr) {
     CAF_LOG_TRACE("");
     CAF_MESSAGE("test group communication via network (inverted setup)");
-    sync_send(cptr, gclient_atom::value).then(
+    request(cptr, gclient_atom::value).then(
       [=](gclient_atom, actor gclient) {
         CAF_LOG_TRACE(CAF_ARG(gclient));
         await_down(this, spawn<monitored>(spawn5_server, gclient, true), [=] {

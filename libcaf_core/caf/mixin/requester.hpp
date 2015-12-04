@@ -33,17 +33,17 @@ namespace caf {
 namespace mixin {
 
 template <class Base, class Subtype, class HandleTag>
-class sync_sender_impl : public Base {
+class requester_impl : public Base {
 public:
   using response_handle_type = response_handle<Subtype, message, HandleTag>;
 
   template <class... Ts>
-  sync_sender_impl(Ts&&... xs) : Base(std::forward<Ts>(xs)...) {
+  requester_impl(Ts&&... xs) : Base(std::forward<Ts>(xs)...) {
     // nop
   }
 
   /****************************************************************************
-   *                              sync_send(...)                              *
+   *                              request(...)                              *
    ****************************************************************************/
 
   /// Sends `{xs...}` as a synchronous message to `dest` with priority `mp`.
@@ -52,10 +52,10 @@ public:
   ///          sent message cannot be received by another actor.
   /// @throws std::invalid_argument if `dest == invalid_actor`
   template <class... Ts>
-  response_handle_type sync_send(message_priority mp, const actor& dest,
-                                 Ts&&... xs) {
+  response_handle_type request(message_priority mp, const actor& dest,
+                               Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
-    return {dptr()->sync_send_impl(mp, dest, std::forward<Ts>(xs)...),
+    return {dptr()->request_impl(mp, dest, std::forward<Ts>(xs)...),
             dptr()};
   }
 
@@ -65,8 +65,8 @@ public:
   ///          sent message cannot be received by another actor.
   /// @throws std::invalid_argument if `dest == invalid_actor`
   template <class... Ts>
-  response_handle_type sync_send(const actor& dest, Ts&&... xs) {
-    return sync_send(message_priority::normal, dest, std::forward<Ts>(xs)...);
+  response_handle_type request(const actor& dest, Ts&&... xs) {
+    return request(message_priority::normal, dest, std::forward<Ts>(xs)...);
   }
 
   /// Sends `{xs...}` as a synchronous message to `dest` with priority `mp`.
@@ -84,7 +84,7 @@ public:
                       >::type...>
                   >::type,
                   HandleTag>
-  sync_send(message_priority mp, const typed_actor<Sigs...>& dest, Ts&&... xs) {
+  request(message_priority mp, const typed_actor<Sigs...>& dest, Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
     using token =
       detail::type_list<
@@ -93,7 +93,7 @@ public:
         >::type...>;
     token tk;
     check_typed_input(dest, tk);
-    return {dptr()->sync_send_impl(mp, dest, std::forward<Ts>(xs)...),
+    return {dptr()->request_impl(mp, dest, std::forward<Ts>(xs)...),
             dptr()};
   }
 
@@ -112,7 +112,7 @@ public:
                       >::type...>
                   >::type,
                   HandleTag>
-  sync_send(const typed_actor<Sigs...>& dest, Ts&&... xs) {
+  request(const typed_actor<Sigs...>& dest, Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
     using token =
       detail::type_list<
@@ -121,13 +121,13 @@ public:
         >::type...>;
     token tk;
     check_typed_input(dest, tk);
-    return {dptr()->sync_send_impl(message_priority::normal,
+    return {dptr()->request_impl(message_priority::normal,
                                    dest, std::forward<Ts>(xs)...),
             dptr()};
   }
 
   /****************************************************************************
-   *                           timed_sync_send(...)                           *
+   *                           timed_request(...)                           *
    ****************************************************************************/
 
   /// Sends `{xs...}` as a synchronous message to `dest` with priority `mp`
@@ -137,10 +137,10 @@ public:
   ///          sent message cannot be received by another actor.
   /// @throws std::invalid_argument if `dest == invalid_actor`
   template <class... Ts>
-  response_handle_type timed_sync_send(message_priority mp, const actor& dest,
+  response_handle_type timed_request(message_priority mp, const actor& dest,
                                        const duration& rtime, Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
-    return {dptr()->timed_sync_send_impl(mp, dest, rtime,
+    return {dptr()->timed_request_impl(mp, dest, rtime,
                                          std::forward<Ts>(xs)...),
             dptr()};
   }
@@ -152,9 +152,9 @@ public:
   ///          sent message cannot be received by another actor.
   /// @throws std::invalid_argument if `dest == invalid_actor`
   template <class... Ts>
-  response_handle_type timed_sync_send(const actor& dest, const duration& rtime,
+  response_handle_type timed_request(const actor& dest, const duration& rtime,
                                        Ts&&... xs) {
-    return timed_sync_send(message_priority::normal, dest, rtime,
+    return timed_request(message_priority::normal, dest, rtime,
                            std::forward<Ts>(xs)...);
   }
 
@@ -173,7 +173,7 @@ public:
                     >::type...
                   >::type,
                   HandleTag>
-  timed_sync_send(message_priority mp, const typed_actor<Sigs...>& dest,
+  timed_request(message_priority mp, const typed_actor<Sigs...>& dest,
                   const duration& rtime, Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
     using token =
@@ -183,7 +183,7 @@ public:
         >::type...>;
     token tk;
     check_typed_input(dest, tk);
-    return {dptr()->timed_sync_send_impl(mp, dest, rtime,
+    return {dptr()->timed_request_impl(mp, dest, rtime,
                                          std::forward<Ts>(xs)...),
             dptr()};
   }
@@ -203,9 +203,9 @@ public:
                     >::type...
                   >::type,
                   HandleTag>
-  timed_sync_send(const typed_actor<Sigs...>& dest, const duration& rtime,
+  timed_request(const typed_actor<Sigs...>& dest, const duration& rtime,
                   Ts&&... xs) {
-    return timed_sync_send(message_priority::normal, dest, rtime,
+    return timed_request(message_priority::normal, dest, rtime,
                            std::forward<Ts>(xs)...);
   }
 
@@ -220,10 +220,10 @@ private:
 };
 
 template <class ResponseHandleTag>
-class sync_sender {
+class requester {
 public:
   template <class Base, class Subtype>
-  using impl = sync_sender_impl<Base, Subtype, ResponseHandleTag>;
+  using impl = requester_impl<Base, Subtype, ResponseHandleTag>;
 };
 
 } // namespace mixin

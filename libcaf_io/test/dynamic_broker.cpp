@@ -181,14 +181,13 @@ void run_server(int argc, char** argv) {
   auto serv = system.middleman().spawn_broker(peer_acceptor_fun,
                                               system.spawn(pong));
   std::thread child;
-  self->sync_send(serv, publish_atom::value).await(
+  self->request(serv, publish_atom::value).await(
     [&](uint16_t port) {
       CAF_MESSAGE("server is running on port " << port);
       child = std::thread([=] { run_client(argc, argv, port); });
     },
-    others >> [&] {
-      CAF_TEST_ERROR("unexpected message: "
-                     << to_string(self->current_message()));
+    [&](const error& err) {
+      CAF_TEST_ERROR("Error: " << self->system().render(err));
     }
   );
   self->await_all_other_actors_done();

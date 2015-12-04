@@ -58,19 +58,19 @@ CAF_TEST(test_serial_reply) {
     self->become (
       [=](hi_atom) -> continue_helper {
         CAF_MESSAGE("received 'hi there'");
-        return self->sync_send(c0, sub0_atom::value).then(
+        return self->request(c0, sub0_atom::value).then(
           [=](sub0_atom) -> continue_helper {
             CAF_MESSAGE("received 'sub0'");
-            return self->sync_send(c1, sub1_atom::value).then(
+            return self->request(c1, sub1_atom::value).then(
               [=](sub1_atom) -> continue_helper {
                 CAF_MESSAGE("received 'sub1'");
-                return self->sync_send(c2, sub2_atom::value).then(
+                return self->request(c2, sub2_atom::value).then(
                   [=](sub2_atom) -> continue_helper {
                     CAF_MESSAGE("received 'sub2'");
-                    return self->sync_send(c3, sub3_atom::value).then(
+                    return self->request(c3, sub3_atom::value).then(
                       [=](sub3_atom) -> continue_helper {
                         CAF_MESSAGE("received 'sub3'");
-                        return self->sync_send(c4, sub4_atom::value).then(
+                        return self->request(c4, sub4_atom::value).then(
                           [=](sub4_atom) -> atom_value {
                             CAF_MESSAGE("received 'sub4'");
                             return ho_atom::value;
@@ -90,12 +90,12 @@ CAF_TEST(test_serial_reply) {
   { // lifetime scope of self
     scoped_actor self{system};
     CAF_MESSAGE("ID of main: " << self->id());
-    self->sync_send(master, hi_atom::value).await(
+    self->request(master, hi_atom::value).await(
       [](ho_atom) {
         CAF_MESSAGE("received 'ho'");
       },
-      others >> [&] {
-        CAF_TEST_ERROR("Unexpected message");
+      [&](const error& err) {
+        CAF_TEST_ERROR("Error: " << self->system().render(err));
       }
     );
     self->send_exit(master, exit_reason::user_shutdown);

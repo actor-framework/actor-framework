@@ -84,7 +84,7 @@ CAF_TEST(round_robin_actor_pool) {
   self->send(w, sys_atom::value, put_atom::value, spawn_worker());
   std::vector<actor_addr> workers;
   for (int i = 0; i < 6; ++i) {
-    self->sync_send(w, i, i).await(
+    self->request(w, i, i).await(
       [&](int res) {
         CAF_CHECK_EQUAL(res, i + i);
         auto sender = self->current_sender();
@@ -99,7 +99,7 @@ CAF_TEST(round_robin_actor_pool) {
     return addr == invalid_actor_addr;
   };
   CAF_CHECK(std::none_of(workers.begin(), workers.end(), is_invalid));
-  self->sync_send(w, sys_atom::value, get_atom::value).await(
+  self->request(w, sys_atom::value, get_atom::value).await(
     [&](std::vector<actor>& ws) {
       std::sort(workers.begin(), workers.end());
       std::sort(ws.begin(), ws.end());
@@ -118,7 +118,7 @@ CAF_TEST(round_robin_actor_pool) {
       CAF_CHECK(dm.source == workers.back());
       workers.pop_back();
       // check whether actor pool removed failed worker
-      self->sync_send(w, sys_atom::value, get_atom::value).await(
+      self->request(w, sys_atom::value, get_atom::value).await(
         [&](std::vector<actor>& ws) {
           std::sort(ws.begin(), ws.end());
           CAF_CHECK(workers.size() == ws.size()
@@ -177,7 +177,7 @@ CAF_TEST(random_actor_pool) {
   scoped_actor self{system};
   auto w = actor_pool::make(&context, 5, spawn_worker, actor_pool::random());
   for (int i = 0; i < 5; ++i) {
-    self->sync_send(w, 1, 2).await(
+    self->request(w, 1, 2).await(
       [&](int res) {
         CAF_CHECK_EQUAL(res, 3);
       },
@@ -212,12 +212,12 @@ CAF_TEST(split_join_actor_pool) {
   scoped_actor self{system};
   auto w = actor_pool::make(&context, 5, spawn_split_worker,
                             actor_pool::split_join<int>(join_fun, split_fun));
-  self->sync_send(w, std::vector<int>{1, 2, 3, 4, 5}).await(
+  self->request(w, std::vector<int>{1, 2, 3, 4, 5}).await(
     [&](int res) {
       CAF_CHECK_EQUAL(res, 15);
     }
   );
-  self->sync_send(w, std::vector<int>{6, 7, 8, 9, 10}).await(
+  self->request(w, std::vector<int>{6, 7, 8, 9, 10}).await(
     [&](int res) {
       CAF_CHECK_EQUAL(res, 40);
     }
