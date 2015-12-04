@@ -24,13 +24,15 @@
 #include <iostream>
 
 #include "caf/all.hpp"
-#include "caf/opencl/spawn_cl.hpp"
+#include "caf/detail/limited_vector.hpp"
+
+#include "caf/opencl/all.hpp"
 
 using namespace std;
 using namespace caf;
 using namespace caf::opencl;
 
-using detail::limited_vector;
+using caf::detail::limited_vector;
 
 namespace {
 
@@ -61,10 +63,15 @@ constexpr const char* kernel_source = R"__(
 
 template<size_t Size>
 class square_matrix {
-
 public:
-
+  using value_type = fvec::value_type;
   static constexpr size_t num_elements = Size * Size;
+
+  // allows serialization
+  template <class IO>
+  friend void serialize(IO& in_or_out, square_matrix& m, const unsigned int) {
+    in_or_out & m.data_;
+  }
 
   square_matrix(square_matrix&&) = default;
   square_matrix(const square_matrix&) = default;
@@ -101,9 +108,7 @@ public:
   const fvec& data() const { return data_; }
 
 private:
-
   fvec data_;
-
 };
 
 template<size_t Size>
@@ -135,6 +140,7 @@ inline bool operator!=(const square_matrix<Size>& lhs,
 using matrix_type = square_matrix<matrix_size>;
 
 void multiplier(event_based_actor* self) {
+  auto& mngr = self->system().opencl_manager();
 
   // create two matrices with ascending values
   matrix_type m1;
@@ -145,7 +151,7 @@ void multiplier(event_based_actor* self) {
   cout << "calculating square of matrix:" << endl
      << to_string(m1) << endl;
 
-  auto unbox_args = [](message& msg) -> maybe<message> {
+  auto unbox_args = [](message& msg) -> optional<message> {
     return msg.apply(
       [](matrix_type& lhs, matrix_type& rhs) {
         return make_message(std::move(lhs.data()), std::move(rhs.data()));
@@ -171,14 +177,14 @@ void multiplier(event_based_actor* self) {
   //          used as response message
   // from 6 : a description of the kernel signature using in/out/in_out classes
   //          with the argument type packed in vectors
-  auto worker = spawn_cl(kernel_source, kernel_name,
-                         spawn_config{dim_vec{matrix_size, matrix_size}},
-                         unbox_args, box_res,
-                         in<fvec>{}, in<fvec>{}, out<fvec>{});
+  auto worker = mngr.spawn(kernel_source, kernel_name,
+                           spawn_config{dim_vec{matrix_size, matrix_size}},
+                           unbox_args, box_res,
+                           in<fvec>{}, in<fvec>{}, out<fvec>{});
 
   // send both matrices to the actor and
   // wait for results in form of a matrix_type
-  self->sync_send(worker, move(m1), move(m2)).then(
+  self->request(worker, chrono::seconds(5), move(m1), move(m2)).then(
     [](const matrix_type& result) {
       cout << "result:" << endl << to_string(result);
     }
@@ -188,9 +194,12 @@ void multiplier(event_based_actor* self) {
 int main() {
   // matrix_type ist not a simple type,
   // it must be annouced to libcaf
-  announce<matrix_type>("matrix_type");
-  spawn(multiplier);
-  await_all_actors_done();
-  shutdown();
+  actor_system_config cfg;
+  cfg.load<opencl::manager>()
+    .add_message_type<fvec>("float_vector")
+    .add_message_type<matrix_type>("square_matrix");
+  actor_system system{cfg};
+  system.spawn(multiplier);
+  system.await_all_actors_done();
   return 0;
 }

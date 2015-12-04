@@ -19,6 +19,7 @@
 
 #include <iostream>
 
+#include "caf/logger.hpp"
 #include "caf/string_algorithms.hpp"
 
 #include "caf/opencl/global.hpp"
@@ -31,8 +32,7 @@ namespace caf {
 namespace opencl {
 
 device device::create(context_ptr context, device_ptr device_id, unsigned id) {
-  CAF_LOGF_DEBUG("creating device for opencl device id '"
-                 << device_id.get() << "' with id '" << id << "'");
+  CAF_LOG_DEBUG("creating device for opencl device with id:" << CAF_ARG(id));
   // look up properties we need to create the command queue
   auto supported = info<cl_ulong>(device_id, CL_DEVICE_QUEUE_PROPERTIES);
   bool profiling = supported & CL_QUEUE_PROFILING_ENABLE;

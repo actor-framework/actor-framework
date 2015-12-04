@@ -4,13 +4,14 @@ project(caf_opencl C CXX)
 # get header files; only needed by CMake generators,
 # e.g., for creating proper Xcode projects
 file(GLOB LIBCAF_OPENCL_HDRS "caf/opencl/*.hpp")
+file(GLOB LIBCAF_OPENCL_HDRS "caf/opencl/detail/*.hpp")
 
 add_custom_target(libcaf_opencl)
 
 # list cpp files excluding platform-dependent files
 set (LIBCAF_OPENCL_SRCS
      src/global.cpp
-     src/metainfo.cpp
+     src/manager.cpp
      src/program.cpp
      src/opencl_err.cpp
      src/platform.cpp
@@ -44,4 +45,3 @@ link_directories(${LD_DIRS})
 include_directories(. ${INCLUDE_DIRS})
 # install includes
 install(DIRECTORY caf/ DESTINATION include/caf FILES_MATCHING PATTERN "*.hpp")
-install(DIRECTORY cppa/ DESTINATION include/cppa FILES_MATCHING PATTERN "*.hpp")

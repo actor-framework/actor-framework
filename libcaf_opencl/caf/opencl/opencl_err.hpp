@@ -24,7 +24,7 @@
 
 #include "caf/opencl/global.hpp"
 
-#include "caf/detail/logging.hpp"
+#include "caf/logger.hpp"
 
 #define CAF_CLF(funname) #funname , funname
 
