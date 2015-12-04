@@ -29,8 +29,10 @@ namespace caf {
 enum class sec : uint8_t {
   /// Indicates that a dynamically typed actor dropped an unexpected message.
   unexpected_message = 1,
-  /// Indicates that a typed actor did not return a promised result.
-  broken_response_promise,
+  /// Indicates that a response message did not match the provided handler.
+  unexpected_response,
+  /// Indicates that the receiver of a request is no longer alive.
+  request_receiver_down,
   /// Unpublishing failed because the actor is `invalid_actor`.
   no_actor_to_unpublish,
   /// Unpublishing failed because the actor is not bound to given port.

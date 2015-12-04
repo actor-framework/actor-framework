@@ -87,7 +87,7 @@ CAF_TEST_FIXTURE_SCOPE(typed_spawn_tests, fixture)
 CAF_TEST(typed_response_promise) {
   scoped_actor self{system};
   auto foo = self->spawn<foo_actor_impl>();
-  self->sync_send(foo, get_atom::value, 42).await(
+  self->request(foo, get_atom::value, 42).await(
     [](int x) {
       CAF_CHECK_EQUAL(x, 84);
     }

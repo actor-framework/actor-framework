@@ -27,7 +27,7 @@
 #include "caf/typed_behavior.hpp"
 #include "caf/abstract_event_based_actor.hpp"
 
-#include "caf/mixin/sync_sender.hpp"
+#include "caf/mixin/requester.hpp"
 
 namespace caf {
 

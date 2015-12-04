@@ -102,10 +102,10 @@ public:
 };
 
 void client(event_based_actor* self, actor parent, server_type serv) {
-  self->sync_send(serv, my_request{0, 0}).then(
+  self->request(serv, my_request{0, 0}).then(
     [=](bool val1) {
       CAF_CHECK_EQUAL(val1, true);
-      self->sync_send(serv, my_request{10, 20}).then(
+      self->request(serv, my_request{10, 20}).then(
         [=](bool val2) {
           CAF_CHECK_EQUAL(val2, false);
           self->send(parent, passed_atom::value);
@@ -130,12 +130,12 @@ void test_typed_spawn(server_type ts) {
       CAF_CHECK_EQUAL(value, true);
     }
   );
-  self->sync_send(ts, my_request{10, 20}).await(
+  self->request(ts, my_request{10, 20}).await(
     [](bool value) {
       CAF_CHECK_EQUAL(value, false);
     }
   );
-  self->sync_send(ts, my_request{0, 0}).await(
+  self->request(ts, my_request{0, 0}).await(
     [](bool value) {
       CAF_CHECK_EQUAL(value, true);
     }
@@ -216,14 +216,14 @@ string_actor::behavior_type string_reverter() {
   };
 }
 
-// uses `return sync_send(...).then(...)`
+// uses `return request(...).then(...)`
 string_actor::behavior_type string_relay(string_actor::pointer self,
                                          string_actor master, bool leaf) {
   auto next = leaf ? self->spawn(string_relay, master, false) : master;
   self->link_to(next);
   return {
     [=](const string& str) {
-      return self->sync_send(next, str).then(
+      return self->request(next, str).then(
         [](string& answer) -> string {
           return std::move(answer);
         }
@@ -285,7 +285,7 @@ int_actor::behavior_type int_fun() {
 behavior foo(event_based_actor* self) {
   return {
     [=](int i, int_actor server) {
-      return self->sync_send(server, i).then([=](int result) -> int {
+      return self->request(server, i).then([=](int result) -> int {
         self->quit(exit_reason::normal);
         return result;
       });
@@ -313,7 +313,7 @@ int_actor::behavior_type int_fun2(int_actor::pointer self) {
 behavior foo2(event_based_actor* self) {
   return {
     [=](int i, int_actor server) {
-      return self->sync_send(server, i).then([=](int result) -> int {
+      return self->request(server, i).then([=](int result) -> int {
         self->quit(exit_reason::normal);
         return result;
       });
@@ -408,7 +408,7 @@ CAF_TEST(reverter_relay_chain) {
                                           true);
   set<string> iface{"caf::replies_to<@str>::with<@str>"};
   CAF_CHECK(aut->message_types() == iface);
-  self->sync_send(aut, "Hello World!").await(
+  self->request(aut, "Hello World!").await(
     [](const string& answer) {
       CAF_CHECK_EQUAL(answer, "!dlroW olleH");
     }
@@ -425,7 +425,7 @@ CAF_TEST(string_delegator_chain) {
                                           true);
   set<string> iface{"caf::replies_to<@str>::with<@str>"};
   CAF_CHECK(aut->message_types() == iface);
-  self->sync_send(aut, "Hello World!").await(
+  self->request(aut, "Hello World!").await(
     [](const string& answer) {
       CAF_CHECK_EQUAL(answer, "!dlroW olleH");
     }
@@ -439,7 +439,7 @@ CAF_TEST(maybe_string_delegator_chain) {
   auto aut = system.spawn(maybe_string_delegator,
                           system.spawn(maybe_string_reverter));
   CAF_MESSAGE("send empty string, expect error");
-  self->sync_send(aut, "").await(
+  self->request(aut, "").await(
     [](ok_atom, const string&) {
       throw std::logic_error("unexpected result!");
     },
@@ -450,7 +450,7 @@ CAF_TEST(maybe_string_delegator_chain) {
     }
   );
   CAF_MESSAGE("send abcd string, expect dcba");
-  self->sync_send(aut, "abcd").await(
+  self->request(aut, "abcd").await(
     [](ok_atom, const string& str) {
       CAF_CHECK_EQUAL(str, "dcba");
     },
@@ -508,6 +508,119 @@ CAF_TEST(check_signature) {
   self->receive(
     [](const down_msg& dm) {
       CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
+    }
+  );
+}
+
+using caf::detail::type_list;
+
+template <class X, class Y>
+struct typed_actor_combine_one {
+  using type = void;
+};
+
+template <class... Xs, class... Ys, class... Zs>
+struct typed_actor_combine_one<typed_mpi<type_list<Xs...>, type_list<Ys...>>,
+                               typed_mpi<type_list<Ys...>, type_list<Zs...>>> {
+  using type = typed_mpi<type_list<Xs...>, type_list<Zs...>>;
+};
+
+template <class X, class Y>
+struct typed_actor_combine_all;
+
+template <class X, class... Ys>
+struct typed_actor_combine_all<X, type_list<Ys...>> {
+  using type = type_list<typename typed_actor_combine_one<X, Ys>::type...>;
+};
+
+template <class X, class Y>
+struct type_actor_combine;
+
+template <class... Xs, class... Ys>
+struct type_actor_combine<typed_actor<Xs...>, typed_actor<Ys...>> {
+  // store Ys in a packed list
+  using ys = type_list<Ys...>;
+  // combine each X with all Ys
+  using all =
+    typename detail::tl_concat<
+      typename typed_actor_combine_all<Xs, ys>::type...
+    >::type;
+  // drop all mismatches (void results)
+  using filtered = typename detail::tl_filter_not_type<all, void>::type;
+  // throw error if we don't have a single match
+  static_assert(detail::tl_size<filtered>::value > 0,
+                "Left-hand actor type does not produce a single result which "
+                "is valid as input to the right-hand actor type.");
+  // compute final actor type
+  using type = typename detail::tl_apply<filtered, typed_actor>::type;
+};
+
+template <class... Xs, class... Ys>
+typename type_actor_combine<typed_actor<Xs...>, typed_actor<Ys...>>::type
+operator*(const typed_actor<Xs...>& x, const typed_actor<Ys...>& y) {
+  using res_type = typename type_actor_combine<typed_actor<Xs...>,
+                                               typed_actor<Ys...>>::type;
+  if (! x || ! y)
+    return {};
+  auto f = [=](event_based_actor* self) -> behavior {
+    self->link_to(x);
+    self->link_to(y);
+    self->trap_exit(true);
+    auto x_ = actor_cast<actor>(x);
+    auto y_ = actor_cast<actor>(y);
+    return {
+      [=](const exit_msg& msg) {
+        // also terminate for normal exit reasons
+        if (msg.source == x || msg.source == y)
+          self->quit(msg.reason);
+      },
+      others >> [=] {
+        auto rp = self->make_response_promise();
+        self->request(x_, self->current_message()).generic_then(
+          [=](message& msg) {
+            self->request(y_, std::move(msg)).generic_then(
+              [=](message& msg) {
+                rp.deliver(std::move(msg));
+              },
+              [=](error& err) {
+                rp.deliver(std::move(err));
+              }
+            );
+          },
+          [=](error& err) {
+            rp.deliver(std::move(err));
+          }
+        );
+      }
+    };
+  };
+  return actor_cast<res_type>(x->home_system().spawn(f));
+}
+
+using first_stage = typed_actor<replies_to<int>::with<double>>;
+using second_stage = typed_actor<replies_to<double>::with<string>>;
+
+first_stage::behavior_type first_stage_impl() {
+  return [](int i) {
+    return static_cast<double>(i) * 2;
+  };
+};
+
+second_stage::behavior_type second_stage_impl() {
+  return [](double x) {
+    return std::to_string(x);
+  };
+}
+
+CAF_TEST(composition) {
+  actor_system system;
+  auto first = system.spawn(first_stage_impl);
+  auto second = system.spawn(second_stage_impl);
+  auto first_then_second = first * second;
+  scoped_actor self{system};
+  self->request(first_then_second, 42).await(
+    [](const string& str) {
+      CAF_MESSAGE("received: " << str);
     }
   );
 }

@@ -223,7 +223,9 @@ protected:
 template <class F>
 class catch_all_match_case : public match_case {
 public:
-  using plain_result_type = typename detail::get_callable_trait<F>::result_type;
+  using ctrait = typename detail::get_callable_trait<F>::type;
+
+  using plain_result_type = typename ctrait::result_type;
 
   using result_type =
     typename std::conditional<
@@ -232,7 +234,7 @@ public:
       typename std::remove_const<plain_result_type>::type
     >::type;
 
-  using arg_types = detail::type_list<>;
+  using arg_types = typename ctrait::arg_types;
 
   catch_all_match_case(F f)
       : match_case(true, detail::make_type_token<>()),
@@ -240,15 +242,34 @@ public:
     // nop
   }
 
-  match_case::result invoke(maybe<message>& res, message&) override {
+  match_case::result invoke(maybe<message>& res, message& msg) override {
     lfinvoker<std::is_same<result_type, void>::value, F> fun{fun_};
-    auto fun_res = fun();
+    arg_types token;
+    auto fun_res = call_fun(fun, msg, token);
     detail::optional_message_visitor omv;
     res = omv(fun_res);
     return match_case::match;
   }
 
 protected:
+  template <class T>
+  static auto call_fun(T& f, message&, detail::type_list<>) -> decltype(f()) {
+    return f();
+  }
+
+  template <class T>
+  static auto call_fun(T& f, message& x, detail::type_list<const message&>)
+  -> decltype(f(x)) {
+    return f(x);
+  }
+
+  template <class T>
+  static auto call_fun(T& f, message& x, detail::type_list<message&>)
+  -> decltype(f(x)) {
+    x.force_unshare();
+    return f(x);
+  }
+
   F fun_;
 };
 

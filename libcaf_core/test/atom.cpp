@@ -134,10 +134,10 @@ testee::behavior_type testee_impl(testee::pointer self) {
   };
 }
 
-CAF_TEST(sync_send_atom_constants) {
+CAF_TEST(request_atom_constants) {
   scoped_actor self{system};
   auto tst = system.spawn(testee_impl);
-  self->sync_send(tst, abc_atom::value).await(
+  self->request(tst, abc_atom::value).await(
     [](int i) {
       CAF_CHECK_EQUAL(i, 42);
     }

@@ -162,6 +162,11 @@ protected:
 public:
   /// @cond PRIVATE
 
+  actor_system& home_system() {
+    CAF_ASSERT(home_system_ != nullptr);
+    return *home_system_;
+  }
+
   enum linking_operation {
     establish_link_op,
     establish_backlink_op,

@@ -60,22 +60,10 @@ inline std::string to_string(const down_msg& x) {
   return "down" + deep_to_string(std::tie(x.source, x.reason));
 }
 
-/// Sent whenever a terminated actor receives a synchronous request.
-struct sync_exited_msg {
-  /// The source of this message, i.e., the terminated actor.
-  actor_addr source;
-  /// The exit reason of the terminated actor.
-  exit_reason reason;
-};
-
-inline std::string to_string(const sync_exited_msg& x) {
-  return "sync_exited" + deep_to_string(std::tie(x.source, x.reason));
-}
-
 template <class T>
 typename std::enable_if<
   detail::tl_exists<
-    detail::type_list<exit_msg, down_msg, sync_exited_msg>,
+    detail::type_list<exit_msg, down_msg>,
     detail::tbind<std::is_same, T>::template type
   >::value,
   bool
@@ -87,7 +75,7 @@ operator==(const T& lhs, const T& rhs) {
 template <class T>
 typename std::enable_if<
   detail::tl_exists<
-    detail::type_list<exit_msg, down_msg, sync_exited_msg>,
+    detail::type_list<exit_msg, down_msg>,
     detail::tbind<std::is_same, T>::template type
   >::value,
   bool
@@ -99,7 +87,7 @@ operator!=(const T& lhs, const T& rhs) {
 template <class IO, class T>
 typename std::enable_if<
   detail::tl_exists<
-    detail::type_list<exit_msg, down_msg, sync_exited_msg>,
+    detail::type_list<exit_msg, down_msg>,
     detail::tbind<
       std::is_same,
       typename std::remove_const<T>::type

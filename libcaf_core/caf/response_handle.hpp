@@ -22,6 +22,7 @@
 
 #include <type_traits>
 
+#include "caf/sec.hpp"
 #include "caf/message_id.hpp"
 #include "caf/typed_behavior.hpp"
 #include "caf/continue_helper.hpp"
@@ -44,40 +45,29 @@ struct nonblocking_response_handle_tag {};
 struct blocking_response_handle_tag {};
 
 /// This helper class identifies an expected response message
-/// and enables `sync_send(...).then(...)`.
-template <class Self, class ResultOptPairOrMessage, class Tag>
+/// and enables `request(...).then(...)`.
+template <class Self, class Output, class Tag>
 class response_handle;
 
-/******************************************************************************
- *                            nonblocking + untyped                           *
- ******************************************************************************/
-template <class Self>
-class response_handle<Self, message, nonblocking_response_handle_tag> {
-public:
-  response_handle() = delete;
-  response_handle(const response_handle&) = default;
-  response_handle& operator=(const response_handle&) = default;
+template <class Output, class F>
+struct get_continue_helper {
+  using type = typed_continue_helper<
+                 typename detail::lifted_result_type<
+                   typename detail::get_callable_trait<F>::result_type
+                 >::type
+               >;
+};
 
-  response_handle(message_id mid, Self* self) : mid_(mid), self_(self) {
-    // nop
-  }
-
-  template <class... Ts>
-  continue_helper then(Ts&&... xs) const {
-    self_->set_response_handler(mid_, behavior{std::forward<Ts>(xs)...});
-    return {mid_};
-  }
-
-private:
-  message_id mid_;
-  Self* self_;
+template <class F>
+struct get_continue_helper<message, F> {
+  using type = continue_helper;
 };
 
 /******************************************************************************
- *                            nonblocking + typed                             *
+ *                                 nonblocking                                *
  ******************************************************************************/
-template <class Self, class TypedOutputPair>
-class response_handle<Self, TypedOutputPair, nonblocking_response_handle_tag> {
+template <class Self, class Output>
+class response_handle<Self, Output, nonblocking_response_handle_tag> {
 public:
   response_handle() = delete;
   response_handle(const response_handle&) = default;
@@ -85,58 +75,56 @@ public:
 
   response_handle(message_id mid, Self* self) : mid_(mid), self_(self) {
     // nop
+  }
+
+  using error_handler = std::function<void (error&)>;
+
+  template <class F, class T>
+  typename get_continue_helper<Output, F>::type
+  then(F f, error_handler ef, timeout_definition<T> tdef) const {
+    return then_impl(f, ef, std::move(tdef));
   }
 
   template <class F>
-  typed_continue_helper<
-    typename detail::lifted_result_type<
-      typename detail::get_callable_trait<F>::result_type
-    >::type>
-  then(F fun) {
+  typename get_continue_helper<Output, F>::type
+  then(F f, error_handler ef = nullptr) const {
+    return then_impl(f, ef);
+  }
+
+  template <class F, class T>
+  typename get_continue_helper<Output, F>::type
+  then(F f, timeout_definition<T> tdef) const {
+    return then(std::move(f), nullptr, std::move(tdef));
+  }
+
+  void generic_then(std::function<void (message&)> f, error_handler ef) {
+    behavior tmp{
+      others >> f
+    };
+    self_->set_response_handler(mid_, behavior{std::move(tmp)}, std::move(ef));
+  }
+
+private:
+  template <class F, class... Ts>
+  typename get_continue_helper<Output, F>::type
+  then_impl(F& f, error_handler& ef, Ts&&... xs) const {
     static_assert(detail::is_callable<F>::value, "argument is not callable");
     static_assert(! std::is_base_of<match_case, F>::value,
                   "match cases are not allowed in this context");
-    detail::type_checker<TypedOutputPair, F>::check();
-    self_->set_response_handler(mid_, behavior{std::move(fun)});
+    detail::type_checker<Output, F>::check();
+    self_->set_response_handler(mid_,
+                                behavior{std::move(f), std::forward<Ts>(xs)...},
+                                std::move(ef));
     return {mid_};
   }
 
-private:
+
   message_id mid_;
   Self* self_;
 };
 
 /******************************************************************************
- *                             blocking + untyped                             *
- ******************************************************************************/
-template <class Self>
-class response_handle<Self, message, blocking_response_handle_tag> {
-public:
-  response_handle() = delete;
-  response_handle(const response_handle&) = default;
-  response_handle& operator=(const response_handle&) = default;
-
-  response_handle(message_id mid, Self* self) : mid_(mid), self_(self) {
-    // nop
-  }
-
-  void await(behavior& bhvr) {
-    self_->dequeue(bhvr, mid_);
-  }
-
-  template <class... Ts>
-  void await(Ts&&... xs) const {
-    behavior bhvr{std::forward<Ts>(xs)...};
-    self_->dequeue(bhvr, mid_);
-  }
-
-private:
-  message_id mid_;
-  Self* self_;
-};
-
-/******************************************************************************
- *                              blocking + typed                              *
+ *                                  blocking                                  *
  ******************************************************************************/
 template <class Self, class Output>
 class response_handle<Self, Output, blocking_response_handle_tag> {
@@ -149,32 +137,52 @@ public:
     // nop
   }
 
-  template <class F>
-  void await(F fun) {
-    static_assert(detail::is_callable<F>::value, "argument is not callable");
-    static_assert(! std::is_base_of<match_case, F>::value,
-                  "match cases are not allowed in this context");
-    detail::type_checker<Output, F>::check();
-    behavior tmp{std::move(fun)};
-    self_->dequeue(tmp, mid_);
+  using error_handler = std::function<void (error&)>;
+
+  template <class F, class T>
+  void await(F f, error_handler ef, timeout_definition<T> tdef) {
+    await_impl(f, ef, std::move(tdef));
   }
 
-  template <class F, class E>
-  void await(F fun, E error_handler) {
-    static_assert(detail::is_callable<F>::value, "argument is not callable");
-    static_assert(! std::is_base_of<match_case, F>::value,
-                  "match cases are not allowed in this context");
-    static_assert(std::is_same<
-                    decltype(error_handler(std::declval<error&>())),
-                    void
-                  >::value,
-                  "error handler accepts no caf::error or returns not void");
-    detail::type_checker<Output, F>::check();
-    behavior tmp{std::move(fun), std::move(error_handler)};
-    self_->dequeue(tmp, mid_);
+  template <class F>
+  void await(F f, error_handler ef = nullptr) {
+    await_impl(f, ef);
+  }
+
+  template <class F, class T>
+  void await(F f, timeout_definition<T> tdef) {
+    await(std::move(f), nullptr, std::move(tdef));
   }
 
 private:
+  template <class F, class... Ts>
+  void await_impl(F& f, error_handler& ef, Ts&&... xs) {
+    static_assert(detail::is_callable<F>::value, "argument is not callable");
+    static_assert(! std::is_base_of<match_case, F>::value,
+                  "match cases are not allowed in this context");
+    detail::type_checker<Output, F>::check();
+    behavior tmp;
+    if (! ef)
+      tmp.assign(
+        std::move(f),
+        others >> [=] {
+          self_->quit(exit_reason::unhandled_sync_failure);
+        },
+        std::forward<Ts>(xs)...
+      );
+    else
+      tmp.assign(
+        std::move(f),
+        ef,
+        others >> [ef] {
+          error err = sec::unexpected_response;
+          ef(err);
+        },
+        std::forward<Ts>(xs)...
+      );
+    self_->dequeue(tmp, mid_);
+  }
+
   message_id mid_;
   Self* self_;
 };

@@ -51,16 +51,11 @@ protected:
 
 void tester(event_based_actor* self, const calculator_type& testee) {
   self->link_to(testee);
-  // will be invoked if we receive an unexpected response message
-  self->on_sync_failure([=] {
-    aout(self) << "AUT (actor under test) failed" << endl;
-    self->quit(exit_reason::user_shutdown);
-  });
   // first test: 2 + 1 = 3
-  self->sync_send(testee, plus_atom::value, 2, 1).then(
+  self->request(testee, plus_atom::value, 2, 1).then(
     [=](result_atom, int r1) {
       // second test: 2 - 1 = 1
-      self->sync_send(testee, minus_atom::value, 2, 1).then(
+      self->request(testee, minus_atom::value, 2, 1).then(
         [=](result_atom, int r2) {
           // both tests succeeded
           if (r1 == 3 && r2 == 1) {
@@ -70,6 +65,11 @@ void tester(event_based_actor* self, const calculator_type& testee) {
           self->send_exit(testee, exit_reason::user_shutdown);
         }
       );
+    },
+    [=](const error& err) {
+      aout(self) << "AUT (actor under test) failed: "
+                 << self->system().render(err) << endl;
+      self->quit(exit_reason::user_shutdown);
     }
   );
 }

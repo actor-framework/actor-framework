@@ -17,6 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/sec.hpp"
 #include "caf/atom.hpp"
 #include "caf/config.hpp"
 #include "caf/actor_cast.hpp"
@@ -41,7 +42,7 @@ void sync_request_bouncer::operator()(const actor_addr& sender,
   if (sender && mid.is_request()) {
     auto ptr = actor_cast<abstract_actor_ptr>(sender);
     ptr->enqueue(invalid_actor_addr, mid.response_id(),
-                 make_message(sync_exited_msg{sender, rsn}),
+                 make_message(make_error(sec::request_receiver_down)),
                  // TODO: this breaks out of the execution unit
                  nullptr);
   }

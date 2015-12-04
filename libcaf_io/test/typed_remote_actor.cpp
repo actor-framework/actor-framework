@@ -94,7 +94,7 @@ void run_client(int argc, char** argv, uint16_t port) {
                                                                  port);
   CAF_REQUIRE(serv);
   scoped_actor self{system};
-  self->sync_send(serv, ping{42})
+  self->request(serv, ping{42})
     .await([](const pong& p) { CAF_CHECK_EQUAL(p.value, 42); });
   anon_send_exit(serv, exit_reason::user_shutdown);
   self->monitor(serv);

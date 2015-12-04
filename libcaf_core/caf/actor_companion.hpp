@@ -27,7 +27,7 @@
 #include "caf/mailbox_element.hpp"
 #include "caf/abstract_event_based_actor.hpp"
 
-#include "caf/mixin/sync_sender.hpp"
+#include "caf/mixin/requester.hpp"
 
 #include "caf/detail/disposer.hpp"
 #include "caf/detail/shared_spinlock.hpp"

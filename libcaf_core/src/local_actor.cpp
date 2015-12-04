@@ -206,8 +206,8 @@ msg_type filter_msg(local_actor* self, mailbox_element& node) {
         binary_serializer bs{self->context(), std::back_inserter(buf)};
         self->save_state(bs, 0);
         auto sender = node.sender;
-        // sync_send(...)
-        auto req = self->sync_send_impl(message_priority::normal, mm,
+        // request(...)
+        auto req = self->request_impl(message_priority::normal, mm,
                                         migrate_atom::value, self->name(),
                                         std::move(buf));
         self->set_response_handler(req, behavior{
@@ -316,7 +316,7 @@ response_promise fetch_response_promise(local_actor*, response_promise& hdl) {
   return std::move(hdl);
 }
 
-// enables `return sync_send(...).then(...)`
+// enables `return request(...).then(...)`
 bool handle_message_id_res(local_actor* self, message& res,
                            response_promise hdl) {
   CAF_ASSERT(hdl);
@@ -329,8 +329,8 @@ bool handle_message_id_res(local_actor* self, message& res,
     // install a behavior that calls the user-defined behavior
     // and using the result of its inner behavior as response
     if (ref_opt) {
-      behavior inner{std::move(*ref_opt)};
-      ref_opt->assign(
+      behavior inner{std::move(std::get<1>(*ref_opt))};
+      std::get<1>(*ref_opt).assign(
         others >> [=] {
           // inner is const inside this lambda and mutable a C++14 feature
           auto ires = const_cast<behavior&>(inner)(self->current_message());
@@ -370,18 +370,10 @@ bool post_process_invoke_res(local_actor* self, bool is_sync_request,
   } else if (is_sync_request) {
     CAF_LOG_DEBUG("report error back to sync caller");
     if (res.empty())
-      res = sec::broken_response_promise;
+      res = sec::unexpected_response;
     rp.deliver(make_message(res.error()));
   }
   return false;
-}
-
-void local_actor::handle_sync_failure() {
-  CAF_LOG_TRACE("");
-  if (sync_failure_handler_)
-    sync_failure_handler_();
-  else
-    quit(exit_reason::unhandled_sync_failure);
 }
 
 invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
@@ -432,7 +424,7 @@ invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
           if (! post_process_invoke_res(this, false,
                                         fun(current_element_->msg))) {
             CAF_LOG_WARNING("sync failure occured:" << CAF_ARG(id()));
-            handle_sync_failure();
+            quit(exit_reason::unhandled_sync_failure);
           }
         }
         ptr.swap(current_element_);
@@ -502,32 +494,34 @@ bool local_actor::awaits(message_id mid) const {
                      predicate);
 }
 
-maybe<behavior&> local_actor::find_pending_response(message_id mid) {
+maybe<local_actor::pending_response&>
+local_actor::find_pending_response(message_id mid) {
   pending_response_predicate predicate{mid};
   auto last = pending_responses_.end();
   auto i = std::find_if(pending_responses_.begin(), last, predicate);
   if (i != last)
-    return i->second;
+    return *i;
   return none;
 }
-
-void local_actor::set_response_handler(message_id response_id, behavior bhvr) {
+void local_actor::set_response_handler(message_id response_id, behavior bhvr,
+                                       error_handler f) {
   auto opt_ref = find_pending_response(response_id);
   if (opt_ref) {
     if (bhvr.timeout().valid())
       request_sync_timeout_msg(bhvr.timeout(), response_id);
-    *opt_ref = std::move(bhvr);
+    get<1>(*opt_ref) = std::move(bhvr);
+    get<2>(*opt_ref) = std::move(f);
   }
 }
 
 behavior& local_actor::awaited_response_handler() {
-  return pending_responses_.front().second;
+  return get<1>(pending_responses_.front());
 }
 
 message_id local_actor::awaited_response_id() {
   return pending_responses_.empty()
          ? message_id::make()
-         : pending_responses_.front().first;
+         : get<0>(pending_responses_.front());
 }
 
 void local_actor::launch(execution_unit* eu, bool lazy, bool hide) {
@@ -945,7 +939,7 @@ void local_actor::load_state(deserializer&, const unsigned int) {
 
 behavior& local_actor::get_behavior() {
   return pending_responses_.empty() ? bhvr_stack_.back()
-                                    : pending_responses_.front().second;
+                                    : get<1>(pending_responses_.front());
 }
 
 bool local_actor::finished() {

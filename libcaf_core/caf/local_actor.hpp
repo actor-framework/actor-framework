@@ -322,16 +322,6 @@ public:
   /// Creates a `response_promise` to response to a request later on.
   response_promise make_response_promise();
 
-  /// Sets the handler for unexpected synchronous response messages.
-  inline void on_sync_failure(std::function<void()> fun) {
-    sync_failure_handler_ = std::move(fun);
-  }
-
-  /// Checks wheter this actor has a user-defined sync failure handler.
-  inline bool has_sync_failure_handler() const {
-    return static_cast<bool>(sync_failure_handler_);
-  }
-
   /// Sets a custom exception handler for this actor. If multiple handlers are
   /// defined, only the functor that was added *last* is being executed.
   template <class F>
@@ -403,12 +393,10 @@ public:
     return current_element_;
   }
 
-  void handle_sync_failure();
-
   template <class Handle, class... Ts>
-  message_id sync_send_impl(message_priority mp, const Handle& dh, Ts&&... xs) {
+  message_id request_impl(message_priority mp, const Handle& dh, Ts&&... xs) {
     if (! dh) {
-      throw std::invalid_argument("cannot sync_send to invalid_actor");
+      throw std::invalid_argument("cannot request to invalid_actor");
     }
     auto req_id = new_request_id(mp);
     send_impl(req_id, actor_cast<abstract_channel*>(dh),
@@ -538,7 +526,9 @@ public:
                                        behavior& fun,
                                        message_id awaited_response);
 
-  using pending_response = std::pair<message_id, behavior>;
+  using error_handler = std::function<void (error&)>;
+
+  using pending_response = std::tuple<message_id, behavior, error_handler>;
 
   message_id new_request_id(message_priority mp);
 
@@ -548,9 +538,10 @@ public:
 
   bool awaits(message_id response_id) const;
 
-  maybe<behavior&> find_pending_response(message_id mid);
+  maybe<pending_response&> find_pending_response(message_id mid);
 
-  void set_response_handler(message_id response_id, behavior bhvr);
+  void set_response_handler(message_id response_id, behavior bhvr,
+                            error_handler f = nullptr);
 
   behavior& awaited_response_handler();
 
@@ -631,8 +622,6 @@ private:
 
   void delayed_send_impl(message_id mid, const channel& whom,
                          const duration& rtime, message data);
-
-  std::function<void()> sync_failure_handler_;
 };
 
 /// A smart pointer to a {@link local_actor} instance.
