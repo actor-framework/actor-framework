@@ -30,12 +30,12 @@ namespace caf {
 /// Implements a simple proxy forwarding all operations to a manager.
 class forwarding_actor_proxy : public actor_proxy {
 public:
-  forwarding_actor_proxy(actor_id mid, node_id pinfo, actor parent);
+  forwarding_actor_proxy(actor_system* sys, actor_id mid,
+                         node_id pinfo, actor parent);
 
   ~forwarding_actor_proxy();
 
-  void enqueue(const actor_addr&, message_id,
-               message, execution_unit*) override;
+  void enqueue(mailbox_element_ptr what, execution_unit* host) override;
 
   bool link_impl(linking_operation op, const actor_addr& other) override;
 
@@ -50,7 +50,8 @@ public:
   void manager(actor new_manager);
 
 private:
-  void forward_msg(const actor_addr& sender, message_id mid, message msg);
+  void forward_msg(const actor_addr& sender, message_id mid, message msg,
+                   const std::vector<actor_addr>* fwd_stack = nullptr);
 
   mutable detail::shared_spinlock manager_mtx_;
   actor manager_;

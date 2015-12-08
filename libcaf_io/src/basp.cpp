@@ -436,11 +436,13 @@ connection_state instance::handle(execution_unit* ctx,
           && tbl_.add_indirect(last_hop, hdr.source_node))
         callee_.learned_new_node_indirectly(hdr.source_node);
       binary_deserializer bd{ctx, payload->data(), payload->size()};
+      std::vector<actor_addr> forwarding_stack;
       message msg;
-      bd & msg;
+      bd >> forwarding_stack >> msg;
       callee_.deliver(hdr.source_node, hdr.source_actor,
-                      hdr.dest_node, hdr.dest_actor, msg,
-                      message_id::from_integer_value(hdr.operation_data));
+                      hdr.dest_node, hdr.dest_actor,
+                      message_id::from_integer_value(hdr.operation_data),
+                      forwarding_stack, msg);
       break;
     }
     case message_type::announce_proxy_instance:
@@ -539,6 +541,7 @@ size_t instance::remove_published_actor(const actor_addr& whom, uint16_t port,
 }
 
 bool instance::dispatch(execution_unit* ctx, const actor_addr& sender,
+                        const std::vector<actor_addr>& forwarding_stack,
                         const actor_addr& receiver, message_id mid,
                         const message& msg) {
   CAF_LOG_TRACE("");
@@ -549,7 +552,7 @@ bool instance::dispatch(execution_unit* ctx, const actor_addr& sender,
     return false;
   }
   auto writer = make_callback([&](serializer& sink) {
-    sink & msg;
+    sink << forwarding_stack << msg;
   });
   header hdr{message_type::dispatch_message, 0, mid.integer_value(),
              sender ? sender->node() : this_node(), receiver->node(),

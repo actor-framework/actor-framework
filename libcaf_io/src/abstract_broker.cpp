@@ -64,7 +64,7 @@ void abstract_broker::enqueue(mailbox_element_ptr ptr, execution_unit*) {
 
 void abstract_broker::enqueue(const actor_addr& sender, message_id mid,
                               message msg, execution_unit* eu) {
-  enqueue(mailbox_element::make(sender, mid, std::move(msg)), eu);
+  enqueue(mailbox_element::make(sender, mid, {}, std::move(msg)), eu);
 }
 
 void abstract_broker::launch(execution_unit* eu, bool is_lazy, bool is_hidden) {

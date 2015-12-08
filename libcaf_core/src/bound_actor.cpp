@@ -17,51 +17,49 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include <utility>
+#include "caf/bound_actor.hpp"
 
-#include "caf/local_actor.hpp"
-#include "caf/response_promise.hpp"
+#include "caf/mailbox_element.hpp"
+#include "caf/system_messages.hpp"
+
+#include "caf/detail/disposer.hpp"
+#include "caf/detail/merged_tuple.hpp"
 
 namespace caf {
 
-/*
-response_promise::response_promise(local_actor* self, actor_addr source,
-                                   forwarding_stack stages,
-                                   message_id id)
-    : self_(self),
-      source_(std::move(source)),
-      stages_(std::move(stages)),
-      id_(id) {
-  CAF_ASSERT(id.is_response() || ! id.valid());
-}
-*/
-
-response_promise::response_promise(local_actor* self, mailbox_element& src)
-    : self_(self),
-      source_(std::move(src.sender)),
-      stages_(std::move(src.stages)),
-      id_(src.mid) {
-  src.mid.mark_as_answered();
+bound_actor::bound_actor(actor_system* sys, actor_addr decorated, message msg)
+    : abstract_actor(sys, decorated->id(), decorated->node(),
+                     is_abstract_actor_flag | is_actor_bind_decorator_flag),
+      decorated_(std::move(decorated)),
+      merger_(std::move(msg)) {
+  // nop
 }
 
-void response_promise::deliver_impl(message msg) const {
-  if (! valid())
-    return;
-  if (stages_.empty()) {
-    source_->enqueue(self_->address(), id_.response_id(),
-                     std::move(msg), self_->context());
-    return;
+void bound_actor::attach(attachable_ptr ptr) {
+  decorated_->attach(std::move(ptr));
+}
+
+size_t bound_actor::detach(const attachable::token& what) {
+  return decorated_->detach(what);
+}
+
+void bound_actor::enqueue(mailbox_element_ptr what, execution_unit* host) {
+  // ignore system messages
+  auto& msg = what->msg;
+  if (! ((msg.size() == 1 && (msg.match_element<exit_msg>(0)
+                              || msg.match_element<down_msg>(0)))
+         || (msg.size() > 1 && msg.match_element<sys_atom>(0)))) {
+    // merge non-system messages
+    message tmp{detail::merged_tuple::make(merger_, std::move(msg))};
+    msg.swap(tmp);
   }
-  auto next = std::move(stages_.back());
-  stages_.pop_back();
-  next->enqueue(mailbox_element::make(std::move(source_), id_,
-                                      std::move(stages_), std::move(msg)),
-                self_->context());
+  decorated_->enqueue(std::move(what), host);
 }
 
-void response_promise::deliver(error x) const {
-  if (id_.valid())
-    deliver_impl(make_message(std::move(x)));
+bool bound_actor::link_impl(linking_operation op, const actor_addr& other) {
+  if (actor_cast<abstract_actor*>(other) == this || other == decorated_)
+    return false;
+  return decorated_->link_impl(op, other);
 }
 
 } // namespace caf

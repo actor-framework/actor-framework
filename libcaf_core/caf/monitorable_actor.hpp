@@ -59,7 +59,10 @@ protected:
   explicit monitorable_actor(actor_config& cfg);
 
   /// Creates a new actor instance.
-  monitorable_actor(actor_id aid, node_id nid);
+  monitorable_actor(actor_system* sys, actor_id aid, node_id nid);
+
+  /// Creates a new actor instance.
+  monitorable_actor(actor_system* sys, actor_id aid, node_id nid, int flags);
 
   /// Called by the runtime system to perform cleanup actions for this actor.
   /// Subtypes should always call this member function when overriding it.

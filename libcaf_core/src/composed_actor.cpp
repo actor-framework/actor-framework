@@ -17,51 +17,56 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include <utility>
-
-#include "caf/local_actor.hpp"
-#include "caf/response_promise.hpp"
+#include "caf/composed_actor.hpp"
 
 namespace caf {
 
-/*
-response_promise::response_promise(local_actor* self, actor_addr source,
-                                   forwarding_stack stages,
-                                   message_id id)
-    : self_(self),
-      source_(std::move(source)),
-      stages_(std::move(stages)),
-      id_(id) {
-  CAF_ASSERT(id.is_response() || ! id.valid());
-}
-*/
-
-response_promise::response_promise(local_actor* self, mailbox_element& src)
-    : self_(self),
-      source_(std::move(src.sender)),
-      stages_(std::move(src.stages)),
-      id_(src.mid) {
-  src.mid.mark_as_answered();
+composed_actor::composed_actor(actor_system* sys,
+                               actor_addr first, actor_addr second)
+    : local_actor(sys, first->id(), first->node(),
+                  is_abstract_actor_flag | is_actor_dot_decorator_flag),
+      first_(first),
+      second_(second) {
+  // nop
 }
 
-void response_promise::deliver_impl(message msg) const {
-  if (! valid())
+void composed_actor::initialize() {
+  trap_exit(true);
+  link_to(first_);
+  link_to(second_);
+  do_become(
+    {
+      [=](const exit_msg& em) {
+        if (em.source == first_ || em.source == second_)
+          quit(em.reason);
+        else if (em.reason != exit_reason::normal)
+          quit(em.reason);
+      },
+      others >> [] {
+        // drop
+      }
+    },
+    true
+  );
+}
+
+void composed_actor::enqueue(mailbox_element_ptr what, execution_unit* host) {
+  if (! what)
     return;
-  if (stages_.empty()) {
-    source_->enqueue(self_->address(), id_.response_id(),
-                     std::move(msg), self_->context());
+  if (is_system_message(what->msg)) {
+    local_actor::enqueue(std::move(what), host);
     return;
   }
-  auto next = std::move(stages_.back());
-  stages_.pop_back();
-  next->enqueue(mailbox_element::make(std::move(source_), id_,
-                                      std::move(stages_), std::move(msg)),
-                self_->context());
+  // store second_ as the next stage in the forwarding chain
+  what->stages.push_back(second_);
+  // forward modified message to first_
+  first_->enqueue(std::move(what), host);
 }
 
-void response_promise::deliver(error x) const {
-  if (id_.valid())
-    deliver_impl(make_message(std::move(x)));
+bool composed_actor::is_system_message(const message& msg) {
+  return (msg.size() == 1 && (msg.match_element<exit_msg>(0)
+                              || msg.match_element<down_msg>(0)))
+         || (msg.size() > 1 && msg.match_element<sys_atom>(0));
 }
 
 } // namespace caf

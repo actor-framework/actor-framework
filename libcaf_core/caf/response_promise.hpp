@@ -20,6 +20,8 @@
 #ifndef CAF_RESPONSE_PROMISE_HPP
 #define CAF_RESPONSE_PROMISE_HPP
 
+#include <vector>
+
 #include "caf/actor.hpp"
 #include "caf/message.hpp"
 #include "caf/actor_addr.hpp"
@@ -38,17 +40,26 @@ public:
   response_promise& operator=(response_promise&&) = default;
   response_promise& operator=(const response_promise&) = default;
 
-  response_promise(local_actor* self, const actor_addr& to,
-                   const message_id& response_id);
+  using forwarding_stack = std::vector<actor_addr>;
+
+  //response_promise(local_actor* self, actor_addr source,
+  //                 forwarding_stack stages,
+  //                 message_id response_id);
+
+  response_promise(local_actor* self, mailbox_element& src);
 
   /// Queries whether this promise is still valid, i.e., no response
   /// was yet delivered to the client.
-  inline explicit operator bool() const {
-    // handle is valid if it has a receiver
-    return static_cast<bool>(to_);
+  inline bool valid() const {
+    // handle is valid if it has a receiver or a next stage
+    return source_ || ! stages_.empty();
   }
 
-  /// Sends the response_message.
+  inline explicit operator bool() const {
+    return valid();
+  }
+
+  /// Sends the response_message and invalidate this promise.
   template <class T, class... Ts>
   typename std::enable_if<
     ! std::is_convertible<T, error>::value
@@ -57,13 +68,15 @@ public:
     deliver_impl(make_message(std::forward<T>(x), std::forward<Ts>(xs)...));
   }
 
-  /// Sends an error as response unless the sender used asynchronous messaging.
+  /// Sends an error as response unless the sender used asynchronous messaging
+  /// and invalidate this promise.
   void deliver(error x) const;
 
 private:
   void deliver_impl(message response_message) const;
   local_actor* self_;
-  actor_addr to_;
+  mutable actor_addr source_;
+  mutable forwarding_stack stages_;
   message_id id_;
 };
 

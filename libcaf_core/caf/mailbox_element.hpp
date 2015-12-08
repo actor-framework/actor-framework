@@ -42,16 +42,28 @@ class mailbox_element : public memory_managed {
 public:
   static constexpr auto memory_cache_flag = detail::needs_embedding;
 
-  mailbox_element* next; // intrusive next pointer
-  mailbox_element* prev; // intrusive previous pointer
-  bool marked;           // denotes if this node is currently processed
+  using forwarding_stack = std::vector<actor_addr>;
+
+  // intrusive pointer to the next mailbox element
+  mailbox_element* next;
+  // intrusive pointer to the previous mailbox element
+  mailbox_element* prev;
+  // avoid multi-processing in blocking actors via flagging
+  bool marked;
+  // source of this message and receiver of the final response
   actor_addr sender;
+  // denotes whether this a sync or async message
   message_id mid;
-  message msg;           // 'content field'
+  // stages.back() is the next actor in the forwarding chain,
+  // if this is empty then the original sender receives the response
+  forwarding_stack stages;
+  // content of this element
+  message msg;
 
   mailbox_element();
-  mailbox_element(actor_addr sender, message_id id);
-  mailbox_element(actor_addr sender, message_id id, message data);
+  mailbox_element(actor_addr sender, message_id id, forwarding_stack stages);
+  mailbox_element(actor_addr sender, message_id id,
+                  forwarding_stack stages, message data);
 
   ~mailbox_element();
 
@@ -62,19 +74,22 @@ public:
 
   using unique_ptr = std::unique_ptr<mailbox_element, detail::disposer>;
 
-  static unique_ptr make(actor_addr sender, message_id id, message msg);
+  static unique_ptr make(actor_addr sender, message_id id,
+                         forwarding_stack stages, message msg);
 
   template <class... Ts>
-  static unique_ptr make_joint(actor_addr sender, message_id id, Ts&&... xs) {
+  static unique_ptr make_joint(actor_addr sender, message_id id,
+                               forwarding_stack stages, Ts&&... xs) {
     using value_storage =
       detail::tuple_vals<
         typename unbox_message_element<
           typename detail::strip_and_convert<Ts>::type
         >::type...
       >;
-    std::integral_constant<size_t, 2> tk;
+    std::integral_constant<size_t, 3> tk;
     using storage = detail::pair_storage<mailbox_element, value_storage>;
     auto ptr = detail::memory::create<storage>(tk, std::move(sender), id,
+                                               std::move(stages),
                                                std::forward<Ts>(xs)...);
     ptr->first.msg.reset(&(ptr->second), false);
     return unique_ptr{&(ptr->first)};

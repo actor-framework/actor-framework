@@ -25,9 +25,11 @@
 #include "caf/actor_addr.hpp"
 #include "caf/serializer.hpp"
 #include "caf/actor_proxy.hpp"
+#include "caf/bound_actor.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/deserializer.hpp"
 #include "caf/blocking_actor.hpp"
+#include "caf/composed_actor.hpp"
 #include "caf/event_based_actor.hpp"
 
 namespace caf {
@@ -46,11 +48,11 @@ actor& actor::operator=(const invalid_actor_t&) {
 }
 
 intptr_t actor::compare(const actor& other) const noexcept {
-  return channel::compare(ptr_.get(), other.ptr_.get());
+  return actor_addr::compare(ptr_.get(), other.ptr_.get());
 }
 
 intptr_t actor::compare(const actor_addr& other) const noexcept {
-  return static_cast<ptrdiff_t>(ptr_.get() - other.ptr_.get());
+  return actor_addr::compare(ptr_.get(), other.ptr_.get());
 }
 
 void actor::swap(actor& other) noexcept {
@@ -67,6 +69,22 @@ node_id actor::node() const noexcept {
 
 actor_id actor::id() const noexcept {
   return ptr_ ? ptr_->id() : invalid_actor_id;
+}
+
+actor actor::bind_impl(message msg) const {
+  if (! ptr_)
+    return invalid_actor;
+  return actor_cast<actor>(make_counted<bound_actor>(&ptr_->home_system(),
+                                                     address(),
+                                                     std::move(msg)));
+}
+
+actor operator*(actor f, actor g) {
+  if (! f || ! g)
+    return invalid_actor;
+  auto ptr = make_counted<composed_actor>(&f->home_system(),
+                                          f.address(), g.address());
+  return actor_cast<actor>(std::move(ptr));
 }
 
 void serialize(serializer& sink, actor& x, const unsigned int) {

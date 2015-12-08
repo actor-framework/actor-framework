@@ -160,7 +160,7 @@ public:
         >::type...>;
     token tk;
     check_typed_input(dest, tk);
-    send_impl(message_id::make(mp), actor_cast<abstract_channel*>(dest),
+    send_impl(message_id::make(mp), actor_cast<abstract_actor*>(dest),
               std::forward<Ts>(xs)...);
   }
 
@@ -174,7 +174,7 @@ public:
         >::type...>;
     token tk;
     check_typed_input(dest, tk);
-    send_impl(message_id::make(), actor_cast<abstract_channel*>(dest),
+    send_impl(message_id::make(), actor_cast<abstract_actor*>(dest),
               std::forward<Ts>(xs)...);
   }
 
@@ -396,6 +396,10 @@ public:
 
   local_actor(actor_config& sys);
 
+  local_actor(actor_system* sys, actor_id aid, node_id nid);
+
+  local_actor(actor_system* sys, actor_id aid, node_id nid, int init_flags);
+
   template <class ActorHandle>
   inline ActorHandle eval_opts(spawn_options opts, ActorHandle res) {
     if (has_monitor_flag(opts)) {
@@ -413,12 +417,10 @@ public:
 
   template <class Handle, class... Ts>
   message_id request_impl(message_priority mp, const Handle& dh, Ts&&... xs) {
-    if (! dh) {
+    if (! dh)
       throw std::invalid_argument("cannot request to invalid_actor");
-    }
     auto req_id = new_request_id(mp);
-    send_impl(req_id, actor_cast<abstract_channel*>(dh),
-              std::forward<Ts>(xs)...);
+    send_impl(req_id, actor_cast<abstract_actor*>(dh), std::forward<Ts>(xs)...);
     return req_id.response_id();
   }
 
@@ -569,8 +571,7 @@ public:
 
   void launch(execution_unit* eu, bool lazy, bool hide);
 
-  void enqueue(const actor_addr&, message_id,
-               message, execution_unit*) override;
+  using abstract_actor::enqueue;
 
   void enqueue(mailbox_element_ptr, execution_unit*) override;
 
@@ -629,11 +630,22 @@ private:
     ! std::is_same<typename std::decay<T>::type, message>::value
   >::type
   send_impl(message_id mid, abstract_channel* dest, T&& x, Ts&&... xs) const {
-    if (! dest) {
+    if (! dest)
       return;
-    }
+    dest->enqueue(address(), mid,
+                  make_message(std::forward<T>(x), std::forward<Ts>(xs)...),
+                  context());
+  }
+
+  template <class T, class... Ts>
+  typename std::enable_if<
+    ! std::is_same<typename std::decay<T>::type, message>::value
+  >::type
+  send_impl(message_id mid, abstract_actor* dest, T&& x, Ts&&... xs) const {
+    if (! dest)
+      return;
     dest->enqueue(mailbox_element::make_joint(address(),
-                                              mid,
+                                              mid, {},
                                               std::forward<T>(x),
                                               std::forward<Ts>(xs)...),
                   context());

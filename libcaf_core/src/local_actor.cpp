@@ -52,6 +52,21 @@ local_actor::local_actor(actor_config& cfg)
       join(grp);
 }
 
+local_actor::local_actor(actor_system* sys, actor_id aid, node_id nid)
+    : monitorable_actor(sys, aid, std::move(nid)),
+      planned_exit_reason_(exit_reason::not_exited),
+      timeout_id_(0) {
+  // nop
+}
+
+local_actor::local_actor(actor_system* sys, actor_id aid,
+                         node_id nid, int init_flags)
+    : monitorable_actor(sys, aid, std::move(nid), init_flags),
+      planned_exit_reason_(exit_reason::not_exited),
+      timeout_id_(0) {
+  // nop
+}
+
 local_actor::~local_actor() {
   if (! mailbox_.closed()) {
     detail::sync_request_bouncer f{exit_reason_};
@@ -199,7 +214,7 @@ msg_type filter_msg(local_actor* self, mailbox_element& node) {
         if (! self->is_serializable()) {
           node.sender->enqueue(
             mailbox_element::make_joint(self->address(), node.mid.response_id(),
-                                        sec::state_not_serializable),
+                                        {}, sec::state_not_serializable),
             self->context());
           return;
         }
@@ -215,7 +230,7 @@ msg_type filter_msg(local_actor* self, mailbox_element& node) {
           [=](ok_atom, const actor_addr& dest) {
             // respond to original message with {'OK', dest}
             sender->enqueue(mailbox_element::make_joint(self->address(),
-                                                        mid.response_id(),
+                                                        mid.response_id(), {},
                                                         ok_atom::value, dest),
                             self->context());
             // "decay" into a proxy for `dest`
@@ -230,7 +245,7 @@ msg_type filter_msg(local_actor* self, mailbox_element& node) {
           [=](error& err) {
             // respond to original message with {'ERROR', errmsg}
             sender->enqueue(mailbox_element::make_joint(self->address(),
-                                                        mid.response_id(),
+                                                        mid.response_id(), {},
                                                         std::move(err)),
                             self->context());
           }
@@ -240,7 +255,7 @@ msg_type filter_msg(local_actor* self, mailbox_element& node) {
         // "replace" this actor with the content of `buf`
         if (! self->is_serializable()) {
           node.sender->enqueue(mailbox_element::make_joint(
-                                 self->address(), node.mid.response_id(),
+                                 self->address(), node.mid.response_id(), {},
                                  sec::state_not_serializable),
                                self->context());
           return;
@@ -254,7 +269,7 @@ msg_type filter_msg(local_actor* self, mailbox_element& node) {
         self->load_state(bd, 0);
         node.sender->enqueue(
           mailbox_element::make_joint(self->address(), node.mid.response_id(),
-                                      ok_atom::value, self->address()),
+                                      {}, ok_atom::value, self->address()),
           self->context());
       },
       [&](sys_atom, get_atom, std::string& what) {
@@ -263,14 +278,14 @@ msg_type filter_msg(local_actor* self, mailbox_element& node) {
           CAF_LOG_DEBUG("reply to 'info' message");
           node.sender->enqueue(
             mailbox_element::make_joint(self->address(), node.mid.response_id(),
-                                        ok_atom::value, std::move(what),
+                                        {}, ok_atom::value, std::move(what),
                                         self->address(), self->name()),
             self->context());
           return;
         }
         node.sender->enqueue(
           mailbox_element::make_joint(self->address(), node.mid.response_id(),
-                                      sec::invalid_sys_key),
+                                      {}, sec::invalid_sys_key),
           self->context());
       },
       others >> [&] {
@@ -565,11 +580,6 @@ void local_actor::launch(execution_unit* eu, bool lazy, bool hide) {
     return;
   }
   eu->exec_later(this);
-}
-
-void local_actor::enqueue(const actor_addr& sender, message_id mid,
-                          message msg, execution_unit* eu) {
-  enqueue(mailbox_element::make(sender, mid, std::move(msg)), eu);
 }
 
 void local_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
@@ -898,11 +908,11 @@ void local_actor::await_data() {
 
 void local_actor::send_impl(message_id mid, abstract_channel* dest,
                             message what) const {
-  if (! dest) {
+  if (! dest)
     return;
-  }
   dest->enqueue(address(), mid, std::move(what), context());
 }
+
 
 void local_actor::send_exit(const actor_addr& whom, exit_reason reason) {
   send(message_priority::high, actor_cast<actor>(whom),
@@ -922,8 +932,7 @@ response_promise local_actor::make_response_promise() {
   auto& mid = ptr->mid;
   if (mid.is_answered())
     return response_promise{};
-  response_promise result{this, ptr->sender, mid.response_id()};
-  mid.mark_as_answered();
+  response_promise result{this, *ptr};
   return result;
 }
 

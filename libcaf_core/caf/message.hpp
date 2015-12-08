@@ -29,6 +29,7 @@
 #include "caf/config.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/skip_message.hpp"
+#include "caf/index_mapping.hpp"
 
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/apply_args.hpp"
@@ -367,13 +368,18 @@ inline message operator+(const message& lhs, const message& rhs) {
 
 /// Unboxes atom constants, i.e., converts `atom_constant<V>` to `V`.
 /// @relates message
-template <class T>
+template <class T, int IsPlaceholderRes = std::is_placeholder<T>::value>
 struct unbox_message_element {
+  using type = index_mapping;
+};
+
+template <class T>
+struct unbox_message_element<T, 0> {
   using type = T;
 };
 
 template <atom_value V>
-struct unbox_message_element<atom_constant<V>> {
+struct unbox_message_element<atom_constant<V>, 0> {
   using type = atom_value;
 };
 

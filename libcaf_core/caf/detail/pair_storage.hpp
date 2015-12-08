@@ -81,6 +81,16 @@ public:
     // nop
   }
 
+  template <class T0, class T1, class T2, class... Ts>
+  pair_storage(intrusive_ptr<ref_counted> storage,
+               std::integral_constant<size_t, 3>,
+               T0&& x0, T1&& x1, T2&& x2, Ts&&... xs)
+      : first(storage, std::forward<T0>(x0),
+              std::forward<T1>(x1), std::forward<T2>(x2)),
+        second(std::move(storage), std::forward<Ts>(xs)...) {
+    // nop
+  }
+
   ~pair_storage() {
     // nop
   }

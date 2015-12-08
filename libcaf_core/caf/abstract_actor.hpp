@@ -57,6 +57,13 @@ using abstract_actor_ptr = intrusive_ptr<abstract_actor>;
 /// Base class for all actor implementations.
 class abstract_actor : public abstract_channel {
 public:
+  void enqueue(const actor_addr& sender, message_id mid,
+               message content, execution_unit* host) override;
+
+  /// Enqueues a new message wrapped in a `mailbox_element` to the actor.
+  /// This `enqueue` variant allows to define forwarding chains.
+  virtual void enqueue(mailbox_element_ptr what, execution_unit* host) = 0;
+
   /// Attaches `ptr` to this actor. The actor will call `ptr->detach(...)` on
   /// exit, or immediately if it already finished execution.
   virtual void attach(attachable_ptr ptr) = 0;
@@ -123,18 +130,10 @@ public:
     return *home_system_;
   }
 
-protected:
-  /// Creates a new actor instance.
-  explicit abstract_actor(actor_config& cfg);
-
-  /// Creates a new actor instance.
-  abstract_actor(actor_id aid, node_id nid);
-
   /****************************************************************************
    *                 here be dragons: end of public interface                 *
    ****************************************************************************/
 
-public:
   /// @cond PRIVATE
 
   enum linking_operation {
@@ -226,7 +225,6 @@ public:
 
   void is_registered(bool value);
 
-protected:
   virtual bool link_impl(linking_operation op, const actor_addr& other) = 0;
 
   // cannot be changed after construction
@@ -236,6 +234,14 @@ protected:
   actor_system* home_system_;
 
  /// @endcond
+
+protected:
+  /// Creates a new actor instance.
+  explicit abstract_actor(actor_config& cfg);
+
+  /// Creates a new actor instance.
+  abstract_actor(actor_system* sys, actor_id aid, node_id nid,
+                 int flags = abstract_channel::is_abstract_actor_flag);
 };
 
 std::string to_string(abstract_actor::linking_operation op);

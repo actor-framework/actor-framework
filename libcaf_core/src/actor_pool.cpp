@@ -120,7 +120,7 @@ void actor_pool::enqueue(const actor_addr& sender, message_id mid,
   upgrade_lock<detail::shared_spinlock> guard{workers_mtx_};
   if (filter(guard, sender, mid, content, eu))
     return;
-  auto ptr = mailbox_element::make(sender, mid, std::move(content));
+  auto ptr = mailbox_element::make(sender, mid, {}, std::move(content));
   policy_(home_system(), guard, workers_, ptr, eu);
 }
 

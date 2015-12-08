@@ -376,7 +376,7 @@ CAF_TEST(typed_spawns) {
   }
 }
 
-CAF_TEST(test_event_testee) {
+CAF_TEST(event_testee_series) {
   // run test series with event_testee
   scoped_actor self{system};
   auto et = self->spawn<event_testee>();
@@ -477,7 +477,7 @@ CAF_TEST(maybe_string_delegator_chain) {
   anon_send_exit(aut, exit_reason::user_shutdown);
 }
 
-CAF_TEST(test_sending_typed_actors) {
+CAF_TEST(sending_typed_actors) {
   scoped_actor self{system};
   auto aut = system.spawn(int_fun);
   self->send(self->spawn(foo), 10, aut);
@@ -489,7 +489,7 @@ CAF_TEST(test_sending_typed_actors) {
   self->send_exit(aut, exit_reason::user_shutdown);
 }
 
-CAF_TEST(test_sending_typed_actors_and_down_msg) {
+CAF_TEST(sending_typed_actors_and_down_msg) {
   scoped_actor self{system};
   auto aut = system.spawn(int_fun2);
   self->send(self->spawn(foo2), 10, aut);
@@ -528,117 +528,169 @@ CAF_TEST(check_signature) {
   );
 }
 
-using caf::detail::type_list;
+namespace {
 
-template <class X, class Y>
-struct typed_actor_combine_one {
-  using type = void;
-};
-
-template <class... Xs, class... Ys, class... Zs>
-struct typed_actor_combine_one<typed_mpi<type_list<Xs...>, type_list<Ys...>>,
-                               typed_mpi<type_list<Ys...>, type_list<Zs...>>> {
-  using type = typed_mpi<type_list<Xs...>, type_list<Zs...>>;
-};
-
-template <class X, class Y>
-struct typed_actor_combine_all;
-
-template <class X, class... Ys>
-struct typed_actor_combine_all<X, type_list<Ys...>> {
-  using type = type_list<typename typed_actor_combine_one<X, Ys>::type...>;
-};
-
-template <class X, class Y>
-struct type_actor_combine;
-
-template <class... Xs, class... Ys>
-struct type_actor_combine<typed_actor<Xs...>, typed_actor<Ys...>> {
-  // store Ys in a packed list
-  using ys = type_list<Ys...>;
-  // combine each X with all Ys
-  using all =
-    typename detail::tl_concat<
-      typename typed_actor_combine_all<Xs, ys>::type...
-    >::type;
-  // drop all mismatches (void results)
-  using filtered = typename detail::tl_filter_not_type<all, void>::type;
-  // throw error if we don't have a single match
-  static_assert(detail::tl_size<filtered>::value > 0,
-                "Left-hand actor type does not produce a single result which "
-                "is valid as input to the right-hand actor type.");
-  // compute final actor type
-  using type = typename detail::tl_apply<filtered, typed_actor>::type;
-};
-
-template <class... Xs, class... Ys>
-typename type_actor_combine<typed_actor<Xs...>, typed_actor<Ys...>>::type
-operator*(const typed_actor<Xs...>& x, const typed_actor<Ys...>& y) {
-  using res_type = typename type_actor_combine<typed_actor<Xs...>,
-                                               typed_actor<Ys...>>::type;
-  if (! x || ! y)
-    return {};
-  auto f = [=](event_based_actor* self) -> behavior {
-    self->link_to(x);
-    self->link_to(y);
-    self->trap_exit(true);
-    auto x_ = actor_cast<actor>(x);
-    auto y_ = actor_cast<actor>(y);
-    return {
-      [=](const exit_msg& msg) {
-        // also terminate for normal exit reasons
-        if (msg.source == x || msg.source == y)
-          self->quit(msg.reason);
-      },
-      others >> [=] {
-        auto rp = self->make_response_promise();
-        self->request(x_, self->current_message()).generic_then(
-          [=](message& msg) {
-            self->request(y_, std::move(msg)).generic_then(
-              [=](message& msg) {
-                rp.deliver(std::move(msg));
-              },
-              [=](error& err) {
-                rp.deliver(std::move(err));
-              }
-            );
-          },
-          [=](error& err) {
-            rp.deliver(std::move(err));
-          }
-        );
-      }
-    };
-  };
-  return actor_cast<res_type>(x->home_system().spawn(f));
-}
-
-using first_stage = typed_actor<replies_to<int>::with<double>>;
-using second_stage = typed_actor<replies_to<double>::with<string>>;
+using first_stage = typed_actor<replies_to<int>::with<double, double>>;
+using second_stage = typed_actor<replies_to<double, double>::with<double>>;
 
 first_stage::behavior_type first_stage_impl() {
   return [](int i) {
-    return static_cast<double>(i) * 2;
+    return std::make_tuple(i * 2.0, i * 4.0);
   };
-}
+};
 
 second_stage::behavior_type second_stage_impl() {
-  return [](double x) {
-    return std::to_string(x);
+  return [](double x, double y) {
+    return x * y;
   };
 }
 
-CAF_TEST(composition) {
+} // namespace <anonymous>
+
+CAF_TEST(dot_composition) {
   actor_system system;
   auto first = system.spawn(first_stage_impl);
   auto second = system.spawn(second_stage_impl);
   auto first_then_second = first * second;
   scoped_actor self{system};
   self->request(first_then_second, 42).await(
-    [](const string& str) {
-      CAF_MESSAGE("received: " << str);
+    [](double res) {
+      CAF_CHECK(res == (42 * 2.0) * (42 * 4.0));
     }
   );
+}
+
+CAF_TEST(currying) {
+  using namespace std::placeholders;
+  auto impl = []() -> behavior {
+    return {
+      [](ok_atom, int x) {
+        return x;
+      },
+      [](ok_atom, double x) {
+        return x;
+      }
+    };
+  };
+  actor_system system;
+  auto aut = system.spawn(impl);
+  CAF_CHECK(system.registry().running() == 1);
+  auto bound = aut.bind(ok_atom::value, _1);
+  CAF_CHECK(aut.id() == bound.id());
+  CAF_CHECK(aut.node() == bound.node());
+  CAF_CHECK(aut == bound);
+  CAF_CHECK(system.registry().running() == 1);
+  scoped_actor self{system};
+  CAF_CHECK(system.registry().running() == 2);
+  self->request(bound, 2.0).await(
+    [](double y) {
+      CAF_CHECK(y == 2.0);
+    }
+  );
+  self->request(bound, 10).await(
+    [](int y) {
+      CAF_CHECK(y == 10);
+    }
+  );
+  self->send_exit(bound, exit_reason::kill);
+  self->await_all_other_actors_done();
+}
+
+CAF_TEST(type_safe_currying) {
+  using namespace std::placeholders;
+  using testee = typed_actor<replies_to<ok_atom, int>::with<int>,
+                             replies_to<ok_atom, double>::with<double>>;
+  auto impl = []() -> testee::behavior_type {
+    return {
+      [](ok_atom, int x) {
+        return x;
+      },
+      [](ok_atom, double x) {
+        return x;
+      }
+    };
+  };
+  actor_system system;
+  auto aut = system.spawn(impl);
+  CAF_CHECK(system.registry().running() == 1);
+  using curried_signature = typed_actor<replies_to<int>::with<int>,
+                                        replies_to<double>::with<double>>;
+  //auto bound = actor_bind(aut, ok_atom::value, _1);
+  auto bound = aut.bind(ok_atom::value, _1);
+  CAF_CHECK(aut == bound);
+  CAF_CHECK(system.registry().running() == 1);
+  static_assert(std::is_same<decltype(bound), curried_signature>::value,
+                "bind returned wrong actor handle");
+  scoped_actor self{system};
+  CAF_CHECK(system.registry().running() == 2);
+  self->request(bound, 2.0).await(
+    [](double y) {
+      CAF_CHECK(y == 2.0);
+    }
+  );
+  self->request(bound, 10).await(
+    [](int y) {
+      CAF_CHECK(y == 10);
+    }
+  );
+  self->send_exit(bound, exit_reason::kill);
+  self->await_all_other_actors_done();
+}
+
+CAF_TEST(reordering) {
+  auto impl = []() -> behavior {
+    return {
+      [](int x, double y) {
+        return x * y;
+      }
+    };
+  };
+  actor_system system;
+  auto aut = system.spawn(impl);
+  CAF_CHECK(system.registry().running() == 1);
+  using namespace std::placeholders;
+  auto bound = aut.bind(_2, _1);
+  CAF_CHECK(aut == bound);
+  CAF_CHECK(system.registry().running() == 1);
+  scoped_actor self{system};
+  CAF_CHECK(system.registry().running() == 2);
+  self->request(bound, 2.0, 10).await(
+    [](double y) {
+      CAF_CHECK(y == 20.0);
+    }
+  );
+  self->send_exit(bound, exit_reason::kill);
+  self->await_all_other_actors_done();
+}
+
+CAF_TEST(type_safe_reordering) {
+  using testee = typed_actor<replies_to<int, double>::with<double>>;
+  auto impl = []() -> testee::behavior_type {
+    return {
+      [](int x, double y) {
+        return x * y;
+      }
+    };
+  };
+  actor_system system;
+  auto aut = system.spawn(impl);
+  CAF_CHECK(system.registry().running() == 1);
+  using namespace std::placeholders;
+  using swapped_signature = typed_actor<replies_to<double, int>::with<double>>;
+  auto bound = aut.bind(_2, _1);
+  CAF_CHECK(aut == bound);
+  CAF_CHECK(system.registry().running() == 1);
+  static_assert(std::is_same<decltype(bound), swapped_signature>::value,
+                "bind returned wrong actor handle");
+  scoped_actor self{system};
+  CAF_CHECK(system.registry().running() == 2);
+  self->request(bound, 2.0, 10).await(
+    [](double y) {
+      CAF_CHECK(y == 20.0);
+    }
+  );
+  self->send_exit(bound, exit_reason::kill);
+  self->await_all_other_actors_done();
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

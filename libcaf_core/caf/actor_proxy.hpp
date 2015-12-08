@@ -88,7 +88,7 @@ public:
   }
 
 protected:
-  actor_proxy(actor_id aid, node_id nid);
+  actor_proxy(actor_system* sys, actor_id aid, node_id nid);
 
   anchor_ptr anchor_;
 };

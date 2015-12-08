@@ -69,7 +69,8 @@ protected:
     SysMsgType tmp;
     set_hdl(tmp, hdl_);
     mailbox_elem_ptr_ = mailbox_element::make_joint(invalid_actor_addr,
-                                                    invalid_message_id, tmp);
+                                                    invalid_message_id,
+                                                    {}, tmp);
   }
 
   Handle hdl_;

@@ -34,8 +34,4 @@ abstract_channel::~abstract_channel() {
   // nop
 }
 
-void abstract_channel::enqueue(mailbox_element_ptr what, execution_unit* host) {
-  enqueue(what->sender, what->mid, std::move(what->msg), host);
-}
-
 } // namespace caf

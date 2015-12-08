@@ -43,8 +43,12 @@ group& group::operator=(const invalid_group_t&) {
   return *this;
 }
 
+intptr_t group::compare(const abstract_group* lhs, const abstract_group* rhs) {
+  return reinterpret_cast<intptr_t>(lhs) - reinterpret_cast<intptr_t>(rhs);
+}
+
 intptr_t group::compare(const group& other) const noexcept {
-  return channel::compare(ptr_.get(), other.ptr_.get());
+  return compare(ptr_.get(), other.ptr_.get());
 }
 
 void serialize(serializer& sink, const group& x, const unsigned int) {

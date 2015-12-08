@@ -56,9 +56,17 @@ monitorable_actor::monitorable_actor(actor_config& cfg)
   // nop
 }
 
-/// Creates a new actor instance.
-monitorable_actor::monitorable_actor(actor_id aid, node_id nid)
-    : abstract_actor(aid, nid),
+monitorable_actor::monitorable_actor(actor_system* sys,
+                                     actor_id aid,
+                                     node_id nid)
+    : abstract_actor(sys, aid, nid),
+      exit_reason_(exit_reason::not_exited) {
+  // nop
+}
+
+monitorable_actor::monitorable_actor(actor_system* sys, actor_id aid,
+                                     node_id nid, int init_flags)
+    : abstract_actor(sys, aid, nid, init_flags),
       exit_reason_(exit_reason::not_exited) {
   // nop
 }

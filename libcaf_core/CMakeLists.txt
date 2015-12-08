@@ -33,7 +33,9 @@ set (LIBCAF_CORE_SRCS
      src/binary_deserializer.cpp
      src/binary_serializer.cpp
      src/blocking_actor.cpp
+     src/bound_actor.cpp
      src/channel.cpp
+     src/composed_actor.cpp
      src/concatenated_tuple.cpp
      src/continue_helper.cpp
      src/decorated_tuple.cpp
@@ -55,6 +57,7 @@ set (LIBCAF_CORE_SRCS
      src/group.cpp
      src/group_manager.cpp
      src/match_case.cpp
+     src/merged_tuple.cpp
      src/monitorable_actor.cpp
      src/local_actor.cpp
      src/logger.cpp

@@ -39,25 +39,24 @@ public:
 
   virtual ~abstract_channel();
 
-  /// Enqueues a new message to the channel.
+  /// Enqueues a new message without forwarding stack to the channel.
   virtual void enqueue(const actor_addr& sender, message_id mid,
                        message content, execution_unit* host) = 0;
-
-  /// Enqueues a new message wrapped in a `mailbox_element` to the channel.
-  /// This variant is used by actors whenever it is possible to allocate
-  /// mailbox element and message on the same memory block and is thus
-  /// more efficient. Non-actors use the default implementation which simply
-  /// calls the pure virtual version.
-  virtual void enqueue(mailbox_element_ptr what, execution_unit* host);
 
   /// Returns the ID of the node this actor is running on.
   inline node_id node() const {
     return node_;
   }
 
-  static constexpr int is_abstract_actor_flag = 0x100000;
+  static constexpr int is_abstract_actor_flag       = 0x100000;
 
-  static constexpr int is_abstract_group_flag = 0x200000;
+  static constexpr int is_abstract_group_flag       = 0x200000;
+
+  static constexpr int is_actor_bind_decorator_flag = 0x400000;
+
+  static constexpr int is_actor_dot_decorator_flag  = 0x800000;
+
+  static constexpr int is_actor_decorator_mask      = 0xC00000;
 
   inline bool is_abstract_actor() const {
     return static_cast<bool>(flags() & is_abstract_actor_flag);
@@ -65,6 +64,10 @@ public:
 
   inline bool is_abstract_group() const {
     return static_cast<bool>(flags() & is_abstract_group_flag);
+  }
+
+  inline bool is_actor_decorator() const {
+    return static_cast<bool>(flags() & is_actor_decorator_mask);
   }
 
 protected:

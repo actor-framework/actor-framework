@@ -22,6 +22,7 @@
 #include "caf/actor.hpp"
 #include "caf/group.hpp"
 #include "caf/message.hpp"
+#include "caf/actor_addr.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/actor_system.hpp"
@@ -41,11 +42,6 @@ channel::channel(const group& x) :  ptr_(actor_cast<abstract_channel*>(x)) {
 
 channel::channel(const invalid_channel_t&) {
   // nop
-}
-
-intptr_t channel::compare(const abstract_channel* lhs,
-                          const abstract_channel* rhs) noexcept {
-  return reinterpret_cast<intptr_t>(lhs) - reinterpret_cast<intptr_t>(rhs);
 }
 
 channel::channel(abstract_channel* ptr) : ptr_(ptr) {
@@ -72,15 +68,34 @@ channel& channel::operator=(const invalid_channel_t&) {
 }
 
 intptr_t channel::compare(const channel& other) const noexcept {
-  return compare(ptr_.get(), other.ptr_.get());
+  return compare(other.ptr_.get());
 }
 
 intptr_t channel::compare(const actor& other) const noexcept {
-  return compare(ptr_.get(), actor_cast<abstract_actor_ptr>(other).get());
+  return compare(actor_cast<abstract_channel*>(other));
 }
 
-intptr_t channel::compare(const abstract_channel* other) const noexcept {
-  return compare(ptr_.get(), other);
+intptr_t channel::compare(const abstract_channel* rhs) const noexcept {
+  // invalid handles are always "less" than valid handles
+  if (! ptr_)
+    return rhs ? -1 : 0;
+  if (! rhs)
+    return 1;
+  // check for identity
+  if (ptr_ == rhs)
+    return 0;
+  // groups are sorted before actors
+  if (ptr_->is_abstract_group()) {
+    if (! rhs->is_abstract_group())
+      return -1;
+    using gptr = const abstract_group*;
+    return group::compare(static_cast<gptr>(get()), static_cast<gptr>(rhs));
+  }
+  CAF_ASSERT(ptr_->is_abstract_actor());
+  if (! rhs->is_abstract_actor())
+    return 1;
+  using aptr = const abstract_actor*;
+  return actor_addr::compare(static_cast<aptr>(get()), static_cast<aptr>(rhs));
 }
 
 void serialize(serializer& sink, channel& x, const unsigned int) {

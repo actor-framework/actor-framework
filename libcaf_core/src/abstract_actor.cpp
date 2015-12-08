@@ -26,23 +26,29 @@
 
 #include "caf/atom.hpp"
 #include "caf/config.hpp"
+#include "caf/logger.hpp"
 #include "caf/message.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/abstract_actor.hpp"
+#include "caf/actor_registry.hpp"
 #include "caf/execution_unit.hpp"
+#include "caf/mailbox_element.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/default_attachable.hpp"
 
-#include "caf/logger.hpp"
-#include "caf/actor_registry.hpp"
 #include "caf/detail/shared_spinlock.hpp"
 
 namespace caf {
 
 // exit_reason_ is guaranteed to be set to 0, i.e., exit_reason::not_exited,
 // by std::atomic<> constructor
+
+void abstract_actor::enqueue(const actor_addr& sender, message_id mid,
+                             message msg, execution_unit* host) {
+  enqueue(mailbox_element::make(sender, mid, {}, std::move(msg)), host);
+}
 
 abstract_actor::abstract_actor(actor_config& cfg)
     : abstract_channel(cfg.flags | abstract_channel::is_abstract_actor_flag,
@@ -52,10 +58,11 @@ abstract_actor::abstract_actor(actor_config& cfg)
   // nop
 }
 
-abstract_actor::abstract_actor(actor_id aid, node_id nid)
-    : abstract_channel(abstract_channel::is_abstract_actor_flag,
-                       std::move(nid)),
-      id_(aid) {
+abstract_actor::abstract_actor(actor_system* sys, actor_id aid,
+                               node_id nid, int flags)
+    : abstract_channel(flags, std::move(nid)),
+      id_(aid),
+      home_system_(sys) {
   // nop
 }
 

@@ -22,20 +22,19 @@
 
 #include "caf/intrusive_ptr.hpp"
 
-#include "caf/actor_addr.hpp"
+#include "caf/actor.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/replies_to.hpp"
+#include "caf/bound_actor.hpp"
 #include "caf/abstract_actor.hpp"
 #include "caf/stateful_actor.hpp"
 #include "caf/typed_behavior.hpp"
 #include "caf/typed_response_promise.hpp"
 
+#include "caf/detail/mpi_bind.hpp"
+#include "caf/detail/mpi_composition.hpp"
+
 namespace caf {
-
-class actor_addr;
-class local_actor;
-
-struct invalid_actor_addr_t;
 
 template <class... Sigs>
 class typed_event_based_actor;
@@ -167,6 +166,15 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
     // nop
   }
 
+  typed_actor(const invalid_actor_t&) {
+    // nop
+  }
+
+  typed_actor& operator=(const invalid_actor_t&) {
+    ptr_.reset();
+  }
+
+
   /// Queries the address of the stored actor.
   actor_addr address() const noexcept {
     return ptr_ ? ptr_->address() : actor_addr();
@@ -197,6 +205,20 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
     ptr_.swap(other.ptr_);
   }
 
+  template <class... Ts>
+  typename detail::mpi_bind<
+    caf::typed_actor,
+    detail::type_list<Sigs...>,
+    typename std::decay<Ts>::type...
+  >::type
+  bind(Ts&&... xs) const {
+    if (! ptr_)
+      return invalid_actor;
+    auto ptr = make_counted<bound_actor>(&ptr_->home_system(), ptr_->address(),
+                                         make_message(xs...));
+    return {ptr.release(), false};
+  }
+
   /// @cond PRIVATE
 
   abstract_actor* operator->() const noexcept {
@@ -207,19 +229,19 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
     return *ptr_.get();
   }
 
-  intptr_t compare(const actor_addr& rhs) const noexcept {
-    return address().compare(rhs);
+  intptr_t compare(const typed_actor& x) const noexcept {
+    return actor_addr::compare(get(), x.get());
   }
 
-  intptr_t compare(const typed_actor& other) const noexcept {
-    return compare(other.address());
-  }
-
-  intptr_t compare(const invalid_actor_addr_t&) const noexcept {
-    return ptr_ ? 1 : 0;
+  intptr_t compare(const actor_addr& x) const noexcept {
+    return actor_addr::compare(get(), actor_cast<abstract_actor*>(x));
   }
 
   intptr_t compare(const invalid_actor_t&) const noexcept {
+    return ptr_ ? 1 : 0;
+  }
+
+  intptr_t compare(const invalid_actor_addr_t&) const noexcept {
     return ptr_ ? 1 : 0;
   }
 
@@ -234,22 +256,58 @@ private:
     // nop
   }
 
+  typed_actor(abstract_actor* ptr, bool add_ref) : ptr_(ptr, add_ref) {
+    // nop
+  }
+
   abstract_actor_ptr ptr_;
 };
 
-template <class T, class... Ts>
-typename std::enable_if<
-  T::is_saving::value
+/// @relates typed_actor
+template <class... Xs, class... Ys>
+bool operator==(const typed_actor<Xs...>& x,
+                const typed_actor<Ys...>& y) noexcept {
+  return actor_addr::compare(actor_cast<abstract_actor*>(x),
+                             actor_cast<abstract_actor*>(y)) == 0;
+}
+
+/// @relates typed_actor
+template <class... Xs, class... Ys>
+bool operator!=(const typed_actor<Xs...>& x,
+                const typed_actor<Ys...>& y) noexcept {
+  return ! (x == y);
+}
+
+/// Returns a new actor that implements the composition `f.g(x) = f(g(x))`.
+/// @relates typed_actor
+template <class... Xs, class... Ys>
+typename detail::mpi_composition<
+  typed_actor,
+  detail::type_list<Ys...>,
+  Xs...
 >::type
+operator*(typed_actor<Xs...> f, typed_actor<Ys...> g) {
+  using result =
+    typename detail::mpi_composition<
+      typed_actor,
+      detail::type_list<Ys...>,
+      Xs...
+    >::type;
+  return actor_cast<result>(actor_cast<actor>(std::move(f))
+                            * actor_cast<actor>(std::move(g)));
+}
+
+/// @relates typed_actor
+template <class T, class... Ts>
+typename std::enable_if<T::is_saving::value>::type
 serialize(T& sink, typed_actor<Ts...>& hdl, const unsigned int) {
   auto addr = hdl.address();
   sink << addr;
 }
 
+/// @relates typed_actor
 template <class T, class... Ts>
-typename std::enable_if<
-  T::is_loading::value
->::type
+typename std::enable_if<T::is_loading::value>::type
 serialize(T& sink, typed_actor<Ts...>& hdl, const unsigned int) {
   actor_addr addr;
   sink >> addr;

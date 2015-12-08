@@ -83,7 +83,8 @@ actor_proxy_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
   // receive a kill_proxy_instance message
   intrusive_ptr<basp_broker> ptr = static_cast<basp_broker*>(self);
   auto mm = &system().middleman();
-  auto res = make_counted<forwarding_actor_proxy>(aid, nid, ptr);
+  auto res = make_counted<forwarding_actor_proxy>(self->home_system_,
+                                                  aid, nid, ptr);
   res->attach_functor([=](exit_reason rsn) {
     mm->backend().post([=] {
       // using res->id() instead of aid keeps this actor instance alive
@@ -201,8 +202,9 @@ void basp_broker_state::deliver(const node_id& source_node,
                                 actor_id source_actor,
                                 const node_id& dest_node,
                                 actor_id dest_actor,
-                                message& msg,
-                                message_id mid) {
+                                message_id mid,
+                                std::vector<actor_addr>& stages,
+                                message& msg) {
   CAF_LOG_TRACE(CAF_ARG(source_node)
                 << CAF_ARG(source_actor) << CAF_ARG(dest_node)
                 << CAF_ARG(dest_actor) << CAF_ARG(msg) << CAF_ARG(mid));
@@ -247,7 +249,9 @@ void basp_broker_state::deliver(const node_id& source_node,
   }
   self->parent().notify<hook::message_received>(source_node, src,
                                                 dest->address(), mid, msg);
-  dest->enqueue(src, mid, std::move(msg), nullptr);
+  dest->enqueue(mailbox_element::make(src, mid, std::move(stages),
+                                      std::move(msg)),
+                nullptr);
 }
 
 void basp_broker_state::learned_new_node(const node_id& nid) {
@@ -288,8 +292,9 @@ void basp_broker_state::learned_new_node(const node_id& nid) {
   using namespace detail;
   system().registry().put(tmp.id(), tmp.address());
   auto writer = make_callback([](serializer& sink) {
+    std::vector<actor_id> stages;
     auto msg = make_message(sys_atom::value, get_atom::value, "info");
-    sink << msg;
+    sink << stages << msg;
   });
   auto path = instance.tbl().lookup(nid);
   if (! path) {
@@ -385,8 +390,9 @@ void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
   auto tmp = system().spawn<detached + hidden>(connection_helper, self);
   system().registry().put(tmp.id(), tmp.address());
   auto writer = make_callback([](serializer& sink) {
-    auto msg = make_message(get_atom::value, "basp.default-connectivity");
-    sink << msg;
+      std::vector<actor_id> stages;
+      auto msg = make_message(get_atom::value, "basp.default-connectivity");
+    sink << stages << msg;
   });
   // writing std::numeric_limits<actor_id>::max() is a hack to get
   // this send-to-named-actor feature working with older CAF releases
@@ -468,7 +474,8 @@ behavior basp_broker::make_behavior() {
       }
     },
     // received from proxy instances
-    [=](forward_atom, const actor_addr& sender, const actor_addr& receiver,
+    [=](forward_atom, const actor_addr& sender,
+        const std::vector<actor_addr>& fwd_stack, const actor_addr& receiver,
         message_id mid, const message& msg) {
       CAF_LOG_TRACE(CAF_ARG(sender) << CAF_ARG(receiver)
                     << CAF_ARG(mid) << CAF_ARG(msg));
@@ -479,7 +486,8 @@ behavior basp_broker::make_behavior() {
       }
       if (sender && system().node() == sender.node())
         system().registry().put(sender->id(), sender);
-      if (! state.instance.dispatch(context(), sender, receiver, mid, msg)
+      if (! state.instance.dispatch(context(), sender, fwd_stack,
+                                    receiver, mid, msg)
           && mid.is_request()) {
         detail::sync_request_bouncer srb{exit_reason::remote_link_unreachable};
         srb(sender, mid);
@@ -498,7 +506,8 @@ behavior basp_broker::make_behavior() {
       if (system().node() == sender.node())
         system().registry().put(sender->id(), sender);
       auto writer = make_callback([&](serializer& sink) {
-        sink << msg;
+        std::vector<actor_addr> stages;
+        sink << stages << msg;
       });
       auto path = this->state.instance.tbl().lookup(receiving_node);
       if (! path) {

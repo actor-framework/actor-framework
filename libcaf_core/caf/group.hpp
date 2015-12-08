@@ -83,6 +83,8 @@ public:
     return *get();
   }
 
+  static intptr_t compare(const abstract_group* lhs, const abstract_group* rhs);
+
   intptr_t compare(const group& other) const noexcept;
 
   inline intptr_t compare(const invalid_group_t&) const noexcept {
