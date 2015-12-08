@@ -17,51 +17,35 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include <utility>
+#ifndef CAF_BOUND_ACTOR_HPP
+#define CAF_BOUND_ACTOR_HPP
 
-#include "caf/local_actor.hpp"
-#include "caf/response_promise.hpp"
+#include "caf/message.hpp"
+#include "caf/actor_addr.hpp"
+#include "caf/attachable.hpp"
+#include "caf/abstract_actor.hpp"
 
 namespace caf {
 
-/*
-response_promise::response_promise(local_actor* self, actor_addr source,
-                                   forwarding_stack stages,
-                                   message_id id)
-    : self_(self),
-      source_(std::move(source)),
-      stages_(std::move(stages)),
-      id_(id) {
-  CAF_ASSERT(id.is_response() || ! id.valid());
-}
-*/
+/// An actor decorator implementing `std::bind`-like compositions.
+class bound_actor : public abstract_actor {
+public:
+  bound_actor(actor_system* sys, actor_addr decorated, message msg);
 
-response_promise::response_promise(local_actor* self, mailbox_element& src)
-    : self_(self),
-      source_(std::move(src.sender)),
-      stages_(std::move(src.stages)),
-      id_(src.mid) {
-  src.mid.mark_as_answered();
-}
+  void attach(attachable_ptr ptr) override;
 
-void response_promise::deliver_impl(message msg) const {
-  if (! valid())
-    return;
-  if (stages_.empty()) {
-    source_->enqueue(self_->address(), id_.response_id(),
-                     std::move(msg), self_->context());
-    return;
-  }
-  auto next = std::move(stages_.back());
-  stages_.pop_back();
-  next->enqueue(mailbox_element::make(std::move(source_), id_,
-                                      std::move(stages_), std::move(msg)),
-                self_->context());
-}
+  size_t detach(const attachable::token& what) override;
 
-void response_promise::deliver(error x) const {
-  if (id_.valid())
-    deliver_impl(make_message(std::move(x)));
-}
+  void enqueue(mailbox_element_ptr what, execution_unit* host) override;
+
+protected:
+  bool link_impl(linking_operation op, const actor_addr& other) override;
+
+private:
+  actor_addr decorated_;
+  message merger_;
+};
 
 } // namespace caf
+
+#endif // CAF_BOUND_ACTOR_HPP

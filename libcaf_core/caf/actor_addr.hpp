@@ -91,6 +91,8 @@ public:
     return ptr_.get();
   }
 
+  static intptr_t compare(const abstract_actor* lhs, const abstract_actor* rhs);
+
   intptr_t compare(const actor_addr& other) const noexcept;
 
   intptr_t compare(const abstract_actor* other) const noexcept;

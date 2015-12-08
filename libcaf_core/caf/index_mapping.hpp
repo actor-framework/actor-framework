@@ -17,51 +17,47 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include <utility>
+#ifndef CAF_INDEX_MAPPING_HPP
+#define CAF_INDEX_MAPPING_HPP
 
-#include "caf/local_actor.hpp"
-#include "caf/response_promise.hpp"
+#include <tuple>
+#include <string>
+#include <functional>
+
+#include "caf/deep_to_string.hpp"
 
 namespace caf {
 
-/*
-response_promise::response_promise(local_actor* self, actor_addr source,
-                                   forwarding_stack stages,
-                                   message_id id)
-    : self_(self),
-      source_(std::move(source)),
-      stages_(std::move(stages)),
-      id_(id) {
-  CAF_ASSERT(id.is_response() || ! id.valid());
-}
-*/
+/// Marker for representing placeholders at runtime.
+struct index_mapping {
+  int value;
 
-response_promise::response_promise(local_actor* self, mailbox_element& src)
-    : self_(self),
-      source_(std::move(src.sender)),
-      stages_(std::move(src.stages)),
-      id_(src.mid) {
-  src.mid.mark_as_answered();
-}
-
-void response_promise::deliver_impl(message msg) const {
-  if (! valid())
-    return;
-  if (stages_.empty()) {
-    source_->enqueue(self_->address(), id_.response_id(),
-                     std::move(msg), self_->context());
-    return;
+  explicit index_mapping(int x) : value(x) {
+    // nop
   }
-  auto next = std::move(stages_.back());
-  stages_.pop_back();
-  next->enqueue(mailbox_element::make(std::move(source_), id_,
-                                      std::move(stages_), std::move(msg)),
-                self_->context());
+
+  template <class T,
+            class E = typename std::enable_if<
+                        std::is_placeholder<T>::value != 0
+                      >::type>
+  index_mapping(T) : value(std::is_placeholder<T>::value) {
+    // nop
+  }
+};
+
+inline bool operator==(const index_mapping& x, const index_mapping& y) {
+  return x.value == y.value;
 }
 
-void response_promise::deliver(error x) const {
-  if (id_.valid())
-    deliver_impl(make_message(std::move(x)));
+template <class T>
+void serialize(T& in_or_out, index_mapping& x, const unsigned int) {
+  in_or_out & x.value;
+}
+
+inline std::string to_string(const index_mapping& x) {
+  return "idx" + deep_to_string(std::forward_as_tuple(x.value));
 }
 
 } // namespace caf
+
+#endif // CAF_INDEX_MAPPING_HPP

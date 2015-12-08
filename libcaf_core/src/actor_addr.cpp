@@ -28,14 +28,6 @@
 
 namespace caf {
 
-namespace {
-
-intptr_t compare_impl(const abstract_actor* lhs, const abstract_actor* rhs) {
-  return reinterpret_cast<intptr_t>(lhs) - reinterpret_cast<intptr_t>(rhs);
-}
-
-} // namespace <anonymous>
-
 actor_addr::actor_addr(const invalid_actor_addr_t&) : ptr_(nullptr) {
   // nop
 }
@@ -48,12 +40,31 @@ actor_addr actor_addr::operator=(const invalid_actor_addr_t&) {
   ptr_.reset();
   return *this;
 }
+
+intptr_t actor_addr::compare(const abstract_actor* lhs,
+                             const abstract_actor* rhs) {
+  // invalid actors are always "less" than valid actors
+  if (! lhs)
+    return rhs ? -1 : 0;
+  if (! rhs)
+    return 1;
+  // check for identity
+  if (lhs == rhs)
+    return 0;
+  // check for equality (a decorator is equal to the actor it represents)
+  auto x = lhs->id();
+  auto y = rhs->id();
+  if (x == y)
+    return lhs->node().compare(rhs->node());
+  return static_cast<intptr_t>(x) - static_cast<intptr_t>(y);
+}
+
 intptr_t actor_addr::compare(const actor_addr& other) const noexcept {
-  return compare_impl(ptr_.get(), other.ptr_.get());
+  return compare(ptr_.get(), other.ptr_.get());
 }
 
 intptr_t actor_addr::compare(const abstract_actor* other) const noexcept {
-  return compare_impl(ptr_.get(), other);
+  return compare(ptr_.get(), other);
 }
 
 

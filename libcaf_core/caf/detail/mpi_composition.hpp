@@ -17,51 +17,53 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include <utility>
+#ifndef CAF_DETAIL_MPI_COMPOSITION_HPP
+#define CAF_DETAIL_MPI_COMPOSITION_HPP
 
-#include "caf/local_actor.hpp"
-#include "caf/response_promise.hpp"
+#include "caf/replies_to.hpp"
+
+#include "caf/detail/type_list.hpp"
 
 namespace caf {
+namespace detail {
 
-/*
-response_promise::response_promise(local_actor* self, actor_addr source,
-                                   forwarding_stack stages,
-                                   message_id id)
-    : self_(self),
-      source_(std::move(source)),
-      stages_(std::move(stages)),
-      id_(id) {
-  CAF_ASSERT(id.is_response() || ! id.valid());
-}
-*/
+template <class X, class Y>
+struct mpi_composition_one {
+  using type = void;
+};
 
-response_promise::response_promise(local_actor* self, mailbox_element& src)
-    : self_(self),
-      source_(std::move(src.sender)),
-      stages_(std::move(src.stages)),
-      id_(src.mid) {
-  src.mid.mark_as_answered();
-}
+template <class... Xs, class... Ys, class... Zs>
+struct mpi_composition_one<typed_mpi<type_list<Xs...>, type_list<Ys...>>,
+                           typed_mpi<type_list<Ys...>, type_list<Zs...>>> {
+  using type = typed_mpi<type_list<Xs...>, type_list<Zs...>>;
+};
 
-void response_promise::deliver_impl(message msg) const {
-  if (! valid())
-    return;
-  if (stages_.empty()) {
-    source_->enqueue(self_->address(), id_.response_id(),
-                     std::move(msg), self_->context());
-    return;
-  }
-  auto next = std::move(stages_.back());
-  stages_.pop_back();
-  next->enqueue(mailbox_element::make(std::move(source_), id_,
-                                      std::move(stages_), std::move(msg)),
-                self_->context());
-}
+template <class X, class Y>
+struct mpi_composition_all;
 
-void response_promise::deliver(error x) const {
-  if (id_.valid())
-    deliver_impl(make_message(std::move(x)));
-}
+template <class X, class... Ys>
+struct mpi_composition_all<X, type_list<Ys...>> {
+  using type = type_list<typename mpi_composition_one<X, Ys>::type...>;
+};
 
+template <template <class...> class Target, class Ys, class... Xs>
+struct mpi_composition {
+  // combine each X with all Ys
+  using all =
+    typename tl_concat<
+      typename mpi_composition_all<Xs, Ys>::type...
+    >::type;
+  // drop all mismatches (void results)
+  using filtered = typename tl_filter_not_type<all, void>::type;
+  // throw error if we don't have a single match
+  static_assert(tl_size<filtered>::value > 0,
+                "Left-hand actor type does not produce a single result which "
+                "is valid as input to the right-hand actor type.");
+  // compute final actor type
+  using type = typename tl_apply<filtered, Target>::type;
+};
+
+} // namespace detail
 } // namespace caf
+
+#endif // CAF_DETAIL_MPI_COMPOSITION_HPP

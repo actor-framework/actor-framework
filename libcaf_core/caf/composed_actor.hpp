@@ -17,51 +17,30 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include <utility>
+#ifndef CAF_COMPOSED_ACTOR_HPP
+#define CAF_COMPOSED_ACTOR_HPP
 
 #include "caf/local_actor.hpp"
-#include "caf/response_promise.hpp"
 
 namespace caf {
 
-/*
-response_promise::response_promise(local_actor* self, actor_addr source,
-                                   forwarding_stack stages,
-                                   message_id id)
-    : self_(self),
-      source_(std::move(source)),
-      stages_(std::move(stages)),
-      id_(id) {
-  CAF_ASSERT(id.is_response() || ! id.valid());
-}
-*/
+/// An actor decorator implementing "dot operator"-like compositions,
+/// i.e., `f.g(x) = f(g(x))`.
+class composed_actor : public local_actor {
+public:
+  composed_actor(actor_system* sys, actor_addr first, actor_addr second);
 
-response_promise::response_promise(local_actor* self, mailbox_element& src)
-    : self_(self),
-      source_(std::move(src.sender)),
-      stages_(std::move(src.stages)),
-      id_(src.mid) {
-  src.mid.mark_as_answered();
-}
+  void initialize() override;
 
-void response_promise::deliver_impl(message msg) const {
-  if (! valid())
-    return;
-  if (stages_.empty()) {
-    source_->enqueue(self_->address(), id_.response_id(),
-                     std::move(msg), self_->context());
-    return;
-  }
-  auto next = std::move(stages_.back());
-  stages_.pop_back();
-  next->enqueue(mailbox_element::make(std::move(source_), id_,
-                                      std::move(stages_), std::move(msg)),
-                self_->context());
-}
+  void enqueue(mailbox_element_ptr what, execution_unit* host) override;
 
-void response_promise::deliver(error x) const {
-  if (id_.valid())
-    deliver_impl(make_message(std::move(x)));
-}
+private:
+  bool is_system_message(const message& msg);
+
+  actor_addr first_;
+  actor_addr second_;
+};
 
 } // namespace caf
+
+#endif // CAF_COMPOSED_ACTOR_HPP

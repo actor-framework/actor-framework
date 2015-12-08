@@ -49,7 +49,7 @@ void manager::detach(execution_unit* ctx, bool invoke_disconnect_message) {
     detach_from(ptr);
     if (invoke_disconnect_message) {
       auto mptr = mailbox_element::make(invalid_actor_addr, invalid_message_id,
-                                        detach_message());
+                                        {}, detach_message());
       ptr->exec_single_event(ctx, mptr);
     }
   }

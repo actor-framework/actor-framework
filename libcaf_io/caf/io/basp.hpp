@@ -401,7 +401,9 @@ public:
     /// Called whenever a `dispatch_message` arrived for a local actor.
     virtual void deliver(const node_id& source_node, actor_id source_actor,
                          const node_id& dest_node, actor_id dest_actor,
-                         message& msg, message_id mid) = 0;
+                         message_id mid,
+                         std::vector<actor_addr>& forwarding_stack,
+                         message& msg) = 0;
 
     /// Called whenever BASP learns the ID of a remote node
     /// to which it does not have a direct connection.
@@ -473,6 +475,7 @@ public:
 
   /// Returns `true` if a path to destination existed, `false` otherwise.
   bool dispatch(execution_unit* ctx, const actor_addr& sender,
+                const std::vector<actor_addr>& forwarding_stack,
                 const actor_addr& receiver, message_id mid, const message& msg);
 
   /// Returns the actor namespace associated to this BASP protocol instance.

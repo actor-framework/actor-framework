@@ -26,10 +26,10 @@
 #include <utility>
 #include <type_traits>
 
-#include "caf/intrusive_ptr.hpp"
 
 #include "caf/fwd.hpp"
 #include "caf/actor_marker.hpp"
+#include "caf/intrusive_ptr.hpp"
 #include "caf/abstract_actor.hpp"
 
 #include "caf/detail/comparable.hpp"
@@ -137,6 +137,12 @@ public:
   /// Exchange content of `*this` and `other`.
   void swap(actor& other) noexcept;
 
+  /// Create a new actor decorator that presets or reorders inputs.
+  template <class... Ts>
+  actor bind(Ts&&... xs) const {
+    return bind_impl(make_message(std::forward<Ts>(xs)...));
+  }
+
   /// @cond PRIVATE
 
   inline abstract_actor* operator->() const noexcept {
@@ -158,6 +164,8 @@ public:
   /// @endcond
 
 private:
+  actor bind_impl(message msg) const;
+
   inline abstract_actor* get() const noexcept {
     return ptr_.get();
   }
@@ -166,6 +174,9 @@ private:
 
   abstract_actor_ptr ptr_;
 };
+
+/// Combine `f` and `g` so that `(f*g)(x) = f(g(x))`.
+actor operator*(actor f, actor g);
 
 /// @relates actor
 void serialize(serializer&, actor&, const unsigned int);

@@ -99,9 +99,6 @@ public:
 
   intptr_t compare(const abstract_channel* other) const noexcept;
 
-  static intptr_t compare(const abstract_channel* lhs,
-                          const abstract_channel* rhs) noexcept;
-
   /// @relates channel
   friend void serialize(serializer& sink, channel& x, const unsigned int);
 

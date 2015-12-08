@@ -21,14 +21,14 @@
 
 #include "caf/send.hpp"
 #include "caf/locks.hpp"
-
 #include "caf/logger.hpp"
+#include "caf/mailbox_element.hpp"
 
 namespace caf {
 
-forwarding_actor_proxy::forwarding_actor_proxy(actor_id aid,
+forwarding_actor_proxy::forwarding_actor_proxy(actor_system* sys, actor_id aid,
                                                node_id nid, actor mgr)
-    : actor_proxy(aid, nid),
+    : actor_proxy(sys, aid, nid),
       manager_(mgr) {
   CAF_ASSERT(mgr != invalid_actor);
   CAF_PUSH_AID(0);
@@ -54,21 +54,28 @@ void forwarding_actor_proxy::manager(actor new_manager) {
 }
 
 void forwarding_actor_proxy::forward_msg(const actor_addr& sender,
-                                         message_id mid, message msg) {
+                                         message_id mid, message msg,
+                                         const std::vector<actor_addr>* fwd) {
   CAF_LOG_TRACE(CAF_ARG(id()) << CAF_ARG(sender)
                 << CAF_ARG(mid) << CAF_ARG(msg));
+  std::vector<actor_addr> tmp;
   shared_lock<detail::shared_spinlock> guard_(manager_mtx_);
-  if (manager_) manager_->enqueue(invalid_actor_addr, invalid_message_id,
-                                  make_message(forward_atom::value, sender,
-                                               address(), mid, std::move(msg)),
-                                  nullptr);
+  if (manager_)
+    manager_->enqueue(invalid_actor_addr, invalid_message_id,
+                      make_message(forward_atom::value, sender,
+                                   fwd ? *fwd : tmp, address(),
+                                   mid, std::move(msg)),
+                      nullptr);
 }
 
-void forwarding_actor_proxy::enqueue(const actor_addr& sender, message_id mid,
-                                     message m, execution_unit*) {
+void forwarding_actor_proxy::enqueue(mailbox_element_ptr what,
+                                     execution_unit*) {
   CAF_PUSH_AID(0);
-  forward_msg(sender, mid, std::move(m));
+  if (! what)
+    return;
+  forward_msg(what->sender, what->mid, std::move(what->msg), &what->stages);
 }
+
 
 bool forwarding_actor_proxy::link_impl(linking_operation op,
                                        const actor_addr& other) {

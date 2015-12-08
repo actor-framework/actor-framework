@@ -26,10 +26,10 @@
 namespace caf {
 
 template <class>
-class intrusive_ptr;
+class maybe;
 
 template <class>
-class maybe;
+class intrusive_ptr;
 
 // classes
 class actor;
