@@ -8,7 +8,7 @@
 #     $ make
 #     $ make test
 #     $ make doc                       <-- this is a necessary step!
-#     $ scripts/obs-commit-version.sh
+#     $ scripts/obs-commit-version.sh [--nightly|--release]
 #
 # In brief, it performs the following steps:
 #
@@ -37,8 +37,6 @@ set -o nounset
 set -o errexit
 
 # Script configuration (yet unlikely to change in the future).
-confReleaseBranch="master"
-confNightlyBranch="develop"
 confReleaseProject="devel:libraries:caf"
 confNightlyProject="devel:libraries:caf:nightly"
 confReleasePackage="caf"
@@ -72,20 +70,17 @@ versionMinor=$(echo "( $versionAsInt / 100 ) % 100" | bc)
 versionPatch=$(echo "$versionAsInt % 100" | bc)
 versionAsStr="$versionMajor.$versionMinor.$versionPatch"
 
-# Retrieve current branch from git.
-gitBranch=`git rev-parse --abbrev-ref HEAD`
-
-if [ "$gitBranch" = "$confReleaseBranch" ] ; then 
+if [ "$1" = "--release" ] ; then
   projectName="$confReleaseProject"
   packageName="$confReleasePackage"
   packageVersion="${versionAsStr}"
-elif [ "$gitBranch" = "$confNightlyBranch" ] ; then
+elif [ "$1" = "--nightly" ] ; then
   projectName="$confNightlyProject"
   packageName="$confNightlyPackage"
   packageVersion="${versionAsStr}_$(date +%Y%m%d)"
 else
   # Don't prevent other branches from building, but issue a warning.
-  echo "Not on '$confReleaseBranch' or '$confNightlyBranch' branch. Exitting." >&2
+  echo "Use with either '--nightly' or '--release'. Exitting." >&2
   exit
 fi
 
