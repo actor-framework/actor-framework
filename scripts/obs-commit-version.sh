@@ -90,7 +90,7 @@ else
 fi
 
 packageFqn="$projectName/$packageName"
-sourceTarball="${versionAsStr}.tar.gz"
+sourceTarball="${packageVersion}.tar.gz"
 buildDir="$sourceDir/build"
 obsDir="$buildDir/obs-temp"
 
@@ -116,7 +116,11 @@ cd - >/dev/null
 osc add "$sourceTarball"
 
 # Fix package version and commit.
-sed -i.bk -E -e "s/^Version:([ ]+).+/Version:\1$packageVersion/g" "$packageName.spec"
+sed -i.bk -E \
+  -e "s/^Version:([ ]+).+/Version:\1$packageVersion/g" \
+  "$packageName.spec" \
+  "$packageName.dsc"
+
 echo "[obs-commit-version] Comitting: $packageVersion, $gitBranch"
 osc commit -m "Automatic commit: $packageVersion, $gitBranch"
 
