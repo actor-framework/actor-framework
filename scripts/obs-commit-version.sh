@@ -82,7 +82,7 @@ if [ "$1" = "--release" ] ; then
 elif [ "$1" = "--nightly" ] ; then
   projectName="$confNightlyProject"
   packageName="$confNightlyPackage"
-  packageVersion="${versionAsStr}_$(date +%Y%m%d)"
+  packageVersion="${versionAsStr}.$(date +%Y%m%d)"
 else
   # Don't prevent other branches from building, but issue a warning.
   echo "Use with either '--nightly' or '--release'. Exitting." >&2
