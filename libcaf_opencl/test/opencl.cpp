@@ -328,12 +328,12 @@ void test_opencl() {
   });
   if (dev6) {
     // test for manuel return size selection (max workgroup size 1d)
-    const size_t max_wg_size = min(dev6->get_max_work_item_sizes()[0], 512UL);
-    const size_t reduce_buffer_size = static_cast<size_t>(max_wg_size) * 8;
-    const size_t reduce_local_size  = static_cast<size_t>(max_wg_size);
-    const size_t reduce_work_groups = reduce_buffer_size / reduce_local_size;
-    const size_t reduce_global_size = reduce_buffer_size;
-    const size_t reduce_result_size = reduce_work_groups;
+    auto max_wg_size = min(dev6->get_max_work_item_sizes()[0], size_t{512});
+    auto reduce_buffer_size = static_cast<size_t>(max_wg_size) * 8;
+    auto reduce_local_size  = static_cast<size_t>(max_wg_size);
+    auto reduce_work_groups = reduce_buffer_size / reduce_local_size;
+    auto reduce_global_size = reduce_buffer_size;
+    auto reduce_result_size = reduce_work_groups;
     ivec arr6(reduce_buffer_size);
     int n = static_cast<int>(arr6.capacity());
     generate(arr6.begin(), arr6.end(), [&]{ return --n; });
