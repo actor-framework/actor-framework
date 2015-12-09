@@ -305,8 +305,9 @@ uint16_t remote_port_of_fd(native_socket fd);
     while (shadow_ > 0) {
       int presult = epoll_wait(epollfd_, pollset_.data(),
                                static_cast<int>(pollset_.size()), -1);
-      CAF_LOG_DEBUG("epoll_wait() on " << shadow_ << " sockets reported "
-                    << presult << " event(s)");
+      CAF_LOG_DEBUG("epoll_wait() on "      << CAF_ARG(shadow_)
+                    << " sockets reported " << CAF_ARG(presult)
+                    << " event(s)");
       if (presult < 0) {
         switch (errno) {
           case EINTR: {
@@ -335,7 +336,8 @@ uint16_t remote_port_of_fd(native_socket fd);
   }
 
   void default_multiplexer::handle(const default_multiplexer::event& e) {
-    CAF_LOG_TRACE("e.fd = " << e.fd << ", mask = " << e.mask);
+    CAF_LOG_TRACE("e.fd = " << CAF_ARG(e.fd) << ", mask = "
+                  << CAF_ARG(e.mask));
     // ptr is only allowed to nullptr if fd is our pipe
     // read handle which is only registered for input
     CAF_ASSERT(e.ptr != nullptr || e.fd == pipe_.first);
@@ -352,16 +354,17 @@ uint16_t remote_port_of_fd(native_socket fd);
     ee.data.ptr = e.ptr;
     int op;
     if (e.mask == 0) {
-      CAF_LOG_DEBUG("attempt to remove socket " << e.fd << " from epoll");
+      CAF_LOG_DEBUG("attempt to remove socket " << CAF_ARG(e.fd)
+                    << " from epoll");
       op = EPOLL_CTL_DEL;
       --shadow_;
     } else if (old == 0) {
-      CAF_LOG_DEBUG("attempt to add socket " << e.fd << " to epoll");
+      CAF_LOG_DEBUG("attempt to add socket " << CAF_ARG(e.fd) << " to epoll");
       op = EPOLL_CTL_ADD;
       ++shadow_;
     } else {
-      CAF_LOG_DEBUG("modify epoll event mask for socket " << e.fd
-                    << ": " << old << " -> " << e.mask);
+      CAF_LOG_DEBUG("modify epoll event mask for socket " << CAF_ARG(e.fd)
+                    << ": " << CAF_ARG(old) << " -> " << CAF_ARG(e.mask));
       op = EPOLL_CTL_MOD;
     }
     if (epoll_ctl(epollfd_, op, e.fd, &ee) < 0) {
