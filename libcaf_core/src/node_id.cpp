@@ -205,6 +205,55 @@ void serialize(deserializer& source, node_id& x, const unsigned int) {
   }
 }
 
+namespace {
+
+inline uint8_t hex_nibble(char c) {
+  return static_cast<uint8_t>(c >= '0' && c <= '9'
+                              ? c - '0'
+                              : (c >= 'a' && c <= 'f' ? (c - 'a') + 10
+                                                      : (c - 'A') + 10));
+};
+
+} // namespace <anonymous>
+
+void node_id::from_string(const std::string& str) {
+  data_.reset();
+  if (str == "<invalid-node>")
+    return;
+  static constexpr size_t hexstr_size = host_id_size * 2;
+  // node id format is: "[0-9a-zA-Z]{40}:[0-9]+"
+  if (str.size() < hexstr_size + 2)
+    return;
+  auto beg = str.begin();
+  auto sep = beg + hexstr_size; // separator ':' / end of hex-string
+  auto eos = str.end(); // end-of-string
+  if (*sep != ':')
+    return;
+  if (! std::all_of(beg, sep, ::isxdigit))
+    return;
+  if (! std::all_of(sep + 1, eos, ::isdigit))
+    return;
+  // iterate two digits in the input string as one byte in hex format
+  struct hex_byte_iter {
+    std::string::const_iterator i;
+    uint8_t operator*() const {
+      return (hex_nibble(*i) << 4) | hex_nibble(*(i + 1));
+    }
+    hex_byte_iter& operator++() {
+      i += 2;
+      return *this;
+    }
+    bool operator!=(const hex_byte_iter& x) const {
+      return i != x.i;
+    }
+  };
+  hex_byte_iter first{beg};
+  hex_byte_iter last{sep};
+  data_.reset(new data);
+  std::copy(first, last, data_->host_.begin());
+  data_->pid_ = static_cast<uint32_t>(atoll(&*(sep + 1)));
+}
+
 std::string to_string(const node_id& x) {
   if (! x)
     return "<invalid-node>";

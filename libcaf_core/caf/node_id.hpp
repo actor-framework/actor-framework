@@ -144,6 +144,8 @@ public:
 
   friend void serialize(deserializer& source, node_id& x, const unsigned int);
 
+  void from_string(const std::string& str);
+
   /// @endcond
 
 private:
