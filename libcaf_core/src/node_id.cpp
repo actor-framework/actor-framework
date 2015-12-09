@@ -238,7 +238,7 @@ void node_id::from_string(const std::string& str) {
   struct hex_byte_iter : std::iterator<std::input_iterator_tag, uint8_t> {
     using const_iterator = std::string::const_iterator;
     const_iterator i;
-    hex_byte_iter(std::string::const_iterator x) : i(x) {
+    hex_byte_iter(const_iterator x) : i(x) {
       // nop
     }
     uint8_t operator*() const {
