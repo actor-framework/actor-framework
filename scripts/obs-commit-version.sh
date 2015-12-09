@@ -48,6 +48,11 @@ type osc >/dev/null 2>&1 || {
   exit 1
 }
 
+if [ "$#" -ne 1 ] ; then
+  echo "Either --release or --nightly option must be specified." >&2
+  exit 1
+fi
+
 sourceDir="$PWD"
 
 # Check if header exists.
@@ -85,7 +90,7 @@ else
 fi
 
 packageFqn="$projectName/$packageName"
-sourceTarball="${versionAsStr}.tar.gz"
+sourceTarball="${packageVersion}.tar.gz"
 buildDir="$sourceDir/build"
 obsDir="$buildDir/obs-temp"
 
@@ -111,7 +116,11 @@ cd - >/dev/null
 osc add "$sourceTarball"
 
 # Fix package version and commit.
-sed -i.bk -E -e "s/^Version:([ ]+).+/Version:\1$packageVersion/g" "$packageName.spec"
-echo "[obs-commit-version] Comitting: $packageVersion, $gitBranch"
-osc commit -m "Automatic commit: $packageVersion, $gitBranch"
+sed -i.bk -E \
+  -e "s/^Version:([ ]+).+/Version:\1$packageVersion/g" \
+  "$packageName.spec" \
+  "$packageName.dsc"
+
+echo "[obs-commit-version] Comitting: $packageVersion, $1"
+osc commit -m "Automatic commit: $packageVersion, $1"
 
