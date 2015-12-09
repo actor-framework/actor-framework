@@ -473,7 +473,7 @@ private:
 
 message_id local_actor::new_request_id(message_priority mp) {
   auto result = ++last_request_id_;
-  pending_responses_.emplace_front(result.response_id(), behavior{});
+  pending_responses_.emplace_front(result.response_id(), behavior{}, nullptr);
   return mp == message_priority::normal ? result : result.with_high_priority();
 }
 
