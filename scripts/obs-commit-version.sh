@@ -90,7 +90,7 @@ else
 fi
 
 packageFqn="$projectName/$packageName"
-sourceTarball="${versionAsStr}.tar.gz"
+sourceTarball="${packageVersion}.tar.gz"
 buildDir="$sourceDir/build"
 obsDir="$buildDir/obs-temp"
 
