@@ -20,6 +20,7 @@
 #include <cstdio>
 #include <cstring>
 #include <sstream>
+#include <iterator>
 
 #include "caf/config.hpp"
 #include "caf/node_id.hpp"
@@ -234,8 +235,12 @@ void node_id::from_string(const std::string& str) {
   if (! std::all_of(sep + 1, eos, ::isdigit))
     return;
   // iterate two digits in the input string as one byte in hex format
-  struct hex_byte_iter {
-    std::string::const_iterator i;
+  struct hex_byte_iter : std::iterator<std::input_iterator_tag, uint8_t> {
+    using const_iterator = std::string::const_iterator;
+    const_iterator i;
+    hex_byte_iter(std::string::const_iterator x) : i(x) {
+      // nop
+    }
     uint8_t operator*() const {
       return (hex_nibble(*i) << 4) | hex_nibble(*(i + 1));
     }
