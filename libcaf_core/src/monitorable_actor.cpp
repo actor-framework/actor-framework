@@ -20,6 +20,7 @@
 #include "caf/monitorable_actor.hpp"
 
 #include "caf/logger.hpp"
+#include "caf/actor_cast.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/default_attachable.hpp"
 
