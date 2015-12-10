@@ -52,6 +52,7 @@
 #include "caf/response_promise.hpp"
 #include "caf/message_priority.hpp"
 #include "caf/check_typed_input.hpp"
+#include "caf/monitorable_actor.hpp"
 #include "caf/invoke_message_result.hpp"
 
 #include "caf/detail/disposer.hpp"
@@ -64,7 +65,7 @@ namespace caf {
 
 /// Base class for actors running on this node, either
 /// living in an own thread or cooperatively scheduled.
-class local_actor : public abstract_actor, public resumable {
+class local_actor : public monitorable_actor, public resumable {
 public:
   using mailbox_type = detail::single_reader_queue<mailbox_element,
                                                    detail::disposer>;
@@ -236,6 +237,23 @@ public:
   /****************************************************************************
    *                      miscellaneous actor operations                      *
    ****************************************************************************/
+
+  /// Returns the execution unit currently used by this actor.
+  /// @warning not thread safe
+  inline execution_unit* context() const {
+    return context_;
+  }
+
+  /// Sets the execution unit for this actor.
+  inline void context(execution_unit* x) {
+    context_ = x;
+  }
+
+  /// Returns the hosting actor system.
+  inline actor_system& system() const {
+    CAF_ASSERT(context_);
+    return context_->system();
+  }
 
   /// Causes this actor to subscribe to the group `what`.
   /// The group will be unsubscribed if the actor finishes execution.
@@ -505,7 +523,7 @@ public:
   // valid behavior left or has set a planned exit reason
   bool finished();
 
-  void cleanup(exit_reason reason) override;
+  void cleanup(exit_reason reason, execution_unit* host) override;
 
   // an actor can have multiple pending timeouts, but only
   // the latest one is active (i.e. the pending_timeouts_.back())
@@ -571,6 +589,9 @@ public:
 protected:
   // used only in thread-mapped actors
   void await_data();
+
+  // identifies the execution unit this actor is currently executed by
+  execution_unit* context_;
 
   // identifies the ID of the last sent synchronous request
   message_id last_request_id_;

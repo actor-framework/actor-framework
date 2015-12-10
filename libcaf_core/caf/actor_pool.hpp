@@ -25,9 +25,9 @@
 
 #include "caf/locks.hpp"
 #include "caf/actor.hpp"
-#include "caf/abstract_actor.hpp"
 #include "caf/execution_unit.hpp"
 #include "caf/mailbox_element.hpp"
+#include "caf/monitorable_actor.hpp"
 
 #include "caf/detail/split_join.hpp"
 #include "caf/detail/shared_spinlock.hpp"
@@ -54,7 +54,7 @@ namespace caf {
 /// during the enqueue operation. Any user-defined policy thus has to dispatch
 /// messages with as little overhead as possible, because the dispatching
 /// runs in the context of the sender.
-class actor_pool : public abstract_actor {
+class actor_pool : public monitorable_actor {
 public:
   using uplock = upgrade_lock<detail::shared_spinlock>;
   using actor_vec = std::vector<actor>;
@@ -103,20 +103,19 @@ public:
 
   void enqueue(mailbox_element_ptr what, execution_unit* host) override;
 
-  actor_pool(execution_unit* host);
+  actor_pool(actor_config& cfg);
 
 private:
   bool filter(upgrade_lock<detail::shared_spinlock>&, const actor_addr& sender,
               message_id mid, const message& content, execution_unit* host);
 
   // call without workers_mtx_ held
-  void quit();
+  void quit(execution_unit* host);
 
   detail::shared_spinlock workers_mtx_;
   std::vector<actor> workers_;
   policy policy_;
   exit_reason planned_reason_;
-  actor_system& system_;
 };
 
 } // namespace caf

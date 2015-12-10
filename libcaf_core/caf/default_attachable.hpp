@@ -38,7 +38,8 @@ public:
     static constexpr size_t token_type = attachable::token::observer;
   };
 
-  void actor_exited(abstract_actor* self, exit_reason reason) override;
+  void actor_exited(abstract_actor* self, exit_reason reason,
+                    execution_unit* host) override;
 
   bool matches(const token& what) override;
 

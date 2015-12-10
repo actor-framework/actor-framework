@@ -29,7 +29,7 @@ namespace caf {
 
 actor_ostream::actor_ostream(abstract_actor* self)
     : self_(self),
-      printer_(self->system().scheduler().printer()) {
+      printer_(self->home_system().scheduler().printer()) {
   // nop
 }
 
@@ -47,7 +47,7 @@ void actor_ostream::redirect(abstract_actor* self, std::string fn, int flags) {
   if (! self)
     return;
   intrusive_ptr<abstract_actor> ptr{self};
-  send_as(actor_cast<actor>(ptr), self->system().scheduler().printer(),
+  send_as(actor_cast<actor>(ptr), self->home_system().scheduler().printer(),
           redirect_atom::value, self->address(), std::move(fn), flags);
 }
 

@@ -59,7 +59,7 @@ class abstract_actor : public abstract_channel {
 public:
   /// Attaches `ptr` to this actor. The actor will call `ptr->detach(...)` on
   /// exit, or immediately if it already finished execution.
-  void attach(attachable_ptr ptr);
+  virtual void attach(attachable_ptr ptr) = 0;
 
   /// Convenience function that attaches the functor `f` to this actor. The
   /// actor executes `f()` on exit or immediatley if it is not running.
@@ -72,7 +72,7 @@ public:
   actor_addr address() const;
 
   /// Detaches the first attached object that matches `what`.
-  size_t detach(const attachable::token& what);
+  virtual size_t detach(const attachable::token& what) = 0;
 
   /// Links this actor to `whom`.
   inline void link_to(const actor_addr& whom) {
@@ -117,43 +117,18 @@ public:
   /// an empty set if this actor is untyped.
   virtual std::set<std::string> message_types() const;
 
-  /// Returns the execution unit currently used by this actor.
-  /// @warning not thread safe
-  inline execution_unit* context() const {
-    return context_;
+  /// Returns the system that created this actor (or proxy).
+  actor_system& home_system() {
+    CAF_ASSERT(home_system_ != nullptr);
+    return *home_system_;
   }
-
-  /// Sets the execution unit for this actor.
-  inline void context(execution_unit* x) {
-    context_ = x;
-  }
-
-  /// Returns the hosting actor system.
-  inline actor_system& system() const {
-    CAF_ASSERT(context_);
-    return context_->system();
-  }
-
-  /// @cond PRIVATE
-  // Returns `exit_reason_ != exit_reason::not_exited`.
-  inline bool exited() const {
-    return exit_reason_ != exit_reason::not_exited;
-  }
-  /// @endcond
 
 protected:
-  /// Creates a new actor instance.
-  abstract_actor(execution_unit* ptr, int flags);
-
   /// Creates a new actor instance.
   explicit abstract_actor(actor_config& cfg);
 
   /// Creates a new actor instance.
   abstract_actor(actor_id aid, node_id nid);
-
-  /// Called by the runtime system to perform cleanup actions for this actor.
-  /// Subtypes should always call this member function when overriding it.
-  virtual void cleanup(exit_reason reason);
 
   /****************************************************************************
    *                 here be dragons: end of public interface                 *
@@ -161,11 +136,6 @@ protected:
 
 public:
   /// @cond PRIVATE
-
-  actor_system& home_system() {
-    CAF_ASSERT(home_system_ != nullptr);
-    return *home_system_;
-  }
 
   enum linking_operation {
     establish_link_op,
@@ -256,52 +226,16 @@ public:
 
   void is_registered(bool value);
 
-  // Tries to run a custom exception handler for `eptr`.
-  maybe<exit_reason> handle(const std::exception_ptr& eptr);
-
 protected:
-  virtual bool link_impl(linking_operation op, const actor_addr& other);
-
-  bool establish_link_impl(const actor_addr& other);
-
-  bool remove_link_impl(const actor_addr& other);
-
-  bool establish_backlink_impl(const actor_addr& other);
-
-  bool remove_backlink_impl(const actor_addr& other);
-
-  inline void attach_impl(attachable_ptr& ptr) {
-    ptr->next.swap(attachables_head_);
-    attachables_head_.swap(ptr);
-  }
-
-  static size_t detach_impl(const attachable::token& what,
-                            attachable_ptr& ptr,
-                            bool stop_on_first_hit = false,
-                            bool dry_run = false);
-
-  // identifies the execution unit this actor is currently executed by
-  execution_unit* context_;
+  virtual bool link_impl(linking_operation op, const actor_addr& other) = 0;
 
   // cannot be changed after construction
   const actor_id id_;
 
-  // initially set to exit_reason::not_exited
-  std::atomic<exit_reason> exit_reason_;
-
-  // guards access to exit_reason_, attachables_, links_,
-  // and enqueue operations if actor is thread-mapped
-  mutable std::mutex mtx_;
-
-  // only used in blocking and thread-mapped actors
-  mutable std::condition_variable cv_;
-
-  // attached functors that are executed on cleanup (monitors, links, etc)
-  attachable_ptr attachables_head_;
-
+  // points to the actor system that created this actor
   actor_system* home_system_;
 
-  /// @endcond
+ /// @endcond
 };
 
 std::string to_string(abstract_actor::linking_operation op);
