@@ -184,7 +184,7 @@ public:
     return super::add_tcp_scribe(fd);
   }
 
-  maybe<std::pair<accept_handle, uint16_t>>
+  std::pair<accept_handle, uint16_t>
   add_tcp_doorman(uint16_t port = 0,
                   const char* in = nullptr,
                   bool reuse_addr = false) {
