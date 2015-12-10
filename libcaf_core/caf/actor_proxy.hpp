@@ -24,6 +24,7 @@
 #include <cstdint>
 
 #include "caf/abstract_actor.hpp"
+#include "caf/monitorable_actor.hpp"
 
 #include "caf/detail/shared_spinlock.hpp"
 
@@ -37,7 +38,7 @@ using actor_proxy_ptr = intrusive_ptr<actor_proxy>;
 
 /// Represents an actor running on a remote machine,
 /// or different hardware, or in a separate process.
-class actor_proxy : public abstract_actor {
+class actor_proxy : public monitorable_actor {
 public:
   /// An anchor points to a proxy instance without sharing
   /// ownership to it, i.e., models a weak ptr.

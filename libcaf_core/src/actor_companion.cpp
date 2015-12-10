@@ -28,7 +28,7 @@ void actor_companion::disconnect(exit_reason rsn) {
     std::lock_guard<lock_type> guard(lock_);
     on_enqueue_.swap(tmp);
   }
-  cleanup(rsn);
+  cleanup(rsn, context());
 }
 
 void actor_companion::on_enqueue(enqueue_handler handler) {

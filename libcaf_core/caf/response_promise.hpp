@@ -38,7 +38,7 @@ public:
   response_promise& operator=(response_promise&&) = default;
   response_promise& operator=(const response_promise&) = default;
 
-  response_promise(const actor_addr& from, const actor_addr& to,
+  response_promise(local_actor* self, const actor_addr& to,
                    const message_id& response_id);
 
   /// Queries whether this promise is still valid, i.e., no response
@@ -62,7 +62,7 @@ public:
 
 private:
   void deliver_impl(message response_message) const;
-  actor_addr from_;
+  local_actor* self_;
   actor_addr to_;
   message_id id_;
 };

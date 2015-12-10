@@ -120,9 +120,8 @@ void forwarding_actor_proxy::local_unlink_from(const actor_addr& other) {
 
 void forwarding_actor_proxy::kill_proxy(execution_unit* ctx, exit_reason rsn) {
   CAF_ASSERT(ctx != nullptr);
-  context(ctx);
   manager(invalid_actor);
-  cleanup(rsn);
+  cleanup(rsn, ctx);
 }
 
 } // namespace caf

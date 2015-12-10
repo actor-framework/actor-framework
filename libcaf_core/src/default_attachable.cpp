@@ -34,12 +34,13 @@ message make(abstract_actor* self, exit_reason reason) {
 
 } // namespace <anonymous>
 
-void default_attachable::actor_exited(abstract_actor* self, exit_reason rsn) {
+void default_attachable::actor_exited(abstract_actor* self, exit_reason rsn,
+                                      execution_unit* host) {
   CAF_ASSERT(self->address() != observer_);
   auto factory = type_ == monitor ? &make<down_msg> : &make<exit_msg>;
   auto ptr = actor_cast<abstract_actor_ptr>(observer_);
   ptr->enqueue(self->address(), message_id{}.with_high_priority(),
-               factory(self, rsn), self->context());
+               factory(self, rsn), host);
 }
 
 bool default_attachable::matches(const token& what) {

@@ -55,7 +55,8 @@ scoped_actor::~scoped_actor() {
     CAF_SET_AID(prev_);
   }
   auto r = self_->planned_exit_reason();
-  self_->cleanup(r == exit_reason::not_exited ? exit_reason::normal : r);
+  self_->cleanup(r == exit_reason::not_exited ? exit_reason::normal : r,
+                 &context_);
 }
 
 std::string to_string(const scoped_actor& x) {

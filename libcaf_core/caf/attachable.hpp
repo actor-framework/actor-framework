@@ -75,7 +75,8 @@ public:
 
   /// Executed if the actor finished execution with given `reason`.
   /// The default implementation does nothing.
-  virtual void actor_exited(abstract_actor* self, exit_reason reason);
+  virtual void actor_exited(abstract_actor* self, exit_reason reason,
+                            execution_unit* host);
 
   /// Returns `true` if `what` selects this instance, otherwise `false`.
   virtual bool matches(const token& what);

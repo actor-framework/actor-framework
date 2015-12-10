@@ -24,18 +24,16 @@
 
 namespace caf {
 
-response_promise::response_promise(const actor_addr& from, const actor_addr& to,
+response_promise::response_promise(local_actor* self, const actor_addr& to,
                                    const message_id& id)
-    : from_(from), to_(to), id_(id) {
+    : self_(self), to_(to), id_(id) {
   CAF_ASSERT(id.is_response() || ! id.valid());
 }
 
 void response_promise::deliver_impl(message msg) const {
   if (! to_)
     return;
-  auto to = actor_cast<abstract_actor_ptr>(to_);
-  auto from = actor_cast<abstract_actor_ptr>(from_);
-  to->enqueue(from_, id_, std::move(msg), from->context());
+  to_->enqueue(self_->address(), id_, std::move(msg), self_->context());
 }
 
 void response_promise::deliver(error x) const {

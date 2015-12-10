@@ -42,7 +42,8 @@ namespace caf {
 // later on in spawn(); this prevents subtle bugs that lead to segfaults,
 // e.g., when calling address() in the ctor of a derived class
 local_actor::local_actor(actor_config& cfg)
-    : abstract_actor(cfg),
+    : monitorable_actor(cfg),
+      context_(cfg.host),
       planned_exit_reason_(exit_reason::not_exited),
       timeout_id_(0),
       initial_behavior_fac_(std::move(cfg.init_fun)) {
@@ -655,7 +656,7 @@ resumable::resume_result local_actor::resume(execution_unit* eu,
       // simply ignore exception
     }
     // exit reason might have been changed by on_exit()
-    self->cleanup(self->planned_exit_reason());
+    self->cleanup(self->planned_exit_reason(), context());
     return resumable::done;
   }
   if (is_initialized()
@@ -920,7 +921,7 @@ response_promise local_actor::make_response_promise() {
   auto& mid = ptr->mid;
   if (mid.is_answered())
     return response_promise{};
-  response_promise result{address(), ptr->sender, mid.response_id()};
+  response_promise result{this, ptr->sender, mid.response_id()};
   mid.mark_as_answered();
   return result;
 }
@@ -954,11 +955,11 @@ bool local_actor::finished() {
     rsn = exit_reason::normal;
     planned_exit_reason(rsn);
   }
-  cleanup(rsn);
+  cleanup(rsn, context());
   return true;
 }
 
-void local_actor::cleanup(exit_reason reason) {
+void local_actor::cleanup(exit_reason reason, execution_unit* host) {
   CAF_LOG_TRACE(CAF_ARG(reason));
   current_mailbox_element().reset();
   detail::sync_request_bouncer f{reason};
@@ -970,7 +971,7 @@ void local_actor::cleanup(exit_reason reason) {
       subscription->unsubscribe(me);
     subscriptions_.clear();
   }
-  abstract_actor::cleanup(reason);
+  monitorable_actor::cleanup(reason, host);
   // tell registry we're done
   is_registered(false);
 }

@@ -96,7 +96,8 @@ actor_pool::~actor_pool() {
 actor actor_pool::make(execution_unit* eu, policy pol) {
   CAF_ASSERT(eu);
   intrusive_ptr<actor_pool> ptr;
-  ptr = make_counted<actor_pool>(eu);
+  actor_config cfg{eu};
+  ptr = make_counted<actor_pool>(cfg);
   ptr->policy_ = std::move(pol);
   return actor_cast<actor>(ptr);
 }
@@ -117,25 +118,22 @@ actor actor_pool::make(execution_unit* eu, size_t num_workers,
 void actor_pool::enqueue(const actor_addr& sender, message_id mid,
                          message content, execution_unit* eu) {
   upgrade_lock<detail::shared_spinlock> guard{workers_mtx_};
-  if (filter(guard, sender, mid, content, eu)) {
+  if (filter(guard, sender, mid, content, eu))
     return;
-  }
   auto ptr = mailbox_element::make(sender, mid, std::move(content));
-  policy_(system_, guard, workers_, ptr, eu);
+  policy_(home_system(), guard, workers_, ptr, eu);
 }
 
 void actor_pool::enqueue(mailbox_element_ptr what, execution_unit* eu) {
   upgrade_lock<detail::shared_spinlock> guard{workers_mtx_};
-  if (filter(guard, what->sender, what->mid, what->msg, eu)) {
+  if (filter(guard, what->sender, what->mid, what->msg, eu))
     return;
-  }
-  policy_(system_, guard, workers_, what, eu);
+  policy_(home_system(), guard, workers_, what, eu);
 }
 
-actor_pool::actor_pool(execution_unit* host)
-    : abstract_actor(host, 0),
-      planned_reason_(exit_reason::not_exited),
-      system_(host->system()) {
+actor_pool::actor_pool(actor_config& cfg)
+    : monitorable_actor(cfg),
+      planned_reason_(exit_reason::not_exited) {
   is_registered(true);
 }
 
@@ -162,7 +160,7 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
     for (auto& w : workers) {
       anon_send(w, msg);
     }
-    quit();
+    quit(eu);
     return true;
   }
   if (msg.match_elements<down_msg>()) {
@@ -177,7 +175,7 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
     if (workers_.empty()) {
       planned_reason_ = exit_reason::out_of_workers;
       unique_guard.unlock();
-      quit();
+      quit(eu);
     }
     return true;
   }
@@ -223,10 +221,10 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
   return false;
 }
 
-void actor_pool::quit() {
+void actor_pool::quit(execution_unit* host) {
   // we can safely run our cleanup code here without holding
   // workers_mtx_ because abstract_actor has its own lock
-  cleanup(planned_reason_);
+  cleanup(planned_reason_, host);
   is_registered(false);
 }
 

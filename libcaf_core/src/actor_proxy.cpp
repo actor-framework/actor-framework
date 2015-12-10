@@ -67,7 +67,7 @@ actor_proxy::~actor_proxy() {
 }
 
 actor_proxy::actor_proxy(actor_id aid, node_id nid)
-    : abstract_actor(aid, nid),
+    : monitorable_actor(aid, nid),
       anchor_(make_counted<anchor>(this)) {
   // nop
 }
