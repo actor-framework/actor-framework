@@ -21,6 +21,7 @@
 
 #include "caf/logger.hpp"
 #include "caf/actor_cast.hpp"
+#include "caf/actor_system.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/default_attachable.hpp"
 
@@ -74,7 +75,7 @@ void monitorable_actor::cleanup(exit_reason reason, execution_unit* host) {
     exit_reason_ = reason;
     attachables_head_.swap(head);
   }
-  CAF_LOG_INFO_IF(node() == system().node(),
+  CAF_LOG_INFO_IF(node() == host->system().node(),
                   "cleanup" << CAF_ARG(id()) << CAF_ARG(reason));
   // send exit messages
   for (attachable* i = head.get(); i != nullptr; i = i->next.get())
