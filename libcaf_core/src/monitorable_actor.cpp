@@ -75,7 +75,7 @@ void monitorable_actor::cleanup(exit_reason reason, execution_unit* host) {
     exit_reason_ = reason;
     attachables_head_.swap(head);
   }
-  CAF_LOG_INFO_IF(node() == host->system().node(),
+  CAF_LOG_INFO_IF(host && host->system().node() == node(),
                   "cleanup" << CAF_ARG(id()) << CAF_ARG(reason));
   // send exit messages
   for (attachable* i = head.get(); i != nullptr; i = i->next.get())
