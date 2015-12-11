@@ -31,9 +31,12 @@ using namespace caf;
 namespace {
 
 using foo_actor = typed_actor<replies_to<get_atom, int>::with<int>,
-                              reacts_to<put_atom, int, int>>;
+                              replies_to<get_atom, int, int>::with<int, int>,
+                              reacts_to<put_atom, int, int>,
+                              reacts_to<put_atom, int, int, int>>;
 
 using foo_promise = typed_response_promise<int>;
+using foo2_promise = typed_response_promise<int, int>;
 
 class foo_actor_impl : public foo_actor::base {
 public:
@@ -57,12 +60,33 @@ public:
         entry = make_response_promise();
         return entry;
       },
+      [=](get_atom, int x, int y) -> foo2_promise {
+        auto calculator = spawn([](event_based_actor* self) -> behavior {
+          return {
+            [self](int promise_id, int v0, int v1) -> message {
+              self->quit();
+              return make_message(put_atom::value, promise_id, v0 * 2, v1 * 2);
+            }
+          };
+        });
+        send(calculator, next_id_, x, y);
+        auto& entry = promises2_[next_id_++];
+        entry = make_response_promise();
+        return entry;
+      },
       [=](put_atom, int promise_id, int x) {
         auto i = promises_.find(promise_id);
         if (i == promises_.end())
           return;
         i->second.deliver(x);
         promises_.erase(i);
+      },
+      [=](put_atom, int promise_id, int x, int y) {
+        auto i = promises2_.find(promise_id);
+        if (i == promises2_.end())
+          return;
+        i->second.deliver(x, y);
+        promises2_.erase(i);
       }
     };
   }
@@ -70,6 +94,7 @@ public:
 private:
   int next_id_ = 0;
   std::map<int, foo_promise> promises_;
+  std::map<int, foo2_promise> promises2_;
 };
 
 struct fixture {
@@ -90,6 +115,12 @@ CAF_TEST(typed_response_promise) {
   self->request(foo, get_atom::value, 42).await(
     [](int x) {
       CAF_CHECK_EQUAL(x, 84);
+    }
+  );
+  self->request(foo, get_atom::value, 42, 52).await(
+    [](int x, int y) {
+      CAF_CHECK_EQUAL(x, 84);
+      CAF_CHECK_EQUAL(y, 104);
     }
   );
   self->send_exit(foo, exit_reason::user_shutdown);
