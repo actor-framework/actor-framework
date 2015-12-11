@@ -49,8 +49,8 @@ struct is_response_promise : std::false_type { };
 template <>
 struct is_response_promise<response_promise> : std::true_type { };
 
-template <class T>
-struct is_response_promise<typed_response_promise<T>> : std::true_type { };
+template <class... Ts>
+struct is_response_promise<typed_response_promise<Ts...>> : std::true_type { };
 
 template <class... Ts>
 struct is_response_promise<delegated<Ts...>> : std::true_type { };
