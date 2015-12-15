@@ -440,8 +440,8 @@ invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
           has_timeout(false);
         }
         ptr.swap(current_element_);
-        auto res = post_process_invoke_res(this,
-                                           current_element_->mid.is_request(),
+        auto is_req = current_element_->mid.is_request();
+        auto res = post_process_invoke_res(this, is_req,
                                            fun(current_element_->msg));
         ptr.swap(current_element_);
         if (res)

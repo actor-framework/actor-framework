@@ -604,7 +604,7 @@ first_stage::behavior_type first_stage_impl() {
   return [](int i) {
     return static_cast<double>(i) * 2;
   };
-};
+}
 
 second_stage::behavior_type second_stage_impl() {
   return [](double x) {

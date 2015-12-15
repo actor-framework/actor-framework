@@ -213,7 +213,7 @@ inline uint8_t hex_nibble(char c) {
                               ? c - '0'
                               : (c >= 'a' && c <= 'f' ? (c - 'a') + 10
                                                       : (c - 'A') + 10));
-};
+}
 
 } // namespace <anonymous>
 
