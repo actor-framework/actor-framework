@@ -30,6 +30,9 @@
 
 namespace caf { // forward declarations
 
+template <class... Ts>
+class typed_actor;
+
 template <class R>
 class typed_continue_helper;
 
@@ -265,6 +268,14 @@ struct sender_signature_checker<OrigSigs, DestSigs, detail::type_list<void>> {
 template <class OrigSigs, class DestSigs>
 struct sender_signature_checker<OrigSigs, DestSigs, detail::type_list<>> {
   static void check() {}
+};
+
+template <class T, class... Ts>
+struct extend_with_helper;
+
+template <class... Ts, class... Es>
+struct extend_with_helper<typed_actor<Es...>, Ts...> {
+  using type = typed_actor<Ts..., Es...>;
 };
 
 } // namespace detail
