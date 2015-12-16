@@ -19,6 +19,7 @@
 
 #include "caf/bound_actor.hpp"
 
+#include "caf/actor_cast.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/system_messages.hpp"
 

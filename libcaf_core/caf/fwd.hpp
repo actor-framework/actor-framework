@@ -31,6 +31,9 @@ class maybe;
 template <class>
 class intrusive_ptr;
 
+template <class>
+struct actor_cast_access;
+
 // classes
 class actor;
 class group;
@@ -85,10 +88,6 @@ enum class atom_value : uint64_t;
 
 // aliases
 using actor_id = uint32_t;
-
-// functions
-template <class T, typename U>
-T actor_cast(const U&);
 
 namespace io {
 

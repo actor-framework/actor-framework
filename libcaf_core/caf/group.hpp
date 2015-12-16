@@ -45,8 +45,8 @@ constexpr invalid_group_t invalid_group = invalid_group_t{};
 class group : detail::comparable<group>,
               detail::comparable<group, invalid_group_t> {
 public:
-  template <class T, typename U>
-  friend T actor_cast(const U&);
+  template <class>
+  friend struct actor_cast_access;
 
   group() = default;
 
@@ -99,6 +99,12 @@ private:
   inline abstract_group* get() const noexcept {
     return ptr_.get();
   }
+
+  inline abstract_group* release() noexcept {
+    return ptr_.release();
+  }
+
+  group(abstract_group*, bool);
 
   abstract_group_ptr ptr_;
 };

@@ -36,6 +36,10 @@ actor_addr::actor_addr(abstract_actor* ptr) : ptr_(ptr) {
   // nop
 }
 
+actor_addr::actor_addr(abstract_actor* ptr, bool add_ref) : ptr_(ptr, add_ref) {
+  // nop
+}
+
 actor_addr actor_addr::operator=(const invalid_actor_addr_t&) {
   ptr_.reset();
   return *this;

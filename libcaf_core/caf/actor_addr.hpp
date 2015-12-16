@@ -52,9 +52,8 @@ public:
   friend class actor;
   friend class abstract_actor;
 
-  template <class T, typename U>
-  friend T actor_cast(const U&);
-
+  template <class>
+  friend struct actor_cast_access;
 
   actor_addr() = default;
   actor_addr(actor_addr&&) = default;
@@ -112,7 +111,13 @@ private:
     return ptr_.get();
   }
 
+  inline abstract_actor* release() noexcept {
+    return ptr_.release();
+  }
+
   actor_addr(abstract_actor*);
+
+  actor_addr(abstract_actor*, bool);
 
   abstract_actor_ptr ptr_;
 };
