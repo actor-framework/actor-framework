@@ -62,6 +62,11 @@ public:
     return write(arg);
   }
 
+  /// Writes `arg` to the buffer allocated for the calling actor.
+  inline actor_ostream& operator<<(std::string arg) {
+    return write(std::move(arg));
+  }
+
   /// Writes `to_string(arg)` to the buffer allocated for the calling actor,
   /// calling either `std::to_string` or `caf::to_string` depending on
   /// the argument.
