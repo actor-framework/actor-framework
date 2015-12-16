@@ -68,8 +68,8 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
   friend class typed_actor;
 
   // allow conversion via actor_cast
-  template <class T, typename U>
-  friend T actor_cast(const U&);
+  template <class>
+  friend struct actor_cast_access;
 
   /// Creates a new `typed_actor` type by extending this one with `Es...`.
   template <class... Es>
@@ -248,8 +248,12 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
   /// @endcond
 
 private:
-  abstract_actor* get() const {
+  abstract_actor* get() const noexcept {
     return ptr_.get();
+  }
+
+  abstract_actor* release() noexcept {
+    return ptr_.release();
   }
 
   typed_actor(abstract_actor* ptr) : ptr_(ptr) {

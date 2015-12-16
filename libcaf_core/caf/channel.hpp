@@ -48,8 +48,8 @@ class channel : detail::comparable<channel>,
                 detail::comparable<channel, actor>,
                 detail::comparable<channel, abstract_channel*> {
 public:
-  template <class T, typename U>
-  friend T actor_cast(const U&);
+  template <class>
+  friend struct actor_cast_access;
 
   channel() = default;
   channel(channel&&) = default;
@@ -106,7 +106,9 @@ public:
   friend void serialize(deserializer& source, channel& x, const unsigned int);
 
 private:
-  channel(abstract_channel* ptr);
+  channel(abstract_channel*);
+
+  channel(abstract_channel*, bool);
 
   inline abstract_channel* get() const noexcept {
     return ptr_.get();

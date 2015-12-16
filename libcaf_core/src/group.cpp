@@ -30,6 +30,10 @@ group::group(abstract_group* ptr) : ptr_(ptr) {
   // nop
 }
 
+group::group(abstract_group* ptr, bool add_ref) : ptr_(ptr, add_ref) {
+  // nop
+}
+
 group::group(const invalid_group_t&) : ptr_(nullptr) {
   // nop
 }

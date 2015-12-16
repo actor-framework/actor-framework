@@ -48,6 +48,11 @@ channel::channel(abstract_channel* ptr) : ptr_(ptr) {
   // nop
 }
 
+channel::channel(abstract_channel* ptr, bool add_ref) : ptr_(ptr, add_ref) {
+  // nop
+}
+
+
 channel::channel(local_actor* ptr) : ptr_(ptr) {
   // nop
 }

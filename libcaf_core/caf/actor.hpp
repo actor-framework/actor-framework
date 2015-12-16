@@ -68,8 +68,8 @@ public:
   friend class local_actor;
 
   // allow conversion via actor_cast
-  template <class T, typename U>
-  friend T actor_cast(const U&);
+  template <class>
+  friend struct actor_cast_access;
 
   actor() = default;
   actor(actor&&) = default;
@@ -170,7 +170,13 @@ private:
     return ptr_.get();
   }
 
+  inline abstract_actor* release() noexcept {
+    return ptr_.release();
+  }
+
   actor(abstract_actor*);
+
+  actor(abstract_actor*, bool);
 
   abstract_actor_ptr ptr_;
 };
