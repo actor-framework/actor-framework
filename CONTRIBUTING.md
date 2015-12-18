@@ -5,7 +5,7 @@ Git Workflow
 ============
 
 CAF's git workflow encompasses the following key aspects. (For general git
-style guidelines, see https://github.com/agis-/git-style-guide.)
+style guidelines, see <https://github.com/agis-/git-style-guide>.)
 
 - The `master` branch always reflects a *production-ready* state, i.e.,
   the latest release version.
