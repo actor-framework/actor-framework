@@ -91,12 +91,10 @@ public:
       // you can't steal from yourself, can you?
       return nullptr;
     }
-    size_t victim;
-    do {
-      // roll the dice to pick a victim other than ourselves
-      victim = d(self).rengine() % p->num_workers();
-    }
-    while (victim == self->id());
+    // roll the dice to pick a victim other than ourselves
+    size_t victim = d(self).rengine() % (p->num_workers() - 1);
+    if (victim == self->id())
+      victim = p->num_workers() - 1;
     // steal oldest element from the victim's queue
     return d(p->worker_by_id(victim)).queue.take_tail();
   }
