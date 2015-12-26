@@ -24,7 +24,7 @@
 #include <cstdint>
 #include <exception>
 #include <functional>
-#include <forward_list>
+#include <list>
 
 #include "caf/fwd.hpp"
 
@@ -646,7 +646,8 @@ protected:
   message_id last_request_id_;
 
   // identifies all IDs of sync messages waiting for a response
-  std::forward_list<pending_response> pending_responses_;
+  // arranged in chronological order, and used as a FIFO queue
+  std::list<pending_response> pending_responses_;
 
   // points to dummy_node_ if no callback is currently invoked,
   // points to the node under processing otherwise
