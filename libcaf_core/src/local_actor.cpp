@@ -650,7 +650,8 @@ resumable::resume_result local_actor::resume(execution_unit* eu,
     }
     if (eptr) {
       auto opt_reason = self->handle(eptr);
-      rsn = *opt_reason;
+      rsn = opt_reason ? *opt_reason
+                       : exit_reason::unhandled_exception;
     }
     self->planned_exit_reason(rsn);
     try {
