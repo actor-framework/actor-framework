@@ -599,7 +599,10 @@ public:
 
   message_id new_request_id(message_priority mp);
 
-  void mark_arrived(message_id response_id);
+  // sync response handler invokation follows a chronological FIFO order
+  // the handler to remove should be at the front the of list
+  // call `pending_responses_.pop_front()` directly
+  // void mark_arrived(message_id response_id);
 
   bool awaits_response() const;
 

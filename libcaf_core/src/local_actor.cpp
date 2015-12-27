@@ -495,11 +495,11 @@ message_id local_actor::new_request_id(message_priority mp) {
   return mp == message_priority::normal ? result : result.with_high_priority();
 }
 
-void local_actor::mark_arrived(message_id mid) {
-  CAF_ASSERT(mid.is_response());
-  pending_response_predicate predicate{mid};
-  pending_responses_.remove_if(predicate);
-}
+//void local_actor::mark_arrived(message_id mid) {
+//  CAF_ASSERT(mid.is_response());
+//  pending_response_predicate predicate{mid};
+//  pending_responses_.remove_if(predicate);
+//}
 
 bool local_actor::awaits_response() const {
   return ! pending_responses_.empty();
@@ -515,9 +515,13 @@ bool local_actor::awaits(message_id mid) const {
 maybe<local_actor::pending_response&>
 local_actor::find_pending_response(message_id mid) {
   pending_response_predicate predicate{mid};
-  auto last = pending_responses_.end();
-  auto i = std::find_if(pending_responses_.begin(), last, predicate);
-  if (i == last) {
+  // due to common usage pattern and the principle of locality, the match, if
+  // any, is more likely to be recently added, and thus reside to the rear of
+  // the list; so search backward
+  auto rbegin = pending_responses_.rbegin();
+  auto rend = pending_responses_.rend();
+  auto i = std::find_if(rbegin, rend, predicate);
+  if (i == rend) {
     return none;
   }
   return *i;
