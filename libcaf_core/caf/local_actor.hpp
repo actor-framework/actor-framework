@@ -24,7 +24,7 @@
 #include <cstdint>
 #include <exception>
 #include <functional>
-#include <forward_list>
+#include <list>
 
 #include "caf/fwd.hpp"
 
@@ -599,7 +599,10 @@ public:
 
   message_id new_request_id(message_priority mp);
 
-  void mark_arrived(message_id response_id);
+  // sync response handler invokation follows a chronological FIFO order
+  // the handler to remove should be at the front the of list
+  // call `pending_responses_.pop_front()` directly
+  // void mark_arrived(message_id response_id);
 
   bool awaits_response() const;
 
@@ -646,7 +649,8 @@ protected:
   message_id last_request_id_;
 
   // identifies all IDs of sync messages waiting for a response
-  std::forward_list<pending_response> pending_responses_;
+  // arranged in chronological order, and used as a FIFO queue
+  std::list<pending_response> pending_responses_;
 
   // points to dummy_node_ if no callback is currently invoked,
   // points to the node under processing otherwise

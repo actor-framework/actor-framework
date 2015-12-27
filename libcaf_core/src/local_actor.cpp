@@ -348,6 +348,7 @@ maybe<message> post_process_invoke_res(local_actor* self,
                                           Handle hdl = Handle{}) {
   CAF_LOGF_TRACE(CAF_MARG(mid, integer_value) << ", " << CAF_TSARG(res));
   if (! res) {
+    // error occurred
     return none;
   }
   if (res->empty()) {
@@ -366,6 +367,8 @@ maybe<message> post_process_invoke_res(local_actor* self,
     return res;
   }
   if (handle_message_id_res(self, *res, none)) {
+    // the responsibility to respond is handed over to a pending `sync_send()`
+    // response handler
     return message{};
   }
   // respond by using the result of 'fun'
@@ -427,6 +430,10 @@ invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
             fun.handle_timeout();
           }
         } else {
+          // the new sync response handler added by invoking `fun()`, if any,
+          // will be at the end of `pending_responses_`
+          // `pending_responses_.pop_front()` removes the current handler `fun`,
+          // not the new one
           auto res = post_process_invoke_res(this, mid,
                                              fun(current_mailbox_element()->msg));
           if (! res) {
@@ -436,7 +443,7 @@ invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
           }
         }
         ptr.swap(current_mailbox_element());
-        mark_arrived(awaited_id);
+        pending_responses_.pop_front();
         return im_success;
       }
       return im_skipped;
@@ -484,15 +491,15 @@ private:
 
 message_id local_actor::new_request_id(message_priority mp) {
   auto result = ++last_request_id_;
-  pending_responses_.emplace_front(result.response_id(), behavior{});
+  pending_responses_.emplace_back(result.response_id(), behavior{});
   return mp == message_priority::normal ? result : result.with_high_priority();
 }
 
-void local_actor::mark_arrived(message_id mid) {
-  CAF_ASSERT(mid.is_response());
-  pending_response_predicate predicate{mid};
-  pending_responses_.remove_if(predicate);
-}
+//void local_actor::mark_arrived(message_id mid) {
+//  CAF_ASSERT(mid.is_response());
+//  pending_response_predicate predicate{mid};
+//  pending_responses_.remove_if(predicate);
+//}
 
 bool local_actor::awaits_response() const {
   return ! pending_responses_.empty();
@@ -508,9 +515,13 @@ bool local_actor::awaits(message_id mid) const {
 maybe<local_actor::pending_response&>
 local_actor::find_pending_response(message_id mid) {
   pending_response_predicate predicate{mid};
-  auto last = pending_responses_.end();
-  auto i = std::find_if(pending_responses_.begin(), last, predicate);
-  if (i == last) {
+  // due to common usage pattern and the principle of locality, the match, if
+  // any, is more likely to be recently added, and thus reside to the rear of
+  // the list; so search backward
+  auto rbegin = pending_responses_.rbegin();
+  auto rend = pending_responses_.rend();
+  auto i = std::find_if(rbegin, rend, predicate);
+  if (i == rend) {
     return none;
   }
   return *i;
