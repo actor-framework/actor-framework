@@ -18,6 +18,7 @@
  ******************************************************************************/
 
 #include "caf/detail/memory.hpp"
+#include "caf/detail/thread_specific.hpp"
 
 #include <vector>
 #include <typeinfo>
@@ -43,54 +44,13 @@ using cache_map = std::map<const std::type_info*, std::unique_ptr<memory_cache>>
 
 } // namespace <anonymous>
 
-#if defined(CAF_CLANG) || defined(CAF_MACOS)
-namespace {
-
-pthread_key_t s_key;
-pthread_once_t s_key_once = PTHREAD_ONCE_INIT;
-
-} // namespace <anonymous>
-
-void cache_map_destructor(void* ptr) {
-  delete reinterpret_cast<cache_map*>(ptr);
-}
-
-void make_cache_map() {
-  pthread_key_create(&s_key, cache_map_destructor);
-}
-
 cache_map& get_cache_map() {
-  pthread_once(&s_key_once, make_cache_map);
-  auto cache = reinterpret_cast<cache_map*>(pthread_getspecific(s_key));
-  if (! cache) {
-    cache = new cache_map;
-    pthread_setspecific(s_key, cache);
+  return thread_specific<cache_map>([](cache_map& cache) {
     // insert default types
     std::unique_ptr<memory_cache> tmp(new basic_memory_cache<mailbox_element>);
-    cache->emplace(&typeid(mailbox_element), std::move(tmp));
-  }
-  return *cache;
+    cache.emplace(&typeid(mailbox_element), std::move(tmp));
+  });
 }
-
-#else // !CAF_CLANG && !CAF_MACOS
-
-namespace {
-
-thread_local std::unique_ptr<cache_map> s_key;
-
-} // namespace <anonymous>
-
-cache_map& get_cache_map() {
-  if (! s_key) {
-    s_key = std::unique_ptr<cache_map>(new cache_map);
-    // insert default types
-    std::unique_ptr<memory_cache> tmp(new basic_memory_cache<mailbox_element>);
-    s_key->emplace(&typeid(mailbox_element), std::move(tmp));
-  }
-  return *s_key;
-}
-
-#endif
 
 memory_cache::~memory_cache() {
   // nop
