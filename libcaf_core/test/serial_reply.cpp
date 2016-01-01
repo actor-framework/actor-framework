@@ -89,7 +89,7 @@ CAF_TEST(test_serial_reply) {
   });
   scoped_actor self{system};
   CAF_MESSAGE("ID of main: " << self->id());
-  self->request(master, hi_atom::value).await(
+  self->request(master, hi_atom::value).receive(
     [](ho_atom) {
       CAF_MESSAGE("received 'ho'");
     },

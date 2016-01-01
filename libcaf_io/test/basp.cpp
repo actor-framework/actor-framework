@@ -574,7 +574,7 @@ CAF_TEST(remote_actor_and_send) {
           this_node(), remote_node(0),
           invalid_actor_id, pseudo_remote(0)->id());
   CAF_MESSAGE("BASP broker should've send the proxy");
-  f.await(
+  f.receive(
     [&](ok_atom, node_id nid, actor_addr res, std::set<std::string> ifs) {
       auto aptr = actor_cast<abstract_actor_ptr>(res);
       CAF_REQUIRE(aptr.downcast<forwarding_actor_proxy>() != nullptr);

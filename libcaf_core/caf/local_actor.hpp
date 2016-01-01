@@ -25,6 +25,7 @@
 #include <exception>
 #include <functional>
 #include <forward_list>
+#include <unordered_map>
 
 #include "caf/fwd.hpp"
 
@@ -514,10 +515,10 @@ public:
   }
 
   inline bool has_behavior() const {
-    return ! bhvr_stack_.empty() || ! pending_responses_.empty();
+    return ! bhvr_stack_.empty()
+           || ! awaited_responses_.empty()
+           || ! multiplexed_responses_.empty();
   }
-
-  behavior& get_behavior();
 
   virtual void initialize() = 0;
 
@@ -548,24 +549,34 @@ public:
 
   using error_handler = std::function<void (error&)>;
 
-  using pending_response = std::tuple<message_id, behavior, error_handler>;
+  using pending_response =
+    std::pair<const message_id, std::pair<behavior, error_handler>>;
 
   message_id new_request_id(message_priority mp);
 
-  void mark_arrived(message_id response_id);
+  void mark_awaited_arrived(message_id mid);
 
   bool awaits_response() const;
 
-  bool awaits(message_id response_id) const;
+  bool awaits(message_id mid) const;
 
-  maybe<pending_response&> find_pending_response(message_id mid);
+  maybe<pending_response&> find_awaited_response(message_id mid);
 
-  void set_response_handler(message_id response_id, behavior bhvr,
-                            error_handler f = nullptr);
+  void set_awaited_response_handler(message_id response_id, behavior bhvr,
+                                    error_handler f = nullptr);
 
   behavior& awaited_response_handler();
 
   message_id awaited_response_id();
+
+  void mark_multiplexed_arrived(message_id mid);
+
+  bool multiplexes(message_id mid) const;
+
+  maybe<pending_response&> find_multiplexed_response(message_id mid);
+
+  void set_multiplexed_response_handler(message_id response_id, behavior bhvr,
+                                        error_handler f = nullptr);
 
   // these functions are dispatched via the actor policies table
 
@@ -598,7 +609,13 @@ protected:
   message_id last_request_id_;
 
   // identifies all IDs of sync messages waiting for a response
-  std::forward_list<pending_response> pending_responses_;
+  std::forward_list<pending_response> awaited_responses_;
+
+  // identifies all IDs of async messages waiting for a response
+  std::unordered_map<
+    message_id,
+    std::pair<behavior, error_handler>
+  > multiplexed_responses_;
 
   // points to dummy_node_ if no callback is currently invoked,
   // points to the node under processing otherwise

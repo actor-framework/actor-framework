@@ -146,12 +146,12 @@ void test_typed_spawn(server_type ts) {
       CAF_CHECK_EQUAL(value, true);
     }
   );
-  self->request(ts, my_request{10, 20}).await(
+  self->request(ts, my_request{10, 20}).receive(
     [](bool value) {
       CAF_CHECK_EQUAL(value, false);
     }
   );
-  self->request(ts, my_request{0, 0}).await(
+  self->request(ts, my_request{0, 0}).receive(
     [](bool value) {
       CAF_CHECK_EQUAL(value, true);
     }
@@ -413,11 +413,11 @@ CAF_TEST(reverter_relay_chain) {
   scoped_actor self{system};
   // actor-under-test
   auto aut = self->spawn<monitored>(string_relay,
-                                          system.spawn(string_reverter),
-                                          true);
+                                    system.spawn(string_reverter),
+                                    true);
   set<string> iface{"caf::replies_to<@str>::with<@str>"};
   CAF_CHECK(aut->message_types() == iface);
-  self->request(aut, "Hello World!").await(
+  self->request(aut, "Hello World!").receive(
     [](const string& answer) {
       CAF_CHECK_EQUAL(answer, "!dlroW olleH");
     }
@@ -430,11 +430,11 @@ CAF_TEST(string_delegator_chain) {
   scoped_actor self{system};
   // actor-under-test
   auto aut = self->spawn<monitored>(string_delegator,
-                                          system.spawn(string_reverter),
-                                          true);
+                                    system.spawn(string_reverter),
+                                    true);
   set<string> iface{"caf::replies_to<@str>::with<@str>"};
   CAF_CHECK(aut->message_types() == iface);
-  self->request(aut, "Hello World!").await(
+  self->request(aut, "Hello World!").receive(
     [](const string& answer) {
       CAF_CHECK_EQUAL(answer, "!dlroW olleH");
     }
@@ -448,7 +448,7 @@ CAF_TEST(maybe_string_delegator_chain) {
   auto aut = system.spawn(maybe_string_delegator,
                           system.spawn(maybe_string_reverter));
   CAF_MESSAGE("send empty string, expect error");
-  self->request(aut, "").await(
+  self->request(aut, "").receive(
     [](ok_atom, const string&) {
       throw std::logic_error("unexpected result!");
     },
@@ -459,7 +459,7 @@ CAF_TEST(maybe_string_delegator_chain) {
     }
   );
   CAF_MESSAGE("send abcd string, expect dcba");
-  self->request(aut, "abcd").await(
+  self->request(aut, "abcd").receive(
     [](ok_atom, const string& str) {
       CAF_CHECK_EQUAL(str, "dcba");
     },
@@ -546,7 +546,7 @@ CAF_TEST(dot_composition) {
   auto second = system.spawn(second_stage_impl);
   auto first_then_second = first * second;
   scoped_actor self{system};
-  self->request(first_then_second, 42).await(
+  self->request(first_then_second, 42).receive(
     [](double res) {
       CAF_CHECK(res == (42 * 2.0) * (42 * 4.0));
     }
@@ -577,12 +577,12 @@ CAF_TEST(currying) {
   CAF_CHECK(system.registry().running() == 1);
   scoped_actor self{system};
   CAF_CHECK(system.registry().running() == 2);
-  self->request(bound, 2.0).await(
+  self->request(bound, 2.0).receive(
     [](double y) {
       CAF_CHECK(y == 2.0);
     }
   );
-  self->request(bound, 10).await(
+  self->request(bound, 10).receive(
     [](int y) {
       CAF_CHECK(y == 10);
     }
@@ -618,12 +618,12 @@ CAF_TEST(type_safe_currying) {
                 "bind returned wrong actor handle");
   scoped_actor self{system};
   CAF_CHECK(system.registry().running() == 2);
-  self->request(bound, 2.0).await(
+  self->request(bound, 2.0).receive(
     [](double y) {
       CAF_CHECK(y == 2.0);
     }
   );
-  self->request(bound, 10).await(
+  self->request(bound, 10).receive(
     [](int y) {
       CAF_CHECK(y == 10);
     }
@@ -649,7 +649,7 @@ CAF_TEST(reordering) {
   CAF_CHECK(system.registry().running() == 1);
   scoped_actor self{system};
   CAF_CHECK(system.registry().running() == 2);
-  self->request(bound, 2.0, 10).await(
+  self->request(bound, 2.0, 10).receive(
     [](double y) {
       CAF_CHECK(y == 20.0);
     }
@@ -679,7 +679,7 @@ CAF_TEST(type_safe_reordering) {
                 "bind returned wrong actor handle");
   scoped_actor self{system};
   CAF_CHECK(system.registry().running() == 2);
-  self->request(bound, 2.0, 10).await(
+  self->request(bound, 2.0, 10).receive(
     [](double y) {
       CAF_CHECK(y == 20.0);
     }

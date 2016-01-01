@@ -49,13 +49,13 @@ struct fixture {
 
   void run_testee(actor testee) {
     scoped_actor self{system};
-    self->request(testee, a_atom::value).await([](int i) {
+    self->request(testee, a_atom::value).receive([](int i) {
       CAF_CHECK_EQUAL(i, 1);
     });
-    self->request(testee, b_atom::value).await([](int i) {
+    self->request(testee, b_atom::value).receive([](int i) {
       CAF_CHECK_EQUAL(i, 2);
     });
-    self->request(testee, c_atom::value).await([](int i) {
+    self->request(testee, c_atom::value).receive([](int i) {
       CAF_CHECK_EQUAL(i, 3);
     });
     self->send_exit(testee, exit_reason::user_shutdown);
