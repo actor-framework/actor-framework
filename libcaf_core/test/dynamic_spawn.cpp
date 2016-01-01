@@ -515,7 +515,7 @@ CAF_TEST(requests) {
   auto sync_testee = system.spawn<blocking_api>([](blocking_actor* s) {
     s->receive (
       on("hi", arg_match) >> [&](actor from) {
-        s->request(from, "whassup?", s).await(
+        s->request(from, "whassup?", s).receive(
           [&](const string& str) -> string {
             CAF_CHECK(s->current_sender() != nullptr);
             CAF_CHECK_EQUAL(str, "nothing");
@@ -553,7 +553,7 @@ CAF_TEST(requests) {
     }
   );
   self->await_all_other_actors_done();
-  self->request(sync_testee, "!?").await(
+  self->request(sync_testee, "!?").receive(
     [] {
       CAF_TEST_ERROR("Unexpected empty message");
     },
@@ -612,7 +612,7 @@ typed_testee::behavior_type testee() {
 CAF_TEST(typed_await) {
   scoped_actor self{system};
   auto x = system.spawn(testee);
-  self->request(x, abc_atom::value).await(
+  self->request(x, abc_atom::value).receive(
     [](const std::string& str) {
       CAF_CHECK_EQUAL(str, "abc");
     }
@@ -791,7 +791,7 @@ CAF_TEST(move_only_argument) {
   };
   auto testee = system.spawn(f, std::move(uptr));
   scoped_actor self{system};
-  self->request(testee, 1.f).await(
+  self->request(testee, 1.f).receive(
     [](int i) {
       CAF_CHECK(i == 42);
     }

@@ -50,6 +50,9 @@ void blocking_actor::initialize() {
 
 void blocking_actor::dequeue(behavior& bhvr, message_id mid) {
   CAF_LOG_TRACE(CAF_ARG(mid));
+  // push an empty sync response handler for `blocking_actor`
+  if (mid != invalid_message_id && ! find_awaited_response(mid))
+    awaited_responses_.emplace_front(mid, std::make_pair(behavior{}, nullptr));
   // try to dequeue from cache first
   if (invoke_from_cache(bhvr, mid)) {
     return;
