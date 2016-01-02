@@ -75,6 +75,14 @@ std::set<std::string> abstract_actor::message_types() const {
   return std::set<std::string>{};
 }
 
+void abstract_actor::inc_actor_system_running_actors() const {
+  home_system_->inc_running_actors();
+}
+
+void abstract_actor::dec_actor_system_running_actors() const {
+  home_system_->dec_running_actors();
+}
+
 void abstract_actor::is_registered(bool value) {
   if (is_registered() == value)
     return;

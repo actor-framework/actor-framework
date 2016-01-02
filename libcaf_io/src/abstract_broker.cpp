@@ -72,6 +72,7 @@ void abstract_broker::launch(execution_unit* eu, bool is_lazy, bool is_hidden) {
   CAF_ASSERT(eu == &backend());
   // add implicit reference count held by middleman/multiplexer
   ref();
+  inc_actor_system_running_actors();
   is_registered(! is_hidden);
   CAF_PUSH_AID(id());
   CAF_LOG_TRACE("init and launch broker:" << CAF_ARG(id()));

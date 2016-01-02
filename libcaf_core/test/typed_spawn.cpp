@@ -542,6 +542,9 @@ CAF_TEST(dot_composition) {
       CAF_CHECK(res == (42 * 2.0) * (42 * 4.0));
     }
   );
+  anon_send_exit(first_then_second, exit_reason::user_shutdown);
+  anon_send_exit(second, exit_reason::user_shutdown);
+  anon_send_exit(first, exit_reason::user_shutdown);
 }
 
 CAF_TEST(currying) {

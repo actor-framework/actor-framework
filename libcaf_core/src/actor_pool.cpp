@@ -134,6 +134,7 @@ void actor_pool::enqueue(mailbox_element_ptr what, execution_unit* eu) {
 actor_pool::actor_pool(actor_config& cfg)
     : monitorable_actor(cfg),
       planned_reason_(exit_reason::not_exited) {
+  inc_actor_system_running_actors();
   is_registered(true);
 }
 
@@ -226,6 +227,7 @@ void actor_pool::quit(execution_unit* host) {
   // workers_mtx_ because abstract_actor has its own lock
   cleanup(planned_reason_, host);
   is_registered(false);
+  dec_actor_system_running_actors();
 }
 
 } // namespace caf

@@ -46,6 +46,7 @@ scoped_actor::scoped_actor(actor_system& as, bool hide_actor) : context_{&as} {
     prev_ = CAF_SET_AID(self_->id());
   }
   CAF_LOG_TRACE(CAF_ARG(hide_actor));
+  self_->inc_actor_system_running_actors();
   self_->is_registered(! hide_actor);
 }
 
