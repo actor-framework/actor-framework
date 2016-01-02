@@ -17,6 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include <exception>
+
 #include "caf/actor_system.hpp"
 
 #include "caf/send.hpp"
@@ -51,12 +53,14 @@ actor_system::actor_system(actor_system_config& cfg)
 
 actor_system::actor_system(actor_system_config&& cfg)
     : ids_(0),
+      num_running_actors_(0),
       types_(*this),
       logger_(*this),
       registry_(*this),
       groups_(*this),
       middleman_(nullptr),
       dummy_execution_unit_(this) {
+  CAF_ASSERT(num_running_actors_ == 0);
   CAF_SET_LOGGER_SYS(this);
   backend_name_ = cfg.middleman_network_backend;
   for (auto& f : cfg.module_factories_) {
@@ -135,12 +139,20 @@ actor_system::actor_system(actor_system_config&& cfg)
 
 actor_system::~actor_system() {
   // stop modules in reverse order
+  groups_.stop();
   registry_.stop();
   for (auto i = modules_.rbegin(); i != modules_.rend(); ++i)
     if (*i)
       (*i)->stop();
   logger_.stop();
   CAF_SET_LOGGER_SYS(nullptr);
+  CAF_ASSERT(num_running_actors_ == 0);
+  // calls `std::terminate()` if running actors exist here
+  // follows the convention of `std::thread` destruction
+  if (num_running_actors_ > 0) {
+    CAF_LOG_ERROR("actors running upon hosting actor system destruction");
+    std::terminate();
+  }
 }
 
 /// Returns the host-local identifier for this system.
@@ -218,6 +230,18 @@ actor_id actor_system::latest_actor_id() const {
 
 void actor_system::await_all_actors_done() const {
   registry_.await_running_count_equal(0);
+}
+
+size_t actor_system::num_running_actors() const {
+  return num_running_actors_;
+}
+
+void actor_system::inc_running_actors() {
+  num_running_actors_.fetch_add(1);
+}
+
+void actor_system::dec_running_actors() {
+  num_running_actors_.fetch_sub(1);
 }
 
 } // namespace caf

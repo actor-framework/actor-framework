@@ -223,6 +223,12 @@ public:
     return get_flag(is_registered_flag);
   }
 
+  /// Increases running-actors-count of the hosting actor system by one.
+  void inc_actor_system_running_actors() const;
+
+  /// Decreases running-actors-count of the hosting actor system by one.
+  void dec_actor_system_running_actors() const;
+
   void is_registered(bool value);
 
   virtual bool link_impl(linking_operation op, const actor_addr& other) = 0;

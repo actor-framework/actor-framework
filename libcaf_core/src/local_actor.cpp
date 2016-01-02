@@ -542,6 +542,7 @@ message_id local_actor::awaited_response_id() {
 
 void local_actor::launch(execution_unit* eu, bool lazy, bool hide) {
   CAF_LOG_TRACE(CAF_ARG(lazy) << CAF_ARG(hide));
+  inc_actor_system_running_actors();
   is_registered(! hide);
   if (is_detached()) {
     // actor lives in its own thread
@@ -983,6 +984,7 @@ void local_actor::cleanup(exit_reason reason, execution_unit* host) {
   monitorable_actor::cleanup(reason, host);
   // tell registry we're done
   is_registered(false);
+  dec_actor_system_running_actors();
 }
 
 void local_actor::quit(exit_reason reason) {
