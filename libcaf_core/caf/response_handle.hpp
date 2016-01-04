@@ -81,6 +81,31 @@ public:
 
   template <class F, class T>
   typename get_continue_helper<Output, F>::type
+  await(F f, error_handler ef, timeout_definition<T> tdef) const {
+    return await_impl(f, ef, std::move(tdef));
+  }
+
+  template <class F>
+  typename get_continue_helper<Output, F>::type
+  await(F f, error_handler ef = nullptr) const {
+    return await_impl(f, ef);
+  }
+
+  template <class F, class T>
+  typename get_continue_helper<Output, F>::type
+  await(F f, timeout_definition<T> tdef) const {
+    return await(std::move(f), nullptr, std::move(tdef));
+  }
+
+  void generic_await(std::function<void (message&)> f, error_handler ef) {
+    behavior tmp{
+      others >> f
+    };
+    self_->set_awaited_response_handler(mid_, behavior{std::move(tmp)}, std::move(ef));
+  }
+
+  template <class F, class T>
+  typename get_continue_helper<Output, F>::type
   then(F f, error_handler ef, timeout_definition<T> tdef) const {
     return then_impl(f, ef, std::move(tdef));
   }
@@ -101,10 +126,23 @@ public:
     behavior tmp{
       others >> f
     };
-    self_->set_response_handler(mid_, behavior{std::move(tmp)}, std::move(ef));
+    self_->set_multiplexed_response_handler(mid_, behavior{std::move(tmp)}, std::move(ef));
   }
 
 private:
+  template <class F, class... Ts>
+  typename get_continue_helper<Output, F>::type
+  await_impl(F& f, error_handler& ef, Ts&&... xs) const {
+    static_assert(detail::is_callable<F>::value, "argument is not callable");
+    static_assert(! std::is_base_of<match_case, F>::value,
+                  "match cases are not allowed in this context");
+    detail::type_checker<Output, F>::check();
+    self_->set_awaited_response_handler(mid_,
+                                        behavior{std::move(f), std::forward<Ts>(xs)...},
+                                        std::move(ef));
+    return {mid_};
+  }
+
   template <class F, class... Ts>
   typename get_continue_helper<Output, F>::type
   then_impl(F& f, error_handler& ef, Ts&&... xs) const {
@@ -112,12 +150,11 @@ private:
     static_assert(! std::is_base_of<match_case, F>::value,
                   "match cases are not allowed in this context");
     detail::type_checker<Output, F>::check();
-    self_->set_response_handler(mid_,
-                                behavior{std::move(f), std::forward<Ts>(xs)...},
-                                std::move(ef));
+    self_->set_multiplexed_response_handler(mid_,
+                                            behavior{std::move(f), std::forward<Ts>(xs)...},
+                                            std::move(ef));
     return {mid_};
   }
-
 
   message_id mid_;
   Self* self_;
@@ -140,23 +177,23 @@ public:
   using error_handler = std::function<void (error&)>;
 
   template <class F, class T>
-  void await(F f, error_handler ef, timeout_definition<T> tdef) {
-    await_impl(f, ef, std::move(tdef));
+  void receive(F f, error_handler ef, timeout_definition<T> tdef) {
+    receive_impl(f, ef, std::move(tdef));
   }
 
   template <class F>
-  void await(F f, error_handler ef = nullptr) {
-    await_impl(f, ef);
+  void receive(F f, error_handler ef = nullptr) {
+    receive_impl(f, ef);
   }
 
   template <class F, class T>
-  void await(F f, timeout_definition<T> tdef) {
-    await(std::move(f), nullptr, std::move(tdef));
+  void receive(F f, timeout_definition<T> tdef) {
+    receive(std::move(f), nullptr, std::move(tdef));
   }
 
 private:
   template <class F, class... Ts>
-  void await_impl(F& f, error_handler& ef, Ts&&... xs) {
+  void receive_impl(F& f, error_handler& ef, Ts&&... xs) {
     static_assert(detail::is_callable<F>::value, "argument is not callable");
     static_assert(! std::is_base_of<match_case, F>::value,
                   "match cases are not allowed in this context");

@@ -192,10 +192,9 @@ enum class msg_type {
   normal_exit,           // an exit message with normal exit reason
   non_normal_exit,       // an exit message with abnormal exit reason
   expired_timeout,       // an 'old & obsolete' timeout
-  expired_sync_response, // a sync response that already timed out
   timeout,               // triggers currently active timeout
   ordinary,              // an asynchronous message or sync. request
-  sync_response,         // a synchronous response
+  response,              // a response
   sys_message            // a system message, e.g., signalizing migration
 };
 
@@ -203,8 +202,7 @@ msg_type filter_msg(local_actor* self, mailbox_element& node) {
   message& msg = node.msg;
   auto mid = node.mid;
   if (mid.is_response())
-    return self->awaits(mid) ? msg_type::sync_response
-                             : msg_type::expired_sync_response;
+    return msg_type::response;
   // intercept system messages, e.g., signalizing migration
   if (msg.size() > 1 && msg.match_element<sys_atom>(0) && node.sender) {
     bool mismatch = false;
@@ -224,9 +222,9 @@ msg_type filter_msg(local_actor* self, mailbox_element& node) {
         auto sender = node.sender;
         // request(...)
         auto req = self->request_impl(message_priority::normal, mm,
-                                        migrate_atom::value, self->name(),
-                                        std::move(buf));
-        self->set_response_handler(req, behavior{
+                                      migrate_atom::value, self->name(),
+                                      std::move(buf));
+        self->set_awaited_response_handler(req, behavior{
           [=](ok_atom, const actor_addr& dest) {
             // respond to original message with {'OK', dest}
             sender->enqueue(mailbox_element::make_joint(self->address(),
@@ -341,21 +339,25 @@ bool handle_message_id_res(local_actor* self, message& res,
       && res.get_as<atom_value>(0) == atom("MESSAGE_ID")) {
     CAF_LOG_DEBUG("message handler returned a message id wrapper");
     auto msg_id = message_id::from_integer_value(res.get_as<uint64_t>(1));
-    auto ref_opt = self->find_pending_response(msg_id);
-    // install a behavior that calls the user-defined behavior
-    // and using the result of its inner behavior as response
-    if (ref_opt) {
-      behavior inner{std::move(std::get<1>(*ref_opt))};
-      std::get<1>(*ref_opt).assign(
-        others >> [=] {
-          // inner is const inside this lambda and mutable a C++14 feature
-          auto ires = const_cast<behavior&>(inner)(self->current_message());
-          if (ires && ! handle_message_id_res(self, *ires, hdl))
-            hdl.deliver(*ires);
-        }
-      );
-      return true;
-    }
+    auto fun = [=](maybe<local_actor::pending_response&> ref_opt) {
+      // install a behavior that calls the user-defined behavior
+      // and using the result of its inner behavior as response
+      if (ref_opt) {
+        behavior inner{std::move(ref_opt->second.first)};
+        ref_opt->second.first.assign(
+          others >> [=] {
+            // inner is const inside this lambda and mutable a C++14 feature
+            auto ires = const_cast<behavior&>(inner)(self->current_message());
+            if (ires && ! handle_message_id_res(self, *ires, hdl))
+              hdl.deliver(*ires);
+          }
+        );
+        return true;
+      }
+      return false;
+    };
+    return fun(self->find_multiplexed_response(msg_id))
+           || fun(self->find_awaited_response(msg_id));
   }
   return false;
 }
@@ -401,9 +403,6 @@ invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
     case msg_type::normal_exit:
       CAF_LOG_DEBUG("dropped normal exit signal");
       return im_dropped;
-    case msg_type::expired_sync_response:
-      CAF_LOG_DEBUG("dropped expired sync response");
-      return im_dropped;
     case msg_type::expired_timeout:
       CAF_LOG_DEBUG("dropped expired timeout message");
       return im_dropped;
@@ -426,28 +425,55 @@ invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
       CAF_LOG_DEBUG("async timeout ignored while in sync mode");
       return im_dropped;
     }
-    case msg_type::sync_response:
-      CAF_LOG_DEBUG("handle as synchronous response:" << CAF_ARG(ptr->msg)
-                    << CAF_ARG(ptr->mid) << CAF_ARG(awaited_id));
-      if (awaited_id.valid() && ptr->mid == awaited_id) {
-        bool is_sync_tout = ptr->msg.match_elements<sync_timeout_msg>();
-        ptr.swap(current_element_);
-        if (is_sync_tout) {
-          if (fun.timeout().valid()) {
-            fun.handle_timeout();
-          }
-        } else {
-          if (! post_process_invoke_res(this, false,
-                                        fun(current_element_->msg))) {
-            CAF_LOG_WARNING("sync failure occured:" << CAF_ARG(id()));
+    case msg_type::response: {
+      auto mid = ptr->mid;
+      auto ref_opt = find_multiplexed_response(mid);
+      if (ref_opt) {
+        CAF_LOG_DEBUG("handle as multiplexed response:" << CAF_ARG(ptr->msg)
+                      << CAF_ARG(mid) << CAF_ARG(awaited_id));
+        if (! awaited_id.valid()) {
+          auto& ref_fun = ref_opt->second.first;
+          bool is_sync_tout = ptr->msg.match_elements<sync_timeout_msg>();
+          ptr.swap(current_element_);
+          if (is_sync_tout) {
+            if (ref_fun.timeout().valid()) {
+              ref_fun.handle_timeout();
+            }
+          } else if (! post_process_invoke_res(this, false,
+                                               ref_fun(current_element_->msg))) {
+            CAF_LOG_WARNING("multiplexed response failure occured:" << CAF_ARG(id()));
             quit(exit_reason::unhandled_sync_failure);
           }
+          ptr.swap(current_element_);
+          mark_multiplexed_arrived(mid);
+          return im_success;
         }
-        ptr.swap(current_element_);
-        mark_arrived(awaited_id);
-        return im_success;
+        CAF_LOG_DEBUG("skipped multiplexed response:" << CAF_ARG(awaited_id));
+        return im_skipped;
+      } else if (awaits(mid)) {
+        if (awaited_id.valid() && mid == awaited_id) {
+          bool is_sync_tout = ptr->msg.match_elements<sync_timeout_msg>();
+          ptr.swap(current_element_);
+          if (is_sync_tout) {
+            if (fun.timeout().valid()) {
+              fun.handle_timeout();
+            }
+          } else {
+            if (! post_process_invoke_res(this, false,
+                                          fun(current_element_->msg))) {
+              CAF_LOG_WARNING("sync response failure occured:" << CAF_ARG(id()));
+              quit(exit_reason::unhandled_sync_failure);
+            }
+          }
+          ptr.swap(current_element_);
+          mark_awaited_arrived(awaited_id);
+          return im_success;
+        }
+        return im_skipped;
       }
-      return im_skipped;
+      CAF_LOG_DEBUG("dropped expired response");
+      return im_dropped;
+    }
     case msg_type::ordinary:
       if (! awaited_id.valid()) {
         auto had_timeout = has_timeout();
@@ -473,14 +499,14 @@ invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
   CAF_CRITICAL("invalid message type");
 }
 
-struct pending_response_predicate {
+struct awaited_response_predicate {
 public:
-  explicit pending_response_predicate(message_id mid) : mid_(mid) {
+  explicit awaited_response_predicate(message_id mid) : mid_(mid) {
     // nop
   }
 
   bool operator()(const local_actor::pending_response& pr) const {
-    return std::get<0>(pr) == mid_;
+    return pr.first == mid_;
   }
 
 private:
@@ -489,55 +515,94 @@ private:
 
 message_id local_actor::new_request_id(message_priority mp) {
   auto result = ++last_request_id_;
-  pending_responses_.emplace_front(result.response_id(), behavior{}, nullptr);
   return mp == message_priority::normal ? result : result.with_high_priority();
 }
 
-void local_actor::mark_arrived(message_id mid) {
+void local_actor::mark_awaited_arrived(message_id mid) {
   CAF_ASSERT(mid.is_response());
-  pending_response_predicate predicate{mid};
-  pending_responses_.remove_if(predicate);
+  awaited_response_predicate predicate{mid};
+  awaited_responses_.remove_if(predicate);
 }
 
 bool local_actor::awaits_response() const {
-  return ! pending_responses_.empty();
+  return ! awaited_responses_.empty();
 }
 
 bool local_actor::awaits(message_id mid) const {
   CAF_ASSERT(mid.is_response());
-  pending_response_predicate predicate{mid};
-  return std::any_of(pending_responses_.begin(), pending_responses_.end(),
+  awaited_response_predicate predicate{mid};
+  return std::any_of(awaited_responses_.begin(), awaited_responses_.end(),
                      predicate);
 }
 
 maybe<local_actor::pending_response&>
-local_actor::find_pending_response(message_id mid) {
-  pending_response_predicate predicate{mid};
-  auto last = pending_responses_.end();
-  auto i = std::find_if(pending_responses_.begin(), last, predicate);
+local_actor::find_awaited_response(message_id mid) {
+  awaited_response_predicate predicate{mid};
+  auto last = awaited_responses_.end();
+  auto i = std::find_if(awaited_responses_.begin(), last, predicate);
   if (i != last)
     return *i;
   return none;
 }
-void local_actor::set_response_handler(message_id response_id, behavior bhvr,
-                                       error_handler f) {
-  auto opt_ref = find_pending_response(response_id);
+
+void local_actor::set_awaited_response_handler(message_id response_id, behavior bhvr,
+                                               error_handler f) {
+  if (bhvr.timeout().valid()) {
+    request_sync_timeout_msg(bhvr.timeout(), response_id);
+  }
+  auto opt_ref = find_awaited_response(response_id);
   if (opt_ref) {
-    if (bhvr.timeout().valid())
-      request_sync_timeout_msg(bhvr.timeout(), response_id);
-    get<1>(*opt_ref) = std::move(bhvr);
-    get<2>(*opt_ref) = std::move(f);
+    opt_ref->second.first = std::move(bhvr);
+    opt_ref->second.second = std::move(f);
+  } else {
+    awaited_responses_.emplace_front(response_id,
+                                     std::make_pair(std::move(bhvr), std::move(f)));
   }
 }
 
 behavior& local_actor::awaited_response_handler() {
-  return get<1>(pending_responses_.front());
+  return awaited_responses_.front().second.first;
 }
 
 message_id local_actor::awaited_response_id() {
-  return pending_responses_.empty()
+  return awaited_responses_.empty()
          ? message_id::make()
-         : get<0>(pending_responses_.front());
+         : awaited_responses_.front().first;
+}
+
+void local_actor::mark_multiplexed_arrived(message_id mid) {
+  CAF_ASSERT(mid.is_response());
+  multiplexed_responses_.erase(mid);
+}
+
+bool local_actor::multiplexes(message_id mid) const {
+  CAF_ASSERT(mid.is_response());
+  auto it = multiplexed_responses_.find(mid);
+  return it != multiplexed_responses_.end();
+}
+
+maybe<local_actor::pending_response&>
+local_actor::find_multiplexed_response(message_id mid) {
+  auto it = multiplexed_responses_.find(mid);
+  if (it != multiplexed_responses_.end()) {
+    return *it;
+  }
+  return none;
+}
+
+void local_actor::set_multiplexed_response_handler(message_id response_id, behavior bhvr,
+                                                   error_handler f) {
+  if (bhvr.timeout().valid()) {
+    request_sync_timeout_msg(bhvr.timeout(), response_id);
+  }
+  auto opt_ref = find_multiplexed_response(response_id);
+  if (opt_ref) {
+    opt_ref->second.first = std::move(bhvr);
+    opt_ref->second.second = std::move(f);
+  } else {
+    multiplexed_responses_.emplace(response_id,
+                                   std::make_pair(std::move(bhvr), std::move(f)));
+  }
 }
 
 void local_actor::launch(execution_unit* eu, bool lazy, bool hide) {
@@ -693,8 +758,8 @@ resumable::resume_result local_actor::resume(execution_unit* eu,
     }
     int handled_msgs = 0;
     auto reset_timeout_if_needed = [&] {
-      if (handled_msgs > 0 && has_behavior()) {
-        request_timeout(get_behavior().timeout());
+      if (handled_msgs > 0 && ! bhvr_stack_.empty()) {
+        request_timeout(bhvr_stack_.back().timeout());
       }
     };
     for (size_t i = 0; i < max_throughput; ++i) {
@@ -757,8 +822,11 @@ resumable::resume_result local_actor::resume(execution_unit* eu,
 
 std::pair<resumable::resume_result, invoke_message_result>
 local_actor::exec_event(mailbox_element_ptr& ptr) {
-  auto& bhvr = awaits_response() ? awaited_response_handler()
-                                 : bhvr_stack().back();
+  behavior empty_bhvr;
+  auto& bhvr =
+    awaits_response() ? awaited_response_handler()
+                      : bhvr_stack().empty() ? empty_bhvr
+                                             : bhvr_stack().back();
   auto mid = awaited_response_id();
   auto res = invoke_message(ptr, bhvr, mid);
   switch (res) {
@@ -879,7 +947,12 @@ void local_actor::push_to_cache(mailbox_element_ptr ptr) {
 }
 
 bool local_actor::invoke_from_cache() {
-  return invoke_from_cache(get_behavior(), awaited_response_id());
+  behavior empty_bhvr;
+  auto& bhvr =
+    awaits_response() ? awaited_response_handler()
+                      : bhvr_stack().empty() ? empty_bhvr
+                                             : bhvr_stack().back();
+  return invoke_from_cache(bhvr, awaited_response_id());
 }
 
 bool local_actor::invoke_from_cache(behavior& bhvr, message_id mid) {
@@ -948,11 +1021,6 @@ void local_actor::load_state(deserializer&, const unsigned int) {
   throw std::logic_error("local_actor::deserialize called");
 }
 
-behavior& local_actor::get_behavior() {
-  return pending_responses_.empty() ? bhvr_stack_.back()
-                                    : get<1>(pending_responses_.front());
-}
-
 bool local_actor::finished() {
   if (has_behavior() && planned_exit_reason() == exit_reason::not_exited)
     return false;
@@ -974,7 +1042,8 @@ void local_actor::cleanup(exit_reason reason, execution_unit* host) {
   current_mailbox_element().reset();
   detail::sync_request_bouncer f{reason};
   mailbox_.close(f);
-  pending_responses_.clear();
+  awaited_responses_.clear();
+  multiplexed_responses_.clear();
   { // lifetime scope of temporary
     actor_addr me = address();
     for (auto& subscription : subscriptions_)
