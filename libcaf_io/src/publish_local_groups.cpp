@@ -26,7 +26,8 @@
 namespace caf {
 namespace io {
 
-uint16_t publish_local_groups(uint16_t port, const char* addr) {
+uint16_t publish_local_groups(uint16_t port, const char* addr,
+                              bool reuse_addr) {
   auto group_nameserver = []() -> behavior {
     return {
       [](get_atom, const std::string& name) {
@@ -37,7 +38,7 @@ uint16_t publish_local_groups(uint16_t port, const char* addr) {
   auto gn = spawn<hidden>(group_nameserver);
   uint16_t result;
   try {
-    result = publish(gn, port, addr);
+    result = publish(gn, port, addr, reuse_addr);
   }
   catch (std::exception&) {
     anon_send_exit(gn, exit_reason::user_shutdown);
