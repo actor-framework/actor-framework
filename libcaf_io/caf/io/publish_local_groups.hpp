@@ -30,7 +30,8 @@ namespace io {
 ///          chooses a random high-level port.
 /// @throws bind_failure
 /// @throws network_error
-uint16_t publish_local_groups(uint16_t port, const char* addr = nullptr);
+uint16_t publish_local_groups(uint16_t port, const char* addr = nullptr,
+                              bool reuse_addr = false);
 
 } // namespace io
 } // namespace caf
