@@ -80,6 +80,9 @@ public:
   template <class... Ts>
   void assign(Ts... xs) {
     static_assert(sizeof...(Ts) > 0, "assign without arguments called");
+    static_assert(! detail::disjunction<may_have_timeout<
+                      typename std::decay<Ts>::type>::value...
+                    >::value, "Timeouts are only allowed in behaviors");
     impl_ = detail::make_behavior(xs...);
   }
 
