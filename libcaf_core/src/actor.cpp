@@ -78,16 +78,17 @@ actor_id actor::id() const noexcept {
 actor actor::bind_impl(message msg) const {
   if (! ptr_)
     return invalid_actor;
-  return actor_cast<actor>(make_counted<bound_actor>(&ptr_->home_system(),
-                                                     address(),
+  return actor_cast<actor>(make_counted<bound_actor>(address(),
                                                      std::move(msg)));
 }
 
 actor operator*(actor f, actor g) {
   if (! f || ! g)
     return invalid_actor;
-  auto ptr = make_counted<composed_actor>(&f->home_system(),
-                                          f.address(), g.address());
+  auto ptr = make_counted<composed_actor>(f.address(),
+                                          g.address(),
+                                          g->home_system().message_types(
+                                            actor{}));
   return actor_cast<actor>(std::move(ptr));
 }
 
