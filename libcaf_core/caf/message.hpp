@@ -30,6 +30,7 @@
 #include "caf/make_counted.hpp"
 #include "caf/skip_message.hpp"
 #include "caf/index_mapping.hpp"
+#include "caf/allowed_unsafe_message_type.hpp"
 
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/apply_args.hpp"
@@ -383,27 +384,41 @@ struct unbox_message_element<atom_constant<V>, 0> {
   using type = atom_value;
 };
 
+///
+template <class T>
+struct is_serializable_or_whitelisted {
+  static constexpr bool value = detail::is_serializable<T>::value
+                                || allowed_unsafe_message_type<T>::value;
+};
+
 /// Returns a new `message` containing the values `(x, xs...)`.
 /// @relates message
-template <class V, class... Ts>
+template <class T, class... Ts>
 typename std::enable_if<
-  ! std::is_same<message, typename std::decay<V>::type>::value
+  ! std::is_same<message, typename std::decay<T>::type>::value
   || (sizeof...(Ts) > 0),
   message
 >::type
-make_message(V&& x, Ts&&... xs) {
+make_message(T&& x, Ts&&... xs) {
   using namespace caf::detail;
   using stored_types =
     type_list<
       typename unbox_message_element<
-        typename strip_and_convert<V>::type
+        typename strip_and_convert<T>::type
       >::type,
       typename unbox_message_element<
         typename strip_and_convert<Ts>::type
       >::type...
     >;
+  static_assert(tl_forall<stored_types, is_serializable_or_whitelisted>::value,
+                "at least one type is not serializable via free "
+                "'serialize(InOrOut&, T&, const unsigned int)' or "
+                "`T::serialize(InOrOut&, const unsigned int)` "
+                "member function; you can whitelist individual types by "
+                "specializing `caf::allowed_unsafe_message_type<T>` "
+                "or using the macro CAF_ALLOW_UNSAFE_MESSAGE_TYPE");
   using storage = typename tl_apply<stored_types, tuple_vals>::type;
-  auto ptr = make_counted<storage>(std::forward<V>(x), std::forward<Ts>(xs)...);
+  auto ptr = make_counted<storage>(std::forward<T>(x), std::forward<Ts>(xs)...);
   return message{detail::message_data::cow_ptr{std::move(ptr)}};
 }
 
