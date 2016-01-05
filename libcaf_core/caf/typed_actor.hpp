@@ -27,6 +27,7 @@
 #include "caf/replies_to.hpp"
 #include "caf/bound_actor.hpp"
 #include "caf/abstract_actor.hpp"
+#include "caf/composed_actor.hpp"
 #include "caf/stateful_actor.hpp"
 #include "caf/typed_behavior.hpp"
 #include "caf/typed_response_promise.hpp"
@@ -214,7 +215,7 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
   bind(Ts&&... xs) const {
     if (! ptr_)
       return invalid_actor;
-    auto ptr = make_counted<bound_actor>(&ptr_->home_system(), ptr_->address(),
+    auto ptr = make_counted<bound_actor>(ptr_->address(),
                                          make_message(xs...));
     return {ptr.release(), false};
   }
@@ -287,18 +288,21 @@ bool operator!=(const typed_actor<Xs...>& x,
 template <class... Xs, class... Ys>
 typename detail::mpi_composition<
   typed_actor,
-  detail::type_list<Ys...>,
-  Xs...
+  detail::type_list<Xs...>,
+  Ys...
 >::type
 operator*(typed_actor<Xs...> f, typed_actor<Ys...> g) {
   using result =
     typename detail::mpi_composition<
       typed_actor,
-      detail::type_list<Ys...>,
-      Xs...
+      detail::type_list<Xs...>,
+      Ys...
     >::type;
-  return actor_cast<result>(actor_cast<actor>(std::move(f))
-                            * actor_cast<actor>(std::move(g)));
+  auto ptr = make_counted<composed_actor>(f.address(),
+                                          g.address(),
+                                          g->home_system().message_types(
+                                            result{}));
+  return actor_cast<result>(std::move(ptr));
 }
 
 /// @relates typed_actor

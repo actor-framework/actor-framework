@@ -20,25 +20,39 @@
 #ifndef CAF_COMPOSED_ACTOR_HPP
 #define CAF_COMPOSED_ACTOR_HPP
 
-#include "caf/local_actor.hpp"
+#include "caf/actor_addr.hpp"
+#include "caf/mailbox_element.hpp"
+#include "caf/monitorable_actor.hpp"
 
 namespace caf {
 
 /// An actor decorator implementing "dot operator"-like compositions,
-/// i.e., `f.g(x) = f(g(x))`.
-class composed_actor : public local_actor {
+/// i.e., `f.g(x) = f(g(x))`. Composed actors are hidden actors.
+/// A composed actor exits when either of its constituent actors exits;
+/// Constituent actors have no dependency on the composed actor
+/// by default, and exit of a composed actor has no effect on its
+/// constituent actors. A composed actor is hosted on the same actor
+/// system and node as `g`, the first actor on the forwarding chain.
+class composed_actor : public monitorable_actor {
 public:
-  composed_actor(actor_system* sys, actor_addr first, actor_addr second);
+  using message_types_set = std::set<std::string>;
 
-  void initialize() override;
+  composed_actor(actor_addr f, actor_addr g, message_types_set msg_types);
 
+  // non-system messages are processed and then forwarded;
+  // system messages are handled and consumed on the spot;
+  // in either case, the processing is done synchronously
   void enqueue(mailbox_element_ptr what, execution_unit* host) override;
 
-private:
-  bool is_system_message(const message& msg);
+  message_types_set message_types() const override;
 
-  actor_addr first_;
-  actor_addr second_;
+private:
+  void handle_system_message(const message& msg, execution_unit* host);
+  static bool is_system_message(const message& msg);
+
+  actor_addr f_;
+  actor_addr g_;
+  message_types_set msg_types_;
 };
 
 } // namespace caf
