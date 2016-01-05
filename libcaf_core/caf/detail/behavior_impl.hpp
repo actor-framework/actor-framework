@@ -21,6 +21,7 @@
 #define CAF_DETAIL_BEHAVIOR_IMPL_HPP
 
 #include <tuple>
+#include <iterator>
 #include <type_traits>
 
 #include "caf/none.hpp"
@@ -70,10 +71,10 @@ public:
 
   behavior_impl(duration tout = duration{});
 
-  virtual bhvr_invoke_result invoke(message&);
+  bhvr_invoke_result invoke(message&);
 
-  inline bhvr_invoke_result invoke(message&& arg) {
-    message tmp(std::move(arg));
+  inline bhvr_invoke_result invoke(message&& x) {
+    message tmp(std::move(x));
     return invoke(tmp);
   }
 
@@ -87,10 +88,24 @@ public:
 
   pointer or_else(const pointer& other);
 
+  using iterator = match_case_info*;
+
+  inline iterator begin() {
+    return begin_;
+  }
+
+  inline iterator end() {
+    return end_;
+  }
+
+  inline size_t size() const {
+    return std::distance(begin_, end_);
+  }
+
 protected:
+  iterator begin_;
+  iterator end_;
   duration timeout_;
-  match_case_info* begin_;
-  match_case_info* end_;
 };
 
 template <size_t Pos, size_t Size>

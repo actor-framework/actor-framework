@@ -95,4 +95,32 @@ CAF_TEST(composition3) {
   );
 }
 
+CAF_TEST(composition4) {
+  auto impl = [](event_based_actor* self, const actor& buddy) {
+    return
+      message_handler{
+        [=](int i) -> skip_message_t {
+          self->send(buddy, "skip: " + std::to_string(i));
+          return skip_message();
+        }
+      }.or_else(message_handler{
+        [=](int i) {
+          self->send(buddy, "handle: " + std::to_string(i));
+        }
+      });
+  };
+  scoped_actor self;
+  auto testee = spawn(impl, self);
+  for (int i = 0; i < 3; ++i)
+    self->send(testee, i);
+  int i = 0;
+  self->receive_for(i, 3)(
+    [&](const std::string& str) {
+      CAF_CHECK_EQUAL(str, "skip: " + std::to_string(i));
+    }
+  );
+  self->send_exit(testee, exit_reason::user_shutdown);
+  self->await_all_other_actors_done();
+}
+
 CAF_TEST_FIXTURE_SCOPE_END()
