@@ -103,10 +103,6 @@ struct fixture {
   actor spawn(Ts&&... xs) {
     return system.spawn<T, Os>(xs...);
   }
-
-  ~fixture() {
-    system.await_all_actors_done();
-  }
 };
 
 } // namespace <anonymous>

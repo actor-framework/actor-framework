@@ -85,7 +85,6 @@ CAF_TEST(unpublishing) {
       CAF_MESSAGE("unpublish succeeded");
     }
     anon_send_exit(d, exit_reason::user_shutdown);
-    system.await_all_actors_done();
   }
   // check after dtor of system was called
   CAF_CHECK_EQUAL(s_dtor_called.load(), 2);

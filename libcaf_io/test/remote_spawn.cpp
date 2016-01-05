@@ -103,7 +103,6 @@ void run_client(int argc, char** argv, uint16_t port) {
   auto serv = system.middleman().remote_actor("localhost", port);
   CAF_REQUIRE(serv);
   system.spawn(client, serv);
-  system.await_all_actors_done();
 }
 
 void run_server(int argc, char** argv) {
@@ -114,7 +113,6 @@ void run_server(int argc, char** argv) {
   auto port = *mport;
   CAF_MESSAGE("published server at port " << port);
   std::thread child([=] { run_client(argc, argv, port); });
-  system.await_all_actors_done();
   child.join();
 }
 

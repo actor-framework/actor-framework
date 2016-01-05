@@ -227,5 +227,4 @@ int main(int argc, char** argv) {
          << res.helptext << endl;
     return 1;
   }
-  system.await_all_actors_done();
 }

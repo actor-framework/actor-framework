@@ -56,5 +56,4 @@ void testee(event_based_actor* self) {
 CAF_TEST(test_local_group) {
   actor_system system;
   system.spawn(testee);
-  system.await_all_actors_done();
 }

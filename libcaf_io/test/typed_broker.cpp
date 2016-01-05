@@ -189,7 +189,6 @@ void run_client(int argc, char** argv, uint16_t port) {
   CAF_MESSAGE("spawn_client_typed finished");
   anon_send(p, kickoff_atom::value, *cl);
   CAF_MESSAGE("`kickoff_atom` has been send");
-  system.await_all_actors_done();
 }
 
 void run_server(int argc, char** argv) {

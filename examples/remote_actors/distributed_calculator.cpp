@@ -296,5 +296,4 @@ int main(int argc, char** argv) {
   else {
     client_repl(system, host, port);
   }
-  system.await_all_actors_done();
 }

@@ -87,18 +87,15 @@ CAF_TEST(test_serial_reply) {
       }
     );
   });
-  { // lifetime scope of self
-    scoped_actor self{system};
-    CAF_MESSAGE("ID of main: " << self->id());
-    self->request(master, hi_atom::value).await(
-      [](ho_atom) {
-        CAF_MESSAGE("received 'ho'");
-      },
-      [&](const error& err) {
-        CAF_TEST_ERROR("Error: " << self->system().render(err));
-      }
-    );
-    self->send_exit(master, exit_reason::user_shutdown);
-  }
-  system.await_all_actors_done();
+  scoped_actor self{system};
+  CAF_MESSAGE("ID of main: " << self->id());
+  self->request(master, hi_atom::value).await(
+    [](ho_atom) {
+      CAF_MESSAGE("received 'ho'");
+    },
+    [&](const error& err) {
+      CAF_TEST_ERROR("Error: " << self->system().render(err));
+    }
+  );
+  self->send_exit(master, exit_reason::user_shutdown);
 }

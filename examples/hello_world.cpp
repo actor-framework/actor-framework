@@ -41,6 +41,5 @@ int main() {
   auto mirror_actor = system.spawn(mirror);
   // create another actor that calls 'hello_world(mirror_actor)';
   system.spawn(hello_world, mirror_actor);
-  // wait until all other actors we have spawned are done
-  system.await_all_actors_done();
+  // system will wait until both actors are done before leaving main
 }

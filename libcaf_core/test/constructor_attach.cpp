@@ -88,5 +88,4 @@ CAF_TEST(constructor_attach) {
   };
   actor_system system;
   anon_send(system.spawn<spawner>(), die_atom::value);
-  system.await_all_actors_done();
 }

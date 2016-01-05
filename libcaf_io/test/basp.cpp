@@ -151,7 +151,6 @@ public:
       nid = invalid_node_id;
     for (auto& ptr : pseudo_remote_)
       ptr.reset();
-    system.await_all_actors_done();
   }
 
   // our "virtual communication backend"

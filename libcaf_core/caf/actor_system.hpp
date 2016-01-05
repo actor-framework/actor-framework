@@ -366,6 +366,18 @@ public:
     return spawn_in_groups<T>({grp}, std::forward<Ts>(xs)...);
   }
 
+  /// Returns whether this actor system calls `await_all_actors_done`
+  /// in its destructor before shutting down.
+  inline bool await_actors_before_shutdown() const {
+    return await_actors_before_shutdown_;
+  }
+
+  /// Configures whether this actor system calls `await_all_actors_done`
+  /// in its destructor before shutting down.
+  inline void await_actors_before_shutdown(bool x) {
+    await_actors_before_shutdown_ = x;
+  }
+
   /// @cond PRIVATE
   inline atom_value backend_name() const {
     return backend_name_;
@@ -415,6 +427,7 @@ private:
   scoped_execution_unit dummy_execution_unit_;
   atom_value backend_name_;
   riac::probe* probe_;
+  bool await_actors_before_shutdown_;
 };
 
 } // namespace caf

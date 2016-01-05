@@ -89,10 +89,6 @@ behavior ping2(event_based_actor* self, const actor& pong_actor) {
 
 struct fixture {
   actor_system system;
-
-  ~fixture() {
-    system.await_all_actors_done();
-  }
 };
 
 } // namespace <anonymous>

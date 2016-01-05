@@ -210,5 +210,4 @@ int main(int, char**) {
                                   "Nietzsche", "Descartes"};
   for (size_t i = 0; i < 5; ++i)
     self->spawn<philosopher>(names[i], chopsticks[i], chopsticks[(i + 1) % 5]);
-  system.await_all_actors_done();
 }

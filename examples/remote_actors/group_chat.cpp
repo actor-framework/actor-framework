@@ -156,5 +156,4 @@ int main(int argc, char** argv) {
   }
   // force actor to quit
   anon_send_exit(client_actor, exit_reason::user_shutdown);
-  system.await_all_actors_done();
 }

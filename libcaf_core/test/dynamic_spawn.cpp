@@ -330,7 +330,6 @@ struct fixture {
   }
 
   ~fixture() {
-    system.await_all_actors_done();
     system.~actor_system();
     // destructor of actor_system must make sure all
     // destructors of all actors have been run

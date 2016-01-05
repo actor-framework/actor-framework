@@ -61,10 +61,6 @@ struct fixture {
     self->send_exit(testee, exit_reason::user_shutdown);
     self->await_all_other_actors_done();
   }
-
-  ~fixture() {
-    system.await_all_actors_done();
-  }
 };
 
 } // namespace <anonymous>

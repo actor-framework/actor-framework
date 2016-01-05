@@ -174,5 +174,4 @@ int main(int argc, char** argv) {
            << endl;
     }
   });
-  system.await_all_actors_done();
 }

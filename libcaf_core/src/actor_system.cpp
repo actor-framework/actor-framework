@@ -56,7 +56,8 @@ actor_system::actor_system(actor_system_config&& cfg)
       registry_(*this),
       groups_(*this),
       middleman_(nullptr),
-      dummy_execution_unit_(this) {
+      dummy_execution_unit_(this),
+      await_actors_before_shutdown_(true) {
   CAF_SET_LOGGER_SYS(this);
   backend_name_ = cfg.middleman_network_backend;
   for (auto& f : cfg.module_factories_) {
@@ -134,6 +135,8 @@ actor_system::actor_system(actor_system_config&& cfg)
 }
 
 actor_system::~actor_system() {
+  if (await_actors_before_shutdown_)
+    await_all_actors_done();
   // stop modules in reverse order
   registry_.stop();
   for (auto i = modules_.rbegin(); i != modules_.rend(); ++i)

@@ -37,14 +37,11 @@ CAF_TEST(simple_reply_response) {
       }
     );
   });
-  {
-    scoped_actor self{system};
-    self->send(s, ok_atom::value);
-    self->receive(
-      others >> [&] {
-        CAF_CHECK(self->current_message() == make_message(ok_atom::value));
-      }
-    );
-  }
-  system.await_all_actors_done();
+  scoped_actor self{system};
+  self->send(s, ok_atom::value);
+  self->receive(
+    others >> [&] {
+      CAF_CHECK(self->current_message() == make_message(ok_atom::value));
+    }
+  );
 }

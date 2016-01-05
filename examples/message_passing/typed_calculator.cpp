@@ -83,5 +83,4 @@ int main() {
   system.await_all_actors_done();
   // test class-based impl
   system.spawn(tester, system.spawn<typed_calculator_class>());
-  system.await_all_actors_done();
 }

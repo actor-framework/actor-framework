@@ -30,6 +30,4 @@ int main() {
       );
     });
   }
-  // wait until all other actors we've spawned are done
-  system.await_all_actors_done();
 }

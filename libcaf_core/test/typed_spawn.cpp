@@ -344,10 +344,6 @@ struct fixture {
                      .add_message_type<get_state_msg>("get_state_msg")) {
     // nop
   }
-
-  ~fixture() {
-    system.await_all_actors_done();
-  }
 };
 
 } // namespace <anonymous>
@@ -363,17 +359,14 @@ CAF_TEST(typed_spawns) {
   test_typed_spawn(system.spawn(typed_server1));
   system.await_all_actors_done();
   CAF_MESSAGE("finished test series with `typed_server1`");
-
   test_typed_spawn(system.spawn(typed_server2));
   system.await_all_actors_done();
   CAF_MESSAGE("finished test series with `typed_server2`");
-  {
-    scoped_actor self{system};
-    test_typed_spawn(self->spawn<typed_server3>("hi there", self));
-    self->receive(on("hi there") >> [] {
-      CAF_MESSAGE("received \"hi there\"");
-    });
-  }
+  scoped_actor self{system};
+  test_typed_spawn(self->spawn<typed_server3>("hi there", self));
+  self->receive(on("hi there") >> [] {
+    CAF_MESSAGE("received \"hi there\"");
+  });
 }
 
 CAF_TEST(event_testee_series) {
@@ -558,6 +551,8 @@ CAF_TEST(dot_composition) {
       CAF_CHECK(res == (42 * 2.0) * (42 * 4.0));
     }
   );
+  anon_send_exit(first, exit_reason::user_shutdown);
+  anon_send_exit(second, exit_reason::user_shutdown);
 }
 
 CAF_TEST(currying) {

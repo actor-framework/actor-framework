@@ -186,10 +186,6 @@ struct fixture {
     rs.str.assign(string(str.rbegin(), str.rend()));
     msg = make_message(i32, te, str, rs);
   }
-
-  ~fixture() {
-    system.await_all_actors_done();
-  }
 };
 
 struct is_message {

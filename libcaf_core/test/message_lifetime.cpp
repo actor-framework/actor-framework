@@ -99,10 +99,6 @@ struct fixture {
     for (size_t i = 0; i < 100; ++i)
       system.spawn<tester>(system.spawn<testee, Os>());
   }
-
-  ~fixture() {
-    system.await_all_actors_done();
-  }
 };
 
 } // namespace <anonymous>

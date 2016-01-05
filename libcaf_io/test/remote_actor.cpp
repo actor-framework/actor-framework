@@ -528,7 +528,6 @@ void launch_remote_side(int argc, char** argv, uint16_t group_port,
       CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
     }
   );
-  system.await_all_actors_done();
 }
 
 void test_remote_actor(int argc, char** argv) {

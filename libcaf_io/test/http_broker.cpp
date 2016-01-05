@@ -200,7 +200,6 @@ public:
     // since we do not invoke any "I/O" from this point on that would
     // trigger the exit message implicitly
     mpx_->flush_runnables();
-    system.await_all_actors_done();
   }
 
   // helper class for a nice-and-easy "mock(...).expect(...)" syntax

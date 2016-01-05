@@ -105,5 +105,4 @@ int main(int argc, const char** argv) {
   std::getline(std::cin, dummy);
   // kill server
   anon_send_exit(*server_actor, exit_reason::user_shutdown);
-  system.await_all_actors_done();
 }

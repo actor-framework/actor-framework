@@ -116,10 +116,6 @@ struct fixture {
       }
     );
   }
-
-  ~fixture() {
-    system.await_all_actors_done();
-  }
 };
 
 } // namespace <anonymous>

@@ -99,10 +99,6 @@ private:
 
 struct fixture {
   actor_system system;
-
-  ~fixture() {
-    system.await_all_actors_done();
-  }
 };
 
 } // namespace <anonymous>
