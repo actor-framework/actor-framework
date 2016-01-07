@@ -23,25 +23,29 @@
 #include "caf/message.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/attachable.hpp"
-#include "caf/abstract_actor.hpp"
+#include "caf/monitorable_actor.hpp"
 
 namespace caf {
 
 /// An actor decorator implementing `std::bind`-like compositions.
-class bound_actor : public abstract_actor {
+/// Bound actors are hidden actors. A bound actor exits when its
+/// decorated actor exits. The decorated actor has no dependency
+/// on the bound actor by default, and exit of a bound actor has
+/// no effect on the decorated actor. Bound actors are hosted on
+/// the same actor system and node as decorated actors.
+class bound_actor : public monitorable_actor {
 public:
-  bound_actor(actor_system* sys, actor_addr decorated, message msg);
+  bound_actor(actor_addr decorated, message msg);
 
-  void attach(attachable_ptr ptr) override;
-
-  size_t detach(const attachable::token& what) override;
-
+  // non-system messages are processed and then forwarded;
+  // system messages are handled and consumed on the spot;
+  // in either case, the processing is done synchronously
   void enqueue(mailbox_element_ptr what, execution_unit* host) override;
 
-protected:
-  bool link_impl(linking_operation op, const actor_addr& other) override;
-
 private:
+  void handle_system_message(const message& msg, execution_unit* host);
+  static bool is_system_message(const message& msg);
+
   actor_addr decorated_;
   message merger_;
 };
