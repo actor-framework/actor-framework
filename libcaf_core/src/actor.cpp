@@ -25,12 +25,13 @@
 #include "caf/actor_addr.hpp"
 #include "caf/serializer.hpp"
 #include "caf/actor_proxy.hpp"
-#include "caf/bound_actor.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/deserializer.hpp"
 #include "caf/blocking_actor.hpp"
-#include "caf/composed_actor.hpp"
 #include "caf/event_based_actor.hpp"
+
+#include "caf/decorator/adapter.hpp"
+#include "caf/decorator/sequencer.hpp"
 
 namespace caf {
 
@@ -78,16 +79,16 @@ actor_id actor::id() const noexcept {
 actor actor::bind_impl(message msg) const {
   if (! ptr_)
     return invalid_actor;
-  return actor_cast<actor>(make_counted<bound_actor>(address(),
-                                                     std::move(msg)));
+  return actor_cast<actor>(make_counted<decorator::adapter>(address(),
+                                                            std::move(msg)));
 }
 
 actor operator*(actor f, actor g) {
   if (! f || ! g)
     return invalid_actor;
-  auto ptr = make_counted<composed_actor>(f.address(),
-                                          g.address(),
-                                          std::set<std::string>{});
+  auto ptr = make_counted<decorator::sequencer>(f.address(),
+                                                g.address(),
+                                                std::set<std::string>{});
   return actor_cast<actor>(std::move(ptr));
 }
 

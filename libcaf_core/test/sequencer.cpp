@@ -19,7 +19,7 @@
 
 #include "caf/config.hpp"
 
-#define CAF_SUITE composed_actor
+#define CAF_SUITE sequencer
 #include "caf/test/unit_test.hpp"
 
 #include "caf/all.hpp"
@@ -77,7 +77,7 @@ struct fixture {
 
 } // namespace <anonymous>
 
-CAF_TEST_FIXTURE_SCOPE(composed_actor_tests, fixture)
+CAF_TEST_FIXTURE_SCOPE(sequencer_tests, fixture)
 
 CAF_TEST(identity) {
   actor_system system_of_g;

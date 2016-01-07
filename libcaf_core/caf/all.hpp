@@ -47,7 +47,6 @@
 #include "caf/replies_to.hpp"
 #include "caf/serializer.hpp"
 #include "caf/actor_proxy.hpp"
-#include "caf/bound_actor.hpp"
 #include "caf/exit_reason.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/ref_counted.hpp"
@@ -62,7 +61,6 @@
 #include "caf/abstract_actor.hpp"
 #include "caf/abstract_group.hpp"
 #include "caf/blocking_actor.hpp"
-#include "caf/composed_actor.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/execution_unit.hpp"
 #include "caf/memory_managed.hpp"
@@ -89,6 +87,9 @@
 #include "caf/scoped_execution_unit.hpp"
 #include "caf/typed_continue_helper.hpp"
 #include "caf/typed_event_based_actor.hpp"
+
+#include "caf/decorator/adapter.hpp"
+#include "caf/decorator/sequencer.hpp"
 
 #include "caf/scheduler/abstract_coordinator.hpp"
 

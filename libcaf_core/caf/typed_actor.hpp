@@ -25,12 +25,13 @@
 #include "caf/actor.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/replies_to.hpp"
-#include "caf/bound_actor.hpp"
 #include "caf/abstract_actor.hpp"
-#include "caf/composed_actor.hpp"
 #include "caf/stateful_actor.hpp"
 #include "caf/typed_behavior.hpp"
 #include "caf/typed_response_promise.hpp"
+
+#include "caf/decorator/adapter.hpp"
+#include "caf/decorator/sequencer.hpp"
 
 #include "caf/detail/mpi_bind.hpp"
 #include "caf/detail/mpi_composition.hpp"
@@ -215,8 +216,8 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
   bind(Ts&&... xs) const {
     if (! ptr_)
       return invalid_actor;
-    auto ptr = make_counted<bound_actor>(ptr_->address(),
-                                         make_message(xs...));
+    auto ptr = make_counted<decorator::adapter>(ptr_->address(),
+                                                make_message(xs...));
     return {ptr.release(), false};
   }
 
@@ -298,10 +299,9 @@ operator*(typed_actor<Xs...> f, typed_actor<Ys...> g) {
       detail::type_list<Xs...>,
       Ys...
     >::type;
-  auto ptr = make_counted<composed_actor>(f.address(),
-                                          g.address(),
-                                          g->home_system().message_types(
-                                            result{}));
+  auto mts = g->home_system().message_types(result{});
+  auto ptr = make_counted<decorator::sequencer>(f.address(), g.address(),
+                                                std::move(mts));
   return actor_cast<result>(std::move(ptr));
 }
 

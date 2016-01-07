@@ -17,35 +17,37 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/composed_actor.hpp"
+#include "caf/decorator/adapter.hpp"
 
+#include "caf/sec.hpp"
+#include "caf/actor_cast.hpp"
 #include "caf/actor_system.hpp"
+#include "caf/mailbox_element.hpp"
+#include "caf/system_messages.hpp"
 #include "caf/default_attachable.hpp"
 
 #include "caf/detail/disposer.hpp"
+#include "caf/detail/merged_tuple.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 
 namespace caf {
+namespace decorator {
 
-composed_actor::composed_actor(actor_addr f, actor_addr g,
-                               message_types_set msg_types)
-    : monitorable_actor(&g->home_system(),
-                        g->home_system().next_actor_id(),
-                        g->node(),
-                        is_abstract_actor_flag | is_actor_dot_decorator_flag),
-      f_(std::move(f)),
-      g_(std::move(g)),
-      msg_types_(std::move(msg_types)) {
-  // composed actor has dependency on constituent actors by default;
-  // if either constituent actor is already dead upon establishing
-  // the dependency, the actor is spawned dead
-  f_->attach(default_attachable::make_monitor(address()));
-  if (g_ != f_)
-    g_->attach(default_attachable::make_monitor(address()));
+adapter::adapter(actor_addr decorated, message msg)
+    : monitorable_actor(&decorated->home_system(),
+                        decorated->home_system().next_actor_id(),
+                        decorated->node(),
+                        is_abstract_actor_flag
+                        | is_actor_bind_decorator_flag),
+      decorated_(std::move(decorated)),
+      merger_(std::move(msg)) {
+  // bound actor has dependency on the decorated actor by default;
+  // if the decorated actor is already dead upon establishing the
+  // dependency, the actor is spawned dead
+  decorated_->attach(default_attachable::make_monitor(address()));
 }
 
-void composed_actor::enqueue(mailbox_element_ptr what,
-                             execution_unit* context) {
+void adapter::enqueue(mailbox_element_ptr what, execution_unit* host) {
   if (! what)
     return; // not even an empty message
   auto reason = exit_reason_.load();
@@ -61,27 +63,23 @@ void composed_actor::enqueue(mailbox_element_ptr what,
     }
     return;
   }
-  auto down_msg_handler = [&](const down_msg& dm) {
-    // quit if either `f` or `g` are no longer available
-    if (dm.source == f_ || dm.source == g_)
-      monitorable_actor::cleanup(dm.reason, context);
+  auto down_handler = [&](const down_msg& dm) {
+    if (dm.source == decorated_)
+      cleanup(dm.reason, host);
   };
   // handle and consume the system message;
   // the only effect that MAY result from handling a system message
   // is to exit the actor if it hasn't exited already;
   // `handle_system_message()` is thread-safe, and if the actor
   // has already exited upon the invocation, nothing is done
-  if (handle_system_message(*what, context, false, down_msg_handler))
+  if (handle_system_message(*what, host, false, down_handler))
     return;
-  // process and forward the non-system message;
-  // store `f` as the next stage in the forwarding chain
-  what->stages.push_back(f_);
-  // forward modified message to `g`
-  g_->enqueue(std::move(what), context);
+  // process and forward non-system messages
+  auto& msg = what->msg;
+  message tmp{detail::merged_tuple::make(merger_, std::move(msg))};
+  msg.swap(tmp);
+  decorated_->enqueue(std::move(what), host);
 }
 
-composed_actor::message_types_set composed_actor::message_types() const {
-  return msg_types_;
-}
-
+} // namespace decorator
 } // namespace caf

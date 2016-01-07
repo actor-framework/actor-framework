@@ -25,6 +25,7 @@ set (LIBCAF_CORE_SRCS
      src/actor_registry.cpp
      src/actor_system.cpp
      src/actor_system_config.cpp
+     src/adapter.cpp
      src/atom.cpp
      src/attachable.cpp
      src/behavior.cpp
@@ -33,9 +34,7 @@ set (LIBCAF_CORE_SRCS
      src/binary_deserializer.cpp
      src/binary_serializer.cpp
      src/blocking_actor.cpp
-     src/bound_actor.cpp
      src/channel.cpp
-     src/composed_actor.cpp
      src/concatenated_tuple.cpp
      src/continue_helper.cpp
      src/decorated_tuple.cpp
@@ -80,6 +79,7 @@ set (LIBCAF_CORE_SRCS
      src/scoped_execution_unit.cpp
      src/sec.cpp
      src/serializer.cpp
+     src/sequencer.cpp
      src/shared_spinlock.cpp
      src/sync_request_bouncer.cpp
      src/try_match.cpp

@@ -17,36 +17,43 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_BOUND_ACTOR_HPP
-#define CAF_BOUND_ACTOR_HPP
+#ifndef CAF_DECORATOR_SEQUENCER_HPP
+#define CAF_DECORATOR_SEQUENCER_HPP
 
-#include "caf/message.hpp"
 #include "caf/actor_addr.hpp"
-#include "caf/attachable.hpp"
+#include "caf/mailbox_element.hpp"
 #include "caf/monitorable_actor.hpp"
 
 namespace caf {
+namespace decorator {
 
-/// An actor decorator implementing `std::bind`-like compositions.
-/// Bound actors are hidden actors. A bound actor exits when its
-/// decorated actor exits. The decorated actor has no dependency
-/// on the bound actor by default, and exit of a bound actor has
-/// no effect on the decorated actor. Bound actors are hosted on
-/// the same actor system and node as decorated actors.
-class bound_actor : public monitorable_actor {
+/// An actor decorator implementing "dot operator"-like compositions,
+/// i.e., `f.g(x) = f(g(x))`. Composed actors are hidden actors.
+/// A composed actor exits when either of its constituent actors exits;
+/// Constituent actors have no dependency on the composed actor
+/// by default, and exit of a composed actor has no effect on its
+/// constituent actors. A composed actor is hosted on the same actor
+/// system and node as `g`, the first actor on the forwarding chain.
+class sequencer : public monitorable_actor {
 public:
-  bound_actor(actor_addr decorated, message msg);
+  using message_types_set = std::set<std::string>;
+
+  sequencer(actor_addr f, actor_addr g, message_types_set msg_types);
 
   // non-system messages are processed and then forwarded;
   // system messages are handled and consumed on the spot;
   // in either case, the processing is done synchronously
   void enqueue(mailbox_element_ptr what, execution_unit* host) override;
 
+  message_types_set message_types() const override;
+
 private:
-  actor_addr decorated_;
-  message merger_;
+  actor_addr f_;
+  actor_addr g_;
+  message_types_set msg_types_;
 };
 
+} // namespace decorator
 } // namespace caf
 
-#endif // CAF_BOUND_ACTOR_HPP
+#endif // CAF_DECORATOR_SEQUENCER_HPP

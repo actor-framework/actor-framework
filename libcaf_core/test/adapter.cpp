@@ -19,7 +19,7 @@
 
 #include "caf/config.hpp"
 
-#define CAF_SUITE bound_actor
+#define CAF_SUITE adapter
 #include "caf/test/unit_test.hpp"
 
 #include "caf/all.hpp"
@@ -62,7 +62,7 @@ struct fixture {
 
 } // namespace <anonymous>
 
-CAF_TEST_FIXTURE_SCOPE(bound_actor_tests, fixture)
+CAF_TEST_FIXTURE_SCOPE(adapter_tests, fixture)
 
 CAF_TEST(identity) {
   auto dbl = system.spawn(dbl_bhvr);
