@@ -32,6 +32,7 @@
 #include <condition_variable>
 
 #include "caf/abstract_actor.hpp"
+#include "caf/mailbox_element.hpp"
 
 #include "caf/detail/type_traits.hpp"
 #include "caf/detail/functor_attachable.hpp"
@@ -41,6 +42,11 @@ namespace caf {
 /// Base class for all actor implementations.
 class monitorable_actor : public abstract_actor {
 public:
+  /// Returns an implementation-dependent name for logging purposes, which
+  /// is only valid as long as the actor is running. The default
+  /// implementation simply returns "actor".
+  virtual const char* name() const;
+
   void attach(attachable_ptr ptr) override;
 
   size_t detach(const attachable::token& what) override;
@@ -82,7 +88,7 @@ protected:
 
   bool remove_backlink_impl(const actor_addr& other);
 
-  // Tries to run a custom exception handler for `eptr`.
+  // tries to run a custom exception handler for `eptr`
   maybe<exit_reason> handle(const std::exception_ptr& eptr);
 
   inline void attach_impl(attachable_ptr& ptr) {
@@ -94,6 +100,20 @@ protected:
                             attachable_ptr& ptr,
                             bool stop_on_first_hit = false,
                             bool dry_run = false);
+
+  bool handle_system_message(mailbox_element& node, execution_unit* context,
+                             bool trap_exit);
+
+  template <class F>
+  bool handle_system_message(mailbox_element& node, execution_unit* context,
+                             bool trap_exit, F& down_msg_handler) {
+    auto& msg = node.msg;
+    if (msg.size() == 1 && msg.match_element<down_msg>(0)) {
+      down_msg_handler(msg.get_as<down_msg>(0));
+      return true;
+    }
+    return handle_system_message(node, context, trap_exit);
+  }
 
   // initially set to exit_reason::not_exited
   std::atomic<exit_reason> exit_reason_;

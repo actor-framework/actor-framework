@@ -57,7 +57,7 @@ struct fixture {
   }
 
   actor_system system;
-  scoped_actor self{ system, true };
+  scoped_actor self{system, true};
 };
 
 } // namespace <anonymous>
@@ -103,8 +103,8 @@ CAF_TEST(lifetime_2) {
 CAF_TEST(lifetime_3) {
   auto dbl = system.spawn(dbl_bhvr);
   auto bound = dbl.bind(1);
-  anon_send(bound, down_msg{ self->address(),
-                             exit_reason::kill });
+  anon_send(bound, down_msg{self->address(),
+                             exit_reason::kill});
   CAF_CHECK(! exited(bound));
   self->monitor(bound);
   auto em_sender = system.spawn(dbl_bhvr);
@@ -177,7 +177,7 @@ CAF_TEST(full_currying) {
     [](int v) {
       CAF_CHECK(v == 2);
     },
-    [](error err) {
+    [](error) {
       CAF_CHECK(false);
     }
   );

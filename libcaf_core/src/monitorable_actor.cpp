@@ -19,6 +19,7 @@
 
 #include "caf/monitorable_actor.hpp"
 
+#include "caf/sec.hpp"
 #include "caf/logger.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/actor_system.hpp"
@@ -26,6 +27,10 @@
 #include "caf/default_attachable.hpp"
 
 namespace caf {
+
+const char* monitorable_actor::name() const {
+  return "monitorable_actor";
+}
 
 void monitorable_actor::attach(attachable_ptr ptr) {
   CAF_LOG_TRACE("");
@@ -208,6 +213,46 @@ size_t monitorable_actor::detach_impl(const attachable::token& what,
     return stop_on_hit ? 1 : 1 + detach_impl(what, ptr, stop_on_hit, dry_run);
   }
   return detach_impl(what, ptr->next, stop_on_hit, dry_run);
+}
+
+bool monitorable_actor::handle_system_message(mailbox_element& node,
+                                              execution_unit* context,
+                                              bool trap_exit) {
+  auto& msg = node.msg;
+  if (! trap_exit && msg.size() == 1 && msg.match_element<exit_msg>(0)) {
+    auto& em = msg.get_as<exit_msg>(0);
+    CAF_ASSERT(em.reason != exit_reason::not_exited);
+    if (em.reason != exit_reason::normal)
+      cleanup(em.reason, context);
+    return true;
+  } else if (msg.size() > 1 && msg.match_element<sys_atom>(0)) {
+    if (! node.sender)
+      return true;
+    error err;
+    mailbox_element_ptr res;
+    msg.apply({
+      [&](sys_atom, get_atom, std::string& what) {
+        CAF_LOG_TRACE(CAF_ARG(what));
+        if (what != "info") {
+          err = sec::invalid_sys_key;
+          return;
+        }
+        res = mailbox_element::make_joint(address(), node.mid.response_id(), {},
+                                          ok_atom::value, std::move(what),
+                                          address(), name());
+      },
+      others >> [&] {
+        err = sec::unsupported_sys_message;
+      }
+    });
+    if (err && node.mid.is_request())
+      res = mailbox_element::make_joint(address(), node.mid.response_id(),
+                                        {}, std::move(err));
+    if (res)
+      node.sender->enqueue(std::move(res), context);
+    return true;
+  }
+  return false;
 }
 
 } // namespace caf

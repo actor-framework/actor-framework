@@ -87,8 +87,7 @@ actor operator*(actor f, actor g) {
     return invalid_actor;
   auto ptr = make_counted<composed_actor>(f.address(),
                                           g.address(),
-                                          g->home_system().message_types(
-                                            actor{}));
+                                          std::set<std::string>{});
   return actor_cast<actor>(std::move(ptr));
 }
 

@@ -72,12 +72,12 @@ struct fixture {
   }
 
   actor_system system;
-  scoped_actor self{ system, true };
+  scoped_actor self{system, true};
 };
 
 } // namespace <anonymous>
 
-CAF_TEST_FIXTURE_SCOPE(bound_actor_tests, fixture)
+CAF_TEST_FIXTURE_SCOPE(composed_actor_tests, fixture)
 
 CAF_TEST(identity) {
   actor_system system_of_g;
@@ -85,15 +85,14 @@ CAF_TEST(identity) {
   auto g = system_of_g.spawn(first_stage_impl);
   auto f = system_of_f.spawn(second_stage_impl);
   CAF_CHECK(system_of_g.registry().running() == 1);
-  auto composed = f * g;
+  auto h = f * g;
   CAF_CHECK(system_of_g.registry().running() == 1);
-  CAF_CHECK(&composed->home_system() == &g->home_system());
-  CAF_CHECK(composed->node() == g->node());
-  CAF_CHECK(composed->id() != g->id());
-  CAF_CHECK(composed != g);
-  CAF_CHECK(composed->message_types()
-            == g->home_system().message_types(composed));
-  anon_send_exit(composed, exit_reason::kill);
+  CAF_CHECK(&h->home_system() == &g->home_system());
+  CAF_CHECK(h->node() == g->node());
+  CAF_CHECK(h->id() != g->id());
+  CAF_CHECK(h != g);
+  CAF_CHECK(h->message_types() == g->home_system().message_types(h));
+  anon_send_exit(h, exit_reason::kill);
   anon_send_exit(f, exit_reason::kill);
   anon_send_exit(g, exit_reason::kill);
 }
@@ -105,8 +104,8 @@ CAF_TEST(lifetime_1a) {
   self->monitor(g);
   anon_send_exit(g, exit_reason::kill);
   wait_until_exited();
-  auto fg = f * g;
-  CAF_CHECK(exited(fg));
+  auto h = f * g;
+  CAF_CHECK(exited(h));
   anon_send_exit(f, exit_reason::kill);
 }
 
@@ -117,8 +116,8 @@ CAF_TEST(lifetime_1b) {
   self->monitor(f);
   anon_send_exit(f, exit_reason::kill);
   wait_until_exited();
-  auto fg = f * g;
-  CAF_CHECK(exited(fg));
+  auto h = f * g;
+  CAF_CHECK(exited(h));
   anon_send_exit(g, exit_reason::kill);
 }
 
@@ -126,8 +125,8 @@ CAF_TEST(lifetime_1b) {
 CAF_TEST(lifetime_2a) {
   auto g = system.spawn(dbl_bhvr);
   auto f = system.spawn(dbl_bhvr);
-  auto fg = f * g;
-  self->monitor(fg);
+  auto h = f * g;
+  self->monitor(h);
   anon_send(g, message{});
   wait_until_exited();
   anon_send_exit(f, exit_reason::kill);
@@ -137,8 +136,8 @@ CAF_TEST(lifetime_2a) {
 CAF_TEST(lifetime_2b) {
   auto g = system.spawn(dbl_bhvr);
   auto f = system.spawn(dbl_bhvr);
-  auto fg = f * g;
-  self->monitor(fg);
+  auto h = f * g;
+  self->monitor(h);
   anon_send(f, message{});
   wait_until_exited();
   anon_send_exit(g, exit_reason::kill);
@@ -150,13 +149,12 @@ CAF_TEST(lifetime_2b) {
 CAF_TEST(lifetime_3) {
   auto g = system.spawn(dbl_bhvr);
   auto f = system.spawn(dbl_bhvr);
-  auto fg = f * g;
-  self->monitor(fg);
-  anon_send(fg, down_msg{ self->address(),
-                          exit_reason::kill });
-  CAF_CHECK(! exited(fg));
+  auto h = f * g;
+  self->monitor(h);
+  anon_send(h, down_msg{self->address(), exit_reason::kill});
+  CAF_CHECK(! exited(h));
   auto em_sender = system.spawn(dbl_bhvr);
-  em_sender->link_to(fg.address());
+  em_sender->link_to(h.address());
   anon_send_exit(em_sender, exit_reason::kill);
   wait_until_exited();
   self->request(f, 1).receive(
@@ -182,10 +180,10 @@ CAF_TEST(lifetime_3) {
 CAF_TEST(request_response_promise) {
   auto g = system.spawn(dbl_bhvr);
   auto f = system.spawn(dbl_bhvr);
-  auto fg = f * g;
-  anon_send_exit(fg, exit_reason::kill);
-  CAF_CHECK(exited(fg));
-  self->request(fg, 1).receive(
+  auto h = f * g;
+  anon_send_exit(h, exit_reason::kill);
+  CAF_CHECK(exited(h));
+  self->request(h, 1).receive(
     [](int) {
       CAF_CHECK(false);
     },

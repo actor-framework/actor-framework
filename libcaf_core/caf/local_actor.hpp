@@ -357,10 +357,7 @@ public:
     attach(attachable_ptr{new functor_attachable(std::move(f))});
   }
 
-  /// Returns an implementation-dependent name for logging purposes, which
-  /// is only valid as long as the actor is running. The default
-  /// implementation simply returns "actor".
-  virtual const char* name() const;
+  const char* name() const override;
 
   /// Serializes the state of this actor to `sink`. This function is
   /// only called if this actor has set the `is_serializable` flag.

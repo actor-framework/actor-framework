@@ -47,9 +47,6 @@ public:
   message_types_set message_types() const override;
 
 private:
-  void handle_system_message(const message& msg, execution_unit* host);
-  static bool is_system_message(const message& msg);
-
   actor_addr f_;
   actor_addr g_;
   message_types_set msg_types_;

@@ -43,9 +43,6 @@ public:
   void enqueue(mailbox_element_ptr what, execution_unit* host) override;
 
 private:
-  void handle_system_message(const message& msg, execution_unit* host);
-  static bool is_system_message(const message& msg);
-
   actor_addr decorated_;
   message merger_;
 };

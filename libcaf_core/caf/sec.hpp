@@ -41,6 +41,8 @@ enum class sec : uint8_t {
   state_not_serializable,
   /// An actor received an invalid key for `('sys', 'get', key)` messages.
   invalid_sys_key,
+  /// An actor received an unsupported system message.
+  unsupported_sys_message,
   /// A remote node disconnected during CAF handshake.
   disconnect_during_handshake,
   /// Tried to forward a message via BASP to an invalid actor handle.
