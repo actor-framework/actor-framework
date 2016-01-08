@@ -31,10 +31,12 @@
 #include "caf/typed_response_promise.hpp"
 
 #include "caf/decorator/adapter.hpp"
+#include "caf/decorator/splitter.hpp"
 #include "caf/decorator/sequencer.hpp"
 
 #include "caf/detail/mpi_bind.hpp"
-#include "caf/detail/mpi_composition.hpp"
+#include "caf/detail/mpi_splice.hpp"
+#include "caf/detail/mpi_sequencer.hpp"
 
 namespace caf {
 
@@ -287,21 +289,45 @@ bool operator!=(const typed_actor<Xs...>& x,
 /// Returns a new actor that implements the composition `f.g(x) = f(g(x))`.
 /// @relates typed_actor
 template <class... Xs, class... Ys>
-typename detail::mpi_composition<
+typename detail::mpi_sequencer<
   typed_actor,
   detail::type_list<Xs...>,
   Ys...
 >::type
 operator*(typed_actor<Xs...> f, typed_actor<Ys...> g) {
   using result =
-    typename detail::mpi_composition<
+    typename detail::mpi_sequencer<
       typed_actor,
       detail::type_list<Xs...>,
       Ys...
     >::type;
+  if (! f || ! g)
+    return invalid_actor;
   auto mts = g->home_system().message_types(result{});
   auto ptr = make_counted<decorator::sequencer>(f.address(), g.address(),
                                                 std::move(mts));
+  return actor_cast<result>(std::move(ptr));
+}
+
+template <class... Xs, class... Ts>
+typename detail::mpi_splice<
+  typed_actor,
+  detail::type_list<Xs...>,
+  typename Ts::signatures...
+>::type
+splice(const typed_actor<Xs...>& x, const Ts&... xs) {
+  using result =
+    typename detail::mpi_splice<
+      typed_actor,
+      detail::type_list<Xs...>,
+      typename Ts::signatures...
+    >::type;
+  std::vector<actor_addr> tmp{x.address(), xs.address()...};
+  for (auto& addr : tmp)
+    if (! addr)
+      return invalid_actor;
+  auto mts = x->home_system().message_types(result{});
+  auto ptr = make_counted<decorator::splitter>(std::move(tmp), std::move(mts));
   return actor_cast<result>(std::move(ptr));
 }
 

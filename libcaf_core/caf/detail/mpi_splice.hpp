@@ -17,21 +17,66 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_TBIND_HPP
-#define CAF_DETAIL_TBIND_HPP
+#ifndef CAF_DETAIL_MPI_SPLICE_HPP
+#define CAF_DETAIL_MPI_SPLICE_HPP
+
+#include <type_traits>
+
+#include "caf/replies_to.hpp"
+
+#include "caf/detail/type_list.hpp"
+#include "caf/detail/typed_actor_util.hpp"
 
 namespace caf {
 namespace detail {
 
-template <template <class, typename> class Tpl, typename Arg1>
-struct tbind {
-  template <class Arg2>
-  struct type {
-    static constexpr bool value = Tpl<Arg1, Arg2>::value;
-  };
+template <class X, class... Ts>
+struct mpi_splice_one;
+
+template <class X>
+struct mpi_splice_one<X> {
+  using type = X;
+};
+
+template <class X, class... Ts>
+struct mpi_splice_one<X, none_t, Ts...> {
+  using type = none_t;
+};
+
+template <class... Xs, class... Ys, class... Zs, class... Ts>
+struct mpi_splice_one<typed_mpi<type_list<Xs...>, type_list<Ys...>>,
+                      typed_mpi<type_list<Xs...>, type_list<Zs...>>,
+                      Ts...>
+: mpi_splice_one<typed_mpi<type_list<Xs...>, type_list<Ys..., Zs...>>, Ts...> {
+  // nop
+};
+
+template <template <class...> class Target, class List, class... Lists>
+struct mpi_splice;
+
+template <template <class...> class Target, class... Ts, class... Lists>
+struct mpi_splice<Target, type_list<Ts...>, Lists...> {
+  using spliced_list =
+    type_list<
+      typename mpi_splice_one<
+        Ts,
+        typename tl_find<
+          Lists,
+          input_is<typename Ts::input_types>::template eval
+        >::type...
+      >::type...
+    >;
+  using filtered_list =
+    typename tl_filter_not_type<
+      spliced_list,
+      none_t
+    >::type;
+  static_assert(tl_size<filtered_list>::value > 0,
+                "cannot splice incompatible actor handles");
+  using type = typename tl_apply<filtered_list, Target>::type;
 };
 
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_TBIND_HPP
+#endif // CAF_DETAIL_MPI_SPLICE_HPP

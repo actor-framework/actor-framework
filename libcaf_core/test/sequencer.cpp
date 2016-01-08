@@ -28,7 +28,7 @@ using namespace caf;
 
 namespace {
 
-behavior dbl_bhvr(event_based_actor* self) {
+behavior testee(event_based_actor* self) {
   return {
     [](int v) {
       return 2 * v;
@@ -42,13 +42,13 @@ behavior dbl_bhvr(event_based_actor* self) {
 using first_stage = typed_actor<replies_to<int>::with<double, double>>;
 using second_stage = typed_actor<replies_to<double, double>::with<double>>;
 
-first_stage::behavior_type first_stage_impl() {
+first_stage::behavior_type typed_first_stage() {
   return [](int i) {
     return std::make_tuple(i * 2.0, i * 4.0);
   };
 };
 
-second_stage::behavior_type second_stage_impl() {
+second_stage::behavior_type typed_second_stage() {
   return [](double x, double y) {
     return x * y;
   };
@@ -82,8 +82,8 @@ CAF_TEST_FIXTURE_SCOPE(sequencer_tests, fixture)
 CAF_TEST(identity) {
   actor_system system_of_g;
   actor_system system_of_f;
-  auto g = system_of_g.spawn(first_stage_impl);
-  auto f = system_of_f.spawn(second_stage_impl);
+  auto g = system_of_g.spawn(typed_first_stage);
+  auto f = system_of_f.spawn(typed_second_stage);
   CAF_CHECK(system_of_g.registry().running() == 1);
   auto h = f * g;
   CAF_CHECK(system_of_g.registry().running() == 1);
@@ -99,8 +99,8 @@ CAF_TEST(identity) {
 
 // spawned dead if `g` is already dead upon spawning
 CAF_TEST(lifetime_1a) {
-  auto g = system.spawn(dbl_bhvr);
-  auto f = system.spawn(dbl_bhvr);
+  auto g = system.spawn(testee);
+  auto f = system.spawn(testee);
   self->monitor(g);
   anon_send_exit(g, exit_reason::kill);
   wait_until_exited();
@@ -111,8 +111,8 @@ CAF_TEST(lifetime_1a) {
 
 // spawned dead if `f` is already dead upon spawning
 CAF_TEST(lifetime_1b) {
-  auto g = system.spawn(dbl_bhvr);
-  auto f = system.spawn(dbl_bhvr);
+  auto g = system.spawn(testee);
+  auto f = system.spawn(testee);
   self->monitor(f);
   anon_send_exit(f, exit_reason::kill);
   wait_until_exited();
@@ -123,8 +123,8 @@ CAF_TEST(lifetime_1b) {
 
 // `f.g` exits when `g` exits
 CAF_TEST(lifetime_2a) {
-  auto g = system.spawn(dbl_bhvr);
-  auto f = system.spawn(dbl_bhvr);
+  auto g = system.spawn(testee);
+  auto f = system.spawn(testee);
   auto h = f * g;
   self->monitor(h);
   anon_send(g, message{});
@@ -134,8 +134,8 @@ CAF_TEST(lifetime_2a) {
 
 // `f.g` exits when `f` exits
 CAF_TEST(lifetime_2b) {
-  auto g = system.spawn(dbl_bhvr);
-  auto f = system.spawn(dbl_bhvr);
+  auto g = system.spawn(testee);
+  auto f = system.spawn(testee);
   auto h = f * g;
   self->monitor(h);
   anon_send(f, message{});
@@ -147,13 +147,13 @@ CAF_TEST(lifetime_2b) {
 // 2) exits by receiving an exit message
 // 3) exit has no effect on constituent actors
 CAF_TEST(lifetime_3) {
-  auto g = system.spawn(dbl_bhvr);
-  auto f = system.spawn(dbl_bhvr);
+  auto g = system.spawn(testee);
+  auto f = system.spawn(testee);
   auto h = f * g;
   self->monitor(h);
   anon_send(h, down_msg{self->address(), exit_reason::kill});
   CAF_CHECK(! exited(h));
-  auto em_sender = system.spawn(dbl_bhvr);
+  auto em_sender = system.spawn(testee);
   em_sender->link_to(h.address());
   anon_send_exit(em_sender, exit_reason::kill);
   wait_until_exited();
@@ -178,8 +178,8 @@ CAF_TEST(lifetime_3) {
 }
 
 CAF_TEST(request_response_promise) {
-  auto g = system.spawn(dbl_bhvr);
-  auto f = system.spawn(dbl_bhvr);
+  auto g = system.spawn(testee);
+  auto f = system.spawn(testee);
   auto h = f * g;
   anon_send_exit(h, exit_reason::kill);
   CAF_CHECK(exited(h));
@@ -197,8 +197,8 @@ CAF_TEST(request_response_promise) {
 
 // single composition of distinct actors
 CAF_TEST(dot_composition_1) {
-  auto first = system.spawn(first_stage_impl);
-  auto second = system.spawn(second_stage_impl);
+  auto first = system.spawn(typed_first_stage);
+  auto second = system.spawn(typed_second_stage);
   auto first_then_second = second * first;
   self->request(first_then_second, 42).receive(
     [](double res) {
@@ -211,7 +211,7 @@ CAF_TEST(dot_composition_1) {
 
 // multiple self composition
 CAF_TEST(dot_composition_2) {
-  auto dbl_actor = system.spawn(dbl_bhvr);
+  auto dbl_actor = system.spawn(testee);
   auto dbl_x4_actor = dbl_actor * dbl_actor
                       * dbl_actor * dbl_actor;
   self->request(dbl_x4_actor, 1).receive(

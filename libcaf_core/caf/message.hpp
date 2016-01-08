@@ -267,6 +267,8 @@ public:
     return size() == sizeof...(Ts) && match_elements_impl(p0, tlist);
   }
 
+  message& operator+=(const message& x);
+
   /// @cond PRIVATE
 
   using raw_ptr = detail::message_data*;

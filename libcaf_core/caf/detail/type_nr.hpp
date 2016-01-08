@@ -94,7 +94,7 @@ using int_types_by_size =
 template <class T, bool IsIntegral = std::is_integral<T>::value>
 struct type_nr {
   static constexpr uint16_t value =
-    static_cast<uint16_t>(tl_find<sorted_builtin_types, T>::value + 1);
+    static_cast<uint16_t>(tl_index_of<sorted_builtin_types, T>::value + 1);
 };
 
 template <class T>
@@ -107,13 +107,13 @@ struct type_nr<T, true> {
       typename tpair::second
     >::type;
   static constexpr uint16_t value =
-    static_cast<uint16_t>(tl_find<sorted_builtin_types, type>::value + 1);
+    static_cast<uint16_t>(tl_index_of<sorted_builtin_types, type>::value + 1);
 };
 
 template <>
 struct type_nr<bool, true> {
   static constexpr uint16_t value =
-    static_cast<uint16_t>(tl_find<sorted_builtin_types, bool>::value + 1);
+    static_cast<uint16_t>(tl_index_of<sorted_builtin_types, bool>::value + 1);
 };
 
 template <atom_value V>

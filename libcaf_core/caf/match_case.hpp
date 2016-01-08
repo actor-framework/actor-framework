@@ -326,7 +326,7 @@ protected:
 template <class Pattern>
 struct pattern_has_wildcard {
   static constexpr bool value =
-    detail::tl_find<
+    detail::tl_index_of<
       Pattern,
       anything
     >::value != -1;

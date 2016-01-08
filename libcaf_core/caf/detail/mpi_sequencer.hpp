@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_MPI_COMPOSITION_HPP
-#define CAF_DETAIL_MPI_COMPOSITION_HPP
+#ifndef CAF_DETAIL_MPI_SEQUENCER_HPP
+#define CAF_DETAIL_MPI_SEQUENCER_HPP
 
 #include "caf/replies_to.hpp"
 
@@ -28,30 +28,30 @@ namespace caf {
 namespace detail {
 
 template <class X, class Y>
-struct mpi_composition_one {
+struct mpi_sequencer_one {
   using type = void;
 };
 
 template <class... Xs, class... Ys, class... Zs>
-struct mpi_composition_one<typed_mpi<type_list<Xs...>, type_list<Ys...>>,
-                           typed_mpi<type_list<Ys...>, type_list<Zs...>>> {
+struct mpi_sequencer_one<typed_mpi<type_list<Xs...>, type_list<Ys...>>,
+                         typed_mpi<type_list<Ys...>, type_list<Zs...>>> {
   using type = typed_mpi<type_list<Xs...>, type_list<Zs...>>;
 };
 
 template <class X, class Y>
-struct mpi_composition_all;
+struct mpi_sequencer_all;
 
 template <class X, class... Ys>
-struct mpi_composition_all<X, type_list<Ys...>> {
-  using type = type_list<typename mpi_composition_one<X, Ys>::type...>;
+struct mpi_sequencer_all<X, type_list<Ys...>> {
+  using type = type_list<typename mpi_sequencer_one<X, Ys>::type...>;
 };
 
 template <template <class...> class Target, class Ys, class... Xs>
-struct mpi_composition {
+struct mpi_sequencer {
   // combine each X with all Ys
   using all =
     typename tl_concat<
-      typename mpi_composition_all<Xs, Ys>::type...
+      typename mpi_sequencer_all<Xs, Ys>::type...
     >::type;
   // drop all mismatches (void results)
   using filtered = typename tl_filter_not_type<all, void>::type;
@@ -66,4 +66,4 @@ struct mpi_composition {
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_MPI_COMPOSITION_HPP
+#endif // CAF_DETAIL_MPI_SEQUENCER_HPP

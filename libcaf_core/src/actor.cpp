@@ -31,6 +31,7 @@
 #include "caf/event_based_actor.hpp"
 
 #include "caf/decorator/adapter.hpp"
+#include "caf/decorator/splitter.hpp"
 #include "caf/decorator/sequencer.hpp"
 
 namespace caf {
@@ -104,6 +105,20 @@ void serialize(deserializer& source, actor& x, const unsigned int) {
 
 std::string to_string(const actor& x) {
   return to_string(x.address());
+}
+
+actor actor::splice_impl(std::initializer_list<actor> xs) {
+  if (xs.size() < 2)
+    return invalid_actor;
+  std::vector<actor_addr> tmp;
+  for (auto& x : xs)
+    if (x)
+      tmp.push_back(x.address());
+    else
+      return invalid_actor;
+  auto ptr = make_counted<decorator::splitter>(std::move(tmp),
+                                               std::set<std::string>{});
+  return actor_cast<actor>(std::move(ptr));
 }
 
 } // namespace caf

@@ -17,9 +17,12 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/decorator/sequencer.hpp"
+#include "caf/decorator/splitter.hpp"
 
 #include "caf/actor_system.hpp"
+#include "caf/stateful_actor.hpp"
+#include "caf/response_promise.hpp"
+#include "caf/event_based_actor.hpp"
 #include "caf/default_attachable.hpp"
 
 #include "caf/detail/disposer.hpp"
@@ -28,23 +31,56 @@
 namespace caf {
 namespace decorator {
 
-sequencer::sequencer(actor_addr f, actor_addr g, message_types_set msg_types)
-    : monitorable_actor(&g->home_system(),
-                        g->home_system().next_actor_id(),
-                        g->node(),
+namespace {
+
+struct splitter_state {
+  response_promise rp;
+  message result;
+  size_t pending;
+};
+
+behavior fan_out_fan_in(stateful_actor<splitter_state>* self,
+                        const std::vector<actor_addr>& workers) {
+  return {
+    others >> [=] {
+      self->state.rp = self->make_response_promise();
+      self->state.pending = workers.size();
+      // request().await() has LIFO ordering
+      for (auto i = workers.rbegin(); i != workers.rend(); ++i)
+        self->request(actor_cast<actor>(*i), self->current_message()).generic_await(
+          [=](const message& tmp) {
+            self->state.result += tmp;
+            if (--self->state.pending == 0)
+              self->state.rp.deliver(std::move(self->state.result));
+          },
+          [=](const error& err) {
+            self->state.rp.deliver(err);
+            self->quit();
+          }
+        );
+      self->unbecome();
+    }
+  };
+}
+
+} // namespace <anonymous>
+
+splitter::splitter(std::vector<actor_addr> workers, message_types_set msg_types)
+    : monitorable_actor(&workers.front()->home_system(),
+                        workers.front()->home_system().next_actor_id(),
+                        workers.front()->node(),
                         is_abstract_actor_flag | is_actor_dot_decorator_flag),
-      f_(std::move(f)),
-      g_(std::move(g)),
+      workers_(std::move(workers)),
       msg_types_(std::move(msg_types)) {
   // composed actor has dependency on constituent actors by default;
   // if either constituent actor is already dead upon establishing
   // the dependency, the actor is spawned dead
-  f_->attach(default_attachable::make_monitor(address()));
-  if (g_ != f_)
-    g_->attach(default_attachable::make_monitor(address()));
+  auto addr = address();
+  for (auto& worker : workers_)
+    worker->attach(default_attachable::make_monitor(addr));
 }
 
-void sequencer::enqueue(mailbox_element_ptr what, execution_unit* context) {
+void splitter::enqueue(mailbox_element_ptr what, execution_unit* context) {
   if (! what)
     return; // not even an empty message
   auto reason = exit_reason_.load();
@@ -62,7 +98,8 @@ void sequencer::enqueue(mailbox_element_ptr what, execution_unit* context) {
   }
   auto down_msg_handler = [&](const down_msg& dm) {
     // quit if either `f` or `g` are no longer available
-    if (dm.source == f_ || dm.source == g_)
+    auto pred = [&](const actor_addr& x) { return x == dm.source; };
+    if (std::any_of(workers_.begin(), workers_.end(), pred))
       monitorable_actor::cleanup(dm.reason, context);
   };
   // handle and consume the system message;
@@ -72,14 +109,11 @@ void sequencer::enqueue(mailbox_element_ptr what, execution_unit* context) {
   // has already exited upon the invocation, nothing is done
   if (handle_system_message(*what, context, false, down_msg_handler))
     return;
-  // process and forward the non-system message;
-  // store `f` as the next stage in the forwarding chain
-  what->stages.push_back(f_);
-  // forward modified message to `g`
-  g_->enqueue(std::move(what), context);
+  auto helper = context->system().spawn(fan_out_fan_in, workers_);
+  helper->enqueue(std::move(what), context);
 }
 
-sequencer::message_types_set sequencer::message_types() const {
+splitter::message_types_set splitter::message_types() const {
   return msg_types_;
 }
 

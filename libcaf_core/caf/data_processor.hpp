@@ -113,7 +113,7 @@ public:
   template <class T>
   typename std::enable_if<std::is_arithmetic<T>::value>::type
   apply(T& x) {
-    apply_builtin(static_cast<builtin>(detail::tl_find<builtin_t, T>::value),
+    apply_builtin(static_cast<builtin>(detail::tl_index_of<builtin_t, T>::value),
                   &x);
   }
 

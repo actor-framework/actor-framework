@@ -69,6 +69,12 @@ bool message::match_element(size_t pos, uint16_t typenr,
   return vals_->match_element(pos, typenr, rtti);
 }
 
+message& message::operator+=(const message& x) {
+  auto tmp = *this + x;
+  swap(tmp);
+  return *this;
+}
+
 bool message::equals(const message& other) const {
   if (empty())
     return other.empty();

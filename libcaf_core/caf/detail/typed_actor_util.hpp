@@ -178,13 +178,13 @@ struct deduce_lifted_output_type<type_list<typed_continue_helper<R>>> {
 
 template <class Signatures, class InputTypes>
 struct deduce_output_type {
-  static constexpr int input_pos =
-    tl_find_if<
+  using signature =
+    typename tl_find<
       Signatures,
       input_is<InputTypes>::template eval
-    >::value;
-  static_assert(input_pos != -1, "typed actor does not support given input");
-  using signature = typename tl_at<Signatures, input_pos>::type;
+    >::type;
+  static_assert(! std::is_same<signature, none_t>::value,
+                "typed actor does not support given input");
   using type = typename signature::output_types;
   // generates the appropriate `delegated<...>` type from given signatures
   using delegated_type = typename detail::tl_apply<type, delegated>::type;

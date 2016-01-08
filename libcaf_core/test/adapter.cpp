@@ -28,7 +28,7 @@ using namespace caf;
 
 namespace {
 
-behavior dbl_bhvr(event_based_actor* self) {
+behavior testee(event_based_actor* self) {
   return {
     [](int v) {
       return 2 * v;
@@ -65,7 +65,7 @@ struct fixture {
 CAF_TEST_FIXTURE_SCOPE(adapter_tests, fixture)
 
 CAF_TEST(identity) {
-  auto dbl = system.spawn(dbl_bhvr);
+  auto dbl = system.spawn(testee);
   CAF_CHECK(system.registry().running() == 1);
   auto bound = dbl.bind(1);
   CAF_CHECK(system.registry().running() == 1);
@@ -80,7 +80,7 @@ CAF_TEST(identity) {
 // bound actor spawned dead if decorated
 // actor is already dead upon spawning
 CAF_TEST(lifetime_1) {
-  auto dbl = system.spawn(dbl_bhvr);
+  auto dbl = system.spawn(testee);
   self->monitor(dbl);
   anon_send_exit(dbl, exit_reason::kill);
   wait_until_exited();
@@ -90,7 +90,7 @@ CAF_TEST(lifetime_1) {
 
 // bound actor exits when decorated actor exits
 CAF_TEST(lifetime_2) {
-  auto dbl = system.spawn(dbl_bhvr);
+  auto dbl = system.spawn(testee);
   auto bound = dbl.bind(1);
   self->monitor(bound);
   anon_send(dbl, message{});
@@ -101,13 +101,13 @@ CAF_TEST(lifetime_2) {
 // 2) exits by receiving an exit message
 // 3) exit has no effect on decorated actor
 CAF_TEST(lifetime_3) {
-  auto dbl = system.spawn(dbl_bhvr);
+  auto dbl = system.spawn(testee);
   auto bound = dbl.bind(1);
   anon_send(bound, down_msg{self->address(),
                              exit_reason::kill});
   CAF_CHECK(! exited(bound));
   self->monitor(bound);
-  auto em_sender = system.spawn(dbl_bhvr);
+  auto em_sender = system.spawn(testee);
   em_sender->link_to(bound->address());
   anon_send_exit(em_sender, exit_reason::kill);
   wait_until_exited();
@@ -123,7 +123,7 @@ CAF_TEST(lifetime_3) {
 }
 
 CAF_TEST(request_response_promise) {
-  auto dbl = system.spawn(dbl_bhvr);
+  auto dbl = system.spawn(testee);
   auto bound = dbl.bind(1);
   anon_send_exit(bound, exit_reason::kill);
   CAF_CHECK(exited(bound));
@@ -171,7 +171,7 @@ CAF_TEST(partial_currying) {
 }
 
 CAF_TEST(full_currying) {
-  auto dbl_actor = system.spawn(dbl_bhvr);
+  auto dbl_actor = system.spawn(testee);
   auto bound = dbl_actor.bind(1);
   self->request(bound, message{}).receive(
     [](int v) {

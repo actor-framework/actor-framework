@@ -32,13 +32,13 @@ namespace caf {
 template <class... Sigs, class... Ts>
 void check_typed_input(const typed_actor<Sigs...>&,
                        const detail::type_list<Ts...>&) {
-  static_assert(detail::tl_find<
+  static_assert(detail::tl_index_of<
                   detail::type_list<Ts...>,
                   atom_value
                 >::value == -1,
                 "atom(...) notation is not sufficient for static type "
                 "checking, please use atom_constant instead in this context");
-  static_assert(detail::tl_find_if<
+  static_assert(detail::tl_exists<
                   detail::type_list<Sigs...>,
                   detail::input_is<detail::type_list<Ts...>>::template eval
                 >::value >= 0,

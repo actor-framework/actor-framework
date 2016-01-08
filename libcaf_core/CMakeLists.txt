@@ -81,6 +81,7 @@ set (LIBCAF_CORE_SRCS
      src/serializer.cpp
      src/sequencer.cpp
      src/shared_spinlock.cpp
+     src/splitter.cpp
      src/sync_request_bouncer.cpp
      src/try_match.cpp
      src/type_erased_value.cpp

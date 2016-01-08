@@ -161,6 +161,8 @@ public:
     return compare(invalid_actor);
   }
 
+  static actor splice_impl(std::initializer_list<actor> xs);
+
   /// @endcond
 
 private:
@@ -183,6 +185,12 @@ private:
 
 /// Combine `f` and `g` so that `(f*g)(x) = f(g(x))`.
 actor operator*(actor f, actor g);
+
+/// @relates actor
+template <class... Ts>
+actor splice(const actor& x, const actor& y, const Ts&... zs) {
+  return actor::splice_impl({x, y, zs...});
+}
 
 /// @relates actor
 void serialize(serializer&, actor&, const unsigned int);

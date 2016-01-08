@@ -25,6 +25,7 @@
 #include <type_traits>
 
 #include "caf/unit.hpp"
+#include "caf/none.hpp"
 
 #include "caf/detail/tbind.hpp"
 #include "caf/detail/type_pair.hpp"
@@ -302,16 +303,57 @@ struct tl_unzip<type_list<Elements...>> {
 
 // int index_of(list, type)
 
-template <class List, typename T>
-struct tl_index_of {
-  static constexpr size_t value =
-      tl_index_of<typename tl_tail<List>::type, T>::value;
+/// Finds the first element of type `What` beginning at index `Pos`.
+template <int Pos, class X, class... Ts>
+struct tl_index_of_impl;
+
+template <int Pos, class X>
+struct tl_index_of_impl<Pos, X> {
+  static constexpr int value = -1;
 };
 
-template <size_t N, typename T, class... Ts>
-struct tl_index_of<
-  type_list<type_pair<std::integral_constant<size_t, N>, T>, Ts...>, T> {
-  static constexpr size_t value = N;
+template <int Pos, class X, class... Ts>
+struct tl_index_of_impl<Pos, X, X, Ts...> {
+  static constexpr int value = Pos;
+};
+
+template <int Pos, class X, class T, class... Ts>
+struct tl_index_of_impl<Pos, X, T, Ts...> {
+  static constexpr int value = tl_index_of_impl<Pos + 1, X, Ts...>::value;
+};
+
+/// Finds the first element satisfying `Pred` beginning at index `Pos`.
+template <class List, class T>
+struct tl_index_of;
+
+template <class... Ts, class T>
+struct tl_index_of<type_list<Ts...>, T> {
+  static constexpr int value = tl_index_of_impl<0, T, Ts...>::value;
+};
+
+// int index_of(list, predicate)
+
+template <int Pos, template <class> class Pred, class... Ts>
+struct tl_index_where_impl;
+
+template <int Pos, template <class> class Pred>
+struct tl_index_where_impl<Pos, Pred> {
+  static constexpr int value = -1;
+};
+
+template <int Pos, template <class> class Pred, class T, class... Ts>
+struct tl_index_where_impl<Pos, Pred, T, Ts...> {
+  static constexpr int value
+    = Pred<T>::value ? Pos : tl_index_where_impl<Pos + 1, Pred, Ts...>::value;
+};
+
+/// Finds the first element satisfying a given predicate.
+template <class List, template <class> class Pred>
+struct tl_index_where;
+
+template <class... Ts, template <class> class Pred>
+struct tl_index_where<type_list<Ts...>, Pred> {
+  static constexpr int value = tl_index_where_impl<0, Pred, Ts...>::value;
 };
 
 // list reverse()
@@ -338,38 +380,31 @@ struct tl_reverse {
 // bool find(list, type)
 
 /// Finds the first element of type `What` beginning at index `Pos`.
-template <class List, template <class> class Pred, int Pos = 0>
+template <template <class> class Pred, class... Ts>
 struct tl_find_impl;
 
-template <template <class> class Pred, int Pos>
-struct tl_find_impl<type_list<>, Pred, Pos> {
-  static constexpr int value = -1;
+template <template <class> class Pred>
+struct tl_find_impl<Pred> {
+  using type = none_t;
 };
 
-template <template <class> class Pred, int Pos, class T0, class... Ts>
-struct tl_find_impl<type_list<T0, Ts...>, Pred, Pos> {
-  // always use type_list for recursive calls to minimize instantiation costs
-  static constexpr int value =
-      Pred<T0>::value ? Pos
-                      : tl_find_impl<type_list<Ts...>, Pred, Pos + 1>::value;
+template <template <class> class Pred, class T, class... Ts>
+struct tl_find_impl<Pred, T, Ts...> {
+  using type =
+    typename std::conditional<
+      Pred<T>::value,
+      T,
+      typename tl_find_impl<Pred, Ts...>::type
+    >::type;
 };
 
-/// Finds the first element satisfying `Pred` beginning at
-///    index `Pos`.
-template <class List, template <class> class Pred, int Pos = 0>
-struct tl_find_if {
-  static constexpr int value = tl_find_impl<List, Pred, Pos>::value;
-};
+/// Finds the first element satisfying `Pred` beginning at index `Pos`.
+template <class List, template <class> class Pred>
+struct tl_find;
 
-/// Finds the first element of type `What` beginning at
-///    index `Pos`.
-template <class List, class What, int Pos = 0>
-struct tl_find {
-  static constexpr int value = tl_find_impl<
-                                 List,
-                                 tbind<std::is_same, What>::template type,
-                                 Pos
-                               >::value;
+template <class... Ts, template <class> class Pred>
+struct tl_find<type_list<Ts...>, Pred> {
+  using type = typename tl_find_impl<Pred, Ts...>::type;
 };
 
 // bool forall(predicate)

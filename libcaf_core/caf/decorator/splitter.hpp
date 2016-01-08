@@ -17,21 +17,44 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_TBIND_HPP
-#define CAF_DETAIL_TBIND_HPP
+#ifndef CAF_DECORATOR_SPLITTER_HPP
+#define CAF_DECORATOR_SPLITTER_HPP
+
+#include <vector>
+
+#include "caf/actor_addr.hpp"
+#include "caf/mailbox_element.hpp"
+#include "caf/monitorable_actor.hpp"
 
 namespace caf {
-namespace detail {
+namespace decorator {
 
-template <template <class, typename> class Tpl, typename Arg1>
-struct tbind {
-  template <class Arg2>
-  struct type {
-    static constexpr bool value = Tpl<Arg1, Arg2>::value;
-  };
+/// An actor decorator implementing "dot operator"-like compositions,
+/// i.e., `f.g(x) = f(g(x))`. Composed actors are hidden actors.
+/// A composed actor exits when either of its constituent actors exits;
+/// Constituent actors have no dependency on the composed actor
+/// by default, and exit of a composed actor has no effect on its
+/// constituent actors. A composed actor is hosted on the same actor
+/// system and node as `g`, the first actor on the forwarding chain.
+class splitter : public monitorable_actor {
+public:
+  using message_types_set = std::set<std::string>;
+
+  splitter(std::vector<actor_addr> workers, message_types_set msg_types);
+
+  // non-system messages are processed and then forwarded;
+  // system messages are handled and consumed on the spot;
+  // in either case, the processing is done synchronously
+  void enqueue(mailbox_element_ptr what, execution_unit* host) override;
+
+  message_types_set message_types() const override;
+
+private:
+  std::vector<actor_addr> workers_;
+  message_types_set msg_types_;
 };
 
-} // namespace detail
+} // namespace decorator
 } // namespace caf
 
-#endif // CAF_DETAIL_TBIND_HPP
+#endif // CAF_DECORATOR_SPLITTER_HPP

@@ -200,12 +200,11 @@ private:
   template <class U>
   void set(U&& arg) {
     using type = typename std::decay<U>::type;
-    static constexpr int type_id = detail::tl_find_if<
-                       types,
-                       detail::tbind<
-                         is_same_ish, type
-                       >::template type
-                     >::value;
+    static constexpr int type_id =
+      detail::tl_index_where<
+        types,
+        detail::tbind<is_same_ish, type>::template type
+      >::value;
     static_assert(type_id >= 0, "invalid type for variant");
     std::integral_constant<int, type_id> token;
     if (type_ != type_id) {
@@ -248,8 +247,8 @@ private:
 template <class T, class... Us>
 T& get(variant<Us...>& value) {
   using namespace detail;
-  int_token<tl_find_if<type_list<Us...>,
-                       tbind<is_same_ish, T>::template type>::value> token;
+  int_token<tl_index_where<type_list<Us...>,
+                           tbind<is_same_ish, T>::template type>::value> token;
   // silence compiler error about "binding to unrelated types" such as
   // 'signed char' to 'char' (which is obvious bullshit)
   return reinterpret_cast<T&>(value.get(token));
@@ -266,8 +265,8 @@ const T& get(const variant<Us...>& value) {
 template <class T, class... Us>
 T* get(variant<Us...>* value) {
   using namespace detail;
-  int_token<tl_find_if<type_list<Us...>,
-                       tbind<is_same_ish, T>::template type>::value> token;
+  int_token<tl_index_where<type_list<Us...>,
+                           tbind<is_same_ish, T>::template type>::value> token;
   if (value->is(token))
     return &get<T>(*value);
   return nullptr;
