@@ -69,7 +69,7 @@ local_actor::local_actor(actor_system* sys, actor_id aid,
 
 local_actor::~local_actor() {
   if (! mailbox_.closed()) {
-    detail::sync_request_bouncer f{exit_reason_};
+    detail::sync_request_bouncer f{get_exit_reason()};
     mailbox_.close(f);
   }
 }

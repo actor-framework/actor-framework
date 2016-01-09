@@ -83,7 +83,7 @@ splitter::splitter(std::vector<actor_addr> workers, message_types_set msg_types)
 void splitter::enqueue(mailbox_element_ptr what, execution_unit* context) {
   if (! what)
     return; // not even an empty message
-  auto reason = exit_reason_.load();
+  auto reason = get_exit_reason();
   if (reason != exit_reason::not_exited) {
     // actor has exited
     auto& mid = what->mid;
