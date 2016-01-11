@@ -50,7 +50,7 @@ adapter::adapter(actor_addr decorated, message msg)
 void adapter::enqueue(mailbox_element_ptr what, execution_unit* host) {
   if (! what)
     return; // not even an empty message
-  auto reason = exit_reason_.load();
+  auto reason = get_exit_reason();
   if (reason != exit_reason::not_exited) {
     // actor has exited
     auto& mid = what->mid;

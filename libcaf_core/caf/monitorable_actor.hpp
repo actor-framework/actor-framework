@@ -51,15 +51,25 @@ public:
 
   size_t detach(const attachable::token& what) override;
 
+  /// Returns the exit reason of this actor or
+  /// `exit_reason::not_exited` if it is still alive.
+  inline exit_reason get_exit_reason() const {
+    return exit_reason_.load(std::memory_order_relaxed);
+  }
+
   /// @cond PRIVATE
 
   /// Called by the runtime system to perform cleanup actions for this actor.
   /// Subtypes should always call this member function when overriding it.
+  /// This member function is thread-safe, and if the actor has already exited
+  /// upon invocation, nothing is done.
   virtual void cleanup(exit_reason reason, execution_unit* host);
 
-  // Returns `exit_reason_ != exit_reason::not_exited`.
+  // returns `exit_reason_ != exit_reason::not_exited`;
+  // it's possible for user code to call this method
+  // without acquiring `mtx_`
   inline bool exited() const {
-    return exit_reason_ != exit_reason::not_exited;
+    return get_exit_reason() != exit_reason::not_exited;
   }
 
   /// @endcond
@@ -91,19 +101,25 @@ protected:
   // tries to run a custom exception handler for `eptr`
   maybe<exit_reason> handle(const std::exception_ptr& eptr);
 
+  // precondition: `mtx_` is acquired
   inline void attach_impl(attachable_ptr& ptr) {
     ptr->next.swap(attachables_head_);
     attachables_head_.swap(ptr);
   }
 
+  // precondition: `mtx_` is acquired
   static size_t detach_impl(const attachable::token& what,
                             attachable_ptr& ptr,
                             bool stop_on_first_hit = false,
                             bool dry_run = false);
 
+  // handles only `exit_msg` and `sys_atom` messages;
+  // returns true if the message is handled
   bool handle_system_message(mailbox_element& node, execution_unit* context,
                              bool trap_exit);
 
+  // handles `exit_msg`, `sys_atom` messages, and additionally `down_msg`
+  // with `down_msg_handler`; returns true if the message is handled
   template <class F>
   bool handle_system_message(mailbox_element& node, execution_unit* context,
                              bool trap_exit, F& down_msg_handler) {
@@ -115,7 +131,9 @@ protected:
     return handle_system_message(node, context, trap_exit);
   }
 
-  // initially set to exit_reason::not_exited
+  // initially set to exit_reason::not_exited;
+  // can only be stored with `mtx_` acquired;
+  // may be read without acquiring `mtx_`
   std::atomic<exit_reason> exit_reason_;
 
   // guards access to exit_reason_, attachables_, links_,
