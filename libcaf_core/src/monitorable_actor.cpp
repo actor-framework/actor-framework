@@ -55,6 +55,25 @@ size_t monitorable_actor::detach(const attachable::token& what) {
   return detach_impl(what, attachables_head_);
 }
 
+void monitorable_actor::cleanup(exit_reason reason, execution_unit* host) {
+  CAF_LOG_TRACE(CAF_ARG(reason));
+  CAF_ASSERT(reason != exit_reason::not_exited);
+  // move everyhting out of the critical section before processing it
+  attachable_ptr head;
+  { // lifetime scope of guard
+    std::unique_lock<std::mutex> guard{mtx_};
+    if (exit_reason_ != exit_reason::not_exited)
+      return;
+    exit_reason_ = reason;
+    attachables_head_.swap(head);
+  }
+  CAF_LOG_INFO_IF(host && host->system().node() == node(),
+                  "cleanup" << CAF_ARG(id()) << CAF_ARG(reason));
+  // send exit messages
+  for (attachable* i = head.get(); i != nullptr; i = i->next.get())
+    i->actor_exited(this, reason, host);
+}
+
 monitorable_actor::monitorable_actor(actor_config& cfg)
     : abstract_actor(cfg),
       exit_reason_(exit_reason::not_exited) {
@@ -74,25 +93,6 @@ monitorable_actor::monitorable_actor(actor_system* sys, actor_id aid,
     : abstract_actor(sys, aid, nid, init_flags),
       exit_reason_(exit_reason::not_exited) {
   // nop
-}
-
-void monitorable_actor::cleanup(exit_reason reason, execution_unit* host) {
-  CAF_LOG_TRACE(CAF_ARG(reason));
-  CAF_ASSERT(reason != exit_reason::not_exited);
-  // move everyhting out of the critical section before processing it
-  attachable_ptr head;
-  { // lifetime scope of guard
-    std::unique_lock<std::mutex> guard{mtx_};
-    if (exit_reason_ != exit_reason::not_exited)
-      return;
-    exit_reason_ = reason;
-    attachables_head_.swap(head);
-  }
-  CAF_LOG_INFO_IF(host && host->system().node() == node(),
-                  "cleanup" << CAF_ARG(id()) << CAF_ARG(reason));
-  // send exit messages
-  for (attachable* i = head.get(); i != nullptr; i = i->next.get())
-    i->actor_exited(this, reason, host);
 }
 
 maybe<exit_reason> monitorable_actor::handle(const std::exception_ptr& eptr) {

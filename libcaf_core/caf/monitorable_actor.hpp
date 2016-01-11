@@ -53,6 +53,10 @@ public:
 
   /// @cond PRIVATE
 
+  /// Called by the runtime system to perform cleanup actions for this actor.
+  /// Subtypes should always call this member function when overriding it.
+  virtual void cleanup(exit_reason reason, execution_unit* host);
+
   // Returns `exit_reason_ != exit_reason::not_exited`.
   inline bool exited() const {
     return exit_reason_ != exit_reason::not_exited;
@@ -69,10 +73,6 @@ protected:
 
   /// Creates a new actor instance.
   monitorable_actor(actor_system* sys, actor_id aid, node_id nid, int flags);
-
-  /// Called by the runtime system to perform cleanup actions for this actor.
-  /// Subtypes should always call this member function when overriding it.
-  virtual void cleanup(exit_reason reason, execution_unit* host);
 
   /****************************************************************************
    *                 here be dragons: end of public interface                 *
