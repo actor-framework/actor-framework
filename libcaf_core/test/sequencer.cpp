@@ -188,7 +188,7 @@ CAF_TEST(request_response_promise) {
       CAF_CHECK(false);
     },
     [](error err) {
-      CAF_CHECK(err.code() == sec::request_receiver_down);
+      CAF_CHECK(err.code() == static_cast<uint8_t>(sec::request_receiver_down));
     }
   );
   anon_send_exit(f, exit_reason::kill);

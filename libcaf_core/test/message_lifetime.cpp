@@ -44,7 +44,7 @@ public:
   behavior make_behavior() override {
     return {
       others >> [=] {
-        CAF_CHECK_EQUAL(current_message().cvals()->get_reference_count(), 2);
+        CAF_CHECK_EQUAL(current_message().cvals()->get_reference_count(), 2u);
         quit();
         return std::move(current_message());
       }
@@ -114,18 +114,18 @@ CAF_TEST(message_lifetime_in_scoped_actor) {
       CAF_CHECK_EQUAL(a, 1);
       CAF_CHECK_EQUAL(b, 2);
       CAF_CHECK_EQUAL(c, 3);
-      CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 2);
-      CAF_CHECK_EQUAL(self->current_message().cvals()->get_reference_count(), 2);
+      CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 2u);
+      CAF_CHECK_EQUAL(self->current_message().cvals()->get_reference_count(), 2u);
       CAF_CHECK(self->current_message().cvals().get() == msg.cvals().get());
     }
   );
-  CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 1);
+  CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 1u);
   msg = make_message(42);
   self->send(self, msg);
   self->receive(
     [&](int& value) {
-      CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 1);
-      CAF_CHECK_EQUAL(self->current_message().cvals()->get_reference_count(), 1);
+      CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 1u);
+      CAF_CHECK_EQUAL(self->current_message().cvals()->get_reference_count(), 1u);
       CAF_CHECK(self->current_message().cvals().get() != msg.cvals().get());
       value = 10;
     }

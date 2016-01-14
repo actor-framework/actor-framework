@@ -64,7 +64,7 @@ CAF_TEST(redirect_aout_globally) {
     }
   );
   self->await_all_other_actors_done();
-  CAF_CHECK_EQUAL(self->mailbox().count(), 0);
+  CAF_CHECK_EQUAL(self->mailbox().count(), 0u);
 }
 
 CAF_TEST(global_and_local_redirect) {
@@ -92,5 +92,5 @@ CAF_TEST(global_and_local_redirect) {
   );
   CAF_CHECK(std::is_permutation(lines.begin(), lines.end(), expected.begin()));
   self->await_all_other_actors_done();
-  CAF_CHECK_EQUAL(self->mailbox().count(), 0);
+  CAF_CHECK_EQUAL(self->mailbox().count(), 0u);
 }

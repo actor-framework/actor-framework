@@ -167,7 +167,7 @@ CAF_TEST(broadcast_actor_pool) {
       CAF_TEST_ERROR("didn't receive a result");
     }
   );
-  CAF_CHECK_EQUAL(results.size(), 25);
+  CAF_CHECK_EQUAL(results.size(), 25u);
   CAF_CHECK(std::all_of(results.begin(), results.end(),
                         [](int res) { return res == 3; }));
   self->send_exit(w, exit_reason::user_shutdown);

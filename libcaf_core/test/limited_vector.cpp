@@ -39,12 +39,12 @@ CAF_TEST(basics) {
   limited_vector<int, 2> vec5 {3, 4};
   vec4.insert(vec4.end(), vec5.begin(), vec5.end());
   auto vec6 = vec4;
-  CAF_CHECK_EQUAL(vec1.size(), 4);
-  CAF_CHECK_EQUAL(vec2.size(), 4);
-  CAF_CHECK_EQUAL(vec3.size(), 4);
-  CAF_CHECK_EQUAL(vec4.size(), 4);
-  CAF_CHECK_EQUAL(vec5.size(), 2);
-  CAF_CHECK_EQUAL(vec6.size(), 4);
+  CAF_CHECK_EQUAL(vec1.size(), 4u);
+  CAF_CHECK_EQUAL(vec2.size(), 4u);
+  CAF_CHECK_EQUAL(vec3.size(), 4u);
+  CAF_CHECK_EQUAL(vec4.size(), 4u);
+  CAF_CHECK_EQUAL(vec5.size(), 2u);
+  CAF_CHECK_EQUAL(vec6.size(), 4u);
   CAF_CHECK_EQUAL(vec1.full(), true);
   CAF_CHECK_EQUAL(vec2.full(), false);
   CAF_CHECK_EQUAL(vec3.full(), true);
@@ -71,7 +71,7 @@ CAF_TEST(basics) {
   vec7.assign(std::begin(arr2), std::end(arr2));
   CAF_CHECK((std::equal(vec7.begin(), vec7.end(), std::begin(arr2))));
   vec7.assign(5, 0);
-  CAF_CHECK_EQUAL(vec7.size(), 5);
+  CAF_CHECK_EQUAL(vec7.size(), 5u);
   CAF_CHECK((std::all_of(vec7.begin(), vec7.end(),
               [](int i) { return i == 0; })));
 }
