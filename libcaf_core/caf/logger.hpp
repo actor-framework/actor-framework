@@ -195,9 +195,11 @@ private:
     caf::logger::line_builder lb;                                              \
     lb << message;                                                             \
     if (nclass.empty())                                                        \
-      printf("[ERROR] %s::%s: %s\n", nclass.c_str(), nfun, lb.get().c_str());  \
+      printf("[ERROR] in %s:%d %s::%s: %s\n", __FILE__, __LINE__,              \
+             nclass.c_str(), nfun, lb.get().c_str());                          \
     else                                                                       \
-      printf("[ERROR] %s: %s\n", nfun, lb.get().c_str());                      \
+      printf("[ERROR] in %s:%d %s: %s\n", __FILE__, __LINE__,                  \
+             nfun, lb.get().c_str());                      \
   } while (false)
 
 #define CAF_ARG(argument) caf::logger::make_arg_wrapper(#argument, argument)
