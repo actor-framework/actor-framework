@@ -83,7 +83,7 @@ CAF_TEST(receive_atoms) {
     self->receive(
       [&](foo_atom, uint32_t value) {
         matched_pattern[0] = true;
-        CAF_CHECK_EQUAL(value, 42);
+        CAF_CHECK_EQUAL(value, 42u);
       },
       [&](abc_atom, def_atom, const std::string& str) {
         matched_pattern[1] = true;

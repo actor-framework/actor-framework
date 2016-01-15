@@ -218,13 +218,13 @@ CAF_TEST(ieee_754_conversion) {
   // check conversion of float
   float f1 = 3.1415925f;         // float value
   auto p1 = caf::detail::pack754(f1); // packet value
-  CAF_CHECK_EQUAL(p1, 0x40490FDA);
+  CAF_CHECK_EQUAL(p1, static_cast<decltype(p1)>(0x40490FDA));
   auto u1 = caf::detail::unpack754(p1); // unpacked value
   CAF_CHECK_EQUAL(f1, u1);
   // check conversion of double
   double f2 = 3.14159265358979311600;  // double value
   auto p2 = caf::detail::pack754(f2); // packet value
-  CAF_CHECK_EQUAL(p2, 0x400921FB54442D18);
+  CAF_CHECK_EQUAL(p2, static_cast<decltype(p2)>(0x400921FB54442D18));
   auto u2 = caf::detail::unpack754(p2); // unpacked value
   CAF_CHECK_EQUAL(f2, u2);
 }

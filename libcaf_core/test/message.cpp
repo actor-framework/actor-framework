@@ -115,10 +115,10 @@ CAF_TEST(extract_opts) {
       {"file,f", "set output file", filename},
       {"whatever", "do whatever"}
     });
-    CAF_CHECK_EQUAL(res.opts.count("file"), 1);
+    CAF_CHECK_EQUAL(res.opts.count("file"), 1u);
     CAF_CHECK(res.remainder.empty());
     CAF_CHECK_EQUAL(filename, "hello.txt");
-    CAF_CHECK_EQUAL(log_level, 5);
+    CAF_CHECK_EQUAL(log_level, 5u);
   };
   f({"--file=hello.txt", "-l", "5"});
   f({"-f", "hello.txt", "--log-level=5"});

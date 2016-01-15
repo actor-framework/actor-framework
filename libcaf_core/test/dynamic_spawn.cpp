@@ -310,11 +310,11 @@ public:
     for (int i = 0; i < 100; ++i) {
       send(this, ok_atom::value);
     }
-    CAF_CHECK_EQUAL(mailbox().count(), 100);
+    CAF_CHECK_EQUAL(mailbox().count(), 100u);
     for (int i = 0; i < 100; ++i) {
       send(this, ok_atom::value);
     }
-    CAF_CHECK_EQUAL(mailbox().count(), 200);
+    CAF_CHECK_EQUAL(mailbox().count(), 200u);
     return {};
   }
 };

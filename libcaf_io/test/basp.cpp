@@ -753,11 +753,11 @@ CAF_TEST(automatic_connection) {
           basp::message_type::announce_proxy_instance, uint32_t{0}, uint64_t{0},
           this_node(), remote_node(0),
           invalid_actor_id, pseudo_remote(0)->id());
-  CAF_CHECK_EQUAL(mpx()->output_buffer(remote_hdl(1)).size(), 0);
+  CAF_CHECK_EQUAL(mpx()->output_buffer(remote_hdl(1)).size(), 0u);
   CAF_CHECK_EQUAL(tbl().lookup_indirect(remote_node(0)), remote_node(1));
   CAF_CHECK_EQUAL(tbl().lookup_indirect(remote_node(1)), invalid_node_id);
   auto connection_helper = system.latest_actor_id();
-  CAF_CHECK_EQUAL(mpx()->output_buffer(remote_hdl(1)).size(), 0);
+  CAF_CHECK_EQUAL(mpx()->output_buffer(remote_hdl(1)).size(), 0u);
   // create a dummy config server and respond to the name lookup
   CAF_MESSAGE("receive ConfigServ of jupiter");
   network::address_listing res;

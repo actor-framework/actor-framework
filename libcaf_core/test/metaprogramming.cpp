@@ -64,7 +64,7 @@ CAF_TEST(metaprogramming) {
   CAF_CHECK((is_same<float, tl_at<l1, 1>::type>::value));
   CAF_CHECK((is_same<std::string, tl_at<l1, 2>::type>::value));
 
-  CAF_CHECK_EQUAL(3, tl_size<l1>::value);
+  CAF_CHECK_EQUAL(3u, tl_size<l1>::value);
   CAF_CHECK_EQUAL(tl_size<r1>::value, tl_size<l1>::value);
   CAF_CHECK((is_same<tl_at<l1, 0>::type, tl_at<r1, 2>::type>::value));
   CAF_CHECK((is_same<tl_at<l1, 1>::type, tl_at<r1, 1>::type>::value));
@@ -75,8 +75,8 @@ CAF_TEST(metaprogramming) {
   CAF_CHECK((is_same<int, tl_head<l2>::type>::value));
   CAF_CHECK((is_same<l1, tl_tail<l2>::type>::value));
 
-  CAF_CHECK_EQUAL((detail::tl_count<l1, is_int>::value), 1);
-  CAF_CHECK_EQUAL((detail::tl_count<l2, is_int>::value), 2);
+  CAF_CHECK_EQUAL((detail::tl_count<l1, is_int>::value), 1u);
+  CAF_CHECK_EQUAL((detail::tl_count<l2, is_int>::value), 2u);
 
   using il0 = int_list<0, 1, 2, 3, 4, 5>;
   using il1 = int_list<4, 5>;

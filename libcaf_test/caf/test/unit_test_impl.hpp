@@ -569,19 +569,6 @@ int main(int argc, char** argv) {
   return result ? 0 : 1;
 }
 
-namespace detail {
-
-expr::expr(test* parent, const char* filename, size_t lineno,
-           bool should_fail, const char* expression)
-    : test_{parent},
-      filename_{filename},
-      line_{lineno},
-      should_fail_{should_fail},
-      expr_{expression} {
-  assert(test_ != nullptr);
-}
-
-} // namespace detail
 } // namespace test
 } // namespace caf
 

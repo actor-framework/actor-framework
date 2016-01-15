@@ -73,12 +73,12 @@ CAF_TEST(cli_args) {
     {"in-file,i", "read from file", input_file},
     {"verbosity,v", "1-5", verbosity}
   });
-  CAF_CHECK_EQUAL(res.remainder.size(), 0);
+  CAF_CHECK_EQUAL(res.remainder.size(), 0u);
   CAF_CHECK(res.remainder == message{});
-  CAF_CHECK_EQUAL(res.opts.count("no-colors"), 1);
-  CAF_CHECK_EQUAL(res.opts.count("verbosity"), 1);
-  CAF_CHECK_EQUAL(res.opts.count("out-file"), 1);
-  CAF_CHECK_EQUAL(res.opts.count("in-file"), 0);
+  CAF_CHECK_EQUAL(res.opts.count("no-colors"), 1u);
+  CAF_CHECK_EQUAL(res.opts.count("verbosity"), 1u);
+  CAF_CHECK_EQUAL(res.opts.count("out-file"), 1u);
+  CAF_CHECK_EQUAL(res.opts.count("in-file"), 0u);
   CAF_CHECK_EQUAL(output_file, "/dev/null");
   CAF_CHECK_EQUAL(input_file, "");
 }
