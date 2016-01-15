@@ -551,7 +551,7 @@ void test_remote_actor(int argc, char** argv) {
   // check whether accessing local actors via system.middleman().remote_actors
   // works correctly, i.e., does not return a proxy instance
   auto serv2 = system.middleman().remote_actor("127.0.0.1", *port2);
-  CAF_CHECK(serv2 && system.node() != serv2->node());
+  CAF_CHECK(serv2 && system.node() == serv2->node());
   CAF_CHECK(serv == serv2);
   launch_remote_side(argc, argv, *gport, *port1, *port2);
   self->receive(
