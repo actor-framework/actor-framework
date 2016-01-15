@@ -105,7 +105,7 @@ public:
         std::set<std::string> sigs;
         return put(port, whom, sigs, addr.c_str(), reuse);
       },
-      [=](connect_atom, const std::string& hostname, uint16_t port) -> get_res {
+      [=](connect_atom, std::string& hostname, uint16_t port) -> get_res {
         CAF_LOG_TRACE(CAF_ARG(hostname) << CAF_ARG(port));
         connection_handle hdl;
         try {
@@ -114,7 +114,8 @@ public:
           // nop
         }
         if (hdl != invalid_connection_handle) {
-          delegate(broker_, connect_atom::value, hdl, port);
+          delegate(broker_, connect_atom::value, hdl,
+                   std::move(hostname), port);
         } else {
           auto rp = make_response_promise();
           rp.deliver(sec::cannot_connect_to_node);
