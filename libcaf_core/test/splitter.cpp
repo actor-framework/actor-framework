@@ -35,7 +35,7 @@ first_stage::behavior_type typed_first_stage() {
   return [](double x) {
     return std::make_tuple(x * 2.0, x * 4.0);
   };
-};
+}
 
 second_stage::behavior_type typed_second_stage() {
   return [](double x, double y) {
@@ -45,7 +45,7 @@ second_stage::behavior_type typed_second_stage() {
 
 behavior untyped_first_stage() {
   return typed_first_stage().unbox();
-};
+}
 
 behavior untyped_second_stage() {
   return typed_second_stage().unbox();
