@@ -67,6 +67,9 @@ actor_system::actor_system(actor_system_config&& cfg)
   auto& mmptr = modules_[module::middleman];
   if (mmptr)
     middleman_ = reinterpret_cast<io::middleman*>(mmptr->subtype_ptr());
+  auto& clptr = modules_[module::opencl_manager];
+  if (clptr)
+    opencl_manager_ = reinterpret_cast<opencl::manager*>(clptr->subtype_ptr());
   auto& pptr = modules_[module::riac_probe];
   if (pptr)
     probe_ = reinterpret_cast<riac::probe*>(pptr->subtype_ptr());
@@ -194,6 +197,16 @@ io::middleman& actor_system::middleman() {
   if (! middleman_)
     throw std::logic_error("cannot access middleman: module not loaded");
   return *middleman_;
+}
+
+bool actor_system::has_opencl_manager() const {
+  return opencl_manager_ != nullptr;
+}
+
+opencl::manager& actor_system::opencl_manager() const {
+  if (! opencl_manager_)
+    throw std::logic_error("cannot access opencl manager: module not loaded");
+  return *opencl_manager_;
 }
 
 bool actor_system::has_probe() const {

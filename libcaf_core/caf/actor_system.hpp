@@ -209,6 +209,13 @@ public:
   /// @throws `std::logic_error` if module is not loaded.
   io::middleman& middleman();
 
+  /// Returns the opencl manager instance from opencl module.
+  /// @throws `std::logic_error` if module is not loaded.
+  opencl::manager& opencl_manager() const;
+
+  /// Returns `true` if the opencl module is available, `false` otherwise.
+  bool has_opencl_manager() const;
+
   /// Returns `true` if the RIAC probe module is available, `false` otherwise.
   bool has_probe() const;
 
@@ -426,6 +433,7 @@ private:
   io::middleman* middleman_;
   scoped_execution_unit dummy_execution_unit_;
   atom_value backend_name_;
+  opencl::manager* opencl_manager_;
   riac::probe* probe_;
   bool await_actors_before_shutdown_;
 };

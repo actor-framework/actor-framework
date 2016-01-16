@@ -102,6 +102,12 @@ struct header;
 
 } // namespace io
 
+namespace opencl {
+
+class manager;
+
+} // namespace opencl
+
 namespace riac {
 
 class probe;
