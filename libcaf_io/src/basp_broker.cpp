@@ -610,7 +610,7 @@ behavior basp_broker::make_behavior() {
           // for the handshake to complete and we can attach to the
           // respective callback
           auto j = state.ctx.find(x.first);
-          CAF_ASSERT(j != ctx.end());
+          CAF_ASSERT(j != state.ctx.end());
           CAF_ASSERT(j->second.callback != nullptr);
           auto f = j->second.callback; // store previous callback
           j->second.callback = [f, rp](const maybe<message>& x) {
