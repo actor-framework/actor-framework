@@ -28,18 +28,18 @@ namespace {
 
 class combinator final : public behavior_impl {
 public:
-  bhvr_invoke_result invoke(message& arg) {
+  bhvr_invoke_result invoke(message& arg) override {
     auto res = first->invoke(arg);
     return res ? res : second->invoke(arg);
   }
 
-  void handle_timeout() {
+  void handle_timeout() override {
     // the second behavior overrides the timeout handling of
     // first behavior
     return second->handle_timeout();
   }
 
-  pointer copy(const generic_timeout_definition& tdef) const {
+  pointer copy(const generic_timeout_definition& tdef) const override {
     return new combinator(first, second->copy(tdef));
   }
 
@@ -48,12 +48,6 @@ public:
         first(p0),
         second(p1) {
     // nop
-  }
-
-protected:
-  match_case** get_cases(size_t&) {
-    // never called
-    return nullptr;
   }
 
 private:
