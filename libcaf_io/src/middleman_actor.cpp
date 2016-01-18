@@ -93,7 +93,6 @@ public:
         if (x) {
           CAF_LOG_DEBUG("found cached entry" << CAF_ARG(*x));
           rp.deliver(ok_atom::value, get<0>(*x), get<1>(*x), get<2>(*x));
-printf("%s %d\n", __FILE__, __LINE__);
           return {};
         }
         // attach this promise to a pending request if possible
@@ -101,7 +100,6 @@ printf("%s %d\n", __FILE__, __LINE__);
         if (rps) {
           CAF_LOG_DEBUG("attach to pending request");
           rps->emplace_back(std::move(rp));
-printf("%s %d\n", __FILE__, __LINE__);
           return {};
         }
         // connect to endpoint and initiate handhsake etc.
@@ -110,14 +108,12 @@ printf("%s %d\n", __FILE__, __LINE__);
           hdl = system().middleman().backend().new_tcp_scribe(key.first, port);
         } catch(std::exception&) {
           rp.deliver(sec::cannot_connect_to_node);
-printf("%s %d\n", __FILE__, __LINE__);
           return {};
         }
         std::vector<response_promise> tmp{std::move(rp)};
         pending_.emplace(key, std::move(tmp));
         request(broker_, connect_atom::value, hdl, port).then(
           [=](ok_atom, node_id& nid, actor_addr& addr, mpi_set& sigs) {
-printf("%s %d\n", __FILE__, __LINE__);
             auto i = pending_.find(key);
             if (i == pending_.end())
               return;
@@ -130,7 +126,6 @@ printf("%s %d\n", __FILE__, __LINE__);
             pending_.erase(i);
           },
           [=](error& err) {
-printf("%s %d\n", __FILE__, __LINE__);
             auto i = pending_.find(key);
             if (i == pending_.end())
               return;
@@ -142,7 +137,6 @@ printf("%s %d\n", __FILE__, __LINE__);
         return {};
       },
       [=](unpublish_atom, const actor_addr&, uint16_t) -> del_res {
-printf("%s %d\n", __FILE__, __LINE__);
         CAF_LOG_TRACE("");
         forward_current_message(broker_);
         return {};
@@ -159,7 +153,6 @@ printf("%s %d\n", __FILE__, __LINE__);
         return {};
       },
       [=](const down_msg& dm) {
-printf("%s %d\n", __FILE__, __LINE__);
         auto i = cached_.begin();
         auto e = cached_.end();
         while (i != e) {
