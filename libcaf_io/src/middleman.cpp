@@ -66,111 +66,6 @@
 namespace caf {
 namespace io {
 
-namespace {
-
-class middleman_actor_impl : public middleman_actor::base {
-public:
-  middleman_actor_impl(actor_config& cfg, actor default_broker)
-      : middleman_actor::base(cfg),
-        broker_(default_broker) {
-    // nop
-  }
-
-  void on_exit() override {
-    CAF_LOG_TRACE("");
-    broker_ = invalid_actor;
-  }
-
-  const char* name() const override {
-    return "middleman_actor";
-  }
-
-  using put_res = maybe<std::tuple<ok_atom, uint16_t>>;
-
-  using get_res = delegated<ok_atom, node_id, actor_addr, std::set<std::string>>;
-
-  using del_res = delegated<void>;
-
-  behavior_type make_behavior() override {
-    CAF_LOG_TRACE("");
-    return {
-      [=](publish_atom, uint16_t port, actor_addr& whom,
-          std::set<std::string>& sigs, std::string& addr, bool reuse) {
-        CAF_LOG_TRACE("");
-        return put(port, whom, sigs, addr.c_str(), reuse);
-      },
-      [=](open_atom, uint16_t port, std::string& addr, bool reuse) -> put_res {
-        CAF_LOG_TRACE("");
-        actor_addr whom = invalid_actor_addr;
-        std::set<std::string> sigs;
-        return put(port, whom, sigs, addr.c_str(), reuse);
-      },
-      [=](connect_atom, std::string& hostname, uint16_t port) -> get_res {
-        CAF_LOG_TRACE(CAF_ARG(hostname) << CAF_ARG(port));
-        connection_handle hdl;
-        try {
-          hdl = system().middleman().backend().new_tcp_scribe(hostname, port);
-        } catch(std::exception&) {
-          // nop
-        }
-        if (hdl != invalid_connection_handle) {
-          delegate(broker_, connect_atom::value, hdl,
-                   std::move(hostname), port);
-        } else {
-          auto rp = make_response_promise();
-          rp.deliver(sec::cannot_connect_to_node);
-        }
-        return {};
-      },
-      [=](unpublish_atom, const actor_addr&, uint16_t) -> del_res {
-        CAF_LOG_TRACE("");
-        forward_current_message(broker_);
-        return {};
-      },
-      [=](close_atom, uint16_t) -> del_res {
-        CAF_LOG_TRACE("");
-        forward_current_message(broker_);
-        return {};
-      },
-      [=](spawn_atom, const node_id&, const std::string&, const message&)
-      -> delegated<ok_atom, actor_addr, std::set<std::string>> {
-        CAF_LOG_TRACE("");
-        forward_current_message(broker_);
-        return {};
-      }
-    };
-  }
-
-private:
-  put_res put(uint16_t port, actor_addr& whom,
-              std::set<std::string>& sigs, const char* in = nullptr,
-              bool reuse_addr = false) {
-    CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(whom) << CAF_ARG(sigs)
-                  << CAF_ARG(in) << CAF_ARG(reuse_addr));
-    accept_handle hdl;
-    uint16_t actual_port;
-    // treat empty strings like nullptr
-    if (in != nullptr && in[0] == '\0')
-      in = nullptr;
-    try {
-      auto res = system().middleman().backend().new_tcp_doorman(port, in,
-                                                                reuse_addr);
-      hdl = res.first;
-      actual_port = res.second;
-      send(broker_, publish_atom::value, hdl, actual_port,
-           std::move(whom), std::move(sigs));
-      return {ok_atom::value, actual_port};
-    }
-    catch (std::exception& e) {
-      return sec::cannot_open_port;
-    }
-  }
-
-  actor broker_;
-};
-
-} // namespace <anonymous>
-
 actor_system::module* middleman::make(actor_system& sys, detail::type_list<>) {
   class impl : public middleman {
   public:
@@ -391,7 +286,7 @@ void middleman::start() {
     backend().thread_id(thread_.get_id());
   }
   auto basp = named_broker<basp_broker>(atom("BASP"));
-  manager_ = system().spawn<middleman_actor_impl, detached + hidden>(basp);
+  manager_ = make_middleman_actor(system(), basp);
 }
 
 void middleman::stop() {

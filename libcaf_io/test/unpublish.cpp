@@ -22,6 +22,7 @@
 #define CAF_SUITE io_unpublish
 #include "caf/test/unit_test.hpp"
 
+#include <new>
 #include <thread>
 #include <atomic>
 
@@ -53,41 +54,67 @@ public:
   }
 };
 
-void test_invalid_unpublish(actor_system& system, const actor& published,
-                            uint16_t port) {
-  auto d = system.spawn<dummy>();
-  system.middleman().unpublish(d, port);
-  auto ra = system.middleman().remote_actor("127.0.0.1", port);
-  CAF_REQUIRE(ra);
-  CAF_CHECK(ra != d);
-  CAF_CHECK(ra == published);
-  anon_send_exit(d, exit_reason::user_shutdown);
-}
-
-CAF_TEST(unpublishing) {
-  auto argc = test::engine::argc();
-  auto argv = test::engine::argv();
-  { // scope for local variables
-    actor_system system{actor_system_config{argc, argv}.load<io::middleman>()};
-    auto d = system.spawn<dummy>();
-    auto port = system.middleman().publish(d, 0);
-    CAF_REQUIRE(port);
-    CAF_MESSAGE("published actor on port " << *port);
-    test_invalid_unpublish(system, d, *port);
-    CAF_MESSAGE("finished `invalid_unpublish`");
-    system.middleman().unpublish(d, *port);
-    // must fail now
-    CAF_MESSAGE("expect error...");
-    try {
-      auto res = system.middleman().remote_actor("127.0.0.1", *port);
-      CAF_TEST_ERROR("unexpected: remote actor succeeded!");
-    } catch(std::exception&) {
-      CAF_MESSAGE("unpublish succeeded");
-    }
-    anon_send_exit(d, exit_reason::user_shutdown);
+struct fixture {
+  fixture() {
+    new (&system) actor_system(actor_system_config{test::engine::argc(),
+                                                   test::engine::argv()}
+                               .load<io::middleman>());
+    testee = system.spawn<dummy>();
   }
-  // check after dtor of system was called
-  CAF_CHECK_EQUAL(s_dtor_called.load(), 2);
-}
+
+  ~fixture() {
+    anon_send_exit(testee, exit_reason::user_shutdown);
+    testee = invalid_actor;
+    system.~actor_system();
+    CAF_CHECK_EQUAL(s_dtor_called.load(), 2);
+  }
+
+  maybe<actor> remote_actor(const char* hostname, uint16_t port) {
+    maybe<actor> result;
+    scoped_actor self{system, true};
+    self->request(system.middleman().actor_handle(),
+                  connect_atom::value, hostname, port).receive(
+      [&](ok_atom, node_id&, actor_addr& res, std::set<std::string>& xs) {
+        CAF_REQUIRE(xs.empty());
+        result = actor_cast<actor>(std::move(res));
+      },
+      [&](error& err) {
+        result = std::move(err);
+      }
+    );
+    return result;
+  }
+
+  union { actor_system system; }; // manually control ctor/dtor
+  actor testee;
+};
 
 } // namespace <anonymous>
+
+CAF_TEST_FIXTURE_SCOPE(unpublish_tests, fixture)
+
+CAF_TEST(unpublishing) {
+  auto port = system.middleman().publish(testee, 0);
+  CAF_REQUIRE(port);
+  CAF_MESSAGE("published actor on port " << *port);
+  CAF_MESSAGE("test invalid unpublish");
+  auto testee2 = system.spawn<dummy>();
+  system.middleman().unpublish(testee2, *port);
+  auto x0 = remote_actor("127.0.0.1", *port);
+  CAF_CHECK(x0 != testee2);
+  CAF_CHECK(x0 == testee);
+  anon_send_exit(testee2, exit_reason::kill);
+  CAF_MESSAGE("unpublish testee");
+  system.middleman().unpublish(testee, *port);
+  CAF_MESSAGE("check whether testee is still available via cache");
+  auto x1 = remote_actor("127.0.0.1", *port);
+  CAF_CHECK(x1 && *x1 == testee);
+  CAF_MESSAGE("fake dead of testee and check if testee becomes unavailable");
+  anon_send(system.middleman().actor_handle(), down_msg{testee.address(),
+                                                        exit_reason::normal});
+  // must fail now
+  auto x2 = remote_actor("127.0.0.1", *port);
+  CAF_CHECK(! x2);
+}
+
+CAF_TEST_FIXTURE_SCOPE_END()

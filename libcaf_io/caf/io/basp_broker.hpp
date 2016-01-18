@@ -93,7 +93,7 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
     // connected port
     uint16_t remote_port;
     // pending operations to be performed after handhsake completed
-    std::function<void (const maybe<message>&)> callback;
+    maybe<response_promise> callback;
   };
 
   void set_context(connection_handle hdl);
@@ -130,27 +130,6 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   const node_id& this_node() const {
     return instance.this_node();
   }
-
-  // and endpoint is identified via host and port
-  using endpoint = std::pair<std::string, uint16_t>;
-
-  // stores the result of a `remote_actor()`
-  using remote_actor_res = std::tuple<node_id, actor_addr,
-                                      std::set<std::string>>;
-
-  // stores the state of connected endpoints, `i->second.empty()` indicates
-  // that a connection has been established but the handshake is still
-  // pending, in which case it is safe to attach to `ctx[i->first].callback`
-  using endpoint_data = std::pair<connection_handle, maybe<remote_actor_res>>;
-
-  using endpoint_map = std::map<endpoint, endpoint_data>;
-
-  // caches the result of all `remote_actor()` calls to avoid
-  // spamming connections for connecting to the same node multiple times
-  endpoint_map connected_endpoints;
-
-  // "reverse lookup" for finding credentials to a connection
-  endpoint_map::iterator find_endpoint(connection_handle x);
 };
 
 /// A broker implementation for the Binary Actor System Protocol (BASP).

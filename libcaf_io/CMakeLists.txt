@@ -14,6 +14,7 @@ set (LIBCAF_IO_SRCS
      src/default_multiplexer.cpp
      src/doorman.cpp
      src/middleman.cpp
+     src/middleman_actor.cpp
      src/hook.cpp
      src/interfaces.cpp
      src/manager.cpp

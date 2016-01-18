@@ -120,21 +120,18 @@ void basp_broker_state::finalize_handshake(const node_id& nid, actor_id aid,
   auto& cb = this_context->callback;
   if (! cb)
     return;
-  actor_addr addr;
   auto cleanup = detail::make_scope_guard([&] {
-    cb = nullptr;
-    auto e = connected_endpoints.end();
-    auto i = find_endpoint(this_context->hdl);
-    if (i == e)
-      return;
-    // store result of this `remote_actor()` call for later retrieval
-    i->second.second = std::make_tuple(nid, addr, sigs);
+    cb = none;
   });
   if (aid == invalid_actor_id) {
     // can occur when connecting to the default port of a node
-    cb(make_message(ok_atom::value, nid, addr, sigs));
+    cb->deliver(make_message(ok_atom::value,
+                             nid,
+                             actor_addr{invalid_actor_addr},
+                             std::move(sigs)));
     return;
   }
+  actor_addr addr;
   if (nid == this_node()) {
     // connected to self
     addr = system().registry().get(aid).first;
@@ -147,7 +144,8 @@ void basp_broker_state::finalize_handshake(const node_id& nid, actor_id aid,
   }
   if (addr.node() != system().node())
     known_remotes.emplace(nid, std::make_pair(this_context->remote_port, addr));
-  cb(make_message(ok_atom::value, nid, addr, sigs));
+  cb->deliver(make_message(ok_atom::value, nid, addr, std::move(sigs)));
+  this_context->callback = none;
 }
 
 void basp_broker_state::purge_state(const node_id& nid) {
@@ -355,7 +353,7 @@ void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
                     // gotcha! send scribe to our BASP broker
                     // to initiate handshake etc.
                     CAF_LOG_INFO("connected directly:" << CAF_ARG(addr));
-                    helper->send(bb, connect_atom::value, hdl, addr, port);
+                    helper->send(bb, connect_atom::value, hdl, port);
                     return;
                   }
                   catch (...) {
@@ -422,7 +420,7 @@ void basp_broker_state::set_context(connection_handle hdl) {
                       hdl,
                       invalid_node_id,
                       0,
-                      nullptr}).first;
+                      none}).first;
   }
   this_context = &i->second;
 }
@@ -435,19 +433,10 @@ bool basp_broker_state::erase_context(connection_handle hdl) {
   auto& ref = i->second;
   if (ref.callback) {
     CAF_LOG_DEBUG("connection closed during handshake");
-    ref.callback(sec::disconnect_during_handshake);
+    ref.callback->deliver(sec::disconnect_during_handshake);
   }
   ctx.erase(i);
   return true;
-}
-
-basp_broker_state::endpoint_map::iterator
-basp_broker_state::find_endpoint(connection_handle y)  {
-  auto pred = [&](const endpoint_map::value_type& x) {
-    return x.second.first == y;
-  };
-  auto e = connected_endpoints.end();
-  return std::find_if(connected_endpoints.begin(), e, pred);
 }
 
 /******************************************************************************
@@ -593,41 +582,9 @@ behavior basp_broker::make_behavior() {
       state.instance.add_published_actor(port, whom, std::move(sigs));
     },
     // received from middleman actor (delegated)
-    [=](connect_atom, connection_handle hdl,
-        std::string& hostname, uint16_t port) {
+    [=](connect_atom, connection_handle hdl, uint16_t port) {
       CAF_LOG_TRACE(CAF_ARG(hdl.id()));
-      // store original context via response promise
       auto rp = make_response_promise();
-      // check whether we already know these credentials
-      auto ep = std::make_pair(std::move(hostname), port);
-      auto i = state.connected_endpoints.find(ep);
-      if (i != state.connected_endpoints.end()) {
-        auto& x = i->second;
-        if (x.second.invalid()) {
-          rp.deliver(x.second.error());
-        } else if (x.second.empty()) {
-          // in this state, we have a connection but are waiting
-          // for the handshake to complete and we can attach to the
-          // respective callback
-          auto j = state.ctx.find(x.first);
-          CAF_ASSERT(j != state.ctx.end());
-          CAF_ASSERT(j->second.callback != nullptr);
-          auto f = j->second.callback; // store previous callback
-          j->second.callback = [f, rp](const maybe<message>& x) {
-            f(x); // run original callback(s) first
-            if (x)
-              rp.deliver(*x);
-            else if (x.invalid())
-              rp.deliver(x.error());
-          };
-        } else {
-          auto& tup = *(x.second);
-          rp.deliver(make_message(ok_atom::value, get<0>(tup),
-                                  get<1>(tup), get<2>(tup)));
-        }
-        return;
-      }
-      // initiate handshake in case we aren't connected to these credentials
       try {
         assign_tcp_scribe(hdl);
       }
@@ -640,15 +597,7 @@ behavior basp_broker::make_behavior() {
       ctx.hdl = hdl;
       ctx.remote_port = port;
       ctx.cstate = basp::await_header;
-      ctx.callback = [rp](const maybe<message>& res) {
-        if (res.valid())
-          rp.deliver(*res);
-        else if (res.invalid())
-          rp.deliver(res.error());
-      };
-      using endpoint_data = basp_broker_state::endpoint_data;
-      state.connected_endpoints.emplace(std::move(ep),
-                                        endpoint_data{hdl, none});
+      ctx.callback = rp;
       // await server handshake
       configure_read(hdl, receive_policy::exactly(basp::header_size));
     },

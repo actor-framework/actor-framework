@@ -111,6 +111,9 @@ using middleman_actor =
     replies_to<spawn_atom, node_id, std::string, message>
     ::with<ok_atom, actor_addr, std::set<std::string>>>;
 
+/// @relates middleman_actor
+middleman_actor make_middleman_actor(actor_system& sys, actor default_broker);
+
 } // namespace io
 } // namespace caf
 
