@@ -7,7 +7,7 @@ network transparent messaging, and more.
 [![Gitter][gitter-badge]]
 (https://gitter.im/actor-framework/chat)
 [![Jenkins][jenkins-badge]]
-(http://mobi39.cpt.haw-hamburg.de/view/CAF%20Dashboard)
+(https://jenkins.inet.haw-hamburg.de/view/CAF%20Dashboard)
 [![Coverity][coverity-badge]]
 (https://scan.coverity.com/projects/5555)
 [![In Progress][in-progress-badge]]
@@ -193,7 +193,7 @@ https://software.opensuse.org/download.html?project=devel%3Alibraries%3Acaf&pack
 https://software.opensuse.org/download.html?project=devel%3Alibraries%3Acaf%3Anightly&package=caf-devel
 
 [jenkins-badge]:
-http://mobi39.cpt.haw-hamburg.de/buildStatus/icon?job=CAF/master%20branch
+https://jenkins.inet.haw-hamburg.de/buildStatus/icon?job=CAF/master%20branch
 
 [coverity-badge]:
 https://scan.coverity.com/projects/5555/badge.svg?flat=1
