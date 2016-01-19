@@ -246,7 +246,7 @@ behavior high_priority_testee(event_based_actor* self) {
   // 'a' must be self->received before 'b'
   return {
     [=](b_atom) {
-      CAF_TEST_ERROR("received 'b' before 'a'");
+      CAF_ERROR("received 'b' before 'a'");
       self->quit();
     },
     [=](a_atom) {
@@ -257,12 +257,12 @@ behavior high_priority_testee(event_based_actor* self) {
           self->quit();
         },
         others >> [&] {
-          CAF_TEST_ERROR("Unexpected message");
+          CAF_ERROR("Unexpected message");
         }
       );
     },
     others >> [&] {
-      CAF_TEST_ERROR("Unexpected message");
+      CAF_ERROR("Unexpected message");
     }
   };
 }
@@ -291,7 +291,7 @@ behavior slave(event_based_actor* self, actor master) {
       self->quit(msg.reason);
     },
     others >> [&] {
-      CAF_TEST_ERROR("Unexpected message");
+      CAF_ERROR("Unexpected message");
     }
   };
 }
@@ -359,7 +359,7 @@ CAF_TEST(self_receive_with_zero_timeout) {
   scoped_actor self{system};
   self->receive(
     others >> [&] {
-      CAF_TEST_ERROR("Unexpected message");
+      CAF_ERROR("Unexpected message");
     },
     after(chrono::seconds(0)) >> [] { /* mailbox empty */ }
   );
@@ -374,7 +374,7 @@ CAF_TEST(mirror) {
       CAF_CHECK_EQUAL(msg, "hello mirror");
     },
     others >> [&] {
-      CAF_TEST_ERROR("Unexpected message");
+      CAF_ERROR("Unexpected message");
     }
   );
   self->send_exit(mirror, exit_reason::user_shutdown);
@@ -384,11 +384,11 @@ CAF_TEST(mirror) {
         CAF_MESSAGE("received `down_msg`");
       }
       else {
-        CAF_TEST_ERROR("Unexpected message");
+        CAF_ERROR("Unexpected message");
       }
     },
     others >> [&] {
-      CAF_TEST_ERROR("Unexpected message");
+      CAF_ERROR("Unexpected message");
     }
   );
 }
@@ -402,7 +402,7 @@ CAF_TEST(detached_mirror) {
       CAF_CHECK_EQUAL(msg, "hello mirror");
     },
     others >> [&] {
-      CAF_TEST_ERROR("Unexpected message");
+      CAF_ERROR("Unexpected message");
     }
   );
   self->send_exit(mirror, exit_reason::user_shutdown);
@@ -412,11 +412,11 @@ CAF_TEST(detached_mirror) {
         CAF_MESSAGE("received `down_msg`");
       }
       else {
-        CAF_TEST_ERROR("Unexpected message");
+        CAF_ERROR("Unexpected message");
       }
     },
     others >> [&] {
-      CAF_TEST_ERROR("Unexpected message");
+      CAF_ERROR("Unexpected message");
     }
   );
 }
@@ -431,7 +431,7 @@ CAF_TEST(priority_aware_mirror) {
       CAF_CHECK_EQUAL(msg, "hello mirror");
     },
     others >> [&] {
-      CAF_TEST_ERROR("Unexpected message");
+      CAF_ERROR("Unexpected message");
     }
   );
   self->send_exit(mirror, exit_reason::user_shutdown);
@@ -441,11 +441,11 @@ CAF_TEST(priority_aware_mirror) {
         CAF_MESSAGE("received `down_msg`");
       }
       else {
-        CAF_TEST_ERROR("Unexpected message");
+        CAF_ERROR("Unexpected message");
       }
     },
     others >> [&] {
-      CAF_TEST_ERROR("Unexpected message");
+      CAF_ERROR("Unexpected message");
     }
   );
 }
@@ -474,7 +474,7 @@ CAF_TEST(echo_actor_messaging) {
       CAF_CHECK_EQUAL(arg, "hello echo");
     },
     others >> [&] {
-      CAF_TEST_ERROR("Unexpected message");
+      CAF_ERROR("Unexpected message");
     }
   );
 }
@@ -521,13 +521,13 @@ CAF_TEST(requests) {
             return "goodbye!";
           },
           after(chrono::minutes(1)) >> [] {
-            CAF_TEST_ERROR("Error in unit test.");
+            CAF_ERROR("Error in unit test.");
             abort();
           }
         );
       },
       others >> [&] {
-        CAF_TEST_ERROR("Unexpected message");
+        CAF_ERROR("Unexpected message");
       }
     );
   });
@@ -543,7 +543,7 @@ CAF_TEST(requests) {
   );
   self->receive (
     on("goodbye!") >> [] { CAF_MESSAGE("Received \"goodbye!\""); },
-    after(chrono::seconds(1)) >> [] { CAF_TEST_ERROR("Unexpected timeout"); }
+    after(chrono::seconds(1)) >> [] { CAF_ERROR("Unexpected timeout"); }
   );
   self->receive (
     [&](const down_msg& dm) {
@@ -554,17 +554,17 @@ CAF_TEST(requests) {
   self->await_all_other_actors_done();
   self->request(sync_testee, "!?").receive(
     [] {
-      CAF_TEST_ERROR("Unexpected empty message");
+      CAF_ERROR("Unexpected empty message");
     },
     [&](error& err) {
       if (err == sec::request_receiver_down)
         CAF_MESSAGE("received `request_receiver_down`");
       else
-        CAF_TEST_ERROR("received unexpected error: "
+        CAF_ERROR("received unexpected error: "
                        << self->system().render(err));
     },
     after(chrono::microseconds(1)) >> [] {
-      CAF_TEST_ERROR("Unexpected timeout");
+      CAF_ERROR("Unexpected timeout");
     }
   );
 }
@@ -634,7 +634,7 @@ CAF_TEST(constructor_attach) {
     behavior make_behavior() {
       return {
         others >> [=] {
-          CAF_TEST_ERROR("Unexpected message");
+          CAF_ERROR("Unexpected message");
         }
       };
     }
@@ -755,7 +755,7 @@ CAF_TEST(kill_the_immortal) {
     self->trap_exit(true);
     return {
       others >> [=] {
-        CAF_TEST_ERROR("Unexpected message");
+        CAF_ERROR("Unexpected message");
       }
     };
   });

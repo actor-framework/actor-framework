@@ -91,8 +91,8 @@ ptrdiff_t invoked(message_handler expr, const Ts&... xs) {
     reset();
   }
   if (results.size() > 1) {
-    CAF_TEST_ERROR("make_message() yielded a different result than "
-                   "message_builder(...).to_message()");
+    CAF_ERROR("make_message() yielded a different result than "
+              "message_builder(...).to_message()");
     return -2;
   }
   return *results.begin();

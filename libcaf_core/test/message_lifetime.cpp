@@ -85,7 +85,7 @@ behavior tester::make_behavior() {
       quit();
     },
     others >> [&] {
-      CAF_TEST_ERROR("Unexpected message");
+      CAF_ERROR("Unexpected message");
     }
   };
 }

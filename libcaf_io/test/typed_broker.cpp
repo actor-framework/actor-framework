@@ -67,11 +67,11 @@ behavior ping(event_based_actor* self, size_t num_pings) {
         return std::make_tuple(ping_atom::value, value + 1);
       },
       others >> [=] {
-        CAF_TEST_ERROR("Unexpected message");
+        CAF_ERROR("Unexpected message");
       });
     },
     others >> [=] {
-      CAF_TEST_ERROR("Unexpected message");
+      CAF_ERROR("Unexpected message");
     }
   };
 }
@@ -92,14 +92,14 @@ behavior pong(event_based_actor* self) {
           self->quit(dm.reason);
         },
         others >> [=] {
-          CAF_TEST_ERROR("Unexpected message");
+          CAF_ERROR("Unexpected message");
         }
       );
       // reply to 'ping'
       return std::make_tuple(pong_atom::value, value);
     },
     others >> [=] {
-      CAF_TEST_ERROR("Unexpected message");
+      CAF_ERROR("Unexpected message");
     }
   };
 }

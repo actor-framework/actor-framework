@@ -321,7 +321,7 @@ int_actor::behavior_type int_fun2(int_actor::pointer self) {
       self->quit();
     },
     [=](const exit_msg&) {
-      CAF_TEST_ERROR("Unexpected message");
+      CAF_ERROR("Unexpected message");
     }
   };
 }
@@ -399,7 +399,7 @@ CAF_TEST(event_testee_series) {
       result = str;
     },
     after(chrono::minutes(1)) >> [&] {
-      CAF_TEST_ERROR("event_testee does not reply");
+      CAF_ERROR("event_testee does not reply");
       throw runtime_error("event_testee does not reply");
     }
   );

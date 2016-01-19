@@ -51,7 +51,7 @@ behavior ping1(event_based_actor* self, const actor& pong_actor) {
     [=](send_ping_atom) {
       self->request(pong_actor, ping_atom::value).then(
         [=](pong_atom) {
-          CAF_TEST_ERROR("received pong atom");
+          CAF_ERROR("received pong atom");
           self->quit(exit_reason::user_shutdown);
         },
         after(std::chrono::milliseconds(100)) >> [=] {
@@ -71,7 +71,7 @@ behavior ping2(event_based_actor* self, const actor& pong_actor) {
     [=](send_ping_atom) {
       self->request(pong_actor, ping_atom::value).then(
         [=](pong_atom) {
-          CAF_TEST_ERROR("received pong atom");
+          CAF_ERROR("received pong atom");
           self->quit(exit_reason::user_shutdown);
         },
         after(std::chrono::milliseconds(100)) >> [=] {
@@ -94,7 +94,7 @@ behavior ping3(event_based_actor* self, const actor& pong_actor) {
     [=](send_ping_atom) {
       self->request(pong_actor, ping_atom::value).then(
         [=](pong_atom) {
-          CAF_TEST_ERROR("received pong atom");
+          CAF_ERROR("received pong atom");
           self->quit(exit_reason::user_shutdown);
         },
         after(std::chrono::milliseconds(100)) >> [=] {
@@ -114,7 +114,7 @@ behavior ping4(event_based_actor* self, const actor& pong_actor) {
     [=](send_ping_atom) {
       self->request(pong_actor, ping_atom::value).then(
         [=](pong_atom) {
-          CAF_TEST_ERROR("received pong atom");
+          CAF_ERROR("received pong atom");
           self->quit(exit_reason::user_shutdown);
         },
         after(std::chrono::milliseconds(100)) >> [=] {
@@ -135,7 +135,7 @@ void ping5(event_based_actor* self, const actor& pong_actor) {
   auto flag = std::make_shared<int>(0);
   self->request(pong_actor, ping_atom::value).then(
     [=](pong_atom) {
-      CAF_TEST_ERROR("received pong atom");
+      CAF_ERROR("received pong atom");
       *flag = 1;
     },
     after(std::chrono::milliseconds(100)) >> [=] {
@@ -147,7 +147,7 @@ void ping5(event_based_actor* self, const actor& pong_actor) {
   );
   self->request(pong_actor, ping_atom::value).await(
     [=](pong_atom) {
-      CAF_TEST_ERROR("received pong atom");
+      CAF_ERROR("received pong atom");
       *flag = 3;
     },
     after(std::chrono::milliseconds(100)) >> [=] {

@@ -62,7 +62,7 @@ behavior ping_behavior(local_actor* self, size_t ping_msgs) {
     [=](pong_atom, int value) -> message {
       CAF_LOG_TRACE(CAF_ARG(value));
       if (! self->current_sender()) {
-        CAF_TEST_ERROR("current_sender() invalid!");
+        CAF_ERROR("current_sender() invalid!");
       }
       CAF_MESSAGE("received {'pong', " << value << "}");
       if (++s_pongs >= ping_msgs) {
@@ -166,7 +166,7 @@ void spawn5_server_impl(event_based_actor* self, actor client, group grp) {
             self->become(
               [=](const down_msg& dm) {
                 if (dm.reason != exit_reason::normal) {
-                  CAF_TEST_ERROR("reflector exited for non-normal exit reason!");
+                  CAF_ERROR("reflector exited for non-normal exit reason!");
                 }
                 if (++*downs == 5) {
                   CAF_MESSAGE("down increased to 5, about to quit");
@@ -175,11 +175,11 @@ void spawn5_server_impl(event_based_actor* self, actor client, group grp) {
                 }
               },
               others >> [=] {
-                CAF_TEST_ERROR("Unexpected message");
+                CAF_ERROR("Unexpected message");
                 self->quit(exit_reason::user_shutdown);
               },
               after(chrono::seconds(3)) >> [=] {
-                CAF_TEST_ERROR("did only receive " << *downs << " down messages");
+                CAF_ERROR("did only receive " << *downs << " down messages");
                 self->quit(exit_reason::user_shutdown);
               }
             );
@@ -187,18 +187,18 @@ void spawn5_server_impl(event_based_actor* self, actor client, group grp) {
         },
         after(std::chrono::seconds(6)) >> [=] {
           CAF_LOG_TRACE("");
-          CAF_TEST_ERROR("Unexpected timeout");
+          CAF_ERROR("Unexpected timeout");
           self->quit(exit_reason::user_shutdown);
         }
       );
     },
     [=](const error& err) {
-      CAF_TEST_ERROR("Error: " << self->system().render(err));
+      CAF_ERROR("Error: " << self->system().render(err));
       self->quit(exit_reason::user_shutdown);
     },
     after(chrono::seconds(10)) >> [=] {
       CAF_LOG_TRACE("");
-      CAF_TEST_ERROR("Unexpected timeout");
+      CAF_ERROR("Unexpected timeout");
       self->quit(exit_reason::user_shutdown);
     }
   );

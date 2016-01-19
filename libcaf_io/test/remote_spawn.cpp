@@ -48,7 +48,7 @@ behavior client(event_based_actor* self, actor serv) {
   self->send(serv, ok_atom::value);
   return {
     others >> [=] {
-      CAF_TEST_ERROR("Unexpected message");
+      CAF_ERROR("Unexpected message");
     }
   };
 }
@@ -90,7 +90,7 @@ behavior server(stateful_actor<server_state>* self) {
     },
     [=](const error& err) {
       CAF_LOG_TRACE("");
-      CAF_TEST_ERROR("Error: " << self->system().render(err));
+      CAF_ERROR("Error: " << self->system().render(err));
     }
   };
 }

@@ -21,6 +21,7 @@
 #define CAF_TEST_UNIT_TEST_IMPL_HPP
 
 #include <regex>
+#include <cctype>
 #include <thread>
 #include <cassert>
 #include <cstdlib>
@@ -140,6 +141,29 @@ const char* fill(size_t line) {
   }
 }
 
+void remove_trailing_spaces(std::string& x) {
+  x.erase(std::find_if_not(x.rbegin(), x.rend(), ::isspace).base(), x.end());
+}
+
+bool check(test* parent, const char *file, size_t line,
+           const char *expr, bool should_fail, bool result) {
+  std::stringstream ss;
+  if (result) {
+    ss << engine::color(green) << "** "
+       << engine::color(blue) << file << engine::color(yellow) << ":"
+       << engine::color(blue) << line << fill(line) << engine::color(reset)
+       << expr;
+    parent->pass(ss.str());
+  } else {
+    ss << engine::color(red) << "!! "
+       << engine::color(blue) << file << engine::color(yellow) << ":"
+       << engine::color(blue) << line << fill(line) << engine::color(reset)
+       << expr;
+    parent->fail(ss.str(), should_fail);
+  }
+  return result;
+}
+
 } // namespace detail
 
 logger::stream::stream(logger& l, level lvl) : logger_(l), level_(lvl) {
@@ -183,11 +207,16 @@ logger::stream& logger::stream::operator<<(const std::string& str) {
   return *this;
 }
 
-void logger::stream::flush() {
-  logger_.log(level_, buf_.str());
-  buf_.str("");
+std::string logger::stream::str() const {
+  return str_;
 }
 
+void logger::stream::flush() {
+  auto str = buf_.str();
+  buf_.str("");
+  logger_.log(level_, str);
+  str_ += str;
+}
 
 bool logger::init(int lvl_cons, int lvl_file, const std::string& logfile) {
   instance().level_console_ = static_cast<level>(lvl_cons);

@@ -94,7 +94,7 @@ CAF_TEST(test_serial_reply) {
       CAF_MESSAGE("received 'ho'");
     },
     [&](const error& err) {
-      CAF_TEST_ERROR("Error: " << self->system().render(err));
+      CAF_ERROR("Error: " << self->system().render(err));
     }
   );
   self->send_exit(master, exit_reason::user_shutdown);
