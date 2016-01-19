@@ -101,7 +101,7 @@ CAF_TEST(receive_atoms) {
       CAF_MESSAGE("drain mailbox");
     },
     after(std::chrono::seconds(0)) >> [] {
-      CAF_TEST_ERROR("mailbox empty");
+      CAF_ERROR("mailbox empty");
     }
   );
   atom_value x = atom("abc");
@@ -114,7 +114,7 @@ CAF_TEST(receive_atoms) {
       CAF_MESSAGE("received 'abc'");
     },
     others >> [] {
-      CAF_TEST_ERROR("unexpected message");
+      CAF_ERROR("unexpected message");
     }
   );
 }

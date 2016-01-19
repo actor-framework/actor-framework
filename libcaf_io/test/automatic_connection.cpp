@@ -261,8 +261,8 @@ CAF_TEST(triangle_setup) {
   bool is_jupiter = r.opts.count("jupiter") > 0;
   bool has_port = r.opts.count("port") > 0;
   if (((is_mars || is_jupiter) && ! has_port) || (is_mars && is_jupiter)) {
-    CAF_TEST_ERROR("need a port when running Mars or Jupiter and cannot "
-                   "both at the same time");
+    CAF_ERROR("need a port when running Mars or Jupiter and cannot "
+              "both at the same time");
     return;
   }
   // enable automatic connections

@@ -58,11 +58,11 @@ void ping(event_based_actor* self, size_t num_pings) {
         return std::make_tuple(ping_atom::value, value + 1);
       },
       others >> [=] {
-        CAF_TEST_ERROR("Unexpected message");
+        CAF_ERROR("Unexpected message");
       });
     },
     others >> [=] {
-      CAF_TEST_ERROR("Unexpected message");
+      CAF_ERROR("Unexpected message");
     }
   );
 }
@@ -83,14 +83,14 @@ void pong(event_based_actor* self) {
           self->quit(dm.reason);
         },
         others >> [=] {
-          CAF_TEST_ERROR("Unexpected message");
+          CAF_ERROR("Unexpected message");
         }
       );
       // reply to 'ping'
       return std::make_tuple(pong_atom::value, value);
     },
     others >> [=] {
-      CAF_TEST_ERROR("Unexpected message");
+      CAF_ERROR("Unexpected message");
     }
   );
 }
@@ -157,7 +157,7 @@ behavior peer_acceptor_fun(broker* self, const actor& buddy) {
       return self->add_tcp_doorman(0, "127.0.0.1").second;
     },
     others >> [&] {
-      CAF_TEST_ERROR("Unexpected message");
+      CAF_ERROR("Unexpected message");
     }
   };
 }
@@ -186,7 +186,7 @@ void run_server(int argc, char** argv) {
       child = std::thread([=] { run_client(argc, argv, port); });
     },
     [&](const error& err) {
-      CAF_TEST_ERROR("Error: " << self->system().render(err));
+      CAF_ERROR("Error: " << self->system().render(err));
     }
   );
   self->await_all_other_actors_done();

@@ -127,7 +127,7 @@ CAF_TEST(round_robin_actor_pool) {
       );
     },
     after(std::chrono::milliseconds(250)) >> [] {
-      CAF_TEST_ERROR("didn't receive a down message");
+      CAF_ERROR("didn't receive a down message");
     }
   );
   CAF_MESSAGE("about to send exit to workers");
@@ -143,7 +143,7 @@ CAF_TEST(round_robin_actor_pool) {
           workers.erase(pos);
       },
       after(std::chrono::milliseconds(250)) >> [] {
-        CAF_TEST_ERROR("didn't receive a down message");
+        CAF_ERROR("didn't receive a down message");
       }
     );
   }
@@ -164,7 +164,7 @@ CAF_TEST(broadcast_actor_pool) {
       results.push_back(res);
     },
     after(std::chrono::milliseconds(250)) >> [] {
-      CAF_TEST_ERROR("didn't receive a result");
+      CAF_ERROR("didn't receive a result");
     }
   );
   CAF_CHECK_EQUAL(results.size(), 25u);
@@ -182,7 +182,7 @@ CAF_TEST(random_actor_pool) {
         CAF_CHECK_EQUAL(res, 3);
       },
       after(std::chrono::milliseconds(250)) >> [] {
-        CAF_TEST_ERROR("didn't receive a down message");
+        CAF_ERROR("didn't receive a down message");
       }
     );
   }

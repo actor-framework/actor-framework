@@ -42,7 +42,7 @@ using namespace caf;
 
 CAF_TEST(apply) {
   auto f1 = [] {
-    CAF_TEST_ERROR("f1 invoked!");
+    CAF_ERROR("f1 invoked!");
   };
   auto f2 = [](int i) {
     CAF_CHECK_EQUAL(i, 42);

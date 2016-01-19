@@ -237,7 +237,7 @@ behavior server(event_based_actor* self) {
           return skip_message();
         },
         others >> [=] {
-          CAF_TEST_ERROR("Unexpected message:" << to_string(self->current_message()));
+          CAF_ERROR("Unexpected message:" << to_string(self->current_message()));
           die();
         }
       );
@@ -246,7 +246,7 @@ behavior server(event_based_actor* self) {
       return skip_message();
     },
     others >> [=] {
-      CAF_TEST_ERROR("Unexpected message:" << to_string(self->current_message()));
+      CAF_ERROR("Unexpected message:" << to_string(self->current_message()));
       die();
     }
   };
@@ -288,7 +288,7 @@ CAF_TEST(pending_quit) {
   system.spawn([mirror](event_based_actor* self) {
     self->request(mirror, 42).then(
       [](int) {
-        CAF_TEST_ERROR("received result, should've been terminated already");
+        CAF_ERROR("received result, should've been terminated already");
       },
       [](const error& err) {
         CAF_CHECK(err == sec::request_receiver_down);
@@ -315,7 +315,7 @@ CAF_TEST(request) {
         ++invocations;
       },
       [&](const error& err) {
-        CAF_TEST_ERROR("Error: " << s->system().render(err));
+        CAF_ERROR("Error: " << s->system().render(err));
       }
     );
     s->request(foi, f_atom::value).receive(
@@ -324,7 +324,7 @@ CAF_TEST(request) {
         ++invocations;
       },
       [&](const error& err) {
-        CAF_TEST_ERROR("Error: " << s->system().render(err));
+        CAF_ERROR("Error: " << s->system().render(err));
       }
     );
     CAF_CHECK_EQUAL(invocations, 2);
@@ -350,8 +350,8 @@ CAF_TEST(request) {
       CAF_CHECK_EQUAL(dm.reason, exit_reason::user_shutdown);
     },
     others >> [&] {
-      CAF_TEST_ERROR("Unexpected message: "
-                     << to_string(self->current_message()));
+      CAF_ERROR("Unexpected message: "
+                << to_string(self->current_message()));
     }
   );
   auto mirror = system.spawn<sync_mirror>();
@@ -371,13 +371,13 @@ CAF_TEST(request) {
         CAF_MESSAGE("received `ok_atom`");
       },
       [](error_atom) {
-        CAF_TEST_ERROR("A didn't receive sync response");
+        CAF_ERROR("A didn't receive sync response");
       },
       [&](const down_msg& dm) -> maybe<skip_message_t> {
         if (dm.reason == exit_reason::normal) {
           return skip_message();
         }
-        CAF_TEST_ERROR("A exited for reason " << to_string(dm.reason));
+        CAF_ERROR("A exited for reason " << to_string(dm.reason));
         return none;
       }
     );
@@ -398,7 +398,7 @@ CAF_TEST(request) {
   CAF_MESSAGE("`await_all_other_actors_done` finished");
   self->request(self, no_way_atom::value).receive(
     [&](int) {
-      CAF_TEST_ERROR("Unexpected message");
+      CAF_ERROR("Unexpected message");
     },
     after(milliseconds(50)) >> [] {
       CAF_MESSAGE("Got timeout");
@@ -416,18 +416,18 @@ CAF_TEST(request) {
                 "synchronous request message\"");
     },
     others >> [&] {
-      CAF_TEST_ERROR("Unexpected message: "
+      CAF_ERROR("Unexpected message: "
                      << to_string(self->current_message()));
     },
     after(milliseconds(0)) >> [] {
-      CAF_TEST_ERROR("Unexpected timeout");
+      CAF_ERROR("Unexpected timeout");
     }
   );
   // mailbox should be empty now
   self->receive(
     others >> [&] {
-      CAF_TEST_ERROR("Unexpected message: "
-                     << to_string(self->current_message()));
+      CAF_ERROR("Unexpected message: "
+                << to_string(self->current_message()));
     },
     after(milliseconds(0)) >> [] {
       CAF_MESSAGE("Mailbox is empty, all good");
@@ -439,11 +439,11 @@ CAF_TEST(request) {
   bool timeout_occured = false;
   self->request(c, milliseconds(500), hi_there_atom::value).receive(
     [&](hi_there_atom) {
-      CAF_TEST_ERROR("C did reply to 'HiThere'");
+      CAF_ERROR("C did reply to 'HiThere'");
     },
     [&](const error& err) {
       CAF_LOG_TRACE("");
-      CAF_TEST_ERROR("Error: " << self->system().render(err));
+      CAF_ERROR("Error: " << self->system().render(err));
     },
     after(milliseconds(500)) >> [&] {
       CAF_MESSAGE("timeout occured");
@@ -457,7 +457,7 @@ CAF_TEST(request) {
     },
     [&](const error& err) {
       CAF_LOG_TRACE("");
-      CAF_TEST_ERROR("Error: " << self->system().render(err));
+      CAF_ERROR("Error: " << self->system().render(err));
     }
   );
   self->send_exit(c, exit_reason::user_shutdown);
@@ -482,7 +482,7 @@ CAF_TEST(request) {
         CAF_CHECK(s->current_sender() == work);
       },
       [&](const error& err) {
-        CAF_TEST_ERROR("Error: " << s->system().render(err));
+        CAF_ERROR("Error: " << s->system().render(err));
       }
     );
     // first 'request', then 'idle'
@@ -493,7 +493,7 @@ CAF_TEST(request) {
         CAF_CHECK(s->current_sender() == work);
       },
       [&](const error& err) {
-        CAF_TEST_ERROR("Error: " << s->system().render(err));
+        CAF_ERROR("Error: " << s->system().render(err));
       }
     );
     s->quit(exit_reason::user_shutdown);
@@ -503,8 +503,8 @@ CAF_TEST(request) {
       CAF_CHECK_EQUAL(dm.reason, exit_reason::user_shutdown);
     },
     others >> [&] {
-      CAF_TEST_ERROR("Unexpected message: "
-                     << to_string(self->current_message()));
+      CAF_ERROR("Unexpected message: "
+                << to_string(self->current_message()));
     }
   );
 }

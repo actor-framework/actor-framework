@@ -132,6 +132,8 @@ public:
 // constructs spacing given a line number.
 const char* fill(size_t line);
 
+void remove_trailing_spaces(std::string& x);
+
 } // namespace detail
 
 /// Logs messages for the test framework.
@@ -175,12 +177,15 @@ public:
 
     stream& operator<<(const std::string& str);
 
+    std::string str() const;
+
   private:
     void flush();
 
     logger& logger_;
     level level_;
     std::ostringstream buf_;
+    std::string str_;
   };
 
   static bool init(int lvl_cons, int lvl_file, const std::string& logfile);
@@ -377,24 +382,8 @@ showable<T> show(const T &x) {
   return showable<T>{x};
 }
 
-inline bool check(test* parent, const char *file, size_t line,
-                  const char *expr, bool should_fail, bool result) {
-  std::stringstream ss;
-  if (result) {
-    ss << engine::color(green) << "** "
-       << engine::color(blue) << file << engine::color(yellow) << ":"
-       << engine::color(blue) << line << fill(line) << engine::color(reset)
-       << expr;
-    parent->pass(ss.str());
-  } else {
-    ss << engine::color(red) << "!! "
-       << engine::color(blue) << file << engine::color(yellow) << ":"
-       << engine::color(blue) << line << fill(line) << engine::color(reset)
-       << expr;
-    parent->fail(ss.str(), should_fail);
-  }
-  return result;
-}
+bool check(test* parent, const char *file, size_t line,
+           const char *expr, bool should_fail, bool result);
 
 template <class T, class U>
 bool check(test* parent, const char *file, size_t line,
@@ -427,19 +416,14 @@ bool check(test* parent, const char *file, size_t line,
 // on the global namespace so that it can hidden via namespace-scoping
 using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 
-#define CAF_TEST_PR(level, msg, colorcode)                                     \
-  ::caf::test::logger::instance(). level ()                                    \
+#define CAF_TEST_PRINT(level, msg, colorcode)                                  \
+  (::caf::test::logger::instance(). level ()                                   \
     << ::caf::test::engine::color(::caf::test:: colorcode )                    \
-    << "  -> " << ::caf::test::engine::color(::caf::test::reset) << msg << '\n'
+    << "  -> " << ::caf::test::engine::color(::caf::test::reset) << msg << '\n')
 
-#define CAF_TEST_ERROR(msg)                                                    \
-  CAF_TEST_PR(info, msg, red)
-
-#define CAF_TEST_INFO(msg)                                                     \
-  CAF_TEST_PR(info, msg, yellow)
-
-#define CAF_TEST_VERBOSE(msg)                                                  \
-  CAF_TEST_PR(verbose, msg, yellow)
+#define CAF_TEST_PRINT_ERROR(msg)   CAF_TEST_PRINT(info, msg, red)
+#define CAF_TEST_PRINT_INFO(msg)    CAF_TEST_PRINT(info, msg, yellow)
+#define CAF_TEST_PRINT_VERBOSE(msg) CAF_TEST_PRINT(verbose, msg, yellow)
 
 #define CAF_PASTE_CONCAT(lhs, rhs) lhs ## rhs
 
@@ -457,6 +441,15 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 
 #define CAF_PRED_EXPR(pred, x_expr, y_expr) "("#x_expr") "#pred" ("#y_expr")"
 #define CAF_FUNC_EXPR(func, x_expr, y_expr) #func"("#x_expr", "#y_expr")"
+
+#define CAF_ERROR(msg)                                                         \
+  do {                                                                         \
+    auto CAF_UNIQUE(__str) = CAF_TEST_PRINT_ERROR(msg).str();                  \
+    ::caf::test::detail::remove_trailing_spaces(CAF_UNIQUE(__str));            \
+    ::caf::test::engine::current_test()->fail(CAF_UNIQUE(__str), false);       \
+    ::caf::test::engine::last_check_file(__FILE__);                            \
+    ::caf::test::engine::last_check_line(__LINE__);                            \
+  } while(false)
 
 #define CAF_CHECK(...)                                                         \
   do {                                                                         \
@@ -502,7 +495,9 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 
 #define CAF_FAIL(msg)                                                          \
   do {                                                                         \
-    CAF_TEST_ERROR(msg);                                                       \
+    auto CAF_UNIQUE(__str) = CAF_TEST_PRINT_ERROR(msg).str();                  \
+    ::caf::test::detail::remove_trailing_spaces(CAF_UNIQUE(__str));            \
+    ::caf::test::engine::current_test()->fail(CAF_UNIQUE(__str), false);       \
     throw ::caf::test::detail::require_error{"test failure"};                  \
   } while(false)
 
@@ -583,6 +578,6 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 #define CAF_REQUIRE_GREATER(x, y)       CAF_REQUIRE_PRED(> , x, y)
 #define CAF_REQUIRE_GREATER_EQUAL(x, y) CAF_REQUIRE_PRED(>=, x, y)
 
-#define CAF_MESSAGE(msg) CAF_TEST_VERBOSE(msg)
+#define CAF_MESSAGE(msg) CAF_TEST_PRINT_VERBOSE(msg)
 
 #endif // CAF_TEST_UNIT_TEST_HPP
