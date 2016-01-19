@@ -115,6 +115,10 @@ endif()
 if(CAF_CXX_WARNINGS_AS_ERRORS)
   set(EXTRA_FLAGS "${EXTRA_FLAGS} -Werror")
 endif()
+# set compiler flags for GCOV if requested
+if(CAF_ENABLE_GCOV)
+  set(EXTRA_FLAGS "${EXTRA_FLAGS} -fprofile-arcs -ftest-coverage")
+endif()
 # enable a ton of warnings if --more-clang-warnings is used
 if(CAF_MORE_WARNINGS)
   if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
