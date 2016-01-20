@@ -30,7 +30,7 @@
 
 namespace caf {
 
-/// An intrusive, reference counting smart pointer impelementation.
+/// An intrusive, reference counting smart pointer implementation.
 /// @relates ref_counted
 template <class T>
 class intrusive_ptr : detail::comparable<intrusive_ptr<T>>,
@@ -66,9 +66,8 @@ public:
   }
 
   ~intrusive_ptr() {
-    if (ptr_) {
+    if (ptr_)
       intrusive_ptr_release(ptr_);
-    }
   }
 
   void swap(intrusive_ptr& other) noexcept {
@@ -92,14 +91,8 @@ public:
   void reset(pointer new_value = nullptr, bool add_ref = true) {
     auto old = ptr_;
     set_ptr(new_value, add_ref);
-    if (old) {
+    if (old)
       intrusive_ptr_release(old);
-    }
-  }
-
-  template <class... Ts>
-  void emplace(Ts&&... xs) {
-    reset(new T(std::forward<Ts>(xs)...));
   }
 
   intrusive_ptr& operator=(pointer ptr) {
@@ -107,21 +100,8 @@ public:
     return *this;
   }
 
-  intrusive_ptr& operator=(intrusive_ptr&& other) {
+  intrusive_ptr& operator=(intrusive_ptr other) {
     swap(other);
-    return *this;
-  }
-
-  intrusive_ptr& operator=(const intrusive_ptr& other) {
-    intrusive_ptr tmp{other};
-    swap(tmp);
-    return *this;
-  }
-
-  template <class Y>
-  intrusive_ptr& operator=(intrusive_ptr<Y> other) {
-    intrusive_ptr tmp{std::move(other)};
-    swap(tmp);
     return *this;
   }
 
