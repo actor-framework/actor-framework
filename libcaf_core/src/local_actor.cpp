@@ -339,7 +339,7 @@ bool handle_message_id_res(local_actor* self, message& res,
       && res.get_as<atom_value>(0) == atom("MESSAGE_ID")) {
     CAF_LOG_DEBUG("message handler returned a message id wrapper");
     auto msg_id = message_id::from_integer_value(res.get_as<uint64_t>(1));
-    auto fun = [=](maybe<local_actor::pending_response&> ref_opt) {
+    auto fun = [=](maybe<local_actor::pending_response&> ref_opt) mutable {
       // install a behavior that calls the user-defined behavior
       // and using the result of its inner behavior as response
       if (ref_opt) {
