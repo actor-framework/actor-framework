@@ -333,7 +333,7 @@ response_promise fetch_response_promise(local_actor*, response_promise& hdl) {
 // enables `return request(...).then(...)`
 bool handle_message_id_res(local_actor* self, message& res,
                            response_promise hdl) {
-  CAF_ASSERT(hdl);
+  CAF_ASSERT(hdl.pending());
   CAF_LOG_TRACE(CAF_ARG(res));
   if (res.match_elements<atom_value, uint64_t>()
       && res.get_as<atom_value>(0) == atom("MESSAGE_ID")) {
@@ -345,8 +345,7 @@ bool handle_message_id_res(local_actor* self, message& res,
       if (ref_opt) {
         behavior inner{std::move(ref_opt->second.first)};
         ref_opt->second.first.assign(
-          others >> [=] {
-            // inner is const inside this lambda and mutable a C++14 feature
+          others >> [=]() mutable {
             auto ires = const_cast<behavior&>(inner)(self->current_message());
             if (ires && ! handle_message_id_res(self, *ires, hdl))
               hdl.deliver(*ires);
@@ -375,7 +374,7 @@ bool post_process_invoke_res(local_actor* self, bool is_sync_request,
   auto rp = fetch_response_promise(self, hdl);
   // return true if self has answered to the original request,
   // e.g., by forwarding or delegating it
-  if (! rp)
+  if (! rp.pending())
     return res.valid();
   // fulfill the promise
   if (res) {
@@ -1001,12 +1000,11 @@ void local_actor::delayed_send_impl(message_id mid, const channel& dest,
 response_promise local_actor::make_response_promise() {
   auto& ptr = current_element_;
   if (! ptr)
-    return response_promise{};
+    return {};
   auto& mid = ptr->mid;
   if (mid.is_answered())
-    return response_promise{};
-  response_promise result{this, *ptr};
-  return result;
+    return {};
+  return {this, *ptr};
 }
 
 const char* local_actor::name() const {

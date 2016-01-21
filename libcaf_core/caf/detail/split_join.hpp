@@ -58,7 +58,7 @@ public:
           this->send(x.first, std::move(x.second));
         this->become(
           // collect results
-          others >> [=] {
+          others >> [=]() mutable {
             join_(value_, this->current_message());
             if (--awaited_results_ == 0) {
               rp.deliver(make_message(value_));

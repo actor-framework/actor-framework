@@ -34,49 +34,42 @@ namespace caf {
 /// to the client (i.e. the sender of the request).
 class response_promise {
 public:
-  response_promise() = default;
+  /// Constructs an invalid response promise.
+  response_promise();
+  response_promise(local_actor* self, mailbox_element& src);
+
   response_promise(response_promise&&) = default;
   response_promise(const response_promise&) = default;
   response_promise& operator=(response_promise&&) = default;
   response_promise& operator=(const response_promise&) = default;
 
-  using forwarding_stack = std::vector<actor_addr>;
-
-  //response_promise(local_actor* self, actor_addr source,
-  //                 forwarding_stack stages,
-  //                 message_id response_id);
-
-  response_promise(local_actor* self, mailbox_element& src);
-
-  /// Queries whether this promise is still valid, i.e., no response
-  /// was yet delivered to the client.
-  inline bool valid() const {
-    // handle is valid if it has a receiver or a next stage
-    return source_ || ! stages_.empty();
-  }
-
-  inline explicit operator bool() const {
-    return valid();
-  }
-
-  /// Sends the response_message and invalidate this promise.
+  /// Satisfies the promise by sending a non-error response message.
   template <class T, class... Ts>
   typename std::enable_if<
+    (sizeof...(Ts) > 0) ||
     ! std::is_convertible<T, error>::value
   >::type
-  deliver(T&&x, Ts&&... xs) const {
+  deliver(T&&x, Ts&&... xs) {
     deliver_impl(make_message(std::forward<T>(x), std::forward<Ts>(xs)...));
   }
 
-  /// Sends an error as response unless the sender used asynchronous messaging
-  /// and invalidate this promise.
-  void deliver(error x) const;
+  /// Satisfies the promise by sending an error response message.
+  /// For non-requests, nothing is done.
+  void deliver(error x);
+
+  /// Queries whether this promise is a valid promise that is not satisfied yet.
+  inline bool pending() const {
+    return ! stages_.empty() || source_;
+  }
 
 private:
-  void deliver_impl(message response_message) const;
+  using forwarding_stack = std::vector<actor_addr>;
+
+  void deliver_impl(message response_message);
+
   local_actor* self_;
-  mutable actor_addr source_;
-  mutable forwarding_stack stages_;
+  actor_addr source_;
+  forwarding_stack stages_;
   message_id id_;
 };
 
