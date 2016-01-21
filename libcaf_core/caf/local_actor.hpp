@@ -24,6 +24,7 @@
 #include <cstdint>
 #include <exception>
 #include <functional>
+#include <type_traits>
 #include <forward_list>
 #include <unordered_map>
 
@@ -55,6 +56,7 @@
 #include "caf/check_typed_input.hpp"
 #include "caf/monitorable_actor.hpp"
 #include "caf/invoke_message_result.hpp"
+#include "caf/typed_response_promise.hpp"
 
 #include "caf/detail/disposer.hpp"
 #include "caf/detail/behavior_stack.hpp"
@@ -340,6 +342,16 @@ public:
 
   /// Creates a `response_promise` to response to a request later on.
   response_promise make_response_promise();
+
+  /// Creates a `response_promise` and responds immediately.
+  /// Non-requests do not get an error response message.
+  template <class... Ts>
+  typed_response_promise<typename std::decay<Ts>::type...>
+  response(Ts&&... xs) {
+    auto promise = make_response_promise();
+    promise.deliver(std::forward<Ts>(xs)...);
+    return promise;
+  }
 
   /// Sets a custom exception handler for this actor. If multiple handlers are
   /// defined, only the functor that was added *last* is being executed.

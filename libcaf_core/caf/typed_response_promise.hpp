@@ -22,27 +22,57 @@
 
 #include "caf/response_promise.hpp"
 
+#include "caf/detail/type_list.hpp"
+
 namespace caf {
 
+/// A response promise can be used to deliver a uniquely identifiable
+/// response message from the server (i.e. receiver of the request)
+/// to the client (i.e. the sender of the request).
 template <class... Ts>
 class typed_response_promise {
 public:
+  /// Constructs an invalid response promise.
   typed_response_promise() = default;
-  typed_response_promise(const typed_response_promise&) = default;
-  typed_response_promise& operator=(const typed_response_promise&) = default;
 
-  typed_response_promise(response_promise promise) : promise_(promise) {
+  inline typed_response_promise(response_promise promise)
+      : promise_(std::move(promise)) {
     // nop
   }
 
-  explicit operator bool() const {
-    // handle is valid if it has a receiver
-    return static_cast<bool>(promise_);
+  typed_response_promise(typed_response_promise&&) = default;
+  typed_response_promise(const typed_response_promise&) = default;
+  typed_response_promise& operator=(typed_response_promise&&) = default;
+  typed_response_promise& operator=(const typed_response_promise&) = default;
+
+  /// Satisfies the promise by sending a non-error response message.
+  template <class U, class... Us>
+  typename std::enable_if<
+    (sizeof...(Us) > 0) || ! std::is_convertible<U, error>::value
+  >::type
+  deliver(U&& x, Us&&... xs) {
+    static_assert(
+      std::is_same<detail::type_list<Ts...>,
+                   detail::type_list<typename std::decay<U>::type,
+                                     typename std::decay<Us>::type...>>::value,
+      "typed_response_promise: message type mismatched");
+    promise_.deliver(std::forward<U>(x), std::forward<Us>(xs)...);
   }
 
-  template <class... Us>
-  void deliver(Us&&... xs) const {
-    promise_.deliver(make_message(std::forward<Us>(xs)...));
+  /// Satisfies the promise by sending an error response message.
+  /// For non-requests, nothing is done.
+  inline void deliver(error x) {
+    promise_.deliver(std::move(x));
+  }
+
+  /// Returns `*this` as an untyped response promise.
+  inline operator response_promise& () {
+    return promise_;
+  }
+
+  /// Queries whether this promise is a valid promise that is not satisfied yet.
+  inline bool pending() const {
+    return promise_.pending();
   }
 
 private:
