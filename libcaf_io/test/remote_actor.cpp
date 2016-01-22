@@ -120,8 +120,7 @@ void reflector(event_based_actor* self) {
   self->become(
     others >> [=] {
       CAF_LOG_TRACE("");
-      CAF_MESSAGE("reflect and quit; sender was: "
-                  << to_string(self->current_sender()));
+      CAF_MESSAGE("reflect and quit; sender was: " << self->current_sender());
       self->quit();
       return self->current_message();
   });
@@ -147,7 +146,7 @@ void spawn5_server_impl(event_based_actor* self, actor client, group grp) {
         CAF_MESSAGE("remote client did not spawn five reflectors!");
       }
       for (auto& a : vec) {
-        CAF_MESSAGE("monitor actor: " << to_string(a));
+        CAF_MESSAGE("monitor actor: " << a);
         self->monitor(a);
       }
       CAF_MESSAGE("wait for reflected messages");
@@ -157,7 +156,7 @@ void spawn5_server_impl(event_based_actor* self, actor client, group grp) {
         [=](const std::string& x0, double x1) {
           CAF_MESSAGE((self->node() == self->current_sender()->node()
                        ? "local" : "remote")
-                      << " answer from " << to_string(self->current_sender()));
+                      << " answer from " << self->current_sender());
           CAF_CHECK_EQUAL(x0, "Hello reflectors!");
           CAF_CHECK_EQUAL(x1, 5.0);
           if (++*replies == 7) {
@@ -220,8 +219,8 @@ void spawn5_server(event_based_actor* self, actor client, bool inverted) {
         CAF_REQUIRE(remote_group != invalid_group);
         CAF_REQUIRE(self->current_sender() != invalid_actor_addr);
         CAF_CHECK(self->node() != self->current_sender()->node());
-        CAF_MESSAGE("got group: " << to_string(remote_group)
-                    << " from " << to_string(self->current_sender()));
+        CAF_MESSAGE("got group: " << remote_group
+                    << " from " << self->current_sender());
         spawn5_server_impl(self, client, remote_group);
       }
     );
@@ -239,7 +238,7 @@ void spawn5_client(event_based_actor* self) {
     [=](spawn5_atom, const group& grp) -> message {
       CAF_LOG_TRACE(CAF_ARG(grp));
       CAF_REQUIRE(grp != invalid_group);
-      CAF_MESSAGE("received: " << to_string(self->current_message()));
+      CAF_MESSAGE("received: " << self->current_message());
       actor_vector vec;
       for (int i = 0; i < 5; ++i)
         vec.push_back(self->system().spawn_in_group(grp, reflector));
@@ -426,7 +425,7 @@ private:
     return {
       [=](sync_msg_atom, float f) -> atom_value {
         CAF_LOG_TRACE("");
-        CAF_MESSAGE("received: " << to_string(current_message()));
+        CAF_MESSAGE("received: " << current_message());
         CAF_CHECK_EQUAL(f, 4.2f);
         become(await_foobars());
         return ok_atom::value;

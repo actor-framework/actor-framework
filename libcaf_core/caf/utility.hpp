@@ -17,75 +17,24 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include <sstream>
-#include <stdlib.h>
+#ifndef CAF_UTILITY_HPP
+#define CAF_UTILITY_HPP
 
-#include "caf/config.hpp"
-#include "caf/utility.hpp"
-#include "caf/exception.hpp"
-
-#ifdef CAF_WINDOWS
-#include <winerror.h>
-#else
-#include <errno.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#endif
-
-namespace {
-
-std::string ae_what(caf::exit_reason reason) {
-  std::ostringstream oss;
-  oss << "actor exited with reason " << reason;
-  return oss.str();
-}
-
-} // namespace <anonymous>
+#include <ostream>
+#include <type_traits>
 
 namespace caf {
 
-caf_exception::~caf_exception() noexcept {
-  // nop
-}
-
-caf_exception::caf_exception(std::string x) : what_(std::move(x)) {
-  // nop
-}
-
-const char* caf_exception::what() const noexcept {
-  return what_.c_str();
-}
-
-actor_exited::~actor_exited() noexcept {
-  // nop
-}
-
-actor_exited::actor_exited(exit_reason x) : caf_exception(ae_what(x)) {
-  reason_ = x;
-}
-
-network_error::network_error(const std::string& x) : caf_exception(x) {
-  // nop
-}
-
-network_error::network_error(std::string&& x) : caf_exception(std::move(x)) {
-  // nop
-}
-
-network_error::~network_error() noexcept {
-  // nop
-}
-
-bind_failure::bind_failure(const std::string& x) : network_error(x) {
-  // nop
-}
-
-bind_failure::bind_failure(std::string&& x) : network_error(std::move(x)) {
-  // nop
-}
-
-bind_failure::~bind_failure() noexcept {
-  // nop
+/// Inserts `x` into stream `os`.
+/// Attempts `os << x` first and then `os << to_string(x)`.
+/// ADL will pull in namespace `std` and that of `T`.
+template <class CharT, class Traits, class T>
+typename std::enable_if<std::is_same<CharT, char>::value,
+                        std::basic_ostream<CharT, Traits>&>::type
+operator<<(std::basic_ostream<CharT, Traits>& os, const T& x) {
+  return os << to_string(x);
 }
 
 } // namespace caf
+
+#endif // CAF_UTILITY_HPP

@@ -237,7 +237,7 @@ behavior server(event_based_actor* self) {
           return skip_message();
         },
         others >> [=] {
-          CAF_ERROR("Unexpected message:" << to_string(self->current_message()));
+          CAF_ERROR("Unexpected message:" << self->current_message());
           die();
         }
       );
@@ -246,7 +246,7 @@ behavior server(event_based_actor* self) {
       return skip_message();
     },
     others >> [=] {
-      CAF_ERROR("Unexpected message:" << to_string(self->current_message()));
+      CAF_ERROR("Unexpected message:" << self->current_message());
       die();
     }
   };
@@ -350,8 +350,7 @@ CAF_TEST(request) {
       CAF_CHECK_EQUAL(dm.reason, exit_reason::user_shutdown);
     },
     others >> [&] {
-      CAF_ERROR("Unexpected message: "
-                << to_string(self->current_message()));
+      CAF_ERROR("Unexpected message: " << self->current_message());
     }
   );
   auto mirror = system.spawn<sync_mirror>();
@@ -377,7 +376,7 @@ CAF_TEST(request) {
         if (dm.reason == exit_reason::normal) {
           return skip_message();
         }
-        CAF_ERROR("A exited for reason " << to_string(dm.reason));
+        CAF_ERROR("A exited for reason " << dm.reason);
         return none;
       }
     );
@@ -416,8 +415,7 @@ CAF_TEST(request) {
                 "synchronous request message\"");
     },
     others >> [&] {
-      CAF_ERROR("Unexpected message: "
-                     << to_string(self->current_message()));
+      CAF_ERROR("Unexpected message: " << self->current_message());
     },
     after(milliseconds(0)) >> [] {
       CAF_ERROR("Unexpected timeout");
@@ -426,8 +424,7 @@ CAF_TEST(request) {
   // mailbox should be empty now
   self->receive(
     others >> [&] {
-      CAF_ERROR("Unexpected message: "
-                << to_string(self->current_message()));
+      CAF_ERROR("Unexpected message: " << self->current_message());
     },
     after(milliseconds(0)) >> [] {
       CAF_MESSAGE("Mailbox is empty, all good");
@@ -503,8 +500,7 @@ CAF_TEST(request) {
       CAF_CHECK_EQUAL(dm.reason, exit_reason::user_shutdown);
     },
     others >> [&] {
-      CAF_ERROR("Unexpected message: "
-                << to_string(self->current_message()));
+      CAF_ERROR("Unexpected message: " << self->current_message());
     }
   );
 }

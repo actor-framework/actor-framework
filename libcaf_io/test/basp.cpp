@@ -39,18 +39,12 @@
 
 namespace std {
 
-ostream& operator<<(ostream& out, const caf::io::basp::message_type& x) {
-  return out << to_string(x);
-}
-
 template <class T>
 ostream& operator<<(ostream& out, const caf::variant<caf::anything, T>& x) {
-  using std::to_string;
-  using caf::to_string;
-  using caf::io::basp::to_string;
+  using caf::operator<<;
   if (get<caf::anything>(&x) != nullptr)
     return out << "*";
-  return out << to_string(get<T>(x));
+  return out << get<T>(x);
 }
 
 } // namespace std
@@ -115,7 +109,7 @@ public:
     auto hdl = mm.named_broker<basp_broker>(atom("BASP"));
     aut_ = static_cast<basp_broker*>(actor_cast<abstract_actor*>(hdl));
     this_node_ = system.node();
-    CAF_MESSAGE("this node: " << to_string(this_node_));
+    CAF_MESSAGE("this node: " << this_node_);
     self_.reset(new scoped_actor{system});
     ahdl_ = accept_handle::from_int(1);
     mpx_->assign_tcp_doorman(aut_.get(), ahdl_);
@@ -409,7 +403,7 @@ public:
   mock_t mock(connection_handle hdl, basp::header hdr, const Ts&... xs) {
     buffer buf;
     to_buf(buf, hdr, nullptr, xs...);
-    CAF_MESSAGE("virtually send " << to_string(hdr.operation)
+    CAF_MESSAGE("virtually send " << hdr.operation
                 << " with " << (buf.size() - basp::header_size)
                 << " bytes payload");
     mpx()->virtual_send(hdl, buf);
@@ -538,7 +532,7 @@ CAF_TEST(publish_and_connect) {
 
 CAF_TEST(remote_actor_and_send) {
   constexpr const char* lo = "localhost";
-  CAF_MESSAGE("self: " << to_string(self()->address()));
+  CAF_MESSAGE("self: " << self()->address());
   mpx()->provide_scribe(lo, 4242, remote_hdl(0));
   CAF_REQUIRE(mpx()->pending_scribes().count(make_pair(lo, 4242)) == 1);
   auto mm1 = system.middleman().actor_handle();
@@ -663,7 +657,7 @@ CAF_TEST(actor_serialize_and_deserialize) {
 CAF_TEST(indirect_connections) {
   // jupiter [remote hdl 0] -> mars [remote hdl 1] -> earth [this_node]
   // (this node receives a message from jupiter via mars and responds via mars)
-  CAF_MESSAGE("self: " << to_string(self()->address()));
+  CAF_MESSAGE("self: " << self()->address());
   auto ax = accept_handle::from_int(4242);
   mpx()->provide_acceptor(4242, ax);
   system.middleman().publish(self(), 4242);
@@ -718,7 +712,7 @@ CAF_TEST(automatic_connection) {
   //  but then also establishes a connection to jupiter directly)
   mpx()->provide_scribe("jupiter", 8080, remote_hdl(0));
   CAF_CHECK(mpx()->pending_scribes().count(make_pair("jupiter", 8080)) == 1);
-  CAF_MESSAGE("self: " << to_string(self()->address()));
+  CAF_MESSAGE("self: " << self()->address());
   auto ax = accept_handle::from_int(4242);
   mpx()->provide_acceptor(4242, ax);
   system.middleman().publish(self(), 4242);

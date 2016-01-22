@@ -79,7 +79,7 @@ void pong(event_based_actor* self) {
           return std::make_tuple(pong_atom::value, val);
         },
         [=](const down_msg& dm) {
-          CAF_MESSAGE("received down_msg{" << to_string(dm.reason) << "}");
+          CAF_MESSAGE("received down_msg{" << dm.reason << "}");
           self->quit(dm.reason);
         },
         others >> [=] {
@@ -127,20 +127,20 @@ void peer_fun(broker* self, connection_handle hdl, const actor& buddy) {
       self->send(buddy, type, value);
     },
     [=](ping_atom, int value) {
-      CAF_MESSAGE("received: " << to_string(self->current_message()));
+      CAF_MESSAGE("received: " << self->current_message());
       write(ping_atom::value, value);
     },
     [=](pong_atom, int value) {
-      CAF_MESSAGE("received: " << to_string(self->current_message()));
+      CAF_MESSAGE("received: " << self->current_message());
       write(pong_atom::value, value);
     },
     [=](const down_msg& dm) {
-      CAF_MESSAGE("received: " << to_string(self->current_message()));
+      CAF_MESSAGE("received: " << self->current_message());
       if (dm.source == buddy)
         self->quit(dm.reason);
     },
     others >> [=] {
-      CAF_MESSAGE("unexpected: " << to_string(self->current_message()));
+      CAF_MESSAGE("unexpected: " << self->current_message());
     }
   );
 }

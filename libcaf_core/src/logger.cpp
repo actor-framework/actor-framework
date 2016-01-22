@@ -37,6 +37,7 @@
 #include "caf/string_algorithms.hpp"
 
 #include "caf/locks.hpp"
+#include "caf/utility.hpp"
 #include "caf/actor_proxy.hpp"
 #include "caf/actor_system.hpp"
 
@@ -282,7 +283,7 @@ logger::logger(actor_system& sys) : system_(sys) {
 void logger::run() {
   std::ostringstream fname;
   fname << "actor_log_" << detail::get_process_id() << "_" << time(0)
-        << "_" << to_string(system_.node())
+        << "_" << system_.node()
         << ".log";
   std::fstream out(fname.str().c_str(), std::ios::out | std::ios::app);
   std::unique_ptr<event> event;
