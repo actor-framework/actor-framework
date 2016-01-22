@@ -35,6 +35,7 @@
 #include "caf/channel.hpp"
 #include "caf/message.hpp"
 #include "caf/node_id.hpp"
+#include "caf/utility.hpp"
 #include "caf/anything.hpp"
 #include "caf/behavior.hpp"
 #include "caf/duration.hpp"

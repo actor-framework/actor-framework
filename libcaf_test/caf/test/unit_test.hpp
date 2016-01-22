@@ -33,6 +33,7 @@
 
 #include "caf/fwd.hpp"
 #include "caf/maybe.hpp"
+#include "caf/utility.hpp"
 
 #include "caf/deep_to_string.hpp"
 

@@ -114,7 +114,7 @@ actor spawn_event_testee2(scoped_actor& parent) {
     behavior wait4timeout(int remaining) {
       return {
         after(chrono::milliseconds(1)) >> [=] {
-          CAF_MESSAGE("remaining: " << to_string(remaining));
+          CAF_MESSAGE("remaining: " << remaining);
           if (remaining == 1) {
             send(parent, ok_atom::value);
             quit();

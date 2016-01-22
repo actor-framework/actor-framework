@@ -166,8 +166,7 @@ CAF_TEST(typed_response_promise) {
       CAF_CHECK_EQUAL(y, 3.14 * 2);
     },
     [](const error& err) {
-      CAF_ERROR("unexpected error response message received: "
-                << to_string(err));
+      CAF_ERROR("unexpected error response message received: " << err);
     }
   );
 }
@@ -179,8 +178,7 @@ CAF_TEST(typed_response_promise_chained) {
       CAF_CHECK_EQUAL(v, 8);
     },
     [](const error& err) {
-      CAF_ERROR("unexpected error response message received: "
-                << to_string(err));
+      CAF_ERROR("unexpected error response message received: " << err);
     }
   );
 }

@@ -29,6 +29,7 @@
 
 #include "caf/fwd.hpp"
 #include "caf/node_id.hpp"
+#include "caf/utility.hpp"
 #include "caf/callback.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/serializer.hpp"

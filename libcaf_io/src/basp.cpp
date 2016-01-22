@@ -54,11 +54,11 @@ std::string to_string(message_type x) {
 std::string to_string(const header &hdr) {
   std::ostringstream oss;
   oss << "{"
-      << to_string(hdr.operation) << ", "
+      << hdr.operation << ", "
       << hdr.payload_len << ", "
       << hdr.operation_data << ", "
-      << to_string(hdr.source_node) << ", "
-      << to_string(hdr.dest_node) << ", "
+      << hdr.source_node << ", "
+      << hdr.dest_node << ", "
       << hdr.source_actor << ", "
       << hdr.dest_actor
       << "}";
