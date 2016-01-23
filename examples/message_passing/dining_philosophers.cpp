@@ -51,7 +51,7 @@ chopstick::behavior_type available_chopstick(chopstick::pointer self) {
   return {
     [=](take_atom) -> std::tuple<taken_atom, bool> {
       self->become(taken_chopstick(self, self->current_sender()));
-      return {taken_atom::value, true};
+      return std::make_tuple(taken_atom::value, true);
     },
     [](put_atom) {
       cerr << "chopstick received unexpected 'put'" << endl;
@@ -63,7 +63,7 @@ chopstick::behavior_type taken_chopstick(chopstick::pointer self,
                                          actor_addr user) {
   return {
     [](take_atom) -> std::tuple<taken_atom, bool> {
-      return {taken_atom::value, false};
+      return std::make_tuple(taken_atom::value, false);
     },
     [=](put_atom) {
       if (self->current_sender() == user)
