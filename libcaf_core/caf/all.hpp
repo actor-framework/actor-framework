@@ -77,7 +77,6 @@
 #include "caf/abstract_channel.hpp"
 #include "caf/may_have_timeout.hpp"
 #include "caf/message_priority.hpp"
-#include "caf/response_promise.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/primitive_variant.hpp"
@@ -86,6 +85,7 @@
 #include "caf/binary_deserializer.hpp"
 #include "caf/scoped_execution_unit.hpp"
 #include "caf/typed_continue_helper.hpp"
+#include "caf/typed_response_promise.hpp"
 #include "caf/typed_event_based_actor.hpp"
 
 #include "caf/decorator/adapter.hpp"

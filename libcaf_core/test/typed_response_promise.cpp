@@ -68,7 +68,7 @@ public:
         });
         send(calculator, next_id_, x);
         auto& entry = promises_[next_id_++];
-        entry = make_response_promise();
+        entry = make_response_promise<foo_promise>();
         return entry;
       },
       [=](get_atom, int x, int y) -> foo2_promise {
@@ -82,7 +82,7 @@ public:
         });
         send(calculator, next_id_, x, y);
         auto& entry = promises2_[next_id_++];
-        entry = make_response_promise();
+        entry = make_response_promise<foo2_promise>();
         // verify move semantics
         CAF_CHECK(entry.pending());
         foo2_promise tmp(std::move(entry));
@@ -94,7 +94,7 @@ public:
         return entry;
       },
       [=](get_atom, double) -> foo3_promise {
-        foo3_promise resp = make_response_promise();
+        auto resp = make_response_promise<double>();
         resp.deliver(make_error(sec::unexpected_message));
         return resp;
       },
@@ -147,8 +147,6 @@ CAF_TEST_FIXTURE_SCOPE(typed_spawn_tests, fixture)
 CAF_TEST(typed_response_promise) {
   typed_response_promise<int> resp;
   resp.deliver(1); // delivers on an invalid promise has no effect
-  CAF_CHECK_EQUAL(static_cast<void*>(&static_cast<response_promise&>(resp)),
-                  static_cast<void*>(&resp));
   self->request(foo, get_atom::value, 42).receive(
     [](int x) {
       CAF_CHECK_EQUAL(x, 84);

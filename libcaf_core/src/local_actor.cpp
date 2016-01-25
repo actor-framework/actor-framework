@@ -997,16 +997,6 @@ void local_actor::delayed_send_impl(message_id mid, const channel& dest,
                                     mid, std::move(msg));
 }
 
-response_promise local_actor::make_response_promise() {
-  auto& ptr = current_element_;
-  if (! ptr)
-    return {};
-  auto& mid = ptr->mid;
-  if (mid.is_answered())
-    return {};
-  return {this, *ptr};
-}
-
 const char* local_actor::name() const {
   return "actor";
 }
