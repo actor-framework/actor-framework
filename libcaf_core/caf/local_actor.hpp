@@ -382,8 +382,8 @@ public:
   /// is equivalent to `make_response_promise<int, int>()`.
   template <class... Ts>
   auto make_response_promise()
-  -> decltype(make_response_promise_impl<Ts...>()) {
-    return make_response_promise_impl<Ts...>();
+  -> decltype(this->make_response_promise_impl<Ts...>()) {
+    return this->make_response_promise_impl<Ts...>();
   }
 
   /// Creates a `typed_response_promise` and responds immediately.
