@@ -35,8 +35,8 @@ public:
   /// Constructs an invalid response promise.
   typed_response_promise() = default;
 
-  inline typed_response_promise(response_promise promise)
-      : promise_(std::move(promise)) {
+  inline typed_response_promise(local_actor* self, mailbox_element& src)
+      : promise_(self, src) {
     // nop
   }
 
@@ -44,6 +44,11 @@ public:
   typed_response_promise(const typed_response_promise&) = default;
   typed_response_promise& operator=(typed_response_promise&&) = default;
   typed_response_promise& operator=(const typed_response_promise&) = default;
+
+  /// Implicitly convertible to untyped response promise.
+  inline operator response_promise& () {
+    return promise_;
+  }
 
   /// Satisfies the promise by sending a non-error response message.
   template <class U, class... Us>
@@ -63,11 +68,6 @@ public:
   /// For non-requests, nothing is done.
   inline void deliver(error x) {
     promise_.deliver(std::move(x));
-  }
-
-  /// Returns `*this` as an untyped response promise.
-  inline operator response_promise& () {
-    return promise_;
   }
 
   /// Queries whether this promise is a valid promise that is not satisfied yet.
