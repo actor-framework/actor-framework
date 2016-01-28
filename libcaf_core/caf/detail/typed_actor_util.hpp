@@ -188,6 +188,8 @@ struct deduce_output_type {
   using type = typename signature::output_types;
   // generates the appropriate `delegated<...>` type from given signatures
   using delegated_type = typename detail::tl_apply<type, delegated>::type;
+  // generates the appropriate `std::tuple<...>` type from given signature
+  using tuple_type = typename detail::tl_apply<type, std::tuple>::type;
 };
 
 template <class... Ts>

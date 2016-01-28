@@ -36,6 +36,9 @@ public:
 
   scoped_actor(actor_system& sys, bool hide_actor = false);
 
+  scoped_actor(scoped_actor&&) = default;
+  scoped_actor& operator=(scoped_actor&&) = default;
+
   ~scoped_actor();
 
   inline blocking_actor* operator->() const {
