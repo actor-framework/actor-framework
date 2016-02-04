@@ -109,7 +109,9 @@ using middleman_actor =
     reacts_to<close_atom, uint16_t>,
 
     replies_to<spawn_atom, node_id, std::string, message>
-    ::with<ok_atom, actor_addr, std::set<std::string>>>;
+    ::with<ok_atom, actor_addr, std::set<std::string>>,
+
+    replies_to<get_atom, node_id>::with<node_id, std::string, uint16_t>>;
 
 /// @relates middleman_actor
 middleman_actor make_middleman_actor(actor_system& sys, actor default_broker);

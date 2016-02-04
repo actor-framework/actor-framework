@@ -472,6 +472,21 @@ CAF_TEST(non_empty_server_handshake) {
   CAF_CHECK(hexstr(buf) == hexstr(expected_buf));
 }
 
+CAF_TEST(remote_address_and_port) {
+  connect_node(1);
+  auto mm = system.middleman().actor_handle();
+  self()->send(mm, get_atom::value, remote_node(1));
+  mpx()->exec_runnable();
+  self()->receive(
+    [&](const node_id& nid, const std::string& addr, uint16_t port) {
+      CAF_CHECK(nid == remote_node(1));
+      // all test nodes have address "test" and connection handle ID as port
+      CAF_CHECK(addr == "test");
+      CAF_CHECK(port == remote_hdl(1).id());
+    }
+  );
+}
+
 CAF_TEST(client_handshake_and_dispatch) {
   connect_node(0);
   // send a message via `dispatch` from node 0

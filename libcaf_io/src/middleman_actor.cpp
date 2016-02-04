@@ -152,6 +152,12 @@ public:
         forward_current_message(broker_);
         return {};
       },
+      [=](get_atom, const node_id&)
+      -> delegated<node_id, std::string, uint16_t> {
+        CAF_LOG_TRACE("");
+        forward_current_message(broker_);
+        return {};
+      },
       [=](const down_msg& dm) {
         auto i = cached_.begin();
         auto e = cached_.end();

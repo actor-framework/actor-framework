@@ -79,11 +79,11 @@ void test_multiplexer::assign_tcp_scribe(abstract_broker* ptr,
     }
 
     std::string addr() const override {
-      return std::string{};
+      return "test";
     }
 
     uint16_t port() const override {
-      return 0;
+      return static_cast<uint16_t>(hdl().id());
     }
 
   private:
@@ -150,7 +150,7 @@ void test_multiplexer::assign_tcp_doorman(abstract_broker* ptr,
     }
 
     std::string addr() const override {
-      return std::string{};
+      return "test";
     }
 
     uint16_t port() const override {

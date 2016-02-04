@@ -659,6 +659,17 @@ behavior basp_broker::make_behavior() {
         });
       }
     },
+    [=](get_atom, const node_id& x)
+    -> std::tuple<node_id, std::string, uint16_t> {
+      std::string addr;
+      uint16_t port = 0;
+      auto hdl = state.instance.tbl().lookup_direct(x);
+      if (hdl != invalid_connection_handle) {
+        addr = remote_addr(hdl);
+        port = remote_port(hdl);
+      }
+      return std::make_tuple(x, std::move(addr), port);
+    },
     // catch-all error handler
     others >> [=] {
       CAF_LOG_ERROR("unexpected message:" << CAF_ARG(current_message()));
