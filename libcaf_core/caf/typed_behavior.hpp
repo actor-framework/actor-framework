@@ -167,6 +167,12 @@ public:
     set(detail::make_behavior(x, xs...));
   }
 
+  struct unsafe_init { };
+
+  typed_behavior(unsafe_init, behavior bhvr) : bhvr_(std::move(bhvr)) {
+    // nop
+  }
+
   inline void swap(typed_behavior& other) {
     bhvr_.swap(other.bhvr_);
   }
