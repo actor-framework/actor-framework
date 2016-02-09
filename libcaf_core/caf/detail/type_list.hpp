@@ -477,6 +477,24 @@ struct tl_count<empty_type_list, Pred> {
 template <class List, template <class> class Pred>
 constexpr size_t tl_count<List, Pred>::value;
 
+// size_t count(type)
+
+/// Counts the number of elements in the list which are equal to `T`.
+template <class List, class T>
+struct tl_count_type {
+  static constexpr size_t value =
+    (std::is_same<typename tl_head<List>::type, T>::value ? 1 : 0)
+    + tl_count_type<typename tl_tail<List>::type, T>::value;
+};
+
+template <class T>
+struct tl_count_type<empty_type_list, T> {
+  static constexpr size_t value = 0;
+};
+
+template <class List, class T>
+constexpr size_t tl_count_type<List, T>::value;
+
 // size_t count_not(predicate)
 
 /// Counts the number of elements in the list which satisfy a predicate.
@@ -874,6 +892,52 @@ struct tl_trim {
 template <class What>
 struct tl_trim<empty_type_list, What> {
   using type = empty_type_list;
+};
+
+// list union(list1, list2)
+
+template <class... Xs>
+struct tl_union {
+  using type = typename tl_distinct<typename tl_concat<Xs...>::type>::type;
+};
+
+// list intersect(list1, list2)
+
+template <class List,
+          bool HeadIsUnique =
+            tl_count_type<List, typename tl_head<List>::type>::value == 1>
+struct tl_intersect_impl;
+
+template <>
+struct tl_intersect_impl<empty_type_list, false> {
+  using type = empty_type_list;
+};
+
+template <class T0, class... Ts>
+struct tl_intersect_impl<type_list<T0, Ts...>, true> {
+  using type = typename tl_intersect_impl<type_list<Ts...>>::type;
+};
+
+template <class T0, class... Ts>
+struct tl_intersect_impl<type_list<T0, Ts...>, false> {
+  using type =
+    typename tl_concat<
+      type_list<T0>,
+      typename tl_intersect_impl<
+        typename tl_filter_type<
+          type_list<Ts...>,
+          T0
+        >::type
+      >::type
+    >::type;
+};
+
+template <class... Ts>
+struct tl_intersect {
+  using type =
+    typename tl_intersect_impl<
+      typename tl_concat<Ts...>::type
+    >::type;
 };
 
 // list group_by(list, predicate)
