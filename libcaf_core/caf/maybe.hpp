@@ -418,6 +418,10 @@ public:
 
   maybe() = default;
 
+  maybe(const unit_t&) {
+    // nop
+  }
+
   maybe(const none_t&) {
     // nop
   }
