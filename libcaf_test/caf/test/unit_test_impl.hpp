@@ -374,18 +374,17 @@ bool engine::run(bool colorize,
            && ! std::regex_search(x, blacklist);
   };
 # endif
+  std::vector<std::string> failed_tests;
   for (auto& p : instance().suites_) {
-    if (! enabled(suites, not_suites, p.first)) {
+    if (! enabled(suites, not_suites, p.first))
       continue;
-    }
     auto suite_name = p.first.empty() ? "<unnamed>" : p.first;
     auto pad = std::string((bar.size() - suite_name.size()) / 2, ' ');
     bool displayed_header = false;
     size_t tests_ran = 0;
     for (auto& t : p.second) {
-      if (! enabled(tests, not_tests, t->name())) {
+      if (! enabled(tests, not_tests, t->name()))
         continue;
-      }
       instance().current_test_ = t.get();
       ++tests_ran;
       if (! displayed_header) {
@@ -425,6 +424,10 @@ bool engine::run(bool colorize,
                     << "took " << color(cyan) << render(elapsed)
                     << color(reset) << '\n';
       if (bad > 0) {
+        // concat suite name + test name
+        failed_tests.emplace_back(p.first);
+        failed_tests.back() += ":";
+        failed_tests.back() += t->name();
         log.verbose() << " (" << color(green) << good << color(reset) << '/'
                       << color(red) << bad << color(reset) << ")" << '\n';
       } else {
@@ -474,8 +477,14 @@ bool engine::run(bool colorize,
              << render(runtime) << '\n' << color(reset) << indent
              << "success: "
              << (total_bad == total_bad_expected ? color(green) : color(red))
-             << percent_good << "%" << color(reset) << "\n\n" << color(cyan)
-             << bar << color(reset) << '\n';
+             << percent_good << "%" << color(reset) << "\n\n";
+  if (! failed_tests.empty()) {
+    log.info() << indent << "failed tests:" << '\n';
+    for (auto& name : failed_tests)
+      log.info() << indent << "- " << name << '\n';
+    log.info() << '\n';
+  }
+  log.info() << color(cyan) << bar << color(reset) << '\n';
   return total_bad == total_bad_expected;
 }
 

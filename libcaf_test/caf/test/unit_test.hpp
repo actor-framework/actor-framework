@@ -419,7 +419,8 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 #define CAF_TEST_PRINT(level, msg, colorcode)                                  \
   (::caf::test::logger::instance(). level ()                                   \
     << ::caf::test::engine::color(::caf::test:: colorcode )                    \
-    << "  -> " << ::caf::test::engine::color(::caf::test::reset) << msg << '\n')
+    << "  -> " << ::caf::test::engine::color(::caf::test::reset) << msg        \
+    << " [line " << __LINE__ << "]\n")
 
 #define CAF_TEST_PRINT_ERROR(msg)   CAF_TEST_PRINT(info, msg, red)
 #define CAF_TEST_PRINT_INFO(msg)    CAF_TEST_PRINT(info, msg, yellow)
