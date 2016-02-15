@@ -322,6 +322,78 @@ msg_type filter_msg(local_actor* self, mailbox_element& node) {
   return msg_type::ordinary;
 }
 
+class invoke_result_visitor_helper {
+public:
+  invoke_result_visitor_helper(response_promise x) : rp(x) {
+    // nop
+  }
+
+  void operator()(error& x) {
+    CAF_LOG_DEBUG("report error back to requesting actor");
+    rp.deliver(std::move(x));
+  }
+
+  void operator()(message& x) {
+    CAF_LOG_DEBUG("respond via response_promise");
+    // suppress empty messages for asynchronous messages
+    if (x.empty() && rp.async())
+      return;
+    rp.deliver(std::move(x));
+  }
+
+  void operator()(const none_t&) {
+    error err = sec::unexpected_response;
+    (*this)(err);
+  }
+
+private:
+  response_promise rp;
+};
+
+class local_actor_invoke_result_visitor : public detail::invoke_result_visitor {
+public:
+  local_actor_invoke_result_visitor(local_actor* ptr) : self_(ptr) {
+    // nop
+  }
+
+  void operator()() override {
+    // nop
+  }
+
+  template <class T>
+  void delegate(T& x) {
+    auto rp = self_->make_response_promise();
+    if (! rp.pending()) {
+      CAF_LOG_DEBUG("suppress response message due to invalid response promise");
+      return;
+    }
+    invoke_result_visitor_helper f{std::move(rp)};
+    f(x);
+  }
+
+  void operator()(error& x) override {
+    CAF_LOG_TRACE(CAF_ARG(x));
+    CAF_LOG_DEBUG("report error back to requesting actor");
+    delegate(x);
+  }
+
+  void operator()(message& x) override {
+    CAF_LOG_TRACE(CAF_ARG(x));
+    CAF_LOG_DEBUG("respond via response_promise");
+    delegate(x);
+  }
+
+  void operator()(const none_t& x) override {
+    CAF_LOG_TRACE(CAF_ARG(x));
+    CAF_LOG_DEBUG("message handler returned none");
+    delegate(x);
+  }
+
+private:
+  local_actor* self_;
+};
+
+/*
 response_promise fetch_response_promise(local_actor* self, int) {
   return self->make_response_promise();
 }
@@ -338,25 +410,7 @@ bool handle_message_id_res(local_actor* self, message& res,
   if (res.match_elements<atom_value, uint64_t>()
       && res.get_as<atom_value>(0) == atom("MESSAGE_ID")) {
     CAF_LOG_DEBUG("message handler returned a message id wrapper");
-    auto msg_id = message_id::from_integer_value(res.get_as<uint64_t>(1));
-    auto fun = [=](maybe<local_actor::pending_response&> ref_opt) mutable {
-      // install a behavior that calls the user-defined behavior
-      // and using the result of its inner behavior as response
-      if (ref_opt) {
-        behavior inner{std::move(ref_opt->second.first)};
-        ref_opt->second.first.assign(
-          others >> [=]() mutable {
-            auto ires = const_cast<behavior&>(inner)(self->current_message());
-            if (ires && ! handle_message_id_res(self, *ires, hdl))
-              hdl.deliver(*ires);
-          }
-        );
-        return true;
-      }
-      return false;
-    };
-    return fun(self->find_multiplexed_response(msg_id))
-           || fun(self->find_awaited_response(msg_id));
+
   }
   return false;
 }
@@ -392,12 +446,14 @@ bool post_process_invoke_res(local_actor* self, bool is_sync_request,
   }
   return false;
 }
+*/
 
 invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
                                                   behavior& fun,
                                                   message_id awaited_id) {
   CAF_ASSERT(ptr != nullptr);
   CAF_LOG_TRACE(CAF_ARG(*ptr) << CAF_ARG(awaited_id));
+  local_actor_invoke_result_visitor visitor{this};
   switch (filter_msg(this, *ptr)) {
     case msg_type::normal_exit:
       CAF_LOG_DEBUG("dropped normal exit signal");
@@ -438,8 +494,9 @@ invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
             if (ref_fun.timeout().valid()) {
               ref_fun.handle_timeout();
             }
-          } else if (! post_process_invoke_res(this, false,
-                                               ref_fun(current_element_->msg))) {
+          } else if (! ref_fun(visitor, current_element_->msg)) {
+          //} else if (! post_process_invoke_res(this, false,
+          //                                     ref_fun(current_element_->msg))) {
             CAF_LOG_WARNING("multiplexed response failure occured:" << CAF_ARG(id()));
             quit(exit_reason::unhandled_sync_failure);
           }
@@ -458,8 +515,9 @@ invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
               fun.handle_timeout();
             }
           } else {
-            if (! post_process_invoke_res(this, false,
-                                          fun(current_element_->msg))) {
+            if (! fun(visitor, current_element_->msg)) {
+            //if (! post_process_invoke_res(this, false,
+            //                              fun(current_element_->msg))) {
               CAF_LOG_WARNING("sync response failure occured:" << CAF_ARG(id()));
               quit(exit_reason::unhandled_sync_failure);
             }
@@ -480,9 +538,10 @@ invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
           has_timeout(false);
         }
         ptr.swap(current_element_);
-        auto is_req = current_element_->mid.is_request();
-        auto res = post_process_invoke_res(this, is_req,
-                                           fun(current_element_->msg));
+        //auto is_req = current_element_->mid.is_request();
+        auto res = fun(visitor, current_element_->msg);
+        //auto res = post_process_invoke_res(this, is_req,
+        //                                   fun(current_element_->msg));
         ptr.swap(current_element_);
         if (res)
           return im_success;

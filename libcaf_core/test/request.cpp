@@ -122,7 +122,7 @@ public:
       [=](go_atom, const actor& next) {
         request(next, gogo_atom::value).then(
           [=](atom_value) {
-            CAF_MESSAGE("send `ok_atom` to buddy");
+            CAF_MESSAGE("send 'ok' to buddy");
             send(buddy(), ok_atom::value);
             quit();
           }
@@ -194,13 +194,15 @@ public:
 
   behavior make_behavior() override {
     return {
-      others >> [=] {
-        return request(buddy(), std::move(current_message())).then(
-          [=](gogogo_atom x) -> gogogo_atom {
+      others >> [=]() -> response_promise {
+        auto rp = make_response_promise();
+        request(buddy(), std::move(current_message())).then(
+          [=](gogogo_atom x) mutable {
+            rp.deliver(x);
             quit();
-            return x;
           }
         );
+        return rp;
       }
     };
   }
@@ -368,15 +370,14 @@ CAF_TEST(request) {
   auto await_ok_message = [&] {
     self->receive(
       [](ok_atom) {
-        CAF_MESSAGE("received `ok_atom`");
+        CAF_MESSAGE("received 'ok'");
       },
       [](error_atom) {
         CAF_ERROR("A didn't receive sync response");
       },
       [&](const down_msg& dm) -> maybe<skip_message_t> {
-        if (dm.reason == exit_reason::normal) {
+        if (dm.reason == exit_reason::normal)
           return skip_message();
-        }
         CAF_ERROR("A exited for reason " << to_string(dm.reason));
         return none;
       }
@@ -398,14 +399,13 @@ CAF_TEST(request) {
   CAF_MESSAGE("`await_all_other_actors_done` finished");
   self->request(self, no_way_atom::value).receive(
     [&](int) {
-      CAF_ERROR("Unexpected message");
+      CAF_ERROR("unexpected message of type int");
     },
     after(milliseconds(50)) >> [] {
-      CAF_MESSAGE("Got timeout");
+      CAF_MESSAGE("got timeout");
     }
   );
-  // we should have received two DOWN messages with normal exit reason
-  // plus 'NoWay'
+  CAF_MESSAGE("expect two DOWN messages and one 'NoWay'");
   int i = 0;
   self->receive_for(i, 3)(
     [&](const down_msg& dm) {
@@ -413,17 +413,16 @@ CAF_TEST(request) {
     },
     [](no_way_atom) {
       CAF_MESSAGE("trigger \"actor did not reply to a "
-                "synchronous request message\"");
+                  "synchronous request message\"");
     },
-    others >> [&] {
-      CAF_ERROR("Unexpected message: "
-                     << to_string(self->current_message()));
+    others >> [&](const message& msg) {
+      CAF_ERROR("unexpected message: " << to_string(msg));
     },
     after(milliseconds(0)) >> [] {
-      CAF_ERROR("Unexpected timeout");
+      CAF_ERROR("unexpected timeout");
     }
   );
-  // mailbox should be empty now
+  CAF_MESSAGE("mailbox should be empty now");
   self->receive(
     others >> [&] {
       CAF_ERROR("Unexpected message: "
@@ -478,11 +477,11 @@ CAF_TEST(request) {
     anon_send(serv, idle_atom::value, work);
     s->request(serv, request_atom::value).receive(
       [&](response_atom) {
-        CAF_MESSAGE("received `response_atom`");
+        CAF_MESSAGE("received 'response'");
         CAF_CHECK(s->current_sender() == work);
       },
       [&](const error& err) {
-        CAF_ERROR("Error: " << s->system().render(err));
+        CAF_ERROR("error: " << s->system().render(err));
       }
     );
     // first 'request', then 'idle'
@@ -493,7 +492,7 @@ CAF_TEST(request) {
         CAF_CHECK(s->current_sender() == work);
       },
       [&](const error& err) {
-        CAF_ERROR("Error: " << s->system().render(err));
+        CAF_ERROR("error: " << s->system().render(err));
       }
     );
     s->quit(exit_reason::user_shutdown);
@@ -503,7 +502,7 @@ CAF_TEST(request) {
       CAF_CHECK_EQUAL(dm.reason, exit_reason::user_shutdown);
     },
     others >> [&] {
-      CAF_ERROR("Unexpected message: "
+      CAF_ERROR("unexpected message: "
                 << to_string(self->current_message()));
     }
   );

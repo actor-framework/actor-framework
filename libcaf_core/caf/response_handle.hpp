@@ -136,6 +136,12 @@ private:
     static_assert(detail::is_callable<F>::value, "argument is not callable");
     static_assert(! std::is_base_of<match_case, F>::value,
                   "match cases are not allowed in this context");
+    static_assert(std::is_same<
+                    void,
+                    typename detail::get_callable_trait<F>::result_type
+                  >::value,
+                  "response handlers are not allowed to have a return "
+                  "type other than void");
     detail::type_checker<Output, F>::check();
     self_->set_awaited_response_handler(mid_,
                                         behavior{std::move(f), std::forward<Ts>(xs)...},
@@ -149,6 +155,12 @@ private:
     static_assert(detail::is_callable<F>::value, "argument is not callable");
     static_assert(! std::is_base_of<match_case, F>::value,
                   "match cases are not allowed in this context");
+    static_assert(std::is_same<
+                    void,
+                    typename detail::get_callable_trait<F>::result_type
+                  >::value,
+                  "response handlers are not allowed to have a return "
+                  "type other than void");
     detail::type_checker<Output, F>::check();
     self_->set_multiplexed_response_handler(mid_,
                                             behavior{std::move(f), std::forward<Ts>(xs)...},
@@ -197,6 +209,12 @@ private:
     static_assert(detail::is_callable<F>::value, "argument is not callable");
     static_assert(! std::is_base_of<match_case, F>::value,
                   "match cases are not allowed in this context");
+    static_assert(std::is_same<
+                    void,
+                    typename detail::get_callable_trait<F>::result_type
+                  >::value,
+                  "response handlers are not allowed to have a return "
+                  "type other than void");
     detail::type_checker<Output, F>::check();
     behavior tmp;
     if (! ef)

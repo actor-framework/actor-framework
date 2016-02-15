@@ -25,14 +25,15 @@
 
 namespace caf {
 
-template <class>
-class maybe;
+// templates
+template <class> class maybe;
+template <class> class intrusive_ptr;
+template <class> struct actor_cast_access;
+template <class> class typed_continue_helper;
 
-template <class>
-class intrusive_ptr;
-
-template <class>
-struct actor_cast_access;
+// variadic templates
+template <class...> class delegated;
+template <class...> class typed_response_promise;
 
 // classes
 class actor;
@@ -61,8 +62,10 @@ class actor_registry;
 class blocking_actor;
 class execution_unit;
 class proxy_registry;
+class continue_helper;
 class mailbox_element;
 class message_handler;
+class response_promise;
 class event_based_actor;
 class binary_serializer;
 class binary_deserializer;

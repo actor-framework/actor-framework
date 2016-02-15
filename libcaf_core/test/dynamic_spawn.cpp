@@ -515,10 +515,10 @@ CAF_TEST(requests) {
     s->receive (
       on("hi", arg_match) >> [&](actor from) {
         s->request(from, "whassup?", s).receive(
-          [&](const string& str) -> string {
+          [&](const string& str) {
             CAF_CHECK(s->current_sender() != nullptr);
             CAF_CHECK_EQUAL(str, "nothing");
-            return "goodbye!";
+            s->send(from, "goodbye!");
           },
           after(chrono::minutes(1)) >> [] {
             CAF_ERROR("Error in unit test.");

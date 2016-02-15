@@ -57,10 +57,21 @@ public:
   /// For non-requests, nothing is done.
   void deliver(error x);
 
+  /// Returns whether this response promise replies to an asynchronous message.
+  bool async() const;
+
   /// Queries whether this promise is a valid promise that is not satisfied yet.
   inline bool pending() const {
     return ! stages_.empty() || source_;
   }
+
+  /// @cond PRIVATE
+
+  inline local_actor* self() {
+    return self_;
+  }
+
+  /// @endcond
 
 private:
   using forwarding_stack = std::vector<actor_addr>;

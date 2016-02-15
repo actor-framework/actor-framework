@@ -26,7 +26,7 @@ namespace caf {
 
 /// Helper class to indicate that a request has been forwarded.
 template <class... Ts>
-struct delegated {
+class delegated {
   // nop
 };
 

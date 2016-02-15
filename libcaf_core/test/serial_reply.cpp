@@ -56,24 +56,25 @@ CAF_TEST(test_serial_reply) {
     auto c3 = self->spawn<linked>(mirror_behavior);
     auto c4 = self->spawn<linked>(mirror_behavior);
     self->become (
-      [=](hi_atom) -> continue_helper {
+      [=](hi_atom) {
+        auto rp = self->make_response_promise();
         CAF_MESSAGE("received 'hi there'");
-        return self->request(c0, sub0_atom::value).then(
-          [=](sub0_atom) -> continue_helper {
+        self->request(c0, sub0_atom::value).then(
+          [=](sub0_atom) {
             CAF_MESSAGE("received 'sub0'");
-            return self->request(c1, sub1_atom::value).then(
-              [=](sub1_atom) -> continue_helper {
+            self->request(c1, sub1_atom::value).then(
+              [=](sub1_atom) {
                 CAF_MESSAGE("received 'sub1'");
-                return self->request(c2, sub2_atom::value).then(
-                  [=](sub2_atom) -> continue_helper {
+                self->request(c2, sub2_atom::value).then(
+                  [=](sub2_atom) {
                     CAF_MESSAGE("received 'sub2'");
-                    return self->request(c3, sub3_atom::value).then(
-                      [=](sub3_atom) -> continue_helper {
+                    self->request(c3, sub3_atom::value).then(
+                      [=](sub3_atom) {
                         CAF_MESSAGE("received 'sub3'");
-                        return self->request(c4, sub4_atom::value).then(
-                          [=](sub4_atom) -> atom_value {
+                        self->request(c4, sub4_atom::value).then(
+                          [=](sub4_atom) mutable {
                             CAF_MESSAGE("received 'sub4'");
-                            return ho_atom::value;
+                            rp.deliver(ho_atom::value);
                           }
                         );
                       }
@@ -97,5 +98,6 @@ CAF_TEST(test_serial_reply) {
       CAF_ERROR("Error: " << self->system().render(err));
     }
   );
+  CAF_REQUIRE(self->mailbox().count() == 0);
   self->send_exit(master, exit_reason::user_shutdown);
 }

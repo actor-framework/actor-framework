@@ -34,16 +34,16 @@
 #include "caf/detail/type_traits.hpp"
 #include "caf/detail/pseudo_tuple.hpp"
 #include "caf/detail/left_or_right.hpp"
-#include "caf/detail/optional_message_visitor.hpp"
+#include "caf/detail/invoke_result_visitor.hpp"
 
 namespace caf {
 
 class match_case {
 public:
   enum result {
-    fall_through,
     no_match,
-    match
+    match,
+    skip
   };
 
   match_case(bool has_wildcard, uint32_t token);
@@ -53,7 +53,7 @@ public:
 
   virtual ~match_case();
 
-  virtual result invoke(maybe<message>&, message&) = 0;
+  virtual result invoke(detail::invoke_result_visitor&, message&) = 0;
 
   inline uint32_t type_token() const {
     return token_;
@@ -192,7 +192,7 @@ public:
     // nop
   }
 
-  match_case::result invoke(maybe<message>& res, message& msg) override {
+  match_case::result invoke(detail::invoke_result_visitor& f, message& msg) override {
     intermediate_tuple it;
     detail::meta_elements<pattern> ms;
     // check if try_match() reports success
@@ -210,10 +210,8 @@ public:
       }
     }
     lfinvoker<std::is_same<result_type, void>::value, F> fun{fun_};
-    detail::optional_message_visitor omv;
-    auto funres = apply_args(fun, detail::get_indices(it), it);
-    res = omv(funres);
-    return match_case::match;
+    auto fun_res = apply_args(fun, detail::get_indices(it), it);
+    return f.visit(fun_res) ? match_case::match : match_case::skip;
   }
 
 protected:
@@ -242,13 +240,11 @@ public:
     // nop
   }
 
-  match_case::result invoke(maybe<message>& res, message& msg) override {
+  match_case::result invoke(detail::invoke_result_visitor& f, message& msg) override {
     lfinvoker<std::is_same<result_type, void>::value, F> fun{fun_};
     arg_types token;
     auto fun_res = call_fun(fun, msg, token);
-    detail::optional_message_visitor omv;
-    res = omv(fun_res);
-    return match_case::match;
+    return f.visit(fun_res) ? match_case::match : match_case::skip;
   }
 
 protected:
@@ -294,7 +290,7 @@ public:
   // however, dealing with all the template parameters in a debugger
   // is just dreadful; this "hack" essentially hides all the ugly
   // template boilterplate types when debugging CAF applications
-  match_case::result invoke(maybe<message>& res, message& msg) override {
+  match_case::result invoke(detail::invoke_result_visitor& f, message& msg) override {
     struct storage {
       storage() : valid(false) {
         // nop
@@ -311,10 +307,8 @@ public:
     if (prepare_invoke(msg, &st.data)) {
       st.valid = true;
       lfinvoker<std::is_same<result_type, void>::value, F> fun{fun_};
-      detail::optional_message_visitor omv;
-      auto funres = apply_args(fun, detail::get_indices(st.data), st.data);
-      res = omv(funres);
-      return match_case::match;
+      auto fun_res = apply_args(fun, detail::get_indices(st.data), st.data);
+      return f.visit(fun_res) ? match_case::match : match_case::skip;
     }
     return match_case::no_match;
   }

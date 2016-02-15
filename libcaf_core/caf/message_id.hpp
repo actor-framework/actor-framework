@@ -65,6 +65,10 @@ public:
     return *this;
   }
 
+  inline bool is_async() const {
+    return value_ == 0;
+  }
+
   inline bool is_response() const {
     return (value_ & response_flag_mask) != 0;
   }

@@ -28,9 +28,8 @@ namespace {
 
 class combinator final : public behavior_impl {
 public:
-  bhvr_invoke_result invoke(message& arg) override {
-    auto res = first->invoke(arg);
-    return res ? res : second->invoke(arg);
+  bool invoke(detail::invoke_result_visitor& f, message& arg) override {
+    return first->invoke(f, arg) || second->invoke(f, arg);
   }
 
   void handle_timeout() override {
@@ -55,6 +54,27 @@ private:
   pointer second;
 };
 
+class maybe_message_visitor : public detail::invoke_result_visitor {
+public:
+  maybe<message> value;
+
+  void operator()() override {
+    value = message{};
+  }
+
+  void operator()(error& x) override {
+    value = std::move(x);
+  }
+
+  void operator()(message& x) override {
+    value = std::move(x);
+  }
+
+  void operator()(const none_t&) override {
+    (*this)();
+  }
+};
+
 } // namespace <anonymous>
 
 behavior_impl::~behavior_impl() {
@@ -68,16 +88,25 @@ behavior_impl::behavior_impl(duration tout)
   // nop
 }
 
-bhvr_invoke_result behavior_impl::invoke(message& msg) {
+bool behavior_impl::invoke(detail::invoke_result_visitor& f, message& msg) {
   auto msg_token = msg.type_token();
-  bhvr_invoke_result res;
-  for (auto i = begin_; i != end_; ++i) {
-    if ((i->has_wildcard || i->type_token == msg_token)
-        && i->ptr->invoke(res, msg) != match_case::no_match) {
-      return res;
-    }
-  }
-  return none;
+  for (auto i = begin_; i != end_; ++i)
+    if (i->has_wildcard || i->type_token == msg_token)
+      switch (i->ptr->invoke(f, msg)) {
+        case match_case::match:
+          return true;
+        case match_case::skip:
+          return false;
+        case match_case::no_match:
+          static_cast<void>(0); // nop
+      };
+  return false;
+}
+
+maybe<message> behavior_impl::invoke(message& x) {
+  maybe_message_visitor f;
+  invoke(f, x);
+  return std::move(f.value);
 }
 
 void behavior_impl::handle_timeout() {

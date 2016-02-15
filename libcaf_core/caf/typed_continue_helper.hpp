@@ -22,17 +22,11 @@
 
 #include "caf/continue_helper.hpp"
 
-#include "caf/detail/type_traits.hpp"
-
-#include "caf/detail/typed_actor_util.hpp"
-
 namespace caf {
 
 template <class OutputList>
 class typed_continue_helper {
 public:
-  using message_id_wrapper_tag = int;
-
   typed_continue_helper(message_id mid) : ch_(mid) {
     // nop
   }
@@ -43,6 +37,10 @@ public:
 
   message_id get_message_id() const {
     return ch_.get_message_id();
+  }
+
+  continue_helper& unbox() {
+    return ch_;
   }
 
 private:

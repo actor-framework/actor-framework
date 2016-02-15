@@ -42,12 +42,12 @@
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/apply_args.hpp"
 #include "caf/detail/type_traits.hpp"
+#include "caf/detail/invoke_result_visitor.hpp"
 #include "caf/detail/tail_argument_token.hpp"
 
 namespace caf {
 
 class message_handler;
-using bhvr_invoke_result = maybe<message>;
 
 } // namespace caf
 
@@ -68,12 +68,14 @@ public:
 
   behavior_impl(duration tout = duration{});
 
-  virtual bhvr_invoke_result invoke(message&);
+  virtual bool invoke(detail::invoke_result_visitor& f, message&);
 
-  inline bhvr_invoke_result invoke(message&& arg) {
+  inline bool invoke(detail::invoke_result_visitor& f, message&& arg) {
     message tmp(std::move(arg));
-    return invoke(tmp);
+    return invoke(f, tmp);
   }
+
+  maybe<message> invoke(message&);
 
   virtual void handle_timeout();
 

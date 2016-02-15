@@ -97,8 +97,13 @@ public:
   }
 
   /// Runs this handler and returns its (optional) result.
-  inline maybe<message> operator()(message& arg) {
-    return (impl_) ? impl_->invoke(arg) : none;
+  inline maybe<message> operator()(message& x) {
+    return impl_ ? impl_->invoke(x) : none;
+  }
+
+  /// Runs this handler with callback.
+  inline bool operator()(detail::invoke_result_visitor& f, message& x) {
+    return impl_ ? impl_->invoke(f, x) : false;
   }
 
   /// Checks whether this behavior is not empty.

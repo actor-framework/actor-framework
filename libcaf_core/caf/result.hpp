@@ -17,58 +17,58 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include <utility>
-#include <algorithm>
+#ifndef CAF_RESULT_HPP
+#define CAF_RESULT_HPP
 
-#include "caf/local_actor.hpp"
-#include "caf/response_promise.hpp"
+#include "caf/none.hpp"
+#include "caf/error.hpp"
+#include "caf/message.hpp"
+#include "caf/skip_message.hpp"
 
 namespace caf {
 
-response_promise::response_promise()
-    : self_(nullptr) {
-  // nop
-}
+enum result_runtime_type {
+  rt_value,
+  rt_error,
+  rt_delegated,
+  rt_skip_message
+};
 
-response_promise::response_promise(local_actor* self, mailbox_element& src)
-    : self_(self),
-      id_(src.mid) {
-  // form an invalid request promise when initialized from a
-  // response ID, since CAF always drops messages in this case
-  if (! src.mid.is_response()) {
-    source_ = std::move(src.sender);
-    stages_ = std::move(src.stages);
+template <class... Ts>
+struct result {
+public:
+  result(Ts... xs) : flag(rt_value), value(make_message(std::move(xs)...)) {
+    // nop
   }
-}
 
-void response_promise::deliver(error x) {
-  //if (id_.valid())
-  deliver_impl(make_message(std::move(x)));
-}
-
-bool response_promise::async() const {
-  return id_.is_async();
-}
-
-void response_promise::deliver_impl(message msg) {
-  if (! stages_.empty()) {
-    auto next = std::move(stages_.back());
-    stages_.pop_back();
-    next->enqueue(mailbox_element::make(std::move(source_), id_,
-                                        std::move(stages_), std::move(msg)),
-                  self_->context());
-    return;
+  template <class E,
+            class = typename std::enable_if<
+                      std::is_same<
+                        decltype(make_error(std::declval<const E&>())),
+                        error
+                      >::value
+                    >::type>
+  result(E x) : flag(rt_error), err(make_error(x)) {
+    // nop
   }
-  if (source_) {
-    source_->enqueue(self_->address(), id_.response_id(),
-                     std::move(msg), self_->context());
-    source_ = invalid_actor_addr;
-    return;
+
+  result(error x) : flag(rt_error), err(std::move(x)) {
+    // nop
   }
-  if (self_)
-    CAF_LOG_ERROR("response promise already satisfied");
-  else
-    CAF_LOG_ERROR("invalid response promise");
-}
+
+  result(skip_message_t) : flag(rt_skip_message) {
+    // nop
+  }
+
+  result(delegated<Ts...>) : flag(rt_delegated) {
+    // nop
+  }
+
+  result_runtime_type flag;
+  message value;
+  error err;
+};
 
 } // namespace caf
+
+#endif // CAF_RESULT_HPP

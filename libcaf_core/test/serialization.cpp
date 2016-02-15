@@ -50,6 +50,7 @@
 #include "caf/ref_counted.hpp"
 #include "caf/deserializer.hpp"
 #include "caf/proxy_registry.hpp"
+#include "caf/message_handler.hpp"
 #include "caf/primitive_variant.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/binary_deserializer.hpp"

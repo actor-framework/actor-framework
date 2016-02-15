@@ -39,9 +39,8 @@ CAF_TEST(simple_ints) {
   auto two = on(2) >> [] { };
   auto three = on(3) >> [] { };
   auto skip_two = [](int i) -> maybe<skip_message_t> {
-    if (i == 2) {
+    if (i == 2)
       return skip_message();
-    }
     return none;
   };
   CAF_CHECK_EQUAL(msg.extract(one), make_message(2, 3));

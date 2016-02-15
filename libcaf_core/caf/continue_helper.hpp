@@ -20,22 +20,14 @@
 #ifndef CAF_CONTINUE_HELPER_HPP
 #define CAF_CONTINUE_HELPER_HPP
 
-#include <functional>
-
-#include "caf/on.hpp"
-#include "caf/behavior.hpp"
 #include "caf/message_id.hpp"
-#include "caf/message_handler.hpp"
 
 namespace caf {
-
-class local_actor;
 
 /// Helper class to enable users to add continuations
 ///  when dealing with synchronous sends.
 class continue_helper {
 public:
-  using message_id_wrapper_tag = int;
   continue_helper(message_id mid);
 
   /// Returns the ID of the expected response message.
