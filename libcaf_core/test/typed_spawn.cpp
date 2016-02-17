@@ -149,6 +149,23 @@ public:
   virtual mpi_output_t<Ys...> operator()(mpi_input_t<Xs>...) = 0;
 };
 
+template <class... Ts>
+struct abstract_composable_state_mixin_helper;
+
+template <class T, class... Ts>
+struct abstract_composable_state_mixin_helper<T, Ts...>
+  : public abstract_composable_state_mixin<T>,
+    public abstract_composable_state_mixin_helper<Ts...> {
+  using abstract_composable_state_mixin<T>::operator();
+  using abstract_composable_state_mixin_helper<Ts...>::operator();
+};
+
+template <class T>
+struct abstract_composable_state_mixin_helper<T>
+  : public abstract_composable_state_mixin<T> {
+  using abstract_composable_state_mixin<T>::operator();
+};
+
 /// Marker type that allows CAF to spawn actors from composable states.
 class abstract_composable_state {
 public:
@@ -188,8 +205,9 @@ template <class TypedActor>
 class composable_state;
 
 template <class... Clauses>
-class composable_state<typed_actor<Clauses...>> : virtual public abstract_composable_state,
-                                            public abstract_composable_state_mixin<Clauses>... {
+class composable_state<typed_actor<Clauses...>>
+  : virtual public abstract_composable_state,
+    public abstract_composable_state_mixin_helper<Clauses...> {
 public:
   using signatures = detail::type_list<Clauses...>;
 
