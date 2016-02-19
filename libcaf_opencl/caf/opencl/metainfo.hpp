@@ -36,8 +36,6 @@
 #include "caf/opencl/smart_ptr.hpp"
 #include "caf/opencl/actor_facade.hpp"
 
-#include "caf/detail/singletons.hpp"
-
 namespace caf {
 namespace opencl {
 

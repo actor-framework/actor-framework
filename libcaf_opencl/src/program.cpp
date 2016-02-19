@@ -23,8 +23,6 @@
 #include <cstring>
 #include <iostream>
 
-#include "caf/detail/singletons.hpp"
-
 #include "caf/opencl/program.hpp"
 #include "caf/opencl/metainfo.hpp"
 #include "caf/opencl/opencl_err.hpp"

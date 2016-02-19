@@ -28,7 +28,6 @@
 #include "caf/all.hpp"
 
 #include "caf/channel.hpp"
-#include "caf/to_string.hpp"
 #include "caf/intrusive_ptr.hpp"
 
 #include "caf/detail/int_list.hpp"
