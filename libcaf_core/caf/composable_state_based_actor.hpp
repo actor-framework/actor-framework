@@ -17,38 +17,38 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_TYPED_ACTOR_POINTER_HPP
-#define CAF_TYPED_ACTOR_POINTER_HPP
+#ifndef CAF_COMPOSABLE_STATE_BASED_ACTOR_HPP
+#define CAF_COMPOSABLE_STATE_BASED_ACTOR_HPP
 
-#include "caf/typed_actor_view.hpp"
-
-#include "caf/detail/type_list.hpp"
+#include "caf/stateful_actor.hpp"
 
 namespace caf {
 
-template <class... Sigs>
-class typed_actor_pointer {
-public:
-  template <class Supertype>
-  typed_actor_pointer(Supertype* selfptr) : view_(selfptr) {
-    using namespace caf::detail;
-    static_assert(tlf_is_subset(type_list<Sigs...>{},
-                                typename Supertype::signatures{}),
-                  "cannot create a pointer view to an unrelated actor type");
-  }
+/// Implementation class for spawning composable states directly as actors.
+template <class State>
+class composable_state_based_actor : public stateful_actor
+                                     <State, typename State::actor_base> {
+ public:
+  static_assert(! std::is_abstract<State>::value,
+                "State is abstract, please make sure to override all "
+                "virtual operator() member functions");
 
-  typed_actor_pointer(const std::nullptr_t&) : view_(nullptr) {
+  using super = stateful_actor<State, typename State::actor_base>;
+
+  composable_state_based_actor(actor_config& cfg) : super(cfg) {
     // nop
   }
 
-  typed_actor_view<Sigs...>* operator->() {
-    return &view_;
-  }
+  using behavior_type = typename State::behavior_type;
 
-private:
-  typed_actor_view<Sigs...> view_;
+  behavior_type make_behavior() override {
+    this->state.init_selfptr(this);
+    behavior tmp;
+    this->state.init_behavior(tmp);
+    return behavior_type{typename behavior_type::unsafe_init{}, std::move(tmp)};
+  }
 };
 
 } // namespace caf
 
-#endif // CAF_TYPED_ACTOR_POINTER_HPP
+#endif // CAF_COMPOSABLE_STATE_BASED_ACTOR_HPP

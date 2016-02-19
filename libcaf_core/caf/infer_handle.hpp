@@ -24,7 +24,7 @@
 #include "caf/actor_addr.hpp"
 #include "caf/stateful_actor.hpp"
 #include "caf/typed_behavior.hpp"
-
+#include "caf/abstract_composable_state.hpp"
 
 namespace caf {
 
@@ -143,6 +143,7 @@ struct infer_handle_from_fun_impl<Result,
   static constexpr spawn_mode mode = spawn_mode::function_with_selfptr;
 };
 
+/// Deduces an actor handle type from a function or function object.
 template <class F, class Trait = typename detail::get_callable_trait<F>::type>
 struct infer_handle_from_fun {
   using result_type = typename Trait::result_type;
@@ -156,6 +157,14 @@ struct infer_handle_from_fun {
   static constexpr spawn_mode mode = delegate::mode;
 };
 
+/// @relates infer_handle_from_fun
+template <class T>
+using infer_handle_from_fun_t = typename infer_handle_from_fun<T>::type;
+
+/// @relates infer_handle_from_fun
+template <class T>
+using infer_impl_from_fun_t = typename infer_handle_from_fun<T>::impl;
+
 template <class T>
 struct infer_handle_from_behavior {
   using type = actor;
@@ -166,7 +175,9 @@ struct infer_handle_from_behavior<typed_behavior<Sigs...>> {
   using type = typed_actor<Sigs...>;
 };
 
-template <class T>
+/// Deduces `actor` for dynamically typed actors, otherwise `typed_actor<...>`
+/// is deduced.
+template <class T, bool = std::is_base_of<abstract_actor, T>::value>
 struct infer_handle_from_class {
   using type =
     typename infer_handle_from_behavior<
@@ -174,6 +185,31 @@ struct infer_handle_from_class {
     >::type;
   static constexpr spawn_mode mode = spawn_mode::clazz;
 };
+
+template <class T>
+struct infer_handle_from_class<T, false> {
+  // nop; this enables SFINAE for spawn to differentiate between
+  // spawns using actor classes or composable states
+};
+
+/// @relates infer_handle_from_class
+template <class T>
+using infer_handle_from_class_t = typename infer_handle_from_class<T>::type;
+
+template <class T, bool = std::is_base_of<abstract_composable_state, T>::value>
+struct infer_handle_from_state {
+  using type = typename T::handle_type;
+};
+
+template <class T>
+struct infer_handle_from_state<T, false> {
+  // nop; this enables SFINAE for spawn to differentiate between
+  // spawns using actor classes or composable states
+};
+
+/// @relates infer_handle_from_state
+template <class T>
+using infer_handle_from_state_t = typename infer_handle_from_state<T>::type;
 
 } // namespace caf
 

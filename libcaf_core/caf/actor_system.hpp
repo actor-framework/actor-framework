@@ -37,6 +37,7 @@
 #include "caf/string_algorithms.hpp"
 #include "caf/scoped_execution_unit.hpp"
 #include "caf/uniform_type_info_map.hpp"
+#include "caf/composable_state_based_actor.hpp"
 #include "caf/prohibit_top_level_spawn_marker.hpp"
 
 #include "caf/detail/spawn_fwd.hpp"
@@ -242,7 +243,7 @@ public:
   /// @param cfg To-be-filled config for the actor.
   /// @param xs Constructor arguments for `C`.
   template <class C, spawn_options Os, class... Ts>
-  typename infer_handle_from_class<C>::type
+  infer_handle_from_class_t<C>
   spawn_class(actor_config& cfg, Ts&&... xs) {
     return spawn_impl<C, Os>(cfg, detail::spawn_fwd<Ts>(xs)...);
   }
@@ -252,10 +253,15 @@ public:
   /// to opt-out of the cooperative scheduling.
   /// @param xs Constructor arguments for `C`.
   template <class C, spawn_options Os = no_spawn_options, class... Ts>
-  typename infer_handle_from_class<C>::type spawn(Ts&&... xs) {
+  infer_handle_from_class_t<C> spawn(Ts&&... xs) {
     check_invariants<C>();
     actor_config cfg;
     return spawn_impl<C, Os>(cfg, detail::spawn_fwd<Ts>(xs)...);
+  }
+
+  template <class S, spawn_options Os = no_spawn_options>
+  infer_handle_from_state_t<S> spawn() {
+    return spawn<composable_state_based_actor<S>, Os>();
   }
 
   /// Called by `spawn_functor` to apply static assertions and
@@ -264,14 +270,13 @@ public:
   /// @param fun Function object for the actor's behavior; will be moved.
   /// @param xs Arguments for `fun`.
   template <spawn_options Os, class C, class F, class... Ts>
-  typename infer_handle_from_class<C>::type
+  infer_handle_from_class_t<C>
   spawn_functor_impl(actor_config& cfg, F& fun, Ts&&... xs) {
-    constexpr bool has_blocking_base =
-      std::is_base_of<blocking_actor, C>::value;
-    static_assert(has_blocking_base || ! has_blocking_api_flag(Os),
+    constexpr bool is_blocking = std::is_base_of<blocking_actor, C>::value;
+    static_assert(is_blocking || ! has_blocking_api_flag(Os),
                   "blocking functor-based actors "
                   "need to be spawned using the blocking_api flag");
-    static_assert(! has_blocking_base || has_blocking_api_flag(Os),
+    static_assert(! is_blocking || has_blocking_api_flag(Os),
                   "non-blocking functor-based actors "
                   "cannot be spawned using the blocking_api flag");
     detail::init_fun_factory<C, F> fac;
@@ -286,9 +291,9 @@ public:
   /// @param fun Function object for the actor's behavior; will be moved.
   /// @param xs Arguments for `fun`.
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
-  typename infer_handle_from_fun<F>::type
+  infer_handle_from_fun_t<F>
   spawn_functor(actor_config& cfg, F& fun, Ts&&... xs) {
-    using impl = typename infer_handle_from_fun<F>::impl;
+    using impl = infer_impl_from_fun_t<F>;
     return spawn_functor_impl<Os, impl>(cfg, fun, std::forward<Ts>(xs)...);
   }
 
@@ -297,15 +302,16 @@ public:
   /// The behavior of `spawn` can be modified by setting `Os`, e.g.,
   /// to opt-out of the cooperative scheduling.
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
-  typename infer_handle_from_fun<F>::type
+  infer_handle_from_fun_t<F>
   spawn(F fun, Ts&&... xs) {
-    check_invariants<typename infer_handle_from_fun<F>::impl>();
+    check_invariants<infer_impl_from_fun_t<F>>();
     actor_config cfg;
     return spawn_functor<Os>(cfg, fun, std::forward<Ts>(xs)...);
   }
 
-  template <class T, spawn_options Os = no_spawn_options, class Iter, class F, class... Ts>
-  typename infer_handle_from_class<T>::type
+  template <class T, spawn_options Os = no_spawn_options,
+            class Iter, class F, class... Ts>
+  infer_handle_from_class_t<T>
   spawn_in_groups_impl(actor_config& cfg, Iter first, Iter second, Ts&&... xs) {
     check_invariants<T>();
     auto irange = make_input_range(first, second);
@@ -313,11 +319,12 @@ public:
     return spawn_class<T, Os>(cfg, std::forward<Ts>(xs)...);
   }
 
-  template <spawn_options Os = no_spawn_options, class Iter, class F, class... Ts>
-  typename infer_handle_from_fun<F>::type
+  template <spawn_options Os = no_spawn_options,
+            class Iter, class F, class... Ts>
+  infer_handle_from_fun_t<F>
   spawn_in_groups_impl(actor_config& cfg, Iter first, Iter second,
                        F& fun, Ts&&... xs) {
-    check_invariants<typename infer_handle_from_fun<F>::impl>();
+    check_invariants<infer_impl_from_fun_t<F>>();
     auto irange = make_input_range(first, second);
     cfg.groups = &irange;
     return spawn_functor<Os>(cfg, fun, std::forward<Ts>(xs)...);
@@ -325,7 +332,7 @@ public:
 
   /// Returns a new functor-based actor subscribed to all groups in `gs`.
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
-  typename infer_handle_from_fun<F>::type
+  infer_handle_from_fun_t<F>
   spawn_in_groups(std::initializer_list<group> gs, F fun, Ts&&... xs) {
     actor_config cfg;
     return spawn_in_groups_impl(cfg, gs.begin(), gs.end(), fun,
@@ -334,7 +341,7 @@ public:
 
   /// Returns a new functor-based actor subscribed to all groups in `gs`.
   template <spawn_options Os = no_spawn_options, class Gs, class F, class... Ts>
-  typename infer_handle_from_fun<F>::type
+  infer_handle_from_fun_t<F>
   spawn_in_groups(const Gs& gs, F fun, Ts&&... xs) {
     actor_config cfg;
     return spawn_in_groups_impl(cfg, gs.begin(), gs.end(), fun,
@@ -343,14 +350,14 @@ public:
 
   /// Returns a new functor-based actor subscribed to all groups in `gs`.
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
-  typename infer_handle_from_fun<F>::type
+  infer_handle_from_fun_t<F>
   spawn_in_group(const group& grp, F fun, Ts&&... xs) {
     return spawn_in_groups({grp}, std::move(fun), std::forward<Ts>(xs)...);
   }
 
   /// Returns a new class-based actor subscribed to all groups in `gs`.
   template <class T, spawn_options Os = no_spawn_options, class... Ts>
-  typename infer_handle_from_class<T>::type
+  infer_handle_from_class_t<T>
   spawn_in_groups(std::initializer_list<group> gs, Ts&&... xs) {
     actor_config cfg;
     return spawn_in_groups_impl<T>(cfg, gs.begin(), gs.end(),
@@ -359,7 +366,7 @@ public:
 
   /// Returns a new class-based actor subscribed to all groups in `gs`.
   template <class T, spawn_options Os = no_spawn_options, class Gs, class... Ts>
-  typename infer_handle_from_class<T>::type
+  infer_handle_from_class_t<T>
   spawn_in_groups(const Gs& gs, Ts&&... xs) {
     actor_config cfg;
     return spawn_in_groups_impl<T>(cfg, gs.begin(), gs.end(),
@@ -368,7 +375,7 @@ public:
 
   /// Returns a new class-based actor subscribed to all groups in `gs`.
   template <class T, spawn_options Os = no_spawn_options, class... Ts>
-  typename infer_handle_from_class<T>::type
+  infer_handle_from_class_t<T>
   spawn_in_group(const group& grp, Ts&&... xs) {
     return spawn_in_groups<T>({grp}, std::forward<Ts>(xs)...);
   }
@@ -400,7 +407,7 @@ private:
   }
 
   template <class C, spawn_options Os, class... Ts>
-  typename infer_handle_from_class<C>::type
+  infer_handle_from_class_t<C>
   spawn_impl(actor_config& cfg, Ts&&... xs) {
     static_assert(! std::is_base_of<blocking_actor, C>::value
                   || has_blocking_api_flag(Os),
