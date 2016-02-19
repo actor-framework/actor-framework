@@ -88,19 +88,6 @@ struct make_response_promise_helper<response_promise> {
 /// Base class for actors running on this node, either
 /// living in an own thread or cooperatively scheduled.
 class local_actor : public monitorable_actor, public resumable {
-private:
-  template <class... Ts>
-  typename detail::make_response_promise_helper<Ts...>::type
-  make_response_promise_impl() {
-    auto& ptr = current_element_;
-    if (! ptr)
-      return {};
-    auto& mid = ptr->mid;
-    if (mid.is_answered())
-      return {};
-    return {this, *ptr};
-  }
-
 public:
   using mailbox_type = detail::single_reader_queue<mailbox_element,
                                                    detail::disposer>;
@@ -372,26 +359,34 @@ public:
   /// Returns all joined groups.
   std::vector<group> joined_groups() const;
 
-  /// Creates a `response_promise` to respond to a request later on.
-  inline response_promise make_response_promise() {
-    return make_response_promise_impl<response_promise>();
-  }
-
   /// Creates a `typed_response_promise` to respond to a request later on.
   /// `make_response_promise<typed_response_promise<int, int>>()`
   /// is equivalent to `make_response_promise<int, int>()`.
   template <class... Ts>
-  auto make_response_promise()
-  -> decltype(this->make_response_promise_impl<Ts...>()) {
-    return this->make_response_promise_impl<Ts...>();
+  typename detail::make_response_promise_helper<Ts...>::type
+  make_response_promise() {
+    auto& ptr = current_element_;
+    if (! ptr)
+      return {};
+    auto& mid = ptr->mid;
+    if (mid.is_answered())
+      return {};
+    return {this, *ptr};
+  }
+
+  /// Creates a `response_promise` to respond to a request later on.
+  inline response_promise make_response_promise() {
+    return make_response_promise<response_promise>();
   }
 
   /// Creates a `typed_response_promise` and responds immediately.
   /// Return type is deduced from arguments.
   /// Return value is implicitly convertible to untyped response promise.
-  template <class... Ts, class R =
+  template <class... Ts,
+            class R =
               typename detail::make_response_promise_helper<
-                typename std::decay<Ts>::type...>::type>
+                typename std::decay<Ts>::type...
+              >::type>
   R response(Ts&&... xs) {
     auto promise = make_response_promise<R>();
     promise.deliver(std::forward<Ts>(xs)...);

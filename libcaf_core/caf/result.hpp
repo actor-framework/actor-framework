@@ -23,6 +23,7 @@
 #include "caf/none.hpp"
 #include "caf/error.hpp"
 #include "caf/message.hpp"
+#include "caf/delegated.hpp"
 #include "caf/skip_message.hpp"
 
 namespace caf {
@@ -39,6 +40,11 @@ struct result {
 public:
   result(Ts... xs) : flag(rt_value), value(make_message(std::move(xs)...)) {
     // nop
+  }
+
+  template <class U, class... Us>
+  result(U x, Us... xs) : flag(rt_value) {
+    init(std::move(x), std::move(xs)...);
   }
 
   template <class E,
@@ -61,6 +67,50 @@ public:
   }
 
   result(delegated<Ts...>) : flag(rt_delegated) {
+    // nop
+  }
+
+  result_runtime_type flag;
+  message value;
+  error err;
+
+private:
+  void init(Ts... xs) {
+    value = make_message(std::move(xs)...);
+  }
+};
+
+template <>
+struct result<void> {
+public:
+  result() : flag(rt_value) {
+    // nop
+  }
+
+  result(const unit_t&) : flag(rt_value) {
+    // nop
+  }
+
+  template <class E,
+            class = typename std::enable_if<
+                      std::is_same<
+                        decltype(make_error(std::declval<const E&>())),
+                        error
+                      >::value
+                    >::type>
+  result(E x) : flag(rt_error), err(make_error(x)) {
+    // nop
+  }
+
+  result(error x) : flag(rt_error), err(std::move(x)) {
+    // nop
+  }
+
+  result(skip_message_t) : flag(rt_skip_message) {
+    // nop
+  }
+
+  result(delegated<void>) : flag(rt_delegated) {
     // nop
   }
 

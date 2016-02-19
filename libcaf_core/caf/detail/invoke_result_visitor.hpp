@@ -151,7 +151,7 @@ public:
       case rt_delegated:
         (*this)();
         return true;
-      case rt_skip_message:
+      default:
         return false;
     }
   }
