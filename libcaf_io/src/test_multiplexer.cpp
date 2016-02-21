@@ -89,6 +89,7 @@ void test_multiplexer::assign_tcp_scribe(abstract_broker* ptr,
   private:
     test_multiplexer* mpx_;
   };
+  CAF_LOG_TRACE(CAF_ARG(hdl));
   auto sptr = make_counted<impl>(ptr, hdl, this);
   impl_ptr(hdl) = sptr;
   ptr->add_scribe(sptr);
@@ -266,8 +267,8 @@ void test_multiplexer::accept_connection(accept_handle hdl) {
 void test_multiplexer::read_data(connection_handle hdl) {
   flush_runnables();
   scribe_data& sd = scribe_data_[hdl];
-  if (sd.ptr == nullptr)
-    throw std::logic_error("scribe data contains a nullptr");
+  while (sd.ptr == nullptr)
+    exec_runnable();
   switch (sd.recv_conf.first) {
     case receive_policy_flag::exactly:
       while (sd.xbuf.size() >= sd.recv_conf.second) {
@@ -302,12 +303,14 @@ void test_multiplexer::read_data(connection_handle hdl) {
 
 void test_multiplexer::virtual_send(connection_handle hdl,
                                     const buffer_type& buf) {
+  CAF_LOG_TRACE(CAF_ARG(hdl));
   auto& vb = virtual_network_buffer(hdl);
   vb.insert(vb.end(), buf.begin(), buf.end());
   read_data(hdl);
 }
 
 void test_multiplexer::exec_runnable() {
+  CAF_LOG_TRACE("");
   resumable_ptr ptr;
   { // critical section
     guard_type guard{mx_};
@@ -320,6 +323,7 @@ void test_multiplexer::exec_runnable() {
 }
 
 bool test_multiplexer::try_exec_runnable() {
+  CAF_LOG_TRACE("");
   resumable_ptr ptr;
   { // critical section
     guard_type guard{mx_};
@@ -333,6 +337,7 @@ bool test_multiplexer::try_exec_runnable() {
 }
 
 void test_multiplexer::flush_runnables() {
+  CAF_LOG_TRACE("");
   // execute runnables in bursts, pick a small size to
   // minimize time in the critical section
   constexpr size_t max_runnable_count = 8;
@@ -357,6 +362,7 @@ void test_multiplexer::flush_runnables() {
 void test_multiplexer::exec_later(resumable* ptr) {
   CAF_ASSERT(ptr != nullptr);
   CAF_ASSERT(ptr->as_ref_counted_ptr()->get_reference_count() > 0);
+  CAF_LOG_TRACE("");
   switch (ptr->subtype()) {
     case resumable::io_actor:
     case resumable::function_object: {
@@ -375,6 +381,7 @@ void test_multiplexer::exec_later(resumable* ptr) {
 void test_multiplexer::exec(resumable_ptr& ptr) {
   CAF_ASSERT(ptr != nullptr);
   CAF_ASSERT(ptr->as_ref_counted_ptr()->get_reference_count() > 0);
+  CAF_LOG_TRACE("");
   switch (ptr->resume(this, 1)) {
     case resumable::resume_later:
       exec_later(ptr.get());

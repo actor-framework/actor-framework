@@ -327,7 +327,6 @@ void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
   learned_new_node(nid);
   if (! enable_automatic_connections)
     return;
-  actor bb = self; // a handle for our helper back to this BASP broker
   // this member function gets only called once, after adding a new
   // indirect connection to the routing table; hence, spawning
   // our helper here exactly once and there is no need to track
@@ -353,7 +352,7 @@ void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
                     // gotcha! send scribe to our BASP broker
                     // to initiate handshake etc.
                     CAF_LOG_INFO("connected directly:" << CAF_ARG(addr));
-                    helper->send(bb, connect_atom::value, hdl, port);
+                    helper->send(s, connect_atom::value, hdl, port);
                     return;
                   }
                   catch (...) {

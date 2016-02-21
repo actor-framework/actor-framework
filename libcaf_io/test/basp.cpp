@@ -476,7 +476,9 @@ CAF_TEST(remote_address_and_port) {
   connect_node(1);
   auto mm = system.middleman().actor_handle();
   self()->send(mm, get_atom::value, remote_node(1));
-  mpx()->exec_runnable();
+  do {
+    mpx()->exec_runnable();
+  } while (! self()->has_next_message());
   self()->receive(
     [&](const node_id& nid, const std::string& addr, uint16_t port) {
       CAF_CHECK(nid == remote_node(1));
