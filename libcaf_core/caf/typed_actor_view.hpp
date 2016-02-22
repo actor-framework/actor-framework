@@ -135,6 +135,10 @@ public:
    *                      miscellaneous actor operations                      *
    ****************************************************************************/
 
+  message& current_message() {
+    return self_->current_message();
+  }
+
   actor_system& system() const {
     return self_->system();
   }

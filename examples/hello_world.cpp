@@ -36,6 +36,7 @@ void hello_world(event_based_actor* self, const actor& buddy) {
 }
 
 int main() {
+  // our CAF environment
   actor_system system;
   // create a new actor that calls 'mirror()'
   auto mirror_actor = system.spawn(mirror);

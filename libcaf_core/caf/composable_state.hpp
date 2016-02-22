@@ -116,7 +116,6 @@ public:
     init_behavior_impl(this, token, x);
   }
 
-protected:
   typed_actor_pointer<Clauses...> self;
 };
 

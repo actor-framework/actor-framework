@@ -99,8 +99,13 @@ public:
     return i->second;
   }
 
-  result<void> operator()(put_atom, const std::string& key, const std::string& value) override {
-    values_[key] = value;
+  result<void> operator()(put_atom put, const std::string& key,
+                          const std::string& value) override {
+    return invoke_mutable(this, put, key, value);
+  }
+
+  result<void> operator()(put_atom, std::string& key, std::string& value) {
+    values_.emplace(std::move(key), std::move(value));
     return unit;
   }
 
