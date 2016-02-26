@@ -69,6 +69,25 @@ doubler::behavior_type simple_doubler() {
   };
 }
 
+using cell = typed_actor<reacts_to<put_atom, int>,
+                         replies_to<get_atom>::with<int>>;
+
+struct cell_state {
+  int value = 0;
+};
+
+cell::behavior_type
+simple_cell(cell::stateful_pointer<cell_state> self) {
+  return {
+    [=](put_atom, int val) {
+      self->state.value = val;
+    },
+    [=](get_atom) {
+      return self->state.value;
+    }
+  };
+}
+
 struct fixture {
   actor_system system;
   std::vector<actor_addr> testees;
@@ -131,6 +150,13 @@ CAF_TEST(single_res_function_view) {
 CAF_TEST(tuple_res_function_view) {
   auto f = make_function_view(spawn(simple_doubler));
   CAF_CHECK(f(10) == std::make_tuple(10, 10));
+}
+
+CAF_TEST(cell_function_view) {
+  auto f = make_function_view(spawn(simple_cell));
+  CAF_CHECK(f(get_atom::value) == 0);
+  f(put_atom::value, 1024);
+  CAF_CHECK(f(get_atom::value) == 1024);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

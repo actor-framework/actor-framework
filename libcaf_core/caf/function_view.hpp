@@ -29,7 +29,19 @@
 namespace caf {
 
 template <class T>
-class function_view_storage;
+class function_view_storage {
+public:
+  function_view_storage(T& storage) : storage_(&storage) {
+    // nop
+  }
+
+  void operator()(T& x) {
+    *storage_ = std::move(x);
+  }
+
+private:
+  T* storage_;
+};
 
 template <class... Ts>
 class function_view_storage<std::tuple<Ts...>> {
@@ -46,6 +58,18 @@ private:
   std::tuple<Ts...>* storage_;
 };
 
+template <>
+class function_view_storage<unit_t> {
+public:
+  function_view_storage(unit_t&) {
+    // nop
+  }
+
+  void operator()() {
+    // nop
+  }
+};
+
 template <class T>
 struct function_view_flattened_result {
   using type = T;
@@ -54,6 +78,11 @@ struct function_view_flattened_result {
 template <class T>
 struct function_view_flattened_result<std::tuple<T>> {
   using type = T;
+};
+
+template <>
+struct function_view_flattened_result<std::tuple<void>> {
+  using type = unit_t;
 };
 
 /// A function view for an actor hides any messaging from the caller.
@@ -92,14 +121,16 @@ public:
   /// @throws actor_exited if the requests resulted in an error
   template <class... Ts,
             class R =
-              typename detail::deduce_output_type<
-                typename type::signatures,
-                detail::type_list<
-                  typename detail::implicit_conversions<
-                    typename std::decay<Ts>::type
-                  >::type...>
-              >::tuple_type>
-  typename function_view_flattened_result<R>::type operator()(Ts&&... xs) {
+              typename function_view_flattened_result<
+                typename detail::deduce_output_type<
+                  typename type::signatures,
+                  detail::type_list<
+                    typename detail::implicit_conversions<
+                      typename std::decay<Ts>::type
+                    >::type...>
+                >::tuple_type
+              >::type>
+  R operator()(Ts&&... xs) {
     if (! impl_)
       throw std::bad_function_call();
     R result;
