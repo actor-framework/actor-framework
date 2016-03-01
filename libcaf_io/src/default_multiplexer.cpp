@@ -779,6 +779,10 @@ connection_handle default_multiplexer::add_tcp_scribe(abstract_broker* self,
       stream_.configure_read(config);
       if (! launched_) launch();
     }
+    void ack_writes(bool enable) override {
+      CAF_LOG_TRACE(CAF_ARG(enable));
+      stream_.ack_writes(enable);
+    }
     std::vector<char>& wr_buf() override {
       return stream_.wr_buf();
     }

@@ -78,7 +78,11 @@ public:
   /// Returns the input buffer of the scribe identified by `hdl`.
   buffer_type& input_buffer(connection_handle hdl);
 
+  /// Returns the configured read policy of the scribe identified by `hdl`.
   receive_policy::config& read_config(connection_handle hdl);
+
+  /// Returns whether the scribe identified by `hdl` receives write ACKs.
+  bool& ack_writes(connection_handle hdl);
 
   /// Returns `true` if this handle has been closed
   /// for reading, `false` otherwise.
@@ -144,6 +148,7 @@ private:
     receive_policy::config recv_conf;
     bool stopped_reading = false;
     intrusive_ptr<scribe> ptr;
+    bool ack_writes = false;
   };
 
   struct doorman_data {

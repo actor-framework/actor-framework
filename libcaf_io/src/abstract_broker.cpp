@@ -99,6 +99,11 @@ void abstract_broker::configure_read(connection_handle hdl,
   by_id(hdl).configure_read(cfg);
 }
 
+void abstract_broker::ack_writes(connection_handle hdl, bool enable) {
+  CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(enable));
+  by_id(hdl).ack_writes(enable);
+}
+
 std::vector<char>& abstract_broker::wr_buf(connection_handle hdl) {
   return by_id(hdl).wr_buf();
 }

@@ -73,6 +73,7 @@ struct new_data_msg {
   std::vector<char> buf;
 };
 
+/// @relates new_data_msg
 inline std::string to_string(const new_data_msg& x) {
   std::ostringstream os;
   os << std::setfill('0') << std::hex << std::right;
@@ -96,6 +97,45 @@ template <class T>
 void serialize(T& in_out, new_data_msg& x, const unsigned int) {
   in_out & x.handle;
   in_out & x.buf;
+}
+
+/// Signalizes that a certain amount of bytes has been written.
+struct data_transferred_msg {
+  /// Handle to the related connection.
+  connection_handle handle;
+  /// Number of transferred bytes.
+  uint64_t written;
+  /// Number of remaining bytes in all send buffers.
+  uint64_t remaining;
+};
+
+/// @relates data_transferred_msg
+inline std::string to_string(const data_transferred_msg& x) {
+  return "data_transferred_msg"
+         + deep_to_string(std::forward_as_tuple(x.handle, x.written,
+                                                x.remaining));
+}
+
+/// @relates data_transferred_msg
+inline bool operator==(const data_transferred_msg& x,
+                       const data_transferred_msg& y) {
+  return x.handle == y.handle
+      && x.written == y.written
+      && x.remaining == y.remaining;
+}
+
+/// @relates data_transferred_msg
+inline bool operator!=(const data_transferred_msg& x,
+                       const data_transferred_msg& y) {
+  return ! (x == y);
+}
+
+/// @relates new_data_msg
+template <class T>
+void serialize(T& in_out, data_transferred_msg& x, const unsigned int) {
+  in_out & x.handle;
+  in_out & x.written;
+  in_out & x.remaining;
 }
 
 /// Signalizes that a {@link broker} connection has been closed.

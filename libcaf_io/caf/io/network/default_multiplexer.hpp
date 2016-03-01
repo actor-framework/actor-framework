@@ -406,8 +406,9 @@ public:
   stream(default_multiplexer& backend_ref)
       : event_handler(backend_ref),
         sock_(backend_ref),
-        threshold_(1),
+        read_threshold_(1),
         collected_(0),
+        ack_writes_(false),
         writing_(false),
         written_(0) {
     configure_read(receive_policy::at_most(1024));
@@ -445,6 +446,10 @@ public:
   void configure_read(receive_policy::config config) {
     rd_flag_ = config.first;
     max_ = config.second;
+  }
+
+  void ack_writes(bool x) {
+    ack_writes_ = x;
   }
 
   /// Copies data to the write buffer.
@@ -500,7 +505,7 @@ public:
           backend().del(operation::read, sock_.fd(), this);
         } else if (rb > 0) {
           collected_ += rb;
-          if (collected_ >= threshold_) {
+          if (collected_ >= read_threshold_) {
             reader_->consume(&backend(), rd_buf_.data(), collected_);
             read_loop();
           }
@@ -510,27 +515,28 @@ public:
       case operation::write: {
         size_t wb; // written bytes
         if (! write_some(wb, sock_.fd(),
-                wr_buf_.data() + written_,
-                wr_buf_.size() - written_)) {
+                         wr_buf_.data() + written_,
+                         wr_buf_.size() - written_)) {
           writer_->io_failure(&backend(), operation::write);
           backend().del(operation::write, sock_.fd(), this);
-        }
-        else if (wb > 0) {
+        } else if (wb > 0) {
           written_ += wb;
-          if (written_ >= wr_buf_.size()) {
-            // prepare next send (or stop sending)
+          CAF_ASSERT(written_ <= wr_buf_.size());
+          auto remaining = wr_buf_.size() - written_;
+          if (ack_writes_)
+            writer_->data_transferred(&backend(), wb,
+                                      remaining + wr_offline_buf_.size());
+          // prepare next send (or stop sending)
+          if (remaining == 0)
             write_loop();
-          }
         }
         break;
       }
       case operation::propagate_error:
-        if (reader_) {
+        if (reader_)
           reader_->io_failure(&backend(), operation::read);
-        }
-        if (writer_) {
+        if (writer_)
           writer_->io_failure(&backend(), operation::write);
-        }
         // backend will delete this handler anyway,
         // no need to call backend().del() here
         break;
@@ -549,13 +555,13 @@ private:
         if (rd_buf_.size() != max_) {
           rd_buf_.resize(max_);
         }
-        threshold_ = max_;
+        read_threshold_ = max_;
         break;
       case receive_policy_flag::at_most:
         if (rd_buf_.size() != max_) {
           rd_buf_.resize(max_);
         }
-        threshold_ = 1;
+        read_threshold_ = 1;
         break;
       case receive_policy_flag::at_least: {
         // read up to 10% more, but at least allow 100 bytes more
@@ -564,7 +570,7 @@ private:
         if (rd_buf_.size() != max_size) {
           rd_buf_.resize(max_size);
         }
-        threshold_ = max_;
+        read_threshold_ = max_;
         break;
       }
     }
@@ -586,13 +592,14 @@ private:
   Socket sock_;
   // reading
   manager_ptr reader_;
-  size_t threshold_;
+  size_t read_threshold_;
   size_t collected_;
   size_t max_;
   receive_policy_flag rd_flag_;
   buffer_type rd_buf_;
   // writing
   manager_ptr writer_;
+  bool ack_writes_;
   bool writing_;
   size_t written_;
   buffer_type wr_buf_;

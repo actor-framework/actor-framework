@@ -134,6 +134,10 @@ connection_handle asio_multiplexer::add_tcp_scribe(abstract_broker* self,
         launch();
       }
     }
+    void ack_writes(bool enable) override {
+      CAF_LOG_TRACE(CAF_ARG(enable));
+      stream_.ack_writes(enable);
+    }
     std::vector<char>& wr_buf() override {
       return stream_.wr_buf();
     }

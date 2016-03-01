@@ -61,6 +61,10 @@ void test_multiplexer::assign_tcp_scribe(abstract_broker* ptr,
       mpx_->read_config(hdl()) = config;
     }
 
+    void ack_writes(bool enable) override {
+      mpx_->ack_writes(hdl()) = enable;
+    }
+
     std::vector<char>& wr_buf() override {
       return mpx_->output_buffer(hdl());
     }
@@ -221,6 +225,10 @@ test_multiplexer::input_buffer(connection_handle hdl) {
 
 receive_policy::config& test_multiplexer::read_config(connection_handle hdl) {
   return scribe_data_[hdl].recv_conf;
+}
+
+bool& test_multiplexer::ack_writes(connection_handle hdl) {
+  return scribe_data_[hdl].ack_writes;
 }
 
 bool& test_multiplexer::stopped_reading(connection_handle hdl) {

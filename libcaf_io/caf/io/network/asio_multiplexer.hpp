@@ -133,6 +133,7 @@ public:
 
   asio_stream(asio_multiplexer& ref)
       : writing_(false),
+        ack_writes_(false),
         fd_(ref.service()),
         backend_(ref) {
     configure_read(receive_policy::at_most(1024));
@@ -165,6 +166,11 @@ public:
   void configure_read(receive_policy::config config) {
     rd_flag_ = config.first;
     rd_size_ = config.second;
+  }
+
+  void ack_writes(bool enable) {
+    CAF_LOG_TRACE(CAF_ARG(enable));
+    ack_writes_ = enable;
   }
 
   /// Copies data to the write buffer.
@@ -263,22 +269,23 @@ private:
       fd_, boost::asio::buffer(wr_buf_),
       [=](const boost::system::error_code& ec, size_t nb) {
         CAF_LOG_TRACE("");
-        static_cast<void>(nb); // silence compiler warning
-        if (! ec) {
-          CAF_LOG_DEBUG(CAF_ARG(nb));
-          write_loop(mgr);
-        } else {
+        if (ec) {
           CAF_LOG_DEBUG(CAF_ARG(ec.message()));
           mgr->io_failure(&backend(), operation::read);
           writing_ = false;
+          return;
         }
+        CAF_LOG_DEBUG(CAF_ARG(nb));
+        if (ack_writes_)
+          mgr->data_transferred(&backend(), nb, wr_offline_buf_.size());
+        write_loop(mgr);
       });
   }
 
   void collect_data(const manager_ptr& mgr, size_t collected_bytes) {
     fd_.async_read_some(boost::asio::buffer(rd_buf_.data() + collected_bytes,
-                                             rd_buf_.size() - collected_bytes),
-                         [=](const boost::system::error_code& ec, size_t nb) {
+                                            rd_buf_.size() - collected_bytes),
+                        [=](const boost::system::error_code& ec, size_t nb) {
       CAF_LOG_TRACE(CAF_ARG(nb));
       if (! ec) {
         auto sum = collected_bytes + nb;
@@ -295,6 +302,7 @@ private:
   }
 
   bool writing_;
+  bool ack_writes_;
   Socket fd_;
   receive_policy_flag rd_flag_;
   size_t rd_size_;

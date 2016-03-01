@@ -62,6 +62,18 @@ void scribe::consume(execution_unit* ctx, const void*, size_t num_bytes) {
   }
 }
 
+void scribe::data_transferred(execution_unit* ctx, size_t written,
+                              size_t remaining) {
+  CAF_LOG_TRACE(CAF_ARG(written) << CAF_ARG(remaining));
+  if (detached())
+    return;
+  data_transferred_msg tmp{hdl(), written, remaining};
+  auto ptr = mailbox_element::make_joint(invalid_actor_addr,
+                                         invalid_message_id,
+                                         {}, tmp);
+  parent()->exec_single_event(ctx, ptr);
+}
+
 void scribe::io_failure(execution_unit* ctx, network::operation op) {
   CAF_LOG_TRACE(CAF_ARG(hdl()) << CAF_ARG(op));
   // keep compiler happy when compiling w/o logging

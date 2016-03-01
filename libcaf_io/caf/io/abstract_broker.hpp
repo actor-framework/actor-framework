@@ -99,6 +99,9 @@ public:
   /// @param config Contains the new receive policy.
   void configure_read(connection_handle hdl, receive_policy::config config);
 
+  /// Enables or disables write notifications for given connection.
+  void ack_writes(connection_handle hdl, bool enable);
+
   /// Returns the write buffer for given connection.
   std::vector<char>& wr_buf(connection_handle hdl);
 

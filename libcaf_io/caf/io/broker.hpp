@@ -25,6 +25,7 @@
 
 #include "caf/extend.hpp"
 #include "caf/local_actor.hpp"
+#include "caf/stateful_actor.hpp"
 #include "caf/abstract_event_based_actor.hpp"
 
 #include "caf/io/scribe.hpp"
@@ -69,6 +70,10 @@ protected:
 };
 
 using broker_ptr = intrusive_ptr<broker>;
+
+/// Convenience template alias for declaring state-based brokers.
+template <class State>
+using stateful_broker = stateful_actor<State, broker>;
 
 } // namespace io
 } // namespace caf
