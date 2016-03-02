@@ -104,6 +104,9 @@ public:
     return *this;
   }
 
+  /// Stores CLI arguments that were not consumed by CAF.
+  message args_remainder;
+
   /// Sets the parameter `name` to `val`.
   using config_value = variant<std::string, double, int64_t, bool, atom_value>;
 

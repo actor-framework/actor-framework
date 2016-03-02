@@ -248,6 +248,7 @@ actor_system_config::actor_system_config(int argc, char** argv)
          << "enable-automatic-connections="
          << deep_to_string(middleman_enable_automatic_connections) << endl;
   }
+  args_remainder = std::move(res.remainder);
 }
 
 actor_system_config&
