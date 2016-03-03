@@ -292,11 +292,11 @@ uint16_t remote_port_of_fd(native_socket fd);
     // handle at most 64 events at a time
     pollset_.resize(64);
     pipe_ = create_pipe();
-    pipe_reader.init(pipe_.first);
+    pipe_reader_.init(pipe_.first);
     epoll_event ee;
     ee.events = input_mask;
-    ee.data.ptr = &pipe_reader;
-    if (epoll_ctl(epollfd_, EPOLL_CTL_ADD, pipe_reader.fd(), &ee) < 0) {
+    ee.data.ptr = &pipe_reader_;
+    if (epoll_ctl(epollfd_, EPOLL_CTL_ADD, pipe_reader_.fd(), &ee) < 0) {
       CAF_LOG_ERROR("epoll_ctl: " << strerror(errno));
       exit(errno);
     }
