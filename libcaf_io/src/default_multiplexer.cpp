@@ -1016,7 +1016,7 @@ void stream::start(const manager_ptr& mgr) {
   CAF_ASSERT(mgr != nullptr);
   reader_ = mgr;
   backend().add(operation::read, fd(), this);
-  read_loop();
+  prepare_next_read();
 }
 
 void stream::configure_read(receive_policy::config config) {
@@ -1042,7 +1042,7 @@ void stream::flush(const manager_ptr& mgr) {
     backend().add(operation::write, fd(), this);
     writer_ = mgr;
     writing_ = true;
-    write_loop();
+    prepare_next_write();
   }
 }
 
@@ -1064,17 +1064,23 @@ void stream::handle_event(operation op) {
   CAF_LOG_TRACE(CAF_ARG(op));
   switch (op) {
     case operation::read: {
-      size_t rb; // read bytes
-      if (! read_some(rb, fd(),
-                      rd_buf_.data() + collected_,
-                      rd_buf_.size() - collected_)) {
-        reader_->io_failure(&backend(), operation::read);
-        backend().del(operation::read, fd(), this);
-      } else if (rb > 0) {
+      // loop until an error occurs or we have nothing more to read
+      // or until we have handled 50 reads
+      size_t rb;
+      for (size_t i = 0; i < backend().max_consecutive_reads(); ++i) {
+        if (! read_some(rb, fd(),
+                        rd_buf_.data() + collected_,
+                        rd_buf_.size() - collected_)) {
+          reader_->io_failure(&backend(), operation::read);
+          backend().del(operation::read, fd(), this);
+          return;
+        }
+        if (rb == 0)
+          return;
         collected_ += rb;
         if (collected_ >= read_threshold_) {
           reader_->consume(&backend(), rd_buf_.data(), collected_);
-          read_loop();
+          prepare_next_read();
         }
       }
       break;
@@ -1095,7 +1101,7 @@ void stream::handle_event(operation op) {
                                     remaining + wr_offline_buf_.size());
         // prepare next send (or stop sending)
         if (remaining == 0)
-          write_loop();
+          prepare_next_write();
       }
       break;
     }
@@ -1110,7 +1116,7 @@ void stream::handle_event(operation op) {
   }
 }
 
-void stream::read_loop() {
+void stream::prepare_next_read() {
   collected_ = 0;
   switch (rd_flag_) {
     case receive_policy_flag::exactly:
@@ -1134,7 +1140,7 @@ void stream::read_loop() {
   }
 }
 
-void stream::write_loop() {
+void stream::prepare_next_write() {
   CAF_LOG_TRACE(CAF_ARG(wr_buf_.size()) << CAF_ARG(wr_offline_buf_.size()));
   written_ = 0;
   wr_buf_.clear();

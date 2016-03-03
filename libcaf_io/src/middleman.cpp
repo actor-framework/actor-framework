@@ -342,6 +342,7 @@ void middleman::init(actor_system_config& cfg) {
   cfg.network_id.swap(this_node);
   // set scheduling parameters for multiplexer
   backend().max_throughput(cfg.scheduler_max_throughput);
+  backend().max_consecutive_reads(cfg.middleman_max_consecutive_reads);
 }
 
 actor_system::module::id_t middleman::id() const {

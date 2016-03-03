@@ -141,6 +141,7 @@ actor_system_config::actor_system_config() {
   scheduler_profiling_ms_resolution = 100;
   middleman_network_backend = atom("default");
   middleman_enable_automatic_connections = false;
+  middleman_max_consecutive_reads = 50;
   nexus_port = 0;
 }
 
@@ -169,6 +170,8 @@ actor_system_config::actor_system_config(int argc, char** argv)
               .bind("middleman.network-backend", middleman_network_backend)
               .bind("middleman.enable-automatic-connections",
                     middleman_enable_automatic_connections)
+              .bind("middleman.max_consecutive_reads",
+                    middleman_max_consecutive_reads)
               .bind("probe.nexus-host", nexus_host)
               .bind("probe.nexus-port", nexus_port);
       detail::parse_ini(ini, consumer, std::cerr);
@@ -200,6 +203,9 @@ actor_system_config::actor_system_config(int argc, char** argv)
     {"caf#middleman.enable-automatic-connections",
      "enables or disables automatic connection management (off per default)",
      middleman_enable_automatic_connections},
+    {"caf#middleman.max_consecutive_reads",
+     "sets the maximum number of allowed I/O reads before scheduling others",
+     middleman_max_consecutive_reads},
     {"caf#probe.nexus-host",
      "sets the hostname or IP address for connecting to the Nexus",
      nexus_host},

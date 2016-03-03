@@ -174,12 +174,21 @@ public:
     max_throughput_ = x;
   }
 
+  inline size_t max_consecutive_reads() const {
+    return max_consecutive_reads_;
+  }
+
+  inline void max_consecutive_reads(size_t x) {
+    max_consecutive_reads_ = x;
+  }
+
 protected:
   /// Identifies the thread this multiplexer
   /// is running in. Must be set by the subclass.
   std::thread::id tid_;
 
   size_t max_throughput_;
+  size_t max_consecutive_reads_;
 };
 
 using multiplexer_ptr = std::unique_ptr<multiplexer>;

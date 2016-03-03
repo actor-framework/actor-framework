@@ -121,6 +121,7 @@ public:
   // Config parameters of middleman.
   atom_value middleman_network_backend;
   bool middleman_enable_automatic_connections;
+  size_t middleman_max_consecutive_reads;
 
   // System parameters that are set while initializing modules.
   node_id network_id;

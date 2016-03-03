@@ -425,9 +425,9 @@ public:
   void handle_event(operation op) override;
 
 private:
-  void read_loop();
+  void prepare_next_read();
 
-  void write_loop();
+  void prepare_next_write();
 
   // state for reading
   manager_ptr reader_;
