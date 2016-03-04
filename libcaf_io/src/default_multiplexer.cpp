@@ -779,8 +779,8 @@ connection_handle default_multiplexer::add_tcp_scribe(abstract_broker* self,
 
 accept_handle default_multiplexer::add_tcp_doorman(abstract_broker* self,
                                                    native_socket fd) {
-  CAF_LOG_TRACE(CAF_ARG(sock.fd()));
-  CAF_ASSERT(sock.fd() != network::invalid_native_socket);
+  CAF_LOG_TRACE(CAF_ARG(fd));
+  CAF_ASSERT(fd != network::invalid_native_socket);
   class impl : public doorman {
   public:
     impl(abstract_broker* ptr, default_multiplexer& ref, native_socket sockfd)
@@ -1159,20 +1159,20 @@ acceptor::acceptor(default_multiplexer& backend_ref, native_socket sockfd)
 }
 
 void acceptor::start(const manager_ptr& mgr) {
-  CAF_LOG_TRACE(CAF_ARG(accept_sock_.fd()));
+  CAF_LOG_TRACE(CAF_ARG(fd()));
   CAF_ASSERT(mgr != nullptr);
   mgr_ = mgr;
   backend().add(operation::read, fd(), this);
 }
 
 void acceptor::stop_reading() {
-  CAF_LOG_TRACE(CAF_ARG(accept_sock_.fd()));
+  CAF_LOG_TRACE(CAF_ARG(fd()));
   close_read_channel();
   backend().del(operation::read, fd(), this);
 }
 
 void acceptor::handle_event(operation op) {
-  CAF_LOG_TRACE(CAF_ARG(accept_sock_.fd()) << CAF_ARG(op));
+  CAF_LOG_TRACE(CAF_ARG(fd()) << CAF_ARG(op));
   if (mgr_ && op == operation::read) {
     native_socket sockfd = invalid_native_socket;
     if (try_accept(sockfd, fd())) {
@@ -1185,7 +1185,7 @@ void acceptor::handle_event(operation op) {
 }
 
 void acceptor::removed_from_loop(operation op) {
-  CAF_LOG_TRACE(CAF_ARG(accept_sock_.fd()) << CAF_ARG(op));
+  CAF_LOG_TRACE(CAF_ARG(fd()) << CAF_ARG(op));
   if (op == operation::read)
     mgr_.reset();
 }
