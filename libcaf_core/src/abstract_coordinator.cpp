@@ -321,8 +321,8 @@ void printer_loop(blocking_actor* self) {
 void abstract_coordinator::start() {
   CAF_LOG_TRACE("");
   // launch utility actors
-  timer_ = system_.spawn<timer_actor, hidden + detached + blocking_api>();
-  printer_ = system_.spawn<hidden + detached + blocking_api>(printer_loop);
+  timer_ = system_.spawn<timer_actor, hidden + detached>();
+  printer_ = system_.spawn<hidden + detached>(printer_loop);
 }
 
 void abstract_coordinator::init(actor_system_config& cfg) {

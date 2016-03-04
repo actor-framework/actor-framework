@@ -31,10 +31,8 @@
 
 namespace caf {
 
-/// A cooperatively scheduled, event-based actor implementation with strong type
-/// checking. This is the recommended base class for user-defined actors and is
-/// used implicitly when spawning typed, functor-based actors without the
-/// `blocking_api` flag.
+/// A cooperatively scheduled, event-based actor
+/// implementation with static type-checking.
 /// @extends local_actor
 template <class... Sigs>
 class typed_event_based_actor

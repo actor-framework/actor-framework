@@ -511,7 +511,7 @@ CAF_TEST(spawn_event_testee2_test) {
 #ifndef CAF_WINDOWS
 CAF_TEST(requests) {
   scoped_actor self{system};
-  auto sync_testee = system.spawn<blocking_api>([](blocking_actor* s) {
+  auto sync_testee = system.spawn([](blocking_actor* s) {
     s->receive (
       on("hi", arg_match) >> [&](actor from) {
         s->request(from, "whassup?", s).receive(

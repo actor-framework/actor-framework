@@ -92,8 +92,7 @@ int main() {
   actor_system system;
   scoped_actor self{system};
   aout(self) << "blocking actor:" << endl;
-  self->spawn(tester<actor>,
-              self->spawn<blocking_api>(blocking_calculator), 1, 2);
+  self->spawn(tester<actor>, self->spawn(blocking_calculator), 1, 2);
   self->await_all_other_actors_done();
   aout(self) << "event-based actor:" << endl;
   self->spawn(tester<actor>, self->spawn(calculator), 3, 4);

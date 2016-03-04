@@ -272,13 +272,6 @@ public:
   template <spawn_options Os, class C, class F, class... Ts>
   infer_handle_from_class_t<C>
   spawn_functor_impl(actor_config& cfg, F& fun, Ts&&... xs) {
-    constexpr bool is_blocking = std::is_base_of<blocking_actor, C>::value;
-    static_assert(is_blocking || ! has_blocking_api_flag(Os),
-                  "blocking functor-based actors "
-                  "need to be spawned using the blocking_api flag");
-    static_assert(! is_blocking || has_blocking_api_flag(Os),
-                  "non-blocking functor-based actors "
-                  "cannot be spawned using the blocking_api flag");
     detail::init_fun_factory<C, F> fac;
     cfg.init_fun = fac(std::move(fun), std::forward<Ts>(xs)...);
     return spawn_impl<C, Os>(cfg);
@@ -409,16 +402,12 @@ private:
   template <class C, spawn_options Os, class... Ts>
   infer_handle_from_class_t<C>
   spawn_impl(actor_config& cfg, Ts&&... xs) {
-    static_assert(! std::is_base_of<blocking_actor, C>::value
-                  || has_blocking_api_flag(Os),
-                  "C is derived from blocking_actor but "
-                  "spawned without blocking_api_flag");
     static_assert(is_unbound(Os),
                   "top-level spawns cannot have monitor or link flag");
     cfg.flags = has_priority_aware_flag(Os)
                 ? abstract_actor::is_priority_aware_flag
                 : 0;
-    if (has_detach_flag(Os) || has_blocking_api_flag(Os))
+    if (has_detach_flag(Os) || std::is_base_of<blocking_actor, C>::value)
       cfg.flags |= abstract_actor::is_detached_flag;
     if (! cfg.host)
       cfg.host = dummy_execution_unit();

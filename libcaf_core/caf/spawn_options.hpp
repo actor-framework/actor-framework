@@ -35,7 +35,6 @@ enum class spawn_options : int {
   monitor_flag = 0x02,
   detach_flag = 0x04,
   hide_flag = 0x08,
-  blocking_api_flag = 0x10,
   priority_aware_flag = 0x20,
   lazy_init_flag = 0x40
 };
@@ -65,11 +64,6 @@ constexpr spawn_options detached = spawn_options::detach_flag;
 
 /// Causes the runtime to ignore the new actor in `await_all_actors_done()`.
 constexpr spawn_options hidden = spawn_options::hide_flag;
-
-/// Causes the new actor to opt in to the blocking API,
-/// i.e., the actor uses a context-switching or thread-based backend
-/// instead of the default event-based implementation.
-constexpr spawn_options blocking_api = spawn_options::blocking_api_flag;
 
 /// Causes the new actor to evaluate message priorities.
 /// @note This implicitly causes the actor to run in its own thread.
@@ -113,12 +107,6 @@ constexpr bool has_link_flag(spawn_options opts) {
 /// @relates spawn_options
 constexpr bool has_monitor_flag(spawn_options opts) {
   return has_spawn_option(opts, monitored);
-}
-
-/// Checks wheter the {@link blocking_api} flag is set in `opts`.
-/// @relates spawn_options
-constexpr bool has_blocking_api_flag(spawn_options opts) {
-  return has_spawn_option(opts, blocking_api);
 }
 
 /// Checks wheter the {@link lazy_init} flag is set in `opts`.

@@ -33,8 +33,7 @@
 namespace caf {
 
 /// A cooperatively scheduled, event-based actor implementation. This is the
-/// recommended base class for user-defined actors and is used implicitly when
-/// spawning functor-based actors without the `blocking_api` flag.
+/// recommended base class for user-defined actors.
 /// @extends local_actor
 class event_based_actor : public abstract_event_based_actor<behavior, true> {
 public:

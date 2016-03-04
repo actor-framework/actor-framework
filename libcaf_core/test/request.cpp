@@ -302,7 +302,7 @@ CAF_TEST(pending_quit) {
 
 CAF_TEST(request) {
   scoped_actor self{system};
-  self->spawn<monitored + blocking_api>([](blocking_actor* s) {
+  self->spawn<monitored>([](blocking_actor* s) {
     int invocations = 0;
     auto foi = s->spawn<float_or_int, linked>();
     s->send(foi, i_atom::value);
@@ -464,7 +464,7 @@ CAF_TEST(request) {
   self->await_all_other_actors_done();
   CAF_MESSAGE("`await_all_other_actors_done` finished");
   // test use case 3
-  self->spawn<monitored + blocking_api>([](blocking_actor* s) { // client
+  self->spawn<monitored>([](blocking_actor* s) { // client
     auto serv = s->spawn<linked>(server);                       // server
     auto work = s->spawn<linked>([]() -> behavior {             // worker
       return {
