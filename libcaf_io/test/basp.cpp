@@ -312,7 +312,8 @@ public:
   std::pair<basp::header, buffer> read_from_out_buf(connection_handle hdl) {
     CAF_MESSAGE("read from output buffer for connection " << hdl.id());
     auto& buf = mpx_->output_buffer(hdl);
-    CAF_REQUIRE(buf.size() >= basp::header_size);
+    while (buf.size() < basp::header_size)
+      mpx()->exec_runnable();
     auto result = from_buf(buf);
     buf.erase(buf.begin(),
               buf.begin() + basp::header_size + result.first.payload_len);
@@ -368,8 +369,9 @@ public:
       buffer buf;
       this_->to_payload(buf, xs...);
       buffer& ob = this_->mpx()->output_buffer(hdl);
+      while (ob.size() < basp::header_size)
+        this_->mpx()->exec_runnable();
       CAF_MESSAGE("output buffer has " << ob.size() << " bytes");
-      CAF_REQUIRE(ob.size() >= basp::header_size);
       basp::header hdr;
       { // lifetime scope of source
         binary_deserializer source{this_->mpx(), ob.data(), ob.size()};
@@ -609,7 +611,8 @@ CAF_TEST(remote_actor_and_send) {
   );
   CAF_MESSAGE("send message to proxy");
   anon_send(actor_cast<actor>(result), 42);
-  mpx()->exec_runnable(); // process forwarded message in basp_broker
+  mpx()->flush_runnables();
+//  mpx()->exec_runnable(); // process forwarded message in basp_broker
   mock()
   .expect(remote_hdl(0),
           basp::message_type::dispatch_message, any_vals, uint64_t{0},
