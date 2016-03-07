@@ -20,6 +20,7 @@
 #include "caf/io/basp_broker.hpp"
 
 #include <limits>
+#include <chrono>
 
 #include "caf/sec.hpp"
 #include "caf/send.hpp"
@@ -153,8 +154,16 @@ void basp_broker_state::purge_state(const node_id& nid) {
   auto hdl = instance.tbl().lookup_direct(nid);
   if (hdl == invalid_connection_handle)
     return;
+  auto i = ctx.find(hdl);
+  if (i != ctx.end()) {
+    auto& ref = i->second;
+    if (ref.callback) {
+      CAF_LOG_DEBUG("connection closed during handshake");
+      ref.callback->deliver(sec::disconnect_during_handshake);
+    }
+    ctx.erase(i);
+  }
   proxies().erase(nid);
-  ctx.erase(hdl);
   known_remotes.erase(nid);
 }
 
@@ -424,20 +433,6 @@ void basp_broker_state::set_context(connection_handle hdl) {
   this_context = &i->second;
 }
 
-bool basp_broker_state::erase_context(connection_handle hdl) {
-  CAF_LOG_TRACE(CAF_ARG(hdl));
-  auto i = ctx.find(hdl);
-  if (i == ctx.end())
-    return false;
-  auto& ref = i->second;
-  if (ref.callback) {
-    CAF_LOG_DEBUG("connection closed during handshake");
-    ref.callback->deliver(sec::disconnect_during_handshake);
-  }
-  ctx.erase(i);
-  return true;
-}
-
 /******************************************************************************
  *                                basp_broker                                 *
  ******************************************************************************/
@@ -538,19 +533,13 @@ behavior basp_broker::make_behavior() {
     // received from underlying broker implementation
     [=](const connection_closed_msg& msg) {
       CAF_LOG_TRACE(CAF_ARG(msg.handle));
-      if (! state.erase_context(msg.handle))
-        return;
       // TODO: currently we assume a node has gone offline once we lose
       //       a connection, we also could try to reach this node via other
       //       hops to be resilient to (rare) network failures or if a
       //       node is reachable via several interfaces and only one fails
       auto nid = state.instance.tbl().lookup_direct(msg.handle);
-      if (nid != invalid_node_id) {
-        // tell BASP instance we've lost connection
-        state.instance.handle_node_shutdown(nid);
-        // remove all proxies
-        state.proxies().erase(nid);
-      }
+      // tell BASP instance we've lost connection
+      state.instance.handle_node_shutdown(nid);
       CAF_ASSERT(nid == invalid_node_id
                  || ! state.instance.tbl().reachable(nid));
     },
@@ -668,6 +657,11 @@ behavior basp_broker::make_behavior() {
         port = remote_port(hdl);
       }
       return std::make_tuple(x, std::move(addr), port);
+    },
+    [=](tick_atom, size_t interval) {
+      state.instance.handle_heartbeat(context());
+      delayed_send(this, std::chrono::milliseconds{interval},
+                   tick_atom::value, interval);
     },
     // catch-all error handler
     others >> [=] {

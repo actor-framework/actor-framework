@@ -122,6 +122,7 @@ public:
   atom_value middleman_network_backend;
   bool middleman_enable_automatic_connections;
   size_t middleman_max_consecutive_reads;
+  size_t middleman_basp_heartbeat_interval;
 
   // System parameters that are set while initializing modules.
   node_id network_id;

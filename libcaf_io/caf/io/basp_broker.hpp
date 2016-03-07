@@ -80,6 +80,10 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   // inherited from basp::instance::listener
   void learned_new_node_indirectly(const node_id& nid) override;
 
+  void handle_heartbeat(const node_id&) override {
+    // nop
+  }
+
   // stores meta information for open connections
   struct connection_context {
     // denotes what message we expect from the remote node next
@@ -97,8 +101,6 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   };
 
   void set_context(connection_handle hdl);
-
-  bool erase_context(connection_handle hdl);
 
   // pointer to ourselves
   broker* self;
