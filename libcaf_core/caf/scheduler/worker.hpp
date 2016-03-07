@@ -91,13 +91,6 @@ public:
     return this_thread_;
   }
 
-  void detach_all() {
-    CAF_LOG_TRACE("");
-    policy_.foreach_resumable(this, [](resumable* job) {
-      intrusive_ptr_release(job);
-    });
-  }
-
   actor_id id_of(resumable* ptr) {
     abstract_actor* dptr = ptr ? dynamic_cast<abstract_actor*>(ptr)
                                : nullptr;
@@ -124,25 +117,23 @@ private:
       CAF_LOG_DEBUG("resume actor:" << CAF_ARG(id_of(job)));
       CAF_PUSH_AID_FROM_PTR(dynamic_cast<abstract_actor*>(job));
       policy_.before_resume(this, job);
-      switch (job->resume(this, max_throughput_)) {
+      auto res = job->resume(this, max_throughput_);
+      policy_.after_resume(this, job);
+      switch (res) {
         case resumable::resume_later: {
-          policy_.after_resume(this, job);
           policy_.resume_job_later(this, job);
           break;
         }
         case resumable::done: {
-          policy_.after_resume(this, job);
           policy_.after_completion(this, job);
           intrusive_ptr_release(job);
           break;
         }
         case resumable::awaiting_message: {
           // resumable will be enqueued again later
-          policy_.after_resume(this, job);
           break;
         }
         case resumable::shutdown_execution_unit: {
-          policy_.after_resume(this, job);
           policy_.after_completion(this, job);
           policy_.before_shutdown(this);
           return;

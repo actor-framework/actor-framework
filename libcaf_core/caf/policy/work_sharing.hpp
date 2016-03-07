@@ -26,36 +26,22 @@
 #include <condition_variable>
 
 #include "caf/resumable.hpp"
+#include "caf/policy/unprofiled.hpp"
 
 namespace caf {
 namespace policy {
 
 /// @extends scheduler_policy
-class work_sharing {
+class work_sharing : public unprofiled {
 public:
-  // A thead-safe queue implementation.
+  // A thread-safe queue implementation.
   using queue_type = std::list<resumable*>;
 
   struct coordinator_data {
     queue_type queue;
     std::mutex lock;
     std::condition_variable cv;
-    inline coordinator_data() {
-      // nop
-    }
   };
-
-  struct worker_data {
-    inline worker_data() {
-      // nop
-    }
-  };
-
-  // Convenience function to access the data field.
-  template <class WorkerOrCoordinator>
-  static auto d(WorkerOrCoordinator* self) -> decltype(self->data()) {
-    return self->data();
-  }
 
   template <class Coordinator>
   void enqueue(Coordinator* self, resumable* job) {
@@ -78,12 +64,7 @@ public:
 
   template <class Worker>
   void internal_enqueue(Worker* self, resumable* job) {
-    auto& parent_data = d(self->parent());
-    queue_type l;
-    l.push_back(job);
-    std::unique_lock<std::mutex> guard(parent_data.lock);
-    parent_data.queue.splice(parent_data.queue.begin(), l);
-    parent_data.cv.notify_one();
+    enqueue(self->parent(), job);
   }
 
   template <class Worker>
@@ -97,53 +78,32 @@ public:
   resumable* dequeue(Worker* self) {
     auto& parent_data = d(self->parent());
     std::unique_lock<std::mutex> guard(parent_data.lock);
-    while (parent_data.queue.empty()) {
-      parent_data.cv.wait(guard);
-    }
+    parent_data.cv.wait(guard, [&] { return ! parent_data.queue.empty(); });
     resumable* job = parent_data.queue.front();
     parent_data.queue.pop_front();
     return job;
   }
 
-  template <class Worker>
-  void before_shutdown(Worker*) {
-    // nop
-  }
-
-  template <class Worker>
-  void before_resume(Worker*, resumable*) {
-    // nop
-  }
-
-  template <class Worker>
-  void after_resume(Worker*, resumable*) {
-    // nop
-  }
-
-  template <class Worker>
-  void after_completion(Worker*, resumable*) {
-    // nop
-  }
-
   template <class Worker, class UnaryFunction>
-  void foreach_resumable(Worker* self, UnaryFunction f) {
-    auto next = [&]() -> resumable* {
-      if (d(self->parent()).queue.empty()) {
-        return nullptr;
-      }
-      auto front = d(self->parent()).queue.front();
-      d(self->parent()).queue.pop_front();
-      return front;
-    };
-    std::unique_lock<std::mutex> guard(d(self->parent()).lock);
-    for (auto job = next(); job != nullptr; job = next()) {
-      f(job);
-    }
+  void foreach_resumable(Worker*, UnaryFunction) {
+    // nop
   }
 
   template <class Coordinator, class UnaryFunction>
-  void foreach_central_resumable(Coordinator*, UnaryFunction) {
-    // nop
+  void foreach_central_resumable(Coordinator* self, UnaryFunction f) {
+    auto& queue = d(self).queue;
+    auto next = [&]() -> resumable* {
+      if (queue.empty()) {
+        return nullptr;
+      }
+      auto front = queue.front();
+      queue.pop_front();
+      return front;
+    };
+    std::unique_lock<std::mutex> guard(d(self).lock);
+    for (auto job = next(); job != nullptr; job = next()) {
+      f(job);
+    }
   }
 };
 

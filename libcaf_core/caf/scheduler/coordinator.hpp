@@ -59,7 +59,7 @@ protected:
   void start() override {
     // initialize workers vector
     auto num = num_workers();
-    //workers_.resize(num);
+    workers_.reserve(num);
     for (size_t i = 0; i < num; ++i)
       workers_.emplace_back(new worker_type(i, this, max_throughput_));
     // start all workers now that all workers have been initialized
