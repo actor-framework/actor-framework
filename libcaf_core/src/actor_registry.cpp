@@ -283,20 +283,26 @@ void actor_registry::start() {
 }
 
 void actor_registry::stop() {
-  scoped_actor self{system_, true};
-  try {
-    for (auto& kvp : named_entries_) {
-      self->monitor(kvp.second);
-      self->send_exit(kvp.second, exit_reason::kill);
-      self->receive(
-        [](const down_msg&) {
-          // nop
-        }
-      );
+  class dropping_execution_unit : public execution_unit {
+  public:
+    dropping_execution_unit(actor_system* sys) : execution_unit(sys) {
+      // nop
     }
-  }
-  catch (actor_exited&) {
-    CAF_LOG_ERROR("actor_exited thrown in actor_registry::stop");
+    void exec_later(resumable*) override {
+      // should not happen in the first place
+      CAF_LOG_ERROR("actor registry actor called exec_later during shutdown");
+    }
+  };
+  // the scheduler is already stopped -> invoke exit messages manually
+  dropping_execution_unit dummy{&system_};
+  for (auto& kvp : named_entries_) {
+    auto mp = mailbox_element::make_joint(invalid_actor_addr,
+                                          invalid_message_id,
+                                          {},
+                                          exit_msg{invalid_actor_addr,
+                                                   exit_reason::kill});
+    auto ptr = static_cast<local_actor*>(actor_cast<abstract_actor*>(kvp.second));
+    ptr->exec_single_event(&dummy, mp);
   }
   named_entries_.clear();
 }

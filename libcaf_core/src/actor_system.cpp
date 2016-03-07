@@ -127,10 +127,10 @@ actor_system::actor_system(actor_system_config&& cfg)
   node_.swap(cfg.network_id);
   // fire up remaining modules
   logger_.start();
+  registry_.start();
   for (auto& mod : modules_)
     if (mod)
       mod->start();
-  registry_.start();
   // store config parameters in ConfigServ
   auto cs = registry_.get(atom("ConfigServ"));
   anon_send(cs, put_atom::value, "middleman.enable-automatic-connections",
@@ -141,10 +141,10 @@ actor_system::~actor_system() {
   if (await_actors_before_shutdown_)
     await_all_actors_done();
   // stop modules in reverse order
-  registry_.stop();
   for (auto i = modules_.rbegin(); i != modules_.rend(); ++i)
     if (*i)
       (*i)->stop();
+  registry_.stop();
   logger_.stop();
   CAF_SET_LOGGER_SYS(nullptr);
 }
