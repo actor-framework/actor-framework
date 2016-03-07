@@ -27,6 +27,7 @@
 #include <cstddef>
 
 #include "caf/resumable.hpp"
+#include "caf/policy/unprofiled.hpp"
 
 #include "caf/detail/double_ended_queue.hpp"
 
@@ -49,9 +50,9 @@ namespace policy {
 /// [1] http://dl.acm.org/citation.cfm?doid=2398857.2384639
 ///
 /// @extends scheduler_policy
-class work_stealing {
+class work_stealing : public unprofiled {
 public:
-  // A thead-safe queue implementation.
+  // A thread-safe queue implementation.
   using queue_type = detail::double_ended_queue<resumable>;
 
   // The coordinator has only a counter for round-robin enqueue to its workers.
@@ -67,21 +68,13 @@ public:
     // This queue is exposed to other workers that may attempt to steal jobs
     // from it and the central scheduling unit can push new jobs to the queue.
     queue_type queue;
-    // needed by our engine
-    std::random_device rdevice;
     // needed to generate pseudo random numbers
     std::default_random_engine rengine;
     // initialize random engine
-    inline worker_data() : rdevice(), rengine(rdevice()) {
+    inline worker_data() : rengine(std::random_device{}()) {
       // nop
     }
   };
-
-  // Convenience function to access the data field.
-  template <class WorkerOrCoordinator>
-  static auto d(WorkerOrCoordinator* self) -> decltype(self->data()) {
-    return self->data();
-  }
 
   // Goes on a raid in quest for a shiny new job.
   template <class Worker>
@@ -165,26 +158,6 @@ public:
     // unreachable, because the last strategy loops
     // until a job has been dequeued
     return nullptr;
-  }
-
-  template <class Worker>
-  void before_shutdown(Worker*) {
-    // nop
-  }
-
-  template <class Worker>
-  void before_resume(Worker*, resumable*) {
-    // nop
-  }
-
-  template <class Worker>
-  void after_resume(Worker*, resumable*) {
-    // nop
-  }
-
-  template <class Worker>
-  void after_completion(Worker*, resumable*) {
-    // nop
   }
 
   template <class Worker, class UnaryFunction>

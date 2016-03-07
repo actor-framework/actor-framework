@@ -82,8 +82,6 @@ public:
   void* subtype_ptr() override;
 
 protected:
-  abstract_coordinator();
-
   void stop_actors();
 
   // ID of the worker receiving the next enqueue
