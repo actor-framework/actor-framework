@@ -46,8 +46,8 @@ caf::actor_system_config make_actor_system_config() {
 struct fixture {
   caf::actor_system server_side{make_actor_system_config()};
   caf::actor_system client_side{make_actor_system_config()};
-  caf::io::middleman& server_side_mm{server_side.middleman()};
-  caf::io::middleman& client_side_mm{client_side.middleman()};
+  caf::io::middleman& server_side_mm = server_side.middleman();
+  caf::io::middleman& client_side_mm = client_side.middleman();
 };
 
 caf::behavior make_pong_behavior() {
