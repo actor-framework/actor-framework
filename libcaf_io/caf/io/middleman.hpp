@@ -315,6 +315,8 @@ private:
   hook_uptr hooks_;
   // actor offering asyncronous IO by managing this singleton instance
   middleman_actor manager_;
+  // configure parameters
+  size_t basp_heartbeat_interval_;
 };
 
 } // namespace io

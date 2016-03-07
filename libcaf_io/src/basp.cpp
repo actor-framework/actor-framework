@@ -46,6 +46,8 @@ std::string to_string(message_type x) {
       return "announce_proxy_instance";
     case message_type::kill_proxy_instance:
       return "kill_proxy_instance";
+    case message_type::heartbeat:
+      return "heartbeat";
     default:
       return "???";
   }
@@ -129,6 +131,16 @@ bool kill_proxy_instance_valid(const header& hdr) {
        && ! zero(hdr.operation_data);
 }
 
+bool heartbeat_valid(const header& hdr) {
+  return  valid(hdr.source_node)
+       && valid(hdr.dest_node)
+       && hdr.source_node != hdr.dest_node
+       && zero(hdr.source_actor)
+       && zero(hdr.dest_actor)
+       && zero(hdr.payload_len)
+       && zero(hdr.operation_data);
+}
+
 } // namespace <anonymous>
 
 bool valid(const header& hdr) {
@@ -145,6 +157,8 @@ bool valid(const header& hdr) {
       return announce_proxy_instance_valid(hdr);
     case message_type::kill_proxy_instance:
       return kill_proxy_instance_valid(hdr);
+    case message_type::heartbeat:
+      return heartbeat_valid(hdr);
   }
 }
 
@@ -337,7 +351,9 @@ connection_state instance::handle(execution_unit* ctx,
     return err();
   }
   // needs forwarding?
-  if (! is_handshake(hdr) && hdr.dest_node != this_node_) {
+  if (! is_handshake(hdr)
+      && ! is_heartbeat(hdr)
+      && hdr.dest_node != this_node_) {
     auto path = lookup(hdr.dest_node);
     if (path) {
       binary_serializer bs{ctx, std::back_inserter(path->wr_buf)};
@@ -452,6 +468,11 @@ connection_state instance::handle(execution_unit* ctx,
       callee_.kill_proxy(hdr.source_node, hdr.source_actor,
                          static_cast<exit_reason>(hdr.operation_data));
       break;
+    case message_type::heartbeat: {
+      CAF_LOG_TRACE("received heartbeat: " << CAF_ARG(hdr.source_node));
+      callee_.handle_heartbeat(hdr.source_node);
+      break;
+    }
     default:
       CAF_LOG_ERROR("invalid operation");
       return err();
@@ -459,11 +480,12 @@ connection_state instance::handle(execution_unit* ctx,
   return await_header;
 }
 
-void instance::handle(const connection_closed_msg& msg) {
-  auto cb = make_callback([&](const node_id& nid){
-    callee_.purge_state(nid);
-  });
-  tbl_.erase_direct(msg.handle, cb);
+void instance::handle_heartbeat(execution_unit* ctx) {
+  for (auto& kvp: tbl_.direct_by_hdl_) {
+    CAF_LOG_TRACE(CAF_ARG(kvp.first) << CAF_ARG(kvp.second));
+    write_heartbeat(ctx, tbl_.parent_->wr_buf(kvp.first), kvp.second);
+    tbl_.parent_->flush(kvp.first);
+  }
 }
 
 void instance::handle_node_shutdown(const node_id& affected_node) {
@@ -670,6 +692,13 @@ void instance::write_kill_proxy_instance(execution_unit* ctx,
   header hdr{message_type::kill_proxy_instance, 0, static_cast<uint32_t>(rsn),
              this_node_, dest_node, aid, invalid_actor_id};
   write(ctx, buf, hdr);
+}
+
+void instance::write_heartbeat(execution_unit* ctx,
+                               buffer_type& buf,
+                               const node_id& remote_side) {
+  write(ctx, buf, message_type::heartbeat, nullptr, 0,
+        this_node_, remote_side, invalid_actor_id, invalid_actor_id);
 }
 
 } // namespace basp

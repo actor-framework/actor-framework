@@ -204,7 +204,12 @@ enum class message_type : uint32_t {
   /// that has been terminated.
   ///
   /// ![](kill_proxy_instance.png)
-  kill_proxy_instance = 0x04
+  kill_proxy_instance = 0x04,
+
+  /// Send to remote node which has direct connection.
+  ///
+  /// ![](heartbeat.png)
+  heartbeat = 0x05,
 };
 
 /// @relates message_type
@@ -414,6 +419,9 @@ public:
     /// to which it does not have a direct connection.
     virtual void learned_new_node_indirectly(const node_id& nid) = 0;
 
+    /// Called if a heartbeat was received from `nid`
+    virtual void handle_heartbeat(const node_id& nid) = 0;
+
     /// Returns the actor namespace associated to this BASP protocol instance.
     inline proxy_registry& proxies() {
       return namespace_;
@@ -441,8 +449,8 @@ public:
   connection_state handle(execution_unit* ctx,
                           new_data_msg& dm, header& hdr, bool is_payload);
 
-  /// Handles connection shutdowns.
-  void handle(const connection_closed_msg& msg);
+  /// Sends heartbeat messages to all valid nodes those are directly connected.
+  void handle_heartbeat(execution_unit* ctx);
 
   /// Handles failure or shutdown of a single node. This function purges
   /// all routes to `affected_node` from the routing table.
@@ -545,6 +553,10 @@ public:
                                  actor_id aid,
                                  exit_reason rsn);
 
+  /// Writes a `heartbeat` to `buf`.
+  void write_heartbeat(execution_unit* ctx,
+                       buffer_type& buf, const node_id& remote_side);
+
   inline const node_id& this_node() const {
     return this_node_;
   }
@@ -570,6 +582,11 @@ private:
 inline bool is_handshake(const header& hdr) {
   return hdr.operation == message_type::server_handshake
       || hdr.operation == message_type::client_handshake;
+}
+
+/// Checks wheter given header contains a heartbeat.
+inline bool is_heartbeat(const header& hdr) {
+  return hdr.operation == message_type::heartbeat;
 }
 
 /// @}

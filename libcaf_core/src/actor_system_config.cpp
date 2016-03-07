@@ -142,6 +142,7 @@ actor_system_config::actor_system_config() {
   middleman_network_backend = atom("default");
   middleman_enable_automatic_connections = false;
   middleman_max_consecutive_reads = 50;
+  middleman_basp_heartbeat_interval = 0;
   nexus_port = 0;
 }
 
@@ -172,6 +173,8 @@ actor_system_config::actor_system_config(int argc, char** argv)
                     middleman_enable_automatic_connections)
               .bind("middleman.max_consecutive_reads",
                     middleman_max_consecutive_reads)
+              .bind("middleman.basp-heartbeat-interval",
+                    middleman_basp_heartbeat_interval)
               .bind("probe.nexus-host", nexus_host)
               .bind("probe.nexus-port", nexus_port);
       detail::parse_ini(ini, consumer, std::cerr);
@@ -206,6 +209,9 @@ actor_system_config::actor_system_config(int argc, char** argv)
     {"caf#middleman.max_consecutive_reads",
      "sets the maximum number of allowed I/O reads before scheduling others",
      middleman_max_consecutive_reads},
+    {"caf#middleman.basp-heartbeat-interval",
+     "sets the interval (ms) of basp-heartbeat, 0 (default) means disabling it",
+     middleman_basp_heartbeat_interval},
     {"caf#probe.nexus-host",
      "sets the hostname or IP address for connecting to the Nexus",
      nexus_host},
@@ -252,7 +258,9 @@ actor_system_config::actor_system_config(int argc, char** argv)
          << "network-backend="
          << deep_to_string(middleman_network_backend) << endl
          << "enable-automatic-connections="
-         << deep_to_string(middleman_enable_automatic_connections) << endl;
+         << deep_to_string(middleman_enable_automatic_connections) << endl
+         << "basp-heartbeat-interval="
+         << middleman_basp_heartbeat_interval << endl;
   }
   args_remainder = std::move(res.remainder);
 }

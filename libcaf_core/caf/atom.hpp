@@ -139,6 +139,9 @@ using spawn_atom = atom_constant<atom("spawn")>;
 /// Used for migrating actors to other nodes.
 using migrate_atom = atom_constant<atom("migrate")>;
 
+/// Used for triggering periodic operations.
+using tick_atom = atom_constant<atom("tick")>;
+
 } // namespace caf
 
 namespace std {
