@@ -20,16 +20,16 @@
 #ifndef CAF_COMPOSED_STATE_HPP
 #define CAF_COMPOSED_STATE_HPP
 
-#include "caf/composable_state.hpp"
+#include "caf/composable_behavior.hpp"
 #include "caf/typed_actor_pointer.hpp"
 
 namespace caf {
 
 template <class InterfaceIntersection, class... States>
-class composed_state_base;
+class composed_behavior_base;
 
 template <class T>
-class composed_state_base<detail::type_list<>, T> : public T {
+class composed_behavior_base<detail::type_list<>, T> : public T {
 public:
   using T::operator();
 
@@ -39,11 +39,11 @@ public:
 };
 
 template <class A, class B, class... Ts>
-class composed_state_base<detail::type_list<>, A, B, Ts...>
+class composed_behavior_base<detail::type_list<>, A, B, Ts...>
   : public A,
-    public composed_state_base<detail::type_list<>, B, Ts...> {
+    public composed_behavior_base<detail::type_list<>, B, Ts...> {
 public:
-  using super = composed_state_base<detail::type_list<>, B, Ts...>;
+  using super = composed_behavior_base<detail::type_list<>, B, Ts...>;
 
   using A::operator();
   using super::operator();
@@ -60,13 +60,13 @@ public:
 };
 
 template <class... Xs, class... Ys, class... Ts, class... States>
-class composed_state_base<detail::type_list<typed_mpi<detail::type_list<Xs...>,
+class composed_behavior_base<detail::type_list<typed_mpi<detail::type_list<Xs...>,
                                               detail::type_list<Ys...>>,
                                     Ts...>,
                           States...>
-  : public composed_state_base<detail::type_list<Ts...>, States...> {
+  : public composed_behavior_base<detail::type_list<Ts...>, States...> {
 public:
-  using super = composed_state_base<detail::type_list<Ts...>, States...>;
+  using super = composed_behavior_base<detail::type_list<Ts...>, States...>;
 
   using super::operator();
 
@@ -74,14 +74,14 @@ public:
 };
 
 template <class... Ts>
-class composed_state
-  : public composed_state_base<typename detail::tl_intersect<
+class composed_behavior
+  : public composed_behavior_base<typename detail::tl_intersect<
                                  typename Ts::signatures...
                                >::type,
                                Ts...> {
 private:
   using super =
-    composed_state_base<typename detail::tl_intersect<
+    composed_behavior_base<typename detail::tl_intersect<
                           typename Ts::signatures...
                         >::type,
                         Ts...>;
@@ -98,7 +98,7 @@ public:
 
   using behavior_type = typename handle_type::behavior_type;
 
-  using combined_type = composed_state;
+  using combined_type = composed_behavior;
 
   using actor_base = typename handle_type::base;
 
@@ -108,7 +108,7 @@ public:
       typed_actor_pointer
     >::type;
 
-  composed_state() : self(nullptr) {
+  composed_behavior() : self(nullptr) {
     // nop
   }
 

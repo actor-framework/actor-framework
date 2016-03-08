@@ -17,38 +17,12 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_COMPOSABLE_STATE_BASED_ACTOR_HPP
-#define CAF_COMPOSABLE_STATE_BASED_ACTOR_HPP
-
-#include "caf/stateful_actor.hpp"
+#include "caf/abstract_composable_behavior.hpp"
 
 namespace caf {
 
-/// Implementation class for spawning composable states directly as actors.
-template <class State>
-class composable_state_based_actor : public stateful_actor
-                                     <State, typename State::actor_base> {
- public:
-  static_assert(! std::is_abstract<State>::value,
-                "State is abstract, please make sure to override all "
-                "virtual operator() member functions");
-
-  using super = stateful_actor<State, typename State::actor_base>;
-
-  composable_state_based_actor(actor_config& cfg) : super(cfg) {
-    // nop
-  }
-
-  using behavior_type = typename State::behavior_type;
-
-  behavior_type make_behavior() override {
-    this->state.init_selfptr(this);
-    behavior tmp;
-    this->state.init_behavior(tmp);
-    return behavior_type{typename behavior_type::unsafe_init{}, std::move(tmp)};
-  }
-};
+abstract_composable_behavior::~abstract_composable_behavior() {
+  // nop
+}
 
 } // namespace caf
-
-#endif // CAF_COMPOSABLE_STATE_BASED_ACTOR_HPP

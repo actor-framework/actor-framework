@@ -231,12 +231,18 @@ struct sender_signature_checker<OrigSigs, DestSigs, detail::type_list<>> {
   static void check() {}
 };
 
-template <class T, class... Ts>
+template <class... Ts>
 struct extend_with_helper;
 
-template <class... Ts, class... Es>
-struct extend_with_helper<typed_actor<Es...>, Ts...> {
-  using type = typed_actor<Ts..., Es...>;
+template <class... Xs>
+struct extend_with_helper<typed_actor<Xs...>> {
+  using type = typed_actor<Xs...>;
+};
+
+template <class... Xs, class... Ys, class... Ts>
+struct extend_with_helper<typed_actor<Xs...>, typed_actor<Ys...>, Ts...>
+  : extend_with_helper<typed_actor<Xs..., Ys...>, Ts...> {
+  // nop
 };
 
 } // namespace detail

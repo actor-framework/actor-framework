@@ -37,7 +37,7 @@
 #include "caf/string_algorithms.hpp"
 #include "caf/scoped_execution_unit.hpp"
 #include "caf/uniform_type_info_map.hpp"
-#include "caf/composable_state_based_actor.hpp"
+#include "caf/composable_behavior_based_actor.hpp"
 #include "caf/prohibit_top_level_spawn_marker.hpp"
 
 #include "caf/detail/spawn_fwd.hpp"
@@ -261,7 +261,7 @@ public:
 
   template <class S, spawn_options Os = no_spawn_options>
   infer_handle_from_state_t<S> spawn() {
-    return spawn<composable_state_based_actor<S>, Os>();
+    return spawn<composable_behavior_based_actor<S>, Os>();
   }
 
   /// Called by `spawn_functor` to apply static assertions and

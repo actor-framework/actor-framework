@@ -81,9 +81,9 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
 
   /// Creates a new `typed_actor` type by extending this one with another
   /// `typed_actor`.
-  template <class T>
+  template <class... Ts>
   using extend_with =
-    typename detail::extend_with_helper<T, Sigs...>::type;
+    typename detail::extend_with_helper<typed_actor, Ts...>::type;
 
   /// Identifies the behavior type actors of this kind use
   /// for their behavior stack.

@@ -19,7 +19,7 @@
 
 #include "caf/config.hpp"
 
-#define CAF_SUITE composable_states
+#define CAF_SUITE composable_behaviors
 #include "caf/test/unit_test.hpp"
 
 #include "caf/all.hpp"
@@ -35,7 +35,7 @@ using d_actor = typed_actor<replies_to<double>::with<double, double>>;
 
 using foo_actor = i3_actor::extend_with<d_actor>;
 
-class foo_actor_state : public composable_state<foo_actor> {
+class foo_actor_state : public composable_behavior<foo_actor> {
 public:
   result<int> operator()(int x, int y, int z) override {
     return x + y + z;
@@ -46,28 +46,28 @@ public:
   }
 };
 
-class i3_actor_state : public composable_state<i3_actor> {
+class i3_actor_state : public composable_behavior<i3_actor> {
 public:
   result<int> operator()(int x, int y, int z) override {
     return x + y + z;
   }
 };
 
-class d_actor_state : public composable_state<d_actor> {
+class d_actor_state : public composable_behavior<d_actor> {
 public:
   result<double, double> operator()(double x) override {
     return {x, x};
   }
 };
 
-class i3_actor_state2 : public composable_state<i3_actor> {
+class i3_actor_state2 : public composable_behavior<i3_actor> {
 public:
   result<int> operator()(int x, int y, int z) override {
     return x * (y * z);
   }
 };
 
-struct foo_actor_state2 : composed_state<i3_actor_state2, i3_actor_state, d_actor_state> {
+struct foo_actor_state2 : composed_behavior<i3_actor_state2, i3_actor_state, d_actor_state> {
   result<int> operator()(int x, int y, int z) override {
     return x - y - z;
   }
@@ -86,7 +86,7 @@ using dict = named_actor::extend<replies_to<get_atom, std::string>::with<std::st
 // a simple calculator
 using calc = named_actor::extend<replies_to<add_atom, int, int>::with<int>>;
 
-class dict_state : public composable_state<dict> {
+class dict_state : public composable_behavior<dict> {
 public:
   result<std::string> operator()(get_name_atom) override {
     return "dictionary";
@@ -113,7 +113,7 @@ protected:
   std::unordered_map<std::string, std::string> values_;
 };
 
-class calc_state : public composable_state<calc> {
+class calc_state : public composable_behavior<calc> {
 public:
   result<std::string> operator()(get_name_atom) override {
     return "calculator";
@@ -124,9 +124,9 @@ public:
   }
 };
 
-class dict_calc_state : public composed_state<dict_state, calc_state> {
+class dict_calc_state : public composed_behavior<dict_state, calc_state> {
 public:
-  // composed_state<...> will mark this operator pure virtual, because
+  // composed_behavior<...> will mark this operator pure virtual, because
   // of conflicting declarations in dict_state and calc_state
   result<std::string> operator()(get_name_atom) override {
     return "calculating dictionary";
@@ -135,7 +135,7 @@ public:
 
 } // namespace <anonymous>
 
-CAF_TEST(composable_states) {
+CAF_TEST(composable_behaviors) {
   actor_system sys;
   //auto x1 = sys.spawn<stateful_impl<foo_actor_state>>();
   auto x1 = sys.spawn<foo_actor_state>();
@@ -146,8 +146,8 @@ CAF_TEST(composable_states) {
     }
   );
   self->send_exit(x1, exit_reason::kill);
-  //auto x2 = sys.spawn<stateful_impl<composed_state<i3_actor_state, d_actor_state>>>();
-  auto x2 = sys.spawn<composed_state<i3_actor_state, d_actor_state>>();
+  //auto x2 = sys.spawn<stateful_impl<composed_behavior<i3_actor_state, d_actor_state>>>();
+  auto x2 = sys.spawn<composed_behavior<i3_actor_state, d_actor_state>>();
   self->request(x2, 1, 2, 4).receive(
     [](int y) {
       CAF_CHECK(y == 7);

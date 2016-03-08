@@ -33,9 +33,9 @@
 namespace caf {
 
 /// Marker type that allows CAF to spawn actors from composable states.
-class abstract_composable_state {
+class abstract_composable_behavior {
 public:
-  virtual ~abstract_composable_state();
+  virtual ~abstract_composable_behavior();
 
   virtual void init_behavior(behavior& x) = 0;
 

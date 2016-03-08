@@ -96,6 +96,25 @@ public:
   actor_system_config& add_error_category(atom_value category,
                                           error_renderer renderer);
 
+  /// Enables the actor system to convert errors of this error category
+  /// to human-readable strings via `to_string(T)`.
+  template <class T>
+  actor_system_config& add_error_category(atom_value category) {
+    auto f = [=](uint8_t val, const std::string& ctx) -> std::string {
+      std::string result;
+      result = to_string(category);
+      result += ": ";
+      result += to_string(static_cast<T>(val));
+      if (! ctx.empty()) {
+        result += " (";
+        result += ctx;
+        result += ")";
+      }
+      return result;
+    };
+    return add_error_category(category, f);
+  }
+
   template <class T, class... Ts>
   actor_system_config& load() {
     module_factories_.push_back([](actor_system& sys) -> actor_system::module* {

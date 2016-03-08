@@ -24,7 +24,7 @@
 #include "caf/replies_to.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/typed_actor_pointer.hpp"
-#include "caf/abstract_composable_state.hpp"
+#include "caf/abstract_composable_behavior.hpp"
 
 namespace caf {
 
@@ -32,13 +32,13 @@ namespace caf {
 /// of the apply operator is derived from the typed message passing interface
 /// `MPI`.
 template <class MPI>
-class abstract_composable_state_mixin;
+class abstract_composable_behavior_mixin;
 
 template <class... Xs, class... Ys>
-class abstract_composable_state_mixin<typed_mpi<detail::type_list<Xs...>,
+class abstract_composable_behavior_mixin<typed_mpi<detail::type_list<Xs...>,
                                                 detail::type_list<Ys...>>> {
 public:
-  virtual ~abstract_composable_state_mixin() noexcept {
+  virtual ~abstract_composable_behavior_mixin() noexcept {
     // nop
   }
 
@@ -47,20 +47,20 @@ public:
 
 // this class works around compiler issues on GCC
 template <class... Ts>
-struct abstract_composable_state_mixin_helper;
+struct abstract_composable_behavior_mixin_helper;
 
 template <class T, class... Ts>
-struct abstract_composable_state_mixin_helper<T, Ts...>
-  : public abstract_composable_state_mixin<T>,
-    public abstract_composable_state_mixin_helper<Ts...> {
-  using abstract_composable_state_mixin<T>::operator();
-  using abstract_composable_state_mixin_helper<Ts...>::operator();
+struct abstract_composable_behavior_mixin_helper<T, Ts...>
+  : public abstract_composable_behavior_mixin<T>,
+    public abstract_composable_behavior_mixin_helper<Ts...> {
+  using abstract_composable_behavior_mixin<T>::operator();
+  using abstract_composable_behavior_mixin_helper<Ts...>::operator();
 };
 
 template <class T>
-struct abstract_composable_state_mixin_helper<T>
-  : public abstract_composable_state_mixin<T> {
-  using abstract_composable_state_mixin<T>::operator();
+struct abstract_composable_behavior_mixin_helper<T>
+  : public abstract_composable_behavior_mixin<T> {
+  using abstract_composable_behavior_mixin<T>::operator();
 };
 
 template <class T, class... Fs>
@@ -83,12 +83,12 @@ void init_behavior_impl(T* thisptr,
 
 /// Base type for composable actor states.
 template <class TypedActor>
-class composable_state;
+class composable_behavior;
 
 template <class... Clauses>
-class composable_state<typed_actor<Clauses...>>
-  : virtual public abstract_composable_state,
-    public abstract_composable_state_mixin_helper<Clauses...> {
+class composable_behavior<typed_actor<Clauses...>>
+  : virtual public abstract_composable_behavior,
+    public abstract_composable_behavior_mixin_helper<Clauses...> {
 public:
   using signatures = detail::type_list<Clauses...>;
 
@@ -102,7 +102,7 @@ public:
 
   using behavior_type = typename handle_type::behavior_type;
 
-  composable_state() : self(nullptr) {
+  composable_behavior() : self(nullptr) {
     // nop
   }
 

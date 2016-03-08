@@ -13,7 +13,7 @@ file(GLOB_RECURSE LIBCAF_CORE_HDRS "caf/*.hpp")
 set (LIBCAF_CORE_SRCS
      src/abstract_actor.cpp
      src/abstract_channel.cpp
-     src/abstract_composable_state.cpp
+     src/abstract_composable_behavior.cpp
      src/abstract_group.cpp
      src/abstract_coordinator.cpp
      src/actor.cpp

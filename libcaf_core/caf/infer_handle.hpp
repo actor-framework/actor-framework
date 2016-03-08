@@ -24,7 +24,7 @@
 #include "caf/actor_addr.hpp"
 #include "caf/stateful_actor.hpp"
 #include "caf/typed_behavior.hpp"
-#include "caf/abstract_composable_state.hpp"
+#include "caf/abstract_composable_behavior.hpp"
 
 namespace caf {
 
@@ -196,7 +196,7 @@ struct infer_handle_from_class<T, false> {
 template <class T>
 using infer_handle_from_class_t = typename infer_handle_from_class<T>::type;
 
-template <class T, bool = std::is_base_of<abstract_composable_state, T>::value>
+template <class T, bool = std::is_base_of<abstract_composable_behavior, T>::value>
 struct infer_handle_from_state {
   using type = typename T::handle_type;
 };
