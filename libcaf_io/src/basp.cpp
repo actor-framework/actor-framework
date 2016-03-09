@@ -342,13 +342,13 @@ connection_state instance::handle(execution_unit* ctx,
   } else {
     binary_deserializer bd{ctx, dm.buf.data(), dm.buf.size()};
     bd >> hdr;
+    CAF_LOG_DEBUG(CAF_ARG(hdr));
+    if (! valid(hdr)) {
+      CAF_LOG_WARNING("received invalid header:" << CAF_ARG(hdr.operation));
+      return err();
+    }
     if (hdr.payload_len > 0)
       return await_payload;
-  }
-  CAF_LOG_DEBUG(CAF_ARG(hdr));
-  if (! valid(hdr)) {
-    CAF_LOG_WARNING("received invalid header:" << CAF_ARG(hdr.operation));
-    return err();
   }
   // needs forwarding?
   if (! is_handshake(hdr)
