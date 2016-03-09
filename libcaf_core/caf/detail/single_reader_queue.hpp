@@ -67,7 +67,7 @@ public:
   }
 
   /// Tries to enqueue a new element to the mailbox.
-  /// @warning Call only from the reader (owner).
+  /// @threadsafe
   enqueue_result enqueue(pointer new_element) {
     CAF_ASSERT(new_element != nullptr);
     pointer e = stack_.load();
