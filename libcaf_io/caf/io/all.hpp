@@ -24,6 +24,7 @@
 #include "caf/io/broker.hpp"
 #include "caf/io/middleman.hpp"
 #include "caf/io/basp_broker.hpp"
+#include "caf/io/typed_broker.hpp"
 #include "caf/io/receive_policy.hpp"
 #include "caf/io/middleman_actor.hpp"
 #include "caf/io/system_messages.hpp"

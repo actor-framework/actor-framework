@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_EXPERIMENTAL_TYPED_BROKER_HPP
-#define CAF_IO_EXPERIMENTAL_TYPED_BROKER_HPP
+#ifndef CAF_IO_TYPED_BROKER_HPP
+#define CAF_IO_TYPED_BROKER_HPP
 
 #include <map>
 #include <vector>
@@ -41,20 +41,26 @@
 
 namespace caf {
 namespace io {
-namespace experimental {
-
-using minimal_client = typed_actor<reacts_to<new_data_msg>,
-                                   reacts_to<connection_closed_msg>>;
-
-using minimal_server =
-  minimal_client::extend<reacts_to<new_connection_msg>,
-                         reacts_to<acceptor_closed_msg>>;
 
 template <class... Sigs>
 class typed_broker;
 
-/// A typed broker mediates between actor systems and other components in
-/// the network.
+/// Denotes a minimal "client" broker managing one or more connection
+/// handles by reacting to `new_data_msg` and `connection_closed_msg`.
+/// @relates typed_broker
+using connection_handler = typed_actor<reacts_to<new_data_msg>,
+                                       reacts_to<connection_closed_msg>>;
+
+/// Denotes a minimal "server" broker managing one or more accept
+/// handles by reacting to `new_connection_msg` and `acceptor_closed_msg`.
+/// The accept handler usually calls `self->fork(...)` when receiving
+/// a `new_connection_msg`.
+/// @relates typed_broker
+using accept_handler = typed_actor<reacts_to<new_connection_msg>,
+                                   reacts_to<acceptor_closed_msg>>;
+
+/// A typed broker mediates between actor systems and other
+/// components in the network.
 /// @extends local_actor
 template <class... Sigs>
 class typed_broker : public abstract_event_based_actor<typed_behavior<Sigs...>,
@@ -72,11 +78,11 @@ public:
   using super::send;
   using super::delayed_send;
 
-  template <class... DestSigs, class... Ts>
-  void send(message_priority mp, const typed_actor<DestSigs...>& dest, Ts&&... xs) {
+  template <class... Dest, class... Ts>
+  void send(message_priority mp, const typed_actor<Dest...>& dest, Ts&&... xs) {
     detail::sender_signature_checker<
       detail::type_list<Sigs...>,
-      detail::type_list<DestSigs...>,
+      detail::type_list<Dest...>,
       detail::type_list<
         typename detail::implicit_conversions<
           typename std::decay<Ts>::type
@@ -86,11 +92,11 @@ public:
     super::send(mp, dest, std::forward<Ts>(xs)...);
   }
 
-  template <class... DestSigs, class... Ts>
-  void send(const typed_actor<DestSigs...>& dest, Ts&&... xs) {
+  template <class... Dest, class... Ts>
+  void send(const typed_actor<Dest...>& dest, Ts&&... xs) {
     detail::sender_signature_checker<
       detail::type_list<Sigs...>,
-      detail::type_list<DestSigs...>,
+      detail::type_list<Dest...>,
       detail::type_list<
         typename detail::implicit_conversions<
           typename std::decay<Ts>::type
@@ -100,12 +106,12 @@ public:
     super::send(dest, std::forward<Ts>(xs)...);
   }
 
-  template <class... DestSigs, class... Ts>
-  void delayed_send(message_priority mp, const typed_actor<DestSigs...>& dest,
+  template <class... Dest, class... Ts>
+  void delayed_send(message_priority mp, const typed_actor<Dest...>& dest,
                     const duration& rtime, Ts&&... xs) {
     detail::sender_signature_checker<
       detail::type_list<Sigs...>,
-      detail::type_list<DestSigs...>,
+      detail::type_list<Dest...>,
       detail::type_list<
         typename detail::implicit_conversions<
           typename std::decay<Ts>::type
@@ -115,12 +121,12 @@ public:
     super::delayed_send(mp, dest, rtime, std::forward<Ts>(xs)...);
   }
 
-  template <class... DestSigs, class... Ts>
-  void delayed_send(const typed_actor<DestSigs...>& dest,
+  template <class... Dest, class... Ts>
+  void delayed_send(const typed_actor<Dest...>& dest,
                     const duration& rtime, Ts&&... xs) {
     detail::sender_signature_checker<
       detail::type_list<Sigs...>,
-      detail::type_list<DestSigs...>,
+      detail::type_list<Dest...>,
       detail::type_list<
         typename detail::implicit_conversions<
           typename std::decay<Ts>::type
@@ -158,7 +164,7 @@ public:
     using impl = typename infer_handle_from_fun<F>::impl;
     static_assert(std::is_convertible<
                     typename impl::actor_hdl,
-                    minimal_client
+                    connection_handler
                   >::value,
                   "Cannot fork: new broker misses required handlers");
     actor_config cfg{this->context()};
@@ -173,13 +179,13 @@ public:
   }
 
   connection_handle add_tcp_scribe(const std::string& host, uint16_t port) {
-    static_assert(std::is_convertible<actor_hdl, minimal_client>::value,
+    static_assert(std::is_convertible<actor_hdl, connection_handler>::value,
                   "Cannot add scribe: broker misses required handlers");
     return super::add_tcp_scribe(host, port);
   }
 
   connection_handle add_tcp_scribe(network::native_socket fd) {
-    static_assert(std::is_convertible<actor_hdl, minimal_client>::value,
+    static_assert(std::is_convertible<actor_hdl, connection_handler>::value,
                   "Cannot add scribe: broker misses required handlers");
     return super::add_tcp_scribe(fd);
   }
@@ -188,13 +194,13 @@ public:
   add_tcp_doorman(uint16_t port = 0,
                   const char* in = nullptr,
                   bool reuse_addr = false) {
-    static_assert(std::is_convertible<actor_hdl, minimal_server>::value,
+    static_assert(std::is_convertible<actor_hdl, accept_handler>::value,
                   "Cannot add doorman: broker misses required handlers");
     return super::add_tcp_doorman(port, in, reuse_addr);
   }
 
   accept_handle add_tcp_doorman(network::native_socket fd) {
-    static_assert(std::is_convertible<actor_hdl, minimal_server>::value,
+    static_assert(std::is_convertible<actor_hdl, accept_handler>::value,
                   "Cannot add doorman: broker misses required handlers");
     return super::add_tcp_doorman(fd);
   }
@@ -215,8 +221,7 @@ protected:
   }
 };
 
-} // namespace experimental
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_EXPERIMENTAL_TYPED_BROKER_HPP
+#endif // CAF_IO_TYPED_BROKER_HPP

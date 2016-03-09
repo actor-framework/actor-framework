@@ -32,12 +32,10 @@ template <class... Sigs>
 class typed_event_based_actor;
 
 namespace io {
-namespace experimental {
 
 template <class... Sigs>
 class typed_broker;
 
-} // namespace experimental
 } // namespace io
 
 enum class spawn_mode {
@@ -117,10 +115,10 @@ struct infer_handle_from_fun_impl<Result,
 // statically typed broker with self pointer
 template <class Result, class... Sigs>
 struct infer_handle_from_fun_impl<Result,
-                                  io::experimental::typed_broker<Sigs...>*,
+                                  io::typed_broker<Sigs...>*,
                                   true> {
   using type = typed_actor<Sigs...>;
-  using impl = io::experimental::typed_broker<Sigs...>;
+  using impl = io::typed_broker<Sigs...>;
   using behavior_type = typed_behavior<Sigs...>;
   static constexpr spawn_mode mode = spawn_mode::function_with_selfptr;
 };
@@ -130,14 +128,14 @@ template <class Result, class State, class... Sigs>
 struct infer_handle_from_fun_impl<Result,
                                   stateful_actor<
                                     State,
-                                    io::experimental::typed_broker<Sigs...>
+                                    io::typed_broker<Sigs...>
                                   >*,
                                   true> {
   using type = typed_actor<Sigs...>;
   using impl =
     stateful_actor<
       State,
-      io::experimental::typed_broker<Sigs...>
+      io::typed_broker<Sigs...>
     >;
   using behavior_type = typed_behavior<Sigs...>;
   static constexpr spawn_mode mode = spawn_mode::function_with_selfptr;
@@ -214,4 +212,3 @@ using infer_handle_from_state_t = typename infer_handle_from_state<T>::type;
 } // namespace caf
 
 #endif // CAF_INFER_HANDLE_HPP
-

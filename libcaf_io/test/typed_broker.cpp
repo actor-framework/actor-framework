@@ -28,14 +28,11 @@
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 
-#include "caf/io/experimental/typed_broker.hpp"
-
 #include "caf/string_algorithms.hpp"
 
 using namespace std;
 using namespace caf;
 using namespace caf::io;
-using namespace caf::io::experimental;
 
 namespace {
 
@@ -44,11 +41,11 @@ using ping_atom = caf::atom_constant<atom("ping")>;
 using pong_atom = caf::atom_constant<atom("pong")>;
 using kickoff_atom = caf::atom_constant<atom("kickoff")>;
 
-using peer = minimal_client::extend<reacts_to<ping_atom, int>,
+using peer = connection_handler::extend<reacts_to<ping_atom, int>,
                                     reacts_to<pong_atom, int>>;
 
 using acceptor =
-  minimal_server::extend<replies_to<publish_atom>::with<uint16_t>>;
+  accept_handler::extend<replies_to<publish_atom>::with<uint16_t>>;
 
 behavior ping(event_based_actor* self, size_t num_pings) {
   CAF_MESSAGE("num_pings: " << num_pings);
@@ -164,12 +161,6 @@ acceptor::behavior_type acceptor_fun(acceptor::broker_pointer self,
       CAF_MESSAGE("received `new_connection_msg`");
       self->fork(peer_fun, msg.handle, buddy);
       self->quit();
-    },
-    [](const new_data_msg&) {
-      // nop
-    },
-    [](const connection_closed_msg&) {
-      // nop
     },
     [](const acceptor_closed_msg&) {
       // nop
