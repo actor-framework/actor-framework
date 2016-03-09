@@ -37,8 +37,8 @@ behavior calculator_fun(event_based_actor* self) {
     [](sub_atom, int a, int b) {
       return a - b;
     },
-    others >> [=] {
-      aout(self) << "received: " << to_string(self->current_message()) << endl;
+    others >> [=](const message& msg) {
+      aout(self) << "received: " << to_string(msg) << endl;
     }
   };
 }
@@ -52,8 +52,8 @@ void blocking_calculator_fun(blocking_actor* self) {
     [](sub_atom, int a, int b) {
       return a - b;
     },
-    others >> [=] {
-      aout(self) << "received: " << to_string(self->current_message()) << endl;
+    others >> [=](const message& msg) {
+      aout(self) << "received: " << to_string(msg) << endl;
     }
   );
 }

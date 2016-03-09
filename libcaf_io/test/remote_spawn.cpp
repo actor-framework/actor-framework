@@ -36,10 +36,10 @@ using namespace caf;
 
 namespace {
 
-behavior mirror(event_based_actor* self) {
+behavior mirror() {
   return {
-    others >> [=] {
-      return self->current_message();
+    others >> [=](message& msg) {
+      return std::move(msg);
     }
   };
 }

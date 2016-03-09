@@ -253,16 +253,13 @@ protected:
     return f();
   }
 
-  template <class T>
-  static auto call_fun(T& f, message& x, detail::type_list<const message&>)
+  template <class T, class U>
+  static auto call_fun(T& f, message& x, detail::type_list<U>)
   -> decltype(f(x)) {
-    return f(x);
-  }
-
-  template <class T>
-  static auto call_fun(T& f, message& x, detail::type_list<message&>)
-  -> decltype(f(x)) {
-    x.force_unshare();
+    static_assert(std::is_same<typename std::decay<U>::type, message>::value,
+                  "catch-all match case callback must take either no "
+                  "arguments or one argument of type `message`, "
+                  "`const message&`, or `message&`");
     return f(x);
   }
 

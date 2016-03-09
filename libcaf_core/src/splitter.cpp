@@ -42,12 +42,12 @@ struct splitter_state {
 behavior fan_out_fan_in(stateful_actor<splitter_state>* self,
                         const std::vector<actor_addr>& workers) {
   return {
-    others >> [=] {
+    others >> [=](const message& msg) {
       self->state.rp = self->make_response_promise();
       self->state.pending = workers.size();
       // request().await() has LIFO ordering
       for (auto i = workers.rbegin(); i != workers.rend(); ++i)
-        self->request(actor_cast<actor>(*i), self->current_message()).generic_await(
+        self->request(actor_cast<actor>(*i), msg).generic_await(
           [=](const message& tmp) {
             self->state.result += tmp;
             if (--self->state.pending == 0)

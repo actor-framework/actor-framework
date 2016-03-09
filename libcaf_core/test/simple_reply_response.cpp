@@ -30,18 +30,18 @@ CAF_TEST(simple_reply_response) {
   actor_system system;
   auto s = system.spawn([](event_based_actor* self) -> behavior {
     return (
-      others >> [=]() -> message {
-        CAF_CHECK(self->current_message() == make_message(ok_atom::value));
+      others >> [=](const message& msg) -> message {
+        CAF_CHECK(msg == make_message(ok_atom::value));
         self->quit();
-        return self->current_message();
+        return msg;
       }
     );
   });
   scoped_actor self{system};
   self->send(s, ok_atom::value);
   self->receive(
-    others >> [&] {
-      CAF_CHECK(self->current_message() == make_message(ok_atom::value));
+    others >> [&](const message& msg) {
+      CAF_CHECK(msg == make_message(ok_atom::value));
     }
   );
 }

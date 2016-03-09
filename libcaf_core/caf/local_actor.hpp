@@ -313,6 +313,7 @@ public:
     set_flag(value, trap_exit_flag);
   }
 
+  /// @cond PRIVATE
   /// Returns the currently processed message.
   /// @warning Only set during callback invocation. Calling this member function
   ///          is undefined behavior (dereferencing a `nullptr`) when not in a
@@ -320,6 +321,7 @@ public:
   inline message& current_message() {
     return current_element_->msg;
   }
+  /// @endcond
 
   /// Returns the address of the sender of the current message.
   /// @warning Only set during callback invocation. Calling this member function

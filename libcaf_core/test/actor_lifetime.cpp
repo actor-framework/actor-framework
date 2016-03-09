@@ -52,8 +52,8 @@ public:
 
   behavior make_behavior() override {
     return {
-      others >> [=] {
-        return current_message();
+      others >> [=](const message& msg) {
+        return msg;
       }
     };
   }

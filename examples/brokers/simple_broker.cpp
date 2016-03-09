@@ -153,9 +153,8 @@ behavior broker_impl(broker* self, connection_handle hdl, const actor& buddy) {
       // send composed message to our buddy
       self->send(buddy, atm, ival);
     },
-    others >> [=] {
-      aout(self) << "unexpected: "
-                 << to_string(self->current_message()) << endl;
+    others >> [=](const message& msg) {
+      aout(self) << "unexpected: " << to_string(msg) << endl;
     }
   };
 }
@@ -172,9 +171,8 @@ behavior server(broker* self, const actor& buddy) {
       aout(self) << "quit server (only accept 1 connection)" << endl;
       self->quit();
     },
-    others >> [=] {
-      aout(self) << "unexpected: "
-                 << to_string(self->current_message()) << endl;
+    others >> [=](const message& msg) {
+      aout(self) << "unexpected: " << to_string(msg) << endl;
     }
   };
 }

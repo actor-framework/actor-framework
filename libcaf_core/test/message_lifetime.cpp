@@ -43,10 +43,10 @@ public:
 
   behavior make_behavior() override {
     return {
-      others >> [=] {
-        CAF_CHECK_EQUAL(current_message().cvals()->get_reference_count(), 2u);
+      others >> [=](message& msg) {
+        CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 2u);
         quit();
-        return std::move(current_message());
+        return std::move(msg);
       }
     };
   }

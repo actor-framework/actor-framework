@@ -51,15 +51,15 @@ public:
   behavior make_behavior() override {
     return {
       // first message is the forwarded request
-      others >> [=] {
+      others >> [=](message& msg) {
         auto rp = this->make_response_promise();
-        split_(workset_, this->current_message());
+        split_(workset_, msg);
         for (auto& x : workset_)
           this->send(x.first, std::move(x.second));
         this->become(
           // collect results
-          others >> [=]() mutable {
-            join_(value_, this->current_message());
+          others >> [=](message& res) mutable {
+            join_(value_, res);
             if (--awaited_results_ == 0) {
               rp.deliver(make_message(value_));
               quit();

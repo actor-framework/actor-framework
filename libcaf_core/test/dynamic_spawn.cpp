@@ -212,9 +212,9 @@ public:
 
   behavior make_behavior() override {
     return {
-      others >> [=]() -> message {
+      others >> [=](const message& msg) -> message {
         quit(exit_reason::normal);
-        return current_message();
+        return msg;
       }
     };
   }
@@ -232,9 +232,9 @@ public:
 
   behavior make_behavior() override {
     return {
-      others >> [=] {
+      others >> [=](const message& msg) {
         CAF_MESSAGE("simple_mirror: return current message");
-        return current_message();
+        return msg;
       }
     };
   }

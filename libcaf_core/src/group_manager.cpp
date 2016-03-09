@@ -189,8 +189,7 @@ public:
             acquaintances_.erase(i);
         }
       },
-      others >> [=] {
-        auto msg = current_message();
+      others >> [=](const message& msg) {
         CAF_LOG_TRACE(CAF_ARG(msg));
         send_to_acquaintances(msg);
       }
@@ -314,8 +313,7 @@ private:
 behavior proxy_broker::make_behavior() {
   CAF_LOG_TRACE("");
   return {
-    others >> [=] {
-      auto msg = current_message();
+    others >> [=](const message& msg) {
       CAF_LOG_TRACE(CAF_ARG(msg));
       group_->send_all_subscribers(current_sender(), msg, context());
     }

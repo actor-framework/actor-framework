@@ -50,8 +50,8 @@ struct sync_mirror : event_based_actor {
 
   behavior make_behavior() override {
     return {
-      others >> [=] {
-        return current_message();
+      others >> [=](const message& msg) {
+        return msg;
       }
     };
   }
@@ -194,9 +194,9 @@ public:
 
   behavior make_behavior() override {
     return {
-      others >> [=]() -> response_promise {
+      others >> [=](message& msg) -> response_promise {
         auto rp = make_response_promise();
-        request(buddy(), std::move(current_message())).then(
+        request(buddy(), std::move(msg)).then(
           [=](gogogo_atom x) mutable {
             rp.deliver(x);
             quit();
@@ -238,8 +238,8 @@ behavior server(event_based_actor* self) {
         [](idle_atom) {
           return skip_message();
         },
-        others >> [=] {
-          CAF_ERROR("Unexpected message:" << to_string(self->current_message()));
+        others >> [=](const message& msg) {
+          CAF_ERROR("Unexpected message:" << to_string(msg));
           die();
         }
       );
@@ -247,8 +247,8 @@ behavior server(event_based_actor* self) {
     [](request_atom) {
       return skip_message();
     },
-    others >> [=] {
-      CAF_ERROR("Unexpected message:" << to_string(self->current_message()));
+    others >> [=](const message& msg) {
+      CAF_ERROR("Unexpected message:" << to_string(msg));
       die();
     }
   };
@@ -281,9 +281,9 @@ CAF_TEST(test_void_res) {
 CAF_TEST(pending_quit) {
   auto mirror = system.spawn([](event_based_actor* self) -> behavior {
     return {
-      others >> [=] {
+      others >> [=](message& msg) {
         self->quit();
-        return std::move(self->current_message());
+        return std::move(msg);
       }
     };
   });
@@ -351,9 +351,8 @@ CAF_TEST(request) {
     [&](const down_msg& dm) {
       CAF_CHECK_EQUAL(dm.reason, exit_reason::user_shutdown);
     },
-    others >> [&] {
-      CAF_ERROR("Unexpected message: "
-                << to_string(self->current_message()));
+    others >> [&](const message& msg) {
+      CAF_ERROR("Unexpected message: " << to_string(msg));
     }
   );
   auto mirror = system.spawn<sync_mirror>();
@@ -424,9 +423,8 @@ CAF_TEST(request) {
   );
   CAF_MESSAGE("mailbox should be empty now");
   self->receive(
-    others >> [&] {
-      CAF_ERROR("Unexpected message: "
-                << to_string(self->current_message()));
+    others >> [&](const message& msg) {
+      CAF_ERROR("Unexpected message: " << to_string(msg));
     },
     after(milliseconds(0)) >> [] {
       CAF_MESSAGE("Mailbox is empty, all good");
@@ -501,9 +499,8 @@ CAF_TEST(request) {
     [&](const down_msg& dm) {
       CAF_CHECK_EQUAL(dm.reason, exit_reason::user_shutdown);
     },
-    others >> [&] {
-      CAF_ERROR("unexpected message: "
-                << to_string(self->current_message()));
+    others >> [&](const message& msg) {
+      CAF_ERROR("unexpected message: " << to_string(msg));
     }
   );
 }

@@ -80,15 +80,6 @@ using namespace caf::io;
 
 namespace {
 
-#define THROW_ON_UNEXPECTED(selfref)                                           \
-  others >> [&] {                                                              \
-    throw std::logic_error("unexpected message: "                              \
-                           + to_string(selfref->current_message()));           \
-  },                                                                           \
-  after(std::chrono::seconds(0)) >> [&] {                                      \
-    throw std::logic_error("unexpected timeout");                              \
-  }
-
 static constexpr uint32_t num_remote_nodes = 2;
 
 using buffer = std::vector<char>;
@@ -514,7 +505,6 @@ CAF_TEST(client_handshake_and_dispatch) {
       CAF_CHECK(c == 3);
       return a + b + c;
     }
-    // , THROW_ON_UNEXPECTED(self())
   );
   CAF_MESSAGE("exec message of forwarding proxy");
   mpx()->exec_runnable();
@@ -523,7 +513,6 @@ CAF_TEST(client_handshake_and_dispatch) {
     [](int i) {
       CAF_CHECK(i == 6);
     }
-    // , THROW_ON_UNEXPECTED(pseudo_remote(0))
   );
 }
 
@@ -634,7 +623,6 @@ CAF_TEST(remote_actor_and_send) {
       CAF_CHECK(self()->current_sender() == result);
       CAF_CHECK(str == "hi there!");
     }
-    // , THROW_ON_UNEXPECTED(self())
   );
 }
 
@@ -716,7 +704,6 @@ CAF_TEST(indirect_connections) {
       CAF_CHECK(str == "hello from jupiter!");
       return "hello from earth!";
     }
-    // , THROW_ON_UNEXPECTED(self())
   );
   mpx()->exec_runnable(); // process forwarded message in basp_broker
   mock()
@@ -815,7 +802,6 @@ CAF_TEST(automatic_connection) {
       CAF_CHECK(str == "hello from jupiter!");
       return "hello from earth!";
     }
-    // , THROW_ON_UNEXPECTED(self())
   );
   mpx()->exec_runnable(); // process forwarded message in basp_broker
   CAF_MESSAGE("response message must take direct route now");

@@ -157,8 +157,8 @@ behavior http_worker(http_broker* self, connection_handle hdl) {
     [=](const connection_closed_msg&) {
       self->quit();
     },
-    others >> [=] {
-      aout(self) << "unexpected: " << self->current_message() << endl;
+    others >> [=](const message& msg) {
+      aout(self) << "unexpected message: " << msg << endl;
     }
   };
 }
@@ -170,8 +170,8 @@ behavior server(broker* self) {
       aout(self) << "fork on new connection" << endl;
       auto worker = self->fork(http_worker, ncm.handle);
     },
-    others >> [=] {
-      aout(self) << "Unexpected: " << self->current_message() << endl;
+    others >> [=](const message& msg) {
+      aout(self) << "Unexpected message: " << msg << endl;
     }
   };
 }

@@ -58,8 +58,8 @@ void client(event_based_actor* self, const string& name) {
     [=](const group_down_msg& g) {
       cout << "*** chatroom offline: " << to_string(g.source) << endl;
     },
-    others >> [=]() {
-      cout << "unexpected: " << to_string(self->current_message()) << endl;
+    others >> [=](const message& msg) {
+      cout << "unexpected: " << to_string(msg) << endl;
     }
   );
 }

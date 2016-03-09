@@ -28,49 +28,50 @@
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 
+using namespace caf;
+
 namespace {
 
 constexpr char local_host[] = "127.0.0.1";
 
-caf::actor_system_config make_actor_system_config() {
-  caf::actor_system_config cfg(caf::test::engine::argc(),
-                               caf::test::engine::argv());
-  cfg.load<caf::io::middleman>();
-  cfg.add_message_type<std::vector<caf::actor>>("std::vector<caf::actor>");
+actor_system_config make_actor_system_config() {
+  actor_system_config cfg(test::engine::argc(), test::engine::argv());
+  cfg.load<io::middleman>();
+  cfg.add_message_type<std::vector<actor>>("std::vector<actor>");
   return cfg;
 }
 
 struct fixture {
-  caf::actor_system server_side{make_actor_system_config()};
-  caf::actor_system client_side{make_actor_system_config()};
-  caf::io::middleman& server_side_mm = server_side.middleman();
-  caf::io::middleman& client_side_mm = client_side.middleman();
+  actor_system server_side{make_actor_system_config()};
+  actor_system client_side{make_actor_system_config()};
+  io::middleman& server_side_mm = server_side.middleman();
+  io::middleman& client_side_mm = client_side.middleman();
 };
 
-caf::behavior make_reflector_behavior(caf::event_based_actor* self) {
+behavior make_reflector_behavior(event_based_actor* self) {
   return {
-    caf::others >> [=] {
+    others >> [=](const message& msg) {
       self->quit();
-      return self->current_message();
+      return msg;
     }
   };
 }
 
-using spawn_atom = caf::atom_constant<caf::atom("Spawn")>;
-using get_group_atom = caf::atom_constant<caf::atom("GetGroup")>;
+using spawn_atom = atom_constant<atom("Spawn")>;
+using get_group_atom = atom_constant<atom("GetGroup")>;
 
 struct await_reflector_down_behavior {
-  caf::event_based_actor* self;
+  event_based_actor* self;
   int cnt;
 
-  void operator()(const caf::down_msg&) {
+  void operator()(const down_msg&) {
     if (++cnt == 5)
       self->quit();
   }
 };
 
 struct await_reflector_reply_behavior {
-  caf::event_based_actor* self;
+  event_based_actor* self;
   int cnt;
 
   void operator()(const std::string& str, double val) {
@@ -82,13 +83,13 @@ struct await_reflector_reply_behavior {
 };
 
 // `grp` may be either local or remote
-void make_client_behavior(caf::event_based_actor* self,
-                          caf::actor server, caf::group grp) {
+void make_client_behavior(event_based_actor* self,
+                          actor server, group grp) {
   self->spawn_in_group(grp, make_reflector_behavior);
   self->spawn_in_group(grp, make_reflector_behavior);
   self->request(server, spawn_atom::value, grp).then(
-    [=](const std::vector<caf::actor>& vec) {
-      auto is_remote = [=](caf::actor actor) {
+    [=](const std::vector<actor>& vec) {
+      auto is_remote = [=](actor actor) {
         return actor->node() != self->node();
       };
       CAF_CHECK(std::all_of(vec.begin(), vec.end(), is_remote));
@@ -101,13 +102,13 @@ void make_client_behavior(caf::event_based_actor* self,
   );
 }
 
-caf::behavior make_server_behavior(caf::event_based_actor* self) {
+behavior make_server_behavior(event_based_actor* self) {
   return {
     [=](get_group_atom) {
       return self->system().groups().get("local", "foobar");
     },
-    [=](spawn_atom, caf::group group) -> std::vector<caf::actor> {
-      std::vector<caf::actor> vec;
+    [=](spawn_atom, group group) -> std::vector<actor> {
+      std::vector<actor> vec;
       for (auto i = 0; i < 5; ++i) {
         vec.push_back(self->spawn_in_group(group, make_reflector_behavior));
       }
@@ -137,14 +138,14 @@ CAF_TEST(server_side_group_comm) {
   // client side
   auto server = client_side_mm.remote_actor(local_host, *port);
   CAF_REQUIRE(server);
-  caf::scoped_actor group_resolver(client_side, true);
-  caf::group group;
+  scoped_actor group_resolver(client_side, true);
+  group grp;
   group_resolver->request(server, get_group_atom::value).receive(
-    [&](caf::group grp) {
-      group = grp;
+    [&](const group& x) {
+      grp = x;
     }
   );
-  client_side.spawn(make_client_behavior, server, group);
+  client_side.spawn(make_client_behavior, server, grp);
 }
 
 CAF_TEST(client_side_group_comm) {

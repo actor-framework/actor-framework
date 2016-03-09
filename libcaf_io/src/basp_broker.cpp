@@ -286,9 +286,9 @@ void basp_broker_state::learned_new_node(const node_id& nid) {
             CAF_LOG_TRACE(CAF_ARG(dm));
             this_actor->quit(dm.reason);
           },
-          others >> [=] {
-            CAF_LOG_ERROR("spawn server has received unexpected message:"
-                           << CAF_ARG(this_actor->current_message()));
+          others >> [=](const message& msg) {
+            CAF_LOG_ERROR("unexpected:" << CAF_ARG(msg));
+            static_cast<void>(msg); // suppress unused warning
           }
         );
       },
@@ -664,8 +664,9 @@ behavior basp_broker::make_behavior() {
                    tick_atom::value, interval);
     },
     // catch-all error handler
-    others >> [=] {
-      CAF_LOG_ERROR("unexpected message:" << CAF_ARG(current_message()));
+    others >> [=](const message& msg) {
+      CAF_LOG_ERROR("unexpected message: " << CAF_ARG(msg));
+      static_cast<void>(msg); // suppress unused warning
     }};
 }
 

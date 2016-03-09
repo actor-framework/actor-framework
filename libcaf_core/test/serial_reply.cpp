@@ -42,9 +42,9 @@ using sub4_atom = atom_constant<atom("sub4")>;
 CAF_TEST(test_serial_reply) {
   actor_system system;
   auto mirror_behavior = [=](event_based_actor* self) {
-    self->become(others >> [=]() -> message {
-      CAF_MESSAGE("return self->current_message()");
-      return self->current_message();
+    self->become(others >> [=](const message& msg) -> message {
+      CAF_MESSAGE("return msg: " << to_string(msg));
+      return msg;
     });
   };
   auto master = system.spawn([=](event_based_actor* self) {
