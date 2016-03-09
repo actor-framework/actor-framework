@@ -118,7 +118,8 @@ public:
             if (i == pending_.end())
               return;
             monitor(addr);
-            cached_.emplace(key, std::make_tuple(nid, addr, sigs));
+            if (nid && addr)
+              cached_.emplace(key, std::make_tuple(nid, addr, sigs));
             auto res = make_message(ok_atom::value, std::move(nid),
                                     std::move(addr), std::move(sigs));
             for (auto& x : i->second)

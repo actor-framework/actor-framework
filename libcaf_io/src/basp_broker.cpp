@@ -457,6 +457,14 @@ behavior basp_broker::make_behavior() {
       auto next = state.instance.handle(context(), msg, ctx.hdr,
                                         ctx.cstate == basp::await_payload);
       if (next == basp::close_connection) {
+        if (ctx.callback) {
+          CAF_LOG_WARNING("failed to handshake with remote node"
+                          << CAF_ARG(msg.handle));
+          ctx.callback->deliver(make_message(ok_atom::value,
+                                node_id{invalid_node_id},
+                                actor_addr{invalid_actor_addr},
+                                std::set<std::string>{}));
+        }
         close(msg.handle);
         state.ctx.erase(msg.handle);
       } else if (next != ctx.cstate) {
