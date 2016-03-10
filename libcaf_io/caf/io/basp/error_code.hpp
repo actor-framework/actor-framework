@@ -17,21 +17,39 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_ALL_HPP
-#define CAF_IO_ALL_HPP
+#ifndef CAF_IO__HPP
+#define CAF_IO__HPP
 
-#include "caf/io/basp/all.hpp"
-#include "caf/io/broker.hpp"
-#include "caf/io/middleman.hpp"
-#include "caf/io/basp_broker.hpp"
-#include "caf/io/typed_broker.hpp"
-#include "caf/io/receive_policy.hpp"
-#include "caf/io/middleman_actor.hpp"
-#include "caf/io/system_messages.hpp"
+#include <cstdint>
 
-#include "caf/io/network/protocol.hpp"
-#include "caf/io/network/interfaces.hpp"
-#include "caf/io/network/multiplexer.hpp"
-#include "caf/io/network/test_multiplexer.hpp"
+namespace caf {
+namespace io {
+namespace basp {
 
-#endif // CAF_IO_ALL_HPP
+/// @addtogroup BASP
+
+/// Describes an error during forwarding of BASP messages.
+enum class error_code : uint64_t {
+  /// Indicates that a forwarding node had no route
+  /// to the destination.
+  no_route_to_destination = 0x01,
+
+  /// Indicates that a forwarding node detected
+  /// a loop in the forwarding path.
+  loop_detected = 0x02
+};
+
+/// @relates error_code
+constexpr const char* to_string(error_code x) {
+  return x == error_code::no_route_to_destination ? "no_route_to_destination"
+                                                  : "loop_detected";
+}
+
+/// @}
+
+} // namespace basp
+} // namespace io
+} // namespace caf
+
+#endif // CAF_IO__HPP
+

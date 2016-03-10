@@ -17,21 +17,31 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_ALL_HPP
-#define CAF_IO_ALL_HPP
+#include "caf/io/basp/message_type.hpp"
 
-#include "caf/io/basp/all.hpp"
-#include "caf/io/broker.hpp"
-#include "caf/io/middleman.hpp"
-#include "caf/io/basp_broker.hpp"
-#include "caf/io/typed_broker.hpp"
-#include "caf/io/receive_policy.hpp"
-#include "caf/io/middleman_actor.hpp"
-#include "caf/io/system_messages.hpp"
+namespace caf {
+namespace io {
+namespace basp {
 
-#include "caf/io/network/protocol.hpp"
-#include "caf/io/network/interfaces.hpp"
-#include "caf/io/network/multiplexer.hpp"
-#include "caf/io/network/test_multiplexer.hpp"
+std::string to_string(message_type x) {
+  switch (x) {
+    case message_type::server_handshake:
+      return "server_handshake";
+    case message_type::client_handshake:
+      return "client_handshake";
+    case message_type::dispatch_message:
+      return "dispatch_message";
+    case message_type::announce_proxy_instance:
+      return "announce_proxy_instance";
+    case message_type::kill_proxy_instance:
+      return "kill_proxy_instance";
+    case message_type::heartbeat:
+      return "heartbeat";
+    default:
+      return "???";
+  }
+}
 
-#endif // CAF_IO_ALL_HPP
+} // namespace basp
+} // namespace io
+} // namespace caf

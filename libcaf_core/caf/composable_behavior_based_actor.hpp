@@ -25,9 +25,8 @@
 namespace caf {
 
 /// Implementation class for spawning composable states directly as actors.
-template <class State>
-class composable_behavior_based_actor : public stateful_actor
-                                     <State, typename State::actor_base> {
+template <class State, class Base = typename State::actor_base>
+class composable_behavior_based_actor : public stateful_actor<State, Base> {
  public:
   static_assert(! std::is_abstract<State>::value,
                 "State is abstract, please make sure to override all "

@@ -34,8 +34,9 @@
 #include "caf/binary_deserializer.hpp"
 #include "caf/forwarding_actor_proxy.hpp"
 
-#include "caf/io/basp.hpp"
+#include "caf/io/basp/all.hpp"
 #include "caf/io/broker.hpp"
+#include "caf/io/typed_broker.hpp"
 
 namespace caf {
 namespace io {
@@ -133,6 +134,8 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
     return instance.this_node();
   }
 };
+
+
 
 /// A broker implementation for the Binary Actor System Protocol (BASP).
 class basp_broker : public stateful_actor<basp_broker_state, broker> {

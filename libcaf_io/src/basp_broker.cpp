@@ -32,7 +32,7 @@
 #include "caf/actor_registry.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 
-#include "caf/io/basp.hpp"
+#include "caf/io/basp/all.hpp"
 #include "caf/io/middleman.hpp"
 
 #include "caf/io/network/interfaces.hpp"

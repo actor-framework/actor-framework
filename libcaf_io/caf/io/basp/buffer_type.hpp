@@ -17,21 +17,25 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_ALL_HPP
-#define CAF_IO_ALL_HPP
+#ifndef CAF_IO_BASP_BUFFER_TYPE_HPP
+#define CAF_IO_BASP_BUFFER_TYPE_HPP
 
-#include "caf/io/basp/all.hpp"
-#include "caf/io/broker.hpp"
-#include "caf/io/middleman.hpp"
-#include "caf/io/basp_broker.hpp"
-#include "caf/io/typed_broker.hpp"
-#include "caf/io/receive_policy.hpp"
-#include "caf/io/middleman_actor.hpp"
-#include "caf/io/system_messages.hpp"
+#include <vector>
 
-#include "caf/io/network/protocol.hpp"
-#include "caf/io/network/interfaces.hpp"
-#include "caf/io/network/multiplexer.hpp"
-#include "caf/io/network/test_multiplexer.hpp"
+namespace caf {
+namespace io {
+namespace basp {
 
-#endif // CAF_IO_ALL_HPP
+/// @addtogroup BASP
+
+/// Storage type for raw bytes.
+using buffer_type = std::vector<char>;
+
+/// @}
+
+} // namespace basp
+} // namespace io
+} // namespace caf
+
+#endif // CAF_IO_BASP_BUFFER_TYPE_HPP
+

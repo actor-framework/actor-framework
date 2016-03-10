@@ -17,21 +17,40 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_ALL_HPP
-#define CAF_IO_ALL_HPP
+#ifndef CAF_IO_BASP_CONNECTION_STATE_HPP
+#define CAF_IO_BASP_CONNECTION_STATE_HPP
 
-#include "caf/io/basp/all.hpp"
-#include "caf/io/broker.hpp"
-#include "caf/io/middleman.hpp"
-#include "caf/io/basp_broker.hpp"
-#include "caf/io/typed_broker.hpp"
-#include "caf/io/receive_policy.hpp"
-#include "caf/io/middleman_actor.hpp"
-#include "caf/io/system_messages.hpp"
 
-#include "caf/io/network/protocol.hpp"
-#include "caf/io/network/interfaces.hpp"
-#include "caf/io/network/multiplexer.hpp"
-#include "caf/io/network/test_multiplexer.hpp"
+namespace caf {
+namespace io {
+namespace basp {
 
-#endif // CAF_IO_ALL_HPP
+/// @addtogroup BASP
+
+/// Denotes the state of a connection between to BASP nodes.
+enum connection_state {
+  /// Indicates that a connection is established and this node is
+  /// waiting for the next BASP header.
+  await_header,
+  /// Indicates that this node has received a header with non-zero payload
+  /// and is waiting for the data.
+  await_payload,
+  /// Indicates that this connection no longer exists.
+  close_connection
+};
+
+/// @relates connection_state
+constexpr const char* to_string(connection_state x) {
+  return x == await_header ? "await_header"
+                           : (x == await_payload ? "await_payload"
+                                                 : "close_connection");
+}
+
+/// @}
+
+} // namespace basp
+} // namespace io
+} // namespace caf
+
+#endif // CAF_IO_BASP_CONNECTION_STATE_HPP
+

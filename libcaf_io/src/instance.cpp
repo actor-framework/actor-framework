@@ -17,288 +17,17 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/io/basp.hpp"
+#include "caf/io/basp/instance.hpp"
 
-#include "caf/message.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/binary_deserializer.hpp"
 
-#include "caf/logger.hpp"
-#include "caf/actor_registry.hpp"
+#include "caf/io/basp/version.hpp"
+#include "caf/io/basp/error_code.hpp"
 
 namespace caf {
 namespace io {
 namespace basp {
-
-/******************************************************************************
- *                               free functions                               *
- ******************************************************************************/
-
-std::string to_string(message_type x) {
-  switch (x) {
-    case message_type::server_handshake:
-      return "server_handshake";
-    case message_type::client_handshake:
-      return "client_handshake";
-    case message_type::dispatch_message:
-      return "dispatch_message";
-    case message_type::announce_proxy_instance:
-      return "announce_proxy_instance";
-    case message_type::kill_proxy_instance:
-      return "kill_proxy_instance";
-    case message_type::heartbeat:
-      return "heartbeat";
-    default:
-      return "???";
-  }
-}
-
-std::string to_string(const header &hdr) {
-  std::ostringstream oss;
-  oss << "{"
-      << to_string(hdr.operation) << ", "
-      << hdr.payload_len << ", "
-      << hdr.operation_data << ", "
-      << to_string(hdr.source_node) << ", "
-      << to_string(hdr.dest_node) << ", "
-      << hdr.source_actor << ", "
-      << hdr.dest_actor
-      << "}";
-  return oss.str();
-}
-
-bool operator==(const header& lhs, const header& rhs) {
-  return lhs.operation == rhs.operation
-      && lhs.payload_len == rhs.payload_len
-      && lhs.operation_data == rhs.operation_data
-      && lhs.source_node == rhs.source_node
-      && lhs.dest_node == rhs.dest_node
-      && lhs.source_actor == rhs.source_actor
-      && lhs.dest_actor == rhs.dest_actor;
-}
-
-namespace {
-
-bool valid(const node_id& val) {
-  return val != invalid_node_id;
-}
-
-template <class T>
-bool zero(T val) {
-  return val == 0;
-}
-
-bool server_handshake_valid(const header& hdr) {
-  return  valid(hdr.source_node)
-       && ! valid(hdr.dest_node)
-       && zero(hdr.dest_actor)
-       && ! zero(hdr.operation_data);
-}
-
-bool client_handshake_valid(const header& hdr) {
-  return  valid(hdr.source_node)
-       && valid(hdr.dest_node)
-       && hdr.source_node != hdr.dest_node
-       && zero(hdr.source_actor)
-       && zero(hdr.dest_actor)
-       && zero(hdr.payload_len)
-       && zero(hdr.operation_data);
-}
-
-bool dispatch_message_valid(const header& hdr) {
-  return  valid(hdr.dest_node)
-       && ! zero(hdr.dest_actor)
-       && ! zero(hdr.payload_len);
-}
-
-bool announce_proxy_instance_valid(const header& hdr) {
-  return  valid(hdr.source_node)
-       && valid(hdr.dest_node)
-       && hdr.source_node != hdr.dest_node
-       && zero(hdr.source_actor)
-       && ! zero(hdr.dest_actor)
-       && zero(hdr.payload_len)
-       && zero(hdr.operation_data);
-}
-
-bool kill_proxy_instance_valid(const header& hdr) {
-  return  valid(hdr.source_node)
-       && valid(hdr.dest_node)
-       && hdr.source_node != hdr.dest_node
-       && ! zero(hdr.source_actor)
-       && zero(hdr.dest_actor)
-       && zero(hdr.payload_len)
-       && ! zero(hdr.operation_data);
-}
-
-bool heartbeat_valid(const header& hdr) {
-  return  valid(hdr.source_node)
-       && valid(hdr.dest_node)
-       && hdr.source_node != hdr.dest_node
-       && zero(hdr.source_actor)
-       && zero(hdr.dest_actor)
-       && zero(hdr.payload_len)
-       && zero(hdr.operation_data);
-}
-
-} // namespace <anonymous>
-
-bool valid(const header& hdr) {
-  switch (hdr.operation) {
-    default:
-      return false; // invalid operation field
-    case message_type::server_handshake:
-      return server_handshake_valid(hdr);
-    case message_type::client_handshake:
-      return client_handshake_valid(hdr);
-    case message_type::dispatch_message:
-      return dispatch_message_valid(hdr);
-    case message_type::announce_proxy_instance:
-      return announce_proxy_instance_valid(hdr);
-    case message_type::kill_proxy_instance:
-      return kill_proxy_instance_valid(hdr);
-    case message_type::heartbeat:
-      return heartbeat_valid(hdr);
-  }
-}
-
-/******************************************************************************
- *                               routing_table                                *
- ******************************************************************************/
-
-routing_table::routing_table(abstract_broker* parent) : parent_(parent) {
-  // nop
-}
-
-routing_table::~routing_table() {
-  // nop
-}
-
-maybe<routing_table::route> routing_table::lookup(const node_id& target) {
-  auto hdl = lookup_direct(target);
-  if (hdl != invalid_connection_handle)
-    return route{parent_->wr_buf(hdl), target, hdl};
-  // pick first available indirect route
-  auto i = indirect_.find(target);
-  if (i != indirect_.end()) {
-    auto& hops = i->second;
-    while (! hops.empty()) {
-      auto& hop = *hops.begin();
-      hdl = lookup_direct(hop);
-      if (hdl != invalid_connection_handle)
-        return route{parent_->wr_buf(hdl), hop, hdl};
-      else
-        hops.erase(hops.begin());
-    }
-  }
-  return none;
-}
-
-void routing_table::flush(const route& r) {
-  parent_->flush(r.hdl);
-}
-
-node_id
-routing_table::lookup_direct(const connection_handle& hdl) const {
-  return get_opt(direct_by_hdl_, hdl, invalid_node_id);
-}
-
-connection_handle
-routing_table::lookup_direct(const node_id& nid) const {
-  return get_opt(direct_by_nid_, nid, invalid_connection_handle);
-}
-
-node_id routing_table::lookup_indirect(const node_id& nid) const {
-  auto i = indirect_.find(nid);
-  if (i == indirect_.end())
-    return invalid_node_id;
-  if (i->second.empty())
-    return invalid_node_id;
-  return *i->second.begin();
-}
-
-void routing_table::blacklist(const node_id& hop, const node_id& dest) {
-  blacklist_[dest].emplace(hop);
-  auto i = indirect_.find(dest);
-  if (i == indirect_.end())
-    return;
-  i->second.erase(hop);
-  if (i->second.empty())
-    indirect_.erase(i);
-}
-
-void routing_table::erase_direct(const connection_handle& hdl,
-                                 erase_callback& cb) {
-  auto i = direct_by_hdl_.find(hdl);
-  if (i == direct_by_hdl_.end())
-    return;
-  cb(i->second);
-  parent_->parent().notify<hook::connection_lost>(i->second);
-  direct_by_nid_.erase(i->second);
-  direct_by_hdl_.erase(i);
-}
-
-bool routing_table::erase_indirect(const node_id& dest) {
-  auto i = indirect_.find(dest);
-  if (i == indirect_.end())
-    return false;
-  if (parent_->parent().has_hook())
-    for (auto& nid : i->second)
-      parent_->parent().notify<hook::route_lost>(nid, dest);
-  indirect_.erase(i);
-  return true;
-}
-
-void routing_table::add_direct(const connection_handle& hdl,
-                               const node_id& nid) {
-  CAF_ASSERT(direct_by_hdl_.count(hdl) == 0);
-  CAF_ASSERT(direct_by_nid_.count(nid) == 0);
-  direct_by_hdl_.emplace(hdl, nid);
-  direct_by_nid_.emplace(nid, hdl);
-  parent_->parent().notify<hook::new_connection_established>(nid);
-}
-
-bool routing_table::add_indirect(const node_id& hop, const node_id& dest) {
-  auto i = blacklist_.find(dest);
-  if (i == blacklist_.end() || i->second.count(hop) == 0) {
-    auto& hops = indirect_[dest];
-    auto added_first = hops.empty();
-    hops.emplace(hop);
-    parent_->parent().notify<hook::new_route_added>(hop, dest);
-    return added_first;
-  }
-  return false; // blacklisted
-}
-
-bool routing_table::reachable(const node_id& dest) {
-  return direct_by_nid_.count(dest) > 0 || indirect_.count(dest) > 0;
-}
-
-size_t routing_table::erase(const node_id& dest, erase_callback& cb) {
-  cb(dest);
-  size_t res = 0;
-  auto i = indirect_.find(dest);
-  if (i != indirect_.end()) {
-    res = i->second.size();
-    for (auto& nid : i->second) {
-      cb(nid);
-      parent_->parent().notify<hook::route_lost>(nid, dest);
-    }
-    indirect_.erase(i);
-  }
-  auto hdl = lookup_direct(dest);
-  if (hdl != invalid_connection_handle) {
-    direct_by_hdl_.erase(hdl);
-    direct_by_nid_.erase(dest);
-    parent_->parent().notify<hook::connection_lost>(dest);
-    ++res;
-  }
-  return res;
-}
-
-/******************************************************************************
- *                                   callee                                   *
- ******************************************************************************/
 
 instance::callee::callee(actor_system& sys, proxy_registry::backend& backend)
     : namespace_(sys, backend) {
@@ -308,10 +37,6 @@ instance::callee::callee(actor_system& sys, proxy_registry::backend& backend)
 instance::callee::~callee() {
   // nop
 }
-
-/******************************************************************************
- *                                  instance                                  *
- ******************************************************************************/
 
 instance::instance(abstract_broker* parent, callee& lstnr)
     : tbl_(parent),
@@ -373,7 +98,7 @@ connection_state instance::handle(execution_unit* ctx,
                                reverse_path->wr_buf,
                                this_node_,
                                hdr.source_node,
-                               error::no_route_to_destination,
+                               error_code::no_route_to_destination,
                                hdr,
                                payload);
         }
@@ -669,7 +394,7 @@ void instance::write_dispatch_error(execution_unit* ctx,
                                     buffer_type& buf,
                                     const node_id& source_node,
                                     const node_id& dest_node,
-                                    error error_code,
+                                    error_code ec,
                                     const header& original_hdr,
                                     buffer_type* payload) {
   auto writer = make_callback([&](serializer& sink) {
@@ -678,7 +403,7 @@ void instance::write_dispatch_error(execution_unit* ctx,
       sink.apply_raw(payload->size(), payload->data());
   });
   header hdr{message_type::kill_proxy_instance, 0,
-             static_cast<uint64_t>(error_code),
+             static_cast<uint64_t>(ec),
              source_node, dest_node,
              invalid_actor_id, invalid_actor_id};
   write(ctx, buf, hdr, &writer);

@@ -7,7 +7,6 @@ file(GLOB_RECURSE LIBCAF_IO_HDRS "caf/*.hpp")
 
 # list cpp files excluding platform-dependent files
 set (LIBCAF_IO_SRCS
-     src/basp.cpp
      src/basp_broker.cpp
      src/abstract_broker.cpp
      src/broker.cpp
@@ -22,7 +21,12 @@ set (LIBCAF_IO_SRCS
      src/stream_manager.cpp
      src/test_multiplexer.cpp
      src/acceptor_manager.cpp
-     src/multiplexer.cpp)
+     src/multiplexer.cpp
+     # BASP files
+     src/header.cpp
+     src/message_type.cpp
+     src/routing_table.cpp
+     src/instance.cpp)
 
 add_custom_target(libcaf_io)
 

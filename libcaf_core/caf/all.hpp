@@ -103,7 +103,7 @@
 
 /// @author Dominik Charousset <dominik.charousset (at) haw-hamburg.de>
 ///
-/// @mainpage libcaf
+/// @mainpage CAF
 ///
 /// @section Intro Introduction
 ///
