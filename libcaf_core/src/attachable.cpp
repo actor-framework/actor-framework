@@ -34,7 +34,7 @@ maybe<exit_reason> attachable::handle_exception(const std::exception_ptr&) {
   return none;
 }
 
-void attachable::actor_exited(abstract_actor*, exit_reason, execution_unit*) {
+void attachable::actor_exited(exit_reason, execution_unit*) {
   // nop
 }
 

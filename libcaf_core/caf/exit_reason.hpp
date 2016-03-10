@@ -52,7 +52,10 @@ enum class exit_reason : uint8_t {
 
   /// Indicates that an actor finishied execution because a connection
   /// to a remote link was closed unexpectedly.
-  remote_link_unreachable = 0x21
+  remote_link_unreachable = 0x21,
+
+  /// Indicates that the actor was killed because it became unreachable.
+  unreachable = 0x40
 };
 
 /// Returns a string representation of given exit reason.

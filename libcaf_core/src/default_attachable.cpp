@@ -20,8 +20,8 @@
 #include "caf/default_attachable.hpp"
 
 #include "caf/message.hpp"
-#include "caf/system_messages.hpp"
 #include "caf/actor_cast.hpp"
+#include "caf/system_messages.hpp"
 
 namespace caf {
 
@@ -34,13 +34,12 @@ message make(abstract_actor* self, exit_reason reason) {
 
 } // namespace <anonymous>
 
-void default_attachable::actor_exited(abstract_actor* self, exit_reason rsn,
-                                      execution_unit* host) {
-  CAF_ASSERT(self->address() != observer_);
+void default_attachable::actor_exited(exit_reason rsn, execution_unit* host) {
+  CAF_ASSERT(observed_ != observer_);
   auto factory = type_ == monitor ? &make<down_msg> : &make<exit_msg>;
   auto ptr = actor_cast<abstract_actor_ptr>(observer_);
-  ptr->enqueue(self->address(), message_id{}.with_high_priority(),
-               factory(self, rsn), host);
+  ptr->enqueue(observed_, message_id{}.with_high_priority(),
+               factory(actor_cast<abstract_actor*>(observed_), rsn), host);
 }
 
 bool default_attachable::matches(const token& what) {
@@ -51,8 +50,10 @@ bool default_attachable::matches(const token& what) {
   return ot.observer == observer_ && ot.type == type_;
 }
 
-default_attachable::default_attachable(actor_addr observer, observe_type type)
-    : observer_(std::move(observer)),
+default_attachable::default_attachable(actor_addr observed, actor_addr observer,
+                                       observe_type type)
+    : observed_(std::move(observed)),
+      observer_(std::move(observer)),
       type_(type) {
   // nop
 }

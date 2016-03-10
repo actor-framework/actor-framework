@@ -92,9 +92,10 @@ CAF_TEST(identity) {
   CAF_CHECK(h->id() != g->id());
   CAF_CHECK(h != g);
   CAF_CHECK(h->message_types() == g->home_system().message_types(h));
-  anon_send_exit(h, exit_reason::kill);
   anon_send_exit(f, exit_reason::kill);
   anon_send_exit(g, exit_reason::kill);
+  // killing both f and g triggers down messages to h,
+  // ultimately clearing up held references and h will become unreachable
 }
 
 // spawned dead if `g` is already dead upon spawning

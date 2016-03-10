@@ -39,9 +39,9 @@ sequencer::sequencer(actor_addr f, actor_addr g, message_types_set msg_types)
   // composed actor has dependency on constituent actors by default;
   // if either constituent actor is already dead upon establishing
   // the dependency, the actor is spawned dead
-  f_->attach(default_attachable::make_monitor(address()));
+  f_->attach(default_attachable::make_monitor(f_, address()));
   if (g_ != f_)
-    g_->attach(default_attachable::make_monitor(address()));
+    g_->attach(default_attachable::make_monitor(g_, address()));
 }
 
 void sequencer::enqueue(mailbox_element_ptr what, execution_unit* context) {

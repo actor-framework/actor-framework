@@ -48,7 +48,7 @@ void monitorable_actor::attach(attachable_ptr ptr) {
     }
   }
   CAF_LOG_DEBUG("cannot attach functor to terminated actor: call immediately");
-  ptr->actor_exited(this, reason, nullptr);
+  ptr->actor_exited(reason, nullptr);
 }
 
 size_t monitorable_actor::detach(const attachable::token& what) {
@@ -73,7 +73,7 @@ void monitorable_actor::cleanup(exit_reason reason, execution_unit* host) {
                   "cleanup" << CAF_ARG(id()) << CAF_ARG(reason));
   // send exit messages
   for (attachable* i = head.get(); i != nullptr; i = i->next.get())
-    i->actor_exited(this, reason, host);
+    i->actor_exited(reason, host);
 }
 
 monitorable_actor::monitorable_actor(actor_config& cfg)
@@ -141,7 +141,7 @@ bool monitorable_actor::establish_link_impl(const actor_addr& other) {
     } else if (ptr->establish_backlink(address())) {
       // add link if not already linked to other
       // (checked by establish_backlink)
-      auto tmp = default_attachable::make_link(other);
+      auto tmp = default_attachable::make_link(address(), other);
       attach_impl(tmp);
       return true;
     }
@@ -158,7 +158,7 @@ bool monitorable_actor::establish_backlink_impl(const actor_addr& other) {
     reason = get_exit_reason();
     if (reason == exit_reason::not_exited) {
       if (detach_impl(tk, attachables_head_, true, true) == 0) {
-        auto tmp = default_attachable::make_link(other);
+        auto tmp = default_attachable::make_link(address(), other);
         attach_impl(tmp);
         return true;
       }

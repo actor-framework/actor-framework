@@ -73,8 +73,10 @@ CAF_TEST(identity) {
   CAF_CHECK(bound->node() == dbl->node());
   CAF_CHECK(bound != dbl);
   CAF_CHECK(bound->id() != dbl->id());
-  anon_send_exit(bound, exit_reason::kill);
+  //anon_send_exit(bound, exit_reason::kill);
   anon_send_exit(dbl, exit_reason::kill);
+  // killing dbl triggers a down message to bound, which becomes unreachable
+  // when it no longer monitors dbl as a result and goes out of scope here
 }
 
 // bound actor spawned dead if decorated

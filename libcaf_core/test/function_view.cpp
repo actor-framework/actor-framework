@@ -90,19 +90,6 @@ simple_cell(cell::stateful_pointer<cell_state> self) {
 
 struct fixture {
   actor_system system;
-  std::vector<actor_addr> testees;
-
-  template <class F>
-  typename infer_handle_from_fun<F>::type spawn(F fun) {
-    auto result = system.spawn(fun);
-    testees.emplace_back(result.address());
-    return result;
-  }
-
-  ~fixture() {
-    for (auto& testee : testees)
-      anon_send_exit(testee, exit_reason::kill);
-  }
 };
 
 } // namespace <anonymous>
@@ -121,7 +108,7 @@ CAF_TEST(empty_function_fiew) {
 }
 
 CAF_TEST(single_res_function_view) {
-  auto f = make_function_view(spawn(adder));
+  auto f = make_function_view(system.spawn(adder));
   CAF_CHECK(f(3, 4) == 7);
   CAF_CHECK(f != nullptr);
   CAF_CHECK(nullptr != f);
@@ -132,9 +119,9 @@ CAF_TEST(single_res_function_view) {
   CAF_CHECK(g != nullptr);
   CAF_CHECK(nullptr != g);
   CAF_CHECK(g(10, 20) == 30);
-  g.assign(spawn(multiplier));
+  g.assign(system.spawn(multiplier));
   CAF_CHECK(g(10, 20) == 200);
-  g.assign(spawn(divider));
+  g.assign(system.spawn(divider));
   try {
     g(1, 0);
     CAF_ERROR("expected exception");
@@ -143,17 +130,17 @@ CAF_TEST(single_res_function_view) {
     CAF_CHECK(true);
   }
   CAF_CHECK(g == nullptr);
-  g.assign(spawn(divider));
+  g.assign(system.spawn(divider));
   CAF_CHECK(g(4, 2) == 2);
 }
 
 CAF_TEST(tuple_res_function_view) {
-  auto f = make_function_view(spawn(simple_doubler));
+  auto f = make_function_view(system.spawn(simple_doubler));
   CAF_CHECK(f(10) == std::make_tuple(10, 10));
 }
 
 CAF_TEST(cell_function_view) {
-  auto f = make_function_view(spawn(simple_cell));
+  auto f = make_function_view(system.spawn(simple_cell));
   CAF_CHECK(f(get_atom::value) == 0);
   f(put_atom::value, 1024);
   CAF_CHECK(f(get_atom::value) == 1024);

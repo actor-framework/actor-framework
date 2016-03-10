@@ -275,7 +275,6 @@ CAF_TEST(test_void_res) {
       CAF_MESSAGE("received void res");
     }
   );
-  self->send_exit(buddy, exit_reason::kill);
 }
 
 CAF_TEST(pending_quit) {

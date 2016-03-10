@@ -68,24 +68,20 @@ local_actor::local_actor(actor_system* sys, actor_id aid,
 }
 
 local_actor::~local_actor() {
-  if (! mailbox_.closed()) {
-    detail::sync_request_bouncer f{get_exit_reason()};
-    mailbox_.close(f);
-  }
+  if (planned_exit_reason() == exit_reason::not_exited)
+    cleanup(exit_reason::unreachable, nullptr);
 }
 
 void local_actor::monitor(const actor_addr& whom) {
-  if (whom == invalid_actor_addr) {
+  if (whom == invalid_actor_addr)
     return;
-  }
   auto ptr = actor_cast<abstract_actor_ptr>(whom);
-  ptr->attach(default_attachable::make_monitor(address()));
+  ptr->attach(default_attachable::make_monitor(whom, address()));
 }
 
 void local_actor::demonitor(const actor_addr& whom) {
-  if (whom == invalid_actor_addr) {
+  if (whom == invalid_actor_addr)
     return;
-  }
   auto ptr = actor_cast<abstract_actor_ptr>(whom);
   default_attachable::observe_token tk{address(), default_attachable::monitor};
   ptr->detach(tk);
@@ -694,14 +690,14 @@ void local_actor::launch(execution_unit* eu, bool lazy, bool hide) {
     return;
   }
   CAF_ASSERT(eu != nullptr);
-  // the scheduler keeps an implicit reference count for
-  // cooperatively scheduled that is released in finalize()
-  ref();
   // do not schedule immediately when spawned with `lazy_init`
   // mailbox could be set to blocked
   if (lazy && mailbox().try_block()) {
     return;
   }
+  // scheduler has a reference count to the actor as long as
+  // it is waiting to get scheduled
+  ref();
   eu->exec_later(this);
 }
 
@@ -727,7 +723,8 @@ void local_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
   auto sender = ptr->sender;
   switch (mailbox().enqueue(ptr.release())) {
     case detail::enqueue_result::unblocked_reader: {
-      // re-schedule actor
+      // add a reference count to this actor and re-schedule it
+      ref();
       if (eu)
         eu->exec_later(this);
        else
@@ -1087,8 +1084,10 @@ bool local_actor::finished() {
 void local_actor::cleanup(exit_reason reason, execution_unit* host) {
   CAF_LOG_TRACE(CAF_ARG(reason));
   current_mailbox_element().reset();
-  detail::sync_request_bouncer f{reason};
-  mailbox_.close(f);
+  if (! mailbox_.closed()) {
+    detail::sync_request_bouncer f{reason};
+    mailbox_.close(f);
+  }
   awaited_responses_.clear();
   multiplexed_responses_.clear();
   { // lifetime scope of temporary

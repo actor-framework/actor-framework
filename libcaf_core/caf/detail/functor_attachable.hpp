@@ -31,28 +31,15 @@ namespace detail {
 template <class F,
           int Args = tl_size<typename get_callable_trait<F>::arg_types>::value>
 struct functor_attachable : attachable {
-  static_assert(Args == 2, "Only 0, 1 and 2 arguments for F are supported");
+  static_assert(Args == 1, "Only 0 or 1 arguments for F are supported");
   F functor_;
   functor_attachable(F arg) : functor_(std::move(arg)) {
     // nop
   }
-  void actor_exited(abstract_actor* self, exit_reason reason,
-                    execution_unit*) override {
-    functor_(self, reason);
-  }
-  static constexpr size_t token_type = attachable::token::anonymous;
-};
-
-template <class F>
-struct functor_attachable<F, 1> : attachable {
-  F functor_;
-  functor_attachable(F arg) : functor_(std::move(arg)) {
-    // nop
-  }
-  void actor_exited(abstract_actor*, exit_reason reason,
-                    execution_unit*) override {
+  void actor_exited(exit_reason reason, execution_unit*) override {
     functor_(reason);
   }
+  static constexpr size_t token_type = attachable::token::anonymous;
 };
 
 template <class F>
@@ -61,7 +48,7 @@ struct functor_attachable<F, 0> : attachable {
   functor_attachable(F arg) : functor_(std::move(arg)) {
     // nop
   }
-  void actor_exited(abstract_actor*, exit_reason, execution_unit*) override {
+  void actor_exited(exit_reason, execution_unit*) override {
     functor_();
   }
 };

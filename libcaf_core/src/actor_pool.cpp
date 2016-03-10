@@ -109,8 +109,8 @@ actor actor_pool::make(execution_unit* eu, size_t num_workers,
   auto res_addr = ptr->address();
   for (size_t i = 0; i < num_workers; ++i) {
     auto worker = fac();
-    worker->attach(default_attachable::make_monitor(res_addr));
-    ptr->workers_.push_back(worker);
+    worker->attach(default_attachable::make_monitor(worker.address(), res_addr));
+    ptr->workers_.push_back(std::move(worker));
   }
   return res;
 }
@@ -181,10 +181,10 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
   }
   if (msg.match_elements<sys_atom, put_atom, actor>()) {
     auto& worker = msg.get_as<actor>(2);
-    if (worker == invalid_actor) {
+    if (worker == invalid_actor)
       return true;
-    }
-    worker->attach(default_attachable::make_monitor(address()));
+    worker->attach(default_attachable::make_monitor(worker.address(),
+                                                    address()));
     upgrade_to_unique_lock<detail::shared_spinlock> unique_guard{guard};
     workers_.push_back(worker);
     return true;

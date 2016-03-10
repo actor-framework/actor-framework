@@ -121,6 +121,7 @@ private:
       policy_.after_resume(this, job);
       switch (res) {
         case resumable::resume_later: {
+          // keep reference to this actor, as it remains in the "loop"
           policy_.resume_job_later(this, job);
           break;
         }
@@ -130,7 +131,8 @@ private:
           break;
         }
         case resumable::awaiting_message: {
-          // resumable will be enqueued again later
+          // resumable will maybe be enqueued again later, deref it for now
+          intrusive_ptr_release(job);
           break;
         }
         case resumable::shutdown_execution_unit: {

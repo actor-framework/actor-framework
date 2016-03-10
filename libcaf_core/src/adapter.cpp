@@ -44,7 +44,7 @@ adapter::adapter(actor_addr decorated, message msg)
   // bound actor has dependency on the decorated actor by default;
   // if the decorated actor is already dead upon establishing the
   // dependency, the actor is spawned dead
-  decorated_->attach(default_attachable::make_monitor(address()));
+  decorated_->attach(default_attachable::make_monitor(decorated_, address()));
 }
 
 void adapter::enqueue(mailbox_element_ptr what, execution_unit* host) {

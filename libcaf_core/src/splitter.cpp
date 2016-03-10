@@ -77,7 +77,7 @@ splitter::splitter(std::vector<actor_addr> workers, message_types_set msg_types)
   // the dependency, the actor is spawned dead
   auto addr = address();
   for (auto& worker : workers_)
-    worker->attach(default_attachable::make_monitor(addr));
+    worker->attach(default_attachable::make_monitor(worker, addr));
 }
 
 void splitter::enqueue(mailbox_element_ptr what, execution_unit* context) {
