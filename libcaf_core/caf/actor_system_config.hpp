@@ -22,6 +22,7 @@
 
 #include <atomic>
 #include <string>
+#include <memory>
 #include <functional>
 #include <type_traits>
 #include <unordered_map>
@@ -57,22 +58,67 @@ public:
 
   using error_renderers = std::unordered_map<atom_value, error_renderer>;
 
+  /// A variant type for config parameters.
+  using config_value = variant<std::string, double, int64_t, bool, atom_value>;
+
+  /// Helper class to generate config readers for different input types.
+  class option {
+  public:
+    using config_reader_sink = std::function<void (size_t, config_value&)>;
+
+    option(const char* category, const char* name, const char* explanation);
+
+    virtual ~option();
+
+    inline const char* name() const {
+      return name_;
+    }
+
+    inline const char* category() const {
+      return category_;
+    }
+
+    inline const char* explanation() const {
+      return explanation_;
+    }
+
+    virtual std::string to_string() const = 0;
+
+    virtual config_reader_sink to_sink() const = 0;
+
+    virtual message::cli_arg to_cli_arg() const = 0;
+
+  protected:
+    const char* category_;
+    const char* name_;
+    const char* explanation_;
+  };
+
+  using option_ptr = std::unique_ptr<option>;
+
+  using options_vector = std::vector<option_ptr>;
+
   actor_system_config();
 
   actor_system_config(int argc, char** argv);
 
   actor_system_config& add_actor_factory(std::string name, actor_factory fun);
 
+  /// Allows others to spawn actors of type `T`
+  /// dynamically by using `name` as identifier.
   template <class T, class... Ts>
   actor_system_config& add_actor_type(std::string name) {
     return add_actor_factory(std::move(name), make_actor_factory<T, Ts...>());
   }
 
+  /// Allows others to spawn actors implemented by function `f`
+  /// dynamically by using `name` as identifier.
   template <class F>
   actor_system_config& add_actor_type(std::string name, F f) {
     return add_actor_factory(std::move(name), make_actor_factory(std::move(f)));
   }
 
+  /// Adds message type `T` with runtime type info `name`.
   template <class T>
   actor_system_config& add_message_type(std::string name) {
     static_assert(std::is_empty<T>::value
@@ -89,10 +135,8 @@ public:
     return *this;
   }
 
-  /**
-   * Enables the actor system to convert errors of this error category
-   * to human-readable strings via `renderer`.
-   */
+  /// Enables the actor system to convert errors of this error category
+  /// to human-readable strings via `renderer`.
   actor_system_config& add_error_category(atom_value category,
                                           error_renderer renderer);
 
@@ -115,6 +159,7 @@ public:
     return add_error_category(category, f);
   }
 
+  /// Loads module `T` with optional template parameters `Ts...`.
   template <class T, class... Ts>
   actor_system_config& load() {
     module_factories_.push_back([](actor_system& sys) -> actor_system::module* {
@@ -126,8 +171,8 @@ public:
   /// Stores CLI arguments that were not consumed by CAF.
   message args_remainder;
 
-  /// Sets the parameter `name` to `val`.
-  using config_value = variant<std::string, double, int64_t, bool, atom_value>;
+  /// Sets a config by using its INI name `config_name` to `config_value`.
+  actor_system_config& set(const char* config_name, config_value config_value);
 
   // Config parameters of scheduler.
   atom_value scheduler_policy;
@@ -141,7 +186,7 @@ public:
   atom_value middleman_network_backend;
   bool middleman_enable_automatic_connections;
   size_t middleman_max_consecutive_reads;
-  size_t middleman_basp_heartbeat_interval;
+  size_t middleman_heartbeat_interval;
 
   // System parameters that are set while initializing modules.
   node_id network_id;
@@ -158,6 +203,7 @@ private:
   actor_factories actor_factories_;
   module_factories module_factories_;
   error_renderers error_renderers_;
+  options_vector options_;
 };
 
 } // namespace caf

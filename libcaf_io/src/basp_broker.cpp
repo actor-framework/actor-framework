@@ -444,10 +444,23 @@ basp_broker::basp_broker(actor_config& cfg)
 
 behavior basp_broker::make_behavior() {
   CAF_LOG_TRACE("");
-  // TODO: query this config from middleman directly
-  // ask the configuration server whether we should open a default port
-  auto config_server = system().registry().get(atom("ConfigServ"));
-  send(config_server, get_atom::value, "middleman.enable-automatic-connections");
+  if (system().middleman().enable_automatic_connections()) {
+printf("enable automatic connections\n");
+    CAF_LOG_INFO("enable automatic connections");
+    // open a random port and store a record for our peers how to
+    // connect to this broker directly in the configuration server
+    auto port = add_tcp_doorman(uint16_t{0});
+    auto addrs = network::interfaces::list_addresses(false);
+    auto config_server = system().registry().get(atom("ConfigServ"));
+    send(config_server, put_atom::value, "basp.default-connectivity",
+         make_message(port.second, std::move(addrs)));
+    state.enable_automatic_connections = true;
+  }
+  auto heartbeat_interval = system().middleman().heartbeat_interval();
+  if (heartbeat_interval > 0) {
+    CAF_LOG_INFO("enable heartbeat" << CAF_ARG(heartbeat_interval));
+    send(this, tick_atom::value, heartbeat_interval);
+  }
   return {
     // received from underlying broker implementation
     [=](new_data_msg& msg) {
@@ -638,22 +651,6 @@ behavior basp_broker::make_behavior() {
         delegate(i->second, spawn_atom::value, std::move(type), std::move(xs));
       }
       return {};
-    },
-    [=](ok_atom, const std::string& key, message& value) {
-      if (key == "middleman.enable-automatic-connections") {
-        value.apply([&](bool enabled) {
-          if (! enabled)
-            return;
-          CAF_LOG_INFO("enable automatic connection");
-          // open a random port and store a record for others
-          // how to connect to this port in the configuration server
-          auto port = add_tcp_doorman(uint16_t{0});
-          auto addrs = network::interfaces::list_addresses(false);
-          send(config_server, put_atom::value, "basp.default-connectivity",
-               make_message(port.second, std::move(addrs)));
-          state.enable_automatic_connections = true;
-        });
-      }
     },
     [=](get_atom, const node_id& x)
     -> std::tuple<node_id, std::string, uint16_t> {

@@ -135,8 +135,6 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   }
 };
 
-
-
 /// A broker implementation for the Binary Actor System Protocol (BASP).
 class basp_broker : public stateful_actor<basp_broker_state, broker> {
 public:

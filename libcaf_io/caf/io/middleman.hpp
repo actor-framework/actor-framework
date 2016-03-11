@@ -261,6 +261,17 @@ public:
     return new impl(sys);
   }
 
+  /// Returns the heartbeat interval in milliseconds.
+  inline size_t heartbeat_interval() const {
+    return heartbeat_interval_;
+  }
+
+  /// Retruns whether the middleman tries to establish
+  /// a direct connection to each of its peers.
+  inline bool enable_automatic_connections() const {
+    return enable_automatic_connections_;
+  }
+
 protected:
   middleman(actor_system& ref);
 
@@ -315,8 +326,10 @@ private:
   hook_uptr hooks_;
   // actor offering asyncronous IO by managing this singleton instance
   middleman_actor manager_;
-  // configure parameters
-  size_t basp_heartbeat_interval_;
+  // heartbeat interval of BASP in milliseconds
+  size_t heartbeat_interval_;
+  // configures whether BASP tries to connect to all known peers
+  bool enable_automatic_connections_;
 };
 
 } // namespace io

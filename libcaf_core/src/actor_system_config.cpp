@@ -35,22 +35,22 @@ struct type_name_visitor : static_visitor<const char*> {
   const char* operator()(const std::string&) const {
     return "a string";
   }
-  const char* operator()(const double) const {
+  const char* operator()(double) const {
     return "a double";
   }
-  const char* operator()(const int64_t) const {
+  const char* operator()(int64_t) const {
     return "an integer";
   }
-  const char* operator()(const size_t) const {
+  const char* operator()(size_t) const {
     return "an unsigned integer";
   }
-  const char* operator()(const uint16_t) const {
+  const char* operator()(uint16_t) const {
     return "an unsigned short integer";
   }
-  const char* operator()(const bool) const {
+  const char* operator()(bool) const {
     return "a boolean";
   }
-  const char* operator()(const atom_value) const {
+  const char* operator()(atom_value) const {
     return "an atom";
   }
 };
@@ -89,38 +89,28 @@ bool assign_config_value(uint16_t& x, int64_t& y) {
   return true;
 }
 
+using options_vector = actor_system_config::options_vector;
+
 class actor_system_config_reader {
 public:
   using config_value = actor_system_config::config_value;
 
   using sink = std::function<void (size_t, config_value&)>;
 
-  template <class T>
-  actor_system_config_reader& bind(std::string arg_name, T& storage) {
-    auto fun = [&storage](size_t ln, config_value& x) {
-      // the INI parser accepts all integers as int64_t
-      using cfg_type =
-        typename std::conditional<
-          std::is_integral<T>::value,
-          int64_t,
-          T
-        >::type;
-      if (get<cfg_type>(&x) && assign_config_value(storage, get<cfg_type>(x)))
-        return;
-      type_name_visitor tnv;
-      std::cerr << "error in line " << ln << ": expected "
-                << tnv(storage) << " found "
-                << apply_visitor(tnv, x) << std::endl;
-    };
-    sinks_.emplace(std::move(arg_name), fun);
-    return *this;
+  actor_system_config_reader(options_vector& xs) {
+    for (auto& x : xs) {
+      std::string key = x->category();
+      key += '.';
+      key += x->name();
+      sinks_.emplace(std::move(key), x->to_sink());
+    }
   }
 
   void operator()(size_t ln, std::string name, config_value& cv) {
     auto i = sinks_.find(name);
     if (i == sinks_.end())
-      std::cerr << "error in line " << ln << ": unrecognized parameter name \""
-                << name << "\"";
+      std::cerr << "error in line " << ln
+                << ": unrecognized parameter name \"" << name << "\"";
     else
       (i->second)(ln, cv);
   }
@@ -129,7 +119,83 @@ private:
   std::map<std::string, sink> sinks_;
 };
 
+using cstr = const char*;
+
+template <class T>
+void add_option(options_vector& xs,
+                T& storage, cstr category, cstr name, cstr explanation) {
+  using option = actor_system_config::option;
+  using config_value = actor_system_config::config_value;
+  class impl : public option {
+  public:
+    impl(cstr ctg, cstr nm, cstr xp, T& ref) : option(ctg, nm, xp), ref_(ref) {
+      // nop
+    }
+    std::string to_string() const override {
+      return deep_to_string(ref_);
+    }
+    message::cli_arg to_cli_arg() const override {
+      std::string argname = "caf#";
+      argname += category();
+      argname += ".";
+      argname += name();
+      return {std::move(argname), explanation(), ref_};
+    }
+    config_reader_sink to_sink() const override {
+      return [=](size_t ln, config_value& x) {
+        // the INI parser accepts all integers as int64_t
+        using cfg_type =
+          typename std::conditional<
+            std::is_integral<T>::value && ! std::is_same<bool, T>::value,
+            int64_t,
+            T
+          >::type;
+        if (get<cfg_type>(&x) && assign_config_value(ref_, get<cfg_type>(x)))
+          return;
+        type_name_visitor tnv;
+        std::cerr << "error in line " << ln << ": expected "
+                  << tnv(ref_) << " found "
+                  << apply_visitor(tnv, x) << std::endl;
+      };
+    }
+  private:
+    T& ref_;
+  };
+  return xs.emplace_back(new impl(category, name, explanation, storage));
+}
+
+class opt_group {
+public:
+  opt_group(options_vector& xs, cstr category) : xs_(xs), category_(category) {
+    // nop
+  }
+
+  template <class T>
+  opt_group& add(T& storage, cstr option_name, cstr explanation) {
+    add_option(xs_, storage, category_, option_name, explanation);
+    return *this;
+  }
+
+private:
+  options_vector& xs_;
+  cstr category_;
+};
+
 } // namespace <anonymous>
+
+actor_system_config::option::option(cstr ct, cstr nm, cstr xp)
+    : category_(ct),
+      name_(nm),
+      explanation_(xp) {
+  // nop
+}
+
+actor_system_config::option::~option() {
+  // nop
+}
+
+// in this config class, we have (1) hard-coded defaults that are overridden
+// by (2) INI-file contents that are in turn overridden by (3) CLI arguments
 
 actor_system_config::actor_system_config() {
   // (1) hard-coded defaults
@@ -142,8 +208,36 @@ actor_system_config::actor_system_config() {
   middleman_network_backend = atom("default");
   middleman_enable_automatic_connections = false;
   middleman_max_consecutive_reads = 50;
-  middleman_basp_heartbeat_interval = 0;
+  middleman_heartbeat_interval = 0;
   nexus_port = 0;
+  // fill our options vector for creating INI and CLI parsers
+  opt_group{options_, "scheduler"}
+  .add(scheduler_policy, "policy",
+       "sets the scheduling policy to either 'stealing' (default) or 'sharing'")
+  .add(scheduler_max_threads, "max-threads",
+       "sets a fixed number of worker threads for the scheduler")
+  .add(scheduler_max_throughput, "max-throughput",
+       "sets the maximum number of messages an actor consumes before yielding")
+  .add(scheduler_enable_profiling, "enable-profiling",
+       "enables or disables profiler output")
+  .add(scheduler_profiling_ms_resolution, "profiling-ms-resolution",
+       "sets the rate in ms in which the profiler collects data")
+  .add(scheduler_profiling_output_file, "profiling-output-file",
+       "sets the output file for the profiler");
+  opt_group{options_, "middleman"}
+  .add(middleman_network_backend, "network-backend",
+       "sets the network backend to either 'default' or 'asio' (if available)")
+  .add(middleman_enable_automatic_connections, "enable-automatic-connections",
+       "enables or disables automatic connection management (off per default)")
+  .add(middleman_max_consecutive_reads, "max-consecutive-reads",
+       "sets the maximum number of consecutive I/O reads per broker")
+  .add(middleman_heartbeat_interval, "heartbeat-interval",
+       "sets the interval (ms) of heartbeat, 0 (default) means disabling it");
+  opt_group{options_, "probe"}
+  .add(nexus_host, "nexus-host",
+       "sets the hostname or IP address for connecting to the Nexus")
+  .add(nexus_port, "probe.nexus-port",
+       "sets the port for connecting to the Nexus");
 }
 
 actor_system_config::actor_system_config(int argc, char** argv)
@@ -151,6 +245,7 @@ actor_system_config::actor_system_config(int argc, char** argv)
   if (argc < 2)
     return;
   auto args = message_builder(argv, argv + argc).move_to_message();
+  // extract config file name first, since INI files are overruled by CLI args
   std::string config_file_name;
   args.extract_opts({
     {"caf-config-file", "", config_file_name}
@@ -159,68 +254,18 @@ actor_system_config::actor_system_config(int argc, char** argv)
   if (! config_file_name.empty()) {
     std::ifstream ini{config_file_name};
     if (ini.good()) {
-      actor_system_config_reader consumer;
-      consumer.bind("scheduler.policy", scheduler_policy)
-              .bind("scheduler.scheduler-max-threads", scheduler_max_threads)
-              .bind("scheduler.max-throughput", scheduler_max_throughput)
-              .bind("scheduler.enable-profiling", scheduler_enable_profiling)
-              .bind("scheduler.profiling-ms-resolution",
-                    scheduler_profiling_ms_resolution)
-              .bind("scheduler.profiling-output-file",
-                    scheduler_profiling_output_file)
-              .bind("middleman.network-backend", middleman_network_backend)
-              .bind("middleman.enable-automatic-connections",
-                    middleman_enable_automatic_connections)
-              .bind("middleman.max_consecutive_reads",
-                    middleman_max_consecutive_reads)
-              .bind("middleman.basp-heartbeat-interval",
-                    middleman_basp_heartbeat_interval)
-              .bind("probe.nexus-host", nexus_host)
-              .bind("probe.nexus-port", nexus_port);
+      actor_system_config_reader consumer{options_};
       detail::parse_ini(ini, consumer, std::cerr);
     }
   }
   // (3) CLI options override the content of the INI file
-  auto res = args.extract_opts({
-    {"caf#scheduler.policy",
-     "sets the scheduling policy to either 'stealing' (default) or 'sharing'",
-     scheduler_policy},
-    {"caf#scheduler.scheduler-max-threads",
-     "sets a fixed number of worker threads for the scheduler",
-     scheduler_max_threads},
-    {"caf#scheduler.max-throughput",
-     "sets the maximum number of messages an actor consumes before yielding",
-     scheduler_max_throughput},
-    {"caf#scheduler.enable-profiling",
-     "enables or disables profiler output",
-     scheduler_enable_profiling},
-    {"caf#scheduler.profiling-ms-resolution",
-     "sets the rate in ms in which the profiler collects data",
-     scheduler_profiling_ms_resolution},
-    {"caf#scheduler.profiling-output-file",
-     "sets the output file for the profiler",
-     scheduler_profiling_output_file},
-    {"caf#middleman.network-backend",
-     "sets the network backend to either 'default' or 'asio' (if available)",
-     middleman_network_backend},
-    {"caf#middleman.enable-automatic-connections",
-     "enables or disables automatic connection management (off per default)",
-     middleman_enable_automatic_connections},
-    {"caf#middleman.max_consecutive_reads",
-     "sets the maximum number of allowed I/O reads before scheduling others",
-     middleman_max_consecutive_reads},
-    {"caf#middleman.basp-heartbeat-interval",
-     "sets the interval (ms) of basp-heartbeat, 0 (default) means disabling it",
-     middleman_basp_heartbeat_interval},
-    {"caf#probe.nexus-host",
-     "sets the hostname or IP address for connecting to the Nexus",
-     nexus_host},
-    {"caf#probe.nexus-port",
-     "sets the port for connecting to the Nexus",
-     nexus_port},
-    {"caf-dump-config", "print config in INI format to stdout"},
-    {"caf-help", "print this text"}
-  }, nullptr, true);
+  std::vector<message::cli_arg> cargs;
+  for (auto& x : options_)
+    cargs.emplace_back(x->to_cli_arg());
+  cargs.emplace_back("caf-dump-config", "print config in INI format to stdout");
+  cargs.emplace_back("caf-help", "print this text");
+  cargs.emplace_back("caf-config-file", "parse INI file", config_file_name);
+  auto res = args.extract_opts(std::move(cargs), nullptr, true);
   using std::cerr;
   using std::cout;
   using std::endl;
@@ -259,8 +304,8 @@ actor_system_config::actor_system_config(int argc, char** argv)
          << deep_to_string(middleman_network_backend) << endl
          << "enable-automatic-connections="
          << deep_to_string(middleman_enable_automatic_connections) << endl
-         << "basp-heartbeat-interval="
-         << middleman_basp_heartbeat_interval << endl;
+         << "heartbeat-interval="
+         << middleman_heartbeat_interval << endl;
   }
   args_remainder = std::move(res.remainder);
 }
@@ -274,6 +319,22 @@ actor_system_config::add_actor_factory(std::string name, actor_factory fun) {
 actor_system_config&
 actor_system_config::add_error_category(atom_value x, error_renderer y) {
   error_renderers_.emplace(x, y);
+  return *this;
+}
+
+actor_system_config&
+actor_system_config::set(const char* config_name, config_value config_value) {
+  std::string cn;
+  for (auto& x : options_) {
+    // config_name has format "$category.$name"
+    cn = x->category();
+    cn += '.';
+    cn += x->name();
+    if (cn == config_name) {
+      auto f = x->to_sink();
+      f(0, config_value);
+    }
+  }
   return *this;
 }
 

@@ -97,8 +97,10 @@ string hexstr(const buffer& buf) {
 
 class fixture {
 public:
-  fixture() : system(actor_system_config{}
-                     .load<io::middleman, network::test_multiplexer>()) {
+  fixture(bool autoconn = false)
+      : system(actor_system_config{}
+               .load<io::middleman, network::test_multiplexer>()
+               .set("middleman.enable-automatic-connections", autoconn)) {
     auto& mm = system.middleman();
     mpx_ = dynamic_cast<network::test_multiplexer*>(&mm.backend());
     CAF_REQUIRE(mpx_ != nullptr);
@@ -427,6 +429,13 @@ private:
   actor_registry* registry_;
 };
 
+class autoconn_enabled_fixture : public fixture {
+public:
+  autoconn_enabled_fixture() : fixture(true) {
+    // nop
+  }
+};
+
 } // namespace <anonymous>
 
 CAF_TEST_FIXTURE_SCOPE(basp_tests, fixture)
@@ -669,8 +678,9 @@ CAF_TEST(actor_serialize_and_deserialize) {
 }
 
 CAF_TEST(indirect_connections) {
-  // jupiter [remote hdl 0] -> mars [remote hdl 1] -> earth [this_node]
-  // (this node receives a message from jupiter via mars and responds via mars)
+  // jupiter [remote hdl 0] -> mars [remote hdl 1] -> earth [this_node];
+  // this node receives a message from jupiter via mars and responds via mars
+  // and any ad-hoc automatic connection requests are ignored
   CAF_MESSAGE("self: " << to_string(self()->address()));
   auto ax = accept_handle::from_int(4242);
   mpx()->provide_acceptor(4242, ax);
@@ -715,11 +725,15 @@ CAF_TEST(indirect_connections) {
           make_message("hello from earth!"));
 }
 
+CAF_TEST_FIXTURE_SCOPE_END()
+
+CAF_TEST_FIXTURE_SCOPE(basp_tests_with_autoconn, autoconn_enabled_fixture)
+
 CAF_TEST(automatic_connection) {
   // this tells our BASP broker to enable the automatic connection feature
-  anon_send(aut(), ok_atom::value,
-            "middleman.enable-automatic-connections", make_message(true));
-  mpx()->exec_runnable(); // process publish message in basp_broker
+  //anon_send(aut(), ok_atom::value,
+  //          "middleman.enable-automatic-connections", make_message(true));
+  //mpx()->exec_runnable(); // process publish message in basp_broker
   // jupiter [remote hdl 0] -> mars [remote hdl 1] -> earth [this_node]
   // (this node receives a message from jupiter via mars and responds via mars,
   //  but then also establishes a connection to jupiter directly)

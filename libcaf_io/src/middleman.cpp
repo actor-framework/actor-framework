@@ -100,7 +100,10 @@ actor_system::module* middleman::make(actor_system& sys, detail::type_list<>) {
   return new impl(sys);
 }
 
-middleman::middleman(actor_system& sys) : system_(sys) {
+middleman::middleman(actor_system& sys)
+    : system_(sys),
+      heartbeat_interval_(0),
+      enable_automatic_connections_(false) {
   // nop
 }
 
@@ -286,10 +289,6 @@ void middleman::start() {
     backend().thread_id(thread_.get_id());
   }
   auto basp = named_broker<basp_broker>(atom("BASP"));
-  if (basp_heartbeat_interval_ > 0) {
-    CAF_LOG_INFO("enable basp-heartbeat: " << CAF_ARG(basp_heartbeat_interval_));
-    anon_send(basp, tick_atom::value, basp_heartbeat_interval_);
-  }
   manager_ = make_middleman_actor(system(), basp);
 }
 
@@ -347,7 +346,9 @@ void middleman::init(actor_system_config& cfg) {
   // set scheduling parameters for multiplexer
   backend().max_throughput(cfg.scheduler_max_throughput);
   backend().max_consecutive_reads(cfg.middleman_max_consecutive_reads);
-  basp_heartbeat_interval_ = cfg.middleman_basp_heartbeat_interval;
+  // set options relevant to BASP
+  heartbeat_interval_ = cfg.middleman_heartbeat_interval;
+  enable_automatic_connections_ = cfg.middleman_enable_automatic_connections;
 }
 
 actor_system::module::id_t middleman::id() const {
