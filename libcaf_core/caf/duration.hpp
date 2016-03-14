@@ -126,10 +126,10 @@ private:
 };
 
 /// @relates duration
-template <class T>
-void serialize(T& in_out, duration& x, const unsigned int) {
-  in_out & x.unit;
-  in_out & x.count;
+template <class Processor>
+void serialize(Processor& proc, duration& x, const unsigned int) {
+  proc & x.unit;
+  proc & x.count;
 }
 
 /// @relates duration

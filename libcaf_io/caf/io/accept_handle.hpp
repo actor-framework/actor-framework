@@ -49,9 +49,9 @@ public:
     // nop
   }
 
-  template <class T>
-  friend void serialize(T& in_out, accept_handle& x, const unsigned int) {
-    in_out & x.id_;
+  template <class Procesor>
+  friend void serialize(Procesor& proc, accept_handle& x, const unsigned int) {
+    proc & x.id_;
   }
 
 private:

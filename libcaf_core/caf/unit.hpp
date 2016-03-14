@@ -51,8 +51,8 @@ struct unit_t : detail::comparable<unit_t> {
 static constexpr unit_t unit = unit_t{};
 
 /// @relates unit_t
-template <class T>
-void serialize(T&, const unit_t&, const unsigned int) {
+template <class Processor>
+void serialize(Processor&, const unit_t&, const unsigned int) {
   // nop
 }
 

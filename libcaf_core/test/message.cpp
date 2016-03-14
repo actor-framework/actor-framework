@@ -175,9 +175,9 @@ bool operator==(const s1& lhs, const s1& rhs) {
   return true;
 }
 
-template <class T>
-void serialize(T& in_out, s1& x, const unsigned int) {
-  in_out & x.value;
+template <class Processor>
+void serialize(Processor& proc, s1& x, const unsigned int) {
+  proc & x.value;
 }
 
 std::string to_string(const s1& x) {
@@ -196,9 +196,9 @@ bool operator==(const s2& lhs, const s2& rhs) {
   return true;
 }
 
-template <class T>
-void serialize(T& in_out, s2& x, const unsigned int) {
-  in_out & x.value;
+template <class Processor>
+void serialize(Processor& proc, s2& x, const unsigned int) {
+  proc & x.value;
 }
 
 std::string to_string(const s2& x) {
@@ -216,9 +216,9 @@ bool operator==(const s3& lhs, const s3& rhs) {
   return lhs.value == rhs.value;
 }
 
-template <class T>
-void serialize(T& in_out, s3& x, const unsigned int) {
-  in_out & x.value;
+template <class Processor>
+void serialize(Processor& proc, s3& x, const unsigned int) {
+  proc & x.value;
 }
 
 std::string to_string(const s3& x) {

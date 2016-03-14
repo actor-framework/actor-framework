@@ -49,9 +49,9 @@ inline bool operator==(const index_mapping& x, const index_mapping& y) {
   return x.value == y.value;
 }
 
-template <class T>
-void serialize(T& in_or_out, index_mapping& x, const unsigned int) {
-  in_or_out & x.value;
+template <class Processor>
+void serialize(Processor& proc, index_mapping& x, const unsigned int) {
+  proc & x.value;
 }
 
 inline std::string to_string(const index_mapping& x) {

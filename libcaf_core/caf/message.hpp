@@ -414,8 +414,8 @@ make_message(T&& x, Ts&&... xs) {
     >;
   static_assert(tl_forall<stored_types, is_serializable_or_whitelisted>::value,
                 "at least one type is not serializable via free "
-                "'serialize(InOrOut&, T&, const unsigned int)' or "
-                "`T::serialize(InOrOut&, const unsigned int)` "
+                "'serialize(Processor&, T&, const unsigned int)' or "
+                "`T::serialize(Processor&, const unsigned int)` "
                 "member function; you can whitelist individual types by "
                 "specializing `caf::allowed_unsafe_message_type<T>` "
                 "or using the macro CAF_ALLOW_UNSAFE_MESSAGE_TYPE");

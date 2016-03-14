@@ -259,7 +259,7 @@ template <class F, class S>
 struct is_tuple<std::pair<F, S>> : std::true_type { };
 
 /// Checks whether `T` provides a free
-/// `serialize(InOut&, T&, const unsigned int)` function.
+/// `serialize(Processor&, T&, const unsigned int)` function.
 template <class T>
 struct has_free_serialize {
 private:
@@ -284,7 +284,7 @@ public:
 };
 
 /// Checks whether `T` provides a member
-/// `T::serialize(InOut&, const unsigned int)` function.
+/// `T::serialize(Processor&, const unsigned int)` function.
 template <class T>
 struct has_member_serialize {
 private:
@@ -309,8 +309,8 @@ public:
 };
 
 /// Checks whether `T` provides either a free function
-/// `serialize(InOut&, T&, const unsigned int)` or a member function
-/// `T::serialize(InOut&, const unsigned int)`. If `T` is iterable,
+/// `serialize(Processor&, T&, const unsigned int)` or a member function
+/// `T::serialize(Processor&, const unsigned int)`. If `T` is iterable,
 /// then the template checks whether `T::value_type` is serializable.
 template <class T,
           bool Ignore = std::is_pointer<T>::value

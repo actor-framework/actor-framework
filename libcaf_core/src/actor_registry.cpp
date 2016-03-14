@@ -161,10 +161,10 @@ struct kvstate {
   std::unordered_map<key_type, std::pair<mapped_type, subscriber_set>> data;
   std::unordered_map<actor,topic_set> subscribers;
   const char* name = "caf.config_server";
-  template <class T>
-  friend void serialize(T& in_out, kvstate& x, const unsigned int) {
-    in_out & x.data;
-    in_out & x.subscribers;
+  template <class Processor>
+  friend void serialize(Processor& proc, kvstate& x, const unsigned int) {
+    proc & x.data;
+    proc & x.subscribers;
   }
 };
 } // namespace <anonymous>

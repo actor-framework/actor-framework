@@ -637,9 +637,9 @@ bool operator!=(const none_t&, const maybe<T>& x) {
 }
 
 /// @relates maybe
-template <class InOrOut, class T>
-typename std::enable_if<InOrOut::is_saving::value>::type
-serialize(InOrOut& sink, maybe<T>& x, const unsigned int) {
+template <class Processor, class T>
+typename std::enable_if<Processor::is_saving::value>::type
+serialize(Processor& sink, maybe<T>& x, const unsigned int) {
   uint8_t flag = x.empty() ? 0 : (x.valid() ? 1 : 2);
   sink & flag;
   if (x.valid())
@@ -651,9 +651,9 @@ serialize(InOrOut& sink, maybe<T>& x, const unsigned int) {
 }
 
 /// @relates maybe
-template <class InOrOut, class T>
-typename std::enable_if<InOrOut::is_loading::value>::type
-serialize(InOrOut& source, maybe<T>& x, const unsigned int) {
+template <class Processor, class T>
+typename std::enable_if<Processor::is_loading::value>::type
+serialize(Processor& source, maybe<T>& x, const unsigned int) {
   uint8_t flag;
   source & flag;
   switch (flag) {

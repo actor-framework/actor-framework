@@ -51,10 +51,10 @@ namespace detail {
 // Calls `serialize(...)` with `using namespace boost::serialization`
 // to enable both ADL and picking up existing boost code.
 
-template <class T, class U>
-void delegate_serialize(T& in_or_out, U& x) {
+template <class Processor, class U>
+void delegate_serialize(Processor& proc, U& x) {
   using namespace boost::serialization;
-  serialize(in_or_out, x, 0);
+  serialize(proc, x, 0);
 }
 
 } // namespace detail

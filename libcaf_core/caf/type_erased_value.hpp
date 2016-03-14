@@ -193,22 +193,22 @@ struct type_erased_value_impl<T[N]> : public type_erased_value {
     array_copy_impl(lhs, rhs, token);
   }
 
-  template <class A, class U, size_t Len>
-  static void array_serialize_impl(A& in_out, U (&ys)[Len], std::true_type) {
+  template <class P, class U, size_t Len>
+  static void array_serialize_impl(P& proc, U (&ys)[Len], std::true_type) {
     for (auto& y : ys)
-      array_serialize(in_out, y);
+      array_serialize(proc, y);
   }
 
-  template <class A, class U, size_t Len>
-  static void array_serialize_impl(A& in_out, U (&ys)[Len], std::false_type) {
+  template <class P, class U, size_t Len>
+  static void array_serialize_impl(P& proc, U (&ys)[Len], std::false_type) {
     for (auto& y : ys)
-      in_out & y;
+      proc & y;
   }
 
-  template <class A, class U, size_t Len>
-  static void array_serialize(A& in_out, U (&ys)[Len]) {
+  template <class P, class U, size_t Len>
+  static void array_serialize(P& proc, U (&ys)[Len]) {
     std::integral_constant<bool,std::is_array<U>::value> token;
-    array_serialize_impl(in_out, ys, token);
+    array_serialize_impl(proc, ys, token);
   }
 };
 

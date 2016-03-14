@@ -73,9 +73,9 @@ struct raw_struct {
   string str;
 };
 
-template <class T>
-void serialize(T& in_out, raw_struct& x, const unsigned int) {
-  in_out & x.str;
+template <class Processor>
+void serialize(Processor& proc, raw_struct& x, const unsigned int) {
+  proc & x.str;
 }
 
 bool operator==(const raw_struct& lhs, const raw_struct& rhs) {
@@ -102,10 +102,10 @@ struct test_array {
   int value2[2][4];
 };
 
-template <class T>
-void serialize(T& in_out, test_array& x, const unsigned int) {
-  in_out & x.value;
-  in_out & x.value2;
+template <class Processor>
+void serialize(Processor& proc, test_array& x, const unsigned int) {
+  proc & x.value;
+  proc & x.value2;
 }
 
 bool operator==(const test_array& lhs, const test_array& rhs) {
@@ -128,8 +128,8 @@ struct test_empty_non_pod {
   }
 };
 
-template <class T>
-void serialize(T&, test_empty_non_pod&, const unsigned int) {
+template <class Processor>
+void serialize(Processor&, test_empty_non_pod&, const unsigned int) {
   // nop
 }
 
@@ -152,15 +152,15 @@ struct fixture {
   scoped_execution_unit context;
   message msg;
 
-  template <class IO>
-  void apply(IO&) {
+  template <class Processor>
+  void apply(Processor&) {
     // end of recursion
   }
 
-  template <class IO, class T, class... Ts>
-  void apply(IO& in_out, T& x, Ts&... xs) {
-    in_out & x;
-    apply(in_out, xs...);
+  template <class Processor, class T, class... Ts>
+  void apply(Processor& proc, T& x, Ts&... xs) {
+    proc & x;
+    apply(proc, xs...);
   }
 
   template <class T, class... Ts>

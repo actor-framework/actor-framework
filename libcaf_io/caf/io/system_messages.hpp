@@ -59,10 +59,10 @@ inline bool operator!=(const new_connection_msg& lhs,
 }
 
 /// @relates new_connection_msg
-template <class T>
-void serialize(T& in_out, new_connection_msg& x, const unsigned int) {
-  in_out & x.source;
-  in_out & x.handle;
+template <class Processor>
+void serialize(Processor& proc, new_connection_msg& x, const unsigned int) {
+  proc & x.source;
+  proc & x.handle;
 }
 
 /// Signalizes newly arrived data for a {@link broker}.
@@ -93,10 +93,10 @@ inline bool operator!=(const new_data_msg& lhs, const new_data_msg& rhs) {
 }
 
 /// @relates new_data_msg
-template <class T>
-void serialize(T& in_out, new_data_msg& x, const unsigned int) {
-  in_out & x.handle;
-  in_out & x.buf;
+template <class Processor>
+void serialize(Processor& proc, new_data_msg& x, const unsigned int) {
+  proc & x.handle;
+  proc & x.buf;
 }
 
 /// Signalizes that a certain amount of bytes has been written.
@@ -131,11 +131,11 @@ inline bool operator!=(const data_transferred_msg& x,
 }
 
 /// @relates new_data_msg
-template <class T>
-void serialize(T& in_out, data_transferred_msg& x, const unsigned int) {
-  in_out & x.handle;
-  in_out & x.written;
-  in_out & x.remaining;
+template <class Processor>
+void serialize(Processor& proc, data_transferred_msg& x, const unsigned int) {
+  proc & x.handle;
+  proc & x.written;
+  proc & x.remaining;
 }
 
 /// Signalizes that a {@link broker} connection has been closed.
@@ -161,9 +161,9 @@ inline bool operator!=(const connection_closed_msg& lhs,
 }
 
 /// @relates connection_closed_msg
-template <class T>
-void serialize(T& in_out, connection_closed_msg& x, const unsigned int) {
-  in_out & x.handle;
+template <class Processor>
+void serialize(Processor& proc, connection_closed_msg& x, const unsigned int) {
+  proc & x.handle;
 }
 
 /// Signalizes that a {@link broker} acceptor has been closed.
@@ -185,9 +185,9 @@ inline bool operator!=(const acceptor_closed_msg& lhs,
 }
 
 /// @relates acceptor_closed_msg
-template <class T>
-void serialize(T& in_out, acceptor_closed_msg& x, const unsigned int) {
-  in_out & x.handle;
+template <class Processor>
+void serialize(Processor& proc, acceptor_closed_msg& x, const unsigned int) {
+  proc & x.handle;
 }
 
 } // namespace io

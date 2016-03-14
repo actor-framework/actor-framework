@@ -39,9 +39,9 @@ struct migratable_state {
 
 const char* migratable_state::name = "migratable_actor";
 
-template <class Archive>
-void serialize(Archive& ar, migratable_state& x, const unsigned int) {
-  ar & x.value;
+template <class Processor>
+void serialize(Processor& proc, migratable_state& x, const unsigned int) {
+  proc & x.value;
 }
 
 struct migratable_actor : stateful_actor<migratable_state> {

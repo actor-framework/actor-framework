@@ -43,8 +43,8 @@ struct none_t : detail::comparable<none_t> {
 static constexpr none_t none = none_t{};
 
 /// @relates none_t
-template <class T>
-void serialize(T&, const none_t&, const unsigned int) {
+template <class Processor>
+void serialize(Processor&, const none_t&, const unsigned int) {
   // nop
 }
 

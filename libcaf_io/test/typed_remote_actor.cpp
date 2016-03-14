@@ -39,9 +39,9 @@ struct ping {
   int32_t value;
 };
 
-template <class T>
-void serialize(T& in_or_out, ping& x, const unsigned int) {
-  in_or_out & x.value;
+template <class Processor>
+void serialize(Processor& proc, ping& x, const unsigned int) {
+  proc & x.value;
 }
 
 bool operator==(const ping& lhs, const ping& rhs) {
@@ -52,9 +52,9 @@ struct pong {
   int32_t value;
 };
 
-template <class T>
-void serialize(T& in_or_out, pong& x, const unsigned int) {
-  in_or_out & x.value;
+template <class Processor>
+void serialize(Processor& proc, pong& x, const unsigned int) {
+  proc & x.value;
 }
 
 bool operator==(const pong& lhs, const pong& rhs) {

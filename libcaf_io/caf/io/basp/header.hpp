@@ -48,15 +48,15 @@ struct header {
 };
 
 /// @relates header
-template <class T>
-void serialize(T& in_or_out, header& hdr, const unsigned int) {
-  in_or_out & hdr.source_node;
-  in_or_out & hdr.dest_node;
-  in_or_out & hdr.source_actor;
-  in_or_out & hdr.dest_actor;
-  in_or_out & hdr.payload_len;
-  in_or_out & hdr.operation;
-  in_or_out & hdr.operation_data;
+template <class Processor>
+void serialize(Processor& proc, header& hdr, const unsigned int) {
+  proc & hdr.source_node;
+  proc & hdr.dest_node;
+  proc & hdr.source_actor;
+  proc & hdr.dest_actor;
+  proc & hdr.payload_len;
+  proc & hdr.operation;
+  proc & hdr.operation_data;
 }
 
 /// @relates header

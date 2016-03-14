@@ -57,12 +57,12 @@ struct tup_ptr_access {
     return tup_ptr_access<Pos + 1, Max>::cmp(pos, tup, x);
   }
 
-  template <class T, class U>
-  static void serialize(size_t pos, T& tup, U& in_or_out) {
+  template <class T, class Processor>
+  static void serialize(size_t pos, T& tup, Processor& proc) {
     if (pos == Pos)
-      try_serialize(in_or_out, &std::get<Pos>(tup));
+      try_serialize(proc, &std::get<Pos>(tup));
     else
-      tup_ptr_access<Pos + 1, Max>::serialize(pos, tup, in_or_out);
+      tup_ptr_access<Pos + 1, Max>::serialize(pos, tup, proc);
   }
 
   template <class T>
@@ -91,8 +91,8 @@ struct tup_ptr_access<Pos, Max, false> {
     return false;
   }
 
-  template <class T, class U>
-  static void serialize(size_t, T&, U&) {
+  template <class T, class Processor>
+  static void serialize(size_t, T&, Processor&) {
     // end of recursion
   }
 

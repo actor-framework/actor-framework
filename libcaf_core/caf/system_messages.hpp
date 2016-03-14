@@ -84,7 +84,7 @@ operator!=(const T& lhs, const T& rhs) {
   return !(lhs == rhs);
 }
 
-template <class IO, class T>
+template <class Processor, class T>
 typename std::enable_if<
   detail::tl_exists<
     detail::type_list<exit_msg, down_msg>,
@@ -94,9 +94,9 @@ typename std::enable_if<
     >::template type
   >::value
 >::type
-serialize(IO& in_or_out, T& x, const unsigned int) {
-  in_or_out & x.source;
-  in_or_out & x.reason;
+serialize(Processor& proc, T& x, const unsigned int) {
+  proc & x.source;
+  proc & x.reason;
 }
 
 /// Sent to all members of a group when it goes offline.
@@ -120,9 +120,9 @@ inline bool operator!=(const group_down_msg& lhs, const group_down_msg& rhs) {
 }
 
 /// @relates group_down_msg
-template <class IO>
-void serialize(IO& in_or_out, group_down_msg& x, const unsigned int) {
-  in_or_out & x.source;
+template <class Processor>
+void serialize(Processor& proc, group_down_msg& x, const unsigned int) {
+  proc & x.source;
 }
 
 /// Sent whenever a timeout occurs during a synchronous send.
@@ -166,9 +166,9 @@ inline bool operator!=(const timeout_msg& lhs, const timeout_msg& rhs) {
 }
 
 /// @relates timeout_msg
-template <class IO>
-void serialize(IO& in_or_out, timeout_msg& x, const unsigned int) {
-  in_or_out & x.timeout_id;
+template <class Processor>
+void serialize(Processor& proc, timeout_msg& x, const unsigned int) {
+  proc & x.timeout_id;
 }
 
 } // namespace caf

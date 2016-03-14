@@ -330,17 +330,17 @@ splice(const typed_actor<Xs...>& x, const Ts&... xs) {
 }
 
 /// @relates typed_actor
-template <class T, class... Ts>
-typename std::enable_if<T::is_saving::value>::type
-serialize(T& sink, typed_actor<Ts...>& hdl, const unsigned int) {
+template <class Processor, class... Ts>
+typename std::enable_if<Processor::is_saving::value>::type
+serialize(Processor& sink, typed_actor<Ts...>& hdl, const unsigned int) {
   auto addr = hdl.address();
   sink << addr;
 }
 
 /// @relates typed_actor
-template <class T, class... Ts>
-typename std::enable_if<T::is_loading::value>::type
-serialize(T& sink, typed_actor<Ts...>& hdl, const unsigned int) {
+template <class Processor, class... Ts>
+typename std::enable_if<Processor::is_loading::value>::type
+serialize(Processor& sink, typed_actor<Ts...>& hdl, const unsigned int) {
   actor_addr addr;
   sink >> addr;
   hdl = actor_cast<typed_actor<Ts...>>(addr);
