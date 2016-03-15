@@ -79,6 +79,7 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
                                   - DEBUG
                                   - TRACE
     --with-address-sanitizer    build with address sanitizer if available
+    --with-gcov                 build with gcov coverage enabled
 
   Influential Environment Variables (only on first invocation):
     CXX                         C++ compiler command
@@ -221,6 +222,9 @@ while [ $# -ne 0 ]; do
             ;;
         --with-address-sanitizer)
             append_cache_entry CAF_ENABLE_ADDRESS_SANITIZER BOOL yes
+            ;;
+        --with-gcov)
+            append_cache_entry CAF_ENABLE_GCOV BOOL yes
             ;;
         --no-memory-management)
             append_cache_entry CAF_NO_MEM_MANAGEMENT BOOL yes
