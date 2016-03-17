@@ -640,6 +640,15 @@ public:
   static constexpr bool value = false;
 };
 
+/// Checks whether T is convertible to either `std::function<void (T&)>`
+/// or `std::function<void (const T&)>`.
+template <class F, class T>
+struct is_handler_for {
+  static constexpr bool value =
+      std::is_convertible<F, std::function<void (T&)>>::value
+      || std::is_convertible<F, std::function<void (const T&)>>::value;
+};
+
 template <class T>
 struct value_type_of {
   using type = typename T::value_type;
@@ -664,6 +673,13 @@ struct deconst_kvp<std::pair<K, V>> {
   using type = std::pair<typename std::remove_const<K>::type,
                          typename std::remove_const<V>::type>;
 };
+
+template <class T>
+using is_callable_t = typename std::enable_if<is_callable<T>::value>::type;
+
+template <class F, class T>
+using is_handler_for_ef =
+  typename std::enable_if<is_handler_for<F, T>::value>::type;
 
 } // namespace detail
 } // namespace caf

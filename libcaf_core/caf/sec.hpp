@@ -35,6 +35,8 @@ enum class sec : uint8_t {
   unexpected_response,
   /// Indicates that the receiver of a request is no longer alive.
   request_receiver_down,
+  /// Indicates that a request message timed out.
+  request_timeout,
   /// Unpublishing failed because the actor is `invalid_actor`.
   no_actor_to_unpublish,
   /// Unpublishing failed because the actor is not bound to given port.

@@ -75,6 +75,15 @@ constexpr time_unit get_time_unit_from_period() {
   return ratio_to_time_unit_helper<Period::num, Period::den>::value;
 }
 
+/// Represents an infinite amount of timeout for specifying "invalid" timeouts.
+struct indefinite_t {
+  constexpr indefinite_t() {
+    // nop
+  }
+};
+
+static constexpr indefinite_t indefinite = indefinite_t{};
+
 /// Time duration consisting of a `time_unit` and a 64 bit unsigned integer.
 class duration {
 public:
@@ -83,6 +92,10 @@ public:
   }
 
   constexpr duration(time_unit u, uint32_t v) : unit(u), count(v) {
+    // nop
+  }
+
+  constexpr duration(const indefinite_t&) : unit(time_unit::invalid), count(0) {
     // nop
   }
 
@@ -118,12 +131,13 @@ private:
   template <class Rep, intmax_t Num, intmax_t D>
   static uint64_t rd(const std::chrono::duration<Rep, std::ratio<Num, D>>& d) {
     // assertion (via ctors): Num == 1 || (Num == 60 && D == 1)
-    if (d.count() < 0) {
+    if (d.count() < 0)
       throw std::invalid_argument("negative durations are not supported");
-    }
     return static_cast<uint64_t>(d.count()) * static_cast<uint64_t>(Num);
   }
 };
+
+std::string to_string(const duration& x);
 
 /// @relates duration
 template <class Processor>

@@ -112,7 +112,7 @@ public:
         }
         std::vector<response_promise> tmp{std::move(rp)};
         pending_.emplace(key, std::move(tmp));
-        request(broker_, connect_atom::value, hdl, port).then(
+        request(broker_, indefinite, connect_atom::value, hdl, port).then(
           [=](ok_atom, node_id& nid, actor_addr& addr, mpi_set& sigs) {
             auto i = pending_.find(key);
             if (i == pending_.end())

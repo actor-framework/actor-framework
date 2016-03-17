@@ -49,20 +49,6 @@ struct blocking_response_handle_tag {};
 template <class Self, class Output, class Tag>
 class response_handle;
 
-template <class Output, class F>
-struct get_continue_helper {
-  using type = typed_continue_helper<
-                 typename detail::lifted_result_type<
-                   typename detail::get_callable_trait<F>::result_type
-                 >::type
-               >;
-};
-
-template <class F>
-struct get_continue_helper<message, F> {
-  using type = continue_helper;
-};
-
 /******************************************************************************
  *                                 nonblocking                                *
  ******************************************************************************/
@@ -77,65 +63,61 @@ public:
     // nop
   }
 
-  using error_handler = std::function<void (error&)>;
-
-  template <class F, class T>
-  typename get_continue_helper<Output, F>::type
-  await(F f, error_handler ef, timeout_definition<T> tdef) const {
-    return await_impl(f, ef, std::move(tdef));
+  template <class F, class E = detail::is_callable_t<F>>
+  void await(F f) const {
+    await_impl(f);
   }
 
-  template <class F>
-  typename get_continue_helper<Output, F>::type
-  await(F f, error_handler ef = nullptr) const {
-    return await_impl(f, ef);
+  template <class F, class OnError,
+            class E1 = detail::is_callable_t<F>,
+            class E2 = detail::is_handler_for_ef<OnError, error>>
+  void await(F f, OnError e) const {
+    await_impl(f, e);
   }
 
-  template <class F, class T>
-  typename get_continue_helper<Output, F>::type
-  await(F f, timeout_definition<T> tdef) const {
-    return await(std::move(f), nullptr, std::move(tdef));
+  template <class F, class E = detail::is_callable_t<F>>
+  void generic_await(F f) {
+    behavior tmp{others >> f};
+    self_->set_awaited_response_handler(mid_, std::move(tmp));
   }
 
-  void generic_await(std::function<void (message&)> f, error_handler ef) {
-    behavior tmp{
-      others >> f
-    };
-    self_->set_awaited_response_handler(mid_, behavior{std::move(tmp)}, std::move(ef));
+  template <class F, class OnError,
+            class E1 = detail::is_callable_t<F>,
+            class E2 = detail::is_handler_for_ef<OnError, error>>
+  void generic_await(F f, OnError ef) {
+    behavior tmp{ef, others >> f};
+    self_->set_awaited_response_handler(mid_, std::move(tmp));
   }
 
-  template <class F, class T>
-  typename get_continue_helper<Output, F>::type
-  then(F f, error_handler ef, timeout_definition<T> tdef) const {
-    return then_impl(f, ef, std::move(tdef));
+  template <class F, class E = detail::is_callable_t<F>>
+  void then(F f) const {
+    then_impl(f);
   }
 
-  template <class F>
-  typename get_continue_helper<Output, F>::type
-  then(F f, error_handler ef = nullptr) const {
-    return then_impl(f, ef);
+  template <class F, class OnError,
+            class E1 = detail::is_callable_t<F>,
+            class E2 = detail::is_handler_for_ef<OnError, error>>
+  void then(F f, OnError e) const {
+    then_impl(f, e);
   }
 
-  template <class F, class T>
-  typename get_continue_helper<Output, F>::type
-  then(F f, timeout_definition<T> tdef) const {
-    return then(std::move(f), nullptr, std::move(tdef));
+  template <class F, class E = detail::is_callable_t<F>>
+  void generic_then(F f) {
+    behavior tmp{others >> f};
+    self_->set_multiplexed_response_handler(mid_, std::move(tmp));
   }
 
-  void generic_then(std::function<void (message&)> f, error_handler ef) {
-    behavior tmp{
-      others >> f
-    };
-    self_->set_multiplexed_response_handler(mid_, behavior{std::move(tmp)}, std::move(ef));
+  template <class F, class OnError,
+            class E1 = detail::is_callable_t<F>,
+            class E2 = detail::is_handler_for_ef<OnError, error>>
+  void generic_then(F f, OnError ef) {
+    behavior tmp{ef, others >> f};
+    self_->set_multiplexed_response_handler(mid_, std::move(tmp));
   }
 
 private:
-  template <class F, class... Ts>
-  typename get_continue_helper<Output, F>::type
-  await_impl(F& f, error_handler& ef, Ts&&... xs) const {
-    static_assert(detail::is_callable<F>::value, "argument is not callable");
-    static_assert(! std::is_base_of<match_case, F>::value,
-                  "match cases are not allowed in this context");
+  template <class F>
+  void await_impl(F& f) const {
     static_assert(std::is_same<
                     void,
                     typename detail::get_callable_trait<F>::result_type
@@ -143,18 +125,29 @@ private:
                   "response handlers are not allowed to have a return "
                   "type other than void");
     detail::type_checker<Output, F>::check();
-    self_->set_awaited_response_handler(mid_,
-                                        behavior{std::move(f), std::forward<Ts>(xs)...},
-                                        std::move(ef));
-    return {mid_};
+    self_->set_awaited_response_handler(mid_, behavior{std::move(f)});
   }
 
-  template <class F, class... Ts>
-  typename get_continue_helper<Output, F>::type
-  then_impl(F& f, error_handler& ef, Ts&&... xs) const {
-    static_assert(detail::is_callable<F>::value, "argument is not callable");
-    static_assert(! std::is_base_of<match_case, F>::value,
-                  "match cases are not allowed in this context");
+  template <class F, class OnError>
+  void await_impl(F& f, OnError& ef) const {
+    static_assert(std::is_same<
+                    void,
+                    typename detail::get_callable_trait<F>::result_type
+                  >::value,
+                  "response handlers are not allowed to have a return "
+                  "type other than void");
+    detail::type_checker<Output, F>::check();
+    auto fallback = others >> [=] {
+      auto err = make_error(sec::unexpected_response);
+      ef(err);
+    };
+    self_->set_awaited_response_handler(mid_, behavior{std::move(f),
+                                                       std::move(ef),
+                                                       std::move(fallback)});
+  }
+
+  template <class F>
+  void then_impl(F& f) const {
     static_assert(std::is_same<
                     void,
                     typename detail::get_callable_trait<F>::result_type
@@ -163,9 +156,26 @@ private:
                   "type other than void");
     detail::type_checker<Output, F>::check();
     self_->set_multiplexed_response_handler(mid_,
-                                            behavior{std::move(f), std::forward<Ts>(xs)...},
-                                            std::move(ef));
-    return {mid_};
+                                            behavior{std::move(f)});
+  }
+
+  template <class F, class OnError>
+  void then_impl(F& f, OnError& ef) const {
+    static_assert(std::is_same<
+                    void,
+                    typename detail::get_callable_trait<F>::result_type
+                  >::value,
+                  "response handlers are not allowed to have a return "
+                  "type other than void");
+    detail::type_checker<Output, F>::check();
+    auto fallback = others >> [=] {
+      auto err = make_error(sec::unexpected_response);
+      ef(err);
+    };
+    self_->set_multiplexed_response_handler(mid_,
+                                            behavior{std::move(f),
+                                                     std::move(ef),
+                                                     std::move(fallback)});
   }
 
   message_id mid_;
@@ -188,27 +198,21 @@ public:
 
   using error_handler = std::function<void (error&)>;
 
-  template <class F, class T>
-  void receive(F f, error_handler ef, timeout_definition<T> tdef) {
-    receive_impl(f, ef, std::move(tdef));
+  template <class F, class E = detail::is_callable_t<F>>
+  void receive(F f) {
+    receive_impl(f);
   }
 
-  template <class F>
-  void receive(F f, error_handler ef = nullptr) {
+  template <class F, class OnError,
+            class E1 = detail::is_callable_t<F>,
+            class E2 = detail::is_handler_for_ef<OnError, error>>
+  void receive(F f, OnError ef) {
     receive_impl(f, ef);
   }
 
-  template <class F, class T>
-  void receive(F f, timeout_definition<T> tdef) {
-    receive(std::move(f), nullptr, std::move(tdef));
-  }
-
 private:
-  template <class F, class... Ts>
-  void receive_impl(F& f, error_handler& ef, Ts&&... xs) {
-    static_assert(detail::is_callable<F>::value, "argument is not callable");
-    static_assert(! std::is_base_of<match_case, F>::value,
-                  "match cases are not allowed in this context");
+  template <class F>
+  void receive_impl(F& f) {
     static_assert(std::is_same<
                     void,
                     typename detail::get_callable_trait<F>::result_type
@@ -216,25 +220,24 @@ private:
                   "response handlers are not allowed to have a return "
                   "type other than void");
     detail::type_checker<Output, F>::check();
-    behavior tmp;
-    if (! ef)
-      tmp.assign(
-        std::move(f),
-        others >> [=] {
-          self_->quit(exit_reason::unhandled_sync_failure);
-        },
-        std::forward<Ts>(xs)...
-      );
-    else
-      tmp.assign(
-        std::move(f),
-        ef,
-        others >> [ef] {
-          error err = sec::unexpected_response;
-          ef(err);
-        },
-        std::forward<Ts>(xs)...
-      );
+    behavior tmp{std::move(f)};
+    self_->dequeue(tmp, mid_);
+  }
+
+  template <class F, class OnError>
+  void receive_impl(F& f, OnError& ef) {
+    static_assert(std::is_same<
+                    void,
+                    typename detail::get_callable_trait<F>::result_type
+                  >::value,
+                  "response handlers are not allowed to have a return "
+                  "type other than void");
+    detail::type_checker<Output, F>::check();
+    auto fallback = others >> [=] {
+      auto err = make_error(sec::unexpected_response);
+      ef(err);
+    };
+    behavior tmp{std::move(f), std::move(ef), std::move(fallback)};
     self_->dequeue(tmp, mid_);
   }
 

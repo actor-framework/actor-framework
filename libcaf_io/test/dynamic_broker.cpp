@@ -180,7 +180,7 @@ void run_server(int argc, char** argv) {
   auto serv = system.middleman().spawn_broker(peer_acceptor_fun,
                                               system.spawn(pong));
   std::thread child;
-  self->request(serv, publish_atom::value).receive(
+  self->request(serv, indefinite, publish_atom::value).receive(
     [&](uint16_t port) {
       CAF_MESSAGE("server is running on port " << port);
       child = std::thread([=] { run_client(argc, argv, port); });

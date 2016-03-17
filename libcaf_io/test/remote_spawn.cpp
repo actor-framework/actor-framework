@@ -68,7 +68,7 @@ behavior server(stateful_actor<server_state>* self) {
       CAF_REQUIRE(self->node() != s.node());
       self->state.client = actor_cast<actor>(s);
       auto mm = self->system().middleman().actor_handle();
-      self->request(mm, spawn_atom::value,
+      self->request(mm, indefinite, spawn_atom::value,
                     s.node(), "mirror", make_message()).then(
         [=](ok_atom, const actor_addr& addr, const std::set<std::string>& ifs) {
           CAF_LOG_TRACE(CAF_ARG(addr) << CAF_ARG(ifs));

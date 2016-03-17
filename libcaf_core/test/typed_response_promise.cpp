@@ -147,18 +147,18 @@ CAF_TEST_FIXTURE_SCOPE(typed_spawn_tests, fixture)
 CAF_TEST(typed_response_promise) {
   typed_response_promise<int> resp;
   resp.deliver(1); // delivers on an invalid promise has no effect
-  self->request(foo, get_atom::value, 42).receive(
+  self->request(foo, indefinite, get_atom::value, 42).receive(
     [](int x) {
       CAF_CHECK_EQUAL(x, 84);
     }
   );
-  self->request(foo, get_atom::value, 42, 52).receive(
+  self->request(foo, indefinite, get_atom::value, 42, 52).receive(
     [](int x, int y) {
       CAF_CHECK_EQUAL(x, 84);
       CAF_CHECK_EQUAL(y, 104);
     }
   );
-  self->request(foo, get_atom::value, 3.14, 3.14).receive(
+  self->request(foo, indefinite, get_atom::value, 3.14, 3.14).receive(
     [](double x, double y) {
       CAF_CHECK_EQUAL(x, 3.14 * 2);
       CAF_CHECK_EQUAL(y, 3.14 * 2);
@@ -172,7 +172,7 @@ CAF_TEST(typed_response_promise) {
 
 CAF_TEST(typed_response_promise_chained) {
   auto composed = foo * foo * foo;
-  self->request(composed, 1).receive(
+  self->request(composed, indefinite, 1).receive(
     [](int v) {
       CAF_CHECK_EQUAL(v, 8);
     },
@@ -185,7 +185,7 @@ CAF_TEST(typed_response_promise_chained) {
 
 // verify that only requests get an error response message
 CAF_TEST(error_response_message) {
-  self->request(foo, get_atom::value, 3.14).receive(
+  self->request(foo, indefinite, get_atom::value, 3.14).receive(
     [](double) {
       CAF_ERROR("unexpected ordinary response message received");
     },

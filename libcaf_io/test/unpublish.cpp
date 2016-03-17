@@ -72,7 +72,7 @@ struct fixture {
   maybe<actor> remote_actor(const char* hostname, uint16_t port) {
     maybe<actor> result;
     scoped_actor self{system, true};
-    self->request(system.middleman().actor_handle(),
+    self->request(system.middleman().actor_handle(), indefinite,
                   connect_atom::value, hostname, port).receive(
       [&](ok_atom, node_id&, actor_addr& res, std::set<std::string>& xs) {
         CAF_REQUIRE(xs.empty());

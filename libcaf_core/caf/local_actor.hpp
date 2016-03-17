@@ -467,12 +467,14 @@ public:
     return current_element_;
   }
 
-  template <class Handle, class... Ts>
-  message_id request_impl(message_priority mp, const Handle& dh, Ts&&... xs) {
+  template <class ActorHandle, class... Ts>
+  message_id request_impl(message_priority mp, const ActorHandle& dh,
+                          const duration& timeout, Ts&&... xs) {
     if (! dh)
-      throw std::invalid_argument("cannot request to invalid_actor");
+      throw std::invalid_argument("cannot send requests to invalid actors");
     auto req_id = new_request_id(mp);
     send_impl(req_id, actor_cast<abstract_actor*>(dh), std::forward<Ts>(xs)...);
+    request_sync_timeout_msg(timeout, req_id);
     return req_id.response_id();
   }
 
@@ -600,8 +602,7 @@ public:
 
   using error_handler = std::function<void (error&)>;
 
-  using pending_response =
-    std::pair<const message_id, std::pair<behavior, error_handler>>;
+  using pending_response = std::pair<const message_id, behavior>;
 
   message_id new_request_id(message_priority mp);
 
@@ -611,10 +612,9 @@ public:
 
   bool awaits(message_id mid) const;
 
-  maybe<pending_response&> find_awaited_response(message_id mid);
+  pending_response* find_awaited_response(message_id mid);
 
-  void set_awaited_response_handler(message_id response_id, behavior bhvr,
-                                    error_handler f = nullptr);
+  void set_awaited_response_handler(message_id response_id, behavior bhvr);
 
   behavior& awaited_response_handler();
 
@@ -624,10 +624,9 @@ public:
 
   bool multiplexes(message_id mid) const;
 
-  maybe<pending_response&> find_multiplexed_response(message_id mid);
+  pending_response* find_multiplexed_response(message_id mid);
 
-  void set_multiplexed_response_handler(message_id response_id, behavior bhvr,
-                                        error_handler f = nullptr);
+  void set_multiplexed_response_handler(message_id response_id, behavior bhvr);
 
   // these functions are dispatched via the actor policies table
 
@@ -663,10 +662,7 @@ protected:
   std::forward_list<pending_response> awaited_responses_;
 
   // identifies all IDs of async messages waiting for a response
-  std::unordered_map<
-    message_id,
-    std::pair<behavior, error_handler>
-  > multiplexed_responses_;
+  std::unordered_map<message_id, behavior> multiplexed_responses_;
 
   // points to dummy_node_ if no callback is currently invoked,
   // points to the node under processing otherwise

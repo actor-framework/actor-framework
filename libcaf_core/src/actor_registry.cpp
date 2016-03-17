@@ -247,6 +247,7 @@ void actor_registry::start() {
         unsubscribe_all(actor_cast<actor>(dm.source));
       },
       others >> [=](const message& msg) -> error {
+        CAF_IGNORE_UNUSED(msg);
         CAF_LOG_WARNING("unexpected:" << CAF_ARG(msg));
         return sec::unexpected_message;
       }
@@ -265,6 +266,7 @@ void actor_registry::start() {
         return {ok_atom::value, res.first, res.second};
       },
       others >> [=](const message& msg) {
+        CAF_IGNORE_UNUSED(msg);
         CAF_LOG_WARNING("unexpected:" << CAF_ARG(msg));
       }
     };

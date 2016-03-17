@@ -115,11 +115,11 @@ template <class Handle, class... Ts>
 void tester(scoped_actor& self, const Handle& hdl, int x, int y, Ts&&... xs) {
   self->monitor(hdl);
   // first test: x + y = z
-  self->request(hdl, add_atom::value, x, y).receive(
+  self->request(hdl, indefinite, add_atom::value, x, y).receive(
     [&](int res1) {
       aout(self) << x << " + " << y << " = " << res1 << endl;
       // second test: x - y = z
-      self->request(hdl, sub_atom::value, x, y).receive(
+      self->request(hdl, indefinite, sub_atom::value, x, y).receive(
         [&](int res2) {
           aout(self) << x << " - " << y << " = " << res2 << endl;
           self->send_exit(hdl, exit_reason::user_shutdown);

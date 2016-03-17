@@ -120,7 +120,7 @@ public:
   behavior make_behavior() override {
     return {
       [=](go_atom, const actor& next) {
-        request(next, gogo_atom::value).then(
+        request(next, indefinite, gogo_atom::value).then(
           [=](atom_value) {
             CAF_MESSAGE("send 'ok' to buddy");
             send(buddy(), ok_atom::value);
@@ -196,7 +196,7 @@ public:
     return {
       others >> [=](message& msg) -> response_promise {
         auto rp = make_response_promise();
-        request(buddy(), std::move(msg)).then(
+        request(buddy(), indefinite, std::move(msg)).then(
           [=](gogogo_atom x) mutable {
             rp.deliver(x);
             quit();
@@ -270,7 +270,7 @@ CAF_TEST(test_void_res) {
     };
   });
   scoped_actor self{system};
-  self->request(buddy, 1, 2).receive(
+  self->request(buddy, indefinite, 1, 2).receive(
     [] {
       CAF_MESSAGE("received void res");
     }
@@ -287,7 +287,7 @@ CAF_TEST(pending_quit) {
     };
   });
   system.spawn([mirror](event_based_actor* self) {
-    self->request(mirror, 42).then(
+    self->request(mirror, indefinite, 42).then(
       [](int) {
         CAF_ERROR("received result, should've been terminated already");
       },
@@ -310,7 +310,7 @@ CAF_TEST(request) {
         CAF_CHECK_EQUAL(i, 0);
       }
     );
-    s->request(foi, i_atom::value).receive(
+    s->request(foi, indefinite, i_atom::value).receive(
       [&](int i) {
         CAF_CHECK_EQUAL(i, 0);
         ++invocations;
@@ -319,7 +319,7 @@ CAF_TEST(request) {
         CAF_ERROR("Error: " << s->system().render(err));
       }
     );
-    s->request(foi, f_atom::value).receive(
+    s->request(foi, indefinite, f_atom::value).receive(
       [&](float f) {
         CAF_CHECK_EQUAL(f, 0.f);
         ++invocations;
@@ -333,11 +333,14 @@ CAF_TEST(request) {
     // provoke invocation of s->handle_sync_failure()
     bool error_handler_called = false;
     bool int_handler_called = false;
-    s->request(foi, f_atom::value).receive(
+    s->request(foi, indefinite, f_atom::value).receive(
       [&](int) {
+printf("******* %s %d\n", __FILE__, __LINE__);
+        CAF_ERROR("int handler called");
         int_handler_called = true;
       },
       [&](const error&) {
+printf("******* %s %d\n", __FILE__, __LINE__);
         CAF_MESSAGE("error received");
         error_handler_called = true;
       }
@@ -356,7 +359,7 @@ CAF_TEST(request) {
   );
   auto mirror = system.spawn<sync_mirror>();
   bool continuation_called = false;
-  self->request(mirror, 42).receive([&](int value) {
+  self->request(mirror, indefinite, 42).receive([&](int value) {
     continuation_called = true;
     CAF_CHECK_EQUAL(value, 42);
   });
@@ -395,12 +398,13 @@ CAF_TEST(request) {
   CAF_MESSAGE("block on `await_all_other_actors_done`");
   self->await_all_other_actors_done();
   CAF_MESSAGE("`await_all_other_actors_done` finished");
-  self->request(self, no_way_atom::value).receive(
+  self->request(self, milliseconds(50), no_way_atom::value).receive(
     [&](int) {
       CAF_ERROR("unexpected message of type int");
     },
-    after(milliseconds(50)) >> [] {
-      CAF_MESSAGE("got timeout");
+    [&](const error& err) {
+      CAF_MESSAGE("err = " << system.render(err));
+      CAF_REQUIRE(err == sec::request_timeout);
     }
   );
   CAF_MESSAGE("expect two DOWN messages and one 'NoWay'");
@@ -439,15 +443,13 @@ CAF_TEST(request) {
     },
     [&](const error& err) {
       CAF_LOG_TRACE("");
-      CAF_ERROR("Error: " << self->system().render(err));
-    },
-    after(milliseconds(500)) >> [&] {
+      CAF_REQUIRE(err == sec::request_timeout);
       CAF_MESSAGE("timeout occured");
       timeout_occured = true;
     }
   );
   CAF_CHECK_EQUAL(timeout_occured, true);
-  self->request(c, gogo_atom::value).receive(
+  self->request(c, indefinite, gogo_atom::value).receive(
     [](gogogo_atom) {
       CAF_MESSAGE("received `gogogo_atom`");
     },
@@ -472,7 +474,7 @@ CAF_TEST(request) {
     });
     // first 'idle', then 'request'
     anon_send(serv, idle_atom::value, work);
-    s->request(serv, request_atom::value).receive(
+    s->request(serv, indefinite, request_atom::value).receive(
       [&](response_atom) {
         CAF_MESSAGE("received 'response'");
         CAF_CHECK(s->current_sender() == work);
@@ -482,7 +484,7 @@ CAF_TEST(request) {
       }
     );
     // first 'request', then 'idle'
-    auto handle = s->request(serv, request_atom::value);
+    auto handle = s->request(serv, indefinite, request_atom::value);
     send_as(work, serv, idle_atom::value, work);
     handle.receive(
       [&](response_atom) {
@@ -514,7 +516,7 @@ behavior snyc_send_no_then_A(event_based_actor * self) {
 behavior snyc_send_no_then_B(event_based_actor * self) {
   return {
     [=](int number) {
-      self->request(self->spawn(snyc_send_no_then_A), number);
+      self->request(self->spawn(snyc_send_no_then_A), indefinite, number);
       self->quit();
     }
   };
@@ -533,7 +535,7 @@ CAF_TEST(async_request) {
         }
       };
     });
-    self->request(receiver, 1).then(
+    self->request(receiver, indefinite, 1).then(
       [=](int) {}
     );
     return {

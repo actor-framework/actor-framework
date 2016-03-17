@@ -201,6 +201,9 @@
   } static_cast<void>(0)
 #endif
 
+// Convenience macros.
+#define CAF_IGNORE_UNUSED(x) static_cast<void>(x);
+
 #define CAF_CRITICAL(error)                                                    \
   printf("%s:%u: critical error: '%s'\n", __FILE__, __LINE__, error);          \
   abort()

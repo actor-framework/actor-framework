@@ -93,7 +93,7 @@ struct fixture {
     self->send(aut, add_atom::value, 7);
     self->send(aut, add_atom::value, 4);
     self->send(aut, add_atom::value, 9);
-    self->request(aut, get_atom::value).receive(
+    self->request(aut, indefinite, get_atom::value).receive(
       [](int x) {
         CAF_CHECK_EQUAL(x, 20);
       }
@@ -110,7 +110,7 @@ struct fixture {
       };
     });
     scoped_actor self{system};
-    self->request(aut, get_atom::value).receive(
+    self->request(aut, indefinite, get_atom::value).receive(
       [&](const string& str) {
         CAF_CHECK_EQUAL(str, expected);
       }

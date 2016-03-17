@@ -26,8 +26,8 @@ behavior mirror(event_based_actor* self) {
 
 void hello_world(event_based_actor* self, const actor& buddy) {
   // send "Hello World!" to our buddy ...
-  self->request(buddy, "Hello World!").then(
-    // ... wait for a response ...
+  self->request(buddy, std::chrono::seconds(10), "Hello World!").then(
+    // ... wait up to 10s for a response ...
     [=](const string& what) {
       // ... and print it
       aout(self) << what << endl;

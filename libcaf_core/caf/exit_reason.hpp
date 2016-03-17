@@ -35,7 +35,7 @@ enum class exit_reason : uint8_t {
   unhandled_exception = 0x02,
 
   /// Indicates that the actor received an unexpected synchronous reply message.
-  unhandled_sync_failure = 0x04,
+  unhandled_request_error = 0x04,
 
   /// Indicates that the exit reason for this actor is unknown, i.e.,
   /// the actor has been terminated and no longer exists.

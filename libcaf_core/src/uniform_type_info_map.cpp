@@ -79,7 +79,6 @@ const char* numbered_type_names[] = {
   "@strmap",
   "@strset",
   "@strvec",
-  "@sync_timeout",
   "@timeout",
   "@u16",
   "@u16str",

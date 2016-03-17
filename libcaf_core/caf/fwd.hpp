@@ -81,7 +81,6 @@ struct down_msg;
 struct timeout_msg;
 struct group_down_msg;
 struct invalid_actor_t;
-struct sync_timeout_msg;
 struct invalid_actor_addr_t;
 struct illegal_message_element;
 struct prohibit_top_level_spawn_marker;

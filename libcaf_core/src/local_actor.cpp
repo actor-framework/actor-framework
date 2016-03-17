@@ -148,20 +148,19 @@ uint32_t local_actor::request_timeout(const duration& d) {
 }
 
 void local_actor::request_sync_timeout_msg(const duration& d, message_id mid) {
-  if (! d.valid()) {
+  CAF_LOG_TRACE(CAF_ARG(d) << CAF_ARG(mid));
+  if (! d.valid())
     return;
-  }
-  delayed_send_impl(mid, this, d, make_message(sync_timeout_msg{}));
+  delayed_send_impl(mid.response_id(), this, d,
+                    make_message(sec::request_timeout));
 }
 
 void local_actor::handle_timeout(behavior& bhvr, uint32_t timeout_id) {
-  if (! is_active_timeout(timeout_id)) {
+  if (! is_active_timeout(timeout_id))
     return;
-  }
   bhvr.handle_timeout();
-  if (bhvr_stack_.empty() || bhvr_stack_.back() != bhvr) {
+  if (bhvr_stack_.empty() || bhvr_stack_.back() != bhvr)
     return;
-  }
   // auto-remove behavior for blocking actors
   if (is_blocking()) {
     CAF_ASSERT(bhvr_stack_.back() == bhvr);
@@ -203,6 +202,7 @@ msg_type filter_msg(local_actor* self, mailbox_element& node) {
   if (msg.size() > 1 && msg.match_element<sys_atom>(0) && node.sender) {
     bool mismatch = false;
     msg.apply({
+      /*
       [&](sys_atom, migrate_atom, const actor& mm) {
         // migrate this actor to `target`
         if (! self->is_serializable()) {
@@ -245,6 +245,7 @@ msg_type filter_msg(local_actor* self, mailbox_element& node) {
           }
         });
       },
+      */
       [&](sys_atom, migrate_atom, std::vector<char>& buf) {
         // "replace" this actor with the content of `buf`
         if (! self->is_serializable()) {
@@ -389,61 +390,6 @@ private:
   local_actor* self_;
 };
 
-/*
-response_promise fetch_response_promise(local_actor* self, int) {
-  return self->make_response_promise();
-}
-
-response_promise fetch_response_promise(local_actor*, response_promise& hdl) {
-  return std::move(hdl);
-}
-
-// enables `return request(...).then(...)`
-bool handle_message_id_res(local_actor* self, message& res,
-                           response_promise hdl) {
-  CAF_ASSERT(hdl.pending());
-  CAF_LOG_TRACE(CAF_ARG(res));
-  if (res.match_elements<atom_value, uint64_t>()
-      && res.get_as<atom_value>(0) == atom("MESSAGE_ID")) {
-    CAF_LOG_DEBUG("message handler returned a message id wrapper");
-
-  }
-  return false;
-}
-
-// - extracts response message from handler
-// - returns true if fun was successfully invoked
-template <class Handle = int>
-bool post_process_invoke_res(local_actor* self, bool is_sync_request,
-                             maybe<message>&& res, Handle hdl = Handle{}) {
-  CAF_LOG_TRACE(CAF_ARG(is_sync_request) << CAF_ARG(res));
-  // an empty response means self has skipped the message
-  if (res.empty())
-    return false;
-  // get a response promise for the original request
-  auto rp = fetch_response_promise(self, hdl);
-  // return true if self has answered to the original request,
-  // e.g., by forwarding or delegating it
-  if (! rp.pending())
-    return res.valid();
-  // fulfill the promise
-  if (res) {
-    CAF_LOG_DEBUG("respond via response_promise");
-    // deliver empty messages only for sync responses
-    if (! handle_message_id_res(self, *res, rp)
-        && (! res->empty() || is_sync_request))
-      rp.deliver(std::move(*res));
-    return true;
-  } else if (is_sync_request) {
-    CAF_LOG_DEBUG("report error back to sync caller");
-    if (res.empty())
-      res = sec::unexpected_response;
-    rp.deliver(make_message(res.error()));
-  }
-  return false;
-}
-*/
-
 invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
                                                   behavior& fun,
                                                   message_id awaited_id) {
@@ -483,7 +429,7 @@ invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
         CAF_LOG_DEBUG("handle as multiplexed response:" << CAF_ARG(ptr->msg)
                       << CAF_ARG(mid) << CAF_ARG(awaited_id));
         if (! awaited_id.valid()) {
-          auto& ref_fun = ref_opt->second.first;
+          auto& ref_fun = ref_opt->second;
           bool is_sync_tout = ptr->msg.match_elements<sync_timeout_msg>();
           ptr.swap(current_element_);
           if (is_sync_tout) {
@@ -494,7 +440,7 @@ invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
           //} else if (! post_process_invoke_res(this, false,
           //                                     ref_fun(current_element_->msg))) {
             CAF_LOG_WARNING("multiplexed response failure occured:" << CAF_ARG(id()));
-            quit(exit_reason::unhandled_sync_failure);
+            quit(exit_reason::unhandled_request_error);
           }
           ptr.swap(current_element_);
           mark_multiplexed_arrived(mid);
@@ -515,7 +461,7 @@ invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
             //if (! post_process_invoke_res(this, false,
             //                              fun(current_element_->msg))) {
               CAF_LOG_WARNING("sync response failure occured:" << CAF_ARG(id()));
-              quit(exit_reason::unhandled_sync_failure);
+              quit(exit_reason::unhandled_request_error);
             }
           }
           ptr.swap(current_element_);
@@ -589,33 +535,26 @@ bool local_actor::awaits(message_id mid) const {
                      predicate);
 }
 
-maybe<local_actor::pending_response&>
+local_actor::pending_response*
 local_actor::find_awaited_response(message_id mid) {
   awaited_response_predicate predicate{mid};
   auto last = awaited_responses_.end();
   auto i = std::find_if(awaited_responses_.begin(), last, predicate);
   if (i != last)
-    return *i;
-  return none;
+    return &(*i);
+  return nullptr;
 }
 
-void local_actor::set_awaited_response_handler(message_id response_id, behavior bhvr,
-                                               error_handler f) {
-  if (bhvr.timeout().valid()) {
-    request_sync_timeout_msg(bhvr.timeout(), response_id);
-  }
+void local_actor::set_awaited_response_handler(message_id response_id, behavior bhvr) {
   auto opt_ref = find_awaited_response(response_id);
-  if (opt_ref) {
-    opt_ref->second.first = std::move(bhvr);
-    opt_ref->second.second = std::move(f);
-  } else {
-    awaited_responses_.emplace_front(response_id,
-                                     std::make_pair(std::move(bhvr), std::move(f)));
-  }
+  if (opt_ref)
+    opt_ref->second = std::move(bhvr);
+  else
+    awaited_responses_.emplace_front(response_id, std::move(bhvr));
 }
 
 behavior& local_actor::awaited_response_handler() {
-  return awaited_responses_.front().second.first;
+  return awaited_responses_.front().second;
 }
 
 message_id local_actor::awaited_response_id() {
@@ -635,28 +574,23 @@ bool local_actor::multiplexes(message_id mid) const {
   return it != multiplexed_responses_.end();
 }
 
-maybe<local_actor::pending_response&>
+local_actor::pending_response*
 local_actor::find_multiplexed_response(message_id mid) {
   auto it = multiplexed_responses_.find(mid);
-  if (it != multiplexed_responses_.end()) {
-    return *it;
-  }
-  return none;
+  if (it != multiplexed_responses_.end())
+    return &(*it);
+  return nullptr;
 }
 
-void local_actor::set_multiplexed_response_handler(message_id response_id, behavior bhvr,
-                                                   error_handler f) {
+void local_actor::set_multiplexed_response_handler(message_id response_id, behavior bhvr) {
   if (bhvr.timeout().valid()) {
     request_sync_timeout_msg(bhvr.timeout(), response_id);
   }
   auto opt_ref = find_multiplexed_response(response_id);
-  if (opt_ref) {
-    opt_ref->second.first = std::move(bhvr);
-    opt_ref->second.second = std::move(f);
-  } else {
-    multiplexed_responses_.emplace(response_id,
-                                   std::make_pair(std::move(bhvr), std::move(f)));
-  }
+  if (opt_ref)
+    opt_ref->second = std::move(bhvr);
+  else
+    multiplexed_responses_.emplace(response_id, std::move(bhvr));
 }
 
 void local_actor::launch(execution_unit* eu, bool lazy, bool hide) {

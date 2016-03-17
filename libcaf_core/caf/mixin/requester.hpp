@@ -21,6 +21,7 @@
 #define CAF_MIXIN_SYNC_SENDER_HPP
 
 #include <tuple>
+#include <chrono>
 
 #include "caf/actor.hpp"
 #include "caf/message.hpp"
@@ -53,9 +54,9 @@ public:
   /// @throws std::invalid_argument if `dest == invalid_actor`
   template <class... Ts>
   response_handle_type request(message_priority mp, const actor& dest,
-                               Ts&&... xs) {
+                               const duration& timeout, Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
-    return {dptr()->request_impl(mp, dest, std::forward<Ts>(xs)...),
+    return {dptr()->request_impl(mp, dest, timeout, std::forward<Ts>(xs)...),
             dptr()};
   }
 
@@ -65,8 +66,10 @@ public:
   ///          sent message cannot be received by another actor.
   /// @throws std::invalid_argument if `dest == invalid_actor`
   template <class... Ts>
-  response_handle_type request(const actor& dest, Ts&&... xs) {
-    return request(message_priority::normal, dest, std::forward<Ts>(xs)...);
+  response_handle_type request(const actor& dest,
+                               const duration& timeout, Ts&&... xs) {
+    return request(message_priority::normal, dest,
+                   timeout, std::forward<Ts>(xs)...);
   }
 
   /// Sends `{xs...}` as a synchronous message to `dest` with priority `mp`.
@@ -84,7 +87,8 @@ public:
                       >::type...>
                   >::type,
                   HandleTag>
-  request(message_priority mp, const typed_actor<Sigs...>& dest, Ts&&... xs) {
+  request(message_priority mp, const typed_actor<Sigs...>& dest,
+          const duration& timeout, Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
     using token =
       detail::type_list<
@@ -93,7 +97,7 @@ public:
         >::type...>;
     token tk;
     check_typed_input(dest, tk);
-    return {dptr()->request_impl(mp, dest, std::forward<Ts>(xs)...),
+    return {dptr()->request_impl(mp, dest, timeout, std::forward<Ts>(xs)...),
             dptr()};
   }
 
@@ -112,7 +116,8 @@ public:
                       >::type...>
                   >::type,
                   HandleTag>
-  request(const typed_actor<Sigs...>& dest, Ts&&... xs) {
+  request(const typed_actor<Sigs...>& dest,
+          const duration& timeout, Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
     using token =
       detail::type_list<
@@ -121,97 +126,10 @@ public:
         >::type...>;
     token tk;
     check_typed_input(dest, tk);
-    return {dptr()->request_impl(message_priority::normal,
-                                   dest, std::forward<Ts>(xs)...),
+    return {dptr()->request_impl(message_priority::normal, dest,
+                                 timeout, std::forward<Ts>(xs)...),
             dptr()};
   }
-
-  /****************************************************************************
-   *                           timed_request(...)                           *
-   ****************************************************************************/
-
-  /// Sends `{xs...}` as a synchronous message to `dest` with priority `mp`
-  /// and relative timeout `rtime`.
-  /// @returns A handle identifying a future-like handle to the response.
-  /// @warning The returned handle is actor specific and the response to the
-  ///          sent message cannot be received by another actor.
-  /// @throws std::invalid_argument if `dest == invalid_actor`
-  template <class... Ts>
-  response_handle_type timed_request(message_priority mp, const actor& dest,
-                                       const duration& rtime, Ts&&... xs) {
-    static_assert(sizeof...(Ts) > 0, "no message to send");
-    return {dptr()->timed_request_impl(mp, dest, rtime,
-                                         std::forward<Ts>(xs)...),
-            dptr()};
-  }
-
-  /// Sends `{xs...}` as a synchronous message to `dest` with
-  /// relative timeout `rtime`.
-  /// @returns A handle identifying a future-like handle to the response.
-  /// @warning The returned handle is actor specific and the response to the
-  ///          sent message cannot be received by another actor.
-  /// @throws std::invalid_argument if `dest == invalid_actor`
-  template <class... Ts>
-  response_handle_type timed_request(const actor& dest, const duration& rtime,
-                                       Ts&&... xs) {
-    return timed_request(message_priority::normal, dest, rtime,
-                           std::forward<Ts>(xs)...);
-  }
-
-  /// Sends `{xs...}` as a synchronous message to `dest` with priority `mp`
-  /// and relative timeout `rtime`.
-  /// @returns A handle identifying a future-like handle to the response.
-  /// @warning The returned handle is actor specific and the response to the
-  ///          sent message cannot be received by another actor.
-  /// @throws std::invalid_argument if `dest == invalid_actor`
-  template <class... Sigs, class... Ts>
-  response_handle<Subtype,
-                  typename detail::deduce_output_type<
-                    detail::type_list<Sigs...>,
-                    typename detail::implicit_conversions<
-                      typename std::decay<Ts>::type
-                    >::type...
-                  >::type,
-                  HandleTag>
-  timed_request(message_priority mp, const typed_actor<Sigs...>& dest,
-                  const duration& rtime, Ts&&... xs) {
-    static_assert(sizeof...(Ts) > 0, "no message to send");
-    using token =
-      detail::type_list<
-        typename detail::implicit_conversions<
-          typename std::decay<Ts>::type
-        >::type...>;
-    token tk;
-    check_typed_input(dest, tk);
-    return {dptr()->timed_request_impl(mp, dest, rtime,
-                                         std::forward<Ts>(xs)...),
-            dptr()};
-  }
-
-  /// Sends `{xs...}` as a synchronous message to `dest` with
-  /// relative timeout `rtime`.
-  /// @returns A handle identifying a future-like handle to the response.
-  /// @warning The returned handle is actor specific and the response to the
-  ///          sent message cannot be received by another actor.
-  /// @throws std::invalid_argument if `dest == invalid_actor`
-  template <class... Sigs, class... Ts>
-  response_handle<Subtype,
-                  typename detail::deduce_output_type<
-                    detail::type_list<Sigs...>,
-                    typename detail::implicit_conversions<
-                      typename std::decay<Ts>::type
-                    >::type...
-                  >::type,
-                  HandleTag>
-  timed_request(const typed_actor<Sigs...>& dest, const duration& rtime,
-                  Ts&&... xs) {
-    return timed_request(message_priority::normal, dest, rtime,
-                           std::forward<Ts>(xs)...);
-  }
-
-  /****************************************************************************
-   *                       deprecated member functions                        *
-   ****************************************************************************/
 
 private:
   Subtype* dptr() {

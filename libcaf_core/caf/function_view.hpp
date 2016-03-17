@@ -136,7 +136,7 @@ public:
     R result;
     function_view_storage<R> h{result};
     try {
-      self_->request(impl_, std::forward<Ts>(xs)...).receive(h);
+      self_->request(impl_, indefinite, std::forward<Ts>(xs)...).receive(h);
     }
     catch (std::exception&) {
       assign(invalid_actor);

@@ -36,6 +36,24 @@ std::string to_string(const time_unit& x) {
   }
 }
 
+std::string to_string(const duration& x) {
+  auto result = std::to_string(x.count);
+  switch (x.unit) {
+    case time_unit::seconds:
+      result += "s";
+      break;
+    case time_unit::milliseconds:
+      result += "ms";
+      break;
+    case time_unit::microseconds:
+      result += "us";
+      break;
+    default:
+      return "indefinite";
+  }
+  return result;
+}
+
 bool operator==(const duration& lhs, const duration& rhs) {
   return lhs.unit == rhs.unit && lhs.count == rhs.count;
 }
