@@ -87,7 +87,7 @@ void make_client_behavior(event_based_actor* self,
                           actor server, group grp) {
   self->spawn_in_group(grp, make_reflector_behavior);
   self->spawn_in_group(grp, make_reflector_behavior);
-  self->request(server, indefinite, spawn_atom::value, grp).then(
+  self->request(server, infinite, spawn_atom::value, grp).then(
     [=](const std::vector<actor>& vec) {
       auto is_remote = [=](actor actor) {
         return actor->node() != self->node();
@@ -140,7 +140,7 @@ CAF_TEST(server_side_group_comm) {
   CAF_REQUIRE(server);
   scoped_actor group_resolver(client_side, true);
   group grp;
-  group_resolver->request(server, indefinite, get_group_atom::value).receive(
+  group_resolver->request(server, infinite, get_group_atom::value).receive(
     [&](const group& x) {
       grp = x;
     }

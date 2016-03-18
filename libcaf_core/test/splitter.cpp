@@ -108,7 +108,7 @@ CAF_TEST(kill_second) {
 
 CAF_TEST(untyped_splicing) {
   init_untyped();
-  self->request(first_and_second, indefinite, 42.0).receive(
+  self->request(first_and_second, infinite, 42.0).receive(
     [](double x, double y, double z) {
       CAF_CHECK(x == (42.0 * 2.0));
       CAF_CHECK(y == (42.0 * 4.0));
@@ -126,7 +126,7 @@ CAF_TEST(typed_splicing) {
                                     ::with<double, double, double>>;
   static_assert(std::is_same<decltype(x_and_y), expected_type>::value,
                 "splice() did not compute the correct result");
-  self->request(x_and_y, indefinite, 42.0).receive(
+  self->request(x_and_y, infinite, 42.0).receive(
     [](double x, double y, double z) {
       CAF_CHECK(x == (42.0 * 2.0));
       CAF_CHECK(y == (42.0 * 4.0));

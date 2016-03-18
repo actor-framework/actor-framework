@@ -59,19 +59,19 @@ CAF_TEST(test_serial_reply) {
       [=](hi_atom) mutable {
         auto rp = self->make_response_promise();
         CAF_MESSAGE("received 'hi there'");
-        self->request(c0, indefinite, sub0_atom::value).then(
+        self->request(c0, infinite, sub0_atom::value).then(
           [=](sub0_atom) mutable {
             CAF_MESSAGE("received 'sub0'");
-            self->request(c1, indefinite, sub1_atom::value).then(
+            self->request(c1, infinite, sub1_atom::value).then(
               [=](sub1_atom) mutable {
                 CAF_MESSAGE("received 'sub1'");
-                self->request(c2, indefinite, sub2_atom::value).then(
+                self->request(c2, infinite, sub2_atom::value).then(
                   [=](sub2_atom) mutable {
                     CAF_MESSAGE("received 'sub2'");
-                    self->request(c3, indefinite, sub3_atom::value).then(
+                    self->request(c3, infinite, sub3_atom::value).then(
                       [=](sub3_atom) mutable {
                         CAF_MESSAGE("received 'sub3'");
-                        self->request(c4, indefinite, sub4_atom::value).then(
+                        self->request(c4, infinite, sub4_atom::value).then(
                           [=](sub4_atom) mutable {
                             CAF_MESSAGE("received 'sub4'");
                             rp.deliver(ho_atom::value);
@@ -90,7 +90,7 @@ CAF_TEST(test_serial_reply) {
   });
   scoped_actor self{system};
   CAF_MESSAGE("ID of main: " << self->id());
-  self->request(master, indefinite, hi_atom::value).receive(
+  self->request(master, infinite, hi_atom::value).receive(
     [](ho_atom) {
       CAF_MESSAGE("received 'ho'");
     },

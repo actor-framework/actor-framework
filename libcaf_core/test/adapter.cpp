@@ -113,7 +113,7 @@ CAF_TEST(lifetime_3) {
   em_sender->link_to(bound->address());
   anon_send_exit(em_sender, exit_reason::kill);
   wait_until_exited();
-  self->request(dbl, indefinite, 1).receive(
+  self->request(dbl, infinite, 1).receive(
     [](int v) {
       CAF_CHECK(v == 2);
     },
@@ -129,7 +129,7 @@ CAF_TEST(request_response_promise) {
   auto bound = dbl.bind(1);
   anon_send_exit(bound, exit_reason::kill);
   CAF_CHECK(exited(bound));
-  self->request(bound, indefinite, message{}).receive(
+  self->request(bound, infinite, message{}).receive(
     [](int) {
       CAF_CHECK(false);
     },
@@ -159,12 +159,12 @@ CAF_TEST(partial_currying) {
   CAF_CHECK(aut.node() == bound.node());
   CAF_CHECK(aut != bound);
   CAF_CHECK(system.registry().running() == 1);
-  self->request(bound, indefinite, 2.0).receive(
+  self->request(bound, infinite, 2.0).receive(
     [](double y) {
       CAF_CHECK(y == 2.0);
     }
   );
-  self->request(bound, indefinite, 10).receive(
+  self->request(bound, infinite, 10).receive(
     [](int y) {
       CAF_CHECK(y == 10);
     }
@@ -175,7 +175,7 @@ CAF_TEST(partial_currying) {
 CAF_TEST(full_currying) {
   auto dbl_actor = system.spawn(testee);
   auto bound = dbl_actor.bind(1);
-  self->request(bound, indefinite, message{}).receive(
+  self->request(bound, infinite, message{}).receive(
     [](int v) {
       CAF_CHECK(v == 2);
     },
@@ -210,12 +210,12 @@ CAF_TEST(type_safe_currying) {
   CAF_CHECK(system.registry().running() == 1);
   static_assert(std::is_same<decltype(bound), curried_signature>::value,
                 "bind returned wrong actor handle");
-  self->request(bound, indefinite, 2.0).receive(
+  self->request(bound, infinite, 2.0).receive(
     [](double y) {
       CAF_CHECK(y == 2.0);
     }
   );
-  self->request(bound, indefinite, 10).receive(
+  self->request(bound, infinite, 10).receive(
     [](int y) {
       CAF_CHECK(y == 10);
     }
@@ -237,7 +237,7 @@ CAF_TEST(reordering) {
   auto bound = aut.bind(_2, _1);
   CAF_CHECK(aut != bound);
   CAF_CHECK(system.registry().running() == 1);
-  self->request(bound, indefinite, 2.0, 10).receive(
+  self->request(bound, infinite, 2.0, 10).receive(
     [](double y) {
       CAF_CHECK(y == 20.0);
     }
@@ -263,7 +263,7 @@ CAF_TEST(type_safe_reordering) {
   CAF_CHECK(system.registry().running() == 1);
   static_assert(std::is_same<decltype(bound), swapped_signature>::value,
                 "bind returned wrong actor handle");
-  self->request(bound, indefinite, 2.0, 10).receive(
+  self->request(bound, infinite, 2.0, 10).receive(
     [](double y) {
       CAF_CHECK(y == 20.0);
     }

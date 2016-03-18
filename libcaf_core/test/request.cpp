@@ -120,7 +120,7 @@ public:
   behavior make_behavior() override {
     return {
       [=](go_atom, const actor& next) {
-        request(next, indefinite, gogo_atom::value).then(
+        request(next, infinite, gogo_atom::value).then(
           [=](atom_value) {
             CAF_MESSAGE("send 'ok' to buddy");
             send(buddy(), ok_atom::value);
@@ -196,7 +196,7 @@ public:
     return {
       others >> [=](message& msg) -> response_promise {
         auto rp = make_response_promise();
-        request(buddy(), indefinite, std::move(msg)).then(
+        request(buddy(), infinite, std::move(msg)).then(
           [=](gogogo_atom x) mutable {
             rp.deliver(x);
             quit();
@@ -270,7 +270,7 @@ CAF_TEST(test_void_res) {
     };
   });
   scoped_actor self{system};
-  self->request(buddy, indefinite, 1, 2).receive(
+  self->request(buddy, infinite, 1, 2).receive(
     [] {
       CAF_MESSAGE("received void res");
     }
@@ -287,7 +287,7 @@ CAF_TEST(pending_quit) {
     };
   });
   system.spawn([mirror](event_based_actor* self) {
-    self->request(mirror, indefinite, 42).then(
+    self->request(mirror, infinite, 42).then(
       [](int) {
         CAF_ERROR("received result, should've been terminated already");
       },
@@ -310,7 +310,7 @@ CAF_TEST(request) {
         CAF_CHECK_EQUAL(i, 0);
       }
     );
-    s->request(foi, indefinite, i_atom::value).receive(
+    s->request(foi, infinite, i_atom::value).receive(
       [&](int i) {
         CAF_CHECK_EQUAL(i, 0);
         ++invocations;
@@ -319,7 +319,7 @@ CAF_TEST(request) {
         CAF_ERROR("Error: " << s->system().render(err));
       }
     );
-    s->request(foi, indefinite, f_atom::value).receive(
+    s->request(foi, infinite, f_atom::value).receive(
       [&](float f) {
         CAF_CHECK_EQUAL(f, 0.f);
         ++invocations;
@@ -333,7 +333,7 @@ CAF_TEST(request) {
     // provoke invocation of s->handle_sync_failure()
     bool error_handler_called = false;
     bool int_handler_called = false;
-    s->request(foi, indefinite, f_atom::value).receive(
+    s->request(foi, infinite, f_atom::value).receive(
       [&](int) {
 printf("******* %s %d\n", __FILE__, __LINE__);
         CAF_ERROR("int handler called");
@@ -359,7 +359,7 @@ printf("******* %s %d\n", __FILE__, __LINE__);
   );
   auto mirror = system.spawn<sync_mirror>();
   bool continuation_called = false;
-  self->request(mirror, indefinite, 42).receive([&](int value) {
+  self->request(mirror, infinite, 42).receive([&](int value) {
     continuation_called = true;
     CAF_CHECK_EQUAL(value, 42);
   });
@@ -449,7 +449,7 @@ printf("******* %s %d\n", __FILE__, __LINE__);
     }
   );
   CAF_CHECK_EQUAL(timeout_occured, true);
-  self->request(c, indefinite, gogo_atom::value).receive(
+  self->request(c, infinite, gogo_atom::value).receive(
     [](gogogo_atom) {
       CAF_MESSAGE("received `gogogo_atom`");
     },
@@ -474,7 +474,7 @@ printf("******* %s %d\n", __FILE__, __LINE__);
     });
     // first 'idle', then 'request'
     anon_send(serv, idle_atom::value, work);
-    s->request(serv, indefinite, request_atom::value).receive(
+    s->request(serv, infinite, request_atom::value).receive(
       [&](response_atom) {
         CAF_MESSAGE("received 'response'");
         CAF_CHECK(s->current_sender() == work);
@@ -484,7 +484,7 @@ printf("******* %s %d\n", __FILE__, __LINE__);
       }
     );
     // first 'request', then 'idle'
-    auto handle = s->request(serv, indefinite, request_atom::value);
+    auto handle = s->request(serv, infinite, request_atom::value);
     send_as(work, serv, idle_atom::value, work);
     handle.receive(
       [&](response_atom) {
@@ -516,7 +516,7 @@ behavior snyc_send_no_then_A(event_based_actor * self) {
 behavior snyc_send_no_then_B(event_based_actor * self) {
   return {
     [=](int number) {
-      self->request(self->spawn(snyc_send_no_then_A), indefinite, number);
+      self->request(self->spawn(snyc_send_no_then_A), infinite, number);
       self->quit();
     }
   };
@@ -535,7 +535,7 @@ CAF_TEST(async_request) {
         }
       };
     });
-    self->request(receiver, indefinite, 1).then(
+    self->request(receiver, infinite, 1).then(
       [=](int) {}
     );
     return {

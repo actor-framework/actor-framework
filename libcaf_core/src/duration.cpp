@@ -49,7 +49,7 @@ std::string to_string(const duration& x) {
       result += "us";
       break;
     default:
-      return "indefinite";
+      return "infinite";
   }
   return result;
 }

@@ -603,7 +603,7 @@ typed_testee::behavior_type testee() {
 CAF_TEST(typed_await) {
   scoped_actor self{system};
   auto x = system.spawn(testee);
-  self->request(x, indefinite, abc_atom::value).receive(
+  self->request(x, infinite, abc_atom::value).receive(
     [](const std::string& str) {
       CAF_CHECK_EQUAL(str, "abc");
     }
@@ -782,7 +782,7 @@ CAF_TEST(move_only_argument) {
   };
   auto testee = system.spawn(f, std::move(uptr));
   scoped_actor self{system};
-  self->request(testee, indefinite, 1.f).receive(
+  self->request(testee, infinite, 1.f).receive(
     [](int i) {
       CAF_CHECK(i == 42);
     }

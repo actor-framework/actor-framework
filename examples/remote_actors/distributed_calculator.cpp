@@ -66,7 +66,7 @@ public:
 
 private:
   void request_task(atom_value op, int lhs, int rhs) {
-    request(server_, indefinite, op, lhs, rhs).then(
+    request(server_, infinite, op, lhs, rhs).then(
       [=](result_atom, int result) {
         aout(this) << lhs << (op == plus_atom::value ? " + " : " - ")
                    << rhs << " = " << result << endl;

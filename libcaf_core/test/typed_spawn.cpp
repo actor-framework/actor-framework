@@ -118,10 +118,10 @@ public:
 };
 
 void client(event_based_actor* self, actor parent, server_type serv) {
-  self->request(serv, indefinite, my_request{0, 0}).then(
+  self->request(serv, infinite, my_request{0, 0}).then(
     [=](bool val1) {
       CAF_CHECK_EQUAL(val1, true);
-      self->request(serv, indefinite, my_request{10, 20}).then(
+      self->request(serv, infinite, my_request{10, 20}).then(
         [=](bool val2) {
           CAF_CHECK_EQUAL(val2, false);
           self->send(parent, passed_atom::value);
@@ -146,12 +146,12 @@ void test_typed_spawn(server_type ts) {
       CAF_CHECK_EQUAL(value, true);
     }
   );
-  self->request(ts, indefinite, my_request{10, 20}).receive(
+  self->request(ts, infinite, my_request{10, 20}).receive(
     [](bool value) {
       CAF_CHECK_EQUAL(value, false);
     }
   );
-  self->request(ts, indefinite, my_request{0, 0}).receive(
+  self->request(ts, infinite, my_request{0, 0}).receive(
     [](bool value) {
       CAF_CHECK_EQUAL(value, true);
     }
@@ -402,7 +402,7 @@ CAF_TEST(string_delegator_chain) {
                                     true);
   set<string> iface{"caf::replies_to<@str>::with<@str>"};
   CAF_CHECK(aut->message_types() == iface);
-  self->request(aut, indefinite, "Hello World!").receive(
+  self->request(aut, infinite, "Hello World!").receive(
     [](const string& answer) {
       CAF_CHECK_EQUAL(answer, "!dlroW olleH");
     }
@@ -416,7 +416,7 @@ CAF_TEST(maybe_string_delegator_chain) {
   auto aut = system.spawn(maybe_string_delegator,
                           system.spawn(maybe_string_reverter));
   CAF_MESSAGE("send empty string, expect error");
-  self->request(aut, indefinite, "").receive(
+  self->request(aut, infinite, "").receive(
     [](ok_atom, const string&) {
       throw std::logic_error("unexpected result!");
     },
@@ -427,7 +427,7 @@ CAF_TEST(maybe_string_delegator_chain) {
     }
   );
   CAF_MESSAGE("send abcd string, expect dcba");
-  self->request(aut, indefinite, "abcd").receive(
+  self->request(aut, infinite, "abcd").receive(
     [](ok_atom, const string& str) {
       CAF_CHECK_EQUAL(str, "dcba");
     },

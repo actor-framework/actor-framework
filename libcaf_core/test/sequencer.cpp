@@ -158,7 +158,7 @@ CAF_TEST(lifetime_3) {
   em_sender->link_to(h.address());
   anon_send_exit(em_sender, exit_reason::kill);
   wait_until_exited();
-  self->request(f, indefinite, 1).receive(
+  self->request(f, infinite, 1).receive(
     [](int v) {
       CAF_CHECK(v == 2);
     },
@@ -166,7 +166,7 @@ CAF_TEST(lifetime_3) {
       CAF_CHECK(false);
     }
   );
-  self->request(g, indefinite, 1).receive(
+  self->request(g, infinite, 1).receive(
     [](int v) {
       CAF_CHECK(v == 2);
     },
@@ -184,7 +184,7 @@ CAF_TEST(request_response_promise) {
   auto h = f * g;
   anon_send_exit(h, exit_reason::kill);
   CAF_CHECK(exited(h));
-  self->request(h, indefinite, 1).receive(
+  self->request(h, infinite, 1).receive(
     [](int) {
       CAF_CHECK(false);
     },
@@ -201,7 +201,7 @@ CAF_TEST(dot_composition_1) {
   auto first = system.spawn(typed_first_stage);
   auto second = system.spawn(typed_second_stage);
   auto first_then_second = second * first;
-  self->request(first_then_second, indefinite, 42).receive(
+  self->request(first_then_second, infinite, 42).receive(
     [](double res) {
       CAF_CHECK(res == (42 * 2.0) * (42 * 4.0));
     }
@@ -215,7 +215,7 @@ CAF_TEST(dot_composition_2) {
   auto dbl_actor = system.spawn(testee);
   auto dbl_x4_actor = dbl_actor * dbl_actor
                       * dbl_actor * dbl_actor;
-  self->request(dbl_x4_actor, indefinite, 1).receive(
+  self->request(dbl_x4_actor, infinite, 1).receive(
     [](int v) {
       CAF_CHECK(v == 16);
     },

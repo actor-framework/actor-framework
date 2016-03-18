@@ -140,7 +140,7 @@ CAF_TEST(composable_behaviors) {
   //auto x1 = sys.spawn<stateful_impl<foo_actor_state>>();
   auto x1 = sys.spawn<foo_actor_state>();
   scoped_actor self{sys};
-  self->request(x1, indefinite, 1, 2, 4).receive(
+  self->request(x1, infinite, 1, 2, 4).receive(
     [](int y) {
       CAF_CHECK(y == 7);
     }
@@ -148,12 +148,12 @@ CAF_TEST(composable_behaviors) {
   self->send_exit(x1, exit_reason::kill);
   //auto x2 = sys.spawn<stateful_impl<composed_behavior<i3_actor_state, d_actor_state>>>();
   auto x2 = sys.spawn<composed_behavior<i3_actor_state, d_actor_state>>();
-  self->request(x2, indefinite, 1, 2, 4).receive(
+  self->request(x2, infinite, 1, 2, 4).receive(
     [](int y) {
       CAF_CHECK(y == 7);
     }
   );
-  self->request(x2, indefinite, 1.0).receive(
+  self->request(x2, infinite, 1.0).receive(
     [](double y1, double y2) {
       CAF_CHECK(y1 == 1.0);
       CAF_CHECK(y1 == y2);
@@ -162,7 +162,7 @@ CAF_TEST(composable_behaviors) {
   self->send_exit(x2, exit_reason::kill);
   //auto x3 = sys.spawn<stateful_impl<foo_actor_state2>>();
   auto x3 = sys.spawn<foo_actor_state2>();
-  self->request(x3, indefinite, 1, 2, 4).receive(
+  self->request(x3, infinite, 1, 2, 4).receive(
     [](int y) {
       CAF_CHECK(y == -5);
     }
@@ -170,7 +170,7 @@ CAF_TEST(composable_behaviors) {
   self->send_exit(x3, exit_reason::kill);
   //auto x4 = sys.spawn<stateful_impl<dict_calc_state>>();
   auto x4 = sys.spawn<dict_calc_state>();
-  self->request(x4, indefinite, add_atom::value, 10, 20).receive(
+  self->request(x4, infinite, add_atom::value, 10, 20).receive(
     [](int y) {
       CAF_CHECK(y == 30);
     }

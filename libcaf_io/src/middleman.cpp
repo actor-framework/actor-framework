@@ -121,7 +121,7 @@ uint16_t middleman::publish(const actor_addr& whom, std::set<std::string> sigs,
   uint16_t result;
   std::string error_msg;
   try {
-    self->request(mm, indefinite, publish_atom::value, port,
+    self->request(mm, infinite, publish_atom::value, port,
                   std::move(whom), std::move(sigs), str, ru).receive(
       [&](ok_atom, uint16_t res) {
         result = res;
@@ -168,7 +168,7 @@ maybe<uint16_t> middleman::publish_local_groups(uint16_t port, const char* in) {
 void middleman::unpublish(const actor_addr& whom, uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(port));
   scoped_actor self{system(), true};
-  self->request(actor_handle(), indefinite,
+  self->request(actor_handle(), infinite,
                 unpublish_atom::value, whom, port).receive(
     [] {
       // ok, basp_broker is done
@@ -185,7 +185,7 @@ actor_addr middleman::remote_actor(std::set<std::string> ifs,
   auto mm = actor_handle();
   actor_addr result;
   scoped_actor self{system(), true};
-  self->request(mm, indefinite, connect_atom::value,
+  self->request(mm, infinite, connect_atom::value,
                 std::move(host), port).receive(
     [&](ok_atom, const node_id&, actor_addr res, std::set<std::string>& xs) {
       CAF_LOG_TRACE(CAF_ARG(res) << CAF_ARG(xs));

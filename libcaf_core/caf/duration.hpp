@@ -76,13 +76,13 @@ constexpr time_unit get_time_unit_from_period() {
 }
 
 /// Represents an infinite amount of timeout for specifying "invalid" timeouts.
-struct indefinite_t {
-  constexpr indefinite_t() {
+struct infinite_t {
+  constexpr infinite_t() {
     // nop
   }
 };
 
-static constexpr indefinite_t indefinite = indefinite_t{};
+static constexpr infinite_t infinite = infinite_t{};
 
 /// Time duration consisting of a `time_unit` and a 64 bit unsigned integer.
 class duration {
@@ -95,7 +95,7 @@ public:
     // nop
   }
 
-  constexpr duration(const indefinite_t&) : unit(time_unit::invalid), count(0) {
+  constexpr duration(const infinite_t&) : unit(time_unit::invalid), count(0) {
     // nop
   }
 
