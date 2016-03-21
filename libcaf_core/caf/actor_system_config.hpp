@@ -168,6 +168,22 @@ public:
     return *this;
   }
 
+  /// Stores whether the help text for this config object was
+  /// printed. If set to `true`, the application should not use
+  /// this config object to initialize an `actor_system` and
+  /// return from `main` immediately.
+  bool cli_helptext_printed;
+
+  /// Stores whether this node was started in slave mode.
+  bool slave_mode;
+
+  /// Stores the name of this node when started in slave mode.
+  std::string slave_name;
+
+  /// Stores credentials for connecting to the bootstrap node
+  /// when using the caf-run launcher.
+  std::string bootstrap_node;
+
   /// Stores CLI arguments that were not consumed by CAF.
   message args_remainder;
 
@@ -188,13 +204,16 @@ public:
   size_t middleman_max_consecutive_reads;
   size_t middleman_heartbeat_interval;
 
-  // System parameters that are set while initializing modules.
-  node_id network_id;
-  proxy_registry* network_proxies;
-
   // Config parameters of RIAC probes.
   std::string nexus_host;
   uint16_t nexus_port;
+
+  // Config parameters of the OpenCL module.
+  std::string opencl_device_ids;
+
+  // System parameters that are set while initializing modules.
+  node_id network_id;
+  proxy_registry* network_proxies;
 
 private:
   value_factories_by_name value_factories_by_name_;

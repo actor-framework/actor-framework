@@ -547,8 +547,7 @@ CAF_TEST(publish_and_connect) {
   auto ax = accept_handle::from_int(4242);
   mpx()->provide_acceptor(4242, ax);
   auto res = system.middleman().publish(self(), 4242);
-  CAF_REQUIRE(res.valid());
-  CAF_CHECK(*res == 4242);
+  CAF_REQUIRE(res == 4242);
   mpx()->flush_runnables(); // process publish message in basp_broker
   connect_node(0, ax, self()->id());
 }

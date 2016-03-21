@@ -125,18 +125,18 @@ CAF_TEST_FIXTURE_SCOPE(dynamic_remote_group_tests, fixture)
 CAF_TEST(remote_group_conn) {
   // server side
   auto port = server_side_mm.publish_local_groups(0);
-  CAF_REQUIRE(port && *port);
+  CAF_REQUIRE(port != 0);
   // client side
-  CAF_CHECK(client_side_mm.remote_group("whatever", local_host, *port));
+  CAF_CHECK(client_side_mm.remote_group("whatever", local_host, port));
 }
 
 CAF_TEST(server_side_group_comm) {
   // server side
   auto port = server_side_mm.publish(server_side.spawn(make_server_behavior),
                                      0, local_host);
-  CAF_REQUIRE(port && *port);
+  CAF_REQUIRE(port != 0);
   // client side
-  auto server = client_side_mm.remote_actor(local_host, *port);
+  auto server = client_side_mm.remote_actor(local_host, port);
   CAF_REQUIRE(server);
   scoped_actor group_resolver(client_side, true);
   group grp;
@@ -152,9 +152,9 @@ CAF_TEST(client_side_group_comm) {
   // server side
   auto port = server_side_mm.publish(server_side.spawn(make_server_behavior),
                                      0, local_host);
-  CAF_REQUIRE(port && *port);
+  CAF_REQUIRE(port != 0);
   // client side
-  auto server = client_side_mm.remote_actor(local_host, *port);
+  auto server = client_side_mm.remote_actor(local_host, port);
   CAF_REQUIRE(server);
   client_side.spawn(make_client_behavior, server,
                     client_side.groups().get("local", "foobar"));

@@ -108,9 +108,8 @@ void run_client(int argc, char** argv, uint16_t port) {
 void run_server(int argc, char** argv) {
   actor_system system{actor_system_config{argc, argv}.load<io::middleman>()};
   auto serv = system.spawn(server);
-  auto mport = system.middleman().publish(serv, 0);
-  CAF_REQUIRE(mport);
-  auto port = *mport;
+  auto port = system.middleman().publish(serv, 0);
+  CAF_REQUIRE(port != 0);
   CAF_MESSAGE("published server at port " << port);
   std::thread child([=] { run_client(argc, argv, port); });
   child.join();

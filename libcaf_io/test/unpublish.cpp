@@ -95,25 +95,25 @@ CAF_TEST_FIXTURE_SCOPE(unpublish_tests, fixture)
 
 CAF_TEST(unpublishing) {
   auto port = system.middleman().publish(testee, 0);
-  CAF_REQUIRE(port);
-  CAF_MESSAGE("published actor on port " << *port);
+  CAF_REQUIRE(port != 0);
+  CAF_MESSAGE("published actor on port " << port);
   CAF_MESSAGE("test invalid unpublish");
   auto testee2 = system.spawn<dummy>();
-  system.middleman().unpublish(testee2, *port);
-  auto x0 = remote_actor("127.0.0.1", *port);
+  system.middleman().unpublish(testee2, port);
+  auto x0 = remote_actor("127.0.0.1", port);
   CAF_CHECK(x0 != testee2);
   CAF_CHECK(x0 == testee);
   anon_send_exit(testee2, exit_reason::kill);
   CAF_MESSAGE("unpublish testee");
-  system.middleman().unpublish(testee, *port);
+  system.middleman().unpublish(testee, port);
   CAF_MESSAGE("check whether testee is still available via cache");
-  auto x1 = remote_actor("127.0.0.1", *port);
+  auto x1 = remote_actor("127.0.0.1", port);
   CAF_CHECK(x1 && *x1 == testee);
   CAF_MESSAGE("fake dead of testee and check if testee becomes unavailable");
   anon_send(system.middleman().actor_handle(), down_msg{testee.address(),
                                                         exit_reason::normal});
   // must fail now
-  auto x2 = remote_actor("127.0.0.1", *port);
+  auto x2 = remote_actor("127.0.0.1", port);
   CAF_CHECK(! x2);
 }
 

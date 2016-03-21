@@ -140,7 +140,7 @@ uint16_t middleman::publish(const actor_addr& whom, std::set<std::string> sigs,
   return result;
 }
 
-maybe<uint16_t> middleman::publish_local_groups(uint16_t port, const char* in) {
+uint16_t middleman::publish_local_groups(uint16_t port, const char* in) {
   CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(in));
   auto group_nameserver = [](event_based_actor* self) -> behavior {
     return {
@@ -150,19 +150,17 @@ maybe<uint16_t> middleman::publish_local_groups(uint16_t port, const char* in) {
     };
   };
   auto gn = system().spawn<hidden>(group_nameserver);
-  maybe<uint16_t> result;
   try {
-    result = publish(gn, port, in);
+    auto result = publish(gn, port, in);
+    add_shutdown_cb([gn] {
+      anon_send_exit(gn, exit_reason::user_shutdown);
+    });
+    return result;
   }
   catch (std::exception&) {
     anon_send_exit(gn, exit_reason::user_shutdown);
     throw;
   }
-  if (result)
-    add_shutdown_cb([gn] {
-      anon_send_exit(gn, exit_reason::user_shutdown);
-    });
-  return result;
 }
 
 void middleman::unpublish(const actor_addr& whom, uint16_t port) {

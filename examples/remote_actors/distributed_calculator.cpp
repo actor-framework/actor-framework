@@ -284,9 +284,7 @@ int main(int argc, char** argv) {
     // try to publish math actor at given port
     cout << "*** try publish at port " << port << endl;
     auto p = system.middleman().publish(calc, port);
-    if (! p)
-      return cerr << "*** error: " << system.render(p.error()) << endl, 1;
-    cout << "*** server successfully published at port " << *p << endl;
+    cout << "*** server successfully published at port " << p << endl;
     cout << "*** press [enter] to quit" << endl;
     string dummy;
     std::getline(std::cin, dummy);

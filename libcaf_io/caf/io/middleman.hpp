@@ -53,9 +53,8 @@ public:
   /// @returns The actual port the OS uses after `bind()`. If `port == 0` the OS
   ///          chooses a random high-level port.
   template <class Handle>
-  maybe<uint16_t> publish(const Handle& whom, uint16_t port,
-                          const char* in = nullptr,
-                          bool reuse_addr = false) {
+  uint16_t publish(const Handle& whom, uint16_t port,
+                   const char* in = nullptr, bool reuse_addr = false) {
     return publish(whom.address(), system().message_types(whom),
                    port, in, reuse_addr);
   }
@@ -64,8 +63,7 @@ public:
   /// on address `addr` and `port`.
   /// @returns The actual port the OS uses after `bind()`. If `port == 0`
   ///          the OS chooses a random high-level port.
-  maybe<uint16_t> publish_local_groups(uint16_t port,
-                                       const char* addr = nullptr);
+  uint16_t publish_local_groups(uint16_t port, const char* addr = nullptr);
 
   /// Unpublishes `whom` by closing `port` or all assigned ports if `port == 0`.
   /// @param whom Actor that should be unpublished at `port`.

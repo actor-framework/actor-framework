@@ -32,9 +32,7 @@ int main(int argc, char** argv) {
   if (res.opts.count("port") == 0 || port <= 1024)
     return cerr << "*** no valid port given" << endl << res.helptext << endl, 1;
   actor_system system{actor_system_config{}.load<io::middleman>()};
-  auto pres = system.middleman().publish_local_groups(port);
-  if (! pres)
-    return cerr << "*** error: " << system.render(pres.error()) << endl, 1;
+  system.middleman().publish_local_groups(port);
   cout << "type 'quit' to shutdown the server" << endl;
   string line;
   while (getline(cin, line))

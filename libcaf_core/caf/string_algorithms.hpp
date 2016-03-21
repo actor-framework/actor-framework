@@ -129,6 +129,11 @@ void replace_all(std::string& str,
   }
 }
 
+template<size_t S>
+bool starts_with(const std::string& str, const char (&prefix)[S]) {
+  return str.compare(0, S, prefix);
+}
+
 template <class T>
 typename std::enable_if<
   std::is_arithmetic<T>::value,

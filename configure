@@ -65,6 +65,7 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --no-cash                   build without cash
     --no-benchmarks             build without benchmarks
     --no-riac                   build without riac
+    --no-tools                  build without CAF tools such as caf-run
     --no-summary                do not print configuration before building
 
   Testing:
@@ -349,6 +350,9 @@ while [ $# -ne 0 ]; do
             ;;
         --no-riac)
             append_cache_entry CAF_NO_RIAC BOOL yes
+            ;;
+        --no-tools)
+            append_cache_entry CAF_NO_TOOLS BOOL yes
             ;;
         --no-summary)
             append_cache_entry CAF_NO_SUMMARY BOOL yes

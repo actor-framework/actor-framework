@@ -25,6 +25,9 @@ endif()
 if(NOT CAF_NO_OPENCL)
   set(CAF_NO_OPENCL no)
 endif()
+if(NOT CAF_NO_TOOLS)
+  set(CAF_NO_TOOLS no)
+endif()
 if(NOT CAF_NO_SUMMARY)
   set(CAF_NO_SUMMARY no)
 endif()
@@ -443,6 +446,9 @@ add_optional_caf_lib(riac)
 # build examples if not being told otherwise
 add_optional_caf_binaries(examples)
 
+# build tools if not being told otherwise
+add_optional_caf_binaries(tools)
+
 # build nexus if not being told otherwise
 add_optional_caf_binaries(nexus CAF_NO_RIAC)
 
@@ -565,6 +571,7 @@ macro(invertYesNo in out)
 endmacro()
 # invert CAF_NO_* variables for nicer output
 invertYesNo(CAF_NO_EXAMPLES CAF_BUILD_EXAMPLES)
+invertYesNo(CAF_NO_TOOLS CAF_BUILD_TOOLS)
 invertYesNo(CAF_NO_UNIT_TESTS CAF_BUILD_UNIT_TESTS)
 invertYesNo(CAF_NO_RIAC CAF_BUILD_RIAC)
 invertYesNo(CAF_NO_NEXUS CAF_BUILD_NEXUS)
@@ -589,6 +596,7 @@ if(NOT CAF_NO_SUMMARY)
         "\nLog level:         ${LOG_LEVEL_STR}"
         "\nWith mem. mgmt.:   ${CAF_BUILD_MEM_MANAGEMENT}"
         "\n"
+        "\nBuild tools:       ${CAF_BUILD_TOOLS}"
         "\nBuild examples:    ${CAF_BUILD_EXAMPLES}"
         "\nBuild unit tests:  ${CAF_BUILD_UNIT_TESTS}"
         "\nBuild riac:        ${CAF_BUILD_RIAC}"

@@ -183,9 +183,13 @@ maybe<uint16_t> as_u16(const std::string& str) {
 
 int main(int argc, char** argv) {
   using std::string;
+  actor_system_config cfg{argc, argv};
+  if (cfg.cli_helptext_printed)
+    return 0;
+  cfg.load<io::middleman>();
   uint16_t port = 0;
   string host = "localhost";
-  auto res = message_builder(argv + 1, argv + argc).extract_opts({
+  auto res = cfg.args_remainder.extract_opts({
     {"server,s", "run in server mode"},
     {"client,c", "run in client mode"},
     {"port,p", "set port", port},
@@ -200,8 +204,6 @@ int main(int argc, char** argv) {
     return cerr << "*** too many arguments" << endl << res.helptext << endl, 1;
   if (res.opts.count("port") == 0)
     return cerr << "*** no port given" << endl << res.helptext << endl, 1;
-  actor_system_config cfg;
-  cfg.load<io::middleman>();
   actor_system system{cfg};
   if (res.opts.count("server") > 0) {
     cout << "run in server mode" << endl;

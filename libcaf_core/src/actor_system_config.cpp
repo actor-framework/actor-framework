@@ -197,7 +197,9 @@ actor_system_config::option::~option() {
 // in this config class, we have (1) hard-coded defaults that are overridden
 // by (2) INI-file contents that are in turn overridden by (3) CLI arguments
 
-actor_system_config::actor_system_config() {
+actor_system_config::actor_system_config()
+    : cli_helptext_printed(false),
+      slave_mode(false) {
   // (1) hard-coded defaults
   scheduler_policy = atom("stealing");
   scheduler_max_threads = std::max(std::thread::hardware_concurrency(),
@@ -238,17 +240,20 @@ actor_system_config::actor_system_config() {
        "sets the hostname or IP address for connecting to the Nexus")
   .add(nexus_port, "probe.nexus-port",
        "sets the port for connecting to the Nexus");
+  opt_group(options_, "opencl")
+  .add(opencl_device_ids, "device-ids",
+       "restricts which OpenCL devices are accessed by CAF");
 }
 
 actor_system_config::actor_system_config(int argc, char** argv)
     : actor_system_config() {
-  if (argc < 2)
+  if (argc < 1)
     return;
-  auto args = message_builder(argv, argv + argc).move_to_message();
+  auto args = message_builder(argv + 1, argv + argc).move_to_message();
   // extract config file name first, since INI files are overruled by CLI args
   std::string config_file_name;
   args.extract_opts({
-    {"caf-config-file", "", config_file_name}
+    {"caf#config-file", "", config_file_name}
   });
   // (2) content of the INI file overrides hard-coded defaults
   if (! config_file_name.empty()) {
@@ -262,15 +267,27 @@ actor_system_config::actor_system_config(int argc, char** argv)
   std::vector<message::cli_arg> cargs;
   for (auto& x : options_)
     cargs.emplace_back(x->to_cli_arg());
-  cargs.emplace_back("caf-dump-config", "print config in INI format to stdout");
-  cargs.emplace_back("caf-help", "print this text");
-  cargs.emplace_back("caf-config-file", "parse INI file", config_file_name);
+  cargs.emplace_back("caf#dump-config", "print config in INI format to stdout");
+  cargs.emplace_back("caf#help", "print this text");
+  cargs.emplace_back("caf#config-file", "parse INI file", config_file_name);
+  cargs.emplace_back("caf#slave-mode", "run in slave mode");
+  cargs.emplace_back("caf#slave-name", "set name for this slave", slave_name);
+  cargs.emplace_back("caf#bootstrap-node", "set bootstrapping", bootstrap_node);
   auto res = args.extract_opts(std::move(cargs), nullptr, true);
   using std::cerr;
   using std::cout;
   using std::endl;
-  if (res.opts.count("caf-help"))
+  if (res.opts.count("caf#help")) {
+    cli_helptext_printed = true;
     cout << res.helptext << endl;
+  }
+  if (res.opts.count("caf#slave-mode")) {
+    slave_mode = true;
+    if (slave_name.empty())
+      std::cerr << "running in slave mode but no name was configured" << endl;
+    if (bootstrap_node.empty())
+      std::cerr << "running in slave mode without bootstrap node" << endl;
+  }
   auto verify_atom_opt = [](std::initializer_list<atom_value> xs, atom_value& x,
                             const char* xname) {
     if (std::find(xs.begin(), xs.end(), x) == xs.end()) {
@@ -287,7 +304,8 @@ actor_system_config::actor_system_config(int argc, char** argv)
                   }, middleman_network_backend, "middleman.network-backend");
   verify_atom_opt({atom("stealing"), atom("sharing")},
                   scheduler_policy, "scheduler.policy ");
-  if (res.opts.count("caf-dump-config")) {
+  if (res.opts.count("caf#dump-config")) {
+    cli_helptext_printed = true;
     cout << std::boolalpha
          << "[scheduler]" << endl
          << "policy=" << deep_to_string(scheduler_policy) << endl

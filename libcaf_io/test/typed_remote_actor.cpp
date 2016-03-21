@@ -110,9 +110,8 @@ void run_server(int argc, char** argv) {
      .add_message_type<ping>("ping")
      .add_message_type<pong>("pong");
   actor_system system{cfg};
-  auto mport = system.middleman().publish(system.spawn(server), 0, "127.0.0.1");
-  CAF_REQUIRE(mport);
-  auto port = *mport;
+  auto port = system.middleman().publish(system.spawn(server), 0, "127.0.0.1");
+  CAF_REQUIRE(port != 0);
   CAF_MESSAGE("running on port " << port << ", start client");
   std::thread child{[=] { run_client(argc, argv, port); }};
   child.join();
