@@ -89,7 +89,7 @@ struct prohibit_top_level_spawn_marker;
 enum class atom_value : uint64_t;
 
 // aliases
-using actor_id = uint32_t;
+using actor_id = uint64_t;
 
 namespace io {
 

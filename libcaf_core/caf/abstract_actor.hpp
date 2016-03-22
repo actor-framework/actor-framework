@@ -47,7 +47,7 @@ namespace caf {
 
 /// A unique actor ID.
 /// @relates abstract_actor
-using actor_id = uint32_t;
+using actor_id = uint64_t;
 
 /// Denotes an ID that is never used by an actor.
 constexpr actor_id invalid_actor_id = 0;
@@ -116,7 +116,7 @@ public:
   }
 
   /// Returns the unique ID of this actor.
-  inline uint32_t id() const {
+  inline actor_id id() const {
     return id_;
   }
 
