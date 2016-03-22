@@ -144,7 +144,7 @@ convert_to_str(T value) {
 }
 
 inline std::string convert_to_str(std::string value) {
-  return std::move(value);
+  return value;
 }
 
 } // namespace caf
