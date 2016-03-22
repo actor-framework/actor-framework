@@ -138,6 +138,14 @@ class manager;
 
 } // namespace opencl
 
+// -- Replication classes ------------------------------------------------------
+
+namespace crdt {
+
+class replicator;
+
+} // namespace crdt
+
 // -- scheduler classes --------------------------------------------------------
 
 namespace scheduler {

@@ -271,6 +271,10 @@ public:
 
   std::string opencl_device_ids;
 
+  // -- config parameters of the replication module ----------------------------
+
+  std::string replication_hosts;
+
   // -- factories --------------------------------------------------------------
 
   value_factory_string_map value_factories_by_name;

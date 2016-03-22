@@ -379,7 +379,11 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
   install(DIRECTORY libcaf_opencl/caf/ DESTINATION include/caf
         FILES_MATCHING PATTERN "*.hpp")
 endif()
-
+#install includes from crdt
+if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_crdt/CMakeLists.txt")
+  install(DIRECTORY libcaf_crdt/caf/ DESTINATION include/caf
+        FILES_MATCHING PATTERN "*.hpp")
+endif()
 # process cmake_uninstall.cmake.in
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in"
                "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
@@ -403,6 +407,11 @@ set(LIBCAF_INCLUDE_DIRS
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
   set(LIBCAF_INCLUDE_DIRS
       "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_opencl/" "${LIBCAF_INCLUDE_DIRS}")
+endif()
+# path to caf crdt headers
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_crdt/CMakeLists.txt")
+  set(LIBCAF_INCLUDE_DIRS
+      "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_crdt/" "${LIBCAF_INCLUDE_DIRS}")
 endif()
 # enable tests if not disabled
 if(NOT CAF_NO_UNIT_TESTS)
@@ -494,6 +503,12 @@ if(NOT CAF_NO_OPENCL)
     add_optional_caf_lib(opencl)
     add_optional_caf_binaries(libcaf_opencl/examples)
   endif()
+endif()
+
+# build crdt library if not told otherwise
+if(NOT CAF_NO_CRDT)
+  add_optional_caf_lib(crdt)
+  add_optional_caf_binaries(libcaf_crdt/examples)
 endif()
 
 # build Python binding if not being told otherwise
@@ -675,6 +690,7 @@ invertYesNo(CAF_NO_EXCEPTIONS CAF_BUILD_WITH_EXCEPTIONS)
 invertYesNo(CAF_NO_MEM_MANAGEMENT CAF_BUILD_MEM_MANAGEMENT)
 invertYesNo(CAF_NO_BENCHMARKS CAF_BUILD_BENCHMARKS)
 invertYesNo(CAF_NO_OPENCL CAF_BUILD_OPENCL)
+invertYesNo(CAF_NO_CRDT CAF_BUILD_CRDT)
 invertYesNo(CAF_NO_PYTHON CAF_BUILD_PYTHON)
 # collect all compiler flags
 string(TOUPPER "${CMAKE_BUILD_TYPE}" UPPER_BUILD_TYPE)
@@ -701,6 +717,7 @@ if(NOT CAF_NO_SUMMARY)
         "\nBuild benchmarks:  ${CAF_BUILD_BENCHMARKS}"
         "\nBuild opencl:      ${CAF_BUILD_OPENCL}"
         "\nBuild Python:      ${CAF_BUILD_PYTHON}"
+        "\nBuild CRDT:        ${CAF_BUILD_CRDT}"
         "\n"
         "\nCXX:               ${CMAKE_CXX_COMPILER}"
         "\nCXXFLAGS:          ${ALL_CXX_FLAGS}"

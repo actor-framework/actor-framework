@@ -154,6 +154,9 @@ actor_system_config::actor_system_config()
   opt_group(options_, "opencl")
   .add(opencl_device_ids, "device-ids",
        "restricts which OpenCL devices are accessed by CAF");
+  opt_group(options_, "replication")
+  .add(replication_hosts, "nodes",
+       "connects to other CAF nodes at init");
   // add renderers for default error categories
   error_renderers.emplace(atom("system"), render_sec);
   error_renderers.emplace(atom("exit"), render_exit_reason);

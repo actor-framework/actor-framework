@@ -205,6 +205,9 @@ actor_system::actor_system(actor_system_config& cfg)
   auto& clptr = modules_[module::opencl_manager];
   if (clptr)
     opencl_manager_ = reinterpret_cast<opencl::manager*>(clptr->subtype_ptr());
+  auto& rptr = modules_[module::replicator];
+  if (rptr)
+    replicator_ = reinterpret_cast<crdt::replicator*>(rptr->subtype_ptr());
   auto& sched = modules_[module::scheduler];
   using test = scheduler::test_coordinator;
   using share = scheduler::coordinator<policy::work_sharing>;
@@ -355,6 +358,16 @@ opencl::manager& actor_system::opencl_manager() const {
   if (!opencl_manager_)
     CAF_RAISE_ERROR("cannot access opencl manager: module not loaded");
   return *opencl_manager_;
+}
+
+bool actor_system::has_replicator() const {
+  return replicator_ != nullptr;
+}
+
+crdt::replicator& actor_system::replicator() const {
+  if (! replicator_)
+    CAF_RAISE_ERROR("cannot access replicator: module not loaded");
+  return *replicator_;
 }
 
 scoped_execution_unit* actor_system::dummy_execution_unit() {
