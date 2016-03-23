@@ -20,6 +20,7 @@
 #ifndef CAF_COMPOSED_STATE_HPP
 #define CAF_COMPOSED_STATE_HPP
 
+#include "caf/handler_input.hpp"
 #include "caf/composable_behavior.hpp"
 #include "caf/typed_actor_pointer.hpp"
 
