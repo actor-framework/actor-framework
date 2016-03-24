@@ -41,7 +41,7 @@ iwanthue <- function(n, hmin=0, hmax=360, cmin=0, cmax=180, lmin=0, lmax=100) {
     lab <- as(hcl, 'LAB')
   }
   lab <- lab[which(!is.na(hex(lab))), ]
-  clus <- kmeans(coords(lab), n, iter.max=50)
+  clus <- kmeans(coords(lab), n, iter.max=100, algorithm="MacQueen")
   hex(LAB(clus$centers))
 }
 
@@ -127,8 +127,8 @@ add_points <- function(p, .data) {
   # hiding smaller point groups behind big point clouds.
   f <- table(.data$label)
   o <- names(rev(sort(f))) # order of layers
-  pts <- lapply(o, function(x) { force(x); geom_point(subset=.(label == x)) })
-  r <- Reduce("+", pts, r)
+  gp <- function(x) { force(x); geom_point(data=subset(.data, label == x)) }
+  r <- Reduce("+", lapply(o, gp), r)
   # Give each layer its own color and assign it it custom alpha value
   # inversely proportional to the point frequency.
   n <- length(f)
@@ -211,7 +211,7 @@ plot_time_boxplot <- function(.data) {
     aes(x=label, y=cpu, fill=util) +
 # TODO: re-enable when fixing the magic transformation.
 #    annotation_logticks(sides="lr", color="grey") +
-    geom_boxplot(outlier.color="grey") +
+    geom_boxplot(outlier.colour="grey") +
     labs(x="ID", y="CPU time") +
     scale_y_time(xs$cpu) +
     scale_fill_gradient(name="Utilization", low="red", high="green",
