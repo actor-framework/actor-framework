@@ -210,6 +210,7 @@ public:
       *this = *other;
     else
       cr_error(other);
+    return *this;
   }
 
   template <class U>
@@ -229,6 +230,7 @@ public:
       *this = *other;
     else
       cr_error(other);
+    return *this;
   }
 
   /// Queries whether this instance holds a value.
