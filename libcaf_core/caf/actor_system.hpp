@@ -23,6 +23,7 @@
 #include <atomic>
 #include <string>
 #include <memory>
+#include <cstddef>
 #include <functional>
 
 #include "caf/fwd.hpp"
@@ -419,7 +420,7 @@ private:
     return ptr;
   }
 
-  std::atomic<actor_id> ids_;
+  std::atomic<size_t> ids_;
   uniform_type_info_map types_;
   node_id node_;
   caf::logger logger_;
@@ -436,4 +437,4 @@ private:
 
 } // namespace caf
 
-#endif //CAF_ACTOR_SYSTEM_HPP
+#endif // CAF_ACTOR_SYSTEM_HPP
