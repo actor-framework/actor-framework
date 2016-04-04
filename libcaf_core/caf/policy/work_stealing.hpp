@@ -57,23 +57,30 @@ public:
 
   // The coordinator has only a counter for round-robin enqueue to its workers.
   struct coordinator_data {
-    std::atomic<size_t> next_worker;
-    inline coordinator_data() : next_worker(0) {
+    inline explicit coordinator_data(scheduler::abstract_coordinator*)
+        : next_worker(0) {
       // nop
     }
+
+    std::atomic<size_t> next_worker;
   };
 
   // Holds job job queue of a worker and a random number generator.
   struct worker_data {
+    inline explicit worker_data(scheduler::abstract_coordinator* p)
+        : rengine(std::random_device{}()),
+          // no need to worry about wrap-around; if `p->num_workers() < 2`,
+          // `uniform` will not be used anyway
+          uniform(0, p->num_workers() - 2) {
+      // nop
+    }
+
     // This queue is exposed to other workers that may attempt to steal jobs
     // from it and the central scheduling unit can push new jobs to the queue.
     queue_type queue;
     // needed to generate pseudo random numbers
     std::default_random_engine rengine;
-    // initialize random engine
-    inline worker_data() : rengine(std::random_device{}()) {
-      // nop
-    }
+    std::uniform_int_distribution<size_t> uniform;
   };
 
   // Goes on a raid in quest for a shiny new job.
@@ -85,7 +92,7 @@ public:
       return nullptr;
     }
     // roll the dice to pick a victim other than ourselves
-    size_t victim = d(self).rengine() % (p->num_workers() - 1);
+    auto victim = d(self).uniform(d(self).rengine);
     if (victim == self->id())
       victim = p->num_workers() - 1;
     // steal oldest element from the victim's queue

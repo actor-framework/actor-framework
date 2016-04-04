@@ -21,6 +21,7 @@
 #define CAF_POLICY_SCHEDULER_POLICY_HPP
 
 #include "caf/fwd.hpp"
+#include "caf/scheduler/abstract_coordinator.hpp"
 
 namespace caf {
 namespace policy {
@@ -30,10 +31,14 @@ namespace policy {
 class scheduler_policy {
 public:
   /// Policy-specific data fields for the coordinator.
-  struct coordinator_data { };
+  struct coordinator_data {
+    explicit coordinator_data(scheduler::abstract_coordinator*);
+  };
 
   /// Policy-specific data fields for the worker.
-  struct worker_data { };
+  struct worker_data {
+    explicit worker_data(scheduler::abstract_coordinator*);
+  };
 
   /// Enqueues a new job to coordinator.
   template <class Coordinator>

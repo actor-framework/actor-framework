@@ -20,6 +20,8 @@
 #ifndef CAF_POLICY_UNPROFILED_HPP
 #define CAF_POLICY_UNPROFILED_HPP
 
+#include "caf/scheduler/abstract_coordinator.hpp"
+
 namespace caf {
 namespace policy {
 
@@ -33,10 +35,18 @@ public:
   virtual ~unprofiled() = default;
 
   /// Policy-specific data fields for the coordinator.
-  struct coordinator_data { };
+  struct coordinator_data {
+    inline explicit coordinator_data(scheduler::abstract_coordinator*) {
+      // nop
+    }
+  };
 
   /// Policy-specific data fields for the worker.
-  struct worker_data { };
+  struct worker_data {
+    inline explicit worker_data(scheduler::abstract_coordinator*) {
+      // nop
+    }
+  };
 
   /// Performs cleanup action before a shutdown takes place.
   template <class Worker>

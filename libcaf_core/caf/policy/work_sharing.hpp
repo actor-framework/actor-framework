@@ -38,6 +38,10 @@ public:
   using queue_type = std::list<resumable*>;
 
   struct coordinator_data {
+    inline explicit coordinator_data(scheduler::abstract_coordinator*) {
+      // nop
+    }
+
     queue_type queue;
     std::mutex lock;
     std::condition_variable cv;
