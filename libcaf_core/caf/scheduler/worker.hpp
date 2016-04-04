@@ -46,7 +46,8 @@ public:
       : execution_unit(&worker_parent->system()),
         max_throughput_(throughput),
         id_(worker_id),
-        parent_(worker_parent) {
+        parent_(worker_parent),
+        data_(worker_parent) {
     // nop
   }
 

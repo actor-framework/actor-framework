@@ -41,7 +41,7 @@ public:
 
   using policy_data = typename Policy::coordinator_data;
 
-  coordinator(actor_system& sys) : super(sys) {
+  coordinator(actor_system& sys) : super(sys), data_(this) {
     // nop
   }
 
