@@ -49,12 +49,15 @@ constexpr invalid_actor_t invalid_actor = invalid_actor_t{};
 
 template <class T>
 struct is_convertible_to_actor {
-  using type = typename std::remove_pointer<T>::type;
   static constexpr bool value =
-      ! std::is_base_of<statically_typed_actor_base, type>::value
-      && (std::is_base_of<actor_proxy, type>::value
-          || std::is_base_of<local_actor, type>::value
-          || std::is_same<scoped_actor, type>::value);
+      ! std::is_base_of<statically_typed_actor_base, T>::value
+      && (std::is_base_of<actor_proxy, T>::value
+          || std::is_base_of<local_actor, T>::value);
+};
+
+template <>
+struct is_convertible_to_actor<scoped_actor> : std::true_type {
+  // nop
 };
 
 /// Identifies an untyped actor. Can be used with derived types
@@ -95,6 +98,7 @@ public:
     // nop
   }
 
+  actor(const scoped_actor&);
   actor(const invalid_actor_t&);
 
   template <class T>
@@ -113,6 +117,7 @@ public:
     return *this;
   }
 
+  actor& operator=(const scoped_actor& x);
   actor& operator=(const invalid_actor_t&);
 
   /// Returns the address of the stored actor.

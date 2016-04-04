@@ -20,10 +20,8 @@
 #ifndef CAF_SCOPED_ACTOR_HPP
 #define CAF_SCOPED_ACTOR_HPP
 
-#include "caf/actor.hpp"
-#include "caf/channel.hpp"
-#include "caf/behavior.hpp"
-#include "caf/actor_cast.hpp"
+#include "caf/actor_system.hpp"
+#include "caf/intrusive_ptr.hpp"
 #include "caf/blocking_actor.hpp"
 #include "caf/scoped_execution_unit.hpp"
 
@@ -51,18 +49,6 @@ public:
 
   inline blocking_actor* get() const {
     return self_.get();
-  }
-
-  inline operator channel() const {
-    return actor_cast<channel>(self_);
-  }
-
-  inline operator actor() const {
-    return actor_cast<actor>(self_);
-  }
-
-  inline operator actor_addr() const {
-    return self_->address();
   }
 
   inline actor_addr address() const {

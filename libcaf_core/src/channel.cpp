@@ -26,17 +26,28 @@
 #include "caf/actor_cast.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/actor_system.hpp"
+#include "caf/scoped_actor.hpp"
 #include "caf/abstract_actor.hpp"
 #include "caf/abstract_group.hpp"
 #include "caf/proxy_registry.hpp"
 
 namespace caf {
 
-channel::channel(const actor& x) : ptr_(actor_cast<abstract_channel*>(x)) {
+namespace {
+
+using ch_pointer = abstract_channel*;
+
+} // namespace <anonymous>
+
+channel::channel(const actor& x) : ptr_(actor_cast<ch_pointer>(x)) {
   // nop
 }
 
-channel::channel(const group& x) :  ptr_(actor_cast<abstract_channel*>(x)) {
+channel::channel(const group& x) :  ptr_(actor_cast<ch_pointer>(x)) {
+  // nop
+}
+
+channel::channel(const scoped_actor& x) : ptr_(actor_cast<ch_pointer>(x)) {
   // nop
 }
 
@@ -58,12 +69,17 @@ channel::channel(local_actor* ptr) : ptr_(ptr) {
 }
 
 channel& channel::operator=(const actor& x) {
-  ptr_.reset(actor_cast<abstract_channel*>(x));
+  ptr_.reset(actor_cast<ch_pointer>(x));
   return *this;
 }
 
 channel& channel::operator=(const group& x) {
-  ptr_.reset(actor_cast<abstract_channel*>(x));
+  ptr_.reset(actor_cast<ch_pointer>(x));
+  return *this;
+}
+
+channel& channel::operator=(const scoped_actor& x) {
+  ptr_.reset(actor_cast<ch_pointer>(x));
   return *this;
 }
 

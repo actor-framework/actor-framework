@@ -59,6 +59,7 @@ public:
 
   channel(const actor&);
   channel(const group&);
+  channel(const scoped_actor&);
   channel(const invalid_channel_t&);
 
   template <class T>
@@ -75,6 +76,7 @@ public:
 
   channel& operator=(const actor&);
   channel& operator=(const group&);
+  channel& operator=(const scoped_actor&);
   channel& operator=(const invalid_channel_t&);
 
   inline explicit operator bool() const noexcept {

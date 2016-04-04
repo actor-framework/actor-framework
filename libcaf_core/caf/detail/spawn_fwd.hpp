@@ -21,10 +21,9 @@
 #define CAF_DETAIL_SPAWN_FWD_HPP
 
 #include <functional>
+#include <type_traits>
 
-#include "caf/fwd.hpp"
-
-#include "caf/detail/type_traits.hpp"
+#include "caf/actor.hpp"
 
 namespace caf {
 namespace detail {

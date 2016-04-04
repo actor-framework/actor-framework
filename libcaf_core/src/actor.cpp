@@ -27,6 +27,7 @@
 #include "caf/actor_proxy.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/deserializer.hpp"
+#include "caf/scoped_actor.hpp"
 #include "caf/blocking_actor.hpp"
 #include "caf/event_based_actor.hpp"
 
@@ -35,6 +36,10 @@
 #include "caf/decorator/sequencer.hpp"
 
 namespace caf {
+
+actor::actor(const scoped_actor& x) : ptr_(x.get()) {
+  // nop
+}
 
 actor::actor(const invalid_actor_t&) : ptr_(nullptr) {
   // nop
@@ -46,6 +51,11 @@ actor::actor(abstract_actor* ptr) : ptr_(ptr) {
 
 actor::actor(abstract_actor* ptr, bool add_ref) : ptr_(ptr, add_ref) {
   // nop
+}
+
+actor& actor::operator=(const scoped_actor& x) {
+  ptr_.reset(x.get());
+  return *this;
 }
 
 actor& actor::operator=(const invalid_actor_t&) {
