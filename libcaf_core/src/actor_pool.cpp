@@ -78,13 +78,14 @@ actor_pool::policy actor_pool::random() {
     }
     void operator()(actor_system&, uplock& guard, const actor_vec& vec,
                     mailbox_element_ptr& ptr, execution_unit* host) {
-      std::uniform_int_distribution<size_t> dis(0, vec.size() - 1);
       upgrade_to_unique_lock<detail::shared_spinlock> unique_guard{guard};
-      actor selected = vec[dis(rd_)];
+      auto selected =
+          vec[dis_(rd_, decltype(dis_)::param_type(0, vec.size() - 1))];
       unique_guard.unlock();
       selected->enqueue(std::move(ptr), host);
     }
     std::random_device rd_;
+    std::uniform_int_distribution<size_t> dis_;
   };
   return impl{};
 }
