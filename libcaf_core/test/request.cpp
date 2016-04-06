@@ -376,7 +376,7 @@ printf("******* %s %d\n", __FILE__, __LINE__);
       [](error_atom) {
         CAF_ERROR("A didn't receive sync response");
       },
-      [&](const down_msg& dm) -> maybe<skip_message_t> {
+      [&](const down_msg& dm) -> optional<skip_message_t> {
         if (dm.reason == exit_reason::normal)
           return skip_message();
         CAF_ERROR("A exited for reason " << to_string(dm.reason));

@@ -404,7 +404,7 @@ public:
       functor_attachable(F arg) : functor_(std::move(arg)) {
         // nop
       }
-      maybe<exit_reason> handle_exception(const std::exception_ptr& eptr) {
+      optional<exit_reason> handle_exception(const std::exception_ptr& eptr) {
         return functor_(eptr);
       }
     };

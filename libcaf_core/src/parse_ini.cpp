@@ -28,7 +28,7 @@ namespace caf {
 namespace detail {
 
 void parse_ini_t::operator()(std::istream& input, config_consumer consumer_fun,
-                             maybe<std::ostream&> errors) const {
+                             optional<std::ostream&> errors) const {
   std::string group;
   std::string line;
   size_t ln = 0; // line number

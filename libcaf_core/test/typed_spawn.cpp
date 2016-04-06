@@ -249,11 +249,9 @@ using maybe_string_actor = typed_actor<replies_to<string>
 
 maybe_string_actor::behavior_type maybe_string_reverter() {
   return {
-    [](string& str) -> maybe<std::tuple<ok_atom, string>> {
+    [](string& str) -> result<ok_atom, string> {
       if (str.empty())
         return mock_errc::cannot_revert_empty;
-      if (str.empty())
-        return none;
       std::reverse(str.begin(), str.end());
       return {ok_atom::value, std::move(str)};
     }
@@ -461,7 +459,7 @@ CAF_TEST(sending_typed_actors_and_down_msg) {
 
 CAF_TEST(check_signature) {
   using foo_type = typed_actor<replies_to<put_atom>::with<ok_atom>>;
-  using foo_result_type = maybe<ok_atom>;
+  using foo_result_type = optional<ok_atom>;
   using bar_type = typed_actor<reacts_to<ok_atom>>;
   auto foo_action = [](foo_type::pointer self) -> foo_type::behavior_type {
     return {

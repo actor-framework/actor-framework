@@ -167,9 +167,8 @@ void run_client(int argc, char** argv, uint16_t port) {
   auto p = system.spawn(ping, size_t{10});
   CAF_MESSAGE("spawn_client...");
   auto cl = system.middleman().spawn_client(peer_fun, "127.0.0.1", port, p);
-  CAF_REQUIRE(cl);
   CAF_MESSAGE("spawn_client finished");
-  anon_send(p, kickoff_atom::value, *cl);
+  anon_send(p, kickoff_atom::value, cl);
   CAF_MESSAGE("`kickoff_atom` has been send");
 }
 

@@ -216,9 +216,9 @@ std::vector<std::string> interfaces::list_addresses(protocol proc,
   return list_addresses({proc}, include_localhost);
 }
 
-maybe<std::pair<std::string, protocol>>
+optional<std::pair<std::string, protocol>>
 interfaces::native_address(const std::string& host,
-                           maybe<protocol> preferred) {
+                           optional<protocol> preferred) {
   addrinfo hint;
   memset(&hint, 0, sizeof(hint));
   hint.ai_socktype = SOCK_STREAM;

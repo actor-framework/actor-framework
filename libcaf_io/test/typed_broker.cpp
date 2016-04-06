@@ -165,7 +165,7 @@ acceptor::behavior_type acceptor_fun(acceptor::broker_pointer self,
     [](const acceptor_closed_msg&) {
       // nop
     },
-    [=](publish_atom) -> maybe<uint16_t> {
+    [=](publish_atom) -> optional<uint16_t> {
       return get<1>(self->add_tcp_doorman(0, "127.0.0.1"));
     }
   };
@@ -178,7 +178,7 @@ void run_client(int argc, char** argv, uint16_t port) {
   auto cl = system.middleman().spawn_client(peer_fun, "localhost", port, p);
   CAF_REQUIRE(cl);
   CAF_MESSAGE("spawn_client_typed finished");
-  anon_send(p, kickoff_atom::value, *cl);
+  anon_send(p, kickoff_atom::value, cl);
   CAF_MESSAGE("`kickoff_atom` has been send");
 }
 

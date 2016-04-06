@@ -257,7 +257,7 @@ public:
   }
 
   void connect_node(size_t i,
-                    maybe<accept_handle> ax = none,
+                    optional<accept_handle> ax = none,
                     actor_id published_actor_id = invalid_actor_id,
                     set<string> published_actor_ifs = std::set<std::string>{}) {
     auto src = ax ? *ax : ahdl_;
@@ -297,7 +297,7 @@ public:
     // test whether basp instance correctly updates the
     // routing table upon receiving client handshakes
     auto path = tbl().lookup(remote_node(i));
-    CAF_REQUIRE(path != none);
+    CAF_REQUIRE(path);
     CAF_CHECK(path->hdl == remote_hdl(i));
     CAF_CHECK(path->next_hop == remote_node(i));
   }
@@ -475,12 +475,15 @@ CAF_TEST(non_empty_server_handshake) {
 }
 
 CAF_TEST(remote_address_and_port) {
+  CAF_MESSAGE("connect node 1");
   connect_node(1);
   auto mm = system.middleman().actor_handle();
+  CAF_MESSAGE("ask MM about node 1");
   self()->send(mm, get_atom::value, remote_node(1));
   do {
     mpx()->exec_runnable();
   } while (! self()->has_next_message());
+  CAF_MESSAGE("receive result of MM");
   self()->receive(
     [&](const node_id& nid, const std::string& addr, uint16_t port) {
       CAF_CHECK(nid == remote_node(1));

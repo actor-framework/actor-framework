@@ -224,7 +224,7 @@ void instance::handle_node_shutdown(const node_id& affected_node) {
   tbl_.erase(affected_node, cb);
 }
 
-maybe<routing_table::route> instance::lookup(const node_id& target) {
+optional<routing_table::route> instance::lookup(const node_id& target) {
   return tbl_.lookup(target);
 }
 
@@ -363,7 +363,7 @@ void instance::write(execution_unit* ctx, buffer_type& buf,
 
 void instance::write_server_handshake(execution_unit* ctx,
                                       buffer_type& out_buf,
-                                      maybe<uint16_t> port) {
+                                      optional<uint16_t> port) {
   using namespace detail;
   published_actor* pa = nullptr;
   if (port) {

@@ -21,7 +21,7 @@
 #define CAF_MATCH_CASE_HPP
 
 #include "caf/none.hpp"
-#include "caf/maybe.hpp"
+#include "caf/optional.hpp"
 
 #include "caf/skip_message.hpp"
 #include "caf/match_case.hpp"
@@ -86,7 +86,7 @@ T& unopt(T& v) {
 }
 
 template <class T>
-T& unopt(maybe<T>& v) {
+T& unopt(optional<T>& v) {
   return *v;
 }
 
@@ -101,7 +101,7 @@ struct has_none {
   }
 
   template <class T, class... Ts>
-  bool operator()(const maybe<T>& x, const Ts&... xs) const {
+  bool operator()(const optional<T>& x, const Ts&... xs) const {
     return ! x || (*this)(xs...);
   }
 };
@@ -350,13 +350,13 @@ public:
   static constexpr uint32_t static_type_token =
     detail::make_type_token_from_list<Pattern>();
 
-  // Let F be "R (Ts...)" then match_case<F...> returns maybe<R>
+  // Let F be "R (Ts...)" then match_case<F...> returns optional<R>
   // unless R is void in which case bool is returned
   using optional_result_type =
     typename std::conditional<
       std::is_same<result_type, void>::value,
-      maybe<unit_t>,
-      maybe<result_type>
+      optional<unit_t>,
+      optional<result_type>
     >::type;
 
   // Needed for static type checking when assigning to a typed behavior.

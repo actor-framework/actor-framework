@@ -25,7 +25,7 @@
 #include "caf/fwd.hpp"
 #include "caf/none.hpp"
 #include "caf/unit.hpp"
-#include "caf/maybe.hpp"
+#include "caf/optional.hpp"
 #include "caf/result.hpp"
 #include "caf/message.hpp"
 #include "caf/skip_message.hpp"
@@ -66,15 +66,11 @@ public:
 
   // unwrap maybes
   template <class T>
-  void operator()(maybe<T>& x) {
+  void operator()(optional<T>& x) {
     if (x)
       (*this)(*x);
-    else if (x.empty())
+    else
       (*this)(none);
-    else {
-      auto tmp = x.error();
-      (*this)(tmp);
-    }
   }
 
   // convert values to messages
@@ -132,8 +128,8 @@ public:
     return false;
   }
 
-  inline bool visit(maybe<skip_message_t>& x) {
-    if (x.valid())
+  inline bool visit(optional<skip_message_t>& x) {
+    if (x)
       return false;
     (*this)(x);
     return true;

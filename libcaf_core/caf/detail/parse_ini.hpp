@@ -25,7 +25,7 @@
 #include <functional>
 
 #include "caf/atom.hpp"
-#include "caf/maybe.hpp"
+#include "caf/optional.hpp"
 #include "caf/variant.hpp"
 
 namespace caf {
@@ -45,7 +45,7 @@ struct parse_ini_t {
   /// @param consumer Callback consuming generated key-value pairs.
   void operator()(std::istream& raw_data,
                   config_consumer consumer,
-                  maybe<std::ostream&> errors = none) const;
+                  optional<std::ostream&> errors = none) const;
 
 };
 

@@ -26,7 +26,6 @@
 #include <thread>
 
 #include "caf/fwd.hpp"
-#include "caf/maybe.hpp"
 #include "caf/node_id.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/proxy_registry.hpp"
@@ -219,7 +218,7 @@ public:
   /// @warning Blocks the caller for the duration of the connection process.
   template <spawn_options Os = no_spawn_options,
             class F = std::function<void(broker*)>, class... Ts>
-  maybe<typename infer_handle_from_fun<F>::type>
+  typename infer_handle_from_fun<F>::type
   spawn_client(F fun, const std::string& host, uint16_t port, Ts&&... xs) {
     using impl = typename infer_handle_from_fun<F>::impl;
     return spawn_client_impl<Os, impl>(std::move(fun), host, port,
@@ -230,7 +229,7 @@ public:
   /// @warning Blocks the caller until the server socket is initialized.
   template <spawn_options Os = no_spawn_options,
             class F = std::function<void(broker*)>, class... Ts>
-  maybe<typename infer_handle_from_fun<F>::type>
+  typename infer_handle_from_fun<F>::type
   spawn_server(F fun, uint16_t port, Ts&&... xs) {
     using impl = typename infer_handle_from_fun<F>::impl;
     return spawn_server_impl<Os, impl>(std::move(fun), port,

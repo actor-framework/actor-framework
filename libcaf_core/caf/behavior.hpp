@@ -97,7 +97,7 @@ public:
   }
 
   /// Runs this handler and returns its (optional) result.
-  inline maybe<message> operator()(message& x) {
+  inline optional<message> operator()(message& x) {
     return impl_ ? impl_->invoke(x) : none;
   }
 

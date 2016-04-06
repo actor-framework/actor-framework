@@ -69,8 +69,9 @@ struct fixture {
     CAF_CHECK_EQUAL(s_dtor_called.load(), 2);
   }
 
-  maybe<actor> remote_actor(const char* hostname, uint16_t port) {
-    maybe<actor> result;
+  actor remote_actor(const char* hostname, uint16_t port,
+                     bool expect_fail = false) {
+    actor result;
     scoped_actor self{system, true};
     self->request(system.middleman().actor_handle(), infinite,
                   connect_atom::value, hostname, port).receive(
@@ -78,10 +79,14 @@ struct fixture {
         CAF_REQUIRE(xs.empty());
         result = actor_cast<actor>(std::move(res));
       },
-      [&](error& err) {
-        result = std::move(err);
+      [&](error&) {
+        // nop
       }
     );
+    if (! expect_fail)
+      CAF_REQUIRE(result != invalid_actor);
+    else
+      CAF_REQUIRE(result == invalid_actor);
     return result;
   }
 
@@ -108,12 +113,12 @@ CAF_TEST(unpublishing) {
   system.middleman().unpublish(testee, port);
   CAF_MESSAGE("check whether testee is still available via cache");
   auto x1 = remote_actor("127.0.0.1", port);
-  CAF_CHECK(x1 && *x1 == testee);
+  CAF_CHECK(x1 == testee);
   CAF_MESSAGE("fake dead of testee and check if testee becomes unavailable");
   anon_send(system.middleman().actor_handle(), down_msg{testee.address(),
                                                         exit_reason::normal});
   // must fail now
-  auto x2 = remote_actor("127.0.0.1", port);
+  auto x2 = remote_actor("127.0.0.1", port, true);
   CAF_CHECK(! x2);
 }
 

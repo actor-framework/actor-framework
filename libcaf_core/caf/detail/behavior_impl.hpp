@@ -25,7 +25,7 @@
 
 #include "caf/none.hpp"
 #include "caf/variant.hpp"
-#include "caf/maybe.hpp"
+#include "caf/optional.hpp"
 #include "caf/match_case.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/intrusive_ptr.hpp"
@@ -75,7 +75,7 @@ public:
     return invoke(f, tmp);
   }
 
-  maybe<message> invoke(message&);
+  optional<message> invoke(message&);
 
   virtual void handle_timeout();
 

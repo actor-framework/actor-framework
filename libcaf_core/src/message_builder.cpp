@@ -72,7 +72,7 @@ message message_builder::move_to_message() {
   return result;
 }
 
-maybe<message> message_builder::apply(message_handler handler) {
+optional<message> message_builder::apply(message_handler handler) {
   // avoid detaching of data_ by moving the data to a message object,
   // calling message::apply and moving the data back
   message::data_ptr ptr;

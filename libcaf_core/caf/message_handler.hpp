@@ -90,7 +90,7 @@ public:
   void assign(message_handler other);
 
   /// Runs this handler and returns its (optional) result.
-  inline maybe<message> operator()(message& arg) {
+  inline optional<message> operator()(message& arg) {
     return (impl_) ? impl_->invoke(arg) : none;
   }
 

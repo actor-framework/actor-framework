@@ -33,7 +33,7 @@ routing_table::~routing_table() {
   // nop
 }
 
-maybe<routing_table::route> routing_table::lookup(const node_id& target) {
+optional<routing_table::route> routing_table::lookup(const node_id& target) {
   auto hdl = lookup_direct(target);
   if (hdl != invalid_connection_handle)
     return route{parent_->wr_buf(hdl), target, hdl};

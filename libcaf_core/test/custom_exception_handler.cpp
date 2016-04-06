@@ -30,7 +30,7 @@ class exception_testee : public event_based_actor {
 public:
   ~exception_testee();
   exception_testee(actor_config& cfg) : event_based_actor(cfg) {
-    set_exception_handler([](const std::exception_ptr&) -> maybe<exit_reason> {
+    set_exception_handler([](const std::exception_ptr&) -> optional<exit_reason> {
       return exit_reason::remote_link_unreachable;
     });
   }
@@ -49,7 +49,7 @@ exception_testee::~exception_testee() {
 
 CAF_TEST(test_custom_exception_handler) {
   actor_system system;
-  auto handler = [](const std::exception_ptr& eptr) -> maybe<exit_reason> {
+  auto handler = [](const std::exception_ptr& eptr) -> optional<exit_reason> {
     try {
       std::rethrow_exception(eptr);
     }

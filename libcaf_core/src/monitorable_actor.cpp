@@ -97,7 +97,7 @@ monitorable_actor::monitorable_actor(actor_system* sys, actor_id aid,
   // nop
 }
 
-maybe<exit_reason> monitorable_actor::handle(const std::exception_ptr& eptr) {
+optional<exit_reason> monitorable_actor::handle(const std::exception_ptr& eptr) {
   std::unique_lock<std::mutex> guard{mtx_};
   for (auto i = attachables_head_.get(); i != nullptr; i = i->next.get()) {
     try {

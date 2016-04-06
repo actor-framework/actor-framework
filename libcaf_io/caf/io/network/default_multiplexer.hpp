@@ -481,7 +481,7 @@ private:
 };
 
 native_socket new_tcp_connection(const std::string& host, uint16_t port,
-                                 maybe<protocol> preferred = none);
+                                 optional<protocol> preferred = none);
 
 std::pair<native_socket, uint16_t>
 new_tcp_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr);

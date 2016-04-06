@@ -32,7 +32,7 @@
 #include <iostream>
 
 #include "caf/fwd.hpp"
-#include "caf/maybe.hpp"
+#include "caf/optional.hpp"
 
 #include "caf/deep_to_string.hpp"
 
@@ -165,7 +165,7 @@ public:
     }
 
     template <class T>
-    stream& operator<<(const maybe<T>& x) {
+    stream& operator<<(const optional<T>& x) {
       if (! x)
         return *this << "-none-";
       return *this << *x;

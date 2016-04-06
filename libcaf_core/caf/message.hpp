@@ -27,6 +27,7 @@
 #include "caf/fwd.hpp"
 #include "caf/atom.hpp"
 #include "caf/config.hpp"
+#include "caf/optional.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/skip_message.hpp"
 #include "caf/index_mapping.hpp"
@@ -121,7 +122,7 @@ public:
   }
 
   /// Returns `handler(*this)`.
-  maybe<message> apply(message_handler handler);
+  optional<message> apply(message_handler handler);
 
   /// Filters this message by applying slices of it to `handler` and  returns
   /// the remaining elements of this operation. Slices are generated in the

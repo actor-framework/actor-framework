@@ -257,7 +257,7 @@ void actor_registry::start() {
     CAF_LOG_TRACE("");
     return {
       [=](get_atom, const std::string& name, message& args)
-      -> maybe<std::tuple<ok_atom, actor_addr, std::set<std::string>>> {
+      -> result<ok_atom, actor_addr, std::set<std::string>> {
         CAF_LOG_TRACE(CAF_ARG(name) << CAF_ARG(args));
         actor_config cfg{self->context()};
         auto res = self->system().types().make_actor(name, cfg, args);

@@ -56,7 +56,7 @@ public:
   using erase_callback = callback<const node_id&>;
 
   /// Returns a route to `target` or `none` on error.
-  maybe<route> lookup(const node_id& target);
+  optional<route> lookup(const node_id& target);
 
   /// Returns the ID of the peer connected via `hdl` or
   /// `invalid_node_id` if `hdl` is unknown.

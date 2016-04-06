@@ -74,7 +74,7 @@ struct fixture {
   void await_down(const actor& x) {
     self->monitor(x);
     self->receive(
-      [&](const down_msg& dm) -> maybe<skip_message_t> {
+      [&](const down_msg& dm) -> optional<skip_message_t> {
         if (dm.source != x)
           return skip_message();
         return none;

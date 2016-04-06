@@ -407,7 +407,7 @@ private:
 
 
 // Represents a computation performing side effects only and
-// optionally return a `std::error_condition`.
+// maybely return a `std::error_condition`.
 template <>
 class maybe<void> {
 public:

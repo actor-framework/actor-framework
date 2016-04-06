@@ -67,7 +67,7 @@ behavior server(broker* self) {
   };
 }
 
-maybe<uint16_t> as_u16(const std::string& str) {
+optional<uint16_t> as_u16(const std::string& str) {
   return static_cast<uint16_t>(stoul(str));
 }
 
@@ -97,12 +97,9 @@ int main(int argc, const char** argv) {
   cout << "*** to quit the program, simply press <enter>" << endl;
   actor_system system;
   auto server_actor = system.middleman().spawn_server(server, port);
-  if (! server_actor)
-    return cerr << "*** spawn_server failed: "
-                << system.render(server_actor.error()) << endl, 1;
   // wait for any input
   std::string dummy;
   std::getline(std::cin, dummy);
   // kill server
-  anon_send_exit(*server_actor, exit_reason::user_shutdown);
+  anon_send_exit(server_actor, exit_reason::user_shutdown);
 }

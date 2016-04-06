@@ -27,6 +27,7 @@ namespace caf {
 
 // templates
 template <class> class maybe;
+template <class> class optional;
 template <class> class intrusive_ptr;
 template <class> struct actor_cast_access;
 template <class> class typed_continue_helper;

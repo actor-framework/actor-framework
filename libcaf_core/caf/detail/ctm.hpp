@@ -22,7 +22,7 @@
 
 #include <tuple>
 
-#include "caf/maybe.hpp"
+#include "caf/optional.hpp"
 #include "caf/delegated.hpp"
 #include "caf/replies_to.hpp"
 #include "caf/typed_response_promise.hpp"
@@ -52,7 +52,7 @@ struct ctm_cmp<typed_mpi<In, OutList>,
 
 template <class In, class Out>
 struct ctm_cmp<typed_mpi<In, type_list<Out>>,
-               typed_mpi<In, type_list<maybe<Out>>>>
+               typed_mpi<In, type_list<optional<Out>>>>
     : std::true_type { };
 
 template <class In, class... Ts>
@@ -62,7 +62,12 @@ struct ctm_cmp<typed_mpi<In, type_list<Ts...>>,
 
 template <class In, class... Ts>
 struct ctm_cmp<typed_mpi<In, type_list<Ts...>>,
-               typed_mpi<In, type_list<maybe<std::tuple<Ts...>>>>>
+               typed_mpi<In, type_list<optional<std::tuple<Ts...>>>>>
+    : std::true_type { };
+
+template <class In, class... Ts>
+struct ctm_cmp<typed_mpi<In, type_list<Ts...>>,
+               typed_mpi<In, type_list<result<Ts...>>>>
     : std::true_type { };
 
 template <class In, class Out>

@@ -511,7 +511,7 @@ printf("enable automatic connections\n");
     // received from some system calls like whereis
     [=](forward_atom, const actor_addr& sender,
         const node_id& receiving_node, atom_value receiver_name,
-        const message& msg) -> maybe<message> {
+        const message& msg) -> result<void> {
       CAF_LOG_TRACE(CAF_ARG(sender)
                     << ", " << CAF_ARG(receiving_node)
                     << ", " << CAF_ARG(receiver_name)
@@ -540,7 +540,7 @@ printf("enable automatic connections\n");
                                  std::numeric_limits<actor_id>::max(),
                                  &writer);
       state.instance.flush(*path);
-      return none;
+      return unit;
     },
     // received from underlying broker implementation
     [=](const new_connection_msg& msg) {
@@ -614,7 +614,7 @@ printf("enable automatic connections\n");
       CAF_LOG_TRACE(CAF_ARG(nid) << ", " << CAF_ARG(aid));
       state.proxies().erase(nid, aid);
     },
-    [=](unpublish_atom, const actor_addr& whom, uint16_t port) -> maybe<void> {
+    [=](unpublish_atom, const actor_addr& whom, uint16_t port) -> result<void> {
       CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(port));
       if (whom == invalid_actor_addr)
         return sec::no_actor_to_unpublish;
@@ -624,9 +624,9 @@ printf("enable automatic connections\n");
       });
       if (state.instance.remove_published_actor(whom, port, &cb) == 0)
         return sec::no_actor_published_at_port;
-      return {};
+      return unit;
     },
-    [=](close_atom, uint16_t port) -> maybe<void> {
+    [=](close_atom, uint16_t port) -> result<void> {
       if (port == 0)
         return sec::cannot_close_invalid_port;
       // it is well-defined behavior to not have an actor published here,
@@ -638,7 +638,7 @@ printf("enable automatic connections\n");
       catch (std::exception&) {
         return sec::cannot_close_invalid_port;
       }
-      return {};
+      return unit;
     },
     [=](spawn_atom, const node_id& nid, std::string& type, message& xs)
     -> delegated<ok_atom, actor_addr, std::set<std::string>> {

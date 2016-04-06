@@ -56,14 +56,14 @@ private:
 
 class maybe_message_visitor : public detail::invoke_result_visitor {
 public:
-  maybe<message> value;
+  optional<message> value;
 
   void operator()() override {
     value = message{};
   }
 
   void operator()(error& x) override {
-    value = std::move(x);
+    value = make_message(std::move(x));
   }
 
   void operator()(message& x) override {
@@ -103,7 +103,7 @@ bool behavior_impl::invoke(detail::invoke_result_visitor& f, message& msg) {
   return false;
 }
 
-maybe<message> behavior_impl::invoke(message& x) {
+optional<message> behavior_impl::invoke(message& x) {
   maybe_message_visitor f;
   invoke(f, x);
   return std::move(f.value);

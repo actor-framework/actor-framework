@@ -121,7 +121,7 @@ public:
   void handle_node_shutdown(const node_id& affected_node);
 
   /// Returns a route to `target` or `none` on error.
-  maybe<routing_table::route> lookup(const node_id& target);
+  optional<routing_table::route> lookup(const node_id& target);
 
   /// Flushes the underlying buffer of `path`.
   void flush(const routing_table::route& path);
@@ -195,7 +195,7 @@ public:
   /// if no actor is published at this port then a standard handshake is
   /// written (e.g. used when establishing direct connections on-the-fly).
   void write_server_handshake(execution_unit* ctx,
-                              buffer_type& buf, maybe<uint16_t> port);
+                              buffer_type& buf, optional<uint16_t> port);
 
   /// Writes the client handshake to `buf`.
   void write_client_handshake(execution_unit* ctx,

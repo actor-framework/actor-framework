@@ -137,7 +137,8 @@ public:
           }
         }
       }
-      mfun(msg_ptr->msg);
+      msg_ptr->msg.apply(mfun);
+      //mfun(msg_ptr->msg);
       msg_ptr.reset();
     }
   }
@@ -249,7 +250,7 @@ void printer_loop(blocking_actor* self) {
   sink_handle global_redirect;
   data_map data;
   auto get_data = [&](const actor_addr& addr, bool insert_missing)
-                  -> maybe<actor_data&> {
+                  -> optional<actor_data&> {
     if (addr == invalid_actor_addr)
       return none;
     auto i = data.find(addr);
@@ -261,7 +262,7 @@ void printer_loop(blocking_actor* self) {
       return i->second;
     return none;
   };
-  auto flush = [&](maybe<actor_data&> what, bool forced) {
+  auto flush = [&](optional<actor_data&> what, bool forced) {
     if (! what)
       return;
     auto& line = what->current_line;

@@ -177,7 +177,7 @@ behavior server(broker* self, const actor& buddy) {
   };
 }
 
-maybe<uint16_t> as_u16(const std::string& str) {
+optional<uint16_t> as_u16(const std::string& str) {
   return static_cast<uint16_t>(stoul(str));
 }
 
@@ -209,19 +209,15 @@ int main(int argc, char** argv) {
     cout << "run in server mode" << endl;
     auto pong_actor = system.spawn(pong);
     auto server_actor = system.middleman().spawn_server(server, port, pong_actor);
-    if (server_actor) {
-      print_on_exit(*server_actor, "server");
-      print_on_exit(pong_actor, "pong");
-    }
+    print_on_exit(server_actor, "server");
+    print_on_exit(pong_actor, "pong");
   } else if (res.opts.count("client") > 0) {
     auto ping_actor = system.spawn(ping, size_t{20});
     auto io_actor = system.middleman().spawn_client(broker_impl, host,
                                                     port, ping_actor);
-    if (io_actor) {
-      print_on_exit(ping_actor, "ping");
-      print_on_exit(*io_actor, "protobuf_io");
-      send_as(*io_actor, ping_actor, kickoff_atom::value, *io_actor);
-    }
+    print_on_exit(ping_actor, "ping");
+    print_on_exit(io_actor, "protobuf_io");
+    send_as(io_actor, ping_actor, kickoff_atom::value, io_actor);
   } else {
     cerr << "*** neither client nor server mode set" << endl
          << res.helptext << endl;

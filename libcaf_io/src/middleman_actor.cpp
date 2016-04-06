@@ -58,7 +58,7 @@ public:
     return "middleman_actor";
   }
 
-  using put_res = maybe<std::tuple<ok_atom, uint16_t>>;
+  using put_res = result<ok_atom, uint16_t>;
 
   using mpi_set = std::set<std::string>;
 
@@ -74,7 +74,7 @@ public:
     CAF_LOG_TRACE("");
     return {
       [=](publish_atom, uint16_t port, actor_addr& whom,
-          mpi_set& sigs, std::string& addr, bool reuse) {
+          mpi_set& sigs, std::string& addr, bool reuse) -> put_res {
         CAF_LOG_TRACE("");
         return put(port, whom, sigs, addr.c_str(), reuse);
       },
@@ -197,14 +197,14 @@ private:
     }
   }
 
-  maybe<endpoint_data&> cached(const endpoint& ep) {
+  optional<endpoint_data&> cached(const endpoint& ep) {
     auto i = cached_.find(ep);
     if (i != cached_.end())
       return i->second;
     return none;
   }
 
-  maybe<std::vector<response_promise>&> pending(const endpoint& ep) {
+  optional<std::vector<response_promise>&> pending(const endpoint& ep) {
     auto i = pending_.find(ep);
     if (i != pending_.end())
       return i->second;

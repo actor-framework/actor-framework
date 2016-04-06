@@ -51,7 +51,7 @@ calculator::behavior_type multiplier() {
 
 calculator::behavior_type divider() {
   return {
-    [](int x, int y) -> maybe<int> {
+    [](int x, int y) -> optional<int> {
       if (y == 0)
         return none;
       return x / y;

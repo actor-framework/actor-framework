@@ -99,7 +99,7 @@ protected:
   bool remove_backlink_impl(const actor_addr& other);
 
   // tries to run a custom exception handler for `eptr`
-  maybe<exit_reason> handle(const std::exception_ptr& eptr);
+  optional<exit_reason> handle(const std::exception_ptr& eptr);
 
   // precondition: `mtx_` is acquired
   inline void attach_impl(attachable_ptr& ptr) {

@@ -98,7 +98,7 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
     // connected port
     uint16_t remote_port;
     // pending operations to be performed after handhsake completed
-    maybe<response_promise> callback;
+    optional<response_promise> callback;
   };
 
   void set_context(connection_handle hdl);
