@@ -70,39 +70,6 @@ Alternatively, you can use the development branch by using:
 brew install caf --HEAD
 ```
 
-### Biicode
-
-The official CAF channel is published under
-[caf_bot/actor-framework](https://www.biicode.com/caf_bot/actor-framework)
-and includes the following blocks:
-
-* libcaf_core
-* libcaf_io
-* libcaf_riac
-* libcaf_opencl (*depends on OpenCL which is not distributed as part of CAF*)
-
-**NOTE:** You do not need to have CAF installed on your
-machine. Biicode will automatically do that for you during the build process.
-Visit this the [bii guide](http://docs.biicode.com/c++/gettingstarted.html)
-for more information.
-
-To use actor-framework in your project, reference the header file as:
-`#include "caf_bot/actor-framework/libcaf_core/caf/all.hpp"`. Then run
-`bii find` to resolve and download the files and `bii build`
-to compile your code.
-
-To avoid specifying the block name in your includes add the following to your
-`bii.conf` file to allow Biicode to associate all `#include "caf/*.hpp"`
-with the actor-framework block:
-
-```ini
-[includes]
-  caf/riac/*.hpp : caf_bot/actor-framework/libcaf_riac
-  caf/opencl/*.hpp : caf_bot/actor-framework/libcaf_opencl
-  caf/io/*.hpp : caf_bot/actor-framework/libcaf_io
-  caf/*.hpp : caf_bot/actor-framework/libcaf_core
-```
-
 ## Get the Sources
 
 * git clone https://github.com/actor-framework/actor-framework.git
