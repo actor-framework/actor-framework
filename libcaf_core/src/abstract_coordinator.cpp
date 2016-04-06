@@ -137,8 +137,7 @@ public:
           }
         }
       }
-      msg_ptr->msg.apply(mfun);
-      //mfun(msg_ptr->msg);
+      mfun(msg_ptr->msg);
       msg_ptr.reset();
     }
   }
