@@ -17,14 +17,15 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_INTRUSIVE_PTR_HPP
-#define CAF_INTRUSIVE_PTR_HPP
+#ifndef CAF_WEAK_INTRUSIVE_PTR_HPP
+#define CAF_WEAK_INTRUSIVE_PTR_HPP
 
 #include <cstddef>
 #include <algorithm>
 #include <stdexcept>
 #include <type_traits>
 
+#include "caf/intrusive_ptr.hpp"
 #include "caf/detail/comparable.hpp"
 
 namespace caf {
@@ -32,9 +33,9 @@ namespace caf {
 /// An intrusive, reference counting smart pointer implementation.
 /// @relates ref_counted
 template <class T>
-class intrusive_ptr : detail::comparable<intrusive_ptr<T>>,
-                      detail::comparable<intrusive_ptr<T>, const T*>,
-                      detail::comparable<intrusive_ptr<T>, std::nullptr_t> {
+class weak_intrusive_ptr : detail::comparable<weak_intrusive_ptr<T>>,
+                           detail::comparable<weak_intrusive_ptr<T>, const T*>,
+                           detail::comparable<weak_intrusive_ptr<T>, std::nullptr_t> {
 public:
   using pointer = T*;
   using const_pointer = const T*;
@@ -43,36 +44,36 @@ public:
   using const_reference = const T&;
 
   // tell actor_cast which semantic this type uses
-  static constexpr bool has_weak_ptr_semantics = false;
+  static constexpr bool has_weak_ptr_semantics = true;
 
-  constexpr intrusive_ptr() : ptr_(nullptr) {
+  constexpr weak_intrusive_ptr() : ptr_(nullptr) {
     // nop
   }
 
-  intrusive_ptr(pointer raw_ptr, bool add_ref = true) {
+  weak_intrusive_ptr(pointer raw_ptr, bool add_ref = true) {
     set_ptr(raw_ptr, add_ref);
   }
 
-  intrusive_ptr(intrusive_ptr&& other) : ptr_(other.detach()) {
+  weak_intrusive_ptr(weak_intrusive_ptr&& other) : ptr_(other.detach()) {
     // nop
   }
 
-  intrusive_ptr(const intrusive_ptr& other) {
+  weak_intrusive_ptr(const weak_intrusive_ptr& other) {
     set_ptr(other.get(), true);
   }
 
   template <class Y>
-  intrusive_ptr(intrusive_ptr<Y> other) : ptr_(other.detach()) {
+  weak_intrusive_ptr(weak_intrusive_ptr<Y> other) : ptr_(other.detach()) {
     static_assert(std::is_convertible<Y*, T*>::value,
                   "Y* is not assignable to T*");
   }
 
-  ~intrusive_ptr() {
+  ~weak_intrusive_ptr() {
     if (ptr_)
-      intrusive_ptr_release(ptr_);
+      intrusive_ptr_release_weak(ptr_);
   }
 
-  void swap(intrusive_ptr& other) noexcept {
+  void swap(weak_intrusive_ptr& other) noexcept {
     std::swap(ptr_, other.ptr_);
   }
 
@@ -95,15 +96,15 @@ public:
     auto old = ptr_;
     set_ptr(new_value, add_ref);
     if (old)
-      intrusive_ptr_release(old);
+      intrusive_ptr_release_weak(old);
   }
 
-  intrusive_ptr& operator=(pointer ptr) {
+  weak_intrusive_ptr& operator=(pointer ptr) {
     reset(ptr);
     return *this;
   }
 
-  intrusive_ptr& operator=(intrusive_ptr other) {
+  weak_intrusive_ptr& operator=(weak_intrusive_ptr other) {
     swap(other);
     return *this;
   }
@@ -132,7 +133,7 @@ public:
     return static_cast<ptrdiff_t>(get() - ptr);
   }
 
-  ptrdiff_t compare(const intrusive_ptr& other) const {
+  ptrdiff_t compare(const weak_intrusive_ptr& other) const {
     return compare(other.get());
   }
 
@@ -140,38 +141,45 @@ public:
     return reinterpret_cast<ptrdiff_t>(get());
   }
 
-  template <class C>
-  intrusive_ptr<C> downcast() const {
-    return (ptr_) ? dynamic_cast<C*>(get()) : nullptr;
+  /// Tries to upgrade this weak reference to a strong reference.
+  intrusive_ptr<T> lock() const {
+    if (! ptr_ || ! intrusive_ptr_upgrade_weak(ptr_))
+      return nullptr;
+    // reference count already increased by intrusive_ptr_upgrade_weak
+    return {ptr_, false};
   }
 
-  template <class C>
-  intrusive_ptr<C> upcast() const {
-    return (ptr_) ? static_cast<C*>(get()) : nullptr;
+  /// Tries to upgrade this weak reference to a strong reference.
+  /// Returns a pointer with increased strong reference count
+  /// on success, `nullptr` otherwise.
+  pointer get_locked() const {
+    if (! ptr_ || ! intrusive_ptr_upgrade_weak(ptr_))
+      return nullptr;
+    return ptr_;
   }
 
 private:
   void set_ptr(pointer raw_ptr, bool add_ref) {
     ptr_ = raw_ptr;
     if (raw_ptr && add_ref)
-      intrusive_ptr_add_ref(raw_ptr);
+      intrusive_ptr_add_weak_ref(raw_ptr);
   }
 
   pointer ptr_;
 };
 
-/// @relates intrusive_ptr
+/// @relates weak_intrusive_ptr
 template <class X, typename Y>
-bool operator==(const intrusive_ptr<X>& lhs, const intrusive_ptr<Y>& rhs) {
+bool operator==(const weak_intrusive_ptr<X>& lhs, const weak_intrusive_ptr<Y>& rhs) {
   return lhs.get() == rhs.get();
 }
 
-/// @relates intrusive_ptr
+/// @relates weak_intrusive_ptr
 template <class X, typename Y>
-bool operator!=(const intrusive_ptr<X>& lhs, const intrusive_ptr<Y>& rhs) {
+bool operator!=(const weak_intrusive_ptr<X>& lhs, const weak_intrusive_ptr<Y>& rhs) {
   return !(lhs == rhs);
 }
 
 } // namespace caf
 
-#endif // CAF_INTRUSIVE_PTR_HPP
+#endif // CAF_WEAK_INTRUSIVE_PTR_HPP

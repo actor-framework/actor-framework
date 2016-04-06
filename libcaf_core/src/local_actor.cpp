@@ -52,16 +52,15 @@ local_actor::local_actor(actor_config& cfg)
       join(grp);
 }
 
-local_actor::local_actor(actor_system* sys, actor_id aid, node_id nid)
-    : monitorable_actor(sys, aid, std::move(nid)),
+local_actor::local_actor()
+    : monitorable_actor(abstract_channel::is_abstract_actor_flag),
       planned_exit_reason_(exit_reason::not_exited),
       timeout_id_(0) {
   // nop
 }
 
-local_actor::local_actor(actor_system* sys, actor_id aid,
-                         node_id nid, int init_flags)
-    : monitorable_actor(sys, aid, std::move(nid), init_flags),
+local_actor::local_actor(int init_flags)
+    : monitorable_actor(init_flags),
       planned_exit_reason_(exit_reason::not_exited),
       timeout_id_(0) {
   // nop
@@ -72,33 +71,42 @@ local_actor::~local_actor() {
     cleanup(exit_reason::unreachable, nullptr);
 }
 
-void local_actor::monitor(const actor_addr& whom) {
-  if (whom == invalid_actor_addr)
+void local_actor::intrusive_ptr_add_ref_impl() {
+  intrusive_ptr_add_ref(ctrl());
+}
+
+void local_actor::intrusive_ptr_release_impl() {
+  intrusive_ptr_release(ctrl());
+}
+
+void local_actor::monitor(abstract_actor* ptr) {
+  if (! ptr)
     return;
-  auto ptr = actor_cast<abstract_actor_ptr>(whom);
-  ptr->attach(default_attachable::make_monitor(whom, address()));
+  ptr->attach(default_attachable::make_monitor(ptr->address(), address()));
 }
 
 void local_actor::demonitor(const actor_addr& whom) {
+  /*
   if (whom == invalid_actor_addr)
     return;
   auto ptr = actor_cast<abstract_actor_ptr>(whom);
   default_attachable::observe_token tk{address(), default_attachable::monitor};
   ptr->detach(tk);
+  */
 }
 
 void local_actor::join(const group& what) {
   CAF_LOG_TRACE(CAF_ARG(what));
   if (what == invalid_group)
     return;
-  if (what->subscribe(address()))
+  if (what->subscribe(ctrl()))
     subscriptions_.emplace(what);
 }
 
 void local_actor::leave(const group& what) {
   CAF_LOG_TRACE(CAF_ARG(what));
   if (subscriptions_.erase(what) > 0)
-    what->unsubscribe(address());
+    what->unsubscribe(ctrl());
 }
 
 void local_actor::on_exit() {
@@ -140,9 +148,10 @@ uint32_t local_actor::request_timeout(const duration& d) {
   CAF_LOG_TRACE("send new timeout_msg, " << CAF_ARG(timeout_id_));
   if (d.is_zero()) {
     // immediately enqueue timeout message if duration == 0s
-    enqueue(address(), invalid_message_id, std::move(msg), context());
+    enqueue(ctrl(), invalid_message_id,
+            std::move(msg), context());
   } else {
-    delayed_send(this, d, std::move(msg));
+    delayed_send(actor_cast<actor>(this), d, std::move(msg));
   }
   return result;
 }
@@ -151,7 +160,7 @@ void local_actor::request_sync_timeout_msg(const duration& d, message_id mid) {
   CAF_LOG_TRACE(CAF_ARG(d) << CAF_ARG(mid));
   if (! d.valid())
     return;
-  delayed_send_impl(mid.response_id(), this, d,
+  delayed_send_impl(mid.response_id(), ctrl(), d,
                     make_message(sec::request_timeout));
 }
 
@@ -245,7 +254,6 @@ msg_type filter_msg(local_actor* self, mailbox_element& node) {
           }
         });
       },
-      */
       [&](sys_atom, migrate_atom, std::vector<char>& buf) {
         // "replace" this actor with the content of `buf`
         if (! self->is_serializable()) {
@@ -267,19 +275,22 @@ msg_type filter_msg(local_actor* self, mailbox_element& node) {
                                       {}, ok_atom::value, self->address()),
           self->context());
       },
+      */
       [&](sys_atom, get_atom, std::string& what) {
         CAF_LOG_TRACE(CAF_ARG(what));
         if (what == "info") {
           CAF_LOG_DEBUG("reply to 'info' message");
           node.sender->enqueue(
-            mailbox_element::make_joint(self->address(), node.mid.response_id(),
+            mailbox_element::make_joint(self->ctrl(),
+                                        node.mid.response_id(),
                                         {}, ok_atom::value, std::move(what),
                                         self->address(), self->name()),
             self->context());
           return;
         }
         node.sender->enqueue(
-          mailbox_element::make_joint(self->address(), node.mid.response_id(),
+          mailbox_element::make_joint(self->ctrl(),
+                                      node.mid.response_id(),
                                       {}, sec::invalid_sys_key),
           self->context());
       },
@@ -603,7 +614,7 @@ void local_actor::launch(execution_unit* eu, bool lazy, bool hide) {
     scheduler::inc_detached_threads();
     //intrusive_ptr<local_actor> mself{this};
     actor_system* sys = &eu->system();
-    std::thread{[hide, sys](intrusive_ptr<local_actor> mself) {
+    std::thread{[hide, sys](strong_actor_ptr mself) {
       CAF_SET_LOGGER_SYS(sys);
       // this extra scope makes sure that the trace logger is
       // destructed before dec_detached_threads() is called
@@ -612,15 +623,16 @@ void local_actor::launch(execution_unit* eu, bool lazy, bool hide) {
         CAF_LOG_TRACE("");
         scoped_execution_unit ctx{sys};
         auto max_throughput = std::numeric_limits<size_t>::max();
-        while (mself->resume(&ctx, max_throughput) != resumable::done) {
+        auto ptr = static_cast<local_actor*>(actor_cast<abstract_actor*>(mself));
+        while (ptr->resume(&ctx, max_throughput) != resumable::done) {
           // await new data before resuming actor
-          mself->await_data();
-          CAF_ASSERT(mself->mailbox().blocked() == false);
+          ptr->await_data();
+          CAF_ASSERT(ptr->mailbox().blocked() == false);
         }
         mself.reset();
       }
       scheduler::dec_detached_threads();
-    }, intrusive_ptr<local_actor>{this}}.detach();
+    }, strong_actor_ptr{ctrl()}}.detach();
     return;
   }
   CAF_ASSERT(eu != nullptr);
@@ -631,7 +643,7 @@ void local_actor::launch(execution_unit* eu, bool lazy, bool hide) {
   }
   // scheduler has a reference count to the actor as long as
   // it is waiting to get scheduled
-  ref();
+  intrusive_ptr_add_ref(ctrl());
   eu->exec_later(this);
 }
 
@@ -658,11 +670,11 @@ void local_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
   switch (mailbox().enqueue(ptr.release())) {
     case detail::enqueue_result::unblocked_reader: {
       // add a reference count to this actor and re-schedule it
-      ref();
+      intrusive_ptr_add_ref(ctrl());
       if (eu)
         eu->exec_later(this);
        else
-        home_system_->scheduler().enqueue(this);
+        home_system().scheduler().enqueue(this);
       break;
     }
     case detail::enqueue_result::queue_closed: {
@@ -680,10 +692,6 @@ void local_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
 
 resumable::subtype_t local_actor::subtype() const {
   return scheduled_actor;
-}
-
-ref_counted* local_actor::as_ref_counted_ptr() {
-  return this;
 }
 
 resumable::resume_result local_actor::resume(execution_unit* eu,
@@ -972,18 +980,17 @@ void local_actor::send_impl(message_id mid, abstract_channel* dest,
                             message what) const {
   if (! dest)
     return;
-  dest->enqueue(address(), mid, std::move(what), context());
+  dest->enqueue(ctrl(), mid, std::move(what), context());
 }
-
 
 void local_actor::send_exit(const actor_addr& whom, exit_reason reason) {
   send(message_priority::high, actor_cast<actor>(whom),
        exit_msg{address(), reason});
 }
 
-void local_actor::delayed_send_impl(message_id mid, const channel& dest,
+void local_actor::delayed_send_impl(message_id mid, strong_actor_ptr dest,
                                     const duration& rel_time, message msg) {
-  system().scheduler().delayed_send(rel_time, address(), dest,
+  system().scheduler().delayed_send(rel_time, ctrl(), std::move(dest),
                                     mid, std::move(msg));
 }
 
@@ -1024,12 +1031,10 @@ void local_actor::cleanup(exit_reason reason, execution_unit* host) {
   }
   awaited_responses_.clear();
   multiplexed_responses_.clear();
-  { // lifetime scope of temporary
-    actor_addr me = address();
-    for (auto& subscription : subscriptions_)
-      subscription->unsubscribe(me);
-    subscriptions_.clear();
-  }
+  auto me = ctrl();
+  for (auto& subscription : subscriptions_)
+    subscription->unsubscribe(me);
+  subscriptions_.clear();
   monitorable_actor::cleanup(reason, host);
   // tell registry we're done
   is_registered(false);

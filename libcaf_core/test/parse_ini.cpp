@@ -107,7 +107,7 @@ struct fixture {
   }
 
   void load_to_config_server(const char* str) {
-    config_server = system.registry().get(atom("ConfigServ"));
+    config_server = actor_cast<actor>(system.registry().get(atom("ConfigServ")));
     CAF_REQUIRE(config_server != invalid_actor);
     // clear config
     scoped_actor self{system};

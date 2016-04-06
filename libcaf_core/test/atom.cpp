@@ -71,7 +71,7 @@ struct send_to_self {
 
 CAF_TEST(receive_atoms) {
   scoped_actor self{system};
-  send_to_self f{self.get()};
+  send_to_self f{self.ptr()};
   f(foo_atom::value, static_cast<uint32_t>(42));
   f(abc_atom::value, def_atom::value, "cstring");
   f(1.f);

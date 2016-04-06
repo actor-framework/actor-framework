@@ -54,8 +54,8 @@ public:
 
   void enqueue(mailbox_element_ptr what, execution_unit* host) override;
 
-  void enqueue(const actor_addr& sender, message_id mid,
-               message content, execution_unit* host) override;
+  void enqueue(strong_actor_ptr sender, message_id mid, message content,
+               execution_unit* host) override;
 
   void initialize() override;
 

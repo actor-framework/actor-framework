@@ -44,7 +44,6 @@ using sorted_builtin_types =
     actor_addr,               // @addr
     std::vector<actor_addr>,  // @addrvec
     atom_value,               // @atom
-    channel,                  // @channel
     std::vector<char>,        // @charbuf
     down_msg,                 // @down
     duration,                 // @duration
@@ -62,6 +61,7 @@ using sorted_builtin_types =
     node_id,                  // @node
     std::string,              // @str
     strmap,                   // @strmap
+    strong_actor_ptr,         // @strong_actor_ptr
     std::set<std::string>,    // @strset
     std::vector<std::string>, // @strvec
     timeout_msg,              // @timeout
@@ -72,6 +72,7 @@ using sorted_builtin_types =
     uint64_t,                 // @u64
     uint8_t,                  // @u8
     unit_t,                   // @unit
+    weak_actor_ptr,           // @weak_actor_ptr
     bool,                     // bool
     double,                   // double
     float                     // float

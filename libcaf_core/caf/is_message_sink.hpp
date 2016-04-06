@@ -17,40 +17,27 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/sec.hpp"
-#include "caf/atom.hpp"
-#include "caf/actor.hpp"
-#include "caf/config.hpp"
-#include "caf/actor_cast.hpp"
-#include "caf/message_id.hpp"
-#include "caf/exit_reason.hpp"
-#include "caf/mailbox_element.hpp"
-#include "caf/system_messages.hpp"
+#ifndef CAF_IS_MESSAGE_SINK_HPP
+#define CAF_IS_MESSAGE_SINK_HPP
 
-#include "caf/detail/sync_request_bouncer.hpp"
+#include <type_traits>
+
+#include "caf/fwd.hpp"
 
 namespace caf {
-namespace detail {
 
-sync_request_bouncer::sync_request_bouncer(exit_reason r)
-    : rsn(r == exit_reason::not_exited ? exit_reason::normal : r) {
-  // nop
-}
+template <class T>
+struct is_message_sink : std::false_type { };
 
-void sync_request_bouncer::operator()(const strong_actor_ptr& sender,
-                                      const message_id& mid) const {
-  CAF_ASSERT(rsn != exit_reason::not_exited);
-  if (sender && mid.is_request()) {
-    sender->enqueue(nullptr, mid.response_id(),
-                    make_message(make_error(sec::request_receiver_down)),
-                    // TODO: this breaks out of the execution unit
-                    nullptr);
-  }
-}
+template <>
+struct is_message_sink<actor> : std::true_type { };
 
-void sync_request_bouncer::operator()(const mailbox_element& e) const {
-  (*this)(e.sender, e.mid);
-}
+template <>
+struct is_message_sink<group> : std::true_type { };
 
-} // namespace detail
+template <class... Ts>
+struct is_message_sink<typed_actor<Ts...>> : std::true_type { };
+
 } // namespace caf
+
+#endif // CAF_IS_MESSAGE_SINK_HPP

@@ -51,7 +51,7 @@ public:
 
   using value_factory = std::function<type_erased_value_ptr ()>;
 
-  using actor_factory_result = std::pair<actor_addr, std::set<std::string>>;
+  using actor_factory_result = std::pair<strong_actor_ptr, std::set<std::string>>;
 
   using actor_factory = std::function<actor_factory_result (actor_config&, message&)>;
 

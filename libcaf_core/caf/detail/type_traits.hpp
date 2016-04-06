@@ -120,7 +120,7 @@ struct is_builtin {
                                 || is_one_of<T, anything, std::string,
                                              std::u16string, std::u32string,
                                              atom_value, message, actor, group,
-                                             channel, node_id>::value;
+                                             node_id>::value;
 };
 
 /// Chekcs wheter `T` is primitive, i.e., either an arithmetic

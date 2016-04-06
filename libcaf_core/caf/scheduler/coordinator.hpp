@@ -82,8 +82,12 @@ protected:
         cv.notify_all();
         return resumable::shutdown_execution_unit;
       }
-      ref_counted* as_ref_counted_ptr() override {
-        return this;
+      void intrusive_ptr_add_ref_impl() override {
+        intrusive_ptr_add_ref(this);
+      }
+
+      void intrusive_ptr_release_impl() override {
+        intrusive_ptr_release(this);
       }
       shutdown_helper() : last_worker(nullptr) {
         // nop

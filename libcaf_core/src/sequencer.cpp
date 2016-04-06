@@ -28,20 +28,20 @@
 namespace caf {
 namespace decorator {
 
-sequencer::sequencer(actor_addr f, actor_addr g, message_types_set msg_types)
-    : monitorable_actor(&g->home_system(),
-                        g->home_system().next_actor_id(),
-                        g->node(),
-                        is_abstract_actor_flag | is_actor_dot_decorator_flag),
+sequencer::sequencer(strong_actor_ptr f, strong_actor_ptr g,
+                     message_types_set msg_types)
+    : monitorable_actor(is_abstract_actor_flag | is_actor_dot_decorator_flag),
       f_(std::move(f)),
       g_(std::move(g)),
       msg_types_(std::move(msg_types)) {
   // composed actor has dependency on constituent actors by default;
   // if either constituent actor is already dead upon establishing
   // the dependency, the actor is spawned dead
-  f_->attach(default_attachable::make_monitor(f_, address()));
+  f_->get()->attach(default_attachable::make_monitor(actor_cast<actor_addr>(f_),
+                                                     address()));
   if (g_ != f_)
-    g_->attach(default_attachable::make_monitor(g_, address()));
+    g_->get()->attach(default_attachable::make_monitor(actor_cast<actor_addr>(g_),
+                                                       address()));
 }
 
 void sequencer::enqueue(mailbox_element_ptr what, execution_unit* context) {

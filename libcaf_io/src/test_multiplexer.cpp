@@ -369,7 +369,6 @@ void test_multiplexer::flush_runnables() {
 
 void test_multiplexer::exec_later(resumable* ptr) {
   CAF_ASSERT(ptr != nullptr);
-  CAF_ASSERT(ptr->as_ref_counted_ptr()->get_reference_count() > 0);
   CAF_LOG_TRACE("");
   switch (ptr->subtype()) {
     case resumable::io_actor:
@@ -388,7 +387,6 @@ void test_multiplexer::exec_later(resumable* ptr) {
 
 void test_multiplexer::exec(resumable_ptr& ptr) {
   CAF_ASSERT(ptr != nullptr);
-  CAF_ASSERT(ptr->as_ref_counted_ptr()->get_reference_count() > 0);
   CAF_LOG_TRACE("");
   switch (ptr->resume(this, 1)) {
     case resumable::resume_later:

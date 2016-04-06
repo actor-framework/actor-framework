@@ -35,6 +35,11 @@
 namespace caf {
 namespace io {
 
+void abstract_broker::enqueue(strong_actor_ptr src, message_id mid,
+                              message msg, execution_unit* eu) {
+  enqueue(mailbox_element::make(std::move(src), mid, {}, std::move(msg)), eu);
+}
+
 void abstract_broker::enqueue(mailbox_element_ptr ptr, execution_unit*) {
   CAF_PUSH_AID(id());
   CAF_LOG_TRACE("enqueue " << CAF_ARG(ptr->msg));
@@ -62,16 +67,11 @@ void abstract_broker::enqueue(mailbox_element_ptr ptr, execution_unit*) {
   }
 }
 
-void abstract_broker::enqueue(const actor_addr& sender, message_id mid,
-                              message msg, execution_unit* eu) {
-  enqueue(mailbox_element::make(sender, mid, {}, std::move(msg)), eu);
-}
-
 void abstract_broker::launch(execution_unit* eu, bool is_lazy, bool is_hidden) {
   CAF_ASSERT(eu != nullptr);
   CAF_ASSERT(eu == &backend());
   // add implicit reference count held by middleman/multiplexer
-  ref();
+  intrusive_ptr_add_ref(ctrl());
   is_registered(! is_hidden);
   CAF_PUSH_AID(id());
   CAF_LOG_TRACE("init and launch broker:" << CAF_ARG(id()));

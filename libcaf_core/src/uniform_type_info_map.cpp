@@ -34,7 +34,6 @@
 
 #include "caf/group.hpp"
 #include "caf/logger.hpp"
-#include "caf/channel.hpp"
 #include "caf/message.hpp"
 #include "caf/duration.hpp"
 #include "caf/actor_cast.hpp"
@@ -59,7 +58,6 @@ const char* numbered_type_names[] = {
   "@addr",
   "@addrvec",
   "@atom",
-  "@channel",
   "@charbuf",
   "@down",
   "@duration",
@@ -77,6 +75,7 @@ const char* numbered_type_names[] = {
   "@node",
   "@str",
   "@strmap",
+  "@strong_actor_ptr",
   "@strset",
   "@strvec",
   "@timeout",
@@ -87,6 +86,7 @@ const char* numbered_type_names[] = {
   "@u64",
   "@u8",
   "@unit",
+  "@weak_actor_ptr",
   "bool",
   "double",
   "float"
@@ -165,7 +165,7 @@ uniform_type_info_map::renderer(atom_value x) const {
 actor_factory_result uniform_type_info_map::make_actor(const std::string& name,
                                                        actor_config& cfg,
                                                        message& msg) const {
-  actor_addr res;
+  strong_actor_ptr res;
   std::set<std::string> ifs;
   auto i = factories_.find(name);
   if (i != factories_.end())

@@ -31,9 +31,6 @@
 
 namespace caf {
 
-class channel;
-class message;
-
 struct invalid_group_t {
   constexpr invalid_group_t() {}
 };
@@ -45,8 +42,8 @@ constexpr invalid_group_t invalid_group = invalid_group_t{};
 class group : detail::comparable<group>,
               detail::comparable<group, invalid_group_t> {
 public:
-  template <class>
-  friend struct actor_cast_access;
+  template <class, class, int>
+  friend class actor_cast_access;
 
   group() = default;
 
@@ -95,11 +92,11 @@ public:
 
   friend void serialize(deserializer& sink, group& x, const unsigned int);
 
-private:
   inline abstract_group* get() const noexcept {
     return ptr_.get();
   }
 
+private:
   inline abstract_group* release() noexcept {
     return ptr_.release();
   }

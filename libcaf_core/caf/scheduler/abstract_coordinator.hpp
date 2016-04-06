@@ -27,7 +27,6 @@
 #include "caf/fwd.hpp"
 #include "caf/atom.hpp"
 #include "caf/actor.hpp"
-#include "caf/channel.hpp"
 #include "caf/message.hpp"
 #include "caf/duration.hpp"
 #include "caf/actor_addr.hpp"
@@ -53,12 +52,12 @@ public:
   virtual void enqueue(resumable* what) = 0;
 
   template <class Duration, class... Data>
-  void delayed_send(Duration rel_time, actor_addr from, channel to,
-                    message_id mid, message data) {
-    timer_->enqueue(invalid_actor_addr, invalid_message_id,
-                     make_message(duration{rel_time}, std::move(from),
-                                  std::move(to), mid, std::move(data)),
-                     nullptr);
+  void delayed_send(Duration rel_time, strong_actor_ptr from,
+                    strong_actor_ptr to, message_id mid, message data) {
+    timer_->enqueue(nullptr, invalid_message_id,
+                    make_message(duration{rel_time}, std::move(from),
+                                 std::move(to), mid, std::move(data)),
+                    nullptr);
   }
 
   inline actor_system& system() {

@@ -104,7 +104,8 @@ public:
   class runnable : public resumable, public ref_counted {
   public:
     subtype_t subtype() const override;
-    ref_counted* as_ref_counted_ptr() override;
+    void intrusive_ptr_add_ref_impl() override;
+    void intrusive_ptr_release_impl() override;
   };
 
   /// Makes sure the multipler does not exit its event loop until

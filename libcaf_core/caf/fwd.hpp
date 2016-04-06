@@ -25,15 +25,19 @@
 
 namespace caf {
 
-// templates
+// 1-class templates
 template <class> class maybe;
 template <class> class optional;
 template <class> class intrusive_ptr;
-template <class> struct actor_cast_access;
+template <class> class weak_intrusive_ptr;
 template <class> class typed_continue_helper;
+
+// 2-class templates
+template <class, class, int> class actor_cast_access;
 
 // variadic templates
 template <class...> class delegated;
+template <class...> class typed_actor;
 template <class...> class typed_response_promise;
 
 // classes
@@ -41,7 +45,6 @@ class actor;
 class group;
 class error;
 class message;
-class channel;
 class node_id;
 class duration;
 class behavior;
@@ -69,6 +72,7 @@ class message_handler;
 class response_promise;
 class event_based_actor;
 class binary_serializer;
+class actor_control_block;
 class binary_deserializer;
 class actor_system_config;
 class uniform_type_info_map;
@@ -133,6 +137,8 @@ class dynamic_message_data;
 
 } // namespace detail
 
+using strong_actor_ptr = intrusive_ptr<actor_control_block>;
+using weak_actor_ptr = weak_intrusive_ptr<actor_control_block>;
 using mailbox_element_ptr = std::unique_ptr<mailbox_element, detail::disposer>;
 
 } // namespace caf

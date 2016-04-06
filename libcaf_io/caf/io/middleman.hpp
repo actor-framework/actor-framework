@@ -52,10 +52,10 @@ public:
   /// @returns The actual port the OS uses after `bind()`. If `port == 0` the OS
   ///          chooses a random high-level port.
   template <class Handle>
-  uint16_t publish(const Handle& whom, uint16_t port,
+  uint16_t publish(Handle&& whom, uint16_t port,
                    const char* in = nullptr, bool reuse_addr = false) {
-    return publish(whom.address(), system().message_types(whom),
-                   port, in, reuse_addr);
+    return publish(actor_cast<strong_actor_ptr>(std::forward<Handle>(whom)),
+                   system().message_types(whom), port, in, reuse_addr);
   }
 
   /// Makes *all* local groups accessible via network
@@ -126,9 +126,6 @@ public:
     named_brokers_.emplace(name, result);
     return result;
   }
-
-  /// Adds `bptr` to the list of known brokers.
-  void add_broker(broker_ptr bptr);
 
   /// Runs `fun` in the event loop of the middleman.
   /// @note This member function is thread-safe.
@@ -301,13 +298,13 @@ private:
     return system().spawn_class<Impl, Os>(cfg);
   }
 
-  uint16_t publish(const actor_addr& whom, std::set<std::string> sigs,
-                          uint16_t port, const char* in, bool ru);
+  uint16_t publish(const strong_actor_ptr& whom, std::set<std::string> sigs,
+                   uint16_t port, const char* in, bool ru);
 
   void unpublish(const actor_addr& whom, uint16_t port);
 
-  actor_addr remote_actor(std::set<std::string> ifs,
-                          std::string host, uint16_t port);
+  strong_actor_ptr remote_actor(std::set<std::string> ifs,
+                                std::string host, uint16_t port);
 
   // environment
   actor_system& system_;
@@ -317,8 +314,6 @@ private:
   std::thread thread_;
   // keeps track of "singleton-like" brokers
   std::map<atom_value, actor> named_brokers_;
-  // keeps track of anonymous brokers
-  std::set<broker_ptr> brokers_;
   // user-defined hooks
   hook_uptr hooks_;
   // actor offering asyncronous IO by managing this singleton instance

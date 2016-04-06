@@ -69,47 +69,52 @@ void await_all_locals_down(actor_system& sys, std::initializer_list<actor> xs) {
 
 class local_group : public abstract_group {
 public:
-  void send_all_subscribers(const actor_addr& sender, const message& msg,
+  void send_all_subscribers(const strong_actor_ptr& sender, const message& msg,
                             execution_unit* host) {
     CAF_LOG_TRACE(CAF_ARG(sender) << CAF_ARG(msg));
     shared_guard guard(mtx_);
-    for (auto& s : subscribers_) {
-      actor_cast<abstract_actor_ptr>(s)->enqueue(sender, invalid_message_id,
-                                                 msg, host);
-    }
+    for (auto& s : subscribers_)
+      s->enqueue(sender, invalid_message_id, msg, host);
   }
 
-  void enqueue(const actor_addr& sender, message_id, message msg,
+  void enqueue(strong_actor_ptr sender, message_id, message msg,
                execution_unit* host) override {
     CAF_LOG_TRACE(CAF_ARG(sender) << CAF_ARG(msg));
     send_all_subscribers(sender, msg, host);
     broker_->enqueue(sender, invalid_message_id, msg, host);
   }
 
-  std::pair<bool, size_t> add_subscriber(const actor_addr& who) {
+  std::pair<bool, size_t> add_subscriber(strong_actor_ptr who) {
     CAF_LOG_TRACE(CAF_ARG(who));
+    if (! who)
+      return {false, subscribers_.size()};
     exclusive_guard guard(mtx_);
-    if (who && subscribers_.insert(who).second) {
-      return {true, subscribers_.size()};
-    }
-    return {false, subscribers_.size()};
+    auto res = subscribers_.emplace(std::move(who)).second;
+    return {res, subscribers_.size()};
   }
 
-  std::pair<bool, size_t> erase_subscriber(const actor_addr& who) {
+  std::pair<bool, size_t> erase_subscriber(const actor_control_block* who) {
     CAF_LOG_TRACE(""); // serializing who would cause a deadlock
     exclusive_guard guard(mtx_);
-    auto success = subscribers_.erase(who) > 0;
-    return {success, subscribers_.size()};
+    auto cmp = [](const strong_actor_ptr& lhs, const actor_control_block* rhs) {
+      return actor_addr::compare(lhs.get(), rhs) < 0;
+    };
+    auto e = subscribers_.end();
+    auto i = std::lower_bound(subscribers_.begin(), e, who, cmp);
+    if (i == e || actor_addr::compare(i->get(), who) != 0)
+      return {false, subscribers_.size()};
+    subscribers_.erase(i);
+    return {true, subscribers_.size()};
   }
 
-  bool subscribe(const actor_addr& who) override {
-    CAF_LOG_TRACE(""); // serializing who would cause a deadlock
-    if (add_subscriber(who).first)
+  bool subscribe(strong_actor_ptr who) override {
+    CAF_LOG_TRACE(CAF_ARG(who));
+    if (add_subscriber(std::move(who)).first)
       return true;
     return false;
   }
 
-  void unsubscribe(const actor_addr& who) override {
+  void unsubscribe(const actor_control_block* who) override {
     CAF_LOG_TRACE(CAF_ARG(who));
     erase_subscriber(who);
   }
@@ -133,7 +138,7 @@ public:
 
 protected:
   detail::shared_spinlock mtx_;
-  std::set<actor_addr> subscribers_;
+  std::set<strong_actor_ptr> subscribers_;
   actor broker_;
 };
 
@@ -167,13 +172,17 @@ public:
       },
       [=](leave_atom, const actor& other) {
         CAF_LOG_TRACE(CAF_ARG(other));
+        acquaintances_.erase(other);
+        // TODO
+        /*
         if (other && acquaintances_.erase(other) > 0)
           demonitor(other);
+        */
       },
       [=](forward_atom, const message& what) {
         CAF_LOG_TRACE(CAF_ARG(what));
         // local forwarding
-        group_->send_all_subscribers(current_sender(), what, context());
+        group_->send_all_subscribers(current_element_->sender, what, context());
         // forward to all acquaintances
         send_to_acquaintances(what);
       },
@@ -199,7 +208,7 @@ public:
 private:
   void send_to_acquaintances(const message& what) {
     // send to all remote subscribers
-    auto sender = current_sender();
+    auto sender = current_element_->sender;
     CAF_LOG_DEBUG(CAF_ARG(acquaintances_.size())
                   << CAF_ARG(sender) << CAF_ARG(what));
     for (auto& acquaintance : acquaintances_)
@@ -251,9 +260,9 @@ public:
     monitor_ = system().spawn<hidden>(broker_monitor_actor, this);
   }
 
-  bool subscribe(const actor_addr& who) override {
+  bool subscribe(strong_actor_ptr who) override {
     CAF_LOG_TRACE(CAF_ARG(who));
-    auto res = add_subscriber(who);
+    auto res = add_subscriber(std::move(who));
     if (res.first) {
       // join remote source
       if (res.second == 1)
@@ -264,7 +273,7 @@ public:
     return false;
   }
 
-  void unsubscribe(const actor_addr& who) override {
+  void unsubscribe(const actor_control_block* who) override {
     CAF_LOG_TRACE(CAF_ARG(who));
     auto res = erase_subscriber(who);
     if (res.first && res.second == 0) {
@@ -274,11 +283,11 @@ public:
     }
   }
 
-  void enqueue(const actor_addr& sender, message_id mid, message msg,
-               execution_unit* eu) override {
+  void enqueue(strong_actor_ptr sender, message_id mid,
+               message msg, execution_unit* eu) override {
     CAF_LOG_TRACE(CAF_ARG(sender) << CAF_ARG(mid) << CAF_ARG(msg));
     // forward message to the broker
-    broker_->enqueue(sender, mid,
+    broker_->enqueue(std::move(sender), mid,
                      make_message(forward_atom::value, std::move(msg)), eu);
   }
 
@@ -299,7 +308,7 @@ private:
       [=](const down_msg& down) {
         CAF_LOG_TRACE(CAF_ARG(down));
         auto msg = make_message(group_down_msg{group(grp)});
-        grp->send_all_subscribers(self->address(), std::move(msg),
+        grp->send_all_subscribers(self->ctrl(), std::move(msg),
                                   self->context());
         self->quit(down.reason);
       }
@@ -315,7 +324,7 @@ behavior proxy_broker::make_behavior() {
   return {
     others >> [=](const message& msg) {
       CAF_LOG_TRACE(CAF_ARG(msg));
-      group_->send_all_subscribers(current_sender(), msg, context());
+      group_->send_all_subscribers(current_element_->sender, msg, context());
     }
   };
 }

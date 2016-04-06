@@ -29,8 +29,8 @@
 
 #include "caf/fwd.hpp"
 #include "caf/actor.hpp"
-#include "caf/actor_addr.hpp"
 #include "caf/abstract_actor.hpp"
+#include "caf/actor_control_block.hpp"
 
 #include "caf/detail/shared_spinlock.hpp"
 #include "caf/detail/singleton_mixin.hpp"
@@ -52,13 +52,13 @@ public:
   /// A registry entry consists of a pointer to the actor and an
   /// exit reason. An entry with a nullptr means the actor has finished
   /// execution for given reason.
-  using id_entry = std::pair<actor_addr, exit_reason>;
+  using id_entry = std::pair<strong_actor_ptr, exit_reason>;
 
   /// Returns the the local actor associated to `key`.
   id_entry get(actor_id key) const;
 
   /// Associates a local actor with its ID.
-  void put(actor_id key, const actor_addr& value);
+  void put(actor_id key, const strong_actor_ptr& value);
 
   /// Removes an actor from this registry,
   /// leaving `reason` for future reference.
@@ -78,15 +78,21 @@ public:
   void await_running_count_equal(size_t expected) const;
 
   /// Returns the actor associated with `key` or `invalid_actor`.
-  actor get(atom_value key) const;
+  strong_actor_ptr get(atom_value key) const;
 
   /// Associates given actor to `key`.
-  void put(atom_value key, actor value);
+  void put(atom_value key, strong_actor_ptr value);
 
   /// Removes a name mapping.
   void erase(atom_value key);
 
-  using name_map = std::unordered_map<atom_value, actor>;
+  /// @cond PRIVATE
+
+  void put(actor_id, actor_control_block*);
+
+  /// @endcond
+
+  using name_map = std::unordered_map<atom_value, strong_actor_ptr>;
 
   name_map named_actors() const;
 

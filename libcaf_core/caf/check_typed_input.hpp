@@ -20,6 +20,7 @@
 #ifndef CAF_CHECK_TYPED_INPUT_HPP
 #define CAF_CHECK_TYPED_INPUT_HPP
 
+#include "caf/fwd.hpp"
 #include "caf/typed_actor.hpp"
 
 #include "caf/detail/type_list.hpp"
@@ -27,8 +28,8 @@
 
 namespace caf {
 
-/// Checks whether `R` does support an input of type `{Ts...}` via a
-/// static assertion (always returns 0).
+/// Checks whether `R` does support an input of type `{Ts...}`
+/// via static assertion.
 template <class... Sigs, class... Ts>
 void check_typed_input(const typed_actor<Sigs...>&,
                        const detail::type_list<Ts...>&) {
@@ -43,6 +44,16 @@ void check_typed_input(const typed_actor<Sigs...>&,
                   detail::input_is<detail::type_list<Ts...>>::template eval
                 >::value >= 0,
                 "typed actor does not support given input");
+}
+
+template <class... Ts>
+void check_typed_input(const actor&, const detail::type_list<Ts...>&) {
+  // nop
+}
+
+template <class... Ts>
+void check_typed_input(const group&, const detail::type_list<Ts...>&) {
+  // nop
 }
 
 } // namespace caf

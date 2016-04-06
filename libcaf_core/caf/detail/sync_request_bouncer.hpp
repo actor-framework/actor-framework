@@ -22,6 +22,7 @@
 
 #include <cstdint>
 
+#include "caf/fwd.hpp"
 #include "caf/exit_reason.hpp"
 
 namespace caf {
@@ -39,7 +40,7 @@ namespace detail {
 struct sync_request_bouncer {
   exit_reason rsn;
   explicit sync_request_bouncer(exit_reason r);
-  void operator()(const actor_addr& sender, const message_id& mid) const;
+  void operator()(const strong_actor_ptr& sender, const message_id& mid) const;
   void operator()(const mailbox_element& e) const;
 
 };

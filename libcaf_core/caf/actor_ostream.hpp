@@ -42,7 +42,9 @@ public:
   /// Open redirection file in append mode.
   static constexpr int append = 0x01;
 
-  explicit actor_ostream(abstract_actor* self);
+  explicit actor_ostream(local_actor* self);
+
+  explicit actor_ostream(scoped_actor& self);
 
   /// Writes `arg` to the buffer allocated for the calling actor.
   actor_ostream& write(std::string arg);
@@ -81,12 +83,12 @@ public:
   }
 
 private:
-  intrusive_ptr<abstract_actor> self_;
+  actor self_;
   actor printer_;
 };
 
 /// Convenience factory function for creating an actor output stream.
-actor_ostream aout(abstract_actor* self);
+actor_ostream aout(local_actor* self);
 
 /// Convenience factory function for creating an actor output stream.
 actor_ostream aout(scoped_actor& self);

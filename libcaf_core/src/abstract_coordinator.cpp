@@ -55,8 +55,8 @@ namespace {
 using hrc = std::chrono::high_resolution_clock;
 
 struct delayed_msg {
-  actor_addr from;
-  channel to;
+  strong_actor_ptr from;
+  strong_actor_ptr to;
   message_id mid;
   message msg;
 };
@@ -106,7 +106,7 @@ public:
     std::multimap<hrc::time_point, delayed_msg> messages;
     // message handling rules
     message_handler mfun{
-      [&](const duration& d, actor_addr& from, channel& to,
+      [&](const duration& d, strong_actor_ptr& from, strong_actor_ptr& to,
           message_id mid, message& msg) {
          insert_dmsg(messages, d, std::move(from),
                      std::move(to), mid, std::move(msg));

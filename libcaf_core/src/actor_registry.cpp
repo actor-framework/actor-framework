@@ -65,16 +65,20 @@ actor_registry::id_entry actor_registry::get(actor_id key) const {
   if (i != entries_.end())
     return i->second;
   CAF_LOG_DEBUG("key invalid, assume actor no longer exists:" << CAF_ARG(key));
-  return {invalid_actor_addr, exit_reason::unknown};
+  return {nullptr, exit_reason::unknown};
 }
 
-void actor_registry::put(actor_id key, const actor_addr& val) {
-  if (val == nullptr)
+void actor_registry::put(actor_id key, actor_control_block* val) {
+  if (! val)
+    return;
+  auto strong_val = actor_cast<actor>(val);
+  if (! strong_val)
     return;
   { // lifetime scope of guard
     exclusive_guard guard(instances_mtx_);
     if (! entries_.emplace(key,
-                           id_entry{val, exit_reason::not_exited}).second) {
+                           id_entry{actor_cast<strong_actor_ptr>(val),
+                                    exit_reason::not_exited}).second) {
       // already defined
       return;
     }
@@ -82,9 +86,13 @@ void actor_registry::put(actor_id key, const actor_addr& val) {
   // attach functor without lock
   CAF_LOG_INFO("added actor:" << CAF_ARG(key));
   actor_registry* reg = this;
-  val->attach_functor([key, reg](exit_reason reason) {
+  strong_val->attach_functor([key, reg](exit_reason reason) {
     reg->erase(key, reason);
   });
+}
+
+void actor_registry::put(actor_id key, const strong_actor_ptr& val) {
+  put(key, actor_cast<actor_control_block*>(val));
 }
 
 void actor_registry::erase(actor_id key, exit_reason reason) {
@@ -93,7 +101,7 @@ void actor_registry::erase(actor_id key, exit_reason reason) {
   if (i != entries_.end()) {
     auto& entry = i->second;
     CAF_LOG_INFO("erased actor:" << CAF_ARG(key) << CAF_ARG(reason));
-    entry.first = invalid_actor_addr;
+    entry.first = nullptr;
     entry.second = reason;
   }
 }
@@ -130,18 +138,18 @@ void actor_registry::await_running_count_equal(size_t expected) const {
   }
 }
 
-actor actor_registry::get(atom_value key) const {
+strong_actor_ptr actor_registry::get(atom_value key) const {
   shared_guard guard{named_entries_mtx_};
   auto i = named_entries_.find(key);
   if (i == named_entries_.end())
-    return invalid_actor;
+    return nullptr;
   return i->second;
 }
 
-void actor_registry::put(atom_value key, actor value) {
+void actor_registry::put(atom_value key, strong_actor_ptr value) {
   if (value)
-    value->attach_functor([=] {
-      system_.registry().put(key, invalid_actor);
+    value->get()->attach_functor([=] {
+      system_.registry().put(key, nullptr);
     });
   exclusive_guard guard{named_entries_mtx_};
   named_entries_.emplace(key, std::move(value));
@@ -257,11 +265,11 @@ void actor_registry::start() {
     CAF_LOG_TRACE("");
     return {
       [=](get_atom, const std::string& name, message& args)
-      -> result<ok_atom, actor_addr, std::set<std::string>> {
+      -> result<ok_atom, strong_actor_ptr, std::set<std::string>> {
         CAF_LOG_TRACE(CAF_ARG(name) << CAF_ARG(args));
         actor_config cfg{self->context()};
         auto res = self->system().types().make_actor(name, cfg, args);
-        if (res.first == invalid_actor_addr)
+        if (! res.first)
           return sec::cannot_spawn_actor_from_arguments;
         return {ok_atom::value, res.first, res.second};
       },
@@ -277,11 +285,9 @@ void actor_registry::start() {
   //       use the lazy_init flag
   //named_entries_.emplace(atom("SpawnServ"), system_.spawn_announce_actor_type_server());
   auto cs = system_.spawn<hidden+lazy_init>(kvstore);
-  put(atom("ConfigServ"), cs);
-  named_entries_.emplace(atom("ConfigServ"), std::move(cs));
+  put(atom("ConfigServ"), actor_cast<strong_actor_ptr>(std::move(cs)));
   auto ss = system_.spawn<hidden+lazy_init>(spawn_serv);
-  put(atom("SpawnServ"), ss);
-  named_entries_.emplace(atom("SpawnServ"), std::move(ss));
+  put(atom("SpawnServ"), actor_cast<strong_actor_ptr>(std::move(ss)));
 }
 
 void actor_registry::stop() {
@@ -298,7 +304,7 @@ void actor_registry::stop() {
   // the scheduler is already stopped -> invoke exit messages manually
   dropping_execution_unit dummy{&system_};
   for (auto& kvp : named_entries_) {
-    auto mp = mailbox_element::make_joint(invalid_actor_addr,
+    auto mp = mailbox_element::make_joint(nullptr,
                                           invalid_message_id,
                                           {},
                                           exit_msg{invalid_actor_addr,

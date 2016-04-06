@@ -62,25 +62,25 @@ public:
 
   using mpi_set = std::set<std::string>;
 
-  using get_res = delegated<ok_atom, node_id, actor_addr, mpi_set>;
+  using get_res = delegated<ok_atom, node_id, strong_actor_ptr, mpi_set>;
 
   using del_res = delegated<void>;
 
-  using endpoint_data = std::tuple<node_id, actor_addr, mpi_set>;
+  using endpoint_data = std::tuple<node_id, strong_actor_ptr, mpi_set>;
 
   using endpoint = std::pair<std::string, uint16_t>;
 
   behavior_type make_behavior() override {
     CAF_LOG_TRACE("");
     return {
-      [=](publish_atom, uint16_t port, actor_addr& whom,
+      [=](publish_atom, uint16_t port, strong_actor_ptr& whom,
           mpi_set& sigs, std::string& addr, bool reuse) -> put_res {
         CAF_LOG_TRACE("");
         return put(port, whom, sigs, addr.c_str(), reuse);
       },
       [=](open_atom, uint16_t port, std::string& addr, bool reuse) -> put_res {
         CAF_LOG_TRACE("");
-        actor_addr whom = invalid_actor_addr;
+        strong_actor_ptr whom;
         mpi_set sigs;
         return put(port, whom, sigs, addr.c_str(), reuse);
       },
@@ -113,7 +113,7 @@ public:
         std::vector<response_promise> tmp{std::move(rp)};
         pending_.emplace(key, std::move(tmp));
         request(broker_, infinite, connect_atom::value, hdl, port).then(
-          [=](ok_atom, node_id& nid, actor_addr& addr, mpi_set& sigs) {
+          [=](ok_atom, node_id& nid, strong_actor_ptr& addr, mpi_set& sigs) {
             auto i = pending_.find(key);
             if (i == pending_.end())
               return;
@@ -148,7 +148,7 @@ public:
         return {};
       },
       [=](spawn_atom, const node_id&, const std::string&, const message&)
-      -> delegated<ok_atom, actor_addr, mpi_set> {
+      -> delegated<ok_atom, strong_actor_ptr, mpi_set> {
         CAF_LOG_TRACE("");
         forward_current_message(broker_);
         return {};
@@ -173,7 +173,7 @@ public:
   }
 
 private:
-  put_res put(uint16_t port, actor_addr& whom,
+  put_res put(uint16_t port, strong_actor_ptr& whom,
               mpi_set& sigs, const char* in = nullptr,
               bool reuse_addr = false) {
     CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(whom) << CAF_ARG(sigs)

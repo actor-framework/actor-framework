@@ -35,7 +35,6 @@
 #include "caf/extend.hpp"
 #include "caf/logger.hpp"
 #include "caf/message.hpp"
-#include "caf/channel.hpp"
 #include "caf/duration.hpp"
 #include "caf/behavior.hpp"
 #include "caf/delegated.hpp"
@@ -92,7 +91,7 @@ public:
   using mailbox_type = detail::single_reader_queue<mailbox_element,
                                                    detail::disposer>;
 
-  static constexpr auto memory_cache_flag = detail::needs_embedding;
+  //static constexpr auto memory_cache_flag = detail::needs_embedding;
 
   ~local_actor();
 
@@ -159,17 +158,32 @@ public:
 
   /// Sends `{xs...}` to `dest` using the priority `mp`.
   template <class... Ts>
-  void send(message_priority mp, const channel& dest, Ts&&... xs) {
+  void send(message_priority mp, const actor& dest, Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "sizeof...(Ts) == 0");
-    send_impl(message_id::make(mp), actor_cast<abstract_channel*>(dest),
+    send_impl(message_id::make(mp), actor_cast<abstract_actor*>(dest),
               std::forward<Ts>(xs)...);
   }
 
   /// Sends `{xs...}` to `dest` using normal priority.
   template <class... Ts>
-  void send(const channel& dest, Ts&&... xs) {
-    send_impl(message_id::make(), actor_cast<abstract_channel*>(dest),
+  void send(const actor& dest, Ts&&... xs) {
+    send_impl(message_id::make(), actor_cast<abstract_actor*>(dest),
               std::forward<Ts>(xs)...);
+  }
+
+  /// Sends `{xs...}` to `dest` using the priority `mp`.
+  template <class... Ts>
+  void send(message_priority mp, const group& dest, Ts&&... xs) {
+    static_assert(sizeof...(Ts) > 0, "sizeof...(Ts) == 0");
+    send_impl(message_id::make(mp), actor_cast<abstract_channel*>(dest),
+              make_message(std::forward<Ts>(xs)...));
+  }
+
+  /// Sends `{xs...}` to `dest` using normal priority.
+  template <class... Ts>
+  void send(const group& dest, Ts&&... xs) {
+    send_impl(message_id::make(), dest.get(),
+              make_message(std::forward<Ts>(xs)...));
   }
 
   /// Sends `{xs...}` to `dest` using the priority `mp`.
@@ -200,6 +214,12 @@ public:
               std::forward<Ts>(xs)...);
   }
 
+  /// Sends `{xs...}` to `dest` using normal priority.
+  template <class... Sigs, class... Ts>
+  void send(typed_event_based_actor<Sigs...>* dest, Ts&&... xs) {
+    send(typed_actor<Sigs...>{dest}, std::forward<Ts>(xs)...);
+  }
+
   /// Sends an exit message to `dest`.
   void send_exit(const actor_addr& dest, exit_reason reason);
 
@@ -212,7 +232,7 @@ public:
   /// Sends a message to `dest` that is delayed by `rel_time`
   /// using the priority `mp`.
   template <class... Ts>
-  void delayed_send(message_priority mp, const channel& dest,
+  void delayed_send(message_priority mp, const actor& dest,
                     const duration& rtime, Ts&&... xs) {
     delayed_send_impl(message_id::make(mp), dest, rtime,
                       make_message(std::forward<Ts>(xs)...));
@@ -220,9 +240,9 @@ public:
 
   /// Sends a message to `dest` that is delayed by `rel_time`.
   template <class... Ts>
-  void delayed_send(const channel& dest, const duration& rtime, Ts&&... xs) {
-    delayed_send_impl(message_id::make(), dest, rtime,
-                      make_message(std::forward<Ts>(xs)...));
+  void delayed_send(const actor& dest, const duration& rtime, Ts&&... xs) {
+    delayed_send_impl(message_id::make(), actor_cast<strong_actor_ptr>(dest),
+                      rtime, make_message(std::forward<Ts>(xs)...));
   }
 
   /// Sends `{xs...}` delayed by `rtime` to `dest` using the priority `mp`.
@@ -236,7 +256,7 @@ public:
         >::type...>;
     token tk;
     check_typed_input(dest, tk);
-    delayed_send_impl(message_id::make(mp), actor_cast<abstract_channel*>(dest),
+    delayed_send_impl(message_id::make(mp), actor_cast<abstract_actor*>(dest),
                       rtime, make_message(std::forward<Ts>(xs)...));
   }
 
@@ -252,8 +272,15 @@ public:
         >::type...>;
     token tk;
     check_typed_input(dest, tk);
-    delayed_send_impl(message_id::make(), actor_cast<channel>(dest),
+    delayed_send_impl(message_id::make(), actor_cast<strong_actor_ptr>(dest),
                       rtime, make_message(std::forward<Ts>(xs)...));
+  }
+
+  /// Sends `{xs...}` to `dest` using normal priority.
+  template <class... Sigs, class... Ts>
+  void delayed_send(typed_event_based_actor<Sigs...>* dest,
+                    const duration& rtime, Ts&&... xs) {
+    delayed_send(typed_actor<Sigs...>{dest}, rtime, std::forward<Ts>(xs)...);
   }
 
   /****************************************************************************
@@ -314,6 +341,7 @@ public:
   }
 
   /// @cond PRIVATE
+
   /// Returns the currently processed message.
   /// @warning Only set during callback invocation. Calling this member function
   ///          is undefined behavior (dereferencing a `nullptr`) when not in a
@@ -321,29 +349,24 @@ public:
   inline message& current_message() {
     return current_element_->msg;
   }
+
+  void monitor(abstract_actor* whom);
+
   /// @endcond
 
   /// Returns the address of the sender of the current message.
   /// @warning Only set during callback invocation. Calling this member function
   ///          is undefined behavior (dereferencing a `nullptr`) when not in a
   ///          callback or `forward_to` has been called previously.
-  inline actor_addr& current_sender() {
-    return current_element_->sender;
+  inline actor_addr current_sender() {
+    return actor_cast<actor_addr>(current_element_->sender);
   }
 
   /// Adds a unidirectional `monitor` to `whom`.
   /// @note Each call to `monitor` creates a new, independent monitor.
-  void monitor(const actor_addr& whom);
-
-  /// @copydoc monitor(const actor_addr&)
-  inline void monitor(const actor& whom) {
-    monitor(whom.address());
-  }
-
-  /// @copydoc monitor(const actor_addr&)
-  template <class... Ts>
-  inline void monitor(const typed_actor<Ts...>& whom) {
-    monitor(whom.address());
+  template <class Handle>
+  void monitor(const Handle& whom) {
+    monitor(actor_cast<abstract_actor*>(whom));
   }
 
   /// Removes a monitor from `whom`.
@@ -429,8 +452,6 @@ public:
 
   subtype_t subtype() const override;
 
-  ref_counted* as_ref_counted_ptr() override;
-
   resume_result resume(execution_unit*, size_t) override;
 
   /****************************************************************************
@@ -446,11 +467,15 @@ public:
   // handle `ptr` in an event-based actor, not suitable to be called in a loop
   virtual void exec_single_event(execution_unit* ctx, mailbox_element_ptr& ptr);
 
+  local_actor();
+
+  local_actor(int init_flags);
+
   local_actor(actor_config& sys);
 
-  local_actor(actor_system* sys, actor_id aid, node_id nid);
+  void intrusive_ptr_add_ref_impl() override;
 
-  local_actor(actor_system* sys, actor_id aid, node_id nid, int init_flags);
+  void intrusive_ptr_release_impl() override;
 
   template <class ActorHandle>
   inline ActorHandle eval_opts(spawn_options opts, ActorHandle res) {
@@ -693,23 +718,10 @@ private:
   typename std::enable_if<
     ! std::is_same<typename std::decay<T>::type, message>::value
   >::type
-  send_impl(message_id mid, abstract_channel* dest, T&& x, Ts&&... xs) const {
-    if (! dest)
-      return;
-    dest->enqueue(address(), mid,
-                  make_message(std::forward<T>(x), std::forward<Ts>(xs)...),
-                  context());
-  }
-
-  template <class T, class... Ts>
-  typename std::enable_if<
-    ! std::is_same<typename std::decay<T>::type, message>::value
-  >::type
   send_impl(message_id mid, abstract_actor* dest, T&& x, Ts&&... xs) const {
     if (! dest)
       return;
-    dest->enqueue(mailbox_element::make_joint(address(),
-                                              mid, {},
+    dest->enqueue(mailbox_element::make_joint(ctrl(), mid, {},
                                               std::forward<T>(x),
                                               std::forward<Ts>(xs)...),
                   context());
@@ -717,7 +729,7 @@ private:
 
   void send_impl(message_id mid, abstract_channel* dest, message what) const;
 
-  void delayed_send_impl(message_id mid, const channel& whom,
+  void delayed_send_impl(message_id mid, strong_actor_ptr whom,
                          const duration& rtime, message data);
 };
 

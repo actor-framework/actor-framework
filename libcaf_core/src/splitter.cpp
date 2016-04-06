@@ -40,7 +40,7 @@ struct splitter_state {
 };
 
 behavior fan_out_fan_in(stateful_actor<splitter_state>* self,
-                        const std::vector<actor_addr>& workers) {
+                        const std::vector<strong_actor_ptr>& workers) {
   return {
     others >> [=](const message& msg) {
       self->state.rp = self->make_response_promise();
@@ -67,11 +67,9 @@ behavior fan_out_fan_in(stateful_actor<splitter_state>* self,
 
 } // namespace <anonymous>
 
-splitter::splitter(std::vector<actor_addr> workers, message_types_set msg_types)
-    : monitorable_actor(&workers.front()->home_system(),
-                        workers.front()->home_system().next_actor_id(),
-                        workers.front()->node(),
-                        is_abstract_actor_flag | is_actor_dot_decorator_flag),
+splitter::splitter(std::vector<strong_actor_ptr> workers,
+                   message_types_set msg_types)
+    : monitorable_actor(is_abstract_actor_flag | is_actor_dot_decorator_flag),
       workers_(std::move(workers)),
       msg_types_(std::move(msg_types)) {
   // composed actor has dependency on constituent actors by default;
@@ -79,7 +77,8 @@ splitter::splitter(std::vector<actor_addr> workers, message_types_set msg_types)
   // the dependency, the actor is spawned dead
   auto addr = address();
   for (auto& worker : workers_)
-    worker->attach(default_attachable::make_monitor(worker, addr));
+    worker->get()->attach(
+      default_attachable::make_monitor(actor_cast<actor_addr>(worker), addr));
 }
 
 void splitter::enqueue(mailbox_element_ptr what, execution_unit* context) {
@@ -100,7 +99,10 @@ void splitter::enqueue(mailbox_element_ptr what, execution_unit* context) {
   }
   auto down_msg_handler = [&](const down_msg& dm) {
     // quit if either `f` or `g` are no longer available
-    auto pred = [&](const actor_addr& x) { return x == dm.source; };
+    auto pred = [&](const strong_actor_ptr& x) {
+      return actor_addr::compare(
+               x.get(), actor_cast<actor_control_block*>(dm.source)) == 0;
+    };
     if (std::any_of(workers_.begin(), workers_.end(), pred))
       monitorable_actor::cleanup(dm.reason, context);
   };

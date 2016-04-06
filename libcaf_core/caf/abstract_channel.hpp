@@ -23,16 +23,14 @@
 #include <atomic>
 
 #include "caf/fwd.hpp"
-#include "caf/node_id.hpp"
 #include "caf/message_id.hpp"
-#include "caf/ref_counted.hpp"
 
 namespace caf {
 
 /// Interface for all message receivers. * This interface describes an
 /// entity that can receive messages and is implemented by {@link actor}
 /// and {@link group}.
-class abstract_channel : public ref_counted {
+class abstract_channel {
 public:
   friend class abstract_actor;
   friend class abstract_group;
@@ -40,13 +38,8 @@ public:
   virtual ~abstract_channel();
 
   /// Enqueues a new message without forwarding stack to the channel.
-  virtual void enqueue(const actor_addr& sender, message_id mid,
-                       message content, execution_unit* host) = 0;
-
-  /// Returns the ID of the node this actor is running on.
-  inline node_id node() const {
-    return node_;
-  }
+  virtual void enqueue(strong_actor_ptr sender, message_id mid, message content,
+                       execution_unit* host = nullptr) = 0;
 
   static constexpr int is_abstract_actor_flag       = 0x100000;
 
@@ -87,20 +80,13 @@ protected:
 
 private:
   // can only be called from abstract_actor and abstract_group
-  abstract_channel(int init_flags, node_id nid);
+  abstract_channel(int init_flags);
 
   // Accumulates several state and type flags. Subtypes may use only the
   // first 20 bits, i.e., the bitmask 0xFFF00000 is reserved for
   // channel-related flags.
   std::atomic<int> flags_;
-
-  // identifies the node of this channel
-  node_id node_;
 };
-
-/// A smart pointer to an abstract channel.
-/// @relates abstract_channel_ptr
-using abstract_channel_ptr = intrusive_ptr<abstract_channel>;
 
 } // namespace caf
 

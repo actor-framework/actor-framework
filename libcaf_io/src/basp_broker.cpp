@@ -58,7 +58,7 @@ basp_broker_state::~basp_broker_state() {
     anon_send_exit(kvp.second, exit_reason::kill);
 }
 
-actor_proxy_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
+strong_actor_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
   CAF_LOG_TRACE(CAF_ARG(nid) << CAF_ARG(aid));
   CAF_ASSERT(nid != this_node());
   if (nid == invalid_node_id || aid == invalid_actor_id)
@@ -82,17 +82,18 @@ actor_proxy_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
   }
   // create proxy and add functor that will be called if we
   // receive a kill_proxy_instance message
-  intrusive_ptr<basp_broker> ptr = static_cast<basp_broker*>(self);
   auto mm = &system().middleman();
-  auto res = make_counted<forwarding_actor_proxy>(self->home_system_,
-                                                  aid, nid, ptr);
-  res->attach_functor([=](exit_reason rsn) {
+  auto res = make_actor<forwarding_actor_proxy, strong_actor_ptr>(
+        aid, nid, &(self->home_system()), self);
+  auto selfptr = actor_cast<strong_actor_ptr>(self);
+  res->get()->attach_functor([=](exit_reason rsn) {
     mm->backend().post([=] {
       // using res->id() instead of aid keeps this actor instance alive
       // until the original instance terminates, thus preventing subtle
       // bugs with attachables
-      if (! ptr->exited())
-        ptr->state.proxies().erase(nid, res->id(), rsn);
+      auto bptr = static_cast<basp_broker*>(selfptr->get());
+      if (! bptr->exited())
+        bptr->state.proxies().erase(nid, res->id(), rsn);
     });
   });
   CAF_LOG_INFO("successfully created proxy instance, "
@@ -105,7 +106,7 @@ actor_proxy_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
                  this_node(), nid,
                  invalid_actor_id, aid);
   instance.tbl().flush(*path);
-  mm->notify<hook::new_remote_actor>(res->address());
+  mm->notify<hook::new_remote_actor>(res);
   return res;
 }
 
@@ -132,20 +133,16 @@ void basp_broker_state::finalize_handshake(const node_id& nid, actor_id aid,
                              std::move(sigs)));
     return;
   }
-  actor_addr addr;
+  strong_actor_ptr ptr;
   if (nid == this_node()) {
     // connected to self
-    addr = system().registry().get(aid).first;
-    CAF_LOG_INFO_IF(! addr, "actor not found:" << CAF_ARG(aid));
+    ptr = actor_cast<strong_actor_ptr>(system().registry().get(aid).first);
+    CAF_LOG_INFO_IF(! ptr, "actor not found:" << CAF_ARG(aid));
   } else {
-    auto ptr = namespace_.get_or_put(nid, aid);
-    if (ptr)
-      addr = ptr->address();
+    ptr = namespace_.get_or_put(nid, aid);
     CAF_LOG_ERROR_IF(! ptr, "creating actor in finalize_handshake failed");
   }
-  if (addr.node() != system().node())
-    known_remotes.emplace(nid, std::make_pair(this_context->remote_port, addr));
-  cb->deliver(make_message(ok_atom::value, nid, addr, std::move(sigs)));
+  cb->deliver(make_message(ok_atom::value, nid, ptr, std::move(sigs)));
   this_context->callback = none;
 }
 
@@ -164,7 +161,6 @@ void basp_broker_state::purge_state(const node_id& nid) {
     ctx.erase(i);
   }
   proxies().erase(nid);
-  known_remotes.erase(nid);
 }
 
 void basp_broker_state::proxy_announced(const node_id& nid, actor_id aid) {
@@ -172,6 +168,8 @@ void basp_broker_state::proxy_announced(const node_id& nid, actor_id aid) {
   // source node has created a proxy for one of our actors
   auto entry = system().registry().get(aid);
   auto send_kill_proxy_instance = [=](exit_reason rsn) {
+    if (rsn == exit_reason::not_exited)
+      rsn = exit_reason::unknown;
     auto path = instance.tbl().lookup(nid);
     if (! path) {
       CAF_LOG_INFO("cannot send exit message for proxy, no route to host:"
@@ -182,16 +180,18 @@ void basp_broker_state::proxy_announced(const node_id& nid, actor_id aid) {
                                        nid, aid, rsn);
     instance.tbl().flush(*path);
   };
-  if (entry.second != exit_reason::not_exited) {
+  auto ptr = actor_cast<strong_actor_ptr>(entry.first);
+  if (! ptr || entry.second != exit_reason::not_exited) {
     CAF_LOG_DEBUG("kill proxy immediately");
     // kill immediately if actor has already terminated
     send_kill_proxy_instance(entry.second);
   } else {
-    intrusive_ptr<broker> bptr = self; // keep broker alive ...
+    auto tmp = actor_cast<strong_actor_ptr>(self); // keep broker alive ...
     auto mm = &system().middleman();
-    entry.first->attach_functor([=](exit_reason reason) {
+    ptr->get()->attach_functor([=](exit_reason reason) {
       mm->backend().dispatch([=] {
         CAF_LOG_TRACE(CAF_ARG(reason));
+        auto bptr = static_cast<basp_broker*>(tmp->get());
         // ... to make sure this is safe
         if (bptr == mm->named_broker<basp_broker>(atom("BASP"))
             && ! bptr->exited())
@@ -207,58 +207,50 @@ void basp_broker_state::kill_proxy(const node_id& nid, actor_id aid,
   proxies().erase(nid, aid, rsn);
 }
 
-void basp_broker_state::deliver(const node_id& source_node,
-                                actor_id source_actor,
-                                const node_id& dest_node,
-                                actor_id dest_actor,
+void basp_broker_state::deliver(const node_id& src_nid,
+                                actor_id src_aid,
+                                const node_id& dest_nid,
+                                actor_id dest_aid,
                                 message_id mid,
-                                std::vector<actor_addr>& stages,
+                                std::vector<strong_actor_ptr>& stages,
                                 message& msg) {
-  CAF_LOG_TRACE(CAF_ARG(source_node)
-                << CAF_ARG(source_actor) << CAF_ARG(dest_node)
-                << CAF_ARG(dest_actor) << CAF_ARG(msg) << CAF_ARG(mid));
-  actor_addr src;
-  if (source_node == this_node()) {
-    auto src_ptr = system().registry().get(source_actor).first;
-    if (src_ptr)
-      src = src_ptr->address();
-  } else {
-    auto ptr = proxies().get_or_put(source_node, source_actor);
-    if (ptr)
-      src = ptr->address();
-  }
-  actor_addr dest;
+  CAF_LOG_TRACE(CAF_ARG(src_nid)
+                << CAF_ARG(src_aid) << CAF_ARG(dest_nid)
+                << CAF_ARG(dest_aid) << CAF_ARG(msg) << CAF_ARG(mid));
+  strong_actor_ptr src;
+  if (src_nid == this_node())
+    src = actor_cast<strong_actor_ptr>(system().registry().get(src_aid).first);
+  else
+    src = proxies().get_or_put(src_nid, src_aid);
+  strong_actor_ptr dest;
   auto rsn = exit_reason::remote_link_unreachable;
-  if (dest_node != this_node()) {
-    auto ptr = proxies().get_or_put(dest_node, dest_actor);
-    if (ptr)
-      dest = ptr->address();
+  if (dest_nid != this_node()) {
+    dest = proxies().get_or_put(dest_nid, dest_aid);
   } else {
-    if (dest_actor == std::numeric_limits<actor_id>::max()) {
+    if (dest_aid == std::numeric_limits<actor_id>::max()) {
       // this hack allows CAF to talk to older CAF versions; CAF <= 0.14 will
       // discard this message silently as the receiver is not found, while
       // CAF >= 0.14.1 will use the operation data to identify named actors
       auto dest_name = static_cast<atom_value>(mid.integer_value());
       CAF_LOG_DEBUG(CAF_ARG(dest_name));
       mid = message_id::make(); // override this since the message is async
-      dest = system().registry().get(dest_name).address();
+      dest = actor_cast<strong_actor_ptr>(system().registry().get(dest_name));
     } else {
-      std::tie(dest, rsn) = system().registry().get(dest_actor);
+      std::tie(dest, rsn) = system().registry().get(dest_aid);
     }
   }
   if (! dest) {
     CAF_LOG_INFO("cannot deliver message, destination not found");
-    self->parent().notify<hook::invalid_message_received>(source_node, src,
-                                                          dest_actor, mid, msg);
-    if (mid.valid() && src != invalid_actor_addr) {
+    self->parent().notify<hook::invalid_message_received>(src_nid, src,
+                                                          dest_aid, mid, msg);
+    if (mid.valid() && src) {
       detail::sync_request_bouncer srb{rsn};
       srb(src, mid);
     }
     return;
   }
-  self->parent().notify<hook::message_received>(source_node, src,
-                                                dest->address(), mid, msg);
-  dest->enqueue(mailbox_element::make(src, mid, std::move(stages),
+  self->parent().notify<hook::message_received>(src_nid, src, dest, mid, msg);
+  dest->enqueue(mailbox_element::make(std::move(src), mid, std::move(stages),
                                       std::move(msg)),
                 nullptr);
 }
@@ -276,7 +268,7 @@ void basp_broker_state::learned_new_node(const node_id& nid) {
         this_actor->monitor(config_serv);
         this_actor->become(
           [=](spawn_atom, std::string& type, message& args)
-          -> delegated<ok_atom, actor_addr, std::set<std::string>> {
+          -> delegated<ok_atom, strong_actor_ptr, std::set<std::string>> {
             CAF_LOG_TRACE(CAF_ARG(type) << CAF_ARG(args));
             this_actor->delegate(config_serv, get_atom::value,
                                  std::move(type), std::move(args));
@@ -299,7 +291,7 @@ void basp_broker_state::learned_new_node(const node_id& nid) {
     };
   });
   using namespace detail;
-  system().registry().put(tmp.id(), tmp.address());
+  system().registry().put(tmp.id(), actor_cast<strong_actor_ptr>(tmp));
   auto writer = make_callback([](serializer& sink) {
     std::vector<actor_id> stages;
     auto msg = make_message(sys_atom::value, get_atom::value, "info");
@@ -396,7 +388,7 @@ void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
   }
   using namespace detail;
   auto tmp = system().spawn<detached + hidden>(connection_helper, self);
-  system().registry().put(tmp.id(), tmp.address());
+  system().registry().put(tmp.id(), actor_cast<strong_actor_ptr>(tmp));
   auto writer = make_callback([](serializer& sink) {
       std::vector<actor_id> stages;
       auto msg = make_message(get_atom::value, "basp.default-connectivity");
@@ -452,7 +444,8 @@ printf("enable automatic connections\n");
     auto port = add_tcp_doorman(uint16_t{0});
     auto addrs = network::interfaces::list_addresses(false);
     auto config_server = system().registry().get(atom("ConfigServ"));
-    send(config_server, put_atom::value, "basp.default-connectivity",
+    send(actor_cast<actor>(config_server), put_atom::value,
+         "basp.default-connectivity",
          make_message(port.second, std::move(addrs)));
     state.enable_automatic_connections = true;
   }
@@ -489,17 +482,17 @@ printf("enable automatic connections\n");
       }
     },
     // received from proxy instances
-    [=](forward_atom, const actor_addr& sender,
-        const std::vector<actor_addr>& fwd_stack, const actor_addr& receiver,
-        message_id mid, const message& msg) {
+    [=](forward_atom, strong_actor_ptr& sender,
+        const std::vector<strong_actor_ptr>& fwd_stack,
+        strong_actor_ptr& receiver, message_id mid, const message& msg) {
       CAF_LOG_TRACE(CAF_ARG(sender) << CAF_ARG(receiver)
                     << CAF_ARG(mid) << CAF_ARG(msg));
-      if (! receiver || system().node() == receiver.node()) {
+      if (! receiver || system().node() == receiver->node()) {
         CAF_LOG_WARNING("cannot forward to invalid or local actor:"
                         << CAF_ARG(receiver));
         return;
       }
-      if (sender && system().node() == sender.node())
+      if (sender && system().node() == sender->node())
         system().registry().put(sender->id(), sender);
       if (! state.instance.dispatch(context(), sender, fwd_stack,
                                     receiver, mid, msg)
@@ -509,16 +502,16 @@ printf("enable automatic connections\n");
       }
     },
     // received from some system calls like whereis
-    [=](forward_atom, const actor_addr& sender,
+    [=](forward_atom, strong_actor_ptr& sender,
         const node_id& receiving_node, atom_value receiver_name,
         const message& msg) -> result<void> {
       CAF_LOG_TRACE(CAF_ARG(sender)
                     << ", " << CAF_ARG(receiving_node)
                     << ", " << CAF_ARG(receiver_name)
                     << ", " << CAF_ARG(msg));
-      if (sender == invalid_actor_addr)
+      if (! sender)
         return sec::cannot_forward_to_invalid_actor;
-      if (system().node() == sender.node())
+      if (system().node() == sender->node())
         system().registry().put(sender->id(), sender);
       auto writer = make_callback([&](serializer& sink) {
         std::vector<actor_addr> stages;
@@ -536,7 +529,7 @@ printf("enable automatic connections\n");
                                  basp::message_type::dispatch_message,
                                  nullptr, static_cast<uint64_t>(receiver_name),
                                  state.this_node(), receiving_node,
-                                 sender.id(),
+                                 sender->id(),
                                  std::numeric_limits<actor_id>::max(),
                                  &writer);
       state.instance.flush(*path);
@@ -571,8 +564,8 @@ printf("enable automatic connections\n");
       state.instance.remove_published_actor(port);
     },
     // received from middleman actor
-    [=](publish_atom, accept_handle hdl, uint16_t port, const actor_addr& whom,
-        std::set<std::string>& sigs) {
+    [=](publish_atom, accept_handle hdl, uint16_t port,
+        const strong_actor_ptr& whom, std::set<std::string>& sigs) {
       CAF_LOG_TRACE(CAF_ARG(hdl.id()) << CAF_ARG(whom) << CAF_ARG(port));
       if (hdl.invalid()) {
         CAF_LOG_WARNING("invalid handle");
@@ -585,9 +578,8 @@ printf("enable automatic connections\n");
         CAF_LOG_DEBUG("failed to assign doorman from handle");
         return;
       }
-      if (whom != invalid_actor_addr) {
+      if (whom)
         system().registry().put(whom->id(), whom);
-      }
       state.instance.add_published_actor(port, whom, std::move(sigs));
     },
     // received from middleman actor (delegated)
@@ -618,7 +610,7 @@ printf("enable automatic connections\n");
       CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(port));
       if (whom == invalid_actor_addr)
         return sec::no_actor_to_unpublish;
-      auto cb = make_callback([&](const actor_addr&, uint16_t x) {
+      auto cb = make_callback([&](const strong_actor_ptr&, uint16_t x) {
         try { close(hdl_by_port(x)); }
         catch (std::exception&) { }
       });
@@ -641,7 +633,7 @@ printf("enable automatic connections\n");
       return unit;
     },
     [=](spawn_atom, const node_id& nid, std::string& type, message& xs)
-    -> delegated<ok_atom, actor_addr, std::set<std::string>> {
+    -> delegated<ok_atom, strong_actor_ptr, std::set<std::string>> {
       CAF_LOG_TRACE(CAF_ARG(nid) << CAF_ARG(type) << CAF_ARG(xs));
       auto i = state.spawn_servers.find(nid);
       if (i == state.spawn_servers.end()) {

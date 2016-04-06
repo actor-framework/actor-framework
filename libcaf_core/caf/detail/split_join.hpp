@@ -103,7 +103,7 @@ public:
                   const std::vector<actor>& workers,
                   mailbox_element_ptr& ptr,
                   execution_unit* host) {
-    if (ptr->sender == invalid_actor_addr)
+    if (! ptr->sender)
       return;
     actor_msg_vec xs(workers.size());
     for (size_t i = 0; i < workers.size(); ++i)

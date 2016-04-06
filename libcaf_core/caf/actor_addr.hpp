@@ -25,10 +25,9 @@
 #include <functional>
 #include <type_traits>
 
-#include "caf/intrusive_ptr.hpp"
-
 #include "caf/fwd.hpp"
 #include "caf/abstract_actor.hpp"
+#include "caf/actor_control_block.hpp"
 
 #include "caf/detail/comparable.hpp"
 
@@ -45,15 +44,21 @@ constexpr invalid_actor_addr_t invalid_actor_addr = invalid_actor_addr_t{};
 
 /// Stores the address of typed as well as untyped actors.
 class actor_addr : detail::comparable<actor_addr>,
+                   detail::comparable<actor_addr, weak_actor_ptr>,
+                   detail::comparable<actor_addr, strong_actor_ptr>,
                    detail::comparable<actor_addr, abstract_actor*>,
-                   detail::comparable<actor_addr, abstract_actor_ptr> {
+                   detail::comparable<actor_addr, actor_control_block*> {
 public:
   // grant access to private ctor
   friend class actor;
   friend class abstract_actor;
 
-  template <class>
-  friend struct actor_cast_access;
+  // allow conversion via actor_cast
+  template <class, class, int>
+  friend class actor_cast_access;
+
+  // tell actor_cast which semantic this type uses
+  static constexpr bool has_weak_ptr_semantics = true;
 
   actor_addr() = default;
   actor_addr(actor_addr&&) = default;
@@ -81,49 +86,62 @@ public:
   /// Returns the origin node of this actor.
   node_id node() const noexcept;
 
+  /// Returns the hosting actor system.
+  actor_system* home_system() const noexcept;
+
   /// Exchange content of `*this` and `other`.
   void swap(actor_addr& other) noexcept;
 
   /// @cond PRIVATE
 
-  inline abstract_actor* operator->() const noexcept {
-    return ptr_.get();
-  }
-
-  static intptr_t compare(const abstract_actor* lhs, const abstract_actor* rhs);
+  static intptr_t compare(const actor_control_block* lhs,
+                          const actor_control_block* rhs);
 
   intptr_t compare(const actor_addr& other) const noexcept;
 
   intptr_t compare(const abstract_actor* other) const noexcept;
 
-  inline intptr_t compare(const abstract_actor_ptr& other) const noexcept {
+  intptr_t compare(const actor_control_block* other) const noexcept;
+
+  inline intptr_t compare(const weak_actor_ptr& other) const noexcept {
     return compare(other.get());
   }
 
-  friend void serialize(serializer&, actor_addr&, const unsigned int);
+  inline intptr_t compare(const strong_actor_ptr& other) const noexcept {
+    return compare(other.get());
+  }
 
-  friend void serialize(deserializer&, actor_addr&, const unsigned int);
+  template <class Processor>
+  friend void serialize(Processor& proc, actor_addr& x, const unsigned int v) {
+    serialize(proc, x.ptr_, v);
+  }
+
+  friend inline std::string to_string(const actor_addr& x) {
+    return to_string(x.ptr_);
+  }
+
+  actor_addr(actor_control_block*, bool);
 
   /// @endcond
 
 private:
-  inline abstract_actor* get() const noexcept {
+  inline actor_control_block* get() const noexcept {
     return ptr_.get();
   }
 
-  inline abstract_actor* release() noexcept {
+  inline actor_control_block* release() noexcept {
     return ptr_.release();
   }
 
-  actor_addr(abstract_actor*);
+  inline actor_control_block* get_locked() const noexcept {
+    return ptr_.get_locked();
+  }
 
-  actor_addr(abstract_actor*, bool);
+  actor_addr(actor_control_block*);
 
-  abstract_actor_ptr ptr_;
+  weak_actor_ptr ptr_;
 };
 
-/// @relates actor_addr
-std::string to_string(const actor_addr& x);
 
 } // namespace caf
 
@@ -134,7 +152,6 @@ struct hash<caf::actor_addr> {
   inline size_t operator()(const caf::actor_addr& ref) const {
     return static_cast<size_t>(ref.id());
   }
-
 };
 } // namespace std
 

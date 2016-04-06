@@ -123,6 +123,7 @@ struct fixture {
 CAF_TEST_FIXTURE_SCOPE(dynamic_stateful_actor_tests, fixture)
 
 CAF_TEST(dynamic_stateful_actor) {
+  CAF_REQUIRE(monitored + monitored == monitored);
   test_adder(system.spawn(adder));
 }
 

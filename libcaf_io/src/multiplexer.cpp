@@ -49,8 +49,12 @@ resumable::subtype_t multiplexer::runnable::subtype() const {
   return resumable::function_object;
 }
 
-ref_counted* multiplexer::runnable::as_ref_counted_ptr() {
-  return this;
+void multiplexer::runnable::intrusive_ptr_add_ref_impl() {
+  intrusive_ptr_add_ref(this);
+}
+
+void multiplexer::runnable::intrusive_ptr_release_impl() {
+  intrusive_ptr_release(this);
 }
 
 } // namespace network

@@ -177,7 +177,7 @@ connection_state instance::handle(execution_unit* ctx,
           && tbl_.add_indirect(last_hop, hdr.source_node))
         callee_.learned_new_node_indirectly(hdr.source_node);
       binary_deserializer bd{ctx, payload->data(), payload->size()};
-      std::vector<actor_addr> forwarding_stack;
+      std::vector<strong_actor_ptr> forwarding_stack;
       message msg;
       bd >> forwarding_stack >> msg;
       callee_.deliver(hdr.source_node, hdr.source_actor,
@@ -240,7 +240,7 @@ void instance::write(execution_unit* ctx, const routing_table::route& r,
 }
 
 void instance::add_published_actor(uint16_t port,
-                                   actor_addr published_actor,
+                                   strong_actor_ptr published_actor,
                                    std::set<std::string> published_interface) {
   using std::swap;
   auto& entry = published_actors_[port];
@@ -260,14 +260,15 @@ size_t instance::remove_published_actor(uint16_t port,
   return 1;
 }
 
-size_t instance::remove_published_actor(const actor_addr& whom, uint16_t port,
+size_t instance::remove_published_actor(const actor_addr& whom,
+                                        uint16_t port,
                                         removed_published_actor* cb) {
   size_t result = 0;
   if (port != 0) {
     auto i = published_actors_.find(port);
     if (i != published_actors_.end() && i->second.first == whom) {
       if (cb)
-        (*cb)(whom, port);
+        (*cb)(i->second.first, port);
       published_actors_.erase(i);
       result = 1;
     }
@@ -276,7 +277,7 @@ size_t instance::remove_published_actor(const actor_addr& whom, uint16_t port,
     while (i != published_actors_.end()) {
       if (i->second.first == whom) {
         if (cb)
-          (*cb)(whom, i->first);
+          (*cb)(i->second.first, i->first);
         i = published_actors_.erase(i);
         ++result;
       } else {
@@ -287,12 +288,12 @@ size_t instance::remove_published_actor(const actor_addr& whom, uint16_t port,
   return result;
 }
 
-bool instance::dispatch(execution_unit* ctx, const actor_addr& sender,
-                        const std::vector<actor_addr>& forwarding_stack,
-                        const actor_addr& receiver, message_id mid,
+bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
+                        const std::vector<strong_actor_ptr>& forwarding_stack,
+                        const strong_actor_ptr& receiver, message_id mid,
                         const message& msg) {
   CAF_LOG_TRACE("");
-  CAF_ASSERT(system().node() != receiver.node());
+  CAF_ASSERT(receiver && system().node() != receiver->node());
   auto path = lookup(receiver->node());
   if (! path) {
     notify<hook::message_sending_failed>(sender, receiver, mid, msg);
@@ -373,13 +374,14 @@ void instance::write_server_handshake(execution_unit* ctx,
   }
   auto writer = make_callback([&](serializer& sink) {
     if (pa) {
-      auto i = pa->first.id();
+      auto i = pa->first ? pa->first->id() : invalid_actor_id;
       sink << i << pa->second;
     }
   });
   header hdr{message_type::server_handshake, 0, version,
              this_node_, invalid_node_id,
-             pa ? pa->first.id() : invalid_actor_id, invalid_actor_id};
+             pa && pa->first ? pa->first->id() : invalid_actor_id,
+             invalid_actor_id};
   write(ctx, out_buf, hdr, &writer);
 }
 

@@ -79,10 +79,7 @@ protected:
   explicit monitorable_actor(actor_config& cfg);
 
   /// Creates a new actor instance.
-  monitorable_actor(actor_system* sys, actor_id aid, node_id nid);
-
-  /// Creates a new actor instance.
-  monitorable_actor(actor_system* sys, actor_id aid, node_id nid, int flags);
+  explicit monitorable_actor(int flags);
 
   /****************************************************************************
    *                 here be dragons: end of public interface                 *

@@ -29,8 +29,8 @@
 
 #include "caf/fwd.hpp"
 #include "caf/actor_marker.hpp"
-#include "caf/intrusive_ptr.hpp"
 #include "caf/abstract_actor.hpp"
+#include "caf/actor_control_block.hpp"
 
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/type_traits.hpp"
@@ -71,8 +71,11 @@ public:
   friend class local_actor;
 
   // allow conversion via actor_cast
-  template <class>
-  friend struct actor_cast_access;
+  template <class, class, int>
+  friend class actor_cast_access;
+
+  // tell actor_cast which semantic this type uses
+  static constexpr bool has_weak_ptr_semantics = false;
 
   actor() = default;
   actor(actor&&) = default;
@@ -80,26 +83,16 @@ public:
   actor& operator=(actor&&) = default;
   actor& operator=(const actor&) = default;
 
-  template <class T,
-            class Enable =
-              typename std::enable_if<
-                is_convertible_to_actor<T>::value
-              >::type>
-  actor(intrusive_ptr<T> ptr) : ptr_(std::move(ptr)) {
-    // nop
-  }
-
-  template <class T,
-            class Enable =
-              typename std::enable_if<
-                is_convertible_to_actor<T>::value
-              >::type>
-  actor(T* ptr) : ptr_(ptr) {
-    // nop
-  }
-
   actor(const scoped_actor&);
   actor(const invalid_actor_t&);
+
+  template <class T,
+            class = typename std::enable_if<
+                      std::is_base_of<dynamically_typed_actor_base, T>::value
+                    >::type>
+  actor(T* ptr) : ptr_(ptr->ctrl()) {
+    // nop
+  }
 
   template <class T>
   typename std::enable_if<is_convertible_to_actor<T>::value, actor&>::type
@@ -151,7 +144,8 @@ public:
   /// @cond PRIVATE
 
   inline abstract_actor* operator->() const noexcept {
-    return ptr_.get();
+    CAF_ASSERT(ptr_);
+    return ptr_->get();
   }
 
   intptr_t compare(const actor&) const noexcept;
@@ -168,24 +162,33 @@ public:
 
   static actor splice_impl(std::initializer_list<actor> xs);
 
+  actor(actor_control_block*, bool);
+
+  template <class Processor>
+  friend void serialize(Processor& proc, actor& x, const unsigned int v) {
+    serialize(proc, x.ptr_, v);
+  }
+
+  friend inline std::string to_string(const actor& x) {
+    return to_string(x.ptr_);
+  }
+
   /// @endcond
 
 private:
   actor bind_impl(message msg) const;
 
-  inline abstract_actor* get() const noexcept {
+  inline actor_control_block* get() const noexcept {
     return ptr_.get();
   }
 
-  inline abstract_actor* release() noexcept {
+  inline actor_control_block* release() noexcept {
     return ptr_.release();
   }
 
-  actor(abstract_actor*);
+  actor(actor_control_block*);
 
-  actor(abstract_actor*, bool);
-
-  abstract_actor_ptr ptr_;
+  strong_actor_ptr ptr_;
 };
 
 /// Combine `f` and `g` so that `(f*g)(x) = f(g(x))`.
@@ -198,13 +201,16 @@ actor splice(const actor& x, const actor& y, const Ts&... zs) {
 }
 
 /// @relates actor
-void serialize(serializer&, actor&, const unsigned int);
+bool operator==(const actor& lhs, abstract_actor* rhs);
 
 /// @relates actor
-void serialize(deserializer&, actor&, const unsigned int);
+bool operator==(abstract_actor* lhs, const actor& rhs);
 
 /// @relates actor
-std::string to_string(const actor& x);
+bool operator!=(const actor& lhs, abstract_actor* rhs);
+
+/// @relates actor
+bool operator!=(abstract_actor* lhs, const actor& rhs);
 
 } // namespace caf
 

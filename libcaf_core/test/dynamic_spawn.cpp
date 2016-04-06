@@ -516,7 +516,7 @@ CAF_TEST(requests) {
       on("hi", arg_match) >> [&](actor from) {
         s->request(from, chrono::minutes(1), "whassup?", s).receive(
           [&](const string& str) {
-            CAF_CHECK(s->current_sender() != nullptr);
+            CAF_CHECK(s->current_sender());
             CAF_CHECK_EQUAL(str, "nothing");
             s->send(from, "goodbye!");
           }

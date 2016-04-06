@@ -36,42 +36,14 @@ proxy_registry::backend::~backend() {
   // nop
 }
 
-proxy_registry::proxy_entry::proxy_entry() : backend_(nullptr) {
-  // nop
-}
-
-proxy_registry::proxy_entry::proxy_entry(actor_proxy::anchor_ptr ptr,
-                                         backend& ref)
-    : ptr_(std::move(ptr)),
-      backend_(&ref) {
-  // nop
-}
-
-proxy_registry::proxy_entry::~proxy_entry() {
-  reset(exit_reason::remote_link_unreachable);
-}
-
-void proxy_registry::proxy_entry::reset(exit_reason rsn) {
-  if (! ptr_ || ! backend_)
-    return;
-  auto ptr = ptr_->get();
-  ptr_.reset();
-  if (ptr)
-    ptr->kill_proxy(backend_->registry_context(), rsn);
-}
-
-void proxy_registry::proxy_entry::assign(actor_proxy::anchor_ptr ptr,
-                                         backend& ctx) {
-  using std::swap;
-  swap(ptr_, ptr);
-  backend_ = &ctx;
-}
-
-
 proxy_registry::proxy_registry(actor_system& sys, backend& be)
     : system_(sys),
       backend_(be) {
   // nop
+}
+
+proxy_registry::~proxy_registry() {
+  clear();
 }
 
 size_t proxy_registry::count_proxies(const key_type& node) {
@@ -79,72 +51,28 @@ size_t proxy_registry::count_proxies(const key_type& node) {
   return (i != proxies_.end()) ? i->second.size() : 0;
 }
 
-std::vector<actor_proxy_ptr> proxy_registry::get_all() const {
-  std::vector<actor_proxy_ptr> result;
-  for (auto& outer : proxies_) {
-    for (auto& inner : outer.second) {
-      if (inner.second) {
-        auto ptr = inner.second->get();
-        if (ptr)
-          result.push_back(std::move(ptr));
-      }
-    }
-  }
-  return result;
-}
-
-std::vector<actor_proxy_ptr>
-proxy_registry::get_all(const key_type& node) const {
-  std::vector<actor_proxy_ptr> result;
-  auto i = proxies_.find(node);
-  if (i == proxies_.end())
-    return result;
-  auto& submap = i->second;
-  for (auto& kvp : submap) {
-    if (kvp.second) {
-      auto ptr = kvp.second->get();
-      if (ptr)
-        result.push_back(std::move(ptr));
-    }
-  }
-  return result;
-}
-
-actor_proxy_ptr proxy_registry::get(const key_type& node, actor_id aid) {
+strong_actor_ptr proxy_registry::get(const key_type& node, actor_id aid) {
   auto& submap = proxies_[node];
   auto i = submap.find(aid);
-  if (i != submap.end()) {
-    auto res = i->second->get();
-    if (! res) {
-      submap.erase(i); // instance is expired
-    }
-    return res;
-  }
+  if (i != submap.end())
+    return i->second;
   return nullptr;
 }
 
-actor_proxy_ptr proxy_registry::get_or_put(const key_type& node, actor_id aid) {
-  CAF_LOG_TRACE(CAF_ARG(node) << CAF_ARG(aid));
-  auto& submap = proxies_[node];
-  auto& anchor = submap[aid];
-  actor_proxy_ptr result;
-  CAF_LOG_DEBUG_IF(! anchor, "found no anchor in submap");
-  if (anchor) {
-    result = anchor->get();
-    CAF_LOG_DEBUG_IF(result, "found valid anchor in submap");
-    CAF_LOG_DEBUG_IF(! result, "found expired anchor in submap");
-  }
-  // replace anchor if we've created one using the default ctor
-  // or if we've found an expired one in the map
-  if (! anchor || ! result) {
-    result = backend_.make_proxy(node, aid);
-    CAF_LOG_WARNING_IF(! result, "backend could not create a proxy:"
-                                 << CAF_ARG(node) << CAF_ARG(aid));
-    if (result)
-      anchor.assign(result->get_anchor(), backend_);
-  }
-  CAF_LOG_DEBUG_IF(result, CAF_ARG(result->address()));
-  CAF_LOG_DEBUG_IF(! result, "result = nullptr");
+strong_actor_ptr proxy_registry::get_or_put(const key_type& nid, actor_id aid) {
+  CAF_LOG_TRACE(CAF_ARG(nid) << CAF_ARG(aid));
+  auto& result = proxies_[nid][aid];
+  if (! result)
+    result = backend_.make_proxy(nid, aid);
+  return result;
+}
+
+std::vector<strong_actor_ptr> proxy_registry::get_all(const key_type& node) {
+  std::vector<strong_actor_ptr> result;
+  auto i = proxies_.find(node);
+  if (i != proxies_.end())
+    for (auto& kvp : i->second)
+      result.push_back(kvp.second);
   return result;
 }
 
@@ -152,9 +80,14 @@ bool proxy_registry::empty() const {
   return proxies_.empty();
 }
 
-void proxy_registry::erase(const key_type& inf) {
-  CAF_LOG_TRACE(CAF_ARG(inf));
-  proxies_.erase(inf);
+void proxy_registry::erase(const key_type& nid) {
+  CAF_LOG_TRACE(CAF_ARG(nid));
+  auto i = proxies_.find(nid);
+  if (i == proxies_.end())
+    return;
+  for (auto& kvp : i->second)
+    kill_proxy(kvp.second, exit_reason::remote_link_unreachable);
+  proxies_.erase(i);
 }
 
 void proxy_registry::erase(const key_type& inf, actor_id aid, exit_reason rsn) {
@@ -165,7 +98,7 @@ void proxy_registry::erase(const key_type& inf, actor_id aid, exit_reason rsn) {
     auto j = submap.find(aid);
     if (j == submap.end())
       return;
-    j->second.reset(rsn);
+    kill_proxy(j->second, rsn);
     submap.erase(j);
     if (submap.empty())
       proxies_.erase(i);
@@ -173,7 +106,17 @@ void proxy_registry::erase(const key_type& inf, actor_id aid, exit_reason rsn) {
 }
 
 void proxy_registry::clear() {
+  for (auto& kvp : proxies_)
+    for (auto& sub_kvp : kvp.second)
+      kill_proxy(sub_kvp.second, exit_reason::remote_link_unreachable);
   proxies_.clear();
+}
+
+void proxy_registry::kill_proxy(strong_actor_ptr& ptr, exit_reason rsn) {
+  if (! ptr)
+    return;
+  auto pptr = static_cast<actor_proxy*>(actor_cast<abstract_actor*>(ptr));
+  pptr->kill_proxy(backend_.registry_context(), rsn);
 }
 
 } // namespace caf

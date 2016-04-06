@@ -32,11 +32,12 @@ actor_addr::actor_addr(const invalid_actor_addr_t&) : ptr_(nullptr) {
   // nop
 }
 
-actor_addr::actor_addr(abstract_actor* ptr) : ptr_(ptr) {
+actor_addr::actor_addr(actor_control_block* ptr) : ptr_(ptr) {
   // nop
 }
 
-actor_addr::actor_addr(abstract_actor* ptr, bool add_ref) : ptr_(ptr, add_ref) {
+actor_addr::actor_addr(actor_control_block* ptr, bool add_ref)
+    : ptr_(ptr, add_ref) {
   // nop
 }
 
@@ -45,8 +46,8 @@ actor_addr actor_addr::operator=(const invalid_actor_addr_t&) {
   return *this;
 }
 
-intptr_t actor_addr::compare(const abstract_actor* lhs,
-                             const abstract_actor* rhs) {
+intptr_t actor_addr::compare(const actor_control_block* lhs,
+                             const actor_control_block* rhs) {
   // invalid actors are always "less" than valid actors
   if (! lhs)
     return rhs ? -1 : 0;
@@ -68,9 +69,12 @@ intptr_t actor_addr::compare(const actor_addr& other) const noexcept {
 }
 
 intptr_t actor_addr::compare(const abstract_actor* other) const noexcept {
-  return compare(ptr_.get(), other);
+  return compare(ptr_.get(), actor_control_block::from(other));
 }
 
+intptr_t actor_addr::compare(const actor_control_block* other) const noexcept {
+  return compare(ptr_.get(), other);
+}
 
 actor_id actor_addr::id() const noexcept {
   return (ptr_) ? ptr_->id() : 0;
@@ -80,33 +84,12 @@ node_id actor_addr::node() const noexcept {
   return ptr_ ? ptr_->node() : node_id{};
 }
 
+actor_system* actor_addr::home_system() const noexcept {
+  return ptr_ ? ptr_->home_system : nullptr;
+}
+
 void actor_addr::swap(actor_addr& other) noexcept {
   ptr_.swap(other.ptr_);
-}
-
-void serialize(serializer& sink, actor_addr& x, const unsigned int) {
-  sink << actor_cast<channel>(x);
-}
-
-void serialize(deserializer& source, actor_addr& x, const unsigned int) {
-  channel y;
-  source >> y;
-  if (! y) {
-    x = invalid_actor_addr;
-    return;
-  }
-  if (! y->is_abstract_actor())
-    throw std::logic_error("Expected an actor address, found a group address.");
-  x.ptr_.reset(static_cast<abstract_actor*>(actor_cast<abstract_channel*>(y)));
-}
-
-std::string to_string(const actor_addr& x) {
-  if (! x)
-    return "<invalid-actor>";
-  std::string result = std::to_string(x->id());
-  result += "@";
-  result += to_string(x->node());
-  return result;
 }
 
 } // namespace caf

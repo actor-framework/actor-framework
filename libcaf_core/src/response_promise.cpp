@@ -60,9 +60,9 @@ void response_promise::deliver_impl(message msg) {
     return;
   }
   if (source_) {
-    source_->enqueue(self_->address(), id_.response_id(),
+    source_->enqueue(self_->ctrl(), id_.response_id(),
                      std::move(msg), self_->context());
-    source_ = invalid_actor_addr;
+    source_.reset();
     return;
   }
   if (self_)

@@ -83,8 +83,7 @@ public:
   friend class scribe;
   friend class doorman;
 
-  void enqueue(const actor_addr&, message_id,
-               message, execution_unit*) override;
+  void enqueue(strong_actor_ptr, message_id, message, execution_unit*) override;
 
   void enqueue(mailbox_element_ptr, execution_unit*) override;
 

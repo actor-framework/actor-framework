@@ -47,7 +47,7 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   ~basp_broker_state();
 
   // inherited from proxy_registry::backend
-  actor_proxy_ptr make_proxy(node_id nid, actor_id aid) override;
+  strong_actor_ptr make_proxy(node_id nid, actor_id aid) override;
 
   // inherited from proxy_registry::backend
   execution_unit* registry_context() override;
@@ -68,7 +68,7 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   // inherited from basp::instance::listener
   void deliver(const node_id& source_node, actor_id source_actor,
                const node_id& dest_node, actor_id dest_actor,
-               message_id mid, std::vector<actor_addr>& stages,
+               message_id mid, std::vector<strong_actor_ptr>& stages,
                message& msg) override;
 
   // performs bookkeeping such as managing `spawn_servers`
@@ -114,10 +114,6 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
 
   // points to the current context for callbacks such as `make_proxy`
   connection_context* this_context = nullptr;
-
-  // stores all published actors we know from other nodes, this primarily
-  // keeps the associated proxies alive to work around subtle bugs
-  std::unordered_map<node_id, std::pair<uint16_t, actor_addr>> known_remotes;
 
   // stores handles to spawn servers for other nodes; these servers
   // are spawned whenever the broker learns a new node ID and try to

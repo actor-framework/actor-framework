@@ -74,12 +74,12 @@ public:
   /// @endcond
 
 private:
-  using forwarding_stack = std::vector<actor_addr>;
+  using forwarding_stack = std::vector<strong_actor_ptr>;
 
   void deliver_impl(message response_message);
 
   local_actor* self_;
-  actor_addr source_;
+  strong_actor_ptr source_;
   forwarding_stack stages_;
   message_id id_;
 };

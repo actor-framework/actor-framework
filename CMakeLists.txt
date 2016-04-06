@@ -13,25 +13,37 @@ endif()
 if(NOT CAF_ENABLE_RUNTIME_CHECKS)
   set(CAF_ENABLE_RUNTIME_CHECKS no)
 endif()
+
 if(NOT CAF_NO_MEM_MANAGEMENT)
   set(CAF_NO_MEM_MANAGEMENT no)
 endif()
+
 if(NOT CAF_BUILD_STATIC_ONLY)
   set(CAF_BUILD_STATIC_ONLY no)
 endif()
+
 if(NOT CAF_BUILD_STATIC)
   set(CAF_BUILD_STATIC no)
 endif()
+
 if(NOT CAF_NO_OPENCL)
   set(CAF_NO_OPENCL no)
 endif()
+
 if(NOT CAF_NO_TOOLS)
   set(CAF_NO_TOOLS no)
 endif()
+
 if(NOT CAF_NO_SUMMARY)
   set(CAF_NO_SUMMARY no)
 endif()
 
+if(NOT CAF_NO_IO)
+  set(CAF_NO_IO no)
+else()
+  set(CAF_NO_RIAC yes)
+  set(CAF_NO_TOOLS yes)
+endif()
 
 ################################################################################
 #                              get version of CAF                              #
@@ -429,7 +441,7 @@ endmacro()
 
 # build core and I/O library
 add_caf_lib(core)
-add_caf_lib(io)
+add_optional_caf_lib(io)
 
 # build opencl library if not told otherwise and OpenCL package was found
 if(NOT CAF_NO_OPENCL)
@@ -570,6 +582,7 @@ macro(invertYesNo in out)
   endif()
 endmacro()
 # invert CAF_NO_* variables for nicer output
+invertYesNo(CAF_NO_IO CAF_BUILD_IO)
 invertYesNo(CAF_NO_EXAMPLES CAF_BUILD_EXAMPLES)
 invertYesNo(CAF_NO_TOOLS CAF_BUILD_TOOLS)
 invertYesNo(CAF_NO_UNIT_TESTS CAF_BUILD_UNIT_TESTS)
@@ -596,6 +609,7 @@ if(NOT CAF_NO_SUMMARY)
         "\nLog level:         ${LOG_LEVEL_STR}"
         "\nWith mem. mgmt.:   ${CAF_BUILD_MEM_MANAGEMENT}"
         "\n"
+        "\nBuild I/O module:  ${CAF_BUILD_IO}"
         "\nBuild tools:       ${CAF_BUILD_TOOLS}"
         "\nBuild examples:    ${CAF_BUILD_EXAMPLES}"
         "\nBuild unit tests:  ${CAF_BUILD_UNIT_TESTS}"

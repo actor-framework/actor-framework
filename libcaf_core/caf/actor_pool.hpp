@@ -98,16 +98,17 @@ public:
   /// function `fac` using the dispatch policy `pol`.
   static actor make(execution_unit* ptr, size_t n, factory fac, policy pol);
 
-  void enqueue(const actor_addr& sender, message_id mid,
-               message content, execution_unit* host) override;
+  void enqueue(strong_actor_ptr sender, message_id mid, message content,
+               execution_unit* host) override;
 
   void enqueue(mailbox_element_ptr what, execution_unit* host) override;
 
   actor_pool(actor_config& cfg);
 
 private:
-  bool filter(upgrade_lock<detail::shared_spinlock>&, const actor_addr& sender,
-              message_id mid, const message& content, execution_unit* host);
+  bool filter(upgrade_lock<detail::shared_spinlock>&,
+              const strong_actor_ptr& sender, message_id mid,
+              const message& content, execution_unit* host);
 
   // call without workers_mtx_ held
   void quit(execution_unit* host);

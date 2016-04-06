@@ -44,10 +44,11 @@ const std::string& abstract_group::module::name() const {
 abstract_group::abstract_group(actor_system& sys,
                                abstract_group::module_ptr mod,
                                std::string id, const node_id& nid)
-    : abstract_channel(abstract_channel::is_abstract_group_flag, nid),
+    : abstract_channel(abstract_channel::is_abstract_group_flag),
       system_(sys),
       module_(mod),
-      identifier_(std::move(id)) {
+      identifier_(std::move(id)),
+      origin_(nid) {
   // nop
 }
 

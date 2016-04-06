@@ -32,7 +32,7 @@
 namespace caf {
 
 /// A multicast group.
-class abstract_group : public abstract_channel {
+class abstract_group : public ref_counted, public abstract_channel {
 public:
   friend class local_actor;
   friend class subscription;
@@ -85,7 +85,7 @@ public:
 
   /// Subscribes `who` to this group and returns `true` on success
   /// or `false` if `who` is already subscribed.
-  virtual bool subscribe(const actor_addr& who) = 0;
+  virtual bool subscribe(strong_actor_ptr who) = 0;
 
   /// Stops any background actors or threads and IO handles.
   virtual void stop() = 0;
@@ -99,11 +99,12 @@ protected:
                  std::string group_id, const node_id& nid);
 
   // called by local_actor
-  virtual void unsubscribe(const actor_addr& who) = 0;
+  virtual void unsubscribe(const actor_control_block* who) = 0;
 
   actor_system& system_;
   module_ptr module_;
   std::string identifier_;
+  node_id origin_;
 };
 
 /// A smart pointer type that manages instances of {@link group}.

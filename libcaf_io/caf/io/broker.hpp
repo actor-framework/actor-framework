@@ -69,8 +69,6 @@ protected:
   virtual behavior make_behavior();
 };
 
-using broker_ptr = intrusive_ptr<broker>;
-
 /// Convenience template alias for declaring state-based brokers.
 template <class State>
 using stateful_broker = stateful_actor<State, broker>;

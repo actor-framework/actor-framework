@@ -19,6 +19,7 @@ set (LIBCAF_CORE_SRCS
      src/actor.cpp
      src/actor_addr.cpp
      src/actor_config.cpp
+     src/actor_control_block.cpp
      src/actor_companion.cpp
      src/actor_ostream.cpp
      src/actor_pool.cpp
@@ -35,7 +36,6 @@ set (LIBCAF_CORE_SRCS
      src/binary_deserializer.cpp
      src/binary_serializer.cpp
      src/blocking_actor.cpp
-     src/channel.cpp
      src/concatenated_tuple.cpp
      src/continue_helper.cpp
      src/decorated_tuple.cpp

@@ -52,12 +52,19 @@ using actor_id = uint64_t;
 /// Denotes an ID that is never used by an actor.
 constexpr actor_id invalid_actor_id = 0;
 
-using abstract_actor_ptr = intrusive_ptr<abstract_actor>;
-
 /// Base class for all actor implementations.
 class abstract_actor : public abstract_channel {
 public:
-  void enqueue(const actor_addr& sender, message_id mid,
+  // allow placement new (only)
+  inline void* operator new(std::size_t, void* ptr) {
+    return ptr;
+  }
+
+  actor_control_block* ctrl() const;
+
+  virtual ~abstract_actor();
+
+  void enqueue(strong_actor_ptr sender, message_id mid,
                message content, execution_unit* host) override;
 
   /// Enqueues a new message wrapped in a `mailbox_element` to the actor.
@@ -115,20 +122,18 @@ public:
     return link_impl(remove_backlink_op, other);
   }
 
-  /// Returns the unique ID of this actor.
-  inline actor_id id() const {
-    return id_;
-  }
-
   /// Returns the set of accepted messages types as strings or
   /// an empty set if this actor is untyped.
   virtual std::set<std::string> message_types() const;
 
+  /// Returns the ID of this actor.
+  actor_id id() const noexcept;
+
+  /// Returns the node this actor is living on.
+  node_id node() const noexcept;
+
   /// Returns the system that created this actor (or proxy).
-  actor_system& home_system() {
-    CAF_ASSERT(home_system_ != nullptr);
-    return *home_system_;
-  }
+  actor_system& home_system() const noexcept;
 
   /****************************************************************************
    *                 here be dragons: end of public interface                 *
@@ -143,7 +148,7 @@ public:
     remove_backlink_op
   };
 
-  //                                                     used by ...
+  // flags storing runtime information                   used by ...
   static constexpr int trap_exit_flag         = 0x01; // local_actor
   static constexpr int has_timeout_flag       = 0x02; // single_timeout
   static constexpr int is_registered_flag     = 0x04; // (several actors)
@@ -225,13 +230,11 @@ public:
 
   void is_registered(bool value);
 
+  inline bool is_actor_decorator() const {
+    return static_cast<bool>(flags() & is_actor_decorator_mask);
+  }
+
   virtual bool link_impl(linking_operation op, const actor_addr& other) = 0;
-
-  // cannot be changed after construction
-  const actor_id id_;
-
-  // points to the actor system that created this actor
-  actor_system* home_system_;
 
  /// @endcond
 
@@ -240,8 +243,14 @@ protected:
   explicit abstract_actor(actor_config& cfg);
 
   /// Creates a new actor instance.
-  abstract_actor(actor_system* sys, actor_id aid, node_id nid,
-                 int flags = abstract_channel::is_abstract_actor_flag);
+  explicit abstract_actor(int flags = 0);
+
+private:
+  // prohibit copies, assigments, and heap allocations
+  void* operator new(size_t);
+  void* operator new[](size_t);
+  abstract_actor(const abstract_actor&) = delete;
+  abstract_actor& operator=(const abstract_actor&) = delete;
 };
 
 std::string to_string(abstract_actor::linking_operation op);

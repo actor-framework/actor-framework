@@ -71,7 +71,7 @@ public:
     virtual void deliver(const node_id& source_node, actor_id source_actor,
                          const node_id& dest_node, actor_id dest_actor,
                          message_id mid,
-                         std::vector<actor_addr>& forwarding_stack,
+                         std::vector<strong_actor_ptr>& forwarding_stack,
                          message& msg) = 0;
 
     /// Called whenever BASP learns the ID of a remote node
@@ -104,7 +104,7 @@ public:
   using payload_writer = callback<serializer&>;
 
   /// Describes a callback function object for `remove_published_actor`.
-  using removed_published_actor = callback<const actor_addr&, uint16_t>;
+  using removed_published_actor = callback<const strong_actor_ptr&, uint16_t>;
 
   instance(abstract_broker* parent, callee& lstnr);
 
@@ -133,7 +133,7 @@ public:
 
   /// Adds a new actor to the map of published actors.
   void add_published_actor(uint16_t port,
-                           actor_addr published_actor,
+                           strong_actor_ptr published_actor,
                            std::set<std::string> published_interface);
 
   /// Removes the actor currently assigned to `port`.
@@ -146,9 +146,10 @@ public:
                                 removed_published_actor* cb = nullptr);
 
   /// Returns `true` if a path to destination existed, `false` otherwise.
-  bool dispatch(execution_unit* ctx, const actor_addr& sender,
-                const std::vector<actor_addr>& forwarding_stack,
-                const actor_addr& receiver, message_id mid, const message& msg);
+  bool dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
+                const std::vector<strong_actor_ptr>& forwarding_stack,
+                const strong_actor_ptr& receiver,
+                message_id mid, const message& msg);
 
   /// Returns the actor namespace associated to this BASP protocol instance.
   proxy_registry& proxies() {
@@ -162,7 +163,7 @@ public:
 
   /// Stores the address of a published actor along with its publicly
   /// visible messaging interface.
-  using published_actor = std::pair<actor_addr, std::set<std::string>>;
+  using published_actor = std::pair<strong_actor_ptr, std::set<std::string>>;
 
   /// Maps ports to addresses and interfaces of published actors.
   using published_actor_map = std::unordered_map<uint16_t, published_actor>;

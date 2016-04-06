@@ -20,8 +20,8 @@
 #ifndef CAF_DECORATOR_ADAPTER_HPP
 #define CAF_DECORATOR_ADAPTER_HPP
 
+#include "caf/actor.hpp"
 #include "caf/message.hpp"
-#include "caf/actor_addr.hpp"
 #include "caf/attachable.hpp"
 #include "caf/monitorable_actor.hpp"
 
@@ -36,7 +36,7 @@ namespace decorator {
 /// the same actor system and node as decorated actors.
 class adapter : public monitorable_actor {
 public:
-  adapter(actor_addr decorated, message msg);
+  adapter(strong_actor_ptr decorated, message msg);
 
   // non-system messages are processed and then forwarded;
   // system messages are handled and consumed on the spot;
@@ -44,7 +44,7 @@ public:
   void enqueue(mailbox_element_ptr what, execution_unit* host) override;
 
 private:
-  actor_addr decorated_;
+  strong_actor_ptr decorated_;
   message merger_;
 };
 

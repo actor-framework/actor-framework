@@ -22,9 +22,9 @@
 
 #include <cstddef>
 
+#include "caf/actor.hpp"
 #include "caf/extend.hpp"
 #include "caf/message.hpp"
-#include "caf/actor_addr.hpp"
 #include "caf/message_id.hpp"
 #include "caf/ref_counted.hpp"
 
@@ -42,7 +42,7 @@ class mailbox_element : public memory_managed {
 public:
   static constexpr auto memory_cache_flag = detail::needs_embedding;
 
-  using forwarding_stack = std::vector<actor_addr>;
+  using forwarding_stack = std::vector<strong_actor_ptr>;
 
   // intrusive pointer to the next mailbox element
   mailbox_element* next;
@@ -51,7 +51,7 @@ public:
   // avoid multi-processing in blocking actors via flagging
   bool marked;
   // source of this message and receiver of the final response
-  actor_addr sender;
+  strong_actor_ptr sender;
   // denotes whether this a sync or async message
   message_id mid;
   // stages.back() is the next actor in the forwarding chain,
@@ -61,8 +61,11 @@ public:
   message msg;
 
   mailbox_element();
-  mailbox_element(actor_addr sender, message_id id, forwarding_stack stages);
-  mailbox_element(actor_addr sender, message_id id,
+
+  mailbox_element(strong_actor_ptr sender, message_id id,
+                  forwarding_stack stages);
+
+  mailbox_element(strong_actor_ptr sender, message_id id,
                   forwarding_stack stages, message data);
 
   ~mailbox_element();
@@ -74,11 +77,11 @@ public:
 
   using unique_ptr = std::unique_ptr<mailbox_element, detail::disposer>;
 
-  static unique_ptr make(actor_addr sender, message_id id,
+  static unique_ptr make(strong_actor_ptr sender, message_id id,
                          forwarding_stack stages, message msg);
 
   template <class... Ts>
-  static unique_ptr make_joint(actor_addr sender, message_id id,
+  static unique_ptr make_joint(strong_actor_ptr sender, message_id id,
                                forwarding_stack stages, Ts&&... xs) {
     using value_storage =
       detail::tuple_vals<

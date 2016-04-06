@@ -23,8 +23,10 @@
 #include "caf/intrusive_ptr.hpp"
 
 #include "caf/actor.hpp"
+#include "caf/make_actor.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/replies_to.hpp"
+#include "caf/actor_system.hpp"
 #include "caf/abstract_actor.hpp"
 #include "caf/stateful_actor.hpp"
 #include "caf/typed_behavior.hpp"
@@ -56,6 +58,7 @@ class typed_broker;
 template <class... Sigs>
 class typed_actor : detail::comparable<typed_actor<Sigs...>>,
                     detail::comparable<typed_actor<Sigs...>, actor_addr>,
+                    detail::comparable<typed_actor<Sigs...>, strong_actor_ptr>,
                     detail::comparable<typed_actor<Sigs...>, invalid_actor_t>,
                     detail::comparable<typed_actor<Sigs...>,
                                        invalid_actor_addr_t> {
@@ -70,8 +73,11 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
   friend class typed_actor;
 
   // allow conversion via actor_cast
-  template <class>
-  friend struct actor_cast_access;
+  template <class, class, int>
+  friend class actor_cast_access;
+
+  // tell actor_cast which semantic this type uses
+  static constexpr bool has_weak_ptr_semantics = false;
 
   /// Creates a new `typed_actor` type by extending this one with `Es...`.
   template <class... Es>
@@ -143,7 +149,7 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
                 detail::tlf_is_subset(signatures(),
                                       typename TypedActor::signatures())
               >::type>
-  typed_actor(TypedActor* ptr) : ptr_(ptr) {
+  typed_actor(TypedActor* ptr) : ptr_(ptr->ctrl()) {
     // nop
   }
 
@@ -176,10 +182,9 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
     ptr_.reset();
   }
 
-
   /// Queries the address of the stored actor.
   actor_addr address() const noexcept {
-    return ptr_ ? ptr_->address() : actor_addr();
+    return {ptr_.get(), true};
   }
 
   /// Returns `*this != invalid_actor`.
@@ -216,19 +221,20 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
   bind(Ts&&... xs) const {
     if (! ptr_)
       return invalid_actor;
-    auto ptr = make_counted<decorator::adapter>(ptr_->address(),
-                                                make_message(xs...));
+    auto& sys = *(ptr_->home_system);
+    auto ptr = make_actor<decorator::adapter, strong_actor_ptr>(
+      sys.next_actor_id(), sys.node(), &sys, ptr_, make_message(xs...));
     return {ptr.release(), false};
   }
 
   /// @cond PRIVATE
 
   abstract_actor* operator->() const noexcept {
-    return ptr_.get();
+    return ptr_->get();
   }
 
   abstract_actor& operator*() const noexcept {
-    return *ptr_.get();
+    return *ptr_->get();
   }
 
   intptr_t compare(const typed_actor& x) const noexcept {
@@ -236,7 +242,11 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
   }
 
   intptr_t compare(const actor_addr& x) const noexcept {
-    return actor_addr::compare(get(), actor_cast<abstract_actor*>(x));
+    return actor_addr::compare(get(), actor_cast<actor_control_block*>(x));
+  }
+
+  intptr_t compare(const strong_actor_ptr& x) const noexcept {
+    return actor_addr::compare(get(), actor_cast<actor_control_block*>(x));
   }
 
   intptr_t compare(const invalid_actor_t&) const noexcept {
@@ -247,34 +257,43 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
     return ptr_ ? 1 : 0;
   }
 
+  typed_actor(actor_control_block* ptr, bool add_ref) : ptr_(ptr, add_ref) {
+    // nop
+  }
+
+  template <class Processor>
+  friend void serialize(Processor& proc, typed_actor& x, const unsigned int v) {
+    serialize(proc, x.ptr_, v);
+  }
+
+  friend inline std::string to_string(const typed_actor& x) {
+    return to_string(x.ptr_);
+  }
+
   /// @endcond
 
 private:
-  abstract_actor* get() const noexcept {
+  actor_control_block* get() const noexcept {
     return ptr_.get();
   }
 
-  abstract_actor* release() noexcept {
+  actor_control_block* release() noexcept {
     return ptr_.release();
   }
 
-  typed_actor(abstract_actor* ptr) : ptr_(ptr) {
+  typed_actor(actor_control_block* ptr) : ptr_(ptr) {
     // nop
   }
 
-  typed_actor(abstract_actor* ptr, bool add_ref) : ptr_(ptr, add_ref) {
-    // nop
-  }
-
-  abstract_actor_ptr ptr_;
+  strong_actor_ptr ptr_;
 };
 
 /// @relates typed_actor
 template <class... Xs, class... Ys>
 bool operator==(const typed_actor<Xs...>& x,
                 const typed_actor<Ys...>& y) noexcept {
-  return actor_addr::compare(actor_cast<abstract_actor*>(x),
-                             actor_cast<abstract_actor*>(y)) == 0;
+  return actor_addr::compare(actor_cast<actor_control_block*>(x),
+                             actor_cast<actor_control_block*>(y)) == 0;
 }
 
 /// @relates typed_actor
@@ -301,10 +320,12 @@ operator*(typed_actor<Xs...> f, typed_actor<Ys...> g) {
     >::type;
   if (! f || ! g)
     return invalid_actor;
-  auto mts = g->home_system().message_types(result{});
-  auto ptr = make_counted<decorator::sequencer>(f.address(), g.address(),
-                                                std::move(mts));
-  return actor_cast<result>(std::move(ptr));
+  auto& sys = g->home_system();
+  auto mts = sys.message_types(result{});
+  return make_actor<decorator::sequencer, result>(
+    sys.next_actor_id(), sys.node(), &sys,
+    actor_cast<strong_actor_ptr>(std::move(f)),
+    actor_cast<strong_actor_ptr>(std::move(g)), std::move(mts));
 }
 
 template <class... Xs, class... Ts>
@@ -320,30 +341,17 @@ splice(const typed_actor<Xs...>& x, const Ts&... xs) {
       detail::type_list<Xs...>,
       typename Ts::signatures...
     >::type;
-  std::vector<actor_addr> tmp{x.address(), xs.address()...};
+  std::vector<strong_actor_ptr> tmp{actor_cast<strong_actor_ptr>(x),
+                                    actor_cast<strong_actor_ptr>(xs)...};
   for (auto& addr : tmp)
     if (! addr)
       return invalid_actor;
-  auto mts = x->home_system().message_types(result{});
-  auto ptr = make_counted<decorator::splitter>(std::move(tmp), std::move(mts));
-  return actor_cast<result>(std::move(ptr));
-}
-
-/// @relates typed_actor
-template <class Processor, class... Ts>
-typename std::enable_if<Processor::is_saving::value>::type
-serialize(Processor& sink, typed_actor<Ts...>& hdl, const unsigned int) {
-  auto addr = hdl.address();
-  sink << addr;
-}
-
-/// @relates typed_actor
-template <class Processor, class... Ts>
-typename std::enable_if<Processor::is_loading::value>::type
-serialize(Processor& sink, typed_actor<Ts...>& hdl, const unsigned int) {
-  actor_addr addr;
-  sink >> addr;
-  hdl = actor_cast<typed_actor<Ts...>>(addr);
+  auto& sys = x->home_system();
+  auto mts = sys.message_types(result{});
+  return make_actor<decorator::splitter, result>(sys.next_actor_id(),
+                                                 sys.node(), &sys,
+                                                 std::move(tmp),
+                                                 std::move(mts));
 }
 
 } // namespace caf

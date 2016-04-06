@@ -38,7 +38,8 @@ class sequencer : public monitorable_actor {
 public:
   using message_types_set = std::set<std::string>;
 
-  sequencer(actor_addr f, actor_addr g, message_types_set msg_types);
+  sequencer(strong_actor_ptr f, strong_actor_ptr g,
+            message_types_set msg_types);
 
   // non-system messages are processed and then forwarded;
   // system messages are handled and consumed on the spot;
@@ -48,8 +49,8 @@ public:
   message_types_set message_types() const override;
 
 private:
-  actor_addr f_;
-  actor_addr g_;
+  strong_actor_ptr f_;
+  strong_actor_ptr g_;
   message_types_set msg_types_;
 };
 

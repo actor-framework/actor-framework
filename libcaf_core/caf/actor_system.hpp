@@ -28,9 +28,10 @@
 
 #include "caf/fwd.hpp"
 #include "caf/logger.hpp"
+#include "caf/actor_cast.hpp"
+#include "caf/make_actor.hpp"
 #include "caf/infer_handle.hpp"
 #include "caf/actor_config.hpp"
-#include "caf/make_counted.hpp"
 #include "caf/spawn_options.hpp"
 #include "caf/group_manager.hpp"
 #include "caf/abstract_actor.hpp"
@@ -412,12 +413,14 @@ private:
       cfg.flags |= abstract_actor::is_detached_flag;
     if (! cfg.host)
       cfg.host = dummy_execution_unit();
-    auto ptr = make_counted<C>(cfg, std::forward<Ts>(xs)...);
+    auto res = make_actor<C>(next_actor_id(), node(), this,
+                             cfg, std::forward<Ts>(xs)...);
     CAF_SET_LOGGER_SYS(this);
-    CAF_LOG_DEBUG("spawned actor:" << CAF_ARG(ptr->id()));
-    CAF_PUSH_AID(ptr->id());
+    CAF_LOG_DEBUG("spawned actor:" << CAF_ARG(res.id()));
+    CAF_PUSH_AID(res->id());
+    auto ptr = static_cast<C*>(actor_cast<abstract_actor*>(res));
     ptr->launch(cfg.host, has_lazy_init_flag(Os), has_hide_flag(Os));
-    return ptr;
+    return res;
   }
 
   std::atomic<size_t> ids_;

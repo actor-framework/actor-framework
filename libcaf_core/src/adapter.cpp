@@ -33,18 +33,15 @@
 namespace caf {
 namespace decorator {
 
-adapter::adapter(actor_addr decorated, message msg)
-    : monitorable_actor(&decorated->home_system(),
-                        decorated->home_system().next_actor_id(),
-                        decorated->node(),
-                        is_abstract_actor_flag
-                        | is_actor_bind_decorator_flag),
+adapter::adapter(strong_actor_ptr decorated, message msg)
+    : monitorable_actor(is_abstract_actor_flag | is_actor_bind_decorator_flag),
       decorated_(std::move(decorated)),
       merger_(std::move(msg)) {
   // bound actor has dependency on the decorated actor by default;
   // if the decorated actor is already dead upon establishing the
   // dependency, the actor is spawned dead
-  decorated_->attach(default_attachable::make_monitor(decorated_, address()));
+  decorated_->get()->attach(
+    default_attachable::make_monitor(decorated_->get()->address(), address()));
 }
 
 void adapter::enqueue(mailbox_element_ptr what, execution_unit* host) {

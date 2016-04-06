@@ -39,16 +39,16 @@ struct fixture {
     actor_system system{cfg};
     scoped_actor self{system};
     CAF_MESSAGE("set aut");
-    actor_addr res;
+    strong_actor_ptr res;
     std::set<std::string> ifs;
     scoped_execution_unit context{&system};
     actor_config actor_cfg{&context};
     std::tie(res, ifs) = system.types().make_actor("test_actor", actor_cfg, args);
     if (expect_fail) {
-      CAF_REQUIRE(res == invalid_actor_addr);
+      CAF_REQUIRE(! res);
       return;
     }
-    CAF_REQUIRE(res != invalid_actor_addr);
+    CAF_REQUIRE(res);
     CAF_CHECK(ifs.empty());
     auto aut = actor_cast<actor>(res);
     CAF_REQUIRE(aut != invalid_actor);

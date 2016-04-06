@@ -31,6 +31,7 @@
 #include "caf/local_actor.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/actor_config.hpp"
+#include "caf/actor_marker.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/response_handle.hpp"
 
@@ -45,7 +46,8 @@ namespace caf {
 /// @extends local_actor
 class blocking_actor
     : public extend<local_actor, blocking_actor>::
-             with<mixin::requester<blocking_response_handle_tag>::impl> {
+             with<mixin::requester<blocking_response_handle_tag>::impl>,
+      public dynamically_typed_actor_base {
 public:
   using behavior_type = behavior;
 

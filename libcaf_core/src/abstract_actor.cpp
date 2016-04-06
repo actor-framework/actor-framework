@@ -37,6 +37,7 @@
 #include "caf/mailbox_element.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/default_attachable.hpp"
+#include "caf/actor_control_block.hpp"
 
 #include "caf/detail/shared_spinlock.hpp"
 
@@ -45,29 +46,30 @@ namespace caf {
 // exit_reason_ is guaranteed to be set to 0, i.e., exit_reason::not_exited,
 // by std::atomic<> constructor
 
-void abstract_actor::enqueue(const actor_addr& sender, message_id mid,
+actor_control_block* abstract_actor::ctrl() const {
+  return actor_control_block::from(this);
+}
+
+abstract_actor::~abstract_actor() {
+  // nop
+}
+
+void abstract_actor::enqueue(strong_actor_ptr sender, message_id mid,
                              message msg, execution_unit* host) {
   enqueue(mailbox_element::make(sender, mid, {}, std::move(msg)), host);
 }
 
 abstract_actor::abstract_actor(actor_config& cfg)
-    : abstract_channel(cfg.flags | abstract_channel::is_abstract_actor_flag,
-                       cfg.host->system().node()),
-      id_(cfg.host->system().next_actor_id()),
-      home_system_(&cfg.host->system()) {
+    : abstract_channel(cfg.flags) {
   // nop
 }
 
-abstract_actor::abstract_actor(actor_system* sys, actor_id aid,
-                               node_id nid, int flags)
-    : abstract_channel(flags, std::move(nid)),
-      id_(aid),
-      home_system_(sys) {
+abstract_actor::abstract_actor(int flags) : abstract_channel(flags) {
   // nop
 }
 
 actor_addr abstract_actor::address() const {
-  return actor_addr{const_cast<abstract_actor*>(this)};
+  return actor_addr{actor_control_block::from(this)};
 }
 
 std::set<std::string> abstract_actor::message_types() const {
@@ -75,13 +77,25 @@ std::set<std::string> abstract_actor::message_types() const {
   return std::set<std::string>{};
 }
 
+actor_id abstract_actor::id() const noexcept {
+  return actor_control_block::from(this)->id();
+}
+
+node_id abstract_actor::node() const noexcept {
+  return actor_control_block::from(this)->node();
+}
+
+actor_system& abstract_actor::home_system() const noexcept {
+  return *(actor_control_block::from(this)->home_system);
+}
+
 void abstract_actor::is_registered(bool value) {
   if (is_registered() == value)
     return;
   if (value)
-    home_system_->registry().inc_running();
+    home_system().registry().inc_running();
   else
-    home_system_->registry().dec_running();
+    home_system().registry().dec_running();
   set_flag(value, is_registered_flag);
 }
 

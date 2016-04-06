@@ -70,11 +70,12 @@ behavior server(stateful_actor<server_state>* self) {
       auto mm = self->system().middleman().actor_handle();
       self->request(mm, infinite, spawn_atom::value,
                     s.node(), "mirror", make_message()).then(
-        [=](ok_atom, const actor_addr& addr, const std::set<std::string>& ifs) {
-          CAF_LOG_TRACE(CAF_ARG(addr) << CAF_ARG(ifs));
-          CAF_REQUIRE(addr != invalid_actor_addr);
+        [=](ok_atom, const strong_actor_ptr& ptr,
+            const std::set<std::string>& ifs) {
+          CAF_LOG_TRACE(CAF_ARG(ptr) << CAF_ARG(ifs));
+          CAF_REQUIRE(ptr);
           CAF_CHECK(ifs.empty());
-          self->state.aut = actor_cast<actor>(addr);
+          self->state.aut = actor_cast<actor>(ptr);
           self->send(self->state.aut, "hello mirror");
           self->become(
             [=](const std::string& str) {

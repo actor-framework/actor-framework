@@ -24,9 +24,7 @@
 
 namespace caf {
 
-abstract_channel::abstract_channel(int fs, node_id nid)
-    : flags_(fs),
-      node_(std::move(nid)) {
+abstract_channel::abstract_channel(int fs) : flags_(fs) {
   // nop
 }
 

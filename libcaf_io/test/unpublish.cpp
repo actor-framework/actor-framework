@@ -75,7 +75,7 @@ struct fixture {
     scoped_actor self{system, true};
     self->request(system.middleman().actor_handle(), infinite,
                   connect_atom::value, hostname, port).receive(
-      [&](ok_atom, node_id&, actor_addr& res, std::set<std::string>& xs) {
+      [&](ok_atom, node_id&, strong_actor_ptr& res, std::set<std::string>& xs) {
         CAF_REQUIRE(xs.empty());
         result = actor_cast<actor>(std::move(res));
       },

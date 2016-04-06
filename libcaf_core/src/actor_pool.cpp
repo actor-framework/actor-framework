@@ -55,9 +55,8 @@ void broadcast_dispatch(actor_system&, actor_pool::uplock&,
                         const actor_pool::actor_vec& vec,
                         mailbox_element_ptr& ptr, execution_unit* host) {
   CAF_ASSERT(!vec.empty());
-  for (size_t i = 1; i < vec.size(); ++i) {
+  for (size_t i = 1; i < vec.size(); ++i)
     vec[i]->enqueue(ptr->sender, ptr->mid, ptr->msg, host);
-  }
   vec.front()->enqueue(std::move(ptr), host);
 }
 
@@ -96,11 +95,19 @@ actor_pool::~actor_pool() {
 
 actor actor_pool::make(execution_unit* eu, policy pol) {
   CAF_ASSERT(eu);
-  intrusive_ptr<actor_pool> ptr;
+  auto& sys = eu->system();
   actor_config cfg{eu};
+  auto res = make_actor<actor_pool, actor>(sys.next_actor_id(), sys.node(),
+                                           &sys, cfg);
+  auto ptr = static_cast<actor_pool*>(actor_cast<abstract_actor*>(res));
+  ptr->policy_ = std::move(pol);
+  return res;
+  /*
+  intrusive_ptr<actor_pool> ptr;
   ptr = make_counted<actor_pool>(cfg);
   ptr->policy_ = std::move(pol);
   return actor_cast<actor>(ptr);
+  */
 }
 
 actor actor_pool::make(execution_unit* eu, size_t num_workers,
@@ -116,7 +123,7 @@ actor actor_pool::make(execution_unit* eu, size_t num_workers,
   return res;
 }
 
-void actor_pool::enqueue(const actor_addr& sender, message_id mid,
+void actor_pool::enqueue(strong_actor_ptr sender, message_id mid,
                          message content, execution_unit* eu) {
   upgrade_lock<detail::shared_spinlock> guard{workers_mtx_};
   if (filter(guard, sender, mid, content, eu))
@@ -139,7 +146,7 @@ actor_pool::actor_pool(actor_config& cfg)
 }
 
 bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
-                        const actor_addr& sender, message_id mid,
+                        const strong_actor_ptr& sender, message_id mid,
                         const message& msg, execution_unit* eu) {
   auto rsn = planned_reason_;
   if (rsn != caf::exit_reason::not_exited) {
@@ -203,19 +210,16 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
   if (msg.match_elements<sys_atom, get_atom>()) {
     auto cpy = workers_;
     guard.unlock();
-    actor_cast<abstract_actor*>(sender)->enqueue(invalid_actor_addr,
-                                                 mid.response_id(),
-                                                 make_message(std::move(cpy)),
-                                                 eu);
+    sender->enqueue(nullptr, mid.response_id(),
+                    make_message(std::move(cpy)), eu);
     return true;
   }
   if (workers_.empty()) {
     guard.unlock();
-    if (sender != invalid_actor_addr && mid.valid()) {
+    if (sender && mid.valid()) {
       // tell client we have ignored this sync message by sending
       // and empty message back
-      auto ptr = actor_cast<abstract_actor_ptr>(sender);
-      ptr->enqueue(invalid_actor_addr, mid.response_id(), message{}, eu);
+      sender->enqueue(nullptr, mid.response_id(), message{}, eu);
     }
     return true;
   }

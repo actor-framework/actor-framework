@@ -709,7 +709,6 @@ default_multiplexer::~default_multiplexer() {
 
 void default_multiplexer::exec_later(resumable* ptr) {
   CAF_ASSERT(ptr);
-  CAF_ASSERT(ptr->as_ref_counted_ptr()->get_reference_count() > 0);
   switch (ptr->subtype()) {
     case resumable::io_actor:
     case resumable::function_object:

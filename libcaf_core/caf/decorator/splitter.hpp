@@ -40,7 +40,7 @@ class splitter : public monitorable_actor {
 public:
   using message_types_set = std::set<std::string>;
 
-  splitter(std::vector<actor_addr> workers, message_types_set msg_types);
+  splitter(std::vector<strong_actor_ptr> workers, message_types_set msg_types);
 
   // non-system messages are processed and then forwarded;
   // system messages are handled and consumed on the spot;
@@ -50,7 +50,7 @@ public:
   message_types_set message_types() const override;
 
 private:
-  std::vector<actor_addr> workers_;
+  std::vector<strong_actor_ptr> workers_;
   message_types_set msg_types_;
 };
 

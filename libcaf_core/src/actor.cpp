@@ -17,12 +17,12 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/channel.hpp"
+#include "caf/actor.hpp"
 
 #include <utility>
 
-#include "caf/actor.hpp"
 #include "caf/actor_addr.hpp"
+#include "caf/make_actor.hpp"
 #include "caf/serializer.hpp"
 #include "caf/actor_proxy.hpp"
 #include "caf/local_actor.hpp"
@@ -37,7 +37,7 @@
 
 namespace caf {
 
-actor::actor(const scoped_actor& x) : ptr_(x.get()) {
+actor::actor(const scoped_actor& x) : ptr_(actor_cast<strong_actor_ptr>(x)) {
   // nop
 }
 
@@ -45,16 +45,16 @@ actor::actor(const invalid_actor_t&) : ptr_(nullptr) {
   // nop
 }
 
-actor::actor(abstract_actor* ptr) : ptr_(ptr) {
+actor::actor(actor_control_block* ptr) : ptr_(ptr) {
   // nop
 }
 
-actor::actor(abstract_actor* ptr, bool add_ref) : ptr_(ptr, add_ref) {
+actor::actor(actor_control_block* ptr, bool add_ref) : ptr_(ptr, add_ref) {
   // nop
 }
 
 actor& actor::operator=(const scoped_actor& x) {
-  ptr_.reset(x.get());
+  ptr_ = actor_cast<strong_actor_ptr>(x);
   return *this;
 }
 
@@ -76,7 +76,7 @@ void actor::swap(actor& other) noexcept {
 }
 
 actor_addr actor::address() const noexcept {
-  return ptr_ ? ptr_->address() : actor_addr{};
+  return actor_cast<actor_addr>(ptr_);
 }
 
 node_id actor::node() const noexcept {
@@ -90,45 +90,54 @@ actor_id actor::id() const noexcept {
 actor actor::bind_impl(message msg) const {
   if (! ptr_)
     return invalid_actor;
-  return actor_cast<actor>(make_counted<decorator::adapter>(address(),
-                                                            std::move(msg)));
+  auto& sys = *(ptr_->home_system);
+  return make_actor<decorator::adapter, actor>(sys.next_actor_id(), sys.node(),
+                                               &sys, ptr_, std::move(msg));
 }
 
 actor operator*(actor f, actor g) {
   if (! f || ! g)
     return invalid_actor;
-  auto ptr = make_counted<decorator::sequencer>(f.address(),
-                                                g.address(),
-                                                std::set<std::string>{});
-  return actor_cast<actor>(std::move(ptr));
-}
-
-void serialize(serializer& sink, actor& x, const unsigned int) {
-  sink << x.address();
-}
-
-void serialize(deserializer& source, actor& x, const unsigned int) {
-  actor_addr addr;
-  source >> addr;
-  x = actor_cast<actor>(addr);
-}
-
-std::string to_string(const actor& x) {
-  return to_string(x.address());
+  auto& sys = f->home_system();
+  return make_actor<decorator::sequencer, actor>(
+    sys.next_actor_id(), sys.node(), &sys,
+    actor_cast<strong_actor_ptr>(std::move(f)),
+    actor_cast<strong_actor_ptr>(std::move(g)), std::set<std::string>{});
 }
 
 actor actor::splice_impl(std::initializer_list<actor> xs) {
   if (xs.size() < 2)
     return invalid_actor;
-  std::vector<actor_addr> tmp;
+  actor_system* sys = nullptr;
+  std::vector<strong_actor_ptr> tmp;
   for (auto& x : xs)
-    if (x)
-      tmp.push_back(x.address());
-    else
+    if (x) {
+      if (! sys)
+        sys = &(x->home_system());
+      tmp.push_back(actor_cast<strong_actor_ptr>(x));
+    } else {
       return invalid_actor;
-  auto ptr = make_counted<decorator::splitter>(std::move(tmp),
-                                               std::set<std::string>{});
-  return actor_cast<actor>(std::move(ptr));
+    }
+  return make_actor<decorator::splitter, actor>(sys->next_actor_id(),
+                                                sys->node(), sys,
+                                                std::move(tmp),
+                                                std::set<std::string>{});
+}
+
+bool operator==(const actor& lhs, abstract_actor* rhs) {
+  return actor_cast<abstract_actor*>(lhs) == rhs;
+}
+
+bool operator==(abstract_actor* lhs, const actor& rhs) {
+  return rhs == lhs;
+}
+
+bool operator!=(const actor& lhs, abstract_actor* rhs) {
+  return !(lhs == rhs);
+}
+
+bool operator!=(abstract_actor* lhs, const actor& rhs) {
+  return !(lhs == rhs);
 }
 
 } // namespace caf

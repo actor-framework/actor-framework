@@ -32,7 +32,7 @@
 
 namespace caf {
 
-using actor_factory_result = std::pair<actor_addr, std::set<std::string>>;
+using actor_factory_result = std::pair<strong_actor_ptr, std::set<std::string>>;
 
 using actor_factory = std::function<actor_factory_result (actor_config&, message&)>;
 
@@ -155,7 +155,8 @@ actor_factory make_actor_factory(F fun) {
       return result;
     };
     handle hdl = cfg.host->system().spawn_class<impl, no_spawn_options>(cfg);
-    return {hdl.address(), cfg.host->system().message_types(hdl)};
+    return {actor_cast<strong_actor_ptr>(std::move(hdl)),
+            cfg.host->system().message_types(hdl)};
   };
 }
 
@@ -178,14 +179,17 @@ actor_factory_result dyn_spawn_class(actor_config& cfg, message& msg) {
   msg.apply(factory);
   if (hdl == invalid_actor)
     return {};
-  return {hdl.address(), cfg.host->system().message_types(hdl)};
+  return {actor_cast<strong_actor_ptr>(std::move(hdl)),
+          cfg.host->system().message_types(hdl)};
 }
 
 template <class T, class... Ts>
 actor_factory make_actor_factory() {
+  /*
   static_assert(std::is_same<T*, decltype(new T(std::declval<actor_config&>(),
                                                 std::declval<Ts>()...))>::value,
                 "no constructor for T(Ts...) exists");
+  */
   static_assert(detail::conjunction<
                   std::is_lvalue_reference<Ts>::value...
                 >::value,

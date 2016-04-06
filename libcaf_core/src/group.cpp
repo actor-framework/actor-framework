@@ -19,9 +19,9 @@
 
 #include "caf/group.hpp"
 
-#include "caf/channel.hpp"
 #include "caf/message.hpp"
 #include "caf/actor_cast.hpp"
+#include "caf/actor_system.hpp"
 #include "caf/group_manager.hpp"
 
 namespace caf {
@@ -56,19 +56,31 @@ intptr_t group::compare(const group& other) const noexcept {
 }
 
 void serialize(serializer& sink, const group& x, const unsigned int) {
-  sink << actor_cast<channel>(x);
+  auto ptr = x.get();
+  if (! ptr) {
+    std::string dummy;
+    sink << dummy;
+  } else {
+    sink << ptr->module_name();
+    ptr->save(sink);
+  }
 }
 
 void serialize(deserializer& source, group& x, const unsigned int) {
-  channel y;
-  source >> y;
-  if (! y) {
+  std::string module_name;
+  source >> module_name;
+  if (module_name.empty()) {
     x = invalid_group;
     return;
   }
-  if (! y->is_abstract_group())
-    throw std::logic_error("Expected an actor address, found a group address.");
-  x.ptr_.reset(static_cast<abstract_group*>(actor_cast<abstract_channel*>(y)));
+  if (source.context() == nullptr)
+    throw std::logic_error("Cannot serialize group without context.");
+  auto& sys = source.context()->system();
+  auto mod = sys.groups().get_module(module_name);
+  if (! mod)
+    throw std::logic_error("Cannot deserialize a group for "
+                           "unknown module: " + module_name);
+  x = mod->load(source);
 }
 
 std::string to_string(const group& x) {

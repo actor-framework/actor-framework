@@ -63,16 +63,15 @@ public:
   /// delegate other subtypes to dedicated workers.
   virtual subtype_t subtype() const;
 
-  /// Returns a pointer to this object as `ref_counted`.
-  virtual ref_counted* as_ref_counted_ptr() = 0;
-
   /// Resume any pending computation until it is either finished
   /// or needs to be re-scheduled later.
   virtual resume_result resume(execution_unit*, size_t max_throughput) = 0;
 
-  void intrusive_ptr_add_ref_impl();
+  /// Add a strong reference count to this object.
+  virtual void intrusive_ptr_add_ref_impl() = 0;
 
-  void intrusive_ptr_release_impl();
+  /// Remove a strong reference count from this object.
+  virtual void intrusive_ptr_release_impl() = 0;
 };
 
 // enables intrusive_ptr<resumable> without introducing ambiguity

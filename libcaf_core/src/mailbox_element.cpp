@@ -28,7 +28,8 @@ mailbox_element::mailbox_element()
   // nop
 }
 
-mailbox_element::mailbox_element(actor_addr x, message_id y, forwarding_stack z)
+mailbox_element::mailbox_element(strong_actor_ptr x, message_id y,
+                                 forwarding_stack z)
     : next(nullptr),
       prev(nullptr),
       marked(false),
@@ -38,7 +39,7 @@ mailbox_element::mailbox_element(actor_addr x, message_id y, forwarding_stack z)
   // nop
 }
 
-mailbox_element::mailbox_element(actor_addr x, message_id y,
+mailbox_element::mailbox_element(strong_actor_ptr x, message_id y,
                                  forwarding_stack z, message m)
     : next(nullptr),
       prev(nullptr),
@@ -54,7 +55,8 @@ mailbox_element::~mailbox_element() {
   // nop
 }
 
-mailbox_element_ptr mailbox_element::make(actor_addr sender, message_id id,
+mailbox_element_ptr mailbox_element::make(strong_actor_ptr sender,
+                                          message_id id,
                                           forwarding_stack stages,
                                           message msg) {
   auto ptr = detail::memory::create<mailbox_element>(std::move(sender), id,

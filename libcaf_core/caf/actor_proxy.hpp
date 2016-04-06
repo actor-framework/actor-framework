@@ -30,44 +30,11 @@
 
 namespace caf {
 
-class actor_proxy;
-
-/// A smart pointer to an {@link actor_proxy} instance.
-/// @relates actor_proxy
-using actor_proxy_ptr = intrusive_ptr<actor_proxy>;
-
 /// Represents an actor running on a remote machine,
 /// or different hardware, or in a separate process.
 class actor_proxy : public monitorable_actor {
 public:
-  /// An anchor points to a proxy instance without sharing
-  /// ownership to it, i.e., models a weak ptr.
-  class anchor : public ref_counted {
-  public:
-    friend class actor_proxy;
-
-    anchor(actor_proxy* instance = nullptr);
-
-    ~anchor();
-
-    /// Queries whether the proxy was already deleted.
-    bool expired() const;
-
-    /// Gets a pointer to the proxy or `nullptr`
-    ///    if the instance is {@link expired()}.
-    actor_proxy_ptr get();
-
-  private:
-    /*
-     * Tries to expire this anchor. Fails if reference
-     *    count of the proxy is nonzero.
-     */
-    bool try_expire() noexcept;
-    std::atomic<actor_proxy*> ptr_;
-    detail::shared_spinlock lock_;
-  };
-
-  using anchor_ptr = intrusive_ptr<anchor>;
+  actor_proxy();
 
   ~actor_proxy();
 
@@ -80,17 +47,6 @@ public:
 
   /// Invokes cleanup code.
   virtual void kill_proxy(execution_unit* ctx, exit_reason reason) = 0;
-
-  void request_deletion(bool decremented_ref_count) noexcept override;
-
-  inline anchor_ptr get_anchor() const {
-    return anchor_;
-  }
-
-protected:
-  actor_proxy(actor_system* sys, actor_id aid, node_id nid);
-
-  anchor_ptr anchor_;
 };
 
 } // namespace caf

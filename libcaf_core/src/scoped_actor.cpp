@@ -39,26 +39,31 @@ struct impl : blocking_actor {
 
 } // namespace <anonymous>
 
-scoped_actor::scoped_actor(actor_system& as, bool hide_actor) : context_{&as} {
+scoped_actor::scoped_actor(actor_system& sys, bool hidden) : context_{&sys} {
   actor_config cfg{&context_};
-  self_.reset(new impl(cfg), false);
-  if (! hide_actor) {
+  self_ = make_actor<impl, strong_actor_ptr>(sys.next_actor_id(), sys.node(),
+                                             &sys, cfg);
+  if (! hidden) {
     prev_ = CAF_SET_AID(self_->id());
   }
-  CAF_LOG_TRACE(CAF_ARG(hide_actor));
-  self_->is_registered(! hide_actor);
+  CAF_LOG_TRACE(CAF_ARG(hidden));
+  ptr()->is_registered(! hidden);
 }
 
 scoped_actor::~scoped_actor() {
   CAF_LOG_TRACE("");
   if (! self_)
     return;
-  if (self_->is_registered()) {
+  if (ptr()->is_registered()) {
     CAF_SET_AID(prev_);
   }
-  auto r = self_->planned_exit_reason();
-  self_->cleanup(r == exit_reason::not_exited ? exit_reason::normal : r,
-                 &context_);
+  auto r = ptr()->planned_exit_reason();
+  ptr()->cleanup(r == exit_reason::not_exited ? exit_reason::normal : r,
+                     &context_);
+}
+
+blocking_actor* scoped_actor::ptr() const {
+  return static_cast<blocking_actor*>(actor_cast<abstract_actor*>(self_));
 }
 
 std::string to_string(const scoped_actor& x) {

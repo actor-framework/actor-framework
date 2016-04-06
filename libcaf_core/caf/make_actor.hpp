@@ -17,40 +17,27 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/sec.hpp"
-#include "caf/atom.hpp"
-#include "caf/actor.hpp"
-#include "caf/config.hpp"
-#include "caf/actor_cast.hpp"
-#include "caf/message_id.hpp"
-#include "caf/exit_reason.hpp"
-#include "caf/mailbox_element.hpp"
-#include "caf/system_messages.hpp"
+#ifndef CAF_MAKE_ACTOR_HPP
+#define CAF_MAKE_ACTOR_HPP
 
-#include "caf/detail/sync_request_bouncer.hpp"
+#include <type_traits>
+
+#include "caf/fwd.hpp"
+#include "caf/ref_counted.hpp"
+#include "caf/infer_handle.hpp"
+#include "caf/intrusive_ptr.hpp"
+#include "caf/actor_storage.hpp"
+#include "caf/actor_control_block.hpp"
 
 namespace caf {
-namespace detail {
 
-sync_request_bouncer::sync_request_bouncer(exit_reason r)
-    : rsn(r == exit_reason::not_exited ? exit_reason::normal : r) {
-  // nop
+template <class T, class R = infer_handle_from_class_t<T>, class... Ts>
+R make_actor(actor_id aid, node_id nid, actor_system* sys, Ts&&... xs) {
+  auto ptr = new actor_storage<T>(aid, std::move(nid), sys,
+                                  std::forward<Ts>(xs)...);
+  return {&(ptr->ctrl), false};
 }
 
-void sync_request_bouncer::operator()(const strong_actor_ptr& sender,
-                                      const message_id& mid) const {
-  CAF_ASSERT(rsn != exit_reason::not_exited);
-  if (sender && mid.is_request()) {
-    sender->enqueue(nullptr, mid.response_id(),
-                    make_message(make_error(sec::request_receiver_down)),
-                    // TODO: this breaks out of the execution unit
-                    nullptr);
-  }
-}
-
-void sync_request_bouncer::operator()(const mailbox_element& e) const {
-  (*this)(e.sender, e.mid);
-}
-
-} // namespace detail
 } // namespace caf
+
+#endif // CAF_MAKE_ACTOR_HPP

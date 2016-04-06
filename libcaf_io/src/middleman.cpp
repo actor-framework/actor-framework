@@ -107,7 +107,8 @@ middleman::middleman(actor_system& sys)
   // nop
 }
 
-uint16_t middleman::publish(const actor_addr& whom, std::set<std::string> sigs,
+uint16_t middleman::publish(const strong_actor_ptr& whom,
+                            std::set<std::string> sigs,
                             uint16_t port, const char* in, bool ru) {
   CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(sigs) << CAF_ARG(port)
                 << CAF_ARG(in) << CAF_ARG(ru));
@@ -177,15 +178,15 @@ void middleman::unpublish(const actor_addr& whom, uint16_t port) {
   );
 }
 
-actor_addr middleman::remote_actor(std::set<std::string> ifs,
-                                   std::string host, uint16_t port) {
+strong_actor_ptr middleman::remote_actor(std::set<std::string> ifs,
+                                         std::string host, uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(ifs) << CAF_ARG(host) << CAF_ARG(port));
   auto mm = actor_handle();
-  actor_addr result;
+  strong_actor_ptr result;
   scoped_actor self{system(), true};
   self->request(mm, infinite, connect_atom::value,
                 std::move(host), port).receive(
-    [&](ok_atom, const node_id&, actor_addr res, std::set<std::string>& xs) {
+    [&](ok_atom, const node_id&, strong_actor_ptr res, std::set<std::string>& xs) {
       CAF_LOG_TRACE(CAF_ARG(res) << CAF_ARG(xs));
       if (!res)
         throw network_error("no actor published at port "
@@ -199,7 +200,7 @@ actor_addr middleman::remote_actor(std::set<std::string> ifs,
 
         throw network_error(std::move(what));
       }
-      result = std::move(res);
+      result.swap(res);
     },
     [&](const error& msg) {
       CAF_LOG_TRACE(CAF_ARG(msg));
@@ -239,13 +240,6 @@ group middleman::remote_group(const std::string& group_identifier,
     }
   );
   return result;
-}
-
-void middleman::add_broker(broker_ptr bptr) {
-  CAF_ASSERT(bptr != nullptr);
-  CAF_LOG_TRACE(CAF_ARG(bptr->id()));
-  brokers_.insert(bptr);
-  bptr->attach_functor([=] { brokers_.erase(bptr); });
 }
 
 actor middleman::remote_lookup(atom_value name, const node_id& nid) {

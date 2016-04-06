@@ -19,6 +19,7 @@
 
 #include "caf/default_attachable.hpp"
 
+#include "caf/actor.hpp"
 #include "caf/message.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/system_messages.hpp"
@@ -37,15 +38,17 @@ message make(abstract_actor* self, exit_reason reason) {
 void default_attachable::actor_exited(exit_reason rsn, execution_unit* host) {
   CAF_ASSERT(observed_ != observer_);
   auto factory = type_ == monitor ? &make<down_msg> : &make<exit_msg>;
-  auto ptr = actor_cast<abstract_actor_ptr>(observer_);
-  ptr->enqueue(observed_, message_id{}.with_high_priority(),
-               factory(actor_cast<abstract_actor*>(observed_), rsn), host);
+  auto observer = actor_cast<strong_actor_ptr>(observer_);
+  auto observed = actor_cast<strong_actor_ptr>(observed_);
+  if (observer)
+    observer->enqueue(std::move(observed), message_id{}.with_high_priority(),
+                      factory(actor_cast<abstract_actor*>(observed_), rsn),
+                      host);
 }
 
 bool default_attachable::matches(const token& what) {
-  if (what.subtype != attachable::token::observer) {
+  if (what.subtype != attachable::token::observer)
     return false;
-  }
   auto& ot = *reinterpret_cast<const observe_token*>(what.ptr);
   return ot.observer == observer_ && ot.type == type_;
 }

@@ -82,17 +82,8 @@ monitorable_actor::monitorable_actor(actor_config& cfg)
   // nop
 }
 
-monitorable_actor::monitorable_actor(actor_system* sys,
-                                     actor_id aid,
-                                     node_id nid)
-    : abstract_actor(sys, aid, nid),
-      exit_reason_(exit_reason::not_exited) {
-  // nop
-}
-
-monitorable_actor::monitorable_actor(actor_system* sys, actor_id aid,
-                                     node_id nid, int init_flags)
-    : abstract_actor(sys, aid, nid, init_flags),
+monitorable_actor::monitorable_actor(int init_flags)
+    : abstract_actor(init_flags),
       exit_reason_(exit_reason::not_exited) {
   // nop
 }
@@ -131,12 +122,14 @@ bool monitorable_actor::establish_link_impl(const actor_addr& other) {
   CAF_LOG_TRACE(CAF_ARG(other));
   if (other && other != this) {
     std::unique_lock<std::mutex> guard{mtx_};
-    auto ptr = actor_cast<abstract_actor_ptr>(other);
+    auto ptr = actor_cast<actor>(other);
+    if (! ptr)
+      return false;
     auto reason = get_exit_reason();
     // send exit message if already exited
     if (reason != exit_reason::not_exited) {
       guard.unlock();
-      ptr->enqueue(address(), invalid_message_id,
+      ptr->enqueue(ctrl(), invalid_message_id,
                    make_message(exit_msg{address(), reason}), nullptr);
     } else if (ptr->establish_backlink(address())) {
       // add link if not already linked to other
@@ -166,9 +159,10 @@ bool monitorable_actor::establish_backlink_impl(const actor_addr& other) {
   }
   // send exit message without lock
   if (reason != exit_reason::not_exited) {
-    auto ptr = actor_cast<abstract_actor_ptr>(other);
-    ptr->enqueue(address(), invalid_message_id,
-                 make_message(exit_msg{address(), reason}), nullptr);
+    auto hdl = actor_cast<actor>(other);
+    if (hdl)
+      hdl->enqueue(ctrl(), invalid_message_id,
+                   make_message(exit_msg{address(), reason}), nullptr);
   }
   return false;
 }
@@ -180,11 +174,13 @@ bool monitorable_actor::remove_link_impl(const actor_addr& other) {
   default_attachable::observe_token tk{other, default_attachable::link};
   std::unique_lock<std::mutex> guard{mtx_};
   // remove_backlink returns true if this actor is linked to other
-  auto ptr = actor_cast<abstract_actor_ptr>(other);
+  auto hdl = actor_cast<actor>(other);
+  if (! hdl)
+    return false;
   if (detach_impl(tk, attachables_head_, true) > 0) {
     guard.unlock();
     // tell remote side to remove link as well
-    ptr->remove_backlink(address());
+    hdl->remove_backlink(address());
     return true;
   }
   return false;
@@ -243,7 +239,8 @@ bool monitorable_actor::handle_system_message(mailbox_element& node,
           err = sec::invalid_sys_key;
           return;
         }
-        res = mailbox_element::make_joint(address(), node.mid.response_id(), {},
+        res = mailbox_element::make_joint(ctrl(),
+                                          node.mid.response_id(), {},
                                           ok_atom::value, std::move(what),
                                           address(), name());
       },
@@ -252,10 +249,13 @@ bool monitorable_actor::handle_system_message(mailbox_element& node,
       }
     });
     if (err && node.mid.is_request())
-      res = mailbox_element::make_joint(address(), node.mid.response_id(),
+      res = mailbox_element::make_joint(ctrl(), node.mid.response_id(),
                                         {}, std::move(err));
-    if (res)
-      node.sender->enqueue(std::move(res), context);
+    if (res) {
+      auto s = actor_cast<actor>(node.sender);
+      if (s)
+        s->enqueue(std::move(res), context);
+    }
     return true;
   }
   return false;

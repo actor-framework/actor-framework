@@ -132,7 +132,7 @@ actor_system::actor_system(actor_system_config&& cfg)
     if (mod)
       mod->start();
   // store config parameters in ConfigServ
-  auto cs = registry_.get(atom("ConfigServ"));
+  auto cs = actor_cast<actor>(registry_.get(atom("ConfigServ")));
   anon_send(cs, put_atom::value, "middleman.enable-automatic-connections",
             make_message(cfg.middleman_enable_automatic_connections));
 }
