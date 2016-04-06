@@ -160,8 +160,8 @@ class optional {
   union { T m_value; };
 };
 
-/// Template specialization to allow `optional`
-/// to hold a reference rather than an actual value.
+/// Template specialization to allow `optional` to hold a reference
+/// rather than an actual value with minimal overhead.
 template <class T>
 class optional<T&> {
  public:
@@ -184,7 +184,7 @@ class optional<T&> {
   }
 
   bool operator!() const {
-    return m_value != nullptr;
+    return ! m_value;
   }
 
   T& operator*() {
