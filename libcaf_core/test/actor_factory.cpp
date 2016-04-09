@@ -62,21 +62,12 @@ struct fixture {
 };
 
 struct test_actor_no_args : event_based_actor {
-  test_actor_no_args(actor_config& conf) : event_based_actor(conf) {
-    // nop
-  }
-
-  behavior make_behavior() override {
-    return {};
-  }
+  using event_based_actor::event_based_actor;
 };
 
 struct test_actor_one_arg : event_based_actor {
   test_actor_one_arg(actor_config& conf, int value) : event_based_actor(conf) {
     CAF_CHECK_EQUAL(value, 42);
-  }
-  behavior make_behavior() override {
-    return {};
   }
 };
 
