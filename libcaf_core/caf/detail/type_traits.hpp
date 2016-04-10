@@ -258,66 +258,38 @@ struct is_tuple<std::tuple<Ts...>> : std::true_type { };
 template <class F, class S>
 struct is_tuple<std::pair<F, S>> : std::true_type { };
 
-/// Checks whether `T` provides a free
-/// `serialize(Processor&, T&, const unsigned int)` function.
-template <class T>
-struct has_free_serialize {
-private:
-  // check for free function
-  template <class C,
-            class E = decltype(serialize(std::declval<serializer&>(),
-                                         std::declval<C&>(), 0))>
-  static bool sfinae_fun(C*) {
-    return true;
-  }
-
-  static void sfinae_fun(void*) {
-    // nop
-  }
-
-  using type = typename std::remove_const<T>::type;
-
-  using result_type = decltype(sfinae_fun(static_cast<type*>(nullptr)));
-
-public:
-  static constexpr bool value = std::is_same<bool, result_type>::value;
-};
-
-/// Checks whether `T` provides a member
-/// `T::serialize(Processor&, const unsigned int)` function.
-template <class T>
-struct has_member_serialize {
-private:
-  // check for free function
-  template <class C,
-            class E = decltype(std::declval<C&>()
-                               .serialize(std::declval<serializer&>(), 0))>
-  static bool sfinae_fun(C*) {
-    return true;
-  }
-
-  static void sfinae_fun(void*) {
-    // nop
-  }
-
-  using type = typename std::remove_const<T>::type;
-
-  using result_type = decltype(sfinae_fun(static_cast<type*>(nullptr)));
-
-public:
-  static constexpr bool value = std::is_same<bool, result_type>::value;
-};
-
-/// Checks whether `T` provides either a free function
-/// `serialize(Processor&, T&, const unsigned int)` or a member function
-/// `T::serialize(Processor&, const unsigned int)`. If `T` is iterable,
-/// then the template checks whether `T::value_type` is serializable.
+/// Checks whether `T` provides either a free function or a member function for
+/// serialization. The following signatures are tested:
+///
+/// - `serialize(Processor&, T&, const unsigned int)`
+/// - `serialize(Processor&, T&)`
+/// - `T::serialize(Processor&, const unsigned int)`.
+/// - `T::serialize(Processor&)`.
 template <class T,
           bool Ignore = std::is_pointer<T>::value
                         || std::is_function<T>::value>
 struct has_serialize {
-  static constexpr bool value = has_free_serialize<T>::value
-                                || has_member_serialize<T>::value;
+  template <class U>
+  static auto test(caf::serializer* sink, U* x)
+  -> decltype(serialize(*sink, *x, 0u), std::true_type());
+
+  template <class U>
+  static auto test(caf::serializer* sink, U* x)
+  -> decltype(serialize(*sink, *x), std::true_type());
+
+  template <class U>
+  static auto test(caf::serializer* sink, U* x)
+  -> decltype(x->serialize(*sink, 0u), std::true_type());
+
+  template <class U>
+  static auto test(caf::serializer* sink, U* x)
+  -> decltype(x->serialize(*sink), std::true_type());
+
+  template <class>
+  static auto test(...) -> std::false_type;
+
+  using type = decltype(test<T>(nullptr, nullptr));
+  static constexpr bool value = type::value;
 };
 
 template <class T>

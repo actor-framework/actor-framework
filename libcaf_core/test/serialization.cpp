@@ -74,7 +74,7 @@ struct raw_struct {
 };
 
 template <class Processor>
-void serialize(Processor& proc, raw_struct& x, const unsigned int) {
+void serialize(Processor& proc, raw_struct& x) {
   proc & x.str;
 }
 
