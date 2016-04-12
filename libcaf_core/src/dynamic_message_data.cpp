@@ -48,29 +48,22 @@ dynamic_message_data::~dynamic_message_data() {
   // nop
 }
 
-const void* dynamic_message_data::at(size_t pos) const {
+const void* dynamic_message_data::get(size_t pos) const {
   CAF_ASSERT(pos < size());
   return elements_[pos]->get();
 }
 
-void dynamic_message_data::serialize_at(serializer& sink, size_t pos) const {
+void dynamic_message_data::save(size_t pos, serializer& sink) const {
   elements_[pos]->save(sink);
 }
 
-void dynamic_message_data::serialize_at(deserializer& source, size_t pos) {
+void dynamic_message_data::load(size_t pos, deserializer& source) {
   elements_[pos]->load(source);
 }
 
-bool dynamic_message_data::compare_at(size_t pos, const element_rtti& rtti,
-                                      const void* x) const {
-  return match_element(pos, rtti.first, rtti.second)
-         ? elements_[pos]->equals(x)
-         : false;
-}
-
-void* dynamic_message_data::mutable_at(size_t pos) {
+void* dynamic_message_data::get_mutable(size_t pos) {
   CAF_ASSERT(pos < size());
-  return elements_[pos]->get();
+  return elements_[pos]->get_mutable();
 }
 
 size_t dynamic_message_data::size() const {
@@ -81,18 +74,11 @@ message_data::cow_ptr dynamic_message_data::copy() const {
   return make_counted<dynamic_message_data>(*this);
 }
 
-bool dynamic_message_data::match_element(size_t pos, uint16_t nr,
-                                         const std::type_info* ptr) const {
-  CAF_ASSERT(nr != 0 || ptr != nullptr);
-  auto rtti = type_at(pos);
-  return rtti.first == nr && (nr != 0 || *rtti.second == *ptr);
-}
-
-auto dynamic_message_data::type_at(size_t pos) const -> element_rtti {
+auto dynamic_message_data::type(size_t pos) const -> rtti_pair {
   return elements_[pos]->type();
 }
 
-std::string dynamic_message_data::stringify_at(size_t pos) const {
+std::string dynamic_message_data::stringify(size_t pos) const {
   return elements_[pos]->stringify();
 }
 

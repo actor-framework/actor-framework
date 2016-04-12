@@ -89,10 +89,6 @@ void serialize(Processor& proc, my_request& x, const unsigned int) {
 
 using server_type = typed_actor<replies_to<my_request>::with<bool>>;
 
-bool operator==(const my_request& lhs, const my_request& rhs) {
-  return lhs.a == rhs.a && lhs.b == rhs.b;
-}
-
 server_type::behavior_type typed_server1() {
   return {
     [](const my_request& req) {

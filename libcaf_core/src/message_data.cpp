@@ -28,22 +28,6 @@ message_data::~message_data() {
   // nop
 }
 
-bool message_data::equals(const message_data& other) const {
-  if (this == &other)
-    return true;
-  auto n = size();
-  if (n != other.size())
-    return false;
-  for (size_t i = 0; i < n; ++i)
-    if (! compare_at(i, other.type_at(i), other.at(i)))
-      return false;
-  return true;
-}
-
-uint16_t message_data::type_nr_at(size_t pos) const {
-  return type_at(pos).first;
-}
-
 message_data* message_data::cow_ptr::get_unshared() {
   auto p = ptr_.get();
   if (! p->unique()) {

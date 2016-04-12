@@ -104,14 +104,14 @@ struct tup_ptr_access<Pos, Max, false> {
 
 template <class T, uint16_t N = detail::type_nr<T>::value>
 struct tuple_vals_type_helper {
-  static typename message_data::element_rtti get() {
+  static typename message_data::rtti_pair get() {
     return {N, nullptr};
   }
 };
 
 template <class T>
 struct tuple_vals_type_helper<T, 0> {
-  static typename message_data::element_rtti get() {
+  static typename message_data::rtti_pair get() {
     return {0, &typeid(T)};
   }
 };
@@ -123,7 +123,7 @@ public:
 
   using super = message_data;
 
-  using element_rtti = typename message_data::element_rtti;
+  using rtti_pair = typename message_data::rtti_pair;
 
   using data_type = std::tuple<Ts...>;
 
@@ -152,52 +152,33 @@ public:
     return message_data::cow_ptr(new tuple_vals(*this), false);
   }
 
-  const void* at(size_t pos) const override {
+  const void* get(size_t pos) const override {
     CAF_ASSERT(pos < size());
     return tup_ptr_access<0, sizeof...(Ts)>::get(pos, data_);
   }
 
-  bool compare_at(size_t pos, const element_rtti& rtti, const void* x) const override {
+  void* get_mutable(size_t pos) override {
     CAF_ASSERT(pos < size());
-    auto& rtti_at_pos = types_[pos];
-    if (rtti.first != rtti_at_pos.first)
-      return false;
-    if (rtti_at_pos.first == 0 && *rtti_at_pos.second != *rtti.second)
-      return false;
-    return tup_ptr_access<0, sizeof...(Ts)>::cmp(pos, data_, x);
+    return const_cast<void*>(get(pos));
   }
 
-  void* mutable_at(size_t pos) override {
-    CAF_ASSERT(pos < size());
-    return const_cast<void*>(at(pos));
-  }
-
-  std::string stringify_at(size_t pos) const override {
+  std::string stringify(size_t pos) const override {
     return tup_ptr_access<0, sizeof...(Ts)>::stringify(pos, data_);
   }
 
-  void serialize_at(deserializer& source, size_t pos) override {
+  void load(size_t pos, deserializer& source) override {
     return tup_ptr_access<0, sizeof...(Ts)>::serialize(pos, data_, source);
-  }
-
-  bool match_element(size_t pos, uint16_t typenr,
-                     const std::type_info* rtti) const override {
-    CAF_ASSERT(pos < size());
-    auto& et = types_[pos];
-    if (et.first != typenr)
-      return false;
-    return et.first != 0 || et.second == rtti || *et.second == *rtti;
   }
 
   uint32_t type_token() const override {
     return make_type_token<Ts...>();
   }
 
-  element_rtti type_at(size_t pos) const override {
+  rtti_pair type(size_t pos) const override {
     return types_[pos];
   }
 
-  void serialize_at(serializer& sink, size_t pos) const override {
+  void save(size_t pos, serializer& sink) const override {
     // the serialization framework uses non-const arguments for deserialization,
     // but this cast is safe since the values are not actually changed
     auto& nc_data = const_cast<data_type&>(data_);
@@ -206,7 +187,7 @@ public:
 
 private:
   data_type data_;
-  std::array<element_rtti, sizeof...(Ts)> types_;
+  std::array<rtti_pair, sizeof...(Ts)> types_;
 };
 
 } // namespace detail

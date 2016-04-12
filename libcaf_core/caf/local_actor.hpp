@@ -91,8 +91,6 @@ public:
   using mailbox_type = detail::single_reader_queue<mailbox_element,
                                                    detail::disposer>;
 
-  //static constexpr auto memory_cache_flag = detail::needs_embedding;
-
   ~local_actor();
 
   /****************************************************************************
@@ -677,6 +675,9 @@ protected:
   // used only in thread-mapped actors
   void await_data();
 
+  // used by both event-based and blocking actors
+  mailbox_type mailbox_;
+
   // identifies the execution unit this actor is currently executed by
   execution_unit* context_;
 
@@ -701,9 +702,6 @@ protected:
 
   // used by both event-based and blocking actors
   detail::behavior_stack bhvr_stack_;
-
-  // used by both event-based and blocking actors
-  mailbox_type mailbox_;
 
   // used by functor-based actors to implemented make_behavior() or act()
   std::function<behavior (local_actor*)> initial_behavior_fac_;

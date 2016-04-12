@@ -29,63 +29,21 @@
 #include "caf/config.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/intrusive_ptr.hpp"
+#include "caf/type_erased_tuple.hpp"
 
 #include "caf/detail/type_list.hpp"
 
 namespace caf {
 namespace detail {
 
-class message_data : public ref_counted {
+class message_data : public ref_counted, public type_erased_tuple {
 public:
   message_data() = default;
   message_data(const message_data&) = default;
 
   ~message_data();
 
-  using element_rtti = std::pair<uint16_t, const std::type_info*>;
-
-  /****************************************************************************
-   *                                modifiers                                 *
-   ****************************************************************************/
-
-  virtual void* mutable_at(size_t pos) = 0;
-
-  virtual void serialize_at(deserializer& source, size_t pos) = 0;
-
-  /****************************************************************************
-   *                                observers                                 *
-   ****************************************************************************/
-
-  // compares each element using uniform_type_info objects
-  bool equals(const message_data& other) const;
-
-  uint16_t type_nr_at(size_t pos) const;
-
-  virtual size_t size() const = 0;
-
-  virtual const void* at(size_t pos) const = 0;
-
-  // Selects type `T` from `pos`, compares this type to `rtti` and returns
-  // `*reinterpret_cast<const T*>(x) == *reinterpret_cast<const T*>(at(pos))`
-  // if the types match, `false` otherwise.
-  virtual bool compare_at(size_t pos, const element_rtti& rtti,
-                          const void* x) const = 0;
-
-  // Tries to match element at position `pos` to given RTTI.
-  virtual bool match_element(size_t pos, uint16_t typenr,
-                             const std::type_info* rtti) const = 0;
-
-  virtual uint32_t type_token() const = 0;
-
-  virtual element_rtti type_at(size_t pos) const = 0;
-
-  virtual std::string stringify_at(size_t pos) const = 0;
-
-  virtual void serialize_at(serializer& sink, size_t pos) const = 0;
-
-  /****************************************************************************
-   *                               nested types                               *
-   ****************************************************************************/
+  // nested types
 
   class cow_ptr {
   public:
@@ -104,9 +62,7 @@ public:
       // nop
     }
 
-    /**************************************************************************
-     *                               modifiers                                *
-     **************************************************************************/
+    // modifiers
 
     inline void swap(cow_ptr& other) {
       ptr_.swap(other.ptr_);
@@ -131,9 +87,8 @@ public:
     inline message_data& operator*() {
       return *get_unshared();
     }
-    /**************************************************************************
-     *                               observers                                *
-     **************************************************************************/
+
+    // observers
 
     inline const message_data* operator->() const {
       return ptr_.get();

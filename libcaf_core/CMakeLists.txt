@@ -87,6 +87,7 @@ set (LIBCAF_CORE_SRCS
      src/sync_request_bouncer.cpp
      src/try_match.cpp
      src/type_erased_value.cpp
+     src/type_erased_tuple.cpp
      src/uniform_type_info_map.cpp)
 
 add_custom_target(libcaf_core)

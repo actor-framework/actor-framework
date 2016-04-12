@@ -108,12 +108,6 @@ void serialize(Processor& proc, test_array& x, const unsigned int) {
   proc & x.value2;
 }
 
-bool operator==(const test_array& lhs, const test_array& rhs) {
-  return std::equal(lhs.value, lhs.value + 4, rhs.value)
-         && std::equal(lhs.value2[0], lhs.value2[0] + 4, rhs.value2[0])
-         && std::equal(lhs.value2[1], lhs.value2[1] + 4, rhs.value2[1]);
-}
-
 struct test_empty_non_pod {
   test_empty_non_pod() = default;
   test_empty_non_pod(const test_empty_non_pod&) = default;
@@ -306,7 +300,7 @@ CAF_TEST(messages) {
   auto buf = serialize(msg);
   message x;
   deserialize(buf, x);
-  CAF_CHECK(msg == x);
+  CAF_CHECK(to_string(msg) == to_string(x));
   CAF_CHECK(is_message(x).equal(i32, te, str, rs));
 }
 
@@ -317,7 +311,8 @@ CAF_TEST(multiple_messages) {
   message m1;
   message m2;
   deserialize(buf, t, m1, m2);
-  CAF_CHECK(tie(t, m1, m2) == tie(te, m, msg));
+  CAF_CHECK_EQUAL(std::make_tuple(t, to_string(m1), to_string(m2)),
+                  std::make_tuple(te, to_string(m), to_string(msg)));
   CAF_CHECK(is_message(m1).equal(rs, te));
   CAF_CHECK(is_message(m2).equal(i32, te, str, rs));
 }

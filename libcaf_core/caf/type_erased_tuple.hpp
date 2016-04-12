@@ -17,61 +17,62 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_MERGED_TUPLE_HPP
-#define CAF_DETAIL_MERGED_TUPLE_HPP
+#ifndef CAF_TYPE_ERASED_COLLECTION_HPP
+#define CAF_TYPE_ERASED_COLLECTION_HPP
 
-#include "caf/message.hpp"
-#include "caf/actor_addr.hpp"
-#include "caf/attachable.hpp"
-#include "caf/abstract_actor.hpp"
+#include <cstddef>
+#include <cstdint>
+#include <typeinfo>
+
+#include "caf/fwd.hpp"
 
 namespace caf {
-namespace detail {
 
-class merged_tuple : public message_data {
+/// Represents a tuple of type-erased values.
+class type_erased_tuple {
 public:
-  merged_tuple& operator=(const merged_tuple&) = delete;
+  using rtti_pair = std::pair<uint16_t, const std::type_info*>;
 
-  using mapping_type = std::vector<std::pair<size_t, size_t>>;
+  virtual ~type_erased_tuple();
 
-  using message_data::cow_ptr;
+  // pure virtual modifiers
 
-  using data_type = std::vector<cow_ptr>;
+  virtual void* get_mutable(size_t pos) = 0;
 
-  merged_tuple(data_type xs, mapping_type ys);
+  virtual void load(size_t pos, deserializer& source) = 0;
 
-  // creates a typed subtuple from `d` with mapping `v`
-  static cow_ptr make(message x, message y);
+  // pure virtual observers
 
-  void* get_mutable(size_t pos) override;
+  virtual size_t size() const = 0;
 
-  void load(size_t pos, deserializer& source) override;
+  virtual uint32_t type_token() const = 0;
 
-  size_t size() const override;
+  virtual rtti_pair type(size_t pos) const = 0;
 
-  cow_ptr copy() const override;
+  virtual const void* get(size_t pos) const = 0;
 
-  const void* get(size_t pos) const override;
+  virtual std::string stringify(size_t pos) const = 0;
 
-  uint32_t type_token() const override;
+  virtual void save(size_t pos, serializer& sink) const = 0;
 
-  rtti_pair type(size_t pos) const override;
+  // observers
 
-  void save(size_t pos, serializer& sink) const override;
+  /// Checks whether the type of the stored value matches
+  /// the type nr and type info object.
+  bool matches(size_t pos, uint16_t tnr, const std::type_info* tinf) const;
 
-  std::string stringify(size_t pos) const override;
+  // inline observers
 
-  const mapping_type& mapping() const;
+  inline uint16_t type_nr(size_t pos) const {
+    return type(pos).first;
+  }
 
-private:
-  merged_tuple(const merged_tuple&) = default;
-
-  data_type data_;
-  uint32_t type_token_;
-  mapping_type mapping_;
+  /// Checks whether the type of the stored value matches `rtti`.
+  inline bool matches(size_t pos, const rtti_pair& rtti) const {
+    return matches(pos, rtti.first, rtti.second);
+  }
 };
 
-} // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_MERGED_TUPLE_HPP
+#endif // CAF_TYPE_ERASED_COLLECTION_HPP

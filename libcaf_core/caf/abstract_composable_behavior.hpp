@@ -55,7 +55,7 @@ public:
     // fill a pseudo tuple with values and invoke f
     detail::pseudo_tuple<Ts...> buf;
     // msg is guaranteed to be detached, hence we don't need to
-    // check this condition over and over again via mutable_at
+    // check this condition over and over again via get_mutable
     for (size_t i = 0; i < msg.size(); ++i)
       buf[i] = const_cast<void*>(msg.at(i));
     return detail::apply_args(f, detail::get_indices(buf), buf);

@@ -38,28 +38,23 @@ public:
 
   static cow_ptr make(std::initializer_list<cow_ptr> xs);
 
-  void* mutable_at(size_t pos) override;
+  void* get_mutable(size_t pos) override;
 
-  void serialize_at(deserializer& source, size_t pos) override;
+  void load(size_t pos, deserializer& source) override;
 
   size_t size() const override;
 
   cow_ptr copy() const override;
 
-  const void* at(size_t pos) const override;
-
-  bool compare_at(size_t, const element_rtti&, const void*) const override;
-
-  bool match_element(size_t pos, uint16_t typenr,
-                     const std::type_info* rtti) const override;
+  const void* get(size_t pos) const override;
 
   uint32_t type_token() const override;
 
-  element_rtti type_at(size_t pos) const override;
+  rtti_pair type(size_t pos) const override;
 
-  void serialize_at(serializer& sink, size_t pos) const override;
+  void save(size_t pos, serializer& sink) const override;
 
-  std::string stringify_at(size_t pos) const override;
+  std::string stringify(size_t pos) const override;
 
   concatenated_tuple(std::initializer_list<cow_ptr> xs);
 

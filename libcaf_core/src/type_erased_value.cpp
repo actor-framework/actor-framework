@@ -25,4 +25,13 @@ type_erased_value::~type_erased_value() {
   // nop
 }
 
+bool type_erased_value::matches(uint16_t nr, const std::type_info* ptr) const {
+  auto tp = type();
+  if (tp.first != nr)
+    return false;
+  if (nr == 0)
+    return ptr ? *tp.second == *ptr : false;
+  return true;
+}
+
 } // namespace caf

@@ -198,8 +198,6 @@ void actor_registry::start() {
         if (key == "*")
           return;
         auto& vp = self->state.data[key];
-        if (vp.first == msg)
-          return;
         vp.first = std::move(msg);
         for (auto& subscriber : vp.second)
           if (subscriber != self->current_sender())

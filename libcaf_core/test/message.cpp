@@ -63,14 +63,14 @@ CAF_TEST(drop) {
     message{}
   };
   for (size_t i = 0; i < messages.size(); ++i) {
-    CAF_CHECK(m1.drop(i) == messages[i]);
+    CAF_CHECK(to_string(m1.drop(i)) == to_string(messages[i]));
   }
 }
 
 CAF_TEST(slice) {
   auto m1 = make_message(1, 2, 3, 4, 5);
   auto m2 = m1.slice(2, 2);
-  CAF_CHECK(m2 == make_message(3, 4));
+  CAF_CHECK(to_string(m2) == to_string(make_message(3, 4)));
 }
 
 CAF_TEST(extract1) {
@@ -85,12 +85,13 @@ CAF_TEST(extract1) {
     [](int, int) { },
     [](float, float) { }
   };
-  CAF_CHECK(m2.extract(f) == m1);
-  CAF_CHECK(m3.extract(f) == m1);
-  CAF_CHECK(m4.extract(f) == m1);
-  CAF_CHECK(m5.extract(f) == m1);
-  CAF_CHECK(m6.extract(f) == m1);
-  CAF_CHECK(m7.extract(f) == m1);
+  auto m1s = to_string(m1);
+  CAF_CHECK(to_string(m2.extract(f)) == m1s);
+  CAF_CHECK(to_string(m3.extract(f)) == m1s);
+  CAF_CHECK(to_string(m4.extract(f)) == m1s);
+  CAF_CHECK(to_string(m5.extract(f)) == m1s);
+  CAF_CHECK(to_string(m6.extract(f)) == m1s);
+  CAF_CHECK(to_string(m7.extract(f)) == m1s);
 }
 
 CAF_TEST(extract2) {
@@ -102,7 +103,7 @@ CAF_TEST(extract2) {
     [](double, double) { }
   });
   // check for false positives through collapsing
-  CAF_CHECK(m3 == make_message(1.0, 4.0));
+  CAF_CHECK(to_string(m3) == to_string(make_message(1.0, 4.0)));
 }
 
 CAF_TEST(extract_opts) {
@@ -137,7 +138,8 @@ CAF_TEST(extract_opts) {
   CAF_CHECK(foo == 42);
   CAF_CHECK(bar == 0);
   CAF_CHECK(! r.error.empty()); // -b is an unknown option
-  CAF_CHECK(! r.remainder.empty() && r.remainder == make_message("-b", "1337"));
+  CAF_CHECK(! r.remainder.empty()
+            && to_string(r.remainder) == to_string(make_message("-b", "1337")));
   r = r.remainder.extract_opts({
     {"bar,b", "bar desc", bar}
   });
@@ -155,11 +157,11 @@ CAF_TEST(concat) {
   auto m1 = make_message(get_atom::value);
   auto m2 = make_message(uint32_t{1});
   auto m3 = message::concat(m1, m2);
-  CAF_CHECK(m3 == m1 + m2);
-  CAF_CHECK(m3 == make_message(get_atom::value, uint32_t{1}));
+  CAF_CHECK(to_string(m3) == to_string(m1 + m2));
+  CAF_CHECK(to_string(m3) == "('get', 1)");
   auto m4 = make_message(get_atom::value, uint32_t{1},
                          get_atom::value, uint32_t{1});
-  CAF_CHECK(message::concat(m3, message{}, m1, m2) == m4);
+  CAF_CHECK(to_string(message::concat(m3, message{}, m1, m2)) == to_string(m4));
 }
 
 namespace {
@@ -167,13 +169,6 @@ namespace {
 struct s1 {
   int value[3] = {10, 20, 30};
 };
-
-bool operator==(const s1& lhs, const s1& rhs) {
-  for (size_t i = 0; i < 3; ++i)
-    if (lhs.value[i] != rhs.value[i])
-      return false;
-  return true;
-}
 
 template <class Processor>
 void serialize(Processor& proc, s1& x, const unsigned int) {
@@ -187,14 +182,6 @@ std::string to_string(const s1& x) {
 struct s2 {
   int value[4][2] = {{1, 10}, {2, 20}, {3, 30}, {4, 40}};
 };
-
-bool operator==(const s2& lhs, const s2& rhs) {
-  for (size_t i = 0; i < 4; ++i)
-    for (size_t j = 0; j < 2; ++j)
-      if (lhs.value[i][j] != rhs.value[i][j])
-        return false;
-  return true;
-}
 
 template <class Processor>
 void serialize(Processor& proc, s2& x, const unsigned int) {
@@ -211,10 +198,6 @@ struct s3 {
     std::iota(value.begin(), value.end(), 1);
   }
 };
-
-bool operator==(const s3& lhs, const s3& rhs) {
-  return lhs.value == rhs.value;
-}
 
 template <class Processor>
 void serialize(Processor& proc, s3& x, const unsigned int) {
@@ -233,10 +216,9 @@ std::string msg_as_string(Ts&&... xs) {
 } // namespace <anonymous>
 
 CAF_TEST(compare_custom_types) {
-  CAF_CHECK(make_message(s1{}) == make_message(s1{}));
   s2 tmp;
   tmp.value[0][1] = 100;
-  CAF_CHECK(make_message(s2{}) != make_message(tmp));
+  CAF_CHECK(to_string(make_message(s2{})) != to_string(make_message(tmp)));
 }
 
 CAF_TEST(empty_to_string) {
@@ -280,13 +262,10 @@ CAF_TEST(tuples_to_string) {
 }
 
 CAF_TEST(arrays_to_string) {
-  CAF_CHECK(make_message(s1{}) == make_message(s1{}));
   CAF_CHECK(msg_as_string(s1{}) == "((10, 20, 30))");
   auto msg2 = make_message(s2{});
   s2 tmp;
   tmp.value[0][1] = 100;
-  CAF_CHECK(! (msg2 == make_message(tmp)));
   CAF_CHECK(to_string(msg2) == "(((1, 10), (2, 20), (3, 30), (4, 40)))");
-  CAF_CHECK(make_message(s3{}) == make_message(s3{}));
   CAF_CHECK(msg_as_string(s3{}) == "((1, 2, 3, 4))");
 }

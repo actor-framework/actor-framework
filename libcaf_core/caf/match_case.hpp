@@ -205,7 +205,7 @@ public:
       // update pointers in our intermediate tuple
       for (size_t i = 0; i < msg.size(); ++i) {
         // msg is guaranteed to be detached, hence we don't need to
-        // check this condition over and over again via mutable_at
+        // check this condition over and over again via get_mutable
         it[i] = const_cast<void*>(msg.at(i));
       }
     }

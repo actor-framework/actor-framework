@@ -122,11 +122,9 @@ public:
   template <class T>
   actor_system_config& add_message_type(std::string name) {
     static_assert(std::is_empty<T>::value
-                  || (detail::is_comparable<T, T>::value
-                      && std::is_default_constructible<T>::value
+                  || (std::is_default_constructible<T>::value
                       && std::is_copy_constructible<T>::value),
-                  "T must provide default and copy constructors "
-                  "as well as operator==");
+                  "T must provide default and copy constructors");
     static_assert(detail::is_serializable<T>::value, "T must be serializable");
     type_names_by_rtti_.emplace(std::type_index(typeid(T)), name);
     value_factories_by_name_.emplace(std::move(name), &make_type_erased<T>);

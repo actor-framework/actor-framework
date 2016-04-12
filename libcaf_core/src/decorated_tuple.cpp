@@ -36,14 +36,14 @@ decorated_tuple::cow_ptr decorated_tuple::make(cow_ptr d, vector_type v) {
   return make_counted<decorated_tuple>(std::move(d), std::move(v));
 }
 
-void* decorated_tuple::mutable_at(size_t pos) {
+void* decorated_tuple::get_mutable(size_t pos) {
   CAF_ASSERT(pos < size());
-  return decorated_->mutable_at(mapping_[pos]);
+  return decorated_->get_mutable(mapping_[pos]);
 }
 
-void decorated_tuple::serialize_at(deserializer& source, size_t pos) {
+void decorated_tuple::load(size_t pos, deserializer& source) {
   CAF_ASSERT(pos < size());
-  return decorated_->serialize_at(source, mapping_[pos]);
+  return decorated_->load(mapping_[pos], source);
 }
 
 size_t decorated_tuple::size() const {
@@ -54,37 +54,27 @@ message_data::cow_ptr decorated_tuple::copy() const {
   return cow_ptr(new decorated_tuple(*this), false);
 }
 
-const void* decorated_tuple::at(size_t pos) const {
+const void* decorated_tuple::get(size_t pos) const {
   CAF_ASSERT(pos < size());
-  return decorated_->at(mapping_[pos]);
-}
-
-bool decorated_tuple::compare_at(size_t pos, const element_rtti& rtti,
-                                 const void* x) const {
-  return decorated_->compare_at(mapping_[pos], rtti, x);
-}
-
-bool decorated_tuple::match_element(size_t pos, uint16_t typenr,
-                                    const std::type_info* rtti) const {
-  return decorated_->match_element(mapping_[pos], typenr, rtti);
+  return decorated_->get(mapping_[pos]);
 }
 
 uint32_t decorated_tuple::type_token() const {
   return type_token_;
 }
 
-message_data::element_rtti decorated_tuple::type_at(size_t pos) const {
-  return decorated_->type_at(mapping_[pos]);
+message_data::rtti_pair decorated_tuple::type(size_t pos) const {
+  return decorated_->type(mapping_[pos]);
 }
 
-void decorated_tuple::serialize_at(serializer& sink, size_t pos) const {
+void decorated_tuple::save(size_t pos, serializer& sink) const {
   CAF_ASSERT(pos < size());
-  return decorated_->serialize_at(sink, mapping_[pos]);
+  return decorated_->save(mapping_[pos], sink);
 }
 
-std::string decorated_tuple::stringify_at(size_t pos) const {
+std::string decorated_tuple::stringify(size_t pos) const {
   CAF_ASSERT(pos < size());
-  return decorated_->stringify_at(pos);
+  return decorated_->stringify(mapping_[pos]);
 }
 
 decorated_tuple::decorated_tuple(cow_ptr&& d, vector_type&& v)
@@ -97,7 +87,7 @@ decorated_tuple::decorated_tuple(cow_ptr&& d, vector_type&& v)
   // calculate type token
   for (size_t i = 0; i < mapping_.size(); ++i) {
     type_token_ <<= 6;
-    type_token_ |= decorated_->type_nr_at(mapping_[i]);
+    type_token_ |= decorated_->type_nr(mapping_[i]);
   }
 }
 

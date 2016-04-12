@@ -20,6 +20,7 @@
 #ifndef CAF_TYPE_ERASED_VALUE_HPP
 #define CAF_TYPE_ERASED_VALUE_HPP
 
+#include <cstdint>
 #include <typeinfo>
 
 #include "caf/deep_to_string.hpp"
@@ -30,25 +31,59 @@
 
 namespace caf {
 
+class type_erased_value;
+
+using type_erased_value_ptr = std::unique_ptr<type_erased_value>;
+
+/// Represents a single type-erased value.
 class type_erased_value {
 public:
+  using rtti_pair = std::pair<uint16_t, const std::type_info*>;
+
   virtual ~type_erased_value();
 
-  virtual void* get() = 0;
+  // pure virtual modifiers
 
+  /// Returns a mutable pointer to the stored value.
+  virtual void* get_mutable() = 0;
+
+  /// Load the content for the stored value from `source`.
+  virtual void load(deserializer& source) = 0;
+
+  // pure virtual observers
+
+  /// Returns the type number and type information object for the stored value.
+  virtual rtti_pair type() const = 0;
+
+  /// Returns a pointer to the stored value.
   virtual const void* get() const = 0;
 
-  virtual bool equals(const void*) const = 0;
+  /// Saves the content of the stored value to `sink`.
+  virtual void save(serializer& sink) const = 0;
 
-  virtual void save(serializer&) const = 0;
-
-  virtual void load(deserializer&) = 0;
-
+  /// Converts the stored value to a string.
   virtual std::string stringify() const = 0;
 
-  virtual type_erased_value* copy() const = 0;
+  /// Returns a copy of the stored value.
+  virtual type_erased_value_ptr copy() const = 0;
 
-  virtual std::pair<uint16_t, const std::type_info*> type() const = 0;
+  // observers
+
+  /// Checks whether the type of the stored value matches
+  /// the type nr and type info object.
+  bool matches(uint16_t tnr, const std::type_info* tinf) const;
+
+  // inline observers
+
+  /// Returns the type number for the stored value.
+  inline uint16_t type_nr() const {
+    return type().first;
+  }
+
+  /// Checks whether the type of the stored value matches `rtti`.
+  inline bool matches(const rtti_pair& rtti) const {
+    return matches(rtti.first, rtti.second);
+  }
 };
 
 template <class T>
@@ -64,16 +99,12 @@ struct type_erased_value_impl : public type_erased_value {
     // nop
   }
 
-  void* get() override {
+  void* get_mutable() override {
     return &x;
   }
 
   const void* get() const override {
     return &x;
-  }
-
-  bool equals(const void* y) const override {
-    return detail::safe_equal(x, *reinterpret_cast<const T*>(y));
   }
 
   void save(serializer& sink) const override {
@@ -88,11 +119,11 @@ struct type_erased_value_impl : public type_erased_value {
     return deep_to_string(x);
   }
 
-  type_erased_value* copy() const override {
-    return new type_erased_value_impl(x);
+  type_erased_value_ptr copy() const override {
+    return type_erased_value_ptr{new type_erased_value_impl(x)};
   }
 
-  std::pair<uint16_t, const std::type_info*> type() const override {
+  rtti_pair type() const override {
     auto nr = detail::type_nr<T>::value;
     return {nr, &typeid(T)};
   }
@@ -111,7 +142,7 @@ struct type_erased_value_impl<T[N]> : public type_erased_value {
     // nop
   }
 
-  void* get() override {
+  void* get_mutable() override {
     T* tmp = xs;
     return reinterpret_cast<void*>(tmp);
   }
@@ -119,14 +150,6 @@ struct type_erased_value_impl<T[N]> : public type_erased_value {
   const void* get() const override {
     const T* tmp = xs;
     return reinterpret_cast<const void*>(tmp);
-  }
-
-  bool equals(const void* vptr) const override {
-    auto cmp = [](const T& x, const T& y) {
-      return detail::safe_equal(x, y);
-    };
-    auto ys = reinterpret_cast<const T*>(vptr);
-    return std::equal(xs, xs + N, ys, cmp);
   }
 
   void save(serializer& sink) const override {
@@ -141,11 +164,11 @@ struct type_erased_value_impl<T[N]> : public type_erased_value {
     return deep_to_string(xs);
   }
 
-  type_erased_value* copy() const override {
+  type_erased_value_ptr copy() const override {
     return new type_erased_value_impl(xs);
   }
 
-  std::pair<uint16_t, const std::type_info*> type() const override {
+  rtti_pair type() const override {
     auto nr = detail::type_nr<T>::value;
     return {nr, &typeid(T)};
   }
@@ -211,8 +234,6 @@ struct type_erased_value_impl<T[N]> : public type_erased_value {
     array_serialize_impl(proc, ys, token);
   }
 };
-
-using type_erased_value_ptr = std::unique_ptr<type_erased_value>;
 
 template <class T, class... Ts>
 type_erased_value_ptr make_type_erased(Ts&&... xs) {

@@ -17,61 +17,25 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_MERGED_TUPLE_HPP
-#define CAF_DETAIL_MERGED_TUPLE_HPP
+#include "caf/type_erased_tuple.hpp"
 
-#include "caf/message.hpp"
-#include "caf/actor_addr.hpp"
-#include "caf/attachable.hpp"
-#include "caf/abstract_actor.hpp"
+#include "caf/config.hpp"
 
 namespace caf {
-namespace detail {
 
-class merged_tuple : public message_data {
-public:
-  merged_tuple& operator=(const merged_tuple&) = delete;
+type_erased_tuple::~type_erased_tuple() {
+  // nop
+}
 
-  using mapping_type = std::vector<std::pair<size_t, size_t>>;
+bool type_erased_tuple::matches(size_t pos, uint16_t nr,
+                                const std::type_info* ptr) const {
+  CAF_ASSERT(pos < size());
+  auto tp = type(pos);
+  if (tp.first != nr)
+    return false;
+  if (nr == 0)
+    return ptr ? *tp.second == *ptr : false;
+  return true;
+}
 
-  using message_data::cow_ptr;
-
-  using data_type = std::vector<cow_ptr>;
-
-  merged_tuple(data_type xs, mapping_type ys);
-
-  // creates a typed subtuple from `d` with mapping `v`
-  static cow_ptr make(message x, message y);
-
-  void* get_mutable(size_t pos) override;
-
-  void load(size_t pos, deserializer& source) override;
-
-  size_t size() const override;
-
-  cow_ptr copy() const override;
-
-  const void* get(size_t pos) const override;
-
-  uint32_t type_token() const override;
-
-  rtti_pair type(size_t pos) const override;
-
-  void save(size_t pos, serializer& sink) const override;
-
-  std::string stringify(size_t pos) const override;
-
-  const mapping_type& mapping() const;
-
-private:
-  merged_tuple(const merged_tuple&) = default;
-
-  data_type data_;
-  uint32_t type_token_;
-  mapping_type mapping_;
-};
-
-} // namespace detail
 } // namespace caf
-
-#endif // CAF_DETAIL_MERGED_TUPLE_HPP

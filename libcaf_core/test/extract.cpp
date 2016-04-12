@@ -31,34 +31,34 @@ using namespace caf;
 
 using std::string;
 
-// exclude this test; advanced match cases are currently not supported on MSVC
-#ifndef CAF_WINDOWS
-CAF_TEST(simple_ints) {
-  auto msg = make_message(1, 2, 3);
-  auto one = on(1) >> [] { };
-  auto two = on(2) >> [] { };
-  auto three = on(3) >> [] { };
-  auto skip_two = [](int i) -> optional<skip_message_t> {
-    if (i == 2)
-      return skip_message();
-    return none;
-  };
-  CAF_CHECK_EQUAL(msg.extract(one), make_message(2, 3));
-  CAF_CHECK_EQUAL(msg.extract(two), make_message(1, 3));
-  CAF_CHECK_EQUAL(msg.extract(three), make_message(1, 2));
-  CAF_CHECK_EQUAL(msg.extract(skip_two), make_message(2));
+namespace {
+
+bool msg_equals_rec(const message&, size_t) {
+  return true;
 }
-#endif // CAF_WINDOWS
+
+template <class T, class... Ts>
+bool msg_equals_rec(const message& msg, size_t pos, const T& x, const Ts&... xs) {
+  return msg.get_as<T>(pos) == x && msg_equals_rec(msg, pos + 1, xs...);
+}
+
+template <class... Ts>
+bool msg_equals(const message& msg, const Ts&... xs) {
+  return msg.match_elements<Ts...>() && msg_equals_rec(msg, 0, xs...);
+}
+
+} // namespace <anonymous>
 
 CAF_TEST(type_sequences) {
   auto _64 = uint64_t{64};
-  auto msg = make_message(1.0, 2.f, "str", 42, _64);
+  std::string str = "str";
+  auto msg = make_message(1.0, 2.f, str, 42, _64);
   auto df = [](double, float) { };
   auto fs = [](float, const string&) { };
   auto iu = [](int, uint64_t) { };
-  CAF_CHECK_EQUAL(msg.extract(df), make_message("str", 42,  _64));
-  CAF_CHECK_EQUAL(msg.extract(fs), make_message(1.0, 42,  _64));
-  CAF_CHECK_EQUAL(msg.extract(iu), make_message(1.0, 2.f, "str"));
+  CAF_CHECK(msg_equals(msg.extract(df), str, 42,  _64));
+  CAF_CHECK(msg_equals(msg.extract(fs), 1.0, 42,  _64));
+  CAF_CHECK(msg_equals(msg.extract(iu), 1.0, 2.f, str));
 }
 
 CAF_TEST(cli_args) {
@@ -73,7 +73,7 @@ CAF_TEST(cli_args) {
     {"verbosity,v", "1-5", verbosity}
   });
   CAF_CHECK_EQUAL(res.remainder.size(), 0u);
-  CAF_CHECK(res.remainder == message{});
+  CAF_CHECK(res.remainder.empty());
   CAF_CHECK_EQUAL(res.opts.count("no-colors"), 1u);
   CAF_CHECK_EQUAL(res.opts.count("verbosity"), 1u);
   CAF_CHECK_EQUAL(res.opts.count("out-file"), 1u);

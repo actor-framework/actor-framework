@@ -94,13 +94,10 @@ public:
   }
 
   /// Returns a mutable pointer to the element at position `p`.
-  void* mutable_at(size_t p);
+  void* get_mutable(size_t p);
 
   /// Returns a const pointer to the element at position `p`.
   const void* at(size_t p) const;
-
-  /// Returns @c true if `*this == other, otherwise false.
-  bool equals(const message& other) const;
 
   /// Returns true if `size() == 0, otherwise false.
   inline bool empty() const {
@@ -118,7 +115,7 @@ public:
   template <class T>
   T& get_as_mutable(size_t p) {
     CAF_ASSERT(match_element(p, detail::type_nr<T>::value, &typeid(T)));
-    return *reinterpret_cast<T*>(mutable_at(p));
+    return *reinterpret_cast<T*>(get_mutable(p));
   }
 
   /// Returns `handler(*this)`.
@@ -354,16 +351,6 @@ struct message::cli_res {
   /// Stores errors during option parsing.
   std::string error;
 };
-
-/// @relates message
-inline bool operator==(const message& lhs, const message& rhs) {
-  return lhs.equals(rhs);
-}
-
-/// @relates message
-inline bool operator!=(const message& lhs, const message& rhs) {
-  return !(lhs == rhs);
-}
 
 /// @relates message
 inline message operator+(const message& lhs, const message& rhs) {

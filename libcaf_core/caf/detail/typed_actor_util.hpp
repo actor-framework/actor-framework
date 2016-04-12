@@ -150,8 +150,8 @@ template <class A, class B, template <class, class> class Predicate>
 struct static_asserter {
   static void verify_match() {
     static constexpr int x = Predicate<A, B>::value;
-    using type_at_x = typename tl_at<B, (x < 0 ? 0 : x)>::type;
-    static_error_printer<x, x, type_at_x> dummy;
+    using type_x = typename tl_at<B, (x < 0 ? 0 : x)>::type;
+    static_error_printer<x, x, type_x> dummy;
     static_cast<void>(dummy);
   }
 };

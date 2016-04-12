@@ -37,7 +37,7 @@ struct pseudo_tuple {
 
   inline const_pointer at(size_t p) const { return data[p]; }
 
-  inline pointer mutable_at(size_t p) { return data[p]; }
+  inline pointer get_mutable(size_t p) { return data[p]; }
 
   inline pointer& operator[](size_t p) { return data[p]; }
 
@@ -55,7 +55,7 @@ get(const detail::pseudo_tuple<Ts...>& tv) {
 template <size_t N, class... Ts>
 typename detail::type_at<N, Ts...>::type& get(detail::pseudo_tuple<Ts...>& tv) {
   static_assert(N < sizeof...(Ts), "N >= tv.size()");
-  auto vp = tv.mutable_at(N);
+  auto vp = tv.get_mutable(N);
   CAF_ASSERT(vp != nullptr);
   return *reinterpret_cast<typename detail::type_at<N, Ts...>::type*>(vp);
 }

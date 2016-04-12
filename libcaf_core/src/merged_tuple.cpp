@@ -37,7 +37,7 @@ merged_tuple::merged_tuple(data_type xs, mapping_type ys)
   for (size_t i = 0; i < mapping_.size(); ++i) {
     type_token_ <<= 6;
     auto& p = mapping_[i];
-    type_token_ |= data_[p.first]->type_nr_at(p.second);
+    type_token_ |= data_[p.first]->type_nr(p.second);
   }
 }
 
@@ -56,16 +56,16 @@ merged_tuple::cow_ptr merged_tuple::make(message x, message y) {
                                             std::move(mapping))};
 }
 
-void* merged_tuple::mutable_at(size_t pos) {
+void* merged_tuple::get_mutable(size_t pos) {
   CAF_ASSERT(pos < mapping_.size());
   auto& p = mapping_[pos];
-  return data_[p.first]->mutable_at(p.second);
+  return data_[p.first]->get_mutable(p.second);
 }
 
-void merged_tuple::serialize_at(deserializer& source, size_t pos) {
+void merged_tuple::load(size_t pos, deserializer& source) {
   CAF_ASSERT(pos < mapping_.size());
   auto& p = mapping_[pos];
-  data_[p.first]->serialize_at(source, p.second);
+  data_[p.first]->load(p.second, source);
 }
 
 size_t merged_tuple::size() const {
@@ -76,46 +76,32 @@ merged_tuple::cow_ptr merged_tuple::copy() const {
   return cow_ptr{make_counted<merged_tuple>(data_, mapping_)};
 }
 
-const void* merged_tuple::at(size_t pos) const {
+const void* merged_tuple::get(size_t pos) const {
   CAF_ASSERT(pos < mapping_.size());
   auto& p = mapping_[pos];
-  return data_[p.first]->at(p.second);
-}
-
-bool merged_tuple::compare_at(size_t pos, const element_rtti& rtti,
-                              const void* x) const {
-  CAF_ASSERT(pos < mapping_.size());
-  auto& p = mapping_[pos];
-  return data_[p.first]->compare_at(p.second, rtti, x);
-}
-
-bool merged_tuple::match_element(size_t pos, uint16_t typenr,
-                                 const std::type_info* rtti) const {
-  CAF_ASSERT(pos < mapping_.size());
-  auto& p = mapping_[pos];
-  return data_[p.first]->match_element(p.second, typenr, rtti);
+  return data_[p.first]->get(p.second);
 }
 
 uint32_t merged_tuple::type_token() const {
   return type_token_;
 }
 
-merged_tuple::element_rtti merged_tuple::type_at(size_t pos) const {
+merged_tuple::rtti_pair merged_tuple::type(size_t pos) const {
   CAF_ASSERT(pos < mapping_.size());
   auto& p = mapping_[pos];
-  return data_[p.first]->type_at(p.second);
+  return data_[p.first]->type(p.second);
 }
 
-void merged_tuple::serialize_at(serializer& sink, size_t pos) const {
+void merged_tuple::save(size_t pos, serializer& sink) const {
   CAF_ASSERT(pos < mapping_.size());
   auto& p = mapping_[pos];
-  data_[p.first]->serialize_at(sink, p.second);
+  data_[p.first]->save(p.second, sink);
 }
 
-std::string merged_tuple::stringify_at(size_t pos) const {
+std::string merged_tuple::stringify(size_t pos) const {
   CAF_ASSERT(pos < mapping_.size());
   auto& p = mapping_[pos];
-  return data_[p.first]->stringify_at(p.second);
+  return data_[p.first]->stringify(p.second);
 }
 
 const merged_tuple::mapping_type& merged_tuple::mapping() const {

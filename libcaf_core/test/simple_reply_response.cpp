@@ -31,7 +31,7 @@ CAF_TEST(simple_reply_response) {
   auto s = system.spawn([](event_based_actor* self) -> behavior {
     return (
       others >> [=](const message& msg) -> message {
-        CAF_CHECK(msg == make_message(ok_atom::value));
+        CAF_CHECK(to_string(msg) == "('ok')");
         self->quit();
         return msg;
       }
@@ -41,7 +41,7 @@ CAF_TEST(simple_reply_response) {
   self->send(s, ok_atom::value);
   self->receive(
     others >> [&](const message& msg) {
-      CAF_CHECK(msg == make_message(ok_atom::value));
+      CAF_CHECK(to_string(msg) == "('ok')");
     }
   );
 }

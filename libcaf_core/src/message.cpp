@@ -54,19 +54,19 @@ void message::swap(message& other) {
   vals_.swap(other.vals_);
 }
 
-void* message::mutable_at(size_t p) {
+void* message::get_mutable(size_t p) {
   CAF_ASSERT(vals_);
-  return vals_->mutable_at(p);
+  return vals_->get_mutable(p);
 }
 
 const void* message::at(size_t p) const {
   CAF_ASSERT(vals_);
-  return vals_->at(p);
+  return vals_->get(p);
 }
 
 bool message::match_element(size_t pos, uint16_t typenr,
                             const std::type_info* rtti) const {
-  return vals_->match_element(pos, typenr, rtti);
+  return vals_->matches(pos, typenr, rtti);
 }
 
 message& message::operator+=(const message& x) {
@@ -75,20 +75,12 @@ message& message::operator+=(const message& x) {
   return *this;
 }
 
-bool message::equals(const message& other) const {
-  if (empty())
-    return other.empty();
-  return other.empty() ? false : vals_->equals(*other.vals());
-}
-
 message message::drop(size_t n) const {
   CAF_ASSERT(vals_);
-  if (n == 0) {
+  if (n == 0)
     return *this;
-  }
-  if (n >= size()) {
+  if (n >= size())
     return message{};
-  }
   std::vector<size_t> mapping (size() - n);
   size_t i = n;
   std::generate(mapping.begin(), mapping.end(), [&] { return i++; });
@@ -382,7 +374,7 @@ void serialize(serializer& sink, const message& msg, const unsigned int) {
   auto& types = sink.context()->system().types();
   auto n = msg.size();
   for (size_t i = 0; i < n; ++i) {
-    auto rtti = msg.cvals()->type_at(i);
+    auto rtti = msg.cvals()->type(i);
     auto ptr = types.portable_name(rtti);
     if (! ptr) {
       std::cerr << "[ERROR]: cannot serialize message because a type was "
@@ -396,7 +388,7 @@ void serialize(serializer& sink, const message& msg, const unsigned int) {
   }
   sink.begin_object(zero, tname);
   for (size_t i = 0; i < n; ++i)
-    msg.cvals()->serialize_at(sink, i);
+    msg.cvals()->save(i, sink);
   sink.end_object();
 }
 
@@ -446,10 +438,10 @@ std::string to_string(const message& msg) {
   if (msg.empty())
     return "<empty-message>";
   std::string str = "(";
-  str += msg.cvals()->stringify_at(0);
+  str += msg.cvals()->stringify(0);
   for (size_t i = 1; i < msg.size(); ++i) {
     str += ", ";
-    str += msg.cvals()->stringify_at(i);
+    str += msg.cvals()->stringify(i);
   }
   str += ")";
   return str;
