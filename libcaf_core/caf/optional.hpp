@@ -26,6 +26,7 @@
 #include "caf/none.hpp"
 #include "caf/unit.hpp"
 #include "caf/config.hpp"
+#include "caf/deep_to_string.hpp"
 
 #include "caf/detail/safe_equal.hpp"
 
@@ -226,6 +227,36 @@ class optional<T&> {
  private:
   T* m_value;
 };
+
+/// @relates optional
+template <class T>
+std::string to_string(const optional<T>& x) {
+  return x ? "!" + deep_to_string(*x) : "<none>";
+}
+
+/// @relates optional
+template <class Processor, class T>
+typename std::enable_if<Processor::is_saving::value>::type
+serialize(Processor& sink, optional<T>& x, const unsigned int) {
+  uint8_t flag = x ? 1 : 0;
+  sink & flag;
+  if (flag)
+    sink & *x;
+}
+
+/// @relates optional
+template <class Processor, class T>
+typename std::enable_if<Processor::is_loading::value>::type
+serialize(Processor& source, optional<T>& x, const unsigned int) {
+  uint8_t flag;
+  source & flag;
+  if (flag) {
+    T value;
+    source & value;
+    x = std::move(value);
+  }
+  x = none;
+}
 
 /// @relates optional
 template <class T, class U>
