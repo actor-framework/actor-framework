@@ -363,6 +363,11 @@ struct is_serializable<T&> : is_serializable<T> {
 };
 
 template <class T>
+struct is_serializable<const T> : is_serializable<T> {
+  // nop
+};
+
+template <class T>
 struct is_serializable<const T&> : is_serializable<T> {
   // nop
 };
