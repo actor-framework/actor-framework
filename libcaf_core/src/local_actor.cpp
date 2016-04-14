@@ -86,13 +86,13 @@ void local_actor::monitor(abstract_actor* ptr) {
 }
 
 void local_actor::demonitor(const actor_addr& whom) {
-  /*
-  if (whom == invalid_actor_addr)
+  if (! whom)
     return;
-  auto ptr = actor_cast<abstract_actor_ptr>(whom);
+  auto ptr = actor_cast<strong_actor_ptr>(whom);
+  if (! ptr)
+    return;
   default_attachable::observe_token tk{address(), default_attachable::monitor};
-  ptr->detach(tk);
-  */
+  ptr->get()->detach(tk);
 }
 
 void local_actor::join(const group& what) {
