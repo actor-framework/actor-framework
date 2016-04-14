@@ -42,7 +42,7 @@ public:
 
   explicit deserializer(actor_system& sys);
 
-  explicit deserializer(execution_unit* ctx);
+  explicit deserializer(execution_unit* ctx = nullptr);
 };
 
 /// Reads `x` from `source`.

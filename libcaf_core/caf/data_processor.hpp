@@ -44,7 +44,7 @@ public:
   data_processor(const data_processor&) = delete;
   data_processor& operator=(const data_processor&) = delete;
 
-  data_processor(execution_unit* ctx) : context_(ctx) {
+  data_processor(execution_unit* ctx = nullptr) : context_(ctx) {
     // nop
   }
 

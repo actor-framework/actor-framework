@@ -20,57 +20,14 @@
 #ifndef CAF_BINARY_DESERIALIZER_HPP
 #define CAF_BINARY_DESERIALIZER_HPP
 
-#include <string>
-#include <cstddef>
-#include <utility>
-
-#include "caf/deserializer.hpp"
+#include "caf/stream_deserializer.hpp"
+#include "caf/streambuf.hpp"
 
 namespace caf {
 
-/// Implements the deserializer interface with a binary serialization protocol.
-class binary_deserializer : public deserializer {
-public:
-  binary_deserializer(actor_system& sys, const void* buf, size_t buf_size);
-  binary_deserializer(execution_unit* ctx, const void* buf, size_t buf_size);
-  binary_deserializer(actor_system& ctx, const void* first, const void* last);
-  binary_deserializer(execution_unit* ctx, const void* first, const void* last);
-
-  template <class C, class T>
-  binary_deserializer(C&& ctx, const T& xs)
-      : binary_deserializer(std::forward<C>(ctx), xs.data(), xs.size()) {
-    // nop
-  }
-
-  /// Replaces the current read buffer.
-  void set_rdbuf(const void* buf, size_t buf_size);
-
-  /// Replaces the current read buffer.
-  void set_rdbuf(const void* first, const void* last);
-
-  /// Returns whether this deserializer has reached the end of its buffer.
-  bool at_end() const;
-
-  /// Compares the next `num_bytes` from the underlying buffer to `buf`
-  /// with same semantics as `strncmp(this->pos_, buf, num_bytes) == 0`.
-  bool buf_equals(const void* buf, size_t num_bytes);
-
-  /// Moves the current read position in the buffer by `num_bytes`.
-  binary_deserializer& advance(ptrdiff_t num_bytes);
-
-  void begin_object(uint16_t& nr, std::string& name) override;
-  void end_object() override;
-  void begin_sequence(size_t& num_elements) override;
-  void end_sequence() override;
-  void apply_raw(size_t num_bytes, void* data) override;
-
-protected:
-  void apply_builtin(builtin in_out_type, void* in_out) override;
-
-private:
-  const void* pos_;
-  const void* end_;
-};
+/// A stream serializer that writes into an unbounded contiguous character
+/// sequence.
+using binary_deserializer = stream_deserializer<charbuf>;
 
 } // namespace caf
 

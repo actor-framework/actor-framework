@@ -46,6 +46,7 @@
 #include <type_traits>
 
 #include "caf/message.hpp"
+#include "caf/streambuf.hpp"
 #include "caf/serializer.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/deserializer.hpp"
@@ -160,14 +161,14 @@ struct fixture {
   template <class T, class... Ts>
   vector<char> serialize(T& x, Ts&... xs) {
     vector<char> buf;
-    binary_serializer bs{&context, std::back_inserter(buf)};
+    binary_serializer bs{&context, buf};
     apply(bs, x, xs...);
     return buf;
   }
 
   template <class T, class... Ts>
   void deserialize(const vector<char>& buf, T& x, Ts&... xs) {
-    binary_deserializer bd{&context, buf.data(), buf.size()};
+    binary_deserializer bd{&context, buf};
     apply(bd, x, xs...);
   }
 
@@ -381,6 +382,7 @@ CAF_TEST(multiple_messages) {
   CAF_CHECK(is_message(m2).equal(i32, te, str, rs));
 }
 
+
 CAF_TEST(type_erased_value) {
   auto buf = serialize(str);
   type_erased_value_ptr ptr{new type_erased_value_impl<std::string>};
@@ -409,6 +411,30 @@ CAF_TEST(type_erased_tuple) {
   CAF_CHECK_EQUAL(tmp2, i32);
   deserialize(buf, tview);
   CAF_CHECK_EQUAL(to_string(tview), deep_to_string(std::make_tuple(str, i32)));
+}
+
+CAF_TEST(streambuf_serialization) {
+  auto data = std::string{"The quick brown fox jumps over the lazy dog"};
+  std::vector<char> buf;
+  // First, we check the standard use case in CAF where stream serializers own
+  // their stream buffers.
+  stream_serializer<vectorbuf> bs{vectorbuf{buf}};
+  bs << data;
+  stream_deserializer<charbuf> bd{charbuf{buf}};
+  std::string target;
+  bd >> target;
+  CAF_CHECK(data == target);
+  // Second, we test another use case where the serializers only keep
+  // references of the stream buffers.
+  buf.clear();
+  target.clear();
+  vectorbuf vb{buf};
+  stream_serializer<vectorbuf&> vs{vb};
+  vs << data;
+  charbuf cb{buf};
+  stream_deserializer<charbuf&> vd{cb};
+  vd >> target;
+  CAF_CHECK(data == target);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

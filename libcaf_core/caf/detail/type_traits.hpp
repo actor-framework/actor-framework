@@ -613,6 +613,30 @@ public:
   static constexpr bool value = false;
 };
 
+template <class T>
+struct has_data_member {
+  template <class U>
+  static auto test(U* x) -> decltype(x->data(), std::true_type());
+
+  template <class U>
+  static auto test(...) -> std::false_type;
+
+  using type = decltype(test<T>(nullptr));
+  static constexpr bool value = type::value;
+};
+
+template <class T>
+struct has_size_member {
+  template <class U>
+  static auto test(U* x) -> decltype(x->size(), std::true_type());
+
+  template <class U>
+  static auto test(...) -> std::false_type;
+
+  using type = decltype(test<T>(nullptr));
+  static constexpr bool value = type::value;
+};
+
 /// Checks whether T is convertible to either `std::function<void (T&)>`
 /// or `std::function<void (const T&)>`.
 template <class F, class T>

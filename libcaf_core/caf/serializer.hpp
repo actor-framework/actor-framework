@@ -41,7 +41,7 @@ public:
 
   explicit serializer(actor_system& sys);
 
-  explicit serializer(execution_unit* ctx);
+  explicit serializer(execution_unit* ctx = nullptr);
 
   virtual ~serializer();
 };
