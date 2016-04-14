@@ -108,7 +108,7 @@ void fill_builtins(builtins& arr, List, size_t pos) {
   using type = typename detail::tl_head<List>::type;
   typename detail::tl_tail<List>::type next;
   arr[pos].first = detail::numbered_type_names[pos];
-  arr[pos].second = &make_type_erased<type>;
+  arr[pos].second = &make_type_erased_value<type>;
   fill_builtins(arr, next, pos + 1);
 }
 

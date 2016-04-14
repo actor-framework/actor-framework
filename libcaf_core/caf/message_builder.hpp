@@ -62,7 +62,7 @@ public:
                     typename std::decay<T>::type
                    >::type
                  >::type;
-    return emplace(make_type_erased<type>(std::forward<T>(x)));
+    return emplace(make_type_erased_value<type>(std::forward<T>(x)));
   }
 
   /// Converts the buffer to an actual message object without

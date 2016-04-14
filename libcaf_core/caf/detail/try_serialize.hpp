@@ -23,13 +23,13 @@
 namespace caf {
 namespace detail {
 
-template <class Processor, class U>
-auto try_serialize(Processor& proc, U* x) -> decltype(proc & *x) {
+template <class Processor, class T>
+auto try_serialize(Processor& proc, T* x) -> decltype(proc & *x) {
   proc & *x;
 }
 
 template <class Processor>
-void try_serialize(Processor&, const void*) {
+void try_serialize(Processor&, void*) {
   // nop
 }
 

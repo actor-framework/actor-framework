@@ -24,6 +24,7 @@
 #include <tuple>
 #include <string>
 #include <utility>
+#include <functional>
 #include <type_traits>
 
 #include "caf/atom.hpp"
@@ -36,6 +37,11 @@ class deep_to_string_t {
 public:
   constexpr deep_to_string_t() {
     // nop
+  }
+
+  template <class T>
+  std::string operator()(const std::reference_wrapper<T>& x) const {
+    return (*this)(x.get());
   }
 
   std::string operator()(const char* cstr) const;

@@ -49,8 +49,10 @@
 #include "caf/serializer.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/deserializer.hpp"
+#include "caf/actor_system.hpp"
 #include "caf/proxy_registry.hpp"
 #include "caf/message_handler.hpp"
+#include "caf/event_based_actor.hpp"
 #include "caf/primitive_variant.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/binary_deserializer.hpp"
@@ -141,6 +143,7 @@ struct fixture {
       {4, 5, 6, 7}
     },
   };
+  int ra[3] = {1, 2, 3};
 
   actor_system system;
   scoped_execution_unit context;
@@ -169,6 +172,25 @@ struct fixture {
   void deserialize(const vector<char>& buf, T& x, Ts&... xs) {
     binary_deserializer bd{&context, buf.data(), buf.size()};
     apply(bd, x, xs...);
+  }
+
+  // serializes `x` and then deserializes and returns the serialized value
+  template <class T>
+  T roundtrip(const T& x) {
+    T result;
+    deserialize(serialize(x), result);
+    return result;
+  }
+
+  // converts `x` to a message, serialize it, then deserializes it, and
+  // finally returns unboxed value
+  template <class T>
+  T msg_roundtrip(const T& x) {
+    message result;
+    auto tmp = make_message(x);
+    deserialize(serialize(tmp), result);
+    CAF_REQUIRE(result.match_elements<T>());
+    return result.get_as<T>(0);
   }
 
   fixture()
@@ -269,13 +291,19 @@ CAF_TEST(custom_struct) {
 CAF_TEST(atoms) {
   atom_value x;
   auto foo = atom("foo");
+  CAF_CHECK(foo == roundtrip(foo));
+  CAF_CHECK(foo == msg_roundtrip(foo));
   using bar_atom = atom_constant<atom("bar")>;
-  auto buf = serialize(foo);
+  CAF_CHECK(bar_atom::value == roundtrip(atom("bar")));
+  CAF_CHECK(bar_atom::value == msg_roundtrip(atom("bar")));
+}
+
+CAF_TEST(raw_arrays) {
+  auto buf = serialize(ra);
+  int x[3];
   deserialize(buf, x);
-  CAF_CHECK(x == foo);
-  buf = serialize(bar_atom::value);
-  deserialize(buf, x);
-  CAF_CHECK(x == bar_atom::value);
+  for (auto i = 0; i < 3; ++i)
+    CAF_CHECK(ra[i] == x[i]);
 }
 
 CAF_TEST(arrays) {
@@ -292,17 +320,57 @@ CAF_TEST(arrays) {
 CAF_TEST(empty_non_pods) {
   test_empty_non_pod x;
   auto buf = serialize(x);
+  CAF_REQUIRE(buf.empty());
   deserialize(buf, x);
-  CAF_CHECK(true);
+}
+
+std::string hexstr(const std::vector<char>& buf) {
+  using namespace std;
+  ostringstream oss;
+  oss << hex;
+  oss.fill('0');
+  for (auto& c : buf) {
+    oss.width(2);
+    oss << int{c};
+  }
+  return oss.str();
 }
 
 CAF_TEST(messages) {
-  auto buf = serialize(msg);
+  // serialize original message which uses tuple_vals internally and
+  // deserialize into a message which uses type_erased_value pointers
   message x;
-  deserialize(buf, x);
+  auto buf1 = serialize(msg);
+  deserialize(buf1, x);
   CAF_CHECK(to_string(msg) == to_string(x));
   CAF_CHECK(is_message(x).equal(i32, te, str, rs));
+  // serialize fully dynamic message again (do another roundtrip)
+  message y;
+  auto buf2 = serialize(x);
+  CAF_CHECK(buf1 == buf2);
+  deserialize(buf2, y);
+  CAF_CHECK(to_string(msg) == to_string(y));
+  CAF_CHECK(is_message(y).equal(i32, te, str, rs));
 }
+
+/*
+CAF_TEST(actor_addr_via_message) {
+  auto testee = system.spawn([] {});
+  auto addr = actor_cast<actor_addr>(testee);
+  auto addr_msg = make_message(addr);
+  // serialize original message which uses tuple_vals and
+  // deserialize into a message which uses message builder
+  message x;
+  deserialize(serialize(addr_msg), x);
+  CAF_CHECK(to_string(addr_msg) == to_string(x));
+  CAF_CHECK(is_message(x).equal(addr));
+  // serialize fully dynamic message again (do another roundtrip)
+  message y;
+  deserialize(serialize(x), y);
+  CAF_CHECK(to_string(addr_msg) == to_string(y));
+  CAF_CHECK(is_message(y).equal(addr));
+}
+*/
 
 CAF_TEST(multiple_messages) {
   auto m = make_message(rs, te);
@@ -315,6 +383,36 @@ CAF_TEST(multiple_messages) {
                   std::make_tuple(te, to_string(m), to_string(msg)));
   CAF_CHECK(is_message(m1).equal(rs, te));
   CAF_CHECK(is_message(m2).equal(i32, te, str, rs));
+}
+
+CAF_TEST(type_erased_value) {
+  auto buf = serialize(str);
+  type_erased_value_ptr ptr{new type_erased_value_impl<std::string>};
+  binary_deserializer bd{&context, buf.data(), buf.size()};
+  ptr->load(bd);
+  CAF_CHECK(str == *reinterpret_cast<const std::string*>(ptr->get()));
+}
+
+CAF_TEST(type_erased_view) {
+  auto str_view = make_type_erased_view(str);
+  auto buf = serialize(str_view);
+  std::string res;
+  deserialize(buf, res);
+  CAF_CHECK(str == res);
+}
+
+CAF_TEST(type_erased_tuple) {
+  auto tview = make_type_erased_tuple_view(str, i32);
+  CAF_CHECK(to_string(tview) == deep_to_string(std::make_tuple(str, i32)));
+  auto buf = serialize(tview);
+  CAF_REQUIRE(buf.size() > 0);
+  std::string tmp1;
+  int32_t tmp2;
+  deserialize(buf, tmp1, tmp2);
+  CAF_CHECK(tmp1 == str);
+  CAF_CHECK(tmp2 == i32);
+  deserialize(buf, tview);
+  CAF_CHECK(to_string(tview) == deep_to_string(std::make_tuple(str, i32)));
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

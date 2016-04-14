@@ -127,9 +127,9 @@ public:
                   "T must provide default and copy constructors");
     static_assert(detail::is_serializable<T>::value, "T must be serializable");
     type_names_by_rtti_.emplace(std::type_index(typeid(T)), name);
-    value_factories_by_name_.emplace(std::move(name), &make_type_erased<T>);
+    value_factories_by_name_.emplace(std::move(name), &make_type_erased_value<T>);
     value_factories_by_rtti_.emplace(std::type_index(typeid(T)),
-                                     &make_type_erased<T>);
+                                     &make_type_erased_value<T>);
     return *this;
   }
 

@@ -22,7 +22,9 @@
 
 #include <cstdint>
 #include <typeinfo>
+#include <functional>
 
+#include "caf/fwd.hpp"
 #include "caf/deep_to_string.hpp"
 
 #include "caf/detail/type_nr.hpp"
@@ -31,18 +33,18 @@
 
 namespace caf {
 
-class type_erased_value;
-
-using type_erased_value_ptr = std::unique_ptr<type_erased_value>;
-
 /// Represents a single type-erased value.
 class type_erased_value {
 public:
+  // -- member types -----------------------------------------------------------
+
   using rtti_pair = std::pair<uint16_t, const std::type_info*>;
+
+  // -- constructors, destructors, and assignment operators --------------------
 
   virtual ~type_erased_value();
 
-  // pure virtual modifiers
+  // -- pure virtual modifiers -------------------------------------------------
 
   /// Returns a mutable pointer to the stored value.
   virtual void* get_mutable() = 0;
@@ -50,7 +52,7 @@ public:
   /// Load the content for the stored value from `source`.
   virtual void load(deserializer& source) = 0;
 
-  // pure virtual observers
+  // -- pure virtual observers -------------------------------------------------
 
   /// Returns the type number and type information object for the stored value.
   virtual rtti_pair type() const = 0;
@@ -67,13 +69,13 @@ public:
   /// Returns a copy of the stored value.
   virtual type_erased_value_ptr copy() const = 0;
 
-  // observers
+  // -- observers --------------------------------------------------------------
 
   /// Checks whether the type of the stored value matches
   /// the type nr and type info object.
   bool matches(uint16_t tnr, const std::type_info* tinf) const;
 
-  // inline observers
+  // -- inline observers -------------------------------------------------------
 
   /// Returns the type number for the stored value.
   inline uint16_t type_nr() const {
@@ -86,160 +88,166 @@ public:
   }
 };
 
+/// @relates type_erased_value_impl
+template <class Processor>
+typename std::enable_if<Processor::is_saving::value>::type
+serialize(Processor& proc, type_erased_value& x) {
+  x.save(proc);
+}
+
+/// @relates type_erased_value_impl
+template <class Processor>
+typename std::enable_if<Processor::is_loading::value>::type
+serialize(Processor& proc, type_erased_value& x) {
+  x.load(proc);
+}
+
+/// @relates type_erased_value_impl
+inline std::string to_string(const type_erased_value& x) {
+  return x.stringify();
+}
+
+/// @relates type_erased_value
+/// Default implementation for single type-erased values.
 template <class T>
-struct type_erased_value_impl : public type_erased_value {
-  T x;
+class type_erased_value_impl : public type_erased_value {
+public:
+  // -- constructors, destructors, and assignment operators --------------------
 
   template <class... Ts>
-  type_erased_value_impl(Ts&&... xs) : x(std::forward<Ts>(xs)...) {
+  type_erased_value_impl(Ts&&... xs) : x_(std::forward<Ts>(xs)...) {
     // nop
   }
 
-  type_erased_value_impl(const T& value) : x(value) {
+  template <class U, size_t N,
+            class = typename std::enable_if<std::is_same<T, U[N]>::value>::type>
+  type_erased_value_impl(const U (&ys)[N]) {
+    array_copy(x_, ys);
+  }
+
+  template <class U, size_t N,
+            class = typename std::enable_if<std::is_same<T, U[N]>::value>::type>
+  type_erased_value_impl(const U (&&ys)[N]) {
+    array_copy(x_, ys);
+  }
+
+  type_erased_value_impl(type_erased_value_impl&& other)
+      : type_erased_value_impl(std::move(other.x_)) {
     // nop
   }
+
+  type_erased_value_impl(const type_erased_value_impl& other)
+      : type_erased_value_impl(other.x_) {
+    // nop
+  }
+
+  // -- overridden modifiers ---------------------------------------------------
 
   void* get_mutable() override {
-    return &x;
-  }
-
-  const void* get() const override {
-    return &x;
-  }
-
-  void save(serializer& sink) const override {
-    detail::try_serialize(sink, const_cast<T*>(&x));
+    return addr_of(x_);
   }
 
   void load(deserializer& source) override {
-    detail::try_serialize(source, &x);
+    detail::try_serialize(source, addr_of(x_));
   }
 
-  std::string stringify() const override {
-    return deep_to_string(x);
-  }
-
-  type_erased_value_ptr copy() const override {
-    return type_erased_value_ptr{new type_erased_value_impl(x)};
-  }
-
-  rtti_pair type() const override {
-    auto nr = detail::type_nr<T>::value;
-    return {nr, &typeid(T)};
-  }
-};
-
-template <class T, size_t N>
-struct type_erased_value_impl<T[N]> : public type_erased_value {
-  using array_type = T[N];
-  array_type xs;
-
-  type_erased_value_impl(const T (&ys)[N]) {
-    array_copy(xs, ys);
-  }
-
-  type_erased_value_impl() {
-    // nop
-  }
-
-  void* get_mutable() override {
-    T* tmp = xs;
-    return reinterpret_cast<void*>(tmp);
-  }
-
-  const void* get() const override {
-    const T* tmp = xs;
-    return reinterpret_cast<const void*>(tmp);
-  }
-
-  void save(serializer& sink) const override {
-    array_serialize(sink, const_cast<array_type&>(xs));
-  }
-
-  void load(deserializer& source) override {
-    array_serialize(source, xs);
-  }
-
-  std::string stringify() const override {
-    return deep_to_string(xs);
-  }
-
-  type_erased_value_ptr copy() const override {
-    return new type_erased_value_impl(xs);
-  }
+  // -- overridden observers ---------------------------------------------------
 
   rtti_pair type() const override {
     auto nr = detail::type_nr<T>::value;
     return {nr, &typeid(T)};
   }
 
+  const void* get() const override {
+    // const is restored when returning from the function
+    return addr_of(const_cast<T&>(x_));
+  }
+
+  void save(serializer& sink) const override {
+    detail::try_serialize(sink, addr_of(x_));
+  }
+
+  std::string stringify() const override {
+    return deep_to_string(x_);
+  }
+
+  type_erased_value_ptr copy() const override {
+    return type_erased_value_ptr{new type_erased_value_impl(x_)};
+  }
+
+private:
+  // -- address-of-member utility ----------------------------------------------
+
+  template <class U>
+  static inline U* addr_of(const U& x) {
+    return const_cast<U*>(&x);
+  }
+
+  template <class U, size_t S>
+  static inline U* addr_of(const U (&x)[S]) {
+    return const_cast<U*>(static_cast<const U*>(x));
+  }
+
+  template <class U>
+  static inline U* addr_of(std::reference_wrapper<U>& x) {
+    return &x.get();
+  }
+
+  template <class U>
+  static inline U* addr_of(const std::reference_wrapper<U>& x) {
+    return &x.get();
+  }
+
+  // -- typeid utility ---------------------------------------------------------
+
+  template <class U>
+  static inline const std::type_info* typeid_of(U&) {
+    return &typeid(U);
+  }
+
+  template <class U>
+  static inline const std::type_info* typeid_of(std::reference_wrapper<U>&) {
+    return &typeid(U);
+  }
+
+  // -- array copying utility --------------------------------------------------
+
   template <class U, size_t Len>
-  static bool array_cmp_impl(U (&lhs)[Len], const U (&rhs)[Len],
-                             std::true_type) {
+  static void array_copy_impl(U (&x)[Len], const U (&y)[Len], std::true_type) {
     for (size_t i = 0; i < Len; ++i)
-      if (! array_cmp(lhs[i], rhs[i]))
-        return false;
-    return true;
+      array_copy(x[i], y[i]);
   }
 
   template <class U, size_t Len>
-  static bool array_cmp_impl(U (&lhs)[Len], const U (&rhs)[Len],
-                             std::false_type) {
-    for (size_t i = 0; i < Len; ++i)
-      if (! detail::safe_equal(lhs[i], rhs[i]))
-        return false;
-    return true;
+  static void array_copy_impl(U (&x)[Len], const U (&y)[Len], std::false_type) {
+    std::copy(y, y + Len, x);
   }
 
   template <class U, size_t Len>
-  static bool array_cmp(U (&lhs)[Len], const U (&rhs)[Len]) {
+  static void array_copy(U (&x)[Len], const U (&y)[Len]) {
     std::integral_constant<bool, std::is_array<U>::value> token;
-    return array_cmp_impl(lhs, rhs, token);
+    array_copy_impl(x, y, token);
   }
 
-  template <class U, size_t Len>
-  static void array_copy_impl(U (&lhs)[Len], const U (&rhs)[Len],
-                              std::true_type) {
-    for (size_t i = 0; i < Len; ++i)
-      array_copy(lhs[i], rhs[i]);
-  }
+  // -- data members -----------------------------------------------------------
 
-  template <class U, size_t Len>
-  static void array_copy_impl(U (&lhs)[Len], const U (&rhs)[Len],
-                              std::false_type) {
-    std::copy(rhs, rhs + Len, lhs);
-  }
-
-  template <class U, size_t Len>
-  static void array_copy(U (&lhs)[Len], const U (&rhs)[Len]) {
-    std::integral_constant<bool,std::is_array<U>::value> token;
-    array_copy_impl(lhs, rhs, token);
-  }
-
-  template <class P, class U, size_t Len>
-  static void array_serialize_impl(P& proc, U (&ys)[Len], std::true_type) {
-    for (auto& y : ys)
-      array_serialize(proc, y);
-  }
-
-  template <class P, class U, size_t Len>
-  static void array_serialize_impl(P& proc, U (&ys)[Len], std::false_type) {
-    for (auto& y : ys)
-      proc & y;
-  }
-
-  template <class P, class U, size_t Len>
-  static void array_serialize(P& proc, U (&ys)[Len]) {
-    std::integral_constant<bool,std::is_array<U>::value> token;
-    array_serialize_impl(proc, ys, token);
-  }
+  T x_;
 };
 
+/// @relates type_erased_value
+/// Creates a type-erased value of type `T` from `xs`.
 template <class T, class... Ts>
-type_erased_value_ptr make_type_erased(Ts&&... xs) {
+type_erased_value_ptr make_type_erased_value(Ts&&... xs) {
   type_erased_value_ptr result;
   result.reset(new type_erased_value_impl<T>(std::forward<Ts>(xs)...));
   return result;
+}
+
+/// @relates type_erased_value
+/// Creates a type-erased view for `x`.
+template <class T>
+type_erased_value_impl<std::reference_wrapper<T>> make_type_erased_view(T& x) {
+  return {std::ref(x)};
 }
 
 } // namespace caf

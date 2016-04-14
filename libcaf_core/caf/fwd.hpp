@@ -25,22 +25,26 @@
 
 namespace caf {
 
-// 1-class templates
+// -- 1 param templates --------------------------------------------------------
+
 template <class> class maybe;
 template <class> class optional;
 template <class> class intrusive_ptr;
 template <class> class weak_intrusive_ptr;
 template <class> class typed_continue_helper;
 
-// 2-class templates
+// -- 3 param templates --------------------------------------------------------
+
 template <class, class, int> class actor_cast_access;
 
-// variadic templates
+// -- variadic templates -------------------------------------------------------
+
 template <class...> class delegated;
 template <class...> class typed_actor;
 template <class...> class typed_response_promise;
 
-// classes
+// -- classes ------------------------------------------------------------------
+
 class actor;
 class group;
 class error;
@@ -70,15 +74,18 @@ class continue_helper;
 class mailbox_element;
 class message_handler;
 class response_promise;
-class event_based_actor;
 class binary_serializer;
+class event_based_actor;
+class type_erased_tuple;
+class type_erased_value;
 class actor_control_block;
 class binary_deserializer;
 class actor_system_config;
 class uniform_type_info_map;
 class forwarding_actor_proxy;
 
-// structs
+// -- structs ------------------------------------------------------------------
+
 struct unit_t;
 struct anything;
 struct exit_msg;
@@ -90,11 +97,15 @@ struct invalid_actor_addr_t;
 struct illegal_message_element;
 struct prohibit_top_level_spawn_marker;
 
-// enums
+// -- enums --------------------------------------------------------------------
+
 enum class atom_value : uint64_t;
 
-// aliases
+// -- aliases ------------------------------------------------------------------
+
 using actor_id = uint64_t;
+
+// -- I/O classes --------------------------------------------------------------
 
 namespace io {
 
@@ -109,11 +120,15 @@ struct header;
 
 } // namespace io
 
+// -- OpenCL classes -----------------------------------------------------------
+
 namespace opencl {
 
 class manager;
 
 } // namespace opencl
+
+// -- RIAC classes -------------------------------------------------------------
 
 namespace riac {
 
@@ -121,12 +136,16 @@ class probe;
 
 } // namespace riac
 
+// -- scheduler classes --------------------------------------------------------
+
 namespace scheduler {
 
 class abstract_worker;
 class abstract_coordinator;
 
 } // namespace scheduler
+
+// -- detail classes -----------------------------------------------------------
 
 namespace detail {
 
@@ -137,8 +156,17 @@ class dynamic_message_data;
 
 } // namespace detail
 
-using strong_actor_ptr = intrusive_ptr<actor_control_block>;
+// -- weak pointer aliases -----------------------------------------------------
+
 using weak_actor_ptr = weak_intrusive_ptr<actor_control_block>;
+
+// -- intrusive pointer aliases ------------------------------------------------
+
+using strong_actor_ptr = intrusive_ptr<actor_control_block>;
+
+// -- unique pointer aliases ---------------------------------------------------
+
+using type_erased_value_ptr = std::unique_ptr<type_erased_value>;
 using mailbox_element_ptr = std::unique_ptr<mailbox_element, detail::disposer>;
 
 } // namespace caf
