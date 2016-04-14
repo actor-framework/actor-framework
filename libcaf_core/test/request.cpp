@@ -335,12 +335,10 @@ CAF_TEST(request) {
     bool int_handler_called = false;
     s->request(foi, infinite, f_atom::value).receive(
       [&](int) {
-printf("******* %s %d\n", __FILE__, __LINE__);
         CAF_ERROR("int handler called");
         int_handler_called = true;
       },
       [&](const error&) {
-printf("******* %s %d\n", __FILE__, __LINE__);
         CAF_MESSAGE("error received");
         error_handler_called = true;
       }
