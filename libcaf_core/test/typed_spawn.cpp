@@ -184,28 +184,55 @@ public:
   }
 
   behavior_type wait4string() {
-    return {on<get_state_msg>() >> [] { return "wait4string"; },
-        on<string>() >> [=] { become(wait4int()); },
-        (on<float>() || on<int>()) >> skip_message};
+    return {
+      [](const get_state_msg&) {
+        return "wait4string";
+      },
+      [=](const string&) {
+        become(wait4int());
+      },
+      [](float) {
+        return skip_message();
+      },
+      [](int) {
+        return skip_message();
+      }
+    };
   }
 
   behavior_type wait4int() {
     return {
-      on<get_state_msg>() >> [] { return "wait4int"; },
-      on<int>() >> [=]()->int {become(wait4float());
+      [](const get_state_msg&) {
+        return "wait4int";
+      },
+      [=](int) -> int {
+        become(wait4float());
         return 42;
       },
-      (on<float>() || on<string>()) >> skip_message
+      [](float) {
+        return skip_message();
+      },
+      [](const string&) {
+        return skip_message();
+      }
     };
   }
 
   behavior_type wait4float() {
     return {
-      on<get_state_msg>() >> [] {
+      [](const get_state_msg&) {
         return "wait4float";
       },
-      on<float>() >> [=] { become(wait4string()); },
-      (on<string>() || on<int>()) >> skip_message};
+      [=](float) {
+        become(wait4string());
+      },
+      [](const string&) {
+        return skip_message();
+      },
+      [](int) {
+        return skip_message();
+      }
+    };
   }
 
   behavior_type make_behavior() override {
@@ -344,9 +371,11 @@ CAF_TEST(typed_spawns) {
   CAF_MESSAGE("finished test series with `typed_server2`");
   scoped_actor self{system};
   test_typed_spawn(self->spawn<typed_server3>("hi there", self));
-  self->receive(on("hi there") >> [] {
-    CAF_MESSAGE("received \"hi there\"");
-  });
+  self->receive(
+    [](const string& str) {
+      CAF_REQUIRE(str == "hi there");
+    }
+  );
 }
 
 CAF_TEST(event_testee_series) {

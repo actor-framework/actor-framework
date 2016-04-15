@@ -49,10 +49,10 @@ struct fixture {
 };
 
 behavior make_reflector_behavior(event_based_actor* self) {
+  self->set_unexpected_handler(mirror_unexpected_once);
   return {
-    others >> [=](const message& msg) {
-      self->quit();
-      return msg;
+    [] {
+      // nop
     }
   };
 }
@@ -85,6 +85,7 @@ struct await_reflector_reply_behavior {
 // `grp` may be either local or remote
 void make_client_behavior(event_based_actor* self,
                           actor server, group grp) {
+  self->set_unexpected_handler(skip_unexpected);
   self->spawn_in_group(grp, make_reflector_behavior);
   self->spawn_in_group(grp, make_reflector_behavior);
   self->request(server, infinite, spawn_atom::value, grp).then(

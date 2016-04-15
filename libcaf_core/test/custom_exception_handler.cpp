@@ -36,7 +36,7 @@ public:
   }
   behavior make_behavior() override {
     return {
-      others >> [] {
+      [](const std::string&) {
         throw std::runtime_error("whatever");
       }
     };

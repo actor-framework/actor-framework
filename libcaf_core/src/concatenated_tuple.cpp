@@ -27,70 +27,6 @@
 namespace caf {
 namespace detail {
 
-auto concatenated_tuple::make(std::initializer_list<cow_ptr> xs) -> cow_ptr {
-  return cow_ptr{make_counted<concatenated_tuple>(xs)};
-}
-
-void* concatenated_tuple::get_mutable(size_t pos) {
-  CAF_ASSERT(pos < size());
-  auto selected = select(pos);
-  return selected.first->get_mutable(selected.second);
-}
-
-void concatenated_tuple::load(size_t pos, deserializer& source) {
-  CAF_ASSERT(pos < size());
-  auto selected = select(pos);
-  selected.first->load(selected.second, source);
-}
-
-size_t concatenated_tuple::size() const {
-  return size_;
-}
-
-message_data::cow_ptr concatenated_tuple::copy() const {
-  return cow_ptr(new concatenated_tuple(*this), false);
-}
-
-const void* concatenated_tuple::get(size_t pos) const {
-  CAF_ASSERT(pos < size());
-  auto selected = select(pos);
-  return selected.first->get(selected.second);
-}
-
-uint32_t concatenated_tuple::type_token() const {
-  return type_token_;
-}
-
-message_data::rtti_pair concatenated_tuple::type(size_t pos) const {
-  CAF_ASSERT(pos < size());
-  auto selected = select(pos);
-  return selected.first->type(selected.second);
-}
-
-void concatenated_tuple::save(size_t pos, serializer& sink) const {
-  CAF_ASSERT(pos < size());
-  auto selected = select(pos);
-  selected.first->save(selected.second, sink);
-}
-
-std::string concatenated_tuple::stringify(size_t pos) const {
-  CAF_ASSERT(pos < size());
-  auto selected = select(pos);
-  return selected.first->stringify(selected.second);
-}
-
-std::pair<message_data*, size_t> concatenated_tuple::select(size_t pos) const {
-  auto idx = pos;
-  for (const auto& m : data_) {
-    auto s = m->size();
-    if (idx >= s)
-      idx -= s;
-    else
-      return {m.get(), idx};
-  }
-  throw std::out_of_range("out of range: concatenated_tuple::select");
-}
-
 concatenated_tuple::concatenated_tuple(std::initializer_list<cow_ptr> xs) {
   for (auto& x : xs) {
     if (x) {
@@ -111,6 +47,76 @@ concatenated_tuple::concatenated_tuple(std::initializer_list<cow_ptr> xs) {
     return tmp + val->size();
   };
   size_ = std::accumulate(data_.begin(), data_.end(), size_t{0}, acc_size);
+}
+
+auto concatenated_tuple::make(std::initializer_list<cow_ptr> xs) -> cow_ptr {
+  return cow_ptr{make_counted<concatenated_tuple>(xs)};
+}
+
+message_data::cow_ptr concatenated_tuple::copy() const {
+  return cow_ptr(new concatenated_tuple(*this), false);
+}
+
+void* concatenated_tuple::get_mutable(size_t pos) {
+  CAF_ASSERT(pos < size());
+  auto selected = select(pos);
+  return selected.first->get_mutable(selected.second);
+}
+
+void concatenated_tuple::load(size_t pos, deserializer& source) {
+  CAF_ASSERT(pos < size());
+  auto selected = select(pos);
+  selected.first->load(selected.second, source);
+}
+
+size_t concatenated_tuple::size() const {
+  return size_;
+}
+
+uint32_t concatenated_tuple::type_token() const {
+  return type_token_;
+}
+
+message_data::rtti_pair concatenated_tuple::type(size_t pos) const {
+  CAF_ASSERT(pos < size());
+  auto selected = select(pos);
+  return selected.first->type(selected.second);
+}
+
+const void* concatenated_tuple::get(size_t pos) const {
+  CAF_ASSERT(pos < size());
+  auto selected = select(pos);
+  return selected.first->get(selected.second);
+}
+
+std::string concatenated_tuple::stringify(size_t pos) const {
+  CAF_ASSERT(pos < size());
+  auto selected = select(pos);
+  return selected.first->stringify(selected.second);
+}
+
+type_erased_value_ptr concatenated_tuple::copy(size_t pos) const {
+  CAF_ASSERT(pos < size());
+  auto selected = select(pos);
+  return selected.first->copy(selected.second);
+}
+
+void concatenated_tuple::save(size_t pos, serializer& sink) const {
+  CAF_ASSERT(pos < size());
+  auto selected = select(pos);
+  selected.first->save(selected.second, sink);
+}
+
+std::pair<message_data*, size_t> concatenated_tuple::select(size_t pos) const {
+  auto idx = pos;
+  for (const auto& m : data_) {
+    auto s = m->size();
+    if (idx >= s)
+      idx -= s;
+    else
+      return {m.get(), idx};
+  }
+  throw std::out_of_range("out of range: concatenated_tuple::select");
 }
 
 } // namespace detail

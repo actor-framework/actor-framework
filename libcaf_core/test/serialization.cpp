@@ -289,7 +289,6 @@ CAF_TEST(custom_struct) {
 }
 
 CAF_TEST(atoms) {
-  atom_value x;
   auto foo = atom("foo");
   CAF_CHECK(foo == roundtrip(foo));
   CAF_CHECK(foo == msg_roundtrip(foo));

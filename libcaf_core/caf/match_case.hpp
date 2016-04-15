@@ -46,7 +46,7 @@ public:
     skip
   };
 
-  match_case(bool has_wildcard, uint32_t token);
+  match_case(uint32_t token);
 
   match_case(match_case&&) = default;
   match_case(const match_case&) = default;
@@ -59,12 +59,7 @@ public:
     return token_;
   }
 
-  inline bool has_wildcard() const {
-    return has_wildcard_;
-  }
-
 private:
-  bool has_wildcard_;
   uint32_t token_;
 };
 
@@ -139,16 +134,6 @@ private:
   F& fun_;
 };
 
-template <class T>
-struct projection_result {
-  using type = typename detail::get_callable_trait<T>::result_type;
-};
-
-template <>
-struct projection_result<unit_t> {
-  using type = unit_t;
-};
-
 template <class F>
 class trivial_match_case : public match_case {
 public:
@@ -187,7 +172,7 @@ public:
   trivial_match_case& operator=(const trivial_match_case&) = default;
 
   trivial_match_case(F f)
-      : match_case(false, detail::make_type_token_from_list<pattern>()),
+      : match_case(detail::make_type_token_from_list<pattern>()),
         fun_(std::move(f)) {
     // nop
   }
@@ -218,215 +203,7 @@ protected:
   F fun_;
 };
 
-template <class F>
-class catch_all_match_case : public match_case {
-public:
-  using ctrait = typename detail::get_callable_trait<F>::type;
-
-  using plain_result_type = typename ctrait::result_type;
-
-  using result_type =
-    typename std::conditional<
-      std::is_reference<plain_result_type>::value,
-      plain_result_type,
-      typename std::remove_const<plain_result_type>::type
-    >::type;
-
-  using arg_types = typename ctrait::arg_types;
-
-  catch_all_match_case(F f)
-      : match_case(true, detail::make_type_token<>()),
-        fun_(std::move(f)) {
-    // nop
-  }
-
-  match_case::result invoke(detail::invoke_result_visitor& f, message& msg) override {
-    lfinvoker<std::is_same<result_type, void>::value, F> fun{fun_};
-    arg_types token;
-    auto fun_res = call_fun(fun, msg, token);
-    return f.visit(fun_res) ? match_case::match : match_case::skip;
-  }
-
-protected:
-  template <class T>
-  static auto call_fun(T& f, message&, detail::type_list<>) -> decltype(f()) {
-    return f();
-  }
-
-  template <class T, class U>
-  static auto call_fun(T& f, message& x, detail::type_list<U>)
-  -> decltype(f(x)) {
-    static_assert(std::is_same<typename std::decay<U>::type, message>::value,
-                  "catch-all match case callback must take either no "
-                  "arguments or one argument of type `message`, "
-                  "`const message&`, or `message&`");
-    return f(x);
-  }
-
-  F fun_;
-};
-
-template <class F, class Tuple>
-class advanced_match_case : public match_case {
-public:
-  using tuple_type = Tuple;
-
-  using base_type = advanced_match_case;
-
-  using result_type = typename detail::get_callable_trait<F>::result_type;
-
-  advanced_match_case(bool hw, uint32_t tt, F f)
-      : match_case(hw, tt),
-        fun_(std::move(f)) {
-    // nop
-  }
-
-  virtual bool prepare_invoke(message& msg, tuple_type*) = 0;
-
-  // this function could as well be implemented in `match_case_impl`;
-  // however, dealing with all the template parameters in a debugger
-  // is just dreadful; this "hack" essentially hides all the ugly
-  // template boilterplate types when debugging CAF applications
-  match_case::result invoke(detail::invoke_result_visitor& f, message& msg) override {
-    struct storage {
-      storage() : valid(false) {
-        // nop
-      }
-      ~storage() {
-        if (valid) {
-          data.~tuple_type();
-        }
-      }
-      union { tuple_type data; };
-      bool valid;
-    };
-    storage st;
-    if (prepare_invoke(msg, &st.data)) {
-      st.valid = true;
-      lfinvoker<std::is_same<result_type, void>::value, F> fun{fun_};
-      auto fun_res = apply_args(fun, detail::get_indices(st.data), st.data);
-      return f.visit(fun_res) ? match_case::match : match_case::skip;
-    }
-    return match_case::no_match;
-  }
-
-protected:
-  F fun_;
-};
-
-template <class Pattern>
-struct pattern_has_wildcard {
-  static constexpr bool value =
-    detail::tl_index_of<
-      Pattern,
-      anything
-    >::value != -1;
-};
-
-template <class Projections>
-struct projection_is_trivial {
-  static constexpr bool value =
-    detail::tl_count_not<
-      Projections,
-      detail::tbind<std::is_same, unit_t>::template type
-    >::value == 0;
-};
-
-/// @tparam F Function or function object denoting the callback.
-/// @tparam Tuple Type of the storage for intermediate results during matching.
-/// @tparam Pattern Input types for this match case.
-template <class F, class Tuple, class Pattern, class Projections>
-class advanced_match_case_impl : public advanced_match_case<F, Tuple> {
-public:
-  using plain_result_type = typename detail::get_callable_trait<F>::result_type;
-
-  using result_type =
-    typename std::conditional<
-      std::is_reference<plain_result_type>::value,
-      plain_result_type,
-      typename std::remove_const<plain_result_type>::type
-    >::type;
-
-  static constexpr uint32_t static_type_token =
-    detail::make_type_token_from_list<Pattern>();
-
-  // Let F be "R (Ts...)" then match_case<F...> returns optional<R>
-  // unless R is void in which case bool is returned
-  using optional_result_type =
-    typename std::conditional<
-      std::is_same<result_type, void>::value,
-      optional<unit_t>,
-      optional<result_type>
-    >::type;
-
-  // Needed for static type checking when assigning to a typed behavior.
-  using arg_types = Pattern;
-
-  using fargs = typename detail::get_callable_trait<F>::arg_types;
-
-  static constexpr size_t fargs_size = detail::tl_size<fargs>::value;
-
-  using super = advanced_match_case<F, Tuple>;
-
-  advanced_match_case_impl(advanced_match_case_impl&&) = default;
-
-  advanced_match_case_impl(const advanced_match_case_impl&) = default;
-
-  advanced_match_case_impl(bool has_wcard, uint32_t ttoken, F f, Projections ps)
-      : super(has_wcard, ttoken, std::move(f)),
-        ps_(std::move(ps)) {
-    // nop
-  }
-
-  bool prepare_invoke(message& msg, Tuple* out) {
-    // detach msg before invoking fun_ if needed
-    if (detail::tl_exists<fargs, detail::is_mutable_ref>::value) {
-      msg.force_unshare();
-    }
-    using filtered_pattern =
-      typename detail::tl_filter_not_type<
-        Pattern,
-        anything
-      >::type;
-    using intermediate_tuple =
-      typename detail::tl_apply<
-        filtered_pattern,
-        detail::pseudo_tuple
-      >::type;
-    intermediate_tuple it;
-    detail::meta_elements<Pattern> ms;
-    // check if try_match() reports success
-    if (! detail::try_match(msg, ms.arr.data(), ms.arr.size(), it.data)) {
-      return false;
-    }
-    match_case_zipper zip;
-    using indices_type = typename detail::il_indices<intermediate_tuple>::type;
-    //indices_type indices;
-    typename detail::il_take<indices_type, std::tuple_size<Projections>::value - fargs_size>::type lefts;
-    typename detail::il_right<indices_type, fargs_size>::type rights;
-    has_none hn;
-    // check if guards of discarded arguments are fulfilled
-    auto lhs_tup = tuple_zip(zip, lefts, ps_, it);
-    if (detail::apply_args(hn, detail::get_indices(lhs_tup), lhs_tup)) {
-      return false;
-    }
-    // zip remaining arguments into output tuple
-    new (out) Tuple (tuple_zip(zip, rights, ps_, it));
-    //tuple_type rhs_tup = tuple_zip(zip, rights, ps_, it);
-    // check if remaining guards are fulfilled
-    if (detail::apply_args(hn, detail::get_indices(*out), *out)) {
-      out->~Tuple();
-      return false;
-    }
-    return true;
-  }
-
-private:
-  Projections ps_;
-};
-
 struct match_case_info {
-  bool has_wildcard;
   uint32_t type_token;
   match_case* ptr;
 };

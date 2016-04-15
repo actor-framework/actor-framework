@@ -42,8 +42,8 @@
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/apply_args.hpp"
 #include "caf/detail/type_traits.hpp"
-#include "caf/detail/invoke_result_visitor.hpp"
 #include "caf/detail/tail_argument_token.hpp"
+#include "caf/detail/invoke_result_visitor.hpp"
 
 namespace caf {
 
@@ -68,9 +68,10 @@ public:
 
   behavior_impl(duration tout = duration{});
 
-  virtual bool invoke(detail::invoke_result_visitor& f, message&);
+  virtual match_case::result invoke(detail::invoke_result_visitor& f, message&);
 
-  inline bool invoke(detail::invoke_result_visitor& f, message&& arg) {
+  inline match_case::result invoke(detail::invoke_result_visitor& f,
+                                   message&& arg) {
     message tmp(std::move(arg));
     return invoke(f, tmp);
   }
@@ -99,7 +100,6 @@ struct defaut_bhvr_impl_init {
   static void init(Array& arr, Tuple& tup) {
     auto& x = arr[Pos];
     x.ptr = &std::get<Pos>(tup);
-    x.has_wildcard = x.ptr->has_wildcard();
     x.type_token = x.ptr->type_token();
     defaut_bhvr_impl_init<Pos + 1, Size>::init(arr, tup);
   }

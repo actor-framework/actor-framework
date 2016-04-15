@@ -33,6 +33,8 @@ namespace caf {
 /// from a series of values using the member function `append`.
 class message_builder {
 public:
+  friend class message;
+
   message_builder(const message_builder&) = delete;
   message_builder& operator=(const message_builder&) = delete;
 

@@ -27,9 +27,7 @@
 #include <iostream>
 #include <condition_variable>
 
-#include "caf/on.hpp"
 #include "caf/send.hpp"
-#include "caf/anything.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/scoped_actor.hpp"
@@ -113,9 +111,6 @@ public:
       },
       [&](const exit_msg&) {
         received_exit = true;
-      },
-      others >> [&] {
-        CAF_LOG_ERROR("unexpected:" << CAF_ARG(msg_ptr->msg));
       }
     };
     // loop
@@ -305,9 +300,6 @@ void printer_loop(blocking_actor* self) {
       auto d = get_data(src, true);
       if (d)
         d->redirect = get_sink_handle(self->system(), fcache, fn, flag);
-    },
-    others >> [&] {
-      std::cerr << "*** unexpected message in printer loop" << std::endl;
     }
   );
 }

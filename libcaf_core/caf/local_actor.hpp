@@ -84,18 +84,52 @@ struct make_response_promise_helper<response_promise> {
 
 } // namespace detail
 
+/// @relates local_actor
+/// Default handler function for unexpected messages
+/// that sends the message back to the sender.
+result<message> mirror_unexpected(local_actor*, const type_erased_tuple*);
+
+/// @relates local_actor
+/// Default handler function for unexpected messages
+/// that sends the message back to the sender and then quits.
+result<message> mirror_unexpected_once(local_actor*, const type_erased_tuple*);
+
+/// @relates local_actor
+/// Default handler function for unexpected messages that
+/// skips an unexpected message in order to handle it again
+/// after a behavior change.
+result<message> skip_unexpected(local_actor*, const type_erased_tuple*);
+
+/// @relates local_actor
+/// Default handler function for unexpected messages that prints
+/// an unexpected message via `aout` and drops it afterwards.
+result<message> print_and_drop_unexpected(local_actor*,
+                                          const type_erased_tuple*);
+
+/// @relates local_actor
+/// Default handler function for unexpected messages that
+/// drops unexpected messages without printing them.
+result<message> silently_drop_unexpected(local_actor*,
+                                         const type_erased_tuple*);
+
 /// Base class for actors running on this node, either
 /// living in an own thread or cooperatively scheduled.
 class local_actor : public monitorable_actor, public resumable {
 public:
+  // -- member types -----------------------------------------------------------
+
   using mailbox_type = detail::single_reader_queue<mailbox_element,
                                                    detail::disposer>;
 
+  using unexpected_handler
+    = std::function<result<message>(local_actor* self,
+                                    const type_erased_tuple*)>;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
   ~local_actor();
 
-  /****************************************************************************
-   *                           spawn actors                                   *
-   ****************************************************************************/
+  // -- spawn functions --------------------------------------------------------
 
   template <class T, spawn_options Os = no_spawn_options, class... Ts>
   typename infer_handle_from_class<T>::type
@@ -150,9 +184,7 @@ public:
     return eval_opts(Os, system().spawn_in_groups_impl<make_unbound(Os)>(cfg, first, first + 1, fun, std::forward<Ts>(xs)...));
   }
 
-  /****************************************************************************
-   *                        send asynchronous messages                        *
-   ****************************************************************************/
+  // -- sending asynchronous messages ------------------------------------------
 
   /// Sends `{xs...}` to `dest` using the priority `mp`.
   template <class... Ts>
@@ -281,12 +313,14 @@ public:
     delayed_send(typed_actor<Sigs...>{dest}, rtime, std::forward<Ts>(xs)...);
   }
 
-  /****************************************************************************
-   *                      miscellaneous actor operations                      *
-   ****************************************************************************/
+  // -- miscellaneous actor operations -----------------------------------------
+
+  /// Sets a custom handler for unexpected messages.
+  inline void set_unexpected_handler(unexpected_handler fun) {
+    unexpected_handler_ = std::move(fun);
+  }
 
   /// Returns the execution unit currently used by this actor.
-  /// @warning not thread safe
   inline execution_unit* context() const {
     return context_;
   }
@@ -444,17 +478,13 @@ public:
   /// The default implementation throws a `std::logic_error`.
   virtual void load_state(deserializer& source, const unsigned int version);
 
-  /****************************************************************************
-   *           override pure virtual member functions of resumable            *
-   ****************************************************************************/
+  // -- overridden member functions of resumable -------------------------------
 
   subtype_t subtype() const override;
 
   resume_result resume(execution_unit*, size_t) override;
 
-  /****************************************************************************
-   *                 here be dragons: end of public interface                 *
-   ****************************************************************************/
+  // -- here be dragons: end of public interface -------------------------------
 
   /// @cond PRIVATE
 
@@ -523,7 +553,10 @@ public:
     current_element_->mid = mp == message_priority::high
                              ? mid.with_high_priority()
                              : mid.with_normal_priority();
-    current_element_->msg = make_message(std::forward<Ts>(xs)...);
+    // make sure our current message is not
+    // destroyed before the end of the scope
+    auto next = make_message(std::forward<Ts>(xs)...);
+    next.swap(current_element_->msg);
     dest->enqueue(std::move(current_element_), context());
   }
 
@@ -708,6 +741,9 @@ protected:
 
   // used for group management
   std::set<group> subscriptions_;
+
+  // used for setting custom functions for handling unexpected messages
+  unexpected_handler unexpected_handler_;
 
   /// @endcond
 

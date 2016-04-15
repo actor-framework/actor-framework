@@ -55,20 +55,15 @@ behavior ping(event_based_actor* self, size_t num_pings) {
       CAF_MESSAGE("received `kickoff_atom`");
       self->send(pong, ping_atom::value, 1);
       self->become(
-      [=](pong_atom, int value) -> std::tuple<ping_atom, int> {
-        if (++*count >= num_pings) {
-          CAF_MESSAGE("received " << num_pings
-                      << " pings, call self->quit");
-          self->quit();
+        [=](pong_atom, int value) -> std::tuple<ping_atom, int> {
+          if (++*count >= num_pings) {
+            CAF_MESSAGE("received " << num_pings
+                        << " pings, call self->quit");
+            self->quit();
+          }
+          return std::make_tuple(ping_atom::value, value + 1);
         }
-        return std::make_tuple(ping_atom::value, value + 1);
-      },
-      others >> [=] {
-        CAF_ERROR("Unexpected message");
-      });
-    },
-    others >> [=] {
-      CAF_ERROR("Unexpected message");
+      );
     }
   };
 }
@@ -87,16 +82,10 @@ behavior pong(event_based_actor* self) {
         [=](const down_msg& dm) {
           CAF_MESSAGE("received down_msg{" << to_string(dm.reason) << "}");
           self->quit(dm.reason);
-        },
-        others >> [=] {
-          CAF_ERROR("Unexpected message");
         }
       );
       // reply to 'ping'
       return std::make_tuple(pong_atom::value, value);
-    },
-    others >> [=] {
-      CAF_ERROR("Unexpected message");
     }
   };
 }

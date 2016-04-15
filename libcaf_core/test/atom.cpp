@@ -96,12 +96,8 @@ CAF_TEST(receive_atoms) {
   }
   CAF_CHECK(matched_pattern[0] && matched_pattern[1] && matched_pattern[2]);
   self->receive(
-    // "erase" message { 'b', 'a, 'c', 23.f }
-    others >> [] {
-      CAF_MESSAGE("drain mailbox");
-    },
-    after(std::chrono::seconds(0)) >> [] {
-      CAF_ERROR("mailbox empty");
+    [](float) {
+      // erase float message
     }
   );
   atom_value x = atom("abc");
@@ -112,9 +108,6 @@ CAF_TEST(receive_atoms) {
   self->receive(
     [](abc_atom) {
       CAF_MESSAGE("received 'abc'");
-    },
-    others >> [] {
-      CAF_ERROR("unexpected message");
     }
   );
 }

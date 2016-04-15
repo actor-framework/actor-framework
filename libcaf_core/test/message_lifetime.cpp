@@ -42,11 +42,17 @@ public:
   }
 
   behavior make_behavior() override {
+    auto f = [](local_actor* self, const type_erased_tuple* x) {
+      auto ptr = dynamic_cast<const detail::message_data*>(x);
+      CAF_REQUIRE(ptr);
+      CAF_CHECK_EQUAL(ptr->get_reference_count(), 2u);
+      self->quit();
+      return message::from(x);
+    };
+    set_unexpected_handler(f);
     return {
-      others >> [=](message& msg) {
-        CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 2u);
-        quit();
-        return std::move(msg);
+      [] {
+        // nop
       }
     };
   }
@@ -83,9 +89,6 @@ behavior tester::make_behavior() {
                 && dm.reason == exit_reason::normal
                 && current_message().cvals()->get_reference_count() == 1);
       quit();
-    },
-    others >> [&] {
-      CAF_ERROR("Unexpected message");
     }
   };
 }

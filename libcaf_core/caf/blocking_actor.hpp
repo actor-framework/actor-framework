@@ -25,7 +25,6 @@
 
 #include "caf/none.hpp"
 
-#include "caf/on.hpp"
 #include "caf/extend.hpp"
 #include "caf/behavior.hpp"
 #include "caf/local_actor.hpp"
@@ -191,6 +190,8 @@ public:
   void initialize() override;
 
   void dequeue(behavior& bhvr, message_id mid = invalid_message_id);
+
+  using local_actor::await_data;
 
   /// @endcond
 

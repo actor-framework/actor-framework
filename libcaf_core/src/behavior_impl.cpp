@@ -28,8 +28,9 @@ namespace {
 
 class combinator final : public behavior_impl {
 public:
-  bool invoke(detail::invoke_result_visitor& f, message& arg) override {
-    return first->invoke(f, arg) || second->invoke(f, arg);
+  match_case::result invoke(detail::invoke_result_visitor& f, message& arg) override {
+    auto x = first->invoke(f, arg);
+    return x == match_case::no_match ? second->invoke(f, arg) : x;
   }
 
   void handle_timeout() override {
@@ -88,19 +89,20 @@ behavior_impl::behavior_impl(duration tout)
   // nop
 }
 
-bool behavior_impl::invoke(detail::invoke_result_visitor& f, message& msg) {
+match_case::result behavior_impl::invoke(detail::invoke_result_visitor& f,
+                                         message& msg) {
   auto msg_token = msg.type_token();
   for (auto i = begin_; i != end_; ++i)
-    if (i->has_wildcard || i->type_token == msg_token)
+    if (i->type_token == msg_token)
       switch (i->ptr->invoke(f, msg)) {
-        case match_case::match:
-          return true;
-        case match_case::skip:
-          return false;
         case match_case::no_match:
-          static_cast<void>(0); // nop
+          break;
+        case match_case::match:
+          return match_case::match;
+        case match_case::skip:
+          return match_case::skip;
       };
-  return false;
+  return match_case::no_match;
 }
 
 optional<message> behavior_impl::invoke(message& x) {

@@ -24,6 +24,7 @@
 
 #include "caf/fwd.hpp"
 #include "caf/atom.hpp"
+#include "caf/message.hpp"
 
 #include "caf/detail/comparable.hpp"
 
@@ -73,7 +74,7 @@ public:
   error(const error&) = default;
   error& operator=(error&&) = default;
   error& operator=(const error&) = default;
-  error(uint8_t code, atom_value category, std::string context = std::string{});
+  error(uint8_t code, atom_value category, message context = message{});
 
   template <class E,
             class = typename std::enable_if<
@@ -93,10 +94,10 @@ public:
   atom_value category() const;
 
   /// Returns optional context information to this error.
-  std::string& context();
+  message& context();
 
   /// Returns optional context information to this error.
-  const std::string& context() const;
+  const message& context() const;
 
   /// Returns `code() != 0`.
   explicit operator bool() const;
@@ -118,7 +119,7 @@ public:
 private:
   uint8_t code_;
   atom_value category_;
-  std::string context_;
+  message context_;
 };
 
 /// @relates error

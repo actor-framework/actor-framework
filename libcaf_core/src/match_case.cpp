@@ -25,7 +25,7 @@ match_case::~match_case() {
   // nop
 }
 
-match_case::match_case(bool hw, uint32_t tt) : has_wildcard_(hw), token_(tt) {
+match_case::match_case(uint32_t tt) : token_(tt) {
   // nop
 }
 

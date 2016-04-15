@@ -60,9 +60,6 @@ behavior server(broker* self) {
       aout(self) << "Finished " << *counter << " requests per second." << endl;
       *counter = 0;
       self->delayed_send(self, std::chrono::seconds(1), tick_atom::value);
-    },
-    others >> [=](const message& msg) {
-      aout(self) << "unexpected: " << to_string(msg) << endl;
     }
   };
 }

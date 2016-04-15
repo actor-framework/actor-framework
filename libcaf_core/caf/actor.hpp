@@ -28,6 +28,7 @@
 
 
 #include "caf/fwd.hpp"
+#include "caf/message.hpp"
 #include "caf/actor_marker.hpp"
 #include "caf/abstract_actor.hpp"
 #include "caf/actor_control_block.hpp"

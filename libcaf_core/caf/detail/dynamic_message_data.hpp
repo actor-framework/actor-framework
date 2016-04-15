@@ -31,41 +31,57 @@ namespace detail {
 
 class dynamic_message_data : public message_data {
 public:
+  // -- member types -----------------------------------------------------------
+
   using elements = std::vector<type_erased_value_ptr>;
+
+  // -- constructors, destructors, and assignment operators --------------------
 
   dynamic_message_data();
 
-  dynamic_message_data(const dynamic_message_data& other);
-
   dynamic_message_data(elements&& data);
+
+  dynamic_message_data(const dynamic_message_data& other);
 
   ~dynamic_message_data();
 
-  const void* get(size_t pos) const override;
-
-  void save(size_t pos, serializer& sink) const override;
-
-  void load(size_t pos, deserializer& source) override;
-
-  void* get_mutable(size_t pos) override;
-
-  size_t size() const override;
+  // -- overridden observers of message_data -----------------------------------
 
   cow_ptr copy() const override;
 
+  // -- overridden modifiers of type_erased_tuple ------------------------------
+
+  void* get_mutable(size_t pos) override;
+
+  void load(size_t pos, deserializer& source) override;
+
+  // -- overridden observers of type_erased_tuple ------------------------------
+
+  size_t size() const override;
+
+  uint32_t type_token() const override;
+
   rtti_pair type(size_t pos) const override;
+
+  const void* get(size_t pos) const override;
 
   std::string stringify(size_t pos) const override;
 
-  uint32_t type_token() const override;
+  type_erased_value_ptr copy(size_t pos) const override;
+
+  void save(size_t pos, serializer& sink) const override;
+
+  // -- modifiers --------------------------------------------------------------
+
+  void clear();
 
   void append(type_erased_value_ptr x);
 
   void add_to_type_token(uint16_t typenr);
 
-  void clear();
-
 private:
+  // -- data members -----------------------------------------------------------
+
   elements elements_;
   uint32_t type_token_;
 };

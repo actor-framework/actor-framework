@@ -22,7 +22,6 @@
 
 #include <type_traits>
 
-#include "caf/on.hpp"
 #include "caf/extend.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/response_handle.hpp"

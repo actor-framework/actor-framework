@@ -294,7 +294,8 @@ public:
     if (valid())
       return {};
     if (has_error_context())
-      return {error_code(), extended_error_->first, extended_error_->second};
+      return {error_code(), extended_error_->first,
+              make_message(extended_error_->second)};
     return {error_code(), error_category_};
   }
 
@@ -371,7 +372,8 @@ private:
   void cr_error(const error_type& x) {
     flag_ = x.compress_code_and_size();
     if (has_error_context())
-      extended_error_ = new extended_error(x.category(), x.context());
+      extended_error_ = new extended_error(x.category(),
+                                           to_string(x.context()));
     else
       error_category_ = x.category();
   }
@@ -380,7 +382,7 @@ private:
     flag_ = x.compress_code_and_size();
     if (has_error_context())
       extended_error_ = new extended_error(x.category(),
-                                           std::move(x.context()));
+                                           to_string(x.context()));
     else
       error_category_ = x.category();
   }

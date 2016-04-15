@@ -30,8 +30,8 @@ namespace {
 
 behavior testee() {
   return {
-    others >> [] {
-      // ignore
+    [] {
+      // nop
     }
   };
 }

@@ -49,25 +49,29 @@ public:
   }
 
   behavior make_behavior() override {
+    auto f = [=](local_actor*, const type_erased_tuple* x) -> result<message> {
+      auto msg = message::from(x);
+      auto rp = this->make_response_promise();
+      split_(workset_, msg);
+      for (auto& x : workset_)
+        this->send(x.first, std::move(x.second));
+      auto g = [=](local_actor*, const type_erased_tuple* x) mutable
+                -> result<message> {
+        auto res = message::from(x);
+        join_(value_, res);
+        if (--awaited_results_ == 0) {
+          rp.deliver(value_);
+          quit();
+        }
+        return delegated<message>{};
+      };
+      set_unexpected_handler(g);
+      return delegated<message>{};
+    };
+    set_unexpected_handler(f);
     return {
-      // first message is the forwarded request
-      others >> [=](message& msg) {
-        auto rp = this->make_response_promise();
-        split_(workset_, msg);
-        for (auto& x : workset_)
-          this->send(x.first, std::move(x.second));
-        this->become(
-          // collect results
-          others >> [=](message& res) mutable {
-            join_(value_, res);
-            if (--awaited_results_ == 0) {
-              rp.deliver(make_message(value_));
-              quit();
-            }
-          }
-        );
-        // no longer needed
-        workset_.clear();
+      [] {
+        // nop
       }
     };
   }

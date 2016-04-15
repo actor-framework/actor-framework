@@ -30,7 +30,6 @@
 #include "caf/none.hpp"
 #include "caf/intrusive_ptr.hpp"
 
-#include "caf/on.hpp"
 #include "caf/message.hpp"
 #include "caf/duration.hpp"
 #include "caf/behavior.hpp"

@@ -105,6 +105,8 @@ private:
   }
 
   behavior reconnecting(std::function<void()> continuation = nullptr) {
+    return {};
+    /* TODO: implement me
     using std::chrono::seconds;
     auto mm = system().middleman().actor_handle();
     send(mm, connect_atom::value, host_, port_);
@@ -153,6 +155,7 @@ private:
       // simply ignore all requests until we have a connection
       others >> skip_message
     };
+    */
   }
 
   actor server_;
@@ -235,8 +238,7 @@ void client_repl(actor_system& system, string host, uint16_t port) {
         if (x && y && op)
           anon_send(client, *op, *x, *y);
       }
-    },
-    others >> usage
+    }
   };
   // read next line, split it, and feed to the eval handler
   string line;
@@ -244,7 +246,8 @@ void client_repl(actor_system& system, string host, uint16_t port) {
     line = trim(std::move(line)); // ignore leading and trailing whitespaces
     std::vector<string> words;
     split(words, line, is_any_of(" "), token_compress_on);
-    message_builder(words.begin(), words.end()).apply(eval);
+    if (! message_builder(words.begin(), words.end()).apply(eval))
+      usage();
   }
 }
 

@@ -47,8 +47,8 @@ public:
 
   behavior make_behavior() override {
     return {
-      others >> [&] {
-        CAF_ERROR("Unexpected message");
+      [] {
+        // nop
       }
     };
   }

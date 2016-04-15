@@ -41,11 +41,13 @@ using sub4_atom = atom_constant<atom("sub4")>;
 
 CAF_TEST(test_serial_reply) {
   actor_system system;
-  auto mirror_behavior = [=](event_based_actor* self) {
-    self->become(others >> [=](const message& msg) -> message {
-      CAF_MESSAGE("return msg: " << to_string(msg));
-      return msg;
-    });
+  auto mirror_behavior = [=](event_based_actor* self) -> behavior {
+    self->set_unexpected_handler(mirror_unexpected);
+    return {
+      [] {
+        // nop
+      }
+    };
   };
   auto master = system.spawn([=](event_based_actor* self) {
     CAF_MESSAGE("ID of master: " << self->id());

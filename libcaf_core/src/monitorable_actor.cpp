@@ -19,7 +19,6 @@
 
 #include "caf/monitorable_actor.hpp"
 
-#include "caf/on.hpp"
 #include "caf/sec.hpp"
 #include "caf/logger.hpp"
 #include "caf/actor_cast.hpp"
@@ -243,11 +242,10 @@ bool monitorable_actor::handle_system_message(mailbox_element& node,
                                           node.mid.response_id(), {},
                                           ok_atom::value, std::move(what),
                                           address(), name());
-      },
-      others >> [&] {
-        err = sec::unsupported_sys_message;
       }
     });
+    if (! res && ! err)
+      err = sec::unsupported_sys_message;
     if (err && node.mid.is_request())
       res = mailbox_element::make_joint(ctrl(), node.mid.response_id(),
                                         {}, std::move(err));

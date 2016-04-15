@@ -72,8 +72,8 @@ CAF_TEST(constructor_attach) {
             quit(reason);
           }
         },
-        others >> [=] {
-          forward_to(testee_);
+        [=](die_atom x) {
+          return delegate(testee_, x);
         }
       };
     }

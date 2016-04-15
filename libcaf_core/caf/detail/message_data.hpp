@@ -111,6 +111,8 @@ public:
     intrusive_ptr<message_data> ptr_;
   };
 
+  using type_erased_tuple::copy;
+
   virtual cow_ptr copy() const = 0;
 };
 

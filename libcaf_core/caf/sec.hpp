@@ -73,6 +73,9 @@ const char* to_string(sec);
 /// @relates sec
 error make_error(sec);
 
+/// @relates sec
+error make_error(sec, message context);
+
 } // namespace caf
 
 #endif // CAF_SEC_HPP

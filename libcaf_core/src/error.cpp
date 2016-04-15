@@ -29,7 +29,7 @@ error::error() : code_(0), category_(atom("")) {
   // nop
 }
 
-error::error(uint8_t x, atom_value y, std::string z)
+error::error(uint8_t x, atom_value y, message z)
     : code_(x),
       category_(y),
       context_(std::move(z)) {
@@ -44,11 +44,11 @@ atom_value error::category() const {
   return category_;
 }
 
-std::string& error::context() {
+message& error::context() {
   return context_;
 }
 
-const std::string& error::context() const {
+const message& error::context() const {
   return context_;
 }
 
@@ -68,9 +68,6 @@ uint32_t error::compress_code_and_size() const {
 }
 
 void serialize(serializer& sink, error& x, const unsigned int) {
-  // truncat oversized strings
-  if (x.context_.size() > 0xFFFFFF)
-    x.context_.resize(0xFFFFFF);
   auto flag_size_and_code = x.compress_code_and_size();
   if (x.category_ == atom("") || x.code_ == 0) {
     flag_size_and_code |= 0x80000000;
@@ -80,11 +77,12 @@ void serialize(serializer& sink, error& x, const unsigned int) {
   sink << flag_size_and_code;
   sink << x.category_;
   if (! x.context_.empty())
-    sink.apply_raw(x.context_.size(), const_cast<char*>(x.context_.data()));
+    sink << x.context_;
+    //sink.apply_raw(x.context_.size(), const_cast<char*>(x.context_.data()));
 }
 
 void serialize(deserializer& source, error& x, const unsigned int) {
-  x.context_.clear();
+  x.context_.reset();
   uint32_t flag_size_and_code;
   source >> flag_size_and_code;
   if (flag_size_and_code & 0x80000000) {
@@ -95,10 +93,8 @@ void serialize(deserializer& source, error& x, const unsigned int) {
   source >> x.category_;
   x.code_ = static_cast<uint8_t>(flag_size_and_code & 0xFF);
   auto size = flag_size_and_code >> 8;
-  if (size > 0) {
-    x.context_.resize(size);
-    source.apply_raw(size, &x.context_[0]);
-  }
+  if (size > 0)
+    source >> x.context_;
 }
 
 int error::compare(uint8_t x, atom_value y) const {
@@ -114,11 +110,15 @@ int error::compare(const error& x) const {
 }
 
 std::string to_string(const error& x) {
-  std::string result = "<error: (";
+  std::string result = "error(";
   result += to_string(x.category());
   result += ", ";
   result += std::to_string(static_cast<int>(x.code()));
-  result += ")>";
+  if (! x.context().empty()) {
+    result += ", ";
+    result += to_string(x.context());
+  }
+  result += ")";
   return result;
 }
 

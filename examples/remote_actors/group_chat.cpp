@@ -57,9 +57,6 @@ void client(event_based_actor* self, const string& name) {
     },
     [=](const group_down_msg& g) {
       cout << "*** chatroom offline: " << to_string(g.source) << endl;
-    },
-    others >> [=](const message& msg) {
-      cout << "unexpected: " << to_string(msg) << endl;
     }
   );
 }
@@ -115,13 +112,12 @@ int main(int argc, char** argv) {
   vector<string> words;
   for (istream_iterator<line> i(cin); i != eof; ++i) {
     auto send_input = [&] {
-      if (!i->str.empty()) {
+      if (! i->str.empty())
         anon_send(client_actor, broadcast_atom::value, i->str);
-      }
     };
     words.clear();
     split(words, i->str, is_any_of(" "));
-    message_builder(words.begin(), words.end()).apply({
+    auto res = message_builder(words.begin(), words.end()).apply({
       [&](const string& cmd, const string& mod, const string& id) {
         if (cmd == "/join") {
           try {
@@ -150,9 +146,10 @@ int main(int argc, char** argv) {
         else {
           send_input();
         }
-      },
-      others >> send_input
+      }
     });
+    if (! res)
+      send_input();
   }
   // force actor to quit
   anon_send_exit(client_actor, exit_reason::user_shutdown);

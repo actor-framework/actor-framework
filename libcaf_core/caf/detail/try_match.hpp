@@ -67,13 +67,6 @@ struct meta_element_factory<atom_constant<V>, type_nr<atom_value>::value> {
   }
 };
 
-template <>
-struct meta_element_factory<anything, 0> {
-  static meta_element create() {
-    return {static_cast<atom_value>(0), 0, nullptr, nullptr};
-  }
-};
-
 template <class TypeList>
 struct meta_elements;
 

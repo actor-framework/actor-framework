@@ -28,6 +28,13 @@ dynamic_message_data::dynamic_message_data() : type_token_(0xFFFFFFFF) {
   // nop
 }
 
+dynamic_message_data::dynamic_message_data(elements&& data)
+    : elements_(std::move(data)),
+      type_token_(0xFFFFFFFF) {
+  for (auto& e : elements_)
+    add_to_type_token(e->type().first);
+}
+
 dynamic_message_data::dynamic_message_data(const dynamic_message_data& other)
     : detail::message_data(other),
       type_token_(0xFFFFFFFF) {
@@ -37,28 +44,12 @@ dynamic_message_data::dynamic_message_data(const dynamic_message_data& other)
   }
 }
 
-dynamic_message_data::dynamic_message_data(elements&& data)
-    : elements_(std::move(data)),
-      type_token_(0xFFFFFFFF) {
-  for (auto& e : elements_)
-    add_to_type_token(e->type().first);
-}
-
 dynamic_message_data::~dynamic_message_data() {
   // nop
 }
 
-const void* dynamic_message_data::get(size_t pos) const {
-  CAF_ASSERT(pos < size());
-  return elements_[pos]->get();
-}
-
-void dynamic_message_data::save(size_t pos, serializer& sink) const {
-  elements_[pos]->save(sink);
-}
-
-void dynamic_message_data::load(size_t pos, deserializer& source) {
-  elements_[pos]->load(source);
+message_data::cow_ptr dynamic_message_data::copy() const {
+  return make_counted<dynamic_message_data>(*this);
 }
 
 void* dynamic_message_data::get_mutable(size_t pos) {
@@ -66,24 +57,48 @@ void* dynamic_message_data::get_mutable(size_t pos) {
   return elements_[pos]->get_mutable();
 }
 
+void dynamic_message_data::load(size_t pos, deserializer& source) {
+  CAF_ASSERT(pos < size());
+  elements_[pos]->load(source);
+}
+
 size_t dynamic_message_data::size() const {
   return elements_.size();
 }
 
-message_data::cow_ptr dynamic_message_data::copy() const {
-  return make_counted<dynamic_message_data>(*this);
+uint32_t dynamic_message_data::type_token() const {
+  return type_token_;
 }
 
 auto dynamic_message_data::type(size_t pos) const -> rtti_pair {
+  CAF_ASSERT(pos < size());
   return elements_[pos]->type();
 }
 
+const void* dynamic_message_data::get(size_t pos) const {
+  CAF_ASSERT(pos < size());
+  CAF_ASSERT(pos < size());
+  return elements_[pos]->get();
+}
+
 std::string dynamic_message_data::stringify(size_t pos) const {
+  CAF_ASSERT(pos < size());
   return elements_[pos]->stringify();
 }
 
-uint32_t dynamic_message_data::type_token() const {
-  return type_token_;
+type_erased_value_ptr dynamic_message_data::copy(size_t pos) const {
+  CAF_ASSERT(pos < size());
+  return elements_[pos]->copy();
+}
+
+void dynamic_message_data::save(size_t pos, serializer& sink) const {
+  CAF_ASSERT(pos < size());
+  elements_[pos]->save(sink);
+}
+
+void dynamic_message_data::clear() {
+  elements_.clear();
+  type_token_ = 0xFFFFFFFF;
 }
 
 void dynamic_message_data::append(type_erased_value_ptr x) {
@@ -93,11 +108,6 @@ void dynamic_message_data::append(type_erased_value_ptr x) {
 
 void dynamic_message_data::add_to_type_token(uint16_t typenr) {
   type_token_ = (type_token_ << 6) | typenr;
-}
-
-void dynamic_message_data::clear() {
-  elements_.clear();
-  type_token_ = 0xFFFFFFFF;
 }
 
 } // namespace detail

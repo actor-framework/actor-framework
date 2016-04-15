@@ -67,10 +67,6 @@ struct disjunction<X, Xs...> {
   static constexpr bool value = X || disjunction<Xs...>::value;
 };
 
-/// Equal to std::is_same<T, anything>.
-template <class T>
-struct is_anything : std::is_same<T, anything> {};
-
 /// Checks whether `T` is an array of type `U`.
 template <class T, typename U>
 struct is_array_of {
@@ -117,9 +113,9 @@ template <class T>
 struct is_builtin {
   // all arithmetic types are considered builtin
   static constexpr bool value = std::is_arithmetic<T>::value
-                                || is_one_of<T, anything, std::string,
-                                             std::u16string, std::u32string,
-                                             atom_value, message, actor, group,
+                                || is_one_of<T, std::string, std::u16string,
+                                             std::u32string, atom_value,
+                                             message, actor, group,
                                              node_id>::value;
 };
 

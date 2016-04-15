@@ -36,10 +36,11 @@ using namespace caf;
 
 namespace {
 
-behavior mirror() {
+behavior mirror(event_based_actor* self) {
+  self->set_unexpected_handler(mirror_unexpected);
   return {
-    others >> [=](message& msg) {
-      return std::move(msg);
+    [] {
+      // nop
     }
   };
 }
@@ -47,8 +48,8 @@ behavior mirror() {
 behavior client(event_based_actor* self, actor serv) {
   self->send(serv, ok_atom::value);
   return {
-    others >> [=] {
-      CAF_ERROR("Unexpected message");
+    [] {
+      // nop
     }
   };
 }

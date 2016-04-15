@@ -5,7 +5,7 @@
 
 // This example is partially included in the manual, do not modify
 // without updating the references in the *.tex files!
-// Manual references: lines 17-21, 24-29, 31-71, 73-107, and 140-146 (Actor.tex)
+// Manual references: lines 17-21, 24-26, 28-68, 70-104, and 137-143 (Actor.tex)
 
 #include <iostream>
 
@@ -29,16 +29,13 @@ class blocking_calculator;
 class typed_calculator;
 
 // function-based, dynamically typed, event-based API
-behavior calculator_fun(event_based_actor* self) {
+behavior calculator_fun(event_based_actor*) {
   return behavior{
     [](add_atom, int a, int b) {
       return a + b;
     },
     [](sub_atom, int a, int b) {
       return a - b;
-    },
-    others >> [=](const message& msg) {
-      aout(self) << "received: " << to_string(msg) << endl;
     }
   };
 }
@@ -51,9 +48,6 @@ void blocking_calculator_fun(blocking_actor* self) {
     },
     [](sub_atom, int a, int b) {
       return a - b;
-    },
-    others >> [=](const message& msg) {
-      aout(self) << "received: " << to_string(msg) << endl;
     }
   );
 }

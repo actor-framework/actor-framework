@@ -30,39 +30,55 @@ namespace detail {
 
 class concatenated_tuple : public message_data {
 public:
-  concatenated_tuple& operator=(const concatenated_tuple&) = delete;
+  // -- member types -----------------------------------------------------------
 
   using message_data::cow_ptr;
 
   using vector_type = std::vector<cow_ptr>;
 
+  // -- constructors, destructors, and assignment operators --------------------
+
+  concatenated_tuple(std::initializer_list<cow_ptr> xs);
+
   static cow_ptr make(std::initializer_list<cow_ptr> xs);
+
+  concatenated_tuple(const concatenated_tuple&) = default;
+
+  concatenated_tuple& operator=(const concatenated_tuple&) = delete;
+
+  // -- overridden observers of message_data -----------------------------------
+
+  cow_ptr copy() const override;
+
+  // -- overridden modifiers of type_erased_tuple ------------------------------
 
   void* get_mutable(size_t pos) override;
 
   void load(size_t pos, deserializer& source) override;
 
+  // -- overridden observers of type_erased_tuple ------------------------------
+
   size_t size() const override;
-
-  cow_ptr copy() const override;
-
-  const void* get(size_t pos) const override;
 
   uint32_t type_token() const override;
 
   rtti_pair type(size_t pos) const override;
 
-  void save(size_t pos, serializer& sink) const override;
+  const void* get(size_t pos) const override;
 
   std::string stringify(size_t pos) const override;
 
-  concatenated_tuple(std::initializer_list<cow_ptr> xs);
+  type_erased_value_ptr copy(size_t pos) const override;
 
-  concatenated_tuple(const concatenated_tuple&) = default;
+  void save(size_t pos, serializer& sink) const override;
+
+  // -- observers --------------------------------------------------------------
 
   std::pair<message_data*, size_t> select(size_t pos) const;
 
 private:
+  // -- data members -----------------------------------------------------------
+
   vector_type data_;
   uint32_t type_token_;
   size_t size_;

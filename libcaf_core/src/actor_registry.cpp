@@ -251,11 +251,6 @@ void actor_registry::start() {
       [=](const down_msg& dm) {
         CAF_LOG_TRACE(CAF_ARG(dm));
         unsubscribe_all(actor_cast<actor>(dm.source));
-      },
-      others >> [=](const message& msg) -> error {
-        CAF_IGNORE_UNUSED(msg);
-        CAF_LOG_WARNING("unexpected:" << CAF_ARG(msg));
-        return sec::unexpected_message;
       }
     };
   };
@@ -270,10 +265,6 @@ void actor_registry::start() {
         if (! res.first)
           return sec::cannot_spawn_actor_from_arguments;
         return {ok_atom::value, res.first, res.second};
-      },
-      others >> [=](const message& msg) {
-        CAF_IGNORE_UNUSED(msg);
-        CAF_LOG_WARNING("unexpected:" << CAF_ARG(msg));
       }
     };
   };

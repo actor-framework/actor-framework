@@ -76,20 +76,6 @@ public:
   }
 
   template <class F, class E = detail::is_callable_t<F>>
-  void generic_await(F f) {
-    behavior tmp{others >> f};
-    self_->set_awaited_response_handler(mid_, std::move(tmp));
-  }
-
-  template <class F, class OnError,
-            class E1 = detail::is_callable_t<F>,
-            class E2 = detail::is_handler_for_ef<OnError, error>>
-  void generic_await(F f, OnError ef) {
-    behavior tmp{ef, others >> f};
-    self_->set_awaited_response_handler(mid_, std::move(tmp));
-  }
-
-  template <class F, class E = detail::is_callable_t<F>>
   void then(F f) const {
     then_impl(f);
   }
@@ -99,20 +85,6 @@ public:
             class E2 = detail::is_handler_for_ef<OnError, error>>
   void then(F f, OnError e) const {
     then_impl(f, e);
-  }
-
-  template <class F, class E = detail::is_callable_t<F>>
-  void generic_then(F f) {
-    behavior tmp{others >> f};
-    self_->set_multiplexed_response_handler(mid_, std::move(tmp));
-  }
-
-  template <class F, class OnError,
-            class E1 = detail::is_callable_t<F>,
-            class E2 = detail::is_handler_for_ef<OnError, error>>
-  void generic_then(F f, OnError ef) {
-    behavior tmp{ef, others >> f};
-    self_->set_multiplexed_response_handler(mid_, std::move(tmp));
   }
 
 private:
@@ -125,7 +97,7 @@ private:
                   "response handlers are not allowed to have a return "
                   "type other than void");
     detail::type_checker<Output, F>::check();
-    self_->set_awaited_response_handler(mid_, behavior{std::move(f)});
+    self_->set_awaited_response_handler(mid_, message_handler{std::move(f)});
   }
 
   template <class F, class OnError>
@@ -137,13 +109,8 @@ private:
                   "response handlers are not allowed to have a return "
                   "type other than void");
     detail::type_checker<Output, F>::check();
-    auto fallback = others >> [=] {
-      auto err = make_error(sec::unexpected_response);
-      ef(err);
-    };
     self_->set_awaited_response_handler(mid_, behavior{std::move(f),
-                                                       std::move(ef),
-                                                       std::move(fallback)});
+                                                       std::move(ef)});
   }
 
   template <class F>
@@ -155,8 +122,7 @@ private:
                   "response handlers are not allowed to have a return "
                   "type other than void");
     detail::type_checker<Output, F>::check();
-    self_->set_multiplexed_response_handler(mid_,
-                                            behavior{std::move(f)});
+    self_->set_multiplexed_response_handler(mid_, behavior{std::move(f)});
   }
 
   template <class F, class OnError>
@@ -168,14 +134,8 @@ private:
                   "response handlers are not allowed to have a return "
                   "type other than void");
     detail::type_checker<Output, F>::check();
-    auto fallback = others >> [=] {
-      auto err = make_error(sec::unexpected_response);
-      ef(err);
-    };
-    self_->set_multiplexed_response_handler(mid_,
-                                            behavior{std::move(f),
-                                                     std::move(ef),
-                                                     std::move(fallback)});
+    self_->set_multiplexed_response_handler(mid_, behavior{std::move(f),
+                                                           std::move(ef)});
   }
 
   message_id mid_;
@@ -233,11 +193,7 @@ private:
                   "response handlers are not allowed to have a return "
                   "type other than void");
     detail::type_checker<Output, F>::check();
-    auto fallback = others >> [=] {
-      auto err = make_error(sec::unexpected_response);
-      ef(err);
-    };
-    behavior tmp{std::move(f), std::move(ef), std::move(fallback)};
+    behavior tmp{std::move(f), std::move(ef)};
     self_->dequeue(tmp, mid_);
   }
 

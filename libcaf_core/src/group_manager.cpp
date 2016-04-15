@@ -163,6 +163,15 @@ public:
 
   behavior make_behavior() override {
     CAF_LOG_TRACE("");
+    // instead of dropping "unexpected" messages,
+    // we simply forward them to our acquaintances
+    auto fwd = [=](local_actor*, const type_erased_tuple* ptr) -> result<message> {
+      CAF_LOG_TRACE(CAF_ARG(msg));
+      send_to_acquaintances(message::from(ptr));
+      return message{};
+    };
+    set_unexpected_handler(fwd);
+    // return behavior
     return {
       [=](join_atom, const actor& other) {
         CAF_LOG_TRACE(CAF_ARG(other));
@@ -173,11 +182,8 @@ public:
       [=](leave_atom, const actor& other) {
         CAF_LOG_TRACE(CAF_ARG(other));
         acquaintances_.erase(other);
-        // TODO
-        /*
         if (other && acquaintances_.erase(other) > 0)
           demonitor(other);
-        */
       },
       [=](forward_atom, const message& what) {
         CAF_LOG_TRACE(CAF_ARG(what));
@@ -197,10 +203,6 @@ public:
           if (i != last)
             acquaintances_.erase(i);
         }
-      },
-      others >> [=](const message& msg) {
-        CAF_LOG_TRACE(CAF_ARG(msg));
-        send_to_acquaintances(msg);
       }
     };
   }
@@ -321,10 +323,19 @@ private:
 
 behavior proxy_broker::make_behavior() {
   CAF_LOG_TRACE("");
+  // instead of dropping "unexpected" messages,
+  // we simply forward them to our acquaintances
+  auto fwd = [=](local_actor*, const type_erased_tuple* x) -> result<message> {
+    CAF_LOG_TRACE(CAF_ARG(msg));
+    group_->send_all_subscribers(current_element_->sender, message::from(x),
+                                 context());
+    return message{};
+  };
+  set_unexpected_handler(fwd);
+  // return dummy behavior
   return {
-    others >> [=](const message& msg) {
-      CAF_LOG_TRACE(CAF_ARG(msg));
-      group_->send_all_subscribers(current_element_->sender, msg, context());
+    [](const down_msg&) {
+      // nop
     }
   };
 }

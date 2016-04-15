@@ -74,6 +74,9 @@ public:
   /// Returns a string representation of the element at position `pos`.
   virtual std::string stringify(size_t pos) const = 0;
 
+  /// Returns a copy of the element at position `pos`.
+  virtual type_erased_value_ptr copy(size_t pos) const = 0;
+
   /// Saves the element at position `pos` to `sink`.
   virtual void save(size_t pos, serializer& sink) const = 0;
 
@@ -169,6 +172,10 @@ public:
 
   std::string stringify(size_t pos) const override {
     return ptrs_[pos]->stringify();
+  }
+
+  type_erased_value_ptr copy(size_t pos) const override {
+    return ptrs_[pos]->copy();
   }
 
   void save(size_t pos, serializer& sink) const override {

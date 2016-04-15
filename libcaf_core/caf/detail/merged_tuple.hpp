@@ -30,41 +30,58 @@ namespace detail {
 
 class merged_tuple : public message_data {
 public:
-  merged_tuple& operator=(const merged_tuple&) = delete;
-
-  using mapping_type = std::vector<std::pair<size_t, size_t>>;
+  // -- member types -----------------------------------------------------------
 
   using message_data::cow_ptr;
 
   using data_type = std::vector<cow_ptr>;
 
+  using mapping_type = std::vector<std::pair<size_t, size_t>>;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  static cow_ptr make(message x, message y);
+
   merged_tuple(data_type xs, mapping_type ys);
 
-  // creates a typed subtuple from `d` with mapping `v`
-  static cow_ptr make(message x, message y);
+  merged_tuple& operator=(const merged_tuple&) = delete;
+
+  // -- overridden observers of message_data -----------------------------------
+
+  cow_ptr copy() const override;
+
+  // -- overridden modifiers of type_erased_tuple ------------------------------
 
   void* get_mutable(size_t pos) override;
 
   void load(size_t pos, deserializer& source) override;
 
+  // -- overridden observers of type_erased_tuple ------------------------------
+
   size_t size() const override;
-
-  cow_ptr copy() const override;
-
-  const void* get(size_t pos) const override;
 
   uint32_t type_token() const override;
 
   rtti_pair type(size_t pos) const override;
 
-  void save(size_t pos, serializer& sink) const override;
+  const void* get(size_t pos) const override;
 
   std::string stringify(size_t pos) const override;
+
+  type_erased_value_ptr copy(size_t pos) const override;
+
+  void save(size_t pos, serializer& sink) const override;
+
+  // -- observers --------------------------------------------------------------
 
   const mapping_type& mapping() const;
 
 private:
+  // -- constructors, destructors, and assignment operators --------------------
+
   merged_tuple(const merged_tuple&) = default;
+
+  // -- data members -----------------------------------------------------------
 
   data_type data_;
   uint32_t type_token_;

@@ -27,6 +27,7 @@
 #include "caf/sec.hpp"
 #include "caf/send.hpp"
 #include "caf/actor.hpp"
+#include "caf/after.hpp"
 #include "caf/config.hpp"
 #include "caf/logger.hpp"
 #include "caf/node_id.hpp"

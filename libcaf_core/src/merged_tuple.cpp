@@ -27,6 +27,20 @@
 namespace caf {
 namespace detail {
 
+merged_tuple::cow_ptr merged_tuple::make(message x, message y) {
+  data_type data{x.vals(), y.vals()};
+  mapping_type mapping;
+  auto s = x.size();
+  for (size_t i = 0; i < s; ++i) {
+    if (x.match_element<index_mapping>(i))
+      mapping.emplace_back(1, x.get_as<index_mapping>(i).value - 1);
+    else
+      mapping.emplace_back(0, i);
+  }
+  return cow_ptr{make_counted<merged_tuple>(std::move(data),
+                                            std::move(mapping))};
+}
+
 merged_tuple::merged_tuple(data_type xs, mapping_type ys)
     : data_(std::move(xs)),
       type_token_(0xFFFFFFFF),
@@ -41,19 +55,8 @@ merged_tuple::merged_tuple(data_type xs, mapping_type ys)
   }
 }
 
-// creates a typed subtuple from `d` with mapping `v`
-merged_tuple::cow_ptr merged_tuple::make(message x, message y) {
-  data_type data{x.vals(), y.vals()};
-  mapping_type mapping;
-  auto s = x.size();
-  for (size_t i = 0; i < s; ++i) {
-    if (x.match_element<index_mapping>(i))
-      mapping.emplace_back(1, x.get_as<index_mapping>(i).value - 1);
-    else
-      mapping.emplace_back(0, i);
-  }
-  return cow_ptr{make_counted<merged_tuple>(std::move(data),
-                                            std::move(mapping))};
+merged_tuple::cow_ptr merged_tuple::copy() const {
+  return cow_ptr{make_counted<merged_tuple>(data_, mapping_)};
 }
 
 void* merged_tuple::get_mutable(size_t pos) {
@@ -72,16 +75,6 @@ size_t merged_tuple::size() const {
   return mapping_.size();
 }
 
-merged_tuple::cow_ptr merged_tuple::copy() const {
-  return cow_ptr{make_counted<merged_tuple>(data_, mapping_)};
-}
-
-const void* merged_tuple::get(size_t pos) const {
-  CAF_ASSERT(pos < mapping_.size());
-  auto& p = mapping_[pos];
-  return data_[p.first]->get(p.second);
-}
-
 uint32_t merged_tuple::type_token() const {
   return type_token_;
 }
@@ -92,16 +85,28 @@ merged_tuple::rtti_pair merged_tuple::type(size_t pos) const {
   return data_[p.first]->type(p.second);
 }
 
-void merged_tuple::save(size_t pos, serializer& sink) const {
+const void* merged_tuple::get(size_t pos) const {
   CAF_ASSERT(pos < mapping_.size());
   auto& p = mapping_[pos];
-  data_[p.first]->save(p.second, sink);
+  return data_[p.first]->get(p.second);
 }
 
 std::string merged_tuple::stringify(size_t pos) const {
   CAF_ASSERT(pos < mapping_.size());
   auto& p = mapping_[pos];
   return data_[p.first]->stringify(p.second);
+}
+
+type_erased_value_ptr merged_tuple::copy(size_t pos) const {
+  CAF_ASSERT(pos < mapping_.size());
+  auto& p = mapping_[pos];
+  return data_[p.first]->copy(p.second);
+}
+
+void merged_tuple::save(size_t pos, serializer& sink) const {
+  CAF_ASSERT(pos < mapping_.size());
+  auto& p = mapping_[pos];
+  data_[p.first]->save(p.second, sink);
 }
 
 const merged_tuple::mapping_type& merged_tuple::mapping() const {

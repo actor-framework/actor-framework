@@ -267,6 +267,9 @@ public:
 
   message& operator+=(const message& x);
 
+  /// Creates a message object from `ptr`.
+  static message from(const type_erased_tuple* ptr);
+
   /// @cond PRIVATE
 
   using raw_ptr = detail::message_data*;

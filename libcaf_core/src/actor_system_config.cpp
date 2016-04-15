@@ -243,6 +243,10 @@ actor_system_config::actor_system_config()
   opt_group(options_, "opencl")
   .add(opencl_device_ids, "device-ids",
        "restricts which OpenCL devices are accessed by CAF");
+  // add renderers for default error categories
+  error_renderers_.emplace(atom("system"), [](uint8_t x) -> std::string {
+    return to_string(static_cast<sec>(x));
+  });
 }
 
 actor_system_config::actor_system_config(int argc, char** argv)

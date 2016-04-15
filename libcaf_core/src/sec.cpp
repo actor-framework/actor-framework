@@ -21,41 +21,46 @@
 
 namespace caf {
 
+namespace {
+
+const char* sec_strings[] = {
+  "<no-error>",
+  "unexpected_message",
+  "invalid_invoke_mutable",
+  "unexpected_response",
+  "request_receiver_down",
+  "request_timeout",
+  "no_actor_to_unpublish",
+  "no_actor_published_at_port",
+  "state_not_serializable",
+  "invalid_sys_key",
+  "unsupported_sys_message",
+  "disconnect_during_handshake",
+  "cannot_forward_to_invalid_actor",
+  "no_route_to_receiving_node",
+  "failed_to_assign_scribe_from_handle",
+  "cannot_close_invalid_port",
+  "cannot_connect_to_node",
+  "cannot_open_port",
+  "cannot_spawn_actor_from_arguments",
+  "no_such_riac_node"
+};
+
+} // namespace <anonymous>
+
 const char* to_string(sec x) {
-  switch (x) {
-    case sec::unexpected_message:
-      return "unexpected_message";
-    case sec::no_actor_to_unpublish:
-      return "no_actor_to_unpublish";
-    case sec::no_actor_published_at_port:
-      return "no_actor_published_at_port";
-    case sec::state_not_serializable:
-      return "state_not_serializable";
-    case sec::invalid_sys_key:
-      return "invalid_sys_key";
-    case sec::disconnect_during_handshake:
-      return "disconnect_during_handshake";
-    case sec::cannot_forward_to_invalid_actor:
-      return "cannot_forward_to_invalid_actor";
-    case sec::no_route_to_receiving_node:
-      return "no_route_to_receiving_node";
-    case sec::failed_to_assign_scribe_from_handle:
-      return "failed_to_assign_scribe_from_handle";
-    case sec::cannot_close_invalid_port:
-      return "cannot_close_invalid_port";
-    case sec::cannot_connect_to_node:
-      return "cannot_connect_to_node";
-    case sec::cannot_open_port:
-      return "cannot_open_port";
-    case sec::cannot_spawn_actor_from_arguments:
-      return "cannot_spawn_actor_from_arguments";
-    default:
-      return "<unknown>";
-  }
+  auto index = static_cast<size_t>(x);
+  if (index > static_cast<size_t>(sec::no_such_riac_node))
+    return "<unknown>";
+  return sec_strings[index];
 }
 
 error make_error(sec x) {
   return {static_cast<uint8_t>(x), atom("system")};
+}
+
+error make_error(sec x, message context) {
+  return {static_cast<uint8_t>(x), atom("system"), std::move(context)};
 }
 
 } // namespace caf

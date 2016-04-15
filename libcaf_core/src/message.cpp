@@ -24,6 +24,7 @@
 #include "caf/serializer.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/deserializer.hpp"
+#include "caf/message_builder.hpp"
 #include "caf/message_handler.hpp"
 #include "caf/string_algorithms.hpp"
 
@@ -62,6 +63,20 @@ void* message::get_mutable(size_t p) {
 const void* message::at(size_t p) const {
   CAF_ASSERT(vals_);
   return vals_->get(p);
+}
+
+message message::from(const type_erased_tuple* ptr) {
+  if (! ptr)
+    return message{};
+  auto dptr = dynamic_cast<const detail::message_data*>(ptr);
+  if (dptr) {
+    data_ptr dp{const_cast<detail::message_data*>(dptr), true};
+    return message{std::move(dp)};
+  }
+  message_builder mb;
+  for (size_t i = 0; i < ptr->size(); ++i)
+    mb.emplace(ptr->copy(i));
+  return mb.move_to_message();
 }
 
 bool message::match_element(size_t pos, uint16_t typenr,

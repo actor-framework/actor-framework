@@ -71,6 +71,14 @@ struct tup_ptr_access {
       return deep_to_string(std::get<Pos>(tup));
     return tup_ptr_access<Pos + 1, Max>::stringify(pos, tup);
   }
+
+  template <class T>
+  static type_erased_value_ptr copy(size_t pos, const T& tup) {
+    using value_type = typename std::tuple_element<Pos, T>::type;
+    if (pos == Pos)
+      return make_type_erased_value<value_type>(std::get<Pos>(tup));
+    return tup_ptr_access<Pos + 1, Max>::copy(pos, tup);;
+  }
 };
 
 template <size_t Pos, size_t Max>
@@ -99,6 +107,11 @@ struct tup_ptr_access<Pos, Max, false> {
   template <class T>
   static std::string stringify(size_t, const T&) {
     return "<unprintable>";
+  }
+
+  template <class T>
+  static type_erased_value_ptr copy(size_t, const T&) {
+    return nullptr;
   }
 };
 
@@ -164,6 +177,10 @@ public:
 
   std::string stringify(size_t pos) const override {
     return tup_ptr_access<0, sizeof...(Ts)>::stringify(pos, data_);
+  }
+
+  type_erased_value_ptr copy(size_t pos) const override {
+    return tup_ptr_access<0, sizeof...(Ts)>::copy(pos, data_);
   }
 
   void load(size_t pos, deserializer& source) override {

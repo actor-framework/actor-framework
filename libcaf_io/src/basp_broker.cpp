@@ -24,6 +24,7 @@
 
 #include "caf/sec.hpp"
 #include "caf/send.hpp"
+#include "caf/after.hpp"
 #include "caf/exception.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/event_based_actor.hpp"
@@ -277,10 +278,6 @@ void basp_broker_state::learned_new_node(const node_id& nid) {
           [=](const down_msg& dm) {
             CAF_LOG_TRACE(CAF_ARG(dm));
             this_actor->quit(dm.reason);
-          },
-          others >> [=](const message& msg) {
-            CAF_LOG_ERROR("unexpected:" << CAF_ARG(msg));
-            static_cast<void>(msg); // suppress unused warning
           }
         );
       },
@@ -658,12 +655,8 @@ behavior basp_broker::make_behavior() {
       state.instance.handle_heartbeat(context());
       delayed_send(this, std::chrono::milliseconds{interval},
                    tick_atom::value, interval);
-    },
-    // catch-all error handler
-    others >> [=](const message& msg) {
-      CAF_LOG_ERROR("unexpected message: " << CAF_ARG(msg));
-      static_cast<void>(msg); // suppress unused warning
-    }};
+    }
+  };
 }
 
 resumable::resume_result basp_broker::resume(execution_unit* ctx, size_t mt) {

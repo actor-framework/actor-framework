@@ -29,6 +29,7 @@
 #include "caf/exit_reason.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/actor_system.hpp"
+#include "caf/actor_ostream.hpp"
 #include "caf/blocking_actor.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/default_attachable.hpp"
@@ -38,6 +39,33 @@
 
 namespace caf {
 
+result<message> mirror_unexpected(local_actor*, const type_erased_tuple* x) {
+  return message::from(x);
+}
+
+result<message> mirror_unexpected_once(local_actor* self,
+                                       const type_erased_tuple* x) {
+  self->quit();
+  return mirror_unexpected(self, x);
+}
+
+result<message> skip_unexpected(local_actor*, const type_erased_tuple*) {
+  return skip_message();
+}
+
+result<message> print_and_drop_unexpected(local_actor* self,
+                                          const type_erased_tuple* x) {
+  aout(self) << "*** unexpected message [id: " << self->id()
+             << ", name: " << self->name() << "]: " << x->stringify()
+             << std::endl;
+  return sec::unexpected_message;
+}
+
+result<message> silently_drop_unexpected(local_actor*,
+                                         const type_erased_tuple*) {
+  return sec::unexpected_message;
+}
+
 // local actors are created with a reference count of one that is adjusted
 // later on in spawn(); this prevents subtle bugs that lead to segfaults,
 // e.g., when calling address() in the ctor of a derived class
@@ -46,7 +74,8 @@ local_actor::local_actor(actor_config& cfg)
       context_(cfg.host),
       planned_exit_reason_(exit_reason::not_exited),
       timeout_id_(0),
-      initial_behavior_fac_(std::move(cfg.init_fun)) {
+      initial_behavior_fac_(std::move(cfg.init_fun)),
+      unexpected_handler_(print_and_drop_unexpected) {
   if (cfg.groups != nullptr)
     for (auto& grp : *cfg.groups)
       join(grp);
@@ -55,14 +84,16 @@ local_actor::local_actor(actor_config& cfg)
 local_actor::local_actor()
     : monitorable_actor(abstract_channel::is_abstract_actor_flag),
       planned_exit_reason_(exit_reason::not_exited),
-      timeout_id_(0) {
+      timeout_id_(0),
+      unexpected_handler_(print_and_drop_unexpected) {
   // nop
 }
 
 local_actor::local_actor(int init_flags)
     : monitorable_actor(init_flags),
       planned_exit_reason_(exit_reason::not_exited),
-      timeout_id_(0) {
+      timeout_id_(0),
+      unexpected_handler_(print_and_drop_unexpected) {
   // nop
 }
 
@@ -209,7 +240,7 @@ msg_type filter_msg(local_actor* self, mailbox_element& node) {
     return msg_type::response;
   // intercept system messages, e.g., signalizing migration
   if (msg.size() > 1 && msg.match_element<sys_atom>(0) && node.sender) {
-    bool mismatch = false;
+    bool mismatch = true;
     msg.apply({
       /*
       [&](sys_atom, migrate_atom, const actor& mm) {
@@ -278,6 +309,7 @@ msg_type filter_msg(local_actor* self, mailbox_element& node) {
       */
       [&](sys_atom, get_atom, std::string& what) {
         CAF_LOG_TRACE(CAF_ARG(what));
+        mismatch = false;
         if (what == "info") {
           CAF_LOG_DEBUG("reply to 'info' message");
           node.sender->enqueue(
@@ -293,9 +325,6 @@ msg_type filter_msg(local_actor* self, mailbox_element& node) {
                                       node.mid.response_id(),
                                       {}, sec::invalid_sys_key),
           self->context());
-      },
-      others >> [&] {
-        mismatch = true;
       }
     });
     return mismatch ? msg_type::ordinary : msg_type::sys_message;
@@ -372,7 +401,7 @@ public:
   void delegate(T& x) {
     auto rp = self_->make_response_promise();
     if (! rp.pending()) {
-      CAF_LOG_DEBUG("suppress response message due to invalid response promise");
+      CAF_LOG_DEBUG("suppress response message: invalid response promise");
       return;
     }
     invoke_result_visitor_helper f{std::move(rp)};
@@ -447,11 +476,15 @@ invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
             if (ref_fun.timeout().valid()) {
               ref_fun.handle_timeout();
             }
-          } else if (! ref_fun(visitor, current_element_->msg)) {
-          //} else if (! post_process_invoke_res(this, false,
-          //                                     ref_fun(current_element_->msg))) {
-            CAF_LOG_WARNING("multiplexed response failure occured:" << CAF_ARG(id()));
-            quit(exit_reason::unhandled_request_error);
+          } else if (ref_fun(visitor, current_element_->msg) == match_case::no_match) {
+            // wrap unexpected message into an error object and try invoke again
+            auto tmp = make_message(make_error(sec::unexpected_response,
+                                               current_element_->msg));
+            if (ref_fun(visitor, tmp) == match_case::no_match) {
+              CAF_LOG_WARNING("multiplexed response failure occured:"
+                              << CAF_ARG(id()));
+              quit(exit_reason::unhandled_request_error);
+            }
           }
           ptr.swap(current_element_);
           mark_multiplexed_arrived(mid);
@@ -467,11 +500,13 @@ invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
             if (fun.timeout().valid()) {
               fun.handle_timeout();
             }
-          } else {
-            if (! fun(visitor, current_element_->msg)) {
-            //if (! post_process_invoke_res(this, false,
-            //                              fun(current_element_->msg))) {
-              CAF_LOG_WARNING("sync response failure occured:" << CAF_ARG(id()));
+          } else if (fun(visitor, current_element_->msg)  == match_case::no_match) {
+            // wrap unexpected message into an error object and try invoke again
+            auto tmp = make_message(make_error(sec::unexpected_response,
+                                               current_element_->msg));
+            if (fun(visitor, tmp) == match_case::no_match) {
+              CAF_LOG_WARNING("multiplexed response failure occured:"
+                              << CAF_ARG(id()));
               quit(exit_reason::unhandled_request_error);
             }
           }
@@ -485,26 +520,39 @@ invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
       return im_dropped;
     }
     case msg_type::ordinary:
-      if (! awaited_id.valid()) {
-        auto had_timeout = has_timeout();
-        if (had_timeout) {
-          has_timeout(false);
+      if (awaited_id.valid()) {
+        CAF_LOG_DEBUG("skipped asynchronous message:" << CAF_ARG(awaited_id));
+        return im_skipped;
+      }
+      bool skipped = false;
+      auto had_timeout = has_timeout();
+      if (had_timeout)
+        has_timeout(false);
+      ptr.swap(current_element_);
+      switch (fun(visitor, current_element_->msg)) {
+        case match_case::skip:
+          skipped = true;
+          break;
+        default:
+          break;
+        case match_case::no_match: {
+          if (had_timeout)
+            has_timeout(true);
+          auto sres = unexpected_handler_(this,
+                                          current_element_->msg.cvals().get());
+          if (sres.flag != rt_skip_message)
+            visitor.visit(sres);
+          else
+            skipped = true;
         }
-        ptr.swap(current_element_);
-        //auto is_req = current_element_->mid.is_request();
-        auto res = fun(visitor, current_element_->msg);
-        //auto res = post_process_invoke_res(this, is_req,
-        //                                   fun(current_element_->msg));
-        ptr.swap(current_element_);
-        if (res)
-          return im_success;
-        // restore timeout if necessary
+      }
+      ptr.swap(current_element_);
+      if (skipped) {
         if (had_timeout)
           has_timeout(true);
-      } else {
-        CAF_LOG_DEBUG("skipped asynchronous message:" << CAF_ARG(awaited_id));
+        return im_skipped;
       }
-      return im_skipped;
+      return im_success;
   }
   // should be unreachable
   CAF_CRITICAL("invalid message type");

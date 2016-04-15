@@ -37,6 +37,14 @@
 #include "caf/io/network/interfaces.hpp"
 #include "caf/io/network/test_multiplexer.hpp"
 
+namespace {
+
+struct anything { };
+
+anything any_vals;
+
+} // namespace <anonymous>
+
 namespace std {
 
 ostream& operator<<(ostream& out, const caf::io::basp::message_type& x) {
@@ -44,11 +52,11 @@ ostream& operator<<(ostream& out, const caf::io::basp::message_type& x) {
 }
 
 template <class T>
-ostream& operator<<(ostream& out, const caf::variant<caf::anything, T>& x) {
+ostream& operator<<(ostream& out, const caf::variant<anything, T>& x) {
   using std::to_string;
   using caf::to_string;
   using caf::io::basp::to_string;
-  if (get<caf::anything>(&x) != nullptr)
+  if (get<anything>(&x) != nullptr)
     return out << "*";
   return out << to_string(get<T>(x));
 }
@@ -355,8 +363,7 @@ public:
                    variant<anything, actor_id> source_actor,
                    variant<anything, actor_id> dest_actor,
                    const Ts&... xs) {
-      CAF_MESSAGE("expect " << num << ". sent message to be a "
-                  << operation);
+      CAF_MESSAGE("expect " << num);
       buffer buf;
       this_->to_payload(buf, xs...);
       buffer& ob = this_->mpx()->output_buffer(hdl);
@@ -637,10 +644,10 @@ CAF_TEST(remote_actor_and_send) {
 
 CAF_TEST(actor_serialize_and_deserialize) {
   auto testee_impl = [](event_based_actor* testee_self) -> behavior {
+    testee_self->set_unexpected_handler(mirror_unexpected_once);
     return {
-      others >> [=] {
-        testee_self->quit();
-        return testee_self->current_message();
+      [] {
+        // nop
       }
     };
   };

@@ -17,36 +17,38 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_ANYTHING_HPP
-#define CAF_ANYTHING_HPP
+#ifndef CAF_AFTER_HPP
+#define CAF_AFTER_HPP
 
+#include <tuple>
 #include <type_traits>
+
+#include "caf/timeout_definition.hpp"
 
 namespace caf {
 
-/// Acts as wildcard expression in patterns.
-struct anything {
-  constexpr anything() {
+class timeout_definition_builder {
+public:
+  constexpr timeout_definition_builder(const duration& d) : tout_(d) {
     // nop
   }
+
+  template <class F>
+  timeout_definition<F> operator>>(F f) const {
+    return {tout_, std::move(f)};
+  }
+
+private:
+  duration tout_;
 };
 
-/// @relates anything
-inline bool operator==(const anything&, const anything&) {
-  return true;
+/// Returns a generator for timeouts.
+template <class Rep, class Period>
+constexpr timeout_definition_builder
+after(const std::chrono::duration<Rep, Period>& d) {
+  return {duration(d)};
 }
-
-/// @relates anything
-inline bool operator!=(const anything&, const anything&) {
-  return false;
-}
-
-/// @relates anything
-template <class T>
-struct is_anything : std::is_same<T, anything> {
-  // no content
-};
 
 } // namespace caf
 
-#endif // CAF_ANYTHING_HPP
+#endif // CAF_AFTER_HPP

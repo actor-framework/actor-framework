@@ -102,8 +102,9 @@ public:
   }
 
   /// Runs this handler with callback.
-  inline bool operator()(detail::invoke_result_visitor& f, message& x) {
-    return impl_ ? impl_->invoke(f, x) : false;
+  inline match_case::result operator()(detail::invoke_result_visitor& f,
+                                       message& x) {
+    return impl_ ? impl_->invoke(f, x) : match_case::no_match;
   }
 
   /// Checks whether this behavior is not empty.
