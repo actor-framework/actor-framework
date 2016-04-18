@@ -39,14 +39,14 @@
 
 namespace caf {
 
-result<message> mirror_unexpected(local_actor*, const type_erased_tuple* x) {
+result<message> reflect_unexpected(local_actor*, const type_erased_tuple* x) {
   return message::from(x);
 }
 
-result<message> mirror_unexpected_once(local_actor* self,
+result<message> reflect_unexpected_and_quit(local_actor* self,
                                        const type_erased_tuple* x) {
   self->quit();
-  return mirror_unexpected(self, x);
+  return reflect_unexpected(self, x);
 }
 
 result<message> skip_unexpected(local_actor*, const type_erased_tuple*) {
@@ -61,7 +61,7 @@ result<message> print_and_drop_unexpected(local_actor* self,
   return sec::unexpected_message;
 }
 
-result<message> silently_drop_unexpected(local_actor*,
+result<message> drop_unexpected(local_actor*,
                                          const type_erased_tuple*) {
   return sec::unexpected_message;
 }

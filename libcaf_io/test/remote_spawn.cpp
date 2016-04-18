@@ -37,7 +37,7 @@ using namespace caf;
 namespace {
 
 behavior mirror(event_based_actor* self) {
-  self->set_unexpected_handler(mirror_unexpected);
+  self->set_unexpected_handler(reflect_unexpected);
   return {
     [] {
       // nop

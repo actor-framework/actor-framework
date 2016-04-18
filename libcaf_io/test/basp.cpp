@@ -644,7 +644,7 @@ CAF_TEST(remote_actor_and_send) {
 
 CAF_TEST(actor_serialize_and_deserialize) {
   auto testee_impl = [](event_based_actor* testee_self) -> behavior {
-    testee_self->set_unexpected_handler(mirror_unexpected_once);
+    testee_self->set_unexpected_handler(reflect_unexpected_and_quit);
     return {
       [] {
         // nop

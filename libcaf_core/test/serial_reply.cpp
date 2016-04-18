@@ -42,7 +42,7 @@ using sub4_atom = atom_constant<atom("sub4")>;
 CAF_TEST(test_serial_reply) {
   actor_system system;
   auto mirror_behavior = [=](event_based_actor* self) -> behavior {
-    self->set_unexpected_handler(mirror_unexpected);
+    self->set_unexpected_handler(reflect_unexpected);
     return {
       [] {
         // nop

@@ -49,7 +49,7 @@ struct fixture {
 };
 
 behavior make_reflector_behavior(event_based_actor* self) {
-  self->set_unexpected_handler(mirror_unexpected_once);
+  self->set_unexpected_handler(reflect_unexpected_and_quit);
   return {
     [] {
       // nop

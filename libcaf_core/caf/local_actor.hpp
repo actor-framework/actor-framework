@@ -87,12 +87,13 @@ struct make_response_promise_helper<response_promise> {
 /// @relates local_actor
 /// Default handler function for unexpected messages
 /// that sends the message back to the sender.
-result<message> mirror_unexpected(local_actor*, const type_erased_tuple*);
+result<message> reflect_unexpected(local_actor*, const type_erased_tuple*);
 
 /// @relates local_actor
 /// Default handler function for unexpected messages
 /// that sends the message back to the sender and then quits.
-result<message> mirror_unexpected_once(local_actor*, const type_erased_tuple*);
+result<message> reflect_unexpected_and_quit(local_actor*,
+                                            const type_erased_tuple*);
 
 /// @relates local_actor
 /// Default handler function for unexpected messages that
@@ -109,8 +110,7 @@ result<message> print_and_drop_unexpected(local_actor*,
 /// @relates local_actor
 /// Default handler function for unexpected messages that
 /// drops unexpected messages without printing them.
-result<message> silently_drop_unexpected(local_actor*,
-                                         const type_erased_tuple*);
+result<message> drop_unexpected(local_actor*, const type_erased_tuple*);
 
 /// Base class for actors running on this node, either
 /// living in an own thread or cooperatively scheduled.

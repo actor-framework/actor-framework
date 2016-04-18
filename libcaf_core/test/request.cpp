@@ -49,7 +49,7 @@ struct sync_mirror : event_based_actor {
   }
 
   behavior make_behavior() override {
-    set_unexpected_handler(mirror_unexpected);
+    set_unexpected_handler(reflect_unexpected);
     return {
       [] {
         // nop
@@ -82,7 +82,7 @@ public:
       : event_based_actor(cfg),
         buddy_(buddy_arg) {
     // don't pollute unit test output with (provoked) warnings
-    set_unexpected_handler(silently_drop_unexpected);
+    set_unexpected_handler(drop_unexpected);
   }
 
   inline const actor& buddy() const {
@@ -145,7 +145,7 @@ class C : public event_based_actor {
 public:
   C(actor_config& cfg) : event_based_actor(cfg) {
     // don't pollute unit test output with (provoked) warnings
-    set_unexpected_handler(silently_drop_unexpected);
+    set_unexpected_handler(drop_unexpected);
   }
 
   behavior make_behavior() override {
@@ -261,7 +261,7 @@ CAF_TEST(test_void_res) {
 
 CAF_TEST(pending_quit) {
   auto mirror = system.spawn([](event_based_actor* self) -> behavior {
-    self->set_unexpected_handler(mirror_unexpected);
+    self->set_unexpected_handler(reflect_unexpected);
     return {
       [] {
         // nop
