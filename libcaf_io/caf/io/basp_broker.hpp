@@ -129,6 +129,8 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   const node_id& this_node() const {
     return instance.this_node();
   }
+
+  static const char* name;
 };
 
 /// A broker implementation for the Binary Actor System Protocol (BASP).
