@@ -28,6 +28,11 @@
 #include "caf/config.hpp"
 #include "caf/actor_control_block.hpp"
 
+#ifdef CAF_GCC
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#endif
+
 namespace caf {
 
 template <class T>
@@ -124,5 +129,9 @@ void intrusive_ptr_release(actor_storage<T>* x) {
 }
 
 } // namespace caf
+
+#ifdef CAF_GCC
+#pragma GCC diagnostic pop
+#endif
 
 #endif // CAF_ACTOR_STORAGE_HPP
