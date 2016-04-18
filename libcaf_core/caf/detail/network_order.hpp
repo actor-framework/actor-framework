@@ -17,6 +17,9 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#ifndef CAF_DETAIL_NETWORK_ORDER_HPP
+#define CAF_DETAIL_NETWORK_ORDER_HPP
+
 #include "caf/config.hpp"
 
 namespace caf {
@@ -67,3 +70,5 @@ inline T from_network_order(T value) {
 
 } // namespace detail
 } // namespace caf
+
+#endif // CAF_DETAIL_NETWORK_ORDER_HPP
