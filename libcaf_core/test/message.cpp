@@ -28,7 +28,7 @@
 
 #include "caf/config.hpp"
 
-#define CAF_SUITE message
+#define CAF_SUITE message_operations
 #include "caf/test/unit_test.hpp"
 
 #include "caf/all.hpp"
