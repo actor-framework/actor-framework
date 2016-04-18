@@ -45,7 +45,7 @@ void testee(event_based_actor* self) {
     },
     [=](timeout_atom) {
       // this actor should receive only 1 message
-      CAF_CHECK(*counter == 1);
+      CAF_CHECK_EQUAL(*counter, 1);
       self->quit();
     }
   );

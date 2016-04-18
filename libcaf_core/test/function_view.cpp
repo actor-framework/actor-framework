@@ -103,13 +103,13 @@ CAF_TEST(empty_function_fiew) {
     CAF_ERROR("line must be unreachable");
   }
   catch (std::bad_function_call&) {
-    CAF_CHECK(true);
+    // nop
   }
 }
 
 CAF_TEST(single_res_function_view) {
   auto f = make_function_view(system.spawn(adder));
-  CAF_CHECK(f(3, 4) == 7);
+  CAF_CHECK_EQUAL(f(3, 4), 7);
   CAF_CHECK(f != nullptr);
   CAF_CHECK(nullptr != f);
   function_view<calculator> g;
@@ -118,32 +118,32 @@ CAF_TEST(single_res_function_view) {
   CAF_CHECK(nullptr == f);
   CAF_CHECK(g != nullptr);
   CAF_CHECK(nullptr != g);
-  CAF_CHECK(g(10, 20) == 30);
+  CAF_CHECK_EQUAL(g(10, 20), 30);
   g.assign(system.spawn(multiplier));
-  CAF_CHECK(g(10, 20) == 200);
+  CAF_CHECK_EQUAL(g(10, 20), 200);
   g.assign(system.spawn(divider));
   try {
     g(1, 0);
     CAF_ERROR("expected exception");
   }
   catch (actor_exited&) {
-    CAF_CHECK(true);
+    // nop
   }
   CAF_CHECK(g == nullptr);
   g.assign(system.spawn(divider));
-  CAF_CHECK(g(4, 2) == 2);
+  CAF_CHECK_EQUAL(g(4, 2), 2);
 }
 
 CAF_TEST(tuple_res_function_view) {
   auto f = make_function_view(system.spawn(simple_doubler));
-  CAF_CHECK(f(10) == std::make_tuple(10, 10));
+  CAF_CHECK_EQUAL(f(10), std::make_tuple(10, 10));
 }
 
 CAF_TEST(cell_function_view) {
   auto f = make_function_view(system.spawn(simple_cell));
-  CAF_CHECK(f(get_atom::value) == 0);
+  CAF_CHECK_EQUAL(f(get_atom::value), 0);
   f(put_atom::value, 1024);
-  CAF_CHECK(f(get_atom::value) == 1024);
+  CAF_CHECK_EQUAL(f(get_atom::value), 1024);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

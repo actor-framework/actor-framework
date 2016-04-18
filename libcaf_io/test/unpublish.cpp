@@ -106,14 +106,14 @@ CAF_TEST(unpublishing) {
   auto testee2 = system.spawn<dummy>();
   system.middleman().unpublish(testee2, port);
   auto x0 = remote_actor("127.0.0.1", port);
-  CAF_CHECK(x0 != testee2);
-  CAF_CHECK(x0 == testee);
+  CAF_CHECK_NOT_EQUAL(x0, testee2);
+  CAF_CHECK_EQUAL(x0, testee);
   anon_send_exit(testee2, exit_reason::kill);
   CAF_MESSAGE("unpublish testee");
   system.middleman().unpublish(testee, port);
   CAF_MESSAGE("check whether testee is still available via cache");
   auto x1 = remote_actor("127.0.0.1", port);
-  CAF_CHECK(x1 == testee);
+  CAF_CHECK_EQUAL(x1, testee);
   CAF_MESSAGE("fake dead of testee and check if testee becomes unavailable");
   anon_send(system.middleman().actor_handle(), down_msg{testee.address(),
                                                         exit_reason::normal});

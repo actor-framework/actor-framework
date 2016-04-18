@@ -274,7 +274,7 @@ CAF_TEST(pending_quit) {
         CAF_ERROR("received result, should've been terminated already");
       },
       [](const error& err) {
-        CAF_CHECK(err == sec::request_receiver_down);
+        CAF_CHECK_EQUAL(err, sec::request_receiver_down);
       }
     );
     self->quit();
@@ -319,7 +319,7 @@ CAF_TEST(request_float_or_int) {
     },
     [&](const error& err) {
       CAF_MESSAGE("error received");
-      CAF_CHECK(err == sec::unexpected_response);
+      CAF_CHECK_EQUAL(err, sec::unexpected_response);
       error_handler_called = true;
     }
   );
@@ -391,7 +391,7 @@ CAF_TEST(client_server_worker_user_case) {
   self->request(serv, infinite, request_atom::value).receive(
     [&](response_atom) {
       CAF_MESSAGE("received 'response'");
-      CAF_CHECK(self->current_sender() == work);
+      CAF_CHECK_EQUAL(self->current_sender(), work.address());
     },
     [&](const error& err) {
       CAF_ERROR("error: " << self->system().render(err));
@@ -402,7 +402,7 @@ CAF_TEST(client_server_worker_user_case) {
   send_as(work, serv, idle_atom::value, work);
   handle.receive(
     [&](response_atom) {
-      CAF_CHECK(self->current_sender() == work);
+      CAF_CHECK_EQUAL(self->current_sender(), work.address());
     },
     [&](const error& err) {
       CAF_ERROR("error: " << self->system().render(err));

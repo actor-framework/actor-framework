@@ -648,7 +648,7 @@ CAF_TEST(custom_exception_handler) {
         CAF_CHECK_EQUAL(dm.reason, exit_reason::unhandled_exception);
       }
       else {
-        CAF_CHECK(false); // report error
+        throw std::runtime_error("received message from unexpected source");
       }
     }
   );
@@ -668,8 +668,8 @@ CAF_TEST(kill_the_immortal) {
   self->send_exit(wannabe_immortal, exit_reason::kill);
   self->receive(
     [&](const down_msg& dm) {
-      CAF_CHECK(dm.reason == exit_reason::kill);
-      CAF_CHECK(dm.source == wannabe_immortal);
+      CAF_CHECK_EQUAL(dm.reason, exit_reason::kill);
+      CAF_CHECK_EQUAL(dm.source, wannabe_immortal.address());
     }
   );
 }
@@ -702,7 +702,7 @@ CAF_TEST(move_only_argument) {
   scoped_actor self{system};
   self->request(testee, infinite, 1.f).receive(
     [](int i) {
-      CAF_CHECK(i == 42);
+      CAF_CHECK_EQUAL(i, 42);
     }
   );
 }

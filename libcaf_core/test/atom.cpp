@@ -49,11 +49,11 @@ CAF_TEST_FIXTURE_SCOPE(atom_tests, fixture)
 
 CAF_TEST(basics) {
   // check if there are leading bits that distinguish "zzz" and "000 "
-  CAF_CHECK(atom("zzz") != atom("000 "));
+  CAF_CHECK_NOT_EQUAL(atom("zzz"), atom("000 "));
   // check if there are leading bits that distinguish "abc" and " abc"
-  CAF_CHECK(atom("abc") != atom(" abc"));
+  CAF_CHECK_NOT_EQUAL(atom("abc"), atom(" abc"));
   // 'illegal' characters are mapped to whitespaces
-  CAF_CHECK(atom("   ") == atom("@!?"));
+  CAF_CHECK_EQUAL(atom("   "), atom("@!?"));
   // check to_string impl
   CAF_CHECK_EQUAL(to_string(s_foo), "FooBar");
 }
@@ -102,7 +102,7 @@ CAF_TEST(receive_atoms) {
   );
   atom_value x = atom("abc");
   atom_value y = abc_atom::value;
-  CAF_CHECK(x == y);
+  CAF_CHECK_EQUAL(x, y);
   auto msg = make_message(atom("abc"));
   self->send(self, msg);
   self->receive(

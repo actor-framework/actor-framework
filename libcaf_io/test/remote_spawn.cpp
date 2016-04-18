@@ -80,8 +80,9 @@ behavior server(stateful_actor<server_state>* self) {
           self->send(self->state.aut, "hello mirror");
           self->become(
             [=](const std::string& str) {
-              CAF_CHECK(self->current_sender() == self->state.aut);
-              CAF_CHECK(str == "hello mirror");
+              CAF_CHECK_EQUAL(self->current_sender(),
+                              self->state.aut.address());
+              CAF_CHECK_EQUAL(str, "hello mirror");
               self->send_exit(self->state.aut, exit_reason::kill);
               self->send_exit(self->state.client, exit_reason::kill);
               self->quit();

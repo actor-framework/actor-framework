@@ -93,7 +93,7 @@ CAF_TEST(round_robin_actor_pool) {
       }
     );
   }
-  CAF_CHECK(workers.size() == 6);
+  CAF_CHECK_EQUAL(workers.size(), 6u);
   CAF_CHECK(std::unique(workers.begin(), workers.end()) == workers.end());
   auto is_invalid = [](const actor_addr& addr) {
     return addr == invalid_actor_addr;
@@ -103,21 +103,21 @@ CAF_TEST(round_robin_actor_pool) {
     [&](std::vector<actor>& ws) {
       std::sort(workers.begin(), workers.end());
       std::sort(ws.begin(), ws.end());
-      CAF_CHECK(workers.size() == ws.size()
-                && std::equal(workers.begin(), workers.end(), ws.begin()));
+      CAF_REQUIRE_EQUAL(workers.size(), ws.size());
+      CAF_CHECK(std::equal(workers.begin(), workers.end(), ws.begin()));
     }
   );
   anon_send_exit(workers.back(), exit_reason::user_shutdown);
   self->receive(
     [&](const down_msg& dm) {
-      CAF_CHECK(dm.source == workers.back());
+      CAF_CHECK_EQUAL(dm.source, workers.back());
       workers.pop_back();
       // check whether actor pool removed failed worker
       self->request(w, infinite, sys_atom::value, get_atom::value).receive(
         [&](std::vector<actor>& ws) {
           std::sort(ws.begin(), ws.end());
-          CAF_CHECK(workers.size() == ws.size()
-                    && std::equal(workers.begin(), workers.end(), ws.begin()));
+          CAF_REQUIRE_EQUAL(workers.size(), ws.size());
+          CAF_CHECK(std::equal(workers.begin(), workers.end(), ws.begin()));
         }
       );
     },
@@ -132,7 +132,7 @@ CAF_TEST(round_robin_actor_pool) {
       [&](const down_msg& dm) {
         auto last = workers.end();
         auto src = dm.source;
-        CAF_CHECK(src != invalid_actor_addr);
+        CAF_CHECK_NOT_EQUAL(src, invalid_actor_addr);
         auto pos = std::find(workers.begin(), last, src);
         if (pos != last)
           workers.erase(pos);

@@ -55,7 +55,7 @@ struct fixture {
     self->monitor(aut);
     self->receive(
       [](const down_msg& dm) {
-        CAF_CHECK(dm.reason == exit_reason::normal);
+        CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
       }
     );
   }

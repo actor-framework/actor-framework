@@ -306,8 +306,8 @@ public:
     // routing table upon receiving client handshakes
     auto path = tbl().lookup(remote_node(i));
     CAF_REQUIRE(path);
-    CAF_CHECK(path->hdl == remote_hdl(i));
-    CAF_CHECK(path->next_hop == remote_node(i));
+    CAF_CHECK_EQUAL(path->hdl, remote_hdl(i));
+    CAF_CHECK_EQUAL(path->next_hop, remote_node(i));
   }
 
   std::pair<basp::header, buffer> read_from_out_buf(connection_handle hdl) {
@@ -476,7 +476,7 @@ CAF_TEST(non_empty_server_handshake) {
                         self()->id(), invalid_actor_id};
   to_buf(expected_buf, expected, nullptr,
          self()->id(), set<string>{"caf::replies_to<@u16>::with<@u16>"});
-  CAF_CHECK(hexstr(buf) == hexstr(expected_buf));
+  CAF_CHECK_EQUAL(hexstr(buf), hexstr(expected_buf));
 }
 
 CAF_TEST(remote_address_and_port) {
@@ -491,10 +491,10 @@ CAF_TEST(remote_address_and_port) {
   CAF_MESSAGE("receive result of MM");
   self()->receive(
     [&](const node_id& nid, const std::string& addr, uint16_t port) {
-      CAF_CHECK(nid == remote_node(1));
+      CAF_CHECK_EQUAL(nid, remote_node(1));
       // all test nodes have address "test" and connection handle ID as port
-      CAF_CHECK(addr == "test");
-      CAF_CHECK(port == remote_hdl(1).id());
+      CAF_CHECK_EQUAL(addr, "test");
+      CAF_CHECK_EQUAL(port, remote_hdl(1).id());
     }
   );
 }
@@ -517,9 +517,9 @@ CAF_TEST(client_handshake_and_dispatch) {
   // receive the message
   self()->receive(
     [](int a, int b, int c) {
-      CAF_CHECK(a == 1);
-      CAF_CHECK(b == 2);
-      CAF_CHECK(c == 3);
+      CAF_CHECK_EQUAL(a, 1);
+      CAF_CHECK_EQUAL(b, 2);
+      CAF_CHECK_EQUAL(c, 3);
       return a + b + c;
     }
   );
@@ -528,7 +528,7 @@ CAF_TEST(client_handshake_and_dispatch) {
   dispatch_out_buf(remote_hdl(0)); // deserialize and send message from out buf
   pseudo_remote(0)->receive(
     [](int i) {
-      CAF_CHECK(i == 6);
+      CAF_CHECK_EQUAL(i, 6);
     }
   );
 }
@@ -603,10 +603,10 @@ CAF_TEST(remote_actor_and_send) {
       CAF_REQUIRE(res);
       auto aptr = actor_cast<abstract_actor*>(res);
       CAF_REQUIRE(dynamic_cast<forwarding_actor_proxy*>(aptr) != nullptr);
-      CAF_CHECK(proxies().count_proxies(remote_node(0)) == 1);
-      CAF_CHECK(nid == remote_node(0));
-      CAF_CHECK(res->node() == remote_node(0));
-      CAF_CHECK(res->id() == pseudo_remote(0)->id());
+      CAF_CHECK_EQUAL(proxies().count_proxies(remote_node(0)), 1u);
+      CAF_CHECK_EQUAL(nid, remote_node(0));
+      CAF_CHECK_EQUAL(res->node(), remote_node(0));
+      CAF_CHECK_EQUAL(res->id(), pseudo_remote(0)->id());
       CAF_CHECK(ifs.empty());
       auto proxy = proxies().get(remote_node(0), pseudo_remote(0)->id());
       CAF_REQUIRE(proxy != nullptr);
@@ -635,9 +635,9 @@ CAF_TEST(remote_actor_and_send) {
        make_message("hi there!"));
   self()->receive(
     [&](const string& str) {
-      CAF_CHECK(to_string(self()->current_sender()) == to_string(result));
-      CAF_CHECK(self()->current_sender() == result);
-      CAF_CHECK(str == "hi there!");
+      CAF_CHECK_EQUAL(to_string(self()->current_sender()), to_string(result));
+      CAF_CHECK_EQUAL(self()->current_sender(), result.address());
+      CAF_CHECK_EQUAL(str, "hi there!");
     }
   );
 }
@@ -658,8 +658,8 @@ CAF_TEST(actor_serialize_and_deserialize) {
           basp::message_type::announce_proxy_instance, uint32_t{0}, uint64_t{0},
           this_node(), prx->node(),
           invalid_actor_id, prx->id());
-  CAF_CHECK(prx->node() == remote_node(0));
-  CAF_CHECK(prx->id() == pseudo_remote(0)->id());
+  CAF_CHECK_EQUAL(prx->node(), remote_node(0));
+  CAF_CHECK_EQUAL(prx->id(), pseudo_remote(0)->id());
   auto testee = system.spawn(testee_impl);
   registry()->put(testee->id(), actor_cast<strong_actor_ptr>(testee));
   CAF_MESSAGE("send message via BASP (from proxy)");
@@ -718,7 +718,7 @@ CAF_TEST(indirect_connections) {
   CAF_MESSAGE("receive message from jupiter");
   self()->receive(
     [](const std::string& str) -> std::string {
-      CAF_CHECK(str == "hello from jupiter!");
+      CAF_CHECK_EQUAL(str, "hello from jupiter!");
       return "hello from earth!";
     }
   );
@@ -745,7 +745,8 @@ CAF_TEST(automatic_connection) {
   // (this node receives a message from jupiter via mars and responds via mars,
   //  but then also establishes a connection to jupiter directly)
   mpx()->provide_scribe("jupiter", 8080, remote_hdl(0));
-  CAF_CHECK(mpx()->pending_scribes().count(make_pair("jupiter", 8080)) == 1);
+  CAF_CHECK_EQUAL(mpx()->pending_scribes().count(make_pair("jupiter", 8080)),
+                  1u);
   CAF_MESSAGE("self: " << to_string(self()->address()));
   auto ax = accept_handle::from_int(4242);
   mpx()->provide_acceptor(4242, ax);
@@ -820,7 +821,7 @@ CAF_TEST(automatic_connection) {
   CAF_MESSAGE("receive message from jupiter");
   self()->receive(
     [](const std::string& str) -> std::string {
-      CAF_CHECK(str == "hello from jupiter!");
+      CAF_CHECK_EQUAL(str, "hello from jupiter!");
       return "hello from earth!";
     }
   );
@@ -833,7 +834,7 @@ CAF_TEST(automatic_connection) {
           self()->id(), pseudo_remote(0)->id(),
           std::vector<actor_id>{},
           make_message("hello from earth!"));
-  CAF_CHECK(mpx()->output_buffer(remote_hdl(1)).size() == 0);
+  CAF_CHECK_EQUAL(mpx()->output_buffer(remote_hdl(1)).size(), 0u);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

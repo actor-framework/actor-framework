@@ -424,7 +424,7 @@ CAF_TEST(string_delegator_chain) {
                                     system.spawn(string_reverter),
                                     true);
   set<string> iface{"caf::replies_to<@str>::with<@str>"};
-  CAF_CHECK(aut->message_types() == iface);
+  CAF_CHECK_EQUAL(aut->message_types(), iface);
   self->request(aut, infinite, "Hello World!").receive(
     [](const string& answer) {
       CAF_CHECK_EQUAL(answer, "!dlroW olleH");
@@ -444,7 +444,7 @@ CAF_TEST(maybe_string_delegator_chain) {
       throw std::logic_error("unexpected result!");
     },
     [](const error& err) {
-      CAF_CHECK(err.category() == atom("mock"));
+      CAF_CHECK_EQUAL(err.category(), atom("mock"));
       CAF_CHECK_EQUAL(err.code(),
                       static_cast<uint8_t>(mock_errc::cannot_revert_empty));
     }

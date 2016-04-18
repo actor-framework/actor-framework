@@ -89,9 +89,9 @@ CAF_TEST_FIXTURE_SCOPE(sequencer_tests, fixture)
 
 CAF_TEST(identity) {
   init_untyped();
-  CAF_CHECK(first != second);
-  CAF_CHECK(first != first_and_second);
-  CAF_CHECK(second != first_and_second);
+  CAF_CHECK_NOT_EQUAL(first, second);
+  CAF_CHECK_NOT_EQUAL(first, first_and_second);
+  CAF_CHECK_NOT_EQUAL(second, first_and_second);
 }
 
 CAF_TEST(kill_first) {
@@ -110,9 +110,9 @@ CAF_TEST(untyped_splicing) {
   init_untyped();
   self->request(first_and_second, infinite, 42.0).receive(
     [](double x, double y, double z) {
-      CAF_CHECK(x == (42.0 * 2.0));
-      CAF_CHECK(y == (42.0 * 4.0));
-      CAF_CHECK(z == (23.0 * 42.0));
+      CAF_CHECK_EQUAL(x, (42.0 * 2.0));
+      CAF_CHECK_EQUAL(y, (42.0 * 4.0));
+      CAF_CHECK_EQUAL(z, (23.0 * 42.0));
     }
   );
 }
@@ -128,9 +128,9 @@ CAF_TEST(typed_splicing) {
                 "splice() did not compute the correct result");
   self->request(x_and_y, infinite, 42.0).receive(
     [](double x, double y, double z) {
-      CAF_CHECK(x == (42.0 * 2.0));
-      CAF_CHECK(y == (42.0 * 4.0));
-      CAF_CHECK(z == (23.0 * 42.0));
+      CAF_CHECK_EQUAL(x, (42.0 * 2.0));
+      CAF_CHECK_EQUAL(y, (42.0 * 4.0));
+      CAF_CHECK_EQUAL(z, (23.0 * 42.0));
     }
   );
   anon_send_exit(x, exit_reason::kill);

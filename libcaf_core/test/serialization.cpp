@@ -119,9 +119,6 @@ struct test_empty_non_pod {
   virtual ~test_empty_non_pod() {
     // nop
   }
-  bool operator==(const test_empty_non_pod&) const {
-    return false;
-  }
 };
 
 template <class Processor>
@@ -271,7 +268,7 @@ CAF_TEST(enum_classes) {
   auto buf = serialize(te);
   test_enum x;
   deserialize(buf, x);
-  CAF_CHECK(te == x);
+  CAF_CHECK_EQUAL(te, x);
 }
 
 CAF_TEST(strings) {
@@ -285,16 +282,16 @@ CAF_TEST(custom_struct) {
   auto buf = serialize(rs);
   raw_struct x;
   deserialize(buf, x);
-  CAF_CHECK(rs == x);
+  CAF_CHECK_EQUAL(rs, x);
 }
 
 CAF_TEST(atoms) {
   auto foo = atom("foo");
-  CAF_CHECK(foo == roundtrip(foo));
-  CAF_CHECK(foo == msg_roundtrip(foo));
+  CAF_CHECK_EQUAL(foo, roundtrip(foo));
+  CAF_CHECK_EQUAL(foo, msg_roundtrip(foo));
   using bar_atom = atom_constant<atom("bar")>;
-  CAF_CHECK(bar_atom::value == roundtrip(atom("bar")));
-  CAF_CHECK(bar_atom::value == msg_roundtrip(atom("bar")));
+  CAF_CHECK_EQUAL(bar_atom::value, roundtrip(atom("bar")));
+  CAF_CHECK_EQUAL(bar_atom::value, msg_roundtrip(atom("bar")));
 }
 
 CAF_TEST(raw_arrays) {
@@ -302,7 +299,7 @@ CAF_TEST(raw_arrays) {
   int x[3];
   deserialize(buf, x);
   for (auto i = 0; i < 3; ++i)
-    CAF_CHECK(ra[i] == x[i]);
+    CAF_CHECK_EQUAL(ra[i], x[i]);
 }
 
 CAF_TEST(arrays) {
@@ -310,10 +307,10 @@ CAF_TEST(arrays) {
   test_array x;
   deserialize(buf, x);
   for (auto i = 0; i < 4; ++i)
-    CAF_CHECK(ta.value[i] == x.value[i]);
+    CAF_CHECK_EQUAL(ta.value[i], x.value[i]);
   for (auto i = 0; i < 2; ++i)
     for (auto j = 0; j < 4; ++j)
-      CAF_CHECK(ta.value2[i][j] == x.value2[i][j]);
+      CAF_CHECK_EQUAL(ta.value2[i][j], x.value2[i][j]);
 }
 
 CAF_TEST(empty_non_pods) {
@@ -341,14 +338,14 @@ CAF_TEST(messages) {
   message x;
   auto buf1 = serialize(msg);
   deserialize(buf1, x);
-  CAF_CHECK(to_string(msg) == to_string(x));
+  CAF_CHECK_EQUAL(to_string(msg), to_string(x));
   CAF_CHECK(is_message(x).equal(i32, te, str, rs));
   // serialize fully dynamic message again (do another roundtrip)
   message y;
   auto buf2 = serialize(x);
-  CAF_CHECK(buf1 == buf2);
+  CAF_CHECK_EQUAL(buf1, buf2);
   deserialize(buf2, y);
-  CAF_CHECK(to_string(msg) == to_string(y));
+  CAF_CHECK_EQUAL(to_string(msg), to_string(y));
   CAF_CHECK(is_message(y).equal(i32, te, str, rs));
 }
 
@@ -361,12 +358,12 @@ CAF_TEST(actor_addr_via_message) {
   // deserialize into a message which uses message builder
   message x;
   deserialize(serialize(addr_msg), x);
-  CAF_CHECK(to_string(addr_msg) == to_string(x));
+  CAF_CHECK_EQUAL(to_string(addr_msg), to_string(x));
   CAF_CHECK(is_message(x).equal(addr));
   // serialize fully dynamic message again (do another roundtrip)
   message y;
   deserialize(serialize(x), y);
-  CAF_CHECK(to_string(addr_msg) == to_string(y));
+  CAF_CHECK_EQUAL(to_string(addr_msg), to_string(y));
   CAF_CHECK(is_message(y).equal(addr));
 }
 */
@@ -389,7 +386,7 @@ CAF_TEST(type_erased_value) {
   type_erased_value_ptr ptr{new type_erased_value_impl<std::string>};
   binary_deserializer bd{&context, buf.data(), buf.size()};
   ptr->load(bd);
-  CAF_CHECK(str == *reinterpret_cast<const std::string*>(ptr->get()));
+  CAF_CHECK_EQUAL(str, *reinterpret_cast<const std::string*>(ptr->get()));
 }
 
 CAF_TEST(type_erased_view) {
@@ -397,21 +394,21 @@ CAF_TEST(type_erased_view) {
   auto buf = serialize(str_view);
   std::string res;
   deserialize(buf, res);
-  CAF_CHECK(str == res);
+  CAF_CHECK_EQUAL(str, res);
 }
 
 CAF_TEST(type_erased_tuple) {
   auto tview = make_type_erased_tuple_view(str, i32);
-  CAF_CHECK(to_string(tview) == deep_to_string(std::make_tuple(str, i32)));
+  CAF_CHECK_EQUAL(to_string(tview), deep_to_string(std::make_tuple(str, i32)));
   auto buf = serialize(tview);
   CAF_REQUIRE(buf.size() > 0);
   std::string tmp1;
   int32_t tmp2;
   deserialize(buf, tmp1, tmp2);
-  CAF_CHECK(tmp1 == str);
-  CAF_CHECK(tmp2 == i32);
+  CAF_CHECK_EQUAL(tmp1, str);
+  CAF_CHECK_EQUAL(tmp2, i32);
   deserialize(buf, tview);
-  CAF_CHECK(to_string(tview) == deep_to_string(std::make_tuple(str, i32)));
+  CAF_CHECK_EQUAL(to_string(tview), deep_to_string(std::make_tuple(str, i32)));
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

@@ -87,7 +87,7 @@ CAF_TEST(test_custom_exception_handler) {
           CAF_CHECK_EQUAL(dm.reason, exit_reason::remote_link_unreachable);
         }
         else {
-          CAF_CHECK(false); // report error
+          throw std::runtime_error("received message from unexpected source");
         }
       }
     );

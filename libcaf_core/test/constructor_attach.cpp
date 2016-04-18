@@ -61,7 +61,7 @@ CAF_TEST(constructor_attach) {
       return {
         [=](const down_msg& msg) {
           CAF_CHECK_EQUAL(msg.reason, exit_reason::user_shutdown);
-          CAF_CHECK(msg.source == testee_);
+          CAF_CHECK_EQUAL(msg.source, testee_.address());
           if (++downs_ == 2) {
             quit(msg.reason);
           }

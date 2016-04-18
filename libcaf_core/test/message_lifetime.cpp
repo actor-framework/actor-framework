@@ -81,13 +81,13 @@ behavior tester::make_behavior() {
       CAF_CHECK_EQUAL(a, 1);
       CAF_CHECK_EQUAL(b, 2);
       CAF_CHECK_EQUAL(c, 3);
-      CAF_CHECK(current_message().cvals()->get_reference_count() == 2
-                && current_message().cvals().get() == msg_.cvals().get());
+      CAF_CHECK_EQUAL(current_message().cvals()->get_reference_count(), 2u);
+      CAF_CHECK_EQUAL(current_message().cvals().get(), msg_.cvals().get());
     },
     [=](const down_msg& dm) {
-      CAF_CHECK(dm.source == aut_
-                && dm.reason == exit_reason::normal
-                && current_message().cvals()->get_reference_count() == 1);
+      CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
+      CAF_CHECK_EQUAL(current_message().cvals()->get_reference_count(), 1u);
+      CAF_CHECK_EQUAL(dm.source, aut_.address());
       quit();
     }
   };
@@ -119,7 +119,7 @@ CAF_TEST(message_lifetime_in_scoped_actor) {
       CAF_CHECK_EQUAL(c, 3);
       CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 2u);
       CAF_CHECK_EQUAL(self->current_message().cvals()->get_reference_count(), 2u);
-      CAF_CHECK(self->current_message().cvals().get() == msg.cvals().get());
+      CAF_CHECK_EQUAL(self->current_message().cvals().get(), msg.cvals().get());
     }
   );
   CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 1u);
@@ -129,7 +129,8 @@ CAF_TEST(message_lifetime_in_scoped_actor) {
     [&](int& value) {
       CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 1u);
       CAF_CHECK_EQUAL(self->current_message().cvals()->get_reference_count(), 1u);
-      CAF_CHECK(self->current_message().cvals().get() != msg.cvals().get());
+      CAF_CHECK_NOT_EQUAL(self->current_message().cvals().get(),
+                          msg.cvals().get());
       value = 10;
     }
   );

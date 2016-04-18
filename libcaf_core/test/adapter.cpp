@@ -43,7 +43,7 @@ struct fixture {
   void wait_until_exited() {
     self->receive(
       [](const down_msg&) {
-        CAF_CHECK(true);
+        // nop
       }
     );
   }
@@ -66,13 +66,13 @@ CAF_TEST_FIXTURE_SCOPE(adapter_tests, fixture)
 
 CAF_TEST(identity) {
   auto dbl = system.spawn(testee);
-  CAF_CHECK(system.registry().running() == 1);
+  CAF_CHECK_EQUAL(system.registry().running(), 1u);
   auto bound = dbl.bind(1);
-  CAF_CHECK(system.registry().running() == 1);
-  CAF_CHECK(&bound->home_system() == &dbl->home_system());
-  CAF_CHECK(bound->node() == dbl->node());
-  CAF_CHECK(bound != dbl);
-  CAF_CHECK(bound->id() != dbl->id());
+  CAF_CHECK_EQUAL(system.registry().running(), 1u);
+  CAF_CHECK_EQUAL(&bound->home_system(), &dbl->home_system());
+  CAF_CHECK_EQUAL(bound->node(), dbl->node());
+  CAF_CHECK_NOT_EQUAL(bound, dbl);
+  CAF_CHECK_NOT_EQUAL(bound->id(), dbl->id());
   //anon_send_exit(bound, exit_reason::kill);
   anon_send_exit(dbl, exit_reason::kill);
   // killing dbl triggers a down message to bound, which becomes unreachable
@@ -115,10 +115,7 @@ CAF_TEST(lifetime_3) {
   wait_until_exited();
   self->request(dbl, infinite, 1).receive(
     [](int v) {
-      CAF_CHECK(v == 2);
-    },
-    [](error) {
-      CAF_CHECK(false);
+      CAF_CHECK_EQUAL(v, 2);
     }
   );
   anon_send_exit(dbl, exit_reason::kill);
@@ -131,10 +128,11 @@ CAF_TEST(request_response_promise) {
   CAF_CHECK(exited(bound));
   self->request(bound, infinite, message{}).receive(
     [](int) {
-      CAF_CHECK(false);
+      throw std::runtime_error("received unexpected integer");
     },
     [](error err) {
-      CAF_CHECK(err.code() == static_cast<uint8_t>(sec::request_receiver_down));
+      CAF_CHECK_EQUAL(err.code(),
+                      static_cast<uint8_t>(sec::request_receiver_down));
     }
   );
   anon_send_exit(dbl, exit_reason::kill);
@@ -153,20 +151,20 @@ CAF_TEST(partial_currying) {
     };
   };
   auto aut = system.spawn(impl);
-  CAF_CHECK(system.registry().running() == 1);
+  CAF_CHECK_EQUAL(system.registry().running(), 1u);
   auto bound = aut.bind(ok_atom::value, _1);
-  CAF_CHECK(aut.id() != bound.id());
-  CAF_CHECK(aut.node() == bound.node());
-  CAF_CHECK(aut != bound);
-  CAF_CHECK(system.registry().running() == 1);
+  CAF_CHECK_NOT_EQUAL(aut.id(), bound.id());
+  CAF_CHECK_NOT_EQUAL(aut, bound);
+  CAF_CHECK_EQUAL(aut.node(), bound.node());
+  CAF_CHECK_EQUAL(system.registry().running(), 1u);
   self->request(bound, infinite, 2.0).receive(
     [](double y) {
-      CAF_CHECK(y == 2.0);
+      CAF_CHECK_EQUAL(y, 2.0);
     }
   );
   self->request(bound, infinite, 10).receive(
     [](int y) {
-      CAF_CHECK(y == 10);
+      CAF_CHECK_EQUAL(y, 10);
     }
   );
   self->send_exit(aut, exit_reason::kill);
@@ -177,10 +175,7 @@ CAF_TEST(full_currying) {
   auto bound = dbl_actor.bind(1);
   self->request(bound, infinite, message{}).receive(
     [](int v) {
-      CAF_CHECK(v == 2);
-    },
-    [](error) {
-      CAF_CHECK(false);
+      CAF_CHECK_EQUAL(v, 2);
     }
   );
   anon_send_exit(bound, exit_reason::kill);
@@ -202,22 +197,22 @@ CAF_TEST(type_safe_currying) {
     };
   };
   auto aut = system.spawn(impl);
-  CAF_CHECK(system.registry().running() == 1);
+  CAF_CHECK_EQUAL(system.registry().running(), 1u);
   using curried_signature = typed_actor<replies_to<int>::with<int>,
                                         replies_to<double>::with<double>>;
   auto bound = aut.bind(ok_atom::value, _1);
-  CAF_CHECK(aut != bound);
-  CAF_CHECK(system.registry().running() == 1);
+  CAF_CHECK_NOT_EQUAL(aut.address(), bound.address());
+  CAF_CHECK_EQUAL(system.registry().running(), 1u);
   static_assert(std::is_same<decltype(bound), curried_signature>::value,
                 "bind returned wrong actor handle");
   self->request(bound, infinite, 2.0).receive(
     [](double y) {
-      CAF_CHECK(y == 2.0);
+      CAF_CHECK_EQUAL(y, 2.0);
     }
   );
   self->request(bound, infinite, 10).receive(
     [](int y) {
-      CAF_CHECK(y == 10);
+      CAF_CHECK_EQUAL(y, 10);
     }
   );
   self->send_exit(aut, exit_reason::kill);
@@ -232,14 +227,14 @@ CAF_TEST(reordering) {
     };
   };
   auto aut = system.spawn(impl);
-  CAF_CHECK(system.registry().running() == 1);
+  CAF_CHECK_EQUAL(system.registry().running(), 1u);
   using namespace std::placeholders;
   auto bound = aut.bind(_2, _1);
-  CAF_CHECK(aut != bound);
-  CAF_CHECK(system.registry().running() == 1);
+  CAF_CHECK_NOT_EQUAL(aut, bound);
+  CAF_CHECK_EQUAL(system.registry().running(), 1u);
   self->request(bound, infinite, 2.0, 10).receive(
     [](double y) {
-      CAF_CHECK(y == 20.0);
+      CAF_CHECK_EQUAL(y, 20.0);
     }
   );
   self->send_exit(aut, exit_reason::kill);
@@ -255,17 +250,17 @@ CAF_TEST(type_safe_reordering) {
     };
   };
   auto aut = system.spawn(impl);
-  CAF_CHECK(system.registry().running() == 1);
+  CAF_CHECK_EQUAL(system.registry().running(), 1u);
   using namespace std::placeholders;
   using swapped_signature = typed_actor<replies_to<double, int>::with<double>>;
   auto bound = aut.bind(_2, _1);
-  CAF_CHECK(aut != bound);
-  CAF_CHECK(system.registry().running() == 1);
+  CAF_CHECK_NOT_EQUAL(aut.address(), bound.address());
+  CAF_CHECK_EQUAL(system.registry().running(), 1u);
   static_assert(std::is_same<decltype(bound), swapped_signature>::value,
                 "bind returned wrong actor handle");
   self->request(bound, infinite, 2.0, 10).receive(
     [](double y) {
-      CAF_CHECK(y == 20.0);
+      CAF_CHECK_EQUAL(y, 20.0);
     }
   );
   self->send_exit(aut, exit_reason::kill);

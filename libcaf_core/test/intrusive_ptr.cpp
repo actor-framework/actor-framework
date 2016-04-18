@@ -151,7 +151,7 @@ CAF_TEST(full_test) {
   CAF_CHECK_EQUAL(p1->unique(), false);
   CAF_CHECK_EQUAL(class0_instances, 0);
   CAF_CHECK_EQUAL(class1_instances, 1);
-  CAF_CHECK(p1 == p2);
+  CAF_CHECK_EQUAL(p1, static_cast<class0*>(p2.get()));
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

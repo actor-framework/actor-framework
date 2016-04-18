@@ -63,14 +63,14 @@ CAF_TEST(drop) {
     message{}
   };
   for (size_t i = 0; i < messages.size(); ++i) {
-    CAF_CHECK(to_string(m1.drop(i)) == to_string(messages[i]));
+    CAF_CHECK_EQUAL(to_string(m1.drop(i)), to_string(messages[i]));
   }
 }
 
 CAF_TEST(slice) {
   auto m1 = make_message(1, 2, 3, 4, 5);
   auto m2 = m1.slice(2, 2);
-  CAF_CHECK(to_string(m2) == to_string(make_message(3, 4)));
+  CAF_CHECK_EQUAL(to_string(m2), to_string(make_message(3, 4)));
 }
 
 CAF_TEST(extract1) {
@@ -86,12 +86,12 @@ CAF_TEST(extract1) {
     [](float, float) { }
   };
   auto m1s = to_string(m1);
-  CAF_CHECK(to_string(m2.extract(f)) == m1s);
-  CAF_CHECK(to_string(m3.extract(f)) == m1s);
-  CAF_CHECK(to_string(m4.extract(f)) == m1s);
-  CAF_CHECK(to_string(m5.extract(f)) == m1s);
-  CAF_CHECK(to_string(m6.extract(f)) == m1s);
-  CAF_CHECK(to_string(m7.extract(f)) == m1s);
+  CAF_CHECK_EQUAL(to_string(m2.extract(f)), m1s);
+  CAF_CHECK_EQUAL(to_string(m3.extract(f)), m1s);
+  CAF_CHECK_EQUAL(to_string(m4.extract(f)), m1s);
+  CAF_CHECK_EQUAL(to_string(m5.extract(f)), m1s);
+  CAF_CHECK_EQUAL(to_string(m6.extract(f)), m1s);
+  CAF_CHECK_EQUAL(to_string(m7.extract(f)), m1s);
 }
 
 CAF_TEST(extract2) {
@@ -103,7 +103,7 @@ CAF_TEST(extract2) {
     [](double, double) { }
   });
   // check for false positives through collapsing
-  CAF_CHECK(to_string(m3) == to_string(make_message(1.0, 4.0)));
+  CAF_CHECK_EQUAL(to_string(m3), to_string(make_message(1.0, 4.0)));
 }
 
 CAF_TEST(extract_opts) {
@@ -135,8 +135,8 @@ CAF_TEST(extract_opts) {
     {"foo,f", "foo desc", foo}
   });
   CAF_CHECK(r.opts.count("foo") > 0);
-  CAF_CHECK(foo == 42);
-  CAF_CHECK(bar == 0);
+  CAF_CHECK_EQUAL(foo, 42);
+  CAF_CHECK_EQUAL(bar, 0);
   CAF_CHECK(! r.error.empty()); // -b is an unknown option
   CAF_CHECK(! r.remainder.empty()
             && to_string(r.remainder) == to_string(make_message("-b", "1337")));
@@ -144,7 +144,7 @@ CAF_TEST(extract_opts) {
     {"bar,b", "bar desc", bar}
   });
   CAF_CHECK(r.opts.count("bar") > 0);
-  CAF_CHECK(bar == 1337);
+  CAF_CHECK_EQUAL(bar, 1337);
   CAF_CHECK(r.error.empty());
 }
 
@@ -157,11 +157,11 @@ CAF_TEST(concat) {
   auto m1 = make_message(get_atom::value);
   auto m2 = make_message(uint32_t{1});
   auto m3 = message::concat(m1, m2);
-  CAF_CHECK(to_string(m3) == to_string(m1 + m2));
-  CAF_CHECK(to_string(m3) == "('get', 1)");
+  CAF_CHECK_EQUAL(to_string(m3), to_string(m1 + m2));
+  CAF_CHECK_EQUAL(to_string(m3), "('get', 1)");
   auto m4 = make_message(get_atom::value, uint32_t{1},
                          get_atom::value, uint32_t{1});
-  CAF_CHECK(to_string(message::concat(m3, message{}, m1, m2)) == to_string(m4));
+  CAF_CHECK_EQUAL(to_string(message::concat(m3, message{}, m1, m2)), to_string(m4));
 }
 
 namespace {
@@ -237,35 +237,35 @@ CAF_TEST(integers_to_string) {
 CAF_TEST(strings_to_string) {
   using svec = vector<string>;
   auto msg1 = make_message("one", "two", "three");
-  CAF_CHECK(to_string(msg1) == R"__(("one", "two", "three"))__");
+  CAF_CHECK_EQUAL(to_string(msg1), R"__(("one", "two", "three"))__");
   auto msg2 = make_message(svec{"one", "two", "three"});
-  CAF_CHECK(to_string(msg2) == R"__((["one", "two", "three"]))__");
+  CAF_CHECK_EQUAL(to_string(msg2), R"__((["one", "two", "three"]))__");
   auto msg3 = make_message(svec{"one", "two"}, "three", "four",
                            svec{"five", "six", "seven"});
   CAF_CHECK(to_string(msg3) ==
           R"__((["one", "two"], "three", "four", ["five", "six", "seven"]))__");
   auto msg4 = make_message("this is a \"test\"");
-  CAF_CHECK(to_string(msg4) == R"__(("this is a \"test\""))__");
+  CAF_CHECK_EQUAL(to_string(msg4), R"__(("this is a \"test\""))__");
 }
 
 CAF_TEST(maps_to_string) {
   map<int, int> m1{{1, 10}, {2, 20}, {3, 30}};
   auto msg1 = make_message(move(m1));
-  CAF_CHECK(to_string(msg1) == "([(1, 10), (2, 20), (3, 30)])");
+  CAF_CHECK_EQUAL(to_string(msg1), "([(1, 10), (2, 20), (3, 30)])");
 }
 
 CAF_TEST(tuples_to_string) {
   auto msg1 = make_message(make_tuple(1, 2, 3), 4, 5);
-  CAF_CHECK(to_string(msg1) == "((1, 2, 3), 4, 5)");
+  CAF_CHECK_EQUAL(to_string(msg1), "((1, 2, 3), 4, 5)");
   auto msg2 = make_message(make_tuple(string{"one"}, 2, uint32_t{3}), 4, true);
-  CAF_CHECK(to_string(msg2) == "((\"one\", 2, 3), 4, true)");
+  CAF_CHECK_EQUAL(to_string(msg2), "((\"one\", 2, 3), 4, true)");
 }
 
 CAF_TEST(arrays_to_string) {
-  CAF_CHECK(msg_as_string(s1{}) == "((10, 20, 30))");
+  CAF_CHECK_EQUAL(msg_as_string(s1{}), "((10, 20, 30))");
   auto msg2 = make_message(s2{});
   s2 tmp;
   tmp.value[0][1] = 100;
-  CAF_CHECK(to_string(msg2) == "(((1, 10), (2, 20), (3, 30), (4, 40)))");
-  CAF_CHECK(msg_as_string(s3{}) == "((1, 2, 3, 4))");
+  CAF_CHECK_EQUAL(to_string(msg2), "(((1, 10), (2, 20), (3, 30), (4, 40)))");
+  CAF_CHECK_EQUAL(msg_as_string(s3{}), "((1, 2, 3, 4))");
 }

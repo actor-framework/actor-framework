@@ -100,7 +100,7 @@ void run_client(int argc, char** argv, uint16_t port) {
   self->monitor(serv);
   self->receive([&](const down_msg& dm) {
     CAF_CHECK_EQUAL(dm.reason, exit_reason::user_shutdown);
-    CAF_CHECK(dm.source == serv);
+    CAF_CHECK_EQUAL(dm.source, serv.address());
   });
 }
 
