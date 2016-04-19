@@ -122,6 +122,9 @@ CAF_TEST(round_robin_actor_pool) {
             if (success) {
               std::sort(ws.begin(), ws.end());
               CAF_CHECK_EQUAL(workers, ws);
+            } else {
+              // wait a bit until polling again
+              std::this_thread::sleep_for(std::chrono::milliseconds(5));
             }
           }
         );
