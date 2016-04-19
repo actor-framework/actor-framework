@@ -82,21 +82,21 @@ CAF_TEST(round_robin_actor_pool) {
   auto w = actor_pool::make(&context, 5, spawn_worker, actor_pool::round_robin());
   self->monitor(w);
   self->send(w, sys_atom::value, put_atom::value, spawn_worker());
-  std::vector<actor_addr> workers;
+  std::vector<actor> workers;
   for (int i = 0; i < 6; ++i) {
     self->request(w, infinite, i, i).receive(
       [&](int res) {
         CAF_CHECK_EQUAL(res, i + i);
         auto sender = self->current_sender();
         self->monitor(sender);
-        workers.push_back(sender);
+        workers.push_back(actor_cast<actor>(sender));
       }
     );
   }
   CAF_CHECK_EQUAL(workers.size(), 6u);
   CAF_CHECK(std::unique(workers.begin(), workers.end()) == workers.end());
-  auto is_invalid = [](const actor_addr& addr) {
-    return addr == invalid_actor_addr;
+  auto is_invalid = [](const actor& x) {
+    return x == invalid_actor;
   };
   CAF_CHECK(std::none_of(workers.begin(), workers.end(), is_invalid));
   self->request(w, infinite, sys_atom::value, get_atom::value).receive(
@@ -110,16 +110,23 @@ CAF_TEST(round_robin_actor_pool) {
   anon_send_exit(workers.back(), exit_reason::user_shutdown);
   self->receive(
     [&](const down_msg& dm) {
-      CAF_CHECK_EQUAL(dm.source, workers.back());
+      CAF_CHECK_EQUAL(dm.source, workers.back().address());
       workers.pop_back();
-      // check whether actor pool removed failed worker
-      self->request(w, infinite, sys_atom::value, get_atom::value).receive(
-        [&](std::vector<actor>& ws) {
-          std::sort(ws.begin(), ws.end());
-          CAF_REQUIRE_EQUAL(workers.size(), ws.size());
-          CAF_CHECK(std::equal(workers.begin(), workers.end(), ws.begin()));
-        }
-      );
+      // poll actor pool up to 10 times or until it removes the failed worker
+      bool success = false;
+      size_t i = 0;
+      while (! success && ++i <= 10) {
+        self->request(w, infinite, sys_atom::value, get_atom::value).receive(
+          [&](std::vector<actor>& ws) {
+            success = workers.size() == ws.size();
+            if (success) {
+              std::sort(ws.begin(), ws.end());
+              CAF_CHECK_EQUAL(workers, ws);
+            }
+          }
+        );
+      }
+      CAF_REQUIRE(success);
     },
     after(std::chrono::milliseconds(250)) >> [] {
       CAF_ERROR("didn't receive a down message");
