@@ -258,67 +258,191 @@ serialize(Processor& source, optional<T>& x, const unsigned int) {
   x = none;
 }
 
+// -- [X.Y.8] comparison with optional ----------------------------------------
+
 /// @relates optional
-template <class T, class U>
-bool operator==(const optional<T>& lhs, const optional<U>& rhs) {
-  if (lhs)
-    return rhs ? detail::safe_equal(*lhs, *rhs) : false;
+template <class T>
+bool operator==(const optional<T>& lhs, const optional<T>& rhs) {
+  return static_cast<bool>(lhs) == static_cast<bool>(rhs)
+      && (! lhs || *lhs == *rhs);
+}
+
+/// @relates optional
+template <class T>
+bool operator!=(const optional<T>& lhs, const optional<T>& rhs) {
+  return ! (lhs == rhs);
+}
+
+/// @relates optional
+template <class T>
+bool operator<(const optional<T>& lhs, const optional<T>& rhs) {
+  return static_cast<bool>(rhs) && (! lhs || *lhs < *rhs);
+}
+
+/// @relates optional
+template <class T>
+bool operator<=(const optional<T>& lhs, const optional<T>& rhs) {
+  return ! (rhs < lhs);
+}
+
+/// @relates optional
+template <class T>
+bool operator>=(const optional<T>& lhs, const optional<T>& rhs) {
+  return ! (lhs < rhs);
+}
+
+/// @relates optional
+template <class T>
+bool operator>(const optional<T>& lhs, const optional<T>& rhs) {
+  return rhs < lhs;
+}
+
+// -- [X.Y.9] comparison with none_t (aka. nullopt_t) -------------------------
+
+/// @relates optional
+template <class T>
+bool operator==(const optional<T>& lhs, none_t) {
+  return ! lhs;
+}
+
+/// @relates optional
+template <class T>
+bool operator==(none_t, const optional<T>& rhs) {
   return ! rhs;
 }
 
 /// @relates optional
-template <class T, class U>
-bool operator==(const optional<T>& lhs, const U& rhs) {
-  return (lhs) ? *lhs == rhs : false;
+template <class T>
+bool operator!=(const optional<T>& lhs, none_t) {
+  return static_cast<bool>(lhs);
 }
 
 /// @relates optional
-template <class T, class U>
-bool operator==(const T& lhs, const optional<U>& rhs) {
-  return rhs == lhs;
-}
-
-/// @relates optional
-template <class T, class U>
-bool operator!=(const optional<T>& lhs, const optional<U>& rhs) {
-  return ! (lhs == rhs);
-}
-
-/// @relates optional
-template <class T, class U>
-bool operator!=(const optional<T>& lhs, const U& rhs) {
-  return ! (lhs == rhs);
-}
-
-/// @relates optional
-template <class T, class U>
-bool operator!=(const T& lhs, const optional<U>& rhs) {
-  return ! (lhs == rhs);
-}
-
-/// @relates optional
-template <class T, class U>
-bool operator<(const optional<T>& lhs, const optional<U>& rhs) {
-  // none is considered smaller than any actual value
-  if (lhs)
-    return rhs ? *lhs < *rhs : false;
+template <class T>
+bool operator!=(none_t, const optional<T>& rhs) {
   return static_cast<bool>(rhs);
 }
 
 /// @relates optional
-template <class T, class U>
-bool operator<(const optional<T>& lhs, const U& rhs) {
-  if (lhs)
-    return *lhs < rhs;
+template <class T>
+bool operator<(const optional<T>&, none_t) {
+  return false;
+}
+
+/// @relates optional
+template <class T>
+bool operator<(none_t, const optional<T>& rhs) {
+  return static_cast<bool>(rhs);
+}
+
+/// @relates optional
+template <class T>
+bool operator<=(const optional<T>& lhs, none_t) {
+  return ! lhs;
+}
+
+/// @relates optional
+template <class T>
+bool operator<=(none_t, const optional<T>&) {
   return true;
 }
 
 /// @relates optional
-template <class T, class U>
-bool operator<(T& lhs, const optional<U>& rhs) {
-  if (rhs)
-    return lhs < *rhs;
+template <class T>
+bool operator>(const optional<T>& lhs, none_t) {
+  return static_cast<bool>(lhs);
+}
+
+/// @relates optional
+template <class T>
+bool operator>(none_t, const optional<T>&) {
   return false;
+}
+
+/// @relates optional
+template <class T>
+bool operator>=(const optional<T>&, none_t) {
+  return true;
+}
+
+/// @relates optional
+template <class T>
+bool operator>=(none_t, const optional<T>&) {
+  return true;
+}
+
+// -- [X.Y.10] comparison with value type ------------------------------------
+
+/// @relates optional
+template <class T>
+bool operator==(const optional<T>& lhs, const T& rhs) {
+  return lhs && *lhs == rhs;
+}
+
+/// @relates optional
+template <class T>
+bool operator==(const T& lhs, const optional<T>& rhs) {
+  return rhs && lhs == *rhs;
+}
+
+/// @relates optional
+template <class T>
+bool operator!=(const optional<T>& lhs, const T& rhs) {
+  return ! lhs || ! (*lhs == rhs);
+}
+
+/// @relates optional
+template <class T>
+bool operator!=(const T& lhs, const optional<T>& rhs) {
+  return ! rhs || ! (lhs == *rhs);
+}
+
+/// @relates optional
+template <class T>
+bool operator<(const optional<T>& lhs, const T& rhs) {
+  return ! lhs || *lhs < rhs;
+}
+
+/// @relates optional
+template <class T>
+bool operator<(const T& lhs, const optional<T>& rhs) {
+  return rhs && lhs < *rhs;
+}
+
+/// @relates optional
+template <class T>
+bool operator<=(const optional<T>& lhs, const T& rhs) {
+  return ! lhs || ! (rhs < *lhs);
+}
+
+/// @relates optional
+template <class T>
+bool operator<=(const T& lhs, const optional<T>& rhs) {
+  return rhs && ! (rhs < lhs);
+}
+
+/// @relates optional
+template <class T>
+bool operator>(const optional<T>& lhs, const T& rhs) {
+  return lhs && rhs < *lhs;
+}
+
+/// @relates optional
+template <class T>
+bool operator>(const T& lhs, const optional<T>& rhs) {
+  return ! rhs || *rhs < lhs;
+}
+
+/// @relates optional
+template <class T>
+bool operator>=(const optional<T>& lhs, const T& rhs) {
+  return lhs && ! (*lhs < rhs);
+}
+
+/// @relates optional
+template <class T>
+bool operator>=(const T& lhs, const optional<T>& rhs) {
+  return ! rhs || ! (lhs < *rhs);
 }
 
 } // namespace caf
