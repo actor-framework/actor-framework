@@ -166,7 +166,6 @@ public:
     // instead of dropping "unexpected" messages,
     // we simply forward them to our acquaintances
     auto fwd = [=](local_actor*, const type_erased_tuple* ptr) -> result<message> {
-      CAF_LOG_TRACE(CAF_ARG(msg));
       send_to_acquaintances(message::from(ptr));
       return message{};
     };
@@ -326,7 +325,6 @@ behavior proxy_broker::make_behavior() {
   // instead of dropping "unexpected" messages,
   // we simply forward them to our acquaintances
   auto fwd = [=](local_actor*, const type_erased_tuple* x) -> result<message> {
-    CAF_LOG_TRACE(CAF_ARG(msg));
     group_->send_all_subscribers(current_element_->sender, message::from(x),
                                  context());
     return message{};
