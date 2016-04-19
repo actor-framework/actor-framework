@@ -82,14 +82,16 @@ int node_id::compare(const node_id& other) const {
     return 0; // shortcut for comparing to self or identical instances
   if (! data_ != ! other.data_)
     return data_ ? 1 : -1; // invalid instances are always smaller
-  int tmp = strncmp(reinterpret_cast<const char*>(host_id().data()),
-                    reinterpret_cast<const char*>(other.host_id().data()),
-                    host_id_size);
-  return tmp != 0
-         ? tmp
-         : (process_id() < other.process_id()
-            ? -1
-            : (process_id() == other.process_id() ? 0 : 1));
+  // use mismatch instead of strncmp because the
+  // latter bails out on the first 0-byte
+  auto last = host_id().end();
+  auto ipair = std::mismatch(host_id().begin(), last, other.host_id().begin());
+  if (ipair.first == last)
+    return static_cast<int>(process_id())-static_cast<int>(other.process_id());
+  else if (*ipair.first < *ipair.second)
+    return -1;
+  else
+    return 1;
 }
 
 node_id::data::data() : pid_(0) {
